@@ -26,11 +26,11 @@ import ContractExpiryNotifier from "@/components/ContractExpiryNotifier";
 import ContractStatusPieChart from "@/components/ContractStatusPieChart";
 import ContractExpiryModal from "@/components/contract-expiry-modal/ContractExpiryModal";
 import DepartmentPerformanceWidget from "@/components/DepartmentPerformanceWidget";
+import { DashboardGreeting } from "@/components/dashboard/DashboardGreeting";
 import { RiskImpactHeroCard } from "@/components/dashboard/RiskImpactHeroCard";
 import FormattedDateTime from "@/components/FormattedDateTime";
 import LicenseExpiryAlertsWidget from "@/components/LicenseExpiryAlertsWidget";
 import LicenseStatusPieChart from "@/components/LicenseStatusPieChart";
-import ProfilePicture from "@/components/ProfilePicture";
 import QuickNotesWidget from "@/components/QuickNotesWidget";
 import RecentActivity from "@/components/RecentActivity";
 import { OrgUnitPicker } from "@/components/settings/OrgUnitPicker";
@@ -60,7 +60,6 @@ import {
 import { WidgetCarousel } from "@/components/ui/widget-carousel";
 import WeatherWidget from "@/components/WeatherWidget";
 import type { ContractStatus } from "@/constants/status";
-import { useAuth } from "@/contexts/AuthContext";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useToast } from "@/hooks/use-toast";
 import { useCombinedExpiryModal } from "@/hooks/useCombinedExpiryModal";
@@ -140,6 +139,8 @@ interface ExecutiveDashboardProps {
 				fullName?: string;
 				role?: string;
 				division?: string;
+				department?: string;
+				departmentLabel?: string;
 		  })
 		| null;
 }
@@ -169,16 +170,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 	const { toast } = useToast();
 	const { orgId } = useOrganization();
 	const effectiveOrgId = orgId || "default_organization";
-	const { user: authUser } = useAuth();
 	const adminName = "Executive"; // Replace with actual admin name
-	const profileUser = authUser ?? user ?? null;
-	const displayName =
-		(profileUser as { fullName?: string } | null)?.fullName ||
-		(profileUser as { name?: string } | null)?.name ||
-		"";
-	const divisionBadge = (user?.division || "unknown")
-		.replace(/-/g, " ")
-		.toUpperCase();
 
 	// Use unified dashboard data hook (server userId starts fetch without waiting on AuthContext)
 	const {
@@ -714,38 +706,6 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 			setResendingToken(null);
 		}
 	};
-	const hours = new Date().getHours();
-	let greeting = "";
-	if (hours < 12) {
-		greeting = "Good morning";
-	} else if (hours < 18) {
-		greeting = "Good afternoon";
-	} else {
-		greeting = "Good evening";
-	}
-
-	// const getDepartmentDisplay = (department: string) => {
-	//   switch (department) {
-	//     case 'childwelfare':
-	//       return 'Child Welfare';
-	//     case 'management':
-	//       return 'Management';
-	//     case 'admin':
-	//       return 'Admin';
-	//     case 'behavioralhealth':
-	//       return 'Behavioral Health';
-	//     case 'clinic':
-	//       return 'Clinic';
-	//     case 'residential':
-	//       return 'Residential';
-	//     case 'cins-fins-snap':
-	//       return 'CFS';
-	//     case 'c-suite':
-	//       return 'C-Suite';
-	//     default:
-	//       return department;
-	//   }
-	// };
 
 	return (
 		<div className="relative">
@@ -771,75 +731,42 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 			</video>
 			{/* Main Content Container */}
 			<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
-				{/* Dashboard greeting — not wrapped in a card */}
-				<div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-					<div className="flex min-w-0 items-center gap-3">
-						{profileUser ? (
-							<ProfilePicture
-								user={profileUser as Models.User<Models.Preferences>}
-								size="lg"
-								editable={false}
-								className="shrink-0"
-							/>
-						) : (
-							<div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#0f5384] text-sm font-semibold text-white">
-								?
+				<DashboardGreeting
+					user={user}
+					actions={
+						<>
+							<div className="text-right">
+								<p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
+									Last updated
+								</p>
+								<p className="text-xs text-slate-600">
+									<ClientTimestamp updatedAt={lastUpdatedAt} />
+								</p>
 							</div>
-						)}
-						<div className="min-w-0">
-							<p className="text-xs text-slate-500">{greeting}</p>
-							<div className="mt-0.5 flex flex-wrap items-center gap-2">
-								<h1 className="truncate text-xl font-semibold tracking-tight text-slate-700 sm:text-2xl">
-									{displayName}
-								</h1>
-								<span
-									className={cn(
-										"inline-flex items-center rounded-md border px-2 py-0.5",
-										"text-[10px] font-semibold tracking-wide",
-										"border-green/20 bg-green/10 text-green",
-									)}
-								>
-									{divisionBadge}
-								</span>
-							</div>
-						</div>
-					</div>
 
-					<div className="ml-auto flex items-center gap-4">
-						<div className="text-right">
-							<p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
-								Last updated
-							</p>
-							<p className="text-xs text-slate-600">
-								<ClientTimestamp updatedAt={lastUpdatedAt} />
-							</p>
-						</div>
-
-						{process.env.NODE_ENV === "development" && (
-							<>
-								<div
-									aria-hidden
-									className="hidden h-8 w-px bg-slate-300 sm:block"
-								/>
-								<Button
-									onClick={triggerTestModal}
-									variant="outline"
-									size="sm"
-									className={cn(
-										"h-9 gap-2 border border-dashed border-orange/40 bg-orange/10",
-										"px-3 text-xs font-medium text-orange hover:bg-orange/15 hover:border-orange/50",
-									)}
-								>
-									<span className="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-orange">
-										Dev
-									</span>
-									<Pencil className="h-3.5 w-3.5" />
-									Test expiry modal
-								</Button>
-							</>
-						)}
-					</div>
-				</div>
+							{process.env.NODE_ENV === "development" && (
+								<>
+									<div
+										aria-hidden
+										className="hidden h-8 w-px bg-slate-300 sm:block"
+									/>
+									<Button
+										onClick={triggerTestModal}
+										variant="outline"
+										size="sm"
+										className={cn( "h-9 gap-2 border border-dashed border-orange/40 bg-orange/10", "px-3 text-xs font-medium text-orange hover:bg-orange/15 hover:border-orange/50", )}
+									>
+										<span className="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-orange">
+											Dev
+										</span>
+										<Pencil className="h-3.5 w-3.5" />
+										Test expiry modal
+									</Button>
+								</>
+							)}
+						</>
+					}
+				/>
 				<RiskImpactHeroCard
 					snapshot={riskImpact}
 					isLoading={riskImpactLoading}
@@ -1078,7 +1005,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 							<div className="glass-card-cap" />
 							{/* Header */}
 							<div className="border-b border-slate-200/80 px-5 py-5 sm:px-6">
-								<p className="mb-1.5 font-mono text-[10.5px] font-medium uppercase tracking-[0.1em] text-[#0f5384]">
+								<p className="mb-1.5 text-[10.5px] font-medium uppercase tracking-[0.1em] text-[#0f5384]">
 									User management
 								</p>
 								<h2 className="text-xl font-semibold tracking-tight text-slate-700">
@@ -1147,10 +1074,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 												className="h-10 w-10 shrink-0 border-slate-200 bg-white p-0 text-slate-600 hover:border-[#0f5384]/30 hover:bg-blue/10 hover:text-[#0f5384]"
 											>
 												<RefreshCw
-													className={cn(
-														"h-4 w-4",
-														refreshLoading && "animate-spin",
-													)}
+													className={cn( "h-4 w-4", refreshLoading && "animate-spin", )}
 												/>
 											</Button>
 										</div>
@@ -1308,7 +1232,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 																	: ""
 														}`}
 													>
-														<td className="pl-2 ">{inv.name}</td>
+														<td className="pl-2">{inv.name}</td>
 														<td>{inv.email}</td>
 														<td>
 															{inv.role
@@ -1404,7 +1328,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 									<AlertDialogDescription className="text-slate-600 text-sm mt-2">
 										User won&apos;t be able to accept it afterward.
 									</AlertDialogDescription>
-									<div className="border border-b-0 border-slate-300 "></div>
+									<div className="border border-b-0 border-slate-300"></div>
 								</AlertDialogHeader>
 
 								<div className="px-6 pb-4">

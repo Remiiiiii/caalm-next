@@ -74,7 +74,7 @@ export default function RouteErrorPage({
 							<p className="text-sm text-red-800 font-medium mb-2 mt-3">
 								Error Digest:
 							</p>
-							<p className="text-sm text-red-700 font-mono">{error.digest}</p>
+							<p className="text-sm text-red-700">{error.digest}</p>
 						</>
 					)}
 				</div>

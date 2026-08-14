@@ -94,8 +94,10 @@ async function fetchDivisionContracts(
 	}
 
 	try {
-		const department =
+		const mappedDepartment =
 			DIVISION_TO_DEPARTMENT[division as UserDivision] || undefined;
+		// Scope may already be a parent department (e.g. "IT") when division is unset
+		const department = mappedDepartment || division;
 		if (department) {
 			const byDept = await tablesDB.listRows({
 				databaseId,
@@ -110,14 +112,17 @@ async function fetchDivisionContracts(
 		// ignore
 	}
 
-	// Fallback: load a window and filter by division field when present
+	// Fallback: load a window and filter by division or department when present
 	const all = await tablesDB.listRows({
 		databaseId,
 		tableId,
 		queries: [Query.limit(500)],
 	});
 	return (all.rows as unknown as ContractRow[]).filter(
-		(c) => c.division === division,
+		(c) =>
+			c.division === division ||
+			c.department === division ||
+			c.department === DIVISION_TO_DEPARTMENT[division as UserDivision],
 	);
 }
 

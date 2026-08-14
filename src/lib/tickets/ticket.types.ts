@@ -44,6 +44,10 @@ export type Ticket = {
 	$id: string;
 	title: string;
 	description: string;
+	category?: string;
+	affectedModule?: string | null;
+	impact?: TicketSeverity;
+	urgency?: TicketSeverity;
 	submittedByUserId: string;
 	submittedByName: string;
 	department: string;
@@ -78,6 +82,10 @@ export type TicketEvent = {
 export type CreateTicketInput = {
 	title: string;
 	description: string;
+	category: string;
+	affectedModule?: string | null;
+	impact: TicketSeverity;
+	urgency: TicketSeverity;
 	severity: TicketSeverity;
 	attachmentIds?: string[];
 };
@@ -103,5 +111,5 @@ export function isTicketsEnabled(): boolean {
 }
 
 export function getTicketsRepo(): string {
-	return process.env.GITHUB_TICKETS_REPO || "caalmsolutions/caalm-next";
+	return process.env.GITHUB_TICKETS_REPO || "Remiiiiii/caalm-next";
 }

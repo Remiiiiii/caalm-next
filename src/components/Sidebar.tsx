@@ -1,6 +1,6 @@
 "use client";
 
-import { Building, Building2, Cloud, Crown, Eye, Lock } from "lucide-react";
+import { Building, Building2, Cloud, Crown, Eye, Lock, Server } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -50,6 +50,7 @@ const Sidebar = memo(
 			primaryRole,
 			isViewer,
 			isITUser,
+			canUseITPortal,
 			shouldShowLock,
 		} = useGroupedNavigation();
 
@@ -69,8 +70,12 @@ const Sidebar = memo(
 			});
 		}, []);
 
-		if (isITUser) {
-			return <ITSidebar name={name} avatar={avatar} email={email} />;
+		// IT chrome only when department is IT (+ monitoring perm via canUseITPortal)
+		const showITSidebar =
+			canUseITPortal && (pathname.startsWith("/dashboard/it") || isITUser);
+
+		if (showITSidebar) {
+			return <ITSidebar name={name} email={email} />;
 		}
 
 		const collapsedSections = groupedNav
@@ -275,6 +280,9 @@ const Sidebar = memo(
 																				)}
 																				{item.name === "Viewer" && (
 																					<Eye className="h-4 w-4 text-gray-500" />
+																				)}
+																				{item.name === "IT" && (
+																					<Server className="h-4 w-4 text-[#0f5384]" />
 																				)}
 																			</span>
 																		)}

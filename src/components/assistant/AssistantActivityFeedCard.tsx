@@ -36,7 +36,7 @@ export default function AssistantActivityFeedCard({
 			<div className="px-4.5 pb-1 pt-1.5">
 				{feed.days.map((day, dayIndex) => (
 					<div key={day.label}>
-						<p className="font-mono pt-3 pb-2 text-[9.5px] uppercase tracking-[0.06em] text-slate-400 first:pt-2.5">
+						<p className="pt-3 pb-2 text-[9.5px] uppercase tracking-[0.06em] text-slate-400 first:pt-2.5">
 							{day.label}
 						</p>
 						<ul>
@@ -49,16 +49,10 @@ export default function AssistantActivityFeedCard({
 								return (
 									<li
 										key={item.id}
-										className={cn(
-											"flex gap-2.5 py-2",
-											!isLast && "border-b border-slate-100",
-										)}
+										className={cn( "flex gap-2.5 py-2", !isLast && "border-b border-slate-100", )}
 									>
 										<div
-											className={cn(
-												"mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md",
-												style.wrap,
-											)}
+											className={cn( "mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md", style.wrap, )}
 										>
 											<Icon
 												className={cn("h-3 w-3", style.icon)}
@@ -85,11 +79,11 @@ export default function AssistantActivityFeedCard({
 												) : null}
 											</p>
 											<div className="mt-0.5 flex items-center gap-1.5">
-												<span className="font-mono text-[10px] text-slate-400">
+												<span className="text-[10px] text-slate-400">
 													{item.whenLabel}
 												</span>
 												{item.count && item.count > 1 ? (
-													<span className="rounded-lg bg-[#F5EBD9] px-1.5 py-px font-mono text-[9.5px] font-semibold text-[#96650F]">
+													<span className="rounded-lg bg-[#F5EBD9] px-1.5 py-px text-[9.5px] font-semibold text-[#96650F]">
 														×{item.count}
 													</span>
 												) : null}

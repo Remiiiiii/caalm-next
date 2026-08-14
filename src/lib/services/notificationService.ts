@@ -67,6 +67,42 @@ function isNotificationRead(row: Record<string, unknown>): boolean {
 	return read === true || read === "true";
 }
 
+function isRecoverableNotificationBackendError(error: unknown): boolean {
+	if (process.env.CI || process.env.NODE_ENV === "test") {
+		return true;
+	}
+
+	if (!error || typeof error !== "object") return false;
+
+	const err = error as {
+		message?: string;
+		code?: string;
+		isTestConfig?: boolean;
+		cause?: { code?: string; message?: string };
+	};
+
+	if (err.isTestConfig || err.code === "TEST_CONFIG") return true;
+
+	const message = String(err.message ?? "");
+	if (
+		message.includes("AppwriteException") ||
+		message.includes("Project with the requested ID could not be found") ||
+		message.includes("fetch failed")
+	) {
+		return true;
+	}
+
+	const cause = err.cause;
+	if (!cause) return false;
+
+	return (
+		cause.code === "ENOTFOUND" ||
+		cause.code === "UND_ERR_CONNECT_TIMEOUT" ||
+		cause.code === "ETIMEDOUT" ||
+		String(cause.message ?? "").includes("fetch failed")
+	);
+}
+
 class NotificationService {
 	private async getClient() {
 		return await createAdminClient();
@@ -1203,22 +1239,16 @@ class NotificationService {
 			);
 
 			return totalUnread;
-		} catch (error: any) {
-			console.error("Failed to get unread count:", error);
-
-			if (
-				process.env.CI ||
-				process.env.NODE_ENV === "test" ||
-				error?.isTestConfig ||
-				error?.code === "TEST_CONFIG" ||
-				error?.message?.includes(
-					"Project with the requested ID could not be found",
-				) ||
-				error?.message?.includes("AppwriteException")
-			) {
+		} catch (error: unknown) {
+			if (isRecoverableNotificationBackendError(error)) {
+				console.warn(
+					"[SERVER] getUnreadCount degraded to 0 after backend error:",
+					error instanceof Error ? error.message : error,
+				);
 				return 0;
 			}
 
+			console.error("Failed to get unread count:", error);
 			throw new Error("Failed to get unread count");
 		}
 	}

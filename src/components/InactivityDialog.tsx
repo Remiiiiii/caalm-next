@@ -92,7 +92,7 @@ export default function InactivityDialog({
 						<div className="space-y-2">
 							<p>
 								Due to inactivity, you&apos;ll be signed out in{" "}
-								<span className="font-mono font-bold text-red-600">
+								<span className="font-bold text-red-600">
 									{formatTime(secondsLeft)}
 								</span>{" "}
 								seconds.

@@ -1,4 +1,9 @@
 import { createHmac, createSign, timingSafeEqual } from "node:crypto";
+import {
+	getImpactLabel,
+	getUrgencyLabel,
+	type TicketImpactUrgency,
+} from "./ticket-intake.constants";
 import type { GitHubIssueSnapshot } from "./ticket.types";
 import { getTicketsRepo } from "./ticket.types";
 
@@ -124,14 +129,27 @@ export function buildGitHubIssueBody(input: {
 	department: string;
 	submittedAt: string;
 	severity: string;
+	category: string;
+	affectedModule?: string | null;
+	impact: string;
+	urgency: string;
 	description: string;
 	ticketId: string;
 }): string {
 	const human = new Date(input.submittedAt).toUTCString();
+	const impactLabel = getImpactLabel(input.impact as TicketImpactUrgency);
+	const urgencyLabel = getUrgencyLabel(input.urgency as TicketImpactUrgency);
+	const moduleLine = input.affectedModule
+		? `**Affected module:** ${input.affectedModule}\n`
+		: "";
+
 	return `### Submitted via CAALM Ticketing
 **Submitted by:** ${input.name} (${input.userId})
 **Department/Division:** ${input.department}
 **Submitted at:** ${input.submittedAt} (${human})
+**Category:** ${input.category}
+${moduleLine}**Impact:** ${impactLabel}
+**Urgency:** ${urgencyLabel}
 **Severity:** ${input.severity}
 
 ---
@@ -159,7 +177,9 @@ export async function createGitHubIssue(input: {
 	});
 	if (!res.ok) {
 		const text = await res.text();
-		throw new Error(`GitHub issue create failed: ${res.status} ${text}`);
+		throw new Error(
+			`GitHub issue create failed for ${owner}/${name}: ${res.status} ${text}`,
+		);
 	}
 	const issue = (await res.json()) as GitHubIssueResponse;
 	return {

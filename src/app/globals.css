@@ -1357,6 +1357,22 @@
 	}
 }
 
+@keyframes fabIn {
+	from {
+		opacity: 0;
+		transform: translateY(8px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.animate-\[fabIn_160ms_ease-out\] {
+		animation: none;
+	}
+}
+
 #bgVideo {
 	transition: opacity 3.5s;
 }

@@ -8,6 +8,8 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS, type PermissionKey } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
+import { isITDepartment } from "@/lib/rbac/it-department";
+import { getUserDepartmentProfile } from "@/lib/rbac/dashboard-access-policy";
 import {
 	getUserDefaultOrganization,
 	getUserRoles,
@@ -17,10 +19,15 @@ import {
 const IT_PERMISSIONS = Object.values(PERMISSIONS.IT) as PermissionKey[];
 
 /**
- * Check if user has any IT permission
+ * Check if user is in the IT department and holds any IT permission.
  */
 export async function hasITRole(userId: string): Promise<boolean> {
 	try {
+		const profile = await getUserDepartmentProfile(userId);
+		if (!isITDepartment(profile)) {
+			return false;
+		}
+
 		const defaultOrg = await getUserDefaultOrganization(userId);
 		if (!defaultOrg) {
 			return false;
@@ -84,6 +91,18 @@ export async function requireITPermission(
 			return NextResponse.json(
 				{ error: "Authentication required" },
 				{ status: 401 },
+			);
+		}
+
+		if (
+			!isITDepartment({
+				department: (user as { department?: string }).department,
+				departmentLabel: (user as { departmentLabel?: string }).departmentLabel,
+			})
+		) {
+			return NextResponse.json(
+				{ error: "Access denied. IT department required." },
+				{ status: 403 },
 			);
 		}
 

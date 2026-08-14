@@ -145,12 +145,7 @@ const PermissionSelector: React.FC<PermissionSelectorProps> = ({
 
 			{sodConflicts.length > 0 ? (
 				<div
-					className={cn(
-						"rounded-md border px-3 py-2 text-sm",
-						enforceSod
-							? "border-red/30 bg-red/10 text-slate-700"
-							: "border-orange/30 bg-orange/10 text-slate-700",
-					)}
+					className={cn( "rounded-md border px-3 py-2 text-sm", enforceSod ? "border-red/30 bg-red/10 text-slate-700" : "border-orange/30 bg-orange/10 text-slate-700", )}
 					role="status"
 				>
 					<p className="font-medium">
@@ -189,10 +184,7 @@ const PermissionSelector: React.FC<PermissionSelectorProps> = ({
 								className="rounded-lg border border-white/35 bg-white/15 px-1 backdrop-blur-sm"
 							>
 								<AccordionTrigger
-									className={cn(
-										"px-3 py-3 text-left hover:no-underline",
-										"data-[state=open]:border-b data-[state=open]:border-white/25",
-									)}
+									className={cn( "px-3 py-3 text-left hover:no-underline", "data-[state=open]:border-b data-[state=open]:border-white/25", )}
 								>
 									<div className="flex min-w-0 flex-1 items-center justify-between gap-3 pr-2">
 										<div className="flex min-w-0 items-center gap-2 sm:gap-3">
@@ -201,11 +193,7 @@ const PermissionSelector: React.FC<PermissionSelectorProps> = ({
 											</span>
 											<Badge
 												variant={selectedInGroup > 0 ? "default" : "outline"}
-												className={cn(
-													"h-6 min-h-0 shrink-0 border-slate-200 px-2 py-0 text-xs font-semibold",
-													"bg-white/50 text-slate-600",
-													partiallySelected && "ring-1 ring-[#0f5384]/30",
-												)}
+												className={cn( "h-6 min-h-0 shrink-0 border-slate-200 px-2 py-0 text-xs font-semibold", "bg-white/50 text-slate-600", partiallySelected && "ring-1 ring-[#0f5384]/30", )}
 											>
 												{selectedInGroup}/{totalInGroup}
 											</Badge>
@@ -283,7 +271,7 @@ const PermissionSelector: React.FC<PermissionSelectorProps> = ({
 																{perm.description}
 															</p>
 														) : null}
-														<p className="mt-0.5 font-mono text-[10px] text-slate-500">
+														<p className="mt-0.5 text-[10px] text-slate-500">
 															{perm.key}
 														</p>
 													</div>

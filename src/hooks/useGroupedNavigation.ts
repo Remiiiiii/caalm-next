@@ -6,53 +6,27 @@ import {
 	type NavigationItem,
 	PERMISSION_BASED_NAV,
 } from "@/constants/navigation-permissions";
-import type { PermissionKey } from "@/constants/permissions";
-import { PERMISSIONS } from "@/constants/permissions";
+import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useUserRoles } from "@/hooks/useUserRoles";
-
-const ROLE_TO_DASHBOARD_MAP: Record<
-	string,
-	{ url: string; permissions: PermissionKey[] }
-> = {
-	"Super Admin": {
-		url: "/dashboard/superadmin",
-		permissions: [PERMISSIONS.USERS.VIEW, PERMISSIONS.SETTINGS.VIEW],
-	},
-	"Organization Admin": {
-		url: "/dashboard/organizationadmin",
-		permissions: [PERMISSIONS.USERS.VIEW, PERMISSIONS.SETTINGS.VIEW],
-	},
-	"Department Manager": {
-		url: "/dashboard/departmentmanager",
-		permissions: [
-			PERMISSIONS.CALENDAR.VIEW_TEAM,
-			PERMISSIONS.CONTRACTS.VIEW,
-			PERMISSIONS.CONTRACTS.REVIEW,
-			PERMISSIONS.CONTRACTS.APPROVE,
-		],
-	},
-	Viewer: {
-		url: "/dashboard/viewer",
-		permissions: [PERMISSIONS.CALENDAR.VIEW_OWN, PERMISSIONS.CONTRACTS.VIEW],
-	},
-	IT: {
-		url: "/dashboard/it",
-		permissions: [PERMISSIONS.IT.VIEW_MONITORING],
-	},
-	"Content Creator": {
-		url: "/dashboard/content-creator",
-		permissions: [
-			PERMISSIONS.NEWS.READ,
-			PERMISSIONS.NEWS.CREATE,
-			PERMISSIONS.NEWS.UPDATE,
-		],
-	},
-};
+import {
+	canAccessITPortal,
+	resolveAccessibleDashboardLinks,
+} from "@/lib/navigation/dashboard-links";
 
 export function useGroupedNavigation() {
+	const { user } = useAuth();
 	const { permissions, loading: permissionsLoading } = usePermissions();
 	const { roles: userRoles, loading: rolesLoading } = useUserRoles();
+
+	const departmentProfile = useMemo(
+		() => ({
+			department: (user as { department?: string } | null)?.department,
+			departmentLabel: (user as { departmentLabel?: string } | null)
+				?.departmentLabel,
+		}),
+		[user],
+	);
 
 	const { isViewer, primaryRole, isITUser } = useMemo(() => {
 		if (userRoles.length === 0) {
@@ -66,6 +40,11 @@ export function useGroupedNavigation() {
 			isITUser: !!itRole,
 		};
 	}, [userRoles]);
+
+	const canUseITPortal = useMemo(
+		() => canAccessITPortal(permissions, departmentProfile),
+		[permissions, departmentProfile],
+	);
 
 	const shouldShowLock = useMemo(
 		() =>
@@ -86,34 +65,20 @@ export function useGroupedNavigation() {
 
 		const nav: typeof PERMISSION_BASED_NAV = [];
 
-		const dashboardItems: Array<{
-			name: string;
-			icon: string;
-			url: string;
-			permissions: PermissionKey[];
-		}> = [];
+		const roleNames = userRoles
+			.map((r) => r.roleName)
+			.filter((name): name is string => Boolean(name));
 
-		const seenUrls = new Set<string>();
-		userRoles.forEach((userRole) => {
-			if (userRole.roleName) {
-				const dashboardConfig = ROLE_TO_DASHBOARD_MAP[userRole.roleName];
-				if (dashboardConfig && !seenUrls.has(dashboardConfig.url)) {
-					const hasAccess = dashboardConfig.permissions.some((perm) =>
-						permissions.includes(perm),
-					);
-
-					if (hasAccess) {
-						seenUrls.add(dashboardConfig.url);
-						dashboardItems.push({
-							name: userRole.roleName,
-							icon: "/assets/icons/dashboard.svg",
-							url: dashboardConfig.url,
-							permissions: dashboardConfig.permissions,
-						});
-					}
-				}
-			}
-		});
+		let dashboardItems = resolveAccessibleDashboardLinks(
+			permissions,
+			roleNames,
+			departmentProfile,
+		).map((link) => ({
+			name: link.name,
+			icon: "/assets/icons/dashboard.svg",
+			url: link.url,
+			permissions: link.permissions,
+		}));
 
 		if (dashboardItems.length === 0 && !rolesLoading) {
 			const fallbackDashboardItems =
@@ -121,13 +86,12 @@ export function useGroupedNavigation() {
 			const accessibleDashboards = fallbackDashboardItems.filter((item) =>
 				hasNavigationPermission(permissions, item),
 			);
-
-			accessibleDashboards.forEach((item) => {
-				if (!seenUrls.has(item.url)) {
-					seenUrls.add(item.url);
-					dashboardItems.push(item);
-				}
-			});
+			dashboardItems = accessibleDashboards.map((item) => ({
+				name: item.name,
+				icon: item.icon,
+				url: item.url,
+				permissions: item.permissions,
+			}));
 		}
 
 		if (dashboardItems.length > 0) {
@@ -175,7 +139,14 @@ export function useGroupedNavigation() {
 		}
 
 		return nav;
-	}, [permissions, permissionsLoading, userRoles, rolesLoading, primaryRole]);
+	}, [
+		permissions,
+		permissionsLoading,
+		userRoles,
+		rolesLoading,
+		primaryRole,
+		departmentProfile,
+	]);
 
 	return {
 		groupedNav,
@@ -185,6 +156,7 @@ export function useGroupedNavigation() {
 		primaryRole,
 		isViewer,
 		isITUser,
+		canUseITPortal,
 		shouldShowLock,
 	};
 }

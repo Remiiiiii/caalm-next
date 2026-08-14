@@ -569,7 +569,7 @@ export default function ContractsDisplay() {
 										Technical details (for developers)
 									</summary>
 									<div className="mt-3 bg-white p-4 rounded-lg border border-red-200">
-										<p className="text-sm text-red-700 mb-3 font-mono">
+										<p className="text-sm text-red-700 mb-3">
 											{error || "An unknown error occurred"}
 										</p>
 

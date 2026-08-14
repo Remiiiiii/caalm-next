@@ -8,6 +8,7 @@ import {
 	Upload,
 } from "lucide-react";
 import ContractExpiryAlertsWidget from "@/components/ContractExpiryAlertsWidget";
+import { DashboardGreeting } from "@/components/dashboard/DashboardGreeting";
 import RecentActivity from "@/components/RecentActivity";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -82,6 +83,7 @@ const ManagerDashboard = () => {
 	// Always render the same structure, but conditionally show content
 	return (
 		<div className="space-y-6">
+			<DashboardGreeting />
 			{error ? (
 				<Card>
 					<CardContent className="p-6">

@@ -44,6 +44,13 @@ describe("dashboard-access-policy", () => {
 		expect(entry?.allowedRoleIds).toContain("role_super_admin");
 	});
 
+	it("opens IT portal only with monitoring permission and IT department", () => {
+		const entry = getPolicyEntryForPath("/dashboard/it");
+		expect(entry?.anyOf).toContain(PERMISSIONS.IT.VIEW_MONITORING);
+		expect(entry?.requireITDepartment).toBe(true);
+		expect(entry?.allowedRoleIds).toBeUndefined();
+	});
+
 	it("returns null for unlisted dashboard paths", () => {
 		expect(getPolicyEntryForPath("/dashboard/manager")).toBeNull();
 	});

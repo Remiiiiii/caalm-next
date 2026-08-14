@@ -318,7 +318,7 @@ export default function RateLimitMonitoring() {
 												key={index}
 												className="hover:bg-blue-50 transition-colors"
 											>
-												<TableCell className="font-mono text-sm text-slate-700">
+												<TableCell className="text-sm text-slate-700">
 													{violator.identifier.length > 50
 														? `${violator.identifier.substring(0, 50)}...`
 														: violator.identifier}

@@ -138,6 +138,18 @@ export const ITEM_ICONS: Record<
 		height: 20,
 		color: SUBITEM_TEXT_GREY,
 	},
+	"Report issue": {
+		src: "/assets/icons/info.svg",
+		width: 20,
+		height: 20,
+		color: SUBITEM_TEXT_GREY,
+	},
+	Tickets: {
+		src: "/assets/icons/file-document.svg",
+		width: 20,
+		height: 20,
+		color: SUBITEM_TEXT_GREY,
+	},
 	Overview: {
 		src: "/assets/icons/analytics.svg",
 		width: 20,
@@ -199,6 +211,8 @@ export const DASHBOARD_ITEM_COLORS: Record<string, string> = {
 	"Organization Admin": "#3b82f6",
 	"Department Manager": SUBITEM_TEXT_GREY,
 	Viewer: SUBITEM_TEXT_GREY,
+	IT: "#0f5384",
+	"Content Creator": SUBITEM_TEXT_GREY,
 };
 
 export function isNavItemActive(

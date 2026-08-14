@@ -14,13 +14,52 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
+import { cn, getProfilePictureUrl } from "@/lib/utils";
 
 interface ProfilePictureProps {
 	user: Models.User<Models.Preferences> | null;
 	size?: "sm" | "md" | "lg";
 	className?: string;
 	editable?: boolean;
+}
+
+type ProfileImageUser = Models.User<Models.Preferences> & {
+	avatar?: string | null;
+	profileImageId?: string | null;
+	fullName?: string;
+};
+
+/** Resolve a displayable image URL from prefs, avatar URL, or storage file id. */
+function resolveProfileImageUrl(
+	user: ProfileImageUser | null | undefined,
+): string | null {
+	if (!user) return null;
+
+	const prefs = user.prefs as
+		| (Models.Preferences & {
+				profileImage?: string | null;
+				profileImageId?: string | null;
+		  })
+		| undefined;
+
+	const prefUrl = prefs?.profileImage?.trim();
+	if (prefUrl) return prefUrl;
+
+	const avatarValue = user.avatar?.trim();
+	if (avatarValue && /^https?:\/\//i.test(avatarValue)) return avatarValue;
+	if (avatarValue?.startsWith("/")) return avatarValue;
+
+	const fileId =
+		(avatarValue &&
+		!avatarValue.startsWith("/") &&
+		!/^https?:\/\//i.test(avatarValue)
+			? avatarValue
+			: null) ||
+		user.profileImageId?.trim() ||
+		prefs?.profileImageId?.trim() ||
+		null;
+
+	return getProfilePictureUrl(fileId);
 }
 
 const ProfilePicture: React.FC<ProfilePictureProps> = ({
@@ -30,8 +69,8 @@ const ProfilePicture: React.FC<ProfilePictureProps> = ({
 	editable = true,
 }) => {
 	const [isUploading, setIsUploading] = useState(false);
-	const [profileImageUrl, setProfileImageUrl] = useState<string | null>(
-		(user?.prefs as any)?.profileImage || null,
+	const [profileImageUrl, setProfileImageUrl] = useState<string | null>(() =>
+		resolveProfileImageUrl(user as ProfileImageUser | null),
 	);
 	const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
@@ -59,21 +98,17 @@ const ProfilePicture: React.FC<ProfilePictureProps> = ({
 
 	const config = sizeConfig[size];
 
-	// Sync profileImageUrl with user.prefs when user changes
-	// Prioritize uploadedImageUrl if it exists (recent upload), but sync with user state when it updates
+	// Keep local URL in sync with user record (prefs URL, avatar file id, etc.)
 	useEffect(() => {
-		const imageUrl = (user?.prefs as any)?.profileImage || null;
+		const imageUrl = resolveProfileImageUrl(user as ProfileImageUser | null);
 
-		// If user state has an image URL, use it and clear uploadedImageUrl
 		if (imageUrl) {
 			setProfileImageUrl(imageUrl);
-			// Clear uploadedImageUrl once user state is synced
 			if (uploadedImageUrl && uploadedImageUrl === imageUrl) {
 				setUploadedImageUrl(null);
 			}
 		} else {
-			// Use uploaded URL if available (during upload/refresh), otherwise use user prefs
-			setProfileImageUrl(uploadedImageUrl || imageUrl);
+			setProfileImageUrl(uploadedImageUrl || null);
 		}
 	}, [user, uploadedImageUrl]);
 
@@ -227,24 +262,28 @@ const ProfilePicture: React.FC<ProfilePictureProps> = ({
 		);
 	}
 
+	const sizePx = { sm: 32, md: 40, lg: 48 } as const;
+
 	const avatarContent = profileImageUrl ? (
 		<div
 			className={cn(
-				"rounded-full overflow-hidden relative",
+				"rounded-full overflow-hidden relative shrink-0",
 				config.container,
 				className,
 			)}
 			style={{
 				background: "linear-gradient(135deg, #12477d 0%, #03afbf 100%)",
 				padding: "3px",
-				width: "38px",
-				height: "38px",
+				width: sizePx[size],
+				height: sizePx[size],
 			}}
 		>
 			<img
 				src={profileImageUrl}
-				alt={user.name || "Profile"}
-				className="object-fit rounded-full border-2 border-[#FCFEFF]"
+				alt={
+					(user as ProfileImageUser).fullName || user.name || "Profile"
+				}
+				className="h-full w-full rounded-full border-2 border-[#FCFEFF] object-cover"
 				onError={(e: any) => {
 					console.error("ProfilePicture: Image failed to load:", {
 						src: profileImageUrl,

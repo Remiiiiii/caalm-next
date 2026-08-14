@@ -27,6 +27,7 @@ import CompanyNewsFeed from "@/components/CompanyNewsFeed";
 import ContractExpiryAlertsWidget from "@/components/ContractExpiryAlertsWidget";
 import ContractStatusPieChart from "@/components/ContractStatusPieChart";
 import DepartmentPerformanceWidget from "@/components/DepartmentPerformanceWidget";
+import { DashboardGreeting } from "@/components/dashboard/DashboardGreeting";
 import { RiskImpactHeroCard } from "@/components/dashboard/RiskImpactHeroCard";
 import FormattedDateTime from "@/components/FormattedDateTime";
 import QuickNotesWidget from "@/components/QuickNotesWidget";
@@ -113,6 +114,8 @@ interface AdminDashboardProps {
 				fullName?: string;
 				role?: string;
 				division?: string;
+				department?: string;
+				departmentLabel?: string;
 		  })
 		| null;
 }
@@ -522,6 +525,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 
 	return (
 		<div className="space-y-6">
+			<DashboardGreeting user={user} />
 			<RiskImpactHeroCard
 				snapshot={riskImpact}
 				isLoading={riskImpactLoading}
@@ -973,7 +977,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 			<Card className="glass-card overflow-hidden">
 				<div className="glass-card-cap" />
 				<div className="border-b border-slate-200/80 px-5 py-5 sm:px-6">
-					<p className="mb-1.5 font-mono text-[10.5px] font-medium uppercase tracking-[0.1em] text-[#0f5384]">
+					<p className="mb-1.5 text-[10.5px] font-medium uppercase tracking-[0.1em] text-[#0f5384]">
 						User management
 					</p>
 					<h2 className="text-xl font-semibold tracking-tight text-slate-700">
@@ -1178,7 +1182,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 														: ""
 											}`}
 										>
-											<td className="pl-2 ">{inv.name}</td>
+											<td className="pl-2">{inv.name}</td>
 											<td>{inv.email}</td>
 											<td>
 												{(inv.role || "").charAt(0).toUpperCase() +

@@ -155,7 +155,7 @@ export function AuditEvidenceTable({
 										key={evidenceRowKey(row, index)}
 										className="hover:bg-slate-50 transition-colors duration-200"
 									>
-										<TableCell className="font-mono text-sm text-slate-700">
+										<TableCell className="text-sm text-slate-700">
 											{formatEvidenceDisplayId(row.id)}
 										</TableCell>
 										<TableCell className="font-medium text-slate-700">

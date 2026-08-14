@@ -93,7 +93,7 @@ export function EvidenceGapsTable({
 										className="border-b border-slate-100 hover:bg-blue/5 transition-colors duration-200"
 									>
 										{!compact ? (
-											<td className="py-3 px-3 text-xs font-mono text-slate-500">
+											<td className="py-3 px-3 text-xs text-slate-500">
 												{row.id}
 											</td>
 										) : null}

@@ -159,7 +159,7 @@ export default function MyAccessPanel() {
 													{item.description}
 												</p>
 											) : (
-												<p className="text-xs text-slate-400 mt-0.5 font-mono">
+												<p className="text-xs text-slate-400 mt-0.5">
 													{item.key}
 												</p>
 											)}

@@ -8,14 +8,10 @@ export default async function NewTicketPage() {
 	await requirePagePermission(PERMISSIONS.TICKETS.CREATE);
 
 	return (
-		<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
-			<div className="mb-4 flex w-full items-center justify-start gap-4 self-start">
+		<div className="dashboard-container">
+			<div className="mb-6 flex w-full items-center justify-start gap-4 self-start">
 				<h1 className="h1 capitalize sidebar-gradient-text">Report an issue</h1>
 			</div>
-			<p className="mb-6 text-sm text-slate-600">
-				Your name and department are taken from your account. They cannot be
-				changed on this form.
-			</p>
 			<TicketSubmitForm />
 		</div>
 	);

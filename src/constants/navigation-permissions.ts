@@ -212,18 +212,6 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 				permissions: [PERMISSIONS.EVENTS.CREATE, PERMISSIONS.EVENTS.INVITE],
 				hiddenForRoles: ["Viewer"],
 			},
-			{
-				name: "Report issue",
-				icon: "/assets/icons/info.svg",
-				url: "/tickets/new",
-				permissions: [PERMISSIONS.TICKETS.CREATE],
-			},
-			{
-				name: "Tickets",
-				icon: "/assets/icons/file-document.svg",
-				url: "/tickets",
-				permissions: [PERMISSIONS.TICKETS.VIEW],
-			},
 		],
 	},
 	{

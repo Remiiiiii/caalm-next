@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { Fragment } from "react";
+import { Fragment, type ReactNode } from "react";
 import { SectionNavIcon } from "@/components/sidebar/SectionNavIcon";
 import SidebarSectionFlyout, {
 	type FlyoutNavItem,
@@ -19,8 +19,10 @@ import { cn } from "@/lib/utils";
 export type CollapsedSection = {
 	header: string;
 	items: FlyoutNavItem[];
-	/** Optional override icon src (IT sidebar uses item icons) */
+	/** Optional override icon src (legacy SVG path) */
 	iconSrc?: string;
+	/** Optional Lucide/React node for IT portal sections */
+	iconNode?: ReactNode;
 };
 
 type SidebarCollapsedRailProps = {
@@ -70,14 +72,21 @@ export default function SidebarCollapsedRail({
 									active && "bg-blue/10 border-[#0f5384]/30 shadow-sm",
 								)}
 							>
-								<SectionNavIcon
-									header={section.header}
-									iconSrc={section.iconSrc}
-									priority={
-										section.header === "Dashboard" ||
-										section.header === "Calendar"
-									}
-								/>
+								{section.iconNode ? (
+									<span className="inline-flex text-[#03AFBF]">
+										{section.iconNode}
+									</span>
+								) : (
+									<SectionNavIcon
+										header={section.header}
+										iconSrc={section.iconSrc}
+										priority={
+											section.header === "Dashboard" ||
+											section.header === "Calendar" ||
+											section.header === "Overview"
+										}
+									/>
+								)}
 							</button>
 						</HoverCardTrigger>
 						<HoverCardContent

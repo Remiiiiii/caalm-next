@@ -4,6 +4,6 @@ import HRDashboard from "../HRDashboard";
 import { requireDashboardPathAccess } from "@/lib/rbac/page-guards";
 
 export default async function HRDashboardPage() {
-	await requireDashboardPathAccess("/dashboard/hr");
-	return <HRDashboard />;
+	const currentUser = await requireDashboardPathAccess("/dashboard/hr");
+	return <HRDashboard user={currentUser} />;
 }

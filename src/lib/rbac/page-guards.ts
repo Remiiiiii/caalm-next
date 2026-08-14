@@ -65,6 +65,8 @@ export async function requireDashboardPathAccess(pathname: string) {
 
 	const profileDest = await getDashboardProfileRedirect(user.$id, pathname, {
 		division: user.division,
+		department: (user as { department?: string }).department,
+		departmentLabel: (user as { departmentLabel?: string }).departmentLabel,
 	});
 	if (profileDest) {
 		redirect(profileDest);

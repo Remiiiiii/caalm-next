@@ -23,11 +23,37 @@ export async function POST(
 	const permissions = await getUserPermissions(user.$id, org?.orgId);
 	const { ticketId } = await params;
 
+	let instructions: string | undefined;
+	let attachmentFiles: File[] = [];
+
+	const contentType = request.headers.get("content-type") || "";
+	if (contentType.includes("multipart/form-data")) {
+		const form = await request.formData();
+		const rawInstructions = form.get("instructions");
+		if (typeof rawInstructions === "string") {
+			instructions = rawInstructions;
+		}
+		attachmentFiles = form
+			.getAll("attachments")
+			.filter((item): item is File => item instanceof File && item.size > 0);
+	} else {
+		try {
+			const body = (await request.json()) as { instructions?: unknown };
+			if (typeof body.instructions === "string") {
+				instructions = body.instructions;
+			}
+		} catch {
+			// Empty body is fine — resolve without extra instructions
+		}
+	}
+
 	try {
 		const ticket = await resolveTicket({
 			ticketId,
 			actorId: user.$id,
 			permissions,
+			instructions,
+			attachmentFiles,
 		});
 		return NextResponse.json({ ticket }, { status: 202 });
 	} catch (error) {

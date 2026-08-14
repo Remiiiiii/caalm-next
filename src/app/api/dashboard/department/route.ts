@@ -31,12 +31,15 @@ export async function GET(request: NextRequest) {
 		const division =
 			request.nextUrl.searchParams.get("division") ||
 			(user as { division?: string }).division ||
+			(user as { department?: string }).department ||
+			(user as { departmentLabel?: string }).departmentLabel ||
 			"";
 
 		if (!division) {
 			return NextResponse.json(
 				{
-					error: "Division is required. Update your profile with a division.",
+					error:
+						"Division or department is required. Update your profile with a placement.",
 				},
 				{ status: 400 },
 			);

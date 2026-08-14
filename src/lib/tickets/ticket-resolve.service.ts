@@ -8,12 +8,16 @@ import {
 	parsePrNumberFromUrl,
 } from "./cursor-agent.service";
 import { fetchGitHubIssue } from "./github-tickets.service";
+import { uploadTicketAttachments } from "./ticket-intake.service";
 import type { Ticket } from "./ticket.types";
 
 export async function resolveTicket(input: {
 	ticketId: string;
 	actorId: string;
 	permissions: string[];
+	instructions?: string;
+	/** Extra files attached on Resolve (screenshots, notes, etc.) */
+	attachmentFiles?: File[];
 }): Promise<Ticket> {
 	const ticket = await getTicketById(input.ticketId);
 	if (!ticket) {
@@ -31,11 +35,37 @@ export async function resolveTicket(input: {
 		ticket.githubRepo || undefined,
 	);
 
+	const attachmentFiles = input.attachmentFiles?.slice(0, 5) || [];
+	const uploadedIds =
+		attachmentFiles.length > 0
+			? await uploadTicketAttachments(attachmentFiles)
+			: [];
+	const attachmentNames = attachmentFiles.map((file) => file.name);
+
+	let instructions = input.instructions?.trim() || undefined;
+	if (attachmentNames.length > 0) {
+		const fileNote = `Attached context files: ${attachmentNames.join(", ")}`;
+		instructions = instructions ? `${instructions}\n\n${fileNote}` : fileNote;
+	}
+
+	if (uploadedIds.length > 0) {
+		const existing = Array.isArray(ticket.attachments) ? ticket.attachments : [];
+		await updateTicket(ticket.$id, {
+			attachments: [...existing, ...uploadedIds],
+		});
+	}
+
 	await appendTicketEvent({
 		ticketId: ticket.$id,
 		eventType: "RESOLVE_CLICKED",
 		actor: input.actorId,
-		metadata: { githubIssueNumber: issue.number },
+		metadata: {
+			githubIssueNumber: issue.number,
+			...(instructions ? { hasInstructions: true } : {}),
+			...(uploadedIds.length
+				? { attachmentIds: uploadedIds, attachmentNames }
+				: {}),
+		},
 	});
 
 	let agentId: string | null = null;
@@ -48,10 +78,11 @@ export async function resolveTicket(input: {
 			repoUrl: ticket.githubRepo
 				? `https://github.com/${ticket.githubRepo}`
 				: undefined,
+			instructions,
 		});
 		agentId = agent.id;
 	} catch (error) {
-		const failed = await updateTicket(ticket.$id, { status: "FAILED" });
+		await updateTicket(ticket.$id, { status: "FAILED" });
 		await appendTicketEvent({
 			ticketId: ticket.$id,
 			eventType: "FAILED",
@@ -60,7 +91,10 @@ export async function resolveTicket(input: {
 				error: error instanceof Error ? error.message : "Agent launch failed",
 			},
 		});
-		return failed;
+		// Re-throw so the API returns the real error instead of a silent FAILED badge
+		throw error instanceof Error
+			? error
+			: new Error("Agent launch failed");
 	}
 
 	const updated = await updateTicket(ticket.$id, {

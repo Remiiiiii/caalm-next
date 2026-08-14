@@ -1,14 +1,66 @@
 /**
  * IT Dashboard Navigation Configuration
- * Defines all navigation items for IT/Software Engineering staff portal
+ * Icons use Lucide keys resolved in ITSidebar (many /assets/icons/*.svg paths do not exist).
  */
 
 import type { PermissionKey } from "./permissions";
 import { PERMISSIONS } from "./permissions";
 
+export type ITNavIconKey =
+	| "layoutDashboard"
+	| "server"
+	| "monitor"
+	| "hardDrive"
+	| "activity"
+	| "barChart3"
+	| "shield"
+	| "heartPulse"
+	| "gauge"
+	| "triangleAlert"
+	| "network"
+	| "appWindow"
+	| "gitBranch"
+	| "hammer"
+	| "rocket"
+	| "tag"
+	| "badgeCheck"
+	| "gitFork"
+	| "ticket"
+	| "searchCode"
+	| "bookOpen"
+	| "keyRound"
+	| "scrollText"
+	| "clipboardCheck"
+	| "lock"
+	| "siren"
+	| "database"
+	| "tableProperties"
+	| "search"
+	| "fileText"
+	| "info"
+	| "circleAlert"
+	| "history"
+	| "calendarClock"
+	| "bookMarked"
+	| "users"
+	| "userCog"
+	| "building2"
+	| "trendingUp"
+	| "settings"
+	| "plug"
+	| "bell"
+	| "databaseBackup"
+	| "clock"
+	| "crown"
+	| "building"
+	| "eye"
+	| "newspaper"
+	| "circlePlus"
+	| "inbox";
+
 export interface ITSidebarItem {
 	name: string;
-	icon: string;
+	icon: ITNavIconKey;
 	url: string;
 	permission?: PermissionKey;
 	subItems?: ITSidebarItem[];
@@ -16,373 +68,397 @@ export interface ITSidebarItem {
 
 export interface ITSidebarSection {
 	header: string;
+	/** Section header icon (falls back to first item icon) */
+	icon?: ITNavIconKey;
 	items: ITSidebarItem[];
 }
 
 /**
- * IT Dashboard Navigation Structure
- * Organized by functional areas with permission-based access control
+ * IT portal nav — grouped by job, not by every microservice name.
  */
 export const IT_NAVIGATION: ITSidebarSection[] = [
 	{
-		header: "Dashboard",
+		header: "Overview",
+		icon: "layoutDashboard",
 		items: [
 			{
 				name: "Dashboard",
-				icon: "/assets/icons/dashboard.svg",
+				icon: "layoutDashboard",
 				url: "/dashboard/it",
 			},
-		],
-	},
-	{
-		header: "System Overview",
-		items: [
 			{
-				name: "System Overview",
-				icon: "/assets/icons/dashboard.svg",
+				name: "System overview",
+				icon: "monitor",
 				url: "/dashboard/it/system-overview",
 				permission: PERMISSIONS.IT.VIEW_MONITORING,
 			},
 			{
-				name: "Storage Metrics",
-				icon: "/assets/icons/database.svg",
+				name: "Storage",
+				icon: "hardDrive",
 				url: "/dashboard/it/storage",
 				permission: PERMISSIONS.IT.VIEW_MONITORING,
 			},
 		],
 	},
 	{
-		header: "Monitoring & Observability",
+		header: "Support",
+		icon: "ticket",
 		items: [
 			{
-				name: "API Analytics",
-				icon: "/assets/icons/analytics.svg",
-				url: "/dashboard/it/monitoring/api-analytics",
-				permission: PERMISSIONS.IT.VIEW_ANALYTICS,
+				name: "Report issue",
+				icon: "circlePlus",
+				url: "/tickets/new",
+				permission: PERMISSIONS.TICKETS.CREATE,
 			},
 			{
-				name: "Rate Limit Monitoring",
-				icon: "/assets/icons/shield.svg",
-				url: "/dashboard/it/rate-limits",
-				permission: PERMISSIONS.IT.VIEW_RATE_LIMITS,
+				name: "Tickets",
+				icon: "inbox",
+				url: "/tickets",
+				permission: PERMISSIONS.TICKETS.VIEW,
 			},
 			{
-				name: "System Health",
-				icon: "/assets/icons/dashboard.svg",
+				name: "Status board",
+				icon: "info",
+				url: "/dashboard/it/status",
+				permission: PERMISSIONS.TICKETS.VIEW,
+			},
+		],
+	},
+	{
+		header: "Monitoring",
+		icon: "activity",
+		items: [
+			{
+				name: "System health",
+				icon: "heartPulse",
 				url: "/dashboard/it/monitoring/system-health",
 				permission: PERMISSIONS.IT.VIEW_MONITORING,
 			},
 			{
-				name: "Performance Metrics",
-				icon: "/assets/icons/analytics.svg",
+				name: "Performance",
+				icon: "gauge",
 				url: "/dashboard/it/monitoring/performance",
 				permission: PERMISSIONS.IT.VIEW_MONITORING,
 			},
 			{
-				name: "Error Logs",
-				icon: "/assets/icons/alert-triangle.svg",
+				name: "Error logs",
+				icon: "triangleAlert",
 				url: "/dashboard/it/monitoring/errors",
 				permission: PERMISSIONS.IT.VIEW_SYSTEM_LOGS,
 			},
 			{
-				name: "Infrastructure Monitoring",
-				icon: "/assets/icons/server.svg",
+				name: "Infrastructure",
+				icon: "server",
 				url: "/dashboard/it/monitoring/infrastructure",
 				permission: PERMISSIONS.IT.VIEW_MONITORING,
 			},
 			{
-				name: "Network Monitoring",
-				icon: "/assets/icons/network.svg",
+				name: "Network",
+				icon: "network",
 				url: "/dashboard/it/monitoring/network",
 				permission: PERMISSIONS.IT.VIEW_MONITORING,
 			},
 			{
-				name: "Application Monitoring",
-				icon: "/assets/icons/app.svg",
+				name: "Applications",
+				icon: "appWindow",
 				url: "/dashboard/it/monitoring/application",
 				permission: PERMISSIONS.IT.VIEW_MONITORING,
 			},
-		],
-	},
-	{
-		header: "CI/CD & Deployments",
-		items: [
 			{
-				name: "Pipeline Status",
-				icon: "/assets/icons/git-branch.svg",
-				url: "/dashboard/it/cicd/pipelines",
-				permission: PERMISSIONS.IT.MANAGE_CI_CD,
-			},
-			{
-				name: "Build History",
-				icon: "/assets/icons/build.svg",
-				url: "/dashboard/it/cicd/builds",
-				permission: PERMISSIONS.IT.MANAGE_CI_CD,
-			},
-			{
-				name: "Deployment Tracking",
-				icon: "/assets/icons/rocket.svg",
-				url: "/dashboard/it/cicd/deployments",
-				permission: PERMISSIONS.IT.MANAGE_DEPLOYMENTS,
-			},
-			{
-				name: "Release Management",
-				icon: "/assets/icons/tag.svg",
-				url: "/dashboard/it/cicd/releases",
-				permission: PERMISSIONS.IT.MANAGE_DEPLOYMENTS,
-			},
-			{
-				name: "Code Quality",
-				icon: "/assets/icons/check-circle.svg",
-				url: "/dashboard/it/cicd/quality",
-				permission: PERMISSIONS.IT.MANAGE_CI_CD,
-			},
-		],
-	},
-	{
-		header: "Development Tools",
-		items: [
-			{
-				name: "Repository Management",
-				icon: "/assets/icons/git.svg",
-				url: "/dashboard/it/development/repositories",
-				permission: PERMISSIONS.IT.MANAGE_CI_CD,
-			},
-			{
-				name: "Issue Tracking",
-				icon: "/assets/icons/ticket.svg",
-				url: "/dashboard/it/development/issues",
-				permission: PERMISSIONS.IT.MANAGE_CI_CD,
-			},
-			{
-				name: "Code Analysis",
-				icon: "/assets/icons/search.svg",
-				url: "/dashboard/it/development/code-analysis",
-				permission: PERMISSIONS.IT.MANAGE_CI_CD,
-			},
-		],
-	},
-	{
-		header: "API Management",
-		items: [
-			{
-				name: "API Documentation",
-				icon: "/assets/icons/book.svg",
-				url: "/dashboard/it/api/documentation",
-				permission: PERMISSIONS.IT.MANAGE_API_KEYS,
-			},
-			{
-				name: "API Usage Statistics",
-				icon: "/assets/icons/analytics.svg",
-				url: "/dashboard/it/api/usage",
+				name: "API analytics",
+				icon: "barChart3",
+				url: "/dashboard/it/monitoring/api-analytics",
 				permission: PERMISSIONS.IT.VIEW_ANALYTICS,
 			},
 			{
-				name: "API Gateway",
-				icon: "/assets/icons/server.svg",
-				url: "/dashboard/it/api/gateway",
-				permission: PERMISSIONS.IT.MANAGE_API_KEYS,
+				name: "Rate limits",
+				icon: "shield",
+				url: "/dashboard/it/rate-limits",
+				permission: PERMISSIONS.IT.VIEW_RATE_LIMITS,
 			},
 		],
 	},
 	{
-		header: "Security & Compliance",
+		header: "Incidents",
+		icon: "siren",
 		items: [
 			{
-				name: "Security Dashboard",
-				icon: "/assets/icons/shield.svg",
-				url: "/dashboard/it/security/dashboard",
-				permission: PERMISSIONS.IT.VIEW_SECURITY,
-			},
-			{
-				name: "Audit Logs",
-				icon: "/assets/icons/audit-logs.svg",
-				url: "/dashboard/it/security/audit-logs",
-				permission: PERMISSIONS.AUDIT.VIEW,
-			},
-			{
-				name: "Compliance Status",
-				icon: "/assets/icons/compliance-status.svg",
-				url: "/dashboard/it/security/compliance",
-				permission: PERMISSIONS.IT.VIEW_SECURITY,
-			},
-			{
-				name: "Access Control",
-				icon: "/assets/icons/lock.svg",
-				url: "/dashboard/it/security/access-control",
-				permission: PERMISSIONS.IT.VIEW_SECURITY,
-			},
-			{
-				name: "Incident Response",
-				icon: "/assets/icons/alert-triangle.svg",
-				url: "/dashboard/it/security/incident-response",
-				permission: PERMISSIONS.IT.VIEW_INCIDENTS,
-			},
-		],
-	},
-	{
-		header: "Database Administration",
-		items: [
-			{
-				name: "Database Performance",
-				icon: "/assets/icons/database.svg",
-				url: "/dashboard/it/database/performance",
-				permission: PERMISSIONS.IT.MANAGE_DATABASE,
-			},
-			{
-				name: "Database Health",
-				icon: "/assets/icons/activity.svg",
-				url: "/dashboard/it/database/health",
-				permission: PERMISSIONS.IT.MANAGE_DATABASE,
-			},
-			{
-				name: "Schema Management",
-				icon: "/assets/icons/layers.svg",
-				url: "/dashboard/it/database/schema",
-				permission: PERMISSIONS.IT.MANAGE_DATABASE,
-			},
-			{
-				name: "Query Analytics",
-				icon: "/assets/icons/search.svg",
-				url: "/dashboard/it/database/queries",
-				permission: PERMISSIONS.IT.MANAGE_DATABASE,
-			},
-		],
-	},
-	{
-		header: "Logs & Analytics",
-		items: [
-			{
-				name: "Log Aggregation",
-				icon: "/assets/icons/file-text.svg",
-				url: "/dashboard/it/logs/aggregation",
-				permission: PERMISSIONS.IT.VIEW_SYSTEM_LOGS,
-			},
-			{
-				name: "Log Analysis",
-				icon: "/assets/icons/search.svg",
-				url: "/dashboard/it/logs/analysis",
-				permission: PERMISSIONS.IT.VIEW_SYSTEM_LOGS,
-			},
-			{
-				name: "Trace Monitoring",
-				icon: "/assets/icons/activity.svg",
-				url: "/dashboard/it/logs/traces",
-				permission: PERMISSIONS.IT.VIEW_MONITORING,
-			},
-		],
-	},
-	{
-		header: "Incident Management",
-		items: [
-			{
-				name: "Status",
-				icon: "/assets/icons/info.svg",
-				url: "/dashboard/it/status",
-				permission: PERMISSIONS.TICKETS.VIEW,
-			},
-			{
-				name: "Active Incidents",
-				icon: "/assets/icons/alert-circle.svg",
+				name: "Active incidents",
+				icon: "circleAlert",
 				url: "/dashboard/it/incidents/active",
 				permission: PERMISSIONS.IT.VIEW_INCIDENTS,
 			},
 			{
-				name: "Incident History",
-				icon: "/assets/icons/history.svg",
+				name: "History",
+				icon: "history",
 				url: "/dashboard/it/incidents/history",
 				permission: PERMISSIONS.IT.VIEW_INCIDENTS,
 			},
 			{
-				name: "On-Call Schedule",
-				icon: "/assets/icons/calendar.svg",
+				name: "On-call",
+				icon: "calendarClock",
 				url: "/dashboard/it/incidents/on-call",
 				permission: PERMISSIONS.IT.VIEW_INCIDENTS,
 			},
 			{
-				name: "Post-Mortems",
-				icon: "/assets/icons/file-text.svg",
+				name: "Post-mortems",
+				icon: "fileText",
 				url: "/dashboard/it/incidents/post-mortems",
 				permission: PERMISSIONS.IT.VIEW_INCIDENTS,
 			},
 			{
 				name: "Runbooks",
-				icon: "/assets/icons/documents.svg",
+				icon: "bookMarked",
 				url: "/dashboard/it/incidents/runbooks",
 				permission: PERMISSIONS.IT.VIEW_RUNBOOKS,
 			},
 		],
 	},
 	{
-		header: "Team & User Management",
+		header: "CI/CD",
+		icon: "rocket",
 		items: [
 			{
-				name: "IT Staff Directory",
-				icon: "/assets/icons/users.svg",
+				name: "Pipelines",
+				icon: "gitBranch",
+				url: "/dashboard/it/cicd/pipelines",
+				permission: PERMISSIONS.IT.MANAGE_CI_CD,
+			},
+			{
+				name: "Builds",
+				icon: "hammer",
+				url: "/dashboard/it/cicd/builds",
+				permission: PERMISSIONS.IT.MANAGE_CI_CD,
+			},
+			{
+				name: "Deployments",
+				icon: "rocket",
+				url: "/dashboard/it/cicd/deployments",
+				permission: PERMISSIONS.IT.MANAGE_DEPLOYMENTS,
+			},
+			{
+				name: "Releases",
+				icon: "tag",
+				url: "/dashboard/it/cicd/releases",
+				permission: PERMISSIONS.IT.MANAGE_DEPLOYMENTS,
+			},
+			{
+				name: "Code quality",
+				icon: "badgeCheck",
+				url: "/dashboard/it/cicd/quality",
+				permission: PERMISSIONS.IT.MANAGE_CI_CD,
+			},
+		],
+	},
+	{
+		header: "Development",
+		icon: "gitFork",
+		items: [
+			{
+				name: "Repositories",
+				icon: "gitFork",
+				url: "/dashboard/it/development/repositories",
+				permission: PERMISSIONS.IT.MANAGE_CI_CD,
+			},
+			{
+				name: "Issues",
+				icon: "ticket",
+				url: "/dashboard/it/development/issues",
+				permission: PERMISSIONS.IT.MANAGE_CI_CD,
+			},
+			{
+				name: "Code analysis",
+				icon: "searchCode",
+				url: "/dashboard/it/development/code-analysis",
+				permission: PERMISSIONS.IT.MANAGE_CI_CD,
+			},
+			{
+				name: "Job scheduler",
+				icon: "clock",
+				url: "/dashboard/it/automation/jobs",
+				permission: PERMISSIONS.IT.MANAGE_CI_CD,
+			},
+		],
+	},
+	{
+		header: "Data & logs",
+		icon: "database",
+		items: [
+			{
+				name: "DB performance",
+				icon: "database",
+				url: "/dashboard/it/database/performance",
+				permission: PERMISSIONS.IT.MANAGE_DATABASE,
+			},
+			{
+				name: "DB health",
+				icon: "activity",
+				url: "/dashboard/it/database/health",
+				permission: PERMISSIONS.IT.MANAGE_DATABASE,
+			},
+			{
+				name: "Schema",
+				icon: "tableProperties",
+				url: "/dashboard/it/database/schema",
+				permission: PERMISSIONS.IT.MANAGE_DATABASE,
+			},
+			{
+				name: "Query analytics",
+				icon: "search",
+				url: "/dashboard/it/database/queries",
+				permission: PERMISSIONS.IT.MANAGE_DATABASE,
+			},
+			{
+				name: "Log aggregation",
+				icon: "scrollText",
+				url: "/dashboard/it/logs/aggregation",
+				permission: PERMISSIONS.IT.VIEW_SYSTEM_LOGS,
+			},
+			{
+				name: "Log analysis",
+				icon: "fileText",
+				url: "/dashboard/it/logs/analysis",
+				permission: PERMISSIONS.IT.VIEW_SYSTEM_LOGS,
+			},
+			{
+				name: "Traces",
+				icon: "activity",
+				url: "/dashboard/it/logs/traces",
+				permission: PERMISSIONS.IT.VIEW_MONITORING,
+			},
+		],
+	},
+	{
+		header: "Security",
+		icon: "shield",
+		items: [
+			{
+				name: "Security dashboard",
+				icon: "shield",
+				url: "/dashboard/it/security/dashboard",
+				permission: PERMISSIONS.IT.VIEW_SECURITY,
+			},
+			{
+				name: "Audit logs",
+				icon: "scrollText",
+				url: "/dashboard/it/security/audit-logs",
+				permission: PERMISSIONS.AUDIT.VIEW,
+			},
+			{
+				name: "Compliance",
+				icon: "clipboardCheck",
+				url: "/dashboard/it/security/compliance",
+				permission: PERMISSIONS.IT.VIEW_SECURITY,
+			},
+			{
+				name: "Access control",
+				icon: "lock",
+				url: "/dashboard/it/security/access-control",
+				permission: PERMISSIONS.IT.VIEW_SECURITY,
+			},
+			{
+				name: "Incident response",
+				icon: "siren",
+				url: "/dashboard/it/security/incident-response",
+				permission: PERMISSIONS.IT.VIEW_INCIDENTS,
+			},
+		],
+	},
+	{
+		header: "API",
+		icon: "keyRound",
+		items: [
+			{
+				name: "Documentation",
+				icon: "bookOpen",
+				url: "/dashboard/it/api/documentation",
+				permission: PERMISSIONS.IT.MANAGE_API_KEYS,
+			},
+			{
+				name: "Usage",
+				icon: "barChart3",
+				url: "/dashboard/it/api/usage",
+				permission: PERMISSIONS.IT.VIEW_ANALYTICS,
+			},
+			{
+				name: "Gateway",
+				icon: "server",
+				url: "/dashboard/it/api/gateway",
+				permission: PERMISSIONS.IT.MANAGE_API_KEYS,
+			},
+		],
+	},
+	{
+		header: "Team",
+		icon: "users",
+		items: [
+			{
+				name: "IT directory",
+				icon: "users",
 				url: "/dashboard/it/team/directory",
 				permission: PERMISSIONS.USERS.VIEW,
 			},
 			{
-				name: "User Roles",
-				icon: "/assets/icons/user-management.svg",
+				name: "Roles",
+				icon: "userCog",
 				url: "/dashboard/it/team/roles",
 				permission: PERMISSIONS.USERS.ASSIGN_ROLES,
 			},
 			{
-				name: "Department Assignments",
-				icon: "/assets/icons/department.svg",
+				name: "Departments",
+				icon: "building2",
 				url: "/dashboard/it/team/departments",
 				permission: PERMISSIONS.USERS.VIEW,
 			},
 			{
-				name: "Performance Metrics",
-				icon: "/assets/icons/trending-up.svg",
+				name: "Team performance",
+				icon: "trendingUp",
 				url: "/dashboard/it/team/performance",
 				permission: PERMISSIONS.USERS.VIEW,
 			},
 		],
 	},
 	{
-		header: "Configuration & Settings",
+		header: "Settings",
+		icon: "settings",
 		items: [
 			{
-				name: "System Configuration",
-				icon: "/assets/icons/settings.svg",
+				name: "System",
+				icon: "settings",
 				url: "/dashboard/it/settings/system",
 				permission: PERMISSIONS.SETTINGS.VIEW,
 			},
 			{
-				name: "Integration Management",
-				icon: "/assets/icons/plug.svg",
+				name: "Integrations",
+				icon: "plug",
 				url: "/dashboard/it/settings/integrations",
 				permission: PERMISSIONS.SETTINGS.INTEGRATIONS,
 			},
 			{
-				name: "Notification Settings",
-				icon: "/assets/icons/bell.svg",
+				name: "Notifications",
+				icon: "bell",
 				url: "/dashboard/it/settings/notifications",
 				permission: PERMISSIONS.SETTINGS.VIEW,
 			},
 			{
-				name: "Backup & Recovery",
-				icon: "/assets/icons/database.svg",
+				name: "Backup",
+				icon: "databaseBackup",
 				url: "/dashboard/it/settings/backup",
 				permission: PERMISSIONS.IT.MANAGE_DATABASE,
 			},
 		],
 	},
-	{
-		header: "Automation & DevOps",
-		items: [
-			{
-				name: "Job Scheduler",
-				icon: "/assets/icons/clock.svg",
-				url: "/dashboard/it/automation/jobs",
-				permission: PERMISSIONS.IT.MANAGE_CI_CD,
-			},
-		],
-	},
 ];
+
+/** Lucide keys for workspace switcher labels */
+export const WORKSPACE_ICON_BY_NAME: Record<string, ITNavIconKey> = {
+	"Super Admin": "crown",
+	"Organization Admin": "building2",
+	"Department Manager": "building",
+	Viewer: "eye",
+	IT: "server",
+	"Content Creator": "newspaper",
+};
 
 /**
  * Filter navigation items based on user permissions
@@ -394,27 +470,21 @@ export function filterITNavigationByPermissions(
 	return navigation
 		.map((section) => ({
 			...section,
-			items: section.items.filter((item) => {
-				// If no permission required, always show
-				if (!item.permission) {
-					return true;
-				}
-
-				// Check if user has the required permission
-				const hasPermission = userPermissions.includes(item.permission);
-
-				// Also filter sub-items if they exist
-				if (item.subItems) {
-					item.subItems = item.subItems.filter((subItem) => {
-						if (!subItem.permission) {
-							return true;
-						}
-						return userPermissions.includes(subItem.permission);
-					});
-				}
-
-				return hasPermission;
-			}),
+			items: section.items
+				.filter((item) => {
+					if (!item.permission) return true;
+					return userPermissions.includes(item.permission);
+				})
+				.map((item) => {
+					if (!item.subItems) return item;
+					return {
+						...item,
+						subItems: item.subItems.filter((subItem) => {
+							if (!subItem.permission) return true;
+							return userPermissions.includes(subItem.permission);
+						}),
+					};
+				}),
 		}))
-		.filter((section) => section.items.length > 0); // Remove empty sections
+		.filter((section) => section.items.length > 0);
 }

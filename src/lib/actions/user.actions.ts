@@ -48,7 +48,9 @@ export type AppUser = {
 	accountId: string;
 	role: CalendarRole; // For calendar permissions compatibility only
 	division?: UserDivision | string;
-	department?: string; // Direct department field (if available)
+	department?: string;
+	departmentLabel?: string;
+	divisionLabel?: string;
 	managerUserId?: string | null;
 	phone?: string;
 	status?: "active" | "inactive" | "suspended";
@@ -783,20 +785,21 @@ const getCurrentUserImpl = async () => {
 			accountId: userData.accountId,
 			role: calendarRole,
 			division: userData.division,
+			department: userData.department,
+			departmentLabel: userData.departmentLabel,
+			divisionLabel: userData.divisionLabel,
 			status: userData.status,
 			$createdAt: userData.$createdAt,
 			$updatedAt: userData.$updatedAt,
 		});
 	} catch (error) {
-		// Don't log session errors as they're expected in 2FA flow
+		// Session missing is normal during 2FA — fall through quietly
 		if (error instanceof Error && error.message.includes("No session found")) {
-			// If no session found, try to get user from 2FA cookies
-			console.log(
-				"getCurrentUser - No session found, checking 2FA authentication",
-			);
 			return await getCurrentUserFrom2FA();
 		}
-		console.log("getCurrentUser - Error:", error);
+		if (process.env.NODE_ENV === "development") {
+			console.warn("getCurrentUser - Error:", error);
+		}
 		return null;
 	}
 };
@@ -858,6 +861,9 @@ const getCurrentUserFrom2FAImpl = async () => {
 				accountId: user.accountId,
 				role: calendarRole,
 				division: user.division,
+				department: user.department,
+				departmentLabel: user.departmentLabel,
+				divisionLabel: user.divisionLabel,
 				status: user.status,
 				profileImageId: resolveProfileImageId({
 					avatar: user.avatar,

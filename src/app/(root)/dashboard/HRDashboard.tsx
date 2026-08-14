@@ -1,3 +1,5 @@
+"use client";
+
 import {
 	Bell,
 	FileCheck,
@@ -6,12 +8,29 @@ import {
 	UserPlus,
 	Users,
 } from "lucide-react";
+import type { Models } from "node-appwrite";
 import ContractExpiryAlertsWidget from "@/components/ContractExpiryAlertsWidget";
+import { DashboardGreeting } from "@/components/dashboard/DashboardGreeting";
 import RecentActivity from "@/components/RecentActivity";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-const HRDashboard = () => {
+interface HRDashboardProps {
+	user?:
+		| (Models.User<Models.Preferences> & {
+				$id: string;
+				accountId?: string;
+				fullName?: string;
+				name?: string;
+				role?: string;
+				division?: string;
+				department?: string;
+				departmentLabel?: string;
+		  })
+		| null;
+}
+
+const HRDashboard = ({ user }: HRDashboardProps) => {
 	const trainingStats = [
 		{
 			title: "Active Employees",
@@ -150,139 +169,120 @@ const HRDashboard = () => {
 
 	return (
 		<div className="space-y-6">
-			<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-				<h1 className="text-3xl font-bold text-navy">Admin Dashboard</h1>
-				<div className="flex space-x-2">
-					<Button variant="default">
-						<UserPlus className="mr-2 h-4 w-4 text-coral" />
-						Add Employee
-					</Button>
-					<Button>
-						<Upload className="mr-2 h-4 w-4 text-coral" />
-						Upload Training Record
-					</Button>
-				</div>
-			</div>
+			<DashboardGreeting
+				user={user}
+				actions={
+					<>
+						<Button variant="default" className="primary-btn px-3 sm:px-4">
+							<UserPlus className="h-4 w-4" />
+							Add Employee
+						</Button>
+						<Button className="primary-btn px-3 sm:px-4">
+							<Upload className="h-4 w-4" />
+							Upload Training Record
+						</Button>
+					</>
+				}
+			/>
 
 			{/* Stats Grid */}
 			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
 				{trainingStats.map((stat) => (
-					<Card key={stat.title}>
-						<CardContent className="p-6">
+					<Card key={stat.title} className="glass-card">
+						<div className="glass-card-cap" />
+						<CardContent className="p-4 sm:p-6">
 							<div className="flex items-center justify-between">
 								<div>
-									<p className="text-sm font-medium text-slate-dark">
+									<p className="text-sm font-medium sidebar-gradient-text">
 										{stat.title}
 									</p>
-									<p className="text-3xl font-bold text-navy">{stat.value}</p>
+									<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
+										<span>{stat.value}</span>
+										<span className="inline-block ml-2 pb-1">
+											<stat.icon className="h-8 w-8 text-slate-600" />
+										</span>
+									</div>
 								</div>
-								<stat.icon className={`h-8 w-8 ${stat.color}`} />
 							</div>
 						</CardContent>
 					</Card>
 				))}
 			</div>
 
-			<div className="grid lg:grid-cols-3 gap-6">
+			<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 				{/* Employee Training Status */}
-				<Card>
-					<CardHeader>
-						<CardTitle>Employee Training & Certifications</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<div className="space-y-4">
-							{employeeTraining.map((record) => (
-								<div
-									key={record.id}
-									className="border border-border rounded-lg p-4"
-								>
-									<div className="flex justify-between items-start mb-2">
+				<div className="lg:col-span-2">
+					<Card className="glass-card">
+						<div className="glass-card-cap" />
+						<CardHeader>
+							<CardTitle className="text-lg font-bold sidebar-gradient-text">
+								Employee Training Status
+							</CardTitle>
+						</CardHeader>
+						<CardContent>
+							<div className="space-y-4">
+								{employeeTraining.map((training) => (
+									<div
+										key={training.id}
+										className="flex items-center justify-between p-4 border border-slate-200 rounded-lg"
+									>
 										<div>
-											<h4 className="font-medium text-navy">
-												{record.employee}
-											</h4>
-											<p className="text-sm text-slate-dark">
-												{record.department}
+											<p className="font-medium text-slate-700">
+												{training.employee}
+											</p>
+											<p className="text-sm text-slate-600">
+												{training.department} · {training.certification}
+											</p>
+											<p className="text-xs text-slate-500 mt-1">
+												{training.contractRequirement}
 											</p>
 										</div>
-										<span
-											className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
-												record.status,
-											)}`}
-										>
-											{record.status.replace("-", " ")}
-										</span>
+										<div className="text-right">
+											<span
+												className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(training.status)}`}
+											>
+												{training.status}
+											</span>
+											<p className="text-xs text-slate-500 mt-1">
+												Due {training.dueDate}
+											</p>
+										</div>
 									</div>
-									<div className="text-sm text-slate-dark space-y-1">
-										<p>
-											<strong>Certification:</strong> {record.certification}
-										</p>
-										<p>
-											<strong>Due Date:</strong> {record.dueDate}
-										</p>
-										<p>
-											<strong>Required for:</strong>{" "}
-											{record.contractRequirement}
-										</p>
-									</div>
-									<div className="mt-3 flex space-x-2">
-										<Button variant="default">Update Status</Button>
-										<Button variant="default">Send Reminder</Button>
-									</div>
-								</div>
-							))}
-						</div>
-					</CardContent>
-				</Card>
+								))}
+							</div>
+						</CardContent>
+					</Card>
+				</div>
 
-				{/* Recent Document Uploads */}
-				<Card>
-					<CardHeader>
-						<CardTitle>Recent Document Uploads</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<div className="space-y-4">
-							{pendingDocuments.map((doc) => (
-								<div
-									key={doc.id}
-									className="border border-border rounded-lg p-4"
-								>
-									<div className="flex justify-between items-start mb-2">
-										<h4 className="font-medium text-navy">{doc.type}</h4>
-										<span className="text-xs text-slate-light">
-											{doc.uploaded}
-										</span>
-									</div>
-									<p className="text-sm text-slate-dark">
-										Employee: {doc.employee}
-									</p>
-									<div className="mt-3 flex space-x-2">
-										<Button variant="default">Review</Button>
-										<Button variant="default">Approve</Button>
-									</div>
-								</div>
-							))}
-						</div>
-
-						<div className="mt-6 p-4 bg-accent-blue rounded-lg">
-							<h4 className="font-medium text-blue mb-2">
-								Training Requirements Alert
-							</h4>
-							<p className="text-sm text-blue">
-								5 employees have upcoming certification deadlines within the
-								next 30 days. Please coordinate with managers to schedule
-								required training sessions.
-							</p>
-							<Button className="mt-2" variant="default">
-								View All Deadlines
-							</Button>
-						</div>
-					</CardContent>
-				</Card>
-
-				{/* Sidebar with Contract Expiry Alerts and Recent Activity */}
+				{/* Sidebar widgets */}
 				<div className="space-y-6">
-					<ContractExpiryAlertsWidget maxVisible={3} />
+					<Card className="glass-card">
+						<div className="glass-card-cap" />
+						<CardHeader>
+							<CardTitle className="text-lg font-bold sidebar-gradient-text">
+								Pending Documents
+							</CardTitle>
+						</CardHeader>
+						<CardContent>
+							<div className="space-y-3">
+								{pendingDocuments.map((doc) => (
+									<div
+										key={doc.id}
+										className="flex justify-between items-start border-b border-slate-200 pb-2 last:border-0"
+									>
+										<div>
+											<p className="text-sm font-medium text-slate-700">
+												{doc.type}
+											</p>
+											<p className="text-xs text-slate-500">{doc.employee}</p>
+										</div>
+										<span className="text-xs text-slate-500">{doc.uploaded}</span>
+									</div>
+								))}
+							</div>
+						</CardContent>
+					</Card>
+					<ContractExpiryAlertsWidget maxVisible={3} compact />
 					<RecentActivity />
 				</div>
 			</div>

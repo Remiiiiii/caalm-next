@@ -185,10 +185,7 @@ export function AuditLogDetailDrawer({
 					) : null}
 					{loggedAt ? (
 						<span
-							className={cn(
-								"text-xs text-slate-600",
-								eventDescription ? "mt-1.5" : undefined,
-							)}
+							className={cn( "text-xs text-slate-600", eventDescription ? "mt-1.5" : undefined, )}
 						>
 							{loggedAt}
 						</span>
@@ -240,17 +237,17 @@ export function AuditLogDetailDrawer({
 					</InfoRow>
 					<InfoRow label="IP address">
 						{log.ip_address ? (
-							<span className="font-mono text-xs font-medium text-slate-700">
+							<span className="text-xs font-medium text-slate-700">
 								{log.ip_address}
 							</span>
 						) : (
-							<span className="font-mono text-xs font-normal text-slate-400">
+							<span className="text-xs font-normal text-slate-400">
 								Not recorded
 							</span>
 						)}
 					</InfoRow>
 					<InfoRow label="Event ID">
-						<span className="break-all font-mono text-xs font-medium leading-snug text-slate-700">
+						<span className="break-all text-xs font-medium leading-snug text-slate-700">
 							{log.event_id || "—"}
 						</span>
 					</InfoRow>
@@ -259,10 +256,7 @@ export function AuditLogDetailDrawer({
 
 			{metadataEntries.length > 0 ? (
 				<section
-					className={cn(
-						previewSectionClass,
-						"overflow-hidden border-slate-200/60! bg-slate-50/80! p-0",
-					)}
+					className={cn( previewSectionClass, "overflow-hidden border-slate-200/60! bg-slate-50/80! p-0", )}
 				>
 					<div className="border-b border-slate-200/70 px-4 py-2.5">
 						<div className="flex items-center gap-2">

@@ -30,7 +30,7 @@ export default function Page() {
 							</li>
 							<li>
 								Permission:{" "}
-								<span className="font-mono text-xs text-slate-800">
+								<span className="text-xs text-slate-800">
 									it.view_incidents
 								</span>
 							</li>

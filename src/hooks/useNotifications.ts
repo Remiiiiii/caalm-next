@@ -435,6 +435,13 @@ const unreadCountFetcher = async (url: string) => {
 	}
 	if (!response.ok) {
 		const errorText = await response.text();
+		// Unread badge is best-effort; treat backend failures as zero
+		if (response.status >= 500) {
+			console.warn(
+				`[CLIENT] Unread count unavailable (${response.status}); using 0`,
+			);
+			return { count: 0 };
+		}
 		const details = {
 			status: response.status,
 			statusText: response.statusText,

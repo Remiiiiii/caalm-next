@@ -3,8 +3,16 @@
  * Guards use permission checks; optional allowedRoleIds disambiguate paths that share permissions.
  */
 
+import { Query } from "node-appwrite";
 import type { PermissionKey } from "@/constants/permissions";
 import { PERMISSIONS } from "@/constants/permissions";
+import { createAdminClient } from "@/lib/appwrite";
+import { appwriteConfig } from "@/lib/appwrite/config";
+import { appendSessionChangedNotice } from "@/lib/auth/session-sync";
+import {
+	isITDepartment,
+	type DepartmentProfileFields,
+} from "@/lib/rbac/it-department";
 import {
 	getUserDefaultOrganization,
 	getUserPermissions,
@@ -12,7 +20,6 @@ import {
 	hasAllPermissions,
 	hasAnyPermission,
 } from "@/lib/rbac/permissions";
-import { appendSessionChangedNotice } from "@/lib/auth/session-sync";
 import { ROLE_DASHBOARD_FALLBACK } from "@/lib/rbac/role-dashboard-metadata";
 
 export type DashboardPolicyEntry = {
@@ -22,6 +29,11 @@ export type DashboardPolicyEntry = {
 	requireAll?: boolean;
 	/** If set, user must hold one of these role row IDs */
 	allowedRoleIds?: string[];
+	/**
+	 * IT portal only: user profile department/departmentLabel must be IT.
+	 * IT.* permissions alone (e.g. Org Admin) are not enough.
+	 */
+	requireITDepartment?: boolean;
 };
 
 /**
@@ -56,7 +68,7 @@ export const DASHBOARD_ROUTE_POLICY: DashboardPolicyEntry[] = [
 	{
 		pathPrefix: "/dashboard/it",
 		anyOf: [PERMISSIONS.IT.VIEW_MONITORING],
-		allowedRoleIds: ["role_it_staff"],
+		requireITDepartment: true,
 	},
 	{
 		pathPrefix: "/dashboard/content-creator",
@@ -134,6 +146,51 @@ function roleIdsHeld(roles: Array<{ roleId: string }>): Set<string> {
 	return new Set(roles.map((r) => r.roleId));
 }
 
+/** Load department fields for IT portal gating (profile $id or accountId). */
+export async function getUserDepartmentProfile(
+	userId: string,
+): Promise<DepartmentProfileFields> {
+	if (!userId) return {};
+
+	try {
+		const { tablesDB } = await createAdminClient();
+		const databaseId = appwriteConfig.databaseId || "default-db";
+		const tableId = appwriteConfig.usersCollectionId || "users";
+
+		try {
+			const profile = await tablesDB.getRow({
+				databaseId,
+				tableId,
+				rowId: userId,
+			});
+			return {
+				department: (profile as { department?: string }).department,
+				departmentLabel: (profile as { departmentLabel?: string })
+					.departmentLabel,
+			};
+		} catch {
+			// May be an Auth accountId instead of users-table $id
+		}
+
+		const byAccount = await tablesDB.listRows({
+			databaseId,
+			tableId,
+			queries: [Query.equal("accountId", userId), Query.limit(1)],
+		});
+		const row = byAccount.rows[0] as
+			| { department?: string; departmentLabel?: string }
+			| undefined;
+		if (!row) return {};
+		return {
+			department: row.department,
+			departmentLabel: row.departmentLabel,
+		};
+	} catch (error) {
+		console.error("[getUserDepartmentProfile] Error:", error);
+		return {};
+	}
+}
+
 /**
  * Returns whether the user may access `pathname` under /dashboard given org context.
  */
@@ -145,6 +202,13 @@ export async function userMayAccessDashboardPath(
 	const entry = getPolicyEntryForPath(pathname);
 	if (!entry) {
 		return true;
+	}
+
+	if (entry.requireITDepartment) {
+		const profile = await getUserDepartmentProfile(userId);
+		if (!isITDepartment(profile)) {
+			return false;
+		}
 	}
 
 	const userRoles = await getUserRoles(userId, orgId);
@@ -262,36 +326,23 @@ export async function getUnauthorizedDashboardRedirect(
 
 type DashboardProfile = {
 	division?: string | null;
+	department?: string | null;
+	departmentLabel?: string | null;
 };
 
 /**
- * Redirect when the signed-in user may access a role dashboard shell but lacks
- * required profile fields (e.g. division on the department manager home).
+ * Profile-field redirects for role dashboards.
+ * IT portal: department must be IT (belt-and-suspenders with policy.requireITDepartment).
+ * Missing division must not bounce authorized users off /departmentmanager —
+ * that page already shows an in-page empty state.
  */
 export async function getDashboardProfileRedirect(
-	userId: string,
+	_userId: string,
 	pathname: string,
 	profile: DashboardProfile,
 ): Promise<string | null> {
-	if (
-		pathname.startsWith("/dashboard/departmentmanager") &&
-		!profile.division?.trim()
-	) {
-		const defaultOrg = await getUserDefaultOrganization(userId);
-		if (!defaultOrg) {
-			return "/sign-in";
-		}
-
-		const home =
-			(await resolveDashboardHomePath(userId, defaultOrg.orgId)) ??
-			"/dashboard";
-
-		if (pathname === home) {
-			return null;
-		}
-
-		return appendSessionChangedNotice(home);
+	if (pathname.startsWith("/dashboard/it") && !isITDepartment(profile)) {
+		return "/dashboard";
 	}
-
 	return null;
 }

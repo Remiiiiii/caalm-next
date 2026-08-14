@@ -162,6 +162,14 @@ export const swrConfig: SWRConfiguration = {
 			return;
 		}
 
+		// Unread badge polls are best-effort; avoid SWR error noise
+		if (
+			typeof key === "string" &&
+			key.includes("/api/notifications/unread-count")
+		) {
+			return;
+		}
+
 		// Avoid Next overlay mangling by logging primitives only
 		console.error(
 			`[SWR] ${typeof key === "string" ? key : JSON.stringify(key)} → ${message}`,

@@ -60,18 +60,28 @@ export function useITUser(): UseITUserReturn {
 
 			const userRoles = await getUserRoles(currentUser.$id, defaultOrg.orgId);
 			const itRole = userRoles.find((role) => role.roleName === "IT");
+			const primaryRole = userRoles[0];
+			const typedUser = currentUser as {
+				fullName?: string;
+				email?: string;
+				division?: string;
+				department?: string;
+				departmentLabel?: string;
+			};
 
-			if (itRole) {
-				setUser({
-					userId: currentUser.$id,
-					fullName: currentUser.fullName,
-					email: currentUser.email,
-					department: currentUser.division || null,
-					roleName: "IT",
-				});
-			} else {
-				setUser(null);
-			}
+			// Any authenticated user with IT portal access can render this card
+			// (Super Admin uses the IT sidebar via permissions, not only the IT role)
+			setUser({
+				userId: currentUser.$id,
+				fullName: typedUser.fullName,
+				email: typedUser.email,
+				department:
+					typedUser.departmentLabel ||
+					typedUser.department ||
+					typedUser.division ||
+					null,
+				roleName: itRole?.roleName || primaryRole?.roleName || "Staff",
+			});
 		} catch (err) {
 			const errorMessage =
 				err instanceof Error ? err.message : "Failed to fetch user data";

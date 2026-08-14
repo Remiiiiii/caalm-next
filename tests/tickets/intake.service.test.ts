@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { buildGitHubIssueBody } from "@/lib/tickets/github-tickets.service";
-import { parseSeverity, slugLabel } from "@/lib/tickets/ticket-intake.service";
+import {
+	buildCreateTicketInput,
+	parseCategory,
+	parseSeverity,
+	slugLabel,
+} from "@/lib/tickets/ticket-intake.service";
+import { deriveSeverityFromMatrix } from "@/lib/tickets/ticket-intake.constants";
+import { resolveSubmitterDepartmentLabel } from "@/lib/tickets/submitter-placement";
 import {
 	buildCursorAgentPrompt,
 	parsePrNumberFromUrl,
@@ -12,6 +19,36 @@ describe("ticket intake helpers", () => {
 		expect(parseSeverity("high")).toBe("high");
 	});
 
+	it("rejects invalid category", () => {
+		expect(() => parseCategory("Mystery")).toThrow("Invalid category");
+		expect(parseCategory("Hardware")).toBe("Hardware");
+	});
+
+	it("derives severity from impact and urgency", () => {
+		expect(deriveSeverityFromMatrix("critical", "critical")).toEqual({
+			severity: "critical",
+			responseSlaHours: 1,
+		});
+		expect(deriveSeverityFromMatrix("low", "low")).toEqual({
+			severity: "low",
+			responseSlaHours: 48,
+		});
+	});
+
+	it("builds create payload with server-derived severity", () => {
+		const payload = buildCreateTicketInput({
+			title: "Login broken",
+			description: "Cannot sign in after password reset flow.",
+			category: "Software / Application",
+			affectedModule: "User Management",
+			impact: "high",
+			urgency: "high",
+		});
+		expect(payload.severity).toBe("high");
+		expect(payload.category).toBe("Software / Application");
+		expect(payload.affectedModule).toBe("User Management");
+	});
+
 	it("builds a structured GitHub issue body from server fields", () => {
 		const body = buildGitHubIssueBody({
 			name: "Ada Lovelace",
@@ -19,18 +56,31 @@ describe("ticket intake helpers", () => {
 			department: "Legal",
 			submittedAt: "2026-08-12T12:00:00.000Z",
 			severity: "high",
+			category: "Software / Application",
+			affectedModule: "User Management",
+			impact: "high",
+			urgency: "high",
 			description: "SSO is down",
 			ticketId: "ticket_1",
 		});
 		expect(body).toContain("Ada Lovelace");
-		expect(body).toContain("user_1");
-		expect(body).toContain("Legal");
+		expect(body).toContain("Software / Application");
+		expect(body).toContain("User Management");
 		expect(body).toContain("SSO is down");
 		expect(body).toContain("ticket_1");
 	});
 
 	it("slugs department labels for GitHub", () => {
 		expect(slugLabel("Human Resources")).toBe("human-resources");
+	});
+
+	it("prefers departmentLabel over legacy division for submitter placement", () => {
+		expect(
+			resolveSubmitterDepartmentLabel({
+				departmentLabel: "IT",
+				division: null,
+			}),
+		).toBe("IT");
 	});
 });
 

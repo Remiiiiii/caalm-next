@@ -255,7 +255,7 @@ export function RiskImpactHeroCard({
 								Risk averted
 							</p>
 						</div>
-						<p className="font-mono text-[10.5px] tracking-wide text-slate-500">
+						<p className="text-[10.5px] tracking-wide text-slate-500">
 							{periodDisplay}
 						</p>
 						<p className="text-[2.5rem] leading-none font-semibold text-slate-800 tracking-tight pt-1">
@@ -303,19 +303,19 @@ export function RiskImpactHeroCard({
 							<span className="text-xs text-slate-600">
 								Contracts monitored
 							</span>
-							<span className="font-mono text-[13px] font-medium text-slate-700">
+							<span className="text-[13px] font-medium text-slate-700">
 								{snapshot.monitoring.contractsMonitored.toLocaleString()}
 							</span>
 						</div>
 						<div className="flex items-baseline justify-between gap-3 pb-2.5 border-b border-slate-300">
 							<span className="text-xs text-slate-600">Grants monitored</span>
-							<span className="font-mono text-[13px] font-medium text-slate-700">
+							<span className="text-[13px] font-medium text-slate-700">
 								{snapshot.monitoring.grantsMonitored.toLocaleString()}
 							</span>
 						</div>
 						<div className="flex items-baseline justify-between gap-3">
 							<span className="text-xs text-slate-600">Clauses flagged</span>
-							<span className="font-mono text-[13px] font-medium text-slate-700">
+							<span className="text-[13px] font-medium text-slate-700">
 								{snapshot.monitoring.clausesFlagged.toLocaleString()}
 							</span>
 						</div>

@@ -1,9 +1,10 @@
 "use client";
 
-import { Building, Building2, Crown, Eye, Lock } from "lucide-react";
+import { Building, Building2, Crown, Eye, Lock, Server } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ITNavIcon } from "@/components/sidebar/ITNavIcon";
 import { NavItemIcon } from "@/components/sidebar/NavItemIcon";
 import {
 	DASHBOARD_ITEM_COLORS,
@@ -16,6 +17,7 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
+import type { ITNavIconKey } from "@/constants/it-navigation";
 import type { NavigationItem } from "@/constants/navigation-permissions";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +25,7 @@ export type FlyoutNavItem = {
 	name: string;
 	url: string;
 	icon?: string;
+	iconKey?: ITNavIconKey;
 	permissions?: string[];
 	viewerReadOnly?: boolean;
 };
@@ -44,7 +47,17 @@ function ItemIcon({
 	item: FlyoutNavItem;
 	sectionHeader: string;
 }) {
-	if (sectionHeader === "Dashboard") {
+	if (item.iconKey) {
+		return (
+			<ITNavIcon
+				name={item.iconKey}
+				size={16}
+				className="text-slate-600 shrink-0"
+			/>
+		);
+	}
+
+	if (sectionHeader === "Dashboard" || sectionHeader === "Workspaces") {
 		if (item.name === "Super Admin")
 			return <Crown className="h-4 w-4 text-yellow-500 shrink-0" />;
 		if (item.name === "Organization Admin")
@@ -53,6 +66,8 @@ function ItemIcon({
 			return <Building className="h-4 w-4 text-green-500 shrink-0" />;
 		if (item.name === "Viewer")
 			return <Eye className="h-4 w-4 text-gray-500 shrink-0" />;
+		if (item.name === "IT")
+			return <Server className="h-4 w-4 text-[#0f5384] shrink-0" />;
 	}
 
 	const mapped = ITEM_ICONS[item.name];

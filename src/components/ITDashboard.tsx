@@ -15,6 +15,10 @@ import {
 	XCircle,
 } from "lucide-react";
 import React from "react";
+import {
+	DashboardGreeting,
+	type DashboardGreetingUser,
+} from "@/components/dashboard/DashboardGreeting";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useITDashboard } from "@/hooks/useITDashboard";
@@ -25,9 +29,11 @@ import {
 	realtimeService,
 } from "@/lib/services/realtime-service";
 
-type ITDashboardProps = {};
+type ITDashboardProps = {
+	user?: DashboardGreetingUser | null;
+};
 
-const ITDashboard: React.FC<ITDashboardProps> = () => {
+const ITDashboard: React.FC<ITDashboardProps> = ({ user }) => {
 	const {
 		dashboard,
 		isLoading: dashboardLoading,
@@ -46,6 +52,7 @@ const ITDashboard: React.FC<ITDashboardProps> = () => {
 	});
 
 	const { user: itUser, loading: userLoading } = useITUser();
+	const greetingUser = (user ?? itUser ?? null) as DashboardGreetingUser | null;
 	const [realtimeStatus, setRealtimeStatus] = React.useState<ConnectionStatus>(
 		realtimeService.getConnectionStatus(),
 	);
@@ -80,30 +87,24 @@ const ITDashboard: React.FC<ITDashboardProps> = () => {
 	return (
 		<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
 			<div className="space-y-6">
-				{/* Header */}
-				<div className="flex items-center justify-between">
-					<div>
-						<h2 className="text-3xl font-bold tracking-tight sidebar-gradient-text">
-							IT Dashboard
-						</h2>
-						<p className="text-muted-foreground">
-							System overview and real-time monitoring
-						</p>
-					</div>
-					<div className="flex items-center gap-2">
-						{realtimeStatus === "connected" ? (
-							<div className="flex items-center gap-1 text-green-600">
-								<Wifi className="h-4 w-4" />
-								<span className="text-sm">Real-time sync active</span>
-							</div>
-						) : (
-							<div className="flex items-center gap-1 text-yellow-600">
-								<Wifi className="h-4 w-4 animate-pulse" />
-								<span className="text-sm">Connecting...</span>
-							</div>
-						)}
-					</div>
-				</div>
+				<DashboardGreeting
+					user={greetingUser}
+					actions={
+						<div className="flex items-center gap-2">
+							{realtimeStatus === "connected" ? (
+								<div className="flex items-center gap-1 text-green-600">
+									<Wifi className="h-4 w-4" />
+									<span className="text-sm">Real-time sync active</span>
+								</div>
+							) : (
+								<div className="flex items-center gap-1 text-yellow-600">
+									<Wifi className="h-4 w-4" />
+									<span className="text-sm">Connecting…</span>
+								</div>
+							)}
+						</div>
+					}
+				/>
 
 				{/* System Health Cards */}
 				<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">

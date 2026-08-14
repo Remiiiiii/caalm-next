@@ -8,6 +8,7 @@ import DemoTourLayer from "@/components/demo/tour/DemoTourLayer";
 import MobileNavigation from "@/components/MobileNavigation";
 import NotificationSoundListener from "@/components/NotificationSoundListener";
 import Sidebar from "@/components/Sidebar";
+import ReportIssueFab from "@/components/tickets/ReportIssueFab";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
@@ -121,6 +122,7 @@ const LayoutContent = ({ children }: { children: React.ReactNode }) => {
 						</section>
 						<Toaster />
 						<DemoTourLayer />
+						<ReportIssueFab />
 					</main>
 				</SidebarProvider>
 			)}

@@ -301,7 +301,7 @@ function CalendarCalHead({
 			<button
 				type="button"
 				onClick={onToday}
-				className="rounded-md font-mono text-[10px] font-medium uppercase tracking-wide text-[#0f5384] bg-blue/10 border border-blue/20 px-2.5 py-1 transition-colors hover:bg-blue/15"
+				className="rounded-md text-[10px] font-medium uppercase tracking-wide text-[#0f5384] bg-blue/10 border border-blue/20 px-2.5 py-1 transition-colors hover:bg-blue/15"
 			>
 				Today
 			</button>
@@ -391,25 +391,10 @@ function DashboardMonthMatrix({
 								type="button"
 								disabled={disabled}
 								onClick={() => onSelectDate(day)}
-								className={cn(
-									"group relative flex h-11 flex-col items-center justify-center text-[13px] transition-colors",
-									!inMonth && "text-slate-300",
-									inMonth && !today && !disabled && "text-slate-700",
-									disabled && "cursor-not-allowed opacity-50",
-								)}
+								className={cn( "group relative flex h-11 flex-col items-center justify-center text-[13px] transition-colors", !inMonth && "text-slate-300", inMonth && !today && !disabled && "text-slate-700", disabled && "cursor-not-allowed opacity-50", )}
 							>
 								<span
-									className={cn(
-										"flex h-[26px] w-[26px] items-center justify-center rounded-full transition-colors",
-										today && CALENDAR_TODAY_BADGE,
-										selected &&
-											!today &&
-											"bg-blue/10 font-semibold text-[#0f5384] ring-2 ring-[#0f5384]/30",
-										!today &&
-											!selected &&
-											!disabled &&
-											"group-hover:bg-slate-100",
-									)}
+									className={cn( "flex h-[26px] w-[26px] items-center justify-center rounded-full transition-colors", today && CALENDAR_TODAY_BADGE, selected && !today && "bg-blue/10 font-semibold text-[#0f5384] ring-2 ring-[#0f5384]/30", !today && !selected && !disabled && "group-hover:bg-slate-100", )}
 								>
 									{format(day, "d")}
 								</span>
@@ -777,14 +762,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 						<div key={day.toISOString()} className="p-2">
 							<div className="text-xs text-slate-500">{format(day, "EEE")}</div>
 							<div
-								className={cn(
-									"mx-auto flex h-[26px] w-[26px] cursor-pointer items-center justify-center rounded-full text-lg font-semibold transition-colors",
-									isToday(day)
-										? CALENDAR_TODAY_BADGE
-										: selectedDate && isSameDay(day, selectedDate)
-											? "bg-blue/10 text-[#0f5384] ring-2 ring-[#0f5384]/30"
-											: "text-slate-700 hover:bg-slate-100",
-								)}
+								className={cn( "mx-auto flex h-[26px] w-[26px] cursor-pointer items-center justify-center rounded-full text-lg font-semibold transition-colors", isToday(day) ? CALENDAR_TODAY_BADGE : selectedDate && isSameDay(day, selectedDate) ? "bg-blue/10 text-[#0f5384] ring-2 ring-[#0f5384]/30" : "text-slate-700 hover:bg-slate-100", )}
 								onClick={() => handleDateSelect(day)}
 							>
 								{format(day, "d")}
@@ -805,10 +783,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 							return (
 								<div
 									key={day.toISOString()}
-									className={cn(
-										"border-b border-slate-200 last:border-b-0 transition-colors",
-										isSelected ? "bg-blue-50" : "hover:bg-slate-50",
-									)}
+									className={cn( "border-b border-slate-200 last:border-b-0 transition-colors", isSelected ? "bg-blue-50" : "hover:bg-slate-50", )}
 								>
 									<div className="flex items-center justify-between p-3 bg-slate-50 border-b border-slate-200">
 										<h3 className="font-semibold text-slate-800 text-sm">
@@ -834,10 +809,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 														onClick={() => onEventClick?.(event)}
 													>
 														<div
-															className={cn(
-																"w-1 h-full rounded-full flex-shrink-0",
-																config.color,
-															)}
+															className={cn( "w-1 h-full rounded-full flex-shrink-0", config.color, )}
 														/>
 														<div className="flex-1 min-w-0">
 															<div className="flex items-center gap-2 mb-1">
@@ -928,11 +900,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 				<button
 					type="button"
 					onClick={goToToday}
-					className={cn(
-						CALENDAR_TAB_BASE,
-						CALENDAR_TAB_INACTIVE,
-						"shrink-0 px-3.5 sm:px-3.5",
-					)}
+					className={cn( CALENDAR_TAB_BASE, CALENDAR_TAB_INACTIVE, "shrink-0 px-3.5 sm:px-3.5", )}
 				>
 					Today
 				</button>
@@ -940,11 +908,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 					type="button"
 					onClick={() => setViewMode("month")}
 					aria-pressed={viewMode === "month"}
-					className={cn(
-						CALENDAR_TAB_BASE,
-						"flex-1",
-						viewMode === "month" ? CALENDAR_TAB_ACTIVE : CALENDAR_TAB_INACTIVE,
-					)}
+					className={cn( CALENDAR_TAB_BASE, "flex-1", viewMode === "month" ? CALENDAR_TAB_ACTIVE : CALENDAR_TAB_INACTIVE, )}
 				>
 					<Grid3X3 className="h-3.5 w-3.5" />
 					Month
@@ -953,11 +917,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 					type="button"
 					onClick={() => setViewMode("week")}
 					aria-pressed={viewMode === "week"}
-					className={cn(
-						CALENDAR_TAB_BASE,
-						"flex-1",
-						viewMode === "week" ? CALENDAR_TAB_ACTIVE : CALENDAR_TAB_INACTIVE,
-					)}
+					className={cn( CALENDAR_TAB_BASE, "flex-1", viewMode === "week" ? CALENDAR_TAB_ACTIVE : CALENDAR_TAB_INACTIVE, )}
 				>
 					<CalendarDays className="h-3.5 w-3.5" />
 					Week
@@ -980,10 +940,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 			</div>
 
 			<div
-				className={cn(
-					"w-full min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white",
-					CALENDAR_CARD_SHADOW,
-				)}
+				className={cn( "w-full min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white", CALENDAR_CARD_SHADOW, )}
 			>
 				{isLoading && (
 					<div className="flex items-center justify-center py-4">

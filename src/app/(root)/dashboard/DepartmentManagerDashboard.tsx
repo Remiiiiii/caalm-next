@@ -25,6 +25,8 @@ interface DepartmentManagerDashboardProps {
 				name?: string;
 				role?: string;
 				division?: string;
+				department?: string;
+				departmentLabel?: string;
 		  })
 		| null;
 }
@@ -32,7 +34,12 @@ interface DepartmentManagerDashboardProps {
 export default function DepartmentManagerDashboard({
 	user,
 }: DepartmentManagerDashboardProps) {
-	const division = user?.division || "";
+	// Prefer division; fall back to department so org-unit–only profiles still load
+	const division =
+		user?.division?.trim() ||
+		user?.department?.trim() ||
+		user?.departmentLabel?.trim() ||
+		"";
 	const { data, error, isLoading, refresh } =
 		useDepartmentDashboardData(division);
 	const {
@@ -51,6 +58,7 @@ export default function DepartmentManagerDashboard({
 					division=""
 					departmentLabel=""
 					userName={displayName}
+					user={user}
 				/>
 				<Card className="glass-card">
 					<div className="glass-card-cap" />
@@ -60,8 +68,8 @@ export default function DepartmentManagerDashboard({
 							Division not assigned
 						</h3>
 						<p className="text-sm text-slate-600 mb-4">
-							Your profile needs a division before this dashboard can show
-							department-scoped metrics.
+							Your profile needs a division or department before this dashboard
+							can show department-scoped metrics.
 						</p>
 					</CardContent>
 				</Card>
@@ -76,6 +84,7 @@ export default function DepartmentManagerDashboard({
 					division={division}
 					departmentLabel=""
 					userName={displayName}
+					user={user}
 				/>
 				<Card className="glass-card">
 					<div className="glass-card-cap" />
@@ -109,6 +118,7 @@ export default function DepartmentManagerDashboard({
 				division={data?.division || division}
 				departmentLabel={data?.departmentLabel || ""}
 				userName={displayName}
+				user={user}
 			/>
 
 			<RiskImpactHeroCard

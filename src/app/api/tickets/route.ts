@@ -4,7 +4,11 @@ import { getCurrentUser } from "@/lib/actions/user.actions";
 import { getUserDefaultOrganization, getUserPermissions } from "@/lib/rbac/permissions";
 import { requirePermission } from "@/lib/rbac/middleware";
 import { canViewAllTickets, filterVisibleTickets } from "@/lib/tickets/ticket-access.policy";
-import { intakeTicket, parseSeverity, uploadTicketAttachments } from "@/lib/tickets/ticket-intake.service";
+import {
+	buildCreateTicketInput,
+	intakeTicket,
+	uploadTicketAttachments,
+} from "@/lib/tickets/ticket-intake.service";
 import { listTickets } from "@/lib/tickets/ticket.repository";
 
 export async function GET(request: NextRequest) {
@@ -64,20 +68,29 @@ export async function POST(request: NextRequest) {
 		const contentType = request.headers.get("content-type") || "";
 		let title = "";
 		let description = "";
-		let severityRaw: unknown = "medium";
+		let category: unknown = "";
+		let affectedModule: unknown = "";
+		let impact: unknown = "";
+		let urgency: unknown = "";
 		let files: File[] = [];
 
 		if (contentType.includes("multipart/form-data")) {
 			const form = await request.formData();
 			title = String(form.get("title") || "");
 			description = String(form.get("description") || "");
-			severityRaw = form.get("severity") || "medium";
+			category = form.get("category") || "";
+			affectedModule = form.get("affectedModule") || "";
+			impact = form.get("impact") || "";
+			urgency = form.get("urgency") || "";
 			files = form.getAll("attachments").filter((item): item is File => item instanceof File);
 		} else {
 			const body = await request.json();
 			title = String(body.title || "");
 			description = String(body.description || "");
-			severityRaw = body.severity;
+			category = body.category;
+			affectedModule = body.affectedModule;
+			impact = body.impact;
+			urgency = body.urgency;
 		}
 
 		if (title.trim().length < 3 || description.trim().length < 8) {
@@ -88,17 +101,24 @@ export async function POST(request: NextRequest) {
 		}
 
 		const attachmentIds = await uploadTicketAttachments(files);
+		const payload = buildCreateTicketInput({
+			title,
+			description,
+			category,
+			affectedModule,
+			impact,
+			urgency,
+			attachmentIds,
+		});
 		const ticket = await intakeTicket({
-			payload: {
-				title,
-				description,
-				severity: parseSeverity(severityRaw),
-				attachmentIds,
-			},
+			payload,
 			actor: {
 				$id: user.$id,
 				fullName: user.fullName,
 				division: user.division,
+				department: user.department,
+				departmentLabel: user.departmentLabel,
+				divisionLabel: user.divisionLabel,
 			},
 			orgId: org.orgId,
 		});
@@ -106,9 +126,12 @@ export async function POST(request: NextRequest) {
 		return NextResponse.json({ ticket }, { status: 201 });
 	} catch (error) {
 		console.error("[api/tickets] POST", error);
-		return NextResponse.json(
-			{ error: error instanceof Error ? error.message : "Failed to create ticket" },
-			{ status: 500 },
-		);
+		const message =
+			error instanceof Error ? error.message : "Failed to create ticket";
+		const status =
+			message.startsWith("Invalid ") || message.includes("combination")
+				? 400
+				: 500;
+		return NextResponse.json({ error: message }, { status });
 	}
 }

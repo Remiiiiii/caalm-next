@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from "react";
 import ArticleEditor from "@/components/news/ArticleEditor";
 import ArticleList from "@/components/news/ArticleList";
 import NewsAnalytics from "@/components/news/NewsAnalytics";
+import { DashboardGreeting } from "@/components/dashboard/DashboardGreeting";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -20,6 +21,8 @@ interface ContentCreatorDashboardProps {
 				fullName?: string;
 				role?: string;
 				division?: string;
+				department?: string;
+				departmentLabel?: string;
 		  })
 		| null;
 }
@@ -32,7 +35,7 @@ interface NewsStats {
 }
 
 const ContentCreatorDashboard: React.FC<ContentCreatorDashboardProps> = ({
-	user: _user,
+	user,
 }) => {
 	const [stats, setStats] = useState<NewsStats>({
 		total: 0,
@@ -108,23 +111,15 @@ const ContentCreatorDashboard: React.FC<ContentCreatorDashboardProps> = ({
 
 	return (
 		<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
-			{/* Header */}
-			<div className="mb-6">
-				<div className="flex items-center justify-between">
-					<div>
-						<h1 className="h1 capitalize sidebar-gradient-text">
-							Content Creator Dashboard
-						</h1>
-						<p className="text-sm text-slate-600 mt-1">
-							Manage and create company news articles
-						</p>
-					</div>
+			<DashboardGreeting
+				user={user}
+				actions={
 					<Button onClick={handleCreateArticle} className="primary-btn">
 						<Plus className="h-4 w-4" />
 						Create Article
 					</Button>
-				</div>
-			</div>
+				}
+			/>
 
 			{/* Statistics Cards */}
 			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">

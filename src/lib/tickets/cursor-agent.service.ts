@@ -10,18 +10,30 @@ export function buildCursorAgentPrompt(input: {
 	issueUrl: string;
 	issueTitle: string;
 	issueBody: string;
+	/** Optional human guidance from the ticket Resolve form */
+	instructions?: string;
 }): string {
+	const guidance = input.instructions?.trim()
+		? `\nOperator instructions:\n${input.instructions.trim()}\n`
+		: "";
+
 	return `Implement a fix for GitHub issue #${input.issueNumber} (${input.issueUrl}).
 
 Title: ${input.issueTitle}
 
 ${input.issueBody}
-
+${guidance}
 Requirements:
 - Write or update tests that cover the fix.
 - Open a pull request with autoCreatePR.
 - The PR body MUST include the line: Fixes #${input.issueNumber}
 `;
+}
+
+function cursorApiAuthHeader(apiKey: string): string {
+	// v0 Cloud Agents API expects Basic auth: API key as username, empty password
+	const token = Buffer.from(`${apiKey}:`, "utf8").toString("base64");
+	return `Basic ${token}`;
 }
 
 export async function launchCursorAgent(input: {
@@ -30,6 +42,7 @@ export async function launchCursorAgent(input: {
 	issueTitle: string;
 	issueBody: string;
 	repoUrl?: string;
+	instructions?: string;
 }): Promise<CursorAgentLaunchResult> {
 	const apiKey = process.env.CURSOR_API_KEY;
 	if (!apiKey) {
@@ -40,7 +53,7 @@ export async function launchCursorAgent(input: {
 	const res = await fetch("https://api.cursor.com/v0/agents", {
 		method: "POST",
 		headers: {
-			Authorization: `Bearer ${apiKey}`,
+			Authorization: cursorApiAuthHeader(apiKey),
 			"Content-Type": "application/json",
 		},
 		body: JSON.stringify({
@@ -75,7 +88,7 @@ export async function getCursorAgentStatus(agentId: string): Promise<{
 
 	const res = await fetch(`https://api.cursor.com/v0/agents/${agentId}`, {
 		headers: {
-			Authorization: `Bearer ${apiKey}`,
+			Authorization: cursorApiAuthHeader(apiKey),
 			"Content-Type": "application/json",
 		},
 	});

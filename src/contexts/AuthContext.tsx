@@ -31,6 +31,9 @@ import { useToast } from "@/hooks/use-toast";
 type AuthenticatedUser = Models.User<Models.Preferences> & {
 	role?: string;
 	division?: string;
+	department?: string;
+	departmentLabel?: string;
+	divisionLabel?: string;
 	accountId?: string;
 	avatar?: string;
 	prefs?: Models.Preferences & {
@@ -236,6 +239,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 								role: normalizeUserRole(twoFAUser.role),
 								accountId: twoFAUser.accountId,
 								division: twoFAUser.division,
+								department: twoFAUser.department,
+								departmentLabel: twoFAUser.departmentLabel,
+								divisionLabel: twoFAUser.divisionLabel,
 								avatar: twoFAUser.avatar,
 								emailVerification: true,
 								phoneVerification: false,
@@ -426,6 +432,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 						role: normalizeUserRole(twoFAUser.role),
 						accountId: twoFAUser.accountId,
 						division: twoFAUser.division,
+						department: twoFAUser.department,
+						departmentLabel: twoFAUser.departmentLabel,
+						divisionLabel: twoFAUser.divisionLabel,
 						avatar: twoFAUser.avatar,
 						emailVerification: true,
 						phoneVerification: false,
