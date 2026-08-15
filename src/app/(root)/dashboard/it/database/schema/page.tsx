@@ -41,7 +41,7 @@ export default function DatabaseSchemaPage() {
 		>
 			{isLoading ? (
 				<div className="py-12 flex justify-center">
-					<LoadingSpinner size="sm" label="Loading schema…" />
+					<LoadingSpinner size="sm" label="Loading schema..." />
 				</div>
 			) : error || !data?.success ? (
 				<ITGlassPanel>
