@@ -70,7 +70,7 @@ describe("MyAccessPanel - Core Rendering", () => {
 		).default;
 		const { container } = render(<MyAccessPanel />);
 
-		expect(screen.getByText(/active roles/i)).toBeInTheDocument();
+		expect(screen.getByText("Active Roles")).toBeInTheDocument();
 		expect(screen.getByText("Permissions")).toBeInTheDocument();
 		// Check for Organization card title specifically
 		const orgCard = container.querySelector(".sidebar-gradient-text");
@@ -93,11 +93,11 @@ describe("MyAccessPanel - Core Rendering", () => {
 		render(<MyAccessPanel />);
 
 		expect(
-			screen.getByPlaceholderText(/search permissions/i),
+			screen.getByPlaceholderText(/search roles or permissions/i),
 		).toBeInTheDocument();
 	});
 
-	it("displays category filter buttons", async () => {
+	it("displays category filter dropdown", async () => {
 		mockUsePermissions.mockReturnValue({
 			permissions: [],
 			loading: false,
@@ -112,7 +112,9 @@ describe("MyAccessPanel - Core Rendering", () => {
 		).default;
 		render(<MyAccessPanel />);
 
-		expect(screen.getByText(/all categories/i)).toBeInTheDocument();
+		expect(
+			screen.getByRole("combobox", { name: /filter by category/i }),
+		).toBeInTheDocument();
 	});
 });
 
@@ -195,7 +197,9 @@ describe("MyAccessPanel - Search Functionality", () => {
 		).default;
 		render(<MyAccessPanel />);
 
-		const searchInput = screen.getByPlaceholderText(/search permissions/i);
+		const searchInput = screen.getByPlaceholderText(
+			/search roles or permissions/i,
+		);
 		await user.type(searchInput, "user");
 
 		expect(searchInput).toHaveValue("user");
@@ -217,7 +221,9 @@ describe("MyAccessPanel - Search Functionality", () => {
 		).default;
 		render(<MyAccessPanel />);
 
-		const searchInput = screen.getByPlaceholderText(/search permissions/i);
+		const searchInput = screen.getByPlaceholderText(
+			/search roles or permissions/i,
+		);
 		await user.type(searchInput, "nonexistent");
 
 		expect(screen.getByText(/no permissions found/i)).toBeInTheDocument();
