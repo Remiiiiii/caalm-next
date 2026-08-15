@@ -2,11 +2,13 @@ import { ID, Query } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { appendTicketEvent } from "./ticket-events.repository";
+import { listPullsForCommit } from "./github-tickets.service";
 import {
 	getTicketByGithubIssue,
+	getTicketByPrNumber,
 	updateTicket,
 } from "./ticket.repository";
-import { getTicketsRepo } from "./ticket.types";
+import { getTicketsRepo, type Ticket, type TicketEventType } from "./ticket.types";
 
 export type GitHubWebhookEvent = {
 	action?: string;
@@ -28,6 +30,10 @@ export type GitHubWebhookEvent = {
 		head_branch?: string;
 		pull_requests?: Array<{ number: number }>;
 	};
+	/** Commit status payload (Vercel posts `Vercel – caalm-next`). */
+	state?: string;
+	sha?: string;
+	context?: string;
 };
 
 function deliveriesTable(): string {
@@ -67,7 +73,17 @@ export type ClassifiedGitHubEvent =
 	  }
 	| { kind: "pr_merged"; issueNumber: number; prNumber: number; prUrl: string }
 	| { kind: "ci_passed"; prNumber: number }
+	| { kind: "vercel_deployed"; sha: string; context: string }
 	| { kind: "ignored" };
+
+/** Hobby-safe deploy doorbell: Vercel GitHub statuses, not a 5-minute cron. */
+export function isCaalmNextVercelSuccess(payload: {
+	state?: string;
+	context?: string;
+}): boolean {
+	if (payload.state !== "success" || !payload.context) return false;
+	return /^Vercel\s[-–]\scaalm-next$/i.test(payload.context.trim());
+}
 
 export function classifyGitHubWebhook(
 	eventName: string,
@@ -112,6 +128,18 @@ export function classifyGitHubWebhook(
 		return { kind: "ci_passed", prNumber };
 	}
 
+	if (
+		eventName === "status" &&
+		isCaalmNextVercelSuccess(payload) &&
+		payload.sha
+	) {
+		return {
+			kind: "vercel_deployed",
+			sha: payload.sha,
+			context: payload.context || "Vercel – caalm-next",
+		};
+	}
+
 	return { kind: "ignored" };
 }
 
@@ -149,6 +177,9 @@ export async function handleGitHubWebhookEvent(
 	if (classified.kind === "pr_merged") {
 		const ticket = await getTicketByGithubIssue(classified.issueNumber, repo);
 		if (!ticket) return { handled: false };
+		if (ticket.status === "RESOLVED") {
+			return { handled: true, ticketId: ticket.$id };
+		}
 		const updated = await updateTicket(ticket.$id, {
 			status: "IN_REVIEW",
 			prNumber: classified.prNumber,
@@ -164,32 +195,69 @@ export async function handleGitHubWebhookEvent(
 	}
 
 	if (classified.kind === "ci_passed") {
-		const { tablesDB } = await createAdminClient();
-		const result = await tablesDB.listRows({
-			databaseId: appwriteConfig.databaseId || "default-db",
-			tableId: appwriteConfig.ticketsCollectionId || "tickets",
-			queries: [Query.equal("prNumber", classified.prNumber), Query.limit(1)],
-		});
-		const ticket = result.rows[0] as { $id: string; status?: string } | undefined;
+		const ticket = await getTicketByPrNumber(classified.prNumber);
 		if (!ticket) return { handled: false };
-		if (ticket.status === "RESOLVED") return { handled: true, ticketId: ticket.$id };
+		return markTicketResolved(ticket, "CI_PASSED");
+	}
 
-		const updated = await updateTicket(ticket.$id, {
-			status: "RESOLVED",
-			resolvedAt: new Date().toISOString(),
-		});
-		await appendTicketEvent({
-			ticketId: updated.$id,
-			eventType: "CI_PASSED",
-			actor: "system",
-		});
-		await appendTicketEvent({
-			ticketId: updated.$id,
-			eventType: "ARCHIVED",
-			actor: "system",
-		});
-		return { handled: true, ticketId: updated.$id };
+	if (classified.kind === "vercel_deployed") {
+		try {
+			const pulls = await listPullsForCommit(classified.sha, repo);
+			for (const pull of pulls) {
+				if (!pull.mergedAt) continue;
+				const issueNumber = issueNumberFromPr({
+					pull_request: {
+						number: pull.number,
+						html_url: "",
+						merged: true,
+						body: pull.body,
+						title: pull.title,
+					},
+				});
+				const ticket =
+					(await getTicketByPrNumber(pull.number)) ||
+					(issueNumber
+						? await getTicketByGithubIssue(issueNumber, repo)
+						: null);
+				if (!ticket) continue;
+				return markTicketResolved(ticket, "DEPLOYED", {
+					sha: classified.sha,
+					context: classified.context,
+					prNumber: pull.number,
+				});
+			}
+		} catch {
+			return { handled: false };
+		}
+		return { handled: false };
 	}
 
 	return { handled: false };
+}
+
+async function markTicketResolved(
+	ticket: Ticket,
+	eventType: Extract<TicketEventType, "CI_PASSED" | "DEPLOYED">,
+	metadata?: Record<string, unknown>,
+): Promise<{ handled: boolean; ticketId: string }> {
+	if (ticket.status === "RESOLVED") {
+		return { handled: true, ticketId: ticket.$id };
+	}
+
+	const updated = await updateTicket(ticket.$id, {
+		status: "RESOLVED",
+		resolvedAt: new Date().toISOString(),
+	});
+	await appendTicketEvent({
+		ticketId: updated.$id,
+		eventType,
+		actor: "system",
+		metadata,
+	});
+	await appendTicketEvent({
+		ticketId: updated.$id,
+		eventType: "ARCHIVED",
+		actor: "system",
+	});
+	return { handled: true, ticketId: updated.$id };
 }

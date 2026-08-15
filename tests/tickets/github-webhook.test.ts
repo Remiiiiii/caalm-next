@@ -64,6 +64,37 @@ describe("classifyGitHubWebhook", () => {
 		).toEqual({ kind: "ci_passed", prNumber: 9 });
 	});
 
+	it("maps a green Vercel caalm-next GitHub status", () => {
+		expect(
+			classifyGitHubWebhook("status", {
+				state: "success",
+				sha: "abc123",
+				context: "Vercel – caalm-next",
+			}),
+		).toEqual({
+			kind: "vercel_deployed",
+			sha: "abc123",
+			context: "Vercel – caalm-next",
+		});
+	});
+
+	it("ignores Vercel demo and failed statuses", () => {
+		expect(
+			classifyGitHubWebhook("status", {
+				state: "success",
+				sha: "abc123",
+				context: "Vercel – caalm-demo",
+			}),
+		).toEqual({ kind: "ignored" });
+		expect(
+			classifyGitHubWebhook("status", {
+				state: "failure",
+				sha: "abc123",
+				context: "Vercel – caalm-next",
+			}),
+		).toEqual({ kind: "ignored" });
+	});
+
 	it("ignores unrelated events", () => {
 		expect(classifyGitHubWebhook("ping", {})).toEqual({ kind: "ignored" });
 	});

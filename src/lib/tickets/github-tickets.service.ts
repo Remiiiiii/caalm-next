@@ -189,6 +189,30 @@ export async function createGitHubIssue(input: {
 	};
 }
 
+/** PRs that contain this commit. Used to map a Vercel GitHub status SHA to a ticket. */
+export async function listPullsForCommit(
+	sha: string,
+	repo?: string,
+): Promise<Array<{ number: number; mergedAt: string | null; title: string; body: string }>> {
+	const { owner, name } = parseRepo(repo);
+	const res = await githubFetch(`/repos/${owner}/${name}/commits/${sha}/pulls`);
+	if (!res.ok) {
+		throw new Error(`GitHub commit pulls lookup failed: ${res.status}`);
+	}
+	const pulls = (await res.json()) as Array<{
+		number: number;
+		merged_at: string | null;
+		title?: string;
+		body?: string | null;
+	}>;
+	return pulls.map((pull) => ({
+		number: pull.number,
+		mergedAt: pull.merged_at,
+		title: pull.title || "",
+		body: pull.body || "",
+	}));
+}
+
 export async function fetchGitHubIssue(
 	issueNumber: number,
 	repo?: string,
