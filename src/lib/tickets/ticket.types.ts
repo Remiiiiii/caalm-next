@@ -33,6 +33,7 @@ export const TICKET_EVENT_TYPES = [
 	"PR_OPENED",
 	"PR_MERGED",
 	"CI_PASSED",
+	"DEPLOYED",
 	"ARCHIVED",
 	"FAILED",
 	"NEEDS_HUMAN",

@@ -42,6 +42,18 @@ export async function getTicketById(ticketId: string): Promise<Ticket | null> {
 	}
 }
 
+export async function getTicketByPrNumber(
+	prNumber: number,
+): Promise<Ticket | null> {
+	const { tablesDB } = await createAdminClient();
+	const result = await tablesDB.listRows({
+		databaseId: dbId(),
+		tableId: ticketsTable(),
+		queries: [Query.equal("prNumber", prNumber), Query.limit(1)],
+	});
+	return (result.rows[0] as unknown as Ticket) ?? null;
+}
+
 export async function getTicketByGithubIssue(
 	issueNumber: number,
 	repo: string,
