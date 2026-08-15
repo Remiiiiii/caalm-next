@@ -163,5 +163,5 @@ mcpjson.txt
 *.old
 *.bak
 
-# Graft local graph cache (regenerable; run `graft build`)
+# Graft
 graft/
