@@ -1,4 +1,4 @@
-import { ClipboardCheck, ScrollText } from "lucide-react";
+import { ClipboardCheck, Gauge, ScrollText } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
@@ -7,6 +7,13 @@ export default function AuditsLayout({ children }: { children: ReactNode }) {
 		<div>
 			<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 pt-4">
 				<nav className="flex flex-wrap gap-2 mb-2">
+					<Link
+						href="/audits/readiness"
+						className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors duration-200"
+					>
+						<Gauge className="h-4 w-4 text-[#0f5384] shrink-0" />
+						Readiness
+					</Link>
 					<Link
 						href="/audits/status"
 						className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors duration-200"

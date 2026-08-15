@@ -1,6 +1,4 @@
 import { Query } from "node-appwrite";
-import { PERMISSIONS } from "@/constants/permissions";
-import { getCurrentUser } from "@/lib/actions/user.actions";
 import { LicenseService } from "@/lib/api/licenses/services/LicenseService";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
@@ -8,19 +6,11 @@ import { dedupeEvidenceRows } from "@/lib/audits/evidence-utils";
 import type {
 	AuditEvidenceRow,
 	AuditEvidenceStatus,
-	ComplianceRagStatus,
 	ComplianceStatusSnapshot,
 	LiveContractCompliance,
 	LiveLicenseCompliance,
 } from "@/lib/audits/types";
-import {
-	buildContractQueries,
-	getContractListScope,
-} from "@/lib/rbac/data-scope";
-import {
-	getUserDefaultOrganization,
-	getUserPermissions,
-} from "@/lib/rbac/permissions";
+import { computeLiveReadinessScore, computeRag } from "./score";
 
 const COMPLIANT_CONTRACT_STATUSES = new Set(["up-to-date", "compliant"]);
 
@@ -59,24 +49,14 @@ function mapLicenseComplianceToStatus(
 	return "pending";
 }
 
-function computeRagStatus(score: number): ComplianceRagStatus {
-	if (score >= 85) return "green";
-	if (score >= 70) return "amber";
-	return "red";
-}
-
-async function fetchContractCompliance(
-	userId: string,
+async function fetchContractsForOrg(
 	orgId: string,
-): Promise<LiveContractCompliance | null> {
-	const scope = await getContractListScope(userId, orgId);
-	const scopeQueries = buildContractQueries(scope);
+): Promise<LiveContractCompliance> {
 	const { tablesDB } = await createAdminClient();
-
 	const result = await tablesDB.listRows({
 		databaseId: appwriteConfig.databaseId!,
 		tableId: appwriteConfig.contractsCollectionId!,
-		queries: [...scopeQueries, Query.limit(500)],
+		queries: [Query.equal("orgId", orgId), Query.limit(500)],
 	});
 
 	const contracts = result.rows as Array<{
@@ -146,9 +126,9 @@ async function fetchContractCompliance(
 	};
 }
 
-async function fetchLicenseCompliance(
+async function fetchLicensesForOrg(
 	orgId: string,
-): Promise<LiveLicenseCompliance | null> {
+): Promise<LiveLicenseCompliance> {
 	const { licenses } = await LicenseService.listLicenses(orgId, undefined, {
 		limit: 500,
 		offset: 0,
@@ -169,7 +149,6 @@ async function fetchLicenseCompliance(
 
 	for (const license of licenses) {
 		if (license.status === "active") active += 1;
-
 		const bucket = license.compliance ?? "unknown";
 		if (complianceBuckets[bucket] === undefined) complianceBuckets.unknown += 1;
 		else complianceBuckets[bucket] += 1;
@@ -200,9 +179,7 @@ async function fetchLicenseCompliance(
 	}
 
 	for (const license of expiring) {
-		if (evidence.some((row) => row.id === license.$id)) {
-			continue;
-		}
+		if (evidence.some((row) => row.id === license.$id)) continue;
 		evidence.push({
 			id: license.$id,
 			title: license.licenseName,
@@ -216,8 +193,6 @@ async function fetchLicenseCompliance(
 		});
 	}
 
-	const compliantCount = complianceBuckets.compliant ?? 0;
-
 	return {
 		total: licenses.length,
 		active,
@@ -228,76 +203,51 @@ async function fetchLicenseCompliance(
 	};
 }
 
-export async function getComplianceStatusSnapshot(
-	userId: string,
-): Promise<ComplianceStatusSnapshot> {
-	const defaultOrg = await getUserDefaultOrganization(userId);
-	const permissions = await getUserPermissions(userId, defaultOrg?.orgId);
+/** Admin/cron org-scoped snapshot (no user permission gating). */
+export async function getOrgComplianceSnapshot(
+	orgId: string,
+): Promise<ComplianceStatusSnapshot & { sourcesUsed: string[]; liveScore: number | null }> {
+	const contracts = await fetchContractsForOrg(orgId);
+	const licenses = await fetchLicensesForOrg(orgId);
 
-	const canViewContracts = permissions.includes(PERMISSIONS.CONTRACTS.VIEW);
-	const canViewLicenses = permissions.includes(PERMISSIONS.LICENSES.VIEW);
-
-	let contracts: LiveContractCompliance | null = null;
-	let licenses: LiveLicenseCompliance | null = null;
-
-	if (defaultOrg?.orgId) {
-		if (canViewContracts) {
-			contracts = await fetchContractCompliance(userId, defaultOrg.orgId);
-		}
-		if (canViewLicenses) {
-			licenses = await fetchLicenseCompliance(defaultOrg.orgId);
-		}
-	}
-
-	const contractComplianceRate = contracts?.complianceRate ?? null;
+	const contractComplianceRate =
+		contracts.total > 0 ? contracts.complianceRate : null;
 	const licenseRenewalHealth =
-		licenses && licenses.total > 0
+		licenses.total > 0
 			? Math.round(
 					((licenses.complianceBuckets.compliant ?? 0) / licenses.total) * 100,
 				)
 			: null;
 
-	// Live sources only — no hardcoded baseline (customer-facing accuracy).
-	const scoreParts: number[] = [];
-	if (contractComplianceRate !== null) scoreParts.push(contractComplianceRate);
-	if (licenseRenewalHealth !== null) scoreParts.push(licenseRenewalHealth);
-
-	const overallScore =
-		scoreParts.length > 0
-			? Math.round(
-					scoreParts.reduce((sum, value) => sum + value, 0) / scoreParts.length,
-				)
-			: 0;
+	const { score, sourcesUsed } = computeLiveReadinessScore({
+		contractComplianceRate,
+		licenseRenewalHealth,
+	});
 
 	const areasAtRisk =
-		(contracts?.buckets["action-required"] ?? 0) +
-		(contracts?.buckets["non-compliant"] ?? 0) +
-		(licenses?.atRisk ?? 0);
+		(contracts.buckets["action-required"] ?? 0) +
+		(contracts.buckets["non-compliant"] ?? 0) +
+		licenses.atRisk;
 
-	const upcomingDeadlines =
-		(contracts?.expiringSoon ?? 0) + (licenses?.expiringSoon ?? 0) + 4;
+	const upcomingDeadlines = contracts.expiringSoon + licenses.expiringSoon;
 
 	return {
 		overview: {
-			ragStatus: computeRagStatus(overallScore),
-			overallScore,
+			ragStatus: computeRag(score) ?? "red",
+			overallScore: score ?? 0,
 			areasAtRisk,
 			upcomingDeadlines,
-			filingsOnTime: 100,
+			filingsOnTime: 0,
 			contractComplianceRate,
 			licenseRenewalHealth,
 		},
 		contracts,
 		licenses,
 		sources: {
-			contracts: canViewContracts && contracts !== null,
-			licenses: canViewLicenses && licenses !== null,
+			contracts: contracts.total > 0,
+			licenses: licenses.total > 0,
 		},
+		sourcesUsed,
+		liveScore: score,
 	};
-}
-
-export async function getComplianceStatusForRequest(): Promise<ComplianceStatusSnapshot | null> {
-	const user = await getCurrentUser();
-	if (!user) return null;
-	return getComplianceStatusSnapshot(user.$id);
 }

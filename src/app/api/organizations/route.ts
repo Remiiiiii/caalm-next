@@ -16,6 +16,8 @@ const updateOrgSchema = z.object({
 			maxUsers: z.number().int().min(1).max(100000).optional(),
 			maxDepartments: z.number().int().min(1).max(1000).optional(),
 			features: z.array(z.string()).optional(),
+			timezone: z.string().min(1).max(64).optional(),
+			websiteUrl: z.string().max(500).optional().nullable(),
 		})
 		.optional(),
 });
@@ -125,6 +127,17 @@ export async function PUT(request: NextRequest) {
 						: {}),
 					...(validated.settings.features !== undefined
 						? { features: validated.settings.features }
+						: {}),
+					...(validated.settings.timezone !== undefined
+						? { timezone: validated.settings.timezone }
+						: {}),
+					...(validated.settings.websiteUrl !== undefined
+						? {
+								websiteUrl:
+									validated.settings.websiteUrl === null
+										? ""
+										: validated.settings.websiteUrl,
+							}
 						: {}),
 				}
 			: undefined;

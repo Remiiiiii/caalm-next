@@ -126,6 +126,15 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 		header: "Audits",
 		items: [
 			{
+				name: "Audit Readiness",
+				icon: "/assets/icons/compliance-status.svg",
+				url: "/audits/readiness",
+				permissions: [PERMISSIONS.AUDIT.VIEW],
+				hiddenForRoles: ["Department Manager"],
+				viewerReadOnly: true,
+				viewerFullAccess: true,
+			},
+			{
 				name: "Compliance Status",
 				icon: "/assets/icons/compliance-status.svg",
 				url: "/audits/status",
