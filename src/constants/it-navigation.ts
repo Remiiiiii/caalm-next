@@ -117,9 +117,9 @@ export const IT_NAVIGATION: ITSidebarSection[] = [
 				permission: PERMISSIONS.TICKETS.VIEW,
 			},
 			{
-				name: "Status board",
-				icon: "info",
-				url: "/dashboard/it/status",
+				name: "Issue History",
+				icon: "history",
+				url: "/dashboard/it/issuehistory",
 				permission: PERMISSIONS.TICKETS.VIEW,
 			},
 		],
@@ -449,6 +449,21 @@ export const IT_NAVIGATION: ITSidebarSection[] = [
 		],
 	},
 ];
+
+/**
+ * Keep the IT sidebar on these pages, not only under /dashboard/it.
+ * Tickets live at /tickets (queue, new, detail) but are IT Support nav items.
+ */
+export function isITSidebarPath(pathname: string | null | undefined): boolean {
+	if (!pathname) return false;
+	if (pathname === "/dashboard/it" || pathname.startsWith("/dashboard/it/")) {
+		return true;
+	}
+	if (pathname === "/incident" || pathname.startsWith("/incident/")) {
+		return true;
+	}
+	return pathname === "/tickets" || pathname.startsWith("/tickets/");
+}
 
 /** Lucide keys for workspace switcher labels */
 export const WORKSPACE_ICON_BY_NAME: Record<string, ITNavIconKey> = {

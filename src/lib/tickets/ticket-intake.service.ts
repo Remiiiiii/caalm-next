@@ -1,23 +1,23 @@
-import { InputFile } from "node-appwrite/file";
 import { ID } from "node-appwrite";
+import { InputFile } from "node-appwrite/file";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
-import { appendTicketEvent } from "./ticket-events.repository";
-import {
-	TICKET_CATEGORIES,
-	TICKET_MODULES,
-	deriveSeverityFromMatrix,
-	type TicketImpactUrgency,
-} from "./ticket-intake.constants";
-import { notifyTicketStaff } from "./ticket-notification.service";
-import { resolveSubmitterDepartmentLabel } from "./submitter-placement";
-import { createTicketRow, updateTicket } from "./ticket.repository";
 import {
 	buildGitHubIssueBody,
 	createGitHubIssue,
 } from "./github-tickets.service";
+import { resolveSubmitterDepartmentLabel } from "./submitter-placement";
+import { createTicketRow, updateTicket } from "./ticket.repository";
 import type { CreateTicketInput, Ticket, TicketSeverity } from "./ticket.types";
 import { getTicketsRepo, isTicketsEnabled } from "./ticket.types";
+import { appendTicketEvent } from "./ticket-events.repository";
+import {
+	deriveSeverityFromMatrix,
+	TICKET_CATEGORIES,
+	TICKET_MODULES,
+	type TicketImpactUrgency,
+} from "./ticket-intake.constants";
+import { notifyTicketStaff } from "./ticket-notification.service";
 
 export type IntakeActor = {
 	$id: string;
@@ -60,9 +60,7 @@ export async function intakeTicket(input: {
 	const submittedAt = new Date().toISOString();
 	const department = resolveSubmitterDepartmentLabel(input.actor);
 	const submittedByName =
-		input.actor.fullName?.trim() ||
-		input.actor.name?.trim() ||
-		"CAALM user";
+		input.actor.fullName?.trim() || input.actor.name?.trim() || "CAALM user";
 
 	const { severity } = deriveSeverityFromMatrix(
 		input.payload.impact,
@@ -145,28 +143,41 @@ export async function intakeTicket(input: {
 		ticketId: ticket.$id,
 		eventType: "ISSUE_CREATED",
 		actor: "ai-agent",
-		metadata: { githubIssueNumber: issue.number, githubIssueUrl: issue.htmlUrl },
+		metadata: {
+			githubIssueNumber: issue.number,
+			githubIssueUrl: issue.htmlUrl,
+		},
 	});
 
 	return updated;
 }
 
 export function slugLabel(value: string): string {
-	return value
-		.toLowerCase()
-		.replace(/[^a-z0-9]+/g, "-")
-		.replace(/^-|-$/g, "")
-		.slice(0, 50) || "unassigned";
+	return (
+		value
+			.toLowerCase()
+			.replace(/[^a-z0-9]+/g, "-")
+			.replace(/^-|-$/g, "")
+			.slice(0, 50) || "unassigned"
+	);
 }
 
 export function parseSeverity(value: unknown): TicketSeverity {
-	if (value === "low" || value === "medium" || value === "high" || value === "critical") {
+	if (
+		value === "low" ||
+		value === "medium" ||
+		value === "high" ||
+		value === "critical"
+	) {
 		return value;
 	}
 	throw new Error("Invalid severity");
 }
 
-export function parseImpactUrgency(value: unknown, field: "impact" | "urgency"): TicketImpactUrgency {
+export function parseImpactUrgency(
+	value: unknown,
+	field: "impact" | "urgency",
+): TicketImpactUrgency {
 	try {
 		return parseSeverity(value);
 	} catch {
@@ -176,7 +187,9 @@ export function parseImpactUrgency(value: unknown, field: "impact" | "urgency"):
 
 export function parseCategory(value: unknown): string {
 	const category = String(value || "").trim();
-	if (!TICKET_CATEGORIES.includes(category as (typeof TICKET_CATEGORIES)[number])) {
+	if (
+		!TICKET_CATEGORIES.includes(category as (typeof TICKET_CATEGORIES)[number])
+	) {
 		throw new Error("Invalid category");
 	}
 	return category;
@@ -185,8 +198,10 @@ export function parseCategory(value: unknown): string {
 export function parseAffectedModule(value: unknown): string | null {
 	const moduleValue = String(value || "").trim();
 	if (!moduleValue) return null;
-	if (!TICKET_MODULES.includes(moduleValue as (typeof TICKET_MODULES)[number])) {
-		throw new Error("Invalid affected module");
+	if (
+		!TICKET_MODULES.includes(moduleValue as (typeof TICKET_MODULES)[number])
+	) {
+		throw new Error("Invalid affected service");
 	}
 	return moduleValue;
 }

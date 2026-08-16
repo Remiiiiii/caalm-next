@@ -9,6 +9,7 @@ import {
 	Upload,
 	X,
 } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
 	type FormEvent,
 	type ReactNode,
@@ -17,7 +18,7 @@ import {
 	useRef,
 	useState,
 } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { SubmitProgressIndicator } from "@/components/tickets/SubmitProgressIndicator";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -31,6 +32,8 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
+import { resolveSubmitterDepartmentLabel } from "@/lib/tickets/submitter-placement";
+import type { TicketSeverity } from "@/lib/tickets/ticket.types";
 import {
 	deriveSeverityFromMatrix,
 	TICKET_CATEGORIES,
@@ -38,9 +41,6 @@ import {
 	TICKET_MODULES,
 	TICKET_URGENCY_LEVELS,
 } from "@/lib/tickets/ticket-intake.constants";
-import { SubmitProgressIndicator } from "@/components/tickets/SubmitProgressIndicator";
-import { resolveSubmitterDepartmentLabel } from "@/lib/tickets/submitter-placement";
-import type { TicketSeverity } from "@/lib/tickets/ticket.types";
 import { cn } from "@/lib/utils";
 
 type MatrixLevel = "Critical" | "High" | "Medium" | "Low";
@@ -108,10 +108,7 @@ function FormField({
 	return (
 		<div>
 			<div className="mb-1.5 flex items-baseline justify-between gap-2">
-				<Label
-					htmlFor={htmlFor}
-					className="text-sm font-medium text-slate-700"
-				>
+				<Label htmlFor={htmlFor} className="text-sm font-medium text-slate-700">
 					{label}
 					{required ? (
 						<>
@@ -230,7 +227,9 @@ export function TicketSubmitForm() {
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	const [title, setTitle] = useState(() => searchParams.get("title") ?? "");
-	const [category, setCategory] = useState(() => searchParams.get("category") ?? "");
+	const [category, setCategory] = useState(
+		() => searchParams.get("category") ?? "",
+	);
 	const [affectedModule, setAffectedModule] = useState(
 		() => searchParams.get("module") ?? "",
 	);
@@ -274,9 +273,7 @@ export function TicketSubmitForm() {
 	const errors = useMemo(
 		() => ({
 			title:
-				title.trim().length < 3
-					? "Title must be at least 3 characters."
-					: null,
+				title.trim().length < 3 ? "Title must be at least 3 characters." : null,
 			category: category === "" ? "Choose a category." : null,
 			impact: impact === "" ? "Select how many people are affected." : null,
 			urgency: urgency === "" ? "Select how urgent this is." : null,
@@ -289,8 +286,7 @@ export function TicketSubmitForm() {
 	);
 
 	const isValid = Object.values(errors).every((item) => !item);
-	const showValidationBanner =
-		!isValid && Object.values(touched).some(Boolean);
+	const showValidationBanner = !isValid && Object.values(touched).some(Boolean);
 
 	const addFiles = useCallback((fileList: FileList | File[]) => {
 		const incoming = Array.from(fileList);
@@ -446,7 +442,11 @@ export function TicketSubmitForm() {
 									error={Boolean(touched.category && errors.category)}
 								/>
 							</FormField>
-							<FormField label="Affected module" htmlFor="ticket-module" hint="optional">
+							<FormField
+								label="Affected service"
+								htmlFor="ticket-module"
+								hint="optional"
+							>
 								<SelectField
 									id="ticket-module"
 									value={affectedModule}
@@ -462,8 +462,8 @@ export function TicketSubmitForm() {
 								How much is this affecting people? <RequiredMark />
 							</p>
 							<p className="mb-3 text-xs text-slate-600">
-								We use this to set severity and response time; no need to guess a
-								priority level yourself.
+								We use this to set severity and response time; no need to guess
+								a priority level yourself.
 							</p>
 							<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 								<PillGroup
@@ -628,7 +628,10 @@ export function TicketSubmitForm() {
 
 						{showValidationBanner ? (
 							<div className="flex items-start gap-2 rounded-md border border-red/20 bg-red/10 px-3 py-2 text-sm text-red">
-								<AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+								<AlertTriangle
+									className="mt-0.5 h-4 w-4 shrink-0"
+									aria-hidden
+								/>
 								<span>
 									Please fill in all required fields before submitting.
 								</span>
@@ -637,7 +640,10 @@ export function TicketSubmitForm() {
 
 						{error ? (
 							<div className="flex items-start gap-2 rounded-md border border-red/20 bg-red/10 px-3 py-2 text-sm text-red">
-								<AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+								<AlertTriangle
+									className="mt-0.5 h-4 w-4 shrink-0"
+									aria-hidden
+								/>
 								<span>{error}</span>
 							</div>
 						) : null}

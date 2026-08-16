@@ -1,5 +1,3 @@
-"use client";
-
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { CardContent, Card as GlassCard } from "@/components/ui/card";

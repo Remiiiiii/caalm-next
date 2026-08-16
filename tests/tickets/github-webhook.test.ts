@@ -33,6 +33,26 @@ describe("classifyGitHubWebhook", () => {
 		});
 	});
 
+	it("maps opened PRs using Fixes #N", () => {
+		expect(
+			classifyGitHubWebhook("pull_request", {
+				action: "opened",
+				pull_request: {
+					number: 9,
+					html_url: "https://github.com/org/repo/pull/9",
+					merged: false,
+					body: "Fixes #42",
+					title: "Fix login",
+				},
+			}),
+		).toEqual({
+			kind: "pr_opened",
+			issueNumber: 42,
+			prNumber: 9,
+			prUrl: "https://github.com/org/repo/pull/9",
+		});
+	});
+
 	it("maps merged PRs using Fixes #N", () => {
 		expect(
 			classifyGitHubWebhook("pull_request", {

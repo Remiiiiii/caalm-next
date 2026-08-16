@@ -817,6 +817,59 @@
 		border-color: rgba(147, 197, 253, 0.65);
 	}
 
+	/* Issue History (Appwrite-style layout, CAALM glass) */
+	.issue-history-shell {
+		@apply w-full space-y-6;
+	}
+	.issue-history-month-card {
+		@apply p-4 sm:p-6;
+	}
+	.issue-history-month-title {
+		@apply text-lg font-semibold;
+	}
+	.issue-history-month-rule {
+		@apply mt-3 mb-4 h-px w-full bg-slate-200/80;
+	}
+	.issue-history-day-header {
+		@apply mb-3 flex items-baseline justify-between gap-3 text-sm text-slate-600;
+	}
+	.issue-history-incident-card {
+		@apply block p-4;
+	}
+	.issue-history-incident-title {
+		@apply min-w-0 flex-1 break-words text-sm font-semibold text-slate-700;
+	}
+	.issue-history-update-box {
+		@apply mt-3 rounded-lg border border-slate-200/80 bg-white/50 p-3;
+	}
+	.incident-detail-shell {
+		@apply w-full space-y-6;
+	}
+	.incident-detail-card {
+		@apply p-4 sm:p-6;
+	}
+	.incident-detail-title {
+		@apply break-words text-xl font-semibold sm:text-2xl;
+	}
+	.incident-timeline {
+		@apply relative mt-6 space-y-3 pl-6;
+	}
+	.incident-timeline::before {
+		content: "";
+		@apply absolute bottom-3 left-[9px] top-3 w-px bg-slate-200;
+	}
+	.incident-timeline-item {
+		@apply relative rounded-lg border border-slate-200/80 bg-white/50 p-4;
+	}
+	.incident-timeline-heading {
+		@apply min-w-0 break-words text-sm font-medium text-slate-700;
+	}
+	.incident-timeline-body {
+		@apply mt-1 min-w-0 break-words text-sm text-slate-600;
+		word-break: break-word;
+		overflow-wrap: anywhere;
+	}
+
 	/* Chart */
 	.chart {
 		@apply flex items-center rounded-[20px] p-5 text-white md:flex-col xl:flex-row;

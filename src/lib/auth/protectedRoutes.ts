@@ -28,6 +28,7 @@ export function isProtectedAppRoute(
 		"/company-news",
 		"/shared",
 		"/tickets",
+		"/incident",
 		"/debug-role",
 		"/test-notifications",
 	];

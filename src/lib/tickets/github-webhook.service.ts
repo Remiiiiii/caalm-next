@@ -71,6 +71,7 @@ export type ClassifiedGitHubEvent =
 			issueNumber: number;
 			assigneeLogin: string | null;
 	  }
+	| { kind: "pr_opened"; issueNumber: number; prNumber: number; prUrl: string }
 	| { kind: "pr_merged"; issueNumber: number; prNumber: number; prUrl: string }
 	| { kind: "ci_passed"; prNumber: number }
 	| { kind: "vercel_deployed"; sha: string; context: string }
@@ -96,6 +97,21 @@ export function classifyGitHubWebhook(
 			kind: "assigned",
 			issueNumber: number,
 			assigneeLogin: payload.assignee?.login || null,
+		};
+	}
+
+	if (
+		eventName === "pull_request" &&
+		payload.pull_request &&
+		(payload.action === "opened" || payload.action === "ready_for_review")
+	) {
+		const issueNumber = issueNumberFromPr(payload);
+		if (!issueNumber) return { kind: "ignored" };
+		return {
+			kind: "pr_opened",
+			issueNumber,
+			prNumber: payload.pull_request.number,
+			prUrl: payload.pull_request.html_url,
 		};
 	}
 
@@ -170,6 +186,32 @@ export async function handleGitHubWebhookEvent(
 			eventType: "ASSIGNED",
 			actor: "system",
 			metadata: { assigneeGithubLogin: classified.assigneeLogin },
+		});
+		return { handled: true, ticketId: updated.$id };
+	}
+
+	if (classified.kind === "pr_opened") {
+		const ticket = await getTicketByGithubIssue(classified.issueNumber, repo);
+		if (!ticket) return { handled: false };
+		if (ticket.prUrl === classified.prUrl) {
+			return { handled: true, ticketId: ticket.$id };
+		}
+		const updated = await updateTicket(ticket.$id, {
+			status:
+				ticket.status === "RESOLVED" || ticket.status === "IN_REVIEW"
+					? ticket.status
+					: "PR_OPEN",
+			prNumber: classified.prNumber,
+			prUrl: classified.prUrl,
+		});
+		await appendTicketEvent({
+			ticketId: updated.$id,
+			eventType: "PR_OPENED",
+			actor: "system",
+			metadata: {
+				prUrl: classified.prUrl,
+				prNumber: classified.prNumber,
+			},
 		});
 		return { handled: true, ticketId: updated.$id };
 	}

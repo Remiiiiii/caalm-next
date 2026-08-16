@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { PERMISSIONS } from "@/constants/permissions";
+import { isITSidebarPath } from "@/constants/it-navigation";
 import {
 	canAccessITPortal,
 	resolveAccessibleDashboardLinks,
@@ -48,5 +49,22 @@ describe("resolveAccessibleDashboardLinks IT entry", () => {
 			{ department: "IT" },
 		);
 		expect(links.some((l) => l.url === "/dashboard/it")).toBe(true);
+	});
+});
+
+describe("isITSidebarPath", () => {
+	it("keeps IT chrome on ticket pages linked from the IT sidebar", () => {
+		expect(isITSidebarPath("/dashboard/it")).toBe(true);
+		expect(isITSidebarPath("/dashboard/it/status")).toBe(true);
+		expect(isITSidebarPath("/dashboard/it/issuehistory")).toBe(true);
+		expect(isITSidebarPath("/tickets")).toBe(true);
+		expect(isITSidebarPath("/tickets/new")).toBe(true);
+		expect(isITSidebarPath("/tickets/abc123")).toBe(true);
+		expect(isITSidebarPath("/incident/abc")).toBe(true);
+	});
+
+	it("does not treat other dashboards as IT chrome", () => {
+		expect(isITSidebarPath("/dashboard/superadmin")).toBe(false);
+		expect(isITSidebarPath("/licenses")).toBe(false);
 	});
 });

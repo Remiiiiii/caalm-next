@@ -5,9 +5,8 @@ import type React from "react";
 import { useEffect } from "react";
 import { ITDashboardErrorBoundary } from "@/components/errors/ITDashboardErrorBoundary";
 import { LoadingSpinner } from "@/components/ui/loading";
-import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { ITProvider } from "@/contexts/ITContext";
-import { OrganizationProvider } from "@/contexts/OrganizationContext";
 
 const ITLayoutContent = ({ children }: { children: React.ReactNode }) => {
 	const { user, loading } = useAuth();
@@ -39,11 +38,12 @@ export default function ITClientShell({
 }: {
 	children: React.ReactNode;
 }) {
+	// Auth and org already wrap the app in (root)/layout. A second pair here
+	// remounts those providers on every IT page and can trip the "more hooks
+	// than during the previous render" error during client navigations.
 	return (
-		<AuthProvider>
-			<OrganizationProvider>
-				<ITLayoutContent>{children}</ITLayoutContent>
-			</OrganizationProvider>
-		</AuthProvider>
+		<ITLayoutContent>
+			{children}
+		</ITLayoutContent>
 	);
 }

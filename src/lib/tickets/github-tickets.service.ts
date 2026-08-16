@@ -1,11 +1,11 @@
 import { createHmac, createSign, timingSafeEqual } from "node:crypto";
+import type { GitHubIssueSnapshot } from "./ticket.types";
+import { getTicketsRepo } from "./ticket.types";
 import {
 	getImpactLabel,
 	getUrgencyLabel,
 	type TicketImpactUrgency,
 } from "./ticket-intake.constants";
-import type { GitHubIssueSnapshot } from "./ticket.types";
-import { getTicketsRepo } from "./ticket.types";
 
 type GitHubIssueResponse = {
 	number: number;
@@ -140,7 +140,7 @@ export function buildGitHubIssueBody(input: {
 	const impactLabel = getImpactLabel(input.impact as TicketImpactUrgency);
 	const urgencyLabel = getUrgencyLabel(input.urgency as TicketImpactUrgency);
 	const moduleLine = input.affectedModule
-		? `**Affected module:** ${input.affectedModule}\n`
+		? `**Affected service:** ${input.affectedModule}\n`
 		: "";
 
 	return `### Submitted via CAALM Ticketing
@@ -193,7 +193,14 @@ export async function createGitHubIssue(input: {
 export async function listPullsForCommit(
 	sha: string,
 	repo?: string,
-): Promise<Array<{ number: number; mergedAt: string | null; title: string; body: string }>> {
+): Promise<
+	Array<{
+		number: number;
+		mergedAt: string | null;
+		title: string;
+		body: string;
+	}>
+> {
 	const { owner, name } = parseRepo(repo);
 	const res = await githubFetch(`/repos/${owner}/${name}/commits/${sha}/pulls`);
 	if (!res.ok) {

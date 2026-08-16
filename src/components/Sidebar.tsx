@@ -23,6 +23,7 @@ import {
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useSidebarCollapse } from "@/contexts/SidebarContext";
+import { isITSidebarPath } from "@/constants/it-navigation";
 import { useAnalyticsPrefetch } from "@/hooks/useAnalyticsPrefetch";
 import { useGroupedNavigation } from "@/hooks/useGroupedNavigation";
 import { sectionTourId } from "@/lib/demo/tour/sectionTourId";
@@ -70,9 +71,9 @@ const Sidebar = memo(
 			});
 		}, []);
 
-		// IT chrome only when department is IT (+ monitoring perm via canUseITPortal)
+		// IT chrome for portal users on IT pages (incl. /tickets) or the IT role
 		const showITSidebar =
-			canUseITPortal && (pathname.startsWith("/dashboard/it") || isITUser);
+			canUseITPortal && (isITSidebarPath(pathname) || isITUser);
 
 		if (showITSidebar) {
 			return <ITSidebar name={name} email={email} />;

@@ -12,15 +12,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import {
-	getImpactLabel,
-	getUrgencyLabel,
-} from "@/lib/tickets/ticket-intake.constants";
 import type {
 	GitHubIssueSnapshot,
 	Ticket,
 	TicketEvent,
 } from "@/lib/tickets/ticket.types";
+import {
+	getImpactLabel,
+	getUrgencyLabel,
+} from "@/lib/tickets/ticket-intake.constants";
 import { cn } from "@/lib/utils";
 import { TicketSeverityPill, TicketStatusPill } from "./TicketStatusPill";
 
@@ -82,9 +82,7 @@ function formatIssueDetails(ticket: Ticket, issue: GitHubIssueSnapshot | null) {
 		`Department/Division: ${ticket.department}`,
 		`Submitted at: ${formatTicketDateTime(ticket.submittedAt)}`,
 		`Category: ${ticket.category || "—"}`,
-		ticket.affectedModule
-			? `Affected module: ${ticket.affectedModule}`
-			: null,
+		ticket.affectedModule ? `Affected service: ${ticket.affectedModule}` : null,
 		`Impact: ${impact} · Urgency: ${urgency} · Severity: ${severity}`,
 		"",
 		description,
@@ -388,8 +386,7 @@ export function TicketDetail({
 								disabled={!canResolve || resolving}
 								className={cn(
 									"inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded text-slate-500 transition-colors duration-200 hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
-									(!canResolve || resolving) &&
-										"cursor-not-allowed opacity-50",
+									(!canResolve || resolving) && "cursor-not-allowed opacity-50",
 								)}
 								title={`Attach files (max ${MAX_FILES}, 10 MB each)`}
 								aria-label="Attach files"
@@ -436,9 +433,7 @@ export function TicketDetail({
 						<Button
 							type="button"
 							className="primary-btn px-3 sm:px-4"
-							disabled={
-								!canResolve || resolving || !ticket.githubIssueNumber
-							}
+							disabled={!canResolve || resolving || !ticket.githubIssueNumber}
 							onClick={() => void onResolve()}
 						>
 							<Send className="h-4 w-4" aria-hidden />
@@ -448,8 +443,7 @@ export function TicketDetail({
 				</div>
 				{!canResolve ? (
 					<p className="border-t border-slate-200/80 px-4 py-2 text-xs text-slate-500 sm:px-6">
-						Only the assigned assignee or a Super Admin can resolve this
-						ticket.
+						Only the assigned assignee or a Super Admin can resolve this ticket.
 					</p>
 				) : null}
 			</Card>

@@ -96,6 +96,21 @@ const nextConfig: NextConfig = {
 	},
 	// Enable Turbopack explicitly
 	turbopack: {},
+
+	async redirects() {
+		return [
+			{
+				source: "/dashboard/it/status",
+				destination: "/dashboard/it/issuehistory",
+				permanent: false,
+			},
+			{
+				source: "/dashboard/it/status/:ticketId",
+				destination: "/incident/:ticketId",
+				permanent: false,
+			},
+		];
+	},
 	// Improve development caching for faster reloads
 	...(process.env.NODE_ENV === "development" && {
 		onDemandEntries: {

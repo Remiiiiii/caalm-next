@@ -191,6 +191,7 @@ export async function proxy(request: NextRequest) {
 		"/audits",
 		"/team",
 		"/tickets",
+		"/incident",
 	];
 
 	const isProtectedPath = protectedPrefixes.some((p) => pathname.startsWith(p));
@@ -201,6 +202,19 @@ export async function proxy(request: NextRequest) {
 		pathname.startsWith("/dashboard/executive/")
 	) {
 		return NextResponse.redirect(new URL("/dashboard", request.url));
+	}
+
+	// Old Issue History URLs → /issuehistory and /incident/[id]
+	if (pathname === "/dashboard/it/status") {
+		return NextResponse.redirect(
+			new URL("/dashboard/it/issuehistory", request.url),
+		);
+	}
+	if (pathname.startsWith("/dashboard/it/status/")) {
+		const ticketId = pathname.slice("/dashboard/it/status/".length).split("/")[0];
+		if (ticketId) {
+			return NextResponse.redirect(new URL(`/incident/${ticketId}`, request.url));
+		}
 	}
 
 	// Dashboard route protection — permission + role-id policy

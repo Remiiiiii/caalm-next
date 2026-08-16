@@ -7,7 +7,7 @@ const STATUS_CLASS: Record<TicketStatus, string> = {
 	IN_PROGRESS: "bg-orange/10 text-orange border-orange/20",
 	PR_OPEN: "bg-green/10 text-green border-green/20",
 	IN_REVIEW: "bg-green/10 text-green border-green/20",
-	RESOLVED: "bg-slate-100 text-slate-600 border-slate-200",
+	RESOLVED: "bg-green/10 text-green border-green/20",
 	FAILED: "bg-red/10 text-red border-red/20",
 	NEEDS_HUMAN: "bg-red/10 text-red border-red/20",
 };
