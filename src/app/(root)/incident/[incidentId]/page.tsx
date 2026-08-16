@@ -47,10 +47,14 @@ export default async function IncidentDetailPage({
 				</Link>
 				<div className="glass-card incident-detail-card">
 					<div className="glass-card-cap" />
-					<TicketStatusPill status={ticket.status} />
-					<h1 className="incident-detail-title mt-3 sidebar-gradient-text">
-						{ticket.title}
-					</h1>
+					<div className="flex items-start justify-between gap-3">
+						<h1 className="incident-detail-title min-w-0 sidebar-gradient-text">
+							{ticket.title}
+						</h1>
+						<div className="shrink-0">
+							<TicketStatusPill status={ticket.status} />
+						</div>
+					</div>
 					<p className="mt-1 break-words text-sm text-slate-600">
 						{formatIssueHistoryDate(stamp)}
 					</p>
