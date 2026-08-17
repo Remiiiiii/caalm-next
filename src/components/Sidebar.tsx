@@ -1,6 +1,15 @@
 "use client";
 
-import { Building, Building2, Cloud, Crown, Eye, Lock, Server } from "lucide-react";
+import {
+	BookOpenCheck,
+	Building,
+	Building2,
+	Cloud,
+	Crown,
+	Eye,
+	Lock,
+	Server,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -14,6 +23,7 @@ import SidebarCollapseToggle from "@/components/sidebar/SidebarCollapseToggle";
 import {
 	DASHBOARD_ITEM_COLORS,
 	ITEM_ICONS,
+	NAV_ICON_FILL_GREY,
 	isNavItemActive,
 } from "@/components/sidebar/sidebar-icons";
 import {
@@ -285,6 +295,15 @@ const Sidebar = memo(
 																				{item.name === "IT" && (
 																					<Server className="h-4 w-4 text-[#0f5384]" />
 																				)}
+																			</span>
+																		)}
+																		{item.name === "Audit Readiness" && (
+																			<span>
+																				<BookOpenCheck
+																					className="h-5 w-5 shrink-0"
+																					style={{ color: NAV_ICON_FILL_GREY }}
+																					aria-hidden
+																				/>
 																			</span>
 																		)}
 																		{(() => {

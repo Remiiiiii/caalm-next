@@ -38,6 +38,8 @@ export default function OrganizationSettingsPage() {
 
 	const [name, setName] = useState("");
 	const [domain, setDomain] = useState("");
+	const [timezone, setTimezone] = useState("America/New_York");
+	const [websiteUrl, setWebsiteUrl] = useState("");
 	const [maxUsers, setMaxUsers] = useState(10);
 	const [maxDepartments, setMaxDepartments] = useState(3);
 	const [saving, setSaving] = useState(false);
@@ -46,6 +48,16 @@ export default function OrganizationSettingsPage() {
 		if (!org) return;
 		setName(org.name || "");
 		setDomain(org.domain || "");
+		setTimezone(
+			typeof org.settings?.timezone === "string" && org.settings.timezone
+				? org.settings.timezone
+				: "America/New_York",
+		);
+		setWebsiteUrl(
+			typeof org.settings?.websiteUrl === "string"
+				? org.settings.websiteUrl
+				: "",
+		);
 		setMaxUsers(org.settings?.maxUsers ?? 10);
 		setMaxDepartments(org.settings?.maxDepartments ?? 3);
 	}, [org]);
@@ -61,7 +73,17 @@ export default function OrganizationSettingsPage() {
 				{
 					method: "PUT",
 					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({ name, domain: domain || null }),
+					body: JSON.stringify({
+						name,
+						domain: domain || null,
+						settings: {
+							maxUsers: org?.settings?.maxUsers ?? 10,
+							maxDepartments: org?.settings?.maxDepartments ?? 3,
+							features: org?.settings?.features || [],
+							timezone,
+							websiteUrl: websiteUrl || null,
+						},
+					}),
 				},
 			);
 			if (!res.ok) {
@@ -79,7 +101,17 @@ export default function OrganizationSettingsPage() {
 		} finally {
 			setSaving(false);
 		}
-	}, [canEdit, orgId, name, domain, mutate, toast]);
+	}, [
+		canEdit,
+		orgId,
+		name,
+		domain,
+		timezone,
+		websiteUrl,
+		org,
+		mutate,
+		toast,
+	]);
 
 	const handleSaveLimits = useCallback(async () => {
 		if (!canEdit) return;
@@ -97,6 +129,8 @@ export default function OrganizationSettingsPage() {
 							maxUsers,
 							maxDepartments,
 							features: org?.settings?.features || [],
+							timezone: org?.settings?.timezone,
+							websiteUrl: org?.settings?.websiteUrl,
 						},
 					}),
 				},
@@ -186,6 +220,36 @@ export default function OrganizationSettingsPage() {
 									placeholder="example.org"
 									className="bg-white !border !border-solid !border-slate-200"
 								/>
+							</div>
+							<div className="space-y-2">
+								<Label htmlFor="org-timezone">Timezone (audit schedule)</Label>
+								<Input
+									id="org-timezone"
+									value={timezone}
+									onChange={(e) => setTimezone(e.target.value)}
+									disabled={!canEdit}
+									placeholder="America/New_York"
+									className="bg-white !border !border-solid !border-slate-200"
+								/>
+								<p className="text-xs text-slate-500">
+									IANA timezone used for weekly/monthly/quarterly readiness runs
+									(local 9:00 window).
+								</p>
+							</div>
+							<div className="space-y-2">
+								<Label htmlFor="org-website">Public website URL</Label>
+								<Input
+									id="org-website"
+									value={websiteUrl}
+									onChange={(e) => setWebsiteUrl(e.target.value)}
+									disabled={!canEdit}
+									placeholder="https://cfcecares.org"
+									className="bg-white !border !border-solid !border-slate-200"
+								/>
+								<p className="text-xs text-slate-500">
+									Optional bounded crawl for readiness packets (informational;
+									not scored).
+								</p>
 							</div>
 							<PermissionGate permission={PERMISSIONS.SETTINGS.EDIT}>
 								<Button

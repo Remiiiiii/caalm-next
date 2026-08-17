@@ -4,7 +4,7 @@ import {
 	ArrowRight,
 	CalendarRange,
 	ClipboardCheck,
-	Download,
+	SquareArrowRightExit,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -225,7 +225,7 @@ export function AuditReadinessHero({
 										className="primary-btn w-full px-3 sm:px-4"
 										onClick={onExport}
 									>
-										<Download className="h-4 w-4" />
+										<SquareArrowRightExit className="h-4 w-4" />
 										Export
 									</Button>
 								) : null}

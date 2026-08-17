@@ -29,6 +29,10 @@ export interface Organization {
 		isDemo?: boolean;
 		expiresAt?: string;
 		ownerEmail?: string;
+		/** IANA timezone for scheduled readiness audits */
+		timezone?: string;
+		/** Public website URL for optional bounded crawl */
+		websiteUrl?: string;
 		[key: string]: unknown;
 	};
 	stripeCustomerId?: string;

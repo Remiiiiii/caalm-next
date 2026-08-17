@@ -4,8 +4,6 @@ import { format } from "date-fns";
 import {
 	AlertCircle,
 	Ban,
-	ChevronLeft,
-	ChevronRight,
 	Edit,
 	Eye,
 	EyeOff,
@@ -32,6 +30,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { PageIndex } from "@/components/ui/page-index";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
 	AppDropdownMenuContent,
@@ -337,8 +336,6 @@ const ArticleList: React.FC<ArticleListProps> = ({ onEdit, onRefresh }) => {
 		}
 	};
 
-	const totalPages = Math.ceil(totalItems / itemsPerPage);
-
 	const clearFilters = () => {
 		setSearchQuery("");
 		setTypeFilter("all");
@@ -595,67 +592,16 @@ const ArticleList: React.FC<ArticleListProps> = ({ onEdit, onRefresh }) => {
 						</Table>
 					</div>
 
-					{/* Pagination */}
-					{totalPages > 1 && (
-						<div className="flex items-center justify-between">
-							<div className="text-sm text-slate-600">
-								Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
-								{Math.min(currentPage * itemsPerPage, totalItems)} of{" "}
-								{totalItems} articles
-							</div>
-							<div className="flex items-center gap-2">
-								<Button
-									variant="outline"
-									size="sm"
-									onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-									disabled={currentPage === 1}
-								>
-									<ChevronLeft className="h-4 w-4" />
-									Previous
-								</Button>
-								<div className="flex items-center gap-1">
-									{Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-										let pageNum: number;
-										if (totalPages <= 5) {
-											pageNum = i + 1;
-										} else if (currentPage <= 3) {
-											pageNum = i + 1;
-										} else if (currentPage >= totalPages - 2) {
-											pageNum = totalPages - 4 + i;
-										} else {
-											pageNum = currentPage - 2 + i;
-										}
-										return (
-											<Button
-												key={pageNum}
-												variant={currentPage === pageNum ? "default" : "ghost"}
-												size="sm"
-												onClick={() => setCurrentPage(pageNum)}
-												className={
-													currentPage === pageNum
-														? "bg-transparent text-slate-700 hover:bg-slate-100 hover:text-slate-700"
-														: ""
-												}
-											>
-												{pageNum}
-											</Button>
-										);
-									})}
-								</div>
-								<Button
-									variant="outline"
-									size="sm"
-									onClick={() =>
-										setCurrentPage((p) => Math.min(totalPages, p + 1))
-									}
-									disabled={currentPage === totalPages}
-								>
-									Next
-									<ChevronRight className="h-4 w-4" />
-								</Button>
-							</div>
-						</div>
-					)}
+					<PageIndex
+						page={currentPage}
+						totalItems={totalItems}
+						pageSize={itemsPerPage}
+						onPageChange={setCurrentPage}
+						hideWhenSinglePage
+						showRange
+						itemLabel="articles"
+						aria-label="Article list pagination"
+					/>
 				</>
 			)}
 

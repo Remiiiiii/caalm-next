@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, Download, X } from "lucide-react";
+import { CheckCircle2, SquareArrowRightExit, X } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useApprovalsView } from "@/components/approvals/ApprovalsViewContext";
@@ -184,7 +184,7 @@ export default function ApprovalsBulkBar({
 						className="cursor-pointer"
 						onClick={exportSelected}
 					>
-						<Download className="h-4 w-4" />
+						<SquareArrowRightExit className="h-4 w-4" />
 						Export
 					</Button>
 					{canDecide && (

@@ -185,6 +185,18 @@ export const appwriteConfig = {
 		"test-audits",
 	),
 
+	/** Customer-facing audit readiness snapshots (name: audit_readiness_snapshots) */
+	auditReadinessSnapshotsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_AUDIT_READINESS_SNAPSHOTS_COLLECTION",
+		"66ea192923722f767a74",
+	),
+
+	/** Evidence map rows for audit prep (name: audit_evidence_map) */
+	auditEvidenceMapCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_AUDIT_EVIDENCE_MAP_COLLECTION",
+		"3cfb1121431b22b684e3",
+	),
+
 	secretKey: getTestFallback("NEXT_APPWRITE_API_KEY", "test-api-key-for-ci"),
 
 	govApiKey: process.env.GOV_API_KEY,

@@ -96,6 +96,11 @@ export const ITEM_ICONS: Record<
 		height: 20,
 		color: SUBITEM_TEXT_GREY,
 	},
+	"Audit Readiness": {
+		width: 20,
+		height: 20,
+		color: SUBITEM_TEXT_GREY,
+	},
 	"Compliance Status": {
 		src: "/assets/icons/compliance-status.svg",
 		width: 20,

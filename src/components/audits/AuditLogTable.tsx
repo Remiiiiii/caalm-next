@@ -1,19 +1,13 @@
 "use client";
 
 import { format } from "date-fns";
-import {
-	AlertTriangle,
-	CheckCircle,
-	ChevronLeft,
-	ChevronRight,
-	Clock,
-	XCircle,
-} from "lucide-react";
+import { AlertTriangle, CheckCircle, Clock, XCircle } from "lucide-react";
 import { useState } from "react";
 import { AuditLogDetailDrawer } from "@/components/audits/AuditLogDetailDrawer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { PageIndex } from "@/components/ui/page-index";
 import {
 	Table,
 	TableBody,
@@ -125,22 +119,24 @@ function ModuleBadge({ module }: { module?: AuditModule }) {
 
 interface AuditLogTableProps {
 	logs: AuditLog[];
-	domainLabel?: string | null;
 	total?: number;
 	page?: number;
+	pageSize?: number;
 	totalPages?: number;
 	onPageChange?: (page: number) => void;
 	isLoading?: boolean;
+	embedded?: boolean;
 }
 
 export function AuditLogTable({
 	logs,
-	domainLabel,
 	total = 0,
 	page = 1,
+	pageSize = 20,
 	totalPages = 1,
 	onPageChange,
 	isLoading,
+	embedded = false,
 }: AuditLogTableProps) {
 	const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
 	const [drawerOpen, setDrawerOpen] = useState(false);
@@ -150,59 +146,11 @@ export function AuditLogTable({
 		setDrawerOpen(true);
 	};
 
-	return (
-		<>
-			<Card className="glass-card">
-				<div className="glass-card-cap" />
-				<CardContent className="p-4 sm:p-6">
-					<div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-						<div className="flex items-center gap-2">
-							<p className="text-xl font-semibold sidebar-gradient-text">
-								Activity log
-							</p>
-							{domainLabel ? (
-								<Badge
-									variant="secondary"
-									className="bg-slate-100 text-slate-700"
-								>
-									{domainLabel}
-								</Badge>
-							) : null}
-							<Badge
-								variant="secondary"
-								className="bg-slate-100 text-slate-700"
-							>
-								{total} {total === 1 ? "entry" : "entries"}
-							</Badge>
-						</div>
-						{onPageChange && totalPages > 1 ? (
-							<div className="flex items-center gap-2">
-								<Button
-									variant="outline"
-									size="sm"
-									className="cursor-pointer"
-									disabled={page <= 1 || isLoading}
-									onClick={() => onPageChange(page - 1)}
-								>
-									<ChevronLeft className="h-4 w-4" />
-								</Button>
-								<span className="text-xs text-slate-600">
-									Page {page} of {totalPages}
-								</span>
-								<Button
-									variant="outline"
-									size="sm"
-									className="cursor-pointer"
-									disabled={page >= totalPages || isLoading}
-									onClick={() => onPageChange(page + 1)}
-								>
-									<ChevronRight className="h-4 w-4" />
-								</Button>
-							</div>
-						) : null}
-					</div>
+	const safeTotalPages = Math.max(1, totalPages);
 
-					<div className="overflow-x-auto">
+	const tableBody = (
+		<>
+			<div className="overflow-x-auto">
 						<Table>
 							<TableHeader>
 								<TableRow className="border-slate-200 bg-slate-50">
@@ -299,39 +247,32 @@ export function AuditLogTable({
 						</Table>
 					</div>
 
-					{onPageChange && total > 0 ? (
-						<div className="flex items-center justify-between mt-4 text-xs text-slate-600">
-							<span>
-								Showing{" "}
-								{(page - 1) * (logs.length || 50) + (logs.length ? 1 : 0)}–
-								{(page - 1) * 50 + logs.length} of {total}
-							</span>
-							{totalPages > 1 ? (
-								<div className="flex items-center gap-2">
-									<Button
-										variant="outline"
-										size="sm"
-										className="cursor-pointer"
-										disabled={page <= 1 || isLoading}
-										onClick={() => onPageChange(page - 1)}
-									>
-										Previous
-									</Button>
-									<Button
-										variant="outline"
-										size="sm"
-										className="cursor-pointer"
-										disabled={page >= totalPages || isLoading}
-										onClick={() => onPageChange(page + 1)}
-									>
-										Next
-									</Button>
-								</div>
-							) : null}
-						</div>
+					{onPageChange ? (
+						<PageIndex
+							className="mt-4"
+							page={page}
+							totalPages={safeTotalPages}
+							totalItems={total}
+							pageSize={pageSize}
+							onPageChange={onPageChange}
+							disabled={isLoading}
+							showRange
+							aria-label="Activity log pagination"
+						/>
 					) : null}
-				</CardContent>
-			</Card>
+		</>
+	);
+
+	return (
+		<>
+			{embedded ? (
+				<div className="mt-6">{tableBody}</div>
+			) : (
+				<Card className="glass-card">
+					<div className="glass-card-cap" />
+					<CardContent className="p-4 sm:p-6">{tableBody}</CardContent>
+				</Card>
+			)}
 
 			<AuditLogDetailDrawer
 				log={selectedLog}

@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, X } from "lucide-react";
+import { SquareArrowRightExit, X } from "lucide-react";
 import { useMemo } from "react";
 import { useLicensesView } from "@/components/LicensesView";
 import { Button } from "@/components/ui/button";
@@ -104,7 +104,7 @@ export default function LicensesBulkBar({ licenses }: LicensesBulkBarProps) {
 						className="primary-btn px-3 sm:px-4 cursor-pointer"
 						onClick={handleExport}
 					>
-						<Download className="h-4 w-4" />
+						<SquareArrowRightExit className="h-4 w-4" />
 						Export selected
 					</Button>
 				)}

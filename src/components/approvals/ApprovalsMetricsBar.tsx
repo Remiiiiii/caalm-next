@@ -4,6 +4,7 @@ import { AlertTriangle, CheckCircle, ClipboardList, Clock } from "lucide-react";
 import { useMemo } from "react";
 import { useApprovalsView } from "@/components/approvals/ApprovalsViewContext";
 import { Card, CardContent } from "@/components/ui/card";
+import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import {
 	type ApprovalQueueItem,
 	type ApprovalTab,
@@ -59,9 +60,7 @@ export default function ApprovalsMetricsBar({
 							</p>
 							<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
 								<span>{counts.needsMe}</span>
-								<span className="inline-block ml-2 pb-1">
-									<ClipboardList className="h-8 w-8 text-slate-600" />
-								</span>
+								<StatCardIcon className="ml-2" icon={ClipboardList} />
 							</div>
 							<p className="text-xs text-slate-600 mt-1">Click to show queue</p>
 						</CardContent>
@@ -81,9 +80,7 @@ export default function ApprovalsMetricsBar({
 							</p>
 							<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
 								<span>{counts.pendingReview}</span>
-								<span className="inline-block ml-2 pb-1">
-									<Clock className="h-8 w-8 text-slate-600" />
-								</span>
+								<StatCardIcon className="ml-2" icon={Clock} />
 							</div>
 							<p className="text-xs text-slate-600 mt-1">Awaiting review</p>
 						</CardContent>
@@ -103,9 +100,7 @@ export default function ApprovalsMetricsBar({
 							</p>
 							<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
 								<span>{counts.actionRequired}</span>
-								<span className="inline-block ml-2 pb-1">
-									<AlertTriangle className="h-8 w-8 text-slate-600" />
-								</span>
+								<StatCardIcon className="ml-2" icon={AlertTriangle} />
 							</div>
 							<p className="text-xs text-slate-600 mt-1">Needs follow-up</p>
 						</CardContent>
@@ -125,9 +120,7 @@ export default function ApprovalsMetricsBar({
 							</p>
 							<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
 								<span>{counts.recentlyDecided}</span>
-								<span className="inline-block ml-2 pb-1">
-									<CheckCircle className="h-8 w-8 text-slate-600" />
-								</span>
+								<StatCardIcon className="ml-2" icon={CheckCircle} />
 							</div>
 							<p className="text-xs text-slate-600 mt-1">Last 14 days</p>
 						</CardContent>

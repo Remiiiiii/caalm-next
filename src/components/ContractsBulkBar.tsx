@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, X } from "lucide-react";
+import { SquareArrowRightExit, X } from "lucide-react";
 import { useMemo } from "react";
 import { useContractsView } from "@/components/ContractsViewContext";
 import { Button } from "@/components/ui/button";
@@ -94,7 +94,7 @@ export default function ContractsBulkBar({ files }: ContractsBulkBarProps) {
 						className="primary-btn px-3 sm:px-4 cursor-pointer"
 						onClick={handleExport}
 					>
-						<Download className="h-4 w-4" />
+						<SquareArrowRightExit className="h-4 w-4" />
 						Export selected
 					</Button>
 				)}

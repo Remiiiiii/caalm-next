@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
+import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import { StatCardSkeleton } from "@/components/ui/skeletons";
 import type { DepartmentDashboardStats } from "@/lib/dashboard/department-dashboard.types";
 
@@ -79,9 +80,7 @@ export function DepartmentStatCardRow({
 									</p>
 									<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
 										<span>{card.value}</span>
-										<span className="inline-block ml-2 pb-1">
-											<card.icon className="h-8 w-8 text-slate-600" />
-										</span>
+										<StatCardIcon className="ml-2" icon={card.icon} />
 									</div>
 									<p className="text-xs text-slate-600 mt-1">
 										{card.description}

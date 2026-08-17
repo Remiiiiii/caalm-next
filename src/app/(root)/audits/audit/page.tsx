@@ -2,13 +2,11 @@
 
 import {
 	AlertTriangle,
-	CheckCircle,
-	Download,
 	Shield,
 	ShieldAlert,
+	SquareArrowRightExit,
 	XCircle,
 } from "lucide-react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
 import useSWR from "swr";
@@ -22,8 +20,10 @@ import {
 	AuditLogTable,
 } from "@/components/audits/AuditLogTable";
 import { AuditPageShell } from "@/components/audits/AuditPageShell";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import { PERMISSIONS } from "@/constants/permissions";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -34,7 +34,7 @@ import {
 import { fetcher } from "@/lib/swr-config";
 
 const VALID_DOMAINS = AUDIT_CONTROL_TABS.map((t) => t.id);
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 20;
 
 const EMPTY_FILTERS: AuditLogFilters = {
 	startDate: "",
@@ -253,18 +253,9 @@ export default function AuditLogsPage() {
 		<AuditPageShell
 			title="Audit logs"
 			subtitle="Activity across contracts, licenses, filings, documents, and governance."
+			tags={["Retained 12 months", "Org-scoped", "Auditor-ready export"]}
 			actions={
 				<>
-					<Button
-						variant="outline"
-						className="primary-btn px-3 sm:px-4"
-						asChild
-					>
-						<Link href="/audits/status">
-							<Shield className="h-4 w-4" />
-							Compliance status
-						</Link>
-					</Button>
 					{canExport ? (
 						<>
 							<Button
@@ -272,7 +263,7 @@ export default function AuditLogsPage() {
 								className="primary-btn px-3 sm:px-4"
 								disabled={isExporting}
 							>
-								<Download className="h-4 w-4" />
+								<SquareArrowRightExit className="h-4 w-4" />
 								Export CSV
 							</Button>
 							<Button
@@ -281,6 +272,7 @@ export default function AuditLogsPage() {
 								className="primary-btn px-3 sm:px-4"
 								disabled={isExporting}
 							>
+								<SquareArrowRightExit className="h-4 w-4" />
 								Export JSON
 							</Button>
 						</>
@@ -288,10 +280,6 @@ export default function AuditLogsPage() {
 				</>
 			}
 		>
-			<p className="text-xs text-slate-500 mb-6">
-				Events retained 12 months · Org-scoped · Auditor-ready export
-			</p>
-
 			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
 				{[
 					{
@@ -315,29 +303,23 @@ export default function AuditLogsPage() {
 					{
 						title: "Exports",
 						value: stats?.exports ?? "—",
-						icon: CheckCircle,
+						icon: SquareArrowRightExit,
 						description: "Data export events",
 					},
 				].map((item) => (
 					<Card key={item.title} className="glass-card">
 						<div className="glass-card-cap" />
 						<CardContent className="p-4 sm:p-6">
-							<div className="flex items-center justify-between">
-								<div>
-									<p className="text-sm font-medium sidebar-gradient-text">
-										{item.title}
-									</p>
-									<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-										<span>{item.value}</span>
-										<span className="inline-block ml-2 pb-1">
-											<item.icon className="h-8 w-8 text-slate-600" />
-										</span>
-									</div>
-									<p className="text-xs text-slate-600 mt-1">
-										{item.description}
-									</p>
-								</div>
+							<div className="flex items-start justify-between gap-2">
+								<p className="text-sm font-medium sidebar-gradient-text">
+									{item.title}
+								</p>
+								<StatCardIcon icon={item.icon} />
 							</div>
+							<div className="text-3xl font-bold text-slate-700 pt-2">
+								{item.value}
+							</div>
+							<p className="text-xs text-slate-600 mt-1">{item.description}</p>
 						</CardContent>
 					</Card>
 				))}
@@ -345,43 +327,72 @@ export default function AuditLogsPage() {
 
 			<AuditLogChart data={stats?.eventsByDate} isLoading={statsLoading} />
 
-			<div className="mb-4 flex flex-wrap gap-2">
-				<Button
-					variant={filters.module === "all" ? "default" : "outline"}
-					size="sm"
-					className={`cursor-pointer ${filters.module === "all" ? "primary-btn" : ""}`}
+			<nav
+				className="mb-4 flex flex-wrap gap-1 border-b border-slate-200"
+				aria-label="Audit log categories"
+			>
+				<button
+					type="button"
+					data-state={filters.module === "all" ? "active" : undefined}
+					className="tabs-underline relative cursor-pointer inline-flex items-center px-3 py-2.5 text-sm font-medium text-slate-600 bg-transparent border-0 shadow-none hover:text-slate-700 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 data-[state=active]:text-slate-700"
 					onClick={() => setDomainTab("all")}
 				>
 					All
-				</Button>
-				{AUDIT_CONTROL_TABS.map((tab) => (
-					<Button
-						key={tab.id}
-						variant={filters.module === tab.id ? "default" : "outline"}
-						size="sm"
-						className={`cursor-pointer ${filters.module === tab.id ? "primary-btn" : ""}`}
-						onClick={() => setDomainTab(tab.id)}
-					>
-						{tab.label}
-					</Button>
-				))}
-			</div>
+				</button>
+				{AUDIT_CONTROL_TABS.map((tab) => {
+					const isActive = filters.module === tab.id;
+					return (
+						<button
+							key={tab.id}
+							type="button"
+							data-state={isActive ? "active" : undefined}
+							className="tabs-underline relative cursor-pointer inline-flex items-center px-3 py-2.5 text-sm font-medium text-slate-600 bg-transparent border-0 shadow-none hover:text-slate-700 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 data-[state=active]:text-slate-700"
+							onClick={() => setDomainTab(tab.id)}
+						>
+							{tab.label}
+						</button>
+					);
+				})}
+			</nav>
 
-			<AuditLogFiltersBar
-				filters={filters}
-				onChange={handleFilterChange}
-				onClear={clearFilters}
-			/>
+			<Card className="glass-card">
+				<div className="glass-card-cap" />
+				<CardContent className="p-4 sm:p-6">
+					<div className="flex flex-wrap items-center gap-2 mb-4">
+						<p className="text-xl font-semibold sidebar-gradient-text">
+							Activity log
+						</p>
+						{domainLabel ? (
+							<Badge
+								variant="secondary"
+								className="bg-slate-100 text-slate-700"
+							>
+								{domainLabel}
+							</Badge>
+						) : null}
+						<Badge variant="secondary" className="bg-slate-100 text-slate-700">
+							{total} {total === 1 ? "entry" : "entries"}
+						</Badge>
+					</div>
 
-			<AuditLogTable
-				logs={auditLogs}
-				domainLabel={domainLabel}
-				total={total}
-				page={page}
-				totalPages={totalPages}
-				onPageChange={setPage}
-				isLoading={logsLoading && !logsData}
-			/>
+					<AuditLogFiltersBar
+						filters={filters}
+						onChange={handleFilterChange}
+						onClear={clearFilters}
+					/>
+
+					<AuditLogTable
+						logs={auditLogs}
+						total={total}
+						page={page}
+						pageSize={PAGE_SIZE}
+						totalPages={totalPages}
+						onPageChange={setPage}
+						isLoading={logsLoading && !logsData}
+						embedded
+					/>
+				</CardContent>
+			</Card>
 		</AuditPageShell>
 	);
 }

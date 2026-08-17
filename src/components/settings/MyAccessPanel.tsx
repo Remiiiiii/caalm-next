@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { CardContent, Card as GlassCard } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { LoadingSpinner } from "@/components/ui/loading";
+import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import {
 	Select,
 	SelectContent,
@@ -148,9 +149,7 @@ export default function MyAccessPanel() {
 								</p>
 								<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
 									<span>{roles.length}</span>
-									<span className="inline-block ml-2 pb-1">
-										<Users className="h-8 w-8 text-slate-600" />
-									</span>
+									<StatCardIcon className="ml-2" icon={Users} />
 								</div>
 								<p className="text-xs text-slate-600 mt-1">
 									{roles.length === 1 ? "Role" : "Roles"} assigned
@@ -175,9 +174,11 @@ export default function MyAccessPanel() {
 									<span className="text-slate-500 text-lg">
 										{totalPermissions}
 									</span>
-									<span className="inline-block ml-2 pb-1">
-										<CheckCircle2 className="h-8 w-8 text-green" />
-									</span>
+									<StatCardIcon
+										className="ml-2"
+										icon={CheckCircle2}
+										iconClassName="text-green"
+									/>
 								</div>
 								<p className="text-xs text-slate-600 mt-1">
 									Granted permissions

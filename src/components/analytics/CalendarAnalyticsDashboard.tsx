@@ -5,7 +5,7 @@ import {
 	Calendar,
 	CheckCircle,
 	Clock,
-	Download,
+	SquareArrowRightExit,
 	FileText,
 	Loader2,
 	RefreshCw,
@@ -357,7 +357,7 @@ export const CalendarAnalyticsDashboard: React.FC = () => {
 									disabled={!data?.meetingLoad}
 									className="primary-btn px-3 sm:px-4"
 								>
-									<Download className="h-4 w-4" />
+									<SquareArrowRightExit className="h-4 w-4" />
 									Export
 								</Button>
 							</div>

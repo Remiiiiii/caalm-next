@@ -41,6 +41,7 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { isFileShareNotification } from "@/lib/files/fileShareNotification";
 import NotificationSettings from "./NotificationSettings";
 import { Button } from "./ui/button";
+import { PageIndex } from "./ui/page-index";
 import { Checkbox } from "./ui/checkbox";
 import {
 	Dialog,
@@ -736,7 +737,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 							className="flex items-center justify-between mt-4 pt-4 border-t border-slate-200"
 							data-testid="pagination"
 						>
-							<div className="flex items-center gap-4">
+							<div className="flex w-full items-center gap-4">
 								<label className="text-xs text-slate-700">
 									Items per page:
 									<select
@@ -751,33 +752,16 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 										))}
 									</select>
 								</label>
-								<span className="text-sm text-gray-500">
-									{`${(page - 1) * perPage + 1}-${Math.min(
-										page * perPage,
-										filtered.length,
-									)} of ${filtered.length} items`}
-								</span>
-							</div>
-							<div className="flex gap-2">
-								<Button
-									variant="outline"
-									size="sm"
-									disabled={page === 1}
-									onClick={() => setPage((p) => Math.max(1, p - 1))}
-								>
-									Previous
-								</Button>
-								<span className="flex items-center px-3 text-sm">
-									Page {page} of {Math.ceil(filtered.length / perPage)}
-								</span>
-								<Button
-									variant="outline"
-									size="sm"
-									disabled={page * perPage >= filtered.length}
-									onClick={() => setPage((p) => p + 1)}
-								>
-									Next
-								</Button>
+								<PageIndex
+									className="ml-auto"
+									page={page}
+									totalItems={filtered.length}
+									pageSize={perPage}
+									onPageChange={setPage}
+									showRange
+									itemLabel="items"
+									aria-label="Notifications pagination"
+								/>
 							</div>
 						</div>
 					</div>

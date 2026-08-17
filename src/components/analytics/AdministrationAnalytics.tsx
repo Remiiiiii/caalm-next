@@ -2,7 +2,7 @@
 
 import {
 	DollarSign,
-	Download,
+	SquareArrowRightExit,
 	FileText,
 	TrendingUp,
 	Users,
@@ -165,7 +165,7 @@ const AdministrationAnalytics = () => {
 						onClick={handleExport}
 						className="bg-white/20 text-slate-700 backdrop-blur border border-white/40 hover:bg-white/30 transition-all duration-300"
 					>
-						<Download className="h-4 w-4" />
+						<SquareArrowRightExit className="h-4 w-4" />
 						Export
 					</Button>
 				</div>

@@ -14,6 +14,7 @@ import {
 import EqualHeightGrid from "@/components/EqualHeightGrid";
 import LicenseCard from "@/components/licenses/LicenseCard";
 import LicensePreviewSheet from "@/components/licenses/LicensePreviewSheet";
+import { PageIndex } from "@/components/ui/page-index";
 import {
 	deserializeLicenseFilters,
 	LICENSE_SAVED_VIEWS_STORAGE_KEY,
@@ -25,7 +26,6 @@ import {
 	serializeLicenseFilters,
 } from "@/lib/licenses/licensesListUtils";
 import type { License } from "@/types/licenses";
-import LicensesPagination from "./LicensesPagination";
 import LicensesTableView from "./LicensesTableView";
 
 export type ViewType = LicenseViewType;
@@ -324,13 +324,16 @@ export default function LicensesView({
 						onRefresh={onRefresh}
 						onLicenseRemoved={onLicenseRemoved}
 					/>
-					{licenses.length > itemsPerPage && (
-						<LicensesPagination
-							currentPage={validCurrentPage}
-							totalPages={totalPages}
-							onPageChange={setCurrentPage}
-						/>
-					)}
+					<PageIndex
+						className="mt-6 justify-center"
+						page={validCurrentPage}
+						totalItems={licenses.length}
+						pageSize={itemsPerPage}
+						onPageChange={setCurrentPage}
+						hideWhenSinglePage
+						scrollToTop
+						aria-label="Licenses pagination"
+					/>
 				</>
 			) : (
 				<>
@@ -346,13 +349,16 @@ export default function LicensesView({
 							</div>
 						))}
 					</EqualHeightGrid>
-					{licenses.length > itemsPerPage && (
-						<LicensesPagination
-							currentPage={validCurrentPage}
-							totalPages={totalPages}
-							onPageChange={setCurrentPage}
-						/>
-					)}
+					<PageIndex
+						className="mt-6 justify-center"
+						page={validCurrentPage}
+						totalItems={licenses.length}
+						pageSize={itemsPerPage}
+						onPageChange={setCurrentPage}
+						hideWhenSinglePage
+						scrollToTop
+						aria-label="Licenses pagination"
+					/>
 				</>
 			)}
 			<LicensePreviewSheet

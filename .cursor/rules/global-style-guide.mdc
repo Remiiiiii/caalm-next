@@ -116,9 +116,7 @@ This is the **single source of truth** for all styling, page structure, and comp
         </p>
         <div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
           <span>Value</span>
-          <span className="inline-block ml-2 pb-1">
-            <Icon className="h-8 w-8 text-slate-600" />
-          </span>
+          <StatCardIcon className="ml-2" icon={Icon} />
         </div>
         <p className="text-xs text-slate-600 mt-1">Description</p>
       </div>
@@ -133,7 +131,7 @@ This is the **single source of truth** for all styling, page structure, and comp
 - ✅ Padding: `p-4 sm:p-6` (responsive)
 - ✅ Title: `text-sm font-medium sidebar-gradient-text`
 - ✅ Value: `text-3xl font-bold text-slate-700`
-- ✅ Icon: `h-8 w-8 text-slate-600` inline with value
+- ✅ Icon: `StatCardIcon` mint rounded-square badge (`rounded-xl bg-green/15`)
 - ✅ Description: `text-xs text-slate-600 mt-1`
 
 **Reference examples:**
@@ -360,11 +358,50 @@ Use custom colors defined in `tailwind.config.ts` without intermediate suffixes 
 - Use consistent spacing: `gap-3` between buttons
 - Responsive padding: `px-3 sm:px-4`
 
+### Search fields
+
+**ALWAYS** use `SearchField` from `@/components/ui/search-field` for search inputs.
+
+```tsx
+import { SearchField } from "@/components/ui/search-field";
+
+<SearchField
+  value={query}
+  onChange={(e) => setQuery(e.target.value)}
+  placeholder="Search contracts..."
+/>
+```
+
+- `.shad-input` sets `px-0 !important` and will hide placeholder text under a Search icon
+- If you must compose manually, set `data-with-leading-icon="true"` on the input (padding-left 2.5rem) and do **not** rely on `pl-9` / `pl-10` alone with `shad-input`
+
+### Page index
+
+**ALWAYS** use `PageIndex` from `@/components/ui/page-index` for list pagination. Do not add per-page wrappers.
+
+```tsx
+import { PageIndex } from "@/components/ui/page-index";
+
+<PageIndex
+  page={page}
+  totalItems={total}
+  pageSize={20}
+  onPageChange={setPage}
+  hideWhenSinglePage
+  showRange
+  itemLabel="contracts"
+/>
+```
+
+- Pass `totalPages`, or pass `totalItems` + `pageSize` and the component computes the page count
+- Plain text Previous / Next with `Page n of n` (no Button chrome, no numbered page buttons)
+- Use `scrollToTop` on full-page lists that should jump to the top on page change
+
 ### Icons
 
 - **Header icons**: `w-5 h-5 text-[#0f5384]` (placed directly next to title)
 - **Button icons**: `h-4 w-4`
-- **Stat card icons**: `h-8 w-8 text-slate-600` (inline with value)
+- **Stat card icons**: `StatCardIcon` from `@/components/ui/stat-card-icon` (rounded-square mint fill, dark teal icon)
 - **Small icons**: `h-3 w-3` or `h-4 w-4`
 
 ### Hover Effects
@@ -515,9 +552,7 @@ When creating a new page or component, verify:
         <p className="text-sm font-medium sidebar-gradient-text">Title</p>
         <div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
           <span>Value</span>
-          <span className="inline-block ml-2 pb-1">
-            <Icon className="h-8 w-8 text-slate-600" />
-          </span>
+          <StatCardIcon className="ml-2" icon={Icon} />
         </div>
         <p className="text-xs text-slate-600 mt-1">Description</p>
       </div>

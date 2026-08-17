@@ -27,6 +27,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { PageIndex } from "@/components/ui/page-index";
 import { ContractCardSkeleton } from "@/components/ui/skeletons";
 import { useGroupedNavigation } from "@/hooks/useGroupedNavigation";
 import {
@@ -238,8 +239,6 @@ export default function ContractsDisplay() {
 		loading,
 		error,
 		totalRecords,
-		currentPage,
-		totalPages,
 		searchOpportunities,
 		clearResults,
 		hasSearched,
@@ -344,21 +343,36 @@ export default function ContractsDisplay() {
 		clearResults();
 	}, [clearResults]);
 
-	const loadMore = useCallback(async () => {
-		setSearchFilters((prevFilters) => {
-			const currentOffset = prevFilters.offset || 0;
-			const currentLimit = prevFilters.limit || 25;
-
-			const newFilters = {
-				...prevFilters,
-				offset: currentOffset + currentLimit,
+	const handlePageChange = useCallback(
+		async (nextPage: number) => {
+			const limit = searchFilters.limit || 25;
+			const nextFilters = {
+				...searchFilters,
+				offset: (nextPage - 1) * limit,
 			};
-
-			// Search with updated pagination
-			searchOpportunities(newFilters);
-			return newFilters;
-		});
-	}, [searchOpportunities]);
+			setSearchFilters(nextFilters);
+			setIsNewSearch(true);
+			try {
+				const cleanFilters: UseSAMOpportunitiesFilters = Object.fromEntries(
+					Object.entries(nextFilters).filter(([key, value]) => {
+						if (typeof value === "string") {
+							return value !== "" && value !== "all";
+						}
+						if (typeof value === "number") {
+							return key === "limit" || key === "offset" || value > 0;
+						}
+						return value !== null && value !== undefined;
+					}),
+				) as UseSAMOpportunitiesFilters;
+				await searchOpportunities(cleanFilters);
+			} catch (err) {
+				console.error("Enhanced SAM search failed:", err);
+			} finally {
+				setIsNewSearch(false);
+			}
+		},
+		[searchFilters, searchOpportunities],
+	);
 
 	// Document Viewer Handlers
 	const handleViewDocument = useCallback((contract: SAMContract) => {
@@ -636,12 +650,6 @@ export default function ContractsDisplay() {
 							<p className="font-medium">
 								Found {totalRecords.toLocaleString()} contracts
 							</p>
-							{contracts.length > 0 && (
-								<p className="text-sm">
-									Page {currentPage} of {totalPages} • Showing{" "}
-									{contracts.length} results
-								</p>
-							)}
 						</div>
 
 						{/* Search Performance Indicator */}
@@ -674,22 +682,23 @@ export default function ContractsDisplay() {
 										/>
 									))}
 								</div>
-
-								{/* Load More */}
-								{contracts.length < totalRecords && (
-									<div className="text-center pt-6">
-										<Button
-											onClick={loadMore}
-											disabled={loading}
-											variant="outline"
-										>
-											{loading ? (
-												<RefreshCw className="h-4 w-4 animate-spin mr-2" />
-											) : null}
-											Load More Contracts
-										</Button>
-									</div>
-								)}
+								<PageIndex
+									className="mt-6 justify-center"
+									page={
+										Math.floor(
+											(searchFilters.offset || 0) /
+												(searchFilters.limit || 25),
+										) + 1
+									}
+									totalItems={totalRecords}
+									pageSize={searchFilters.limit || 25}
+									onPageChange={handlePageChange}
+									hideWhenSinglePage
+									showRange
+									itemLabel="contracts"
+									disabled={loading}
+									aria-label="SAM contracts pagination"
+								/>
 							</>
 						) : (
 							<Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">

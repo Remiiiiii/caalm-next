@@ -7,7 +7,7 @@ import {
 	ChevronDown,
 	ClipboardCheck,
 	Crown,
-	Download,
+	SquareArrowRightExit,
 	FileText,
 	Shield,
 	TrendingUp,
@@ -398,7 +398,7 @@ export default function AnalyticsMock() {
 									Last updated Jul 21, 2026
 								</span>
 								<span className="inline-flex items-center gap-1 rounded-full primary-btn px-2 py-1 text-[9px]">
-									<Download className="h-2.5 w-2.5" />
+									<SquareArrowRightExit className="h-2.5 w-2.5" />
 									Export
 								</span>
 							</div>

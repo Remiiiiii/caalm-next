@@ -1,6 +1,6 @@
 "use client";
 
-import { Upload } from "lucide-react";
+import { SquareArrowRightExit } from "lucide-react";
 import { useMemo } from "react";
 import LicenseForm from "@/components/licenses/LicenseForm";
 import { Button } from "@/components/ui/button";
@@ -91,7 +91,7 @@ export default function LicensesHeaderActions({
 				onClick={handleExport}
 				className="primary-btn px-3 sm:px-4 cursor-pointer"
 			>
-				<Upload className="w-4 h-4" />
+				<SquareArrowRightExit className="w-4 h-4" />
 				<span className="hidden sm:inline">
 					{selectedIds.length > 0 ? `Export (${selectedIds.length})` : "Export"}
 				</span>

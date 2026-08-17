@@ -14,6 +14,7 @@ import { DashboardGreeting } from "@/components/dashboard/DashboardGreeting";
 import RecentActivity from "@/components/RecentActivity";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatCardIcon } from "@/components/ui/stat-card-icon";
 
 interface HRDashboardProps {
 	user?:
@@ -198,9 +199,7 @@ const HRDashboard = ({ user }: HRDashboardProps) => {
 									</p>
 									<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
 										<span>{stat.value}</span>
-										<span className="inline-block ml-2 pb-1">
-											<stat.icon className="h-8 w-8 text-slate-600" />
-										</span>
+										<StatCardIcon className="ml-2" icon={stat.icon} />
 									</div>
 								</div>
 							</div>

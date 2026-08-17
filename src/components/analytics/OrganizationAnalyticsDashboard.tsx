@@ -6,7 +6,7 @@ import {
 	BarChart3,
 	Building,
 	ClipboardCheck,
-	Download,
+	SquareArrowRightExit,
 	Eye,
 	FileText,
 	Shield,
@@ -486,7 +486,7 @@ const OrganizationAnalyticsDashboard = () => {
 								onClick={handleExport}
 								className="primary-btn px-3 sm:px-4"
 							>
-								<Download className="h-4 w-4" />
+								<SquareArrowRightExit className="h-4 w-4" />
 								Export
 							</Button>
 							<Button

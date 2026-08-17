@@ -13,6 +13,7 @@ import {
 	Search,
 	ShieldAlert,
 	Table,
+	SquareArrowRightExit,
 	Upload,
 } from "lucide-react";
 import Image from "next/image";
@@ -316,7 +317,7 @@ export default function LicensesMock() {
 								Upload
 							</span>
 							<span className="inline-flex items-center gap-1.5 rounded-full primary-btn px-2.5 py-1 text-[10px] sm:text-xs">
-								<Upload className="h-3 w-3" />
+								<SquareArrowRightExit className="h-3 w-3" />
 								Export
 							</span>
 						</div>

@@ -10,6 +10,7 @@ import NewsAnalytics from "@/components/news/NewsAnalytics";
 import { DashboardGreeting } from "@/components/dashboard/DashboardGreeting";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 
@@ -133,9 +134,7 @@ const ContentCreatorDashboard: React.FC<ContentCreatorDashboardProps> = ({
 								</p>
 								<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
 									<span>{loading ? "..." : stats.total}</span>
-									<span className="inline-block ml-2 pb-1">
-										<FileText className="h-8 w-8 text-slate-600" />
-									</span>
+									<StatCardIcon className="ml-2" icon={FileText} />
 								</div>
 								<p className="text-xs text-slate-600 mt-1">All articles</p>
 							</div>
@@ -153,9 +152,7 @@ const ContentCreatorDashboard: React.FC<ContentCreatorDashboardProps> = ({
 								</p>
 								<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
 									<span>{loading ? "..." : stats.published}</span>
-									<span className="inline-block ml-2 pb-1">
-										<TrendingUp className="h-8 w-8 text-slate-600" />
-									</span>
+									<StatCardIcon className="ml-2" icon={TrendingUp} />
 								</div>
 								<p className="text-xs text-slate-600 mt-1">Live articles</p>
 							</div>
@@ -173,9 +170,7 @@ const ContentCreatorDashboard: React.FC<ContentCreatorDashboardProps> = ({
 								</p>
 								<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
 									<span>{loading ? "..." : stats.drafts}</span>
-									<span className="inline-block ml-2 pb-1">
-										<FileText className="h-8 w-8 text-slate-600" />
-									</span>
+									<StatCardIcon className="ml-2" icon={FileText} />
 								</div>
 								<p className="text-xs text-slate-600 mt-1">Unpublished</p>
 							</div>
@@ -193,9 +188,7 @@ const ContentCreatorDashboard: React.FC<ContentCreatorDashboardProps> = ({
 								</p>
 								<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
 									<span>{loading ? "..." : stats.thisMonth}</span>
-									<span className="inline-block ml-2 pb-1">
-										<Calendar className="h-8 w-8 text-slate-600" />
-									</span>
+									<StatCardIcon className="ml-2" icon={Calendar} />
 								</div>
 								<p className="text-xs text-slate-600 mt-1">
 									Published this month

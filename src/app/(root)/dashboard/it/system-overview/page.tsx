@@ -13,6 +13,7 @@ import { ITGlassPanel, ITPageShell } from "@/components/it/ITPageShell";
 import { Button } from "@/components/ui/button";
 import { CardContent, Card as GlassCard } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading";
+import { StatCardIcon } from "@/components/ui/stat-card-icon";
 
 interface OverviewMetrics {
 	storageTotal?: string;
@@ -111,9 +112,7 @@ export default function SystemOverviewPage() {
 									</p>
 									<div className="flex items-center text-2xl font-bold text-slate-700 pt-2">
 										<span>{card.value}</span>
-										<span className="inline-block ml-2 pb-1">
-											<card.icon className="h-7 w-7 text-slate-600" />
-										</span>
+										<StatCardIcon className="ml-2" icon={card.icon} />
 									</div>
 								</CardContent>
 							</GlassCard>

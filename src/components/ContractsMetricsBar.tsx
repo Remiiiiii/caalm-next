@@ -4,6 +4,7 @@ import { AlertTriangle, CheckCircle, FileText } from "lucide-react";
 import { useMemo } from "react";
 import { useContractsView } from "@/components/ContractsViewContext";
 import { Card, CardContent } from "@/components/ui/card";
+import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import {
 	isExpiringWithinDays,
 	matchesStatusTab,
@@ -137,9 +138,7 @@ export default function ContractsMetricsBar({
 									</p>
 									<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
 										<span>{metrics.totalContracts.toLocaleString()}</span>
-										<span className="inline-block ml-2 pb-1">
-											<FileText className="h-8 w-8 text-slate-600" />
-										</span>
+										<StatCardIcon className="ml-2" icon={FileText} />
 									</div>
 									<p className="text-xs text-slate-600 mt-1">
 										Click to show all
@@ -171,9 +170,10 @@ export default function ContractsMetricsBar({
 											expiringContracts.in60 +
 											expiringContracts.in90}
 									</span>
-									<span className="inline-block pb-1">
-										<AlertTriangle className="h-8 w-8 text-orange" />
-									</span>
+									<StatCardIcon
+										icon={AlertTriangle}
+										iconClassName="text-orange"
+									/>
 								</div>
 								<div className="flex items-center justify-between gap-2 mt-2 text-xs text-slate-600">
 									<span>30d: {expiringContracts.in30}</span>
@@ -203,9 +203,11 @@ export default function ContractsMetricsBar({
 									</p>
 									<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
 										<span>{metrics.activeCount}</span>
-										<span className="inline-block ml-2 pb-1">
-											<CheckCircle className="h-8 w-8 text-green" />
-										</span>
+										<StatCardIcon
+											className="ml-2"
+											icon={CheckCircle}
+											iconClassName="text-green"
+										/>
 									</div>
 									<p className="text-xs text-slate-600 mt-1">
 										{metrics.totalContracts > 0

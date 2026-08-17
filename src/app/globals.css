@@ -333,15 +333,22 @@
 		@apply border-none! w-full! shadow-none! py-0! px-0! h-12! rounded-md placeholder:text-light-200 text-[14px] leading-[20px] font-normal text-slate-700 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#078FAB] focus-visible:ring-offset-0;
 	}
 
-	/* Leading-icon search fields need left padding that shad-input would otherwise zero out */
-	.shad-input.pl-10,
-	input.shad-input.pl-10 {
-		@apply pl-10! pr-3!;
-	}
-
 	/* More specific override for input elements with shad-input class */
 	input.shad-input {
 		@apply border-none! w-full! shadow-none! py-0! px-0! h-12! rounded-md bg-transparent! focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#078FAB] focus-visible:ring-offset-0;
+	}
+
+	/* Leading-icon search: must beat input.shad-input { px-0! } so placeholder text is not under the icon */
+	.shad-input[data-with-leading-icon="true"],
+	input.shad-input[data-with-leading-icon="true"],
+	.shad-input.pl-8,
+	.shad-input.pl-9,
+	.shad-input.pl-10,
+	input.shad-input.pl-8,
+	input.shad-input.pl-9,
+	input.shad-input.pl-10 {
+		padding-left: 2.5rem !important;
+		padding-right: 0.75rem !important;
 	}
 
 	.shad-form-item {

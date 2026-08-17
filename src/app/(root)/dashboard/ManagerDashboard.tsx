@@ -12,6 +12,7 @@ import { DashboardGreeting } from "@/components/dashboard/DashboardGreeting";
 import RecentActivity from "@/components/RecentActivity";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import {
 	ContractCardSkeleton,
 	StatCardSkeleton,
@@ -110,9 +111,7 @@ const ManagerDashboard = () => {
 												</p>
 												<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
 													<span>{contracts.length}</span>
-													<span className="inline-block ml-2 pb-1">
-														<FileText className="h-8 w-8 text-slate-600" />
-													</span>
+													<StatCardIcon className="ml-2" icon={FileText} />
 												</div>
 											</div>
 										</div>
@@ -134,9 +133,7 @@ const ManagerDashboard = () => {
 																.length
 														}
 													</span>
-													<span className="inline-block ml-2 pb-1">
-														<AlertCircle className="h-8 w-8 text-slate-600" />
-													</span>
+													<StatCardIcon className="ml-2" icon={AlertCircle} />
 												</div>
 											</div>
 										</div>
@@ -158,9 +155,7 @@ const ManagerDashboard = () => {
 																.length
 														}
 													</span>
-													<span className="inline-block ml-2 pb-1">
-														<Clock className="h-8 w-8 text-slate-600" />
-													</span>
+													<StatCardIcon className="ml-2" icon={Clock} />
 												</div>
 											</div>
 										</div>
@@ -182,9 +177,7 @@ const ManagerDashboard = () => {
 																.length
 														}
 													</span>
-													<span className="inline-block ml-2 pb-1">
-														<Upload className="h-8 w-8 text-slate-600" />
-													</span>
+													<StatCardIcon className="ml-2" icon={Upload} />
 												</div>
 											</div>
 										</div>

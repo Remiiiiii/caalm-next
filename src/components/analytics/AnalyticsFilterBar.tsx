@@ -1,6 +1,6 @@
 "use client";
 
-import { Download } from "lucide-react";
+import { SquareArrowRightExit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -74,7 +74,7 @@ export function AnalyticsFilterBar({
 							className="primary-btn px-3 sm:px-4 w-full sm:w-auto sm:ml-0"
 							onClick={onExport}
 						>
-							<Download className="h-4 w-4" />
+							<SquareArrowRightExit className="h-4 w-4" />
 							Export
 						</Button>
 					) : null}

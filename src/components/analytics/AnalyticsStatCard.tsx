@@ -2,6 +2,7 @@
 
 import type { LucideIcon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import { cn } from "@/lib/utils";
 
 interface AnalyticsStatCardProps {
@@ -57,9 +58,7 @@ export function AnalyticsStatCard({
 						<p className="text-sm font-medium sidebar-gradient-text">{title}</p>
 						<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
 							<span>{value}</span>
-							<span className="inline-block ml-2 pb-1">
-								<Icon className="h-8 w-8 text-slate-600" />
-							</span>
+							<StatCardIcon className="ml-2" icon={Icon} />
 						</div>
 						{description ? (
 							<p className="text-xs text-slate-600 mt-1">{description}</p>

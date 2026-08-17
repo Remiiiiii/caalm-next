@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 interface AuditPageShellProps {
 	title: string;
 	subtitle?: string;
+	tags?: string[];
 	actions?: ReactNode;
 	children: ReactNode;
 }
@@ -12,6 +13,7 @@ interface AuditPageShellProps {
 export function AuditPageShell({
 	title,
 	subtitle,
+	tags,
 	actions,
 	children,
 }: AuditPageShellProps) {
@@ -24,6 +26,18 @@ export function AuditPageShell({
 					</div>
 					{subtitle ? (
 						<p className="text-sm text-slate-600 max-w-3xl">{subtitle}</p>
+					) : null}
+					{tags && tags.length > 0 ? (
+						<div className="flex flex-wrap gap-2 mt-2.5">
+							{tags.map((tag) => (
+								<span
+									key={tag}
+									className="text-[10px] font-medium tracking-wide uppercase text-slate-500 border border-slate-200 bg-white/70 px-2 py-0.5"
+								>
+									{tag}
+								</span>
+							))}
+						</div>
 					) : null}
 				</div>
 				{actions ? (

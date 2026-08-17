@@ -60,8 +60,8 @@ vi.mock("@/components/LicensesTableView", () => ({
 	),
 }));
 
-vi.mock("@/components/LicensesPagination", () => ({
-	default: () => <div data-testid="licenses-pagination">Pagination</div>,
+vi.mock("@/components/ui/page-index", () => ({
+	PageIndex: () => <div data-testid="licenses-pagination">Pagination</div>,
 }));
 
 vi.mock("@/components/Sort", () => ({

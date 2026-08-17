@@ -6,8 +6,8 @@ import Card from "@/components/Card";
 import ContractPreviewSheet from "@/components/ContractPreviewSheet";
 import { useContractsView } from "@/components/ContractsViewContext";
 import EqualHeightGrid from "@/components/EqualHeightGrid";
+import { PageIndex } from "@/components/ui/page-index";
 import type { UIFileDoc } from "@/types/files";
-import ContractsPagination from "./ContractsPagination";
 import ContractsTableView from "./ContractsTableView";
 
 export type {
@@ -87,13 +87,16 @@ export default function ContractsView({
 						user={user}
 						onRefresh={onRefresh}
 					/>
-					{files.length > itemsPerPage && (
-						<ContractsPagination
-							currentPage={validCurrentPage}
-							totalPages={totalPages}
-							onPageChange={setCurrentPage}
-						/>
-					)}
+					<PageIndex
+						className="mt-6 justify-center"
+						page={validCurrentPage}
+						totalItems={files.length}
+						pageSize={itemsPerPage}
+						onPageChange={setCurrentPage}
+						hideWhenSinglePage
+						scrollToTop
+						aria-label="Contracts pagination"
+					/>
 				</>
 			) : (
 				<>
@@ -111,13 +114,16 @@ export default function ContractsView({
 							</div>
 						))}
 					</EqualHeightGrid>
-					{files.length > itemsPerPage && (
-						<ContractsPagination
-							currentPage={validCurrentPage}
-							totalPages={totalPages}
-							onPageChange={setCurrentPage}
-						/>
-					)}
+					<PageIndex
+						className="mt-6 justify-center"
+						page={validCurrentPage}
+						totalItems={files.length}
+						pageSize={itemsPerPage}
+						onPageChange={setCurrentPage}
+						hideWhenSinglePage
+						scrollToTop
+						aria-label="Contracts pagination"
+					/>
 				</>
 			)}
 			<ContractPreviewSheet

@@ -257,13 +257,17 @@ export async function getComplianceStatusSnapshot(
 				)
 			: null;
 
-	const scoreParts: number[] = [88];
+	// Live sources only — no hardcoded baseline (customer-facing accuracy).
+	const scoreParts: number[] = [];
 	if (contractComplianceRate !== null) scoreParts.push(contractComplianceRate);
 	if (licenseRenewalHealth !== null) scoreParts.push(licenseRenewalHealth);
 
-	const overallScore = Math.round(
-		scoreParts.reduce((sum, value) => sum + value, 0) / scoreParts.length,
-	);
+	const overallScore =
+		scoreParts.length > 0
+			? Math.round(
+					scoreParts.reduce((sum, value) => sum + value, 0) / scoreParts.length,
+				)
+			: 0;
 
 	const areasAtRisk =
 		(contracts?.buckets["action-required"] ?? 0) +

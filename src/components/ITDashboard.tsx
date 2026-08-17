@@ -21,6 +21,7 @@ import {
 } from "@/components/dashboard/DashboardGreeting";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import { useITDashboard } from "@/hooks/useITDashboard";
 import { useITMetrics } from "@/hooks/useITMetrics";
 import { useITUser } from "@/hooks/useITUser";
@@ -118,15 +119,15 @@ const ITDashboard: React.FC<ITDashboardProps> = ({ user }) => {
 									</p>
 									<div className="flex items-center text-3xl font-bold text-slate-700 pt-2 capitalize">
 										<span>{systemHealth.status}</span>
-										<span className="inline-block ml-2 pb-1">
+										<StatCardIcon className="ml-2">
 											{systemHealth.status === "healthy" ? (
-												<CheckCircle className="h-8 w-8 text-green-600" />
+												<CheckCircle className="text-green-600" />
 											) : systemHealth.status === "degraded" ? (
-												<AlertTriangle className="h-8 w-8 text-yellow-600" />
+												<AlertTriangle className="text-yellow-600" />
 											) : (
-												<XCircle className="h-8 w-8 text-red-600" />
+												<XCircle className="text-red-600" />
 											)}
-										</span>
+										</StatCardIcon>
 									</div>
 									<p className="text-xs text-slate-600 mt-1">
 										Uptime: {systemHealth.uptime}%
@@ -150,9 +151,7 @@ const ITDashboard: React.FC<ITDashboardProps> = ({ user }) => {
 												? quickStats.apiRequests.toLocaleString()
 												: "0"}
 										</span>
-										<span className="inline-block ml-2 pb-1">
-											<Activity className="h-8 w-8 text-slate-600" />
-										</span>
+										<StatCardIcon className="ml-2" icon={Activity} />
 									</div>
 									<p className="text-xs text-slate-600 mt-1">Total requests</p>
 								</div>
@@ -174,9 +173,7 @@ const ITDashboard: React.FC<ITDashboardProps> = ({ user }) => {
 												? quickStats.deployments.toLocaleString()
 												: "0"}
 										</span>
-										<span className="inline-block ml-2 pb-1">
-											<Server className="h-8 w-8 text-slate-600" />
-										</span>
+										<StatCardIcon className="ml-2" icon={Server} />
 									</div>
 									<p className="text-xs text-slate-600 mt-1">
 										Total deployments
@@ -200,9 +197,7 @@ const ITDashboard: React.FC<ITDashboardProps> = ({ user }) => {
 												? quickStats.activeIncidents
 												: "0"}
 										</span>
-										<span className="inline-block ml-2 pb-1">
-											<AlertCircle className="h-8 w-8 text-slate-600" />
-										</span>
+										<StatCardIcon className="ml-2" icon={AlertCircle} />
 									</div>
 									<p className="text-xs text-slate-600 mt-1">
 										Requiring attention

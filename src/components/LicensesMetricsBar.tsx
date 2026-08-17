@@ -13,6 +13,7 @@ import { useMemo } from "react";
 import CountUp from "react-countup";
 import { useLicensesView } from "@/components/LicensesView";
 import { Card, CardContent } from "@/components/ui/card";
+import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import {
 	computeLicenseMetrics,
 	getLicenseExpiryRaw,
@@ -121,9 +122,7 @@ export default function LicensesMetricsBar({
 								<span className="tabular-nums">
 									<CountUp end={metrics.totalLicenses} duration={1.2} />
 								</span>
-								<span className="inline-block ml-2 pb-1">
-									<FileText className="h-8 w-8 text-[#0f5384]" />
-								</span>
+								<StatCardIcon className="ml-2" icon={FileText} />
 							</div>
 							<p className="text-xs text-slate-600 mt-1">Click to show all</p>
 						</CardContent>
@@ -145,9 +144,11 @@ export default function LicensesMetricsBar({
 								<span className="tabular-nums">
 									<CountUp end={metrics.activeCount} duration={1.2} />
 								</span>
-								<span className="inline-block ml-2 pb-1">
-									<CheckCircle className="h-8 w-8 text-green" />
-								</span>
+								<StatCardIcon
+									className="ml-2"
+									icon={CheckCircle}
+									iconClassName="text-green"
+								/>
 							</div>
 							<p className="text-xs text-slate-600 mt-1">
 								{metrics.totalLicenses > 0
@@ -176,9 +177,10 @@ export default function LicensesMetricsBar({
 									<span className="tabular-nums">
 										<CountUp end={metrics.totalExpiring} duration={1.2} />
 									</span>
-									<span className="inline-block pb-1">
-										<AlertTriangle className="h-8 w-8 text-orange" />
-									</span>
+									<StatCardIcon
+										icon={AlertTriangle}
+										iconClassName="text-orange"
+									/>
 								</div>
 								<div className="flex items-center justify-between gap-2 mt-2 text-xs text-slate-600">
 									<span>30d: {metrics.expiring.in30}</span>
@@ -212,7 +214,7 @@ export default function LicensesMetricsBar({
 									<span className="tabular-nums">
 										{metrics.utilizationRate.toFixed(1)}%
 									</span>
-									<ChartColumnIncreasing className="h-8 w-8 text-[#0f5384]" />
+									<StatCardIcon icon={ChartColumnIncreasing} />
 								</div>
 								<p className="text-xs text-slate-600 mt-1">
 									{metrics.usedQuantity.toLocaleString()} of{" "}
@@ -242,7 +244,7 @@ export default function LicensesMetricsBar({
 											duration={1.2}
 										/>
 									</span>
-									<ShieldAlert className="h-8 w-8 text-red" />
+									<StatCardIcon icon={ShieldAlert} iconClassName="text-red" />
 								</div>
 								<p className="text-xs text-slate-600 mt-1">
 									At-risk or non-compliant
@@ -268,7 +270,10 @@ export default function LicensesMetricsBar({
 									<span className="tabular-nums">
 										<CountUp end={metrics.actionRequiredCount} duration={1.2} />
 									</span>
-									<ClipboardList className="h-8 w-8 text-orange" />
+									<StatCardIcon
+										icon={ClipboardList}
+										iconClassName="text-orange"
+									/>
 								</div>
 								<p className="text-xs text-slate-600 mt-1">
 									Needs owner follow-up
@@ -294,7 +299,7 @@ export default function LicensesMetricsBar({
 									<span className="tabular-nums">
 										<CountUp end={metrics.pendingCount} duration={1.2} />
 									</span>
-									<FileText className="h-8 w-8 text-orange" />
+									<StatCardIcon icon={FileText} iconClassName="text-orange" />
 								</div>
 								<p className="text-xs text-slate-600 mt-1">
 									Pending or suspended
@@ -324,7 +329,10 @@ export default function LicensesMetricsBar({
 									<span className="tabular-nums">
 										<CountUp end={metrics.autoRenewWatchCount} duration={1.2} />
 									</span>
-									<RefreshCw className="h-8 w-8 text-[#03AFBF]" />
+									<StatCardIcon
+										icon={RefreshCw}
+										iconClassName="text-[#03AFBF]"
+									/>
 								</div>
 								<p className="text-xs text-slate-600 mt-1">
 									Auto-renew within 90 days
@@ -353,7 +361,7 @@ export default function LicensesMetricsBar({
 											duration={1.2}
 										/>
 									</span>
-									<RefreshCw className="h-8 w-8 text-slate-600" />
+									<StatCardIcon icon={RefreshCw} />
 								</div>
 								<p className="text-xs text-slate-600 mt-1">
 									{metrics.renewalPipelineCost > 0

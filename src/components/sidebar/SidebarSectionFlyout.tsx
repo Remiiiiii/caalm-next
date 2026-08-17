@@ -1,6 +1,14 @@
 "use client";
 
-import { Building, Building2, Crown, Eye, Lock, Server } from "lucide-react";
+import {
+	BookOpenCheck,
+	Building,
+	Building2,
+	Crown,
+	Eye,
+	Lock,
+	Server,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -9,6 +17,7 @@ import { NavItemIcon } from "@/components/sidebar/NavItemIcon";
 import {
 	DASHBOARD_ITEM_COLORS,
 	ITEM_ICONS,
+	NAV_ICON_FILL_GREY,
 	isNavItemActive,
 } from "@/components/sidebar/sidebar-icons";
 import {
@@ -68,6 +77,16 @@ function ItemIcon({
 			return <Eye className="h-4 w-4 text-gray-500 shrink-0" />;
 		if (item.name === "IT")
 			return <Server className="h-4 w-4 text-[#0f5384] shrink-0" />;
+	}
+
+	if (item.name === "Audit Readiness") {
+		return (
+			<BookOpenCheck
+				className="h-4 w-4 shrink-0"
+				style={{ color: NAV_ICON_FILL_GREY }}
+				aria-hidden
+			/>
+		);
 	}
 
 	const mapped = ITEM_ICONS[item.name];

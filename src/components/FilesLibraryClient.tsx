@@ -4,7 +4,6 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Card from "@/components/Card";
-import ContractsPagination from "@/components/ContractsPagination";
 import FilesBulkBar from "@/components/FilesBulkBar";
 import FilesTableView from "@/components/FilesTableView";
 import {
@@ -12,6 +11,7 @@ import {
 	type FilesViewType,
 } from "@/components/FilesViewToggle";
 import Sort from "@/components/Sort";
+import { PageIndex } from "@/components/ui/page-index";
 import type { UIFileDoc } from "@/types/files";
 
 const VIEW_STORAGE_KEY = "caalm-files-library-view";
@@ -134,13 +134,16 @@ export default function FilesLibraryClient({
 								onRefresh={onRefresh}
 							/>
 						</section>
-						{files.length > TABLE_PAGE_SIZE && (
-							<ContractsPagination
-								currentPage={validCurrentPage}
-								totalPages={totalPages}
-								onPageChange={setCurrentPage}
-							/>
-						)}
+						<PageIndex
+							className="mt-6 justify-center"
+							page={validCurrentPage}
+							totalItems={files.length}
+							pageSize={TABLE_PAGE_SIZE}
+							onPageChange={setCurrentPage}
+							hideWhenSinglePage
+							scrollToTop
+							aria-label="Files pagination"
+						/>
 					</>
 				) : (
 					<section className="file-list mb-6">

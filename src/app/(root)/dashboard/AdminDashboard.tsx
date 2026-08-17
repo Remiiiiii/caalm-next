@@ -36,6 +36,7 @@ import Thumbnail from "@/components/Thumbnail";
 import Avatar from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import {
 	SelectItem,
 	SelectScrollable,
@@ -568,9 +569,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 										</p>
 										<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
 											<span>{unifiedStats.totalContracts}</span>
-											<span className="inline-block ml-2 pb-1">
-												<FileStack className="h-8 w-8 text-slate-600" />
-											</span>
+											<StatCardIcon className="ml-2" icon={FileStack} />
 										</div>
 									</div>
 								</div>
@@ -588,9 +587,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 										</p>
 										<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
 											<span>{unifiedStats.expiringContracts}</span>
-											<span className="inline-block ml-2 pb-1">
-												<AlertTriangle className="h-8 w-8 text-slate-600" />
-											</span>
+											<StatCardIcon className="ml-2" icon={AlertTriangle} />
 										</div>
 									</div>
 								</div>
@@ -608,9 +605,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 										</p>
 										<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
 											<span>{unifiedStats.activeUsers}</span>
-											<span className="inline-block ml-2 pb-1">
-												<Users className="h-8 w-8 text-slate-600" />
-											</span>
+											<StatCardIcon className="ml-2" icon={Users} />
 										</div>
 									</div>
 								</div>
@@ -628,9 +623,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 										</p>
 										<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
 											<span>{unifiedStats.complianceRate}</span>
-											<span className="inline-block ml-2 pb-1">
-												<CheckCircle className="h-8 w-8 text-slate-600" />
-											</span>
+											<StatCardIcon className="ml-2" icon={CheckCircle} />
 										</div>
 									</div>
 								</div>

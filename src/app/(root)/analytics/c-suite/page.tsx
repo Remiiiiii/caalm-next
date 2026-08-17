@@ -7,7 +7,7 @@ import {
 	Calendar,
 	CheckCircle,
 	ClipboardCheck,
-	Download,
+	SquareArrowRightExit,
 	Loader2,
 	Shield,
 	TrendingUp,
@@ -123,7 +123,7 @@ const CSuitePage = () => {
 					onClick={handleExport}
 					disabled={isLoading || !summary}
 				>
-					<Download className="h-4 w-4" />
+					<SquareArrowRightExit className="h-4 w-4" />
 					Export audit packet
 				</Button>
 			}

@@ -4,7 +4,6 @@ import { format } from "date-fns";
 import {
 	AlertCircle,
 	Calendar,
-	ChevronLeft,
 	ChevronRight,
 	FileText,
 	Filter,
@@ -23,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PageIndex } from "@/components/ui/page-index";
 import {
 	Select,
 	SelectContent,
@@ -503,84 +503,20 @@ const CompanyNewsFeed: React.FC<CompanyNewsFeedProps> = ({
 							))}
 						</div>
 
-						{/* Pagination */}
 						{totalPages > 1 && (
 							<Card className="glass-card">
 								<div className="glass-card-cap" />
 								<CardContent className="p-6">
-									<div className="flex items-center justify-between">
-										<div className="text-sm text-light-100">
-											Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
-											{Math.min(currentPage * itemsPerPage, totalItems)} of{" "}
-											{totalItems} articles
-										</div>
-										<div className="flex items-center gap-2">
-											<Button
-												variant="outline"
-												size="sm"
-												onClick={() => handlePageChange(currentPage - 1)}
-												disabled={currentPage === 1}
-												className="primary-btn px-3 sm:px-4"
-											>
-												<ChevronLeft className="h-4 w-4" />
-												Previous
-											</Button>
-											<div className="flex items-center gap-1">
-												{Array.from(
-													{ length: totalPages },
-													(_, i) => i + 1,
-												).map((page) => {
-													if (
-														page === 1 ||
-														page === totalPages ||
-														(page >= currentPage - 1 && page <= currentPage + 1)
-													) {
-														const isCurrentPage = page === currentPage;
-														return isCurrentPage ? (
-															<Button
-																key={page}
-																size="sm"
-																onClick={() => handlePageChange(page)}
-																className="bg-transparent text-navy hover:bg-transparent"
-															>
-																{page}
-															</Button>
-														) : (
-															<Button
-																key={page}
-																variant="ghost"
-																size="sm"
-																onClick={() => handlePageChange(page)}
-																className="px-3 py-1 text-navy"
-															>
-																{page}
-															</Button>
-														);
-													} else if (
-														page === currentPage - 2 ||
-														page === currentPage + 2
-													) {
-														return (
-															<span key={page} className="px-2 text-light-200">
-																...
-															</span>
-														);
-													}
-													return null;
-												})}
-											</div>
-											<Button
-												variant="outline"
-												size="sm"
-												onClick={() => handlePageChange(currentPage + 1)}
-												disabled={currentPage === totalPages}
-												className="primary-btn px-3 sm:px-4"
-											>
-												Next
-												<ChevronRight className="h-4 w-4" />
-											</Button>
-										</div>
-									</div>
+									<PageIndex
+										page={currentPage}
+										totalItems={totalItems}
+										pageSize={itemsPerPage}
+										onPageChange={handlePageChange}
+										hideWhenSinglePage
+										showRange
+										itemLabel="articles"
+										aria-label="News feed pagination"
+									/>
 								</CardContent>
 							</Card>
 						)}

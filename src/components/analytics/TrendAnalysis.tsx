@@ -5,7 +5,7 @@ import {
 	ArrowUpRight,
 	BarChart3,
 	Calendar,
-	Download,
+	SquareArrowRightExit,
 	LineChart,
 	PieChart,
 	TrendingDown,
@@ -349,7 +349,7 @@ const TrendAnalysis: React.FC<TrendAnalysisProps> = ({ department }) => {
 						size="sm"
 						className="bg-white/20 backdrop-blur border border-white/40 hover:bg-white/30"
 					>
-						<Download className="h-4 w-4" />
+						<SquareArrowRightExit className="h-4 w-4" />
 						Export
 					</Button>
 				</div>

@@ -4,7 +4,7 @@ import {
 	AlertTriangle,
 	CheckCircle,
 	Clock,
-	Download,
+	SquareArrowRightExit,
 	Eye,
 	FileText,
 	Filter,
@@ -364,7 +364,7 @@ const ComplianceTracking: React.FC<ComplianceTrackingProps> = ({
 						size="sm"
 						className="bg-white/20 backdrop-blur border border-white/40 hover:bg-white/30"
 					>
-						<Download className="h-4 w-4" />
+						<SquareArrowRightExit className="h-4 w-4" />
 						Export
 					</Button>
 				</div>

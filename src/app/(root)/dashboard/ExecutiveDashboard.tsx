@@ -48,6 +48,7 @@ import {
 import Avatar from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import {
 	SelectItem,
 	SelectScrollable,
@@ -817,14 +818,11 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 												</p>
 												<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
 													<span>{stat.value}</span>
-													<span className="inline-block ml-2 pb-1">
-														<stat.icon
-															className={`h-8 w-8 ${stat.color.replace(
-																"text-",
-																"text-",
-															)}`}
-														/>
-													</span>
+													<StatCardIcon
+														className="ml-2"
+														icon={stat.icon}
+														iconClassName={stat.color}
+													/>
 												</div>
 											</div>
 										</div>
