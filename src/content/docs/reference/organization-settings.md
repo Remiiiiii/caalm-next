@@ -19,7 +19,7 @@ Three tabs:
 
 | Tab | Job |
 |---|---|
-| **Profile** | Org name and email domain |
+| **Profile** | Org name, email domain, timezone, and public website URL |
 | **Limits** | Max users and max departments for this org |
 | **Org structure** | Live catalog of departments, divisions, and cost centers |
 
@@ -27,13 +27,18 @@ Subscription tier and status show at the top (read-only from billing).
 
 ## Profile
 
-Use this when the company name or primary email domain changes.
+Use this when the company name, primary email domain, audit schedule timezone, or public website changes.
 
 1. Open `/settings/organization`
 2. Edit **Organization name** and optional **Email domain**
-3. Save profile
+3. Set **Timezone (audit schedule)** to an IANA value such as `America/New_York`  
+   Audit readiness weekly/monthly/quarterly jobs use the org’s **local 9:00** hour.
+4. Optionally set **Public website URL** for informational site crawl on readiness packets
+5. Save profile
 
 Domain is a label for your org (for example `acme.org`). It does not replace invite email checks by itself.
+
+Website URL is separate from email domain. It is used by [Audit readiness](/docs/reference/audit-readiness) for a bounded public-site crawl and is **not** part of the readiness score.
 
 ## Limits
 

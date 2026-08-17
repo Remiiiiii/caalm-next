@@ -184,6 +184,13 @@ export const DOCS_NAV: DocsNavGroup[] = [
 				summary: "Compliance status, KRIs, and audit logs.",
 			},
 			{
+				title: "Audit readiness",
+				slug: "reference/audit-readiness",
+				path: "reference/audit-readiness",
+				summary:
+					"Scores, snapshots, AI prep, packet preview, and PDF export for review readiness.",
+			},
+			{
 				title: "Analytics and reports",
 				slug: "reference/analytics",
 				path: "reference/analytics",
