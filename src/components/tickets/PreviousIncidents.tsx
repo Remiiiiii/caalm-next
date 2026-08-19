@@ -4,6 +4,7 @@ import { ChevronDown, GitMerge } from "lucide-react";
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import type { Ticket, TicketEvent } from "@/lib/tickets/ticket.types";
+import { displayTicketNumber } from "@/lib/tickets/ticket-number.utils";
 import { TicketSeverityPill, TicketStatusPill } from "./TicketStatusPill";
 
 export function PreviousIncidents({
@@ -51,7 +52,10 @@ function PreviousIncidentRow({
 					className="flex w-full cursor-pointer items-start justify-between gap-3 text-left transition-all duration-200 focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
 				>
 					<div>
-						<p className="text-sm font-medium text-slate-700">{ticket.title}</p>
+						<p className="font-mono text-xs font-semibold tracking-wide text-[#0f5384]">
+							{displayTicketNumber(ticket)}
+						</p>
+						<p className="mt-1 text-sm font-medium text-slate-700">{ticket.title}</p>
 						<p className="mt-1 text-xs text-slate-600">
 							{new Date(ticket.submittedAt).toUTCString()}
 							{ticket.resolvedAt

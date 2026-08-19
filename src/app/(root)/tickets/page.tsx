@@ -1,7 +1,6 @@
 export const dynamic = "force-dynamic";
 
-import { TicketQueue } from "@/components/tickets/TicketQueue";
-import { PreviousIncidents } from "@/components/tickets/PreviousIncidents";
+import { TicketsListWithSearch } from "@/components/tickets/TicketsListWithSearch";
 import { PERMISSIONS } from "@/constants/permissions";
 import { requirePagePermission } from "@/lib/rbac/page-guards";
 import { getUserDefaultOrganization, getUserPermissions } from "@/lib/rbac/permissions";
@@ -33,8 +32,10 @@ export default async function TicketsPage() {
 	]);
 
 	const resolvedItems = filterVisibleTickets(resolved.items, ctx);
-	const eventsByTicket: Record<string, Awaited<ReturnType<typeof listTicketEvents>>> =
-		{};
+	const eventsByTicket: Record<
+		string,
+		Awaited<ReturnType<typeof listTicketEvents>>
+	> = {};
 	await Promise.all(
 		resolvedItems.map(async (ticket) => {
 			eventsByTicket[ticket.$id] = await listTicketEvents(ticket.$id);
@@ -46,23 +47,11 @@ export default async function TicketsPage() {
 			<div className="mb-4 flex w-full items-center justify-start gap-4 self-start">
 				<h1 className="h1 capitalize sidebar-gradient-text">Tickets</h1>
 			</div>
-			<div className="space-y-8">
-				<section>
-					<h2 className="mb-4 text-sm font-medium sidebar-gradient-text">
-						Active
-					</h2>
-					<TicketQueue tickets={filterVisibleTickets(active.items, ctx)} />
-				</section>
-				<section>
-					<h2 className="mb-4 text-sm font-medium sidebar-gradient-text">
-						Previous incidents
-					</h2>
-					<PreviousIncidents
-						tickets={resolvedItems}
-						eventsByTicket={eventsByTicket}
-					/>
-				</section>
-			</div>
+			<TicketsListWithSearch
+				activeTickets={filterVisibleTickets(active.items, ctx)}
+				resolvedTickets={resolvedItems}
+				eventsByTicket={eventsByTicket}
+			/>
 		</div>
 	);
 }

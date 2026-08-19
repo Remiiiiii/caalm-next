@@ -9,8 +9,12 @@ import {
 	deriveSeverityFromMatrix,
 	type TicketImpactUrgency,
 } from "./ticket-intake.constants";
-import { notifyTicketStaff } from "./ticket-notification.service";
+import {
+	notifyTicketStaff,
+	notifyTicketSubmitter,
+} from "./ticket-notification.service";
 import { resolveSubmitterDepartmentLabel } from "./submitter-placement";
+import { allocateTicketNumber } from "./ticket-number.service";
 import { createTicketRow, updateTicket } from "./ticket.repository";
 import {
 	buildGitHubIssueBody,
@@ -69,6 +73,9 @@ export async function intakeTicket(input: {
 		input.payload.urgency,
 	);
 
+	// Human reference number first so confirm UI / email always have something to show.
+	const ticketNumber = await allocateTicketNumber(input.orgId);
+
 	const ticket = await createTicketRow({
 		title: input.payload.title.trim(),
 		description: input.payload.description.trim(),
@@ -85,6 +92,7 @@ export async function intakeTicket(input: {
 		attachments: input.payload.attachmentIds || [],
 		orgId: input.orgId,
 		githubRepo: getTicketsRepo(),
+		ticketNumber,
 	});
 
 	await appendTicketEvent({
@@ -97,11 +105,17 @@ export async function intakeTicket(input: {
 			category: input.payload.category,
 			impact: input.payload.impact,
 			urgency: input.payload.urgency,
+			ticketNumber,
 		},
 	});
 
-	// Notify IT staff + IT department managers as soon as the ticket exists.
+	// Notify submitter + staff as soon as the ticket exists.
 	// Do not wait for GitHub — that path can fail and previously skipped alerts.
+	try {
+		await notifyTicketSubmitter({ ticket });
+	} catch (error) {
+		console.warn("[tickets] notify submitter on create failed", error);
+	}
 	try {
 		await notifyTicketStaff({ ticket, kind: "issue_created" });
 	} catch (error) {
@@ -126,6 +140,7 @@ export async function intakeTicket(input: {
 			urgency: ticket.urgency,
 			description: ticket.description,
 			ticketId: ticket.$id,
+			ticketNumber: ticket.ticketNumber,
 		}),
 		labels: [
 			"source:caalm-ticket",

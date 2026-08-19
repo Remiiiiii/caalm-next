@@ -4,6 +4,7 @@ import { AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import type { Ticket } from "@/lib/tickets/ticket.types";
+import { displayTicketNumber } from "@/lib/tickets/ticket-number.utils";
 import {
 	TicketSeverityPill,
 	TicketStatusPill,
@@ -39,7 +40,10 @@ export function TicketQueue({ tickets }: { tickets: Ticket[] }) {
 						<CardContent className="p-4 sm:p-6">
 							<div className="flex flex-wrap items-start justify-between gap-3">
 								<div className="min-w-0">
-									<p className="text-sm font-medium sidebar-gradient-text">
+									<p className="font-mono text-xs font-semibold tracking-wide text-[#0f5384]">
+										{displayTicketNumber(ticket)}
+									</p>
+									<p className="mt-1 text-sm font-medium sidebar-gradient-text">
 										{ticket.title}
 									</p>
 									<p className="mt-1 text-xs text-slate-600">

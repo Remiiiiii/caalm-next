@@ -10,6 +10,7 @@ import { getUserDefaultOrganization, getUserPermissions } from "@/lib/rbac/permi
 import { canResolveTicket, canViewTicket } from "@/lib/tickets/ticket-access.policy";
 import { listTicketEvents } from "@/lib/tickets/ticket-events.repository";
 import { getTicketById } from "@/lib/tickets/ticket.repository";
+import { displayTicketNumber } from "@/lib/tickets/ticket-number.utils";
 
 export default async function TicketStatusDetailPage({
 	params,
@@ -27,7 +28,11 @@ export default async function TicketStatusDetailPage({
 	const events = await listTicketEvents(ticket.$id);
 
 	return (
-		<ITPageShell title="Ticket" subtitle={ticket.title} icon={Activity}>
+		<ITPageShell
+			title="Ticket"
+			subtitle={`${displayTicketNumber(ticket)} · ${ticket.title}`}
+			icon={Activity}
+		>
 			<TicketDetail
 				ticket={ticket}
 				events={events}

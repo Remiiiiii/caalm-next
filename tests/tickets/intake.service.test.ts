@@ -70,6 +70,24 @@ describe("ticket intake helpers", () => {
 		expect(body).toContain("ticket_1");
 	});
 
+	it("includes ticket number in GitHub issue body when provided", () => {
+		const body = buildGitHubIssueBody({
+			name: "Ada Lovelace",
+			userId: "user_1",
+			department: "Legal",
+			submittedAt: "2026-08-12T12:00:00.000Z",
+			severity: "high",
+			category: "Software / Application",
+			affectedModule: "User Management",
+			impact: "high",
+			urgency: "high",
+			description: "SSO is down",
+			ticketId: "ticket_1",
+			ticketNumber: "TKT-2026-0042",
+		});
+		expect(body).toContain("TKT-2026-0042");
+	});
+
 	it("slugs department labels for GitHub", () => {
 		expect(slugLabel("Human Resources")).toBe("human-resources");
 	});

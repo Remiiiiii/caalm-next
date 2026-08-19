@@ -2,8 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { Activity } from "lucide-react";
 import { ITPageShell } from "@/components/it/ITPageShell";
-import { PreviousIncidents } from "@/components/tickets/PreviousIncidents";
-import { TicketQueue } from "@/components/tickets/TicketQueue";
+import { TicketsListWithSearch } from "@/components/tickets/TicketsListWithSearch";
 import { PERMISSIONS } from "@/constants/permissions";
 import { requirePagePermission } from "@/lib/rbac/page-guards";
 import { getUserDefaultOrganization, getUserPermissions } from "@/lib/rbac/permissions";
@@ -39,8 +38,10 @@ export default async function TicketStatusPage() {
 	const activeItems = filterVisibleTickets(active.items, ctx);
 	const resolvedItems = filterVisibleTickets(resolved.items, ctx);
 
-	const eventsByTicket: Record<string, Awaited<ReturnType<typeof listTicketEvents>>> =
-		{};
+	const eventsByTicket: Record<
+		string,
+		Awaited<ReturnType<typeof listTicketEvents>>
+	> = {};
 	await Promise.all(
 		resolvedItems.map(async (ticket) => {
 			eventsByTicket[ticket.$id] = await listTicketEvents(ticket.$id);
@@ -53,23 +54,11 @@ export default async function TicketStatusPage() {
 			subtitle="Active tickets and previous incidents."
 			icon={Activity}
 		>
-			<div className="space-y-8">
-				<section>
-					<h2 className="mb-4 text-sm font-medium sidebar-gradient-text">
-						Active queue
-					</h2>
-					<TicketQueue tickets={activeItems} />
-				</section>
-				<section>
-					<h2 className="mb-4 text-sm font-medium sidebar-gradient-text">
-						Previous incidents
-					</h2>
-					<PreviousIncidents
-						tickets={resolvedItems}
-						eventsByTicket={eventsByTicket}
-					/>
-				</section>
-			</div>
+			<TicketsListWithSearch
+				activeTickets={activeItems}
+				resolvedTickets={resolvedItems}
+				eventsByTicket={eventsByTicket}
+			/>
 		</ITPageShell>
 	);
 }

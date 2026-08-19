@@ -10,6 +10,7 @@ import {
 	uploadTicketAttachments,
 } from "@/lib/tickets/ticket-intake.service";
 import { listTickets } from "@/lib/tickets/ticket.repository";
+import { normalizeTicketNumberQuery } from "@/lib/tickets/ticket-number.utils";
 
 export async function GET(request: NextRequest) {
 	const denied = await requirePermission(request, {
@@ -33,11 +34,19 @@ export async function GET(request: NextRequest) {
 		| "active"
 		| "resolved"
 		| null;
+	const rawSearch =
+		searchParams.get("q") || searchParams.get("search") || "";
+	const normalizedNumber = normalizeTicketNumberQuery(rawSearch);
+	const search =
+		normalizedNumber.startsWith("TKT-") && /\d/.test(normalizedNumber)
+			? normalizedNumber
+			: rawSearch.trim();
 
 	const { items, total } = await listTickets({
 		orgId: org.orgId,
 		status: statusParam || undefined,
 		submittedByUserId: canViewAllTickets(permissions) ? undefined : user.$id,
+		search: search || undefined,
 		limit: Number(searchParams.get("limit") || 50),
 		offset: Number(searchParams.get("offset") || 0),
 	});
