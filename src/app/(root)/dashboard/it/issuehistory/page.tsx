@@ -12,6 +12,8 @@ import {
 import { groupTicketsByMonthDay } from "@/lib/tickets/issue-history";
 import { canViewAllTickets, filterVisibleTickets } from "@/lib/tickets/ticket-access.policy";
 import { listTickets } from "@/lib/tickets/ticket.repository";
+import { getOrganization } from "@/lib/rbac/organizations";
+import { resolveOrgTimezone } from "@/lib/timezone";
 
 export default async function IssueHistoryPage() {
 	const user = await requirePagePermission(PERMISSIONS.TICKETS.VIEW);
@@ -31,7 +33,13 @@ export default async function IssueHistoryPage() {
 
 	const ctx = { userId: user.$id, permissions };
 	const resolvedItems = filterVisibleTickets(resolved.items, ctx);
-	const months = groupTicketsByMonthDay(resolvedItems, {});
+	const organization = await getOrganization(org.orgId);
+	const timeZone = resolveOrgTimezone(
+		typeof organization?.settings?.timezone === "string"
+			? organization.settings.timezone
+			: null,
+	);
+	const months = groupTicketsByMonthDay(resolvedItems, {}, timeZone);
 
 	return (
 		<ITPageShell

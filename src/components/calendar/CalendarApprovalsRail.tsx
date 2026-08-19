@@ -1,6 +1,6 @@
 "use client";
 
-import { format, formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
 import {
 	AlertCircle,
 	CalendarPlus,
@@ -21,6 +21,8 @@ import type {
 	CalendarApprovalChangeSummary,
 	CalendarApprovalRequest,
 } from "@/lib/actions/calendar-approval.actions";
+import { useOrgTimezone } from "@/hooks/useOrgTimezone";
+import { formatInTimezone } from "@/lib/timezone";
 import { cn } from "@/lib/utils";
 
 function getSensitivityBadgeClasses(
@@ -55,6 +57,7 @@ export function CalendarApprovalsRail({
 	onSelectApproval,
 	className,
 }: CalendarApprovalsRailProps) {
+	const timeZone = useOrgTimezone();
 	const getChangeTypeConfig = (
 		type: string,
 	): {
@@ -235,7 +238,11 @@ export function CalendarApprovalsRail({
 											</span>
 											{submittedTime && (
 												<span className="text-slate-400">
-													{format(submittedTime, "MMM d, h:mm a")}
+													{formatInTimezone(
+														submittedTime,
+														"MMM d, h:mm a",
+														timeZone,
+													)}
 												</span>
 											)}
 										</div>

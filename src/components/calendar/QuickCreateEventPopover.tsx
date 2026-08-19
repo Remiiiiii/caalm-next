@@ -3,6 +3,8 @@
 import * as VisuallyHiddenPrimitive from "@radix-ui/react-visually-hidden";
 import { CalendarPlus, MoreHorizontal } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useOrgTimezone } from "@/hooks/useOrgTimezone";
+import { formatInTimezone } from "@/lib/timezone";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -59,6 +61,7 @@ export function QuickCreateEventPopover({
 	onCreate,
 	onMoreOptions,
 }: QuickCreateEventPopoverProps) {
+	const timeZone = useOrgTimezone();
 	const [title, setTitle] = useState("");
 	const [startTime, setStartTime] = useState(defaultStartTime);
 	const [endTime, setEndTime] = useState(
@@ -105,12 +108,7 @@ export function QuickCreateEventPopover({
 						</p>
 					</div>
 					<p className="text-sm text-slate-600 mt-1 ml-14">
-						{anchorDate.toLocaleDateString(undefined, {
-							weekday: "short",
-							month: "short",
-							day: "numeric",
-							year: "numeric",
-						})}
+						{formatInTimezone(anchorDate, "EEE, MMM d, yyyy", timeZone)}
 					</p>
 				</div>
 				<div className="flex-1 overflow-y-auto p-6 bg-slate-50 space-y-3">

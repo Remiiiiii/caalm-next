@@ -113,6 +113,7 @@ import {
 	type PermissionOverrideRecord,
 	SENSITIVITY_LABELS,
 } from "@/constants/rbac";
+import { useOrgTimezone } from "@/hooks/useOrgTimezone";
 import { useToast } from "@/hooks/use-toast";
 import { useAutoSync } from "@/hooks/useAutoSync";
 import { useCalendarApprovals } from "@/hooks/useCalendarApprovals";
@@ -275,6 +276,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 	user,
 }) => {
 	const { toast } = useToast();
+	const timeZone = useOrgTimezone();
 
 	const [selectedDate, setSelectedDate] = useState<Date | undefined>(
 		new Date(),
@@ -5547,6 +5549,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 															<div className="text-sm text-slate-600">
 																{formatEventDetailDateLine(
 																	selectedEvent.startDate,
+																	timeZone,
 																)}
 															</div>
 															{(() => {
@@ -5554,6 +5557,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 																	startDate: selectedEvent.startDate,
 																	startTime: selectedEvent.startTime,
 																	endTime: selectedEvent.endTime,
+																	timeZone,
 																});
 																return timeLine ? (
 																	<div className="text-xs text-slate-500 mt-0.5">

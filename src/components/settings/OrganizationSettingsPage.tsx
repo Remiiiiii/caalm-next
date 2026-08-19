@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import useSWR from "swr";
 import { PermissionGate } from "@/components/PermissionGate";
 import { OrgStructureManager } from "@/components/settings/OrgStructureManager";
+import { TimezoneSelect } from "@/components/settings/TimezoneSelect";
 import { Button } from "@/components/ui/button";
 import { CardContent, Card as GlassCard } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -24,7 +25,7 @@ interface OrgResponse {
 }
 
 export default function OrganizationSettingsPage() {
-	const { orgId } = useOrganization();
+	const { orgId, refreshOrgProfile } = useOrganization();
 	const { permissions, loading: permissionsLoading } = usePermissions();
 	const { toast } = useToast();
 	const canEdit = permissions.includes(PERMISSIONS.SETTINGS.EDIT);
@@ -92,6 +93,7 @@ export default function OrganizationSettingsPage() {
 			}
 			toast({ title: "Organization profile saved" });
 			await mutate();
+			await refreshOrgProfile();
 		} catch (error) {
 			toast({
 				title: "Could not save",
@@ -110,6 +112,7 @@ export default function OrganizationSettingsPage() {
 		websiteUrl,
 		org,
 		mutate,
+		refreshOrgProfile,
 		toast,
 	]);
 
@@ -222,18 +225,17 @@ export default function OrganizationSettingsPage() {
 								/>
 							</div>
 							<div className="space-y-2">
-								<Label htmlFor="org-timezone">Timezone (audit schedule)</Label>
-								<Input
+								<Label htmlFor="org-timezone">Organization timezone</Label>
+								<TimezoneSelect
 									id="org-timezone"
 									value={timezone}
-									onChange={(e) => setTimezone(e.target.value)}
+									onValueChange={setTimezone}
 									disabled={!canEdit}
-									placeholder="America/New_York"
-									className="bg-white !border !border-solid !border-slate-200"
 								/>
 								<p className="text-xs text-slate-500">
-									IANA timezone used for weekly/monthly/quarterly readiness runs
-									(local 9:00 window).
+									Used for date and time display across CAALM, plus scheduled
+									jobs (readiness, digests, expiry notices) at the local 9:00
+									window.
 								</p>
 							</div>
 							<div className="space-y-2">

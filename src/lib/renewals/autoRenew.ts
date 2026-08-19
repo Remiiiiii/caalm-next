@@ -2,6 +2,8 @@
  * Shared date helpers and auto-renew term math for contracts and licenses.
  */
 
+import { daysUntilDateOnly } from "@/lib/timezone";
+
 export function parseDateOnly(raw?: string | null): Date | null {
 	if (!raw || typeof raw !== "string") return null;
 	const dateStr = raw.split("T")[0];
@@ -23,7 +25,11 @@ export function toDateOnlyString(date: Date): string {
 export function daysUntilExpiry(
 	expiryRaw: string,
 	now: Date = new Date(),
+	timeZone?: string,
 ): number {
+	if (timeZone) {
+		return daysUntilDateOnly(expiryRaw, now, timeZone);
+	}
 	const expiry = parseDateOnly(expiryRaw);
 	if (!expiry) return Number.NaN;
 	const today = new Date(now);
@@ -35,8 +41,9 @@ export function daysUntilExpiry(
 export function isExpiryReachedOrPassed(
 	expiryRaw: string,
 	now: Date = new Date(),
+	timeZone?: string,
 ): boolean {
-	const days = daysUntilExpiry(expiryRaw, now);
+	const days = daysUntilExpiry(expiryRaw, now, timeZone);
 	return !Number.isNaN(days) && days <= 0;
 }
 

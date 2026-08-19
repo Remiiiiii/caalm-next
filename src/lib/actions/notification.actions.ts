@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { hasPermission } from "@/lib/rbac/permissions";
 import { daysUntilExpiry } from "@/lib/renewals/autoRenew";
+import { getOrganizationTimezone } from "@/lib/timezone/org";
 import {
 	type AlertChannel,
 	buildExpirySmsMessage,
@@ -440,7 +441,13 @@ export const checkDocumentExpirations = async () => {
 				if (contract.status?.toLowerCase() === "expired") continue;
 				if (contract.isExpired === true) continue;
 
-				const daysUntil = daysUntilExpiry(contract.contractExpiryDate);
+				const daysUntil = daysUntilExpiry(
+					contract.contractExpiryDate,
+					new Date(),
+					await getOrganizationTimezone(
+						typeof contract.orgId === "string" ? contract.orgId : null,
+					),
+				);
 				if (!shouldSendExpiryNotice(daysUntil, contract.renewalNoticeDays)) {
 					continue;
 				}
@@ -519,7 +526,13 @@ export const checkDocumentExpirations = async () => {
 				if (!license.licenseExpiryDate) continue;
 				if (license.status?.toLowerCase() === "expired") continue;
 
-				const daysUntil = daysUntilExpiry(license.licenseExpiryDate);
+				const daysUntil = daysUntilExpiry(
+					license.licenseExpiryDate,
+					new Date(),
+					await getOrganizationTimezone(
+						typeof license.orgId === "string" ? license.orgId : null,
+					),
+				);
 				if (!shouldSendExpiryNotice(daysUntil, license.renewalNoticeDays)) {
 					continue;
 				}
@@ -587,7 +600,13 @@ export const checkDocumentExpirations = async () => {
 			for (const audit of audits.rows) {
 				if (!audit.auditExpiryDate) continue;
 
-				const daysUntil = daysUntilExpiry(audit.auditExpiryDate);
+				const daysUntil = daysUntilExpiry(
+					audit.auditExpiryDate,
+					new Date(),
+					await getOrganizationTimezone(
+						typeof audit.orgId === "string" ? audit.orgId : null,
+					),
+				);
 				if (!shouldSendExpiryNotice(daysUntil, audit.renewalNoticeDays)) {
 					continue;
 				}

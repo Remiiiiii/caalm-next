@@ -1,3 +1,5 @@
+"use client";
+
 import {
 	AlertCircle,
 	CheckCircle2,
@@ -13,6 +15,7 @@ import {
 } from "@/lib/tickets/issue-history";
 import type { Ticket, TicketEvent } from "@/lib/tickets/ticket.types";
 
+import { useOrgTimezone } from "@/hooks/useOrgTimezone";
 import { AffectedServicesHoverInfo } from "./AffectedServicesHoverInfo";
 
 function TimelineIcon({ kind }: { kind: TimelineIconKind }) {
@@ -29,6 +32,7 @@ export function IncidentTimeline({
 	ticket: Ticket;
 	events: TicketEvent[];
 }) {
+	const timeZone = useOrgTimezone();
 	const steps = buildIncidentTimelineSteps(ticket, events);
 	const resourceLinks = getIncidentTimelineResourceLinks(ticket, events);
 	const service = affectedService(ticket);
@@ -49,7 +53,7 @@ export function IncidentTimeline({
 					<p className="incident-timeline-heading pr-8">
 						{step.heading}{" "}
 						<span className="font-normal text-slate-600">
-							{formatIssueHistoryDate(step.timestamp)}
+							{formatIssueHistoryDate(step.timestamp, timeZone)}
 						</span>
 						{step.externalHref ? (
 							<a

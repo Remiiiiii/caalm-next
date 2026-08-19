@@ -772,6 +772,7 @@ class NotificationService {
 						notification.userId,
 						notificationId,
 						digestFrequency,
+						orgId,
 					);
 					console.log(
 						`[SERVER] NotificationService.createNotification] Queued notification ${notificationId} for ${digestFrequency} digest`,

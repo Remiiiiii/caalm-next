@@ -8,6 +8,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { useOrgTimezone } from "@/hooks/useOrgTimezone";
+import { formatInTimezone } from "@/lib/timezone";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -71,6 +73,7 @@ export function AuditReadinessHero({
 	onExport,
 	canExport = false,
 }: AuditReadinessHeroProps) {
+	const timeZone = useOrgTimezone();
 	const styles = RAG_STYLES[ragStatus];
 	const hasPeriodControl = Boolean(onPeriodChange && period);
 	const periodLabel = AUDIT_PERIOD_OPTIONS.find(
@@ -232,10 +235,11 @@ export function AuditReadinessHero({
 								{lastUpdated ? (
 									<p className="mt-auto text-xs text-slate-500">
 										Last updated{" "}
-										{new Date(lastUpdated).toLocaleString(undefined, {
-											dateStyle: "medium",
-											timeStyle: "short",
-										})}
+										{formatInTimezone(
+											new Date(lastUpdated),
+											"MMM d, yyyy h:mm a",
+											timeZone,
+										)}
 									</p>
 								) : null}
 							</div>

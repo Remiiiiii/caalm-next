@@ -18,6 +18,8 @@ import {
 import { canViewTicket } from "@/lib/tickets/ticket-access.policy";
 import { listTicketEvents } from "@/lib/tickets/ticket-events.repository";
 import { getTicketById } from "@/lib/tickets/ticket.repository";
+import { getOrganization } from "@/lib/rbac/organizations";
+import { resolveOrgTimezone } from "@/lib/timezone";
 
 export default async function IncidentDetailPage({
 	params,
@@ -34,6 +36,12 @@ export default async function IncidentDetailPage({
 	}
 	const events = await listTicketEvents(ticket.$id);
 	const stamp = ticket.resolvedAt || ticket.submittedAt;
+	const organization = org?.orgId ? await getOrganization(org.orgId) : null;
+	const timeZone = resolveOrgTimezone(
+		typeof organization?.settings?.timezone === "string"
+			? organization.settings.timezone
+			: null,
+	);
 
 	return (
 		<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-6">
@@ -56,7 +64,7 @@ export default async function IncidentDetailPage({
 						</div>
 					</div>
 					<p className="mt-1 break-words text-sm text-slate-600">
-						{formatIssueHistoryDate(stamp)}
+						{formatIssueHistoryDate(stamp, timeZone)}
 					</p>
 					<div className="mt-4 flex min-w-0 flex-wrap items-center gap-2">
 						<span className="shrink-0 text-sm text-slate-600">

@@ -64,6 +64,8 @@ import { useUnifiedDashboardData } from "@/hooks/useUnifiedDashboardData";
 import { hasMicrosoftCalendarIntegration } from "@/lib/actions/calendar.actions";
 import { createCalendarEvent } from "@/lib/actions/calendar.client";
 import { getTimezoneAbbreviation } from "@/lib/calendar/eventDisplayFormat";
+import { useOrgTimezone } from "@/hooks/useOrgTimezone";
+import { formatInTimezone } from "@/lib/timezone";
 import { cn } from "@/lib/utils";
 
 const WEEKDAY_LABELS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"] as const;
@@ -241,6 +243,7 @@ function getDayEventDots(day: Date, events: LocalCalendarEvent[]) {
 }
 
 function CalendarLiveClock() {
+	const timeZone = useOrgTimezone();
 	const [now, setNow] = useState(() => new Date());
 
 	useEffect(() => {
@@ -248,7 +251,7 @@ function CalendarLiveClock() {
 		return () => clearInterval(id);
 	}, []);
 
-	const tz = getTimezoneAbbreviation(now);
+	const tz = getTimezoneAbbreviation(now, timeZone);
 
 	return (
 		<span
@@ -256,7 +259,7 @@ function CalendarLiveClock() {
 			aria-live="polite"
 			aria-atomic="true"
 		>
-			{format(now, "HH:mm")}
+			{formatInTimezone(now, "HH:mm", timeZone)}
 			{tz ? ` ${tz}` : ""}
 		</span>
 	);

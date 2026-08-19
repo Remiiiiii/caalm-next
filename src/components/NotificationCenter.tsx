@@ -36,7 +36,9 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useMemo, useState } from "react";
+import { useOrgTimezone } from "@/hooks/useOrgTimezone";
 import { useToast } from "@/hooks/use-toast";
+import { formatInTimezone } from "@/lib/timezone";
 import { useNotifications } from "@/hooks/useNotifications";
 import { isFileShareNotification } from "@/lib/files/fileShareNotification";
 import NotificationSettings from "./NotificationSettings";
@@ -182,6 +184,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 	onRefresh,
 	userId,
 }) => {
+	const timeZone = useOrgTimezone();
 	const [search, setSearch] = useState("");
 	const [page, setPage] = useState(1);
 	const [perPage, setPerPage] = useState(10);
@@ -409,7 +412,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 		if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
 		if (diffInHours < 24) return `${diffInHours}h ago`;
 		if (diffInDays < 7) return `${diffInDays}d ago`;
-		return date.toLocaleDateString();
+		return formatInTimezone(date, "MMM d, yyyy", timeZone);
 	};
 
 	const getPriorityColor = (priority?: string) => {

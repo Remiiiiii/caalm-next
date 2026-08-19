@@ -11,7 +11,9 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { PERMISSIONS } from "@/constants/permissions";
+import { useOrgTimezone } from "@/hooks/useOrgTimezone";
 import { usePermissions } from "@/hooks/usePermissions";
+import { formatInTimezone } from "@/lib/timezone";
 import { AUDIT_PERIOD_OPTIONS, type AuditPeriod } from "@/lib/audits/types";
 
 interface AnalyticsFilterBarProps {
@@ -27,6 +29,7 @@ export function AnalyticsFilterBar({
 	lastUpdated,
 	onExport,
 }: AnalyticsFilterBarProps) {
+	const timeZone = useOrgTimezone();
 	const { permissions } = usePermissions();
 	const canExport = permissions.includes(PERMISSIONS.AUDIT.EXPORT);
 
@@ -62,10 +65,11 @@ export function AnalyticsFilterBar({
 					{lastUpdated ? (
 						<p className="text-xs text-slate-500 sm:ml-auto">
 							Last updated{" "}
-							{new Date(lastUpdated).toLocaleString(undefined, {
-								dateStyle: "medium",
-								timeStyle: "short",
-							})}
+							{formatInTimezone(
+								new Date(lastUpdated),
+								"MMM d, yyyy h:mm a",
+								timeZone,
+							)}
 						</p>
 					) : null}
 					{canExport && onExport ? (

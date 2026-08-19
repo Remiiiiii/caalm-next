@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { formatInTimezone } from "@/lib/timezone";
 
 export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
@@ -108,10 +109,18 @@ export const getFileType = (fileName: string) => {
 	return { type: "other", extension };
 };
 
-export const formatDateTime = (isoString: string | null | undefined) => {
+export const formatDateTime = (
+	isoString: string | null | undefined,
+	timeZone?: string,
+) => {
 	if (!isoString) return "—";
 
 	const date = new Date(isoString);
+	if (Number.isNaN(date.getTime())) return "—";
+
+	if (timeZone) {
+		return formatInTimezone(date, " d MMM, h:mmaaa", timeZone);
+	}
 
 	// Get hours and adjust for 12-hour format
 	let hours = date.getHours();
@@ -142,17 +151,42 @@ export const formatDateTime = (isoString: string | null | undefined) => {
 
 	return ` ${day} ${month}, ${time}`;
 };
-export const formatDate = (isoString: string | null | undefined) => {
+export const formatDate = (
+	isoString: string | null | undefined,
+	timeZone?: string,
+) => {
 	if (!isoString) return "—";
+
+	// Date-only values stay calendar-stable (no timezone shift).
+	if (isoString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+		const [year, month, day] = isoString.split("-").map(Number);
+		const monthNames = [
+			"Jan",
+			"Feb",
+			"Mar",
+			"Apr",
+			"May",
+			"Jun",
+			"Jul",
+			"Aug",
+			"Sep",
+			"Oct",
+			"Nov",
+			"Dec",
+		];
+		return `${day} ${monthNames[month - 1]}, ${year}`;
+	}
+
+	if (timeZone && isoString.match(/^\d{4}-\d{2}-\d{2}T/)) {
+		const instant = new Date(isoString);
+		if (!Number.isNaN(instant.getTime())) {
+			return formatInTimezone(instant, "d MMM, yyyy", timeZone);
+		}
+	}
 
 	let date: Date;
 
-	// Handle date-only strings (YYYY-MM-DD) by parsing manually to avoid timezone issues
-	if (isoString.match(/^\d{4}-\d{2}-\d{2}$/)) {
-		// Date-only format: parse manually to use local timezone
-		const [year, month, day] = isoString.split("-").map(Number);
-		date = new Date(year, month - 1, day);
-	} else if (isoString.match(/^\d{4}-\d{2}-\d{2}T/)) {
+	if (isoString.match(/^\d{4}-\d{2}-\d{2}T/)) {
 		// ISO string with time: extract date part and parse as local date to avoid timezone shifts
 		const dateOnlyMatch = isoString.match(/^(\d{4})-(\d{2})-(\d{2})T/);
 		if (dateOnlyMatch) {

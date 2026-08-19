@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
+import { useOrgTimezone } from "@/hooks/useOrgTimezone";
+import { formatInTimezone } from "@/lib/timezone";
 import useSWR from "swr";
 import { ReadinessAiPanel } from "@/components/audits/ReadinessAiPanel";
 import { ReadinessCharts } from "@/components/audits/ReadinessCharts";
@@ -95,6 +97,7 @@ interface ReadinessResponse {
 }
 
 export default function AuditReadinessPage() {
+	const timeZone = useOrgTimezone();
 	const { permissions, loading: permissionsLoading } = usePermissions();
 	const { toast } = useToast();
 	const canView = permissions.includes(PERMISSIONS.AUDIT.VIEW);
@@ -489,7 +492,11 @@ export default function AuditReadinessPage() {
 								{filteredHistory.map((row) => (
 									<tr key={row.id} className="border-b border-slate-100">
 										<td className="py-2 pr-3 text-slate-700">
-											{new Date(row.createdAt).toLocaleString()}
+											{formatInTimezone(
+												new Date(row.createdAt),
+												"MMM d, yyyy h:mm a",
+												timeZone,
+											)}
 										</td>
 										<td className="py-2 pr-3 capitalize text-slate-600">
 											{row.cadence}

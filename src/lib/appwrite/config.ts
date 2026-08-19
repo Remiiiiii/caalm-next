@@ -260,6 +260,11 @@ export const appwriteConfig = {
 		"69b8a202002e5f9d3b02",
 	),
 
+	ticketSequencesCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_TICKET_SEQUENCES_COLLECTION",
+		"69b8a209009b2a6e0c09",
+	),
+
 	webhookDeliveriesCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_WEBHOOK_DELIVERIES_COLLECTION",
 		"69b8a203003d6a0e4c03",

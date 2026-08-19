@@ -11,6 +11,7 @@ import {
 	shouldAutoRenew,
 	toDateOnlyString,
 } from "@/lib/renewals/autoRenew";
+import { getOrganizationTimezone } from "@/lib/timezone/org";
 import type { RenewalRecord } from "@/types/licenses";
 
 export type ProcessExpiredResult = {
@@ -118,8 +119,15 @@ async function processContracts(now: Date): Promise<{
 		if (!contract.contractExpiryDate) continue;
 
 		try {
-			const expired = isExpiryReachedOrPassed(contract.contractExpiryDate, now);
-			const days = daysUntilExpiry(contract.contractExpiryDate, now);
+			const timeZone = await getOrganizationTimezone(
+				typeof contract.orgId === "string" ? contract.orgId : null,
+			);
+			const expired = isExpiryReachedOrPassed(
+				contract.contractExpiryDate,
+				now,
+				timeZone,
+			);
+			const days = daysUntilExpiry(contract.contractExpiryDate, now, timeZone);
 
 			if (
 				expired &&
@@ -131,7 +139,7 @@ async function processContracts(now: Date): Promise<{
 					startDate: contract.startDate as string | undefined,
 					expiryDate: contract.contractExpiryDate,
 				});
-				const newDays = daysUntilExpiry(newExpiry, now);
+				const newDays = daysUntilExpiry(newExpiry, now, timeZone);
 
 				await tablesDB.updateRow({
 					databaseId: appwriteConfig.databaseId,
@@ -228,8 +236,15 @@ async function processLicenses(now: Date): Promise<{
 		if (!license.licenseExpiryDate) continue;
 
 		try {
-			const expired = isExpiryReachedOrPassed(license.licenseExpiryDate, now);
-			const days = daysUntilExpiry(license.licenseExpiryDate, now);
+			const timeZone = await getOrganizationTimezone(
+				typeof license.orgId === "string" ? license.orgId : null,
+			);
+			const expired = isExpiryReachedOrPassed(
+				license.licenseExpiryDate,
+				now,
+				timeZone,
+			);
+			const days = daysUntilExpiry(license.licenseExpiryDate, now, timeZone);
 
 			if (
 				expired &&
@@ -242,7 +257,7 @@ async function processLicenses(now: Date): Promise<{
 					startDate,
 					expiryDate: license.licenseExpiryDate,
 				});
-				const newDays = daysUntilExpiry(newExpiry, now);
+				const newDays = daysUntilExpiry(newExpiry, now, timeZone);
 
 				const renewalHistory = (
 					(license.renewalHistory as RenewalRecord[]) || []
@@ -324,11 +339,8 @@ export async function processExpiredDocuments(
 	now: Date = new Date(),
 ): Promise<ProcessExpiredResult> {
 	try {
-		const today = new Date(now);
-		today.setHours(0, 0, 0, 0);
-
-		const contracts = await processContracts(today);
-		const licenses = await processLicenses(today);
+		const contracts = await processContracts(now);
+		const licenses = await processLicenses(now);
 
 		const updatedCount = contracts.updated + licenses.updated;
 		const autoRenewedCount = contracts.autoRenewed + licenses.autoRenewed;

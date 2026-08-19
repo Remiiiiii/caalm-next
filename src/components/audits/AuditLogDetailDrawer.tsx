@@ -1,6 +1,5 @@
 "use client";
 
-import { format } from "date-fns";
 import {
 	AlertTriangle,
 	AlignLeft,
@@ -17,6 +16,11 @@ import {
 	previewSectionHeaderClass,
 } from "@/components/preview/previewSheetParts";
 import { Button } from "@/components/ui/button";
+import { useOrgTimezone } from "@/hooks/useOrgTimezone";
+import {
+	formatInTimezone,
+	getTimezoneAbbreviation,
+} from "@/lib/timezone";
 import { cn } from "@/lib/utils";
 
 interface AuditLogDetailDrawerProps {
@@ -64,21 +68,14 @@ function formatTargetType(type?: string | null): string {
 	return type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function getTimezoneAbbreviation(date: Date): string {
-	const part = new Intl.DateTimeFormat("en-US", { timeZoneName: "short" })
-		.formatToParts(date)
-		.find((p) => p.type === "timeZoneName")?.value;
-	return part || "UTC";
-}
-
-/** e.g. Logged Aug 4, 2026 · 11:54:55 UTC */
-function formatLoggedAt(iso?: string | null): string | null {
+/** e.g. Logged Aug 4, 2026 · 11:54:55 EDT */
+function formatLoggedAt(iso: string | null | undefined, timeZone: string): string | null {
 	if (!iso) return null;
 	const date = new Date(iso);
 	if (Number.isNaN(date.getTime())) return null;
-	const datePart = format(date, "MMM d, yyyy");
-	const timePart = format(date, "HH:mm:ss");
-	const tz = getTimezoneAbbreviation(date);
+	const datePart = formatInTimezone(date, "MMM d, yyyy", timeZone);
+	const timePart = formatInTimezone(date, "HH:mm:ss", timeZone);
+	const tz = getTimezoneAbbreviation(date, timeZone);
 	return `Logged ${datePart} · ${timePart} ${tz}`;
 }
 
@@ -161,6 +158,7 @@ export function AuditLogDetailDrawer({
 	open,
 	onOpenChange,
 }: AuditLogDetailDrawerProps) {
+	const timeZone = useOrgTimezone();
 	if (!log) return null;
 
 	const metadataEntries =
@@ -169,7 +167,7 @@ export function AuditLogDetailDrawer({
 			: [];
 
 	const targetType = formatTargetType(log.target_type);
-	const loggedAt = formatLoggedAt(log.created_at);
+	const loggedAt = formatLoggedAt(log.created_at, timeZone);
 	const eventDescription = formatEventDescription(log.summary, log.event_title);
 
 	return (

@@ -77,6 +77,6 @@ export interface OrgAuditSettings {
 export const READINESS_DISCLAIMER =
 	"CAALM readiness is based on records in your CAALM organization. This is not a state, federal, funder, HRSA, DCF, or accreditation audit determination.";
 
-export const DEFAULT_ORG_TIMEZONE = "America/New_York";
+export { DEFAULT_ORG_TIMEZONE } from "@/lib/timezone";
 
 export type { AuditReadinessSeverity };

@@ -85,7 +85,9 @@ import {
 	type PermissionOverrideRecord,
 	SENSITIVITY_LABELS,
 } from "@/constants/rbac";
+import { useOrgTimezone } from "@/hooks/useOrgTimezone";
 import { useToast } from "@/hooks/use-toast";
+import { formatInTimezone } from "@/lib/timezone";
 import { useCalendarApprovals } from "@/hooks/useCalendarApprovals";
 import { useCalendarEvents } from "@/hooks/useCalendarEvents";
 import { useCalendarPermissions } from "@/hooks/useCalendarPermissions";
@@ -195,6 +197,7 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 	showExpandLabel = true,
 }) => {
 	const { toast } = useToast();
+	const timeZone = useOrgTimezone();
 	const [selectedDate, setSelectedDate] = useState<Date | undefined>(
 		new Date(),
 	);
@@ -1468,7 +1471,11 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 																	</span>
 																	{submittedTime && (
 																		<span className="text-slate-400">
-																			{format(submittedTime, "MMM d, h:mm a")}
+																			{formatInTimezone(
+																				submittedTime,
+																				"MMM d, h:mm a",
+																				timeZone,
+																			)}
 																		</span>
 																	)}
 																</div>
@@ -2054,9 +2061,10 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 												<span className="text-slate-600">Submitted:</span>
 												<span className="font-medium text-slate-700">
 													{selectedApproval.submittedAt
-														? format(
+														? formatInTimezone(
 																new Date(selectedApproval.submittedAt),
 																"MMM d, yyyy h:mm a",
+																timeZone,
 															)
 														: "Unknown"}
 												</span>
@@ -2552,9 +2560,10 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 															)}
 														>
 															Reviewed on{" "}
-															{format(
+															{formatInTimezone(
 																new Date(eventApprovalRequest.decidedAt),
 																"MMM d, yyyy h:mm a",
+																timeZone,
 															)}
 														</p>
 													)}

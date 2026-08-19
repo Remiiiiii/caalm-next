@@ -3,15 +3,20 @@
 import {
 	createContext,
 	type ReactNode,
+	useCallback,
 	useContext,
 	useEffect,
 	useState,
 } from "react";
+import { DEFAULT_ORG_TIMEZONE, resolveOrgTimezone } from "@/lib/timezone";
 
 interface OrganizationContextType {
 	orgId: string | null;
 	setOrgId: (orgId: string) => void;
 	loading: boolean;
+	timezone: string;
+	timezoneLoading: boolean;
+	refreshOrgProfile: () => Promise<void>;
 }
 
 const OrganizationContext = createContext<OrganizationContextType | undefined>(
@@ -21,6 +26,33 @@ const OrganizationContext = createContext<OrganizationContextType | undefined>(
 const OrganizationProvider = ({ children }: { children: ReactNode }) => {
 	const [orgId, setOrgId] = useState<string | null>(null);
 	const [loading, setLoading] = useState(true);
+	const [timezone, setTimezone] = useState(DEFAULT_ORG_TIMEZONE);
+	const [timezoneLoading, setTimezoneLoading] = useState(true);
+
+	const loadTimezone = useCallback(async (id: string | null) => {
+		if (!id) {
+			setTimezone(DEFAULT_ORG_TIMEZONE);
+			setTimezoneLoading(false);
+			return;
+		}
+		setTimezoneLoading(true);
+		try {
+			const res = await fetch(
+				`/api/organization/default?orgId=${encodeURIComponent(id)}`,
+				{ cache: "no-store" },
+			);
+			if (res.ok) {
+				const data = await res.json();
+				setTimezone(resolveOrgTimezone(data.timezone));
+			} else {
+				setTimezone(DEFAULT_ORG_TIMEZONE);
+			}
+		} catch {
+			setTimezone(DEFAULT_ORG_TIMEZONE);
+		} finally {
+			setTimezoneLoading(false);
+		}
+	}, []);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -43,6 +75,8 @@ const OrganizationProvider = ({ children }: { children: ReactNode }) => {
 					if (data.orgId && !cancelled) {
 						setOrgId(data.orgId);
 						localStorage.setItem("caalm_org_id", data.orgId);
+						setTimezone(resolveOrgTimezone(data.timezone));
+						setTimezoneLoading(false);
 						setLoading(false);
 						return;
 					}
@@ -65,10 +99,19 @@ const OrganizationProvider = ({ children }: { children: ReactNode }) => {
 		};
 	}, []);
 
+	useEffect(() => {
+		if (!orgId) return;
+		void loadTimezone(orgId);
+	}, [orgId, loadTimezone]);
+
 	const handleSetOrgId = (newOrgId: string) => {
 		setOrgId(newOrgId);
 		localStorage.setItem("caalm_org_id", newOrgId);
 	};
+
+	const refreshOrgProfile = useCallback(async () => {
+		await loadTimezone(orgId);
+	}, [loadTimezone, orgId]);
 
 	return (
 		<OrganizationContext.Provider
@@ -76,6 +119,9 @@ const OrganizationProvider = ({ children }: { children: ReactNode }) => {
 				orgId,
 				setOrgId: handleSetOrgId,
 				loading,
+				timezone,
+				timezoneLoading,
+				refreshOrgProfile,
 			}}
 		>
 			{children}
@@ -88,8 +134,6 @@ export { OrganizationProvider };
 export const useOrganization = () => {
 	const context = useContext(OrganizationContext);
 
-	// Always return the same structure to ensure consistent hook calls
-	// Don't throw - return default values instead
 	if (context) {
 		return context;
 	}
@@ -98,5 +142,8 @@ export const useOrganization = () => {
 		orgId: null,
 		setOrgId: () => undefined,
 		loading: true,
+		timezone: DEFAULT_ORG_TIMEZONE,
+		timezoneLoading: true,
+		refreshOrgProfile: async () => undefined,
 	};
 };

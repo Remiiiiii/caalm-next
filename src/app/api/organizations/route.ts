@@ -7,6 +7,7 @@ import { requirePermission } from "@/lib/rbac/middleware";
 import { getOrganization, updateOrganization } from "@/lib/rbac/organizations";
 import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 import { logAuditEvent } from "@/lib/services/audit-logger";
+import { isValidIanaTimezone } from "@/lib/timezone";
 
 const updateOrgSchema = z.object({
 	name: z.string().min(1).max(255).optional(),
@@ -16,7 +17,14 @@ const updateOrgSchema = z.object({
 			maxUsers: z.number().int().min(1).max(100000).optional(),
 			maxDepartments: z.number().int().min(1).max(1000).optional(),
 			features: z.array(z.string()).optional(),
-			timezone: z.string().min(1).max(64).optional(),
+			timezone: z
+				.string()
+				.min(1)
+				.max(64)
+				.refine((value) => isValidIanaTimezone(value), {
+					message: "Timezone must be a valid IANA timezone",
+				})
+				.optional(),
 			websiteUrl: z.string().max(500).optional().nullable(),
 		})
 		.optional(),

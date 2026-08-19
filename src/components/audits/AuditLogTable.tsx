@@ -1,8 +1,9 @@
 "use client";
 
-import { format } from "date-fns";
 import { AlertTriangle, CheckCircle, Clock, XCircle } from "lucide-react";
 import { useState } from "react";
+import { useOrgTimezone } from "@/hooks/useOrgTimezone";
+import { formatInTimezone } from "@/lib/timezone";
 import { AuditLogDetailDrawer } from "@/components/audits/AuditLogDetailDrawer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -138,6 +139,7 @@ export function AuditLogTable({
 	isLoading,
 	embedded = false,
 }: AuditLogTableProps) {
+	const timeZone = useOrgTimezone();
 	const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
 	const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -193,9 +195,10 @@ export function AuditLogTable({
 										>
 											<TableCell className="text-sm text-slate-700 whitespace-nowrap">
 												{log.created_at
-													? format(
+													? formatInTimezone(
 															new Date(log.created_at),
 															"MMM d, yyyy HH:mm",
+															timeZone,
 														)
 													: "—"}
 											</TableCell>

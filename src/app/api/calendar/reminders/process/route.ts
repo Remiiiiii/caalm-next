@@ -5,6 +5,8 @@ import { getUserByAccountId } from "@/lib/actions/user.actions";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { sendReminderNotification } from "@/lib/services/calendar-notifications.service";
+import { zonedWallTimeToUtc } from "@/lib/timezone";
+import { getOrganizationTimezone } from "@/lib/timezone/org";
 
 /**
  * POST /api/calendar/reminders/process
@@ -54,12 +56,29 @@ export async function POST(request: NextRequest) {
 					continue;
 				}
 
-				// Calculate when reminder should be sent
-				const eventStart = new Date(event.startDate);
-				if (event.startTime) {
-					const [hours, minutes] = event.startTime.split(":").map(Number);
-					eventStart.setHours(hours, minutes, 0, 0);
-				}
+				const timeZone = await getOrganizationTimezone(
+					typeof (event as { orgId?: string }).orgId === "string"
+						? (event as { orgId?: string }).orgId
+						: null,
+				);
+				const dateKey = String(event.startDate).split("T")[0];
+				const [year, month, day] = dateKey.split("-").map(Number);
+				const [hours, minutes] = (event.startTime || "00:00")
+					.split(":")
+					.map(Number);
+				const eventStart =
+					year && month && day
+						? zonedWallTimeToUtc(
+								{
+									year,
+									month,
+									day,
+									hour: hours || 0,
+									minute: minutes || 0,
+								},
+								timeZone,
+							)
+						: new Date(event.startDate);
 
 				const reminderTime = new Date(eventStart);
 				reminderTime.setMinutes(

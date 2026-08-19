@@ -21,6 +21,7 @@ import {
 	getImpactLabel,
 	getUrgencyLabel,
 } from "@/lib/tickets/ticket-intake.constants";
+import { useOrgTimezone } from "@/hooks/useOrgTimezone";
 import { cn } from "@/lib/utils";
 import { TicketSeverityPill, TicketStatusPill } from "./TicketStatusPill";
 
@@ -29,8 +30,7 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
 type AttachmentEntry = { id: string; file: File };
 
-/** Show times in the viewer's local timezone (not forced GMT). */
-function formatTicketDateTime(value: string): string {
+function formatTicketDateTime(value: string, timeZone: string): string {
 	const date = new Date(value);
 	if (Number.isNaN(date.getTime())) return value;
 	return new Intl.DateTimeFormat(undefined, {
@@ -42,6 +42,7 @@ function formatTicketDateTime(value: string): string {
 		minute: "2-digit",
 		second: "2-digit",
 		timeZoneName: "short",
+		timeZone,
 	}).format(date);
 }
 
@@ -66,7 +67,11 @@ function formatFileSize(bytes: number): string {
 	return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function formatIssueDetails(ticket: Ticket, issue: GitHubIssueSnapshot | null) {
+function formatIssueDetails(
+	ticket: Ticket,
+	issue: GitHubIssueSnapshot | null,
+	timeZone: string,
+) {
 	const impact = ticket.impact ? getImpactLabel(ticket.impact) : "—";
 	const urgency = ticket.urgency ? getUrgencyLabel(ticket.urgency) : "—";
 	const severity = ticket.severity
@@ -80,7 +85,7 @@ function formatIssueDetails(ticket: Ticket, issue: GitHubIssueSnapshot | null) {
 	return [
 		`Submitted by: ${ticket.submittedByName} (${ticket.submittedByUserId})`,
 		`Department/Division: ${ticket.department}`,
-		`Submitted at: ${formatTicketDateTime(ticket.submittedAt)}`,
+		`Submitted at: ${formatTicketDateTime(ticket.submittedAt, timeZone)}`,
 		`Category: ${ticket.category || "—"}`,
 		ticket.affectedModule ? `Affected service: ${ticket.affectedModule}` : null,
 		`Impact: ${impact} · Urgency: ${urgency} · Severity: ${severity}`,
@@ -102,6 +107,7 @@ export function TicketDetail({
 	events: TicketEvent[];
 	canResolve: boolean;
 }) {
+	const timeZone = useOrgTimezone();
 	const [issue, setIssue] = useState<GitHubIssueSnapshot | null>(null);
 	const [loading, setLoading] = useState(false);
 	const [resolving, setResolving] = useState(false);
@@ -133,8 +139,8 @@ export function TicketDetail({
 
 	const issueTitle = issue?.title || ticket.title;
 	const issueDetails = useMemo(
-		() => formatIssueDetails(ticket, issue),
-		[ticket, issue],
+		() => formatIssueDetails(ticket, issue, timeZone),
+		[ticket, issue, timeZone],
 	);
 
 	const addFiles = useCallback((fileList: FileList | File[]) => {
@@ -234,7 +240,7 @@ export function TicketDetail({
 					</h2>
 					<p className="text-sm text-slate-600">
 						{ticket.submittedByName} · {ticket.department} ·{" "}
-						{formatTicketDateTime(ticket.submittedAt)}
+						{formatTicketDateTime(ticket.submittedAt, timeZone)}
 					</p>
 					{ticket.status === "FAILED" && (error || lastFailureReason) ? (
 						<p className="rounded-md border border-red/20 bg-red/5 px-3 py-2 text-sm text-red">
@@ -318,7 +324,7 @@ export function TicketDetail({
 									<span className="font-medium text-slate-700">
 										{comment.author}
 									</span>{" "}
-									· {formatTicketDateTime(comment.createdAt)}
+									· {formatTicketDateTime(comment.createdAt, timeZone)}
 									<p className="mt-1 whitespace-pre-wrap">{comment.body}</p>
 								</li>
 							))}
@@ -460,7 +466,7 @@ export function TicketDetail({
 								<span className="font-medium text-slate-700">
 									{event.eventType.replaceAll("_", " ")}
 								</span>{" "}
-								· {formatTicketDateTime(event.timestamp)} · {event.actor}
+								· {formatTicketDateTime(event.timestamp, timeZone)} · {event.actor}
 							</li>
 						))}
 					</ol>

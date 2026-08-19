@@ -8,7 +8,9 @@ import { ReadinessCharts } from "@/components/audits/ReadinessCharts";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { PERMISSIONS } from "@/constants/permissions";
+import { useOrgTimezone } from "@/hooks/useOrgTimezone";
 import { usePermissions } from "@/hooks/usePermissions";
+import { formatInTimezone } from "@/lib/timezone";
 import { useToast } from "@/hooks/use-toast";
 import { fetcher } from "@/lib/swr-config";
 
@@ -56,6 +58,7 @@ interface PreviewResponse {
 }
 
 export default function AuditReadinessPreviewPage() {
+	const timeZone = useOrgTimezone();
 	const { permissions, loading: permissionsLoading } = usePermissions();
 	const canExport = permissions.includes(PERMISSIONS.AUDIT.EXPORT);
 	const { toast } = useToast();
@@ -171,7 +174,7 @@ export default function AuditReadinessPreviewPage() {
 					<p className="text-sm text-blue-100 mt-2">
 						{payload.org.name} ·{" "}
 						{(payload.latestSnapshot?.cadence || "live").toUpperCase()} ·{" "}
-						{new Date().toLocaleString()}
+						{formatInTimezone(new Date(), "MMM d, yyyy h:mm a", timeZone)}
 					</p>
 				</header>
 

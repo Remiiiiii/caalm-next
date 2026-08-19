@@ -1,3 +1,8 @@
+import {
+	localDayKey as orgLocalDayKey,
+	localMonthKey as orgLocalMonthKey,
+	resolveOrgTimezone,
+} from "@/lib/timezone";
 import type { Ticket, TicketEvent, TicketEventType } from "./ticket.types";
 
 export type IssueHistoryIncident = {
@@ -54,41 +59,46 @@ export function incidentSortDate(ticket: Ticket): Date {
 	return Number.isNaN(date.getTime()) ? new Date(0) : date;
 }
 
-/** Local timezone, e.g. "Aug 13, 2026 at 5:01 AM EDT". */
-export function formatIssueHistoryDate(iso: string): string {
+/** Org (or viewer) timezone, e.g. "Aug 13, 2026 at 5:01 AM EDT". */
+export function formatIssueHistoryDate(iso: string, timeZone?: string): string {
 	const date = new Date(iso);
 	if (Number.isNaN(date.getTime())) return iso;
+	const tz = timeZone ? resolveOrgTimezone(timeZone) : undefined;
 	const datePart = new Intl.DateTimeFormat(undefined, {
 		month: "short",
 		day: "numeric",
 		year: "numeric",
+		timeZone: tz,
 	}).format(date);
 	const timePart = new Intl.DateTimeFormat(undefined, {
 		hour: "numeric",
 		minute: "2-digit",
 		timeZoneName: "short",
+		timeZone: tz,
 	}).format(date);
 	return `${datePart} at ${timePart}`;
 }
 
-/** Local day label, e.g. "Aug 13, 2026". */
-export function formatIssueHistoryDay(iso: string): string {
+/** Day label, e.g. "Aug 13, 2026". */
+export function formatIssueHistoryDay(iso: string, timeZone?: string): string {
 	const date = new Date(iso);
 	if (Number.isNaN(date.getTime())) return iso;
 	return new Intl.DateTimeFormat(undefined, {
 		month: "short",
 		day: "numeric",
 		year: "numeric",
+		timeZone: timeZone ? resolveOrgTimezone(timeZone) : undefined,
 	}).format(date);
 }
 
-/** Local month header, e.g. "August 2026". */
-export function formatIssueHistoryMonth(iso: string): string {
+/** Month header, e.g. "August 2026". */
+export function formatIssueHistoryMonth(iso: string, timeZone?: string): string {
 	const date = new Date(iso);
 	if (Number.isNaN(date.getTime())) return iso;
 	return new Intl.DateTimeFormat(undefined, {
 		month: "long",
 		year: "numeric",
+		timeZone: timeZone ? resolveOrgTimezone(timeZone) : undefined,
 	}).format(date);
 }
 
@@ -834,6 +844,7 @@ export function formatMonthRange(tickets: Ticket[]): string | null {
 export function groupTicketsByMonthDay(
 	tickets: Ticket[],
 	eventsByTicket: Record<string, TicketEvent[]>,
+	timeZone?: string,
 ): IssueHistoryMonthGroup[] {
 	const sorted = [...tickets].sort(
 		(a, b) => incidentSortDate(b).getTime() - incidentSortDate(a).getTime(),
@@ -843,8 +854,12 @@ export function groupTicketsByMonthDay(
 
 	for (const ticket of sorted) {
 		const date = incidentSortDate(ticket);
-		const monthKey = localMonthKey(date);
-		const dayKey = localDayKey(date);
+		const monthKey = timeZone
+			? orgLocalMonthKey(date, resolveOrgTimezone(timeZone))
+			: localMonthKey(date);
+		const dayKey = timeZone
+			? orgLocalDayKey(date, resolveOrgTimezone(timeZone))
+			: localDayKey(date);
 		const events = eventsByTicket[ticket.$id] || [];
 		const incident: IssueHistoryIncident = {
 			ticket,
@@ -856,7 +871,7 @@ export function groupTicketsByMonthDay(
 		if (!month) {
 			month = {
 				monthKey,
-				label: formatIssueHistoryMonth(date.toISOString()),
+				label: formatIssueHistoryMonth(date.toISOString(), timeZone),
 				days: [],
 			};
 			months.set(monthKey, month);
@@ -866,7 +881,7 @@ export function groupTicketsByMonthDay(
 		if (!day) {
 			day = {
 				dayKey,
-				label: formatIssueHistoryDay(date.toISOString()),
+				label: formatIssueHistoryDay(date.toISOString(), timeZone),
 				incidents: [],
 			};
 			month.days.push(day);

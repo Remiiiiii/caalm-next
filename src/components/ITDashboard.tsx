@@ -22,6 +22,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatCardIcon } from "@/components/ui/stat-card-icon";
+import { useOrgTimezone } from "@/hooks/useOrgTimezone";
+import { formatInTimezone } from "@/lib/timezone";
 import { useITDashboard } from "@/hooks/useITDashboard";
 import { useITMetrics } from "@/hooks/useITMetrics";
 import { useITUser } from "@/hooks/useITUser";
@@ -35,6 +37,7 @@ type ITDashboardProps = {
 };
 
 const ITDashboard: React.FC<ITDashboardProps> = ({ user }) => {
+	const timeZone = useOrgTimezone();
 	const {
 		dashboard,
 		isLoading: dashboardLoading,
@@ -285,7 +288,11 @@ const ITDashboard: React.FC<ITDashboardProps> = ({ user }) => {
 													{alert.message}
 												</p>
 												<p className="text-xs text-slate-600">
-													{new Date(alert.timestamp).toLocaleString()}
+													{formatInTimezone(
+														new Date(alert.timestamp),
+														"MMM d, yyyy h:mm a",
+														timeZone,
+													)}
 												</p>
 											</div>
 										</div>

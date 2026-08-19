@@ -2,6 +2,8 @@ import { ID, Query } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import type { NotificationDigestQueue } from "@/lib/database/schemas/notification-digest-queue.schema";
+import { nextLocalNineAm } from "@/lib/timezone";
+import { getOrganizationTimezone } from "@/lib/timezone/org";
 import type { Notification } from "@/types/notifications";
 
 class DigestService {
@@ -17,6 +19,7 @@ class DigestService {
 		userId: string,
 		notificationId: string,
 		digestFrequency: "daily" | "weekly",
+		orgId?: string | null,
 	): Promise<NotificationDigestQueue> {
 		try {
 			const tablesDB = await this.getTablesDB();
@@ -28,8 +31,11 @@ class DigestService {
 				throw new Error("Database ID is not configured");
 			}
 
-			// Calculate scheduled send time based on frequency
-			const scheduledSendAt = this.calculateScheduledSendTime(digestFrequency);
+			const timezone = await getOrganizationTimezone(orgId);
+			const scheduledSendAt = this.calculateScheduledSendTime(
+				digestFrequency,
+				timezone,
+			);
 
 			const queueItem: Omit<NotificationDigestQueue, "$id" | "created_at"> = {
 				user_id: userId,
@@ -59,22 +65,11 @@ class DigestService {
 	/**
 	 * Calculate the scheduled send time based on digest frequency
 	 */
-	private calculateScheduledSendTime(frequency: "daily" | "weekly"): Date {
-		const now = new Date();
-		const scheduled = new Date(now);
-
-		if (frequency === "daily") {
-			// Schedule for next day at 9 AM (user's timezone - defaulting to UTC for now)
-			scheduled.setDate(scheduled.getDate() + 1);
-			scheduled.setHours(9, 0, 0, 0);
-		} else if (frequency === "weekly") {
-			// Schedule for next Monday at 9 AM
-			const daysUntilMonday = (8 - scheduled.getDay()) % 7 || 7;
-			scheduled.setDate(scheduled.getDate() + daysUntilMonday);
-			scheduled.setHours(9, 0, 0, 0);
-		}
-
-		return scheduled;
+	private calculateScheduledSendTime(
+		frequency: "daily" | "weekly",
+		timeZone: string,
+	): Date {
+		return nextLocalNineAm(new Date(), timeZone, frequency);
 	}
 
 	/**

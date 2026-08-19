@@ -1,4 +1,7 @@
-import { format } from "date-fns";
+import {
+	formatInTimezone,
+	getTimezoneAbbreviation as getOrgTimezoneAbbreviation,
+} from "@/lib/timezone";
 
 /** Convert 24-hour or 12-hour time strings to display form (e.g. "2:00 PM"). */
 export function formatTimeForDisplay(timeInput: string): string {
@@ -15,7 +18,11 @@ export function formatTimeForDisplay(timeInput: string): string {
 	return `${hours12}:${minutes} ${ampm}`;
 }
 
-export function getTimezoneAbbreviation(date: Date = new Date()): string {
+export function getTimezoneAbbreviation(
+	date: Date = new Date(),
+	timeZone?: string,
+): string {
+	if (timeZone) return getOrgTimezoneAbbreviation(date, timeZone);
 	const part = new Intl.DateTimeFormat("en-US", { timeZoneName: "short" })
 		.formatToParts(date)
 		.find((p) => p.type === "timeZoneName")?.value;
@@ -51,9 +58,15 @@ export function parseTimeToMinutes(timeStr: string | undefined): number {
 	return 0;
 }
 
-export function formatEventDetailDateLine(startDate: Date | string): string {
+export function formatEventDetailDateLine(
+	startDate: Date | string,
+	timeZone?: string,
+): string {
 	const dateObj = startDate instanceof Date ? startDate : new Date(startDate);
-	return format(dateObj, "EEEE, MMMM d, yyyy");
+	if (timeZone) {
+		return formatInTimezone(dateObj, "EEEE, MMMM d, yyyy", timeZone);
+	}
+	return formatInTimezone(dateObj, "EEEE, MMMM d, yyyy");
 }
 
 /** Time range + timezone for event detail card (e.g. "10:00 AM – 10:30 AM EDT"). */
@@ -61,6 +74,7 @@ export function formatEventDetailTimeLine(params: {
 	startDate: Date | string;
 	startTime?: string;
 	endTime?: string;
+	timeZone?: string;
 }): string | null {
 	if (!params.startTime) return null;
 	const dateObj =
@@ -69,7 +83,7 @@ export function formatEventDetailTimeLine(params: {
 			: new Date(params.startDate);
 	const start = formatTimeForDisplay(params.startTime);
 	const end = params.endTime ? formatTimeForDisplay(params.endTime) : "";
-	const tz = getTimezoneAbbreviation(dateObj);
+	const tz = getTimezoneAbbreviation(dateObj, params.timeZone);
 	const timePart = end ? `${start} – ${end}` : start;
 	return `${timePart}${tz ? ` ${tz}` : ""}`;
 }

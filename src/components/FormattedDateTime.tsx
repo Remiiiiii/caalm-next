@@ -1,3 +1,6 @@
+"use client";
+
+import { useOrgTimezone } from "@/hooks/useOrgTimezone";
 import { cn, formatDate, formatDateTime } from "@/lib/utils";
 
 export const FormattedDateTime = ({
@@ -7,9 +10,10 @@ export const FormattedDateTime = ({
 	date: string;
 	className?: string;
 }) => {
+	const timeZone = useOrgTimezone();
 	return (
 		<span className={cn("body-1 text-slate-700", className)}>
-			{formatDateTime(date)}
+			{formatDateTime(date, timeZone)}
 		</span>
 	);
 };
@@ -20,9 +24,10 @@ export const FormattedDate = ({
 	date: string;
 	className?: string;
 }) => {
+	const timeZone = useOrgTimezone();
 	return (
 		<span className={cn("body-2 text-slate-700", className)}>
-			{formatDate(date)}
+			{formatDate(date, timeZone)}
 		</span>
 	);
 };
