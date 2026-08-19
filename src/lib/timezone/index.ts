@@ -61,15 +61,15 @@ export function localMonthKey(date: Date, timeZone: string): string {
 }
 
 /**
- * Hourly cron window: fire when local time is in [09:00, 09:59].
+ * Daily cron: due cadences use the org's local calendar day.
  * Weekly = Monday; monthly = day 1; quarterly = Jan/Apr/Jul/Oct day 1.
+ * Hour is ignored because Hobby Vercel only allows one run per day.
  */
 export function cadencesDueNow(
 	date: Date,
 	timeZone: string,
 ): ScheduleCadence[] {
 	const p = zonedParts(date, timeZone);
-	if (p.hour !== 9) return [];
 
 	const due: ScheduleCadence[] = [];
 	if (p.weekday === "Mon") due.push("weekly");

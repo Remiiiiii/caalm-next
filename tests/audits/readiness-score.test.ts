@@ -24,15 +24,15 @@ describe("audit readiness score", () => {
 });
 
 describe("audit readiness timezone cadence", () => {
-	it("fires weekly on Monday at 09:00 local", () => {
+	it("fires weekly on Monday local (any hour)", () => {
 		// 2026-08-17 is a Monday; 13:30 UTC ≈ 09:30 America/New_York (EDT)
 		const date = new Date("2026-08-17T13:30:00.000Z");
 		expect(cadencesDueNow(date, "America/New_York")).toContain("weekly");
 		expect(localDayKey(date, "America/New_York")).toBe("2026-08-17");
 	});
 
-	it("does not fire outside the 09:00 hour", () => {
-		const date = new Date("2026-08-17T15:30:00.000Z");
-		expect(cadencesDueNow(date, "America/New_York")).toEqual([]);
+	it("does not fire weekly on Tuesday local", () => {
+		const date = new Date("2026-08-18T13:30:00.000Z");
+		expect(cadencesDueNow(date, "America/New_York")).not.toContain("weekly");
 	});
 });

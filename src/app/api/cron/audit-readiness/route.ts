@@ -11,7 +11,7 @@ function isAuthorizedCron(request: NextRequest): boolean {
 }
 
 /**
- * Hourly cron: for each org, if local time is 09:00–09:59 and cadence is due
+ * Daily cron: for each org, if the cadence is due on the local calendar day
  * (weekly Mon / monthly day 1 / quarterly Jan|Apr|Jul|Oct day 1), run snapshot.
  */
 export async function GET(request: NextRequest) {

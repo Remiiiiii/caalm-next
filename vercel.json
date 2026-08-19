@@ -7,7 +7,7 @@
 	"crons": [
 		{
 			"path": "/api/notifications/process-digest",
-			"schedule": "0 * * * *"
+			"schedule": "0 9 * * *"
 		},
 		{
 			"path": "/api/contracts/update-expired",
@@ -23,7 +23,7 @@
 		},
 		{
 			"path": "/api/cron/audit-readiness",
-			"schedule": "0 * * * *"
+			"schedule": "0 13 * * *"
 		}
 	]
 }
