@@ -10,6 +10,7 @@ import { appwriteConfig } from "@/lib/appwrite/config";
 export type BillingStatus =
 	| "active"
 	| "trialing"
+	| "pilot"
 	| "past_due"
 	| "canceled"
 	| "none";
@@ -198,7 +199,9 @@ export async function updateOrganization(
 }
 
 /**
- * Update organization Stripe billing fields (webhook / checkout source of truth)
+ * Update organization Stripe billing fields (webhook / checkout source of truth).
+ * Tier limits in settings are always overwritten from TIER_LIMITS when tier changes —
+ * clients cannot raise their own caps.
  */
 export async function updateOrganizationBilling(
 	orgId: string,
@@ -210,12 +213,32 @@ export async function updateOrganizationBilling(
 		billingInterval?: BillingInterval;
 		subscriptionTier?: "starter" | "growth" | "enterprise";
 		currentPeriodEnd?: string;
+		/** Merge into settings JSON (e.g. pastDueSince). Tier caps still win. */
+		settingsPatch?: Record<string, unknown>;
 	},
 ): Promise<Organization | null> {
 	try {
 		const { tablesDB } = await createAdminClient();
+		const { settingsFromTier, normalizePricingTier } = await import(
+			"@/lib/billing/entitlements"
+		);
 
-		const updateData: Record<string, string> = {};
+		const existing = await getOrganization(orgId);
+		const nextTier = updates.subscriptionTier
+			? normalizePricingTier(updates.subscriptionTier)
+			: normalizePricingTier(existing?.subscriptionTier);
+		const tierCaps = settingsFromTier(nextTier);
+
+		const mergedSettings = {
+			...(existing?.settings || {}),
+			...(updates.settingsPatch || {}),
+			maxUsers: tierCaps.maxUsers,
+			maxDepartments: tierCaps.maxDepartments,
+		};
+
+		const updateData: Record<string, string> = {
+			settings: JSON.stringify(mergedSettings),
+		};
 		if (updates.stripeCustomerId !== undefined)
 			updateData.stripeCustomerId = updates.stripeCustomerId;
 		if (updates.stripeSubscriptionId !== undefined)

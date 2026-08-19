@@ -77,6 +77,34 @@ export async function POST(request: NextRequest) {
 				{ status: 400 },
 			);
 		}
+
+		const { getOrganization } = await import("@/lib/rbac/organizations");
+		const {
+			assertBillingWriteAccess,
+			assertWithinLimit,
+			getEffectiveLimits,
+		} = await import("@/lib/billing/entitlements");
+		const { countActiveDepartments } = await import("@/lib/billing/usage");
+
+		const org = await getOrganization(orgId);
+		if (!org) {
+			return NextResponse.json(
+				{ error: "Organization not found" },
+				{ status: 404 },
+			);
+		}
+
+		assertBillingWriteAccess(org);
+
+		if (body.type === "department") {
+			const used = await countActiveDepartments(orgId);
+			assertWithinLimit({
+				resource: "departments",
+				used,
+				limits: getEffectiveLimits(org),
+			});
+		}
+
 		const unit = await createOrgUnit({
 			orgId,
 			code: body.code,
@@ -87,6 +115,13 @@ export async function POST(request: NextRequest) {
 		});
 		return NextResponse.json({ success: true, data: { unit } }, { status: 201 });
 	} catch (error) {
+		const { BillingLimitError } = await import("@/lib/billing/entitlements");
+		if (error instanceof BillingLimitError) {
+			return NextResponse.json(
+				{ success: false, error: error.message, code: error.code },
+				{ status: error.status },
+			);
+		}
 		const message =
 			error instanceof Error ? error.message : "Internal server error";
 		return NextResponse.json({ success: false, error: message }, { status: 400 });

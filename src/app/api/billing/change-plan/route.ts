@@ -5,13 +5,18 @@ import { getCurrentUser } from "@/lib/actions/user.actions";
 import { requirePermission } from "@/lib/rbac/middleware";
 import { getOrganization } from "@/lib/rbac/organizations";
 import { validateUserOrgAccess } from "@/lib/rbac/permissions";
-import { createPortalSession } from "@/lib/stripe/billing";
+import { changeSubscriptionPlan } from "@/lib/stripe/billing";
 import { isStripeConfigured } from "@/lib/stripe/client";
 
 const bodySchema = z.object({
 	orgId: z.string().min(1),
+	tier: z.enum(["starter", "growth", "enterprise"]),
+	interval: z.enum(["monthly", "yearly"]),
 });
 
+/**
+ * Upgrade/downgrade with Stripe proration. Price IDs never come from the client.
+ */
 export async function POST(request: NextRequest) {
 	const { isDemoMode } = await import("@/lib/config/demo-mode");
 	if (isDemoMode()) {
@@ -56,10 +61,8 @@ export async function POST(request: NextRequest) {
 		);
 	}
 
-	const hasOrgAccess = await validateUserOrgAccess(
-		user.$id,
-		parsed.data.orgId,
-	);
+	const { orgId, tier, interval } = parsed.data;
+	const hasOrgAccess = await validateUserOrgAccess(user.$id, orgId);
 	if (!hasOrgAccess) {
 		return NextResponse.json(
 			{ error: "Access denied to this organization" },
@@ -67,7 +70,7 @@ export async function POST(request: NextRequest) {
 		);
 	}
 
-	const org = await getOrganization(parsed.data.orgId);
+	const org = await getOrganization(orgId);
 	if (!org) {
 		return NextResponse.json(
 			{ error: "Organization not found" },
@@ -75,27 +78,28 @@ export async function POST(request: NextRequest) {
 		);
 	}
 
-	if (!org.stripeCustomerId) {
+	if (!org.stripeSubscriptionId) {
 		return NextResponse.json(
-			{ error: "No Stripe customer for this organization yet" },
-			{ status: 400 },
+			{
+				error: "No subscription to change. Use Checkout to start billing.",
+				code: "USE_CHECKOUT",
+			},
+			{ status: 409 },
 		);
 	}
 
-	const appUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
-
 	try {
-		const url = await createPortalSession({
-			org,
-			email: user.email,
-			userName: user.fullName,
-			returnUrl: `${appUrl}/settings/billing?tab=billing`,
+		const subscription = await changeSubscriptionPlan({ org, tier, interval });
+		return NextResponse.json({
+			subscriptionId: subscription.id,
+			status: subscription.status,
+			tier,
+			interval,
 		});
-		return NextResponse.json({ url });
 	} catch (error: unknown) {
 		const message =
-			error instanceof Error ? error.message : "Failed to create portal session";
-		console.error("[billing/portal]", error);
+			error instanceof Error ? error.message : "Failed to change plan";
+		console.error("[billing/change-plan]", error);
 		return NextResponse.json({ error: message }, { status: 500 });
 	}
 }

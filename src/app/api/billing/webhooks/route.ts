@@ -19,13 +19,15 @@ export async function POST(request: NextRequest) {
 
 	try {
 		const event = constructWebhookEvent(payload, signature);
-		await handleStripeWebhookEvent(event);
-		return NextResponse.json({ received: true });
-	} catch (error: any) {
+		const result = await handleStripeWebhookEvent(event);
+		return NextResponse.json({
+			received: true,
+			duplicate: Boolean(result.duplicate),
+		});
+	} catch (error: unknown) {
+		const message =
+			error instanceof Error ? error.message : "Webhook error";
 		console.error("[billing/webhooks]", error);
-		return NextResponse.json(
-			{ error: error?.message || "Webhook error" },
-			{ status: 400 },
-		);
+		return NextResponse.json({ error: message }, { status: 400 });
 	}
 }

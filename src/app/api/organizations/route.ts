@@ -13,8 +13,7 @@ const updateOrgSchema = z.object({
 	domain: z.string().max(255).optional().nullable(),
 	settings: z
 		.object({
-			maxUsers: z.number().int().min(1).max(100000).optional(),
-			maxDepartments: z.number().int().min(1).max(1000).optional(),
+			// maxUsers / maxDepartments are NOT accepted from clients — tier caps win.
 			features: z.array(z.string()).optional(),
 		})
 		.optional(),
@@ -106,28 +105,26 @@ export async function PUT(request: NextRequest) {
 		const body = await request.json();
 		const validated = updateOrgSchema.parse(body);
 
+		const { settingsFromTier, normalizePricingTier } = await import(
+			"@/lib/billing/entitlements"
+		);
+		const caps = settingsFromTier(
+			normalizePricingTier(existing.subscriptionTier),
+		);
+
 		const settings = validated.settings
 			? {
-					maxUsers:
-						validated.settings.maxUsers ?? existing.settings.maxUsers ?? 10,
-					maxDepartments:
-						validated.settings.maxDepartments ??
-						existing.settings.maxDepartments ??
-						3,
+					...existing.settings,
+					maxUsers: caps.maxUsers,
+					maxDepartments: caps.maxDepartments,
 					features:
 						validated.settings.features ?? existing.settings.features ?? [],
-					...existing.settings,
-					...(validated.settings.maxUsers !== undefined
-						? { maxUsers: validated.settings.maxUsers }
-						: {}),
-					...(validated.settings.maxDepartments !== undefined
-						? { maxDepartments: validated.settings.maxDepartments }
-						: {}),
-					...(validated.settings.features !== undefined
-						? { features: validated.settings.features }
-						: {}),
 				}
-			: undefined;
+			: {
+					...existing.settings,
+					maxUsers: caps.maxUsers,
+					maxDepartments: caps.maxDepartments,
+				};
 
 		const updated = await updateOrganization(orgId, {
 			name: validated.name,

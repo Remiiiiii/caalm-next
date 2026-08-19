@@ -30,6 +30,21 @@ interface SubscriptionPayload {
 	billingInterval: string | null;
 	currentPeriodEnd: string | null;
 	stripeConfigured: boolean;
+	access?: {
+		state: string;
+		canWrite: boolean;
+		canCheckout: boolean;
+		warning: string | null;
+		pilotEndsAt: string | null;
+		graceEndsAt: string | null;
+	};
+	entitlements?: {
+		tier: string;
+		maxUsers: number;
+		maxDepartments: number | null;
+		maxContracts: number | null;
+		storageBytes: number;
+	};
 	plan: {
 		key: string;
 		name: string;
@@ -40,8 +55,8 @@ interface SubscriptionPayload {
 	usage: {
 		storage: { used: number; limit: number };
 		users: { used: number | null; limit: number };
-		departments: { used: number | null; limit: number };
-		contracts: { used: number | null; limit: number };
+		departments: { used: number | null; limit: number | null };
+		contracts: { used: number | null; limit: number | null };
 	};
 	plans: PricingPlan[];
 }

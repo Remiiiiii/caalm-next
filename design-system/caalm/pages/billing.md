@@ -76,8 +76,31 @@ Patterns from:
 | CAALM Growth | `prod_UrsYVP25KIDdt6` | `price_1Ts8o3EcIRVzi89s2e0HMLdS` ($299) | `price_1Ts8o4EcIRVzi89sT5qx4zsN` |
 | CAALM Enterprise | `prod_UrsYNL7QlzzNCV` | `price_1Ts8o6EcIRVzi89sI4fjcZ0r` ($999) | `price_1Ts8o7EcIRVzi89sjETnxfVI` |
 
+## Backend API (UI plug-and-play)
+
+| Method | Path | Permission | Purpose |
+|--------|------|------------|---------|
+| GET | `/api/billing/subscription?orgId=` | `settings.billing` | Plan, usage, entitlements, access lock state |
+| GET | `/api/billing/invoices?orgId=` | `settings.billing` | Invoice list + PDF URLs |
+| POST | `/api/billing/checkout` | `settings.billing` | Hosted Checkout (new sub / pilot → paid) |
+| POST | `/api/billing/change-plan` | `settings.billing` | Prorated upgrade/downgrade on existing sub |
+| POST | `/api/billing/portal` | `settings.billing` | Stripe Customer Portal |
+| POST | `/api/billing/pilot` | `platform.system_settings` | Start 3–6 month free pilot (staff only) |
+| POST | `/api/billing/webhooks` | Stripe signature | Source of truth for subscription state |
+
+`GET /subscription` returns `access.canWrite`, `entitlements.maxDepartments`, and live `usage.*` so the UI can disable CTAs without guessing.
+
+## Security rules
+
+- Price IDs only from server env — never from the client
+- Org membership checked on every billing mutation
+- `maxUsers` / `maxDepartments` cannot be raised via Settings PUT
+- Department create + invites enforce tier caps server-side
+- Past-due: 7-day grace, then write lock; pilots expire on `currentPeriodEnd`
+
 Local checkout/webhook walkthrough:
 
-1. Set `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` in `.env.local` (price IDs already mapped).
+1. Set `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` in `.env.local` (price IDs already mapped). Enable Stripe Tax in Dashboard if `STRIPE_AUTOMATIC_TAX=true`.
 2. Run `stripe listen --forward-to localhost:3000/api/billing/webhooks` and copy the CLI webhook secret.
-3. Open `/settings/billing`, complete test Checkout, confirm org `billingStatus` + `subscriptionTier` update via webhook.
+3. Staff: `POST /api/billing/pilot` with `{ orgId, tier, months: 3|4|5|6 }`.
+4. Open `/settings/billing`, complete test Checkout, confirm org `billingStatus` + `subscriptionTier` update via webhook.

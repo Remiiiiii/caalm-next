@@ -2,12 +2,24 @@ import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getTotalSpaceUsed } from "@/lib/actions/file.actions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
+import {
+	getEffectiveLimits,
+	resolveBillingAccess,
+} from "@/lib/billing/entitlements";
+import {
+	countActiveDepartments,
+	countContracts,
+	countOrgMembers,
+} from "@/lib/billing/usage";
 import { loadPricingFromMarkdown } from "@/lib/pricing";
 import { getOrgIdFromRequest, requirePermission } from "@/lib/rbac/middleware";
 import { getOrganization } from "@/lib/rbac/organizations";
+import { validateUserOrgAccess } from "@/lib/rbac/permissions";
 import { isStripeConfigured } from "@/lib/stripe/client";
-import { TIER_LIMITS } from "@/lib/stripe/prices";
 
+/**
+ * Stable JSON shape for the billing UI — plug-and-play tomorrow.
+ */
 export async function GET(request: NextRequest) {
 	const permissionCheck = await requirePermission(request, {
 		permission: PERMISSIONS.SETTINGS.BILLING,
@@ -25,7 +37,19 @@ export async function GET(request: NextRequest) {
 	const orgId =
 		getOrgIdFromRequest(request) ||
 		request.nextUrl.searchParams.get("orgId") ||
-		"default_organization";
+		undefined;
+
+	if (!orgId) {
+		return NextResponse.json({ error: "orgId is required" }, { status: 400 });
+	}
+
+	const hasOrgAccess = await validateUserOrgAccess(user.$id, orgId);
+	if (!hasOrgAccess) {
+		return NextResponse.json(
+			{ error: "Access denied to this organization" },
+			{ status: 403 },
+		);
+	}
 
 	const org = await getOrganization(orgId);
 	if (!org) {
@@ -35,17 +59,8 @@ export async function GET(request: NextRequest) {
 		);
 	}
 
-	const rawTier = String(org.subscriptionTier || "starter")
-		.toLowerCase()
-		.trim();
-	const tier =
-		rawTier in TIER_LIMITS ? (rawTier as keyof typeof TIER_LIMITS) : "starter";
-	const limits = TIER_LIMITS[tier];
-	const settings = org.settings || {
-		maxUsers: limits.maxUsers,
-		maxDepartments: limits.maxDepartments,
-		features: [],
-	};
+	const limits = getEffectiveLimits(org);
+	const access = resolveBillingAccess(org);
 
 	let storageUsed = 0;
 	try {
@@ -55,13 +70,19 @@ export async function GET(request: NextRequest) {
 		storageUsed = 0;
 	}
 
+	const [usersUsed, departmentsUsed, contractsUsed] = await Promise.all([
+		countOrgMembers(orgId).catch(() => null),
+		countActiveDepartments(orgId).catch(() => null),
+		countContracts(orgId).catch(() => null),
+	]);
+
 	const pricing = await loadPricingFromMarkdown();
-	const plan = pricing.plans.find((p) => p.key === tier);
+	const plan = pricing.plans.find((p) => p.key === limits.tier);
 
 	return NextResponse.json({
 		orgId: org.$id,
 		name: org.name,
-		subscriptionTier: tier,
+		subscriptionTier: limits.tier,
 		billingStatus: org.billingStatus || "none",
 		billingInterval: org.billingInterval || null,
 		currentPeriodEnd: org.currentPeriodEnd || null,
@@ -69,6 +90,21 @@ export async function GET(request: NextRequest) {
 		stripeSubscriptionId: org.stripeSubscriptionId || null,
 		hasStripeCustomer: Boolean(org.stripeCustomerId),
 		stripeConfigured: isStripeConfigured(),
+		access: {
+			state: access.state,
+			canWrite: access.canWrite,
+			canCheckout: access.canCheckout,
+			warning: access.warning,
+			pilotEndsAt: access.pilotEndsAt,
+			graceEndsAt: access.graceEndsAt,
+		},
+		entitlements: {
+			tier: limits.tier,
+			maxUsers: limits.maxUsers,
+			maxDepartments: limits.maxDepartments,
+			maxContracts: limits.maxContracts,
+			storageBytes: limits.storageBytes,
+		},
 		plan: plan
 			? {
 					key: plan.key,
@@ -84,15 +120,15 @@ export async function GET(request: NextRequest) {
 				limit: limits.storageBytes,
 			},
 			users: {
-				used: null as number | null,
-				limit: settings.maxUsers ?? limits.maxUsers,
+				used: usersUsed,
+				limit: limits.maxUsers,
 			},
 			departments: {
-				used: null as number | null,
-				limit: settings.maxDepartments ?? limits.maxDepartments,
+				used: departmentsUsed,
+				limit: limits.maxDepartments,
 			},
 			contracts: {
-				used: null as number | null,
+				used: contractsUsed,
 				limit: limits.maxContracts,
 			},
 		},
