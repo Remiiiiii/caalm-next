@@ -55,6 +55,20 @@ export async function POST(request: NextRequest) {
 		return NextResponse.json({ data: invitation });
 	} catch (error) {
 		console.error("Failed to create invitation:", error);
+		const { isPlanLimitError } = await import("@/lib/billing/planLimits");
+		if (isPlanLimitError(error)) {
+			return NextResponse.json(
+				{
+					error: error.message,
+					code: "PLAN_LIMIT_EXCEEDED",
+					kind: error.kind,
+					limit: error.limit,
+					used: error.used,
+					tier: error.tier,
+				},
+				{ status: 402 },
+			);
+		}
 
 		return NextResponse.json(
 			{

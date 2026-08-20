@@ -2,6 +2,12 @@ import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getTotalSpaceUsed } from "@/lib/actions/file.actions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
+import {
+	countActiveContracts,
+	countActiveLicenses,
+	countBillableUsers,
+	sumOrgStorageBytes,
+} from "@/lib/billing/planLimits";
 import { loadPricingFromMarkdown } from "@/lib/pricing";
 import { getOrgIdFromRequest, requirePermission } from "@/lib/rbac/middleware";
 import { getOrganization } from "@/lib/rbac/organizations";
@@ -49,11 +55,20 @@ export async function GET(request: NextRequest) {
 
 	let storageUsed = 0;
 	try {
-		const space = await getTotalSpaceUsed();
-		storageUsed = typeof space?.used === "number" ? space.used : 0;
+		storageUsed = await sumOrgStorageBytes(orgId);
+		if (!storageUsed) {
+			const space = await getTotalSpaceUsed();
+			storageUsed = typeof space?.used === "number" ? space.used : 0;
+		}
 	} catch {
 		storageUsed = 0;
 	}
+
+	const [usersUsed, contractsUsed, licensesUsed] = await Promise.all([
+		countBillableUsers(orgId),
+		countActiveContracts(orgId),
+		countActiveLicenses(orgId),
+	]);
 
 	const pricing = await loadPricingFromMarkdown();
 	const plan = pricing.plans.find((p) => p.key === tier);
@@ -84,7 +99,7 @@ export async function GET(request: NextRequest) {
 				limit: limits.storageBytes,
 			},
 			users: {
-				used: null as number | null,
+				used: usersUsed,
 				limit: settings.maxUsers ?? limits.maxUsers,
 			},
 			departments: {
@@ -92,8 +107,12 @@ export async function GET(request: NextRequest) {
 				limit: settings.maxDepartments ?? limits.maxDepartments,
 			},
 			contracts: {
-				used: null as number | null,
+				used: contractsUsed,
 				limit: limits.maxContracts,
+			},
+			licenses: {
+				used: licensesUsed,
+				limit: limits.maxLicenses,
 			},
 		},
 		plans: pricing.plans,

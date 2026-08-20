@@ -166,6 +166,31 @@ export const uploadFile = async ({
 			throw new Error("User organization not found");
 		}
 
+		const { assertCanUploadBytes, PlanLimitError } = await import(
+			"@/lib/billing/planLimits"
+		);
+		try {
+			await assertCanUploadBytes(defaultOrg.orgId, file.size || 0);
+		} catch (error) {
+			if (error instanceof PlanLimitError) {
+				throw error;
+			}
+			throw error;
+		}
+
+		if (contractMetadata) {
+			const { assertCanCreateContract } = await import(
+				"@/lib/billing/planLimits"
+			);
+			await assertCanCreateContract(defaultOrg.orgId);
+		}
+		if (licenseMetadata) {
+			const { assertCanCreateLicense } = await import(
+				"@/lib/billing/planLimits"
+			);
+			await assertCanCreateLicense(defaultOrg.orgId);
+		}
+
 		// Validate required config
 		if (
 			!appwriteConfig.bucketId ||

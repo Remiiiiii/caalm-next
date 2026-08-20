@@ -42,13 +42,14 @@ export function getTierFromPriceId(
 	return null;
 }
 
-/** Storage limits in bytes by tier (from PRICING.md) */
+/** Storage + seat + document limits by tier (from public/PRICING.md) */
 export const TIER_LIMITS: Record<
 	PricingTier,
 	{
 		maxUsers: number;
 		maxDepartments: number;
 		maxContracts: number;
+		maxLicenses: number;
 		storageBytes: number;
 	}
 > = {
@@ -56,18 +57,21 @@ export const TIER_LIMITS: Record<
 		maxUsers: 10,
 		maxDepartments: 3,
 		maxContracts: 100,
+		maxLicenses: 100,
 		storageBytes: 10 * 1024 * 1024 * 1024,
 	},
 	growth: {
 		maxUsers: 100,
 		maxDepartments: 6,
 		maxContracts: 2500,
+		maxLicenses: 2500,
 		storageBytes: 100 * 1024 * 1024 * 1024,
 	},
 	enterprise: {
 		maxUsers: 1000,
 		maxDepartments: Number.POSITIVE_INFINITY,
 		maxContracts: 25000,
+		maxLicenses: 25000,
 		storageBytes: 1024 * 1024 * 1024 * 1024,
 	},
 };

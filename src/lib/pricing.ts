@@ -35,6 +35,9 @@ function sectionFor({
 }
 
 function extractPrices(section: string): { monthly: number; yearly: number } {
+	if (/Custom\s*\(contact sales\)/i.test(section)) {
+		return { monthly: 0, yearly: 0 };
+	}
 	const monthly = section.match(/\*\*Monthly\*\*:\s*\$([0-9.,]+)/i)?.[1] ?? "0";
 	const yearly =
 		section.match(/\*\*Yearly[^*]*\*\*:\s*\$([0-9.,]+)/i)?.[1] ?? "0";
@@ -125,7 +128,6 @@ export async function loadPricingFromMarkdown(): Promise<PricingData> {
 	// Fallback defaults if markdown is not found at build time
 	const starterMonthly = 79;
 	const proMonthly = 299;
-	const enterpriseMonthly = 999;
 
 	// Keep in sync with public/PRICING.md (source of truth when markdown loads)
 	const defaults: PricingPlan[] = [
@@ -137,12 +139,14 @@ export async function loadPricingFromMarkdown(): Promise<PricingData> {
 			features: [
 				"Up to **3 departments**",
 				"Up to **10 staff users**",
-				"Up to **100 active contracts** tracked",
-				"**Analytics** for Admin + 2 departments",
-				"**Reports** (basic) via `Reports & Analytics Page`",
+				"Up to **100 active contracts**",
+				"Up to **100 active licenses**",
+				"**Contract & license intake** with AI field extraction",
+				"**Multi-step approvals** and renewal / expiry alerts",
+				"**Permission-based roles** (custom roles included)",
+				"**Basic dashboards & reports**",
 				"**Email support**",
-				"**Analytical data retention**: 90 days",
-				"**Storage**: 10GB",
+				"**Storage**: 10 GB",
 			],
 		},
 		{
@@ -154,29 +158,25 @@ export async function loadPricingFromMarkdown(): Promise<PricingData> {
 				"Up to **6 departments**",
 				"Up to **100 staff users**",
 				"Up to **2,500 active contracts**",
-				"**Full analytics suite** across all departments",
-				"**Report scheduling**",
-				"**Webhooks/API access** for integrations",
-				"**Priority support**",
-				"**Storage**: 100GB",
+				"Up to **2,500 active licenses**",
+				"**Department-scoped views** and fuller operational dashboards",
+				"**License allocate & renew** workflows",
+				"**Priority email support**",
+				"**Storage**: 100 GB",
 			],
 		},
 		{
 			key: "enterprise",
 			name: "Enterprise",
-			monthly: enterpriseMonthly,
-			yearly: Math.round(enterpriseMonthly * 12 * 0.8 * 100) / 100,
+			monthly: 0,
+			yearly: 0,
 			features: [
-				"**Dedicated account manager**",
-				"**Unlimited departments**",
-				"**Up to 1,000 staff users** (higher limits upon request)",
-				"**25,000 active contracts** (higher upon request)",
-				"**SSO/SAML & SCIM** (enterprise identity)",
-				"**Advanced audit logs & exports**",
-				"**Custom roles & permissions**, detailed access",
-				"**Uptime SLA** 99.9% and **Dedicated CSM**",
-				"**Storage**: 1 TB (expandable)",
-				"**Custom integrations** and migration assistance",
+				"**Custom user / contract / license / storage limits**",
+				"**Dedicated account manager / CSM**",
+				"**Migration assistance** and custom integration planning",
+				"**Security questionnaire support**",
+				"**Priority support**",
+				"SSO/SAML, customer API, and formal SLAs via **custom agreement** as they ship",
 			],
 		},
 	];

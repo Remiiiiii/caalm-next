@@ -827,7 +827,8 @@ export default function LandingHero() {
 						variants={fadeUp}
 						className="mt-4 sm:mt-5 text-sm sm:text-base text-slate-600 max-w-xl mx-auto"
 					>
-						Your journey to data management and compliance starts here
+						Contract and license operations for multi-department teams —
+						approvals, renewals, and compliance visibility.
 					</motion.p>
 				</motion.div>
 			</div>

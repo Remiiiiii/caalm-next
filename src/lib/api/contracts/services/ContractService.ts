@@ -124,6 +124,11 @@ export class ContractService {
 			throw new Error("Could not determine user organization");
 		}
 
+		const { assertCanCreateContract } = await import(
+			"@/lib/billing/planLimits"
+		);
+		await assertCanCreateContract(defaultOrg.orgId);
+
 		const contractExpiryDate = formData.expiryDate
 			? new Date(formData.expiryDate).toISOString().split("T")[0]
 			: new Date().toISOString().split("T")[0];

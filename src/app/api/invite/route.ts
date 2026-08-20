@@ -49,6 +49,20 @@ export async function POST(req: NextRequest) {
 		});
 		return NextResponse.json(result, { status: 200 });
 	} catch (err: unknown) {
+		const { isPlanLimitError } = await import("@/lib/billing/planLimits");
+		if (isPlanLimitError(err)) {
+			return NextResponse.json(
+				{
+					error: err.message,
+					code: "PLAN_LIMIT_EXCEEDED",
+					kind: err.kind,
+					limit: err.limit,
+					used: err.used,
+					tier: err.tier,
+				},
+				{ status: 402 },
+			);
+		}
 		let message = "Internal Server Error";
 		if (err instanceof Error) message = err.message;
 		return NextResponse.json({ error: message }, { status: 500 });
