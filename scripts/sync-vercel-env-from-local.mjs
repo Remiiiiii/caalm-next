@@ -105,13 +105,17 @@ function runVercel(args, input) {
 }
 
 function getExistingVercelKeys() {
-	const output = runVercel(["env", "ls", "production"]);
-	const keys = new Set();
-	for (const line of output.split("\n")) {
-		const match = line.match(/^\s+([A-Z][A-Z0-9_]*)\s+Encrypted/);
-		if (match) keys.add(match[1]);
-	}
-	return keys;
+	const output = runVercel([
+		"env",
+		"ls",
+		"production",
+		"--project",
+		"caalm-next",
+		"--scope",
+		"remiiiiiis-projects",
+		"--json",
+	]);
+	return new Set(JSON.parse(output).envs.map((entry) => entry.key));
 }
 
 function addVercelEnv(key, value) {

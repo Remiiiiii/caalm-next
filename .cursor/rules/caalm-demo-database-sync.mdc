@@ -1,0 +1,56 @@
+---
+description: Keep caalm-demo database schema parallel with production caalm-dev
+alwaysApply: true
+---
+
+# caalm-demo database parity
+
+Production and demo share one Appwrite project but use **separate databases**:
+
+| Database | ID | Purpose |
+|----------|-----|---------|
+| caalm-dev (production) | `685ed87c0009d8189fc7` | Live app data |
+| caalm-demo | `caalm-demo` | Demo sandbox (`APP_MODE=demo`) |
+
+## Mandatory rule
+
+After **any** schema change to production (`685ed87c0009d8189fc7`), sync the same change to `caalm-demo` in the same task/PR before marking work done.
+
+Schema means:
+
+- New or renamed tables/collections (same alphanumeric `$id` as prod)
+- New or changed columns/attributes (type, size, required, enum values, relationships)
+- New indexes
+
+Do **not** copy production row data into demo. Demo keeps its own seeded/demo rows.
+
+## How to sync
+
+1. Apply the production schema change first (MCP Appwrite tools or Console).
+2. Run:
+
+```bash
+node scripts/sync-demo-database-schema.mjs --apply
+```
+
+3. Confirm output shows `Sync complete.` and zero remaining diffs:
+
+```bash
+node scripts/sync-demo-database-schema.mjs
+```
+
+## Known exceptions
+
+- `push_subscriptions` uses table id `push_subscriptions` on demo and `69b8a208008a1f5d9b08` on prod. The sync script maps by **table name** and mirrors columns/indexes onto the demo id. Do not rename the demo table id.
+- `fileRef` on Contracts/Licenses still points at retired Files collection `685ed9e90020d8f09173` in prod. On demo, the sync script maps that target to current Files `6934a3120033b4a5c4da`.
+- `Audit Logs.changes` may fail on demo when the collection hits Appwrite's attribute cap (demo currently maxes at 20). Log the failure; do not delete demo columns to force it. Track parity gap in the PR if it persists.
+
+## RBAC seed data
+
+When permissions or role-permission **documents** change in prod, also seed those reference rows into demo (schema sync alone is not enough). Use MCP database tools; do not hardcode role bypasses.
+
+## Safety
+
+- Never point demo env vars at `685ed87c0009d8189fc7` (`assertDemoDatabaseGuard` blocks this).
+- Never write demo seed data into production.
+- Use MCP tools or `scripts/sync-demo-database-schema.mjs` for schema work; avoid one-off throwaway DB scripts.

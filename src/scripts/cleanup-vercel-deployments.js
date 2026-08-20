@@ -3,8 +3,18 @@
 const { execSync } = require("node:child_process");
 const _fs = require("node:fs");
 
-// Configuration
-const _PROJECT_NAME = "caalm-next"; // Replace with your actual project name
+// This script deletes old deployments for whichever Vercel project is linked
+// in .vercel/project.json. `_PROJECT_NAME` below is unused; switch with:
+//
+//   Production (caalm-next):  pnpm vercel:link:prod
+//     or: vercel link --project caalm-next --scope team_GWg5ooNk0faHlJn0L7sIS0zh --yes
+//
+//   Demo (caalm-demo):        pnpm vercel:link:demo
+//     or: vercel link --project caalm-demo --scope team_GWg5ooNk0faHlJn0L7sIS0zh --yes
+//
+// Confirm: vercel ls --yes  (URLs should say caalm-next or caalm-demo)
+// Then:     node src/scripts/cleanup-vercel-deployments.js
+
 const KEEP_CURRENT = true; // Keep the current deployment
 const DRY_RUN = false; // Set to false to actually delete deployments
 
@@ -189,6 +199,9 @@ function cleanupDeployments() {
 	const deploymentsToDelete = KEEP_CURRENT
 		? allDeployments.filter((d) => d.uid !== currentDeployment.uid)
 		: allDeployments;
+
+	// vercel ls is newest-first; delete oldest first so recent previews stay up longer
+	deploymentsToDelete.reverse();
 
 	if (deploymentsToDelete.length === 0) {
 		console.log("✅ No deployments to delete");

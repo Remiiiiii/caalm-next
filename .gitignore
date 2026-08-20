@@ -165,3 +165,5 @@ mcpjson.txt
 
 # Graft
 graft/
+.env*
+.env*.local
