@@ -260,6 +260,7 @@ export const appwriteConfig = {
 		"69b8a202002e5f9d3b02",
 	),
 
+	/** Per-org year counters for TKT-YYYY-#### numbers (name: ticket_sequences). */
 	ticketSequencesCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_TICKET_SEQUENCES_COLLECTION",
 		"69b8a209009b2a6e0c09",

@@ -17,11 +17,12 @@ import type {
 	Ticket,
 	TicketEvent,
 } from "@/lib/tickets/ticket.types";
+import { useOrgTimezone } from "@/hooks/useOrgTimezone";
 import {
 	getImpactLabel,
 	getUrgencyLabel,
 } from "@/lib/tickets/ticket-intake.constants";
-import { useOrgTimezone } from "@/hooks/useOrgTimezone";
+import { displayTicketNumber } from "@/lib/tickets/ticket-number.utils";
 import { cn } from "@/lib/utils";
 import { TicketSeverityPill, TicketStatusPill } from "./TicketStatusPill";
 
@@ -92,7 +93,8 @@ function formatIssueDetails(
 		"",
 		description,
 		"",
-		`CAALM ticket ref: ${ticket.$id}`,
+		`CAALM ticket number: ${displayTicketNumber(ticket)}`,
+		`CAALM ticket id: ${ticket.$id}`,
 	]
 		.filter((line) => line !== null)
 		.join("\n");
@@ -232,6 +234,9 @@ export function TicketDetail({
 				<div className="glass-card-cap" />
 				<CardContent className="space-y-3 p-4 sm:p-6">
 					<div className="flex flex-wrap items-center gap-2">
+						<span className="font-mono text-xs font-semibold tracking-wide text-[#0f5384]">
+							{displayTicketNumber(ticket)}
+						</span>
 						<TicketSeverityPill severity={ticket.severity} />
 						<TicketStatusPill status={ticket.status} />
 					</div>

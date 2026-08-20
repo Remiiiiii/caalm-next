@@ -135,6 +135,7 @@ export function buildGitHubIssueBody(input: {
 	urgency: string;
 	description: string;
 	ticketId: string;
+	ticketNumber?: string | null;
 }): string {
 	const human = new Date(input.submittedAt).toUTCString();
 	const impactLabel = getImpactLabel(input.impact as TicketImpactUrgency);
@@ -142,12 +143,15 @@ export function buildGitHubIssueBody(input: {
 	const moduleLine = input.affectedModule
 		? `**Affected service:** ${input.affectedModule}\n`
 		: "";
+	const numberLine = input.ticketNumber
+		? `**Ticket number:** ${input.ticketNumber}\n`
+		: "";
 
 	return `### Submitted via CAALM Ticketing
 **Submitted by:** ${input.name} (${input.userId})
 **Department/Division:** ${input.department}
 **Submitted at:** ${input.submittedAt} (${human})
-**Category:** ${input.category}
+${numberLine}**Category:** ${input.category}
 ${moduleLine}**Impact:** ${impactLabel}
 **Urgency:** ${urgencyLabel}
 **Severity:** ${input.severity}
@@ -156,7 +160,7 @@ ${moduleLine}**Impact:** ${impactLabel}
 ${input.description}
 
 ---
-_CAALM ticket ref: ${input.ticketId}_
+_CAALM ticket number: ${input.ticketNumber || "n/a"} · id: ${input.ticketId}_
 `;
 }
 

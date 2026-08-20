@@ -86,11 +86,30 @@ export async function updateTicket(
 	return row as unknown as Ticket;
 }
 
+export async function getTicketByNumber(input: {
+	orgId: string;
+	ticketNumber: string;
+}): Promise<Ticket | null> {
+	const { tablesDB } = await createAdminClient();
+	const result = await tablesDB.listRows({
+		databaseId: dbId(),
+		tableId: ticketsTable(),
+		queries: [
+			Query.equal("orgId", input.orgId),
+			Query.equal("ticketNumber", input.ticketNumber),
+			Query.limit(1),
+		],
+	});
+	return (result.rows[0] as unknown as Ticket) ?? null;
+}
+
 export async function listTickets(options: {
 	orgId: string;
 	status?: TicketStatus | "active" | "resolved";
 	submittedByUserId?: string;
 	assigneeCaalmUserId?: string;
+	/** Free-text search: ticket number, title, or description. */
+	search?: string;
 	limit?: number;
 	offset?: number;
 }): Promise<{ items: Ticket[]; total: number }> {
@@ -111,6 +130,18 @@ export async function listTickets(options: {
 	if (options.assigneeCaalmUserId) {
 		queries.push(
 			Query.equal("assigneeCaalmUserId", options.assigneeCaalmUserId),
+		);
+	}
+
+	const search = options.search?.trim();
+	if (search) {
+		// Appwrite OR across number / title / description so staff can find by TKT-… or keywords.
+		queries.push(
+			Query.or([
+				Query.contains("ticketNumber", search),
+				Query.contains("title", search),
+				Query.contains("description", search),
+			]),
 		);
 	}
 

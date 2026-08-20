@@ -19,6 +19,7 @@ import {
 	useState,
 } from "react";
 import { SubmitProgressIndicator } from "@/components/tickets/SubmitProgressIndicator";
+import { TicketSubmittedConfirmDialog } from "@/components/tickets/TicketSubmittedConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -33,7 +34,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { resolveSubmitterDepartmentLabel } from "@/lib/tickets/submitter-placement";
-import type { TicketSeverity } from "@/lib/tickets/ticket.types";
+import type { Ticket, TicketSeverity } from "@/lib/tickets/ticket.types";
 import {
 	deriveSeverityFromMatrix,
 	TICKET_CATEGORIES,
@@ -41,6 +42,7 @@ import {
 	TICKET_MODULES,
 	TICKET_URGENCY_LEVELS,
 } from "@/lib/tickets/ticket-intake.constants";
+import { displayTicketNumber } from "@/lib/tickets/ticket-number.utils";
 import { cn } from "@/lib/utils";
 
 type MatrixLevel = "Critical" | "High" | "Medium" | "Low";
@@ -244,6 +246,8 @@ export function TicketSubmitForm() {
 	const [showSubmitProgress, setShowSubmitProgress] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [fileError, setFileError] = useState<string | null>(null);
+	const [confirmOpen, setConfirmOpen] = useState(false);
+	const [submittedTicket, setSubmittedTicket] = useState<Ticket | null>(null);
 
 	const userName = user?.name ?? "Signed-in user";
 	const departmentLabel = resolveSubmitterDepartmentLabel({
@@ -364,9 +368,12 @@ export function TicketSubmitForm() {
 
 			clearInterval(progressInterval);
 			setSubmitProgress(100);
-			// Brief success beat so the user sees 100% before navigating away
+			// Brief success beat so the user sees 100% before the confirm modal
 			await new Promise((resolve) => setTimeout(resolve, 700));
-			router.push(`/tickets/${data.ticket.$id}`);
+			setShowSubmitProgress(false);
+			setSubmitting(false);
+			setSubmittedTicket(data.ticket as Ticket);
+			setConfirmOpen(true);
 		} catch (err) {
 			clearInterval(progressInterval);
 			setShowSubmitProgress(false);
@@ -669,6 +676,19 @@ export function TicketSubmitForm() {
 					</form>
 				</CardContent>
 			</Card>
+
+			{submittedTicket ? (
+				<TicketSubmittedConfirmDialog
+					open={confirmOpen}
+					ticketNumber={displayTicketNumber(submittedTicket)}
+					ticketId={submittedTicket.$id}
+					onOpenChange={setConfirmOpen}
+					onViewTicket={() => {
+						setConfirmOpen(false);
+						router.push(`/tickets/${submittedTicket.$id}`);
+					}}
+				/>
+			) : null}
 		</div>
 	);
 }

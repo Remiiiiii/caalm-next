@@ -29,6 +29,17 @@ const TICKET_NOTIFICATION_TYPES = [
 		description: "In-app alert when a new support ticket is submitted",
 	},
 	{
+		type_key: "ticket-received",
+		label: "Ticket Received",
+		icon: "ticket",
+		color_classes: "text-green-600",
+		bg_color_classes: "bg-green-50",
+		priority: "medium" as const,
+		enabled: true,
+		description:
+			"Confirmation for the submitter with their ticket reference number",
+	},
+	{
 		type_key: "ticket-pr-opened",
 		label: "Ticket PR Opened",
 		icon: "git-pull-request",
@@ -190,6 +201,60 @@ export async function listTicketStaffRecipients(
 	return [...byDocId.values()];
 }
 
+export async function notifyTicketSubmitter(input: {
+	ticket: Ticket;
+}): Promise<void> {
+	await ensureTicketNotificationTypes();
+
+	const ticketNumber = input.ticket.ticketNumber || input.ticket.$id;
+	const caalmUrl = `/tickets/${input.ticket.$id}`;
+	const title = `Ticket received: ${ticketNumber}`;
+	const message = `Your ticket "${input.ticket.title}" was submitted. Save this number for reference: ${ticketNumber}.`;
+
+	try {
+		await notificationService.createNotification({
+			type: "ticket-received",
+			title,
+			message,
+			userId: input.ticket.submittedByUserId,
+			priority: "medium",
+			actionUrl: caalmUrl,
+			actionText: "View ticket",
+			metadata: {
+				ticketId: input.ticket.$id,
+				ticketNumber,
+			},
+		});
+	} catch (error) {
+		console.warn("[tickets] submitter in-app notification failed", error);
+	}
+
+	const profile = await resolveUserProfile(input.ticket.submittedByUserId);
+	const email = profile?.email?.trim();
+	if (!email) {
+		console.warn(
+			`[tickets] no email for submitter ${input.ticket.submittedByUserId}`,
+		);
+		return;
+	}
+
+	try {
+		const { mailgunService } = await import("@/lib/services/mailgun");
+		await mailgunService.sendEmail({
+			to: email,
+			subject: title,
+			text: `${message}\n\nOpen in CAALM: ${caalmUrl}`,
+			html: `<p>Your support ticket was received.</p>
+<p><strong>Ticket number:</strong> ${ticketNumber}</p>
+<p><strong>Title:</strong> ${input.ticket.title}</p>
+<p>Save this number if you need to follow up.</p>
+<p><a href="${caalmUrl}">View ticket in CAALM</a></p>`,
+		});
+	} catch (error) {
+		console.warn("[tickets] submitter email notification failed", error);
+	}
+}
+
 export async function notifyTicketStaff(input: {
 	ticket: Ticket;
 	kind: "issue_created" | "pr_opened";
@@ -204,18 +269,19 @@ export async function notifyTicketStaff(input: {
 		return;
 	}
 
+	const ticketNumber = input.ticket.ticketNumber || input.ticket.$id;
 	const isIssue = input.kind === "issue_created";
 	const title = isIssue
-		? `New ticket: ${input.ticket.title}`
-		: `PR ready for review: ${input.ticket.title}`;
+		? `New ticket ${ticketNumber}: ${input.ticket.title}`
+		: `PR ready for review: ${ticketNumber}`;
 	const githubUrl = isIssue
 		? input.ticket.githubIssueUrl
 		: input.ticket.prUrl;
 	// Ticket detail page works for staff + IT DMs (IT portal may redirect non-IT dept).
 	const caalmUrl = `/tickets/${input.ticket.$id}`;
 	const message = isIssue
-		? `${input.ticket.submittedByName} submitted a ${input.ticket.severity} ticket from ${input.ticket.department}.`
-		: `A pull request is ready for ${input.ticket.title}.`;
+		? `${input.ticket.submittedByName} submitted a ${input.ticket.severity} ticket (${ticketNumber}) from ${input.ticket.department}.`
+		: `A pull request is ready for ${ticketNumber}: ${input.ticket.title}.`;
 
 	for (const recipient of recipients) {
 		try {
@@ -229,6 +295,7 @@ export async function notifyTicketStaff(input: {
 				actionText: "Open ticket",
 				metadata: {
 					ticketId: input.ticket.$id,
+					ticketNumber,
 					githubUrl,
 				},
 			});
@@ -242,8 +309,8 @@ export async function notifyTicketStaff(input: {
 				await mailgunService.sendEmail({
 					to: recipient.email,
 					subject: title,
-					text: `${message}\n\nCAALM: ${caalmUrl}\nGitHub: ${githubUrl || "n/a"}`,
-					html: `<p>${message}</p><p><a href="${caalmUrl}">Open in CAALM</a>${
+					text: `${message}\n\nTicket: ${ticketNumber}\nCAALM: ${caalmUrl}\nGitHub: ${githubUrl || "n/a"}`,
+					html: `<p>${message}</p><p><strong>${ticketNumber}</strong></p><p><a href="${caalmUrl}">Open in CAALM</a>${
 						githubUrl ? ` · <a href="${githubUrl}">Open on GitHub</a>` : ""
 					}</p>`,
 				});

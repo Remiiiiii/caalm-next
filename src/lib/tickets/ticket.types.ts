@@ -43,6 +43,8 @@ export type TicketEventType = (typeof TICKET_EVENT_TYPES)[number];
 
 export type Ticket = {
 	$id: string;
+	/** Human reference, e.g. TKT-2026-0042. Per-org year sequence. */
+	ticketNumber?: string | null;
 	title: string;
 	description: string;
 	category?: string;
