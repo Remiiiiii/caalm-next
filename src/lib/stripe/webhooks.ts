@@ -1,6 +1,11 @@
 import type Stripe from "stripe";
-import { clearOrgSubscription, syncSubscriptionToOrg } from "./billing";
+import {
+	clearOrgSubscription,
+	markOrgPastDue,
+	syncSubscriptionToOrg,
+} from "./billing";
 import { getStripe } from "./client";
+import { claimStripeEvent } from "./webhook-idempotency";
 
 export function constructWebhookEvent(
 	payload: string | Buffer,
@@ -14,9 +19,33 @@ export function constructWebhookEvent(
 	return stripe.webhooks.constructEvent(payload, signature, secret);
 }
 
+async function orgIdFromInvoice(
+	invoice: Stripe.Invoice,
+): Promise<string | undefined> {
+	const customerId =
+		typeof invoice.customer === "string"
+			? invoice.customer
+			: invoice.customer?.id;
+	const metaOrg =
+		invoice.metadata?.orgId ||
+		(invoice as { subscription_details?: { metadata?: { orgId?: string } } })
+			.subscription_details?.metadata?.orgId;
+	if (metaOrg) return metaOrg;
+
+	if (!customerId) return undefined;
+	const { listOrganizations } = await import("@/lib/rbac/organizations");
+	const orgs = await listOrganizations();
+	return orgs.find((o) => o.stripeCustomerId === customerId)?.$id;
+}
+
 export async function handleStripeWebhookEvent(
 	event: Stripe.Event,
-): Promise<void> {
+): Promise<{ processed: boolean; duplicate?: boolean }> {
+	const claimed = await claimStripeEvent(event.id);
+	if (!claimed) {
+		return { processed: false, duplicate: true };
+	}
+
 	switch (event.type) {
 		case "checkout.session.completed": {
 			const session = event.data.object as Stripe.Checkout.Session;
@@ -62,7 +91,28 @@ export async function handleStripeWebhookEvent(
 			await syncSubscriptionToOrg(subscription);
 			break;
 		}
+		case "invoice.payment_failed": {
+			const invoice = event.data.object as Stripe.Invoice;
+			const orgId = await orgIdFromInvoice(invoice);
+			if (orgId) {
+				await markOrgPastDue(orgId);
+			}
+			const subscriptionId =
+				typeof (invoice as { subscription?: string | { id: string } })
+					.subscription === "string"
+					? ((invoice as { subscription?: string }).subscription as string)
+					: (invoice as { subscription?: { id: string } }).subscription?.id;
+			if (subscriptionId) {
+				const stripe = getStripe();
+				const subscription =
+					await stripe.subscriptions.retrieve(subscriptionId);
+				await syncSubscriptionToOrg(subscription);
+			}
+			break;
+		}
 		default:
 			break;
 	}
+
+	return { processed: true };
 }

@@ -20,6 +20,14 @@ vi.mock("@/lib/actions/user.actions", () => ({
 	getCurrentUser: () => mockGetCurrentUser(),
 }));
 
+vi.mock("@/lib/rbac/permissions", () => ({
+	validateUserOrgAccess: vi.fn(async () => true),
+}));
+
+vi.mock("@/lib/stripe/webhook-idempotency", () => ({
+	claimStripeEvent: vi.fn(async () => true),
+}));
+
 vi.mock("@/lib/stripe/webhooks", () => ({
 	constructWebhookEvent: (payload: string, signature: string) =>
 		mockConstructWebhookEvent(payload, signature),
@@ -36,6 +44,8 @@ vi.mock("@/lib/stripe/billing", () => ({
 	createCheckoutSession: vi.fn(),
 	createPortalSession: vi.fn(),
 	listInvoicesForOrg: vi.fn(),
+	changeSubscriptionPlan: vi.fn(),
+	startOrgPilot: vi.fn(),
 }));
 
 vi.mock("@/lib/rbac/organizations", () => ({
@@ -88,7 +98,7 @@ describe("POST /api/billing/webhooks", () => {
 			type: "ping",
 			data: { object: {} },
 		});
-		mockHandleStripeWebhookEvent.mockResolvedValue(undefined);
+		mockHandleStripeWebhookEvent.mockResolvedValue({ processed: true });
 
 		const { POST } = await import("@/app/api/billing/webhooks/route");
 		const request = new NextRequest(
@@ -104,6 +114,63 @@ describe("POST /api/billing/webhooks", () => {
 		const body = await response.json();
 		expect(body.received).toBe(true);
 		expect(mockHandleStripeWebhookEvent).toHaveBeenCalled();
+	});
+});
+
+describe("POST /api/billing/change-plan", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it("returns 403 when user lacks settings.billing permission", async () => {
+		mockRequirePermission.mockResolvedValue(
+			new Response(JSON.stringify({ error: "Insufficient permissions" }), {
+				status: 403,
+			}),
+		);
+
+		const { POST } = await import("@/app/api/billing/change-plan/route");
+		const request = new NextRequest(
+			"http://localhost:3000/api/billing/change-plan",
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					orgId: "org-1",
+					tier: "growth",
+					interval: "monthly",
+				}),
+			},
+		);
+		const response = await POST(request);
+		expect(response.status).toBe(403);
+	});
+});
+
+describe("POST /api/billing/pilot", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it("returns 403 when user lacks platform.system_settings", async () => {
+		mockRequirePermission.mockResolvedValue(
+			new Response(JSON.stringify({ error: "Insufficient permissions" }), {
+				status: 403,
+			}),
+		);
+
+		const { POST } = await import("@/app/api/billing/pilot/route");
+		const request = new NextRequest("http://localhost:3000/api/billing/pilot", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				orgId: "org-1",
+				tier: "growth",
+				months: 3,
+			}),
+		});
+		const response = await POST(request);
+		expect(response.status).toBe(403);
 	});
 });
 

@@ -38,6 +38,41 @@ export async function POST(req: NextRequest) {
 			);
 		}
 
+		const { getOrganization } = await import("@/lib/rbac/organizations");
+		const {
+			assertBillingWriteAccess,
+			assertWithinLimit,
+			getEffectiveLimits,
+			BillingLimitError,
+		} = await import("@/lib/billing/entitlements");
+		const { countOrgMembers } = await import("@/lib/billing/usage");
+
+		const org = await getOrganization(orgId);
+		if (!org) {
+			return NextResponse.json(
+				{ error: "Organization not found" },
+				{ status: 404 },
+			);
+		}
+
+		try {
+			assertBillingWriteAccess(org);
+			const used = await countOrgMembers(orgId);
+			assertWithinLimit({
+				resource: "users",
+				used,
+				limits: getEffectiveLimits(org),
+			});
+		} catch (limitError) {
+			if (limitError instanceof BillingLimitError) {
+				return NextResponse.json(
+					{ error: limitError.message, code: limitError.code },
+					{ status: limitError.status },
+				);
+			}
+			throw limitError;
+		}
+
 		const result = await createInvitation({
 			name,
 			email,

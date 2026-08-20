@@ -18,9 +18,9 @@ interface UsageMetersCardProps {
 	usersUsed: number | null;
 	usersLimit: number;
 	departmentsUsed: number | null;
-	departmentsLimit: number;
+	departmentsLimit: number | null;
 	contractsUsed: number | null;
-	contractsLimit: number;
+	contractsLimit: number | null;
 }
 
 function formatBytes(bytes: number): string {
@@ -97,13 +97,13 @@ export default function UsageMetersCard({
 					<MeterRow
 						label="Departments"
 						used={departmentsUsed}
-						limit={departmentsLimit}
+						limit={departmentsLimit ?? Number.POSITIVE_INFINITY}
 						icon={<Building2 className="h-4 w-4" />}
 					/>
 					<MeterRow
 						label="Contracts"
 						used={contractsUsed}
-						limit={contractsLimit}
+						limit={contractsLimit ?? Number.POSITIVE_INFINITY}
 						icon={<FileText className="h-4 w-4" />}
 					/>
 				</div>

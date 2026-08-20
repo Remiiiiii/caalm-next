@@ -1,13 +1,24 @@
 import type Stripe from "stripe";
 import {
+	settingsFromTier,
+	normalizePricingTier,
+} from "@/lib/billing/entitlements";
+import {
 	type BillingInterval,
 	type BillingStatus,
 	getOrganization,
 	type Organization,
+	updateOrganization,
 	updateOrganizationBilling,
 } from "@/lib/rbac/organizations";
 import { getStripe } from "./client";
 import { getPriceId, getTierFromPriceId, type PricingTier } from "./prices";
+
+function automaticTaxEnabled(): boolean {
+	const raw = process.env.STRIPE_AUTOMATIC_TAX;
+	if (raw === undefined || raw === "") return true;
+	return raw === "1" || raw.toLowerCase() === "true";
+}
 
 export async function getOrCreateStripeCustomer(
 	org: Organization,
@@ -54,15 +65,22 @@ export async function createCheckoutSession({
 }): Promise<string> {
 	const stripe = getStripe();
 	const customerId = await getOrCreateStripeCustomer(org, email, userName);
+	// Price IDs always resolved server-side from env — never trust the client.
 	const priceId = getPriceId(tier, interval);
 
-	const session = await stripe.checkout.sessions.create({
+	const sessionParams: Stripe.Checkout.SessionCreateParams = {
 		mode: "subscription",
 		customer: customerId,
 		line_items: [{ price: priceId, quantity: 1 }],
 		success_url: successUrl,
 		cancel_url: cancelUrl,
 		client_reference_id: org.$id,
+		billing_address_collection: "required",
+		customer_update: {
+			address: "auto",
+			name: "auto",
+		},
+		tax_id_collection: { enabled: true },
 		metadata: {
 			orgId: org.$id,
 			tier,
@@ -76,7 +94,13 @@ export async function createCheckoutSession({
 			},
 		},
 		allow_promotion_codes: true,
-	});
+	};
+
+	if (automaticTaxEnabled()) {
+		sessionParams.automatic_tax = { enabled: true };
+	}
+
+	const session = await stripe.checkout.sessions.create(sessionParams);
 
 	if (!session.url) {
 		throw new Error("Stripe Checkout session missing URL");
@@ -105,6 +129,49 @@ export async function createPortalSession({
 	});
 
 	return session.url;
+}
+
+/**
+ * Change plan on an existing subscription with Stripe proration.
+ * Price ID is resolved server-side only.
+ */
+export async function changeSubscriptionPlan({
+	org,
+	tier,
+	interval,
+}: {
+	org: Organization;
+	tier: PricingTier;
+	interval: BillingInterval;
+}): Promise<Stripe.Subscription> {
+	if (!org.stripeSubscriptionId) {
+		throw new Error("Organization has no active Stripe subscription");
+	}
+
+	const stripe = getStripe();
+	const priceId = getPriceId(tier, interval);
+	const subscription = await stripe.subscriptions.retrieve(
+		org.stripeSubscriptionId,
+	);
+	const itemId = subscription.items.data[0]?.id;
+	if (!itemId) {
+		throw new Error("Subscription has no line items");
+	}
+
+	const updated = await stripe.subscriptions.update(subscription.id, {
+		items: [{ id: itemId, price: priceId }],
+		proration_behavior: "create_prorations",
+		metadata: {
+			...subscription.metadata,
+			orgId: org.$id,
+			tier,
+			interval,
+		},
+		cancel_at_period_end: false,
+	});
+
+	await syncSubscriptionToOrg(updated, org.$id);
+	return updated;
 }
 
 export async function listInvoicesForOrg(
@@ -149,9 +216,7 @@ export async function syncSubscriptionToOrg(
 	orgIdOverride?: string,
 ): Promise<void> {
 	const orgId =
-		orgIdOverride ||
-		subscription.metadata?.orgId ||
-		(typeof subscription.customer === "string" ? undefined : undefined);
+		orgIdOverride || subscription.metadata?.orgId || undefined;
 
 	const customerId =
 		typeof subscription.customer === "string"
@@ -198,6 +263,16 @@ export async function syncSubscriptionToOrg(
 		? new Date(periodEndUnix * 1000).toISOString()
 		: undefined;
 
+	const settingsPatch: Record<string, unknown> = {};
+	if (billingStatus === "past_due") {
+		const existing = await getOrganization(resolvedOrgId);
+		if (!existing?.settings?.pastDueSince) {
+			settingsPatch.pastDueSince = new Date().toISOString();
+		}
+	} else if (billingStatus === "active" || billingStatus === "trialing") {
+		settingsPatch.pastDueSince = null;
+	}
+
 	await updateOrganizationBilling(resolvedOrgId, {
 		stripeCustomerId: customerId,
 		stripeSubscriptionId: subscription.id,
@@ -206,6 +281,19 @@ export async function syncSubscriptionToOrg(
 		billingInterval: mapped?.interval,
 		subscriptionTier: mapped?.tier,
 		currentPeriodEnd: periodEnd,
+		settingsPatch,
+	});
+}
+
+export async function markOrgPastDue(orgId: string): Promise<void> {
+	const existing = await getOrganization(orgId);
+	const settingsPatch: Record<string, unknown> = {};
+	if (!existing?.settings?.pastDueSince) {
+		settingsPatch.pastDueSince = new Date().toISOString();
+	}
+	await updateOrganizationBilling(orgId, {
+		billingStatus: "past_due",
+		settingsPatch,
 	});
 }
 
@@ -214,7 +302,69 @@ export async function clearOrgSubscription(orgId: string): Promise<void> {
 		stripeSubscriptionId: "",
 		stripePriceId: "",
 		billingStatus: "canceled",
+		settingsPatch: { pastDueSince: null },
 	});
 }
 
-export { getOrganization };
+/**
+ * Start a free pilot (3–6 months). No Stripe charge until they convert via Checkout.
+ * Only callable from the pilot API (platform permission).
+ */
+export async function startOrgPilot({
+	orgId,
+	tier,
+	months,
+}: {
+	orgId: string;
+	tier: PricingTier;
+	months: 3 | 4 | 5 | 6;
+}): Promise<Organization> {
+	const org = await getOrganization(orgId);
+	if (!org) throw new Error("Organization not found");
+
+	if (
+		org.billingStatus === "active" ||
+		org.billingStatus === "trialing" ||
+		org.billingStatus === "past_due"
+	) {
+		throw new Error(
+			"Organization already has a Stripe subscription; cancel it before starting a pilot",
+		);
+	}
+
+	const now = new Date();
+	const ends = new Date(now);
+	ends.setMonth(ends.getMonth() + months);
+	const caps = settingsFromTier(tier);
+
+	await updateOrganization(orgId, {
+		subscriptionTier: tier,
+		status: "trial",
+		settings: {
+			...org.settings,
+			...caps,
+			features: org.settings?.features || [],
+			pilotStartedAt: now.toISOString(),
+			pilotMonths: months,
+			pastDueSince: null,
+		},
+	});
+
+	const updated = await updateOrganizationBilling(orgId, {
+		billingStatus: "pilot",
+		subscriptionTier: tier,
+		currentPeriodEnd: ends.toISOString(),
+		stripeSubscriptionId: "",
+		stripePriceId: "",
+		settingsPatch: {
+			pilotStartedAt: now.toISOString(),
+			pilotMonths: months,
+			pastDueSince: null,
+		},
+	});
+
+	if (!updated) throw new Error("Failed to start pilot");
+	return updated;
+}
+
+export { getOrganization, normalizePricingTier };
