@@ -12,7 +12,10 @@ import {
 } from "react";
 import { Button } from "@/components/ui/button";
 import ShimmerBadge from "@/components/landing/ShimmerBadge";
-import { SubmitProgressIndicator } from "@/components/tickets/SubmitProgressIndicator";
+import {
+	createSubmitProgressTicker,
+	SubmitProgressIndicator,
+} from "@/components/tickets/SubmitProgressIndicator";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -100,15 +103,7 @@ export default function ReportIssueFab() {
 			setShowSubmitProgress(true);
 			setSubmitProgress(0);
 
-			const progressInterval = setInterval(() => {
-				setSubmitProgress((prev) => {
-					if (prev >= 90) {
-						clearInterval(progressInterval);
-						return 90;
-					}
-					return prev + 10;
-				});
-			}, 200);
+			const stopProgress = createSubmitProgressTicker(setSubmitProgress);
 
 			try {
 				const trimmedTitle = title.trim();
@@ -129,17 +124,16 @@ export default function ReportIssueFab() {
 					throw new Error(data.error || "Failed to submit ticket");
 				}
 
-				clearInterval(progressInterval);
+				stopProgress();
 				setSubmitProgress(100);
-				// Let the user see the success state on the progress bar
-				await new Promise((resolve) => setTimeout(resolve, 700));
+				await new Promise((resolve) => setTimeout(resolve, 1200));
 				setSent(true);
 				window.setTimeout(() => {
 					setOpen(false);
 					router.push(`/tickets/${data.ticket.$id}`);
 				}, 1000);
 			} catch (err) {
-				clearInterval(progressInterval);
+				stopProgress();
 				setShowSubmitProgress(false);
 				setSubmitProgress(0);
 				setError(

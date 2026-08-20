@@ -9,7 +9,7 @@ import {
 	Upload,
 	X,
 } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import {
 	type FormEvent,
 	type ReactNode,
@@ -18,7 +18,10 @@ import {
 	useRef,
 	useState,
 } from "react";
-import { SubmitProgressIndicator } from "@/components/tickets/SubmitProgressIndicator";
+import {
+	createSubmitProgressTicker,
+	SubmitProgressIndicator,
+} from "@/components/tickets/SubmitProgressIndicator";
 import { TicketSubmittedConfirmDialog } from "@/components/tickets/TicketSubmittedConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -33,7 +36,10 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
-import { resolveSubmitterDepartmentLabel } from "@/lib/tickets/submitter-placement";
+import {
+	resolveSubmitterDepartmentLabel,
+	type SubmitterPlacementInput,
+} from "@/lib/tickets/submitter-placement";
 import type { Ticket, TicketSeverity } from "@/lib/tickets/ticket.types";
 import {
 	deriveSeverityFromMatrix,
@@ -208,7 +214,7 @@ function PillGroup({
 							className={cn(
 								"cursor-pointer rounded-full border px-3 py-1.5 text-xs transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
 								active
-									? "border-[#0f5384] bg-[#0f5384] text-white"
+									? "border-blue/20 bg-blue/10 text-[#0f5384]"
 									: "border-slate-200 text-slate-600 hover:border-blue-300 hover:bg-blue/5",
 							)}
 						>
@@ -223,17 +229,16 @@ function PillGroup({
 }
 
 export function TicketSubmitForm() {
-	const router = useRouter();
 	const searchParams = useSearchParams();
 	const { user } = useAuth();
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
-	const [title, setTitle] = useState(() => searchParams.get("title") ?? "");
+	const [title, setTitle] = useState(() => searchParams?.get("title") ?? "");
 	const [category, setCategory] = useState(
-		() => searchParams.get("category") ?? "",
+		() => searchParams?.get("category") ?? "",
 	);
 	const [affectedModule, setAffectedModule] = useState(
-		() => searchParams.get("module") ?? "",
+		() => searchParams?.get("module") ?? "",
 	);
 	const [impact, setImpact] = useState("");
 	const [urgency, setUrgency] = useState("");
@@ -250,11 +255,12 @@ export function TicketSubmitForm() {
 	const [submittedTicket, setSubmittedTicket] = useState<Ticket | null>(null);
 
 	const userName = user?.name ?? "Signed-in user";
+	const placement = user as SubmitterPlacementInput | null;
 	const departmentLabel = resolveSubmitterDepartmentLabel({
-		departmentLabel: user?.departmentLabel,
-		department: user?.department,
-		divisionLabel: user?.divisionLabel,
-		division: user?.division,
+		departmentLabel: placement?.departmentLabel,
+		department: placement?.department,
+		divisionLabel: placement?.divisionLabel,
+		division: placement?.division,
 	});
 	const initials = getInitials(user?.name);
 
@@ -338,16 +344,8 @@ export function TicketSubmitForm() {
 		setShowSubmitProgress(true);
 		setSubmitProgress(0);
 
-		// Same simulated progress pattern as contract/license upload
-		const progressInterval = setInterval(() => {
-			setSubmitProgress((prev) => {
-				if (prev >= 90) {
-					clearInterval(progressInterval);
-					return 90;
-				}
-				return prev + 10;
-			});
-		}, 200);
+		// Simulated progress while the API runs; completes at 100% on success
+		const stopProgress = createSubmitProgressTicker(setSubmitProgress);
 
 		try {
 			const form = new FormData();
@@ -366,16 +364,16 @@ export function TicketSubmitForm() {
 			const data = await res.json();
 			if (!res.ok) throw new Error(data.error || "Failed to submit ticket");
 
-			clearInterval(progressInterval);
+			stopProgress();
 			setSubmitProgress(100);
-			// Brief success beat so the user sees 100% before the confirm modal
-			await new Promise((resolve) => setTimeout(resolve, 700));
+			// Let the bar fill and success check animate before the confirm modal
+			await new Promise((resolve) => setTimeout(resolve, 1200));
 			setShowSubmitProgress(false);
 			setSubmitting(false);
 			setSubmittedTicket(data.ticket as Ticket);
 			setConfirmOpen(true);
 		} catch (err) {
-			clearInterval(progressInterval);
+			stopProgress();
 			setShowSubmitProgress(false);
 			setSubmitProgress(0);
 			setError(err instanceof Error ? err.message : "Failed to submit ticket");
@@ -385,10 +383,10 @@ export function TicketSubmitForm() {
 
 	return (
 		<div className="w-full space-y-6">
-			<p className="text-sm text-slate-600">
-				Your submission is logged and tracked end to end. Fields marked with an
-				asterisk are required.
-			</p>
+			<div className="space-y-1 text-sm text-slate-600">
+				<p>Your submission is logged and tracked end to end.</p>
+				<p>Fields marked with an asterisk are required.</p>
+			</div>
 
 			<div className="glass-card-inner flex items-center gap-3 rounded-lg border border-slate-200/60 p-3 sm:p-4">
 				<div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue/10 text-xs font-semibold text-[#0f5384]">
@@ -683,10 +681,6 @@ export function TicketSubmitForm() {
 					ticketNumber={displayTicketNumber(submittedTicket)}
 					ticketId={submittedTicket.$id}
 					onOpenChange={setConfirmOpen}
-					onViewTicket={() => {
-						setConfirmOpen(false);
-						router.push(`/tickets/${submittedTicket.$id}`);
-					}}
 				/>
 			) : null}
 		</div>

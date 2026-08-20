@@ -1,11 +1,9 @@
 "use client";
 
-import { Search } from "lucide-react";
 import { useMemo, useState } from "react";
-import { Input } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/search-field";
 import { normalizeTicketNumberQuery } from "@/lib/tickets/ticket-number.utils";
-import type { Ticket, TicketEvent } from "@/lib/tickets/ticket.types";
-import { PreviousIncidents } from "./PreviousIncidents";
+import type { Ticket } from "@/lib/tickets/ticket.types";
 import { TicketQueue } from "./TicketQueue";
 
 function matchesTicketSearch(ticket: Ticket, rawQuery: string): boolean {
@@ -29,12 +27,8 @@ function matchesTicketSearch(ticket: Ticket, rawQuery: string): boolean {
 
 export function TicketsListWithSearch({
 	activeTickets,
-	resolvedTickets,
-	eventsByTicket,
 }: {
 	activeTickets: Ticket[];
-	resolvedTickets: Ticket[];
-	eventsByTicket: Record<string, TicketEvent[]>;
 }) {
 	const [query, setQuery] = useState("");
 
@@ -42,24 +36,16 @@ export function TicketsListWithSearch({
 		() => activeTickets.filter((ticket) => matchesTicketSearch(ticket, query)),
 		[activeTickets, query],
 	);
-	const filteredResolved = useMemo(
-		() =>
-			resolvedTickets.filter((ticket) => matchesTicketSearch(ticket, query)),
-		[resolvedTickets, query],
-	);
 
 	return (
 		<div className="space-y-8">
-			<div className="relative max-w-md">
-				<Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-500" />
-				<Input
-					value={query}
-					onChange={(event) => setQuery(event.target.value)}
-					placeholder="Search by ticket number, title, or submitter…"
-					aria-label="Search tickets"
-					className="border-slate-200 bg-white pl-9 text-slate-700"
-				/>
-			</div>
+			<SearchField
+				containerClassName="max-w-md"
+				value={query}
+				onChange={(event) => setQuery(event.target.value)}
+				placeholder="Search by ticket number, title, or submitter…"
+				aria-label="Search tickets"
+			/>
 
 			<section>
 				<h2 className="mb-4 text-sm font-medium sidebar-gradient-text">
@@ -71,21 +57,6 @@ export function TicketsListWithSearch({
 					) : null}
 				</h2>
 				<TicketQueue tickets={filteredActive} />
-			</section>
-
-			<section>
-				<h2 className="mb-4 text-sm font-medium sidebar-gradient-text">
-					Previous incidents
-					{query.trim() ? (
-						<span className="ml-2 font-normal text-slate-500">
-							({filteredResolved.length})
-						</span>
-					) : null}
-				</h2>
-				<PreviousIncidents
-					tickets={filteredResolved}
-					eventsByTicket={eventsByTicket}
-				/>
 			</section>
 		</div>
 	);
