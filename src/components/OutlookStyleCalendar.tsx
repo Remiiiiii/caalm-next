@@ -5,13 +5,9 @@ import {
 	addDays,
 	addMonths,
 	addWeeks,
-	eachDayOfInterval,
 	endOfMonth,
 	endOfWeek,
 	format,
-	isSameDay,
-	isSameMonth,
-	isToday,
 	startOfMonth,
 	startOfWeek,
 	subDays,
@@ -60,12 +56,10 @@ import { AgendaView } from "@/components/calendar/AgendaView";
 import { CalendarApprovalsRail } from "@/components/calendar/CalendarApprovalsRail";
 import { CalendarFiltersDrawer } from "@/components/calendar/CalendarFiltersDrawer";
 import { DayView } from "@/components/calendar/DayView";
-import { EventChip } from "@/components/calendar/EventChip";
+import { DeleteEventDialog } from "@/components/calendar/DeleteEventDialog";
 import { EventReviewDialog } from "@/components/calendar/EventReviewDialog";
-import {
-	type CalendarSource,
-	VISIBLE_CHIPS_PER_DAY,
-} from "@/components/calendar/eventChipStyles";
+import type { CalendarSource } from "@/components/calendar/eventChipStyles";
+import { MonthView } from "@/components/calendar/MonthView";
 import { OverflowDialog } from "@/components/calendar/OverflowDialog";
 import type {
 	EventAttachment,
@@ -2853,157 +2847,23 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 	const renderMonthView = (
 		eventsToRender: LocalCalendarEvent[] = normalizedEvents,
 	) => {
-		const monthStart = startOfMonth(currentMonth);
-		const monthEnd = endOfMonth(currentMonth);
-		const startDate = startOfWeek(monthStart);
-		const endDate = endOfWeek(monthEnd);
-		const days = eachDayOfInterval({ start: startDate, end: endDate });
-
 		return (
-			<div className="grid grid-cols-7 gap-px bg-gray-200">
-				{/* Day headers */}
-				{["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-					<div
-						key={day}
-						className="p-2 text-center text-sm font-medium text-gray-700 bg-gray-50"
-					>
-						{day}
-					</div>
-				))}
-
-				{/* Calendar days */}
-				{days.map((day) => {
-					// Use isSameDay for proper date comparison (handles timezone safely)
-					const dayEvents = eventsToRender.filter((event) => {
-						// event.startDate is already a Date object from useCalendarEvents
-						if (!event.startDate) return false;
-
-						// Ensure we have a Date object
-						const eventDate =
-							event.startDate instanceof Date
-								? event.startDate
-								: new Date(event.startDate);
-
-						// Use isSameDay for timezone-safe date comparison
-						// This ensures events show on the correct calendar day
-						return isSameDay(eventDate, day);
-					});
-
-					// Debug logging for specific dates
-					if (dayEvents.length > 0) {
-						console.log(
-							`Events for ${format(day, "yyyy-MM-dd")}:`,
-							dayEvents.map((e) => ({
-								title: e.title,
-								startDate: (() => {
-									if (!e.startDate) return "N/A";
-									const dateObj =
-										e.startDate instanceof Date
-											? e.startDate
-											: new Date(e.startDate);
-									return Number.isNaN(dateObj.getTime())
-										? "Invalid Date"
-										: dateObj.toISOString();
-								})(),
-								startDateLocal: (() => {
-									if (!e.startDate) return "N/A";
-									const dateObj =
-										e.startDate instanceof Date
-											? e.startDate
-											: new Date(e.startDate);
-									return Number.isNaN(dateObj.getTime())
-										? "Invalid Date"
-										: format(dateObj, "yyyy-MM-dd");
-								})(),
-								startTime: e.startTime,
-							})),
-						);
-					}
-
-					const isCurrentMonth = isSameMonth(day, currentMonth);
-					const isSelected = selectedDate && isSameDay(day, selectedDate);
-					const isCurrentDay = isToday(day);
-
-					return (
-						<div
-							key={day.toISOString()}
-							className={cn(
-								"min-h-[72px] sm:min-h-[105px] max-h-[72px] sm:max-h-[105px] overflow-hidden p-1.5 sm:p-2 bg-white border border-gray-200 cursor-pointer transition-colors flex flex-col",
-								!isCurrentMonth && "bg-gray-50 text-gray-400",
-								isSelected && "bg-gray-50 border-blue-300",
-							)}
-							onClick={() => {
-								handleDateSelect(day);
-								openQuickCreate(day);
-							}}
-						>
-							<div className="flex items-center justify-start mb-0.5 flex-shrink-0">
-								{isCurrentDay ? (
-									<div
-										className="w-6 h-6 rounded-full"
-										style={{
-											background:
-												"linear-gradient(135deg, #12477d 0%, #03afbf 100%)",
-										}}
-									>
-										<span className="text-white text-xs font-medium flex items-center justify-center h-full">
-											{format(day, "d")}
-										</span>
-									</div>
-								) : (
-									<div className="text-xs font-medium">{format(day, "d")}</div>
-								)}
-							</div>
-
-							{/* Events for this day */}
-							<div className="flex flex-col flex-1 min-h-0">
-								<div className="space-y-1">
-									{dayEvents
-										.slice(0, VISIBLE_CHIPS_PER_DAY)
-										.map((event, index) => {
-											const canViewSensitive =
-												canViewEventSensitiveDetails(event);
-											const displayTitle = canViewSensitive
-												? event.title
-												: "Restricted event";
-											return (
-												<EventChip
-													key={event.$id || `event-${index}-${event.title}`}
-													event={event}
-													displayTitle={displayTitle}
-													timeLabel={
-														event.startTime
-															? formatTimeForDisplay(event.startTime)
-															: "All Day"
-													}
-													canViewSensitive={canViewSensitive}
-													onClick={(e) => {
-														e.stopPropagation();
-														openEditDialog(event);
-													}}
-												/>
-											);
-										})}
-								</div>
-								{dayEvents.length > VISIBLE_CHIPS_PER_DAY && (
-									<button
-										type="button"
-										className="w-full text-[10px] text-slate-600 text-center hover:text-[#0f5384] py-1 mt-auto cursor-pointer transition-colors duration-200"
-										onClick={(e) => {
-											e.stopPropagation();
-											setOverflowDate(day);
-											setOverflowEvents(dayEvents);
-											setIsOverflowOpen(true);
-										}}
-									>
-										+{dayEvents.length - VISIBLE_CHIPS_PER_DAY} more
-									</button>
-								)}
-							</div>
-						</div>
-					);
-				})}
-			</div>
+			<MonthView
+				currentMonth={currentMonth}
+				selectedDate={selectedDate}
+				events={eventsToRender}
+				canViewEventSensitiveDetails={canViewEventSensitiveDetails}
+				onSelectDay={(day) => {
+					handleDateSelect(day);
+					openQuickCreate(day);
+				}}
+				onEventClick={openEditDialog}
+				onOverflow={(day, dayEvents) => {
+					setOverflowDate(day);
+					setOverflowEvents(dayEvents);
+					setIsOverflowOpen(true);
+				}}
+			/>
 		);
 	};
 
@@ -5107,78 +4967,15 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 				</Dialog>
 
 				{/* Delete Confirmation Modal */}
-				<Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
-					<DialogContent className="overflow-hidden p-0 shadow-xl sm:max-w-md">
-						<VisuallyHiddenPrimitive.Root>
-							<DialogTitle>Delete Event</DialogTitle>
-						</VisuallyHiddenPrimitive.Root>
-						{/* Cap */}
-						<div className="h-4 w-full bg-[#d6d7d8] opacity-70 " />
-
-						{/* Header */}
-						<div className="border-b border-white/40 bg-white/35 px-6 py-4 backdrop-blur-sm">
-							<div className="flex items-start gap-3">
-								<div className="w-9 h-9 rounded-fullflex items-center justify-center">
-									<AlertTriangle className="w-5 h-5 text-[#f0c974]" />
-								</div>
-								<div>
-									<h2 className="text-base font-semibold sidebar-gradient-text">
-										Delete Event
-									</h2>
-									<DialogDescription className="text-sm text-slate-600 mt-1">
-										Are you sure you want to delete &quot;{selectedEvent?.title}
-										&quot;? This action cannot be undone.
-									</DialogDescription>
-								</div>
-							</div>
-						</div>
-
-						{/* Body */}
-						<div className="px-6 py-5 space-y-3 bg-white">
-							<Label
-								htmlFor="deleteReason"
-								className="text-sm font-medium text-slate-700"
-							>
-								Reason for deletion (optional)
-							</Label>
-							<Textarea
-								id="deleteReason"
-								placeholder="Please provide a reason for deleting this event..."
-								value={deleteReason}
-								onChange={(e) => setDeleteReason(e.target.value)}
-								rows={4}
-								className="bg-white border-slate-300 focus:border-[#078FAB] focus:ring-1 focus:ring-[#078FAB] focus-visible:ring-1 focus-visible:ring-[#078FAB] focus-visible:ring-offset-0"
-							/>
-							<p className="text-xs text-slate-500">
-								This helps your team understand why the event was removed.
-							</p>
-						</div>
-
-						{/* Footer */}
-						<div className="flex items-center justify-between border-t border-white/40 bg-white/35 px-6 py-4 backdrop-blur-sm">
-							<div className="text-xs text-slate-500">
-								This action is permanent.
-							</div>
-							<div className="flex items-center gap-3">
-								<Button
-									variant="outline"
-									onClick={cancelDelete}
-									className="primary-btn px-3 sm:px-4"
-								>
-									<Ban className="w-4 h-4" />
-									Cancel
-								</Button>
-								<Button
-									onClick={confirmDeleteEvent}
-									className="primary-btn px-3 sm:px-4"
-								>
-									<Trash2 className="w-4 h-4" />
-									Delete Event
-								</Button>
-							</div>
-						</div>
-					</DialogContent>
-				</Dialog>
+				<DeleteEventDialog
+					open={isDeleteModalOpen}
+					onOpenChange={setIsDeleteModalOpen}
+					eventTitle={selectedEvent?.title}
+					deleteReason={deleteReason}
+					onDeleteReasonChange={setDeleteReason}
+					onCancel={cancelDelete}
+					onConfirm={confirmDeleteEvent}
+				/>
 				{overflowDialog}
 
 				{/* AI Assistant Panel — same dimensions as Ask Caalm preview */}
