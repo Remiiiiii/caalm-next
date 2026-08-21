@@ -24,6 +24,7 @@ import {
 	normalizeOrgPlacement,
 	OrgUnitValidationError,
 } from "../org/org-unit-validation";
+import { calendarRoleFromRbacName } from "@/lib/calendar/legacyCalendarRole";
 import { parseStringify } from "../utils";
 import { triggerUserInvitationNotification } from "../utils/notificationTriggers";
 import {
@@ -137,26 +138,14 @@ export const getUserByAccountId = async (
 			: [];
 		const roleName = userRoles[0]?.roleName || "";
 
-		// Legacy calendar role label for older UI only — not used for authz.
-		// Calendar gates use org permission keys (see evaluateCalendarPermission).
-		let calendarRole: CalendarRole = "viewer";
-		if (roleName === "Super Admin" || roleName === "Organization Admin") {
-			calendarRole = "admin";
-		} else if (roleName === "Department Manager") {
-			calendarRole = "approver";
-		} else if (roleName === "Viewer") {
-			calendarRole = "viewer";
-		} else if (roleName === "IT") {
-			calendarRole = "admin"; // display-only legacy label; IT pack is VIEW_OWN
-		}
-
 		return {
 			$id: user.$id,
 			fullName: user.fullName,
 			email: user.email,
 			avatar: user.avatar,
 			accountId: user.accountId,
-			role: calendarRole,
+			// Display/compat only — calendar authz uses permission keys.
+			role: calendarRoleFromRbacName(roleName),
 			division: user.division,
 			status: user.status,
 		};
@@ -766,25 +755,14 @@ const getCurrentUserImpl = async () => {
 			: [];
 		const roleName = userRoles[0]?.roleName || "";
 
-		// Legacy calendar role label for older UI only — not used for authz.
-		let calendarRole: CalendarRole = "viewer";
-		if (roleName === "Super Admin" || roleName === "Organization Admin") {
-			calendarRole = "admin";
-		} else if (roleName === "Department Manager") {
-			calendarRole = "approver";
-		} else if (roleName === "Viewer") {
-			calendarRole = "viewer";
-		} else if (roleName === "IT") {
-			calendarRole = "admin"; // display-only legacy label; IT pack is VIEW_OWN
-		}
-
 		return parseStringify({
 			$id: userData.$id,
 			fullName: userData.fullName,
 			email: userData.email,
 			avatar: userData.avatar,
 			accountId: userData.accountId,
-			role: calendarRole,
+			// Display/compat only — calendar authz uses permission keys.
+			role: calendarRoleFromRbacName(roleName),
 			division: userData.division,
 			department: userData.department,
 			departmentLabel: userData.departmentLabel,
@@ -845,22 +823,14 @@ const getCurrentUserFrom2FAImpl = async () => {
 				: [];
 			const roleName = userRoles[0]?.roleName || "";
 
-			let calendarRole: CalendarRole = "viewer";
-			if (roleName === "Super Admin" || roleName === "Organization Admin") {
-				calendarRole = "admin";
-			} else if (roleName === "Department Manager") {
-				calendarRole = "approver";
-			} else if (roleName === "Viewer") {
-				calendarRole = "viewer";
-			}
-
 			return parseStringify({
 				$id: user.$id,
 				fullName: user.fullName,
 				email: user.email,
 				avatar: user.avatar,
 				accountId: user.accountId,
-				role: calendarRole,
+				// Display/compat only — calendar authz uses permission keys.
+				role: calendarRoleFromRbacName(roleName),
 				division: user.division,
 				department: user.department,
 				departmentLabel: user.departmentLabel,
@@ -1952,20 +1922,6 @@ export interface UserManagementRow {
 	department?: string;
 	division?: string;
 	status?: string;
-}
-
-/**
- * @deprecated Legacy calendar role bridge for display/compat only.
- * Calendar authz uses org permission keys via evaluateCalendarPermission /
- * useCalendarPermissions — do not add new call sites that treat this as authz.
- */
-function calendarRoleFromRbacName(roleName: string): CalendarRole {
-	const name = roleName.trim();
-	if (name === "Super Admin" || name === "Organization Admin") return "admin";
-	if (name === "Department Manager") return "approver";
-	if (name === "Viewer") return "viewer";
-	if (name === "IT") return "admin";
-	return "viewer";
 }
 
 function resolveProfileAvatarUrl(user: {
