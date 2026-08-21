@@ -104,7 +104,10 @@ import {
 	getLatestApprovalRequestByEventId,
 } from "@/lib/actions/calendar-approval.actions";
 import { fetchUserNamesByIds } from "@/lib/actions/user.actions";
-import { resolveCalendarPermissions } from "@/lib/auth/permissions";
+import {
+	isCalendarEventOwner,
+	resolveCalendarPermissions,
+} from "@/lib/auth/permissions";
 import { cn } from "@/lib/utils";
 
 // Local event interface for component use
@@ -228,7 +231,7 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 	});
 
 	const { events: calendarEvents, refresh } = useCalendarEvents();
-	const { userId, accountId, role } = useUserRole();
+	const { userId, accountId } = useUserRole();
 	const { permissions: basePermissions } = useCalendarPermissions({
 		userId,
 	});
@@ -499,14 +502,23 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 		}
 		const overrides = (selectedEvent as EventWithExtras)?.overrides || [];
 		return resolveCalendarPermissions({
-			role,
+			heldPermissions: permissions,
+			isEventOwner: isCalendarEventOwner({
+				userId,
+				userAccountId: accountId,
+				event: selectedEvent as {
+					createdByUserId?: string | null;
+					createdByAccountId?: string | null;
+					createdBy?: string | null;
+				},
+			}),
 			overrides,
 			context: {
 				userId: userId || "",
 				teamIds: [],
 			},
 		});
-	}, [selectedEvent, role, userId]);
+	}, [selectedEvent, permissions, userId, accountId]);
 
 	// Combine local events with calendar events
 	const allEvents = [...events, ...(calendarEvents || [])];

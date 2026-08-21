@@ -2,15 +2,16 @@ import { useMemo } from "react";
 import type {
 	CalendarPermissionMap,
 	PermissionOverrideRecord,
-	UserRole,
 } from "@/constants/rbac";
-import { useUserRole } from "@/hooks/useUserRole";
+import { usePermissions } from "@/hooks/usePermissions";
 import { resolveCalendarPermissions } from "@/lib/auth/permissions";
 
 type UseCalendarPermissionsArgs = {
 	eventOverrides?: PermissionOverrideRecord[];
 	userId?: string;
 	teamIds?: string[];
+	/** When resolving for a specific event, pass whether the user owns it. */
+	isEventOwner?: boolean;
 };
 
 const EMPTY_PERMISSIONS: CalendarPermissionMap = {
@@ -21,29 +22,32 @@ const EMPTY_PERMISSIONS: CalendarPermissionMap = {
 	manageParticipants: false,
 };
 
+/**
+ * Calendar gates from the org permission catalog (not legacy role names).
+ */
 export const useCalendarPermissions = ({
 	eventOverrides = [],
 	userId,
 	teamIds = [],
+	isEventOwner = false,
 }: UseCalendarPermissionsArgs = {}) => {
-	const { role, loading } = useUserRole();
+	const { permissions: heldPermissions, loading } = usePermissions();
 
 	const permissions = useMemo(() => {
 		if (loading) {
 			return EMPTY_PERMISSIONS;
 		}
 
-		const resolved = resolveCalendarPermissions({
-			role: role as UserRole,
+		return resolveCalendarPermissions({
+			heldPermissions,
+			isEventOwner,
 			overrides: eventOverrides,
 			context: {
 				userId: userId || "",
 				teamIds,
 			},
 		});
-
-		return resolved;
-	}, [eventOverrides, role, loading, userId, teamIds]);
+	}, [eventOverrides, heldPermissions, loading, userId, teamIds, isEventOwner]);
 
 	return {
 		permissions,
