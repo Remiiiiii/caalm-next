@@ -1,8 +1,9 @@
 /**
  * Navigation Permission Mappings
- * Maps navigation items to required permissions
+ * Maps navigation items to required permissions (permission keys only — no role-name denylists).
  */
 
+import { permissionSatisfied } from "@/lib/rbac/permission-implications";
 import type { PermissionKey } from "./permissions";
 import { PERMISSIONS } from "./permissions";
 
@@ -13,7 +14,6 @@ export interface NavigationItem {
 	permissions: PermissionKey[]; // Array of permissions (user needs ANY of these)
 	requireAll?: boolean; // If true, user needs ALL permissions
 	requiresElevated?: boolean; // If true, shows lock icon when permission is missing
-	hiddenForRoles?: string[]; // Roles that should not see this item
 	viewerReadOnly?: boolean; // If true, Viewer role sees this as read-only
 	viewerFullAccess?: boolean; // If true, Viewer gets full read access (for audits)
 }
@@ -24,8 +24,14 @@ export interface NavigationSection {
 }
 
 /**
- * Navigation configuration with permission-based access control
- * Based on complete visibility matrix for all roles
+ * Navigation configuration with permission-based access control.
+ * Visibility is driven only by catalog keys (plus implications).
+ *
+ * Default-role smoke expectations (from seed packs):
+ * - Viewer: calendar, own contracts/licenses, audits, docs (read), my access
+ * - Dept Manager: department-scoped contracts/licenses, approvals, team view — not org-wide "All" lists
+ * - Org Admin: org settings/billing; not System Settings (platform.system_settings)
+ * - Super Admin: System Settings via platform.system_settings
  */
 export const PERMISSION_BASED_NAV: NavigationSection[] = [
 	{
@@ -47,7 +53,6 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 					PERMISSIONS.CALENDAR.VIEW_TEAM,
 					PERMISSIONS.CALENDAR.VIEW_ALL,
 				],
-				// Viewers can see but it's read-only
 				viewerReadOnly: true,
 			},
 		],
@@ -59,16 +64,20 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 				name: "All Contracts",
 				icon: "/assets/icons/documents.svg",
 				url: "/contracts",
-				permissions: [PERMISSIONS.CONTRACTS.VIEW],
-				// Hidden for Department Manager, visible for Viewer (read-only)
-				hiddenForRoles: ["Department Manager"],
+				// Org-wide list: VIEW_ALL only (Dept Manager has VIEW_DEPARTMENT, not VIEW_ALL)
+				permissions: [PERMISSIONS.CONTRACTS.VIEW_ALL],
 				viewerReadOnly: true,
 			},
 			{
 				name: "My Contracts",
 				icon: "/assets/icons/my-contracts.svg",
 				url: "/my-contracts",
-				permissions: [PERMISSIONS.CONTRACTS.VIEW],
+				permissions: [
+					PERMISSIONS.CONTRACTS.VIEW,
+					PERMISSIONS.CONTRACTS.VIEW_OWN,
+					PERMISSIONS.CONTRACTS.VIEW_DEPARTMENT,
+					PERMISSIONS.CONTRACTS.VIEW_ALL,
+				],
 				viewerReadOnly: true,
 			},
 			{
@@ -79,7 +88,6 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 					PERMISSIONS.CONTRACTS.APPROVE,
 					PERMISSIONS.CONTRACTS.REVIEW,
 				],
-				// Requires approval permission (shows lock icon if missing)
 				requiresElevated: true,
 				viewerReadOnly: true,
 			},
@@ -87,9 +95,8 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 				name: "Advanced Resources",
 				icon: "/assets/icons/search.svg",
 				url: "/contracts/advanced-resources",
-				permissions: [PERMISSIONS.CONTRACTS.VIEW],
-				// Hidden for Department Manager and Viewer
-				hiddenForRoles: ["Department Manager", "Viewer"],
+				// Create/edit — not on Viewer or Dept Manager packs
+				permissions: [PERMISSIONS.CONTRACTS.CREATE, PERMISSIONS.CONTRACTS.EDIT],
 			},
 		],
 	},
@@ -100,23 +107,30 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 				name: "All Licenses",
 				icon: "/assets/icons/license.svg",
 				url: "/licenses",
-				permissions: [PERMISSIONS.LICENSES.VIEW],
-				// Hidden for Department Manager, visible for Viewer (read-only)
-				hiddenForRoles: ["Department Manager"],
+				// Org-wide list: VIEW_ALL only
+				permissions: [PERMISSIONS.LICENSES.VIEW_ALL],
 				viewerReadOnly: true,
 			},
 			{
 				name: "Department Licenses",
 				icon: "/assets/icons/department.svg",
 				url: "/licenses/department",
-				permissions: [PERMISSIONS.LICENSES.VIEW],
+				permissions: [
+					PERMISSIONS.LICENSES.VIEW,
+					PERMISSIONS.LICENSES.VIEW_DEPARTMENT,
+					PERMISSIONS.LICENSES.VIEW_ALL,
+				],
 				viewerReadOnly: true,
 			},
 			{
 				name: "Proposals & Approvals",
 				icon: "/assets/icons/edit.svg",
 				url: "/licenses/approvals",
-				permissions: [PERMISSIONS.LICENSES.EDIT, PERMISSIONS.LICENSES.RENEW],
+				permissions: [
+					PERMISSIONS.LICENSES.EDIT,
+					PERMISSIONS.LICENSES.RENEW,
+					PERMISSIONS.LICENSES.APPROVE,
+				],
 				requiresElevated: true,
 				viewerReadOnly: true,
 			},
@@ -130,8 +144,6 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 				icon: "/assets/icons/compliance-status.svg",
 				url: "/audits/status",
 				permissions: [PERMISSIONS.AUDIT.VIEW],
-				// Hidden for Department Manager, full read access for Viewer
-				hiddenForRoles: ["Department Manager"],
 				viewerReadOnly: true,
 				viewerFullAccess: true,
 			},
@@ -140,8 +152,6 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 				icon: "/assets/icons/audit-logs.svg",
 				url: "/audits/audit",
 				permissions: [PERMISSIONS.AUDIT.VIEW],
-				// Super Admin sees all orgs, Org Admin sees own org, Viewer gets full read
-				hiddenForRoles: ["Department Manager"],
 				viewerReadOnly: true,
 				viewerFullAccess: true,
 			},
@@ -154,9 +164,8 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 				name: "Uploads",
 				icon: "/assets/icons/uploads.svg",
 				url: "/uploads",
-				permissions: [PERMISSIONS.CONTRACTS.VIEW],
-				// Hidden for Viewer (prevents contamination)
-				hiddenForRoles: ["Viewer"],
+				// Create — Viewer pack has VIEW only
+				permissions: [PERMISSIONS.CONTRACTS.CREATE],
 			},
 			{
 				name: "Documents",
@@ -210,7 +219,6 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 				icon: "/assets/icons/task.svg",
 				url: "/team/tasks",
 				permissions: [PERMISSIONS.EVENTS.CREATE, PERMISSIONS.EVENTS.INVITE],
-				hiddenForRoles: ["Viewer"],
 			},
 		],
 	},
@@ -244,8 +252,6 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 				icon: "/assets/icons/department.svg",
 				url: "/analytics/c-suite",
 				permissions: [PERMISSIONS.CALENDAR.VIEW_ALL, PERMISSIONS.SETTINGS.VIEW],
-				// Hidden for Department Manager, visible for Viewer (read-only)
-				hiddenForRoles: ["Department Manager"],
 				requiresElevated: true,
 				viewerReadOnly: true,
 			},
@@ -269,13 +275,8 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 				name: "System Settings",
 				icon: "/assets/icons/settings.svg",
 				url: "/settings/system",
-				permissions: [
-					PERMISSIONS.SETTINGS.VIEW,
-					PERMISSIONS.SETTINGS.EDIT,
-					PERMISSIONS.PLATFORM.SYSTEM_SETTINGS,
-				],
-				// Only Super Admin (role hide + PLATFORM gate for permission-based nav)
-				hiddenForRoles: ["Organization Admin", "Department Manager", "Viewer"],
+				// Platform break-glass only (Super Admin); Org Admin pack excludes PLATFORM keys
+				permissions: [PERMISSIONS.PLATFORM.SYSTEM_SETTINGS],
 				requiresElevated: true,
 			},
 			{
@@ -283,8 +284,6 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 				icon: "/assets/icons/settings.svg",
 				url: "/settings/organization",
 				permissions: [PERMISSIONS.SETTINGS.VIEW, PERMISSIONS.SETTINGS.EDIT],
-				// Hidden for Department Manager, read-only for Viewer
-				hiddenForRoles: ["Department Manager"],
 				viewerReadOnly: true,
 			},
 			{
@@ -295,8 +294,6 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 					PERMISSIONS.SETTINGS.BILLING,
 					PERMISSIONS.SETTINGS.INTEGRATIONS,
 				],
-				// Hidden for Department Manager and Viewer
-				hiddenForRoles: ["Department Manager", "Viewer"],
 				requiresElevated: true,
 			},
 		],
@@ -304,7 +301,8 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 ];
 
 /**
- * Helper function to check if user has permission for navigation item
+ * Helper function to check if user has permission for navigation item.
+ * Uses permission implications (e.g. VIEW_ALL satisfies VIEW_OWN).
  */
 export function hasNavigationPermission(
 	userPermissions: PermissionKey[],
@@ -313,10 +311,12 @@ export function hasNavigationPermission(
 	if (item.permissions.length === 0) return true; // No permission required
 
 	if (item.requireAll) {
-		// User needs ALL permissions
-		return item.permissions.every((perm) => userPermissions.includes(perm));
-	} else {
-		// User needs ANY permission
-		return item.permissions.some((perm) => userPermissions.includes(perm));
+		return item.permissions.every((perm) =>
+			permissionSatisfied(userPermissions, perm),
+		);
 	}
+
+	return item.permissions.some((perm) =>
+		permissionSatisfied(userPermissions, perm),
+	);
 }

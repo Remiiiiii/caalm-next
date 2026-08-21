@@ -101,15 +101,8 @@ export function useGroupedNavigation() {
 			});
 		}
 
-		const filterItemsByRole = (items: NavigationItem[]): NavigationItem[] => {
-			return items.filter((item) => {
-				if (item.hiddenForRoles && primaryRole) {
-					if (item.hiddenForRoles.includes(primaryRole)) {
-						return false;
-					}
-				}
-				return true;
-			});
+		const filterAccessible = (items: NavigationItem[]): NavigationItem[] => {
+			return items.filter((item) => hasNavigationPermission(permissions, item));
 		};
 
 		const sectionHeaders = [
@@ -127,11 +120,7 @@ export function useGroupedNavigation() {
 		for (const header of sectionHeaders) {
 			const sectionItems =
 				PERMISSION_BASED_NAV.find((s) => s.header === header)?.items || [];
-			const accessible = filterItemsByRole(
-				sectionItems.filter((item) =>
-					hasNavigationPermission(permissions, item),
-				),
-			);
+			const accessible = filterAccessible(sectionItems);
 
 			if (accessible.length > 0) {
 				nav.push({ header, items: accessible });
@@ -144,7 +133,6 @@ export function useGroupedNavigation() {
 		permissionsLoading,
 		userRoles,
 		rolesLoading,
-		primaryRole,
 		departmentProfile,
 	]);
 
