@@ -3,6 +3,7 @@
 import { CheckCircle, Lock } from "lucide-react";
 import type React from "react";
 import { Badge } from "@/components/ui/badge";
+import { getApprovalStatusText } from "@/lib/calendar/calendarStatusDisplay";
 import { cn } from "@/lib/utils";
 import {
 	CALENDAR_SOURCE_STYLES,
@@ -30,18 +31,6 @@ interface EventChipProps {
 	compact?: boolean;
 	className?: string;
 	onClick?: (e: React.MouseEvent) => void;
-}
-
-function getApprovalStatusText(status: string | null | undefined): string {
-	if (!status) return "";
-	const statusMap: Record<string, string> = {
-		pending: "PENDING",
-		approved: "APPROVED",
-		rejected: "REJECTED",
-		changes_requested: "CHG REQ",
-		not_required: "NOT REQUIRED",
-	};
-	return statusMap[status] || status.replace("_", " ").toUpperCase();
 }
 
 export function EventChip({

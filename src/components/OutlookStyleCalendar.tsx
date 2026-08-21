@@ -68,6 +68,18 @@ import {
 	VISIBLE_CHIPS_PER_DAY,
 } from "@/components/calendar/eventChipStyles";
 import {
+	getEventTypeConfig,
+	getEventTypeLabel,
+} from "@/components/calendar/eventTypeConfig";
+import { OverflowDialog } from "@/components/calendar/OverflowDialog";
+import type {
+	EventAttachment,
+	LocalCalendarEvent,
+	NewEventForm,
+	OutlookStyleCalendarProps,
+	ParticipantOption,
+} from "@/components/calendar/outlookStyleCalendarTypes";
+import {
 	QuickCreateEventPopover,
 	type QuickCreatePayload,
 } from "@/components/calendar/QuickCreateEventPopover";
@@ -108,7 +120,6 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { PERMISSIONS } from "@/constants/permissions";
 import {
-	type CalendarApprovalStatus,
 	type CalendarSensitivity,
 	type PermissionOverrideRecord,
 	SENSITIVITY_LABELS,
@@ -134,6 +145,10 @@ import type { SharedCalendar } from "@/lib/actions/shared-calendar.actions";
 import { fetchUserNamesByIds } from "@/lib/actions/user.actions";
 import { resolveCalendarPermissions } from "@/lib/auth/permissions";
 import {
+	getApprovalStatusText,
+	getSensitivityBadgeClasses,
+} from "@/lib/calendar/calendarStatusDisplay";
+import {
 	formatEventDetailDateLine,
 	formatEventDetailTimeLine,
 	formatTimeForDisplay,
@@ -142,132 +157,7 @@ import {
 import { cn, convertFileSize, getFileType } from "@/lib/utils";
 import { getUSHolidaysForMonth, parseHolidayDate } from "@/lib/utils/holidays";
 
-// Event attachments are stored as file IDs (references to files collection)
-// Full file details are fetched when needed
-interface EventAttachment {
-	$id: string; // File ID from files collection
-	name?: string;
-	url?: string;
-	type?: string;
-	extension?: string;
-	size?: number;
-	bucketFileId?: string;
-}
-
 type CalendarViewMode = "day" | "week" | "month" | "agenda";
-
-interface LocalCalendarEvent {
-	$id?: string;
-	id?: string;
-	title: string;
-	startDate: string | Date;
-	endDate?: string | Date;
-	type:
-		| "contract review"
-		| "deadline discussion"
-		| "meeting"
-		| "internal review"
-		| "audit";
-	description?: string;
-	startTime?: string;
-	endTime?: string;
-	contractName?: string;
-	participants?: string;
-	location?: string;
-	resourceId?: string;
-	createdBy?: string;
-	createdByAccountId?: string;
-	createdByUserId?: string;
-	outlook_id?: string;
-	attachments?: Array<EventAttachment | string>;
-	sensitivityLevel?: CalendarSensitivity;
-	approvalStatus?: CalendarApprovalStatus;
-	requiresApproval?: boolean;
-	pendingApprovalId?: string | null;
-	overrides?: PermissionOverrideRecord[];
-	source?: CalendarSource;
-}
-
-interface EventReminderConfigData {
-	type: "before_start" | "before_end" | "custom";
-	minutes: number;
-	channels: Array<"in_app" | "email" | "sms" | "push">;
-}
-
-interface NewEventForm {
-	title: string;
-	date: Date;
-	endDate: Date;
-	type:
-		| "contract review"
-		| "deadline discussion"
-		| "meeting"
-		| "internal review"
-		| "audit";
-	description: string;
-	startTime: string;
-	endTime: string;
-	contractName: string;
-	participants: string;
-	location: string;
-	attachments?: EventAttachment[];
-	sensitivityLevel: CalendarSensitivity;
-	reminders?: EventReminderConfigData[]; // Priority 2: Advanced notifications
-}
-
-interface ParticipantOption {
-	$id: string;
-	fullName?: string;
-	name?: string;
-	email: string;
-}
-
-interface CalendarUser {
-	$id: string;
-	fullName?: string;
-	role?: string;
-	department?: string;
-	accountId?: string;
-	email?: string;
-}
-
-interface OutlookStyleCalendarProps {
-	events?: LocalCalendarEvent[];
-	onDateSelect?: (date: Date) => void;
-	user?: CalendarUser | null;
-}
-
-// Map approval status to display text
-const getApprovalStatusText = (status: string | null | undefined): string => {
-	if (!status) return "";
-
-	// Map status values to display text
-	const statusMap: Record<string, string> = {
-		pending: "PENDING",
-		approved: "APPROVED",
-		rejected: "REJECTED",
-		changes_requested: "CHG REQ",
-		not_required: "NOT REQUIRED",
-	};
-
-	return statusMap[status] || status.replace("_", " ").toUpperCase();
-};
-
-// Map sensitivity level to badge color classes
-const getSensitivityBadgeClasses = (
-	sensitivityLevel: CalendarSensitivity,
-): string => {
-	switch (sensitivityLevel) {
-		case "standard":
-			return "bg-[#d4fcee] text-[#10b981] border-[#10b981]";
-		case "restricted":
-			return "bg-[#f5f2f9] text-[#a06ce2] border-[#a06ce2]";
-		case "confidential":
-			return "bg-[#d9e3f9] text-[#0033A0] border-[#0033A0]";
-		default:
-			return "bg-slate-50 text-slate-700 border-slate-200";
-	}
-};
 
 const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 	events = [],
@@ -2090,61 +1980,6 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 		setIsAddEventOpen(true);
 	};
 
-	const getEventTypeConfig = (type: LocalCalendarEvent["type"]) => {
-		const configs = {
-			"contract review": {
-				color: "bg-blue text-blue border-blue",
-				icon: FileText,
-				borderColor: "border-blue",
-			},
-			contract: {
-				color: "bg-blue-100 text-blue-800 border-blue-200",
-				icon: FileText,
-				borderColor: "border-blue",
-			},
-			"deadline discussion": {
-				color: "bg-red-100 text-red-800 border-red-200",
-				icon: Clock,
-				borderColor: "border-red",
-			},
-			deadline: {
-				color: "bg-red-100 text-red-800 border-red-200",
-				icon: Clock,
-				borderColor: "border-red",
-			},
-			meeting: {
-				color: "bg-green-100 text-green-800 border-green-200",
-				icon: Users,
-				borderColor: "border-green",
-			},
-			"internal review": {
-				color: "bg-yellow-100 text-yellow-800 border-yellow-200",
-				icon: FileText,
-				borderColor: "border-orange",
-			},
-			review: {
-				color: "bg-yellow-100 text-yellow-800 border-yellow-200",
-				icon: FileText,
-				borderColor: "border-orange",
-			},
-			audit: {
-				color: "bg-purple-100 text-purple-800 border-purple-200",
-				icon: FileText,
-				borderColor: "border-purple-500",
-			},
-		};
-		return configs[type] || configs.meeting;
-	};
-
-	const getEventTypeBorderColor = (type: string | undefined): string => {
-		if (!type) return "border-gray-400";
-		const normalizedType = type.toLowerCase().trim();
-		const config = getEventTypeConfig(
-			normalizedType as LocalCalendarEvent["type"],
-		);
-		return config.borderColor || "border-gray-400";
-	};
-
 	const handleCreateEvent = async () => {
 		if (!newEvent.title.trim()) {
 			toast({
@@ -2722,25 +2557,6 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 		setConflictData(null);
 		setCreatingEvent(false);
 	};
-	// Display-friendly label for event type (keeps full text like "Deadline Discussion")
-	const getEventTypeLabel = (
-		t: string | undefined,
-	):
-		| "Contract Review"
-		| "Deadline Discussion"
-		| "Meeting"
-		| "Internal Review"
-		| "Audit"
-		| "" => {
-		if (!t) return "";
-		const v = t.toLowerCase().trim();
-		if (v === "contract review" || v === "contract") return "Contract Review";
-		if (v === "deadline discussion" || v === "deadline")
-			return "Deadline Discussion";
-		if (v === "internal review" || v === "review") return "Internal Review";
-		if (v === "meeting") return "Meeting";
-		return "Audit";
-	};
 
 	const handleDeleteEvent = () => {
 		if (!selectedEvent || (!selectedEvent.$id && !selectedEvent.id)) {
@@ -3150,157 +2966,15 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 	};
 
 	// Overflow dialog listing all events for a selected day
-	const OverflowDialog = () => (
-		<Dialog open={isOverflowOpen} onOpenChange={setIsOverflowOpen}>
-			<DialogContent className="flex max-h-[90vh] max-w-2xl flex-col overflow-hidden p-0 shadow-xl">
-				<VisuallyHiddenPrimitive.Root>
-					<DialogTitle>
-						{overflowDate
-							? format(overflowDate, "EEEE, MMMM d, yyyy")
-							: "Events"}
-					</DialogTitle>
-				</VisuallyHiddenPrimitive.Root>
-				{/* Professional Header with Cap */}
-				<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-				<div className="glass-dialog-wizard-header">
-					<div className="flex items-center px-6">
-						<div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-							<CalendarIcon className="w-5 h-5 text-[#0f5384]" />
-						</div>
-						<div>
-							<h2 className="text-xl font-semibold sidebar-gradient-text mt-6">
-								{overflowDate
-									? format(overflowDate, "EEEE, MMMM d, yyyy")
-									: "Events"}
-							</h2>
-							<p className="text-sm text-slate-600 mt-1">
-								{overflowEvents.length} event
-								{overflowEvents.length !== 1 ? "s" : ""} scheduled
-							</p>
-						</div>
-					</div>
-				</div>
-
-				{/* Scrollable Event List */}
-				<div className="flex-1 overflow-y-auto p-6 bg-white">
-					<div className="space-y-3">
-						{[...overflowEvents]
-							.sort((a, b) => {
-								const timeA = parseTimeToMinutes(a.startTime);
-								const timeB = parseTimeToMinutes(b.startTime);
-								return timeA - timeB;
-							})
-							.map((event) => {
-								const config = getEventTypeConfig(event.type);
-								const IconComp = config.icon;
-								const canViewSensitive = canViewEventSensitiveDetails(event);
-								const displayTitle = canViewSensitive
-									? event.title
-									: "Restricted event";
-								const status =
-									event.approvalStatus &&
-									event.approvalStatus !== "not_required"
-										? event.approvalStatus
-										: null;
-								return (
-									<button
-										key={
-											event.$id ||
-											event.id ||
-											`${event.title}-${event.startDate}`
-										}
-										type="button"
-										onClick={() => {
-											setIsOverflowOpen(false);
-											openEditDialog(event);
-										}}
-										className={cn(
-											"w-full text-left p-4 rounded-lg border-2 border-slate-200 bg-white hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 group",
-											"shadow-sm hover:shadow-md",
-										)}
-									>
-										<div className="flex items-start gap-4">
-											{/* Icon with background */}
-											<div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:from-blue-200 group-hover:to-indigo-200 transition-colors">
-												<IconComp className="h-5 w-5 text-blue-600" />
-											</div>
-
-											{/* Event Details */}
-											<div className="flex-1 min-w-0">
-												<div className="flex items-center gap-2 mb-2">
-													<span
-														className={cn(
-															"text-sm font-semibold truncate",
-															canViewSensitive
-																? "text-slate-700"
-																: "text-slate-500 italic",
-														)}
-													>
-														{displayTitle}
-													</span>
-													{status && (
-														<Badge
-															variant="outline"
-															className="uppercase text-[10px]"
-														>
-															{getApprovalStatusText(status)}
-														</Badge>
-													)}
-													{!status && event.outlook_id && (
-														<CheckCircle className="h-4 w-4 text-green flex-shrink-0" />
-													)}
-												</div>
-												<div className="flex items-center gap-2 text-xs text-slate-600">
-													<Clock className="h-3.5 w-3.5 flex-shrink-0" />
-													<span>
-														{event.startTime
-															? `${formatTimeForDisplay(event.startTime)}${
-																	event.endTime
-																		? ` - ${formatTimeForDisplay(
-																				event.endTime,
-																			)}`
-																		: ""
-																}`
-															: "All Day"}
-													</span>
-												</div>
-												{event.type && (
-													<div className="mt-2">
-														<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
-															{getEventTypeLabel(
-																event.type as unknown as string,
-															)}
-														</span>
-													</div>
-												)}
-											</div>
-
-											{/* Chevron Icon */}
-											<div className="flex-shrink-0 flex items-center">
-												<ChevronRight className="h-5 w-5 text-slate-400 group-hover:text-blue-600 transition-colors" />
-											</div>
-										</div>
-									</button>
-								);
-							})}
-					</div>
-				</div>
-
-				{/* Footer */}
-				<div className="flex items-center justify-between border-t border-white/40 bg-white/35 px-6 py-4 backdrop-blur-sm">
-					<div className="text-xs text-slate-500">
-						Click on any event to view details
-					</div>
-					<Button
-						variant="outline"
-						onClick={() => setIsOverflowOpen(false)}
-						className="primary-btn px-4"
-					>
-						Close
-					</Button>
-				</div>
-			</DialogContent>
-		</Dialog>
+	const overflowDialog = (
+		<OverflowDialog
+			open={isOverflowOpen}
+			onOpenChange={setIsOverflowOpen}
+			overflowDate={overflowDate}
+			overflowEvents={overflowEvents}
+			canViewEventSensitiveDetails={canViewEventSensitiveDetails}
+			onSelectEvent={openEditDialog}
+		/>
 	);
 
 	const renderWeekView = (
@@ -6200,7 +5874,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 						</div>
 					</DialogContent>
 				</Dialog>
-				<OverflowDialog />
+				{overflowDialog}
 
 				{/* AI Assistant Panel — same dimensions as Ask Caalm preview */}
 				<Sheet open={showAiPanel} onOpenChange={setShowAiPanel} modal={false}>
