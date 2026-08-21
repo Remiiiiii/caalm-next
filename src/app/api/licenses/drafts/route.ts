@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { ID, Query } from "node-appwrite";
+import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
 import { FileService } from "@/lib/api/contracts/services/FileService";
 import { requireAuth } from "@/lib/api/licenses/middleware/auth.middleware";
@@ -11,6 +12,7 @@ import {
 } from "@/lib/api/licenses/utils/response.util";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { requirePermission } from "@/lib/rbac/middleware";
 
 /**
  * License Draft Service - Simple inline service for license drafts
@@ -463,6 +465,11 @@ export async function POST(request: NextRequest) {
 		const authError = await requireAuth(request);
 		if (authError) return authError;
 
+		const permissionCheck = await requirePermission(request, {
+			permission: PERMISSIONS.LICENSES.CREATE,
+		});
+		if (permissionCheck) return permissionCheck;
+
 		const user = await getCurrentUser();
 		if (!user) {
 			return errorResponse("User not found", 401, { requestId });
@@ -545,6 +552,11 @@ export async function GET(request: NextRequest) {
 		const authError = await requireAuth(request);
 		if (authError) return authError;
 
+		const permissionCheck = await requirePermission(request, {
+			permission: PERMISSIONS.LICENSES.CREATE,
+		});
+		if (permissionCheck) return permissionCheck;
+
 		const user = await getCurrentUser();
 		if (!user) {
 			return errorResponse("User not found", 401, { requestId });
@@ -608,6 +620,11 @@ export async function DELETE(request: NextRequest) {
 		// Authentication
 		const authError = await requireAuth(request);
 		if (authError) return authError;
+
+		const permissionCheck = await requirePermission(request, {
+			permission: PERMISSIONS.LICENSES.CREATE,
+		});
+		if (permissionCheck) return permissionCheck;
 
 		const user = await getCurrentUser();
 		if (!user) {

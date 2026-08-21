@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
 import { requireAuth } from "@/lib/api/licenses/middleware/auth.middleware";
 import { LicenseService } from "@/lib/api/licenses/services/LicenseService";
@@ -7,6 +8,7 @@ import {
 	generateRequestId,
 	successResponse,
 } from "@/lib/api/licenses/utils/response.util";
+import { requirePermission } from "@/lib/rbac/middleware";
 import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 
 export async function GET(request: NextRequest) {
@@ -14,6 +16,11 @@ export async function GET(request: NextRequest) {
 	try {
 		const authError = await requireAuth(request);
 		if (authError) return authError;
+
+		const permissionCheck = await requirePermission(request, {
+			permission: PERMISSIONS.LICENSES.VIEW,
+		});
+		if (permissionCheck) return permissionCheck;
 
 		const user = await getCurrentUser();
 		if (!user) {

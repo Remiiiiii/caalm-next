@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
 import { requireAuth } from "@/lib/api/licenses/middleware/auth.middleware";
 import { licenseRenewalSchema } from "@/lib/api/licenses/schemas/license.schema";
@@ -8,6 +9,7 @@ import {
 	generateRequestId,
 	successResponse,
 } from "@/lib/api/licenses/utils/response.util";
+import { requirePermission } from "@/lib/rbac/middleware";
 import { logAuditEvent } from "@/lib/services/audit-logger";
 
 export async function POST(
@@ -18,6 +20,11 @@ export async function POST(
 	try {
 		const authError = await requireAuth(request);
 		if (authError) return authError;
+
+		const permissionCheck = await requirePermission(request, {
+			permission: PERMISSIONS.LICENSES.RENEW,
+		});
+		if (permissionCheck) return permissionCheck;
 
 		const user = await getCurrentUser();
 		if (!user) {

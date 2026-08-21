@@ -110,6 +110,11 @@ export async function POST(request: NextRequest) {
 			return errorResponse("User not found", 401, { requestId });
 		}
 
+		const permissionCheck = await requirePermission(request, {
+			permission: PERMISSIONS.LICENSES.CREATE,
+		});
+		if (permissionCheck) return permissionCheck;
+
 		const body = await request.json();
 		const validatedData = licenseCreateSchema.parse(body);
 
