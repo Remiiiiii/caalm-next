@@ -9,10 +9,12 @@ describe("planLimits", () => {
 		expect(resolveTier("nope")).toBe("starter");
 	});
 
-	it("includes license caps alongside contracts", () => {
+	it("includes license caps alongside contracts (Growth+ unlimited)", () => {
 		expect(TIER_LIMITS.starter.maxLicenses).toBe(100);
-		expect(TIER_LIMITS.growth.maxLicenses).toBe(2500);
-		expect(TIER_LIMITS.enterprise.maxLicenses).toBe(25000);
+		expect(TIER_LIMITS.growth.maxLicenses).toBe(Number.POSITIVE_INFINITY);
+		expect(TIER_LIMITS.enterprise.maxLicenses).toBe(Number.POSITIVE_INFINITY);
+		expect(TIER_LIMITS.starter.maxContracts).toBe(100);
+		expect(TIER_LIMITS.growth.maxContracts).toBe(2500);
 	});
 
 	it("PlanLimitError carries upgrade-oriented message and code", () => {

@@ -1,6 +1,7 @@
 "use client";
 
-import { Building2, FileText, HardDrive, Users } from "lucide-react";
+import { Building2, FileText, HardDrive, KeyRound, Sparkles, Users } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 
@@ -21,6 +22,13 @@ interface UsageMetersCardProps {
 	departmentsLimit: number;
 	contractsUsed: number | null;
 	contractsLimit: number;
+	licensesUsed?: number | null;
+	licensesLimit?: number;
+	aiExtractionsUsed?: number | null;
+	aiExtractionsLimit?: number;
+	/** Show upgrade CTA when any finite meter is at/above this % (default 80). */
+	onUpgradeClick?: () => void;
+	nearLimitPercent?: number;
 }
 
 function formatBytes(bytes: number): string {
@@ -35,6 +43,11 @@ function formatBytes(bytes: number): string {
 	return `${value.toFixed(value >= 10 || i === 0 ? 0 : 1)} ${units[i]}`;
 }
 
+function meterPct(used: number | null, limit: number): number {
+	if (used === null || !Number.isFinite(limit) || limit <= 0) return 0;
+	return Math.min(100, Math.round((used / limit) * 100));
+}
+
 function MeterRow({ label, used, limit, icon, formatValue }: UsageMeter) {
 	const infinite = !Number.isFinite(limit);
 	const displayUsed =
@@ -44,10 +57,7 @@ function MeterRow({ label, used, limit, icon, formatValue }: UsageMeter) {
 		: formatValue
 			? formatValue(limit)
 			: String(limit);
-	const pct =
-		used === null || infinite || limit <= 0
-			? 0
-			: Math.min(100, Math.round((used / limit) * 100));
+	const pct = meterPct(used, limit);
 
 	return (
 		<div className="space-y-2">
@@ -74,12 +84,42 @@ export default function UsageMetersCard({
 	departmentsLimit,
 	contractsUsed,
 	contractsLimit,
+	licensesUsed = null,
+	licensesLimit = Number.POSITIVE_INFINITY,
+	aiExtractionsUsed = null,
+	aiExtractionsLimit = Number.POSITIVE_INFINITY,
+	onUpgradeClick,
+	nearLimitPercent = 80,
 }: UsageMetersCardProps) {
+	const meters: Array<{ used: number | null; limit: number }> = [
+		{ used: storageUsed, limit: storageLimit },
+		{ used: usersUsed, limit: usersLimit },
+		{ used: departmentsUsed, limit: departmentsLimit },
+		{ used: contractsUsed, limit: contractsLimit },
+		{ used: licensesUsed, limit: licensesLimit },
+		{ used: aiExtractionsUsed, limit: aiExtractionsLimit },
+	];
+	const nearLimit = meters.some(
+		(m) => meterPct(m.used, m.limit) >= nearLimitPercent,
+	);
+
 	return (
 		<Card className="glass-card">
 			<div className="glass-card-cap" />
 			<CardContent className="p-4 sm:p-6 space-y-5">
-				<p className="text-sm font-medium sidebar-gradient-text">Usage</p>
+				<div className="flex items-center justify-between gap-3">
+					<p className="text-sm font-medium sidebar-gradient-text">Usage</p>
+					{nearLimit && onUpgradeClick && (
+						<Button
+							variant="outline"
+							size="sm"
+							className="primary-btn px-3 sm:px-4 cursor-pointer"
+							onClick={onUpgradeClick}
+						>
+							Upgrade plan
+						</Button>
+					)}
+				</div>
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 					<MeterRow
 						label="Storage"
@@ -106,10 +146,22 @@ export default function UsageMetersCard({
 						limit={contractsLimit}
 						icon={<FileText className="h-4 w-4" />}
 					/>
+					<MeterRow
+						label="Licenses"
+						used={licensesUsed}
+						limit={licensesLimit}
+						icon={<KeyRound className="h-4 w-4" />}
+					/>
+					<MeterRow
+						label="AI extractions (this month)"
+						used={aiExtractionsUsed}
+						limit={aiExtractionsLimit}
+						icon={<Sparkles className="h-4 w-4" />}
+					/>
 				</div>
 				<p className="text-xs text-slate-500">
-					Seat, department, and contract counts show when available. Storage is
-					live from your workspace.
+					Hitting a limit blocks invites, new contracts, uploads, or AI extract
+					until you upgrade or free capacity.
 				</p>
 			</CardContent>
 		</Card>

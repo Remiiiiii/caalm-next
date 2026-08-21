@@ -127,7 +127,7 @@ export async function loadPricingFromMarkdown(): Promise<PricingData> {
 
 	// Fallback defaults if markdown is not found at build time
 	const starterMonthly = 79;
-	const proMonthly = 299;
+	const growthMonthly = 449;
 
 	// Keep in sync with public/PRICING.md (source of truth when markdown loads)
 	const defaults: PricingPlan[] = [
@@ -141,6 +141,7 @@ export async function loadPricingFromMarkdown(): Promise<PricingData> {
 				"Up to **10 staff users**",
 				"Up to **100 active contracts**",
 				"Up to **100 active licenses**",
+				"**50 AI document extractions / month**",
 				"**Contract & license intake** with AI field extraction",
 				"**Multi-step approvals** and renewal / expiry alerts",
 				"**Permission-based roles** (custom roles included)",
@@ -152,17 +153,19 @@ export async function loadPricingFromMarkdown(): Promise<PricingData> {
 		{
 			key: "growth",
 			name: "Growth",
-			monthly: proMonthly,
-			yearly: Math.round(proMonthly * 12 * 0.8 * 100) / 100,
+			monthly: growthMonthly,
+			yearly: Math.round(growthMonthly * 12 * 0.8 * 100) / 100,
 			features: [
 				"Up to **6 departments**",
 				"Up to **100 staff users**",
 				"Up to **2,500 active contracts**",
-				"Up to **2,500 active licenses**",
+				"**Unlimited active licenses**",
+				"**500 AI document extractions / month**",
 				"**Department-scoped views** and fuller operational dashboards",
 				"**License allocate & renew** workflows",
 				"**Priority email support**",
 				"**Storage**: 100 GB",
+				"**90-day Growth pilot** available (AI capped at 100 / month during pilot)",
 			],
 		},
 		{
@@ -171,12 +174,14 @@ export async function loadPricingFromMarkdown(): Promise<PricingData> {
 			monthly: 0,
 			yearly: 0,
 			features: [
-				"**Custom user / contract / license / storage limits**",
+				"**Custom user / contract / storage / AI limits**",
+				"**Unlimited licenses**",
 				"**Dedicated account manager / CSM**",
 				"**Migration assistance** and custom integration planning",
 				"**Security questionnaire support**",
 				"**Priority support**",
 				"SSO/SAML, customer API, and formal SLAs via **custom agreement** as they ship",
+				"**Sales-assisted only** — no self-serve checkout",
 			],
 		},
 	];

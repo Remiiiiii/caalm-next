@@ -7,7 +7,12 @@ import {
 	updateOrganizationBilling,
 } from "@/lib/rbac/organizations";
 import { getStripe } from "./client";
-import { getPriceId, getTierFromPriceId, type PricingTier } from "./prices";
+import {
+	getPriceId,
+	getTierFromPriceId,
+	PILOT_TRIAL_DAYS,
+	type PricingTier,
+} from "./prices";
 
 export async function getOrCreateStripeCustomer(
 	org: Organization,
@@ -43,6 +48,7 @@ export async function createCheckoutSession({
 	userName,
 	successUrl,
 	cancelUrl,
+	trialDays,
 }: {
 	org: Organization;
 	tier: PricingTier;
@@ -51,10 +57,27 @@ export async function createCheckoutSession({
 	userName?: string;
 	successUrl: string;
 	cancelUrl: string;
+	/** When set (e.g. Growth pilot), Stripe starts a trial before first charge. */
+	trialDays?: number;
 }): Promise<string> {
+	if (tier === "enterprise") {
+		throw new Error(
+			"Enterprise is sales-assisted only. Contact sales — self-serve checkout is not available.",
+		);
+	}
+
 	const stripe = getStripe();
 	const customerId = await getOrCreateStripeCustomer(org, email, userName);
 	const priceId = getPriceId(tier, interval);
+
+	const status = org.billingStatus || "none";
+	const eligibleForPilot =
+		tier === "growth" &&
+		(status === "none" || status === "canceled") &&
+		(trialDays === undefined || trialDays > 0);
+	const resolvedTrialDays = eligibleForPilot
+		? trialDays ?? PILOT_TRIAL_DAYS
+		: undefined;
 
 	const session = await stripe.checkout.sessions.create({
 		mode: "subscription",
@@ -67,12 +90,19 @@ export async function createCheckoutSession({
 			orgId: org.$id,
 			tier,
 			interval,
+			...(resolvedTrialDays
+				? { pilot: "growth-90d", trialDays: String(resolvedTrialDays) }
+				: {}),
 		},
 		subscription_data: {
+			...(resolvedTrialDays
+				? { trial_period_days: resolvedTrialDays }
+				: {}),
 			metadata: {
 				orgId: org.$id,
 				tier,
 				interval,
+				...(resolvedTrialDays ? { pilot: "growth-90d" } : {}),
 			},
 		},
 		allow_promotion_codes: true,

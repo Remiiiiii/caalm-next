@@ -12,11 +12,15 @@ interface PlanUpgradeSectionProps {
 	plans: PricingPlan[];
 	currentTier: string;
 	stripeConfigured: boolean;
+	billingStatus?: string;
+	pilotEligible?: boolean;
+	pilotTrialDays?: number;
 	onCheckout: (
-		tier: "starter" | "growth" | "enterprise",
+		tier: "starter" | "growth",
 		interval: "monthly" | "yearly",
 	) => void;
 	loadingTier?: string | null;
+	salesEmail?: string;
 }
 
 function stripMarkdown(value: string): string {
@@ -30,13 +34,49 @@ export default function PlanUpgradeSection({
 	plans,
 	currentTier,
 	stripeConfigured,
+	billingStatus = "none",
+	pilotEligible = false,
+	pilotTrialDays = 90,
 	onCheckout,
 	loadingTier,
+	salesEmail = "sales@caalm.app",
 }: PlanUpgradeSectionProps) {
 	const [interval, setInterval] = useState<"monthly" | "yearly">("monthly");
+	const showPilotCta =
+		pilotEligible &&
+		(billingStatus === "none" || billingStatus === "canceled") &&
+		currentTier !== "growth" &&
+		currentTier !== "enterprise";
 
 	return (
 		<div className="space-y-4">
+			{showPilotCta && (
+				<Card className="glass-card">
+					<div className="glass-card-cap" />
+					<CardContent className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+						<div>
+							<p className="text-sm font-medium sidebar-gradient-text">
+								90-day Growth pilot
+							</p>
+							<p className="text-xs text-slate-600 mt-1">
+								Try Growth for {pilotTrialDays} days. No charge until the trial
+								ends unless you cancel. AI extractions capped at 100 / month
+								during the pilot.
+							</p>
+						</div>
+						<Button
+							className="primary-btn px-3 sm:px-4 cursor-pointer shrink-0"
+							disabled={!stripeConfigured || loadingTier === "growth"}
+							onClick={() => onCheckout("growth", interval)}
+						>
+							{loadingTier === "growth"
+								? "Redirecting…"
+								: "Start 90-day Growth pilot"}
+						</Button>
+					</CardContent>
+				</Card>
+			)}
+
 			<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
 				<p className="text-sm font-medium sidebar-gradient-text">Change plan</p>
 				<div
@@ -68,6 +108,7 @@ export default function PlanUpgradeSection({
 			<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 				{plans.map((plan) => {
 					const isCurrent = plan.key === currentTier;
+					const isEnterprise = plan.key === "enterprise";
 					const price = interval === "monthly" ? plan.monthly : plan.yearly;
 					const busy = loadingTier === plan.key;
 
@@ -88,12 +129,18 @@ export default function PlanUpgradeSection({
 										</Badge>
 									)}
 								</div>
-								<p className="text-3xl font-bold text-slate-700 pt-2">
-									${price.toLocaleString()}
-									<span className="text-sm font-medium text-slate-600 ml-1">
-										/{interval === "monthly" ? "mo" : "yr"}
-									</span>
-								</p>
+								{isEnterprise || price === 0 ? (
+									<p className="text-3xl font-bold text-slate-700 pt-2">
+										Custom
+									</p>
+								) : (
+									<p className="text-3xl font-bold text-slate-700 pt-2">
+										${price.toLocaleString()}
+										<span className="text-sm font-medium text-slate-600 ml-1">
+											/{interval === "monthly" ? "mo" : "yr"}
+										</span>
+									</p>
+								)}
 								<ul className="mt-4 space-y-2 flex-1">
 									{plan.features.slice(0, 5).map((feature) => (
 										<li
@@ -105,17 +152,30 @@ export default function PlanUpgradeSection({
 										</li>
 									))}
 								</ul>
-								<Button
-									className="primary-btn px-3 sm:px-4 mt-6 w-full cursor-pointer"
-									disabled={!stripeConfigured || isCurrent || busy}
-									onClick={() => onCheckout(plan.key, interval)}
-								>
-									{isCurrent
-										? "Current plan"
-										: busy
-											? "Redirecting…"
-											: `Choose ${plan.name}`}
-								</Button>
+								{isEnterprise ? (
+									<Button
+										asChild
+										className="primary-btn px-3 sm:px-4 mt-6 w-full cursor-pointer"
+									>
+										<a href={`mailto:${salesEmail}?subject=CAALM%20Enterprise`}>
+											Contact sales
+										</a>
+									</Button>
+								) : (
+									<Button
+										className="primary-btn px-3 sm:px-4 mt-6 w-full cursor-pointer"
+										disabled={!stripeConfigured || isCurrent || busy}
+										onClick={() =>
+											onCheckout(plan.key as "starter" | "growth", interval)
+										}
+									>
+										{isCurrent
+											? "Current plan"
+											: busy
+												? "Redirecting…"
+												: `Choose ${plan.name}`}
+									</Button>
+								)}
 							</CardContent>
 						</Card>
 					);

@@ -8,11 +8,15 @@ import {
 	countBillableUsers,
 	sumOrgStorageBytes,
 } from "@/lib/billing/planLimits";
+import { getAiExtractionMeter } from "@/lib/billing/consumeAiExtractionForRequest";
 import { loadPricingFromMarkdown } from "@/lib/pricing";
 import { getOrgIdFromRequest, requirePermission } from "@/lib/rbac/middleware";
 import { getOrganization } from "@/lib/rbac/organizations";
 import { isStripeConfigured } from "@/lib/stripe/client";
-import { TIER_LIMITS } from "@/lib/stripe/prices";
+import {
+	PILOT_TRIAL_DAYS,
+	TIER_LIMITS,
+} from "@/lib/stripe/prices";
 
 export async function GET(request: NextRequest) {
 	const permissionCheck = await requirePermission(request, {
@@ -64,26 +68,36 @@ export async function GET(request: NextRequest) {
 		storageUsed = 0;
 	}
 
-	const [usersUsed, contractsUsed, licensesUsed] = await Promise.all([
+	const [usersUsed, contractsUsed, licensesUsed, aiMeter] = await Promise.all([
 		countBillableUsers(orgId),
 		countActiveContracts(orgId),
 		countActiveLicenses(orgId),
+		getAiExtractionMeter(orgId, org.billingStatus || "none"),
 	]);
 
 	const pricing = await loadPricingFromMarkdown();
 	const plan = pricing.plans.find((p) => p.key === tier);
+	const billingStatus = org.billingStatus || "none";
+	const pilotEligible =
+		(billingStatus === "none" || billingStatus === "canceled") &&
+		tier !== "enterprise";
 
 	return NextResponse.json({
 		orgId: org.$id,
 		name: org.name,
 		subscriptionTier: tier,
-		billingStatus: org.billingStatus || "none",
+		billingStatus,
 		billingInterval: org.billingInterval || null,
 		currentPeriodEnd: org.currentPeriodEnd || null,
 		stripeCustomerId: org.stripeCustomerId || null,
 		stripeSubscriptionId: org.stripeSubscriptionId || null,
 		hasStripeCustomer: Boolean(org.stripeCustomerId),
 		stripeConfigured: isStripeConfigured(),
+		pilot: {
+			eligible: pilotEligible,
+			trialDays: PILOT_TRIAL_DAYS,
+			tier: "growth",
+		},
 		plan: plan
 			? {
 					key: plan.key,
@@ -113,6 +127,10 @@ export async function GET(request: NextRequest) {
 			licenses: {
 				used: licensesUsed,
 				limit: limits.maxLicenses,
+			},
+			aiExtractions: {
+				used: aiMeter.used,
+				limit: aiMeter.limit,
 			},
 		},
 		plans: pricing.plans,

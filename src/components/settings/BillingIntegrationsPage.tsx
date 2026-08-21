@@ -30,6 +30,11 @@ interface SubscriptionPayload {
 	billingInterval: string | null;
 	currentPeriodEnd: string | null;
 	stripeConfigured: boolean;
+	pilot?: {
+		eligible: boolean;
+		trialDays: number;
+		tier: "growth";
+	};
 	plan: {
 		key: string;
 		name: string;
@@ -42,6 +47,8 @@ interface SubscriptionPayload {
 		users: { used: number | null; limit: number };
 		departments: { used: number | null; limit: number };
 		contracts: { used: number | null; limit: number };
+		licenses?: { used: number | null; limit: number };
+		aiExtractions?: { used: number | null; limit: number };
 	};
 	plans: PricingPlan[];
 }
@@ -192,7 +199,7 @@ export default function BillingIntegrationsPage() {
 	};
 
 	const handleCheckout = async (
-		tier: "starter" | "growth" | "enterprise",
+		tier: "starter" | "growth",
 		interval: "monthly" | "yearly",
 	) => {
 		try {
@@ -310,6 +317,19 @@ export default function BillingIntegrationsPage() {
 										departmentsLimit={subscription.usage.departments.limit}
 										contractsUsed={subscription.usage.contracts.used}
 										contractsLimit={subscription.usage.contracts.limit}
+										licensesUsed={subscription.usage.licenses?.used ?? null}
+										licensesLimit={
+											subscription.usage.licenses?.limit ??
+											Number.POSITIVE_INFINITY
+										}
+										aiExtractionsUsed={
+											subscription.usage.aiExtractions?.used ?? null
+										}
+										aiExtractionsLimit={
+											subscription.usage.aiExtractions?.limit ??
+											Number.POSITIVE_INFINITY
+										}
+										onUpgradeClick={() => setShowPlans(true)}
 									/>
 
 									{(showPlans ||
@@ -319,6 +339,9 @@ export default function BillingIntegrationsPage() {
 											plans={subscription.plans}
 											currentTier={subscription.subscriptionTier}
 											stripeConfigured={subscription.stripeConfigured}
+											billingStatus={subscription.billingStatus}
+											pilotEligible={subscription.pilot?.eligible ?? false}
+											pilotTrialDays={subscription.pilot?.trialDays ?? 90}
 											onCheckout={handleCheckout}
 											loadingTier={checkoutTier}
 										/>

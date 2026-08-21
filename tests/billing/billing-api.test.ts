@@ -136,6 +136,33 @@ describe("POST /api/billing/checkout", () => {
 		expect(response.status).toBe(403);
 		expect(mockGetCurrentUser).not.toHaveBeenCalled();
 	});
+
+	it("returns 400 when tier is enterprise (sales-only)", async () => {
+		mockRequirePermission.mockResolvedValue(null);
+		mockGetCurrentUser.mockResolvedValue({
+			$id: "u1",
+			email: "admin@example.com",
+			fullName: "Admin",
+		});
+
+		const { POST } = await import("@/app/api/billing/checkout/route");
+		const request = new NextRequest(
+			"http://localhost:3000/api/billing/checkout",
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					orgId: "org-1",
+					tier: "enterprise",
+					interval: "monthly",
+				}),
+			},
+		);
+		const response = await POST(request);
+		expect(response.status).toBe(400);
+		const body = await response.json();
+		expect(body.code).toBe("ENTERPRISE_SALES_ONLY");
+	});
 });
 
 describe("GET /api/billing/subscription", () => {

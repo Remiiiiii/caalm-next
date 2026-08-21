@@ -12,7 +12,12 @@ import {
 	TIER_LIMITS,
 } from "@/lib/stripe/prices";
 
-export type PlanLimitKind = "users" | "contracts" | "licenses" | "storage";
+export type PlanLimitKind =
+	| "users"
+	| "contracts"
+	| "licenses"
+	| "storage"
+	| "ai_extractions";
 
 export class PlanLimitError extends Error {
 	readonly code = "PLAN_LIMIT_EXCEEDED";
@@ -78,6 +83,7 @@ export async function getOrgPlanLimits(orgId: string) {
 					: base.maxDepartments,
 			maxContracts: base.maxContracts,
 			maxLicenses: base.maxLicenses,
+			maxAiExtractionsPerMonth: base.maxAiExtractionsPerMonth,
 			storageBytes: base.storageBytes,
 		},
 	};
