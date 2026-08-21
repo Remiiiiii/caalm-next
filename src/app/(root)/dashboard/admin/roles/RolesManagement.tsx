@@ -479,9 +479,8 @@ const RolesManagement = () => {
 					if (!open) setRoleToDelete(null);
 				}}
 			>
-				<DialogContent className="overflow-hidden p-0 shadow-xl sm:max-w-md">
+				<DialogContent className="overflow-hidden p-0 shadow-xl sm:max-w-md" variant="destructive">
 					<DialogTitle className="sr-only">Delete Role</DialogTitle>
-					{/* Cap */}
 					<div className="h-4 w-full bg-[#d6d7d8] opacity-70" />
 
 					{/* Header */}

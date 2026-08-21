@@ -60,7 +60,7 @@ export function TicketSubmittedConfirmDialog({
 					</div>
 
 					<div className="mt-2 flex items-stretch overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-						<p className="min-w-0 flex-1 px-3 py-2.5 font-mono text-base font-semibold tracking-wide text-slate-800">
+						<p className="min-w-0 flex-1 px-3 py-2.5 text-base font-semibold tracking-wide text-slate-800">
 							{ticketNumber}
 						</p>
 						<div className="w-px shrink-0 bg-slate-200" aria-hidden />

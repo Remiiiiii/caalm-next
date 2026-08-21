@@ -40,7 +40,7 @@ export function TicketQueue({ tickets }: { tickets: Ticket[] }) {
 						<CardContent className="p-4 sm:p-6">
 							<div className="flex flex-wrap items-start justify-between gap-3">
 								<div className="min-w-0">
-									<p className="font-mono text-xs font-semibold tracking-wide text-[#0f5384]">
+									<p className="text-xs font-semibold tracking-wide text-[#0f5384]">
 										{displayTicketNumber(ticket)}
 									</p>
 									<p className="mt-1 text-sm font-medium sidebar-gradient-text">

@@ -16,6 +16,7 @@ import { ROLE_LABELS, type UserRole } from "@/constants/rbac";
 import { useAuth } from "@/contexts/AuthContext";
 import { useGroupedNavigation } from "@/hooks/useGroupedNavigation";
 import { cn } from "@/lib/utils";
+import SidebarUserCard from "@/components/sidebar/SidebarUserCard";
 import FileUploader from "./FileUploader";
 import { Button } from "./ui/button";
 
@@ -46,6 +47,8 @@ const MobileNavigation = ({
 		isViewer,
 		shouldShowLock,
 	} = useGroupedNavigation();
+	const settingsItems =
+		groupedNav.find((section) => section.header === "Settings")?.items ?? [];
 
 	useEffect(() => {
 		setOpen(false);
@@ -109,15 +112,9 @@ const MobileNavigation = ({
 							</p>
 						) : (
 							<ul className="mobile-nav-list">
-								{groupedNav.map((section) => (
+								{groupedNav.map((section) =>
+									section.header === "Settings" ? null : (
 									<li key={section.header}>
-										{section.header === "Settings" && (
-											<div
-												aria-hidden
-												className="mx-4 mb-3 border-t border-slate-200/80"
-												role="separator"
-											/>
-										)}
 										<p className="mb-2 px-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
 											{section.header}
 										</p>
@@ -167,12 +164,18 @@ const MobileNavigation = ({
 											})}
 										</ul>
 									</li>
-								))}
+									),
+								)}
 							</ul>
 						)}
 					</nav>
 					<Separator className="my-5 bg-light-200/20" />
 					<div className="flex flex-col justify-between gap-5 pb-5">
+						<SidebarUserCard
+							name={fullName}
+							email={email}
+							settingsItems={settingsItems}
+						/>
 						<FileUploader ownerId={ownerId} accountId={accountId} />
 						<Button
 							type="button"

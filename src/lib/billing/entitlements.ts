@@ -199,6 +199,43 @@ export function getEffectiveLimits(org: Organization): EffectiveLimits {
 	return getTierLimits(normalizePricingTier(org.subscriptionTier));
 }
 
+const TIER_DISPLAY_NAME: Record<PricingTier, string> = {
+	starter: "Starter",
+	growth: "Growth",
+	enterprise: "Enterprise",
+};
+
+/** Sidebar / account label, e.g. "Growth" or "Growth 90 day trial". */
+export function formatSubscriptionLabel(input: {
+	tier?: string | null;
+	billingStatus?: string | null;
+	orgStatus?: string | null;
+	currentPeriodEnd?: string | null;
+	pilotMonths?: number | null;
+}): string {
+	const tierKey = normalizePricingTier(input.tier);
+	const name = TIER_DISPLAY_NAME[tierKey];
+	const isTrial =
+		input.billingStatus === "trialing" ||
+		input.billingStatus === "pilot" ||
+		input.orgStatus === "trial";
+	if (!isTrial) return name;
+
+	let days = 90;
+	if (typeof input.pilotMonths === "number" && input.pilotMonths > 0) {
+		days = input.pilotMonths * 30;
+	} else if (input.currentPeriodEnd) {
+		const remaining = Math.ceil(
+			(new Date(input.currentPeriodEnd).getTime() - Date.now()) /
+				(1000 * 60 * 60 * 24),
+		);
+		if (Number.isFinite(remaining) && remaining > 0) {
+			days = remaining;
+		}
+	}
+	return `${name} ${days} day trial`;
+}
+
 export class BillingLimitError extends Error {
 	code: "BILLING_LOCKED" | "TIER_LIMIT";
 	status: number;

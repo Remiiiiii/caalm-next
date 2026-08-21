@@ -33,6 +33,17 @@ This is the **single source of truth** for all styling, page structure, and comp
 </div>
 ```
 
+**Page width rule (required):** Full app pages must use the container above at full content width. Do **not** add page-level `max-w-*`, `max-w-[…]`, or `mx-auto` wrappers that narrow the main page column. New pages must match existing pages (contracts, settings, tickets, licenses) so layout width stays consistent across the app.
+
+Allowed exceptions (inner content only, not the page shell):
+
+- Dialogs/modals (`max-w-[600px]`, etc.)
+- Single-field controls (e.g. `SearchField` with `max-w-md`)
+- Prose/print articles (e.g. audit preview `max-w-4xl` on the article body)
+- Subtitle/description text (`max-w-4xl` on a paragraph, not the page root)
+
+**Reference:** `src/app/(root)/settings/page.tsx`, `src/app/(root)/tickets/page.tsx`, `src/app/(root)/licenses/page.tsx`
+
 ### Page Header
 
 **Standard pattern for all pages:**
@@ -310,6 +321,12 @@ Use custom colors defined in `tailwind.config.ts` without intermediate suffixes 
 - **Muted**: `text-slate-500`
 - **Small**: `text-xs text-slate-600`
 
+### Font family
+
+- **App UI font**: Poppins (`font-poppins` on `<body>` in `src/app/layout.tsx`) — inherit it on all pages and components
+- **Do not use** `font-mono` in app UI; use Poppins (default) for ticket numbers, IDs, and metrics too
+- **Numeric columns/meters**: `tabular-nums` for aligned digits without switching font
+
 ---
 
 ## Spacing & Layout
@@ -336,9 +353,10 @@ Use custom colors defined in `tailwind.config.ts` without intermediate suffixes 
 
 ### Container Widths
 
-- **Page container**: `w-full px-4 sm:px-6 lg:px-8 xl:px-12`
+- **Page container**: `w-full px-4 sm:px-6 lg:px-8 xl:px-12` — full width; no page-level `max-w-*`
 - **Dialog max width**: `max-w-[600px]` (standard), `max-w-7xl` (large dialogs)
 - **Dialog max height**: `max-h-[90vh]`
+- **Never** narrow a new page with `max-w-225`, `max-w-4xl`, or similar on the outer page wrapper; match sibling routes instead
 
 ---
 

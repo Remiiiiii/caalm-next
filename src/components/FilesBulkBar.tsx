@@ -110,10 +110,9 @@ export default function FilesBulkBar({
 			</div>
 
 			<Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-				<DialogContent className="gap-0 overflow-hidden border border-slate-200 p-0 shadow-xl sm:max-w-md">
+				<DialogContent className="gap-0 overflow-hidden border border-slate-200 p-0 shadow-xl sm:max-w-md" variant="destructive">
 					<DialogTitle className="sr-only">Delete Files</DialogTitle>
 					<div className="absolute top-0 right-0 left-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
-
 					<div className="mt-4 border-b border-slate-200 bg-white px-6 py-4">
 						<div className="flex items-center gap-2">
 							<AlertTriangle className="h-5 w-5 shrink-0 text-[#f7d333]" />

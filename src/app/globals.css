@@ -1054,12 +1054,22 @@
 		position: relative;
 	}
 
-	.sidebar-storage-info {
+	.sidebar-storage-info,
+	.sidebar-user-info {
 		@apply mt-4 flex items-center justify-center gap-2 rounded-md p-1 text-light-100 lg:justify-start lg:p-3;
 		background-color: #e3f2fd;
 	}
 
-	.sidebar.sidebar-collapsed .sidebar-storage-info {
+	.sidebar-storage-info {
+		@apply mt-4;
+	}
+
+	.sidebar-user-info {
+		@apply mt-2 py-1.5 lg:px-3 lg:py-2;
+	}
+
+	.sidebar.sidebar-collapsed .sidebar-storage-info,
+	.sidebar.sidebar-collapsed .sidebar-user-info {
 		display: none;
 	}
 
@@ -1960,9 +1970,13 @@ button[data-state="active"] > span {
 	box-shadow: none !important;
 }
 
-.rdp-root.caalm-dashboard-cal .rdp-today:not(.rdp-outside) .rdp-day_button:hover,
+.rdp-root.caalm-dashboard-cal
+	.rdp-today:not(.rdp-outside)
+	.rdp-day_button:hover,
 .rdp-root.caalm-dashboard-cal .rdp-selected .rdp-day_button:hover,
-.rdp-root.caalm-dashboard-cal .rdp-today:not(.rdp-outside) .rdp-day_button:focus-visible,
+.rdp-root.caalm-dashboard-cal
+	.rdp-today:not(.rdp-outside)
+	.rdp-day_button:focus-visible,
 .rdp-root.caalm-dashboard-cal .rdp-selected .rdp-day_button:focus-visible,
 .caalm-dashboard-cal .rdp-today:not(.rdp-outside) .rdp-day_button:hover,
 .caalm-dashboard-cal .rdp-selected .rdp-day_button:hover,

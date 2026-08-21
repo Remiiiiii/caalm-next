@@ -17,6 +17,7 @@ import { Fragment, memo, useEffect } from "react";
 import ITSidebar from "@/components/ITSidebar";
 import StorageUsageBar from "@/components/StorageUsageBar";
 import { NavItemIcon } from "@/components/sidebar/NavItemIcon";
+import SidebarUserCard from "@/components/sidebar/SidebarUserCard";
 import { SectionNavIcon } from "@/components/sidebar/SectionNavIcon";
 import SidebarCollapsedRail from "@/components/sidebar/SidebarCollapsedRail";
 import SidebarCollapseToggle from "@/components/sidebar/SidebarCollapseToggle";
@@ -89,8 +90,15 @@ const Sidebar = memo(
 			return <ITSidebar name={name} email={email} />;
 		}
 
+		const settingsItems =
+			groupedNav.find((section) => section.header === "Settings")?.items ??
+			[];
+
 		const collapsedSections = groupedNav
-			.filter((section) => section.items.length > 0)
+			.filter(
+				(section) =>
+					section.items.length > 0 && section.header !== "Settings",
+			)
 			.map((section) => ({
 				header: section.header,
 				items: section.items.map((item) => ({
@@ -152,12 +160,20 @@ const Sidebar = memo(
 							<div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-500" />
 						</div>
 					) : (
-						<SidebarCollapsedRail
-							sections={collapsedSections}
-							isViewer={isViewer}
-							shouldShowLock={shouldShowLock}
-							rootException="/analytics"
-						/>
+						<>
+							<SidebarCollapsedRail
+								sections={collapsedSections}
+								isViewer={isViewer}
+								shouldShowLock={shouldShowLock}
+								rootException="/analytics"
+							/>
+							<SidebarUserCard
+								compact
+								name={name}
+								email={email}
+								settingsItems={settingsItems}
+							/>
+						</>
 					)
 				) : (
 					<>
@@ -179,20 +195,10 @@ const Sidebar = memo(
 								) : (
 									groupedNav.map((section) => {
 										if (section.items.length === 0) return null;
+										if (section.header === "Settings") return null;
 
 										return (
 											<Fragment key={section.header}>
-												{section.header === "Settings" && (
-													<li
-														aria-hidden
-														className="my-3 list-none px-1"
-													>
-														<div
-															className="border-t border-slate-200/80"
-															role="separator"
-														/>
-													</li>
-												)}
 												<div className="mb-3">
 												<li
 													className="sidebar-section-header mb-0 lg:mb-1"
@@ -397,17 +403,6 @@ const Sidebar = memo(
 							</ul>
 						</nav>
 
-						{!groupedNav.some((s) => s.header === "Settings") && (
-							<Link href="/settings" className="cursor-pointer">
-								<div className="flex items-center gap-2 mt-6">
-									<SectionNavIcon header="Settings" priority />
-									<span className="font-semibold text-sm sidebar-gradient-text">
-										Settings
-									</span>
-								</div>
-							</Link>
-						)}
-
 						<div className="sidebar-storage-info">
 							<div className="w-full">
 								<div className="flex items-center gap-2 mb-2">
@@ -417,6 +412,18 @@ const Sidebar = memo(
 								<StorageUsageBar />
 							</div>
 						</div>
+
+						<div
+							aria-hidden
+							className="mx-1 mt-2 border-t border-slate-300/80"
+							role="separator"
+						/>
+
+						<SidebarUserCard
+							name={name}
+							email={email}
+							settingsItems={settingsItems}
+						/>
 					</>
 				)}
 			</aside>

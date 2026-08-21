@@ -461,7 +461,7 @@ export function UserManagementActionDialogs({
 	if (action === "delete") {
 		return (
 			<Dialog open onOpenChange={(next) => !next && onClose()}>
-				<DialogContent className="flex max-h-[90vh] max-w-[440px] flex-col overflow-hidden border border-slate-200 p-0 shadow-xl">
+				<DialogContent className="flex max-h-[90vh] max-w-[440px] flex-col overflow-hidden border border-slate-200 p-0 shadow-xl" variant="destructive">
 					<div className="absolute top-0 right-0 left-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
 
 					<div className="mt-4 flex items-start gap-3 border-b border-slate-200/80 bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-5">

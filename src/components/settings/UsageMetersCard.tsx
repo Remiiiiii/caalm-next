@@ -1,8 +1,15 @@
 "use client";
 
-import { Building2, FileText, HardDrive, Users } from "lucide-react";
+import {
+	AlertCircle,
+	Building2,
+	FileText,
+	HardDrive,
+	Users,
+} from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 
 interface UsageMeter {
 	label: string;
@@ -21,6 +28,8 @@ interface UsageMetersCardProps {
 	departmentsLimit: number | null;
 	contractsUsed: number | null;
 	contractsLimit: number | null;
+	billingInterval: "monthly" | "yearly";
+	onBillingIntervalChange: (interval: "monthly" | "yearly") => void;
 }
 
 function formatBytes(bytes: number): string {
@@ -33,6 +42,17 @@ function formatBytes(bytes: number): string {
 		i += 1;
 	}
 	return `${value.toFixed(value >= 10 || i === 0 ? 0 : 1)} ${units[i]}`;
+}
+
+function meterState(
+	used: number | null,
+	limit: number,
+): "normal" | "warn" | "over" {
+	if (used === null || !Number.isFinite(limit) || limit <= 0) return "normal";
+	const pct = (used / limit) * 100;
+	if (pct > 100) return "over";
+	if (pct >= 80) return "warn";
+	return "normal";
 }
 
 function MeterRow({ label, used, limit, icon, formatValue }: UsageMeter) {
@@ -48,19 +68,50 @@ function MeterRow({ label, used, limit, icon, formatValue }: UsageMeter) {
 		used === null || infinite || limit <= 0
 			? 0
 			: Math.min(100, Math.round((used / limit) * 100));
+	const state = meterState(used, limit);
+	const overPct =
+		used !== null && Number.isFinite(limit) && limit > 0 && used > limit
+			? Math.round((used / limit) * 100)
+			: null;
 
 	return (
-		<div className="space-y-2">
-			<div className="flex items-center justify-between gap-2">
-				<div className="flex items-center gap-2 text-sm text-slate-700">
+		<div
+			className={cn(
+				state === "warn" && "rounded-md",
+				state === "over" && "rounded-md",
+			)}
+		>
+			<div className="mb-1.5 flex items-center justify-between gap-2">
+				<div className="flex items-center gap-2 text-sm font-medium text-slate-700">
 					<span className="text-[#0f5384]">{icon}</span>
 					{label}
 				</div>
-				<span className="text-xs text-slate-600">
+				<span
+					className={cn(
+						"tabular-nums text-[11px] text-slate-600",
+						state === "over" && "font-semibold text-red",
+					)}
+				>
 					{displayUsed} / {displayLimit}
 				</span>
 			</div>
-			<Progress value={used === null ? 0 : pct} className="h-2" />
+			<div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200/80">
+				<div
+					className={cn(
+						"h-full rounded-full transition-all duration-300",
+						state === "over" && "bg-red",
+						state === "warn" && "bg-orange",
+						state === "normal" && "bg-[#0f5384]",
+					)}
+					style={{ width: `${used === null ? 0 : pct}%` }}
+				/>
+			</div>
+			{state === "over" && overPct !== null ? (
+				<p className="mt-1.5 flex items-center gap-1 text-[10px] font-semibold text-red">
+					<AlertCircle className="h-3 w-3 shrink-0" aria-hidden />
+					{overPct}% over limit — upgrade to avoid access issues
+				</p>
+			) : null}
 		</div>
 	);
 }
@@ -74,40 +125,67 @@ export default function UsageMetersCard({
 	departmentsLimit,
 	contractsUsed,
 	contractsLimit,
+	billingInterval,
+	onBillingIntervalChange,
 }: UsageMetersCardProps) {
 	return (
 		<Card className="glass-card">
 			<div className="glass-card-cap" />
-			<CardContent className="p-4 sm:p-6 space-y-5">
-				<p className="text-sm font-medium sidebar-gradient-text">Usage</p>
-				<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+			<CardContent className="space-y-4 p-4 sm:p-6">
+				<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+					<p className="text-sm font-medium sidebar-gradient-text">Usage</p>
+					<Tabs
+						value={billingInterval}
+						onValueChange={(value) =>
+							onBillingIntervalChange(value as "monthly" | "yearly")
+						}
+					>
+						<TabsList className="h-auto border border-slate-200 bg-white/60 p-1">
+							<TabsTrigger
+								value="monthly"
+								className="cursor-pointer rounded-md px-4 py-1.5 text-sm font-medium text-slate-600 data-[state=active]:border data-[state=active]:border-slate-200 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm"
+							>
+								Monthly
+							</TabsTrigger>
+							<TabsTrigger
+								value="yearly"
+								className="cursor-pointer rounded-md px-4 py-1.5 text-sm font-medium text-slate-600 data-[state=active]:border data-[state=active]:border-slate-200 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm"
+							>
+								Yearly (−20%)
+							</TabsTrigger>
+						</TabsList>
+					</Tabs>
+				</div>
+
+				<div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-x-7">
 					<MeterRow
 						label="Storage"
 						used={storageUsed}
 						limit={storageLimit}
-						icon={<HardDrive className="h-4 w-4" />}
+						icon={<HardDrive className="h-3.5 w-3.5" />}
 						formatValue={formatBytes}
 					/>
 					<MeterRow
 						label="Seats"
 						used={usersUsed}
 						limit={usersLimit}
-						icon={<Users className="h-4 w-4" />}
+						icon={<Users className="h-3.5 w-3.5" />}
 					/>
 					<MeterRow
 						label="Departments"
 						used={departmentsUsed}
 						limit={departmentsLimit ?? Number.POSITIVE_INFINITY}
-						icon={<Building2 className="h-4 w-4" />}
+						icon={<Building2 className="h-3.5 w-3.5" />}
 					/>
 					<MeterRow
 						label="Contracts"
 						used={contractsUsed}
 						limit={contractsLimit ?? Number.POSITIVE_INFINITY}
-						icon={<FileText className="h-4 w-4" />}
+						icon={<FileText className="h-3.5 w-3.5" />}
 					/>
 				</div>
-				<p className="text-xs text-slate-500">
+
+				<p className="text-[11px] text-slate-500">
 					Seat, department, and contract counts show when available. Storage is
 					live from your workspace.
 				</p>

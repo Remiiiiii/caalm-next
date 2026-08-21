@@ -476,7 +476,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 
 				{/* Header with gradient background */}
 				<div className="glass-dialog-wizard-header mt-4">
-					<div className="flex items-center justify-between px-6">
+					<div className="flex items-center justify-between gap-3 px-6 pr-12">
 						<div className="flex items-center gap-3">
 							<Bell className="w-5 h-5 text-[#0f5384]" />
 							<DialogTitle className="text-xl font-semibold sidebar-gradient-text">

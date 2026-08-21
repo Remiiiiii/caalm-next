@@ -29,7 +29,7 @@ export default async function TicketPage({
 		<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
 			<div className="mb-4 flex w-full flex-col items-start justify-start gap-1 self-start">
 				<h1 className="h1 capitalize sidebar-gradient-text">Ticket</h1>
-				<p className="font-mono text-sm font-semibold tracking-wide text-[#0f5384]">
+				<p className="text-sm font-semibold tracking-wide text-[#0f5384]">
 					{displayTicketNumber(ticket)}
 				</p>
 			</div>

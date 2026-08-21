@@ -1,18 +1,17 @@
 "use client";
 
-import { ArrowLeft, CreditCard, Puzzle } from "lucide-react";
-import Link from "next/link";
+import { CreditCard, Puzzle } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PermissionGate } from "@/components/PermissionGate";
 import BillingOverviewCard from "@/components/settings/BillingOverviewCard";
+import { BillingSectionLabel } from "@/components/settings/BillingSectionLabel";
 import IntegrationsPanel from "@/components/settings/IntegrationsPanel";
 import InvoiceHistoryTable, {
 	type InvoiceRow,
 } from "@/components/settings/InvoiceHistoryTable";
 import PlanUpgradeSection from "@/components/settings/PlanUpgradeSection";
 import UsageMetersCard from "@/components/settings/UsageMetersCard";
-import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PERMISSIONS } from "@/constants/permissions";
@@ -68,6 +67,7 @@ export default function BillingIntegrationsPage() {
 	const { toast } = useToast();
 	const router = useRouter();
 	const searchParams = useSearchParams();
+	const changePlanRef = useRef<HTMLDivElement>(null);
 
 	const resolvedOrgId = orgId || "default_organization";
 	const initialTab =
@@ -83,7 +83,9 @@ export default function BillingIntegrationsPage() {
 	const [invoiceError, setInvoiceError] = useState<string | null>(null);
 	const [managing, setManaging] = useState(false);
 	const [checkoutTier, setCheckoutTier] = useState<string | null>(null);
-	const [showPlans, setShowPlans] = useState(false);
+	const [billingInterval, setBillingInterval] = useState<
+		"monthly" | "yearly"
+	>("monthly");
 
 	const canBilling = useMemo(
 		() => permissions.includes(PERMISSIONS.SETTINGS.BILLING),
@@ -112,10 +114,15 @@ export default function BillingIntegrationsPage() {
 			}
 			const data = (await res.json()) as SubscriptionPayload;
 			setSubscription(data);
-		} catch (error: any) {
+			if (data.billingInterval === "yearly") {
+				setBillingInterval("yearly");
+			}
+		} catch (error: unknown) {
+			const message =
+				error instanceof Error ? error.message : "Could not load subscription";
 			toast({
 				title: "Billing unavailable",
-				description: error?.message || "Could not load subscription",
+				description: message,
 				variant: "destructive",
 			});
 		} finally {
@@ -138,8 +145,10 @@ export default function BillingIntegrationsPage() {
 			}
 			const data = await res.json();
 			setInvoices(data.invoices || []);
-		} catch (error: any) {
-			setInvoiceError(error?.message || "Failed to load invoices");
+		} catch (error: unknown) {
+			const message =
+				error instanceof Error ? error.message : "Failed to load invoices";
+			setInvoiceError(message);
 		} finally {
 			setLoadingInvoices(false);
 		}
@@ -182,6 +191,13 @@ export default function BillingIntegrationsPage() {
 		}
 	}, [permissionsLoading, tab, canBilling, canIntegrations]);
 
+	const scrollToPlans = () => {
+		changePlanRef.current?.scrollIntoView({
+			behavior: "smooth",
+			block: "start",
+		});
+	};
+
 	const handleManageBilling = async () => {
 		try {
 			setManaging(true);
@@ -196,10 +212,12 @@ export default function BillingIntegrationsPage() {
 			const data = await res.json();
 			if (!res.ok) throw new Error(data.error || "Portal unavailable");
 			window.location.href = data.url;
-		} catch (error: any) {
+		} catch (error: unknown) {
+			const message =
+				error instanceof Error ? error.message : "Could not open billing portal";
 			toast({
 				title: "Portal error",
-				description: error?.message || "Could not open billing portal",
+				description: message,
 				variant: "destructive",
 			});
 			setManaging(false);
@@ -223,10 +241,12 @@ export default function BillingIntegrationsPage() {
 			const data = await res.json();
 			if (!res.ok) throw new Error(data.error || "Checkout unavailable");
 			window.location.href = data.url;
-		} catch (error: any) {
+		} catch (error: unknown) {
+			const message =
+				error instanceof Error ? error.message : "Could not start checkout";
 			toast({
 				title: "Checkout error",
-				description: error?.message || "Could not start checkout",
+				description: message,
 				variant: "destructive",
 			});
 			setCheckoutTier(null);
@@ -249,22 +269,12 @@ export default function BillingIntegrationsPage() {
 
 	return (
 		<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
-			<div className="flex items-center gap-4 mb-4 justify-start self-start w-full">
-				<Link href="/settings">
-					<Button
-						variant="outline"
-						size="sm"
-						className="primary-btn px-3 sm:px-4 cursor-pointer"
-					>
-						<ArrowLeft className="h-4 w-4" />
-						Back
-					</Button>
-				</Link>
+			<div className="mb-6 flex items-center gap-4 justify-start self-start w-full">
 				<div>
 					<h1 className="h1 capitalize sidebar-gradient-text">
 						Billing & Integrations
 					</h1>
-					<p className="text-sm text-slate-600 mt-1">
+					<p className="mt-1 text-sm text-slate-600">
 						Manage your subscription, usage, and connected apps
 					</p>
 				</div>
@@ -280,7 +290,7 @@ export default function BillingIntegrationsPage() {
 				}}
 				className="space-y-6"
 			>
-				<TabsList className="bg-white/60 border border-slate-200">
+				<TabsList className="border border-slate-200 bg-white/60">
 					{canBilling && (
 						<TabsTrigger value="billing" className="cursor-pointer gap-2">
 							<CreditCard className="h-4 w-4" />
@@ -299,66 +309,63 @@ export default function BillingIntegrationsPage() {
 					<TabsContent value="billing" className="space-y-6">
 						<PermissionGate permission={PERMISSIONS.SETTINGS.BILLING}>
 							{subscription && (
-								<>
-									<BillingOverviewCard
-										planName={
-											subscription.plan?.name || subscription.subscriptionTier
-										}
-										tier={subscription.subscriptionTier}
-										status={subscription.billingStatus}
-										interval={subscription.billingInterval}
-										monthly={subscription.plan?.monthly ?? null}
-										yearly={subscription.plan?.yearly ?? null}
-										currentPeriodEnd={subscription.currentPeriodEnd}
-										stripeConfigured={subscription.stripeConfigured}
-										onManageBilling={handleManageBilling}
-										onChangePlan={() => setShowPlans(true)}
-										managing={managing}
-									/>
+								<div className="flex flex-col gap-6">
+									<div className="space-y-4">
+										<BillingSectionLabel>Billing overview</BillingSectionLabel>
 
-									<UsageMetersCard
-										storageUsed={subscription.usage.storage.used}
-										storageLimit={subscription.usage.storage.limit}
-										usersUsed={subscription.usage.users.used}
-										usersLimit={subscription.usage.users.limit}
-										departmentsUsed={subscription.usage.departments.used}
-										departmentsLimit={subscription.usage.departments.limit}
-										contractsUsed={subscription.usage.contracts.used}
-										contractsLimit={subscription.usage.contracts.limit}
-									/>
+										<BillingOverviewCard
+											planName={
+												subscription.plan?.name || subscription.subscriptionTier
+											}
+											tier={subscription.subscriptionTier}
+											status={subscription.billingStatus}
+											interval={subscription.billingInterval}
+											monthly={subscription.plan?.monthly ?? null}
+											yearly={subscription.plan?.yearly ?? null}
+											currentPeriodEnd={subscription.currentPeriodEnd}
+											stripeConfigured={subscription.stripeConfigured}
+											accessWarning={subscription.access?.warning}
+											onManageBilling={handleManageBilling}
+											onChangePlan={scrollToPlans}
+											managing={managing}
+										/>
 
-									{(showPlans ||
-										subscription.billingStatus === "none" ||
-										subscription.billingStatus === "canceled") && (
+										<UsageMetersCard
+											storageUsed={subscription.usage.storage.used}
+											storageLimit={subscription.usage.storage.limit}
+											usersUsed={subscription.usage.users.used}
+											usersLimit={subscription.usage.users.limit}
+											departmentsUsed={subscription.usage.departments.used}
+											departmentsLimit={subscription.usage.departments.limit}
+											contractsUsed={subscription.usage.contracts.used}
+											contractsLimit={subscription.usage.contracts.limit}
+											billingInterval={billingInterval}
+											onBillingIntervalChange={setBillingInterval}
+										/>
+									</div>
+
+									<div
+										ref={changePlanRef}
+										id="billing-change-plan"
+										className="scroll-mt-6 space-y-4"
+									>
+										<BillingSectionLabel>Change plan</BillingSectionLabel>
 										<PlanUpgradeSection
 											plans={subscription.plans}
 											currentTier={subscription.subscriptionTier}
 											stripeConfigured={subscription.stripeConfigured}
+											billingInterval={billingInterval}
 											onCheckout={handleCheckout}
 											loadingTier={checkoutTier}
 										/>
-									)}
-
-									{!showPlans &&
-										subscription.billingStatus !== "none" &&
-										subscription.billingStatus !== "canceled" && (
-											<div className="flex justify-end">
-												<Button
-													variant="outline"
-													className="primary-btn px-3 sm:px-4 cursor-pointer"
-													onClick={() => setShowPlans(true)}
-												>
-													Compare plans
-												</Button>
-											</div>
-										)}
+									</div>
 
 									<InvoiceHistoryTable
 										invoices={invoices}
 										loading={loadingInvoices}
 										error={invoiceError}
 									/>
-								</>
+								</div>
 							)}
 						</PermissionGate>
 					</TabsContent>
@@ -374,7 +381,7 @@ export default function BillingIntegrationsPage() {
 									onViewPlans={() => {
 										if (canBilling) {
 											setTab("billing");
-											setShowPlans(true);
+											window.setTimeout(scrollToPlans, 150);
 										} else {
 											toast({
 												title: "Upgrade required",

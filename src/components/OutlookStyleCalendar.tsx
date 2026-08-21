@@ -6133,7 +6133,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 
 				{/* Delete Confirmation Modal */}
 				<Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
-					<DialogContent className="overflow-hidden p-0 shadow-xl sm:max-w-md">
+					<DialogContent className="overflow-hidden p-0 shadow-xl sm:max-w-md" variant="destructive">
 						<VisuallyHiddenPrimitive.Root>
 							<DialogTitle>Delete Event</DialogTitle>
 						</VisuallyHiddenPrimitive.Root>

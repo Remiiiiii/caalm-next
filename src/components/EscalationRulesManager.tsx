@@ -707,7 +707,7 @@ export const EscalationRulesManager: React.FC<EscalationRulesManagerProps> = ({
 
 			{/* Delete Confirmation Dialog */}
 			<Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-				<DialogContent className="overflow-hidden p-0 shadow-xl sm:max-w-md">
+				<DialogContent className="overflow-hidden p-0 shadow-xl sm:max-w-md" variant="destructive">
 					<VisuallyHiddenPrimitive.Root>
 						<DialogTitle>Delete Escalation Rule</DialogTitle>
 					</VisuallyHiddenPrimitive.Root>

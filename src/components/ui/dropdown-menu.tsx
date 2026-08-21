@@ -43,14 +43,16 @@ const DropdownMenuSubContent = React.forwardRef<
 	React.ElementRef<typeof DropdownMenuPrimitive.SubContent>,
 	React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.SubContent>
 >(({ className, ...props }, ref) => (
-	<DropdownMenuPrimitive.SubContent
-		ref={ref}
-		className={cn(
-			"z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
-			className,
-		)}
-		{...props}
-	/>
+	<DropdownMenuPrimitive.Portal>
+		<DropdownMenuPrimitive.SubContent
+			ref={ref}
+			className={cn(
+				"z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+				className,
+			)}
+			{...props}
+		/>
+	</DropdownMenuPrimitive.Portal>
 ));
 DropdownMenuSubContent.displayName =
 	DropdownMenuPrimitive.SubContent.displayName;
@@ -64,7 +66,7 @@ const DropdownMenuContent = React.forwardRef<
 			ref={ref}
 			sideOffset={sideOffset}
 			className={cn(
-				"relative z-50 min-w-[8rem] overflow-hidden rounded-md border border-white/30 bg-white/10 p-1 pt-4 text-slate-700 shadow-md backdrop-blur data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 before:absolute before:top-0 before:left-0 before:right-0 before:h-4 before:rounded-t-md before:bg-[#d6d7d8] before:opacity-70",
+				"relative z-50 min-w-[8rem] overflow-visible rounded-md border border-white/30 bg-white/10 p-1 pt-4 text-slate-700 shadow-md backdrop-blur data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 before:absolute before:top-0 before:left-0 before:right-0 before:h-4 before:rounded-t-md before:bg-[#d6d7d8] before:opacity-70",
 				className,
 			)}
 			{...props}
@@ -222,7 +224,7 @@ const AppDropdownMenuContent = React.forwardRef<
 	<DropdownMenuContent
 		ref={ref}
 		className={cn(
-			"relative min-w-[12rem] overflow-hidden border border-white/30 bg-white/10 p-0 text-slate-700 backdrop-blur",
+			"relative min-w-[12rem] overflow-visible border border-white/30 bg-white/10 p-0 text-slate-700 backdrop-blur",
 			className,
 		)}
 		{...props}

@@ -43,7 +43,21 @@ export async function GET(request: NextRequest) {
 				: null,
 		);
 
-		return NextResponse.json({ orgId, timezone });
+		const pilotMonthsRaw = org?.settings?.pilotMonths;
+		const pilotMonths =
+			typeof pilotMonthsRaw === "number" && Number.isFinite(pilotMonthsRaw)
+				? pilotMonthsRaw
+				: null;
+
+		return NextResponse.json({
+			orgId,
+			timezone,
+			subscriptionTier: org?.subscriptionTier || "starter",
+			billingStatus: org?.billingStatus || null,
+			orgStatus: org?.status || null,
+			currentPeriodEnd: org?.currentPeriodEnd || null,
+			pilotMonths,
+		});
 	} catch (error) {
 		console.error("[organization/default] Error:", error);
 		return NextResponse.json(

@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { DEFAULT_PRICING_PLANS } from "@/lib/pricing-defaults";
 
 export type PricingPlan = {
 	key: "starter" | "growth" | "enterprise";
@@ -122,68 +123,8 @@ export async function loadPricingFromMarkdown(): Promise<PricingData> {
 		return { plans };
 	}
 
-	// Fallback defaults if markdown is not found at build time
-	const starterMonthly = 79;
-	const proMonthly = 299;
-	const enterpriseMonthly = 999;
-
-	// Keep in sync with public/PRICING.md (source of truth when markdown loads)
-	const defaults: PricingPlan[] = [
-		{
-			key: "starter",
-			name: "Starter",
-			monthly: starterMonthly,
-			yearly: Math.round(starterMonthly * 12 * 0.8 * 100) / 100,
-			features: [
-				"Up to **3 departments**",
-				"Up to **10 staff users**",
-				"Up to **100 active contracts** tracked",
-				"**Analytics** for Admin + 2 departments",
-				"**Reports** (basic) via `Reports & Analytics Page`",
-				"**Email support**",
-				"**Analytical data retention**: 90 days",
-				"**Storage**: 10GB",
-			],
-		},
-		{
-			key: "growth",
-			name: "Growth",
-			monthly: proMonthly,
-			yearly: Math.round(proMonthly * 12 * 0.8 * 100) / 100,
-			features: [
-				"Up to **6 departments**",
-				"Up to **100 staff users**",
-				"Up to **2,500 active contracts**",
-				"**Full analytics suite** across all departments",
-				"**Report scheduling**",
-				"**Webhooks/API access** for integrations",
-				"**Priority support**",
-				"**Storage**: 100GB",
-			],
-		},
-		{
-			key: "enterprise",
-			name: "Enterprise",
-			monthly: enterpriseMonthly,
-			yearly: Math.round(enterpriseMonthly * 12 * 0.8 * 100) / 100,
-			features: [
-				"**Dedicated account manager**",
-				"**Unlimited departments**",
-				"**Up to 1,000 staff users** (higher limits upon request)",
-				"**25,000 active contracts** (higher upon request)",
-				"**SSO/SAML & SCIM** (enterprise identity)",
-				"**Advanced audit logs & exports**",
-				"**Custom roles & permissions**, detailed access",
-				"**Uptime SLA** 99.9% and **Dedicated CSM**",
-				"**Storage**: 1 TB (expandable)",
-				"**Custom integrations** and migration assistance",
-			],
-		},
-	];
-
-	// Cache the fallback defaults too
-	pricingCache = { plans: defaults };
+	pricingCache = { plans: DEFAULT_PRICING_PLANS };
 	pricingCacheTime = now;
 
-	return { plans: defaults };
+	return { plans: DEFAULT_PRICING_PLANS };
 }

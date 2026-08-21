@@ -25,6 +25,8 @@ Tech stack: React (Next.js), Tailwind, ShadCN, Appwrite, pnpm, Node. JS
 
 When creating new pages, components, dialogs, or cards, always reference the Global Style Guide first.
 
+**Page width:** New pages use `w-full px-4 sm:px-6 lg:px-8 xl:px-12` only — no page-level `max-w-*` that narrows content vs other routes (see Global Style Guide → Page Container).
+
 ## Development Guidelines
 
 - Use `pnpm add` when installing new packages.
