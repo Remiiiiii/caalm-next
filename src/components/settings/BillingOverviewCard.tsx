@@ -18,6 +18,7 @@ interface BillingOverviewCardProps {
 	onManageBilling: () => void;
 	onChangePlan: () => void;
 	managing?: boolean;
+	actionsDisabled?: boolean;
 }
 
 function statusPillClass(status: string): string {
@@ -51,6 +52,45 @@ function statusLabel(status: string): string {
 	}
 }
 
+function formatMoney(amount: number): string {
+	return `$${amount.toLocaleString(undefined, {
+		minimumFractionDigits: 2,
+		maximumFractionDigits: 2,
+	})}`;
+}
+
+function formatPaymentDate(iso: string): string {
+	return new Date(iso).toLocaleDateString(undefined, {
+		month: "long",
+		day: "numeric",
+		year: "numeric",
+	});
+}
+
+function BillingBreakdownRow({
+	label,
+	amount,
+	emphasis = false,
+}: {
+	label: string;
+	amount: string;
+	emphasis?: boolean;
+}) {
+	return (
+		<div
+			className={cn(
+				"flex items-center justify-between gap-4 px-4 py-3 text-sm",
+				emphasis ? "font-semibold text-slate-700" : "text-slate-600",
+			)}
+		>
+			<span>{label}</span>
+			<span className={cn("tabular-nums", emphasis && "text-slate-800")}>
+				{amount}
+			</span>
+		</div>
+	);
+}
+
 export default function BillingOverviewCard({
 	planName,
 	tier,
@@ -64,17 +104,61 @@ export default function BillingOverviewCard({
 	onManageBilling,
 	onChangePlan,
 	managing,
+	actionsDisabled,
 }: BillingOverviewCardProps) {
-	const price =
-		interval === "yearly" ? yearly : monthly !== null ? monthly : monthly;
-	const priceDisplay =
-		price !== null ? `$${price.toLocaleString()}` : null;
-	const billingCadence =
+	const billingActionsDisabled =
+		actionsDisabled || !stripeConfigured || managing;
+	const activeAmount =
 		interval === "yearly"
-			? "year · billed yearly"
-			: interval === "monthly"
-				? "month · billed monthly"
-				: "month";
+			? yearly
+			: monthly !== null
+				? monthly
+				: yearly;
+	const monthlyDisplay =
+		monthly !== null ? formatMoney(monthly) : null;
+	const yearlyDisplay = yearly !== null ? formatMoney(yearly) : null;
+	const basePlanDisplay =
+		activeAmount !== null ? formatMoney(activeAmount) : "—";
+
+	const nextPaymentDate = currentPeriodEnd
+		? formatPaymentDate(currentPeriodEnd)
+		: null;
+
+	const pricePair =
+		monthlyDisplay && yearlyDisplay
+			? `${monthlyDisplay}/${yearlyDisplay}`
+			: basePlanDisplay !== "—"
+				? basePlanDisplay
+				: null;
+
+	const hasScheduledPayment =
+		Boolean(nextPaymentDate) &&
+		(status === "active" || status === "trialing" || status === "past_due");
+
+	const nextPaymentLine = (() => {
+		if (hasScheduledPayment && nextPaymentDate) {
+			const amount =
+				interval === "yearly"
+					? yearlyDisplay ?? basePlanDisplay
+					: monthlyDisplay ?? basePlanDisplay;
+			if (amount) {
+				return `Next payment of ${amount} will occur on ${nextPaymentDate}.`;
+			}
+		}
+		if (pricePair) {
+			return `Next payment of ${pricePair} will occur when you start a subscription.`;
+		}
+		if (status === "pilot" && nextPaymentDate) {
+			return `Pilot access ends on ${nextPaymentDate}. Choose a plan to continue after that date.`;
+		}
+		return "No upcoming payment scheduled.";
+	})();
+
+	const showWarning =
+		Boolean(accessWarning) ||
+		status === "none" ||
+		status === "canceled" ||
+		status === "past_due";
 
 	const renewalLabel = currentPeriodEnd
 		? new Date(currentPeriodEnd).toLocaleDateString(undefined, {
@@ -83,12 +167,6 @@ export default function BillingOverviewCard({
 				year: "numeric",
 			})
 		: null;
-
-	const showWarning =
-		Boolean(accessWarning) ||
-		status === "none" ||
-		status === "canceled" ||
-		status === "past_due";
 
 	const warningText =
 		accessWarning ||
@@ -103,60 +181,32 @@ export default function BillingOverviewCard({
 	return (
 		<Card className="glass-card">
 			<div className="glass-card-cap" />
-			<CardContent className="space-y-3 p-4 sm:p-6">
-				<div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-					<div className="min-w-0">
-						<div className="flex flex-wrap items-center gap-2.5">
-							<h2 className="text-xl font-semibold capitalize text-slate-700 sm:text-2xl">
-								{planName || tier}
-							</h2>
-							<span
-								className={cn(
-									"rounded-sm border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide",
-									statusPillClass(status),
-								)}
-							>
-								{statusLabel(status)}
-							</span>
-						</div>
-						<p className="mt-1 text-sm text-slate-600">
-							{priceDisplay ? (
-								<>
-									<span className="font-semibold text-slate-700">
-										{priceDisplay}
-									</span>{" "}
-									/{billingCadence}
-								</>
-							) : (
-								"Pricing unavailable"
+			<CardContent className="flex flex-col gap-4 p-4 sm:p-6">
+				<div className="min-w-0">
+					<div className="flex flex-wrap items-center gap-2.5">
+						<h2 className="text-xl font-semibold capitalize text-slate-700 sm:text-2xl">
+							{planName || tier}
+						</h2>
+						<span
+							className={cn(
+								"rounded-sm border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide",
+								statusPillClass(status),
 							)}
-						</p>
-						{(status === "active" || status === "trialing") && renewalLabel ? (
-							<p className="mt-0.5 text-xs text-slate-500">
-								Renews on {renewalLabel}
-							</p>
-						) : null}
+						>
+							{statusLabel(status)}
+						</span>
 					</div>
+					<p className="mt-2 text-sm text-slate-600">{nextPaymentLine}</p>
+				</div>
 
-					<div className="flex shrink-0 flex-wrap gap-2">
-						<Button
-							variant="outline"
-							className="primary-btn cursor-pointer px-3 sm:px-4"
-							onClick={onManageBilling}
-							disabled={!stripeConfigured || managing}
-						>
-							<CreditCard className="h-4 w-4" />
-							Manage billing
-						</Button>
-						<Button
-							className="primary-btn cursor-pointer px-3 sm:px-4"
-							onClick={onChangePlan}
-							disabled={!stripeConfigured}
-						>
-							<Columns3Cog className="h-4 w-4" />
-							Change plan
-						</Button>
-					</div>
+				<div className="overflow-hidden rounded-lg border border-slate-200 bg-white/65">
+					<BillingBreakdownRow label="Base plan" amount={basePlanDisplay} />
+					<div className="border-t border-slate-200" aria-hidden />
+					<BillingBreakdownRow
+						label="Total"
+						amount={basePlanDisplay}
+						emphasis
+					/>
 				</div>
 
 				{showWarning && warningText ? (
@@ -177,6 +227,26 @@ export default function BillingOverviewCard({
 						the customer portal.
 					</p>
 				) : null}
+
+				<div className="flex flex-wrap justify-end gap-2 pt-1">
+					<Button
+						variant="outline"
+						className="primary-btn cursor-pointer px-3 sm:px-4"
+						onClick={onManageBilling}
+						disabled={billingActionsDisabled}
+					>
+						<CreditCard className="h-4 w-4" />
+						Manage billing
+					</Button>
+					<Button
+						className="primary-btn cursor-pointer px-3 sm:px-4"
+						onClick={onChangePlan}
+						disabled={billingActionsDisabled}
+					>
+						<Columns3Cog className="h-4 w-4" />
+						Change plan
+					</Button>
+				</div>
 			</CardContent>
 		</Card>
 	);

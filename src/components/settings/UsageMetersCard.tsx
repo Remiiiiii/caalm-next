@@ -8,7 +8,6 @@ import {
 	Users,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
 interface UsageMeter {
@@ -28,8 +27,6 @@ interface UsageMetersCardProps {
 	departmentsLimit: number | null;
 	contractsUsed: number | null;
 	contractsLimit: number | null;
-	billingInterval: "monthly" | "yearly";
-	onBillingIntervalChange: (interval: "monthly" | "yearly") => void;
 }
 
 function formatBytes(bytes: number): string {
@@ -125,64 +122,55 @@ export default function UsageMetersCard({
 	departmentsLimit,
 	contractsUsed,
 	contractsLimit,
-	billingInterval,
-	onBillingIntervalChange,
 }: UsageMetersCardProps) {
 	return (
 		<Card className="glass-card">
 			<div className="glass-card-cap" />
 			<CardContent className="space-y-4 p-4 sm:p-6">
-				<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-					<p className="text-sm font-medium sidebar-gradient-text">Usage</p>
-					<Tabs
-						value={billingInterval}
-						onValueChange={(value) =>
-							onBillingIntervalChange(value as "monthly" | "yearly")
-						}
-					>
-						<TabsList className="h-auto border border-slate-200 bg-white/60 p-1">
-							<TabsTrigger
-								value="monthly"
-								className="cursor-pointer rounded-md px-4 py-1.5 text-sm font-medium text-slate-600 data-[state=active]:border data-[state=active]:border-slate-200 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm"
-							>
-								Monthly
-							</TabsTrigger>
-							<TabsTrigger
-								value="yearly"
-								className="cursor-pointer rounded-md px-4 py-1.5 text-sm font-medium text-slate-600 data-[state=active]:border data-[state=active]:border-slate-200 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm"
-							>
-								Yearly (−20%)
-							</TabsTrigger>
-						</TabsList>
-					</Tabs>
-				</div>
+				<p className="text-sm font-medium sidebar-gradient-text">Usage</p>
 
-				<div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-x-7">
-					<MeterRow
-						label="Storage"
-						used={storageUsed}
-						limit={storageLimit}
-						icon={<HardDrive className="h-3.5 w-3.5" />}
-						formatValue={formatBytes}
+				<div className="relative grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-0">
+					<div
+						className="pointer-events-none absolute top-0 bottom-0 left-1/2 hidden w-[1.5px] -translate-x-1/2 bg-slate-400/75 sm:block"
+						aria-hidden
 					/>
-					<MeterRow
-						label="Seats"
-						used={usersUsed}
-						limit={usersLimit}
-						icon={<Users className="h-3.5 w-3.5" />}
+					<div
+						className="pointer-events-none absolute right-0 left-0 top-1/2 hidden h-[1.5px] -translate-y-1/2 bg-slate-400/75 sm:block"
+						aria-hidden
 					/>
-					<MeterRow
-						label="Departments"
-						used={departmentsUsed}
-						limit={departmentsLimit ?? Number.POSITIVE_INFINITY}
-						icon={<Building2 className="h-3.5 w-3.5" />}
-					/>
-					<MeterRow
-						label="Contracts"
-						used={contractsUsed}
-						limit={contractsLimit ?? Number.POSITIVE_INFINITY}
-						icon={<FileText className="h-3.5 w-3.5" />}
-					/>
+					<div className="sm:pr-6 sm:pb-5">
+						<MeterRow
+							label="Storage"
+							used={storageUsed}
+							limit={storageLimit}
+							icon={<HardDrive className="h-3.5 w-3.5" />}
+							formatValue={formatBytes}
+						/>
+					</div>
+					<div className="sm:pb-5 sm:pl-6">
+						<MeterRow
+							label="Seats"
+							used={usersUsed}
+							limit={usersLimit}
+							icon={<Users className="h-3.5 w-3.5" />}
+						/>
+					</div>
+					<div className="sm:pr-6 sm:pt-5">
+						<MeterRow
+							label="Departments"
+							used={departmentsUsed}
+							limit={departmentsLimit ?? Number.POSITIVE_INFINITY}
+							icon={<Building2 className="h-3.5 w-3.5" />}
+						/>
+					</div>
+					<div className="sm:pt-5 sm:pl-6">
+						<MeterRow
+							label="Contracts"
+							used={contractsUsed}
+							limit={contractsLimit ?? Number.POSITIVE_INFINITY}
+							icon={<FileText className="h-3.5 w-3.5" />}
+						/>
+					</div>
 				</div>
 
 				<p className="text-[11px] text-slate-500">

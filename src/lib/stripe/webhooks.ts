@@ -1,11 +1,23 @@
 import type Stripe from "stripe";
 import {
 	clearOrgSubscription,
+	completePaymentMethodReplace,
 	markOrgPastDue,
+	syncCreditNoteToOrg,
+	syncPaidInvoiceToOrg,
+	syncQuoteAcceptedToOrg,
 	syncSubscriptionToOrg,
 } from "./billing";
 import { getStripe } from "./client";
+import { resolveOrgIdFromInvoice } from "./invoice-utils";
 import { claimStripeEvent } from "./webhook-idempotency";
+import { getOrganization } from "@/lib/rbac/organizations";
+
+/**
+ * Subscribe the endpoint to:
+ * checkout.session.completed, customer.subscription.created|updated|deleted,
+ * invoice.paid|finalized|payment_failed, credit_note.created, quote.accepted
+ */
 
 export function constructWebhookEvent(
 	payload: string | Buffer,
@@ -19,25 +31,6 @@ export function constructWebhookEvent(
 	return stripe.webhooks.constructEvent(payload, signature, secret);
 }
 
-async function orgIdFromInvoice(
-	invoice: Stripe.Invoice,
-): Promise<string | undefined> {
-	const customerId =
-		typeof invoice.customer === "string"
-			? invoice.customer
-			: invoice.customer?.id;
-	const metaOrg =
-		invoice.metadata?.orgId ||
-		(invoice as { subscription_details?: { metadata?: { orgId?: string } } })
-			.subscription_details?.metadata?.orgId;
-	if (metaOrg) return metaOrg;
-
-	if (!customerId) return undefined;
-	const { listOrganizations } = await import("@/lib/rbac/organizations");
-	const orgs = await listOrganizations();
-	return orgs.find((o) => o.stripeCustomerId === customerId)?.$id;
-}
-
 export async function handleStripeWebhookEvent(
 	event: Stripe.Event,
 ): Promise<{ processed: boolean; duplicate?: boolean }> {
@@ -49,9 +42,39 @@ export async function handleStripeWebhookEvent(
 	switch (event.type) {
 		case "checkout.session.completed": {
 			const session = event.data.object as Stripe.Checkout.Session;
+			const stripe = getStripe();
+
+			if (session.mode === "setup" && session.setup_intent) {
+				const replaceId = session.metadata?.replacePaymentMethodId;
+				const orgId =
+					session.metadata?.orgId || session.client_reference_id || undefined;
+				if (replaceId && orgId) {
+					const setupIntentId =
+						typeof session.setup_intent === "string"
+							? session.setup_intent
+							: session.setup_intent.id;
+					const setupIntent =
+						await stripe.setupIntents.retrieve(setupIntentId);
+					const newPaymentMethodId =
+						typeof setupIntent.payment_method === "string"
+							? setupIntent.payment_method
+							: setupIntent.payment_method?.id;
+					if (newPaymentMethodId) {
+						const org = await getOrganization(orgId);
+						if (org) {
+							await completePaymentMethodReplace(
+								org,
+								replaceId,
+								newPaymentMethodId,
+							);
+						}
+					}
+				}
+				break;
+			}
+
 			if (session.mode !== "subscription" || !session.subscription) break;
 
-			const stripe = getStripe();
 			const subscriptionId =
 				typeof session.subscription === "string"
 					? session.subscription
@@ -62,6 +85,7 @@ export async function handleStripeWebhookEvent(
 			await syncSubscriptionToOrg(subscription, orgId || undefined);
 			break;
 		}
+		case "customer.subscription.created":
 		case "customer.subscription.updated": {
 			const subscription = event.data.object as Stripe.Subscription;
 			await syncSubscriptionToOrg(subscription);
@@ -77,37 +101,35 @@ export async function handleStripeWebhookEvent(
 			}
 			break;
 		}
-		case "invoice.paid":
+		case "invoice.paid": {
+			const invoice = event.data.object as Stripe.Invoice;
+			await syncPaidInvoiceToOrg(invoice);
+			break;
+		}
 		case "invoice.finalized": {
 			const invoice = event.data.object as Stripe.Invoice;
-			const subscriptionId =
-				typeof (invoice as { subscription?: string | { id: string } })
-					.subscription === "string"
-					? ((invoice as { subscription?: string }).subscription as string)
-					: (invoice as { subscription?: { id: string } }).subscription?.id;
-			if (!subscriptionId) break;
-			const stripe = getStripe();
-			const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-			await syncSubscriptionToOrg(subscription);
+			// Unpaid Dashboard invoices must not grant access. Subscription
+			// invoices still sync so we pick up `incomplete` / `trialing`.
+			await syncPaidInvoiceToOrg(invoice);
 			break;
 		}
 		case "invoice.payment_failed": {
 			const invoice = event.data.object as Stripe.Invoice;
-			const orgId = await orgIdFromInvoice(invoice);
+			const orgId = await resolveOrgIdFromInvoice(invoice);
 			if (orgId) {
 				await markOrgPastDue(orgId);
 			}
-			const subscriptionId =
-				typeof (invoice as { subscription?: string | { id: string } })
-					.subscription === "string"
-					? ((invoice as { subscription?: string }).subscription as string)
-					: (invoice as { subscription?: { id: string } }).subscription?.id;
-			if (subscriptionId) {
-				const stripe = getStripe();
-				const subscription =
-					await stripe.subscriptions.retrieve(subscriptionId);
-				await syncSubscriptionToOrg(subscription);
-			}
+			await syncPaidInvoiceToOrg(invoice);
+			break;
+		}
+		case "credit_note.created": {
+			const creditNote = event.data.object as Stripe.CreditNote;
+			await syncCreditNoteToOrg(creditNote);
+			break;
+		}
+		case "quote.accepted": {
+			const quote = event.data.object as Stripe.Quote;
+			await syncQuoteAcceptedToOrg(quote);
 			break;
 		}
 		default:

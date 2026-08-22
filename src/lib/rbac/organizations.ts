@@ -131,6 +131,43 @@ export async function getOrganization(
 	}
 }
 
+function parseOrganizationRow(org: Record<string, unknown>): Organization {
+	return {
+		...org,
+		settings:
+			typeof org.settings === "string"
+				? JSON.parse(org.settings)
+				: org.settings,
+	} as unknown as Organization;
+}
+
+/**
+ * Find an org by Stripe customer id (cus_…). Used by webhooks when
+ * invoice/quote metadata is missing. Falls back to a full list if the
+ * stripeCustomerId index is not available.
+ */
+export async function getOrganizationByStripeCustomerId(
+	customerId: string,
+): Promise<Organization | null> {
+	if (!customerId) return null;
+
+	const { tablesDB } = await createAdminClient();
+	const databaseId = appwriteConfig.databaseId || "default-db";
+
+	try {
+		const result = await tablesDB.listRows({
+			databaseId,
+			tableId: "organizations",
+			queries: [Query.equal("stripeCustomerId", customerId), Query.limit(1)],
+		});
+		const row = result.rows[0] as Record<string, unknown> | undefined;
+		return row ? parseOrganizationRow(row) : null;
+	} catch {
+		const orgs = await listOrganizations();
+		return orgs.find((org) => org.stripeCustomerId === customerId) ?? null;
+	}
+}
+
 /**
  * List all organizations
  */

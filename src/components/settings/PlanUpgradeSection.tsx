@@ -15,7 +15,12 @@ interface PlanUpgradeSectionProps {
 		tier: "starter" | "growth" | "enterprise",
 		interval: "monthly" | "yearly",
 	) => void;
+	onSendQuote?: (
+		tier: "starter" | "growth" | "enterprise",
+		interval: "monthly" | "yearly",
+	) => void;
 	loadingTier?: string | null;
+	quotingTier?: string | null;
 }
 
 function stripMarkdown(value: string): string {
@@ -33,7 +38,9 @@ export default function PlanUpgradeSection({
 	stripeConfigured,
 	billingInterval,
 	onCheckout,
+	onSendQuote,
 	loadingTier,
+	quotingTier,
 }: PlanUpgradeSectionProps) {
 	return (
 		<div className="grid grid-cols-1 items-stretch gap-3 pt-3 md:grid-cols-3 md:gap-4">
@@ -102,6 +109,18 @@ export default function PlanUpgradeSection({
 										? "Redirecting…"
 										: `Choose ${plan.name}`}
 							</Button>
+							{onSendQuote && plan.key === "enterprise" && !isCurrent ? (
+								<Button
+									variant="outline"
+									className="primary-btn mt-2 w-full cursor-pointer px-3 sm:px-4"
+									disabled={!stripeConfigured || quotingTier === plan.key}
+									onClick={() => onSendQuote(plan.key, billingInterval)}
+								>
+									{quotingTier === plan.key
+										? "Creating quote…"
+										: "Send quote"}
+								</Button>
+							) : null}
 						</CardContent>
 					</Card>
 					</div>

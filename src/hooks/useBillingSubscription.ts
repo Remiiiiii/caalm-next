@@ -15,10 +15,14 @@ export type BillingSubscriptionPayload = {
 	plans: PricingPlan[];
 };
 
-async function fetchBillingSubscription(
-	url: string,
-): Promise<BillingSubscriptionPayload> {
-	const res = await fetch(url, { cache: "no-store" });
+async function fetchBillingSubscription([url, orgId]: [
+	string,
+	string,
+]): Promise<BillingSubscriptionPayload> {
+	const res = await fetch(url, {
+		cache: "no-store",
+		headers: { "x-org-id": orgId },
+	});
 	if (!res.ok) {
 		const err = await res.json().catch(() => ({}));
 		throw new Error(err.error || "Failed to load plans");
@@ -39,7 +43,7 @@ export function useBillingSubscription() {
 	const url = billingSubscriptionUrl(resolvedOrgId);
 
 	const { data, error, isLoading } = useSWR(
-		!permissionsLoading && canBilling ? url : null,
+		!permissionsLoading && canBilling ? [url, resolvedOrgId] : null,
 		fetchBillingSubscription,
 		{
 			dedupingInterval: 15000,

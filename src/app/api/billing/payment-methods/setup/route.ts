@@ -5,11 +5,12 @@ import { getCurrentUser } from "@/lib/actions/user.actions";
 import { requirePermission } from "@/lib/rbac/middleware";
 import { getOrganization } from "@/lib/rbac/organizations";
 import { validateUserOrgAccess } from "@/lib/rbac/permissions";
-import { createPortalSession } from "@/lib/stripe/billing";
+import { createPaymentMethodSetupSession } from "@/lib/stripe/billing";
 import { isStripeConfigured } from "@/lib/stripe/client";
 
 const bodySchema = z.object({
 	orgId: z.string().min(1),
+	replacePaymentMethodId: z.string().min(1).optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -56,10 +57,7 @@ export async function POST(request: NextRequest) {
 		);
 	}
 
-	const hasOrgAccess = await validateUserOrgAccess(
-		user.$id,
-		parsed.data.orgId,
-	);
+	const hasOrgAccess = await validateUserOrgAccess(user.$id, parsed.data.orgId);
 	if (!hasOrgAccess) {
 		return NextResponse.json(
 			{ error: "Access denied to this organization" },
@@ -76,19 +74,24 @@ export async function POST(request: NextRequest) {
 	}
 
 	const appUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
+	const billingUrl = `${appUrl}/settings/billing?tab=billing`;
 
 	try {
-		const url = await createPortalSession({
+		const url = await createPaymentMethodSetupSession({
 			org,
 			email: user.email,
 			userName: user.fullName,
-			returnUrl: `${appUrl}/settings/billing?tab=billing`,
+			successUrl: `${billingUrl}&setup=success`,
+			cancelUrl: billingUrl,
+			replacePaymentMethodId: parsed.data.replacePaymentMethodId,
 		});
 		return NextResponse.json({ url });
 	} catch (error: unknown) {
 		const message =
-			error instanceof Error ? error.message : "Failed to create portal session";
-		console.error("[billing/portal]", error);
+			error instanceof Error
+				? error.message
+				: "Failed to start payment method setup";
+		console.error("[billing/payment-methods/setup]", error);
 		return NextResponse.json({ error: message }, { status: 500 });
 	}
 }

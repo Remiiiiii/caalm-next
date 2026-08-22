@@ -436,7 +436,7 @@ const HERO_TRUST_PILLARS = [
 		id: "security",
 		title: "Enterprise-grade security",
 		description:
-			"HIPAA, SOC 2, and GDPR compliance safeguard sensitive data with industry-leading security practices.",
+			"Your data is encrypted and hosted on SOC 2–audited infrastructure. RBAC, SSO, and GDPR-ready processing keep access and personal data under your control.",
 		Visual: SecurityVisual,
 	},
 	{

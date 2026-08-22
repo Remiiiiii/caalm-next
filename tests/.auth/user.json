@@ -1,33 +1,43 @@
 {
-	"cookies": [
-		{
-			"name": "a_session_test",
-			"value": "test-session-token",
-			"domain": "localhost",
-			"path": "/",
-			"expires": -1,
-			"httpOnly": true,
-			"secure": false,
-			"sameSite": "Lax"
-		}
-	],
-	"origins": [
-		{
-			"origin": "http://localhost:3000",
-			"localStorage": [
-				{
-					"name": "user-email",
-					"value": "test@example.com"
-				},
-				{
-					"name": "cached_user",
-					"value": "{\"user\":{\"$id\":\"test-user-id\",\"email\":\"test@example.com\",\"name\":\"Test User\"},\"timestamp\":1767886863366}"
-				},
-				{
-					"name": "auth-token",
-					"value": "test-auth-token"
-				}
-			]
-		}
-	]
+  "cookies": [
+    {
+      "name": "2fa_completed",
+      "value": "true",
+      "domain": "localhost",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "2fa_user_id",
+      "value": "68682eba0038a0e0b7fd",
+      "domain": "localhost",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": [
+    {
+      "origin": "http://localhost:3000",
+      "localStorage": [
+        {
+          "name": "user-email",
+          "value": "test@example.com"
+        },
+        {
+          "name": "cached_user",
+          "value": "{\"user\":{\"$id\":\"68682eba0038a0e0b7fd\",\"email\":\"test@example.com\",\"name\":\"Test User\"},\"timestamp\":1787353938956}"
+        },
+        {
+          "name": "auth-token",
+          "value": "test-auth-token"
+        }
+      ]
+    }
+  ]
 }

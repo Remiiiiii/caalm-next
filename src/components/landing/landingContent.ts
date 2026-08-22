@@ -191,7 +191,7 @@ export const FAQ_ITEMS = [
 	{
 		question: "How secure is my contract data?",
 		answer:
-			"Enterprise-grade security with encrypted data, role-based access control, and audit trails so your organization can meet compliance standards.",
+			"Contract data is encrypted at rest and in transit, hosted on SOC 2–audited infrastructure, and gated with role-based access, SSO, and audit trails. GDPR-ready processing covers EU personal data.",
 	},
 	{
 		question: "How does permission-based access work?",

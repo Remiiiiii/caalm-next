@@ -22,6 +22,7 @@ vi.mock("@/lib/actions/user.actions", () => ({
 
 vi.mock("@/lib/rbac/permissions", () => ({
 	validateUserOrgAccess: vi.fn(async () => true),
+	getUserPermissions: vi.fn(async () => []),
 }));
 
 vi.mock("@/lib/stripe/webhook-idempotency", () => ({
@@ -43,6 +44,7 @@ vi.mock("@/lib/stripe/client", () => ({
 vi.mock("@/lib/stripe/billing", () => ({
 	createCheckoutSession: vi.fn(),
 	createPortalSession: vi.fn(),
+	createAndFinalizeQuote: vi.fn(),
 	listInvoicesForOrg: vi.fn(),
 	changeSubscriptionPlan: vi.fn(),
 	startOrgPilot: vi.fn(),
@@ -202,6 +204,36 @@ describe("POST /api/billing/checkout", () => {
 		const response = await POST(request);
 		expect(response.status).toBe(403);
 		expect(mockGetCurrentUser).not.toHaveBeenCalled();
+	});
+});
+
+describe("POST /api/billing/quotes", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it("returns 403 when user lacks billing or platform permission", async () => {
+		mockRequirePermission.mockResolvedValue(
+			new Response(JSON.stringify({ error: "Insufficient permissions" }), {
+				status: 403,
+			}),
+		);
+
+		const { POST } = await import("@/app/api/billing/quotes/route");
+		const request = new NextRequest(
+			"http://localhost:3000/api/billing/quotes",
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					orgId: "org-1",
+					tier: "enterprise",
+					interval: "yearly",
+				}),
+			},
+		);
+		const response = await POST(request);
+		expect(response.status).toBe(403);
 	});
 });
 
