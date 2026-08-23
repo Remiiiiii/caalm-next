@@ -15,15 +15,32 @@ test.describe("Billing settings surface", () => {
 				waitUntil: "domcontentloaded",
 				timeout: 60000,
 			});
-			await expect(page).not.toHaveURL(/sign-in/);
-			await expect(page).not.toHaveURL(/\/settings$/, {
-				timeout: 15000,
+			await expect(page).not.toHaveURL(/sign-in/, { timeout: 15000 });
+
+			const pageRoot = page.getByTestId("billing-integrations-page");
+			const forbidden = page.getByTestId("billing-page-forbidden");
+			const loading = page.getByTestId("billing-page-loading");
+
+			// Org + permissions hydrate first. Do not wait on heading text:
+			// gradient headings can have an empty accessible name, and a
+			// missing-permission bounce happens after the first URL check.
+			await expect(loading.or(pageRoot).or(forbidden)).toBeVisible({
+				timeout: 30000,
 			});
-			await expect(
-				page.getByRole("heading", { name: /billing & integrations/i }),
-			).toBeVisible({ timeout: 30000 });
+			await expect(loading).toHaveCount(0, { timeout: 30000 });
+
+			const bouncedToSettings = /\/settings\/?$/.test(
+				new URL(page.url()).pathname,
+			);
+			if (bouncedToSettings || (await forbidden.isVisible().catch(() => false))) {
+				throw new Error(
+					"Playwright user cannot open billing. Grant settings.billing to PLAYWRIGHT_E2E_USER_ID.",
+				);
+			}
+
+			await expect(pageRoot).toBeVisible({ timeout: 10000 });
 			await expect(page.getByRole("tab", { name: "Billing" })).toBeVisible({
-				timeout: 15000,
+				timeout: 10000,
 			});
 		});
 

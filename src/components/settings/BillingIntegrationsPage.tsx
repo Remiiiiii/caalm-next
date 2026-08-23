@@ -683,7 +683,10 @@ export default function BillingIntegrationsPage() {
 
 		return (
 
-			<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-8">
+			<div
+				data-testid="billing-page-loading"
+				className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-8"
+			>
 
 				<LoadingSpinner size="sm" label="Loading billing…" />
 
@@ -697,7 +700,16 @@ export default function BillingIntegrationsPage() {
 
 	if (!canAccessPage) {
 
-		return null;
+		return (
+			<div
+				data-testid="billing-page-forbidden"
+				className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-8"
+			>
+				<p className="text-sm text-slate-600">
+					You need billing or integrations permission to open this page.
+				</p>
+			</div>
+		);
 
 	}
 
@@ -709,13 +721,19 @@ export default function BillingIntegrationsPage() {
 
 	return (
 
-		<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
+		<div
+			data-testid="billing-integrations-page"
+			className="w-full px-4 sm:px-6 lg:px-8 xl:px-12"
+		>
 
 			<div className="mb-6 flex items-center gap-4 justify-start self-start w-full">
 
 				<div>
 
-					<h1 className="h1 capitalize sidebar-gradient-text">
+					<h1
+						aria-label="Billing & Integrations"
+						className="h1 capitalize sidebar-gradient-text"
+					>
 
 						Billing & Integrations
 
