@@ -262,7 +262,7 @@ export default function Step1FileUpload({
 												variant="ghost"
 												size="sm"
 												onClick={() => onDeleteDraft(draft.$id)}
-												className="primary-btn h-8 px-3"
+												className="delete-btn h-8 px-3"
 											>
 												<Trash2 className="h-3 w-3" />
 												Delete

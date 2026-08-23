@@ -3005,7 +3005,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 															variant="ghost"
 															size="sm"
 															onClick={() => handleDeleteClick(draft.$id)}
-															className="primary-btn h-8 px-3"
+															className="delete-btn h-8 px-3"
 														>
 															<Trash2 className="h-3 w-3" />
 															Delete
@@ -6814,7 +6814,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 										setDraftToDelete(null);
 									}
 								}}
-								className="primary-btn px-3 sm:px-4"
+								className="delete-btn px-3 sm:px-4"
 							>
 								<Trash2 className="h-4 w-4" />
 								Delete Draft

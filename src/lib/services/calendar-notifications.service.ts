@@ -1,5 +1,10 @@
 import { ID, Query } from "node-appwrite";
+import { getCalendarEventById } from "@/lib/actions/calendar.actions";
+import { getUserByAccountId, getUserById } from "@/lib/actions/user.actions";
 import { createAdminClient } from "@/lib/appwrite";
+import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
+import { zonedWallTimeToUtc } from "@/lib/timezone";
+import { getOrganizationTimezone } from "@/lib/timezone/org";
 import { appwriteConfig } from "../appwrite/config";
 import { notificationService } from "./notificationService";
 
@@ -17,6 +22,7 @@ export interface CalendarEventReminder {
 	channels: NotificationChannel[];
 	isSent: boolean;
 	sentAt?: string;
+	escalatedAt?: string;
 	createdAt: string;
 }
 
@@ -57,9 +63,7 @@ export interface CreateEscalationRuleData {
 }
 
 const getRemindersCollectionId = (): string => {
-	const collectionId =
-		process.env.NEXT_PUBLIC_APPWRITE_CALENDAR_REMINDERS_COLLECTION ||
-		"calendar_reminders";
+	const collectionId = appwriteConfig.calendarRemindersCollectionId;
 	if (!collectionId) {
 		throw new Error("Calendar reminders collection ID not configured");
 	}
@@ -67,14 +71,51 @@ const getRemindersCollectionId = (): string => {
 };
 
 const getEscalationRulesCollectionId = (): string => {
-	const collectionId =
-		process.env.NEXT_PUBLIC_APPWRITE_ESCALATION_RULES_COLLECTION ||
-		"escalation_rules";
+	const collectionId = appwriteConfig.escalationRulesCollectionId;
 	if (!collectionId) {
 		throw new Error("Escalation rules collection ID not configured");
 	}
 	return collectionId;
 };
+
+const getEscalationJobsCollectionId = (): string => {
+	const collectionId = appwriteConfig.escalationJobsCollectionId;
+	if (!collectionId) {
+		throw new Error("Escalation jobs collection ID not configured");
+	}
+	return collectionId;
+};
+
+function parseJsonArray(value: unknown): string[] {
+	if (Array.isArray(value)) {
+		return value.map(String);
+	}
+	if (typeof value === "string") {
+		try {
+			const parsed = JSON.parse(value);
+			return Array.isArray(parsed) ? parsed.map(String) : [];
+		} catch {
+			return [];
+		}
+	}
+	return [];
+}
+
+function parseReminder(row: Record<string, unknown>): CalendarEventReminder {
+	return {
+		$id: String(row.$id || ""),
+		eventId: String(row.eventId || ""),
+		userId: String(row.userId || ""),
+		reminderType: (row.reminderType as CalendarEventReminder["reminderType"]) ||
+			"before_start",
+		reminderMinutes: Number(row.reminderMinutes) || 0,
+		channels: parseJsonArray(row.channels) as NotificationChannel[],
+		isSent: Boolean(row.isSent),
+		sentAt: row.sentAt ? String(row.sentAt) : undefined,
+		escalatedAt: row.escalatedAt ? String(row.escalatedAt) : undefined,
+		createdAt: String(row.createdAt || ""),
+	};
+}
 
 /**
  * Create a reminder for a calendar event
@@ -132,7 +173,7 @@ export const sendReminderNotification = async (
 	userEmail?: string,
 	userPhone?: string,
 ): Promise<void> => {
-	const channels = reminder.channels as NotificationChannel[];
+	const channels = parseJsonArray(reminder.channels) as NotificationChannel[];
 
 	const reminderTime = new Date(eventStartDate);
 	if (eventStartTime) {
@@ -931,3 +972,480 @@ export const notifyMeetingInvitees = async (
 
 	return notified;
 };
+
+export async function computeReminderDueAt(
+	reminder: Pick<
+		CalendarEventReminder,
+		"reminderType" | "reminderMinutes"
+	>,
+	event: {
+		startDate: string;
+		endDate?: string;
+		startTime?: string;
+		endTime?: string;
+		orgId?: string;
+	},
+): Promise<Date> {
+	const useEnd = reminder.reminderType === "before_end";
+	const dateSource = useEnd
+		? event.endDate || event.startDate
+		: event.startDate;
+	const timeSource = useEnd
+		? event.endTime || event.startTime || "00:00"
+		: event.startTime || "00:00";
+
+	const timeZone = await getOrganizationTimezone(event.orgId || null);
+	const dateKey = String(dateSource).split("T")[0];
+	const [year, month, day] = dateKey.split("-").map(Number);
+	const [hours, minutes] = timeSource.split(":").map(Number);
+	const eventMoment =
+		year && month && day
+			? zonedWallTimeToUtc(
+					{
+						year,
+						month,
+						day,
+						hour: hours || 0,
+						minute: minutes || 0,
+					},
+					timeZone,
+				)
+			: new Date(dateSource);
+
+	const due = new Date(eventMoment);
+	due.setMinutes(due.getMinutes() - reminder.reminderMinutes);
+	return due;
+}
+
+async function resolveEventOrgId(
+	event: { orgId?: string; createdByUserId?: string },
+	fallbackUserId?: string,
+): Promise<string | null> {
+	if (typeof event.orgId === "string" && event.orgId) return event.orgId;
+	const userId = event.createdByUserId || fallbackUserId;
+	if (!userId) return null;
+	const org = await getUserDefaultOrganization(userId);
+	return org?.orgId || null;
+}
+
+async function resolveUserContact(userId: string): Promise<{
+	email?: string;
+	phone?: string;
+}> {
+	let user = await getUserById(userId);
+	if (!user) {
+		user = await getUserByAccountId(userId);
+	}
+	if (!user) return {};
+	return {
+		email: typeof user.email === "string" ? user.email : undefined,
+		phone: typeof user.phone === "string" ? user.phone : undefined,
+	};
+}
+
+export async function listRemindersForEvent(
+	eventId: string,
+): Promise<CalendarEventReminder[]> {
+	const { tablesDB } = await createAdminClient();
+	const response = await tablesDB.listRows({
+		databaseId: appwriteConfig.databaseId!,
+		tableId: getRemindersCollectionId(),
+		queries: [Query.equal("eventId", eventId), Query.limit(100)],
+	});
+	return response.rows.map((row) =>
+		parseReminder(row as unknown as Record<string, unknown>),
+	);
+}
+
+export async function replaceEventReminders(
+	eventId: string,
+	userId: string,
+	reminders: CreateReminderData[],
+): Promise<void> {
+	const existing = await listRemindersForEvent(eventId);
+	const { tablesDB } = await createAdminClient();
+	const collectionId = getRemindersCollectionId();
+
+	for (const reminder of existing) {
+		if (!reminder.isSent) {
+			await tablesDB.deleteRow({
+				databaseId: appwriteConfig.databaseId!,
+				tableId: collectionId,
+				rowId: reminder.$id,
+			});
+		}
+	}
+
+	for (const reminder of reminders) {
+		await createEventReminder({
+			...reminder,
+			eventId,
+			userId,
+		});
+	}
+}
+
+export async function cancelUnsentRemindersForEvent(
+	eventId: string,
+): Promise<number> {
+	const existing = await listRemindersForEvent(eventId);
+	const { tablesDB } = await createAdminClient();
+	const collectionId = getRemindersCollectionId();
+	let cancelled = 0;
+
+	for (const reminder of existing) {
+		if (reminder.isSent) continue;
+		await tablesDB.updateRow({
+			databaseId: appwriteConfig.databaseId!,
+			tableId: collectionId,
+			rowId: reminder.$id,
+			data: {
+				isSent: true,
+				sentAt: new Date().toISOString(),
+			},
+		});
+		cancelled += 1;
+	}
+
+	return cancelled;
+}
+
+export async function enqueueEscalationJobsForEvent(input: {
+	organizationId: string;
+	eventId: string;
+	triggerEvent: Extract<
+		EscalationRule["triggerEvent"],
+		"event_created" | "event_updated" | "event_cancelled"
+	>;
+}): Promise<number> {
+	const rules = await getActiveEscalationRules(
+		input.organizationId,
+		input.triggerEvent,
+	);
+	if (rules.length === 0) return 0;
+
+	const { tablesDB } = await createAdminClient();
+	const collectionId = getEscalationJobsCollectionId();
+	const now = Date.now();
+	let created = 0;
+
+	for (const rule of rules) {
+		const triggerAt = new Date(now + rule.delayMinutes * 60_000).toISOString();
+		try {
+			await tablesDB.createRow({
+				databaseId: appwriteConfig.databaseId!,
+				tableId: collectionId,
+				rowId: ID.unique(),
+				data: {
+					organizationId: input.organizationId,
+					ruleId: rule.$id,
+					triggerEvent: input.triggerEvent,
+					eventId: input.eventId,
+					triggerAt,
+					isSent: false,
+					createdAt: new Date().toISOString(),
+				},
+			});
+			created += 1;
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			if (!/unique|already exists|duplicate/i.test(message)) {
+				console.error(
+					"[SERVER] enqueueEscalationJobsForEvent] Failed to enqueue:",
+					error,
+				);
+			}
+		}
+	}
+
+	return created;
+}
+
+async function sendEscalationNotification(input: {
+	userId: string;
+	eventTitle: string;
+	eventId: string;
+	reason: string;
+	channels: NotificationChannel[];
+}): Promise<void> {
+	const message = `${input.reason}: "${input.eventTitle}"`;
+	const { email, phone } = await resolveUserContact(input.userId);
+
+	try {
+		await notificationService.createNotification({
+			userId: input.userId,
+			title: "Calendar escalation",
+			message,
+			type: "event_reminder",
+			priority: "high",
+			actionUrl: `/calendar?eventId=${input.eventId}`,
+			actionText: "View Event",
+			metadata: {
+				eventId: input.eventId,
+				escalation: true,
+			},
+		});
+	} catch (error) {
+		console.error(
+			"[SERVER] sendEscalationNotification] In-app notification failed:",
+			error,
+		);
+	}
+
+	for (const channel of input.channels) {
+		try {
+			if (channel === "email" && email) {
+				const { mailgunService } = await import("./mailgun");
+				await mailgunService.sendEmail({
+					to: email,
+					subject: `[CAALM] Calendar escalation: ${input.eventTitle}`,
+					text: message,
+				});
+			} else if (channel === "sms" && phone) {
+				await notificationService.sendSMSNotification(input.userId, {
+					title: "Calendar escalation",
+					message,
+					priority: "high",
+					actionUrl: `/calendar?eventId=${input.eventId}`,
+					type: "event_reminder",
+				});
+			}
+		} catch (error) {
+			console.error(
+				`[SERVER] sendEscalationNotification] ${channel} failed:`,
+				error,
+			);
+		}
+	}
+}
+
+export async function processDueReminders(): Promise<{
+	processed: string[];
+	failed: string[];
+}> {
+	const { tablesDB } = await createAdminClient();
+	const remindersResponse = await tablesDB.listRows({
+		databaseId: appwriteConfig.databaseId!,
+		tableId: getRemindersCollectionId(),
+		queries: [Query.equal("isSent", false), Query.limit(100)],
+	});
+
+	const processed: string[] = [];
+	const failed: string[] = [];
+	const now = Date.now();
+
+	for (const row of remindersResponse.rows) {
+		const reminder = parseReminder(row as unknown as Record<string, unknown>);
+		try {
+			const event = await getCalendarEventById(reminder.eventId);
+			if (!event || event.deleted_at) {
+				await tablesDB.updateRow({
+					databaseId: appwriteConfig.databaseId!,
+					tableId: getRemindersCollectionId(),
+					rowId: reminder.$id,
+					data: {
+						isSent: true,
+						sentAt: new Date().toISOString(),
+					},
+				});
+				continue;
+			}
+
+			const orgId = await resolveEventOrgId(
+				event as { orgId?: string; createdByUserId?: string },
+				reminder.userId,
+			);
+			const dueAt = await computeReminderDueAt(reminder, {
+				startDate: event.startDate,
+				endDate: event.endDate,
+				startTime: event.startTime,
+				endTime: event.endTime,
+				orgId: orgId || undefined,
+			});
+
+			if (dueAt.getTime() > now) continue;
+
+			const contact = await resolveUserContact(reminder.userId);
+			await sendReminderNotification(
+				reminder,
+				event.title,
+				event.startDate,
+				event.startTime || "00:00",
+				contact.email,
+				contact.phone,
+			);
+			processed.push(reminder.$id);
+		} catch (error) {
+			console.error(
+				`[SERVER] processDueReminders] Error processing reminder ${reminder.$id}:`,
+				error,
+			);
+			failed.push(reminder.$id);
+		}
+	}
+
+	return { processed, failed };
+}
+
+export async function processMissedReminderEscalations(): Promise<number> {
+	const { tablesDB } = await createAdminClient();
+	const remindersResponse = await tablesDB.listRows({
+		databaseId: appwriteConfig.databaseId!,
+		tableId: getRemindersCollectionId(),
+		queries: [Query.equal("isSent", false), Query.limit(100)],
+	});
+
+	const now = Date.now();
+	let escalated = 0;
+
+	for (const row of remindersResponse.rows) {
+		const reminder = parseReminder(row as unknown as Record<string, unknown>);
+		if (reminder.escalatedAt) continue;
+
+		try {
+			const event = await getCalendarEventById(reminder.eventId);
+			if (!event || event.deleted_at) continue;
+
+			const orgId = await resolveEventOrgId(
+				event as { orgId?: string; createdByUserId?: string },
+				reminder.userId,
+			);
+			if (!orgId) continue;
+
+			const dueAt = await computeReminderDueAt(reminder, {
+				startDate: event.startDate,
+				endDate: event.endDate,
+				startTime: event.startTime,
+				endTime: event.endTime,
+				orgId,
+			});
+
+			const rules = await getActiveEscalationRules(orgId, "reminder_not_sent");
+			const matching = rules.filter(
+				(rule) => dueAt.getTime() + rule.delayMinutes * 60_000 <= now,
+			);
+			if (matching.length === 0) continue;
+
+			for (const rule of matching) {
+				for (const userId of rule.escalateToUserIds) {
+					await sendEscalationNotification({
+						userId,
+						eventTitle: event.title,
+						eventId: reminder.eventId,
+						reason: `Missed reminder for upcoming event`,
+						channels: rule.escalationChannels,
+					});
+				}
+			}
+
+			await tablesDB.updateRow({
+				databaseId: appwriteConfig.databaseId!,
+				tableId: getRemindersCollectionId(),
+				rowId: reminder.$id,
+				data: { escalatedAt: new Date().toISOString() },
+			});
+			escalated += 1;
+		} catch (error) {
+			console.error(
+				`[SERVER] processMissedReminderEscalations] Failed for ${reminder.$id}:`,
+				error,
+			);
+		}
+	}
+
+	return escalated;
+}
+
+export async function processDueEscalationJobs(): Promise<{
+	processed: string[];
+	failed: string[];
+}> {
+	const { tablesDB } = await createAdminClient();
+	const nowIso = new Date().toISOString();
+	const response = await tablesDB.listRows({
+		databaseId: appwriteConfig.databaseId!,
+		tableId: getEscalationJobsCollectionId(),
+		queries: [
+			Query.equal("isSent", false),
+			Query.lessThanEqual("triggerAt", nowIso),
+			Query.limit(100),
+		],
+	});
+
+	const processed: string[] = [];
+	const failed: string[] = [];
+
+	for (const row of response.rows) {
+		const job = row as unknown as Record<string, unknown>;
+		const jobId = String(job.$id || "");
+		try {
+			const event = await getCalendarEventById(String(job.eventId || ""));
+			const eventTitle = event?.title || "Calendar event";
+			const reason =
+				job.triggerEvent === "event_created"
+					? "Event created"
+					: job.triggerEvent === "event_updated"
+						? "Event updated"
+						: job.triggerEvent === "event_cancelled"
+							? "Event cancelled"
+							: "Calendar escalation";
+
+			const rules = await getActiveEscalationRules(
+				String(job.organizationId || ""),
+				job.triggerEvent as EscalationRule["triggerEvent"],
+			);
+			const rule = rules.find((item) => item.$id === String(job.ruleId || ""));
+			const channels = rule?.escalationChannels || ["in_app"];
+			const userIds = rule?.escalateToUserIds || [];
+
+			for (const userId of userIds) {
+				await sendEscalationNotification({
+					userId,
+					eventTitle,
+					eventId: String(job.eventId || ""),
+					reason,
+					channels,
+				});
+			}
+
+			await tablesDB.updateRow({
+				databaseId: appwriteConfig.databaseId!,
+				tableId: getEscalationJobsCollectionId(),
+				rowId: jobId,
+				data: {
+					isSent: true,
+					sentAt: new Date().toISOString(),
+				},
+			});
+			processed.push(jobId);
+		} catch (error) {
+			console.error(
+				`[SERVER] processDueEscalationJobs] Failed for ${jobId}:`,
+				error,
+			);
+			failed.push(jobId);
+		}
+	}
+
+	return { processed, failed };
+}
+
+export async function runCalendarNotificationCron(): Promise<{
+	remindersProcessed: number;
+	remindersFailed: number;
+	missedReminderEscalations: number;
+	jobsProcessed: number;
+	jobsFailed: number;
+}> {
+	const reminders = await processDueReminders();
+	const missedReminderEscalations = await processMissedReminderEscalations();
+	const jobs = await processDueEscalationJobs();
+
+	return {
+		remindersProcessed: reminders.processed.length,
+		remindersFailed: reminders.failed.length,
+		missedReminderEscalations,
+		jobsProcessed: jobs.processed.length,
+		jobsFailed: jobs.failed.length,
+	};
+}

@@ -9,6 +9,7 @@ alwaysApply: false
 - Use utility-first classes for rapid UI development.
 - Create custom themes using Tailwind's configuration file.
 - Utilize `@apply` for reusable styles in your CSS files.
+- Text inputs, selects, textareas, and search fields must use a visible `border border-slate-300`. Do not use `border-none`, `border-0`, `border-white/50`, or `border-slate-200` on a standalone field. See `input-field-borders.mdc`.
 
 ## Custom Colors
 

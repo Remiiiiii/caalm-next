@@ -39,11 +39,13 @@ export function useBillingSubscription() {
 	const { orgId } = useOrganization();
 	const { permissions, loading: permissionsLoading } = usePermissions();
 	const canBilling = permissions.includes(PERMISSIONS.SETTINGS.BILLING);
-	const resolvedOrgId = orgId || "default_organization";
+	const resolvedOrgId = orgId ?? "";
 	const url = billingSubscriptionUrl(resolvedOrgId);
 
 	const { data, error, isLoading } = useSWR(
-		!permissionsLoading && canBilling ? [url, resolvedOrgId] : null,
+		!permissionsLoading && canBilling && resolvedOrgId
+			? [url, resolvedOrgId]
+			: null,
 		fetchBillingSubscription,
 		{
 			dedupingInterval: 15000,

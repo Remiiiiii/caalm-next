@@ -309,6 +309,29 @@
 			animation: none;
 		}
 	}
+
+	/* Destructive confirm — red outline, not the teal primary gradient */
+	.delete-btn,
+	.btn-delete {
+		@apply flex w-full items-center justify-center rounded-full border border-red/30! bg-red/10! px-4 py-2 font-semibold text-red! shadow-none transition-all duration-200 sm:w-auto sm:px-6;
+		white-space: nowrap;
+		background-image: none !important;
+	}
+
+	.delete-btn:hover,
+	.btn-delete:hover {
+		@apply border-red/40! bg-red/20! text-red!;
+	}
+
+	.delete-btn:disabled,
+	.btn-delete:disabled {
+		@apply opacity-50;
+	}
+
+	.delete-btn::after,
+	.btn-delete::after {
+		content: none;
+	}
 	.analytics-icon {
 		@apply shadow-md;
 		background-image: linear-gradient(
@@ -367,7 +390,8 @@
 		background: rgba(255, 255, 255, 0.3);
 		backdrop-filter: blur(8px);
 		-webkit-backdrop-filter: blur(8px);
-		border: 1px solid rgba(255, 255, 255, 0.5);
+		/* Visible slate-300 border; slate-200 disappears on bg-slate-50 */
+		border: 1px solid #cbd5e1;
 		padding-left: 0.75rem;
 		padding-right: 0.75rem;
 		padding-top: 0.5rem;
@@ -375,7 +399,7 @@
 		box-sizing: border-box;
 	}
 	.glass-form-control[data-with-leading-icon="true"] {
-		padding-left: 2.5rem;
+		padding-left: 3rem;
 	}
 	.glass-form-control:focus,
 	.glass-form-control:focus-visible {

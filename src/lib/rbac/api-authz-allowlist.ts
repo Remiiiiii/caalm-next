@@ -39,6 +39,16 @@ export const API_AUTHZ_ALLOWLIST: readonly ApiAuthzAllowEntry[] = [
 		reason: "GitHub HMAC signature verification (X-Hub-Signature-256)",
 	},
 	{
+		path: "roadmap/webhooks/ci-test-result",
+		class: "webhook",
+		reason: "Roadmap CI HMAC signature (X-Hub-Signature-256 / X-Roadmap-Signature)",
+	},
+	{
+		path: "roadmap/webhooks/pr-merged",
+		class: "webhook",
+		reason: "Roadmap merge HMAC signature (GitHub pull_request.closed or slim payload)",
+	},
+	{
 		path: "auth/callback/microsoft",
 		class: "oauth",
 		reason: "Microsoft OAuth redirect callback",

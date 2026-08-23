@@ -596,7 +596,7 @@ const LicenseActionDropdown = ({
 									handleAction();
 								}}
 								disabled={isLoading}
-								className="primary-btn gap-2 px-3 sm:px-4"
+								className="delete-btn gap-2 px-3 sm:px-4"
 							>
 								<Trash2 className="h-4 w-4 shrink-0" />
 								{isLoading ? "Deleting..." : "Delete License"}

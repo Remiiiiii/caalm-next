@@ -115,10 +115,12 @@
 
 ### Inputs
 
+Every standalone text input, select, textarea, and search field must have a **visible** `1px solid #CBD5E1` (`border-slate-300`) border. Do not use white, translucent, or `slate-200` borders on light fills; they disappear.
+
 ```css
 .input {
   padding: 12px 16px;
-  border: 1px solid #E2E8F0;
+  border: 1px solid #CBD5E1;
   border-radius: 8px;
   font-size: 16px;
   transition: border-color 200ms ease;

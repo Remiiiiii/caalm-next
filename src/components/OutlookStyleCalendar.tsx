@@ -90,6 +90,7 @@ import {
 	DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/search-field";
 import { Label } from "@/components/ui/label";
 import {
 	Popover,
@@ -4098,25 +4099,23 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 												</Label>
 												{/* Location Search */}
 												<div className="space-y-2">
-													<div className="relative">
-														<Input
-															placeholder="Search for a meeting room or location..."
-															value={locationSearch}
-															onChange={(e) => {
-																const value = e.target.value;
-																setLocationSearch(value);
-																setNewEvent({ ...newEvent, location: value });
-																searchLocations(value);
-															}}
-															onFocus={() => {
-																if (locationSearch.length >= 2) {
-																	searchLocations(locationSearch);
-																}
-															}}
-															className="bg-white border-slate-300 focus:border-blue-500 focus:ring-blue-500 h-11 pl-10"
-														/>
-														<MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-													</div>
+													<SearchField
+														id="location"
+														placeholder="Search for a meeting room or location..."
+														value={locationSearch}
+														onChange={(e) => {
+															const value = e.target.value;
+															setLocationSearch(value);
+															setNewEvent({ ...newEvent, location: value });
+															searchLocations(value);
+														}}
+														onFocus={() => {
+															if (locationSearch.length >= 2) {
+																searchLocations(locationSearch);
+															}
+														}}
+														className="h-11 bg-white"
+													/>
 
 													{/* Location Search Results */}
 													{locationSearch.length >= 2 &&
@@ -4383,8 +4382,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 
 								<Button
 									size="sm"
-									variant="outline"
-									className="px-3 sm:px-4 border-slate-200 text-slate-700 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 cursor-pointer"
+									className="btn-primary px-3 sm:px-4 cursor-pointer"
 									onClick={() => setIsFiltersDrawerOpen(true)}
 								>
 									<SlidersHorizontal className="h-4 w-4" />
@@ -4394,16 +4392,18 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 						</div>
 
 						<Dialog open={showSettings} onOpenChange={setShowSettings}>
-							<DialogContent className="sm:max-w-[500px] shadow-xl">
+							<DialogContent className="sm:max-w-[460px] max-h-[80vh] overflow-y-auto p-4 sm:p-4 gap-2 shadow-xl">
 								<DialogHeader>
 									<DialogTitle className="sidebar-gradient-text">
 										Calendar Settings
 									</DialogTitle>
 								</DialogHeader>
-								<CalendarSettings
-									userId={user?.$id || ""}
-									onClose={() => setShowSettings(false)}
-								/>
+								{showSettings ? (
+									<CalendarSettings
+										userId={user?.$id || ""}
+										onClose={() => setShowSettings(false)}
+									/>
+								) : null}
 							</DialogContent>
 						</Dialog>
 
@@ -6041,7 +6041,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 														<Button
 															variant="outline"
 															onClick={handleDeleteEvent}
-															className="primary-btn px-3 sm:px-4 text-red-600 hover:text-red-700 hover:bg-red-50"
+															className="delete-btn px-3 sm:px-4"
 														>
 															<Trash2 className="w-4 h-4" />
 															Delete
@@ -6195,7 +6195,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 								</Button>
 								<Button
 									onClick={confirmDeleteEvent}
-									className="primary-btn px-3 sm:px-4"
+									className="delete-btn px-3 sm:px-4"
 								>
 									<Trash2 className="w-4 h-4" />
 									Delete Event

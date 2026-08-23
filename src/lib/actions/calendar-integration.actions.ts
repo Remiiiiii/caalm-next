@@ -333,6 +333,36 @@ export const getValidIntegration = async (
 	}
 };
 
+export type CalendarIntegrationStatus = {
+	connected: boolean;
+	lastSync?: string;
+	syncEnabled: boolean;
+};
+
+/**
+ * Read-only status for settings UI. Does not refresh Microsoft tokens —
+ * token refresh talks to Microsoft and can take several seconds.
+ */
+export const getCalendarIntegrationStatus = async (
+	userId: string,
+	provider: "microsoft" | "google",
+): Promise<CalendarIntegrationStatus> => {
+	try {
+		const integration = await getCalendarIntegration(userId, provider);
+		if (!integration) {
+			return { connected: false, syncEnabled: false };
+		}
+		return {
+			connected: true,
+			lastSync: integration.last_sync,
+			syncEnabled: integration.sync_enabled ?? true,
+		};
+	} catch (error) {
+		console.error("Error getting calendar integration status:", error);
+		return { connected: false, syncEnabled: false };
+	}
+};
+
 /**
  * Check if user has active calendar integration
  */

@@ -524,7 +524,7 @@ const RolesManagement = () => {
 							<Button
 								type="button"
 								variant="ghost"
-								className="primary-btn px-3 sm:px-4"
+								className="delete-btn px-3 sm:px-4"
 								onClick={() => void handleDelete()}
 							>
 								<Trash2 className="h-4 w-4" />

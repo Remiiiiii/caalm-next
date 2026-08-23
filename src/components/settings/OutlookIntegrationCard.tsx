@@ -14,8 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import {
-	getMicrosoftCalendarIntegration,
-	hasMicrosoftCalendarIntegration,
+	getMicrosoftCalendarIntegrationStatus,
 	syncMicrosoftCalendar,
 } from "@/lib/actions/calendar.actions";
 import IntegrationCard from "./IntegrationCard";
@@ -38,36 +37,32 @@ export default function OutlookIntegrationCard({
 	const loadStatus = useCallback(async () => {
 		try {
 			setLoading(true);
-			const [hasIntegration, integration] = await Promise.all([
-				hasMicrosoftCalendarIntegration(userId),
-				getMicrosoftCalendarIntegration(userId),
-			]);
+			const status = await getMicrosoftCalendarIntegrationStatus(userId);
+			setConnected(status.connected);
+			setLastSync(status.lastSync);
+			setSyncEnabled(status.syncEnabled);
+			setUserEmail(undefined);
+			setLoading(false);
 
-			let email: string | undefined;
-			if (integration && hasIntegration) {
-				try {
-					const userResponse = await fetch("/api/microsoft/user-info");
-					if (userResponse.ok) {
-						const userData = await userResponse.json();
-						email = userData.userPrincipalName;
-					}
-				} catch {
-					// ignore email fetch errors
-				}
+			if (status.connected) {
+				void fetch("/api/microsoft/user-info")
+					.then((res) => (res.ok ? res.json() : null))
+					.then((userData) => {
+						if (userData?.userPrincipalName) {
+							setUserEmail(userData.userPrincipalName);
+						}
+					})
+					.catch(() => {
+						// ignore email fetch errors
+					});
 			}
-
-			setConnected(hasIntegration);
-			setLastSync(integration?.last_sync);
-			setSyncEnabled(integration?.sync_enabled ?? true);
-			setUserEmail(email);
 		} catch {
+			setLoading(false);
 			toast({
 				title: "Error",
 				description: "Failed to load Outlook integration status",
 				variant: "destructive",
 			});
-		} finally {
-			setLoading(false);
 		}
 	}, [toast, userId]);
 

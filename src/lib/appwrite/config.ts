@@ -232,6 +232,19 @@ export const appwriteConfig = {
 		"test-resource-bookings",
 	),
 
+	calendarRemindersCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CALENDAR_REMINDERS_COLLECTION",
+		"69c0b101001a2b3c4d11",
+	),
+	escalationRulesCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_ESCALATION_RULES_COLLECTION",
+		"69c0b102002b3c4d5e12",
+	),
+	escalationJobsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_ESCALATION_JOBS_COLLECTION",
+		"69c0b103003c4d5e6f13",
+	),
+
 	// News Articles
 	newsArticlesCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_NEWS_ARTICLES_COLLECTION",
@@ -287,6 +300,24 @@ export const appwriteConfig = {
 	orgUnitHistoryCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_ORG_UNIT_HISTORY_COLLECTION",
 		"69b8a207007f0e4c8a07",
+	),
+
+	/** CLM Completion Roadmap (Section 0) — alphanumeric Appwrite table IDs */
+	roadmapSectionsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_ROADMAP_SECTIONS_COLLECTION",
+		"69c0a101001a2b3c4d01",
+	),
+	roadmapTasksCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_ROADMAP_TASKS_COLLECTION",
+		"69c0a102002b3c4d5e02",
+	),
+	roadmapTestRunsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_ROADMAP_TEST_RUNS_COLLECTION",
+		"69c0a103003c4d5e6f03",
+	),
+	roadmapStatusLogCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_ROADMAP_STATUS_LOG_COLLECTION",
+		"69c0a104004d5e6f7a04",
 	),
 
 	// Imagine Art API (AI Image Generation)

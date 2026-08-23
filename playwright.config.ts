@@ -42,7 +42,9 @@ export default defineConfig({
 				...devices["Desktop Chrome"],
 				// No storageState = no authentication
 			},
-			testIgnore: ["**/components/notification-/**"],
+			testIgnore: [
+				"**/components/notification-/**",
+			],
 		},
 	],
 

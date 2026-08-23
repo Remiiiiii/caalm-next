@@ -1,0 +1,36 @@
+---
+description: All text inputs, selects, textareas, and search fields must have a visible slate-300 border
+globs: "**/*.{ts,tsx,js,jsx,css}"
+alwaysApply: false
+---
+
+# Input field borders
+
+Every standalone text input, select, textarea, and search field must show a visible border. Fields sit on `bg-white` or `bg-slate-50`, so a white, translucent, or `slate-200` border looks like no border.
+
+## Required
+
+```tsx
+<Input className="border border-slate-300" />
+<SelectTrigger className="border border-slate-300" />
+<Textarea className="border border-slate-300" />
+<SearchField /> // wrapper already includes border border-slate-300
+```
+
+- Resting: `border border-slate-300` (`#cbd5e1`) — stronger than card `slate-200` so fields read as inputs
+- Hover: `hover:border-blue-300`
+- Focus: `focus-visible:border-[#078FAB]`
+- Shared class `.glass-form-control` already sets this slate-300 border; do not override it to white, transparent, or `slate-200`
+
+## Forbidden on a standalone field
+
+```tsx
+<Input className="border-none" />
+<Input className="border-0" />
+<Input className="border-white/50" />
+<Input className="border-slate-200" />
+```
+
+`border-0` is allowed only on an inner control whose parent already has the visible border (the inner `Input` inside `SearchField`).
+
+`.shad-input` is `border-none` on purpose when it lives inside `.shad-form-item`, which already has `border border-light-300`. Do not use `.shad-input` as a standalone field.

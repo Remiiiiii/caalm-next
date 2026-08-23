@@ -543,8 +543,8 @@ export default function PaymentMethodsSection({
 							</Button>
 							<Button
 								type="button"
-								variant="destructive"
-								className="rounded-full px-3 sm:px-4"
+								variant="outline"
+								className="delete-btn px-3 sm:px-4"
 								disabled={removing}
 								onClick={() => void handleRemove()}
 							>

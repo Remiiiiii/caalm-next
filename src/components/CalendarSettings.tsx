@@ -2,7 +2,6 @@
 
 import { format } from "date-fns";
 import {
-	AlertCircle,
 	Calendar,
 	CheckCircle,
 	Clock,
@@ -12,24 +11,15 @@ import {
 	XCircle,
 } from "lucide-react";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { EscalationRulesManager } from "@/components/EscalationRulesManager";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import {
-	getMicrosoftCalendarIntegration,
-	hasMicrosoftCalendarIntegration,
+	getMicrosoftCalendarIntegrationStatus,
 	syncMicrosoftCalendar,
 } from "@/lib/actions/calendar.actions";
 
@@ -60,36 +50,35 @@ export default function CalendarSettings({
 	const [syncing, setSyncing] = useState(false);
 	const { toast } = useToast();
 
-	const loadIntegrationStatus = async () => {
+	const loadIntegrationStatus = useCallback(async () => {
+		if (!userId) return;
+
 		try {
 			setIntegrationStatus((prev) => ({ ...prev, loading: true }));
 
-			const [hasIntegration, integration] = await Promise.all([
-				hasMicrosoftCalendarIntegration(userId),
-				getMicrosoftCalendarIntegration(userId),
-			]);
-
-			// Fetch user email from Microsoft Graph if integration exists
-			let userEmail: string | undefined;
-			if (integration && hasIntegration) {
-				try {
-					const userResponse = await fetch("/api/microsoft/user-info");
-					if (userResponse.ok) {
-						const userData = await userResponse.json();
-						userEmail = userData.userPrincipalName;
-					}
-				} catch (error) {
-					console.warn("Could not fetch user email:", error);
-				}
-			}
-
+			const status = await getMicrosoftCalendarIntegrationStatus(userId);
 			setIntegrationStatus({
-				connected: hasIntegration,
-				lastSync: integration?.last_sync,
-				syncEnabled: integration?.sync_enabled ?? true,
+				connected: status.connected,
+				lastSync: status.lastSync,
+				syncEnabled: status.syncEnabled,
 				loading: false,
-				userEmail,
 			});
+
+			// Email is nice-to-have. Graph + token refresh must not block the dialog.
+			if (status.connected) {
+				void fetch("/api/microsoft/user-info")
+					.then((res) => (res.ok ? res.json() : null))
+					.then((userData) => {
+						if (!userData?.userPrincipalName) return;
+						setIntegrationStatus((prev) => ({
+							...prev,
+							userEmail: userData.userPrincipalName,
+						}));
+					})
+					.catch((error) => {
+						console.warn("Could not fetch user email:", error);
+					});
+			}
 		} catch (error) {
 			console.error("Error loading integration status:", error);
 			setIntegrationStatus((prev) => ({ ...prev, loading: false }));
@@ -99,9 +88,11 @@ export default function CalendarSettings({
 				variant: "destructive",
 			});
 		}
-	};
+	}, [userId]);
 
-	// Load integration status
+	// Load once per user. useCallback keeps this function stable so the
+	// effect does not re-run after every setState (that loop hits React's
+	// "Maximum update depth exceeded" limit).
 	useEffect(() => {
 		loadIntegrationStatus();
 	}, [loadIntegrationStatus]);
@@ -245,244 +236,175 @@ export default function CalendarSettings({
 
 	if (integrationStatus.loading) {
 		return (
-			<Card className="w-full max-w-md">
-				<CardHeader>
-					<CardTitle className="flex items-center gap-2">
-						<Calendar className="h-5 w-5" />
-						Calendar Integration
-					</CardTitle>
-				</CardHeader>
-				<CardContent>
-					<div className="flex items-center justify-center py-8">
-						<Loader2 className="h-6 w-6 animate-spin" />
-						<span className="ml-2">Loading...</span>
-					</div>
-				</CardContent>
-			</Card>
+			<div className="flex items-center justify-center py-6">
+				<Loader2 className="h-5 w-5 animate-spin text-slate-500" />
+				<span className="ml-2 text-sm text-slate-600">Loading...</span>
+			</div>
 		);
 	}
 
 	return (
-		<Card className="w-full max-w-md">
-			<CardHeader>
-				<CardTitle className="flex items-center gap-2">
-					<Calendar className="h-5 w-5" />
-					Calendar Integration
-				</CardTitle>
-				<CardDescription>
-					Connect your Microsoft Outlook calendar for seamless synchronization
-				</CardDescription>
-			</CardHeader>
-			<CardContent className="space-y-6">
-				{/* Microsoft Outlook Integration */}
-				<div className="space-y-4">
-					<div className="flex items-center justify-between">
-						<div className="flex items-center gap-2">
-							<div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-								<Calendar className="h-4 w-4 text-blue-600" />
-							</div>
-							<div>
-								<h3 className="font-medium">Microsoft Outlook</h3>
-								<p className="text-sm text-muted-foreground">
-									Two-way calendar sync
-								</p>
-							</div>
+		<div className="space-y-3">
+			<div className="flex items-center justify-between gap-3">
+				<div className="flex items-center gap-2 min-w-0">
+					<div className="w-7 h-7 bg-blue-100 rounded-lg flex items-center justify-center shrink-0">
+						<Calendar className="h-4 w-4 text-[#0f5384]" />
+					</div>
+					<div className="min-w-0">
+						<h3 className="text-sm font-medium text-slate-700">
+							Microsoft Outlook
+						</h3>
+						<p className="text-xs text-slate-500">Two-way calendar sync</p>
+					</div>
+				</div>
+				<Badge
+					className={
+						integrationStatus.connected
+							? "h-auto py-1 text-xs rounded-full pointer-events-none bg-green/10 text-green border-green/20 hover:bg-green/10"
+							: "h-auto py-1 text-xs rounded-full pointer-events-none bg-red/10 text-red border-red/20 hover:bg-red/10"
+					}
+				>
+					{integrationStatus.connected ? (
+						<>
+							<CheckCircle className="h-3 w-3 mr-1" /> Connected
+						</>
+					) : (
+						<>
+							<XCircle className="h-3 w-3 mr-1" /> Not Connected
+						</>
+					)}
+				</Badge>
+			</div>
+
+			{integrationStatus.connected ? (
+				<div className="space-y-2.5">
+					{integrationStatus.userEmail ? (
+						<div className="flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5">
+							<Image
+								src="/assets/images/365.png"
+								alt="Microsoft 365"
+								width={20}
+								height={20}
+								className="rounded shrink-0"
+							/>
+							<p className="text-xs font-medium text-slate-700 truncate">
+								{integrationStatus.userEmail}
+							</p>
 						</div>
-						<Badge
-							variant={integrationStatus.connected ? "default" : "secondary"}
-							className={
-								integrationStatus.connected ? "bg-green-100 text-green-800" : ""
-							}
+					) : null}
+
+					{integrationStatus.lastSync ? (
+						<div className="flex items-center gap-1.5 text-xs text-slate-500">
+							<Clock className="h-3.5 w-3.5" />
+							<span>
+								Last sync:{" "}
+								{format(
+									new Date(integrationStatus.lastSync),
+									"MMM d, yyyy h:mm a",
+								)}
+							</span>
+						</div>
+					) : null}
+
+					<div className="flex items-center justify-between">
+						<Label htmlFor="sync-enabled" className="text-sm text-slate-700">
+							Automatic sync
+						</Label>
+						<Switch
+							id="sync-enabled"
+							checked={integrationStatus.syncEnabled}
+							onCheckedChange={toggleSyncEnabled}
+						/>
+					</div>
+
+					<div className="flex gap-2">
+						<Button
+							onClick={handleSync}
+							disabled={syncing}
+							size="sm"
+							variant="outline"
+							className="flex-1"
 						>
-							{integrationStatus.connected ? (
+							{syncing ? (
 								<>
-									<CheckCircle className="h-3 w-3 mr-1" /> Connected
+									<Loader2 className="h-4 w-4 animate-spin" /> Syncing...
 								</>
 							) : (
 								<>
-									<XCircle className="h-3 w-3 mr-1" /> Not Connected
+									<RefreshCw className="h-4 w-4" /> Sync Now
 								</>
 							)}
-						</Badge>
-					</div>
-
-					{integrationStatus.connected ? (
-						<div className="space-y-3">
-							{/* Connected Email Account */}
-							{integrationStatus.userEmail && (
-								<div className="border border-gray-200 rounded-lg p-3 bg-gray-50">
-									<h4 className="text-sm font-medium text-gray-700 mb-2">
-										Email account
-									</h4>
-									<div className="flex items-center gap-3">
-										<Image
-											src="/assets/images/365.png"
-											alt="Microsoft 365"
-											width={32}
-											height={32}
-											className="rounded"
-										/>
-										<div>
-											<p className="text-sm font-medium text-gray-900">
-												{integrationStatus.userEmail}
-											</p>
-											<p className="text-xs text-gray-500">Microsoft 365</p>
-										</div>
-									</div>
-								</div>
-							)}
-
-							{/* Last Sync */}
-							{integrationStatus.lastSync && (
-								<div className="flex items-center gap-2 text-sm text-muted-foreground">
-									<Clock className="h-4 w-4" />
-									<span>
-										Last sync:{" "}
-										{format(
-											new Date(integrationStatus.lastSync),
-											"MMM d, yyyy h:mm a",
-										)}
-									</span>
-								</div>
-							)}
-
-							{/* Sync Controls */}
-							<div className="space-y-3">
-								<div className="flex items-center justify-between">
-									<Label htmlFor="sync-enabled" className="text-sm">
-										Automatic sync
-									</Label>
-									<Switch
-										id="sync-enabled"
-										checked={integrationStatus.syncEnabled}
-										onCheckedChange={toggleSyncEnabled}
-									/>
-								</div>
-
-								<div className="flex gap-2">
-									<Button
-										onClick={handleSync}
-										disabled={syncing}
-										size="sm"
-										variant="outline"
-										className="flex-1"
-									>
-										{syncing ? (
-											<>
-												<Loader2 className="h-4 w-4 animate-spin" /> Syncing...
-											</>
-										) : (
-											<>
-												<RefreshCw className="h-4 w-4" /> Sync Now
-											</>
-										)}
-									</Button>
-									<Button
-										onClick={handleEmergencyStop}
-										size="sm"
-										variant="destructive"
-										className="flex-1"
-									>
-										<XCircle className="h-4 w-4" /> Emergency Stop
-									</Button>
-									<Button
-										onClick={handleDisconnect}
-										size="sm"
-										variant="outline"
-										className="flex-1"
-									>
-										Disconnect
-									</Button>
-								</div>
-							</div>
-						</div>
-					) : (
-						<div className="space-y-3">
-							<div className="flex items-start gap-2 p-3 bg-blue-50 rounded-lg">
-								<AlertCircle className="h-4 w-4 text-blue-600 mt-0.5" />
-								<div className="text-sm text-blue-800">
-									<p className="font-medium">Connect your Outlook calendar</p>
-									<p className="text-blue-600">
-										Sync events between CAALM and Microsoft Outlook
-										automatically
-									</p>
-								</div>
-							</div>
-
-							<div className="flex items-start gap-2 p-3 bg-amber-50 rounded-lg">
-								<AlertCircle className="h-4 w-4 text-amber-600 mt-0.5" />
-								<div className="text-sm text-amber-800">
-									<p className="font-medium">
-										Important: Use a Work/School Account
-									</p>
-									<p className="text-amber-600">
-										Personal Microsoft accounts (hotmail.com, outlook.com) have
-										limited calendar access. Please use a work or school
-										Microsoft account for full functionality.
-									</p>
-								</div>
-							</div>
-
-							<Button onClick={handleConnect} className="w-full" size="sm">
-								<ExternalLink className="h-4 w-4" />
-								Connect Microsoft Outlook
-							</Button>
-						</div>
-					)}
-				</div>
-
-				<Separator />
-
-				{/* Escalation Rules */}
-				<div className="space-y-3">
-					<h3 className="font-medium text-sm">Notification Escalation</h3>
-					<div className="flex items-center justify-between">
-						<div className="flex items-center gap-2">
-							<div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-								<AlertCircle className="h-4 w-4 text-blue-600" />
-							</div>
-							<div>
-								<h4 className="font-medium text-sm">Escalation Rules</h4>
-								<p className="text-xs text-muted-foreground">
-									Configure automatic notification escalation
-								</p>
-							</div>
-						</div>
-						<EscalationRulesManager />
+						</Button>
+						<Button
+							onClick={handleEmergencyStop}
+							size="sm"
+							variant="destructive"
+							className="flex-1"
+						>
+							<XCircle className="h-4 w-4" /> Emergency Stop
+						</Button>
+						<Button
+							onClick={handleDisconnect}
+							size="sm"
+							variant="outline"
+							className="flex-1"
+						>
+							Disconnect
+						</Button>
 					</div>
 				</div>
-
-				<Separator />
-
-				{/* Future Integrations */}
-				<div className="space-y-3">
-					<h3 className="font-medium text-sm text-muted-foreground">
-						Coming Soon
-					</h3>
-
-					<div className="flex items-center gap-2 opacity-50">
-						<div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-							<Calendar className="h-4 w-4 text-gray-400" />
-						</div>
-						<div>
-							<h4 className="font-medium text-sm">Google Calendar</h4>
-							<p className="text-xs text-muted-foreground">
-								Two-way calendar sync
-							</p>
-						</div>
-						<Badge variant="secondary" className="ml-auto">
-							Soon
-						</Badge>
+			) : (
+				<div className="space-y-2.5 pt-4">
+					<p className="text-xs text-slate-600">
+						Use a work or school Microsoft account. Personal hotmail/outlook
+						accounts have limited calendar access.
+					</p>
+					<div className="flex justify-center pb-4">
+						<Button
+							onClick={handleConnect}
+							className="primary-btn w-auto! px-3 sm:px-4"
+							size="sm"
+						>
+							<ExternalLink className="h-4 w-4" />
+							Connect Microsoft Outlook
+						</Button>
 					</div>
 				</div>
+			)}
 
-				{/* Help Text */}
-				<div className="text-xs text-muted-foreground space-y-1">
-					<p>• Events created in CAALM will appear in your Outlook calendar</p>
-					<p>• Events from Outlook will be imported into CAALM</p>
-					<p>• Changes are synchronized automatically when enabled</p>
+			<div className="pt-4 border-t border-slate-200 space-y-3">
+				<div className="min-w-0">
+					<h4 className="text-sm font-medium text-slate-700">
+						Escalation Rules
+					</h4>
+					<p className="text-xs text-slate-500">
+						Automatic notification escalation
+					</p>
 				</div>
-			</CardContent>
-		</Card>
+				<div className="flex justify-center">
+					<EscalationRulesManager />
+				</div>
+			</div>
+
+			<div className="space-y-3 pt-4 border-t border-slate-200">
+				<h3 className="font-medium text-sm text-muted-foreground">
+					Coming Soon
+				</h3>
+				<div className="flex items-center gap-2 opacity-50">
+					<div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+						<Calendar className="h-4 w-4 text-gray-400" />
+					</div>
+					<div>
+						<h4 className="font-medium text-sm">Google Calendar</h4>
+						<p className="text-xs text-muted-foreground">
+							Two-way calendar sync
+						</p>
+					</div>
+					<Badge variant="secondary" className="ml-auto">
+						Soon
+					</Badge>
+				</div>
+			</div>
+		</div>
 	);
 }

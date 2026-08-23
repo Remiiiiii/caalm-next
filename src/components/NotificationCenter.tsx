@@ -654,8 +654,8 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 								<Button
 									onClick={() => handleDeleteNotifications(selected)}
 									disabled={loading}
-									variant="destructive"
-									className="primary-btn px-3 sm:px-4"
+									variant="outline"
+									className="delete-btn px-3 sm:px-4"
 								>
 									<Trash2 className="w-4 h-4" />
 									Delete ({selected.length})

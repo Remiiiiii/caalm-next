@@ -21,7 +21,7 @@ export function SearchField({
 	return (
 		<div
 			className={cn(
-				"relative rounded-md border border-slate-200 bg-white/70",
+				"relative rounded-md border border-slate-300 bg-white/70",
 				containerClassName,
 			)}
 		>
@@ -33,7 +33,7 @@ export function SearchField({
 				type="search"
 				data-with-leading-icon="true"
 				className={cn(
-					"h-12 border-0 bg-transparent shadow-none",
+					"h-12 border-0 bg-transparent pl-12! shadow-none [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden",
 					className,
 				)}
 				{...props}

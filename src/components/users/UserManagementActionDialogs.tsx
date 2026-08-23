@@ -563,7 +563,7 @@ export function UserManagementActionDialogs({
 							type="button"
 							disabled={busy}
 							onClick={onConfirmDelete}
-							className="gap-2 rounded-full border border-brand/30 bg-brand/10 px-4 font-semibold text-brand transition-all duration-200 hover:bg-brand/20 focus-visible:ring-brand/40"
+							className="delete-btn gap-2 px-3 sm:px-4"
 						>
 							{busy ? (
 								<Loader2 className="h-4 w-4 animate-spin" aria-hidden />

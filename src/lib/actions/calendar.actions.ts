@@ -7,6 +7,7 @@ import type {
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "../appwrite/config";
 import {
+	getCalendarIntegrationStatus,
 	getValidIntegration,
 	hasActiveCalendarIntegration,
 } from "./calendar-integration.actions";
@@ -1096,6 +1097,19 @@ export const getMicrosoftCalendarIntegration = async (userId: string) => {
 	} catch (error) {
 		console.error("Error getting Microsoft calendar integration:", error);
 		return null;
+	}
+};
+
+/** Settings UI only: one Appwrite read, no Microsoft token refresh. */
+export const getMicrosoftCalendarIntegrationStatus = async (userId: string) => {
+	try {
+		return await getCalendarIntegrationStatus(userId, "microsoft");
+	} catch (error) {
+		console.error(
+			"Error getting Microsoft calendar integration status:",
+			error,
+		);
+		return { connected: false, syncEnabled: false };
 	}
 };
 

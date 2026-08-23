@@ -82,10 +82,10 @@ export const DeleteConfirmationDialog: React.FC<
 							Cancel
 						</Button>
 						<Button
-							variant="destructive"
+							variant="outline"
 							onClick={handleConfirm}
 							disabled={isLoading}
-							className="px-3 sm:px-4"
+							className="delete-btn px-3 sm:px-4"
 						>
 							{isLoading ? "Deleting..." : "Delete"}
 						</Button>

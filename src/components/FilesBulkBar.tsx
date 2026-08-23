@@ -100,7 +100,7 @@ export default function FilesBulkBar({
 					<Button
 						type="button"
 						size="sm"
-						className="primary-btn cursor-pointer px-3 sm:px-4"
+						className="delete-btn cursor-pointer px-3 sm:px-4"
 						onClick={() => setConfirmOpen(true)}
 					>
 						<Trash2 className="h-4 w-4" />
@@ -151,7 +151,7 @@ export default function FilesBulkBar({
 							type="button"
 							onClick={handleBulkDelete}
 							disabled={isDeleting}
-							className="primary-btn gap-2 px-3 sm:px-4"
+							className="delete-btn gap-2 px-3 sm:px-4"
 						>
 							<Trash2 className="h-4 w-4 shrink-0" />
 							{isDeleting ? "Deleting..." : "Delete Files"}

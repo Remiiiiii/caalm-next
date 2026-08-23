@@ -44,9 +44,7 @@ export async function POST(request: NextRequest) {
 
 		// Get reminder details
 		const { tablesDB } = await createAdminClient();
-		const remindersCollectionId =
-			process.env.NEXT_PUBLIC_APPWRITE_CALENDAR_REMINDERS_COLLECTION ||
-			"calendar_reminders";
+		const remindersCollectionId = appwriteConfig.calendarRemindersCollectionId;
 
 		const reminder = await tablesDB.getRow({
 			databaseId: appwriteConfig.databaseId!,

@@ -1219,12 +1219,12 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
 							</Button>
 							<Button
 								onClick={confirmDeleteCalendar}
-								className="primary-btn px-3 sm:px-4 bg-red-600 hover:bg-red-700 text-white"
+								className="delete-btn px-3 sm:px-4"
 								disabled={isDeleting}
 							>
 								{isDeleting ? (
 									<>
-										<div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+										<div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-red border-t-transparent"></div>
 										Deleting...
 									</>
 								) : (

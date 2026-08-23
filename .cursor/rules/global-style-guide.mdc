@@ -18,6 +18,7 @@ This is the **single source of truth** for all styling, page structure, and comp
 6. [Typography](#typography)
 7. [Spacing & Layout](#spacing--layout)
 8. [Interactive Elements](#interactive-elements)
+9. [Input fields](#input-fields)
 
 ---
 
@@ -292,7 +293,8 @@ Use custom colors defined in `tailwind.config.ts` without intermediate suffixes 
 
 ### Border Colors
 
-- **Standard borders**: `border-slate-200`
+- **Standard borders**: `border-slate-200` (cards, dialogs, dividers)
+- **Form field borders**: `border-slate-300` (inputs, selects, textareas, search fields)
 - **Hover borders**: `border-blue-300`
 
 ### Text Colors
@@ -375,6 +377,23 @@ Use custom colors defined in `tailwind.config.ts` without intermediate suffixes 
 - Include icons in buttons when appropriate
 - Use consistent spacing: `gap-3` between buttons
 - Responsive padding: `px-3 sm:px-4`
+
+### Input fields
+
+**ALWAYS** give text inputs, selects, textareas, and search fields a visible border. A white, `rgba(255,255,255,…)`, or `slate-200` border disappears on `bg-white` / `bg-slate-50`.
+
+```tsx
+<Input className="border border-slate-300" />
+<SelectTrigger className="border border-slate-300">
+<SearchField /> {/* wrapper already has border border-slate-300 */}
+```
+
+- Resting border: `border border-slate-300` (`#cbd5e1`) — stronger than card `slate-200` so fields read as inputs
+- Hover: `hover:border-blue-300`
+- Focus: teal `#078FAB` (`focus-visible:border-[#078FAB]`)
+- Do **not** use `border-none`, `border-0`, `border-white/50`, or `border-slate-200` on a standalone field
+- `border-0` is allowed **only** on an inner control whose parent already has the visible border (e.g. `SearchField` inner `Input`)
+- `.glass-form-control` already includes the slate-300 border; do not override it to white/transparent
 
 ### Search fields
 
@@ -532,6 +551,7 @@ When creating a new page or component, verify:
 - [ ] Icons use brand color: `text-[#0f5384]` for headers
 - [ ] Buttons use: `primary-btn px-3 sm:px-4`
 - [ ] All interactive elements have transition effects
+- [ ] Text inputs, selects, textareas, and search fields use a visible `border-slate-300` (never white, transparent, or `slate-200` on light fills)
 
 ---
 

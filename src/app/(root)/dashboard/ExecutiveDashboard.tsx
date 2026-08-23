@@ -17,12 +17,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import type { Models } from "node-appwrite";
 // In your dashboard page (e.g., src/app/(root)/dashboard/page.tsx)
 // import { NotificationDemoButton } from '@/components/NotificationDemoButton';
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import useSWR from "swr";
 import ClientTimestamp from "@/components/ClientTimestamp";
 import CompanyNewsFeed from "@/components/CompanyNewsFeed";
 import ContractExpiryAlertsWidget from "@/components/ContractExpiryAlertsWidget";
-import ContractExpiryNotifier from "@/components/ContractExpiryNotifier";
 import ContractStatusPieChart from "@/components/ContractStatusPieChart";
 import ContractExpiryModal from "@/components/contract-expiry-modal/ContractExpiryModal";
 import DepartmentPerformanceWidget from "@/components/DepartmentPerformanceWidget";
@@ -70,8 +69,6 @@ import { useUnifiedDashboardData } from "@/hooks/useUnifiedDashboardData";
 import { cn } from "@/lib/utils";
 import { resolveInviteDepartment } from "../../../../constants";
 import type { UIFileDoc } from "@/types/files";
-
-type NotifierContract = { id: string; name: string; expiryDate: string };
 
 interface UninvitedUser {
 	$id: string;
@@ -411,17 +408,6 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 
 	// SWR handles all data fetching automatically - no manual fetch needed
 
-	// Contracts for expiry notifier — reuse /api/contracts/all (no duplicate Appwrite client fetch)
-	const expiryContracts = useMemo<NotifierContract[]>(() => {
-		return (contractsFromApi || [])
-			.filter((c) => Boolean(c.contractExpiryDate))
-			.map((c) => ({
-				id: c.$id,
-				name: c.contractName || c.name || "Contract",
-				expiryDate: String(c.contractExpiryDate),
-			}));
-	}, [contractsFromApi]);
-
 	const handleRefreshUsers = async () => {
 		setRefreshLoading(true);
 		try {
@@ -719,7 +705,6 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 				onItemDismissed={markItemDismissed}
 				shouldPlaySpeech={shouldPlaySpeech}
 			/>
-			<ContractExpiryNotifier contracts={expiryContracts} />
 			{/* Background Video */}
 			<video
 				autoPlay
@@ -1461,7 +1446,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 									</AlertDialogCancel>
 									<AlertDialogAction
 										onClick={confirmDelete}
-										className="primary-btn"
+										className="delete-btn px-3 sm:px-4"
 									>
 										Delete Invitation
 									</AlertDialogAction>

@@ -764,7 +764,7 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 						</AlertDialogCancel>
 						<AlertDialogAction
 							onClick={handleDeleteNote}
-							className="primary-btn px-3 sm:px-4"
+							className="delete-btn px-3 sm:px-4"
 						>
 							Delete Note
 						</AlertDialogAction>

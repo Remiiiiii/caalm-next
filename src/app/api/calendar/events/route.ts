@@ -21,7 +21,12 @@ import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 import { logAuditEvent } from "@/lib/services/audit-logger";
 import { CACHE_KEYS, CACHE_TTLS } from "@/lib/services/cache-keys";
 import CacheManager from "@/lib/services/cache-manager";
-import { createEventReminder } from "@/lib/services/calendar-notifications.service";
+import {
+	cancelUnsentRemindersForEvent,
+	createEventReminder,
+	enqueueEscalationJobsForEvent,
+	replaceEventReminders,
+} from "@/lib/services/calendar-notifications.service";
 import { syncDeletionToOutlook } from "@/lib/services/deletion-sync";
 import {
 	detectParticipantConflicts,
@@ -61,6 +66,28 @@ const buildPermissionErrorResponse = (
 		},
 	);
 };
+
+async function enqueueEventEscalation(
+	userProfileId: string | undefined,
+	eventId: string | undefined,
+	triggerEvent: "event_created" | "event_updated" | "event_cancelled",
+) {
+	if (!userProfileId || !eventId) return;
+	try {
+		const org = await getUserDefaultOrganization(userProfileId);
+		if (!org?.orgId) return;
+		await enqueueEscalationJobsForEvent({
+			organizationId: org.orgId,
+			eventId,
+			triggerEvent,
+		});
+	} catch (error) {
+		console.error(
+			"[SERVER] calendar/events] Failed to enqueue escalation jobs:",
+			error,
+		);
+	}
+}
 
 export async function POST(request: NextRequest) {
 	try {
@@ -425,9 +452,14 @@ export async function POST(request: NextRequest) {
 					"[SERVER] POST /api/calendar/events] Error creating reminders:",
 					reminderError,
 				);
-				// Don't fail event creation if reminder creation fails
 			}
 		}
+
+		await enqueueEventEscalation(
+			permissionCheck.userId || undefined,
+			createdEvent.$id,
+			"event_created",
+		);
 
 		// Invalidate calendar cache for the month
 		// Parse date string safely to avoid timezone shifts
@@ -744,6 +776,33 @@ export async function PUT(request: NextRequest) {
 			updatedEvent = await updateCalendarEvent(eventId, eventData);
 		}
 
+		if (Array.isArray(eventData.reminders)) {
+			try {
+				await replaceEventReminders(
+					eventId,
+					permissionCheck.userId || userId,
+					eventData.reminders.map((reminder) => ({
+						eventId,
+						userId: permissionCheck.userId || userId,
+						reminderType: reminder.type || "before_start",
+						reminderMinutes: reminder.minutes || 15,
+						channels: reminder.channels || ["in_app"],
+					})),
+				);
+			} catch (reminderError) {
+				console.error(
+					"[SERVER] PUT /api/calendar/events] Error syncing reminders:",
+					reminderError,
+				);
+			}
+		}
+
+		await enqueueEventEscalation(
+			permissionCheck.userId || undefined,
+			eventId,
+			"event_updated",
+		);
+
 		// Note: Audit logging for 'update' action is not supported by the current schema
 		// The audit logs collection only supports: delete, sync_delete, restore, cleanup
 
@@ -929,6 +988,19 @@ export async function DELETE(request: NextRequest) {
 
 		// Perform soft delete immediately
 		await deleteCalendarEvent(eventId, userId);
+		try {
+			await cancelUnsentRemindersForEvent(eventId);
+		} catch (reminderError) {
+			console.error(
+				"[SERVER] DELETE /api/calendar/events] Error cancelling reminders:",
+				reminderError,
+			);
+		}
+		await enqueueEventEscalation(
+			permissionCheck.userId || undefined,
+			eventId,
+			"event_cancelled",
+		);
 
 		// Get client IP and user agent for audit
 		const ipAddress =

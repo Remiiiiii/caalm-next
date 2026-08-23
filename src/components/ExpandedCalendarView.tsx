@@ -1270,16 +1270,18 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 											Settings
 										</Button>
 									</DialogTrigger>
-									<DialogContent className="sm:max-w-[500px] shadow-xl">
+									<DialogContent className="sm:max-w-[460px] max-h-[80vh] overflow-y-auto p-4 sm:p-4 gap-2 shadow-xl">
 										<DialogHeader>
 											<DialogTitle className="sidebar-gradient-text">
 												Calendar Settings
 											</DialogTitle>
 										</DialogHeader>
-										<CalendarSettings
-											userId={user?.$id || ""}
-											onClose={() => setShowSettings(false)}
-										/>
+										{showSettings ? (
+											<CalendarSettings
+												userId={user?.$id || ""}
+												onClose={() => setShowSettings(false)}
+											/>
+										) : null}
 									</DialogContent>
 								</Dialog>
 

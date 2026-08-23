@@ -106,8 +106,7 @@ export default function BillingOverviewCard({
 	managing,
 	actionsDisabled,
 }: BillingOverviewCardProps) {
-	const billingActionsDisabled =
-		actionsDisabled || !stripeConfigured || managing;
+	const billingActionsDisabled = actionsDisabled || managing;
 	const activeAmount =
 		interval === "yearly"
 			? yearly
@@ -233,7 +232,7 @@ export default function BillingOverviewCard({
 						variant="outline"
 						className="primary-btn cursor-pointer px-3 sm:px-4"
 						onClick={onManageBilling}
-						disabled={billingActionsDisabled}
+						disabled={billingActionsDisabled || !stripeConfigured}
 					>
 						<CreditCard className="h-4 w-4" />
 						Manage billing

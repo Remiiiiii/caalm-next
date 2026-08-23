@@ -132,7 +132,7 @@ export default function BillingIntegrationsPage() {
 
 	const { user } = useAuth();
 
-	const { orgId } = useOrganization();
+	const { orgId, loading: orgLoading } = useOrganization();
 
 	const { permissions, loading: permissionsLoading } = usePermissions();
 
@@ -144,7 +144,7 @@ export default function BillingIntegrationsPage() {
 
 
 
-	const resolvedOrgId = orgId || "default_organization";
+	const resolvedOrgId = orgId ?? "";
 
 	const initialTab =
 
@@ -167,6 +167,9 @@ export default function BillingIntegrationsPage() {
 	const [paymentMethodsOrgName, setPaymentMethodsOrgName] = useState("");
 
 	const [loadingSub, setLoadingSub] = useState(true);
+	const [subscriptionError, setSubscriptionError] = useState<string | null>(
+		null,
+	);
 
 	const [loadingInvoices, setLoadingInvoices] = useState(false);
 
@@ -222,7 +225,7 @@ export default function BillingIntegrationsPage() {
 
 	const loadSubscription = useCallback(async () => {
 
-		if (!canBilling) {
+		if (!canBilling || !resolvedOrgId) {
 
 			setLoadingSub(false);
 
@@ -233,6 +236,8 @@ export default function BillingIntegrationsPage() {
 		try {
 
 			setLoadingSub(true);
+
+			setSubscriptionError(null);
 
 			const res = await fetch(
 
@@ -260,6 +265,8 @@ export default function BillingIntegrationsPage() {
 
 				error instanceof Error ? error.message : "Could not load subscription";
 
+			setSubscriptionError(message);
+
 			toast({
 
 				title: "Billing unavailable",
@@ -282,7 +289,7 @@ export default function BillingIntegrationsPage() {
 
 	const loadInvoices = useCallback(async () => {
 
-		if (!canBilling) return;
+		if (!canBilling || !resolvedOrgId) return;
 
 		try {
 
@@ -330,7 +337,7 @@ export default function BillingIntegrationsPage() {
 
 	const loadPaymentMethods = useCallback(async (options?: { silent?: boolean }) => {
 
-		if (!canBilling) return;
+		if (!canBilling || !resolvedOrgId) return;
 
 		try {
 
@@ -416,7 +423,13 @@ export default function BillingIntegrationsPage() {
 
 	useEffect(() => {
 
-		if (!permissionsLoading && canBilling) {
+		if (orgLoading || permissionsLoading) {
+
+			return;
+
+		}
+
+		if (canBilling && resolvedOrgId) {
 
 			loadSubscription();
 
@@ -424,7 +437,7 @@ export default function BillingIntegrationsPage() {
 
 			loadPaymentMethods();
 
-		} else if (!permissionsLoading) {
+		} else {
 
 			setLoadingSub(false);
 
@@ -432,9 +445,13 @@ export default function BillingIntegrationsPage() {
 
 	}, [
 
+		orgLoading,
+
 		permissionsLoading,
 
 		canBilling,
+
+		resolvedOrgId,
 
 		loadSubscription,
 
@@ -502,19 +519,25 @@ export default function BillingIntegrationsPage() {
 
 	useEffect(() => {
 
-		if (!permissionsLoading && !canAccessPage) {
+		if (orgLoading || permissionsLoading) {
+
+			return;
+
+		}
+
+		if (!canAccessPage) {
 
 			router.replace("/settings");
 
 		}
 
-	}, [permissionsLoading, canAccessPage, router]);
+	}, [orgLoading, permissionsLoading, canAccessPage, router]);
 
 
 
 	useEffect(() => {
 
-		if (!permissionsLoading) {
+		if (!orgLoading && !permissionsLoading) {
 
 			if (tab === "billing" && !canBilling && canIntegrations) {
 
@@ -528,11 +551,13 @@ export default function BillingIntegrationsPage() {
 
 		}
 
-	}, [permissionsLoading, tab, canBilling, canIntegrations]);
+	}, [orgLoading, permissionsLoading, tab, canBilling, canIntegrations]);
 
 
 
 	const handleManageBilling = async () => {
+
+		if (!resolvedOrgId) return;
 
 		try {
 
@@ -585,6 +610,8 @@ export default function BillingIntegrationsPage() {
 
 
 	const startPaymentMethodSetup = async (replacePaymentMethodId?: string) => {
+
+		if (!resolvedOrgId) return;
 
 		try {
 
@@ -653,8 +680,9 @@ export default function BillingIntegrationsPage() {
 
 
 	if (
+		orgLoading ||
 		permissionsLoading ||
-		(canBilling && loadingSub && !subscription) ||
+		(canBilling && loadingSub && !subscription && !subscriptionError) ||
 		(canBilling && loadingPaymentMethods && !paymentMethodError)
 	) {
 
@@ -764,128 +792,131 @@ export default function BillingIntegrationsPage() {
 
 					<TabsContent value="billing" className="space-y-6">
 
-						<PermissionGate permission={PERMISSIONS.SETTINGS.BILLING}>
+						<PermissionGate
+							permission={PERMISSIONS.SETTINGS.BILLING}
+							showOnLoading
+						>
 
-							{subscription && (
+							<div className="flex flex-col gap-6">
 
-								<div className="flex flex-col gap-6">
+								<div className="space-y-4">
 
-									<div className="space-y-4">
-
-										<BillingSectionLabel>Billing overview</BillingSectionLabel>
-
-
-
-										<BillingOverviewCard
-
-											planName={
-
-												subscription.plan?.name || subscription.subscriptionTier
-
-											}
-
-											tier={subscription.subscriptionTier}
-
-											status={subscription.billingStatus}
-
-											interval={subscription.billingInterval}
-
-											monthly={subscription.plan?.monthly ?? null}
-
-											yearly={subscription.plan?.yearly ?? null}
-
-											currentPeriodEnd={subscription.currentPeriodEnd}
-
-											stripeConfigured={subscription.stripeConfigured}
-
-											accessWarning={subscription.access?.warning}
-
-											onManageBilling={handleManageBilling}
-
-											onChangePlan={() => setPlanOpen(true)}
-
-											managing={managing}
-
-											actionsDisabled={loadingPaymentMethods}
-
-										/>
-
-									</div>
+									<BillingSectionLabel>Billing overview</BillingSectionLabel>
 
 
 
-									<PaymentMethodsSection
+									<BillingOverviewCard
 
-										orgId={resolvedOrgId}
+										planName={
 
-										orgName={paymentMethodsOrgName || subscription.name}
-
-										hasUpcomingInvoice={hasUpcomingInvoice}
-
-										paymentMethods={paymentMethods}
-
-										loading={loadingPaymentMethods}
-
-										error={paymentMethodError}
-
-										onRefresh={loadPaymentMethods}
-
-										onPaymentMethodUpdated={handlePaymentMethodUpdated}
-
-										onPaymentMethodsReplace={handlePaymentMethodsReplace}
-
-										onPaymentMethodRemoved={handlePaymentMethodRemoved}
-
-										onAddPaymentMethod={() => startPaymentMethodSetup()}
-
-										onReplacePaymentMethod={(paymentMethodId) =>
-
-											startPaymentMethodSetup(paymentMethodId)
+											subscription?.plan?.name ||
+											subscription?.subscriptionTier ||
+											"Starter"
 
 										}
 
-										adding={addingPaymentMethod}
+										tier={subscription?.subscriptionTier || "starter"}
 
-										replacingId={replacingPaymentMethodId}
+										status={subscription?.billingStatus || "none"}
 
-										actionError={paymentMethodActionError}
+										interval={subscription?.billingInterval ?? null}
 
-									/>
+										monthly={subscription?.plan?.monthly ?? null}
 
+										yearly={subscription?.plan?.yearly ?? null}
 
+										currentPeriodEnd={subscription?.currentPeriodEnd ?? null}
 
-									<UsageMetersCard
+										stripeConfigured={Boolean(subscription?.stripeConfigured)}
 
-										storageUsed={subscription.usage.storage.used}
+										accessWarning={
+											subscriptionError || subscription?.access?.warning
+										}
 
-										storageLimit={subscription.usage.storage.limit}
+										onManageBilling={handleManageBilling}
 
-										usersUsed={subscription.usage.users.used}
+										onChangePlan={() => setPlanOpen(true)}
 
-										usersLimit={subscription.usage.users.limit}
+										managing={managing}
 
-										departmentsUsed={subscription.usage.departments.used}
+										actionsDisabled={loadingPaymentMethods}
 
-										departmentsLimit={subscription.usage.departments.limit}
-
-										contractsUsed={subscription.usage.contracts.used}
-
-										contractsLimit={subscription.usage.contracts.limit}
-
-									/>
-
-
-
-									<InvoiceHistoryTable
-										invoices={invoices}
-										orgId={resolvedOrgId}
-										loading={loadingInvoices}
-										error={invoiceError}
 									/>
 
 								</div>
 
-							)}
+
+
+								<PaymentMethodsSection
+
+									orgId={resolvedOrgId}
+
+									orgName={paymentMethodsOrgName || subscription?.name || ""}
+
+									hasUpcomingInvoice={hasUpcomingInvoice}
+
+									paymentMethods={paymentMethods}
+
+									loading={loadingPaymentMethods}
+
+									error={paymentMethodError}
+
+									onRefresh={loadPaymentMethods}
+
+									onPaymentMethodUpdated={handlePaymentMethodUpdated}
+
+									onPaymentMethodsReplace={handlePaymentMethodsReplace}
+
+									onPaymentMethodRemoved={handlePaymentMethodRemoved}
+
+									onAddPaymentMethod={() => startPaymentMethodSetup()}
+
+									onReplacePaymentMethod={(paymentMethodId) =>
+
+										startPaymentMethodSetup(paymentMethodId)
+
+									}
+
+									adding={addingPaymentMethod}
+
+									replacingId={replacingPaymentMethodId}
+
+									actionError={paymentMethodActionError}
+
+								/>
+
+
+
+								<UsageMetersCard
+
+									storageUsed={subscription?.usage.storage.used ?? 0}
+
+									storageLimit={subscription?.usage.storage.limit ?? 0}
+
+									usersUsed={subscription?.usage.users.used ?? 0}
+
+									usersLimit={subscription?.usage.users.limit ?? 0}
+
+									departmentsUsed={subscription?.usage.departments.used ?? 0}
+
+									departmentsLimit={subscription?.usage.departments.limit ?? 0}
+
+									contractsUsed={subscription?.usage.contracts.used ?? 0}
+
+									contractsLimit={subscription?.usage.contracts.limit ?? 0}
+
+								/>
+
+
+
+								<InvoiceHistoryTable
+									invoices={invoices}
+									orgId={resolvedOrgId}
+									loading={loadingInvoices}
+									error={invoiceError}
+								/>
+
+							</div>
 
 						</PermissionGate>
 

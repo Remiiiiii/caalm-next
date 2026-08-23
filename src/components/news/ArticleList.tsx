@@ -637,7 +637,7 @@ const ArticleList: React.FC<ArticleListProps> = ({ onEdit, onRefresh }) => {
 								}
 							}}
 							disabled={deleting}
-							className="bg-red text-white hover:bg-red/90"
+							className="delete-btn px-3 sm:px-4"
 						>
 							{deleting ? (
 								<>

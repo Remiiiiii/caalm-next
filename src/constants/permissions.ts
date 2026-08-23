@@ -91,6 +91,8 @@ export const PERMISSIONS = {
 		VIEW_INCIDENTS: "it.view_incidents",
 		VIEW_RUNBOOKS: "it.view_runbooks",
 		MANAGE_RUNBOOKS: "it.manage_runbooks",
+		VIEW_ROADMAP: "it.view_roadmap",
+		MANAGE_ROADMAP: "it.manage_roadmap",
 	},
 
 	// News Permissions
@@ -495,6 +497,18 @@ export const PERMISSION_DEFINITIONS = [
 		name: "Manage Runbooks",
 		category: "it",
 		description: "Create, edit, publish, and archive IT runbooks",
+	},
+	{
+		key: PERMISSIONS.IT.VIEW_ROADMAP,
+		name: "View CLM Roadmap",
+		category: "it",
+		description: "View the in-app CLM completion roadmap and progress",
+	},
+	{
+		key: PERMISSIONS.IT.MANAGE_ROADMAP,
+		name: "Manage CLM Roadmap",
+		category: "it",
+		description: "Start roadmap tasks and bind branches/PRs (cannot force-complete)",
 	},
 
 	// News

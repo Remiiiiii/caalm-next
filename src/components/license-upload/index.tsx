@@ -934,7 +934,7 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 								setDraftToDelete(null);
 								await deleteDraft(id);
 							}}
-							className="primary-btn gap-2 px-3 sm:px-4"
+							className="delete-btn gap-2 px-3 sm:px-4"
 						>
 							<Trash2 className="h-4 w-4 shrink-0" />
 							Delete Draft

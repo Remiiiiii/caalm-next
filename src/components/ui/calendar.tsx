@@ -93,9 +93,9 @@ export function Calendar({
 				...components,
 				Chevron: CalendarChevron,
 				Nav: hideNavigation ? EmptyNav : (components?.Nav ?? CustomNavbar),
-				MonthCaption: hideNavigation
-					? EmptyMonthCaption
-					: components?.MonthCaption,
+				// Only override caption when hiding nav. Passing `undefined`
+				// here replaces DayPicker's default and crashes render.
+				...(hideNavigation ? { MonthCaption: EmptyMonthCaption } : {}),
 			}}
 		/>
 	);
