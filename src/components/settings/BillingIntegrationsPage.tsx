@@ -679,12 +679,7 @@ export default function BillingIntegrationsPage() {
 
 
 
-	if (
-		orgLoading ||
-		permissionsLoading ||
-		(canBilling && loadingSub && !subscription && !subscriptionError) ||
-		(canBilling && loadingPaymentMethods && !paymentMethodError)
-	) {
+	if (orgLoading || permissionsLoading) {
 
 		return (
 

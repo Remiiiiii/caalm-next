@@ -24,6 +24,7 @@ const SYNC_PLAN = {
 		localFile: path.join(ROOT, ".env.local"),
 		skipKeys: new Set([
 			"VERCEL_OIDC_TOKEN",
+			"GOOGLE_APPLICATION_CREDENTIALS",
 			"DEMO_OTP_CODE",
 			"NEXT_PUBLIC_DEMO_OTP_HINT",
 			"DEMO_ORG_TTL_DAYS",
@@ -60,7 +61,7 @@ function parseEnvFile(filePath) {
 		if (idx === -1) continue;
 		const key = trimmed.slice(0, idx).trim();
 		if (!/^[A-Z][A-Z0-9_]*$/.test(key)) continue;
-		env[key] = trimmed.slice(idx + 1).trim();
+		env[key] = unquote(trimmed.slice(idx + 1).trim());
 	}
 	return env;
 }
@@ -94,6 +95,25 @@ function listVercelKeys(project) {
 	]);
 	const parsed = JSON.parse(output);
 	return new Set(parsed.envs.map((entry) => entry.key));
+}
+
+function unquote(value) {
+	if (
+		(value.startsWith('"') && value.endsWith('"')) ||
+		(value.startsWith("'") && value.endsWith("'"))
+	) {
+		return value.slice(1, -1);
+	}
+	return value;
+}
+
+function visibilityFlags(key) {
+	// NEXT_PUBLIC_* is baked into the browser bundle. Vercel rejects secret
+	// visibility for those keys on Production and Preview.
+	if (key.startsWith("NEXT_PUBLIC_")) {
+		return ["--visibility", "config", "--no-sensitive", "--yes"];
+	}
+	return ["--yes"];
 }
 
 function isVercelManagedKey(key) {
@@ -169,20 +189,26 @@ for (const [project, plan] of Object.entries(SYNC_PLAN)) {
 		}
 		for (const env of ENVS) {
 			console.log(`  add ${key} -> ${env}`);
-			runVercel(
-				[
-					"env",
-					"add",
-					key,
-					env,
-					"--force",
-					"--project",
-					project,
-					"--scope",
-					TEAM,
-				],
-				value,
-			);
+			try {
+				runVercel(
+					[
+						"env",
+						"add",
+						key,
+						env,
+						"--force",
+						"--project",
+						project,
+						"--scope",
+						TEAM,
+						...visibilityFlags(key),
+					],
+					value,
+				);
+			} catch (error) {
+				const message = error instanceof Error ? error.message : String(error);
+				console.error(`  fail ${key} -> ${env}: ${message}`);
+			}
 		}
 	}
 }

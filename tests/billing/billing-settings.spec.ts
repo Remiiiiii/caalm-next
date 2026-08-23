@@ -16,8 +16,14 @@ test.describe("Billing settings surface", () => {
 				timeout: 60000,
 			});
 			await expect(page).not.toHaveURL(/sign-in/);
+			await expect(page).not.toHaveURL(/\/settings$/, {
+				timeout: 15000,
+			});
+			await expect(
+				page.getByRole("heading", { name: /billing & integrations/i }),
+			).toBeVisible({ timeout: 30000 });
 			await expect(page.getByRole("tab", { name: "Billing" })).toBeVisible({
-				timeout: 30000,
+				timeout: 15000,
 			});
 		});
 
