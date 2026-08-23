@@ -34,7 +34,7 @@ test.describe("Billing settings surface", () => {
 			);
 			if (bouncedToSettings || (await forbidden.isVisible().catch(() => false))) {
 				throw new Error(
-					"Billing page denied access. PLAYWRIGHT_E2E_USER_ID already has settings.billing via Super Admin. An empty permissions list usually means NEXT_PUBLIC_APPWRITE_PERMISSIONS_COLLECTION is missing in CI (fallback used to be test-permissions).",
+					"Billing page denied access. The E2E user already has settings.billing on Super Admin. Do not set NEXT_PUBLIC_APPWRITE_PERMISSIONS_COLLECTION to test-permissions; use table 685ed87c0009d8189fc8. An empty list usually means /api/permissions/check failed or hung.",
 				);
 			}
 
