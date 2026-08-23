@@ -69,6 +69,7 @@ For each collection, find the Collection ID:
 | Secret Name                                                     | Collection Name               | Where to Find                                                  |
 | --------------------------------------------------------------- | ----------------------------- | -------------------------------------------------------------- |
 | `NEXT_PUBLIC_APPWRITE_USERS_COLLECTION`                         | Users                         | Databases → Your DB → Users collection                         |
+| `NEXT_PUBLIC_APPWRITE_PERMISSIONS_COLLECTION`                   | Permissions                   | Databases → Your DB → Permissions collection 
 | `NEXT_PUBLIC_APPWRITE_FILES_COLLECTION`                         | Files                         | Databases → Your DB → Files collection                         |
 | `NEXT_PUBLIC_APPWRITE_CONTRACTS_COLLECTION`                     | Contracts                     | Databases → Your DB → Contracts collection                     |
 | `NEXT_PUBLIC_APPWRITE_CONTRACTS_ENTERPRISE_METADATA_COLLECTION` | Contracts Enterprise Metadata | Databases → Your DB → Contracts Enterprise Metadata collection |
@@ -165,9 +166,10 @@ After adding all secrets, verify they're configured:
 - `NEXT_APPWRITE_API_KEY`
 - `NEXT_PUBLIC_APPWRITE_DATABASE`
 
-### Required (Collections - 25 secrets)
+### Required (Collections - 26 secrets)
 
 - `NEXT_PUBLIC_APPWRITE_USERS_COLLECTION`
+- `NEXT_PUBLIC_APPWRITE_PERMISSIONS_COLLECTION`
 - `NEXT_PUBLIC_APPWRITE_FILES_COLLECTION`
 - `NEXT_PUBLIC_APPWRITE_CONTRACTS_COLLECTION`
 - `NEXT_PUBLIC_APPWRITE_CONTRACTS_ENTERPRISE_METADATA_COLLECTION`

@@ -133,8 +133,12 @@ class StandardRedisCache implements CacheService {
 		}
 
 		this.client = new Redis(redisUrl, {
-			maxRetriesPerRequest: 3,
+			maxRetriesPerRequest: 1,
+			connectTimeout: 2000,
+			commandTimeout: 2000,
+			enableOfflineQueue: false,
 			retryStrategy: (times) => {
+				if (times > 2) return null;
 				const delay = Math.min(times * 50, 2000);
 				return delay;
 			},
@@ -262,12 +266,34 @@ function createCacheService(): CacheService {
  */
 const cacheService = createCacheService();
 
+const CACHE_OP_TIMEOUT_MS = 2500;
+
+async function withTimeout<T>(
+	promise: Promise<T>,
+	fallback: T,
+	ms: number = CACHE_OP_TIMEOUT_MS,
+): Promise<T> {
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	try {
+		return await Promise.race([
+			promise,
+			new Promise<T>((_, reject) => {
+				timer = setTimeout(() => reject(new Error("cache timeout")), ms);
+			}),
+		]);
+	} catch {
+		return fallback;
+	} finally {
+		if (timer) clearTimeout(timer);
+	}
+}
+
 /**
  * Get value from cache
  */
 export async function get<T>(key: string): Promise<T | null> {
 	const startTime = Date.now();
-	const value = await cacheService.get<T>(key);
+	const value = await withTimeout(cacheService.get<T>(key), null);
 	const duration = Date.now() - startTime;
 
 	// Track metrics
@@ -303,11 +329,11 @@ export async function set(
 	// Only log in development to reduce production overhead
 	if (process.env.NODE_ENV === "development") {
 		const startTime = Date.now();
-		await cacheService.set(key, value, ttl);
+		await withTimeout(cacheService.set(key, value, ttl), undefined);
 		const duration = Date.now() - startTime;
 		console.log(`Cache SET: ${key} (TTL: ${ttl}s, ${duration}ms)`);
 	} else {
-		await cacheService.set(key, value, ttl);
+		await withTimeout(cacheService.set(key, value, ttl), undefined);
 	}
 }
 
@@ -315,7 +341,7 @@ export async function set(
  * Delete key from cache
  */
 export async function del(key: string): Promise<void> {
-	await cacheService.del(key);
+	await withTimeout(cacheService.del(key), undefined);
 	// Only log in development
 	if (process.env.NODE_ENV === "development") {
 		console.log(`Cache DEL: ${key}`);

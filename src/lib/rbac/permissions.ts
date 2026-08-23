@@ -276,7 +276,8 @@ async function getUserPermissionsImpl(
 
 					const permissions = await tablesDB.listRows({
 						databaseId: appwriteConfig.databaseId || "default-db",
-						tableId: appwriteConfig.permissionsCollectionId || "permissions",
+						tableId:
+							appwriteConfig.permissionsCollectionId || "685ed87c0009d8189fc8",
 						queries: permissionQueries,
 					});
 

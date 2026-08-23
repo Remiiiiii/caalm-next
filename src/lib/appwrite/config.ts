@@ -105,7 +105,7 @@ export const appwriteConfig = {
 
 	permissionsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_PERMISSIONS_COLLECTION",
-		"test-permissions",
+		"685ed87c0009d8189fc8",
 	),
 
 	otpTokensCollectionId: getTestFallback(

@@ -61,7 +61,9 @@ export function usePermissions(): UsePermissionsResult {
 				const requestKey = `permissions:${user.$id}:${orgId || "default"}`;
 
 				const data = await deduplicateRequest(requestKey, async () => {
-					const response = await fetch(url);
+					const response = await fetch(url, {
+						signal: AbortSignal.timeout(20000),
+					});
 					if (!response.ok) {
 						throw new Error("Failed to fetch permissions");
 					}

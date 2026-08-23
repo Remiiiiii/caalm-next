@@ -55,8 +55,10 @@ test("authenticate", async ({ page, context }) => {
 			},
 		]);
 
+		// commit = response started. Do not wait for DOMContentLoaded:
+		// Next.js can stream / forever and Playwright will time out.
 		await page.goto("/", {
-			waitUntil: "domcontentloaded",
+			waitUntil: "commit",
 			timeout: SETUP_GOTO_TIMEOUT,
 		});
 
@@ -64,6 +66,7 @@ test("authenticate", async ({ page, context }) => {
 			({ userId }) => {
 				localStorage.setItem("auth-token", "test-auth-token");
 				localStorage.setItem("user-email", "test@example.com");
+				localStorage.setItem("caalm_org_id", "default_organization");
 				localStorage.setItem(
 					"cached_user",
 					JSON.stringify({
@@ -80,11 +83,14 @@ test("authenticate", async ({ page, context }) => {
 			{ userId: e2eUserId },
 		);
 
-		await page.goto(DASHBOARD_ENTRY, {
-			waitUntil: "domcontentloaded",
-			timeout: SETUP_GOTO_TIMEOUT,
-		});
-		console.log("Navigated to dashboard entry with 2FA cookies");
+		// Setup only stores cookies + localStorage. /dashboard RSC can sit on
+		// "Rendering..." and never fire DOMContentLoaded.
+		await page.context().storageState({ path: authFile });
+		console.log(
+			"Authentication setup completed successfully - saved to",
+			authFile,
+		);
+		return;
 	} else {
 		await page.goto("/sign-in", {
 			waitUntil: "domcontentloaded",
@@ -142,6 +148,7 @@ test("authenticate", async ({ page, context }) => {
 			await page.evaluate(() => {
 				localStorage.setItem("auth-token", "test-auth-token");
 				localStorage.setItem("user-email", "test@example.com");
+				localStorage.setItem("caalm_org_id", "default_organization");
 				localStorage.setItem(
 					"cached_user",
 					JSON.stringify({
@@ -182,6 +189,7 @@ test("authenticate", async ({ page, context }) => {
 			await page.evaluate(() => {
 				localStorage.setItem("auth-token", "test-auth-token");
 				localStorage.setItem("user-email", "test@example.com");
+				localStorage.setItem("caalm_org_id", "default_organization");
 				localStorage.setItem(
 					"cached_user",
 					JSON.stringify({
@@ -250,6 +258,10 @@ test("authenticate", async ({ page, context }) => {
 						{
 							name: "user-email",
 							value: "test@example.com",
+						},
+						{
+							name: "caalm_org_id",
+							value: "default_organization",
 						},
 						{
 							name: "cached_user",

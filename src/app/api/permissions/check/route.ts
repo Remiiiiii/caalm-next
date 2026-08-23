@@ -21,9 +21,12 @@ export async function GET(request: NextRequest) {
 
 		const cacheKey = CACHE_KEYS.rbac.check(user.$id, orgId);
 
-		// Drop any stale empty `rbac:check:*` entries; getUserPermissions already
-		// caches non-empty permission lists.
-		await CacheManager.invalidate(cacheKey);
+		// Drop stale empty `rbac:check:*` entries. Do not block the permission
+		// lookup if the cache is slow or unreachable.
+		await Promise.race([
+			CacheManager.invalidate(cacheKey).catch(() => undefined),
+			new Promise((resolve) => setTimeout(resolve, 1500)),
+		]);
 
 		const permissions = await deduplicateRequest(cacheKey, async () =>
 			getUserPermissions(user.$id, orgId),

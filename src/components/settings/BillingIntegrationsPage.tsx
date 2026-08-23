@@ -852,8 +852,6 @@ export default function BillingIntegrationsPage() {
 
 										managing={managing}
 
-										actionsDisabled={loadingPaymentMethods}
-
 									/>
 
 								</div>

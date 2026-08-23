@@ -1,4 +1,11 @@
+import path from "node:path";
 import { defineConfig, devices } from "@playwright/test";
+import { config as loadEnv } from "dotenv";
+
+// Next.js loads .env.local for `pnpm dev`. Playwright is a separate Node
+// process, so load the same files here. Existing env (CI secrets) wins.
+loadEnv({ path: path.join(process.cwd(), ".env") });
+loadEnv({ path: path.join(process.cwd(), ".env.local") });
 
 export default defineConfig({
 	testDir: "./tests",

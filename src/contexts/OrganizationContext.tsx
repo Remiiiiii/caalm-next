@@ -59,7 +59,8 @@ const OrganizationProvider = ({ children }: { children: ReactNode }) => {
 
 		const resolveOrg = async () => {
 			const savedOrgId = localStorage.getItem("caalm_org_id");
-			if (savedOrgId && savedOrgId !== "default_organization") {
+			// default_organization is the real seed org $id, not a placeholder
+			if (savedOrgId) {
 				if (!cancelled) {
 					setOrgId(savedOrgId);
 					setLoading(false);
