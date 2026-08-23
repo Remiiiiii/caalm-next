@@ -28,13 +28,14 @@ test.describe("Billing settings surface", () => {
 				timeout: 30000,
 			});
 			await expect(loading).toHaveCount(0, { timeout: 30000 });
+			await expect(pageRoot.or(forbidden)).toBeVisible({ timeout: 15000 });
 
 			const bouncedToSettings = /\/settings\/?$/.test(
 				new URL(page.url()).pathname,
 			);
 			if (bouncedToSettings || (await forbidden.isVisible().catch(() => false))) {
 				throw new Error(
-					"Billing page denied access. The E2E user already has settings.billing on Super Admin. Do not set NEXT_PUBLIC_APPWRITE_PERMISSIONS_COLLECTION to test-permissions; use table 685ed87c0009d8189fc8. An empty list usually means /api/permissions/check failed or hung.",
+					"Billing page denied access after auth settled. Super Admin already grants settings.billing; this is not a reason to skip the tests or set the permissions table to test-permissions. Use 685ed87c0009d8189fc8 and wait for /api/permissions/check.",
 				);
 			}
 

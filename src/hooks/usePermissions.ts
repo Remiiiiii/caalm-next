@@ -19,13 +19,20 @@ interface UsePermissionsResult {
 }
 
 export function usePermissions(): UsePermissionsResult {
-	const { user } = useAuth();
+	const { user, loading: authLoading } = useAuth();
 	const { orgId } = useOrganization();
 	const [permissions, setPermissions] = useState<PermissionKey[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
+		// Stay in loading until auth finishes. An empty list + loading false
+		// would look like "no billing access" and bounce to /settings.
+		if (authLoading) {
+			setLoading(true);
+			return;
+		}
+
 		if (!user?.$id) {
 			setPermissions([]);
 			setLoading(false);
@@ -96,7 +103,7 @@ export function usePermissions(): UsePermissionsResult {
 		};
 
 		fetchPermissions();
-	}, [user?.$id, orgId]);
+	}, [user?.$id, orgId, authLoading]);
 
 	const checkPermission = useMemo(
 		() => async (key: PermissionKey) => {

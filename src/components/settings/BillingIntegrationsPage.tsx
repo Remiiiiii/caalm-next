@@ -130,7 +130,7 @@ interface SubscriptionPayload {
 
 export default function BillingIntegrationsPage() {
 
-	const { user } = useAuth();
+	const { user, loading: authLoading } = useAuth();
 
 	const { orgId, loading: orgLoading } = useOrganization();
 
@@ -519,7 +519,7 @@ export default function BillingIntegrationsPage() {
 
 	useEffect(() => {
 
-		if (orgLoading || permissionsLoading) {
+		if (authLoading || orgLoading || permissionsLoading) {
 
 			return;
 
@@ -531,7 +531,7 @@ export default function BillingIntegrationsPage() {
 
 		}
 
-	}, [orgLoading, permissionsLoading, canAccessPage, router]);
+	}, [authLoading, orgLoading, permissionsLoading, canAccessPage, router]);
 
 
 
@@ -679,7 +679,7 @@ export default function BillingIntegrationsPage() {
 
 
 
-	if (orgLoading || permissionsLoading) {
+	if (authLoading || orgLoading || permissionsLoading) {
 
 		return (
 
