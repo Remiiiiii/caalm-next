@@ -30,6 +30,7 @@ test.describe("Billing settings surface", () => {
 						"Billing page denied access after auth settled. Super Admin already grants settings.billing; this is not a reason to skip the tests or set the permissions table to test-permissions. Use 685ed87c0009d8189fc8 and wait for /api/permissions/check.",
 					);
 				}
+				await expect(pageRoot).toBeVisible({ timeout: 30000 });
 				await expect(billingTab).toBeVisible({ timeout: 15000 });
 			};
 
@@ -39,14 +40,30 @@ test.describe("Billing settings surface", () => {
 					timeout: 60000,
 				});
 				await expect(page).not.toHaveURL(/sign-in/, { timeout: 15000 });
-				// RBAC gates the client tree; wait for the check or the tab (cached path).
+
+				const permissionsWithBilling = page.waitForResponse(
+					async (res) => {
+						if (!res.url().includes("/api/permissions/check") || !res.ok()) {
+							return false;
+						}
+						try {
+							const data = (await res.json()) as {
+								permissions?: string[];
+							};
+							return (
+								Array.isArray(data.permissions) &&
+								data.permissions.includes("settings.billing")
+							);
+						} catch {
+							return false;
+						}
+					},
+					{ timeout: 90000 },
+				);
+
 				await Promise.race([
-					page.waitForResponse(
-						(res) =>
-							res.url().includes("/api/permissions/check") && res.ok(),
-						{ timeout: 90000 },
-					),
-					billingTab.waitFor({ state: "visible", timeout: 90000 }),
+					permissionsWithBilling,
+					pageRoot.waitFor({ state: "visible", timeout: 90000 }),
 					forbidden.waitFor({ state: "visible", timeout: 90000 }),
 				]).catch(() => undefined);
 			};

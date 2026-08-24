@@ -15,6 +15,8 @@ interface UsePermissionsResult {
 	hasAnyPermission: (keys: PermissionKey[]) => Promise<boolean>;
 	hasAllPermissions: (keys: PermissionKey[]) => Promise<boolean>;
 	loading: boolean;
+	/** True after the first fetch attempt finishes for the current user/org. */
+	settled: boolean;
 	error: string | null;
 }
 
@@ -23,6 +25,7 @@ export function usePermissions(): UsePermissionsResult {
 	const { orgId } = useOrganization();
 	const [permissions, setPermissions] = useState<PermissionKey[]>([]);
 	const [loading, setLoading] = useState(true);
+	const [settled, setSettled] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
@@ -30,14 +33,18 @@ export function usePermissions(): UsePermissionsResult {
 		// would look like "no billing access" and bounce to /settings.
 		if (authLoading) {
 			setLoading(true);
+			setSettled(false);
 			return;
 		}
 
 		if (!user?.$id) {
 			setPermissions([]);
 			setLoading(false);
+			setSettled(false);
 			return;
 		}
+
+		setSettled(false);
 
 		// Check client-side cache first (stale-while-revalidate pattern)
 		const cacheKey = `permissions:${user.$id}:${orgId || "default"}`;
@@ -99,6 +106,7 @@ export function usePermissions(): UsePermissionsResult {
 				}
 			} finally {
 				setLoading(false);
+				setSettled(true);
 			}
 		};
 
@@ -135,6 +143,7 @@ export function usePermissions(): UsePermissionsResult {
 		hasAnyPermission: checkAnyPermission,
 		hasAllPermissions: checkAllPermissions,
 		loading,
+		settled,
 		error,
 	};
 }

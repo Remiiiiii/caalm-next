@@ -59,6 +59,15 @@ function readCachedAuthUser(): Models.User<Models.Preferences> | null {
 	return null;
 }
 
+/** E2E uses 2FA cookies + cached user without an Appwrite session; keep cache if re-check stalls. */
+function shouldKeepCachedUserOnAuthMiss(): boolean {
+	if (typeof document === "undefined") return false;
+	const has2faCookies =
+		document.cookie.includes("2fa_completed=true") &&
+		/(?:^|;\s*)2fa_user_id=/.test(document.cookie);
+	return has2faCookies && Boolean(readCachedAuthUser());
+}
+
 interface AuthContextType {
 	user: Models.User<Models.Preferences> | null;
 	setUser: (user: Models.User<Models.Preferences> | null) => void;
@@ -282,7 +291,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 									// localStorage might be full, ignore
 								}
 							}
-						} else {
+						} else if (!shouldKeepCachedUserOnAuthMiss()) {
 							if (process.env.NODE_ENV === "development") {
 								console.log("AuthContext: No 2FA user found, setting to null");
 							}
@@ -301,8 +310,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 				}
 			} catch (error) {
 				console.error("AuthContext: Session check failed:", error);
-				setUser(null);
-				setIsSessionValid(false);
+				if (!shouldKeepCachedUserOnAuthMiss()) {
+					setUser(null);
+					setIsSessionValid(false);
+				}
 			} finally {
 				setLoading(false);
 			}

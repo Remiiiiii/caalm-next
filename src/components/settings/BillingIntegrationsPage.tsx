@@ -134,7 +134,7 @@ export default function BillingIntegrationsPage() {
 
 	const { orgId, loading: orgLoading } = useOrganization();
 
-	const { permissions, loading: permissionsLoading } = usePermissions();
+	const { permissions, loading: permissionsLoading, settled: permissionsSettled, error: permissionsError } = usePermissions();
 
 	const { toast } = useToast();
 
@@ -519,7 +519,14 @@ export default function BillingIntegrationsPage() {
 
 	useEffect(() => {
 
-		if (authLoading || orgLoading || permissionsLoading) {
+		if (authLoading || orgLoading || permissionsLoading || !user) {
+
+			return;
+
+		}
+
+		// Wait for a definitive permissions result; transient fetch errors must not bounce.
+		if (!permissionsSettled || permissionsError) {
 
 			return;
 
@@ -530,7 +537,7 @@ export default function BillingIntegrationsPage() {
 
 		}
 
-	}, [authLoading, orgLoading, permissionsLoading, canAccessPage, router]);
+	}, [authLoading, orgLoading, permissionsLoading, permissionsSettled, permissionsError, user, canAccessPage, router]);
 
 
 

@@ -13,7 +13,7 @@ export default defineConfig({
 	fullyParallel: true,
 	forbidOnly: !!process.env.CI,
 	retries: process.env.CI ? 1 : 0, // Reduced retries to speed up tests
-	workers: process.env.CI ? 2 : undefined, // Increased workers to 2 for faster execution
+	workers: process.env.CI ? 1 : undefined, // Single worker in CI avoids auth/RBAC races on one server
 	reporter: process.env.CI
 		? [["html"], ["github"]] // GitHub Actions reporter for CI
 		: "html", // HTML reporter for local development
