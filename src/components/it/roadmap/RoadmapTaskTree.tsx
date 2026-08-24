@@ -86,6 +86,11 @@ function TaskRow({
 						{task.status.replace("_", " ")}
 					</span>
 				</div>
+				{task.prNumber != null ? (
+					<p className="text-xs text-slate-600 mt-1 tabular-nums">
+						PR #{task.prNumber}
+					</p>
+				) : null}
 			</div>
 		</div>
 	);

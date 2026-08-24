@@ -10,6 +10,7 @@ import {
 	getTaskByCode,
 	getTaskById,
 	getTaskByPrNumber,
+	getTasksByPrNumber,
 	getTestRunById,
 	listSections,
 	listStatusLogs,
@@ -21,6 +22,7 @@ import {
 	getCatalogLinkedPrNumber,
 	getCatalogLinkedPrNumbers,
 	getSectionNumberForPr,
+	sectionUsesPerTaskPrCompletion,
 } from "./catalog";
 import { fetchPullRequestStatus, listOpenPullRequests } from "./github";
 import {
@@ -143,6 +145,24 @@ export async function resolveTaskPullRequest(
 		: null;
 }
 
+function enrichTreeWithPrBranches(
+	nodes: RoadmapTaskTreeNode[],
+	branchByPr: Map<number, string>,
+): RoadmapTaskTreeNode[] {
+	const walk = (node: RoadmapTaskTreeNode): RoadmapTaskTreeNode => {
+		const prBranch =
+			node.branchName?.trim() ||
+			(node.prNumber != null ? branchByPr.get(node.prNumber) : undefined) ||
+			null;
+		return {
+			...node,
+			prBranch,
+			children: node.children.map(walk),
+		};
+	};
+	return nodes.map(walk);
+}
+
 async function firstTaskInSection(
 	sectionNumber: number,
 ): Promise<RoadmapTask | null> {
@@ -217,8 +237,11 @@ function invalidateOverviewCache() {
 	overviewCache = null;
 }
 
-export async function getOverview(): Promise<RoadmapOverview> {
+export async function getOverview(options?: {
+	skipCache?: boolean;
+}): Promise<RoadmapOverview> {
 	if (
+		!options?.skipCache &&
 		overviewCache &&
 		Date.now() - overviewCache.fetchedAt < OVERVIEW_CACHE_MS
 	) {
@@ -265,9 +288,11 @@ export async function getOverview(): Promise<RoadmapOverview> {
 			mergeBlockReason:
 				section.status === "complete"
 					? null
-					: waitingNumber
-						? `Waiting for PR #${waitingNumber} to merge`
-						: null,
+					: sectionUsesPerTaskPrCompletion(section.sectionNumber)
+						? `${taskCounts.complete} of ${taskCounts.total} tasks complete`
+						: waitingNumber
+							? `Waiting for PR #${waitingNumber} to merge`
+							: null,
 		};
 	});
 
@@ -287,18 +312,39 @@ export async function getSectionTaskTree(
 	if (!section) throw new RoadmapError("Section not found", 404);
 
 	const mergeBlockReason =
-		section.status === "complete"
+		section.status === "complete" || sectionUsesPerTaskPrCompletion(section.sectionNumber)
 			? null
 			: await evaluateSectionMergeBlock(section.sectionNumber);
+
+	const sectionTasks = tasks.filter((t) => t.sectionId === sectionId);
+	const prNumbers = [
+		...new Set(
+			sectionTasks
+				.map((t) => t.prNumber)
+				.filter((n): n is number => n != null),
+		),
+	];
+	const branchByPr = new Map<number, string>();
+	await Promise.all(
+		prNumbers.map(async (prNumber) => {
+			const live = await fetchPullRequestStatus({ prNumber });
+			if (live.headRef?.trim()) {
+				branchByPr.set(prNumber, live.headRef.trim());
+			}
+		}),
+	);
+
+	const tree = buildTaskTree(tasks, sectionId, {
+		sections,
+		tasks,
+		mergeBlockReasons: mergeBlockReason
+			? { [section.$id]: mergeBlockReason }
+			: undefined,
+	});
+
 	return {
 		sectionId,
-		tasks: buildTaskTree(tasks, sectionId, {
-			sections,
-			tasks,
-			mergeBlockReasons: mergeBlockReason
-				? { [section.$id]: mergeBlockReason }
-				: undefined,
-		}),
+		tasks: enrichTreeWithPrBranches(tree, branchByPr),
 	};
 }
 
@@ -308,6 +354,7 @@ export async function getSectionPullRequests(sectionId: string): Promise<
 		title: string;
 		state: "open" | "closed" | "merged" | "unknown";
 		htmlUrl: string;
+		headRef: string;
 		body: string;
 	}>
 > {
@@ -322,6 +369,7 @@ export async function getSectionPullRequests(sectionId: string): Promise<
 				title: live.title || `PR #${number}`,
 				state: live.state,
 				htmlUrl: live.htmlUrl || "",
+				headRef: live.headRef?.trim() || "",
 				body: live.body || "",
 			};
 		}),
@@ -456,6 +504,7 @@ export async function recordCiTestResult(
 	const task =
 		(input.taskCode ? await getTaskByCode(input.taskCode) : null) ||
 		(await getTaskByPrNumber(input.prNumber)) ||
+		((await getTasksByPrNumber(input.prNumber))[0] ?? null) ||
 		(sectionNumber != null ? await firstTaskInSection(sectionNumber) : null);
 	if (!task) {
 		throw new RoadmapError(
@@ -525,8 +574,9 @@ export type MergeCompleteOutcome = {
 };
 
 /**
- * Sole path that may set status=complete. Completes every task in the
- * catalog section once all linked PRs are merged with green tests.
+ * Sole path that may set status=complete.
+ * Single-PR sections: all tasks complete together.
+ * Multi-PR sections with per-task catalog links: only tasks bound to the merged PR.
  */
 export async function completeSectionFromMerge(
 	input: MergeCompleteInput,
@@ -603,18 +653,41 @@ export async function completeSectionFromMerge(
 		};
 	}
 
-	const block = await evaluateSectionMergeBlock(sectionNumber, {
-		triggeringPr: {
-			prNumber: input.prNumber,
-			mergeCommitSha: input.mergeCommitSha,
-		},
-	});
-	if (block) {
+	const perTaskPr = sectionUsesPerTaskPrCompletion(sectionNumber);
+	const tasksToComplete = perTaskPr
+		? sectionTasks.filter(
+				(t) => t.prNumber === input.prNumber && t.status !== "complete",
+			)
+		: sectionTasks.filter((t) => t.status !== "complete");
+
+	if (!perTaskPr) {
+		const block = await evaluateSectionMergeBlock(sectionNumber, {
+			triggeringPr: {
+				prNumber: input.prNumber,
+				mergeCommitSha: input.mergeCommitSha,
+			},
+		});
+		if (block) {
+			return {
+				sectionNumber,
+				completed: false,
+				reason: block,
+				tasks: sectionTasks,
+				testRun,
+			};
+		}
+	}
+
+	if (tasksToComplete.length === 0) {
+		await persistUnlockedSnapshot();
+		const refreshed = (await listTasks()).filter((t) => t.sectionId === section.$id);
 		return {
 			sectionNumber,
-			completed: false,
-			reason: block,
-			tasks: sectionTasks,
+			completed: refreshed.every((t) => t.status === "complete"),
+			reason: perTaskPr
+				? `PR #${input.prNumber} tasks already complete`
+				: undefined,
+			tasks: refreshed,
 			testRun,
 		};
 	}
@@ -622,7 +695,7 @@ export async function completeSectionFromMerge(
 	const completedAt = new Date().toISOString();
 	const updated: RoadmapTask[] = [];
 	for (const task of sectionTasks) {
-		if (task.status === "complete") {
+		if (!tasksToComplete.some((t) => t.$id === task.$id)) {
 			updated.push(task);
 			continue;
 		}
@@ -648,9 +721,15 @@ export async function completeSectionFromMerge(
 
 	await persistUnlockedSnapshot();
 	const refreshed = (await listTasks()).filter((t) => t.sectionId === section.$id);
+	const sectionComplete = refreshed.every((t) => t.status === "complete");
 	return {
 		sectionNumber,
-		completed: true,
+		completed: sectionComplete,
+		reason: sectionComplete
+			? undefined
+			: perTaskPr
+				? `${refreshed.filter((t) => t.status === "complete").length} of ${refreshed.length} tasks complete`
+				: undefined,
 		tasks: refreshed,
 		testRun,
 	};

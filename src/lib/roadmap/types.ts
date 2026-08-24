@@ -83,6 +83,8 @@ export type RoadmapStatusLog = {
 export type RoadmapTaskTreeNode = RoadmapTask & {
 	children: RoadmapTaskTreeNode[];
 	lockReason?: string;
+	/** GitHub head branch for the task's linked PR (from live API or task.branchName). */
+	prBranch?: string | null;
 };
 
 export type RoadmapSectionOverview = {
@@ -134,4 +136,6 @@ export type RoadmapCatalogTask = {
 	testSuiteRef: string;
 	/** Child task codes (optional nesting) */
 	children?: RoadmapCatalogTask[];
+	/** GitHub PR that completes this task when merged with green CI */
+	linkedPrNumber?: number;
 };

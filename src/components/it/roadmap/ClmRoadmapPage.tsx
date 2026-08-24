@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, Map } from "lucide-react";
+import { ChevronDown, GitBranch, Map } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import useSWR from "swr";
@@ -9,6 +9,7 @@ import { ITGlassPanel, ITPageShell } from "@/components/it/ITPageShell";
 import { RoadmapProgressBar } from "@/components/it/roadmap/RoadmapProgressBar";
 import { RoadmapTaskTree } from "@/components/it/roadmap/RoadmapTaskTree";
 import { PageIndex } from "@/components/ui/page-index";
+import { useRoadmapRealtime } from "@/hooks/useRoadmapRealtime";
 import type { RoadmapOverview, RoadmapTaskTreeNode } from "@/lib/roadmap/types";
 import { fetcher } from "@/lib/swr-config";
 import { cn } from "@/lib/utils";
@@ -25,6 +26,7 @@ type SectionPullRequestsResponse = {
 		title: string;
 		state: string;
 		htmlUrl: string;
+		headRef: string;
 		body: string;
 	}>;
 };
@@ -64,7 +66,11 @@ function RoadmapSectionCard({
 		useSWR<SectionTasksResponse>(
 			expanded ? `/api/roadmap/sections/${section.id}/tasks` : null,
 			fetcher,
-			{ refreshInterval: 60_000, keepPreviousData: true },
+			{
+				refreshInterval: 120_000,
+				revalidateOnFocus: true,
+				keepPreviousData: true,
+			},
 		);
 	const { data: prs, isLoading: prsLoading } =
 		useSWR<SectionPullRequestsResponse>(
@@ -201,6 +207,15 @@ function RoadmapSectionCard({
 												{pr.state}
 											</span>
 										</p>
+										{pr.headRef ? (
+											<p className="text-xs text-slate-600 tabular-nums flex items-center gap-1.5">
+												<GitBranch
+													className="h-3.5 w-3.5 text-[#0f5384] shrink-0"
+													aria-hidden
+												/>
+												<span>{pr.headRef}</span>
+											</p>
+										) : null}
 										{pr.htmlUrl ? (
 											<a
 												href={pr.htmlUrl}
@@ -232,9 +247,12 @@ function RoadmapSectionCard({
 }
 
 export function ClmRoadmapPage() {
+	const { realtimeEnabled } = useRoadmapRealtime();
 	const { data: overview, isLoading: overviewLoading } =
 		useSWR<RoadmapOverview>("/api/roadmap/overview", fetcher, {
-			refreshInterval: 60_000,
+			// Appwrite Realtime pushes updates; polling is a fallback only
+			refreshInterval: realtimeEnabled ? 0 : 30_000,
+			revalidateOnFocus: true,
 			keepPreviousData: true,
 		});
 

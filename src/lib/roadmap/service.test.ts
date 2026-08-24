@@ -133,11 +133,8 @@ describe("roadmap service", () => {
 		expect(s0.taskCounts.complete).toBe(0);
 	});
 
-	it("completes a multi-PR section only after every catalog PR is merged and green", async () => {
+	it("completes a multi-PR section task-by-task as each catalog PR merges", async () => {
 		const { getSectionTaskTree } = await import("./service");
-		const s0Tree = await getSectionTaskTree(
-			(await getOverview()).sections.find((s) => s.sectionNumber === 0)!.id,
-		);
 		await recordCiTestResult({
 			prNumber: 49,
 			commitSha: "sha49",
@@ -156,12 +153,25 @@ describe("roadmap service", () => {
 		const [first, ...rest] = section1Prs;
 		const last = rest[rest.length - 1]!;
 
+		await recordCiTestResult({
+			prNumber: first!,
+			commitSha: `sha${first}`,
+			result: "passed",
+			logsUrl: `https://ci.example/${first}`,
+			summary: "ok",
+		});
+
 		const firstMerge = await completeSectionFromMerge({
 			prNumber: first!,
 			mergeCommitSha: `sha${first}`,
 			baseBranch: "main",
 		});
 		expect(firstMerge.completed).toBe(false);
+		expect(firstMerge.tasks.filter((t) => t.status === "complete").length).toBe(1);
+
+		const s1 = (await getOverview()).sections.find((s) => s.sectionNumber === 1)!;
+		expect(s1.progressPercent).toBeGreaterThan(0);
+		expect(s1.progressPercent).toBeLessThan(100);
 
 		const shaByPr = new Map<number, string>();
 		for (const n of section1Prs) {
@@ -182,14 +192,12 @@ describe("roadmap service", () => {
 				logsUrl: `https://ci.example/${n}`,
 				summary: "ok",
 			});
+			await completeSectionFromMerge({
+				prNumber: n,
+				mergeCommitSha: shaByPr.get(n)!,
+				baseBranch: "main",
+			});
 		}
-		await recordCiTestResult({
-			prNumber: first!,
-			commitSha: shaByPr.get(first!)!,
-			result: "passed",
-			logsUrl: `https://ci.example/${first}`,
-			summary: "ok",
-		});
 		await recordCiTestResult({
 			prNumber: last,
 			commitSha: shaByPr.get(last)!,

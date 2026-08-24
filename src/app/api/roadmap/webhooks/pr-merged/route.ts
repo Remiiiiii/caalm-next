@@ -5,7 +5,7 @@ import {
 	recordPassingRecheck,
 	RoadmapError,
 } from "@/lib/roadmap/service";
-import { listSections, listTasks } from "@/lib/roadmap/store";
+import { listSections, listTasks, getTasksByPrNumber } from "@/lib/roadmap/store";
 import {
 	getRoadmapWebhookSecret,
 	verifyRoadmapWebhookSignature,
@@ -67,7 +67,8 @@ export async function POST(request: NextRequest) {
 		}
 
 		if (body.recheckPassed === true) {
-			const owner = await firstTaskForPr(prNumber);
+			const owners = await getTasksByPrNumber(prNumber);
+			const owner = owners[0] ?? (await firstTaskForPr(prNumber));
 			if (owner) {
 				await recordPassingRecheck({
 					taskId: owner.$id,

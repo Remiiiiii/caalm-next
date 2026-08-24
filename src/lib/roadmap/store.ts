@@ -6,7 +6,11 @@
 import { ID, Query } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig, isAppwriteConfigured } from "@/lib/appwrite/config";
-import { ROADMAP_CATALOG } from "./catalog";
+import {
+	ROADMAP_CATALOG,
+	getCatalogLinkedPrNumbers,
+	getCatalogTaskLinkedPrNumber,
+} from "./catalog";
 import { computeUnlocked, type LockSnapshot } from "./locking";
 import type {
 	RoadmapSection,
@@ -192,6 +196,7 @@ function taskLayoutData(task: RoadmapTask) {
 		acceptanceCriteria: task.acceptanceCriteria,
 		orderIndex: task.orderIndex,
 		testSuiteRef: task.testSuiteRef,
+		prNumber: task.prNumber,
 	};
 }
 
@@ -336,6 +341,10 @@ export function buildSeedSnapshot(): {
 			items: (typeof catalogSection.tasks)[number][],
 			parentTaskId: string | null,
 		) => {
+			const sectionPrs = catalogSection.linkedPrNumbers ?? [];
+			const soleSectionPr =
+				sectionPrs.length === 1 ? sectionPrs[0] : undefined;
+
 			items.forEach((item, index) => {
 				const taskId = `task_${item.taskCode.replace(/\./g, "_")}`;
 				tasks.push({
@@ -350,7 +359,7 @@ export function buildSeedSnapshot(): {
 					status: "locked",
 					branchName: null,
 					prUrl: null,
-					prNumber: null,
+					prNumber: item.linkedPrNumber ?? soleSectionPr ?? null,
 					testSuiteRef: item.testSuiteRef,
 					latestTestRunId: null,
 					completedAt: null,
@@ -400,10 +409,25 @@ export async function listSections(): Promise<RoadmapSection[]> {
 	return result.rows.map((row) => row as unknown as RoadmapSection);
 }
 
+function enrichTaskPrFromCatalog(task: RoadmapTask): RoadmapTask {
+	if (task.prNumber != null) return task;
+	const fromCatalog = getCatalogTaskLinkedPrNumber(task.taskCode);
+	if (fromCatalog != null) {
+		return { ...task, prNumber: fromCatalog };
+	}
+	const sectionNumber = Number(task.taskCode.split(".")[0]);
+	if (Number.isNaN(sectionNumber)) return task;
+	const sectionPrs = getCatalogLinkedPrNumbers(sectionNumber);
+	if (sectionPrs.length === 1) {
+		return { ...task, prNumber: sectionPrs[0] };
+	}
+	return task;
+}
+
 export async function listTasks(sectionId?: string): Promise<RoadmapTask[]> {
 	const state = ensureSeeded();
 	if (!useAppwrite()) {
-		const all = [...state.tasks.values()];
+		const all = [...state.tasks.values()].map(enrichTaskPrFromCatalog);
 		return (sectionId ? all.filter((t) => t.sectionId === sectionId) : all).sort(
 			(a, b) => a.orderIndex - b.orderIndex,
 		);
@@ -421,11 +445,12 @@ export async function listTasks(sectionId?: string): Promise<RoadmapTask[]> {
 	});
 	return result.rows.map((row) => {
 		const r = row as Record<string, unknown>;
-		return {
+		const task = enrichTaskPrFromCatalog({
 			...(r as unknown as RoadmapTask),
 			acceptanceCriteria: parseStringArray(r.acceptanceCriteria),
 			parentTaskId: r.parentTaskId ? String(r.parentTaskId) : null,
-		};
+		});
+		return task;
 	});
 }
 
@@ -463,8 +488,15 @@ export async function getTaskByCode(
 export async function getTaskByPrNumber(
 	prNumber: number,
 ): Promise<RoadmapTask | null> {
+	const matches = await getTasksByPrNumber(prNumber);
+	return matches[0] ?? null;
+}
+
+export async function getTasksByPrNumber(
+	prNumber: number,
+): Promise<RoadmapTask[]> {
 	const tasks = await listTasks();
-	return tasks.find((t) => t.prNumber === prNumber) || null;
+	return tasks.filter((t) => t.prNumber === prNumber);
 }
 
 export async function getSectionById(

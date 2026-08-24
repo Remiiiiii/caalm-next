@@ -3,8 +3,10 @@ import {
 	findDuplicateCatalogPrNumbers,
 	getCatalogLinkedPrNumber,
 	getCatalogLinkedPrNumbers,
+	getCatalogTaskLinkedPrNumber,
 	getSectionNumberForPr,
 	ROADMAP_CATALOG,
+	sectionUsesPerTaskPrCompletion,
 } from "./catalog";
 
 describe("roadmap catalog PR links", () => {
@@ -46,6 +48,15 @@ describe("roadmap catalog PR links", () => {
 		expect(getSectionNumberForPr(49)).toBe(0);
 		expect(getSectionNumberForPr(52)).toBe(1);
 		expect(getSectionNumberForPr(9999)).toBeUndefined();
+	});
+
+	it("maps section 1 tasks to catalog PRs", () => {
+		expect(getCatalogTaskLinkedPrNumber("1.1")).toBe(52);
+		expect(getCatalogTaskLinkedPrNumber("1.2")).toBe(54);
+		expect(getCatalogTaskLinkedPrNumber("1.3")).toBe(56);
+		expect(getCatalogTaskLinkedPrNumber("1.4")).toBe(59);
+		expect(sectionUsesPerTaskPrCompletion(1)).toBe(true);
+		expect(sectionUsesPerTaskPrCompletion(0)).toBe(false);
 	});
 
 	it("includes dedicated GitHub tracking PRs 61-65", () => {

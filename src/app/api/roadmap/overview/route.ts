@@ -13,7 +13,8 @@ export async function GET(request: NextRequest) {
 	if (denied) return denied;
 
 	try {
-		const overview = await getOverview();
+		const skipCache = request.nextUrl.searchParams.get("fresh") === "1";
+		const overview = await getOverview({ skipCache });
 		return NextResponse.json(overview);
 	} catch (error) {
 		if (error instanceof RoadmapError) {

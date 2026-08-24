@@ -202,7 +202,9 @@ export function lockReasonForTask(
 
 	return (
 		snapshot.mergeBlockReasons?.[section.$id] ??
-		"Waiting for this section's pull requests to merge"
+		(task.prNumber != null
+			? `Waiting for PR #${task.prNumber} to merge with green tests`
+			: "Waiting for this section's pull requests to merge")
 	);
 }
 

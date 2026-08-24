@@ -41,7 +41,7 @@ export function RoadmapProgressBar({
 				aria-label={label || "Roadmap progress"}
 			>
 				<div
-					className="h-full rounded-full bg-[#0f5384] transition-all duration-200"
+					className="h-full rounded-full bg-green transition-all duration-200"
 					style={{ width: `${clamped}%` }}
 				/>
 			</div>

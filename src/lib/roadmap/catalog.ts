@@ -18,6 +18,7 @@ function t(
 	description: string,
 	acceptanceCriteria: string[],
 	children?: RoadmapCatalogSection["tasks"][number]["children"],
+	linkedPrNumber?: number,
 ): RoadmapCatalogSection["tasks"][number] {
 	return {
 		taskCode,
@@ -26,6 +27,7 @@ function t(
 		acceptanceCriteria,
 		testSuiteRef: `tests/roadmap/${taskCode.replace(/\./g, "-")}.test.ts`,
 		children,
+		linkedPrNumber,
 	};
 }
 
@@ -118,12 +120,16 @@ export const ROADMAP_CATALOG: RoadmapCatalogSection[] = [
 				[
 					"Auth integration tests confirm session cannot be forged via cookie manipulation",
 				],
+				undefined,
+				52,
 			),
 			t(
 				"1.2",
 				"Remove 2FA test-mode bypass",
 				"Delete or hard-gate unknown-user bypass behind a non-prod-only flag.",
 				["Bypass path unreachable when NODE_ENV=production"],
+				undefined,
+				54,
 			),
 			t(
 				"1.3",
@@ -133,24 +139,32 @@ export const ROADMAP_CATALOG: RoadmapCatalogSection[] = [
 					"Unauthenticated/unauthorized calls return 401/403",
 					"Authorized dismiss transitions contract status",
 				],
+				undefined,
+				56,
 			),
 			t(
 				"1.4",
 				"Close authz gaps on AI routes",
 				"Gate extract-data, contract-analysis, ai-analyze (and license equivalents).",
 				["Every listed route has positive + negative authz tests"],
+				undefined,
+				59,
 			),
 			t(
 				"1.5",
 				"Fix multi-tenant data bleed",
 				"Add orgId filtering to all_org list scope so VIEW_ALL cannot cross tenants.",
 				["VIEW_ALL for Org A never returns Org B rows"],
+				undefined,
+				56,
 			),
 			t(
 				"1.6",
 				"Session-audit on revoke/reset",
 				"Capture session revoke and password/2FA reset in the audit log.",
 				["Revoke/reset actions produce verifiable audit events"],
+				undefined,
+				59,
 			),
 		],
 	},
@@ -603,12 +617,60 @@ export function getCatalogLinkedPrNumbers(sectionNumber: number): number[] {
 	);
 }
 
-/** Newest catalog PR for the section (last entry). Card display only. */
 export function getCatalogLinkedPrNumber(
 	sectionNumber: number,
 ): number | undefined {
 	const numbers = getCatalogLinkedPrNumbers(sectionNumber);
 	return numbers[numbers.length - 1];
+}
+
+/** Catalog PR bound to a task code (multi-PR sections). */
+export function getCatalogTaskLinkedPrNumber(
+	taskCode: string,
+): number | undefined {
+	for (const section of ROADMAP_CATALOG) {
+		const found = findCatalogTask(section.tasks, taskCode);
+		if (found?.linkedPrNumber != null) return found.linkedPrNumber;
+	}
+	return undefined;
+}
+
+function findCatalogTask(
+	tasks: RoadmapCatalogSection["tasks"],
+	taskCode: string,
+): RoadmapCatalogSection["tasks"][number] | undefined {
+	for (const task of tasks) {
+		if (task.taskCode === taskCode) return task;
+		if (task.children?.length) {
+			const nested = findCatalogTask(task.children, taskCode);
+			if (nested) return nested;
+		}
+	}
+	return undefined;
+}
+
+/** True when tasks complete individually as each catalog PR merges (not all-at-once). */
+export function sectionUsesPerTaskPrCompletion(sectionNumber: number): boolean {
+	const section = ROADMAP_CATALOG.find((s) => s.sectionNumber === sectionNumber);
+	if (!section) return false;
+	const prs = section.linkedPrNumbers ?? [];
+	if (prs.length <= 1) return false;
+	return section.tasks.some((task) => task.linkedPrNumber != null);
+}
+
+/** Task codes in the catalog that share a GitHub PR number. */
+export function getCatalogTaskCodesForPr(prNumber: number): string[] {
+	const codes: string[] = [];
+	for (const section of ROADMAP_CATALOG) {
+		const walk = (tasks: RoadmapCatalogSection["tasks"]) => {
+			for (const task of tasks) {
+				if (task.linkedPrNumber === prNumber) codes.push(task.taskCode);
+				if (task.children?.length) walk(task.children);
+			}
+		};
+		walk(section.tasks);
+	}
+	return codes;
 }
 
 /** Exclusive catalog owner for a GitHub PR, or undefined if the PR is not listed. */
