@@ -34,7 +34,15 @@ export default defineConfig({
 	},
 
 	projects: [
-		{ name: "setup", testMatch: /.*\.setup\.js/ },
+		{
+			name: "preflight",
+			testMatch: /e2e-preflight\.setup\.js/,
+		},
+		{
+			name: "setup",
+			testMatch: /auth\.setup\.js/,
+			dependencies: ["preflight"],
+		},
 		{
 			name: "chromium",
 			use: {
@@ -56,11 +64,17 @@ export default defineConfig({
 	],
 
 	webServer: {
-		command: "pnpm run dev",
+		// CI uses a production build so Suspense/streaming matches deploy behavior.
+		command: process.env.CI
+			? "pnpm run build && pnpm run start"
+			: "pnpm run dev",
 		url: "http://localhost:3000",
 		reuseExistingServer: !process.env.CI,
-		timeout: process.env.CI ? 180 * 1000 : 120 * 1000, // 180s in CI, 120s locally
+		timeout: process.env.CI ? 300 * 1000 : 120 * 1000,
 		stdout: "pipe",
 		stderr: "pipe",
+		env: {
+			PLAYWRIGHT_TEST: "true",
+		},
 	},
 });

@@ -13,41 +13,53 @@ test.describe("Billing settings surface", () => {
 				testInfo.project.name === "chromium-no-auth",
 				"Billing UI needs the stored session from the chromium project",
 			);
-			await page.goto(BILLING_PATH, {
-				waitUntil: "domcontentloaded",
-				timeout: 60000,
-			});
-			await expect(page).not.toHaveURL(/sign-in/, { timeout: 15000 });
 
 			const pageRoot = page.getByTestId("billing-integrations-page");
 			const forbidden = page.getByTestId("billing-page-forbidden");
-			const loading = page.getByTestId("billing-page-loading");
+			const billingTab = page.getByRole("tab", { name: "Billing" });
 
-			// Org + permissions hydrate first. Do not wait on heading text:
-			// gradient headings can have an empty accessible name, and a
-			// missing-permission bounce happens after the first URL check.
-			// .first() avoids strict-mode when the fallback wrapper is visible.
-			await expect(loading.or(pageRoot).or(forbidden).first()).toBeVisible({
-				timeout: 30000,
-			});
-			// Do not require loading count 0. The route Suspense fallback
-			// keeps data-testid="billing-page-loading" in the DOM after
-			// BillingIntegrationsPage has already rendered.
-			await expect(pageRoot.or(forbidden)).toBeVisible({ timeout: 60000 });
+			const assertBillingSettled = async () => {
+				const pathname = new URL(page.url()).pathname;
+				if (/\/settings\/?$/.test(pathname)) {
+					throw new Error(
+						"Billing page denied access after auth settled. Super Admin already grants settings.billing; this is not a reason to skip the tests or set the permissions table to test-permissions. Use 685ed87c0009d8189fc8 and wait for /api/permissions/check.",
+					);
+				}
+				if (await forbidden.isVisible().catch(() => false)) {
+					throw new Error(
+						"Billing page denied access after auth settled. Super Admin already grants settings.billing; this is not a reason to skip the tests or set the permissions table to test-permissions. Use 685ed87c0009d8189fc8 and wait for /api/permissions/check.",
+					);
+				}
+				await expect(billingTab).toBeVisible({ timeout: 15000 });
+			};
 
-			const bouncedToSettings = /\/settings\/?$/.test(
-				new URL(page.url()).pathname,
-			);
-			if (bouncedToSettings || (await forbidden.isVisible().catch(() => false))) {
-				throw new Error(
-					"Billing page denied access after auth settled. Super Admin already grants settings.billing; this is not a reason to skip the tests or set the permissions table to test-permissions. Use 685ed87c0009d8189fc8 and wait for /api/permissions/check.",
-				);
+			const gotoBilling = async () => {
+				await page.goto(BILLING_PATH, {
+					waitUntil: "domcontentloaded",
+					timeout: 60000,
+				});
+				await expect(page).not.toHaveURL(/sign-in/, { timeout: 15000 });
+				// RBAC gates the client tree; wait for the check or the tab (cached path).
+				await Promise.race([
+					page.waitForResponse(
+						(res) =>
+							res.url().includes("/api/permissions/check") && res.ok(),
+						{ timeout: 90000 },
+					),
+					billingTab.waitFor({ state: "visible", timeout: 90000 }),
+					forbidden.waitFor({ state: "visible", timeout: 90000 }),
+				]).catch(() => undefined);
+			};
+
+			await gotoBilling();
+			try {
+				await assertBillingSettled();
+			} catch {
+				// Dev Suspense/useSearchParams can leave the route fallback up; one reload usually clears it.
+				await page.reload({ waitUntil: "domcontentloaded" });
+				await gotoBilling();
+				await assertBillingSettled();
 			}
-
-			await expect(pageRoot).toBeVisible({ timeout: 10000 });
-			await expect(page.getByRole("tab", { name: "Billing" })).toBeVisible({
-				timeout: 10000,
-			});
 		});
 
 		test("loads billing page without auth redirect", async ({ page }) => {

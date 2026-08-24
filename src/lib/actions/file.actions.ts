@@ -2274,10 +2274,14 @@ export async function getTotalSpaceUsed() {
 				queries: [Query.equal("owner", currentUser.$id)],
 			});
 		} catch (error: any) {
-			// Handle case where 'owner' attribute might not be available yet (e.g., still processing)
-			if (error?.message?.includes("Attribute not found in schema: owner")) {
+			const message = String(error?.message || "");
+			// owner is a relationship on Files; Appwrite cannot filter virtual relations on all hosts.
+			if (
+				message.includes("Attribute not found in schema: owner") ||
+				message.includes("virtual relationship attribute")
+			) {
 				console.warn(
-					"Owner attribute not available, fetching all files and filtering in memory",
+					"Owner relationship not queryable, fetching files and filtering in memory",
 				);
 				// Fallback: fetch all files and filter in memory
 				const allFiles = await tablesDB.listRows({

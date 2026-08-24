@@ -225,6 +225,14 @@ Add this **repository secret** so CI can complete [`tests/auth.setup.js`](tests/
 
 For local Playwright runs, set the same value in `.env.local` or the shell, for example: `PLAYWRIGHT_E2E_USER_ID=<your-user-document-id>`.
 
+**E2E preflight (runs before auth setup):** Playwright calls `GET /api/test/e2e-preflight` to verify:
+
+1. `organizations` row `default_organization` exists
+2. `NEXT_PUBLIC_APPWRITE_PERMISSIONS_COLLECTION` points at the **permissions** table (permission keys like `settings.billing`), not `role_permissions`
+3. The E2E user resolves to Super Admin (or otherwise has `settings.billing`) via `user_roles` → `role_permissions` → `permissions`
+
+If preflight fails, fix Appwrite data or secrets — do not add per-user permission documents or hardcoded RBAC bypasses. See [`src/lib/e2e/preflight.ts`](src/lib/e2e/preflight.ts).
+
 ### RBAC `roles` table (optional columns)
 
 Add these optional attributes to the Appwrite **Tables** `roles` table when you want dashboard home routing stored in the database (until then, the app uses [`ROLE_DASHBOARD_FALLBACK`](src/lib/rbac/role-dashboard-metadata.ts)):
