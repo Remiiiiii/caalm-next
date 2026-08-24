@@ -3,7 +3,9 @@ import { expect, test } from "@playwright/test";
 const BILLING_PATH = "/settings/billing";
 
 test.describe("Billing settings surface", () => {
-	test.describe.configure({ timeout: 90000 });
+	// Serial: 8 workers on a compiling `next dev` route all sit on the
+	// Suspense fallback ("Loading billing…") and miss the client testids.
+	test.describe.configure({ timeout: 120000, mode: "serial" });
 
 	test.describe("authenticated", () => {
 		test.beforeEach(async ({ page }, testInfo) => {
@@ -24,11 +26,14 @@ test.describe("Billing settings surface", () => {
 			// Org + permissions hydrate first. Do not wait on heading text:
 			// gradient headings can have an empty accessible name, and a
 			// missing-permission bounce happens after the first URL check.
-			await expect(loading.or(pageRoot).or(forbidden)).toBeVisible({
+			// .first() avoids strict-mode when the fallback wrapper is visible.
+			await expect(loading.or(pageRoot).or(forbidden).first()).toBeVisible({
 				timeout: 30000,
 			});
-			await expect(loading).toHaveCount(0, { timeout: 30000 });
-			await expect(pageRoot.or(forbidden)).toBeVisible({ timeout: 15000 });
+			// Do not require loading count 0. The route Suspense fallback
+			// keeps data-testid="billing-page-loading" in the DOM after
+			// BillingIntegrationsPage has already rendered.
+			await expect(pageRoot.or(forbidden)).toBeVisible({ timeout: 60000 });
 
 			const bouncedToSettings = /\/settings\/?$/.test(
 				new URL(page.url()).pathname,

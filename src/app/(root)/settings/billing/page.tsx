@@ -16,7 +16,10 @@ export default async function BillingSettingsPage() {
 	return (
 		<Suspense
 			fallback={
-				<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-8">
+				<div
+					data-testid="billing-page-loading"
+					className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-8"
+				>
 					<LoadingSpinner size="sm" label="Loading billing…" />
 				</div>
 			}

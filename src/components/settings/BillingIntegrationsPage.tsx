@@ -526,7 +526,6 @@ export default function BillingIntegrationsPage() {
 		}
 
 		if (!canAccessPage) {
-
 			router.replace("/settings");
 
 		}
@@ -699,7 +698,6 @@ export default function BillingIntegrationsPage() {
 
 
 	if (!canAccessPage) {
-
 		return (
 			<div
 				data-testid="billing-page-forbidden"
