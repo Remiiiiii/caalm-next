@@ -233,6 +233,24 @@ For local Playwright runs, set the same value in `.env.local` or the shell, for 
 
 If preflight fails, fix Appwrite data or secrets — do not add per-user permission documents or hardcoded RBAC bypasses. See [`src/lib/e2e/preflight.ts`](src/lib/e2e/preflight.ts).
 
+### CLM roadmap CI webhooks
+
+After Playwright passes, [`scripts/notify-roadmap-ci.mjs`](scripts/notify-roadmap-ci.mjs) calls production roadmap endpoints so merged PRs can flip section tasks to `complete`:
+
+| Secret Name | Description |
+| ----------- | ----------- |
+| `ROADMAP_WEBHOOK_SECRET` | Same HMAC secret as Vercel (`ROADMAP_WEBHOOK_SECRET` or `GITHUB_WEBHOOK_SECRET`). Required for roadmap notifications. |
+| `ROADMAP_APP_URL` | Optional. Production app origin (e.g. `https://www.caalmsolutions.com`). Defaults to that URL if unset. |
+
+**One-time backfill** (e.g. PR #49 already merged before this wiring):
+
+```bash
+ROADMAP_WEBHOOK_SECRET=... ROADMAP_APP_URL=https://www.caalmsolutions.com \
+  node scripts/notify-roadmap-ci.mjs --backfill --pr 49 --sha <merge-commit-sha>
+```
+
+Ensure Vercel production has `ROADMAP_USE_APPWRITE=true` and roadmap collection IDs, then run `pnpm exec tsx scripts/seed-roadmap-appwrite.ts` if tables are empty.
+
 ### RBAC `roles` table (optional columns)
 
 Add these optional attributes to the Appwrite **Tables** `roles` table when you want dashboard home routing stored in the database (until then, the app uses [`ROLE_DASHBOARD_FALLBACK`](src/lib/rbac/role-dashboard-metadata.ts)):
