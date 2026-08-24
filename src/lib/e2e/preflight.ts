@@ -7,6 +7,7 @@ import { Query } from "node-appwrite";
 import { PERMISSIONS } from "@/constants/permissions";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { getOrCreateDefaultOrganization } from "@/lib/database/seeds/default-organization";
 import { getOrganization } from "@/lib/rbac/organizations";
 import { getUserPermissions } from "@/lib/rbac/permissions";
 
@@ -69,6 +70,14 @@ async function checkRolePermissionsTable(): Promise<E2EPreflightCheck> {
 	}
 }
 
+function canSeedE2EOrg(): boolean {
+	return (
+		process.env.CI === "true" ||
+		process.env.PLAYWRIGHT_TEST === "true" ||
+		process.env.NODE_ENV === "test"
+	);
+}
+
 export async function runE2EPreflight(
 	e2eUserId: string,
 ): Promise<E2EPreflightResult> {
@@ -89,13 +98,32 @@ export async function runE2EPreflight(
 		ok: true,
 	});
 
-	const org = await getOrganization(DEFAULT_E2E_ORG_ID);
+	let org = await getOrganization(DEFAULT_E2E_ORG_ID);
+	if (!org && canSeedE2EOrg()) {
+		try {
+			org = await getOrCreateDefaultOrganization(e2eUserId);
+			checks.push({
+				name: "default_organization_seed",
+				ok: true,
+				detail: "Created default_organization during E2E preflight",
+			});
+		} catch (error) {
+			const message =
+				error instanceof Error ? error.message : "Unknown seed error";
+			checks.push({
+				name: "default_organization_seed",
+				ok: false,
+				detail: message,
+			});
+		}
+	}
+
 	checks.push({
 		name: "default_organization",
 		ok: Boolean(org),
 		detail: org
 			? undefined
-			: `organizations row "${DEFAULT_E2E_ORG_ID}" not found. Seed prod/dev Appwrite or run getOrCreateDefaultOrganization.`,
+			: `organizations row "${DEFAULT_E2E_ORG_ID}" not found. Seed Appwrite or set GitHub secrets to the database that contains it.`,
 	});
 
 	checks.push(await checkPermissionsTable());

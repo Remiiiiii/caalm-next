@@ -128,6 +128,12 @@ export const API_AUTHZ_ALLOWLIST: readonly ApiAuthzAllowEntry[] = [
 		class: "public",
 		reason: "Demo sandbox session bootstrap",
 	},
+	{
+		path: "test/e2e-preflight",
+		class: "health",
+		reason:
+			"Playwright/CI preflight only: returns 404 outside CI, PLAYWRIGHT_TEST, or development; read-only Appwrite RBAC checks",
+	},
 ] as const;
 
 export const API_AUTHZ_ALLOWLIST_PATHS = new Set(
