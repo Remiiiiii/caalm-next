@@ -16,8 +16,12 @@ import { rateLimitMonitoring } from "@/lib/services/rate-limit-monitoring";
 import { rateLimiter } from "@/lib/services/rate-limiter";
 import { penaltyService } from "@/lib/services/rate-limiter-penalties";
 
-// Check if rate limiting is enabled
+// Check if rate limiting is enabled (off during Playwright/CI — production server, burst API tests)
+const isAutomatedTestRun =
+	process.env.PLAYWRIGHT_TEST === "true" || process.env.CI === "true";
+
 const RATE_LIMIT_ENABLED =
+	!isAutomatedTestRun &&
 	process.env.RATE_LIMIT_ENABLED !== "false" &&
 	process.env.NODE_ENV === "production";
 

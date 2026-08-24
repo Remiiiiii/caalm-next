@@ -75,6 +75,7 @@ export default defineConfig({
 		stderr: "pipe",
 		env: {
 			PLAYWRIGHT_TEST: "true",
+			RATE_LIMIT_ENABLED: "false",
 		},
 	},
 });

@@ -26,8 +26,22 @@ test.describe("Billing settings surface", () => {
 					);
 				}
 				if (await forbidden.isVisible().catch(() => false)) {
+					const perm429 = await page
+						.evaluate(() =>
+							performance
+								.getEntriesByType("resource")
+								.some(
+									(e) =>
+										e.name.includes("/api/permissions/check") &&
+										"responseStatus" in e &&
+										(e as PerformanceResourceTiming).responseStatus === 429,
+								),
+						)
+						.catch(() => false);
 					throw new Error(
-						"Billing page denied access after auth settled. Super Admin already grants settings.billing; this is not a reason to skip the tests or set the permissions table to test-permissions. Use 685ed87c0009d8189fc8 and wait for /api/permissions/check.",
+						perm429
+							? "Billing page forbidden after /api/permissions/check returned 429 (rate limited). Ensure RATE_LIMIT_ENABLED=false for Playwright CI."
+							: "Billing page denied access after auth settled. Super Admin already grants settings.billing; this is not a reason to skip the tests or set the permissions table to test-permissions. Use 685ed87c0009d8189fc8 and wait for /api/permissions/check.",
 					);
 				}
 				await expect(pageRoot).toBeVisible({ timeout: 30000 });
