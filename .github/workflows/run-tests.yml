@@ -21,6 +21,19 @@ on:
   pull_request:
     branches: [main, develop]
   workflow_dispatch:
+    inputs:
+      roadmap_backfill_pr:
+        description: "Backfill CLM roadmap for merged PR number (optional)"
+        required: false
+        type: string
+      roadmap_backfill_sha:
+        description: "Merge commit SHA for roadmap backfill"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
@@ -120,6 +133,7 @@ jobs:
           ROADMAP_APP_URL: ${{ secrets.ROADMAP_APP_URL }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_EVENT_PATH: ${{ github.event_path }}
           GITHUB_SHA: ${{ github.sha }}
           GITHUB_REF: ${{ github.ref }}
           GITHUB_REPOSITORY: ${{ github.repository }}
@@ -128,6 +142,21 @@ jobs:
           GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
           GITHUB_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: node scripts/notify-roadmap-ci.mjs
+
+      - name: Backfill CLM roadmap (manual dispatch)
+        if: >-
+          always() &&
+          github.event_name == 'workflow_dispatch' &&
+          github.event.inputs.roadmap_backfill_pr != '' &&
+          github.event.inputs.roadmap_backfill_sha != ''
+        env:
+          ROADMAP_WEBHOOK_SECRET: ${{ secrets.ROADMAP_WEBHOOK_SECRET }}
+          ROADMAP_APP_URL: ${{ secrets.ROADMAP_APP_URL }}
+        run: >-
+          node scripts/notify-roadmap-ci.mjs
+          --backfill
+          --pr ${{ github.event.inputs.roadmap_backfill_pr }}
+          --sha ${{ github.event.inputs.roadmap_backfill_sha }}
 
       - name: Upload test results
         if: always()
@@ -170,3 +199,17 @@ jobs:
           vercel-args: "--prod"
           vercel-version: latest
           working-directory: ./
+
+      - name: Notify CLM roadmap (after production deploy)
+        env:
+          ROADMAP_WEBHOOK_SECRET: ${{ secrets.ROADMAP_WEBHOOK_SECRET }}
+          ROADMAP_APP_URL: ${{ secrets.ROADMAP_APP_URL }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_EVENT_NAME: push
+          GITHUB_EVENT_PATH: ${{ github.event_path }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_REF: ${{ github.ref }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+        run: node scripts/notify-roadmap-ci.mjs

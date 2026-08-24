@@ -3,7 +3,8 @@
  * Notify production CLM roadmap webhooks after CI passes.
  *
  * - pull_request: POST ci-test-result (cleared-to-merge on PR HEAD)
- * - push to main: POST ci-test-result + pr-merged for merged PR(s) on GITHUB_SHA
+ * - push to main: POST ci-test-result + pr-merged for merged PR(s)
+ *   (merge commit, push event message, and recently merged catalog PRs)
  *
  * Usage:
  *   node scripts/notify-roadmap-ci.mjs
@@ -11,6 +12,11 @@
  */
 
 import { createHmac } from "node:crypto";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const APP_URL = (
 	process.env.ROADMAP_APP_URL ||
@@ -28,6 +34,9 @@ const SHA = process.env.GITHUB_SHA || "";
 const RUN_ID = process.env.GITHUB_RUN_ID || "";
 const SERVER_URL = process.env.GITHUB_SERVER_URL || "https://github.com";
 const GH_TOKEN = process.env.GITHUB_TOKEN || "";
+
+/** Re-notify catalog-linked PRs merged within this window (idempotent on prod). */
+const RECENT_MERGE_DAYS = 45;
 
 function sign(body) {
 	return `sha256=${createHmac("sha256", SECRET).update(body).digest("hex")}`;
@@ -48,6 +57,14 @@ function logsUrl() {
 		return `${SERVER_URL}/${REPO}/actions/runs/${RUN_ID}`;
 	}
 	return `${APP_URL}/dashboard/it/development/clm-roadmap`;
+}
+
+function githubHeaders() {
+	return {
+		Authorization: `Bearer ${GH_TOKEN}`,
+		Accept: "application/vnd.github+json",
+		"X-GitHub-Api-Version": "2022-11-28",
+	};
 }
 
 async function postWebhook(path, body) {
@@ -89,24 +106,136 @@ async function notifyPrMerged({ prNumber, mergeCommitSha }) {
 	});
 }
 
+/** PR numbers listed in src/lib/roadmap/catalog.ts linkedPrNumbers arrays. */
+function loadCatalogLinkedPrs() {
+	const catalogPath = path.join(__dirname, "../src/lib/roadmap/catalog.ts");
+	const text = readFileSync(catalogPath, "utf8");
+	const prs = new Set();
+	for (const match of text.matchAll(/linkedPrNumbers:\s*\[([^\]]+)\]/g)) {
+		for (const n of match[1].match(/\d+/g) || []) {
+			prs.add(Number(n));
+		}
+	}
+	return [...prs];
+}
+
+/** Parse "Merge pull request #49 …" or "Title (#49)" from the push event payload. */
+function parsePrNumbersFromPushEvent() {
+	const eventPath = process.env.GITHUB_EVENT_PATH;
+	if (!eventPath) return [];
+	try {
+		const event = JSON.parse(readFileSync(eventPath, "utf8"));
+		const message = event.head_commit?.message || "";
+		const prs = new Set();
+		const mergeMatch = message.match(/Merge pull request #(\d+)/i);
+		if (mergeMatch) prs.add(Number(mergeMatch[1]));
+		const squashMatch = message.match(/\(#(\d+)\)\s*$/m);
+		if (squashMatch) prs.add(Number(squashMatch[1]));
+		return [...prs];
+	} catch {
+		return [];
+	}
+}
+
+async function fetchPullRequest(repo, prNumber) {
+	const url = `https://api.github.com/repos/${repo}/pulls/${prNumber}`;
+	const res = await fetch(url, { headers: githubHeaders() });
+	if (!res.ok) {
+		console.warn(`[roadmap] GitHub API ${res.status} for pulls/${prNumber}`);
+		return null;
+	}
+	return res.json();
+}
+
 async function fetchMergedPrsForCommit(repo, sha) {
 	if (!GH_TOKEN) {
 		console.warn("[roadmap] GITHUB_TOKEN missing; cannot resolve PRs for commit");
 		return [];
 	}
 	const url = `https://api.github.com/repos/${repo}/commits/${sha}/pulls`;
-	const res = await fetch(url, {
-		headers: {
-			Authorization: `Bearer ${GH_TOKEN}`,
-			Accept: "application/vnd.github+json",
-		},
-	});
+	const res = await fetch(url, { headers: githubHeaders() });
 	if (!res.ok) {
 		console.warn(`[roadmap] GitHub API ${res.status} for commits/${sha}/pulls`);
 		return [];
 	}
 	const pulls = await res.json();
-	return pulls.filter((pr) => Boolean(pr.merged_at)).map((pr) => pr.number);
+	return pulls
+		.filter((pr) => Boolean(pr.merged_at) && pr.merge_commit_sha)
+		.map((pr) => ({
+			prNumber: pr.number,
+			mergeCommitSha: pr.merge_commit_sha,
+		}));
+}
+
+async function fetchRecentlyMergedCatalogPrs(repo) {
+	if (!GH_TOKEN) return [];
+	const catalogPrs = loadCatalogLinkedPrs();
+	const cutoff = Date.now() - RECENT_MERGE_DAYS * 86_400_000;
+	const targets = [];
+
+	for (const prNumber of catalogPrs) {
+		const pr = await fetchPullRequest(repo, prNumber);
+		if (!pr?.merged_at || !pr.merge_commit_sha) continue;
+		if (new Date(pr.merged_at).getTime() < cutoff) continue;
+		targets.push({
+			prNumber,
+			mergeCommitSha: pr.merge_commit_sha,
+		});
+	}
+
+	return targets;
+}
+
+function dedupePrTargets(targets) {
+	const byPr = new Map();
+	for (const target of targets) {
+		byPr.set(target.prNumber, target);
+	}
+	return [...byPr.values()];
+}
+
+async function resolvePrTargetsForMainPush(repo, sha) {
+	const fromCommit = await fetchMergedPrsForCommit(repo, sha);
+	const fromEvent = parsePrNumbersFromPushEvent();
+	const fromCatalog = await fetchRecentlyMergedCatalogPrs(repo);
+
+	const eventTargets = [];
+	for (const prNumber of fromEvent) {
+		const pr = await fetchPullRequest(repo, prNumber);
+		if (pr?.merged_at && pr.merge_commit_sha) {
+			eventTargets.push({
+				prNumber,
+				mergeCommitSha: pr.merge_commit_sha,
+			});
+		} else {
+			// PR still open on this push — use HEAD sha for ci-test-result only path
+			eventTargets.push({ prNumber, mergeCommitSha: sha });
+		}
+	}
+
+	// Merge-commit pushes: associate current SHA when GitHub omits merge_commit_sha
+	const commitTargets = fromCommit.map((t) => ({
+		prNumber: t.prNumber,
+		mergeCommitSha: t.mergeCommitSha || sha,
+	}));
+
+	return dedupePrTargets([...commitTargets, ...eventTargets, ...fromCatalog]);
+}
+
+async function notifyRoadmapForPr({ prNumber, commitSha, summary }) {
+	console.log(`[roadmap] Notify PR #${prNumber} @ ${commitSha.slice(0, 7)}`);
+	const ci = await notifyCiPassed({
+		prNumber,
+		commitSha,
+		summary: summary || `Playwright E2E passed on ${commitSha.slice(0, 7)}`,
+	});
+	console.log("[roadmap] ci-test-result:", ci.status, JSON.stringify(ci.json));
+	const merge = await notifyPrMerged({
+		prNumber,
+		mergeCommitSha: commitSha,
+	});
+	console.log("[roadmap] pr-merged:", merge.status, JSON.stringify(merge.json));
+	if (!ci.ok || !merge.ok) process.exit(1);
 }
 
 async function runBackfill({ pr, sha }) {
@@ -115,24 +244,24 @@ async function runBackfill({ pr, sha }) {
 		process.exit(1);
 	}
 	console.log(`[roadmap] Backfill PR #${pr} @ ${sha}`);
-	const ci = await notifyCiPassed({
+	await notifyRoadmapForPr({
 		prNumber: pr,
 		commitSha: sha,
 		summary: "Manual backfill: Playwright E2E passed",
 	});
-	console.log("[roadmap] ci-test-result:", ci.status, JSON.stringify(ci.json));
-	const merge = await notifyPrMerged({ prNumber: pr, mergeCommitSha: sha });
-	console.log("[roadmap] pr-merged:", merge.status, JSON.stringify(merge.json));
-	if (!ci.ok || !merge.ok) process.exit(1);
 }
 
 async function main() {
 	const args = parseArgs(process.argv.slice(2));
 
 	if (!SECRET) {
-		console.log(
-			"[roadmap] ROADMAP_WEBHOOK_SECRET not set — skipping roadmap notifications",
-		);
+		const msg =
+			"[roadmap] ROADMAP_WEBHOOK_SECRET not set — skipping roadmap notifications";
+		if (REF === "refs/heads/main" && EVENT === "push") {
+			console.error(`${msg} (required on main push)`);
+			process.exit(1);
+		}
+		console.log(msg);
 		return;
 	}
 
@@ -156,33 +285,19 @@ async function main() {
 	}
 
 	if (EVENT === "push" && REF === "refs/heads/main" && REPO && SHA) {
-		const prNumbers = await fetchMergedPrsForCommit(REPO, SHA);
-		if (!prNumbers.length) {
-			console.log("[roadmap] No merged PR linked to main push — nothing to notify");
+		const targets = await resolvePrTargetsForMainPush(REPO, SHA);
+		if (!targets.length) {
+			console.log(
+				"[roadmap] No merged catalog/PR targets for main push — nothing to notify",
+			);
 			return;
 		}
-		for (const prNumber of prNumbers) {
-			console.log(`[roadmap] Main push: PR #${prNumber} @ ${SHA}`);
-			const ci = await notifyCiPassed({
+		for (const { prNumber, mergeCommitSha } of targets) {
+			await notifyRoadmapForPr({
 				prNumber,
-				commitSha: SHA,
-				summary: "Playwright E2E passed on merge commit (main)",
+				commitSha: mergeCommitSha,
+				summary: "Playwright E2E passed on main (CI + deploy pipeline)",
 			});
-			console.log(
-				"[roadmap] ci-test-result:",
-				ci.status,
-				JSON.stringify(ci.json),
-			);
-			const merge = await notifyPrMerged({
-				prNumber,
-				mergeCommitSha: SHA,
-			});
-			console.log(
-				"[roadmap] pr-merged:",
-				merge.status,
-				JSON.stringify(merge.json),
-			);
-			if (!ci.ok || !merge.ok) process.exit(1);
 		}
 		return;
 	}

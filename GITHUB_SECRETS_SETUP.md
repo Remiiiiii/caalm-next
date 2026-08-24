@@ -235,21 +235,37 @@ If preflight fails, fix Appwrite data or secrets — do not add per-user permiss
 
 ### CLM roadmap CI webhooks
 
-After Playwright passes, [`scripts/notify-roadmap-ci.mjs`](scripts/notify-roadmap-ci.mjs) calls production roadmap endpoints so merged PRs can flip section tasks to `complete`:
+The roadmap **only** moves sections to `complete` when signed webhooks hit production (`/api/roadmap/webhooks/ci-test-result` and `/api/roadmap/webhooks/pr-merged`). Merging a PR or deploying alone does not update the UI.
+
+After Playwright passes (and again after production deploy on `main`), [`scripts/notify-roadmap-ci.mjs`](scripts/notify-roadmap-ci.mjs) calls those endpoints. On `main` pushes it also syncs **recently merged catalog-linked PRs** (catch-up for merges that landed before CI wiring existed, or direct pushes that are not merge commits).
 
 | Secret Name | Description |
 | ----------- | ----------- |
-| `ROADMAP_WEBHOOK_SECRET` | Same HMAC secret as Vercel (`ROADMAP_WEBHOOK_SECRET` or `GITHUB_WEBHOOK_SECRET`). Required for roadmap notifications. |
+| `ROADMAP_WEBHOOK_SECRET` | Same HMAC secret as Vercel (`ROADMAP_WEBHOOK_SECRET` or `GITHUB_WEBHOOK_SECRET`). **Required** on `main` push; CI fails if missing. |
 | `ROADMAP_APP_URL` | Optional. Production app origin (e.g. `https://www.caalmsolutions.com`). Defaults to that URL if unset. |
 
-**One-time backfill** (e.g. PR #49 already merged before this wiring):
+**Vercel production (required for persisted roadmap state):**
+
+- `ROADMAP_USE_APPWRITE=true`
+- Roadmap collection IDs (`NEXT_PUBLIC_APPWRITE_ROADMAP_*`)
+- Same `ROADMAP_WEBHOOK_SECRET` as GitHub
+- `ROADMAP_GITHUB_REPO=Remiiiiii/caalm-next` (optional; PR comments on webhook)
+
+If tables are empty: `pnpm exec tsx scripts/seed-roadmap-appwrite.ts`
+
+**Manual backfill** (Actions → Tests and Vercel deploy → Run workflow):
+
+- `roadmap_backfill_pr`: `49`
+- `roadmap_backfill_sha`: merge commit SHA (PR #49: `8f5083be97cb351a4740e7d8339f26b5b0385d30`)
+
+Or locally:
 
 ```bash
 ROADMAP_WEBHOOK_SECRET=... ROADMAP_APP_URL=https://www.caalmsolutions.com \
-  node scripts/notify-roadmap-ci.mjs --backfill --pr 49 --sha <merge-commit-sha>
+  node scripts/notify-roadmap-ci.mjs --backfill --pr 49 --sha 8f5083be97cb351a4740e7d8339f26b5b0385d30
 ```
 
-Ensure Vercel production has `ROADMAP_USE_APPWRITE=true` and roadmap collection IDs, then run `pnpm exec tsx scripts/seed-roadmap-appwrite.ts` if tables are empty.
+Refresh the CLM roadmap page after webhooks succeed (SWR polls ~60s; server cache ~15s).
 
 ### RBAC `roles` table (optional columns)
 
