@@ -3,17 +3,19 @@ import type { CalendarEvent } from "@/lib/actions/calendar.actions";
 import { getUserByAccountId } from "@/lib/actions/user.actions";
 import {
 	getUserDefaultOrganization,
-	getUserRoles,
+	getUserPermissions,
 } from "@/lib/rbac/permissions";
 import {
 	type CalendarPermissionAction,
 	hasCalendarPermission,
+	isCalendarEventOwner,
 	resolveCalendarPermissions,
 	resolvePermissionKey,
 } from "./permissions";
 
 export type CalendarPermissionEvaluation = {
 	allowed: boolean;
+	/** Legacy calendar role label for logs only; authz uses permission keys. */
 	userRole: UserRole | null;
 	permissions: CalendarPermissionMap | null;
 	userId: string | null;
@@ -50,26 +52,8 @@ export const evaluateCalendarPermission = async ({
 		};
 	}
 
-	// Get user's role from database (prioritize highest role)
 	const defaultOrg = await getUserDefaultOrganization(user.$id);
-	const userRoles = defaultOrg
-		? await getUserRoles(user.$id, defaultOrg.orgId)
-		: [];
-
-	// Import role priority helper
-	const { getHighestPriorityRole } = await import("@/lib/utils/role-priority");
-	const roleName = getHighestPriorityRole(userRoles) || "";
-
-	// Map new RBAC roles to legacy calendar roles for compatibility
-	// This is temporary until calendar permissions are fully migrated
-	let calendarRole: UserRole = "viewer";
-	if (roleName === "Super Admin" || roleName === "Organization Admin") {
-		calendarRole = "admin";
-	} else if (roleName === "Department Manager") {
-		calendarRole = "approver";
-	} else if (roleName === "Viewer") {
-		calendarRole = "viewer";
-	}
+	const heldPermissions = await getUserPermissions(user.$id, defaultOrg?.orgId);
 
 	// Ensure overrides is an array (parse from JSON string if needed)
 	let overrides = event?.overrides || [];
@@ -92,9 +76,16 @@ export const evaluateCalendarPermission = async ({
 		overrides = [];
 	}
 
+	const isOwner = isCalendarEventOwner({
+		userId: user.$id,
+		userAccountId,
+		event,
+	});
+
 	const permissions = resolveCalendarPermissions({
-		role: calendarRole,
-		overrides: overrides,
+		heldPermissions,
+		isEventOwner: isOwner,
+		overrides,
 		context: {
 			userId: user.$id,
 			teamIds,
@@ -104,33 +95,24 @@ export const evaluateCalendarPermission = async ({
 	const permissionKey = resolvePermissionKey(action);
 	let allowed = hasCalendarPermission(permissions, permissionKey);
 
-	// Special case: allow event creators to cancel their own events even without cancelEvent permission
-	if (!allowed && action === "cancel" && event) {
-		const isEventCreator =
-			(user.$id && event.createdByUserId === user.$id) ||
-			(userAccountId &&
-				(event.createdByAccountId === userAccountId ||
-					event.createdBy === userAccountId));
-
-		if (isEventCreator) {
-			allowed = true;
-		}
+	// Owners can cancel their own events when they have delete_own / cancel
+	// (already reflected above). Keep creator cancel as a last-resort for
+	// events created before delete_own was assigned, matching prior behavior.
+	if (!allowed && action === "cancel" && isOwner) {
+		allowed = true;
 	}
 
 	if (!allowed) {
 		console.error("[evaluateCalendarPermission] Permission denied:", {
-			userRole: calendarRole,
-			roleName,
 			permissionKey,
 			permissions,
+			heldCount: heldPermissions.length,
+			isOwner,
 			eventId: event?.$id,
-			eventCreatedBy: event?.createdBy,
-			eventCreatedByAccountId: event?.createdByAccountId,
-			eventCreatedByUserId: event?.createdByUserId,
 		});
 		return {
 			allowed,
-			userRole: calendarRole,
+			userRole: null,
 			permissions,
 			userId: user.$id,
 			reason: "permission_denied",
@@ -138,7 +120,6 @@ export const evaluateCalendarPermission = async ({
 	}
 
 	// Block updates if event has a pending approval, but allow cancellations
-	// (cancellation creates its own approval request)
 	if (
 		event?.requiresApproval &&
 		event.approvalStatus === "pending" &&
@@ -146,7 +127,7 @@ export const evaluateCalendarPermission = async ({
 	) {
 		return {
 			allowed: false,
-			userRole: calendarRole,
+			userRole: null,
 			permissions,
 			userId: user.$id,
 			reason: "pending_approval",
@@ -154,12 +135,9 @@ export const evaluateCalendarPermission = async ({
 		};
 	}
 
-	// Allow cancellation even if there's a pending approval for creation
-	// The cancellation will create its own approval request if needed
-
 	return {
 		allowed: true,
-		userRole: calendarRole,
+		userRole: null,
 		permissions,
 		userId: user.$id,
 	};

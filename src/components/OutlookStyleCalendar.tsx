@@ -134,7 +134,10 @@ import {
 } from "@/lib/actions/calendar-approval.actions";
 import type { SharedCalendar } from "@/lib/actions/shared-calendar.actions";
 import { fetchUserNamesByIds } from "@/lib/actions/user.actions";
-import { resolveCalendarPermissions } from "@/lib/auth/permissions";
+import {
+	isCalendarEventOwner,
+	resolveCalendarPermissions,
+} from "@/lib/auth/permissions";
 import {
 	formatEventDetailDateLine,
 	formatEventDetailTimeLine,
@@ -408,7 +411,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 	} | null>(null);
 	const [loadingContract, setLoadingContract] = useState(false);
 
-	const { userId, accountId, role } = useUserRole();
+	const { userId, accountId } = useUserRole();
 	const { permissions: basePermissions } = useCalendarPermissions({ userId });
 	const canCreateEvent = basePermissions.createEvent;
 	const { permissions } = usePermissions();
@@ -780,14 +783,19 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 		}
 
 		return resolveCalendarPermissions({
-			role,
+			heldPermissions: permissions,
+			isEventOwner: isCalendarEventOwner({
+				userId,
+				userAccountId: accountId,
+				event: selectedEvent,
+			}),
 			overrides,
 			context: {
 				userId: userId || "",
 				teamIds: [],
 			},
 		});
-	}, [selectedEvent, role, userId]);
+	}, [selectedEvent, permissions, userId, accountId]);
 
 	const canViewSelectedEventSensitiveDetails =
 		!selectedEvent ||
@@ -796,7 +804,12 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 
 	const resolvePermissionsForEvent = (event: LocalCalendarEvent) =>
 		resolveCalendarPermissions({
-			role,
+			heldPermissions: permissions,
+			isEventOwner: isCalendarEventOwner({
+				userId,
+				userAccountId: accountId,
+				event,
+			}),
 			overrides: (event.overrides || []) as PermissionOverrideRecord[],
 			context: {
 				userId: userId || "",

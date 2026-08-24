@@ -137,7 +137,8 @@ export const getUserByAccountId = async (
 			: [];
 		const roleName = userRoles[0]?.roleName || "";
 
-		// Map new RBAC roles to calendar roles for compatibility
+		// Legacy calendar role label for older UI only — not used for authz.
+		// Calendar gates use org permission keys (see evaluateCalendarPermission).
 		let calendarRole: CalendarRole = "viewer";
 		if (roleName === "Super Admin" || roleName === "Organization Admin") {
 			calendarRole = "admin";
@@ -146,7 +147,7 @@ export const getUserByAccountId = async (
 		} else if (roleName === "Viewer") {
 			calendarRole = "viewer";
 		} else if (roleName === "IT") {
-			calendarRole = "admin"; // IT staff get admin-level calendar access
+			calendarRole = "admin"; // display-only legacy label; IT pack is VIEW_OWN
 		}
 
 		return {
@@ -765,7 +766,7 @@ const getCurrentUserImpl = async () => {
 			: [];
 		const roleName = userRoles[0]?.roleName || "";
 
-		// Map new RBAC roles to calendar roles for compatibility
+		// Legacy calendar role label for older UI only — not used for authz.
 		let calendarRole: CalendarRole = "viewer";
 		if (roleName === "Super Admin" || roleName === "Organization Admin") {
 			calendarRole = "admin";
@@ -774,7 +775,7 @@ const getCurrentUserImpl = async () => {
 		} else if (roleName === "Viewer") {
 			calendarRole = "viewer";
 		} else if (roleName === "IT") {
-			calendarRole = "admin"; // IT staff get admin-level calendar access
+			calendarRole = "admin"; // display-only legacy label; IT pack is VIEW_OWN
 		}
 
 		return parseStringify({
@@ -1953,6 +1954,11 @@ export interface UserManagementRow {
 	status?: string;
 }
 
+/**
+ * @deprecated Legacy calendar role bridge for display/compat only.
+ * Calendar authz uses org permission keys via evaluateCalendarPermission /
+ * useCalendarPermissions — do not add new call sites that treat this as authz.
+ */
 function calendarRoleFromRbacName(roleName: string): CalendarRole {
 	const name = roleName.trim();
 	if (name === "Super Admin" || name === "Organization Admin") return "admin";
