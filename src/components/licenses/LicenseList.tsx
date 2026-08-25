@@ -30,6 +30,8 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { usePermissions } from "@/hooks/usePermissions";
+import { canLicenseAction } from "@/lib/licenses/licenseUiPermissions";
 import type { License } from "@/types/licenses";
 import LicenseAllocationDialog from "./LicenseAllocationDialog";
 import LicenseDetailView from "./LicenseDetailView";
@@ -42,6 +44,13 @@ interface LicenseListProps {
 }
 
 export default function LicenseList({ licenses, onRefresh }: LicenseListProps) {
+	const { permissions } = usePermissions();
+	const canView = canLicenseAction(permissions, "view");
+	const canEdit = canLicenseAction(permissions, "edit");
+	const canAllocate = canLicenseAction(permissions, "allocate");
+	const canRenew = canLicenseAction(permissions, "renew");
+	const canDelete = canLicenseAction(permissions, "delete");
+
 	const [selectedLicense, setSelectedLicense] = useState<License | null>(null);
 	const [showDetail, setShowDetail] = useState(false);
 	const [showAllocate, setShowAllocate] = useState(false);
@@ -208,45 +217,55 @@ export default function LicenseList({ licenses, onRefresh }: LicenseListProps) {
 												</Button>
 											</DropdownMenuTrigger>
 											<AppDropdownMenuContent align="end">
-												<AppDropdownMenuItem
-													icon={Info}
-													onClick={() => {
-														setSelectedLicense(license);
-														setShowDetail(true);
-													}}
-												>
-													View Details
-												</AppDropdownMenuItem>
-												<AppDropdownMenuItem
-													icon={Pencil}
-													onClick={() => {
-														setSelectedLicense(license);
-														setShowEdit(true);
-													}}
-												>
-													Edit
-												</AppDropdownMenuItem>
-												<AppDropdownMenuItem
-													icon={Key}
-													onClick={() => {
-														setSelectedLicense(license);
-														setShowAllocate(true);
-													}}
-												>
-													Allocate
-												</AppDropdownMenuItem>
-												<AppDropdownMenuItem
-													icon={RefreshCw}
-													onClick={() => {
-														setSelectedLicense(license);
-														setShowRenew(true);
-													}}
-												>
-													Renew
-												</AppDropdownMenuItem>
-												<AppDropdownMenuItem icon={Trash2} tone="danger">
-													Delete
-												</AppDropdownMenuItem>
+												{canView && (
+													<AppDropdownMenuItem
+														icon={Info}
+														onClick={() => {
+															setSelectedLicense(license);
+															setShowDetail(true);
+														}}
+													>
+														View Details
+													</AppDropdownMenuItem>
+												)}
+												{canEdit && (
+													<AppDropdownMenuItem
+														icon={Pencil}
+														onClick={() => {
+															setSelectedLicense(license);
+															setShowEdit(true);
+														}}
+													>
+														Edit
+													</AppDropdownMenuItem>
+												)}
+												{canAllocate && (
+													<AppDropdownMenuItem
+														icon={Key}
+														onClick={() => {
+															setSelectedLicense(license);
+															setShowAllocate(true);
+														}}
+													>
+														Allocate
+													</AppDropdownMenuItem>
+												)}
+												{canRenew && (
+													<AppDropdownMenuItem
+														icon={RefreshCw}
+														onClick={() => {
+															setSelectedLicense(license);
+															setShowRenew(true);
+														}}
+													>
+														Renew
+													</AppDropdownMenuItem>
+												)}
+												{canDelete && (
+													<AppDropdownMenuItem icon={Trash2} tone="danger">
+														Delete
+													</AppDropdownMenuItem>
+												)}
 											</AppDropdownMenuContent>
 										</DropdownMenu>
 									</TableCell>
@@ -280,10 +299,14 @@ export default function LicenseList({ licenses, onRefresh }: LicenseListProps) {
 								<div className="flex-1 overflow-y-auto px-6 py-4 space-y-6 bg-slate-50">
 									<LicenseDetailView
 										license={selectedLicense}
-										onEdit={() => {
-											setShowDetail(false);
-											setShowEdit(true);
-										}}
+										onEdit={
+											canEdit
+												? () => {
+														setShowDetail(false);
+														setShowEdit(true);
+													}
+												: undefined
+										}
 									/>
 								</div>
 								<div className="glass-dialog-alert-footer">

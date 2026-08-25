@@ -29,12 +29,12 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { PERMISSIONS } from "@/constants/permissions";
 import { useToast } from "@/hooks/use-toast";
 import { useDepartmentAssignment } from "@/hooks/useDepartmentAssignment";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import type { AppUser } from "@/lib/actions/user.actions";
+import { canLicenseAction } from "@/lib/licenses/licenseUiPermissions";
 import type { License } from "@/types/licenses";
 import {
 	type ContractDepartment,
@@ -246,30 +246,25 @@ const LicenseActionDropdown = ({
 		}
 	};
 
-	// Permission-based action filtering
-	let filteredActions = licenseActionsDropdownItems;
-
-	filteredActions = licenseActionsDropdownItems.filter((action) => {
+	// Permission-based action filtering (keys only; matches API gates)
+	const filteredActions = licenseActionsDropdownItems.filter((action) => {
 		switch (action.value) {
 			case "delete":
-				return (
-					permissions.includes(PERMISSIONS.LICENSES.DELETE) ||
-					permissions.includes(PERMISSIONS.LICENSES.EDIT)
-				);
+				return canLicenseAction(permissions, "delete");
 			case "edit":
 			case "assign":
 			case "status":
-				return permissions.includes(PERMISSIONS.LICENSES.EDIT);
+				return canLicenseAction(permissions, "edit");
 			case "allocate":
-				return permissions.includes(PERMISSIONS.LICENSES.ALLOCATE);
+				return canLicenseAction(permissions, "allocate");
 			case "renew":
-				return permissions.includes(PERMISSIONS.LICENSES.RENEW);
+				return canLicenseAction(permissions, "renew");
 			case "details":
 			case "download":
 			case "share":
-				return permissions.includes(PERMISSIONS.LICENSES.VIEW);
+				return canLicenseAction(permissions, "view");
 			default:
-				return true;
+				return false;
 		}
 	});
 
