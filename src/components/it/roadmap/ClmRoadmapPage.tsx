@@ -211,9 +211,9 @@ function RoadmapSectionCard({
 								No catalog PRs linked to this section.
 							</p>
 						) : (
-							<div className="space-y-4">
+							<div className="divide-y divide-slate-200">
 								{prs.pullRequests.map((pr) => (
-									<div key={pr.number} className="space-y-1.5">
+									<div key={pr.number} className="space-y-1.5 py-3 first:pt-0 last:pb-0">
 										<p className="text-xs font-semibold text-slate-700">
 											#{pr.number}{" "}
 											<span
