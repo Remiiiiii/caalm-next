@@ -9,6 +9,7 @@
  * Usage:
  *   node scripts/notify-roadmap-ci.mjs
  *   node scripts/notify-roadmap-ci.mjs --backfill --pr 49 --sha <merge-commit>
+ *   node scripts/notify-roadmap-ci.mjs --catchup   # re-notify all catalog PRs merged in 45d
  */
 
 import { createHmac } from "node:crypto";
@@ -43,9 +44,10 @@ function sign(body) {
 }
 
 function parseArgs(argv) {
-	const out = { backfill: false, pr: null, sha: null };
+	const out = { backfill: false, catchup: false, pr: null, sha: null };
 	for (let i = 0; i < argv.length; i++) {
 		if (argv[i] === "--backfill") out.backfill = true;
+		if (argv[i] === "--catchup") out.catchup = true;
 		if (argv[i] === "--pr") out.pr = Number(argv[++i]);
 		if (argv[i] === "--sha") out.sha = argv[++i];
 	}
@@ -69,6 +71,8 @@ function githubHeaders() {
 
 const RETRYABLE_STATUSES = new Set([404, 408, 429, 500, 502, 503, 504]);
 const MAX_WEBHOOK_ATTEMPTS = 5;
+/** Pause between webhook POSTs so burst traffic stays under rate limits. */
+const INTER_WEBHOOK_DELAY_MS = 1500;
 
 function sleep(ms) {
 	return new Promise((resolve) => setTimeout(resolve, ms));
@@ -85,6 +89,25 @@ function logWebhookHostHint(rawBody) {
 			"[roadmap] Host returned DEPLOYMENT_NOT_FOUND — ROADMAP_APP_URL may point at a removed Vercel preview. Use the stable production origin (https://www.caalmsolutions.com).",
 		);
 	}
+}
+
+function retryDelayMs(status, json, res, attempt) {
+	if (status === 429) {
+		const bodyRetry = Number(json?.retryAfter);
+		if (Number.isFinite(bodyRetry) && bodyRetry > 0) {
+			return bodyRetry * 1000 + 500;
+		}
+		const headerRetry = Number(res.headers.get("retry-after"));
+		if (Number.isFinite(headerRetry) && headerRetry > 0) {
+			return headerRetry * 1000 + 500;
+		}
+		if (json?.resetTime) {
+			const wait = new Date(json.resetTime).getTime() - Date.now();
+			if (wait > 0) return wait + 500;
+		}
+		return 65_000;
+	}
+	return Math.min(30_000, 2 ** (attempt - 1) * 2000);
 }
 
 async function postWebhook(path, body) {
@@ -117,7 +140,7 @@ async function postWebhook(path, body) {
 			return lastResult;
 		}
 
-		const delayMs = Math.min(30_000, 2 ** (attempt - 1) * 2000);
+		const delayMs = retryDelayMs(res.status, json, res, attempt);
 		console.warn(
 			`[roadmap] ${path} returned ${res.status} — retry ${attempt}/${MAX_WEBHOOK_ATTEMPTS} in ${delayMs}ms`,
 		);
@@ -234,10 +257,9 @@ function dedupePrTargets(targets) {
 	return [...byPr.values()];
 }
 
-async function resolvePrTargetsForMainPush(repo, sha) {
+async function resolvePrTargetsForMainPush(repo, sha, { includeCatalogCatchup = false } = {}) {
 	const fromCommit = await fetchMergedPrsForCommit(repo, sha);
 	const fromEvent = parsePrNumbersFromPushEvent();
-	const fromCatalog = await fetchRecentlyMergedCatalogPrs(repo);
 
 	const eventTargets = [];
 	for (const prNumber of fromEvent) {
@@ -259,7 +281,14 @@ async function resolvePrTargetsForMainPush(repo, sha) {
 		mergeCommitSha: t.mergeCommitSha || sha,
 	}));
 
-	return dedupePrTargets([...commitTargets, ...eventTargets, ...fromCatalog]);
+	const targets = dedupePrTargets([...commitTargets, ...eventTargets]);
+
+	if (!includeCatalogCatchup) {
+		return targets;
+	}
+
+	const fromCatalog = await fetchRecentlyMergedCatalogPrs(repo);
+	return dedupePrTargets([...targets, ...fromCatalog]);
 }
 
 async function notifyRoadmapForPr({ prNumber, commitSha, summary }) {
@@ -270,6 +299,7 @@ async function notifyRoadmapForPr({ prNumber, commitSha, summary }) {
 		summary: summary || `Playwright E2E passed on ${commitSha.slice(0, 7)}`,
 	});
 	console.log("[roadmap] ci-test-result:", ci.status, JSON.stringify(ci.json));
+	await sleep(INTER_WEBHOOK_DELAY_MS);
 	const merge = await notifyPrMerged({
 		prNumber,
 		mergeCommitSha: commitSha,
@@ -325,19 +355,27 @@ async function main() {
 	}
 
 	if (EVENT === "push" && REF === "refs/heads/main" && REPO && SHA) {
-		const targets = await resolvePrTargetsForMainPush(REPO, SHA);
+		const includeCatalogCatchup =
+			args.catchup || process.env.ROADMAP_CATCHUP === "true";
+		const targets = await resolvePrTargetsForMainPush(REPO, SHA, {
+			includeCatalogCatchup,
+		});
 		if (!targets.length) {
 			console.log(
 				"[roadmap] No merged catalog/PR targets for main push — nothing to notify",
 			);
 			return;
 		}
-		for (const { prNumber, mergeCommitSha } of targets) {
+		for (let i = 0; i < targets.length; i++) {
+			const { prNumber, mergeCommitSha } = targets[i];
 			await notifyRoadmapForPr({
 				prNumber,
 				commitSha: mergeCommitSha,
 				summary: "Playwright E2E passed on main (CI + deploy pipeline)",
 			});
+			if (i < targets.length - 1) {
+				await sleep(INTER_WEBHOOK_DELAY_MS);
+			}
 		}
 		return;
 	}

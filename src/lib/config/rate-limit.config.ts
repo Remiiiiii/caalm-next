@@ -181,6 +181,7 @@ export function shouldBypassRateLimit(endpoint: string): boolean {
 	const bypassPatterns = [
 		"^/api/cache/health$",
 		"^/api/admin/rate-limits/", // Rate limit metrics endpoint
+		"^/api/roadmap/webhooks/", // HMAC-signed CI callbacks — not public traffic
 		"^/_next/",
 		"^/favicon.ico$",
 	];

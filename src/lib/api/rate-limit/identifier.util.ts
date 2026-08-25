@@ -156,6 +156,7 @@ export function shouldBypassRateLimit(request: NextRequest): boolean {
 	const bypassPatterns = [
 		"/api/cache/health",
 		"/api/admin/rate-limits",
+		"/api/roadmap/webhooks", // HMAC-signed CI callbacks
 		"/_next",
 		"/favicon.ico",
 	];
