@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { Query } from "node-appwrite";
+import { PERMISSIONS } from "@/constants/permissions";
 import { requireAuth } from "@/lib/api/licenses/middleware/auth.middleware";
 import {
 	buildPaginationMeta,
@@ -12,12 +13,18 @@ import {
 } from "@/lib/api/licenses/utils/response.util";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { requirePermission } from "@/lib/rbac/middleware";
 
 export async function GET(request: NextRequest) {
 	const requestId = generateRequestId();
 	try {
 		const authError = await requireAuth(request);
 		if (authError) return authError;
+
+		const permissionCheck = await requirePermission(request, {
+			permission: PERMISSIONS.LICENSES.VIEW,
+		});
+		if (permissionCheck) return permissionCheck;
 
 		const { limit, offset } = parsePaginationParams(request);
 

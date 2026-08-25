@@ -1,5 +1,6 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import type { NextRequest } from "next/server";
+import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
 import { requireAuth } from "@/lib/api/licenses/middleware/auth.middleware";
 import { licenseCreateSchema } from "@/lib/api/licenses/schemas/license.schema";
@@ -10,6 +11,7 @@ import {
 	notFoundResponse,
 	successResponse,
 } from "@/lib/api/licenses/utils/response.util";
+import { requirePermission } from "@/lib/rbac/middleware";
 import { logAuditEvent } from "@/lib/services/audit-logger";
 
 export async function GET(
@@ -20,6 +22,11 @@ export async function GET(
 	try {
 		const authError = await requireAuth(request);
 		if (authError) return authError;
+
+		const permissionCheck = await requirePermission(request, {
+			permission: PERMISSIONS.LICENSES.VIEW,
+		});
+		if (permissionCheck) return permissionCheck;
 
 		const { id } = await params;
 
@@ -48,6 +55,11 @@ export async function PUT(
 	try {
 		const authError = await requireAuth(request);
 		if (authError) return authError;
+
+		const permissionCheck = await requirePermission(request, {
+			permission: PERMISSIONS.LICENSES.EDIT,
+		});
+		if (permissionCheck) return permissionCheck;
 
 		const { id } = await params;
 		const body = await request.json();
@@ -111,6 +123,11 @@ export async function DELETE(
 	try {
 		const authError = await requireAuth(request);
 		if (authError) return authError;
+
+		const permissionCheck = await requirePermission(request, {
+			permission: PERMISSIONS.LICENSES.DELETE,
+		});
+		if (permissionCheck) return permissionCheck;
 
 		const { id } = await params;
 		const user = await getCurrentUser();

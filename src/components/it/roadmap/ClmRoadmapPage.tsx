@@ -2,7 +2,7 @@
 
 import { ChevronDown, GitBranch, Map } from "lucide-react";
 import Image from "next/image";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import useSWR from "swr";
 import { DocsMarkdown } from "@/components/docs/DocsMarkdown";
 import { ITGlassPanel, ITPageShell } from "@/components/it/ITPageShell";
@@ -258,18 +258,7 @@ export function ClmRoadmapPage() {
 
 	const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 	const [detailOpenIds, setDetailOpenIds] = useState<Set<string>>(new Set());
-	const seededExpand = useRef(false);
 	const [sectionPage, setSectionPage] = useState(1);
-
-	useEffect(() => {
-		if (seededExpand.current || !overview?.sections?.length) return;
-		const firstOpen =
-			overview.sections.find((s) => s.status !== "locked") ||
-			overview.sections[0];
-		if (!firstOpen?.id) return;
-		seededExpand.current = true;
-		setExpandedIds(new Set([firstOpen.id]));
-	}, [overview]);
 
 	const pagedSections = useMemo(() => {
 		const sections = overview?.sections || [];

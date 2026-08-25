@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { PERMISSIONS } from "@/constants/permissions";
 import { extractLicenseFromDocument } from "@/lib/ai/extractLicenseFromDocument";
 import {
 	errorResponse,
@@ -6,8 +7,14 @@ import {
 	successResponse,
 	validationErrorResponse,
 } from "@/lib/api/contracts/utils/response.util";
+import { requirePermission } from "@/lib/rbac/middleware";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+	const permissionCheck = await requirePermission(request, {
+		permission: PERMISSIONS.LICENSES.VIEW,
+	});
+	if (permissionCheck) return permissionCheck;
+
 	return NextResponse.json({
 		message: "License extraction API is working",
 		status: "ok",
@@ -18,6 +25,11 @@ export async function GET() {
 export async function POST(request: NextRequest) {
 	const requestId = generateRequestId();
 	try {
+		const permissionCheck = await requirePermission(request, {
+			permission: PERMISSIONS.LICENSES.CREATE,
+		});
+		if (permissionCheck) return permissionCheck;
+
 		const contentType = request.headers.get("content-type");
 
 		if (contentType?.includes("application/json")) {

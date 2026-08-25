@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { PERMISSIONS } from "@/constants/permissions";
 import {
 	FileService,
 	MAX_ARRAYBUFFER_SIZE,
@@ -11,6 +12,7 @@ import {
 	validationErrorResponse,
 } from "@/lib/api/licenses/utils/response.util";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { requirePermission } from "@/lib/rbac/middleware";
 
 export async function POST(request: NextRequest) {
 	const requestId = generateRequestId();
@@ -20,6 +22,11 @@ export async function POST(request: NextRequest) {
 
 		const authError = await requireAuth(request);
 		if (authError) return authError;
+
+		const permissionCheck = await requirePermission(request, {
+			permission: PERMISSIONS.LICENSES.CREATE,
+		});
+		if (permissionCheck) return permissionCheck;
 
 		if (!bucketFileId) {
 			return validationErrorResponse("bucketFileId is required", requestId);
