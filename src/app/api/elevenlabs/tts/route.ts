@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
 		const voice_id =
 			process.env.ELEVENLABS_VOICE_ID ||
 			body.voice_id ||
-			"21m00Tcm4TlvDq8ikWAM";
+			"onwK4e9ZLuTAKqWW03F9";
 
 		if (!text || typeof text !== "string") {
 			return NextResponse.json(
