@@ -25,12 +25,10 @@ import {
 	ChevronRight,
 	Clock,
 	Edit,
-	Eye,
 	FileCheck,
 	FileText,
 	Glasses,
 	Grid3X3,
-	Link,
 	List,
 	Loader2,
 	MapPin,
@@ -72,6 +70,7 @@ import {
 	QuickCreateEventPopover,
 	type QuickCreatePayload,
 } from "@/components/calendar/QuickCreateEventPopover";
+import { ShareEventDialog } from "@/components/calendar/ShareEventDialog";
 import { TimeGridWeekView } from "@/components/calendar/TimeGridWeekView";
 import { EventReminderConfig as EventReminderConfigComponent } from "@/components/EventReminderConfig";
 import { ResourceManager } from "@/components/ResourceManager";
@@ -4910,79 +4909,15 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 
 
 				{/* Share Dialog */}
-				<Dialog open={isShareOpen} onOpenChange={setIsShareOpen}>
-					<DialogContent className="max-w-md">
-						<DialogHeader>
-							<DialogTitle>Share Event</DialogTitle>
-						</DialogHeader>
-						<div className="space-y-4">
-							<div>
-								<Label className="block text-sm font-medium text-slate-700 mb-1">
-									Share with users
-								</Label>
-								<div className="flex space-x-2">
-									<Input placeholder="Search users..." className="flex-1" />
-									<Button size="sm">
-										<UserPlus className="h-4 w-4" />
-									</Button>
-								</div>
-							</div>
-
-							<div>
-								<Label className="block text-sm font-medium text-slate-700 mb-1">
-									Permissions
-								</Label>
-								<Select
-									value={shareSettings.permissions}
-									onValueChange={(value: "view" | "edit") =>
-										setShareSettings({ ...shareSettings, permissions: value })
-									}
-								>
-									<SelectTrigger>
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent>
-										<SelectItem value="view">
-											<div className="flex items-center space-x-2">
-												<Eye className="h-4 w-4" />
-												<span>View only</span>
-											</div>
-										</SelectItem>
-										<SelectItem value="edit">
-											<div className="flex items-center space-x-2">
-												<Edit className="h-4 w-4" />
-												<span>Can edit</span>
-											</div>
-										</SelectItem>
-									</SelectContent>
-								</Select>
-							</div>
-
-							<div className="flex items-center space-x-2">
-								<Button
-									variant="outline"
-									onClick={handleShare}
-									className="flex-1"
-								>
-									<Link className="h-4 w-4" />
-									Generate Link
-								</Button>
-							</div>
-
-							<div className="flex justify-end space-x-2">
-								<Button
-									variant="outline"
-									onClick={() => setIsShareOpen(false)}
-									className="primary-btn px-3 sm:px-4"
-								>
-									<Ban className="w-4 h-4" />
-									Cancel
-								</Button>
-								<Button onClick={handleShare}>Share</Button>
-							</div>
-						</div>
-					</DialogContent>
-				</Dialog>
+				<ShareEventDialog
+					open={isShareOpen}
+					onOpenChange={setIsShareOpen}
+					permissions={shareSettings.permissions}
+					onPermissionsChange={(value) =>
+						setShareSettings({ ...shareSettings, permissions: value })
+					}
+					onShare={handleShare}
+				/>
 
 				{/* Delete Confirmation Modal */}
 
