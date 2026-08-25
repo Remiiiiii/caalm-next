@@ -230,6 +230,35 @@ export async function evaluateSectionMergeBlock(
 	return null;
 }
 
+type CatalogPrLinkMeta = {
+	title: string;
+	state?: "open" | "closed" | "merged" | "unknown";
+};
+
+/** Titles/state for catalog PRs — open list first, then GitHub lookup for merged/closed. */
+async function resolveCatalogPrLookup(
+	openPrs: GitHubPullRequestSummary[],
+	catalogNumbers: number[],
+): Promise<Map<number, CatalogPrLinkMeta>> {
+	const lookup = new Map<number, CatalogPrLinkMeta>();
+	for (const pr of openPrs) {
+		lookup.set(pr.number, { title: pr.title, state: pr.state });
+	}
+	const missing = [...new Set(catalogNumbers)].filter((n) => !lookup.has(n));
+	await Promise.all(
+		missing.map(async (number) => {
+			const live = await fetchPullRequestStatus({ prNumber: number });
+			if (live.title) {
+				lookup.set(number, {
+					title: live.title,
+					state: live.state,
+				});
+			}
+		}),
+	);
+	return lookup;
+}
+
 const OVERVIEW_CACHE_MS = 15_000;
 let overviewCache: { fetchedAt: number; value: RoadmapOverview } | null = null;
 
@@ -257,6 +286,10 @@ export async function getOverview(options?: {
 	const unlockedSections = snapshot.sections;
 	const unlockedTasks = snapshot.tasks;
 	const openByNumber = new Map(openPrs.map((pr) => [pr.number, pr]));
+	const allCatalogNumbers = unlockedSections.flatMap((section) =>
+		getCatalogLinkedPrNumbers(section.sectionNumber),
+	);
+	const prLookup = await resolveCatalogPrLookup(openPrs, allCatalogNumbers);
 
 	const sectionViews: RoadmapSectionOverview[] = unlockedSections.map(
 		(section) => {
@@ -269,11 +302,11 @@ export async function getOverview(options?: {
 			openByNumber.has(number),
 		);
 		const prLinks = catalogNumbers.map((number) => {
-			const open = openByNumber.get(number);
+			const meta = prLookup.get(number);
 			return {
 				number,
-				title: open?.title || `PR #${number}`,
-				state: open ? ("open" as const) : undefined,
+				title: meta?.title ?? "",
+				state: meta?.state,
 			};
 		});
 		return {

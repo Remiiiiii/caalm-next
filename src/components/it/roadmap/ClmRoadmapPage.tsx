@@ -1,11 +1,12 @@
 "use client";
 
-import { ChevronDown, GitBranch, Map } from "lucide-react";
+import { ChevronDown, Map } from "lucide-react";
 import Image from "next/image";
 import { useMemo, useState } from "react";
 import useSWR from "swr";
 import { DocsMarkdown } from "@/components/docs/DocsMarkdown";
 import { ITGlassPanel, ITPageShell } from "@/components/it/ITPageShell";
+import { RoadmapBranchRow } from "@/components/it/roadmap/RoadmapBranchRow";
 import { RoadmapProgressBar } from "@/components/it/roadmap/RoadmapProgressBar";
 import { RoadmapTaskTree } from "@/components/it/roadmap/RoadmapTaskTree";
 import { PageIndex } from "@/components/ui/page-index";
@@ -114,11 +115,8 @@ function RoadmapSectionCard({
 						</span>
 					</div>
 					<RoadmapProgressBar percent={section.progressPercent} size="sm" />
-					<p className="text-xs text-slate-500 mt-1">
-						{section.taskCounts.complete}/{section.taskCounts.total} complete
-					</p>
 					{section.mergeBlockReason && section.status !== "complete" ? (
-						<p className="text-xs text-slate-600 mt-1">
+						<p className="text-xs text-slate-600 mt-1 text-center">
 							{section.mergeBlockReason}
 						</p>
 					) : null}
@@ -128,9 +126,24 @@ function RoadmapSectionCard({
 								<li
 									key={pr.number}
 									className="text-xs text-slate-600 line-clamp-2"
-									title={`#${pr.number} ${pr.title}`}
+									title={
+										pr.title
+											? `#${pr.number} ${pr.title}`
+											: `#${pr.number}`
+									}
 								>
-									#{pr.number} {pr.title}
+									#{pr.number}
+									{pr.title ? (
+										<span
+											className={cn(
+												pr.state === "merged" &&
+													"line-through text-slate-500",
+											)}
+										>
+											{" "}
+											{pr.title}
+										</span>
+									) : null}
 									{pr.state ? (
 										<span className="text-slate-500"> · {pr.state}</span>
 									) : null}
@@ -202,19 +215,21 @@ function RoadmapSectionCard({
 								{prs.pullRequests.map((pr) => (
 									<div key={pr.number} className="space-y-1.5">
 										<p className="text-xs font-semibold text-slate-700">
-											#{pr.number} {pr.title}
+											#{pr.number}{" "}
+											<span
+												className={cn(
+													pr.state === "merged" &&
+														"line-through text-slate-500 font-normal",
+												)}
+											>
+												{pr.title}
+											</span>
 											<span className="ml-2 font-normal text-slate-500 capitalize">
 												{pr.state}
 											</span>
 										</p>
 										{pr.headRef ? (
-											<p className="text-xs text-slate-600 tabular-nums flex items-center gap-1.5">
-												<GitBranch
-													className="h-3.5 w-3.5 text-[#0f5384] shrink-0"
-													aria-hidden
-												/>
-												<span>{pr.headRef}</span>
-											</p>
+											<RoadmapBranchRow branch={pr.headRef} />
 										) : null}
 										{pr.htmlUrl ? (
 											<a

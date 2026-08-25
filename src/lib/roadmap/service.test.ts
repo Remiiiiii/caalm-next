@@ -48,8 +48,12 @@ describe("roadmap service", () => {
 	});
 
 	it("seeds section 0 available with tasks locked and overall progress at 0", async () => {
+		fetchPullRequestStatus.mockImplementation(async ({ prNumber }) => ({
+			state: "open" as const,
+			number: prNumber,
+			title: `Catalog PR ${prNumber}`,
+		}));
 		const overview = await getOverview();
-		expect(fetchPullRequestStatus).not.toHaveBeenCalled();
 		expect(overview.overallProgressPercent).toBe(0);
 		const s0 = overview.sections.find((s) => s.sectionNumber === 0);
 		expect(s0?.status).toBe("available");
