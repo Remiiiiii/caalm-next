@@ -167,3 +167,6 @@ mcpjson.txt
 graft/
 .env*
 .env*.local
+
+# Local After Effects MCP clone (setup scripts install this separately)
+public/assets/demo/ae-mcp-setup/after-effects-mcp/

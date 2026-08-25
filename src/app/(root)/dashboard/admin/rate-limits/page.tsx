@@ -2,6 +2,8 @@
  * Rate Limit Monitoring Dashboard Page
  */
 
+export const dynamic = "force-dynamic";
+
 import { redirect } from "next/navigation";
 import RateLimitMonitoring from "@/components/admin/RateLimitMonitoring";
 import {
