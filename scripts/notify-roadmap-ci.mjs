@@ -67,24 +67,64 @@ function githubHeaders() {
 	};
 }
 
+const RETRYABLE_STATUSES = new Set([404, 408, 429, 500, 502, 503, 504]);
+const MAX_WEBHOOK_ATTEMPTS = 5;
+
+function sleep(ms) {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isRetryableWebhookFailure(status, rawBody) {
+	if (RETRYABLE_STATUSES.has(status)) return true;
+	return String(rawBody).includes("DEPLOYMENT_NOT_FOUND");
+}
+
+function logWebhookHostHint(rawBody) {
+	if (String(rawBody).includes("DEPLOYMENT_NOT_FOUND")) {
+		console.error(
+			"[roadmap] Host returned DEPLOYMENT_NOT_FOUND — ROADMAP_APP_URL may point at a removed Vercel preview. Use the stable production origin (https://www.caalmsolutions.com).",
+		);
+	}
+}
+
 async function postWebhook(path, body) {
 	const payload = JSON.stringify(body);
-	const res = await fetch(`${APP_URL}${path}`, {
-		method: "POST",
-		headers: {
-			"Content-Type": "application/json",
-			"x-hub-signature-256": sign(payload),
-		},
-		body: payload,
-	});
-	const text = await res.text();
-	let json;
-	try {
-		json = JSON.parse(text);
-	} catch {
-		json = { raw: text };
+	let lastResult = { ok: false, status: 0, json: {} };
+
+	for (let attempt = 1; attempt <= MAX_WEBHOOK_ATTEMPTS; attempt++) {
+		const res = await fetch(`${APP_URL}${path}`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				"x-hub-signature-256": sign(payload),
+			},
+			body: payload,
+		});
+		const text = await res.text();
+		let json;
+		try {
+			json = JSON.parse(text);
+		} catch {
+			json = { raw: text };
+		}
+		lastResult = { ok: res.ok, status: res.status, json };
+
+		if (res.ok) return lastResult;
+
+		logWebhookHostHint(text);
+
+		if (!isRetryableWebhookFailure(res.status, text) || attempt === MAX_WEBHOOK_ATTEMPTS) {
+			return lastResult;
+		}
+
+		const delayMs = Math.min(30_000, 2 ** (attempt - 1) * 2000);
+		console.warn(
+			`[roadmap] ${path} returned ${res.status} — retry ${attempt}/${MAX_WEBHOOK_ATTEMPTS} in ${delayMs}ms`,
+		);
+		await sleep(delayMs);
 	}
-	return { ok: res.ok, status: res.status, json };
+
+	return lastResult;
 }
 
 async function notifyCiPassed({ prNumber, commitSha, summary }) {

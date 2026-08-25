@@ -126,6 +126,7 @@ jobs:
 
       - name: Notify CLM roadmap (CI passed)
         if: success() && steps.playwright.outcome == 'success'
+        continue-on-error: true
         env:
           ROADMAP_WEBHOOK_SECRET: ${{ secrets.ROADMAP_WEBHOOK_SECRET }}
           ROADMAP_APP_URL: ${{ secrets.ROADMAP_APP_URL }}
