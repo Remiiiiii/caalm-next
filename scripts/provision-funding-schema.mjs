@@ -26,11 +26,15 @@ const ENDPOINT = (
 	process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || "https://fra.cloud.appwrite.io/v1"
 ).replace(/\/$/, "");
 const PROJECT = process.env.NEXT_PUBLIC_APPWRITE_PROJECT;
-const API_KEY = process.env.NEXT_APPWRITE_API_KEY;
+const API_KEY =
+	process.env.NEXT_APPWRITE_API_KEY || process.env.NEXT_APPWRITE_KEY;
 const PROD_DB =
 	process.env.NEXT_PUBLIC_APPWRITE_DATABASE ||
-	process.env.PROD_APPWRITE_DATABASE_ID ||
-	"685ed87c0009d8189fc7";
+	process.env.PROD_APPWRITE_DATABASE_ID;
+if (!PROD_DB) {
+	console.error("Missing NEXT_PUBLIC_APPWRITE_DATABASE or PROD_APPWRITE_DATABASE_ID");
+	process.exit(1);
+}
 const DEMO_DB = "caalm-demo";
 
 const TABLES = [
@@ -113,7 +117,8 @@ const TABLES = [
 			{ key: "dueDate", type: "datetime", required: false },
 			{ key: "reminderDaysBefore", type: "integer", required: false },
 			{ key: "linkUrl", type: "string", size: 2048, required: false },
-			{ key: "renewalLinked", type: "boolean", required: true },
+			// Optional + default avoids Appwrite "no default on required boolean".
+			{ key: "renewalLinked", type: "boolean", required: false },
 			{ key: "completedAt", type: "datetime", required: false },
 			{ key: "createdByUserId", type: "string", size: 64, required: true },
 		],
@@ -208,14 +213,16 @@ async function createColumn(databaseId, tableId, col) {
 			body: { key: col.key, required: col.required, array: false },
 		});
 	} else if (col.type === "boolean") {
+		// Appwrite rejects default when required=true.
+		const body = {
+			key: col.key,
+			required: col.required,
+			array: false,
+		};
+		if (!col.required) body.default = false;
 		await appwrite(`${base}/boolean`, {
 			method: "POST",
-			body: {
-				key: col.key,
-				required: col.required,
-				default: false,
-				array: false,
-			},
+			body,
 		});
 	} else if (col.type === "datetime") {
 		await appwrite(`${base}/datetime`, {
@@ -238,34 +245,78 @@ async function createColumn(databaseId, tableId, col) {
 }
 
 async function createIndex(databaseId, tableId, index) {
-	await appwrite(`/tablesdb/${databaseId}/tables/${tableId}/indexes`, {
-		method: "POST",
-		body: {
-			key: index.key,
-			type: index.type,
-			attributes: index.attributes,
-		},
-	});
+	const columns = index.attributes || index.columns;
+	// Prefer TablesDB path; fall back to legacy Databases collections API.
+	try {
+		await appwrite(`/tablesdb/${databaseId}/tables/${tableId}/indexes`, {
+			method: "POST",
+			body: {
+				key: index.key,
+				type: index.type,
+				columns,
+			},
+		});
+	} catch (error) {
+		await appwrite(
+			`/databases/${databaseId}/collections/${tableId}/indexes`,
+			{
+				method: "POST",
+				body: {
+					key: index.key,
+					type: index.type,
+					attributes: columns,
+				},
+			},
+		);
+	}
+}
+
+async function getTable(databaseId, tableId) {
+	try {
+		return await appwrite(`/tablesdb/${databaseId}/tables/${tableId}`);
+	} catch (error) {
+		if (String(error.message).includes("(404)")) return null;
+		throw error;
+	}
 }
 
 async function provisionDatabase(databaseId) {
 	console.log(`\nDatabase ${databaseId} (${APPLY ? "APPLY" : "dry-run"})`);
 	for (const table of TABLES) {
-		const exists = await tableExists(databaseId, table.tableId);
-		if (exists) {
+		let existing = await getTable(databaseId, table.tableId);
+		if (!existing) {
+			console.log(`  + create table ${table.tableId} (${table.name})`);
+			if (!APPLY) continue;
+			await createTable(databaseId, table);
+			existing = { columns: [], indexes: [] };
+		} else {
 			console.log(`  = table exists ${table.tableId} (${table.name})`);
-			continue;
 		}
-		console.log(`  + create table ${table.tableId} (${table.name})`);
-		if (!APPLY) continue;
-		await createTable(databaseId, table);
+
+		const existingCols = new Set(
+			(existing.columns || []).map((c) => c.key),
+		);
 		for (const col of table.columns) {
+			if (existingCols.has(col.key)) {
+				console.log(`    = column ${col.key}`);
+				continue;
+			}
 			console.log(`    + column ${col.key} (${col.type})`);
+			if (!APPLY) continue;
 			await createColumn(databaseId, table.tableId, col);
 			await new Promise((r) => setTimeout(r, 400));
 		}
+
+		const existingIndexes = new Set(
+			(existing.indexes || []).map((i) => i.key),
+		);
 		for (const index of table.indexes) {
+			if (existingIndexes.has(index.key)) {
+				console.log(`    = index ${index.key}`);
+				continue;
+			}
 			console.log(`    + index ${index.key}`);
+			if (!APPLY) continue;
 			try {
 				await createIndex(databaseId, table.tableId, index);
 			} catch (error) {

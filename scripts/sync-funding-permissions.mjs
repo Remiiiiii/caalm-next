@@ -14,7 +14,12 @@ const ROOT = path.resolve(import.meta.dirname, "..");
 loadEnv({ path: path.join(ROOT, ".env.local") });
 
 const PROD_DB =
-	process.env.PROD_APPWRITE_DATABASE_ID || "685ed87c0009d8189fc7";
+	process.env.PROD_APPWRITE_DATABASE_ID ||
+	process.env.NEXT_PUBLIC_APPWRITE_DATABASE;
+if (!PROD_DB) {
+	console.error("Missing PROD_APPWRITE_DATABASE_ID or NEXT_PUBLIC_APPWRITE_DATABASE");
+	process.exit(1);
+}
 const DEMO_DB = "caalm-demo";
 const PERMISSIONS_TABLE =
 	process.env.NEXT_PUBLIC_APPWRITE_PERMISSIONS_COLLECTION ||
@@ -22,10 +27,11 @@ const PERMISSIONS_TABLE =
 const ROLE_PERMISSIONS_TABLE = "role_permissions";
 
 const ENDPOINT = (
-	process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || "https://fra.cloud.appwrite.io/v1"
+	process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || ""
 ).replace(/\/$/, "");
 const PROJECT = process.env.NEXT_PUBLIC_APPWRITE_PROJECT;
-const API_KEY = process.env.NEXT_APPWRITE_API_KEY;
+const API_KEY =
+	process.env.NEXT_APPWRITE_API_KEY || process.env.NEXT_APPWRITE_KEY;
 const INCLUDE_DEMO = process.argv.includes("--demo");
 
 const FUNDING_PERMISSIONS = [
@@ -49,8 +55,10 @@ const FUNDING_PERMISSIONS = [
 
 const ROLE_IDS = ["role_super_admin", "role_org_admin"];
 
-if (!PROJECT || !API_KEY) {
-	console.error("Missing NEXT_PUBLIC_APPWRITE_PROJECT or NEXT_APPWRITE_API_KEY");
+if (!PROJECT || !API_KEY || !ENDPOINT) {
+	console.error(
+		"Missing NEXT_PUBLIC_APPWRITE_ENDPOINT / PROJECT or NEXT_APPWRITE_API_KEY",
+	);
 	process.exit(1);
 }
 
@@ -90,11 +98,31 @@ async function getRow(databaseId, tableId, rowId) {
 	}
 }
 
+async function findPermissionByKey(databaseId, key) {
+	const qKey = encodeURIComponent(
+		JSON.stringify({ method: "equal", attribute: "key", values: [key] }),
+	);
+	const qLimit = encodeURIComponent(
+		JSON.stringify({ method: "limit", values: [1] }),
+	);
+	const list = await appwrite(
+		`/tablesdb/${databaseId}/tables/${PERMISSIONS_TABLE}/rows?queries[]=${qKey}&queries[]=${qLimit}`,
+	);
+	return (list.rows || [])[0] || null;
+}
+
 async function upsertPermission(databaseId, permission) {
-	const existing = await getRow(databaseId, PERMISSIONS_TABLE, permission.$id);
-	if (existing) {
-		console.log(`  permission exists: ${permission.key}`);
+	const byId = await getRow(databaseId, PERMISSIONS_TABLE, permission.$id);
+	if (byId) {
+		console.log(`  permission exists: ${permission.key} (${permission.$id})`);
 		return permission.$id;
+	}
+	const byKey = await findPermissionByKey(databaseId, permission.key);
+	if (byKey) {
+		console.log(
+			`  permission exists by key: ${permission.key} (${byKey.$id})`,
+		);
+		return byKey.$id;
 	}
 	await appwrite(`/tablesdb/${databaseId}/tables/${PERMISSIONS_TABLE}/rows`, {
 		method: "POST",
@@ -134,11 +162,14 @@ async function ensureRolePermission(databaseId, roleId, permissionId) {
 		console.log(`  role_permission exists: ${roleId} -> ${permissionId}`);
 		return;
 	}
+	// TablesDB requires an explicit rowId when creating a single row.
+	const rowId = `rp_${roleId}_${permissionId}`.slice(0, 36);
 	await appwrite(
 		`/tablesdb/${databaseId}/tables/${ROLE_PERMISSIONS_TABLE}/rows`,
 		{
 			method: "POST",
 			body: {
+				rowId,
 				data: { roleId, permissionId },
 				permissions: ['read("users")'],
 			},
