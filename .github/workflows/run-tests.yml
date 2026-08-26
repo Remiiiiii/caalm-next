@@ -51,16 +51,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 11.23.0
-         
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -141,7 +141,7 @@ jobs:
           GITHUB_SERVER_URL: ${{ github.server_url }}
           GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
           GITHUB_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: pnpm exec node scripts/notify-roadmap-ci.mjs
+        run: node scripts/notify-roadmap-ci.mjs
 
       - name: Backfill CLM roadmap (manual dispatch)
         if: >-
@@ -153,7 +153,7 @@ jobs:
           ROADMAP_WEBHOOK_SECRET: ${{ secrets.ROADMAP_WEBHOOK_SECRET }}
           ROADMAP_APP_URL: ${{ secrets.ROADMAP_APP_URL }}
         run: >-
-          pnpm exec node scripts/notify-roadmap-ci.mjs
+          node scripts/notify-roadmap-ci.mjs
           --backfill
           --pr ${{ github.event.inputs.roadmap_backfill_pr }}
           --sha ${{ github.event.inputs.roadmap_backfill_sha }}
@@ -212,4 +212,4 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_RUN_ID: ${{ github.run_id }}
           GITHUB_SERVER_URL: ${{ github.server_url }}
-        run: pnpm exec node scripts/notify-roadmap-ci.mjs
+        run: node scripts/notify-roadmap-ci.mjs
