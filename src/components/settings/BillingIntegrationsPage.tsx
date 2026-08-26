@@ -695,7 +695,12 @@ export default function BillingIntegrationsPage() {
 
 
 
-	if (authLoading || orgLoading || permissionsLoading) {
+	if (
+		authLoading ||
+		orgLoading ||
+		permissionsLoading ||
+		(canBilling && loadingSub && !subscription)
+	) {
 
 		return (
 

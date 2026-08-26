@@ -204,6 +204,59 @@ function taskLayoutData(task: RoadmapTask) {
 	};
 }
 
+function sameStringArray(left: unknown, right: unknown): boolean {
+	const a = parseStringArray(left);
+	const b = parseStringArray(right);
+	if (a.length !== b.length) return false;
+	return a.every((item, index) => item === b[index]);
+}
+
+function catalogLayoutMatchesExisting(
+	existingSections: Map<string, RoadmapSection>,
+	existingTasks: Map<string, RoadmapTask>,
+	seed: { sections: RoadmapSection[]; tasks: RoadmapTask[] },
+): boolean {
+	const seedTaskIds = new Set(seed.tasks.map((task) => task.$id));
+	if (existingTasks.size !== seed.tasks.length) return false;
+	for (const id of existingTasks.keys()) {
+		if (!seedTaskIds.has(id)) return false;
+	}
+
+	for (const section of seed.sections) {
+		const existing = existingSections.get(section.$id);
+		if (!existing) return false;
+		if (existing.sectionNumber !== section.sectionNumber) return false;
+		if (existing.title !== section.title) return false;
+		if (existing.sourceRef !== section.sourceRef) return false;
+		if (existing.orderIndex !== section.orderIndex) return false;
+	}
+
+	for (const task of seed.tasks) {
+		const existing = existingTasks.get(task.$id);
+		if (!existing) return false;
+		const existingParent = existing.parentTaskId
+			? String(existing.parentTaskId)
+			: null;
+		if (existingParent !== (task.parentTaskId ?? null)) return false;
+		if (existing.sectionId !== task.sectionId) return false;
+		if (existing.taskCode !== task.taskCode) return false;
+		if (existing.title !== task.title) return false;
+		if (existing.description !== task.description) return false;
+		if (
+			!sameStringArray(existing.acceptanceCriteria, task.acceptanceCriteria)
+		) {
+			return false;
+		}
+		if (existing.orderIndex !== task.orderIndex) return false;
+		if ((existing.testSuiteRef ?? null) !== (task.testSuiteRef ?? null)) {
+			return false;
+		}
+		if ((existing.prNumber ?? null) !== (task.prNumber ?? null)) return false;
+	}
+
+	return true;
+}
+
 /**
  * Rewrite section/task identity from catalog.
  * Same-title rows keep status/PR fields. Remapped IDs (old 5.1 e-sign vs new 5.1
@@ -233,6 +286,13 @@ async function syncCatalogLayoutToAppwrite(
 	const existingTasks = new Map(
 		existingTaskRows.rows.map((row) => [row.$id, row as unknown as RoadmapTask]),
 	);
+
+	// Skip the rewrite when identity/layout already matches the catalog.
+	// A full pass is one Appwrite write per section and task; the page fetch
+	// aborts at 30s and the UI looks like the roadmap is missing.
+	if (catalogLayoutMatchesExisting(existingSections, existingTasks, seed)) {
+		return;
+	}
 
 	const mergedSections = seed.sections.map((section) => {
 		const existing = existingSections.get(section.$id);

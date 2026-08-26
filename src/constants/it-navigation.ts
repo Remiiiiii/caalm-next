@@ -25,6 +25,7 @@ export type ITNavIconKey =
 	| "tag"
 	| "badgeCheck"
 	| "gitFork"
+	| "map"
 	| "ticket"
 	| "searchCode"
 	| "bookOpen"

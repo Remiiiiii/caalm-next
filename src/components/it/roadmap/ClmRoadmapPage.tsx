@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, Map } from "lucide-react";
+import { ChevronDown, Map as MapIcon } from "lucide-react";
 import Image from "next/image";
 import { useMemo, useState } from "react";
 import useSWR from "swr";
@@ -112,7 +112,7 @@ function RoadmapPullRequestItem({ pr }: { pr: SectionPullRequest }) {
 
 const SECTIONS_PAGE_SIZE = 5;
 
-function RoadmapUnavailableState() {
+function RoadmapUnavailableState({ detail }: { detail?: string }) {
 	return (
 		<div className="flex flex-col items-center justify-center text-center py-12 px-4">
 			<Image
@@ -123,6 +123,9 @@ function RoadmapUnavailableState() {
 				className="mx-auto mb-4"
 			/>
 			<p className="body-1 text-slate-700">Roadmap not found</p>
+			{detail ? (
+				<p className="text-sm text-slate-500 mt-2 max-w-md">{detail}</p>
+			) : null}
 		</div>
 	);
 }
@@ -304,8 +307,11 @@ function RoadmapSectionCard({
 
 export function ClmRoadmapPage() {
 	const { realtimeEnabled } = useRoadmapRealtime();
-	const { data: overview, isLoading: overviewLoading } =
-		useSWR<RoadmapOverview>("/api/roadmap/overview", fetcher, {
+	const {
+		data: overview,
+		error: overviewError,
+		isLoading: overviewLoading,
+	} = useSWR<RoadmapOverview>("/api/roadmap/overview", fetcher, {
 			// Appwrite Realtime pushes updates; polling is a fallback only
 			refreshInterval: realtimeEnabled ? 0 : 30_000,
 			revalidateOnFocus: true,
@@ -344,7 +350,7 @@ export function ClmRoadmapPage() {
 		<ITPageShell
 			title="CLM Completion Roadmap"
 			subtitle="Interactive plan engine — A section completes only when every catalog PR merges to main with green tests."
-			icon={Map}
+			icon={MapIcon}
 		>
 			{overviewLoading && !overview ? (
 				<p className="text-sm text-slate-600">Loading roadmap…</p>
@@ -384,7 +390,13 @@ export function ClmRoadmapPage() {
 					</div>
 				</div>
 			) : (
-				<RoadmapUnavailableState />
+				<RoadmapUnavailableState
+					detail={
+						overviewError instanceof Error
+							? overviewError.message
+							: undefined
+					}
+				/>
 			)}
 		</ITPageShell>
 	);

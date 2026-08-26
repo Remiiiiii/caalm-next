@@ -302,7 +302,7 @@ export const appwriteConfig = {
 		"69b8a207007f0e4c8a07",
 	),
 
-	/** CLM Completion Roadmap (Section 0) — alphanumeric Appwrite table IDs */
+	/** CLM Completion Roadmap — alphanumeric Appwrite table IDs */
 	roadmapSectionsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_ROADMAP_SECTIONS_COLLECTION",
 		"69c0a101001a2b3c4d01",
