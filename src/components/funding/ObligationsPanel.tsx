@@ -28,7 +28,8 @@ export function ObligationsPanel({
 	}
 
 	async function addObligation() {
-		if (!stream || !title.trim()) return;
+		const selected = stream;
+		if (!selected || !title.trim()) return;
 		setSaving(true);
 		setError(null);
 		try {
@@ -36,8 +37,8 @@ export function ObligationsPanel({
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
-					contractId: stream.contractId,
-					contractName: stream.contractName,
+					contractId: selected.contractId,
+					contractName: selected.contractName,
 					title: title.trim(),
 					kind: "renewal",
 					renewalLinked: true,
