@@ -16,6 +16,7 @@ import {
 	listStatusLogs,
 	listTasks,
 	persistUnlockedSnapshot,
+	saveSection,
 	saveTask,
 } from "./store";
 import {
@@ -233,6 +234,7 @@ export async function evaluateSectionMergeBlock(
 type CatalogPrLinkMeta = {
 	title: string;
 	state?: "open" | "closed" | "merged" | "unknown";
+	mergeCommitSha?: string;
 };
 
 /** Titles/state for catalog PRs — open list first, then GitHub lookup for merged/closed. */
@@ -248,15 +250,47 @@ async function resolveCatalogPrLookup(
 	await Promise.all(
 		missing.map(async (number) => {
 			const live = await fetchPullRequestStatus({ prNumber: number });
-			if (live.title) {
-				lookup.set(number, {
-					title: live.title,
-					state: live.state,
-				});
-			}
+			if (live.state === "unknown" && !live.title) return;
+			lookup.set(number, {
+				title: live.title ?? "",
+				state: live.state,
+				mergeCommitSha: live.mergeCommitSha,
+			});
 		}),
 	);
 	return lookup;
+}
+
+async function persistTasksCompletedByMergedPrs(
+	tasks: RoadmapTask[],
+	prLookup: Map<number, CatalogPrLinkMeta>,
+): Promise<boolean> {
+	let changed = false;
+	const completedAt = new Date().toISOString();
+	for (const task of tasks) {
+		if (task.status === "complete" || task.prNumber == null) continue;
+		const meta = prLookup.get(task.prNumber);
+		if (meta?.state !== "merged") continue;
+		const next: RoadmapTask = {
+			...task,
+			status: "complete",
+			completedAt: task.completedAt ?? completedAt,
+			completedCommitSha:
+				task.completedCommitSha ?? meta.mergeCommitSha ?? null,
+		};
+		await saveTask(next);
+		await appendStatusLog({
+			entityType: "task",
+			entityId: task.$id,
+			fromStatus: task.status,
+			toStatus: "complete",
+			actor: "system:merged-catalog-pr",
+			commitSha: meta.mergeCommitSha ?? null,
+			testRunId: null,
+		});
+		changed = true;
+	}
+	return changed;
 }
 
 const OVERVIEW_CACHE_MS = 15_000;
@@ -290,10 +324,35 @@ export async function getOverview(options?: {
 		getCatalogLinkedPrNumbers(section.sectionNumber),
 	);
 	const prLookup = await resolveCatalogPrLookup(openPrs, allCatalogNumbers);
+	const mergedPrChanged = await persistTasksCompletedByMergedPrs(
+		unlockedTasks,
+		prLookup,
+	);
+	let viewSections = unlockedSections;
+	let viewTasks = unlockedTasks;
+	if (mergedPrChanged) {
+		invalidateOverviewCache();
+		const [freshSections, freshTasks] = await Promise.all([
+			listSections(),
+			listTasks(),
+		]);
+		const refreshed = computeUnlocked({
+			sections: freshSections,
+			tasks: freshTasks,
+		});
+		viewSections = refreshed.snapshot.sections;
+		viewTasks = refreshed.snapshot.tasks;
+		for (const section of refreshed.snapshot.sections) {
+			const prev = freshSections.find((item) => item.$id === section.$id);
+			if (prev && prev.status !== section.status) {
+				await saveSection(section);
+			}
+		}
+	}
 
-	const sectionViews: RoadmapSectionOverview[] = unlockedSections.map(
+	const sectionViews: RoadmapSectionOverview[] = viewSections.map(
 		(section) => {
-			const sectionTasks = unlockedTasks.filter(
+			const sectionTasks = viewTasks.filter(
 				(task) => task.sectionId === section.$id,
 			);
 		const taskCounts = countByStatus(sectionTasks);
@@ -330,7 +389,7 @@ export async function getOverview(options?: {
 	});
 
 	const overview = {
-		overallProgressPercent: computeProgressPercent(unlockedTasks),
+		overallProgressPercent: computeProgressPercent(viewTasks),
 		sections: sectionViews,
 	};
 	overviewCache = { fetchedAt: Date.now(), value: overview };

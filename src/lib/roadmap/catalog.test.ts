@@ -5,6 +5,7 @@ import {
 	getCatalogLinkedPrNumbers,
 	getCatalogTaskLinkedPrNumber,
 	getSectionNumberForPr,
+	getUnlinkedCatalogTaskCodes,
 	ROADMAP_CATALOG,
 	sectionUsesPerTaskPrCompletion,
 } from "./catalog";
@@ -60,12 +61,13 @@ describe("roadmap catalog PR links", () => {
 	});
 
 	it("maps section 3 calendar-split tasks to catalog PRs", () => {
-		expect(getCatalogTaskLinkedPrNumber("3.4")).toBe(51);
-		expect(getCatalogTaskLinkedPrNumber("3.5")).toBe(55);
-		expect(getCatalogTaskLinkedPrNumber("3.6")).toBe(57);
-		expect(getCatalogTaskLinkedPrNumber("3.7")).toBe(58);
-		expect(getCatalogTaskLinkedPrNumber("3.8")).toBe(60);
+		expect(getCatalogTaskLinkedPrNumber("3.1")).toBe(51);
+		expect(getCatalogTaskLinkedPrNumber("3.2")).toBe(55);
+		expect(getCatalogTaskLinkedPrNumber("3.3")).toBe(57);
+		expect(getCatalogTaskLinkedPrNumber("3.4")).toBe(58);
+		expect(getCatalogTaskLinkedPrNumber("3.5")).toBe(60);
 		expect(sectionUsesPerTaskPrCompletion(3)).toBe(true);
+		expect(getUnlinkedCatalogTaskCodes(3)).toEqual([]);
 	});
 
 	it("maps section 10 obligation tasks to catalog PRs", () => {

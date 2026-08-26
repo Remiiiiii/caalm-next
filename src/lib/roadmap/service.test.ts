@@ -219,4 +219,23 @@ describe("roadmap service", () => {
 		expect(lastMerge.sectionNumber).toBe(1);
 		expect(lastMerge.tasks.every((t) => t.status === "complete")).toBe(true);
 	});
+
+	it("marks 3.1 complete when GitHub shows PR 51 merged", async () => {
+		fetchPullRequestStatus.mockImplementation(async ({ prNumber }) => {
+			if (prNumber === 51) return mergedPr(51, "sha51");
+			return unknownPr(prNumber);
+		});
+
+		const overview = await getOverview();
+		const s3 = overview.sections.find((s) => s.sectionNumber === 3)!;
+		expect(s3.taskCounts.complete).toBe(1);
+		expect(s3.taskCounts.total).toBe(5);
+		expect(s3.status).not.toBe("complete");
+
+		const { getSectionTaskTree } = await import("./service");
+		const tree = await getSectionTaskTree(s3.id);
+		const byCode = Object.fromEntries(tree.tasks.map((t) => [t.taskCode, t]));
+		expect(byCode["3.1"]?.status).toBe("complete");
+		expect(byCode["3.5"]?.status).not.toBe("complete");
+	});
 });

@@ -147,6 +147,10 @@ export async function seedRoadmapToAppwriteIfEmpty(): Promise<{
 	});
 
 	if ((existing.total ?? existing.rows.length) > 0) {
+		await syncCatalogLayoutToAppwrite(tablesDB, databaseId, {
+			sectionsTableId,
+			tasksTableId,
+		});
 		return { seeded: false, sectionCount: 0, taskCount: 0 };
 	}
 
@@ -238,6 +242,20 @@ async function syncCatalogLayoutToAppwrite(
 		return section;
 	});
 	const mergedTasks = seed.tasks.map((task) => {
+		const byPr =
+			task.prNumber != null
+				? [...existingTasks.values()].find((row) => row.prNumber === task.prNumber)
+				: undefined;
+		if (byPr) {
+			return {
+				...byPr,
+				...taskLayoutData(task),
+				$id: task.$id,
+				sectionId: task.sectionId,
+				parentTaskId: task.parentTaskId,
+				orderIndex: task.orderIndex,
+			};
+		}
 		const existing = existingTasks.get(task.$id);
 		if (existing && existing.title === task.title) {
 			return { ...existing, ...taskLayoutData(task) };
