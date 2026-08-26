@@ -59,6 +59,24 @@ describe("roadmap catalog PR links", () => {
 		expect(sectionUsesPerTaskPrCompletion(0)).toBe(false);
 	});
 
+	it("maps section 3 calendar-split tasks to catalog PRs", () => {
+		expect(getCatalogTaskLinkedPrNumber("3.4")).toBe(51);
+		expect(getCatalogTaskLinkedPrNumber("3.5")).toBe(55);
+		expect(getCatalogTaskLinkedPrNumber("3.6")).toBe(57);
+		expect(getCatalogTaskLinkedPrNumber("3.7")).toBe(58);
+		expect(getCatalogTaskLinkedPrNumber("3.8")).toBe(60);
+		expect(sectionUsesPerTaskPrCompletion(3)).toBe(true);
+	});
+
+	it("maps section 10 obligation tasks to catalog PRs", () => {
+		expect(getCatalogTaskLinkedPrNumber("10.1")).toBe(20);
+		expect(getCatalogTaskLinkedPrNumber("10.2")).toBe(27);
+		expect(getCatalogTaskLinkedPrNumber("10.3")).toBe(32);
+		expect(getCatalogTaskLinkedPrNumber("10.4")).toBe(32);
+		expect(getCatalogTaskLinkedPrNumber("10.5")).toBe(32);
+		expect(sectionUsesPerTaskPrCompletion(10)).toBe(true);
+	});
+
 	it("includes dedicated GitHub tracking PRs 61-65", () => {
 		expect(getCatalogLinkedPrNumbers(5)).toEqual([63]);
 		expect(getCatalogLinkedPrNumbers(6)).toEqual([64]);

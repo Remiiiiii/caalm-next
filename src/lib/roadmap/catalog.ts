@@ -248,9 +248,43 @@ export const ROADMAP_CATALOG: RoadmapCatalogSection[] = [
 			),
 			t(
 				"3.4",
-				"Split OutlookStyleCalendar",
-				"Composable sub-components/hooks with unit tests.",
+				"Extract calendar helpers and OverflowDialog",
+				"Pull shared calendar helpers and OverflowDialog out of OutlookStyleCalendar.",
 				["Regression suite passes with no behavior change"],
+				undefined,
+				51,
+			),
+			t(
+				"3.5",
+				"Extract MonthView, EventReviewDialog, DeleteEventDialog",
+				"Split month view and event review/delete dialogs into composable modules.",
+				["Regression suite passes with no behavior change"],
+				undefined,
+				55,
+			),
+			t(
+				"3.6",
+				"Extract ShareEventDialog",
+				"Move ShareEventDialog into its own module with unit tests.",
+				["Regression suite passes with no behavior change"],
+				undefined,
+				57,
+			),
+			t(
+				"3.7",
+				"Extract ConflictDialog",
+				"Move ConflictDialog into its own module with unit tests.",
+				["Regression suite passes with no behavior change"],
+				undefined,
+				58,
+			),
+			t(
+				"3.8",
+				"Extract ApprovalReviewDialog",
+				"Move ApprovalReviewDialog into its own module with unit tests.",
+				["Regression suite passes with no behavior change"],
+				undefined,
+				60,
 			),
 		],
 	},
@@ -450,30 +484,40 @@ export const ROADMAP_CATALOG: RoadmapCatalogSection[] = [
 				"Obligations entity",
 				"Structured fields: description, owner, due, status, link, reminders.",
 				["CRUD works against obligations collection"],
+				undefined,
+				20,
 			),
 			t(
 				"10.2",
 				"Migrate keyObligations text arrays",
 				"Move legacy text into structured records.",
 				["Row-count and field-mapping parity with legacy text data"],
+				undefined,
+				27,
 			),
 			t(
 				"10.3",
 				"Obligation queue/dashboard",
 				"By owner, due date, overdue flagging.",
 				["Queue filters by owner and overdue correctly"],
+				undefined,
+				32,
 			),
 			t(
 				"10.4",
 				"Obligation reminders",
 				"Wire into existing notification channels.",
 				["Reminder fires at configured offset before due date"],
+				undefined,
+				32,
 			),
 			t(
 				"10.5",
 				"Link obligations to renewals",
 				"Renewal view surfaces open/overdue obligations.",
 				["Renewal view lists linked open/overdue obligations"],
+				undefined,
+				32,
 			),
 		],
 	},
@@ -649,13 +693,25 @@ function findCatalogTask(
 	return undefined;
 }
 
+function catalogTasksHaveLinkedPr(
+	tasks: RoadmapCatalogSection["tasks"],
+): boolean {
+	for (const task of tasks) {
+		if (task.linkedPrNumber != null) return true;
+		if (task.children?.length && catalogTasksHaveLinkedPr(task.children)) {
+			return true;
+		}
+	}
+	return false;
+}
+
 /** True when tasks complete individually as each catalog PR merges (not all-at-once). */
 export function sectionUsesPerTaskPrCompletion(sectionNumber: number): boolean {
 	const section = ROADMAP_CATALOG.find((s) => s.sectionNumber === sectionNumber);
 	if (!section) return false;
 	const prs = section.linkedPrNumbers ?? [];
 	if (prs.length <= 1) return false;
-	return section.tasks.some((task) => task.linkedPrNumber != null);
+	return catalogTasksHaveLinkedPr(section.tasks);
 }
 
 /** Task codes in the catalog that share a GitHub PR number. */
