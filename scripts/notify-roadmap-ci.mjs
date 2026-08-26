@@ -13,11 +13,15 @@
  */
 
 import { createHmac } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { config as loadEnv } from "dotenv";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.resolve(__dirname, "..");
+
+loadEnv({ path: path.join(ROOT, ".env.local") });
 
 const APP_URL = (
 	process.env.ROADMAP_APP_URL ||
@@ -35,6 +39,15 @@ const SHA = process.env.GITHUB_SHA || "";
 const RUN_ID = process.env.GITHUB_RUN_ID || "";
 const SERVER_URL = process.env.GITHUB_SERVER_URL || "https://github.com";
 const GH_TOKEN = process.env.GITHUB_TOKEN || "";
+
+function resolveGithubRepo() {
+	if (REPO) return REPO;
+	const configPath = path.join(ROOT, ".git", "config");
+	if (!existsSync(configPath)) return "";
+	const config = readFileSync(configPath, "utf8");
+	const match = config.match(/url\s*=\s*.*github\.com[:/](.+?)(?:\.git)?\s*$/m);
+	return match ? match[1].trim() : "";
+}
 
 /** Re-notify catalog-linked PRs merged within this window (idempotent on prod). */
 const RECENT_MERGE_DAYS = 45;
@@ -308,6 +321,39 @@ async function notifyRoadmapForPr({ prNumber, commitSha, summary }) {
 	if (!ci.ok || !merge.ok) process.exit(1);
 }
 
+async function runCatchup() {
+	const repo = resolveGithubRepo();
+	if (!repo) {
+		console.error(
+			"[roadmap] Set GITHUB_REPOSITORY or run from a clone with a GitHub origin remote",
+		);
+		process.exit(1);
+	}
+	if (!GH_TOKEN) {
+		console.error("[roadmap] GITHUB_TOKEN missing — needed to look up merged PRs");
+		process.exit(1);
+	}
+
+	const targets = await fetchRecentlyMergedCatalogPrs(repo);
+	if (!targets.length) {
+		console.log("[roadmap] No recently merged catalog PRs found");
+		return;
+	}
+
+	console.log(`[roadmap] Catch-up: ${targets.length} merged catalog PR(s) in ${repo}`);
+	for (let i = 0; i < targets.length; i++) {
+		const { prNumber, mergeCommitSha } = targets[i];
+		await notifyRoadmapForPr({
+			prNumber,
+			commitSha: mergeCommitSha,
+			summary: "Manual catch-up: merged catalog PR",
+		});
+		if (i < targets.length - 1) {
+			await sleep(INTER_WEBHOOK_DELAY_MS);
+		}
+	}
+}
+
 async function runBackfill({ pr, sha }) {
 	if (!pr || !sha) {
 		console.error("[roadmap] --backfill requires --pr and --sha");
@@ -337,6 +383,11 @@ async function main() {
 
 	if (args.backfill) {
 		await runBackfill(args);
+		return;
+	}
+
+	if (args.catchup) {
+		await runCatchup();
 		return;
 	}
 
