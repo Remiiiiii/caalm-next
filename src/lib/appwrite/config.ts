@@ -320,6 +320,18 @@ export const appwriteConfig = {
 		"69c0a104004d5e6f7a04",
 	),
 
+	/** Funding pursuits pipeline (name: funding_pursuits) */
+	fundingPursuitsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_FUNDING_PURSUITS_COLLECTION",
+		"69c4f201001a2b3c4d01",
+	),
+
+	/** Contract obligations for retention (name: contract_obligations) */
+	contractObligationsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CONTRACT_OBLIGATIONS_COLLECTION",
+		"69c4f202002b3c4d5e02",
+	),
+
 	// Imagine Art API (AI Image Generation)
 	imagineArtApiKey: process.env.IMAGINE_ART_API_KEY,
 
