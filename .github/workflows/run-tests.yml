@@ -19,9 +19,16 @@ name: Tests and Vercel deploy
 # GitHub skips pull_request workflows while mergeable_state is dirty.
 on:
   push:
-    branches: [main, develop, chore/*, feature/*, cursor/*]
+    branches:
+      - main
+      - develop
+      - "chore/**"
+      - "feature/**"
+      - "cursor/**"
   pull_request:
-    branches: [main, develop]
+    branches:
+      - main
+      - develop
   workflow_dispatch:
     inputs:
       roadmap_backfill_pr:
