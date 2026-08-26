@@ -652,11 +652,7 @@ export default function BillingIntegrationsPage() {
 
 
 
-	if (
-		permissionsLoading ||
-		(canBilling && loadingSub && !subscription) ||
-		(canBilling && loadingPaymentMethods && !paymentMethodError)
-	) {
+	if (permissionsLoading || (canBilling && loadingSub && !subscription)) {
 
 		return (
 
@@ -674,7 +670,25 @@ export default function BillingIntegrationsPage() {
 
 	if (!canAccessPage) {
 
-		return null;
+		return (
+
+			<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-8">
+
+				<h1 className="h1 capitalize sidebar-gradient-text">
+
+					Billing & Integrations
+
+				</h1>
+
+				<p className="mt-2 text-sm text-slate-600">
+
+					You need billing or integrations permission to view this page.
+
+				</p>
+
+			</div>
+
+		);
 
 	}
 

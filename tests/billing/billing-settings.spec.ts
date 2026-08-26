@@ -1,22 +1,34 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 
 const BILLING_PATH = "/settings/billing";
+
+async function gotoBillingReady(page: Page) {
+	await page.goto(BILLING_PATH, {
+		waitUntil: "domcontentloaded",
+		timeout: 60000,
+	});
+	await expect(page).not.toHaveURL(/sign-in/);
+	// Wait for the shell after permissions + subscription load — not networkidle
+	// (Stripe/polling can keep the network busy forever).
+	await expect(
+		page.getByRole("heading", { name: /billing & integrations/i }),
+	).toBeVisible({ timeout: 30000 });
+	await expect(page.getByRole("tab", { name: "Billing" })).toBeVisible({
+		timeout: 30000,
+	});
+}
 
 test.describe("Billing settings surface", () => {
 	test.describe.configure({ timeout: 90000 });
 
-	test.beforeEach(async ({ page }) => {
-		await page.goto(BILLING_PATH, {
-			waitUntil: "domcontentloaded",
-			timeout: 60000,
-		});
+	test.beforeEach(async ({ page }, testInfo) => {
+		if (testInfo.title === "billing APIs include x-org-id") return;
+		await gotoBillingReady(page);
 	});
 
 	test("loads billing page without auth redirect", async ({ page }) => {
 		await expect(page).not.toHaveURL(/sign-in/);
-		await expect(page.getByRole("tab", { name: "Billing" })).toBeVisible({
-			timeout: 30000,
-		});
+		await expect(page.getByRole("tab", { name: "Billing" })).toBeVisible();
 	});
 
 	test("billing overview section renders", async ({ page }) => {
@@ -61,7 +73,7 @@ test.describe("Billing settings surface", () => {
 			});
 		});
 
-		await page.reload({ waitUntil: "domcontentloaded" });
+		await gotoBillingReady(page);
 
 		await expect
 			.poll(() => apiCalls.length, { timeout: 30000 })

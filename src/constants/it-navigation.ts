@@ -25,6 +25,7 @@ export type ITNavIconKey =
 	| "tag"
 	| "badgeCheck"
 	| "gitFork"
+	| "map"
 	| "ticket"
 	| "searchCode"
 	| "bookOpen"
@@ -271,6 +272,12 @@ export const IT_NAVIGATION: ITSidebarSection[] = [
 				icon: "searchCode",
 				url: "/dashboard/it/development/code-analysis",
 				permission: PERMISSIONS.IT.MANAGE_CI_CD,
+			},
+			{
+				name: "CLM Roadmap",
+				icon: "map",
+				url: "/dashboard/it/development/clm-roadmap",
+				permission: PERMISSIONS.IT.VIEW_ROADMAP,
 			},
 			{
 				name: "Job scheduler",

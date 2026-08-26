@@ -289,6 +289,24 @@ export const appwriteConfig = {
 		"69b8a207007f0e4c8a07",
 	),
 
+	/** CLM Completion Roadmap — alphanumeric Appwrite table IDs */
+	roadmapSectionsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_ROADMAP_SECTIONS_COLLECTION",
+		"69c0a101001a2b3c4d01",
+	),
+	roadmapTasksCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_ROADMAP_TASKS_COLLECTION",
+		"69c0a102002b3c4d5e02",
+	),
+	roadmapTestRunsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_ROADMAP_TEST_RUNS_COLLECTION",
+		"69c0a103003c4d5e6f03",
+	),
+	roadmapStatusLogCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_ROADMAP_STATUS_LOG_COLLECTION",
+		"69c0a104004d5e6f7a04",
+	),
+
 	// Imagine Art API (AI Image Generation)
 	imagineArtApiKey: process.env.IMAGINE_ART_API_KEY,
 
