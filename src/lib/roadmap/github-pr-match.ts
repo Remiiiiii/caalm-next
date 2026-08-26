@@ -3,7 +3,11 @@
  * Section cards use catalog `linkedPrNumbers` (topic match), not "Section N:" titles.
  */
 
-import { getCatalogLinkedPrNumbers } from "./catalog";
+import {
+	ROADMAP_CATALOG,
+	getCatalogLinkedPrNumbers,
+	getSectionNumberForPr,
+} from "./catalog";
 
 export type GitHubPullRequestSummary = {
 	number: number;
@@ -63,6 +67,32 @@ export function findTaskPullRequest(
 		matchPullRequestToTask(pr, sectionNumber, taskCode),
 	);
 	return taskMatch ?? null;
+}
+
+/**
+ * Map a PR to a section when it is not yet in `linkedPrNumbers`.
+ * Catalog number wins, then `clm/{section}-` branch, then task-code title/branch.
+ */
+export function resolveSectionFromPrMatch(
+	pr: GitHubPullRequestSummary,
+): number | undefined {
+	const fromCatalog = getSectionNumberForPr(pr.number);
+	if (fromCatalog != null) return fromCatalog;
+
+	for (const section of ROADMAP_CATALOG) {
+		if (matchPullRequestToSection(pr, section.sectionNumber)) {
+			return section.sectionNumber;
+		}
+		const stack = [...section.tasks];
+		while (stack.length) {
+			const task = stack.pop()!;
+			if (matchPullRequestToTask(pr, section.sectionNumber, task.taskCode)) {
+				return section.sectionNumber;
+			}
+			if (task.children?.length) stack.push(...task.children);
+		}
+	}
+	return undefined;
 }
 
 /**

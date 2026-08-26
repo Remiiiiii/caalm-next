@@ -47,6 +47,34 @@ const isAttachmentObject = (
 ): attachment is EventAttachment & { fileId?: string; id?: string } =>
 	typeof attachment !== "string";
 
+/** PDF text is loaded on first chat send, not when the panel opens. */
+async function loadContractPdfContent(
+	contractId: string,
+): Promise<string> {
+	try {
+		const detailsRes = await fetch(
+			`/api/contracts/get-details?contractId=${encodeURIComponent(contractId)}`,
+		);
+		if (!detailsRes.ok) return "";
+
+		const details = await detailsRes.json();
+		const fileUrl = details.data?.fileUrl as string | undefined;
+		if (!fileUrl) return "";
+
+		const extractRes = await fetch("/api/extract-pdf-text", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ fileUrl }),
+		});
+		if (!extractRes.ok) return "";
+
+		const extractResult = await extractRes.json();
+		return typeof extractResult.text === "string" ? extractResult.text : "";
+	} catch {
+		return "";
+	}
+}
+
 interface CalendarAIChatProps {
 	mode: "pre-reads" | "chat";
 	event: {
@@ -688,11 +716,20 @@ const CalendarAIChat: React.FC<CalendarAIChatProps> = ({
 					}
 				}
 
-				// For chat mode, include contract content if available
-				// Skip contract and attachment content for holiday events - use AI's own knowledge instead
+				// For chat mode, include contract content if available (PDF loads on first send)
+				let contractContent = contractData?.content || "";
+				if (
+					!isHolidayEvent &&
+					!contractContent &&
+					contractData?.noticeId &&
+					(mode === "chat" || mode === "pre-reads")
+				) {
+					contractContent = await loadContractPdfContent(contractData.noticeId);
+				}
+
 				const fileContent = isHolidayEvent
 					? ""
-					: (contractData?.content || "") + attachmentContents;
+					: contractContent + attachmentContents;
 
 				// Log contract and attachment availability for debugging (skip for holidays)
 				if (
@@ -700,8 +737,8 @@ const CalendarAIChat: React.FC<CalendarAIChatProps> = ({
 					(contractData || attachmentsForProcessing.length > 0)
 				) {
 					console.log("Data available for AI:", {
-						hasContractContent: !!contractData?.content,
-						contractContentLength: contractData?.content?.length || 0,
+						hasContractContent: Boolean(contractContent),
+						contractContentLength: contractContent.length,
 						attachmentCount: attachmentsForProcessing.length,
 						attachmentContentsLength: attachmentContents.length,
 						mode: mode,

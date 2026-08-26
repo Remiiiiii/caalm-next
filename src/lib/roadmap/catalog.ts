@@ -228,6 +228,10 @@ export const ROADMAP_CATALOG: RoadmapCatalogSection[] = [
 		sourceRef: "Scalability; Incomplete #14",
 		linkedPrNumbers: [51, 55, 57, 58, 60],
 		tasks: [
+			// No GitHub PR yet. These stay incomplete until a PR whose title
+			// includes the task code (e.g. "3.1") or whose branch is
+			// clm/3-3.1-* merges. Do not leave them unlinked forever: a
+			// per-task section cannot finish while any task has no PR path.
 			t(
 				"3.1",
 				"Paginate expiry processor",
@@ -726,6 +730,21 @@ export function getCatalogTaskCodesForPr(prNumber: number): string[] {
 		};
 		walk(section.tasks);
 	}
+	return codes;
+}
+
+/** Task codes in a section that have no catalog `linkedPrNumber`. */
+export function getUnlinkedCatalogTaskCodes(sectionNumber: number): string[] {
+	const section = ROADMAP_CATALOG.find((s) => s.sectionNumber === sectionNumber);
+	if (!section) return [];
+	const codes: string[] = [];
+	const walk = (tasks: RoadmapCatalogSection["tasks"]) => {
+		for (const task of tasks) {
+			if (task.linkedPrNumber == null) codes.push(task.taskCode);
+			if (task.children?.length) walk(task.children);
+		}
+	};
+	walk(section.tasks);
 	return codes;
 }
 

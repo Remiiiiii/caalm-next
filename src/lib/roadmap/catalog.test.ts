@@ -5,6 +5,7 @@ import {
 	getCatalogLinkedPrNumbers,
 	getCatalogTaskLinkedPrNumber,
 	getSectionNumberForPr,
+	getUnlinkedCatalogTaskCodes,
 	ROADMAP_CATALOG,
 	sectionUsesPerTaskPrCompletion,
 } from "./catalog";
@@ -66,6 +67,13 @@ describe("roadmap catalog PR links", () => {
 		expect(getCatalogTaskLinkedPrNumber("3.7")).toBe(58);
 		expect(getCatalogTaskLinkedPrNumber("3.8")).toBe(60);
 		expect(sectionUsesPerTaskPrCompletion(3)).toBe(true);
+	});
+
+	it("leaves 3.1–3.3 unlinked until those PRs exist", () => {
+		expect(getCatalogTaskLinkedPrNumber("3.1")).toBeUndefined();
+		expect(getCatalogTaskLinkedPrNumber("3.2")).toBeUndefined();
+		expect(getCatalogTaskLinkedPrNumber("3.3")).toBeUndefined();
+		expect(getUnlinkedCatalogTaskCodes(3)).toEqual(["3.1", "3.2", "3.3"]);
 	});
 
 	it("maps section 10 obligation tasks to catalog PRs", () => {

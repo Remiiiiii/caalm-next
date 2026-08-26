@@ -56,19 +56,19 @@ export async function GET(
 		const roleIds = userRoles.rows.map(
 			(ur) => (ur as unknown as { roleId: string }).roleId,
 		);
-		const roles = await Promise.all(
-			roleIds.map(async (roleId: string) => {
-				try {
-					return await tablesDB.getRow({
-						databaseId: appwriteConfig.databaseId || "default-db",
-						tableId: "roles",
-						rowId: roleId,
-					});
-				} catch {
-					return null;
-				}
-			}),
-		);
+
+		let roles: unknown[] = [];
+		if (roleIds.length > 0) {
+			const roleRows = await tablesDB.listRows({
+				databaseId: appwriteConfig.databaseId || "default-db",
+				tableId: "roles",
+				queries: [
+					Query.or(roleIds.map((roleId) => Query.equal("$id", roleId))),
+					Query.limit(Math.max(roleIds.length, 1)),
+				],
+			});
+			roles = roleRows.rows;
+		}
 
 		return NextResponse.json({
 			success: true,
@@ -181,32 +181,35 @@ export async function POST(
 			);
 		}
 
-		for (const ur of existing.rows) {
-			await tablesDB.deleteRow({
-				databaseId: appwriteConfig.databaseId || "default-db",
-				tableId: "user_roles",
-				rowId: ur.$id,
-			});
-		}
+		await Promise.all(
+			existing.rows.map((ur) =>
+				tablesDB.deleteRow({
+					databaseId: appwriteConfig.databaseId || "default-db",
+					tableId: "user_roles",
+					rowId: ur.$id,
+				}),
+			),
+		);
 
-		const assignments = [];
-		for (const nextRoleId of nextRoleIds) {
-			const assignment = await tablesDB.createRow({
-				databaseId: appwriteConfig.databaseId || "default-db",
-				tableId: "user_roles",
-				rowId: ID.unique(),
-				data: {
-					userId,
-					roleId: nextRoleId,
-					orgId: targetOrgId,
-					assignedBy: currentUser.$id,
-					assignedAt: new Date().toISOString(),
-				},
-			});
-			assignments.push(assignment);
-		}
+		const assignments = await Promise.all(
+			nextRoleIds.map((nextRoleId) =>
+				tablesDB.createRow({
+					databaseId: appwriteConfig.databaseId || "default-db",
+					tableId: "user_roles",
+					rowId: ID.unique(),
+					data: {
+						userId,
+						roleId: nextRoleId,
+						orgId: targetOrgId,
+						assignedBy: currentUser.$id,
+						assignedAt: new Date().toISOString(),
+					},
+				}),
+			),
+		);
 
 		await CacheManager.invalidateRBAC(userId, targetOrgId);
+		await CacheManager.invalidateUsers(undefined, userId);
 
 		await logAuditEvent({
 			event_id: "rbac_user_role_assigned",

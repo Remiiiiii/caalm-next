@@ -438,42 +438,47 @@ async function fetchScopedContracts(
 	const queries = [...scopeQueries, Query.limit(500)];
 
 	if (division) {
-		try {
-			const byDivision = await tablesDB.listRows({
-				databaseId: appwriteConfig.databaseId!,
-				tableId: appwriteConfig.contractsCollectionId!,
-				queries: [
-					...scopeQueries,
-					Query.equal("division", division),
-					Query.limit(500),
-				],
-			});
-			if (byDivision.rows.length > 0) {
-				return byDivision.rows as unknown as ContractRow[];
-			}
-		} catch {
-			// division attribute may be missing; fall through
-		}
-
 		const department =
 			DIVISION_TO_DEPARTMENT[division as UserDivision] || undefined;
-		if (department) {
+
+		const fetchScoped = async (
+			field: "division" | "department",
+			value: string,
+		) => {
 			try {
-				const byDept = await tablesDB.listRows({
+				return await tablesDB.listRows({
 					databaseId: appwriteConfig.databaseId!,
 					tableId: appwriteConfig.contractsCollectionId!,
 					queries: [
 						...scopeQueries,
-						Query.equal("department", department),
+						Query.equal(field, value),
 						Query.limit(500),
 					],
 				});
-				if (byDept.rows.length > 0) {
-					return byDept.rows as unknown as ContractRow[];
-				}
 			} catch {
-				// fall through
+				return { rows: [] as unknown[] };
 			}
+		};
+
+		const [byDivision, byDept] = await Promise.all([
+			fetchScoped("division", division),
+			department
+				? fetchScoped("department", department)
+				: Promise.resolve({ rows: [] as unknown[] }),
+		]);
+
+		const merged = [
+			...(byDivision.rows as unknown as ContractRow[]),
+			...(byDept.rows as unknown as ContractRow[]),
+		];
+		if (merged.length > 0) {
+			const seen = new Set<string>();
+			return merged.filter((row) => {
+				const id = row.$id;
+				if (!id || seen.has(id)) return false;
+				seen.add(id);
+				return true;
+			});
 		}
 	}
 

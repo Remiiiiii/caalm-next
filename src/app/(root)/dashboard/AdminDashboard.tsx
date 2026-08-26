@@ -52,7 +52,6 @@ import { OrgUnitPicker } from "@/components/settings/OrgUnitPicker";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useToast } from "@/hooks/use-toast";
 import { useAdminStats } from "@/hooks/useAdminStats";
-import { useRiskImpactDashboard } from "@/hooks/useRiskImpactDashboard";
 import { useUnifiedDashboardData } from "@/hooks/useUnifiedDashboardData";
 import { cn } from "@/lib/utils";
 import { resolveInviteDepartment } from "../../../../constants";
@@ -134,7 +133,9 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 		stats: unifiedStats,
 		files,
 		invitations,
+		riskImpact,
 		isLoading: unifiedLoading,
+		error: unifiedError,
 		refresh: refreshUnified,
 		prependInvitation,
 	} = useUnifiedDashboardData(
@@ -151,13 +152,6 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 		},
 	);
 	const uninvitedUsers = uninvitedRes?.data ?? [];
-
-	const {
-		snapshot: riskImpact,
-		isLoading: riskImpactLoading,
-		error: riskImpactError,
-		refresh: refreshRiskImpact,
-	} = useRiskImpactDashboard();
 
 	const { toast } = useToast();
 
@@ -529,9 +523,9 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 			<DashboardGreeting user={user} />
 			<RiskImpactHeroCard
 				snapshot={riskImpact}
-				isLoading={riskImpactLoading}
-				error={riskImpactError}
-				onRetry={() => refreshRiskImpact()}
+				isLoading={unifiedLoading}
+				error={unifiedError ? "Failed to load risk impact" : null}
+				onRetry={() => refreshUnified()}
 			/>
 			{/* Widget Carousel */}
 			<Card className="glass-card">

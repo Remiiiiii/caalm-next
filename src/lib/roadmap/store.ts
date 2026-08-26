@@ -147,6 +147,10 @@ export async function seedRoadmapToAppwriteIfEmpty(): Promise<{
 	});
 
 	if ((existing.total ?? existing.rows.length) > 0) {
+		await syncCatalogLayoutToAppwrite(tablesDB, databaseId, {
+			sectionsTableId,
+			tasksTableId,
+		});
 		return { seeded: false, sectionCount: 0, taskCount: 0 };
 	}
 
@@ -239,7 +243,9 @@ async function syncCatalogLayoutToAppwrite(
 	});
 	const mergedTasks = seed.tasks.map((task) => {
 		const existing = existingTasks.get(task.$id);
-		if (existing && existing.title === task.title) {
+		// Keep status when the task code is the same even if the title changed
+		// (e.g. 3.4 "Split OutlookStyleCalendar" → extract-helpers wording).
+		if (existing && existing.taskCode === task.taskCode) {
 			return { ...existing, ...taskLayoutData(task) };
 		}
 		return task;

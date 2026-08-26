@@ -63,8 +63,6 @@ import type { ContractStatus } from "@/constants/status";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useToast } from "@/hooks/use-toast";
 import { useCombinedExpiryModal } from "@/hooks/useCombinedExpiryModal";
-import { useDashboardLicenses } from "@/hooks/useDashboardLicenses";
-import { useRiskImpactDashboard } from "@/hooks/useRiskImpactDashboard";
 import { useUnifiedDashboardData } from "@/hooks/useUnifiedDashboardData";
 import { cn } from "@/lib/utils";
 import { resolveInviteDepartment } from "../../../../constants";
@@ -176,6 +174,8 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 		files,
 		invitations,
 		contracts: unifiedContracts,
+		riskImpact,
+		dashboardLicenses,
 		isLoading: unifiedLoading,
 		lastUpdatedAt,
 		refresh: refreshUnified,
@@ -184,13 +184,6 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 		orgId || "default_organization",
 		user?.$id ?? user?.accountId ?? null,
 	);
-
-	const {
-		snapshot: riskImpact,
-		isLoading: riskImpactLoading,
-		error: riskImpactError,
-		refresh: refreshRiskImpact,
-	} = useRiskImpactDashboard();
 
 	const contractsFromApi = (unifiedContracts || []) as UIFileDoc[];
 
@@ -204,9 +197,6 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 		},
 	);
 	const uninvitedUsers = uninvitedRes?.data ?? [];
-
-	// Single licenses fetch shared by license widgets
-	const { licenses: dashboardLicenses } = useDashboardLicenses();
 
 	// Combined contracts + licenses expiry modal (0–30 days)
 	const {
@@ -755,9 +745,9 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 				/>
 				<RiskImpactHeroCard
 					snapshot={riskImpact}
-					isLoading={riskImpactLoading}
-					error={riskImpactError}
-					onRetry={() => refreshRiskImpact()}
+					isLoading={unifiedLoading}
+					error={null}
+					onRetry={() => refreshUnified()}
 				/>
 				<Card className="glass-card mb-6 overflow-visible">
 					<div className="glass-card-cap" />

@@ -1,8 +1,10 @@
 import type { NextRequest } from "next/server";
 import { Query } from "node-appwrite";
 import { isPendingInvitationStatus } from "@/constants/status";
+import { LicenseService } from "@/lib/api/licenses/services/LicenseService";
 import { createApiAdminClient } from "@/lib/appwrite/api-client";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { computeRiskImpact } from "@/lib/dashboard/risk-impact.service";
 import { CACHE_KEYS, CACHE_TTLS } from "@/lib/services/cache-keys";
 import CacheManager from "@/lib/services/cache-manager";
 
@@ -39,8 +41,8 @@ export async function GET(request: NextRequest) {
 		}
 
 		// Check cache first (include pagination in cache key)
-		// v3: include amount, contractType, vendor on dashboard contract payloads
-		const cacheKey = `${CACHE_KEYS.dashboard.unified(orgId, userId)}:v3:page:${page}:limit:${limit}`;
+		// v4: includes riskImpact + dashboardLicenses (fewer client round-trips)
+		const cacheKey = `${CACHE_KEYS.dashboard.unified(orgId, userId)}:v4:page:${page}:limit:${limit}`;
 
 		// Try to get cached data first to check ETag
 		const existingCache = (await import("@/lib/services/redis-cache").then(
@@ -326,6 +328,24 @@ export async function GET(request: NextRequest) {
 				// Uninvited users load via /api/users/uninvited (not on critical path)
 				const uninvitedUsers: unknown[] = [];
 
+				const [riskImpactResult, licensesResult] = await Promise.allSettled([
+					computeRiskImpact({
+						userId,
+						orgId,
+						period: "ytd",
+					}),
+					LicenseService.listLicenses(orgId, {}, { limit: 500, offset: 0 }),
+				]);
+
+				const riskImpact =
+					riskImpactResult.status === "fulfilled"
+						? riskImpactResult.value
+						: null;
+				const dashboardLicenses =
+					licensesResult.status === "fulfilled"
+						? licensesResult.value.licenses
+						: [];
+
 				const unifiedData = {
 					stats: {
 						totalContracts,
@@ -352,6 +372,8 @@ export async function GET(request: NextRequest) {
 					},
 					recentActivities: recentActivities.documents,
 					calendarEvents: calendarEvents.documents,
+					riskImpact,
+					dashboardLicenses,
 					// Pagination metadata
 					pagination: {
 						contracts: {

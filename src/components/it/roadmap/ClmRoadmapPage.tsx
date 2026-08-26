@@ -20,17 +20,95 @@ type SectionTasksResponse = {
 	tasks: RoadmapTaskTreeNode[];
 };
 
+type SectionPullRequest = {
+	number: number;
+	title: string;
+	state: string;
+	htmlUrl: string;
+	headRef: string;
+	body: string;
+};
+
 type SectionPullRequestsResponse = {
 	sectionId: string;
-	pullRequests: Array<{
-		number: number;
-		title: string;
-		state: string;
-		htmlUrl: string;
-		headRef: string;
-		body: string;
-	}>;
+	pullRequests: SectionPullRequest[];
 };
+
+function RoadmapPullRequestItem({ pr }: { pr: SectionPullRequest }) {
+	const [expanded, setExpanded] = useState(false);
+	const merged = pr.state === "merged";
+
+	return (
+		<div className="space-y-1.5 py-3 first:pt-0 last:pb-0">
+			<div className="flex items-start gap-2">
+				<div className="flex-1 min-w-0 space-y-1">
+					<button
+						type="button"
+						className="flex w-full items-center gap-2 cursor-pointer rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
+						aria-expanded={expanded}
+						aria-label={`${expanded ? "Collapse" : "Expand"} pull request #${pr.number}`}
+						onClick={() => setExpanded((open) => !open)}
+					>
+						<p className="min-w-0 flex-1 truncate text-xs">
+							<span className="font-semibold text-slate-700">
+								#{pr.number}
+							</span>{" "}
+							<span
+								className={cn(
+									merged
+										? "line-through text-slate-500 font-normal"
+										: "text-slate-700",
+								)}
+							>
+								{pr.title}
+							</span>
+						</p>
+						{pr.state ? (
+							<span className="shrink-0 text-xs font-normal text-slate-500 capitalize">
+								{pr.state}
+							</span>
+						) : null}
+						<span
+							className="shrink-0 rounded-md p-1 text-[#0f5384]"
+							aria-hidden
+						>
+							<ChevronDown
+								className={cn(
+									"h-4 w-4 transition-transform duration-200",
+									expanded && "rotate-180",
+								)}
+							/>
+						</span>
+					</button>
+					{pr.headRef ? <RoadmapBranchRow branch={pr.headRef} /> : null}
+				</div>
+			</div>
+			{expanded ? (
+				<>
+					{pr.htmlUrl ? (
+						<a
+							href={pr.htmlUrl}
+							className="text-[11px] text-[#0f5384] underline"
+							target="_blank"
+							rel="noreferrer"
+						>
+							View on GitHub
+						</a>
+					) : null}
+					{pr.body ? (
+						<div className="text-xs text-slate-600 [&_.docs-prose]:max-w-none [&_h1]:mb-2 [&_h1]:mt-1 [&_h1]:text-sm [&_h2]:mb-1 [&_h2]:mt-3 [&_h2]:text-sm [&_h3]:mb-1 [&_h3]:mt-2 [&_h3]:text-xs [&_ol]:my-2 [&_ol]:text-xs [&_ol]:leading-5 [&_p]:my-2 [&_p]:text-xs [&_p]:leading-5 [&_pre]:my-2 [&_pre]:p-2 [&_pre]:text-[11px] [&_ul]:my-2 [&_ul]:text-xs [&_ul]:leading-5">
+							<DocsMarkdown markdown={pr.body} />
+						</div>
+					) : (
+						<p className="text-xs text-slate-600">
+							This PR has no description.
+						</p>
+					)}
+				</>
+			) : null}
+		</div>
+	);
+}
 
 const SECTIONS_PAGE_SIZE = 5;
 
@@ -213,44 +291,7 @@ function RoadmapSectionCard({
 						) : (
 							<div className="divide-y divide-slate-200">
 								{prs.pullRequests.map((pr) => (
-									<div key={pr.number} className="space-y-1.5 py-3 first:pt-0 last:pb-0">
-										<p className="text-xs font-semibold text-slate-700">
-											#{pr.number}{" "}
-											<span
-												className={cn(
-													pr.state === "merged" &&
-														"line-through text-slate-500 font-normal",
-												)}
-											>
-												{pr.title}
-											</span>
-											<span className="ml-2 font-normal text-slate-500 capitalize">
-												{pr.state}
-											</span>
-										</p>
-										{pr.headRef ? (
-											<RoadmapBranchRow branch={pr.headRef} />
-										) : null}
-										{pr.htmlUrl ? (
-											<a
-												href={pr.htmlUrl}
-												className="text-[11px] text-[#0f5384] underline"
-												target="_blank"
-												rel="noreferrer"
-											>
-												View on GitHub
-											</a>
-										) : null}
-										{pr.body ? (
-											<div className="text-xs text-slate-600 [&_.docs-prose]:max-w-none [&_h1]:mb-2 [&_h1]:mt-1 [&_h1]:text-sm [&_h2]:mb-1 [&_h2]:mt-3 [&_h2]:text-sm [&_h3]:mb-1 [&_h3]:mt-2 [&_h3]:text-xs [&_ol]:my-2 [&_ol]:text-xs [&_ol]:leading-5 [&_p]:my-2 [&_p]:text-xs [&_p]:leading-5 [&_pre]:my-2 [&_pre]:p-2 [&_pre]:text-[11px] [&_ul]:my-2 [&_ul]:text-xs [&_ul]:leading-5">
-												<DocsMarkdown markdown={pr.body} />
-											</div>
-										) : (
-											<p className="text-xs text-slate-600">
-												This PR has no description.
-											</p>
-										)}
-									</div>
+									<RoadmapPullRequestItem key={pr.number} pr={pr} />
 								))}
 							</div>
 						)

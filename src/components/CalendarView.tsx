@@ -57,7 +57,6 @@ import {
 } from "@/components/ui/select";
 import { CalendarEventSkeleton } from "@/components/ui/skeletons";
 import { useCalendarEvents } from "@/hooks/useCalendarEvents";
-import { useDashboardLicenses } from "@/hooks/useDashboardLicenses";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useToast } from "@/hooks/use-toast";
 import { useUnifiedDashboardData } from "@/hooks/useUnifiedDashboardData";
@@ -470,16 +469,15 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 
 	// Use unified dashboard data for contracts; month-scoped events from calendar API
 	const { orgId } = useOrganization();
-	const { contracts, isLoading: dashboardLoading, refresh } =
+	const { contracts, dashboardLicenses: licenses, isLoading: dashboardLoading, refresh } =
 		useUnifiedDashboardData(orgId || "default_organization");
-	const { licenses, isLoading: licensesLoading } = useDashboardLicenses();
 	const {
 		events: monthCalendarEvents,
 		isLoading: calendarLoading,
 		refresh: refreshCalendar,
 	} = useCalendarEvents({ month: currentMonth });
 
-	const isLoading = dashboardLoading || calendarLoading || licensesLoading;
+	const isLoading = dashboardLoading || calendarLoading;
 
 	const allEvents = useMemo(() => {
 		const fromCalendar: LocalCalendarEvent[] = monthCalendarEvents

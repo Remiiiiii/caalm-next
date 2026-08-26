@@ -734,90 +734,51 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 				}
 			}
 
-			// Try to fetch from database contracts collection
+			// Scoped lookup by name or id — avoids loading the full contract list
 			try {
-				const response = await fetch("/api/contracts/database");
+				const response = await fetch(
+					`/api/contracts/database?name=${encodeURIComponent(event.contractName)}`,
+				);
 				if (response.ok) {
 					const result = await response.json();
-					if (result.success && result.contracts) {
-						const matchingContract = result.contracts.find(
-							(c: { id: string; name: string }) =>
-								c.name.toLowerCase() ===
-									(event.contractName || "").toLowerCase() ||
-								c.id === event.contractName,
-						);
+					const contracts = result.data?.contracts ?? result.contracts;
+					if (result.success && contracts?.length) {
+						const matchingContract = contracts[0];
+						try {
+							const contractDetailsResponse = await fetch(
+								`/api/contracts/get-details?contractId=${encodeURIComponent(
+									matchingContract.id,
+								)}`,
+							);
 
-						if (matchingContract) {
-							// Fetch contract with file details and extract PDF content
-							try {
-								const contractDetailsResponse = await fetch(
-									`/api/contracts/get-details?contractId=${encodeURIComponent(
-										matchingContract.id,
-									)}`,
-								);
+							if (contractDetailsResponse.ok) {
+								const contractDetails = await contractDetailsResponse.json();
 
-								if (contractDetailsResponse.ok) {
-									const contractDetails = await contractDetailsResponse.json();
+								if (contractDetails.success && contractDetails.data) {
+									const contractInfo = contractDetails.data;
+									const contractDataResult = {
+										title: contractInfo.contractName || matchingContract.name,
+										description: contractInfo.description || "",
+										noticeId: matchingContract.id,
+										content: "",
+									};
 
-									if (contractDetails.success && contractDetails.data) {
-										const contractInfo = contractDetails.data;
-										let extractedContent = "";
-
-										// If file URL exists, extract PDF content
-										if (contractInfo.fileUrl) {
-											try {
-												const extractResponse = await fetch(
-													"/api/extract-pdf-text",
-													{
-														method: "POST",
-														headers: {
-															"Content-Type": "application/json",
-														},
-														body: JSON.stringify({
-															fileUrl: contractInfo.fileUrl,
-														}),
-													},
-												);
-
-												if (extractResponse.ok) {
-													const extractResult = await extractResponse.json();
-													if (extractResult.text) {
-														extractedContent = extractResult.text;
-													}
-												}
-											} catch (extractError) {
-												console.warn(
-													"Failed to extract PDF content:",
-													extractError,
-												);
-											}
-										}
-
-										const contractDataResult = {
-											title: contractInfo.contractName || matchingContract.name,
-											description: contractInfo.description || "",
-											noticeId: matchingContract.id,
-											content: extractedContent,
-										};
-
-										setContractData(contractDataResult);
-										return contractDataResult;
-									}
+									setContractData(contractDataResult);
+									return contractDataResult;
 								}
-							} catch (detailsError) {
-								console.warn("Failed to fetch contract details:", detailsError);
 							}
-
-							// Fallback: return contract without extracted content
-							const fallbackResult = {
-								title: matchingContract.name,
-								description: "",
-								noticeId: matchingContract.id,
-								content: "",
-							};
-							setContractData(fallbackResult);
-							return fallbackResult;
+						} catch (detailsError) {
+							console.warn("Failed to fetch contract details:", detailsError);
 						}
+
+						const fallbackResult = {
+							title: matchingContract.name,
+							description: "",
+							noticeId: matchingContract.id,
+							content: "",
+						};
+						setContractData(fallbackResult);
+						return fallbackResult;
 					}
 				}
 			} catch (error) {

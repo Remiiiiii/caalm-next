@@ -212,16 +212,10 @@ export async function POST(request: NextRequest) {
 			alternateSlots: any[];
 		} | null = null;
 		try {
-			const participantConflicts = await detectParticipantConflicts(
-				eventData,
-				undefined,
-				userId,
-			);
-			const resourceConflicts = await detectResourceConflicts(
-				eventData,
-				undefined,
-				userId,
-			);
+			const [participantConflicts, resourceConflicts] = await Promise.all([
+				detectParticipantConflicts(eventData, undefined, userId),
+				detectResourceConflicts(eventData, undefined, userId),
+			]);
 			const allConflicts = [...participantConflicts, ...resourceConflicts];
 
 			if (allConflicts.length > 0) {
@@ -692,16 +686,10 @@ export async function PUT(request: NextRequest) {
 			alternateSlots: any[];
 		} | null = null;
 		try {
-			const participantConflicts = await detectParticipantConflicts(
-				eventData,
-				eventId,
-				userId,
-			);
-			const resourceConflicts = await detectResourceConflicts(
-				eventData,
-				eventId,
-				userId,
-			);
+			const [participantConflicts, resourceConflicts] = await Promise.all([
+				detectParticipantConflicts(eventData, eventId, userId),
+				detectResourceConflicts(eventData, eventId, userId),
+			]);
 			const allConflicts = [...participantConflicts, ...resourceConflicts];
 
 			if (allConflicts.length > 0) {

@@ -1,6 +1,7 @@
 /**
  * CLM Completion Roadmap — domain types (Section 0).
- * Status can only become `complete` via the verified merge webhook path.
+ * Status becomes `complete` from a verified merge webhook, or when a
+ * catalog-linked GitHub PR is already merged (overview reconcile).
  */
 
 export type RoadmapEntityStatus =

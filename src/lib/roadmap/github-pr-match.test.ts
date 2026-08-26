@@ -3,6 +3,7 @@ import {
 	findSectionPullRequest,
 	matchPullRequestToSection,
 	matchPullRequestToTask,
+	resolveSectionFromPrMatch,
 	stripHtmlFromPrBody,
 } from "./github-pr-match";
 
@@ -44,6 +45,19 @@ describe("github-pr-match", () => {
 		expect(findSectionPullRequest([roadmapPr, calendarPr], 3)).toEqual(
 			calendarPr,
 		);
+	});
+
+	it("maps an unlinked 3.1 PR to section 3 by task code", () => {
+		const expiryPr = {
+			number: 9001,
+			title: "3.1 Paginate expiry processor",
+			htmlUrl: "https://github.com/Remiiiiii/caalm-next/pull/9001",
+			headRef: "clm/3-3.1-paginate-expiry",
+			state: "open" as const,
+		};
+		expect(resolveSectionFromPrMatch(expiryPr)).toBe(3);
+		expect(matchPullRequestToTask(expiryPr, 3, "3.1")).toBe(true);
+		expect(matchPullRequestToTask(expiryPr, 3, "3.2")).toBe(false);
 	});
 });
 

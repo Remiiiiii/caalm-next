@@ -48,6 +48,60 @@ export async function GET(request: NextRequest) {
 		const scope = await getContractListScope(user.$id, defaultOrg.orgId);
 		const scopeQueries = buildContractQueries(scope);
 
+		const nameQuery = request.nextUrl.searchParams.get("name")?.trim();
+		if (nameQuery) {
+			const cacheKey = `contracts:lookup:${user.$id}:${nameQuery.toLowerCase()}`;
+			const lookup = await CacheManager.withCache(
+				"contracts/database",
+				cacheKey,
+				async () => {
+					const { tablesDB } = await createAdminClient();
+					const exact = await tablesDB.listRows({
+						databaseId: appwriteConfig.databaseId || "default-db",
+						tableId: appwriteConfig.contractsCollectionId || "contracts",
+						queries: [
+							...scopeQueries,
+							Query.or([
+								Query.equal("$id", nameQuery),
+								Query.equal("contractName", nameQuery),
+							]),
+							Query.select(["$id", "contractName", "contractType", "vendor"]),
+							Query.limit(1),
+						],
+					});
+
+					if (exact.rows.length > 0) {
+						return exact.rows;
+					}
+
+					// Case-insensitive fallback within scope (bounded scan)
+					const window = await tablesDB.listRows({
+						databaseId: appwriteConfig.databaseId || "default-db",
+						tableId: appwriteConfig.contractsCollectionId || "contracts",
+						queries: [
+							...scopeQueries,
+							Query.select(["$id", "contractName", "contractType", "vendor"]),
+							Query.limit(200),
+						],
+					});
+					const needle = nameQuery.toLowerCase();
+					return window.rows.filter((row: { contractName?: string; $id?: string }) => {
+						const name = String(row.contractName || "").toLowerCase();
+						return name === needle || row.$id === nameQuery;
+					});
+				},
+			);
+
+			const contractList = lookup.map((contract: Record<string, unknown>) => ({
+				id: contract.$id,
+				name: contract.contractName || "Unnamed Contract",
+				type: contract.contractType,
+				vendor: contract.vendor,
+			}));
+
+			return successResponse({ contracts: contractList }, { requestId });
+		}
+
 		const { limit, offset } = parsePaginationParams(request);
 
 		const cacheKey =

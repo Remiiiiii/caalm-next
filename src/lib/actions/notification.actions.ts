@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { hasPermission } from "@/lib/rbac/permissions";
 import { daysUntilExpiry } from "@/lib/renewals/autoRenew";
+import { DEFAULT_ORG_TIMEZONE } from "@/lib/timezone";
 import { getOrganizationTimezone } from "@/lib/timezone/org";
 import {
 	type AlertChannel,
@@ -16,7 +17,7 @@ import {
 import {
 	buildExpiryNoticeMetadata,
 	type ExpiryNoticeMetadata,
-	matchesExpiryNoticeMetadata,
+	parseExpiryNoticeMetadata,
 	shouldSendExpiryNotice,
 } from "@/lib/renewals/expiryNotice";
 import {
@@ -133,26 +134,132 @@ export const markNotificationAsRead = async (notificationId: string) => {
 	}
 };
 
-async function expiryNoticeAlreadySent(
-	type: string,
-	meta: ExpiryNoticeMetadata,
-): Promise<boolean> {
+
+async function loadExpiryNoticeSentKeys(
+	types: string[],
+): Promise<Set<string>> {
 	const { tablesDB } = await createAdminClient();
 	const tableId = appwriteConfig.notificationsCollectionId || "notifications";
+	const sent = new Set<string>();
 
-	const existing = await tablesDB.listRows({
-		databaseId: appwriteConfig.databaseId,
-		tableId,
-		queries: [
-			Query.equal("type", type),
-			Query.orderDesc("$createdAt"),
-			Query.limit(100),
-		],
-	});
-
-	return existing.rows.some((row) =>
-		matchesExpiryNoticeMetadata(row.metadata as string | undefined, meta),
+	await Promise.all(
+		types.map(async (type) => {
+			const existing = await tablesDB.listRows({
+				databaseId: appwriteConfig.databaseId,
+				tableId,
+				queries: [
+					Query.equal("type", type),
+					Query.orderDesc("$createdAt"),
+					Query.limit(500),
+				],
+			});
+			for (const row of existing.rows) {
+				const parsed = parseExpiryNoticeMetadata(
+					row.metadata as string | undefined,
+				);
+				if (parsed) {
+					sent.add(
+						`${parsed.entityType}:${parsed.entityId}:${parsed.daysUntil}`,
+					);
+				}
+			}
+		}),
 	);
+
+	return sent;
+}
+
+async function loadContractAlertSettingsMap(
+	contractIds: string[],
+): Promise<
+	Map<
+		string,
+		{
+			channels: Set<AlertChannel>;
+			recipientIds: string[];
+		}
+	>
+> {
+	const map = new Map<
+		string,
+		{ channels: Set<AlertChannel>; recipientIds: string[] }
+	>();
+	const tableId =
+		appwriteConfig.contractsEnterpriseMetadataCollectionId ||
+		appwriteConfig.contractExtensionsCollectionId;
+
+	if (!appwriteConfig.databaseId || !tableId || contractIds.length === 0) {
+		return map;
+	}
+
+	const { tablesDB } = await createAdminClient();
+	const chunkSize = 50;
+
+	for (let i = 0; i < contractIds.length; i += chunkSize) {
+		const chunk = contractIds.slice(i, i + chunkSize);
+		try {
+			const docs = await tablesDB.listRows({
+				databaseId: appwriteConfig.databaseId,
+				tableId,
+				queries: [
+					Query.or(chunk.map((id) => Query.equal("contractId", id))),
+					Query.limit(chunk.length),
+				],
+			});
+			for (const row of docs.rows) {
+				const contractId = String(
+					(row as { contractId?: string }).contractId || "",
+				);
+				if (!contractId) continue;
+				map.set(contractId, {
+					channels: parseAlertChannels(
+						(row as { alertChannels?: unknown }).alertChannels ?? null,
+					),
+					recipientIds: parseAlertRecipientIds(
+						(row as { alertRecipientIds?: unknown }).alertRecipientIds ?? null,
+					),
+				});
+			}
+		} catch (error) {
+			console.warn("Failed to batch-load contract alert settings:", error);
+		}
+	}
+
+	return map;
+}
+
+async function preloadOrganizationTimezones(
+	orgIds: string[],
+): Promise<Map<string, string>> {
+	const unique = [...new Set(orgIds.filter(Boolean))] as string[];
+	const map = new Map<string, string>();
+	await Promise.all(
+		unique.map(async (orgId) => {
+			map.set(orgId, await getOrganizationTimezone(orgId));
+		}),
+	);
+	return map;
+}
+
+async function mapWithConcurrency<T, R>(
+	items: T[],
+	fn: (item: T) => Promise<R>,
+	limit = 10,
+): Promise<R[]> {
+	if (items.length === 0) return [];
+	const results = new Array<R>(items.length);
+	let index = 0;
+
+	await Promise.all(
+		Array.from({ length: Math.min(limit, items.length) }, async () => {
+			while (index < items.length) {
+				const current = index++;
+				results[current] = await fn(items[current]);
+			}
+		}),
+	);
+
+	return results;
 }
 
 type UserRow = {
@@ -163,51 +270,6 @@ type UserRow = {
 	department?: string;
 	phone?: string;
 };
-
-async function getContractEnterpriseAlertSettings(contractId: string): Promise<{
-	channels: Set<AlertChannel>;
-	recipientIds: string[];
-}> {
-	const tableId =
-		appwriteConfig.contractsEnterpriseMetadataCollectionId ||
-		appwriteConfig.contractExtensionsCollectionId;
-
-	if (!appwriteConfig.databaseId || !tableId) {
-		return {
-			channels: parseAlertChannels(null),
-			recipientIds: [],
-		};
-	}
-
-	try {
-		const { tablesDB } = await createAdminClient();
-		const docs = await tablesDB.listRows({
-			databaseId: appwriteConfig.databaseId,
-			tableId,
-			queries: [Query.equal("contractId", contractId), Query.limit(1)],
-		});
-		const row = docs.rows[0] as
-			| {
-					alertChannels?: unknown;
-					alertRecipientIds?: unknown;
-			  }
-			| undefined;
-
-		return {
-			channels: parseAlertChannels(row?.alertChannels ?? null),
-			recipientIds: parseAlertRecipientIds(row?.alertRecipientIds ?? null),
-		};
-	} catch (error) {
-		console.warn(
-			`Failed to load enterprise alert settings for contract ${contractId}:`,
-			error,
-		);
-		return {
-			channels: parseAlertChannels(null),
-			recipientIds: [],
-		};
-	}
-}
 
 async function resolveAuthPhone(
 	accountId: string,
@@ -426,70 +488,123 @@ export const checkDocumentExpirations = async () => {
 			throw new Error("Database ID not configured");
 		}
 
-		let notificationsCreated = 0;
+		const now = new Date();
+		const sentKeys = await loadExpiryNoticeSentKeys([
+			"contract-expiry",
+			"license-expiry",
+			"audit-upcoming",
+		]);
 
-		// --- Contracts ---
-		if (appwriteConfig.contractsCollectionId) {
-			const contracts = await tablesDB.listRows({
-				databaseId: appwriteConfig.databaseId,
-				tableId: appwriteConfig.contractsCollectionId,
-				queries: [Query.isNotNull("contractExpiryDate"), Query.limit(1000)],
+		const [contractsResult, licensesResult, auditsResult] = await Promise.all([
+			appwriteConfig.contractsCollectionId
+				? tablesDB.listRows({
+						databaseId: appwriteConfig.databaseId,
+						tableId: appwriteConfig.contractsCollectionId,
+						queries: [
+							Query.isNotNull("contractExpiryDate"),
+							Query.limit(1000),
+						],
+					})
+				: Promise.resolve({ rows: [] as Record<string, unknown>[] }),
+			appwriteConfig.licensesCollectionId
+				? tablesDB.listRows({
+						databaseId: appwriteConfig.databaseId,
+						tableId: appwriteConfig.licensesCollectionId,
+						queries: [
+							Query.isNotNull("licenseExpiryDate"),
+							Query.limit(1000),
+						],
+					})
+				: Promise.resolve({ rows: [] as Record<string, unknown>[] }),
+			appwriteConfig.auditsCollectionId
+				? tablesDB.listRows({
+						databaseId: appwriteConfig.databaseId,
+						tableId: appwriteConfig.auditsCollectionId,
+						queries: [
+							Query.isNotNull("auditExpiryDate"),
+							Query.limit(1000),
+						],
+					})
+				: Promise.resolve({ rows: [] as Record<string, unknown>[] }),
+		]);
+
+		const orgIds = [
+			...contractsResult.rows,
+			...licensesResult.rows,
+			...auditsResult.rows,
+		]
+			.map((row) =>
+				typeof row.orgId === "string" ? row.orgId : null,
+			)
+			.filter(Boolean) as string[];
+
+		const timezoneByOrg = await preloadOrganizationTimezones(orgIds);
+		const contractAlertSettings = await loadContractAlertSettingsMap(
+			contractsResult.rows.map((row) => String(row.$id || "")).filter(Boolean),
+		);
+
+		const { buildDesktopExpiryAlert } = await import(
+			"@/lib/push/notifications-server"
+		);
+
+		type ExpiryJob = () => Promise<number>;
+
+		const contractJobs: ExpiryJob[] = [];
+		for (const contract of contractsResult.rows) {
+			if (!contract.contractExpiryDate) continue;
+			if (contract.status?.toLowerCase() === "expired") continue;
+			if (contract.isExpired === true) continue;
+
+			const orgId =
+				typeof contract.orgId === "string" ? contract.orgId : null;
+			const timeZone = orgId
+				? (timezoneByOrg.get(orgId) ?? DEFAULT_ORG_TIMEZONE)
+				: DEFAULT_ORG_TIMEZONE;
+			const daysUntil = daysUntilExpiry(
+				contract.contractExpiryDate as string,
+				now,
+				timeZone,
+			);
+			if (!shouldSendExpiryNotice(daysUntil, contract.renewalNoticeDays)) {
+				continue;
+			}
+
+			const meta: ExpiryNoticeMetadata = {
+				entityType: "contract",
+				entityId: String(contract.$id),
+				daysUntil,
+			};
+			const sentKey = `${meta.entityType}:${meta.entityId}:${meta.daysUntil}`;
+			if (sentKeys.has(sentKey)) continue;
+
+			const departmentLabel = contract.department
+				? formatDepartmentName(contract.department as string)
+				: "Unknown Department";
+			const expirySlice = String(contract.contractExpiryDate).slice(0, 10);
+			const autoRenew = contract.autoRenew === true;
+			const actionPhrase = autoRenew
+				? "is scheduled to auto-renew"
+				: "is set to expire";
+			const contractName = (contract.contractName as string) || "Untitled";
+			const title = autoRenew
+				? "Contract Renewal Notice"
+				: "Contract Expiry Reminder";
+			const message = `The contract "${contractName}" in ${departmentLabel} ${actionPhrase} in ${daysUntil} days (on ${expirySlice}).`;
+			const smsMessage = buildExpirySmsMessage({
+				entityLabel: "Contract",
+				name: contractName,
+				daysUntil,
+				expirySlice,
+				autoRenew,
 			});
-
-			for (const contract of contracts.rows) {
-				if (!contract.contractExpiryDate) continue;
-				if (contract.status?.toLowerCase() === "expired") continue;
-				if (contract.isExpired === true) continue;
-
-				const daysUntil = daysUntilExpiry(
-					contract.contractExpiryDate,
-					new Date(),
-					await getOrganizationTimezone(
-						typeof contract.orgId === "string" ? contract.orgId : null,
-					),
-				);
-				if (!shouldSendExpiryNotice(daysUntil, contract.renewalNoticeDays)) {
-					continue;
-				}
-
-				const meta: ExpiryNoticeMetadata = {
-					entityType: "contract",
-					entityId: contract.$id,
-					daysUntil,
+			const alertSettings =
+				contractAlertSettings.get(String(contract.$id)) ?? {
+					channels: parseAlertChannels(null),
+					recipientIds: [],
 				};
-				if (await expiryNoticeAlreadySent("contract-expiry", meta)) {
-					continue;
-				}
 
-				const departmentLabel = contract.department
-					? formatDepartmentName(contract.department)
-					: "Unknown Department";
-				const expirySlice = String(contract.contractExpiryDate).slice(0, 10);
-				const autoRenew = contract.autoRenew === true;
-				const actionPhrase = autoRenew
-					? "is scheduled to auto-renew"
-					: "is set to expire";
-				const contractName = (contract.contractName as string) || "Untitled";
-				const title = autoRenew
-					? "Contract Renewal Notice"
-					: "Contract Expiry Reminder";
-				const message = `The contract "${contractName}" in ${departmentLabel} ${actionPhrase} in ${daysUntil} days (on ${expirySlice}).`;
-				const smsMessage = buildExpirySmsMessage({
-					entityLabel: "Contract",
-					name: contractName,
-					daysUntil,
-					expirySlice,
-					autoRenew,
-				});
-
-				const alertSettings = await getContractEnterpriseAlertSettings(
-					contract.$id,
-				);
-
-				const { buildDesktopExpiryAlert } = await import(
-					"@/lib/push/notifications-server"
-				);
-				notificationsCreated += await notifyEligibleUsers({
+			contractJobs.push(() =>
+				notifyEligibleUsers({
 					title,
 					message,
 					smsMessage,
@@ -507,67 +622,59 @@ export const checkDocumentExpirations = async () => {
 						daysUntil,
 						expirySlice,
 						autoRenew,
-						entityId: contract.$id,
+						entityId: String(contract.$id),
 						url: "/dashboard",
 					}),
-				});
-			}
+				}),
+			);
 		}
 
-		// --- Licenses ---
-		if (appwriteConfig.licensesCollectionId) {
-			const licenses = await tablesDB.listRows({
-				databaseId: appwriteConfig.databaseId,
-				tableId: appwriteConfig.licensesCollectionId,
-				queries: [Query.isNotNull("licenseExpiryDate"), Query.limit(1000)],
+		const licenseJobs: ExpiryJob[] = [];
+		for (const license of licensesResult.rows) {
+			if (!license.licenseExpiryDate) continue;
+			if (license.status?.toLowerCase() === "expired") continue;
+
+			const orgId = typeof license.orgId === "string" ? license.orgId : null;
+			const timeZone = orgId
+				? (timezoneByOrg.get(orgId) ?? DEFAULT_ORG_TIMEZONE)
+				: DEFAULT_ORG_TIMEZONE;
+			const daysUntil = daysUntilExpiry(
+				license.licenseExpiryDate as string,
+				now,
+				timeZone,
+			);
+			if (!shouldSendExpiryNotice(daysUntil, license.renewalNoticeDays)) {
+				continue;
+			}
+
+			const meta: ExpiryNoticeMetadata = {
+				entityType: "license",
+				entityId: String(license.$id),
+				daysUntil,
+			};
+			const sentKey = `${meta.entityType}:${meta.entityId}:${meta.daysUntil}`;
+			if (sentKeys.has(sentKey)) continue;
+
+			const expirySlice = String(license.licenseExpiryDate).slice(0, 10);
+			const autoRenew = license.autoRenew === true;
+			const actionPhrase = autoRenew
+				? "is scheduled to auto-renew"
+				: "is set to expire";
+			const licenseName = (license.licenseName as string) || "Untitled";
+			const title = autoRenew
+				? "License Renewal Notice"
+				: "License Expiry Reminder";
+			const message = `The license "${licenseName}" ${actionPhrase} in ${daysUntil} days (on ${expirySlice}).`;
+			const smsMessage = buildExpirySmsMessage({
+				entityLabel: "License",
+				name: licenseName,
+				daysUntil,
+				expirySlice,
+				autoRenew,
 			});
 
-			for (const license of licenses.rows) {
-				if (!license.licenseExpiryDate) continue;
-				if (license.status?.toLowerCase() === "expired") continue;
-
-				const daysUntil = daysUntilExpiry(
-					license.licenseExpiryDate,
-					new Date(),
-					await getOrganizationTimezone(
-						typeof license.orgId === "string" ? license.orgId : null,
-					),
-				);
-				if (!shouldSendExpiryNotice(daysUntil, license.renewalNoticeDays)) {
-					continue;
-				}
-
-				const meta: ExpiryNoticeMetadata = {
-					entityType: "license",
-					entityId: license.$id,
-					daysUntil,
-				};
-				if (await expiryNoticeAlreadySent("license-expiry", meta)) {
-					continue;
-				}
-
-				const expirySlice = String(license.licenseExpiryDate).slice(0, 10);
-				const autoRenew = license.autoRenew === true;
-				const actionPhrase = autoRenew
-					? "is scheduled to auto-renew"
-					: "is set to expire";
-				const licenseName = (license.licenseName as string) || "Untitled";
-				const title = autoRenew
-					? "License Renewal Notice"
-					: "License Expiry Reminder";
-				const message = `The license "${licenseName}" ${actionPhrase} in ${daysUntil} days (on ${expirySlice}).`;
-				const smsMessage = buildExpirySmsMessage({
-					entityLabel: "License",
-					name: licenseName,
-					daysUntil,
-					expirySlice,
-					autoRenew,
-				});
-
-				const { buildDesktopExpiryAlert } = await import(
-					"@/lib/push/notifications-server"
-				);
-				notificationsCreated += await notifyEligibleUsers({
+			licenseJobs.push(() =>
+				notifyEligibleUsers({
 					title,
 					message,
 					smsMessage,
@@ -582,60 +689,52 @@ export const checkDocumentExpirations = async () => {
 						name: licenseName,
 						daysUntil,
 						expirySlice,
-						entityId: license.$id,
+						entityId: String(license.$id),
 						url: "/licenses",
 					}),
-				});
-			}
+				}),
+			);
 		}
 
-		// --- Audits ---
-		if (appwriteConfig.auditsCollectionId) {
-			const audits = await tablesDB.listRows({
-				databaseId: appwriteConfig.databaseId,
-				tableId: appwriteConfig.auditsCollectionId,
-				queries: [Query.isNotNull("auditExpiryDate"), Query.limit(1000)],
+		const auditJobs: ExpiryJob[] = [];
+		for (const audit of auditsResult.rows) {
+			if (!audit.auditExpiryDate) continue;
+
+			const orgId = typeof audit.orgId === "string" ? audit.orgId : null;
+			const timeZone = orgId
+				? (timezoneByOrg.get(orgId) ?? DEFAULT_ORG_TIMEZONE)
+				: DEFAULT_ORG_TIMEZONE;
+			const daysUntil = daysUntilExpiry(
+				audit.auditExpiryDate as string,
+				now,
+				timeZone,
+			);
+			if (!shouldSendExpiryNotice(daysUntil, audit.renewalNoticeDays)) {
+				continue;
+			}
+
+			const meta: ExpiryNoticeMetadata = {
+				entityType: "audit",
+				entityId: String(audit.$id),
+				daysUntil,
+			};
+			const sentKey = `${meta.entityType}:${meta.entityId}:${meta.daysUntil}`;
+			if (sentKeys.has(sentKey)) continue;
+
+			const expirySlice = String(audit.auditExpiryDate).slice(0, 10);
+			const auditName = (audit.auditName as string) || "Untitled";
+			const title = "Upcoming Audit Reminder";
+			const message = `The audit "${auditName}" is due in ${daysUntil} days (on ${expirySlice}).`;
+			const smsMessage = buildExpirySmsMessage({
+				entityLabel: "Audit",
+				name: auditName,
+				daysUntil,
+				expirySlice,
+				autoRenew: false,
 			});
 
-			for (const audit of audits.rows) {
-				if (!audit.auditExpiryDate) continue;
-
-				const daysUntil = daysUntilExpiry(
-					audit.auditExpiryDate,
-					new Date(),
-					await getOrganizationTimezone(
-						typeof audit.orgId === "string" ? audit.orgId : null,
-					),
-				);
-				if (!shouldSendExpiryNotice(daysUntil, audit.renewalNoticeDays)) {
-					continue;
-				}
-
-				const meta: ExpiryNoticeMetadata = {
-					entityType: "audit",
-					entityId: audit.$id,
-					daysUntil,
-				};
-				if (await expiryNoticeAlreadySent("audit-upcoming", meta)) {
-					continue;
-				}
-
-				const expirySlice = String(audit.auditExpiryDate).slice(0, 10);
-				const auditName = (audit.auditName as string) || "Untitled";
-				const title = "Upcoming Audit Reminder";
-				const message = `The audit "${auditName}" is due in ${daysUntil} days (on ${expirySlice}).`;
-				const smsMessage = buildExpirySmsMessage({
-					entityLabel: "Audit",
-					name: auditName,
-					daysUntil,
-					expirySlice,
-					autoRenew: false,
-				});
-
-				const { buildDesktopExpiryAlert } = await import(
-					"@/lib/push/notifications-server"
-				);
-				notificationsCreated += await notifyEligibleUsers({
+			auditJobs.push(() =>
+				notifyEligibleUsers({
 					title,
 					message,
 					smsMessage,
@@ -650,12 +749,19 @@ export const checkDocumentExpirations = async () => {
 						name: auditName,
 						daysUntil,
 						expirySlice,
-						entityId: audit.$id,
+						entityId: String(audit.$id),
 						url: "/audits",
 					}),
-				});
-			}
+				}),
+			);
 		}
+
+		const jobResults = await mapWithConcurrency(
+			[...contractJobs, ...licenseJobs, ...auditJobs],
+			(job) => job(),
+			10,
+		);
+		const notificationsCreated = jobResults.reduce((sum, n) => sum + n, 0);
 
 		return { notificationsCreated };
 	} catch (error) {

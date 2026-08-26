@@ -259,6 +259,11 @@ interface LicensesViewProps {
 	} | null;
 	onRefresh?: () => void;
 	onLicenseRemoved?: (licenseId: string) => void;
+	/** Server-driven pagination (optional) */
+	totalCount?: number;
+	page?: number;
+	pageSize?: number;
+	onPageChange?: (page: number) => void;
 }
 
 export default function LicensesView({
@@ -266,10 +271,15 @@ export default function LicensesView({
 	user,
 	onRefresh,
 	onLicenseRemoved,
+	totalCount,
+	page: externalPage,
+	pageSize: externalPageSize,
+	onPageChange,
 }: LicensesViewProps) {
 	const { view, previewLicense, setPreviewLicense } = useLicensesView();
-	const [currentPage, setCurrentPage] = useState(1);
-	const itemsPerPage = 12;
+	const [internalPage, setInternalPage] = useState(1);
+	const itemsPerPage = externalPageSize ?? 12;
+	const serverPaginated = typeof onPageChange === "function";
 
 	const licensesKey = useMemo(
 		() => licenses.map((l) => l.$id).join("|"),
@@ -277,26 +287,38 @@ export default function LicensesView({
 	);
 
 	useEffect(() => {
-		setCurrentPage(1);
-	}, [licensesKey]);
+		if (!serverPaginated) {
+			setInternalPage(1);
+		}
+	}, [licensesKey, serverPaginated]);
 
-	const totalPages = Math.max(1, Math.ceil(licenses.length / itemsPerPage));
+	const currentPage = serverPaginated ? (externalPage ?? 1) : internalPage;
+	const setCurrentPage = serverPaginated
+		? (next: number) => onPageChange?.(next)
+		: setInternalPage;
+
+	const totalItems = serverPaginated ? (totalCount ?? licenses.length) : licenses.length;
+	const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
 
 	const validCurrentPage = useMemo(() => {
 		return Math.min(Math.max(1, currentPage), totalPages);
 	}, [currentPage, totalPages]);
 
 	useEffect(() => {
-		if (totalPages > 0 && (currentPage > totalPages || currentPage < 1)) {
-			setCurrentPage(Math.min(Math.max(1, currentPage), totalPages));
+		if (
+			!serverPaginated &&
+			totalPages > 0 &&
+			(currentPage > totalPages || currentPage < 1)
+		) {
+			setInternalPage(Math.min(Math.max(1, currentPage), totalPages));
 		}
-	}, [totalPages, currentPage]);
+	}, [totalPages, currentPage, serverPaginated]);
 
-	const startIndex = (validCurrentPage - 1) * itemsPerPage;
-	const endIndex = startIndex + itemsPerPage;
+	const startIndex = serverPaginated ? 0 : (validCurrentPage - 1) * itemsPerPage;
+	const endIndex = serverPaginated ? licenses.length : startIndex + itemsPerPage;
 	const paginatedLicenses = useMemo(
-		() => licenses.slice(startIndex, endIndex),
-		[licenses, startIndex, endIndex],
+		() => (serverPaginated ? licenses : licenses.slice(startIndex, endIndex)),
+		[licenses, startIndex, endIndex, serverPaginated],
 	);
 
 	if (licenses.length === 0) {
@@ -327,7 +349,7 @@ export default function LicensesView({
 					<PageIndex
 						className="mt-6 justify-center"
 						page={validCurrentPage}
-						totalItems={licenses.length}
+						totalItems={totalItems}
 						pageSize={itemsPerPage}
 						onPageChange={setCurrentPage}
 						hideWhenSinglePage
@@ -352,7 +374,7 @@ export default function LicensesView({
 					<PageIndex
 						className="mt-6 justify-center"
 						page={validCurrentPage}
-						totalItems={licenses.length}
+						totalItems={totalItems}
 						pageSize={itemsPerPage}
 						onPageChange={setCurrentPage}
 						hideWhenSinglePage

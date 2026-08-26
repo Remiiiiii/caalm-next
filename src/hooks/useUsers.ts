@@ -38,7 +38,7 @@ function isAppUserDoc(
 export const useUsers = ({
 	orgId,
 	enableRealTime = true,
-	pollingInterval = 15000, // 15 seconds for users (less frequent than calendar)
+	pollingInterval = 60000, // 60 seconds — user list changes infrequently
 }: UseUsersOptions) => {
 	const key = swrKeys.users(orgId);
 

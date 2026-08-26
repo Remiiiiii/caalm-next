@@ -3,6 +3,9 @@ import useSWR from "swr";
 import { useAuth } from "@/contexts/AuthContext";
 import { clearCachedData, getCachedData, setCachedData } from "@/lib/utils/client-cache";
 
+import type { RiskImpactSnapshot } from "@/lib/dashboard/risk-impact.types";
+import type { License } from "@/types/licenses";
+
 interface DashboardData {
 	stats: {
 		totalContracts: number;
@@ -22,6 +25,8 @@ interface DashboardData {
 	notificationsStats: unknown;
 	recentActivities: unknown[];
 	calendarEvents: unknown[];
+	riskImpact: RiskImpactSnapshot | null;
+	dashboardLicenses: License[];
 }
 
 interface UnifiedDashboardDataResponse {
@@ -51,7 +56,7 @@ export const useUnifiedDashboardData = (
 	const { user } = useAuth();
 	const effectiveUserId = serverUserId || user?.$id;
 	const url = effectiveUserId
-		? `/api/dashboard/unified?orgId=${orgId}&userId=${effectiveUserId}&v=3`
+		? `/api/dashboard/unified?orgId=${orgId}&userId=${effectiveUserId}&v=4`
 		: null;
 
 	// Get cached data as fallback for stale-while-revalidate
@@ -147,6 +152,8 @@ export const useUnifiedDashboardData = (
 		notificationsStats: data?.data?.notificationsStats || {},
 		recentActivities: data?.data?.recentActivities || [],
 		calendarEvents: data?.data?.calendarEvents || [],
+		riskImpact: data?.data?.riskImpact ?? null,
+		dashboardLicenses: data?.data?.dashboardLicenses || [],
 
 		// Loading states
 		isLoading,

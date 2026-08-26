@@ -219,4 +219,107 @@ describe("roadmap service", () => {
 		expect(lastMerge.sectionNumber).toBe(1);
 		expect(lastMerge.tasks.every((t) => t.status === "complete")).toBe(true);
 	});
+
+	it("marks 3.4 complete when GitHub shows PR 51 merged, without completing 3.1–3.3", async () => {
+		fetchPullRequestStatus.mockImplementation(async ({ prNumber }) => {
+			if (prNumber === 51) return mergedPr(51, "sha51");
+			return unknownPr(prNumber);
+		});
+
+		const overview = await getOverview();
+		const s3 = overview.sections.find((s) => s.sectionNumber === 3)!;
+		expect(s3.taskCounts.complete).toBeGreaterThanOrEqual(1);
+		expect(s3.taskCounts.complete).toBeLessThan(s3.taskCounts.total);
+		expect(s3.status).not.toBe("complete");
+
+		const { getSectionTaskTree } = await import("./service");
+		const tree = await getSectionTaskTree(s3.id);
+		const byCode = Object.fromEntries(tree.tasks.map((t) => [t.taskCode, t]));
+		expect(byCode["3.4"]?.status).toBe("complete");
+		expect(byCode["3.1"]?.status).not.toBe("complete");
+		expect(byCode["3.2"]?.status).not.toBe("complete");
+		expect(byCode["3.3"]?.status).not.toBe("complete");
+	});
+
+	it("completes unlinked 3.1 when a matching PR merges after prior sections", async () => {
+		const { getSectionTaskTree } = await import("./service");
+
+		await recordCiTestResult({
+			prNumber: 49,
+			commitSha: "sha49",
+			result: "passed",
+			logsUrl: "https://ci.example/49",
+			summary: "ok",
+		});
+		await completeSectionFromMerge({
+			prNumber: 49,
+			mergeCommitSha: "sha49",
+			baseBranch: "main",
+		});
+
+		for (const n of getCatalogLinkedPrNumbers(1)) {
+			await recordCiTestResult({
+				prNumber: n,
+				commitSha: `sha${n}`,
+				result: "passed",
+				logsUrl: `https://ci.example/${n}`,
+				summary: "ok",
+			});
+			await completeSectionFromMerge({
+				prNumber: n,
+				mergeCommitSha: `sha${n}`,
+				baseBranch: "main",
+			});
+		}
+
+		await recordCiTestResult({
+			prNumber: 53,
+			commitSha: "sha53",
+			result: "passed",
+			logsUrl: "https://ci.example/53",
+			summary: "ok",
+		});
+		await completeSectionFromMerge({
+			prNumber: 53,
+			mergeCommitSha: "sha53",
+			baseBranch: "main",
+		});
+
+		fetchPullRequestStatus.mockImplementation(async ({ prNumber }) => {
+			if (prNumber === 9001) {
+				return {
+					state: "merged" as const,
+					number: 9001,
+					title: "3.1 Paginate expiry processor",
+					htmlUrl: "https://github.com/Remiiiiii/caalm-next/pull/9001",
+					headRef: "clm/3-3.1-paginate-expiry",
+					mergeCommitSha: "sha9001",
+				};
+			}
+			return unknownPr(prNumber);
+		});
+
+		await recordCiTestResult({
+			prNumber: 9001,
+			commitSha: "sha9001",
+			taskCode: "3.1",
+			result: "passed",
+			logsUrl: "https://ci.example/9001",
+			summary: "ok",
+		});
+		const merged = await completeSectionFromMerge({
+			prNumber: 9001,
+			mergeCommitSha: "sha9001",
+			baseBranch: "main",
+		});
+		expect(merged.sectionNumber).toBe(3);
+		expect(merged.completed).toBe(false);
+
+		const s3 = (await getOverview()).sections.find((s) => s.sectionNumber === 3)!;
+		const tree = await getSectionTaskTree(s3.id);
+		const byCode = Object.fromEntries(tree.tasks.map((t) => [t.taskCode, t]));
+		expect(byCode["3.1"]?.status).toBe("complete");
+		expect(byCode["3.2"]?.status).not.toBe("complete");
+		expect(byCode["3.3"]?.status).not.toBe("complete");
+	});
 });

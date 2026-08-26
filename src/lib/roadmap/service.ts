@@ -1,5 +1,6 @@
 /**
- * Roadmap business logic — the only path to `complete` is completeSectionFromMerge().
+ * Roadmap business logic — tasks complete via completeSectionFromMerge()
+ * or when a catalog-linked GitHub PR is already merged (overview reconcile).
  */
 
 import {
@@ -16,6 +17,7 @@ import {
 	listStatusLogs,
 	listTasks,
 	persistUnlockedSnapshot,
+	saveSection,
 	saveTask,
 } from "./store";
 import {
@@ -28,6 +30,7 @@ import { fetchPullRequestStatus, listOpenPullRequests } from "./github";
 import {
 	findSectionPullRequest,
 	matchPullRequestToTask,
+	resolveSectionFromPrMatch,
 	type GitHubPullRequestSummary,
 	type ResolvedPullRequest,
 } from "./github-pr-match";
@@ -233,6 +236,7 @@ export async function evaluateSectionMergeBlock(
 type CatalogPrLinkMeta = {
 	title: string;
 	state?: "open" | "closed" | "merged" | "unknown";
+	mergeCommitSha?: string;
 };
 
 /** Titles/state for catalog PRs — open list first, then GitHub lookup for merged/closed. */
@@ -248,15 +252,65 @@ async function resolveCatalogPrLookup(
 	await Promise.all(
 		missing.map(async (number) => {
 			const live = await fetchPullRequestStatus({ prNumber: number });
-			if (live.title) {
-				lookup.set(number, {
-					title: live.title,
-					state: live.state,
-				});
-			}
+			if (live.state === "unknown" && !live.title) return;
+			lookup.set(number, {
+				title: live.title ?? "",
+				state: live.state,
+				mergeCommitSha: live.mergeCommitSha,
+			});
 		}),
 	);
 	return lookup;
+}
+
+function toPrSummary(
+	prNumber: number,
+	live: Awaited<ReturnType<typeof fetchPullRequestStatus>>,
+): GitHubPullRequestSummary {
+	const state =
+		live.state === "merged" || live.state === "closed" || live.state === "open"
+			? live.state
+			: "open";
+	return {
+		number: live.number ?? prNumber,
+		title: live.title ?? "",
+		htmlUrl: live.htmlUrl ?? "",
+		headRef: live.headRef ?? "",
+		state,
+	};
+}
+
+/** Mark catalog-linked tasks complete when GitHub already shows their PR merged. */
+async function persistTasksCompletedByMergedPrs(
+	tasks: RoadmapTask[],
+	prLookup: Map<number, CatalogPrLinkMeta>,
+): Promise<boolean> {
+	let changed = false;
+	const completedAt = new Date().toISOString();
+	for (const task of tasks) {
+		if (task.status === "complete" || task.prNumber == null) continue;
+		const meta = prLookup.get(task.prNumber);
+		if (meta?.state !== "merged") continue;
+		const next: RoadmapTask = {
+			...task,
+			status: "complete",
+			completedAt: task.completedAt ?? completedAt,
+			completedCommitSha:
+				task.completedCommitSha ?? meta.mergeCommitSha ?? null,
+		};
+		await saveTask(next);
+		await appendStatusLog({
+			entityType: "task",
+			entityId: task.$id,
+			fromStatus: task.status,
+			toStatus: "complete",
+			actor: "system:merged-catalog-pr",
+			commitSha: meta.mergeCommitSha ?? null,
+			testRunId: null,
+		});
+		changed = true;
+	}
+	return changed;
 }
 
 const OVERVIEW_CACHE_MS = 15_000;
@@ -290,10 +344,35 @@ export async function getOverview(options?: {
 		getCatalogLinkedPrNumbers(section.sectionNumber),
 	);
 	const prLookup = await resolveCatalogPrLookup(openPrs, allCatalogNumbers);
+	const mergedPrChanged = await persistTasksCompletedByMergedPrs(
+		unlockedTasks,
+		prLookup,
+	);
+	let viewSections = unlockedSections;
+	let viewTasks = unlockedTasks;
+	if (mergedPrChanged) {
+		invalidateOverviewCache();
+		const [freshSections, freshTasks] = await Promise.all([
+			listSections(),
+			listTasks(),
+		]);
+		const refreshed = computeUnlocked({
+			sections: freshSections,
+			tasks: freshTasks,
+		});
+		viewSections = refreshed.snapshot.sections;
+		viewTasks = refreshed.snapshot.tasks;
+		for (const section of refreshed.snapshot.sections) {
+			const prev = freshSections.find((item) => item.$id === section.$id);
+			if (prev && prev.status !== section.status) {
+				await saveSection(section);
+			}
+		}
+	}
 
-	const sectionViews: RoadmapSectionOverview[] = unlockedSections.map(
+	const sectionViews: RoadmapSectionOverview[] = viewSections.map(
 		(section) => {
-			const sectionTasks = unlockedTasks.filter(
+			const sectionTasks = viewTasks.filter(
 				(task) => task.sectionId === section.$id,
 			);
 		const taskCounts = countByStatus(sectionTasks);
@@ -330,7 +409,7 @@ export async function getOverview(options?: {
 	});
 
 	const overview = {
-		overallProgressPercent: computeProgressPercent(unlockedTasks),
+		overallProgressPercent: computeProgressPercent(viewTasks),
 		sections: sectionViews,
 	};
 	overviewCache = { fetchedAt: Date.now(), value: overview };
@@ -529,11 +608,13 @@ export async function recordCiTestResult(
 	input: CiTestResultInput,
 ): Promise<CiTestResultOutcome> {
 	invalidateOverviewCache();
+	const live = await fetchPullRequestStatus({ prNumber: input.prNumber });
 	const sectionNumber =
 		getSectionNumberForPr(input.prNumber) ??
 		(input.taskCode
 			? Number(input.taskCode.split(".")[0])
-			: undefined);
+			: undefined) ??
+		resolveSectionFromPrMatch(toPrSummary(input.prNumber, live));
 	const task =
 		(input.taskCode ? await getTaskByCode(input.taskCode) : null) ||
 		(await getTaskByPrNumber(input.prNumber)) ||
@@ -607,9 +688,10 @@ export type MergeCompleteOutcome = {
 };
 
 /**
- * Sole path that may set status=complete.
+ * Tasks complete from a verified merge.
  * Single-PR sections: all tasks complete together.
- * Multi-PR sections with per-task catalog links: only tasks bound to the merged PR.
+ * Multi-PR sections: tasks bound to the merged PR, plus unlinked tasks whose
+ * title/branch matches the PR (so 3.1–3.3 can finish without a pre-listed number).
  */
 export async function completeSectionFromMerge(
 	input: MergeCompleteInput,
@@ -623,7 +705,11 @@ export async function completeSectionFromMerge(
 		);
 	}
 
-	const sectionNumber = getSectionNumberForPr(input.prNumber);
+	const live = await fetchPullRequestStatus({ prNumber: input.prNumber });
+	const prSummary = toPrSummary(input.prNumber, live);
+	const sectionNumber =
+		getSectionNumberForPr(input.prNumber) ??
+		resolveSectionFromPrMatch(prSummary);
 	if (sectionNumber == null) {
 		throw new RoadmapError(
 			`PR #${input.prNumber} is not linked to a roadmap section`,
@@ -688,9 +774,15 @@ export async function completeSectionFromMerge(
 
 	const perTaskPr = sectionUsesPerTaskPrCompletion(sectionNumber);
 	const tasksToComplete = perTaskPr
-		? sectionTasks.filter(
-				(t) => t.prNumber === input.prNumber && t.status !== "complete",
-			)
+		? sectionTasks.filter((t) => {
+				if (t.status === "complete") return false;
+				if (t.prNumber === input.prNumber) return true;
+				// Unlinked tasks complete when the PR title/branch names the task code.
+				if (t.prNumber == null) {
+					return matchPullRequestToTask(prSummary, sectionNumber, t.taskCode);
+				}
+				return false;
+			})
 		: sectionTasks.filter((t) => t.status !== "complete");
 
 	if (!perTaskPr) {

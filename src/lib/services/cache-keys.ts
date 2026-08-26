@@ -114,6 +114,7 @@ export const CACHE_KEYS = {
 			orgId ? `users:role:${userId}:${orgId}` : `users:role:${userId}`,
 		roleNameByUserId: (userId: string, orgId?: string) =>
 			orgId ? `users:roleName:${userId}:${orgId}` : `users:roleName:${userId}`,
+		management: (orgId: string) => `users:management:${orgId}`,
 	},
 
 	// Recent Activities
@@ -219,7 +220,8 @@ export const getTTLForRoute = (route: string): number => {
 
 		// Licenses
 		licenses: CACHE_TTLS.long,
-		"licenses/all": CACHE_TTLS.long, // 10 minutes
+		"licenses/all": CACHE_TTLS.long,
+		"licenses/metrics": CACHE_TTLS.long, // 10 minutes
 		"licenses/database": CACHE_TTLS.long, // 10 minutes
 		"licenses/details": CACHE_TTLS.medium, // 5 minutes
 		"licenses/expiring": CACHE_TTLS.medium, // 5 minutes
@@ -229,6 +231,8 @@ export const getTTLForRoute = (route: string): number => {
 		reports: CACHE_TTLS.veryLong, // 15 minutes
 
 		// Users
+		// Users
+		"users/management": CACHE_TTLS.medium,
 		users: CACHE_TTLS.veryLong,
 		"users/uninvited": CACHE_TTLS.veryLong, // 15 minutes
 		"users/get-by-ids": CACHE_TTLS.long,

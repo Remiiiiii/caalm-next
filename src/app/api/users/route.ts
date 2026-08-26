@@ -2,6 +2,8 @@ import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import { listUsersForManagement } from "@/lib/actions/user.actions";
 import { getOrgIdFromRequest, requirePermission } from "@/lib/rbac/middleware";
+import { CACHE_KEYS } from "@/lib/services/cache-keys";
+import CacheManager from "@/lib/services/cache-manager";
 
 export async function GET(request: NextRequest) {
 	try {
@@ -21,7 +23,12 @@ export async function GET(request: NextRequest) {
 			);
 		}
 
-		const users = await listUsersForManagement(orgId);
+		const users = await CacheManager.withCache(
+			"users/management",
+			CACHE_KEYS.users.management(orgId),
+			() => listUsersForManagement(orgId),
+		);
+
 		return NextResponse.json(users);
 	} catch (error) {
 		console.error("Error fetching users:", error);

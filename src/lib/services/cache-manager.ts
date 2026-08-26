@@ -62,6 +62,7 @@ export class CacheManager {
 				// Vercel KV: delete known unified dashboard cache keys (paginated variants)
 				for (const page of [1, 2]) {
 					for (const limit of [20, 50]) {
+						await cache.del(`${baseKey}:v4:page:${page}:limit:${limit}`);
 						await cache.del(`${baseKey}:v3:page:${page}:limit:${limit}`);
 					}
 				}
@@ -227,6 +228,7 @@ export class CacheManager {
 	): Promise<void> {
 		await cache.del(CACHE_KEYS.users.all());
 		await cache.del(CACHE_KEYS.users.uninvited());
+		await cache.clear("^users:management:");
 		// Clear search cache
 		await cache.clear("^users:search:");
 		// Clear get-by-ids cache (could be multiple keys due to hashing)

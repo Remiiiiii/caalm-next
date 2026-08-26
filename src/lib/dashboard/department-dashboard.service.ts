@@ -80,36 +80,42 @@ async function fetchDivisionContracts(
 	const databaseId = appwriteConfig.databaseId!;
 	const tableId = appwriteConfig.contractsCollectionId!;
 
-	try {
-		const byDivision = await tablesDB.listRows({
-			databaseId,
-			tableId,
-			queries: [Query.equal("division", division), Query.limit(500)],
-		});
-		if (byDivision.rows.length > 0) {
-			return byDivision.rows as unknown as ContractRow[];
-		}
-	} catch {
-		// division attribute may not exist on older rows; fall through
-	}
-
-	try {
-		const mappedDepartment =
-			DIVISION_TO_DEPARTMENT[division as UserDivision] || undefined;
-		// Scope may already be a parent department (e.g. "IT") when division is unset
-		const department = mappedDepartment || division;
-		if (department) {
-			const byDept = await tablesDB.listRows({
+	const fetchRows = async (
+		field: "division" | "department",
+		value: string,
+	): Promise<ContractRow[]> => {
+		try {
+			const result = await tablesDB.listRows({
 				databaseId,
 				tableId,
-				queries: [Query.equal("department", department), Query.limit(500)],
+				queries: [Query.equal(field, value), Query.limit(500)],
 			});
-			if (byDept.rows.length > 0) {
-				return byDept.rows as unknown as ContractRow[];
-			}
+			return result.rows as unknown as ContractRow[];
+		} catch {
+			return [];
 		}
-	} catch {
-		// ignore
+	};
+
+	const mappedDepartment =
+		DIVISION_TO_DEPARTMENT[division as UserDivision] || undefined;
+	const department = mappedDepartment || division;
+
+	const [byDivision, byDept] = await Promise.all([
+		fetchRows("division", division),
+		department !== division
+			? fetchRows("department", department)
+			: Promise.resolve([] as ContractRow[]),
+	]);
+
+	const merged = [...byDivision, ...byDept];
+	if (merged.length > 0) {
+		const seen = new Set<string>();
+		return merged.filter((row) => {
+			const id = row.$id;
+			if (!id || seen.has(id)) return false;
+			seen.add(id);
+			return true;
+		});
 	}
 
 	// Fallback: load a window and filter by division or department when present
@@ -122,7 +128,7 @@ async function fetchDivisionContracts(
 		(c) =>
 			c.division === division ||
 			c.department === division ||
-			c.department === DIVISION_TO_DEPARTMENT[division as UserDivision],
+			c.department === mappedDepartment,
 	);
 }
 
