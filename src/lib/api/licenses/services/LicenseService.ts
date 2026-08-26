@@ -175,6 +175,11 @@ export class LicenseService {
 			throw new Error("Could not determine user organization");
 		}
 
+		const { assertCanCreateLicense } = await import(
+			"@/lib/billing/planLimits"
+		);
+		await assertCanCreateLicense(defaultOrg.orgId);
+
 		// Map legacy field names to database field names
 		const mappedData = LicenseService.mapFieldsToDatabase(formData);
 

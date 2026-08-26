@@ -74,8 +74,10 @@ export default function Pricing({ plans }: Props) {
 					>
 						Explore our plans
 					</h2>
-					<p className="mt-2 text-slate-700 text-sm sm:text-base">
-						Flexible monthly plans and cost-effective annual subscriptions.
+					<p className="mt-2 text-slate-700 text-sm sm:text-base max-w-2xl mx-auto">
+						Contract and license operations for multi-department teams —
+						approvals, renewals, and compliance visibility. Prices are per
+						workspace.
 					</p>
 				</motion.div>
 
@@ -155,14 +157,24 @@ export default function Pricing({ plans }: Props) {
 									) : null}
 								</h3>
 								<div className="flex items-baseline gap-1 mb-4">
-									<span className="text-4xl font-bold text-slate-700">
-										${plan.displayPrice}
-									</span>
-									<span className="text-sm text-slate-600">
-										{period === "monthly" ? "user/month" : "user/year"}
-									</span>
+									{plan.key === "enterprise" || plan.displayPrice === 0 ? (
+										<span className="text-4xl font-bold text-slate-700">
+											Custom
+										</span>
+									) : (
+										<>
+											<span className="text-4xl font-bold text-slate-700">
+												${plan.displayPrice}
+											</span>
+											<span className="text-sm text-slate-600">
+												{period === "monthly"
+													? "/ workspace / month"
+													: "/ workspace / year"}
+											</span>
+										</>
+									)}
 								</div>
-								{idx === 2 ? (
+								{plan.key === "enterprise" || idx === 2 ? (
 									<a href="#contact">
 										<button
 											type="button"
@@ -182,20 +194,22 @@ export default function Pricing({ plans }: Props) {
 													: "bg-gradient-to-r from-slate-500 to-slate-700",
 											)}
 										>
-											Get started
+											{idx === 1
+												? "Start 90-day Growth pilot"
+												: "Get started"}
 										</button>
 									</Link>
 								)}
 								<hr className="my-6 border-slate-200" />
 								<h4 className="text-sm font-semibold text-slate-800 mb-3">
 									{idx === 0
-										? "Everything in starter plan"
+										? "Includes"
 										: idx === 1
-											? "Everything in Starter plan plus"
-											: "Everything in Growth plan plus"}
+											? "Everything in Starter, plus"
+											: "Everything in Growth, plus"}
 								</h4>
 								<ul className="space-y-2 text-slate-600 text-sm">
-									{plan.features.slice(0, 8).map((feature) => (
+									{plan.features.slice(0, 10).map((feature) => (
 										<li key={feature} className="flex items-start gap-2">
 											<Check
 												className="mt-0.5 h-5 w-5"

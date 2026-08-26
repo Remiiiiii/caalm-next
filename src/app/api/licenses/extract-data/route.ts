@@ -7,6 +7,8 @@ import {
 	successResponse,
 	validationErrorResponse,
 } from "@/lib/api/contracts/utils/response.util";
+import { isPlanLimitError } from "@/lib/billing/planLimits";
+import { consumeAiExtractionForRequest } from "@/lib/billing/consumeAiExtractionForRequest";
 import { requirePermission } from "@/lib/rbac/middleware";
 
 export async function GET(request: NextRequest) {
@@ -22,6 +24,21 @@ export async function GET(request: NextRequest) {
 	});
 }
 
+function planLimitResponse(error: unknown) {
+	if (!isPlanLimitError(error)) return null;
+	return NextResponse.json(
+		{
+			error: error.message,
+			code: "PLAN_LIMIT_EXCEEDED",
+			kind: error.kind,
+			limit: error.limit,
+			used: error.used,
+			tier: error.tier,
+		},
+		{ status: 402 },
+	);
+}
+
 export async function POST(request: NextRequest) {
 	const requestId = generateRequestId();
 	try {
@@ -29,6 +46,9 @@ export async function POST(request: NextRequest) {
 			permission: PERMISSIONS.LICENSES.CREATE,
 		});
 		if (permissionCheck) return permissionCheck;
+
+		// Count against monthly AI quota before spending model tokens
+		await consumeAiExtractionForRequest(request);
 
 		const contentType = request.headers.get("content-type");
 
@@ -84,6 +104,9 @@ export async function POST(request: NextRequest) {
 
 		return successResponse(result.extractedData, { requestId });
 	} catch (error) {
+		const limited = planLimitResponse(error);
+		if (limited) return limited;
+
 		console.error("License data extraction error:", error);
 		const message =
 			error instanceof Error ? error.message : "Failed to extract license data";

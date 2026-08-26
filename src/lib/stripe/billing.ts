@@ -24,7 +24,12 @@ import {
 	resolveOrgIdFromInvoice,
 	subscriptionIdFromInvoice,
 } from "./invoice-utils";
-import { getPriceId, getTierFromPriceId, type PricingTier } from "./prices";
+import {
+	getPriceId,
+	getTierFromPriceId,
+	PILOT_TRIAL_DAYS,
+	type PricingTier,
+} from "./prices";
 
 function isStripeMissingCustomerError(error: unknown): boolean {
 	if (!error || typeof error !== "object") return false;
@@ -125,6 +130,7 @@ export async function createCheckoutSession({
 	userName,
 	successUrl,
 	cancelUrl,
+	trialDays,
 }: {
 	org: Organization;
 	tier: PricingTier;
@@ -133,13 +139,29 @@ export async function createCheckoutSession({
 	userName?: string;
 	successUrl: string;
 	cancelUrl: string;
+	/** When set (e.g. Growth pilot), Stripe starts a trial before first charge. */
+	trialDays?: number;
 }): Promise<string> {
+	if (tier === "enterprise") {
+		throw new Error(
+			"Enterprise is sales-assisted only. Contact sales — self-serve checkout is not available.",
+		);
+	}
+
 	const stripe = getStripe();
 	const customerId = await getOrCreateStripeCustomer(org, email, userName);
 	// Price IDs always resolved server-side from env — never trust the client.
 	const priceId = getPriceId(tier, interval);
 
-	const trialDays = checkoutTrialPeriodDays(org);
+	const status = org.billingStatus || "none";
+	const eligibleForPilot =
+		tier === "growth" &&
+		(status === "none" || status === "canceled") &&
+		(trialDays === undefined || trialDays > 0);
+	const resolvedTrialDays = eligibleForPilot
+		? (trialDays ?? PILOT_TRIAL_DAYS)
+		: checkoutTrialPeriodDays(org);
+
 	const subscriptionData: NonNullable<
 		Stripe.Checkout.SessionCreateParams["subscription_data"]
 	> & {
@@ -149,13 +171,16 @@ export async function createCheckoutSession({
 			orgId: org.$id,
 			tier,
 			interval,
+			...(eligibleForPilot && resolvedTrialDays
+				? { pilot: "growth-90d" }
+				: {}),
 		},
 		// Flexible mode is Stripe's current default for prorations; set it
 		// explicitly so new Checkout subs match Quotes and Dashboard invoices.
 		billing_mode: { type: "flexible" },
 	};
-	if (trialDays) {
-		subscriptionData.trial_period_days = trialDays;
+	if (resolvedTrialDays) {
+		subscriptionData.trial_period_days = resolvedTrialDays;
 	}
 
 	const sessionParams: Stripe.Checkout.SessionCreateParams = {
@@ -175,6 +200,9 @@ export async function createCheckoutSession({
 			orgId: org.$id,
 			tier,
 			interval,
+			...(eligibleForPilot && resolvedTrialDays
+				? { pilot: "growth-90d", trialDays: String(resolvedTrialDays) }
+				: {}),
 		},
 		subscription_data: subscriptionData,
 		allow_promotion_codes: true,

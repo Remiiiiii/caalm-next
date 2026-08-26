@@ -6,6 +6,8 @@ import {
 	successResponse,
 	validationErrorResponse,
 } from "@/lib/api/contracts/utils/response.util";
+import { isPlanLimitError } from "@/lib/billing/planLimits";
+import { consumeAiExtractionForRequest } from "@/lib/billing/consumeAiExtractionForRequest";
 
 export async function GET() {
 	return NextResponse.json({
@@ -15,9 +17,27 @@ export async function GET() {
 	});
 }
 
+function planLimitResponse(error: unknown) {
+	if (!isPlanLimitError(error)) return null;
+	return NextResponse.json(
+		{
+			error: error.message,
+			code: "PLAN_LIMIT_EXCEEDED",
+			kind: error.kind,
+			limit: error.limit,
+			used: error.used,
+			tier: error.tier,
+		},
+		{ status: 402 },
+	);
+}
+
 export async function POST(request: NextRequest) {
 	const requestId = generateRequestId();
 	try {
+		// Count against monthly AI quota before spending model tokens
+		await consumeAiExtractionForRequest(request);
+
 		const contentType = request.headers.get("content-type");
 
 		if (contentType?.includes("application/json")) {
@@ -87,6 +107,9 @@ export async function POST(request: NextRequest) {
 
 		return successResponse(result.extractedData, { requestId });
 	} catch (error) {
+		const limited = planLimitResponse(error);
+		if (limited) return limited;
+
 		console.error("Contract data extraction error:", error);
 		return errorResponse(
 			error instanceof Error

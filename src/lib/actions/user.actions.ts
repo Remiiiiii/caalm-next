@@ -1140,6 +1140,20 @@ export const createInvitation = async ({
 		}
 		console.log("createInvitation: Role validation passed");
 
+		if (orgId) {
+			const { assertCanInviteUser, PlanLimitError } = await import(
+				"@/lib/billing/planLimits"
+			);
+			try {
+				await assertCanInviteUser(orgId);
+			} catch (limitError) {
+				if (limitError instanceof PlanLimitError) {
+					throw limitError;
+				}
+				throw limitError;
+			}
+		}
+
 		let normalizedPlacement;
 		try {
 			normalizedPlacement = normalizeOrgPlacement({

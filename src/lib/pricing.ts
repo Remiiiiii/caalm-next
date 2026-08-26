@@ -36,6 +36,9 @@ function sectionFor({
 }
 
 function extractPrices(section: string): { monthly: number; yearly: number } {
+	if (/Custom\s*\(contact sales\)/i.test(section)) {
+		return { monthly: 0, yearly: 0 };
+	}
 	const monthly = section.match(/\*\*Monthly\*\*:\s*\$([0-9.,]+)/i)?.[1] ?? "0";
 	const yearly =
 		section.match(/\*\*Yearly[^*]*\*\*:\s*\$([0-9.,]+)/i)?.[1] ?? "0";

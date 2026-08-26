@@ -11,6 +11,7 @@ import { isStripeConfigured } from "@/lib/stripe/client";
 
 const bodySchema = z.object({
 	orgId: z.string().min(1),
+	// Enterprise is sales-only — rejected below even if sent.
 	tier: z.enum(["starter", "growth", "enterprise"]),
 	interval: z.enum(["monthly", "yearly"]),
 });
@@ -60,6 +61,17 @@ export async function POST(request: NextRequest) {
 	}
 
 	const { orgId, tier, interval } = parsed.data;
+
+	if (tier === "enterprise") {
+		return NextResponse.json(
+			{
+				error:
+					"Enterprise is sales-assisted only. Contact sales — self-serve checkout is not available.",
+				code: "ENTERPRISE_SALES_ONLY",
+			},
+			{ status: 400 },
+		);
+	}
 
 	const hasOrgAccess = await validateUserOrgAccess(user.$id, orgId);
 	if (!hasOrgAccess) {
@@ -119,6 +131,10 @@ export async function POST(request: NextRequest) {
 		const message =
 			error instanceof Error ? error.message : "Failed to create checkout session";
 		console.error("[billing/checkout]", error);
-		return NextResponse.json({ error: message }, { status: 500 });
+		const salesOnly = /sales-assisted|Enterprise/i.test(message);
+		return NextResponse.json(
+			{ error: message },
+			{ status: salesOnly ? 400 : 500 },
+		);
 	}
 }

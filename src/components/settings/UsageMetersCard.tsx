@@ -5,8 +5,11 @@ import {
 	Building2,
 	FileText,
 	HardDrive,
+	KeyRound,
+	Sparkles,
 	Users,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +30,13 @@ interface UsageMetersCardProps {
 	departmentsLimit: number | null;
 	contractsUsed: number | null;
 	contractsLimit: number | null;
+	licensesUsed?: number | null;
+	licensesLimit?: number;
+	aiExtractionsUsed?: number | null;
+	aiExtractionsLimit?: number;
+	/** Show upgrade CTA when any finite meter is at/above this % (default 80). */
+	onUpgradeClick?: () => void;
+	nearLimitPercent?: number;
 }
 
 function formatBytes(bytes: number): string {
@@ -50,6 +60,11 @@ function meterState(
 	if (pct > 100) return "over";
 	if (pct >= 80) return "warn";
 	return "normal";
+}
+
+function meterPct(used: number | null, limit: number): number {
+	if (used === null || !Number.isFinite(limit) || limit <= 0) return 0;
+	return Math.min(100, Math.round((used / limit) * 100));
 }
 
 function MeterRow({ label, used, limit, icon, formatValue }: UsageMeter) {
@@ -122,12 +137,45 @@ export default function UsageMetersCard({
 	departmentsLimit,
 	contractsUsed,
 	contractsLimit,
+	licensesUsed = null,
+	licensesLimit = Number.POSITIVE_INFINITY,
+	aiExtractionsUsed = null,
+	aiExtractionsLimit = Number.POSITIVE_INFINITY,
+	onUpgradeClick,
+	nearLimitPercent = 80,
 }: UsageMetersCardProps) {
+	const meters: Array<{ used: number | null; limit: number }> = [
+		{ used: storageUsed, limit: storageLimit },
+		{ used: usersUsed, limit: usersLimit },
+		{
+			used: departmentsUsed,
+			limit: departmentsLimit ?? Number.POSITIVE_INFINITY,
+		},
+		{ used: contractsUsed, limit: contractsLimit ?? Number.POSITIVE_INFINITY },
+		{ used: licensesUsed, limit: licensesLimit },
+		{ used: aiExtractionsUsed, limit: aiExtractionsLimit },
+	];
+	const nearLimit = meters.some(
+		(m) => meterPct(m.used, m.limit) >= nearLimitPercent,
+	);
+
 	return (
 		<Card className="glass-card">
 			<div className="glass-card-cap" />
 			<CardContent className="space-y-4 p-4 sm:p-6">
-				<p className="text-sm font-medium sidebar-gradient-text">Usage</p>
+				<div className="flex items-center justify-between gap-3">
+					<p className="text-sm font-medium sidebar-gradient-text">Usage</p>
+					{nearLimit && onUpgradeClick ? (
+						<Button
+							variant="outline"
+							size="sm"
+							className="primary-btn cursor-pointer px-3 sm:px-4"
+							onClick={onUpgradeClick}
+						>
+							Upgrade plan
+						</Button>
+					) : null}
+				</div>
 
 				<div className="relative grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-0">
 					<div
@@ -173,9 +221,24 @@ export default function UsageMetersCard({
 					</div>
 				</div>
 
+				<div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+					<MeterRow
+						label="Licenses"
+						used={licensesUsed}
+						limit={licensesLimit}
+						icon={<KeyRound className="h-4 w-4" />}
+					/>
+					<MeterRow
+						label="AI extractions (this month)"
+						used={aiExtractionsUsed}
+						limit={aiExtractionsLimit}
+						icon={<Sparkles className="h-4 w-4" />}
+					/>
+				</div>
+
 				<p className="text-[11px] text-slate-500">
-					Seat, department, and contract counts show when available. Storage is
-					live from your workspace.
+					Hitting a limit blocks invites, new contracts, uploads, or AI extract
+					until you upgrade or free capacity.
 				</p>
 			</CardContent>
 		</Card>

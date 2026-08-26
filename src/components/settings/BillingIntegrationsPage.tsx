@@ -66,6 +66,12 @@ interface SubscriptionPayload {
 
 	stripeConfigured: boolean;
 
+	pilot?: {
+		eligible: boolean;
+		trialDays: number;
+		tier: "growth";
+	};
+
 	access?: {
 
 		state: string;
@@ -119,6 +125,10 @@ interface SubscriptionPayload {
 		departments: { used: number | null; limit: number | null };
 
 		contracts: { used: number | null; limit: number | null };
+
+		licenses?: { used: number | null; limit: number };
+
+		aiExtractions?: { used: number | null; limit: number };
 
 	};
 
@@ -904,23 +914,27 @@ export default function BillingIntegrationsPage() {
 
 
 								<UsageMetersCard
-
 									storageUsed={subscription?.usage.storage.used ?? 0}
-
 									storageLimit={subscription?.usage.storage.limit ?? 0}
-
 									usersUsed={subscription?.usage.users.used ?? 0}
-
 									usersLimit={subscription?.usage.users.limit ?? 0}
-
 									departmentsUsed={subscription?.usage.departments.used ?? 0}
-
 									departmentsLimit={subscription?.usage.departments.limit ?? 0}
-
 									contractsUsed={subscription?.usage.contracts.used ?? 0}
-
 									contractsLimit={subscription?.usage.contracts.limit ?? 0}
-
+									licensesUsed={subscription?.usage.licenses?.used ?? null}
+									licensesLimit={
+										subscription?.usage.licenses?.limit ??
+										Number.POSITIVE_INFINITY
+									}
+									aiExtractionsUsed={
+										subscription?.usage.aiExtractions?.used ?? null
+									}
+									aiExtractionsLimit={
+										subscription?.usage.aiExtractions?.limit ??
+										Number.POSITIVE_INFINITY
+									}
+									onUpgradeClick={() => setPlanOpen(true)}
 								/>
 
 
