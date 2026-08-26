@@ -15,9 +15,11 @@
 
 name: Tests and Vercel deploy
 
+# cursor/* is on push so agent branches still get CI when the PR cannot merge.
+# GitHub skips pull_request workflows while mergeable_state is dirty.
 on:
   push:
-    branches: [main, develop, chore/*, feature/*]
+    branches: [main, develop, chore/*, feature/*, cursor/*]
   pull_request:
     branches: [main, develop]
   workflow_dispatch:

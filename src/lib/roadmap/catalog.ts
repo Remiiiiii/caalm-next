@@ -234,24 +234,6 @@ export const ROADMAP_CATALOG: RoadmapCatalogSection[] = [
 			// per-task section cannot finish while any task has no PR path.
 			t(
 				"3.1",
-				"Paginate expiry processor",
-				"Replace limit(1000)-then-loop with cursor batches.",
-				["Correct at 10x expected record volume"],
-			),
-			t(
-				"3.2",
-				"Fix auto-renew notification scan",
-				"Replace limit(100) user scan with scalable targets.",
-				["Notification targeting scales without full user scan"],
-			),
-			t(
-				"3.3",
-				"Split ContractUploadForm",
-				"Composable sub-components/hooks with unit tests.",
-				["Regression suite passes with no behavior change"],
-			),
-			t(
-				"3.4",
 				"Extract calendar helpers and OverflowDialog",
 				"Pull shared calendar helpers and OverflowDialog out of OutlookStyleCalendar.",
 				["Regression suite passes with no behavior change"],
@@ -259,7 +241,7 @@ export const ROADMAP_CATALOG: RoadmapCatalogSection[] = [
 				51,
 			),
 			t(
-				"3.5",
+				"3.2",
 				"Extract MonthView, EventReviewDialog, DeleteEventDialog",
 				"Split month view and event review/delete dialogs into composable modules.",
 				["Regression suite passes with no behavior change"],
@@ -267,7 +249,7 @@ export const ROADMAP_CATALOG: RoadmapCatalogSection[] = [
 				55,
 			),
 			t(
-				"3.6",
+				"3.3",
 				"Extract ShareEventDialog",
 				"Move ShareEventDialog into its own module with unit tests.",
 				["Regression suite passes with no behavior change"],
@@ -275,7 +257,7 @@ export const ROADMAP_CATALOG: RoadmapCatalogSection[] = [
 				57,
 			),
 			t(
-				"3.7",
+				"3.4",
 				"Extract ConflictDialog",
 				"Move ConflictDialog into its own module with unit tests.",
 				["Regression suite passes with no behavior change"],
@@ -283,7 +265,7 @@ export const ROADMAP_CATALOG: RoadmapCatalogSection[] = [
 				58,
 			),
 			t(
-				"3.8",
+				"3.5",
 				"Extract ApprovalReviewDialog",
 				"Move ApprovalReviewDialog into its own module with unit tests.",
 				["Regression suite passes with no behavior change"],

@@ -242,6 +242,20 @@ async function syncCatalogLayoutToAppwrite(
 		return section;
 	});
 	const mergedTasks = seed.tasks.map((task) => {
+		const byPr =
+			task.prNumber != null
+				? [...existingTasks.values()].find((row) => row.prNumber === task.prNumber)
+				: undefined;
+		if (byPr) {
+			return {
+				...byPr,
+				...taskLayoutData(task),
+				$id: task.$id,
+				sectionId: task.sectionId,
+				parentTaskId: task.parentTaskId,
+				orderIndex: task.orderIndex,
+			};
+		}
 		const existing = existingTasks.get(task.$id);
 		// Keep status when the task code is the same even if the title changed
 		// (e.g. 3.4 "Split OutlookStyleCalendar" → extract-helpers wording).
