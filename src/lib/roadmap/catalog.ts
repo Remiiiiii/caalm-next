@@ -308,6 +308,8 @@ export const ROADMAP_CATALOG: RoadmapCatalogSection[] = [
 		title: "Clause Library, Templates & AI Playbooks",
 		sourceRef: "AI-assisted review; Strategic #4",
 		linkedPrNumbers: [63],
+		// PR #63 is a tracking stub (notes file + copied roadmap engine).
+		completesOnMerge: false,
 		tasks: [
 			t(
 				"5.1",
@@ -645,6 +647,14 @@ export function getCatalogLinkedPrNumbers(sectionNumber: number): number[] {
 		ROADMAP_CATALOG.find((s) => s.sectionNumber === sectionNumber)
 			?.linkedPrNumbers ?? []
 	);
+}
+
+/** False for tracking-stub sections so a merge does not mark the work done. */
+export function sectionCompletesOnMergedCatalogPr(
+	sectionNumber: number,
+): boolean {
+	const section = ROADMAP_CATALOG.find((s) => s.sectionNumber === sectionNumber);
+	return section?.completesOnMerge !== false;
 }
 
 export function getCatalogLinkedPrNumber(

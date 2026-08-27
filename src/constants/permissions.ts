@@ -133,6 +133,16 @@ export const PERMISSIONS = {
 		RESOLVE: "tickets.resolve",
 	},
 
+	/**
+	 * Funding & Retention — dollar-ranked retention + pursuit pipeline.
+	 * Separate from CONTRACTS so capture/finance roles can be scoped without
+	 * granting full contract edit/approve powers.
+	 */
+	FUNDING: {
+		VIEW: "funding.view",
+		MANAGE: "funding.manage",
+	},
+
 	// Platform / break-glass capabilities (Super Admin only by default)
 	PLATFORM: {
 		DIAGNOSE: "platform.diagnose",
@@ -658,6 +668,22 @@ export const PERMISSION_DEFINITIONS = [
 		name: "Resolve Tickets",
 		category: "tickets",
 		description: "Trigger AI resolution on tickets assigned to you",
+	},
+
+	// Funding & Retention
+	{
+		key: PERMISSIONS.FUNDING.VIEW,
+		name: "View Funding & Retention",
+		category: "funding",
+		description:
+			"See dollar-ranked retention streams and the funding pursuit pipeline",
+	},
+	{
+		key: PERMISSIONS.FUNDING.MANAGE,
+		name: "Manage Funding & Retention",
+		category: "funding",
+		description:
+			"Create/edit pursuits and obligations, mark wins, and spawn proposals from won bids",
 	},
 
 	// Platform

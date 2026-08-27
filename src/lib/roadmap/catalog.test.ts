@@ -7,6 +7,7 @@ import {
 	getSectionNumberForPr,
 	getUnlinkedCatalogTaskCodes,
 	ROADMAP_CATALOG,
+	sectionCompletesOnMergedCatalogPr,
 	sectionUsesPerTaskPrCompletion,
 } from "./catalog";
 
@@ -85,5 +86,10 @@ describe("roadmap catalog PR links", () => {
 		expect(getCatalogLinkedPrNumbers(7)).toEqual([62]);
 		expect(getCatalogLinkedPrNumbers(9)).toEqual([61]);
 		expect(getCatalogLinkedPrNumbers(15)).toEqual([65]);
+	});
+
+	it("does not complete section 5 from tracking stub PR 63", () => {
+		expect(sectionCompletesOnMergedCatalogPr(5)).toBe(false);
+		expect(sectionCompletesOnMergedCatalogPr(0)).toBe(true);
 	});
 });

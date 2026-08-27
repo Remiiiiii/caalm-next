@@ -24,6 +24,7 @@ import {
 	getCatalogLinkedPrNumber,
 	getCatalogLinkedPrNumbers,
 	getSectionNumberForPr,
+	sectionCompletesOnMergedCatalogPr,
 	sectionUsesPerTaskPrCompletion,
 } from "./catalog";
 import { fetchPullRequestStatus, listOpenPullRequests } from "./github";
@@ -289,6 +290,13 @@ async function persistTasksCompletedByMergedPrs(
 	const completedAt = new Date().toISOString();
 	for (const task of tasks) {
 		if (task.status === "complete" || task.prNumber == null) continue;
+		const linkedSection = getSectionNumberForPr(task.prNumber);
+		if (
+			linkedSection != null &&
+			!sectionCompletesOnMergedCatalogPr(linkedSection)
+		) {
+			continue;
+		}
 		const meta = prLookup.get(task.prNumber);
 		if (meta?.state !== "merged") continue;
 		const next: RoadmapTask = {
@@ -728,6 +736,15 @@ export async function completeSectionFromMerge(
 	const owner = sectionTasks[0];
 	if (!owner) {
 		throw new RoadmapError(`Section ${sectionNumber} has no tasks`, 404);
+	}
+
+	if (!sectionCompletesOnMergedCatalogPr(sectionNumber)) {
+		return {
+			sectionNumber,
+			completed: false,
+			reason: `Section ${sectionNumber} is a tracking stub — merge does not mark it complete`,
+			tasks: sectionTasks,
+		};
 	}
 
 	if (sectionTasks.every((t) => t.status === "complete")) {

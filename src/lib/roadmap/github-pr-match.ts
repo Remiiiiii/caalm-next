@@ -15,6 +15,8 @@ export type GitHubPullRequestSummary = {
 	htmlUrl: string;
 	headRef: string;
 	state: "open" | "closed" | "merged";
+	draft?: boolean;
+	createdAt?: string;
 };
 
 export type ResolvedPullRequest = GitHubPullRequestSummary & {

@@ -55,6 +55,12 @@ export const ITEM_ICONS: Record<
 		height: 20,
 		color: SUBITEM_TEXT_GREY,
 	},
+	"Funding & Retention": {
+		src: "/assets/icons/dollar-circle.svg",
+		width: 20,
+		height: 20,
+		color: SUBITEM_TEXT_GREY,
+	},
 	"All Licenses": {
 		src: "/assets/icons/licenses.svg",
 		width: 25,

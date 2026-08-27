@@ -98,6 +98,13 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 				// Create/edit — not on Viewer or Dept Manager packs
 				permissions: [PERMISSIONS.CONTRACTS.CREATE, PERMISSIONS.CONTRACTS.EDIT],
 			},
+			{
+				name: "Funding & Retention",
+				icon: "/assets/icons/dollar-circle.svg",
+				url: "/contracts/funding-retention",
+				permissions: [PERMISSIONS.FUNDING.VIEW],
+				viewerReadOnly: true,
+			},
 		],
 	},
 	{

@@ -165,7 +165,7 @@ const ContractCard = React.memo(
 
 						{/* Action Buttons */}
 						<div className="flex justify-between items-center pt-2">
-							<div className="flex gap-2">
+							<div className="flex gap-2 flex-wrap">
 								{contract.uiLink && (
 									<Button
 										size="sm"
@@ -194,6 +194,52 @@ const ContractCard = React.memo(
 										Details
 									</Button>
 								)}
+								<Button
+									size="sm"
+									variant="outline"
+									className="flex items-center gap-2 primary-btn"
+									onClick={async (e) => {
+										e.stopPropagation();
+										try {
+											const amount = Number(
+												contract.award?.amount ||
+													(contract as { awardAmount?: number }).awardAmount ||
+													0,
+											);
+											const res = await fetch("/api/funding/pursuits", {
+												method: "POST",
+												headers: { "Content-Type": "application/json" },
+												body: JSON.stringify({
+													title: contract.title,
+													amount: Number.isFinite(amount) ? amount : 0,
+													source: "sam_gov",
+													stage: "watching",
+													samNoticeId: contract.noticeId,
+													samUrl: contract.uiLink,
+													responseDeadline: contract.responseDeadLine,
+													description: contract.naicsDescription || undefined,
+												}),
+											});
+											if (!res.ok) {
+												const data = await res.json().catch(() => ({}));
+												throw new Error(
+													data.error || "Could not save pursuit",
+												);
+											}
+											window.location.href = "/contracts/funding-retention";
+										} catch (err) {
+											console.error("[ContractsDisplay] save pursuit", err);
+											window.alert(
+												err instanceof Error
+													? err.message
+													: "Could not save as pursuit",
+											);
+										}
+									}}
+								>
+									<DollarSign className="h-4 w-4" />
+									Save as Pursuit
+								</Button>
 							</div>
 
 							{/* Click indicator */}
