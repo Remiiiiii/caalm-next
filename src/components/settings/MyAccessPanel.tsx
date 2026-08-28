@@ -242,7 +242,7 @@ export default function MyAccessPanel() {
 								value={searchQuery}
 								onChange={(e) => setSearchQuery(e.target.value)}
 								data-with-leading-icon="true"
-								className="h-10 border border-slate-200! bg-white pl-10!"
+								className="h-10 border-[0.25px] border-slate-200! bg-white pl-10!"
 							/>
 						</div>
 					</div>
@@ -280,7 +280,7 @@ export default function MyAccessPanel() {
 							>
 								<SelectTrigger
 									aria-label="Filter by category"
-									className="h-10 w-45 cursor-pointer border border-slate-200! bg-white"
+									className="h-10 w-45 cursor-pointer border-[0.25px] border-slate-200! bg-white"
 								>
 									<SelectValue placeholder="All Categories" />
 								</SelectTrigger>

@@ -4,6 +4,7 @@ import {
 	matchPullRequestToSection,
 	matchPullRequestToTask,
 	resolveSectionFromPrMatch,
+	displayPullRequestTitle,
 	stripHtmlFromPrBody,
 } from "./github-pr-match";
 
@@ -80,6 +81,15 @@ Ship the roadmap engine.
 </div>`;
 		expect(stripHtmlFromPrBody(raw)).toBe(
 			"## Summary\n\nShip the roadmap engine.",
+		);
+	});
+
+	it("strips a leading task-code prefix from PR titles for display", () => {
+		expect(displayPullRequestTitle("5.1 Clause library data model")).toBe(
+			"Clause library data model",
+		);
+		expect(displayPullRequestTitle("Clause library data model")).toBe(
+			"Clause library data model",
 		);
 	});
 });

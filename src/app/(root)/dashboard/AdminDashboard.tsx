@@ -47,7 +47,7 @@ import {
 	TableRowSkeleton,
 } from "@/components/ui/skeletons";
 import { WidgetCarousel } from "@/components/ui/widget-carousel";
-import WeatherWidget from "@/components/WeatherWidget";
+import { WeatherBriefingLauncher } from "@/components/dashboard-briefing/WeatherBriefingLauncher";
 import { OrgUnitPicker } from "@/components/settings/OrgUnitPicker";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useToast } from "@/hooks/use-toast";
@@ -520,7 +520,10 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 
 	return (
 		<div className="space-y-6">
-			<DashboardGreeting user={user} />
+			<DashboardGreeting
+				user={user}
+				actions={<WeatherBriefingLauncher />}
+			/>
 			<RiskImpactHeroCard
 				snapshot={riskImpact}
 				isLoading={unifiedLoading}
@@ -541,7 +544,6 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 						<DepartmentPerformanceWidget />
 						<CompanyNewsFeed />
 						{user && <QuickNotesWidget user={user as any} />}
-						<WeatherWidget />
 					</WidgetCarousel>
 				</CardContent>
 			</Card>
@@ -999,7 +1001,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 											}))
 										}
 										placeholder="Choose from directory…"
-										className="w-full border border-slate-200 bg-white text-slate-700 shadow-sm"
+										className="w-full border-[0.25px] border-slate-200 bg-white text-slate-700 shadow-sm"
 									>
 										{(uninvitedUsers as UninvitedUser[]).map((u) => (
 											<SelectItem key={u.$id} value={u.$id}>
@@ -1058,7 +1060,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 										setInviteForm((prev) => ({ ...prev, role: value }))
 									}
 									placeholder="Select role…"
-									className="w-full border border-slate-200 bg-white text-slate-700 shadow-sm"
+									className="w-full border-[0.25px] border-slate-200 bg-white text-slate-700 shadow-sm"
 								>
 									<SelectItem value="Organization Admin">
 										Organization Admin

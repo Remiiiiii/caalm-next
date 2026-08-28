@@ -58,7 +58,7 @@ alwaysApply: false
 
 ### Form inputs
 
-Text inputs, selects, textareas, and search fields inside dialogs must use a visible `border border-slate-300`. Do not leave them borderless on `bg-slate-50`. See `input-field-borders.mdc`.
+Text inputs, selects, textareas, and search fields inside dialogs must use a visible `border-[0.25px] border-slate-300`. Do not leave them borderless on `bg-slate-50`. See `input-field-borders.mdc`.
 
 ### Professional Cap
 

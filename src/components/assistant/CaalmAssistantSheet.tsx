@@ -314,7 +314,7 @@ export default function CaalmAssistantSheet({
 						placeholder="Write your comments"
 						rows={4}
 						className={cn(
-							"min-h-24 resize-y rounded-xl border border-slate-300! bg-white text-slate-700",
+							"min-h-24 resize-y rounded-xl border-[0.25px] border-slate-300! bg-white text-slate-700",
 							feedbackTouched &&
 								!feedbackValid &&
 								"border-red-500! focus-visible:ring-red-500/30",
@@ -383,7 +383,7 @@ export default function CaalmAssistantSheet({
 									rows={4}
 									className={cn(
 										"min-h-[7.5rem] w-full resize-none rounded-3xl bg-white text-slate-700 shadow-sm",
-										"border border-slate-300! px-4! pb-14! pt-3.5! pe-14!",
+										"border-[0.25px] border-slate-300! px-4! pb-14! pt-3.5! pe-14!",
 										"placeholder:text-slate-400 focus-visible:border-[#078FAB]! focus-visible:ring-[#078FAB]",
 									)}
 									onKeyDown={(e) => {

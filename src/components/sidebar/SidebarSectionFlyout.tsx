@@ -6,6 +6,7 @@ import {
 	Building2,
 	Crown,
 	Eye,
+	HandCoins,
 	Lock,
 	Server,
 } from "lucide-react";
@@ -82,6 +83,16 @@ function ItemIcon({
 	if (item.name === "Audit Readiness") {
 		return (
 			<BookOpenCheck
+				className="h-4 w-4 shrink-0"
+				style={{ color: NAV_ICON_FILL_GREY }}
+				aria-hidden
+			/>
+		);
+	}
+
+	if (item.name === "Funding & Retention") {
+		return (
+			<HandCoins
 				className="h-4 w-4 shrink-0"
 				style={{ color: NAV_ICON_FILL_GREY }}
 				aria-hidden

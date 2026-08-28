@@ -19,6 +19,8 @@ This is the **single source of truth** for all styling, page structure, and comp
 7. [Spacing & Layout](#spacing--layout)
 8. [Interactive Elements](#interactive-elements)
 9. [Input fields](#input-fields)
+10. [Overflow menus (3-dot)](#overflow-menus-3-dot)
+11. [Badges](#badges)
 
 ---
 
@@ -380,20 +382,22 @@ Use custom colors defined in `tailwind.config.ts` without intermediate suffixes 
 
 ### Input fields
 
-**ALWAYS** give text inputs, selects, textareas, and search fields a visible border. A white, `rgba(255,255,255,…)`, or `slate-200` border disappears on `bg-white` / `bg-slate-50`.
+**ALWAYS** give text inputs, selects, textareas, and search fields a visible **0.25px** border. A white, `rgba(255,255,255,…)`, or `slate-200` border disappears on `bg-white` / `bg-slate-50`. Tailwind `border` is 1px — do not use it on fields.
 
 ```tsx
-<Input className="border border-slate-300" />
-<SelectTrigger className="border border-slate-300">
-<SearchField /> {/* wrapper already has border border-slate-300 */}
+<Input className="border-[0.25px] border-slate-300" />
+<SelectTrigger className="border-[0.25px] border-slate-300">
+<SearchField /> {/* wrapper already has border-[0.25px] border-slate-300; height is h-10 to match selects */}
 ```
 
-- Resting border: `border border-slate-300` (`#cbd5e1`) — stronger than card `slate-200` so fields read as inputs
+- Width: `border-[0.25px]` (not `border` / 1px)
+- Resting color: `border-slate-300` (`#cbd5e1`) — stronger than card `slate-200` so fields read as inputs
 - Hover: `hover:border-blue-300`
 - Focus: teal `#078FAB` (`focus-visible:border-[#078FAB]`)
-- Do **not** use `border-none`, `border-0`, `border-white/50`, or `border-slate-200` on a standalone field
+- Do **not** use `border-none`, `border-0`, `border` (1px), `border-white/50`, or `border-slate-200` on a standalone field
 - `border-0` is allowed **only** on an inner control whose parent already has the visible border (e.g. `SearchField` inner `Input`)
-- `.glass-form-control` already includes the slate-300 border; do not override it to white/transparent
+- `.glass-form-control` already includes the 0.25px slate-300 border; do not override it to 1px, white, or transparent
+- Search fields in a filter row match adjacent dropdowns at `h-10`
 
 ### Search fields
 
@@ -462,6 +466,73 @@ className="shadow-sm hover:shadow-md transition-all duration-200"
   </div>
 </div>
 ```
+
+---
+
+## Overflow menus (3-dot)
+
+**ALWAYS** use the Contracts table trigger (`ActionDropdown`). Do **not** use Lucide `MoreVertical` / `EllipsisVertical` for row or card overflow menus.
+
+```tsx
+<DropdownMenu>
+  <DropdownMenuTrigger
+    className="shad-no-focus rounded-full transition-colors hover:bg-white/30"
+    aria-label={`Actions for ${itemName}`}
+  >
+    <Image src="/assets/icons/dots.svg" alt="" width={34} height={34} />
+  </DropdownMenuTrigger>
+  <AppDropdownMenuContent align="end">
+    <AppDropdownMenuItem icon={Pencil} onClick={...}>
+      Edit
+    </AppDropdownMenuItem>
+    <DropdownMenuSeparator />
+    <AppDropdownMenuItem icon={Trash2} tone="danger" onClick={...}>
+      Delete
+    </AppDropdownMenuItem>
+  </AppDropdownMenuContent>
+</DropdownMenu>
+```
+
+**Required:**
+- Icon: `/assets/icons/dots.svg` at `width={34}` `height={34}`
+- Trigger: `shad-no-focus rounded-full transition-colors hover:bg-white/30`
+- Items: `AppDropdownMenuItem` with a Lucide `icon` (and `tone="danger"` for delete/archive)
+- `aria-label` on the trigger that names the row (`Actions for {title}`)
+
+**Delete / Archive divider (required):** If the menu includes Delete, Archive, or any other destructive item, put `<DropdownMenuSeparator />` immediately **above** that item. Never sit a destructive action flush against Edit / History / other safe actions.
+
+**Reference:** `src/components/ActionDropdown.tsx` (contracts table), `src/components/licenses/LicenseActionDropdown.tsx`
+
+---
+
+## Badges
+
+**ALWAYS** use the CAALM badge pattern from the Contracts table. Do **not** use unstyled shadcn `Badge` variants (`default`, `secondary`, `outline`, `destructive`) as the final look.
+
+```tsx
+<span className="inline-block px-2 py-0.5 text-xs rounded-full font-medium border bg-green/10 text-green border-green/20">
+  Active
+</span>
+```
+
+**Shape (required):** `inline-block px-2 py-0.5 text-xs rounded-full font-medium border`
+
+**Status / meaning colors (required):**
+
+| Meaning | Classes |
+|---|---|
+| Success / active / current | `bg-green/10 text-green border-green/20` |
+| Warning / pending / draft | `bg-orange/10 text-orange border-orange/20` |
+| Danger / expired / action required | `bg-red/10 text-red border-red/20` |
+| Info / category / in progress | `bg-blue/10 text-blue border-blue/20` |
+| Neutral / inactive / version | `bg-slate-100 text-slate-600 border-slate-200` |
+
+**Rules:**
+- Use custom colors with opacity (`bg-green/10`), never `bg-green-100` / `bg-blue-100`
+- Capitalize labels (`Active`, `Draft`), do not dump raw enum strings (`active`)
+- `Badge` from `@/components/ui/badge` is allowed only when these classes override the default variant (see department tables). Prefer a `<span>` like `ContractsTableView`
+
+**Reference:** `src/components/ContractsTableView.tsx` (`statusBadge`), `src/components/Card.tsx`, `src/components/licenses/LicenseCard.tsx`
 
 ---
 
@@ -551,7 +622,10 @@ When creating a new page or component, verify:
 - [ ] Icons use brand color: `text-[#0f5384]` for headers
 - [ ] Buttons use: `primary-btn px-3 sm:px-4`
 - [ ] All interactive elements have transition effects
-- [ ] Text inputs, selects, textareas, and search fields use a visible `border-slate-300` (never white, transparent, or `slate-200` on light fills)
+- [ ] Text inputs, selects, textareas, and search fields use `border-[0.25px] border-slate-300` (never 1px `border`, white, transparent, or `slate-200` on light fills)
+- [ ] 3-dot overflow menus use `/assets/icons/dots.svg` (34×34) with `shad-no-focus rounded-full hover:bg-white/30` — not Lucide `MoreVertical`
+- [ ] Delete / Archive menu items have `<DropdownMenuSeparator />` immediately above them and `tone="danger"`
+- [ ] Badges use `inline-block px-2 py-0.5 text-xs rounded-full font-medium border` plus CAALM status colors (`bg-green/10`, `bg-orange/10`, `bg-red/10`, `bg-blue/10`, or slate) — not default shadcn Badge variants
 
 ---
 
@@ -564,7 +638,8 @@ When creating a new page or component, verify:
 
 ### Components
 - `src/components/ContractsMetricsBar.tsx` - Stat cards with glass-card-inner
-- `src/components/ActionDropdown.tsx` - Dialog structure
+- `src/components/ActionDropdown.tsx` - Dialog structure and 3-dot overflow menu
+- `src/components/ContractsTableView.tsx` - CAALM status badges
 - `src/components/news/ArticleEditor.tsx` - Large dialog with tabs
 
 ### Dialogs

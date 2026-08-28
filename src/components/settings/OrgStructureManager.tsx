@@ -37,7 +37,7 @@ type CostCentersResponse = {
 };
 
 const fieldBorder =
-	"bg-white !border !border-solid !border-slate-200 focus-visible:!border-[#078FAB]";
+	"bg-white !border-[0.25px] !border-solid !border-slate-200 focus-visible:!border-[#078FAB]";
 
 function slugify(value: string) {
 	return value

@@ -8,8 +8,9 @@ import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig, isAppwriteConfigured } from "@/lib/appwrite/config";
 import {
 	ROADMAP_CATALOG,
-	getCatalogLinkedPrNumbers,
-	getCatalogTaskLinkedPrNumber,
+	catalogPullRequestUrl,
+	catalogTasksHaveLinkedPr,
+	displayedPrNumberForTask,
 } from "./catalog";
 import { computeUnlocked, type LockSnapshot } from "./locking";
 import type {
@@ -307,22 +308,22 @@ async function syncCatalogLayoutToAppwrite(
 				? [...existingTasks.values()].find((row) => row.prNumber === task.prNumber)
 				: undefined;
 		if (byPr) {
-			return {
+			return enrichTaskPrFromCatalog({
 				...byPr,
 				...taskLayoutData(task),
 				$id: task.$id,
 				sectionId: task.sectionId,
 				parentTaskId: task.parentTaskId,
 				orderIndex: task.orderIndex,
-			};
+			});
 		}
 		const existing = existingTasks.get(task.$id);
 		// Keep status when the task code is the same even if the title changed
 		// (e.g. 3.4 "Split OutlookStyleCalendar" → extract-helpers wording).
 		if (existing && existing.taskCode === task.taskCode) {
-			return { ...existing, ...taskLayoutData(task) };
+			return enrichTaskPrFromCatalog({ ...existing, ...taskLayoutData(task) });
 		}
-		return task;
+		return enrichTaskPrFromCatalog(task);
 	});
 
 	const unlocked = computeUnlocked({
@@ -422,8 +423,10 @@ export function buildSeedSnapshot(): {
 			parentTaskId: string | null,
 		) => {
 			const sectionPrs = catalogSection.linkedPrNumbers ?? [];
-			const soleSectionPr =
-				sectionPrs.length === 1 ? sectionPrs[0] : undefined;
+			const inheritSolePr =
+				sectionPrs.length === 1 &&
+				!catalogTasksHaveLinkedPr(catalogSection.tasks);
+			const soleSectionPr = inheritSolePr ? sectionPrs[0] : undefined;
 
 			items.forEach((item, index) => {
 				const taskId = `task_${item.taskCode.replace(/\./g, "_")}`;
@@ -490,18 +493,12 @@ export async function listSections(): Promise<RoadmapSection[]> {
 }
 
 function enrichTaskPrFromCatalog(task: RoadmapTask): RoadmapTask {
-	if (task.prNumber != null) return task;
-	const fromCatalog = getCatalogTaskLinkedPrNumber(task.taskCode);
-	if (fromCatalog != null) {
-		return { ...task, prNumber: fromCatalog };
+	const prNumber = displayedPrNumberForTask(task.taskCode, task.prNumber);
+	const prUrl = prNumber != null ? catalogPullRequestUrl(prNumber) : null;
+	if (prNumber === (task.prNumber ?? null) && prUrl === (task.prUrl ?? null)) {
+		return task;
 	}
-	const sectionNumber = Number(task.taskCode.split(".")[0]);
-	if (Number.isNaN(sectionNumber)) return task;
-	const sectionPrs = getCatalogLinkedPrNumbers(sectionNumber);
-	if (sectionPrs.length === 1) {
-		return { ...task, prNumber: sectionPrs[0] };
-	}
-	return task;
+	return { ...task, prNumber, prUrl };
 }
 
 export async function listTasks(sectionId?: string): Promise<RoadmapTask[]> {
@@ -548,11 +545,11 @@ export async function getTaskById(taskId: string): Promise<RoadmapTask | null> {
 			rowId: taskId,
 		});
 		const r = row as Record<string, unknown>;
-		return {
+		return enrichTaskPrFromCatalog({
 			...(r as unknown as RoadmapTask),
 			acceptanceCriteria: parseStringArray(r.acceptanceCriteria),
 			parentTaskId: r.parentTaskId ? String(r.parentTaskId) : null,
-		};
+		});
 	} catch {
 		return null;
 	}
