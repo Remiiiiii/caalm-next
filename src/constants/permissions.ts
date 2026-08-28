@@ -143,6 +143,14 @@ export const PERMISSIONS = {
 		MANAGE: "funding.manage",
 	},
 
+	// Standard clause library (org playbooks)
+	CLAUSES: {
+		VIEW: "clauses.view",
+		CREATE: "clauses.create",
+		EDIT: "clauses.edit",
+		DELETE: "clauses.delete",
+	},
+
 	// Platform / break-glass capabilities (Super Admin only by default)
 	PLATFORM: {
 		DIAGNOSE: "platform.diagnose",
@@ -163,6 +171,7 @@ export const SENSITIVE_PERMISSIONS: readonly string[] = [
 	PERMISSIONS.CONTRACTS.SIGN,
 	PERMISSIONS.LICENSES.APPROVE,
 	PERMISSIONS.LICENSES.DELETE,
+	PERMISSIONS.CLAUSES.DELETE,
 	PERMISSIONS.APPROVALS.OVERRIDE,
 	PERMISSIONS.TICKETS.DELETE,
 	PERMISSIONS.TICKETS.ASSIGN,
@@ -684,6 +693,32 @@ export const PERMISSION_DEFINITIONS = [
 		category: "funding",
 		description:
 			"Create/edit pursuits and obligations, mark wins, and spawn proposals from won bids",
+	},
+
+	// Clause library
+	{
+		key: PERMISSIONS.CLAUSES.VIEW,
+		name: "View Clause Library",
+		category: "clauses",
+		description: "View org-owned standard clauses and version history",
+	},
+	{
+		key: PERMISSIONS.CLAUSES.CREATE,
+		name: "Create Clauses",
+		category: "clauses",
+		description: "Add new standard clauses to the org library",
+	},
+	{
+		key: PERMISSIONS.CLAUSES.EDIT,
+		name: "Edit Clauses",
+		category: "clauses",
+		description: "Update drafts or publish a new clause version",
+	},
+	{
+		key: PERMISSIONS.CLAUSES.DELETE,
+		name: "Archive Clauses",
+		category: "clauses",
+		description: "Archive a current clause so it leaves the active library",
 	},
 
 	// Platform

@@ -415,7 +415,7 @@ export default function ApprovalDecideSheet({
 							value={notes}
 							onChange={(e) => setNotes(e.target.value)}
 							placeholder="Required for deny or request changes"
-							className="min-h-[88px] border border-slate-300 bg-white shadow-none focus-visible:border-[#078FAB]"
+							className="min-h-[88px] border-[0.25px] border-slate-300 bg-white shadow-none focus-visible:border-[#078FAB]"
 						/>
 					</div>
 				) : null}

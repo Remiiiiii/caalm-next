@@ -210,7 +210,7 @@ export default function OrganizationSettingsPage() {
 									value={name}
 									onChange={(e) => setName(e.target.value)}
 									disabled={!canEdit}
-									className="bg-white !border !border-solid !border-slate-200"
+									className="bg-white !border-[0.25px] !border-solid !border-slate-200"
 								/>
 							</div>
 							<div className="space-y-2">
@@ -221,7 +221,7 @@ export default function OrganizationSettingsPage() {
 									onChange={(e) => setDomain(e.target.value)}
 									disabled={!canEdit}
 									placeholder="example.org"
-									className="bg-white !border !border-solid !border-slate-200"
+									className="bg-white !border-[0.25px] !border-solid !border-slate-200"
 								/>
 							</div>
 							<div className="space-y-2">
@@ -246,7 +246,7 @@ export default function OrganizationSettingsPage() {
 									onChange={(e) => setWebsiteUrl(e.target.value)}
 									disabled={!canEdit}
 									placeholder="https://cfcecares.org"
-									className="bg-white !border !border-solid !border-slate-200"
+									className="bg-white !border-[0.25px] !border-solid !border-slate-200"
 								/>
 								<p className="text-xs text-slate-500">
 									Optional bounded crawl for readiness packets (informational;
@@ -282,7 +282,7 @@ export default function OrganizationSettingsPage() {
 										value={maxUsers}
 										onChange={(e) => setMaxUsers(Number(e.target.value) || 1)}
 										disabled={!canEdit}
-										className="bg-white !border !border-solid !border-slate-200"
+										className="bg-white !border-[0.25px] !border-solid !border-slate-200"
 									/>
 								</div>
 								<div className="space-y-2">
@@ -296,7 +296,7 @@ export default function OrganizationSettingsPage() {
 											setMaxDepartments(Number(e.target.value) || 1)
 										}
 										disabled={!canEdit}
-										className="bg-white !border !border-solid !border-slate-200"
+										className="bg-white !border-[0.25px] !border-solid !border-slate-200"
 									/>
 								</div>
 							</div>

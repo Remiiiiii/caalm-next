@@ -533,7 +533,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 									value={search}
 									onChange={(e) => setSearch(e.target.value)}
 									data-with-leading-icon="true"
-									className="border border-slate-200 bg-white text-slate-700 placeholder:text-slate-400"
+									className="border-[0.25px] border-slate-200 bg-white text-slate-700 placeholder:text-slate-400"
 								/>
 							</div>
 							<div

@@ -166,6 +166,21 @@ const nextConfig: NextConfig = {
 					},
 				],
 			},
+			// Spline scenes are binary. Without nosniff, Chrome treats them as JSON
+			// and shows its Pretty-print viewer if anything embeds the raw file.
+			{
+				source: "/scene.splinecode",
+				headers: [
+					{
+						key: "Content-Type",
+						value: "application/octet-stream",
+					},
+					{
+						key: "X-Content-Type-Options",
+						value: "nosniff",
+					},
+				],
+			},
 			// Static assets - cache aggressively in production, disable in dev
 			{
 				source: "/:all*(js|css|svg|png|jpg|jpeg|gif|webp|avif)",

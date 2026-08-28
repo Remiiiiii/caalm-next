@@ -64,7 +64,7 @@ export function TimezoneSelect({
 					disabled={disabled}
 					role="combobox"
 					aria-expanded={open}
-					className="h-10 w-full justify-between bg-white !border !border-solid !border-slate-200 font-normal text-slate-700 cursor-pointer"
+					className="h-10 w-full justify-between bg-white !border-[0.25px] !border-solid !border-slate-200 font-normal text-slate-700 cursor-pointer"
 				>
 					<span className="truncate">{selectedLabel}</span>
 					<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 text-slate-500" />

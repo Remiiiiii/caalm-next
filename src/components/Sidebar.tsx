@@ -7,6 +7,7 @@ import {
 	Cloud,
 	Crown,
 	Eye,
+	HandCoins,
 	Lock,
 	Server,
 } from "lucide-react";
@@ -312,11 +313,21 @@ const Sidebar = memo(
 																				/>
 																			</span>
 																		)}
+																		{item.name === "Funding & Retention" && (
+																			<span>
+																				<HandCoins
+																					className="h-5 w-5 shrink-0"
+																					style={{ color: NAV_ICON_FILL_GREY }}
+																					aria-hidden
+																				/>
+																			</span>
+																		)}
 																		{(() => {
 																			const iconConfig = ITEM_ICONS[item.name];
 																			if (
 																				!iconConfig &&
-																				item.name !== "Documents"
+																				item.name !== "Documents" &&
+																				item.name !== "Funding & Retention"
 																			) {
 																				return null;
 																			}

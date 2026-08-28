@@ -98,6 +98,12 @@ export const appwriteConfig = {
 		"test-license-drafts",
 	),
 
+	/** Org clause library (name: clauses) */
+	clausesCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CLAUSES_COLLECTION",
+		"69c8f401001a2b3c4d01",
+	),
+
 	tasksCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_TASKS_COLLECTION",
 		"tasks",

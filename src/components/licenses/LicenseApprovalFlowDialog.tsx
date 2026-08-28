@@ -208,7 +208,7 @@ export default function LicenseApprovalFlowDialog({
 										value={notes}
 										onChange={(e) => setNotes(e.target.value)}
 										placeholder="Notes (required for reject / request changes)"
-										className="min-h-[72px] border border-slate-300 bg-white shadow-none focus-visible:border-[#078FAB]"
+										className="min-h-[72px] border-[0.25px] border-slate-300 bg-white shadow-none focus-visible:border-[#078FAB]"
 									/>
 								</div>
 							)}
