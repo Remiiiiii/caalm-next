@@ -1,7 +1,8 @@
 "use client";
 
-import { PanelRightClose, Rss } from "lucide-react";
+import { PanelRightClose } from "lucide-react";
 import useSWR from "swr";
+import { BriefingNewsIcon } from "@/components/dashboard-briefing/BriefingNewsIcon";
 import { MarketsCard } from "@/components/dashboard-briefing/MarketsCard";
 import { MsnNewsCards } from "@/components/dashboard-briefing/MsnNewsCards";
 import { Button } from "@/components/ui/button";
@@ -34,11 +35,12 @@ export function WeatherBriefingSheet({
 	longitude,
 }: WeatherBriefingSheetProps) {
 	const { data, isLoading } = useSWR(
-		open ? "/api/briefing?v=6" : null,
+		open ? "/api/briefing?v=7" : null,
 		briefingFetcher,
 		{
-			revalidateOnFocus: false,
-			dedupingInterval: 60 * 1000,
+			revalidateOnFocus: true,
+			refreshInterval: 60 * 1000,
+			dedupingInterval: 15 * 1000,
 		},
 	);
 
@@ -70,8 +72,8 @@ export function WeatherBriefingSheet({
 
 					<div className="mt-4 flex shrink-0 items-center justify-between gap-2 px-4 pb-3 pt-1">
 						<div className="flex items-center gap-2">
-							<Rss className="h-5 w-5 text-[#0f5384]" />
-							<h2 className="text-lg font-semibold sidebar-gradient-text">
+							<BriefingNewsIcon className="h-6 w-auto" />
+							<h2 className="text-xl font-semibold sidebar-gradient-text">
 								Briefing
 							</h2>
 						</div>
@@ -94,12 +96,12 @@ export function WeatherBriefingSheet({
 							longitude={longitude}
 							embedded
 						/>
-						<MarketsCard
-							markets={data?.markets ?? []}
-							loading={isLoading && !data}
-						/>
 						<MsnNewsCards
 							news={data?.news ?? []}
+							loading={isLoading && !data}
+						/>
+						<MarketsCard
+							markets={data?.markets ?? []}
 							loading={isLoading && !data}
 						/>
 					</div>

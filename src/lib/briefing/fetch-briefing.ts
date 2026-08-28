@@ -24,18 +24,23 @@ const BBC_RSS_URL = "https://feeds.bbci.co.uk/news/world/rss.xml";
 const GOOGLE_NEWS_RSS_URL =
 	"https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en";
 
+const NO_STORE: RequestInit = { cache: "no-store" };
+
+type YahooChartResult = {
+	meta?: {
+		regularMarketPrice?: number;
+		regularMarketChangePercent?: number;
+		chartPreviousClose?: number;
+		previousClose?: number;
+	};
+	indicators?: {
+		quote?: Array<{ close?: Array<number | null> }>;
+	};
+};
+
 type YahooChartResponse = {
 	chart?: {
-		result?: Array<{
-			meta?: {
-				regularMarketPrice?: number;
-				chartPreviousClose?: number;
-				previousClose?: number;
-			};
-			indicators?: {
-				quote?: Array<{ close?: Array<number | null> }>;
-			};
-		}>;
+		result?: YahooChartResult[];
 	};
 };
 
@@ -72,37 +77,45 @@ async function fetchWithTimeout(
 	const controller = new AbortController();
 	const timer = setTimeout(() => controller.abort(), ms);
 	try {
-		return await fetch(url, { ...init, signal: controller.signal });
+		return await fetch(url, { ...NO_STORE, ...init, signal: controller.signal });
 	} finally {
 		clearTimeout(timer);
 	}
 }
 
-async function fetchYahooQuote(
+async function fetchYahooChart(
 	symbol: string,
-	name: string,
-	ticker: string,
-): Promise<MarketQuote | null> {
+	range: string,
+	interval: string,
+): Promise<YahooChartResult | null> {
 	const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
 		symbol,
-	)}?range=5d&interval=30m`;
+	)}?range=${range}&interval=${interval}&includePrePost=true`;
 
 	const response = await fetchWithTimeout(url, {
 		headers: {
 			Accept: "application/json",
 			"User-Agent": YAHOO_UA,
 		},
-		next: { revalidate: 300 },
 	});
 
 	if (!response.ok) return null;
 
 	const json = (await response.json()) as YahooChartResponse;
-	const result = json.chart?.result?.[0];
+	return json.chart?.result?.[0] ?? null;
+}
+
+function quoteFromChart(
+	result: YahooChartResult | null,
+	name: string,
+	ticker: string,
+	sparkPoints: number,
+): MarketQuote | null {
 	if (!result) return null;
 
 	const closes = (result.indicators?.quote?.[0]?.close ?? []).filter(
-		(value): value is number => typeof value === "number" && Number.isFinite(value),
+		(value): value is number =>
+			typeof value === "number" && Number.isFinite(value),
 	);
 	const price =
 		result.meta?.regularMarketPrice ?? closes[closes.length - 1] ?? 0;
@@ -112,8 +125,12 @@ async function fetchYahooQuote(
 		closes[0] ??
 		price;
 	const changePercent =
-		previous === 0 ? 0 : ((price - previous) / previous) * 100;
-	const sparkline = closes.slice(-24);
+		typeof result.meta?.regularMarketChangePercent === "number"
+			? result.meta.regularMarketChangePercent
+			: previous === 0
+				? 0
+				: ((price - previous) / previous) * 100;
+	const sparkline = closes.slice(-sparkPoints);
 
 	if (!price) return null;
 
@@ -124,6 +141,20 @@ async function fetchYahooQuote(
 		changePercent,
 		sparkline,
 	};
+}
+
+async function fetchYahooQuote(
+	symbol: string,
+	name: string,
+	ticker: string,
+): Promise<MarketQuote | null> {
+	// Prefer today's session (incl. pre/post) so quotes move with the market.
+	const today = await fetchYahooChart(symbol, "1d", "5m");
+	const fromToday = quoteFromChart(today, name, ticker, 48);
+	if (fromToday) return fromToday;
+
+	const recent = await fetchYahooChart(symbol, "5d", "15m");
+	return quoteFromChart(recent, name, ticker, 24);
 }
 
 async function fetchMarkets(): Promise<MarketQuote[]> {
@@ -191,7 +222,6 @@ async function articlePageMeta(articleUrl: string): Promise<{
 				Accept: "text/html",
 				"User-Agent": YAHOO_UA,
 			},
-			next: { revalidate: 300 },
 		});
 		if (!response.ok) return { image: null, canonical: null };
 		const html = await response.text();
@@ -244,7 +274,7 @@ function parseRssItems(xml: string, fallbackSource: string): BriefingNewsItem[] 
 		(match) => match[1],
 	);
 
-	return blocks.slice(0, 2).map((block, index) => {
+	return blocks.slice(0, 12).map((block, index) => {
 		const rawTitle = firstTag(block, "title");
 		const dash = rawTitle.lastIndexOf(" - ");
 		const title = dash > 0 ? rawTitle.slice(0, dash).trim() : rawTitle;
@@ -269,44 +299,63 @@ function parseRssItems(xml: string, fallbackSource: string): BriefingNewsItem[] 
 	});
 }
 
-async function fetchNews(): Promise<BriefingNewsItem[]> {
-	const feeds = [
-		{ url: BBC_RSS_URL, source: "BBC News" },
-		{ url: GOOGLE_NEWS_RSS_URL, source: "News" },
-	];
+function newestHeadlines(
+	items: BriefingNewsItem[],
+	count: number,
+): BriefingNewsItem[] {
+	const seen = new Set<string>();
+	const sorted = [...items].sort((a, b) => {
+		const at = Date.parse(a.publishedAt) || 0;
+		const bt = Date.parse(b.publishedAt) || 0;
+		return bt - at;
+	});
 
-	for (const feed of feeds) {
-		try {
-			const response = await fetchWithTimeout(feed.url, {
-				headers: {
-					"User-Agent": YAHOO_UA,
-					Accept: "application/rss+xml, application/xml, text/xml",
-				},
-				next: { revalidate: 300 },
-			});
-			if (!response.ok) continue;
-			const xml = await response.text();
-			const items = parseRssItems(xml, feed.source).filter((item) => item.title);
-			if (items.length === 0) continue;
-
-			const withHeroes = await Promise.all(
-				items.map(async (item) => {
-					if (!item.articleUrl) return item;
-					const page = await articlePageMeta(item.articleUrl);
-					return {
-						...item,
-						imageUrl: page.image || item.imageUrl,
-						articleUrl: page.canonical || item.articleUrl,
-					};
-				}),
-			);
-			return withHeroes;
-		} catch {
-			continue;
-		}
+	const picked: BriefingNewsItem[] = [];
+	for (const item of sorted) {
+		const key = item.title.toLowerCase().replace(/\s+/g, " ").slice(0, 80);
+		if (!key || seen.has(key)) continue;
+		seen.add(key);
+		picked.push(item);
+		if (picked.length >= count) break;
 	}
+	return picked;
+}
 
-	return [];
+async function fetchNewsFeed(
+	url: string,
+	source: string,
+): Promise<BriefingNewsItem[]> {
+	const response = await fetchWithTimeout(url, {
+		headers: {
+			"User-Agent": YAHOO_UA,
+			Accept: "application/rss+xml, application/xml, text/xml",
+		},
+	});
+	if (!response.ok) return [];
+	const xml = await response.text();
+	return parseRssItems(xml, source).filter((item) => item.title);
+}
+
+async function fetchNews(): Promise<BriefingNewsItem[]> {
+	const feeds = await Promise.all([
+		fetchNewsFeed(BBC_RSS_URL, "BBC News").catch(() => [] as BriefingNewsItem[]),
+		fetchNewsFeed(GOOGLE_NEWS_RSS_URL, "News").catch(
+			() => [] as BriefingNewsItem[],
+		),
+	]);
+	const headlines = newestHeadlines(feeds.flat(), 2);
+
+	return Promise.all(
+		headlines.map(async (item) => {
+			if (!item.articleUrl) return item;
+			const page = await articlePageMeta(item.articleUrl);
+			return {
+				...item,
+				imageUrl: page.image || item.imageUrl,
+				articleUrl: page.canonical || item.articleUrl,
+			};
+		}),
+	);
 }
 
 export async function fetchBriefing(): Promise<BriefingResponse> {

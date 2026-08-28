@@ -167,7 +167,7 @@ export const CACHE_KEYS = {
 
 	// Dashboard briefing (markets + news)
 	briefing: {
-		snapshot: () => `briefing:snapshot:v6`,
+		snapshot: () => `briefing:snapshot:v7`,
 	},
 } as const;
 
@@ -267,7 +267,7 @@ export const getTTLForRoute = (route: string): number => {
 		weather: CACHE_TTLS.long, // 10 minutes
 
 		// Briefing
-		briefing: CACHE_TTLS.medium, // 5 minutes
+		briefing: 60, // 1 minute — markets and headlines should stay current
 	};
 
 	return ttlMap[route] || CACHE_TTLS.medium;

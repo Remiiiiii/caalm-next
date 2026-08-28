@@ -3,7 +3,7 @@
 import { TrendingUp } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { MSN_MARKETS_URL, type MarketQuote } from "@/types/briefing";
+import { YAHOO_FINANCE_MARKETS_URL, type MarketQuote } from "@/types/briefing";
 
 function Sparkline({
 	points,
@@ -128,7 +128,7 @@ export function MarketsCard({ markets, loading = false }: MarketsCardProps) {
 
 				<div className="mt-4 flex justify-end border-t border-slate-200 pt-3">
 					<a
-						href={MSN_MARKETS_URL}
+						href={YAHOO_FINANCE_MARKETS_URL}
 						target="_blank"
 						rel="noopener noreferrer"
 						className="text-sm font-medium text-[#0f5384] transition-colors duration-200 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
