@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+	displayedPrNumberForTask,
 	findDuplicateCatalogPrNumbers,
 	getCatalogLinkedPrNumber,
 	getCatalogLinkedPrNumbers,
@@ -81,18 +82,29 @@ describe("roadmap catalog PR links", () => {
 	});
 
 	it("includes dedicated GitHub tracking PRs 61-65", () => {
-		expect(getCatalogLinkedPrNumbers(5)).toEqual([67]);
+		expect(getCatalogLinkedPrNumbers(5)).toEqual([67, 68, 69, 70]);
 		expect(getCatalogLinkedPrNumbers(6)).toEqual([64]);
 		expect(getCatalogLinkedPrNumbers(7)).toEqual([62]);
 		expect(getCatalogLinkedPrNumbers(9)).toEqual([61]);
 		expect(getCatalogLinkedPrNumbers(15)).toEqual([65]);
 	});
 
-	it("binds section 5 per-task so only 5.1 completes with PR 67", () => {
+	it("binds section 5 per-task PRs 67-70", () => {
 		expect(getCatalogTaskLinkedPrNumber("5.1")).toBe(67);
-		expect(getUnlinkedCatalogTaskCodes(5)).toEqual(["5.2", "5.3", "5.4"]);
+		expect(getCatalogTaskLinkedPrNumber("5.2")).toBe(68);
+		expect(getCatalogTaskLinkedPrNumber("5.3")).toBe(69);
+		expect(getCatalogTaskLinkedPrNumber("5.4")).toBe(70);
+		expect(getUnlinkedCatalogTaskCodes(5)).toEqual([]);
 		expect(sectionUsesPerTaskPrCompletion(5)).toBe(true);
 		expect(sectionCompletesOnMergedCatalogPr(5)).toBe(true);
 		expect(getSectionNumberForPr(63)).toBeUndefined();
+		expect(getSectionNumberForPr(68)).toBe(5);
+	});
+
+	it("does not show merged stub 63 when catalog has per-task PRs", () => {
+		expect(displayedPrNumberForTask("5.1", 63)).toBe(67);
+		expect(displayedPrNumberForTask("5.2", 63)).toBe(68);
+		expect(displayedPrNumberForTask("5.3", 63)).toBe(69);
+		expect(displayedPrNumberForTask("5.4", 63)).toBe(70);
 	});
 });
