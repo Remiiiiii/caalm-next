@@ -21,6 +21,7 @@ const ContractExpiryAlertsWidget = ({
 	showSettings = true,
 	compact = false,
 	contracts: propsContracts,
+	alarmEnabled = true,
 }: ContractExpiryAlertsWidgetProps) => {
 	// Use contracts from props if provided, otherwise fetch all contracts from database
 	const {
@@ -114,7 +115,7 @@ const ContractExpiryAlertsWidget = ({
 		expiredContractsCount,
 	} = useContractAlarm({
 		contracts: contractsArray,
-		enabled: true,
+		enabled: alarmEnabled,
 	});
 
 	// Filter contracts to show those expiring within the selected filter period

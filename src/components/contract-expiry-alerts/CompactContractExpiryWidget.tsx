@@ -25,7 +25,7 @@ interface CompactContractExpiryWidgetProps {
 }
 
 const COMPACT_HEIGHT =
-	"w-full h-full min-h-[200px] sm:min-h-[250px] lg:min-h-[300px]";
+	"w-full h-[200px] sm:h-[250px] lg:h-[300px]";
 
 export const CompactContractExpiryWidget: React.FC<
 	CompactContractExpiryWidgetProps
@@ -107,30 +107,27 @@ export const CompactContractExpiryWidget: React.FC<
 				</div>
 
 				{/* Filter Controls */}
-				<div className="flex items-center justify-between gap-2">
+				<div
+					className={`flex w-full items-center gap-2 ${isPlaying ? "justify-start" : "justify-center"}`}
+				>
 					<ContractFilterControls
 						filterDays={filterDays}
 						onFilterChange={onFilterChange}
 						id="contract-filter-compact"
 						size="sm"
 					/>
-
-					<div className="flex items-center gap-2">
-						<ContractStatusBadges
-							expiringCount={expiringCount}
-							expiredCount={expiredCount}
-							filterDays={filterDays}
-							isPlaying={isPlaying}
-							size="sm"
-						/>
-
-						<AlarmControls
-							isPlaying={isPlaying}
-							onSilence={onSilence}
-							onDismiss={onDismiss}
-							variant="compact"
-						/>
-					</div>
+					<ContractStatusBadges
+						expiringCount={expiringCount}
+						expiredCount={expiredCount}
+						filterDays={filterDays}
+						size="sm"
+					/>
+					<AlarmControls
+						isPlaying={isPlaying}
+						onSilence={onSilence}
+						onDismiss={onDismiss}
+						variant="compact"
+					/>
 				</div>
 			</CardHeader>
 
@@ -138,7 +135,11 @@ export const CompactContractExpiryWidget: React.FC<
 				{filteredContracts.length === 0 ? (
 					<ContractEmptyState filterDays={filterDays} variant="compact" />
 				) : (
-					<div className="min-h-0 flex-1 space-y-2 overflow-x-hidden overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
+					<div
+						className="min-h-0 flex-1 space-y-2 overflow-x-hidden overflow-y-auto overscroll-contain pr-1 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent"
+						role="region"
+						aria-label="Expiring contracts"
+					>
 						{filteredContracts.map((contract: Contract) => (
 							<div
 								key={contract.$id}

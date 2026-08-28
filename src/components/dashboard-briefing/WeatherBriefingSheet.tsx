@@ -6,7 +6,12 @@ import { BriefingNewsIcon } from "@/components/dashboard-briefing/BriefingNewsIc
 import { MarketsCard } from "@/components/dashboard-briefing/MarketsCard";
 import { MsnNewsCards } from "@/components/dashboard-briefing/MsnNewsCards";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import {
+	Sheet,
+	SheetContent,
+	SheetHeaderIcon,
+	SheetTitle,
+} from "@/components/ui/sheet";
 import WeatherWidget from "@/components/WeatherWidget";
 import { cn } from "@/lib/utils";
 import type { BriefingResponse } from "@/types/briefing";
@@ -35,7 +40,7 @@ export function WeatherBriefingSheet({
 	longitude,
 }: WeatherBriefingSheetProps) {
 	const { data, isLoading } = useSWR(
-		open ? "/api/briefing?v=7" : null,
+		open ? "/api/briefing?v=15" : null,
 		briefingFetcher,
 		{
 			revalidateOnFocus: true,
@@ -59,8 +64,8 @@ export function WeatherBriefingSheet({
 					"data-[state=open]:slide-in-from-right data-[state=closed]:slide-out-to-right",
 					"data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0",
 					"pointer-events-auto",
-					"[&>button]:hidden",
 				)}
+				showCloseButton={false}
 			>
 				<div
 					className="glass-card-frosted relative flex h-full w-full flex-col overflow-hidden rounded-2xl"
@@ -71,8 +76,10 @@ export function WeatherBriefingSheet({
 					<SheetTitle className="sr-only">Weather briefing</SheetTitle>
 
 					<div className="mt-4 flex shrink-0 items-center justify-between gap-2 px-4 pb-3 pt-1">
-						<div className="flex items-center gap-2">
-							<BriefingNewsIcon className="h-6 w-auto" />
+						<div className="flex items-center gap-3">
+							<SheetHeaderIcon>
+								<BriefingNewsIcon className="h-5 w-auto" />
+							</SheetHeaderIcon>
 							<h2 className="text-xl font-semibold sidebar-gradient-text">
 								Briefing
 							</h2>

@@ -7,6 +7,9 @@ export const MSN_NEWS_URL =
 
 export const BBC_NEWS_URL = "https://www.bbc.com/news";
 
+export const GOOGLE_NEWS_URL =
+	"https://news.google.com/?hl=en-US&gl=US&ceid=US:en";
+
 export type MarketQuote = {
 	name: string;
 	ticker: string;
@@ -15,12 +18,17 @@ export type MarketQuote = {
 	sparkline: number[];
 };
 
+export type NewsFeed = "bbc" | "google";
+
 export type BriefingNewsItem = {
 	id: string;
 	title: string;
 	source: string;
+	feed: NewsFeed;
 	publishedAt: string;
 	imageUrl: string | null;
+	videoUrl: string | null;
+	excerpt: string | null;
 	articleUrl: string | null;
 };
 

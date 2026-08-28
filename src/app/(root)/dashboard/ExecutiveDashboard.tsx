@@ -762,6 +762,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 								showSettings={false}
 								compact={true}
 								contracts={contractsFromApi}
+								alarmEnabled={!isModalOpen}
 							/>
 							<LicenseExpiryAlertsWidget
 								maxVisible={2}

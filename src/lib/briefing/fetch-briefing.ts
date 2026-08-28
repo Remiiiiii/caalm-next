@@ -3,6 +3,13 @@ import type {
 	BriefingResponse,
 	MarketQuote,
 } from "@/types/briefing";
+import {
+	isGoogleNewsArticleUrl,
+	isPlayableNewsVideo,
+	isUsableNewsImage,
+	resolveGoogleNewsPublisherUrl,
+} from "@/lib/briefing/google-news-url";
+import { excerptWords } from "@/lib/briefing/excerpt";
 import { bbcImageAtWidth } from "@/lib/briefing/image-url";
 
 const YAHOO_UA =
@@ -20,7 +27,11 @@ const MARKET_SYMBOLS: Array<{
 	{ symbol: "CL=F", name: "Crude Oil", ticker: "CL" },
 ];
 
-const BBC_RSS_URL = "https://feeds.bbci.co.uk/news/world/rss.xml";
+const BBC_WORLD_RSS_URL = "https://feeds.bbci.co.uk/news/world/rss.xml";
+const BBC_US_CANADA_RSS_URL =
+	"https://feeds.bbci.co.uk/news/world/us_and_canada/rss.xml";
+const BBC_US_EDITION_RSS_URL =
+	"https://feeds.bbci.co.uk/news/rss.xml?edition=us";
 const GOOGLE_NEWS_RSS_URL =
 	"https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en";
 
@@ -212,30 +223,90 @@ function metaContent(html: string, key: string): string | null {
 	return raw ? decodeXml(raw) : null;
 }
 
+function jsonLdMp4Url(html: string): string | null {
+	const match = html.match(
+		/"contentUrl"\s*:\s*"(https?:[^"]+\.mp4[^"]*)"/i,
+	);
+	return match?.[1] ? decodeXml(match[1].replace(/\\u0026/g, "&")) : null;
+}
+
+function html5VideoSrc(html: string): string | null {
+	const source = html.match(
+		/<source[^>]+src=["'](https?:[^"']+\.(?:mp4|webm|ogg)[^"']*)["']/i,
+	);
+	if (source?.[1]) return decodeXml(source[1]);
+	const video = html.match(
+		/<video[^>]+src=["'](https?:[^"']+\.(?:mp4|webm|ogg)[^"']*)["']/i,
+	);
+	return video?.[1] ? decodeXml(video[1]) : null;
+}
+
+function extractNewsVideoUrl(html: string): string | null {
+	const candidates = [
+		metaContent(html, "og:video:secure_url"),
+		metaContent(html, "og:video:url"),
+		metaContent(html, "og:video"),
+		metaContent(html, "twitter:player:stream"),
+		jsonLdMp4Url(html),
+		html5VideoSrc(html),
+	];
+	return candidates.find((url) => isPlayableNewsVideo(url)) ?? null;
+}
+
 async function articlePageMeta(articleUrl: string): Promise<{
 	image: string | null;
+	video: string | null;
+	excerpt: string | null;
 	canonical: string | null;
 }> {
 	try {
-		const response = await fetchWithTimeout(articleUrl, {
-			headers: {
-				Accept: "text/html",
-				"User-Agent": YAHOO_UA,
+		const targetUrl = isGoogleNewsArticleUrl(articleUrl)
+			? (await resolveGoogleNewsPublisherUrl(
+					articleUrl,
+					fetchWithTimeout,
+					YAHOO_UA,
+				)) || articleUrl
+			: articleUrl;
+		const response = await fetchWithTimeout(
+			targetUrl,
+			{
+				headers: {
+					Accept: "text/html",
+					"User-Agent": YAHOO_UA,
+				},
 			},
-		});
-		if (!response.ok) return { image: null, canonical: null };
+			12_000,
+		);
+		if (!response.ok) {
+			return {
+				image: null,
+				video: null,
+				excerpt: null,
+				canonical: cleanArticleUrl(targetUrl),
+			};
+		}
 		const html = await response.text();
-		const og = metaContent(html, "og:image");
+		const og =
+			metaContent(html, "og:image") || metaContent(html, "twitter:image");
 		const canonicalRaw =
 			html.match(
 				/<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']+)["']/i,
 			)?.[1] || metaContent(html, "og:url");
+		const image =
+			og && isUsableNewsImage(og) ? bbcImageAtWidth(og, 1024) : null;
+		const description =
+			metaContent(html, "og:description") ||
+			metaContent(html, "twitter:description") ||
+			metaContent(html, "description");
 		return {
-			image: og ? bbcImageAtWidth(og, 1024) : null,
-			canonical: cleanArticleUrl(canonicalRaw),
+			image,
+			video: extractNewsVideoUrl(html),
+			excerpt: excerptWords(description ?? "") || null,
+			canonical:
+				cleanArticleUrl(canonicalRaw) || cleanArticleUrl(targetUrl),
 		};
 	} catch {
-		return { image: null, canonical: null };
+		return { image: null, video: null, excerpt: null, canonical: null };
 	}
 }
 
@@ -269,7 +340,11 @@ function rssItemLink(block: string): string | null {
 	return guid || null;
 }
 
-function parseRssItems(xml: string, fallbackSource: string): BriefingNewsItem[] {
+function parseRssItems(
+	xml: string,
+	fallbackSource: string,
+	feed: BriefingNewsItem["feed"],
+): BriefingNewsItem[] {
 	const blocks = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/gi)].map(
 		(match) => match[1],
 	);
@@ -283,17 +358,29 @@ function parseRssItems(xml: string, fallbackSource: string): BriefingNewsItem[] 
 			firstTag(block, "source") || sourceFromTitle || fallbackSource;
 		const pubDate = firstTag(block, "pubDate");
 		const articleUrl = cleanArticleUrl(rssItemLink(block));
-		const imageUrl = upgradeNewsImageUrl(
-			largestMediaThumbnail(block) || attr(block, "enclosure", "url") || null,
+		const enclosureUrl = attr(block, "enclosure", "url") || null;
+		const enclosureType = attr(block, "enclosure", "type");
+		const enclosureIsVideo =
+			/video\//i.test(enclosureType) || isPlayableNewsVideo(enclosureUrl);
+		const rssImage = upgradeNewsImageUrl(
+			largestMediaThumbnail(block) ||
+				(enclosureIsVideo ? null : enclosureUrl),
 		);
+		const imageUrl = isUsableNewsImage(rssImage) ? rssImage : null;
+		const rssVideo = enclosureIsVideo ? enclosureUrl : null;
 		const publishedAt = pubDate ? new Date(pubDate).toISOString() : "";
+		const body =
+			firstTag(block, "content:encoded") || firstTag(block, "description");
 
 		return {
 			id: `${fallbackSource}-${index}-${title.slice(0, 32)}`,
 			title,
 			source,
+			feed,
 			publishedAt: Number.isNaN(Date.parse(publishedAt)) ? "" : publishedAt,
 			imageUrl,
+			videoUrl: isPlayableNewsVideo(rssVideo) ? rssVideo : null,
+			excerpt: excerptWords(body) || null,
 			articleUrl,
 		};
 	});
@@ -324,6 +411,7 @@ function newestHeadlines(
 async function fetchNewsFeed(
 	url: string,
 	source: string,
+	feed: BriefingNewsItem["feed"],
 ): Promise<BriefingNewsItem[]> {
 	const response = await fetchWithTimeout(url, {
 		headers: {
@@ -333,13 +421,21 @@ async function fetchNewsFeed(
 	});
 	if (!response.ok) return [];
 	const xml = await response.text();
-	return parseRssItems(xml, source).filter((item) => item.title);
+	return parseRssItems(xml, source, feed).filter((item) => item.title);
 }
 
 async function fetchNews(): Promise<BriefingNewsItem[]> {
 	const feeds = await Promise.all([
-		fetchNewsFeed(BBC_RSS_URL, "BBC News").catch(() => [] as BriefingNewsItem[]),
-		fetchNewsFeed(GOOGLE_NEWS_RSS_URL, "News").catch(
+		fetchNewsFeed(BBC_WORLD_RSS_URL, "BBC News", "bbc").catch(
+			() => [] as BriefingNewsItem[],
+		),
+		fetchNewsFeed(BBC_US_CANADA_RSS_URL, "BBC News", "bbc").catch(
+			() => [] as BriefingNewsItem[],
+		),
+		fetchNewsFeed(BBC_US_EDITION_RSS_URL, "BBC News", "bbc").catch(
+			() => [] as BriefingNewsItem[],
+		),
+		fetchNewsFeed(GOOGLE_NEWS_RSS_URL, "News", "google").catch(
 			() => [] as BriefingNewsItem[],
 		),
 	]);
@@ -351,7 +447,11 @@ async function fetchNews(): Promise<BriefingNewsItem[]> {
 			const page = await articlePageMeta(item.articleUrl);
 			return {
 				...item,
-				imageUrl: page.image || item.imageUrl,
+				imageUrl: isUsableNewsImage(page.image)
+					? page.image
+					: item.imageUrl,
+				videoUrl: page.video || item.videoUrl,
+				excerpt: page.excerpt || item.excerpt,
 				articleUrl: page.canonical || item.articleUrl,
 			};
 		}),

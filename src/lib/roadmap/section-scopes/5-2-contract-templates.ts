@@ -1,4 +1,4 @@
-/** Tracking scope for CLM roadmap task 5.2. Implementation lands in later commits on this branch. */
+/** Tracking scope for CLM roadmap task 5.2. */
 export const TASK_5_2_SCOPE = {
   sectionNumber: 5,
   taskCode: "5.2",

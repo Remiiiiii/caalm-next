@@ -104,6 +104,12 @@ export const appwriteConfig = {
 		"69c8f401001a2b3c4d01",
 	),
 
+	/** Org contract templates (name: contract_templates) */
+	contractTemplatesCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CONTRACT_TEMPLATES_COLLECTION",
+		"69c8f502001b3c4d5e02",
+	),
+
 	tasksCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_TASKS_COLLECTION",
 		"tasks",

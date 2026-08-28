@@ -2,6 +2,7 @@
 
 import { Archive, CircleCheck, FileText, Pencil } from "lucide-react";
 import Image from "next/image";
+import { useEffect, useState } from "react";
 import {
 	AppDropdownMenuContent,
 	AppDropdownMenuItem,
@@ -41,6 +42,31 @@ export function ClauseLibraryDetail({
 	onArchive,
 }: ClauseLibraryDetailProps) {
 	const timeZone = useOrgTimezone();
+	const [templateCount, setTemplateCount] = useState<number | null>(null);
+
+	useEffect(() => {
+		if (!clause) {
+			setTemplateCount(null);
+			return;
+		}
+		let cancelled = false;
+		void fetch(
+			`/api/contract-templates?familyId=${encodeURIComponent(clause.familyId)}`,
+		)
+			.then(async (response) => {
+				if (!response.ok) return;
+				const body = await response.json().catch(() => ({}));
+				if (cancelled) return;
+				setTemplateCount(Array.isArray(body.items) ? body.items.length : 0);
+			})
+			.catch(() => {
+				if (!cancelled) setTemplateCount(null);
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, [clause?.familyId]);
+
 	const showMenu =
 		Boolean(clause) &&
 		(canEdit || (canDelete && clause?.status !== "archived"));
@@ -163,8 +189,11 @@ export function ClauseLibraryDetail({
 					<h3 className="text-sm font-medium sidebar-gradient-text">Usage</h3>
 					<div className="rounded-lg border border-slate-200 bg-white p-4">
 						<p className="text-sm text-slate-600">
-							No contracts reference this clause yet. Links will appear here
-							once clauses can be inserted into contracts.
+							{templateCount == null
+								? "Template usage appears here when you can view contract templates."
+								: templateCount === 0
+									? "No templates use this clause yet."
+									: `Used in ${templateCount} ${templateCount === 1 ? "template" : "templates"}.`}
 						</p>
 					</div>
 				</section>

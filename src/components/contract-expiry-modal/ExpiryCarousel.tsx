@@ -14,6 +14,7 @@ import {
 	type ExpirySpeechMode,
 	formatExpiryQueueSpeech,
 } from "@/lib/expiry/expiry-speech";
+import { suppressContractAlarm } from "@/lib/sounds/contractAlarm";
 
 interface ExpiryCarouselProps {
 	items: ExpiryQueueItem[];
@@ -31,6 +32,7 @@ export default function ExpiryCarousel({
 	shouldPlaySpeech = true,
 }: ExpiryCarouselProps) {
 	const [currentIndex, setCurrentIndex] = useState(0);
+	const [speechMuted, setSpeechMuted] = useState(false);
 	const { user } = useAuth();
 	const generatedForRef = useRef<string | null>(null);
 	const speechRequestRef = useRef(0);
@@ -56,8 +58,10 @@ export default function ExpiryCarousel({
 		setCurrentIndex(index + 1);
 	}, []);
 
-	const { generateSpeech, play, pause, stop, isPlaying, isLoading } =
-		useElevenLabsTTS({ autoPlay: true, onPlaybackEnd: handlePlaybackEnd });
+	const { generateSpeech, stop, isLoading } = useElevenLabsTTS({
+		autoPlay: true,
+		onPlaybackEnd: handlePlaybackEnd,
+	});
 
 	useEffect(() => {
 		if (items.length > 0) {
@@ -78,9 +82,14 @@ export default function ExpiryCarousel({
 		"";
 
 	useEffect(() => {
+		// Let Expire is a user click, which unlocks autoplay. Suppress the
+		// looping dashboard bell for the whole overlay session so it cannot
+		// start behind the modal (Silence lives on the widget, not here).
+		suppressContractAlarm();
 		return () => {
 			stop();
 			generatedForRef.current = null;
+			suppressContractAlarm();
 		};
 	}, [stop]);
 
@@ -97,7 +106,7 @@ export default function ExpiryCarousel({
 	}, [itemsSignature, stop]);
 
 	useEffect(() => {
-		if (!currentItem || !shouldPlaySpeech) return;
+		if (!currentItem || !shouldPlaySpeech || speechMuted) return;
 
 		const spokenKey = expiryItemKey(currentItem, currentIndex);
 		if (generatedForRef.current === spokenKey) return;
@@ -145,26 +154,20 @@ export default function ExpiryCarousel({
 		generateSpeech,
 		stop,
 		shouldPlaySpeech,
+		speechMuted,
 	]);
 
-	const handleToggleAudio = async () => {
-		if (isPlaying) {
-			pause();
-		} else {
-			try {
-				await play();
-			} catch {
-				if (currentItem) {
-					const text = formatExpiryQueueSpeech({
-						items,
-						index: currentIndex,
-						mode: "navigate",
-						userFullName,
-					});
-					await generateSpeech(text);
-				}
-			}
+	const handleToggleAudio = () => {
+		if (!speechMuted) {
+			setSpeechMuted(true);
+			generatedForRef.current = null;
+			stop();
+			suppressContractAlarm();
+			return;
 		}
+
+		generatedForRef.current = null;
+		setSpeechMuted(false);
 	};
 
 	const handlePrevious = () => {
@@ -184,6 +187,7 @@ export default function ExpiryCarousel({
 	const handleItemHandled = (item: ExpiryQueueItem) => {
 		skipAutoAdvanceRef.current = true;
 		stop();
+		suppressContractAlarm();
 		if (onItemDismissed) {
 			onItemDismissed(item);
 		} else {
@@ -203,13 +207,12 @@ export default function ExpiryCarousel({
 						variant="outline"
 						size="icon"
 						className="glass-card text-slate-800 shadow-lg cursor-pointer"
-						aria-label={isPlaying ? "Pause audio" : "Play audio"}
-						disabled={isLoading}
+						aria-label={speechMuted ? "Unmute audio" : "Mute audio"}
 					>
-						{isLoading ? (
-							<div className="w-5 h-5 border-2 border-slate-800 border-t-transparent rounded-full animate-spin" />
-						) : isPlaying ? (
+						{speechMuted ? (
 							<VolumeX className="w-5 h-5" />
+						) : isLoading ? (
+							<div className="w-5 h-5 border-2 border-slate-800 border-t-transparent rounded-full animate-spin" />
 						) : (
 							<Volume2 className="w-5 h-5" />
 						)}
@@ -255,6 +258,7 @@ export default function ExpiryCarousel({
 				onClose={() => {
 					skipAutoAdvanceRef.current = true;
 					stop();
+					suppressContractAlarm();
 					onDismiss();
 				}}
 				onItemHandled={handleItemHandled}

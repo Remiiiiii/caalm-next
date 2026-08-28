@@ -61,6 +61,12 @@ export const ITEM_ICONS: Record<
 		height: 20,
 		color: SUBITEM_TEXT_GREY,
 	},
+	"Contract Templates": {
+		src: "/assets/icons/edit.svg",
+		width: 20,
+		height: 20,
+		color: SUBITEM_TEXT_GREY,
+	},
 	"Funding & Retention": {
 		width: 20,
 		height: 20,

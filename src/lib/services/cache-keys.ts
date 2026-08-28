@@ -167,7 +167,7 @@ export const CACHE_KEYS = {
 
 	// Dashboard briefing (markets + news)
 	briefing: {
-		snapshot: () => `briefing:snapshot:v7`,
+		snapshot: () => `briefing:snapshot:v15`,
 	},
 } as const;
 

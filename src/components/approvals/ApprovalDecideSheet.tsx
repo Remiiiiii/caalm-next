@@ -279,18 +279,7 @@ export default function ApprovalDecideSheet({
 									</Button>
 								</div>
 							</div>
-						) : (
-							<div className="flex justify-end">
-								<Button
-									variant="outline"
-									className="primary-btn cursor-pointer px-3 sm:px-4"
-									onClick={() => onOpenChange(false)}
-								>
-									<X className="h-4 w-4" />
-									Close
-								</Button>
-							</div>
-						)}
+						) : null}
 					</div>
 				}
 			>

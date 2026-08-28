@@ -151,6 +151,14 @@ export const PERMISSIONS = {
 		DELETE: "clauses.delete",
 	},
 
+	// Contract templates assembled from the clause library
+	CONTRACT_TEMPLATES: {
+		VIEW: "contract_templates.view",
+		CREATE: "contract_templates.create",
+		EDIT: "contract_templates.edit",
+		DELETE: "contract_templates.delete",
+	},
+
 	// Platform / break-glass capabilities (Super Admin only by default)
 	PLATFORM: {
 		DIAGNOSE: "platform.diagnose",
@@ -172,6 +180,7 @@ export const SENSITIVE_PERMISSIONS: readonly string[] = [
 	PERMISSIONS.LICENSES.APPROVE,
 	PERMISSIONS.LICENSES.DELETE,
 	PERMISSIONS.CLAUSES.DELETE,
+	PERMISSIONS.CONTRACT_TEMPLATES.DELETE,
 	PERMISSIONS.APPROVALS.OVERRIDE,
 	PERMISSIONS.TICKETS.DELETE,
 	PERMISSIONS.TICKETS.ASSIGN,
@@ -719,6 +728,30 @@ export const PERMISSION_DEFINITIONS = [
 		name: "Archive Clauses",
 		category: "clauses",
 		description: "Archive a current clause so it leaves the active library",
+	},
+	{
+		key: PERMISSIONS.CONTRACT_TEMPLATES.VIEW,
+		name: "View Contract Templates",
+		category: "contract_templates",
+		description: "View org-owned contract templates built from the clause library",
+	},
+	{
+		key: PERMISSIONS.CONTRACT_TEMPLATES.CREATE,
+		name: "Create Contract Templates",
+		category: "contract_templates",
+		description: "Create contract templates from clause library entries",
+	},
+	{
+		key: PERMISSIONS.CONTRACT_TEMPLATES.EDIT,
+		name: "Edit Contract Templates",
+		category: "contract_templates",
+		description: "Edit contract templates and clause order",
+	},
+	{
+		key: PERMISSIONS.CONTRACT_TEMPLATES.DELETE,
+		name: "Archive Contract Templates",
+		category: "contract_templates",
+		description: "Archive a contract template so it leaves the active catalog",
 	},
 
 	// Platform

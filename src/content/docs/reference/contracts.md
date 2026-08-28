@@ -55,7 +55,7 @@ Contracts pages often surface counts and “needs attention” cues. Use them as
 - [ ] Approval state matches reality
 - [ ] Related tasks/dates on calendar if your team uses that discipline
 
-Related: [Approvals](/docs/reference/approvals), [SAM.gov](/docs/reference/sam-gov).
+Related: [Clause Library](/docs/reference/clause-library), [Contract templates](/docs/reference/contract-templates), [Funding and retention](/docs/reference/funding-retention), [Approvals](/docs/reference/approvals), [SAM.gov](/docs/reference/sam-gov).
 
 
 ## Intake standards (recommended)

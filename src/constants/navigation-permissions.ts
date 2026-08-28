@@ -105,6 +105,12 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 				permissions: [PERMISSIONS.CLAUSES.VIEW],
 			},
 			{
+				name: "Contract Templates",
+				icon: "/assets/icons/edit.svg",
+				url: "/contracts/templates",
+				permissions: [PERMISSIONS.CONTRACT_TEMPLATES.VIEW],
+			},
+			{
 				name: "Funding & Retention",
 				icon: "/assets/icons/dollar-circle.svg",
 				url: "/contracts/funding-retention",

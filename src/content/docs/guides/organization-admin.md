@@ -15,7 +15,7 @@ You own day-to-day company operations inside CAALM:
 
 - **Users** — invite, edit, deactivate, assign roles
 - **Org settings**, billing, and integrations (when you hold those permissions)
-- **Contracts, licenses, calendar, news, audits, AI** features your role pack includes
+- **Contracts, licenses, clause library, templates, funding & retention, calendar, news, audits, AI** features your role pack includes
 - **Audit readiness** (`/audits/readiness`) for prep scores, snapshots, and packets — see [Audit readiness](/docs/reference/audit-readiness)
 - **Approvals** for org workflows (including override only if that permission is granted)
 - **Custom roles** — build job-shaped roles with templates; avoid mega-roles
