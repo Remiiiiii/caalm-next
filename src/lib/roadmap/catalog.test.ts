@@ -94,7 +94,7 @@ describe("roadmap catalog PR links", () => {
 		expect(getCatalogTaskLinkedPrNumber("5.2")).toBe(68);
 		expect(getCatalogTaskLinkedPrNumber("5.3")).toBe(69);
 		expect(getCatalogTaskLinkedPrNumber("5.4")).toBe(70);
-		expect(getUnlinkedCatalogTaskCodes(5)).toEqual([]);
+		expect(getUnlinkedCatalogTaskCodes(5)).toEqual(["5.5"]);
 		expect(sectionUsesPerTaskPrCompletion(5)).toBe(true);
 		expect(sectionCompletesOnMergedCatalogPr(5)).toBe(true);
 		expect(getSectionNumberForPr(63)).toBeUndefined();

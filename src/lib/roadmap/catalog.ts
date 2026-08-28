@@ -310,6 +310,7 @@ export const ROADMAP_CATALOG: RoadmapCatalogSection[] = [
 		linkedPrNumbers: [67, 68, 69, 70],
 		// PR #63 was a tracking stub merged by accident. Real 5.1 work is PR #67.
 		// 68–70 are draft tracking PRs (not 61/62/64: those belong to sections 9/7/6).
+		// 5.5 is the guided create wizard; linkedPrNumber is set when its PR opens.
 		tasks: [
 			t(
 				"5.1",
@@ -342,6 +343,16 @@ export const ROADMAP_CATALOG: RoadmapCatalogSection[] = [
 				["Review UI shows severity for seeded deviations"],
 				undefined,
 				70,
+			),
+			t(
+				"5.5",
+				"Guided contract creation wizard",
+				"Step-by-step intake that assembles a new draft from templates and lets the author inject extra templates or clauses along the way. Never patches a pending or active contract.",
+				[
+					"Wizard creates a new contract row and pending-review proposal; existing contracts stay untouched",
+					"Author can start from scratch or a published template, then inject another template or clause mid-flow",
+					"Submit snapshots today's published clause versions into markdown with merge fields filled",
+				],
 			),
 		],
 	},
@@ -661,7 +672,9 @@ export function getCatalogLinkedPrNumbers(sectionNumber: number): number[] {
 export function sectionCompletesOnMergedCatalogPr(
 	sectionNumber: number,
 ): boolean {
-	const section = ROADMAP_CATALOG.find((s) => s.sectionNumber === sectionNumber);
+	const section = ROADMAP_CATALOG.find(
+		(s) => s.sectionNumber === sectionNumber,
+	);
 	return section?.completesOnMerge !== false;
 }
 
@@ -711,7 +724,9 @@ export function catalogTasksHaveLinkedPr(
 
 /** True when tasks complete individually as each catalog PR merges (not all-at-once). */
 export function sectionUsesPerTaskPrCompletion(sectionNumber: number): boolean {
-	const section = ROADMAP_CATALOG.find((s) => s.sectionNumber === sectionNumber);
+	const section = ROADMAP_CATALOG.find(
+		(s) => s.sectionNumber === sectionNumber,
+	);
 	if (!section) return false;
 	return catalogTasksHaveLinkedPr(section.tasks);
 }
@@ -733,7 +748,9 @@ export function getCatalogTaskCodesForPr(prNumber: number): string[] {
 
 /** Task codes in a section that have no catalog `linkedPrNumber`. */
 export function getUnlinkedCatalogTaskCodes(sectionNumber: number): string[] {
-	const section = ROADMAP_CATALOG.find((s) => s.sectionNumber === sectionNumber);
+	const section = ROADMAP_CATALOG.find(
+		(s) => s.sectionNumber === sectionNumber,
+	);
 	if (!section) return [];
 	const codes: string[] = [];
 	const walk = (tasks: RoadmapCatalogSection["tasks"]) => {
@@ -766,7 +783,10 @@ export function displayedPrNumberForTask(
 	const sectionNumber = Number(taskCode.split(".")[0]);
 	if (Number.isNaN(sectionNumber)) return null;
 	const sectionPrs = getCatalogLinkedPrNumbers(sectionNumber);
-	if (sectionPrs.length === 1 && !ROADMAP_TRACKING_STUB_PRS.has(sectionPrs[0])) {
+	if (
+		sectionPrs.length === 1 &&
+		!ROADMAP_TRACKING_STUB_PRS.has(sectionPrs[0])
+	) {
 		return sectionPrs[0];
 	}
 	return null;

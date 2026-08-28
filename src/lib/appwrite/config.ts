@@ -104,6 +104,18 @@ export const appwriteConfig = {
 		"69c8f401001a2b3c4d01",
 	),
 
+	/** Contract recipes that reference clause families (name: contract_templates) */
+	contractTemplatesCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CONTRACT_TEMPLATES_COLLECTION",
+		"69c8f501001a2b3c4d02",
+	),
+
+	/** Guided create-from-template wizard drafts (name: contract_wizard_sessions) */
+	contractWizardSessionsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CONTRACT_WIZARD_SESSIONS_COLLECTION",
+		"69c8f502002b3c4d5e03",
+	),
+
 	tasksCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_TASKS_COLLECTION",
 		"tasks",
