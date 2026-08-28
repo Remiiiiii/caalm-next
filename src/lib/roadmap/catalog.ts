@@ -307,15 +307,16 @@ export const ROADMAP_CATALOG: RoadmapCatalogSection[] = [
 		sectionNumber: 5,
 		title: "Clause Library, Templates & AI Playbooks",
 		sourceRef: "AI-assisted review; Strategic #4",
-		linkedPrNumbers: [63],
-		// PR #63 is a tracking stub (notes file + copied roadmap engine).
-		completesOnMerge: false,
+		linkedPrNumbers: [67],
+		// PR #63 was a tracking stub merged by accident. Real 5.1 work is PR #67.
 		tasks: [
 			t(
 				"5.1",
 				"Clause library data model",
 				"Org-owned standard clauses, categorized, versioned.",
 				["CRUD on clause library with versioning"],
+				undefined,
+				67,
 			),
 			t(
 				"5.2",
@@ -689,7 +690,7 @@ function findCatalogTask(
 	return undefined;
 }
 
-function catalogTasksHaveLinkedPr(
+export function catalogTasksHaveLinkedPr(
 	tasks: RoadmapCatalogSection["tasks"],
 ): boolean {
 	for (const task of tasks) {
@@ -705,8 +706,6 @@ function catalogTasksHaveLinkedPr(
 export function sectionUsesPerTaskPrCompletion(sectionNumber: number): boolean {
 	const section = ROADMAP_CATALOG.find((s) => s.sectionNumber === sectionNumber);
 	if (!section) return false;
-	const prs = section.linkedPrNumbers ?? [];
-	if (prs.length <= 1) return false;
 	return catalogTasksHaveLinkedPr(section.tasks);
 }
 
@@ -739,6 +738,9 @@ export function getUnlinkedCatalogTaskCodes(sectionNumber: number): string[] {
 	walk(section.tasks);
 	return codes;
 }
+
+/** Merged tracking stubs that must never auto-complete a section. */
+export const ROADMAP_TRACKING_STUB_PRS = new Set([63]);
 
 /** Exclusive catalog owner for a GitHub PR, or undefined if the PR is not listed. */
 export function getSectionNumberForPr(prNumber: number): number | undefined {

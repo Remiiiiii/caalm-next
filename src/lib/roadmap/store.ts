@@ -8,6 +8,7 @@ import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig, isAppwriteConfigured } from "@/lib/appwrite/config";
 import {
 	ROADMAP_CATALOG,
+	catalogTasksHaveLinkedPr,
 	getCatalogLinkedPrNumbers,
 	getCatalogTaskLinkedPrNumber,
 } from "./catalog";
@@ -422,8 +423,10 @@ export function buildSeedSnapshot(): {
 			parentTaskId: string | null,
 		) => {
 			const sectionPrs = catalogSection.linkedPrNumbers ?? [];
-			const soleSectionPr =
-				sectionPrs.length === 1 ? sectionPrs[0] : undefined;
+			const inheritSolePr =
+				sectionPrs.length === 1 &&
+				!catalogTasksHaveLinkedPr(catalogSection.tasks);
+			const soleSectionPr = inheritSolePr ? sectionPrs[0] : undefined;
 
 			items.forEach((item, index) => {
 				const taskId = `task_${item.taskCode.replace(/\./g, "_")}`;
