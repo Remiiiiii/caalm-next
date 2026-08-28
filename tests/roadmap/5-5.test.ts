@@ -7,6 +7,7 @@ describe("roadmap task 5.5 guided contract wizard", () => {
 
 	it("is catalogued under Clause Library, Templates & AI Playbooks", () => {
 		expect(task).toBeDefined();
+		expect(task?.linkedPrNumber).toBe(71);
 		expect(task?.title).toMatch(/guided contract/i);
 		expect(
 			task?.acceptanceCriteria.some((line) => /new contract/i.test(line)),

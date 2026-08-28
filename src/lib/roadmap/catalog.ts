@@ -307,10 +307,10 @@ export const ROADMAP_CATALOG: RoadmapCatalogSection[] = [
 		sectionNumber: 5,
 		title: "Clause Library, Templates & AI Playbooks",
 		sourceRef: "AI-assisted review; Strategic #4",
-		linkedPrNumbers: [67, 68, 69, 70],
+		linkedPrNumbers: [67, 68, 69, 70, 71],
 		// PR #63 was a tracking stub merged by accident. Real 5.1 work is PR #67.
 		// 68–70 are draft tracking PRs (not 61/62/64: those belong to sections 9/7/6).
-		// 5.5 is the guided create wizard; linkedPrNumber is set when its PR opens.
+		// 5.5 guided create wizard is PR #71.
 		tasks: [
 			t(
 				"5.1",
@@ -353,6 +353,8 @@ export const ROADMAP_CATALOG: RoadmapCatalogSection[] = [
 					"Author can start from scratch or a published template, then inject another template or clause mid-flow",
 					"Submit snapshots today's published clause versions into markdown with merge fields filled",
 				],
+				undefined,
+				71,
 			),
 		],
 	},
