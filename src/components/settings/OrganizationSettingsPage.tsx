@@ -16,8 +16,28 @@ import { PERMISSIONS } from "@/constants/permissions";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
+import {
+	firstOrgProfileErrors,
+	organizationProfileFormSchema,
+	type OrganizationProfileForm,
+} from "@/lib/rbac/organization-profile.schema";
 import type { Organization } from "@/lib/rbac/organizations";
 import { fetcher } from "@/lib/swr-config";
+
+function FieldError({
+	id,
+	message,
+}: {
+	id: string;
+	message?: string;
+}) {
+	if (!message) return null;
+	return (
+		<p id={id} className="text-xs text-red" role="alert">
+			{message}
+		</p>
+	);
+}
 
 interface OrgResponse {
 	success: boolean;
@@ -41,9 +61,27 @@ export default function OrganizationSettingsPage() {
 	const [domain, setDomain] = useState("");
 	const [timezone, setTimezone] = useState("America/New_York");
 	const [websiteUrl, setWebsiteUrl] = useState("");
+	const [street, setStreet] = useState("");
+	const [city, setCity] = useState("");
+	const [state, setState] = useState("");
+	const [zipcode, setZipcode] = useState("");
+	const [phone, setPhone] = useState("");
+	const [email, setEmail] = useState("");
 	const [maxUsers, setMaxUsers] = useState(10);
 	const [maxDepartments, setMaxDepartments] = useState(3);
 	const [saving, setSaving] = useState(false);
+	const [fieldErrors, setFieldErrors] = useState<
+		Partial<Record<keyof OrganizationProfileForm, string>>
+	>({});
+
+	const clearFieldError = useCallback((key: keyof OrganizationProfileForm) => {
+		setFieldErrors((current) => {
+			if (!current[key]) return current;
+			const next = { ...current };
+			delete next[key];
+			return next;
+		});
+	}, []);
 
 	useEffect(() => {
 		if (!org) return;
@@ -59,14 +97,51 @@ export default function OrganizationSettingsPage() {
 				? org.settings.websiteUrl
 				: "",
 		);
+		setStreet(
+			typeof org.settings?.street === "string" && org.settings.street
+				? org.settings.street
+				: typeof org.settings?.address === "string"
+					? org.settings.address
+					: "",
+		);
+		setCity(typeof org.settings?.city === "string" ? org.settings.city : "");
+		setState(typeof org.settings?.state === "string" ? org.settings.state : "");
+		setZipcode(
+			typeof org.settings?.zipcode === "string" ? org.settings.zipcode : "",
+		);
+		setPhone(typeof org.settings?.phone === "string" ? org.settings.phone : "");
+		setEmail(typeof org.settings?.email === "string" ? org.settings.email : "");
 		setMaxUsers(org.settings?.maxUsers ?? 10);
 		setMaxDepartments(org.settings?.maxDepartments ?? 3);
 	}, [org]);
 
 	const handleSaveProfile = useCallback(async () => {
 		if (!canEdit) return;
+		const parsed = organizationProfileFormSchema.safeParse({
+			name,
+			domain,
+			timezone,
+			websiteUrl,
+			street,
+			city,
+			state,
+			zipcode,
+			phone,
+			email,
+		});
+		if (!parsed.success) {
+			setFieldErrors(firstOrgProfileErrors(parsed.error));
+			toast({
+				title: "Fix the highlighted fields",
+				description: parsed.error.issues[0]?.message ?? "Check the form",
+				variant: "destructive",
+			});
+			return;
+		}
+		setFieldErrors({});
 		setSaving(true);
 		try {
+			const profile = parsed.data;
 			const res = await fetch(
 				orgId
 					? `/api/organizations?orgId=${encodeURIComponent(orgId)}`
@@ -75,14 +150,20 @@ export default function OrganizationSettingsPage() {
 					method: "PUT",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
-						name,
-						domain: domain || null,
+						name: profile.name,
+						domain: profile.domain,
 						settings: {
 							maxUsers: org?.settings?.maxUsers ?? 10,
 							maxDepartments: org?.settings?.maxDepartments ?? 3,
 							features: org?.settings?.features || [],
-							timezone,
-							websiteUrl: websiteUrl || null,
+							timezone: profile.timezone,
+							websiteUrl: profile.websiteUrl,
+							street: profile.street,
+							city: profile.city,
+							state: profile.state,
+							zipcode: profile.zipcode,
+							phone: profile.phone,
+							email: profile.email,
 						},
 					}),
 				},
@@ -110,6 +191,12 @@ export default function OrganizationSettingsPage() {
 		domain,
 		timezone,
 		websiteUrl,
+		street,
+		city,
+		state,
+		zipcode,
+		phone,
+		email,
 		org,
 		mutate,
 		refreshOrgProfile,
@@ -208,28 +295,45 @@ export default function OrganizationSettingsPage() {
 								<Input
 									id="org-name"
 									value={name}
-									onChange={(e) => setName(e.target.value)}
+									onChange={(e) => {
+										setName(e.target.value);
+										clearFieldError("name");
+									}}
 									disabled={!canEdit}
+									aria-invalid={Boolean(fieldErrors.name)}
+									aria-describedby={fieldErrors.name ? "org-name-error" : undefined}
 									className="bg-white !border-[0.25px] !border-solid !border-slate-200"
 								/>
+								<FieldError id="org-name-error" message={fieldErrors.name} />
 							</div>
 							<div className="space-y-2">
 								<Label htmlFor="org-domain">Email domain</Label>
 								<Input
 									id="org-domain"
 									value={domain}
-									onChange={(e) => setDomain(e.target.value)}
+									onChange={(e) => {
+										setDomain(e.target.value);
+										clearFieldError("domain");
+									}}
 									disabled={!canEdit}
-									placeholder="example.org"
+									placeholder="example.com"
+									aria-invalid={Boolean(fieldErrors.domain)}
+									aria-describedby={
+										fieldErrors.domain ? "org-domain-error" : undefined
+									}
 									className="bg-white !border-[0.25px] !border-solid !border-slate-200"
 								/>
+								<FieldError id="org-domain-error" message={fieldErrors.domain} />
 							</div>
 							<div className="space-y-2">
 								<Label htmlFor="org-timezone">Organization timezone</Label>
 								<TimezoneSelect
 									id="org-timezone"
 									value={timezone}
-									onValueChange={setTimezone}
+									onValueChange={(value) => {
+										setTimezone(value);
+										clearFieldError("timezone");
+									}}
 									disabled={!canEdit}
 								/>
 								<p className="text-xs text-slate-500">
@@ -239,14 +343,148 @@ export default function OrganizationSettingsPage() {
 								</p>
 							</div>
 							<div className="space-y-2">
+								<Label htmlFor="org-street">Street</Label>
+								<Input
+									id="org-street"
+									value={street}
+									onChange={(e) => {
+										setStreet(e.target.value);
+										clearFieldError("street");
+									}}
+									disabled={!canEdit}
+									placeholder="9802 SW 77th Ave"
+									aria-invalid={Boolean(fieldErrors.street)}
+									aria-describedby={
+										fieldErrors.street ? "org-street-error" : undefined
+									}
+									className="bg-white border-[0.25px] border-slate-300"
+								/>
+								<FieldError id="org-street-error" message={fieldErrors.street} />
+								<p className="text-xs text-slate-500">
+									Printed in the letterhead of every agreement you create.
+								</p>
+							</div>
+							<div className="grid grid-cols-1 gap-4 sm:grid-cols-6">
+								<div className="space-y-2 sm:col-span-3">
+									<Label htmlFor="org-city">City</Label>
+									<Input
+										id="org-city"
+										value={city}
+										onChange={(e) => {
+											setCity(e.target.value);
+											clearFieldError("city");
+										}}
+										disabled={!canEdit}
+										placeholder="Miami"
+										aria-invalid={Boolean(fieldErrors.city)}
+										aria-describedby={
+											fieldErrors.city ? "org-city-error" : undefined
+										}
+										className="bg-white border-[0.25px] border-slate-300"
+									/>
+									<FieldError id="org-city-error" message={fieldErrors.city} />
+								</div>
+								<div className="space-y-2 sm:col-span-2">
+									<Label htmlFor="org-state">State</Label>
+									<Input
+										id="org-state"
+										value={state}
+										onChange={(e) => {
+											setState(e.target.value);
+											clearFieldError("state");
+										}}
+										disabled={!canEdit}
+										placeholder="FL"
+										aria-invalid={Boolean(fieldErrors.state)}
+										aria-describedby={
+											fieldErrors.state ? "org-state-error" : undefined
+										}
+										className="bg-white border-[0.25px] border-slate-300"
+									/>
+									<FieldError id="org-state-error" message={fieldErrors.state} />
+								</div>
+								<div className="space-y-2 sm:col-span-1">
+									<Label htmlFor="org-zipcode">Zipcode</Label>
+									<Input
+										id="org-zipcode"
+										value={zipcode}
+										onChange={(e) => {
+											setZipcode(e.target.value);
+											clearFieldError("zipcode");
+										}}
+										disabled={!canEdit}
+										placeholder="33156"
+										aria-invalid={Boolean(fieldErrors.zipcode)}
+										aria-describedby={
+											fieldErrors.zipcode ? "org-zipcode-error" : undefined
+										}
+										className="bg-white border-[0.25px] border-slate-300"
+									/>
+									<FieldError id="org-zipcode-error" message={fieldErrors.zipcode} />
+								</div>
+							</div>
+							<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+								<div className="space-y-2">
+									<Label htmlFor="org-phone">Phone</Label>
+									<Input
+										id="org-phone"
+										value={phone}
+										onChange={(e) => {
+											setPhone(e.target.value);
+											clearFieldError("phone");
+										}}
+										disabled={!canEdit}
+										placeholder="(202) 555-0100"
+										aria-invalid={Boolean(fieldErrors.phone)}
+										aria-describedby={
+											fieldErrors.phone ? "org-phone-error" : undefined
+										}
+										className="bg-white border-[0.25px] border-slate-300"
+									/>
+									<FieldError id="org-phone-error" message={fieldErrors.phone} />
+								</div>
+								<div className="space-y-2">
+									<Label htmlFor="org-email">Public email</Label>
+									<Input
+										id="org-email"
+										type="email"
+										value={email}
+										onChange={(e) => {
+											setEmail(e.target.value);
+											clearFieldError("email");
+										}}
+										disabled={!canEdit}
+										placeholder="hello@example.org"
+										aria-invalid={Boolean(fieldErrors.email)}
+										aria-describedby={
+											fieldErrors.email ? "org-email-error" : undefined
+										}
+										className="bg-white border-[0.25px] border-slate-300"
+									/>
+									<FieldError id="org-email-error" message={fieldErrors.email} />
+								</div>
+							</div>
+							<div className="space-y-2">
 								<Label htmlFor="org-website">Public website URL</Label>
 								<Input
 									id="org-website"
+									type="url"
 									value={websiteUrl}
-									onChange={(e) => setWebsiteUrl(e.target.value)}
+									onChange={(e) => {
+										setWebsiteUrl(e.target.value);
+										clearFieldError("websiteUrl");
+									}}
 									disabled={!canEdit}
 									placeholder="https://cfcecares.org"
+									aria-invalid={Boolean(fieldErrors.websiteUrl)}
+									aria-describedby={
+										fieldErrors.websiteUrl ? "org-website-error" : undefined
+									}
 									className="bg-white !border-[0.25px] !border-solid !border-slate-200"
+								/>
+								<FieldError
+									id="org-website-error"
+									message={fieldErrors.websiteUrl}
 								/>
 								<p className="text-xs text-slate-500">
 									Optional bounded crawl for readiness packets (informational;

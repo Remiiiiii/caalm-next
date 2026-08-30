@@ -17,6 +17,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useGroupedNavigation } from "@/hooks/useGroupedNavigation";
 import { cn } from "@/lib/utils";
 import SidebarUserCard from "@/components/sidebar/SidebarUserCard";
+import { ContractTemplatesNavIcon } from "@/components/sidebar/NavItemIcon";
 import FileUploader from "./FileUploader";
 import { Button } from "./ui/button";
 
@@ -134,6 +135,20 @@ const MobileNavigation = ({
 															className="flex w-full items-center gap-3"
 															onClick={() => setOpen(false)}
 														>
+														{item.name === "Contract Templates" ? (
+															<ContractTemplatesNavIcon size={24} />
+														) : item.icon.endsWith(".png") ? (
+															<img
+																src={item.icon}
+																alt=""
+																width={24}
+																height={24}
+																className={cn(
+																	"nav-icon shrink-0",
+																	active && "nav-icon-active",
+																)}
+															/>
+														) : (
 															<Image
 																src={item.icon}
 																alt=""
@@ -144,6 +159,7 @@ const MobileNavigation = ({
 																	active && "nav-icon-active",
 																)}
 															/>
+														)}
 															<span className="flex min-w-0 flex-1 items-center gap-2">
 																<span className="truncate">{item.name}</span>
 																{shouldShowLock(item) && (

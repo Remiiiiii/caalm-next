@@ -104,10 +104,16 @@ export const appwriteConfig = {
 		"69c8f401001a2b3c4d01",
 	),
 
-	/** Org contract templates (name: contract_templates) */
+	/** Contract recipes that reference clause families (name: contract_templates) */
 	contractTemplatesCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_CONTRACT_TEMPLATES_COLLECTION",
-		"69c8f502001b3c4d5e02",
+		"69c8f501001a2b3c4d02",
+	),
+
+	/** Guided create-from-template wizard drafts (name: contract_wizard_sessions) */
+	contractWizardSessionsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CONTRACT_WIZARD_SESSIONS_COLLECTION",
+		"69c8f502002b3c4d5e03",
 	),
 
 	tasksCollectionId: getTestFallback(
@@ -181,6 +187,12 @@ export const appwriteConfig = {
 	),
 
 	bucketId: getTestFallback("NEXT_PUBLIC_APPWRITE_BUCKET", "test-bucket"),
+
+	/** Agreement blueprints + wizard draft artifacts (name: contract_blueprints) */
+	contractBlueprintsBucketId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CONTRACT_BLUEPRINTS_BUCKET",
+		"69c8f503003c4d5e6f04",
+	),
 
 	profilePicturesBucketId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_PROFILE_PICTURES_BUCKET",

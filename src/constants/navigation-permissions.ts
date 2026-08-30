@@ -99,6 +99,12 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 				permissions: [PERMISSIONS.CONTRACTS.CREATE, PERMISSIONS.CONTRACTS.EDIT],
 			},
 			{
+				name: "Create Contract",
+				icon: "/assets/icons/create-contract.png",
+				url: "/contracts/create",
+				permissions: [PERMISSIONS.CONTRACTS.CREATE],
+			},
+			{
 				name: "Clause Library",
 				icon: "/assets/icons/documents.svg",
 				url: "/contracts/library",
@@ -106,7 +112,7 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 			},
 			{
 				name: "Contract Templates",
-				icon: "/assets/icons/edit.svg",
+				icon: "/assets/icons/documents.svg",
 				url: "/contracts/templates",
 				permissions: [PERMISSIONS.CONTRACT_TEMPLATES.VIEW],
 			},
@@ -163,7 +169,6 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 				icon: "/assets/icons/compliance-status.svg",
 				url: "/audits/readiness",
 				permissions: [PERMISSIONS.AUDIT.VIEW],
-				hiddenForRoles: ["Department Manager"],
 				viewerReadOnly: true,
 				viewerFullAccess: true,
 			},

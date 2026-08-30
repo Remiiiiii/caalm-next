@@ -34,6 +34,13 @@ export interface Organization {
 		timezone?: string;
 		/** Public website URL for optional bounded crawl */
 		websiteUrl?: string;
+		street?: string;
+		city?: string;
+		state?: string;
+		zipcode?: string;
+		address?: string;
+		phone?: string;
+		email?: string;
 		[key: string]: unknown;
 	};
 	stripeCustomerId?: string;

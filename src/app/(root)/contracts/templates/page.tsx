@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
-import { ContractTemplatesPage } from "@/components/contract-templates/ContractTemplatesPage";
+import { TemplateLibraryPage } from "@/components/templates/TemplateLibraryPage";
 import { PERMISSIONS } from "@/constants/permissions";
 import { requirePagePermission } from "@/lib/rbac/page-guards";
 
 export const metadata: Metadata = {
 	title: "Contract Templates | CAALM",
-	description: "Assemble draft contracts from approved clause library entries.",
+	description:
+		"Published recipes of clause-library entries used to assemble new drafts.",
 };
 
-export default async function ContractsTemplatesRoutePage() {
+export default async function ContractTemplatesPage() {
 	await requirePagePermission(PERMISSIONS.CONTRACT_TEMPLATES.VIEW);
 
 	return (
@@ -19,10 +20,10 @@ export default async function ContractsTemplatesRoutePage() {
 				</h1>
 			</div>
 			<p className="mb-6 max-w-4xl text-sm text-slate-600">
-				Build a recipe from published clauses. Using a template creates a draft
-				contract in Proposals & Approvals with that wording snapshotted.
+				A template is a recipe, not a live patch. Using one always creates a new
+				contract in Proposals & Approvals.
 			</p>
-			<ContractTemplatesPage />
+			<TemplateLibraryPage />
 		</div>
 	);
 }

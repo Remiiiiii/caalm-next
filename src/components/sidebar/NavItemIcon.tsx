@@ -1,5 +1,6 @@
 "use client";
 
+import { LayoutTemplate } from "lucide-react";
 import Image from "next/image";
 import {
 	ITEM_ICONS,
@@ -12,6 +13,19 @@ type NavItemIconProps = {
 	height?: number;
 	priority?: boolean;
 };
+
+export function ContractTemplatesNavIcon({ size = 20 }: { size?: number }) {
+	return (
+		<LayoutTemplate
+			className="shrink-0"
+			size={size}
+			fill={NAV_ICON_FILL_GREY}
+			stroke={NAV_ICON_FILL_GREY}
+			strokeWidth={1}
+			aria-hidden
+		/>
+	);
+}
 
 function DocumentsNavIcon({ height }: { height: number }) {
 	return (
@@ -49,8 +63,25 @@ export function NavItemIcon({
 	if (name === "Documents") {
 		return <DocumentsNavIcon height={height} />;
 	}
+	if (name === "Contract Templates") {
+		return <ContractTemplatesNavIcon size={height} />;
+	}
 	const iconConfig = ITEM_ICONS[name];
 	if (!iconConfig?.src) return null;
+
+	// Static PNGs from /public bypass next/image so the exact file is shown (no optimizer cache).
+	if (iconConfig.src.endsWith(".png")) {
+		return (
+			<img
+				src={iconConfig.src}
+				alt=""
+				width={width}
+				height={height}
+				className="shrink-0 max-w-none"
+				style={{ width: "auto", height: `${height}px` }}
+			/>
+		);
+	}
 
 	return (
 		<Image

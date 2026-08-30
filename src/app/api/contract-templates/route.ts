@@ -1,64 +1,33 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
-import { getCurrentUser } from "@/lib/actions/user.actions";
+import { requirePermission } from "@/lib/rbac/middleware";
 import {
 	createTemplate,
 	isTemplateStatus,
-	isValidContractTypeId,
 	listTemplates,
-} from "@/lib/contract-templates/contract-templates.service";
-import { requirePermission } from "@/lib/rbac/middleware";
-import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
-import type { ClauseRef } from "@/types/contract-templates";
-
-function parseRefs(raw: unknown): ClauseRef[] | null {
-	if (!Array.isArray(raw)) return null;
-	const refs: ClauseRef[] = [];
-	for (const [index, item] of raw.entries()) {
-		if (!item || typeof item !== "object") return null;
-		const familyId = String(
-			(item as { familyId?: unknown }).familyId || "",
-		).trim();
-		if (!familyId) return null;
-		const sortOrderRaw = (item as { sortOrder?: unknown }).sortOrder;
-		const sortOrder =
-			typeof sortOrderRaw === "number" ? sortOrderRaw : index;
-		refs.push({ familyId, sortOrder });
-	}
-	return refs;
-}
+	parseClauseSlots,
+} from "@/lib/templates/contract-template.service";
+import { resolveOrgContext } from "@/lib/templates/require-org-permission";
 
 export async function GET(request: NextRequest) {
-	const denied = await requirePermission(request, {
+	const permissionCheck = await requirePermission(request, {
 		permission: PERMISSIONS.CONTRACT_TEMPLATES.VIEW,
 	});
-	if (denied) return denied;
+	if (permissionCheck) return permissionCheck;
 
-	const user = await getCurrentUser();
-	if (!user) {
-		return NextResponse.json({ error: "Authentication required" }, { status: 401 });
-	}
-	const org = await getUserDefaultOrganization(user.$id);
-	if (!org?.orgId) {
-		return NextResponse.json({ error: "Organization not found" }, { status: 404 });
-	}
+	const auth = await resolveOrgContext();
+	if (!auth.ok) return auth.response;
 
 	const { searchParams } = request.nextUrl;
 	const statusParam = searchParams.get("status");
-	const familyId = searchParams.get("familyId") || undefined;
-
 	try {
 		const items = await listTemplates({
-			orgId: org.orgId,
+			orgId: auth.orgId,
 			status: isTemplateStatus(statusParam) ? statusParam : undefined,
+			contractType: searchParams.get("contractType") || undefined,
 			search: searchParams.get("search") || undefined,
 		});
-		const filtered = familyId
-			? items.filter((item) =>
-					item.clauseRefs.some((ref) => ref.familyId === familyId),
-				)
-			: items;
-		return NextResponse.json({ items: filtered });
+		return NextResponse.json({ items });
 	} catch (error) {
 		console.error("[contract-templates GET]", error);
 		return NextResponse.json(
@@ -69,49 +38,29 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-	const denied = await requirePermission(request, {
+	const permissionCheck = await requirePermission(request, {
 		permission: PERMISSIONS.CONTRACT_TEMPLATES.CREATE,
 	});
-	if (denied) return denied;
+	if (permissionCheck) return permissionCheck;
 
-	const user = await getCurrentUser();
-	if (!user) {
-		return NextResponse.json({ error: "Authentication required" }, { status: 401 });
-	}
-	const org = await getUserDefaultOrganization(user.$id);
-	if (!org?.orgId) {
-		return NextResponse.json({ error: "Organization not found" }, { status: 404 });
-	}
+	const auth = await resolveOrgContext();
+	if (!auth.ok) return auth.response;
 
 	try {
 		const body = await request.json();
-		const title = String(body.title || "").trim();
-		const refs = parseRefs(body.clauseRefs);
-		if (!title) {
-			return NextResponse.json({ error: "title is required" }, { status: 400 });
+		const name = String(body.name || "").trim();
+		if (!name) {
+			return NextResponse.json({ error: "name is required" }, { status: 400 });
 		}
-		if (!refs) {
-			return NextResponse.json(
-				{ error: "clauseRefs must be an array" },
-				{ status: 400 },
-			);
-		}
-		if (!isValidContractTypeId(body.contractTypeId)) {
-			return NextResponse.json(
-				{ error: "Invalid contract type" },
-				{ status: 400 },
-			);
-		}
-
 		const template = await createTemplate({
-			orgId: org.orgId,
-			userId: user.$id,
+			orgId: auth.orgId,
+			userId: auth.user.$id,
 			data: {
-				title,
+				name,
 				description: body.description ? String(body.description) : undefined,
+				contractType: String(body.contractType || "").trim(),
 				status: isTemplateStatus(body.status) ? body.status : "draft",
-				contractTypeId: body.contractTypeId,
-				clauseRefs: refs,
+				clauseSlots: parseClauseSlots(body.clauseSlots),
 			},
 		});
 		return NextResponse.json({ template }, { status: 201 });

@@ -55,6 +55,12 @@ export const ITEM_ICONS: Record<
 		height: 20,
 		color: SUBITEM_TEXT_GREY,
 	},
+	"Create Contract": {
+		src: "/assets/icons/create-contract.png",
+		width: 20,
+		height: 20,
+		color: SUBITEM_TEXT_GREY,
+	},
 	"Clause Library": {
 		src: "/assets/icons/documents.svg",
 		width: 20,
@@ -62,7 +68,6 @@ export const ITEM_ICONS: Record<
 		color: SUBITEM_TEXT_GREY,
 	},
 	"Contract Templates": {
-		src: "/assets/icons/edit.svg",
 		width: 20,
 		height: 20,
 		color: SUBITEM_TEXT_GREY,

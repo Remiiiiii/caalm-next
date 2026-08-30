@@ -101,7 +101,7 @@ function ItemIcon({
 	}
 
 	const mapped = ITEM_ICONS[item.name];
-	if (item.name === "Documents" || mapped?.src) {
+	if (item.name === "Documents" || mapped?.src || mapped?.width) {
 		return (
 			<NavItemIcon
 				name={item.name}
