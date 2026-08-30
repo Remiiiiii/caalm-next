@@ -48,6 +48,11 @@ const SIGNAL_PATTERNS: Array<{ signal: string; class: DetectedAuthClass; re: Reg
 			re: /\brequireITPermission\s*\(/,
 		},
 		{
+			signal: "requireContractCreateContext",
+			class: "permission",
+			re: /\brequireContractCreateContext\s*\(/,
+		},
+		{
 			signal: "hasPermission",
 			class: "permission",
 			re: /\bhasPermission\s*\(/,
