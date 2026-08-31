@@ -3,6 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
 	compress: true,
 	poweredByHeader: false, // Remove X-Powered-By header for security
+	transpilePackages: ["currency-code-to-country-flag"],
 
 	// TypeScript configuration
 	typescript: {

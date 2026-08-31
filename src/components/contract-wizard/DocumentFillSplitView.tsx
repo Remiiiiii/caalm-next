@@ -2,9 +2,11 @@
 
 import {
 	Calendar,
+	CalendarDays,
 	DollarSign,
 	FilePlus,
 	FileText,
+	Info,
 	Plus,
 	Scale,
 	Trash2,
@@ -18,9 +20,18 @@ import {
 	Fragment,
 	type FocusEvent,
 } from "react";
+import { FarClausePicker } from "@/components/contract-wizard/FarClausePicker";
 import { Button } from "@/components/ui/button";
+import { Calendar as DateCalendar } from "@/components/ui/calendar";
+import { CurrencySelect } from "@/components/ui/currency-select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "@/components/ui/popover";
+import { UsdConversionHint } from "@/components/ui/usd-conversion-hint";
 import {
 	Select,
 	SelectContent,
@@ -31,14 +42,12 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useDepartmentAssignment } from "@/hooks/useDepartmentAssignment";
 import {
-	clauseForGroup,
 	formatAmountForDocument,
 	formatAmountWhileTyping,
 	getVisibleFillFields,
 	GOVERNMENT_CONTRACT_TYPES,
 	markLiveTokenHtml,
 	parseAmountInput,
-	parseDocxHeadings,
 	type FillSectionId,
 	type TokenGroup,
 	type VisibleFillField,
@@ -53,6 +62,31 @@ import type { WizardCustomBlock, WizardIntake } from "@/types/contract-templates
 
 const FIELD = "border-[0.25px] border-slate-300";
 
+/** Parse YYYY-MM-DD as a local date so the picker does not shift a day. */
+function parseLocalIsoDate(value: string): Date | undefined {
+	const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+	if (!match) return undefined;
+	const year = Number(match[1]);
+	const month = Number(match[2]);
+	const day = Number(match[3]);
+	const date = new Date(year, month - 1, day);
+	if (
+		date.getFullYear() !== year ||
+		date.getMonth() !== month - 1 ||
+		date.getDate() !== day
+	) {
+		return undefined;
+	}
+	return date;
+}
+
+function toLocalIsoDate(date: Date): string {
+	const year = date.getFullYear();
+	const month = String(date.getMonth() + 1).padStart(2, "0");
+	const day = String(date.getDate()).padStart(2, "0");
+	return `${year}-${month}-${day}`;
+}
+
 const GROUP_LABEL: Record<TokenGroup, string> = {
 	record: "Record details",
 	parties: "Parties",
@@ -62,6 +96,23 @@ const GROUP_LABEL: Record<TokenGroup, string> = {
 	legal: "Legal",
 	signatures: "Signatures",
 };
+
+/** Short “what to do here” copy under each section title. */
+const GROUP_ACTION: Record<TokenGroup, string> = {
+	record: "Enter the agreement name, department, and other record fields.",
+	parties: "Name the organizations or people who are parties to this agreement.",
+	dates: "Set the effective date and end date for this agreement.",
+	terms: "Fill in the remaining term and scope placeholders in this section.",
+	compensation: "Enter the amount, currency, and related payment fields.",
+	legal: "Complete the legal placeholders that appear in this section.",
+	signatures: "Review signature placeholders; they are filled at signing time.",
+};
+
+const ADDED_SECTION_ACTION =
+	"Paragraphs added here appear in the agreement but aren't part of the standard blueprint.";
+
+const SIGNATURES_NOTE =
+	"Signatures are added automatically when the agreement is sent for signing.";
 
 const GROUP_ICON: Record<TokenGroup, typeof FileText> = {
 	record: FileText,
@@ -257,19 +308,16 @@ export function DocumentFillSplitView({
 		target.scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" });
 	}, [activeToken, html]);
 
-	const headings = useMemo(() => parseDocxHeadings(html), [html]);
 	const sectionIndex =
 		section === "added"
 			? groups.length
 			: groups.findIndex((row) => row.group === section);
 	const sectionTotal = groups.length + 1;
 	const activeGroup = groups.find((row) => row.group === section);
-	const clause =
-		section === "added"
-			? null
-			: clauseForGroup(section, headings);
 	const sectionTitle =
-		section === "added" ? "Added language" : GROUP_LABEL[section];
+		section === "added" ? "Optional paragraphs" : GROUP_LABEL[section];
+	const sectionAction =
+		section === "added" ? ADDED_SECTION_ACTION : GROUP_ACTION[section];
 
 	const onFieldFocus = (field: VisibleFillField) => {
 		const tokens = fieldTokens(field);
@@ -355,22 +403,17 @@ export function DocumentFillSplitView({
 				/>
 
 				<div className="min-w-0 flex-1 space-y-6 p-4 sm:p-6">
-				<div>
-					<p className="text-xs text-slate-500">
-						Section {sectionIndex + 1} of {sectionTotal}
-					</p>
-					<h2 className="text-xl font-semibold sidebar-gradient-text">
-						{sectionTitle}
-					</h2>
-					<p className="mt-1 text-sm text-slate-600">
-						Signatures are added when the agreement is sent for signing.
-					</p>
-					{clause && (
-						<p className="mt-3 inline-block rounded-full border border-blue/20 bg-blue/10 px-2 py-0.5 text-xs font-medium text-blue">
-							Updating clause {clause.number} · {clause.title}
+				{section !== "added" && (
+					<div>
+						<p className="text-xs text-slate-500">
+							Section {sectionIndex + 1} of {sectionTotal}
 						</p>
-					)}
-				</div>
+						<h2 className="text-xl font-semibold sidebar-gradient-text">
+							{sectionTitle}
+						</h2>
+						<p className="mt-1 text-sm text-slate-600">{sectionAction}</p>
+					</div>
+				)}
 
 				{activeGroup && (
 					<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -395,11 +438,51 @@ export function DocumentFillSplitView({
 				)}
 
 				{section === "added" && (
-					<div className="space-y-3">
-						<div className="flex items-center justify-between">
-							<p className="text-sm font-medium sidebar-gradient-text">
+					<div className="space-y-4">
+						<p className="text-xs text-slate-500">
+							Section {sectionIndex + 1} of {sectionTotal}
+						</p>
+						<div>
+							<h2 className="text-xl font-semibold sidebar-gradient-text">
 								Optional paragraphs
+							</h2>
+							<p className="mt-1 text-sm text-slate-600">
+								{ADDED_SECTION_ACTION}
 							</p>
+						</div>
+
+						{customBlocks.length === 0 ? (
+							<div className="flex min-h-28 items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50/60 px-4 py-8">
+								<p className="text-sm text-slate-500">
+									No optional paragraphs added yet
+								</p>
+							</div>
+						) : (
+							<div className="space-y-3">
+								{customBlocks.map((block) => (
+									<div key={block.id} className="flex items-end gap-2">
+										<Textarea
+											className={cn("min-h-20", FIELD)}
+											value={block.body}
+											onChange={(event) =>
+												onChangeBlock(block.id, event.target.value)
+											}
+											placeholder="Write the paragraph that should appear in the agreement…"
+										/>
+										<button
+											type="button"
+											className="mb-1 cursor-pointer rounded p-1 text-slate-400 transition-colors duration-200 hover:text-red focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
+											aria-label="Remove paragraph"
+											onClick={() => onRemoveBlock(block.id)}
+										>
+											<Trash2 className="h-4 w-4" />
+										</button>
+									</div>
+								))}
+							</div>
+						)}
+
+						<div className="flex justify-end">
 							<Button
 								type="button"
 								className="primary-btn cursor-pointer px-3 sm:px-4"
@@ -409,33 +492,16 @@ export function DocumentFillSplitView({
 								Add paragraph
 							</Button>
 						</div>
-						{customBlocks.length === 0 && (
-							<p className="text-sm text-slate-600">
-								Add a paragraph that is not in the blueprint.
-							</p>
-						)}
-						{customBlocks.map((block) => (
-							<div key={block.id} className="flex gap-2">
-								<Textarea
-									className={cn("min-h-20", FIELD)}
-									value={block.body}
-									onChange={(event) =>
-										onChangeBlock(block.id, event.target.value)
-									}
-								/>
-								<Button
-									type="button"
-									variant="outline"
-									className="primary-btn cursor-pointer px-2"
-									aria-label="Remove paragraph"
-									onClick={() => onRemoveBlock(block.id)}
-								>
-									<Trash2 className="h-4 w-4" />
-								</Button>
-							</div>
-						))}
 					</div>
 				)}
+
+				<div className="flex items-start gap-2 border-t border-slate-200 pt-4">
+					<Info
+						className="mt-0.5 h-4 w-4 shrink-0 text-slate-500"
+						aria-hidden
+					/>
+					<p className="text-sm text-slate-600">{SIGNATURES_NOTE}</p>
+				</div>
 				</div>
 			</aside>
 
@@ -514,6 +580,22 @@ function FillControl({
 		onFocus: (_event: FocusEvent) => onFocus(),
 	};
 
+	if (field.kind === "intake" && field.intakeField === "currency") {
+		return (
+			<div className={span}>
+				<Label className={labelClass}>{field.label}</Label>
+				<div className="mt-1">
+					<CurrencySelect
+						value={value || "USD"}
+						onValueChange={setValue}
+						amount={intake.amount}
+						triggerClassName={FIELD}
+					/>
+				</div>
+			</div>
+		);
+	}
+
 	if (field.kind === "intake" && field.intakeField === "department") {
 		return (
 			<div className={span}>
@@ -575,10 +657,23 @@ function FillControl({
 					onChange={(event) => setValue(parseAmountInput(event.target.value))}
 					{...focusProps}
 				/>
-				<p className="mt-1 text-xs text-slate-500">
-					Formats automatically in the document.
-				</p>
+				<UsdConversionHint
+					amount={value}
+					currencyCode={intake.currency || "USD"}
+				/>
 			</div>
+		);
+	}
+
+	if (field.kind === "token" && field.token === "ADDITIONAL_FAR_CLAUSES") {
+		return (
+			<FarClausePicker
+				value={value}
+				onChange={setValue}
+				onFocus={onFocus}
+				label={field.label}
+				labelClassName={labelClass}
+			/>
 		);
 	}
 
@@ -596,11 +691,63 @@ function FillControl({
 		);
 	}
 
+	if (field.dataType === "date") {
+		const selected = parseLocalIsoDate(value);
+		return (
+			<div className={span}>
+				<Label className={labelClass}>{field.label}</Label>
+				<Popover
+					onOpenChange={(open) => {
+						if (open) onFocus();
+					}}
+				>
+					<PopoverTrigger asChild>
+						<Button
+							type="button"
+							variant="outline"
+							className="mt-1 h-11 w-full justify-between bg-white text-sm font-normal border-slate-300 hover:border-blue-500"
+							{...focusProps}
+						>
+							{selected
+								? selected.toLocaleDateString("en-US", {
+										weekday: "short",
+										month: "short",
+										day: "numeric",
+										year: "numeric",
+									})
+								: `Select ${field.label.toLowerCase()}`}
+							<CalendarDays className="h-4 w-4 text-slate-500" />
+						</Button>
+					</PopoverTrigger>
+					<PopoverContent
+						className="w-auto overflow-hidden border-slate-200 p-0 shadow-lg"
+						align="start"
+					>
+						<DateCalendar
+							mode="single"
+							selected={selected}
+							disabled={(date) => {
+								const today = new Date();
+								today.setHours(0, 0, 0, 0);
+								const check = new Date(date);
+								check.setHours(0, 0, 0, 0);
+								return check < today;
+							}}
+							onSelect={(date) => {
+								if (date) setValue(toLocalIsoDate(date));
+							}}
+						/>
+					</PopoverContent>
+				</Popover>
+			</div>
+		);
+	}
+
 	return (
 		<div className={span}>
 			<Label className={labelClass}>{field.label}</Label>
 			<Input
-				type={field.dataType === "date" ? "date" : "text"}
+				type="text"
 				className={cn("mt-1", FIELD)}
 				value={value}
 				onChange={(event) => setValue(event.target.value)}

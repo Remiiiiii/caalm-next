@@ -55,6 +55,7 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
+import { CurrencySelect } from "@/components/ui/currency-select";
 import { Input } from "@/components/ui/input";
 import {
 	Popover,
@@ -395,17 +396,6 @@ const RISK_LEVELS = [
 	{ value: "high", label: "High" },
 	{ value: "medium", label: "Medium" },
 	{ value: "low", label: "Low" },
-];
-
-const CURRENCY_CODES = [
-	"USD",
-	"EUR",
-	"GBP",
-	"CAD",
-	"MXN",
-	"JPY",
-	"AUD",
-	"other",
 ];
 
 const PAYMENT_TERM_OPTIONS = [
@@ -4522,23 +4512,11 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																				Currency{" "}
 																				<span className="text-red">*</span>
 																			</FormLabel>
-																			<Select
-																				onValueChange={field.onChange}
+																			<CurrencySelect
 																				value={field.value}
-																			>
-																				<FormControl>
-																					<SelectTrigger className="bg-white border-slate-300">
-																						<SelectValue placeholder="Select currency" />
-																					</SelectTrigger>
-																				</FormControl>
-																				<SelectContent>
-																					{CURRENCY_CODES.map((code) => (
-																						<SelectItem key={code} value={code}>
-																							{code}
-																						</SelectItem>
-																					))}
-																				</SelectContent>
-																			</Select>
+																				onValueChange={field.onChange}
+																				amount={form.watch("amount")}
+																			/>
 																			<FormMessage />
 																		</FormItem>
 																	)}

@@ -34,10 +34,15 @@ export async function POST(request: NextRequest, context: RouteContext) {
 			);
 		}
 		const assembly = await previewWizard({ orgId: auth.orgId, payload });
-		const injected = assembly.sections
+		const injectedClauses = assembly.sections
 			.filter((section) => !section.skipped)
-			.map((section) => `${section.title}\n\n${section.body}`);
-		const pdf = await buildWizardPdf(payload, injected, auth.orgId);
+			.map((section) => ({
+				title: section.title,
+				body: section.body,
+			}));
+		const pdf = await buildWizardPdf(payload, injectedClauses, auth.orgId, {
+			forPreview: true,
+		});
 		const fileId = await uploadWizardDraftArtifact({
 			sessionId: session.$id,
 			kind: "preview",

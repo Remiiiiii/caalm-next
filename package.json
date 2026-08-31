@@ -104,6 +104,7 @@
 		"appwrite": "^22.4.1",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
+		"currency-code-to-country-flag": "^1.1.1",
 		"date-fns": "^4.1.0",
 		"date-fns-tz": "^3.2.0",
 		"date-holidays": "^3.26.8",

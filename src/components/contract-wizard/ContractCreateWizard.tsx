@@ -1,36 +1,54 @@
 "use client";
 
 import {
+	closestCenter,
+	DndContext,
+	type DragEndEvent,
+	KeyboardSensor,
+	PointerSensor,
+	useSensor,
+	useSensors,
+} from "@dnd-kit/core";
+import {
+	arrayMove,
+	SortableContext,
+	sortableKeyboardCoordinates,
+	useSortable,
+	verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
 	ArrowLeft,
 	ArrowRight,
-	ChevronDown,
-	ChevronUp,
+	FileCheck,
 	FileText,
+	FileBox,
+	GripVertical,
 	Inbox,
-	Plus,
-	Save,
+	Loader2,
 	Trash2,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BlueprintPickerGrid } from "@/components/contract-wizard/BlueprintPickerGrid";
 import { DocumentFillSplitView } from "@/components/contract-wizard/DocumentFillSplitView";
 import { InjectLibraryDialog } from "@/components/contract-wizard/InjectLibraryDialog";
 import { WizardDraftsList } from "@/components/contract-wizard/WizardDraftsList";
 import { WizardPdfPreview } from "@/components/contract-wizard/WizardPdfPreview";
 import { WizardStepper } from "@/components/contract-wizard/WizardStepper";
+import { SaveProgressCard } from "@/components/SaveProgressCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import type { BlueprintCatalogEntry } from "@/lib/templates/blueprint-catalog";
 import {
 	emptyWizardPayload,
 	injectClauseFamily,
 	injectTemplateSlots,
-	moveSection,
 } from "@/lib/templates/assemble-contract";
+import type { BlueprintCatalogEntry } from "@/lib/templates/blueprint-catalog";
 import { WIZARD_STEP_COUNT } from "@/lib/templates/constants";
 import { validateBlueprintTokens } from "@/lib/templates/token-schema";
 import type { Clause } from "@/types/clauses";
@@ -38,6 +56,7 @@ import type {
 	ContractTemplate,
 	WizardIntake,
 	WizardPayload,
+	WizardSection,
 	WizardSession,
 	WizardSessionSummary,
 } from "@/types/contract-templates";
@@ -47,11 +66,17 @@ async function readError(response: Response): Promise<string> {
 	return body.error || response.statusText || "Request failed";
 }
 
-function formatSavedAt(iso: string | null): string {
+function formatSavedAgo(iso: string | null, nowMs: number): string {
 	if (!iso) return "";
 	const date = new Date(iso);
 	if (Number.isNaN(date.getTime())) return "";
-	return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+	const seconds = Math.max(0, Math.round((nowMs - date.getTime()) / 1000));
+	if (seconds < 5) return "Saved just now";
+	if (seconds >= 60) {
+		const minutes = Math.round(seconds / 60);
+		return `Saved ${minutes} min ago`;
+	}
+	return `Saved ${seconds} s ago`;
 }
 
 export function ContractCreateWizard() {
@@ -75,6 +100,10 @@ export function ContractCreateWizard() {
 	const [pdfFileId, setPdfFileId] = useState<string | null>(null);
 	const [previewing, setPreviewing] = useState(false);
 	const [previewError, setPreviewError] = useState<string | null>(null);
+	const [nowMs, setNowMs] = useState(() => Date.now());
+	const [clauseTitlesByFamily, setClauseTitlesByFamily] = useState<
+		Record<string, string>
+	>({});
 	const lastSavedHash = useRef("");
 	const dirty = useRef(false);
 	const saveGen = useRef(0);
@@ -155,30 +184,36 @@ export function ContractCreateWizard() {
 		return summaries;
 	}, []);
 
-	const applyDraftSummaries = useCallback((summaries: WizardSessionSummary[]) => {
-		// #region agent log
-		fetch("http://127.0.0.1:7246/ingest/851d37c7-2223-45c1-89c0-a79ca1139a1d", {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				"X-Debug-Session-Id": "cb2714",
-			},
-			body: JSON.stringify({
-				sessionId: "cb2714",
-				hypothesisId: "H2",
-				location: "ContractCreateWizard.tsx:applyDraftSummaries",
-				message: "applying draft summaries to state",
-				data: {
-					summaryCount: summaries.length,
-					summaryIds: summaries.map((s) => s.$id),
+	const applyDraftSummaries = useCallback(
+		(summaries: WizardSessionSummary[]) => {
+			// #region agent log
+			fetch(
+				"http://127.0.0.1:7246/ingest/851d37c7-2223-45c1-89c0-a79ca1139a1d",
+				{
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						"X-Debug-Session-Id": "cb2714",
+					},
+					body: JSON.stringify({
+						sessionId: "cb2714",
+						hypothesisId: "H2",
+						location: "ContractCreateWizard.tsx:applyDraftSummaries",
+						message: "applying draft summaries to state",
+						data: {
+							summaryCount: summaries.length,
+							summaryIds: summaries.map((s) => s.$id),
+						},
+						timestamp: Date.now(),
+					}),
 				},
-				timestamp: Date.now(),
-			}),
-		}).catch(() => {});
-		// #endregion
-		setOpenDrafts(summaries);
-		setHasSavedDrafts(summaries.length > 0);
-	}, []);
+			).catch(() => {});
+			// #endregion
+			setOpenDrafts(summaries);
+			setHasSavedDrafts(summaries.length > 0);
+		},
+		[],
+	);
 
 	const sessionQuery = searchParams.get("session");
 	const templateQuery = searchParams.get("template");
@@ -276,14 +311,17 @@ export function ContractCreateWizard() {
 			if (opts?.quiet) setAutosaving(true);
 			else setSaving(true);
 			try {
-				const response = await fetch(`/api/contracts/wizard/${activeSession.$id}`, {
-					method: "PATCH",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({
-						payload: nextPayload,
-						currentStep: nextStep,
-					}),
-				});
+				const response = await fetch(
+					`/api/contracts/wizard/${activeSession.$id}`,
+					{
+						method: "PATCH",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({
+							payload: nextPayload,
+							currentStep: nextStep,
+						}),
+					},
+				);
 				if (!response.ok) throw new Error(await readError(response));
 				const body = await response.json();
 				if (gen !== saveGen.current) return;
@@ -295,13 +333,17 @@ export function ContractCreateWizard() {
 				payloadRef.current = body.session.payload;
 				lastSavedHash.current = JSON.stringify(body.session.payload);
 				dirty.current = false;
+				setNowMs(Date.now());
 			} catch (error) {
 				if (gen !== saveGen.current) return;
-				toast({
-					title: "Could not save progress",
-					description: error instanceof Error ? error.message : "Try again",
-					variant: "destructive",
-				});
+				// Quiet autosave stays silent; manual save still surfaces errors.
+				if (!opts?.quiet) {
+					toast({
+						title: "Could not save progress",
+						description: error instanceof Error ? error.message : "Try again",
+						variant: "destructive",
+					});
+				}
 			} finally {
 				if (gen === saveGen.current) {
 					setSaving(false);
@@ -323,6 +365,13 @@ export function ContractCreateWizard() {
 		return () => window.clearTimeout(handle);
 	}, [payload, session, loading, save]);
 
+	// Refresh relative “Saved Xs ago” while a draft is open.
+	useEffect(() => {
+		if (!session || !payload.lastSavedAt) return;
+		const handle = window.setInterval(() => setNowMs(Date.now()), 15_000);
+		return () => window.clearInterval(handle);
+	}, [session, payload.lastSavedAt]);
+
 	useEffect(() => {
 		const onLeave = (event: BeforeUnloadEvent) => {
 			if (!dirty.current) return;
@@ -340,7 +389,9 @@ export function ContractCreateWizard() {
 		try {
 			if (payload.draftPdfFileId) {
 				setPdfFileId(payload.draftPdfFileId);
-				setPdfUrl(`/api/contracts/wizard/${session.$id}/draft-file?kind=preview`);
+				setPdfUrl(
+					`/api/contracts/wizard/${session.$id}/draft-file?kind=preview`,
+				);
 			}
 			const response = await fetch(
 				`/api/contracts/wizard/${session.$id}/preview-pdf`,
@@ -366,6 +417,38 @@ export function ContractCreateWizard() {
 	useEffect(() => {
 		if (step === 3 && session && payload.blueprintId) void loadPdf();
 	}, [step, session, payload.blueprintId, loadPdf]);
+
+	// Resolve human clause titles for the inject list (familyId alone is a hex REF).
+	useEffect(() => {
+		if (step !== 2) return;
+		let cancelled = false;
+		void (async () => {
+			try {
+				const response = await fetch(
+					"/api/contracts/wizard?publishedClauses=1",
+				);
+				const body = await response.json().catch(() => ({}));
+				if (cancelled || !response.ok) return;
+				const map: Record<string, string> = {};
+				for (const clause of body.items || []) {
+					if (
+						clause &&
+						typeof clause.familyId === "string" &&
+						typeof clause.title === "string" &&
+						clause.title.trim()
+					) {
+						map[clause.familyId] = clause.title;
+					}
+				}
+				setClauseTitlesByFamily(map);
+			} catch {
+				// Keep empty map; cards fall back to the family id.
+			}
+		})();
+		return () => {
+			cancelled = true;
+		};
+	}, [step]);
 
 	const goNext = async () => {
 		if (step === 0 && !payload.blueprintId) {
@@ -490,25 +573,28 @@ export function ContractCreateWizard() {
 		async (ids: string[]) => {
 			if (ids.length === 0) return 0;
 			// #region agent log
-			fetch("http://127.0.0.1:7246/ingest/851d37c7-2223-45c1-89c0-a79ca1139a1d", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					"X-Debug-Session-Id": "cb2714",
-				},
-				body: JSON.stringify({
-					sessionId: "cb2714",
-					hypothesisId: "H3",
-					location: "ContractCreateWizard.tsx:deleteDrafts:start",
-					message: "deleteDrafts called",
-					data: {
-						requestIds: ids,
-						openDraftsLength: openDrafts.length,
-						openDraftIds: openDrafts.map((d) => d.$id),
+			fetch(
+				"http://127.0.0.1:7246/ingest/851d37c7-2223-45c1-89c0-a79ca1139a1d",
+				{
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						"X-Debug-Session-Id": "cb2714",
 					},
-					timestamp: Date.now(),
-				}),
-			}).catch(() => {});
+					body: JSON.stringify({
+						sessionId: "cb2714",
+						hypothesisId: "H3",
+						location: "ContractCreateWizard.tsx:deleteDrafts:start",
+						message: "deleteDrafts called",
+						data: {
+							requestIds: ids,
+							openDraftsLength: openDrafts.length,
+							openDraftIds: openDrafts.map((d) => d.$id),
+						},
+						timestamp: Date.now(),
+					}),
+				},
+			).catch(() => {});
 			// #endregion
 			const response = await fetch("/api/contracts/wizard", {
 				method: "DELETE",
@@ -527,29 +613,32 @@ export function ContractCreateWizard() {
 			}
 
 			// #region agent log
-			fetch("http://127.0.0.1:7246/ingest/851d37c7-2223-45c1-89c0-a79ca1139a1d", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					"X-Debug-Session-Id": "cb2714",
-				},
-				body: JSON.stringify({
-					sessionId: "cb2714",
-					hypothesisId: "H1,H5",
-					location: "ContractCreateWizard.tsx:deleteDrafts:response",
-					message: "DELETE response received",
-					data: {
-						deleted,
-						failed: body.failed ?? [],
-						summariesInBody: body.summaries?.length ?? null,
-						summaryIdsInBody: body.summaries?.map((s) => s.$id) ?? null,
-						overlapDeletedStillInSummaries: (body.summaries ?? []).filter(
-							(s) => deleted.includes(s.$id),
-						).map((s) => s.$id),
+			fetch(
+				"http://127.0.0.1:7246/ingest/851d37c7-2223-45c1-89c0-a79ca1139a1d",
+				{
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						"X-Debug-Session-Id": "cb2714",
 					},
-					timestamp: Date.now(),
-				}),
-			}).catch(() => {});
+					body: JSON.stringify({
+						sessionId: "cb2714",
+						hypothesisId: "H1,H5",
+						location: "ContractCreateWizard.tsx:deleteDrafts:response",
+						message: "DELETE response received",
+						data: {
+							deleted,
+							failed: body.failed ?? [],
+							summariesInBody: body.summaries?.length ?? null,
+							summaryIdsInBody: body.summaries?.map((s) => s.$id) ?? null,
+							overlapDeletedStillInSummaries: (body.summaries ?? [])
+								.filter((s) => deleted.includes(s.$id))
+								.map((s) => s.$id),
+						},
+						timestamp: Date.now(),
+					}),
+				},
+			).catch(() => {});
 			// #endregion
 
 			// Instant list update while the server response is applied.
@@ -764,6 +853,10 @@ export function ContractCreateWizard() {
 	};
 
 	const injectClause = (clause: Clause) => {
+		setClauseTitlesByFamily((current) => ({
+			...current,
+			[clause.familyId]: clause.title,
+		}));
 		const next = {
 			...payload,
 			sections: injectClauseFamily(payload.sections, clause.familyId),
@@ -773,11 +866,36 @@ export function ContractCreateWizard() {
 	};
 
 	const enabledCount = payload.sections.filter((row) => row.enabled).length;
-	const savedLabel = payload.lastSavedAt
-		? `Saved at ${formatSavedAt(payload.lastSavedAt)}`
-		: autosaving
-			? "Saving…"
-			: "";
+	const isPersistBusy = saving || autosaving;
+	const showSaveStatus = Boolean(session) && step > 0;
+	const sectionSortIds = useMemo(
+		() => payload.sections.map((section) => section.familyId),
+		[payload.sections],
+	);
+	const sectionSensors = useSensors(
+		useSensor(PointerSensor, {
+			activationConstraint: { distance: 8 },
+		}),
+		useSensor(KeyboardSensor, {
+			coordinateGetter: sortableKeyboardCoordinates,
+		}),
+	);
+
+	const handleSectionDragEnd = (event: DragEndEvent) => {
+		const { active, over } = event;
+		if (!over || active.id === over.id) return;
+		const oldIndex = payload.sections.findIndex(
+			(section) => section.familyId === active.id,
+		);
+		const newIndex = payload.sections.findIndex(
+			(section) => section.familyId === over.id,
+		);
+		if (oldIndex < 0 || newIndex < 0) return;
+		setPayload({
+			...payload,
+			sections: arrayMove(payload.sections, oldIndex, newIndex),
+		});
+	};
 
 	const showBootSkeleton = loading && !session && openDrafts.length === 0;
 
@@ -814,6 +932,29 @@ export function ContractCreateWizard() {
 						<Inbox className="h-4 w-4" />
 						View saved drafts
 					</Button>
+				</div>
+			)}
+
+			{session && step > 0 && step < 3 && (
+				<div className="mb-4">
+					{showSaveStatus && isPersistBusy && (
+						<p className="mb-2 flex items-center justify-end gap-1.5 text-sm text-slate-600">
+							<Loader2 className="h-3.5 w-3.5 animate-spin" />
+							Saving...
+						</p>
+					)}
+					{showSaveStatus && !isPersistBusy && payload.lastSavedAt && (
+						<p className="mb-2 flex items-center justify-end gap-1.5 text-xs text-slate-600">
+							<FileCheck className="h-3.5 w-3.5 text-green" />
+							{formatSavedAgo(payload.lastSavedAt, nowMs)}
+						</p>
+					)}
+					<SaveProgressCard
+						compact
+						description="Save manually anytime to pick up where you left off."
+						onSave={() => void save(payload, step)}
+						isSaving={isPersistBusy}
+					/>
 				</div>
 			)}
 
@@ -876,15 +1017,15 @@ export function ContractCreateWizard() {
 							<div className="flex flex-wrap items-center justify-between gap-3">
 								<p className="text-sm text-slate-600">
 									{enabledCount} extra clause
-									{enabledCount === 1 ? "" : "s"} will append to the
-									blueprint. Inject more at any time.
+									{enabledCount === 1 ? "" : "s"} will append to the blueprint.
+									Inject more at any time.
 								</p>
 								<Button
 									type="button"
 									className="primary-btn cursor-pointer px-3 sm:px-4"
 									onClick={() => setInjectOpen(true)}
 								>
-									<Plus className="h-4 w-4" />
+									<FileBox className="h-4 w-4" />
 									Inject template or clause
 								</Button>
 							</div>
@@ -898,101 +1039,44 @@ export function ContractCreateWizard() {
 									</p>
 								</div>
 							) : (
-								<ul className="space-y-3">
-									{payload.sections.map((section, index) => (
-										<li
-											key={`${section.familyId}-${index}`}
-											className="rounded-lg border border-slate-200 bg-white p-4"
-										>
-											<div className="flex flex-wrap items-start justify-between gap-3">
-												<div>
-													<p className="font-medium text-slate-700">
-														{index + 1}. {section.familyId}
-													</p>
-													<p className="mt-1 text-xs text-slate-500">
-														{section.source === "injected"
-															? "Injected along the way"
-															: "From a recipe"}
-														{section.required ? " · required" : " · optional"}
-													</p>
-												</div>
-												<div className="flex items-center gap-2">
-													<Button
-														type="button"
-														variant="outline"
-														className="primary-btn cursor-pointer px-2"
-														aria-label="Move up"
-														onClick={() =>
-															setPayload({
-																...payload,
-																sections: moveSection(
-																	payload.sections,
-																	index,
-																	-1,
-																),
-															})
-														}
-													>
-														<ChevronUp className="h-4 w-4" />
-													</Button>
-													<Button
-														type="button"
-														variant="outline"
-														className="primary-btn cursor-pointer px-2"
-														aria-label="Move down"
-														onClick={() =>
-															setPayload({
-																...payload,
-																sections: moveSection(
-																	payload.sections,
-																	index,
-																	1,
-																),
-															})
-														}
-													>
-														<ChevronDown className="h-4 w-4" />
-													</Button>
-													{!section.required && (
-														<Button
-															type="button"
-															variant="outline"
-															className="primary-btn cursor-pointer px-2"
-															aria-label="Remove"
-															onClick={() =>
-																setPayload({
-																	...payload,
-																	sections: payload.sections.filter(
-																		(_, i) => i !== index,
-																	),
-																})
-															}
-														>
-															<Trash2 className="h-4 w-4" />
-														</Button>
-													)}
-												</div>
-											</div>
-											<label className="mt-3 flex cursor-pointer items-center gap-2 text-sm text-slate-700">
-												<input
-													type="checkbox"
-													className="cursor-pointer"
-													checked={section.enabled}
-													disabled={section.required}
-													onChange={(event) => {
+								<DndContext
+									sensors={sectionSensors}
+									collisionDetection={closestCenter}
+									onDragEnd={handleSectionDragEnd}
+								>
+									<SortableContext
+										items={sectionSortIds}
+										strategy={verticalListSortingStrategy}
+									>
+										<ul className="space-y-3">
+											{payload.sections.map((section, index) => (
+												<SortableInjectSectionItem
+													key={section.familyId}
+													section={section}
+													index={index}
+													title={
+														clauseTitlesByFamily[section.familyId] ||
+														section.familyId
+													}
+													onToggleEnabled={(enabled) => {
 														const sections = payload.sections.map((row, i) =>
-															i === index
-																? { ...row, enabled: event.target.checked }
-																: row,
+															i === index ? { ...row, enabled } : row,
 														);
 														setPayload({ ...payload, sections });
 													}}
+													onRemove={() =>
+														setPayload({
+															...payload,
+															sections: payload.sections.filter(
+																(_, i) => i !== index,
+															),
+														})
+													}
 												/>
-												Include in the document
-											</label>
-										</li>
-									))}
-								</ul>
+											))}
+										</ul>
+									</SortableContext>
+								</DndContext>
 							)}
 						</div>
 					)}
@@ -1007,14 +1091,13 @@ export function ContractCreateWizard() {
 							error={previewError}
 						/>
 					)}
-
 				</CardContent>
 				<div
 					className={`flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 px-4 py-4 sm:px-6 ${
 						step >= 1 ? "sticky bottom-0 z-10" : ""
 					}`}
 				>
-					<div className="flex items-center gap-3">
+					<div className="flex flex-wrap items-center gap-3">
 						{step > 0 && (
 							<Button
 								type="button"
@@ -1026,21 +1109,6 @@ export function ContractCreateWizard() {
 								<ArrowLeft className="h-4 w-4" />
 								Back
 							</Button>
-						)}
-						{step > 0 && (
-							<Button
-								type="button"
-								variant="outline"
-								className="primary-btn cursor-pointer px-3 sm:px-4"
-								disabled={!session || saving}
-								onClick={() => void save(payload, step)}
-							>
-								<Save className="h-4 w-4" />
-								Save draft
-							</Button>
-						)}
-						{step === 3 && savedLabel && (
-							<span className="text-xs text-slate-500">{savedLabel}</span>
 						)}
 					</div>
 					{step < 3 ? (
@@ -1104,5 +1172,101 @@ export function ContractCreateWizard() {
 				onInjectClause={injectClause}
 			/>
 		</div>
+	);
+}
+
+type SortableInjectSectionItemProps = {
+	section: WizardSection;
+	index: number;
+	title: string;
+	onToggleEnabled: (enabled: boolean) => void;
+	onRemove: () => void;
+};
+
+function SortableInjectSectionItem({
+	section,
+	index,
+	title,
+	onToggleEnabled,
+	onRemove,
+}: SortableInjectSectionItemProps) {
+	const {
+		attributes,
+		listeners,
+		setNodeRef,
+		transform,
+		transition,
+		isDragging,
+	} = useSortable({ id: section.familyId });
+
+	const style = {
+		transform: CSS.Transform.toString(transform),
+		transition,
+	};
+
+	const sourceLabel =
+		section.source === "injected" ? "Injected along the way" : "From a recipe";
+	const optionLabel = section.required ? "Required" : "Optional";
+
+	return (
+		<li
+			ref={setNodeRef}
+			style={style}
+			className={`rounded-lg border border-slate-200 bg-white p-4 transition-shadow duration-200 ${
+				isDragging ? "opacity-50 shadow-lg" : "shadow-sm"
+			}`}
+		>
+			<div className="flex items-start justify-between gap-4">
+				<div className="min-w-0 flex-1">
+					<p className="font-semibold text-slate-700">
+						{index + 1}. {title}
+					</p>
+					<p className="mt-1 text-xs font-medium tracking-wide text-slate-500 uppercase">
+						REF {section.familyId}
+					</p>
+					<div className="mt-2 flex flex-wrap gap-1.5">
+						<span className="inline-block rounded border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-medium tracking-wide text-slate-500 uppercase">
+							{sourceLabel}
+						</span>
+						<span className="inline-block rounded border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-medium tracking-wide text-slate-500 uppercase">
+							{optionLabel}
+						</span>
+					</div>
+					<label className="mt-3 flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+						<Checkbox
+							checked={section.enabled}
+							disabled={section.required}
+							onCheckedChange={(checked) => onToggleEnabled(checked === true)}
+							className="border-[0.25px] border-slate-300 data-[state=checked]:border-green data-[state=checked]:bg-green data-[state=checked]:text-white"
+						/>
+						Include in the document
+					</label>
+				</div>
+				<div className="flex shrink-0 items-center gap-2 self-center">
+					<div
+						{...attributes}
+						{...listeners}
+						className="cursor-grab rounded-md border border-slate-200 p-2 text-slate-400 transition-colors duration-200 hover:bg-slate-50 hover:text-[#0f5384] active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
+						title="Drag to reorder"
+						aria-label="Drag to reorder"
+					>
+						<GripVertical className="h-4 w-4" />
+					</div>
+					{!section.required && (
+						<>
+							<div className="h-8 w-px bg-slate-200" aria-hidden />
+							<button
+								type="button"
+								aria-label="Remove"
+								className="cursor-pointer rounded-md border border-red/30 p-2 text-red transition-colors duration-200 hover:bg-red/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red/40"
+								onClick={onRemove}
+							>
+								<Trash2 className="h-4 w-4" />
+							</button>
+						</>
+					)}
+				</div>
+			</div>
+		</li>
 	);
 }

@@ -199,6 +199,26 @@ export function defineToken(token: string): TokenFieldDef {
 			schemaField: "governingLaw",
 		};
 	}
+	if (token === "ADDITIONAL_FAR_CLAUSES") {
+		return {
+			token,
+			label: "Additional FAR clauses",
+			group: "legal",
+			dataType: "longtext",
+			required: false,
+			source: "manual",
+		};
+	}
+	if (token === "SCOPE_OF_WORK") {
+		return {
+			token,
+			label: "Statement of work",
+			group: "terms",
+			dataType: "longtext",
+			required: false,
+			source: "manual",
+		};
+	}
 
 	return {
 		token,

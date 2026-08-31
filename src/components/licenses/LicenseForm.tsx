@@ -21,6 +21,7 @@ import {
 	FormLabel,
 	FormMessage,
 } from "@/components/ui/form";
+import { CurrencySelect } from "@/components/ui/currency-select";
 import { Input } from "@/components/ui/input";
 import {
 	Select,
@@ -367,21 +368,11 @@ export default function LicenseForm({
 									render={({ field }) => (
 										<FormItem>
 											<FormLabel>Currency</FormLabel>
-											<Select
-												onValueChange={field.onChange}
+											<CurrencySelect
 												value={field.value || "USD"}
-											>
-												<FormControl>
-													<SelectTrigger>
-														<SelectValue />
-													</SelectTrigger>
-												</FormControl>
-												<SelectContent>
-													<SelectItem value="USD">USD</SelectItem>
-													<SelectItem value="EUR">EUR</SelectItem>
-													<SelectItem value="GBP">GBP</SelectItem>
-												</SelectContent>
-											</Select>
+												onValueChange={field.onChange}
+												amount={form.watch("cost")}
+											/>
 											<FormMessage />
 										</FormItem>
 									)}

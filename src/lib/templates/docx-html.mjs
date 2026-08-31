@@ -129,6 +129,30 @@ function normalizeLetterheadOrgParts(parts) {
 	});
 }
 
+/** Drop orphan bullets left when a list token (e.g. SCOPE_OF_WORK) is still empty. */
+export function stripEmptyPreviewListItems(html) {
+	let next = html.replace(
+		/<li\b[^>]*>((?:(?!<\/li>)[\s\S])*?)<\/li>/gi,
+		(full, inner) => {
+			const text = String(inner)
+				.replace(/<br\s*\/?>/gi, "")
+				.replace(/<p\b[^>]*>\s*<\/p>/gi, "")
+				.replace(
+					/<span\b[^>]*class="[^"]*docx-token[^"]*"[^>]*>\s*\{\{[A-Za-z0-9_]+\}\}\s*<\/span>/gi,
+					"",
+				)
+				.replace(/\{\{[A-Za-z0-9_]+\}\}/g, "")
+				.replace(/&nbsp;/gi, " ")
+				.replace(/<[^>]+>/g, "")
+				.replace(/\s+/g, "")
+				.trim();
+			return text ? full : "";
+		},
+	);
+	next = next.replace(/<(ul|ol)\b[^>]*>\s*<\/\1>/gi, "");
+	return next;
+}
+
 export function layoutDocxHtml(html) {
 	let next = html.replace(/<p>\s*<\/p>/g, "");
 	next = next.replace(
@@ -181,7 +205,7 @@ export function layoutDocxHtml(html) {
 		/(<p class="docx-heading"><strong>\s*1\.)/,
 		'<hr class="docx-rule" />$1',
 	);
-	return next;
+	return stripEmptyPreviewListItems(next);
 }
 
 export async function docxBufferToHtml(docx, opts) {

@@ -66,6 +66,18 @@ describe("layoutDocxHtml letterhead", () => {
 		expect(laidOut).toContain("docx-letterhead-org");
 		expect(laidOut).toContain("docx-token");
 	});
+
+	it("removes empty list bullets left by blank statement-of-work tokens", () => {
+		const html = [
+			"<p><strong>5. STATEMENT OF WORK</strong></p>",
+			"<ul><li>Keep this item</li><li></li><li><p></p></li><li><span class=\"docx-token\">{{SCOPE_OF_WORK}}</span></li></ul>",
+		].join("");
+		const laidOut = layoutDocxHtml(html);
+		expect(laidOut).toContain("Keep this item");
+		expect(laidOut).not.toMatch(/<li>\s*<\/li>/);
+		expect(laidOut).not.toContain("{{SCOPE_OF_WORK}}");
+		expect(laidOut.match(/<li\b/g)?.length).toBe(1);
+	});
 });
 
 describe("isLetterheadOrgPart", () => {

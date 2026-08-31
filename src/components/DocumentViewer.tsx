@@ -1,5 +1,7 @@
 import {
 	Calendar,
+	ChevronLeft,
+	ChevronRight,
 	FileImage,
 	FileSpreadsheet,
 	FileText,
@@ -7,6 +9,8 @@ import {
 	Lightbulb,
 	Loader2,
 	Minimize2,
+	Minus,
+	Plus,
 	Presentation,
 	Send,
 	Sparkles,
@@ -14,13 +18,17 @@ import {
 import Image from "next/image";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Document, Page, pdfjs } from "react-pdf";
 import { useDocumentViewer } from "@/hooks/useDocumentViewer";
-import { fetchUserNamesByIds } from "@/lib/actions/user.actions";
 import { convertFileSize } from "@/lib/utils";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Textarea } from "./ui/textarea";
+import "react-pdf/dist/Page/AnnotationLayer.css";
+import "react-pdf/dist/Page/TextLayer.css";
+
+// Use pdf.js so Adobe/Gemini Summarize never appears in the preview pane.
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 interface DocumentViewerProps {
 	isOpen: boolean;
@@ -45,6 +53,45 @@ interface ChatMessage {
 	timestamp: Date;
 }
 
+/** Browser-side bytes → base64 without blowing the call stack on large PDFs. */
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+	const bytes = new Uint8Array(buffer);
+	let binary = "";
+	const chunkSize = 0x8000;
+	for (let i = 0; i < bytes.length; i += chunkSize) {
+		binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+	}
+	return btoa(binary);
+}
+
+/**
+ * Cookie-gated draft URLs (wizard preview) can't be fetched from the server.
+ * Pull the PDF in the browser, then extract text via the API.
+ */
+async function extractPdfTextInBrowser(
+	fileUrl: string,
+	fileName: string,
+): Promise<string | undefined> {
+	try {
+		const pdfResponse = await fetch(fileUrl, { credentials: "include" });
+		if (!pdfResponse.ok) return undefined;
+		const pdfBase64 = arrayBufferToBase64(await pdfResponse.arrayBuffer());
+		const extractResponse = await fetch("/api/extract-pdf-text", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ pdfBase64, fileName }),
+		});
+		if (!extractResponse.ok) return undefined;
+		const body = await extractResponse.json().catch(() => ({}));
+		return typeof body.text === "string" && body.text.trim()
+			? body.text
+			: undefined;
+	} catch (error) {
+		console.error("Browser PDF extract failed:", error);
+		return undefined;
+	}
+}
+
 const DocumentViewer: React.FC<DocumentViewerProps> = ({
 	isOpen,
 	onClose,
@@ -60,9 +107,12 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 	const [uploading, setUploading] = useState(false);
 	const [welcomeMessageLoaded, setWelcomeMessageLoaded] = useState(false);
 	const [showAIAssistant, setShowAIAssistant] = useState(false);
-	const [creatorName, setCreatorName] = useState<string>("");
 	const [documentSummary, setDocumentSummary] = useState<string>("");
 	const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+	const [pdfNumPages, setPdfNumPages] = useState(0);
+	const [pdfPageNumber, setPdfPageNumber] = useState(1);
+	const [pdfScale, setPdfScale] = useState(1);
+	const [pdfViewerFile, setPdfViewerFile] = useState<string | null>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -89,10 +139,53 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 			setIsLoading(false);
 			setShowUploadPrompt(false);
 			setWelcomeMessageLoaded(false);
-			setShowAIAssistant(false);
+			// Ask CAALM owns summarize — open the panel immediately.
+			setShowAIAssistant(true);
 			setDocumentSummary("");
+			setPdfNumPages(0);
+			setPdfPageNumber(1);
+			setPdfScale(1);
+			setPdfViewerFile(null);
 		}
 	}, [isOpen]);
+
+	// Auth-gated PDF URLs: fetch with cookies, then hand a blob URL to pdf.js.
+	useEffect(() => {
+		if (!isOpen || file.type.toLowerCase() !== "pdf" || !file.url) {
+			return;
+		}
+		if (
+			file.url.startsWith("blob:") ||
+			file.url.startsWith("data:") ||
+			file.url.startsWith("file://")
+		) {
+			setPdfViewerFile(file.url);
+			return;
+		}
+
+		let cancelled = false;
+		let blobUrl: string | null = null;
+		void (async () => {
+			try {
+				const response = await fetch(file.url, { credentials: "include" });
+				if (cancelled || !response.ok) {
+					if (!cancelled) setPdfViewerFile(file.url);
+					return;
+				}
+				const blob = await response.blob();
+				if (cancelled) return;
+				blobUrl = URL.createObjectURL(blob);
+				setPdfViewerFile(blobUrl);
+			} catch {
+				if (!cancelled) setPdfViewerFile(file.url);
+			}
+		})();
+
+		return () => {
+			cancelled = true;
+			if (blobUrl) URL.revokeObjectURL(blobUrl);
+		};
+	}, [isOpen, file.url, file.type]);
 
 	// Trigger file content extraction and AI analysis when document viewer opens
 	useEffect(() => {
@@ -210,10 +303,24 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 			formatted = breakIntoParagraphs(formatted);
 		}
 
+		// Markdown ## / # headings (Gemini-style structured summary)
+		formatted = formatted.replace(
+			/^###\s+(.+)$/gm,
+			'<strong class="mb-1 mt-3 block text-sm font-semibold text-slate-800">$1</strong>',
+		);
+		formatted = formatted.replace(
+			/^##\s+(.+)$/gm,
+			'<strong class="mb-2 mt-4 block text-base font-semibold text-slate-800">$1</strong>',
+		);
+		formatted = formatted.replace(
+			/^#\s+(.+)$/gm,
+			'<strong class="mb-2 mt-4 block text-lg font-semibold text-slate-800">$1</strong>',
+		);
+
 		// First, handle section headers like "**Key Sections to Review:**" before processing other content
 		formatted = formatted.replace(
 			/^\*\*([^*]+?)\*\*:?\s*$/gm,
-			'<strong class="block mb-0 mt-3 text-base font-semibold sidebar-gradient-text">$1</strong>',
+			'<strong class="mb-0 mt-3 block text-base font-semibold text-slate-800">$1</strong>',
 		);
 
 		// Split by double line breaks first to handle sections
@@ -233,11 +340,11 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 					let processedContent = content
 						.replace(
 							/\*\*([^*]+?)\*\*/g,
-							'<strong class="font-semibold sidebar-gradient-text">$1</strong>',
+							'<strong class="font-semibold text-slate-800">$1</strong>',
 						)
 						.replace(
 							/__([^_]+?)__/g,
-							'<strong class="font-semibold sidebar-gradient-text">$1</strong>',
+							'<strong class="font-semibold text-slate-800">$1</strong>',
 						);
 
 					// Process italic text
@@ -245,7 +352,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 						.replace(/(?<!\*)\*([^*]+?)\*(?!\*)/g, "<em>$1</em>")
 						.replace(/(?<!_)_([^_]+?)_(?!_)/g, "<em>$1</em>");
 
-					return `<div class="${indent} mb-2 flex items-start"><span class="mr-2 text-gray-600 flex-shrink-0">•</span><span class="flex-1">${processedContent.trim()}</span></div>`;
+					return `<div class="${indent} mb-2 flex items-start"><span class="mr-2 text-gray-600 shrink-0">•</span><span class="flex-1">${processedContent.trim()}</span></div>`;
 				},
 			);
 
@@ -260,29 +367,29 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 					let processedContent = content
 						.replace(
 							/\*\*([^*]+?)\*\*/g,
-							'<strong class="font-semibold sidebar-gradient-text">$1</strong>',
+							'<strong class="font-semibold text-slate-800">$1</strong>',
 						)
 						.replace(
 							/__([^_]+?)__/g,
-							'<strong class="font-semibold sidebar-gradient-text">$1</strong>',
+							'<strong class="font-semibold text-slate-800">$1</strong>',
 						);
 
 					processedContent = processedContent
 						.replace(/(?<!\*)\*([^*]+?)\*(?!\*)/g, "<em>$1</em>")
 						.replace(/(?<!_)_([^_]+?)_(?!_)/g, "<em>$1</em>");
 
-					return `<div class="${indent} mb-2 flex items-start"><span class="mr-2 font-semibold text-gray-700 flex-shrink-0">${number}</span><span class="flex-1">${processedContent.trim()}</span></div>`;
+					return `<div class="${indent} mb-2 flex items-start"><span class="mr-2 font-semibold text-gray-700 shrink-0">${number}</span><span class="flex-1">${processedContent.trim()}</span></div>`;
 				},
 			);
 
 			// Process any remaining bold text in regular paragraphs
 			sectionText = sectionText.replace(
 				/\*\*([^*]+?)\*\*/g,
-				'<strong class="font-semibold sidebar-gradient-text">$1</strong>',
+				'<strong class="font-semibold text-slate-800">$1</strong>',
 			);
 			sectionText = sectionText.replace(
 				/__([^_]+?)__/g,
-				'<strong class="font-semibold sidebar-gradient-text">$1</strong>',
+				'<strong class="font-semibold text-slate-800">$1</strong>',
 			);
 
 			// Process italic text
@@ -327,7 +434,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 		// Process any remaining bold text
 		formatted = formatted.replace(
 			/\*\*([^*]+?)\*\*/g,
-			'<strong class="font-semibold sidebar-gradient-text">$1</strong>',
+			'<strong class="font-semibold text-slate-800">$1</strong>',
 		);
 
 		// Process any remaining italic text
@@ -342,8 +449,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 
 		setIsGeneratingSummary(true);
 		try {
-			// Get file content if available
-			const contentToAnalyze = fileContent?.content;
+			let contentToAnalyze = fileContent?.content;
 			let urlToUse = file.url;
 
 			// If it's a local PDF and we have extracted content, use that
@@ -355,6 +461,19 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 				urlToUse = "";
 			}
 
+			// Auth-gated preview URLs: extract in the browser first so Gemini gets real text.
+			if (
+				!contentToAnalyze &&
+				file.type.toLowerCase() === "pdf" &&
+				file.url &&
+				!file.url.startsWith("file://") &&
+				!file.url.startsWith("blob:") &&
+				!file.url.startsWith("data:")
+			) {
+				contentToAnalyze = await extractPdfTextInBrowser(file.url, file.name);
+				if (contentToAnalyze) urlToUse = "";
+			}
+
 			const response = await fetch("/api/ai-analyze", {
 				method: "POST",
 				headers: {
@@ -364,7 +483,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 					action: "analyze",
 					fileName: file.name,
 					fileType: file.type,
-					fileUrl: urlToUse,
+					fileUrl: urlToUse || undefined,
 					fileContent: contentToAnalyze,
 				}),
 			});
@@ -409,43 +528,19 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 		}
 	}, [analyzeWithAI]);
 
-	// Initialize with welcome message and suggested questions when component opens
+	// Initialize with welcome message and structured summary when component opens
 	useEffect(() => {
 		if (isOpen && !welcomeMessageLoaded && chatMessages.length === 0) {
+			void generateSummary();
 			analyze();
 		}
-	}, [isOpen, welcomeMessageLoaded, chatMessages.length, analyze]);
-
-	// Fetch creator's full name
-	useEffect(() => {
-		const fetchCreatorName = async () => {
-			if (!file.createdBy) {
-				setCreatorName("");
-				return;
-			}
-
-			try {
-				const users = await fetchUserNamesByIds([file.createdBy]);
-				if (users && users.length > 0) {
-					const user =
-						users.find(
-							(u) =>
-								u?.$id === file.createdBy || u?.accountId === file.createdBy,
-						) || users[0];
-					setCreatorName(user?.fullName || "Unknown");
-				} else {
-					setCreatorName("Unknown");
-				}
-			} catch (error) {
-				console.error("Failed to fetch creator name:", error);
-				setCreatorName("Unknown");
-			}
-		};
-
-		if (isOpen && file.createdBy) {
-			fetchCreatorName();
-		}
-	}, [isOpen, file.createdBy]);
+	}, [
+		isOpen,
+		welcomeMessageLoaded,
+		chatMessages.length,
+		analyze,
+		generateSummary,
+	]);
 
 	const handleSendMessage = async ({
 		message: overrideMessage,
@@ -465,28 +560,29 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 		setIsLoading(true);
 
 		try {
-			// For PDFs, use the extracted content if available
-			const contentToAnalyze = fileContent;
+			// Prefer extracted text; for auth-gated PDFs, extract in the browser first.
+			let contentToAnalyze = fileContent?.content as string | undefined;
 			let urlToUse = file.url;
 
-			// If it's a local PDF and we have extracted content, use that
 			if (
 				file.type.toLowerCase() === "pdf" &&
 				file.url.startsWith("file://") &&
 				fileContent
 			) {
-				urlToUse = ""; // Don't pass the file:// URL to the AI API
+				urlToUse = "";
 			}
 
-			console.log("Sending AI question request:", {
-				action: "question",
-				question: message,
-				fileName: file.name,
-				fileType: file.type,
-				fileUrl: urlToUse,
-				hasFileContent: !!contentToAnalyze,
-				fileContentLength: contentToAnalyze?.content?.length || 0,
-			});
+			if (
+				!contentToAnalyze &&
+				file.type.toLowerCase() === "pdf" &&
+				file.url &&
+				!file.url.startsWith("file://") &&
+				!file.url.startsWith("blob:") &&
+				!file.url.startsWith("data:")
+			) {
+				contentToAnalyze = await extractPdfTextInBrowser(file.url, file.name);
+				if (contentToAnalyze) urlToUse = "";
+			}
 
 			const response = await fetch("/api/ai-analyze", {
 				method: "POST",
@@ -498,7 +594,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 					question: message,
 					fileName: file.name,
 					fileType: file.type,
-					fileUrl: urlToUse,
+					fileUrl: urlToUse || undefined,
 					fileContent: contentToAnalyze,
 				}),
 			});
@@ -710,26 +806,115 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 			}
 
 			return (
-				<div className="h-full flex flex-col">
-					{isPreviewLoading && (
-						<div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
-							<div className="text-center">
-								<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-								<p className="text-sm text-gray-500">Loading PDF...</p>
-							</div>
+				<div className="relative flex h-full flex-col bg-slate-50">
+					<div className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-200 bg-white px-3 py-2">
+						<div className="flex items-center gap-1">
+							<Button
+								type="button"
+								variant="outline"
+								size="icon"
+								className="h-8 w-8 cursor-pointer"
+								disabled={pdfPageNumber <= 1}
+								onClick={() =>
+									setPdfPageNumber((p) => Math.max(1, p - 1))
+								}
+								aria-label="Previous page"
+							>
+								<ChevronLeft className="h-4 w-4" />
+							</Button>
+							<span className="min-w-18 text-center text-xs text-slate-600 tabular-nums">
+								{pdfNumPages > 0
+									? `${pdfPageNumber} / ${pdfNumPages}`
+									: "—"}
+							</span>
+							<Button
+								type="button"
+								variant="outline"
+								size="icon"
+								className="h-8 w-8 cursor-pointer"
+								disabled={
+									pdfNumPages === 0 || pdfPageNumber >= pdfNumPages
+								}
+								onClick={() =>
+									setPdfPageNumber((p) => Math.min(pdfNumPages, p + 1))
+								}
+								aria-label="Next page"
+							>
+								<ChevronRight className="h-4 w-4" />
+							</Button>
 						</div>
-					)}
-					<div className="flex-1">
-						<iframe
-							src={`${file.url}#toolbar=0&navpanes=0&scrollbar=0`}
-							className="w-full h-full border-0"
-							title={file.name}
-							onLoad={() => setIsPreviewLoading(false)}
-							onError={() => {
-								setPreviewError("Failed to load PDF");
-								setIsPreviewLoading(false);
-							}}
-						/>
+						<div className="flex items-center gap-1">
+							<Button
+								type="button"
+								variant="outline"
+								size="icon"
+								className="h-8 w-8 cursor-pointer"
+								disabled={pdfScale <= 0.6}
+								onClick={() =>
+									setPdfScale((s) =>
+										Math.max(0.6, Number((s - 0.1).toFixed(1))),
+									)
+								}
+								aria-label="Zoom out"
+							>
+								<Minus className="h-4 w-4" />
+							</Button>
+							<span className="min-w-12 text-center text-xs text-slate-600 tabular-nums">
+								{Math.round(pdfScale * 100)}%
+							</span>
+							<Button
+								type="button"
+								variant="outline"
+								size="icon"
+								className="h-8 w-8 cursor-pointer"
+								disabled={pdfScale >= 2}
+								onClick={() =>
+									setPdfScale((s) =>
+										Math.min(2, Number((s + 0.1).toFixed(1))),
+									)
+								}
+								aria-label="Zoom in"
+							>
+								<Plus className="h-4 w-4" />
+							</Button>
+						</div>
+					</div>
+					<div className="min-h-0 flex-1 overflow-auto p-4">
+						<div className="flex justify-center">
+							{pdfViewerFile ? (
+								<Document
+									file={pdfViewerFile}
+									onLoadSuccess={({ numPages }) => {
+										setPdfNumPages(numPages);
+										setPdfPageNumber(1);
+										setIsPreviewLoading(false);
+										setPreviewError(null);
+									}}
+									onLoadError={() => {
+										setPreviewError("Failed to load PDF");
+										setIsPreviewLoading(false);
+									}}
+									loading={
+										<div className="flex h-64 items-center justify-center text-sm text-slate-500">
+											Loading PDF…
+										</div>
+									}
+									className="rounded-md border border-slate-200 bg-white shadow-sm"
+								>
+									<Page
+										pageNumber={pdfPageNumber}
+										scale={pdfScale}
+										renderTextLayer
+										renderAnnotationLayer={false}
+										className="mx-auto"
+									/>
+								</Document>
+							) : (
+								<div className="flex h-64 items-center justify-center text-sm text-slate-500">
+									Loading PDF…
+								</div>
+							)}
+						</div>
 					</div>
 				</div>
 			);
@@ -939,19 +1124,18 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 									onClick={async (e) => {
 										e.stopPropagation();
 										setShowAIAssistant(true);
-										// Generate summary and analyze
 										await generateSummary();
 										analyze();
 									}}
-									className="flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#00C1CB] via-[#0E638F] to-[#162768] py-6 font-semibold text-white shadow-drop-1 transition-opacity hover:opacity-90"
+									className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#00C1CB] via-[#0E638F] to-[#162768] py-6 font-semibold text-white shadow-drop-1 transition-opacity hover:opacity-90"
 								>
 									<Lightbulb className="h-5 w-5" />
-									Analyze Document
+									Ask CAALM AI
 								</Button>
 							)}
 						</div>
 
-						{/* Scrollable chat + docs; composer pinned to bottom */}
+						{/* Scrollable summary + chat; composer pinned to bottom */}
 						{showAIAssistant && (
 							<>
 								<div
@@ -962,130 +1146,72 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 										className="space-y-4 p-4 text-left"
 										onClick={(e) => e.stopPropagation()}
 									>
-										{/* Welcome Message */}
-										{chatMessages.length > 0 &&
-											chatMessages[0].sender === "assistant" && (
-												<div className="flex justify-start">
-													<div className="flex max-w-[95%] items-start space-x-3">
-														<div className="shrink-0">
-															<Image
-																src="/assets/images/assistant.svg"
-																alt="AI Assistant"
-																width={40}
-																height={40}
-																className="h-10 w-10 rounded-full bg-blue-100 p-1"
-															/>
-														</div>
-														<div className="rounded-2xl border border-light-300 bg-white px-4 py-3 text-left shadow-drop-1">
-															<p className="whitespace-pre-line text-left text-sm text-gray-700">
-																{chatMessages[0].text}
-															</p>
-															<p className="mt-2 text-left text-xs text-gray-400">
-																{chatMessages[0].timestamp.toLocaleTimeString()}
-															</p>
-														</div>
-													</div>
+										{/* Gemini-style structured summary (primary content) */}
+										<div className="rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm">
+											<div className="mb-3 flex items-center gap-2">
+												<Sparkles className="h-4 w-4 text-[#0f5384]" />
+												<span className="text-sm font-semibold sidebar-gradient-text">
+													Document summary
+												</span>
+											</div>
+											{isGeneratingSummary && !documentSummary ? (
+												<div className="flex items-center gap-2 text-sm text-slate-500">
+													<Loader2 className="h-4 w-4 animate-spin" />
+													Generating summary…
 												</div>
+											) : (
+												<div
+													className="text-left text-sm leading-relaxed text-slate-700 [&_strong]:text-slate-800"
+													dir="ltr"
+													dangerouslySetInnerHTML={{
+														__html: formatAIResponseHTML(
+															documentSummary ||
+																file.description ||
+																"Open Ask CAALM to summarize this document.",
+														),
+													}}
+												/>
 											)}
-
-										{(documentSummary || file.description) && (
-											<Card className="rounded-lg border border-slate-200 bg-white text-left shadow-sm">
-												<CardHeader className="pb-2">
-													<CardTitle className="flex items-center gap-2 text-sm font-semibold sidebar-gradient-text">
-														<FileText className="h-4 w-4 text-cyan-600" />
-														Summary
-													</CardTitle>
-												</CardHeader>
-												<CardContent>
-													{isGeneratingSummary ? (
-														<div className="flex items-center gap-2 text-left text-sm text-slate-500">
-															<Loader2 className="h-4 w-4 animate-spin" />
-															Generating summary...
-														</div>
-													) : (
-														<p
-															className="text-left text-sm leading-relaxed text-slate-700"
-															dir="ltr"
-														>
-															{documentSummary || file.description}
-														</p>
-													)}
-												</CardContent>
-											</Card>
-										)}
-
-										<Card className="rounded-lg border border-slate-200 bg-white text-left shadow-sm">
-											<CardHeader className="pb-2">
-												<CardTitle className="flex items-center gap-2 text-sm font-semibold sidebar-gradient-text">
-													<Calendar className="h-4 w-4 text-cyan-600" />
-													Important Dates
-												</CardTitle>
-											</CardHeader>
-											<CardContent>
-												<div className="space-y-2 text-left">
-													<div className="flex justify-between text-sm">
-														<span className="text-gray-600">Created:</span>
-														<span className="font-medium text-gray-900">
-															{formatDate(file.createdAt)}
-														</span>
-													</div>
-													{file.expiresAt && (
-														<div className="flex justify-between text-sm">
-															<span className="text-gray-600">Expires:</span>
-															<span className="font-medium text-gray-900">
-																{formatDate(file.expiresAt)}
-															</span>
-														</div>
-													)}
-												</div>
-											</CardContent>
-										</Card>
-
-										<Card className="rounded-lg border border-slate-200 bg-white text-left shadow-sm">
-											<CardHeader className="pb-2">
-												<CardTitle className="flex items-center gap-2 text-sm font-semibold sidebar-gradient-text">
-													<FileText className="h-4 w-4 text-cyan-600" />
-													Document Information
-												</CardTitle>
-											</CardHeader>
-											<CardContent>
-												<div className="space-y-2 text-left">
-													<div className="flex justify-between text-sm">
-														<span className="text-gray-600">File Type:</span>
-														<span className="font-medium text-gray-900">
-															{file.type.toUpperCase()}
-														</span>
-													</div>
-													<div className="flex justify-between text-sm">
-														<span className="text-gray-600">File Size:</span>
-														<span className="font-medium text-gray-900">
-															{convertFileSize({
-																sizeInBytes:
-																	typeof file.size === "string"
-																		? Number.isNaN(Number(file.size))
-																			? null
-																			: Number(file.size)
-																		: file.size,
-															})}
-														</span>
-													</div>
-													{file.createdBy && (
-														<div className="flex justify-between text-sm">
-															<span className="text-gray-600">Created By:</span>
-															<span className="font-medium text-gray-900">
-																{creatorName || "Loading..."}
-															</span>
-														</div>
-													)}
-												</div>
-											</CardContent>
-										</Card>
+											{/* Compact file meta under summary */}
+											<div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 border-t border-slate-100 pt-3 text-xs text-slate-500">
+												<span>
+													<span className="font-medium text-slate-600">
+														Type:
+													</span>{" "}
+													{file.type.toUpperCase()}
+												</span>
+												<span>
+													<span className="font-medium text-slate-600">
+														Size:
+													</span>{" "}
+													{convertFileSize({
+														sizeInBytes: (() => {
+															if (file.size === "" || file.size == null) {
+																return null;
+															}
+															const n =
+																typeof file.size === "string"
+																	? Number(file.size)
+																	: file.size;
+															if (Number.isNaN(n) || n <= 0) return null;
+															return n;
+														})(),
+													})}
+												</span>
+												<span>
+													<span className="font-medium text-slate-600">
+														Created:
+													</span>{" "}
+													{formatDate(file.createdAt)}
+												</span>
+											</div>
+										</div>
 
 										{/* Quick Questions */}
 										<div>
 											<h4 className="mb-2 flex items-center gap-2 text-sm font-semibold sidebar-gradient-text">
-												<FileText className="h-4 w-4 text-cyan-600" />
-												Quick Questions
+												<Sparkles className="h-4 w-4 text-[#0f5384]" />
+												Quick questions
 											</h4>
 											<div className="flex flex-wrap gap-2">
 												{[
@@ -1098,7 +1224,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 														key={q}
 														variant="outline"
 														size="sm"
-														className="rounded-full border-light-300 bg-white text-xs shadow-drop-1 transition-all duration-200 hover:border-[#00C1CB] hover:bg-light-400 focus:outline-none focus:ring-2 focus:ring-[#078FAB]"
+														className="cursor-pointer rounded-full border-light-300 bg-white text-xs shadow-drop-1 transition-all duration-200 hover:border-[#00C1CB] hover:bg-light-400 focus:outline-none focus:ring-2 focus:ring-[#078FAB]"
 														onClick={(e) => {
 															e.stopPropagation();
 															handleSendMessage({ message: q });

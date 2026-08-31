@@ -39,10 +39,15 @@ export async function POST(request: NextRequest, context: RouteContext) {
 			);
 		}
 		const assembly = await previewWizard({ orgId: auth.orgId, payload });
-		const injected = assembly.sections
+		const injectedClauses = assembly.sections
 			.filter((section) => !section.skipped)
-			.map((section) => `${section.title}\n\n${section.body}`);
-		const docx = await buildWizardDocx(payload, injected, auth.orgId);
+			.map((section) => ({
+				title: section.title,
+				body: section.body,
+			}));
+		const docx = await buildWizardDocx(payload, injectedClauses, auth.orgId, {
+			forPreview: true,
+		});
 		const html = await docxBufferToHtml(docx);
 		return NextResponse.json({ html });
 	} catch (error) {

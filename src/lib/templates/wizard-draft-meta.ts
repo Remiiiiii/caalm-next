@@ -5,7 +5,6 @@ import {
 } from "date-fns";
 import { blueprintLabel } from "@/lib/templates/blueprint-catalog";
 import { WIZARD_STEP_COUNT } from "@/lib/templates/constants";
-import { filledTokenPercent } from "@/lib/templates/token-schema";
 import type { WizardIntake, WizardSession, WizardSessionSummary } from "@/types/contract-templates";
 
 export function draftDisplayName(intake: WizardIntake): string {
@@ -33,6 +32,20 @@ export function draftEditedAt(session: WizardSession): string {
 	return date.toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
+function stepProgress(currentStep: number): { percent: number; label: string } {
+	if (currentStep <= 0) {
+		return { percent: 0, label: "Not started" };
+	}
+	// 4 steps, 0-based: Fill = 33%, Assemble = 67%, Preview = 100%
+	const stepPercent = Math.round(
+		(currentStep / (WIZARD_STEP_COUNT - 1)) * 100,
+	);
+	return {
+		percent: Math.max(stepPercent, 8),
+		label: `${stepPercent}% complete`,
+	};
+}
+
 export function draftProgress(session: WizardSession): {
 	percent: number;
 	label: string;
@@ -40,27 +53,7 @@ export function draftProgress(session: WizardSession): {
 	if (!session.payload.blueprintId) {
 		return { percent: 0, label: "Not started" };
 	}
-
-	const percent = filledTokenPercent(
-		session.payload.blueprintId,
-		session.payload.intake,
-		session.payload.tokenValues,
-	);
-	if (percent > 0) {
-		return { percent, label: `${percent}% complete` };
-	}
-
-	if (session.currentStep > 0) {
-		const stepPercent = Math.round(
-			(session.currentStep / (WIZARD_STEP_COUNT - 1)) * 100,
-		);
-		return {
-			percent: Math.max(stepPercent, 8),
-			label: `${stepPercent}% complete`,
-		};
-	}
-
-	return { percent: 0, label: "Not started" };
+	return stepProgress(session.currentStep);
 }
 
 /** Drafts with no name, no blueprint, and no fill progress. */
@@ -113,25 +106,7 @@ export function draftProgressFromSummary(
 	if (!summary.blueprintId) {
 		return { percent: 0, label: "Not started" };
 	}
-
-	if (summary.fillPercent > 0) {
-		return {
-			percent: summary.fillPercent,
-			label: `${summary.fillPercent}% complete`,
-		};
-	}
-
-	if (summary.currentStep > 0) {
-		const stepPercent = Math.round(
-			(summary.currentStep / (WIZARD_STEP_COUNT - 1)) * 100,
-		);
-		return {
-			percent: Math.max(stepPercent, 8),
-			label: `${stepPercent}% complete`,
-		};
-	}
-
-	return { percent: 0, label: "Not started" };
+	return stepProgress(summary.currentStep);
 }
 
 /** Untitled, no agreement type chosen, and never started. */

@@ -5,6 +5,8 @@ import {
 	draftDisplayName,
 	draftDisplayNameFromSummary,
 	draftEditedAt,
+	draftProgress,
+	draftProgressFromSummary,
 	isEmptyWizardDraft,
 	isEmptyWizardDraftSummary,
 } from "./wizard-draft-meta";
@@ -103,5 +105,45 @@ describe("wizard draft metadata", () => {
 			}),
 		).toBe(false);
 		expect(draftDisplayNameFromSummary(summary)).toBe("Untitled draft");
+	});
+
+	it("measures draft progress by wizard step, not filled fields", () => {
+		const payload = emptyWizardPayload();
+		payload.blueprintId = "government";
+		payload.intake.contractName = "Acme Support Services";
+		payload.intake.counterparty = "Acme";
+		payload.intake.startDate = "2026-09-01";
+		payload.intake.expiryDate = "2027-09-01";
+		payload.intake.amount = "10000";
+
+		expect(
+			draftProgress(session({ payload, currentStep: 1 })),
+		).toEqual({ percent: 33, label: "33% complete" });
+		expect(
+			draftProgress(session({ payload, currentStep: 2 })),
+		).toEqual({ percent: 67, label: "67% complete" });
+		expect(
+			draftProgress(session({ payload, currentStep: 3 })),
+		).toEqual({ percent: 100, label: "100% complete" });
+
+		const summary: WizardSessionSummary = {
+			$id: "sess1",
+			$createdAt: new Date().toISOString(),
+			$updatedAt: new Date().toISOString(),
+			currentStep: 1,
+			contractName: "Acme Support Services",
+			blueprintId: "government",
+			templateId: null,
+			lastSavedAt: null,
+			fillPercent: 100,
+		};
+		expect(draftProgressFromSummary(summary)).toEqual({
+			percent: 33,
+			label: "33% complete",
+		});
+		expect(draftProgressFromSummary({ ...summary, currentStep: 0 })).toEqual({
+			percent: 0,
+			label: "Not started",
+		});
 	});
 });

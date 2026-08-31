@@ -141,10 +141,12 @@ export function buildMergeValues(
 export function applyMergeFields(
 	text: string,
 	values: Record<string, string>,
+	opts?: { blankMissing?: boolean },
 ): string {
 	return text.replace(PLACEHOLDER, (_, key: string) => {
 		const value = values[key];
-		return value && value.length > 0 ? value : `{{${key}}}`;
+		if (value && value.length > 0) return value;
+		return opts?.blankMissing ? "" : `{{${key}}}`;
 	});
 }
 
@@ -245,6 +247,7 @@ export function assembleContract(input: {
 	payload: WizardPayload;
 	clausesByFamily: Map<string, ClauseSnapshot>;
 	today?: Date;
+	blankMissingPlaceholders?: boolean;
 }): AssemblyResult {
 	assertCreatesNewContract(input.payload);
 	const mergeValues = buildMergeValues(input.payload.intake, input.today);
@@ -266,7 +269,11 @@ export function assembleContract(input: {
 		}
 
 		const body =
-			clause && !skipped ? applyMergeFields(clause.body, mergeValues) : "";
+			clause && !skipped
+				? applyMergeFields(clause.body, mergeValues, {
+						blankMissing: input.blankMissingPlaceholders,
+					})
+				: "";
 
 		sections.push({
 			familyId: row.familyId,

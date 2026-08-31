@@ -173,6 +173,9 @@ importers:
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
+      currency-code-to-country-flag:
+        specifier: ^1.1.1
+        version: 1.1.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       date-fns:
         specifier: ^4.1.0
         version: 4.1.0
@@ -3264,6 +3267,12 @@ packages:
 
   csstype@3.2.3:
     resolution: {integrity: sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ==}
+
+  currency-code-to-country-flag@1.1.1:
+    resolution: {integrity: sha512-QrxWXBBPfPsB00OERPP1BHYo50i24wJVWm2XZ375A/JUQoK0tJcu735EG0CrAMF5nnxYLBWeGjjeokgLDkNbrg==}
+    peerDependencies:
+      react: '>=16.8.0'
+      react-dom: '>=16.8.0'
 
   d3-array@3.2.4:
     resolution: {integrity: sha512-tdQAmyA18i4J7wprpYq8ClcxZy3SC31QMeByyCFyRt7BVHdREQZ5lpzoe5mFEYZUWe+oq8HBvk9JjpibyEV4Jg==}
@@ -8854,6 +8863,11 @@ snapshots:
       lru-cache: 11.2.6
 
   csstype@3.2.3: {}
+
+  currency-code-to-country-flag@1.1.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4):
+    dependencies:
+      react: 19.2.4
+      react-dom: 19.2.4(react@19.2.4)
 
   d3-array@3.2.4:
     dependencies:

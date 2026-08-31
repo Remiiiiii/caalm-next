@@ -28,7 +28,10 @@ import {
 } from "@/lib/templates/constants";
 import { getTemplateById } from "@/lib/templates/contract-template.service";
 import { convertDocxBufferToPdf } from "@/lib/templates/docx-to-pdf";
-import { mergeBlueprintDocument } from "@/lib/templates/merge-docx";
+import {
+	mergeBlueprintDocument,
+	type InjectedClause,
+} from "@/lib/templates/merge-docx";
 import { getOrganization } from "@/lib/rbac/organizations";
 import { orgLetterheadValues } from "@/lib/templates/org-letterhead";
 import { isEmptyWizardDraftSummary } from "@/lib/templates/wizard-draft-meta";
@@ -398,6 +401,7 @@ export async function previewWizard(input: {
 	return assembleContract({
 		payload: input.payload,
 		clausesByFamily,
+		blankMissingPlaceholders: true,
 	});
 }
 
@@ -657,8 +661,9 @@ function mappedContractType(typeId: string): string {
 
 export async function buildWizardDocx(
 	payload: WizardPayload,
-	injectedBodies: string[] = [],
+	injectedClauses: InjectedClause[] = [],
 	orgId?: string,
+	opts?: { forPreview?: boolean },
 ): Promise<Buffer> {
 	if (!payload.blueprintId) {
 		throw new Error("Choose an agreement blueprint first");
@@ -680,16 +685,19 @@ export async function buildWizardDocx(
 		template,
 		tokenValues,
 		customBlocks: payload.customBlocks,
-		injectedBodies,
+		injectedClauses,
+		forPreview: opts?.forPreview,
+		blueprintId: payload.blueprintId,
 	});
 }
 
 export async function buildWizardPdf(
 	payload: WizardPayload,
-	injectedBodies: string[] = [],
+	injectedClauses: InjectedClause[] = [],
 	orgId?: string,
+	opts?: { forPreview?: boolean },
 ): Promise<Buffer> {
-	const docx = await buildWizardDocx(payload, injectedBodies, orgId);
+	const docx = await buildWizardDocx(payload, injectedClauses, orgId, opts);
 	return convertDocxBufferToPdf(docx);
 }
 
@@ -755,7 +763,10 @@ export async function submitWizard(input: {
 		const pdfBuffer = payload.blueprintId
 			? await buildWizardPdf(
 					payload,
-					included.map((section) => section.body),
+					included.map((section) => ({
+						title: section.title,
+						body: section.body,
+					})),
 					input.orgId,
 				)
 			: Buffer.from(assembly.markdown, "utf8");

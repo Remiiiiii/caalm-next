@@ -16,12 +16,12 @@ const genAI = new GoogleGenerativeAI(apiKey || "");
 
 // Initialize the model - Use the correct model name
 export const model = genAI.getGenerativeModel({
-	model: "gemini-2.5-flash-lite",
+	model: "gemini-3.5-flash-lite",
 });
 
 /** JSON-only responses for contract type quiz (do not reuse plain `model` here). */
 const contractTypeSuggestionModel = genAI.getGenerativeModel({
-	model: "gemini-2.5-flash-lite",
+	model: "gemini-3.5-flash-lite",
 	generationConfig: {
 		responseMimeType: "application/json",
 		temperature: 0.2,
@@ -191,92 +191,68 @@ export const analyzeDocument = async (
 		});
 
 		const prompt = `
-      Analyze the following document and provide a comprehensive analysis in plain text:
-      
-      Document Name: ${fileName}
-      Document Type: ${fileType}
-      ${fileContent ? `Content: ${fileContent}` : "No content available"}
-      ${fileUrl ? `URL: ${fileUrl}` : ""}
-      
-      Please provide your analysis in this exact format:
-      
-      SUMMARY:
-      [Provide a concise 2-3 sentence summary of the document]
-      
-      KEY POINTS:
-      • [First key point]
-      • [Second key point]
-      • [Third key point]
-      • [Fourth key point]
-      • [Fifth key point]
-      
-      TOPICS:
-      [List main topics or themes discussed, separated by commas]
-      
-      DOCUMENT TYPE:
-      [Classify the document type]
-    `;
+Analyze this document and write a scannable summary in GitHub-flavored markdown.
+Match this layout exactly (no SUMMARY:/KEY POINTS: labels):
+
+1) One short intro paragraph. Bold the document type (e.g. **Government Contract**).
+2) A ## Key Information heading, then bullets as **Label:** value for any facts you can find (parties, agency, contractor, effective date, expiry, amount, governing law, document length/pages). Omit unknown labels.
+3) For each major numbered section in the document (Statement of Work, Consideration, etc.), add a ## Section Title heading, one short paragraph, then bullets with **Lead-in:** detail when helpful.
+
+Rules:
+- Use only information present in the document text. Do not invent dates, parties, or amounts.
+- Prefer bullets over long paragraphs.
+- Do not wrap the whole reply in a code fence.
+
+Document Name: ${fileName}
+Document Type: ${fileType}
+${fileContent ? `Content:\n${fileContent.slice(0, 120000)}` : "No content available"}
+${fileUrl ? `URL: ${fileUrl}` : ""}
+`;
 
 		console.log("Sending prompt to Gemini AI...");
 		const result = await model.generateContent(prompt);
 		const response = await result.response;
-		const text = response.text();
+		const text = response.text().trim();
 		console.log("Received AI response, length:", text.length);
 
-		// Parse the plain text response
 		const lines = text
 			.split("\n")
 			.map((line) => line.trim())
 			.filter((line) => line.length > 0);
 
-		let summary = "";
-		let keyPoints: string[] = [];
-		let topics: string[] = [];
+		// Prefer the full markdown body as the display summary.
+		let summary = text;
+		const keyPoints: string[] = [];
+		const topics: string[] = [];
 		let documentType = fileType;
 
-		let currentSection = "";
-
 		for (const line of lines) {
-			if (line.startsWith("SUMMARY:")) {
-				currentSection = "summary";
-				continue;
-			} else if (line.startsWith("KEY POINTS:")) {
-				currentSection = "keyPoints";
-				continue;
-			} else if (line.startsWith("TOPICS:")) {
-				currentSection = "topics";
-				continue;
-			} else if (line.startsWith("DOCUMENT TYPE:")) {
-				currentSection = "documentType";
-				continue;
+			const bullet = line.match(/^[-*•]\s+\*\*([^*]+):\*\*\s*(.+)$/);
+			if (bullet) {
+				keyPoints.push(`${bullet[1].trim()}: ${bullet[2].trim()}`);
 			}
-
-			if (currentSection === "summary" && line) {
-				summary = line;
-			} else if (currentSection === "keyPoints" && line.startsWith("•")) {
-				keyPoints.push(line.substring(1).trim());
-			} else if (currentSection === "topics" && line) {
-				topics = line
-					.split(",")
-					.map((t) => t.trim())
-					.filter((t) => t.length > 0);
-			} else if (currentSection === "documentType" && line) {
-				documentType = line;
+			const heading = line.match(/^##\s+(.+)$/);
+			if (heading) {
+				topics.push(heading[1].trim());
 			}
 		}
 
-		// Fallback if parsing fails
+		// Infer type from intro bold phrase when present.
+		const boldType = text.match(/\*\*([^*]+Contract[^*]*)\*\*/i);
+		if (boldType?.[1]) {
+			documentType = boldType[1].trim();
+		}
+
 		if (!summary) {
-			summary = text.split("\n")[0] || "Document analysis completed";
+			summary = "Document analysis completed";
 		}
 		if (keyPoints.length === 0) {
-			keyPoints = text
-				.split("\n")
-				.filter(
-					(line) => line.trim().startsWith("•") || line.trim().startsWith("-"),
-				)
-				.map((line) => line.replace(/^[•-]\s*/, ""))
-				.slice(0, 5);
+			for (const line of lines) {
+				if (line.startsWith("- ") || line.startsWith("* ") || line.startsWith("• ")) {
+					keyPoints.push(line.replace(/^[-*•]\s+/, "").replace(/\*\*/g, ""));
+				}
+				if (keyPoints.length >= 8) break;
+			}
 		}
 
 		const suggestedQuestions = getSuggestedQuestions(documentType);
@@ -289,11 +265,11 @@ export const analyzeDocument = async (
 		});
 
 		return {
-			summary: summary || "Document analysis completed",
-			keyPoints: keyPoints,
+			summary,
+			keyPoints,
 			suggestedQuestions,
-			documentType: documentType,
-			topics: topics,
+			documentType,
+			topics,
 		};
 	} catch (error) {
 		console.error("Error analyzing document:", error);
@@ -305,7 +281,7 @@ export const analyzeDocument = async (
 			hasUrl: !!fileUrl,
 			apiKeyExists: !!process.env.GOOGLE_API_KEY,
 			apiKeyLength: process.env.GOOGLE_API_KEY?.length || 0,
-			modelName: "gemini-2.5-flash-lite",
+			modelName: "gemini-3.5-flash-lite",
 		});
 		return {
 			summary: "Unable to analyze document at this time",

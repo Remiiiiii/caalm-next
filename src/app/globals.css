@@ -2010,6 +2010,78 @@ button[data-state="active"] > span {
 	color: #1d4ed8 !important;
 }
 
+/* Date picker dropdown: same today/selected circle as the dashboard calendar */
+.caalm-picker-cal:not(.caalm-mini-cal):not(.caalm-dashboard-cal) {
+	--rdp-accent-color: #2563eb;
+	--rdp-selected-border: 2px solid transparent;
+	--rdp-today-color: #2563eb;
+}
+
+.caalm-picker-cal:not(.caalm-mini-cal):not(.caalm-dashboard-cal) .rdp-day_button {
+	border-radius: 9999px;
+	border: none !important;
+	box-shadow: none !important;
+	color: #334155;
+	font-weight: 500;
+}
+
+.caalm-picker-cal:not(.caalm-mini-cal):not(.caalm-dashboard-cal)
+	.rdp-today:not(.rdp-outside)
+	.rdp-day_button,
+.caalm-picker-cal:not(.caalm-mini-cal):not(.caalm-dashboard-cal)
+	.rdp-selected
+	.rdp-day_button {
+	border: none !important;
+	color: #2563eb !important;
+	background: #dbeafe !important;
+	font-weight: 600;
+	box-shadow: none !important;
+}
+
+.caalm-picker-cal:not(.caalm-mini-cal):not(.caalm-dashboard-cal)
+	.rdp-today:not(.rdp-outside)
+	.rdp-day_button:hover,
+.caalm-picker-cal:not(.caalm-mini-cal):not(.caalm-dashboard-cal)
+	.rdp-selected
+	.rdp-day_button:hover,
+.caalm-picker-cal:not(.caalm-mini-cal):not(.caalm-dashboard-cal)
+	.rdp-today:not(.rdp-outside)
+	.rdp-day_button:focus-visible,
+.caalm-picker-cal:not(.caalm-mini-cal):not(.caalm-dashboard-cal)
+	.rdp-selected
+	.rdp-day_button:focus-visible {
+	background: #bfdbfe !important;
+	color: #1d4ed8 !important;
+}
+
+/* Past / disabled days: muted text (do not mute next-month outside days) */
+.caalm-picker-cal:not(.caalm-mini-cal):not(.caalm-dashboard-cal)
+	.rdp-past:not(.rdp-selected):not(.rdp-today)
+	.rdp-day_button,
+.caalm-picker-cal:not(.caalm-mini-cal):not(.caalm-dashboard-cal)
+	.rdp-disabled
+	.rdp-day_button {
+	color: #94a3b8 !important;
+	opacity: 0.7;
+	font-weight: 500;
+}
+
+/* Next/prev month spillover days: same weight as in-month days when selectable */
+.caalm-picker-cal:not(.caalm-mini-cal):not(.caalm-dashboard-cal)
+	.rdp-outside:not(.rdp-past):not(.rdp-disabled)
+	.rdp-day_button {
+	color: #334155 !important;
+	opacity: 1;
+	font-weight: 500;
+}
+
+.caalm-picker-cal:not(.caalm-mini-cal):not(.caalm-dashboard-cal)
+	.rdp-past:not(.rdp-selected):not(.rdp-today)
+	.rdp-day_button:hover {
+	background: #f1f5f9 !important;
+	color: #64748b !important;
+}
+
 /* biome-ignore-end lint/complexity/noImportantStyles: end React DayPicker override block */
 /* biome-ignore-end lint/style/noDescendingSpecificity: end React DayPicker override block */
 

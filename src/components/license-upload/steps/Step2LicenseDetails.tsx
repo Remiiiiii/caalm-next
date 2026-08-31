@@ -12,6 +12,7 @@ import {
 	aiFieldItemClassName,
 } from "@/components/contract-upload/AiExtractionReview";
 import { Button } from "@/components/ui/button";
+import { CurrencySelect } from "@/components/ui/currency-select";
 import { Calendar } from "@/components/ui/calendar";
 import {
 	FormControl,
@@ -39,8 +40,6 @@ import { cn } from "@/lib/utils";
 import { CATEGORIES, COMPLIANCE_STATUSES, LICENSE_TYPES } from "../constants";
 import type { LicenseUploadFormData } from "../schema";
 import type { Manager } from "../types";
-
-const CURRENCY_CODES = ["USD", "EUR", "GBP", "CAD", "MXN", "JPY", "AUD"];
 
 const DIVISIONS = [
 	"administration",
@@ -486,23 +485,11 @@ export default function Step2LicenseDetails({
 									Currency
 									<AiHint name="currencyCode" />
 								</FormLabel>
-								<Select
-									onValueChange={field.onChange}
+								<CurrencySelect
 									value={field.value || "USD"}
-								>
-									<FormControl>
-										<SelectTrigger className="bg-white border-slate-300">
-											<SelectValue />
-										</SelectTrigger>
-									</FormControl>
-									<SelectContent>
-										{CURRENCY_CODES.map((code) => (
-											<SelectItem key={code} value={code}>
-												{code}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
+									onValueChange={field.onChange}
+									amount={form.watch("cost")}
+								/>
 								<FormMessage />
 							</FormItem>
 						)}
