@@ -1015,7 +1015,7 @@
 
 	/* Sidebar */
 	.sidebar {
-		@apply flex h-screen flex-col overflow-auto px-5 py-7;
+		@apply flex h-screen flex-col overflow-hidden px-5 py-7;
 		width: 280px;
 		min-width: 280px;
 		max-width: 280px;
@@ -1032,14 +1032,18 @@
 			transition: none;
 		}
 	}
-	.sidebar::-webkit-scrollbar {
+	.sidebar::-webkit-scrollbar,
+	.sidebar-nav::-webkit-scrollbar {
 		width: 0;
 		height: 0;
 		border-radius: 0;
 	}
 	.sidebar::-webkit-scrollbar-track,
 	.sidebar::-webkit-scrollbar-thumb,
-	.sidebar::-webkit-scrollbar-thumb:hover {
+	.sidebar::-webkit-scrollbar-thumb:hover,
+	.sidebar-nav::-webkit-scrollbar-track,
+	.sidebar-nav::-webkit-scrollbar-thumb,
+	.sidebar-nav::-webkit-scrollbar-thumb:hover {
 		background: transparent;
 		border-radius: 0;
 	}
@@ -1078,6 +1082,10 @@
 		position: relative;
 	}
 
+	.sidebar-footer {
+		@apply sticky bottom-0 z-10 shrink-0 pt-1;
+	}
+
 	.sidebar-storage-info,
 	.sidebar-user-info {
 		@apply mt-4 flex items-center justify-center gap-2 rounded-md p-1 text-light-100 lg:justify-start lg:p-3;
@@ -1085,7 +1093,7 @@
 	}
 
 	.sidebar-storage-info {
-		@apply mt-4;
+		@apply mt-2 py-1.5 lg:px-3 lg:py-2;
 	}
 
 	.sidebar-user-info {
@@ -1102,7 +1110,7 @@
 	}
 
 	.sidebar-nav {
-		@apply text-sm leading-5 font-semibold mt-6 flex-1 gap-1;
+		@apply mt-6 min-h-0 flex-1 gap-1 overflow-y-auto text-sm leading-5 font-semibold;
 	}
 	.sidebar-nav-item {
 		@apply flex text-light-100 gap-4 rounded-xl w-full justify-start items-center text-[16px] leading-[24px] font-semibold px-[30px] h-[52px] rounded-full;

@@ -2,20 +2,10 @@
 
 // import { Separator } from '@/components/ui/separator';
 import {
-	AlertTriangle,
-	// Printer,
-	// ChevronUp,
-	// ChevronDown,
-	// FileText,
 	Bot,
 	Building,
-	Calendar,
-	CheckCircle,
 	ChevronDown as ChevronDownIcon,
 	ChevronRight,
-	// Search,
-	// ZoomIn,
-	// ZoomOut,
 	Download,
 	File,
 	FileArchive,
@@ -27,17 +17,12 @@ import {
 	Mail,
 	MapPin,
 	Minimize2,
-	// Clock,
 	Phone,
 	RotateCw,
-	Send,
 	Shield,
 	Sparkles,
-	// MessageCircle,
 	Star,
-	Target,
 	User,
-	Users,
 } from "lucide-react";
 import Image from "next/image";
 import type React from "react";
@@ -45,11 +30,17 @@ import {
 	// useMemo,
 	useCallback,
 	useEffect,
+	useRef,
 	useState,
 } from "react";
 import useSWR from "swr";
 // import { Input } from '@/components/ui/input';
-import { Badge } from "@/components/ui/badge";
+import { ContractAnalysisCards } from "@/components/contract-assistant/ContractAnalysisCards";
+import type { ContractChatMessage } from "@/components/contract-assistant/ContractAssistantChat";
+import {
+	AskCaalmComposer,
+	ContractAssistantChat,
+} from "@/components/contract-assistant/ContractAssistantChat";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -58,7 +49,8 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
+import type { ContractStarterPrompt } from "@/lib/ai/contract-assistant.types";
+import { splitProseParagraphs } from "@/lib/ai/split-prose";
 import type { ContractAnalysis } from "@/lib/ai-contract-analyzer";
 import type { SAMContract } from "@/lib/sam-config";
 
@@ -88,15 +80,23 @@ const ContractDocumentViewer: React.FC<ContractDocumentViewerProps> = ({
 	// AI Analysis state
 	const [aiAnalysis, setAiAnalysis] = useState<AIAnalysis | null>(null);
 	const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
-	const [aiInput, setAiInput] = useState<string>("");
-	const [aiResponse, setAiResponse] = useState<string>("");
 	const [isAiLoading, setIsAiLoading] = useState<boolean>(false);
+	const [starterPrompts, setStarterPrompts] = useState<ContractStarterPrompt[]>(
+		[],
+	);
+	const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([]);
+	const [contractMessages, setContractMessages] = useState<
+		ContractChatMessage[]
+	>([]);
 
 	// UI state
 	const [showAiPanel, setShowAiPanel] = useState<boolean>(false);
 	const [showSmartSummary, setShowSmartSummary] = useState<boolean>(true);
 	const [showMainDescription, setShowMainDescription] =
 		useState<boolean>(false);
+	const [showContractFacts, setShowContractFacts] = useState<boolean>(true);
+	const descriptionCardRef = useRef<HTMLDivElement>(null);
+	const [aiPaneHeight, setAiPaneHeight] = useState<number | null>(null);
 
 	// SWR fetcher function
 	const fetcher = useCallback(async (url: string) => {
@@ -138,6 +138,31 @@ const ContractDocumentViewer: React.FC<ContractDocumentViewerProps> = ({
 
 	// Extract contract details from SWR response
 	const contractDetails = swrData?.success ? swrData.data : null;
+
+	// Keep AI pane height locked to Full Description so bottoms stay parallel
+	useEffect(() => {
+		if (!showAiPanel) {
+			setAiPaneHeight(null);
+			return;
+		}
+
+		const node = descriptionCardRef.current;
+		if (!node || typeof ResizeObserver === "undefined") return;
+
+		const syncHeight = () => {
+			setAiPaneHeight(Math.round(node.getBoundingClientRect().height));
+		};
+
+		syncHeight();
+		const observer = new ResizeObserver(syncHeight);
+		observer.observe(node);
+		return () => observer.disconnect();
+	}, [
+		showAiPanel,
+		showMainDescription,
+		contractDetails?.description,
+		contract?.description,
+	]);
 
 	// Handle SWR errors
 	useEffect(() => {
@@ -307,52 +332,16 @@ ${contractDetails.attachments
 		}
 	};
 
-	// Helper function to format description content
-	const formatDescription = (description: string): string => {
-		if (!description) return "No description available.";
+	const formatDescription = (description: string): string[] => {
+		if (!description) return ["No description available."];
 
-		// Remove HTML tags
 		const stripHtml = (html: string): string => {
 			const tmp = document.createElement("div");
 			tmp.innerHTML = html;
 			return tmp.textContent || tmp.innerText || "";
 		};
 
-		// Clean the description
-		let cleaned = stripHtml(description);
-
-		// Normalize line breaks and spacing
-		cleaned = cleaned
-			.replace(/\r\n/g, "\n") // Convert Windows line breaks
-			.replace(/\r/g, "\n") // Convert Mac line breaks
-			.replace(/\n\s*\n/g, "\n\n") // Normalize multiple line breaks
-			.replace(/\s+/g, " ") // Normalize multiple spaces
-			.trim();
-
-		// Remove unnecessary line breaks within sentences
-		cleaned = cleaned
-			.replace(/([.!?])\s*\n\s*([a-z])/g, "$1 $2") // Join sentences broken by line breaks
-			.replace(/([a-z])\s*\n\s*([a-z])/g, "$1 $2") // Join words broken by line breaks
-			.replace(/([A-Z][a-z]+)\s*\n\s*([a-z])/g, "$1 $2") // Join proper nouns broken by line breaks
-			.replace(/\n\s*([a-z])/g, " $1") // Join lowercase words at line start
-			.replace(/([a-z])\s*\n/g, "$1 ") // Join lowercase words at line end
-			.trim();
-
-		// Add proper spacing around common patterns (but preserve sentence flow)
-		cleaned = cleaned
-			.replace(/(\d+\.\s*)/g, "\n$1") // Add line break before numbered items
-			.replace(/(Amendment\s+\d+)/gi, "\n$1") // Add line break before amendments
-			.replace(/(\n\s*)(\d+\.\s*)/g, "\n$2") // Ensure proper spacing for numbered items
-			.replace(/(\n\s*)([A-Z][a-z]+:)/g, "\n$2") // Preserve section headers
-			.trim();
-
-		// Final cleanup to ensure proper sentence spacing
-		cleaned = cleaned
-			.replace(/\s+([.!?])\s+/g, "$1 ") // Normalize sentence endings
-			.replace(/\s+/g, " ") // Final space normalization
-			.trim();
-
-		return cleaned;
+		return splitProseParagraphs(stripHtml(description));
 	};
 
 	// AI Analysis functions
@@ -399,6 +388,17 @@ ${contractDetails.attachments
 			});
 
 			setAiAnalysis(result.analysis);
+			setStarterPrompts(result.starterPrompts || []);
+			setSuggestedQuestions(result.suggestedQuestions || []);
+			if (result.analysis?.summary) {
+				setContractMessages([
+					{
+						id: "summary",
+						role: "assistant",
+						text: result.analysis.summary,
+					},
+				]);
+			}
 
 			if (result.fallback) {
 				console.warn(
@@ -463,17 +463,25 @@ ${contractDetails.attachments
 		}
 	};
 
-	// AI Chat function
-	const handleAiChat = async () => {
-		if (!aiInput.trim() || !content) return;
+	const sendContractMessage = async (question: string) => {
+		if (!question.trim() || !content) return;
 
+		const userMessage: ContractChatMessage = {
+			id: `${Date.now()}`,
+			role: "user",
+			text: question.trim(),
+		};
+		setContractMessages((prev) => [...prev, userMessage]);
 		setIsAiLoading(true);
 		try {
-			console.log("Sending AI chat request:", { question: aiInput });
-
 			const enhancedContent = contractDetails?.description
 				? `${content}\n\nENHANCED DESCRIPTION FROM SAM.GOV:\n${contractDetails.description}`
 				: content;
+
+			const previousContext = [...contractMessages, userMessage]
+				.slice(-4)
+				.map((message) => `${message.role}: ${message.text}`)
+				.join("\n");
 
 			const response = await fetch("/api/ai-analyze", {
 				method: "POST",
@@ -482,10 +490,12 @@ ${contractDetails.attachments
 				},
 				body: JSON.stringify({
 					action: "question",
-					question: aiInput,
+					context: "contract",
+					question: question.trim(),
 					fileName: contract?.title || "Contract Document",
 					fileType: "contract",
 					fileContent: enhancedContent,
+					previousContext,
 				}),
 			});
 
@@ -496,18 +506,29 @@ ${contractDetails.attachments
 			}
 
 			const result = await response.json();
-
-			if (result.answer) {
-				setAiResponse(result.answer);
-				setAiInput(""); // Clear the input field after successful response
-			} else {
-				throw new Error(result.error || "No response from AI");
-			}
+			setSuggestedQuestions(result.suggestedQuestions || []);
+			setContractMessages((prev) => [
+				...prev,
+				{
+					id: `${Date.now()}-ai`,
+					role: "assistant",
+					text:
+						result.answerMarkdown ||
+						result.answer ||
+						"I could not answer that.",
+					citations: result.citations || [],
+				},
+			]);
 		} catch (error) {
 			console.error("Error getting AI response:", error);
-			setAiResponse(
-				"Sorry, I encountered an error while analyzing your question. Please try again.",
-			);
+			setContractMessages((prev) => [
+				...prev,
+				{
+					id: `${Date.now()}-error`,
+					role: "assistant",
+					text: "Sorry, I encountered an error while analyzing your question. Please try again.",
+				},
+			]);
 		} finally {
 			setIsAiLoading(false);
 		}
@@ -517,7 +538,7 @@ ${contractDetails.attachments
 
 	return (
 		<Dialog open={isOpen} onOpenChange={onClose}>
-			<DialogContent className="flex max-h-[95vh] max-w-7xl flex-col overflow-y-auto rounded-[26px] p-0 shadow-drop-1">
+			<DialogContent className="flex max-h-[95vh] w-[96vw] max-w-384 flex-col overflow-y-auto rounded-[26px] p-0 shadow-drop-1 sm:max-w-384">
 				<DialogHeader className="px-6 py-6 pb-4">
 					{/* Action Buttons */}
 					<div className="flex items-center gap-2 justify-end">
@@ -527,19 +548,21 @@ ${contractDetails.attachments
 						</Button>
 						<Button
 							size="sm"
-							onClick={() => setShowAiPanel(!showAiPanel)}
+							disabled={isAnalyzing}
+							onClick={() => {
+								setShowAiPanel(true);
+								setShowMainDescription(true);
+								setShowContractFacts(false);
+								void performAIAnalysis();
+							}}
 							className="shadow-drop-1 primary-btn"
 						>
-							<Bot className="h-4 w-4" />
+							{isAnalyzing ? (
+								<Loader2 className="h-4 w-4 animate-spin" />
+							) : (
+								<Sparkles className="h-4 w-4" />
+							)}
 							AI Analysis
-						</Button>
-						<Button
-							size="sm"
-							onClick={onClose}
-							className="shadow-drop-1 primary-btn px-3 sm:px-4"
-						>
-							<Minimize2 className="h-4 w-4" />
-							Close
 						</Button>
 					</div>
 					<div className="flex items-center justify-between">
@@ -556,53 +579,61 @@ ${contractDetails.attachments
 					</div>
 				</DialogHeader>
 
-				<div className="flex flex-1 min-h-0 px-6 pb-6">
-					{/* Main Content Area */}
-					<div className="flex-1 flex flex-col min-h-0 space-y-6">
-						{/* Smart Summary Section */}
-						<Card className="border border-light-300 shadow-drop-1 rounded-xl bg-white/80 backdrop-blur">
-							<CardHeader
-								className="pb-3 cursor-pointer"
-								onClick={() => setShowSmartSummary(!showSmartSummary)}
-							>
-								<div className="flex items-center justify-between">
-									<CardTitle className="text-lg flex items-center gap-2 sidebar-gradient-text font-semibold">
-										<Lightbulb className="h-5 w-5 text-cyan-600" />
-										Smart Summary
-									</CardTitle>
-									{showSmartSummary ? (
-										<ChevronDownIcon className="h-4 w-4 text-gray-500" />
-									) : (
-										<ChevronRight className="h-4 w-4 text-gray-500" />
-									)}
-								</div>
-							</CardHeader>
-							{showSmartSummary && (
-								<CardContent>
-									<p className="text-sm text-gray-700 leading-relaxed">
-										{aiAnalysis?.summary ||
-											`The ${
-												contract.fullParentPathName || "Department"
-											} is seeking bids for ${
-												contract.type?.toLowerCase() || "services"
-											} for its ${
-												contract.officeAddress?.city || "facilities"
-											}. This contract opportunity involves ${
-												contract.typeOfSetAsideDescription
-													? `a ${contract.typeOfSetAsideDescription.toLowerCase()}`
-													: "competitive bidding"
-											}. The contract will be performed at ${
-												contract.officeAddress?.city || "specified location"
-											}, ${
-												contract.officeAddress?.state || ""
-											} and requires compliance with all applicable federal regulations and requirements.`}
-									</p>
-								</CardContent>
-							)}
-						</Card>
+				<div className="flex min-h-0 flex-1 flex-col space-y-6 px-6 pb-6">
+					{/* Smart Summary Section */}
+					<Card className="border border-light-300 shadow-drop-1 rounded-xl bg-white/80 backdrop-blur">
+						<CardHeader
+							className="pb-3 cursor-pointer"
+							onClick={() => setShowSmartSummary(!showSmartSummary)}
+						>
+							<div className="flex items-center justify-between">
+								<CardTitle className="text-lg flex items-center gap-2 sidebar-gradient-text font-semibold">
+									<Lightbulb className="h-5 w-5 text-cyan-600" />
+									Smart Summary
+								</CardTitle>
+								{showSmartSummary ? (
+									<ChevronDownIcon className="h-4 w-4 text-gray-500" />
+								) : (
+									<ChevronRight className="h-4 w-4 text-gray-500" />
+								)}
+							</div>
+						</CardHeader>
+						{showSmartSummary && (
+							<CardContent>
+								<p className="text-sm text-gray-700 leading-relaxed">
+									{aiAnalysis?.summary ||
+										`The ${
+											contract.fullParentPathName || "Department"
+										} is seeking bids for ${
+											contract.type?.toLowerCase() || "services"
+										} for its ${
+											contract.officeAddress?.city || "facilities"
+										}. This contract opportunity involves ${
+											contract.typeOfSetAsideDescription
+												? `a ${contract.typeOfSetAsideDescription.toLowerCase()}`
+												: "competitive bidding"
+										}. The contract will be performed at ${
+											contract.officeAddress?.city || "specified location"
+										}, ${
+											contract.officeAddress?.state || ""
+										} and requires compliance with all applicable federal regulations and requirements.`}
+								</p>
+							</CardContent>
+						)}
+					</Card>
 
-						{/* Description Section */}
-						<Card className="border border-light-300 shadow-drop-1 rounded-xl bg-white/80 backdrop-blur">
+					{/* Full Description + AI pane: same row height; AI scrolls internally */}
+					<div
+						className={
+							showAiPanel
+								? "grid grid-cols-1 items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(28rem,36rem)] lg:gap-0"
+								: "grid grid-cols-1"
+						}
+					>
+						<Card
+							ref={descriptionCardRef}
+							className="border border-light-300 shadow-drop-1 rounded-xl bg-white/80 backdrop-blur"
+						>
 							<CardHeader
 								className="pb-3 cursor-pointer"
 								onClick={() => setShowMainDescription(!showMainDescription)}
@@ -621,18 +652,164 @@ ${contractDetails.attachments
 							</CardHeader>
 							{showMainDescription && (
 								<CardContent>
-									<div className="text-sm text-gray-700 leading-relaxed whitespace-normal">
+									<div className="space-y-3 text-sm text-slate-700 leading-relaxed">
 										{formatDescription(
 											contractDetails?.description ||
 												contract.description ||
 												"No description available.",
-										)}
+										).map((paragraph, index) => (
+											<p key={`${index}-${paragraph.slice(0, 24)}`}>
+												{paragraph}
+											</p>
+										))}
 									</div>
 								</CardContent>
 							)}
 						</Card>
 
-						{/* 3-Column Information Grid */}
+						{showAiPanel ? (
+							<div
+								className="flex flex-col overflow-hidden rounded-xl border border-light-300 bg-light-400/30 backdrop-blur lg:rounded-none lg:border-0 lg:border-l lg:border-light-300"
+								style={
+									aiPaneHeight != null ? { height: aiPaneHeight } : undefined
+								}
+							>
+								<div className="flex shrink-0 flex-col justify-center border-b border-light-300 bg-white/80 p-4 backdrop-blur">
+									<div className="mb-4 flex items-center justify-center">
+										<h3 className="flex items-center gap-2 font-bold sidebar-gradient-text">
+											<Image
+												src="/assets/images/assistant.svg"
+												alt="AI Analysis"
+												width={30}
+												height={30}
+											/>
+											CAALM Contract Assistant
+										</h3>
+										<Button
+											variant="ghost"
+											size="sm"
+											onClick={() => setShowAiPanel(false)}
+											className="shadow-drop-1"
+										>
+											<Minimize2 className="h-4 w-4" />
+										</Button>
+									</div>
+
+									{!aiAnalysis ? (
+										<Button
+											onClick={performAIAnalysis}
+											disabled={isAnalyzing}
+											className="w-full shadow-drop-1 primary-btn"
+										>
+											{isAnalyzing ? (
+												<>
+													<Loader2 className="h-4 w-4 animate-spin" />
+													Analyzing...
+												</>
+											) : (
+												<>
+													<Lightbulb className="h-4 w-4" />
+													Analyze Document
+												</>
+											)}
+										</Button>
+									) : (
+										<Button
+											onClick={performAIAnalysis}
+											variant="outline"
+											disabled={isAnalyzing}
+											className="w-full! shadow-drop-1 primary-btn"
+										>
+											{isAnalyzing ? (
+												<>
+													<Loader2 className="h-4 w-4 animate-spin" />
+													Re-analyzing...
+												</>
+											) : (
+												<>
+													<RotateCw className="h-4 w-4" />
+													Refresh Analysis
+												</>
+											)}
+										</Button>
+									)}
+								</div>
+
+								{aiAnalysis ? (
+									<>
+										<div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
+											<ContractAnalysisCards analysis={aiAnalysis} />
+											<div className="flex flex-col overflow-hidden rounded-lg border border-slate-200 bg-white">
+												<ContractAssistantChat
+													messages={contractMessages}
+													starterPrompts={starterPrompts}
+													suggestedQuestions={suggestedQuestions}
+													loading={isAiLoading}
+													analyzing={isAnalyzing}
+													onSend={sendContractMessage}
+													footer={
+														<div>
+															<div className="mb-2 flex items-center gap-2 text-sm font-semibold sidebar-gradient-text">
+																<FileText className="h-4 w-4 text-[#0f5384]" />
+																Proposal Generation
+															</div>
+															<Button
+																size="sm"
+																className="w-full! shadow-drop-1 primary-btn"
+																onClick={() => {
+																	console.log(
+																		"Generate proposal for contract:",
+																		contract?.noticeId,
+																	);
+																}}
+															>
+																Generate Proposal
+															</Button>
+															<p className="mt-2 text-center text-xs text-gray-500">
+																Create a professional proposal based on AI
+																analysis
+															</p>
+														</div>
+													}
+												/>
+											</div>
+										</div>
+
+										{/* Footer sits on the pane bottom = Full Description bottom */}
+										<div className="shrink-0 px-4 pb-4 pt-0">
+											<AskCaalmComposer
+												loading={isAiLoading}
+												onSend={sendContractMessage}
+											/>
+										</div>
+									</>
+								) : null}
+							</div>
+						) : null}
+					</div>
+
+					{/* Rest of document column */}
+					<div className="flex min-w-0 flex-col space-y-6">
+						{/* 3-Column Information Grid — collapsed when assistant is open */}
+						{showAiPanel ? (
+							<div className="border-t border-slate-200 pt-4">
+								<button
+									type="button"
+									onClick={() => setShowContractFacts((open) => !open)}
+									className="flex w-full cursor-pointer items-center justify-between py-2 text-left"
+								>
+									<span className="text-sm font-semibold sidebar-gradient-text">
+										Contract details
+									</span>
+									{showContractFacts ? (
+										<ChevronDownIcon className="h-4 w-4 text-slate-500" />
+									) : (
+										<ChevronRight className="h-4 w-4 text-slate-500" />
+									)}
+								</button>
+							</div>
+						) : null}
+						{(!showAiPanel || showContractFacts) && (
 						<div className="flex flex-col lg:flex-row lg:space-x-6">
 							{/* Left Column */}
 							<div className="flex-1 space-y-4">
@@ -842,6 +1019,7 @@ ${contractDetails.attachments
 								</div>
 							</div>
 						</div>
+						)}
 
 						{/* Attachments Section */}
 						{contractDetails?.attachments &&
@@ -907,503 +1085,6 @@ ${contractDetails.attachments
 								</Card>
 							)}
 					</div>
-
-					{/* AI Analysis Panel */}
-					{showAiPanel && (
-						<div className="w-96 border-l border-light-300 bg-light-400/30 backdrop-blur flex flex-col">
-							<div className="flex justify-center flex-col p-4 border-b border-light-300 bg-white/80 backdrop-blur">
-								<div className="flex items-center justify-center mb-4">
-									<h3 className="font-bold sidebar-gradient-text flex items-center gap-2">
-										<Image
-											src="/assets/images/assistant.svg"
-											alt="AI Analysis"
-											width={30}
-											height={30}
-										/>
-										AI Analysis
-									</h3>
-									<Button
-										variant="ghost"
-										size="sm"
-										onClick={() => setShowAiPanel(false)}
-										className="shadow-drop-1"
-									>
-										<Minimize2 className="h-4 w-4" />
-									</Button>
-								</div>
-
-								{!aiAnalysis ? (
-									<Button
-										onClick={performAIAnalysis}
-										disabled={isAnalyzing}
-										className="w-full shadow-drop-1 primary-btn"
-									>
-										{isAnalyzing ? (
-											<>
-												<Loader2 className="h-4 w-4 animate-spin" />
-												Analyzing...
-											</>
-										) : (
-											<>
-												<Lightbulb className="h-4 w-4" />
-												Analyze Document
-											</>
-										)}
-									</Button>
-								) : (
-									<Button
-										onClick={performAIAnalysis}
-										variant="outline"
-										disabled={isAnalyzing}
-										className="!w-full shadow-drop-1 primary-btn"
-									>
-										{isAnalyzing ? (
-											<>
-												<Loader2 className="h-4 w-4 animate-spin" />
-												Re-analyzing...
-											</>
-										) : (
-											<>
-												<RotateCw className="h-4 w-4" />
-												Refresh Analysis
-											</>
-										)}
-									</Button>
-								)}
-							</div>
-
-							<div className="flex-1 overflow-auto p-4 space-y-4">
-								{aiAnalysis && (
-									<>
-										{/* Summary */}
-										<Card className="bg-white border border-slate-200 shadow-sm rounded-lg">
-											<CardHeader className="pb-2">
-												<CardTitle className="text-sm flex items-center gap-2 font-semibold text-slate-700">
-													<FileText className="h-4 w-4 text-cyan-600" />
-													Summary
-												</CardTitle>
-											</CardHeader>
-											<CardContent>
-												<p className="text-sm text-slate-700">
-													{aiAnalysis.summary}
-												</p>
-											</CardContent>
-										</Card>
-
-										{/* Key Terms */}
-										<Card className="bg-white border border-slate-200 shadow-sm rounded-lg">
-											<CardHeader className="pb-2">
-												<CardTitle className="text-sm flex items-center gap-2 font-semibold text-slate-700">
-													<Lightbulb className="h-4 w-4 text-cyan-600" />
-													Key Terms
-												</CardTitle>
-											</CardHeader>
-											<CardContent>
-												<div className="flex flex-wrap gap-2">
-													{aiAnalysis.keyTerms.map((term, index) => (
-														<Badge
-															key={index}
-															variant="secondary"
-															className="bg-slate-100 text-slate-700 border-0 text-xs font-normal px-3 py-1 rounded-full"
-														>
-															{term}
-														</Badge>
-													))}
-												</div>
-											</CardContent>
-										</Card>
-
-										{/* Important Dates */}
-										{aiAnalysis.importantDates.length > 0 && (
-											<Card className="border border-light-300 shadow-drop-1 rounded-xl bg-white/80 backdrop-blur">
-												<CardHeader className="pb-2">
-													<CardTitle className="text-sm flex items-center gap-2 sidebar-gradient-text font-semibold">
-														<Calendar className="h-4 w-4 text-cyan-600" />
-														Important Dates
-													</CardTitle>
-												</CardHeader>
-												<CardContent>
-													<div className="space-y-2">
-														{aiAnalysis.importantDates.map((date, index) => (
-															<div
-																key={index}
-																className="flex justify-between text-sm"
-															>
-																<span className="text-gray-600">
-																	{date.label}:
-																</span>
-																<span className="font-medium">
-																	{date.date
-																		? new Date(date.date).toLocaleDateString()
-																		: "N/A"}
-																</span>
-															</div>
-														))}
-													</div>
-												</CardContent>
-											</Card>
-										)}
-
-										{/* Parties */}
-										{aiAnalysis.parties.length > 0 && (
-											<Card className="border border-light-300 shadow-drop-1 rounded-xl bg-white/80 backdrop-blur">
-												<CardHeader className="pb-2">
-													<CardTitle className="text-sm flex items-center gap-2 sidebar-gradient-text font-semibold">
-														<Users className="h-4 w-4 text-cyan-600" />
-														Contract Parties
-													</CardTitle>
-												</CardHeader>
-												<CardContent>
-													<div className="space-y-2">
-														{aiAnalysis.parties.map((party, index) => (
-															<div key={index} className="text-sm">
-																<div className="font-medium text-gray-900">
-																	{party.name}
-																</div>
-																<div className="text-gray-600">
-																	{party.role}
-																</div>
-																{party.contact && (
-																	<div className="text-xs text-gray-500 mt-1">
-																		{party.contact}
-																	</div>
-																)}
-															</div>
-														))}
-													</div>
-												</CardContent>
-											</Card>
-										)}
-
-										{/* Financial Information */}
-										{aiAnalysis.financialInfo.length > 0 && (
-											<Card className="border border-light-300 shadow-drop-1 rounded-xl bg-white/80 backdrop-blur">
-												<CardHeader className="pb-2">
-													<CardTitle className="text-sm flex items-center gap-2 sidebar-gradient-text font-semibold">
-														<Target className="h-4 w-4 text-cyan-600" />
-														Financial Information
-													</CardTitle>
-												</CardHeader>
-												<CardContent>
-													<div className="space-y-2">
-														{aiAnalysis.financialInfo.map((info, index) => (
-															<div key={index} className="text-sm">
-																<div className="font-medium text-gray-900">
-																	{info.label}
-																</div>
-																<div className="text-gray-600">
-																	{info.value}
-																</div>
-																{info.context && (
-																	<div className="text-xs text-gray-500 mt-1">
-																		{info.context}
-																	</div>
-																)}
-															</div>
-														))}
-													</div>
-												</CardContent>
-											</Card>
-										)}
-
-										{/* Compliance Requirements */}
-										{aiAnalysis.complianceRequirements.length > 0 && (
-											<Card className="border border-light-300 shadow-drop-1 rounded-xl bg-white/80 backdrop-blur">
-												<CardHeader className="pb-2">
-													<CardTitle className="text-sm flex items-center gap-2 sidebar-gradient-text font-semibold">
-														<Shield className="h-4 w-4 text-cyan-600" />
-														Compliance Requirements
-													</CardTitle>
-												</CardHeader>
-												<CardContent>
-													<div className="space-y-2">
-														{aiAnalysis.complianceRequirements.map(
-															(req, index) => (
-																<div key={index} className="text-sm">
-																	<div className="font-medium text-gray-900">
-																		{req.requirement}
-																	</div>
-																	<div className="text-gray-600">
-																		{req.category}
-																	</div>
-																	{req.deadline && (
-																		<div className="text-xs text-gray-500 mt-1">
-																			Deadline:{" "}
-																			{new Date(
-																				req.deadline,
-																			).toLocaleDateString()}
-																		</div>
-																	)}
-																</div>
-															),
-														)}
-													</div>
-												</CardContent>
-											</Card>
-										)}
-
-										{/* Performance Metrics */}
-										{aiAnalysis.performanceMetrics.length > 0 && (
-											<Card className="border border-light-300 shadow-drop-1 rounded-xl bg-white/80 backdrop-blur">
-												<CardHeader className="pb-2">
-													<CardTitle className="text-sm flex items-center gap-2 sidebar-gradient-text font-semibold">
-														<Target className="h-4 w-4 text-cyan-600" />
-														Performance Metrics
-													</CardTitle>
-												</CardHeader>
-												<CardContent>
-													<div className="space-y-2">
-														{aiAnalysis.performanceMetrics.map(
-															(metric, index) => (
-																<div key={index} className="text-sm">
-																	<div className="font-medium text-gray-900">
-																		{metric.metric}
-																	</div>
-																	{metric.target && (
-																		<div className="text-gray-600">
-																			Target: {metric.target}
-																		</div>
-																	)}
-																	{metric.frequency && (
-																		<div className="text-xs text-gray-500 mt-1">
-																			Frequency: {metric.frequency}
-																		</div>
-																	)}
-																</div>
-															),
-														)}
-													</div>
-												</CardContent>
-											</Card>
-										)}
-
-										{/* Risks */}
-										{aiAnalysis.risks.length > 0 && (
-											<Card className="border border-light-300 shadow-drop-1 rounded-xl bg-white/80 backdrop-blur">
-												<CardHeader className="pb-2">
-													<CardTitle className="text-sm flex items-center gap-2 sidebar-gradient-text font-semibold">
-														<AlertTriangle className="h-4 w-4 text-cyan-600" />
-														Risks
-													</CardTitle>
-												</CardHeader>
-												<CardContent>
-													<ul className="space-y-2">
-														{aiAnalysis.risks.map((risk, index) => (
-															<li key={index} className="text-sm text-gray-700">
-																<div className="flex items-start gap-2">
-																	<div
-																		className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
-																			risk.severity === "high"
-																				? "bg-red-500"
-																				: risk.severity === "medium"
-																					? "bg-yellow-500"
-																					: "bg-green-500"
-																		}`}
-																	/>
-																	<div className="flex-1">
-																		<div className="font-medium">
-																			{risk.risk}
-																		</div>
-																		{risk.context && (
-																			<div className="text-xs text-gray-500 mt-1">
-																				{risk.context}
-																			</div>
-																		)}
-																	</div>
-																</div>
-															</li>
-														))}
-													</ul>
-												</CardContent>
-											</Card>
-										)}
-
-										{/* Opportunities */}
-										{aiAnalysis.opportunities.length > 0 && (
-											<Card className="border border-light-300 shadow-drop-1 rounded-xl bg-white/80 backdrop-blur">
-												<CardHeader className="pb-2">
-													<CardTitle className="text-sm flex items-center gap-2 sidebar-gradient-text font-semibold">
-														<CheckCircle className="h-4 w-4 text-cyan-600" />
-														Opportunities
-													</CardTitle>
-												</CardHeader>
-												<CardContent>
-													<ul className="space-y-2">
-														{aiAnalysis.opportunities.map(
-															(opportunity, index) => (
-																<li
-																	key={index}
-																	className="text-sm text-gray-700"
-																>
-																	<div className="flex items-start gap-2">
-																		<div
-																			className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
-																				opportunity.impact === "high"
-																					? "bg-green-500"
-																					: opportunity.impact === "medium"
-																						? "bg-yellow-500"
-																						: "bg-blue-500"
-																			}`}
-																		/>
-																		<div className="flex-1">
-																			<div className="font-medium">
-																				{opportunity.opportunity}
-																			</div>
-																			{opportunity.context && (
-																				<div className="text-xs text-gray-500 mt-1">
-																					{opportunity.context}
-																				</div>
-																			)}
-																		</div>
-																	</div>
-																</li>
-															),
-														)}
-													</ul>
-												</CardContent>
-											</Card>
-										)}
-
-										{/* Recommendations */}
-										{aiAnalysis.recommendations.length > 0 && (
-											<Card className="border border-light-300 shadow-drop-1 rounded-xl bg-white/80 backdrop-blur">
-												<CardHeader className="pb-2">
-													<CardTitle className="text-sm flex items-center gap-2 sidebar-gradient-text font-semibold">
-														<Lightbulb className="h-4 w-4 text-cyan-600" />
-														Recommendations
-													</CardTitle>
-												</CardHeader>
-												<CardContent>
-													<ul className="space-y-1">
-														{aiAnalysis.recommendations.map((rec, index) => (
-															<li
-																key={index}
-																className="text-sm text-gray-700 flex items-start gap-2"
-															>
-																<div className="w-1 h-1 rounded-full bg-blue-400 mt-2 flex-shrink-0" />
-																<div className="flex-1">
-																	<div className="font-medium">
-																		{rec.recommendation}
-																	</div>
-																	{rec.context && (
-																		<div className="text-xs text-gray-500 mt-1">
-																			{rec.context}
-																		</div>
-																	)}
-																</div>
-															</li>
-														))}
-													</ul>
-												</CardContent>
-											</Card>
-										)}
-
-										{/* AI Chat */}
-										<Card className="border border-light-300 shadow-drop-1 rounded-xl bg-white/80 backdrop-blur">
-											<CardHeader className="pb-2">
-												<CardTitle className="text-sm flex items-center gap-2 sidebar-gradient-text font-semibold">
-													<Sparkles className="h-4 w-4 text-cyan-600" />
-													Ask AI
-												</CardTitle>
-											</CardHeader>
-											<CardContent className="space-y-3">
-												<div className="flex gap-2">
-													<Textarea
-														placeholder="Ask a question about this contract..."
-														value={aiInput}
-														onChange={(e) => setAiInput(e.target.value)}
-														className="text-sm"
-														rows={2}
-													/>
-												</div>
-												<Button
-													onClick={handleAiChat}
-													disabled={isAiLoading || !aiInput.trim()}
-													size="sm"
-													className="!w-full shadow-drop-1 primary-btn"
-												>
-													{isAiLoading ? (
-														<>
-															<Loader2 className="h-4 w-4 animate-spin" />
-															Thinking...
-														</>
-													) : (
-														<Send className="h-4 w-4" />
-													)}
-												</Button>
-
-												{/* Suggested Questions */}
-												<div className="mt-4">
-													<div className="mb-3">
-														<h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-															<FileText className="h-4 w-4 text-cyan-600" />
-															Quick Questions
-														</h4>
-													</div>
-
-													<div className="flex flex-wrap gap-2">
-														{[
-															"What is this contract about?",
-															"Summarize the main points",
-															"What are the key terms and conditions?",
-															"What actions do I need to take?",
-														].map((q, idx) => (
-															<Button
-																key={idx}
-																variant="outline"
-																size="sm"
-																className="text-xs rounded-full bg-white border-light-300 hover:bg-light-400 hover:border-[#00C1CB] focus:ring-2 focus:ring-[#078FAB] focus:outline-none transition-all duration-200 shadow-drop-1"
-																onClick={() => setAiInput(q)}
-																disabled={isAiLoading}
-															>
-																{q}
-															</Button>
-														))}
-													</div>
-												</div>
-
-												{aiResponse && (
-													<div className="mt-3 p-3 bg-blue-50 rounded border">
-														<p className="text-sm text-gray-700">
-															{aiResponse}
-														</p>
-													</div>
-												)}
-											</CardContent>
-										</Card>
-
-										{/* Generate Proposal Button */}
-										<Card className="border border-light-300 shadow-drop-1 rounded-xl bg-white/80 backdrop-blur">
-											<CardHeader className="pb-2">
-												<CardTitle className="text-sm flex items-center gap-2 sidebar-gradient-text font-semibold">
-													<FileText className="h-4 w-4 text-cyan-600" />
-													Proposal Generation
-												</CardTitle>
-											</CardHeader>
-											<CardContent>
-												<Button
-													size="sm"
-													className="!w-full shadow-drop-1 primary-btn"
-													onClick={() => {
-														// TODO: Implement proposal generation logic
-														console.log(
-															"Generate proposal for contract:",
-															contract?.noticeId,
-														);
-													}}
-												>
-													Generate Proposal
-												</Button>
-												<p className="text-xs text-gray-500 mt-2 text-center">
-													Create a professional proposal based on AI analysis
-												</p>
-											</CardContent>
-										</Card>
-									</>
-								)}
-							</div>
-						</div>
-					)}
 				</div>
 			</DialogContent>
 		</Dialog>

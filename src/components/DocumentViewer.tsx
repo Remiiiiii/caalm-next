@@ -19,7 +19,13 @@ import Image from "next/image";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
+import type { ContractChatMessage } from "@/components/contract-assistant/ContractAssistantChat";
+import { ContractAssistantChat } from "@/components/contract-assistant/ContractAssistantChat";
 import { useDocumentViewer } from "@/hooks/useDocumentViewer";
+import type {
+	ContractStarterPrompt,
+	PdfPageText,
+} from "@/lib/ai/contract-assistant.types";
 import { convertFileSize } from "@/lib/utils";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -33,6 +39,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/b
 interface DocumentViewerProps {
 	isOpen: boolean;
 	onClose: () => void;
+	assistantMode?: "document" | "contract";
 	file: {
 		id: string;
 		name: string;
@@ -71,7 +78,7 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
 async function extractPdfTextInBrowser(
 	fileUrl: string,
 	fileName: string,
-): Promise<string | undefined> {
+): Promise<{ text?: string; pageTexts?: PdfPageText[] } | undefined> {
 	try {
 		const pdfResponse = await fetch(fileUrl, { credentials: "include" });
 		if (!pdfResponse.ok) return undefined;
@@ -83,9 +90,13 @@ async function extractPdfTextInBrowser(
 		});
 		if (!extractResponse.ok) return undefined;
 		const body = await extractResponse.json().catch(() => ({}));
-		return typeof body.text === "string" && body.text.trim()
-			? body.text
+		const text =
+			typeof body.text === "string" && body.text.trim() ? body.text : undefined;
+		const pageTexts = Array.isArray(body.pageTexts)
+			? (body.pageTexts as PdfPageText[])
 			: undefined;
+		if (!text && !pageTexts?.length) return undefined;
+		return { text, pageTexts };
 	} catch (error) {
 		console.error("Browser PDF extract failed:", error);
 		return undefined;
@@ -96,6 +107,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 	isOpen,
 	onClose,
 	file,
+	assistantMode = "document",
 }) => {
 	const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
 	const [newMessage, setNewMessage] = useState("");
@@ -113,8 +125,18 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 	const [pdfPageNumber, setPdfPageNumber] = useState(1);
 	const [pdfScale, setPdfScale] = useState(1);
 	const [pdfViewerFile, setPdfViewerFile] = useState<string | null>(null);
+	const [pageTexts, setPageTexts] = useState<PdfPageText[] | undefined>();
+	const [starterPrompts, setStarterPrompts] = useState<ContractStarterPrompt[]>(
+		[],
+	);
+	const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([]);
+	const [contractMessages, setContractMessages] = useState<
+		ContractChatMessage[]
+	>([]);
+	const [isContractAnalyzing, setIsContractAnalyzing] = useState(false);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const chatEndRef = useRef<HTMLDivElement>(null);
+	const contractAnalyzedRef = useRef(false);
 
 	// Use SWR hook for document data
 	const {
@@ -146,6 +168,12 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 			setPdfPageNumber(1);
 			setPdfScale(1);
 			setPdfViewerFile(null);
+			setPageTexts(undefined);
+			setStarterPrompts([]);
+			setSuggestedQuestions([]);
+			setContractMessages([]);
+			setIsContractAnalyzing(false);
+			contractAnalyzedRef.current = false;
 		}
 	}, [isOpen]);
 
@@ -470,7 +498,9 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 				!file.url.startsWith("blob:") &&
 				!file.url.startsWith("data:")
 			) {
-				contentToAnalyze = await extractPdfTextInBrowser(file.url, file.name);
+				const extracted = await extractPdfTextInBrowser(file.url, file.name);
+				contentToAnalyze = extracted?.text;
+				if (extracted?.pageTexts?.length) setPageTexts(extracted.pageTexts);
 				if (contentToAnalyze) urlToUse = "";
 			}
 
@@ -531,6 +561,10 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 	// Initialize with welcome message and structured summary when component opens
 	useEffect(() => {
 		if (isOpen && !welcomeMessageLoaded && chatMessages.length === 0) {
+			if (assistantMode === "contract") {
+				setWelcomeMessageLoaded(true);
+				return;
+			}
 			void generateSummary();
 			analyze();
 		}
@@ -540,6 +574,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 		chatMessages.length,
 		analyze,
 		generateSummary,
+		assistantMode,
 	]);
 
 	const handleSendMessage = async ({
@@ -580,7 +615,9 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 				!file.url.startsWith("blob:") &&
 				!file.url.startsWith("data:")
 			) {
-				contentToAnalyze = await extractPdfTextInBrowser(file.url, file.name);
+				const extracted = await extractPdfTextInBrowser(file.url, file.name);
+				contentToAnalyze = extracted?.text;
+				if (extracted?.pageTexts?.length) setPageTexts(extracted.pageTexts);
 				if (contentToAnalyze) urlToUse = "";
 			}
 
@@ -627,6 +664,129 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 		}
 		setIsLoading(false);
 	};
+
+	const loadContractCorpus = useCallback(async () => {
+		if (pageTexts?.length) {
+			return { pageTexts, fileContent: undefined as string | undefined };
+		}
+		if (file.type.toLowerCase() === "pdf" && file.url) {
+			const extracted = await extractPdfTextInBrowser(file.url, file.name);
+			if (extracted?.pageTexts?.length) {
+				setPageTexts(extracted.pageTexts);
+				return { pageTexts: extracted.pageTexts, fileContent: extracted.text };
+			}
+			return { pageTexts: undefined, fileContent: extracted?.text };
+		}
+		return { pageTexts: undefined, fileContent: fileContent?.content };
+	}, [file.name, file.type, file.url, fileContent, pageTexts]);
+
+	const analyzeContract = useCallback(async () => {
+		setIsContractAnalyzing(true);
+		try {
+			const corpus = await loadContractCorpus();
+			const response = await fetch("/api/ai-analyze", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					action: "analyze",
+					context: "contract",
+					fileName: file.name,
+					fileType: file.type,
+					pageTexts: corpus.pageTexts,
+					fileContent: corpus.fileContent,
+				}),
+			});
+			const result = await response.json();
+			setStarterPrompts(result.starterPrompts || []);
+			setSuggestedQuestions(result.suggestedQuestions || []);
+			if (result.summaryMarkdown || result.summary) {
+				setContractMessages([
+					{
+						id: "summary",
+						role: "assistant",
+						text: result.summaryMarkdown || result.summary,
+						citations: result.citations || [],
+					},
+				]);
+			}
+		} catch (error) {
+			console.error("Contract analysis failed:", error);
+		} finally {
+			setIsContractAnalyzing(false);
+		}
+	}, [file.name, file.type, loadContractCorpus]);
+
+	const sendContractMessage = useCallback(
+		async (text: string) => {
+			const userMessage: ContractChatMessage = {
+				id: `${Date.now()}`,
+				role: "user",
+				text,
+			};
+			setContractMessages((prev) => [...prev, userMessage]);
+			setIsLoading(true);
+			try {
+				const corpus = await loadContractCorpus();
+				const previousContext = [...contractMessages, userMessage]
+					.slice(-4)
+					.map((message) => `${message.role}: ${message.text}`)
+					.join("\n");
+				const response = await fetch("/api/ai-analyze", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						action: "question",
+						context: "contract",
+						question: text,
+						fileName: file.name,
+						fileType: file.type,
+						pageTexts: corpus.pageTexts,
+						fileContent: corpus.fileContent,
+						previousContext,
+					}),
+				});
+				const result = await response.json();
+				setSuggestedQuestions(result.suggestedQuestions || []);
+				setContractMessages((prev) => [
+					...prev,
+					{
+						id: `${Date.now()}-ai`,
+						role: "assistant",
+						text:
+							result.answerMarkdown ||
+							result.answer ||
+							"I could not answer that.",
+						citations: result.citations || [],
+					},
+				]);
+			} catch (error) {
+				console.error("Contract question failed:", error);
+				setContractMessages((prev) => [
+					...prev,
+					{
+						id: `${Date.now()}-error`,
+						role: "assistant",
+						text: "I'm sorry, I encountered an error while processing your question. Please try again.",
+					},
+				]);
+			} finally {
+				setIsLoading(false);
+			}
+		},
+		[contractMessages, file.name, file.type, loadContractCorpus],
+	);
+
+	useEffect(() => {
+		if (
+			!isOpen ||
+			assistantMode !== "contract" ||
+			contractAnalyzedRef.current
+		) {
+			return;
+		}
+		contractAnalyzedRef.current = true;
+		void analyzeContract();
+	}, [analyzeContract, assistantMode, isOpen]);
 
 	const handleKeyPress = (e: React.KeyboardEvent) => {
 		if (e.key === "Enter" && !e.shiftKey) {
@@ -815,26 +975,20 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 								size="icon"
 								className="h-8 w-8 cursor-pointer"
 								disabled={pdfPageNumber <= 1}
-								onClick={() =>
-									setPdfPageNumber((p) => Math.max(1, p - 1))
-								}
+								onClick={() => setPdfPageNumber((p) => Math.max(1, p - 1))}
 								aria-label="Previous page"
 							>
 								<ChevronLeft className="h-4 w-4" />
 							</Button>
 							<span className="min-w-18 text-center text-xs text-slate-600 tabular-nums">
-								{pdfNumPages > 0
-									? `${pdfPageNumber} / ${pdfNumPages}`
-									: "—"}
+								{pdfNumPages > 0 ? `${pdfPageNumber} / ${pdfNumPages}` : "—"}
 							</span>
 							<Button
 								type="button"
 								variant="outline"
 								size="icon"
 								className="h-8 w-8 cursor-pointer"
-								disabled={
-									pdfNumPages === 0 || pdfPageNumber >= pdfNumPages
-								}
+								disabled={pdfNumPages === 0 || pdfPageNumber >= pdfNumPages}
 								onClick={() =>
 									setPdfPageNumber((p) => Math.min(pdfNumPages, p + 1))
 								}
@@ -869,9 +1023,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 								className="h-8 w-8 cursor-pointer"
 								disabled={pdfScale >= 2}
 								onClick={() =>
-									setPdfScale((s) =>
-										Math.min(2, Number((s + 0.1).toFixed(1))),
-									)
+									setPdfScale((s) => Math.min(2, Number((s + 0.1).toFixed(1))))
 								}
 								aria-label="Zoom in"
 							>
@@ -1098,11 +1250,13 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 								<h3 className="flex items-center gap-2 font-bold sidebar-gradient-text">
 									<Image
 										src="/assets/images/assistant.svg"
-										alt="AI Assistant"
+										alt="CAALM Contract Assistant"
 										width={30}
 										height={30}
 									/>
-									AI Assistant
+									{assistantMode === "contract"
+										? "CAALM Contract Assistant"
+										: "AI Assistant"}
 								</h3>
 								{showAIAssistant && (
 									<Button
@@ -1124,6 +1278,10 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 									onClick={async (e) => {
 										e.stopPropagation();
 										setShowAIAssistant(true);
+										if (assistantMode === "contract") {
+											void analyzeContract();
+											return;
+										}
 										await generateSummary();
 										analyze();
 									}}
@@ -1135,8 +1293,20 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 							)}
 						</div>
 
+						{showAIAssistant && assistantMode === "contract" ? (
+							<ContractAssistantChat
+								messages={contractMessages}
+								starterPrompts={starterPrompts}
+								suggestedQuestions={suggestedQuestions}
+								loading={isLoading}
+								analyzing={isContractAnalyzing}
+								onSend={sendContractMessage}
+								onJumpToPage={setPdfPageNumber}
+							/>
+						) : null}
+
 						{/* Scrollable summary + chat; composer pinned to bottom */}
-						{showAIAssistant && (
+						{showAIAssistant && assistantMode !== "contract" && (
 							<>
 								<div
 									className="min-h-0 flex-1 overflow-y-auto text-left"

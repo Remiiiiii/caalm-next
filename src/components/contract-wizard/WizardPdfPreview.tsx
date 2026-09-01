@@ -6,6 +6,7 @@ import {
 	Download,
 	Minus,
 	Plus,
+	Printer,
 	Sparkles,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
@@ -100,6 +101,37 @@ export function WizardPdfPreview({
 		[],
 	);
 
+	const printPdf = useCallback(() => {
+		const src =
+			typeof viewerFile === "string" ? viewerFile : objectUrl || pdfUrl;
+		if (!src) return;
+
+		const iframe = document.createElement("iframe");
+		iframe.setAttribute("aria-hidden", "true");
+		iframe.style.position = "fixed";
+		iframe.style.right = "0";
+		iframe.style.bottom = "0";
+		iframe.style.width = "0";
+		iframe.style.height = "0";
+		iframe.style.border = "0";
+		iframe.src = src;
+		document.body.appendChild(iframe);
+
+		const cleanup = () => {
+			iframe.remove();
+		};
+
+		iframe.onload = () => {
+			try {
+				iframe.contentWindow?.focus();
+				iframe.contentWindow?.print();
+			} catch {
+				window.open(src, "_blank")?.print();
+			}
+			window.setTimeout(cleanup, 1000);
+		};
+	}, [objectUrl, pdfUrl, viewerFile]);
+
 	return (
 		<div className="space-y-4">
 			<div className="flex flex-wrap items-center justify-between gap-3">
@@ -112,15 +144,30 @@ export function WizardPdfPreview({
 						clauses, then create the draft to start pending review.
 					</p>
 				</div>
-				<div className="flex flex-wrap gap-2">
+				<div className="flex flex-wrap items-center gap-2">
 					{pdfUrl && (
-						<Button asChild className="primary-btn cursor-pointer px-3 sm:px-4">
-							<a href={pdfUrl} download={fileName}>
+						<Button
+							asChild
+							variant="outline"
+							size="icon"
+							className="h-8 w-8 cursor-pointer text-slate-700"
+						>
+							<a href={pdfUrl} download={fileName} aria-label="Download PDF">
 								<Download className="h-4 w-4" />
-								Download PDF
 							</a>
 						</Button>
 					)}
+					<Button
+						type="button"
+						variant="outline"
+						size="icon"
+						className="h-8 w-8 cursor-pointer text-slate-700"
+						disabled={!pdfUrl}
+						onClick={printPdf}
+						aria-label="Print PDF"
+					>
+						<Printer className="h-4 w-4" />
+					</Button>
 					<Button
 						type="button"
 						className="primary-btn cursor-pointer px-3 sm:px-4"
@@ -128,7 +175,7 @@ export function WizardPdfPreview({
 						onClick={() => setAiOpen(true)}
 					>
 						<Sparkles className="h-4 w-4" />
-						Ask CAALM AI
+						Ask CAALM Contract Assistant
 					</Button>
 				</div>
 			</div>
@@ -161,9 +208,7 @@ export function WizardPdfPreview({
 								size="icon"
 								className="h-8 w-8 cursor-pointer"
 								disabled={numPages === 0 || pageNumber >= numPages}
-								onClick={() =>
-									setPageNumber((p) => Math.min(numPages, p + 1))
-								}
+								onClick={() => setPageNumber((p) => Math.min(numPages, p + 1))}
 								aria-label="Next page"
 							>
 								<ChevronRight className="h-4 w-4" />
@@ -237,6 +282,7 @@ export function WizardPdfPreview({
 			<DocumentViewer
 				isOpen={aiOpen}
 				onClose={() => setAiOpen(false)}
+				assistantMode="contract"
 				file={{
 					id: fileId || sessionId,
 					name: fileName,

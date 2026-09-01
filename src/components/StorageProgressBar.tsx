@@ -73,7 +73,7 @@ export default function StorageProgressBar({
 						}}
 					/>
 				</div>
-				<p className="mb-6 text-xs text-center text-slate-600">
+				<p className="text-xs text-center text-slate-600">
 					{formattedUsed} {usedUnit} of {displayLimitGB} GB used
 				</p>
 			</div>
