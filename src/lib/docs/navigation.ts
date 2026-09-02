@@ -154,6 +154,24 @@ export const DOCS_NAV: DocsNavGroup[] = [
 				summary: "Browse, upload, assign, review, and renew contracts.",
 			},
 			{
+				title: "Clause Library",
+				slug: "reference/clause-library",
+				path: "reference/clause-library",
+				summary: "Store and version standard contract wording.",
+			},
+			{
+				title: "Contract templates",
+				slug: "reference/contract-templates",
+				path: "reference/contract-templates",
+				summary: "Assemble published clauses into a reusable recipe.",
+			},
+			{
+				title: "Funding and retention",
+				slug: "reference/funding-retention",
+				path: "reference/funding-retention",
+				summary: "Protect live dollars and track new funding pursuits.",
+			},
+			{
 				title: "Licenses",
 				slug: "reference/licenses",
 				path: "reference/licenses",

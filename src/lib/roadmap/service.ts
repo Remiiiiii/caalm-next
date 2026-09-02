@@ -24,6 +24,7 @@ import {
 	getCatalogLinkedPrNumber,
 	getCatalogLinkedPrNumbers,
 	getSectionNumberForPr,
+	ROADMAP_TRACKING_STUB_PRS,
 	sectionCompletesOnMergedCatalogPr,
 	sectionUsesPerTaskPrCompletion,
 } from "./catalog";
@@ -736,6 +737,15 @@ export async function completeSectionFromMerge(
 	const owner = sectionTasks[0];
 	if (!owner) {
 		throw new RoadmapError(`Section ${sectionNumber} has no tasks`, 404);
+	}
+
+	if (ROADMAP_TRACKING_STUB_PRS.has(input.prNumber)) {
+		return {
+			sectionNumber,
+			completed: false,
+			reason: `PR #${input.prNumber} is a tracking stub — merge does not mark tasks complete`,
+			tasks: sectionTasks,
+		};
 	}
 
 	if (!sectionCompletesOnMergedCatalogPr(sectionNumber)) {

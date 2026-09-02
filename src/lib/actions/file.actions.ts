@@ -2760,52 +2760,28 @@ export const contractStatus = async ({
 					data: updateData,
 				});
 			} catch (statusUpdateError: any) {
-				// If status update fails, check if it's a relationship validation error
 				const isRelationshipError =
 					statusUpdateError?.type === "relationship_value_invalid" ||
 					statusUpdateError?.message?.includes("Invalid relationship value") ||
 					statusUpdateError?.message?.includes("Array given");
 
+				// fileRef points at a retired Files table. Template drafts store a
+				// current Files id there, which blocks any later status update.
 				if (isRelationshipError) {
-					console.error(
-						"[contractStatus] Status update failed with relationship error:",
-						{
-							error: statusUpdateError?.message,
-							errorType: statusUpdateError?.type,
-							normalizationAttempted: Object.keys(normalizationData).length > 0,
-							fieldsNormalized: Object.keys(normalizationData),
-						},
-					);
-
-					// If we already tried normalization and it failed, provide detailed error
-					if (Object.keys(normalizationData).length > 0) {
-						const fieldsToFix = Object.keys(normalizationData).join(", ");
-						throw new Error(
-							`Cannot update contract status: relationship fields are stored as arrays and cannot be automatically fixed. ` +
-								`Appwrite is rejecting updates to fix these fields. ` +
-								`Please fix these fields manually in the Appwrite Console: ${fieldsToFix}. ` +
-								`For each field, change empty arrays [] to null. Contract ID: ${fileId}. ` +
-								`Original error: ${
-									statusUpdateError?.message || "Unknown error"
-								}`,
-						);
-					} else {
-						// No normalization was attempted, but we got a relationship error
-						// This means the fields might be arrays but weren't detected
-						// Provide a generic error message
-						throw new Error(
-							`Cannot update contract status: relationship validation error. ` +
-								`Please check the contract document in Appwrite Console and ensure all relationship fields ` +
-								`(fileId, fileRef, owner, contractOwnerId, parentContractId) are either valid IDs or null, not arrays. ` +
-								`Contract ID: ${fileId}. ` +
-								`Original error: ${
-									statusUpdateError?.message || "Unknown error"
-								}`,
-						);
+					try {
+						await tablesDB.updateRow({
+							databaseId: appwriteConfig.databaseId!,
+							tableId: appwriteConfig.contractsCollectionId!,
+							rowId: fileId,
+							data: { status, fileRef: null },
+						});
+					} catch {
+						// Fall through to the existing relationship error messaging.
+						throw statusUpdateError;
 					}
+				} else {
+					throw statusUpdateError;
 				}
-				// Re-throw other errors as-is
-				throw statusUpdateError;
 			}
 
 			// Fetch the updated contract

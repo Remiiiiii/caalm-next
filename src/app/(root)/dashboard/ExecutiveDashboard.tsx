@@ -58,7 +58,7 @@ import {
 	TableRowSkeleton,
 } from "@/components/ui/skeletons";
 import { WidgetCarousel } from "@/components/ui/widget-carousel";
-import WeatherWidget from "@/components/WeatherWidget";
+import { WeatherBriefingLauncher } from "@/components/dashboard-briefing/WeatherBriefingLauncher";
 import type { ContractStatus } from "@/constants/status";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useToast } from "@/hooks/use-toast";
@@ -710,7 +710,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 				<DashboardGreeting
 					user={user}
 					actions={
-						<>
+						<div className="flex items-start gap-3">
 							<div className="text-right">
 								<p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
 									Last updated
@@ -720,17 +720,16 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 								</p>
 							</div>
 
-							{process.env.NODE_ENV === "development" && (
-								<>
-									<div
-										aria-hidden
-										className="hidden h-8 w-px bg-slate-300 sm:block"
-									/>
+							<div className="flex flex-col items-end gap-2">
+								{process.env.NODE_ENV === "development" && (
 									<Button
 										onClick={triggerTestModal}
 										variant="outline"
 										size="sm"
-										className={cn( "h-9 gap-2 border border-dashed border-orange/40 bg-orange/10", "px-3 text-xs font-medium text-orange hover:bg-orange/15 hover:border-orange/50", )}
+										className={cn(
+											"h-9 gap-2 border border-dashed border-orange/40 bg-orange/10",
+											"px-3 text-xs font-medium text-orange hover:bg-orange/15 hover:border-orange/50",
+										)}
 									>
 										<span className="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-orange">
 											Dev
@@ -738,9 +737,14 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 										<Pencil className="h-3.5 w-3.5" />
 										Test expiry modal
 									</Button>
-								</>
-							)}
-						</>
+								)}
+								<WeatherBriefingLauncher
+									location="Miami"
+									latitude={25.7617}
+									longitude={-80.1918}
+								/>
+							</div>
+						</div>
 					}
 				/>
 				<RiskImpactHeroCard
@@ -758,6 +762,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 								showSettings={false}
 								compact={true}
 								contracts={contractsFromApi}
+								alarmEnabled={!isModalOpen}
 							/>
 							<LicenseExpiryAlertsWidget
 								maxVisible={2}
@@ -769,11 +774,6 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 							<DepartmentPerformanceWidget />
 							<CompanyNewsFeed />
 							<QuickNotesWidget user={user ?? undefined} />
-							<WeatherWidget
-								location="Miami"
-								latitude={25.7617}
-								longitude={-80.1918}
-							/>
 						</WidgetCarousel>
 					</CardContent>
 				</Card>
@@ -1014,7 +1014,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 														}))
 													}
 													placeholder="Choose from directory…"
-													className="w-full border border-slate-200 bg-white text-slate-700 shadow-sm"
+													className="w-full border-[0.25px] border-slate-200 bg-white text-slate-700 shadow-sm"
 												>
 													{(uninvitedUsers as UninvitedUser[]).map(
 														(inviteUser: UninvitedUser) => (
@@ -1083,7 +1083,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 													setInviteForm((prev) => ({ ...prev, role: value }))
 												}
 												placeholder="Select role…"
-												className="w-full border border-slate-200 bg-white text-slate-700 shadow-sm"
+												className="w-full border-[0.25px] border-slate-200 bg-white text-slate-700 shadow-sm"
 											>
 												<SelectItem value="Super Admin">Super Admin</SelectItem>
 												<SelectItem value="Organization Admin">

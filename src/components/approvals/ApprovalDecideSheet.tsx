@@ -279,18 +279,7 @@ export default function ApprovalDecideSheet({
 									</Button>
 								</div>
 							</div>
-						) : (
-							<div className="flex justify-end">
-								<Button
-									variant="outline"
-									className="primary-btn cursor-pointer px-3 sm:px-4"
-									onClick={() => onOpenChange(false)}
-								>
-									<X className="h-4 w-4" />
-									Close
-								</Button>
-							</div>
-						)}
+						) : null}
 					</div>
 				}
 			>
@@ -415,7 +404,7 @@ export default function ApprovalDecideSheet({
 							value={notes}
 							onChange={(e) => setNotes(e.target.value)}
 							placeholder="Required for deny or request changes"
-							className="min-h-[88px] border border-slate-300 bg-white shadow-none focus-visible:border-[#078FAB]"
+							className="min-h-[88px] border-[0.25px] border-slate-300 bg-white shadow-none focus-visible:border-[#078FAB]"
 						/>
 					</div>
 				) : null}

@@ -205,6 +205,57 @@ describe("computeUnlocked", () => {
 			"locked",
 		);
 	});
+
+	it("does not lock a later section whose tasks are already all complete", () => {
+		const sections = [
+			section({
+				$id: "s5",
+				sectionNumber: 5,
+				title: "Clauses",
+				status: "in_progress",
+			}),
+			section({
+				$id: "s11",
+				sectionNumber: 11,
+				title: "Growth API",
+				status: "locked",
+			}),
+		];
+		const tasks = [
+			task({
+				$id: "t5.1",
+				sectionId: "s5",
+				taskCode: "5.1",
+				orderIndex: 0,
+				status: "in_review",
+			}),
+			task({
+				$id: "t11.1",
+				sectionId: "s11",
+				taskCode: "11.1",
+				orderIndex: 0,
+				status: "complete",
+			}),
+			task({
+				$id: "t11.2",
+				sectionId: "s11",
+				taskCode: "11.2",
+				orderIndex: 1,
+				status: "complete",
+			}),
+		];
+
+		const { snapshot } = computeUnlocked({ sections, tasks });
+		expect(snapshot.sections.find((s) => s.$id === "s5")?.status).toBe(
+			"in_progress",
+		);
+		expect(snapshot.sections.find((s) => s.$id === "s11")?.status).toBe(
+			"complete",
+		);
+		expect(snapshot.tasks.find((t) => t.$id === "t11.1")?.status).toBe(
+			"complete",
+		);
+	});
 });
 
 describe("computeProgressPercent", () => {

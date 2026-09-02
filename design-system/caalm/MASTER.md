@@ -115,12 +115,12 @@
 
 ### Inputs
 
-Every standalone text input, select, textarea, and search field must have a **visible** `1px solid #CBD5E1` (`border-slate-300`) border. Do not use white, translucent, or `slate-200` borders on light fills; they disappear.
+Every standalone text input, select, textarea, and search field must have a **visible** `0.25px solid #CBD5E1` (`border-[0.25px] border-slate-300`) border. Do not use 1px (`border`), white, translucent, or `slate-200` borders on light fills; they disappear or look too heavy. Search fields in a filter row use `h-10` to match adjacent selects.
 
 ```css
 .input {
   padding: 12px 16px;
-  border: 1px solid #CBD5E1;
+  border: 0.25px solid #CBD5E1;
   border-radius: 8px;
   font-size: 16px;
   transition: border-color 200ms ease;
@@ -149,6 +149,30 @@ Every standalone text input, select, textarea, and search field must have a **vi
   max-width: 500px;
   width: 90%;
 }
+
+### Overflow menus (3-dot)
+
+Use the Contracts table trigger. Do not use Lucide `MoreVertical`.
+
+- Icon: `/assets/icons/dots.svg` at 34×34
+- Trigger classes: `shad-no-focus rounded-full transition-colors hover:bg-white/30`
+- Items: `AppDropdownMenuItem` with a Lucide `icon`
+- If the menu has Delete or Archive, put `<DropdownMenuSeparator />` immediately **above** that item and use `tone="danger"`
+
+Reference: `src/components/ActionDropdown.tsx`
+
+### Badges
+
+Use the Contracts table badge, not default shadcn Badge variants.
+
+- Shape: `inline-block px-2 py-0.5 text-xs rounded-full font-medium border`
+- Active / current: `bg-green/10 text-green border-green/20`
+- Pending / draft: `bg-orange/10 text-orange border-orange/20`
+- Danger / expired: `bg-red/10 text-red border-red/20`
+- Info / category: `bg-blue/10 text-blue border-blue/20`
+- Neutral / version: `bg-slate-100 text-slate-600 border-slate-200`
+
+Reference: `src/components/ContractsTableView.tsx` (`statusBadge`)
 ```
 
 ---

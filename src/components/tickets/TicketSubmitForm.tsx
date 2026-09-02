@@ -54,7 +54,7 @@ import { cn } from "@/lib/utils";
 type MatrixLevel = "Critical" | "High" | "Medium" | "Low";
 
 const TICKET_FIELD_CLASS =
-	"bg-white !border !border-solid !border-slate-200 focus-visible:!border-[#078FAB] focus-visible:ring-1 focus-visible:ring-[#078FAB]";
+	"bg-white !border-[0.25px] !border-solid !border-slate-200 focus-visible:!border-[#078FAB] focus-visible:ring-1 focus-visible:ring-[#078FAB]";
 
 const SEVERITY_BADGE: Record<MatrixLevel, string> = {
 	Critical: "bg-red/10 text-red border-red/20",

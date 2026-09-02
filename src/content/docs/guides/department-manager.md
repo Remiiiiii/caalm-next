@@ -43,7 +43,7 @@ A record is healthy when:
 - Viewers may monitor your area — treat questions as free QA
 - Executives will ask risk questions from analytics — keep metadata trustworthy
 
-Refs: [Contracts](/docs/reference/contracts), [Licenses](/docs/reference/licenses), [Lifecycle](/docs/concepts/lifecycle).
+Refs: [Contracts](/docs/reference/contracts), [Clause Library](/docs/reference/clause-library), [Contract templates](/docs/reference/contract-templates), [Funding and retention](/docs/reference/funding-retention), [Licenses](/docs/reference/licenses), [Lifecycle](/docs/concepts/lifecycle).
 
 
 ## Monday triage template

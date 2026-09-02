@@ -43,3 +43,6 @@ Common causes:
 - Stakeholders disagree offline and never return to CAALM
 
 Admin response: reassign ownership, fix roles, or convene a decision — do not leave limbo records aging in place.
+
+Related: [Contract templates](/docs/reference/contract-templates), [Contracts](/docs/reference/contracts), [Funding and retention](/docs/reference/funding-retention).
+

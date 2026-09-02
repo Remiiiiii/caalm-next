@@ -5,11 +5,9 @@ import {
 	eachDayOfInterval,
 	endOfWeek,
 	format,
-	isBefore,
 	isSameDay,
 	isSameMonth,
 	isToday,
-	startOfDay,
 	startOfMonth,
 	startOfWeek,
 } from "date-fns";
@@ -28,7 +26,7 @@ import {
 	Users,
 } from "lucide-react";
 import type React from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import ExpandedCalendarView, {
 	type CalendarDisplayEvent,
 } from "@/components/ExpandedCalendarView";
@@ -361,7 +359,6 @@ function DashboardMonthMatrix({
 	const weeks = Array.from({ length: 6 }, (_, index) =>
 		days.slice(index * 7, index * 7 + 7),
 	);
-	const todayStart = startOfDay(new Date());
 
 	return (
 		<div className="px-3.5 pb-4 sm:px-[14px]">
@@ -382,7 +379,6 @@ function DashboardMonthMatrix({
 						const selected = Boolean(
 							selectedDate && isSameDay(day, selectedDate),
 						);
-						const disabled = isBefore(day, todayStart);
 						const today = isToday(day) && inMonth;
 						const { hasContract, hasDeadline, hasLicense, hasAudit } =
 							getDayEventDots(day, events);
@@ -391,12 +387,11 @@ function DashboardMonthMatrix({
 							<button
 								key={day.toISOString()}
 								type="button"
-								disabled={disabled}
 								onClick={() => onSelectDate(day)}
-								className={cn( "group relative flex h-11 flex-col items-center justify-center text-[13px] transition-colors", !inMonth && "text-slate-300", inMonth && !today && !disabled && "text-slate-700", disabled && "cursor-not-allowed opacity-50", )}
+								className={cn( "group relative flex h-11 flex-col items-center justify-center text-[13px] transition-colors", !inMonth && "text-slate-300", inMonth && !today && "text-slate-700", )}
 							>
 								<span
-									className={cn( "flex h-[26px] w-[26px] items-center justify-center rounded-full transition-colors", today && CALENDAR_TODAY_BADGE, selected && !today && "bg-blue/10 font-semibold text-[#0f5384] ring-2 ring-[#0f5384]/30", !today && !selected && !disabled && "group-hover:bg-slate-100", )}
+									className={cn( "flex h-[26px] w-[26px] items-center justify-center rounded-full transition-colors", today && CALENDAR_TODAY_BADGE, selected && !today && "bg-blue/10 font-semibold text-[#0f5384] ring-2 ring-[#0f5384]/30", !today && !selected && "group-hover:bg-slate-100", )}
 								>
 									{format(day, "d")}
 								</span>
@@ -453,6 +448,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 	);
 	const [currentMonth, setCurrentMonth] = useState(new Date());
 	const [viewMode, setViewMode] = useState<"month" | "week">("month");
+	const [weekSnapDay, setWeekSnapDay] = useState<string | null>(null);
 	const [isAddEventOpen, setIsAddEventOpen] = useState(false);
 	const [creatingEvent, setCreatingEvent] = useState(false);
 	const [outlookConnected, setOutlookConnected] = useState(false);
@@ -545,21 +541,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 	}, [user]);
 
 	const handleDateSelect = (date: Date | undefined) => {
-		// Don't allow selecting past dates
-		if (date) {
-			const today = new Date();
-			today.setHours(0, 0, 0, 0);
-
-			if (date < today) {
-				toast({
-					title: "Error",
-					description: "Cannot select dates in the past",
-					variant: "destructive",
-				});
-				return;
-			}
-		}
-
 		setSelectedDate(date);
 		onDateSelect?.(date!);
 
@@ -571,6 +552,23 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 			}));
 		}
 	};
+
+	const weekDayKey = (day: Date) => format(day, "yyyy-MM-dd");
+
+	const handleWeekDayChipClick = (day: Date) => {
+		handleDateSelect(day);
+		setWeekSnapDay(weekDayKey(day));
+	};
+
+	useLayoutEffect(() => {
+		if (!weekSnapDay || viewMode !== "week") return;
+		const el = document.querySelector<HTMLElement>(
+			`[data-week-day="${weekSnapDay}"]`,
+		);
+		const scroller = el?.closest<HTMLElement>("[data-week-list]");
+		if (!el || !scroller) return;
+		scroller.scrollTop = el.offsetTop;
+	}, [weekSnapDay, viewMode]);
 
 	const handleMonthChange = (month: Date) => {
 		setCurrentMonth(month);
@@ -762,18 +760,23 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 					{weekDays.map((day) => (
 						<div key={day.toISOString()} className="p-2">
 							<div className="text-xs text-slate-500">{format(day, "EEE")}</div>
-							<div
-								className={cn( "mx-auto flex h-[26px] w-[26px] cursor-pointer items-center justify-center rounded-full text-lg font-semibold transition-colors", isToday(day) ? CALENDAR_TODAY_BADGE : selectedDate && isSameDay(day, selectedDate) ? "bg-blue/10 text-[#0f5384] ring-2 ring-[#0f5384]/30" : "text-slate-700 hover:bg-slate-100", )}
-								onClick={() => handleDateSelect(day)}
+							<button
+								type="button"
+								aria-label={`Show events for ${format(day, "EEEE, MMMM d, yyyy")}`}
+								className={cn( "mx-auto flex h-[26px] w-[26px] cursor-pointer items-center justify-center rounded-full text-lg font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40", isToday(day) ? CALENDAR_TODAY_BADGE : selectedDate && isSameDay(day, selectedDate) ? "bg-blue/10 text-[#0f5384] ring-2 ring-[#0f5384]/30" : "text-slate-700 hover:bg-slate-100", )}
+								onClick={() => handleWeekDayChipClick(day)}
 							>
 								{format(day, "d")}
-							</div>
+							</button>
 						</div>
 					))}
 				</div>
 
 				{/* Week events list - scrollable container */}
-				<div className="h-[280px] overflow-y-auto border rounded-lg w-full">
+				<div
+					data-week-list
+					className="relative h-[280px] overflow-y-auto border rounded-lg w-full pb-[280px]"
+				>
 					<div className="space-y-0">
 						{weekDays.map((day) => {
 							const dayEvents = allEvents.filter(
@@ -784,6 +787,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 							return (
 								<div
 									key={day.toISOString()}
+									data-week-day={weekDayKey(day)}
 									className={cn( "border-b border-slate-200 last:border-b-0 transition-colors", isSelected ? "bg-blue-50" : "hover:bg-slate-50", )}
 								>
 									<div className="flex items-center justify-between p-3 bg-slate-50 border-b border-slate-200">
@@ -965,7 +969,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 					/>
 				) : (
 					<div className="px-3.5 pb-4 sm:px-[14px]">
-						<WeekView />
+						{WeekView()}
 					</div>
 				)}
 
@@ -1184,7 +1188,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 											}
 											placeholder="Enter event description"
 											rows={3}
-											className="flex min-h-[80px] w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#03afbf] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+											className="flex min-h-[80px] w-full rounded-md border-[0.25px] border-slate-200 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#03afbf] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
 										/>
 									</div>
 								</div>

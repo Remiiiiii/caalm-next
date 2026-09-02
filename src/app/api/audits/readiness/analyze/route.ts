@@ -84,17 +84,15 @@ export async function POST(request: NextRequest) {
 	if (validated.action === "summary" || validated.action === "analyze") {
 		const summary =
 			aiSummary || (await generateReadinessAutoSummary(payload));
+		const suggestedQuestions = payload.summary.insights
+			.slice(0, 4)
+			.map((insight) => `What should we do about: ${insight.title}?`);
 		return NextResponse.json({
 			success: true,
 			data: {
 				summary,
 				keyPoints: payload.summary.insights.slice(0, 5).map((i) => i.title),
-				suggestedQuestions: [
-					"Which gaps matter most for HRSA OSV prep?",
-					"What should we fix before child-welfare monitoring?",
-					"Which items belong on a financial PBC list?",
-					"What is scored vs informational on the public site crawl?",
-				],
+				suggestedQuestions,
 				documentType: "audit_readiness",
 				topics: payload.sourcesUsed,
 			},

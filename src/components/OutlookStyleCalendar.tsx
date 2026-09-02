@@ -4230,8 +4230,8 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 							"data-[state=open]:slide-in-from-right data-[state=closed]:slide-out-to-right",
 							"data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0",
 							"pointer-events-auto",
-							"[&>button]:hidden",
 						)}
+						showCloseButton={false}
 					>
 						<div
 							className="glass-card-frosted relative flex h-full w-full flex-col overflow-hidden rounded-2xl"

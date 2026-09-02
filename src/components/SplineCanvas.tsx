@@ -96,7 +96,7 @@ export default function SplineCanvas({
 	return (
 		<div
 			ref={setContainerRef}
-			className={`${className} ${visible ? "opacity-100" : "opacity-0"}`}
+			className={`${className} ${visible ? "opacity-100" : "opacity-0"} overflow-hidden [&_iframe]:hidden`}
 			style={wrapperStyle}
 		>
 			<Spline
