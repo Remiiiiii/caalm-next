@@ -150,7 +150,7 @@ export const ITEM_ICONS: Record<
 	"Calendar View": {
 		src: "/assets/icons/calendar3.svg",
 		width: 20,
-		height: 20,
+		height: 21,
 		color: SUBITEM_TEXT_GREY,
 	},
 	"Training & Certifications": {

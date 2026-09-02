@@ -114,66 +114,6 @@ ${answersText}${note}`;
 	}
 }
 
-// Suggested questions based on document type
-const getSuggestedQuestions = (documentType: string): string[] => {
-	const baseQuestions = [
-		"What is the main purpose of this document?",
-		"What are the key points or findings?",
-		"Who are the main parties or stakeholders mentioned?",
-		"What is the expiration date of this contract?",
-		"What actions are required or recommended?",
-	];
-
-	const typeSpecificQuestions: { [key: string]: string[] } = {
-		pdf: [
-			"Can you summarize the main sections of this document?",
-			"What are the most important details I should know?",
-			"Are there any legal implications or requirements mentioned?",
-			"What are the next steps or recommendations?",
-		],
-		doc: [
-			"What is the document structure and organization?",
-			"What are the key takeaways from this document?",
-			"Are there any important figures or data mentioned?",
-			"What are the main conclusions or recommendations?",
-		],
-		docx: [
-			"What is the document structure and organization?",
-			"What are the key takeaways from this document?",
-			"Are there any important figures or data mentioned?",
-			"What are the main conclusions or recommendations?",
-		],
-		txt: [
-			"What is the main content of this text file?",
-			"Are there any important patterns or information?",
-			"What should I focus on in this document?",
-			"Are there any key terms or concepts I should understand?",
-		],
-		jpg: [
-			"What can you see in this image?",
-			"Are there any important details or text visible?",
-			"What is the context or purpose of this image?",
-			"Are there any people, objects, or locations shown?",
-		],
-		jpeg: [
-			"What can you see in this image?",
-			"Are there any important details or text visible?",
-			"What is the context or purpose of this image?",
-			"Are there any people, objects, or locations shown?",
-		],
-		png: [
-			"What can you see in this image?",
-			"Are there any important details or text visible?",
-			"What is the context or purpose of this image?",
-			"Are there any people, objects, or locations shown?",
-		],
-	};
-
-	const specificQuestions =
-		typeSpecificQuestions[documentType.toLowerCase()] || [];
-	return [...baseQuestions, ...specificQuestions].slice(0, 8); // Limit to 8 questions
-};
-
 // Analyze document content and extract key information
 export const analyzeDocument = async (
 	fileName: string,
@@ -255,7 +195,17 @@ ${fileUrl ? `URL: ${fileUrl}` : ""}
 			}
 		}
 
-		const suggestedQuestions = getSuggestedQuestions(documentType);
+		const suggestedQuestions = [
+			...topics.slice(0, 2).map((topic) => `What should I know about ${topic}?`),
+			...keyPoints.slice(0, 3).map((point) => {
+				const label = point.split(":")[0]?.trim();
+				return label
+					? `Explain ${label} from this document`
+					: "What else is important in this document?";
+			}),
+		]
+			.filter(Boolean)
+			.slice(0, 4);
 
 		console.log("Analysis completed successfully:", {
 			summaryLength: summary.length,
@@ -286,7 +236,7 @@ ${fileUrl ? `URL: ${fileUrl}` : ""}
 		return {
 			summary: "Unable to analyze document at this time",
 			keyPoints: [],
-			suggestedQuestions: getSuggestedQuestions(fileType),
+			suggestedQuestions: [],
 			documentType: fileType,
 			topics: [],
 		};

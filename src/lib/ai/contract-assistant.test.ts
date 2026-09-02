@@ -39,11 +39,25 @@ describe("contract assistant parsers", () => {
 		expect(parsed.starterPrompts[0]?.label).toBe("Map deadlines");
 	});
 
-	it("falls back to empty markdown and default questions when JSON is invalid", () => {
+	it("falls back to empty markdown and no default questions when JSON is invalid", () => {
 		const parsed = parseContractAssistantJson("not json");
 		expect(parsed.answerMarkdown).toBe("");
 		expect(parsed.citations).toEqual([]);
-		expect(parsed.suggestedQuestions.length).toBeGreaterThan(0);
+		expect(parsed.suggestedQuestions).toEqual([]);
+	});
+
+	it("normalizes object-shaped suggestedQuestions into prompt strings", () => {
+		const parsed = parseContractAssistantJson(`{
+  "answerMarkdown": "**Title**",
+  "suggestedQuestions": [
+    {"label":"Deadlines","prompt":"What reporting deadlines apply?"},
+    "Who signs this contract?"
+  ]
+}`);
+		expect(parsed.suggestedQuestions).toEqual([
+			"What reporting deadlines apply?",
+			"Who signs this contract?",
+		]);
 	});
 
 	it("keeps quote-only citations for SAM text without pages", () => {

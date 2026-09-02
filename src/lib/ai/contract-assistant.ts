@@ -50,9 +50,21 @@ export function buildContractCorpus(options: {
 	return clip((options.fileContent || "").trim(), MAX_TOTAL_CHARS);
 }
 
+function questionTextFromUnknown(item: unknown): string {
+	if (typeof item === "string") return item.trim();
+	if (!item || typeof item !== "object") return "";
+	const row = item as Record<string, unknown>;
+	// Models sometimes return starter-shaped objects instead of plain strings
+	for (const key of ["prompt", "question", "text", "label"] as const) {
+		const value = row[key];
+		if (typeof value === "string" && value.trim()) return value.trim();
+	}
+	return "";
+}
+
 function asStringArray(value: unknown, fallback: string[] = []): string[] {
 	if (!Array.isArray(value)) return fallback;
-	return value.map((item) => String(item).trim()).filter(Boolean);
+	return value.map(questionTextFromUnknown).filter(Boolean);
 }
 
 export function parseCitations(raw: unknown): ContractCitation[] {
@@ -116,10 +128,7 @@ export function parseContractAssistantJson(raw: string): {
 		answerMarkdown: markdown,
 		summaryMarkdown: markdown,
 		citations: parseCitations(parsed.citations),
-		suggestedQuestions: asStringArray(
-			parsed.suggestedQuestions,
-			CONTRACT_ASSISTANT_FALLBACK_QUESTIONS,
-		).slice(0, 3),
+		suggestedQuestions: asStringArray(parsed.suggestedQuestions, []).slice(0, 3),
 		starterPrompts: parseStarterPrompts(parsed.starterPrompts),
 	};
 }
@@ -128,7 +137,11 @@ function groundingRules(): string {
 	return `Hard rules:
 - Use only the provided contract text. Do not invent parties, dates, amounts, FAR/NIST/DFARS clauses, or deadlines.
 - If a fact is missing, say it is not stated in the document.
-- Prefer numbered sections with bold headings and bullets.
+- Format answerMarkdown as clean GitHub-flavored markdown with real newline characters (\\n).
+- Start with one short bold title line, then one bullet per fact on its own line: "- **Label:** value".
+- Never place multiple bullets on the same line. Never use " * " as an inline separator.
+- Do not wrap dates, IDs, or plain values in quotation marks unless you are quoting the document verbatim.
+- Prefer scannable bullets over long paragraphs.
 - Insert citation markers like [1] immediately after claims that quote the document.
 - citations[].id must match those markers. pages[] must be page numbers from [[PAGE:N]] markers when present; otherwise use an empty pages array and still include a short quote.
 - suggestedQuestions must be 3 short, document-specific follow-up questions. Never reuse generic questions like "What is this document about?"
@@ -186,14 +199,9 @@ ${corpus}`;
 			summaryMarkdown:
 				parsed.summaryMarkdown ||
 				fallbackAnalyze(options.fileName).summaryMarkdown,
-			starterPrompts:
-				parsed.starterPrompts.length > 0
-					? parsed.starterPrompts
-					: CONTRACT_ASSISTANT_FALLBACK_STARTERS,
-			suggestedQuestions:
-				parsed.suggestedQuestions.length > 0
-					? parsed.suggestedQuestions
-					: CONTRACT_ASSISTANT_FALLBACK_QUESTIONS,
+			// Empty when the model omits them — do not inject static starters/questions
+			starterPrompts: parsed.starterPrompts,
+			suggestedQuestions: parsed.suggestedQuestions,
 			citations: parsed.citations,
 		};
 	} catch (error) {
@@ -221,10 +229,12 @@ export async function answerContractQuestion(options: {
 	const prompt = `You are CAALM's contract assistant. Answer the user's question using only this contract.
 Return JSON only:
 {
-  "answerMarkdown": "numbered sections and bullets",
+  "answerMarkdown": "**Short title grounded in this document**\\n\\n- **Label:** value from this document\\n- **Label:** value from this document",
   "citations": [{"id":1,"pages":[2],"quote":"..."}],
   "suggestedQuestions": ["...", "...", "..."]
 }
+
+Derive the title, labels, and values only from the contract text and the user's question. Do not reuse sample labels, IDs, or dates from this prompt.
 
 ${groundingRules()}
 
@@ -241,10 +251,7 @@ ${corpus}`;
 		return {
 			answerMarkdown: parsed.answerMarkdown || fallbackAnswer().answerMarkdown,
 			citations: parsed.citations,
-			suggestedQuestions:
-				parsed.suggestedQuestions.length > 0
-					? parsed.suggestedQuestions
-					: CONTRACT_ASSISTANT_FALLBACK_QUESTIONS,
+			suggestedQuestions: parsed.suggestedQuestions,
 		};
 	} catch (error) {
 		console.error("answerContractQuestion error:", error);

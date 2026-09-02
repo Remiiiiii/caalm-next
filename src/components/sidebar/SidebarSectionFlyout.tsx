@@ -120,8 +120,7 @@ function ItemIcon({
 			alt=""
 			width={18}
 			height={18}
-			className="shrink-0 max-w-none"
-			style={{ width: "auto", height: "18px" }}
+			className="h-[18px] w-[18px] shrink-0 object-contain"
 		/>
 	);
 }

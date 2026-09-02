@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, Send, Sparkles } from "lucide-react";
+import { Loader2, MessageSquareText, Send, Sparkles } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { ContractAssistantMarkdown } from "@/components/contract-assistant/ContractAssistantMarkdown";
@@ -36,8 +36,8 @@ export function AskCaalmComposer({
 	};
 
 	return (
-		<div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-			<div className="mb-2 flex items-center gap-2 text-sm font-semibold sidebar-gradient-text">
+		<div className="rounded-lg border border-slate-200 bg-white p-2.5 shadow-sm">
+			<div className="mb-1.5 flex items-center gap-2 text-sm font-semibold sidebar-gradient-text">
 				<Sparkles className="h-4 w-4 text-[#0f5384]" />
 				Ask CAALM
 			</div>
@@ -52,8 +52,8 @@ export function AskCaalmComposer({
 						}
 					}}
 					placeholder="Ask a question about this contract..."
-					rows={3}
-					className="min-h-20 w-full resize-none border-[0.25px] border-slate-300! bg-white px-3! pt-3! pb-12! pe-14! text-sm focus-visible:border-[#078FAB]!"
+					rows={1}
+					className="min-h-16 max-h-24 w-full resize-none border-[0.25px] border-slate-300! bg-white px-3! py-2.5! pe-14! text-sm focus-visible:border-[#078FAB]!"
 					aria-label="Ask CAALM Contract Assistant"
 				/>
 				{/* Plain button: primary-btn's w-full breaks absolute bottom-right placement */}
@@ -62,7 +62,7 @@ export function AskCaalmComposer({
 					onClick={() => send(draft)}
 					disabled={!draft.trim() || loading}
 					aria-label="Send message"
-					className="absolute right-3 bottom-3 z-10 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-white shadow-md transition-opacity duration-200 disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
+					className="absolute top-1/2 right-5 z-10 flex h-8 w-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-white shadow-md transition-opacity duration-200 disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
 					style={{
 						backgroundImage:
 							"linear-gradient(to right, #00c1cb, #078fab, #0e638f, #11487d, #162768)",
@@ -75,7 +75,7 @@ export function AskCaalmComposer({
 					)}
 				</button>
 			</div>
-			<p className="mt-2 text-xs text-slate-500">
+			<p className="mt-1.5 text-xs text-slate-500">
 				Be sure to double-check responses; they may be inaccurate.
 			</p>
 		</div>
@@ -99,12 +99,12 @@ export function ContractAssistantChat({
 	analyzing?: boolean;
 	onSend: (text: string) => void;
 	onJumpToPage?: (page: number) => void;
-	/** Renders where Ask CAALM used to sit (e.g. Proposal Generation) */
+	/** Optional content above the pinned Ask CAALM input (e.g. Proposal Generation) */
 	footer?: ReactNode;
 }) {
 	const endRef = useRef<HTMLDivElement>(null);
 	const hasUserMessage = messages.some((message) => message.role === "user");
-	// Summary is already in ContractAnalysisCards — hide the seeded chat copy until Q&A starts
+	// Hide seeded summary chat copy until the user starts Q&A
 	const visibleMessages = hasUserMessage
 		? messages
 		: messages.filter((message) => message.id !== "summary");
@@ -114,8 +114,9 @@ export function ContractAssistantChat({
 	}, [messages, loading]);
 
 	return (
-		<div className="flex flex-col">
-			<div className="space-y-4 p-4">
+		<div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+			{/* Message list is the only scroll region inside the chat card */}
+			<div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4">
 				{!hasUserMessage ? (
 					<ContractAssistantStarters
 						prompts={starterPrompts}
@@ -124,48 +125,70 @@ export function ContractAssistantChat({
 					/>
 				) : null}
 
-				{visibleMessages.map((message) =>
-					message.role === "user" ? (
-						<div
-							key={message.id}
-							className="ml-6 rounded-2xl bg-linear-to-r from-[#00C1CB] via-[#0E638F] to-[#162768] p-3 text-sm text-white"
-						>
-							{message.text}
-						</div>
-					) : (
-						<div
-							key={message.id}
-							className="rounded-xl border border-slate-200 bg-white p-4"
-						>
-							<ContractAssistantMarkdown
-								text={message.text}
-								citations={message.citations || []}
-								onJumpToPage={onJumpToPage}
-							/>
-						</div>
-					),
-				)}
-
-				{loading ? (
-					<div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
-						<Loader2 className="h-4 w-4 animate-spin text-[#0f5384]" />
-						Thinking…
+				{!hasUserMessage && !loading ? (
+					<div className="flex min-h-40 flex-1 flex-col items-center justify-center px-4 py-8 text-center">
+						<MessageSquareText
+							className="mb-3 h-10 w-10 text-slate-400"
+							strokeWidth={1.5}
+							aria-hidden
+						/>
+						<p className="max-w-xs text-sm leading-snug text-slate-500">
+							Ask a question or pick a prompt above to get started
+						</p>
 					</div>
 				) : null}
 
 				{hasUserMessage ? (
-					<ContractFollowUpSuggestions
-						questions={suggestedQuestions}
-						disabled={loading}
-						onSelect={onSend}
-					/>
+					<div className="space-y-4">
+						{visibleMessages.map((message) =>
+							message.role === "user" ? (
+								<div
+									key={message.id}
+									className="ml-6 rounded-2xl bg-linear-to-r from-[#00C1CB] via-[#0E638F] to-[#162768] p-3 text-sm text-white"
+								>
+									{message.text}
+								</div>
+							) : (
+								<div
+									key={message.id}
+									className="rounded-xl border border-slate-200 bg-white p-4"
+								>
+									<ContractAssistantMarkdown
+										text={message.text}
+										citations={message.citations || []}
+										onJumpToPage={onJumpToPage}
+									/>
+								</div>
+							),
+						)}
+
+						{loading ? (
+							<div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
+								<Loader2 className="h-4 w-4 animate-spin text-[#0f5384]" />
+								Thinking…
+							</div>
+						) : null}
+
+						<ContractFollowUpSuggestions
+							questions={suggestedQuestions}
+							disabled={loading}
+							onSelect={onSend}
+						/>
+						<div ref={endRef} />
+					</div>
+				) : loading ? (
+					<div className="mt-4 flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
+						<Loader2 className="h-4 w-4 animate-spin text-[#0f5384]" />
+						Thinking…
+					</div>
 				) : null}
-				<div ref={endRef} />
 			</div>
 
-			{footer ? (
-				<div className="border-t border-slate-200 bg-white p-4">{footer}</div>
-			) : null}
+			{/* Always keep a typed input pinned so Q&A can continue after fallbacks */}
+			<div className="shrink-0 space-y-3 border-t border-slate-200 bg-white p-4">
+				{footer}
+				<AskCaalmComposer loading={loading || analyzing} onSend={onSend} />
+			</div>
 		</div>
 	);
 }

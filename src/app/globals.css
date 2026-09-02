@@ -536,7 +536,7 @@
 
 	/* Sidebar & MobileNavigation */
 	.nav-icon {
-		@apply w-6 filter invert opacity-25;
+		@apply h-6 w-6 object-contain filter invert opacity-25;
 	}
 	.nav-icon-active {
 		@apply invert-0 opacity-100;
@@ -1254,6 +1254,18 @@
 	body {
 		@apply bg-background text-foreground;
 	}
+}
+
+/* Adobe Acrobat Chrome/Edge extension overlays (not CAALM UI) */
+[id*="adobe-acrobat" i],
+[id*="AdobeAcrobat" i],
+[class*="adobe-acrobat" i],
+[class*="AdobeAcrobat" i],
+iframe[src*="acrobat.adobe" i],
+iframe[src*="documentcloud.adobe" i] {
+	display: none !important;
+	visibility: hidden !important;
+	pointer-events: none !important;
 }
 
 .gradient-icon {

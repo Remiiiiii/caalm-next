@@ -16,43 +16,38 @@ import {
 	Loader2,
 	Mail,
 	MapPin,
-	Minimize2,
 	Phone,
-	RotateCw,
 	Shield,
 	Sparkles,
 	Star,
 	User,
+	X,
 } from "lucide-react";
-import Image from "next/image";
 import type React from "react";
 import {
 	// useMemo,
 	useCallback,
 	useEffect,
-	useRef,
 	useState,
 } from "react";
 import useSWR from "swr";
 // import { Input } from '@/components/ui/input';
+import AssistantAvatar from "@/components/assistant/AssistantAvatar";
 import { ContractAnalysisCards } from "@/components/contract-assistant/ContractAnalysisCards";
 import type { ContractChatMessage } from "@/components/contract-assistant/ContractAssistantChat";
-import {
-	AskCaalmComposer,
-	ContractAssistantChat,
-} from "@/components/contract-assistant/ContractAssistantChat";
+import { ContractAssistantChat } from "@/components/contract-assistant/ContractAssistantChat";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
 	Dialog,
 	DialogContent,
-	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
 import type { ContractStarterPrompt } from "@/lib/ai/contract-assistant.types";
 import { splitProseParagraphs } from "@/lib/ai/split-prose";
 import type { ContractAnalysis } from "@/lib/ai-contract-analyzer";
 import type { SAMContract } from "@/lib/sam-config";
+import { cn } from "@/lib/utils";
 
 interface ContractDocumentViewerProps {
 	isOpen: boolean;
@@ -95,8 +90,6 @@ const ContractDocumentViewer: React.FC<ContractDocumentViewerProps> = ({
 	const [showMainDescription, setShowMainDescription] =
 		useState<boolean>(false);
 	const [showContractFacts, setShowContractFacts] = useState<boolean>(true);
-	const descriptionCardRef = useRef<HTMLDivElement>(null);
-	const [aiPaneHeight, setAiPaneHeight] = useState<number | null>(null);
 
 	// SWR fetcher function
 	const fetcher = useCallback(async (url: string) => {
@@ -138,31 +131,6 @@ const ContractDocumentViewer: React.FC<ContractDocumentViewerProps> = ({
 
 	// Extract contract details from SWR response
 	const contractDetails = swrData?.success ? swrData.data : null;
-
-	// Keep AI pane height locked to Full Description so bottoms stay parallel
-	useEffect(() => {
-		if (!showAiPanel) {
-			setAiPaneHeight(null);
-			return;
-		}
-
-		const node = descriptionCardRef.current;
-		if (!node || typeof ResizeObserver === "undefined") return;
-
-		const syncHeight = () => {
-			setAiPaneHeight(Math.round(node.getBoundingClientRect().height));
-		};
-
-		syncHeight();
-		const observer = new ResizeObserver(syncHeight);
-		observer.observe(node);
-		return () => observer.disconnect();
-	}, [
-		showAiPanel,
-		showMainDescription,
-		contractDetails?.description,
-		contract?.description,
-	]);
 
 	// Handle SWR errors
 	useEffect(() => {
@@ -408,7 +376,7 @@ ${contractDetails.attachments
 		} catch (error) {
 			console.error("Error performing AI analysis:", error);
 			const fallbackAnalysis: AIAnalysis = {
-				keyTerms: ["contract", "agreement", "terms", "conditions"],
+				keyTerms: [],
 				importantDates: [
 					{
 						label: "Posted Date",
@@ -418,43 +386,31 @@ ${contractDetails.attachments
 						label: "Response Deadline",
 						date: contract?.responseDeadLine || "Not specified",
 					},
-				],
+				].filter((item) => item.date !== "Not specified"),
 				financialInfo: [
-					{ label: "Contract Type", value: contract?.type || "Not specified" },
-					{
-						label: "Set-Aside",
-						value: contract?.typeOfSetAsideDescription || "None",
-					},
+					...(contract?.type
+						? [{ label: "Contract Type", value: contract.type }]
+						: []),
+					...(contract?.typeOfSetAsideDescription
+						? [
+								{
+									label: "Set-Aside",
+									value: contract.typeOfSetAsideDescription,
+								},
+							]
+						: []),
 				],
 				parties: contract?.fullParentPathName
 					? [{ name: contract.fullParentPathName, role: "Contracting Agency" }]
 					: [],
-				risks: [
-					{
-						risk: "AI analysis service not available",
-						severity: "medium",
-						context: "Please configure AI service for detailed analysis",
-					},
-				],
-				opportunities: [
-					{
-						opportunity: "Enable AI analysis for comprehensive insights",
-						impact: "high",
-						context: "AI service would provide detailed contract analysis",
-					},
-				],
-				recommendations: [
-					{
-						recommendation: "Configure AI analysis service",
-						priority: "high",
-						context: "AI service configuration needed for enhanced analysis",
-					},
-				],
+				risks: [],
+				opportunities: [],
+				recommendations: [],
 				complianceRequirements: [],
 				performanceMetrics: [],
 				summary:
-					"Basic analysis completed. AI service is required for comprehensive contract analysis.",
-				confidence: 0.3,
+					"AI analysis is unavailable right now. Showing only fields already on this solicitation record.",
+				confidence: 0,
 			};
 
 			setAiAnalysis(fallbackAnalysis);
@@ -538,121 +494,111 @@ ${contractDetails.attachments
 
 	return (
 		<Dialog open={isOpen} onOpenChange={onClose}>
-			<DialogContent className="flex max-h-[95vh] w-[96vw] max-w-384 flex-col overflow-y-auto rounded-[26px] p-0 shadow-drop-1 sm:max-w-384">
-				<DialogHeader className="px-6 py-6 pb-4">
-					{/* Action Buttons */}
-					<div className="flex items-center gap-2 justify-end">
-						<Button size="sm" className="primary-btn">
-							<Star className="h-4 w-4" />
-							Save
-						</Button>
-						<Button
-							size="sm"
-							disabled={isAnalyzing}
-							onClick={() => {
-								setShowAiPanel(true);
-								setShowMainDescription(true);
-								setShowContractFacts(false);
-								void performAIAnalysis();
-							}}
-							className="shadow-drop-1 primary-btn"
-						>
-							{isAnalyzing ? (
-								<Loader2 className="h-4 w-4 animate-spin" />
-							) : (
-								<Sparkles className="h-4 w-4" />
-							)}
-							AI Analysis
-						</Button>
-					</div>
-					<div className="flex items-center justify-between">
-						<div className="flex items-center gap-3">
-							<div>
-								<DialogTitle className="mt-4 text-xl font-bold sidebar-gradient-text">
-									{contract.title}
-								</DialogTitle>
-								<div className="text-sm text-gray-600 mt-1">
-									ID: {contract.noticeId}
-								</div>
-							</div>
-						</div>
-					</div>
-				</DialogHeader>
-
-				<div className="flex min-h-0 flex-1 flex-col space-y-6 px-6 pb-6">
-					{/* Smart Summary Section */}
-					<Card className="border border-light-300 shadow-drop-1 rounded-xl bg-white/80 backdrop-blur">
-						<CardHeader
-							className="pb-3 cursor-pointer"
-							onClick={() => setShowSmartSummary(!showSmartSummary)}
-						>
-							<div className="flex items-center justify-between">
-								<CardTitle className="text-lg flex items-center gap-2 sidebar-gradient-text font-semibold">
-									<Lightbulb className="h-5 w-5 text-cyan-600" />
-									Smart Summary
-								</CardTitle>
-								{showSmartSummary ? (
-									<ChevronDownIcon className="h-4 w-4 text-gray-500" />
-								) : (
-									<ChevronRight className="h-4 w-4 text-gray-500" />
-								)}
-							</div>
-						</CardHeader>
-						{showSmartSummary && (
-							<CardContent>
-								<p className="text-sm text-gray-700 leading-relaxed">
-									{aiAnalysis?.summary ||
-										`The ${
-											contract.fullParentPathName || "Department"
-										} is seeking bids for ${
-											contract.type?.toLowerCase() || "services"
-										} for its ${
-											contract.officeAddress?.city || "facilities"
-										}. This contract opportunity involves ${
-											contract.typeOfSetAsideDescription
-												? `a ${contract.typeOfSetAsideDescription.toLowerCase()}`
-												: "competitive bidding"
-										}. The contract will be performed at ${
-											contract.officeAddress?.city || "specified location"
-										}, ${
-											contract.officeAddress?.state || ""
-										} and requires compliance with all applicable federal regulations and requirements.`}
-								</p>
-							</CardContent>
-						)}
-					</Card>
-
-					{/* Full Description + AI pane: same row height; AI scrolls internally */}
-					<div
-						className={
-							showAiPanel
-								? "grid grid-cols-1 items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(28rem,36rem)] lg:gap-0"
-								: "grid grid-cols-1"
-						}
+			{/* Fixed viewport height; body uses push-slide for AI panel */}
+			<DialogContent className="flex h-[95vh] max-h-[95vh] w-[96vw] max-w-384 flex-col gap-0 overflow-hidden rounded-[26px] p-0 shadow-drop-1 sm:max-w-384">
+				{/* Top bar stays full-width — Save / AI Analysis never shift */}
+				<div className="flex shrink-0 items-center justify-end gap-2 border-b border-slate-200 px-6 py-4">
+					<DialogTitle className="sr-only">{contract.title}</DialogTitle>
+					<Button size="sm" className="primary-btn">
+						<Star className="h-4 w-4" />
+						Save
+					</Button>
+					<Button
+						size="sm"
+						disabled={isAnalyzing}
+						onClick={() => {
+							setShowAiPanel(true);
+							setShowMainDescription(true);
+							setShowContractFacts(false);
+							void performAIAnalysis();
+						}}
+						className="shadow-drop-1 primary-btn"
 					>
-						<Card
-							ref={descriptionCardRef}
-							className="border border-light-300 shadow-drop-1 rounded-xl bg-white/80 backdrop-blur"
-						>
+						{isAnalyzing ? (
+							<Loader2 className="h-4 w-4 animate-spin" />
+						) : (
+							<Sparkles className="h-4 w-4" />
+						)}
+						AI Analysis
+					</Button>
+				</div>
+
+				{/* Push layout: left content narrows; AI panel slides in from the right */}
+				<div className="flex min-h-0 flex-1 overflow-hidden">
+					{/* Left document column — shifts left when panel opens */}
+					<div className="min-h-0 min-w-0 flex-1 space-y-6 overflow-y-auto px-6 py-5">
+						<div>
+							<h2 className="text-xl font-bold sidebar-gradient-text">
+								{contract.title}
+							</h2>
+							<p className="mt-1 text-sm text-slate-600">
+								ID: {contract.noticeId}
+							</p>
+						</div>
+
+						{/* Smart Summary Section */}
+						<Card className="rounded-xl border border-light-300 bg-white/80 shadow-drop-1 backdrop-blur">
 							<CardHeader
-								className="pb-3 cursor-pointer"
+								className="cursor-pointer pb-3"
+								onClick={() => setShowSmartSummary(!showSmartSummary)}
+							>
+								<div className="flex items-center justify-between">
+									<CardTitle className="flex items-center gap-2 text-lg font-semibold sidebar-gradient-text">
+										<Lightbulb className="h-5 w-5 text-[#0f5384]" />
+										Smart Summary
+									</CardTitle>
+									{showSmartSummary ? (
+										<ChevronDownIcon className="h-4 w-4 text-slate-500" />
+									) : (
+										<ChevronRight className="h-4 w-4 text-slate-500" />
+									)}
+								</div>
+							</CardHeader>
+							{showSmartSummary && (
+								<CardContent>
+									<p className="text-sm leading-relaxed text-slate-700">
+										{aiAnalysis?.summary ||
+											`The ${
+												contract.fullParentPathName || "Department"
+											} is seeking bids for ${
+												contract.type?.toLowerCase() || "services"
+											} for its ${
+												contract.officeAddress?.city || "facilities"
+											}. This contract opportunity involves ${
+												contract.typeOfSetAsideDescription
+													? `a ${contract.typeOfSetAsideDescription.toLowerCase()}`
+													: "competitive bidding"
+											}. The contract will be performed at ${
+												contract.officeAddress?.city || "specified location"
+											}, ${
+												contract.officeAddress?.state || ""
+											} and requires compliance with all applicable federal regulations and requirements.`}
+									</p>
+								</CardContent>
+							)}
+						</Card>
+
+						{/* Full Description */}
+						<Card className="rounded-xl border border-light-300 bg-white/80 shadow-drop-1 backdrop-blur">
+							<CardHeader
+								className="cursor-pointer pb-3"
 								onClick={() => setShowMainDescription(!showMainDescription)}
 							>
 								<div className="flex items-center justify-between">
-									<CardTitle className="text-lg flex items-center gap-2 sidebar-gradient-text font-semibold">
-										<FileText className="h-5 w-5 text-cyan-600" />
+									<CardTitle className="flex items-center gap-2 text-lg font-semibold sidebar-gradient-text">
+										<FileText className="h-5 w-5 text-[#0f5384]" />
 										Full Description
 									</CardTitle>
 									{showMainDescription ? (
-										<ChevronDownIcon className="h-4 w-4 text-gray-500" />
+										<ChevronDownIcon className="h-4 w-4 text-slate-500" />
 									) : (
-										<ChevronRight className="h-4 w-4 text-gray-500" />
+										<ChevronRight className="h-4 w-4 text-slate-500" />
 									)}
 								</div>
 							</CardHeader>
 							{showMainDescription && (
 								<CardContent>
-									<div className="space-y-3 text-sm text-slate-700 leading-relaxed">
+									<div className="space-y-3 text-sm leading-relaxed text-slate-700">
 										{formatDescription(
 											contractDetails?.description ||
 												contract.description ||
@@ -667,132 +613,9 @@ ${contractDetails.attachments
 							)}
 						</Card>
 
+						{/* Contract details — collapsed by default when assistant is open */}
 						{showAiPanel ? (
-							<div
-								className="flex flex-col overflow-hidden rounded-xl border border-light-300 bg-light-400/30 backdrop-blur lg:rounded-none lg:border-0 lg:border-l lg:border-light-300"
-								style={
-									aiPaneHeight != null ? { height: aiPaneHeight } : undefined
-								}
-							>
-								<div className="flex shrink-0 flex-col justify-center border-b border-light-300 bg-white/80 p-4 backdrop-blur">
-									<div className="mb-4 flex items-center justify-center">
-										<h3 className="flex items-center gap-2 font-bold sidebar-gradient-text">
-											<Image
-												src="/assets/images/assistant.svg"
-												alt="AI Analysis"
-												width={30}
-												height={30}
-											/>
-											CAALM Contract Assistant
-										</h3>
-										<Button
-											variant="ghost"
-											size="sm"
-											onClick={() => setShowAiPanel(false)}
-											className="shadow-drop-1"
-										>
-											<Minimize2 className="h-4 w-4" />
-										</Button>
-									</div>
-
-									{!aiAnalysis ? (
-										<Button
-											onClick={performAIAnalysis}
-											disabled={isAnalyzing}
-											className="w-full shadow-drop-1 primary-btn"
-										>
-											{isAnalyzing ? (
-												<>
-													<Loader2 className="h-4 w-4 animate-spin" />
-													Analyzing...
-												</>
-											) : (
-												<>
-													<Lightbulb className="h-4 w-4" />
-													Analyze Document
-												</>
-											)}
-										</Button>
-									) : (
-										<Button
-											onClick={performAIAnalysis}
-											variant="outline"
-											disabled={isAnalyzing}
-											className="w-full! shadow-drop-1 primary-btn"
-										>
-											{isAnalyzing ? (
-												<>
-													<Loader2 className="h-4 w-4 animate-spin" />
-													Re-analyzing...
-												</>
-											) : (
-												<>
-													<RotateCw className="h-4 w-4" />
-													Refresh Analysis
-												</>
-											)}
-										</Button>
-									)}
-								</div>
-
-								{aiAnalysis ? (
-									<>
-										<div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
-											<ContractAnalysisCards analysis={aiAnalysis} />
-											<div className="flex flex-col overflow-hidden rounded-lg border border-slate-200 bg-white">
-												<ContractAssistantChat
-													messages={contractMessages}
-													starterPrompts={starterPrompts}
-													suggestedQuestions={suggestedQuestions}
-													loading={isAiLoading}
-													analyzing={isAnalyzing}
-													onSend={sendContractMessage}
-													footer={
-														<div>
-															<div className="mb-2 flex items-center gap-2 text-sm font-semibold sidebar-gradient-text">
-																<FileText className="h-4 w-4 text-[#0f5384]" />
-																Proposal Generation
-															</div>
-															<Button
-																size="sm"
-																className="w-full! shadow-drop-1 primary-btn"
-																onClick={() => {
-																	console.log(
-																		"Generate proposal for contract:",
-																		contract?.noticeId,
-																	);
-																}}
-															>
-																Generate Proposal
-															</Button>
-															<p className="mt-2 text-center text-xs text-gray-500">
-																Create a professional proposal based on AI
-																analysis
-															</p>
-														</div>
-													}
-												/>
-											</div>
-										</div>
-
-										{/* Footer sits on the pane bottom = Full Description bottom */}
-										<div className="shrink-0 px-4 pb-4 pt-0">
-											<AskCaalmComposer
-												loading={isAiLoading}
-												onSend={sendContractMessage}
-											/>
-										</div>
-									</>
-								) : null}
-							</div>
-						) : null}
-					</div>
-
-					{/* Rest of document column */}
-					<div className="flex min-w-0 flex-col space-y-6">
-						{/* 3-Column Information Grid — collapsed when assistant is open */}
-						{showAiPanel ? (
-							<div className="border-t border-slate-200 pt-4">
+							<div className="border-t border-slate-200 pt-2">
 								<button
 									type="button"
 									onClick={() => setShowContractFacts((open) => !open)}
@@ -1085,6 +908,102 @@ ${contractDetails.attachments
 								</Card>
 							)}
 					</div>
+
+					{/* Right AI panel — slides in from the right; left content pushes left */}
+					<aside
+						className={cn(
+							"flex h-full shrink-0 flex-col overflow-hidden border-l border-slate-200 bg-light-400/30 transition-[width] duration-300 ease-in-out motion-reduce:transition-none",
+							showAiPanel
+								? "w-full max-w-xl pointer-events-auto sm:w-lg lg:w-xl"
+								: "w-0 border-l-0 pointer-events-none",
+						)}
+						aria-hidden={!showAiPanel}
+					>
+						{/* Fixed inner width so content does not reflow while the rail opens */}
+						<div className="flex h-full w-full max-w-xl flex-col sm:w-lg lg:w-xl">
+							{/* Header pinned — matches Sheet Hide pattern */}
+							<div className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-200 bg-white/80 px-4 py-3 backdrop-blur">
+								<h3 className="flex min-w-0 items-center gap-2 font-bold sidebar-gradient-text">
+									<AssistantAvatar size="sm" alt="" />
+									<span className="truncate">CAALM Contract Assistant</span>
+								</h3>
+								<Button
+									type="button"
+									variant="ghost"
+									size="icon"
+									className="h-8 w-8 shrink-0 cursor-pointer text-slate-600 hover:bg-white/50 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
+									aria-label="Close assistant"
+									onClick={() => setShowAiPanel(false)}
+								>
+									<X className="h-4 w-4" />
+								</Button>
+							</div>
+
+							{!aiAnalysis ? (
+								<div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
+									{isAnalyzing ? (
+										<>
+											<Loader2 className="h-5 w-5 animate-spin text-[#0f5384]" />
+											<p className="text-sm text-slate-500">
+												Analyzing this contract…
+											</p>
+										</>
+									) : (
+										<>
+											<p className="text-sm text-slate-500">
+												Run analysis to open the assistant.
+											</p>
+											<Button
+												onClick={performAIAnalysis}
+												disabled={isAnalyzing}
+												className="shadow-drop-1 primary-btn"
+											>
+												<Lightbulb className="h-4 w-4" />
+												Analyze Document
+											</Button>
+										</>
+									)}
+								</div>
+							) : (
+								<div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+									<div className="min-h-0 shrink-0 overflow-y-auto p-4">
+										<ContractAnalysisCards analysis={aiAnalysis} />
+									</div>
+									{/* Chat + pinned Ask CAALM input fill the rest of the panel */}
+									<div className="mx-4 mb-3 flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white">
+										<ContractAssistantChat
+											messages={contractMessages}
+											starterPrompts={starterPrompts}
+											suggestedQuestions={suggestedQuestions}
+											loading={isAiLoading}
+											analyzing={isAnalyzing}
+											onSend={sendContractMessage}
+											footer={
+												<div>
+													<div className="mb-1.5 flex items-center gap-2 text-sm font-semibold sidebar-gradient-text">
+														<FileText className="h-4 w-4 text-[#0f5384]" />
+														Proposal Generation
+													</div>
+													<Button
+														size="sm"
+														className="w-full! shadow-drop-1 primary-btn"
+														onClick={() => {
+															console.log(
+																"Generate proposal for contract:",
+																contract?.noticeId,
+															);
+														}}
+													>
+														Generate Proposal
+													</Button>
+												</div>
+											}
+										/>
+									</div>
+								</div>
+							)}
+						</div>
+					</aside>
 				</div>
 			</DialogContent>
 		</Dialog>

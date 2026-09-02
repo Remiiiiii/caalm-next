@@ -6,19 +6,19 @@ import {
 	FileSpreadsheet,
 	FileText,
 	FileType,
-	Lightbulb,
 	Loader2,
-	Minimize2,
 	Minus,
 	Plus,
 	Presentation,
 	Send,
 	Sparkles,
+	X,
 } from "lucide-react";
 import Image from "next/image";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
+import AssistantAvatar from "@/components/assistant/AssistantAvatar";
 import type { ContractChatMessage } from "@/components/contract-assistant/ContractAssistantChat";
 import { ContractAssistantChat } from "@/components/contract-assistant/ContractAssistantChat";
 import { useDocumentViewer } from "@/hooks/useDocumentViewer";
@@ -26,14 +26,13 @@ import type {
 	ContractStarterPrompt,
 	PdfPageText,
 } from "@/lib/ai/contract-assistant.types";
-import { convertFileSize } from "@/lib/utils";
+import { convertFileSize, cn } from "@/lib/utils";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
-import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 
-// Use pdf.js so Adobe/Gemini Summarize never appears in the preview pane.
+// pdf.js only (no Adobe Embed / browser PDF chrome)
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 interface DocumentViewerProps {
@@ -177,6 +176,34 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 		}
 	}, [isOpen]);
 
+	// Hide Adobe Acrobat browser-extension chrome injected into the page when a PDF is present.
+	useEffect(() => {
+		if (!isOpen) return;
+
+		const hideAdobeExtensionUi = () => {
+			const nodes = document.querySelectorAll<HTMLElement>(
+				[
+					'[id*="adobe-acrobat" i]',
+					'[id*="AdobeAcrobat" i]',
+					'[class*="adobe-acrobat" i]',
+					'[class*="AdobeAcrobat" i]',
+					'iframe[src*="acrobat.adobe" i]',
+					'iframe[src*="documentcloud.adobe" i]',
+				].join(","),
+			);
+			for (const node of nodes) {
+				node.style.setProperty("display", "none", "important");
+				node.style.setProperty("visibility", "hidden", "important");
+				node.style.setProperty("pointer-events", "none", "important");
+			}
+		};
+
+		hideAdobeExtensionUi();
+		const observer = new MutationObserver(hideAdobeExtensionUi);
+		observer.observe(document.body, { childList: true, subtree: true });
+		return () => observer.disconnect();
+	}, [isOpen]);
+
 	// Auth-gated PDF URLs: fetch with cookies, then hand a blob URL to pdf.js.
 	useEffect(() => {
 		if (!isOpen || file.type.toLowerCase() !== "pdf" || !file.url) {
@@ -200,9 +227,12 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 					if (!cancelled) setPdfViewerFile(file.url);
 					return;
 				}
-				const blob = await response.blob();
+				const buffer = await response.arrayBuffer();
 				if (cancelled) return;
-				blobUrl = URL.createObjectURL(blob);
+				// Avoid application/pdf blob MIME — Acrobat extension keys off that.
+				blobUrl = URL.createObjectURL(
+					new Blob([buffer], { type: "application/octet-stream" }),
+				);
 				setPdfViewerFile(blobUrl);
 			} catch {
 				if (!cancelled) setPdfViewerFile(file.url);
@@ -221,14 +251,16 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 
 		const fileType = file.type.toLowerCase();
 
-		// Check if it's a local file (file:// URL or blob URL)
+		// Blob/data URLs use pdf.js in-panel (no Adobe viewer). Upload prompt is
+		// only for legacy document-mode flows that need a server-side file id.
 		if (
 			file.url.startsWith("file://") ||
 			file.url.startsWith("blob:") ||
 			file.url.startsWith("data:")
 		) {
-			console.log("Detected local file URL, cannot fetch directly:", file.url);
-			setShowUploadPrompt(true);
+			if (assistantMode !== "contract") {
+				setShowUploadPrompt(true);
+			}
 			return;
 		}
 
@@ -254,7 +286,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 			});
 			extractText();
 		}
-	}, [isOpen, file.id, file.url, file.type, file.name, extractText]);
+	}, [assistantMode, isOpen, file.id, file.url, file.type, file.name, extractText]);
 
 	useEffect(() => {
 		// Only scroll to bottom when new messages are added (not on initial load)
@@ -920,13 +952,8 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 		}
 
 		if (isPdfFile(fileType)) {
-			// Show upload prompt for local files
-			if (
-				showUploadPrompt ||
-				file.url.startsWith("file://") ||
-				file.url.startsWith("blob:") ||
-				file.url.startsWith("data:")
-			) {
+			// Contract mode always uses pdf.js (blob URLs included) — never Adobe chrome.
+			if (showUploadPrompt && assistantMode !== "contract") {
 				return (
 					<div className="h-full flex items-center justify-center">
 						<div className="text-center max-w-md">
@@ -1192,29 +1219,30 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 							</div>
 						</div>
 					</div>
-					<div className="flex items-center space-x-2">
-						<Button
-							variant="outline"
-							size="sm"
-							className="primary-btn px-3 sm:px-4"
-							onClick={() => {
-								setIsClosing(true);
-								onClose();
-							}}
-							style={{
-								pointerEvents: "auto",
-							}}
-						>
-							<Minimize2 className="w-4 h-4" />
-							Close
-						</Button>
-					</div>
+					<button
+						type="button"
+						onClick={() => {
+							setIsClosing(true);
+							onClose();
+						}}
+						className="cursor-pointer rounded-sm p-1 text-slate-500 transition-colors duration-200 hover:bg-white/80 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
+						aria-label="Close"
+					>
+						<X className="h-4 w-4" />
+					</button>
 				</div>
 
 				{/* Main Content */}
 				<div className="flex min-h-0 flex-1 overflow-hidden rounded-3xl">
-					{/* Document Preview */}
-					<div className="relative w-[72%] border-r border-light-300 bg-light-400 pl-8">
+					{/* Document Preview — full width when assistant is closed */}
+					<div
+						className={cn(
+							"relative min-h-0 bg-light-400 pl-8",
+							showAIAssistant
+								? "w-[72%] border-r border-light-300"
+								: "w-full",
+						)}
+					>
 						{previewError ? (
 							<div className="h-full flex items-center justify-center">
 								<div className="text-center">
@@ -1239,61 +1267,23 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 					</div>
 
 					{/* AI Analysis Panel */}
+					{showAIAssistant ? (
 					<div
 						className="flex w-[28%] min-h-0 flex-col border-l border-light-300 bg-light-400/30 text-left backdrop-blur"
 						dir="ltr"
 						onClick={(e) => e.stopPropagation()}
 					>
-						{/* Header */}
-						<div className="flex shrink-0 flex-col items-stretch border-b border-light-300 bg-white/80 p-4 text-left backdrop-blur">
-							<div className="mb-4 flex items-center justify-between">
-								<h3 className="flex items-center gap-2 font-bold sidebar-gradient-text">
-									<Image
-										src="/assets/images/assistant.svg"
-										alt="CAALM Contract Assistant"
-										width={30}
-										height={30}
-									/>
-									{assistantMode === "contract"
-										? "CAALM Contract Assistant"
-										: "AI Assistant"}
-								</h3>
-								{showAIAssistant && (
-									<Button
-										variant="ghost"
-										size="sm"
-										onClick={(e) => {
-											e.stopPropagation();
-											setShowAIAssistant(false);
-										}}
-										className="flex h-8 w-8 items-center justify-center rounded-lg pl-6 shadow-sm transition-colors hover:bg-gray-50"
-										title="Collapse AI Assistant"
-									>
-										<Minimize2 className="h-4 w-4 text-black" />
-									</Button>
-								)}
-							</div>
-							{!showAIAssistant && (
-								<Button
-									onClick={async (e) => {
-										e.stopPropagation();
-										setShowAIAssistant(true);
-										if (assistantMode === "contract") {
-											void analyzeContract();
-											return;
-										}
-										await generateSummary();
-										analyze();
-									}}
-									className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#00C1CB] via-[#0E638F] to-[#162768] py-6 font-semibold text-white shadow-drop-1 transition-opacity hover:opacity-90"
-								>
-									<Lightbulb className="h-5 w-5" />
-									Ask CAALM AI
-								</Button>
-							)}
+						{/* Header — no collapse control; toggle lives next to dialog X */}
+						<div className="flex shrink-0 items-center gap-2 border-b border-light-300 bg-white/80 p-4 text-left backdrop-blur">
+							<AssistantAvatar size="sm" alt="" />
+							<h3 className="font-bold sidebar-gradient-text">
+								{assistantMode === "contract"
+									? "CAALM Contract Assistant"
+									: "AI Assistant"}
+							</h3>
 						</div>
 
-						{showAIAssistant && assistantMode === "contract" ? (
+						{assistantMode === "contract" ? (
 							<ContractAssistantChat
 								messages={contractMessages}
 								starterPrompts={starterPrompts}
@@ -1306,7 +1296,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 						) : null}
 
 						{/* Scrollable summary + chat; composer pinned to bottom */}
-						{showAIAssistant && assistantMode !== "contract" && (
+						{assistantMode !== "contract" && (
 							<>
 								<div
 									className="min-h-0 flex-1 overflow-y-auto text-left"
@@ -1377,19 +1367,15 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 											</div>
 										</div>
 
-										{/* Quick Questions */}
+										{/* Quick questions — only show model-generated follow-ups */}
+										{suggestedQuestions.length > 0 ? (
 										<div>
 											<h4 className="mb-2 flex items-center gap-2 text-sm font-semibold sidebar-gradient-text">
 												<Sparkles className="h-4 w-4 text-[#0f5384]" />
 												Quick questions
 											</h4>
 											<div className="flex flex-wrap gap-2">
-												{[
-													"What is this document about?",
-													"When does this contract expire?",
-													"What are the key terms and conditions?",
-													"What actions do I need to take?",
-												].map((q) => (
+												{suggestedQuestions.map((q) => (
 													<Button
 														key={q}
 														variant="outline"
@@ -1406,6 +1392,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 												))}
 											</div>
 										</div>
+										) : null}
 
 										{/* Chat Messages — exclude greeting shown at top */}
 										{chatMessages.length > 1 && (
@@ -1499,6 +1486,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 							</>
 						)}
 					</div>
+					) : null}
 				</div>
 			</div>
 		</div>

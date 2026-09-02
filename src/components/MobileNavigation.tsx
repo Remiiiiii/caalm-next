@@ -66,8 +66,7 @@ const MobileNavigation = ({
 				alt="CAALM logo"
 				width={50}
 				height={50}
-				className="mt-1 h-[50px] w-auto"
-				style={{ width: "auto", height: "50px" }}
+				className="mt-1 h-[50px] w-[50px] object-contain"
 			/>
 			<Sheet open={open} onOpenChange={setOpen}>
 				<SheetTrigger asChild>
@@ -158,6 +157,7 @@ const MobileNavigation = ({
 																	"nav-icon shrink-0",
 																	active && "nav-icon-active",
 																)}
+																style={{ width: "24px", height: "24px" }}
 															/>
 														)}
 															<span className="flex min-w-0 flex-1 items-center gap-2">

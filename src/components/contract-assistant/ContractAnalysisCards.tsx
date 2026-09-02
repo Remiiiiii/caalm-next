@@ -4,14 +4,12 @@ import {
 	AlertTriangle,
 	Calendar,
 	CheckCircle,
-	FileText,
 	Lightbulb,
 	Shield,
 	Target,
 	Users,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { splitProseParagraphs } from "@/lib/ai/split-prose";
 import type { ContractAnalysis } from "@/lib/ai-contract-analyzer";
 
 const iconClass = "h-4 w-4 text-[#0f5384]";
@@ -32,25 +30,6 @@ export function ContractAnalysisCards({
 }) {
 	return (
 		<div className="space-y-4">
-			<Card className={cardClass}>
-				<CardHeader className="pb-2">
-					<CardTitle className={titleClass}>
-						<FileText className={iconClass} />
-						Summary
-					</CardTitle>
-				</CardHeader>
-				<CardContent className="space-y-3">
-					{splitProseParagraphs(analysis.summary).map((paragraph, index) => (
-						<p
-							key={`${index}-${paragraph.slice(0, 24)}`}
-							className="text-sm text-slate-700"
-						>
-							{paragraph}
-						</p>
-					))}
-				</CardContent>
-			</Card>
-
 			{analysis.keyTerms.length > 0 ? (
 				<Card className={cardClass}>
 					<CardHeader className="pb-2">

@@ -13,10 +13,9 @@ import { useCallback, useEffect, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import DocumentViewer from "@/components/DocumentViewer";
 import { Button } from "@/components/ui/button";
-import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 
-// Use pdf.js (not Chrome’s PDF viewer) so Adobe/Gemini Summarize never appears.
+// pdf.js only — avoid Adobe / browser PDF chrome in the wizard preview.
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 type WizardPdfPreviewProps = {
@@ -74,10 +73,13 @@ export function WizardPdfPreview({
 					if (!cancelled) setViewerFile(url);
 					return;
 				}
-				const blob = await response.blob();
+				const buffer = await response.arrayBuffer();
 				if (cancelled) return;
-				if (blob.size > 0) setFileSizeBytes(blob.size);
-				blobUrl = URL.createObjectURL(blob);
+				if (buffer.byteLength > 0) setFileSizeBytes(buffer.byteLength);
+				// Octet-stream MIME reduces Adobe Acrobat extension injection
+				blobUrl = URL.createObjectURL(
+					new Blob([buffer], { type: "application/octet-stream" }),
+				);
 				setViewerFile(blobUrl);
 			} catch {
 				if (!cancelled) setViewerFile(url);
@@ -101,36 +103,50 @@ export function WizardPdfPreview({
 		[],
 	);
 
+	// Print the pdf.js canvas as an image — never load a PDF URL in an iframe
+	// (that triggers the Adobe Acrobat browser-extension toolbar).
 	const printPdf = useCallback(() => {
+		const canvas = document.querySelector(
+			".wizard-pdf-preview .react-pdf__Page__canvas",
+		) as HTMLCanvasElement | null;
+		if (!canvas) return;
+
+		const dataUrl = canvas.toDataURL("image/png");
+		const printWindow = window.open("", "_blank", "noopener,noreferrer");
+		if (!printWindow) return;
+
+		printWindow.document.write(
+			`<!doctype html><html><head><title>${fileName}</title></head><body style="margin:0;display:flex;justify-content:center;"><img src="${dataUrl}" alt="" style="max-width:100%;height:auto"/></body></html>`,
+		);
+		printWindow.document.close();
+		printWindow.focus();
+		printWindow.addEventListener("load", () => {
+			printWindow.print();
+			printWindow.close();
+		});
+	}, [fileName]);
+
+	const downloadPdf = useCallback(async () => {
 		const src =
 			typeof viewerFile === "string" ? viewerFile : objectUrl || pdfUrl;
 		if (!src) return;
-
-		const iframe = document.createElement("iframe");
-		iframe.setAttribute("aria-hidden", "true");
-		iframe.style.position = "fixed";
-		iframe.style.right = "0";
-		iframe.style.bottom = "0";
-		iframe.style.width = "0";
-		iframe.style.height = "0";
-		iframe.style.border = "0";
-		iframe.src = src;
-		document.body.appendChild(iframe);
-
-		const cleanup = () => {
-			iframe.remove();
-		};
-
-		iframe.onload = () => {
-			try {
-				iframe.contentWindow?.focus();
-				iframe.contentWindow?.print();
-			} catch {
-				window.open(src, "_blank")?.print();
-			}
-			window.setTimeout(cleanup, 1000);
-		};
-	}, [objectUrl, pdfUrl, viewerFile]);
+		try {
+			const response = await fetch(src, { credentials: "include" });
+			if (!response.ok) return;
+			// Octet-stream avoids the browser opening a native PDF viewer / Adobe UI
+			const blob = new Blob([await response.arrayBuffer()], {
+				type: "application/octet-stream",
+			});
+			const href = URL.createObjectURL(blob);
+			const anchor = document.createElement("a");
+			anchor.href = href;
+			anchor.download = fileName.endsWith(".pdf") ? fileName : `${fileName}.pdf`;
+			anchor.click();
+			URL.revokeObjectURL(href);
+		} catch {
+			// no-op: download is best-effort
+		}
+	}, [fileName, objectUrl, pdfUrl, viewerFile]);
 
 	return (
 		<div className="space-y-4">
@@ -145,16 +161,16 @@ export function WizardPdfPreview({
 					</p>
 				</div>
 				<div className="flex flex-wrap items-center gap-2">
-					{pdfUrl && (
+					{(pdfUrl || objectUrl) && (
 						<Button
-							asChild
+							type="button"
 							variant="outline"
 							size="icon"
 							className="h-8 w-8 cursor-pointer text-slate-700"
+							onClick={() => void downloadPdf()}
+							aria-label="Download PDF"
 						>
-							<a href={pdfUrl} download={fileName} aria-label="Download PDF">
-								<Download className="h-4 w-4" />
-							</a>
+							<Download className="h-4 w-4" />
 						</Button>
 					)}
 					<Button
@@ -162,7 +178,7 @@ export function WizardPdfPreview({
 						variant="outline"
 						size="icon"
 						className="h-8 w-8 cursor-pointer text-slate-700"
-						disabled={!pdfUrl}
+						disabled={!pdfUrl && !objectUrl && !viewerFile}
 						onClick={printPdf}
 						aria-label="Print PDF"
 					>
@@ -185,7 +201,7 @@ export function WizardPdfPreview({
 			{error && <p className="text-sm text-red">{error}</p>}
 
 			{viewerFile && (
-				<div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+				<div className="wizard-pdf-preview overflow-hidden rounded-lg border border-slate-200 bg-white">
 					<div className="flex items-center justify-between gap-2 border-b border-slate-200 bg-white px-4 py-2">
 						<div className="flex items-center gap-1">
 							<Button

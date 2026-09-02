@@ -42,7 +42,9 @@ export function ContractAssistantStarters({
 						className="cursor-pointer rounded-xl border border-slate-200 bg-white p-3 text-left text-sm text-slate-700 shadow-sm transition-all duration-200 hover:border-blue-300 hover:bg-blue-50"
 						onClick={() => onSelect(item.prompt)}
 					>
-						<span className="font-semibold text-slate-800">{item.label}</span>
+						<span className="font-semibold sidebar-gradient-text">
+							{item.label}
+						</span>
 					</button>
 				))}
 			</div>
