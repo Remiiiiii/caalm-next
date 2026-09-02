@@ -307,33 +307,54 @@ export const ROADMAP_CATALOG: RoadmapCatalogSection[] = [
 		sectionNumber: 5,
 		title: "Clause Library, Templates & AI Playbooks",
 		sourceRef: "AI-assisted review; Strategic #4",
-		linkedPrNumbers: [63],
-		// PR #63 is a tracking stub (notes file + copied roadmap engine).
-		completesOnMerge: false,
+		linkedPrNumbers: [67, 68, 69, 70, 71],
+		// PR #63 was a tracking stub merged by accident. Real 5.1 work is PR #67.
+		// 68–70 are draft tracking PRs (not 61/62/64: those belong to sections 9/7/6).
+		// 5.5 guided create wizard is PR #71.
 		tasks: [
 			t(
 				"5.1",
 				"Clause library data model",
 				"Org-owned standard clauses, categorized, versioned.",
 				["CRUD on clause library with versioning"],
+				undefined,
+				67,
 			),
 			t(
 				"5.2",
 				"Contract templates",
 				"Templates referencing clause library entries.",
 				["Template from clause library produces a valid draft"],
+				undefined,
+				68,
 			),
 			t(
 				"5.3",
 				"Playbook deviation scoring",
 				"Gemini compares extracted clauses to standards.",
 				["Off-standard clause flagged; matching standard passes"],
+				undefined,
+				69,
 			),
 			t(
 				"5.4",
 				"Surface deviations in review UI",
 				"Severity flags in contract review.",
 				["Review UI shows severity for seeded deviations"],
+				undefined,
+				70,
+			),
+			t(
+				"5.5",
+				"Guided contract creation wizard",
+				"Step-by-step intake that fills a .docx agreement blueprint, lets the author inject extra clauses, and submits a PDF draft. Never patches a pending or active contract.",
+				[
+					"Wizard creates a new contract row and pending-review proposal; existing contracts stay untouched",
+					"Author picks a blueprint, fills placeholders, then injects another template or clause mid-flow",
+					"Submit stores a PDF snapshot and starts the pending-review approval path",
+				],
+				undefined,
+				71,
 			),
 		],
 	},
@@ -653,7 +674,9 @@ export function getCatalogLinkedPrNumbers(sectionNumber: number): number[] {
 export function sectionCompletesOnMergedCatalogPr(
 	sectionNumber: number,
 ): boolean {
-	const section = ROADMAP_CATALOG.find((s) => s.sectionNumber === sectionNumber);
+	const section = ROADMAP_CATALOG.find(
+		(s) => s.sectionNumber === sectionNumber,
+	);
 	return section?.completesOnMerge !== false;
 }
 
@@ -689,7 +712,7 @@ function findCatalogTask(
 	return undefined;
 }
 
-function catalogTasksHaveLinkedPr(
+export function catalogTasksHaveLinkedPr(
 	tasks: RoadmapCatalogSection["tasks"],
 ): boolean {
 	for (const task of tasks) {
@@ -703,10 +726,10 @@ function catalogTasksHaveLinkedPr(
 
 /** True when tasks complete individually as each catalog PR merges (not all-at-once). */
 export function sectionUsesPerTaskPrCompletion(sectionNumber: number): boolean {
-	const section = ROADMAP_CATALOG.find((s) => s.sectionNumber === sectionNumber);
+	const section = ROADMAP_CATALOG.find(
+		(s) => s.sectionNumber === sectionNumber,
+	);
 	if (!section) return false;
-	const prs = section.linkedPrNumbers ?? [];
-	if (prs.length <= 1) return false;
 	return catalogTasksHaveLinkedPr(section.tasks);
 }
 
@@ -727,7 +750,9 @@ export function getCatalogTaskCodesForPr(prNumber: number): string[] {
 
 /** Task codes in a section that have no catalog `linkedPrNumber`. */
 export function getUnlinkedCatalogTaskCodes(sectionNumber: number): string[] {
-	const section = ROADMAP_CATALOG.find((s) => s.sectionNumber === sectionNumber);
+	const section = ROADMAP_CATALOG.find(
+		(s) => s.sectionNumber === sectionNumber,
+	);
 	if (!section) return [];
 	const codes: string[] = [];
 	const walk = (tasks: RoadmapCatalogSection["tasks"]) => {
@@ -738,6 +763,39 @@ export function getUnlinkedCatalogTaskCodes(sectionNumber: number): string[] {
 	};
 	walk(section.tasks);
 	return codes;
+}
+
+/** Merged tracking stubs that must never auto-complete a section. */
+export const ROADMAP_TRACKING_STUB_PRS = new Set([63]);
+
+/**
+ * PR number shown on a task row.
+ * Catalog `linkedPrNumber` wins over a stale Appwrite value (e.g. merged stub #63).
+ */
+export function displayedPrNumberForTask(
+	taskCode: string,
+	livePrNumber: number | null | undefined,
+): number | null {
+	const fromCatalog = getCatalogTaskLinkedPrNumber(taskCode);
+	if (fromCatalog != null) return fromCatalog;
+	if (livePrNumber != null && ROADMAP_TRACKING_STUB_PRS.has(livePrNumber)) {
+		return null;
+	}
+	if (livePrNumber != null) return livePrNumber;
+	const sectionNumber = Number(taskCode.split(".")[0]);
+	if (Number.isNaN(sectionNumber)) return null;
+	const sectionPrs = getCatalogLinkedPrNumbers(sectionNumber);
+	if (
+		sectionPrs.length === 1 &&
+		!ROADMAP_TRACKING_STUB_PRS.has(sectionPrs[0])
+	) {
+		return sectionPrs[0];
+	}
+	return null;
+}
+
+export function catalogPullRequestUrl(prNumber: number): string {
+	return `https://github.com/Remiiiiii/caalm-next/pull/${prNumber}`;
 }
 
 /** Exclusive catalog owner for a GitHub PR, or undefined if the PR is not listed. */

@@ -143,6 +143,22 @@ export const PERMISSIONS = {
 		MANAGE: "funding.manage",
 	},
 
+	// Standard clause library (org playbooks)
+	CLAUSES: {
+		VIEW: "clauses.view",
+		CREATE: "clauses.create",
+		EDIT: "clauses.edit",
+		DELETE: "clauses.delete",
+	},
+
+	// Contract templates assembled from the clause library
+	CONTRACT_TEMPLATES: {
+		VIEW: "contract_templates.view",
+		CREATE: "contract_templates.create",
+		EDIT: "contract_templates.edit",
+		DELETE: "contract_templates.delete",
+	},
+
 	// Platform / break-glass capabilities (Super Admin only by default)
 	PLATFORM: {
 		DIAGNOSE: "platform.diagnose",
@@ -163,6 +179,8 @@ export const SENSITIVE_PERMISSIONS: readonly string[] = [
 	PERMISSIONS.CONTRACTS.SIGN,
 	PERMISSIONS.LICENSES.APPROVE,
 	PERMISSIONS.LICENSES.DELETE,
+	PERMISSIONS.CLAUSES.DELETE,
+	PERMISSIONS.CONTRACT_TEMPLATES.DELETE,
 	PERMISSIONS.APPROVALS.OVERRIDE,
 	PERMISSIONS.TICKETS.DELETE,
 	PERMISSIONS.TICKETS.ASSIGN,
@@ -684,6 +702,56 @@ export const PERMISSION_DEFINITIONS = [
 		category: "funding",
 		description:
 			"Create/edit pursuits and obligations, mark wins, and spawn proposals from won bids",
+	},
+
+	// Clause library
+	{
+		key: PERMISSIONS.CLAUSES.VIEW,
+		name: "View Clause Library",
+		category: "clauses",
+		description: "View org-owned standard clauses and version history",
+	},
+	{
+		key: PERMISSIONS.CLAUSES.CREATE,
+		name: "Create Clauses",
+		category: "clauses",
+		description: "Add new standard clauses to the org library",
+	},
+	{
+		key: PERMISSIONS.CLAUSES.EDIT,
+		name: "Edit Clauses",
+		category: "clauses",
+		description: "Update drafts or publish a new clause version",
+	},
+	{
+		key: PERMISSIONS.CLAUSES.DELETE,
+		name: "Archive Clauses",
+		category: "clauses",
+		description: "Archive a current clause so it leaves the active library",
+	},
+	{
+		key: PERMISSIONS.CONTRACT_TEMPLATES.VIEW,
+		name: "View Contract Templates",
+		category: "contract_templates",
+		description: "View org-owned contract templates built from the clause library",
+	},
+	{
+		key: PERMISSIONS.CONTRACT_TEMPLATES.CREATE,
+		name: "Create Contract Templates",
+		category: "contract_templates",
+		description: "Create contract templates from clause library entries",
+	},
+	{
+		key: PERMISSIONS.CONTRACT_TEMPLATES.EDIT,
+		name: "Edit Contract Templates",
+		category: "contract_templates",
+		description: "Edit contract templates and clause order",
+	},
+	{
+		key: PERMISSIONS.CONTRACT_TEMPLATES.DELETE,
+		name: "Archive Contract Templates",
+		category: "contract_templates",
+		description: "Archive a contract template so it leaves the active catalog",
 	},
 
 	// Platform

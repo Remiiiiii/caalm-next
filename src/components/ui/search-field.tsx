@@ -21,7 +21,7 @@ export function SearchField({
 	return (
 		<div
 			className={cn(
-				"relative rounded-md border border-slate-300 bg-white/70",
+				"relative flex h-10 items-center rounded-md border-[0.25px] border-slate-300 bg-white/70",
 				containerClassName,
 			)}
 		>
@@ -33,7 +33,9 @@ export function SearchField({
 				type="search"
 				data-with-leading-icon="true"
 				className={cn(
-					"h-12 border-0 bg-transparent pl-12! shadow-none [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden",
+					// glass-form-control sets a resting border in CSS; force it off so
+					// only this wrapper paints the field outline
+					"h-full min-h-0 !border-0 bg-transparent py-0 pl-12! !shadow-none [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden",
 					className,
 				)}
 				{...props}

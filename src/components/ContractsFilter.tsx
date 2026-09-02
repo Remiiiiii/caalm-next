@@ -26,6 +26,7 @@ import {
 	SheetContent,
 	SheetDescription,
 	SheetHeader,
+	SheetHeaderIcon,
 	SheetTitle,
 	SheetTrigger,
 } from "@/components/ui/sheet";
@@ -108,13 +109,15 @@ const ContractsFilter: React.FC<ContractsFilterProps> = ({
 				<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70" />
 
 				<SheetHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4 px-6 text-left space-y-1">
-					<div className="flex items-center gap-3">
-						<Filter className="w-5 h-5 text-[#0f5384]" />
+					<div className="flex items-center gap-3 pr-10">
+						<SheetHeaderIcon>
+							<Filter className="h-5 w-5 text-[#0f5384]" />
+						</SheetHeaderIcon>
 						<SheetTitle className="text-xl font-semibold sidebar-gradient-text">
 							Filter contracts
 						</SheetTitle>
 					</div>
-					<SheetDescription className="text-sm text-slate-600 ml-8">
+					<SheetDescription className="text-sm text-slate-600 ml-14">
 						Refine your contract list
 					</SheetDescription>
 				</SheetHeader>

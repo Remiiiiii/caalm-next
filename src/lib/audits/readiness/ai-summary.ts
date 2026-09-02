@@ -76,11 +76,9 @@ export async function answerReadinessQuestion(options: {
 		return {
 			answer:
 				"AI is not configured. Review Contracts and Licenses gaps on the readiness page, and remember this score is not an official audit determination.",
-			suggestedQuestions: [
-				"Which gaps matter most for HRSA OSV prep?",
-				"What should we fix before child-welfare monitoring?",
-				"Which contract files belong on a financial PBC list?",
-			],
+			suggestedQuestions: options.payload.summary.insights
+				.slice(0, 3)
+				.map((insight) => `What should we do about: ${insight.title}?`),
 		};
 	}
 
@@ -114,11 +112,9 @@ ${payloadContext(options.payload)}`;
 	} catch {
 		return {
 			answer: text,
-			suggestedQuestions: [
-				"What are the top 3 actions this week?",
-				"How do these gaps map to HRSA OSV evidence?",
-				"What is informational vs scored?",
-			],
+			suggestedQuestions: options.payload.summary.insights
+				.slice(0, 3)
+				.map((insight) => `What should we do about: ${insight.title}?`),
 		};
 	}
 }

@@ -161,7 +161,7 @@ export default function EditPaymentMethodDialog({
 								>
 									Year
 								</Label>
-								<div className="relative overflow-hidden rounded-md border border-slate-200 bg-white focus-within:border-[#078FAB] focus-within:ring-1 focus-within:ring-[#078FAB]">
+								<div className="relative overflow-hidden rounded-md border-[0.25px] border-slate-200 bg-white focus-within:border-[#078FAB] focus-within:ring-1 focus-within:ring-[#078FAB]">
 									<Input
 										id="pm-exp-year"
 										type="number"

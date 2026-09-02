@@ -10,7 +10,6 @@ import {
 	Loader2,
 	Save,
 	Users,
-	X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import FormattedDateTime, {
@@ -228,16 +227,8 @@ export default function ContractPreviewSheet({
 				</div>
 			}
 			footer={
-				<div className="flex w-full flex-wrap items-center justify-between gap-2">
-					<Button
-						variant="outline"
-						className="primary-btn cursor-pointer px-3 sm:px-4"
-						onClick={() => onOpenChange(false)}
-					>
-						<X className="h-4 w-4" />
-						Close
-					</Button>
-					<div className="flex flex-wrap items-center gap-2">
+				isDirty || file.url ? (
+					<div className="flex w-full flex-wrap items-center justify-end gap-2">
 						{isDirty ? (
 							<Button
 								className="primary-btn cursor-pointer px-3 sm:px-4"
@@ -264,7 +255,7 @@ export default function ContractPreviewSheet({
 							</Button>
 						) : null}
 					</div>
-				</div>
+				) : undefined
 			}
 		>
 			<div className={cn(previewSectionClass, "p-4")}>

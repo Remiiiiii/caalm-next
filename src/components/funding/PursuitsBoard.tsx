@@ -115,13 +115,13 @@ export function PursuitsBoard({
 				</div>
 				<div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-3 sm:p-6">
 					<Input
-						className="border border-slate-300 sm:col-span-2"
+						className="border-[0.25px] border-slate-300 sm:col-span-2"
 						placeholder="Opportunity title"
 						value={title}
 						onChange={(e) => setTitle(e.target.value)}
 					/>
 					<Input
-						className="border border-slate-300"
+						className="border-[0.25px] border-slate-300"
 						placeholder="Amount (USD)"
 						value={amount}
 						onChange={(e) => setAmount(e.target.value)}
@@ -183,7 +183,7 @@ export function PursuitsBoard({
 										}
 										disabled={busyId === p.$id}
 									>
-										<SelectTrigger className="w-[150px] border border-slate-300">
+										<SelectTrigger className="w-[150px] border-[0.25px] border-slate-300">
 											<SelectValue />
 										</SelectTrigger>
 										<SelectContent>

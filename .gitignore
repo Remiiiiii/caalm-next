@@ -160,6 +160,7 @@ document/
 mcpjson.txt
 *.backup
 *.tmp
+.tmp-blueprint-thumbs/
 *.old
 *.bak
 

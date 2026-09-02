@@ -10,7 +10,7 @@ import {
 const apiKey = process.env.GOOGLE_API_KEY || "";
 
 const extractionModel = new GoogleGenerativeAI(apiKey).getGenerativeModel({
-	model: "gemini-2.5-flash-lite",
+	model: "gemini-3.5-flash-lite",
 	generationConfig: {
 		responseMimeType: "application/json",
 		temperature: 0.1,

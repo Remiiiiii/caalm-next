@@ -17,6 +17,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useGroupedNavigation } from "@/hooks/useGroupedNavigation";
 import { cn } from "@/lib/utils";
 import SidebarUserCard from "@/components/sidebar/SidebarUserCard";
+import { ContractTemplatesNavIcon } from "@/components/sidebar/NavItemIcon";
 import FileUploader from "./FileUploader";
 import { Button } from "./ui/button";
 
@@ -65,8 +66,7 @@ const MobileNavigation = ({
 				alt="CAALM logo"
 				width={50}
 				height={50}
-				className="mt-1 h-[50px] w-auto"
-				style={{ width: "auto", height: "50px" }}
+				className="mt-1 h-[50px] w-[50px] object-contain"
 			/>
 			<Sheet open={open} onOpenChange={setOpen}>
 				<SheetTrigger asChild>
@@ -134,7 +134,10 @@ const MobileNavigation = ({
 															className="flex w-full items-center gap-3"
 															onClick={() => setOpen(false)}
 														>
-															<Image
+														{item.name === "Contract Templates" ? (
+															<ContractTemplatesNavIcon size={24} />
+														) : item.icon.endsWith(".png") ? (
+															<img
 																src={item.icon}
 																alt=""
 																width={24}
@@ -144,6 +147,19 @@ const MobileNavigation = ({
 																	active && "nav-icon-active",
 																)}
 															/>
+														) : (
+															<Image
+																src={item.icon}
+																alt=""
+																width={24}
+																height={24}
+																className={cn(
+																	"nav-icon shrink-0",
+																	active && "nav-icon-active",
+																)}
+																style={{ width: "24px", height: "24px" }}
+															/>
+														)}
 															<span className="flex min-w-0 flex-1 items-center gap-2">
 																<span className="truncate">{item.name}</span>
 																{shouldShowLock(item) && (

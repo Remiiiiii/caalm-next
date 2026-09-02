@@ -122,14 +122,14 @@ export function ObligationsPanel({
 				<div className="space-y-2 border-t border-slate-200 pt-4">
 					<p className="text-sm font-medium text-slate-700">Add obligation</p>
 					<Input
-						className="border border-slate-300"
+						className="border-[0.25px] border-slate-300"
 						placeholder="e.g. Confirm renewal owner + evidence plan"
 						value={title}
 						onChange={(e) => setTitle(e.target.value)}
 					/>
 					<Input
 						type="date"
-						className="border border-slate-300"
+						className="border-[0.25px] border-slate-300"
 						value={dueDate}
 						onChange={(e) => setDueDate(e.target.value)}
 					/>

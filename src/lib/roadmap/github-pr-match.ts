@@ -98,6 +98,14 @@ export function resolveSectionFromPrMatch(
 }
 
 /**
+ * Drop a leading `5.1 ` task-code prefix so the pane title matches the catalog
+ * task name (GitHub titles often start with the code for branch matching).
+ */
+export function displayPullRequestTitle(title: string): string {
+	return title.replace(/^\d+\.\d+\s+/, "").trim();
+}
+
+/**
  * Drop HTML comments and tags from a GitHub PR body.
  * The roadmap pane shows markdown only; Cursor footer buttons are noise.
  */
