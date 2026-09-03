@@ -368,15 +368,15 @@ Use custom colors defined in `tailwind.config.ts` without intermediate suffixes 
 
 ### Buttons
 
-**Primary buttons:**
+**Primary buttons** (`.primary-btn` and `.btn-primary` are aliases — same styles):
 ```tsx
-<Button className="primary-btn px-3 sm:px-4">
+<Button className="btn-primary px-3 sm:px-4">
   <Icon className="h-4 w-4" />
   Button Text
 </Button>
 ```
 
-- Include icons in buttons when appropriate
+- **ALWAYS** include a Lucide icon (`h-4 w-4`) on buttons that use `btn-primary` or `primary-btn` — icon + label, never text-only
 - Use consistent spacing: `gap-3` between buttons
 - Responsive padding: `px-3 sm:px-4`
 
@@ -620,7 +620,7 @@ When creating a new page or component, verify:
 - [ ] Dialogs use professional structure with cap bar, gradient header, and `bg-slate-50` content
 - [ ] Custom colors use opacity syntax: `bg-blue/10` (NOT `bg-blue-100`)
 - [ ] Icons use brand color: `text-[#0f5384]` for headers
-- [ ] Buttons use: `primary-btn px-3 sm:px-4`
+- [ ] Buttons use: `btn-primary px-3 sm:px-4` (or `primary-btn`) **with a Lucide icon**
 - [ ] All interactive elements have transition effects
 - [ ] Text inputs, selects, textareas, and search fields use `border-[0.25px] border-slate-300` (never 1px `border`, white, transparent, or `slate-200` on light fills)
 - [ ] 3-dot overflow menus use `/assets/icons/dots.svg` (34×34) with `shad-no-focus rounded-full hover:bg-white/30` — not Lucide `MoreVertical`

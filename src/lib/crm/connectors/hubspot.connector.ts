@@ -1,7 +1,9 @@
 import { getAppUrl } from "@/lib/config/environment";
 import type {
 	CrmConnectionInfo,
+	CrmDealProperty,
 	CrmDealSnapshot,
+	CrmFieldMap,
 	CrmPipeline,
 	CrmTokens,
 } from "../types";
@@ -56,6 +58,35 @@ type HubSpotTokenInfo = {
 	user?: string;
 };
 
+type HubSpotPropertiesResponse = {
+	results?: Array<{
+		name?: string;
+		label?: string;
+		type?: string;
+		fieldType?: string;
+		hidden?: boolean;
+		calculated?: boolean;
+	}>;
+};
+
+function resolveFieldMap(fieldMap?: CrmFieldMap): CrmFieldMap {
+	return fieldMap
+		? { ...DEFAULT_CRM_FIELD_MAP, ...fieldMap }
+		: DEFAULT_CRM_FIELD_MAP;
+}
+
+function dealPropertyList(fieldMap: CrmFieldMap): string[] {
+	return [
+		fieldMap.dealName,
+		fieldMap.amount,
+		fieldMap.company,
+		fieldMap.owner,
+		fieldMap.closeDate,
+		"dealstage",
+		"pipeline",
+	].filter(Boolean);
+}
+
 export function parseHubSpotPipelines(
 	payload: HubSpotPipelineResponse,
 ): CrmPipeline[] {
@@ -69,21 +100,45 @@ export function parseHubSpotPipelines(
 	}));
 }
 
-export function parseHubSpotDeal(payload: HubSpotDealResponse): CrmDealSnapshot {
+export function parseHubSpotDealProperties(
+	payload: HubSpotPropertiesResponse,
+): CrmDealProperty[] {
+	return (payload.results || [])
+		.filter((property) => {
+			const name = property.name?.trim();
+			if (!name) return false;
+			// Skip HubSpot-internal calc/hidden fields that aren't useful for mapping
+			if (property.hidden || property.calculated) return false;
+			return /^[a-zA-Z0-9_-]+$/.test(name);
+		})
+		.map((property) => ({
+			name: String(property.name),
+			label: property.label?.trim() || String(property.name),
+			type: (property.type || "").toLowerCase(),
+			fieldType: (property.fieldType || "").toLowerCase(),
+		}))
+		.sort((a, b) => a.label.localeCompare(b.label));
+}
+
+export function parseHubSpotDeal(
+	payload: HubSpotDealResponse,
+	fieldMap?: CrmFieldMap,
+): CrmDealSnapshot {
+	const map = resolveFieldMap(fieldMap);
 	const properties = payload.properties || {};
-	const amountRaw = properties[DEFAULT_CRM_FIELD_MAP.amount];
+	const amountRaw = properties[map.amount];
 	const amount = amountRaw ? Number(amountRaw) : null;
 	return {
 		provider: "hubspot",
 		externalId: String(payload.id || ""),
-		name: properties[DEFAULT_CRM_FIELD_MAP.dealName] || "Untitled deal",
+		name: properties[map.dealName] || "Untitled deal",
 		amount: Number.isFinite(amount) ? amount : null,
 		currency: "USD",
-		companyName: properties[DEFAULT_CRM_FIELD_MAP.company] || null,
-		ownerName: properties[DEFAULT_CRM_FIELD_MAP.owner] || null,
+		companyName: properties[map.company] || null,
+		ownerName: properties[map.owner] || null,
 		stageId: properties.dealstage || null,
 		pipelineId: properties.pipeline || null,
-		closeDate: properties[DEFAULT_CRM_FIELD_MAP.closeDate] || null,
+		closeDate: properties[map.closeDate] || null,
 		raw: Object.fromEntries(
 			Object.entries(properties).map(([key, value]) => [key, value ?? null]),
 		),
@@ -190,27 +245,35 @@ export const hubspotConnector: CrmOriginConnector = {
 		return parseHubSpotPipelines(payload);
 	},
 
-	async getDeal(accessToken: string, dealId: string): Promise<CrmDealSnapshot> {
-		const properties = [
-			DEFAULT_CRM_FIELD_MAP.dealName,
-			DEFAULT_CRM_FIELD_MAP.amount,
-			DEFAULT_CRM_FIELD_MAP.owner,
-			DEFAULT_CRM_FIELD_MAP.closeDate,
-			"dealstage",
-			"pipeline",
-		].join(",");
+	async listDealProperties(accessToken: string): Promise<CrmDealProperty[]> {
+		const payload = await hubspotJson<HubSpotPropertiesResponse>(
+			`${HUBSPOT_API}/crm/v3/properties/deals`,
+			accessToken,
+		);
+		return parseHubSpotDealProperties(payload);
+	},
+
+	async getDeal(
+		accessToken: string,
+		dealId: string,
+		fieldMap?: CrmFieldMap,
+	): Promise<CrmDealSnapshot> {
+		const map = resolveFieldMap(fieldMap);
+		const properties = dealPropertyList(map).join(",");
 		const payload = await hubspotJson<HubSpotDealResponse>(
 			`${HUBSPOT_API}/crm/v3/objects/deals/${encodeURIComponent(dealId)}?properties=${properties}`,
 			accessToken,
 		);
-		return parseHubSpotDeal(payload);
+		return parseHubSpotDeal(payload, map);
 	},
 
 	async searchDealsByStage(
 		accessToken: string,
 		pipelineId: string,
 		stageId: string,
+		fieldMap?: CrmFieldMap,
 	): Promise<CrmDealSnapshot[]> {
+		const map = resolveFieldMap(fieldMap);
 		const filters: Array<{
 			propertyName: string;
 			operator: string;
@@ -236,19 +299,12 @@ export const hubspotConnector: CrmOriginConnector = {
 				method: "POST",
 				body: JSON.stringify({
 					filterGroups: [{ filters }],
-					properties: [
-						DEFAULT_CRM_FIELD_MAP.dealName,
-						DEFAULT_CRM_FIELD_MAP.amount,
-						DEFAULT_CRM_FIELD_MAP.owner,
-						DEFAULT_CRM_FIELD_MAP.closeDate,
-						"dealstage",
-						"pipeline",
-					],
+					properties: dealPropertyList(map),
 					limit: 50,
 				}),
 			},
 		);
-		return (payload.results || []).map(parseHubSpotDeal);
+		return (payload.results || []).map((row) => parseHubSpotDeal(row, map));
 	},
 
 	async verifyConnection(accessToken: string): Promise<CrmConnectionInfo> {

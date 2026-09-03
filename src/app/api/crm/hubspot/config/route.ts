@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getCrmIntegration, updateCrmIntegration } from "@/lib/crm/integrations.repository";
 import { resolveCrmOrgRequest } from "@/lib/crm/request-context";
-import { DEFAULT_CRM_FIELD_MAP, parseCrmConfig } from "@/lib/crm/types";
+import { DEFAULT_CRM_FIELD_MAP, parseCrmConfig, sanitizeCrmFieldMap } from "@/lib/crm/types";
 import { requirePermission } from "@/lib/rbac/middleware";
 
 export async function PUT(request: NextRequest) {
@@ -27,6 +27,7 @@ export async function PUT(request: NextRequest) {
 			pipelineId?: string;
 			triggerStageId?: string;
 			enabled?: boolean;
+			fieldMap?: Partial<typeof DEFAULT_CRM_FIELD_MAP>;
 		};
 		const current = parseCrmConfig(integration.config_json);
 		const next = {
@@ -38,7 +39,10 @@ export async function PUT(request: NextRequest) {
 				typeof body.triggerStageId === "string"
 					? body.triggerStageId
 					: current.triggerStageId,
-			fieldMap: current.fieldMap || DEFAULT_CRM_FIELD_MAP,
+			fieldMap: sanitizeCrmFieldMap(
+				body.fieldMap ?? current.fieldMap,
+				DEFAULT_CRM_FIELD_MAP,
+			),
 			enabled: body.enabled !== false,
 		};
 

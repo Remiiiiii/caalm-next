@@ -141,12 +141,12 @@ export default function SalesforceIntegrationCard({
 						</p>
 					) : (
 						<Button
-							className="primary-btn px-3 sm:px-4 cursor-pointer w-fit"
+							className="btn-primary px-3 sm:px-4 cursor-pointer w-fit"
 							onClick={handleRequest}
 							disabled={requesting}
 						>
 							{requesting ? (
-								<Loader2 className="h-4 w-4 animate-spin" />
+								<Loader2 className="h-4 w-4 animate-spin" aria-hidden />
 							) : null}
 							Request setup
 						</Button>

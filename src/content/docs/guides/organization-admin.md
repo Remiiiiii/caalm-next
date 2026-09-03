@@ -90,7 +90,7 @@ Use Role Management templates (Viewer, Contract reviewer, Department manager, Co
 - [ ] New users completed 2FA
 - [ ] No unexplained role changes
 - [ ] Expiry widgets reviewed with owners
-- [ ] Integration health glanced at
+- [ ] Integration health glanced at (Outlook, HubSpot; Salesforce request if Enterprise) — [CRM origin](/docs/admin/crm-integrations)
 - [ ] Super Admin list still tiny (escalate odd grants to platform ops)
 
 See: [Super Admin guide](/docs/guides/super-admin), [Invite and onboard users](/docs/admin/invite-onboard), [Design a permission model](/docs/admin/permission-model), [Permissions](/docs/concepts/permissions).

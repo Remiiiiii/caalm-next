@@ -49,6 +49,64 @@ describe("mapDealToDraftPayload", () => {
 		expect(payload.crmReference).toBe("hubspot:12345");
 		expect(payload.description).toContain("HubSpot");
 		expect(payload.description).toContain("Acme Corp");
+		expect(payload.contractExpiryDate).toBe(
+			new Date("2026-10-01").toISOString(),
+		);
+		expect(payload.contractNumber).toBe("HS-12345");
+		expect(payload.contractType).toBe("Other");
+		expect(payload.department).toBe("Sales");
+		expect(payload.amount).toBe(75000);
+	});
+
+	it("resolves HubSpot millisecond close dates to ISO expiry", () => {
+		const ms = String(Date.UTC(2026, 8, 30, 12, 0, 0));
+		const payload = mapDealToDraftPayload({
+			deal: { ...deal, closeDate: ms },
+			orgId: "org_1",
+			ownerId: "user_1",
+		});
+		expect(payload.contractExpiryDate).toBe(new Date(Number(ms)).toISOString());
+	});
+
+	it("falls back when close date is missing", () => {
+		const payload = mapDealToDraftPayload({
+			deal: { ...deal, closeDate: null },
+			orgId: "org_1",
+			ownerId: "user_1",
+		});
+		expect(payload.contractExpiryDate).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+		expect(new Date(payload.contractExpiryDate).getTime()).toBeGreaterThan(
+			Date.now(),
+		);
+	});
+
+	it("lands custom-mapped CRM fields on draft metadata", () => {
+		const mappedDeal: CrmDealSnapshot = {
+			...deal,
+			externalId: "mapped-1",
+			name: "Custom Title Deal",
+			amount: 42000,
+			companyName: "Mapped Vendor LLC",
+			ownerName: "Alex Rivera",
+			closeDate: "2026-11-15",
+			raw: {
+				caalm_title: "Custom Title Deal",
+				contract_value: "42000",
+				vendor_name: "Mapped Vendor LLC",
+			},
+		};
+		const payload = mapDealToDraftPayload({
+			deal: mappedDeal,
+			orgId: "org_1",
+			ownerId: "user_1",
+		});
+		expect(payload.contractName).toBe("Custom Title Deal");
+		expect(payload.amount).toBe(42000);
+		expect(payload.vendor).toBe("Mapped Vendor LLC");
+		expect(payload.description).toContain("Mapped Vendor LLC");
+		expect(payload.description).toContain("Alex Rivera");
+		expect(payload.description).toContain("hubspot:mapped-1");
+		expect(payload.priority).toBe("Medium");
 	});
 
 	it("is idempotent at the reference key — same deal always maps to the same crmReference", () => {

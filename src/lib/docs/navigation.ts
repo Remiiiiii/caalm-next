@@ -324,6 +324,12 @@ export const DOCS_NAV: DocsNavGroup[] = [
 				path: "admin/integrations",
 				summary: "Calendar sync and org API keys.",
 			},
+			{
+				title: "HubSpot and Salesforce CRM origin",
+				slug: "admin/crm-integrations",
+				path: "admin/crm-integrations",
+				summary: "Connect HubSpot, request Salesforce, pipeline stages, and CRM troubleshooting.",
+			},
 		],
 	},
 	{
@@ -404,6 +410,12 @@ export const DOCS_NAV: DocsNavGroup[] = [
 				slug: "troubleshooting/demo-vs-production",
 				path: "troubleshooting/demo-vs-production",
 				summary: "Why the sandbox behaves differently.",
+			},
+			{
+				title: "HubSpot or Salesforce not connecting",
+				slug: "troubleshooting/crm-origin",
+				path: "admin/crm-integrations",
+				summary: "OAuth, pipeline stage, drafts, webhooks, and Salesforce setup request.",
 			},
 		],
 	},

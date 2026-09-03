@@ -105,8 +105,8 @@ Text inputs, selects, textareas, and search fields inside dialogs must use a vis
 
 ### Buttons
 
-- Primary action buttons: `className="primary-btn px-3 sm:px-4"`
-- Include icons in buttons when appropriate
+- Primary action buttons: `className="btn-primary px-3 sm:px-4"` (or `primary-btn` — same styles)
+- **ALWAYS** include a Lucide icon (`h-4 w-4`) on `btn-primary` / `primary-btn` buttons — never text-only
 - Use consistent spacing: `gap-3` between buttons
 
 ## Color Palette

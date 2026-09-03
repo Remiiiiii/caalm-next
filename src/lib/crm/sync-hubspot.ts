@@ -20,6 +20,7 @@ export async function syncHubSpotDeals(input: {
 		accessToken,
 		config.pipelineId,
 		config.triggerStageId,
+		config.fieldMap,
 	);
 
 	let created = 0;
@@ -61,7 +62,11 @@ export async function ingestHubSpotDeal(input: {
 	}
 
 	const accessToken = await getFreshHubSpotAccessToken(input.integration);
-	const deal = await hubspotConnector.getDeal(accessToken, input.dealId);
+	const deal = await hubspotConnector.getDeal(
+		accessToken,
+		input.dealId,
+		config.fieldMap,
+	);
 	if (deal.stageId && deal.stageId !== config.triggerStageId) {
 		return { skipped: true };
 	}

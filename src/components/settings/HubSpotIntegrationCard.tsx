@@ -1,25 +1,31 @@
 "use client";
 
 import { format } from "date-fns";
-import { AlertCircle, Loader2, RefreshCw, Settings2 } from "lucide-react";
+import {
+	AlertCircle,
+	Info,
+	Loader2,
+	RefreshCw,
+	Settings2,
+	Unplug,
+	Waypoints,
+} from "lucide-react";
+import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
+import { VscDebugConnectedCompact } from "react-icons/vsc";
 import { Button } from "@/components/ui/button";
+import {
+	AppDropdownMenuContent,
+	AppDropdownMenuItem,
+	DropdownMenu,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import HubSpotConfigDialog from "./HubSpotConfigDialog";
 import IntegrationCard from "./IntegrationCard";
-
-function HubSpotGlyph({ className }: { className?: string }) {
-	return (
-		<svg
-			viewBox="0 0 24 24"
-			className={className}
-			aria-hidden="true"
-			fill="currentColor"
-		>
-			<path d="M17.3 10.2V7.4a2.4 2.4 0 1 0-1.7 0v2.8a3.6 3.6 0 0 0-2.1 1.3l-3.3-2.4a2.6 2.6 0 1 0-1.3 1.3l3.3 2.4a3.6 3.6 0 1 0 5.1-5.1ZM6.2 8.6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Zm10.2-3.3a.8.8 0 1 1 0-1.6.8.8 0 0 1 0 1.6ZM12 16.7a1.9 1.9 0 1 1 0-3.8 1.9 1.9 0 0 1 0 3.8Z" />
-		</svg>
-	);
-}
+import type { CrmFieldMap, CrmIntegrationConfig } from "@/lib/crm/types";
+import { DEFAULT_CRM_FIELD_MAP } from "@/lib/crm/types";
 
 interface HubSpotIntegrationCardProps {
 	orgId: string;
@@ -44,6 +50,9 @@ export default function HubSpotIntegrationCard({
 	const [lastError, setLastError] = useState<string | null>(null);
 	const [pipelineId, setPipelineId] = useState("");
 	const [triggerStageId, setTriggerStageId] = useState("");
+	const [fieldMap, setFieldMap] = useState<CrmFieldMap>({
+		...DEFAULT_CRM_FIELD_MAP,
+	});
 
 	const loadStatus = useCallback(async () => {
 		if (locked || !orgId) {
@@ -64,6 +73,10 @@ export default function HubSpotIntegrationCard({
 			setLastError(data.lastError || null);
 			setPipelineId(data.config?.pipelineId || "");
 			setTriggerStageId(data.config?.triggerStageId || "");
+			setFieldMap({
+				...DEFAULT_CRM_FIELD_MAP,
+				...(data.config?.fieldMap || {}),
+			});
 		} catch (error) {
 			toast({
 				title: "HubSpot status unavailable",
@@ -137,12 +150,46 @@ export default function HubSpotIntegrationCard({
 		}
 	};
 
+	const overflowMenu = connected ? (
+		<DropdownMenu>
+			<DropdownMenuTrigger
+				className="shad-no-focus rounded-full transition-colors hover:bg-white/30 cursor-pointer"
+				aria-label="Actions for HubSpot"
+			>
+				<Image src="/assets/icons/dots.svg" alt="" width={34} height={34} />
+			</DropdownMenuTrigger>
+			<AppDropdownMenuContent align="end">
+				<AppDropdownMenuItem
+					icon={Settings2}
+					onClick={() => setConfigOpen(true)}
+				>
+					Configure
+				</AppDropdownMenuItem>
+				<AppDropdownMenuItem
+					icon={RefreshCw}
+					disabled={syncing || !triggerStageId}
+					onClick={() => void handleSync()}
+				>
+					{syncing ? "Syncing…" : "Sync now"}
+				</AppDropdownMenuItem>
+				<DropdownMenuSeparator />
+				<AppDropdownMenuItem
+					icon={Unplug}
+					tone="danger"
+					onClick={() => void handleDisconnect()}
+				>
+					Disconnect
+				</AppDropdownMenuItem>
+			</AppDropdownMenuContent>
+		</DropdownMenu>
+	) : null;
+
 	if (locked || demoLocked) {
 		return (
 			<IntegrationCard
 				title="HubSpot"
 				description="Create a CAALM draft when a HubSpot deal hits a stage."
-				icon={HubSpotGlyph}
+				icon={Waypoints}
 				status="locked"
 				lockedHint={
 					demoLocked
@@ -159,7 +206,7 @@ export default function HubSpotIntegrationCard({
 			<IntegrationCard
 				title="HubSpot"
 				description="Create a CAALM draft when a HubSpot deal hits a stage."
-				icon={HubSpotGlyph}
+				icon={Waypoints}
 				status="connecting"
 				actions={
 					<div className="flex items-center gap-2 text-sm text-slate-600">
@@ -176,72 +223,53 @@ export default function HubSpotIntegrationCard({
 			<IntegrationCard
 				title="HubSpot"
 				description="Create a CAALM draft when a HubSpot deal hits a stage."
-				icon={HubSpotGlyph}
+				icon={Waypoints}
 				status={connected ? "connected" : "disconnected"}
 				meta={displayName}
 				lastSync={
 					lastSync ? format(new Date(lastSync), "MMM d, yyyy h:mm a") : null
 				}
+				menu={overflowMenu}
 				onConnect={handleConnect}
 				actions={
 					connected ? (
 						<div className="flex flex-col gap-3 w-full">
 							{lastError ? (
-								<p className="text-xs text-red">{lastError}</p>
+								<div className="flex items-start gap-2 p-3 rounded-lg bg-red/10 border border-red/20">
+									<AlertCircle className="h-4 w-4 text-red mt-0.5 shrink-0" />
+									<p className="text-xs text-slate-700">{lastError}</p>
+								</div>
 							) : (
-								<p className="text-xs text-slate-600">
-									{triggerStageId
-										? "Trigger stage is set. Move a deal there or sync now."
-										: "Configure a pipeline and trigger stage next."}
-								</p>
+								<div
+									className={`flex items-start gap-2 p-3 rounded-lg border ${
+										triggerStageId
+											? "bg-green/10 border-green/20"
+											: "bg-blue/10 border-blue/20"
+									}`}
+								>
+									<Info className="h-4 w-4 text-[#0f5384] mt-0.5 shrink-0" />
+									<p className="text-xs text-slate-700">
+										{triggerStageId
+											? "Trigger stage is set. Move a deal there, or sync now to pull it in immediately."
+											: "Configure a pipeline and trigger stage next."}
+									</p>
+								</div>
 							)}
-							<div className="flex flex-wrap gap-2">
-								<Button
-									size="sm"
-									variant="outline"
-									className="cursor-pointer"
-									onClick={() => setConfigOpen(true)}
-								>
-									<Settings2 className="h-4 w-4" />
-									Configure
-								</Button>
-								<Button
-									size="sm"
-									variant="outline"
-									className="cursor-pointer"
-									onClick={handleSync}
-									disabled={syncing || !triggerStageId}
-								>
-									{syncing ? (
-										<Loader2 className="h-4 w-4 animate-spin" />
-									) : (
-										<RefreshCw className="h-4 w-4" />
-									)}
-									Sync now
-								</Button>
-								<Button
-									size="sm"
-									variant="outline"
-									className="cursor-pointer"
-									onClick={handleDisconnect}
-								>
-									Disconnect
-								</Button>
-							</div>
 						</div>
 					) : (
 						<div className="flex flex-col gap-3 w-full">
 							<div className="flex items-start gap-2 p-3 rounded-lg bg-blue/10 border border-blue/20">
-								<AlertCircle className="h-4 w-4 text-[#0f5384] mt-0.5" />
+								<AlertCircle className="h-4 w-4 text-[#0f5384] mt-0.5 shrink-0" />
 								<p className="text-xs text-slate-700">
 									Connect HubSpot, pick a deal stage, and CAALM opens a draft
 									when that stage is reached. HubSpot Free CRM is enough.
 								</p>
 							</div>
 							<Button
-								className="primary-btn px-3 sm:px-4 cursor-pointer w-fit"
+								className="btn-primary px-3 sm:px-4 cursor-pointer w-fit"
 								onClick={handleConnect}
 							>
+								<VscDebugConnectedCompact className="h-4 w-4" aria-hidden />
 								Connect HubSpot
 							</Button>
 						</div>
@@ -254,7 +282,17 @@ export default function HubSpotIntegrationCard({
 				orgId={orgId}
 				pipelineId={pipelineId}
 				triggerStageId={triggerStageId}
-				onSaved={() => void loadStatus()}
+				fieldMap={fieldMap}
+				onSaved={(config: CrmIntegrationConfig) => {
+					// Apply save payload locally — skip HubSpot status round-trip
+					setPipelineId(config.pipelineId || "");
+					setTriggerStageId(config.triggerStageId || "");
+					setFieldMap({
+						...DEFAULT_CRM_FIELD_MAP,
+						...(config.fieldMap || {}),
+					});
+					setLastError(null);
+				}}
 			/>
 		</>
 	);

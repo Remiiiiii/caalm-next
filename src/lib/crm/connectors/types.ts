@@ -1,6 +1,7 @@
 import type {
 	CrmConnectionInfo,
 	CrmDealSnapshot,
+	CrmFieldMap,
 	CrmPipeline,
 	CrmTokens,
 } from "../types";
@@ -22,11 +23,16 @@ export interface CrmOriginConnector {
 	exchangeCode(code: string): Promise<CrmTokens & CrmConnectionInfo>;
 	refreshTokens(refreshToken: string): Promise<CrmTokens>;
 	listPipelines(accessToken: string): Promise<CrmPipeline[]>;
-	getDeal(accessToken: string, dealId: string): Promise<CrmDealSnapshot>;
+	getDeal(
+		accessToken: string,
+		dealId: string,
+		fieldMap?: CrmFieldMap,
+	): Promise<CrmDealSnapshot>;
 	searchDealsByStage(
 		accessToken: string,
 		pipelineId: string,
 		stageId: string,
+		fieldMap?: CrmFieldMap,
 	): Promise<CrmDealSnapshot[]>;
 	verifyConnection(accessToken: string): Promise<CrmConnectionInfo>;
 }

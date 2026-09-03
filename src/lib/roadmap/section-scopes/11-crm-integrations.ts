@@ -5,6 +5,6 @@ export const SECTION_11_SCOPE = {
 	tasks: [
 		"6.1 Salesforce connector (Enterprise mold — request setup only)",
 		"6.2 HubSpot connector (Growth+ live OAuth + stage → draft)",
-		"6.3 Configurable field mapping (defaults + stage picker)",
+		"6.3 Configurable field mapping (defaults + stage picker + org field map UI)",
 	],
 } as const;
