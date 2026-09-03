@@ -296,7 +296,7 @@ export default function ComingSoonPage() {
 														value={email}
 														onChange={(e) => setEmail(e.target.value)}
 														required
-														className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/90 backdrop-blur-sm"
+														className="w-full pl-10 pr-4 py-3 border-[0.25px] border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/90 backdrop-blur-sm"
 													/>
 												</div>
 												<button

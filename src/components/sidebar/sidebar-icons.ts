@@ -55,6 +55,28 @@ export const ITEM_ICONS: Record<
 		height: 20,
 		color: SUBITEM_TEXT_GREY,
 	},
+	"Create Contract": {
+		src: "/assets/icons/create-contract.png",
+		width: 20,
+		height: 20,
+		color: SUBITEM_TEXT_GREY,
+	},
+	"Clause Library": {
+		src: "/assets/icons/documents.svg",
+		width: 20,
+		height: 20,
+		color: SUBITEM_TEXT_GREY,
+	},
+	"Contract Templates": {
+		width: 20,
+		height: 20,
+		color: SUBITEM_TEXT_GREY,
+	},
+	"Funding & Retention": {
+		width: 20,
+		height: 20,
+		color: SUBITEM_TEXT_GREY,
+	},
 	"All Licenses": {
 		src: "/assets/icons/licenses.svg",
 		width: 25,
@@ -128,7 +150,7 @@ export const ITEM_ICONS: Record<
 	"Calendar View": {
 		src: "/assets/icons/calendar3.svg",
 		width: 20,
-		height: 20,
+		height: 21,
 		color: SUBITEM_TEXT_GREY,
 	},
 	"Training & Certifications": {

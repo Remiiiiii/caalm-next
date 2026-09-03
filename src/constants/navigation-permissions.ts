@@ -98,6 +98,31 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 				// Create/edit — not on Viewer or Dept Manager packs
 				permissions: [PERMISSIONS.CONTRACTS.CREATE, PERMISSIONS.CONTRACTS.EDIT],
 			},
+			{
+				name: "Create Contract",
+				icon: "/assets/icons/create-contract.png",
+				url: "/contracts/create",
+				permissions: [PERMISSIONS.CONTRACTS.CREATE],
+			},
+			{
+				name: "Clause Library",
+				icon: "/assets/icons/documents.svg",
+				url: "/contracts/library",
+				permissions: [PERMISSIONS.CLAUSES.VIEW],
+			},
+			{
+				name: "Contract Templates",
+				icon: "/assets/icons/documents.svg",
+				url: "/contracts/templates",
+				permissions: [PERMISSIONS.CONTRACT_TEMPLATES.VIEW],
+			},
+			{
+				name: "Funding & Retention",
+				icon: "/assets/icons/dollar-circle.svg",
+				url: "/contracts/funding-retention",
+				permissions: [PERMISSIONS.FUNDING.VIEW],
+				viewerReadOnly: true,
+			},
 		],
 	},
 	{
@@ -144,7 +169,6 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 				icon: "/assets/icons/compliance-status.svg",
 				url: "/audits/readiness",
 				permissions: [PERMISSIONS.AUDIT.VIEW],
-				hiddenForRoles: ["Department Manager"],
 				viewerReadOnly: true,
 				viewerFullAccess: true,
 			},

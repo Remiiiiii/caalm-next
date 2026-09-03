@@ -6,6 +6,7 @@ import {
 	Building2,
 	Crown,
 	Eye,
+	HandCoins,
 	Lock,
 	Server,
 } from "lucide-react";
@@ -89,8 +90,18 @@ function ItemIcon({
 		);
 	}
 
+	if (item.name === "Funding & Retention") {
+		return (
+			<HandCoins
+				className="h-4 w-4 shrink-0"
+				style={{ color: NAV_ICON_FILL_GREY }}
+				aria-hidden
+			/>
+		);
+	}
+
 	const mapped = ITEM_ICONS[item.name];
-	if (item.name === "Documents" || mapped?.src) {
+	if (item.name === "Documents" || mapped?.src || mapped?.width) {
 		return (
 			<NavItemIcon
 				name={item.name}
@@ -109,8 +120,7 @@ function ItemIcon({
 			alt=""
 			width={18}
 			height={18}
-			className="shrink-0 max-w-none"
-			style={{ width: "auto", height: "18px" }}
+			className="h-[18px] w-[18px] shrink-0 object-contain"
 		/>
 	);
 }

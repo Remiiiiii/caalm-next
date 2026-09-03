@@ -1,7 +1,7 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
 import { format, parseISO } from "date-fns";
+import { AnimatePresence, motion } from "framer-motion";
 import {
 	CalendarClock,
 	ChevronDown,
@@ -241,205 +241,202 @@ export default function ExpiryAlertModal({
 							transition={{ duration: 0.28, ease: "easeInOut" }}
 							className="flex flex-col items-start space-y-5 w-full"
 						>
-						{/* Title block */}
-						<div className="space-y-3 w-full">
-							<h2
-								id={titleId}
-								className="text-3xl md:text-4xl font-bold text-slate-800 drop-shadow-lg wrap-break-word"
-							>
-								{title}
-							</h2>
-							<p
-								id={descId}
-								className="text-lg md:text-xl text-slate-700 drop-shadow-md flex items-center gap-2"
-							>
-								<CalendarClock className="h-5 w-5 shrink-0 text-[#0f5384]" />
-								<span className="font-semibold">{dueVerb(entityType)}:</span>{" "}
-								{formatExpiryDisplay(expiryDate)}
-							</p>
-							<span
-								className={cn(
-									"inline-flex items-center gap-2 rounded-full border-2 px-5 py-2.5",
-									urgencyPillClass(daysRemaining),
-								)}
-							>
-								{daysRemaining <= 0 ? (
-									<span className="text-xl md:text-2xl font-bold">!</span>
-								) : (
-									<span className="text-xl md:text-2xl font-bold">
-										{daysRemaining}
+							{/* Title block */}
+							<div className="space-y-3 w-full">
+								<h2
+									id={titleId}
+									className="text-3xl md:text-4xl font-bold text-slate-800 drop-shadow-lg wrap-break-word"
+								>
+									{title}
+								</h2>
+								<p
+									id={descId}
+									className="text-lg md:text-xl text-slate-700 drop-shadow-md flex items-center gap-2"
+								>
+									<CalendarClock className="h-5 w-5 shrink-0 text-[#0f5384]" />
+									<span className="font-semibold">{dueVerb(entityType)}:</span>{" "}
+									{formatExpiryDisplay(expiryDate)}
+								</p>
+								<span
+									className={cn(
+										"inline-flex items-center gap-2 rounded-full border-2 px-5 py-2.5",
+										urgencyPillClass(daysRemaining),
+									)}
+								>
+									{daysRemaining <= 0 ? (
+										<span className="text-xl md:text-2xl font-bold">!</span>
+									) : (
+										<span className="text-xl md:text-2xl font-bold">
+											{daysRemaining}
+										</span>
+									)}
+									<span className="text-base md:text-lg opacity-95">
+										{daysLabel}
 									</span>
-								)}
-								<span className="text-base md:text-lg opacity-95">
-									{daysLabel}
 								</span>
-							</span>
-						</div>
+							</div>
 
-						{/*
+							{/*
 						  Stat grid — 2×2 with vertical + horizontal cross dividers
 						*/}
-						<div className="relative grid grid-cols-2 w-full overflow-visible">
-							{/* Cross: vertical + horizontal */}
-							<div
-								aria-hidden
-								className="pointer-events-none absolute inset-y-4 left-1/2 w-px -translate-x-1/2 bg-slate-300"
-							/>
-							<div
-								aria-hidden
-								className="pointer-events-none absolute inset-x-4 top-1/2 h-px -translate-y-1/2 bg-slate-300"
-							/>
+							<div className="relative grid grid-cols-2 w-full overflow-visible">
+								{/* Cross: vertical + horizontal */}
+								<div
+									aria-hidden
+									className="pointer-events-none absolute inset-y-4 left-1/2 w-px -translate-x-1/2 bg-slate-300"
+								/>
+								<div
+									aria-hidden
+									className="pointer-events-none absolute inset-x-4 top-1/2 h-px -translate-y-1/2 bg-slate-300"
+								/>
 
-							<div className="relative p-5 min-h-[108px]">
-								<p className="text-xs font-medium uppercase tracking-[0.08em] text-slate-400 mb-2">
-									Amount
-								</p>
-								<p className="text-[32px] leading-none font-bold text-slate-700 tracking-tight">
-									{showAmount
-										? `$${amount.toLocaleString(undefined, {
-												maximumFractionDigits: 0,
-											})}`
-										: "—"}
-								</p>
+								<div className="relative p-5 min-h-[108px]">
+									<p className="text-xs font-medium uppercase tracking-[0.08em] text-slate-400 mb-2">
+										Amount
+									</p>
+									<p className="text-[32px] leading-none font-bold text-slate-700 tracking-tight">
+										{showAmount
+											? `$${amount.toLocaleString(undefined, {
+													maximumFractionDigits: 0,
+												})}`
+											: "—"}
+									</p>
+								</div>
+
+								<div className="relative p-5 min-h-[108px]">
+									<p className="text-xs font-medium uppercase tracking-[0.08em] text-slate-400 mb-2">
+										Status
+									</p>
+									<p className="text-lg font-medium text-slate-700 capitalize leading-snug">
+										{status.replace(/[-_]/g, " ") || "—"}
+									</p>
+								</div>
+
+								<div className="relative p-5 min-h-[108px]">
+									<p className="text-xs font-medium uppercase tracking-[0.08em] text-slate-400 mb-2">
+										{typeFieldLabel(entityType)}
+									</p>
+									<p className="text-lg font-medium text-slate-700 leading-snug">
+										{typeLabel || "—"}
+									</p>
+								</div>
+
+								<div className="relative p-5 min-h-[108px]">
+									<p className="text-xs font-medium uppercase tracking-[0.08em] text-slate-400 mb-2">
+										{vendorFieldLabel(entityType)}
+									</p>
+									<p className="text-lg font-medium text-slate-700 leading-snug">
+										{vendor || "—"}
+									</p>
+								</div>
 							</div>
 
-							<div className="relative p-5 min-h-[108px]">
-								<p className="text-xs font-medium uppercase tracking-[0.08em] text-slate-400 mb-2">
-									Status
-								</p>
-								<p className="text-lg font-medium text-slate-700 capitalize leading-snug">
-									{status.replace(/[-_]/g, " ") || "—"}
-								</p>
-							</div>
-
-							<div className="relative p-5 min-h-[108px]">
-								<p className="text-xs font-medium uppercase tracking-[0.08em] text-slate-400 mb-2">
-									{typeFieldLabel(entityType)}
-								</p>
-								<p className="text-lg font-medium text-slate-700 leading-snug">
-									{typeLabel || "—"}
-								</p>
-							</div>
-
-							<div className="relative p-5 min-h-[108px]">
-								<p className="text-xs font-medium uppercase tracking-[0.08em] text-slate-400 mb-2">
-									{vendorFieldLabel(entityType)}
-								</p>
-								<p className="text-lg font-medium text-slate-700 leading-snug">
-									{vendor || "—"}
-								</p>
-							</div>
-						</div>
-
-						{/* Action bar — primary row + muted secondary links */}
-						<div className="relative z-50 mt-1 flex flex-col gap-4 w-full">
-							<div className="relative z-50 flex flex-nowrap items-center gap-3">
-								<Button
-									type="button"
-									className="primary-btn px-3 sm:px-4 shrink-0"
-									onClick={onRenew}
-									disabled={isBusy}
-								>
-									{entityType === "audit" ? (
-										<FileWarning className="h-4 w-4" />
-									) : (
-										<RotateCcw className="h-4 w-4" />
-									)}
-									{primaryLabel(entityType)}
-								</Button>
-
-								<Button
-									type="button"
-									variant="outline"
-									className="primary-btn px-3 sm:px-4 shrink-0"
-									onClick={onViewDetails}
-									disabled={isBusy}
-								>
-									<Eye className="h-4 w-4" />
-									View Details
-								</Button>
-
-								<DropdownMenu>
-									<DropdownMenuTrigger asChild>
-										<button
-											type="button"
-											disabled={isBusy}
-											className="relative z-50 inline-flex h-10 items-center gap-1.5 px-1 text-sm font-medium text-slate-500 hover:text-slate-800 cursor-pointer disabled:opacity-50 bg-transparent border-0 shrink-0"
-										>
-											<Clock className="h-4 w-4" />
-											Snooze
-											<ChevronDown className="h-3.5 w-3.5 opacity-70" />
-										</button>
-									</DropdownMenuTrigger>
-									<DropdownMenuContent
-										align="start"
-										className="z-[10050] w-44"
-									>
-										{SNOOZE_OPTIONS.map((opt) => (
-											<DropdownMenuItem
-												key={opt.value}
-												onClick={() => onSnooze(opt.value)}
-												className="cursor-pointer"
-											>
-												{opt.label}
-											</DropdownMenuItem>
-										))}
-									</DropdownMenuContent>
-								</DropdownMenu>
-							</div>
-
-							<div className="border-t border-slate-200/80 pt-4 flex flex-wrap items-center gap-6 min-h-6">
-								{onContactProvider && (
-									<button
+							{/* Action bar — primary row + muted secondary links */}
+							<div className="relative z-50 mt-1 flex flex-col gap-4 w-full">
+								<div className="relative z-50 flex flex-nowrap items-center gap-3">
+									<Button
 										type="button"
-										onClick={onContactProvider}
+										className="primary-btn px-3 sm:px-4 shrink-0"
+										onClick={onRenew}
 										disabled={isBusy}
-										className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-600 cursor-pointer disabled:opacity-50 bg-transparent border-0 p-0"
 									>
-										<Mail className="h-3.5 w-3.5" />
-										Contact Provider
-									</button>
-								)}
+										{entityType === "audit" ? (
+											<FileWarning className="h-4 w-4" />
+										) : (
+											<RotateCcw className="h-4 w-4" />
+										)}
+										{primaryLabel(entityType)}
+									</Button>
 
-								{!confirmLetExpire ? (
-									<button
+									<Button
 										type="button"
-										className="text-sm text-red hover:text-red/80 cursor-pointer disabled:opacity-50 bg-transparent border-0 p-0"
-										onClick={() => setConfirmLetExpire(true)}
-										disabled={isBusy || entityType === "audit"}
+										variant="outline"
+										className="primary-btn px-3 sm:px-4 shrink-0"
+										onClick={onViewDetails}
+										disabled={isBusy}
 									>
-										{entityType === "audit" ? "Mark as skipped" : "Let Expire"}
-									</button>
-								) : (
-									<span className="inline-flex flex-wrap items-center gap-2 text-sm text-slate-500">
-										<span>
-											{showAmount
-												? `Confirm ($${amount.toLocaleString()})?`
-												: "Confirm?"}
+										<Eye className="h-4 w-4" />
+										View Details
+									</Button>
+
+									<DropdownMenu>
+										<DropdownMenuTrigger asChild>
+											<button
+												type="button"
+												disabled={isBusy}
+												className="relative z-50 inline-flex h-10 items-center gap-1.5 px-1 text-sm font-medium text-slate-500 hover:text-slate-800 cursor-pointer disabled:opacity-50 bg-transparent border-0 shrink-0"
+											>
+												<Clock className="h-4 w-4" />
+												Snooze
+												<ChevronDown className="h-3.5 w-3.5 opacity-70" />
+											</button>
+										</DropdownMenuTrigger>
+										<DropdownMenuContent
+											align="start"
+											className="z-[10050] w-44"
+										>
+											{SNOOZE_OPTIONS.map((opt) => (
+												<DropdownMenuItem
+													key={opt.value}
+													onClick={() => onSnooze(opt.value)}
+													className="cursor-pointer"
+												>
+													{opt.label}
+												</DropdownMenuItem>
+											))}
+										</DropdownMenuContent>
+									</DropdownMenu>
+								</div>
+
+								<div className="border-t border-slate-200/80 pt-4 flex flex-wrap items-center gap-6 min-h-6">
+									{onContactProvider && (
+										<button
+											type="button"
+											onClick={onContactProvider}
+											disabled={isBusy}
+											className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-600 cursor-pointer disabled:opacity-50 bg-transparent border-0 p-0"
+										>
+											<Mail className="h-3.5 w-3.5" />
+											Contact Provider
+										</button>
+									)}
+
+									{!confirmLetExpire ? (
+										<button
+											type="button"
+											className="text-sm text-red hover:text-red/80 cursor-pointer disabled:opacity-50 bg-transparent border-0 p-0"
+											onClick={() => setConfirmLetExpire(true)}
+											disabled={isBusy || entityType === "audit"}
+										>
+											{entityType === "audit"
+												? "Mark as skipped"
+												: "Let Expire"}
+										</button>
+									) : (
+										<span className="inline-flex flex-wrap items-center gap-2 text-sm text-slate-500">
+											<button
+												type="button"
+												className="font-semibold text-red hover:underline cursor-pointer disabled:opacity-50 bg-transparent border-0 p-0"
+												onClick={() => {
+													onLetExpire();
+													setConfirmLetExpire(false);
+												}}
+												disabled={isBusy}
+											>
+												Confirm
+											</button>
+											<button
+												type="button"
+												className="text-slate-400 hover:underline cursor-pointer bg-transparent border-0 p-0"
+												onClick={() => setConfirmLetExpire(false)}
+												disabled={isBusy}
+											>
+												Cancel
+											</button>
 										</span>
-										<button
-											type="button"
-											className="font-semibold text-red hover:underline cursor-pointer disabled:opacity-50 bg-transparent border-0 p-0"
-											onClick={() => {
-												onLetExpire();
-												setConfirmLetExpire(false);
-											}}
-											disabled={isBusy}
-										>
-											Confirm
-										</button>
-										<button
-											type="button"
-											className="text-slate-400 hover:underline cursor-pointer bg-transparent border-0 p-0"
-											onClick={() => setConfirmLetExpire(false)}
-											disabled={isBusy}
-										>
-											Cancel
-										</button>
-									</span>
-								)}
+									)}
+								</div>
 							</div>
-						</div>
 						</motion.div>
 					</AnimatePresence>
 				</div>

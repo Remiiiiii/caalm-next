@@ -32,7 +32,7 @@ interface AuditLogFiltersBarProps {
 
 function FieldBox({ children }: { children: ReactNode }) {
 	return (
-		<div className="mt-1 rounded-md border border-slate-200 bg-white/70 px-3">
+		<div className="mt-1 rounded-md border-[0.25px] border-slate-200 bg-white/70 px-3">
 			{children}
 		</div>
 	);

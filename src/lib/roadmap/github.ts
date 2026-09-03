@@ -109,6 +109,8 @@ export async function listOpenPullRequests(): Promise<
 		title: string;
 		html_url: string;
 		state: string;
+		draft?: boolean;
+		created_at?: string;
 		head?: { ref?: string };
 	}>;
 
@@ -118,6 +120,8 @@ export async function listOpenPullRequests(): Promise<
 		htmlUrl: pr.html_url,
 		headRef: pr.head?.ref ?? "",
 		state: "open",
+		draft: Boolean(pr.draft),
+		createdAt: pr.created_at,
 	}));
 
 	openPullRequestsCache = { fetchedAt: now, prs };

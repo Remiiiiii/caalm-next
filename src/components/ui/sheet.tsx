@@ -1,6 +1,6 @@
 import * as SheetPrimitive from "@radix-ui/react-dialog";
 import { cva, type VariantProps } from "class-variance-authority";
-import { X } from "lucide-react";
+import { PanelRightClose } from "lucide-react";
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
@@ -52,6 +52,8 @@ interface SheetContentProps
 		VariantProps<typeof sheetVariants> {
 	/** When false, skips the backdrop overlay (default true). */
 	showOverlay?: boolean;
+	/** When false, skips the default Hide control (default true). */
+	showCloseButton?: boolean;
 }
 
 const SheetContent = React.forwardRef<
@@ -59,7 +61,14 @@ const SheetContent = React.forwardRef<
 	SheetContentProps
 >(
 	(
-		{ side = "right", className, children, showOverlay = true, ...props },
+		{
+			side = "right",
+			className,
+			children,
+			showOverlay = true,
+			showCloseButton = true,
+			...props
+		},
 		ref,
 	) => (
 		<SheetPortal>
@@ -70,10 +79,12 @@ const SheetContent = React.forwardRef<
 				{...props}
 			>
 				{children}
-				<SheetPrimitive.Close className="absolute right-4 top-4 z-20 cursor-pointer rounded-sm p-1 text-slate-500 opacity-80 transition-colors duration-200 hover:bg-white/80 hover:text-slate-700 hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40">
-					<X className="h-4 w-4" />
-					<span className="sr-only">Close</span>
-				</SheetPrimitive.Close>
+				{showCloseButton ? (
+					<SheetPrimitive.Close className="absolute right-4 top-4 z-20 flex h-8 w-8 cursor-pointer items-center justify-center rounded-sm text-slate-600 opacity-80 transition-colors duration-200 hover:bg-white/80 hover:text-slate-700 hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40">
+						<PanelRightClose className="h-4 w-4" />
+						<span className="sr-only">Hide</span>
+					</SheetPrimitive.Close>
+				) : null}
 			</SheetPrimitive.Content>
 		</SheetPortal>
 	),
@@ -93,6 +104,26 @@ const SheetHeader = ({
 	/>
 );
 SheetHeader.displayName = "SheetHeader";
+
+/** White rounded tile + shadow used next to sheet titles. */
+export function SheetHeaderIcon({
+	children,
+	className,
+}: {
+	children: React.ReactNode;
+	className?: string;
+}) {
+	return (
+		<div
+			className={cn(
+				"flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/50 bg-white/40 shadow-sm backdrop-blur-sm",
+				className,
+			)}
+		>
+			{children}
+		</div>
+	);
+}
 
 const SheetFooter = ({
 	className,
@@ -139,6 +170,7 @@ export {
 	SheetDescription,
 	SheetFooter,
 	SheetHeader,
+	SheetHeaderIcon,
 	SheetOverlay,
 	SheetPortal,
 	SheetTitle,

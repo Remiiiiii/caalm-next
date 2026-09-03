@@ -63,16 +63,7 @@ export const RISK_LEVELS = [
 	{ value: "low", label: "Low" },
 ];
 
-export const CURRENCY_CODES = [
-	"USD",
-	"EUR",
-	"GBP",
-	"CAD",
-	"MXN",
-	"JPY",
-	"AUD",
-	"other",
-];
+export { CURRENCY_CODES } from "@/lib/currency";
 
 export const PAYMENT_TERM_OPTIONS = [
 	{ value: "due_on_receipt", label: "Due on Receipt" },

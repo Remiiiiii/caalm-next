@@ -15,6 +15,8 @@ export type GitHubPullRequestSummary = {
 	htmlUrl: string;
 	headRef: string;
 	state: "open" | "closed" | "merged";
+	draft?: boolean;
+	createdAt?: string;
 };
 
 export type ResolvedPullRequest = GitHubPullRequestSummary & {
@@ -93,6 +95,14 @@ export function resolveSectionFromPrMatch(
 		}
 	}
 	return undefined;
+}
+
+/**
+ * Drop a leading `5.1 ` task-code prefix so the pane title matches the catalog
+ * task name (GitHub titles often start with the code for branch matching).
+ */
+export function displayPullRequestTitle(title: string): string {
+	return title.replace(/^\d+\.\d+\s+/, "").trim();
 }
 
 /**

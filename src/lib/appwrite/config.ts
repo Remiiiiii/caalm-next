@@ -98,6 +98,24 @@ export const appwriteConfig = {
 		"test-license-drafts",
 	),
 
+	/** Org clause library (name: clauses) */
+	clausesCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CLAUSES_COLLECTION",
+		"69c8f401001a2b3c4d01",
+	),
+
+	/** Contract recipes that reference clause families (name: contract_templates) */
+	contractTemplatesCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CONTRACT_TEMPLATES_COLLECTION",
+		"69c8f501001a2b3c4d02",
+	),
+
+	/** Guided create-from-template wizard drafts (name: contract_wizard_sessions) */
+	contractWizardSessionsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CONTRACT_WIZARD_SESSIONS_COLLECTION",
+		"69c8f502002b3c4d5e03",
+	),
+
 	tasksCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_TASKS_COLLECTION",
 		"tasks",
@@ -169,6 +187,12 @@ export const appwriteConfig = {
 	),
 
 	bucketId: getTestFallback("NEXT_PUBLIC_APPWRITE_BUCKET", "test-bucket"),
+
+	/** Agreement blueprints + wizard draft artifacts (name: contract_blueprints) */
+	contractBlueprintsBucketId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CONTRACT_BLUEPRINTS_BUCKET",
+		"69c8f503003c4d5e6f04",
+	),
 
 	profilePicturesBucketId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_PROFILE_PICTURES_BUCKET",
@@ -318,6 +342,18 @@ export const appwriteConfig = {
 	roadmapStatusLogCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_ROADMAP_STATUS_LOG_COLLECTION",
 		"69c0a104004d5e6f7a04",
+	),
+
+	/** Funding pursuits pipeline (name: funding_pursuits) */
+	fundingPursuitsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_FUNDING_PURSUITS_COLLECTION",
+		"69c4f201001a2b3c4d01",
+	),
+
+	/** Contract obligations for retention (name: contract_obligations) */
+	contractObligationsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CONTRACT_OBLIGATIONS_COLLECTION",
+		"69c4f202002b3c4d5e02",
 	),
 
 	// Imagine Art API (AI Image Generation)

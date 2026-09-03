@@ -13,6 +13,7 @@ import {
 	SheetContent,
 	SheetDescription,
 	SheetHeader,
+	SheetHeaderIcon,
 	SheetTitle,
 } from "@/components/ui/sheet";
 
@@ -45,13 +46,15 @@ export function CalendarFiltersDrawer({
 			>
 				<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70" />
 				<SheetHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4 px-6 text-left">
-					<div className="flex items-center gap-3">
-						<SlidersHorizontal className="w-5 h-5 text-[#0f5384]" />
+					<div className="flex items-center gap-3 pr-10">
+						<SheetHeaderIcon>
+							<SlidersHorizontal className="h-5 w-5 text-[#0f5384]" />
+						</SheetHeaderIcon>
 						<SheetTitle className="text-xl font-semibold sidebar-gradient-text">
 							Manage calendar
 						</SheetTitle>
 					</div>
-					<SheetDescription className="text-sm text-slate-600 mt-1 ml-8">
+					<SheetDescription className="text-sm text-slate-600 mt-1 ml-14">
 						Share, print, settings, and Outlook sync
 					</SheetDescription>
 				</SheetHeader>

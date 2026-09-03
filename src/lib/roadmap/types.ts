@@ -126,6 +126,12 @@ export type RoadmapCatalogSection = {
 	sourceRef: string;
 	/** GitHub PR numbers matched to this section by topic (newest last) */
 	linkedPrNumbers?: number[];
+	/**
+	 * When false, a merged catalog PR is still shown on the section but does
+	 * not mark tasks complete. Use this for tracking stubs that landed on
+	 * main without the product work.
+	 */
+	completesOnMerge?: boolean;
 	tasks: RoadmapCatalogTask[];
 };
 

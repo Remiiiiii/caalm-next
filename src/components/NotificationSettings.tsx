@@ -818,7 +818,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
 														}
 													}
 												}}
-												className={`text-xs border border-slate-300 ${
+												className={`text-xs border-[0.25px] border-slate-300 ${
 													phoneNumberVerified
 														? "bg-slate-100 cursor-not-allowed"
 														: "bg-white"
