@@ -973,6 +973,8 @@ export default function BillingIntegrationsPage() {
 
 									userId={user.$id}
 
+									orgId={resolvedOrgId}
+
 									subscriptionTier={subscription?.subscriptionTier || "starter"}
 
 									onViewPlans={() => {

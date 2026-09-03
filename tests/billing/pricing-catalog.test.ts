@@ -27,6 +27,8 @@ describe("honest pricing catalog", () => {
 
 		expect(starter?.features.join(" ")).toMatch(/custom roles included/i);
 		expect(growth?.features.join(" ")).toMatch(/License allocate/i);
+		expect(growth?.features.join(" ")).toMatch(/HubSpot CRM origin/i);
+		expect(enterprise?.features.join(" ")).toMatch(/Salesforce CRM origin/i);
 		expect(growth?.features.join(" ")).toMatch(/Unlimited active licenses/i);
 		expect(growth?.features.join(" ")).toMatch(/500 AI document extractions/i);
 		expect(enterprise?.features.join(" ")).toMatch(/Sales-assisted only/i);

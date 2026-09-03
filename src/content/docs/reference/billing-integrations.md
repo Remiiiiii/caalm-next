@@ -18,6 +18,8 @@ Treat plan changes as financial operations with an owner — not casual clicking
 ## Integrations
 
 - **Outlook** connect/sync for calendar workflows
+- **HubSpot** deal-stage origin (Growth+) — creates a contract draft
+- **Salesforce** origin request (Enterprise, sales-led setup)
 - **Organization API keys** for controlled automation access
 
 Demo mode may disable external integrations.

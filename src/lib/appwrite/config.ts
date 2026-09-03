@@ -356,6 +356,18 @@ export const appwriteConfig = {
 		"69c4f202002b3c4d5e02",
 	),
 
+	/** Org-level CRM connections (name: crm_integrations) */
+	crmIntegrationsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CRM_INTEGRATIONS_COLLECTION",
+		"69d2a101001a2b3c4d01",
+	),
+
+	/** CRM deal → contract idempotency (name: crm_origin_links) */
+	crmOriginLinksCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CRM_ORIGIN_LINKS_COLLECTION",
+		"69d2a102002b3c4d5e02",
+	),
+
 	// Imagine Art API (AI Image Generation)
 	imagineArtApiKey: process.env.IMAGINE_ART_API_KEY,
 

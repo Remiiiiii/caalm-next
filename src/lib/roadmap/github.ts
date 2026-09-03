@@ -7,6 +7,10 @@ import {
 	stripHtmlFromPrBody,
 	type GitHubPullRequestSummary,
 } from "./github-pr-match";
+import {
+	evaluateRoadmapCompletionGate,
+	type RoadmapCompletionGate,
+} from "./required-checks";
 
 function getRepo(): string {
 	return (
@@ -235,4 +239,135 @@ export async function fetchPullRequestStatus(params: {
 			: { state: "open", ...base };
 	prStatusCache.set(params.prNumber, { fetchedAt: Date.now(), value });
 	return value;
+}
+
+type ActionsRunJson = {
+	id: number;
+	name: string;
+	event: string;
+	conclusion: string | null;
+	head_sha: string;
+};
+
+type ActionsJobJson = {
+	name: string;
+	conclusion: string | null;
+};
+
+const COMPLETION_GATE_CACHE_MS = 30_000;
+const completionGateCache = new Map<
+	string,
+	{ fetchedAt: number; value: RoadmapCompletionGate }
+>();
+
+/**
+ * Fetch Actions runs + jobs for a commit and decide if CLM completion is allowed.
+ * Fail closed when GitHub is unavailable — merge alone must not complete tasks.
+ */
+export async function fetchRoadmapCompletionGate(params: {
+	commitSha: string;
+}): Promise<RoadmapCompletionGate> {
+	const sha = params.commitSha.trim();
+	if (!sha) {
+		return {
+			ok: false,
+			reason: "Missing commit SHA for required CI checks",
+			playwrightPushPassed: false,
+			deployProductionPassed: false,
+		};
+	}
+
+	const cached = completionGateCache.get(sha);
+	if (cached && Date.now() - cached.fetchedAt < COMPLETION_GATE_CACHE_MS) {
+		return cached.value;
+	}
+
+	const token = await getGitHubToken();
+	const repo = getRepo();
+	if (!token || !repo.includes("/")) {
+		const value: RoadmapCompletionGate = {
+			ok: false,
+			reason:
+				"GitHub token/repo not configured — cannot verify Playwright E2E / production deploy",
+			playwrightPushPassed: false,
+			deployProductionPassed: false,
+		};
+		completionGateCache.set(sha, { fetchedAt: Date.now(), value });
+		return value;
+	}
+
+	const [owner, name] = repo.split("/");
+	let runsRes: Response;
+	try {
+		runsRes = await fetch(
+			`https://api.github.com/repos/${owner}/${name}/actions/runs?head_sha=${encodeURIComponent(sha)}&per_page=30`,
+			{
+				headers: githubHeaders(token),
+				signal: AbortSignal.timeout(GITHUB_FETCH_MS),
+			},
+		);
+	} catch {
+		const value: RoadmapCompletionGate = {
+			ok: false,
+			reason: `Could not load Actions runs for ${sha.slice(0, 7)}`,
+			playwrightPushPassed: false,
+			deployProductionPassed: false,
+		};
+		completionGateCache.set(sha, { fetchedAt: Date.now(), value });
+		return value;
+	}
+
+	if (!runsRes.ok) {
+		const value: RoadmapCompletionGate = {
+			ok: false,
+			reason: `GitHub Actions runs unavailable (${runsRes.status}) for ${sha.slice(0, 7)}`,
+			playwrightPushPassed: false,
+			deployProductionPassed: false,
+		};
+		completionGateCache.set(sha, { fetchedAt: Date.now(), value });
+		return value;
+	}
+
+	const runsJson = (await runsRes.json()) as { workflow_runs?: ActionsRunJson[] };
+	const workflowRuns = runsJson.workflow_runs ?? [];
+
+	const runsWithJobs = await Promise.all(
+		workflowRuns.map(async (run) => {
+			let jobs: ActionsJobJson[] = [];
+			try {
+				const jobsRes = await fetch(
+					`https://api.github.com/repos/${owner}/${name}/actions/runs/${run.id}/jobs?per_page=50`,
+					{
+						headers: githubHeaders(token),
+						signal: AbortSignal.timeout(GITHUB_FETCH_MS),
+					},
+				);
+				if (jobsRes.ok) {
+					const jobsJson = (await jobsRes.json()) as { jobs?: ActionsJobJson[] };
+					jobs = jobsJson.jobs ?? [];
+				}
+			} catch {
+				jobs = [];
+			}
+			return {
+				name: run.name,
+				event: run.event,
+				conclusion: run.conclusion,
+				headSha: run.head_sha,
+				jobs: jobs.map((job) => ({
+					name: job.name,
+					conclusion: job.conclusion,
+				})),
+			};
+		}),
+	);
+
+	const value = evaluateRoadmapCompletionGate(runsWithJobs);
+	completionGateCache.set(sha, { fetchedAt: Date.now(), value });
+	return value;
+}
+
+/** Test helper — clears completion-gate cache between vitest cases. */
+export function clearRoadmapCompletionGateCacheForTests(): void {
+	completionGateCache.clear();
 }

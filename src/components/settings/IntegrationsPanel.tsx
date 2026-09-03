@@ -1,17 +1,21 @@
 "use client";
 
 import { KeyRound, Shield, Webhook } from "lucide-react";
+import HubSpotIntegrationCard from "./HubSpotIntegrationCard";
 import IntegrationCard from "./IntegrationCard";
 import OutlookIntegrationCard from "./OutlookIntegrationCard";
+import SalesforceIntegrationCard from "./SalesforceIntegrationCard";
 
 interface IntegrationsPanelProps {
 	userId: string;
+	orgId: string;
 	subscriptionTier: "starter" | "growth" | "enterprise";
 	onViewPlans: () => void;
 }
 
 export default function IntegrationsPanel({
 	userId,
+	orgId,
 	subscriptionTier,
 	onViewPlans,
 }: IntegrationsPanelProps) {
@@ -19,6 +23,8 @@ export default function IntegrationsPanel({
 	const hasApiAccess =
 		subscriptionTier === "growth" || subscriptionTier === "enterprise";
 	const hasSso = subscriptionTier === "enterprise";
+	const hasHubSpot = hasApiAccess;
+	const hasSalesforce = subscriptionTier === "enterprise";
 
 	return (
 		<div className="space-y-6">
@@ -32,6 +38,19 @@ export default function IntegrationsPanel({
 
 			<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 				{!isDemo && <OutlookIntegrationCard userId={userId} />}
+
+				<HubSpotIntegrationCard
+					orgId={orgId}
+					locked={!hasHubSpot}
+					demoLocked={isDemo}
+					onViewPlans={onViewPlans}
+				/>
+
+				<SalesforceIntegrationCard
+					orgId={orgId}
+					locked={!hasSalesforce || isDemo}
+					onViewPlans={onViewPlans}
+				/>
 
 				<IntegrationCard
 					title="API & Webhooks"

@@ -1,10 +1,10 @@
-﻿/** Tracking scope for CLM roadmap section 11. Implementation lands in later commits on this branch. */
+﻿/** Tracking scope for CLM roadmap CRM origin (catalog section 6; historical PR #64 label 11). */
 export const SECTION_11_SCOPE = {
-  sectionNumber: 11,
-  title: "CRM/ERP Origin Integrations",
-  tasks: [
-  "11.1 Salesforce connector",
-  "11.2 HubSpot connector",
-  "11.3 Configurable field mapping",
-  ],
+	sectionNumber: 6,
+	title: "CRM/ERP Origin Integrations",
+	tasks: [
+		"6.1 Salesforce connector (Enterprise mold — request setup only)",
+		"6.2 HubSpot connector (Growth+ live OAuth + stage → draft)",
+		"6.3 Configurable field mapping (defaults + stage picker)",
+	],
 } as const;

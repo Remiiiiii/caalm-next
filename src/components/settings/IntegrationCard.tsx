@@ -1,6 +1,7 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
+import type { ComponentType, SVGProps } from "react";
 import { Lock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,7 @@ export type IntegrationStatus =
 interface IntegrationCardProps {
 	title: string;
 	description: string;
-	icon: LucideIcon;
+	icon: LucideIcon | ComponentType<SVGProps<SVGSVGElement>>;
 	status: IntegrationStatus;
 	lastSync?: string | null;
 	meta?: string | null;
