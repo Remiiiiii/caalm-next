@@ -110,6 +110,11 @@ export type RoadmapSectionOverview = {
 		number: number;
 		title: string;
 		state?: "open" | "closed" | "merged" | "unknown";
+		/**
+		 * True only when GitHub says merged AND roadmap completion checks
+		 * (Playwright E2E push + Deploy to Vercel production) passed.
+		 */
+		checksPassed?: boolean;
 	}>;
 	/** Why tasks in this section stay locked (missing merge or green tests). */
 	mergeBlockReason?: string | null;

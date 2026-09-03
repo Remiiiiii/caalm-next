@@ -392,6 +392,38 @@ export async function getOverview(options?: {
 		unlockedTasks,
 		prLookup,
 	);
+
+	// Same completion gate used to finish sections — used for PR strikethrough UI
+	const checksPassedByPr = new Map<number, boolean>();
+	const gateReasonByPr = new Map<number, string>();
+	const gateBySha = new Map<
+		string,
+		Awaited<ReturnType<typeof fetchRoadmapCompletionGate>>
+	>();
+	await Promise.all(
+		[...prLookup.entries()].map(async ([number, meta]) => {
+			if (meta.state !== "merged") {
+				checksPassedByPr.set(number, false);
+				return;
+			}
+			const sha = meta.mergeCommitSha?.trim();
+			if (!sha) {
+				checksPassedByPr.set(number, false);
+				gateReasonByPr.set(number, "missing merge commit");
+				return;
+			}
+			let gate = gateBySha.get(sha);
+			if (!gate) {
+				gate = await fetchRoadmapCompletionGate({ commitSha: sha });
+				gateBySha.set(sha, gate);
+			}
+			checksPassedByPr.set(number, gate.ok);
+			if (!gate.ok && gate.reason) {
+				gateReasonByPr.set(number, gate.reason);
+			}
+		}),
+	);
+
 	let viewSections = unlockedSections;
 	let viewTasks = unlockedTasks;
 	if (mergedPrChanged) {
@@ -430,8 +462,14 @@ export async function getOverview(options?: {
 				number,
 				title: meta?.title ?? "",
 				state: meta?.state,
+				checksPassed: checksPassedByPr.get(number) === true,
 			};
 		});
+		const waitingChecksNumber = catalogNumbers.find(
+			(number) =>
+				prLookup.get(number)?.state === "merged" &&
+				checksPassedByPr.get(number) !== true,
+		);
 		return {
 			id: section.$id,
 			sectionNumber: section.sectionNumber,
@@ -448,7 +486,12 @@ export async function getOverview(options?: {
 						? `${taskCounts.complete} of ${taskCounts.total} tasks complete`
 						: waitingNumber
 							? `Waiting for PR #${waitingNumber} to merge`
-							: null,
+							: waitingChecksNumber
+								? `PR #${waitingChecksNumber}: ${
+										gateReasonByPr.get(waitingChecksNumber) ||
+										"Waiting for required checks"
+									}`
+								: null,
 		};
 	});
 
@@ -512,6 +555,7 @@ export async function getSectionPullRequests(sectionId: string): Promise<
 		htmlUrl: string;
 		headRef: string;
 		body: string;
+		checksPassed: boolean;
 	}>
 > {
 	const section = await getSectionById(sectionId);
@@ -520,6 +564,13 @@ export async function getSectionPullRequests(sectionId: string): Promise<
 	return Promise.all(
 		numbers.map(async (number) => {
 			const live = await fetchPullRequestStatus({ prNumber: number });
+			let checksPassed = false;
+			if (live.state === "merged" && live.mergeCommitSha?.trim()) {
+				const gate = await fetchRoadmapCompletionGate({
+					commitSha: live.mergeCommitSha.trim(),
+				});
+				checksPassed = gate.ok;
+			}
 			return {
 				number,
 				title: live.title || `PR #${number}`,
@@ -527,6 +578,7 @@ export async function getSectionPullRequests(sectionId: string): Promise<
 				htmlUrl: live.htmlUrl || "",
 				headRef: live.headRef?.trim() || "",
 				body: live.body || "",
+				checksPassed,
 			};
 		}),
 	);

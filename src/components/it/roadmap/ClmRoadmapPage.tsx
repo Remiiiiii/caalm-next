@@ -28,6 +28,7 @@ type SectionPullRequest = {
 	htmlUrl: string;
 	headRef: string;
 	body: string;
+	checksPassed?: boolean;
 };
 
 type SectionPullRequestsResponse = {
@@ -37,7 +38,8 @@ type SectionPullRequestsResponse = {
 
 function RoadmapPullRequestItem({ pr }: { pr: SectionPullRequest }) {
 	const [expanded, setExpanded] = useState(false);
-	const merged = pr.state === "merged";
+	// Only strike when roadmap completion checks passed — not merely GitHub "merged"
+	const complete = pr.checksPassed === true;
 
 	return (
 		<div className="space-y-1.5 py-3 first:pt-0 last:pb-0">
@@ -56,7 +58,7 @@ function RoadmapPullRequestItem({ pr }: { pr: SectionPullRequest }) {
 							</span>{" "}
 							<span
 								className={cn(
-									merged
+									complete
 										? "line-through text-slate-500 font-normal"
 										: "text-slate-700",
 								)}
@@ -220,7 +222,8 @@ function RoadmapSectionCard({
 									{title ? (
 										<span
 											className={cn(
-												pr.state === "merged" &&
+												(pr.checksPassed ||
+													section.status === "complete") &&
 													"line-through text-slate-500",
 											)}
 										>

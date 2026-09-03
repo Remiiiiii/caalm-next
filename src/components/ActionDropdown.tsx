@@ -343,7 +343,7 @@ const ActionDropdown = ({
 		);
 		if (value === "assign") {
 			return (
-				<DialogContent className="flex max-h-[90vh] w-[calc(100%-1.5rem)] sm:w-full max-w-[600px] flex-col overflow-hidden p-0 shadow-xl">
+				<DialogContent className="flex max-h-[90vh] w-[calc(100%-1.5rem)] sm:w-full max-w-[720px] flex-col overflow-hidden p-0 shadow-xl">
 					{/* Professional Cap */}
 					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
 
@@ -365,56 +365,64 @@ const ActionDropdown = ({
 						</p>
 					</div>
 
-					{/* Scrollable Content */}
-					<div className="flex-1 overflow-y-auto bg-white/20 p-6 backdrop-blur-sm">
-						<div className="bg-white rounded-lg p-6 border border-slate-200 shadow-sm space-y-6">
+					{/* Scrollable Content — content sits on outer panel (no nested white card) */}
+					<div className="flex-1 space-y-6 overflow-y-auto bg-slate-50 p-6">
 							{/* Department Selection */}
 							<div>
 								<div className="mb-3 text-sm font-medium text-slate-700">
 									Select department for this contract:
 								</div>
-								<div className="grid grid-cols-3 gap-2">
+								<div className="flex flex-wrap gap-2">
 									{departmentEnums.length > 0 ? (
-										departmentEnums.map((dept) => (
-											<label
-												key={dept}
-												className={`flex items-center gap-2 cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 p-2 rounded-lg border-2 ${
-													selectedDepartment === dept
-														? "border-blue-500 bg-blue-50"
-														: "border-slate-200 bg-white"
-												} group shadow-sm hover:shadow-md`}
-												onClick={(e) => {
-													e.preventDefault();
-													e.stopPropagation();
-													if (!isLoading) {
-														handleDepartmentChange(dept);
-													}
-												}}
-											>
-												<input
-													type="radio"
-													name="contract-department"
-													value={dept}
-													checked={selectedDepartment === dept}
-													onChange={(e) => {
+										departmentEnums.map((dept) => {
+											const isSelected = selectedDepartment === dept;
+											return (
+												<label
+													key={dept}
+													className={`inline-flex items-center gap-2 cursor-pointer transition-all duration-200 px-3 py-1.5 rounded-full border outline-none focus-within:outline-none ${
+														isSelected
+															? "border-green bg-green/10 text-slate-700 shadow-sm"
+															: "border-slate-200 bg-white text-slate-700 hover:bg-blue-50 hover:border-blue-300"
+													} group`}
+													onClick={(e) => {
+														e.preventDefault();
 														e.stopPropagation();
 														if (!isLoading) {
 															handleDepartmentChange(dept);
 														}
 													}}
-													onClick={(e) => {
-														e.stopPropagation();
-													}}
-													disabled={isLoading}
-													className="cursor-pointer w-4 h-4 text-blue-600"
-												/>
-												<span className="text-sm cursor-pointer text-slate-700 font-medium group-hover:text-blue-600 transition-colors">
-													{formatDepartmentName(dept as ContractDepartment)}
-												</span>
-											</label>
-										))
+												>
+													<input
+														type="radio"
+														name="contract-department"
+														value={dept}
+														checked={isSelected}
+														onChange={(e) => {
+															e.stopPropagation();
+															if (!isLoading) {
+																handleDepartmentChange(dept);
+															}
+														}}
+														onClick={(e) => {
+															e.stopPropagation();
+														}}
+														disabled={isLoading}
+														className="h-3.5 w-3.5 shrink-0 cursor-pointer appearance-none rounded-full border border-slate-300 bg-white checked:border-green checked:bg-green checked:shadow-[inset_0_0_0_2.5px_white] focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
+													/>
+													<span
+														className={`text-xs font-medium cursor-pointer transition-colors ${
+															isSelected
+																? "text-slate-700"
+																: "text-slate-700 group-hover:text-[#0f5384]"
+														}`}
+													>
+														{formatDepartmentName(dept as ContractDepartment)}
+													</span>
+												</label>
+											);
+										})
 									) : (
-										<div className="text-sm text-slate-500 col-span-3">
+										<div className="text-sm text-slate-500">
 											{isLoading
 												? "Loading departments..."
 												: "No departments available"}
@@ -428,7 +436,7 @@ const ActionDropdown = ({
 								<div className="mb-3 text-sm font-medium text-slate-700">
 									Select manager(s) to assign this contract:
 								</div>
-								<div className="overflow-x-auto rounded-lg border border-slate-200">
+								<div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
 									<table className="min-w-full divide-y divide-slate-200">
 										<thead className="bg-slate-50">
 											<tr>
@@ -529,7 +537,9 @@ const ActionDropdown = ({
 															? "Loading managers..."
 															: !selectedDepartment
 																? "Please select a department first"
-																: "No managers available"}
+																: `No managers found in ${formatDepartmentName(
+																		selectedDepartment as ContractDepartment,
+																	)} — try another department`}
 													</td>
 												</tr>
 											)}
@@ -537,23 +547,31 @@ const ActionDropdown = ({
 									</table>
 								</div>
 							</div>
-						</div>
 					</div>
 
-					{/* Professional Footer */}
-					<div className="glass-dialog-alert-footer">
-						<div className="text-xs text-slate-500">
-							{selectedManagers.length === 1
-								? `${selectedManagers.length} manager selected`
-								: selectedManagers.length > 0
-									? `${selectedManagers.length} managers(s) selected`
-									: "Select at least one manager"}
-						</div>
-						<div className="flex items-center gap-3">
+					{/* Footer: info + Cancel + Assign on one row */}
+					<div className="flex shrink-0 flex-nowrap items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
+							{selectedManagers.length === 0 ? (
+								<div className="flex shrink-0 items-center gap-1.5 text-xs text-slate-500">
+									<Info
+										className="h-3.5 w-3.5 shrink-0 text-[#0f5384]"
+										aria-hidden
+									/>
+									<span>
+										Select at least one manager to continue
+									</span>
+								</div>
+							) : (
+								<span className="shrink-0 text-xs text-slate-500">
+									{selectedManagers.length === 1
+										? "1 manager selected"
+										: `${selectedManagers.length} managers selected`}
+								</span>
+							)}
 							<Button
 								variant="outline"
 								onClick={(e) => closeAllModals(e)}
-								className="primary-btn px-3 sm:px-4"
+								className="primary-btn !w-auto shrink-0 px-3 sm:px-4"
 								disabled={isLoading}
 							>
 								<Ban className="w-4 h-4" />
@@ -570,7 +588,7 @@ const ActionDropdown = ({
 									selectedManagers.length === 0 ||
 									!selectedDepartment
 								}
-								className="primary-btn px-3 sm:px-4"
+								className="primary-btn !w-auto shrink-0 px-3 sm:px-4"
 							>
 								{isLoading && (
 									<Image
@@ -584,7 +602,6 @@ const ActionDropdown = ({
 								<UserRoundCheck className="w-4 h-4" />
 								Assign Contract
 							</Button>
-						</div>
 					</div>
 				</DialogContent>
 			);

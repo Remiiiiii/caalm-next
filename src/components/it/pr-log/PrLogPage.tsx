@@ -105,7 +105,10 @@ function PrLogSectionCard({
 							{link.title ? (
 								<span
 									className={cn(
-										link.state === "merged" && "line-through text-slate-500",
+										(link.checksPassed ||
+											(section.status === "complete" &&
+												link.state === "merged")) &&
+											"line-through text-slate-500",
 									)}
 								>
 									{" "}
