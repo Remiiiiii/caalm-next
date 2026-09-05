@@ -25,6 +25,7 @@ import {
 	SheetContent,
 	SheetDescription,
 	SheetHeader,
+	SheetHeaderIcon,
 	SheetTitle,
 	SheetTrigger,
 } from "@/components/ui/sheet";
@@ -95,13 +96,15 @@ export default function ApprovalsFilter({
 			>
 				<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70" />
 				<SheetHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4 px-6 text-left space-y-1">
-					<div className="flex items-center gap-3">
-						<Filter className="w-5 h-5 text-[#0f5384]" />
+					<div className="flex items-center gap-3 pr-10">
+						<SheetHeaderIcon>
+							<Filter className="h-5 w-5 text-[#0f5384]" />
+						</SheetHeaderIcon>
 						<SheetTitle className="text-xl font-semibold sidebar-gradient-text">
 							Filter approvals
 						</SheetTitle>
 					</div>
-					<SheetDescription className="text-sm text-slate-600 ml-8">
+					<SheetDescription className="text-sm text-slate-600 ml-14">
 						Refine your decision queue
 					</SheetDescription>
 				</SheetHeader>
@@ -169,6 +172,26 @@ export default function ApprovalsFilter({
 										{t}
 									</SelectItem>
 								))}
+							</SelectContent>
+						</Select>
+					</div>
+
+					<div className="space-y-2">
+						<Label className="text-slate-700 font-medium">SLA status</Label>
+						<Select
+							value={filters.slaStatus || "any"}
+							onValueChange={(v) =>
+								updateFilter("slaStatus", v === "any" ? undefined : v)
+							}
+						>
+							<SelectTrigger className="border-[0.25px] border-slate-300 bg-white">
+								<SelectValue placeholder="Any SLA status" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="any">Any SLA status</SelectItem>
+								<SelectItem value="at_risk">At risk</SelectItem>
+								<SelectItem value="breached">SLA breached</SelectItem>
+								<SelectItem value="on_track">On track</SelectItem>
 							</SelectContent>
 						</Select>
 					</div>

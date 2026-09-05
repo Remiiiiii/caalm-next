@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-@config "../../tailwind.config.ts";
+@config "../../tailwind.config.mjs";
 
 @layer base {
 	* {
@@ -375,7 +375,7 @@
 	}
 
 	.shad-form-item {
-		@apply flex h-[88px] flex-col justify-center rounded-xl border border-light-300 px-4 shadow-drop-1;
+		@apply flex h-[88px] flex-col justify-center rounded-xl border-[0.25px] border-light-300 px-4 shadow-drop-1;
 	}
 	.shad-form-label {
 		@apply text-light-100 p-1 text-[14px] leading-[20px] font-normal text-slate-700 w-full;
@@ -390,8 +390,8 @@
 		background: rgba(255, 255, 255, 0.3);
 		backdrop-filter: blur(8px);
 		-webkit-backdrop-filter: blur(8px);
-		/* Visible slate-300 border; slate-200 disappears on bg-slate-50 */
-		border: 1px solid #cbd5e1;
+		/* Visible slate-300 hairline; slate-200 disappears on bg-slate-50 */
+		border: 0.25px solid #cbd5e1;
 		padding-left: 0.75rem;
 		padding-right: 0.75rem;
 		padding-top: 0.5rem;
@@ -536,7 +536,7 @@
 
 	/* Sidebar & MobileNavigation */
 	.nav-icon {
-		@apply w-6 filter invert opacity-25;
+		@apply h-6 w-6 object-contain filter invert opacity-25;
 	}
 	.nav-icon-active {
 		@apply invert-0 opacity-100;
@@ -1015,7 +1015,7 @@
 
 	/* Sidebar */
 	.sidebar {
-		@apply flex h-screen flex-col overflow-auto px-5 py-7;
+		@apply flex h-screen flex-col overflow-hidden px-5 py-7;
 		width: 280px;
 		min-width: 280px;
 		max-width: 280px;
@@ -1032,14 +1032,18 @@
 			transition: none;
 		}
 	}
-	.sidebar::-webkit-scrollbar {
+	.sidebar::-webkit-scrollbar,
+	.sidebar-nav::-webkit-scrollbar {
 		width: 0;
 		height: 0;
 		border-radius: 0;
 	}
 	.sidebar::-webkit-scrollbar-track,
 	.sidebar::-webkit-scrollbar-thumb,
-	.sidebar::-webkit-scrollbar-thumb:hover {
+	.sidebar::-webkit-scrollbar-thumb:hover,
+	.sidebar-nav::-webkit-scrollbar-track,
+	.sidebar-nav::-webkit-scrollbar-thumb,
+	.sidebar-nav::-webkit-scrollbar-thumb:hover {
 		background: transparent;
 		border-radius: 0;
 	}
@@ -1078,6 +1082,10 @@
 		position: relative;
 	}
 
+	.sidebar-footer {
+		@apply sticky bottom-0 z-10 shrink-0 pt-1;
+	}
+
 	.sidebar-storage-info,
 	.sidebar-user-info {
 		@apply mt-4 flex items-center justify-center gap-2 rounded-md p-1 text-light-100 lg:justify-start lg:p-3;
@@ -1085,7 +1093,7 @@
 	}
 
 	.sidebar-storage-info {
-		@apply mt-4;
+		@apply mt-2 py-1.5 lg:px-3 lg:py-2;
 	}
 
 	.sidebar-user-info {
@@ -1102,7 +1110,7 @@
 	}
 
 	.sidebar-nav {
-		@apply text-sm leading-5 font-semibold mt-6 flex-1 gap-1;
+		@apply mt-6 min-h-0 flex-1 gap-1 overflow-y-auto text-sm leading-5 font-semibold;
 	}
 	.sidebar-nav-item {
 		@apply flex text-light-100 gap-4 rounded-xl w-full justify-start items-center text-[16px] leading-[24px] font-semibold px-[30px] h-[52px] rounded-full;
@@ -1246,6 +1254,18 @@
 	body {
 		@apply bg-background text-foreground;
 	}
+}
+
+/* Adobe Acrobat Chrome/Edge extension overlays (not CAALM UI) */
+[id*="adobe-acrobat" i],
+[id*="AdobeAcrobat" i],
+[class*="adobe-acrobat" i],
+[class*="AdobeAcrobat" i],
+iframe[src*="acrobat.adobe" i],
+iframe[src*="documentcloud.adobe" i] {
+	display: none !important;
+	visibility: hidden !important;
+	pointer-events: none !important;
 }
 
 .gradient-icon {
@@ -2010,6 +2030,78 @@ button[data-state="active"] > span {
 	color: #1d4ed8 !important;
 }
 
+/* Date picker dropdown: same today/selected circle as the dashboard calendar */
+.caalm-picker-cal:not(.caalm-mini-cal):not(.caalm-dashboard-cal) {
+	--rdp-accent-color: #2563eb;
+	--rdp-selected-border: 2px solid transparent;
+	--rdp-today-color: #2563eb;
+}
+
+.caalm-picker-cal:not(.caalm-mini-cal):not(.caalm-dashboard-cal) .rdp-day_button {
+	border-radius: 9999px;
+	border: none !important;
+	box-shadow: none !important;
+	color: #334155;
+	font-weight: 500;
+}
+
+.caalm-picker-cal:not(.caalm-mini-cal):not(.caalm-dashboard-cal)
+	.rdp-today:not(.rdp-outside)
+	.rdp-day_button,
+.caalm-picker-cal:not(.caalm-mini-cal):not(.caalm-dashboard-cal)
+	.rdp-selected
+	.rdp-day_button {
+	border: none !important;
+	color: #2563eb !important;
+	background: #dbeafe !important;
+	font-weight: 600;
+	box-shadow: none !important;
+}
+
+.caalm-picker-cal:not(.caalm-mini-cal):not(.caalm-dashboard-cal)
+	.rdp-today:not(.rdp-outside)
+	.rdp-day_button:hover,
+.caalm-picker-cal:not(.caalm-mini-cal):not(.caalm-dashboard-cal)
+	.rdp-selected
+	.rdp-day_button:hover,
+.caalm-picker-cal:not(.caalm-mini-cal):not(.caalm-dashboard-cal)
+	.rdp-today:not(.rdp-outside)
+	.rdp-day_button:focus-visible,
+.caalm-picker-cal:not(.caalm-mini-cal):not(.caalm-dashboard-cal)
+	.rdp-selected
+	.rdp-day_button:focus-visible {
+	background: #bfdbfe !important;
+	color: #1d4ed8 !important;
+}
+
+/* Past / disabled days: muted text (do not mute next-month outside days) */
+.caalm-picker-cal:not(.caalm-mini-cal):not(.caalm-dashboard-cal)
+	.rdp-past:not(.rdp-selected):not(.rdp-today)
+	.rdp-day_button,
+.caalm-picker-cal:not(.caalm-mini-cal):not(.caalm-dashboard-cal)
+	.rdp-disabled
+	.rdp-day_button {
+	color: #94a3b8 !important;
+	opacity: 0.7;
+	font-weight: 500;
+}
+
+/* Next/prev month spillover days: same weight as in-month days when selectable */
+.caalm-picker-cal:not(.caalm-mini-cal):not(.caalm-dashboard-cal)
+	.rdp-outside:not(.rdp-past):not(.rdp-disabled)
+	.rdp-day_button {
+	color: #334155 !important;
+	opacity: 1;
+	font-weight: 500;
+}
+
+.caalm-picker-cal:not(.caalm-mini-cal):not(.caalm-dashboard-cal)
+	.rdp-past:not(.rdp-selected):not(.rdp-today)
+	.rdp-day_button:hover {
+	background: #f1f5f9 !important;
+	color: #64748b !important;
+}
+
 /* biome-ignore-end lint/complexity/noImportantStyles: end React DayPicker override block */
 /* biome-ignore-end lint/style/noDescendingSpecificity: end React DayPicker override block */
 
@@ -2028,6 +2120,11 @@ a[href*="spline"] {
 	pointer-events: none;
 	clip: rect(0, 0, 0, 0);
 	clip-path: inset(50%);
+}
+
+/* Raw .splinecode in an iframe is binary JSON. Chrome shows a Pretty-print dump. */
+iframe[src*="splinecode"] {
+	display: none !important;
 }
 
 /* ===== Landing page polish utilities ===== */

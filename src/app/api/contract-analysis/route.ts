@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { analyzeContractDocument } from "@/lib/ai/contract-assistant";
 import {
 	type AIAnalysisRequest,
 	contractAnalyzer,
@@ -42,9 +43,16 @@ export async function POST(request: NextRequest) {
 			confidence: analysis.confidence,
 		});
 
+		const assistant = await analyzeContractDocument({
+			fileName: body.contractTitle || "Contract",
+			fileContent: body.content,
+		});
+
 		return NextResponse.json({
 			success: true,
 			analysis,
+			starterPrompts: assistant.starterPrompts,
+			suggestedQuestions: assistant.suggestedQuestions,
 			timestamp: new Date().toISOString(),
 		});
 	} catch (error) {
@@ -69,9 +77,16 @@ export async function POST(request: NextRequest) {
 				},
 			);
 
+			const assistant = await analyzeContractDocument({
+				fileName: body.contractTitle || "Contract",
+				fileContent: body.content,
+			});
+
 			return NextResponse.json({
 				success: true,
 				analysis: fallbackAnalysis,
+				starterPrompts: assistant.starterPrompts,
+				suggestedQuestions: assistant.suggestedQuestions,
 				fallback: true,
 				error:
 					error instanceof Error

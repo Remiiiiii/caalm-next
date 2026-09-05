@@ -78,6 +78,8 @@ export interface License {
 	// Optional - Audit
 	orgId: string;
 	createdBy?: string;
+	deletedAt?: string | null;
+	deletedBy?: string | null;
 	renewalHistory?: RenewalRecord[];
 	approvalWorkflowState?: string;
 	currentApprovalStage?: string;

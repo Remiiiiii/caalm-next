@@ -7,6 +7,7 @@ import { CreditCard, Puzzle } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { mutate } from "swr";
 
 import { PermissionGate } from "@/components/PermissionGate";
 
@@ -479,22 +480,44 @@ export default function BillingIntegrationsPage() {
 
 		const setup = searchParams?.get("setup");
 
-		if (checkout === "success") {
+		if (checkout === "success" && canBilling && resolvedOrgId) {
+			let cancelled = false;
 
-			toast({
+			const refreshBillingAfterCheckout = async () => {
+				try {
+					await fetch(
+						`/api/billing/refresh?orgId=${encodeURIComponent(resolvedOrgId)}`,
+						{
+							method: "POST",
+							headers: { "x-org-id": resolvedOrgId },
+						},
+					);
+				} catch {
+					// Billing page still reloads below; webhook can finish the sync later.
+				}
 
-				title: "Checkout complete",
+				if (cancelled) return;
 
-				description: "Your subscription will update shortly.",
+				toast({
+					title: "Checkout complete",
+					description: "Refreshing your subscription details.",
+				});
 
-			});
+				await Promise.all([
+					loadSubscription(),
+					loadInvoices(),
+					loadPaymentMethods(),
+					mutate(
+						`/api/organization/default?orgId=${encodeURIComponent(resolvedOrgId)}`,
+					),
+				]);
+			};
 
-			loadSubscription();
+			void refreshBillingAfterCheckout();
 
-			loadInvoices();
-
-			loadPaymentMethods();
-
+			return () => {
+				cancelled = true;
+			};
 		}
 
 		if (setup === "success") {
@@ -516,6 +539,8 @@ export default function BillingIntegrationsPage() {
 		searchParams,
 
 		toast,
+		canBilling,
+		resolvedOrgId,
 
 		loadSubscription,
 
@@ -972,6 +997,8 @@ export default function BillingIntegrationsPage() {
 								<IntegrationsPanel
 
 									userId={user.$id}
+
+									orgId={resolvedOrgId}
 
 									subscriptionTier={subscription?.subscriptionTier || "starter"}
 

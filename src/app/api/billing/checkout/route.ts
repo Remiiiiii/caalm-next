@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
 			interval,
 			email: user.email,
 			userName: user.fullName,
-			successUrl: `${appUrl}/settings/billing?tab=billing&checkout=success`,
+			successUrl: `${appUrl}/settings/billing?tab=billing&checkout=success&session_id={CHECKOUT_SESSION_ID}`,
 			cancelUrl: `${appUrl}/settings/billing?tab=billing&checkout=canceled`,
 		});
 		return NextResponse.json({ url });

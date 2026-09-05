@@ -2,7 +2,6 @@
 
 import {
 	AlertTriangle,
-	Ban,
 	PencilIcon,
 	Plus,
 	Trash2,
@@ -509,18 +508,6 @@ const RolesManagement = () => {
 							This action is permanent.
 						</div>
 						<div className="flex items-center justify-end gap-3">
-							<Button
-								type="button"
-								variant="ghost"
-								className="primary-btn px-3 sm:px-4"
-								onClick={() => {
-									setDeleteDialogOpen(false);
-									setRoleToDelete(null);
-								}}
-							>
-								<Ban className="h-4 w-4" />
-								Cancel
-							</Button>
 							<Button
 								type="button"
 								variant="ghost"

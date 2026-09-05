@@ -908,6 +908,36 @@ export async function syncSubscriptionToOrg(
 	});
 }
 
+export async function syncLatestStripeStateForOrg(
+	org: Organization,
+): Promise<boolean> {
+	if (!org.stripeCustomerId) return false;
+
+	const stripe = getStripe();
+	const subscriptions = await stripe.subscriptions.list({
+		customer: org.stripeCustomerId,
+		status: "all",
+		limit: 10,
+	});
+
+	const latest =
+		subscriptions.data.find((subscription) =>
+			["trialing", "active", "past_due", "unpaid"].includes(
+				subscription.status,
+			),
+		) ||
+		subscriptions.data.find((subscription) =>
+			["canceled", "incomplete", "incomplete_expired", "paused"].includes(
+				subscription.status,
+			),
+		);
+
+	if (!latest) return false;
+
+	await syncSubscriptionToOrg(latest, org.$id);
+	return true;
+}
+
 export async function markOrgPastDue(orgId: string): Promise<void> {
 	const existing = await getOrganization(orgId);
 	const settingsPatch: Record<string, unknown> = {};

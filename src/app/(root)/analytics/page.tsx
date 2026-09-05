@@ -29,6 +29,7 @@ import { AnalyticsStatCard } from "@/components/analytics/AnalyticsStatCard";
 import { AuditReadinessHero } from "@/components/analytics/AuditReadinessHero";
 import { CalendarAnalyticsDashboard } from "@/components/analytics/CalendarAnalyticsDashboard";
 import OrganizationAnalyticsDashboard from "@/components/analytics/OrganizationAnalyticsDashboard";
+import { PortfolioAccountabilityDashboard } from "@/components/analytics/PortfolioAccountabilityDashboard";
 import ReportsPage from "@/components/ReportsPage";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -44,10 +45,16 @@ import { useUnifiedAnalyticsData } from "@/hooks/useUnifiedAnalyticsData";
 import { useUserRole } from "@/hooks/useUserRole";
 import type { AuditPeriod } from "@/lib/audits/types";
 
-type AnalyticsTab = "organization" | "contracts" | "calendar" | "compliance";
+type AnalyticsTab =
+	| "organization"
+	| "portfolio"
+	| "contracts"
+	| "calendar"
+	| "compliance";
 
 const ANALYTICS_TABS: AnalyticsTab[] = [
 	"organization",
+	"portfolio",
 	"contracts",
 	"compliance",
 	"calendar",
@@ -340,36 +347,45 @@ const AnalyticsPage = () => {
 				}}
 				className="w-full"
 			>
-				<TabsList className="responsive-tab-list h-auto w-full max-w-3xl bg-white/30 backdrop-blur border border-white/40 mb-6 p-1">
-					<TabsTrigger
-						value="organization"
-						className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-navy data-[state=active]:shadow-sm"
-					>
-						<Building2 className="h-4 w-4" />
-						<span>Organization</span>
-					</TabsTrigger>
-					<TabsTrigger
-						value="contracts"
-						className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-navy data-[state=active]:shadow-sm"
-					>
-						<FileText className="h-4 w-4" />
-						<span>Contracts</span>
-					</TabsTrigger>
-					<TabsTrigger
-						value="compliance"
-						className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-navy data-[state=active]:shadow-sm"
-					>
-						<Shield className="h-4 w-4" />
-						<span className="truncate">Compliance & audit</span>
-					</TabsTrigger>
-					<TabsTrigger
-						value="calendar"
-						className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-navy data-[state=active]:shadow-sm"
-					>
-						<Calendar className="h-4 w-4" />
-						<span>Calendar</span>
-					</TabsTrigger>
-				</TabsList>
+				<div className="mb-6 flex justify-center">
+					<TabsList className="inline-flex h-auto w-auto max-w-full flex-wrap justify-center gap-1 bg-white/30 backdrop-blur border border-white/40 p-1">
+						<TabsTrigger
+							value="organization"
+							className="flex shrink-0 items-center gap-2 whitespace-nowrap data-[state=active]:bg-white data-[state=active]:text-navy data-[state=active]:shadow-sm"
+						>
+							<Building2 className="h-4 w-4" />
+							<span>Organization</span>
+						</TabsTrigger>
+						<TabsTrigger
+							value="portfolio"
+							className="flex shrink-0 items-center gap-2 whitespace-nowrap data-[state=active]:bg-white data-[state=active]:text-navy data-[state=active]:shadow-sm"
+						>
+							<Scale className="h-4 w-4" />
+							<span>Portfolio</span>
+						</TabsTrigger>
+						<TabsTrigger
+							value="contracts"
+							className="flex shrink-0 items-center gap-2 whitespace-nowrap data-[state=active]:bg-white data-[state=active]:text-navy data-[state=active]:shadow-sm"
+						>
+							<FileText className="h-4 w-4" />
+							<span>Contracts</span>
+						</TabsTrigger>
+						<TabsTrigger
+							value="compliance"
+							className="flex shrink-0 items-center gap-2 whitespace-nowrap data-[state=active]:bg-white data-[state=active]:text-navy data-[state=active]:shadow-sm"
+						>
+							<Shield className="h-4 w-4" />
+							<span>Compliance & audit</span>
+						</TabsTrigger>
+						<TabsTrigger
+							value="calendar"
+							className="flex shrink-0 items-center gap-2 whitespace-nowrap data-[state=active]:bg-white data-[state=active]:text-navy data-[state=active]:shadow-sm"
+						>
+							<Calendar className="h-4 w-4" />
+							<span>Calendar</span>
+						</TabsTrigger>
+					</TabsList>
+				</div>
 				<TabsContent value="organization" className="mt-0">
 					{permissions.includes(PERMISSIONS.SETTINGS.VIEW) ? (
 						<AnalyticsErrorBoundary>
@@ -395,6 +411,11 @@ const AnalyticsPage = () => {
 							</CardContent>
 						</Card>
 					)}
+				</TabsContent>
+				<TabsContent value="portfolio" className="mt-0">
+					<AnalyticsErrorBoundary>
+						<PortfolioAccountabilityDashboard />
+					</AnalyticsErrorBoundary>
 				</TabsContent>
 				<TabsContent value="contracts" className="mt-0">
 					<div className="flex justify-center">

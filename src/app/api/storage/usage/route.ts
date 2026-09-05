@@ -16,23 +16,40 @@ export async function GET(_request: NextRequest) {
 		}
 
 		const cacheKey = CACHE_KEYS.storage.usage(user.$id);
-
-		const totalSpace = await CacheManager.withCache(
-			"storage/usage",
-			cacheKey,
-			async () => await getTotalSpaceUsed(),
-		);
-
 		const { limitBytes, limitGB } = await resolveStorageLimitForUser(user.$id);
 
-		return NextResponse.json({
-			...totalSpace,
-			limitBytes,
-			limitGB,
-		});
+		try {
+			const totalSpace = await CacheManager.withCache(
+				"storage/usage",
+				cacheKey,
+				async () => await getTotalSpaceUsed(),
+			);
+
+			return NextResponse.json({
+				...totalSpace,
+				limitBytes,
+				limitGB,
+			});
+		} catch (usageError: unknown) {
+			// Sidebar bar is best-effort — don't 500 the whole app chrome
+			const message =
+				usageError instanceof Error ? usageError.message : "Unknown error";
+			console.error("[SERVER] /api/storage/usage: getTotalSpaceUsed failed:", message);
+			return NextResponse.json({
+				image: { size: 0, latestDate: "" },
+				document: { size: 0, latestDate: "" },
+				video: { size: 0, latestDate: "" },
+				audio: { size: 0, latestDate: "" },
+				other: { size: 0, latestDate: "" },
+				used: 0,
+				all: limitBytes,
+				limitBytes,
+				limitGB,
+			});
+		}
 	} catch (error: unknown) {
 		const message = error instanceof Error ? error.message : "Unknown error";
-		console.error("Failed to fetch storage usage:", error);
+		console.error("[SERVER] Failed to fetch storage usage:", error);
 		return NextResponse.json(
 			{ error: "Failed to fetch storage usage", message },
 			{ status: 500 },

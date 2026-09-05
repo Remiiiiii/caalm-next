@@ -68,9 +68,20 @@ function EmptyMonthCaption(_props: MonthCaptionProps) {
 	return <></>;
 }
 
+/** True when the calendar day is before local midnight today. */
+function isPastDay(date: Date): boolean {
+	const today = new Date();
+	today.setHours(0, 0, 0, 0);
+	const check = new Date(date);
+	check.setHours(0, 0, 0, 0);
+	return check < today;
+}
+
 export function Calendar({
 	className,
 	classNames,
+	modifiers,
+	modifiersClassNames,
 	style,
 	components,
 	navLayout = "around",
@@ -85,8 +96,22 @@ export function Calendar({
 			showOutsideDays
 			hideNavigation={hideNavigation}
 			navLayout={hideNavigation ? undefined : navLayout}
-			className={cn("p-3", className)}
-			classNames={classNames}
+			className={cn("caalm-picker-cal p-3", className)}
+			classNames={{
+				...classNames,
+				caption_label: cn(
+					"sidebar-gradient-text",
+					classNames?.caption_label,
+				),
+			}}
+			modifiers={{
+				...modifiers,
+				past: isPastDay,
+			}}
+			modifiersClassNames={{
+				...modifiersClassNames,
+				past: cn("rdp-past", modifiersClassNames?.past),
+			}}
 			style={style}
 			{...props}
 			components={{

@@ -1,3 +1,8 @@
+import type { ApprovalSlaStatus } from "@/lib/approvals/contractApprovalWorkflow.types";
+import {
+	hoursRemaining,
+	slaCountdownLabel,
+} from "@/lib/approvals/approvalSlaDisplay";
 import type { UIFileDoc } from "@/types/files";
 import type { License } from "@/types/licenses";
 
@@ -16,6 +21,7 @@ export interface ApprovalFilters {
 	itemType?: string;
 	submittedFrom?: Date;
 	submittedTo?: Date;
+	slaStatus?: ApprovalSlaStatus | "any";
 }
 
 export interface SavedApprovalView {
@@ -29,6 +35,7 @@ export interface SavedApprovalView {
 		itemType?: string;
 		submittedFrom?: string;
 		submittedTo?: string;
+		slaStatus?: ApprovalSlaStatus | "any";
 	};
 }
 
@@ -54,6 +61,10 @@ export interface ApprovalQueueItem {
 	decisionId: string;
 	rawContract?: UIFileDoc;
 	rawLicense?: License;
+	slaStatus?: ApprovalSlaStatus;
+	dueAt?: string;
+	stepLabel?: string;
+	hoursRemaining?: number;
 }
 
 export const APPROVALS_SAVED_VIEWS_KEY = "approvals-saved-views";
@@ -66,9 +77,19 @@ export function daysSince(iso: string): number {
 	return Math.max(0, Math.floor(ms / (1000 * 60 * 60 * 24)));
 }
 
+export function isSlaAtRisk(item: ApprovalQueueItem): boolean {
+	return item.slaStatus === "at_risk";
+}
+
+export function isSlaBreached(item: ApprovalQueueItem): boolean {
+	return item.slaStatus === "breached";
+}
+
+/** @deprecated Use isSlaAtRisk / isSlaBreached. Kept as SLA-aware alias. */
 export function isAgingUrgent(item: ApprovalQueueItem): boolean {
 	const status = (item.status || "").toLowerCase();
 	if (status !== "pending-review" && status !== "action-required") return false;
+	if (item.slaStatus) return isSlaAtRisk(item) || isSlaBreached(item);
 	return daysSince(item.submittedAt) >= 5;
 }
 
@@ -81,6 +102,7 @@ export function matchesApprovalTab(
 	tab: ApprovalTab,
 ): boolean {
 	const status = (item.status || "").toLowerCase();
+	if (status === "expired") return false;
 	if (tab === "needs-me") {
 		return status === "pending-review" || status === "action-required";
 	}
@@ -124,6 +146,13 @@ export function applyApprovalFilters(
 		if (filters.itemType && item.itemType !== filters.itemType) {
 			return false;
 		}
+		if (
+			filters.slaStatus &&
+			filters.slaStatus !== "any" &&
+			item.slaStatus !== filters.slaStatus
+		) {
+			return false;
+		}
 		if (filters.submittedFrom || filters.submittedTo) {
 			const submitted = new Date(item.submittedAt);
 			if (Number.isNaN(submitted.getTime())) return false;
@@ -148,7 +177,38 @@ export function countActiveApprovalFilters(filters: ApprovalFilters): number {
 	if (filters.assignedTo) count++;
 	if (filters.itemType) count++;
 	if (filters.submittedFrom || filters.submittedTo) count++;
+	if (filters.slaStatus && filters.slaStatus !== "any") count++;
 	return count;
+}
+
+function slaFromWorkflowState(raw?: string): {
+	slaStatus?: ApprovalSlaStatus;
+	dueAt?: string;
+	stepLabel?: string;
+	hoursRemaining?: number;
+} {
+	if (!raw) return {};
+	try {
+		const parsed = JSON.parse(raw) as {
+			currentStepIndex?: number;
+			steps?: Array<{
+				label?: string;
+				status?: string;
+				dueAt?: string;
+				slaStatus?: ApprovalSlaStatus;
+			}>;
+		};
+		const current = parsed.steps?.[parsed.currentStepIndex ?? 0];
+		if (!current) return {};
+		return {
+			slaStatus: current.slaStatus,
+			dueAt: current.dueAt,
+			stepLabel: current.label,
+			hoursRemaining: hoursRemaining(current.dueAt),
+		};
+	} catch {
+		return {};
+	}
 }
 
 export function contractToApprovalItem(file: UIFileDoc): ApprovalQueueItem {
@@ -179,6 +239,7 @@ export function contractToApprovalItem(file: UIFileDoc): ApprovalQueueItem {
 					: undefined,
 		decisionId: file.contractId || file.$id,
 		rawContract: file,
+		...slaFromWorkflowState(file.approvalWorkflowState),
 	};
 }
 
@@ -204,6 +265,7 @@ export function licenseToApprovalItem(license: License): ApprovalQueueItem {
 		ownerLabel: license.createdBy,
 		decisionId: license.$id,
 		rawLicense: license,
+		...slaFromWorkflowState(license.approvalWorkflowState),
 	};
 }
 
@@ -215,6 +277,7 @@ export function serializeApprovalFilters(filters: ApprovalFilters) {
 		itemType: filters.itemType,
 		submittedFrom: filters.submittedFrom?.toISOString(),
 		submittedTo: filters.submittedTo?.toISOString(),
+		slaStatus: filters.slaStatus,
 	};
 }
 
@@ -228,6 +291,7 @@ export function deserializeApprovalFilters(
 		itemType: raw.itemType,
 		submittedFrom: raw.submittedFrom ? new Date(raw.submittedFrom) : undefined,
 		submittedTo: raw.submittedTo ? new Date(raw.submittedTo) : undefined,
+		slaStatus: raw.slaStatus,
 	};
 }
 
@@ -252,4 +316,17 @@ export function statusBadgeClasses(status: string): string {
 
 export function statusLabel(status: string): string {
 	return (status || "unknown").replace(/-/g, " ");
+}
+
+export function slaBadgeClasses(status?: ApprovalSlaStatus): string {
+	if (status === "breached") return "bg-red/10 text-red border-red/20";
+	if (status === "at_risk") return "bg-orange/10 text-orange border-orange/20";
+	return "bg-green/10 text-green border-green/20";
+}
+
+export function slaBadgeLabel(item: ApprovalQueueItem): string {
+	if (item.slaStatus === "breached") return "SLA breached";
+	if (item.slaStatus === "at_risk") return "At risk";
+	if (item.dueAt) return slaCountdownLabel(item.dueAt);
+	return "";
 }

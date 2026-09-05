@@ -27,6 +27,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
+import {
+	getEnterpriseDropzoneAccept,
+	getEnterpriseFormatHint,
+} from "@/lib/files/enterprise-file-formats";
 import { cn } from "@/lib/utils";
 import { STEP_TITLES } from "../constants";
 import type { Draft, ProcessedFileData } from "../types";
@@ -52,16 +57,16 @@ export default function Step1FileUpload({
 	onResumeDraft,
 	onDeleteDraft,
 }: Step1Props) {
+	const { toast } = useToast();
 	const { getRootProps, getInputProps, isDragActive } = useDropzone({
 		onDrop,
-		accept: {
-			"application/pdf": [".pdf"],
-			"application/msword": [".doc"],
-			"application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-				[".docx"],
-			"text/plain": [".txt"],
-			"image/png": [".png"],
-			"image/jpeg": [".jpg", ".jpeg"],
+		accept: getEnterpriseDropzoneAccept("licensePrimary"),
+		onDropRejected: () => {
+			toast({
+				variant: "destructive",
+				title: "File type not allowed",
+				description: `${getEnterpriseFormatHint("licensePrimary")} (Max 50MB)`,
+			});
 		},
 		multiple: false,
 	} as DropzoneOptions);
@@ -176,7 +181,7 @@ export default function Step1FileUpload({
 										: "Drag & drop license file here"}
 								</p>
 								<p className="text-sm text-light-200 mt-2">
-									Supports PDF, DOC, DOCX, TXT, PNG, JPG (Max 50MB)
+									{getEnterpriseFormatHint("licensePrimary")} (Max 50MB)
 								</p>
 							</div>
 						)}

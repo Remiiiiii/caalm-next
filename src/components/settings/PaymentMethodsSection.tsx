@@ -2,7 +2,6 @@
 
 import {
 	ArrowLeftRight,
-	Ban,
 	CreditCard,
 	Info,
 	MoreHorizontal,
@@ -530,17 +529,7 @@ export default function PaymentMethodsSection({
 
 					<div className="glass-dialog-alert-footer">
 						<div className="text-xs text-slate-500" />
-						<div className="flex items-center gap-3">
-							<Button
-								type="button"
-								variant="outline"
-								className="primary-btn px-3 sm:px-4"
-								onClick={() => setRemoveOpen(false)}
-								disabled={removing}
-							>
-								<Ban className="h-4 w-4" aria-hidden />
-								Cancel
-							</Button>
+						<div className="flex items-center justify-end gap-3">
 							<Button
 								type="button"
 								variant="outline"
@@ -577,18 +566,6 @@ export default function PaymentMethodsSection({
 							an upcoming invoice. To proceed, set a backup or add a new default
 							payment method.
 						</DialogDescription>
-					</div>
-					<div className="glass-dialog-alert-footer">
-						<div className="text-xs text-slate-500" />
-						<Button
-							type="button"
-							variant="outline"
-							className="primary-btn px-3 sm:px-4"
-							onClick={() => setRemoveBlockedOpen(false)}
-						>
-							<Ban className="h-4 w-4" aria-hidden />
-							Cancel
-						</Button>
 					</div>
 				</DialogContent>
 			</Dialog>

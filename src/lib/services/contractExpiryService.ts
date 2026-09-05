@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { excludeSoftDeletedQuery } from "@/lib/soft-delete";
 import { triggerContractExpiryNotification } from "@/lib/utils/notificationTriggers";
 
 // Lazy import to avoid initialization errors when messaging service is not configured
@@ -94,10 +95,7 @@ class ContractExpiryService {
 			const response = await client.tablesDB.listRows({
 				databaseId: appwriteConfig.databaseId!,
 				tableId: appwriteConfig.contractsCollectionId!,
-				queries: [
-					// Only get active contracts
-					// Note: You might want to adjust this filter based on your status values
-				],
+				queries: [excludeSoftDeletedQuery()],
 			});
 
 			return response.rows as Contract[];

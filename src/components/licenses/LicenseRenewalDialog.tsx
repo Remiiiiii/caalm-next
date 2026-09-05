@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Ban, Loader2, RefreshCw } from "lucide-react";
+import { Loader2, RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -21,6 +21,7 @@ import {
 	FormLabel,
 	FormMessage,
 } from "@/components/ui/form";
+import { CurrencySelect } from "@/components/ui/currency-select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
@@ -190,9 +191,11 @@ export default function LicenseRenewalDialog({
 									render={({ field }) => (
 										<FormItem>
 											<FormLabel>Currency</FormLabel>
-											<FormControl>
-												<Input {...field} />
-											</FormControl>
+											<CurrencySelect
+												value={field.value || "USD"}
+												onValueChange={field.onChange}
+												amount={form.watch("cost")}
+											/>
 											<FormMessage />
 										</FormItem>
 									)}
@@ -244,15 +247,7 @@ export default function LicenseRenewalDialog({
 					<div className="text-xs text-slate-500">
 						Renewal will be recorded in license history
 					</div>
-					<div className="flex items-center gap-3">
-						<Button
-							variant="outline"
-							className="primary-btn px-3 sm:px-4"
-							onClick={() => setOpen(false)}
-						>
-							<Ban className="w-4 h-4" />
-							Cancel
-						</Button>
+					<div className="flex items-center justify-end gap-3">
 						<Button
 							className="primary-btn px-3 sm:px-4"
 							onClick={form.handleSubmit(onSubmit)}

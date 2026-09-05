@@ -1,25 +1,28 @@
 "use client";
 
 import {
-	Ban,
 	CheckCircle2,
 	GitBranch,
 	Loader2,
+	MessageSquareWarning,
 	RefreshCw,
 	XCircle,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
+import { ExpirationAttestationDialog } from "@/components/approvals/ExpirationAttestationDialog";
+import { WorkflowFrozenBanner } from "@/components/approvals/WorkflowFrozenBanner";
+import LicenseRenewalDialog from "@/components/licenses/LicenseRenewalDialog";
 import ApprovalWorkflowActions from "@/components/contracts/approval/ApprovalWorkflowActions";
 import ContractApprovalFlowCanvas from "@/components/contracts/approval/ContractApprovalFlowCanvas";
-import { Badge } from "@/components/ui/badge";
+import { WorkflowStatusBadge } from "@/components/contracts/approval/WorkflowStatusBadge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useLicenseApprovalWorkflow } from "@/hooks/useLicenseApprovalWorkflow";
 import type { ApprovalDecision } from "@/lib/approvals/contractApprovalWorkflow.types";
-import { cn } from "@/lib/utils";
+import type { License } from "@/types/licenses";
 
 interface LicenseApprovalFlowDialogProps {
 	open: boolean;
@@ -41,6 +44,8 @@ export default function LicenseApprovalFlowDialog({
 	const pathname = usePathname();
 	const [notes, setNotes] = useState("");
 	const [busy, setBusy] = useState(false);
+	const [attestOpen, setAttestOpen] = useState(false);
+	const [renewOpen, setRenewOpen] = useState(false);
 
 	const handleDecision = async (decision: ApprovalDecision) => {
 		if (
@@ -91,6 +96,7 @@ export default function LicenseApprovalFlowDialog({
 	};
 
 	return (
+		<>
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className="flex max-h-[90vh] max-w-[960px] flex-col overflow-hidden border border-slate-200 p-0 shadow-xl">
 				<div className="absolute top-0 right-0 left-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
@@ -103,7 +109,7 @@ export default function LicenseApprovalFlowDialog({
 						</DialogTitle>
 					</div>
 					<p className="mt-1 ml-14 text-sm text-slate-600">
-						{licenseName || workflow?.contractName || "License"} — track review
+						{licenseName || workflow?.contractName || "License"} — Track review
 						steps through executive activation
 					</p>
 				</div>
@@ -130,26 +136,27 @@ export default function LicenseApprovalFlowDialog({
 						</div>
 					) : workflow ? (
 						<div className="space-y-4">
+							{workflow.workflowFrozen ? (
+								<WorkflowFrozenBanner
+									status={workflow.contractStatus}
+									attestPending
+									onAttest={() => setAttestOpen(true)}
+									onRenew={() => setRenewOpen(true)}
+								/>
+							) : null}
 							<div className="flex flex-wrap items-center gap-2">
-								<Badge
-									variant="outline"
-									className="bg-white text-xs text-slate-700"
-								>
-									Status: {workflow.contractStatus}
-								</Badge>
+								<WorkflowStatusBadge status={workflow.contractStatus} />
 								{workflow.department ? (
-									<Badge
-										variant="outline"
-										className="bg-white text-xs text-slate-600"
-									>
+									<span className="inline-block rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
 										{workflow.department}
 										{workflow.subDepartment
 											? ` · ${workflow.subDepartment}`
 											: ""}
-									</Badge>
+									</span>
 								) : null}
 							</div>
 							<ContractApprovalFlowCanvas workflow={workflow} />
+							{workflow.workflowFrozen ? null : (
 							<ApprovalWorkflowActions
 								workflow={workflow}
 								busy={busy}
@@ -197,19 +204,24 @@ export default function LicenseApprovalFlowDialog({
 									}
 								}}
 							/>
+							)}
 							{(workflow.canDecide || workflow.canOverride) && (
 								<div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-									<p className="mb-2 text-sm font-medium text-slate-800">
+									<p className="mb-2 text-sm font-medium text-slate-700">
 										{workflow.canDecide
-											? "Your decision on the current step"
+											? "Your decision on this step"
 											: "Admin override"}
 									</p>
 									<Textarea
 										value={notes}
 										onChange={(e) => setNotes(e.target.value)}
-										placeholder="Notes (required for reject / request changes)"
-										className="min-h-[72px] border border-slate-300 bg-white shadow-none focus-visible:border-[#078FAB]"
+										placeholder="Add notes (required for Reject or Request changes)"
+										className="min-h-[72px] border-[0.25px] border-slate-300 bg-white shadow-none focus-visible:border-[#078FAB]"
 									/>
+									<p className="mt-2 text-xs text-slate-500">
+										Notes are shared with the submitter and visible in the audit
+										log.
+									</p>
 								</div>
 							)}
 						</div>
@@ -223,6 +235,24 @@ export default function LicenseApprovalFlowDialog({
 								type="button"
 								className="primary-btn px-3 sm:px-4"
 								disabled={busy}
+								onClick={() => void handleDecision("rejected")}
+							>
+								<XCircle className="h-4 w-4" />
+								Reject
+							</Button>
+							<Button
+								type="button"
+								className="primary-btn px-3 sm:px-4"
+								disabled={busy}
+								onClick={() => void handleDecision("changes_requested")}
+							>
+								<MessageSquareWarning className="h-4 w-4" />
+								Request changes
+							</Button>
+							<Button
+								type="button"
+								className="primary-btn px-3 sm:px-4"
+								disabled={busy}
 								onClick={() => void handleDecision("approved")}
 							>
 								{busy ? (
@@ -232,41 +262,45 @@ export default function LicenseApprovalFlowDialog({
 								)}
 								Approve
 							</Button>
-							<Button
-								type="button"
-								variant="outline"
-								className="primary-btn px-3 sm:px-4"
-								disabled={busy}
-								onClick={() => void handleDecision("changes_requested")}
-							>
-								Request changes
-							</Button>
-							<Button
-								type="button"
-								variant="outline"
-								className={cn(
-									"primary-btn px-3 sm:px-4 text-red border-red/30",
-								)}
-								disabled={busy}
-								onClick={() => void handleDecision("rejected")}
-							>
-								<XCircle className="h-4 w-4" />
-								Reject
-							</Button>
 						</>
 					) : null}
-					<Button
-						type="button"
-						variant="outline"
-						className="primary-btn px-3 sm:px-4"
-						onClick={() => onOpenChange(false)}
-						disabled={busy}
-					>
-						<Ban className="h-4 w-4" />
-						Close
-					</Button>
 				</div>
 			</DialogContent>
 		</Dialog>
+			<ExpirationAttestationDialog
+				open={attestOpen}
+				onOpenChange={setAttestOpen}
+				entityType="license"
+				entityId={licenseId}
+				entityName={licenseName || workflow?.contractName || "License"}
+				attestationId={workflow?.expirationAttestationId}
+				phase="post_expiry"
+				onSuccess={() => void refresh()}
+			/>
+			<LicenseRenewalDialog
+				license={
+					{
+						$id: licenseId,
+						$createdAt: "",
+						$updatedAt: "",
+						licenseName: licenseName || workflow?.contractName || "License",
+						licenseNumber: "",
+						licenseType: "",
+						licenseExpiryDate: new Date().toISOString().split("T")[0],
+						issuingAuthority: "",
+						issueDate: "",
+						status:
+							(workflow?.contractStatus as License["status"]) || "expired",
+						orgId: "",
+					} satisfies License
+				}
+				open={renewOpen}
+				onOpenChange={setRenewOpen}
+				onSuccess={() => {
+					void refresh();
+					router.refresh();
+				}}
+			/>
+		</>
 	);
 }

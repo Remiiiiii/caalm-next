@@ -6,7 +6,6 @@ import {
 	FileText,
 	Info,
 	ListTree,
-	X,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import type { AuditLog } from "@/components/audits/AuditLogTable";
@@ -15,7 +14,6 @@ import {
 	previewSectionClass,
 	previewSectionHeaderClass,
 } from "@/components/preview/previewSheetParts";
-import { Button } from "@/components/ui/button";
 import { useOrgTimezone } from "@/hooks/useOrgTimezone";
 import {
 	formatInTimezone,
@@ -191,18 +189,6 @@ export function AuditLogDetailDrawer({
 				</>
 			}
 			icon={Info}
-			footer={
-				<div className="flex w-full justify-end">
-					<Button
-						variant="outline"
-						className="primary-btn cursor-pointer px-3 sm:px-4"
-						onClick={() => onOpenChange(false)}
-					>
-						<X className="h-4 w-4" />
-						Close
-					</Button>
-				</div>
-			}
 		>
 			<section className={cn(previewSectionClass, "overflow-hidden p-0")}>
 				<div className="divide-y divide-slate-200/70 px-4">

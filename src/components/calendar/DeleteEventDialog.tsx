@@ -1,7 +1,7 @@
 "use client";
 
 import * as VisuallyHiddenPrimitive from "@radix-ui/react-visually-hidden";
-import { AlertTriangle, Ban, Trash2 } from "lucide-react";
+import { AlertTriangle, Trash2 } from "lucide-react";
 import type React from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,7 +33,13 @@ export function DeleteEventDialog({
 	onConfirm,
 }: DeleteEventDialogProps): React.ReactElement {
 	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
+		<Dialog
+			open={open}
+			onOpenChange={(next) => {
+				if (!next) onCancel();
+				else onOpenChange(true);
+			}}
+		>
 			<DialogContent className="overflow-hidden p-0 shadow-xl sm:max-w-md">
 				<VisuallyHiddenPrimitive.Root>
 					<DialogTitle>Delete Event</DialogTitle>
@@ -82,14 +88,6 @@ export function DeleteEventDialog({
 						This action is permanent.
 					</div>
 					<div className="flex items-center gap-3">
-						<Button
-							variant="outline"
-							onClick={onCancel}
-							className="primary-btn px-3 sm:px-4"
-						>
-							<Ban className="w-4 h-4" />
-							Cancel
-						</Button>
 						<Button onClick={onConfirm} className="primary-btn px-3 sm:px-4">
 							<Trash2 className="w-4 h-4" />
 							Delete Event

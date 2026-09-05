@@ -1,19 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Ban, Clock, Eye, Mail, RefreshCw, RotateCcw, X } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { Clock, Eye, Mail, RefreshCw, RotateCcw, X } from "lucide-react";
 import { useMemo, useState } from "react";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
 	Select,
@@ -26,6 +15,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useContractSnooze } from "@/hooks/useContractSnooze";
 import { useUpdateContractStatus } from "@/hooks/useUpdateContractStatus";
 import type { UIFileDoc } from "@/types/files";
+import { ExpirationAttestationDialog } from "@/components/approvals/ExpirationAttestationDialog";
+import { ContractRenewalDialog } from "@/components/contracts/ContractRenewalDialog";
 import ContractDismissalSignatureModal from "./ContractDismissalSignatureModal";
 
 interface ExpiryActionButtonsProps {
@@ -41,11 +32,11 @@ export default function ExpiryActionButtons({
 	onStatusChange,
 	daysUntilExpiry,
 }: ExpiryActionButtonsProps) {
-	const router = useRouter();
 	const { toast } = useToast();
 	const { updateStatus } = useUpdateContractStatus({ onStatusChange });
 	const { snoozeContract } = useContractSnooze();
-	const [showLetExpireDialog, setShowLetExpireDialog] = useState(false);
+	const [showAttestDialog, setShowAttestDialog] = useState(false);
+	const [showRenewDialog, setShowRenewDialog] = useState(false);
 	const [showSignatureModal, setShowSignatureModal] = useState(false);
 	const [isUpdating, setIsUpdating] = useState(false);
 	const [isSnoozing, setIsSnoozing] = useState(false);
@@ -171,10 +162,7 @@ export default function ExpiryActionButtons({
 	};
 
 	const handleRenewContract = () => {
-		// Navigate to contract details page or renewal form
-		// For now, navigate to contracts page - can be enhanced later with specific renewal route
-		router.push(`/contracts`);
-		onDismiss();
+		setShowRenewDialog(true);
 	};
 
 	const handleLetExpire = async () => {
@@ -249,7 +237,7 @@ export default function ExpiryActionButtons({
 
 				<motion.div variants={buttonVariants} whileHover="hover" whileTap="tap">
 					<Button
-						onClick={() => setShowLetExpireDialog(true)}
+						onClick={() => setShowAttestDialog(true)}
 						variant="outline"
 						className="glass-card text-slate-800 shadow-lg hover:shadow-xl transition-all"
 						size="lg"
@@ -335,49 +323,38 @@ export default function ExpiryActionButtons({
 			</motion.div>
 
 			{/* Signature Modal */}
+			<ExpirationAttestationDialog
+				open={showAttestDialog}
+				onOpenChange={setShowAttestDialog}
+				entityType="contract"
+				entityId={contract.$id}
+				entityName={
+					contract.contractName || contract.name || "Untitled Contract"
+				}
+				priorExpiryDate={contract.contractExpiryDate}
+				phase="pre_expiry"
+				onSuccess={() => {
+					void handleLetExpire();
+				}}
+			/>
+			<ContractRenewalDialog
+				open={showRenewDialog}
+				onOpenChange={setShowRenewDialog}
+				contractId={contract.$id}
+				contractName={
+					contract.contractName || contract.name || "Untitled Contract"
+				}
+				onSuccess={() => {
+					onStatusChange?.();
+					onDismiss();
+				}}
+			/>
 			<ContractDismissalSignatureModal
 				isOpen={showSignatureModal}
 				onClose={() => setShowSignatureModal(false)}
 				contract={contract}
 				onSuccess={handleSignatureSuccess}
 			/>
-
-			{/* Confirmation Dialog for Let Expire */}
-			<AlertDialog
-				open={showLetExpireDialog}
-				onOpenChange={setShowLetExpireDialog}
-			>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>Let Contract Expire?</AlertDialogTitle>
-						<AlertDialogDescription>
-							Are you sure you want to mark this contract as inactive and let it
-							expire? This action will update the contract status to
-							&quot;inactive&quot;.
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel disabled={isUpdating}>
-							<Ban className="w-4 h-4" />
-							Cancel
-						</AlertDialogCancel>
-						<AlertDialogAction
-							onClick={handleLetExpire}
-							disabled={isUpdating}
-							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-						>
-							{isUpdating ? (
-								<>
-									<RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-									Updating...
-								</>
-							) : (
-								"Let Expire"
-							)}
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
 		</>
 	);
 }

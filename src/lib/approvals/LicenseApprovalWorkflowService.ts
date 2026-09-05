@@ -21,6 +21,12 @@ import {
 	serializeWorkflowState,
 	upgradeAwaitingExecutiveStep,
 } from "@/lib/approvals/ContractApprovalWorkflowService";
+import { stampCurrentStepSla } from "@/lib/approvals/ApprovalSlaService";
+import {
+	assertWorkflowMutable,
+	isTerminalDocumentStatus,
+} from "@/lib/approvals/documentStatus";
+import { resolveAttestationId } from "@/lib/approvals/resolveAttestationId";
 import type {
 	ApprovalDecision,
 	ApprovalWorkflowNotification,
@@ -183,13 +189,14 @@ async function buildStateForLicense(
 		steps.findIndex((s) => s.status === "current"),
 	);
 
-	return {
+	const state: ApprovalWorkflowState = {
 		version: WORKFLOW_VERSION,
 		currentStepIndex: currentStepIndex >= 0 ? currentStepIndex : 0,
 		derivedAt: new Date().toISOString(),
 		steps,
 		notifications: options?.preserveNotifications || [],
 	};
+	return stampCurrentStepSla(state, orgId, "license");
 }
 
 async function appendNotification(
@@ -282,11 +289,13 @@ export async function getLicenseWorkflowForViewer(
 	options?: { isAdminOverride?: boolean },
 ): Promise<ApprovalWorkflowViewerPayload> {
 	const license = await getLicense(licenseId);
+	const contractStatus = String(license.status || "pending-review");
+	const frozen = isTerminalDocumentStatus(contractStatus);
 	let state = parseWorkflowState(license.approvalWorkflowState as string);
 	const uploader = String(license.licenseOwnerId || license.createdBy || "");
 	const orgId = license.orgId as string | undefined;
 
-	if (!state) {
+	if (!state && !frozen) {
 		state = await buildStateForLicense(license);
 		await updateLicense(licenseId, {
 			approvalWorkflowState: serializeWorkflowState(state),
@@ -294,13 +303,41 @@ export async function getLicenseWorkflowForViewer(
 		});
 	}
 
-	const ensured = await ensureLicenseExecutiveStep(state, orgId, uploader);
-	state = ensured.state;
-	if (ensured.upgraded) {
-		await updateLicense(licenseId, {
-			approvalWorkflowState: serializeWorkflowState(state),
-			currentApprovalStage: state.steps[state.currentStepIndex]?.label || "",
-		});
+	if (!frozen && state) {
+		const ensured = await ensureLicenseExecutiveStep(state, orgId, uploader);
+		state = await stampCurrentStepSla(ensured.state, orgId, "license");
+		if (ensured.upgraded) {
+			await updateLicense(licenseId, {
+				approvalWorkflowState: serializeWorkflowState(state),
+				currentApprovalStage: state.steps[state.currentStepIndex]?.label || "",
+			});
+		}
+	}
+
+	if (!state) {
+		return {
+			contractId: licenseId,
+			contractName: String(license.licenseName || "Untitled License"),
+			contractStatus,
+			department: (license.division || license.department) as string | undefined,
+			businessUnit: license.businessUnit as string | undefined,
+			subDepartment: license.subDepartment as string | undefined,
+			currentStepIndex: 0,
+			steps: [],
+			notifications: [],
+			canDecide: false,
+			canOverride: false,
+			needsExecutiveAssignment: false,
+			canAssignExecutive: false,
+			canResubmit: false,
+			viewerUserId,
+			uploaderUserId: uploader || undefined,
+			reassignCandidates: [],
+			workflowFrozen: frozen,
+			expirationAttestationId: frozen
+				? await resolveAttestationId(orgId, "license", licenseId)
+				: undefined,
+		};
 	}
 
 	const steps = await Promise.all(
@@ -340,14 +377,17 @@ export async function getLicenseWorkflowForViewer(
 		(isAssignee || !!options?.isAdminOverride) &&
 		(!!options?.isAdminOverride || canDecideByRole);
 
-	const needsExecutiveAssignment = needsExecutiveAssignmentFlag(state);
-	const contractStatus = String(license.status || "pending-review");
+	const needsExecutiveAssignment = frozen
+		? false
+		: needsExecutiveAssignmentFlag(state);
 	const canResubmit =
+		!frozen &&
 		contractStatus === "action-required" &&
 		(viewerUserId === uploader || !!options?.isAdminOverride);
 	const canAssignExecutive =
-		needsExecutiveAssignment && !!options?.isAdminOverride;
+		!frozen && needsExecutiveAssignment && !!options?.isAdminOverride;
 	const canReassignUi =
+		!frozen &&
 		!!options?.isAdminOverride &&
 		(needsExecutiveAssignment || current?.status === "current") &&
 		current?.kind !== "activated" &&
@@ -366,14 +406,18 @@ export async function getLicenseWorkflowForViewer(
 		currentStepIndex: state.currentStepIndex,
 		steps,
 		notifications: state.notifications || [],
-		canDecide,
-		canOverride: !!options?.isAdminOverride,
+		canDecide: frozen ? false : canDecide,
+		canOverride: frozen ? false : !!options?.isAdminOverride,
 		needsExecutiveAssignment,
 		canAssignExecutive,
 		canResubmit,
 		viewerUserId,
 		uploaderUserId: uploader || undefined,
 		reassignCandidates,
+		workflowFrozen: frozen,
+		expirationAttestationId: frozen
+			? await resolveAttestationId(orgId, "license", licenseId)
+			: undefined,
 	};
 }
 
@@ -447,6 +491,7 @@ export async function decideLicense({
 	adminOverride?: boolean;
 }): Promise<{ state: ApprovalWorkflowState; contractStatus: string }> {
 	const license = await getLicense(licenseId);
+	assertWorkflowMutable(license.status as string | undefined);
 	let state =
 		parseWorkflowState(license.approvalWorkflowState as string) ||
 		(await buildStateForLicense(license));
@@ -636,6 +681,7 @@ export async function decideLicense({
 		}
 	}
 
+	state = await stampCurrentStepSla(state, orgId, "license");
 	await updateLicense(licenseId, {
 		approvalWorkflowState: serializeWorkflowState(state),
 		status: nextStatus,
@@ -657,6 +703,7 @@ export async function reassignLicenseCurrentStep({
 	adminOverride?: boolean;
 }): Promise<ApprovalWorkflowState> {
 	const license = await getLicense(licenseId);
+	assertWorkflowMutable(license.status as string | undefined);
 	let state =
 		parseWorkflowState(license.approvalWorkflowState as string) ||
 		(await buildStateForLicense(license));
@@ -701,6 +748,7 @@ export async function reassignLicenseCurrentStep({
 		},
 	);
 
+	state = await stampCurrentStepSla(state, orgId, "license");
 	await updateLicense(licenseId, {
 		approvalWorkflowState: serializeWorkflowState(state),
 		currentApprovalStage: nextCurrent?.label || "",
@@ -722,6 +770,7 @@ export async function resubmitLicenseAfterChanges({
 	adminOverride?: boolean;
 }): Promise<{ state: ApprovalWorkflowState; contractStatus: string }> {
 	const license = await getLicense(licenseId);
+	assertWorkflowMutable(license.status as string | undefined);
 	const status = String(license.status || "");
 	if (status !== "action-required") {
 		throw new Error("Only items with requested changes can be resubmitted");
@@ -759,6 +808,11 @@ export async function resubmitLicenseAfterChanges({
 	);
 
 	const nextStatus = "pending-review";
+	state = await stampCurrentStepSla(
+		state,
+		license.orgId as string | undefined,
+		"license",
+	);
 	await updateLicense(licenseId, {
 		approvalWorkflowState: serializeWorkflowState(state),
 		status: nextStatus,

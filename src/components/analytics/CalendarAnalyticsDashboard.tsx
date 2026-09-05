@@ -391,7 +391,7 @@ export const CalendarAnalyticsDashboard: React.FC = () => {
 									<div>
 										<p className="text-sm text-slate-600 mb-1">Meeting Hours</p>
 										<p className="text-2xl font-bold text-navy">
-											{data.meetingLoad.totalHours.toFixed(1)}
+											{(data.meetingLoad.totalHours ?? 0).toFixed(1)}
 										</p>
 									</div>
 									<div className="p-3 bg-green-100 rounded-lg">

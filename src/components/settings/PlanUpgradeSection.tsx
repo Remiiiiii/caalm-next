@@ -1,17 +1,15 @@
 "use client";
 
 import { Check } from "lucide-react";
-import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import type { PricingPlan } from "@/lib/pricing";
-import { cn } from "@/lib/utils";
 
 interface PlanUpgradeSectionProps {
 	plans: PricingPlan[];
 	currentTier: string;
 	stripeConfigured: boolean;
+	billingInterval: "monthly" | "yearly";
 	billingStatus?: string;
 	pilotEligible?: boolean;
 	pilotTrialDays?: number;
@@ -34,6 +32,7 @@ export default function PlanUpgradeSection({
 	plans,
 	currentTier,
 	stripeConfigured,
+	billingInterval,
 	billingStatus = "none",
 	pilotEligible = false,
 	pilotTrialDays = 90,
@@ -41,7 +40,6 @@ export default function PlanUpgradeSection({
 	loadingTier,
 	salesEmail = "sales@caalm.app",
 }: PlanUpgradeSectionProps) {
-	const [interval, setInterval] = useState<"monthly" | "yearly">("monthly");
 	const showPilotCta =
 		pilotEligible &&
 		(billingStatus === "none" || billingStatus === "canceled") &&
@@ -67,7 +65,7 @@ export default function PlanUpgradeSection({
 						<Button
 							className="primary-btn px-3 sm:px-4 cursor-pointer shrink-0"
 							disabled={!stripeConfigured || loadingTier === "growth"}
-							onClick={() => onCheckout("growth", interval)}
+							onClick={() => onCheckout("growth", billingInterval)}
 						>
 							{loadingTier === "growth"
 								? "Redirecting…"
@@ -77,39 +75,12 @@ export default function PlanUpgradeSection({
 				</Card>
 			)}
 
-			<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-				<p className="text-sm font-medium sidebar-gradient-text">Change plan</p>
-				<div
-					role="tablist"
-					aria-label="Billing period"
-					className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white/80 px-1.5 py-1 shadow-sm"
-				>
-					{(["monthly", "yearly"] as const).map((period) => (
-						<button
-							key={period}
-							type="button"
-							role="tab"
-							aria-selected={interval === period}
-							className={cn(
-								"cursor-pointer rounded-full px-4 py-1.5 text-sm font-semibold capitalize transition-all duration-200",
-								interval === period
-									? "bg-gradient-to-r from-[#00C1CB] via-[#078FAB] to-[#162768] text-white shadow-sm"
-									: "text-slate-600 hover:bg-blue-50",
-							)}
-							onClick={() => setInterval(period)}
-						>
-							{period}
-							{period === "yearly" ? " (−20%)" : ""}
-						</button>
-					))}
-				</div>
-			</div>
-
 			<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 				{plans.map((plan) => {
 					const isCurrent = plan.key === currentTier;
 					const isEnterprise = plan.key === "enterprise";
-					const price = interval === "monthly" ? plan.monthly : plan.yearly;
+					const price =
+						billingInterval === "monthly" ? plan.monthly : plan.yearly;
 					const busy = loadingTier === plan.key;
 
 					return (
@@ -121,12 +92,9 @@ export default function PlanUpgradeSection({
 										{plan.name}
 									</p>
 									{isCurrent && (
-										<Badge
-											variant="outline"
-											className="bg-blue/10 text-blue border-blue/20"
-										>
+										<span className="inline-block px-2 py-0.5 text-xs rounded-full font-medium border bg-blue/10 text-blue border-blue/20">
 											Current
-										</Badge>
+										</span>
 									)}
 								</div>
 								{isEnterprise || price === 0 ? (
@@ -137,7 +105,7 @@ export default function PlanUpgradeSection({
 									<p className="text-3xl font-bold text-slate-700 pt-2">
 										${price.toLocaleString()}
 										<span className="text-sm font-medium text-slate-600 ml-1">
-											/{interval === "monthly" ? "mo" : "yr"}
+											/{billingInterval === "monthly" ? "mo" : "yr"}
 										</span>
 									</p>
 								)}
@@ -166,7 +134,10 @@ export default function PlanUpgradeSection({
 										className="primary-btn px-3 sm:px-4 mt-6 w-full cursor-pointer"
 										disabled={!stripeConfigured || isCurrent || busy}
 										onClick={() =>
-											onCheckout(plan.key as "starter" | "growth", interval)
+											onCheckout(
+												plan.key as "starter" | "growth",
+												billingInterval,
+											)
 										}
 									>
 										{isCurrent

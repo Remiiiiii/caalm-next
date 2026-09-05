@@ -1,6 +1,6 @@
 ---
 title: "Connect Outlook and integrations"
-description: "Calendar sync and org API keys with least privilege."
+description: "Calendar sync, HubSpot origin, Salesforce setup, and org API keys with least privilege."
 section: admin
 audience: "Admins with integrations permission"
 ---
@@ -16,6 +16,14 @@ Before connecting:
 - Train calendar owners
 - Decide shared calendar visibility norms
 - Decide which system wins when dates conflict
+
+## HubSpot and Salesforce CRM origin
+
+Full setup, pipeline, and troubleshooting (users and developers): [HubSpot and Salesforce CRM origin](/docs/admin/crm-integrations).
+
+**HubSpot** (Growth+): Connect, pick a deal stage, draft contract when the deal hits that stage.
+
+**Salesforce** (Enterprise): Request setup. Not self-serve OAuth until CAALM enables the org.
 
 ## API keys
 

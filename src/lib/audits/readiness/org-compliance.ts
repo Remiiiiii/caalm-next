@@ -2,6 +2,7 @@ import { Query } from "node-appwrite";
 import { LicenseService } from "@/lib/api/licenses/services/LicenseService";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { excludeSoftDeletedQuery } from "@/lib/soft-delete";
 import { dedupeEvidenceRows } from "@/lib/audits/evidence-utils";
 import type {
 	AuditEvidenceRow,
@@ -56,7 +57,11 @@ async function fetchContractsForOrg(
 	const result = await tablesDB.listRows({
 		databaseId: appwriteConfig.databaseId!,
 		tableId: appwriteConfig.contractsCollectionId!,
-		queries: [Query.equal("orgId", orgId), Query.limit(500)],
+		queries: [
+			Query.equal("orgId", orgId),
+			excludeSoftDeletedQuery(),
+			Query.limit(500),
+		],
 	});
 
 	const contracts = result.rows as Array<{

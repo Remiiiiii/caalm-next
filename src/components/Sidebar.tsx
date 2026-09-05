@@ -7,6 +7,7 @@ import {
 	Cloud,
 	Crown,
 	Eye,
+	HandCoins,
 	Lock,
 	Server,
 } from "lucide-react";
@@ -312,11 +313,21 @@ const Sidebar = memo(
 																				/>
 																			</span>
 																		)}
+																		{item.name === "Funding & Retention" && (
+																			<span>
+																				<HandCoins
+																					className="h-5 w-5 shrink-0"
+																					style={{ color: NAV_ICON_FILL_GREY }}
+																					aria-hidden
+																				/>
+																			</span>
+																		)}
 																		{(() => {
 																			const iconConfig = ITEM_ICONS[item.name];
 																			if (
 																				!iconConfig &&
-																				item.name !== "Documents"
+																				item.name !== "Documents" &&
+																				item.name !== "Funding & Retention"
 																			) {
 																				return null;
 																			}
@@ -403,27 +414,35 @@ const Sidebar = memo(
 							</ul>
 						</nav>
 
-						<div className="sidebar-storage-info">
-							<div className="w-full">
-								<div className="flex items-center gap-2 mb-2">
-									<Cloud className="h-4 w-4 text-slate-700" />
-									<p className="caption text-slate-700">Storage</p>
+						<div className="sidebar-footer">
+							<div
+								aria-hidden
+								className="mx-1 border-t border-slate-300/80"
+								role="separator"
+							/>
+
+							<div className="sidebar-storage-info">
+								<div className="w-full">
+									<div className="mb-1 flex items-center gap-2">
+										<Cloud className="h-3.5 w-3.5 text-slate-700" />
+										<p className="caption text-slate-700">Storage</p>
+									</div>
+									<StorageUsageBar />
 								</div>
-								<StorageUsageBar />
 							</div>
+
+							<div
+								aria-hidden
+								className="mx-1 mt-2 border-t border-slate-300/80"
+								role="separator"
+							/>
+
+							<SidebarUserCard
+								name={name}
+								email={email}
+								settingsItems={settingsItems}
+							/>
 						</div>
-
-						<div
-							aria-hidden
-							className="mx-1 mt-2 border-t border-slate-300/80"
-							role="separator"
-						/>
-
-						<SidebarUserCard
-							name={name}
-							email={email}
-							settingsItems={settingsItems}
-						/>
 					</>
 				)}
 			</aside>

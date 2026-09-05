@@ -172,12 +172,33 @@ export async function GET(request: NextRequest) {
 							}
 						}
 
-						await tablesDB.updateRow({
-							databaseId: appwriteConfig.databaseId!,
-							tableId: appwriteConfig.contractsCollectionId!,
-							rowId: contract.id,
-							data: updateData,
-						});
+						try {
+							await tablesDB.updateRow({
+								databaseId: appwriteConfig.databaseId!,
+								tableId: appwriteConfig.contractsCollectionId!,
+								rowId: contract.id,
+								data: updateData,
+							});
+						} catch (firstError: unknown) {
+							const message =
+								firstError instanceof Error
+									? firstError.message
+									: String(firstError ?? "");
+							// Legacy fileRef → retired Files table blocks updates
+							if (
+								message.includes("relationship_value_invalid") ||
+								message.includes("Invalid relationship value")
+							) {
+								await tablesDB.updateRow({
+									databaseId: appwriteConfig.databaseId!,
+									tableId: appwriteConfig.contractsCollectionId!,
+									rowId: contract.id,
+									data: { ...updateData, fileRef: null },
+								});
+							} else {
+								throw firstError;
+							}
+						}
 						console.log(
 							`[API /contracts/all] Updated contract "${contract.name}" (${contract.id}) - daysUntilExpiry: ${contract.daysUntilExpiry}`,
 						);

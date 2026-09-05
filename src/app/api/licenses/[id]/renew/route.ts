@@ -89,10 +89,10 @@ export async function POST(
 			});
 		}
 
-		return errorResponse(
-			error instanceof Error ? error : new Error("Failed to renew license"),
-			500,
-			{ requestId },
-		);
+		const message =
+			error instanceof Error ? error.message : "Failed to renew license";
+		return errorResponse(message, message.includes("attestation") ? 409 : 500, {
+			requestId,
+		});
 	}
 }

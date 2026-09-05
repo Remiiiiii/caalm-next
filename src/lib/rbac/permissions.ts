@@ -328,7 +328,25 @@ async function getUserRolesImpl(
 
 	const accountId = await resolveAuthAccountId(userId);
 	// Roles may be stored under Auth accountId OR users-table document $id.
-	const candidateIds = [...new Set([userId, accountId].filter(Boolean))];
+	// When callers pass only accountId, also resolve the profile row $id —
+	// otherwise candidateIds collapses to one ID and misses $id-keyed roles.
+	let profileDocId = userId;
+	try {
+		const { tablesDB } = await createAdminClient();
+		const byAccount = await tablesDB.listRows({
+			databaseId: appwriteConfig.databaseId || "default-db",
+			tableId: appwriteConfig.usersCollectionId || "users",
+			queries: [Query.equal("accountId", accountId), Query.limit(1)],
+		});
+		if (byAccount.rows[0]?.$id) {
+			profileDocId = String(byAccount.rows[0].$id);
+		}
+	} catch {
+		// keep profileDocId as provided userId
+	}
+	const candidateIds = [
+		...new Set([userId, accountId, profileDocId].filter(Boolean)),
+	];
 	const cacheKey = CACHE_KEYS.rbac.userRoles(
 		candidateIds.slice().sort().join("|"),
 		orgId,

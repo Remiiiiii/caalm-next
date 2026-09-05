@@ -16,6 +16,7 @@ import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 import { logAuditEvent } from "@/lib/services/audit-logger";
 import { CACHE_KEYS } from "@/lib/services/cache-keys";
 import CacheManager from "@/lib/services/cache-manager";
+import { excludeSoftDeletedQuery, softDeleteFields } from "@/lib/soft-delete";
 import { constructFileUrl, getFileType, parseStringify } from "@/lib/utils";
 import {
 	triggerContractExpiryNotification,
@@ -190,6 +191,15 @@ export const uploadFile = async ({
 			);
 			await assertCanCreateLicense(defaultOrg.orgId);
 		}
+
+		const {
+			assertEnterpriseFileAllowed,
+			resolveUploadContextFromMetadata,
+		} = await import("@/lib/files/enterprise-file-formats");
+		assertEnterpriseFileAllowed(
+			file,
+			resolveUploadContextFromMetadata({ contractMetadata, licenseMetadata }),
+		);
 
 		// Validate required config
 		if (
@@ -1980,154 +1990,111 @@ export const deleteFile = async ({
 		// Determine if this is a contract deletion
 		// If contractId is provided, fileId is the contract ID
 		const isContract = !!contractId;
-		let actualFileDocumentId: string | null = null;
-		let actualBucketFileId: string | null = bucketFileId || null;
 
 		if (isContract) {
-			// This is a contract - fileId is actually the contract ID
 			const contractIdToDelete = fileId;
+			const actor = await getCurrentUser();
+			let contractLabel = contractIdToDelete;
+			let orgId: string | undefined;
+			let department: string | undefined;
+			let alreadyDeleted = false;
 
-			// First, get the contract document to find the associated file document
 			try {
 				const contractDoc = await tablesDB.getRow({
 					databaseId: appwriteConfig.databaseId!,
 					tableId: appwriteConfig.contractsCollectionId!,
 					rowId: contractIdToDelete,
 				});
-
-				// Get the file document ID from the contract
-				actualFileDocumentId =
-					contractDoc.fileId || contractDoc.fileRef || null;
-				actualBucketFileId = bucketFileId || contractDoc.bucketFileId || null;
-
-				console.log("Contract document found:", {
-					contractId: contractIdToDelete,
-					fileDocumentId: actualFileDocumentId,
-					bucketFileId: actualBucketFileId,
-				});
-			} catch (_error: any) {
+				contractLabel =
+					(contractDoc.contractName as string) ||
+					(contractDoc.name as string) ||
+					contractIdToDelete;
+				orgId = (contractDoc.orgId as string | undefined) || undefined;
+				department =
+					(contractDoc.department as string | undefined) || undefined;
+				alreadyDeleted = Boolean(contractDoc.deletedAt);
+			} catch (_error: unknown) {
 				console.log(
-					"Contract document not found, may have been deleted already",
+					"[SERVER] deleteFile: Contract not found, may have been deleted already",
 				);
-				// Continue with deletion attempt
 			}
 
-			// Start operations for contract deletion
-			// Delete in sequence to avoid constraint issues
-			try {
-				// 0. Delete related enterprise metadata documents first (if they exist)
+			if (!alreadyDeleted) {
+				// Contracts.fileRef is a oneToOne to a retired Files table id. Rows that
+				// still hold that ref fail ANY update with relationship_value_invalid
+				// ("Array given"). Clear it while soft-deleting.
+				await writeRowWithSchemaDriftRecovery({
+					tablesDB,
+					mode: "update",
+					databaseId: appwriteConfig.databaseId!,
+					tableId: appwriteConfig.contractsCollectionId!,
+					rowId: contractIdToDelete,
+					data: {
+						...softDeleteFields(actor?.$id),
+						fileRef: null,
+					},
+				});
+
+				const deletedByName =
+					(actor as { fullName?: string } | null)?.fullName ||
+					actor?.email ||
+					"A user";
 				try {
-					const enterpriseMetadataCollectionId =
-						appwriteConfig.contractsEnterpriseMetadataCollectionId ||
-						appwriteConfig.contractExtensionsCollectionId;
-
-					if (enterpriseMetadataCollectionId) {
-						const enterpriseDocs = await tablesDB.listRows({
-							databaseId: appwriteConfig.databaseId!,
-							tableId: enterpriseMetadataCollectionId,
-							queries: [Query.equal("contractId", contractIdToDelete)],
-						});
-
-						// Delete all related enterprise metadata documents
-						for (const doc of enterpriseDocs.rows) {
-							try {
-								await tablesDB.deleteRow({
-									databaseId: appwriteConfig.databaseId!,
-									tableId: enterpriseMetadataCollectionId,
-									rowId: doc.$id,
-								});
-								console.log("Enterprise metadata document deleted:", doc.$id);
-							} catch (error: any) {
-								console.log("Error deleting enterprise metadata:", error);
-								// Continue with other deletions
-							}
-						}
-					}
-				} catch (error: any) {
-					console.log("Error finding enterprise metadata:", error);
-					// Continue with contract deletion even if enterprise metadata lookup fails
-				}
-
-				// 1. Delete the contract document
-				try {
-					await tablesDB.deleteRow({
-						databaseId: appwriteConfig.databaseId!,
-						tableId: appwriteConfig.contractsCollectionId!,
-						rowId: contractIdToDelete,
+					const { notifyContractDeleted } = await import(
+						"@/lib/notifications/document-delete-notifications"
+					);
+					const notifyOrgId =
+						orgId ||
+						(actor
+							? (await getUserDefaultOrganization(actor.$id))?.orgId
+							: undefined);
+					await notifyContractDeleted({
+						contractId: contractIdToDelete,
+						contractName: contractLabel,
+						orgId: notifyOrgId,
+						department,
+						deletedByUserId: actor?.$id,
+						deletedByAccountId: actor?.accountId,
+						deletedByName,
 					});
-					console.log("Contract document deleted successfully");
-				} catch (error: any) {
-					if (error?.code === 404 || error?.message?.includes("not found")) {
-						console.log("Contract document not found, skipping deletion");
-					} else {
-						console.error("Error deleting contract document:", error);
-						throw error;
-					}
+				} catch (notifyError) {
+					console.error(
+						"[SERVER] deleteFile: Failed to notify contract delete:",
+						notifyError,
+					);
 				}
+			}
 
-				// 2. Delete the file document (if we found the file document ID)
-				if (actualFileDocumentId) {
-					try {
-						// Clear owner relationship first to avoid two-way relationship constraint issues
-						try {
-							const fileDoc = await tablesDB.getRow({
-								databaseId: appwriteConfig.databaseId!,
-								tableId: appwriteConfig.filesCollectionId!,
-								rowId: actualFileDocumentId,
-							});
-							if (fileDoc.owner) {
-								await tablesDB.updateRow({
-									databaseId: appwriteConfig.databaseId!,
-									tableId: appwriteConfig.filesCollectionId!,
-									rowId: actualFileDocumentId,
-									data: { owner: null },
-								});
-								console.log("Owner relationship cleared before deletion");
-							}
-						} catch (clearError: any) {
-							console.log(
-								"Could not clear owner relationship, continuing with deletion:",
-								clearError.message,
-							);
-							// Continue with deletion even if clearing owner fails
-						}
-
-						await tablesDB.deleteRow({
-							databaseId: appwriteConfig.databaseId!,
-							tableId: appwriteConfig.filesCollectionId!,
-							rowId: actualFileDocumentId,
-						});
-						console.log("File document deleted successfully");
-					} catch (error: any) {
-						if (error?.code === 404 || error?.message?.includes("not found")) {
-							console.log("File document not found, skipping deletion");
-						} else {
-							console.error("Error deleting file document:", error);
-							// Don't throw - continue with storage deletion
-						}
-					}
+			if (actor) {
+				try {
+					const userName =
+						(actor as { fullName?: string }).fullName ||
+						actor.email ||
+						"unknown";
+					await logAuditEvent({
+						event_id: `contract_delete_${contractIdToDelete}`,
+						event_title: `Contract deleted: ${contractLabel}`,
+						action: "delete",
+						source: "caalm",
+						user_id: actor.$id,
+						user_name: userName,
+						user_email: actor.email || "",
+						orgId:
+							orgId ||
+							(await getUserDefaultOrganization(actor.$id))?.orgId,
+						status: "success",
+						module: "contracts",
+						target_type: "contract",
+						target_id: contractIdToDelete,
+						target_label: contractLabel,
+						summary: `${userName} deleted contract ${contractLabel}`,
+					});
+				} catch (auditError) {
+					console.error(
+						"[SERVER] deleteFile: Failed to log contract delete audit event:",
+						auditError,
+					);
 				}
-
-				// 3. Delete the storage file
-				if (actualBucketFileId) {
-					try {
-						await storage.deleteFile({
-							bucketId: appwriteConfig.bucketId!,
-							fileId: actualBucketFileId,
-						});
-						console.log("Storage file deleted successfully");
-					} catch (error: any) {
-						if (error?.code === 404 || error?.message?.includes("not found")) {
-							console.log("Storage file not found, skipping deletion");
-						} else {
-							console.error("Error deleting storage file:", error);
-							// Don't throw - storage deletion is less critical
-						}
-					}
-				}
-			} catch (error: any) {
-				console.error("Error during contract deletion:", error);
-				throw error;
 			}
 		} else {
 			// This is a regular file deletion
@@ -2142,13 +2109,49 @@ export const deleteFile = async ({
 					})
 					.then(async (contractDocs) => {
 						if (contractDocs.rows.length > 0) {
-							const contractIdToDelete = contractDocs.rows[0].$id;
+							const related = contractDocs.rows[0];
+							const contractIdToDelete = related.$id;
 							try {
-								return await tablesDB.deleteRow({
+								if (related.deletedAt) {
+									return null;
+								}
+								const actor = await getCurrentUser();
+								const updated = await tablesDB.updateRow({
 									databaseId: appwriteConfig.databaseId!,
 									tableId: appwriteConfig.contractsCollectionId!,
 									rowId: contractIdToDelete,
+									data: {
+										...softDeleteFields(actor?.$id),
+										fileRef: null,
+									},
 								});
+								try {
+									const { notifyContractDeleted } = await import(
+										"@/lib/notifications/document-delete-notifications"
+									);
+									const label =
+										(related.contractName as string) ||
+										(related.name as string) ||
+										contractIdToDelete;
+									await notifyContractDeleted({
+										contractId: contractIdToDelete,
+										contractName: label,
+										orgId: related.orgId as string | undefined,
+										department: related.department as string | undefined,
+										deletedByUserId: actor?.$id,
+										deletedByAccountId: actor?.accountId,
+										deletedByName:
+											(actor as { fullName?: string } | null)?.fullName ||
+											actor?.email ||
+											"A user",
+									});
+								} catch (notifyError) {
+									console.error(
+										"[SERVER] deleteFile: Failed to notify related contract delete:",
+										notifyError,
+									);
+								}
+								return updated;
 							} catch (error: any) {
 								if (
 									error?.code === 404 ||
@@ -2760,52 +2763,28 @@ export const contractStatus = async ({
 					data: updateData,
 				});
 			} catch (statusUpdateError: any) {
-				// If status update fails, check if it's a relationship validation error
 				const isRelationshipError =
 					statusUpdateError?.type === "relationship_value_invalid" ||
 					statusUpdateError?.message?.includes("Invalid relationship value") ||
 					statusUpdateError?.message?.includes("Array given");
 
+				// fileRef points at a retired Files table. Template drafts store a
+				// current Files id there, which blocks any later status update.
 				if (isRelationshipError) {
-					console.error(
-						"[contractStatus] Status update failed with relationship error:",
-						{
-							error: statusUpdateError?.message,
-							errorType: statusUpdateError?.type,
-							normalizationAttempted: Object.keys(normalizationData).length > 0,
-							fieldsNormalized: Object.keys(normalizationData),
-						},
-					);
-
-					// If we already tried normalization and it failed, provide detailed error
-					if (Object.keys(normalizationData).length > 0) {
-						const fieldsToFix = Object.keys(normalizationData).join(", ");
-						throw new Error(
-							`Cannot update contract status: relationship fields are stored as arrays and cannot be automatically fixed. ` +
-								`Appwrite is rejecting updates to fix these fields. ` +
-								`Please fix these fields manually in the Appwrite Console: ${fieldsToFix}. ` +
-								`For each field, change empty arrays [] to null. Contract ID: ${fileId}. ` +
-								`Original error: ${
-									statusUpdateError?.message || "Unknown error"
-								}`,
-						);
-					} else {
-						// No normalization was attempted, but we got a relationship error
-						// This means the fields might be arrays but weren't detected
-						// Provide a generic error message
-						throw new Error(
-							`Cannot update contract status: relationship validation error. ` +
-								`Please check the contract document in Appwrite Console and ensure all relationship fields ` +
-								`(fileId, fileRef, owner, contractOwnerId, parentContractId) are either valid IDs or null, not arrays. ` +
-								`Contract ID: ${fileId}. ` +
-								`Original error: ${
-									statusUpdateError?.message || "Unknown error"
-								}`,
-						);
+					try {
+						await tablesDB.updateRow({
+							databaseId: appwriteConfig.databaseId!,
+							tableId: appwriteConfig.contractsCollectionId!,
+							rowId: fileId,
+							data: { status, fileRef: null },
+						});
+					} catch {
+						// Fall through to the existing relationship error messaging.
+						throw statusUpdateError;
 					}
+				} else {
+					throw statusUpdateError;
 				}
-				// Re-throw other errors as-is
-				throw statusUpdateError;
 			}
 
 			// Fetch the updated contract
@@ -3187,6 +3166,7 @@ export const getContracts = async () => {
 		const contracts = await tablesDB.listRows({
 			databaseId: appwriteConfig.databaseId!,
 			tableId: appwriteConfig.contractsCollectionId!,
+			queries: [excludeSoftDeletedQuery()],
 		});
 		return parseStringify(contracts);
 	} catch (error) {
@@ -3207,6 +3187,7 @@ export const getContractsForManager = async (managerUserId: string) => {
 			databaseId: appwriteConfig.databaseId!,
 			tableId: appwriteConfig.contractsCollectionId!,
 			queries: [
+				excludeSoftDeletedQuery(),
 				managerIds.length === 1
 					? Query.contains("assignedManagers", managerIds[0])
 					: Query.or(
@@ -3227,6 +3208,7 @@ export const getTotalContractsCount = async () => {
 		const contracts = await tablesDB.listRows({
 			databaseId: appwriteConfig.databaseId!,
 			tableId: appwriteConfig.contractsCollectionId!,
+			queries: [excludeSoftDeletedQuery(), Query.limit(1)],
 		});
 		return contracts.total;
 	} catch (error: any) {
@@ -3260,6 +3242,7 @@ export const getExpiringContractsCount = async () => {
 			databaseId: appwriteConfig.databaseId!,
 			tableId: appwriteConfig.contractsCollectionId!,
 			queries: [
+				excludeSoftDeletedQuery(),
 				Query.lessThanEqual(
 					"contractExpiryDate",
 					thirtyDaysFromNow.toISOString().split("T")[0],
@@ -3300,6 +3283,7 @@ export const getContractsByUserDivision = async (userDivision: string) => {
 		const contracts = await tablesDB.listRows({
 			databaseId: appwriteConfig.databaseId!,
 			tableId: appwriteConfig.contractsCollectionId!,
+			queries: [excludeSoftDeletedQuery()],
 		});
 
 		// Filter contracts where assigned managers belong to the user's division

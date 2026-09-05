@@ -1,7 +1,6 @@
 "use client";
 
 import {
-	Ban,
 	Loader2,
 	Save,
 	ShieldCheck,
@@ -110,7 +109,7 @@ function DialogShell({
 	icon: React.ReactNode;
 	subtitle?: string;
 	children: React.ReactNode;
-	footer: React.ReactNode;
+	footer?: React.ReactNode;
 }) {
 	return (
 		<Dialog open={open} onOpenChange={(next) => !next && onClose()}>
@@ -132,7 +131,9 @@ function DialogShell({
 				<div className="glass-dialog-body-padded flex-1 overflow-y-auto">
 					{children}
 				</div>
-				<div className="glass-dialog-footer-wrap">{footer}</div>
+				{footer ? (
+					<div className="glass-dialog-footer-wrap">{footer}</div>
+				) : null}
 			</DialogContent>
 		</Dialog>
 	);
@@ -193,18 +194,6 @@ export function UserManagementActionDialogs({
 				title="User profile"
 				icon={<UserRound className="h-5 w-5 text-[#0f5384]" />}
 				subtitle={user.email}
-				footer={
-					<div className="flex justify-end">
-						<Button
-							variant="outline"
-							onClick={onClose}
-							className="primary-btn px-3 sm:px-4"
-						>
-							<Ban className="h-4 w-4" />
-							Close
-						</Button>
-					</div>
-				}
 			>
 				<div className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
 					<div className="flex items-center gap-3">
@@ -287,15 +276,6 @@ export function UserManagementActionDialogs({
 				subtitle={user.email}
 				footer={
 					<div className="flex items-center justify-end gap-3">
-						<Button
-							variant="outline"
-							onClick={onClose}
-							disabled={busy}
-							className="primary-btn px-3 sm:px-4"
-						>
-							<Ban className="h-4 w-4" />
-							Cancel
-						</Button>
 						<Button
 							disabled={busy || !fullName.trim()}
 							onClick={() =>
@@ -388,15 +368,6 @@ export function UserManagementActionDialogs({
 				subtitle={`Assign a role for ${user.fullName}`}
 				footer={
 					<div className="flex items-center justify-end gap-3">
-						<Button
-							variant="outline"
-							onClick={onClose}
-							disabled={busy}
-							className="primary-btn px-3 sm:px-4"
-						>
-							<Ban className="h-4 w-4" />
-							Cancel
-						</Button>
 						<Button
 							disabled={busy || !roleName}
 							onClick={() => onSaveRole(roleName)}
@@ -552,15 +523,6 @@ export function UserManagementActionDialogs({
 					<div className="flex items-center justify-end gap-2 border-t border-slate-200 bg-slate-50 px-6 py-4">
 						<Button
 							type="button"
-							onClick={onClose}
-							disabled={busy}
-							className="btn-primary gap-2 px-3 sm:px-4"
-						>
-							<Ban className="h-4 w-4" aria-hidden />
-							Cancel
-						</Button>
-						<Button
-							type="button"
 							disabled={busy}
 							onClick={onConfirmDelete}
 							className="delete-btn gap-2 px-3 sm:px-4"
@@ -592,15 +554,6 @@ export function UserManagementActionDialogs({
 				icon={<UserRound className="h-5 w-5 text-[#0f5384]" />}
 				footer={
 					<div className="flex items-center justify-end gap-3">
-						<Button
-							variant="outline"
-							onClick={onClose}
-							disabled={busy}
-							className="primary-btn px-3 sm:px-4"
-						>
-							<Ban className="h-4 w-4" />
-							Cancel
-						</Button>
 						<Button
 							disabled={busy}
 							onClick={cfg.onConfirm}

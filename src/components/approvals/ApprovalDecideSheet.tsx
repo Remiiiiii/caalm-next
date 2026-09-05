@@ -10,13 +10,14 @@ import {
 	X,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { agingLabel } from "@/components/approvals/ApprovalsAttentionStrip";
 import { useApprovalsView } from "@/components/approvals/ApprovalsViewContext";
 import ApprovalWorkflowActions from "@/components/contracts/approval/ApprovalWorkflowActions";
 import ContractApprovalFlowCanvas from "@/components/contracts/approval/ContractApprovalFlowCanvas";
 import DocumentViewer from "@/components/DocumentViewer";
 import FormattedDateTime from "@/components/FormattedDateTime";
+import { PlaybookDeviationsPanel } from "@/components/playbook/PlaybookDeviationsPanel";
 import EntityPreviewSheetShell from "@/components/preview/EntityPreviewSheetShell";
 import {
 	previewSectionClass,
@@ -32,9 +33,13 @@ import { useLicenseApprovalWorkflow } from "@/hooks/useLicenseApprovalWorkflow";
 import { usePermissions } from "@/hooks/usePermissions";
 import {
 	type ApprovalQueueItem,
+	slaBadgeClasses,
+	slaBadgeLabel,
 	statusBadgeClasses,
 	statusLabel,
 } from "@/lib/approvals/approvalsListUtils";
+import { buildSeededDeviationReport } from "@/lib/playbook/seeded-deviations";
+import type { DeviationReport } from "@/types/playbook-deviations";
 import { cn, constructFileUrl } from "@/lib/utils";
 
 interface ApprovalDecideSheetProps {
@@ -42,6 +47,8 @@ interface ApprovalDecideSheetProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	canDecide: boolean;
+	/** When set, review UI shows this report instead of the seeded fixture. */
+	deviationReport?: DeviationReport | null;
 }
 
 type Decision = "approved" | "rejected" | "changes_requested";
@@ -51,6 +58,7 @@ export default function ApprovalDecideSheet({
 	open,
 	onOpenChange,
 	canDecide,
+	deviationReport,
 }: ApprovalDecideSheetProps) {
 	const { permissions } = usePermissions();
 	const router = useRouter();
@@ -96,6 +104,35 @@ export default function ApprovalDecideSheet({
 	const [notes, setNotes] = useState("");
 	const [busy, setBusy] = useState(false);
 	const [viewerOpen, setViewerOpen] = useState(false);
+	const [playbookReport, setPlaybookReport] = useState<DeviationReport | null>(
+		null,
+	);
+	const [playbookLoading, setPlaybookLoading] = useState(false);
+	const [playbookSeeded, setPlaybookSeeded] = useState(false);
+
+	useEffect(() => {
+		if (!open || item?.entity !== "contract") {
+			setPlaybookReport(null);
+			setPlaybookLoading(false);
+			setPlaybookSeeded(false);
+			return;
+		}
+
+		if (deviationReport !== undefined) {
+			setPlaybookReport(deviationReport);
+			setPlaybookLoading(false);
+			setPlaybookSeeded(false);
+			return;
+		}
+
+		// 5.4 AC: review UI shows severity for seeded deviations until live
+		// document extract is wired into this sheet.
+		setPlaybookLoading(true);
+		const report = buildSeededDeviationReport();
+		setPlaybookReport(report);
+		setPlaybookSeeded(true);
+		setPlaybookLoading(false);
+	}, [open, item?.entity, item?.id, deviationReport]);
 
 	if (!item) return null;
 
@@ -195,9 +232,14 @@ export default function ApprovalDecideSheet({
 						</Badge>
 						<Badge
 							variant="outline"
-							className="border border-white/50 bg-white/60 text-slate-600"
+							className={cn(
+								"border",
+								item.slaStatus
+									? slaBadgeClasses(item.slaStatus)
+									: "border-white/50 bg-white/60 text-slate-600",
+							)}
 						>
-							Waiting {agingLabel(item)}
+							{slaBadgeLabel(item) || `Waiting ${agingLabel(item)}`}
 						</Badge>
 					</div>
 				}
@@ -279,18 +321,7 @@ export default function ApprovalDecideSheet({
 									</Button>
 								</div>
 							</div>
-						) : (
-							<div className="flex justify-end">
-								<Button
-									variant="outline"
-									className="primary-btn cursor-pointer px-3 sm:px-4"
-									onClick={() => onOpenChange(false)}
-								>
-									<X className="h-4 w-4" />
-									Close
-								</Button>
-							</div>
-						)}
+						) : null}
 					</div>
 				}
 			>
@@ -352,6 +383,23 @@ export default function ApprovalDecideSheet({
 						</div>
 					</section>
 				)}
+
+				{item.entity === "contract" ? (
+					<section className={cn(previewSectionClass, "overflow-hidden p-0")}>
+						<div className={previewSectionHeaderClass}>
+							<p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+								Playbook check
+							</p>
+						</div>
+						<div className="p-3">
+							<PlaybookDeviationsPanel
+								report={playbookReport}
+								loading={playbookLoading}
+								seeded={playbookSeeded}
+							/>
+						</div>
+					</section>
+				) : null}
 
 				<section className={cn(previewSectionClass, "space-y-3 p-4")}>
 					<div className="flex items-start gap-3">
@@ -415,7 +463,7 @@ export default function ApprovalDecideSheet({
 							value={notes}
 							onChange={(e) => setNotes(e.target.value)}
 							placeholder="Required for deny or request changes"
-							className="min-h-[88px] border border-slate-300 bg-white shadow-none focus-visible:border-[#078FAB]"
+							className="min-h-[88px] border-[0.25px] border-slate-300 bg-white shadow-none focus-visible:border-[#078FAB]"
 						/>
 					</div>
 				) : null}

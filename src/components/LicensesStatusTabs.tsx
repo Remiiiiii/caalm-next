@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useLicensesView } from "@/components/LicensesView";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import StatusUnderlineTabs from "@/components/StatusUnderlineTabs";
 import {
 	computeLicenseMetrics,
 	isComplianceAtRisk,
@@ -10,7 +10,6 @@ import {
 	isLicenseExpiringWithinDays,
 	type LicenseStatusTab,
 } from "@/lib/licenses/licensesListUtils";
-import { cn } from "@/lib/utils";
 import type { License } from "@/types/licenses";
 
 interface LicensesStatusTabsProps {
@@ -40,7 +39,7 @@ export default function LicensesStatusTabs({
 		};
 	}, [licenses]);
 
-	const tabs: { value: LicenseStatusTab; label: string; count: number }[] = [
+	const tabs = [
 		{ value: "all", label: "All", count: counts.all },
 		{ value: "active", label: "Active", count: counts.active },
 		{ value: "pending", label: "Pending", count: counts.pending },
@@ -59,33 +58,15 @@ export default function LicensesStatusTabs({
 	];
 
 	return (
-		<div className="px-4 sm:px-6 pt-4 border-b border-slate-200/80">
-			<Tabs
-				value={statusTab}
-				onValueChange={(v) => {
-					setStatusTab(v as LicenseStatusTab);
-					scrollToList();
-				}}
-			>
-				<TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 h-auto gap-1 bg-slate-100/80 p-1">
-					{tabs.map((tab) => (
-						<TabsTrigger
-							key={tab.value}
-							value={tab.value}
-							className={cn(
-								"cursor-pointer text-xs sm:text-sm py-2 data-[state=active]:bg-white data-[state=active]:shadow-sm",
-							)}
-						>
-							<span className="sidebar-gradient-text font-medium">
-								{tab.label}
-							</span>
-							<span className="ml-1.5 text-slate-500 tabular-nums">
-								{tab.count}
-							</span>
-						</TabsTrigger>
-					))}
-				</TabsList>
-			</Tabs>
-		</div>
+		<StatusUnderlineTabs
+			tabs={tabs}
+			value={statusTab}
+			indicatorId="licenses-status-underline"
+			listClassName="grid-cols-2 sm:grid-cols-4 lg:grid-cols-7"
+			onValueChange={(v) => {
+				setStatusTab(v as LicenseStatusTab);
+				scrollToList();
+			}}
+		/>
 	);
 }

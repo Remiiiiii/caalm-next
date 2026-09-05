@@ -160,6 +160,7 @@ document/
 mcpjson.txt
 *.backup
 *.tmp
+.tmp-blueprint-thumbs/
 *.old
 *.bak
 
@@ -170,3 +171,8 @@ graft/
 
 # Local After Effects MCP clone (setup scripts install this separately)
 public/assets/demo/ae-mcp-setup/after-effects-mcp/
+
+# Local Vercel/env dumps (never commit)
+.tmp-*.env
+.tmp-vercel*.env
+

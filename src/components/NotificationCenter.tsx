@@ -153,6 +153,20 @@ const NOTIFICATION_TYPES = {
 		bgColor: "bg-indigo-50/30 border-indigo-400",
 		priority: "high" as const,
 	},
+	"contract-deleted": {
+		label: "Contract Deleted",
+		icon: <Trash2 className="w-4 h-4" />,
+		color: "bg-red-100 text-red-800",
+		bgColor: "bg-destructive/10 border-destructive/30",
+		priority: "high" as const,
+	},
+	"license-deleted": {
+		label: "License Deleted",
+		icon: <Trash2 className="w-4 h-4" />,
+		color: "bg-red-100 text-red-800",
+		bgColor: "bg-destructive/10 border-destructive/30",
+		priority: "high" as const,
+	},
 	info: {
 		label: "Information",
 		icon: <Info className="w-4 h-4" />,
@@ -533,7 +547,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 									value={search}
 									onChange={(e) => setSearch(e.target.value)}
 									data-with-leading-icon="true"
-									className="border border-slate-200 bg-white text-slate-700 placeholder:text-slate-400"
+									className="border-[0.25px] border-slate-200 bg-white text-slate-700 placeholder:text-slate-400"
 								/>
 							</div>
 							<div

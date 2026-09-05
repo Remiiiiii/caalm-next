@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { hasPermission } from "@/lib/rbac/permissions";
 import { daysUntilExpiry } from "@/lib/renewals/autoRenew";
+import { excludeSoftDeletedQuery } from "@/lib/soft-delete";
 import { DEFAULT_ORG_TIMEZONE } from "@/lib/timezone";
 import { getOrganizationTimezone } from "@/lib/timezone/org";
 import {
@@ -501,6 +502,7 @@ export const checkDocumentExpirations = async () => {
 						databaseId: appwriteConfig.databaseId,
 						tableId: appwriteConfig.contractsCollectionId,
 						queries: [
+							excludeSoftDeletedQuery(),
 							Query.isNotNull("contractExpiryDate"),
 							Query.limit(1000),
 						],
@@ -511,6 +513,7 @@ export const checkDocumentExpirations = async () => {
 						databaseId: appwriteConfig.databaseId,
 						tableId: appwriteConfig.licensesCollectionId,
 						queries: [
+							excludeSoftDeletedQuery("licenses"),
 							Query.isNotNull("licenseExpiryDate"),
 							Query.limit(1000),
 						],

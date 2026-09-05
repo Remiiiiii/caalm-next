@@ -911,20 +911,8 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 						</p>
 					</div>
 
-					{/* Footer — centered actions */}
-					<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-center gap-3">
-						<Button
-							type="button"
-							variant="ghost"
-							onClick={() => {
-								setDeleteDialogOpen(false);
-								setDraftToDelete(null);
-							}}
-							className="primary-btn gap-2 px-3 sm:px-4"
-						>
-							<Ban className="h-4 w-4 shrink-0" />
-							Cancel
-						</Button>
+					{/* Footer — primary action; corner X dismisses */}
+					<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3">
 						<Button
 							type="button"
 							onClick={async () => {

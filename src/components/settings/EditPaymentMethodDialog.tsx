@@ -1,6 +1,6 @@
 "use client";
 
-import { Ban, ChevronDown, ChevronUp, CreditCard, Save } from "lucide-react";
+import { ChevronDown, ChevronUp, CreditCard, Save } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -98,7 +98,6 @@ export default function EditPaymentMethodDialog({
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent
 				className="flex max-h-[90vh] w-[calc(100%-1.5rem)] max-w-[480px] flex-col overflow-hidden p-0 shadow-xl sm:w-full"
-				showCloseButton={false}
 			>
 				<div className="absolute top-0 right-0 left-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
 
@@ -161,7 +160,7 @@ export default function EditPaymentMethodDialog({
 								>
 									Year
 								</Label>
-								<div className="relative overflow-hidden rounded-md border border-slate-200 bg-white focus-within:border-[#078FAB] focus-within:ring-1 focus-within:ring-[#078FAB]">
+								<div className="relative overflow-hidden rounded-md border-[0.25px] border-slate-200 bg-white focus-within:border-[#078FAB] focus-within:ring-1 focus-within:ring-[#078FAB]">
 									<Input
 										id="pm-exp-year"
 										type="number"
@@ -219,17 +218,7 @@ export default function EditPaymentMethodDialog({
 
 					<div className="glass-dialog-alert-footer">
 						<div className="text-xs text-slate-500" />
-						<div className="flex items-center gap-3">
-							<Button
-								type="button"
-								variant="outline"
-								className="primary-btn px-3 sm:px-4"
-								onClick={() => onOpenChange(false)}
-								disabled={saving}
-							>
-								<Ban className="h-4 w-4" aria-hidden />
-								Cancel
-							</Button>
+						<div className="flex items-center justify-end gap-3">
 							<Button
 								type="submit"
 								className="primary-btn px-3 sm:px-4"

@@ -1,0 +1,120 @@
+.docx-preview {
+	color: #111;
+	font-family: "Times New Roman", Times, serif;
+	font-size: 15px;
+	line-height: 1.45;
+}
+
+.docx-letterhead {
+	display: flex;
+	flex-direction: row;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 1.5rem;
+	margin: 0 0 1.5rem;
+	width: 100%;
+}
+
+.docx-letterhead-logo {
+	flex: 0 0 auto;
+}
+
+.docx-letterhead img {
+	display: block;
+	flex-shrink: 0;
+	object-fit: contain;
+}
+
+.docx-letterhead-org {
+	flex: 0 1 auto;
+	margin-left: auto;
+	max-width: 55%;
+	color: #111;
+	font-family: inherit;
+	font-size: 15px;
+	line-height: 1.05;
+	text-align: right;
+}
+
+.docx-letterhead-org p {
+	margin: 0;
+	line-height: 1.05;
+	text-align: right;
+}
+
+.docx-letterhead-org p + p {
+	margin-top: 0;
+}
+
+.docx-letterhead-org p:first-child {
+	font-weight: 700;
+}
+
+.docx-title {
+	color: #0f5384;
+	font-size: 1.05rem;
+	font-weight: 700;
+	letter-spacing: 0.02em;
+	margin: 0 0 1rem;
+	text-align: center;
+}
+
+.docx-title strong {
+	color: inherit;
+	font-weight: 700;
+}
+
+.docx-heading {
+	color: #0f5384;
+	font-weight: 700;
+	margin: 1rem 0 0.5rem;
+}
+
+.docx-heading strong {
+	color: inherit;
+}
+
+.docx-token {
+	color: #8a2a00;
+}
+
+.docx-rule {
+	border: 0;
+	border-top: 1px solid #111;
+	margin: 1rem 0 1.25rem;
+}
+
+.docx-preview p {
+  margin: 0 0 0.75rem;
+}
+
+.docx-preview .docx-letterhead-org p {
+  margin: 0;
+  line-height: 1.05;
+}
+
+.docx-preview ul {
+	margin: 0 0 0.75rem;
+	padding-left: 1.25rem;
+}
+
+.docx-paginated {
+	background-color: #f1f5f9;
+	background-image: repeating-linear-gradient(
+		to bottom,
+		#ffffff 0,
+		#ffffff 1048px,
+		#e2e8f0 1048px,
+		#cbd5e1 1056px
+	);
+	padding: 1.5rem 1.5rem 2rem;
+}
+
+.docx-paginated .docx-live-token {
+	border-radius: 2px;
+	transition: background-color 200ms ease;
+}
+
+.docx-paginated .docx-live-token-active {
+	background: rgb(219 234 254);
+}

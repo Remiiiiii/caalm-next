@@ -6,9 +6,11 @@ import {
 	Calendar,
 	Loader2,
 	RefreshCw,
+	Unplug,
 	XCircle,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { VscDebugConnectedCompact } from "react-icons/vsc";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -203,34 +205,29 @@ export default function OutlookIntegrationCard({
 						</div>
 						<div className="flex flex-wrap gap-2">
 							<Button
-								size="sm"
-								variant="outline"
-								className="cursor-pointer"
+								className="btn-primary px-3 sm:px-4 cursor-pointer"
 								onClick={handleSync}
 								disabled={syncing}
 							>
 								{syncing ? (
-									<Loader2 className="h-4 w-4 animate-spin" />
+									<Loader2 className="h-4 w-4 animate-spin" aria-hidden />
 								) : (
-									<RefreshCw className="h-4 w-4" />
+									<RefreshCw className="h-4 w-4" aria-hidden />
 								)}
 								Sync now
 							</Button>
 							<Button
-								size="sm"
-								variant="destructive"
-								className="cursor-pointer"
+								className="btn-delete px-3 sm:px-4 cursor-pointer"
 								onClick={handleEmergencyStop}
 							>
-								<XCircle className="h-4 w-4" />
+								<XCircle className="h-4 w-4" aria-hidden />
 								Emergency stop
 							</Button>
 							<Button
-								size="sm"
-								variant="outline"
-								className="cursor-pointer"
+								className="btn-primary px-3 sm:px-4 cursor-pointer"
 								onClick={handleDisconnect}
 							>
+								<Unplug className="h-4 w-4" aria-hidden />
 								Disconnect
 							</Button>
 						</div>
@@ -238,16 +235,17 @@ export default function OutlookIntegrationCard({
 				) : (
 					<div className="flex flex-col gap-3 w-full">
 						<div className="flex items-start gap-2 p-3 rounded-lg bg-blue/10 border border-blue/20">
-							<AlertCircle className="h-4 w-4 text-[#0f5384] mt-0.5" />
+							<AlertCircle className="h-4 w-4 text-[#0f5384] mt-0.5 shrink-0" />
 							<p className="text-xs text-slate-700">
 								Connect Outlook to sync contract and license events with your
 								calendar.
 							</p>
 						</div>
 						<Button
-							className="primary-btn px-3 sm:px-4 cursor-pointer w-fit"
+							className="btn-primary px-3 sm:px-4 cursor-pointer w-fit"
 							onClick={handleConnect}
 						>
+							<VscDebugConnectedCompact className="h-4 w-4" aria-hidden />
 							Connect Outlook
 						</Button>
 					</div>

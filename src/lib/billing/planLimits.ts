@@ -6,6 +6,7 @@
 import { Query } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { excludeSoftDeletedQuery } from "@/lib/soft-delete";
 import { getOrganization } from "@/lib/rbac/organizations";
 import {
 	type PricingTier,
@@ -92,10 +93,22 @@ export async function getOrgPlanLimits(orgId: string) {
 async function countByOrg(tableId: string, orgId: string): Promise<number> {
 	try {
 		const { tablesDB } = await createAdminClient();
+		const queries = [Query.equal("orgId", orgId), Query.limit(1)];
+		if (
+			tableId === appwriteConfig.licensesCollectionId ||
+			tableId === "licenses"
+		) {
+			queries.splice(1, 0, excludeSoftDeletedQuery("licenses"));
+		} else if (
+			tableId === appwriteConfig.contractsCollectionId ||
+			tableId === "contracts"
+		) {
+			queries.splice(1, 0, excludeSoftDeletedQuery());
+		}
 		const result = await tablesDB.listRows({
 			databaseId: appwriteConfig.databaseId || "default-db",
 			tableId,
-			queries: [Query.equal("orgId", orgId), Query.limit(1)],
+			queries,
 		});
 		return result.total ?? 0;
 	} catch (error) {

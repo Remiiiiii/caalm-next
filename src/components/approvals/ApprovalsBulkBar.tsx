@@ -236,13 +236,6 @@ export default function ApprovalsBulkBar({
 					</div>
 					<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
 						<Button
-							variant="outline"
-							className="cursor-pointer"
-							onClick={() => setDenyOpen(false)}
-						>
-							Cancel
-						</Button>
-						<Button
 							className="primary-btn px-3 sm:px-4 cursor-pointer"
 							disabled={busy || !denyNotes.trim()}
 							onClick={() => bulkSetStatus("inactive")}

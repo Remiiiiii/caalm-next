@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Keep caalm-demo schema parallel with production (685ed87c0009d8189fc7).
+ * Keep caalm-demo schema parallel with production (caalm-dev).
  *
  * Schema only: tables/collections, columns/attributes, indexes.
  * Does not copy row data.
@@ -17,13 +17,20 @@ import { config as loadEnv } from "dotenv";
 const ROOT = path.resolve(import.meta.dirname, "..");
 loadEnv({ path: path.join(ROOT, ".env.local") });
 
-const PROD_DB = process.env.PROD_APPWRITE_DATABASE_ID || "685ed87c0009d8189fc7";
+const PROD_DB =
+	process.env.PROD_APPWRITE_DATABASE_ID ||
+	process.env.NEXT_PUBLIC_APPWRITE_DATABASE;
+if (!PROD_DB) {
+	console.error("Missing PROD_APPWRITE_DATABASE_ID or NEXT_PUBLIC_APPWRITE_DATABASE");
+	process.exit(1);
+}
 const DEMO_DB = "caalm-demo";
 const ENDPOINT = (
 	process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || "https://fra.cloud.appwrite.io/v1"
 ).replace(/\/$/, "");
 const PROJECT = process.env.NEXT_PUBLIC_APPWRITE_PROJECT;
-const API_KEY = process.env.NEXT_APPWRITE_API_KEY;
+const API_KEY =
+	process.env.NEXT_APPWRITE_API_KEY || process.env.NEXT_APPWRITE_KEY;
 
 /** Prod table ID -> demo table ID when IDs intentionally differ. */
 const TABLE_ID_EXCEPTIONS = {
@@ -228,6 +235,21 @@ async function createAttribute(databaseId, tableId, attr) {
 					key: attr.key,
 					required: attr.required,
 					array: attr.array || false,
+				},
+			});
+			break;
+		case "double":
+		case "float":
+			// Appwrite stores floats as type "double" in list responses.
+			await appwrite(`${base}/float`, {
+				method: "POST",
+				body: {
+					key: attr.key,
+					required: attr.required,
+					array: attr.array || false,
+					...(attr.min != null ? { min: attr.min } : {}),
+					...(attr.max != null ? { max: attr.max } : {}),
+					...(attr.default != null ? { default: attr.default } : {}),
 				},
 			});
 			break;

@@ -64,6 +64,21 @@ export const API_AUTHZ_ALLOWLIST: readonly ApiAuthzAllowEntry[] = [
 		reason: "Starts Microsoft OAuth authorize redirect",
 	},
 	{
+		path: "hubspot/auth",
+		class: "oauth",
+		reason: "Starts HubSpot OAuth authorize redirect",
+	},
+	{
+		path: "hubspot/callback",
+		class: "oauth",
+		reason: "HubSpot OAuth redirect callback",
+	},
+	{
+		path: "webhooks/hubspot",
+		class: "webhook",
+		reason: "HubSpot HMAC signature verification (X-HubSpot-Signature-v3)",
+	},
+	{
 		path: "auth/send-otp",
 		class: "public",
 		reason: "Pre-auth OTP send during sign-in",

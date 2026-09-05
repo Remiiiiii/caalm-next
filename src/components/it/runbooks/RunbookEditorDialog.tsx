@@ -317,13 +317,6 @@ export function RunbookEditorDialog({
 					</div>
 					<div className="flex items-center gap-3">
 						<Button
-							variant="outline"
-							className="primary-btn px-3 sm:px-4"
-							onClick={() => onOpenChange(false)}
-						>
-							Cancel
-						</Button>
-						<Button
 							className="primary-btn px-3 sm:px-4"
 							disabled={saving}
 							onClick={() => void handleSave()}

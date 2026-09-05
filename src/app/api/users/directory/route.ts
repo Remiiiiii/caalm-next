@@ -66,13 +66,22 @@ export async function GET(request: NextRequest) {
 				if (!email || status === "inactive" || status === "suspended") {
 					return null;
 				}
+				// Prefer avatar file id; fall back to profileImageId (upload stores either)
 				const avatarRaw = String(user.avatar || "").trim();
-				const avatar =
+				const profileImageId = String(user.profileImageId || "").trim();
+				const candidate =
 					avatarRaw &&
 					!avatarRaw.startsWith("/") &&
 					!/^https?:\/\//i.test(avatarRaw) &&
 					!avatarRaw.includes("avatar-placeholder")
 						? avatarRaw
+						: profileImageId || null;
+				const avatar =
+					candidate &&
+					!candidate.startsWith("/") &&
+					!/^https?:\/\//i.test(candidate) &&
+					!candidate.includes("avatar-placeholder")
+						? candidate
 						: null;
 				return {
 					$id: String(user.$id || ""),

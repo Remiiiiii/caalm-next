@@ -51,6 +51,9 @@ interface ContractStats {
 	activeContracts: number;
 	expiredContracts: number;
 	pendingContracts: number;
+	totalLicenses?: number;
+	activeLicenses?: number;
+	expiredLicenses?: number;
 	complianceRate: number;
 	staffCount: number;
 }
@@ -73,6 +76,9 @@ interface OrganizationAnalyticsData {
 		totalBudget: number;
 		totalActiveStaff: number;
 		complianceRate: number;
+		totalLicenses?: number;
+		activeLicenses?: number;
+		expiredLicenses?: number;
 	};
 }
 
@@ -185,6 +191,8 @@ const OrganizationAnalyticsDashboard = () => {
 		const headers = [
 			"Department",
 			"Contracts",
+			"Licenses",
+			"Expired licenses",
 			"Staff",
 			"Budget",
 			"Compliance %",
@@ -193,6 +201,8 @@ const OrganizationAnalyticsDashboard = () => {
 		const rows = analyticsData.departments.map((dept) => [
 			dept.name,
 			dept.totalStats.totalContracts,
+			dept.totalStats.totalLicenses ?? 0,
+			dept.totalStats.expiredLicenses ?? 0,
 			dept.totalStats.staffCount,
 			dept.totalStats.totalBudget,
 			dept.totalStats.complianceRate,
@@ -543,6 +553,28 @@ const OrganizationAnalyticsDashboard = () => {
 														<FileText
 															className="h-8 w-8"
 															style={{ color: "#524E4E" }}
+														/>
+													</div>
+												</CardContent>
+											</Card>
+											<Card className="glass-card">
+												<div className="glass-card-cap" />
+												<CardContent className="p-4">
+													<div className="flex items-center justify-between">
+														<div>
+															<p className="text-sm text-slate-600">
+																Licenses
+															</p>
+															<p className="text-2xl font-bold text-navy">
+																{dept.totalStats.totalLicenses ?? 0}
+															</p>
+															<p className="text-xs text-slate-500">
+																{dept.totalStats.expiredLicenses ?? 0} expired
+															</p>
+														</div>
+														<Shield
+															className="h-8 w-8"
+															style={{ color: "#0f5384" }}
 														/>
 													</div>
 												</CardContent>

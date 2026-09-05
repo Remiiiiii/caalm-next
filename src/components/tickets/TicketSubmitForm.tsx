@@ -50,11 +50,16 @@ import {
 } from "@/lib/tickets/ticket-intake.constants";
 import { displayTicketNumber } from "@/lib/tickets/ticket-number.utils";
 import { cn } from "@/lib/utils";
+import {
+	getEnterpriseFormatHint,
+	getEnterpriseInputAccept,
+	validateEnterpriseFile,
+} from "@/lib/files/enterprise-file-formats";
 
 type MatrixLevel = "Critical" | "High" | "Medium" | "Low";
 
 const TICKET_FIELD_CLASS =
-	"bg-white !border !border-solid !border-slate-200 focus-visible:!border-[#078FAB] focus-visible:ring-1 focus-visible:ring-[#078FAB]";
+	"bg-white !border-[0.25px] !border-solid !border-slate-200 focus-visible:!border-[#078FAB] focus-visible:ring-1 focus-visible:ring-[#078FAB]";
 
 const SEVERITY_BADGE: Record<MatrixLevel, string> = {
 	Critical: "bg-red/10 text-red border-red/20",
@@ -309,6 +314,11 @@ export function TicketSubmitForm() {
 				if (next.length >= MAX_FILES) {
 					setFileError(`You can attach up to ${MAX_FILES} files.`);
 					break;
+				}
+				const validation = validateEnterpriseFile(file, "attachment");
+				if (!validation.ok) {
+					setFileError(validation.reason);
+					continue;
 				}
 				if (file.size > MAX_FILE_BYTES) {
 					setFileError(`${file.name} exceeds the 10 MB limit.`);
@@ -579,13 +589,14 @@ export function TicketSubmitForm() {
 									Drop files here, or click to browse
 								</p>
 								<p className="text-xs text-slate-500">
-									Screenshots, logs, or documents up to 10 MB each (max{" "}
+									{getEnterpriseFormatHint("attachment")} — up to 10 MB each (max{" "}
 									{MAX_FILES} files)
 								</p>
 								<input
 									ref={fileInputRef}
 									type="file"
 									multiple
+									accept={getEnterpriseInputAccept("attachment")}
 									className="hidden"
 									onChange={(event) => {
 										if (event.target.files?.length) {

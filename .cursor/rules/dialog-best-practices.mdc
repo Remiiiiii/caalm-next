@@ -1,10 +1,18 @@
 ---
 description: Enterprise/professional UI standards for dialogs and modals
 globs: "**/*.{ts,tsx,js,jsx}"
-alwaysApply: false
+alwaysApply: true
 ---
 
 **Note**: This file is part of the comprehensive style guide. For the complete single source of truth, see `global-style-guide.mdc`.
+
+## Hard rule — do not deviate from the CAALM dialog template
+
+- **ALWAYS** use the Standard Dialog Structure below (cap, gradient header, `bg-slate-50` body, footer) for every new or updated dialog/modal.
+- **NEVER** invent alternate dialog chrome: custom icon tiles, white flat headers, solid filled destructive CTAs that replace `.delete-btn`, mock-only layouts, or one-off shells that skip the cap / gradient header / slate body.
+- Prefer shared helpers (`.glass-dialog-wizard-header`, `DeleteConfirmationDialog`, existing `DialogContent` patterns) over hand-rolled dialog shells.
+- **ONLY** depart from this template when the user **explicitly** asks for a different dialog design in that request. A screenshot or product mock is not permission to abandon the template unless they say to follow the mock over CAALM chrome.
+- When unsure, match `ActionDropdown.tsx` / `dialog-best-practices.mdc` first; ask before redesigning dialog chrome.
 
 - All dialogs, modals, and popups in the application must follow the enterprise/professional UI design standards.
 - When creating or updating any dialog, automatically apply the following structure:
@@ -41,24 +49,29 @@ alwaysApply: false
     </div>
 
     {/* Professional Footer */}
-    <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-      <div className="text-xs text-slate-500">Optional footer text</div>
-      <div className="flex items-center gap-3">
-        <Button variant="outline" className="primary-btn px-3 sm:px-4">
-          Cancel
-        </Button>
-        <Button className="primary-btn px-3 sm:px-4">Action</Button>
-      </div>
+    <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3">
+      <Button className="primary-btn px-3 sm:px-4">
+        <Icon className="h-4 w-4" />
+        Action
+      </Button>
     </div>
   </DialogContent>
 </Dialog>
 ```
 
+### Dismiss control
+
+- Prefer the built-in corner **X** on `DialogContent` (`showCloseButton`, **on by default for all variants** including `destructive`).
+- Do **not** add a footer Cancel button unless the user explicitly asks for one, or Cancel does more than dismiss (discard draft, abort upload, cancel an event with side effects).
+- Destructive confirms: keep `variant="destructive"` (blocks overlay dismiss); rely on the corner X to close. Primary footer action is Delete / Confirm only.
+- Destructive delete buttons use `.delete-btn` (soft red, same family as Expired badge) — not solid filled red.
+- Pass `showCloseButton={false}` only when dismiss must be fully blocked.
+
 ## Required Design Elements
 
 ### Form inputs
 
-Text inputs, selects, textareas, and search fields inside dialogs must use a visible `border border-slate-300`. Do not leave them borderless on `bg-slate-50`. See `input-field-borders.mdc`.
+Text inputs, selects, textareas, and search fields inside dialogs must use a visible `border-[0.25px] border-slate-300`. Do not leave them borderless on `bg-slate-50`. See `input-field-borders.mdc`.
 
 ### Professional Cap
 
@@ -67,7 +80,7 @@ Text inputs, selects, textareas, and search fields inside dialogs must use a vis
 
 ### Header Section
 
-- Use gradient background: `bg-gradient-to-r from-blue-50 to-indigo-50`
+- Use gradient background: `bg-gradient-to-r from-blue-50 to-indigo-50` (or `.glass-dialog-wizard-header`)
 - Add `mt-4` to account for the professional cap bar
 - Icon is placed directly next to the title in a flex container: `<div className="flex items-center gap-3">`
 - Icon uses brand color: `text-[#0f5384]` (no circular background)
@@ -85,8 +98,8 @@ Text inputs, selects, textareas, and search fields inside dialogs must use a vis
 ### Footer Section
 
 - Background: `bg-slate-50 border-t border-slate-200`
-- Include helpful text and action buttons
-- Use consistent button styling: `primary-btn px-3 sm:px-4`
+- Primary action on the right; omit Cancel when the corner X is present
+- Use consistent button styling: `primary-btn px-3 sm:px-4` / `delete-btn` for destructive confirms
 
 ## Interactive Elements
 
@@ -105,8 +118,8 @@ Text inputs, selects, textareas, and search fields inside dialogs must use a vis
 
 ### Buttons
 
-- Primary action buttons: `className="primary-btn px-3 sm:px-4"`
-- Include icons in buttons when appropriate
+- Primary action buttons: `className="btn-primary px-3 sm:px-4"` (or `primary-btn` — same styles)
+- **ALWAYS** include a Lucide icon (`h-4 w-4`) on `btn-primary` / `primary-btn` buttons — never text-only
 - Use consistent spacing: `gap-3` between buttons
 
 ## Color Palette
@@ -139,15 +152,10 @@ Example structure:
 ```tsx
 <button className="w-full text-left p-4 rounded-lg border-2 border-slate-200 bg-white hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 group shadow-sm hover:shadow-md">
   <div className="flex items-start gap-4">
-    {/* Icon */}
     <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:from-blue-200 group-hover:to-indigo-200 transition-colors">
       <Icon className="h-5 w-5 text-blue-600" />
     </div>
-
-    {/* Content */}
     <div className="flex-1 min-w-0">{/* Title and metadata */}</div>
-
-    {/* Indicator */}
     <ChevronRight className="h-5 w-5 text-slate-400 group-hover:text-blue-600 transition-colors" />
   </div>
 </button>
@@ -155,6 +163,7 @@ Example structure:
 
 ## Consistency Requirements
 
+- NEVER deviate from the CAALM dialog template unless the user explicitly requests a different design
 - NEVER use plain DialogContent without the professional structure
 - NEVER skip the cap bar at the top
 - NEVER use flat backgrounds in headers - always use the gradient
@@ -171,184 +180,13 @@ Example structure:
 
 ## Glass Card Design
 
-All cards and dialogs should use the glass-card style for a modern, professional appearance:
-
-### Glass Card Structure
-
-```tsx
-<Card className="glass-card">
-  <div className="glass-card-cap" />
-  <CardHeader>
-    <CardTitle>Title</CardTitle>
-  </CardHeader>
-  <CardContent>{/* Content */}</CardContent>
-</Card>
-```
-
-### Glass Card CSS Classes
-
-- **`.glass-card`**: Main container with backdrop blur, white background with opacity, border, and shadow
-
-  - Applied to: `<Card className="glass-card">`
-  - Provides: `background: rgba(255, 255, 255, 0.1)`, `backdrop-filter: blur(12px)`, border and shadow effects
-
-- **`.glass-card-cap`**: Decorative cap at the top of the card
-
-  - Applied to: `<div className="glass-card-cap" />` (placed immediately after Card opening tag)
-  - Provides: Thin horizontal bar at the top with `background: #d6d7d8` and `opacity: 0.7`
-
-- **`.glass-card-inner`**: Inner content wrapper for nested glass effects
-  - Applied to: Nested content areas that need additional blur effect
-  - Provides: Enhanced backdrop blur for layered content
-
-### When to Use Glass Cards
-
-- **ALWAYS** use glass-card for:
-
-  - Dashboard cards and widgets
-  - Audit log cards
-  - Stat/metric cards
-  - Content cards in dialogs
-  - Widget components (RecentActivity, QuickNotes, WeatherWidget, etc.)
-
-- **ALWAYS** include the glass-card-cap div immediately after the Card opening tag
-- **ALWAYS** apply glass-card class to Card components in audit logs, dashboards, and widgets
-
-### Glass Card Examples
-
-```tsx
-// Stat Card (Dashboard Pattern - NO CardHeader, content directly in CardContent)
-<Card className="glass-card">
-  <div className="glass-card-cap" />
-  <CardContent className="p-4 sm:p-6">
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="text-sm font-medium sidebar-gradient-text">
-          Stat Title
-        </p>
-        <div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-          <span>Value</span>
-          <span className="inline-block ml-2 pb-1">
-            <Icon className="h-8 w-8 text-slate-600" />
-          </span>
-        </div>
-        <p className="text-xs text-slate-600 mt-1">Description</p>
-      </div>
-    </div>
-  </CardContent>
-</Card>
-
-// Widget Card (with CardHeader)
-<Card className="glass-card w-full h-[200px] sm:h-[250px] lg:h-[300px]">
-  <div className="glass-card-cap" />
-  <CardHeader className="pb-3 pt-6 px-4">
-    <CardTitle>Widget Title</CardTitle>
-  </CardHeader>
-  <CardContent className="px-4 pb-2">
-    {/* Content */}
-  </CardContent>
-</Card>
-
-// Content Card (NO CardHeader, content directly in CardContent)
-<Card className="glass-card">
-  <div className="glass-card-cap" />
-  <CardContent className="p-4 sm:p-6">
-    {/* Content directly here, no CardHeader */}
-  </CardContent>
-</Card>
-
-// Dialog with Glass Card
-<DialogContent className="glass-card max-w-[600px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl">
-  <div className="glass-card-cap" />
-  {/* Dialog content */}
-</DialogContent>
-```
-
-## Page Structure Standards
-
-### Page Container
-
-All pages must use the standard container structure:
-
-```tsx
-<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
-  {/* Page content */}
-</div>
-```
-
-### Page Header
-
-Page headers follow a consistent pattern:
-
-```tsx
-{/* Header */}
-<div className="flex items-center gap-4 mb-4 justify-start self-start w-full">
-  <h1 className="h1 capitalize sidebar-gradient-text">Page Title</h1>
-</div>
-```
-
-- Use `h1` class with `capitalize` and `sidebar-gradient-text`
-- Action buttons should be in a separate row below the header
-- Example: `ContentCreatorDashboard.tsx`, `[type]/page.tsx` (contracts page)
-
-### Stat Cards Grid
-
-Stat cards use a consistent grid layout:
-
-```tsx
-<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-  {/* Stat cards */}
-</div>
-```
-
-- Grid gap: `gap-6` (NOT `gap-4`)
-- Responsive: 1 column mobile, 2 columns tablet, 4 columns desktop
-- Bottom margin: `mb-6`
-
-### Stat Card Structure
-
-**IMPORTANT**: Stat cards on dashboard pages do NOT use `CardHeader`. Content goes directly in `CardContent`:
-
-```tsx
-<Card className="glass-card">
-  <div className="glass-card-cap" />
-  <CardContent className="p-4 sm:p-6">
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="text-sm font-medium sidebar-gradient-text">
-          Title
-        </p>
-        <div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-          <span>Value</span>
-          <span className="inline-block ml-2 pb-1">
-            <Icon className="h-8 w-8 text-slate-600" />
-          </span>
-        </div>
-        <p className="text-xs text-slate-600 mt-1">Description</p>
-      </div>
-    </div>
-  </CardContent>
-</Card>
-```
-
-**Key Points:**
-- NO `CardHeader` or `CardTitle` in stat cards
-- NO `bg-slate-50` in stat card `CardContent` (only in dialogs)
-- Padding: `p-4 sm:p-6` (responsive padding)
-- Title: `text-sm font-medium sidebar-gradient-text`
-- Value: `text-3xl font-bold text-slate-700`
-- Icon: `h-8 w-8 text-slate-600` inline with value
-- Description: `text-xs text-slate-600 mt-1`
+All cards and dialogs should use the glass-card style for a modern, professional appearance. See `global-style-guide.mdc` for glass-card patterns and page structure standards.
 
 ## Examples in Codebase
 
 Reference these components for correct implementation:
 
 - `ActionDropdown.tsx` - Re-assign dialog (primary reference for current header style)
-- `OutlookStyleCalendar.tsx` - OverflowDialog
-- `OutlookStyleCalendar.tsx` - Event Review Dialog
-- `OutlookStyleCalendar.tsx` - Delete Confirmation Modal
-- `RecentActivity.tsx` - Glass card implementation
-- `QuickNotesWidget.tsx` - Glass card with cap
-- `WeatherWidget.tsx` - Glass card structure
-- `src/app/(root)/audits/audit/page.tsx` - Audit logs with glass cards
+- `OutlookStyleCalendar.tsx` - OverflowDialog / Event Review Dialog
+- `src/components/ui/delete-confirmation-dialog.tsx` - Destructive confirm with corner X
+- `RecentActivity.tsx` / `QuickNotesWidget.tsx` / `WeatherWidget.tsx` - Glass cards

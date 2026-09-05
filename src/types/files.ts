@@ -36,4 +36,7 @@ export interface UIFileDoc extends Models.Document {
 	// Storage/other optional attributes referenced by UI
 	bucketFileId?: string;
 	description?: string;
+	deletedAt?: string | null;
+	deletedBy?: string | null;
+	approvalWorkflowState?: string;
 }

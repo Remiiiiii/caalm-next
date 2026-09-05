@@ -7,6 +7,7 @@ import { Query } from "node-appwrite";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getUserById } from "@/lib/actions/user.actions";
 import { hasPermission } from "@/lib/rbac/permissions";
+import { excludeSoftDeletedQuery } from "@/lib/soft-delete";
 
 export type ContractListScope =
 	| { mode: "all_org" }
@@ -56,11 +57,13 @@ export async function getContractListScope(
  * Appwrite query fragments for contract listRows (AND).
  */
 export function buildContractQueries(scope: ContractListScope) {
+	const hidden = excludeSoftDeletedQuery();
 	switch (scope.mode) {
 		case "all_org":
-			return [];
+			return [hidden];
 		case "department":
 			return [
+				hidden,
 				Query.or([
 					Query.equal("department", scope.department),
 					Query.equal("assignToDepartment", scope.department),
@@ -68,12 +71,13 @@ export function buildContractQueries(scope: ContractListScope) {
 			];
 		case "own":
 			return [
+				hidden,
 				Query.or([
 					Query.equal("contractOwnerId", scope.userId),
 					Query.equal("ownerId", scope.userId),
 				]),
 			];
 		default:
-			return [];
+			return [hidden];
 	}
 }

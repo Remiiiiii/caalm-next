@@ -25,6 +25,7 @@ type FileType = "image" | "video" | "audio" | "document" | "other";
 import { Query } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite/admin";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { excludeSoftDeletedQuery } from "@/lib/soft-delete";
 
 interface SearchParamProps {
 	searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -44,7 +45,7 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
 
 	// Special handling for contracts - get ALL contracts from contracts collection
 	if (type.toLowerCase() === "contracts") {
-		const queries = [];
+		const queries = [excludeSoftDeletedQuery()];
 
 		if (searchText) {
 			queries.push(Query.contains("contractName", searchText));

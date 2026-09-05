@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { writeRowWithSchemaDriftRecovery } from "@/lib/appwrite/schemaDriftRecovery";
 import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
+import { excludeSoftDeletedQuery, softDeleteFields } from "@/lib/soft-delete";
 import type { RenewalRecord } from "@/types/licenses";
 
 /**
@@ -455,20 +456,64 @@ export class LicenseService {
 	}
 
 	/**
-	 * Delete license
+	 * Soft-delete a license so the row stays for audit/recovery.
 	 */
-	static async deleteLicense(licenseId: string): Promise<void> {
+	static async deleteLicense(
+		licenseId: string,
+		deletedBy?: string,
+		options?: {
+			deletedByName?: string | null;
+			deletedByAccountId?: string | null;
+		},
+	): Promise<any> {
 		const { tablesDB } = await createAdminClient();
 
 		if (!appwriteConfig.databaseId || !appwriteConfig.licensesCollectionId) {
 			throw new Error("Database configuration missing");
 		}
 
-		await tablesDB.deleteRow({
+		const existing = await LicenseService.getLicenseById(licenseId);
+		if (existing?.deletedAt) {
+			return existing;
+		}
+
+		const license = await tablesDB.updateRow({
 			databaseId: appwriteConfig.databaseId,
 			tableId: appwriteConfig.licensesCollectionId,
 			rowId: licenseId,
+			data: softDeleteFields(deletedBy),
 		});
+
+		const mapped = LicenseService.mapFieldsFromDatabase(license);
+
+		try {
+			const { notifyLicenseDeleted } = await import(
+				"@/lib/notifications/document-delete-notifications"
+			);
+			await notifyLicenseDeleted({
+				licenseId,
+				licenseName:
+					mapped.licenseName ||
+					existing?.licenseName ||
+					licenseId,
+				orgId: mapped.orgId || existing?.orgId,
+				department:
+					mapped.department ||
+					mapped.division ||
+					existing?.department ||
+					existing?.division,
+				deletedByUserId: deletedBy,
+				deletedByAccountId: options?.deletedByAccountId,
+				deletedByName: options?.deletedByName,
+			});
+		} catch (notifyError) {
+			console.error(
+				"[LicenseService.deleteLicense] Failed to notify license delete:",
+				notifyError,
+			);
+		}
+
+		return mapped;
 	}
 
 	/**
@@ -492,7 +537,10 @@ export class LicenseService {
 			throw new Error("Database configuration missing");
 		}
 
-		const queries: string[] = [Query.equal("orgId", orgId)];
+		const queries: string[] = [
+			Query.equal("orgId", orgId),
+			excludeSoftDeletedQuery("licenses"),
+		];
 
 		if (filters?.search) {
 			queries.push(
@@ -622,6 +670,18 @@ export class LicenseService {
 		},
 	): Promise<any> {
 		const license = await LicenseService.getLicenseById(licenseId);
+		const wasExpired = String(license.status || "").toLowerCase() === "expired";
+		if (wasExpired) {
+			const { isRenewalBlocked } = await import(
+				"@/lib/approvals/ExpirationAttestationService"
+			);
+			const orgId = String(license.orgId || "");
+			if (orgId && (await isRenewalBlocked(orgId, "license", licenseId))) {
+				throw new Error(
+					"File and complete the expiration attestation before renewing",
+				);
+			}
+		}
 
 		const renewalRecord: RenewalRecord = {
 			renewalDate: renewalData.renewalDate,
@@ -656,18 +716,33 @@ export class LicenseService {
 				updateData.licenseExpiryDate = newExpiration
 					.toISOString()
 					.split("T")[0];
-				updateData.status = "active";
+				updateData.status = wasExpired ? "pending-review" : "active";
 			}
+		}
+
+		if (wasExpired) {
+			updateData.status = "pending-review";
+			updateData.approvalWorkflowState = "";
+			updateData.currentApprovalStage = "";
 		}
 
 		if (renewalData.cost) {
 			updateData.cost = renewalData.cost;
 		}
 
-		return await LicenseService.updateLicense(licenseId, {
+		const updated = await LicenseService.updateLicense(licenseId, {
 			...license,
 			...updateData,
 		});
+
+		if (wasExpired) {
+			const { initializeLicenseOnUpload } = await import(
+				"@/lib/approvals/LicenseApprovalWorkflowService"
+			);
+			await initializeLicenseOnUpload({ licenseId });
+		}
+
+		return updated;
 	}
 
 	/**
@@ -692,6 +767,7 @@ export class LicenseService {
 			tableId: appwriteConfig.licensesCollectionId,
 			queries: [
 				Query.equal("orgId", orgId),
+				excludeSoftDeletedQuery("licenses"),
 				Query.between(
 					"licenseExpiryDate",
 					today.toISOString().split("T")[0],

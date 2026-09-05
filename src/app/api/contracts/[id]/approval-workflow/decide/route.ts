@@ -51,14 +51,15 @@ export async function POST(
 			return validationErrorResponse("Invalid decision", requestId);
 		}
 
+		// Workflow assignees use Auth accountId; RBAC checks use users-table $id.
 		const viewerUserId = user.accountId || user.$id;
 		const org = await getUserDefaultOrganization(user.$id);
 		const orgId = org?.orgId;
 		const canReview = orgId
-			? await hasPermission(viewerUserId, PERMISSIONS.CONTRACTS.REVIEW, orgId)
+			? await hasPermission(user.$id, PERMISSIONS.CONTRACTS.REVIEW, orgId)
 			: false;
 		const canApprove = orgId
-			? await hasPermission(viewerUserId, PERMISSIONS.CONTRACTS.APPROVE, orgId)
+			? await hasPermission(user.$id, PERMISSIONS.CONTRACTS.APPROVE, orgId)
 			: false;
 		const isAdminOverride = orgId
 			? await hasPermission(user.$id, PERMISSIONS.APPROVALS.OVERRIDE, orgId)
@@ -106,14 +107,16 @@ export async function POST(
 		const message =
 			error instanceof Error ? error.message : "Failed to record decision";
 		const status =
-			message.includes("not an assignee") ||
-			message.includes("cannot approve") ||
-			message.includes("cannot be decided") ||
-			message.includes("No active approval step")
-				? 403
-				: message.includes("Notes are required")
-					? 400
-					: 500;
+			message.includes("expired") || message.includes("inactive")
+				? 409
+				: message.includes("not an assignee") ||
+						message.includes("cannot approve") ||
+						message.includes("cannot be decided") ||
+						message.includes("No active approval step")
+					? 403
+					: message.includes("Notes are required")
+						? 400
+						: 500;
 		return errorResponse(message, status, { requestId });
 	}
 }

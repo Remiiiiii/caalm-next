@@ -7,6 +7,7 @@ import { contractToApprovalItem } from "@/lib/approvals/approvalsListUtils";
 import { createAdminClient } from "@/lib/appwrite/admin";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { getUserPermissions } from "@/lib/rbac/permissions";
+import { excludeSoftDeletedQuery } from "@/lib/soft-delete";
 import type { UIFileDoc } from "@/types/files";
 
 export default async function ContractsApprovalsPage() {
@@ -27,7 +28,11 @@ export default async function ContractsApprovalsPage() {
 		const contractsResult = await tablesDB.listRows({
 			databaseId: appwriteConfig.databaseId!,
 			tableId: appwriteConfig.contractsCollectionId!,
-			queries: [Query.orderDesc("$createdAt"), Query.limit(500)],
+			queries: [
+				excludeSoftDeletedQuery("contracts"),
+				Query.orderDesc("$createdAt"),
+				Query.limit(500),
+			],
 		});
 
 		const isValidDocumentId = (id: string | null | undefined): boolean => {
@@ -82,6 +87,9 @@ export default async function ContractsApprovalsPage() {
 					vendor: contract.vendor as string | undefined,
 					contractNumber: contract.contractNumber as string | undefined,
 					department: contract.department as string | undefined,
+					approvalWorkflowState: contract.approvalWorkflowState as
+						| string
+						| undefined,
 					assignedManagers: contract.assignedManagers as string[] | undefined,
 					description: contract.description as string | undefined,
 					bucketFileId: String(

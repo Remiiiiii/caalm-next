@@ -24,6 +24,11 @@ import {
 } from "@/lib/tickets/ticket-intake.constants";
 import { displayTicketNumber } from "@/lib/tickets/ticket-number.utils";
 import { cn } from "@/lib/utils";
+import {
+	getEnterpriseFormatHint,
+	getEnterpriseInputAccept,
+	validateEnterpriseFile,
+} from "@/lib/files/enterprise-file-formats";
 import { TicketSeverityPill, TicketStatusPill } from "./TicketStatusPill";
 
 const MAX_FILES = 5;
@@ -156,6 +161,11 @@ export function TicketDetail({
 				if (next.length >= MAX_FILES) {
 					setFileError(`You can attach up to ${MAX_FILES} files.`);
 					break;
+				}
+				const validation = validateEnterpriseFile(file, "attachment");
+				if (!validation.ok) {
+					setFileError(validation.reason);
+					continue;
 				}
 				if (file.size > MAX_FILE_BYTES) {
 					setFileError(`${file.name} exceeds the 10 MB limit.`);
@@ -407,12 +417,13 @@ export function TicketDetail({
 							<span className="text-xs text-slate-500">
 								{attachments.length > 0
 									? `${attachments.length}/${MAX_FILES} attached`
-									: "Attach context files"}
+									: getEnterpriseFormatHint("attachment")}
 							</span>
 							<input
 								ref={fileInputRef}
 								type="file"
 								multiple
+								accept={getEnterpriseInputAccept("attachment")}
 								className="hidden"
 								disabled={!canResolve || resolving}
 								onChange={(event) => {

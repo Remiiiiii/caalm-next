@@ -154,6 +154,24 @@ export const DOCS_NAV: DocsNavGroup[] = [
 				summary: "Browse, upload, assign, review, and renew contracts.",
 			},
 			{
+				title: "Clause Library",
+				slug: "reference/clause-library",
+				path: "reference/clause-library",
+				summary: "Store and version standard contract wording.",
+			},
+			{
+				title: "Contract templates",
+				slug: "reference/contract-templates",
+				path: "reference/contract-templates",
+				summary: "Assemble published clauses into a reusable recipe.",
+			},
+			{
+				title: "Funding and retention",
+				slug: "reference/funding-retention",
+				path: "reference/funding-retention",
+				summary: "Protect live dollars and track new funding pursuits.",
+			},
+			{
 				title: "Licenses",
 				slug: "reference/licenses",
 				path: "reference/licenses",
@@ -306,6 +324,12 @@ export const DOCS_NAV: DocsNavGroup[] = [
 				path: "admin/integrations",
 				summary: "Calendar sync and org API keys.",
 			},
+			{
+				title: "HubSpot and Salesforce CRM origin",
+				slug: "admin/crm-integrations",
+				path: "admin/crm-integrations",
+				summary: "Connect HubSpot, request Salesforce, pipeline stages, and CRM troubleshooting.",
+			},
 		],
 	},
 	{
@@ -386,6 +410,12 @@ export const DOCS_NAV: DocsNavGroup[] = [
 				slug: "troubleshooting/demo-vs-production",
 				path: "troubleshooting/demo-vs-production",
 				summary: "Why the sandbox behaves differently.",
+			},
+			{
+				title: "HubSpot or Salesforce not connecting",
+				slug: "troubleshooting/crm-origin",
+				path: "admin/crm-integrations",
+				summary: "OAuth, pipeline stage, drafts, webhooks, and Salesforce setup request.",
 			},
 		],
 	},

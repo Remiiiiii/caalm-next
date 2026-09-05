@@ -9,6 +9,10 @@ import { appwriteConfig } from "@/lib/appwrite/config";
 import { logAuditEvent } from "@/lib/services/audit-logger";
 import CacheManager from "@/lib/services/cache-manager";
 import { constructFileUrl, getFileType } from "@/lib/utils";
+import {
+	assertEnterpriseFileAllowed,
+	EnterpriseFileFormatError,
+} from "@/lib/files/enterprise-file-formats";
 
 export async function POST(request: NextRequest) {
 	try {
@@ -36,6 +40,15 @@ export async function POST(request: NextRequest) {
 				{ error: "File size exceeds 50MB limit" },
 				{ status: 400 },
 			);
+		}
+
+		try {
+			assertEnterpriseFileAllowed(file, "attachment");
+		} catch (error) {
+			if (error instanceof EnterpriseFileFormatError) {
+				return NextResponse.json({ error: error.message }, { status: 400 });
+			}
+			throw error;
 		}
 
 		// Validate configuration

@@ -130,7 +130,7 @@ export function computeUnlocked(snapshot: LockSnapshot): {
 				bumpSection(section, "locked");
 			}
 			openedIncompleteSection = true;
-			break;
+			continue;
 		}
 
 		if (section.status === "locked") {
@@ -143,15 +143,25 @@ export function computeUnlocked(snapshot: LockSnapshot): {
 		}
 
 		openedIncompleteSection = true;
-		break;
 	}
 
-	// Ensure later sections stay locked when we already opened one incomplete section
+	// Later unfinished sections stay locked. Sections whose tasks are already
+	// all complete stay complete even if an earlier section is still open.
 	if (openedIncompleteSection) {
 		const firstOpen = sections.find((s) => s.status !== "complete");
 		if (firstOpen) {
 			for (const later of sections) {
 				if (later.sectionNumber <= firstOpen.sectionNumber) continue;
+				const laterTasks = tasks.filter((t) => t.sectionId === later.$id);
+				const allDone =
+					laterTasks.length > 0 &&
+					laterTasks.every((t) => t.status === "complete");
+				if (allDone) {
+					if (later.status !== "complete") {
+						bumpSection(later, "complete");
+					}
+					continue;
+				}
 				if (later.status !== "locked") {
 					bumpSection(later, "locked");
 				}

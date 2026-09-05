@@ -3,6 +3,9 @@ import { InputFile } from "node-appwrite/file";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import {
+	assertEnterpriseFileAllowed,
+} from "@/lib/files/enterprise-file-formats";
+import {
 	buildGitHubIssueBody,
 	createGitHubIssue,
 } from "./github-tickets.service";
@@ -44,6 +47,7 @@ export async function uploadTicketAttachments(
 	const ids: string[] = [];
 
 	for (const file of files.slice(0, 5)) {
+		assertEnterpriseFileAllowed(file, "attachment");
 		const buffer = Buffer.from(await file.arrayBuffer());
 		const uploaded = await storage.createFile({
 			bucketId,

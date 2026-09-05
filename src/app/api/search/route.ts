@@ -6,6 +6,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { Query } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { excludeSoftDeletedQuery } from "@/lib/soft-delete";
 import { logApiPerformance } from "@/lib/monitoring/performance";
 import { CACHE_KEYS, CACHE_TTLS } from "@/lib/services/cache-keys";
 import CacheManager from "@/lib/services/cache-manager";
@@ -117,6 +118,7 @@ async function searchContracts(tablesDB: any, query: string, limit: number) {
 		appwriteConfig.databaseId,
 		appwriteConfig.contractsCollectionId,
 		[
+			excludeSoftDeletedQuery(),
 			Query.or([
 				Query.contains("title", query),
 				Query.contains("description", query),

@@ -10,14 +10,15 @@ import {
 	HelpCircle,
 	Loader2,
 	MessageSquare,
-	Minimize2,
 	NotebookPen,
+	PanelRightClose,
 	Sparkles,
 } from "lucide-react";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AssistantAvatar from "@/components/assistant/AssistantAvatar";
 import { Button } from "@/components/ui/button";
+import { SheetHeaderIcon } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -986,8 +987,10 @@ Contract: ${contractTitle}`;
 		<div className="flex flex-col h-full bg-light-400/30 backdrop-blur">
 			{/* Header */}
 			<div className="flex items-center justify-between p-4 border-b border-light-300 bg-white/80 backdrop-blur">
-				<div className="flex items-center gap-2">
-					<AssistantAvatar size="sm" alt="AI Assistant" className="h-10 w-10" />
+				<div className="flex items-center gap-3">
+					<SheetHeaderIcon>
+						<AssistantAvatar size="xs" alt="AI Assistant" />
+					</SheetHeaderIcon>
 					<h3 className="font-bold sidebar-gradient-text">
 						{mode === "pre-reads"
 							? "Pre-Reads Recommendations"
@@ -996,12 +999,14 @@ Contract: ${contractTitle}`;
 				</div>
 				{onClose && (
 					<Button
+						type="button"
 						variant="ghost"
-						size="sm"
+						size="icon"
 						onClick={onClose}
-						className="shadow-drop-1"
+						className="h-8 w-8 cursor-pointer text-slate-600 hover:bg-white/50 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
+						aria-label="Hide"
 					>
-						<Minimize2 className="h-4 w-4" />
+						<PanelRightClose className="h-4 w-4" />
 					</Button>
 				)}
 			</div>

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getCatalogLinkedPrNumbers } from "./catalog";
 import {
+	clearOverviewCacheForTests,
 	completeSectionFromMerge,
 	getOverview,
 	recordCiTestResult,
@@ -11,11 +12,14 @@ import { resetRoadmapMemoryForTests } from "./store";
 
 const fetchPullRequestStatus = vi.fn();
 const listOpenPullRequests = vi.fn(async () => []);
+const fetchRoadmapCompletionGate = vi.fn();
 
 vi.mock("./github", () => ({
 	fetchPullRequestStatus: (args: { prNumber: number }) =>
 		fetchPullRequestStatus(args),
 	listOpenPullRequests: () => listOpenPullRequests(),
+	fetchRoadmapCompletionGate: (args: { commitSha: string }) =>
+		fetchRoadmapCompletionGate(args),
 	postPullRequestComment: vi.fn(async () => ({
 		posted: false,
 		detail: "skip",
@@ -36,15 +40,35 @@ function mergedPr(prNumber: number, sha: string) {
 	};
 }
 
+function greenGate() {
+	return {
+		ok: true as const,
+		playwrightPushPassed: true,
+		deployProductionPassed: true,
+	};
+}
+
+function redGate(reason: string) {
+	return {
+		ok: false as const,
+		reason,
+		playwrightPushPassed: false,
+		deployProductionPassed: false,
+	};
+}
+
 describe("roadmap service", () => {
 	beforeEach(() => {
 		resetRoadmapMemoryForTests();
+		clearOverviewCacheForTests();
 		fetchPullRequestStatus.mockReset();
 		fetchPullRequestStatus.mockImplementation(async ({ prNumber }) =>
 			unknownPr(prNumber),
 		);
 		listOpenPullRequests.mockReset();
 		listOpenPullRequests.mockResolvedValue([]);
+		fetchRoadmapCompletionGate.mockReset();
+		fetchRoadmapCompletionGate.mockResolvedValue(greenGate());
 	});
 
 	it("seeds section 0 available with tasks locked and overall progress at 0", async () => {
@@ -237,5 +261,48 @@ describe("roadmap service", () => {
 		const byCode = Object.fromEntries(tree.tasks.map((t) => [t.taskCode, t]));
 		expect(byCode["3.1"]?.status).toBe("complete");
 		expect(byCode["3.5"]?.status).not.toBe("complete");
+	});
+
+	it("does not mark tasks complete from merge alone without required CI checks", async () => {
+		fetchRoadmapCompletionGate.mockResolvedValue(
+			redGate(
+				"Waiting for Tests and Vercel deploy / Deploy to Vercel (production) to pass",
+			),
+		);
+		fetchPullRequestStatus.mockImplementation(async ({ prNumber }) => {
+			if (prNumber === 51) return mergedPr(51, "sha51");
+			return unknownPr(prNumber);
+		});
+
+		const overview = await getOverview();
+		const s3 = overview.sections.find((s) => s.sectionNumber === 3)!;
+		expect(s3.taskCounts.complete).toBe(0);
+	});
+
+	it("refuses section completion when Deploy to Vercel (production) is missing", async () => {
+		fetchRoadmapCompletionGate.mockResolvedValue(
+			redGate(
+				"Waiting for Tests and Vercel deploy / Deploy to Vercel (production) to pass",
+			),
+		);
+		await recordCiTestResult({
+			prNumber: 49,
+			commitSha: "nodeploy",
+			result: "passed",
+			logsUrl: "https://ci.example/49",
+			summary: "playwright only",
+		});
+
+		const merged = await completeSectionFromMerge({
+			prNumber: 49,
+			mergeCommitSha: "nodeploy",
+			baseBranch: "main",
+		});
+		expect(merged.completed).toBe(false);
+		expect(merged.reason).toMatch(/Deploy to Vercel \(production\)/i);
+
+		const overview = await getOverview();
+		const s0 = overview.sections.find((s) => s.sectionNumber === 0)!;
+		expect(s0.taskCounts.complete).toBe(0);
 	});
 });

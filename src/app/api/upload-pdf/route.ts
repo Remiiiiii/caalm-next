@@ -2,6 +2,11 @@ import { existsSync, mkdirSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { type NextRequest, NextResponse } from "next/server";
+import {
+	EnterpriseFileFormatError,
+	assertEnterpriseFileAllowed,
+	getEnterpriseFileExtension,
+} from "@/lib/files/enterprise-file-formats";
 
 export async function POST(request: NextRequest) {
 	try {
@@ -12,10 +17,18 @@ export async function POST(request: NextRequest) {
 			return NextResponse.json({ error: "No file provided" }, { status: 400 });
 		}
 
-		// Check if it's a PDF
-		if (!file.type.includes("pdf")) {
+		try {
+			assertEnterpriseFileAllowed(file, "contractPrimary");
+		} catch (error) {
+			if (error instanceof EnterpriseFileFormatError) {
+				return NextResponse.json({ error: error.message }, { status: 400 });
+			}
+			throw error;
+		}
+
+		if (getEnterpriseFileExtension(file.name) !== "pdf") {
 			return NextResponse.json(
-				{ error: "Only PDF files are supported" },
+				{ error: "Only PDF files are supported for AI analysis" },
 				{ status: 400 },
 			);
 		}

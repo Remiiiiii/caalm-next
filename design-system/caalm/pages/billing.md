@@ -72,9 +72,9 @@ Patterns from:
 
 | Product | Stripe ID | Monthly | Yearly |
 |---------|-----------|---------|--------|
-| CAALM Starter | `prod_UrsY8xHlfRCU3z` | `price_1Ts8nnEcIRVzi89ssgnJqT5O` ($79) | `price_1Ts8o1EcIRVzi89shUqLqfxd` |
-| CAALM Growth | `prod_UrsYVP25KIDdt6` | `price_1Ts8o3EcIRVzi89s2e0HMLdS` ($299) | `price_1Ts8o4EcIRVzi89sT5qx4zsN` |
-| CAALM Enterprise | `prod_UrsYNL7QlzzNCV` | `price_1Ts8o6EcIRVzi89sI4fjcZ0r` ($999) | `price_1Ts8o7EcIRVzi89sjETnxfVI` |
+| CAALM Starter | `prod_VBzjog1u27R7Sh` | `price_1UBbkCAuUylMuLSJLgF2k9PD` ($79) | `price_1UBbkCAuUylMuLSJvYdxvzGM` ($758) |
+| CAALM Growth | `prod_VBzjJhkifHKF0E` | `price_1UBbkDAuUylMuLSJyEZXQopj` ($449) | `price_1UBbkDAuUylMuLSJCST3jtVJ` ($4,310) |
+| CAALM Enterprise | `prod_VBzjtfssiPr53Q` | `price_1UBbkDAuUylMuLSJeyZqaq1d` (sales list) | `price_1UBbkEAuUylMuLSJkBVVGFAf` (sales list) |
 
 ## Backend API (UI plug-and-play)
 

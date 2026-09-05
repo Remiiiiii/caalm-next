@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Ban, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type React from "react";
 import { useState } from "react";
@@ -21,6 +21,7 @@ import {
 	FormLabel,
 	FormMessage,
 } from "@/components/ui/form";
+import { CurrencySelect } from "@/components/ui/currency-select";
 import { Input } from "@/components/ui/input";
 import {
 	Select,
@@ -367,21 +368,11 @@ export default function LicenseForm({
 									render={({ field }) => (
 										<FormItem>
 											<FormLabel>Currency</FormLabel>
-											<Select
-												onValueChange={field.onChange}
+											<CurrencySelect
 												value={field.value || "USD"}
-											>
-												<FormControl>
-													<SelectTrigger>
-														<SelectValue />
-													</SelectTrigger>
-												</FormControl>
-												<SelectContent>
-													<SelectItem value="USD">USD</SelectItem>
-													<SelectItem value="EUR">EUR</SelectItem>
-													<SelectItem value="GBP">GBP</SelectItem>
-												</SelectContent>
-											</Select>
+												onValueChange={field.onChange}
+												amount={form.watch("cost")}
+											/>
 											<FormMessage />
 										</FormItem>
 									)}
@@ -651,15 +642,7 @@ export default function LicenseForm({
 					<div className="text-xs text-slate-500">
 						Required fields marked with *
 					</div>
-					<div className="flex items-center gap-3">
-						<Button
-							variant="outline"
-							className="primary-btn px-3 sm:px-4"
-							onClick={() => setOpen(false)}
-						>
-							<Ban className="w-4 h-4" />
-							Cancel
-						</Button>
+					<div className="flex items-center justify-end gap-3">
 						<Button
 							className="primary-btn px-3 sm:px-4"
 							onClick={form.handleSubmit(onSubmit)}

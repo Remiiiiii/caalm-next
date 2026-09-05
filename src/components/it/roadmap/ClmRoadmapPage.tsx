@@ -12,6 +12,7 @@ import { RoadmapTaskTree } from "@/components/it/roadmap/RoadmapTaskTree";
 import { PageIndex } from "@/components/ui/page-index";
 import { useRoadmapRealtime } from "@/hooks/useRoadmapRealtime";
 import type { RoadmapOverview, RoadmapTaskTreeNode } from "@/lib/roadmap/types";
+import { displayPullRequestTitle } from "@/lib/roadmap/github-pr-match";
 import { fetcher } from "@/lib/swr-config";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +28,7 @@ type SectionPullRequest = {
 	htmlUrl: string;
 	headRef: string;
 	body: string;
+	checksPassed?: boolean;
 };
 
 type SectionPullRequestsResponse = {
@@ -36,7 +38,8 @@ type SectionPullRequestsResponse = {
 
 function RoadmapPullRequestItem({ pr }: { pr: SectionPullRequest }) {
 	const [expanded, setExpanded] = useState(false);
-	const merged = pr.state === "merged";
+	// Only strike when roadmap completion checks passed — not merely GitHub "merged"
+	const complete = pr.checksPassed === true;
 
 	return (
 		<div className="space-y-1.5 py-3 first:pt-0 last:pb-0">
@@ -55,12 +58,12 @@ function RoadmapPullRequestItem({ pr }: { pr: SectionPullRequest }) {
 							</span>{" "}
 							<span
 								className={cn(
-									merged
+									complete
 										? "line-through text-slate-500 font-normal"
 										: "text-slate-700",
 								)}
 							>
-								{pr.title}
+								{displayPullRequestTitle(pr.title)}
 							</span>
 						</p>
 						{pr.state ? (
@@ -203,33 +206,37 @@ function RoadmapSectionCard({
 					) : null}
 					{section.prLinks && section.prLinks.length > 0 ? (
 						<ul className="mt-2 space-y-1">
-							{section.prLinks.map((pr) => (
+							{section.prLinks.map((pr) => {
+								const title = displayPullRequestTitle(pr.title);
+								return (
 								<li
 									key={pr.number}
 									className="text-xs text-slate-600 line-clamp-2"
 									title={
-										pr.title
-											? `#${pr.number} ${pr.title}`
+										title
+											? `#${pr.number} ${title}`
 											: `#${pr.number}`
 									}
 								>
 									#{pr.number}
-									{pr.title ? (
+									{title ? (
 										<span
 											className={cn(
-												pr.state === "merged" &&
+												(pr.checksPassed ||
+													section.status === "complete") &&
 													"line-through text-slate-500",
 											)}
 										>
 											{" "}
-											{pr.title}
+											{title}
 										</span>
 									) : null}
 									{pr.state ? (
 										<span className="text-slate-500"> · {pr.state}</span>
 									) : null}
 								</li>
-							))}
+								);
+							})}
 						</ul>
 					) : section.prTitle ? (
 						<p className="text-xs text-slate-600 mt-2">{section.prTitle}</p>
