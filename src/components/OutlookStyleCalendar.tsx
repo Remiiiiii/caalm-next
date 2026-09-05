@@ -138,6 +138,10 @@ import {
 	parseTimeToMinutes,
 } from "@/lib/calendar/eventDisplayFormat";
 import { cn, convertFileSize, getFileType } from "@/lib/utils";
+import {
+	getEnterpriseInputAccept,
+	validateEnterpriseFile,
+} from "@/lib/files/enterprise-file-formats";
 import { getUSHolidaysForMonth, parseHolidayDate } from "@/lib/utils/holidays";
 
 type CalendarViewMode = "day" | "week" | "month" | "agenda";
@@ -1101,28 +1105,14 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 	const handleFileUpload = async (files: FileList | null) => {
 		if (!files || files.length === 0) return;
 
-		const allowedTypes = [
-			"image/jpeg",
-			"image/jpg",
-			"image/png",
-			"application/pdf",
-			"application/msword",
-			"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-		];
-		const allowedExtensions = ["jpg", "jpeg", "png", "pdf", "doc", "docx"];
-
 		const filesToUpload: File[] = [];
 		for (let i = 0; i < files.length; i++) {
 			const file = files[i];
-			const extension = file.name.split(".").pop()?.toLowerCase();
-
-			if (
-				!allowedTypes.includes(file.type) &&
-				!allowedExtensions.includes(extension || "")
-			) {
+			const validation = validateEnterpriseFile(file, "attachment");
+			if (!validation.ok) {
 				toast({
 					title: "Invalid file type",
-					description: `File "${file.name}" is not supported. Allowed types: JPG, JPEG, PNG, PDF, DOC, DOCX`,
+					description: validation.reason,
 					variant: "destructive",
 				});
 				continue;
@@ -3785,7 +3775,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 																type="file"
 																id="file-upload"
 																multiple
-																accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
+																accept={getEnterpriseInputAccept("attachment")}
 																onChange={(e) =>
 																	handleFileUpload(e.target.files)
 																}
@@ -4254,7 +4244,10 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 
 				<ConflictDialog
 					open={isConflictDialogOpen}
-					onOpenChange={setIsConflictDialogOpen}
+					onOpenChange={(open) => {
+						if (!open) handleCancelConflict();
+						else setIsConflictDialogOpen(true);
+					}}
 					conflictData={conflictData}
 					creatingEvent={creatingEvent}
 					onCancel={handleCancelConflict}

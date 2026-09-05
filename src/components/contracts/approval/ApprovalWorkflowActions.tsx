@@ -1,7 +1,6 @@
 "use client";
 
 import {
-	Check,
 	ChevronDown,
 	ChevronUp,
 	Loader2,
@@ -23,12 +22,52 @@ interface ApprovalWorkflowActionsProps {
 }
 
 const VISIBLE_LIMIT = 4;
+/** Sentinel selection: assign every eligible candidate for this step. */
+const ALL_ELIGIBLE = "__all_eligible__";
+
+const ROLE_PILL =
+	"inline-block shrink-0 px-2 py-0.5 text-xs rounded-full font-medium border bg-blue/10 text-blue border-blue/20";
 
 function initials(name: string): string {
 	const parts = name.trim().split(/\s+/).filter(Boolean);
 	if (parts.length === 0) return "?";
 	if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
 	return `${parts[0][0] || ""}${parts[1][0] || ""}`.toUpperCase();
+}
+
+function CandidateAvatar({
+	userId,
+	fullName,
+	profileImageUrl,
+}: {
+	userId: string;
+	fullName: string;
+	profileImageUrl?: string | null;
+}) {
+	const [imageFailed, setImageFailed] = useState(false);
+	const showImage = Boolean(profileImageUrl) && !imageFailed;
+
+	return (
+		<span
+			className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full text-xs font-semibold text-white"
+			style={
+				showImage ? undefined : { backgroundColor: getAvatarColor(userId) }
+			}
+			aria-hidden
+		>
+			{showImage ? (
+				// eslint-disable-next-line @next/next/no-img-element -- remote Appwrite storage URL
+				<img
+					src={profileImageUrl || ""}
+					alt=""
+					className="h-full w-full object-cover"
+					onError={() => setImageFailed(true)}
+				/>
+			) : (
+				initials(fullName)
+			)}
+		</span>
+	);
 }
 
 /** Banners + admin assign / uploader resubmit controls shared by contract & license dialogs. */
@@ -86,7 +125,7 @@ export default function ApprovalWorkflowActions({
 			) : null}
 
 			{workflow.canResubmit ? (
-				<div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-slate-800">
+				<div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-slate-700">
 					<p className="font-medium">Changes were requested</p>
 					<p className="mt-1 text-slate-600">
 						After updating the item, resubmit to restart department review.
@@ -105,7 +144,7 @@ export default function ApprovalWorkflowActions({
 
 			{showReassign ? (
 				<div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-					<p className="mb-1 text-sm font-medium text-slate-800">
+					<p className="mb-1 text-sm font-medium text-slate-700">
 						{workflow.needsExecutiveAssignment
 							? "Assign executive"
 							: "Reassign current step"}
@@ -118,11 +157,7 @@ export default function ApprovalWorkflowActions({
 						for {workflow.contractName}.
 					</p>
 
-					<div className="rounded-lg border border-slate-200 bg-white px-1 py-2">
-						<p className="px-3 pb-2 text-xs font-medium text-slate-500">
-							People eligible for this step
-						</p>
-
+					<div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
 						{candidates.length === 0 ? (
 							<p className="px-3 py-6 text-center text-sm text-slate-500">
 								{isExecutiveStep
@@ -131,74 +166,113 @@ export default function ApprovalWorkflowActions({
 							</p>
 						) : (
 							<>
-								<ul className="space-y-0.5">
+								<ul className="divide-y divide-slate-100">
 									{visiblePeople.map((person) => {
 										const isSelected = person.userId === selectedUserId;
 										const isYou = person.userId === workflow.viewerUserId;
-										const subtitle = [
-											person.email || "No email on file",
-											person.roleLabel,
-										].join(" · ");
 										return (
 											<li key={person.userId}>
 												<button
 													type="button"
+													aria-pressed={isSelected}
 													disabled={pending}
 													onClick={() => setSelectedUserId(person.userId)}
 													className={cn(
-														"flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors duration-200 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
-														isSelected && "bg-blue-50 hover:bg-blue-50",
+														"flex w-full cursor-pointer items-center gap-3 px-3 py-3 text-left transition-colors duration-200 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#0f5384]/40",
+														isSelected && "bg-blue-50/80 hover:bg-blue-50",
 													)}
 												>
 													<span
-														className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white"
-														style={{
-															backgroundColor: getAvatarColor(person.userId),
-														}}
+														className={cn(
+															"flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2",
+															isSelected
+																? "border-[#0f5384]"
+																: "border-slate-300",
+														)}
 														aria-hidden
 													>
-														{initials(person.fullName)}
+														{isSelected ? (
+															<span className="h-2 w-2 rounded-full bg-[#0f5384]" />
+														) : null}
 													</span>
+													<CandidateAvatar
+														userId={person.userId}
+														fullName={person.fullName}
+														profileImageUrl={person.profileImageUrl}
+													/>
 													<span className="min-w-0 flex-1">
 														<span className="block truncate text-sm font-semibold text-slate-700">
 															{person.fullName}
-															{isYou ? " (you)" : ""}
+															{isYou ? (
+																<span className="font-normal text-slate-500">
+																	{" "}
+																	(you)
+																</span>
+															) : null}
 														</span>
-														<span className="block truncate text-xs text-slate-500">
-															{subtitle}
+														<span className="mt-0.5 flex min-w-0 flex-wrap items-center gap-1.5 text-xs text-slate-500">
+															<span className="truncate">
+																{person.email || "No email on file"}
+															</span>
+															<span aria-hidden>·</span>
+															<span className={ROLE_PILL}>
+																{person.roleLabel}
+															</span>
 														</span>
 													</span>
-													{isSelected ? (
-														<Check className="h-4 w-4 shrink-0 text-[#0f5384]" />
-													) : null}
 												</button>
 											</li>
 										);
 									})}
 
-									<li className="flex items-center gap-3 px-3 py-2.5">
-										<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500">
-											<Users className="h-4 w-4" />
-										</span>
-										<span className="min-w-0 flex-1">
-											<span className="block text-sm font-semibold text-slate-700">
-												Anyone with{" "}
-												<span className="text-[#0f5384]">{roleGroupLabel}</span>{" "}
-												role
+									<li>
+										<button
+											type="button"
+											aria-pressed={selectedUserId === ALL_ELIGIBLE}
+											disabled={pending || candidates.length === 0}
+											onClick={() => setSelectedUserId(ALL_ELIGIBLE)}
+											className={cn(
+												"flex w-full cursor-pointer items-center gap-3 px-3 py-3 text-left transition-colors duration-200 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#0f5384]/40",
+												selectedUserId === ALL_ELIGIBLE &&
+													"bg-blue-50/80 hover:bg-blue-50",
+											)}
+										>
+											<span
+												className={cn(
+													"flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2",
+													selectedUserId === ALL_ELIGIBLE
+														? "border-[#0f5384]"
+														: "border-slate-300",
+												)}
+												aria-hidden
+											>
+												{selectedUserId === ALL_ELIGIBLE ? (
+													<span className="h-2 w-2 rounded-full bg-[#0f5384]" />
+												) : null}
 											</span>
-											<span className="block text-xs text-slate-500">
-												{candidates.length}{" "}
-												{candidates.length === 1 ? "person" : "people"} in your
-												organization
+											<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+												<Users className="h-4 w-4" />
 											</span>
-										</span>
+											<span className="min-w-0 flex-1">
+												<span className="flex flex-wrap items-center gap-1.5 text-sm font-semibold text-slate-700">
+													<span>Anyone with</span>
+													<span className={ROLE_PILL}>{roleGroupLabel}</span>
+													<span>role</span>
+												</span>
+												<span className="mt-0.5 block text-xs text-slate-500">
+													Assigns all {candidates.length}{" "}
+													{candidates.length === 1 ? "person" : "people"} in
+													your organization
+												</span>
+											</span>
+										</button>
 									</li>
 								</ul>
 
 								{hiddenCount > 0 ? (
 									<button
 										type="button"
-										className="mt-1 flex w-full cursor-pointer items-center justify-center gap-1 border-t border-slate-100 px-3 pt-2.5 pb-1 text-xs font-medium text-slate-500 transition-colors duration-200 hover:text-slate-800"
+										className="flex w-full cursor-pointer items-center justify-center gap-1 border-t border-slate-100 px-3 py-2.5 text-xs font-medium text-slate-500 transition-colors duration-200 hover:text-slate-700"
 										onClick={() => setShowAll((v) => !v)}
 									>
 										{showAll ? (
@@ -240,7 +314,12 @@ export default function ApprovalWorkflowActions({
 							disabled={pending || !selectedUserId}
 							onClick={() => {
 								if (!selectedUserId) return;
-								void run(() => onReassign([selectedUserId]));
+								const assigneeUserIds =
+									selectedUserId === ALL_ELIGIBLE
+										? candidates.map((c) => c.userId)
+										: [selectedUserId];
+								if (assigneeUserIds.length === 0) return;
+								void run(() => onReassign(assigneeUserIds));
 							}}
 						>
 							{pending ? (
@@ -248,7 +327,9 @@ export default function ApprovalWorkflowActions({
 							) : (
 								<UserPlus className="h-4 w-4" />
 							)}
-							Assign to selected
+							{selectedUserId === ALL_ELIGIBLE
+								? "Assign to all eligible"
+								: "Assign to selected"}
 						</Button>
 					</div>
 				</div>

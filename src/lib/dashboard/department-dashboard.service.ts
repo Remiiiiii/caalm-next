@@ -2,6 +2,7 @@ import { Query } from "node-appwrite";
 import { listCalendarApprovalRequests } from "@/lib/actions/calendar-approval.actions";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { excludeSoftDeletedQuery } from "@/lib/soft-delete";
 import type {
 	DepartmentActionItem,
 	DepartmentContractAtRisk,
@@ -88,7 +89,11 @@ async function fetchDivisionContracts(
 			const result = await tablesDB.listRows({
 				databaseId,
 				tableId,
-				queries: [Query.equal(field, value), Query.limit(500)],
+				queries: [
+					excludeSoftDeletedQuery(),
+					Query.equal(field, value),
+					Query.limit(500),
+				],
 			});
 			return result.rows as unknown as ContractRow[];
 		} catch {
@@ -122,7 +127,7 @@ async function fetchDivisionContracts(
 	const all = await tablesDB.listRows({
 		databaseId,
 		tableId,
-		queries: [Query.limit(500)],
+		queries: [excludeSoftDeletedQuery(), Query.limit(500)],
 	});
 	return (all.rows as unknown as ContractRow[]).filter(
 		(c) =>
@@ -141,7 +146,11 @@ async function fetchDivisionLicenses(departmentLabel: string) {
 		const response = await tablesDB.listRows({
 			databaseId: appwriteConfig.databaseId!,
 			tableId: appwriteConfig.licensesCollectionId,
-			queries: [Query.equal("department", departmentLabel), Query.limit(200)],
+			queries: [
+				excludeSoftDeletedQuery("licenses"),
+				Query.equal("department", departmentLabel),
+				Query.limit(200),
+			],
 		});
 		const rows = response.rows as Array<Record<string, unknown>>;
 		const needsAttention = rows.filter((row) => {

@@ -211,14 +211,6 @@ export function TemplateEditorDialog({
 				<div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
 					<Button
 						type="button"
-						variant="outline"
-						className="primary-btn cursor-pointer px-3 sm:px-4"
-						onClick={() => onOpenChange(false)}
-					>
-						Cancel
-					</Button>
-					<Button
-						type="button"
 						className="primary-btn cursor-pointer px-3 sm:px-4"
 						disabled={saving}
 						onClick={() =>

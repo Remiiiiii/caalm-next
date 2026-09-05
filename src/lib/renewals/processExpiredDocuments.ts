@@ -11,6 +11,8 @@ import {
 	shouldAutoRenew,
 	toDateOnlyString,
 } from "@/lib/renewals/autoRenew";
+import { createPendingPostExpiryAttestation } from "@/lib/approvals/ExpirationAttestationService";
+import { excludeSoftDeletedQuery } from "@/lib/soft-delete";
 import { getOrganizationTimezone } from "@/lib/timezone/org";
 import type { RenewalRecord } from "@/types/licenses";
 
@@ -112,7 +114,11 @@ async function processContracts(now: Date): Promise<{
 	const contracts = await tablesDB.listRows({
 		databaseId: appwriteConfig.databaseId,
 		tableId: appwriteConfig.contractsCollectionId,
-		queries: [Query.isNotNull("contractExpiryDate"), Query.limit(1000)],
+		queries: [
+			excludeSoftDeletedQuery(),
+			Query.isNotNull("contractExpiryDate"),
+			Query.limit(1000),
+		],
 	});
 
 	for (const contract of contracts.rows) {
@@ -178,9 +184,11 @@ async function processContracts(now: Date): Promise<{
 					daysUntilExpiry: days,
 				};
 
+				const becomingExpired =
+					expired && contract.status?.toLowerCase() !== "expired";
 				if (expired) {
 					updateData.isExpired = true;
-					if (contract.status?.toLowerCase() !== "expired") {
+					if (becomingExpired) {
 						updateData.status = "expired";
 					}
 				}
@@ -192,6 +200,22 @@ async function processContracts(now: Date): Promise<{
 					data: updateData,
 				});
 				updated++;
+
+				if (becomingExpired) {
+					await createPendingPostExpiryAttestation({
+						orgId: typeof contract.orgId === "string" ? contract.orgId : "",
+						entityType: "contract",
+						entityId: contract.$id,
+						entityName:
+							(contract.contractName as string) || "Untitled Contract",
+						accountableUserId: String(
+							contract.contractOwnerId || contract.owner || "",
+						),
+						expiredAt: now.toISOString(),
+						priorExpiryDate: String(contract.contractExpiryDate || ""),
+						workflowState: contract.approvalWorkflowState as string | undefined,
+					});
+				}
 			}
 		} catch (error: unknown) {
 			const message = error instanceof Error ? error.message : String(error);
@@ -227,7 +251,11 @@ async function processLicenses(now: Date): Promise<{
 	const licenses = await tablesDB.listRows({
 		databaseId: appwriteConfig.databaseId,
 		tableId: appwriteConfig.licensesCollectionId,
-		queries: [Query.isNotNull("licenseExpiryDate"), Query.limit(1000)],
+		queries: [
+			excludeSoftDeletedQuery("licenses"),
+			Query.isNotNull("licenseExpiryDate"),
+			Query.limit(1000),
+		],
 	});
 
 	const todayStr = toDateOnlyString(now);
@@ -296,15 +324,15 @@ async function processLicenses(now: Date): Promise<{
 				continue;
 			}
 
-			const needsStatusUpdate =
+			const becomingExpired =
 				expired && license.status?.toLowerCase() !== "expired";
 			const needsDaysUpdate = license.daysUntilExpiry !== days;
 
-			if (needsStatusUpdate || needsDaysUpdate) {
+			if (becomingExpired || needsDaysUpdate) {
 				const updateData: Record<string, unknown> = {
 					daysUntilExpiry: days,
 				};
-				if (expired) {
+				if (becomingExpired) {
 					updateData.status = "expired";
 				}
 
@@ -315,6 +343,24 @@ async function processLicenses(now: Date): Promise<{
 					data: updateData,
 				});
 				updated++;
+
+				if (becomingExpired) {
+					await createPendingPostExpiryAttestation({
+						orgId: typeof license.orgId === "string" ? license.orgId : "",
+						entityType: "license",
+						entityId: license.$id,
+						entityName:
+							(license.licenseName as string) || "Untitled License",
+						accountableUserId: String(
+							license.licenseOwnerId || license.createdBy || "",
+						),
+						expiredAt: now.toISOString(),
+						priorExpiryDate: String(
+							license.licenseExpiryDate || license.expirationDate || "",
+						),
+						workflowState: license.approvalWorkflowState as string | undefined,
+					});
+				}
 			}
 		} catch (error: unknown) {
 			const message = error instanceof Error ? error.message : String(error);

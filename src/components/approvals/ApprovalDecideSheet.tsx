@@ -33,6 +33,8 @@ import { useLicenseApprovalWorkflow } from "@/hooks/useLicenseApprovalWorkflow";
 import { usePermissions } from "@/hooks/usePermissions";
 import {
 	type ApprovalQueueItem,
+	slaBadgeClasses,
+	slaBadgeLabel,
 	statusBadgeClasses,
 	statusLabel,
 } from "@/lib/approvals/approvalsListUtils";
@@ -230,9 +232,14 @@ export default function ApprovalDecideSheet({
 						</Badge>
 						<Badge
 							variant="outline"
-							className="border border-white/50 bg-white/60 text-slate-600"
+							className={cn(
+								"border",
+								item.slaStatus
+									? slaBadgeClasses(item.slaStatus)
+									: "border-white/50 bg-white/60 text-slate-600",
+							)}
 						>
-							Waiting {agingLabel(item)}
+							{slaBadgeLabel(item) || `Waiting ${agingLabel(item)}`}
 						</Badge>
 					</div>
 				}

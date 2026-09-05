@@ -9,7 +9,9 @@ import {
 	type ApprovalQueueItem,
 	daysSince,
 	isActionRequired,
-	isAgingUrgent,
+	isSlaAtRisk,
+	isSlaBreached,
+	slaBadgeLabel,
 } from "@/lib/approvals/approvalsListUtils";
 
 interface ApprovalsAttentionStripProps {
@@ -19,19 +21,21 @@ interface ApprovalsAttentionStripProps {
 export default function ApprovalsAttentionStrip({
 	items,
 }: ApprovalsAttentionStripProps) {
-	const { setTab, scrollToList } = useApprovalsView();
+	const { setTab, setFilters, scrollToList } = useApprovalsView();
 
 	const counts = useMemo(() => {
-		let aging = 0;
+		let atRisk = 0;
+		let breached = 0;
 		let actionRequired = 0;
 		items.forEach((item) => {
-			if (isAgingUrgent(item)) aging++;
+			if (isSlaBreached(item)) breached++;
+			else if (isSlaAtRisk(item)) atRisk++;
 			if (isActionRequired(item)) actionRequired++;
 		});
-		return { aging, actionRequired };
+		return { atRisk, breached, actionRequired };
 	}, [items]);
 
-	const total = counts.aging + counts.actionRequired;
+	const total = counts.atRisk + counts.breached + counts.actionRequired;
 	if (total === 0) return null;
 
 	return (
@@ -43,8 +47,13 @@ export default function ApprovalsAttentionStrip({
 						Needs attention
 					</p>
 					<p className="text-xs text-slate-600 mt-0.5">
-						{counts.aging > 0 && <span>{counts.aging} waiting 5+ days</span>}
-						{counts.aging > 0 && counts.actionRequired > 0 && " · "}
+						{counts.breached > 0 && (
+							<span>{counts.breached} SLA breached</span>
+						)}
+						{counts.breached > 0 && (counts.atRisk > 0 || counts.actionRequired > 0) &&
+							" · "}
+						{counts.atRisk > 0 && <span>{counts.atRisk} at risk</span>}
+						{counts.atRisk > 0 && counts.actionRequired > 0 && " · "}
 						{counts.actionRequired > 0 && (
 							<span>{counts.actionRequired} action required</span>
 						)}
@@ -66,18 +75,22 @@ export default function ApprovalsAttentionStrip({
 						View action required
 					</Button>
 				)}
-				{counts.aging > 0 && (
+				{(counts.breached > 0 || counts.atRisk > 0) && (
 					<Button
 						type="button"
 						size="sm"
 						variant="outline"
 						className="cursor-pointer border-orange/30 hover:bg-orange/10"
 						onClick={() => {
+							setFilters((prev) => ({
+								...prev,
+								slaStatus: counts.breached > 0 ? "breached" : "at_risk",
+							}));
 							setTab("needs-me");
 							scrollToList();
 						}}
 					>
-						View aging
+						{counts.breached > 0 ? "View SLA breached" : "View at risk"}
 					</Button>
 				)}
 				<Button
@@ -98,6 +111,8 @@ export default function ApprovalsAttentionStrip({
 }
 
 export function agingLabel(item: ApprovalQueueItem): string {
+	const sla = slaBadgeLabel(item);
+	if (sla) return sla;
 	const days = daysSince(item.submittedAt);
 	if (days === 0) return "Today";
 	if (days === 1) return "1 day";

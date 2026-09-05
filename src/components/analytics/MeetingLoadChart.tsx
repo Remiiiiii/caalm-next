@@ -97,7 +97,7 @@ export const MeetingLoadChart: React.FC<MeetingLoadChartProps> = ({ data }) => {
 							<div>
 								<p className="text-sm text-slate-600 mb-1">Total Hours</p>
 								<p className="text-2xl font-bold text-navy">
-									{data.totalHours.toFixed(1)}
+									{(data.totalHours ?? 0).toFixed(1)}
 								</p>
 							</div>
 							<Clock className="h-8 w-8 text-green-600" />
@@ -111,7 +111,7 @@ export const MeetingLoadChart: React.FC<MeetingLoadChartProps> = ({ data }) => {
 							<div>
 								<p className="text-sm text-slate-600 mb-1">Avg Duration</p>
 								<p className="text-2xl font-bold text-navy">
-									{data.averageDuration.toFixed(1)}h
+									{(data.averageDuration ?? 0).toFixed(1)}h
 								</p>
 							</div>
 							<TrendingUp className="h-8 w-8 text-purple-600" />

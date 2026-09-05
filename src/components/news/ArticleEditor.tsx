@@ -7,7 +7,6 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import {
 	AlertTriangle,
-	Ban,
 	Bold,
 	BookOpenCheck,
 	FileText,
@@ -402,10 +401,6 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({
 		onClose();
 	};
 
-	const handleCancelClose = () => {
-		setShowConfirmDialog(false);
-	};
-
 	// Auto-save hook
 	const { isSaving, lastSaved } = useAutoSave(
 		{
@@ -751,18 +746,6 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({
 						</div>
 						<div className="flex items-center gap-3">
 							<Button
-								variant="outline"
-								onClick={(e) => {
-									e.stopPropagation();
-									handleClose();
-								}}
-								disabled={loading}
-								className="primary-btn px-3 sm:px-4"
-							>
-								<Ban className="h-4 w-4" />
-								Cancel
-							</Button>
-							<Button
 								onClick={() => handleSave(false)}
 								disabled={loading}
 								variant="outline"
@@ -833,15 +816,7 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({
 					{/* Professional Footer */}
 					<div className="glass-dialog-alert-footer">
 						<div className="text-xs text-slate-500"></div>
-						<div className="flex items-center gap-3">
-							<Button
-								variant="outline"
-								onClick={handleCancelClose}
-								className="primary-btn px-3 sm:px-4"
-							>
-								<Ban className="h-4 w-4" />
-								Cancel
-							</Button>
+						<div className="flex items-center justify-end gap-3">
 							<Button
 								onClick={handleConfirmClose}
 								variant="destructive"

@@ -134,4 +134,6 @@ export interface ContractMetadataPayload {
 	projectDescription?: string;
 	propertyDescription?: string;
 	enterpriseMetadata?: ContractEnterpriseMetadata;
+	deletedAt?: string | null;
+	deletedBy?: string | null;
 }

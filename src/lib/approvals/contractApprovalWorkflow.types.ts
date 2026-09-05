@@ -16,6 +16,8 @@ export type ApprovalStepStatus =
 
 export type ApprovalDecision = "approved" | "changes_requested" | "rejected";
 
+export type ApprovalSlaStatus = "on_track" | "at_risk" | "breached";
+
 export type ApprovalNotificationType =
 	| "upload_submitted"
 	| "pending_review"
@@ -25,7 +27,11 @@ export type ApprovalNotificationType =
 	| "rejected"
 	| "needs_executive_assignment"
 	| "reassigned"
-	| "resubmitted";
+	| "resubmitted"
+	| "sla_at_risk"
+	| "sla_due_soon"
+	| "sla_breached"
+	| "sla_escalated";
 
 export interface ApprovalWorkflowStep {
 	id: string;
@@ -37,6 +43,15 @@ export interface ApprovalWorkflowStep {
 	completedByUserId?: string;
 	decision?: ApprovalDecision;
 	notes?: string;
+	/** ISO timestamp when this step became current */
+	startedAt?: string;
+	/** ISO due datetime computed from the org SLA policy */
+	dueAt?: string;
+	slaStatus?: ApprovalSlaStatus;
+	slaBreachedAt?: string;
+	lastReminderAt?: string;
+	/** 0 = none, 1 = at-risk, 2 = breached, 3 = repeat */
+	escalationLevel?: number;
 }
 
 export interface ApprovalWorkflowNotification {
@@ -73,6 +88,8 @@ export interface ApprovalReassignCandidate {
 	fullName: string;
 	email: string;
 	roleLabel: string;
+	/** Resolved profile photo URL when the user has uploaded one */
+	profileImageUrl?: string | null;
 }
 
 export interface ApprovalWorkflowViewerPayload {
@@ -103,4 +120,7 @@ export interface ApprovalWorkflowViewerPayload {
 	uploaderUserId?: string;
 	/** Eligible people for Assign / Reassign (pick by name; IDs stay server-side). */
 	reassignCandidates?: ApprovalReassignCandidate[];
+	/** True when status is expired or inactive — history only, no SLA or decisions. */
+	workflowFrozen?: boolean;
+	expirationAttestationId?: string;
 }

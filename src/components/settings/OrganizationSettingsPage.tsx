@@ -4,6 +4,7 @@ import { Building2, Save } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import useSWR from "swr";
 import { PermissionGate } from "@/components/PermissionGate";
+import { ApprovalSlaPoliciesManager } from "@/components/settings/ApprovalSlaPoliciesManager";
 import { OrgStructureManager } from "@/components/settings/OrgStructureManager";
 import { TimezoneSelect } from "@/components/settings/TimezoneSelect";
 import { Button } from "@/components/ui/button";
@@ -284,6 +285,9 @@ export default function OrganizationSettingsPage() {
 					<TabsTrigger value="structure" className="cursor-pointer">
 						Org structure
 					</TabsTrigger>
+					<TabsTrigger value="approval-sla" className="cursor-pointer">
+						Approval SLAs
+					</TabsTrigger>
 				</TabsList>
 
 				<TabsContent value="profile" className="mt-4">
@@ -551,6 +555,10 @@ export default function OrganizationSettingsPage() {
 							</PermissionGate>
 						</CardContent>
 					</GlassCard>
+				</TabsContent>
+
+				<TabsContent value="approval-sla" className="mt-4">
+					<ApprovalSlaPoliciesManager canEdit={canEdit} />
 				</TabsContent>
 
 				<TabsContent value="structure" className="mt-4">

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Info, RotateCcw, Save, Settings2, X } from "lucide-react";
+import { ArrowRight, Info, RotateCcw, Save, Settings2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -362,14 +362,6 @@ export default function HubSpotConfigDialog({
 				</div>
 
 				<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3">
-					<Button
-						variant="outline"
-						className="btn-primary px-3 sm:px-4"
-						onClick={() => onOpenChange(false)}
-					>
-						<X className="h-4 w-4" />
-						Cancel
-					</Button>
 					<Button
 						className="btn-primary px-3 sm:px-4"
 						onClick={handleSave}

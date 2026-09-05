@@ -1,6 +1,6 @@
 "use client";
 
-import { Ban, Edit, Eye, Link, UserPlus } from "lucide-react";
+import { Edit, Eye, Link, UserPlus } from "lucide-react";
 import type React from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -93,14 +93,6 @@ export function ShareEventDialog({
 					</div>
 
 					<div className="flex justify-end space-x-2">
-						<Button
-							variant="outline"
-							onClick={() => onOpenChange(false)}
-							className="primary-btn px-3 sm:px-4"
-						>
-							<Ban className="w-4 h-4" />
-							Cancel
-						</Button>
 						<Button onClick={onShare}>Share</Button>
 					</div>
 				</div>

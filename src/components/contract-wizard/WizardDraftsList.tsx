@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Ban, FileText, Loader2, Trash2 } from "lucide-react";
+import { AlertTriangle, FileText, Loader2, Trash2 } from "lucide-react";
 import { useMemo, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -372,17 +372,7 @@ export function WizardDraftsList({
 						</p>
 					</div>
 
-					<div className="flex items-center justify-center gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
-						<Button
-							type="button"
-							variant="ghost"
-							disabled={deleting}
-							className="primary-btn gap-2 px-3 sm:px-4"
-							onClick={() => setPendingDeleteIds([])}
-						>
-							<Ban className="h-4 w-4 shrink-0" />
-							Cancel
-						</Button>
+					<div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
 						<Button
 							type="button"
 							disabled={deleting}

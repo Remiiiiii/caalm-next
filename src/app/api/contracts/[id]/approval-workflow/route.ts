@@ -29,11 +29,12 @@ export async function GET(
 			return errorResponse("Contract ID is required", 400, { requestId });
 		}
 
+		// Workflow assignees use Auth accountId; RBAC checks use users-table $id.
 		const viewerUserId = user.accountId || user.$id;
 		const org = await getUserDefaultOrganization(user.$id);
 		const orgId = org?.orgId;
 		const canView = orgId
-			? await hasPermission(viewerUserId, PERMISSIONS.CONTRACTS.VIEW, orgId)
+			? await hasPermission(user.$id, PERMISSIONS.CONTRACTS.VIEW, orgId)
 			: false;
 		if (!canView) {
 			return forbiddenResponse("Permission denied: view contract", requestId);

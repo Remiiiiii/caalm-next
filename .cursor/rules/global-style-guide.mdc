@@ -183,6 +183,8 @@ For content cards (like article lists, tables, etc.):
 
 ## Dialog & Modal Standards
 
+**Hard rule:** Do not deviate from the CAALM dialog template unless the user explicitly asks. Full rules: `.cursor/rules/dialog-best-practices.mdc` (always applied). Prefer corner **X** to dismiss; omit footer Cancel unless requested.
+
 ### Standard Dialog Structure
 
 **ALL dialogs** must follow this structure:
@@ -213,15 +215,12 @@ For content cards (like article lists, tables, etc.):
       {/* Main content here */}
     </div>
 
-    {/* Professional Footer */}
-    <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-      <div className="text-xs text-slate-500">Optional footer text</div>
-      <div className="flex items-center gap-3">
-        <Button variant="outline" className="primary-btn px-3 sm:px-4">
-          Cancel
-        </Button>
-        <Button className="primary-btn px-3 sm:px-4">Action</Button>
-      </div>
+    {/* Professional Footer — corner X dismisses; omit Cancel unless requested */}
+    <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3">
+      <Button className="primary-btn px-3 sm:px-4">
+        <Icon className="h-4 w-4" />
+        Action
+      </Button>
     </div>
   </DialogContent>
 </Dialog>
@@ -235,6 +234,8 @@ For content cards (like article lists, tables, etc.):
 - Add `mt-4` to header div to account for cap bar
 - Use `bg-slate-50` for scrollable content area
 - Place icons directly next to title with `gap-3` and `text-[#0f5384]`
+- Prefer corner X (`showCloseButton`) to dismiss; do not add footer Cancel unless the user asks
+- Do not invent alternate dialog chrome unless the user explicitly requests it
 - Use `ml-14` on subtitle paragraphs to align with title text
 - Include footer with `bg-slate-50` and border-top
 

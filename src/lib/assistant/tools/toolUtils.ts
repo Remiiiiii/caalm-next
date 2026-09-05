@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import type { ToolContext } from "@/lib/assistant/tools/types";
 import CacheManager from "@/lib/services/cache-manager";
+import { excludeSoftDeletedQuery } from "@/lib/soft-delete";
 
 export function hasAll(
 	ctx: ToolContext,
@@ -96,6 +97,7 @@ export async function searchContractsTable(ctx: ToolContext, search: string) {
 	const q = search.trim();
 	const queries = [
 		Query.equal("orgId", ctx.orgId),
+		excludeSoftDeletedQuery(),
 		...(q ? [Query.contains("contractName", q)] : []),
 		Query.orderDesc("$createdAt"),
 		Query.limit(8),
@@ -119,6 +121,7 @@ export async function searchLicensesTable(ctx: ToolContext, search: string) {
 	const q = search.trim();
 	const queries = [
 		Query.equal("orgId", ctx.orgId),
+		excludeSoftDeletedQuery("licenses"),
 		...(q ? [Query.contains("licenseName", q)] : []),
 		Query.orderDesc("$createdAt"),
 		Query.limit(8),

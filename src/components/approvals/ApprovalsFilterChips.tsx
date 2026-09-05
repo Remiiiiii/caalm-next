@@ -50,6 +50,19 @@ export default function ApprovalsFilterChips() {
 				setFilters((prev) => ({ ...prev, assignedTo: undefined })),
 		});
 	}
+	if (filters.slaStatus && filters.slaStatus !== "any") {
+		const slaLabels = {
+			at_risk: "At risk",
+			breached: "SLA breached",
+			on_track: "On track",
+		};
+		chips.push({
+			key: "sla",
+			label: slaLabels[filters.slaStatus] || filters.slaStatus,
+			onRemove: () =>
+				setFilters((prev) => ({ ...prev, slaStatus: undefined })),
+		});
+	}
 	if (filters.itemType) {
 		chips.push({
 			key: "type",

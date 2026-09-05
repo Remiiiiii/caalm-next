@@ -27,6 +27,7 @@ import type {
 	PdfPageText,
 } from "@/lib/ai/contract-assistant.types";
 import { convertFileSize, cn } from "@/lib/utils";
+import { validateEnterpriseFile } from "@/lib/files/enterprise-file-formats";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
@@ -832,6 +833,16 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 	) => {
 		const uploadedFile = event.target.files?.[0];
 		if (!uploadedFile) return;
+
+		const validation = validateEnterpriseFile(uploadedFile, "contractPrimary");
+		if (!validation.ok || validation.extension !== "pdf") {
+			console.error(
+				validation.ok
+					? "AI analysis requires a PDF file."
+					: validation.reason,
+			);
+			return;
+		}
 
 		setUploading(true);
 		try {

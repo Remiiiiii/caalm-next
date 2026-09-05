@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Ban, Trash2, X } from "lucide-react";
+import { AlertTriangle, Trash2, X } from "lucide-react";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -136,17 +136,7 @@ export default function FilesBulkBar({
 						</p>
 					</div>
 
-					<div className="flex items-center justify-center gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
-						<Button
-							type="button"
-							variant="ghost"
-							onClick={() => setConfirmOpen(false)}
-							disabled={isDeleting}
-							className="primary-btn gap-2 px-3 sm:px-4"
-						>
-							<Ban className="h-4 w-4 shrink-0" />
-							Cancel
-						</Button>
+					<div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
 						<Button
 							type="button"
 							onClick={handleBulkDelete}

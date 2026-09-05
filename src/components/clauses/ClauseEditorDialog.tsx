@@ -198,14 +198,6 @@ export function ClauseEditorDialog({
 				<div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
 					<Button
 						type="button"
-						variant="outline"
-						className="primary-btn px-3 sm:px-4"
-						onClick={() => onOpenChange(false)}
-					>
-						Cancel
-					</Button>
-					<Button
-						type="button"
 						className="primary-btn px-3 sm:px-4"
 						disabled={saving || !title.trim() || !body.trim()}
 						onClick={() => void handleSubmit()}

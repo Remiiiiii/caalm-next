@@ -368,6 +368,18 @@ export const appwriteConfig = {
 		"69d2a102002b3c4d5e02",
 	),
 
+	/** Per-org approval step SLA policies (name: approval_sla_policies) */
+	approvalSlaPoliciesCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_APPROVAL_SLA_POLICIES_COLLECTION",
+		"69e4a101001a2b3c4d01",
+	),
+
+	/** Expiration accountability records (name: document_expiration_attestations) */
+	documentExpirationAttestationsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_DOCUMENT_EXPIRATION_ATTESTATIONS_COLLECTION",
+		"69e4c201001b3c4d5e02",
+	),
+
 	// Imagine Art API (AI Image Generation)
 	imagineArtApiKey: process.env.IMAGINE_ART_API_KEY,
 

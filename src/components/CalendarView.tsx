@@ -12,7 +12,6 @@ import {
 	startOfWeek,
 } from "date-fns";
 import {
-	Ban,
 	CalendarDays,
 	CalendarIcon,
 	CheckCircle,
@@ -1200,14 +1199,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 												: "Enter a title to continue"}
 										</div>
 										<div className="flex items-center gap-3">
-											<Button
-												variant="outline"
-												onClick={() => setIsAddEventOpen(false)}
-												className="primary-btn px-3 sm:px-4"
-											>
-												<Ban className="h-4 w-4" />
-												Cancel
-											</Button>
 											<Button
 												onClick={handleAddEvent}
 												disabled={!newEvent.title.trim() || creatingEvent}

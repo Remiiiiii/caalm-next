@@ -130,6 +130,10 @@ import {
 } from "@/lib/contracts/contractTypeConfigs";
 import { getNoticeThresholds } from "@/lib/renewals/expiryNotice";
 import { refreshStorageUsage } from "@/lib/storage/refreshStorageUsage";
+import {
+	getEnterpriseDropzoneAccept,
+	getEnterpriseFormatHint,
+} from "@/lib/files/enterprise-file-formats";
 import { fireConfetti } from "@/lib/ui/confetti";
 import {
 	CONTRACT_DEPARTMENTS,
@@ -1672,12 +1676,13 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
 	const { getRootProps, getInputProps, isDragActive } = useDropzone({
 		onDrop,
-		accept: {
-			"application/pdf": [".pdf"],
-			"application/msword": [".doc"],
-			"application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-				[".docx"],
-			"text/plain": [".txt"],
+		accept: getEnterpriseDropzoneAccept("contractPrimary"),
+		onDropRejected: () => {
+			toast({
+				variant: "destructive",
+				title: "File type not allowed",
+				description: `${getEnterpriseFormatHint("contractPrimary")} (Max 50MB)`,
+			});
 		},
 		multiple: false,
 	});
@@ -2880,14 +2885,6 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 											</span>
 										</button>
 									</p>
-									<Button
-										variant="outline"
-										onClick={() => setIsOpen(false)}
-										className="primary-btn w-full shrink-0 px-3 sm:w-auto sm:px-4"
-									>
-										<Ban className="w-4 h-4" />
-										Cancel
-									</Button>
 								</div>
 							</div>
 						</div>
@@ -3009,7 +3006,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 							</div>
 
 							<div className="shrink-0 border-t border-white/35 bg-white/30 px-5 py-3 backdrop-blur-xl">
-								<div className="flex items-center justify-between gap-3">
+								<div className="flex items-center justify-end gap-3">
 									<Button
 										type="button"
 										variant="outline"
@@ -3018,14 +3015,6 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 									>
 										<ChevronLeft className="h-4 w-4" />
 										Back
-									</Button>
-									<Button
-										variant="outline"
-										onClick={() => setIsOpen(false)}
-										className="primary-btn px-3 sm:px-4"
-									>
-										<Ban className="w-4 h-4" />
-										Cancel
 									</Button>
 								</div>
 							</div>
@@ -3315,7 +3304,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
 							{/* Footer */}
 							<div className="sticky bottom-0 shrink-0 border-t border-white/35 bg-white/30 px-6 py-4 backdrop-blur-xl">
-								<div className="flex items-center justify-between gap-2">
+								<div className="flex items-center justify-end gap-2">
 									<div className="flex flex-wrap items-center gap-2">
 										{aiQuizPhase === "questions" && aiQuizStep > 0 && (
 											<Button
@@ -3332,17 +3321,6 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 											</Button>
 										)}
 									</div>
-									<Button
-										variant="outline"
-										onClick={() => setIsOpen(false)}
-										className={cn(
-											AI_ASSISTANT_BTN_PRIMARY_CLASS,
-											"shrink-0 px-4 sm:px-6",
-										)}
-									>
-										<Ban className="w-4 h-4" />
-										Cancel
-									</Button>
 								</div>
 							</div>
 						</div>
@@ -3583,7 +3561,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																		: "Drag & drop contract file here"}
 																</p>
 																<p className="text-sm text-light-200 mt-2">
-																	Supports PDF, DOC, DOCX, TXT (Max 50MB)
+																	{getEnterpriseFormatHint("contractPrimary")} (Max 50MB)
 																</p>
 															</div>
 														)}

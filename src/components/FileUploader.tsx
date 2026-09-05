@@ -8,6 +8,10 @@ import { useDropzone } from "react-dropzone";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { uploadFile } from "@/lib/actions/file.actions";
+import {
+	getEnterpriseDropzoneAccept,
+	getEnterpriseFormatHint,
+} from "@/lib/files/enterprise-file-formats";
 import { refreshStorageUsage } from "@/lib/storage/refreshStorageUsage";
 import { cn, convertFileToUrl, getFileType } from "@/lib/utils";
 import { MAX_FILE_SIZE } from "../../constants";
@@ -63,7 +67,17 @@ const FileUploader = ({ ownerId, accountId, className }: Props) => {
 		[ownerId, accountId, path, router, toast],
 	);
 
-	const { getRootProps, getInputProps } = useDropzone({ onDrop });
+	const { getRootProps, getInputProps } = useDropzone({
+		onDrop,
+		accept: getEnterpriseDropzoneAccept("generalDocument"),
+		onDropRejected: () => {
+			toast({
+				variant: "destructive",
+				title: "File type not allowed",
+				description: getEnterpriseFormatHint("generalDocument"),
+			});
+		},
+	});
 
 	const handleRemoveFile = (
 		e: React.MouseEvent<HTMLImageElement, MouseEvent>,

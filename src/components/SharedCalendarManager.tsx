@@ -3,7 +3,6 @@
 import * as VisuallyHiddenPrimitive from "@radix-ui/react-visually-hidden";
 import {
 	AlertTriangle,
-	Ban,
 	Calendar as CalendarIcon,
 	Check,
 	Edit,
@@ -603,11 +602,6 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
 		}
 	};
 
-	const cancelDeleteCalendar = () => {
-		setIsDeleteCalendarDialogOpen(false);
-		setCalendarToDelete(null);
-	};
-
 	return (
 		<>
 			<Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -933,7 +927,13 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
 			</Dialog>
 
 			{/* Edit Calendar Dialog */}
-			<Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+			<Dialog
+				open={isEditDialogOpen}
+				onOpenChange={(open) => {
+					setIsEditDialogOpen(open);
+					if (!open) setCalendarToEdit(null);
+				}}
+			>
 				<DialogContent className="w-[calc(100%-1.5rem)] sm:w-full max-w-[600px] p-0 max-h-[90vh] flex flex-col">
 					<VisuallyHiddenPrimitive.Root>
 						<DialogTitle>Edit Shared Calendar</DialogTitle>
@@ -1137,17 +1137,6 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
 					<div className="glass-dialog-footer-wrap">
 						<div className="flex items-center justify-end gap-3">
 							<Button
-								variant="outline"
-								className="primary-btn px-3 sm:px-4"
-								onClick={() => {
-									setIsEditDialogOpen(false);
-									setCalendarToEdit(null);
-								}}
-							>
-								<Ban className="w-4 h-4" />
-								Cancel
-							</Button>
-							<Button
 								className="primary-btn px-3 sm:px-4"
 								onClick={handleUpdateCalendar}
 								disabled={!editFormData.name.trim()}
@@ -1163,7 +1152,10 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
 			{/* Delete Calendar Confirmation Dialog */}
 			<Dialog
 				open={isDeleteCalendarDialogOpen}
-				onOpenChange={setIsDeleteCalendarDialogOpen}
+				onOpenChange={(open) => {
+					setIsDeleteCalendarDialogOpen(open);
+					if (!open) setCalendarToDelete(null);
+				}}
 			>
 				<DialogContent className="overflow-hidden p-0 shadow-xl sm:max-w-md" variant="destructive">
 					<VisuallyHiddenPrimitive.Root>
@@ -1207,16 +1199,7 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
 						<div className="text-xs text-slate-500">
 							This action is permanent.
 						</div>
-						<div className="flex items-center gap-3">
-							<Button
-								variant="outline"
-								onClick={cancelDeleteCalendar}
-								className="primary-btn px-3 sm:px-4"
-								disabled={isDeleting}
-							>
-								<Ban className="w-4 h-4" />
-								Cancel
-							</Button>
+						<div className="flex items-center justify-end gap-3">
 							<Button
 								onClick={confirmDeleteCalendar}
 								className="delete-btn px-3 sm:px-4"

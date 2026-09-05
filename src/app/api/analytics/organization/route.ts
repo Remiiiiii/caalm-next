@@ -13,6 +13,9 @@ interface ContractStats {
 	activeContracts: number;
 	expiredContracts: number;
 	pendingContracts: number;
+	totalLicenses: number;
+	activeLicenses: number;
+	expiredLicenses: number;
 	complianceRate: number;
 	staffCount: number;
 }
@@ -45,7 +48,7 @@ export async function GET(request: NextRequest) {
 			async () => {
 				const { tablesDB } = await createAdminClient();
 
-				const [allContracts, allUsers] = await Promise.all([
+				const [allContracts, allLicenses, allUsers] = await Promise.all([
 					tablesDB.listRows({
 						databaseId: appwriteConfig.databaseId,
 						tableId: appwriteConfig.contractsCollectionId,
@@ -59,6 +62,11 @@ export async function GET(request: NextRequest) {
 								"compliance",
 							]),
 						],
+					}),
+					tablesDB.listRows({
+						databaseId: appwriteConfig.databaseId,
+						tableId: appwriteConfig.licensesCollectionId,
+						queries: [Query.limit(2000)],
 					}),
 					tablesDB.listRows({
 						databaseId: appwriteConfig.databaseId,
@@ -107,7 +115,39 @@ export async function GET(request: NextRequest) {
 				});
 
 				// Calculate stats for a given contracts array
-				const calculateStats = (contracts: any[]): ContractStats => {
+				const licensesByDepartment: Record<string, any[]> = {};
+				const licensesByDivision: Record<string, any[]> = {};
+				allLicenses.rows.forEach((license: any) => {
+					const department = license.department as string;
+					const division = license.division as string;
+					if (department) {
+						if (!licensesByDepartment[department]) {
+							licensesByDepartment[department] = [];
+						}
+						licensesByDepartment[department].push(license);
+					}
+					if (division) {
+						if (!licensesByDivision[division]) {
+							licensesByDivision[division] = [];
+						}
+						licensesByDivision[division].push(license);
+					}
+				});
+
+				const licenseCounts = (licenses: any[]) => ({
+					totalLicenses: licenses.length,
+					activeLicenses: licenses.filter(
+						(l) => String(l.status).toLowerCase() === "active",
+					).length,
+					expiredLicenses: licenses.filter(
+						(l) => String(l.status).toLowerCase() === "expired",
+					).length,
+				});
+
+				const calculateStats = (
+					contracts: any[],
+					licenses: any[] = [],
+				): ContractStats => {
 					const totalContracts = contracts.length;
 					const totalBudget = contracts.reduce((sum, contract) => {
 						const amount =
@@ -122,7 +162,10 @@ export async function GET(request: NextRequest) {
 						(c) => c.status === "expired" || c.status === "Expired",
 					).length;
 					const pendingContracts = contracts.filter(
-						(c) => c.status === "pending" || c.status === "Pending",
+						(c) =>
+							c.status === "pending" ||
+							c.status === "Pending" ||
+							c.status === "pending-review",
 					).length;
 
 					const compliantContracts = contracts.filter(
@@ -140,6 +183,7 @@ export async function GET(request: NextRequest) {
 						activeContracts,
 						expiredContracts,
 						pendingContracts,
+						...licenseCounts(licenses),
 						complianceRate,
 						staffCount: 0, // Will be set separately
 					};
@@ -251,7 +295,11 @@ export async function GET(request: NextRequest) {
 
 				Object.entries(departmentConfig).forEach(([deptKey, deptConfig]) => {
 					const departmentContracts = contractsByDepartment[deptKey] || [];
-					const departmentStats = calculateStats(departmentContracts);
+					const departmentLicenses = licensesByDepartment[deptKey] || [];
+					const departmentStats = calculateStats(
+						departmentContracts,
+						departmentLicenses,
+					);
 
 					// Division IDs now match database division names directly
 					const dbDivisionMap: Record<string, string> = {
@@ -272,7 +320,11 @@ export async function GET(request: NextRequest) {
 					const divisions = deptConfig.divisions.map((division) => {
 						const dbDivision = dbDivisionMap[division.id] || division.id;
 						const divisionContracts = contractsByDivision[dbDivision] || [];
-						const divisionStats = calculateStats(divisionContracts);
+						const divisionLicenses = licensesByDivision[dbDivision] || [];
+						const divisionStats = calculateStats(
+							divisionContracts,
+							divisionLicenses,
+						);
 						const divisionStaffCount = usersByDivision[dbDivision]?.length || 0;
 						divisionStats.staffCount = divisionStaffCount;
 						departmentStaffCount += divisionStaffCount;
@@ -306,11 +358,18 @@ export async function GET(request: NextRequest) {
 				);
 				const totalActiveStaff = allUsers.total;
 
+				const overall = calculateStats(
+					allContracts.rows,
+					allLicenses.rows,
+				);
 				const totalStats = {
 					totalContracts,
 					totalBudget,
 					totalActiveStaff,
-					complianceRate: calculateStats(allContracts.rows).complianceRate,
+					complianceRate: overall.complianceRate,
+					totalLicenses: overall.totalLicenses,
+					expiredLicenses: overall.expiredLicenses,
+					activeLicenses: overall.activeLicenses,
 				};
 
 				return {

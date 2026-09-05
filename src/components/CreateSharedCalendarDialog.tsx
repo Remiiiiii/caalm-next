@@ -2,7 +2,6 @@
 
 import * as VisuallyHiddenPrimitive from "@radix-ui/react-visually-hidden";
 import {
-	Ban,
 	Calendar as CalendarIcon,
 	Check,
 	Globe,
@@ -141,7 +140,13 @@ export const CreateSharedCalendarDialog: React.FC<
 	};
 
 	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
+		<Dialog
+			open={open}
+			onOpenChange={(next) => {
+				if (!next) handleCancel();
+				else onOpenChange(true);
+			}}
+		>
 			<DialogContent className="w-[calc(100%-1.5rem)] sm:w-full max-w-[600px] p-0 max-h-[90vh] flex flex-col">
 				<VisuallyHiddenPrimitive.Root>
 					<DialogTitle>Create Shared Calendar</DialogTitle>
@@ -359,15 +364,6 @@ export const CreateSharedCalendarDialog: React.FC<
 				{/* Professional Footer */}
 				<div className="glass-dialog-footer-wrap">
 					<div className="flex items-center justify-end gap-3">
-						<Button
-							variant="outline"
-							className="primary-btn px-3 sm:px-4"
-							onClick={handleCancel}
-							disabled={creating}
-						>
-							<Ban className="w-4 h-4" />
-							Cancel
-						</Button>
 						<Button
 							className="primary-btn px-3 sm:px-4"
 							onClick={handleCreate}

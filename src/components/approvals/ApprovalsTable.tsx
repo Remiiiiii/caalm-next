@@ -22,7 +22,10 @@ import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import {
 	type ApprovalQueueItem,
-	isAgingUrgent,
+	isSlaAtRisk,
+	isSlaBreached,
+	slaBadgeClasses,
+	slaBadgeLabel,
 	statusBadgeClasses,
 	statusLabel,
 } from "@/lib/approvals/approvalsListUtils";
@@ -188,7 +191,7 @@ export default function ApprovalsTable({
 							Submitted
 						</TableHead>
 						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-							Aging
+							SLA
 						</TableHead>
 						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
 							Status
@@ -250,16 +253,27 @@ export default function ApprovalsTable({
 								<FormattedDateTime date={item.submittedAt} className="body-2" />
 							</TableCell>
 							<TableCell className="py-3 whitespace-nowrap">
-								<span
-									className={cn(
-										"text-sm",
-										isAgingUrgent(item)
-											? "text-orange font-medium"
-											: "text-slate-600",
-									)}
-								>
-									{agingLabel(item)}
-								</span>
+								{item.slaStatus || item.dueAt ? (
+									<span
+										className={cn(
+											"inline-block px-2 py-0.5 text-xs rounded-full font-medium border",
+											slaBadgeClasses(item.slaStatus),
+										)}
+									>
+										{slaBadgeLabel(item) || agingLabel(item)}
+									</span>
+								) : (
+									<span
+										className={cn(
+											"text-sm",
+											isSlaAtRisk(item) || isSlaBreached(item)
+												? "text-orange font-medium"
+												: "text-slate-600",
+										)}
+									>
+										{agingLabel(item)}
+									</span>
+								)}
 							</TableCell>
 							<TableCell className="py-3 whitespace-nowrap">
 								<Badge

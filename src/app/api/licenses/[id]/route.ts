@@ -131,28 +131,38 @@ export async function DELETE(
 
 		const { id } = await params;
 		const user = await getCurrentUser();
+		const deletedByName =
+			(user as { fullName?: string } | null)?.fullName ||
+			user?.email ||
+			"A user";
 
-		await LicenseService.deleteLicense(id);
+		const license = await LicenseService.deleteLicense(id, user?.$id, {
+			deletedByName,
+			deletedByAccountId: user?.accountId,
+		});
+		const licenseLabel =
+			(license as { licenseName?: string })?.licenseName || id;
 
 		revalidateTag("licenses-list");
 		revalidatePath("/licenses");
 
 		if (user) {
+			const userName =
+				(user as { fullName?: string }).fullName || user.email || "unknown";
 			await logAuditEvent({
 				event_id: `license_delete_${id}`,
-				event_title: `License deleted: ${id}`,
+				event_title: `License deleted: ${licenseLabel}`,
 				action: "delete",
 				source: "caalm",
 				user_id: user.$id,
-				user_name:
-					(user as { fullName?: string }).fullName || user.email || "unknown",
+				user_name: userName,
 				user_email: user.email || "",
 				status: "success",
 				module: "licenses",
 				target_type: "license",
 				target_id: id,
-				target_label: id,
-				summary: `${(user as { fullName?: string }).fullName || user.email} deleted license ${id}`,
+				target_label: licenseLabel,
+				summary: `${userName} deleted license ${licenseLabel}`,
 				correlation_id: requestId,
 			});
 		}

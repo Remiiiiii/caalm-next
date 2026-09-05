@@ -764,7 +764,7 @@ export default function ContractsDisplay() {
 								Search Contracts
 							</CardTitle>
 							{activeFilterChips.length > 0 && (
-								<span className="inline-block shrink-0 px-2 py-0.5 text-xs rounded-md font-medium border bg-green/10 text-green border-green/20">
+								<span className="inline-block shrink-0 px-2 py-0.5 text-xs rounded-full font-medium border bg-green/10 text-green border-green/20">
 									{activeFilterChips.length} filter
 									{activeFilterChips.length === 1 ? "" : "s"} active
 								</span>

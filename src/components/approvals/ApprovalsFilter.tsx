@@ -177,6 +177,26 @@ export default function ApprovalsFilter({
 					</div>
 
 					<div className="space-y-2">
+						<Label className="text-slate-700 font-medium">SLA status</Label>
+						<Select
+							value={filters.slaStatus || "any"}
+							onValueChange={(v) =>
+								updateFilter("slaStatus", v === "any" ? undefined : v)
+							}
+						>
+							<SelectTrigger className="border-[0.25px] border-slate-300 bg-white">
+								<SelectValue placeholder="Any SLA status" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="any">Any SLA status</SelectItem>
+								<SelectItem value="at_risk">At risk</SelectItem>
+								<SelectItem value="breached">SLA breached</SelectItem>
+								<SelectItem value="on_track">On track</SelectItem>
+							</SelectContent>
+						</Select>
+					</div>
+
+					<div className="space-y-2">
 						<Label className="text-slate-700 font-medium">Submitted</Label>
 						<div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
 							<Popover>

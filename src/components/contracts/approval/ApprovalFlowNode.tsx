@@ -2,6 +2,7 @@
 
 import { Bell, CheckCircle2, Clock, User, XCircle } from "lucide-react";
 import { getAvatarColor } from "@/components/ui/avatar";
+import { slaCountdownLabel } from "@/lib/approvals/approvalSlaDisplay";
 import type {
 	ApprovalParticipant,
 	ApprovalWorkflowNotification,
@@ -28,6 +29,7 @@ interface ApprovalFlowNodeProps {
 	isCurrent: boolean;
 	department?: string;
 	subDepartment?: string;
+	frozen?: boolean;
 }
 
 function statusMeta(status: string) {
@@ -106,6 +108,7 @@ export default function ApprovalFlowNode({
 	isCurrent,
 	department,
 	subDepartment,
+	frozen = false,
 }: ApprovalFlowNodeProps) {
 	const meta = statusMeta(step.status);
 	const StatusIcon = meta.Icon;
@@ -152,6 +155,26 @@ export default function ApprovalFlowNode({
 		/Awaiting\s+executive/gi,
 		"Awaiting\u00A0executive",
 	);
+	const countdown = isCurrent && !frozen ? slaCountdownLabel(step.dueAt) : "";
+	const slaPill =
+		frozen
+			? null
+			: isCurrent && step.slaStatus === "breached"
+			? {
+					label: countdown || "SLA breached",
+					className: "bg-red/10 text-red border-red/20",
+				}
+			: isCurrent && step.slaStatus === "at_risk"
+				? {
+						label: countdown || "At risk",
+						className: "bg-orange/10 text-orange border-orange/20",
+					}
+				: countdown
+					? {
+							label: countdown,
+							className: "bg-green/10 text-green border-green/20",
+						}
+					: null;
 
 	return (
 		<div
@@ -168,15 +191,27 @@ export default function ApprovalFlowNode({
 					<p className="min-w-0 flex-1 text-[15px] font-bold leading-snug sidebar-gradient-text">
 						{titleLabel}
 					</p>
-					<span
-						className={cn(
-							"inline-flex shrink-0 items-center gap-1 rounded border px-2 py-1 text-[10px] font-medium uppercase tracking-wide",
-							meta.className,
-						)}
-					>
-						<StatusIcon className="h-2.5 w-2.5" />
-						{meta.label}
-					</span>
+					<div className="flex shrink-0 flex-col items-end gap-1">
+						<span
+							className={cn(
+								"inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide",
+								meta.className,
+							)}
+						>
+							<StatusIcon className="h-2.5 w-2.5" />
+							{meta.label}
+						</span>
+						{slaPill ? (
+							<span
+								className={cn(
+									"inline-block px-2 py-0.5 text-xs rounded-full font-medium border",
+									slaPill.className,
+								)}
+							>
+								{slaPill.label}
+							</span>
+						) : null}
+					</div>
 				</div>
 
 				{/* Department / category */}

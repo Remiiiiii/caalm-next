@@ -760,19 +760,15 @@ export async function submitWizard(input: {
 		.slice(0, 60);
 	let fileId: string | null = null;
 	try {
-		const pdfBuffer = payload.blueprintId
-			? await buildWizardPdf(
-					payload,
-					included.map((section) => ({
-						title: section.title,
-						body: section.body,
-					})),
-					input.orgId,
-				)
-			: Buffer.from(assembly.markdown, "utf8");
-		const fileName = payload.blueprintId
-			? `${safeName || "contract"}-${input.session.$id.slice(0, 8)}.pdf`
-			: `${safeName || "contract"}-${input.session.$id.slice(0, 8)}.md`;
+		const pdfBuffer = await buildWizardPdf(
+			payload,
+			included.map((section) => ({
+				title: section.title,
+				body: section.body,
+			})),
+			input.orgId,
+		);
+		const fileName = `${safeName || "contract"}-${input.session.$id.slice(0, 8)}.pdf`;
 		const bucketFileId = await FileService.uploadFileToStorage(
 			pdfBuffer,
 			fileName,
