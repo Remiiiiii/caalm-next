@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { emptyWizardPayload } from "./assemble-contract";
 import {
 	buildMergeTokenValues,
+	fillFieldPlaceholder,
 	formatAmountForDocument,
 	getVisibleFillFields,
 	isSignatureLockToken,
@@ -26,6 +27,19 @@ describe("blueprint token schema", () => {
 		expect(fields.some((field) => field.kind === "intake" && field.intakeField === "counterparty")).toBe(
 			true,
 		);
+	});
+
+	it("gives payment schedule a written-plan example, not a bare number", () => {
+		const placeholder = fillFieldPlaceholder({
+			kind: "token",
+			token: "PAYMENT_SCHEDULE",
+			label: "Payment Schedule",
+			dataType: "string",
+			required: false,
+			group: "compensation",
+		});
+		expect(placeholder.toLowerCase()).toContain("quarterly");
+		expect(placeholder.toLowerCase()).toContain("not just a number");
 	});
 
 	it("lists every missing required field at once", () => {

@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
+import { useStepUp } from "@/contexts/StepUpContext";
 import {
 	getMicrosoftCalendarIntegrationStatus,
 	syncMicrosoftCalendar,
@@ -29,6 +30,7 @@ export default function OutlookIntegrationCard({
 	userId,
 }: OutlookIntegrationCardProps) {
 	const { toast } = useToast();
+	const { ensureStepUp } = useStepUp();
 	const [loading, setLoading] = useState(true);
 	const [syncing, setSyncing] = useState(false);
 	const [connected, setConnected] = useState(false);
@@ -77,6 +79,7 @@ export default function OutlookIntegrationCard({
 	};
 
 	const handleDisconnect = async () => {
+		if (!(await ensureStepUp())) return;
 		try {
 			const response = await fetch("/api/microsoft/disconnect", {
 				method: "POST",

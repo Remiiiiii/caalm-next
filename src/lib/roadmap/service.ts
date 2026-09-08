@@ -201,7 +201,8 @@ export async function evaluateSectionMergeBlock(
 	for (const number of numbers) {
 		const isTrigger = options?.triggeringPr?.prNumber === number;
 		if (isTrigger) {
-			const sha = options.triggeringPr.mergeCommitSha;
+			const sha = options?.triggeringPr?.mergeCommitSha;
+			if (!sha) continue;
 			const gate = await fetchRoadmapCompletionGate({ commitSha: sha });
 			if (!gate.ok) {
 				return `PR #${number}: ${gate.reason}`;

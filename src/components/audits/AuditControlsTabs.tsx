@@ -74,7 +74,7 @@ export function AuditControlsTabs() {
 				onValueChange={handleTabChange}
 				className="w-full"
 			>
-				<TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 mb-6 bg-white border border-slate-200 h-auto gap-1 p-1">
+				<TabsList className="grid w-full grid-cols-5 mb-6 bg-white border border-slate-200 h-auto gap-1 p-1">
 					{AUDIT_CONTROL_TABS.map((tab) => {
 						const Icon = TAB_ICONS[tab.id];
 						const isActive = activeTab === tab.id;

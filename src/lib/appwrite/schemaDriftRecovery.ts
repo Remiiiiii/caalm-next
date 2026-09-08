@@ -35,6 +35,8 @@ const ENUM_FALLBACKS: Record<string, string> = {
 	department: "Administration",
 
 	division: "management",
+
+	currencyCode: "USD",
 };
 
 /** Limits learned from Appwrite errors during this process (field -> max chars). */

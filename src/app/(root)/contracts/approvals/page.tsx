@@ -82,6 +82,7 @@ export default async function ContractsApprovalsPage() {
 					contractOwnerId: contract.contractOwnerId as string | undefined,
 					contractExpiryDate: contract.contractExpiryDate as string | undefined,
 					status: contract.status as UIFileDoc["status"],
+					lifecycleStatus: contract.lifecycleStatus as string | undefined,
 					contractType: contract.contractType as string | undefined,
 					amount: contract.amount as number | undefined,
 					vendor: contract.vendor as string | undefined,
@@ -104,7 +105,9 @@ export default async function ContractsApprovalsPage() {
 		contractDocuments = [];
 	}
 
-	const items = contractDocuments.map(contractToApprovalItem);
+	const items = contractDocuments
+		.filter((file) => file.lifecycleStatus !== "negotiation")
+		.map(contractToApprovalItem);
 	const departments = Array.from(
 		new Set(items.map((i) => i.department).filter((d): d is string => !!d)),
 	).sort();

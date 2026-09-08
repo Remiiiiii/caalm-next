@@ -11,7 +11,7 @@ type WizardStepperProps = {
 
 export function WizardStepper({ currentStep, onSelect }: WizardStepperProps) {
 	return (
-		<ol className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+		<ol className="mb-6 grid grid-cols-4 gap-3">
 			{WIZARD_STEPS.map((step) => {
 				const done = currentStep > step.id;
 				const active = currentStep === step.id;

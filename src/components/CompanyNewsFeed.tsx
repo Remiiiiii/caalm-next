@@ -221,8 +221,8 @@ const CompanyNewsFeed: React.FC<CompanyNewsFeedProps> = ({
 					</div>
 				</div>
 
-				{/* Stats Cards */}
-				<div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+				{/* Stats Cards — laptop glance only; phone goes straight to the feed */}
+				<div className="mb-8 hidden gap-6 md:grid md:grid-cols-3">
 					<Card className="glass-card hover:shadow-drop-3 transition-all duration-300">
 						<div className="glass-card-cap" />
 						<CardContent className="p-6">

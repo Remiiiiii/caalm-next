@@ -142,10 +142,19 @@ export default function LicenseStatusPieChart({
 							))}
 						</Pie>
 						<Tooltip
-							formatter={(value: number, _name, item) => [
-								`${value} (${item.payload.percentage}%)`,
-								item.payload.name,
-							]}
+							formatter={(value, _name, item) => {
+								const safeValue =
+									typeof value === "number"
+										? value
+										: Number(value ?? 0);
+								const payload = item?.payload as
+									| { percentage?: number; name?: string }
+									| undefined;
+								return [
+									`${safeValue} (${payload?.percentage ?? 0}%)`,
+									payload?.name ?? "Unknown",
+								];
+							}}
 						/>
 					</PieChart>
 				</ResponsiveContainer>

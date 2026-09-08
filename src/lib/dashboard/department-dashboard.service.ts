@@ -231,7 +231,7 @@ function buildActionQueue(params: {
 			type: "contract_review",
 			title: `Review ${contract.contractName || contract.name || "contract"}`,
 			dueDate: contract.contractExpiryDate,
-			href: `/my-contracts`,
+			href: `/contracts/approvals`,
 			priority: "high",
 			meta: contract.status || "pending-review",
 		});
@@ -251,7 +251,7 @@ function buildActionQueue(params: {
 			type: "contract_expiry",
 			title: `${contract.contractName || contract.name || "Contract"} expires soon`,
 			dueDate: contract.contractExpiryDate,
-			href: `/my-contracts`,
+			href: `/contracts/approvals`,
 			priority: days !== null && days <= 30 ? "high" : "medium",
 			meta:
 				days !== null ? `${days} day${days === 1 ? "" : "s"} left` : undefined,
@@ -332,7 +332,7 @@ export async function getDepartmentDashboardData(
 	const actionQueue = buildActionQueue({
 		contracts,
 		pendingApprovals: approvals.length,
-		approvalsHref: "/calendar",
+		approvalsHref: "/contracts/approvals",
 	});
 
 	// Also surface contract reviews in queue (already included via buildActionQueue)
@@ -367,21 +367,21 @@ export async function getDepartmentDashboardData(
 				needsAttention: contractsNeedingAttention.length,
 				ok: contractsOk,
 				total: totalContracts,
-				href: "/my-contracts",
+				href: "/contracts/approvals",
 			},
 			calendar: {
 				label: "Calendar",
 				needsAttention: approvals.length,
 				ok: Math.max(0, approvals.length === 0 ? 1 : 0),
 				total: Math.max(approvals.length, 1),
-				href: "/calendar",
+				href: "/contracts/approvals",
 			},
 			licenses: {
 				label: "Licenses",
 				needsAttention: licenses.needsAttention,
 				ok: licenses.ok,
 				total: licenses.total,
-				href: "/licenses/department",
+				href: "/licenses/approvals",
 			},
 			documents: {
 				label: "Documents",

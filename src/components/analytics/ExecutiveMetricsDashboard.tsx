@@ -194,7 +194,7 @@ const ExecutiveMetricsDashboard: React.FC<ExecutiveMetricsDashboardProps> = ({
 						className="!p-0"
 					/>
 				</div>
-				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+				<div className="grid grid-cols-4 gap-6">
 					{[...Array(8)].map((_, i) => (
 						<Card
 							key={i}
@@ -254,7 +254,7 @@ const ExecutiveMetricsDashboard: React.FC<ExecutiveMetricsDashboardProps> = ({
 			</div>
 
 			{/* Metrics Grid */}
-			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+			<div className="grid grid-cols-4 gap-6">
 				{metrics.map((metric, index) => {
 					const IconComponent = metric.icon;
 					return (
@@ -296,7 +296,7 @@ const ExecutiveMetricsDashboard: React.FC<ExecutiveMetricsDashboardProps> = ({
 			</div>
 
 			{/* Summary Cards */}
-			<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+			<div className="grid grid-cols-3 gap-6">
 				<Card className="glass-card">
 					<div className="glass-card-cap" />
 					<CardHeader>

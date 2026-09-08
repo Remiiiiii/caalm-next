@@ -48,6 +48,7 @@ export const CONTRACT_CATEGORY_OPTIONS = [
 
 export const LIFECYCLE_STATUSES = [
 	{ value: "draft", label: "Draft" },
+	{ value: "negotiation", label: "Negotiation" },
 	{ value: "under_review", label: "Under Review" },
 	{ value: "approved", label: "Approved" },
 	{ value: "active", label: "Active" },

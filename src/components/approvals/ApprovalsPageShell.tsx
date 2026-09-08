@@ -52,7 +52,7 @@ function ApprovalsPageBody({
 			<div className="flex items-center gap-4 mb-4 justify-start self-start w-full">
 				<h1 className="h1 capitalize sidebar-gradient-text">{title}</h1>
 			</div>
-			<div className="mb-6 flex items-center justify-end gap-2 flex-wrap">
+			<div className="mb-6 hidden md:flex items-center justify-end gap-2 flex-wrap">
 				<Button
 					asChild
 					variant="outline"

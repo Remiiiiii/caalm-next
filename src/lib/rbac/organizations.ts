@@ -41,6 +41,8 @@ export interface Organization {
 		address?: string;
 		phone?: string;
 		email?: string;
+		/** Optional company logo file id (organization_logos bucket) */
+		logoFileId?: string;
 		[key: string]: unknown;
 	};
 	stripeCustomerId?: string;

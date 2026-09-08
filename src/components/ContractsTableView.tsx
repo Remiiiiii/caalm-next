@@ -49,13 +49,18 @@ function formatContractValue(amount: number): string {
 
 function statusBadge(file: UIFileDoc) {
 	const expired = isContractExpired(file);
-	const status = expired ? "expired" : file.status || "";
+	const status = expired
+		? "expired"
+		: file.lifecycleStatus === "negotiation"
+			? "negotiation"
+			: file.status || "";
 	const labelMap: Record<string, string> = {
 		"pending-review": "Pending Review",
 		"action-required": "Action Required",
 		active: "Active",
 		inactive: "Inactive",
 		expired: "Expired",
+		negotiation: "Negotiation",
 	};
 	const classMap: Record<string, string> = {
 		active: "bg-green/10 text-green border-green/20",
@@ -63,6 +68,7 @@ function statusBadge(file: UIFileDoc) {
 		"action-required": "bg-red/10 text-red border-red/20",
 		inactive: "bg-slate-100 text-slate-600 border-slate-200",
 		expired: "bg-red/10 text-red border-red/20",
+		negotiation: "bg-orange/10 text-orange border-orange/20",
 	};
 	return (
 		<span

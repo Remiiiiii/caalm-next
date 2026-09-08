@@ -421,7 +421,7 @@ const OrganizationAnalyticsDashboard = () => {
 				</div>
 				<div className="animate-pulse">
 					<div className="h-8 bg-white/20 rounded-xl w-1/3 mb-4"></div>
-					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+					<div className="grid grid-cols-4 gap-6">
 						{[1, 2, 3, 4].map((i) => (
 							<div
 								key={i}
@@ -487,7 +487,7 @@ const OrganizationAnalyticsDashboard = () => {
 			<Card className="glass-card">
 				<div className="glass-card-cap" />
 				<CardHeader>
-					<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+					<div className="flex flex-row items-center justify-between gap-4">
 						<CardTitle className="h2 sidebar-gradient-text">
 							Departmental Performance Breakdown
 						</CardTitle>
@@ -537,7 +537,7 @@ const OrganizationAnalyticsDashboard = () => {
 								>
 									<div className="space-y-6">
 										{/* Department Stats */}
-										<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+										<div className="grid grid-cols-4 gap-6">
 											<Card className="glass-card">
 												<div className="glass-card-cap" />
 												<CardContent className="p-4">
@@ -647,7 +647,7 @@ const OrganizationAnalyticsDashboard = () => {
 											</CardHeader>
 											<CardContent>
 												{dept.divisions.length > 0 ? (
-													<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+													<div className="grid grid-cols-3 gap-4">
 														{dept.divisions.map((division) => (
 															<Card
 																key={division.id}
@@ -759,7 +759,7 @@ const OrganizationAnalyticsDashboard = () => {
 
 					{/* Overview Tab */}
 					<TabsContent value="overview" className="space-y-6">
-						<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+						<div className="grid grid-cols-2 gap-6">
 							{/* Budget Allocation */}
 							<Card className="glass-card">
 								<div className="glass-card-cap" />
@@ -842,7 +842,7 @@ const OrganizationAnalyticsDashboard = () => {
 						</div>
 
 						{/* Staff and Contract Distribution */}
-						<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+						<div className="grid grid-cols-2 gap-6">
 							<Card className="bg-white/60 backdrop-blur border border-white/40 shadow-lg">
 								<CardHeader>
 									<CardTitle className="h3 sidebar-gradient-text">

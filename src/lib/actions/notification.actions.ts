@@ -581,7 +581,7 @@ export const checkDocumentExpirations = async () => {
 			if (sentKeys.has(sentKey)) continue;
 
 			const departmentLabel = contract.department
-				? formatDepartmentName(contract.department as string)
+				? formatDepartmentName(contract.department as ContractDepartment)
 				: "Unknown Department";
 			const expirySlice = String(contract.contractExpiryDate).slice(0, 10);
 			const autoRenew = contract.autoRenew === true;

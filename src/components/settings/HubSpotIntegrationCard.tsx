@@ -22,6 +22,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
+import { useStepUp } from "@/contexts/StepUpContext";
 import HubSpotConfigDialog from "./HubSpotConfigDialog";
 import IntegrationCard from "./IntegrationCard";
 import type { CrmFieldMap, CrmIntegrationConfig } from "@/lib/crm/types";
@@ -41,6 +42,7 @@ export default function HubSpotIntegrationCard({
 	onViewPlans,
 }: HubSpotIntegrationCardProps) {
 	const { toast } = useToast();
+	const { ensureStepUp } = useStepUp();
 	const [loading, setLoading] = useState(!locked);
 	const [syncing, setSyncing] = useState(false);
 	const [connected, setConnected] = useState(false);
@@ -97,6 +99,7 @@ export default function HubSpotIntegrationCard({
 	};
 
 	const handleDisconnect = async () => {
+		if (!(await ensureStepUp())) return;
 		try {
 			const res = await fetch("/api/hubspot/disconnect", {
 				method: "POST",

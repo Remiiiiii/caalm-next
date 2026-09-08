@@ -1,10 +1,10 @@
 import type { BlueprintId, WizardIntake } from "@/types/contract-templates";
+import manifest from "./blueprint-token-manifest.json";
 import {
 	isOrgLetterheadToken,
 	ORG_LETTERHEAD_TOKENS,
 	type OrgLetterheadToken,
 } from "./org-letterhead";
-import manifest from "./blueprint-token-manifest.json";
 
 export const GOVERNMENT_CONTRACT_TYPES = [
 	{ value: "firm-fixed-price", label: "Firm-fixed-price" },
@@ -116,7 +116,9 @@ function groupFor(token: string): TokenGroup {
 }
 
 export function isSignatureLockToken(token: string): boolean {
-	return token.endsWith("_SIGNATURE_HASH") || token.endsWith("_SIGNATURE_TIMESTAMP");
+	return (
+		token.endsWith("_SIGNATURE_HASH") || token.endsWith("_SIGNATURE_TIMESTAMP")
+	);
 }
 
 export function defineToken(token: string): TokenFieldDef {
@@ -337,13 +339,136 @@ export function getVisibleFillFields(blueprintId: string): VisibleFillField[] {
 	return fields;
 }
 
+/** Example text so authors know what each merge field expects. */
+const TOKEN_PLACEHOLDERS: Record<string, string> = {
+	CLIENT_NAME: "e.g. Acme Health Services",
+	VENDOR_NAME: "e.g. Northwind Consulting LLC",
+	GRANTOR_NAME: "e.g. State Health Foundation",
+	GRANTEE_NAME: "e.g. Community Care Nonprofit",
+	CONTRACTING_AGENCY: "e.g. U.S. Department of Health",
+	CONTRACTOR_NAME: "e.g. Apex Solutions Inc.",
+	LANDLORD_NAME: "e.g. Riverfront Properties LLC",
+	TENANT_NAME: "e.g. Bright Path Clinic",
+	CONSULTANT_NAME: "e.g. Jordan Lee",
+	PARTY_A_NAME: "e.g. County Behavioral Health",
+	PARTY_B_NAME: "e.g. Partner Agency Inc.",
+	DONOR_NAME: "e.g. Smith Family Foundation",
+	RECIPIENT_NAME: "e.g. CAALM Community Fund",
+	COMPANY_NAME: "e.g. CAALM Solutions",
+	EMPLOYEE_NAME: "e.g. Alex Rivera",
+	SPONSOR_NAME: "e.g. Fiscal Sponsor Org",
+	SPONSORED_PROJECT_NAME: "e.g. Youth Mentorship Project",
+	SCOPE_OF_WORK: "Describe the services or deliverables in 2–4 sentences…",
+	GRANT_PURPOSE_DESCRIPTION:
+		"e.g. Expand outpatient behavioral health capacity in rural counties",
+	MOU_PURPOSE: "e.g. Coordinate referral pathways between both organizations",
+	PARTY_A_RESPONSIBILITIES: "List Party A’s duties, one item per line…",
+	PARTY_B_RESPONSIBILITIES: "List Party B’s duties, one item per line…",
+	GIFT_DESCRIPTION: "e.g. Unrestricted cash gift for operating support",
+	GIFT_PURPOSE: "e.g. Fund scholarships for the 2026 program year",
+	PROJECT_DESCRIPTION:
+		"Summarize the sponsored project’s goals and activities…",
+	JOB_DUTIES_DESCRIPTION: "List primary duties and expectations…",
+	QUALITY_STANDARDS: "e.g. Industry best practices and documented QC reviews",
+	SLA_TERMS: "e.g. 99.5% uptime; critical tickets answered within 4 hours",
+	RENEWAL_TERMS:
+		"e.g. Auto-renews for one year unless either party gives 60 days’ notice",
+	BUDGET: "e.g. 500000",
+	RENT_AMOUNT: "e.g. 4500",
+	SALARY_AMOUNT: "e.g. 85000",
+	GIFT_VALUE: "e.g. 25000",
+	PAYMENT_SCHEDULE: "e.g. four equal quarterly installments",
+	INVOICING_TERMS: "e.g. Net 30 from invoice date; submit invoices monthly",
+	LATE_FEE_TERMS: "e.g. 1.5% per month on unpaid balances after the due date",
+	IP_OWNERSHIP_TERMS: "e.g. Work product is owned by Client upon full payment",
+	CURE_PERIOD: "e.g. 15 days after written notice",
+	NOTICE_PERIOD: "e.g. 30 days’ prior written notice",
+	GOVERNING_STATE: "e.g. Delaware",
+	REPORTING_FREQUENCY: "e.g. quarterly progress reports",
+	RECORD_RETENTION_PERIOD: "e.g. seven (7) years after final payment",
+	PREMISES_ADDRESS: "e.g. 123 Main Street, Suite 400, Austin, TX 78701",
+	SQUARE_FOOTAGE: "e.g. 2,400",
+	PERMITTED_USE: "e.g. General office and outpatient counseling services",
+	RENT_FREQUENCY: "e.g. monthly, due on the first of each month",
+	SECURITY_DEPOSIT: "e.g. equal to one month’s rent",
+	UTILITIES_ALLOCATION: "e.g. Tenant pays electricity; Landlord pays water",
+	INSURANCE_AMOUNT: "e.g. $1,000,000 general liability per occurrence",
+	DELIVERABLES_SCHEDULE: "e.g. Draft by Day 30; final report by Day 60",
+	NON_SOLICIT_PERIOD: "e.g. twelve (12) months after termination",
+	RECOGNITION_TERMS: "e.g. Name listed on the annual donor wall",
+	REPORTING_TERMS: "e.g. Annual impact summary within 90 days of year-end",
+	SPONSORSHIP_MODEL: "e.g. comprehensive (Model A) fiscal sponsorship",
+	ADMIN_FEE_PERCENTAGE: "e.g. 7%",
+	JOB_TITLE: "e.g. Program Manager",
+	SUPERVISOR_TITLE: "e.g. Director of Operations",
+	WORK_LOCATION: "e.g. Hybrid — HQ in Denver, 3 days on-site",
+	WORK_SCHEDULE: "e.g. Monday–Friday, 9:00 a.m.–5:00 p.m. local time",
+	EMPLOYMENT_TYPE_TERMS: "e.g. full-time, exempt, at-will employment",
+	COMPENSATION_TYPE: "e.g. annual salary",
+	PAY_FREQUENCY: "e.g. biweekly",
+	BONUS_COMMISSION_TERMS: "e.g. discretionary annual bonus up to 10% of salary",
+	HEALTH_BENEFITS_TERMS: "e.g. Company-sponsored medical, dental, and vision",
+	PTO_TERMS: "e.g. 20 days PTO per year, accrued monthly",
+	RETIREMENT_BENEFITS_TERMS: "e.g. 401(k) with 4% employer match",
+	OTHER_BENEFITS_TERMS: "e.g. $75/month wellness stipend",
+	PROBATIONARY_PERIOD_TERMS: "e.g. 90-day introductory period",
+	PROBATION_LENGTH: "e.g. 90 days",
+	NON_COMPETE_TERMS: "e.g. Limited non-compete in the same service line",
+	NON_COMPETE_PERIOD: "e.g. six (6) months after employment ends",
+	NON_COMPETE_SCOPE: "e.g. within 25 miles of the primary work location",
+	SEVERANCE_TERMS:
+		"e.g. two weeks’ pay per year of service, capped at 12 weeks",
+	ADDITIONAL_FAR_CLAUSES: "Search and add FAR clauses (e.g. 52.212-4)",
+};
+
+const INTAKE_PLACEHOLDERS: Partial<Record<keyof WizardIntake, string>> = {
+	contractName: "e.g. FY2026 Community Grant Agreement",
+	counterparty: "e.g. Acme Health Services",
+	department: "Select department",
+	currency: "Select currency",
+	amount: "e.g. 500000",
+	governingLaw: "e.g. Delaware",
+	description: "Optional internal notes about this draft…",
+};
+
+export function fillFieldPlaceholder(field: VisibleFillField): string {
+	if (field.kind === "intake") {
+		return (
+			INTAKE_PLACEHOLDERS[field.intakeField] ||
+			`Enter ${field.label.toLowerCase()}`
+		);
+	}
+	if (TOKEN_PLACEHOLDERS[field.token]) {
+		return TOKEN_PLACEHOLDERS[field.token];
+	}
+	if (field.dataType === "currency") {
+		return "e.g. 500000";
+	}
+	if (field.dataType === "longtext") {
+		return `Describe ${field.label.toLowerCase()} in plain language…`;
+	}
+	if (field.dataType === "date") {
+		return `Select ${field.label.toLowerCase()}`;
+	}
+	if (field.token.endsWith("_TITLE")) {
+		return "e.g. Executive Director";
+	}
+	if (field.token.endsWith("_NAME") || field.token.includes("SIGNEE_NAME")) {
+		return "e.g. Jordan Lee";
+	}
+	return `Enter ${field.label.toLowerCase()}`;
+}
+
 export function parseAmountInput(raw: string): string {
 	const cleaned = raw.replace(/[^0-9.]/g, "");
 	if (!cleaned) return "";
 	const dot = cleaned.indexOf(".");
 	if (dot === -1) return cleaned;
 	const whole = cleaned.slice(0, dot) || "0";
-	const decimals = cleaned.slice(dot + 1).replace(/\./g, "").slice(0, 2);
+	const decimals = cleaned
+		.slice(dot + 1)
+		.replace(/\./g, "")
+		.slice(0, 2);
 	return decimals.length > 0 ? `${whole}.${decimals}` : whole;
 }
 
@@ -376,10 +501,7 @@ export function formatAmountWhileTyping(raw: string, currency = "USD"): string {
 	return `${symbol}${grouped}.${fracRaw.slice(0, 2)}`;
 }
 
-export function formatAmountForDocument(
-	raw: string,
-	currency = "USD",
-): string {
+export function formatAmountForDocument(raw: string, currency = "USD"): string {
 	const amount = Number(raw);
 	if (!raw.trim() || Number.isNaN(amount)) return raw.trim();
 	const code = /^[A-Za-z]{3}$/.test(currency.trim())
@@ -423,7 +545,10 @@ export function buildMergeTokenValues(
 	return values;
 }
 
-const HEADING_KEYWORDS: Record<Exclude<TokenGroup, "signatures" | "record">, string[]> = {
+const HEADING_KEYWORDS: Record<
+	Exclude<TokenGroup, "signatures" | "record">,
+	string[]
+> = {
 	parties: ["part", "parties"],
 	dates: ["term", "duration", "period"],
 	compensation: ["consideration", "payment", "compensation", "rent", "salary"],
@@ -432,12 +557,12 @@ const HEADING_KEYWORDS: Record<Exclude<TokenGroup, "signatures" | "record">, str
 };
 
 export function parseDocxHeadings(html: string): DocxHeading[] {
-	return [...html.matchAll(/<p class="docx-heading"><strong>\s*(\d+)\.\s*([^<]+)/g)].map(
-		(match) => ({
-			number: Number(match[1]),
-			title: match[2].replace(/\.$/, "").trim(),
-		}),
-	);
+	return [
+		...html.matchAll(/<p class="docx-heading"><strong>\s*(\d+)\.\s*([^<]+)/g),
+	].map((match) => ({
+		number: Number(match[1]),
+		title: match[2].replace(/\.$/, "").trim(),
+	}));
 }
 
 export function clauseForGroup(

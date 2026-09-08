@@ -160,3 +160,35 @@ export function firstOrgProfileErrors(
 	}
 	return next;
 }
+
+const ORG_IDENTITY_SETTINGS_KEYS = [
+	"street",
+	"city",
+	"state",
+	"zipcode",
+	"phone",
+	"email",
+	"websiteUrl",
+] as const;
+
+/** True when an org PUT changes identity fields (not timezone-only). */
+export function orgPutRequiresStepUp(body: unknown): boolean {
+	if (!body || typeof body !== "object") return false;
+	const record = body as Record<string, unknown>;
+	if (record.name !== undefined) return true;
+	if (record.domain !== undefined) return true;
+	const settings = record.settings;
+	if (!settings || typeof settings !== "object") return false;
+	const settingsRecord = settings as Record<string, unknown>;
+	return ORG_IDENTITY_SETTINGS_KEYS.some(
+		(key) => settingsRecord[key] !== undefined,
+	);
+}
+
+/** True when an org PUT toggles org-wide 2FA policy. */
+export function orgPutRequiresStepUpForRequire2fa(body: unknown): boolean {
+	if (!body || typeof body !== "object") return false;
+	const settings = (body as Record<string, unknown>).settings;
+	if (!settings || typeof settings !== "object") return false;
+	return (settings as Record<string, unknown>).require2fa !== undefined;
+}

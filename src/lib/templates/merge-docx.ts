@@ -20,6 +20,46 @@ function escapeXml(value: string): string {
 		.replace(/"/g, "&quot;");
 }
 
+/** Strip tags/control chars so negotiation text is safe inside <w:t>. */
+function stripControlChars(value: string): string {
+	let out = "";
+	for (const char of value) {
+		const code = char.charCodeAt(0);
+		if (code === 0x09 || code === 0x0a || code === 0x0d) {
+			out += char;
+			continue;
+		}
+		if (code < 0x20) continue;
+		out += char;
+	}
+	return out;
+}
+
+function negotiationTextToPlain(text: string): string {
+	return stripControlChars(
+		text
+			.split("\r\n")
+			.join("\n")
+			.replace(/<br\s*\/?>/gi, "\n")
+			.replace(/<\/(p|div|tr|li|h[1-6])>/gi, "\n")
+			.replace(/<[^>]+>/g, "")
+			.replace(/&nbsp;/gi, " ")
+			.replace(/&#(\d+);/g, (_, code) => {
+				const n = Number(code);
+				return Number.isFinite(n) && n > 0 ? String.fromCharCode(n) : "";
+			})
+			.replace(/&amp;/g, "&")
+			.replace(/&lt;/g, "<")
+			.replace(/&gt;/g, ">")
+			.replace(/&quot;/g, '"')
+			.replace(/&#39;/g, "'"),
+	).trim();
+}
+
+function sanitizeXmlText(value: string): string {
+	return escapeXml(stripControlChars(value));
+}
+
 function paragraphPlainText(paragraphXml: string): string {
 	return [...paragraphXml.matchAll(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g)]
 		.map((match) => match[1])
@@ -86,7 +126,7 @@ function cloneParagraphWithText(sampleParagraph: string, text: string): string {
 	const pPr = stripParagraphBorders(pPrMatch?.[0] ?? "");
 	const rPr = rPrMatch?.[0] ?? "";
 	const preserve = text.includes("  ") ? ' xml:space="preserve"' : "";
-	return `<w:p>${pPr}<w:r>${rPr}<w:t${preserve}>${escapeXml(text)}</w:t></w:r></w:p>`;
+	return `<w:p>${pPr}<w:r>${rPr}<w:t${preserve}>${sanitizeXmlText(text)}</w:t></w:r></w:p>`;
 }
 
 function buildNumberedSectionHeading(
@@ -97,13 +137,237 @@ function buildNumberedSectionHeading(
 		? findSampleNumberedHeadingParagraph(sourceXml)
 		: null;
 	if (headingSample) return cloneParagraphWithText(headingSample, heading);
-	return `<w:p><w:r><w:rPr><w:b/><w:color w:val="0F5384"/></w:rPr><w:t>${escapeXml(heading)}</w:t></w:r></w:p>`;
+	return `<w:p><w:r><w:rPr><w:b/><w:color w:val="0F5384"/></w:rPr><w:t>${sanitizeXmlText(heading)}</w:t></w:r></w:p>`;
 }
 
 function buildBodyParagraph(text: string, sourceXml?: string): string {
 	const bodySample = sourceXml ? findSampleBodyParagraph(sourceXml) : null;
 	if (bodySample) return cloneParagraphWithText(bodySample, text);
-	return `<w:p><w:r><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t xml:space="preserve">${escapeXml(text)}</w:t></w:r></w:p>`;
+	return `<w:p><w:r><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t xml:space="preserve">${sanitizeXmlText(text)}</w:t></w:r></w:p>`;
+}
+
+function buildNegotiationBodyParagraph(
+	text: string,
+	sourceXml: string,
+): string {
+	const sample = findSampleBodyParagraph(sourceXml);
+	const pPrMatch = sample?.match(/<w:pPr>[\s\S]*?<\/w:pPr>/);
+	const rPrMatch = sample?.match(/<w:rPr>[\s\S]*?<\/w:rPr>/);
+	const pPr = stripParagraphBorders(pPrMatch?.[0] ?? "");
+	const rPr = rPrMatch?.[0] ?? "";
+	const normalized = negotiationTextToPlain(text).replace(/^[-*]\s+/, "• ");
+	if (!normalized) {
+		return `<w:p>${pPr}</w:p>`;
+	}
+	const runs = normalized.split(/(\*\*[^*]+\*\*)/g).filter(Boolean);
+	const runXml = runs
+		.map((part) => {
+			const bold = /^\*\*[^*]+\*\*$/.test(part);
+			const value = bold ? part.slice(2, -2) : part;
+			const boldTag = bold ? "<w:b/>" : "";
+			const properties = rPr
+				? rPr.replace(/<w:rPr>/, `<w:rPr>${boldTag}`)
+				: `<w:rPr>${boldTag}<w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/></w:rPr>`;
+			return `<w:r>${properties}<w:t xml:space="preserve">${sanitizeXmlText(value)}</w:t></w:r>`;
+		})
+		.join("");
+	return `<w:p>${pPr}${runXml}</w:p>`;
+}
+
+function normalizedSectionTitle(value: string): string {
+	return value
+		.replace(/\*\*/g, "")
+		.replace(/[^a-z0-9]+/gi, " ")
+		.trim()
+		.toLowerCase();
+}
+
+export interface NegotiationPdfSection {
+	index: number;
+	title: string;
+	paragraphs: string[];
+}
+
+export interface NegotiationSectionReplaceResult {
+	docx: Buffer;
+	replacedSectionIndexes: number[];
+}
+
+/**
+ * Replace the editable body inside a merged DOCX while preserving letterhead,
+ * section headings, and signature blocks from the blueprint.
+ */
+export function replaceNegotiationSectionsInDocx(
+	docx: Buffer,
+	sections: NegotiationPdfSection[],
+	documentTitle: string,
+): Buffer {
+	return replaceNegotiationSectionsInDocxDetailed(docx, sections, documentTitle)
+		.docx;
+}
+
+/**
+ * Same as replaceNegotiationSectionsInDocx, plus which section indexes were
+ * rewritten (so preview can refuse a stale blueprint PDF).
+ */
+export function replaceNegotiationSectionsInDocxDetailed(
+	docx: Buffer,
+	sections: NegotiationPdfSection[],
+	documentTitle: string,
+): NegotiationSectionReplaceResult {
+	const zip = new PizZip(docx);
+	const file = zip.file("word/document.xml");
+	if (!file) return { docx, replacedSectionIndexes: [] };
+	const xml = file.asText();
+	const paragraphRe = /<w:p\b[^>]*>[\s\S]*?<\/w:p>/g;
+	const paragraphs: Array<{
+		start: number;
+		end: number;
+		xml: string;
+		text: string;
+	}> = [];
+	let match: RegExpExecArray | null = paragraphRe.exec(xml);
+	while (match) {
+		paragraphs.push({
+			start: match.index,
+			end: match.index + match[0].length,
+			xml: match[0],
+			text: paragraphPlainText(match[0]),
+		});
+		match = paragraphRe.exec(xml);
+	}
+
+	// Never splice past </w:body> — that deletes closing tags and Adobe rejects the file.
+	const bodyClose = xml.lastIndexOf("</w:body>");
+	const hardEnd = bodyClose >= 0 ? bodyClose : xml.length;
+
+	const signatureStart =
+		paragraphs.find(
+			(paragraph) =>
+				/^(GRANTOR|GRANTEE|SIGNATURE|CONTRACTOR|VENDOR|CLIENT)$/i.test(
+					paragraph.text.trim(),
+				),
+		)?.start ??
+		findSignaturesParagraphIndex(xml) ??
+		hardEnd;
+	const numbered = paragraphs
+		.map((paragraph) => ({
+			...paragraph,
+			heading: /^(\d+)[.)]\s+(.+)$/.exec(paragraph.text.trim()),
+		}))
+		.filter((paragraph) => paragraph.heading);
+
+	const replacements: Array<{
+		start: number;
+		end: number;
+		value: string;
+		sectionIndex: number;
+	}> = [];
+
+	const bodyParagraphsXml = (paragraphTexts: string[]): string =>
+		flattenParagraphInputs(paragraphTexts.map(negotiationTextToPlain))
+			.map((text) => buildNegotiationBodyParagraph(text, xml))
+			.join("");
+
+	/**
+	 * Swap section body text without dropping tables/bookmarks/drawings.
+	 * Like dokkit: only remove <w:p> nodes in the range; keep everything else.
+	 */
+	const replaceParagraphsPreserveStructure = (
+		slice: string,
+		newParasXml: string,
+	): string => {
+		const preserved = slice.replace(/<w:p\b[^>]*>[\s\S]*?<\/w:p>/g, "");
+		return `${newParasXml}${preserved}`;
+	};
+
+	for (const section of sections.filter((item) => item.index > 0)) {
+		// Prefer index+title, then title-only (wizard may renumber ADDITIONAL TERMS),
+		// then index-only as a last resort.
+		const heading =
+			numbered.find(
+				(item) =>
+					Number(item.heading?.[1]) === section.index &&
+					normalizedSectionTitle(item.heading?.[2] || "") ===
+						normalizedSectionTitle(section.title),
+			) ||
+			numbered.find(
+				(item) =>
+					normalizedSectionTitle(item.heading?.[2] || "") ===
+					normalizedSectionTitle(section.title),
+			) ||
+			numbered.find((item) => Number(item.heading?.[1]) === section.index);
+		if (!heading) continue;
+		const nextHeading = numbered.find((item) => item.start > heading.start);
+		const end = Math.min(
+			nextHeading?.start ?? hardEnd,
+			signatureStart,
+			hardEnd,
+		);
+		if (end < heading.end) continue;
+		const slice = xml.slice(heading.end, end);
+		replacements.push({
+			start: heading.end,
+			end,
+			value: replaceParagraphsPreserveStructure(
+				slice,
+				bodyParagraphsXml(section.paragraphs),
+			),
+			sectionIndex: section.index,
+		});
+	}
+
+	const preamble = sections.find((section) => section.index === 0);
+	if (preamble?.paragraphs.length && numbered[0]) {
+		const titleParagraph = paragraphs.find(
+			(paragraph) =>
+				normalizedSectionTitle(paragraph.text) ===
+				normalizedSectionTitle(documentTitle),
+		);
+		if (titleParagraph && titleParagraph.end < numbered[0].start) {
+			const end = Math.min(numbered[0].start, hardEnd);
+			const slice = xml.slice(titleParagraph.end, end);
+			replacements.push({
+				start: titleParagraph.end,
+				end,
+				value: replaceParagraphsPreserveStructure(
+					slice,
+					bodyParagraphsXml(preamble.paragraphs),
+				),
+				sectionIndex: 0,
+			});
+		}
+	}
+
+	const replacedSectionIndexes = [
+		...new Set(replacements.map((row) => row.sectionIndex)),
+	].sort((a, b) => a - b);
+
+	if (replacements.length === 0) {
+		return { docx, replacedSectionIndexes: [] };
+	}
+
+	let nextXml = xml;
+	for (const replacement of replacements.sort((a, b) => b.start - a.start)) {
+		nextXml =
+			nextXml.slice(0, replacement.start) +
+			replacement.value +
+			nextXml.slice(replacement.end);
+	}
+	const openP = (nextXml.match(/<w:p\b/g) || []).length;
+	const closeP = (nextXml.match(/<\/w:p>/g) || []).length;
+	if (
+		!nextXml.includes("</w:body>") ||
+		!nextXml.includes("</w:document>") ||
+		openP !== closeP
+	) {
+		return { docx, replacedSectionIndexes: [] };
+	}
+	zip.file("word/document.xml", nextXml);
+	return {
+		docx: zip.generate({ type: "nodebuffer" }) as Buffer,
+		replacedSectionIndexes,
+	};
 }
 
 function buildBodyParagraphs(body: string, sourceXml?: string): string[] {
@@ -115,7 +379,7 @@ function buildBodyParagraphs(body: string, sourceXml?: string): string[] {
 function buildClauseSubheading(title: string): string {
 	const trimmed = title.trim();
 	if (!trimmed) return "";
-	return `<w:p><w:r><w:rPr><w:b/><w:color w:val="0F5384"/></w:rPr><w:t>${escapeXml(trimmed)}</w:t></w:r></w:p>`;
+	return `<w:p><w:r><w:rPr><w:b/><w:color w:val="0F5384"/></w:rPr><w:t>${sanitizeXmlText(trimmed)}</w:t></w:r></w:p>`;
 }
 
 export function buildSupplementalDocumentBlocks(input: {

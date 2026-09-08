@@ -42,6 +42,7 @@ import { PERMISSIONS } from "@/constants/permissions";
 import { useAuth } from "@/contexts/AuthContext";
 
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { useStepUp } from "@/contexts/StepUpContext";
 
 import { useToast } from "@/hooks/use-toast";
 
@@ -148,6 +149,7 @@ export default function BillingIntegrationsPage() {
 	const { permissions, loading: permissionsLoading, settled: permissionsSettled, error: permissionsError } = usePermissions();
 
 	const { toast } = useToast();
+	const { ensureStepUp } = useStepUp();
 
 	const router = useRouter();
 
@@ -653,6 +655,8 @@ export default function BillingIntegrationsPage() {
 	const startPaymentMethodSetup = async (replacePaymentMethodId?: string) => {
 
 		if (!resolvedOrgId) return;
+
+		if (!(await ensureStepUp())) return;
 
 		try {
 

@@ -42,6 +42,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useDepartmentAssignment } from "@/hooks/useDepartmentAssignment";
 import {
+	fillFieldPlaceholder,
 	formatAmountForDocument,
 	formatAmountWhileTyping,
 	getVisibleFillFields,
@@ -326,7 +327,7 @@ export function DocumentFillSplitView({
 	};
 
 	return (
-		<div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start lg:gap-0">
+		<div className="grid grid-cols-2 gap-4 lg:items-start lg:gap-0">
 			<aside
 				ref={inputPanelRef}
 				className="flex min-h-0 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white lg:flex-row"
@@ -416,7 +417,7 @@ export function DocumentFillSplitView({
 				)}
 
 				{activeGroup && (
-					<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+					<div className="grid grid-cols-2 gap-3">
 						{activeGroup.fields.map((field) => (
 							<Fragment key={fieldKey(field)}>
 								{field.dividerBefore ? (
@@ -566,6 +567,7 @@ function FillControl({
 	onPatchToken: (token: string, value: string) => void;
 }) {
 	const value = fieldValue(field, intake, tokenValues);
+	const placeholder = fillFieldPlaceholder(field);
 	const setValue = (next: string) => {
 		if (field.kind === "intake") onPatchIntake(field.intakeField, next);
 		else onPatchToken(field.token, next);
@@ -649,6 +651,7 @@ function FillControl({
 					type="text"
 					inputMode="decimal"
 					className={cn("mt-1", FIELD)}
+					placeholder={placeholder}
 					value={
 						value
 							? formatAmountWhileTyping(value, intake.currency || "USD")
@@ -683,6 +686,7 @@ function FillControl({
 				<Label className={labelClass}>{field.label}</Label>
 				<Textarea
 					className={cn("mt-1 min-h-24", FIELD)}
+					placeholder={placeholder}
 					value={value}
 					onChange={(event) => setValue(event.target.value)}
 					{...focusProps}
@@ -715,7 +719,7 @@ function FillControl({
 										day: "numeric",
 										year: "numeric",
 									})
-								: `Select ${field.label.toLowerCase()}`}
+								: placeholder}
 							<CalendarDays className="h-4 w-4 text-slate-500" />
 						</Button>
 					</PopoverTrigger>
@@ -749,6 +753,7 @@ function FillControl({
 			<Input
 				type="text"
 				className={cn("mt-1", FIELD)}
+				placeholder={placeholder}
 				value={value}
 				onChange={(event) => setValue(event.target.value)}
 				{...focusProps}

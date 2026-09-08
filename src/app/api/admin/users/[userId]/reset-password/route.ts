@@ -3,6 +3,7 @@ import * as sdk from "node-appwrite";
 import { PERMISSIONS } from "@/constants/permissions";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { requireStepUpForSession } from "@/lib/auth/step-up";
 import { requirePermission } from "@/lib/rbac/middleware";
 
 /**
@@ -18,6 +19,9 @@ export async function POST(
 			permission: PERMISSIONS.USERS.EDIT,
 		});
 		if (permissionCheck) return permissionCheck;
+
+		const stepUpCheck = await requireStepUpForSession(request);
+		if (stepUpCheck) return stepUpCheck;
 
 		const { userId } = await params;
 		if (!userId) {

@@ -1,22 +1,26 @@
 import * as React from "react";
+import { DESKTOP_MIN_WIDTH } from "@/lib/ui/desktop-first";
 
-/** Matches Tailwind `lg` — sidebar visible at lg+; drawer below. */
-const MOBILE_BREAKPOINT = 1024;
-
-export function useIsMobile() {
+/** `true` / `false` after measure; `undefined` until the first layout read. */
+export function useIsMobileState(): boolean | undefined {
 	const [isMobile, setIsMobile] = React.useState<boolean | undefined>(
 		undefined,
 	);
 
 	React.useEffect(() => {
-		const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
+		const mql = window.matchMedia(`(max-width: ${DESKTOP_MIN_WIDTH - 1}px)`);
 		const onChange = () => {
-			setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+			setIsMobile(window.innerWidth < DESKTOP_MIN_WIDTH);
 		};
 		mql.addEventListener("change", onChange);
-		setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+		setIsMobile(window.innerWidth < DESKTOP_MIN_WIDTH);
 		return () => mql.removeEventListener("change", onChange);
 	}, []);
 
-	return !!isMobile;
+	return isMobile;
+}
+
+/** Matches Tailwind `lg` — sidebar visible at lg+; drawer below. */
+export function useIsMobile() {
+	return !!useIsMobileState();
 }

@@ -11,6 +11,11 @@ import { useToast } from "@/hooks/use-toast";
 import { useContractSnooze } from "@/hooks/useContractSnooze";
 import { useUpdateContractStatus } from "@/hooks/useUpdateContractStatus";
 import type { UIFileDoc } from "@/types/files";
+import { DESKTOP_MIN_WIDTH } from "@/lib/ui/desktop-first";
+
+function isPhoneViewport() {
+	return typeof window !== "undefined" && window.innerWidth < DESKTOP_MIN_WIDTH;
+}
 
 type ContractExpiryAlertBridgeProps = {
 	open: boolean;
@@ -48,11 +53,27 @@ export default function ContractExpiryAlertBridge({
 		"";
 
 	const handleRenew = () => {
+		if (isPhoneViewport()) {
+			toast({
+				title: "Open on a laptop",
+				description: "Renew from the contract library on a desktop or laptop.",
+			});
+			onContractHandled(contract.$id);
+			return;
+		}
 		router.push("/contracts");
 		onContractHandled(contract.$id);
 	};
 
 	const handleViewDetails = () => {
+		if (isPhoneViewport()) {
+			toast({
+				title: "Open on a laptop",
+				description: "Full contract details need a wider screen.",
+			});
+			onContractHandled(contract.$id);
+			return;
+		}
 		router.push(`/contracts?highlight=${encodeURIComponent(contract.$id)}`);
 		onContractHandled(contract.$id);
 	};
@@ -126,11 +147,7 @@ export default function ContractExpiryAlertBridge({
 			amount={
 				typeof contract.amount === "number"
 					? contract.amount
-					: typeof contract.amount === "string" &&
-							contract.amount.trim() !== "" &&
-							Number.isFinite(Number.parseFloat(contract.amount))
-						? Number.parseFloat(contract.amount)
-						: undefined
+					: undefined
 			}
 			status={contract.status || "active"}
 			typeLabel={formatExpiryTypeLabel(contract.contractType)}

@@ -204,7 +204,6 @@ function NewsCardVideo({
 			preload="metadata"
 			controls={false}
 			tabIndex={-1}
-			referrerPolicy="no-referrer"
 			onLoadedMetadata={(event) => {
 				event.currentTarget.currentTime = 0.1;
 			}}

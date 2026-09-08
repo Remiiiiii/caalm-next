@@ -2280,3 +2280,51 @@ iframe[src*="splinecode"] {
 		transition: none;
 	}
 }
+
+/* ===== Negotiate workspace (shared internal + counterparty views) ===== */
+.negotiate-redline-del {
+	color: #ff7474; /* CAALM red */
+	text-decoration: line-through;
+	background: rgba(255, 116, 116, 0.1);
+	border-radius: 2px;
+	padding: 0 2px;
+}
+
+.negotiate-redline-ins {
+	color: #0f8a6d; /* darker CAALM green for AA contrast on tint */
+	text-decoration: underline;
+	background: rgba(61, 217, 179, 0.14);
+	border-radius: 2px;
+	padding: 0 2px;
+}
+
+.negotiate-comment-marker {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 18px;
+	height: 18px;
+	border-radius: 9999px;
+	background: #f9ab72; /* CAALM orange */
+	color: #fff;
+	font-size: 10px;
+	font-weight: 700;
+	margin-left: 6px;
+	vertical-align: middle;
+	cursor: pointer;
+	flex-shrink: 0;
+}
+
+.negotiate-redline-tag {
+	display: inline-block;
+	font-size: 9.5px;
+	font-weight: 700;
+	letter-spacing: 0.03em;
+	text-transform: uppercase;
+	padding: 1px 6px;
+	margin-left: 6px;
+	vertical-align: middle;
+	border-radius: 9999px;
+	border-width: 1px;
+	border-style: solid;
+}

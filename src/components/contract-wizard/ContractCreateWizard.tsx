@@ -215,9 +215,9 @@ export function ContractCreateWizard() {
 		[],
 	);
 
-	const sessionQuery = searchParams.get("session");
-	const templateQuery = searchParams.get("template");
-	const freshQuery = searchParams.get("fresh");
+	const sessionQuery = searchParams?.get("session") ?? null;
+	const templateQuery = searchParams?.get("template") ?? null;
+	const freshQuery = searchParams?.get("fresh") ?? null;
 
 	useEffect(() => {
 		let cancelled = false;
@@ -835,12 +835,17 @@ export function ContractCreateWizard() {
 			);
 			if (!response.ok) throw new Error(await readError(response));
 			dirty.current = false;
+			const payloadJson = (await response.json()) as { contractId?: string };
 			toast({
-				title: "Draft sent for review",
+				title: "Draft ready to negotiate",
 				description:
 					"A new contract was created. Existing records were not changed.",
 			});
-			router.push("/contracts/approvals");
+			if (payloadJson.contractId) {
+				router.push(`/contracts/${payloadJson.contractId}/negotiate`);
+			} else {
+				router.push("/contracts/approvals");
+			}
 		} catch (error) {
 			toast({
 				title: "Could not submit",

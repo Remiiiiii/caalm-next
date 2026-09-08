@@ -22,7 +22,12 @@ export interface LicenseFilters {
 	expiryDateTo?: Date;
 	department?: string;
 	assignedTo?: string;
+	/** Free-text search (API list param `search`). */
+	search?: string;
+	/** Alias used by some filter UIs; prefer `search` for API calls. */
 	searchQuery?: string;
+	vendor?: string;
+	expiringSoon?: boolean;
 	autoRenew?: boolean;
 	issuingAuthority?: string;
 }
@@ -42,7 +47,10 @@ export interface SavedLicenseView {
 		expiryDateTo?: string;
 		department?: string;
 		assignedTo?: string;
+		search?: string;
 		searchQuery?: string;
+		vendor?: string;
+		expiringSoon?: boolean;
 		autoRenew?: boolean;
 		issuingAuthority?: string;
 	};

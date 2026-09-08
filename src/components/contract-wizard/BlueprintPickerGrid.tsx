@@ -67,7 +67,7 @@ export function BlueprintPickerGrid({
 
 	return (
 		<div className="space-y-4">
-			<div className="flex flex-col gap-4 sm:flex-row sm:items-stretch">
+			<div className="flex flex-row items-stretch gap-4">
 				<div className="min-w-0 flex-1">
 					<h2 className="text-xl font-semibold sidebar-gradient-text">
 						Choose the agreement
@@ -79,10 +79,10 @@ export function BlueprintPickerGrid({
 					</p>
 				</div>
 				<div
-					className="hidden w-px shrink-0 self-stretch bg-slate-200 sm:mx-6 sm:block"
+					className="mx-6 w-px shrink-0 self-stretch bg-slate-200"
 					aria-hidden
 				/>
-				<div className="sm:flex sm:max-w-md sm:shrink-0 sm:items-end sm:w-full">
+				<div className="flex w-full max-w-md shrink-0 items-end">
 					<SearchField
 						value={query}
 						onChange={(event) => setQuery(event.target.value)}
@@ -99,7 +99,7 @@ export function BlueprintPickerGrid({
 					<div
 						key={row.map((item) => item.id).join("-")}
 						className={cn(
-							"grid grid-cols-2 gap-6 py-6 md:grid-cols-3 xl:grid-cols-5",
+							"grid grid-cols-3 gap-6 py-6 xl:grid-cols-5",
 							rowIndex < rows.length - 1 && "border-b border-slate-200",
 						)}
 					>

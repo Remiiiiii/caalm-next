@@ -81,11 +81,11 @@ export default function Step1FileUpload({
 
 	const rootProps = {
 		...dropzoneRootRest,
-		onDragOver: (event: DragEvent) => {
+		onDragOver: (event: DragEvent<HTMLElement>) => {
 			if (handleDemoSampleDragOverCapture(event)) return;
 			dropzoneDragOver?.(event);
 		},
-		onDrop: (event: DragEvent) => {
+		onDrop: (event: DragEvent<HTMLElement>) => {
 			if (handleDemoSampleDropCapture(event, onDrop)) return;
 			dropzoneDrop?.(event);
 		},

@@ -83,10 +83,12 @@ const getStatusBadgeClasses = (status: string): string => {
 
 import {
 	AlertTriangle,
+	ArrowRightLeft,
 	Download,
 	FileText,
 	FolderPen,
 	Info,
+	MessageSquareText,
 	Pencil,
 	RefreshCw,
 	ScanEye,
@@ -95,9 +97,10 @@ import {
 	UserRoundCheck,
 	X,
 } from "lucide-react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { ShareInput } from "@/components/ActionsModalContent";
 import ContractApprovalFlowDialog from "@/components/contracts/approval/ContractApprovalFlowDialog";
+import { TransferOwnershipDialog } from "@/components/ownership/TransferOwnershipDialog";
 import { PERMISSIONS } from "@/constants/permissions";
 import { useDepartmentAssignment } from "@/hooks/useDepartmentAssignment";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -145,6 +148,7 @@ const ActionDropdown = ({
 	const [deleteConfirmed, setDeleteConfirmed] = useState(false);
 	const [emails, setEmails] = useState<string[]>([]);
 	const [downloading, setDownloading] = useState(false);
+	const [showTransfer, setShowTransfer] = useState(false);
 
 	// Initialize emails from file.users when share dialog opens
 	useEffect(() => {
@@ -179,6 +183,7 @@ const ActionDropdown = ({
 		handleManagerToggle,
 	} = useDepartmentAssignment();
 	const path = usePathname() || "";
+	const router = useRouter();
 	const [isViewerOpen, setIsViewerOpen] = useState(false);
 	const { permissions } = usePermissions();
 
@@ -205,6 +210,7 @@ const ActionDropdown = ({
 		setAction(null);
 		setName(file.name || file.contractName || "");
 		setDeleteConfirmed(false);
+		setShowTransfer(false);
 		//setEmails([])
 	};
 
@@ -496,7 +502,7 @@ const ActionDropdown = ({
 															: manager.division
 																? formatDepartmentName(
 																		DIVISION_TO_DEPARTMENT[
-																			manager.division
+																			manager.division as UserDivision
 																		] as ContractDepartment,
 																	)
 																: "N/A"}
@@ -967,6 +973,11 @@ const ActionDropdown = ({
 			case "review":
 				// Review requires contracts.review
 				return permissions.includes(PERMISSIONS.CONTRACTS.REVIEW);
+			case "negotiate":
+				return (
+					permissions.includes(PERMISSIONS.CONTRACTS.EDIT) ||
+					permissions.includes(PERMISSIONS.CONTRACTS.REVIEW)
+				);
 			case "status":
 				// Workflow viewer: view/review/approve
 				return (
@@ -977,6 +988,11 @@ const ActionDropdown = ({
 			case "assign":
 				// Assign requires contracts.edit
 				return permissions.includes(PERMISSIONS.CONTRACTS.EDIT);
+			case "transfer":
+				return (
+					permissions.includes(PERMISSIONS.CONTRACTS.VIEW_ALL) &&
+					permissions.includes(PERMISSIONS.CONTRACTS.EDIT)
+				);
 			case "details":
 			case "download":
 			case "share":
@@ -991,7 +1007,7 @@ const ActionDropdown = ({
 	// Only show Assign and Status for actual contract files
 	if (!isContractFile) {
 		filteredActions = filteredActions.filter(
-			(action) => !["assign", "status"].includes(action.value),
+			(action) => !["assign", "status", "transfer"].includes(action.value),
 		);
 	}
 
@@ -1007,6 +1023,13 @@ const ActionDropdown = ({
 	if (isContractExpired) {
 		filteredActions = filteredActions.filter((action) =>
 			["delete", "details", "download", "status"].includes(action.value),
+		);
+	}
+
+	const lifecycle = (file.lifecycleStatus || "draft").toLowerCase();
+	if (lifecycle !== "draft" && lifecycle !== "negotiation") {
+		filteredActions = filteredActions.filter(
+			(action) => action.value !== "negotiate",
 		);
 	}
 
@@ -1036,6 +1059,7 @@ const ActionDropdown = ({
 						{filteredActions.map((actionItem) => {
 							const actionIconMap = {
 								assign: UserRoundCheck,
+								transfer: ArrowRightLeft,
 								rename: Pencil,
 								share: Share2,
 								delete: Trash2,
@@ -1043,6 +1067,7 @@ const ActionDropdown = ({
 								status: RefreshCw,
 								download: Download,
 								review: ScanEye,
+								negotiate: MessageSquareText,
 							} as const;
 
 							const Icon =
@@ -1148,6 +1173,15 @@ const ActionDropdown = ({
 									tone={tone}
 									onClick={() => {
 										setAction(actionItem);
+										if (actionItem.value === "negotiate") {
+											const id = file.contractId || file.$id;
+											if (id) router.push(`/contracts/${id}/negotiate`);
+											return;
+										}
+										if (actionItem.value === "transfer") {
+											setShowTransfer(true);
+											return;
+										}
 										if (actionItem.value === "review") {
 											setIsViewerOpen(true);
 										} else if (
@@ -1227,6 +1261,26 @@ const ActionDropdown = ({
 				contractId={String(file.contractId || file.$id)}
 				contractName={file.contractName || file.name}
 			/>
+			{(file.contractId || file.$id) && (
+				<TransferOwnershipDialog
+					open={showTransfer}
+					onOpenChange={setShowTransfer}
+					itemKind="contract"
+					itemName={file.contractName || file.name || "Contract"}
+					transferUrl={`/api/contracts/${file.contractId || file.$id}/transfer`}
+					excludeUserId={
+						typeof file.contractOwnerId === "string"
+							? file.contractOwnerId
+							: typeof file.owner === "string"
+								? file.owner
+								: undefined
+					}
+					onTransferred={() => {
+						onRefresh?.();
+						onStatusChange?.();
+					}}
+				/>
+			)}
 		</>
 	);
 };

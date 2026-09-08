@@ -98,7 +98,7 @@ export const useUnifiedDashboardData = (
 			if (url && options?.revalidate !== false) {
 				clearCachedData(url);
 			}
-			return mutate(data, { dedupe: false, ...options });
+			return mutate(data, options);
 		},
 		[mutate, url],
 	);

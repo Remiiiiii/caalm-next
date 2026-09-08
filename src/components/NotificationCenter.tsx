@@ -70,6 +70,7 @@ interface Notification {
 	priority?: "low" | "medium" | "high" | "urgent";
 	actionUrl?: string;
 	actionText?: string;
+	metadata?: string | Record<string, unknown> | null;
 	$createdAt: string;
 	$updatedAt: string;
 }
@@ -299,7 +300,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 		const byId = new Map(sorted.map((n) => [n.$id, n]));
 		const ordered = manualOrderIds
 			.map((id) => byId.get(id))
-			.filter((n): n is Notification => Boolean(n));
+			.flatMap((n) => (n ? [n] : []));
 		const remaining = sorted.filter((n) => !manualOrderIds.includes(n.$id));
 		return [...ordered, ...remaining];
 	}, [sorted, manualOrderIds]);

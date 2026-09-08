@@ -143,7 +143,7 @@ export async function DELETE(
 		const licenseLabel =
 			(license as { licenseName?: string })?.licenseName || id;
 
-		revalidateTag("licenses-list");
+		revalidateTag("licenses-list", "max");
 		revalidatePath("/licenses");
 
 		if (user) {

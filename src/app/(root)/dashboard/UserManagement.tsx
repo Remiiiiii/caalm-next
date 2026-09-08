@@ -47,6 +47,7 @@ import {
 } from "@/components/users/UserManagementActionDialogs";
 import { PERMISSIONS } from "@/constants/permissions";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { useStepUp } from "@/contexts/StepUpContext";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { type UserManagementUser, useUsers } from "@/hooks/useUsers";
@@ -127,6 +128,7 @@ const formatDateTimeLabel = (iso?: string): string => {
 
 const UserManagement = () => {
 	const { toast } = useToast();
+	const { ensureStepUp } = useStepUp();
 	const { permissions } = usePermissions();
 	const canManageUsers = permissions.includes(PERMISSIONS.USERS.EDIT);
 	const canAssignRoles = permissions.includes(PERMISSIONS.USERS.ASSIGN_ROLES);
@@ -908,6 +910,7 @@ const UserManagement = () => {
 				}}
 				onSaveRole={async (roleName) => {
 					if (!actionUser) return;
+					if (!(await ensureStepUp())) return;
 					await runAction(
 						async () => {
 							const res = await fetch("/api/admin/set-user-role", {
@@ -929,6 +932,7 @@ const UserManagement = () => {
 				}}
 				onConfirmReset={async () => {
 					if (!actionUser) return;
+					if (!(await ensureStepUp())) return;
 					await runAction(
 						async () => {
 							const res = await fetch(
@@ -945,6 +949,7 @@ const UserManagement = () => {
 				}}
 				onConfirmRevoke={async () => {
 					if (!actionUser) return;
+					if (!(await ensureStepUp())) return;
 					await runAction(
 						async () => {
 							const res = await fetch(
@@ -961,6 +966,7 @@ const UserManagement = () => {
 				}}
 				onConfirmSuspend={async () => {
 					if (!actionUser) return;
+					if (!(await ensureStepUp())) return;
 					const nextStatus =
 						actionUser.status === "suspended" ||
 						actionUser.status === "inactive"
@@ -987,6 +993,7 @@ const UserManagement = () => {
 				}}
 				onConfirmDelete={async () => {
 					if (!actionUser) return;
+					if (!(await ensureStepUp())) return;
 					await runAction(
 						async () => {
 							const res = await fetch(

@@ -98,7 +98,7 @@ export default function ApprovalsAttentionStrip({
 					type="button"
 					size="sm"
 					variant="outline"
-					className="cursor-pointer border-slate-200"
+					className="hidden md:inline-flex cursor-pointer border-slate-200"
 				>
 					<Link href="/calendar">
 						<Calendar className="h-3.5 w-3.5" />

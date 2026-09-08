@@ -40,11 +40,12 @@ import {
 	resolveSubmitterDepartmentLabel,
 	type SubmitterPlacementInput,
 } from "@/lib/tickets/submitter-placement";
-import type { Ticket, TicketSeverity } from "@/lib/tickets/ticket.types";
+import type { Ticket, TicketLane, TicketSeverity } from "@/lib/tickets/ticket.types";
 import {
+	categoriesForLane,
 	deriveSeverityFromMatrix,
-	TICKET_CATEGORIES,
 	TICKET_IMPACT_LEVELS,
+	TICKET_LANE_OPTIONS,
 	TICKET_MODULES,
 	TICKET_URGENCY_LEVELS,
 } from "@/lib/tickets/ticket-intake.constants";
@@ -74,7 +75,7 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
 type AttachmentEntry = { id: string; file: File };
 type TouchedFields = Partial<
-	Record<"title" | "category" | "impact" | "urgency" | "description", boolean>
+	Record<"lane" | "title" | "category" | "impact" | "urgency" | "description", boolean>
 >;
 
 function getInitials(name?: string | null): string {
@@ -149,6 +150,7 @@ function SelectField({
 	options,
 	placeholder,
 	error,
+	disabled,
 }: {
 	id: string;
 	value: string;
@@ -157,11 +159,13 @@ function SelectField({
 	options: readonly string[];
 	placeholder: string;
 	error?: boolean;
+	disabled?: boolean;
 }) {
 	return (
 		<Select
 			value={value || undefined}
 			onValueChange={onChange}
+			disabled={disabled}
 			onOpenChange={(open) => {
 				if (!open) onBlur?.();
 			}}
@@ -238,6 +242,12 @@ export function TicketSubmitForm() {
 	const { user } = useAuth();
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
+	const [lane, setLane] = useState<TicketLane | "">(
+		() => {
+			const raw = searchParams?.get("lane");
+			return raw === "help" || raw === "engineering" ? raw : "";
+		},
+	);
 	const [title, setTitle] = useState(() => searchParams?.get("title") ?? "");
 	const [category, setCategory] = useState(
 		() => searchParams?.get("category") ?? "",
@@ -247,6 +257,7 @@ export function TicketSubmitForm() {
 	);
 	const [impact, setImpact] = useState("");
 	const [urgency, setUrgency] = useState("");
+	const [helpPriority, setHelpPriority] = useState("");
 	const [description, setDescription] = useState("");
 	const [attachments, setAttachments] = useState<AttachmentEntry[]>([]);
 	const [dragOver, setDragOver] = useState(false);
@@ -269,12 +280,20 @@ export function TicketSubmitForm() {
 	});
 	const initials = getInitials(user?.name);
 
+	const categoryOptions = useMemo(
+		() => (lane ? categoriesForLane(lane) : []),
+		[lane],
+	);
+
+	const effectiveImpact = lane === "help" ? helpPriority : impact;
+	const effectiveUrgency = lane === "help" ? helpPriority : urgency;
+
 	const derived = useMemo(() => {
-		if (!impact || !urgency) return null;
+		if (!effectiveImpact || !effectiveUrgency) return null;
 		try {
 			const result = deriveSeverityFromMatrix(
-				impact as TicketSeverity,
-				urgency as TicketSeverity,
+				effectiveImpact as TicketSeverity,
+				effectiveUrgency as TicketSeverity,
 			);
 			return {
 				level: matrixLevelLabel(result.severity),
@@ -283,21 +302,34 @@ export function TicketSubmitForm() {
 		} catch {
 			return null;
 		}
-	}, [impact, urgency]);
+	}, [effectiveImpact, effectiveUrgency]);
 
 	const errors = useMemo(
 		() => ({
+			lane: lane === "" ? "Choose Help or Engineering." : null,
 			title:
 				title.trim().length < 3 ? "Title must be at least 3 characters." : null,
 			category: category === "" ? "Choose a category." : null,
-			impact: impact === "" ? "Select how many people are affected." : null,
-			urgency: urgency === "" ? "Select how urgent this is." : null,
+			impact:
+				lane === "help"
+					? helpPriority === ""
+						? "Select a priority."
+						: null
+					: impact === ""
+						? "Select how many people are affected."
+						: null,
+			urgency:
+				lane === "help"
+					? null
+					: urgency === ""
+						? "Select how urgent this is."
+						: null,
 			description:
 				description.trim().length < 8
 					? "Description must be at least 8 characters."
 					: null,
 		}),
-		[title, category, impact, urgency, description],
+		[lane, title, category, impact, urgency, helpPriority, description],
 	);
 
 	const isValid = Object.values(errors).every((item) => !item);
@@ -341,13 +373,14 @@ export function TicketSubmitForm() {
 	const onSubmit = async (event: FormEvent) => {
 		event.preventDefault();
 		setTouched({
+			lane: true,
 			title: true,
 			category: true,
 			impact: true,
 			urgency: true,
 			description: true,
 		});
-		if (!isValid || !derived) return;
+		if (!isValid || !derived || !lane) return;
 
 		setSubmitting(true);
 		setError(null);
@@ -361,10 +394,11 @@ export function TicketSubmitForm() {
 			const form = new FormData();
 			form.set("title", title.trim());
 			form.set("description", description.trim());
+			form.set("lane", lane);
 			form.set("category", category);
 			if (affectedModule) form.set("affectedModule", affectedModule);
-			form.set("impact", impact);
-			form.set("urgency", urgency);
+			form.set("impact", effectiveImpact);
+			form.set("urgency", effectiveUrgency);
 
 			for (const entry of attachments.slice(0, MAX_FILES)) {
 				form.append("attachments", entry.file);
@@ -418,6 +452,48 @@ export function TicketSubmitForm() {
 				<div className="glass-card-cap" />
 				<CardContent className="p-4 sm:p-6">
 					<form onSubmit={onSubmit} noValidate className="space-y-6">
+						<div>
+							<p className="mb-1 text-sm font-medium text-slate-700">
+								What kind of request is this? <RequiredMark />
+							</p>
+							<p className="mb-3 text-xs text-slate-600">
+								Pick the closest match — you can escalate Help to Engineering
+								later if needed.
+							</p>
+							<div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+								{TICKET_LANE_OPTIONS.map((option) => {
+									const selected = lane === option.value;
+									return (
+										<button
+											key={option.value}
+											type="button"
+											onClick={() => {
+												setLane(option.value);
+												setCategory("");
+												setTouched((prev) => ({ ...prev, lane: true }));
+											}}
+											className={cn(
+												"cursor-pointer rounded-lg border p-4 text-left transition-all duration-200",
+												selected
+													? "border-[#0f5384] bg-blue/5 shadow-sm"
+													: "border-slate-200 bg-white hover:border-blue-300 hover:bg-blue-50",
+											)}
+										>
+											<p className="text-sm font-semibold sidebar-gradient-text">
+												{option.label}
+											</p>
+											<p className="mt-1 text-xs text-slate-600">
+												{option.helper}
+											</p>
+										</button>
+									);
+								})}
+							</div>
+							{touched.lane && errors.lane ? (
+								<p className="mt-2 text-xs text-red">{errors.lane}</p>
+							) : null}
+						</div>
+
 						<FormField
 							label="Title"
 							htmlFor="ticket-title"
@@ -452,26 +528,53 @@ export function TicketSubmitForm() {
 									onBlur={() =>
 										setTouched((prev) => ({ ...prev, category: true }))
 									}
-									options={TICKET_CATEGORIES}
-									placeholder="Choose a category"
+									options={categoryOptions}
+									placeholder={
+										lane ? "Choose a category" : "Pick a lane first"
+									}
 									error={Boolean(touched.category && errors.category)}
+									disabled={!lane}
 								/>
 							</FormField>
-							<FormField
-								label="Affected service"
-								htmlFor="ticket-module"
-								hint="optional"
-							>
-								<SelectField
-									id="ticket-module"
-									value={affectedModule}
-									onChange={setAffectedModule}
-									options={TICKET_MODULES}
-									placeholder="Where does this happen?"
-								/>
-							</FormField>
+							{lane === "engineering" ? (
+								<FormField
+									label="Affected service"
+									htmlFor="ticket-module"
+									hint="optional"
+								>
+									<SelectField
+										id="ticket-module"
+										value={affectedModule}
+										onChange={setAffectedModule}
+										options={TICKET_MODULES}
+										placeholder="Where does this happen?"
+									/>
+								</FormField>
+							) : (
+								<div />
+							)}
 						</div>
 
+						{lane === "help" ? (
+							<div>
+								<p className="mb-1 text-sm font-medium text-slate-700">
+									Priority <RequiredMark />
+								</p>
+								<p className="mb-3 text-xs text-slate-600">
+									How soon do you need this handled?
+								</p>
+								<PillGroup
+									label="Priority"
+									value={helpPriority}
+									onChange={(value) => {
+										setHelpPriority(value);
+										setTouched((prev) => ({ ...prev, impact: true }));
+									}}
+									options={TICKET_URGENCY_LEVELS}
+									error={touched.impact ? errors.impact : null}
+								/>
+							</div>
+						) : lane === "engineering" ? (
 						<div>
 							<p className="mb-1 text-sm font-medium text-slate-700">
 								How much is this affecting people? <RequiredMark />
@@ -519,6 +622,7 @@ export function TicketSubmitForm() {
 								</div>
 							) : null}
 						</div>
+						) : null}
 
 						<FormField
 							label="Description"
@@ -691,6 +795,7 @@ export function TicketSubmitForm() {
 					open={confirmOpen}
 					ticketNumber={displayTicketNumber(submittedTicket)}
 					ticketId={submittedTicket.$id}
+					lane={submittedTicket.lane}
 					onOpenChange={setConfirmOpen}
 				/>
 			) : null}

@@ -5,6 +5,7 @@ import {
 	normalizeOrgPlacement,
 	OrgUnitValidationError,
 } from "@/lib/org/org-unit-validation";
+import { requireStepUpForSession } from "@/lib/auth/step-up";
 import { requirePermission } from "@/lib/rbac/middleware";
 
 export async function PATCH(req: NextRequest) {
@@ -30,6 +31,11 @@ export async function PATCH(req: NextRequest) {
 		} = body;
 		if (!accountId) {
 			return NextResponse.json({ error: "Missing accountId" }, { status: 400 });
+		}
+
+		if (status !== undefined) {
+			const stepUpCheck = await requireStepUpForSession(req);
+			if (stepUpCheck) return stepUpCheck;
 		}
 
 		if (

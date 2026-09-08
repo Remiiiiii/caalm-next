@@ -137,7 +137,7 @@ export default function MyAccessPanel() {
 	return (
 		<div className="space-y-6">
 			{/* Summary Stats */}
-			<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+			<div className="grid grid-cols-3 gap-6">
 				{/* Roles Card */}
 				<GlassCard className="glass-card">
 					<div className="glass-card-cap" />
@@ -247,7 +247,7 @@ export default function MyAccessPanel() {
 						</div>
 					</div>
 
-					<div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+					<div className="mt-6 flex flex-row items-center justify-between gap-4">
 						<div className="flex min-w-0 flex-1 flex-wrap gap-3">
 							{roles.length === 0 ? (
 								<div className="w-full py-4">
@@ -357,7 +357,7 @@ export default function MyAccessPanel() {
 									</span>
 								</button>
 								{!collapsed && (
-									<div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+									<div className="mt-4 grid grid-cols-2 gap-3">
 										{items.map((item) => (
 											<div
 												key={item.key}

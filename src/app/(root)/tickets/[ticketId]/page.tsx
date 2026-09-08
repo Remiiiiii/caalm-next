@@ -5,7 +5,13 @@ import { TicketDetail } from "@/components/tickets/TicketDetail";
 import { PERMISSIONS } from "@/constants/permissions";
 import { requirePagePermission } from "@/lib/rbac/page-guards";
 import { getUserDefaultOrganization, getUserPermissions } from "@/lib/rbac/permissions";
-import { canResolveTicket, canViewTicket } from "@/lib/tickets/ticket-access.policy";
+import {
+	canClaimTicket,
+	canCloseTicket,
+	canEscalateTicket,
+	canStartFixAgent,
+	canViewTicket,
+} from "@/lib/tickets/ticket-access.policy";
 import { listTicketEvents } from "@/lib/tickets/ticket-events.repository";
 import { getTicketById } from "@/lib/tickets/ticket.repository";
 import { displayTicketNumber } from "@/lib/tickets/ticket-number.utils";
@@ -24,6 +30,7 @@ export default async function TicketPage({
 		notFound();
 	}
 	const events = await listTicketEvents(ticket.$id);
+	const access = { userId: user.$id, permissions };
 
 	return (
 		<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
@@ -36,10 +43,10 @@ export default async function TicketPage({
 			<TicketDetail
 				ticket={ticket}
 				events={events}
-				canResolve={canResolveTicket(ticket, {
-					userId: user.$id,
-					permissions,
-				})}
+				canClaim={canClaimTicket(ticket, access)}
+				canClose={canCloseTicket(ticket, access)}
+				canEscalate={canEscalateTicket(ticket, access)}
+				canStartFixAgent={canStartFixAgent(ticket, access)}
 			/>
 		</div>
 	);

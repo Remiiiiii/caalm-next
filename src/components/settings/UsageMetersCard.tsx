@@ -177,16 +177,16 @@ export default function UsageMetersCard({
 					) : null}
 				</div>
 
-				<div className="relative grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-0">
+				<div className="relative grid grid-cols-2 gap-0">
 					<div
-						className="pointer-events-none absolute top-0 bottom-0 left-1/2 hidden w-[1.5px] -translate-x-1/2 bg-slate-400/75 sm:block"
+						className="pointer-events-none absolute top-0 bottom-0 left-1/2 w-[1.5px] -translate-x-1/2 bg-slate-400/75"
 						aria-hidden
 					/>
 					<div
-						className="pointer-events-none absolute right-0 left-0 top-1/2 hidden h-[1.5px] -translate-y-1/2 bg-slate-400/75 sm:block"
+						className="pointer-events-none absolute right-0 left-0 top-1/2 h-[1.5px] -translate-y-1/2 bg-slate-400/75"
 						aria-hidden
 					/>
-					<div className="sm:pr-6 sm:pb-5">
+					<div className="pr-6 pb-5">
 						<MeterRow
 							label="Storage"
 							used={storageUsed}
@@ -195,7 +195,7 @@ export default function UsageMetersCard({
 							formatValue={formatBytes}
 						/>
 					</div>
-					<div className="sm:pb-5 sm:pl-6">
+					<div className="pb-5 pl-6">
 						<MeterRow
 							label="Seats"
 							used={usersUsed}
@@ -203,7 +203,7 @@ export default function UsageMetersCard({
 							icon={<Users className="h-3.5 w-3.5" />}
 						/>
 					</div>
-					<div className="sm:pr-6 sm:pt-5">
+					<div className="pr-6 pt-5">
 						<MeterRow
 							label="Departments"
 							used={departmentsUsed}
@@ -211,7 +211,7 @@ export default function UsageMetersCard({
 							icon={<Building2 className="h-3.5 w-3.5" />}
 						/>
 					</div>
-					<div className="sm:pt-5 sm:pl-6">
+					<div className="pt-5 pl-6">
 						<MeterRow
 							label="Contracts"
 							used={contractsUsed}
@@ -221,7 +221,7 @@ export default function UsageMetersCard({
 					</div>
 				</div>
 
-				<div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+				<div className="grid grid-cols-2 gap-5">
 					<MeterRow
 						label="Licenses"
 						used={licensesUsed}

@@ -13,6 +13,11 @@ import { useUpdateContractStatus } from "@/hooks/useUpdateContractStatus";
 import type { ExpiryQueueItem } from "@/lib/expiry/expiry-queue";
 import type { UIFileDoc } from "@/types/files";
 import type { License } from "@/types/licenses";
+import { DESKTOP_MIN_WIDTH } from "@/lib/ui/desktop-first";
+
+function isPhoneViewport() {
+	return typeof window !== "undefined" && window.innerWidth < DESKTOP_MIN_WIDTH;
+}
 
 type ExpiryQueueAlertBridgeProps = {
 	item: ExpiryQueueItem;
@@ -60,11 +65,27 @@ export default function ExpiryQueueAlertBridge({
 			"";
 
 		const handleRenew = () => {
+			if (isPhoneViewport()) {
+				toast({
+					title: "Open on a laptop",
+					description: "Renew from the contract library on a desktop or laptop.",
+				});
+				onItemHandled(item);
+				return;
+			}
 			router.push("/contracts");
 			onItemHandled(item);
 		};
 
 		const handleViewDetails = () => {
+			if (isPhoneViewport()) {
+				toast({
+					title: "Open on a laptop",
+					description: "Full contract details need a wider screen.",
+				});
+				onItemHandled(item);
+				return;
+			}
 			router.push(
 				`/contracts?highlight=${encodeURIComponent(contract.$id)}`,
 			);
@@ -162,11 +183,27 @@ export default function ExpiryQueueAlertBridge({
 	);
 
 	const handleRenew = () => {
+		if (isPhoneViewport()) {
+			toast({
+				title: "Open on a laptop",
+				description: "Renew from the license library on a desktop or laptop.",
+			});
+			onItemHandled(item);
+			return;
+		}
 		router.push(`/licenses?highlight=${encodeURIComponent(license.$id)}`);
 		onItemHandled(item);
 	};
 
 	const handleViewDetails = () => {
+		if (isPhoneViewport()) {
+			toast({
+				title: "Open on a laptop",
+				description: "Full license details need a wider screen.",
+			});
+			onItemHandled(item);
+			return;
+		}
 		router.push(`/licenses?highlight=${encodeURIComponent(license.$id)}`);
 		onItemHandled(item);
 	};

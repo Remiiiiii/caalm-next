@@ -288,7 +288,7 @@ export async function createPendingPostExpiryAttestation(input: {
 		const managers = await getUsersByRoleNames(
 			["Department Manager", "Organization Admin"],
 			input.orgId,
-			{ activeOnly: true },
+			{ status: "active" },
 		);
 		for (const user of managers) {
 			if (user.$id) recipients.add(user.$id);

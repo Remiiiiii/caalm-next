@@ -2965,8 +2965,8 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 					<div className="glass-card-cap" />
 					<CardContent className="p-0">
 						{/* Clean toolbar — pt clears absolute glass-card-cap (h-4) */}
-						<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pt-7 px-4 pb-4 border-b border-slate-200 bg-white/60">
-							<div className="flex items-center gap-2 sm:gap-3 flex-wrap min-w-0">
+						<div className="flex flex-row items-center justify-between gap-3 pt-7 px-4 pb-4 border-b border-slate-200 bg-white/60">
+							<div className="flex items-center gap-3 flex-wrap min-w-0">
 								<Button
 									size="sm"
 									variant="outline"
@@ -2999,7 +2999,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 										<ChevronRight className="h-4 w-4" />
 									</Button>
 								</div>
-								<div className="text-xl sm:text-2xl font-bold sidebar-gradient-text truncate min-w-0">
+								<div className="text-2xl font-bold sidebar-gradient-text truncate min-w-0">
 									{periodLabel}
 								</div>
 							</div>
@@ -3011,10 +3011,10 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 										setViewMode(value as CalendarViewMode)
 									}
 								>
-									<TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
+									<TabsList className="grid w-full grid-cols-4">
 										<TabsTrigger
 											value="day"
-											className="hidden sm:flex items-center space-x-1 cursor-pointer"
+											className="flex items-center space-x-1 cursor-pointer"
 										>
 											<CalendarIcon className="h-4 w-4 text-slate-700 shrink-0" />
 											<span className="sidebar-gradient-text">Day</span>

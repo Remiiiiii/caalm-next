@@ -84,6 +84,12 @@ export const DOCS_NAV: DocsNavGroup[] = [
 				summary: "How CAALM keeps renewals from becoming surprises.",
 			},
 			{
+				title: "Desktop, tablet, and phone",
+				slug: "concepts/desktop-and-mobile",
+				path: "concepts/desktop-and-mobile",
+				summary: "What works on a laptop versus a phone.",
+			},
+			{
 				title: "Security and 2FA",
 				slug: "concepts/security-2fa",
 				path: "concepts/security-2fa",
@@ -152,6 +158,13 @@ export const DOCS_NAV: DocsNavGroup[] = [
 				slug: "reference/contracts",
 				path: "reference/contracts",
 				summary: "Browse, upload, assign, review, and renew contracts.",
+			},
+			{
+				title: "Negotiate contracts",
+				slug: "reference/negotiate",
+				path: "reference/negotiate",
+				summary:
+					"Comment, redline, invite counterparties, and send drafts for review.",
 			},
 			{
 				title: "Clause Library",
@@ -375,6 +388,12 @@ export const DOCS_NAV: DocsNavGroup[] = [
 		title: "Troubleshooting",
 		description: "When something looks wrong — start here.",
 		items: [
+			{
+				title: "Help vs Engineering tickets",
+				slug: "troubleshooting/help-vs-engineering-tickets",
+				path: "troubleshooting/help-vs-engineering-tickets",
+				summary: "Lane choice, CAALM close vs GitHub agent, and when to escalate.",
+			},
 			{
 				title: "I can’t sign in",
 				slug: "troubleshooting/cant-sign-in",

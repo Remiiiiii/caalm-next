@@ -145,7 +145,7 @@ type EventWithExtras = LocalCalendarEvent & {
 interface NewEventForm {
 	title: string;
 	date: Date | undefined;
-	type: "contract" | "deadline" | "meeting" | "review" | "audit";
+	type: "contract" | "deadline" | "meeting" | "review" | "audit" | "license";
 	description: string;
 	startTime: string;
 	endTime: string;

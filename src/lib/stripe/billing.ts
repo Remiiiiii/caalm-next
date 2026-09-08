@@ -603,7 +603,7 @@ export async function orgHasUpcomingInvoice(org: Organization): Promise<boolean>
 
 	const stripe = getStripe();
 	try {
-		await stripe.invoices.retrieveUpcoming({
+		await stripe.invoices.createPreview({
 			customer: org.stripeCustomerId,
 		});
 		return true;

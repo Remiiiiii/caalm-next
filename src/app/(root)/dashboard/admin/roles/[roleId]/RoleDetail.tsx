@@ -14,6 +14,7 @@ import { LoadingSpinner } from "@/components/ui/loading";
 import { PERMISSIONS } from "@/constants/permissions";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useToast } from "@/hooks/use-toast";
+import { useStepUp } from "@/contexts/StepUpContext";
 
 interface Role {
 	$id: string;
@@ -58,6 +59,7 @@ const RoleDetail = ({ roleId }: { roleId: string }) => {
 		description: "",
 	});
 	const { toast } = useToast();
+	const { ensureStepUp } = useStepUp();
 	const router = useRouter();
 	const { orgId } = useOrganization();
 
@@ -162,6 +164,10 @@ const RoleDetail = ({ roleId }: { roleId: string }) => {
 
 		try {
 			setSaving(true);
+			if (!(await ensureStepUp())) {
+				setSaving(false);
+				return;
+			}
 			const response = await fetch(`/api/admin/roles/${roleId}`, {
 				method: "PUT",
 				headers: {

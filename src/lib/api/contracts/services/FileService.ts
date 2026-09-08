@@ -73,6 +73,35 @@ export class FileService {
 	}
 
 	/**
+	 * Download storage bytes as a Node Buffer (DOCX/PDF for negotiation).
+	 */
+	static async downloadFileBufferFromStorage(
+		bucketFileId: string,
+	): Promise<Buffer> {
+		const downloaded = await FileService.downloadFileFromStorage(bucketFileId);
+		if (Buffer.isBuffer(downloaded)) return downloaded;
+		if (downloaded instanceof ArrayBuffer) {
+			return Buffer.from(downloaded);
+		}
+		if (downloaded instanceof Uint8Array) {
+			return Buffer.from(downloaded);
+		}
+		if (
+			downloaded &&
+			typeof downloaded === "object" &&
+			typeof (downloaded as { arrayBuffer?: unknown }).arrayBuffer ===
+				"function"
+		) {
+			return Buffer.from(
+				await (
+					downloaded as { arrayBuffer: () => Promise<ArrayBuffer> }
+				).arrayBuffer(),
+			);
+		}
+		throw new Error("Could not read the file from storage");
+	}
+
+	/**
 	 * Get file download URL
 	 */
 	static getFileDownloadUrl(bucketFileId: string): string {

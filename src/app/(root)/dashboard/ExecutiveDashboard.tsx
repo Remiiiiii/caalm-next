@@ -62,6 +62,7 @@ import { WidgetCarousel } from "@/components/ui/widget-carousel";
 import { WeatherBriefingLauncher } from "@/components/dashboard-briefing/WeatherBriefingLauncher";
 import type { ContractStatus } from "@/constants/status";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { useStepUp } from "@/contexts/StepUpContext";
 import { useToast } from "@/hooks/use-toast";
 import { useCombinedExpiryModal } from "@/hooks/useCombinedExpiryModal";
 import { useUnifiedDashboardData } from "@/hooks/useUnifiedDashboardData";
@@ -191,6 +192,7 @@ const getInvitationStatusBadgeClasses = (status: string): string => {
 
 const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 	const { toast } = useToast();
+	const { ensureStepUp } = useStepUp();
 	const { orgId } = useOrganization();
 	const effectiveOrgId = orgId || "default_organization";
 	const adminName = "Executive"; // Replace with actual admin name
@@ -253,14 +255,14 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 
 	// Desktop push View → /dashboard?expiryEntity=contract|license&expiryId=…
 	useEffect(() => {
-		const entity = searchParams.get("expiryEntity");
-		const id = searchParams.get("expiryId");
+		const entity = searchParams?.get("expiryEntity");
+		const id = searchParams?.get("expiryId");
 		if ((entity !== "contract" && entity !== "license") || !id) return;
 		if (entity === "contract" && !contractsFromApi?.length) return;
 
 		const opened = openForEntityId(entity, id);
 		if (opened || entity === "license") {
-			const next = new URLSearchParams(searchParams.toString());
+			const next = new URLSearchParams(searchParams?.toString() ?? "");
 			next.delete("expiryEntity");
 			next.delete("expiryId");
 			const qs = next.toString();
@@ -591,6 +593,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 
 	const confirmRevoke = async () => {
 		if (!revokeToken) return;
+		if (!(await ensureStepUp())) return;
 
 		try {
 			// Add visual feedback - mark as revoking
@@ -634,6 +637,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 
 	const confirmDelete = async () => {
 		if (!deleteToken) return;
+		if (!(await ensureStepUp())) return;
 
 		try {
 			// Add visual feedback - mark as deleting
@@ -997,10 +1001,18 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 										))}
 										<Button
 											asChild
-											className="primary-btn w-full cursor-pointer"
+											className="primary-btn hidden md:inline-flex w-full cursor-pointer"
 										>
 											<Link href="/analytics?tab=portfolio">
 												Open portfolio analytics
+											</Link>
+										</Button>
+										<Button
+											asChild
+											className="primary-btn inline-flex w-full cursor-pointer md:hidden"
+										>
+											<Link href="/contracts/approvals">
+												Open approvals
 											</Link>
 										</Button>
 									</div>

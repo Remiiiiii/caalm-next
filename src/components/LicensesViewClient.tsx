@@ -36,7 +36,8 @@ function buildListUrl(
 		limit: String(pageSize),
 		offset: String((page - 1) * pageSize),
 	});
-	if (filters.search?.trim()) params.set("search", filters.search.trim());
+	const search = (filters.search ?? filters.searchQuery)?.trim();
+	if (search) params.set("search", search);
 	if (filters.vendor?.trim()) params.set("vendor", filters.vendor.trim());
 	if (filters.licenseType?.trim())
 		params.set("licenseType", filters.licenseType.trim());
@@ -62,7 +63,7 @@ export default function LicensesViewClient({
 	}, [filters, statusTab]);
 
 	const hasActiveFilters = Boolean(
-		filters.search?.trim() ||
+		(filters.search ?? filters.searchQuery)?.trim() ||
 			filters.vendor?.trim() ||
 			filters.licenseType?.trim() ||
 			filters.status?.trim() ||

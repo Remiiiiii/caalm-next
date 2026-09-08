@@ -27,7 +27,7 @@ const SHOW_DELAY_MS = 500;
  * Demo-only coach marks: auto-show one tip per first visit to a matched route.
  */
 export default function DemoTourLayer() {
-	const pathname = usePathname();
+	const pathname = usePathname() || "";
 	const router = useRouter();
 	const [activeTip, setActiveTip] = useState<DemoTip | null>(null);
 	const [mounted, setMounted] = useState(false);

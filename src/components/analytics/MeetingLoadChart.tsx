@@ -76,7 +76,7 @@ export const MeetingLoadChart: React.FC<MeetingLoadChartProps> = ({ data }) => {
 	return (
 		<div className="space-y-6">
 			{/* Summary Cards */}
-			<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+			<div className="grid grid-cols-3 gap-4">
 				<Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
 					<CardContent className="pt-6">
 						<div className="flex items-center justify-between">

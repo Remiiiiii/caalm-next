@@ -82,13 +82,17 @@ function attr(xml: string, tag: string, name: string): string {
 
 async function fetchWithTimeout(
 	url: string,
-	init: RequestInit,
+	init?: RequestInit,
 	ms = 8000,
 ): Promise<Response> {
 	const controller = new AbortController();
 	const timer = setTimeout(() => controller.abort(), ms);
 	try {
-		return await fetch(url, { ...NO_STORE, ...init, signal: controller.signal });
+		return await fetch(url, {
+			...NO_STORE,
+			...init,
+			signal: controller.signal,
+		});
 	} finally {
 		clearTimeout(timer);
 	}

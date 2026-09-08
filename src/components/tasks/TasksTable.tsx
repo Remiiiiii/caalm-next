@@ -4,6 +4,7 @@ import { format, isPast, parseISO } from "date-fns";
 import { Calendar, Link2, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
 	Select,
 	SelectContent,
@@ -69,39 +70,64 @@ export function TasksTable({
 	}
 
 	return (
-		<div className="overflow-x-auto">
-			<Table>
-				<TableHeader>
-					<TableRow>
-						<TableHead>Name</TableHead>
-						<TableHead>Status</TableHead>
-						<TableHead>Priority</TableHead>
-						<TableHead>Assignee</TableHead>
-						<TableHead>Due date</TableHead>
-						<TableHead>Linked</TableHead>
-						<TableHead className="w-[80px]">Actions</TableHead>
-					</TableRow>
-				</TableHeader>
-				<TableBody>
-					{tasks.map((task) => {
-						const overdue =
-							task.dueDate &&
-							task.status !== "done" &&
-							isPast(parseISO(task.dueDate));
-						return (
-							<TableRow
-								key={task.$id}
-								className="hover:bg-blue-50 transition-all duration-200"
-							>
-								<TableCell>
-									<div className="font-medium text-slate-700">{task.title}</div>
+		<>
+			<div className="space-y-3 p-3 md:hidden">
+				{tasks.map((task) => {
+					const overdue =
+						task.dueDate &&
+						task.status !== "done" &&
+						isPast(parseISO(task.dueDate));
+					return (
+						<Card key={task.$id} className="glass-card">
+							<div className="glass-card-cap" />
+							<CardContent className="p-4 space-y-3">
+								<div>
+									<p className="text-sm font-medium sidebar-gradient-text">
+										{task.title}
+									</p>
 									{task.description ? (
-										<p className="text-xs text-slate-500 mt-0.5 line-clamp-1">
+										<p className="mt-0.5 text-xs text-slate-500 line-clamp-2">
 											{task.description}
 										</p>
 									) : null}
-								</TableCell>
-								<TableCell>
+								</div>
+								<div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
+									<span
+										className={`font-medium capitalize ${PRIORITY_CLASS[task.priority] || ""}`}
+									>
+										{task.priority}
+									</span>
+									<span>·</span>
+									<span>
+										{task.assigneeId
+											? assigneeNames[task.assigneeId] || "Assigned"
+											: "Unassigned"}
+									</span>
+									{task.dueDate ? (
+										<>
+											<span>·</span>
+											<span
+												className={`inline-flex items-center gap-1 ${
+													overdue ? "text-red font-medium" : ""
+												}`}
+											>
+												<Calendar className="h-3.5 w-3.5" />
+												{format(parseISO(task.dueDate), "MMM d, yyyy")}
+											</span>
+										</>
+									) : null}
+									{task.linkedEntityType &&
+									task.linkedEntityType !== "none" ? (
+										<>
+											<span>·</span>
+											<span className="inline-flex items-center gap-1 capitalize">
+												<Link2 className="h-3 w-3" />
+												{task.linkedEntityType.replace("_", " ")}
+											</span>
+										</>
+									) : null}
+								</div>
+								<div className="flex flex-wrap items-center gap-2">
 									{canEdit ? (
 										<Select
 											value={task.status}
@@ -109,7 +135,7 @@ export function TasksTable({
 												onStatusChange(task.$id, value as TaskStatus)
 											}
 										>
-											<SelectTrigger className="w-[140px] h-8 bg-white">
+											<SelectTrigger className="h-10 w-full min-w-0 flex-1 border-[0.25px] border-slate-300 bg-white">
 												<SelectValue />
 											</SelectTrigger>
 											<SelectContent>
@@ -130,62 +156,145 @@ export function TasksTable({
 											{STATUS_LABELS[task.status]}
 										</Badge>
 									)}
-								</TableCell>
-								<TableCell>
-									<span
-										className={`text-sm font-medium capitalize ${PRIORITY_CLASS[task.priority] || ""}`}
-									>
-										{task.priority}
-									</span>
-								</TableCell>
-								<TableCell className="text-sm text-slate-700">
-									{task.assigneeId
-										? assigneeNames[task.assigneeId] || "Assigned"
-										: "Unassigned"}
-								</TableCell>
-								<TableCell>
-									{task.dueDate ? (
-										<span
-											className={`inline-flex items-center gap-1 text-sm ${
-												overdue ? "text-red font-medium" : "text-slate-600"
-											}`}
-										>
-											<Calendar className="h-3.5 w-3.5" />
-											{format(parseISO(task.dueDate), "MMM d, yyyy")}
-										</span>
-									) : (
-										<span className="text-sm text-slate-400">None</span>
-									)}
-								</TableCell>
-								<TableCell>
-									{task.linkedEntityType && task.linkedEntityType !== "none" ? (
-										<span className="inline-flex items-center gap-1 text-xs text-slate-600 capitalize">
-											<Link2 className="h-3 w-3" />
-											{task.linkedEntityType.replace("_", " ")}
-										</span>
-									) : (
-										<span className="text-sm text-slate-400">—</span>
-									)}
-								</TableCell>
-								<TableCell>
 									{canEdit ? (
 										<Button
 											type="button"
 											variant="ghost"
-											size="icon"
-											className="h-8 w-8 cursor-pointer text-slate-500 hover:text-red"
+											className="h-10 w-10 shrink-0 cursor-pointer text-slate-500 hover:text-red"
 											aria-label={`Delete ${task.title}`}
 											onClick={() => onDelete(task.$id)}
 										>
 											<Trash2 className="h-4 w-4" />
 										</Button>
 									) : null}
-								</TableCell>
-							</TableRow>
-						);
-					})}
-				</TableBody>
-			</Table>
-		</div>
+								</div>
+							</CardContent>
+						</Card>
+					);
+				})}
+			</div>
+
+			<div className="hidden md:block overflow-x-auto">
+				<Table>
+					<TableHeader>
+						<TableRow>
+							<TableHead>Name</TableHead>
+							<TableHead>Status</TableHead>
+							<TableHead>Priority</TableHead>
+							<TableHead>Assignee</TableHead>
+							<TableHead>Due date</TableHead>
+							<TableHead>Linked</TableHead>
+							<TableHead className="w-[80px]">Actions</TableHead>
+						</TableRow>
+					</TableHeader>
+					<TableBody>
+						{tasks.map((task) => {
+							const overdue =
+								task.dueDate &&
+								task.status !== "done" &&
+								isPast(parseISO(task.dueDate));
+							return (
+								<TableRow
+									key={task.$id}
+									className="hover:bg-blue-50 transition-all duration-200"
+								>
+									<TableCell>
+										<div className="font-medium text-slate-700">
+											{task.title}
+										</div>
+										{task.description ? (
+											<p className="text-xs text-slate-500 mt-0.5 line-clamp-1">
+												{task.description}
+											</p>
+										) : null}
+									</TableCell>
+									<TableCell>
+										{canEdit ? (
+											<Select
+												value={task.status}
+												onValueChange={(value) =>
+													onStatusChange(task.$id, value as TaskStatus)
+												}
+											>
+												<SelectTrigger className="w-[140px] h-8 bg-white">
+													<SelectValue />
+												</SelectTrigger>
+												<SelectContent>
+													{(Object.keys(STATUS_LABELS) as TaskStatus[]).map(
+														(s) => (
+															<SelectItem key={s} value={s}>
+																{STATUS_LABELS[s]}
+															</SelectItem>
+														),
+													)}
+												</SelectContent>
+											</Select>
+										) : (
+											<Badge
+												variant="outline"
+												className={STATUS_CLASS[task.status]}
+											>
+												{STATUS_LABELS[task.status]}
+											</Badge>
+										)}
+									</TableCell>
+									<TableCell>
+										<span
+											className={`text-sm font-medium capitalize ${PRIORITY_CLASS[task.priority] || ""}`}
+										>
+											{task.priority}
+										</span>
+									</TableCell>
+									<TableCell className="text-sm text-slate-700">
+										{task.assigneeId
+											? assigneeNames[task.assigneeId] || "Assigned"
+											: "Unassigned"}
+									</TableCell>
+									<TableCell>
+										{task.dueDate ? (
+											<span
+												className={`inline-flex items-center gap-1 text-sm ${
+													overdue ? "text-red font-medium" : "text-slate-600"
+												}`}
+											>
+												<Calendar className="h-3.5 w-3.5" />
+												{format(parseISO(task.dueDate), "MMM d, yyyy")}
+											</span>
+										) : (
+											<span className="text-sm text-slate-400">None</span>
+										)}
+									</TableCell>
+									<TableCell>
+										{task.linkedEntityType &&
+										task.linkedEntityType !== "none" ? (
+											<span className="inline-flex items-center gap-1 text-xs text-slate-600 capitalize">
+												<Link2 className="h-3 w-3" />
+												{task.linkedEntityType.replace("_", " ")}
+											</span>
+										) : (
+											<span className="text-sm text-slate-400">—</span>
+										)}
+									</TableCell>
+									<TableCell>
+										{canEdit ? (
+											<Button
+												type="button"
+												variant="ghost"
+												size="icon"
+												className="h-8 w-8 cursor-pointer text-slate-500 hover:text-red"
+												aria-label={`Delete ${task.title}`}
+												onClick={() => onDelete(task.$id)}
+											>
+												<Trash2 className="h-4 w-4" />
+											</Button>
+										) : null}
+									</TableCell>
+								</TableRow>
+							);
+						})}
+					</TableBody>
+				</Table>
+			</div>
+		</>
 	);
 }

@@ -1,10 +1,11 @@
 "use client";
 
 import { Building2, Save } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import useSWR from "swr";
 import { PermissionGate } from "@/components/PermissionGate";
 import { ApprovalSlaPoliciesManager } from "@/components/settings/ApprovalSlaPoliciesManager";
+import { OrganizationLogoUploader } from "@/components/settings/OrganizationLogoUploader";
 import { OrgStructureManager } from "@/components/settings/OrgStructureManager";
 import { TimezoneSelect } from "@/components/settings/TimezoneSelect";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ import { LoadingSpinner } from "@/components/ui/loading";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PERMISSIONS } from "@/constants/permissions";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { useStepUp } from "@/contexts/StepUpContext";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import {
@@ -24,6 +26,10 @@ import {
 } from "@/lib/rbac/organization-profile.schema";
 import type { Organization } from "@/lib/rbac/organizations";
 import { fetcher } from "@/lib/swr-config";
+import { resolveOrgLogoFileId } from "@/lib/organizations/org-logo";
+
+const FIELD_INPUT_CLASS =
+	"bg-white border-[0.25px] border-slate-300 hover:border-blue-300";
 
 function FieldError({
 	id,
@@ -40,6 +46,52 @@ function FieldError({
 	);
 }
 
+function FieldLabel({
+	htmlFor,
+	children,
+	required,
+}: {
+	htmlFor?: string;
+	children: string;
+	required: boolean;
+}) {
+	return (
+		<div className="flex items-center gap-2">
+			<Label
+				htmlFor={htmlFor}
+				className="text-sm font-medium text-slate-700"
+			>
+				{children}
+			</Label>
+			<span className="text-xs text-slate-500">
+				{required ? "Required" : "Optional"}
+			</span>
+		</div>
+	);
+}
+
+function FormSection({
+	title,
+	description,
+	children,
+}: {
+	title: string;
+	description: string;
+	children: ReactNode;
+}) {
+	return (
+		<section className="space-y-4 min-w-0">
+			<div className="space-y-1">
+				<p className="text-sm font-medium uppercase tracking-[0.1em] text-slate-700">
+					{title}
+				</p>
+				<p className="text-sm text-slate-600">{description}</p>
+			</div>
+			{children}
+		</section>
+	);
+}
+
 interface OrgResponse {
 	success: boolean;
 	data: { organization: Organization };
@@ -49,6 +101,7 @@ export default function OrganizationSettingsPage() {
 	const { orgId, refreshOrgProfile } = useOrganization();
 	const { permissions, loading: permissionsLoading } = usePermissions();
 	const { toast } = useToast();
+	const { ensureStepUp } = useStepUp();
 	const canEdit = permissions.includes(PERMISSIONS.SETTINGS.EDIT);
 
 	const url = orgId
@@ -140,6 +193,7 @@ export default function OrganizationSettingsPage() {
 			return;
 		}
 		setFieldErrors({});
+		if (!(await ensureStepUp())) return;
 		setSaving(true);
 		try {
 			const profile = parsed.data;
@@ -202,6 +256,7 @@ export default function OrganizationSettingsPage() {
 		mutate,
 		refreshOrgProfile,
 		toast,
+		ensureStepUp,
 	]);
 
 	const handleSaveLimits = useCallback(async () => {
@@ -293,219 +348,315 @@ export default function OrganizationSettingsPage() {
 				<TabsContent value="profile" className="mt-4">
 					<GlassCard className="glass-card">
 						<div className="glass-card-cap" />
-						<CardContent className="p-4 sm:p-6 space-y-4 bg-slate-50">
-							<div className="space-y-2">
-								<Label htmlFor="org-name">Organization name</Label>
-								<Input
-									id="org-name"
-									value={name}
-									onChange={(e) => {
-										setName(e.target.value);
-										clearFieldError("name");
-									}}
-									disabled={!canEdit}
-									aria-invalid={Boolean(fieldErrors.name)}
-									aria-describedby={fieldErrors.name ? "org-name-error" : undefined}
-									className="bg-white !border-[0.25px] !border-solid !border-slate-200"
-								/>
-								<FieldError id="org-name-error" message={fieldErrors.name} />
-							</div>
-							<div className="space-y-2">
-								<Label htmlFor="org-domain">Email domain</Label>
-								<Input
-									id="org-domain"
-									value={domain}
-									onChange={(e) => {
-										setDomain(e.target.value);
-										clearFieldError("domain");
-									}}
-									disabled={!canEdit}
-									placeholder="example.com"
-									aria-invalid={Boolean(fieldErrors.domain)}
-									aria-describedby={
-										fieldErrors.domain ? "org-domain-error" : undefined
-									}
-									className="bg-white !border-[0.25px] !border-solid !border-slate-200"
-								/>
-								<FieldError id="org-domain-error" message={fieldErrors.domain} />
-							</div>
-							<div className="space-y-2">
-								<Label htmlFor="org-timezone">Organization timezone</Label>
-								<TimezoneSelect
-									id="org-timezone"
-									value={timezone}
-									onValueChange={(value) => {
-										setTimezone(value);
-										clearFieldError("timezone");
-									}}
-									disabled={!canEdit}
-								/>
-								<p className="text-xs text-slate-500">
-									Used for date and time display across CAALM, plus scheduled
-									jobs (readiness, digests, expiry notices) at the local 9:00
-									window.
-								</p>
-							</div>
-							<div className="space-y-2">
-								<Label htmlFor="org-street">Street</Label>
-								<Input
-									id="org-street"
-									value={street}
-									onChange={(e) => {
-										setStreet(e.target.value);
-										clearFieldError("street");
-									}}
-									disabled={!canEdit}
-									placeholder="9802 SW 77th Ave"
-									aria-invalid={Boolean(fieldErrors.street)}
-									aria-describedby={
-										fieldErrors.street ? "org-street-error" : undefined
-									}
-									className="bg-white border-[0.25px] border-slate-300"
-								/>
-								<FieldError id="org-street-error" message={fieldErrors.street} />
-								<p className="text-xs text-slate-500">
-									Printed in the letterhead of every agreement you create.
-								</p>
-							</div>
-							<div className="grid grid-cols-1 gap-4 sm:grid-cols-6">
-								<div className="space-y-2 sm:col-span-3">
-									<Label htmlFor="org-city">City</Label>
-									<Input
-										id="org-city"
-										value={city}
-										onChange={(e) => {
-											setCity(e.target.value);
-											clearFieldError("city");
-										}}
-										disabled={!canEdit}
-										placeholder="Miami"
-										aria-invalid={Boolean(fieldErrors.city)}
-										aria-describedby={
-											fieldErrors.city ? "org-city-error" : undefined
-										}
-										className="bg-white border-[0.25px] border-slate-300"
-									/>
-									<FieldError id="org-city-error" message={fieldErrors.city} />
-								</div>
-								<div className="space-y-2 sm:col-span-2">
-									<Label htmlFor="org-state">State</Label>
-									<Input
-										id="org-state"
-										value={state}
-										onChange={(e) => {
-											setState(e.target.value);
-											clearFieldError("state");
-										}}
-										disabled={!canEdit}
-										placeholder="FL"
-										aria-invalid={Boolean(fieldErrors.state)}
-										aria-describedby={
-											fieldErrors.state ? "org-state-error" : undefined
-										}
-										className="bg-white border-[0.25px] border-slate-300"
-									/>
-									<FieldError id="org-state-error" message={fieldErrors.state} />
-								</div>
-								<div className="space-y-2 sm:col-span-1">
-									<Label htmlFor="org-zipcode">Zipcode</Label>
-									<Input
-										id="org-zipcode"
-										value={zipcode}
-										onChange={(e) => {
-											setZipcode(e.target.value);
-											clearFieldError("zipcode");
-										}}
-										disabled={!canEdit}
-										placeholder="33156"
-										aria-invalid={Boolean(fieldErrors.zipcode)}
-										aria-describedby={
-											fieldErrors.zipcode ? "org-zipcode-error" : undefined
-										}
-										className="bg-white border-[0.25px] border-slate-300"
-									/>
-									<FieldError id="org-zipcode-error" message={fieldErrors.zipcode} />
-								</div>
-							</div>
-							<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-								<div className="space-y-2">
-									<Label htmlFor="org-phone">Phone</Label>
-									<Input
-										id="org-phone"
-										value={phone}
-										onChange={(e) => {
-											setPhone(e.target.value);
-											clearFieldError("phone");
-										}}
-										disabled={!canEdit}
-										placeholder="(202) 555-0100"
-										aria-invalid={Boolean(fieldErrors.phone)}
-										aria-describedby={
-											fieldErrors.phone ? "org-phone-error" : undefined
-										}
-										className="bg-white border-[0.25px] border-slate-300"
-									/>
-									<FieldError id="org-phone-error" message={fieldErrors.phone} />
-								</div>
-								<div className="space-y-2">
-									<Label htmlFor="org-email">Public email</Label>
-									<Input
-										id="org-email"
-										type="email"
-										value={email}
-										onChange={(e) => {
-											setEmail(e.target.value);
-											clearFieldError("email");
-										}}
-										disabled={!canEdit}
-										placeholder="hello@example.org"
-										aria-invalid={Boolean(fieldErrors.email)}
-										aria-describedby={
-											fieldErrors.email ? "org-email-error" : undefined
-										}
-										className="bg-white border-[0.25px] border-slate-300"
-									/>
-									<FieldError id="org-email-error" message={fieldErrors.email} />
-								</div>
-							</div>
-							<div className="space-y-2">
-								<Label htmlFor="org-website">Public website URL</Label>
-								<Input
-									id="org-website"
-									type="url"
-									value={websiteUrl}
-									onChange={(e) => {
-										setWebsiteUrl(e.target.value);
-										clearFieldError("websiteUrl");
-									}}
-									disabled={!canEdit}
-									placeholder="https://cfcecares.org"
-									aria-invalid={Boolean(fieldErrors.websiteUrl)}
-									aria-describedby={
-										fieldErrors.websiteUrl ? "org-website-error" : undefined
-									}
-									className="bg-white !border-[0.25px] !border-solid !border-slate-200"
-								/>
-								<FieldError
-									id="org-website-error"
-									message={fieldErrors.websiteUrl}
-								/>
-								<p className="text-xs text-slate-500">
-									Optional bounded crawl for readiness packets (informational;
-									not scored).
-								</p>
-							</div>
-							<PermissionGate permission={PERMISSIONS.SETTINGS.EDIT}>
-								<Button
-									type="button"
-									className="primary-btn px-3 sm:px-4 cursor-pointer"
-									disabled={saving || !name.trim()}
-									onClick={handleSaveProfile}
+						<CardContent className="p-4 sm:p-6 bg-slate-50">
+							<div className="w-full min-w-0 space-y-8">
+								<FormSection
+									title="Branding"
+									description="Shown on agreements and public-facing pages."
 								>
-									<Save className="h-4 w-4" />
-									Save profile
-								</Button>
-							</PermissionGate>
+									<OrganizationLogoUploader
+										orgId={org.$id}
+										logoFileId={resolveOrgLogoFileId(org.settings)}
+										canEdit={canEdit}
+										onChanged={async () => {
+											await mutate();
+											await refreshOrgProfile();
+										}}
+									/>
+								</FormSection>
+
+								<div className="border-t border-slate-200" />
+
+								<FormSection
+									title="Organization identity"
+									description="Core details used to identify your organization across CAALM."
+								>
+									{/* Short paired values share a row */}
+									<div className="grid grid-cols-2 gap-4 min-w-0">
+										<div className="space-y-2 min-w-0">
+											<FieldLabel htmlFor="org-name" required>
+												Organization name
+											</FieldLabel>
+											<Input
+												id="org-name"
+												value={name}
+												onChange={(e) => {
+													setName(e.target.value);
+													clearFieldError("name");
+												}}
+												disabled={!canEdit}
+												aria-invalid={Boolean(fieldErrors.name)}
+												aria-describedby={
+													fieldErrors.name ? "org-name-error" : undefined
+												}
+												className={FIELD_INPUT_CLASS}
+											/>
+											<FieldError
+												id="org-name-error"
+												message={fieldErrors.name}
+											/>
+										</div>
+										<div className="space-y-2 min-w-0">
+											<FieldLabel htmlFor="org-domain" required>
+												Email domain
+											</FieldLabel>
+											<Input
+												id="org-domain"
+												value={domain}
+												onChange={(e) => {
+													setDomain(e.target.value);
+													clearFieldError("domain");
+												}}
+												disabled={!canEdit}
+												placeholder="example.com"
+												aria-invalid={Boolean(fieldErrors.domain)}
+												aria-describedby={
+													fieldErrors.domain
+														? "org-domain-error org-domain-hint"
+														: "org-domain-hint"
+												}
+												className={FIELD_INPUT_CLASS}
+											/>
+											<FieldError
+												id="org-domain-error"
+												message={fieldErrors.domain}
+											/>
+											<p
+												id="org-domain-hint"
+												className="text-xs text-slate-500"
+											>
+												Users signing up with this domain join your org
+												automatically.
+											</p>
+										</div>
+									</div>
+									{/* Long values stay full-width */}
+									<div className="space-y-2 min-w-0">
+										<FieldLabel htmlFor="org-timezone" required>
+											Organization timezone
+										</FieldLabel>
+										<TimezoneSelect
+											id="org-timezone"
+											value={timezone}
+											onValueChange={(value) => {
+												setTimezone(value);
+												clearFieldError("timezone");
+											}}
+											disabled={!canEdit}
+										/>
+										<p className="text-xs text-slate-500">
+											Used for date and time display across CAALM, plus
+											scheduled jobs (readiness, digests, expiry notices) at
+											the local 9:00 window.
+										</p>
+										<FieldError
+											id="org-timezone-error"
+											message={fieldErrors.timezone}
+										/>
+									</div>
+								</FormSection>
+
+								<div className="border-t border-slate-200" />
+
+								<FormSection
+									title="Address & contact"
+									description="Printed in the letterhead of every agreement you create."
+								>
+									<div className="space-y-2 min-w-0">
+										<FieldLabel htmlFor="org-street" required>
+											Street
+										</FieldLabel>
+										<Input
+											id="org-street"
+											value={street}
+											onChange={(e) => {
+												setStreet(e.target.value);
+												clearFieldError("street");
+											}}
+											disabled={!canEdit}
+											placeholder="9802 SW 77th Ave"
+											aria-invalid={Boolean(fieldErrors.street)}
+											aria-describedby={
+												fieldErrors.street ? "org-street-error" : undefined
+											}
+											className={FIELD_INPUT_CLASS}
+										/>
+										<FieldError
+											id="org-street-error"
+											message={fieldErrors.street}
+										/>
+									</div>
+									<div className="grid grid-cols-3 gap-4 min-w-0">
+										<div className="space-y-2 min-w-0">
+											<FieldLabel htmlFor="org-city" required>
+												City
+											</FieldLabel>
+											<Input
+												id="org-city"
+												value={city}
+												onChange={(e) => {
+													setCity(e.target.value);
+													clearFieldError("city");
+												}}
+												disabled={!canEdit}
+												placeholder="Miami"
+												aria-invalid={Boolean(fieldErrors.city)}
+												aria-describedby={
+													fieldErrors.city ? "org-city-error" : undefined
+												}
+												className={FIELD_INPUT_CLASS}
+											/>
+											<FieldError
+												id="org-city-error"
+												message={fieldErrors.city}
+											/>
+										</div>
+										<div className="space-y-2 min-w-0">
+											<FieldLabel htmlFor="org-state" required>
+												State
+											</FieldLabel>
+											<Input
+												id="org-state"
+												value={state}
+												onChange={(e) => {
+													setState(e.target.value);
+													clearFieldError("state");
+												}}
+												disabled={!canEdit}
+												placeholder="FL"
+												aria-invalid={Boolean(fieldErrors.state)}
+												aria-describedby={
+													fieldErrors.state ? "org-state-error" : undefined
+												}
+												className={FIELD_INPUT_CLASS}
+											/>
+											<FieldError
+												id="org-state-error"
+												message={fieldErrors.state}
+											/>
+										</div>
+										<div className="space-y-2 min-w-0">
+											<FieldLabel htmlFor="org-zipcode" required>
+												Zipcode
+											</FieldLabel>
+											<Input
+												id="org-zipcode"
+												value={zipcode}
+												onChange={(e) => {
+													setZipcode(e.target.value);
+													clearFieldError("zipcode");
+												}}
+												disabled={!canEdit}
+												placeholder="33156"
+												aria-invalid={Boolean(fieldErrors.zipcode)}
+												aria-describedby={
+													fieldErrors.zipcode
+														? "org-zipcode-error"
+														: undefined
+												}
+												className={FIELD_INPUT_CLASS}
+											/>
+											<FieldError
+												id="org-zipcode-error"
+												message={fieldErrors.zipcode}
+											/>
+										</div>
+									</div>
+									{/* Phone, public email, and website share one row */}
+									<div className="grid grid-cols-3 gap-4 min-w-0">
+										<div className="space-y-2 min-w-0">
+											<FieldLabel htmlFor="org-phone" required={false}>
+												Phone
+											</FieldLabel>
+											<Input
+												id="org-phone"
+												value={phone}
+												onChange={(e) => {
+													setPhone(e.target.value);
+													clearFieldError("phone");
+												}}
+												disabled={!canEdit}
+												placeholder="(202) 555-0100"
+												aria-invalid={Boolean(fieldErrors.phone)}
+												aria-describedby={
+													fieldErrors.phone ? "org-phone-error" : undefined
+												}
+												className={FIELD_INPUT_CLASS}
+											/>
+											<FieldError
+												id="org-phone-error"
+												message={fieldErrors.phone}
+											/>
+										</div>
+										<div className="space-y-2 min-w-0">
+											<FieldLabel htmlFor="org-email" required={false}>
+												Public email
+											</FieldLabel>
+											<Input
+												id="org-email"
+												type="email"
+												value={email}
+												onChange={(e) => {
+													setEmail(e.target.value);
+													clearFieldError("email");
+												}}
+												disabled={!canEdit}
+												placeholder="hello@example.org"
+												aria-invalid={Boolean(fieldErrors.email)}
+												aria-describedby={
+													fieldErrors.email ? "org-email-error" : undefined
+												}
+												className={FIELD_INPUT_CLASS}
+											/>
+											<FieldError
+												id="org-email-error"
+												message={fieldErrors.email}
+											/>
+										</div>
+										<div className="space-y-2 min-w-0">
+											<FieldLabel htmlFor="org-website" required={false}>
+												Public website URL
+											</FieldLabel>
+											<Input
+												id="org-website"
+												type="url"
+												value={websiteUrl}
+												onChange={(e) => {
+													setWebsiteUrl(e.target.value);
+													clearFieldError("websiteUrl");
+												}}
+												disabled={!canEdit}
+												placeholder="https://example.org"
+												aria-invalid={Boolean(fieldErrors.websiteUrl)}
+												aria-describedby={
+													fieldErrors.websiteUrl
+														? "org-website-error"
+														: undefined
+												}
+												className={FIELD_INPUT_CLASS}
+											/>
+											<FieldError
+												id="org-website-error"
+												message={fieldErrors.websiteUrl}
+											/>
+										</div>
+									</div>
+								</FormSection>
+
+								<PermissionGate permission={PERMISSIONS.SETTINGS.EDIT}>
+									<div className="flex justify-end pt-2">
+										<Button
+											type="button"
+											className="primary-btn px-3 sm:px-4 cursor-pointer"
+											disabled={saving || !name.trim()}
+											onClick={handleSaveProfile}
+										>
+											<Save className="h-4 w-4" />
+											Save profile
+										</Button>
+									</div>
+								</PermissionGate>
+							</div>
 						</CardContent>
 					</GlassCard>
 				</TabsContent>
@@ -514,7 +665,7 @@ export default function OrganizationSettingsPage() {
 					<GlassCard className="glass-card">
 						<div className="glass-card-cap" />
 						<CardContent className="p-4 sm:p-6 space-y-4 bg-slate-50">
-							<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+							<div className="grid grid-cols-2 gap-4">
 								<div className="space-y-2">
 									<Label htmlFor="max-users">Max users</Label>
 									<Input

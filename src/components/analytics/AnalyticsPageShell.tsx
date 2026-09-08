@@ -17,7 +17,7 @@ export function AnalyticsPageShell({
 }: AnalyticsPageShellProps) {
 	return (
 		<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 space-y-6">
-			<div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+			<div className="flex flex-row items-start justify-between gap-4">
 				<div>
 					<div className="flex items-center gap-4 mb-2 justify-start self-start w-full">
 						<h1 className="h1 capitalize sidebar-gradient-text">{title}</h1>

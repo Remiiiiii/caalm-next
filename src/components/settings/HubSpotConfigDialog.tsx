@@ -245,7 +245,7 @@ export default function HubSpotConfigDialog({
 
 						<div className="rounded-lg border border-slate-200 bg-white p-4 space-y-4">
 							{/* Column headers — make the direction obvious */}
-							<div className="hidden sm:grid sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1.2fr)] gap-2 items-center px-1">
+							<div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1.2fr)] gap-2 items-center px-1">
 								<p className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
 									CAALM draft field
 								</p>
@@ -260,9 +260,9 @@ export default function HubSpotConfigDialog({
 									key={key}
 									className="rounded-md border border-slate-200 bg-slate-50/80 p-3 space-y-2"
 								>
-									<div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1.2fr)] gap-2 sm:items-center">
+									<div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1.2fr)] gap-2 items-center">
 										<div className="min-w-0">
-											<p className="text-[11px] font-medium uppercase tracking-wide text-slate-500 sm:hidden mb-1">
+											<p className="hidden">
 												CAALM draft field
 											</p>
 											<Label
@@ -276,12 +276,12 @@ export default function HubSpotConfigDialog({
 											</p>
 										</div>
 
-										<div className="hidden sm:flex justify-center text-slate-400" aria-hidden>
+										<div className="flex justify-center text-slate-400" aria-hidden>
 											<ArrowRight className="h-4 w-4" />
 										</div>
 
 										<div className="min-w-0">
-											<p className="text-[11px] font-medium uppercase tracking-wide text-slate-500 sm:hidden mb-1">
+											<p className="hidden">
 												Copy from HubSpot property
 											</p>
 											{usePropertyDropdowns ? (

@@ -77,6 +77,7 @@ export async function POST(request: NextRequest) {
 		const contentType = request.headers.get("content-type") || "";
 		let title = "";
 		let description = "";
+		let lane: unknown = "";
 		let category: unknown = "";
 		let affectedModule: unknown = "";
 		let impact: unknown = "";
@@ -87,6 +88,7 @@ export async function POST(request: NextRequest) {
 			const form = await request.formData();
 			title = String(form.get("title") || "");
 			description = String(form.get("description") || "");
+			lane = form.get("lane") || "";
 			category = form.get("category") || "";
 			affectedModule = form.get("affectedModule") || "";
 			impact = form.get("impact") || "";
@@ -96,6 +98,7 @@ export async function POST(request: NextRequest) {
 			const body = await request.json();
 			title = String(body.title || "");
 			description = String(body.description || "");
+			lane = body.lane;
 			category = body.category;
 			affectedModule = body.affectedModule;
 			impact = body.impact;
@@ -113,6 +116,7 @@ export async function POST(request: NextRequest) {
 		const payload = buildCreateTicketInput({
 			title,
 			description,
+			lane,
 			category,
 			affectedModule,
 			impact,

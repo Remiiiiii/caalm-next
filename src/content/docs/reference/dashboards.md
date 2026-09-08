@@ -32,6 +32,10 @@ See [Roles and home dashboards](/docs/concepts/roles-and-dashboards) for paths. 
 3. What is the next click?
 4. If the number is wrong, which metadata field is lying?
 
+## Phone vs laptop
+
+Your role dashboard is available on a phone for glance and expiry actions. Analytics, the IT portal, and admin tools need a laptop. See [Desktop, tablet, and phone](/docs/concepts/desktop-and-mobile).
+
 ## Customization notes
 
 Some widgets and notification layouts can be rearranged (for example notification center ordering). Treat personal layout changes as productivity — not as a substitute for fixing data quality.

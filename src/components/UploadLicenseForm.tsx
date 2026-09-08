@@ -550,6 +550,16 @@ const UploadLicenseForm: React.FC<LicenseUploadFormProps> = ({
 										processedFileData={processedFileData}
 										isExtracting={isExtracting}
 										savedDrafts={savedDrafts}
+										fileIngestUi={
+											isExtracting
+												? "progress"
+												: processedFileData
+													? "success"
+													: "hidden"
+										}
+										fileIngestProgress={
+											isExtracting ? 50 : processedFileData ? 100 : 0
+										}
 										onDrop={onDrop}
 										onResumeDraft={resumeDraft}
 										onDeleteDraft={handleDeleteClick}

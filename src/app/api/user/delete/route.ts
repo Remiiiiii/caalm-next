@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
+import { requireStepUpForSession } from "@/lib/auth/step-up";
 import { getOrgIdFromRequest, requirePermission } from "@/lib/rbac/middleware";
 import { deleteUserAccount } from "@/lib/users/delete-user.service";
 
@@ -34,6 +35,9 @@ export async function DELETE(req: NextRequest) {
 			permission: PERMISSIONS.USERS.EDIT,
 		});
 		if (permissionCheck) return permissionCheck;
+
+		const stepUpCheck = await requireStepUpForSession(req);
+		if (stepUpCheck) return stepUpCheck;
 
 		const userId = await parseUserId(req);
 		if (!userId) {

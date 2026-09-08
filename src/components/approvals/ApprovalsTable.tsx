@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
+import ApprovalsMobileList from "@/components/approvals/ApprovalsMobileList";
 import { agingLabel } from "@/components/approvals/ApprovalsAttentionStrip";
 import { useApprovalsView } from "@/components/approvals/ApprovalsViewContext";
 import FormattedDateTime from "@/components/FormattedDateTime";
@@ -158,7 +159,18 @@ export default function ApprovalsTable({
 	}
 
 	return (
-		<div className="w-full overflow-x-auto px-2 sm:px-4 pb-4">
+		<>
+			<ApprovalsMobileList
+				items={items}
+				selectedIds={selectedIds}
+				busyId={busyId}
+				canReview={canReview}
+				canDecide={canDecide}
+				onToggleSelected={toggleSelected}
+				onPreview={setPreviewItem}
+				onQuickApprove={quickApprove}
+			/>
+			<div className="hidden md:block w-full overflow-x-auto px-2 sm:px-4 pb-4">
 			<Table className="border-separate border-spacing-0">
 				<TableHeader className="[&_tr]:border-b-0">
 					<TableRow className={DATA_TABLE_HEADER_ROW}>
@@ -321,6 +333,7 @@ export default function ApprovalsTable({
 					))}
 				</TableBody>
 			</Table>
-		</div>
+			</div>
+		</>
 	);
 }

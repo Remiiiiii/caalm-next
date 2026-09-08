@@ -44,6 +44,11 @@ export const actionsDropdownItems = [
 		value: "assign",
 	},
 	{
+		label: "Transfer",
+		icon: "/assets/icons/assign.svg",
+		value: "transfer",
+	},
+	{
 		label: "Details",
 		icon: "/assets/icons/info.svg",
 		value: "details",
@@ -62,6 +67,11 @@ export const actionsDropdownItems = [
 		label: "Review",
 		icon: "/assets/icons/review.svg",
 		value: "review",
+	},
+	{
+		label: "Negotiate",
+		icon: "/assets/icons/review.svg",
+		value: "negotiate",
 	},
 	{
 		label: "Share",

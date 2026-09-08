@@ -152,6 +152,7 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
 				contractOwnerId: contract.contractOwnerId,
 				contractExpiryDate: contract.contractExpiryDate,
 				status: contract.status,
+				lifecycleStatus: contract.lifecycleStatus,
 				contractType: contract.contractType,
 				amount: contract.amount,
 				vendor: contract.vendor,

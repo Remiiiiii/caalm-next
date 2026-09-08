@@ -1,5 +1,10 @@
 import { cn } from "@/lib/utils";
-import type { TicketSeverity, TicketStatus } from "@/lib/tickets/ticket.types";
+import type {
+	TicketLane,
+	TicketSeverity,
+	TicketStatus,
+} from "@/lib/tickets/ticket.types";
+import { resolveTicketLane } from "@/lib/tickets/ticket.types";
 
 const STATUS_CLASS: Record<TicketStatus, string> = {
 	OPEN: "bg-blue/10 text-blue border-blue/20",
@@ -41,6 +46,29 @@ export function TicketSeverityPill({ severity }: { severity: TicketSeverity }) {
 			)}
 		>
 			{severity}
+		</span>
+	);
+}
+
+const LANE_CLASS: Record<TicketLane, string> = {
+	help: "bg-slate-100 text-slate-600 border-slate-200",
+	engineering: "bg-blue/10 text-blue border-blue/20",
+};
+
+export function TicketLanePill({
+	lane,
+}: {
+	lane?: TicketLane | null;
+}) {
+	const resolved = resolveTicketLane({ lane });
+	return (
+		<span
+			className={cn(
+				"inline-block px-2 py-0.5 text-xs rounded-full font-medium border capitalize",
+				LANE_CLASS[resolved],
+			)}
+		>
+			{resolved === "help" ? "Help" : "Engineering"}
 		</span>
 	);
 }

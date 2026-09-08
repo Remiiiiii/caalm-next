@@ -11,6 +11,9 @@ export const TICKET_STATUSES = [
 
 export type TicketStatus = (typeof TICKET_STATUSES)[number];
 
+export const TICKET_LANES = ["help", "engineering"] as const;
+export type TicketLane = (typeof TICKET_LANES)[number];
+
 export const ACTIVE_TICKET_STATUSES: TicketStatus[] = [
 	"OPEN",
 	"ASSIGNED",
@@ -28,6 +31,9 @@ export const TICKET_EVENT_TYPES = [
 	"CREATED",
 	"ISSUE_CREATED",
 	"ASSIGNED",
+	"CLAIMED",
+	"ESCALATED",
+	"MARKED_RESOLVED",
 	"RESOLVE_CLICKED",
 	"AGENT_STARTED",
 	"PR_OPENED",
@@ -45,6 +51,8 @@ export type Ticket = {
 	$id: string;
 	/** Human reference, e.g. TKT-2026-0042. Per-org year sequence. */
 	ticketNumber?: string | null;
+	/** help = CAALM close; engineering = GitHub + agent. Missing ⇒ engineering. */
+	lane?: TicketLane | null;
 	title: string;
 	description: string;
 	category?: string;
@@ -85,6 +93,7 @@ export type TicketEvent = {
 export type CreateTicketInput = {
 	title: string;
 	description: string;
+	lane: TicketLane;
 	category: string;
 	affectedModule?: string | null;
 	impact: TicketSeverity;
@@ -115,4 +124,9 @@ export function isTicketsEnabled(): boolean {
 
 export function getTicketsRepo(): string {
 	return process.env.GITHUB_TICKETS_REPO || "Remiiiiii/caalm-next";
+}
+
+/** Treat legacy rows without lane as engineering. */
+export function resolveTicketLane(ticket: Pick<Ticket, "lane">): TicketLane {
+	return ticket.lane === "help" ? "help" : "engineering";
 }

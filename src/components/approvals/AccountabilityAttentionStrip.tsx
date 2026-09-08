@@ -103,7 +103,7 @@ export function AccountabilityAttentionStrip() {
 							<li key={item.$id}>
 								<button
 									type="button"
-									className="text-xs text-[#0f5384] underline-offset-2 hover:underline"
+									className="py-2 text-sm text-[#0f5384] underline-offset-2 hover:underline"
 									onClick={() => setAttestTarget(item)}
 								>
 									Explain {item.entityName}
@@ -114,7 +114,7 @@ export function AccountabilityAttentionStrip() {
 							<li key={item.$id}>
 								<button
 									type="button"
-									className="text-xs text-[#0f5384] underline-offset-2 hover:underline"
+									className="py-2 text-sm text-[#0f5384] underline-offset-2 hover:underline"
 									onClick={() => setReviewTarget(item)}
 								>
 									Review {item.entityName}

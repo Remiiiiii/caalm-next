@@ -51,7 +51,7 @@ export default function PlanUpgradeSection({
 			{showPilotCta && (
 				<Card className="glass-card">
 					<div className="glass-card-cap" />
-					<CardContent className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+					<CardContent className="p-4 sm:p-6 flex flex-row items-center justify-between gap-4">
 						<div>
 							<p className="text-sm font-medium sidebar-gradient-text">
 								90-day Growth pilot
@@ -75,7 +75,7 @@ export default function PlanUpgradeSection({
 				</Card>
 			)}
 
-			<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+			<div className="grid grid-cols-3 gap-6">
 				{plans.map((plan) => {
 					const isCurrent = plan.key === currentTier;
 					const isEnterprise = plan.key === "enterprise";

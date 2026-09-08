@@ -451,7 +451,7 @@ const TrendAnalysis: React.FC<TrendAnalysisProps> = ({ department }) => {
 			</Card>
 
 			{/* Summary Statistics */}
-			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+			<div className="grid grid-cols-4 gap-6">
 				{[
 					{
 						key: "contracts",

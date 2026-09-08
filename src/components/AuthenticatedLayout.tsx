@@ -2,6 +2,7 @@
 
 import type { Models } from "appwrite";
 import type React from "react";
+import { DesktopFirstGate } from "@/components/DesktopFirstGate";
 import DashboardHeader from "@/components/DashboardHeader";
 import { DesktopNotificationNavListener } from "@/components/DesktopNotificationNavListener";
 import InactivityDialog from "@/components/InactivityDialog";
@@ -69,7 +70,9 @@ const AuthenticatedLayout = ({
 						<div className="px-3 sm:px-4 lg:pr-7 pb-2 sm:pb-3 min-w-0 shrink-0">
 							<DashboardHeader user={currentUser} />
 						</div>
-						<div className="main-content">{children}</div>
+						<div className="main-content">
+							<DesktopFirstGate>{children}</DesktopFirstGate>
+						</div>
 					</section>
 					<Toaster />
 

@@ -366,7 +366,7 @@ export const CalendarAnalyticsDashboard: React.FC = () => {
 				</CardHeader>
 				<CardContent>
 					{/* Key Metrics Cards */}
-					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+					<div className="grid grid-cols-4 gap-4 mb-6">
 						<Card className="glass-card">
 							<div className="glass-card-cap" />
 							<CardContent className="pt-6">
@@ -473,7 +473,7 @@ export const CalendarAnalyticsDashboard: React.FC = () => {
 									</CardDescription>
 								</CardHeader>
 								<CardContent>
-									<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+									<div className="grid grid-cols-2 gap-6">
 										<div>
 											<p className="text-sm text-slate-600 mb-2">
 												Total Bookings

@@ -15,10 +15,10 @@ import {
 import { ROLE_LABELS, type UserRole } from "@/constants/rbac";
 import { useAuth } from "@/contexts/AuthContext";
 import { useGroupedNavigation } from "@/hooks/useGroupedNavigation";
+import { isCompanionPath } from "@/lib/ui/desktop-first";
 import { cn } from "@/lib/utils";
 import SidebarUserCard from "@/components/sidebar/SidebarUserCard";
 import { ContractTemplatesNavIcon } from "@/components/sidebar/NavItemIcon";
-import FileUploader from "./FileUploader";
 import { Button } from "./ui/button";
 
 interface Props {
@@ -31,8 +31,6 @@ interface Props {
 }
 
 const MobileNavigation = ({
-	$id: ownerId,
-	accountId,
 	fullName,
 	avatar,
 	email,
@@ -48,8 +46,17 @@ const MobileNavigation = ({
 		isViewer,
 		shouldShowLock,
 	} = useGroupedNavigation();
+	const companionNav = groupedNav
+		.map((section) => ({
+			...section,
+			items: section.items.filter(
+				(item) => Boolean(item.url) && isCompanionPath(item.url),
+			),
+		}))
+		.filter((section) => section.items.length > 0);
 	const settingsItems =
-		groupedNav.find((section) => section.header === "Settings")?.items ?? [];
+		companionNav.find((section) => section.header === "Settings")?.items ??
+		[];
 
 	useEffect(() => {
 		setOpen(false);
@@ -106,13 +113,13 @@ const MobileNavigation = ({
 								<div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-500" />
 								<span className="text-sm">Loading navigation...</span>
 							</div>
-						) : groupedNav.length === 0 ? (
+						) : companionNav.length === 0 ? (
 							<p className="py-8 text-center text-sm text-muted-foreground">
 								No navigation items available
 							</p>
 						) : (
 							<ul className="mobile-nav-list">
-								{groupedNav.map((section) =>
+								{companionNav.map((section) =>
 									section.header === "Settings" ? null : (
 									<li key={section.header}>
 										<p className="mb-2 px-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -185,6 +192,16 @@ const MobileNavigation = ({
 							</ul>
 						)}
 					</nav>
+					<p className="px-4 pb-1 text-xs text-slate-500">
+						Full app on laptop.{" "}
+						<Link
+							href="/docs/concepts/desktop-and-mobile"
+							className="text-[#0f5384] underline-offset-2 hover:underline"
+							onClick={() => setOpen(false)}
+						>
+							See device differences
+						</Link>
+					</p>
 					<Separator className="my-5 bg-light-200/20" />
 					<div className="flex flex-col justify-between gap-5 pb-5">
 						<SidebarUserCard
@@ -192,7 +209,6 @@ const MobileNavigation = ({
 							email={email}
 							settingsItems={settingsItems}
 						/>
-						<FileUploader ownerId={ownerId} accountId={accountId} />
 						<Button
 							type="button"
 							className="mobile-sign-out-button"

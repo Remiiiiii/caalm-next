@@ -79,10 +79,10 @@ export function DepartmentActionQueue({
 							No pending approvals or contracts needing attention right now.
 						</p>
 						<Link
-							href="/calendar"
+							href="/contracts/approvals"
 							className="text-sm text-[#0f5384] hover:underline mt-3 cursor-pointer"
 						>
-							Open calendar
+							Open approvals
 						</Link>
 					</div>
 				) : (

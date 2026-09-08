@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
+import { requireStepUpForSession } from "@/lib/auth/step-up";
 import { requirePermission } from "@/lib/rbac/middleware";
 import { getOrganization } from "@/lib/rbac/organizations";
 import { validateUserOrgAccess } from "@/lib/rbac/permissions";
@@ -62,6 +63,9 @@ export async function PATCH(
 		permission: PERMISSIONS.SETTINGS.BILLING,
 	});
 	if (permissionCheck) return permissionCheck;
+
+	const stepUpCheck = await requireStepUpForSession(request);
+	if (stepUpCheck) return stepUpCheck;
 
 	if (!isStripeConfigured()) {
 		return NextResponse.json(
@@ -133,6 +137,9 @@ export async function DELETE(
 		permission: PERMISSIONS.SETTINGS.BILLING,
 	});
 	if (permissionCheck) return permissionCheck;
+
+	const stepUpCheck = await requireStepUpForSession(request);
+	if (stepUpCheck) return stepUpCheck;
 
 	if (!isStripeConfigured()) {
 		return NextResponse.json(

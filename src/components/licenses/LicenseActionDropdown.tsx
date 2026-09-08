@@ -3,6 +3,7 @@
 import * as VisuallyHiddenPrimitive from "@radix-ui/react-visually-hidden";
 import {
 	AlertTriangle,
+	ArrowRightLeft,
 	Download,
 	FileText,
 	GitBranch,
@@ -18,6 +19,7 @@ import {
 import Image from "next/image";
 import type React from "react";
 import { Fragment, useState } from "react";
+import { TransferOwnershipDialog } from "@/components/ownership/TransferOwnershipDialog";
 import { Button } from "@/components/ui/button";
 import { DeleteConfirmBody } from "@/components/ui/delete-confirmation-dialog";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -29,6 +31,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { PERMISSIONS } from "@/constants/permissions";
 import { useToast } from "@/hooks/use-toast";
 import { useDepartmentAssignment } from "@/hooks/useDepartmentAssignment";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -91,6 +94,11 @@ const licenseActionsDropdownItems = [
 		value: "assign",
 	},
 	{
+		label: "Transfer",
+		icon: "/assets/icons/assign.svg",
+		value: "transfer",
+	},
+	{
 		label: "Approval workflow",
 		icon: "/assets/icons/contract-status.svg",
 		value: "status",
@@ -141,6 +149,7 @@ const LicenseActionDropdown = ({
 	const [showAllocate, setShowAllocate] = useState(false);
 	const [showRenew, setShowRenew] = useState(false);
 	const [showAssign, setShowAssign] = useState(false);
+	const [showTransfer, setShowTransfer] = useState(false);
 	const [showStatus, setShowStatus] = useState(false);
 	const [showDelete, setShowDelete] = useState(false);
 	const [deleteConfirmed, setDeleteConfirmed] = useState(false);
@@ -257,6 +266,11 @@ const LicenseActionDropdown = ({
 			case "assign":
 			case "status":
 				return canLicenseAction(permissions, "edit");
+			case "transfer":
+				return (
+					permissions.includes(PERMISSIONS.LICENSES.VIEW_ALL) &&
+					permissions.includes(PERMISSIONS.LICENSES.EDIT)
+				);
 			case "allocate":
 				return canLicenseAction(permissions, "allocate");
 			case "renew":
@@ -358,6 +372,7 @@ const LicenseActionDropdown = ({
 							allocate: KeyRound,
 							renew: RefreshCw,
 							assign: UserRoundCheck,
+							transfer: ArrowRightLeft,
 							status: GitBranch,
 							delete: Trash2,
 							download: Download,
@@ -401,6 +416,8 @@ const LicenseActionDropdown = ({
 										} else if (actionItem.value === "assign") {
 											setShowAssign(true);
 											setIsModalOpen(true);
+										} else if (actionItem.value === "transfer") {
+											setShowTransfer(true);
 										} else if (actionItem.value === "status") {
 											setShowStatus(true);
 											setIsModalOpen(true);
@@ -786,7 +803,7 @@ const LicenseActionDropdown = ({
 																	: manager.division
 																		? formatDepartmentName(
 																				DIVISION_TO_DEPARTMENT[
-																					manager.division
+																					manager.division as UserDivision
 																				] as ContractDepartment,
 																			)
 																		: "N/A"}
@@ -871,6 +888,19 @@ const LicenseActionDropdown = ({
 					</DialogContent>
 				</Dialog>
 			)}
+			<TransferOwnershipDialog
+				open={showTransfer}
+				onOpenChange={setShowTransfer}
+				itemKind="license"
+				itemName={license.licenseName || "License"}
+				transferUrl={`/api/licenses/${license.$id}/transfer`}
+				excludeUserId={
+					typeof license.licenseOwnerId === "string"
+						? license.licenseOwnerId
+						: undefined
+				}
+				onTransferred={() => onRefresh?.()}
+			/>
 		</>
 	);
 };

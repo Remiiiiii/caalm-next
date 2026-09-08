@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useToast } from "@/hooks/use-toast";
+import { useStepUp } from "@/contexts/StepUpContext";
 import type { ApprovalSlaPolicy } from "@/lib/approvals/ApprovalSlaService";
 
 const STEP_LABELS: Record<string, string> = {
@@ -49,6 +50,7 @@ export function ApprovalSlaPoliciesManager({
 }) {
 	const { orgId } = useOrganization();
 	const { toast } = useToast();
+	const { ensureStepUp } = useStepUp();
 	const [policies, setPolicies] = useState<ApprovalSlaPolicy[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [dialogOpen, setDialogOpen] = useState(false);
@@ -142,6 +144,7 @@ export function ApprovalSlaPoliciesManager({
 	};
 
 	const remove = async (id: string) => {
+		if (!(await ensureStepUp())) return;
 		const res = await fetch(`/api/approvals/sla-policies/${id}`, {
 			method: "DELETE",
 		});
@@ -251,7 +254,7 @@ export function ApprovalSlaPoliciesManager({
 						</p>
 					</div>
 					<div className="flex-1 space-y-4 overflow-y-auto bg-slate-50 p-6">
-						<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+						<div className="grid grid-cols-2 gap-4">
 							<div className="space-y-2">
 								<Label>Applies to</Label>
 								<Select

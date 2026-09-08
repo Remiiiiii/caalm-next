@@ -10,6 +10,7 @@ Day-one access is not adoption. Use this week plan to build the habits CAALM rew
 ## Day 1 — Orient
 
 - Read [Mental model](/docs/concepts/mental-model) and [Permissions](/docs/concepts/permissions).
+- If you work from a phone, read [Desktop, tablet, and phone](/docs/concepts/desktop-and-mobile) first. Days 2, 4, and 5 include laptop-only screens (libraries, audits, analytics).
 - Open **View My Access** and screenshot / note your permission set.
 - Walk your role guide once end-to-end.
 

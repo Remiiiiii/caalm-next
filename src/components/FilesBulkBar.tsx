@@ -27,7 +27,7 @@ export default function FilesBulkBar({
 	selectedIds,
 	onClearSelection,
 }: FilesBulkBarProps) {
-	const path = usePathname();
+	const path = usePathname() || "";
 	const router = useRouter();
 	const { toast } = useToast();
 	const [confirmOpen, setConfirmOpen] = useState(false);

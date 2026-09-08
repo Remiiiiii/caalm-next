@@ -143,7 +143,7 @@ export function AnalyticsReadinessSummary({
 	];
 
 	return (
-		<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+		<div className="grid grid-cols-3 gap-6">
 			{summaryCards.map((card, i) => {
 				const tone = toneFor(card.percent);
 				const delay = 0.08 + i * 0.1;

@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
 			rows = result.rows as Array<Record<string, unknown>>;
 		}
 
-		const users: ShareDirectoryUser[] = rows
+		const users = rows
 			.map((user) => {
 				const email = String(user.email || "").trim();
 				const status = String(user.status || "active").toLowerCase();
@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
 					!candidate.includes("avatar-placeholder")
 						? candidate
 						: null;
-				return {
+				const entry: ShareDirectoryUser = {
 					$id: String(user.$id || ""),
 					fullName: String(user.fullName || "Unknown").trim() || "Unknown",
 					email,
@@ -92,6 +92,7 @@ export async function GET(request: NextRequest) {
 						"Other",
 					avatar,
 				};
+				return entry;
 			})
 			.filter((u): u is ShareDirectoryUser => Boolean(u?.$id && u.email));
 

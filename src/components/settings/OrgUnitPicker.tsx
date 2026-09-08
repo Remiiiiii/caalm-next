@@ -109,7 +109,7 @@ export function OrgUnitPicker({
 			className={cn(
 				layout === "inline"
 					? "contents"
-					: "grid grid-cols-1 sm:grid-cols-2 gap-4",
+					: "grid grid-cols-2 gap-4",
 			)}
 		>
 			<div className="min-w-0 space-y-2">

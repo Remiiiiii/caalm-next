@@ -170,7 +170,6 @@ export {
 	SheetDescription,
 	SheetFooter,
 	SheetHeader,
-	SheetHeaderIcon,
 	SheetOverlay,
 	SheetPortal,
 	SheetTitle,

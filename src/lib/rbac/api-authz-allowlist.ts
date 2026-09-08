@@ -104,17 +104,7 @@ export const API_AUTHZ_ALLOWLIST: readonly ApiAuthzAllowEntry[] = [
 		reason: "Invitation acceptance via invite token",
 	},
 	{
-		path: "invitations/[token]/delete",
-		class: "token",
-		reason: "Invitation token-scoped action",
-	},
-	{
 		path: "invitations/[token]/resend",
-		class: "token",
-		reason: "Invitation token-scoped action",
-	},
-	{
-		path: "invitations/[token]/revoke",
 		class: "token",
 		reason: "Invitation token-scoped action",
 	},
@@ -148,6 +138,31 @@ export const API_AUTHZ_ALLOWLIST: readonly ApiAuthzAllowEntry[] = [
 		class: "health",
 		reason:
 			"Playwright/CI preflight only: returns 404 outside CI, PLAYWRIGHT_TEST, or development; read-only Appwrite RBAC checks",
+	},
+	{
+		path: "negotiate/[token]",
+		class: "token",
+		reason: "Counterparty negotiation view via hashed invite token + OTP session",
+	},
+	{
+		path: "negotiate/[token]/comments",
+		class: "token",
+		reason: "Counterparty comment via hashed invite token + OTP session",
+	},
+	{
+		path: "negotiate/[token]/session",
+		class: "token",
+		reason: "Check negotiate OTP session cookie for counterparty gate",
+	},
+	{
+		path: "negotiate/[token]/verify/request",
+		class: "token",
+		reason: "Send OTP to allowlisted negotiate invitee email",
+	},
+	{
+		path: "negotiate/[token]/verify/confirm",
+		class: "token",
+		reason: "Confirm OTP and set httpOnly negotiate session cookie",
 	},
 ] as const;
 

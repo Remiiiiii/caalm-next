@@ -45,7 +45,7 @@ export const AttachmentEngagementStats: React.FC<
 	return (
 		<div className="space-y-6">
 			{/* Summary Cards */}
-			<div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+			<div className="grid grid-cols-4 gap-4">
 				<Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
 					<CardContent className="pt-6">
 						<div className="flex items-center justify-between">
@@ -187,7 +187,7 @@ export const AttachmentEngagementStats: React.FC<
 					</CardDescription>
 				</CardHeader>
 				<CardContent>
-					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+					<div className="grid grid-cols-2 gap-4">
 						<div className="p-4 bg-white/50 rounded-lg">
 							<p className="text-sm text-slate-600 mb-2">
 								Average Views per Attachment

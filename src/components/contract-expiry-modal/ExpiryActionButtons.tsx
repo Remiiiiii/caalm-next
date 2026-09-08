@@ -1,7 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Clock, Eye, Mail, RefreshCw, RotateCcw, X } from "lucide-react";
+import { Clock, Eye, Mail, RotateCcw, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useContractSnooze } from "@/hooks/useContractSnooze";
 import { useUpdateContractStatus } from "@/hooks/useUpdateContractStatus";
 import type { UIFileDoc } from "@/types/files";
+import { DESKTOP_MIN_WIDTH } from "@/lib/ui/desktop-first";
 import { ExpirationAttestationDialog } from "@/components/approvals/ExpirationAttestationDialog";
 import { ContractRenewalDialog } from "@/components/contracts/ContractRenewalDialog";
 import ContractDismissalSignatureModal from "./ContractDismissalSignatureModal";
@@ -32,6 +34,7 @@ export default function ExpiryActionButtons({
 	onStatusChange,
 	daysUntilExpiry,
 }: ExpiryActionButtonsProps) {
+	const router = useRouter();
 	const { toast } = useToast();
 	const { updateStatus } = useUpdateContractStatus({ onStatusChange });
 	const { snoozeContract } = useContractSnooze();
@@ -174,7 +177,7 @@ export default function ExpiryActionButtons({
 				path: "/dashboard",
 			});
 			if (success) {
-				setShowLetExpireDialog(false);
+				setShowAttestDialog(false);
 				onDismiss();
 			}
 		} catch (error) {
@@ -185,8 +188,16 @@ export default function ExpiryActionButtons({
 	};
 
 	const handleViewDetails = () => {
-		// Navigate to contract details - check if there's a specific contract details route
-		// For now, navigate to contracts page
+		// Contracts library is desktop-required; keep phone users on companion flows.
+		if (typeof window !== "undefined" && window.innerWidth < DESKTOP_MIN_WIDTH) {
+			toast({
+				title: "Open on a laptop",
+				description:
+					"Full contract details need a wider screen. Use Renew or Let Expire here, or open Approvals on your phone.",
+			});
+			onDismiss();
+			return;
+		}
 		router.push(`/contracts`);
 		onDismiss();
 	};
@@ -222,7 +233,7 @@ export default function ExpiryActionButtons({
 				initial={{ opacity: 0, y: 50 }}
 				animate={{ opacity: 1, y: 0 }}
 				transition={{ delay: 1.5, duration: 0.5 }}
-				className="relative z-20 mt-8 flex flex-nowrap gap-3 w-fit ml-24"
+				className="relative z-20 mt-8 flex flex-wrap gap-3 w-full max-w-full justify-start"
 			>
 				<motion.div variants={buttonVariants} whileHover="hover" whileTap="tap">
 					<Button

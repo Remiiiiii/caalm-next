@@ -4,6 +4,7 @@ import {
 	deleteSlaPolicy,
 	updateSlaPolicy,
 } from "@/lib/approvals/ApprovalSlaService";
+import { requireStepUpForSession } from "@/lib/auth/step-up";
 import { requirePermission } from "@/lib/rbac/middleware";
 
 export async function PATCH(
@@ -29,6 +30,9 @@ export async function DELETE(
 		permission: PERMISSIONS.SETTINGS.EDIT,
 	});
 	if (denied) return denied;
+
+	const stepUpCheck = await requireStepUpForSession(request);
+	if (stepUpCheck) return stepUpCheck;
 
 	const { id } = await params;
 	await deleteSlaPolicy(id);

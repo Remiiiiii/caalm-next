@@ -17,10 +17,11 @@ These queues typically require review and/or approve permissions.
 ## What a healthy approval looks like
 
 1. Submitter provides complete metadata + file
-2. Reviewer checks correctness (not vibes)
-3. Approver makes an explicit decision
-4. System retains who decided and when
-5. Downstream monitoring begins from truthful dates
+2. If wording is still moving, finish that work in [Negotiate](/docs/reference/negotiate), then **Send for review**
+3. Reviewer checks correctness (not vibes)
+4. Approver makes an explicit decision
+5. System retains who decided and when
+6. Downstream monitoring begins from truthful dates
 
 ## Separation of duties
 
@@ -44,5 +45,7 @@ Common causes:
 
 Admin response: reassign ownership, fix roles, or convene a decision — do not leave limbo records aging in place.
 
-Related: [Contract templates](/docs/reference/contract-templates), [Contracts](/docs/reference/contracts), [Funding and retention](/docs/reference/funding-retention).
+Approval queues work on a phone. Starting a negotiation or opening the contracts library needs a laptop. See [Desktop, tablet, and phone](/docs/concepts/desktop-and-mobile).
+
+Related: [Negotiate contracts](/docs/reference/negotiate), [Contract templates](/docs/reference/contract-templates), [Contracts](/docs/reference/contracts), [Funding and retention](/docs/reference/funding-retention).
 

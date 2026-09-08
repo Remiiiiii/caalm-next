@@ -11,16 +11,21 @@ import { useEffect, useState } from "react";
 
 export default function RunbookDetailPage() {
 	const params = useParams<{ runbookId: string }>();
+	const runbookId = params?.runbookId ?? "";
 	const [item, setItem] = useState<Runbook | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [loading, setLoading] = useState(true);
 
 	useEffect(() => {
+		if (!runbookId) {
+			setLoading(false);
+			return;
+		}
 		let cancelled = false;
 		async function load() {
 			setLoading(true);
 			try {
-				const res = await fetch(`/api/it/runbooks/${params.runbookId}`);
+				const res = await fetch(`/api/it/runbooks/${runbookId}`);
 				const data = await res.json();
 				if (!res.ok) throw new Error(data.error || "Not found");
 				if (!cancelled) setItem(data.item);
@@ -36,7 +41,7 @@ export default function RunbookDetailPage() {
 		return () => {
 			cancelled = true;
 		};
-	}, [params.runbookId]);
+	}, [runbookId]);
 
 	return (
 		<ITPageShell

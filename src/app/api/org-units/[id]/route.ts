@@ -5,6 +5,7 @@ import {
 	updateOrgUnit,
 } from "@/lib/org/org-units.service";
 import type { OrgUnitType } from "@/lib/database/schemas/org-units.schema";
+import { requireStepUpForSession } from "@/lib/auth/step-up";
 import { requirePermission } from "@/lib/rbac/middleware";
 
 export async function PATCH(
@@ -19,6 +20,10 @@ export async function PATCH(
 	try {
 		const { id } = await params;
 		const body = await request.json();
+		if (body.active === false) {
+			const stepUpCheck = await requireStepUpForSession(request);
+			if (stepUpCheck) return stepUpCheck;
+		}
 		const unit = await updateOrgUnit(id, {
 			name: body.name,
 			parentId: body.parentId,
@@ -42,6 +47,9 @@ export async function DELETE(
 		permission: PERMISSIONS.SETTINGS.EDIT,
 	});
 	if (denied) return denied;
+
+	const stepUpCheck = await requireStepUpForSession(request);
+	if (stepUpCheck) return stepUpCheck;
 
 	try {
 		const { id } = await params;

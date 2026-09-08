@@ -1,0 +1,13 @@
+# Gotenberg — LibreOffice DOCX/PDF conversion for negotiation previews.
+# Usage: docker compose -f docker-compose.gotenberg.yml up -d
+# Then set GOTENBERG_URL=http://127.0.0.1:3001 in .env.local
+
+services:
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    ports:
+      - "3001:3000"
+    command:
+      - "gotenberg"
+      - "--api-timeout=120s"
+      - "--libreoffice-restart-after=10"

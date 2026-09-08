@@ -39,4 +39,5 @@ export interface UIFileDoc extends Models.Document {
 	deletedAt?: string | null;
 	deletedBy?: string | null;
 	approvalWorkflowState?: string;
+	lifecycleStatus?: string;
 }

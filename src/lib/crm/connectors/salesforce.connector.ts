@@ -19,6 +19,9 @@ export const salesforceConnector: CrmOriginConnector = {
 	listPipelines() {
 		return refuse();
 	},
+	listDealProperties() {
+		return refuse();
+	},
 	getDeal() {
 		return refuse();
 	},

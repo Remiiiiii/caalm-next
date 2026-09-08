@@ -14,6 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PERMISSIONS } from "@/constants/permissions";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { useStepUp } from "@/contexts/StepUpContext";
 import { useToast } from "@/hooks/use-toast";
 import type { Organization } from "@/lib/rbac/organizations";
 import { fetcher } from "@/lib/swr-config";
@@ -34,6 +35,7 @@ const FEATURE_FLAGS = [
 export default function SystemSettingsPage() {
 	const { orgId } = useOrganization();
 	const { toast } = useToast();
+	const { ensureStepUp } = useStepUp();
 	const url = orgId
 		? `/api/organizations?orgId=${encodeURIComponent(orgId)}`
 		: "/api/organizations";
@@ -60,6 +62,11 @@ export default function SystemSettingsPage() {
 	const handleSavePlatform = useCallback(async () => {
 		setSaving(true);
 		try {
+			const require2faChanged =
+				Boolean(org?.settings?.require2fa) !== require2fa;
+			if (require2faChanged && !(await ensureStepUp())) {
+				return;
+			}
 			const res = await fetch(
 				orgId
 					? `/api/organizations?orgId=${encodeURIComponent(orgId)}`
@@ -92,7 +99,7 @@ export default function SystemSettingsPage() {
 		} finally {
 			setSaving(false);
 		}
-	}, [orgId, org, features, require2fa, mutate, toast]);
+	}, [orgId, org, features, require2fa, mutate, toast, ensureStepUp]);
 
 	if (isLoading) {
 		return (

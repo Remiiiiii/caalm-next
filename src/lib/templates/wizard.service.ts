@@ -1,14 +1,19 @@
-import { ID, Query } from "node-appwrite";
 import { appendFile } from "node:fs/promises";
 import { join } from "node:path";
+import { ID, Query } from "node-appwrite";
 import { ContractTypeMapper } from "@/lib/api/contracts/services/ContractTypeMapper";
 import { FileService } from "@/lib/api/contracts/services/FileService";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
-import { initializeOnUpload } from "@/lib/approvals/ContractApprovalWorkflowService";
+import { writeRowWithSchemaDriftRecovery } from "@/lib/appwrite/schemaDriftRecovery";
 import { assertCanCreateContract } from "@/lib/billing/planLimits";
 import { listClauses } from "@/lib/clauses/clause-library.service";
 import { getContractTypeConfig } from "@/lib/contracts/contractTypeConfigs";
+import {
+	negotiationSnapshotFromDocx,
+	type NegotiationSnapshotMetadata,
+} from "@/lib/contracts/negotiation/docx-snapshot";
+import { getOrganization } from "@/lib/rbac/organizations";
 import { logAuditEvent } from "@/lib/services/audit-logger";
 import {
 	assembleContract,
@@ -29,17 +34,17 @@ import {
 import { getTemplateById } from "@/lib/templates/contract-template.service";
 import { convertDocxBufferToPdf } from "@/lib/templates/docx-to-pdf";
 import {
-	mergeBlueprintDocument,
 	type InjectedClause,
+	mergeBlueprintDocument,
 } from "@/lib/templates/merge-docx";
-import { getOrganization } from "@/lib/rbac/organizations";
+import { applyOrgLogoToDocx } from "@/lib/organizations/org-logo.server";
 import { orgLetterheadValues } from "@/lib/templates/org-letterhead";
-import { isEmptyWizardDraftSummary } from "@/lib/templates/wizard-draft-meta";
 import {
 	buildMergeTokenValues,
 	filledTokenPercent,
 	validateBlueprintTokens,
 } from "@/lib/templates/token-schema";
+import { isEmptyWizardDraftSummary } from "@/lib/templates/wizard-draft-meta";
 import type { Clause } from "@/types/clauses";
 import type {
 	AssemblyResult,
@@ -48,6 +53,7 @@ import type {
 	WizardCustomBlock,
 	WizardDocumentSection,
 	WizardPayload,
+	WizardSection,
 	WizardSession,
 	WizardSessionStatus,
 	WizardSessionSummary,
@@ -164,7 +170,7 @@ export function parseWizardPayload(raw: unknown): WizardPayload {
 			.filter((item) => item && typeof item === "object")
 			.map((item) => {
 				const section = item as Record<string, unknown>;
-				return {
+				const mapped: WizardSection = {
 					familyId: String(section.familyId || ""),
 					source: section.source === "injected" ? "injected" : "template",
 					fromTemplateId: section.fromTemplateId
@@ -174,9 +180,10 @@ export function parseWizardPayload(raw: unknown): WizardPayload {
 					enabled: section.enabled !== false,
 					condition:
 						section.condition && typeof section.condition === "object"
-							? (section.condition as WizardPayload["sections"][number]["condition"])
+							? (section.condition as WizardSection["condition"])
 							: undefined,
 				};
+				return mapped;
 			})
 			.filter((section) => section.familyId),
 		tokenValues,
@@ -439,7 +446,6 @@ export async function countWizardSessions(input: {
 			Query.equal("status", "in_progress"),
 			Query.limit(1),
 		],
-		total: true,
 	});
 	return result.total ?? 0;
 }
@@ -561,6 +567,33 @@ export async function getWizardSession(
 	}
 }
 
+export async function getWizardSessionForContract(input: {
+	contractId: string;
+	orgId: string;
+}): Promise<WizardSession | null> {
+	const { tablesDB } = await createAdminClient();
+	const response = await tablesDB.listRows({
+		databaseId: dbId(),
+		tableId: sessionsTable(),
+		queries: [
+			Query.equal("contractId", input.contractId),
+			Query.orderDesc("$updatedAt"),
+			Query.limit(10),
+		],
+	});
+	const sessions = (
+		response.rows as unknown as Record<string, unknown>[]
+	).map(mapSession);
+	return (
+		sessions.find(
+			(session) =>
+				session.orgId === input.orgId &&
+				session.status === "submitted" &&
+				Boolean(session.payload.blueprintId),
+		) || null
+	);
+}
+
 export async function createWizardSession(input: {
 	orgId: string;
 	userId: string;
@@ -659,6 +692,74 @@ function mappedContractType(typeId: string): string {
 	return ContractTypeMapper.map(config?.label || typeId);
 }
 
+const CONTRACT_DEPARTMENTS = [
+	"IT",
+	"Finance",
+	"Legal",
+	"Operations",
+	"Sales",
+	"Marketing",
+	"Executive",
+	"Engineering",
+	"Administration",
+] as const;
+
+/** Appwrite datetime columns reject bare YYYY-MM-DD inconsistently — use noon UTC ISO. */
+function toContractDatetime(dateStr: string | undefined): string | undefined {
+	if (!dateStr?.trim()) return undefined;
+	const raw = dateStr.trim();
+	if (raw.includes("T")) {
+		const parsed = new Date(raw);
+		return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString();
+	}
+	const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw);
+	if (match) {
+		const noonUtc = new Date(
+			Date.UTC(
+				Number(match[1]),
+				Number(match[2]) - 1,
+				Number(match[3]),
+				12,
+				0,
+				0,
+			),
+		);
+		return noonUtc.toISOString();
+	}
+	const parsed = new Date(raw);
+	return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString();
+}
+
+/** contractExpiryDate is required on Contracts — never omit it. */
+function resolveWizardExpiryDate(expiryDate: string): string {
+	const fromIntake = toContractDatetime(expiryDate);
+	if (fromIntake) return fromIntake;
+	const fallback = new Date();
+	fallback.setUTCDate(fallback.getUTCDate() + 90);
+	fallback.setUTCHours(12, 0, 0, 0);
+	return fallback.toISOString();
+}
+
+function mappedCurrency(code: string): string {
+	const raw = (code || "USD").trim();
+	if (raw.toLowerCase() === "other") return "other";
+	const upper = raw.toUpperCase();
+	if (["USD", "EUR", "GBP", "CAD", "MXN", "JPY", "AUD"].includes(upper)) {
+		return upper;
+	}
+	return "USD";
+}
+
+function mappedDepartment(department: string): string {
+	const trimmed = department.trim();
+	if (
+		(CONTRACT_DEPARTMENTS as readonly string[]).includes(trimmed)
+	) {
+		return trimmed;
+	}
+	return "Administration";
+}
+
 export async function buildWizardDocx(
 	payload: WizardPayload,
 	injectedClauses: InjectedClause[] = [],
@@ -681,7 +782,7 @@ export async function buildWizardDocx(
 		payload.tokenValues,
 		orgLetterheadValues(org),
 	);
-	return mergeBlueprintDocument({
+	const merged = mergeBlueprintDocument({
 		template,
 		tokenValues,
 		customBlocks: payload.customBlocks,
@@ -689,6 +790,7 @@ export async function buildWizardDocx(
 		forPreview: opts?.forPreview,
 		blueprintId: payload.blueprintId,
 	});
+	return applyOrgLogoToDocx(merged, org?.settings);
 }
 
 export async function buildWizardPdf(
@@ -699,6 +801,50 @@ export async function buildWizardPdf(
 ): Promise<Buffer> {
 	const docx = await buildWizardDocx(payload, injectedClauses, orgId, opts);
 	return convertDocxBufferToPdf(docx);
+}
+
+function negotiationSnapshotMetadata(
+	assembly: AssemblyResult,
+): NegotiationSnapshotMetadata[] {
+	const values = assembly.mergeValues;
+	return [
+		{ label: "Other party", value: values.counterparty || "—" },
+		{ label: "Department", value: values.department || "—" },
+		{
+			label: "Value",
+			value: `${values.currency || "USD"} ${values.amount || "—"}`,
+		},
+		{ label: "Effective date", value: values.startDate || "—" },
+		{ label: "Expiry date", value: values.expiryDate || "—" },
+		{ label: "Governing law", value: values.governingLaw || "—" },
+		{ label: "Assembled", value: values.today || "—" },
+	];
+}
+
+export async function buildNegotiationSnapshotFromWizardPayload(input: {
+	payload: WizardPayload;
+	orgId: string;
+}): Promise<string> {
+	if (!input.payload.blueprintId) {
+		throw new Error("A blueprint is required to rebuild this negotiation snapshot");
+	}
+	const assembly = await previewWizard({
+		orgId: input.orgId,
+		payload: input.payload,
+	});
+	const included = assembly.sections.filter((section) => !section.skipped);
+	const docx = await buildWizardDocx(
+		input.payload,
+		included.map((section) => ({
+			title: section.title,
+			body: section.body,
+		})),
+		input.orgId,
+	);
+	return negotiationSnapshotFromDocx(
+		docx,
+		negotiationSnapshotMetadata(assembly),
+	);
 }
 
 export async function submitWizard(input: {
@@ -759,15 +905,28 @@ export async function submitWizard(input: {
 		.replace(/-+/g, "-")
 		.slice(0, 60);
 	let fileId: string | null = null;
+	let negotiationDocxBucketFileId = "";
+	let negotiationSnapshot = assembly.markdown;
 	try {
-		const pdfBuffer = await buildWizardPdf(
+		const injectedClauses = included.map((section) => ({
+			title: section.title,
+			body: section.body,
+		}));
+		const docxBuffer = await buildWizardDocx(
 			payload,
-			included.map((section) => ({
-				title: section.title,
-				body: section.body,
-			})),
+			injectedClauses,
 			input.orgId,
 		);
+		negotiationSnapshot = await negotiationSnapshotFromDocx(
+			docxBuffer,
+			negotiationSnapshotMetadata(assembly),
+		);
+		const docxFileName = `${safeName || "contract"}-${input.session.$id.slice(0, 8)}-negotiation.docx`;
+		negotiationDocxBucketFileId = await FileService.uploadFileToStorage(
+			docxBuffer,
+			docxFileName,
+		);
+		const pdfBuffer = await convertDocxBufferToPdf(docxBuffer);
 		const fileName = `${safeName || "contract"}-${input.session.$id.slice(0, 8)}.pdf`;
 		const bucketFileId = await FileService.uploadFileToStorage(
 			pdfBuffer,
@@ -814,35 +973,43 @@ export async function submitWizard(input: {
 		.join(" ")
 		.slice(0, 250);
 
+	const startDateIso = toContractDatetime(payload.intake.startDate);
 	const contractData: Record<string, unknown> = {
 		contractName: payload.intake.contractName.slice(0, 128),
 		contractNumber: buildWizardContractNumber(input.session.$id),
 		orgId: input.orgId,
 		amount:
 			Number(String(payload.intake.amount).replace(/[$,]/g, "")) || 0,
-		currencyCode: payload.intake.currency || "USD",
-		lifecycleStatus: "draft",
+		currencyCode: mappedCurrency(payload.intake.currency || "USD"),
+		// lifecycleStatus = negotiation phase; status = operational enum (no "draft").
+		lifecycleStatus: "negotiation",
 		status: "pending-review",
 		description,
 		contractOwnerId: input.userId,
 		// Required on Contracts; wizard intake allows "Not set".
-		department: payload.intake.department || "Administration",
+		department: mappedDepartment(
+			payload.intake.department || "Administration",
+		),
 		vendor: payload.intake.counterparty.slice(0, 50),
 		contractType: mappedContractType(payload.intake.contractType),
-		startDate: payload.intake.startDate || undefined,
-		contractExpiryDate: payload.intake.expiryDate || undefined,
+		contractExpiryDate: resolveWizardExpiryDate(payload.intake.expiryDate),
 		templateUsed: (payload.blueprintId || payload.templateId || "guided-wizard").slice(
 			0,
 			255,
 		),
 		priority: "Medium",
 	};
+	if (startDateIso) {
+		contractData.startDate = startDateIso;
+	}
 	// fileId is a string column; fileRef is a relationship — only set fileId on create.
 	if (fileId) {
 		contractData.fileId = fileId;
 	}
 
-	await tablesDB.createRow({
+	await writeRowWithSchemaDriftRecovery({
+		tablesDB,
+		mode: "create",
 		databaseId: dbId(),
 		tableId: contractsTable,
 		rowId: contractId,
@@ -863,9 +1030,21 @@ export async function submitWizard(input: {
 	}
 
 	try {
-		await initializeOnUpload({ contractId });
+		const { createVersion } = await import(
+			"@/lib/contracts/negotiation/versions.service"
+		);
+		await createVersion({
+			contractId,
+			orgId: input.orgId,
+			extractedText: negotiationSnapshot || description,
+			createdBy: input.userId,
+			changeSummary: "Wizard submit snapshot",
+			source: "wizard_submit",
+			fileId: fileId || "",
+			bucketFileId: negotiationDocxBucketFileId,
+		});
 	} catch (error) {
-		console.error("[wizard submit] approval workflow init failed", error);
+		console.error("[wizard submit] negotiation version failed", error);
 	}
 
 	const updated = await tablesDB.updateRow({
@@ -895,7 +1074,7 @@ export async function submitWizard(input: {
 		target_id: contractId,
 		target_label: payload.intake.contractName,
 		summary:
-			"Created a new pending-review contract from the guided template wizard",
+			"Created a new negotiation draft from the guided template wizard",
 		metadata: {
 			sessionId: input.session.$id,
 			templateId: payload.templateId,

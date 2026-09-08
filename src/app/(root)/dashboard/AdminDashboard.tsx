@@ -51,6 +51,7 @@ import { WeatherBriefingLauncher } from "@/components/dashboard-briefing/Weather
 import { OrgUnitPicker } from "@/components/settings/OrgUnitPicker";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useToast } from "@/hooks/use-toast";
+import { useStepUp } from "@/contexts/StepUpContext";
 import { useAdminStats } from "@/hooks/useAdminStats";
 import { useUnifiedDashboardData } from "@/hooks/useUnifiedDashboardData";
 import { cn } from "@/lib/utils";
@@ -154,6 +155,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 	const uninvitedUsers = uninvitedRes?.data ?? [];
 
 	const { toast } = useToast();
+	const { ensureStepUp } = useStepUp();
 
 	// Invitation management
 	const [inviteForm, setInviteForm] = useState({
@@ -365,6 +367,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 
 	const _confirmRevoke = async () => {
 		if (!revokeToken) return;
+		if (!(await ensureStepUp())) return;
 		try {
 			setRevokingToken(revokeToken);
 			setRemovingInvitations((prev) => new Set(prev).add(revokeToken));
@@ -409,6 +412,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 
 	const _confirmDelete = async () => {
 		if (!deleteToken) return;
+		if (!(await ensureStepUp())) return;
 		try {
 			setDeletingToken(deleteToken);
 			setRemovingInvitations((prev) => new Set(prev).add(deleteToken));

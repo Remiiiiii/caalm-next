@@ -50,6 +50,7 @@ import {
 } from "@/lib/ui/data-table-styles";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useStepUp } from "@/contexts/StepUpContext";
 
 export interface PaymentMethodRow {
 	id: string;
@@ -110,6 +111,7 @@ export default function PaymentMethodsSection({
 	actionError,
 }: PaymentMethodsSectionProps) {
 	const { toast } = useToast();
+	const { ensureStepUp } = useStepUp();
 	const [editOpen, setEditOpen] = useState(false);
 	const [removeOpen, setRemoveOpen] = useState(false);
 	const [removeBlockedOpen, setRemoveBlockedOpen] = useState(false);
@@ -142,6 +144,7 @@ export default function PaymentMethodsSection({
 		expYear: number;
 	}) => {
 		if (!selectedMethod) return;
+		if (!(await ensureStepUp())) return;
 		try {
 			setSaving(true);
 			setLocalError(null);
@@ -184,6 +187,7 @@ export default function PaymentMethodsSection({
 
 	const handleRemove = async () => {
 		if (!selectedMethod) return;
+		if (!(await ensureStepUp())) return;
 		try {
 			setRemoving(true);
 			setLocalError(null);
@@ -218,6 +222,7 @@ export default function PaymentMethodsSection({
 	};
 
 	const handleSetDefault = async (method: PaymentMethodRow) => {
+		if (!(await ensureStepUp())) return;
 		try {
 			setSettingDefaultId(method.id);
 			setLocalError(null);

@@ -3,11 +3,16 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
+import { requireStepUp } from "@/lib/auth/step-up";
 import { requirePermission } from "@/lib/rbac/middleware";
+import {
+	orgPutRequiresStepUp,
+	orgPutRequiresStepUpForRequire2fa,
+	updateOrgSchema,
+} from "@/lib/rbac/organization-profile.schema";
 import { getOrganization, updateOrganization } from "@/lib/rbac/organizations";
 import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 import { logAuditEvent } from "@/lib/services/audit-logger";
-import { updateOrgSchema } from "@/lib/rbac/organization-profile.schema";
 import { formatOrgStreetAddress } from "@/lib/templates/org-letterhead";
 
 export async function GET(request: NextRequest) {
@@ -94,6 +99,15 @@ export async function PUT(request: NextRequest) {
 		}
 
 		const body = await request.json();
+
+		if (
+			orgPutRequiresStepUp(body) ||
+			orgPutRequiresStepUpForRequire2fa(body)
+		) {
+			const stepUpCheck = requireStepUp(request, user.$id);
+			if (stepUpCheck) return stepUpCheck;
+		}
+
 		const validated = updateOrgSchema.parse(body);
 
 		const { settingsFromTier, normalizePricingTier } = await import(

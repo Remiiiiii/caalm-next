@@ -142,7 +142,7 @@ const AnalyticsPage = () => {
 							</div>
 						</div>
 
-						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+						<div className="grid grid-cols-3 gap-6">
 							{[1, 2, 3].map((i) => (
 								<DepartmentCardSkeleton key={i} />
 							))}
@@ -313,7 +313,7 @@ const AnalyticsPage = () => {
 				lastUpdated={summary?.lastUpdated}
 			/>
 
-			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+			<div className="grid grid-cols-4 gap-6">
 				<AnalyticsStatCard
 					title="Total contracts"
 					value={totals.totalContracts.toLocaleString()}
@@ -458,7 +458,7 @@ const AnalyticsPage = () => {
 												<div className="h-4 bg-white/20 rounded-lg w-24 animate-pulse"></div>
 											</div>
 										</div>
-										<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+										<div className="grid grid-cols-3 gap-6">
 											{[...Array(3)].map((_, i) => (
 												<div
 													key={i}
@@ -471,7 +471,7 @@ const AnalyticsPage = () => {
 															<div className="h-4 bg-gray-200 rounded-lg w-full animate-pulse"></div>
 														</div>
 													</div>
-													<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+													<div className="grid grid-cols-2 gap-3">
 														{[...Array(4)].map((_, j) => (
 															<div
 																key={j}
@@ -560,7 +560,7 @@ const AnalyticsPage = () => {
 													</div>
 
 													{/* Department Summary Stats */}
-													<div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-white/20 backdrop-blur border border-white/40 rounded-xl">
+													<div className="grid grid-cols-4 gap-4 p-4 bg-white/20 backdrop-blur border border-white/40 rounded-xl">
 														<div className="text-center">
 															<div className="text-2xl font-bold text-navy">
 																{dept.totalStats.totalContracts}
@@ -597,7 +597,7 @@ const AnalyticsPage = () => {
 
 													{/* Division Cards Grid */}
 													{dept.divisions.length > 0 ? (
-														<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-2">
+														<div className="grid grid-cols-3 gap-6 p-2">
 															{dept.divisions.map((division) => (
 																<Card
 																	key={division.id}
@@ -621,7 +621,7 @@ const AnalyticsPage = () => {
 																		</div>
 																	</CardHeader>
 																	<CardContent className="pt-0 px-6 pb-6">
-																		<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+																		<div className="grid grid-cols-2 gap-3">
 																			<div className="text-center p-3 bg-gray-50 rounded-lg min-h-[80px] flex flex-col justify-center">
 																				<div className="text-xl font-bold text-gray-800 mb-1">
 																					{division.stats.totalContracts}

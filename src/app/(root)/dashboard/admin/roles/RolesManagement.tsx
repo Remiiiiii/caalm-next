@@ -40,6 +40,8 @@ import {
 import { PERMISSIONS } from "@/constants/permissions";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useToast } from "@/hooks/use-toast";
+import { useStepUp } from "@/contexts/StepUpContext";
+import { useStepUp } from "@/contexts/StepUpContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import {
 	DATA_TABLE_BODY_ROW_BASE,
@@ -174,6 +176,7 @@ const RolesManagement = () => {
 	const [roleToDelete, setRoleToDelete] = useState<RoleRow | null>(null);
 	const [pageNowMs] = useState(() => Date.now());
 	const { toast } = useToast();
+	const { ensureStepUp } = useStepUp();
 	const router = useRouter();
 	const { orgId } = useOrganization();
 	const { permissions } = usePermissions();
@@ -213,6 +216,7 @@ const RolesManagement = () => {
 
 	const handleDelete = async () => {
 		if (!roleToDelete) return;
+		if (!(await ensureStepUp())) return;
 
 		try {
 			const response = await fetch(`/api/admin/roles/${roleToDelete.$id}`, {

@@ -51,4 +51,4 @@ Later library edits do not silently change drafts that already exist. The next *
 - `contract_templates.delete`: archive a template (sensitive)
 - `contracts.create`: required to **Use template** and spawn a draft
 
-Related: [Clause Library](/docs/reference/clause-library), [Contracts](/docs/reference/contracts), [Approvals](/docs/reference/approvals).
+Related: [Clause Library](/docs/reference/clause-library), [Contracts](/docs/reference/contracts), [Negotiate contracts](/docs/reference/negotiate), [Approvals](/docs/reference/approvals).

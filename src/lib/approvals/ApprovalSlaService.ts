@@ -1,4 +1,5 @@
 import { ID, Query } from "node-appwrite";
+import { slaCountdownLabel } from "@/lib/approvals/approvalSlaDisplay";
 import type {
 	ApprovalSlaStatus,
 	ApprovalStepKind,
@@ -454,12 +455,7 @@ async function processEntityRows(
 			);
 			result.reminded += 1;
 			dirty = true;
-		} else if (
-			isDueSoon &&
-			!alreadyDueSoon &&
-			level < 2 &&
-			slaStatus !== "breached"
-		) {
+		} else if (isDueSoon && !alreadyDueSoon && level < 2) {
 			current.lastReminderAt = now.toISOString();
 			state.notifications = [
 				...(state.notifications || []),

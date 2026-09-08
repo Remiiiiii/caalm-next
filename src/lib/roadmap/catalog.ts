@@ -390,7 +390,7 @@ export const ROADMAP_CATALOG: RoadmapCatalogSection[] = [
 			t(
 				"7.1",
 				"Build-vs-partner decision",
-				"Document redline approach and rationale.",
+				"Document redline approach and rationale. Native v1 is recorded in docs/adr/007-native-negotiation-workspace.md.",
 				["Decision artifact recorded on the task"],
 			),
 			t("7.2", "Document versioning + diff", "Diff view between versions.", [

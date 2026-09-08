@@ -18,7 +18,7 @@ interface ContractsBulkBarProps {
 }
 
 export default function ContractsBulkBar({ files }: ContractsBulkBarProps) {
-	const path = usePathname();
+	const path = usePathname() || "";
 	const router = useRouter();
 	const { toast } = useToast();
 	const { selectedIds, clearSelection } = useContractsView();
