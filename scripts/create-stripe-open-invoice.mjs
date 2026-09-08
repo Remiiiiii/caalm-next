@@ -7,7 +7,7 @@
  *
  * Loads STRIPE_SECRET_KEY from .env.local
  */
-import { readFileSync, existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import Stripe from "stripe";
 
@@ -112,4 +112,6 @@ console.log("Open invoice created.");
 console.log(`  customer: ${customerId}`);
 console.log(`  invoice:  ${invoice.id}`);
 console.log(`  status:   ${invoice.status}`);
-console.log(`  total:    ${(invoice.amount_due / 100).toFixed(2)} ${invoice.currency}`);
+console.log(
+	`  total:    ${(invoice.amount_due / 100).toFixed(2)} ${invoice.currency}`,
+);

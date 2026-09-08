@@ -1,6 +1,15 @@
 import { ID, Query } from "node-appwrite";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getUserById } from "@/lib/actions/user.actions";
+import {
+	clearSlaProgress,
+	stampCurrentStepSla,
+} from "@/lib/approvals/ApprovalSlaService";
+import {
+	assertWorkflowMutable,
+	isTerminalDocumentStatus,
+} from "@/lib/approvals/documentStatus";
+import { resolveAttestationId } from "@/lib/approvals/resolveAttestationId";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { writeRowWithSchemaDriftRecovery } from "@/lib/appwrite/schemaDriftRecovery";
@@ -114,7 +123,9 @@ export function resolveStatusAfterApprove(
 	return "pending-review";
 }
 
-export function assigneeHintForKind(kind: ApprovalStepKind): string | undefined {
+export function assigneeHintForKind(
+	kind: ApprovalStepKind,
+): string | undefined {
 	switch (kind) {
 		case "executive_approval":
 		case "awaiting_executive":
@@ -176,7 +187,7 @@ export function resetWorkflowForResubmit(
 		}
 		if (step.kind === "department_review") {
 			return {
-				...step,
+				...clearSlaProgress(step),
 				status: "current" as const,
 				completedAt: undefined,
 				completedByUserId: undefined,
@@ -185,7 +196,7 @@ export function resetWorkflowForResubmit(
 			};
 		}
 		return {
-			...step,
+			...clearSlaProgress(step),
 			status: "pending" as const,
 			completedAt: undefined,
 			completedByUserId: undefined,
@@ -278,9 +289,7 @@ export function needsExecutiveAssignmentFlag(
 	state: ApprovalWorkflowState,
 ): boolean {
 	const current = state.steps[state.currentStepIndex];
-	return (
-		current?.status === "current" && current.kind === "awaiting_executive"
-	);
+	return current?.status === "current" && current.kind === "awaiting_executive";
 }
 
 function toReassignCandidate(
@@ -289,6 +298,8 @@ function toReassignCandidate(
 		accountId?: string;
 		fullName?: string;
 		email?: string;
+		avatar?: string | null;
+		profileImageId?: string | null;
 	},
 	roleLabel: string,
 ): ApprovalReassignCandidate | null {
@@ -300,6 +311,7 @@ function toReassignCandidate(
 		fullName: String(user.fullName || "Unknown").trim() || "Unknown",
 		email: String(user.email || "").trim(),
 		roleLabel,
+		profileImageUrl: resolveParticipantImageUrl(user),
 	};
 }
 
@@ -312,7 +324,14 @@ export async function buildReassignCandidates(
 
 	const byId = new Map<string, ApprovalReassignCandidate>();
 	const add = (
-		users: Array<{ $id?: string; fullName?: string; email?: string }>,
+		users: Array<{
+			$id?: string;
+			accountId?: string;
+			fullName?: string;
+			email?: string;
+			avatar?: string | null;
+			profileImageId?: string | null;
+		}>,
 		roleLabel: string,
 	) => {
 		for (const user of users) {
@@ -323,10 +342,7 @@ export async function buildReassignCandidates(
 		}
 	};
 
-	if (
-		stepKind === "executive_approval" ||
-		stepKind === "awaiting_executive"
-	) {
+	if (stepKind === "executive_approval" || stepKind === "awaiting_executive") {
 		const [execs, admins] = await Promise.all([
 			getAllExecutives(orgId),
 			getAllAdmins(orgId),
@@ -610,13 +626,14 @@ export async function buildStateForContract(
 		steps.findIndex((s) => s.status === "current"),
 	);
 
-	return {
+	const state: ApprovalWorkflowState = {
 		version: WORKFLOW_VERSION,
 		currentStepIndex: currentStepIndex >= 0 ? currentStepIndex : 0,
 		derivedAt: new Date().toISOString(),
 		steps,
 		notifications: options?.preserveNotifications || [],
 	};
+	return stampCurrentStepSla(state, orgId, "contract");
 }
 
 function resolveParticipantImageUrl(user: {
@@ -722,7 +739,9 @@ export async function ensureActionableExecutiveStep(
 	return { state: upgradedState, upgraded: true };
 }
 
-async function collectAdminUserIds(orgId: string | undefined): Promise<string[]> {
+async function collectAdminUserIds(
+	orgId: string | undefined,
+): Promise<string[]> {
 	const [executives, admins] = await Promise.all([
 		getAllExecutives(orgId),
 		getAllAdmins(orgId),
@@ -756,11 +775,13 @@ export async function getWorkflowForViewer(
 	options?: { isAdminOverride?: boolean },
 ): Promise<ApprovalWorkflowViewerPayload> {
 	const contract = await getContract(contractId);
+	const contractStatus = String(contract.status || "pending-review");
+	const frozen = isTerminalDocumentStatus(contractStatus);
 	let state = parseWorkflowState(contract.approvalWorkflowState as string);
 	const uploader = String(contract.contractOwnerId || contract.owner || "");
 	const orgId = contract.orgId as string | undefined;
 
-	if (!state) {
+	if (!state && !frozen) {
 		state = await buildStateForContract(contract);
 		await updateContract(contractId, {
 			approvalWorkflowState: serializeWorkflowState(state),
@@ -768,13 +789,46 @@ export async function getWorkflowForViewer(
 		});
 	}
 
-	const ensured = await ensureActionableExecutiveStep(state, orgId, uploader);
-	state = ensured.state;
-	if (ensured.upgraded) {
-		await updateContract(contractId, {
-			approvalWorkflowState: serializeWorkflowState(state),
-			currentApprovalStage: state.steps[state.currentStepIndex]?.label || "",
-		});
+	if (!frozen && state) {
+		const ensured = await ensureActionableExecutiveStep(state, orgId, uploader);
+		state = await stampCurrentStepSla(ensured.state, orgId, "contract");
+		if (
+			ensured.upgraded ||
+			!parseWorkflowState(contract.approvalWorkflowState as string)?.steps[
+				ensured.state.currentStepIndex
+			]?.dueAt
+		) {
+			await updateContract(contractId, {
+				approvalWorkflowState: serializeWorkflowState(state),
+				currentApprovalStage: state.steps[state.currentStepIndex]?.label || "",
+			});
+		}
+	}
+
+	if (!state) {
+		return {
+			contractId,
+			contractName: String(contract.contractName || "Untitled Contract"),
+			contractStatus,
+			department: contract.department as string | undefined,
+			businessUnit: contract.businessUnit as string | undefined,
+			subDepartment: contract.subDepartment as string | undefined,
+			currentStepIndex: 0,
+			steps: [],
+			notifications: [],
+			canDecide: false,
+			canOverride: false,
+			needsExecutiveAssignment: false,
+			canAssignExecutive: false,
+			canResubmit: false,
+			viewerUserId,
+			uploaderUserId: uploader || undefined,
+			reassignCandidates: [],
+			workflowFrozen: frozen,
+			expirationAttestationId: frozen
+				? await resolveAttestationId(orgId, "contract", contractId)
+				: undefined,
+		};
 	}
 
 	const participantCache = new Map<string, ApprovalParticipant>();
@@ -812,11 +866,7 @@ export async function getWorkflowForViewer(
 	const isAssignee = !!current?.assigneeUserIds.includes(viewerUserId);
 	const isExecStep = current?.kind === "executive_approval";
 	const canDecideByRole = isExecStep
-		? await hasPermission(
-				viewerUserId,
-				PERMISSIONS.CONTRACTS.APPROVE,
-				orgId,
-			)
+		? await hasPermission(viewerUserId, PERMISSIONS.CONTRACTS.APPROVE, orgId)
 		: await hasPermission(
 				viewerUserId,
 				PERMISSIONS.CONTRACTS.REVIEW,
@@ -838,17 +888,19 @@ export async function getWorkflowForViewer(
 		(isAssignee || !!options?.isAdminOverride) &&
 		(!!options?.isAdminOverride || canDecideByRole);
 
-	const needsExecutiveAssignment = needsExecutiveAssignmentFlag(state);
-	const contractStatus = String(contract.status || "pending-review");
+	const needsExecutiveAssignment = frozen
+		? false
+		: needsExecutiveAssignmentFlag(state);
 	const canResubmit =
+		!frozen &&
 		contractStatus === "action-required" &&
 		(viewerUserId === uploader || !!options?.isAdminOverride);
 	const canAssignExecutive =
-		needsExecutiveAssignment && !!options?.isAdminOverride;
+		!frozen && needsExecutiveAssignment && !!options?.isAdminOverride;
 	const canReassignUi =
+		!frozen &&
 		!!options?.isAdminOverride &&
-		(needsExecutiveAssignment ||
-			current?.status === "current") &&
+		(needsExecutiveAssignment || current?.status === "current") &&
 		current?.kind !== "activated" &&
 		current?.kind !== "submitted";
 	const reassignCandidates = canReassignUi
@@ -865,14 +917,18 @@ export async function getWorkflowForViewer(
 		currentStepIndex: state.currentStepIndex,
 		steps,
 		notifications: state.notifications || [],
-		canDecide,
-		canOverride: !!options?.isAdminOverride,
+		canDecide: frozen ? false : canDecide,
+		canOverride: frozen ? false : !!options?.isAdminOverride,
 		needsExecutiveAssignment,
 		canAssignExecutive,
 		canResubmit,
 		viewerUserId,
 		uploaderUserId: uploader || undefined,
 		reassignCandidates,
+		workflowFrozen: frozen,
+		expirationAttestationId: frozen
+			? await resolveAttestationId(orgId, "contract", contractId)
+			: undefined,
 	};
 }
 
@@ -991,6 +1047,7 @@ export async function decide({
 	contractStatus: string;
 }> {
 	const contract = await getContract(contractId);
+	assertWorkflowMutable(contract.status as string | undefined);
 	let state =
 		parseWorkflowState(contract.approvalWorkflowState as string) ||
 		(await buildStateForContract(contract));
@@ -1181,6 +1238,7 @@ export async function decide({
 		}
 	}
 
+	state = await stampCurrentStepSla(state, orgId, "contract");
 	await updateContract(contractId, {
 		approvalWorkflowState: serializeWorkflowState(state),
 		status: nextStatus,
@@ -1205,6 +1263,7 @@ export async function reassignCurrentStep({
 	adminOverride?: boolean;
 }): Promise<ApprovalWorkflowState> {
 	const contract = await getContract(contractId);
+	assertWorkflowMutable(contract.status as string | undefined);
 	let state =
 		parseWorkflowState(contract.approvalWorkflowState as string) ||
 		(await buildStateForContract(contract));
@@ -1249,6 +1308,7 @@ export async function reassignCurrentStep({
 		},
 	);
 
+	state = await stampCurrentStepSla(state, orgId, "contract");
 	await updateContract(contractId, {
 		approvalWorkflowState: serializeWorkflowState(state),
 		currentApprovalStage: nextCurrent?.label || "",
@@ -1270,11 +1330,13 @@ export async function resubmitAfterChanges({
 	adminOverride?: boolean;
 }): Promise<{ state: ApprovalWorkflowState; contractStatus: string }> {
 	const contract = await getContract(contractId);
+	assertWorkflowMutable(contract.status as string | undefined);
 	const status = String(contract.status || "");
 	if (status !== "action-required") {
 		throw new Error("Only items with requested changes can be resubmitted");
 	}
 	const uploader = String(contract.contractOwnerId || contract.owner || "");
+	const orgId = contract.orgId as string | undefined;
 	if (viewerUserId !== uploader && !adminOverride) {
 		throw new Error("Only the uploader can resubmit after changes");
 	}
@@ -1287,10 +1349,7 @@ export async function resubmitAfterChanges({
 
 	await appendNotification(state, {
 		type: "resubmitted",
-		recipientUserIds: uniqueIds([
-			...(dept?.assigneeUserIds || []),
-			uploader,
-		]),
+		recipientUserIds: uniqueIds([...(dept?.assigneeUserIds || []), uploader]),
 		stepId: dept?.id,
 		label: "Resubmitted for review",
 	});
@@ -1307,6 +1366,7 @@ export async function resubmitAfterChanges({
 	);
 
 	const nextStatus = "pending-review";
+	state = await stampCurrentStepSla(state, orgId, "contract");
 	await updateContract(contractId, {
 		approvalWorkflowState: serializeWorkflowState(state),
 		status: nextStatus,

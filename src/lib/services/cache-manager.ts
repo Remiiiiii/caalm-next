@@ -79,7 +79,7 @@ export class CacheManager {
 		orgId: string,
 		userId?: string,
 	): Promise<void> {
-		await this.invalidateDashboard(orgId, userId);
+		await CacheManager.invalidateDashboard(orgId, userId);
 		await cache.del(CACHE_KEYS.users.uninvited());
 	}
 

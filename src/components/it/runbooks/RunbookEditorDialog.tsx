@@ -1,11 +1,9 @@
 "use client";
 
+import { BookOpen, Plus, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -17,8 +15,6 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { Runbook, RunbookStep } from "@/lib/it/runbooks/types";
-import { BookOpen, Plus, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
 
 type Props = {
 	open: boolean;
@@ -316,13 +312,6 @@ export function RunbookEditorDialog({
 						Publish only after a second person can follow it.
 					</div>
 					<div className="flex items-center gap-3">
-						<Button
-							variant="outline"
-							className="primary-btn px-3 sm:px-4"
-							onClick={() => onOpenChange(false)}
-						>
-							Cancel
-						</Button>
 						<Button
 							className="primary-btn px-3 sm:px-4"
 							disabled={saving}

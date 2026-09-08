@@ -86,13 +86,13 @@ import {
 	DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { SearchField } from "@/components/ui/search-field";
 import { Label } from "@/components/ui/label";
 import {
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
+import { SearchField } from "@/components/ui/search-field";
 import {
 	Select,
 	SelectContent,
@@ -109,12 +109,12 @@ import {
 	type PermissionOverrideRecord,
 	SENSITIVITY_LABELS,
 } from "@/constants/rbac";
-import { useOrgTimezone } from "@/hooks/useOrgTimezone";
 import { useToast } from "@/hooks/use-toast";
 import { useAutoSync } from "@/hooks/useAutoSync";
 import { useCalendarApprovals } from "@/hooks/useCalendarApprovals";
 import { useCalendarEvents } from "@/hooks/useCalendarEvents";
 import { useCalendarPermissions } from "@/hooks/useCalendarPermissions";
+import { useOrgTimezone } from "@/hooks/useOrgTimezone";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useSharedCalendars } from "@/hooks/useSharedCalendars";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -137,6 +137,10 @@ import {
 	formatTimeForDisplay,
 	parseTimeToMinutes,
 } from "@/lib/calendar/eventDisplayFormat";
+import {
+	getEnterpriseInputAccept,
+	validateEnterpriseFile,
+} from "@/lib/files/enterprise-file-formats";
 import { cn, convertFileSize, getFileType } from "@/lib/utils";
 import { getUSHolidaysForMonth, parseHolidayDate } from "@/lib/utils/holidays";
 
@@ -1101,28 +1105,14 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 	const handleFileUpload = async (files: FileList | null) => {
 		if (!files || files.length === 0) return;
 
-		const allowedTypes = [
-			"image/jpeg",
-			"image/jpg",
-			"image/png",
-			"application/pdf",
-			"application/msword",
-			"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-		];
-		const allowedExtensions = ["jpg", "jpeg", "png", "pdf", "doc", "docx"];
-
 		const filesToUpload: File[] = [];
 		for (let i = 0; i < files.length; i++) {
 			const file = files[i];
-			const extension = file.name.split(".").pop()?.toLowerCase();
-
-			if (
-				!allowedTypes.includes(file.type) &&
-				!allowedExtensions.includes(extension || "")
-			) {
+			const validation = validateEnterpriseFile(file, "attachment");
+			if (!validation.ok) {
 				toast({
 					title: "Invalid file type",
-					description: `File "${file.name}" is not supported. Allowed types: JPG, JPEG, PNG, PDF, DOC, DOCX`,
+					description: validation.reason,
 					variant: "destructive",
 				});
 				continue;
@@ -2975,8 +2965,8 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 					<div className="glass-card-cap" />
 					<CardContent className="p-0">
 						{/* Clean toolbar — pt clears absolute glass-card-cap (h-4) */}
-						<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pt-7 px-4 pb-4 border-b border-slate-200 bg-white/60">
-							<div className="flex items-center gap-2 sm:gap-3 flex-wrap min-w-0">
+						<div className="flex flex-row items-center justify-between gap-3 pt-7 px-4 pb-4 border-b border-slate-200 bg-white/60">
+							<div className="flex items-center gap-3 flex-wrap min-w-0">
 								<Button
 									size="sm"
 									variant="outline"
@@ -3009,7 +2999,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 										<ChevronRight className="h-4 w-4" />
 									</Button>
 								</div>
-								<div className="text-xl sm:text-2xl font-bold sidebar-gradient-text truncate min-w-0">
+								<div className="text-2xl font-bold sidebar-gradient-text truncate min-w-0">
 									{periodLabel}
 								</div>
 							</div>
@@ -3021,10 +3011,10 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 										setViewMode(value as CalendarViewMode)
 									}
 								>
-									<TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
+									<TabsList className="grid w-full grid-cols-4">
 										<TabsTrigger
 											value="day"
-											className="hidden sm:flex items-center space-x-1 cursor-pointer"
+											className="flex items-center space-x-1 cursor-pointer"
 										>
 											<CalendarIcon className="h-4 w-4 text-slate-700 shrink-0" />
 											<span className="sidebar-gradient-text">Day</span>
@@ -3785,7 +3775,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 																type="file"
 																id="file-upload"
 																multiple
-																accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
+																accept={getEnterpriseInputAccept("attachment")}
 																onChange={(e) =>
 																	handleFileUpload(e.target.files)
 																}
@@ -4170,7 +4160,6 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 					onDecision={handleApprovalDecision}
 				/>
 
-
 				<EventReviewDialog
 					isOpen={isEditEventOpen}
 					onOpenChange={setIsEditEventOpen}
@@ -4188,7 +4177,6 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 					onEditEvent={handleEditSelectedEvent}
 					onDeleteEvent={handleDeleteEvent}
 				/>
-
 
 				{/* Share Dialog */}
 				<ShareEventDialog
@@ -4230,8 +4218,8 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 							"data-[state=open]:slide-in-from-right data-[state=closed]:slide-out-to-right",
 							"data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0",
 							"pointer-events-auto",
-							"[&>button]:hidden",
 						)}
+						showCloseButton={false}
 					>
 						<div
 							className="glass-card-frosted relative flex h-full w-full flex-col overflow-hidden rounded-2xl"
@@ -4254,7 +4242,10 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 
 				<ConflictDialog
 					open={isConflictDialogOpen}
-					onOpenChange={setIsConflictDialogOpen}
+					onOpenChange={(open) => {
+						if (!open) handleCancelConflict();
+						else setIsConflictDialogOpen(true);
+					}}
 					conflictData={conflictData}
 					creatingEvent={creatingEvent}
 					onCancel={handleCancelConflict}

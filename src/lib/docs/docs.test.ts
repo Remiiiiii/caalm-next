@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { extractHeadings, parseMarkdown, stripMarkdown } from "@/lib/docs/markdown";
-import { searchDocs } from "@/lib/docs/search";
+import {
+	extractHeadings,
+	parseMarkdown,
+	stripMarkdown,
+} from "@/lib/docs/markdown";
 import { flattenDocsNav } from "@/lib/docs/navigation";
+import { searchDocs } from "@/lib/docs/search";
 
 describe("docs markdown", () => {
 	it("parses headings, lists, callouts, and tables", () => {

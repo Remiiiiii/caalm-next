@@ -5,10 +5,10 @@ import {
 	Calendar,
 	CheckCircle,
 	Clock,
-	SquareArrowRightExit,
 	FileText,
 	Loader2,
 	RefreshCw,
+	SquareArrowRightExit,
 } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
@@ -366,7 +366,7 @@ export const CalendarAnalyticsDashboard: React.FC = () => {
 				</CardHeader>
 				<CardContent>
 					{/* Key Metrics Cards */}
-					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+					<div className="grid grid-cols-4 gap-4 mb-6">
 						<Card className="glass-card">
 							<div className="glass-card-cap" />
 							<CardContent className="pt-6">
@@ -391,7 +391,7 @@ export const CalendarAnalyticsDashboard: React.FC = () => {
 									<div>
 										<p className="text-sm text-slate-600 mb-1">Meeting Hours</p>
 										<p className="text-2xl font-bold text-navy">
-											{data.meetingLoad.totalHours.toFixed(1)}
+											{(data.meetingLoad.totalHours ?? 0).toFixed(1)}
 										</p>
 									</div>
 									<div className="p-3 bg-green-100 rounded-lg">
@@ -473,7 +473,7 @@ export const CalendarAnalyticsDashboard: React.FC = () => {
 									</CardDescription>
 								</CardHeader>
 								<CardContent>
-									<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+									<div className="grid grid-cols-2 gap-6">
 										<div>
 											<p className="text-sm text-slate-600 mb-2">
 												Total Bookings

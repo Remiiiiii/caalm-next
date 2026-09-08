@@ -1,10 +1,10 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
 import { DocsMarkdown } from "@/components/docs/DocsMarkdown";
 import { DocsPrevNext } from "@/components/docs/DocsPrevNext";
 import { DocsToc } from "@/components/docs/DocsToc";
 import { getAllDocsSlugs, getDocsPage } from "@/lib/docs/load";
-import type { Metadata } from "next";
-import Link from "next/link";
-import { notFound } from "next/navigation";
 
 type PageProps = {
 	params: Promise<{ slug: string[] }>;

@@ -173,6 +173,9 @@ importers:
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
+      currency-code-to-country-flag:
+        specifier: ^1.1.1
+        version: 1.1.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       date-fns:
         specifier: ^4.1.0
         version: 4.1.0
@@ -182,6 +185,9 @@ importers:
       date-holidays:
         specifier: ^3.26.8
         version: 3.26.8
+      docxtemplater:
+        specifier: ^3.69.3
+        version: 3.69.3
       dotenv:
         specifier: ^17.2.4
         version: 17.2.4
@@ -239,6 +245,9 @@ importers:
       pdfjs-dist:
         specifier: ^5.4.624
         version: 5.4.624
+      pizzip:
+        specifier: ^3.2.0
+        version: 3.2.0
       qrcode:
         specifier: ^1.5.4
         version: 1.5.4
@@ -266,6 +275,9 @@ importers:
       react-horizontal-scrolling-menu:
         specifier: ^8.2.0
         version: 8.2.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      react-icons:
+        specifier: ^5.7.0
+        version: 5.7.0(react@19.2.4)
       react-intersection-observer:
         specifier: ^10.0.2
         version: 10.0.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -2892,6 +2904,10 @@ packages:
     engines: {node: '>=10.0.0'}
     deprecated: this version has critical issues, please update to the latest version
 
+  '@xmldom/xmldom@0.9.12':
+    resolution: {integrity: sha512-5AXjrcMClTryPe9LgZrygpB1lj7s0S9E0+W+AHaVKAVyHanafK86iPSvG5xHVSp/jC+VH1UXu0TAEmY279xH7A==}
+    engines: {node: '>=14.6'}
+
   abort-controller@3.0.0:
     resolution: {integrity: sha512-h8lQ8tacZYnR3vNQTgibj+tODHI5/+l06Au2Pcriv/Gmet0eaj4TwWH41sO9wnHDiQsEj19q0drzdWdeAHtweg==}
     engines: {node: '>=6.5'}
@@ -3255,6 +3271,12 @@ packages:
   csstype@3.2.3:
     resolution: {integrity: sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ==}
 
+  currency-code-to-country-flag@1.1.1:
+    resolution: {integrity: sha512-QrxWXBBPfPsB00OERPP1BHYo50i24wJVWm2XZ375A/JUQoK0tJcu735EG0CrAMF5nnxYLBWeGjjeokgLDkNbrg==}
+    peerDependencies:
+      react: '>=16.8.0'
+      react-dom: '>=16.8.0'
+
   d3-array@3.2.4:
     resolution: {integrity: sha512-tdQAmyA18i4J7wprpYq8ClcxZy3SC31QMeByyCFyRt7BVHdREQZ5lpzoe5mFEYZUWe+oq8HBvk9JjpibyEV4Jg==}
     engines: {node: '>=12'}
@@ -3440,6 +3462,10 @@ packages:
   doctrine@2.1.0:
     resolution: {integrity: sha512-35mSku4ZXK0vfCuHEDAwt55dg2jNajHZ1odvF+8SSr82EsZY4QmXfuWso8oEd8zRhVObSN18aM0CjSdoBX7zIw==}
     engines: {node: '>=0.10.0'}
+
+  docxtemplater@3.69.3:
+    resolution: {integrity: sha512-z6IIXImBvOFudR1VHZIjIoewPd/xft/OVF1JT9eKgJLGWQaFZ8gPrjPuAnho0bbQEfKd5Ge7RPq+owqKLmC3PA==}
+    engines: {node: '>=0.10'}
 
   dom-accessibility-api@0.5.16:
     resolution: {integrity: sha512-X7BJ2yElsnOJ30pZF4uIIDfBEVgF4XEBxL9Bxhy6dnrm5hkzqmsWHGTiHqRiITNhMyFLyAiWndIJP7Z1NTteDg==}
@@ -4824,6 +4850,9 @@ packages:
   pako@1.0.11:
     resolution: {integrity: sha512-4hLB8Py4zZce5s4yd9XzopqwVv/yGNhV1Bl8NTmCq1763HeK2+EwVTv+leGeL13Dnh2wfbqowVPXCIO0z4taYw==}
 
+  pako@2.2.0:
+    resolution: {integrity: sha512-zJq6RP/5q+TO2OpFV3FHzlPnFjmkb7Nc99a5SNjJE+uu/PkpChs+NIZSSzbBoD+6kjiISXjfYdwj1ZRQ81dz/w==}
+
   parent-module@1.0.1:
     resolution: {integrity: sha512-GQ2EWRpQV8/o+Aw8YqtfZZPfNRWZYkbidE9k5rpl/hC3vtHHBfGm2Ifi6qWV+coDGkrUKZAxE3Lot5kcsRlh+g==}
     engines: {node: '>=6'}
@@ -4878,6 +4907,9 @@ packages:
   picomatch@4.0.3:
     resolution: {integrity: sha512-5gTmgEY/sqK6gFXLIsQNH19lWb4ebPDLA4SdLP7dsWkIXHWlG66oPuVvXSGFPppYZz8ZDZq0dYYrbHfBCVUb1Q==}
     engines: {node: '>=12'}
+
+  pizzip@3.2.0:
+    resolution: {integrity: sha512-X4NPNICxCfIK8VYhF6wbksn81vTiziyLbvKuORVAmolvnUzl1A1xmz9DAWKxPRq9lZg84pJOOAMq3OE61bD8IQ==}
 
   playwright-core@1.58.2:
     resolution: {integrity: sha512-yZkEtftgwS8CsfYo7nm0KE8jsvm6i/PTgVtB8DL726wNf6H2IMsDuxCpJj59KDaxCtSnrWan2AeDqM7JBaultg==}
@@ -5066,6 +5098,11 @@ packages:
     peerDependencies:
       react: '>=16.8'
       react-dom: '>=16.8'
+
+  react-icons@5.7.0:
+    resolution: {integrity: sha512-LBLy340Rzqy6+/yVhZKT3B/QpP1BZaesGqasf09HPOBzRarcDIFH0WwXlXQfE7q7ipxK4MSiC5DIBWURCny6fw==}
+    peerDependencies:
+      react: '*'
 
   react-intersection-observer@10.0.2:
     resolution: {integrity: sha512-lAMzxVWrBko6SLd1jx6l84fVrzJu91hpxHlvD2as2Wec9mDCjdYXwc5xNOFBchpeBir0Y7AGBW+C/AYMa7CSFg==}
@@ -8462,6 +8499,8 @@ snapshots:
 
   '@xmldom/xmldom@0.8.11': {}
 
+  '@xmldom/xmldom@0.9.12': {}
+
   abort-controller@3.0.0:
     dependencies:
       event-target-shim: 5.0.1
@@ -8833,6 +8872,11 @@ snapshots:
 
   csstype@3.2.3: {}
 
+  currency-code-to-country-flag@1.1.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4):
+    dependencies:
+      react: 19.2.4
+      react-dom: 19.2.4(react@19.2.4)
+
   d3-array@3.2.4:
     dependencies:
       internmap: 2.0.3
@@ -8998,6 +9042,10 @@ snapshots:
   doctrine@2.1.0:
     dependencies:
       esutils: 2.0.3
+
+  docxtemplater@3.69.3:
+    dependencies:
+      '@xmldom/xmldom': 0.9.12
 
   dom-accessibility-api@0.5.16: {}
 
@@ -10576,6 +10624,8 @@ snapshots:
 
   pako@1.0.11: {}
 
+  pako@2.2.0: {}
+
   parent-module@1.0.1:
     dependencies:
       callsites: 3.1.0
@@ -10622,6 +10672,10 @@ snapshots:
   picomatch@2.3.1: {}
 
   picomatch@4.0.3: {}
+
+  pizzip@3.2.0:
+    dependencies:
+      pako: 2.2.0
 
   playwright-core@1.58.2: {}
 
@@ -10856,6 +10910,10 @@ snapshots:
       react: 19.2.4
       react-dom: 19.2.4(react@19.2.4)
       smooth-scroll-into-view-if-needed: 2.0.2
+
+  react-icons@5.7.0(react@19.2.4):
+    dependencies:
+      react: 19.2.4
 
   react-intersection-observer@10.0.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4):
     dependencies:

@@ -6,8 +6,8 @@ import useSWR from "swr";
 import LicensesBulkBar from "@/components/LicensesBulkBar";
 import { applyLicenseFilters } from "@/lib/licenses/applyLicenseFilters";
 import {
-	matchesStatusTab,
 	type LicenseFilters,
+	matchesStatusTab,
 } from "@/lib/licenses/licensesListUtils";
 import { fetcher } from "@/lib/swr-config";
 import type { License } from "@/types/licenses";
@@ -27,16 +27,13 @@ interface ListResponse {
 	meta?: { pagination?: { total: number } };
 }
 
-function buildListUrl(
-	page: number,
-	pageSize: number,
-	filters: LicenseFilters,
-) {
+function buildListUrl(page: number, pageSize: number, filters: LicenseFilters) {
 	const params = new URLSearchParams({
 		limit: String(pageSize),
 		offset: String((page - 1) * pageSize),
 	});
-	if (filters.search?.trim()) params.set("search", filters.search.trim());
+	const search = (filters.search ?? filters.searchQuery)?.trim();
+	if (search) params.set("search", search);
 	if (filters.vendor?.trim()) params.set("vendor", filters.vendor.trim());
 	if (filters.licenseType?.trim())
 		params.set("licenseType", filters.licenseType.trim());
@@ -62,7 +59,7 @@ export default function LicensesViewClient({
 	}, [filters, statusTab]);
 
 	const hasActiveFilters = Boolean(
-		filters.search?.trim() ||
+		(filters.search ?? filters.searchQuery)?.trim() ||
 			filters.vendor?.trim() ||
 			filters.licenseType?.trim() ||
 			filters.status?.trim() ||

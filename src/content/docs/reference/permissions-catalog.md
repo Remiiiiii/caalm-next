@@ -39,6 +39,31 @@ This catalog explains permission keys in everyday language. Exact availability c
 | `contracts.approve` | Approve contract proposals |
 | `contracts.sign` | Sign where enabled |
 
+## Clause Library
+
+| Key | Meaning |
+|---|---|
+| `clauses.view` | Browse standard clauses and version history |
+| `clauses.create` | Add a new clause to the org library |
+| `clauses.edit` | Update drafts or publish a new version |
+| `clauses.delete` | Archive the current clause (leaves the active library) |
+
+## Contract templates
+
+| Key | Meaning |
+|---|---|
+| `contract_templates.view` | Browse recipes built from the clause library |
+| `contract_templates.create` | Create a template |
+| `contract_templates.edit` | Change template details and clause order |
+| `contract_templates.delete` | Archive a template (leaves the active catalog) |
+
+## Funding and retention
+
+| Key | Meaning |
+|---|---|
+| `funding.view` | See dollar-ranked retention streams and the pursuit pipeline |
+| `funding.manage` | Create/edit pursuits and obligations, mark wins, spawn proposals |
+
 ## Licenses
 
 | Key | Meaning |

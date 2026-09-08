@@ -29,14 +29,15 @@ import ContractStatusPieChart from "@/components/ContractStatusPieChart";
 import DepartmentPerformanceWidget from "@/components/DepartmentPerformanceWidget";
 import { DashboardGreeting } from "@/components/dashboard/DashboardGreeting";
 import { RiskImpactHeroCard } from "@/components/dashboard/RiskImpactHeroCard";
+import { WeatherBriefingLauncher } from "@/components/dashboard-briefing/WeatherBriefingLauncher";
 import FormattedDateTime from "@/components/FormattedDateTime";
 import QuickNotesWidget from "@/components/QuickNotesWidget";
 import RecentActivity from "@/components/RecentActivity";
+import { OrgUnitPicker } from "@/components/settings/OrgUnitPicker";
 import Thumbnail from "@/components/Thumbnail";
 import Avatar from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import {
 	SelectItem,
 	SelectScrollable,
@@ -46,10 +47,10 @@ import {
 	StatCardSkeleton,
 	TableRowSkeleton,
 } from "@/components/ui/skeletons";
+import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import { WidgetCarousel } from "@/components/ui/widget-carousel";
-import WeatherWidget from "@/components/WeatherWidget";
-import { OrgUnitPicker } from "@/components/settings/OrgUnitPicker";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { useStepUp } from "@/contexts/StepUpContext";
 import { useToast } from "@/hooks/use-toast";
 import { useAdminStats } from "@/hooks/useAdminStats";
 import { useUnifiedDashboardData } from "@/hooks/useUnifiedDashboardData";
@@ -154,6 +155,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 	const uninvitedUsers = uninvitedRes?.data ?? [];
 
 	const { toast } = useToast();
+	const { ensureStepUp } = useStepUp();
 
 	// Invitation management
 	const [inviteForm, setInviteForm] = useState({
@@ -365,6 +367,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 
 	const _confirmRevoke = async () => {
 		if (!revokeToken) return;
+		if (!(await ensureStepUp())) return;
 		try {
 			setRevokingToken(revokeToken);
 			setRemovingInvitations((prev) => new Set(prev).add(revokeToken));
@@ -409,6 +412,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 
 	const _confirmDelete = async () => {
 		if (!deleteToken) return;
+		if (!(await ensureStepUp())) return;
 		try {
 			setDeletingToken(deleteToken);
 			setRemovingInvitations((prev) => new Set(prev).add(deleteToken));
@@ -520,7 +524,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 
 	return (
 		<div className="space-y-6">
-			<DashboardGreeting user={user} />
+			<DashboardGreeting user={user} actions={<WeatherBriefingLauncher />} />
 			<RiskImpactHeroCard
 				snapshot={riskImpact}
 				isLoading={unifiedLoading}
@@ -541,7 +545,6 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 						<DepartmentPerformanceWidget />
 						<CompanyNewsFeed />
 						{user && <QuickNotesWidget user={user as any} />}
-						<WeatherWidget />
 					</WidgetCarousel>
 				</CardContent>
 			</Card>
@@ -999,7 +1002,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 											}))
 										}
 										placeholder="Choose from directory…"
-										className="w-full border border-slate-200 bg-white text-slate-700 shadow-sm"
+										className="w-full border-[0.25px] border-slate-200 bg-white text-slate-700 shadow-sm"
 									>
 										{(uninvitedUsers as UninvitedUser[]).map((u) => (
 											<SelectItem key={u.$id} value={u.$id}>
@@ -1058,7 +1061,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 										setInviteForm((prev) => ({ ...prev, role: value }))
 									}
 									placeholder="Select role…"
-									className="w-full border border-slate-200 bg-white text-slate-700 shadow-sm"
+									className="w-full border-[0.25px] border-slate-200 bg-white text-slate-700 shadow-sm"
 								>
 									<SelectItem value="Organization Admin">
 										Organization Admin

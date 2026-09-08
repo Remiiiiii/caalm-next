@@ -3,17 +3,14 @@
 import { Check, CheckCircle2, Copy, Ticket } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 type TicketSubmittedConfirmDialogProps = {
 	open: boolean;
 	ticketNumber: string;
 	ticketId: string;
+	lane?: "help" | "engineering" | null;
 	onOpenChange: (open: boolean) => void;
 };
 
@@ -21,6 +18,7 @@ export function TicketSubmittedConfirmDialog({
 	open,
 	ticketNumber,
 	ticketId: _ticketId,
+	lane,
 	onOpenChange,
 }: TicketSubmittedConfirmDialogProps) {
 	const [copied, setCopied] = useState(false);
@@ -34,6 +32,13 @@ export function TicketSubmittedConfirmDialog({
 			setCopied(false);
 		}
 	};
+
+	const laneCopy =
+		lane === "help"
+			? "Routed to Help — IT can claim and close it in CAALM."
+			: lane === "engineering"
+				? "Routed to Engineering — a GitHub issue is created for the fix agent."
+				: null;
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -50,6 +55,7 @@ export function TicketSubmittedConfirmDialog({
 					<div className="mt-1 ml-11 space-y-0.5 text-xs text-slate-600">
 						<p>Save this number for follow-ups.</p>
 						<p>We also emailed you a copy.</p>
+						{laneCopy ? <p>{laneCopy}</p> : null}
 					</div>
 				</div>
 
@@ -72,7 +78,9 @@ export function TicketSubmittedConfirmDialog({
 								"hover:bg-slate-50 hover:text-[#0f5384] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 focus-visible:ring-inset",
 								copied && "text-green",
 							)}
-							aria-label={copied ? "Ticket number copied" : "Copy ticket number"}
+							aria-label={
+								copied ? "Ticket number copied" : "Copy ticket number"
+							}
 						>
 							{copied ? (
 								<Check className="h-4 w-4" aria-hidden />

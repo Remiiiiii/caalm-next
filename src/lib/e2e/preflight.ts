@@ -130,10 +130,7 @@ export async function runE2EPreflight(
 	checks.push(await checkRolePermissionsTable());
 
 	if (org) {
-		const permissions = await getUserPermissions(
-			e2eUserId,
-			DEFAULT_E2E_ORG_ID,
-		);
+		const permissions = await getUserPermissions(e2eUserId, DEFAULT_E2E_ORG_ID);
 		const hasBilling = permissions.includes(PERMISSIONS.SETTINGS.BILLING);
 		checks.push({
 			name: "settings.billing",

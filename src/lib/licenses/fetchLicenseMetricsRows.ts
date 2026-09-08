@@ -1,6 +1,7 @@
 import { Query } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { excludeSoftDeletedQuery } from "@/lib/soft-delete";
 import type { License } from "@/types/licenses";
 
 /** Slim license rows for metrics, filters, and attention strips (no heavy fields). */
@@ -13,6 +14,7 @@ export async function fetchLicenseMetricsRows(
 		tableId: appwriteConfig.licensesCollectionId || "licenses",
 		queries: [
 			Query.equal("orgId", orgId),
+			excludeSoftDeletedQuery("licenses"),
 			Query.select([
 				"$id",
 				"status",
@@ -27,6 +29,7 @@ export async function fetchLicenseMetricsRows(
 				"division",
 				"department",
 				"assignedManagers",
+				"deletedAt",
 			]),
 			Query.limit(2000),
 		],

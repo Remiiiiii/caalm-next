@@ -130,7 +130,9 @@ export function DashboardGreeting({
 			</div>
 
 			{actions ? (
-				<div className="ml-auto flex flex-wrap items-center gap-3">{actions}</div>
+				<div className="ml-auto flex flex-wrap items-center gap-3">
+					{actions}
+				</div>
 			) : null}
 		</div>
 	);

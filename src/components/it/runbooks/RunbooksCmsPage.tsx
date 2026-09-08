@@ -1,5 +1,8 @@
 "use client";
 
+import { BookOpen, ExternalLink, Plus, RefreshCw, Search } from "lucide-react";
+import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
 import { ITGlassPanel, ITPageShell } from "@/components/it/ITPageShell";
 import { RunbookEditorDialog } from "@/components/it/runbooks/RunbookEditorDialog";
 import { Badge } from "@/components/ui/badge";
@@ -19,15 +22,6 @@ import type {
 	Runbook,
 	RunbookStorageMode,
 } from "@/lib/it/runbooks/types";
-import {
-	BookOpen,
-	ExternalLink,
-	Plus,
-	RefreshCw,
-	Search,
-} from "lucide-react";
-import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
 
 const severityClass: Record<string, string> = {
 	low: "bg-slate-100 text-slate-700 border-slate-200",
@@ -248,10 +242,16 @@ export function RunbooksCmsPage() {
 										</Badge>
 									</div>
 									<div className="mt-3 flex flex-wrap gap-2">
-										<Badge variant="outline" className="bg-white text-slate-700">
+										<Badge
+											variant="outline"
+											className="bg-white text-slate-700"
+										>
 											{item.service}
 										</Badge>
-										<Badge variant="outline" className="bg-white text-slate-700">
+										<Badge
+											variant="outline"
+											className="bg-white text-slate-700"
+										>
 											{item.status}
 										</Badge>
 										{item.integrationKeys.slice(0, 2).map((key) => (
@@ -266,7 +266,9 @@ export function RunbooksCmsPage() {
 									</div>
 									<div className="mt-4 flex items-center gap-2">
 										<Button asChild className="primary-btn px-3 sm:px-4">
-											<Link href={`/dashboard/it/incidents/runbooks/${item.$id}`}>
+											<Link
+												href={`/dashboard/it/incidents/runbooks/${item.$id}`}
+											>
 												Open
 												<ExternalLink className="h-3.5 w-3.5" />
 											</Link>

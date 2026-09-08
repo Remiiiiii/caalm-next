@@ -23,6 +23,9 @@ That process feels normal until one miss costs a license, a grant, or a week of 
 ## What CAALM centralizes
 
 - **Contracts** — terms, owners, expirations, approvals, files
+- **Clause Library** — versioned standard wording reused across deals
+- **Contract templates** — recipes that snapshot published clauses into a draft
+- **Funding & Retention** — protect dollars already won; track new bids into proposals
 - **Licenses** — credentials and renewals that keep you legal to operate
 - **Files** — supporting documents in a controlled library
 - **Calendar** — deadlines and events next to the work they protect

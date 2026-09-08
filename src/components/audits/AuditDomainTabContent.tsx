@@ -81,7 +81,7 @@ export function AuditDomainTabContent({
 		<div className="space-y-6">
 			<Card className="glass-card">
 				<div className="glass-card-cap" />
-				<CardContent className="p-4 sm:p-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+				<CardContent className="p-4 sm:p-6 flex flex-row items-center justify-between gap-3">
 					<div>
 						<p className="text-sm font-medium sidebar-gradient-text">
 							CAALM module: {data.caalmModule}

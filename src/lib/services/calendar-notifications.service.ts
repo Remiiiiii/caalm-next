@@ -106,7 +106,8 @@ function parseReminder(row: Record<string, unknown>): CalendarEventReminder {
 		$id: String(row.$id || ""),
 		eventId: String(row.eventId || ""),
 		userId: String(row.userId || ""),
-		reminderType: (row.reminderType as CalendarEventReminder["reminderType"]) ||
+		reminderType:
+			(row.reminderType as CalendarEventReminder["reminderType"]) ||
 			"before_start",
 		reminderMinutes: Number(row.reminderMinutes) || 0,
 		channels: parseJsonArray(row.channels) as NotificationChannel[],
@@ -938,7 +939,8 @@ export const notifyMeetingInvitees = async (
 	for (const id of parseParticipantIds(participants)) {
 		try {
 			if (excludeUserId && id === excludeUserId) continue;
-			let user = await getUserById(id);
+			type ContactUser = { $id?: string; email?: string | null };
+			let user = (await getUserById(id)) as ContactUser | null;
 			if (!user?.email) {
 				user = await getUserByAccountId(id);
 			}
@@ -974,10 +976,7 @@ export const notifyMeetingInvitees = async (
 };
 
 export async function computeReminderDueAt(
-	reminder: Pick<
-		CalendarEventReminder,
-		"reminderType" | "reminderMinutes"
-	>,
+	reminder: Pick<CalendarEventReminder, "reminderType" | "reminderMinutes">,
 	event: {
 		startDate: string;
 		endDate?: string;
@@ -1032,7 +1031,8 @@ async function resolveUserContact(userId: string): Promise<{
 	email?: string;
 	phone?: string;
 }> {
-	let user = await getUserById(userId);
+	type ContactUser = { email?: string | null; phone?: string | null };
+	let user = (await getUserById(userId)) as ContactUser | null;
 	if (!user) {
 		user = await getUserByAccountId(userId);
 	}

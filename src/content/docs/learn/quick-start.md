@@ -7,6 +7,9 @@ audience: "Everyone"
 
 This is the shortest path to value. Follow the track that matches how you arrived.
 
+> [!NOTE]
+> Phones can open dashboards, approvals, tickets, and news. The contracts library, analytics, settings, and uploads need a laptop. See [Desktop, tablet, and phone](/docs/concepts/desktop-and-mobile).
+
 ## Path A — You were invited
 
 1. Open the invite email and click **Accept invite** (route: `/invite/accept`).

@@ -2,8 +2,8 @@
 
 import {
 	DollarSign,
-	SquareArrowRightExit,
 	FileText,
+	SquareArrowRightExit,
 	TrendingUp,
 	Users,
 } from "lucide-react";
@@ -172,7 +172,7 @@ const AdministrationAnalytics = () => {
 			</div>
 
 			{/* KPI Cards */}
-			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+			<div className="grid grid-cols-4 gap-6">
 				<Card className="bg-white/60 backdrop-blur border border-white/40 shadow-lg">
 					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
 						<CardTitle className="body-2 text-navy">Total Contracts</CardTitle>
@@ -219,7 +219,7 @@ const AdministrationAnalytics = () => {
 			</div>
 
 			{/* Charts Section */}
-			<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+			<div className="grid grid-cols-2 gap-6">
 				{/* Contract Trends */}
 				<Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
 					<CardHeader>
@@ -312,7 +312,7 @@ const AdministrationAnalytics = () => {
 			</div>
 
 			{/* Additional Charts */}
-			<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+			<div className="grid grid-cols-2 gap-6">
 				{/* License Compliance */}
 				<Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
 					<CardHeader>
@@ -399,7 +399,7 @@ const AdministrationAnalytics = () => {
 			</div>
 
 			{/* Staff and Contract Distribution */}
-			<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+			<div className="grid grid-cols-2 gap-6">
 				<Card className="bg-white/60 backdrop-blur border border-white/40 shadow-lg">
 					<CardHeader>
 						<CardTitle className="h3 sidebar-gradient-text">

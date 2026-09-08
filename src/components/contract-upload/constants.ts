@@ -48,6 +48,7 @@ export const CONTRACT_CATEGORY_OPTIONS = [
 
 export const LIFECYCLE_STATUSES = [
 	{ value: "draft", label: "Draft" },
+	{ value: "negotiation", label: "Negotiation" },
 	{ value: "under_review", label: "Under Review" },
 	{ value: "approved", label: "Approved" },
 	{ value: "active", label: "Active" },
@@ -63,16 +64,7 @@ export const RISK_LEVELS = [
 	{ value: "low", label: "Low" },
 ];
 
-export const CURRENCY_CODES = [
-	"USD",
-	"EUR",
-	"GBP",
-	"CAD",
-	"MXN",
-	"JPY",
-	"AUD",
-	"other",
-];
+export { CURRENCY_CODES } from "@/lib/currency";
 
 export const PAYMENT_TERM_OPTIONS = [
 	{ value: "due_on_receipt", label: "Due on Receipt" },

@@ -123,13 +123,15 @@ export async function POST(request: NextRequest) {
 			interval,
 			email: user.email,
 			userName: user.fullName,
-			successUrl: `${appUrl}/settings/billing?tab=billing&checkout=success`,
+			successUrl: `${appUrl}/settings/billing?tab=billing&checkout=success&session_id={CHECKOUT_SESSION_ID}`,
 			cancelUrl: `${appUrl}/settings/billing?tab=billing&checkout=canceled`,
 		});
 		return NextResponse.json({ url });
 	} catch (error: unknown) {
 		const message =
-			error instanceof Error ? error.message : "Failed to create checkout session";
+			error instanceof Error
+				? error.message
+				: "Failed to create checkout session";
 		console.error("[billing/checkout]", error);
 		const salesOnly = /sales-assisted|Enterprise/i.test(message);
 		return NextResponse.json(

@@ -6,7 +6,7 @@ import {
 	Columns3Cog,
 	Mail,
 	MessageCircleQuestionMark,
-	MoreHorizontal,
+	MoreVertical,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -73,7 +73,7 @@ export default function SidebarUserCard({
 						compact ? "h-10 w-10" : "h-7 w-7",
 					)}
 				>
-					<MoreHorizontal className={compact ? "h-5 w-5" : "h-4 w-4"} />
+					<MoreVertical className={compact ? "h-5 w-5" : "h-4 w-4"} />
 				</button>
 			</DropdownMenuTrigger>
 			<AppDropdownMenuContent

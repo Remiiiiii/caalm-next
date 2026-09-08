@@ -110,6 +110,11 @@ export type RoadmapSectionOverview = {
 		number: number;
 		title: string;
 		state?: "open" | "closed" | "merged" | "unknown";
+		/**
+		 * True only when GitHub says merged AND roadmap completion checks
+		 * (Playwright E2E push + Deploy to Vercel production) passed.
+		 */
+		checksPassed?: boolean;
 	}>;
 	/** Why tasks in this section stay locked (missing merge or green tests). */
 	mergeBlockReason?: string | null;
@@ -126,6 +131,12 @@ export type RoadmapCatalogSection = {
 	sourceRef: string;
 	/** GitHub PR numbers matched to this section by topic (newest last) */
 	linkedPrNumbers?: number[];
+	/**
+	 * When false, a merged catalog PR is still shown on the section but does
+	 * not mark tasks complete. Use this for tracking stubs that landed on
+	 * main without the product work.
+	 */
+	completesOnMerge?: boolean;
 	tasks: RoadmapCatalogTask[];
 };
 

@@ -1,7 +1,7 @@
 "use client";
 
-import useSWR from "swr";
 import Image from "next/image";
+import useSWR from "swr";
 import LicensesAttentionStrip from "@/components/LicensesAttentionStrip";
 import LicensesControlBar from "@/components/LicensesControlBar";
 import LicensesHeaderActions from "@/components/LicensesHeaderActions";
@@ -88,7 +88,9 @@ export default function LicensesPageClient({
 								user={user}
 								initialLicenses={initialLicenses}
 								totalCount={
-									metricsData?.data?.total ?? initialTotal ?? initialLicenses.length
+									metricsData?.data?.total ??
+									initialTotal ??
+									initialLicenses.length
 								}
 								pageSize={PAGE_SIZE}
 							/>

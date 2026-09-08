@@ -1,13 +1,7 @@
 "use client";
 
 import * as VisuallyHiddenPrimitive from "@radix-ui/react-visually-hidden";
-import {
-	AlertCircle,
-	AlertTriangle,
-	Ban,
-	Clock,
-	Loader2,
-} from "lucide-react";
+import { AlertCircle, AlertTriangle, Clock, Loader2 } from "lucide-react";
 import type React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -60,7 +54,13 @@ export function ConflictDialog({
 	onConfirm,
 }: ConflictDialogProps): React.ReactElement {
 	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
+		<Dialog
+			open={open}
+			onOpenChange={(next) => {
+				if (!next) onCancel();
+				else onOpenChange(true);
+			}}
+		>
 			<DialogContent className="flex max-h-[90vh] flex-col overflow-hidden p-0 shadow-xl sm:max-w-2xl">
 				<VisuallyHiddenPrimitive.Root>
 					<DialogTitle>Scheduling Conflicts Detected</DialogTitle>
@@ -156,21 +156,23 @@ export function ConflictDialog({
 										Suggested Alternate Times:
 									</h3>
 									<div className="space-y-2">
-										{conflictData.alternateSlots.slice(0, 5).map((slot, index) => (
-											<div
-												key={`${slot.startDate}-${slot.startTime}-${index}`}
-												className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm"
-											>
-												<div className="flex items-center gap-2">
-													<Clock className="w-4 h-4 text-blue-600" />
-													<span className="text-slate-700">
-														{slot.startDate} at{" "}
-														{formatTimeForDisplay(slot.startTime)} -{" "}
-														{formatTimeForDisplay(slot.endTime)}
-													</span>
+										{conflictData.alternateSlots
+											.slice(0, 5)
+											.map((slot, index) => (
+												<div
+													key={`${slot.startDate}-${slot.startTime}-${index}`}
+													className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm"
+												>
+													<div className="flex items-center gap-2">
+														<Clock className="w-4 h-4 text-blue-600" />
+														<span className="text-slate-700">
+															{slot.startDate} at{" "}
+															{formatTimeForDisplay(slot.startTime)} -{" "}
+															{formatTimeForDisplay(slot.endTime)}
+														</span>
+													</div>
 												</div>
-											</div>
-										))}
+											))}
 									</div>
 								</div>
 							)}
@@ -195,15 +197,6 @@ export function ConflictDialog({
 						Review conflicts before proceeding.
 					</div>
 					<div className="flex items-center gap-3">
-						<Button
-							variant="outline"
-							onClick={onCancel}
-							disabled={creatingEvent}
-							className="primary-btn px-3 sm:px-4"
-						>
-							<Ban className="w-4 h-4" />
-							Cancel
-						</Button>
 						<Button
 							onClick={onConfirm}
 							disabled={creatingEvent}

@@ -10,8 +10,7 @@ import type {
 
 function tableId(): string {
 	return (
-		appwriteConfig.auditReadinessSnapshotsCollectionId ||
-		"66ea192923722f767a74"
+		appwriteConfig.auditReadinessSnapshotsCollectionId || "66ea192923722f767a74"
 	);
 }
 
@@ -22,12 +21,15 @@ function parseRecord(
 		$id: String(row.$id),
 		orgId: String(row.orgId),
 		cadence: row.cadence as AuditCadence,
-		score: row.score === null || row.score === undefined ? null : Number(row.score),
+		score:
+			row.score === null || row.score === undefined ? null : Number(row.score),
 		ragStatus: (row.ragStatus as ComplianceRagStatus | null) ?? null,
 		timezone: String(row.timezone || "America/New_York"),
 		payload: String(row.payload || "{}"),
 		aiSummary: row.aiSummary ? String(row.aiSummary) : undefined,
-		createdAt: String(row.$createdAt || row.createdAt || new Date().toISOString()),
+		createdAt: String(
+			row.$createdAt || row.createdAt || new Date().toISOString(),
+		),
 	};
 }
 

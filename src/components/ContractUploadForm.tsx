@@ -49,6 +49,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CurrencySelect } from "@/components/ui/currency-select";
 import {
 	Dialog,
 	DialogContent,
@@ -127,6 +128,10 @@ import {
 	getRequiredFields,
 	resolveDraftContractTypeId,
 } from "@/lib/contracts/contractTypeConfigs";
+import {
+	getEnterpriseDropzoneAccept,
+	getEnterpriseFormatHint,
+} from "@/lib/files/enterprise-file-formats";
 import { getNoticeThresholds } from "@/lib/renewals/expiryNotice";
 import { refreshStorageUsage } from "@/lib/storage/refreshStorageUsage";
 import { fireConfetti } from "@/lib/ui/confetti";
@@ -395,17 +400,6 @@ const RISK_LEVELS = [
 	{ value: "high", label: "High" },
 	{ value: "medium", label: "Medium" },
 	{ value: "low", label: "Low" },
-];
-
-const CURRENCY_CODES = [
-	"USD",
-	"EUR",
-	"GBP",
-	"CAD",
-	"MXN",
-	"JPY",
-	"AUD",
-	"other",
 ];
 
 const PAYMENT_TERM_OPTIONS = [
@@ -1682,12 +1676,13 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
 	const { getRootProps, getInputProps, isDragActive } = useDropzone({
 		onDrop,
-		accept: {
-			"application/pdf": [".pdf"],
-			"application/msword": [".doc"],
-			"application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-				[".docx"],
-			"text/plain": [".txt"],
+		accept: getEnterpriseDropzoneAccept("contractPrimary"),
+		onDropRejected: () => {
+			toast({
+				variant: "destructive",
+				title: "File type not allowed",
+				description: `${getEnterpriseFormatHint("contractPrimary")} (Max 50MB)`,
+			});
 		},
 		multiple: false,
 	});
@@ -1702,11 +1697,11 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
 	const dropzoneRootProps = {
 		...dropzoneRootRest,
-		onDragOver: (event: React.DragEvent) => {
+		onDragOver: (event: React.DragEvent<HTMLElement>) => {
 			if (handleDemoSampleDragOverCapture(event)) return;
 			dropzoneDragOver?.(event);
 		},
-		onDrop: (event: React.DragEvent) => {
+		onDrop: (event: React.DragEvent<HTMLElement>) => {
 			if (handleDemoSampleDropCapture(event, onDrop)) return;
 			dropzoneDrop?.(event);
 		},
@@ -2755,7 +2750,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
 							{/* Contract Type Cards Grid */}
 							<div className="min-h-0 flex-1 overflow-y-auto p-6">
-								<div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+								<div className="mx-auto grid max-w-6xl grid-cols-3 gap-6">
 									{/* Drafts card — first */}
 									<div
 										role="button"
@@ -2862,7 +2857,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
 							{/* Footer */}
 							<div className="sticky bottom-0 shrink-0 border-t border-white/35 bg-white/30 px-6 py-4 backdrop-blur-xl">
-								<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+								<div className="flex flex-row items-center justify-between gap-3">
 									<p className="flex flex-wrap items-center gap-2 text-xs text-slate-500 sm:text-sm">
 										<span>
 											Need help? Use CAALM AI Assistant to pick the best
@@ -2890,14 +2885,6 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 											</span>
 										</button>
 									</p>
-									<Button
-										variant="outline"
-										onClick={() => setIsOpen(false)}
-										className="primary-btn w-full shrink-0 px-3 sm:w-auto sm:px-4"
-									>
-										<Ban className="w-4 h-4" />
-										Cancel
-									</Button>
 								</div>
 							</div>
 						</div>
@@ -2955,7 +2942,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 											return (
 												<div
 													key={draft.$id}
-													className="flex flex-col gap-3 rounded-xl border border-white/40 bg-white/50 p-4 shadow-sm backdrop-blur-md sm:flex-row sm:items-center sm:justify-between"
+													className="flex flex-row items-center justify-between gap-3 rounded-xl border border-white/40 bg-white/50 p-4 shadow-sm backdrop-blur-md"
 												>
 													<div className="min-w-0 flex-1">
 														<h3 className="mb-1 truncate text-sm font-medium text-slate-700">
@@ -3019,7 +3006,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 							</div>
 
 							<div className="shrink-0 border-t border-white/35 bg-white/30 px-5 py-3 backdrop-blur-xl">
-								<div className="flex items-center justify-between gap-3">
+								<div className="flex items-center justify-end gap-3">
 									<Button
 										type="button"
 										variant="outline"
@@ -3028,14 +3015,6 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 									>
 										<ChevronLeft className="h-4 w-4" />
 										Back
-									</Button>
-									<Button
-										variant="outline"
-										onClick={() => setIsOpen(false)}
-										className="primary-btn px-3 sm:px-4"
-									>
-										<Ban className="w-4 h-4" />
-										Cancel
 									</Button>
 								</div>
 							</div>
@@ -3122,7 +3101,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																	placeholder="e.g. Annual lease for our program office…"
 																	className="min-h-[100px] glass-form-control resize-y"
 																/>
-																<div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+																<div className="flex flex-row justify-end gap-3">
 																	<Button
 																		type="button"
 																		variant="ghost"
@@ -3325,7 +3304,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
 							{/* Footer */}
 							<div className="sticky bottom-0 shrink-0 border-t border-white/35 bg-white/30 px-6 py-4 backdrop-blur-xl">
-								<div className="flex items-center justify-between gap-2">
+								<div className="flex items-center justify-end gap-2">
 									<div className="flex flex-wrap items-center gap-2">
 										{aiQuizPhase === "questions" && aiQuizStep > 0 && (
 											<Button
@@ -3342,17 +3321,6 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 											</Button>
 										)}
 									</div>
-									<Button
-										variant="outline"
-										onClick={() => setIsOpen(false)}
-										className={cn(
-											AI_ASSISTANT_BTN_PRIMARY_CLASS,
-											"shrink-0 px-4 sm:px-6",
-										)}
-									>
-										<Ban className="w-4 h-4" />
-										Cancel
-									</Button>
 								</div>
 							</div>
 						</div>
@@ -3593,7 +3561,8 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																		: "Drag & drop contract file here"}
 																</p>
 																<p className="text-sm text-light-200 mt-2">
-																	Supports PDF, DOC, DOCX, TXT (Max 50MB)
+																	{getEnterpriseFormatHint("contractPrimary")}{" "}
+																	(Max 50MB)
 																</p>
 															</div>
 														)}
@@ -3638,7 +3607,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 													{/* Step 2: Contract Basics & Timeline */}
 													{currentStep === 2 && (
 														<div className="space-y-4">
-															<div className="grid grid-cols-1 md:grid-cols-1  gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+															<div className="grid grid-cols-1 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
 																<FormField
 																	control={form.control}
 																	name="contractName"
@@ -3671,7 +3640,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																	)}
 																/>
 															</div>
-															<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+															<div className="grid grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
 																<FormField
 																	control={form.control}
 																	name="contractNumber"
@@ -3734,7 +3703,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																	)}
 																/>
 															</div>
-															<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+															<div className="grid grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
 																<FormField
 																	control={form.control}
 																	name="lifecycleStatus"
@@ -3789,7 +3758,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																	)}
 																/>
 															</div>
-															<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+															<div className="grid grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
 																<FormField
 																	control={form.control}
 																	name="assignToDepartment"
@@ -3859,7 +3828,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																	)}
 																/>
 															</div>
-															<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+															<div className="grid grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
 																<FormField
 																	control={form.control}
 																	name="subDepartment"
@@ -3955,7 +3924,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																/>
 															</div>
 
-															<div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+															<div className="grid grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
 																<FormField
 																	control={form.control}
 																	name="startDate"
@@ -4175,7 +4144,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 													{/* Step 3: Parties & Key Contacts */}
 													{currentStep === 3 && (
 														<div className="space-y-4">
-															<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+															<div className="grid grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
 																<FormField
 																	control={form.control}
 																	name="counterpartyLegalName"
@@ -4228,7 +4197,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																	)}
 																/>
 															</div>
-															<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+															<div className="grid grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
 																<FormField
 																	control={form.control}
 																	name="counterpartyContactTitle"
@@ -4269,7 +4238,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																	)}
 																/>
 															</div>
-															<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+															<div className="grid grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
 																<FormField
 																	control={form.control}
 																	name="counterpartyContactPhone"
@@ -4323,7 +4292,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																	)}
 																/>
 															</div>
-															<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+															<div className="grid grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
 																<FormField
 																	control={form.control}
 																	name="counterpartyTaxId"
@@ -4364,7 +4333,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																	)}
 																/>
 															</div>
-															<div className="grid grid-cols-1 md:grid-cols-1 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+															<div className="grid grid-cols-1 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
 																<FormField
 																	control={form.control}
 																	name="counterpartyAddress"
@@ -4387,7 +4356,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																/>
 															</div>
 
-															<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+															<div className="grid grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
 																<FormField
 																	control={form.control}
 																	name="primaryInternalContactId"
@@ -4480,7 +4449,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 													{/* Step 4: Financials & Payment Terms */}
 													{currentStep === 4 && (
 														<div className="space-y-4">
-															<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+															<div className="grid grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
 																<FormField
 																	control={form.control}
 																	name="amount"
@@ -4522,23 +4491,11 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																				Currency{" "}
 																				<span className="text-red">*</span>
 																			</FormLabel>
-																			<Select
-																				onValueChange={field.onChange}
+																			<CurrencySelect
 																				value={field.value}
-																			>
-																				<FormControl>
-																					<SelectTrigger className="bg-white border-slate-300">
-																						<SelectValue placeholder="Select currency" />
-																					</SelectTrigger>
-																				</FormControl>
-																				<SelectContent>
-																					{CURRENCY_CODES.map((code) => (
-																						<SelectItem key={code} value={code}>
-																							{code}
-																						</SelectItem>
-																					))}
-																				</SelectContent>
-																			</Select>
+																				onValueChange={field.onChange}
+																				amount={form.watch("amount")}
+																			/>
 																			<FormMessage />
 																		</FormItem>
 																	)}
@@ -4675,7 +4632,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																/>
 															</div>
 
-															<div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+															<div className="grid grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
 																<FormField
 																	control={form.control}
 																	name="projectMatterId"
@@ -4742,7 +4699,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 													{/* Step 5: Risk & Compliance */}
 													{currentStep === 5 && (
 														<div className="space-y-4">
-															<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+															<div className="grid grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
 																<FormField
 																	control={form.control}
 																	name="riskLevel"
@@ -4799,7 +4756,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																/>
 															</div>
 
-															<div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+															<div className="grid grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
 																<FormField
 																	control={form.control}
 																	name="insuranceRequired"
@@ -4860,7 +4817,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																/>
 															</div>
 
-															<div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+															<div className="grid grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
 																<FormField
 																	control={form.control}
 																	name="insuranceVerifiedDate"
@@ -5124,7 +5081,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																/>
 															</div>
 
-															<div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+															<div className="grid grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
 																<FormField
 																	control={form.control}
 																	name="terminationNoticeDays"
@@ -5534,7 +5491,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																)}
 															/>
 
-															<div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+															<div className="grid grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
 																<FormField
 																	control={form.control}
 																	name="approvalWorkflowTemplate"
@@ -5621,7 +5578,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																)}
 															/>
 
-															<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+															<div className="grid grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
 																<FormField
 																	control={form.control}
 																	name="approvalEscalationContactIds"
@@ -5670,7 +5627,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 													{/* Step 7: Notifications & Renewal Alerts */}
 													{currentStep === 7 && (
 														<div className="space-y-4">
-															<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+															<div className="grid grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
 																<FormField
 																	control={form.control}
 																	name="alertRecipientIds"
@@ -5808,7 +5765,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																/>
 															</div>
 
-															<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+															<div className="grid grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
 																<FormField
 																	control={form.control}
 																	name="alertLeadTimes"
@@ -5935,7 +5892,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 													{/* Step 8: Documents, Attachments & Metadata */}
 													{currentStep === 8 && (
 														<div className="space-y-4">
-															<div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+															<div className="grid grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
 																<FormField
 																	control={form.control}
 																	name="versionNumber"
@@ -5997,7 +5954,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																/>
 															</div>
 
-															<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+															<div className="grid grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
 																<FormField
 																	control={form.control}
 																	name="relatedDocumentIds"
@@ -6040,7 +5997,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																	)}
 																/>
 															</div>
-															<div className="grid grid-cols-1 md:grid-cols-1 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+															<div className="grid grid-cols-1 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
 																<FormField
 																	control={form.control}
 																	name="businessPurpose"
@@ -6062,7 +6019,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																	)}
 																/>
 															</div>
-															<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+															<div className="grid grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
 																<FormField
 																	control={form.control}
 																	name="tags"
@@ -6108,7 +6065,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 													{/* Step 9: Legal & Governance */}
 													{currentStep === 9 && (
 														<div className="space-y-4">
-															<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+															<div className="grid grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
 																<FormField
 																	control={form.control}
 																	name="governingLaw"
@@ -6173,7 +6130,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																/>
 															</div>
 
-															<div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+															<div className="grid grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
 																<FormField
 																	control={form.control}
 																	name="disputeResolutionMethod"
@@ -6285,7 +6242,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 													{/* Step 10: Digital Signatures & Access Controls */}
 													{currentStep === 10 && (
 														<div className="space-y-4">
-															<div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+															<div className="grid grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
 																<FormField
 																	control={form.control}
 																	name="digitalSignatureRequired"
@@ -6376,7 +6333,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																/>
 															</div>
 
-															<div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+															<div className="grid grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
 																<FormField
 																	control={form.control}
 																	name="digitalSignatureCompletedAt"
@@ -6455,7 +6412,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																/>
 															</div>
 
-															<div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+															<div className="grid grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
 																<FormField
 																	control={form.control}
 																	name="signatureRecipientIds"

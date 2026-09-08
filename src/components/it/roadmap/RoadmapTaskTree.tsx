@@ -1,6 +1,12 @@
 "use client";
 
-import { CheckCircle2, ChevronDown, ChevronRight, Circle, Lock } from "lucide-react";
+import {
+	CheckCircle2,
+	ChevronDown,
+	ChevronRight,
+	Circle,
+	Lock,
+} from "lucide-react";
 import { useState } from "react";
 import {
 	Tooltip,
@@ -65,6 +71,7 @@ function TaskRow({
 
 			<span
 				className="mt-0.5"
+				role="img"
 				aria-label={`Status: ${task.status}`}
 				title={task.status}
 			>

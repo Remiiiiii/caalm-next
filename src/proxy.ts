@@ -161,6 +161,7 @@ export async function proxy(request: NextRequest) {
 		"/favicon.ico",
 		"/assets",
 		"/docs",
+		"/scene.splinecode",
 	];
 
 	if (
@@ -215,9 +216,13 @@ export async function proxy(request: NextRequest) {
 		);
 	}
 	if (pathname.startsWith("/dashboard/it/status/")) {
-		const ticketId = pathname.slice("/dashboard/it/status/".length).split("/")[0];
+		const ticketId = pathname
+			.slice("/dashboard/it/status/".length)
+			.split("/")[0];
 		if (ticketId) {
-			return NextResponse.redirect(new URL(`/incident/${ticketId}`, request.url));
+			return NextResponse.redirect(
+				new URL(`/incident/${ticketId}`, request.url),
+			);
 		}
 	}
 
@@ -297,6 +302,6 @@ export const config = {
 		 * - favicon.ico (favicon file)
 		 * Note: API routes are now included for rate limiting
 		 */
-		"/((?!_next/static|_next/image|favicon.ico).*)",
+		"/((?!_next/static|_next/image|favicon.ico|scene\\.splinecode|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|mp4|mp3|ico|woff2?|splinecode)$).*)",
 	],
 };

@@ -1,8 +1,9 @@
 import { getOrganization } from "@/lib/rbac/organizations";
-import { notifyAuditViewUsers } from "./alerts";
 import { generateReadinessAutoSummary } from "./ai-summary";
+import { notifyAuditViewUsers } from "./alerts";
 import { buildOrgReadinessSummary } from "./build-summary";
 import { getOrgAuditSettings } from "./org-settings";
+import { computeRag } from "./score";
 import { crawlPublicSite } from "./site-crawl";
 import {
 	createReadinessSnapshot,
@@ -12,7 +13,6 @@ import {
 } from "./snapshot.service";
 import { cadencesDueNow, localDayKey, resolveOrgTimezone } from "./timezone";
 import type { AuditCadence, AuditReadinessSnapshotRecord } from "./types";
-import { computeRag } from "./score";
 
 export async function runReadinessAuditForOrg(options: {
 	orgId: string;
@@ -80,8 +80,7 @@ export async function runReadinessAuditForOrg(options: {
 	const previous = await getLatestSnapshot(options.orgId, options.cadence);
 	const previousScore = previous?.score ?? null;
 	const score = summary.readinessScore;
-	const liveScore =
-		payloadBase.sourcesUsed.length === 0 ? null : score;
+	const liveScore = payloadBase.sourcesUsed.length === 0 ? null : score;
 	const scoreDelta =
 		liveScore !== null && previousScore !== null
 			? liveScore - previousScore
@@ -137,7 +136,9 @@ export async function runReadinessAuditForOrg(options: {
 					? "No readiness score yet (add contracts or licenses)."
 					: `Score ${liveScore} (${computeRag(liveScore)}).`,
 				`Critical items: ${summary.severity.critical}.`,
-				scoreDelta !== null ? `Change: ${scoreDelta >= 0 ? "+" : ""}${scoreDelta}.` : "",
+				scoreDelta !== null
+					? `Change: ${scoreDelta >= 0 ? "+" : ""}${scoreDelta}.`
+					: "",
 			]
 				.filter(Boolean)
 				.join(" "),
@@ -196,8 +197,7 @@ export async function runDueReadinessAudits(now = new Date()): Promise<{
 				results.push({
 					orgId: org.$id,
 					cadence,
-					skipped:
-						error instanceof Error ? error.message : "run_failed",
+					skipped: error instanceof Error ? error.message : "run_failed",
 				});
 			}
 		}

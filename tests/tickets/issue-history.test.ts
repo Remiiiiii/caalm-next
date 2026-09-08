@@ -1,16 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
 	buildIncidentTimelineSteps,
+	buildIssueHistoryCalendarWindows,
 	buildResolvedSummary,
 	eventSummary,
-	getIncidentTimelineResourceLinks,
+	findCalendarWindowIndexForMonth,
 	formatIssueHistoryDate,
 	formatIssueHistoryMonth,
-	buildIssueHistoryCalendarWindows,
-	findCalendarWindowIndexForMonth,
-	formatCalendarThreeMonthLabel,
 	formatThreeMonthWindowLabel,
 	formatVisibleMonthRange,
+	getIncidentTimelineResourceLinks,
 	getLatestEvent,
 	groupTicketsByMonthDay,
 	humanizeEventType,
@@ -20,7 +19,9 @@ import {
 } from "@/lib/tickets/issue-history";
 import type { Ticket, TicketEvent } from "@/lib/tickets/ticket.types";
 
-function ticket(partial: Partial<Ticket> & { $id: string; submittedAt: string }): Ticket {
+function ticket(
+	partial: Partial<Ticket> & { $id: string; submittedAt: string },
+): Ticket {
 	return {
 		title: "Test issue",
 		description: "Rolled back a change.",
@@ -148,7 +149,9 @@ describe("eventSummary", () => {
 					ticketId: "t1",
 					eventType: "FAILED",
 					timestamp: "2026-08-13T09:05:00.000Z",
-					metadata: JSON.stringify({ error: "Cursor agent launch failed: 429" }),
+					metadata: JSON.stringify({
+						error: "Cursor agent launch failed: 429",
+					}),
 				}),
 				t,
 			),
@@ -217,7 +220,9 @@ describe("formatIssueHistoryDate", () => {
 
 describe("formatVisibleMonthRange", () => {
 	it("returns a single month when only one is visible", () => {
-		expect(formatVisibleMonthRange([{ monthKey: "2026-08" }])).toContain("2026");
+		expect(formatVisibleMonthRange([{ monthKey: "2026-08" }])).toContain(
+			"2026",
+		);
 	});
 
 	it("returns a range when multiple months are visible", () => {
@@ -239,11 +244,9 @@ describe("sliceIssueHistoryMonthWindow", () => {
 		];
 
 		expect(sliceIssueHistoryMonthWindow(months, 0)).toHaveLength(3);
-		expect(sliceIssueHistoryMonthWindow(months, 0).map((m) => m.monthKey)).toEqual([
-			"2026-08",
-			"2026-07",
-			"2026-06",
-		]);
+		expect(
+			sliceIssueHistoryMonthWindow(months, 0).map((m) => m.monthKey),
+		).toEqual(["2026-08", "2026-07", "2026-06"]);
 		expect(sliceIssueHistoryMonthWindow(months, 1)).toHaveLength(1);
 		expect(issueHistoryMonthWindowCount(months.length)).toBe(2);
 	});
@@ -389,10 +392,12 @@ describe("buildIncidentTimelineSteps", () => {
 		expect(
 			steps.find((step) => step.heading === "PR created")?.links?.[0]?.label,
 		).toBe("PR #42");
-		expect(steps.find((step) => step.heading === "GitHub issue")?.links).toBeUndefined();
-		expect(steps.find((step) => step.heading === "GitHub issue")?.externalHref).toBe(
-			"https://github.com/org/repo/issues/7",
-		);
+		expect(
+			steps.find((step) => step.heading === "GitHub issue")?.links,
+		).toBeUndefined();
+		expect(
+			steps.find((step) => step.heading === "GitHub issue")?.externalHref,
+		).toBe("https://github.com/org/repo/issues/7");
 	});
 
 	it("keeps Resolved first even when other steps have later timestamps", () => {

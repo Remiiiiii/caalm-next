@@ -150,9 +150,7 @@ export function useCombinedExpiryModal(contracts: UIFileDoc[]) {
 		(item: ExpiryQueueItem) => {
 			if (testMode) {
 				setTestItems((prev) =>
-					prev.filter(
-						(i) => !(i.kind === item.kind && i.id === item.id),
-					),
+					prev.filter((i) => !(i.kind === item.kind && i.id === item.id)),
 				);
 				return;
 			}
@@ -175,9 +173,7 @@ export function useCombinedExpiryModal(contracts: UIFileDoc[]) {
 			}
 			const days = calculateDaysUntilExpiry(match.contractExpiryDate) ?? 0;
 			setWasManuallyClosed(false);
-			setTestItems([
-				{ kind: "contract", id: match.$id, file: match, days },
-			]);
+			setTestItems([{ kind: "contract", id: match.$id, file: match, days }]);
 			setTestMode(true);
 			setIsModalOpen(true);
 			return true;
@@ -226,9 +222,7 @@ export function useCombinedExpiryModal(contracts: UIFileDoc[]) {
 					match.licenseExpiryDate || match.expirationDate,
 				) ?? 0;
 			setWasManuallyClosed(false);
-			setTestItems([
-				{ kind: "license", id: match.$id, license: match, days },
-			]);
+			setTestItems([{ kind: "license", id: match.$id, license: match, days }]);
 			setTestMode(true);
 			setIsModalOpen(true);
 			return true;
@@ -250,13 +244,15 @@ export function useCombinedExpiryModal(contracts: UIFileDoc[]) {
 		itemsToShow,
 		/** @deprecated Prefer itemsToShow — contract files only for legacy callers */
 		contractsToShow: itemsToShow
-			.filter((i): i is Extract<ExpiryQueueItem, { kind: "contract" }> =>
-				i.kind === "contract",
+			.filter(
+				(i): i is Extract<ExpiryQueueItem, { kind: "contract" }> =>
+					i.kind === "contract",
 			)
 			.map((i) => i.file),
 		contractsWithDays: itemsToShow
-			.filter((i): i is Extract<ExpiryQueueItem, { kind: "contract" }> =>
-				i.kind === "contract",
+			.filter(
+				(i): i is Extract<ExpiryQueueItem, { kind: "contract" }> =>
+					i.kind === "contract",
 			)
 			.map((i) => ({ file: i.file, days: i.days })),
 		isModalOpen,

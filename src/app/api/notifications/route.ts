@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
 		try {
 			await broadcastNotificationToUser(
 				body.userId,
-				notification as Record<string, unknown>,
+				notification as unknown as Record<string, unknown>,
 			);
 		} catch (sseError) {
 			console.warn("Failed to broadcast notification via SSE:", sseError);

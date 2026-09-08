@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS, type PermissionKey } from "@/constants/permissions";
+import { requireStepUpForSession } from "@/lib/auth/step-up";
 import { requirePermission } from "@/lib/rbac/middleware";
 import {
 	assignPermissionsToRole,
@@ -63,6 +64,9 @@ export async function PUT(
 		if (permissionCheck) {
 			return permissionCheck;
 		}
+
+		const stepUpCheck = await requireStepUpForSession(request);
+		if (stepUpCheck) return stepUpCheck;
 
 		const { roleId } = await params;
 		const body = (await request.json()) as {
@@ -128,7 +132,7 @@ export async function PUT(
 		return NextResponse.json({
 			success: true,
 			data: role,
-			sodWarnings: "warnings" in sod ? sod.warnings ?? [] : [],
+			sodWarnings: "warnings" in sod ? (sod.warnings ?? []) : [],
 		});
 	} catch (error) {
 		console.error("Error updating role:", error);
@@ -151,6 +155,9 @@ export async function DELETE(
 		if (permissionCheck) {
 			return permissionCheck;
 		}
+
+		const stepUpCheck = await requireStepUpForSession(request);
+		if (stepUpCheck) return stepUpCheck;
 
 		const { roleId } = await params;
 		await deleteRole(roleId);

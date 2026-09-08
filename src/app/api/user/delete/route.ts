@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
+import { requireStepUpForSession } from "@/lib/auth/step-up";
 import { getOrgIdFromRequest, requirePermission } from "@/lib/rbac/middleware";
 import { deleteUserAccount } from "@/lib/users/delete-user.service";
 
@@ -9,7 +10,9 @@ function resolveErrorMessage(error: unknown, fallback: string): string {
 		return error.message;
 	}
 	if (typeof error === "object" && error !== null && "message" in error) {
-		const message = String((error as { message?: unknown }).message || "").trim();
+		const message = String(
+			(error as { message?: unknown }).message || "",
+		).trim();
 		if (message) return message;
 	}
 	return fallback;
@@ -34,6 +37,9 @@ export async function DELETE(req: NextRequest) {
 			permission: PERMISSIONS.USERS.EDIT,
 		});
 		if (permissionCheck) return permissionCheck;
+
+		const stepUpCheck = await requireStepUpForSession(req);
+		if (stepUpCheck) return stepUpCheck;
 
 		const userId = await parseUserId(req);
 		if (!userId) {

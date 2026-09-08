@@ -24,6 +24,7 @@ import {
 	Gauge,
 	GitBranch,
 	GitFork,
+	GitPullRequest,
 	Hammer,
 	HardDrive,
 	HeartPulse,
@@ -76,6 +77,7 @@ const IT_LUCIDE_ICONS: Record<ITNavIconKey, LucideIcon> = {
 	tag: Tag,
 	badgeCheck: BadgeCheck,
 	gitFork: GitFork,
+	gitPullRequest: GitPullRequest,
 	map: MapIcon,
 	ticket: Ticket,
 	searchCode: SearchCode,
@@ -117,11 +119,7 @@ type ITNavIconProps = {
 	size?: number;
 };
 
-export function ITNavIcon({
-	name,
-	className,
-	size = 18,
-}: ITNavIconProps) {
+export function ITNavIcon({ name, className, size = 18 }: ITNavIconProps) {
 	const Icon = IT_LUCIDE_ICONS[name] ?? LayoutDashboard;
 	return (
 		<Icon

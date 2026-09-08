@@ -7,6 +7,7 @@ import {
 	SheetContent,
 	SheetDescription,
 	SheetHeader,
+	SheetHeaderIcon,
 	SheetTitle,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
@@ -19,7 +20,7 @@ interface EntityPreviewSheetShellProps {
 	icon: LucideIcon;
 	statusBanner?: ReactNode;
 	children: ReactNode;
-	footer: ReactNode;
+	footer?: ReactNode;
 	maxWidth?: "md" | "lg";
 }
 
@@ -49,10 +50,10 @@ export default function EntityPreviewSheetShell({
 					<div className="glass-card-cap rounded-t-2xl!" />
 
 					<SheetHeader className="glass-dialog-wizard-header mt-4 space-y-3 px-5 py-4 text-left">
-						<div className="flex items-start gap-3 pr-6">
-							<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/50 bg-white/40 shadow-sm backdrop-blur-sm">
+						<div className="flex items-start gap-3 pr-10">
+							<SheetHeaderIcon>
 								<Icon className="h-5 w-5 text-[#0f5384]" />
-							</div>
+							</SheetHeaderIcon>
 							<div className="min-w-0 flex-1">
 								<SheetTitle className="truncate text-lg font-semibold leading-snug sidebar-gradient-text">
 									{title}
@@ -72,9 +73,11 @@ export default function EntityPreviewSheetShell({
 						{children}
 					</div>
 
-					<div className="glass-dialog-footer-compact px-5 py-3.5">
-						{footer}
-					</div>
+					{footer ? (
+						<div className="glass-dialog-footer-compact px-5 py-3.5">
+							{footer}
+						</div>
+					) : null}
 				</div>
 			</SheetContent>
 		</Sheet>

@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS, type PermissionKey } from "@/constants/permissions";
+import { requireStepUpForSession } from "@/lib/auth/step-up";
 import { getOrgIdFromRequest, requirePermission } from "@/lib/rbac/middleware";
 import {
 	assignPermissionsToRole,
@@ -53,6 +54,9 @@ export async function POST(request: NextRequest) {
 		if (permissionCheck) {
 			return permissionCheck;
 		}
+
+		const stepUpCheck = await requireStepUpForSession(request);
+		if (stepUpCheck) return stepUpCheck;
 
 		const body = await request.json();
 		const {

@@ -7,15 +7,16 @@ import {
 	type FormEvent,
 	useCallback,
 	useEffect,
+	useMemo,
 	useRef,
 	useState,
 } from "react";
-import { Button } from "@/components/ui/button";
 import ShimmerBadge from "@/components/landing/ShimmerBadge";
 import {
 	createSubmitProgressTicker,
 	SubmitProgressIndicator,
 } from "@/components/tickets/SubmitProgressIndicator";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -28,11 +29,15 @@ import {
 import { PERMISSIONS } from "@/constants/permissions";
 import { useFullWindowOverlayOpen } from "@/hooks/useFullWindowOverlayOpen";
 import { usePermissions } from "@/hooks/usePermissions";
-import { TICKET_CATEGORIES } from "@/lib/tickets/ticket-intake.constants";
 import {
 	resolveTicketContextFromPath,
 	shouldHideReportIssueFab,
 } from "@/lib/tickets/route-module-map";
+import type { TicketLane } from "@/lib/tickets/ticket.types";
+import {
+	categoriesForLane,
+	TICKET_LANE_OPTIONS,
+} from "@/lib/tickets/ticket-intake.constants";
 import { cn } from "@/lib/utils";
 
 export default function ReportIssueFab() {
@@ -44,6 +49,7 @@ export default function ReportIssueFab() {
 
 	const routeContext = resolveTicketContextFromPath(pathname);
 	const [open, setOpen] = useState(false);
+	const [lane, setLane] = useState<TicketLane | "">("");
 	const [title, setTitle] = useState("");
 	const [category, setCategory] = useState("");
 	const [submitting, setSubmitting] = useState(false);
@@ -54,12 +60,15 @@ export default function ReportIssueFab() {
 
 	const canCreate = permissions.includes(PERMISSIONS.TICKETS.CREATE);
 	const hidden =
-		loading ||
-		!canCreate ||
-		shouldHideReportIssueFab(pathname) ||
-		overlayOpen;
+		loading || !canCreate || shouldHideReportIssueFab(pathname) || overlayOpen;
+
+	const categoryOptions = useMemo(
+		() => (lane ? categoriesForLane(lane) : []),
+		[lane],
+	);
 
 	useEffect(() => {
+		setLane("");
 		setTitle("");
 		setCategory("");
 		setSent(false);
@@ -73,7 +82,10 @@ export default function ReportIssueFab() {
 		if (!open) return;
 
 		function handlePointerDown(event: MouseEvent) {
-			if (panelRef.current && !panelRef.current.contains(event.target as Node)) {
+			if (
+				panelRef.current &&
+				!panelRef.current.contains(event.target as Node)
+			) {
 				setOpen(false);
 			}
 		}
@@ -84,9 +96,10 @@ export default function ReportIssueFab() {
 
 	const fullFormHref = (() => {
 		const params = new URLSearchParams();
+		if (lane) params.set("lane", lane);
 		if (title.trim()) params.set("title", title.trim());
 		if (category) params.set("category", category);
-		if (routeContext.affectedModule) {
+		if (lane === "engineering" && routeContext.affectedModule) {
 			params.set("module", routeContext.affectedModule);
 		}
 		const query = params.toString();
@@ -96,7 +109,7 @@ export default function ReportIssueFab() {
 	const handleQuickSubmit = useCallback(
 		async (event: FormEvent) => {
 			event.preventDefault();
-			if (!title.trim() || !category || submitting) return;
+			if (!lane || !title.trim() || !category || submitting) return;
 
 			setSubmitting(true);
 			setError(null);
@@ -113,8 +126,11 @@ export default function ReportIssueFab() {
 					"description",
 					`Quick report from ${routeContext.pageLabel}.\n\n${trimmedTitle}`,
 				);
+				form.set("lane", lane);
 				form.set("category", category);
-				form.set("affectedModule", routeContext.affectedModule);
+				if (lane === "engineering") {
+					form.set("affectedModule", routeContext.affectedModule);
+				}
 				form.set("impact", "medium");
 				form.set("urgency", "medium");
 
@@ -143,7 +159,15 @@ export default function ReportIssueFab() {
 				setSubmitting(false);
 			}
 		},
-		[category, routeContext.affectedModule, routeContext.pageLabel, router, submitting, title],
+		[
+			category,
+			lane,
+			routeContext.affectedModule,
+			routeContext.pageLabel,
+			router,
+			submitting,
+			title,
+		],
 	);
 
 	if (hidden) return null;
@@ -160,7 +184,9 @@ export default function ReportIssueFab() {
 							<div className="mx-auto mb-3 flex h-9 w-9 items-center justify-center rounded-full bg-blue/10">
 								<Send className="h-4 w-4 text-[#0f5384]" aria-hidden />
 							</div>
-							<p className="text-sm font-medium text-slate-700">Ticket logged</p>
+							<p className="text-sm font-medium text-slate-700">
+								Ticket logged
+							</p>
 							<p className="mt-1 text-xs text-slate-600">
 								We tagged it under {routeContext.pageLabel}.
 							</p>
@@ -185,6 +211,35 @@ export default function ReportIssueFab() {
 							</p>
 
 							<div className="space-y-3 px-4 pb-3">
+								<div className="grid grid-cols-1 gap-2">
+									{TICKET_LANE_OPTIONS.map((option) => {
+										const selected = lane === option.value;
+										return (
+											<button
+												key={option.value}
+												type="button"
+												onClick={() => {
+													setLane(option.value);
+													setCategory("");
+												}}
+												className={cn(
+													"cursor-pointer rounded-lg border px-3 py-2 text-left transition-all duration-200",
+													selected
+														? "border-[#0f5384] bg-blue/5"
+														: "border-slate-200 hover:border-blue-300",
+												)}
+											>
+												<p className="text-xs font-semibold text-slate-700">
+													{option.label}
+												</p>
+												<p className="mt-0.5 text-[11px] text-slate-500">
+													{option.helper}
+												</p>
+											</button>
+										);
+									})}
+								</div>
+
 								<div>
 									<Label
 										htmlFor="report-issue-title"
@@ -210,15 +265,26 @@ export default function ReportIssueFab() {
 									>
 										Category
 									</Label>
-									<Select value={category || undefined} onValueChange={setCategory}>
+									<Select
+										value={category || undefined}
+										onValueChange={setCategory}
+										disabled={!lane}
+									>
 										<SelectTrigger
 											id="report-issue-category"
-											className={cn( "cursor-pointer border-slate-200 bg-white text-sm shadow-sm focus-visible:border-[#078FAB] focus-visible:ring-[#078FAB]", !category && "text-slate-500", )}
+											className={cn(
+												"cursor-pointer border-slate-200 bg-white text-sm shadow-sm focus-visible:border-[#078FAB] focus-visible:ring-[#078FAB]",
+												!category && "text-slate-500",
+											)}
 										>
-											<SelectValue placeholder="Choose a category" />
+											<SelectValue
+												placeholder={
+													lane ? "Choose a category" : "Pick a lane first"
+												}
+											/>
 										</SelectTrigger>
 										<SelectContent className="border-slate-200 bg-white/95 shadow-xl backdrop-blur-xl">
-											{TICKET_CATEGORIES.map((item) => (
+											{categoryOptions.map((item) => (
 												<SelectItem
 													key={item}
 													value={item}
@@ -259,7 +325,7 @@ export default function ReportIssueFab() {
 									type="submit"
 									size="sm"
 									className="primary-btn px-4"
-									disabled={!title.trim() || !category || submitting}
+									disabled={!lane || !title.trim() || !category || submitting}
 								>
 									{submitting ? "Submitting…" : "Submit"}
 								</Button>

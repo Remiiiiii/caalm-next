@@ -101,15 +101,11 @@ export function formatLicenseForSpeech({
 				"Just a heads-up—you've got a license coming up for renewal soon.",
 			);
 		} else {
-			parts.push(
-				`Looks like you have ${totalItems} licenses expiring soon.`,
-			);
+			parts.push(`Looks like you have ${totalItems} licenses expiring soon.`);
 		}
 
 		if (totalItems > 1) {
-			parts.push(
-				`Let's start with license ${itemIndex + 1} of ${totalItems}.`,
-			);
+			parts.push(`Let's start with license ${itemIndex + 1} of ${totalItems}.`);
 		}
 	}
 

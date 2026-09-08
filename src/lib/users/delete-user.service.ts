@@ -92,7 +92,10 @@ export async function deleteUserAccount(
 			});
 		}
 	} catch (error) {
-		console.error("[deleteUserAccount] Failed to clear manager references:", error);
+		console.error(
+			"[deleteUserAccount] Failed to clear manager references:",
+			error,
+		);
 	}
 
 	await deleteRowsMatchingUserIds(tablesDB, "user_roles", candidateIds);
@@ -128,7 +131,10 @@ export async function deleteUserAccount(
 		try {
 			await usersApi.delete(accountId);
 		} catch (authError) {
-			console.error("[deleteUserAccount] Failed to delete Auth user:", authError);
+			console.error(
+				"[deleteUserAccount] Failed to delete Auth user:",
+				authError,
+			);
 		}
 	}
 

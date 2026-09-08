@@ -6,10 +6,8 @@ import { useCombinedExpiryModal } from "@/hooks/useCombinedExpiryModal";
 import { useContractsExpiring } from "@/hooks/useContractsExpiring";
 
 export default function ContractsExpiryModalTestButton() {
-	const {
-		contracts: contractsFromApi,
-		refresh: refreshContracts,
-	} = useContractsExpiring();
+	const { contracts: contractsFromApi, refresh: refreshContracts } =
+		useContractsExpiring();
 
 	const {
 		itemsToShow,

@@ -1,8 +1,8 @@
 import type { PermissionKey } from "@/constants/permissions";
 import { PERMISSIONS } from "@/constants/permissions";
 import {
-	isITDepartment,
 	type DepartmentProfileFields,
+	isITDepartment,
 } from "@/lib/rbac/it-department";
 
 export type DashboardSwitchLink = {

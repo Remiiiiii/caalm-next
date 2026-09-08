@@ -2,7 +2,6 @@
 
 import {
 	ArrowLeftRight,
-	Ban,
 	CreditCard,
 	Info,
 	MoreHorizontal,
@@ -12,8 +11,8 @@ import {
 	Trash2,
 } from "lucide-react";
 import { useState } from "react";
-import EditPaymentMethodDialog from "@/components/settings/EditPaymentMethodDialog";
 import CardBrandIcon from "@/components/billing/CardBrandIcon";
+import EditPaymentMethodDialog from "@/components/settings/EditPaymentMethodDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -44,13 +43,14 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useStepUp } from "@/contexts/StepUpContext";
+import { useToast } from "@/hooks/use-toast";
 import {
 	DATA_TABLE_BODY_ROW_BASE,
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
 } from "@/lib/ui/data-table-styles";
 import { cn } from "@/lib/utils";
-import { useToast } from "@/hooks/use-toast";
 
 export interface PaymentMethodRow {
 	id: string;
@@ -111,6 +111,7 @@ export default function PaymentMethodsSection({
 	actionError,
 }: PaymentMethodsSectionProps) {
 	const { toast } = useToast();
+	const { ensureStepUp } = useStepUp();
 	const [editOpen, setEditOpen] = useState(false);
 	const [removeOpen, setRemoveOpen] = useState(false);
 	const [removeBlockedOpen, setRemoveBlockedOpen] = useState(false);
@@ -143,6 +144,7 @@ export default function PaymentMethodsSection({
 		expYear: number;
 	}) => {
 		if (!selectedMethod) return;
+		if (!(await ensureStepUp())) return;
 		try {
 			setSaving(true);
 			setLocalError(null);
@@ -185,6 +187,7 @@ export default function PaymentMethodsSection({
 
 	const handleRemove = async () => {
 		if (!selectedMethod) return;
+		if (!(await ensureStepUp())) return;
 		try {
 			setRemoving(true);
 			setLocalError(null);
@@ -219,23 +222,21 @@ export default function PaymentMethodsSection({
 	};
 
 	const handleSetDefault = async (method: PaymentMethodRow) => {
+		if (!(await ensureStepUp())) return;
 		try {
 			setSettingDefaultId(method.id);
 			setLocalError(null);
-			const res = await fetch(
-				`/api/billing/payment-methods/${method.id}`,
-				{
-					method: "PATCH",
-					headers: {
-						"Content-Type": "application/json",
-						"x-org-id": orgId,
-					},
-					body: JSON.stringify({
-						orgId,
-						setDefault: true,
-					}),
+			const res = await fetch(`/api/billing/payment-methods/${method.id}`, {
+				method: "PATCH",
+				headers: {
+					"Content-Type": "application/json",
+					"x-org-id": orgId,
 				},
-			);
+				body: JSON.stringify({
+					orgId,
+					setDefault: true,
+				}),
+			});
 			const data = await res.json();
 			if (!res.ok) {
 				throw new Error(data.error || "Could not set default payment method");
@@ -354,10 +355,7 @@ export default function PaymentMethodsSection({
 														{method.name || "—"}
 													</TableCell>
 													<TableCell className="text-sm text-slate-700">
-														{formatExpiration(
-															method.expMonth,
-															method.expYear,
-														)}
+														{formatExpiration(method.expMonth, method.expYear)}
 													</TableCell>
 													<TableCell className="text-right">
 														<DropdownMenu modal={false}>
@@ -530,17 +528,7 @@ export default function PaymentMethodsSection({
 
 					<div className="glass-dialog-alert-footer">
 						<div className="text-xs text-slate-500" />
-						<div className="flex items-center gap-3">
-							<Button
-								type="button"
-								variant="outline"
-								className="primary-btn px-3 sm:px-4"
-								onClick={() => setRemoveOpen(false)}
-								disabled={removing}
-							>
-								<Ban className="h-4 w-4" aria-hidden />
-								Cancel
-							</Button>
+						<div className="flex items-center justify-end gap-3">
 							<Button
 								type="button"
 								variant="outline"
@@ -573,22 +561,10 @@ export default function PaymentMethodsSection({
 					<div className="glass-dialog-body-padded">
 						<DialogDescription className="text-sm leading-relaxed text-slate-600">
 							The default payment method cannot be removed as{" "}
-							<span className="font-semibold text-slate-700">{orgName}</span> has
-							an upcoming invoice. To proceed, set a backup or add a new default
-							payment method.
+							<span className="font-semibold text-slate-700">{orgName}</span>{" "}
+							has an upcoming invoice. To proceed, set a backup or add a new
+							default payment method.
 						</DialogDescription>
-					</div>
-					<div className="glass-dialog-alert-footer">
-						<div className="text-xs text-slate-500" />
-						<Button
-							type="button"
-							variant="outline"
-							className="primary-btn px-3 sm:px-4"
-							onClick={() => setRemoveBlockedOpen(false)}
-						>
-							<Ban className="h-4 w-4" aria-hidden />
-							Cancel
-						</Button>
 					</div>
 				</DialogContent>
 			</Dialog>

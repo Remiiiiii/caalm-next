@@ -32,14 +32,15 @@ type DialogContentProps = React.ComponentPropsWithoutRef<
 > & {
 	/** Merged into `DialogOverlay` after defaults (`bg-white/10 backdrop-blur-xs`). */
 	overlayClassName?: string;
-	/** Corner X. Default on for browse/task modals; off for `variant="destructive"`. */
+	/** Corner X. Default on for all variants; set false only to hide it. */
 	showCloseButton?: boolean;
 	closeButtonClassName?: string;
 	/** Backdrop click dismiss. Off for `variant="destructive"`. */
 	dismissOnOverlay?: boolean;
 	/**
-	 * `destructive` = labeled Cancel in the footer, no X, no overlay dismiss.
-	 * `default` = visible X; add a footer Cancel when the modal is a form/task.
+	 * `destructive` = no overlay dismiss by default (safer confirms).
+	 * Corner X is on by default for all variants (footer Cancel is omit).
+	 * Pass `showCloseButton={false}` only when dismiss must be blocked.
 	 */
 	variant?: "default" | "destructive";
 };
@@ -63,7 +64,7 @@ const DialogContent = React.forwardRef<
 		ref,
 	) => {
 		const isDestructive = variant === "destructive";
-		const showX = showCloseButton ?? !isDestructive;
+		const showX = showCloseButton ?? true;
 		const allowOverlay = dismissOnOverlay ?? !isDestructive;
 
 		return (

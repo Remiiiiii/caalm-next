@@ -97,9 +97,7 @@ export function SubmitProgressIndicator({
 									? "w-full bg-green"
 									: "bg-linear-to-r from-brand to-brand-100",
 							)}
-							style={
-								isSuccess ? undefined : { width: `${clampedProgress}%` }
-							}
+							style={isSuccess ? undefined : { width: `${clampedProgress}%` }}
 						/>
 					</div>
 				</div>

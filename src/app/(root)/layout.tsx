@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import type React from "react";
 import { Suspense, useEffect, useMemo } from "react";
 import DashboardHeader from "@/components/DashboardHeader";
+import { DesktopFirstGate } from "@/components/DesktopFirstGate";
 import DemoTourLayer from "@/components/demo/tour/DemoTourLayer";
 import MobileNavigation from "@/components/MobileNavigation";
 import NotificationSoundListener from "@/components/NotificationSoundListener";
@@ -14,6 +15,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { OrganizationProvider } from "@/contexts/OrganizationContext";
 import { SidebarProvider } from "@/contexts/SidebarContext";
+import { StepUpProvider } from "@/contexts/StepUpContext";
 
 const LayoutContent = ({ children }: { children: React.ReactNode }) => {
 	const { user, loading } = useAuth();
@@ -109,15 +111,17 @@ const LayoutContent = ({ children }: { children: React.ReactNode }) => {
 								<DashboardHeader user={user} />
 							</div>
 							<div className="main-content">
-								<Suspense
-									fallback={
-										<div className="flex min-h-[200px] items-center justify-center">
-											<LoadingSpinner size="md" />
-										</div>
-									}
-								>
-									{children}
-								</Suspense>
+								<DesktopFirstGate>
+									<Suspense
+										fallback={
+											<div className="flex min-h-[200px] items-center justify-center">
+												<LoadingSpinner size="md" />
+											</div>
+										}
+									>
+										{children}
+									</Suspense>
+								</DesktopFirstGate>
 							</div>
 						</section>
 						<Toaster />
@@ -134,7 +138,9 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 	return (
 		<AuthProvider>
 			<OrganizationProvider>
-				<LayoutContent>{children}</LayoutContent>
+				<StepUpProvider>
+					<LayoutContent>{children}</LayoutContent>
+				</StepUpProvider>
 			</OrganizationProvider>
 		</AuthProvider>
 	);

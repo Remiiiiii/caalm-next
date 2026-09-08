@@ -10,7 +10,12 @@ import ExpiryAlertModal, {
 import { useToast } from "@/hooks/use-toast";
 import { useContractSnooze } from "@/hooks/useContractSnooze";
 import { useUpdateContractStatus } from "@/hooks/useUpdateContractStatus";
+import { DESKTOP_MIN_WIDTH } from "@/lib/ui/desktop-first";
 import type { UIFileDoc } from "@/types/files";
+
+function isPhoneViewport() {
+	return typeof window !== "undefined" && window.innerWidth < DESKTOP_MIN_WIDTH;
+}
 
 type ContractExpiryAlertBridgeProps = {
 	open: boolean;
@@ -38,8 +43,7 @@ export default function ContractExpiryAlertBridge({
 	const { updateStatus } = useUpdateContractStatus({ onStatusChange });
 	const [isBusy, setIsBusy] = useState(false);
 
-	const title =
-		contract.contractName || contract.name || "Untitled Contract";
+	const title = contract.contractName || contract.name || "Untitled Contract";
 	const expiryDate = contract.contractExpiryDate || "";
 	const vendor =
 		contract.vendor ||
@@ -48,11 +52,27 @@ export default function ContractExpiryAlertBridge({
 		"";
 
 	const handleRenew = () => {
+		if (isPhoneViewport()) {
+			toast({
+				title: "Open on a laptop",
+				description: "Renew from the contract library on a desktop or laptop.",
+			});
+			onContractHandled(contract.$id);
+			return;
+		}
 		router.push("/contracts");
 		onContractHandled(contract.$id);
 	};
 
 	const handleViewDetails = () => {
+		if (isPhoneViewport()) {
+			toast({
+				title: "Open on a laptop",
+				description: "Full contract details need a wider screen.",
+			});
+			onContractHandled(contract.$id);
+			return;
+		}
 		router.push(`/contracts?highlight=${encodeURIComponent(contract.$id)}`);
 		onContractHandled(contract.$id);
 	};
@@ -123,15 +143,7 @@ export default function ContractExpiryAlertBridge({
 			title={title}
 			expiryDate={expiryDate}
 			daysRemaining={daysRemaining}
-			amount={
-				typeof contract.amount === "number"
-					? contract.amount
-					: typeof contract.amount === "string" &&
-							contract.amount.trim() !== "" &&
-							Number.isFinite(Number.parseFloat(contract.amount))
-						? Number.parseFloat(contract.amount)
-						: undefined
-			}
+			amount={typeof contract.amount === "number" ? contract.amount : undefined}
 			status={contract.status || "active"}
 			typeLabel={formatExpiryTypeLabel(contract.contractType)}
 			vendor={vendor || "—"}

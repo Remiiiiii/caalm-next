@@ -26,17 +26,13 @@ export default function AdjustPlanDialog({
 }: AdjustPlanDialogProps) {
 	const { toast } = useToast();
 	const { tier } = useOrgPlanSummary();
-	const {
-		canBilling,
-		resolvedOrgId,
-		plans,
-		subscription,
-	} = useBillingSubscription();
+	const { canBilling, resolvedOrgId, plans, subscription } =
+		useBillingSubscription();
 
 	const [checkoutTier, setCheckoutTier] = useState<string | null>(null);
-	const [billingInterval, setBillingInterval] = useState<
-		"monthly" | "yearly"
-	>("monthly");
+	const [billingInterval, setBillingInterval] = useState<"monthly" | "yearly">(
+		"monthly",
+	);
 
 	useEffect(() => {
 		if (subscription?.billingInterval === "yearly") {
@@ -67,7 +63,11 @@ export default function AdjustPlanDialog({
 					"Content-Type": "application/json",
 					"x-org-id": resolvedOrgId,
 				},
-				body: JSON.stringify({ orgId: resolvedOrgId, tier: nextTier, interval }),
+				body: JSON.stringify({
+					orgId: resolvedOrgId,
+					tier: nextTier,
+					interval,
+				}),
 			});
 			const data = await res.json();
 			if (!res.ok) throw new Error(data.error || "Checkout unavailable");

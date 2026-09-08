@@ -2,13 +2,12 @@
 
 import { useMemo } from "react";
 import { useContractsView } from "@/components/ContractsViewContext";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import StatusUnderlineTabs from "@/components/StatusUnderlineTabs";
 import {
 	isContractExpired,
 	isExpiringWithinDays,
 	type StatusTab,
 } from "@/lib/contracts/contractsListUtils";
-import { cn } from "@/lib/utils";
 import type { UIFileDoc } from "@/types/files";
 
 interface ContractsStatusTabsProps {
@@ -48,7 +47,7 @@ export default function ContractsStatusTabs({
 		};
 	}, [files]);
 
-	const tabs: { value: StatusTab; label: string; count: number }[] = [
+	const tabs = [
 		{ value: "all", label: "All", count: counts.all },
 		{ value: "active", label: "Active", count: counts.active },
 		{ value: "pending", label: "Pending", count: counts.pending },
@@ -57,33 +56,15 @@ export default function ContractsStatusTabs({
 	];
 
 	return (
-		<div className="px-4 sm:px-6 pt-4 border-b border-slate-200/80">
-			<Tabs
-				value={statusTab}
-				onValueChange={(v) => {
-					setStatusTab(v as StatusTab);
-					scrollToList();
-				}}
-			>
-				<TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 h-auto gap-1 bg-slate-100/80 p-1">
-					{tabs.map((tab) => (
-						<TabsTrigger
-							key={tab.value}
-							value={tab.value}
-							className={cn(
-								"cursor-pointer text-xs sm:text-sm py-2 data-[state=active]:bg-white data-[state=active]:shadow-sm",
-							)}
-						>
-							<span className="sidebar-gradient-text font-medium">
-								{tab.label}
-							</span>
-							<span className="ml-1.5 text-slate-500 tabular-nums">
-								{tab.count}
-							</span>
-						</TabsTrigger>
-					))}
-				</TabsList>
-			</Tabs>
-		</div>
+		<StatusUnderlineTabs
+			tabs={tabs}
+			value={statusTab}
+			indicatorId="contracts-status-underline"
+			listClassName="grid-cols-2 sm:grid-cols-5"
+			onValueChange={(v) => {
+				setStatusTab(v as StatusTab);
+				scrollToList();
+			}}
+		/>
 	);
 }

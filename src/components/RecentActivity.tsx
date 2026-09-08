@@ -32,10 +32,7 @@ interface RecentActivityProps {
 	className?: string;
 }
 
-const RecentActivity: FC<RecentActivityProps> = ({
-	limit = 25,
-	className,
-}) => {
+const RecentActivity: FC<RecentActivityProps> = ({ limit = 25, className }) => {
 	const { orgId } = useOrganization();
 	const { recentActivities, isLoading } = useUnifiedDashboardData(
 		orgId || "default_organization",
@@ -105,11 +102,12 @@ const RecentActivity: FC<RecentActivityProps> = ({
 					</div>
 					<div className={cn(ACTIVITY_VIEWPORT_CLASS, "overflow-y-auto")}>
 						<div className="space-y-3 py-2 pr-2">
-							{Array.from({ length: ACTIVITY_VISIBLE_COUNT }, (_, i) => i + 1).map(
-								(i) => (
-									<ActivityItemSkeleton key={i} />
-								),
-							)}
+							{Array.from(
+								{ length: ACTIVITY_VISIBLE_COUNT },
+								(_, i) => i + 1,
+							).map((i) => (
+								<ActivityItemSkeleton key={i} />
+							))}
 						</div>
 					</div>
 				</CardContent>

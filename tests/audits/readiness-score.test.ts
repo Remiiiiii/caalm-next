@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { computeLiveReadinessScore, computeRag } from "@/lib/audits/readiness/score";
+import {
+	computeLiveReadinessScore,
+	computeRag,
+} from "@/lib/audits/readiness/score";
 import { cadencesDueNow, localDayKey } from "@/lib/audits/readiness/timezone";
 
 describe("audit readiness score", () => {

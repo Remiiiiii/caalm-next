@@ -29,17 +29,16 @@ export function normalizeStripeCardBrand(brand: string): StripeCardBrand {
 	const normalized = brand.trim().toLowerCase().replace(/_/g, " ");
 	if (normalized === "visa") return "visa";
 	if (normalized === "mastercard") return "mastercard";
-	if (
-		normalized === "amex" ||
-		normalized === "american express"
-	) {
+	if (normalized === "amex" || normalized === "american express") {
 		return "amex";
 	}
 	if (normalized === "discover") return "discover";
 	if (normalized === "diners" || normalized === "diners club") return "diners";
 	if (normalized === "jcb") return "jcb";
-	if (normalized === "unionpay" || normalized === "union pay") return "unionpay";
-	if (normalized === "eftpos au" || normalized === "eftpos_au") return "eftpos_au";
+	if (normalized === "unionpay" || normalized === "union pay")
+		return "unionpay";
+	if (normalized === "eftpos au" || normalized === "eftpos_au")
+		return "eftpos_au";
 	return "unknown";
 }
 
@@ -130,12 +129,16 @@ export default function CardBrandIcon({
 }: CardBrandIconProps) {
 	const normalized = normalizeStripeCardBrand(brand);
 	const label = formatBrandLabel(brand);
-	const imageSrc = PAYMENT_BRAND_IMAGES[normalized as keyof typeof PAYMENT_BRAND_IMAGES];
+	const imageSrc =
+		PAYMENT_BRAND_IMAGES[normalized as keyof typeof PAYMENT_BRAND_IMAGES];
 
 	if (imageSrc) {
 		return (
 			<span
-				className={cn("inline-flex shrink-0 items-center justify-center", className)}
+				className={cn(
+					"inline-flex shrink-0 items-center justify-center",
+					className,
+				)}
 			>
 				<BrandImage src={imageSrc} alt={label} />
 			</span>

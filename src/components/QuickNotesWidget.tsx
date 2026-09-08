@@ -573,14 +573,6 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 							</div>
 							<div className="flex items-center gap-3">
 								<Button
-									variant="outline"
-									onClick={() => setIsCreateDialogOpen(false)}
-									className="primary-btn px-3 sm:px-4"
-								>
-									<Ban className="h-4 w-4" />
-									Cancel
-								</Button>
-								<Button
 									onClick={handleCreateNote}
 									disabled={!stripHtml(newNote.content).trim()}
 									className="primary-btn px-3 sm:px-4"
@@ -669,14 +661,6 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 									: "Add note content to update"}
 							</div>
 							<div className="flex items-center gap-3">
-								<Button
-									variant="outline"
-									onClick={() => setIsEditDialogOpen(false)}
-									className="primary-btn px-3 sm:px-4"
-								>
-									<Ban className="h-4 w-4" />
-									Cancel
-								</Button>
 								<Button
 									onClick={handleEditNote}
 									disabled={!stripHtml(editNote.content).trim()}

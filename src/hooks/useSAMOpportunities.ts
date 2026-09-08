@@ -35,6 +35,7 @@ export interface UseSAMOpportunitiesFilters {
 
 	// Pagination
 	limit?: number;
+	/** SAM.gov page index (0-based), NOT a record skip. Page 2 => offset 1. */
 	offset?: number;
 
 	// Status
@@ -84,51 +85,56 @@ const searchFetcher = async (
 	return result.data;
 };
 
+function filtersCacheKey(filters: UseSAMOpportunitiesFilters): string {
+	return JSON.stringify(filters);
+}
+
 /**
  * Enhanced React hook for searching SAM.gov opportunities with SWR caching
  * Implements debouncing, memoization, and fast data fetching
  */
 export const useSAMOpportunities = (): UseSAMOpportunitiesResult => {
 	const [hasSearched, setHasSearched] = useState(false);
+	// Own copy of the last good page — SWR mutation `data` alone can briefly
+	// go empty between page triggers; this keeps the list/total stable.
+	const [lastResult, setLastResult] = useState<SAMSearchResponse | null>(null);
 	const [searchCache, setSearchCache] = useState<
 		Map<string, SAMSearchResponse>
 	>(new Map());
 
-	// Use SWR mutation for search with caching
 	const {
 		trigger,
 		isMutating: loading,
 		error: swrError,
-		data: searchResult,
 	} = useSWRMutation("/api/sam-opportunities", searchFetcher, {
-		revalidate: false, // Don't auto-revalidate search results
-		onSuccess: (data, _key, config) => {
-			// Cache successful searches
-			const cacheKey = JSON.stringify(config);
-			setSearchCache((prev) => new Map(prev.set(cacheKey, data)));
-		},
+		revalidate: false,
 	});
 
-	// Memoized search function with debouncing support
 	const searchOpportunities = useCallback(
 		async (filters: UseSAMOpportunitiesFilters) => {
 			try {
 				setHasSearched(true);
 
-				// Check cache first for exact matches
-				const cacheKey = JSON.stringify(filters);
+				const cacheKey = filtersCacheKey(filters);
 				const cachedResult = searchCache.get(cacheKey);
 
 				if (cachedResult) {
-					// Return cached result immediately
+					setLastResult(cachedResult);
 					return cachedResult;
 				}
 
-				// Execute new search
 				const result = await trigger(filters);
+				if (result) {
+					setLastResult(result);
+					setSearchCache((prev) => {
+						const next = new Map(prev);
+						next.set(cacheKey, result);
+						return next;
+					});
+				}
 				return result;
 			} catch (err) {
-				console.error("Enhanced SAM search failed:", err);
+				console.error("[CLIENT] useSAMOpportunities: search failed", err);
 				throw err;
 			}
 		},
@@ -137,15 +143,16 @@ export const useSAMOpportunities = (): UseSAMOpportunitiesResult => {
 
 	const clearResults = useCallback(() => {
 		setHasSearched(false);
-		setSearchCache(new Map()); // Clear search cache
+		setLastResult(null);
+		setSearchCache(new Map());
 	}, []);
 
-	// Memoized derived values for performance
 	const memoizedValues = useMemo(() => {
-		const opportunities = searchResult?.opportunities || [];
-		const totalRecords = searchResult?.totalRecords || 0;
-		const currentPage = searchResult?.page || 1;
-		const totalPages = Math.ceil(totalRecords / 100) || 0;
+		const opportunities = lastResult?.opportunities || [];
+		const totalRecords = lastResult?.totalRecords || 0;
+		const currentPage = lastResult?.page || 1;
+		const pageSize = lastResult?.size || 25;
+		const totalPages = Math.ceil(totalRecords / pageSize) || 0;
 
 		return {
 			opportunities,
@@ -153,7 +160,7 @@ export const useSAMOpportunities = (): UseSAMOpportunitiesResult => {
 			currentPage,
 			totalPages,
 		};
-	}, [searchResult]);
+	}, [lastResult]);
 
 	const error = swrError ? String(swrError) : null;
 
@@ -175,7 +182,6 @@ export const useSAMFilterMapping = () => {
 		(
 			responseOption: string,
 		): keyof typeof RESPONSE_DEADLINE_OPTIONS | undefined => {
-			// Map your existing response deadline options to SAM API format
 			const mapping: Record<string, keyof typeof RESPONSE_DEADLINE_OPTIONS> = {
 				Anytime: "Anytime",
 				"Next Day": "Next Day",
@@ -193,29 +199,27 @@ export const useSAMFilterMapping = () => {
 	);
 
 	const mapNAICSSectorToCodes = useCallback((sector: string): string[] => {
-		// Map NAICS sectors to actual NAICS codes
-		// This would integrate with your existing NAICS sector data
 		const sectorMapping: Record<string, string[]> = {
-			Agriculture: ["11"], // Agriculture, Forestry, Fishing and Hunting
-			Mining: ["21"], // Mining, Quarrying, and Oil and Gas Extraction
-			Utilities: ["22"], // Utilities
-			Construction: ["23"], // Construction
-			Manufacturing: ["31", "32", "33"], // Manufacturing
-			"Wholesale Trade": ["42"], // Wholesale Trade
-			"Retail Trade": ["44", "45"], // Retail Trade
-			Transportation: ["48", "49"], // Transportation and Warehousing
-			Information: ["51"], // Information
-			Finance: ["52"], // Finance and Insurance
-			"Real Estate": ["53"], // Real Estate and Rental and Leasing
-			"Professional Services": ["54"], // Professional, Scientific, and Technical Services
-			Management: ["55"], // Management of Companies and Enterprises
-			Administrative: ["56"], // Administrative and Support and Waste Management
-			"Educational Services": ["61"], // Educational Services
-			"Health Care": ["62"], // Health Care and Social Assistance
-			Arts: ["71"], // Arts, Entertainment, and Recreation
-			Accommodation: ["72"], // Accommodation and Food Services
-			"Other Services": ["81"], // Other Services (except Public Administration)
-			"Public Administration": ["92"], // Public Administration
+			Agriculture: ["11"],
+			Mining: ["21"],
+			Utilities: ["22"],
+			Construction: ["23"],
+			Manufacturing: ["31", "32", "33"],
+			"Wholesale Trade": ["42"],
+			"Retail Trade": ["44", "45"],
+			Transportation: ["48", "49"],
+			Information: ["51"],
+			Finance: ["52"],
+			"Real Estate": ["53"],
+			"Professional Services": ["54"],
+			Management: ["55"],
+			Administrative: ["56"],
+			"Educational Services": ["61"],
+			"Health Care": ["62"],
+			Arts: ["71"],
+			Accommodation: ["72"],
+			"Other Services": ["81"],
+			"Public Administration": ["92"],
 		};
 
 		return sectorMapping[sector] || [];

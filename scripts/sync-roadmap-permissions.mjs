@@ -16,11 +16,13 @@ loadEnv({ path: path.join(ROOT, ".env.local") });
 const PROD_DB = process.env.PROD_APPWRITE_DATABASE_ID || "685ed87c0009d8189fc7";
 const DEMO_DB = "caalm-demo";
 const PERMISSIONS_TABLE =
-	process.env.NEXT_PUBLIC_APPWRITE_PERMISSIONS_COLLECTION || "685ed87c0009d8189fc8";
+	process.env.NEXT_PUBLIC_APPWRITE_PERMISSIONS_COLLECTION ||
+	"685ed87c0009d8189fc8";
 const ROLE_PERMISSIONS_TABLE = "role_permissions";
 
 const ENDPOINT = (
-	process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || "https://fra.cloud.appwrite.io/v1"
+	process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT ||
+	"https://fra.cloud.appwrite.io/v1"
 ).replace(/\/$/, "");
 const PROJECT = process.env.NEXT_PUBLIC_APPWRITE_PROJECT;
 const API_KEY = process.env.NEXT_APPWRITE_API_KEY;
@@ -48,7 +50,9 @@ const ROADMAP_PERMISSIONS = [
 const ROLE_IDS = ["role_it_staff", "role_super_admin", "role_org_admin"];
 
 if (!PROJECT || !API_KEY) {
-	console.error("Missing NEXT_PUBLIC_APPWRITE_PROJECT or NEXT_APPWRITE_API_KEY");
+	console.error(
+		"Missing NEXT_PUBLIC_APPWRITE_PROJECT or NEXT_APPWRITE_API_KEY",
+	);
 	process.exit(1);
 }
 
@@ -124,7 +128,9 @@ async function roleHasPermission(databaseId, roleId, permissionId) {
 			values: [permissionId],
 		}),
 	);
-	const qLimit = encodeURIComponent(JSON.stringify({ method: "limit", values: [1] }));
+	const qLimit = encodeURIComponent(
+		JSON.stringify({ method: "limit", values: [1] }),
+	);
 	const result = await appwrite(
 		`/tablesdb/${databaseId}/tables/${ROLE_PERMISSIONS_TABLE}/rows?queries[]=${qRole}&queries[]=${qPerm}&queries[]=${qLimit}`,
 	);
@@ -138,13 +144,16 @@ async function assignRolePermission(databaseId, roleId, permissionId) {
 	}
 
 	const rowId = `rp_${roleId}_${permissionId}`.slice(0, 36);
-	await appwrite(`/tablesdb/${databaseId}/tables/${ROLE_PERMISSIONS_TABLE}/rows`, {
-		method: "POST",
-		body: {
-			rowId,
-			data: { roleId, permissionId },
+	await appwrite(
+		`/tablesdb/${databaseId}/tables/${ROLE_PERMISSIONS_TABLE}/rows`,
+		{
+			method: "POST",
+			body: {
+				rowId,
+				data: { roleId, permissionId },
+			},
 		},
-	});
+	);
 	console.log(`  assigned: ${roleId} -> ${permissionId}`);
 }
 

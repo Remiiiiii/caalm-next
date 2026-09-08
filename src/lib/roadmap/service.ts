@@ -1,8 +1,35 @@
 /**
  * Roadmap business logic — tasks complete via completeSectionFromMerge()
- * or when a catalog-linked GitHub PR is already merged (overview reconcile).
+ * only after Playwright E2E (push) + Deploy to Vercel (production) succeed.
+ * Overview reconcile no longer completes on merge alone.
  */
 
+import {
+	getCatalogLinkedPrNumber,
+	getCatalogLinkedPrNumbers,
+	getSectionNumberForPr,
+	ROADMAP_TRACKING_STUB_PRS,
+	sectionCompletesOnMergedCatalogPr,
+	sectionUsesPerTaskPrCompletion,
+} from "./catalog";
+import {
+	fetchPullRequestStatus,
+	fetchRoadmapCompletionGate,
+	listOpenPullRequests,
+} from "./github";
+import {
+	findSectionPullRequest,
+	type GitHubPullRequestSummary,
+	matchPullRequestToTask,
+	type ResolvedPullRequest,
+	resolveSectionFromPrMatch,
+} from "./github-pr-match";
+import {
+	buildTaskTree,
+	computeProgressPercent,
+	computeUnlocked,
+	countByStatus,
+} from "./locking";
 import {
 	appendStatusLog,
 	createTestRun,
@@ -20,26 +47,6 @@ import {
 	saveSection,
 	saveTask,
 } from "./store";
-import {
-	getCatalogLinkedPrNumber,
-	getCatalogLinkedPrNumbers,
-	getSectionNumberForPr,
-	sectionUsesPerTaskPrCompletion,
-} from "./catalog";
-import { fetchPullRequestStatus, listOpenPullRequests } from "./github";
-import {
-	findSectionPullRequest,
-	matchPullRequestToTask,
-	resolveSectionFromPrMatch,
-	type GitHubPullRequestSummary,
-	type ResolvedPullRequest,
-} from "./github-pr-match";
-import {
-	buildTaskTree,
-	computeProgressPercent,
-	computeUnlocked,
-	countByStatus,
-} from "./locking";
 import type {
 	RoadmapOverview,
 	RoadmapSectionOverview,
@@ -194,7 +201,12 @@ export async function evaluateSectionMergeBlock(
 	for (const number of numbers) {
 		const isTrigger = options?.triggeringPr?.prNumber === number;
 		if (isTrigger) {
-			const sha = options.triggeringPr.mergeCommitSha;
+			const sha = options?.triggeringPr?.mergeCommitSha;
+			if (!sha) continue;
+			const gate = await fetchRoadmapCompletionGate({ commitSha: sha });
+			if (!gate.ok) {
+				return `PR #${number}: ${gate.reason}`;
+			}
 			const run = await findTestRunForPrCommit({
 				prNumber: number,
 				commitSha: sha,
@@ -220,6 +232,10 @@ export async function evaluateSectionMergeBlock(
 		const sha = live.mergeCommitSha;
 		if (!sha) {
 			return `PR #${number}: missing merge commit`;
+		}
+		const gate = await fetchRoadmapCompletionGate({ commitSha: sha });
+		if (!gate.ok) {
+			return `PR #${number}: ${gate.reason}`;
 		}
 		const run = await findTestRunForPrCommit({
 			prNumber: number,
@@ -280,23 +296,47 @@ function toPrSummary(
 	};
 }
 
-/** Mark catalog-linked tasks complete when GitHub already shows their PR merged. */
+/**
+ * Mark catalog-linked tasks complete only when the merge commit also has
+ * Playwright E2E (push) + Deploy to Vercel (production) green.
+ */
 async function persistTasksCompletedByMergedPrs(
 	tasks: RoadmapTask[],
 	prLookup: Map<number, CatalogPrLinkMeta>,
 ): Promise<boolean> {
 	let changed = false;
 	const completedAt = new Date().toISOString();
+	const gateBySha = new Map<
+		string,
+		Awaited<ReturnType<typeof fetchRoadmapCompletionGate>>
+	>();
+
 	for (const task of tasks) {
 		if (task.status === "complete" || task.prNumber == null) continue;
+		const linkedSection = getSectionNumberForPr(task.prNumber);
+		if (
+			linkedSection != null &&
+			!sectionCompletesOnMergedCatalogPr(linkedSection)
+		) {
+			continue;
+		}
 		const meta = prLookup.get(task.prNumber);
 		if (meta?.state !== "merged") continue;
+		const sha = meta.mergeCommitSha?.trim();
+		if (!sha) continue;
+
+		let gate = gateBySha.get(sha);
+		if (!gate) {
+			gate = await fetchRoadmapCompletionGate({ commitSha: sha });
+			gateBySha.set(sha, gate);
+		}
+		if (!gate.ok) continue;
+
 		const next: RoadmapTask = {
 			...task,
 			status: "complete",
 			completedAt: task.completedAt ?? completedAt,
-			completedCommitSha:
-				task.completedCommitSha ?? meta.mergeCommitSha ?? null,
+			completedCommitSha: task.completedCommitSha ?? sha,
 		};
 		await saveTask(next);
 		await appendStatusLog({
@@ -305,7 +345,7 @@ async function persistTasksCompletedByMergedPrs(
 			fromStatus: task.status,
 			toStatus: "complete",
 			actor: "system:merged-catalog-pr",
-			commitSha: meta.mergeCommitSha ?? null,
+			commitSha: sha,
 			testRunId: null,
 		});
 		changed = true;
@@ -318,6 +358,11 @@ let overviewCache: { fetchedAt: number; value: RoadmapOverview } | null = null;
 
 function invalidateOverviewCache() {
 	overviewCache = null;
+}
+
+/** Vitest helper — overview cache must not survive resetRoadmapMemoryForTests. */
+export function clearOverviewCacheForTests(): void {
+	invalidateOverviewCache();
 }
 
 export async function getOverview(options?: {
@@ -348,6 +393,38 @@ export async function getOverview(options?: {
 		unlockedTasks,
 		prLookup,
 	);
+
+	// Same completion gate used to finish sections — used for PR strikethrough UI
+	const checksPassedByPr = new Map<number, boolean>();
+	const gateReasonByPr = new Map<number, string>();
+	const gateBySha = new Map<
+		string,
+		Awaited<ReturnType<typeof fetchRoadmapCompletionGate>>
+	>();
+	await Promise.all(
+		[...prLookup.entries()].map(async ([number, meta]) => {
+			if (meta.state !== "merged") {
+				checksPassedByPr.set(number, false);
+				return;
+			}
+			const sha = meta.mergeCommitSha?.trim();
+			if (!sha) {
+				checksPassedByPr.set(number, false);
+				gateReasonByPr.set(number, "missing merge commit");
+				return;
+			}
+			let gate = gateBySha.get(sha);
+			if (!gate) {
+				gate = await fetchRoadmapCompletionGate({ commitSha: sha });
+				gateBySha.set(sha, gate);
+			}
+			checksPassedByPr.set(number, gate.ok);
+			if (!gate.ok && gate.reason) {
+				gateReasonByPr.set(number, gate.reason);
+			}
+		}),
+	);
+
 	let viewSections = unlockedSections;
 	let viewTasks = unlockedTasks;
 	if (mergedPrChanged) {
@@ -370,11 +447,10 @@ export async function getOverview(options?: {
 		}
 	}
 
-	const sectionViews: RoadmapSectionOverview[] = viewSections.map(
-		(section) => {
-			const sectionTasks = viewTasks.filter(
-				(task) => task.sectionId === section.$id,
-			);
+	const sectionViews: RoadmapSectionOverview[] = viewSections.map((section) => {
+		const sectionTasks = viewTasks.filter(
+			(task) => task.sectionId === section.$id,
+		);
 		const taskCounts = countByStatus(sectionTasks);
 		const catalogNumbers = getCatalogLinkedPrNumbers(section.sectionNumber);
 		const waitingNumber = catalogNumbers.find((number) =>
@@ -386,8 +462,14 @@ export async function getOverview(options?: {
 				number,
 				title: meta?.title ?? "",
 				state: meta?.state,
+				checksPassed: checksPassedByPr.get(number) === true,
 			};
 		});
+		const waitingChecksNumber = catalogNumbers.find(
+			(number) =>
+				prLookup.get(number)?.state === "merged" &&
+				checksPassedByPr.get(number) !== true,
+		);
 		return {
 			id: section.$id,
 			sectionNumber: section.sectionNumber,
@@ -404,7 +486,12 @@ export async function getOverview(options?: {
 						? `${taskCounts.complete} of ${taskCounts.total} tasks complete`
 						: waitingNumber
 							? `Waiting for PR #${waitingNumber} to merge`
-							: null,
+							: waitingChecksNumber
+								? `PR #${waitingChecksNumber}: ${
+										gateReasonByPr.get(waitingChecksNumber) ||
+										"Waiting for required checks"
+									}`
+								: null,
 		};
 	});
 
@@ -424,16 +511,15 @@ export async function getSectionTaskTree(
 	if (!section) throw new RoadmapError("Section not found", 404);
 
 	const mergeBlockReason =
-		section.status === "complete" || sectionUsesPerTaskPrCompletion(section.sectionNumber)
+		section.status === "complete" ||
+		sectionUsesPerTaskPrCompletion(section.sectionNumber)
 			? null
 			: await evaluateSectionMergeBlock(section.sectionNumber);
 
 	const sectionTasks = tasks.filter((t) => t.sectionId === sectionId);
 	const prNumbers = [
 		...new Set(
-			sectionTasks
-				.map((t) => t.prNumber)
-				.filter((n): n is number => n != null),
+			sectionTasks.map((t) => t.prNumber).filter((n): n is number => n != null),
 		),
 	];
 	const branchByPr = new Map<number, string>();
@@ -468,6 +554,7 @@ export async function getSectionPullRequests(sectionId: string): Promise<
 		htmlUrl: string;
 		headRef: string;
 		body: string;
+		checksPassed: boolean;
 	}>
 > {
 	const section = await getSectionById(sectionId);
@@ -476,6 +563,13 @@ export async function getSectionPullRequests(sectionId: string): Promise<
 	return Promise.all(
 		numbers.map(async (number) => {
 			const live = await fetchPullRequestStatus({ prNumber: number });
+			let checksPassed = false;
+			if (live.state === "merged" && live.mergeCommitSha?.trim()) {
+				const gate = await fetchRoadmapCompletionGate({
+					commitSha: live.mergeCommitSha.trim(),
+				});
+				checksPassed = gate.ok;
+			}
 			return {
 				number,
 				title: live.title || `PR #${number}`,
@@ -483,6 +577,7 @@ export async function getSectionPullRequests(sectionId: string): Promise<
 				htmlUrl: live.htmlUrl || "",
 				headRef: live.headRef?.trim() || "",
 				body: live.body || "",
+				checksPassed,
 			};
 		}),
 	);
@@ -611,9 +706,7 @@ export async function recordCiTestResult(
 	const live = await fetchPullRequestStatus({ prNumber: input.prNumber });
 	const sectionNumber =
 		getSectionNumberForPr(input.prNumber) ??
-		(input.taskCode
-			? Number(input.taskCode.split(".")[0])
-			: undefined) ??
+		(input.taskCode ? Number(input.taskCode.split(".")[0]) : undefined) ??
 		resolveSectionFromPrMatch(toPrSummary(input.prNumber, live));
 	const task =
 		(input.taskCode ? await getTaskByCode(input.taskCode) : null) ||
@@ -688,10 +781,14 @@ export type MergeCompleteOutcome = {
 };
 
 /**
- * Tasks complete from a verified merge.
+ * Tasks complete from a verified merge + required CI checks.
  * Single-PR sections: all tasks complete together.
  * Multi-PR sections: tasks bound to the merged PR, plus unlinked tasks whose
  * title/branch matches the PR (so 3.1–3.3 can finish without a pre-listed number).
+ *
+ * Required checks on the merge commit:
+ * - Tests and Vercel deploy / Playwright E2E (push)
+ * - Tests and Vercel deploy / Deploy to Vercel (production)
  */
 export async function completeSectionFromMerge(
 	input: MergeCompleteInput,
@@ -730,6 +827,24 @@ export async function completeSectionFromMerge(
 		throw new RoadmapError(`Section ${sectionNumber} has no tasks`, 404);
 	}
 
+	if (ROADMAP_TRACKING_STUB_PRS.has(input.prNumber)) {
+		return {
+			sectionNumber,
+			completed: false,
+			reason: `PR #${input.prNumber} is a tracking stub — merge does not mark tasks complete`,
+			tasks: sectionTasks,
+		};
+	}
+
+	if (!sectionCompletesOnMergedCatalogPr(sectionNumber)) {
+		return {
+			sectionNumber,
+			completed: false,
+			reason: `Section ${sectionNumber} is a tracking stub — merge does not mark it complete`,
+			tasks: sectionTasks,
+		};
+	}
+
 	if (sectionTasks.every((t) => t.status === "complete")) {
 		return { sectionNumber, completed: true, tasks: sectionTasks };
 	}
@@ -742,6 +857,20 @@ export async function completeSectionFromMerge(
 			sectionNumber,
 			completed: false,
 			reason: `Finish section ${priorIncomplete.sectionNumber} (${priorIncomplete.title}) first`,
+			tasks: sectionTasks,
+		};
+	}
+
+	const gate = await fetchRoadmapCompletionGate({
+		commitSha: input.mergeCommitSha,
+	});
+	if (!gate.ok) {
+		return {
+			sectionNumber,
+			completed: false,
+			reason:
+				gate.reason ||
+				`PR #${input.prNumber}: required CI checks not green on ${input.mergeCommitSha}`,
 			tasks: sectionTasks,
 		};
 	}
@@ -805,7 +934,9 @@ export async function completeSectionFromMerge(
 
 	if (tasksToComplete.length === 0) {
 		await persistUnlockedSnapshot();
-		const refreshed = (await listTasks()).filter((t) => t.sectionId === section.$id);
+		const refreshed = (await listTasks()).filter(
+			(t) => t.sectionId === section.$id,
+		);
 		return {
 			sectionNumber,
 			completed: refreshed.every((t) => t.status === "complete"),
@@ -845,7 +976,9 @@ export async function completeSectionFromMerge(
 	}
 
 	await persistUnlockedSnapshot();
-	const refreshed = (await listTasks()).filter((t) => t.sectionId === section.$id);
+	const refreshed = (await listTasks()).filter(
+		(t) => t.sectionId === section.$id,
+	);
 	const sectionComplete = refreshed.every((t) => t.status === "complete");
 	return {
 		sectionNumber,

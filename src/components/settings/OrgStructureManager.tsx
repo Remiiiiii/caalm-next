@@ -26,8 +26,12 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { PERMISSIONS } from "@/constants/permissions";
+import { useStepUp } from "@/contexts/StepUpContext";
 import { useToast } from "@/hooks/use-toast";
-import type { CostCenter, OrgUnit } from "@/lib/database/schemas/org-units.schema";
+import type {
+	CostCenter,
+	OrgUnit,
+} from "@/lib/database/schemas/org-units.schema";
 import { fetcher } from "@/lib/swr-config";
 
 type UnitsResponse = { success: boolean; data: { units: OrgUnit[] } };
@@ -37,7 +41,7 @@ type CostCentersResponse = {
 };
 
 const fieldBorder =
-	"bg-white !border !border-solid !border-slate-200 focus-visible:!border-[#078FAB]";
+	"bg-white !border-[0.25px] !border-solid !border-slate-200 focus-visible:!border-[#078FAB]";
 
 function slugify(value: string) {
 	return value
@@ -57,6 +61,7 @@ export function OrgStructureManager({
 	maxDepartments: number;
 }) {
 	const { toast } = useToast();
+	const { ensureStepUp } = useStepUp();
 	const unitsUrl = `/api/org-units?orgId=${encodeURIComponent(orgId)}&includeInactive=true`;
 	const costUrl = `/api/cost-centers?orgId=${encodeURIComponent(orgId)}&includeInactive=true`;
 
@@ -209,6 +214,7 @@ export function OrgStructureManager({
 
 	const archiveUnit = useCallback(
 		async (id: string) => {
+			if (!(await ensureStepUp())) return;
 			setBusy(true);
 			try {
 				const res = await fetch(`/api/org-units/${id}`, { method: "DELETE" });
@@ -226,7 +232,7 @@ export function OrgStructureManager({
 				setBusy(false);
 			}
 		},
-		[mutate, toast],
+		[mutate, toast, ensureStepUp],
 	);
 
 	const restoreUnit = useCallback(
@@ -320,7 +326,7 @@ export function OrgStructureManager({
 			<GlassCard className="glass-card">
 				<div className="glass-card-cap" />
 				<CardContent className="p-4 sm:p-6 bg-slate-50 space-y-4">
-					<div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+					<div className="flex flex-row items-start justify-between gap-3">
 						<div className="flex items-start gap-3">
 							<Network className="h-5 w-5 text-[#0f5384] mt-0.5" />
 							<div>
@@ -438,7 +444,9 @@ export function OrgStructureManager({
 															key={child.$id}
 															className="flex items-center justify-between gap-2 border-b border-slate-200 py-2 text-sm text-slate-700 last:border-b-0"
 														>
-															<span className="truncate pl-1">{child.name}</span>
+															<span className="truncate pl-1">
+																{child.name}
+															</span>
 															{canEdit ? (
 																child.active ? (
 																	<Button
@@ -562,7 +570,7 @@ export function OrgStructureManager({
 							</p>
 						</div>
 					</div>
-					<ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+					<ul className="grid grid-cols-2 gap-2">
 						{costCenters.map((cc) => (
 							<li
 								key={cc.$id}
@@ -592,7 +600,7 @@ export function OrgStructureManager({
 						) : null}
 					</ul>
 					{canEdit ? (
-						<div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+						<div className="grid grid-cols-3 gap-2">
 							<div className="space-y-1">
 								<Label htmlFor="cc-code">Code</Label>
 								<Input

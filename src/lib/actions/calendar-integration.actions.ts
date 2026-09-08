@@ -475,17 +475,19 @@ export const updateCalendarIntegration = async (
 
 		return {
 			$id: updatedIntegration.$id,
-			user_id: (updatedIntegration as { user_id: string }).user_id,
-			provider: (updatedIntegration as { provider: "microsoft" | "google" })
-				.provider,
+			user_id: (updatedIntegration as unknown as { user_id: string }).user_id,
+			provider: (
+				updatedIntegration as unknown as { provider: "microsoft" | "google" }
+			).provider,
 			access_token: tokens.access_token || "",
 			refresh_token: tokens.refresh_token || "",
-			token_expiry: (updatedIntegration as { token_expiry: string })
+			token_expiry: (updatedIntegration as unknown as { token_expiry: string })
 				.token_expiry,
-			connected_at: (updatedIntegration as { connected_at: string })
+			connected_at: (updatedIntegration as unknown as { connected_at: string })
 				.connected_at,
-			last_sync: (updatedIntegration as { last_sync?: string }).last_sync,
-			sync_enabled: (updatedIntegration as { sync_enabled: boolean })
+			last_sync: (updatedIntegration as unknown as { last_sync?: string })
+				.last_sync,
+			sync_enabled: (updatedIntegration as unknown as { sync_enabled: boolean })
 				.sync_enabled,
 			$createdAt: updatedIntegration.$createdAt,
 			$updatedAt: updatedIntegration.$updatedAt,

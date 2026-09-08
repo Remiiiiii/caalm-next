@@ -3,7 +3,6 @@
 import * as VisuallyHiddenPrimitive from "@radix-ui/react-visually-hidden";
 import {
 	AlertTriangle,
-	Ban,
 	Bell,
 	Clock,
 	Edit,
@@ -736,19 +735,6 @@ export const EscalationRulesManager: React.FC<EscalationRulesManagerProps> = ({
 
 					<div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
 						<Button
-							variant="outline"
-							onClick={() => {
-								setIsCreateDialogOpen(false);
-								setIsEditDialogOpen(false);
-								setRuleToEdit(null);
-							}}
-							className="primary-btn px-3 sm:px-4"
-							disabled={isSaving}
-						>
-							<Ban className="h-4 w-4" />
-							Cancel
-						</Button>
-						<Button
 							onClick={handleSave}
 							className="primary-btn px-3 sm:px-4"
 							disabled={isSaving}
@@ -803,16 +789,7 @@ export const EscalationRulesManager: React.FC<EscalationRulesManagerProps> = ({
 						<div className="text-xs text-slate-500">
 							This action is permanent.
 						</div>
-						<div className="flex items-center gap-3">
-							<Button
-								variant="outline"
-								onClick={() => setIsDeleteDialogOpen(false)}
-								className="primary-btn px-3 sm:px-4"
-								disabled={isDeleting}
-							>
-								<Ban className="w-4 h-4" />
-								Cancel
-							</Button>
+						<div className="flex items-center justify-end gap-3">
 							<Button
 								onClick={confirmDelete}
 								className="delete-btn px-3 sm:px-4"

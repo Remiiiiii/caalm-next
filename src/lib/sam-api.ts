@@ -249,11 +249,8 @@ export class SAMApiService {
 
 		return {
 			totalRecords: apiResponse.totalRecords || 0,
-			page:
-				Math.floor(
-					(params.offset || 0) /
-						(params.limit || SAM_CONFIG.DEFAULT_RESULTS_PER_PAGE),
-				) + 1,
+			// SAM `offset` is a 0-based page index, not a record skip
+			page: (params.offset || 0) + 1,
 			size: params.limit || SAM_CONFIG.DEFAULT_RESULTS_PER_PAGE,
 			opportunities: (
 				apiResponse.opportunitiesData ||

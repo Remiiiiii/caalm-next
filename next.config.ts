@@ -3,6 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
 	compress: true,
 	poweredByHeader: false, // Remove X-Powered-By header for security
+	transpilePackages: ["currency-code-to-country-flag"],
 
 	// TypeScript configuration
 	typescript: {
@@ -163,6 +164,21 @@ const nextConfig: NextConfig = {
 					{
 						key: "Service-Worker-Allowed",
 						value: "/",
+					},
+				],
+			},
+			// Spline scenes are binary. Without nosniff, Chrome treats them as JSON
+			// and shows its Pretty-print viewer if anything embeds the raw file.
+			{
+				source: "/scene.splinecode",
+				headers: [
+					{
+						key: "Content-Type",
+						value: "application/octet-stream",
+					},
+					{
+						key: "X-Content-Type-Options",
+						value: "nosniff",
 					},
 				],
 			},

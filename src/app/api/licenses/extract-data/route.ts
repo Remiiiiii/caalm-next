@@ -7,8 +7,8 @@ import {
 	successResponse,
 	validationErrorResponse,
 } from "@/lib/api/contracts/utils/response.util";
-import { isPlanLimitError } from "@/lib/billing/planLimits";
 import { consumeAiExtractionForRequest } from "@/lib/billing/consumeAiExtractionForRequest";
+import { isPlanLimitError } from "@/lib/billing/planLimits";
 import { requirePermission } from "@/lib/rbac/middleware";
 
 export async function GET(request: NextRequest) {

@@ -19,9 +19,7 @@ export function ReadinessAiPanel({
 	initialSummary?: string;
 }) {
 	const [messages, setMessages] = useState<Message[]>(
-		initialSummary
-			? [{ role: "assistant", content: initialSummary }]
-			: [],
+		initialSummary ? [{ role: "assistant", content: initialSummary }] : [],
 	);
 	const [question, setQuestion] = useState("");
 	const [loading, setLoading] = useState(false);

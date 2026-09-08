@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import type Stripe from "stripe";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockClaim = vi.fn();
 const mockSyncPaidInvoiceToOrg = vi.fn();
@@ -18,8 +18,7 @@ vi.mock("@/lib/stripe/billing", () => ({
 	clearOrgSubscription: (...args: unknown[]) =>
 		mockClearOrgSubscription(...args),
 	markOrgPastDue: (...args: unknown[]) => mockMarkOrgPastDue(...args),
-	syncCreditNoteToOrg: (...args: unknown[]) =>
-		mockSyncCreditNoteToOrg(...args),
+	syncCreditNoteToOrg: (...args: unknown[]) => mockSyncCreditNoteToOrg(...args),
 	syncPaidInvoiceToOrg: (...args: unknown[]) =>
 		mockSyncPaidInvoiceToOrg(...args),
 	syncQuoteAcceptedToOrg: (...args: unknown[]) =>
@@ -59,27 +58,21 @@ describe("handleStripeWebhookEvent", () => {
 	});
 
 	it("syncs Dashboard invoices that have no subscription", async () => {
-		const { handleStripeWebhookEvent } = await import(
-			"@/lib/stripe/webhooks"
-		);
+		const { handleStripeWebhookEvent } = await import("@/lib/stripe/webhooks");
 		const invoice = { id: "in_dash", customer: "cus_1", status: "paid" };
 		await handleStripeWebhookEvent(event("invoice.paid", invoice));
 		expect(mockSyncPaidInvoiceToOrg).toHaveBeenCalledWith(invoice);
 	});
 
 	it("syncs credit notes so refunds do not drift from Appwrite", async () => {
-		const { handleStripeWebhookEvent } = await import(
-			"@/lib/stripe/webhooks"
-		);
+		const { handleStripeWebhookEvent } = await import("@/lib/stripe/webhooks");
 		const creditNote = { id: "cn_1", invoice: "in_1" };
 		await handleStripeWebhookEvent(event("credit_note.created", creditNote));
 		expect(mockSyncCreditNoteToOrg).toHaveBeenCalledWith(creditNote);
 	});
 
 	it("syncs accepted quotes to the org", async () => {
-		const { handleStripeWebhookEvent } = await import(
-			"@/lib/stripe/webhooks"
-		);
+		const { handleStripeWebhookEvent } = await import("@/lib/stripe/webhooks");
 		const quote = { id: "qt_1", metadata: { orgId: "org_1" } };
 		await handleStripeWebhookEvent(event("quote.accepted", quote));
 		expect(mockSyncQuoteAcceptedToOrg).toHaveBeenCalledWith(quote);

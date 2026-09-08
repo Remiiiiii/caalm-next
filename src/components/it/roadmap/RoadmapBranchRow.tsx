@@ -31,10 +31,7 @@ export function RoadmapBranchRow({ branch }: Props) {
 
 	return (
 		<div className="text-xs text-slate-600 tabular-nums flex items-center gap-1.5 min-w-0">
-			<GitBranch
-				className="h-3.5 w-3.5 text-[#0f5384] shrink-0"
-				aria-hidden
-			/>
+			<GitBranch className="h-3.5 w-3.5 text-[#0f5384] shrink-0" aria-hidden />
 			<span className="min-w-0 truncate">{branch}</span>
 			<TooltipProvider>
 				<Tooltip open={copied}>

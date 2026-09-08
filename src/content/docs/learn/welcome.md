@@ -32,8 +32,9 @@ CAALM Docs is the complete operating manual for CAALM Solutions — the complian
 1. Start with [What is CAALM?](/docs/learn/what-is-caalm) if you are brand new.
 2. Do the [Quick start](/docs/learn/quick-start) once.
 3. Read the [mental model](/docs/concepts/mental-model) — it pays for itself forever.
-4. Open your [role guide](/docs/guides/super-admin).
-5. Keep the [permissions catalog](/docs/reference/permissions-catalog) bookmarked.
+4. If you use a phone, read [Desktop, tablet, and phone](/docs/concepts/desktop-and-mobile) so you know which screens stay laptop-only.
+5. Open your [role guide](/docs/guides/super-admin).
+6. Keep the [permissions catalog](/docs/reference/permissions-catalog) bookmarked.
 
 > [!TIP]
 > Prefer search (⌘K / Ctrl+K). Docs are written in the language users actually use: “I can’t see a contract,” “2FA locked out,” “who can approve?”

@@ -11,10 +11,11 @@ Every important agreement in CAALM should move through a living lifecycle. If a 
 
 1. **Capture** — upload / create the contract or license with metadata
 2. **Enrich** — owner, dates, department/division, related files
-3. **Review** — someone with review permission checks correctness
-4. **Approve** — authorized approvers accept (or reject) as required
-5. **Monitor** — dashboards + notifications watch the expiration window
-6. **Renew / close** — extend, replace, or archive with evidence
+3. **Negotiate** (contracts) — comment, redline, and invite the counterparty until wording is ready ([Negotiate contracts](/docs/reference/negotiate))
+4. **Review** — someone with review permission checks correctness
+5. **Approve** — authorized approvers accept (or reject) as required
+6. **Monitor** — dashboards + notifications watch the expiration window
+7. **Renew / close** — extend, replace, or archive with evidence
 
 ## Where teams lose the plot
 
@@ -30,6 +31,7 @@ Use statuses the way your org agreed to use them. If “in review” means three
 ## Link to features
 
 - [Contracts](/docs/reference/contracts)
+- [Negotiate contracts](/docs/reference/negotiate)
 - [Licenses](/docs/reference/licenses)
 - [Approvals](/docs/reference/approvals)
 - [Notifications and deadlines](/docs/concepts/notifications-deadlines)

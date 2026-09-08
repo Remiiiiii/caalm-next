@@ -108,7 +108,12 @@ describe("LicensesViewClient", () => {
 	it("shows empty state when licenses prop is empty", () => {
 		render(
 			<LicensesViewProvider>
-				<LicensesViewClient licenses={[]} user={{}} />
+				<LicensesViewClient
+					initialLicenses={[]}
+					totalCount={0}
+					pageSize={20}
+					user={{}}
+				/>
 			</LicensesViewProvider>,
 		);
 		expect(screen.getByText("No licenses found")).toBeInTheDocument();
@@ -121,7 +126,12 @@ describe("LicensesViewClient", () => {
 		];
 		render(
 			<LicensesViewProvider>
-				<LicensesViewClient licenses={licenses} user={{}} />
+				<LicensesViewClient
+					initialLicenses={licenses}
+					totalCount={licenses.length}
+					pageSize={20}
+					user={{}}
+				/>
 			</LicensesViewProvider>,
 		);
 		expect(screen.getByText("License One")).toBeInTheDocument();
@@ -155,7 +165,12 @@ describe("LicensesViewClient", () => {
 		render(
 			<LicensesViewProvider>
 				<SetPendingTab />
-				<LicensesViewClient licenses={licenses} user={{}} />
+				<LicensesViewClient
+					initialLicenses={licenses}
+					totalCount={licenses.length}
+					pageSize={20}
+					user={{}}
+				/>
 			</LicensesViewProvider>,
 		);
 

@@ -1,15 +1,33 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { PERMISSIONS } from "@/constants/permissions";
 import {
 	deleteCalendarIntegration,
 	getCalendarIntegration,
 } from "@/lib/actions/calendar-integration.actions";
+import { getCurrentUser } from "@/lib/actions/user.actions";
+import { requireStepUp } from "@/lib/auth/step-up";
 import { getCurrentUserId } from "@/lib/microsoft/auth-utils";
+import { requirePermission } from "@/lib/rbac/middleware";
 
-export async function POST(_request: NextRequest) {
+export async function POST(request: NextRequest) {
 	try {
-		// Get current user ID
-		let userId: string;
+		const permissionCheck = await requirePermission(request, {
+			permission: PERMISSIONS.SETTINGS.INTEGRATIONS,
+		});
+		if (permissionCheck) return permissionCheck;
 
+		const user = await getCurrentUser();
+		if (!user) {
+			return NextResponse.json(
+				{ error: "Authentication required" },
+				{ status: 401 },
+			);
+		}
+
+		const stepUpCheck = requireStepUp(request, user.$id);
+		if (stepUpCheck) return stepUpCheck;
+
+		let userId: string;
 		try {
 			userId = await getCurrentUserId();
 		} catch (_authError) {
@@ -19,7 +37,6 @@ export async function POST(_request: NextRequest) {
 			);
 		}
 
-		// Get the integration to delete
 		const integration = await getCalendarIntegration(userId, "microsoft");
 
 		if (!integration) {
@@ -29,7 +46,6 @@ export async function POST(_request: NextRequest) {
 			);
 		}
 
-		// Delete the integration
 		await deleteCalendarIntegration(integration.$id!);
 
 		return NextResponse.json({

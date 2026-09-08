@@ -27,7 +27,10 @@ const EVENT_LABELS: Record<TicketEventType, string> = {
 	CREATED: "Created",
 	ISSUE_CREATED: "GitHub issue",
 	ASSIGNED: "Assigned to",
-	RESOLVE_CLICKED: "Resolve started",
+	CLAIMED: "Claimed",
+	ESCALATED: "Escalated",
+	MARKED_RESOLVED: "Marked resolved",
+	RESOLVE_CLICKED: "Fix agent started",
 	AGENT_STARTED: "Agent started",
 	PR_OPENED: "PR created",
 	PR_MERGED: "Pull request merged",
@@ -92,7 +95,10 @@ export function formatIssueHistoryDay(iso: string, timeZone?: string): string {
 }
 
 /** Month header, e.g. "August 2026". */
-export function formatIssueHistoryMonth(iso: string, timeZone?: string): string {
+export function formatIssueHistoryMonth(
+	iso: string,
+	timeZone?: string,
+): string {
 	const date = new Date(iso);
 	if (Number.isNaN(date.getTime())) return iso;
 	return new Intl.DateTimeFormat(undefined, {
@@ -116,22 +122,22 @@ function localDayKey(date: Date): string {
 export function getLatestEvent(events: TicketEvent[]): TicketEvent | null {
 	if (events.length === 0) return null;
 	return [...events].sort(
-		(a, b) =>
-			new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+		(a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
 	)[0];
 }
 
 export function humanizeEventType(type: string): string {
-	return (
-		EVENT_LABELS[type as TicketEventType] || type.replaceAll("_", " ")
-	);
+	return EVENT_LABELS[type as TicketEventType] || type.replaceAll("_", " ");
 }
 
 const EVENT_SUMMARY_COPY: Record<TicketEventType, string> = {
 	CREATED: "The issue was reported.",
 	ISSUE_CREATED: "A linked GitHub issue was opened for this ticket.",
 	ASSIGNED: "This issue was assigned for investigation.",
-	RESOLVE_CLICKED: "Automated resolve was started for this ticket.",
+	CLAIMED: "A staff member claimed this ticket in CAALM.",
+	ESCALATED: "This Help ticket was escalated to Engineering.",
+	MARKED_RESOLVED: "A staff member marked this ticket resolved in CAALM.",
+	RESOLVE_CLICKED: "The fix agent was started for this ticket.",
 	AGENT_STARTED: "The Cursor agent started working on a fix.",
 	PR_OPENED: "A pull request was created for review.",
 	PR_MERGED: "The pull request was merged.",
@@ -184,6 +190,12 @@ function defaultEventSummary(
 			}
 			return EVENT_SUMMARY_COPY.ASSIGNED;
 		}
+		case "CLAIMED":
+			return EVENT_SUMMARY_COPY.CLAIMED;
+		case "ESCALATED":
+			return EVENT_SUMMARY_COPY.ESCALATED;
+		case "MARKED_RESOLVED":
+			return EVENT_SUMMARY_COPY.MARKED_RESOLVED;
 		case "RESOLVE_CLICKED": {
 			const attachmentNames = metadata?.attachmentNames;
 			if (Array.isArray(attachmentNames) && attachmentNames.length > 0) {
@@ -373,11 +385,15 @@ function githubPullRequestUrl(
 	prNumber: number | null | undefined,
 ): string | undefined {
 	if (ticket.prUrl?.trim()) return ticket.prUrl.trim();
-	if (typeof prNumber !== "number" || !ticket.githubRepo?.trim()) return undefined;
+	if (typeof prNumber !== "number" || !ticket.githubRepo?.trim())
+		return undefined;
 	return `https://github.com/${ticket.githubRepo.trim()}/pull/${prNumber}`;
 }
 
-function prNumberFromEvents(ticket: Ticket, events: TicketEvent[]): number | null {
+function prNumberFromEvents(
+	ticket: Ticket,
+	events: TicketEvent[],
+): number | null {
 	const pr = pullRequestFrom(ticket, events);
 	return typeof pr.number === "number" ? pr.number : null;
 }
@@ -480,7 +496,9 @@ export function buildResolvedSummary(
 		sentences.push("All required CI checks passed.");
 	}
 
-	const deployed = resolveCluster.find((entry) => entry.eventType === "DEPLOYED");
+	const deployed = resolveCluster.find(
+		(entry) => entry.eventType === "DEPLOYED",
+	);
 	if (deployed) {
 		const meta = parseEventMetadata(deployed.metadata);
 		const context =
@@ -780,7 +798,9 @@ export function findCalendarWindowIndexForMonth(
 	monthKey: string | null | undefined,
 ): number {
 	if (!monthKey) return 0;
-	const index = windows.findIndex((window) => window.monthKeys.includes(monthKey));
+	const index = windows.findIndex((window) =>
+		window.monthKeys.includes(monthKey),
+	);
 	return index >= 0 ? index : 0;
 }
 
@@ -826,7 +846,9 @@ export function formatThreeMonthWindowLabel(
 
 export function formatMonthRange(tickets: Ticket[]): string | null {
 	if (tickets.length === 0) return null;
-	const dates = tickets.map(incidentSortDate).sort((a, b) => a.getTime() - b.getTime());
+	const dates = tickets
+		.map(incidentSortDate)
+		.sort((a, b) => a.getTime() - b.getTime());
 	const oldest = dates[0];
 	const newest = dates[dates.length - 1];
 	const start = new Intl.DateTimeFormat(undefined, {

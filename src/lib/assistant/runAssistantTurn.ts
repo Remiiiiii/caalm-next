@@ -391,7 +391,7 @@ User permissions include: ${ctx.permissions.slice(0, 40).join(", ")}${ctx.permis
 
 	const genAI = new GoogleGenerativeAI(apiKey);
 	const model = genAI.getGenerativeModel({
-		model: "gemini-2.5-flash-lite",
+		model: "gemini-3.5-flash-lite",
 		systemInstruction,
 		tools: declarations.length
 			? [{ functionDeclarations: declarations }]

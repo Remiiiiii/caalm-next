@@ -4,6 +4,7 @@ import {
 	AlertTriangle,
 	Ban,
 	CheckCircle,
+	Clock,
 	FileText,
 	Pencil,
 	RefreshCw,
@@ -27,6 +28,7 @@ import ContractExpiryModal from "@/components/contract-expiry-modal/ContractExpi
 import DepartmentPerformanceWidget from "@/components/DepartmentPerformanceWidget";
 import { DashboardGreeting } from "@/components/dashboard/DashboardGreeting";
 import { RiskImpactHeroCard } from "@/components/dashboard/RiskImpactHeroCard";
+import { WeatherBriefingLauncher } from "@/components/dashboard-briefing/WeatherBriefingLauncher";
 import FormattedDateTime from "@/components/FormattedDateTime";
 import LicenseExpiryAlertsWidget from "@/components/LicenseExpiryAlertsWidget";
 import LicenseStatusPieChart from "@/components/LicenseStatusPieChart";
@@ -47,7 +49,6 @@ import {
 import Avatar from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import {
 	SelectItem,
 	SelectScrollable,
@@ -57,16 +58,17 @@ import {
 	StatCardSkeleton,
 	TableRowSkeleton,
 } from "@/components/ui/skeletons";
+import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import { WidgetCarousel } from "@/components/ui/widget-carousel";
-import WeatherWidget from "@/components/WeatherWidget";
 import type { ContractStatus } from "@/constants/status";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { useStepUp } from "@/contexts/StepUpContext";
 import { useToast } from "@/hooks/use-toast";
 import { useCombinedExpiryModal } from "@/hooks/useCombinedExpiryModal";
 import { useUnifiedDashboardData } from "@/hooks/useUnifiedDashboardData";
 import { cn } from "@/lib/utils";
-import { resolveInviteDepartment } from "../../../../constants";
 import type { UIFileDoc } from "@/types/files";
+import { resolveInviteDepartment } from "../../../../constants";
 
 interface UninvitedUser {
 	$id: string;
@@ -87,6 +89,32 @@ const CalendarView = dynamic(() => import("@/components/CalendarView"), {
 		</div>
 	),
 });
+
+const slaMetricsFetcher = async (url: string) => {
+	const res = await fetch(url, { credentials: "include" });
+	if (!res.ok) throw new Error("Failed to fetch portfolio accountability");
+	return res.json() as Promise<{
+		success?: boolean;
+		metrics?: {
+			velocity?: {
+				sla?: {
+					openItems: number;
+					atRisk: number;
+					breached: number;
+					avgStepHours: number | null;
+					breachRate: number;
+				};
+			};
+			accountability?: {
+				pending: number;
+				overduePending: number;
+			};
+			expiration?: {
+				unintentionalRate: number;
+			};
+		};
+	}>;
+};
 
 const uninvitedFetcher = async (url: string) => {
 	const res = await fetch(url, { credentials: "include" });
@@ -164,6 +192,7 @@ const getInvitationStatusBadgeClasses = (status: string): string => {
 
 const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 	const { toast } = useToast();
+	const { ensureStepUp } = useStepUp();
 	const { orgId } = useOrganization();
 	const effectiveOrgId = orgId || "default_organization";
 	const adminName = "Executive"; // Replace with actual admin name
@@ -198,6 +227,17 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 	);
 	const uninvitedUsers = uninvitedRes?.data ?? [];
 
+	const slaMetricsUrl = orgId
+		? `/api/analytics/portfolio-accountability?orgId=${encodeURIComponent(orgId)}&period=30d`
+		: "/api/analytics/portfolio-accountability?period=30d";
+	const { data: slaMetricsRes } = useSWR(slaMetricsUrl, slaMetricsFetcher, {
+		revalidateOnFocus: false,
+		dedupingInterval: 120000,
+	});
+	const slaMetrics = slaMetricsRes?.metrics?.velocity?.sla;
+	const accountability = slaMetricsRes?.metrics?.accountability;
+	const expiration = slaMetricsRes?.metrics?.expiration;
+
 	// Combined contracts + licenses expiry modal (0–30 days)
 	const {
 		itemsToShow,
@@ -215,14 +255,14 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 
 	// Desktop push View → /dashboard?expiryEntity=contract|license&expiryId=…
 	useEffect(() => {
-		const entity = searchParams.get("expiryEntity");
-		const id = searchParams.get("expiryId");
+		const entity = searchParams?.get("expiryEntity");
+		const id = searchParams?.get("expiryId");
 		if ((entity !== "contract" && entity !== "license") || !id) return;
 		if (entity === "contract" && !contractsFromApi?.length) return;
 
 		const opened = openForEntityId(entity, id);
 		if (opened || entity === "license") {
-			const next = new URLSearchParams(searchParams.toString());
+			const next = new URLSearchParams(searchParams?.toString() ?? "");
 			next.delete("expiryEntity");
 			next.delete("expiryId");
 			const qs = next.toString();
@@ -346,24 +386,35 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 		},
 	];
 
-	const pendingApprovals = [
+	const slaStatCards = [
 		{
-			id: 1,
-			type: "User Registration",
-			requester: "David Wilson - Admin",
-			division: "hr",
+			title: "Open approvals",
+			value: slaMetrics?.openItems?.toString() ?? "—",
+			hint: "Live steps only; expired docs excluded",
 		},
 		{
-			id: 2,
-			type: "Contract Proposal",
-			title: "New Vendor Agreement",
-			amount: "$125,000",
+			title: "SLA breached",
+			value: slaMetrics?.breached?.toString() ?? "—",
+			hint:
+				slaMetrics?.breachRate != null
+					? `${slaMetrics.breachRate}% of open steps`
+					: "Past the due time",
 		},
 		{
-			id: 3,
-			type: "Document Access",
-			requester: "Emma Davis - Legal",
-			resource: "Confidential Audit Files",
+			title: "Need explanation",
+			value: accountability?.pending?.toString() ?? "—",
+			hint:
+				accountability?.overduePending != null
+					? `${accountability.overduePending} overdue attestations`
+					: "Expiration attestations pending",
+		},
+		{
+			title: "Unintentional expirations",
+			value:
+				expiration?.unintentionalRate != null
+					? `${expiration.unintentionalRate}%`
+					: "—",
+			hint: "Last 30 days; intentional pre-declarations excluded",
 		},
 	];
 
@@ -542,6 +593,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 
 	const confirmRevoke = async () => {
 		if (!revokeToken) return;
+		if (!(await ensureStepUp())) return;
 
 		try {
 			// Add visual feedback - mark as revoking
@@ -585,6 +637,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 
 	const confirmDelete = async () => {
 		if (!deleteToken) return;
+		if (!(await ensureStepUp())) return;
 
 		try {
 			// Add visual feedback - mark as deleting
@@ -710,7 +763,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 				<DashboardGreeting
 					user={user}
 					actions={
-						<>
+						<div className="flex items-start gap-3">
 							<div className="text-right">
 								<p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
 									Last updated
@@ -720,17 +773,16 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 								</p>
 							</div>
 
-							{process.env.NODE_ENV === "development" && (
-								<>
-									<div
-										aria-hidden
-										className="hidden h-8 w-px bg-slate-300 sm:block"
-									/>
+							<div className="flex flex-col items-end gap-2">
+								{process.env.NODE_ENV === "development" && (
 									<Button
 										onClick={triggerTestModal}
 										variant="outline"
 										size="sm"
-										className={cn( "h-9 gap-2 border border-dashed border-orange/40 bg-orange/10", "px-3 text-xs font-medium text-orange hover:bg-orange/15 hover:border-orange/50", )}
+										className={cn(
+											"h-9 gap-2 border border-dashed border-orange/40 bg-orange/10",
+											"px-3 text-xs font-medium text-orange hover:bg-orange/15 hover:border-orange/50",
+										)}
 									>
 										<span className="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-orange">
 											Dev
@@ -738,9 +790,14 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 										<Pencil className="h-3.5 w-3.5" />
 										Test expiry modal
 									</Button>
-								</>
-							)}
-						</>
+								)}
+								<WeatherBriefingLauncher
+									location="Miami"
+									latitude={25.7617}
+									longitude={-80.1918}
+								/>
+							</div>
+						</div>
 					}
 				/>
 				<RiskImpactHeroCard
@@ -758,6 +815,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 								showSettings={false}
 								compact={true}
 								contracts={contractsFromApi}
+								alarmEnabled={!isModalOpen}
 							/>
 							<LicenseExpiryAlertsWidget
 								maxVisible={2}
@@ -769,11 +827,6 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 							<DepartmentPerformanceWidget />
 							<CompanyNewsFeed />
 							<QuickNotesWidget user={user ?? undefined} />
-							<WeatherWidget
-								location="Miami"
-								latitude={25.7617}
-								longitude={-80.1918}
-							/>
 						</WidgetCarousel>
 					</CardContent>
 				</Card>
@@ -915,58 +968,50 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 								</CardContent>
 							</Card>
 
-							{/* Pending Approvals */}
+							{/* Approval SLA accountability */}
 							<Card className="glass-card">
 								<div className="glass-card-cap" />
 								<CardHeader>
-									<CardTitle className="flex left-0 text-lg font-bold text-center sidebar-gradient-text">
-										Pending Approvals
+									<CardTitle className="flex items-center gap-2 left-0 text-lg font-bold text-center sidebar-gradient-text">
+										<Clock className="h-5 w-5 text-[#0f5384]" />
+										Approvals & expirations
 									</CardTitle>
 								</CardHeader>
 								<CardContent>
 									<div className="space-y-3">
-										{pendingApprovals.map((approval) => (
+										{slaStatCards.map((stat) => (
 											<div
-												key={approval.id}
+												key={stat.title}
 												className="bg-white/20 backdrop-blur-md border border-white/30 rounded-lg p-3 shadow-sm"
 											>
-												<div className="flex justify-between items-start mb-2">
-													<h4 className="font-medium text-slate-700">
-														{approval.type}
-													</h4>
-													<div className="flex space-x-2">
-														<Button
-															size="sm"
-															variant="outline"
-															className="glass-card text-slate-700 hover:opacity-80 cursor-pointer"
-															asChild
-														>
-															<Link href="/contracts/approvals">Review</Link>
-														</Button>
+												<div className="flex items-center justify-between gap-3">
+													<div>
+														<p className="text-sm font-medium text-slate-700">
+															{stat.title}
+														</p>
+														<p className="text-xs text-slate-500 mt-0.5">
+															{stat.hint}
+														</p>
 													</div>
+													<p className="text-2xl font-bold text-slate-700 tabular-nums">
+														{stat.value}
+													</p>
 												</div>
-												<p className="text-sm text-slate-600 mt-1">
-													{approval.requester || approval.title}
-												</p>
-												{approval.division && (
-													<p className="text-xs text-slate-500 mt-1">
-														Division: {approval.division}
-													</p>
-												)}
-												{approval.amount && (
-													<p className="text-xs text-slate-500 mt-1">
-														Amount: {approval.amount}
-													</p>
-												)}
 											</div>
 										))}
 										<Button
 											asChild
-											className="primary-btn w-full cursor-pointer"
+											className="primary-btn hidden md:inline-flex w-full cursor-pointer"
 										>
-											<Link href="/contracts/approvals">
-												Open approvals inbox
+											<Link href="/analytics?tab=portfolio">
+												Open portfolio analytics
 											</Link>
+										</Button>
+										<Button
+											asChild
+											className="primary-btn inline-flex w-full cursor-pointer md:hidden"
+										>
+											<Link href="/contracts/approvals">Open approvals</Link>
 										</Button>
 									</div>
 								</CardContent>
@@ -1014,7 +1059,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 														}))
 													}
 													placeholder="Choose from directory…"
-													className="w-full border border-slate-200 bg-white text-slate-700 shadow-sm"
+													className="w-full border-[0.25px] border-slate-200 bg-white text-slate-700 shadow-sm"
 												>
 													{(uninvitedUsers as UninvitedUser[]).map(
 														(inviteUser: UninvitedUser) => (
@@ -1047,7 +1092,10 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 												className="h-10 w-10 shrink-0 border-slate-200 bg-white p-0 text-slate-600 hover:border-[#0f5384]/30 hover:bg-blue/10 hover:text-[#0f5384]"
 											>
 												<RefreshCw
-													className={cn( "h-4 w-4", refreshLoading && "animate-spin", )}
+													className={cn(
+														"h-4 w-4",
+														refreshLoading && "animate-spin",
+													)}
 												/>
 											</Button>
 										</div>
@@ -1083,7 +1131,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 													setInviteForm((prev) => ({ ...prev, role: value }))
 												}
 												placeholder="Select role…"
-												className="w-full border border-slate-200 bg-white text-slate-700 shadow-sm"
+												className="w-full border-[0.25px] border-slate-200 bg-white text-slate-700 shadow-sm"
 											>
 												<SelectItem value="Super Admin">Super Admin</SelectItem>
 												<SelectItem value="Organization Admin">

@@ -59,22 +59,31 @@ export async function GET(request: NextRequest) {
 			rows = result.rows as Array<Record<string, unknown>>;
 		}
 
-		const users: ShareDirectoryUser[] = rows
+		const users = rows
 			.map((user) => {
 				const email = String(user.email || "").trim();
 				const status = String(user.status || "active").toLowerCase();
 				if (!email || status === "inactive" || status === "suspended") {
 					return null;
 				}
+				// Prefer avatar file id; fall back to profileImageId (upload stores either)
 				const avatarRaw = String(user.avatar || "").trim();
-				const avatar =
+				const profileImageId = String(user.profileImageId || "").trim();
+				const candidate =
 					avatarRaw &&
 					!avatarRaw.startsWith("/") &&
 					!/^https?:\/\//i.test(avatarRaw) &&
 					!avatarRaw.includes("avatar-placeholder")
 						? avatarRaw
+						: profileImageId || null;
+				const avatar =
+					candidate &&
+					!candidate.startsWith("/") &&
+					!/^https?:\/\//i.test(candidate) &&
+					!candidate.includes("avatar-placeholder")
+						? candidate
 						: null;
-				return {
+				const entry: ShareDirectoryUser = {
 					$id: String(user.$id || ""),
 					fullName: String(user.fullName || "Unknown").trim() || "Unknown",
 					email,
@@ -83,6 +92,7 @@ export async function GET(request: NextRequest) {
 						"Other",
 					avatar,
 				};
+				return entry;
 			})
 			.filter((u): u is ShareDirectoryUser => Boolean(u?.$id && u.email));
 

@@ -10,7 +10,7 @@ interface AuditStatCardRowProps {
 
 export function AuditStatCardRow({ kpis }: AuditStatCardRowProps) {
 	return (
-		<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+		<div className="grid grid-cols-4 gap-6 mb-6">
 			{kpis.map((kpi) => (
 				<Card key={kpi.id} className="glass-card">
 					<div className="glass-card-cap" />

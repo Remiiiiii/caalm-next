@@ -33,3 +33,7 @@ Deadlines only matter if a human notices them with enough time to act.
 The quiet miss: record exists, date is wrong or owner left, notifications go to nobody useful, leadership dashboard still looks “mostly fine” until it is not.
 
 Fix path: [Missed renewal or quiet notifications](/docs/troubleshooting/missed-renewals).
+
+## On a phone
+
+You can open notifications that land on a companion page (dashboard, approvals, tickets). Tuning alert categories lives under Settings and needs a laptop. See [Desktop, tablet, and phone](/docs/concepts/desktop-and-mobile).

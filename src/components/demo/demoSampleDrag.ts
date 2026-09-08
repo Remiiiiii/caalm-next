@@ -67,8 +67,12 @@ export function handleDemoSampleDragOverCapture(
 	}
 	event.preventDefault();
 	event.stopPropagation();
+	const dataTransfer = event.dataTransfer;
+	if (!dataTransfer) {
+		return false;
+	}
 	try {
-		event.dataTransfer.dropEffect = "copy";
+		dataTransfer.dropEffect = "copy";
 	} catch {
 		// ignore
 	}

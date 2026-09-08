@@ -147,9 +147,7 @@ export async function hasAnyPermission(
 
 	try {
 		const permissions = await getUserPermissions(userId, orgId);
-		return permissionKeys.some((key) =>
-			permissionSatisfied(permissions, key),
-		);
+		return permissionKeys.some((key) => permissionSatisfied(permissions, key));
 	} catch (error) {
 		console.error("[hasAnyPermission] Error checking permissions:", error);
 		return false;
@@ -170,9 +168,7 @@ export async function hasAllPermissions(
 
 	try {
 		const permissions = await getUserPermissions(userId, orgId);
-		return permissionKeys.every((key) =>
-			permissionSatisfied(permissions, key),
-		);
+		return permissionKeys.every((key) => permissionSatisfied(permissions, key));
 	} catch (error) {
 		console.error("[hasAllPermissions] Error checking permissions:", error);
 		return false;
@@ -328,7 +324,25 @@ async function getUserRolesImpl(
 
 	const accountId = await resolveAuthAccountId(userId);
 	// Roles may be stored under Auth accountId OR users-table document $id.
-	const candidateIds = [...new Set([userId, accountId].filter(Boolean))];
+	// When callers pass only accountId, also resolve the profile row $id —
+	// otherwise candidateIds collapses to one ID and misses $id-keyed roles.
+	let profileDocId = userId;
+	try {
+		const { tablesDB } = await createAdminClient();
+		const byAccount = await tablesDB.listRows({
+			databaseId: appwriteConfig.databaseId || "default-db",
+			tableId: appwriteConfig.usersCollectionId || "users",
+			queries: [Query.equal("accountId", accountId), Query.limit(1)],
+		});
+		if (byAccount.rows[0]?.$id) {
+			profileDocId = String(byAccount.rows[0].$id);
+		}
+	} catch {
+		// keep profileDocId as provided userId
+	}
+	const candidateIds = [
+		...new Set([userId, accountId, profileDocId].filter(Boolean)),
+	];
 	const cacheKey = CACHE_KEYS.rbac.userRoles(
 		candidateIds.slice().sort().join("|"),
 		orgId,
@@ -347,9 +361,7 @@ async function getUserRolesImpl(
 					queries: [
 						candidateIds.length === 1
 							? Query.equal("userId", candidateIds[0])
-							: Query.or(
-									candidateIds.map((id) => Query.equal("userId", id)),
-								),
+							: Query.or(candidateIds.map((id) => Query.equal("userId", id))),
 						Query.equal("orgId", orgId),
 						Query.limit(50),
 					],

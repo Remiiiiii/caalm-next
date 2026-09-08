@@ -1,9 +1,9 @@
 "use client";
 
-import { ITGlassPanel, ITPageShell } from "@/components/it/ITPageShell";
-import { Button } from "@/components/ui/button";
 import { BookOpen, Construction, ShieldAlert } from "lucide-react";
 import Link from "next/link";
+import { ITGlassPanel, ITPageShell } from "@/components/it/ITPageShell";
+import { Button } from "@/components/ui/button";
 
 export default function Page() {
 	return (
@@ -50,9 +50,15 @@ export default function Page() {
 						</p>
 						<div className="flex flex-wrap gap-2">
 							<Button asChild className="primary-btn px-3 sm:px-4">
-								<Link href="/dashboard/it/incidents/runbooks">Open runbooks</Link>
+								<Link href="/dashboard/it/incidents/runbooks">
+									Open runbooks
+								</Link>
 							</Button>
-							<Button asChild variant="outline" className="primary-btn px-3 sm:px-4">
+							<Button
+								asChild
+								variant="outline"
+								className="primary-btn px-3 sm:px-4"
+							>
 								<Link href="/docs/runbooks/overview">Read docs</Link>
 							</Button>
 						</div>

@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { IncidentTimeline } from "@/components/tickets/IncidentTimeline";
 import { TicketStatusPill } from "@/components/tickets/TicketStatusPill";
 import { PERMISSIONS } from "@/constants/permissions";
+import { getOrganization } from "@/lib/rbac/organizations";
 import { requirePagePermission } from "@/lib/rbac/page-guards";
 import {
 	getUserDefaultOrganization,
@@ -15,10 +16,9 @@ import {
 	affectedService,
 	formatIssueHistoryDate,
 } from "@/lib/tickets/issue-history";
+import { getTicketById } from "@/lib/tickets/ticket.repository";
 import { canViewTicket } from "@/lib/tickets/ticket-access.policy";
 import { listTicketEvents } from "@/lib/tickets/ticket-events.repository";
-import { getTicketById } from "@/lib/tickets/ticket.repository";
-import { getOrganization } from "@/lib/rbac/organizations";
 import { resolveOrgTimezone } from "@/lib/timezone";
 
 export default async function IncidentDetailPage({

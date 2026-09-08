@@ -74,7 +74,10 @@ function parseArgs(argv: string[]): Args {
 			permission = next;
 			i++;
 		} else if (arg === "--methods" && next) {
-			methods = next.split(",").map((m) => m.trim().toUpperCase()).filter(Boolean);
+			methods = next
+				.split(",")
+				.map((m) => m.trim().toUpperCase())
+				.filter(Boolean);
 			i++;
 		} else if (arg === "--allowlist-reason" && next) {
 			allowlistReason = next;
@@ -93,7 +96,9 @@ function parseArgs(argv: string[]): Args {
 	}
 
 	if (type === "permission" && !permission) {
-		console.error("--permission is required when --type is permission (default)");
+		console.error(
+			"--permission is required when --type is permission (default)",
+		);
 		process.exit(1);
 	}
 
@@ -368,7 +373,9 @@ function main(): void {
 		console.log(`Permission: ${args.permission}`);
 	}
 	console.log(`Methods: ${args.methods.join(", ")}`);
-	console.log("Next: implement the TODO body, then run pnpm run test:api-authz");
+	console.log(
+		"Next: implement the TODO body, then run pnpm run test:api-authz",
+	);
 
 	if (args.type === "public") {
 		appendAllowlistHint(args.routePath, args.allowlistReason!);

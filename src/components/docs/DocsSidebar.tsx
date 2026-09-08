@@ -13,7 +13,7 @@ function isItemActive(pathname: string, slug: string) {
 }
 
 export function DocsSidebar({ onNavigate }: { onNavigate?: () => void }) {
-	const pathname = usePathname();
+	const pathname = usePathname() || "";
 	const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
 		() => new Set(),
 	);

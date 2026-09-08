@@ -82,9 +82,7 @@ describe("ExpiryAlertModal button wiring", () => {
 		const user = userEvent.setup();
 		const { props } = renderModal();
 
-		await user.click(
-			screen.getByRole("button", { name: /renew contract/i }),
-		);
+		await user.click(screen.getByRole("button", { name: /renew contract/i }));
 		expect(props.onRenew).toHaveBeenCalledTimes(1);
 	});
 
@@ -92,9 +90,7 @@ describe("ExpiryAlertModal button wiring", () => {
 		const user = userEvent.setup();
 		const { props } = renderModal();
 
-		await user.click(
-			screen.getByRole("button", { name: /view details/i }),
-		);
+		await user.click(screen.getByRole("button", { name: /view details/i }));
 		expect(props.onViewDetails).toHaveBeenCalledTimes(1);
 	});
 
@@ -122,9 +118,7 @@ describe("ExpiryAlertModal button wiring", () => {
 		const user = userEvent.setup();
 		const { props } = renderModal();
 
-		await user.click(
-			screen.getByRole("button", { name: /contact provider/i }),
-		);
+		await user.click(screen.getByRole("button", { name: /contact provider/i }));
 		expect(props.onContactProvider).toHaveBeenCalledTimes(1);
 	});
 
@@ -171,9 +165,7 @@ describe("ExpiryAlertModal button wiring", () => {
 		expect(
 			screen.getByRole("button", { name: /contact provider/i }),
 		).toBeDisabled();
-		expect(
-			screen.getByRole("button", { name: /let expire/i }),
-		).toBeDisabled();
+		expect(screen.getByRole("button", { name: /let expire/i })).toBeDisabled();
 	});
 
 	it("shows Renew License label for license entity type", () => {
@@ -181,7 +173,9 @@ describe("ExpiryAlertModal button wiring", () => {
 		expect(
 			screen.getByRole("button", { name: /renew license/i }),
 		).toBeInTheDocument();
-		expect(within(screen.getByRole("dialog")).getByText("Issuer")).toBeInTheDocument();
+		expect(
+			within(screen.getByRole("dialog")).getByText("Issuer"),
+		).toBeInTheDocument();
 	});
 });
 

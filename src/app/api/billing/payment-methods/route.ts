@@ -4,7 +4,10 @@ import { getCurrentUser } from "@/lib/actions/user.actions";
 import { getOrgIdFromRequest, requirePermission } from "@/lib/rbac/middleware";
 import { getOrganization } from "@/lib/rbac/organizations";
 import { validateUserOrgAccess } from "@/lib/rbac/permissions";
-import { listPaymentMethodsForOrg, orgHasUpcomingInvoice } from "@/lib/stripe/billing";
+import {
+	listPaymentMethodsForOrg,
+	orgHasUpcomingInvoice,
+} from "@/lib/stripe/billing";
 import { isStripeConfigured } from "@/lib/stripe/client";
 
 export async function GET(request: NextRequest) {

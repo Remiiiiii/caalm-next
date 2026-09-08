@@ -194,9 +194,7 @@ export default function Pricing({ plans }: Props) {
 													: "bg-gradient-to-r from-slate-500 to-slate-700",
 											)}
 										>
-											{idx === 1
-												? "Start 90-day Growth pilot"
-												: "Get started"}
+											{idx === 1 ? "Start 90-day Growth pilot" : "Get started"}
 										</button>
 									</Link>
 								)}

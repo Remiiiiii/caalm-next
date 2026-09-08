@@ -1,5 +1,5 @@
-import type { Metadata } from "next";
 import { Mail } from "lucide-react";
+import type { Metadata } from "next";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import ContactForm from "./ContactForm";

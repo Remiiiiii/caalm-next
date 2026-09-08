@@ -41,9 +41,5 @@ export default function ITClientShell({
 	// Auth and org already wrap the app in (root)/layout. A second pair here
 	// remounts those providers on every IT page and can trip the "more hooks
 	// than during the previous render" error during client navigations.
-	return (
-		<ITLayoutContent>
-			{children}
-		</ITLayoutContent>
-	);
+	return <ITLayoutContent>{children}</ITLayoutContent>;
 }

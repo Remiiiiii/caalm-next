@@ -274,9 +274,7 @@ export async function notifyTicketStaff(input: {
 	const title = isIssue
 		? `New ticket ${ticketNumber}: ${input.ticket.title}`
 		: `PR ready for review: ${ticketNumber}`;
-	const githubUrl = isIssue
-		? input.ticket.githubIssueUrl
-		: input.ticket.prUrl;
+	const githubUrl = isIssue ? input.ticket.githubIssueUrl : input.ticket.prUrl;
 	// Ticket detail page works for staff + IT DMs (IT portal may redirect non-IT dept).
 	const caalmUrl = `/tickets/${input.ticket.$id}`;
 	const message = isIssue

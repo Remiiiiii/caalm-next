@@ -704,14 +704,6 @@ export function ApprovalReviewDialog({
 								)}
 								Approve
 							</Button>
-							<Button
-								onClick={() => onOpenChange(false)}
-								disabled={isProcessingApproval}
-								className="primary-btn px-3 sm:px-4 flex-1"
-							>
-								<Ban className="w-4 h-4" />
-								Cancel
-							</Button>
 						</div>
 					</>
 				)}

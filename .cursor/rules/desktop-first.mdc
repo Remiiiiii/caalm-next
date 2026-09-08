@@ -1,0 +1,26 @@
+---
+description: Desktop-primary product policy for the authenticated CAALM app
+alwaysApply: true
+---
+
+# Desktop-first product UI
+
+The authenticated product is **desktop-primary**. Full UI starts at **1024px** (`DESKTOP_MIN_WIDTH` in `src/lib/ui/desktop-first.ts`).
+
+## Rules
+
+- Design and ship dense features (wizards, negotiation, analytics, calendar, org admin, settings, audits) for laptop/desktop first.
+- Do **not** invent a full phone layout for new dense screens.
+- Phones (`< 1024px`) only render companion routes from `COMPANION_PATH_PREFIXES`, minus `DESKTOP_OVERRIDE_PREFIXES` (IT portal and dense admin trees). Everything else under the authenticated app uses `DesktopRequiredScreen` via `DesktopFirstGate`.
+- Tablets are small laptops: full app, no separate tablet product.
+- Add a path to the companion allowlist only when the work is an interrupt action (approve, attest, renew, notify, glance). Do not expand it to dodge the gate.
+
+## Exclusions
+
+- Public marketing / landing pages stay responsive.
+- Public counterparty flow `/negotiate/[token]` stays usable on phones.
+
+## When adding routes
+
+- Companion path → render normally on phones; keep `MobileNavigation` filter in sync via `isCompanionPath`.
+- Desktop-required path → no extra phone CSS work; the gate handles it. Prefer desktop-end layout classes on gated-only files (`grid-cols-4`, `flex-row`); do not add new `sm:`/`md:` phone-stack ladders there.

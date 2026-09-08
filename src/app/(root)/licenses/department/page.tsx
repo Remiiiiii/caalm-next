@@ -173,7 +173,12 @@ const Page = async () => {
 							assignedManagers={uniqueAssignedManagers}
 						/>
 						{licenses.length > 0 ? (
-							<LicensesViewClient licenses={licenses} user={user} />
+							<LicensesViewClient
+								initialLicenses={licenses}
+								totalCount={licenses.length}
+								pageSize={licenses.length || 20}
+								user={user}
+							/>
 						) : (
 							<div className="flex flex-col items-center justify-center text-center py-12 px-4">
 								<Image

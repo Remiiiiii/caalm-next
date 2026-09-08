@@ -40,7 +40,7 @@ export function DomainReadinessGrid({
 }: DomainReadinessGridProps) {
 	if (isLoading) {
 		return (
-			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+			<div className="grid grid-cols-3 gap-6">
 				{Array.from({ length: 5 }).map((_, i) => (
 					<Card key={i} className="glass-card">
 						<div className="glass-card-cap" />
@@ -54,7 +54,7 @@ export function DomainReadinessGrid({
 	}
 
 	return (
-		<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+		<div className="grid grid-cols-3 gap-6">
 			{domains.map((domain) => {
 				const Icon = DOMAIN_ICONS[domain.domain];
 				return (

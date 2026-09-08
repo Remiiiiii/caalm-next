@@ -30,7 +30,7 @@ export function TasksControlBar({
 	assignees,
 }: TasksControlBarProps) {
 	return (
-		<div className="flex flex-wrap items-center gap-3 p-4 sm:p-6 border-b border-slate-200">
+		<div className="flex flex-col gap-3 p-4 sm:p-6 border-b border-slate-200 md:flex-row md:flex-wrap md:items-center">
 			<div className="flex items-center gap-2 text-slate-600">
 				<Filter className="h-4 w-4" />
 				<span className="text-sm font-medium">Filters</span>
@@ -40,7 +40,7 @@ export function TasksControlBar({
 				placeholder="Search by title…"
 				value={filters.search}
 				onChange={(e) => onChange({ ...filters, search: e.target.value })}
-				className="max-w-xs bg-white"
+				className="w-full border-[0.25px] border-slate-300 bg-white md:max-w-xs"
 			/>
 			<Select
 				value={filters.status}
@@ -49,7 +49,7 @@ export function TasksControlBar({
 				}
 			>
 				<SelectTrigger
-					className="w-[160px] bg-white"
+					className="w-full border-[0.25px] border-slate-300 bg-white md:w-[160px]"
 					aria-label="Filter by status"
 				>
 					<SelectValue placeholder="Status" />
@@ -72,7 +72,7 @@ export function TasksControlBar({
 				}
 			>
 				<SelectTrigger
-					className="w-[150px] bg-white"
+					className="w-full border-[0.25px] border-slate-300 bg-white md:w-[150px]"
 					aria-label="Filter by priority"
 				>
 					<SelectValue placeholder="Priority" />
@@ -95,7 +95,7 @@ export function TasksControlBar({
 				}
 			>
 				<SelectTrigger
-					className="w-[180px] bg-white"
+					className="w-full border-[0.25px] border-slate-300 bg-white md:w-[180px]"
 					aria-label="Filter by assignee"
 				>
 					<SelectValue placeholder="Assignee" />

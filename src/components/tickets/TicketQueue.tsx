@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import type { Ticket } from "@/lib/tickets/ticket.types";
 import { displayTicketNumber } from "@/lib/tickets/ticket-number.utils";
 import {
+	TicketLanePill,
 	TicketSeverityPill,
 	TicketStatusPill,
 	timeInStatus,
@@ -18,7 +19,9 @@ export function TicketQueue({ tickets }: { tickets: Ticket[] }) {
 				<div className="glass-card-cap" />
 				<CardContent className="p-8 text-center">
 					<AlertCircle className="mx-auto mb-3 h-10 w-10 text-slate-500" />
-					<p className="text-sm font-medium text-slate-700">No active tickets</p>
+					<p className="text-sm font-medium text-slate-700">
+						No active tickets
+					</p>
 					<p className="mt-1 text-xs text-slate-600">
 						New submissions appear here until they are resolved.
 					</p>
@@ -52,7 +55,8 @@ export function TicketQueue({ tickets }: { tickets: Ticket[] }) {
 										status
 									</p>
 								</div>
-								<div className="flex items-center gap-2">
+								<div className="flex flex-wrap items-center gap-2">
+									<TicketLanePill lane={ticket.lane} />
 									<TicketSeverityPill severity={ticket.severity} />
 									<TicketStatusPill status={ticket.status} />
 								</div>

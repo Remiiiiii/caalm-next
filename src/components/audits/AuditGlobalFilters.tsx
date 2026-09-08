@@ -37,7 +37,7 @@ export function AuditGlobalFilters({
 		<Card className="glass-card mb-6">
 			<div className="glass-card-cap" />
 			<div className="flex flex-col gap-4 p-4 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
-				<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-1 min-w-0">
+				<div className="flex flex-row items-center flex-1 gap-3 min-w-0">
 					<Select
 						value={period}
 						onValueChange={(v) => onPeriodChange(v as AuditPeriod)}

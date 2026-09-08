@@ -1,8 +1,8 @@
 import type Stripe from "stripe";
 import { getOrganizationByStripeCustomerId } from "@/lib/rbac/organizations";
 import {
-	getTierFromPriceId,
 	type BillingInterval,
+	getTierFromPriceId,
 	type PricingTier,
 } from "./prices";
 
@@ -22,9 +22,7 @@ function asId(value: unknown): string | undefined {
 export function subscriptionIdFromInvoice(
 	invoice: Stripe.Invoice,
 ): string | undefined {
-	const legacy = asId(
-		(invoice as { subscription?: unknown }).subscription,
-	);
+	const legacy = asId((invoice as { subscription?: unknown }).subscription);
 	if (legacy) return legacy;
 
 	const parent = (

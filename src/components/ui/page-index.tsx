@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useEffect, type ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
 import { cn } from "@/lib/utils";
 
 export interface PageIndexProps {

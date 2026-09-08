@@ -27,7 +27,9 @@ function main() {
 	console.log(`Dashboard: ${DASHBOARD_BRANDING}\n`);
 	console.log("Steps:");
 	console.log("1. Open Stripe Dashboard → Settings → Branding");
-	console.log("2. Upload public/assets/images/logo.png as Logo (and Icon if needed)");
+	console.log(
+		"2. Upload public/assets/images/logo.png as Logo (and Icon if needed)",
+	);
 	console.log(`3. Set brand color to ${BRAND_COLOR}`);
 	console.log(
 		"4. Save. New paid invoice PDFs use logo, color, and the CAALM footer line.",

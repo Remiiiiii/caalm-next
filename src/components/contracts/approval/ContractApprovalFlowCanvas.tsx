@@ -27,6 +27,7 @@ export default function ContractApprovalFlowCanvas({
 								isCurrent={isCurrent}
 								department={department}
 								subDepartment={subDepartment}
+								frozen={workflow.workflowFrozen}
 							/>
 							{index < steps.length - 1 ? (
 								<ApprovalFlowConnector

@@ -88,9 +88,7 @@ describe("ContractExpiryAlertBridge wiring", () => {
 		const user = userEvent.setup();
 		renderBridge();
 
-		await user.click(
-			screen.getByRole("button", { name: /renew contract/i }),
-		);
+		await user.click(screen.getByRole("button", { name: /renew contract/i }));
 
 		expect(push).toHaveBeenCalledWith("/contracts");
 		expect(onContractHandled).toHaveBeenCalledWith("contract-abc");
@@ -100,13 +98,9 @@ describe("ContractExpiryAlertBridge wiring", () => {
 		const user = userEvent.setup();
 		renderBridge();
 
-		await user.click(
-			screen.getByRole("button", { name: /view details/i }),
-		);
+		await user.click(screen.getByRole("button", { name: /view details/i }));
 
-		expect(push).toHaveBeenCalledWith(
-			"/contracts?highlight=contract-abc",
-		);
+		expect(push).toHaveBeenCalledWith("/contracts?highlight=contract-abc");
 		expect(onContractHandled).toHaveBeenCalledWith("contract-abc");
 	});
 
@@ -155,9 +149,7 @@ describe("ContractExpiryAlertBridge wiring", () => {
 			}),
 		);
 
-		await user.click(
-			screen.getByRole("button", { name: /contact provider/i }),
-		);
+		await user.click(screen.getByRole("button", { name: /contact provider/i }));
 
 		expect(locationMock.href).toBe("mailto:vendor@example.com");
 		vi.unstubAllGlobals();
@@ -167,9 +159,7 @@ describe("ContractExpiryAlertBridge wiring", () => {
 		const user = userEvent.setup();
 		renderBridge();
 
-		await user.click(
-			screen.getByRole("button", { name: /contact provider/i }),
-		);
+		await user.click(screen.getByRole("button", { name: /contact provider/i }));
 
 		expect(toast).toHaveBeenCalledWith(
 			expect.objectContaining({

@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import { matchRunbooksForAlert } from "@/lib/it/runbooks/store";
 import type { Runbook } from "@/lib/it/runbooks/types";
 
-function rb(partial: Partial<Runbook> & Pick<Runbook, "title" | "service">): Runbook {
+function rb(
+	partial: Partial<Runbook> & Pick<Runbook, "title" | "service">,
+): Runbook {
 	const ts = new Date().toISOString();
 	return {
 		$id: partial.$id || "1",

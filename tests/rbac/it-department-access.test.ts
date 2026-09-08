@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { PERMISSIONS } from "@/constants/permissions";
 import { isITSidebarPath } from "@/constants/it-navigation";
+import { PERMISSIONS } from "@/constants/permissions";
 import {
 	canAccessITPortal,
 	resolveAccessibleDashboardLinks,

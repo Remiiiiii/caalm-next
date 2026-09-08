@@ -108,13 +108,8 @@ export default function BillingOverviewCard({
 }: BillingOverviewCardProps) {
 	const billingActionsDisabled = actionsDisabled || managing;
 	const activeAmount =
-		interval === "yearly"
-			? yearly
-			: monthly !== null
-				? monthly
-				: yearly;
-	const monthlyDisplay =
-		monthly !== null ? formatMoney(monthly) : null;
+		interval === "yearly" ? yearly : monthly !== null ? monthly : yearly;
+	const monthlyDisplay = monthly !== null ? formatMoney(monthly) : null;
 	const yearlyDisplay = yearly !== null ? formatMoney(yearly) : null;
 	const basePlanDisplay =
 		activeAmount !== null ? formatMoney(activeAmount) : "—";
@@ -138,8 +133,8 @@ export default function BillingOverviewCard({
 		if (hasScheduledPayment && nextPaymentDate) {
 			const amount =
 				interval === "yearly"
-					? yearlyDisplay ?? basePlanDisplay
-					: monthlyDisplay ?? basePlanDisplay;
+					? (yearlyDisplay ?? basePlanDisplay)
+					: (monthlyDisplay ?? basePlanDisplay);
 			if (amount) {
 				return `Next payment of ${amount} will occur on ${nextPaymentDate}.`;
 			}

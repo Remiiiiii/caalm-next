@@ -2,14 +2,24 @@ import { ID } from "node-appwrite";
 import { InputFile } from "node-appwrite/file";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { assertEnterpriseFileAllowed } from "@/lib/files/enterprise-file-formats";
 import {
 	buildGitHubIssueBody,
 	createGitHubIssue,
 } from "./github-tickets.service";
 import { resolveSubmitterDepartmentLabel } from "./submitter-placement";
+import { createTicketRow, updateTicket } from "./ticket.repository";
+import type {
+	CreateTicketInput,
+	Ticket,
+	TicketLane,
+	TicketSeverity,
+} from "./ticket.types";
+import { getTicketsRepo, isTicketsEnabled, TICKET_LANES } from "./ticket.types";
 import { appendTicketEvent } from "./ticket-events.repository";
 import {
 	deriveSeverityFromMatrix,
+	isCategoryAllowedForLane,
 	TICKET_CATEGORIES,
 	TICKET_MODULES,
 	type TicketImpactUrgency,
@@ -19,9 +29,6 @@ import {
 	notifyTicketSubmitter,
 } from "./ticket-notification.service";
 import { allocateTicketNumber } from "./ticket-number.service";
-import { createTicketRow, updateTicket } from "./ticket.repository";
-import type { CreateTicketInput, Ticket, TicketSeverity } from "./ticket.types";
-import { getTicketsRepo, isTicketsEnabled } from "./ticket.types";
 
 export type IntakeActor = {
 	$id: string;
@@ -44,6 +51,7 @@ export async function uploadTicketAttachments(
 	const ids: string[] = [];
 
 	for (const file of files.slice(0, 5)) {
+		assertEnterpriseFileAllowed(file, "attachment");
 		const buffer = Buffer.from(await file.arrayBuffer());
 		const uploaded = await storage.createFile({
 			bucketId,
@@ -65,6 +73,7 @@ export async function intakeTicket(input: {
 	const department = resolveSubmitterDepartmentLabel(input.actor);
 	const submittedByName =
 		input.actor.fullName?.trim() || input.actor.name?.trim() || "CAALM user";
+	const lane = input.payload.lane;
 
 	const { severity } = deriveSeverityFromMatrix(
 		input.payload.impact,
@@ -77,6 +86,7 @@ export async function intakeTicket(input: {
 	const ticket = await createTicketRow({
 		title: input.payload.title.trim(),
 		description: input.payload.description.trim(),
+		lane,
 		category: input.payload.category,
 		affectedModule: input.payload.affectedModule || null,
 		impact: input.payload.impact,
@@ -98,6 +108,7 @@ export async function intakeTicket(input: {
 		eventType: "CREATED",
 		actor: input.actor.$id,
 		metadata: {
+			lane,
 			severity,
 			department,
 			category: input.payload.category,
@@ -120,7 +131,8 @@ export async function intakeTicket(input: {
 		console.warn("[tickets] notify on create failed", error);
 	}
 
-	if (!isTicketsEnabled()) {
+	// Help lane stays in CAALM until escalated — no GitHub issue.
+	if (lane === "help" || !isTicketsEnabled()) {
 		return ticket;
 	}
 
@@ -132,19 +144,20 @@ export async function intakeTicket(input: {
 			department,
 			submittedAt,
 			severity: ticket.severity,
-			category: ticket.category,
+			category: ticket.category || input.payload.category,
 			affectedModule: ticket.affectedModule,
-			impact: ticket.impact,
-			urgency: ticket.urgency,
+			impact: ticket.impact || input.payload.impact,
+			urgency: ticket.urgency || input.payload.urgency,
 			description: ticket.description,
 			ticketId: ticket.$id,
 			ticketNumber: ticket.ticketNumber,
 		}),
 		labels: [
 			"source:caalm-ticket",
+			"lane:engineering",
 			`dept:${slugLabel(department)}`,
 			`severity:${ticket.severity}`,
-			`category:${slugLabel(ticket.category)}`,
+			`category:${slugLabel(ticket.category || input.payload.category)}`,
 		],
 	});
 
@@ -200,6 +213,14 @@ export function parseImpactUrgency(
 	}
 }
 
+export function parseLane(value: unknown): TicketLane {
+	const lane = String(value || "").trim();
+	if (!(TICKET_LANES as readonly string[]).includes(lane)) {
+		throw new Error("Invalid lane");
+	}
+	return lane as TicketLane;
+}
+
 export function parseCategory(value: unknown): string {
 	const category = String(value || "").trim();
 	if (
@@ -224,12 +245,18 @@ export function parseAffectedModule(value: unknown): string | null {
 export function buildCreateTicketInput(input: {
 	title: string;
 	description: string;
+	lane: unknown;
 	category: unknown;
 	affectedModule?: unknown;
 	impact: unknown;
 	urgency: unknown;
 	attachmentIds?: string[];
 }): CreateTicketInput {
+	const lane = parseLane(input.lane);
+	const category = parseCategory(input.category);
+	if (!isCategoryAllowedForLane(lane, category)) {
+		throw new Error("Invalid category for lane");
+	}
 	const impact = parseImpactUrgency(input.impact, "impact");
 	const urgency = parseImpactUrgency(input.urgency, "urgency");
 	const { severity } = deriveSeverityFromMatrix(impact, urgency);
@@ -237,7 +264,8 @@ export function buildCreateTicketInput(input: {
 	return {
 		title: input.title.trim(),
 		description: input.description.trim(),
-		category: parseCategory(input.category),
+		lane,
+		category,
 		affectedModule: parseAffectedModule(input.affectedModule),
 		impact,
 		urgency,

@@ -1,17 +1,17 @@
 import { describe, expect, it } from "vitest";
+import {
+	buildCursorAgentPrompt,
+	parsePrNumberFromUrl,
+} from "@/lib/tickets/cursor-agent.service";
 import { buildGitHubIssueBody } from "@/lib/tickets/github-tickets.service";
+import { resolveSubmitterDepartmentLabel } from "@/lib/tickets/submitter-placement";
+import { deriveSeverityFromMatrix } from "@/lib/tickets/ticket-intake.constants";
 import {
 	buildCreateTicketInput,
 	parseCategory,
 	parseSeverity,
 	slugLabel,
 } from "@/lib/tickets/ticket-intake.service";
-import { deriveSeverityFromMatrix } from "@/lib/tickets/ticket-intake.constants";
-import { resolveSubmitterDepartmentLabel } from "@/lib/tickets/submitter-placement";
-import {
-	buildCursorAgentPrompt,
-	parsePrNumberFromUrl,
-} from "@/lib/tickets/cursor-agent.service";
 
 describe("ticket intake helpers", () => {
 	it("rejects client-supplied invalid severity", () => {
@@ -39,14 +39,42 @@ describe("ticket intake helpers", () => {
 		const payload = buildCreateTicketInput({
 			title: "Login broken",
 			description: "Cannot sign in after password reset flow.",
+			lane: "engineering",
 			category: "Software / Application",
 			affectedModule: "User Management",
 			impact: "high",
 			urgency: "high",
 		});
 		expect(payload.severity).toBe("high");
+		expect(payload.lane).toBe("engineering");
 		expect(payload.category).toBe("Software / Application");
 		expect(payload.affectedModule).toBe("User Management");
+	});
+
+	it("rejects help category on engineering lane", () => {
+		expect(() =>
+			buildCreateTicketInput({
+				title: "Need laptop",
+				description: "Requesting a replacement device for my role.",
+				lane: "engineering",
+				category: "Hardware",
+				impact: "low",
+				urgency: "medium",
+			}),
+		).toThrow(/category/i);
+	});
+
+	it("builds help lane payload without engineering-only category", () => {
+		const payload = buildCreateTicketInput({
+			title: "Need laptop",
+			description: "Requesting a replacement device for my role.",
+			lane: "help",
+			category: "Hardware",
+			impact: "low",
+			urgency: "medium",
+		});
+		expect(payload.lane).toBe("help");
+		expect(payload.category).toBe("Hardware");
 	});
 
 	it("builds a structured GitHub issue body from server fields", () => {
@@ -115,9 +143,9 @@ describe("cursor agent helpers", () => {
 	});
 
 	it("parses a PR number from a GitHub URL", () => {
-		expect(
-			parsePrNumberFromUrl("https://github.com/org/repo/pull/88"),
-		).toBe(88);
+		expect(parsePrNumberFromUrl("https://github.com/org/repo/pull/88")).toBe(
+			88,
+		);
 		expect(parsePrNumberFromUrl(undefined)).toBeNull();
 	});
 });

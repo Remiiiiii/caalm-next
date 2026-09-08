@@ -18,6 +18,8 @@ Treat plan changes as financial operations with an owner — not casual clicking
 ## Integrations
 
 - **Outlook** connect/sync for calendar workflows
+- **HubSpot** deal-stage origin (Growth+) — creates a contract draft
+- **Salesforce** origin request (Enterprise, sales-led setup)
 - **Organization API keys** for controlled automation access
 
 Demo mode may disable external integrations.
@@ -28,4 +30,4 @@ Demo mode may disable external integrations.
 - Outlook access should be limited to people who understand shared calendar implications.
 - Document which integration is authoritative when both CAALM and an external system have dates.
 
-Admin playbooks: [Configure billing](/docs/admin/billing), [Connect integrations](/docs/admin/integrations).
+Admin playbooks: [Configure billing](/docs/admin/billing), [Connect integrations](/docs/admin/integrations), [HubSpot and Salesforce CRM origin](/docs/admin/crm-integrations).

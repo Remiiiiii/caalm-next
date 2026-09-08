@@ -15,7 +15,6 @@ import {
 } from "date-fns";
 import {
 	AlertCircle,
-	Ban,
 	Bell,
 	CalendarIcon,
 	CheckCircle,
@@ -563,14 +562,6 @@ const OutlookReplicaCalendar: React.FC<OutlookReplicaCalendarProps> = ({
 							/>
 						</div>
 						<div className="flex justify-end gap-2">
-							<Button
-								variant="outline"
-								onClick={() => setIsAddEventOpen(false)}
-								className="primary-btn px-3 sm:px-4"
-							>
-								<Ban className="w-4 h-4" />
-								Cancel
-							</Button>
 							<Button onClick={handleCreateEvent} disabled={creatingEvent}>
 								{creatingEvent ? (
 									<Loader2 className="h-4 w-4 animate-spin" />

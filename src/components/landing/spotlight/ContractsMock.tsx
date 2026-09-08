@@ -9,9 +9,9 @@ import {
 	Filter,
 	LayoutGrid,
 	Search,
+	SquareArrowRightExit,
 	Table,
 	TriangleAlert,
-	SquareArrowRightExit,
 	Upload,
 } from "lucide-react";
 import Image from "next/image";

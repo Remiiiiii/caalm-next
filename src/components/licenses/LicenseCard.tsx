@@ -20,7 +20,7 @@ function statusBadge(
 
 	if (isExpired) {
 		return (
-			<span className="inline-block px-1.5 py-0.5 border border-red/20 bg-red/10 text-red text-xs rounded-md font-medium">
+			<span className="inline-block px-1.5 py-0.5 border border-red/20 bg-red/10 text-red text-xs rounded-full font-medium">
 				Expired
 			</span>
 		);
@@ -29,37 +29,37 @@ function statusBadge(
 	switch (status) {
 		case "pending-review":
 			return (
-				<span className="inline-block px-1.5 py-0.5 border border-orange/20 bg-orange/10 text-orange text-xs rounded-md font-medium">
+				<span className="inline-block px-1.5 py-0.5 border border-orange/20 bg-orange/10 text-orange text-xs rounded-full font-medium">
 					Pending Review
 				</span>
 			);
 		case "action-required":
 			return (
-				<span className="inline-block px-1.5 py-0.5 border border-red/20 bg-red/10 text-red text-xs rounded-md font-medium">
+				<span className="inline-block px-1.5 py-0.5 border border-red/20 bg-red/10 text-red text-xs rounded-full font-medium">
 					Action Required
 				</span>
 			);
 		case "active":
 			return (
-				<span className="inline-block px-1.5 py-0.5 border border-green/20 bg-green/10 text-green text-xs rounded-md font-medium">
+				<span className="inline-block px-1.5 py-0.5 border border-green/20 bg-green/10 text-green text-xs rounded-full font-medium">
 					Active
 				</span>
 			);
 		case "inactive":
 			return (
-				<span className="inline-block px-1.5 py-0.5 border border-slate-200 bg-slate-100 text-slate-600 text-xs rounded-md font-medium">
+				<span className="inline-block px-1.5 py-0.5 border border-slate-200 bg-slate-100 text-slate-600 text-xs rounded-full font-medium">
 					Inactive
 				</span>
 			);
 		case "suspended":
 			return (
-				<span className="inline-block px-1.5 py-0.5 border border-slate-200 bg-slate-100 text-slate-700 text-xs rounded-md font-medium">
+				<span className="inline-block px-1.5 py-0.5 border border-slate-200 bg-slate-100 text-slate-700 text-xs rounded-full font-medium">
 					Suspended
 				</span>
 			);
 		default:
 			return (
-				<span className="inline-block px-1.5 py-0.5 border border-slate-200 bg-slate-100 text-slate-800 text-xs rounded-md font-medium">
+				<span className="inline-block px-1.5 py-0.5 border border-slate-200 bg-slate-100 text-slate-800 text-xs rounded-full font-medium">
 					{status || "Unknown"}
 				</span>
 			);
@@ -235,7 +235,7 @@ export default function LicenseCard({
 				<div className="flex items-center gap-2 flex-wrap">
 					{statusBadge(license.status, expiryDate)}
 					{divisionLabel && (
-						<span className="inline-block px-1.5 py-0.5 border border-slate-200 bg-white/50 text-slate-600 text-xs rounded-md font-medium capitalize">
+						<span className="inline-block px-1.5 py-0.5 border border-slate-200 bg-white/50 text-slate-600 text-xs rounded-full font-medium capitalize">
 							{divisionLabel}
 						</span>
 					)}

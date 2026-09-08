@@ -4,6 +4,7 @@ import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { requireStepUp } from "@/lib/auth/step-up";
 import { requirePermission } from "@/lib/rbac/middleware";
 import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 import { listRoles } from "@/lib/rbac/roles";
@@ -29,6 +30,9 @@ export async function POST(request: NextRequest) {
 				{ status: 401 },
 			);
 		}
+
+		const stepUpCheck = requireStepUp(request, currentUser.$id);
+		if (stepUpCheck) return stepUpCheck;
 
 		const { email, roleName, orgId } = await request.json();
 

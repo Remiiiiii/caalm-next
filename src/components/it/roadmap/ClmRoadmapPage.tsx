@@ -11,6 +11,7 @@ import { RoadmapProgressBar } from "@/components/it/roadmap/RoadmapProgressBar";
 import { RoadmapTaskTree } from "@/components/it/roadmap/RoadmapTaskTree";
 import { PageIndex } from "@/components/ui/page-index";
 import { useRoadmapRealtime } from "@/hooks/useRoadmapRealtime";
+import { displayPullRequestTitle } from "@/lib/roadmap/github-pr-match";
 import type { RoadmapOverview, RoadmapTaskTreeNode } from "@/lib/roadmap/types";
 import { fetcher } from "@/lib/swr-config";
 import { cn } from "@/lib/utils";
@@ -27,6 +28,7 @@ type SectionPullRequest = {
 	htmlUrl: string;
 	headRef: string;
 	body: string;
+	checksPassed?: boolean;
 };
 
 type SectionPullRequestsResponse = {
@@ -36,7 +38,8 @@ type SectionPullRequestsResponse = {
 
 function RoadmapPullRequestItem({ pr }: { pr: SectionPullRequest }) {
 	const [expanded, setExpanded] = useState(false);
-	const merged = pr.state === "merged";
+	// Only strike when roadmap completion checks passed — not merely GitHub "merged"
+	const complete = pr.checksPassed === true;
 
 	return (
 		<div className="space-y-1.5 py-3 first:pt-0 last:pb-0">
@@ -50,17 +53,15 @@ function RoadmapPullRequestItem({ pr }: { pr: SectionPullRequest }) {
 						onClick={() => setExpanded((open) => !open)}
 					>
 						<p className="min-w-0 flex-1 truncate text-xs">
-							<span className="font-semibold text-slate-700">
-								#{pr.number}
-							</span>{" "}
+							<span className="font-semibold text-slate-700">#{pr.number}</span>{" "}
 							<span
 								className={cn(
-									merged
+									complete
 										? "line-through text-slate-500 font-normal"
 										: "text-slate-700",
 								)}
 							>
-								{pr.title}
+								{displayPullRequestTitle(pr.title)}
 							</span>
 						</p>
 						{pr.state ? (
@@ -203,33 +204,32 @@ function RoadmapSectionCard({
 					) : null}
 					{section.prLinks && section.prLinks.length > 0 ? (
 						<ul className="mt-2 space-y-1">
-							{section.prLinks.map((pr) => (
-								<li
-									key={pr.number}
-									className="text-xs text-slate-600 line-clamp-2"
-									title={
-										pr.title
-											? `#${pr.number} ${pr.title}`
-											: `#${pr.number}`
-									}
-								>
-									#{pr.number}
-									{pr.title ? (
-										<span
-											className={cn(
-												pr.state === "merged" &&
-													"line-through text-slate-500",
-											)}
-										>
-											{" "}
-											{pr.title}
-										</span>
-									) : null}
-									{pr.state ? (
-										<span className="text-slate-500"> · {pr.state}</span>
-									) : null}
-								</li>
-							))}
+							{section.prLinks.map((pr) => {
+								const title = displayPullRequestTitle(pr.title);
+								return (
+									<li
+										key={pr.number}
+										className="text-xs text-slate-600 line-clamp-2"
+										title={title ? `#${pr.number} ${title}` : `#${pr.number}`}
+									>
+										#{pr.number}
+										{title ? (
+											<span
+												className={cn(
+													(pr.checksPassed || section.status === "complete") &&
+														"line-through text-slate-500",
+												)}
+											>
+												{" "}
+												{title}
+											</span>
+										) : null}
+										{pr.state ? (
+											<span className="text-slate-500"> · {pr.state}</span>
+										) : null}
+									</li>
+								);
+							})}
 						</ul>
 					) : section.prTitle ? (
 						<p className="text-xs text-slate-600 mt-2">{section.prTitle}</p>
@@ -312,11 +312,11 @@ export function ClmRoadmapPage() {
 		error: overviewError,
 		isLoading: overviewLoading,
 	} = useSWR<RoadmapOverview>("/api/roadmap/overview", fetcher, {
-			// Appwrite Realtime pushes updates; polling is a fallback only
-			refreshInterval: realtimeEnabled ? 0 : 30_000,
-			revalidateOnFocus: true,
-			keepPreviousData: true,
-		});
+		// Appwrite Realtime pushes updates; polling is a fallback only
+		refreshInterval: realtimeEnabled ? 0 : 30_000,
+		revalidateOnFocus: true,
+		keepPreviousData: true,
+	});
 
 	const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 	const [detailOpenIds, setDetailOpenIds] = useState<Set<string>>(new Set());
@@ -392,9 +392,7 @@ export function ClmRoadmapPage() {
 			) : (
 				<RoadmapUnavailableState
 					detail={
-						overviewError instanceof Error
-							? overviewError.message
-							: undefined
+						overviewError instanceof Error ? overviewError.message : undefined
 					}
 				/>
 			)}

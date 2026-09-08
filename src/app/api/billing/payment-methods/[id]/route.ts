@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
+import { requireStepUpForSession } from "@/lib/auth/step-up";
 import { requirePermission } from "@/lib/rbac/middleware";
 import { getOrganization } from "@/lib/rbac/organizations";
 import { validateUserOrgAccess } from "@/lib/rbac/permissions";
@@ -63,6 +64,9 @@ export async function PATCH(
 	});
 	if (permissionCheck) return permissionCheck;
 
+	const stepUpCheck = await requireStepUpForSession(request);
+	if (stepUpCheck) return stepUpCheck;
+
 	if (!isStripeConfigured()) {
 		return NextResponse.json(
 			{ error: "Stripe is not configured" },
@@ -104,10 +108,7 @@ export async function PATCH(
 
 	try {
 		if (parsed.data.setDefault) {
-			const paymentMethods = await setDefaultOrgPaymentMethod(
-				resolved.org,
-				id,
-			);
+			const paymentMethods = await setDefaultOrgPaymentMethod(resolved.org, id);
 			return NextResponse.json({ paymentMethods });
 		}
 
@@ -119,7 +120,9 @@ export async function PATCH(
 		return NextResponse.json({ paymentMethod });
 	} catch (error: unknown) {
 		const message =
-			error instanceof Error ? error.message : "Failed to update payment method";
+			error instanceof Error
+				? error.message
+				: "Failed to update payment method";
 		console.error("[billing/payment-methods/PATCH]", error);
 		return NextResponse.json({ error: message }, { status: 400 });
 	}
@@ -133,6 +136,9 @@ export async function DELETE(
 		permission: PERMISSIONS.SETTINGS.BILLING,
 	});
 	if (permissionCheck) return permissionCheck;
+
+	const stepUpCheck = await requireStepUpForSession(request);
+	if (stepUpCheck) return stepUpCheck;
 
 	if (!isStripeConfigured()) {
 		return NextResponse.json(
@@ -159,7 +165,9 @@ export async function DELETE(
 		return NextResponse.json({ success: true });
 	} catch (error: unknown) {
 		const message =
-			error instanceof Error ? error.message : "Failed to remove payment method";
+			error instanceof Error
+				? error.message
+				: "Failed to remove payment method";
 		console.error("[billing/payment-methods/DELETE]", error);
 		return NextResponse.json({ error: message }, { status: 400 });
 	}

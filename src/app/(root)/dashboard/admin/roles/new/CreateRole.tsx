@@ -16,6 +16,7 @@ import {
 	type RoleTemplateId,
 } from "@/constants/role-templates";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { useStepUp } from "@/contexts/StepUpContext";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -47,6 +48,7 @@ const CreateRole = () => {
 	});
 	const [templateId, setTemplateId] = useState<RoleTemplateId>("blank");
 	const { toast } = useToast();
+	const { ensureStepUp } = useStepUp();
 	const router = useRouter();
 	const { orgId } = useOrganization();
 
@@ -120,6 +122,10 @@ const CreateRole = () => {
 
 		try {
 			setSaving(true);
+			if (!(await ensureStepUp())) {
+				setSaving(false);
+				return;
+			}
 			const response = await fetch(`/api/admin/roles${adminQuery(orgId)}`, {
 				method: "POST",
 				headers: {

@@ -44,6 +44,7 @@ CAALM’s working product today is document intake, approvals, renewals/expiry a
   - **Unlimited active licenses**
   - **500 AI document extractions / month**
   - **Department-scoped views** and fuller operational dashboards
+  - **HubSpot CRM origin** (deal stage → contract draft)
   - **License allocate & renew** workflows
   - **Priority email support**
   - **Storage**: 100 GB
@@ -62,6 +63,7 @@ CAALM’s working product today is document intake, approvals, renewals/expiry a
   - **Unlimited licenses**
   - **Dedicated account manager / CSM**
   - **Migration assistance** and custom integration planning
+  - **Salesforce CRM origin** (sales-led setup)
   - **Security questionnaire support** for vendor review
   - **Priority support**
   - **Sales-assisted only** — no self-serve checkout

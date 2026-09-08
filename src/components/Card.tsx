@@ -25,7 +25,7 @@ const statusBadge = (
 
 	if (isContractExpired) {
 		return (
-			<span className="inline-block px-1.5 py-0.5 border border-red/20 bg-red/10 text-red text-xs rounded-md font-medium">
+			<span className="inline-block px-1.5 py-0.5 border border-red/20 bg-red/10 text-red text-xs rounded-full font-medium">
 				Expired
 			</span>
 		);
@@ -34,31 +34,31 @@ const statusBadge = (
 	switch (status) {
 		case "pending-review":
 			return (
-				<span className="inline-block px-1.5 py-0.5 border border-orange/20 bg-orange/10 text-orange text-xs rounded-md font-medium">
+				<span className="inline-block px-1.5 py-0.5 border border-orange/20 bg-orange/10 text-orange text-xs rounded-full font-medium">
 					Pending Review
 				</span>
 			);
 		case "action-required":
 			return (
-				<span className="inline-block px-1.5 py-0.5 border border-red/20 bg-red/10 text-red text-xs rounded-md font-medium">
+				<span className="inline-block px-1.5 py-0.5 border border-red/20 bg-red/10 text-red text-xs rounded-full font-medium">
 					Action Required
 				</span>
 			);
 		case "active":
 			return (
-				<span className="inline-block px-1.5 py-0.5 border border-green/20 bg-green/10 text-green text-xs rounded-md font-medium">
+				<span className="inline-block px-1.5 py-0.5 border border-green/20 bg-green/10 text-green text-xs rounded-full font-medium">
 					Active
 				</span>
 			);
 		case "inactive":
 			return (
-				<span className="inline-block px-1.5 py-0.5 border border-slate-200 bg-slate-100 text-slate-600 text-xs rounded-md font-medium">
+				<span className="inline-block px-1.5 py-0.5 border border-slate-200 bg-slate-100 text-slate-600 text-xs rounded-full font-medium">
 					Inactive
 				</span>
 			);
 		default:
 			return (
-				<span className="inline-block px-1.5 py-0.5 border border-slate-200 bg-slate-100 text-slate-800 text-xs rounded-md font-medium">
+				<span className="inline-block px-1.5 py-0.5 border border-slate-200 bg-slate-100 text-slate-800 text-xs rounded-full font-medium">
 					{status || "Unknown"}
 				</span>
 			);
@@ -87,7 +87,7 @@ const riskLevelBadge = (risk: string) => {
 	const label = risk.charAt(0).toUpperCase() + risk.slice(1).toLowerCase();
 	return (
 		<span
-			className={`inline-block px-1.5 py-0.5 text-xs rounded-md font-medium ${color}`}
+			className={`inline-block px-1.5 py-0.5 text-xs rounded-full font-medium ${color}`}
 		>
 			{label} Risk
 		</span>
@@ -640,7 +640,7 @@ const Card = ({
 						)}
 					{riskLevel && riskLevelBadge(riskLevel)}
 					{departmentLabel && (
-						<span className="inline-block px-1.5 py-0.5 border border-slate-200 bg-white/50 text-slate-600 text-xs rounded-md font-medium capitalize">
+						<span className="inline-block px-1.5 py-0.5 border border-slate-200 bg-white/50 text-slate-600 text-xs rounded-full font-medium capitalize">
 							{departmentLabel}
 						</span>
 					)}

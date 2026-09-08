@@ -21,7 +21,10 @@ export async function POST() {
 	try {
 		const userId = await resolveSessionUserId();
 		if (!userId) {
-			return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+			return NextResponse.json(
+				{ error: "Authentication required" },
+				{ status: 401 },
+			);
 		}
 
 		await removePushSubscription(userId);

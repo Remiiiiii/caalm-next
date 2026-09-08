@@ -1,7 +1,6 @@
 "use client";
 
 import {
-	Ban,
 	Loader2,
 	Save,
 	ShieldCheck,
@@ -25,10 +24,10 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import type { UserManagementUser } from "@/hooks/useUsers";
-import { avatarPlaceholderUrl } from "../../../constants";
-import { fetcher } from "@/lib/swr-config";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import type { UserManagementUser } from "@/hooks/useUsers";
+import { fetcher } from "@/lib/swr-config";
+import { avatarPlaceholderUrl } from "../../../constants";
 
 function isSafeNextImageSrc(src: string): boolean {
 	const s = src.trim();
@@ -110,7 +109,7 @@ function DialogShell({
 	icon: React.ReactNode;
 	subtitle?: string;
 	children: React.ReactNode;
-	footer: React.ReactNode;
+	footer?: React.ReactNode;
 }) {
 	return (
 		<Dialog open={open} onOpenChange={(next) => !next && onClose()}>
@@ -132,7 +131,9 @@ function DialogShell({
 				<div className="glass-dialog-body-padded flex-1 overflow-y-auto">
 					{children}
 				</div>
-				<div className="glass-dialog-footer-wrap">{footer}</div>
+				{footer ? (
+					<div className="glass-dialog-footer-wrap">{footer}</div>
+				) : null}
 			</DialogContent>
 		</Dialog>
 	);
@@ -159,12 +160,17 @@ export function UserManagementActionDialogs({
 	const [roleName, setRoleName] = useState("");
 
 	const historyUrl =
-		user && action === "edit"
-			? `/api/users/${user.$id}/org-history`
-			: null;
+		user && action === "edit" ? `/api/users/${user.$id}/org-history` : null;
 	const { data: historyData } = useSWR<{
 		success: boolean;
-		data: { history: Array<{ $id: string; changedAt: string; reason?: string; toOrgUnitId?: string }> };
+		data: {
+			history: Array<{
+				$id: string;
+				changedAt: string;
+				reason?: string;
+				toOrgUnitId?: string;
+			}>;
+		};
 	}>(historyUrl, fetcher);
 
 	const usersUrl = orgId
@@ -193,18 +199,6 @@ export function UserManagementActionDialogs({
 				title="User profile"
 				icon={<UserRound className="h-5 w-5 text-[#0f5384]" />}
 				subtitle={user.email}
-				footer={
-					<div className="flex justify-end">
-						<Button
-							variant="outline"
-							onClick={onClose}
-							className="primary-btn px-3 sm:px-4"
-						>
-							<Ban className="h-4 w-4" />
-							Close
-						</Button>
-					</div>
-				}
 			>
 				<div className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
 					<div className="flex items-center gap-3">
@@ -288,15 +282,6 @@ export function UserManagementActionDialogs({
 				footer={
 					<div className="flex items-center justify-end gap-3">
 						<Button
-							variant="outline"
-							onClick={onClose}
-							disabled={busy}
-							className="primary-btn px-3 sm:px-4"
-						>
-							<Ban className="h-4 w-4" />
-							Cancel
-						</Button>
-						<Button
 							disabled={busy || !fullName.trim()}
 							onClick={() =>
 								onSaveEdit({
@@ -347,14 +332,14 @@ export function UserManagementActionDialogs({
 							<SelectContent>
 								<SelectItem value="__none">None</SelectItem>
 								{(Array.isArray(orgUsersRaw) ? orgUsersRaw : [])
-									.filter(
-										(u: { $id?: string }) => u.$id && u.$id !== user.$id,
-									)
-									.map((u: { $id: string; fullName?: string; email?: string }) => (
-										<SelectItem key={u.$id} value={u.$id}>
-											{u.fullName || u.email || u.$id}
-										</SelectItem>
-									))}
+									.filter((u: { $id?: string }) => u.$id && u.$id !== user.$id)
+									.map(
+										(u: { $id: string; fullName?: string; email?: string }) => (
+											<SelectItem key={u.$id} value={u.$id}>
+												{u.fullName || u.email || u.$id}
+											</SelectItem>
+										),
+									)}
 							</SelectContent>
 						</Select>
 					</div>
@@ -388,15 +373,6 @@ export function UserManagementActionDialogs({
 				subtitle={`Assign a role for ${user.fullName}`}
 				footer={
 					<div className="flex items-center justify-end gap-3">
-						<Button
-							variant="outline"
-							onClick={onClose}
-							disabled={busy}
-							className="primary-btn px-3 sm:px-4"
-						>
-							<Ban className="h-4 w-4" />
-							Cancel
-						</Button>
 						<Button
 							disabled={busy || !roleName}
 							onClick={() => onSaveRole(roleName)}
@@ -461,7 +437,10 @@ export function UserManagementActionDialogs({
 	if (action === "delete") {
 		return (
 			<Dialog open onOpenChange={(next) => !next && onClose()}>
-				<DialogContent className="flex max-h-[90vh] max-w-[440px] flex-col overflow-hidden border border-slate-200 p-0 shadow-xl" variant="destructive">
+				<DialogContent
+					className="flex max-h-[90vh] max-w-[440px] flex-col overflow-hidden border border-slate-200 p-0 shadow-xl"
+					variant="destructive"
+				>
 					<div className="absolute top-0 right-0 left-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
 
 					<div className="mt-4 flex items-start gap-3 border-b border-slate-200/80 bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-5">
@@ -552,15 +531,6 @@ export function UserManagementActionDialogs({
 					<div className="flex items-center justify-end gap-2 border-t border-slate-200 bg-slate-50 px-6 py-4">
 						<Button
 							type="button"
-							onClick={onClose}
-							disabled={busy}
-							className="btn-primary gap-2 px-3 sm:px-4"
-						>
-							<Ban className="h-4 w-4" aria-hidden />
-							Cancel
-						</Button>
-						<Button
-							type="button"
 							disabled={busy}
 							onClick={onConfirmDelete}
 							className="delete-btn gap-2 px-3 sm:px-4"
@@ -578,11 +548,7 @@ export function UserManagementActionDialogs({
 		);
 	}
 
-	if (
-		action === "reset" ||
-		action === "revoke" ||
-		action === "suspend"
-	) {
+	if (action === "reset" || action === "revoke" || action === "suspend") {
 		const cfg = confirmConfig[action];
 		return (
 			<DialogShell
@@ -592,15 +558,6 @@ export function UserManagementActionDialogs({
 				icon={<UserRound className="h-5 w-5 text-[#0f5384]" />}
 				footer={
 					<div className="flex items-center justify-end gap-3">
-						<Button
-							variant="outline"
-							onClick={onClose}
-							disabled={busy}
-							className="primary-btn px-3 sm:px-4"
-						>
-							<Ban className="h-4 w-4" />
-							Cancel
-						</Button>
 						<Button
 							disabled={busy}
 							onClick={cfg.onConfirm}

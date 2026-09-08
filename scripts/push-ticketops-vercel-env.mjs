@@ -128,7 +128,9 @@ for (const key of toPush) {
 			console.log(`Adding ${key} → ${environment}...`);
 			addEnv(key, local[key], environment);
 		} catch (error) {
-			console.error(`  FAILED: ${error instanceof Error ? error.message : error}`);
+			console.error(
+				`  FAILED: ${error instanceof Error ? error.message : error}`,
+			);
 		}
 	}
 }

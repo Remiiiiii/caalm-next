@@ -1,9 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
-import { getUserDefaultOrganization, getUserPermissions } from "@/lib/rbac/permissions";
 import { requirePermission } from "@/lib/rbac/middleware";
-import { resolveTicket } from "@/lib/tickets/ticket-resolve.service";
+import {
+	getUserDefaultOrganization,
+	getUserPermissions,
+} from "@/lib/rbac/permissions";
+import { startFixAgent } from "@/lib/tickets/ticket-resolve.service";
 
 export async function POST(
 	request: NextRequest,
@@ -16,7 +19,10 @@ export async function POST(
 
 	const user = await getCurrentUser();
 	if (!user) {
-		return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+		return NextResponse.json(
+			{ error: "Authentication required" },
+			{ status: 401 },
+		);
 	}
 
 	const org = await getUserDefaultOrganization(user.$id);
@@ -48,7 +54,7 @@ export async function POST(
 	}
 
 	try {
-		const ticket = await resolveTicket({
+		const ticket = await startFixAgent({
 			ticketId,
 			actorId: user.$id,
 			permissions,
@@ -57,7 +63,8 @@ export async function POST(
 		});
 		return NextResponse.json({ ticket }, { status: 202 });
 	} catch (error) {
-		const message = error instanceof Error ? error.message : "Resolve failed";
+		const message =
+			error instanceof Error ? error.message : "Start fix agent failed";
 		const status = message.includes("Not allowed") ? 403 : 400;
 		return NextResponse.json({ error: message }, { status });
 	}

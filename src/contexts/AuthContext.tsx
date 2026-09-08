@@ -12,7 +12,9 @@ import {
 	useState,
 } from "react";
 import { normalizeUserRole } from "@/constants/rbac";
+import { useToast } from "@/hooks/use-toast";
 import { getSessionUser } from "@/lib/actions/auth.actions";
+import { getCurrentUserFrom2FA } from "@/lib/actions/user.actions";
 import { isAuthRoute, isProtectedAppRoute } from "@/lib/auth/protectedRoutes";
 import {
 	CACHED_USER_STORAGE_KEY,
@@ -21,12 +23,10 @@ import {
 	SESSION_CHANGED_NOTICE_PARAM,
 	SESSION_CHANGED_NOTICE_VALUE,
 } from "@/lib/auth/session-sync";
-import { getCurrentUserFrom2FA } from "@/lib/actions/user.actions";
 import {
 	getDashboardUrlForUser,
 	invalidateDashboardUrlCache,
 } from "@/lib/utils/dashboard-redirect";
-import { useToast } from "@/hooks/use-toast";
 
 type AuthenticatedUser = Models.User<Models.Preferences> & {
 	role?: string;
@@ -330,7 +330,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 		if (sessionNoticeShownRef.current || typeof window === "undefined") return;
 
 		const params = new URLSearchParams(window.location.search);
-		if (params.get(SESSION_CHANGED_NOTICE_PARAM) !== SESSION_CHANGED_NOTICE_VALUE) {
+		if (
+			params.get(SESSION_CHANGED_NOTICE_PARAM) !== SESSION_CHANGED_NOTICE_VALUE
+		) {
 			return;
 		}
 

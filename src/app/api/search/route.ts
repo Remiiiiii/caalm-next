@@ -9,6 +9,7 @@ import { appwriteConfig } from "@/lib/appwrite/config";
 import { logApiPerformance } from "@/lib/monitoring/performance";
 import { CACHE_KEYS, CACHE_TTLS } from "@/lib/services/cache-keys";
 import CacheManager from "@/lib/services/cache-manager";
+import { excludeSoftDeletedQuery } from "@/lib/soft-delete";
 
 export async function GET(request: NextRequest) {
 	const startTime = Date.now();
@@ -117,6 +118,7 @@ async function searchContracts(tablesDB: any, query: string, limit: number) {
 		appwriteConfig.databaseId,
 		appwriteConfig.contractsCollectionId,
 		[
+			excludeSoftDeletedQuery(),
 			Query.or([
 				Query.contains("title", query),
 				Query.contains("description", query),

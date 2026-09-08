@@ -3,7 +3,7 @@
 import * as VisuallyHiddenPrimitive from "@radix-ui/react-visually-hidden";
 import {
 	AlertTriangle,
-	Ban,
+	ArrowRightLeft,
 	Download,
 	FileText,
 	GitBranch,
@@ -19,7 +19,9 @@ import {
 import Image from "next/image";
 import type React from "react";
 import { Fragment, useState } from "react";
+import { TransferOwnershipDialog } from "@/components/ownership/TransferOwnershipDialog";
 import { Button } from "@/components/ui/button";
+import { DeleteConfirmBody } from "@/components/ui/delete-confirmation-dialog";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
 	AppDropdownMenuContent,
@@ -29,6 +31,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { PERMISSIONS } from "@/constants/permissions";
 import { useToast } from "@/hooks/use-toast";
 import { useDepartmentAssignment } from "@/hooks/useDepartmentAssignment";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -91,6 +94,11 @@ const licenseActionsDropdownItems = [
 		value: "assign",
 	},
 	{
+		label: "Transfer",
+		icon: "/assets/icons/assign.svg",
+		value: "transfer",
+	},
+	{
 		label: "Approval workflow",
 		icon: "/assets/icons/contract-status.svg",
 		value: "status",
@@ -141,8 +149,10 @@ const LicenseActionDropdown = ({
 	const [showAllocate, setShowAllocate] = useState(false);
 	const [showRenew, setShowRenew] = useState(false);
 	const [showAssign, setShowAssign] = useState(false);
+	const [showTransfer, setShowTransfer] = useState(false);
 	const [showStatus, setShowStatus] = useState(false);
 	const [showDelete, setShowDelete] = useState(false);
+	const [deleteConfirmed, setDeleteConfirmed] = useState(false);
 	const [showShare, setShowShare] = useState(false);
 	const [_emails, _setEmails] = useState<string[]>([]);
 
@@ -176,6 +186,7 @@ const LicenseActionDropdown = ({
 		setShowStatus(false);
 		setShowDelete(false);
 		setShowShare(false);
+		setDeleteConfirmed(false);
 	};
 
 	const handleAction = async () => {
@@ -255,6 +266,11 @@ const LicenseActionDropdown = ({
 			case "assign":
 			case "status":
 				return canLicenseAction(permissions, "edit");
+			case "transfer":
+				return (
+					permissions.includes(PERMISSIONS.LICENSES.VIEW_ALL) &&
+					permissions.includes(PERMISSIONS.LICENSES.EDIT)
+				);
 			case "allocate":
 				return canLicenseAction(permissions, "allocate");
 			case "renew":
@@ -356,6 +372,7 @@ const LicenseActionDropdown = ({
 							allocate: KeyRound,
 							renew: RefreshCw,
 							assign: UserRoundCheck,
+							transfer: ArrowRightLeft,
 							status: GitBranch,
 							delete: Trash2,
 							download: Download,
@@ -399,6 +416,8 @@ const LicenseActionDropdown = ({
 										} else if (actionItem.value === "assign") {
 											setShowAssign(true);
 											setIsModalOpen(true);
+										} else if (actionItem.value === "transfer") {
+											setShowTransfer(true);
 										} else if (actionItem.value === "status") {
 											setShowStatus(true);
 											setIsModalOpen(true);
@@ -543,46 +562,43 @@ const LicenseActionDropdown = ({
 
 			{/* Delete Dialog — matches Delete Draft design */}
 			{showDelete && (
-				<Dialog open={showDelete} onOpenChange={setShowDelete}>
-					<DialogContent className="overflow-hidden p-0 gap-0 shadow-xl sm:max-w-md border border-slate-200" variant="destructive">
+				<Dialog
+					open={showDelete}
+					onOpenChange={(open) => {
+						setShowDelete(open);
+						if (!open) setDeleteConfirmed(false);
+					}}
+				>
+					<DialogContent
+						className="flex max-h-[90vh] max-w-[600px] flex-col overflow-hidden p-0 shadow-xl"
+						variant="destructive"
+						showCloseButton
+					>
 						<DialogTitle className="sr-only">Delete License</DialogTitle>
 						<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
 
-						{/* Header */}
-						<div className="px-6 py-4 mt-4 bg-white border-b border-slate-200">
-							<div className="flex items-center gap-2">
-								<AlertTriangle className="w-5 h-5 shrink-0 text-[#f7d333]" />
-								<h2 className="text-base font-semibold sidebar-gradient-text">
-									Delete License
-								</h2>
+						<div className="glass-dialog-wizard-header mt-4">
+							<div className="flex items-center gap-3 px-6">
+								<div className="flex items-center gap-3">
+									<AlertTriangle className="w-5 h-5 text-[#0f5384]" />
+									<h2 className="text-xl font-semibold sidebar-gradient-text">
+										Delete License
+									</h2>
+								</div>
 							</div>
-							<p className="text-sm text-slate-600 mt-1 ml-7">
-								Are you sure you want to delete &quot;{license.licenseName}
-								&quot;? This action cannot be undone.
-							</p>
 						</div>
 
-						{/* Body */}
-						<div className="px-6 py-5 space-y-3 bg-white">
-							<p className="text-sm text-slate-600">
-								This will permanently remove the license from the system.
-							</p>
-							<p className="text-xs font-medium text-slate-500">
-								This action is permanent.
-							</p>
-						</div>
+						<DeleteConfirmBody
+							description="Are you sure you want to delete this license? This action cannot be undone."
+							items={[license.licenseName || "Untitled"]}
+							itemNoun="license"
+							requireConfirmation
+							confirmationLabel="I understand this will permanently delete this license and cannot be undone."
+							confirmed={deleteConfirmed}
+							onConfirmedChange={setDeleteConfirmed}
+						/>
 
-						{/* Footer — centered actions */}
-						<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-center gap-3">
-							<Button
-								type="button"
-								variant="ghost"
-								onClick={(e) => closeAllModals(e)}
-								className="primary-btn gap-2 px-3 sm:px-4"
-							>
-								<Ban className="h-4 w-4 shrink-0" />
-								Cancel
-							</Button>
+						<div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
 							<Button
 								type="button"
 								onClick={(e) => {
@@ -590,20 +606,11 @@ const LicenseActionDropdown = ({
 									e.preventDefault();
 									handleAction();
 								}}
-								disabled={isLoading}
+								disabled={isLoading || !deleteConfirmed}
 								className="delete-btn gap-2 px-3 sm:px-4"
 							>
 								<Trash2 className="h-4 w-4 shrink-0" />
 								{isLoading ? "Deleting..." : "Delete License"}
-								{isLoading && (
-									<Image
-										src="/assets/icons/loader.svg"
-										alt="loader"
-										width={16}
-										height={16}
-										className="animate-spin ml-2"
-									/>
-								)}
 							</Button>
 						</div>
 					</DialogContent>
@@ -644,15 +651,6 @@ const LicenseActionDropdown = ({
 									Enter email addresses to share
 								</div>
 								<div className="flex items-center gap-3">
-									<Button
-										variant="outline"
-										onClick={(e) => closeAllModals(e)}
-										className="primary-btn px-3 sm:px-4"
-										disabled={isLoading}
-									>
-										<Ban className="w-4 h-4" />
-										Cancel
-									</Button>
 									<Button
 										onClick={(e) => {
 											e.stopPropagation();
@@ -805,7 +803,7 @@ const LicenseActionDropdown = ({
 																	: manager.division
 																		? formatDepartmentName(
 																				DIVISION_TO_DEPARTMENT[
-																					manager.division
+																					manager.division as UserDivision
 																				] as ContractDepartment,
 																			)
 																		: "N/A"}
@@ -860,15 +858,6 @@ const LicenseActionDropdown = ({
 								</div>
 								<div className="flex items-center gap-3">
 									<Button
-										variant="outline"
-										onClick={(e) => closeAllModals(e)}
-										className="primary-btn px-3 sm:px-4"
-										disabled={isLoading}
-									>
-										<Ban className="w-4 h-4" />
-										Cancel
-									</Button>
-									<Button
 										onClick={(e) => {
 											e.stopPropagation();
 											e.preventDefault();
@@ -899,6 +888,19 @@ const LicenseActionDropdown = ({
 					</DialogContent>
 				</Dialog>
 			)}
+			<TransferOwnershipDialog
+				open={showTransfer}
+				onOpenChange={setShowTransfer}
+				itemKind="license"
+				itemName={license.licenseName || "License"}
+				transferUrl={`/api/licenses/${license.$id}/transfer`}
+				excludeUserId={
+					typeof license.licenseOwnerId === "string"
+						? license.licenseOwnerId
+						: undefined
+				}
+				onTransferred={() => onRefresh?.()}
+			/>
 		</>
 	);
 };

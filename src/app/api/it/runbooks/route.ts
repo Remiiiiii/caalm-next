@@ -1,5 +1,5 @@
-import { z } from "zod";
 import type { NextRequest } from "next/server";
+import { z } from "zod";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
 import {
@@ -59,17 +59,19 @@ export async function GET(request: NextRequest) {
 	const { items, storage } = await listRunbooks(org.orgId, {
 		search: searchParams.get("search") || undefined,
 		service: searchParams.get("service") || undefined,
-		severity: (searchParams.get("severity") as
-			| "low"
-			| "medium"
-			| "high"
-			| "critical"
-			| null) || undefined,
-		status: (searchParams.get("status") as
-			| "draft"
-			| "published"
-			| "archived"
-			| null) || undefined,
+		severity:
+			(searchParams.get("severity") as
+				| "low"
+				| "medium"
+				| "high"
+				| "critical"
+				| null) || undefined,
+		status:
+			(searchParams.get("status") as
+				| "draft"
+				| "published"
+				| "archived"
+				| null) || undefined,
 		limit: Number(searchParams.get("limit") || 100),
 		offset: Number(searchParams.get("offset") || 0),
 	});
@@ -96,11 +98,17 @@ export async function POST(request: NextRequest) {
 
 		const user = await getCurrentUser();
 		if (!user) {
-			return Response.json({ error: "Authentication required" }, { status: 401 });
+			return Response.json(
+				{ error: "Authentication required" },
+				{ status: 401 },
+			);
 		}
 		const org = await getUserDefaultOrganization(user.$id);
 		if (!org?.orgId) {
-			return Response.json({ error: "Organization not found" }, { status: 404 });
+			return Response.json(
+				{ error: "Organization not found" },
+				{ status: 404 },
+			);
 		}
 
 		const parsed = matchSchema.safeParse(body);

@@ -3,9 +3,7 @@ import { PERMISSIONS } from "@/constants/permissions";
 import { getTotalSpaceUsed } from "@/lib/actions/file.actions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
 import { getAiExtractionMeter } from "@/lib/billing/consumeAiExtractionForRequest";
-import {
-	resolveBillingAccess,
-} from "@/lib/billing/entitlements";
+import { resolveBillingAccess } from "@/lib/billing/entitlements";
 import {
 	countActiveContracts,
 	countActiveLicenses,

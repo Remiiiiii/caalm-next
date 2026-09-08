@@ -1,10 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
-import {
-	softDeleteOrgUnit,
-	updateOrgUnit,
-} from "@/lib/org/org-units.service";
+import { requireStepUpForSession } from "@/lib/auth/step-up";
 import type { OrgUnitType } from "@/lib/database/schemas/org-units.schema";
+import { softDeleteOrgUnit, updateOrgUnit } from "@/lib/org/org-units.service";
 import { requirePermission } from "@/lib/rbac/middleware";
 
 export async function PATCH(
@@ -19,6 +17,10 @@ export async function PATCH(
 	try {
 		const { id } = await params;
 		const body = await request.json();
+		if (body.active === false) {
+			const stepUpCheck = await requireStepUpForSession(request);
+			if (stepUpCheck) return stepUpCheck;
+		}
 		const unit = await updateOrgUnit(id, {
 			name: body.name,
 			parentId: body.parentId,
@@ -30,7 +32,10 @@ export async function PATCH(
 	} catch (error) {
 		const message =
 			error instanceof Error ? error.message : "Internal server error";
-		return NextResponse.json({ success: false, error: message }, { status: 400 });
+		return NextResponse.json(
+			{ success: false, error: message },
+			{ status: 400 },
+		);
 	}
 }
 
@@ -43,6 +48,9 @@ export async function DELETE(
 	});
 	if (denied) return denied;
 
+	const stepUpCheck = await requireStepUpForSession(request);
+	if (stepUpCheck) return stepUpCheck;
+
 	try {
 		const { id } = await params;
 		const unit = await softDeleteOrgUnit(id);
@@ -50,6 +58,9 @@ export async function DELETE(
 	} catch (error) {
 		const message =
 			error instanceof Error ? error.message : "Internal server error";
-		return NextResponse.json({ success: false, error: message }, { status: 400 });
+		return NextResponse.json(
+			{ success: false, error: message },
+			{ status: 400 },
+		);
 	}
 }

@@ -1,4 +1,4 @@
-import type { TicketSeverity } from "./ticket.types";
+import type { TicketLane, TicketSeverity } from "./ticket.types";
 
 export const TICKET_CATEGORIES = [
 	"Software / Application",
@@ -10,6 +10,48 @@ export const TICKET_CATEGORIES = [
 ] as const;
 
 export type TicketCategory = (typeof TICKET_CATEGORIES)[number];
+
+export const TICKET_LANE_OPTIONS: Array<{
+	value: TicketLane;
+	label: string;
+	helper: string;
+}> = [
+	{
+		value: "help",
+		label: "I need help",
+		helper: "I need access, a device, or a change",
+	},
+	{
+		value: "engineering",
+		label: "Something is broken",
+		helper: "Something isn't working the way it should",
+	},
+];
+
+export const HELP_TICKET_CATEGORIES: TicketCategory[] = [
+	"Hardware",
+	"Access & Permissions",
+	"Network & Connectivity",
+	"Billing & Account",
+	"Other",
+];
+
+export const ENGINEERING_TICKET_CATEGORIES: TicketCategory[] = [
+	"Software / Application",
+];
+
+export function categoriesForLane(lane: TicketLane): TicketCategory[] {
+	return lane === "help"
+		? HELP_TICKET_CATEGORIES
+		: ENGINEERING_TICKET_CATEGORIES;
+}
+
+export function isCategoryAllowedForLane(
+	lane: TicketLane,
+	category: string,
+): boolean {
+	return categoriesForLane(lane).includes(category as TicketCategory);
+}
 
 export const TICKET_MODULES = [
 	"Contract Workflows",

@@ -31,7 +31,7 @@ export default function StorageUsageBar({
 	}
 
 	return (
-		<div className={`mb-2 ${className ?? ""}`}>
+		<div className={className ?? ""}>
 			{showLabel ? (
 				<p className="mb-1 text-md text-slate-500">Account storage</p>
 			) : null}

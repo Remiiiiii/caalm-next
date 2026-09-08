@@ -84,9 +84,7 @@ export function toScimEnterpriseOrgFields(user: {
 		/** SCIM "department" = CAALM program/division leaf */
 		department: user.division || null,
 		costCenter: user.costCenterCode || null,
-		manager: user.managerUserId
-			? { value: user.managerUserId }
-			: null,
+		manager: user.managerUserId ? { value: user.managerUserId } : null,
 	};
 }
 

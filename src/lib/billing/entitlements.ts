@@ -7,10 +7,7 @@
  */
 
 import type { Organization } from "@/lib/rbac/organizations";
-import {
-	type PricingTier,
-	TIER_LIMITS,
-} from "@/lib/stripe/prices";
+import { type PricingTier, TIER_LIMITS } from "@/lib/stripe/prices";
 
 /** Days an org can keep writing after a failed payment before hard lock. */
 export const PAST_DUE_GRACE_DAYS = 7;
@@ -118,8 +115,7 @@ export function resolveBillingAccess(
 				state: "locked_pilot_expired",
 				canWrite: false,
 				canCheckout: true,
-				warning:
-					"Pilot ended. Choose a plan to keep using CAALM.",
+				warning: "Pilot ended. Choose a plan to keep using CAALM.",
 				pilotEndsAt: endsAt.toISOString(),
 				graceEndsAt: null,
 			};
@@ -128,9 +124,7 @@ export function resolveBillingAccess(
 			state: "pilot",
 			canWrite: true,
 			canCheckout: true,
-			warning: endsAt
-				? `Pilot ends ${endsAt.toLocaleDateString()}.`
-				: null,
+			warning: endsAt ? `Pilot ends ${endsAt.toLocaleDateString()}.` : null,
 			pilotEndsAt: endsAt?.toISOString() ?? null,
 			graceEndsAt: null,
 		};
@@ -166,8 +160,7 @@ export function resolveBillingAccess(
 			state: "locked_past_due",
 			canWrite: false,
 			canCheckout: true,
-			warning:
-				"Payment past due. Update billing to restore write access.",
+			warning: "Payment past due. Update billing to restore write access.",
 			pilotEndsAt: null,
 			graceEndsAt: graceEnd.toISOString(),
 		};
@@ -189,7 +182,8 @@ export function resolveBillingAccess(
 		state: "locked_no_subscription",
 		canWrite: false,
 		canCheckout: true,
-		warning: "No active subscription or pilot. Contact CAALM to start a pilot, or choose a plan.",
+		warning:
+			"No active subscription or pilot. Contact CAALM to start a pilot, or choose a plan.",
 		pilotEndsAt: null,
 		graceEndsAt: null,
 	};

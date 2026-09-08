@@ -16,7 +16,6 @@ import { Button } from "@/components/ui/button";
 import { CardContent, Card as GlassCard } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { LoadingSpinner } from "@/components/ui/loading";
-import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import {
 	Select,
 	SelectContent,
@@ -24,6 +23,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import { PERMISSION_DEFINITIONS, PERMISSIONS } from "@/constants/permissions";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -137,7 +137,7 @@ export default function MyAccessPanel() {
 	return (
 		<div className="space-y-6">
 			{/* Summary Stats */}
-			<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+			<div className="grid grid-cols-3 gap-6">
 				{/* Roles Card */}
 				<GlassCard className="glass-card">
 					<div className="glass-card-cap" />
@@ -242,12 +242,12 @@ export default function MyAccessPanel() {
 								value={searchQuery}
 								onChange={(e) => setSearchQuery(e.target.value)}
 								data-with-leading-icon="true"
-								className="h-10 border border-slate-200! bg-white pl-10!"
+								className="h-10 border-[0.25px] border-slate-200! bg-white pl-10!"
 							/>
 						</div>
 					</div>
 
-					<div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+					<div className="mt-6 flex flex-row items-center justify-between gap-4">
 						<div className="flex min-w-0 flex-1 flex-wrap gap-3">
 							{roles.length === 0 ? (
 								<div className="w-full py-4">
@@ -280,7 +280,7 @@ export default function MyAccessPanel() {
 							>
 								<SelectTrigger
 									aria-label="Filter by category"
-									className="h-10 w-45 cursor-pointer border border-slate-200! bg-white"
+									className="h-10 w-45 cursor-pointer border-[0.25px] border-slate-200! bg-white"
 								>
 									<SelectValue placeholder="All Categories" />
 								</SelectTrigger>
@@ -357,7 +357,7 @@ export default function MyAccessPanel() {
 									</span>
 								</button>
 								{!collapsed && (
-									<div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+									<div className="mt-4 grid grid-cols-2 gap-3">
 										{items.map((item) => (
 											<div
 												key={item.key}
@@ -381,9 +381,7 @@ export default function MyAccessPanel() {
 												<div className="min-w-0 flex-1">
 													<p
 														className={`text-sm font-semibold ${
-															item.granted
-																? "text-slate-700"
-																: "text-slate-500"
+															item.granted ? "text-slate-700" : "text-slate-500"
 														}`}
 													>
 														{item.name}

@@ -882,7 +882,10 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 					if (!open) setDraftToDelete(null);
 				}}
 			>
-				<DialogContent className="overflow-hidden p-0 gap-0 shadow-xl sm:max-w-md border border-slate-200" variant="destructive">
+				<DialogContent
+					className="overflow-hidden p-0 gap-0 shadow-xl sm:max-w-md border border-slate-200"
+					variant="destructive"
+				>
 					<DialogTitle className="sr-only">Delete Draft</DialogTitle>
 					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
 
@@ -911,20 +914,8 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 						</p>
 					</div>
 
-					{/* Footer — centered actions */}
-					<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-center gap-3">
-						<Button
-							type="button"
-							variant="ghost"
-							onClick={() => {
-								setDeleteDialogOpen(false);
-								setDraftToDelete(null);
-							}}
-							className="primary-btn gap-2 px-3 sm:px-4"
-						>
-							<Ban className="h-4 w-4 shrink-0" />
-							Cancel
-						</Button>
+					{/* Footer — primary action; corner X dismisses */}
+					<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3">
 						<Button
 							type="button"
 							onClick={async () => {

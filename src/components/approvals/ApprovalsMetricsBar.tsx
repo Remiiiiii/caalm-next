@@ -8,6 +8,8 @@ import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import {
 	type ApprovalQueueItem,
 	type ApprovalTab,
+	isSlaAtRisk,
+	isSlaBreached,
 	matchesApprovalTab,
 } from "@/lib/approvals/approvalsListUtils";
 import { cn } from "@/lib/utils";
@@ -19,11 +21,22 @@ interface ApprovalsMetricsBarProps {
 export default function ApprovalsMetricsBar({
 	items,
 }: ApprovalsMetricsBarProps) {
-	const { setTab, scrollToList } = useApprovalsView();
+	const { setTab, setFilters, scrollToList } = useApprovalsView();
 
 	const counts = useMemo(() => {
+		const open = items.filter((i) => matchesApprovalTab(i, "needs-me"));
+		const atRisk = open.filter(isSlaAtRisk).length;
+		const breached = open.filter(isSlaBreached).length;
+		const timed = open.filter((i) => typeof i.hoursRemaining === "number");
+		const avgHoursLeft =
+			timed.length > 0
+				? Math.round(
+						timed.reduce((sum, i) => sum + (i.hoursRemaining || 0), 0) /
+							timed.length,
+					)
+				: null;
 		return {
-			needsMe: items.filter((i) => matchesApprovalTab(i, "needs-me")).length,
+			needsMe: open.length,
 			pendingReview: items.filter((i) =>
 				matchesApprovalTab(i, "pending-review"),
 			).length,
@@ -33,6 +46,11 @@ export default function ApprovalsMetricsBar({
 			recentlyDecided: items.filter((i) =>
 				matchesApprovalTab(i, "recently-decided"),
 			).length,
+			atRisk,
+			breached,
+			breachRate:
+				open.length > 0 ? Math.round((breached / open.length) * 100) : 0,
+			avgHoursLeft,
 		};
 	}, [items]);
 
@@ -126,6 +144,90 @@ export default function ApprovalsMetricsBar({
 						</CardContent>
 					</Card>
 				</button>
+			</div>
+
+			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
+				<button
+					type="button"
+					className="text-left"
+					onClick={() => {
+						setFilters((prev) => ({ ...prev, slaStatus: "at_risk" }));
+						setTab("needs-me");
+						scrollToList();
+					}}
+				>
+					<Card className={cn(interactiveCard)}>
+						<div className="glass-card-cap" />
+						<CardContent className="p-4 sm:p-6">
+							<p className="text-sm font-medium sidebar-gradient-text">
+								At risk
+							</p>
+							<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
+								<span>{counts.atRisk}</span>
+								<StatCardIcon className="ml-2" icon={AlertTriangle} />
+							</div>
+							<p className="text-xs text-slate-600 mt-1">
+								Past halfway to the SLA
+							</p>
+						</CardContent>
+					</Card>
+				</button>
+
+				<button
+					type="button"
+					className="text-left"
+					onClick={() => {
+						setFilters((prev) => ({ ...prev, slaStatus: "breached" }));
+						setTab("needs-me");
+						scrollToList();
+					}}
+				>
+					<Card className={cn(interactiveCard)}>
+						<div className="glass-card-cap" />
+						<CardContent className="p-4 sm:p-6">
+							<p className="text-sm font-medium sidebar-gradient-text">
+								SLA breached
+							</p>
+							<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
+								<span>{counts.breached}</span>
+								<StatCardIcon className="ml-2" icon={AlertTriangle} />
+							</div>
+							<p className="text-xs text-slate-600 mt-1">Past the due time</p>
+						</CardContent>
+					</Card>
+				</button>
+
+				<Card className="glass-card">
+					<div className="glass-card-cap" />
+					<CardContent className="p-4 sm:p-6">
+						<p className="text-sm font-medium sidebar-gradient-text">
+							Breach rate
+						</p>
+						<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
+							<span>{counts.breachRate}%</span>
+							<StatCardIcon className="ml-2" icon={Clock} />
+						</div>
+						<p className="text-xs text-slate-600 mt-1">
+							Of open approval steps
+						</p>
+					</CardContent>
+				</Card>
+
+				<Card className="glass-card">
+					<div className="glass-card-cap" />
+					<CardContent className="p-4 sm:p-6">
+						<p className="text-sm font-medium sidebar-gradient-text">
+							Avg hours left
+						</p>
+						<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
+							<span>{counts.avgHoursLeft ?? "—"}</span>
+							<StatCardIcon className="ml-2" icon={Clock} />
+						</div>
+						<p className="text-xs text-slate-600 mt-1">
+							Until current-step due time
+						</p>
+					</CardContent>
+				</Card>
 			</div>
 		</section>
 	);

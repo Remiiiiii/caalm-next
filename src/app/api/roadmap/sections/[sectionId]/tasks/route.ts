@@ -8,10 +8,7 @@ export async function GET(
 	context: { params: Promise<{ sectionId: string }> },
 ) {
 	const denied = await requirePermission(request, {
-		permission: [
-			PERMISSIONS.IT.VIEW_ROADMAP,
-			PERMISSIONS.IT.MANAGE_ROADMAP,
-		],
+		permission: [PERMISSIONS.IT.VIEW_ROADMAP, PERMISSIONS.IT.MANAGE_ROADMAP],
 	});
 	if (denied) return denied;
 
@@ -21,9 +18,15 @@ export async function GET(
 		return NextResponse.json(data);
 	} catch (error) {
 		if (error instanceof RoadmapError) {
-			return NextResponse.json({ error: error.message }, { status: error.status });
+			return NextResponse.json(
+				{ error: error.message },
+				{ status: error.status },
+			);
 		}
 		console.error("[SERVER] roadmap/sections/tasks:", error);
-		return NextResponse.json({ error: "Failed to load tasks" }, { status: 500 });
+		return NextResponse.json(
+			{ error: "Failed to load tasks" },
+			{ status: 500 },
+		);
 	}
 }

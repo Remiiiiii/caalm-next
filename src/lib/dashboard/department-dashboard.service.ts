@@ -8,6 +8,7 @@ import type {
 	DepartmentDashboardData,
 	DepartmentRecentActivityItem,
 } from "@/lib/dashboard/department-dashboard.types";
+import { excludeSoftDeletedQuery } from "@/lib/soft-delete";
 import {
 	DIVISION_TO_DEPARTMENT,
 	formatDivisionName,
@@ -88,7 +89,11 @@ async function fetchDivisionContracts(
 			const result = await tablesDB.listRows({
 				databaseId,
 				tableId,
-				queries: [Query.equal(field, value), Query.limit(500)],
+				queries: [
+					excludeSoftDeletedQuery(),
+					Query.equal(field, value),
+					Query.limit(500),
+				],
 			});
 			return result.rows as unknown as ContractRow[];
 		} catch {
@@ -122,7 +127,7 @@ async function fetchDivisionContracts(
 	const all = await tablesDB.listRows({
 		databaseId,
 		tableId,
-		queries: [Query.limit(500)],
+		queries: [excludeSoftDeletedQuery(), Query.limit(500)],
 	});
 	return (all.rows as unknown as ContractRow[]).filter(
 		(c) =>
@@ -141,7 +146,11 @@ async function fetchDivisionLicenses(departmentLabel: string) {
 		const response = await tablesDB.listRows({
 			databaseId: appwriteConfig.databaseId!,
 			tableId: appwriteConfig.licensesCollectionId,
-			queries: [Query.equal("department", departmentLabel), Query.limit(200)],
+			queries: [
+				excludeSoftDeletedQuery("licenses"),
+				Query.equal("department", departmentLabel),
+				Query.limit(200),
+			],
 		});
 		const rows = response.rows as Array<Record<string, unknown>>;
 		const needsAttention = rows.filter((row) => {
@@ -222,7 +231,7 @@ function buildActionQueue(params: {
 			type: "contract_review",
 			title: `Review ${contract.contractName || contract.name || "contract"}`,
 			dueDate: contract.contractExpiryDate,
-			href: `/my-contracts`,
+			href: `/contracts/approvals`,
 			priority: "high",
 			meta: contract.status || "pending-review",
 		});
@@ -242,7 +251,7 @@ function buildActionQueue(params: {
 			type: "contract_expiry",
 			title: `${contract.contractName || contract.name || "Contract"} expires soon`,
 			dueDate: contract.contractExpiryDate,
-			href: `/my-contracts`,
+			href: `/contracts/approvals`,
 			priority: days !== null && days <= 30 ? "high" : "medium",
 			meta:
 				days !== null ? `${days} day${days === 1 ? "" : "s"} left` : undefined,
@@ -323,7 +332,7 @@ export async function getDepartmentDashboardData(
 	const actionQueue = buildActionQueue({
 		contracts,
 		pendingApprovals: approvals.length,
-		approvalsHref: "/calendar",
+		approvalsHref: "/contracts/approvals",
 	});
 
 	// Also surface contract reviews in queue (already included via buildActionQueue)
@@ -358,21 +367,21 @@ export async function getDepartmentDashboardData(
 				needsAttention: contractsNeedingAttention.length,
 				ok: contractsOk,
 				total: totalContracts,
-				href: "/my-contracts",
+				href: "/contracts/approvals",
 			},
 			calendar: {
 				label: "Calendar",
 				needsAttention: approvals.length,
 				ok: Math.max(0, approvals.length === 0 ? 1 : 0),
 				total: Math.max(approvals.length, 1),
-				href: "/calendar",
+				href: "/contracts/approvals",
 			},
 			licenses: {
 				label: "Licenses",
 				needsAttention: licenses.needsAttention,
 				ok: licenses.ok,
 				total: licenses.total,
-				href: "/licenses/department",
+				href: "/licenses/approvals",
 			},
 			documents: {
 				label: "Documents",

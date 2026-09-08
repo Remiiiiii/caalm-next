@@ -52,6 +52,9 @@ export const ROLE_TEMPLATES: RoleTemplate[] = [
 			PERMISSIONS.CONTRACTS.REVIEW,
 			PERMISSIONS.LICENSES.VIEW,
 			PERMISSIONS.LICENSES.VIEW_DEPARTMENT,
+			PERMISSIONS.FUNDING.VIEW,
+			PERMISSIONS.CLAUSES.VIEW,
+			PERMISSIONS.CONTRACT_TEMPLATES.VIEW,
 		],
 	},
 	{
@@ -71,12 +74,17 @@ export const ROLE_TEMPLATES: RoleTemplate[] = [
 			PERMISSIONS.LICENSES.VIEW_DEPARTMENT,
 			PERMISSIONS.USERS.VIEW,
 			PERMISSIONS.USERS.INVITE,
+			PERMISSIONS.FUNDING.VIEW,
+			PERMISSIONS.FUNDING.MANAGE,
+			PERMISSIONS.CLAUSES.VIEW,
+			PERMISSIONS.CONTRACT_TEMPLATES.VIEW,
 		],
 	},
 	{
 		id: "content_creator",
 		name: "Content creator",
-		description: "Create and publish internal news without billing or user admin.",
+		description:
+			"Create and publish internal news without billing or user admin.",
 		permissionKeys: [
 			PERMISSIONS.NEWS.READ,
 			PERMISSIONS.NEWS.CREATE,

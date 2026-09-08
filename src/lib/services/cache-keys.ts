@@ -164,6 +164,11 @@ export const CACHE_KEYS = {
 		byCoords: (lat: string, lon: string) => `weather:coords:${lat}:${lon}`,
 		byCity: (city: string) => `weather:city:${city.toLowerCase()}`,
 	},
+
+	// Dashboard briefing (markets + news)
+	briefing: {
+		snapshot: () => `briefing:snapshot:v15`,
+	},
 } as const;
 
 /**
@@ -260,6 +265,9 @@ export const getTTLForRoute = (route: string): number => {
 
 		// Weather
 		weather: CACHE_TTLS.long, // 10 minutes
+
+		// Briefing
+		briefing: 60, // 1 minute — markets and headlines should stay current
 	};
 
 	return ttlMap[route] || CACHE_TTLS.medium;

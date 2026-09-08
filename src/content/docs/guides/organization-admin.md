@@ -15,7 +15,7 @@ You own day-to-day company operations inside CAALM:
 
 - **Users** — invite, edit, deactivate, assign roles
 - **Org settings**, billing, and integrations (when you hold those permissions)
-- **Contracts, licenses, calendar, news, audits, AI** features your role pack includes
+- **Contracts, licenses, clause library, templates, funding & retention, calendar, news, audits, AI** features your role pack includes
 - **Audit readiness** (`/audits/readiness`) for prep scores, snapshots, and packets — see [Audit readiness](/docs/reference/audit-readiness)
 - **Approvals** for org workflows (including override only if that permission is granted)
 - **Custom roles** — build job-shaped roles with templates; avoid mega-roles
@@ -90,7 +90,7 @@ Use Role Management templates (Viewer, Contract reviewer, Department manager, Co
 - [ ] New users completed 2FA
 - [ ] No unexplained role changes
 - [ ] Expiry widgets reviewed with owners
-- [ ] Integration health glanced at
+- [ ] Integration health glanced at (Outlook, HubSpot; Salesforce request if Enterprise) — [CRM origin](/docs/admin/crm-integrations)
 - [ ] Super Admin list still tiny (escalate odd grants to platform ops)
 
 See: [Super Admin guide](/docs/guides/super-admin), [Invite and onboard users](/docs/admin/invite-onboard), [Design a permission model](/docs/admin/permission-model), [Permissions](/docs/concepts/permissions).

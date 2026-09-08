@@ -1,12 +1,15 @@
 import type {
-	AuditReadinessSummary,
 	AuditReadinessSeverity,
+	AuditReadinessSummary,
 } from "@/lib/analytics/audit-readiness.types";
 import type { ComplianceRagStatus } from "@/lib/audits/types";
 
 export type AuditCadence = "weekly" | "monthly" | "quarterly";
 
-export type AuditEvidenceAuditType = "hrsa_osv" | "cw_monitoring" | "financial_pbc";
+export type AuditEvidenceAuditType =
+	| "hrsa_osv"
+	| "cw_monitoring"
+	| "financial_pbc";
 
 export type AuditEvidenceSegment = "cfce_fqhc_cw";
 
@@ -17,7 +20,13 @@ export interface AuditEvidenceMapRow {
 	requirementId: string;
 	label: string;
 	evidenceType: string;
-	caalmModule: "contracts" | "licenses" | "documents" | "governance" | "site" | "other";
+	caalmModule:
+		| "contracts"
+		| "licenses"
+		| "documents"
+		| "governance"
+		| "site"
+		| "other";
 	inV1: boolean;
 	notes?: string;
 }

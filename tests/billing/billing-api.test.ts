@@ -48,6 +48,7 @@ vi.mock("@/lib/stripe/billing", () => ({
 	listInvoicesForOrg: vi.fn(),
 	changeSubscriptionPlan: vi.fn(),
 	startOrgPilot: vi.fn(),
+	syncLatestStripeStateForOrg: vi.fn(),
 }));
 
 vi.mock("@/lib/rbac/organizations", () => ({
@@ -281,6 +282,28 @@ describe("GET /api/billing/subscription", () => {
 			"http://localhost:3000/api/billing/subscription?orgId=org-1",
 		);
 		const response = await GET(request);
+		expect(response.status).toBe(403);
+	});
+});
+
+describe("POST /api/billing/refresh", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it("returns 403 when user lacks settings.billing permission", async () => {
+		mockRequirePermission.mockResolvedValue(
+			new Response(JSON.stringify({ error: "Insufficient permissions" }), {
+				status: 403,
+			}),
+		);
+
+		const { POST } = await import("@/app/api/billing/refresh/route");
+		const request = new NextRequest(
+			"http://localhost:3000/api/billing/refresh?orgId=org-1",
+			{ method: "POST" },
+		);
+		const response = await POST(request);
 		expect(response.status).toBe(403);
 	});
 });

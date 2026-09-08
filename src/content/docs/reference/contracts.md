@@ -13,6 +13,7 @@ Contracts are one of CAALM’s primary systems of record.
 |---|---|---|
 | All Contracts | `/contracts` | Org-visible contract library (permission-gated) |
 | My Contracts | `/my-contracts` | Ownership / scoped working set |
+| Negotiate | `/contracts/[id]/negotiate` | Comment, redline, and invite before formal review |
 | Approvals | `/contracts/approvals` | Review and approve proposals |
 | Advanced Resources | `/contracts/advanced-resources` | SAM.gov opportunity search |
 
@@ -55,7 +56,7 @@ Contracts pages often surface counts and “needs attention” cues. Use them as
 - [ ] Approval state matches reality
 - [ ] Related tasks/dates on calendar if your team uses that discipline
 
-Related: [Approvals](/docs/reference/approvals), [SAM.gov](/docs/reference/sam-gov).
+Related: [Negotiate contracts](/docs/reference/negotiate), [Clause Library](/docs/reference/clause-library), [Contract templates](/docs/reference/contract-templates), [Funding and retention](/docs/reference/funding-retention), [Approvals](/docs/reference/approvals), [SAM.gov](/docs/reference/sam-gov).
 
 
 ## Intake standards (recommended)
@@ -90,9 +91,10 @@ Managers may only get the scoped tools — that is normal.
 
 ## Approvals handoff
 
-A contract should not sit in “draft/review” because people are negotiating in email forever. Either:
+A contract should not sit in “draft/review” because people are negotiating in email forever. Prefer:
 
-- Keep status as draft until terms are real, or
-- Update CAALM when interim approvals happen
+- Keep wording work in [Negotiate](/docs/reference/negotiate) until terms are real
+- Click **Send for review** when the draft is ready for the approval queue
+- Update CAALM when interim decisions happen offline
 
 The anti-pattern is an approved-looking record whose file is still a redlined draft.

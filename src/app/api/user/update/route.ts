@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import { updateUserProfile } from "@/lib/actions/user.actions";
+import { requireStepUpForSession } from "@/lib/auth/step-up";
 import {
 	normalizeOrgPlacement,
 	OrgUnitValidationError,
@@ -30,6 +31,11 @@ export async function PATCH(req: NextRequest) {
 		} = body;
 		if (!accountId) {
 			return NextResponse.json({ error: "Missing accountId" }, { status: 400 });
+		}
+
+		if (status !== undefined) {
+			const stepUpCheck = await requireStepUpForSession(req);
+			if (stepUpCheck) return stepUpCheck;
 		}
 
 		if (

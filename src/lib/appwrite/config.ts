@@ -98,6 +98,42 @@ export const appwriteConfig = {
 		"test-license-drafts",
 	),
 
+	/** Org clause library (name: clauses) */
+	clausesCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CLAUSES_COLLECTION",
+		"69c8f401001a2b3c4d01",
+	),
+
+	/** Contract recipes that reference clause families (name: contract_templates) */
+	contractTemplatesCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CONTRACT_TEMPLATES_COLLECTION",
+		"69c8f501001a2b3c4d02",
+	),
+
+	/** Guided create-from-template wizard drafts (name: contract_wizard_sessions) */
+	contractWizardSessionsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CONTRACT_WIZARD_SESSIONS_COLLECTION",
+		"69c8f502002b3c4d5e03",
+	),
+
+	/** Contract document snapshots for negotiation diffs (name: contract_document_versions) */
+	contractDocumentVersionsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CONTRACT_DOCUMENT_VERSIONS_COLLECTION",
+		"69c9a101001b2c3d4e01",
+	),
+
+	/** Inline comments / redlines on a draft (name: contract_negotiation_comments) */
+	contractNegotiationCommentsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CONTRACT_NEGOTIATION_COMMENTS_COLLECTION",
+		"69c9a102002c3d4e5f02",
+	),
+
+	/** Hashed counterparty invite tokens (name: contract_negotiation_access) */
+	contractNegotiationAccessCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CONTRACT_NEGOTIATION_ACCESS_COLLECTION",
+		"69c9a103003d4e5f6a03",
+	),
+
 	tasksCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_TASKS_COLLECTION",
 		"tasks",
@@ -170,9 +206,21 @@ export const appwriteConfig = {
 
 	bucketId: getTestFallback("NEXT_PUBLIC_APPWRITE_BUCKET", "test-bucket"),
 
+	/** Agreement blueprints + wizard draft artifacts (name: contract_blueprints) */
+	contractBlueprintsBucketId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CONTRACT_BLUEPRINTS_BUCKET",
+		"69c8f503003c4d5e6f04",
+	),
+
 	profilePicturesBucketId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_PROFILE_PICTURES_BUCKET",
 		"test-profile-pictures-bucket",
+	),
+
+	/** Optional company logos for agreement letterheads (name: organization_logos) */
+	organizationLogosBucketId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_ORGANIZATION_LOGOS_BUCKET",
+		"69d1f8a00012c4e8f901",
 	),
 
 	auditLogsCollectionId: getTestFallback(
@@ -318,6 +366,42 @@ export const appwriteConfig = {
 	roadmapStatusLogCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_ROADMAP_STATUS_LOG_COLLECTION",
 		"69c0a104004d5e6f7a04",
+	),
+
+	/** Funding pursuits pipeline (name: funding_pursuits) */
+	fundingPursuitsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_FUNDING_PURSUITS_COLLECTION",
+		"69c4f201001a2b3c4d01",
+	),
+
+	/** Contract obligations for retention (name: contract_obligations) */
+	contractObligationsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CONTRACT_OBLIGATIONS_COLLECTION",
+		"69c4f202002b3c4d5e02",
+	),
+
+	/** Org-level CRM connections (name: crm_integrations) */
+	crmIntegrationsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CRM_INTEGRATIONS_COLLECTION",
+		"69d2a101001a2b3c4d01",
+	),
+
+	/** CRM deal → contract idempotency (name: crm_origin_links) */
+	crmOriginLinksCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CRM_ORIGIN_LINKS_COLLECTION",
+		"69d2a102002b3c4d5e02",
+	),
+
+	/** Per-org approval step SLA policies (name: approval_sla_policies) */
+	approvalSlaPoliciesCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_APPROVAL_SLA_POLICIES_COLLECTION",
+		"69e4a101001a2b3c4d01",
+	),
+
+	/** Expiration accountability records (name: document_expiration_attestations) */
+	documentExpirationAttestationsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_DOCUMENT_EXPIRATION_ATTESTATIONS_COLLECTION",
+		"69e4c201001b3c4d5e02",
 	),
 
 	// Imagine Art API (AI Image Generation)

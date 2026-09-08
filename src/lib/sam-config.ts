@@ -65,6 +65,7 @@ export interface SAMContractSearchParams {
 
 	// Pagination
 	limit?: number; // Max 1000, default 1
+	/** SAM.gov page index (0-based). NOT record offset. See Get Opportunities API. */
 	offset?: number; // Default 0
 
 	// Core search filters

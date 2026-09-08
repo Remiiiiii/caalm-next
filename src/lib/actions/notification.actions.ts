@@ -6,8 +6,6 @@ import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { hasPermission } from "@/lib/rbac/permissions";
 import { daysUntilExpiry } from "@/lib/renewals/autoRenew";
-import { DEFAULT_ORG_TIMEZONE } from "@/lib/timezone";
-import { getOrganizationTimezone } from "@/lib/timezone/org";
 import {
 	type AlertChannel,
 	buildExpirySmsMessage,
@@ -20,6 +18,9 @@ import {
 	parseExpiryNoticeMetadata,
 	shouldSendExpiryNotice,
 } from "@/lib/renewals/expiryNotice";
+import { excludeSoftDeletedQuery } from "@/lib/soft-delete";
+import { DEFAULT_ORG_TIMEZONE } from "@/lib/timezone";
+import { getOrganizationTimezone } from "@/lib/timezone/org";
 import {
 	type ContractDepartment,
 	formatDepartmentName,
@@ -134,10 +135,7 @@ export const markNotificationAsRead = async (notificationId: string) => {
 	}
 };
 
-
-async function loadExpiryNoticeSentKeys(
-	types: string[],
-): Promise<Set<string>> {
+async function loadExpiryNoticeSentKeys(types: string[]): Promise<Set<string>> {
 	const { tablesDB } = await createAdminClient();
 	const tableId = appwriteConfig.notificationsCollectionId || "notifications";
 	const sent = new Set<string>();
@@ -169,9 +167,7 @@ async function loadExpiryNoticeSentKeys(
 	return sent;
 }
 
-async function loadContractAlertSettingsMap(
-	contractIds: string[],
-): Promise<
+async function loadContractAlertSettingsMap(contractIds: string[]): Promise<
 	Map<
 		string,
 		{
@@ -501,6 +497,7 @@ export const checkDocumentExpirations = async () => {
 						databaseId: appwriteConfig.databaseId,
 						tableId: appwriteConfig.contractsCollectionId,
 						queries: [
+							excludeSoftDeletedQuery(),
 							Query.isNotNull("contractExpiryDate"),
 							Query.limit(1000),
 						],
@@ -511,6 +508,7 @@ export const checkDocumentExpirations = async () => {
 						databaseId: appwriteConfig.databaseId,
 						tableId: appwriteConfig.licensesCollectionId,
 						queries: [
+							excludeSoftDeletedQuery("licenses"),
 							Query.isNotNull("licenseExpiryDate"),
 							Query.limit(1000),
 						],
@@ -520,10 +518,7 @@ export const checkDocumentExpirations = async () => {
 				? tablesDB.listRows({
 						databaseId: appwriteConfig.databaseId,
 						tableId: appwriteConfig.auditsCollectionId,
-						queries: [
-							Query.isNotNull("auditExpiryDate"),
-							Query.limit(1000),
-						],
+						queries: [Query.isNotNull("auditExpiryDate"), Query.limit(1000)],
 					})
 				: Promise.resolve({ rows: [] as Record<string, unknown>[] }),
 		]);
@@ -533,9 +528,7 @@ export const checkDocumentExpirations = async () => {
 			...licensesResult.rows,
 			...auditsResult.rows,
 		]
-			.map((row) =>
-				typeof row.orgId === "string" ? row.orgId : null,
-			)
+			.map((row) => (typeof row.orgId === "string" ? row.orgId : null))
 			.filter(Boolean) as string[];
 
 		const timezoneByOrg = await preloadOrganizationTimezones(orgIds);
@@ -555,8 +548,7 @@ export const checkDocumentExpirations = async () => {
 			if (contract.status?.toLowerCase() === "expired") continue;
 			if (contract.isExpired === true) continue;
 
-			const orgId =
-				typeof contract.orgId === "string" ? contract.orgId : null;
+			const orgId = typeof contract.orgId === "string" ? contract.orgId : null;
 			const timeZone = orgId
 				? (timezoneByOrg.get(orgId) ?? DEFAULT_ORG_TIMEZONE)
 				: DEFAULT_ORG_TIMEZONE;
@@ -578,7 +570,7 @@ export const checkDocumentExpirations = async () => {
 			if (sentKeys.has(sentKey)) continue;
 
 			const departmentLabel = contract.department
-				? formatDepartmentName(contract.department as string)
+				? formatDepartmentName(contract.department as ContractDepartment)
 				: "Unknown Department";
 			const expirySlice = String(contract.contractExpiryDate).slice(0, 10);
 			const autoRenew = contract.autoRenew === true;
@@ -597,11 +589,10 @@ export const checkDocumentExpirations = async () => {
 				expirySlice,
 				autoRenew,
 			});
-			const alertSettings =
-				contractAlertSettings.get(String(contract.$id)) ?? {
-					channels: parseAlertChannels(null),
-					recipientIds: [],
-				};
+			const alertSettings = contractAlertSettings.get(String(contract.$id)) ?? {
+				channels: parseAlertChannels(null),
+				recipientIds: [],
+			};
 
 			contractJobs.push(() =>
 				notifyEligibleUsers({

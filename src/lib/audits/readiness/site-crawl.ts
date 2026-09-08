@@ -23,10 +23,7 @@ function sameOrigin(a: string, b: string): boolean {
 	}
 }
 
-function extractTag(
-	html: string,
-	pattern: RegExp,
-): string | null {
+function extractTag(html: string, pattern: RegExp): string | null {
 	const match = html.match(pattern);
 	if (!match?.[1]) return null;
 	return match[1].replace(/\s+/g, " ").trim().slice(0, 300) || null;
@@ -156,9 +153,7 @@ export async function crawlPublicSite(
 						/<meta[^>]+name=["']description["'][^>]+content=["']([^"']*)["']/i,
 					)
 				: null,
-			h1: page.body
-				? extractTag(page.body, /<h1[^>]*>([^<]*)<\/h1>/i)
-				: null,
+			h1: page.body ? extractTag(page.body, /<h1[^>]*>([^<]*)<\/h1>/i) : null,
 			error: page.error,
 		});
 		if (page.status && page.status >= 400) {

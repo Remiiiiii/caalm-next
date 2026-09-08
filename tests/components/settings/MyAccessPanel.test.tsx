@@ -25,9 +25,13 @@ vi.mock("@/hooks/useUserRoles", () => ({
 }));
 
 vi.mock("next/link", () => ({
-	default: ({ children, href }: { children: React.ReactNode; href: string }) => (
-		<a href={href}>{children}</a>
-	),
+	default: ({
+		children,
+		href,
+	}: {
+		children: React.ReactNode;
+		href: string;
+	}) => <a href={href}>{children}</a>,
 }));
 
 beforeEach(() => {
@@ -48,9 +52,8 @@ describe("MyAccessPanel - Core Rendering", () => {
 			loading: false,
 		});
 
-		const MyAccessPanel = (
-			await import("@/components/settings/MyAccessPanel")
-		).default;
+		const MyAccessPanel = (await import("@/components/settings/MyAccessPanel"))
+			.default;
 		render(<MyAccessPanel />);
 		expect(screen.getByText(/loading your access/i)).toBeInTheDocument();
 	});
@@ -65,9 +68,8 @@ describe("MyAccessPanel - Core Rendering", () => {
 			loading: false,
 		});
 
-		const MyAccessPanel = (
-			await import("@/components/settings/MyAccessPanel")
-		).default;
+		const MyAccessPanel = (await import("@/components/settings/MyAccessPanel"))
+			.default;
 		const { container } = render(<MyAccessPanel />);
 
 		expect(screen.getByText("Active Roles")).toBeInTheDocument();
@@ -87,9 +89,8 @@ describe("MyAccessPanel - Core Rendering", () => {
 			loading: false,
 		});
 
-		const MyAccessPanel = (
-			await import("@/components/settings/MyAccessPanel")
-		).default;
+		const MyAccessPanel = (await import("@/components/settings/MyAccessPanel"))
+			.default;
 		render(<MyAccessPanel />);
 
 		expect(
@@ -107,9 +108,8 @@ describe("MyAccessPanel - Core Rendering", () => {
 			loading: false,
 		});
 
-		const MyAccessPanel = (
-			await import("@/components/settings/MyAccessPanel")
-		).default;
+		const MyAccessPanel = (await import("@/components/settings/MyAccessPanel"))
+			.default;
 		render(<MyAccessPanel />);
 
 		expect(
@@ -132,9 +132,8 @@ describe("MyAccessPanel - Roles Display", () => {
 			loading: false,
 		});
 
-		const MyAccessPanel = (
-			await import("@/components/settings/MyAccessPanel")
-		).default;
+		const MyAccessPanel = (await import("@/components/settings/MyAccessPanel"))
+			.default;
 		render(<MyAccessPanel />);
 
 		expect(screen.getByText("Super Admin")).toBeInTheDocument();
@@ -151,9 +150,8 @@ describe("MyAccessPanel - Roles Display", () => {
 			loading: false,
 		});
 
-		const MyAccessPanel = (
-			await import("@/components/settings/MyAccessPanel")
-		).default;
+		const MyAccessPanel = (await import("@/components/settings/MyAccessPanel"))
+			.default;
 		render(<MyAccessPanel />);
 
 		expect(screen.getByText(/no roles assigned/i)).toBeInTheDocument();
@@ -169,9 +167,8 @@ describe("MyAccessPanel - Roles Display", () => {
 			loading: false,
 		});
 
-		const MyAccessPanel = (
-			await import("@/components/settings/MyAccessPanel")
-		).default;
+		const MyAccessPanel = (await import("@/components/settings/MyAccessPanel"))
+			.default;
 		render(<MyAccessPanel />);
 
 		const manageButton = screen.getByRole("link", { name: /manage roles/i });
@@ -192,9 +189,8 @@ describe("MyAccessPanel - Search Functionality", () => {
 		});
 
 		const user = userEvent.setup();
-		const MyAccessPanel = (
-			await import("@/components/settings/MyAccessPanel")
-		).default;
+		const MyAccessPanel = (await import("@/components/settings/MyAccessPanel"))
+			.default;
 		render(<MyAccessPanel />);
 
 		const searchInput = screen.getByPlaceholderText(
@@ -216,9 +212,8 @@ describe("MyAccessPanel - Search Functionality", () => {
 		});
 
 		const user = userEvent.setup();
-		const MyAccessPanel = (
-			await import("@/components/settings/MyAccessPanel")
-		).default;
+		const MyAccessPanel = (await import("@/components/settings/MyAccessPanel"))
+			.default;
 		render(<MyAccessPanel />);
 
 		const searchInput = screen.getByPlaceholderText(
@@ -241,9 +236,8 @@ describe("MyAccessPanel - Visual Structure", () => {
 			loading: false,
 		});
 
-		const MyAccessPanel = (
-			await import("@/components/settings/MyAccessPanel")
-		).default;
+		const MyAccessPanel = (await import("@/components/settings/MyAccessPanel"))
+			.default;
 		const { container } = render(<MyAccessPanel />);
 
 		const glassCards = container.querySelectorAll(".glass-card");
@@ -260,9 +254,8 @@ describe("MyAccessPanel - Visual Structure", () => {
 			loading: false,
 		});
 
-		const MyAccessPanel = (
-			await import("@/components/settings/MyAccessPanel")
-		).default;
+		const MyAccessPanel = (await import("@/components/settings/MyAccessPanel"))
+			.default;
 		const { container } = render(<MyAccessPanel />);
 
 		const caps = container.querySelectorAll(".glass-card-cap");
@@ -279,9 +272,8 @@ describe("MyAccessPanel - Visual Structure", () => {
 			loading: false,
 		});
 
-		const MyAccessPanel = (
-			await import("@/components/settings/MyAccessPanel")
-		).default;
+		const MyAccessPanel = (await import("@/components/settings/MyAccessPanel"))
+			.default;
 		render(<MyAccessPanel />);
 
 		expect(screen.getByText(/test org 123/i)).toBeInTheDocument();

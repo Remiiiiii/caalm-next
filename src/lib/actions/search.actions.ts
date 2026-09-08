@@ -3,6 +3,7 @@
 import { ID, Query } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite/admin";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { excludeSoftDeletedQuery } from "@/lib/soft-delete";
 
 const handleError = (error: unknown, message: string) => {
 	console.log(error, message);
@@ -75,7 +76,7 @@ export const performQuickSearch = async ({
 	const { tablesDB } = await createAdminClient();
 
 	try {
-		const queries = [];
+		const queries = [excludeSoftDeletedQuery()];
 		let results: SearchResult[] = [];
 
 		switch (searchType) {
@@ -122,7 +123,7 @@ export const performQuickSearch = async ({
 				const allContractsResult = await tablesDB.listRows({
 					databaseId: appwriteConfig.databaseId!,
 					tableId: appwriteConfig.contractsCollectionId!,
-					queries: [Query.limit(200)],
+					queries: [excludeSoftDeletedQuery(), Query.limit(200)],
 				});
 
 				// Group by department and create department entries
@@ -153,7 +154,7 @@ export const performQuickSearch = async ({
 				const vendorContractsResult = await tablesDB.listRows({
 					databaseId: appwriteConfig.databaseId!,
 					tableId: appwriteConfig.contractsCollectionId!,
-					queries: [Query.limit(200)],
+					queries: [excludeSoftDeletedQuery(), Query.limit(200)],
 				});
 
 				// Group by vendor and create vendor entries
@@ -342,7 +343,7 @@ export const performAdvancedSearch = async ({
 		const contractsResult = await tablesDB.listRows({
 			databaseId: appwriteConfig.databaseId!,
 			tableId: appwriteConfig.contractsCollectionId!,
-			queries: searchQueries,
+			queries: [excludeSoftDeletedQuery(), ...searchQueries],
 		});
 
 		// Search in files collection
@@ -501,7 +502,7 @@ export const getSearchSuggestions = async (
 			const contractsResult = await tablesDB.listRows({
 				databaseId: appwriteConfig.databaseId!,
 				tableId: appwriteConfig.contractsCollectionId!,
-				queries: [Query.limit(50)], // Get more documents to filter client-side
+				queries: [excludeSoftDeletedQuery(), Query.limit(50)],
 			});
 
 			contractsResult.rows.forEach((contract) => {

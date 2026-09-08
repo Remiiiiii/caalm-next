@@ -3,31 +3,17 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
+import { requireStepUp } from "@/lib/auth/step-up";
 import { requirePermission } from "@/lib/rbac/middleware";
+import {
+	orgPutRequiresStepUp,
+	orgPutRequiresStepUpForRequire2fa,
+	updateOrgSchema,
+} from "@/lib/rbac/organization-profile.schema";
 import { getOrganization, updateOrganization } from "@/lib/rbac/organizations";
 import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 import { logAuditEvent } from "@/lib/services/audit-logger";
-import { isValidIanaTimezone } from "@/lib/timezone";
-
-const updateOrgSchema = z.object({
-	name: z.string().min(1).max(255).optional(),
-	domain: z.string().max(255).optional().nullable(),
-	settings: z
-		.object({
-			// maxUsers / maxDepartments are NOT accepted from clients — tier caps win.
-			features: z.array(z.string()).optional(),
-			timezone: z
-				.string()
-				.min(1)
-				.max(64)
-				.refine((value) => isValidIanaTimezone(value), {
-					message: "Timezone must be a valid IANA timezone",
-				})
-				.optional(),
-			websiteUrl: z.string().max(500).optional().nullable(),
-		})
-		.optional(),
-});
+import { formatOrgStreetAddress } from "@/lib/templates/org-letterhead";
 
 export async function GET(request: NextRequest) {
 	try {
@@ -113,6 +99,12 @@ export async function PUT(request: NextRequest) {
 		}
 
 		const body = await request.json();
+
+		if (orgPutRequiresStepUp(body) || orgPutRequiresStepUpForRequire2fa(body)) {
+			const stepUpCheck = requireStepUp(request, user.$id);
+			if (stepUpCheck) return stepUpCheck;
+		}
+
 		const validated = updateOrgSchema.parse(body);
 
 		const { settingsFromTier, normalizePricingTier } = await import(
@@ -140,12 +132,72 @@ export async function PUT(request: NextRequest) {
 										: validated.settings.websiteUrl,
 							}
 						: {}),
+					...(validated.settings.address !== undefined
+						? {
+								address:
+									validated.settings.address === null
+										? ""
+										: validated.settings.address,
+							}
+						: {}),
+					...(validated.settings.street !== undefined
+						? {
+								street:
+									validated.settings.street === null
+										? ""
+										: validated.settings.street,
+							}
+						: {}),
+					...(validated.settings.city !== undefined
+						? {
+								city:
+									validated.settings.city === null
+										? ""
+										: validated.settings.city,
+							}
+						: {}),
+					...(validated.settings.state !== undefined
+						? {
+								state:
+									validated.settings.state === null
+										? ""
+										: validated.settings.state,
+							}
+						: {}),
+					...(validated.settings.zipcode !== undefined
+						? {
+								zipcode:
+									validated.settings.zipcode === null
+										? ""
+										: validated.settings.zipcode,
+							}
+						: {}),
+					...(validated.settings.phone !== undefined
+						? {
+								phone:
+									validated.settings.phone === null
+										? ""
+										: validated.settings.phone,
+							}
+						: {}),
+					...(validated.settings.email !== undefined
+						? {
+								email:
+									validated.settings.email === null
+										? ""
+										: validated.settings.email,
+							}
+						: {}),
 				}
 			: {
 					...existing.settings,
 					maxUsers: caps.maxUsers,
 					maxDepartments: caps.maxDepartments,
 				};
+
+		if (validated.settings) {
+			settings.address = formatOrgStreetAddress(settings);
+		}
 
 		const updated = await updateOrganization(orgId, {
 			name: validated.name,
@@ -180,9 +232,11 @@ export async function PUT(request: NextRequest) {
 		return NextResponse.json(
 			{
 				error:
-					error instanceof Error
-						? error.message
-						: "Failed to update organization",
+					error instanceof z.ZodError
+						? error.issues.map((issue) => issue.message).join("; ")
+						: error instanceof Error
+							? error.message
+							: "Failed to update organization",
 			},
 			{ status: error instanceof z.ZodError ? 400 : 500 },
 		);

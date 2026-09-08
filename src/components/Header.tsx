@@ -225,10 +225,7 @@ export const Header = () => {
 							aria-hidden
 						>
 							{Array.from({ length: 9 }).map((_, i) => (
-								<span
-									key={i}
-									className="size-1 rounded-full bg-current"
-								/>
+								<span key={i} className="size-1 rounded-full bg-current" />
 							))}
 						</span>
 					)}

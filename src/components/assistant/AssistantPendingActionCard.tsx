@@ -357,14 +357,6 @@ function ParticipantsPickerDialog({
 					<div className="flex items-center gap-3">
 						<Button
 							type="button"
-							variant="outline"
-							className="primary-btn px-3 sm:px-4 cursor-pointer"
-							onClick={() => onOpenChange(false)}
-						>
-							Cancel
-						</Button>
-						<Button
-							type="button"
 							className="primary-btn px-3 sm:px-4 cursor-pointer"
 							onClick={() => {
 								const selected = users.filter((u) => draftIds.includes(u.$id));

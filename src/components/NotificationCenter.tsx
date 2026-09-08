@@ -36,14 +36,13 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useMemo, useState } from "react";
-import { useOrgTimezone } from "@/hooks/useOrgTimezone";
 import { useToast } from "@/hooks/use-toast";
-import { formatInTimezone } from "@/lib/timezone";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useOrgTimezone } from "@/hooks/useOrgTimezone";
 import { isFileShareNotification } from "@/lib/files/fileShareNotification";
+import { formatInTimezone } from "@/lib/timezone";
 import NotificationSettings from "./NotificationSettings";
 import { Button } from "./ui/button";
-import { PageIndex } from "./ui/page-index";
 import { Checkbox } from "./ui/checkbox";
 import {
 	Dialog,
@@ -52,6 +51,7 @@ import {
 	DialogTitle,
 } from "./ui/dialog";
 import { Input } from "./ui/input";
+import { PageIndex } from "./ui/page-index";
 import {
 	Select,
 	SelectContent,
@@ -70,6 +70,7 @@ interface Notification {
 	priority?: "low" | "medium" | "high" | "urgent";
 	actionUrl?: string;
 	actionText?: string;
+	metadata?: string | Record<string, unknown> | null;
 	$createdAt: string;
 	$updatedAt: string;
 }
@@ -151,6 +152,20 @@ const NOTIFICATION_TYPES = {
 		icon: <CheckCircle className="w-4 h-4" />,
 		color: "bg-indigo-100 text-indigo-800",
 		bgColor: "bg-indigo-50/30 border-indigo-400",
+		priority: "high" as const,
+	},
+	"contract-deleted": {
+		label: "Contract Deleted",
+		icon: <Trash2 className="w-4 h-4" />,
+		color: "bg-red-100 text-red-800",
+		bgColor: "bg-destructive/10 border-destructive/30",
+		priority: "high" as const,
+	},
+	"license-deleted": {
+		label: "License Deleted",
+		icon: <Trash2 className="w-4 h-4" />,
+		color: "bg-red-100 text-red-800",
+		bgColor: "bg-destructive/10 border-destructive/30",
 		priority: "high" as const,
 	},
 	info: {
@@ -285,7 +300,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 		const byId = new Map(sorted.map((n) => [n.$id, n]));
 		const ordered = manualOrderIds
 			.map((id) => byId.get(id))
-			.filter((n): n is Notification => Boolean(n));
+			.flatMap((n) => (n ? [n] : []));
 		const remaining = sorted.filter((n) => !manualOrderIds.includes(n.$id));
 		return [...ordered, ...remaining];
 	}, [sorted, manualOrderIds]);
@@ -533,7 +548,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 									value={search}
 									onChange={(e) => setSearch(e.target.value)}
 									data-with-leading-icon="true"
-									className="border border-slate-200 bg-white text-slate-700 placeholder:text-slate-400"
+									className="border-[0.25px] border-slate-200 bg-white text-slate-700 placeholder:text-slate-400"
 								/>
 							</div>
 							<div

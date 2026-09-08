@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 
-import RoleDetail from "./RoleDetail";
 import { requireDashboardPathAccess } from "@/lib/rbac/page-guards";
+import RoleDetail from "./RoleDetail";
 
 export default async function RoleDetailPage({
 	params,

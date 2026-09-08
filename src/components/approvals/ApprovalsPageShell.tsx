@@ -3,6 +3,7 @@
 import { Calendar } from "lucide-react";
 import Link from "next/link";
 import { useMemo } from "react";
+import { AccountabilityAttentionStrip } from "@/components/approvals/AccountabilityAttentionStrip";
 import ApprovalDecideSheet from "@/components/approvals/ApprovalDecideSheet";
 import ApprovalsAttentionStrip from "@/components/approvals/ApprovalsAttentionStrip";
 import ApprovalsBulkBar from "@/components/approvals/ApprovalsBulkBar";
@@ -51,7 +52,7 @@ function ApprovalsPageBody({
 			<div className="flex items-center gap-4 mb-4 justify-start self-start w-full">
 				<h1 className="h1 capitalize sidebar-gradient-text">{title}</h1>
 			</div>
-			<div className="mb-6 flex items-center justify-end gap-2 flex-wrap">
+			<div className="mb-6 hidden md:flex items-center justify-end gap-2 flex-wrap">
 				<Button
 					asChild
 					variant="outline"
@@ -65,6 +66,7 @@ function ApprovalsPageBody({
 				</Button>
 			</div>
 
+			<AccountabilityAttentionStrip />
 			<ApprovalsAttentionStrip items={items} />
 			<ApprovalsMetricsBar items={items} />
 

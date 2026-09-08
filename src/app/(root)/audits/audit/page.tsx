@@ -255,32 +255,30 @@ export default function AuditLogsPage() {
 			subtitle="Activity across contracts, licenses, filings, documents, and governance."
 			tags={["Retained 12 months", "Org-scoped", "Auditor-ready export"]}
 			actions={
-				<>
-					{canExport ? (
-						<>
-							<Button
-								onClick={() => exportLogs("csv")}
-								className="primary-btn px-3 sm:px-4"
-								disabled={isExporting}
-							>
-								<SquareArrowRightExit className="h-4 w-4" />
-								Export CSV
-							</Button>
-							<Button
-								variant="outline"
-								onClick={() => exportLogs("json")}
-								className="primary-btn px-3 sm:px-4"
-								disabled={isExporting}
-							>
-								<SquareArrowRightExit className="h-4 w-4" />
-								Export JSON
-							</Button>
-						</>
-					) : null}
-				</>
+				canExport ? (
+					<>
+						<Button
+							onClick={() => exportLogs("csv")}
+							className="primary-btn px-3 sm:px-4"
+							disabled={isExporting}
+						>
+							<SquareArrowRightExit className="h-4 w-4" />
+							Export CSV
+						</Button>
+						<Button
+							variant="outline"
+							onClick={() => exportLogs("json")}
+							className="primary-btn px-3 sm:px-4"
+							disabled={isExporting}
+						>
+							<SquareArrowRightExit className="h-4 w-4" />
+							Export JSON
+						</Button>
+					</>
+				) : null
 			}
 		>
-			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+			<div className="grid grid-cols-4 gap-6 mb-6">
 				{[
 					{
 						title: "Total events",

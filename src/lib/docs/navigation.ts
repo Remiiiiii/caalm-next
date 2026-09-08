@@ -45,7 +45,8 @@ export const DOCS_NAV: DocsNavGroup[] = [
 	{
 		id: "concepts",
 		title: "Concepts",
-		description: "How CAALM thinks — the mental models that unlock everything else.",
+		description:
+			"How CAALM thinks — the mental models that unlock everything else.",
 		items: [
 			{
 				title: "Mental model",
@@ -84,6 +85,12 @@ export const DOCS_NAV: DocsNavGroup[] = [
 				summary: "How CAALM keeps renewals from becoming surprises.",
 			},
 			{
+				title: "Desktop, tablet, and phone",
+				slug: "concepts/desktop-and-mobile",
+				path: "concepts/desktop-and-mobile",
+				summary: "What works on a laptop versus a phone.",
+			},
+			{
 				title: "Security and 2FA",
 				slug: "concepts/security-2fa",
 				path: "concepts/security-2fa",
@@ -94,7 +101,8 @@ export const DOCS_NAV: DocsNavGroup[] = [
 	{
 		id: "guides",
 		title: "Guides by role",
-		description: "Step-by-step playbooks for the people who use CAALM every day.",
+		description:
+			"Step-by-step playbooks for the people who use CAALM every day.",
 		items: [
 			{
 				title: "Super Admin",
@@ -152,6 +160,31 @@ export const DOCS_NAV: DocsNavGroup[] = [
 				slug: "reference/contracts",
 				path: "reference/contracts",
 				summary: "Browse, upload, assign, review, and renew contracts.",
+			},
+			{
+				title: "Negotiate contracts",
+				slug: "reference/negotiate",
+				path: "reference/negotiate",
+				summary:
+					"Comment, redline, invite counterparties, and send drafts for review.",
+			},
+			{
+				title: "Clause Library",
+				slug: "reference/clause-library",
+				path: "reference/clause-library",
+				summary: "Store and version standard contract wording.",
+			},
+			{
+				title: "Contract templates",
+				slug: "reference/contract-templates",
+				path: "reference/contract-templates",
+				summary: "Assemble published clauses into a reusable recipe.",
+			},
+			{
+				title: "Funding and retention",
+				slug: "reference/funding-retention",
+				path: "reference/funding-retention",
+				summary: "Protect live dollars and track new funding pursuits.",
 			},
 			{
 				title: "Licenses",
@@ -306,6 +339,13 @@ export const DOCS_NAV: DocsNavGroup[] = [
 				path: "admin/integrations",
 				summary: "Calendar sync and org API keys.",
 			},
+			{
+				title: "HubSpot and Salesforce CRM origin",
+				slug: "admin/crm-integrations",
+				path: "admin/crm-integrations",
+				summary:
+					"Connect HubSpot, request Salesforce, pipeline stages, and CRM troubleshooting.",
+			},
 		],
 	},
 	{
@@ -324,13 +364,15 @@ export const DOCS_NAV: DocsNavGroup[] = [
 				title: "Using the IT Runbooks CMS",
 				slug: "runbooks/using-the-cms",
 				path: "runbooks/using-the-cms",
-				summary: "Find, open, create, and update live runbooks in the IT portal.",
+				summary:
+					"Find, open, create, and update live runbooks in the IT portal.",
 			},
 			{
 				title: "Writing a good runbook",
 				slug: "runbooks/writing",
 				path: "runbooks/writing",
-				summary: "Symptoms, steps, verification, and escalation that work at 2 a.m.",
+				summary:
+					"Symptoms, steps, verification, and escalation that work at 2 a.m.",
 			},
 			{
 				title: "Integrations",
@@ -342,7 +384,8 @@ export const DOCS_NAV: DocsNavGroup[] = [
 				title: "Admin setup",
 				slug: "runbooks/admin-setup",
 				path: "runbooks/admin-setup",
-				summary: "Permissions, Appwrite collection, and first published runbooks.",
+				summary:
+					"Permissions, Appwrite collection, and first published runbooks.",
 			},
 		],
 	},
@@ -351,6 +394,13 @@ export const DOCS_NAV: DocsNavGroup[] = [
 		title: "Troubleshooting",
 		description: "When something looks wrong — start here.",
 		items: [
+			{
+				title: "Help vs Engineering tickets",
+				slug: "troubleshooting/help-vs-engineering-tickets",
+				path: "troubleshooting/help-vs-engineering-tickets",
+				summary:
+					"Lane choice, CAALM close vs GitHub agent, and when to escalate.",
+			},
 			{
 				title: "I can’t sign in",
 				slug: "troubleshooting/cant-sign-in",
@@ -386,6 +436,13 @@ export const DOCS_NAV: DocsNavGroup[] = [
 				slug: "troubleshooting/demo-vs-production",
 				path: "troubleshooting/demo-vs-production",
 				summary: "Why the sandbox behaves differently.",
+			},
+			{
+				title: "HubSpot or Salesforce not connecting",
+				slug: "troubleshooting/crm-origin",
+				path: "admin/crm-integrations",
+				summary:
+					"OAuth, pipeline stage, drafts, webhooks, and Salesforce setup request.",
 			},
 		],
 	},

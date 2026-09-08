@@ -4,9 +4,9 @@ import {
 	Download,
 	HelpCircle,
 	Loader2,
-	PanelRightClose,
 	Send,
 	SquarePen,
+	X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -240,13 +240,13 @@ export default function CaalmAssistantSheet({
 								variant="ghost"
 								size="icon"
 								className="h-8 w-8 cursor-pointer text-slate-600 hover:bg-white/50 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
-								aria-label="Hide chat window"
+								aria-label="Close"
 								onClick={() => onOpenChange(false)}
 							>
-								<PanelRightClose className="h-4 w-4" />
+								<X className="h-4 w-4" />
 							</Button>
 						</TooltipTrigger>
-						<TooltipContent side="bottom">Hide</TooltipContent>
+						<TooltipContent side="bottom">Close</TooltipContent>
 					</Tooltip>
 				</div>
 			</TooltipProvider>
@@ -314,7 +314,7 @@ export default function CaalmAssistantSheet({
 						placeholder="Write your comments"
 						rows={4}
 						className={cn(
-							"min-h-24 resize-y rounded-xl border border-slate-300! bg-white text-slate-700",
+							"min-h-24 resize-y rounded-xl border-[0.25px] border-slate-300! bg-white text-slate-700",
 							feedbackTouched &&
 								!feedbackValid &&
 								"border-red-500! focus-visible:ring-red-500/30",
@@ -383,7 +383,7 @@ export default function CaalmAssistantSheet({
 									rows={4}
 									className={cn(
 										"min-h-[7.5rem] w-full resize-none rounded-3xl bg-white text-slate-700 shadow-sm",
-										"border border-slate-300! px-4! pb-14! pt-3.5! pe-14!",
+										"border-[0.25px] border-slate-300! px-4! pb-14! pt-3.5! pe-14!",
 										"placeholder:text-slate-400 focus-visible:border-[#078FAB]! focus-visible:ring-[#078FAB]",
 									)}
 									onKeyDown={(e) => {

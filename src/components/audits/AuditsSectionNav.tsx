@@ -28,7 +28,7 @@ const SECTION_TABS = [
 ] as const;
 
 export function AuditsSectionNav() {
-	const pathname = usePathname();
+	const pathname = usePathname() || "";
 
 	return (
 		<nav

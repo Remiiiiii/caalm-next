@@ -60,6 +60,7 @@ describe("navigation permissions (issue #36)", () => {
 		expect(names).not.toContain("Assign Tasks");
 		expect(names).not.toContain("System Settings");
 		expect(names).not.toContain("Advanced Resources");
+		expect(names).not.toContain("Create Contract");
 	});
 
 	it("Department Manager does not see org-wide All Contracts/Licenses or System Settings", () => {
@@ -71,6 +72,7 @@ describe("navigation permissions (issue #36)", () => {
 		expect(names).not.toContain("System Settings");
 		expect(names).not.toContain("C Suite");
 		expect(names).not.toContain("Advanced Resources");
+		expect(names).not.toContain("Create Contract");
 	});
 
 	it("Organization Admin does not see System Settings", () => {
@@ -81,6 +83,7 @@ describe("navigation permissions (issue #36)", () => {
 		expect(names).toContain("Organization Settings");
 		expect(names).toContain("Billing & Integrations");
 		expect(names).toContain("All Contracts");
+		expect(names).toContain("Create Contract");
 	});
 
 	it("Super Admin sees System Settings", () => {

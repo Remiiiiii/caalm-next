@@ -41,12 +41,14 @@ export const API_AUTHZ_ALLOWLIST: readonly ApiAuthzAllowEntry[] = [
 	{
 		path: "roadmap/webhooks/ci-test-result",
 		class: "webhook",
-		reason: "Roadmap CI HMAC signature (X-Hub-Signature-256 / X-Roadmap-Signature)",
+		reason:
+			"Roadmap CI HMAC signature (X-Hub-Signature-256 / X-Roadmap-Signature)",
 	},
 	{
 		path: "roadmap/webhooks/pr-merged",
 		class: "webhook",
-		reason: "Roadmap merge HMAC signature (GitHub pull_request.closed or slim payload)",
+		reason:
+			"Roadmap merge HMAC signature (GitHub pull_request.closed or slim payload)",
 	},
 	{
 		path: "auth/callback/microsoft",
@@ -62,6 +64,21 @@ export const API_AUTHZ_ALLOWLIST: readonly ApiAuthzAllowEntry[] = [
 		path: "microsoft/auth",
 		class: "oauth",
 		reason: "Starts Microsoft OAuth authorize redirect",
+	},
+	{
+		path: "hubspot/auth",
+		class: "oauth",
+		reason: "Starts HubSpot OAuth authorize redirect",
+	},
+	{
+		path: "hubspot/callback",
+		class: "oauth",
+		reason: "HubSpot OAuth redirect callback",
+	},
+	{
+		path: "webhooks/hubspot",
+		class: "webhook",
+		reason: "HubSpot HMAC signature verification (X-HubSpot-Signature-v3)",
 	},
 	{
 		path: "auth/send-otp",
@@ -89,17 +106,7 @@ export const API_AUTHZ_ALLOWLIST: readonly ApiAuthzAllowEntry[] = [
 		reason: "Invitation acceptance via invite token",
 	},
 	{
-		path: "invitations/[token]/delete",
-		class: "token",
-		reason: "Invitation token-scoped action",
-	},
-	{
 		path: "invitations/[token]/resend",
-		class: "token",
-		reason: "Invitation token-scoped action",
-	},
-	{
-		path: "invitations/[token]/revoke",
 		class: "token",
 		reason: "Invitation token-scoped action",
 	},
@@ -133,6 +140,32 @@ export const API_AUTHZ_ALLOWLIST: readonly ApiAuthzAllowEntry[] = [
 		class: "health",
 		reason:
 			"Playwright/CI preflight only: returns 404 outside CI, PLAYWRIGHT_TEST, or development; read-only Appwrite RBAC checks",
+	},
+	{
+		path: "negotiate/[token]",
+		class: "token",
+		reason:
+			"Counterparty negotiation view via hashed invite token + OTP session",
+	},
+	{
+		path: "negotiate/[token]/comments",
+		class: "token",
+		reason: "Counterparty comment via hashed invite token + OTP session",
+	},
+	{
+		path: "negotiate/[token]/session",
+		class: "token",
+		reason: "Check negotiate OTP session cookie for counterparty gate",
+	},
+	{
+		path: "negotiate/[token]/verify/request",
+		class: "token",
+		reason: "Send OTP to allowlisted negotiate invitee email",
+	},
+	{
+		path: "negotiate/[token]/verify/confirm",
+		class: "token",
+		reason: "Confirm OTP and set httpOnly negotiate session cookie",
 	},
 ] as const;
 

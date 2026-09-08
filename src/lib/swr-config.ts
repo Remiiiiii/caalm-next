@@ -97,9 +97,13 @@ export const fetcher = async (url: string) => {
 			typeof err.message === "string" &&
 			err.message.toLowerCase().includes("fetch")
 		) {
-			throw createFetcherError("Network error - please check your connection", 0, {
-				isNetworkError: true,
-			});
+			throw createFetcherError(
+				"Network error - please check your connection",
+				0,
+				{
+					isNetworkError: true,
+				},
+			);
 		}
 
 		throw createFetcherError(

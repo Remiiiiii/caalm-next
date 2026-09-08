@@ -8,8 +8,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
-import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import { StatCardSkeleton } from "@/components/ui/skeletons";
+import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import type { DepartmentDashboardStats } from "@/lib/dashboard/department-dashboard.types";
 
 interface DepartmentStatCardRowProps {

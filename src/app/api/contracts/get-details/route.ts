@@ -22,8 +22,8 @@ export async function GET(request: NextRequest) {
 			return validationErrorResponse("Contract ID is required", requestId);
 		}
 
-		// Cache key for specific contract
-		const cacheKey = CACHE_KEYS.contracts.details(contractId);
+		// Cache key for specific contract (v2 includes contractOwnerId for avatar stacks)
+		const cacheKey = `${CACHE_KEYS.contracts.details(contractId)}:v2`;
 
 		// Fetch contract details with caching (5 minutes TTL)
 		const contractData = await CacheManager.withCache(
@@ -83,6 +83,10 @@ export async function GET(request: NextRequest) {
 					contractNumber: contract.contractNumber || "",
 					contractExpiryDate: contract.contractExpiryDate || "",
 					status: contract.status || "",
+					lifecycleStatus: contract.lifecycleStatus || "",
+					contractOwnerId: String(
+						contract.contractOwnerId || contract.owner || "",
+					),
 					fileId: contract.fileId || "",
 					fileUrl: fileUrl,
 					fileExtension: fileExtension,

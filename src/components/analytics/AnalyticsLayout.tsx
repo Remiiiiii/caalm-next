@@ -154,7 +154,7 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
 				<div className="animate-pulse">
 					<div className="h-8 bg-white/20 rounded-xl w-1/3 mb-4"></div>
 					<div className="h-4 bg-white/20 rounded-xl w-1/2 mb-6"></div>
-					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+					<div className="grid grid-cols-4 gap-6">
 						{[1, 2, 3, 4].map((i) => (
 							<div
 								key={i}
@@ -232,7 +232,7 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
 
 			{/* Quick Stats */}
 			{(divisionData || analyticsStats) && (
-				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+				<div className="grid grid-cols-4 gap-6">
 					<Card className="bg-white/60 backdrop-blur border border-white/40 shadow-lg">
 						<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
 							<CardTitle className="body-2 text-slate-700">

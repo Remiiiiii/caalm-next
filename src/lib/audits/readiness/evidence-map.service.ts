@@ -2,15 +2,10 @@ import { ID, Query } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { CFCE_EVIDENCE_MAP_SEED } from "./evidence-map.seed";
-import type {
-	AuditEvidenceMapRow,
-	AuditEvidenceSegment,
-} from "./types";
+import type { AuditEvidenceMapRow, AuditEvidenceSegment } from "./types";
 
 function tableId(): string {
-	return (
-		appwriteConfig.auditEvidenceMapCollectionId || "3cfb1121431b22b684e3"
-	);
+	return appwriteConfig.auditEvidenceMapCollectionId || "3cfb1121431b22b684e3";
 }
 
 function parseRow(row: Record<string, unknown>): AuditEvidenceMapRow {

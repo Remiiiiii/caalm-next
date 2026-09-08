@@ -10,6 +10,7 @@ import {
 	getUserDefaultOrganization,
 	getUserPermissions,
 } from "@/lib/rbac/permissions";
+import { excludeSoftDeletedQuery } from "@/lib/soft-delete";
 import type { License } from "@/types/licenses";
 
 export default async function LicensesApprovalsPage() {
@@ -35,6 +36,7 @@ export default async function LicensesApprovalsPage() {
 			tableId: appwriteConfig.licensesCollectionId || "licenses",
 			queries: [
 				Query.equal("orgId", orgId),
+				excludeSoftDeletedQuery("licenses"),
 				Query.orderDesc("$createdAt"),
 				Query.limit(1000),
 			],

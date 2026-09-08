@@ -2,7 +2,13 @@
 
 import { Loader2 } from "lucide-react";
 import dynamic from "next/dynamic";
-import { Suspense, useEffect, useState } from "react";
+import {
+	Component,
+	type ReactNode,
+	Suspense,
+	useEffect,
+	useState,
+} from "react";
 import { useSplineWatermarkRemoval } from "@/hooks/useSplineWatermarkRemoval";
 import { getSplineSceneUrl } from "@/lib/spline-config";
 
@@ -26,6 +32,31 @@ interface SplineExpirySceneProps {
 	className?: string;
 }
 
+function GradientFallback({ className = "" }: { className?: string }) {
+	return (
+		<div
+			className={`absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 ${className}`}
+		/>
+	);
+}
+
+/** Spline's runtime throws on load failure instead of calling onError. */
+class SplineSceneGuard extends Component<
+	{ children: ReactNode; fallback: ReactNode },
+	{ hasError: boolean }
+> {
+	state = { hasError: false };
+
+	static getDerivedStateFromError() {
+		return { hasError: true };
+	}
+
+	render() {
+		if (this.state.hasError) return this.props.fallback;
+		return this.props.children;
+	}
+}
+
 export default function SplineExpiryScene({
 	className = "",
 }: SplineExpirySceneProps) {
@@ -46,38 +77,35 @@ export default function SplineExpiryScene({
 	}, []);
 
 	if (hasError || !sceneUrl) {
-		// Fallback: subtle gradient background if Spline scene is not available
-		return (
-			<div
-				className={`absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 ${className}`}
-			/>
-		);
+		return <GradientFallback className={className} />;
 	}
 
 	return (
-		<div className={`absolute inset-0 ${className}`}>
-			{/* Spline scene - in front, no blur */}
-			<div className="absolute inset-0 pointer-events-none">
-				<Suspense
-					fallback={
-						<div className="absolute inset-0 flex items-center justify-center bg-transparent">
-							<div className="text-slate-700 text-sm flex items-center gap-2">
-								<Loader2 className="h-4 w-4 animate-spin shrink-0" />
-								Loading 3D scene...
+		<div className={`absolute inset-0 overflow-hidden ${className}`}>
+			{/* Hide iframes: Chrome JSON-prettifies raw .splinecode if it is embedded as a document */}
+			<div className="absolute inset-0 pointer-events-none [&_iframe]:hidden">
+				<SplineSceneGuard fallback={<GradientFallback className={className} />}>
+					<Suspense
+						fallback={
+							<div className="absolute inset-0 flex items-center justify-center bg-transparent">
+								<div className="text-slate-700 text-sm flex items-center gap-2">
+									<Loader2 className="h-4 w-4 animate-spin shrink-0" />
+									Loading 3D scene...
+								</div>
 							</div>
-						</div>
-					}
-				>
-					<Spline
-						scene={sceneUrl}
-						onLoad={() => setIsLoading(false)}
-						onError={() => {
-							setHasError(true);
-							setIsLoading(false);
-						}}
-						className="w-full h-full"
-					/>
-				</Suspense>
+						}
+					>
+						<Spline
+							scene={sceneUrl}
+							onLoad={() => setIsLoading(false)}
+							onError={() => {
+								setHasError(true);
+								setIsLoading(false);
+							}}
+							className="w-full h-full"
+						/>
+					</Suspense>
+				</SplineSceneGuard>
 			</div>
 
 			{isLoading && (

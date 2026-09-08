@@ -17,7 +17,6 @@ import {
 } from "date-fns";
 import {
 	AlertCircle,
-	Ban,
 	CalendarDays,
 	CalendarIcon,
 	CalendarPlus,
@@ -85,12 +84,11 @@ import {
 	type PermissionOverrideRecord,
 	SENSITIVITY_LABELS,
 } from "@/constants/rbac";
-import { useOrgTimezone } from "@/hooks/useOrgTimezone";
 import { useToast } from "@/hooks/use-toast";
-import { formatInTimezone } from "@/lib/timezone";
 import { useCalendarApprovals } from "@/hooks/useCalendarApprovals";
 import { useCalendarEvents } from "@/hooks/useCalendarEvents";
 import { useCalendarPermissions } from "@/hooks/useCalendarPermissions";
+import { useOrgTimezone } from "@/hooks/useOrgTimezone";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useUserRole } from "@/hooks/useUserRole";
 import {
@@ -111,6 +109,7 @@ import {
 	resolveCalendarPermissions,
 } from "@/lib/auth/permissions";
 import { getSensitivityBadgeClasses } from "@/lib/calendar/calendarStatusDisplay";
+import { formatInTimezone } from "@/lib/timezone";
 import { cn } from "@/lib/utils";
 
 // Local event interface for component use
@@ -146,7 +145,7 @@ type EventWithExtras = LocalCalendarEvent & {
 interface NewEventForm {
 	title: string;
 	date: Date | undefined;
-	type: "contract" | "deadline" | "meeting" | "review" | "audit";
+	type: "contract" | "deadline" | "meeting" | "review" | "audit" | "license";
 	description: string;
 	startTime: string;
 	endTime: string;
@@ -2105,15 +2104,7 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 							</div>
 
 							{/* Footer Actions */}
-							<div className="sticky bottom-0 flex items-center gap-3 border-t border-white/40 bg-white/35 px-6 py-4 backdrop-blur-sm">
-								<Button
-									onClick={() => setIsApprovalDialogOpen(false)}
-									disabled={isProcessingApproval}
-									className="primary-btn px-3 sm:px-4 flex-1"
-								>
-									<Ban className="w-4 h-4" />
-									Cancel
-								</Button>
+							<div className="sticky bottom-0 flex items-center justify-end gap-3 border-t border-white/40 bg-white/35 px-6 py-4 backdrop-blur-sm">
 								<Button
 									onClick={async () => {
 										if (!selectedApproval) return;
@@ -2363,14 +2354,6 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 						</div>
 
 						<div className="flex justify-end space-x-2">
-							<Button
-								variant="outline"
-								onClick={() => setIsAddEventOpen(false)}
-								className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
-							>
-								<Ban className="w-4 h-4" />
-								Cancel
-							</Button>
 							<Button
 								onClick={handleAddEvent}
 								disabled={
@@ -2732,14 +2715,6 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 						</div>
 
 						<div className="flex justify-end space-x-2">
-							<Button
-								variant="outline"
-								onClick={() => setIsShareOpen(false)}
-								className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"
-							>
-								<Ban className="w-4 h-4" />
-								Cancel
-							</Button>
 							<Button
 								onClick={handleShare}
 								className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700 hover:bg-white/40"

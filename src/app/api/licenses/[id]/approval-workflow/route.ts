@@ -29,11 +29,12 @@ export async function GET(
 			return errorResponse("License ID is required", 400, { requestId });
 		}
 
+		// Workflow assignees use Auth accountId; RBAC checks use users-table $id.
 		const viewerUserId = user.accountId || user.$id;
 		const org = await getUserDefaultOrganization(user.$id);
 		const orgId = org?.orgId;
 		const canView = orgId
-			? await hasPermission(viewerUserId, PERMISSIONS.LICENSES.VIEW, orgId)
+			? await hasPermission(user.$id, PERMISSIONS.LICENSES.VIEW, orgId)
 			: false;
 		if (!canView) {
 			return forbiddenResponse("Permission denied: view license", requestId);

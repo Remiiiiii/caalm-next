@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/actions/user.actions";
 import { PERMISSIONS } from "@/constants/permissions";
+import { getCurrentUser } from "@/lib/actions/user.actions";
 import { requirePermission } from "@/lib/rbac/middleware";
 import { RoadmapError, startTask } from "@/lib/roadmap/service";
 
@@ -16,7 +16,10 @@ export async function POST(
 	try {
 		const user = await getCurrentUser();
 		if (!user) {
-			return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+			return NextResponse.json(
+				{ error: "Authentication required" },
+				{ status: 401 },
+			);
 		}
 		const { taskId } = await context.params;
 		const body = (await request.json()) as { branchName?: string };
@@ -28,9 +31,15 @@ export async function POST(
 		return NextResponse.json({ task });
 	} catch (error) {
 		if (error instanceof RoadmapError) {
-			return NextResponse.json({ error: error.message }, { status: error.status });
+			return NextResponse.json(
+				{ error: error.message },
+				{ status: error.status },
+			);
 		}
 		console.error("[SERVER] roadmap/tasks/start:", error);
-		return NextResponse.json({ error: "Failed to start task" }, { status: 500 });
+		return NextResponse.json(
+			{ error: "Failed to start task" },
+			{ status: 500 },
+		);
 	}
 }

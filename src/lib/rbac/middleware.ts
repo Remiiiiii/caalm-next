@@ -5,8 +5,8 @@
 
 import { type NextRequest, NextResponse } from "next/server";
 import type { PermissionKey } from "@/constants/permissions";
-import { authorize } from "@/lib/rbac/authorize";
 import { getCurrentUser } from "@/lib/actions/user.actions";
+import { authorize } from "@/lib/rbac/authorize";
 
 export interface PermissionMiddlewareOptions {
 	permission?: PermissionKey | PermissionKey[];

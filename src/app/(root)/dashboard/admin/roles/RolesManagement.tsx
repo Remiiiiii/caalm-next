@@ -2,7 +2,6 @@
 
 import {
 	AlertTriangle,
-	Ban,
 	PencilIcon,
 	Plus,
 	Trash2,
@@ -40,6 +39,7 @@ import {
 } from "@/components/ui/table";
 import { PERMISSIONS } from "@/constants/permissions";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { useStepUp } from "@/contexts/StepUpContext";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import {
@@ -175,6 +175,7 @@ const RolesManagement = () => {
 	const [roleToDelete, setRoleToDelete] = useState<RoleRow | null>(null);
 	const [pageNowMs] = useState(() => Date.now());
 	const { toast } = useToast();
+	const { ensureStepUp } = useStepUp();
 	const router = useRouter();
 	const { orgId } = useOrganization();
 	const { permissions } = usePermissions();
@@ -214,6 +215,7 @@ const RolesManagement = () => {
 
 	const handleDelete = async () => {
 		if (!roleToDelete) return;
+		if (!(await ensureStepUp())) return;
 
 		try {
 			const response = await fetch(`/api/admin/roles/${roleToDelete.$id}`, {
@@ -479,7 +481,10 @@ const RolesManagement = () => {
 					if (!open) setRoleToDelete(null);
 				}}
 			>
-				<DialogContent className="overflow-hidden p-0 shadow-xl sm:max-w-md" variant="destructive">
+				<DialogContent
+					className="overflow-hidden p-0 shadow-xl sm:max-w-md"
+					variant="destructive"
+				>
 					<DialogTitle className="sr-only">Delete Role</DialogTitle>
 					<div className="h-4 w-full bg-[#d6d7d8] opacity-70" />
 
@@ -509,18 +514,6 @@ const RolesManagement = () => {
 							This action is permanent.
 						</div>
 						<div className="flex items-center justify-end gap-3">
-							<Button
-								type="button"
-								variant="ghost"
-								className="primary-btn px-3 sm:px-4"
-								onClick={() => {
-									setDeleteDialogOpen(false);
-									setRoleToDelete(null);
-								}}
-							>
-								<Ban className="h-4 w-4" />
-								Cancel
-							</Button>
 							<Button
 								type="button"
 								variant="ghost"

@@ -32,7 +32,7 @@ interface AuditLogFiltersBarProps {
 
 function FieldBox({ children }: { children: ReactNode }) {
 	return (
-		<div className="mt-1 rounded-md border border-slate-200 bg-white/70 px-3">
+		<div className="mt-1 rounded-md border-[0.25px] border-slate-200 bg-white/70 px-3">
 			{children}
 		</div>
 	);
@@ -45,7 +45,7 @@ export function AuditLogFiltersBar({
 }: AuditLogFiltersBarProps) {
 	return (
 		<div>
-			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
+			<div className="grid grid-cols-3 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
 				<div>
 					<label
 						htmlFor="audit-start-date"

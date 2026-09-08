@@ -1,10 +1,10 @@
 "use client";
 
+import Link from "next/link";
+import type { ReactNode } from "react";
 import type { InlineNode, MdBlock } from "@/lib/docs/markdown";
 import { parseMarkdown } from "@/lib/docs/markdown";
 import { cn } from "@/lib/utils";
-import Link from "next/link";
-import type { ReactNode } from "react";
 
 function Inline({ nodes }: { nodes: InlineNode[] }): ReactNode {
 	return nodes.map((node, i) => {
@@ -22,7 +22,10 @@ function Inline({ nodes }: { nodes: InlineNode[] }): ReactNode {
 				);
 			case "strong":
 				return (
-					<strong key={i} className="font-semibold text-slate-700 dark:text-slate-100">
+					<strong
+						key={i}
+						className="font-semibold text-slate-700 dark:text-slate-100"
+					>
 						<Inline nodes={node.children} />
 					</strong>
 				);

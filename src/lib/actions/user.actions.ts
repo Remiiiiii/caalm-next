@@ -6,6 +6,11 @@ import { redirect } from "next/navigation";
 import * as sdk from "node-appwrite";
 import { ID, Query } from "node-appwrite";
 import { cache } from "react";
+import {
+	INVITATION_STATUS,
+	isPendingInvitationStatus,
+} from "@/constants/status";
+import { calendarRoleFromRbacName } from "@/lib/calendar/legacyCalendarRole";
 import { addUserToOrganization } from "@/lib/rbac/organizations";
 import {
 	getUserDefaultOrganization,
@@ -14,17 +19,12 @@ import {
 import { ROLE_DASHBOARD_FALLBACK } from "@/lib/rbac/role-dashboard-metadata";
 import CacheManager from "@/lib/services/cache-manager";
 import { avatarPlaceholderUrl, type UserDivision } from "../../../constants";
-import {
-	INVITATION_STATUS,
-	isPendingInvitationStatus,
-} from "@/constants/status";
 import { createAdminClient, createSessionClient } from "../appwrite";
 import { appwriteConfig } from "../appwrite/config";
 import {
 	normalizeOrgPlacement,
 	OrgUnitValidationError,
 } from "../org/org-unit-validation";
-import { calendarRoleFromRbacName } from "@/lib/calendar/legacyCalendarRole";
 import { parseStringify } from "../utils";
 import { triggerUserInvitationNotification } from "../utils/notificationTriggers";
 import {
@@ -461,10 +461,7 @@ export const finalizeAccountAfterEmailVerification = async ({
 					email,
 				);
 			} catch (error) {
-				console.error(
-					"Failed to notify admins about new user request:",
-					error,
-				);
+				console.error("Failed to notify admins about new user request:", error);
 			}
 		})(),
 	]);
@@ -1157,7 +1154,8 @@ export const createInvitation = async ({
 		let normalizedPlacement;
 		try {
 			normalizedPlacement = normalizeOrgPlacement({
-				department: department?.trim() || (division ? undefined : "Administration"),
+				department:
+					department?.trim() || (division ? undefined : "Administration"),
 				division,
 				requireDepartment: true,
 			});
@@ -1272,7 +1270,11 @@ export const createInvitation = async ({
 				throw new Error(
 					"Invitation could not be saved due to a data format mismatch. Contact support if this continues.",
 				);
-			} else if (error.message.includes("Invalid division") || error.message.includes("Department is required") || error.message.includes("belongs under")) {
+			} else if (
+				error.message.includes("Invalid division") ||
+				error.message.includes("Department is required") ||
+				error.message.includes("belongs under")
+			) {
 				throw error;
 			} else {
 				// Log the original error for debugging but return a user-friendly message
@@ -2098,11 +2100,16 @@ export const listUsersForManagement = async (
 				email: String((user as { email?: string }).email || ""),
 				avatar: (user as { avatar?: string }).avatar,
 			});
-			const accountId = String((user as { accountId?: string }).accountId || "");
+			const accountId = String(
+				(user as { accountId?: string }).accountId || "",
+			);
 			if (accountId) accountIdToProfileId.set(accountId, userId);
 		}
 
-		const assignmentsByProfileId = new Map<string, UserManagementAssignment[]>();
+		const assignmentsByProfileId = new Map<
+			string,
+			UserManagementAssignment[]
+		>();
 
 		for (const assignment of userRolesResult.rows) {
 			const rawUserId = String(

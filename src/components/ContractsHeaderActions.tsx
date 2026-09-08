@@ -1,6 +1,7 @@
 "use client";
 
-import { SquareArrowRightExit } from "lucide-react";
+import { FilePlus, SquareArrowRightExit } from "lucide-react";
+import Link from "next/link";
 import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { PERMISSIONS } from "@/constants/permissions";
@@ -20,6 +21,7 @@ export default function ContractsHeaderActions({
 	const { filters, statusTab, selectedIds } = useContractsView();
 	const { permissions } = usePermissions();
 	const canView = permissions.includes(PERMISSIONS.CONTRACTS.VIEW);
+	const canCreate = permissions.includes(PERMISSIONS.CONTRACTS.CREATE);
 
 	const exportFiles = useMemo(() => {
 		const base = files.filter((file) => {
@@ -136,6 +138,18 @@ export default function ContractsHeaderActions({
 
 	return (
 		<div className="flex items-center gap-2 justify-end flex-wrap">
+			{canCreate && (
+				<Button
+					asChild
+					size="sm"
+					className="primary-btn px-3 sm:px-4 cursor-pointer"
+				>
+					<Link href="/contracts/create">
+						<FilePlus className="h-4 w-4" />
+						<span className="hidden sm:inline">Create contract</span>
+					</Link>
+				</Button>
+			)}
 			{canView && (
 				<Button
 					variant="outline"

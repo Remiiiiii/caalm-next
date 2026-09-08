@@ -1,10 +1,10 @@
 import { Query } from "node-appwrite";
 import { PERMISSIONS } from "@/constants/permissions";
+import { createNotification } from "@/lib/actions/notification.actions";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
-import { createNotification } from "@/lib/actions/notification.actions";
-import { hasPermission } from "@/lib/rbac/permissions";
 import type { ComplianceRagStatus } from "@/lib/audits/types";
+import { hasPermission } from "@/lib/rbac/permissions";
 
 export async function notifyAuditViewUsers(options: {
 	orgId: string;

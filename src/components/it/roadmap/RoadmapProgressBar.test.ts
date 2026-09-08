@@ -31,7 +31,11 @@ describe("RoadmapProgressBar math", () => {
 		expect(computeProgressPercent([])).toBe(0);
 		expect(computeProgressPercent([task("locked"), task("complete")])).toBe(50);
 		expect(
-			computeProgressPercent([task("complete"), task("complete"), task("complete")]),
+			computeProgressPercent([
+				task("complete"),
+				task("complete"),
+				task("complete"),
+			]),
 		).toBe(100);
 	});
 });

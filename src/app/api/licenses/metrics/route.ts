@@ -72,7 +72,9 @@ export async function GET(request: NextRequest) {
 	} catch (error) {
 		console.error("Licenses metrics API error:", error);
 		return errorResponse(
-			error instanceof Error ? error : new Error("Failed to fetch license metrics"),
+			error instanceof Error
+				? error
+				: new Error("Failed to fetch license metrics"),
 			500,
 			{ requestId },
 		);

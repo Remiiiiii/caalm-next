@@ -20,6 +20,9 @@ function fakeContract(id: string, days: number, name = "Contract"): UIFileDoc {
 		$createdAt: "",
 		$updatedAt: "",
 		$permissions: [],
+		$sequence: 0,
+		$collectionId: "files",
+		$databaseId: "default-db",
 		$type: "",
 		$typeId: "",
 		type: "document",
@@ -47,6 +50,7 @@ function fakeLicense(id: string, days: number, name = "License"): License {
 		issuingAuthority: "State Board",
 		issueDate: isoOffset(-365).slice(0, 10),
 		status: "active",
+		orgId: "org-1",
 	};
 }
 
@@ -63,10 +67,7 @@ describe("calculateDaysUntilExpiry", () => {
 describe("buildExpiryQueue", () => {
 	it("merges contracts and licenses sorted by days", () => {
 		const queue = buildExpiryQueue({
-			contracts: [
-				fakeContract("c30", 30, "C30"),
-				fakeContract("c5", 5, "C5"),
-			],
+			contracts: [fakeContract("c30", 30, "C30"), fakeContract("c5", 5, "C5")],
 			licenses: [fakeLicense("l10", 10, "L10")],
 		});
 		expect(queue.map((i) => i.id)).toEqual(["c5", "l10", "c30"]);

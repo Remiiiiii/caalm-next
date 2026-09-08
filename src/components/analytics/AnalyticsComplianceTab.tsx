@@ -34,7 +34,7 @@ export function AnalyticsComplianceTab({
 				isLoading={isLoading}
 			/>
 
-			<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+			<div className="grid grid-cols-2 gap-6">
 				<RiskSeverityPanel
 					severity={summary?.severity ?? { critical: 0, moderate: 0, low: 0 }}
 					isLoading={isLoading}

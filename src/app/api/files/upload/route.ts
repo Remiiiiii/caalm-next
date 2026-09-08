@@ -6,6 +6,10 @@ import {
 	createApiSessionClient,
 } from "@/lib/appwrite/api-client";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import {
+	assertEnterpriseFileAllowed,
+	EnterpriseFileFormatError,
+} from "@/lib/files/enterprise-file-formats";
 import { logAuditEvent } from "@/lib/services/audit-logger";
 import CacheManager from "@/lib/services/cache-manager";
 import { constructFileUrl, getFileType } from "@/lib/utils";
@@ -36,6 +40,15 @@ export async function POST(request: NextRequest) {
 				{ error: "File size exceeds 50MB limit" },
 				{ status: 400 },
 			);
+		}
+
+		try {
+			assertEnterpriseFileAllowed(file, "attachment");
+		} catch (error) {
+			if (error instanceof EnterpriseFileFormatError) {
+				return NextResponse.json({ error: error.message }, { status: 400 });
+			}
+			throw error;
 		}
 
 		// Validate configuration

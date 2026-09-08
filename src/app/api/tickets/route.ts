@@ -1,15 +1,21 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
-import { getUserDefaultOrganization, getUserPermissions } from "@/lib/rbac/permissions";
 import { requirePermission } from "@/lib/rbac/middleware";
-import { canViewAllTickets, filterVisibleTickets } from "@/lib/tickets/ticket-access.policy";
+import {
+	getUserDefaultOrganization,
+	getUserPermissions,
+} from "@/lib/rbac/permissions";
+import { listTickets } from "@/lib/tickets/ticket.repository";
+import {
+	canViewAllTickets,
+	filterVisibleTickets,
+} from "@/lib/tickets/ticket-access.policy";
 import {
 	buildCreateTicketInput,
 	intakeTicket,
 	uploadTicketAttachments,
 } from "@/lib/tickets/ticket-intake.service";
-import { listTickets } from "@/lib/tickets/ticket.repository";
 import { normalizeTicketNumberQuery } from "@/lib/tickets/ticket-number.utils";
 
 export async function GET(request: NextRequest) {
@@ -20,12 +26,18 @@ export async function GET(request: NextRequest) {
 
 	const user = await getCurrentUser();
 	if (!user) {
-		return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+		return NextResponse.json(
+			{ error: "Authentication required" },
+			{ status: 401 },
+		);
 	}
 
 	const org = await getUserDefaultOrganization(user.$id);
 	if (!org?.orgId) {
-		return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+		return NextResponse.json(
+			{ error: "Organization not found" },
+			{ status: 404 },
+		);
 	}
 
 	const permissions = await getUserPermissions(user.$id, org.orgId);
@@ -34,8 +46,7 @@ export async function GET(request: NextRequest) {
 		| "active"
 		| "resolved"
 		| null;
-	const rawSearch =
-		searchParams.get("q") || searchParams.get("search") || "";
+	const rawSearch = searchParams.get("q") || searchParams.get("search") || "";
 	const normalizedNumber = normalizeTicketNumberQuery(rawSearch);
 	const search =
 		normalizedNumber.startsWith("TKT-") && /\d/.test(normalizedNumber)
@@ -65,18 +76,25 @@ export async function POST(request: NextRequest) {
 
 	const user = await getCurrentUser();
 	if (!user) {
-		return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+		return NextResponse.json(
+			{ error: "Authentication required" },
+			{ status: 401 },
+		);
 	}
 
 	const org = await getUserDefaultOrganization(user.$id);
 	if (!org?.orgId) {
-		return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+		return NextResponse.json(
+			{ error: "Organization not found" },
+			{ status: 404 },
+		);
 	}
 
 	try {
 		const contentType = request.headers.get("content-type") || "";
 		let title = "";
 		let description = "";
+		let lane: unknown = "";
 		let category: unknown = "";
 		let affectedModule: unknown = "";
 		let impact: unknown = "";
@@ -87,15 +105,19 @@ export async function POST(request: NextRequest) {
 			const form = await request.formData();
 			title = String(form.get("title") || "");
 			description = String(form.get("description") || "");
+			lane = form.get("lane") || "";
 			category = form.get("category") || "";
 			affectedModule = form.get("affectedModule") || "";
 			impact = form.get("impact") || "";
 			urgency = form.get("urgency") || "";
-			files = form.getAll("attachments").filter((item): item is File => item instanceof File);
+			files = form
+				.getAll("attachments")
+				.filter((item): item is File => item instanceof File);
 		} else {
 			const body = await request.json();
 			title = String(body.title || "");
 			description = String(body.description || "");
+			lane = body.lane;
 			category = body.category;
 			affectedModule = body.affectedModule;
 			impact = body.impact;
@@ -113,6 +135,7 @@ export async function POST(request: NextRequest) {
 		const payload = buildCreateTicketInput({
 			title,
 			description,
+			lane,
 			category,
 			affectedModule,
 			impact,

@@ -5,6 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { ContractTemplatesNavIcon } from "@/components/sidebar/NavItemIcon";
+import SidebarUserCard from "@/components/sidebar/SidebarUserCard";
 import { Separator } from "@/components/ui/separator";
 import {
 	Sheet,
@@ -15,9 +17,8 @@ import {
 import { ROLE_LABELS, type UserRole } from "@/constants/rbac";
 import { useAuth } from "@/contexts/AuthContext";
 import { useGroupedNavigation } from "@/hooks/useGroupedNavigation";
+import { isCompanionPath } from "@/lib/ui/desktop-first";
 import { cn } from "@/lib/utils";
-import SidebarUserCard from "@/components/sidebar/SidebarUserCard";
-import FileUploader from "./FileUploader";
 import { Button } from "./ui/button";
 
 interface Props {
@@ -29,14 +30,7 @@ interface Props {
 	role: UserRole;
 }
 
-const MobileNavigation = ({
-	$id: ownerId,
-	accountId,
-	fullName,
-	avatar,
-	email,
-	role,
-}: Props) => {
+const MobileNavigation = ({ fullName, avatar, email, role }: Props) => {
 	const { logout } = useAuth();
 	const [open, setOpen] = useState(false);
 	const pathname = usePathname();
@@ -47,8 +41,16 @@ const MobileNavigation = ({
 		isViewer,
 		shouldShowLock,
 	} = useGroupedNavigation();
+	const companionNav = groupedNav
+		.map((section) => ({
+			...section,
+			items: section.items.filter(
+				(item) => Boolean(item.url) && isCompanionPath(item.url),
+			),
+		}))
+		.filter((section) => section.items.length > 0);
 	const settingsItems =
-		groupedNav.find((section) => section.header === "Settings")?.items ?? [];
+		companionNav.find((section) => section.header === "Settings")?.items ?? [];
 
 	useEffect(() => {
 		setOpen(false);
@@ -65,8 +67,7 @@ const MobileNavigation = ({
 				alt="CAALM logo"
 				width={50}
 				height={50}
-				className="mt-1 h-[50px] w-auto"
-				style={{ width: "auto", height: "50px" }}
+				className="mt-1 h-[50px] w-[50px] object-contain"
 			/>
 			<Sheet open={open} onOpenChange={setOpen}>
 				<SheetTrigger asChild>
@@ -106,69 +107,95 @@ const MobileNavigation = ({
 								<div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-500" />
 								<span className="text-sm">Loading navigation...</span>
 							</div>
-						) : groupedNav.length === 0 ? (
+						) : companionNav.length === 0 ? (
 							<p className="py-8 text-center text-sm text-muted-foreground">
 								No navigation items available
 							</p>
 						) : (
 							<ul className="mobile-nav-list">
-								{groupedNav.map((section) =>
+								{companionNav.map((section) =>
 									section.header === "Settings" ? null : (
-									<li key={section.header}>
-										<p className="mb-2 px-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
-											{section.header}
-										</p>
-										<ul className="mb-4 flex flex-col gap-1">
-											{section.items.map((item) => {
-												const active = item.url ? isActive(item.url) : false;
-												return (
-													<li
-														key={`${section.header}-${item.name}`}
-														className={cn(
-															"mobile-nav-item",
-															active && "shad-active",
-														)}
-													>
-														<Link
-															href={item.url}
-															className="flex w-full items-center gap-3"
-															onClick={() => setOpen(false)}
+										<li key={section.header}>
+											<p className="mb-2 px-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
+												{section.header}
+											</p>
+											<ul className="mb-4 flex flex-col gap-1">
+												{section.items.map((item) => {
+													const active = item.url ? isActive(item.url) : false;
+													return (
+														<li
+															key={`${section.header}-${item.name}`}
+															className={cn(
+																"mobile-nav-item",
+																active && "shad-active",
+															)}
 														>
-															<Image
-																src={item.icon}
-																alt=""
-																width={24}
-																height={24}
-																className={cn(
-																	"nav-icon shrink-0",
-																	active && "nav-icon-active",
-																)}
-															/>
-															<span className="flex min-w-0 flex-1 items-center gap-2">
-																<span className="truncate">{item.name}</span>
-																{shouldShowLock(item) && (
-																	<Lock
-																		className="h-3 w-3 shrink-0 text-gray-500"
-																		aria-hidden
+															<Link
+																href={item.url}
+																className="flex w-full items-center gap-3"
+																onClick={() => setOpen(false)}
+															>
+																{item.name === "Contract Templates" ? (
+																	<ContractTemplatesNavIcon size={24} />
+																) : item.icon.endsWith(".png") ? (
+																	<img
+																		src={item.icon}
+																		alt=""
+																		width={24}
+																		height={24}
+																		className={cn(
+																			"nav-icon shrink-0",
+																			active && "nav-icon-active",
+																		)}
+																	/>
+																) : (
+																	<Image
+																		src={item.icon}
+																		alt=""
+																		width={24}
+																		height={24}
+																		className={cn(
+																			"nav-icon shrink-0",
+																			active && "nav-icon-active",
+																		)}
+																		style={{ width: "24px", height: "24px" }}
 																	/>
 																)}
-																{isViewer && item.viewerReadOnly && (
-																	<span className="shrink-0 text-xs text-gray-500">
-																		(read-only)
-																	</span>
-																)}
-															</span>
-														</Link>
-													</li>
-												);
-											})}
-										</ul>
-									</li>
+																<span className="flex min-w-0 flex-1 items-center gap-2">
+																	<span className="truncate">{item.name}</span>
+																	{shouldShowLock(item) && (
+																		<Lock
+																			className="h-3 w-3 shrink-0 text-gray-500"
+																			aria-hidden
+																		/>
+																	)}
+																	{isViewer && item.viewerReadOnly && (
+																		<span className="shrink-0 text-xs text-gray-500">
+																			(read-only)
+																		</span>
+																	)}
+																</span>
+															</Link>
+														</li>
+													);
+												})}
+											</ul>
+										</li>
 									),
 								)}
 							</ul>
 						)}
 					</nav>
+					<p className="px-4 pb-1 text-xs text-slate-500">
+						Full app on laptop.{" "}
+						<Link
+							href="/docs/concepts/desktop-and-mobile"
+							className="text-[#0f5384] underline-offset-2 hover:underline"
+							onClick={() => setOpen(false)}
+						>
+							See device differences
+						</Link>
+					</p>
 					<Separator className="my-5 bg-light-200/20" />
 					<div className="flex flex-col justify-between gap-5 pb-5">
 						<SidebarUserCard
@@ -176,7 +203,6 @@ const MobileNavigation = ({
 							email={email}
 							settingsItems={settingsItems}
 						/>
-						<FileUploader ownerId={ownerId} accountId={accountId} />
 						<Button
 							type="button"
 							className="mobile-sign-out-button"

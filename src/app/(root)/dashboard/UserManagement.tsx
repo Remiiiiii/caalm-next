@@ -47,6 +47,7 @@ import {
 } from "@/components/users/UserManagementActionDialogs";
 import { PERMISSIONS } from "@/constants/permissions";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { useStepUp } from "@/contexts/StepUpContext";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { type UserManagementUser, useUsers } from "@/hooks/useUsers";
@@ -127,6 +128,7 @@ const formatDateTimeLabel = (iso?: string): string => {
 
 const UserManagement = () => {
 	const { toast } = useToast();
+	const { ensureStepUp } = useStepUp();
 	const { permissions } = usePermissions();
 	const canManageUsers = permissions.includes(PERMISSIONS.USERS.EDIT);
 	const canAssignRoles = permissions.includes(PERMISSIONS.USERS.ASSIGN_ROLES);
@@ -202,9 +204,10 @@ const UserManagement = () => {
 									u.type === "department" && u.active !== false,
 							)
 							.flatMap((u: { name?: string; code?: string }) =>
-								[String(u.name || "").trim(), String(u.code || "").trim()].filter(
-									Boolean,
-								),
+								[
+									String(u.name || "").trim(),
+									String(u.code || "").trim(),
+								].filter(Boolean),
 							),
 					),
 				];
@@ -241,13 +244,13 @@ const UserManagement = () => {
 		const fromUsers = users
 			.map((user) => user.department?.trim() || "Unassigned")
 			.filter(Boolean);
-		return [...new Set([...orgDepartmentNames, ...fromUsers, "Unassigned"])].sort(
-			(a, b) => {
-				if (a === "Unassigned") return 1;
-				if (b === "Unassigned") return -1;
-				return a.localeCompare(b);
-			},
-		);
+		return [
+			...new Set([...orgDepartmentNames, ...fromUsers, "Unassigned"]),
+		].sort((a, b) => {
+			if (a === "Unassigned") return 1;
+			if (b === "Unassigned") return -1;
+			return a.localeCompare(b);
+		});
 	}, [users, orgDepartmentNames]);
 
 	const isWithinDateRange = (
@@ -466,9 +469,7 @@ const UserManagement = () => {
 								checked={selectedRoles.includes(role)}
 								onCheckedChange={(checked) =>
 									setSelectedRoles((prev) =>
-										checked
-											? [...prev, role]
-											: prev.filter((r) => r !== role),
+										checked ? [...prev, role] : prev.filter((r) => r !== role),
 									)
 								}
 							>
@@ -908,6 +909,7 @@ const UserManagement = () => {
 				}}
 				onSaveRole={async (roleName) => {
 					if (!actionUser) return;
+					if (!(await ensureStepUp())) return;
 					await runAction(
 						async () => {
 							const res = await fetch("/api/admin/set-user-role", {
@@ -929,6 +931,7 @@ const UserManagement = () => {
 				}}
 				onConfirmReset={async () => {
 					if (!actionUser) return;
+					if (!(await ensureStepUp())) return;
 					await runAction(
 						async () => {
 							const res = await fetch(
@@ -945,6 +948,7 @@ const UserManagement = () => {
 				}}
 				onConfirmRevoke={async () => {
 					if (!actionUser) return;
+					if (!(await ensureStepUp())) return;
 					await runAction(
 						async () => {
 							const res = await fetch(
@@ -961,6 +965,7 @@ const UserManagement = () => {
 				}}
 				onConfirmSuspend={async () => {
 					if (!actionUser) return;
+					if (!(await ensureStepUp())) return;
 					const nextStatus =
 						actionUser.status === "suspended" ||
 						actionUser.status === "inactive"
@@ -987,6 +992,7 @@ const UserManagement = () => {
 				}}
 				onConfirmDelete={async () => {
 					if (!actionUser) return;
+					if (!(await ensureStepUp())) return;
 					await runAction(
 						async () => {
 							const res = await fetch(

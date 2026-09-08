@@ -145,7 +145,7 @@ const Footer = () => {
 								value={email}
 								onChange={(e) => setEmail(e.target.value)}
 								placeholder="you@company.com"
-								className="w-full min-w-0 flex-1 rounded-full border border-slate-200 bg-white/80 px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0f5384]/40 sm:max-w-[16rem]"
+								className="w-full min-w-0 flex-1 rounded-full border-[0.25px] border-slate-200 bg-white/80 px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0f5384]/40 sm:max-w-[16rem]"
 							/>
 							<Button
 								type="submit"

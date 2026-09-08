@@ -71,5 +71,10 @@ export function shouldHideReportIssueFab(
 	pathname: string | null | undefined,
 ): boolean {
 	const path = pathname || "";
-	return path === "/tickets/new" || path.startsWith("/sign-in");
+	return (
+		path === "/tickets/new" ||
+		path.startsWith("/sign-in") ||
+		path.startsWith("/contracts/approvals") ||
+		path.startsWith("/licenses/approvals")
+	);
 }

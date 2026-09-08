@@ -1,8 +1,5 @@
-import {
-	countByKind,
-	type ExpiryQueueItem,
-} from "@/lib/expiry/expiry-queue";
 import { formatContractForSpeech } from "@/lib/contract-speech";
+import { countByKind, type ExpiryQueueItem } from "@/lib/expiry/expiry-queue";
 import { formatLicenseForSpeech } from "@/lib/license-speech";
 import { normalizeSpeechPronunciation } from "@/lib/speech-pronunciation";
 

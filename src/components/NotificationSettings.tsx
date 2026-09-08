@@ -1,7 +1,6 @@
 import type { RealtimeResponseEvent } from "appwrite";
 import {
 	AlertTriangle,
-	Ban,
 	Bell,
 	BellOff,
 	CalendarClock,
@@ -21,6 +20,7 @@ import {
 	ShieldCheck,
 	ShieldX,
 	Smartphone,
+	Trash2,
 	TrendingUp,
 	Users,
 	Zap,
@@ -130,6 +130,18 @@ const NOTIFICATION_TYPES = {
 		icon: <CheckCircle className="w-4 h-4 text-[#0f5384]" />,
 		description: "Notifications when tasks are completed",
 		defaultPriority: "low" as const,
+	},
+	"contract-deleted": {
+		label: "Contract Deleted",
+		icon: <Trash2 className="w-4 h-4 text-[#0f5384]" />,
+		description: "Alerts when a contract is deleted",
+		defaultPriority: "high" as const,
+	},
+	"license-deleted": {
+		label: "License Deleted",
+		icon: <Trash2 className="w-4 h-4 text-[#0f5384]" />,
+		description: "Alerts when a license is deleted",
+		defaultPriority: "high" as const,
 	},
 	info: {
 		label: "Information",
@@ -818,7 +830,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
 														}
 													}
 												}}
-												className={`text-xs border border-slate-300 ${
+												className={`text-xs border-[0.25px] border-slate-300 ${
 													phoneNumberVerified
 														? "bg-slate-100 cursor-not-allowed"
 														: "bg-white"
@@ -1079,14 +1091,6 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
 					</Button>
 
 					<div className="flex items-center gap-3">
-						<Button
-							variant="outline"
-							onClick={onClose}
-							className="primary-btn px-3 sm:px-4"
-						>
-							<Ban className="w-4 h-4" />
-							Cancel
-						</Button>
 						<Button
 							onClick={saveSettings}
 							disabled={saving}
