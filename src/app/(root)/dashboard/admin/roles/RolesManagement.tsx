@@ -39,9 +39,8 @@ import {
 } from "@/components/ui/table";
 import { PERMISSIONS } from "@/constants/permissions";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { useStepUp } from "@/contexts/StepUpContext";
 import { useToast } from "@/hooks/use-toast";
-import { useStepUp } from "@/contexts/StepUpContext";
-import { useStepUp } from "@/contexts/StepUpContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import {
 	DATA_TABLE_BODY_ROW_BASE,
@@ -482,7 +481,10 @@ const RolesManagement = () => {
 					if (!open) setRoleToDelete(null);
 				}}
 			>
-				<DialogContent className="overflow-hidden p-0 shadow-xl sm:max-w-md" variant="destructive">
+				<DialogContent
+					className="overflow-hidden p-0 shadow-xl sm:max-w-md"
+					variant="destructive"
+				>
 					<DialogTitle className="sr-only">Delete Role</DialogTitle>
 					<div className="h-4 w-full bg-[#d6d7d8] opacity-70" />
 
