@@ -1,10 +1,10 @@
+import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import {
 	isDealStageChange,
 	parseHubSpotWebhookEvents,
 	verifyHubSpotSignature,
 } from "./hubspot-webhook";
-import { createHmac } from "node:crypto";
 
 describe("HubSpot webhook helpers", () => {
 	it("parses stage-change events", () => {
@@ -28,7 +28,9 @@ describe("HubSpot webhook helpers", () => {
 		const body = "[]";
 		const timestamp = String(Date.now());
 		const source = `POST/api/webhooks/hubspot${body}${timestamp}`;
-		const signature = createHmac("sha256", secret).update(source).digest("base64");
+		const signature = createHmac("sha256", secret)
+			.update(source)
+			.digest("base64");
 		expect(
 			verifyHubSpotSignature({
 				method: "POST",

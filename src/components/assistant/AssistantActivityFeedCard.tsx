@@ -49,10 +49,16 @@ export default function AssistantActivityFeedCard({
 								return (
 									<li
 										key={item.id}
-										className={cn( "flex gap-2.5 py-2", !isLast && "border-b border-slate-100", )}
+										className={cn(
+											"flex gap-2.5 py-2",
+											!isLast && "border-b border-slate-100",
+										)}
 									>
 										<div
-											className={cn( "mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md", style.wrap, )}
+											className={cn(
+												"mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md",
+												style.wrap,
+											)}
 										>
 											<Icon
 												className={cn("h-3 w-3", style.icon)}

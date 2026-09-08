@@ -38,11 +38,7 @@ import type { ContractChatMessage } from "@/components/contract-assistant/Contra
 import { ContractAssistantChat } from "@/components/contract-assistant/ContractAssistantChat";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-	Dialog,
-	DialogContent,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import type { ContractStarterPrompt } from "@/lib/ai/contract-assistant.types";
 import { splitProseParagraphs } from "@/lib/ai/split-prose";
 import type { ContractAnalysis } from "@/lib/ai-contract-analyzer";
@@ -633,215 +629,217 @@ ${contractDetails.attachments
 							</div>
 						) : null}
 						{(!showAiPanel || showContractFacts) && (
-						<div className="flex flex-col lg:flex-row lg:space-x-6">
-							{/* Left Column */}
-							<div className="flex-1 space-y-4">
-								{/* Office */}
-								<div className="flex items-center gap-3">
-									<Building className="h-10 w-10 text-cyan-600" />
-									<div>
-										<div className="text-sm font-medium text-gray-900">
-											Office
-										</div>
-										<div className="text-sm text-gray-600">
-											{contract.fullParentPathName || "N/A"}
-										</div>
-										{contract.officeAddress && (
+							<div className="flex flex-col lg:flex-row lg:space-x-6">
+								{/* Left Column */}
+								<div className="flex-1 space-y-4">
+									{/* Office */}
+									<div className="flex items-center gap-3">
+										<Building className="h-10 w-10 text-cyan-600" />
+										<div>
+											<div className="text-sm font-medium text-gray-900">
+												Office
+											</div>
 											<div className="text-sm text-gray-600">
-												{contract.officeAddress.city},{" "}
-												{contract.officeAddress.state}{" "}
-												{contract.officeAddress.zipcode}
+												{contract.fullParentPathName || "N/A"}
 											</div>
-										)}
-									</div>
-								</div>
-
-								{/* Notice Type */}
-								<div className="flex items-center gap-3">
-									<File className="h-4 w-4 text-cyan-600" />
-									<div>
-										<div className="text-sm font-medium text-gray-900">
-											Notice Type
-										</div>
-										<div className="text-sm text-gray-600">
-											{contract.type || "N/A"}
+											{contract.officeAddress && (
+												<div className="text-sm text-gray-600">
+													{contract.officeAddress.city},{" "}
+													{contract.officeAddress.state}{" "}
+													{contract.officeAddress.zipcode}
+												</div>
+											)}
 										</div>
 									</div>
-								</div>
 
-								{/* NAICS Code */}
-								<div className="flex items-center gap-3">
-									<File className="h-4 w-4 text-cyan-600" />
-									<div>
-										<div className="text-sm font-medium text-gray-900">
-											NAICS Code
-										</div>
-										<div className="text-sm text-gray-600">
-											{contract.naicsCode || "N/A"}
-										</div>
-									</div>
-								</div>
-
-								{/* Primary Contact */}
-								<div className="flex items-center gap-3">
-									<User className="h-4 w-4 text-cyan-600" />
-									<div>
-										<div className="text-sm font-medium text-gray-900">
-											Primary Contact
-										</div>
-										<div className="text-sm text-gray-600">
-											{contract.pointOfContact?.[0]?.fullName || "N/A"}
-										</div>
-										{contract.pointOfContact?.[0]?.email && (
-											<div className="text-xs text-gray-500 flex items-center gap-1 mt-1">
-												<Mail className="h-3 w-3" />
-												{contract.pointOfContact[0].email}
+									{/* Notice Type */}
+									<div className="flex items-center gap-3">
+										<File className="h-4 w-4 text-cyan-600" />
+										<div>
+											<div className="text-sm font-medium text-gray-900">
+												Notice Type
 											</div>
-										)}
-										{contract.pointOfContact?.[0]?.phone && (
-											<div className="text-xs text-gray-500 flex items-center gap-1 mt-1">
-												<Phone className="h-3 w-3" />
-												{contract.pointOfContact[0].phone}
-											</div>
-										)}
-									</div>
-								</div>
-							</div>
-
-							{/* Vertical Divider */}
-							<div className="hidden lg:block w-px bg-gray-300 self-stretch mx-3"></div>
-
-							{/* Middle Column */}
-							<div className="flex-1 space-y-4">
-								{/* Buyer */}
-								<div className="flex items-center gap-3">
-									<Building className="h-10 w-10 text-cyan-600" />
-									<div>
-										<div className="text-sm font-medium text-gray-900">
-											Buyer
-										</div>
-										<div className="text-sm text-gray-600">
-											{contract.fullParentPathName || "N/A"}
-										</div>
-									</div>
-								</div>
-
-								{/* Location */}
-								<div className="flex items-center gap-3">
-									<MapPin className="h-4 w-4 text-cyan-600" />
-									<div>
-										<div className="text-sm font-medium text-gray-900">
-											Location
-										</div>
-										<div className="text-sm text-gray-600">
-											{contract.placeOfPerformance?.city?.name ||
-												contract.officeAddress?.city ||
-												"N/A"}
-										</div>
-										<div className="text-sm text-gray-600">
-											{contract.placeOfPerformance?.state?.name ||
-												contract.officeAddress?.state ||
-												"N/A"}
-										</div>
-										<div className="text-sm text-gray-600">
-											{contract.placeOfPerformance?.zip ||
-												contract.officeAddress?.zipcode ||
-												"N/A"}
-										</div>
-									</div>
-								</div>
-
-								{/* FPDS Code */}
-								<div className="flex items-center gap-3">
-									<File className="h-4 w-4 text-cyan-600" />
-									<div>
-										<div className="text-sm font-medium text-gray-900">
-											FPDS Code
-										</div>
-										<div className="text-sm text-gray-600">
-											{contract.classificationCode || "N/A"}
-										</div>
-									</div>
-								</div>
-
-								{/* Set Aside */}
-								<div className="flex items-center gap-3">
-									<Shield className="h-4 w-4 text-cyan-600" />
-									<div>
-										<div className="text-sm font-medium text-gray-900">
-											Set Aside
-										</div>
-										<div className="text-sm text-gray-600">
-											{contract.typeOfSetAsideDescription || "None"}
-										</div>
-									</div>
-								</div>
-							</div>
-
-							{/* Vertical Divider */}
-							<div className="hidden lg:block w-px bg-gray-300 self-stretch mx-3"></div>
-
-							{/* Right Column - Timeline */}
-							<div className="flex-1 space-y-4">
-								<div className="relative">
-									{/* Timeline Line */}
-									<div className="absolute left-[5px] top-5 bottom-5 w-0.5 h-[70px] bg-gray-300"></div>
-
-									<div className="space-y-6">
-										{/* Post Date */}
-										<div className="flex items-start gap-4">
-											<div className="w-3 h-3 border-2 border-cyan-500 rounded-full mt-1 flex-shrink-0"></div>
-											<div className="flex-1">
-												<div className="text-sm font-medium text-gray-900">
-													POST DATE
-												</div>
-												<div className="text-lg font-semibold text-gray-900">
-													{contract.postedDate
-														? new Date(contract.postedDate).toLocaleDateString()
-														: "N/A"}
-												</div>
-												<div className="text-sm text-gray-500">
-													{contract.postedDate
-														? getTimeAgo(contract.postedDate)
-														: "N/A"}
-												</div>
+											<div className="text-sm text-gray-600">
+												{contract.type || "N/A"}
 											</div>
 										</div>
+									</div>
 
-										{/* Due Date */}
-										<div className="flex items-start gap-4">
-											<div className="w-3 h-3 border-2 border-cyan-500 rounded-full mt-1 flex-shrink-0"></div>
+									{/* NAICS Code */}
+									<div className="flex items-center gap-3">
+										<File className="h-4 w-4 text-cyan-600" />
+										<div>
+											<div className="text-sm font-medium text-gray-900">
+												NAICS Code
+											</div>
+											<div className="text-sm text-gray-600">
+												{contract.naicsCode || "N/A"}
+											</div>
+										</div>
+									</div>
 
-											<div className="flex-1">
-												<div className="text-sm font-medium text-gray-900">
-													DUE DATE
+									{/* Primary Contact */}
+									<div className="flex items-center gap-3">
+										<User className="h-4 w-4 text-cyan-600" />
+										<div>
+											<div className="text-sm font-medium text-gray-900">
+												Primary Contact
+											</div>
+											<div className="text-sm text-gray-600">
+												{contract.pointOfContact?.[0]?.fullName || "N/A"}
+											</div>
+											{contract.pointOfContact?.[0]?.email && (
+												<div className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+													<Mail className="h-3 w-3" />
+													{contract.pointOfContact[0].email}
 												</div>
-												<div className="text-lg font-semibold text-gray-900">
-													{contract.responseDeadLine
-														? new Date(
-																contract.responseDeadLine,
-															).toLocaleDateString()
-														: "N/A"}
+											)}
+											{contract.pointOfContact?.[0]?.phone && (
+												<div className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+													<Phone className="h-3 w-3" />
+													{contract.pointOfContact[0].phone}
 												</div>
-												<div
-													className={`text-sm ${
-														contract.responseDeadLine
+											)}
+										</div>
+									</div>
+								</div>
+
+								{/* Vertical Divider */}
+								<div className="hidden lg:block w-px bg-gray-300 self-stretch mx-3"></div>
+
+								{/* Middle Column */}
+								<div className="flex-1 space-y-4">
+									{/* Buyer */}
+									<div className="flex items-center gap-3">
+										<Building className="h-10 w-10 text-cyan-600" />
+										<div>
+											<div className="text-sm font-medium text-gray-900">
+												Buyer
+											</div>
+											<div className="text-sm text-gray-600">
+												{contract.fullParentPathName || "N/A"}
+											</div>
+										</div>
+									</div>
+
+									{/* Location */}
+									<div className="flex items-center gap-3">
+										<MapPin className="h-4 w-4 text-cyan-600" />
+										<div>
+											<div className="text-sm font-medium text-gray-900">
+												Location
+											</div>
+											<div className="text-sm text-gray-600">
+												{contract.placeOfPerformance?.city?.name ||
+													contract.officeAddress?.city ||
+													"N/A"}
+											</div>
+											<div className="text-sm text-gray-600">
+												{contract.placeOfPerformance?.state?.name ||
+													contract.officeAddress?.state ||
+													"N/A"}
+											</div>
+											<div className="text-sm text-gray-600">
+												{contract.placeOfPerformance?.zip ||
+													contract.officeAddress?.zipcode ||
+													"N/A"}
+											</div>
+										</div>
+									</div>
+
+									{/* FPDS Code */}
+									<div className="flex items-center gap-3">
+										<File className="h-4 w-4 text-cyan-600" />
+										<div>
+											<div className="text-sm font-medium text-gray-900">
+												FPDS Code
+											</div>
+											<div className="text-sm text-gray-600">
+												{contract.classificationCode || "N/A"}
+											</div>
+										</div>
+									</div>
+
+									{/* Set Aside */}
+									<div className="flex items-center gap-3">
+										<Shield className="h-4 w-4 text-cyan-600" />
+										<div>
+											<div className="text-sm font-medium text-gray-900">
+												Set Aside
+											</div>
+											<div className="text-sm text-gray-600">
+												{contract.typeOfSetAsideDescription || "None"}
+											</div>
+										</div>
+									</div>
+								</div>
+
+								{/* Vertical Divider */}
+								<div className="hidden lg:block w-px bg-gray-300 self-stretch mx-3"></div>
+
+								{/* Right Column - Timeline */}
+								<div className="flex-1 space-y-4">
+									<div className="relative">
+										{/* Timeline Line */}
+										<div className="absolute left-[5px] top-5 bottom-5 w-0.5 h-[70px] bg-gray-300"></div>
+
+										<div className="space-y-6">
+											{/* Post Date */}
+											<div className="flex items-start gap-4">
+												<div className="w-3 h-3 border-2 border-cyan-500 rounded-full mt-1 flex-shrink-0"></div>
+												<div className="flex-1">
+													<div className="text-sm font-medium text-gray-900">
+														POST DATE
+													</div>
+													<div className="text-lg font-semibold text-gray-900">
+														{contract.postedDate
+															? new Date(
+																	contract.postedDate,
+																).toLocaleDateString()
+															: "N/A"}
+													</div>
+													<div className="text-sm text-gray-500">
+														{contract.postedDate
+															? getTimeAgo(contract.postedDate)
+															: "N/A"}
+													</div>
+												</div>
+											</div>
+
+											{/* Due Date */}
+											<div className="flex items-start gap-4">
+												<div className="w-3 h-3 border-2 border-cyan-500 rounded-full mt-1 flex-shrink-0"></div>
+
+												<div className="flex-1">
+													<div className="text-sm font-medium text-gray-900">
+														DUE DATE
+													</div>
+													<div className="text-lg font-semibold text-gray-900">
+														{contract.responseDeadLine
+															? new Date(
+																	contract.responseDeadLine,
+																).toLocaleDateString()
+															: "N/A"}
+													</div>
+													<div
+														className={`text-sm ${
+															contract.responseDeadLine
+																? getUrgencyIndicator(contract.responseDeadLine)
+																		.color
+																: "text-gray-500"
+														}`}
+													>
+														{contract.responseDeadLine
 															? getUrgencyIndicator(contract.responseDeadLine)
-																	.color
-															: "text-gray-500"
-													}`}
-												>
-													{contract.responseDeadLine
-														? getUrgencyIndicator(contract.responseDeadLine)
-																.text
-														: "N/A"}
+																	.text
+															: "N/A"}
+													</div>
 												</div>
 											</div>
 										</div>
 									</div>
 								</div>
 							</div>
-						</div>
 						)}
 
 						{/* Attachments Section */}

@@ -85,10 +85,12 @@ export async function GET(request: NextRequest) {
 						],
 					});
 					const needle = nameQuery.toLowerCase();
-					return window.rows.filter((row: { contractName?: string; $id?: string }) => {
-						const name = String(row.contractName || "").toLowerCase();
-						return name === needle || row.$id === nameQuery;
-					});
+					return window.rows.filter(
+						(row: { contractName?: string; $id?: string }) => {
+							const name = String(row.contractName || "").toLowerCase();
+							return name === needle || row.$id === nameQuery;
+						},
+					);
 				},
 			);
 

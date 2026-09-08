@@ -41,7 +41,9 @@ export const ENGINEERING_TICKET_CATEGORIES: TicketCategory[] = [
 ];
 
 export function categoriesForLane(lane: TicketLane): TicketCategory[] {
-	return lane === "help" ? HELP_TICKET_CATEGORIES : ENGINEERING_TICKET_CATEGORIES;
+	return lane === "help"
+		? HELP_TICKET_CATEGORIES
+		: ENGINEERING_TICKET_CATEGORIES;
 }
 
 export function isCategoryAllowedForLane(

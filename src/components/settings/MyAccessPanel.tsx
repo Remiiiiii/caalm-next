@@ -16,7 +16,6 @@ import { Button } from "@/components/ui/button";
 import { CardContent, Card as GlassCard } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { LoadingSpinner } from "@/components/ui/loading";
-import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import {
 	Select,
 	SelectContent,
@@ -24,6 +23,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import { PERMISSION_DEFINITIONS, PERMISSIONS } from "@/constants/permissions";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -381,9 +381,7 @@ export default function MyAccessPanel() {
 												<div className="min-w-0 flex-1">
 													<p
 														className={`text-sm font-semibold ${
-															item.granted
-																? "text-slate-700"
-																: "text-slate-500"
+															item.granted ? "text-slate-700" : "text-slate-500"
 														}`}
 													>
 														{item.name}

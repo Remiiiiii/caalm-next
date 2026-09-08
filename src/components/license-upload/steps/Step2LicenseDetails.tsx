@@ -12,8 +12,8 @@ import {
 	aiFieldItemClassName,
 } from "@/components/contract-upload/AiExtractionReview";
 import { Button } from "@/components/ui/button";
-import { CurrencySelect } from "@/components/ui/currency-select";
 import { Calendar } from "@/components/ui/calendar";
+import { CurrencySelect } from "@/components/ui/currency-select";
 import {
 	FormControl,
 	FormField,

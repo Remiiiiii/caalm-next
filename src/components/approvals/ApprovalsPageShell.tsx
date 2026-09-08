@@ -3,8 +3,8 @@
 import { Calendar } from "lucide-react";
 import Link from "next/link";
 import { useMemo } from "react";
-import ApprovalDecideSheet from "@/components/approvals/ApprovalDecideSheet";
 import { AccountabilityAttentionStrip } from "@/components/approvals/AccountabilityAttentionStrip";
+import ApprovalDecideSheet from "@/components/approvals/ApprovalDecideSheet";
 import ApprovalsAttentionStrip from "@/components/approvals/ApprovalsAttentionStrip";
 import ApprovalsBulkBar from "@/components/approvals/ApprovalsBulkBar";
 import ApprovalsControlBar from "@/components/approvals/ApprovalsControlBar";

@@ -1,11 +1,11 @@
-import { appendTicketEvent } from "./ticket-events.repository";
+import { getTicketById, updateTicket } from "./ticket.repository";
+import { resolveTicketLane, type Ticket } from "./ticket.types";
 import { canCloseTicket } from "./ticket-access.policy";
+import { appendTicketEvent } from "./ticket-events.repository";
 import {
 	notifyTicketStaff,
 	notifyTicketSubmitter,
 } from "./ticket-notification.service";
-import { getTicketById, updateTicket } from "./ticket.repository";
-import { resolveTicketLane, type Ticket } from "./ticket.types";
 
 /**
  * Human "Mark resolved" — Help lane close without Cursor agent.

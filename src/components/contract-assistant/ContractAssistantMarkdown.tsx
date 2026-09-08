@@ -16,10 +16,7 @@ function normalizeAssistantMarkdown(text: string): string {
 	next = next.replace(/^\*\s+(?=\*\*)/gm, "- ");
 	next = next.replace(/\s+\*\s*$/gm, "");
 	next = next.replace(/"([^"\n]{1,48})"/g, "$1");
-	next = next.replace(
-		/^(\*\*[^*\n]+\*\*)\s*\n(?=[-*•]|\d+\.)/m,
-		"$1\n\n",
-	);
+	next = next.replace(/^(\*\*[^*\n]+\*\*)\s*\n(?=[-*•]|\d+\.)/m, "$1\n\n");
 
 	return next.trim();
 }
@@ -144,12 +141,7 @@ export function ContractAssistantMarkdown({
 					key={`p-${blockKey++}`}
 					className="mt-2 text-sm leading-relaxed text-slate-700 first:mt-0"
 				>
-					{renderInlineText(
-						joined,
-						citationMap,
-						onJumpToPage,
-						`p-${blockKey}`,
-					)}
+					{renderInlineText(joined, citationMap, onJumpToPage, `p-${blockKey}`)}
 				</p>,
 			);
 		}

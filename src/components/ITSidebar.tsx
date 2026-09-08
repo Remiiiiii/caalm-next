@@ -286,73 +286,74 @@ const ITSidebar: React.FC<ITSidebarProps> = ({ name, email }) => {
 											</li>
 										)}
 										<div className="mb-3">
-										<li className="sidebar-section-header mb-0 lg:mb-1">
-											<span className="flex items-center gap-2">
-												<span className="text-[#03AFBF]">
-													<ITNavIcon name={headerIcon} size={20} />
+											<li className="sidebar-section-header mb-0 lg:mb-1">
+												<span className="flex items-center gap-2">
+													<span className="text-[#03AFBF]">
+														<ITNavIcon name={headerIcon} size={20} />
+													</span>
+													<span className="font-semibold text-sm sidebar-gradient-text relative z-10">
+														{section.header}
+													</span>
 												</span>
-												<span className="font-semibold text-sm sidebar-gradient-text relative z-10">
-													{section.header}
-												</span>
-											</span>
-										</li>
-										<div className="relative ml-3">
-											<ul className="flex flex-col gap-1 relative z-10">
-												{section.items.map((item, index) => {
-													const isActive =
-														item.url === "/tickets"
-															? pathname === "/tickets" ||
-																(!!pathname?.startsWith("/tickets/") &&
-																	!pathname.startsWith("/tickets/new"))
-															: isNavItemActive(
-																	pathname,
-																	item.url,
-																	"/dashboard/it",
-																);
+											</li>
+											<div className="relative ml-3">
+												<ul className="flex flex-col gap-1 relative z-10">
+													{section.items.map((item, index) => {
+														const isActive =
+															item.url === "/tickets"
+																? pathname === "/tickets" ||
+																	(!!pathname?.startsWith("/tickets/") &&
+																		!pathname.startsWith("/tickets/new"))
+																: isNavItemActive(
+																		pathname,
+																		item.url,
+																		"/dashboard/it",
+																	);
 
-													return (
-														<li
-															key={`${section.header}-${item.name}-${index}`}
-															className="relative flex items-center"
-														>
-															{index < section.items.length + 1 && (
-																<span
-																	className="absolute left-0 top-0 h-6 w-4 border-l border-[#BFBFBF]"
-																	style={{ zIndex: 0 }}
-																/>
-															)}
-															<span className="absolute left-0 top-0 h-4 w-4 border-l border-b border-[#BFBFBF] rounded-bl-xl" />
-															<Link
-																href={item.url}
-																className={cn(
-																	"ml-4 w-full flex items-center gap-1.5 rounded-md px-1.5 py-1 cursor-pointer transition-all duration-200",
-																	"hover:bg-blue-50 hover:border-blue-300 border border-transparent",
-																	"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
-																	isActive && "bg-blue/10 border-blue/20",
-																)}
+														return (
+															<li
+																key={`${section.header}-${item.name}-${index}`}
+																className="relative flex items-center"
 															>
-																<ITNavIcon
-																	name={item.icon}
-																	size={16}
+																{index < section.items.length + 1 && (
+																	<span
+																		className="absolute left-0 top-0 h-6 w-4 border-l border-[#BFBFBF]"
+																		style={{ zIndex: 0 }}
+																	/>
+																)}
+																<span className="absolute left-0 top-0 h-4 w-4 border-l border-b border-[#BFBFBF] rounded-bl-xl" />
+																<Link
+																	href={item.url}
 																	className={cn(
-																		"text-slate-500",
-																		isActive && "text-[#0f5384]",
-																	)}
-																/>
-																<p
-																	className={cn(
-																		"text-xs text-slate-700 font-medium truncate",
-																		isActive && "text-[#0f5384] font-semibold",
+																		"ml-4 w-full flex items-center gap-1.5 rounded-md px-1.5 py-1 cursor-pointer transition-all duration-200",
+																		"hover:bg-blue-50 hover:border-blue-300 border border-transparent",
+																		"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
+																		isActive && "bg-blue/10 border-blue/20",
 																	)}
 																>
-																	{item.name}
-																</p>
-															</Link>
-														</li>
-													);
-												})}
-											</ul>
-										</div>
+																	<ITNavIcon
+																		name={item.icon}
+																		size={16}
+																		className={cn(
+																			"text-slate-500",
+																			isActive && "text-[#0f5384]",
+																		)}
+																	/>
+																	<p
+																		className={cn(
+																			"text-xs text-slate-700 font-medium truncate",
+																			isActive &&
+																				"text-[#0f5384] font-semibold",
+																		)}
+																	>
+																		{item.name}
+																	</p>
+																</Link>
+															</li>
+														);
+													})}
+												</ul>
+											</div>
 										</div>
 									</Fragment>
 								);

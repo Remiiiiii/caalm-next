@@ -52,7 +52,9 @@ export function getWeatherIcon(
 		case "snow":
 			return (
 				<div className="relative">
-					<CloudSnow className={cn(iconClass, "text-blue-200 drop-shadow-sm")} />
+					<CloudSnow
+						className={cn(iconClass, "text-blue-200 drop-shadow-sm")}
+					/>
 				</div>
 			);
 		case "mist":

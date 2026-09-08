@@ -26,19 +26,50 @@ const BUCKET =
 	process.env.NEXT_PUBLIC_APPWRITE_CONTRACT_BLUEPRINTS_BUCKET ||
 	"69c8f503003c4d5e6f04";
 const dirArg = process.argv.find((arg, i) => process.argv[i - 1] === "--dir");
-const SOURCE = dirArg || path.join(os.homedir(), "Downloads", "files", "updated");
+const SOURCE =
+	dirArg || path.join(os.homedir(), "Downloads", "files", "updated");
 
 const FILES = [
-	["vendor", "01_Vendor_Service_Agreement.docx", "bp01vendordocx", "bp01vendorthumb"],
+	[
+		"vendor",
+		"01_Vendor_Service_Agreement.docx",
+		"bp01vendordocx",
+		"bp01vendorthumb",
+	],
 	["grant", "02_Grant_Agreement.docx", "bp02grantdocx", "bp02grantthumb"],
 	["government", "03_Government_Contract.docx", "bp03govdocx", "bp03govthumb"],
 	["lease", "04_Lease_Agreement.docx", "bp04leasedocx", "bp04leasethumb"],
-	["consulting", "05_Consulting_Agreement.docx", "bp05consultdocx", "bp05consultthumb"],
+	[
+		"consulting",
+		"05_Consulting_Agreement.docx",
+		"bp05consultdocx",
+		"bp05consultthumb",
+	],
 	["mou", "06_Memorandum_of_Understanding.docx", "bp06moudocx", "bp06mouthumb"],
-	["donation", "07_Donation_Gift_Agreement.docx", "bp07donationdocx", "bp07donationthumb"],
-	["independent_contractor", "08_Independent_Contractor_Agreement.docx", "bp08icondocx", "bp08iconthumb"],
-	["fiscal_sponsorship", "09_Fiscal_Sponsorship_Agreement.docx", "bp09fiscaldocx", "bp09fiscalthumb"],
-	["employment", "10_Employment_Contract.docx", "bp10employdocx", "bp10employthumb"],
+	[
+		"donation",
+		"07_Donation_Gift_Agreement.docx",
+		"bp07donationdocx",
+		"bp07donationthumb",
+	],
+	[
+		"independent_contractor",
+		"08_Independent_Contractor_Agreement.docx",
+		"bp08icondocx",
+		"bp08iconthumb",
+	],
+	[
+		"fiscal_sponsorship",
+		"09_Fiscal_Sponsorship_Agreement.docx",
+		"bp09fiscaldocx",
+		"bp09fiscalthumb",
+	],
+	[
+		"employment",
+		"10_Employment_Contract.docx",
+		"bp10employdocx",
+		"bp10employthumb",
+	],
 ];
 
 // Minimal 1x1 PNG.
@@ -64,11 +95,7 @@ async function upsertFile(fileId, fileName, buffer, mime) {
 
 	const form = new FormData();
 	form.set("fileId", fileId);
-	form.set(
-		"file",
-		new Blob([buffer], { type: mime }),
-		fileName,
-	);
+	form.set("file", new Blob([buffer], { type: mime }), fileName);
 	const response = await fetch(`${ENDPOINT}/storage/buckets/${BUCKET}/files`, {
 		method: "POST",
 		headers,

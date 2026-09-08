@@ -32,7 +32,8 @@ vi.mock("@/lib/users/delete-user.service", () => ({
 }));
 
 vi.mock("@/lib/rbac/permissions", () => ({
-	validateUserOrgAccess: (...args: unknown[]) => mockValidateUserOrgAccess(...args),
+	validateUserOrgAccess: (...args: unknown[]) =>
+		mockValidateUserOrgAccess(...args),
 }));
 
 vi.mock("@/lib/rbac/organizations", () => ({

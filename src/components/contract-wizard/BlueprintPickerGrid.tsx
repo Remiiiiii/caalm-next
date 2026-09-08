@@ -116,7 +116,9 @@ export function BlueprintPickerGrid({
 			</div>
 
 			{visible.length === 0 && (
-				<p className="text-sm text-slate-600">No agreements match that search.</p>
+				<p className="text-sm text-slate-600">
+					No agreements match that search.
+				</p>
 			)}
 
 			{visible.length > 0 && (
@@ -299,7 +301,10 @@ function PreviewDialog({
 	if (!blueprint) return null;
 
 	return (
-		<Dialog open={Boolean(blueprint)} onOpenChange={(open) => !open && onClose()}>
+		<Dialog
+			open={Boolean(blueprint)}
+			onOpenChange={(open) => !open && onClose()}
+		>
 			<DialogContent className="flex max-h-[90vh] max-w-3xl flex-col overflow-hidden border border-slate-200 p-0 shadow-xl">
 				<div className="absolute top-0 right-0 left-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
 				<div className="mt-4 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-indigo-50 py-4">

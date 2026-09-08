@@ -1,20 +1,20 @@
 import { Query } from "node-appwrite";
-import { computeSlaMetrics } from "@/lib/approvals/ApprovalSlaService";
-import { parseWorkflowState } from "@/lib/approvals/ContractApprovalWorkflowService";
-import {
-	REASON_CATEGORY_LABELS,
-	type ExpirationAttestation,
-	type ExpirationReasonCategory,
-} from "@/lib/approvals/expirationAttestation.types";
-import { listAttestationsForOrg } from "@/lib/approvals/ExpirationAttestationService";
-import { createAdminClient } from "@/lib/appwrite";
-import { appwriteConfig } from "@/lib/appwrite/config";
-import { excludeSoftDeletedQuery } from "@/lib/soft-delete";
 import type {
 	PortfolioAccountabilityMetrics,
 	PortfolioPeriod,
 	StatusCounts,
 } from "@/lib/analytics/portfolioAccountability.types";
+import { computeSlaMetrics } from "@/lib/approvals/ApprovalSlaService";
+import { parseWorkflowState } from "@/lib/approvals/ContractApprovalWorkflowService";
+import { listAttestationsForOrg } from "@/lib/approvals/ExpirationAttestationService";
+import {
+	type ExpirationAttestation,
+	type ExpirationReasonCategory,
+	REASON_CATEGORY_LABELS,
+} from "@/lib/approvals/expirationAttestation.types";
+import { createAdminClient } from "@/lib/appwrite";
+import { appwriteConfig } from "@/lib/appwrite/config";
+import { excludeSoftDeletedQuery } from "@/lib/soft-delete";
 
 export type {
 	PortfolioAccountabilityMetrics,
@@ -44,7 +44,10 @@ function bumpStatus(counts: StatusCounts, status: string): void {
 	counts.total += 1;
 	if (normalized === "active") counts.active += 1;
 	else if (normalized === "expired") counts.expired += 1;
-	else if (normalized === "pending-review" || normalized === "action-required") {
+	else if (
+		normalized === "pending-review" ||
+		normalized === "action-required"
+	) {
 		counts.pendingReview += 1;
 	} else if (normalized === "inactive") counts.inactive += 1;
 	else counts.other += 1;
@@ -70,24 +73,25 @@ function median(values: number[]): number | null {
 	const sorted = [...values].sort((a, b) => a - b);
 	const mid = Math.floor(sorted.length / 2);
 	const raw =
-		sorted.length % 2 === 0
-			? (sorted[mid - 1] + sorted[mid]) / 2
-			: sorted[mid];
+		sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
 	return Math.round(raw * 10) / 10;
 }
 
 function average(values: number[]): number | null {
 	if (values.length === 0) return null;
-	return Math.round((values.reduce((s, n) => s + n, 0) / values.length) * 10) / 10;
-}
-
-function departmentOf(row: Record<string, unknown>): string {
 	return (
-		String(row.department || row.division || "").trim() || "Unassigned"
+		Math.round((values.reduce((s, n) => s + n, 0) / values.length) * 10) / 10
 	);
 }
 
-function expiryDateOf(row: Record<string, unknown>, kind: "contract" | "license"): Date | null {
+function departmentOf(row: Record<string, unknown>): string {
+	return String(row.department || row.division || "").trim() || "Unassigned";
+}
+
+function expiryDateOf(
+	row: Record<string, unknown>,
+	kind: "contract" | "license",
+): Date | null {
 	return parseDate(
 		kind === "contract"
 			? row.contractExpiryDate
@@ -100,14 +104,18 @@ function cycleDays(row: Record<string, unknown>): number | null {
 	if (!state) return null;
 	const submitted = state.steps.find((s) => s.kind === "submitted");
 	const activated = state.steps.find((s) => s.kind === "activated");
-	const start = parseDate(submitted?.completedAt || submitted?.startedAt || row.$createdAt);
+	const start = parseDate(
+		submitted?.completedAt || submitted?.startedAt || row.$createdAt,
+	);
 	const end = parseDate(activated?.completedAt);
 	if (!start || !end) return null;
 	const days = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
 	return days >= 0 ? days : null;
 }
 
-function stepDurations(row: Record<string, unknown>): Array<{ kind: string; hours: number }> {
+function stepDurations(
+	row: Record<string, unknown>,
+): Array<{ kind: string; hours: number }> {
 	const state = parseWorkflowState(row.approvalWorkflowState as string);
 	if (!state) return [];
 	const out: Array<{ kind: string; hours: number }> = [];
@@ -192,7 +200,12 @@ export async function computePortfolioAccountability(
 	const stepHours = new Map<string, { total: number; count: number }>();
 	const deptMap = new Map<
 		string,
-		{ documents: number; expired: number; pendingAttestations: number; value: number }
+		{
+			documents: number;
+			expired: number;
+			pendingAttestations: number;
+			value: number;
+		}
 	>();
 
 	const ensureDept = (name: string) => {
@@ -242,7 +255,11 @@ export async function computePortfolioAccountability(
 
 			const expiry = expiryDateOf(row, kind);
 			const expiredAt = parseDate(row.$updatedAt);
-			if (expiry && expiry.getTime() >= startMs && expiry.getTime() <= now.getTime()) {
+			if (
+				expiry &&
+				expiry.getTime() >= startMs &&
+				expiry.getTime() <= now.getTime()
+			) {
 				eligible += 1;
 			}
 			if (status.toLowerCase() === "expired") {
@@ -280,7 +297,13 @@ export async function computePortfolioAccountability(
 	const rootCause = new Map<string, number>();
 	const trendMap = new Map<
 		string,
-		{ label: string; expired: number; attested: number; days: number[]; sort: string }
+		{
+			label: string;
+			expired: number;
+			attested: number;
+			days: number[];
+			sort: string;
+		}
 	>();
 
 	const ensureTrend = (date: Date) => {
@@ -319,7 +342,8 @@ export async function computePortfolioAccountability(
 		if (att.status === "reviewed" || att.status === "waived") reviewed += 1;
 		const expiredAt = parseDate(att.expiredAt || att.priorExpiryDate);
 		if (att.status === "pending" && expiredAt) {
-			const ageDays = (now.getTime() - expiredAt.getTime()) / (1000 * 60 * 60 * 24);
+			const ageDays =
+				(now.getTime() - expiredAt.getTime()) / (1000 * 60 * 60 * 24);
 			if (ageDays > 7) overduePending += 1;
 		}
 		const submittedAt = parseDate(att.submittedAt);
@@ -347,8 +371,9 @@ export async function computePortfolioAccountability(
 
 	for (const row of [...contracts, ...licenses]) {
 		const days = cycleDays(row);
-		const activated = parseWorkflowState(row.approvalWorkflowState as string)
-			?.steps.find((s) => s.kind === "activated");
+		const activated = parseWorkflowState(
+			row.approvalWorkflowState as string,
+		)?.steps.find((s) => s.kind === "activated");
 		const end = parseDate(activated?.completedAt);
 		if (days != null && end && end.getTime() >= startMs) {
 			ensureTrend(end).days.push(days);

@@ -12,7 +12,11 @@ export type DepartmentProfileFields = {
 /** True when department or departmentLabel is IT (case-insensitive). */
 export function isITDepartment(profile: DepartmentProfileFields): boolean {
 	const values = [profile.department, profile.departmentLabel]
-		.map((v) => String(v || "").trim().toLowerCase())
+		.map((v) =>
+			String(v || "")
+				.trim()
+				.toLowerCase(),
+		)
 		.filter(Boolean);
 	return values.some((v) => v === "it");
 }

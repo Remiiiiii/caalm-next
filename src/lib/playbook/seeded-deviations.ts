@@ -84,8 +84,7 @@ export function buildSeededDeviationReport(): DeviationReport {
 			extractedCategory: "termination",
 			verdict: "no_standard",
 			severity: "medium",
-			rationale:
-				"No published playbook standard matches this clause category.",
+			rationale: "No published playbook standard matches this clause category.",
 		}),
 	];
 

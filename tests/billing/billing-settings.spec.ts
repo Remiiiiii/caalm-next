@@ -185,9 +185,7 @@ test.describe("Billing settings surface", () => {
 			await expect(page.getByRole("dialog")).toHaveCount(0);
 		});
 
-		test("payment method menu shows edit replace remove", async ({
-			page,
-		}) => {
+		test("payment method menu shows edit replace remove", async ({ page }) => {
 			const actionButton = page
 				.getByRole("button", { name: /actions for card ending in/i })
 				.first();
@@ -197,8 +195,12 @@ test.describe("Billing settings surface", () => {
 
 			await actionButton.click();
 			await expect(page.getByRole("menuitem", { name: "Edit" })).toBeVisible();
-			await expect(page.getByRole("menuitem", { name: "Replace" })).toBeVisible();
-			await expect(page.getByRole("menuitem", { name: "Remove" })).toBeVisible();
+			await expect(
+				page.getByRole("menuitem", { name: "Replace" }),
+			).toBeVisible();
+			await expect(
+				page.getByRole("menuitem", { name: "Remove" }),
+			).toBeVisible();
 			await page.keyboard.press("Escape");
 		});
 

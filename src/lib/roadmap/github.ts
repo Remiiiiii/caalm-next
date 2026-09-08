@@ -4,8 +4,8 @@
 
 import { createGitHubAppJwt } from "@/lib/tickets/github-tickets.service";
 import {
-	stripHtmlFromPrBody,
 	type GitHubPullRequestSummary,
+	stripHtmlFromPrBody,
 } from "./github-pr-match";
 import {
 	evaluateRoadmapCompletionGate,
@@ -328,7 +328,9 @@ export async function fetchRoadmapCompletionGate(params: {
 		return value;
 	}
 
-	const runsJson = (await runsRes.json()) as { workflow_runs?: ActionsRunJson[] };
+	const runsJson = (await runsRes.json()) as {
+		workflow_runs?: ActionsRunJson[];
+	};
 	const workflowRuns = runsJson.workflow_runs ?? [];
 
 	const runsWithJobs = await Promise.all(
@@ -343,7 +345,9 @@ export async function fetchRoadmapCompletionGate(params: {
 					},
 				);
 				if (jobsRes.ok) {
-					const jobsJson = (await jobsRes.json()) as { jobs?: ActionsJobJson[] };
+					const jobsJson = (await jobsRes.json()) as {
+						jobs?: ActionsJobJson[];
+					};
 					jobs = jobsJson.jobs ?? [];
 				}
 			} catch {

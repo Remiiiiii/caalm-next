@@ -1,15 +1,15 @@
-import { canStartFixAgent } from "./ticket-access.policy";
 import {
 	getCursorAgentStatus,
 	launchCursorAgent,
 	parsePrNumberFromUrl,
 } from "./cursor-agent.service";
 import { fetchGitHubIssue } from "./github-tickets.service";
-import { uploadTicketAttachments } from "./ticket-intake.service";
-import { appendTicketEvent } from "./ticket-events.repository";
-import { notifyTicketStaff } from "./ticket-notification.service";
 import { getTicketById, listTickets, updateTicket } from "./ticket.repository";
 import { resolveTicketLane, type Ticket } from "./ticket.types";
+import { canStartFixAgent } from "./ticket-access.policy";
+import { appendTicketEvent } from "./ticket-events.repository";
+import { uploadTicketAttachments } from "./ticket-intake.service";
+import { notifyTicketStaff } from "./ticket-notification.service";
 
 /** Launch Cursor fix agent (engineering lane). Formerly resolveTicket. */
 export async function startFixAgent(input: {
@@ -57,7 +57,9 @@ export async function startFixAgent(input: {
 	}
 
 	if (uploadedIds.length > 0) {
-		const existing = Array.isArray(ticket.attachments) ? ticket.attachments : [];
+		const existing = Array.isArray(ticket.attachments)
+			? ticket.attachments
+			: [];
 		await updateTicket(ticket.$id, {
 			attachments: [...existing, ...uploadedIds],
 		});
@@ -99,9 +101,7 @@ export async function startFixAgent(input: {
 				error: error instanceof Error ? error.message : "Agent launch failed",
 			},
 		});
-		throw error instanceof Error
-			? error
-			: new Error("Agent launch failed");
+		throw error instanceof Error ? error : new Error("Agent launch failed");
 	}
 
 	const updated = await updateTicket(ticket.$id, {
@@ -126,9 +126,13 @@ export async function syncCursorAgentTicket(ticket: Ticket): Promise<Ticket> {
 	if (!ticket.cursorAgentRunId) return ticket;
 
 	const status = await getCursorAgentStatus(ticket.cursorAgentRunId);
-	const finished = ["FINISHED", "COMPLETED", "ERROR", "FAILED", "EXPIRED"].includes(
-		status.status.toUpperCase(),
-	);
+	const finished = [
+		"FINISHED",
+		"COMPLETED",
+		"ERROR",
+		"FAILED",
+		"EXPIRED",
+	].includes(status.status.toUpperCase());
 	if (!finished) return ticket;
 
 	if (["ERROR", "FAILED", "EXPIRED"].includes(status.status.toUpperCase())) {

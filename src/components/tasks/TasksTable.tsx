@@ -116,8 +116,7 @@ export function TasksTable({
 											</span>
 										</>
 									) : null}
-									{task.linkedEntityType &&
-									task.linkedEntityType !== "none" ? (
+									{task.linkedEntityType && task.linkedEntityType !== "none" ? (
 										<>
 											<span>·</span>
 											<span className="inline-flex items-center gap-1 capitalize">

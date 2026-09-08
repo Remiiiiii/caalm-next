@@ -108,7 +108,10 @@ export const SAM_FEDERAL_ORGANIZATIONS: SamFederalOrganization[] = [
 	{ name: "Department of the Interior", aliases: ["doi", "interior"] },
 	{ name: "Department of Justice", aliases: ["doj", "justice"] },
 	{ name: "Department of Labor", aliases: ["dol", "labor"] },
-	{ name: "Department of State", aliases: ["state department", "dos", "state dept"] },
+	{
+		name: "Department of State",
+		aliases: ["state department", "dos", "state dept"],
+	},
 	{
 		name: "Department of Transportation",
 		aliases: ["dot", "transportation"],
@@ -132,7 +135,10 @@ export const SAM_FEDERAL_ORGANIZATIONS: SamFederalOrganization[] = [
 		name: "National Aeronautics and Space Administration",
 		aliases: ["nasa", "space"],
 	},
-	{ name: "National Science Foundation", aliases: ["nsf", "science foundation"] },
+	{
+		name: "National Science Foundation",
+		aliases: ["nsf", "science foundation"],
+	},
 	{
 		name: "Office of Personnel Management",
 		aliases: ["opm", "personnel"],
@@ -278,9 +284,7 @@ export function filterSamOrganizations(
 
 	const scored = SAM_FEDERAL_ORGANIZATIONS.map((org) => {
 		const name = normalizeOrgQuery(org.name);
-		const aliasHit = org.aliases.find((a) =>
-			normalizeOrgQuery(a).includes(q),
-		);
+		const aliasHit = org.aliases.find((a) => normalizeOrgQuery(a).includes(q));
 		let score = 0;
 		if (name === q || org.aliases.some((a) => normalizeOrgQuery(a) === q)) {
 			score = 100;

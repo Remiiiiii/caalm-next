@@ -41,12 +41,14 @@ export const API_AUTHZ_ALLOWLIST: readonly ApiAuthzAllowEntry[] = [
 	{
 		path: "roadmap/webhooks/ci-test-result",
 		class: "webhook",
-		reason: "Roadmap CI HMAC signature (X-Hub-Signature-256 / X-Roadmap-Signature)",
+		reason:
+			"Roadmap CI HMAC signature (X-Hub-Signature-256 / X-Roadmap-Signature)",
 	},
 	{
 		path: "roadmap/webhooks/pr-merged",
 		class: "webhook",
-		reason: "Roadmap merge HMAC signature (GitHub pull_request.closed or slim payload)",
+		reason:
+			"Roadmap merge HMAC signature (GitHub pull_request.closed or slim payload)",
 	},
 	{
 		path: "auth/callback/microsoft",
@@ -142,7 +144,8 @@ export const API_AUTHZ_ALLOWLIST: readonly ApiAuthzAllowEntry[] = [
 	{
 		path: "negotiate/[token]",
 		class: "token",
-		reason: "Counterparty negotiation view via hashed invite token + OTP session",
+		reason:
+			"Counterparty negotiation view via hashed invite token + OTP session",
 	},
 	{
 		path: "negotiate/[token]/comments",

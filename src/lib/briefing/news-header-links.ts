@@ -1,7 +1,7 @@
 import {
 	BBC_NEWS_URL,
-	GOOGLE_NEWS_URL,
 	type BriefingNewsItem,
+	GOOGLE_NEWS_URL,
 } from "@/types/briefing";
 
 export type NewsHeaderLink = {
@@ -43,9 +43,7 @@ export function showGoogleNewsCardLink(
 }
 
 /** Header shortcut follows BBC when a BBC story is on screen. */
-export function newsHeaderLinks(
-	news: BriefingNewsItem[],
-): NewsHeaderLink[] {
+export function newsHeaderLinks(news: BriefingNewsItem[]): NewsHeaderLink[] {
 	const hasBbc = shownNews(news).some(isBbcOutlet);
 	return [
 		{

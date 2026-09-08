@@ -821,8 +821,8 @@ const ActionDropdown = ({
 					{/* Footer — corner X dismisses; Share is the only action */}
 					<div className="flex items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
 						<p className="text-sm text-slate-500">
-							{emails.length}{" "}
-							{emails.length === 1 ? "person" : "people"} selected
+							{emails.length} {emails.length === 1 ? "person" : "people"}{" "}
+							selected
 						</p>
 						<Button
 							onClick={(e) => {

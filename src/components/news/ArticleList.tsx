@@ -30,7 +30,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { PageIndex } from "@/components/ui/page-index";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
 	AppDropdownMenuContent,
@@ -39,6 +38,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { PageIndex } from "@/components/ui/page-index";
 import {
 	Select,
 	SelectContent,

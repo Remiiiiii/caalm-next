@@ -202,23 +202,23 @@ export function extractBodyFacts(
 	const patterns: Array<{ key: FactKey; re: RegExp }> = [
 		{
 			key: "effectiveDate",
-			re: /\bEffective\s+Date\s*[:\-]\s*([^\n|]+)/gi,
+			re: /\bEffective\s+Date\s*[:-]\s*([^\n|]+)/gi,
 		},
 		{
 			key: "expiryDate",
-			re: /\b(?:Expiry|Expiration)\s+Date\s*[:\-]\s*([^\n|]+)/gi,
+			re: /\b(?:Expiry|Expiration)\s+Date\s*[:-]\s*([^\n|]+)/gi,
 		},
 		{
 			key: "department",
-			re: /\bDepartment\s*[:\-]\s*([^\n|]+)/gi,
+			re: /\bDepartment\s*[:-]\s*([^\n|]+)/gi,
 		},
 		{
 			key: "otherParty",
-			re: /\b(?:Other\s+party|Counterparty|Vendor|Grantee(?:\s+Name)?)\s*[:\-]\s*([^\n|]+)/gi,
+			re: /\b(?:Other\s+party|Counterparty|Vendor|Grantee(?:\s+Name)?)\s*[:-]\s*([^\n|]+)/gi,
 		},
 		{
 			key: "value",
-			re: /\b(?:Grant\s+Amount|Contract\s+Value|Total\s+Value|Amount)\s*[:\-]\s*([^\n|]+)/gi,
+			re: /\b(?:Grant\s+Amount|Contract\s+Value|Total\s+Value|Amount)\s*[:-]\s*([^\n|]+)/gi,
 		},
 	];
 	for (const { key, re } of patterns) {
@@ -354,10 +354,7 @@ export function withRefreshedMetadataBlock(
 ): string {
 	if (metadata.length === 0) return text;
 	const byLabel = new Map(
-		metadata.map((entry) => [
-			normalizeLabel(entry.label),
-			entry.value.trim(),
-		]),
+		metadata.map((entry) => [normalizeLabel(entry.label), entry.value.trim()]),
 	);
 	const byCanon = new Map<string, string>();
 	for (const entry of metadata) {

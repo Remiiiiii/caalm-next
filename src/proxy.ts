@@ -216,9 +216,13 @@ export async function proxy(request: NextRequest) {
 		);
 	}
 	if (pathname.startsWith("/dashboard/it/status/")) {
-		const ticketId = pathname.slice("/dashboard/it/status/".length).split("/")[0];
+		const ticketId = pathname
+			.slice("/dashboard/it/status/".length)
+			.split("/")[0];
 		if (ticketId) {
-			return NextResponse.redirect(new URL(`/incident/${ticketId}`, request.url));
+			return NextResponse.redirect(
+				new URL(`/incident/${ticketId}`, request.url),
+			);
 		}
 	}
 

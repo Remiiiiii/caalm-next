@@ -1,7 +1,7 @@
-import { appendTicketEvent } from "./ticket-events.repository";
-import { canClaimTicket } from "./ticket-access.policy";
 import { getTicketById, updateTicket } from "./ticket.repository";
 import type { Ticket } from "./ticket.types";
+import { canClaimTicket } from "./ticket-access.policy";
+import { appendTicketEvent } from "./ticket-events.repository";
 
 export async function claimTicket(input: {
 	ticketId: string;

@@ -242,11 +242,10 @@ export function replaceNegotiationSectionsInDocxDetailed(
 	const hardEnd = bodyClose >= 0 ? bodyClose : xml.length;
 
 	const signatureStart =
-		paragraphs.find(
-			(paragraph) =>
-				/^(GRANTOR|GRANTEE|SIGNATURE|CONTRACTOR|VENDOR|CLIENT)$/i.test(
-					paragraph.text.trim(),
-				),
+		paragraphs.find((paragraph) =>
+			/^(GRANTOR|GRANTEE|SIGNATURE|CONTRACTOR|VENDOR|CLIENT)$/i.test(
+				paragraph.text.trim(),
+			),
 		)?.start ??
 		findSignaturesParagraphIndex(xml) ??
 		hardEnd;
@@ -415,9 +414,7 @@ export function buildSupplementalDocumentBlocks(input: {
 			),
 		);
 		parts.push(
-			...customBodies.map((text) =>
-				buildBodyParagraph(text, input.sourceXml),
-			),
+			...customBodies.map((text) => buildBodyParagraph(text, input.sourceXml)),
 		);
 	}
 
@@ -429,7 +426,8 @@ const DEFAULT_BODY_FONT = {
 	hAnsi: "Times New Roman",
 };
 
-const PLACEHOLDER_FONT_PATTERN = /consolas|courier|monaco|lucida console|monospace/i;
+const PLACEHOLDER_FONT_PATTERN =
+	/consolas|courier|monaco|lucida console|monospace/i;
 
 function canonicalFontName(name: string): string {
 	const trimmed = name.trim();
@@ -437,7 +435,9 @@ function canonicalFontName(name: string): string {
 	return trimmed;
 }
 
-function parseRunFonts(rFontsTag: string): { ascii: string; hAnsi: string } | null {
+function parseRunFonts(
+	rFontsTag: string,
+): { ascii: string; hAnsi: string } | null {
 	const ascii = rFontsTag.match(/w:ascii="([^"]*)"/)?.[1];
 	const hAnsi = rFontsTag.match(/w:hAnsi="([^"]*)"/)?.[1];
 	if (!ascii && !hAnsi) return null;

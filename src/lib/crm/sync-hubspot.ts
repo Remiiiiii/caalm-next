@@ -12,7 +12,9 @@ export async function syncHubSpotDeals(input: {
 }): Promise<{ created: number; reused: number; skipped: number }> {
 	const config = parseCrmConfig(input.integration.config_json);
 	if (!config.enabled || !config.triggerStageId) {
-		throw new Error("Pick a HubSpot pipeline and trigger stage before syncing.");
+		throw new Error(
+			"Pick a HubSpot pipeline and trigger stage before syncing.",
+		);
 	}
 
 	const accessToken = await getFreshHubSpotAccessToken(input.integration);

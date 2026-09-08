@@ -21,17 +21,26 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
 	const user = await getCurrentUser();
 	if (!user) {
-		return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+		return NextResponse.json(
+			{ error: "Authentication required" },
+			{ status: 401 },
+		);
 	}
 	const org = await getUserDefaultOrganization(user.$id);
 	if (!org?.orgId) {
-		return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+		return NextResponse.json(
+			{ error: "Organization not found" },
+			{ status: 404 },
+		);
 	}
 
 	const { id } = await context.params;
 	const existing = await getObligationById(id);
 	if (!existing || existing.orgId !== org.orgId) {
-		return NextResponse.json({ error: "Obligation not found" }, { status: 404 });
+		return NextResponse.json(
+			{ error: "Obligation not found" },
+			{ status: 404 },
+		);
 	}
 
 	try {
@@ -44,7 +53,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 		if (body.dueDate != null) patch.dueDate = String(body.dueDate);
 		if (body.ownerUserId != null) patch.ownerUserId = String(body.ownerUserId);
 		if (body.ownerName != null) patch.ownerName = String(body.ownerName);
-		if (body.renewalLinked != null) patch.renewalLinked = Boolean(body.renewalLinked);
+		if (body.renewalLinked != null)
+			patch.renewalLinked = Boolean(body.renewalLinked);
 		if (body.linkUrl != null) patch.linkUrl = String(body.linkUrl);
 
 		const obligation = await updateObligation(id, patch);
@@ -66,17 +76,26 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
 
 	const user = await getCurrentUser();
 	if (!user) {
-		return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+		return NextResponse.json(
+			{ error: "Authentication required" },
+			{ status: 401 },
+		);
 	}
 	const org = await getUserDefaultOrganization(user.$id);
 	if (!org?.orgId) {
-		return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+		return NextResponse.json(
+			{ error: "Organization not found" },
+			{ status: 404 },
+		);
 	}
 
 	const { id } = await context.params;
 	const existing = await getObligationById(id);
 	if (!existing || existing.orgId !== org.orgId) {
-		return NextResponse.json({ error: "Obligation not found" }, { status: 404 });
+		return NextResponse.json(
+			{ error: "Obligation not found" },
+			{ status: 404 },
+		);
 	}
 
 	try {

@@ -49,13 +49,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CurrencySelect } from "@/components/ui/currency-select";
 import {
 	Dialog,
 	DialogContent,
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
-import { CurrencySelect } from "@/components/ui/currency-select";
 import { Input } from "@/components/ui/input";
 import {
 	Popover,
@@ -128,12 +128,12 @@ import {
 	getRequiredFields,
 	resolveDraftContractTypeId,
 } from "@/lib/contracts/contractTypeConfigs";
-import { getNoticeThresholds } from "@/lib/renewals/expiryNotice";
-import { refreshStorageUsage } from "@/lib/storage/refreshStorageUsage";
 import {
 	getEnterpriseDropzoneAccept,
 	getEnterpriseFormatHint,
 } from "@/lib/files/enterprise-file-formats";
+import { getNoticeThresholds } from "@/lib/renewals/expiryNotice";
+import { refreshStorageUsage } from "@/lib/storage/refreshStorageUsage";
 import { fireConfetti } from "@/lib/ui/confetti";
 import {
 	CONTRACT_DEPARTMENTS,
@@ -3561,7 +3561,8 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																		: "Drag & drop contract file here"}
 																</p>
 																<p className="text-sm text-light-200 mt-2">
-																	{getEnterpriseFormatHint("contractPrimary")} (Max 50MB)
+																	{getEnterpriseFormatHint("contractPrimary")}{" "}
+																	(Max 50MB)
 																</p>
 															</div>
 														)}

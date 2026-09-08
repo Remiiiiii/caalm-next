@@ -14,17 +14,18 @@ export type ExpirationReasonCategory =
 	| "counterparty_terminated"
 	| "other";
 
-export const REASON_CATEGORY_LABELS: Record<ExpirationReasonCategory, string> = {
-	strategic_termination: "Strategic termination",
-	budget_constraints: "Budget constraints",
-	vendor_non_response: "Vendor did not respond",
-	approval_bottleneck: "Approval bottleneck",
-	missed_renewal: "Missed renewal window",
-	operational_oversight: "Operational oversight",
-	auto_renew_failed: "Auto-renew failed",
-	counterparty_terminated: "Counterparty terminated",
-	other: "Other",
-};
+export const REASON_CATEGORY_LABELS: Record<ExpirationReasonCategory, string> =
+	{
+		strategic_termination: "Strategic termination",
+		budget_constraints: "Budget constraints",
+		vendor_non_response: "Vendor did not respond",
+		approval_bottleneck: "Approval bottleneck",
+		missed_renewal: "Missed renewal window",
+		operational_oversight: "Operational oversight",
+		auto_renew_failed: "Auto-renew failed",
+		counterparty_terminated: "Counterparty terminated",
+		other: "Other",
+	};
 
 export interface ExpirationAttestation {
 	$id: string;

@@ -1,17 +1,17 @@
 import { describe, expect, it } from "vitest";
+import {
+	buildCursorAgentPrompt,
+	parsePrNumberFromUrl,
+} from "@/lib/tickets/cursor-agent.service";
 import { buildGitHubIssueBody } from "@/lib/tickets/github-tickets.service";
+import { resolveSubmitterDepartmentLabel } from "@/lib/tickets/submitter-placement";
+import { deriveSeverityFromMatrix } from "@/lib/tickets/ticket-intake.constants";
 import {
 	buildCreateTicketInput,
 	parseCategory,
 	parseSeverity,
 	slugLabel,
 } from "@/lib/tickets/ticket-intake.service";
-import { deriveSeverityFromMatrix } from "@/lib/tickets/ticket-intake.constants";
-import { resolveSubmitterDepartmentLabel } from "@/lib/tickets/submitter-placement";
-import {
-	buildCursorAgentPrompt,
-	parsePrNumberFromUrl,
-} from "@/lib/tickets/cursor-agent.service";
 
 describe("ticket intake helpers", () => {
 	it("rejects client-supplied invalid severity", () => {
@@ -143,9 +143,9 @@ describe("cursor agent helpers", () => {
 	});
 
 	it("parses a PR number from a GitHub URL", () => {
-		expect(
-			parsePrNumberFromUrl("https://github.com/org/repo/pull/88"),
-		).toBe(88);
+		expect(parsePrNumberFromUrl("https://github.com/org/repo/pull/88")).toBe(
+			88,
+		);
 		expect(parsePrNumberFromUrl(undefined)).toBeNull();
 	});
 });

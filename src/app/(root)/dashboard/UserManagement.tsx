@@ -204,9 +204,10 @@ const UserManagement = () => {
 									u.type === "department" && u.active !== false,
 							)
 							.flatMap((u: { name?: string; code?: string }) =>
-								[String(u.name || "").trim(), String(u.code || "").trim()].filter(
-									Boolean,
-								),
+								[
+									String(u.name || "").trim(),
+									String(u.code || "").trim(),
+								].filter(Boolean),
 							),
 					),
 				];
@@ -243,13 +244,13 @@ const UserManagement = () => {
 		const fromUsers = users
 			.map((user) => user.department?.trim() || "Unassigned")
 			.filter(Boolean);
-		return [...new Set([...orgDepartmentNames, ...fromUsers, "Unassigned"])].sort(
-			(a, b) => {
-				if (a === "Unassigned") return 1;
-				if (b === "Unassigned") return -1;
-				return a.localeCompare(b);
-			},
-		);
+		return [
+			...new Set([...orgDepartmentNames, ...fromUsers, "Unassigned"]),
+		].sort((a, b) => {
+			if (a === "Unassigned") return 1;
+			if (b === "Unassigned") return -1;
+			return a.localeCompare(b);
+		});
 	}, [users, orgDepartmentNames]);
 
 	const isWithinDateRange = (
@@ -468,9 +469,7 @@ const UserManagement = () => {
 								checked={selectedRoles.includes(role)}
 								onCheckedChange={(checked) =>
 									setSelectedRoles((prev) =>
-										checked
-											? [...prev, role]
-											: prev.filter((r) => r !== role),
+										checked ? [...prev, role] : prev.filter((r) => r !== role),
 									)
 								}
 							>

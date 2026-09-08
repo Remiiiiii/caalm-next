@@ -6,10 +6,10 @@ import {
 	BarChart3,
 	Building,
 	ClipboardCheck,
-	SquareArrowRightExit,
 	Eye,
 	FileText,
 	Shield,
+	SquareArrowRightExit,
 	TrendingUp,
 	Users,
 } from "lucide-react";
@@ -562,9 +562,7 @@ const OrganizationAnalyticsDashboard = () => {
 												<CardContent className="p-4">
 													<div className="flex items-center justify-between">
 														<div>
-															<p className="text-sm text-slate-600">
-																Licenses
-															</p>
+															<p className="text-sm text-slate-600">Licenses</p>
 															<p className="text-2xl font-bold text-navy">
 																{dept.totalStats.totalLicenses ?? 0}
 															</p>

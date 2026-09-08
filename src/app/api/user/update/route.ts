@@ -1,11 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import { updateUserProfile } from "@/lib/actions/user.actions";
+import { requireStepUpForSession } from "@/lib/auth/step-up";
 import {
 	normalizeOrgPlacement,
 	OrgUnitValidationError,
 } from "@/lib/org/org-unit-validation";
-import { requireStepUpForSession } from "@/lib/auth/step-up";
 import { requirePermission } from "@/lib/rbac/middleware";
 
 export async function PATCH(req: NextRequest) {

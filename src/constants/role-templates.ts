@@ -83,7 +83,8 @@ export const ROLE_TEMPLATES: RoleTemplate[] = [
 	{
 		id: "content_creator",
 		name: "Content creator",
-		description: "Create and publish internal news without billing or user admin.",
+		description:
+			"Create and publish internal news without billing or user admin.",
 		permissionKeys: [
 			PERMISSIONS.NEWS.READ,
 			PERMISSIONS.NEWS.CREATE,

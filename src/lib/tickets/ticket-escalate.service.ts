@@ -2,10 +2,6 @@ import {
 	buildGitHubIssueBody,
 	createGitHubIssue,
 } from "./github-tickets.service";
-import { appendTicketEvent } from "./ticket-events.repository";
-import { canEscalateTicket } from "./ticket-access.policy";
-import { slugLabel } from "./ticket-intake.service";
-import { notifyTicketStaff } from "./ticket-notification.service";
 import { getTicketById, updateTicket } from "./ticket.repository";
 import {
 	getTicketsRepo,
@@ -13,6 +9,10 @@ import {
 	resolveTicketLane,
 	type Ticket,
 } from "./ticket.types";
+import { canEscalateTicket } from "./ticket-access.policy";
+import { appendTicketEvent } from "./ticket-events.repository";
+import { slugLabel } from "./ticket-intake.service";
+import { notifyTicketStaff } from "./ticket-notification.service";
 
 /**
  * Help → Engineering: set lane, create GitHub issue so Start fix agent can run.
@@ -43,8 +43,7 @@ export async function escalateTicket(input: {
 
 	let updated = await updateTicket(ticket.$id, {
 		lane: "engineering",
-		assigneeCaalmUserId:
-			ticket.assigneeCaalmUserId || input.actorId,
+		assigneeCaalmUserId: ticket.assigneeCaalmUserId || input.actorId,
 		status:
 			ticket.status === "OPEN" || ticket.status === "ASSIGNED"
 				? "ASSIGNED"

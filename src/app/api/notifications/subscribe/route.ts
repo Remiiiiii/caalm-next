@@ -25,12 +25,19 @@ export async function POST(request: NextRequest) {
 	try {
 		const userId = await resolveSessionUserId();
 		if (!userId) {
-			return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+			return NextResponse.json(
+				{ error: "Authentication required" },
+				{ status: 401 },
+			);
 		}
 
 		const body = await request.json();
 		const subscription = body?.subscription as PushSubscriptionJSON | undefined;
-		if (!subscription?.endpoint || !subscription?.keys?.p256dh || !subscription?.keys?.auth) {
+		if (
+			!subscription?.endpoint ||
+			!subscription?.keys?.p256dh ||
+			!subscription?.keys?.auth
+		) {
 			return NextResponse.json(
 				{ error: "Valid PushSubscription JSON is required" },
 				{ status: 400 },

@@ -4,15 +4,18 @@ import { History } from "lucide-react";
 import { ITPageShell } from "@/components/it/ITPageShell";
 import { IssueHistoryList } from "@/components/tickets/IssueHistoryList";
 import { PERMISSIONS } from "@/constants/permissions";
+import { getOrganization } from "@/lib/rbac/organizations";
 import { requirePagePermission } from "@/lib/rbac/page-guards";
 import {
 	getUserDefaultOrganization,
 	getUserPermissions,
 } from "@/lib/rbac/permissions";
 import { groupTicketsByMonthDay } from "@/lib/tickets/issue-history";
-import { canViewAllTickets, filterVisibleTickets } from "@/lib/tickets/ticket-access.policy";
 import { listTickets } from "@/lib/tickets/ticket.repository";
-import { getOrganization } from "@/lib/rbac/organizations";
+import {
+	canViewAllTickets,
+	filterVisibleTickets,
+} from "@/lib/tickets/ticket-access.policy";
 import { resolveOrgTimezone } from "@/lib/timezone";
 
 export default async function IssueHistoryPage() {

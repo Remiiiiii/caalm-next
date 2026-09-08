@@ -4,8 +4,8 @@ import { getCurrentUser } from "@/lib/actions/user.actions";
 import { getOrgIdFromRequest, requirePermission } from "@/lib/rbac/middleware";
 import { getOrganization } from "@/lib/rbac/organizations";
 import { validateUserOrgAccess } from "@/lib/rbac/permissions";
-import { isStripeConfigured } from "@/lib/stripe/client";
 import { syncLatestStripeStateForOrg } from "@/lib/stripe/billing";
+import { isStripeConfigured } from "@/lib/stripe/client";
 
 export async function POST(request: NextRequest) {
 	const permissionCheck = await requirePermission(request, {

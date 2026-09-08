@@ -60,9 +60,7 @@ export function buildPrLogOverview(
 
 	const complete = sections.filter((s) => s.status === "complete").length;
 	const overallProgressPercent =
-		sections.length === 0
-			? 0
-			: Math.round((complete / sections.length) * 100);
+		sections.length === 0 ? 0 : Math.round((complete / sections.length) * 100);
 
 	return { overallProgressPercent, sections };
 }

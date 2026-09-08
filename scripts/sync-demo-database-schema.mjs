@@ -10,7 +10,6 @@
  *   node scripts/sync-demo-database-schema.mjs --apply   # apply to caalm-demo
  */
 
-import fs from "node:fs";
 import path from "node:path";
 import { config as loadEnv } from "dotenv";
 
@@ -21,12 +20,15 @@ const PROD_DB =
 	process.env.PROD_APPWRITE_DATABASE_ID ||
 	process.env.NEXT_PUBLIC_APPWRITE_DATABASE;
 if (!PROD_DB) {
-	console.error("Missing PROD_APPWRITE_DATABASE_ID or NEXT_PUBLIC_APPWRITE_DATABASE");
+	console.error(
+		"Missing PROD_APPWRITE_DATABASE_ID or NEXT_PUBLIC_APPWRITE_DATABASE",
+	);
 	process.exit(1);
 }
 const DEMO_DB = "caalm-demo";
 const ENDPOINT = (
-	process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || "https://fra.cloud.appwrite.io/v1"
+	process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT ||
+	"https://fra.cloud.appwrite.io/v1"
 ).replace(/\/$/, "");
 const PROJECT = process.env.NEXT_PUBLIC_APPWRITE_PROJECT;
 const API_KEY =
@@ -45,7 +47,9 @@ const RELATIONSHIP_TARGET_EXCEPTIONS = {
 const APPLY = process.argv.includes("--apply");
 
 if (!PROJECT || !API_KEY) {
-	console.error("Missing NEXT_PUBLIC_APPWRITE_PROJECT or NEXT_APPWRITE_API_KEY in .env.local");
+	console.error(
+		"Missing NEXT_PUBLIC_APPWRITE_PROJECT or NEXT_APPWRITE_API_KEY in .env.local",
+	);
 	process.exit(1);
 }
 
@@ -84,7 +88,9 @@ async function listAllCollections(databaseId) {
 		const queries = ['{"method":"limit","values":[100]}'];
 		if (cursor) queries.push(`{"method":"cursorAfter","values":["${cursor}"]}`);
 
-		const qs = queries.map((q) => `queries[]=${encodeURIComponent(q)}`).join("&");
+		const qs = queries
+			.map((q) => `queries[]=${encodeURIComponent(q)}`)
+			.join("&");
 		const page = await appwrite(`/databases/${databaseId}/collections?${qs}`);
 		collections.push(...(page.collections || []));
 
@@ -146,7 +152,8 @@ function buildPlan(prodCollections, demoCollections) {
 
 	for (const [prodId, demoIdOverride] of Object.entries(TABLE_ID_EXCEPTIONS)) {
 		const prodTable = prodById.get(prodId);
-		const demoTable = demoByName.get(prodTable?.name) || demoById.get(demoIdOverride);
+		const demoTable =
+			demoByName.get(prodTable?.name) || demoById.get(demoIdOverride);
 		if (prodTable && demoTable) compare(prodTable, demoTable);
 	}
 
@@ -173,7 +180,12 @@ function buildPlan(prodCollections, demoCollections) {
 	return plan;
 }
 
-async function waitForAttribute(databaseId, collectionId, key, { timeoutMs = 120000 } = {}) {
+async function waitForAttribute(
+	databaseId,
+	collectionId,
+	key,
+	{ timeoutMs = 120000 } = {},
+) {
 	const attempts = Math.ceil(timeoutMs / 1000);
 	for (let attempt = 0; attempt < attempts; attempt += 1) {
 		const list = await appwrite(
@@ -217,7 +229,10 @@ async function createAttribute(databaseId, tableId, attr) {
 			if (attr.encrypt != null) body.encrypt = attr.encrypt;
 
 			if (attr.format === "email") {
-				await appwrite(`${base}/email`, { method: "POST", body: { ...body, size: undefined } });
+				await appwrite(`${base}/email`, {
+					method: "POST",
+					body: { ...body, size: undefined },
+				});
 			} else if (attr.format === "enum") {
 				await appwrite(`${base}/enum`, {
 					method: "POST",
@@ -348,7 +363,9 @@ async function applyPlan(plan) {
 	}
 
 	for (const item of plan.addIndexes) {
-		console.log(`ADD INDEX ${item.tableName} (${item.tableId}).${item.index.key}`);
+		console.log(
+			`ADD INDEX ${item.tableName} (${item.tableId}).${item.index.key}`,
+		);
 		if (!APPLY) continue;
 		try {
 			await createIndex(DEMO_DB, item.tableId, item.index);

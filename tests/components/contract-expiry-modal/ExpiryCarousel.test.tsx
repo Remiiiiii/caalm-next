@@ -95,7 +95,9 @@ describe("ExpiryCarousel alarm + mute", () => {
 		await user.click(screen.getByRole("button", { name: "Mute audio" }));
 		expect(stop).toHaveBeenCalled();
 		expect(suppressContractAlarm).toHaveBeenCalled();
-		expect(screen.getByRole("button", { name: "Unmute audio" })).toBeInTheDocument();
+		expect(
+			screen.getByRole("button", { name: "Unmute audio" }),
+		).toBeInTheDocument();
 	});
 
 	it("suppresses the bell again when Let Expire advances the queue", async () => {

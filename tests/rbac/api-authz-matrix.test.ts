@@ -72,7 +72,9 @@ describe("API authz matrix", () => {
 
 		// Soft assertions: we expect some permission-gated routes already.
 		expect(counts.permission ?? 0).toBeGreaterThan(20);
-		expect(diff.remaining.length).toBe(baseline.unguarded.length - diff.resolved.length);
+		expect(diff.remaining.length).toBe(
+			baseline.unguarded.length - diff.resolved.length,
+		);
 
 		// Keep baseline JSON sorted for stable diffs when regenerating.
 		const sorted = [...baseline.unguarded].sort();
@@ -80,10 +82,7 @@ describe("API authz matrix", () => {
 	});
 
 	it("baseline file is valid JSON on disk", () => {
-		const raw = fs.readFileSync(
-			"src/lib/rbac/api-authz-baseline.json",
-			"utf8",
-		);
+		const raw = fs.readFileSync("src/lib/rbac/api-authz-baseline.json", "utf8");
 		expect(() => JSON.parse(raw)).not.toThrow();
 	});
 });

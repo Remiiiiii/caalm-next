@@ -56,9 +56,7 @@ export interface NegotiationDocumentModel {
 }
 
 export function isDocxNegotiationSnapshot(text: string): boolean {
-	return text
-		.trimStart()
-		.startsWith("<!-- negotiation-snapshot:docx -->");
+	return text.trimStart().startsWith("<!-- negotiation-snapshot:docx -->");
 }
 
 export function isThinNegotiationSnapshot(text: string): boolean {
@@ -89,8 +87,7 @@ const MD_HEADING_RE = /^#{2,3}\s*(?:(\d+)[.)]\s*)?(.+)$/;
 /** Plain numbered section titles from DOCX-style bodies (no markdown ##). */
 const PLAIN_SECTION_RE = /^(\d+)[.)]\s+([A-Z][A-Z0-9 &/'(),.-]{1,80})$/;
 const METADATA_LINE_RE = /^[-•]\s*([^:]{1,40}):\s*(.+)$/;
-const LINEAGE_LINE_RE =
-	/^[-•]\s*(.+?)\s*\(([\w-]+)\s+v(\d+),\s*([\w-]+)\)\s*$/;
+const LINEAGE_LINE_RE = /^[-•]\s*(.+?)\s*\(([\w-]+)\s+v(\d+),\s*([\w-]+)\)\s*$/;
 
 /**
  * Split a blank-line block into anchorable units: each bullet/list line is
@@ -161,20 +158,14 @@ export function splitBlockIntoUnits(
 	return units.length > 0 ? units : [{ ...block, isBullet: false }];
 }
 
-function pushUnits(
-	clause: DocumentClause,
-	block: DocumentParagraph,
-) {
+function pushUnits(clause: DocumentClause, block: DocumentParagraph) {
 	const units = splitBlockIntoUnits(block).map((unit) => {
 		const prefixLength = protectedPrefixLength(unit.text);
-		const protectedEnd = prefixLength
-			? unit.start + prefixLength
-			: undefined;
+		const protectedEnd = prefixLength ? unit.start + prefixLength : undefined;
 		return {
 			...unit,
 			protectedEnd,
-			redlineAllowed:
-				prefixLength > 0 || !isProtectedStructuralText(unit.text),
+			redlineAllowed: prefixLength > 0 || !isProtectedStructuralText(unit.text),
 		};
 	});
 	clause.paragraphs.push(...units);
@@ -228,8 +219,14 @@ function isLetterheadNoise(paragraph: string): boolean {
 	// PDF letterhead lines must never become negotiable body text.
 	const lower = paragraph.toLowerCase();
 	if (/^caalm\s+solutions/i.test(paragraph.trim())) return true;
-	if (/\b(miami|fl\s+\d{5}|support@|www\.)\b/i.test(lower) && paragraph.length < 200) {
-		return /logo|inc\.|llc|phone|tel:|address/i.test(lower) || /^\S+@\S+/.test(paragraph);
+	if (
+		/\b(miami|fl\s+\d{5}|support@|www\.)\b/i.test(lower) &&
+		paragraph.length < 200
+	) {
+		return (
+			/logo|inc\.|llc|phone|tel:|address/i.test(lower) ||
+			/^\S+@\S+/.test(paragraph)
+		);
 	}
 	return false;
 }
@@ -252,9 +249,7 @@ export function parseNegotiationDocument(
 		metadata: [],
 		clauses: [],
 		lineage: [],
-		source: isDocxNegotiationSnapshot(text)
-			? "docx"
-			: "markdown",
+		source: isDocxNegotiationSnapshot(text) ? "docx" : "markdown",
 		negotiableParagraphs: [],
 	};
 
@@ -394,9 +389,7 @@ export interface ClauseTocEntry {
 	anchorStart: number;
 }
 
-export function buildClauseToc(
-	clauses: DocumentClause[],
-): ClauseTocEntry[] {
+export function buildClauseToc(clauses: DocumentClause[]): ClauseTocEntry[] {
 	return clauses
 		.filter((clause) => clause.index > 0)
 		.map((clause) => ({

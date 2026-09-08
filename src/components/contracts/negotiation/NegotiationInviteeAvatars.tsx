@@ -176,7 +176,9 @@ export function NegotiationInviteeAvatars({
 								{rows.slice(MAX_VISIBLE).map((person) => (
 									<p key={`${person.role}-${person.email}`}>
 										{person.name}
-										{person.role === "owner" ? " · Owner" : ` · ${person.email}`}
+										{person.role === "owner"
+											? " · Owner"
+											: ` · ${person.email}`}
 									</p>
 								))}
 							</div>

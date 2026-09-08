@@ -1,6 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
-import { listAccess, revokeAccess } from "@/lib/contracts/negotiation/access.service";
+import {
+	listAccess,
+	revokeAccess,
+} from "@/lib/contracts/negotiation/access.service";
 import { loadContractForOrg } from "@/lib/contracts/negotiation/contract-scope";
 import { getOrgIdFromRequest, requirePermission } from "@/lib/rbac/middleware";
 
@@ -13,7 +16,10 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
 	if (denied) return denied;
 	const orgId = getOrgIdFromRequest(request);
 	if (!orgId) {
-		return NextResponse.json({ error: "Organization is required" }, { status: 400 });
+		return NextResponse.json(
+			{ error: "Organization is required" },
+			{ status: 400 },
+		);
 	}
 	const { id, accessId } = await context.params;
 	try {
@@ -25,7 +31,8 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
 		await revokeAccess(accessId);
 		return NextResponse.json({ success: true });
 	} catch (error) {
-		const message = error instanceof Error ? error.message : "Failed to revoke invite";
+		const message =
+			error instanceof Error ? error.message : "Failed to revoke invite";
 		return NextResponse.json({ error: message }, { status: 400 });
 	}
 }

@@ -1,8 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
+import { getCurrentUser } from "@/lib/actions/user.actions";
 import { getCrmIntegration } from "@/lib/crm/integrations.repository";
 import { getOrgIdFromRequest, requirePermission } from "@/lib/rbac/middleware";
-import { getCurrentUser } from "@/lib/actions/user.actions";
 import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 
 export async function GET(request: NextRequest) {

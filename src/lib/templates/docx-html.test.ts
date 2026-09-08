@@ -4,7 +4,7 @@ import { isLetterheadOrgPart, layoutDocxHtml } from "./docx-html.mjs";
 describe("layoutDocxHtml letterhead", () => {
 	it("places merged org lines beside the logo", () => {
 		const html = [
-			"<p><img src=\"logo.png\" /></p>",
+			'<p><img src="logo.png" /></p>',
 			"<p>Caalm Solutions Inc.</p>",
 			"<p>9802 SW 77th Ave</p>",
 			"<p>Miami, FL 33156</p>",
@@ -27,7 +27,7 @@ describe("layoutDocxHtml letterhead", () => {
 		const mergedOrg =
 			"<p>Caalm Solutions Inc.<br />9802 SW 77th Ave<br />Miami, FL 33156<br />(305) 555-5555<br />support@caalmsolutions.com<br />caalmsolutions.com</p>";
 		const html = [
-			"<p><img src=\"logo.png\" /></p>",
+			'<p><img src="logo.png" /></p>',
 			mergedOrg,
 			"<p><strong>VENDOR / SERVICE AGREEMENT</strong></p>",
 		].join("");
@@ -43,7 +43,7 @@ describe("layoutDocxHtml letterhead", () => {
 
 	it("splits multiline org_address values in the letterhead block", () => {
 		const html = [
-			"<p><img src=\"logo.png\" /></p>",
+			'<p><img src="logo.png" /></p>',
 			"<p>Caalm Solutions Inc.</p>",
 			"<p>9802 SW 77th Ave\nMiami, FL 33156</p>",
 			"<p>(305) 555-5555</p>",
@@ -57,7 +57,7 @@ describe("layoutDocxHtml letterhead", () => {
 
 	it("still groups unfilled org tokens", () => {
 		const html = [
-			"<p><img src=\"logo.png\" />{{org_name}}</p>",
+			'<p><img src="logo.png" />{{org_name}}</p>',
 			"<p>{{org_address}}</p>",
 			"<p><strong>VENDOR AGREEMENT</strong></p>",
 		].join("");
@@ -70,7 +70,7 @@ describe("layoutDocxHtml letterhead", () => {
 	it("removes empty list bullets left by blank statement-of-work tokens", () => {
 		const html = [
 			"<p><strong>5. STATEMENT OF WORK</strong></p>",
-			"<ul><li>Keep this item</li><li></li><li><p></p></li><li><span class=\"docx-token\">{{SCOPE_OF_WORK}}</span></li></ul>",
+			'<ul><li>Keep this item</li><li></li><li><p></p></li><li><span class="docx-token">{{SCOPE_OF_WORK}}</span></li></ul>',
 		].join("");
 		const laidOut = layoutDocxHtml(html);
 		expect(laidOut).toContain("Keep this item");

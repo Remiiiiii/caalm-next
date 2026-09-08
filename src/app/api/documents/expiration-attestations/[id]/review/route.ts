@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
-import { reviewAttestation } from "@/lib/approvals/ExpirationAttestationService";
 import { getCurrentUser } from "@/lib/actions/user.actions";
+import { reviewAttestation } from "@/lib/approvals/ExpirationAttestationService";
 import { requirePermission } from "@/lib/rbac/middleware";
 
 export async function PATCH(
@@ -15,11 +15,17 @@ export async function PATCH(
 
 	const user = await getCurrentUser();
 	if (!user) {
-		return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+		return NextResponse.json(
+			{ error: "Authentication required" },
+			{ status: 401 },
+		);
 	}
 
 	const { id } = await params;
-	const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+	const body = (await request.json().catch(() => ({}))) as Record<
+		string,
+		unknown
+	>;
 
 	const attestation = await reviewAttestation({
 		id,

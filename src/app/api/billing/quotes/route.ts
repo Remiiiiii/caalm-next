@@ -2,9 +2,9 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
-import { permissionSatisfied } from "@/lib/rbac/permission-implications";
 import { getOrgIdFromRequest, requirePermission } from "@/lib/rbac/middleware";
 import { getOrganization } from "@/lib/rbac/organizations";
+import { permissionSatisfied } from "@/lib/rbac/permission-implications";
 import {
 	getUserPermissions,
 	validateUserOrgAccess,

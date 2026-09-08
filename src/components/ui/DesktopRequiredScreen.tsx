@@ -19,9 +19,7 @@ export function DesktopRequiredScreen({
 
 	const copyLink = async () => {
 		const href =
-			typeof window !== "undefined"
-				? window.location.href
-				: pathname;
+			typeof window !== "undefined" ? window.location.href : pathname;
 		try {
 			await navigator.clipboard.writeText(href);
 			setCopied(true);
@@ -52,8 +50,8 @@ export function DesktopRequiredScreen({
 							</h2>
 							<p className="mt-2 text-sm text-slate-600">
 								This screen needs a wider view. Copy the link and finish the
-								work on a desktop or laptop. Phones stay for approvals,
-								tickets, and dashboard glance.{" "}
+								work on a desktop or laptop. Phones stay for approvals, tickets,
+								and dashboard glance.{" "}
 								<Link
 									href="/docs/concepts/desktop-and-mobile"
 									className="text-[#0f5384] underline-offset-2 hover:underline"

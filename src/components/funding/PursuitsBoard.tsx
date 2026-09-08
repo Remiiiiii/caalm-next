@@ -12,8 +12,8 @@ import {
 } from "@/components/ui/select";
 import { formatUsd } from "@/lib/funding/constants";
 import {
-	PURSUIT_STAGES,
 	type FundingPursuit,
+	PURSUIT_STAGES,
 	type PursuitStage,
 } from "@/lib/funding/types";
 

@@ -25,14 +25,18 @@ export function normalizeTicketNumberQuery(raw: string): string {
 export function parseTicketNumber(
 	value: string,
 ): { year: number; sequence: number } | null {
-	const match = value.trim().toUpperCase().match(/^TKT-(\d{4})-(\d+)$/);
+	const match = value
+		.trim()
+		.toUpperCase()
+		.match(/^TKT-(\d{4})-(\d+)$/);
 	if (!match) return null;
 	return { year: Number(match[1]), sequence: Number(match[2]) };
 }
 
 /** Display helper for UI — falls back when older rows lack a number. */
-export function displayTicketNumber(
-	ticket: { ticketNumber?: string | null; $id: string },
-): string {
+export function displayTicketNumber(ticket: {
+	ticketNumber?: string | null;
+	$id: string;
+}): string {
 	return ticket.ticketNumber?.trim() || ticket.$id;
 }

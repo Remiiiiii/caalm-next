@@ -1,13 +1,13 @@
 "use client";
 
-import { ITGlassPanel, ITPageShell } from "@/components/it/ITPageShell";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import type { Runbook } from "@/lib/it/runbooks/types";
 import { ArrowLeft, BookOpen } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { ITGlassPanel, ITPageShell } from "@/components/it/ITPageShell";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import type { Runbook } from "@/lib/it/runbooks/types";
 
 export default function RunbookDetailPage() {
 	const params = useParams<{ runbookId: string }>();

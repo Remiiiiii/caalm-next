@@ -423,9 +423,7 @@ async function sendEmailNotificationsToAdmins(
 				),
 			),
 		);
-		console.log(
-			`Sent new-user-request emails to ${emails.length} admins`,
-		);
+		console.log(`Sent new-user-request emails to ${emails.length} admins`);
 	} catch (error) {
 		console.error("Failed to send admin emails for new user request:", error);
 	}

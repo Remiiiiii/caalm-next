@@ -11,7 +11,11 @@ export const TEMPLATE_TABLE_NAMES = {
 
 export const WIZARD_STEPS = [
 	{ id: 0, title: "Choose agreement", hint: "Pick a legal blueprint" },
-	{ id: 1, title: "Fill agreement", hint: "Complete placeholders in the document" },
+	{
+		id: 1,
+		title: "Fill agreement",
+		hint: "Complete placeholders in the document",
+	},
 	{ id: 2, title: "Assemble", hint: "Inject clauses or extra templates" },
 	{ id: 3, title: "Preview", hint: "Review the PDF, then send for approval" },
 ] as const;

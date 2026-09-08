@@ -84,12 +84,11 @@ import {
 	type PermissionOverrideRecord,
 	SENSITIVITY_LABELS,
 } from "@/constants/rbac";
-import { useOrgTimezone } from "@/hooks/useOrgTimezone";
 import { useToast } from "@/hooks/use-toast";
-import { formatInTimezone } from "@/lib/timezone";
 import { useCalendarApprovals } from "@/hooks/useCalendarApprovals";
 import { useCalendarEvents } from "@/hooks/useCalendarEvents";
 import { useCalendarPermissions } from "@/hooks/useCalendarPermissions";
+import { useOrgTimezone } from "@/hooks/useOrgTimezone";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useUserRole } from "@/hooks/useUserRole";
 import {
@@ -110,6 +109,7 @@ import {
 	resolveCalendarPermissions,
 } from "@/lib/auth/permissions";
 import { getSensitivityBadgeClasses } from "@/lib/calendar/calendarStatusDisplay";
+import { formatInTimezone } from "@/lib/timezone";
 import { cn } from "@/lib/utils";
 
 // Local event interface for component use

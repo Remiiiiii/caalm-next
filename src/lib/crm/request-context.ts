@@ -1,8 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/actions/user.actions";
+import { getOrgIdFromRequest } from "@/lib/rbac/middleware";
 import type { Organization } from "@/lib/rbac/organizations";
 import { getOrganization } from "@/lib/rbac/organizations";
-import { getOrgIdFromRequest } from "@/lib/rbac/middleware";
 import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 import { assertCrmProviderAccess } from "./entitlements";
 import type { CrmProvider } from "./types";

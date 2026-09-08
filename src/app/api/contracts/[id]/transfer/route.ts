@@ -17,17 +17,25 @@ export async function POST(request: NextRequest, context: RouteContext) {
 	const user = await getCurrentUser();
 	const orgId = getOrgIdFromRequest(request);
 	if (!user || !orgId) {
-		return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+		return NextResponse.json(
+			{ error: "Authentication required" },
+			{ status: 401 },
+		);
 	}
 
 	const stepUpCheck = requireStepUp(request, user.$id);
 	if (stepUpCheck) return stepUpCheck;
 
 	const { id } = await context.params;
-	const body = (await request.json().catch(() => ({}))) as { toUserId?: string };
+	const body = (await request.json().catch(() => ({}))) as {
+		toUserId?: string;
+	};
 	const toUserId = String(body.toUserId || "").trim();
 	if (!toUserId) {
-		return NextResponse.json({ error: "toUserId is required" }, { status: 400 });
+		return NextResponse.json(
+			{ error: "toUserId is required" },
+			{ status: 400 },
+		);
 	}
 
 	try {

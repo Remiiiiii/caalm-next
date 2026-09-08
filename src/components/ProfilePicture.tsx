@@ -280,9 +280,7 @@ const ProfilePicture: React.FC<ProfilePictureProps> = ({
 		>
 			<img
 				src={profileImageUrl}
-				alt={
-					(user as ProfileImageUser).fullName || user.name || "Profile"
-				}
+				alt={(user as ProfileImageUser).fullName || user.name || "Profile"}
 				className="h-full w-full rounded-full border-2 border-[#FCFEFF] object-cover"
 				onError={(e: any) => {
 					console.error("ProfilePicture: Image failed to load:", {

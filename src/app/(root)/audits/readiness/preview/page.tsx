@@ -8,11 +8,11 @@ import { ReadinessCharts } from "@/components/audits/ReadinessCharts";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { PERMISSIONS } from "@/constants/permissions";
+import { useToast } from "@/hooks/use-toast";
 import { useOrgTimezone } from "@/hooks/useOrgTimezone";
 import { usePermissions } from "@/hooks/usePermissions";
-import { formatInTimezone } from "@/lib/timezone";
-import { useToast } from "@/hooks/use-toast";
 import { fetcher } from "@/lib/swr-config";
+import { formatInTimezone } from "@/lib/timezone";
 
 interface PreviewResponse {
 	success: boolean;
@@ -277,7 +277,10 @@ export default function AuditReadinessPreviewPage() {
 								</thead>
 								<tbody>
 									{payload.evidenceMapHits.map((row) => (
-										<tr key={row.requirementId} className="border-t border-slate-100">
+										<tr
+											key={row.requirementId}
+											className="border-t border-slate-100"
+										>
 											<td className="p-2">{row.requirementId}</td>
 											<td className="p-2">{row.label}</td>
 											<td className="p-2">{row.auditType}</td>

@@ -27,7 +27,13 @@ export function ContractTemplatesNavIcon({ size = 20 }: { size?: number }) {
 	);
 }
 
-function DocumentsNavIcon({ width, height }: { width: number; height: number }) {
+function DocumentsNavIcon({
+	width,
+	height,
+}: {
+	width: number;
+	height: number;
+}) {
 	return (
 		<svg
 			viewBox="4 2 16 20"

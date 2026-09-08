@@ -45,11 +45,13 @@ async function asDownloadBuffer(downloaded: unknown): Promise<Buffer> {
 		downloaded &&
 		typeof downloaded === "object" &&
 		"arrayBuffer" in downloaded &&
-		typeof (downloaded as { arrayBuffer: () => Promise<ArrayBuffer> }).arrayBuffer ===
-			"function"
+		typeof (downloaded as { arrayBuffer: () => Promise<ArrayBuffer> })
+			.arrayBuffer === "function"
 	) {
 		return Buffer.from(
-			await (downloaded as { arrayBuffer: () => Promise<ArrayBuffer> }).arrayBuffer(),
+			await (
+				downloaded as { arrayBuffer: () => Promise<ArrayBuffer> }
+			).arrayBuffer(),
 		);
 	}
 	throw new Error("Could not read the blueprint file from storage");
@@ -99,7 +101,9 @@ export async function uploadWizardDraftArtifact(input: {
 	return created.$id;
 }
 
-export async function deleteWizardDraftArtifacts(sessionId: string): Promise<void> {
+export async function deleteWizardDraftArtifacts(
+	sessionId: string,
+): Promise<void> {
 	const { storage } = await createAdminClient();
 	const kinds: DraftArtifactKind[] = ["draft", "preview", "final"];
 	await Promise.allSettled(
@@ -137,4 +141,3 @@ export async function uploadNamedBlueprintFile(input: {
 	});
 	return created.$id;
 }
-

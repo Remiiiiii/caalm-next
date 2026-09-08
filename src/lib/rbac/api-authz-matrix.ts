@@ -35,84 +35,87 @@ const BASELINE_PATH = path.join(
 	"src/lib/rbac/api-authz-baseline.json",
 );
 
-const SIGNAL_PATTERNS: Array<{ signal: string; class: DetectedAuthClass; re: RegExp }> =
-	[
-		{
-			signal: "requirePermission",
-			class: "permission",
-			re: /\brequirePermission\s*\(/,
-		},
-		{
-			signal: "requireContractCreateContext",
-			class: "permission",
-			re: /\brequireContractCreateContext\s*\(/,
-		},
-		{
-			signal: "requireITPermission",
-			class: "permission",
-			re: /\brequireITPermission\s*\(/,
-		},
-		{
-			signal: "requireContractCreateContext",
-			class: "permission",
-			re: /\brequireContractCreateContext\s*\(/,
-		},
-		{
-			signal: "hasPermission",
-			class: "permission",
-			re: /\bhasPermission\s*\(/,
-		},
-		{
-			signal: "hasAnyPermission",
-			class: "permission",
-			re: /\bhasAnyPermission\s*\(/,
-		},
-		{
-			signal: "authorize",
-			class: "permission",
-			re: /\bauthorize(CurrentUser)?\s*\(/,
-		},
-		{
-			signal: "requireAuth",
-			class: "session",
-			re: /\brequireAuth\s*\(/,
-		},
-		{
-			signal: "requireContractPermission",
-			class: "session",
-			re: /\brequireContractPermission\s*\(/,
-		},
-		{
-			signal: "getCurrentUser",
-			class: "session",
-			re: /\bgetCurrentUser\s*\(/,
-		},
-		{
-			signal: "getLoggedInUser",
-			class: "session",
-			re: /\bgetLoggedInUser\s*\(/,
-		},
-		{
-			signal: "createSessionClient",
-			class: "session",
-			re: /\bcreateSessionClient\s*\(/,
-		},
-		{
-			signal: "CRON_SECRET",
-			class: "cron",
-			re: /\bCRON_SECRET\b|\bisAuthorizedCron\b|x-cron-secret/i,
-		},
-		{
-			signal: "stripeWebhook",
-			class: "webhook",
-			re: /\bconstructWebhookEvent\b|\bstripe-signature\b|\bstripe\.webhooks\b/i,
-		},
-		{
-			signal: "githubWebhook",
-			class: "webhook",
-			re: /\bverifyGitHubWebhookSignature\b|\bx-hub-signature-256\b/i,
-		},
-	];
+const SIGNAL_PATTERNS: Array<{
+	signal: string;
+	class: DetectedAuthClass;
+	re: RegExp;
+}> = [
+	{
+		signal: "requirePermission",
+		class: "permission",
+		re: /\brequirePermission\s*\(/,
+	},
+	{
+		signal: "requireContractCreateContext",
+		class: "permission",
+		re: /\brequireContractCreateContext\s*\(/,
+	},
+	{
+		signal: "requireITPermission",
+		class: "permission",
+		re: /\brequireITPermission\s*\(/,
+	},
+	{
+		signal: "requireContractCreateContext",
+		class: "permission",
+		re: /\brequireContractCreateContext\s*\(/,
+	},
+	{
+		signal: "hasPermission",
+		class: "permission",
+		re: /\bhasPermission\s*\(/,
+	},
+	{
+		signal: "hasAnyPermission",
+		class: "permission",
+		re: /\bhasAnyPermission\s*\(/,
+	},
+	{
+		signal: "authorize",
+		class: "permission",
+		re: /\bauthorize(CurrentUser)?\s*\(/,
+	},
+	{
+		signal: "requireAuth",
+		class: "session",
+		re: /\brequireAuth\s*\(/,
+	},
+	{
+		signal: "requireContractPermission",
+		class: "session",
+		re: /\brequireContractPermission\s*\(/,
+	},
+	{
+		signal: "getCurrentUser",
+		class: "session",
+		re: /\bgetCurrentUser\s*\(/,
+	},
+	{
+		signal: "getLoggedInUser",
+		class: "session",
+		re: /\bgetLoggedInUser\s*\(/,
+	},
+	{
+		signal: "createSessionClient",
+		class: "session",
+		re: /\bcreateSessionClient\s*\(/,
+	},
+	{
+		signal: "CRON_SECRET",
+		class: "cron",
+		re: /\bCRON_SECRET\b|\bisAuthorizedCron\b|x-cron-secret/i,
+	},
+	{
+		signal: "stripeWebhook",
+		class: "webhook",
+		re: /\bconstructWebhookEvent\b|\bstripe-signature\b|\bstripe\.webhooks\b/i,
+	},
+	{
+		signal: "githubWebhook",
+		class: "webhook",
+		re: /\bverifyGitHubWebhookSignature\b|\bx-hub-signature-256\b/i,
+	},
+];
 
 const CLASS_RANK: Record<DetectedAuthClass, number> = {
 	permission: 5,
@@ -239,4 +242,4 @@ export function buildBaselineFromScan(
 	};
 }
 
-export { BASELINE_PATH, API_ROOT };
+export { API_ROOT, BASELINE_PATH };

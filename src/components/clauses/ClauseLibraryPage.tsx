@@ -1,11 +1,18 @@
 "use client";
 
-import { Archive, FileText, FunnelX, Plus, SlidersHorizontal, X } from "lucide-react";
+import {
+	Archive,
+	FileText,
+	FunnelX,
+	Plus,
+	SlidersHorizontal,
+	X,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+	CAALM_BADGE_BASE,
 	ClauseEditorDialog,
 	clauseCategoryLabel,
-	CAALM_BADGE_BASE,
 	clauseStatusBadgeClass,
 	clauseStatusLabel,
 } from "@/components/clauses/ClauseEditorDialog";
@@ -28,8 +35,8 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { PERMISSIONS } from "@/constants/permissions";
-import { usePermissions } from "@/hooks/usePermissions";
 import { useToast } from "@/hooks/use-toast";
+import { usePermissions } from "@/hooks/usePermissions";
 import { fetchUserNamesByIds } from "@/lib/actions/user.actions";
 import { cn } from "@/lib/utils";
 import {
@@ -107,7 +114,9 @@ export function ClauseLibraryPage() {
 	}, [load]);
 
 	useEffect(() => {
-		const ids = [...new Set(items.map((clause) => clause.createdBy).filter(Boolean))];
+		const ids = [
+			...new Set(items.map((clause) => clause.createdBy).filter(Boolean)),
+		];
 		if (ids.length === 0) {
 			setOwnerNames({});
 			return;
@@ -134,7 +143,9 @@ export function ClauseLibraryPage() {
 	}, [items]);
 
 	const ownerOptions = useMemo(() => {
-		const ids = [...new Set(items.map((clause) => clause.createdBy).filter(Boolean))];
+		const ids = [
+			...new Set(items.map((clause) => clause.createdBy).filter(Boolean)),
+		];
 		return ids.map((id) => ({
 			id,
 			label: ownerNames[id] || "Unknown",
@@ -358,10 +369,7 @@ export function ClauseLibraryPage() {
 							) : null}
 						</Button>
 					</PopoverTrigger>
-					<PopoverContent
-						align="end"
-						className="w-80 space-y-3 bg-slate-50"
-					>
+					<PopoverContent align="end" className="w-80 space-y-3 bg-slate-50">
 						<div className="space-y-1">
 							<p className="text-xs font-medium text-slate-600">Version</p>
 							<Select value={version} onValueChange={setVersion}>
@@ -426,8 +434,8 @@ export function ClauseLibraryPage() {
 					<span
 						className={`${CAALM_BADGE_BASE} bg-orange/10 text-orange border-orange/20`}
 					>
-						{activeFilterCount}{" "}
-						{activeFilterCount === 1 ? "filter" : "filters"} active
+						{activeFilterCount} {activeFilterCount === 1 ? "filter" : "filters"}{" "}
+						active
 					</span>
 				) : null}
 				{!permissionsLoading && canCreate ? (
@@ -518,9 +526,7 @@ export function ClauseLibraryPage() {
 			) : null}
 
 			<div className="flex min-h-[calc(100vh-16rem)] flex-col gap-4 lg:flex-row">
-				<Card
-					className="glass-card flex min-h-0 flex-1 flex-col lg:max-w-[52%]"
-				>
+				<Card className="glass-card flex min-h-0 flex-1 flex-col lg:max-w-[52%]">
 					<div className="glass-card-cap" />
 					<CardContent className="flex min-h-0 flex-1 flex-col p-0 pt-4">
 						<div
@@ -569,56 +575,54 @@ export function ClauseLibraryPage() {
 									{pagedItems.map((clause) => {
 										const selected = clause.familyId === selectedFamilyId;
 										return (
+											<div
+												key={clause.$id}
+												className={cn(
+													LIST_GRID,
+													"h-10 overflow-hidden cursor-pointer border-b border-slate-200/80 px-3 text-sm transition-colors duration-200",
+													selected ? "bg-blue-50" : "hover:bg-white/40",
+												)}
+												onClick={() => selectRow(clause)}
+												onKeyDown={(event) => {
+													if (event.key === "Enter" || event.key === " ") {
+														event.preventDefault();
+														selectRow(clause);
+													}
+												}}
+												role="button"
+												tabIndex={0}
+											>
 												<div
-													key={clause.$id}
-													className={cn(
-														LIST_GRID,
-														"h-10 overflow-hidden cursor-pointer border-b border-slate-200/80 px-3 text-sm transition-colors duration-200",
-														selected
-															? "bg-blue-50"
-															: "hover:bg-white/40",
-													)}
-													onClick={() => selectRow(clause)}
-													onKeyDown={(event) => {
-														if (event.key === "Enter" || event.key === " ") {
-															event.preventDefault();
-															selectRow(clause);
-														}
-													}}
-													role="button"
-													tabIndex={0}
+													onClick={(event) => event.stopPropagation()}
+													onKeyDown={(event) => event.stopPropagation()}
 												>
-													<div
-														onClick={(event) => event.stopPropagation()}
-														onKeyDown={(event) => event.stopPropagation()}
-													>
-														<Checkbox
-															aria-label={`Select ${clause.title}`}
-															checked={selectedIds.includes(clause.$id)}
-															onCheckedChange={(checked) =>
-																toggleSelect(clause.$id, checked === true)
-															}
-														/>
-													</div>
-													<p className="truncate font-medium text-slate-700">
-														{clause.title}
-													</p>
-													<span
-														className={`${CAALM_BADGE_BASE} max-w-full truncate justify-self-start bg-blue/10 text-blue border-blue/20`}
-													>
-														{clauseCategoryLabel(clause.category)}
-													</span>
-													<span
-														className={`${CAALM_BADGE_BASE} justify-self-start bg-slate-100 text-slate-600 border-slate-200`}
-													>
-														v{clause.version}
-													</span>
-													<span
-														className={`${CAALM_BADGE_BASE} justify-self-start ${clauseStatusBadgeClass(clause.status)}`}
-													>
-														{clauseStatusLabel(clause.status)}
-													</span>
+													<Checkbox
+														aria-label={`Select ${clause.title}`}
+														checked={selectedIds.includes(clause.$id)}
+														onCheckedChange={(checked) =>
+															toggleSelect(clause.$id, checked === true)
+														}
+													/>
 												</div>
+												<p className="truncate font-medium text-slate-700">
+													{clause.title}
+												</p>
+												<span
+													className={`${CAALM_BADGE_BASE} max-w-full truncate justify-self-start bg-blue/10 text-blue border-blue/20`}
+												>
+													{clauseCategoryLabel(clause.category)}
+												</span>
+												<span
+													className={`${CAALM_BADGE_BASE} justify-self-start bg-slate-100 text-slate-600 border-slate-200`}
+												>
+													v{clause.version}
+												</span>
+												<span
+													className={`${CAALM_BADGE_BASE} justify-self-start ${clauseStatusBadgeClass(clause.status)}`}
+												>
+													{clauseStatusLabel(clause.status)}
+												</span>
+											</div>
 										);
 									})}
 								</div>
@@ -642,9 +646,7 @@ export function ClauseLibraryPage() {
 					<ClauseLibraryDetail
 						clause={selectedClause}
 						ownerName={
-							selectedClause
-								? ownerNames[selectedClause.createdBy] || ""
-								: ""
+							selectedClause ? ownerNames[selectedClause.createdBy] || "" : ""
 						}
 						canEdit={canEdit}
 						canDelete={canDelete}

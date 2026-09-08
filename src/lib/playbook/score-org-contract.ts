@@ -17,7 +17,9 @@ export type ListPlaybookStandardsFn = (filters: {
 	currentOnly: true;
 }) => Promise<Clause[]>;
 
-export type ExtractClausesFn = (content: string) => Promise<ExtractedClauseInput[]>;
+export type ExtractClausesFn = (
+	content: string,
+) => Promise<ExtractedClauseInput[]>;
 
 export async function scoreOrgContractDeviations(input: {
 	orgId: string;

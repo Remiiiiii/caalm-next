@@ -23,7 +23,9 @@ describe("signature-block", () => {
 		expect(xml).toContain("DIGITAL SIGNATURE RECORD");
 		expect(xml).toContain("Fingerprint hash (Agency)");
 		expect(xml).toContain("Fingerprint hash (Contractor)");
-		expect(xml).toContain("ELECTRONICALLY SIGNED VIA CAALM SECURE SIGNATURE MODULE");
+		expect(xml).toContain(
+			"ELECTRONICALLY SIGNED VIA CAALM SECURE SIGNATURE MODULE",
+		);
 		expect(xml).toContain("E8F5F0");
 		expect(xml).not.toContain("DIGITAL SIGNATURES &amp; EXECUTION");
 	});

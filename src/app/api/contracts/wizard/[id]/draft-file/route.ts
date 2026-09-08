@@ -24,7 +24,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
 			? session.payload.draftDocxFileId
 			: session.payload.draftPdfFileId;
 	if (!fileId) {
-		return NextResponse.json({ error: "Draft file not saved yet" }, { status: 404 });
+		return NextResponse.json(
+			{ error: "Draft file not saved yet" },
+			{ status: 404 },
+		);
 	}
 	try {
 		const buffer = await downloadBlueprintFile(fileId);
@@ -39,6 +42,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
 		});
 	} catch (error) {
 		console.error("[wizard draft-file]", error);
-		return NextResponse.json({ error: "Draft file not found" }, { status: 404 });
+		return NextResponse.json(
+			{ error: "Draft file not found" },
+			{ status: 404 },
+		);
 	}
 }

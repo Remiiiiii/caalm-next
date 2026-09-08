@@ -1,7 +1,7 @@
 import type Stripe from "stripe";
 import {
-	settingsFromTier,
 	normalizePricingTier,
+	settingsFromTier,
 } from "@/lib/billing/entitlements";
 import {
 	type BillingInterval,
@@ -33,8 +33,15 @@ import {
 
 function isStripeMissingCustomerError(error: unknown): boolean {
 	if (!error || typeof error !== "object") return false;
-	const stripeError = error as { code?: string; param?: string; message?: string };
-	if (stripeError.code === "resource_missing" && stripeError.param === "customer") {
+	const stripeError = error as {
+		code?: string;
+		param?: string;
+		message?: string;
+	};
+	if (
+		stripeError.code === "resource_missing" &&
+		stripeError.param === "customer"
+	) {
 		return true;
 	}
 	return (
@@ -171,9 +178,7 @@ export async function createCheckoutSession({
 			orgId: org.$id,
 			tier,
 			interval,
-			...(eligibleForPilot && resolvedTrialDays
-				? { pilot: "growth-90d" }
-				: {}),
+			...(eligibleForPilot && resolvedTrialDays ? { pilot: "growth-90d" } : {}),
 		},
 		// Flexible mode is Stripe's current default for prorations; set it
 		// explicitly so new Checkout subs match Quotes and Dashboard invoices.
@@ -337,8 +342,7 @@ export async function syncPaidInvoiceToOrg(
 	}
 
 	const paid =
-		invoice.status === "paid" ||
-		(invoice as { paid?: boolean }).paid === true;
+		invoice.status === "paid" || (invoice as { paid?: boolean }).paid === true;
 	if (!paid) return;
 
 	const mapped = mapPlanFromInvoice(invoice);
@@ -590,7 +594,9 @@ const UPCOMING_INVOICE_BILLING_STATUSES = new Set<BillingStatus>([
 	"past_due",
 ]);
 
-export async function orgHasUpcomingInvoice(org: Organization): Promise<boolean> {
+export async function orgHasUpcomingInvoice(
+	org: Organization,
+): Promise<boolean> {
 	if (!org.stripeCustomerId) return false;
 
 	if (
@@ -838,8 +844,7 @@ export async function syncSubscriptionToOrg(
 	subscription: Stripe.Subscription,
 	orgIdOverride?: string,
 ): Promise<void> {
-	const orgId =
-		orgIdOverride || subscription.metadata?.orgId || undefined;
+	const orgId = orgIdOverride || subscription.metadata?.orgId || undefined;
 
 	const customerId =
 		typeof subscription.customer === "string"

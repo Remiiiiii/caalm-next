@@ -35,11 +35,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
 				: await downloadBlueprintFile(fileId);
 		if (kind === "html") {
 			const org = await getOrganization(auth.orgId);
-			const withOrg = mergeDocxTemplate(
-				buffer,
-				orgLetterheadValues(org),
-				{ keepMissing: true },
-			);
+			const withOrg = mergeDocxTemplate(buffer, orgLetterheadValues(org), {
+				keepMissing: true,
+			});
 			const html = await docxBufferToHtml(withOrg);
 			return NextResponse.json({ html });
 		}

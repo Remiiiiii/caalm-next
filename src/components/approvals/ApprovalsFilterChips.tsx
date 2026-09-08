@@ -59,8 +59,7 @@ export default function ApprovalsFilterChips() {
 		chips.push({
 			key: "sla",
 			label: slaLabels[filters.slaStatus] || filters.slaStatus,
-			onRemove: () =>
-				setFilters((prev) => ({ ...prev, slaStatus: undefined })),
+			onRemove: () => setFilters((prev) => ({ ...prev, slaStatus: undefined })),
 		});
 	}
 	if (filters.itemType) {

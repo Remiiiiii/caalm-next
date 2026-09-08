@@ -18,13 +18,15 @@ function encodeXmlText(value: string): string {
 }
 
 function normalizeSearchText(value: string): string {
-	return value
-		.replace(/\r\n/g, "\n")
-		.replace(/\u00a0/g, " ")
-		// Snapshot uses **bold** markers; DOCX stores plain runs without asterisks.
-		.replace(/\*\*/g, "")
-		.replace(/\s+/g, " ")
-		.trim();
+	return (
+		value
+			.replace(/\r\n/g, "\n")
+			.replace(/\u00a0/g, " ")
+			// Snapshot uses **bold** markers; DOCX stores plain runs without asterisks.
+			.replace(/\*\*/g, "")
+			.replace(/\s+/g, " ")
+			.trim()
+	);
 }
 
 type TextRun = {
@@ -115,9 +117,7 @@ export function applyPlainTextReplacementInDocx(
 		let nextText = run.text;
 		if (i === 0) {
 			nextText =
-				run.text.slice(0, localStart) +
-				replacement +
-				run.text.slice(localEnd);
+				run.text.slice(0, localStart) + replacement + run.text.slice(localEnd);
 		} else {
 			nextText = run.text.slice(0, localStart) + run.text.slice(localEnd);
 		}

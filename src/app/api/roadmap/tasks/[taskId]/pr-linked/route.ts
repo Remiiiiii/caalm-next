@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/actions/user.actions";
 import { PERMISSIONS } from "@/constants/permissions";
+import { getCurrentUser } from "@/lib/actions/user.actions";
 import { requirePermission } from "@/lib/rbac/middleware";
 import { linkPullRequest, RoadmapError } from "@/lib/roadmap/service";
 
@@ -35,7 +35,10 @@ export async function POST(
 		return NextResponse.json({ task });
 	} catch (error) {
 		if (error instanceof RoadmapError) {
-			return NextResponse.json({ error: error.message }, { status: error.status });
+			return NextResponse.json(
+				{ error: error.message },
+				{ status: error.status },
+			);
 		}
 		console.error("[SERVER] roadmap/tasks/pr-linked:", error);
 		return NextResponse.json({ error: "Failed to link PR" }, { status: 500 });

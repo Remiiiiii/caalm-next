@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
+import type { Clause } from "@/types/clauses";
 import {
 	buildCreateClauseData,
 	buildListQueries,
 	planClauseArchive,
 	planClauseUpdate,
 } from "./clause-library.service";
-import type { Clause } from "@/types/clauses";
 
 function clause(overrides: Partial<Clause> = {}): Clause {
 	return {
@@ -126,8 +126,8 @@ describe("clause library versioning", () => {
 
 		const otherOrg = buildListQueries({ orgId: "org_b", familyId: "family_1" });
 		expect(otherOrg[0]).toContain("org_b");
-		expect(otherOrg.some((q) => q.includes('"family_1"') || q.includes("family_1"))).toBe(
-			true,
-		);
+		expect(
+			otherOrg.some((q) => q.includes('"family_1"') || q.includes("family_1")),
+		).toBe(true);
 	});
 });

@@ -1,4 +1,4 @@
-import { Shield, Info } from "lucide-react";
+import { Info, Shield } from "lucide-react";
 import { redirect } from "next/navigation";
 import MyAccessPanel from "@/components/settings/MyAccessPanel";
 import { getCurrentUser } from "@/lib/actions/user.actions";
@@ -22,8 +22,9 @@ export default async function SettingsPermissionsPage() {
 				<div className="flex items-start gap-2 p-3 rounded-lg bg-blue/5 border border-blue/20">
 					<Info className="h-4 w-4 text-[#0f5384] mt-0.5 shrink-0" />
 					<p className="text-xs text-slate-600 leading-relaxed">
-						This page displays all permissions granted to you through your assigned roles. 
-						Contact your administrator if you need additional access.
+						This page displays all permissions granted to you through your
+						assigned roles. Contact your administrator if you need additional
+						access.
 					</p>
 				</div>
 			</div>

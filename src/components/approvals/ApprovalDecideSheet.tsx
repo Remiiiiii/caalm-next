@@ -39,8 +39,8 @@ import {
 	statusLabel,
 } from "@/lib/approvals/approvalsListUtils";
 import { buildSeededDeviationReport } from "@/lib/playbook/seeded-deviations";
-import type { DeviationReport } from "@/types/playbook-deviations";
 import { cn, constructFileUrl } from "@/lib/utils";
+import type { DeviationReport } from "@/types/playbook-deviations";
 
 interface ApprovalDecideSheetProps {
 	item: ApprovalQueueItem | null;

@@ -75,7 +75,9 @@ export function extractFarClausesFromStructure(root: EcfrNode): FarClause[] {
 		const title = rawTitle.replace(/\.$/, "");
 		clauses.push({ number, title });
 	}
-	clauses.sort((a, b) => a.number.localeCompare(b.number, "en", { numeric: true }));
+	clauses.sort((a, b) =>
+		a.number.localeCompare(b.number, "en", { numeric: true }),
+	);
 	return clauses;
 }
 
@@ -99,13 +101,13 @@ export function serializeFarClauseSelection(
 	catalog: FarClause[],
 ): string {
 	const byNumber = new Map(catalog.map((clause) => [clause.number, clause]));
-	const unique = [...new Set(numbers.filter((n) => FAR_CLAUSE_NUMBER_RE.test(n)))];
+	const unique = [
+		...new Set(numbers.filter((n) => FAR_CLAUSE_NUMBER_RE.test(n))),
+	];
 	return unique
 		.map((number) => {
 			const clause = byNumber.get(number);
-			return clause
-				? formatFarClauseLine(clause)
-				: `FAR ${number}`;
+			return clause ? formatFarClauseLine(clause) : `FAR ${number}`;
 		})
 		.join("\n");
 }

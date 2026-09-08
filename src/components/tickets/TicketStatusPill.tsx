@@ -1,10 +1,10 @@
-import { cn } from "@/lib/utils";
 import type {
 	TicketLane,
 	TicketSeverity,
 	TicketStatus,
 } from "@/lib/tickets/ticket.types";
 import { resolveTicketLane } from "@/lib/tickets/ticket.types";
+import { cn } from "@/lib/utils";
 
 const STATUS_CLASS: Record<TicketStatus, string> = {
 	OPEN: "bg-blue/10 text-blue border-blue/20",
@@ -55,11 +55,7 @@ const LANE_CLASS: Record<TicketLane, string> = {
 	engineering: "bg-blue/10 text-blue border-blue/20",
 };
 
-export function TicketLanePill({
-	lane,
-}: {
-	lane?: TicketLane | null;
-}) {
+export function TicketLanePill({ lane }: { lane?: TicketLane | null }) {
 	const resolved = resolveTicketLane({ lane });
 	return (
 		<span

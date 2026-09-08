@@ -128,7 +128,10 @@ export function parseContractAssistantJson(raw: string): {
 		answerMarkdown: markdown,
 		summaryMarkdown: markdown,
 		citations: parseCitations(parsed.citations),
-		suggestedQuestions: asStringArray(parsed.suggestedQuestions, []).slice(0, 3),
+		suggestedQuestions: asStringArray(parsed.suggestedQuestions, []).slice(
+			0,
+			3,
+		),
 		starterPrompts: parseStarterPrompts(parsed.starterPrompts),
 	};
 }

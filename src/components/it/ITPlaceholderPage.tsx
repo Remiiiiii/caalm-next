@@ -37,9 +37,7 @@ export function ITPlaceholderPage({
 						{permission ? (
 							<li>
 								Permission:{" "}
-								<span className="text-xs text-slate-800">
-									{permission}
-								</span>
+								<span className="text-xs text-slate-800">{permission}</span>
 							</li>
 						) : null}
 					</ul>

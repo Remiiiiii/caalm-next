@@ -6,8 +6,8 @@ import useSWR from "swr";
 import LicensesBulkBar from "@/components/LicensesBulkBar";
 import { applyLicenseFilters } from "@/lib/licenses/applyLicenseFilters";
 import {
-	matchesStatusTab,
 	type LicenseFilters,
+	matchesStatusTab,
 } from "@/lib/licenses/licensesListUtils";
 import { fetcher } from "@/lib/swr-config";
 import type { License } from "@/types/licenses";
@@ -27,11 +27,7 @@ interface ListResponse {
 	meta?: { pagination?: { total: number } };
 }
 
-function buildListUrl(
-	page: number,
-	pageSize: number,
-	filters: LicenseFilters,
-) {
+function buildListUrl(page: number, pageSize: number, filters: LicenseFilters) {
 	const params = new URLSearchParams({
 		limit: String(pageSize),
 		offset: String((page - 1) * pageSize),

@@ -24,10 +24,7 @@ export function htmlToPlainText(html: string): string {
 }
 
 /** First N words of body text; add ... only when there is more. */
-export function excerptWords(
-	text: string,
-	count = EXCERPT_WORDS,
-): string {
+export function excerptWords(text: string, count = EXCERPT_WORDS): string {
 	const cleaned = htmlToPlainText(text)
 		.replace(/View Full Coverage on Google News/gi, "")
 		.replace(/\s+/g, " ")

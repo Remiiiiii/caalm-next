@@ -28,6 +28,7 @@ import ContractExpiryModal from "@/components/contract-expiry-modal/ContractExpi
 import DepartmentPerformanceWidget from "@/components/DepartmentPerformanceWidget";
 import { DashboardGreeting } from "@/components/dashboard/DashboardGreeting";
 import { RiskImpactHeroCard } from "@/components/dashboard/RiskImpactHeroCard";
+import { WeatherBriefingLauncher } from "@/components/dashboard-briefing/WeatherBriefingLauncher";
 import FormattedDateTime from "@/components/FormattedDateTime";
 import LicenseExpiryAlertsWidget from "@/components/LicenseExpiryAlertsWidget";
 import LicenseStatusPieChart from "@/components/LicenseStatusPieChart";
@@ -48,7 +49,6 @@ import {
 import Avatar from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import {
 	SelectItem,
 	SelectScrollable,
@@ -58,8 +58,8 @@ import {
 	StatCardSkeleton,
 	TableRowSkeleton,
 } from "@/components/ui/skeletons";
+import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import { WidgetCarousel } from "@/components/ui/widget-carousel";
-import { WeatherBriefingLauncher } from "@/components/dashboard-briefing/WeatherBriefingLauncher";
 import type { ContractStatus } from "@/constants/status";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useStepUp } from "@/contexts/StepUpContext";
@@ -67,8 +67,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useCombinedExpiryModal } from "@/hooks/useCombinedExpiryModal";
 import { useUnifiedDashboardData } from "@/hooks/useUnifiedDashboardData";
 import { cn } from "@/lib/utils";
-import { resolveInviteDepartment } from "../../../../constants";
 import type { UIFileDoc } from "@/types/files";
+import { resolveInviteDepartment } from "../../../../constants";
 
 interface UninvitedUser {
 	$id: string;
@@ -1011,9 +1011,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 											asChild
 											className="primary-btn inline-flex w-full cursor-pointer md:hidden"
 										>
-											<Link href="/contracts/approvals">
-												Open approvals
-											</Link>
+											<Link href="/contracts/approvals">Open approvals</Link>
 										</Button>
 									</div>
 								</CardContent>
@@ -1094,7 +1092,10 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 												className="h-10 w-10 shrink-0 border-slate-200 bg-white p-0 text-slate-600 hover:border-[#0f5384]/30 hover:bg-blue/10 hover:text-[#0f5384]"
 											>
 												<RefreshCw
-													className={cn( "h-4 w-4", refreshLoading && "animate-spin", )}
+													className={cn(
+														"h-4 w-4",
+														refreshLoading && "animate-spin",
+													)}
 												/>
 											</Button>
 										</div>

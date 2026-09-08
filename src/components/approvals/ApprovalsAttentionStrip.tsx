@@ -47,10 +47,9 @@ export default function ApprovalsAttentionStrip({
 						Needs attention
 					</p>
 					<p className="text-xs text-slate-600 mt-0.5">
-						{counts.breached > 0 && (
-							<span>{counts.breached} SLA breached</span>
-						)}
-						{counts.breached > 0 && (counts.atRisk > 0 || counts.actionRequired > 0) &&
+						{counts.breached > 0 && <span>{counts.breached} SLA breached</span>}
+						{counts.breached > 0 &&
+							(counts.atRisk > 0 || counts.actionRequired > 0) &&
 							" · "}
 						{counts.atRisk > 0 && <span>{counts.atRisk} at risk</span>}
 						{counts.atRisk > 0 && counts.actionRequired > 0 && " · "}

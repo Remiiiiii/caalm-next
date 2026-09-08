@@ -5,6 +5,32 @@
  */
 
 import {
+	getCatalogLinkedPrNumber,
+	getCatalogLinkedPrNumbers,
+	getSectionNumberForPr,
+	ROADMAP_TRACKING_STUB_PRS,
+	sectionCompletesOnMergedCatalogPr,
+	sectionUsesPerTaskPrCompletion,
+} from "./catalog";
+import {
+	fetchPullRequestStatus,
+	fetchRoadmapCompletionGate,
+	listOpenPullRequests,
+} from "./github";
+import {
+	findSectionPullRequest,
+	type GitHubPullRequestSummary,
+	matchPullRequestToTask,
+	type ResolvedPullRequest,
+	resolveSectionFromPrMatch,
+} from "./github-pr-match";
+import {
+	buildTaskTree,
+	computeProgressPercent,
+	computeUnlocked,
+	countByStatus,
+} from "./locking";
+import {
 	appendStatusLog,
 	createTestRun,
 	findTestRunForPrCommit,
@@ -21,32 +47,6 @@ import {
 	saveSection,
 	saveTask,
 } from "./store";
-import {
-	getCatalogLinkedPrNumber,
-	getCatalogLinkedPrNumbers,
-	getSectionNumberForPr,
-	ROADMAP_TRACKING_STUB_PRS,
-	sectionCompletesOnMergedCatalogPr,
-	sectionUsesPerTaskPrCompletion,
-} from "./catalog";
-import {
-	fetchPullRequestStatus,
-	fetchRoadmapCompletionGate,
-	listOpenPullRequests,
-} from "./github";
-import {
-	findSectionPullRequest,
-	matchPullRequestToTask,
-	resolveSectionFromPrMatch,
-	type GitHubPullRequestSummary,
-	type ResolvedPullRequest,
-} from "./github-pr-match";
-import {
-	buildTaskTree,
-	computeProgressPercent,
-	computeUnlocked,
-	countByStatus,
-} from "./locking";
 import type {
 	RoadmapOverview,
 	RoadmapSectionOverview,
@@ -447,11 +447,10 @@ export async function getOverview(options?: {
 		}
 	}
 
-	const sectionViews: RoadmapSectionOverview[] = viewSections.map(
-		(section) => {
-			const sectionTasks = viewTasks.filter(
-				(task) => task.sectionId === section.$id,
-			);
+	const sectionViews: RoadmapSectionOverview[] = viewSections.map((section) => {
+		const sectionTasks = viewTasks.filter(
+			(task) => task.sectionId === section.$id,
+		);
 		const taskCounts = countByStatus(sectionTasks);
 		const catalogNumbers = getCatalogLinkedPrNumbers(section.sectionNumber);
 		const waitingNumber = catalogNumbers.find((number) =>
@@ -512,16 +511,15 @@ export async function getSectionTaskTree(
 	if (!section) throw new RoadmapError("Section not found", 404);
 
 	const mergeBlockReason =
-		section.status === "complete" || sectionUsesPerTaskPrCompletion(section.sectionNumber)
+		section.status === "complete" ||
+		sectionUsesPerTaskPrCompletion(section.sectionNumber)
 			? null
 			: await evaluateSectionMergeBlock(section.sectionNumber);
 
 	const sectionTasks = tasks.filter((t) => t.sectionId === sectionId);
 	const prNumbers = [
 		...new Set(
-			sectionTasks
-				.map((t) => t.prNumber)
-				.filter((n): n is number => n != null),
+			sectionTasks.map((t) => t.prNumber).filter((n): n is number => n != null),
 		),
 	];
 	const branchByPr = new Map<number, string>();
@@ -708,9 +706,7 @@ export async function recordCiTestResult(
 	const live = await fetchPullRequestStatus({ prNumber: input.prNumber });
 	const sectionNumber =
 		getSectionNumberForPr(input.prNumber) ??
-		(input.taskCode
-			? Number(input.taskCode.split(".")[0])
-			: undefined) ??
+		(input.taskCode ? Number(input.taskCode.split(".")[0]) : undefined) ??
 		resolveSectionFromPrMatch(toPrSummary(input.prNumber, live));
 	const task =
 		(input.taskCode ? await getTaskByCode(input.taskCode) : null) ||
@@ -938,7 +934,9 @@ export async function completeSectionFromMerge(
 
 	if (tasksToComplete.length === 0) {
 		await persistUnlockedSnapshot();
-		const refreshed = (await listTasks()).filter((t) => t.sectionId === section.$id);
+		const refreshed = (await listTasks()).filter(
+			(t) => t.sectionId === section.$id,
+		);
 		return {
 			sectionNumber,
 			completed: refreshed.every((t) => t.status === "complete"),
@@ -978,7 +976,9 @@ export async function completeSectionFromMerge(
 	}
 
 	await persistUnlockedSnapshot();
-	const refreshed = (await listTasks()).filter((t) => t.sectionId === section.$id);
+	const refreshed = (await listTasks()).filter(
+		(t) => t.sectionId === section.$id,
+	);
 	const sectionComplete = refreshed.every((t) => t.status === "complete");
 	return {
 		sectionNumber,

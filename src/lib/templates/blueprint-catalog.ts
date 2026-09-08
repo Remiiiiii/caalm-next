@@ -1,6 +1,6 @@
 import { getContractTypeConfig } from "@/lib/contracts/contractTypeConfigs";
-import type { BlueprintId } from "@/types/contract-templates";
 import thumbnailHashes from "@/lib/templates/blueprint-thumbnail-hashes.json";
+import type { BlueprintId } from "@/types/contract-templates";
 
 function thumbUrl(id: BlueprintId): string {
 	const hash = thumbnailHashes[id]?.slice(0, 12) || "0";

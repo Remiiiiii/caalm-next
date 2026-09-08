@@ -18,16 +18,13 @@ export function UsdConversionHint({
 	return (
 		<p
 			className="flex shrink-0 items-center gap-1.5 text-sm text-slate-500 whitespace-nowrap"
-			aria-label={label ? `Approximately ${label}` : undefined}
+			role="status"
 		>
 			{loading ? (
 				"Converting to USD…"
 			) : (
 				<>
-					<EqualApproximately
-						className="h-5 w-5 text-slate-500"
-						aria-hidden
-					/>
+					<EqualApproximately className="h-5 w-5 text-slate-500" aria-hidden />
 					<span>{label}</span>
 				</>
 			)}

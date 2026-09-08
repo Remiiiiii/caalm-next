@@ -12,6 +12,7 @@ import {
 	useForm,
 } from "react-hook-form";
 import { Button } from "@/components/ui/button";
+import { CurrencySelect } from "@/components/ui/currency-select";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
 	Form,
@@ -21,7 +22,6 @@ import {
 	FormLabel,
 	FormMessage,
 } from "@/components/ui/form";
-import { CurrencySelect } from "@/components/ui/currency-select";
 import { Input } from "@/components/ui/input";
 import {
 	Select,

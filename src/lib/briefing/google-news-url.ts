@@ -81,8 +81,7 @@ export function parseGoogleNewsPublisherUrl(body: string): string | null {
 		const rows = JSON.parse(body.slice(jsonStart)) as unknown;
 		if (!Array.isArray(rows)) return null;
 		const envelope = rows.find(
-			(row) =>
-				Array.isArray(row) && row[0] === "wrb.fr" && row[1] === "Fbv4je",
+			(row) => Array.isArray(row) && row[0] === "wrb.fr" && row[1] === "Fbv4je",
 		);
 		if (!Array.isArray(envelope) || typeof envelope[2] !== "string") {
 			return null;
@@ -168,8 +167,7 @@ export async function resolveGoogleNewsPublisherUrl(
 			{
 				method: "POST",
 				headers: {
-					"Content-Type":
-						"application/x-www-form-urlencoded;charset=UTF-8",
+					"Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
 					Referer: "https://news.google.com/",
 					"User-Agent": userAgent,
 				},

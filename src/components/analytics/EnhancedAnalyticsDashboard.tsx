@@ -4,10 +4,10 @@ import {
 	Activity,
 	AlertTriangle,
 	BarChart3,
-	SquareArrowRightExit,
 	Eye,
 	EyeOff,
 	Shield,
+	SquareArrowRightExit,
 	TrendingUp,
 } from "lucide-react";
 import type React from "react";

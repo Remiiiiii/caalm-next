@@ -148,7 +148,7 @@ function summarizeDiff(project, plan, local, remote) {
 	const extraOnVercel = [...remote].filter(
 		(key) =>
 			!plan.skipKeys.has(key) &&
-			!Object.prototype.hasOwnProperty.call(local, key) &&
+			!Object.hasOwn(local, key) &&
 			!isVercelManagedKey(key),
 	);
 	return { missingOnVercel, extraOnVercel };

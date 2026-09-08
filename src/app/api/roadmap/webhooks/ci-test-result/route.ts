@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { postPullRequestComment } from "@/lib/roadmap/github";
-import { recordCiTestResult, RoadmapError } from "@/lib/roadmap/service";
+import { RoadmapError, recordCiTestResult } from "@/lib/roadmap/service";
 import {
 	getRoadmapWebhookSecret,
 	verifyRoadmapWebhookSignature,
@@ -36,7 +36,10 @@ export async function POST(request: NextRequest) {
 			!body.logsUrl ||
 			!body.summary
 		) {
-			return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+			return NextResponse.json(
+				{ error: "Missing required fields" },
+				{ status: 400 },
+			);
 		}
 
 		const outcome = await recordCiTestResult({
@@ -62,9 +65,15 @@ export async function POST(request: NextRequest) {
 		});
 	} catch (error) {
 		if (error instanceof RoadmapError) {
-			return NextResponse.json({ error: error.message }, { status: error.status });
+			return NextResponse.json(
+				{ error: error.message },
+				{ status: error.status },
+			);
 		}
 		console.error("[SERVER] roadmap/webhooks/ci-test-result:", error);
-		return NextResponse.json({ error: "Webhook processing failed" }, { status: 500 });
+		return NextResponse.json(
+			{ error: "Webhook processing failed" },
+			{ status: 500 },
+		);
 	}
 }

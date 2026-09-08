@@ -1,8 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
-import { disconnectCrmIntegration } from "@/lib/crm/integrations.repository";
 import { requireStepUp } from "@/lib/auth/step-up";
+import { disconnectCrmIntegration } from "@/lib/crm/integrations.repository";
 import { getOrgIdFromRequest, requirePermission } from "@/lib/rbac/middleware";
 import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 

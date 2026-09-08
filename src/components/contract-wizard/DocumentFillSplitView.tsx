@@ -13,12 +13,12 @@ import {
 	Users,
 } from "lucide-react";
 import {
+	type FocusEvent,
+	Fragment,
 	useEffect,
 	useMemo,
 	useRef,
 	useState,
-	Fragment,
-	type FocusEvent,
 } from "react";
 import { FarClausePicker } from "@/components/contract-wizard/FarClausePicker";
 import { Button } from "@/components/ui/button";
@@ -31,7 +31,6 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
-import { UsdConversionHint } from "@/components/ui/usd-conversion-hint";
 import {
 	Select,
 	SelectContent,
@@ -40,26 +39,30 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { UsdConversionHint } from "@/components/ui/usd-conversion-hint";
 import { useDepartmentAssignment } from "@/hooks/useDepartmentAssignment";
-import {
-	fillFieldPlaceholder,
-	formatAmountForDocument,
-	formatAmountWhileTyping,
-	getVisibleFillFields,
-	GOVERNMENT_CONTRACT_TYPES,
-	markLiveTokenHtml,
-	parseAmountInput,
-	type FillSectionId,
-	type TokenGroup,
-	type VisibleFillField,
-} from "@/lib/templates/token-schema";
-import { cn } from "@/lib/utils";
 import {
 	measureDocxPreviewPageCount,
 	resolveDocxPreviewPage,
 } from "@/lib/templates/docx-preview-pagination";
+import {
+	type FillSectionId,
+	fillFieldPlaceholder,
+	formatAmountForDocument,
+	formatAmountWhileTyping,
+	GOVERNMENT_CONTRACT_TYPES,
+	getVisibleFillFields,
+	markLiveTokenHtml,
+	parseAmountInput,
+	type TokenGroup,
+	type VisibleFillField,
+} from "@/lib/templates/token-schema";
+import { cn } from "@/lib/utils";
 import "@/lib/templates/docx-preview.css";
-import type { WizardCustomBlock, WizardIntake } from "@/types/contract-templates";
+import type {
+	WizardCustomBlock,
+	WizardIntake,
+} from "@/types/contract-templates";
 
 const FIELD = "border-[0.25px] border-slate-300";
 
@@ -101,7 +104,8 @@ const GROUP_LABEL: Record<TokenGroup, string> = {
 /** Short “what to do here” copy under each section title. */
 const GROUP_ACTION: Record<TokenGroup, string> = {
 	record: "Enter the agreement name, department, and other record fields.",
-	parties: "Name the organizations or people who are parties to this agreement.",
+	parties:
+		"Name the organizations or people who are parties to this agreement.",
 	dates: "Set the effective date and end date for this agreement.",
 	terms: "Fill in the remaining term and scope placeholders in this section.",
 	compensation: "Enter the amount, currency, and related payment fields.",
@@ -248,27 +252,24 @@ export function DocumentFillSplitView({
 					if (!response.ok) {
 						throw new Error(body.error || "Could not refresh the preview");
 					}
-					const marked = markLiveTokenHtml(
-						body.html || "",
-						{
-							...tokenValues,
-							...Object.fromEntries(
-								fields
-									.filter((field) => field.kind === "intake")
-									.flatMap((field) =>
-										field.tokens.map((token) => [
-											token,
-											field.intakeField === "amount"
-												? formatAmountForDocument(
-														String(intake.amount || ""),
-														intake.currency,
-													)
-												: String(intake[field.intakeField] || ""),
-										]),
-									),
-							),
-						},
-					);
+					const marked = markLiveTokenHtml(body.html || "", {
+						...tokenValues,
+						...Object.fromEntries(
+							fields
+								.filter((field) => field.kind === "intake")
+								.flatMap((field) =>
+									field.tokens.map((token) => [
+										token,
+										field.intakeField === "amount"
+											? formatAmountForDocument(
+													String(intake.amount || ""),
+													intake.currency,
+												)
+											: String(intake[field.intakeField] || ""),
+									]),
+								),
+						),
+					});
 					setHtml(marked);
 					setPreviewError(null);
 				} catch (error) {
@@ -302,11 +303,18 @@ export function DocumentFillSplitView({
 			node.classList.remove("docx-live-token-active");
 		}
 		if (!activeToken) return;
-		const target = root.querySelector(`[data-token="${CSS.escape(activeToken)}"]`);
+		const target = root.querySelector(
+			`[data-token="${CSS.escape(activeToken)}"]`,
+		);
 		if (!(target instanceof HTMLElement)) return;
 		target.classList.add("docx-live-token-active");
-		const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-		target.scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" });
+		const reduce = window.matchMedia(
+			"(prefers-reduced-motion: reduce)",
+		).matches;
+		target.scrollIntoView({
+			block: "center",
+			behavior: reduce ? "auto" : "smooth",
+		});
 	}, [activeToken, html]);
 
 	const sectionIndex =
@@ -337,64 +345,64 @@ export function DocumentFillSplitView({
 						className="flex gap-2 overflow-x-auto lg:flex-col lg:overflow-visible"
 						aria-label="Agreement sections"
 					>
-				{groups.map((row) => {
-					const Icon = GROUP_ICON[row.group];
-					const required = row.fields.filter((field) => field.required);
-					const complete =
-						required.length > 0 &&
-						required.every((field) =>
-							fieldValue(field, intake, tokenValues).trim(),
-						);
-					const current = section === row.group;
-					return (
+						{groups.map((row) => {
+							const Icon = GROUP_ICON[row.group];
+							const required = row.fields.filter((field) => field.required);
+							const complete =
+								required.length > 0 &&
+								required.every((field) =>
+									fieldValue(field, intake, tokenValues).trim(),
+								);
+							const current = section === row.group;
+							return (
+								<button
+									key={row.group}
+									type="button"
+									className={cn(
+										"relative flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center transition-colors duration-200",
+										current
+											? "text-[#0f5384]"
+											: "text-slate-500 hover:text-[#0f5384]",
+										"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
+									)}
+									aria-current={current ? "true" : undefined}
+									aria-label={GROUP_LABEL[row.group]}
+									onClick={() => setSection(row.group)}
+								>
+									{current && (
+										<span className="absolute -left-1 hidden h-6 w-0.5 rounded-full bg-[#0f5384] lg:block" />
+									)}
+									<Icon className="h-4 w-4" />
+									{required.length > 0 && (
+										<span
+											className={cn(
+												"absolute top-1 right-1 h-1.5 w-1.5 rounded-full",
+												complete ? "bg-green" : "bg-slate-300",
+											)}
+											aria-hidden
+										/>
+									)}
+								</button>
+							);
+						})}
 						<button
-							key={row.group}
 							type="button"
 							className={cn(
 								"relative flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center transition-colors duration-200",
-								current
+								section === "added"
 									? "text-[#0f5384]"
 									: "text-slate-500 hover:text-[#0f5384]",
 								"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
 							)}
-							aria-current={current ? "true" : undefined}
-							aria-label={GROUP_LABEL[row.group]}
-							onClick={() => setSection(row.group)}
+							aria-current={section === "added" ? "true" : undefined}
+							aria-label="Added language"
+							onClick={() => setSection("added")}
 						>
-							{current && (
+							{section === "added" && (
 								<span className="absolute -left-1 hidden h-6 w-0.5 rounded-full bg-[#0f5384] lg:block" />
 							)}
-							<Icon className="h-4 w-4" />
-							{required.length > 0 && (
-								<span
-									className={cn(
-										"absolute top-1 right-1 h-1.5 w-1.5 rounded-full",
-										complete ? "bg-green" : "bg-slate-300",
-									)}
-									aria-hidden
-								/>
-							)}
+							<FilePlus className="h-4 w-4" />
 						</button>
-					);
-				})}
-				<button
-					type="button"
-					className={cn(
-						"relative flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center transition-colors duration-200",
-						section === "added"
-							? "text-[#0f5384]"
-							: "text-slate-500 hover:text-[#0f5384]",
-						"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
-					)}
-					aria-current={section === "added" ? "true" : undefined}
-					aria-label="Added language"
-					onClick={() => setSection("added")}
-				>
-					{section === "added" && (
-						<span className="absolute -left-1 hidden h-6 w-0.5 rounded-full bg-[#0f5384] lg:block" />
-					)}
-					<FilePlus className="h-4 w-4" />
-				</button>
 					</nav>
 				</div>
 
@@ -404,105 +412,105 @@ export function DocumentFillSplitView({
 				/>
 
 				<div className="min-w-0 flex-1 space-y-6 p-4 sm:p-6">
-				{section !== "added" && (
-					<div>
-						<p className="text-xs text-slate-500">
-							Section {sectionIndex + 1} of {sectionTotal}
-						</p>
-						<h2 className="text-xl font-semibold sidebar-gradient-text">
-							{sectionTitle}
-						</h2>
-						<p className="mt-1 text-sm text-slate-600">{sectionAction}</p>
-					</div>
-				)}
-
-				{activeGroup && (
-					<div className="grid grid-cols-2 gap-3">
-						{activeGroup.fields.map((field) => (
-							<Fragment key={fieldKey(field)}>
-								{field.dividerBefore ? (
-									<hr className="col-span-full border-slate-200" />
-								) : null}
-								<FillControl
-									field={field}
-									intake={intake}
-									tokenValues={tokenValues}
-									departments={departmentEnums || []}
-									active={fieldTokens(field).includes(activeToken || "")}
-									onFocus={() => onFieldFocus(field)}
-									onPatchIntake={onPatchIntake}
-									onPatchToken={onPatchToken}
-								/>
-							</Fragment>
-						))}
-					</div>
-				)}
-
-				{section === "added" && (
-					<div className="space-y-4">
-						<p className="text-xs text-slate-500">
-							Section {sectionIndex + 1} of {sectionTotal}
-						</p>
+					{section !== "added" && (
 						<div>
-							<h2 className="text-xl font-semibold sidebar-gradient-text">
-								Optional paragraphs
-							</h2>
-							<p className="mt-1 text-sm text-slate-600">
-								{ADDED_SECTION_ACTION}
+							<p className="text-xs text-slate-500">
+								Section {sectionIndex + 1} of {sectionTotal}
 							</p>
+							<h2 className="text-xl font-semibold sidebar-gradient-text">
+								{sectionTitle}
+							</h2>
+							<p className="mt-1 text-sm text-slate-600">{sectionAction}</p>
 						</div>
+					)}
 
-						{customBlocks.length === 0 ? (
-							<div className="flex min-h-28 items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50/60 px-4 py-8">
-								<p className="text-sm text-slate-500">
-									No optional paragraphs added yet
+					{activeGroup && (
+						<div className="grid grid-cols-2 gap-3">
+							{activeGroup.fields.map((field) => (
+								<Fragment key={fieldKey(field)}>
+									{field.dividerBefore ? (
+										<hr className="col-span-full border-slate-200" />
+									) : null}
+									<FillControl
+										field={field}
+										intake={intake}
+										tokenValues={tokenValues}
+										departments={departmentEnums || []}
+										active={fieldTokens(field).includes(activeToken || "")}
+										onFocus={() => onFieldFocus(field)}
+										onPatchIntake={onPatchIntake}
+										onPatchToken={onPatchToken}
+									/>
+								</Fragment>
+							))}
+						</div>
+					)}
+
+					{section === "added" && (
+						<div className="space-y-4">
+							<p className="text-xs text-slate-500">
+								Section {sectionIndex + 1} of {sectionTotal}
+							</p>
+							<div>
+								<h2 className="text-xl font-semibold sidebar-gradient-text">
+									Optional paragraphs
+								</h2>
+								<p className="mt-1 text-sm text-slate-600">
+									{ADDED_SECTION_ACTION}
 								</p>
 							</div>
-						) : (
-							<div className="space-y-3">
-								{customBlocks.map((block) => (
-									<div key={block.id} className="flex items-end gap-2">
-										<Textarea
-											className={cn("min-h-20", FIELD)}
-											value={block.body}
-											onChange={(event) =>
-												onChangeBlock(block.id, event.target.value)
-											}
-											placeholder="Write the paragraph that should appear in the agreement…"
-										/>
-										<button
-											type="button"
-											className="mb-1 cursor-pointer rounded p-1 text-slate-400 transition-colors duration-200 hover:text-red focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
-											aria-label="Remove paragraph"
-											onClick={() => onRemoveBlock(block.id)}
-										>
-											<Trash2 className="h-4 w-4" />
-										</button>
-									</div>
-								))}
+
+							{customBlocks.length === 0 ? (
+								<div className="flex min-h-28 items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50/60 px-4 py-8">
+									<p className="text-sm text-slate-500">
+										No optional paragraphs added yet
+									</p>
+								</div>
+							) : (
+								<div className="space-y-3">
+									{customBlocks.map((block) => (
+										<div key={block.id} className="flex items-end gap-2">
+											<Textarea
+												className={cn("min-h-20", FIELD)}
+												value={block.body}
+												onChange={(event) =>
+													onChangeBlock(block.id, event.target.value)
+												}
+												placeholder="Write the paragraph that should appear in the agreement…"
+											/>
+											<button
+												type="button"
+												className="mb-1 cursor-pointer rounded p-1 text-slate-400 transition-colors duration-200 hover:text-red focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
+												aria-label="Remove paragraph"
+												onClick={() => onRemoveBlock(block.id)}
+											>
+												<Trash2 className="h-4 w-4" />
+											</button>
+										</div>
+									))}
+								</div>
+							)}
+
+							<div className="flex justify-end">
+								<Button
+									type="button"
+									className="primary-btn cursor-pointer px-3 sm:px-4"
+									onClick={onAddBlock}
+								>
+									<Plus className="h-4 w-4" />
+									Add paragraph
+								</Button>
 							</div>
-						)}
-
-						<div className="flex justify-end">
-							<Button
-								type="button"
-								className="primary-btn cursor-pointer px-3 sm:px-4"
-								onClick={onAddBlock}
-							>
-								<Plus className="h-4 w-4" />
-								Add paragraph
-							</Button>
 						</div>
-					</div>
-				)}
+					)}
 
-				<div className="flex items-start gap-2 border-t border-slate-200 pt-4">
-					<Info
-						className="mt-0.5 h-4 w-4 shrink-0 text-slate-500"
-						aria-hidden
-					/>
-					<p className="text-sm text-slate-600">{SIGNATURES_NOTE}</p>
-				</div>
+					<div className="flex items-start gap-2 border-t border-slate-200 pt-4">
+						<Info
+							className="mt-0.5 h-4 w-4 shrink-0 text-slate-500"
+							aria-hidden
+						/>
+						<p className="text-sm text-slate-600">{SIGNATURES_NOTE}</p>
+					</div>
 				</div>
 			</aside>
 
@@ -524,7 +532,9 @@ export function DocumentFillSplitView({
 						</p>
 					</div>
 					{previewError && (
-						<p className="bg-white px-4 py-2 text-sm text-red">{previewError}</p>
+						<p className="bg-white px-4 py-2 text-sm text-red">
+							{previewError}
+						</p>
 					)}
 					<div
 						ref={docRef}
@@ -573,10 +583,7 @@ function FillControl({
 		else onPatchToken(field.token, next);
 	};
 	const span = field.dataType === "longtext" ? "md:col-span-2" : "";
-	const labelClass = cn(
-		"text-slate-700",
-		active && "text-[#0f5384]",
-	);
+	const labelClass = cn("text-slate-700", active && "text-[#0f5384]");
 
 	const focusProps = {
 		onFocus: (_event: FocusEvent) => onFocus(),
@@ -626,7 +633,10 @@ function FillControl({
 		return (
 			<div className={span}>
 				<Label className={labelClass}>{field.label}</Label>
-				<Select value={value || "__none"} onValueChange={(next) => setValue(next === "__none" ? "" : next)}>
+				<Select
+					value={value || "__none"}
+					onValueChange={(next) => setValue(next === "__none" ? "" : next)}
+				>
 					<SelectTrigger className={cn("mt-1", FIELD)} onFocus={onFocus}>
 						<SelectValue placeholder="Select contract type" />
 					</SelectTrigger>

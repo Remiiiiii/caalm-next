@@ -9,7 +9,11 @@ import { ITGlassPanel, ITPageShell } from "@/components/it/ITPageShell";
 import { RoadmapBranchRow } from "@/components/it/roadmap/RoadmapBranchRow";
 import { RoadmapProgressBar } from "@/components/it/roadmap/RoadmapProgressBar";
 import { PageIndex } from "@/components/ui/page-index";
-import type { PrLogOverview, PrLogPullRequestDetail, PrLogSection } from "@/lib/it/pr-log/types";
+import type {
+	PrLogOverview,
+	PrLogPullRequestDetail,
+	PrLogSection,
+} from "@/lib/it/pr-log/types";
 import { fetcher } from "@/lib/swr-config";
 import { cn } from "@/lib/utils";
 
@@ -247,9 +251,7 @@ export function PrLogPage() {
 			) : (
 				<PrLogUnavailableState
 					detail={
-						overviewError instanceof Error
-							? overviewError.message
-							: undefined
+						overviewError instanceof Error ? overviewError.message : undefined
 					}
 				/>
 			)}

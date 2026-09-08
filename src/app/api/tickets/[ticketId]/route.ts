@@ -1,11 +1,14 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
-import { getUserDefaultOrganization, getUserPermissions } from "@/lib/rbac/permissions";
 import { requirePermission } from "@/lib/rbac/middleware";
+import {
+	getUserDefaultOrganization,
+	getUserPermissions,
+} from "@/lib/rbac/permissions";
+import { getTicketById } from "@/lib/tickets/ticket.repository";
 import { canViewTicket } from "@/lib/tickets/ticket-access.policy";
 import { listTicketEvents } from "@/lib/tickets/ticket-events.repository";
-import { getTicketById } from "@/lib/tickets/ticket.repository";
 
 export async function GET(
 	request: NextRequest,
@@ -18,7 +21,10 @@ export async function GET(
 
 	const user = await getCurrentUser();
 	if (!user) {
-		return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+		return NextResponse.json(
+			{ error: "Authentication required" },
+			{ status: 401 },
+		);
 	}
 
 	const org = await getUserDefaultOrganization(user.$id);

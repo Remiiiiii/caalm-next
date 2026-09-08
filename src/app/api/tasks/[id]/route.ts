@@ -102,9 +102,15 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 					? undefined
 					: validated.linkedEntityType,
 			linkedEntityId:
-				validated.linkedEntityId === null ? undefined : validated.linkedEntityId,
+				validated.linkedEntityId === null
+					? undefined
+					: validated.linkedEntityId,
 		};
-		const task = await TaskService.updateTask(defaultOrg.orgId, id, updateInput);
+		const task = await TaskService.updateTask(
+			defaultOrg.orgId,
+			id,
+			updateInput,
+		);
 		if (!task) {
 			return NextResponse.json({ error: "Task not found" }, { status: 404 });
 		}

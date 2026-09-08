@@ -34,7 +34,10 @@ export async function GET(_request: NextRequest) {
 			// Sidebar bar is best-effort — don't 500 the whole app chrome
 			const message =
 				usageError instanceof Error ? usageError.message : "Unknown error";
-			console.error("[SERVER] /api/storage/usage: getTotalSpaceUsed failed:", message);
+			console.error(
+				"[SERVER] /api/storage/usage: getTotalSpaceUsed failed:",
+				message,
+			);
 			return NextResponse.json({
 				image: { size: 0, latestDate: "" },
 				document: { size: 0, latestDate: "" },

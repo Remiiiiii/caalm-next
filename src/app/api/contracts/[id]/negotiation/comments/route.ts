@@ -2,7 +2,10 @@ import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
 import { assertRedlineAnchorAllowed } from "@/lib/contracts/negotiation/comments.logic";
-import { createComment, listComments } from "@/lib/contracts/negotiation/comments.service";
+import {
+	createComment,
+	listComments,
+} from "@/lib/contracts/negotiation/comments.service";
 import { loadContractForOrg } from "@/lib/contracts/negotiation/contract-scope";
 import { getVersion } from "@/lib/contracts/negotiation/versions.service";
 import { getOrgIdFromRequest, requirePermission } from "@/lib/rbac/middleware";
@@ -16,7 +19,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
 	if (denied) return denied;
 	const orgId = getOrgIdFromRequest(request);
 	if (!orgId) {
-		return NextResponse.json({ error: "Organization is required" }, { status: 400 });
+		return NextResponse.json(
+			{ error: "Organization is required" },
+			{ status: 400 },
+		);
 	}
 	const { id } = await context.params;
 	try {
@@ -24,7 +30,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
 		const comments = await listComments(id);
 		return NextResponse.json({ comments });
 	} catch (error) {
-		const message = error instanceof Error ? error.message : "Failed to list comments";
+		const message =
+			error instanceof Error ? error.message : "Failed to list comments";
 		return NextResponse.json({ error: message }, { status: 400 });
 	}
 }
@@ -37,10 +44,16 @@ export async function POST(request: NextRequest, context: RouteContext) {
 	const user = await getCurrentUser();
 	const orgId = getOrgIdFromRequest(request);
 	if (!user || !orgId) {
-		return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+		return NextResponse.json(
+			{ error: "Authentication required" },
+			{ status: 401 },
+		);
 	}
 	const { id } = await context.params;
-	const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+	const body = (await request.json().catch(() => ({}))) as Record<
+		string,
+		unknown
+	>;
 	try {
 		await loadContractForOrg(id, orgId);
 		const versionId = String(body.versionId || "");
@@ -75,7 +88,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
 		});
 		return NextResponse.json({ comment });
 	} catch (error) {
-		const message = error instanceof Error ? error.message : "Failed to create comment";
+		const message =
+			error instanceof Error ? error.message : "Failed to create comment";
 		return NextResponse.json({ error: message }, { status: 400 });
 	}
 }

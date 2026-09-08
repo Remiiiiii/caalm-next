@@ -85,12 +85,12 @@
 }
 
 .docx-preview p {
-  margin: 0 0 0.75rem;
+	margin: 0 0 0.75rem;
 }
 
 .docx-preview .docx-letterhead-org p {
-  margin: 0;
-  line-height: 1.05;
+	margin: 0;
+	line-height: 1.05;
 }
 
 .docx-preview ul {

@@ -135,8 +135,7 @@ export function DeleteConfirmBody({
 										<span
 											className={cn(
 												"inline-block shrink-0 px-2 py-0.5 text-xs rounded-full font-medium border",
-												item.statusClassName ||
-													statusBadgeClasses(item.status),
+												item.statusClassName || statusBadgeClasses(item.status),
 											)}
 										>
 											{statusLabel}

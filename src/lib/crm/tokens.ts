@@ -22,7 +22,9 @@ export async function getFreshHubSpotAccessToken(
 ): Promise<string> {
 	const tokens = parseCrmTokens(integration.tokens_json);
 	if (!tokens?.access_token) {
-		throw new Error("HubSpot is not connected. Reconnect in Settings → Integrations.");
+		throw new Error(
+			"HubSpot is not connected. Reconnect in Settings → Integrations.",
+		);
 	}
 
 	if (!isTokenExpired(integration.token_expiry) || !tokens.refresh_token) {

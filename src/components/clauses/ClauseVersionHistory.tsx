@@ -1,10 +1,6 @@
 import { History } from "lucide-react";
 import { useEffect, useState } from "react";
-import {
-	Dialog,
-	DialogContent,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import type { Clause } from "@/types/clauses";
 import {
 	CAALM_BADGE_BASE,

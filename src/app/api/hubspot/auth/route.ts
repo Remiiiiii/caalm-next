@@ -56,7 +56,8 @@ export async function GET(request: NextRequest) {
 
 		return NextResponse.redirect(hubspotConnector.getAuthUrl(state));
 	} catch (error) {
-		const message = error instanceof Error ? error.message : "HubSpot auth failed";
+		const message =
+			error instanceof Error ? error.message : "HubSpot auth failed";
 		const status = message.includes("available on the") ? 403 : 500;
 		return NextResponse.json({ error: message }, { status });
 	}

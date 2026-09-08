@@ -56,8 +56,7 @@ function mapRow(row: Record<string, unknown>): Clause {
 /** Always includes orgId so list queries cannot leak across tenants. */
 export function buildListQueries(filters: ListClausesFilters): string[] {
 	const queries = [Query.equal("orgId", filters.orgId)];
-	const currentOnly =
-		filters.currentOnly ?? (filters.familyId ? false : true);
+	const currentOnly = filters.currentOnly ?? !filters.familyId;
 
 	if (filters.familyId) {
 		queries.push(Query.equal("familyId", filters.familyId));

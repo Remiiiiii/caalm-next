@@ -1,16 +1,16 @@
-import type {
-	BriefingNewsItem,
-	BriefingResponse,
-	MarketQuote,
-} from "@/types/briefing";
+import { excerptWords } from "@/lib/briefing/excerpt";
 import {
 	isGoogleNewsArticleUrl,
 	isPlayableNewsVideo,
 	isUsableNewsImage,
 	resolveGoogleNewsPublisherUrl,
 } from "@/lib/briefing/google-news-url";
-import { excerptWords } from "@/lib/briefing/excerpt";
 import { bbcImageAtWidth } from "@/lib/briefing/image-url";
+import type {
+	BriefingNewsItem,
+	BriefingResponse,
+	MarketQuote,
+} from "@/types/briefing";
 
 const YAHOO_UA =
 	"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
@@ -74,9 +74,7 @@ function firstTag(xml: string, tag: string): string {
 }
 
 function attr(xml: string, tag: string, name: string): string {
-	const match = xml.match(
-		new RegExp(`<${tag}[^>]*\\s${name}="([^"]+)"`, "i"),
-	);
+	const match = xml.match(new RegExp(`<${tag}[^>]*\\s${name}="([^"]+)"`, "i"));
 	return match ? decodeXml(match[1]) : "";
 }
 
@@ -228,9 +226,7 @@ function metaContent(html: string, key: string): string | null {
 }
 
 function jsonLdMp4Url(html: string): string | null {
-	const match = html.match(
-		/"contentUrl"\s*:\s*"(https?:[^"]+\.mp4[^"]*)"/i,
-	);
+	const match = html.match(/"contentUrl"\s*:\s*"(https?:[^"]+\.mp4[^"]*)"/i);
 	return match?.[1] ? decodeXml(match[1].replace(/\\u0026/g, "&")) : null;
 }
 
@@ -306,8 +302,7 @@ async function articlePageMeta(articleUrl: string): Promise<{
 			image,
 			video: extractNewsVideoUrl(html),
 			excerpt: excerptWords(description ?? "") || null,
-			canonical:
-				cleanArticleUrl(canonicalRaw) || cleanArticleUrl(targetUrl),
+			canonical: cleanArticleUrl(canonicalRaw) || cleanArticleUrl(targetUrl),
 		};
 	} catch {
 		return { image: null, video: null, excerpt: null, canonical: null };
@@ -367,8 +362,7 @@ function parseRssItems(
 		const enclosureIsVideo =
 			/video\//i.test(enclosureType) || isPlayableNewsVideo(enclosureUrl);
 		const rssImage = upgradeNewsImageUrl(
-			largestMediaThumbnail(block) ||
-				(enclosureIsVideo ? null : enclosureUrl),
+			largestMediaThumbnail(block) || (enclosureIsVideo ? null : enclosureUrl),
 		);
 		const imageUrl = isUsableNewsImage(rssImage) ? rssImage : null;
 		const rssVideo = enclosureIsVideo ? enclosureUrl : null;
@@ -451,9 +445,7 @@ async function fetchNews(): Promise<BriefingNewsItem[]> {
 			const page = await articlePageMeta(item.articleUrl);
 			return {
 				...item,
-				imageUrl: isUsableNewsImage(page.image)
-					? page.image
-					: item.imageUrl,
+				imageUrl: isUsableNewsImage(page.image) ? page.image : item.imageUrl,
 				videoUrl: page.video || item.videoUrl,
 				excerpt: page.excerpt || item.excerpt,
 				articleUrl: page.canonical || item.articleUrl,

@@ -1,21 +1,21 @@
+import { type NextRequest, NextResponse } from "next/server";
 import { ID } from "node-appwrite";
 import { InputFile } from "node-appwrite/file";
-import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
+import { getCurrentUser } from "@/lib/actions/user.actions";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { requireStepUp } from "@/lib/auth/step-up";
 import {
 	getOrgLogoUrl,
 	isAllowedOrgLogoMime,
 	ORG_LOGO_MAX_BYTES,
 	resolveOrgLogoFileId,
 } from "@/lib/organizations/org-logo";
-import { requireStepUp } from "@/lib/auth/step-up";
 import { requirePermission } from "@/lib/rbac/middleware";
 import { getOrganization, updateOrganization } from "@/lib/rbac/organizations";
 import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 import { logAuditEvent } from "@/lib/services/audit-logger";
-import { getCurrentUser } from "@/lib/actions/user.actions";
 
 async function resolveTargetOrgId(
 	request: NextRequest,
@@ -39,7 +39,10 @@ export async function POST(request: NextRequest) {
 	if (denied) return denied;
 
 	try {
-		if (!appwriteConfig.organizationLogosBucketId || !appwriteConfig.databaseId) {
+		if (
+			!appwriteConfig.organizationLogosBucketId ||
+			!appwriteConfig.databaseId
+		) {
 			return NextResponse.json(
 				{ error: "Organization logo storage is not configured" },
 				{ status: 500 },
@@ -176,7 +179,10 @@ export async function DELETE(request: NextRequest) {
 	if (denied) return denied;
 
 	try {
-		if (!appwriteConfig.organizationLogosBucketId || !appwriteConfig.databaseId) {
+		if (
+			!appwriteConfig.organizationLogosBucketId ||
+			!appwriteConfig.databaseId
+		) {
 			return NextResponse.json(
 				{ error: "Organization logo storage is not configured" },
 				{ status: 500 },

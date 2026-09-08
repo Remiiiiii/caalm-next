@@ -1,13 +1,6 @@
 "use client";
 
-import {
-	Download,
-	Eye,
-	Lock,
-	Mail,
-	Printer,
-	ShieldCheck,
-} from "lucide-react";
+import { Download, Eye, Lock, Mail, Printer, ShieldCheck } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { NegotiationCommentThread } from "@/components/contracts/negotiation/NegotiationCommentThread";
@@ -179,8 +172,10 @@ export default function CounterpartyNegotiatePage() {
 	const downloadDraft = useCallback(() => {
 		if (!text.trim()) return;
 		const safeName =
-			title.replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/-+/g, "-").slice(0, 60) ||
-			"contract-draft";
+			title
+				.replace(/[^a-zA-Z0-9._-]+/g, "-")
+				.replace(/-+/g, "-")
+				.slice(0, 60) || "contract-draft";
 		const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
 		const href = URL.createObjectURL(blob);
 		const anchor = document.createElement("a");
@@ -491,7 +486,10 @@ export default function CounterpartyNegotiatePage() {
 				</div>
 
 				<div className="mb-3 flex shrink-0 items-center gap-2 rounded-md border border-blue/20 bg-blue/10 px-3 py-2 text-sm text-slate-700">
-					<span className="h-1.5 w-1.5 shrink-0 rounded-full bg-blue" aria-hidden />
+					<span
+						className="h-1.5 w-1.5 shrink-0 rounded-full bg-blue"
+						aria-hidden
+					/>
 					<p>
 						<span className="font-semibold text-[#0f5384]">
 							{statusCopy.label}
@@ -553,21 +551,18 @@ export default function CounterpartyNegotiatePage() {
 								setBusy(true);
 								setSaveError(null);
 								try {
-									const res = await fetch(
-										`/api/negotiate/${token}/comments`,
-										{
-											method: "POST",
-											credentials: "include",
-											headers: { "Content-Type": "application/json" },
-											body: JSON.stringify({
-												body,
-												redlineProposal,
-												anchorStart,
-												anchorEnd,
-												anchorType: "paragraph",
-											}),
-										},
-									);
+									const res = await fetch(`/api/negotiate/${token}/comments`, {
+										method: "POST",
+										credentials: "include",
+										headers: { "Content-Type": "application/json" },
+										body: JSON.stringify({
+											body,
+											redlineProposal,
+											anchorStart,
+											anchorEnd,
+											anchorType: "paragraph",
+										}),
+									});
 									if (!res.ok) {
 										const payload = await res.json().catch(() => ({}));
 										throw new Error(payload.error || "Could not comment");

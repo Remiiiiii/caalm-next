@@ -1,9 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
-import { createCostCenter, listCostCenters } from "@/lib/org/org-units.service";
 import { getCurrentUser } from "@/lib/actions/user.actions";
-import { hasPermission } from "@/lib/rbac/permissions";
+import { createCostCenter, listCostCenters } from "@/lib/org/org-units.service";
 import { requirePermission } from "@/lib/rbac/middleware";
+import { hasPermission } from "@/lib/rbac/permissions";
 
 export async function GET(request: NextRequest) {
 	const user = await getCurrentUser();
@@ -73,6 +73,9 @@ export async function POST(request: NextRequest) {
 	} catch (error) {
 		const message =
 			error instanceof Error ? error.message : "Internal server error";
-		return NextResponse.json({ success: false, error: message }, { status: 400 });
+		return NextResponse.json(
+			{ success: false, error: message },
+			{ status: 400 },
+		);
 	}
 }

@@ -4,9 +4,9 @@
  */
 
 import {
-	ROADMAP_CATALOG,
 	getCatalogLinkedPrNumbers,
 	getSectionNumberForPr,
+	ROADMAP_CATALOG,
 } from "./catalog";
 
 export type GitHubPullRequestSummary = {

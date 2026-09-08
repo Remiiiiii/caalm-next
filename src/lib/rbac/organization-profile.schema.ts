@@ -5,14 +5,13 @@ import { isValidIanaTimezone } from "@/lib/timezone";
 const EMAIL_DOMAIN_RE =
 	/^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}$/;
 
-const US_PHONE_RE =
-	/^(?:\+?1[\s.-]?)?(?:\(?\d{3}\)?[\s.-]?)\d{3}[\s.-]?\d{4}$/;
+const US_PHONE_RE = /^(?:\+?1[\s.-]?)?(?:\(?\d{3}\)?[\s.-]?)\d{3}[\s.-]?\d{4}$/;
 
 const US_ZIP_RE = /^\d{5}(?:-\d{4})?$/;
 
 const CITY_RE = /^[A-Za-z][A-Za-z .'-]{0,127}$/;
 
-const STREET_RE = /^[A-Za-z0-9][A-Za-z0-9 .,'#/\-]{0,254}$/;
+const STREET_RE = /^[A-Za-z0-9][A-Za-z0-9 .,'#/-]{0,254}$/;
 
 function blankToNull(value: string | null | undefined): string | null {
 	if (value == null) return null;
@@ -22,12 +21,15 @@ function blankToNull(value: string | null | undefined): string | null {
 
 /** Empty string becomes null. Omitted (`undefined`) stays omitted so partial PUTs do not wipe fields. */
 function optionalText(schema: z.ZodType<string>) {
-	return z.preprocess((value) => {
-		if (value === undefined) return undefined;
-		if (value === null) return null;
-		if (typeof value !== "string") return value;
-		return blankToNull(value);
-	}, z.union([z.undefined(), z.null(), schema]));
+	return z.preprocess(
+		(value) => {
+			if (value === undefined) return undefined;
+			if (value === null) return null;
+			if (typeof value !== "string") return value;
+			return blankToNull(value);
+		},
+		z.union([z.undefined(), z.null(), schema]),
+	);
 }
 
 export const orgNameField = z
@@ -74,11 +76,7 @@ export const orgStreetField = optionalText(
 );
 
 export const orgCityField = optionalText(
-	z
-		.string()
-		.trim()
-		.max(128)
-		.regex(CITY_RE, "Enter a city name like Miami"),
+	z.string().trim().max(128).regex(CITY_RE, "Enter a city name like Miami"),
 );
 
 export const orgStateField = optionalText(
@@ -154,7 +152,10 @@ export function firstOrgProfileErrors(
 	const next: Partial<Record<keyof OrganizationProfileForm, string>> = {};
 	for (const issue of error.issues) {
 		const key = issue.path[0];
-		if (typeof key === "string" && next[key as keyof OrganizationProfileForm] == null) {
+		if (
+			typeof key === "string" &&
+			next[key as keyof OrganizationProfileForm] == null
+		) {
 			next[key as keyof OrganizationProfileForm] = issue.message;
 		}
 	}

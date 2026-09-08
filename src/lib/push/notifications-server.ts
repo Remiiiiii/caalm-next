@@ -68,9 +68,7 @@ function ensureVapidConfigured(): boolean {
 }
 
 function pushSubscriptionsTableId(): string {
-	return (
-		appwriteConfig.pushSubscriptionsCollectionId || "69b8a208008a1f5d9b08"
-	);
+	return appwriteConfig.pushSubscriptionsCollectionId || "69b8a208008a1f5d9b08";
 }
 
 /** Truncate entity names for toast body (~one line on Windows). */

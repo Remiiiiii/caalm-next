@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import { requirePermission } from "@/lib/rbac/middleware";
-import { rejectForcedComplete, RoadmapError } from "@/lib/roadmap/service";
+import { RoadmapError, rejectForcedComplete } from "@/lib/roadmap/service";
 
 /**
  * Explicitly forbidden endpoint — checkboxes cannot force-complete.
@@ -12,10 +12,7 @@ export async function POST(
 	_context: { params: Promise<{ taskId: string }> },
 ) {
 	const denied = await requirePermission(request, {
-		permission: [
-			PERMISSIONS.IT.VIEW_ROADMAP,
-			PERMISSIONS.IT.MANAGE_ROADMAP,
-		],
+		permission: [PERMISSIONS.IT.VIEW_ROADMAP, PERMISSIONS.IT.MANAGE_ROADMAP],
 	});
 	if (denied) return denied;
 
@@ -24,7 +21,10 @@ export async function POST(
 		return NextResponse.json({ error: "unreachable" }, { status: 500 });
 	} catch (error) {
 		if (error instanceof RoadmapError) {
-			return NextResponse.json({ error: error.message }, { status: error.status });
+			return NextResponse.json(
+				{ error: error.message },
+				{ status: error.status },
+			);
 		}
 		return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 	}

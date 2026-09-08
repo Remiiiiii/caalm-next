@@ -14,7 +14,10 @@ export function isOrgLetterheadToken(token: string): boolean {
 	return (ORG_LETTERHEAD_TOKENS as readonly string[]).includes(token);
 }
 
-function settingText(settings: Organization["settings"] | undefined, key: string): string {
+function settingText(
+	settings: Organization["settings"] | undefined,
+	key: string,
+): string {
 	const value = settings?.[key];
 	return typeof value === "string" ? value.trim() : "";
 }

@@ -2,7 +2,10 @@ import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
 import { acceptNegotiationRedline } from "@/lib/contracts/negotiation/accept-redline.service";
-import { getComment, updateComment } from "@/lib/contracts/negotiation/comments.service";
+import {
+	getComment,
+	updateComment,
+} from "@/lib/contracts/negotiation/comments.service";
 import { loadContractForOrg } from "@/lib/contracts/negotiation/contract-scope";
 import { getOrgIdFromRequest, requirePermission } from "@/lib/rbac/middleware";
 
@@ -16,7 +19,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
 	const user = await getCurrentUser();
 	const orgId = getOrgIdFromRequest(request);
 	if (!user || !orgId) {
-		return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+		return NextResponse.json(
+			{ error: "Authentication required" },
+			{ status: 401 },
+		);
 	}
 	const { id, commentId } = await context.params;
 	try {

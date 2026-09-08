@@ -43,7 +43,9 @@ export function currencyName(code: string): string {
 	return CURRENCY_NAMES[normalized] || normalized;
 }
 
-export function currencySelectOptions(current?: string | null): CurrencyOption[] {
+export function currencySelectOptions(
+	current?: string | null,
+): CurrencyOption[] {
 	const codes = [...TOP_CURRENCY_CODES] as string[];
 	const extra = current ? normalizeCurrencyCode(current) : "";
 	if (extra && !codes.includes(extra)) {

@@ -1,13 +1,13 @@
 "use client";
 
 import { AlertTriangle, BookCheck, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type {
 	ClauseDeviation,
 	DeviationReport,
 	DeviationSeverity,
 	DeviationVerdict,
 } from "@/types/playbook-deviations";
-import { cn } from "@/lib/utils";
 
 function severityDotClass(severity: DeviationSeverity): string {
 	if (severity === "high") return "bg-red";
@@ -41,10 +41,7 @@ function severityLabel(severity: DeviationSeverity): string {
 
 function rowTitle(row: ClauseDeviation): string {
 	return (
-		row.extractedTitle ||
-		row.standardTitle ||
-		row.extractedCategory ||
-		"Clause"
+		row.extractedTitle || row.standardTitle || row.extractedCategory || "Clause"
 	);
 }
 
@@ -105,13 +102,9 @@ export function PlaybookDeviationsPanel({
 							{report.summary.passCount === 1 ? "" : "es"}
 						</span>
 						<span aria-hidden>·</span>
-						<span>
-							{report.summary.deviateCount} off-standard
-						</span>
+						<span>{report.summary.deviateCount} off-standard</span>
 						<span aria-hidden>·</span>
-						<span>
-							{report.summary.noStandardCount} without a standard
-						</span>
+						<span>{report.summary.noStandardCount} without a standard</span>
 					</div>
 					<ul className="space-y-3">
 						{report.deviations.map((row) => (

@@ -10,8 +10,8 @@ import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { appendSessionChangedNotice } from "@/lib/auth/session-sync";
 import {
-	isITDepartment,
 	type DepartmentProfileFields,
+	isITDepartment,
 } from "@/lib/rbac/it-department";
 import {
 	getUserDefaultOrganization,

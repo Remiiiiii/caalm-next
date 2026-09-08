@@ -49,9 +49,24 @@ function task(
 describe("computeUnlocked", () => {
 	it("keeps section 2 locked while section 1 is incomplete", () => {
 		const sections = [
-			section({ $id: "s0", sectionNumber: 0, title: "Engine", status: "complete" }),
-			section({ $id: "s1", sectionNumber: 1, title: "Trust", status: "available" }),
-			section({ $id: "s2", sectionNumber: 2, title: "Audit", status: "locked" }),
+			section({
+				$id: "s0",
+				sectionNumber: 0,
+				title: "Engine",
+				status: "complete",
+			}),
+			section({
+				$id: "s1",
+				sectionNumber: 1,
+				title: "Trust",
+				status: "available",
+			}),
+			section({
+				$id: "s2",
+				sectionNumber: 2,
+				title: "Audit",
+				status: "locked",
+			}),
 		];
 		const tasks = [
 			task({
@@ -201,9 +216,7 @@ describe("computeUnlocked", () => {
 		expect(snapshot.sections.find((s) => s.$id === "s2")?.status).toBe(
 			"available",
 		);
-		expect(snapshot.tasks.find((t) => t.$id === "t2.1")?.status).toBe(
-			"locked",
-		);
+		expect(snapshot.tasks.find((t) => t.$id === "t2.1")?.status).toBe("locked");
 	});
 
 	it("does not lock a later section whose tasks are already all complete", () => {
@@ -289,9 +302,7 @@ describe("computeProgressPercent", () => {
 
 describe("buildTaskTree", () => {
 	it("nests children under parents", () => {
-		const sections = [
-			section({ $id: "s1", sectionNumber: 1, title: "Trust" }),
-		];
+		const sections = [section({ $id: "s1", sectionNumber: 1, title: "Trust" })];
 		const tasks = [
 			task({
 				$id: "p",

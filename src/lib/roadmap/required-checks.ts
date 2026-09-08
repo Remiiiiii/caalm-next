@@ -38,9 +38,7 @@ export type RoadmapCompletionGate = {
 };
 
 function jobSucceeded(jobs: WorkflowJobSummary[], name: string): boolean {
-	return jobs.some(
-		(job) => job.name === name && job.conclusion === "success",
-	);
+	return jobs.some((job) => job.name === name && job.conclusion === "success");
 }
 
 /**

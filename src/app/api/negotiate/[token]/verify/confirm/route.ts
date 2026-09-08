@@ -15,7 +15,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
 	const { token } = await context.params;
 	const access = await resolveAccessByToken(token);
 	if (!access) {
-		return NextResponse.json({ error: "Link expired or invalid" }, { status: 401 });
+		return NextResponse.json(
+			{ error: "Link expired or invalid" },
+			{ status: 401 },
+		);
 	}
 
 	const body = (await request.json().catch(() => ({}))) as {

@@ -214,8 +214,7 @@ export function InjectLibraryDialog({
 									<div className="min-w-0 flex-1">
 										<p className="font-medium text-slate-700">{clause.title}</p>
 										<p className="mt-1 text-xs font-medium tracking-wide text-slate-500 uppercase">
-											{clauseCategoryLabel(clause.category)} · v
-											{clause.version}
+											{clauseCategoryLabel(clause.category)} · v{clause.version}
 										</p>
 									</div>
 									<Button

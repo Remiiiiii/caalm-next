@@ -11,7 +11,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
 	const { token } = await context.params;
 	const access = await resolveAccessByToken(token);
 	if (!access) {
-		return NextResponse.json({ error: "Link expired or invalid" }, { status: 401 });
+		return NextResponse.json(
+			{ error: "Link expired or invalid" },
+			{ status: 401 },
+		);
 	}
 
 	const session = resolveNegotiateSession(request, access);
@@ -22,11 +25,17 @@ export async function POST(request: NextRequest, context: RouteContext) {
 		);
 	}
 
-	const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+	const body = (await request.json().catch(() => ({}))) as Record<
+		string,
+		unknown
+	>;
 	const versions = await listVersions(access.contractId);
 	const latest = versions[0];
 	if (!latest) {
-		return NextResponse.json({ error: "No draft text to comment on" }, { status: 400 });
+		return NextResponse.json(
+			{ error: "No draft text to comment on" },
+			{ status: 400 },
+		);
 	}
 	try {
 		const redlineProposal = String(body.redlineProposal || "");
@@ -53,7 +62,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
 		});
 		return NextResponse.json({ comment });
 	} catch (error) {
-		const message = error instanceof Error ? error.message : "Failed to add comment";
+		const message =
+			error instanceof Error ? error.message : "Failed to add comment";
 		return NextResponse.json({ error: message }, { status: 400 });
 	}
 }

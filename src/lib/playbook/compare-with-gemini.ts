@@ -1,13 +1,13 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import {
+	parseDeviationCompareResult,
+	parseExtractedClauses,
+} from "@/lib/playbook/deviation-scoring";
 import { CLAUSE_CATEGORIES } from "@/types/clauses";
 import type {
 	DeviationCompareResult,
 	ExtractedClauseInput,
 } from "@/types/playbook-deviations";
-import {
-	parseDeviationCompareResult,
-	parseExtractedClauses,
-} from "@/lib/playbook/deviation-scoring";
 
 const apiKey = process.env.GOOGLE_API_KEY || "";
 const genAI = new GoogleGenerativeAI(apiKey);

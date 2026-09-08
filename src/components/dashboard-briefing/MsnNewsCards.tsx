@@ -3,8 +3,11 @@
 import { Newspaper } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { newsHeaderLinks, showGoogleNewsCardLink } from "@/lib/briefing/news-header-links";
-import { GOOGLE_NEWS_URL, type BriefingNewsItem } from "@/types/briefing";
+import {
+	newsHeaderLinks,
+	showGoogleNewsCardLink,
+} from "@/lib/briefing/news-header-links";
+import { type BriefingNewsItem, GOOGLE_NEWS_URL } from "@/types/briefing";
 
 type MsnNewsCardsProps = {
 	news: BriefingNewsItem[];

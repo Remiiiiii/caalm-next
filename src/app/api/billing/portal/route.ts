@@ -56,10 +56,7 @@ export async function POST(request: NextRequest) {
 		);
 	}
 
-	const hasOrgAccess = await validateUserOrgAccess(
-		user.$id,
-		parsed.data.orgId,
-	);
+	const hasOrgAccess = await validateUserOrgAccess(user.$id, parsed.data.orgId);
 	if (!hasOrgAccess) {
 		return NextResponse.json(
 			{ error: "Access denied to this organization" },
@@ -87,7 +84,9 @@ export async function POST(request: NextRequest) {
 		return NextResponse.json({ url });
 	} catch (error: unknown) {
 		const message =
-			error instanceof Error ? error.message : "Failed to create portal session";
+			error instanceof Error
+				? error.message
+				: "Failed to create portal session";
 		console.error("[billing/portal]", error);
 		return NextResponse.json({ error: message }, { status: 500 });
 	}

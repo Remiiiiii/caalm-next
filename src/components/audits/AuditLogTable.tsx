@@ -2,8 +2,6 @@
 
 import { AlertTriangle, CheckCircle, Clock, XCircle } from "lucide-react";
 import { useState } from "react";
-import { useOrgTimezone } from "@/hooks/useOrgTimezone";
-import { formatInTimezone } from "@/lib/timezone";
 import { AuditLogDetailDrawer } from "@/components/audits/AuditLogDetailDrawer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,10 +15,12 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { useOrgTimezone } from "@/hooks/useOrgTimezone";
 import type {
 	AuditChangeDiff,
 	AuditModule,
 } from "@/lib/audits/audit-log.utils";
+import { formatInTimezone } from "@/lib/timezone";
 
 export interface AuditLog {
 	event_id: string;
@@ -153,116 +153,116 @@ export function AuditLogTable({
 	const tableBody = (
 		<>
 			<div className="overflow-x-auto">
-						<Table>
-							<TableHeader>
-								<TableRow className="border-slate-200 bg-slate-50">
-									<TableHead>Date</TableHead>
-									<TableHead>Source</TableHead>
-									<TableHead>Action</TableHead>
-									<TableHead>Module</TableHead>
-									<TableHead>Target</TableHead>
-									<TableHead>Details</TableHead>
-									<TableHead>Status</TableHead>
-									<TableHead className="w-[80px]" />
-								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{isLoading ? (
-									Array.from({ length: 5 }).map((_, index) => (
-										<TableRow key={`skeleton-${index}`}>
-											{Array.from({ length: 8 }).map((__, cell) => (
-												<TableCell key={`cell-${cell}`}>
-													<div className="h-4 w-full max-w-[120px] bg-slate-200 rounded animate-pulse" />
-												</TableCell>
-											))}
-										</TableRow>
-									))
-								) : logs.length === 0 ? (
-									<TableRow>
-										<TableCell
-											colSpan={8}
-											className="text-center py-12 text-slate-500"
-										>
-											No audit logs match your filters.
+				<Table>
+					<TableHeader>
+						<TableRow className="border-slate-200 bg-slate-50">
+							<TableHead>Date</TableHead>
+							<TableHead>Source</TableHead>
+							<TableHead>Action</TableHead>
+							<TableHead>Module</TableHead>
+							<TableHead>Target</TableHead>
+							<TableHead>Details</TableHead>
+							<TableHead>Status</TableHead>
+							<TableHead className="w-[80px]" />
+						</TableRow>
+					</TableHeader>
+					<TableBody>
+						{isLoading ? (
+							Array.from({ length: 5 }).map((_, index) => (
+								<TableRow key={`skeleton-${index}`}>
+									{Array.from({ length: 8 }).map((__, cell) => (
+										<TableCell key={`cell-${cell}`}>
+											<div className="h-4 w-full max-w-[120px] bg-slate-200 rounded animate-pulse" />
 										</TableCell>
-									</TableRow>
-								) : (
-									logs.map((log) => (
-										<TableRow
-											key={`${log.event_id}-${log.created_at}`}
-											className="hover:bg-slate-50 transition-colors duration-200 cursor-pointer"
-											onClick={() => openDetails(log)}
+									))}
+								</TableRow>
+							))
+						) : logs.length === 0 ? (
+							<TableRow>
+								<TableCell
+									colSpan={8}
+									className="text-center py-12 text-slate-500"
+								>
+									No audit logs match your filters.
+								</TableCell>
+							</TableRow>
+						) : (
+							logs.map((log) => (
+								<TableRow
+									key={`${log.event_id}-${log.created_at}`}
+									className="hover:bg-slate-50 transition-colors duration-200 cursor-pointer"
+									onClick={() => openDetails(log)}
+								>
+									<TableCell className="text-sm text-slate-700 whitespace-nowrap">
+										{log.created_at
+											? formatInTimezone(
+													new Date(log.created_at),
+													"MMM d, yyyy HH:mm",
+													timeZone,
+												)
+											: "—"}
+									</TableCell>
+									<TableCell>
+										<div className="text-sm font-medium text-slate-700">
+											{log.user_name}
+										</div>
+										<div className="text-xs text-slate-500">
+											{log.user_email}
+										</div>
+									</TableCell>
+									<TableCell>{getActionBadge(log.action)}</TableCell>
+									<TableCell>
+										<ModuleBadge module={log.module} />
+									</TableCell>
+									<TableCell className="max-w-[160px]">
+										<div className="text-sm text-slate-700 truncate">
+											{log.target_label || log.event_title}
+										</div>
+										{log.target_type ? (
+											<div className="text-xs text-slate-500 capitalize">
+												{log.target_type}
+											</div>
+										) : null}
+									</TableCell>
+									<TableCell className="max-w-[240px]">
+										<p className="text-sm text-slate-700 truncate">
+											{log.summary || log.event_title}
+										</p>
+									</TableCell>
+									<TableCell>{getStatusBadge(log.status)}</TableCell>
+									<TableCell>
+										<Button
+											variant="ghost"
+											size="sm"
+											className="cursor-pointer text-[#0f5384]"
+											onClick={(e) => {
+												e.stopPropagation();
+												openDetails(log);
+											}}
 										>
-											<TableCell className="text-sm text-slate-700 whitespace-nowrap">
-												{log.created_at
-													? formatInTimezone(
-															new Date(log.created_at),
-															"MMM d, yyyy HH:mm",
-															timeZone,
-														)
-													: "—"}
-											</TableCell>
-											<TableCell>
-												<div className="text-sm font-medium text-slate-700">
-													{log.user_name}
-												</div>
-												<div className="text-xs text-slate-500">
-													{log.user_email}
-												</div>
-											</TableCell>
-											<TableCell>{getActionBadge(log.action)}</TableCell>
-											<TableCell>
-												<ModuleBadge module={log.module} />
-											</TableCell>
-											<TableCell className="max-w-[160px]">
-												<div className="text-sm text-slate-700 truncate">
-													{log.target_label || log.event_title}
-												</div>
-												{log.target_type ? (
-													<div className="text-xs text-slate-500 capitalize">
-														{log.target_type}
-													</div>
-												) : null}
-											</TableCell>
-											<TableCell className="max-w-[240px]">
-												<p className="text-sm text-slate-700 truncate">
-													{log.summary || log.event_title}
-												</p>
-											</TableCell>
-											<TableCell>{getStatusBadge(log.status)}</TableCell>
-											<TableCell>
-												<Button
-													variant="ghost"
-													size="sm"
-													className="cursor-pointer text-[#0f5384]"
-													onClick={(e) => {
-														e.stopPropagation();
-														openDetails(log);
-													}}
-												>
-													Details
-												</Button>
-											</TableCell>
-										</TableRow>
-									))
-								)}
-							</TableBody>
-						</Table>
-					</div>
+											Details
+										</Button>
+									</TableCell>
+								</TableRow>
+							))
+						)}
+					</TableBody>
+				</Table>
+			</div>
 
-					{onPageChange ? (
-						<PageIndex
-							className="mt-4"
-							page={page}
-							totalPages={safeTotalPages}
-							totalItems={total}
-							pageSize={pageSize}
-							onPageChange={onPageChange}
-							disabled={isLoading}
-							showRange
-							aria-label="Activity log pagination"
-						/>
-					) : null}
+			{onPageChange ? (
+				<PageIndex
+					className="mt-4"
+					page={page}
+					totalPages={safeTotalPages}
+					totalItems={total}
+					pageSize={pageSize}
+					onPageChange={onPageChange}
+					disabled={isLoading}
+					showRange
+					aria-label="Activity log pagination"
+				/>
+			) : null}
 		</>
 	);
 

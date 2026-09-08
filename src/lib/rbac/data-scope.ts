@@ -22,11 +22,7 @@ export async function getContractListScope(
 	orgId: string,
 ): Promise<ContractListScope> {
 	const viewAll =
-		(await hasPermission(
-			userId,
-			PERMISSIONS.CONTRACTS.VIEW_ALL,
-			orgId,
-		)) ||
+		(await hasPermission(userId, PERMISSIONS.CONTRACTS.VIEW_ALL, orgId)) ||
 		(await hasPermission(userId, PERMISSIONS.CONTRACTS.REVIEW, orgId)) ||
 		(await hasPermission(userId, PERMISSIONS.CONTRACTS.APPROVE, orgId)) ||
 		(await hasPermission(userId, PERMISSIONS.APPROVALS.OVERRIDE, orgId));

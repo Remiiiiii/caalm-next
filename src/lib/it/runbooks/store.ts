@@ -6,8 +6,8 @@ import type {
 	RunbookInput,
 	RunbookListFilters,
 	RunbookStatus,
-	RunbookStorageMode,
 	RunbookStep,
+	RunbookStorageMode,
 } from "./types";
 
 type MemoryBucket = Map<string, Runbook>;
@@ -86,9 +86,7 @@ function rowToRunbook(row: Record<string, unknown>): Runbook {
 		orgId: String(row.orgId || ""),
 		tags: parseStringArray(row.tags),
 		integrationKeys: parseStringArray(row.integrationKeys),
-		lastReviewedAt: row.lastReviewedAt
-			? String(row.lastReviewedAt)
-			: undefined,
+		lastReviewedAt: row.lastReviewedAt ? String(row.lastReviewedAt) : undefined,
 		$createdAt: String(row.$createdAt || nowIso()),
 		$updatedAt: String(row.$updatedAt || nowIso()),
 	};
@@ -188,7 +186,8 @@ function seedForOrg(orgId: string): Runbook[] {
 					body: "Trigger a known test path and confirm delivery.",
 				},
 			],
-			verification: "A controlled test notification arrives in-app and email/SMS.",
+			verification:
+				"A controlled test notification arrives in-app and email/SMS.",
 			escalation: "If providers are up but CAALM jobs fail, page IT on-call.",
 			integrationKeys: ["monitoring"],
 		},
@@ -270,8 +269,7 @@ async function listFromAppwrite(
 		Query.offset(filters.offset || 0),
 	];
 	if (filters.service) queries.push(Query.equal("service", filters.service));
-	if (filters.severity)
-		queries.push(Query.equal("severity", filters.severity));
+	if (filters.severity) queries.push(Query.equal("severity", filters.severity));
 	if (filters.status) queries.push(Query.equal("status", filters.status));
 	if (filters.search) queries.push(Query.search("title", filters.search));
 
@@ -438,7 +436,8 @@ export async function updateRunbook(
 			if (input.severity !== undefined) data.severity = input.severity;
 			if (input.status !== undefined) data.status = input.status;
 			if (input.symptoms !== undefined) data.symptoms = input.symptoms;
-			if (input.steps !== undefined) data.stepsJson = JSON.stringify(input.steps);
+			if (input.steps !== undefined)
+				data.stepsJson = JSON.stringify(input.steps);
 			if (input.verification !== undefined)
 				data.verification = input.verification;
 			if (input.escalation !== undefined) data.escalation = input.escalation;
@@ -519,7 +518,7 @@ export function matchRunbooksForAlert(
 			if (text && rb.title.toLowerCase().includes(text)) score += 5;
 			for (const symptom of rb.symptoms) {
 				if (text && symptom.toLowerCase().includes(text)) score += 3;
-				if (text && text.includes(symptom.toLowerCase())) score += 3;
+				if (text?.includes(symptom.toLowerCase())) score += 3;
 			}
 			return { rb, score };
 		})

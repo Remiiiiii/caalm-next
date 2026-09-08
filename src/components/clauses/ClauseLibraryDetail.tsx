@@ -3,6 +3,7 @@
 import { Archive, CircleCheck, FileText, Pencil } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import {
 	AppDropdownMenuContent,
 	AppDropdownMenuItem,
@@ -10,7 +11,6 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Card, CardContent } from "@/components/ui/card";
 import { useOrgTimezone } from "@/hooks/useOrgTimezone";
 import { formatDateTime } from "@/lib/utils";
 import type { Clause } from "@/types/clauses";
@@ -77,9 +77,7 @@ export function ClauseLibraryDetail({
 				<div className="glass-card-cap" />
 				<CardContent className="flex flex-1 flex-col items-center justify-center gap-3 p-4 pt-8 text-center sm:p-6 sm:pt-8">
 					<FileText className="h-8 w-8 text-[#0f5384]" />
-					<p className="text-sm font-medium text-slate-700">
-						Select a clause
-					</p>
+					<p className="text-sm font-medium text-slate-700">Select a clause</p>
 					<p className="max-w-sm text-sm text-slate-600">
 						Pick a row on the left to read the full wording, history, and
 						actions.
@@ -179,10 +177,7 @@ export function ClauseLibraryDetail({
 				</section>
 
 				<div className="mt-6">
-					<ClauseVersionHistory
-						variant="embedded"
-						familyId={clause.familyId}
-					/>
+					<ClauseVersionHistory variant="embedded" familyId={clause.familyId} />
 				</div>
 
 				<section className="mt-6 space-y-2">

@@ -101,10 +101,7 @@ function toRecipient(user: {
 	return { userId, accountId };
 }
 
-function isExcluded(
-	recipient: Recipient,
-	excludeIds: Set<string>,
-): boolean {
+function isExcluded(recipient: Recipient, excludeIds: Set<string>): boolean {
 	if (excludeIds.has(recipient.userId)) return true;
 	if (recipient.accountId && excludeIds.has(recipient.accountId)) return true;
 	return false;
@@ -154,8 +151,7 @@ async function collectDeleteRecipients(params: {
 		const matchingManagers = managers.filter((user) => {
 			const dept = normalizeDept(
 				(user as { department?: string; departmentLabel?: string })
-					.department ||
-					(user as { departmentLabel?: string }).departmentLabel,
+					.department || (user as { departmentLabel?: string }).departmentLabel,
 			);
 			return dept.length > 0 && dept === targetDept;
 		});
@@ -187,12 +183,10 @@ async function notifyDocumentDeleted(
 		const type =
 			input.kind === "contract" ? "contract-deleted" : "license-deleted";
 		const kindLabel = input.kind === "contract" ? "Contract" : "License";
-		const actor =
-			input.deletedByName?.trim() || "A user";
+		const actor = input.deletedByName?.trim() || "A user";
 		const title = `${kindLabel} deleted: ${input.documentName}`;
 		const message = `${actor} deleted ${input.kind} "${input.documentName}".`;
-		const actionUrl =
-			input.kind === "contract" ? "/contracts" : "/licenses";
+		const actionUrl = input.kind === "contract" ? "/contracts" : "/licenses";
 
 		let created = 0;
 		for (const recipient of recipients) {

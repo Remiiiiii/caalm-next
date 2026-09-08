@@ -5,12 +5,12 @@
 
 import type { PermissionKey } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
+import { permissionSatisfied } from "@/lib/rbac/permission-implications";
 import {
 	getUserDefaultOrganization,
 	getUserPermissions,
 	validateUserOrgAccess,
 } from "@/lib/rbac/permissions";
-import { permissionSatisfied } from "@/lib/rbac/permission-implications";
 
 export type AuthorizeDecision = {
 	allowed: boolean;
@@ -97,7 +97,9 @@ export async function authorize(
  */
 export async function authorizeCurrentUser(
 	input: Omit<AuthorizeInput, "userId">,
-): Promise<AuthorizeDecision & { user?: Awaited<ReturnType<typeof getCurrentUser>> }> {
+): Promise<
+	AuthorizeDecision & { user?: Awaited<ReturnType<typeof getCurrentUser>> }
+> {
 	const user = await getCurrentUser();
 	if (!user) {
 		return { allowed: false, reason: "Authentication required" };

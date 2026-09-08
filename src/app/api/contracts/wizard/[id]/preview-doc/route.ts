@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { docxBufferToHtml } from "@/lib/templates/docx-preview";
 import { requireContractCreateContext } from "@/lib/templates/require-org-permission";
 import {
 	buildWizardDocx,
@@ -6,7 +7,6 @@ import {
 	parseWizardPayload,
 	previewWizard,
 } from "@/lib/templates/wizard.service";
-import { docxBufferToHtml } from "@/lib/templates/docx-preview";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -29,7 +29,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
 			...session.payload,
 			...body,
 			intake: { ...session.payload.intake, ...(body.intake || {}) },
-			tokenValues: { ...session.payload.tokenValues, ...(body.tokenValues || {}) },
+			tokenValues: {
+				...session.payload.tokenValues,
+				...(body.tokenValues || {}),
+			},
 			customBlocks: body.customBlocks ?? session.payload.customBlocks,
 		});
 		if (!payload.blueprintId) {

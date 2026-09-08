@@ -3,17 +3,13 @@
 import { CheckCircle2, ClipboardCheck } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import {
-	REASON_CATEGORY_LABELS,
 	type ExpirationAttestation,
+	REASON_CATEGORY_LABELS,
 } from "@/lib/approvals/expirationAttestation.types";
 
 interface ExpirationAttestationReviewDialogProps {

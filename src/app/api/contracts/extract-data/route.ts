@@ -6,8 +6,8 @@ import {
 	successResponse,
 	validationErrorResponse,
 } from "@/lib/api/contracts/utils/response.util";
-import { isPlanLimitError } from "@/lib/billing/planLimits";
 import { consumeAiExtractionForRequest } from "@/lib/billing/consumeAiExtractionForRequest";
+import { isPlanLimitError } from "@/lib/billing/planLimits";
 
 export async function GET() {
 	return NextResponse.json({

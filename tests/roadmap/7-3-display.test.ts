@@ -26,7 +26,7 @@ describe("negotiation display text", () => {
 			? nodes
 			: // Fragment children
 				((nodes as { props?: { children?: unknown } }).props?.children ??
-					nodes);
+				nodes);
 		const flat = Array.isArray(asArray) ? asArray : [asArray];
 		const strong = flat.filter(
 			(node) =>

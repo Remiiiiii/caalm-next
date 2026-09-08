@@ -42,9 +42,9 @@ function mockRoot({
 describe("docx preview pagination", () => {
 	it("ignores container padding when counting pages", () => {
 		const twoPages = DOCX_PREVIEW_PAGE_STRIDE_PX * 2 + 56;
-		expect(measureDocxPreviewPageCount(mockRoot({ scrollHeight: twoPages }))).toBe(
-			2,
-		);
+		expect(
+			measureDocxPreviewPageCount(mockRoot({ scrollHeight: twoPages })),
+		).toBe(2);
 	});
 
 	it("does not count a thin trailing strip as another page", () => {

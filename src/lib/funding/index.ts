@@ -1,14 +1,14 @@
 export {
-	FUNDING_TABLE_IDS,
-	FUNDING_TABLE_NAMES,
-	RETENTION_WINDOWS,
 	computeRetentionHealth,
 	daysUntil,
+	FUNDING_TABLE_IDS,
+	FUNDING_TABLE_NAMES,
 	formatUsd,
 	isObligationKind,
 	isObligationStatus,
 	isPursuitSource,
 	isPursuitStage,
+	RETENTION_WINDOWS,
 } from "./constants";
 export { convertWonPursuitToProposal } from "./convert-pursuit.service";
 export {

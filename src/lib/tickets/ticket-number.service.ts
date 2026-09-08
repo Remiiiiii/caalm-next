@@ -23,9 +23,7 @@ function dbId(): string {
 }
 
 function sequencesTable(): string {
-	return (
-		appwriteConfig.ticketSequencesCollectionId || "69b8a209009b2a6e0c09"
-	);
+	return appwriteConfig.ticketSequencesCollectionId || "69b8a209009b2a6e0c09";
 }
 
 /**
@@ -112,9 +110,7 @@ export async function allocateTicketNumber(orgId: string): Promise<string> {
 				ticketNumber: candidate,
 			});
 			if (!taken) return candidate;
-		} catch {
-			continue;
-		}
+		} catch {}
 	}
 
 	throw new Error("Failed to allocate ticket number");

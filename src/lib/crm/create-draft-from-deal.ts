@@ -74,7 +74,9 @@ export function mapDealToDraftPayload(input: {
 	const crmReference = crmReferenceFor(deal.provider, deal.externalId);
 	const descriptionParts = [
 		`Spawned from ${deal.provider === "hubspot" ? "HubSpot" : "Salesforce"} deal "${deal.name}".`,
-		deal.amount != null ? `Estimated value: ${deal.currency} ${deal.amount}.` : null,
+		deal.amount != null
+			? `Estimated value: ${deal.currency} ${deal.amount}.`
+			: null,
 		deal.companyName ? `Company: ${deal.companyName}.` : null,
 		deal.ownerName ? `CRM owner: ${deal.ownerName}.` : null,
 		`CRM reference: ${crmReference}.`,

@@ -19,8 +19,7 @@ function getTtlMs() {
 
 function isDemoSandboxEmail(email) {
 	return (
-		typeof email === "string" &&
-		email.toLowerCase().endsWith(DEMO_EMAIL_SUFFIX)
+		typeof email === "string" && email.toLowerCase().endsWith(DEMO_EMAIL_SUFFIX)
 	);
 }
 
@@ -48,7 +47,7 @@ module.exports = async ({ req, res, log, error }) => {
 	const skipped = [];
 	const errors = [];
 
-	let cursor = undefined;
+	let cursor;
 	let scanned = 0;
 
 	try {

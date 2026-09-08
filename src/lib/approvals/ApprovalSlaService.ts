@@ -51,9 +51,7 @@ const DEFAULT_DURATION_HOURS: Partial<Record<ApprovalStepKind, number>> = {
 };
 
 function uniqueIds(ids: Array<string | undefined | null>): string[] {
-	return [
-		...new Set(ids.filter((id): id is string => Boolean(id?.trim()))),
-	];
+	return [...new Set(ids.filter((id): id is string => Boolean(id?.trim())))];
 }
 
 function policyTableId(): string {
@@ -136,7 +134,9 @@ export function applySlaToStep(
 	return next;
 }
 
-export function clearSlaProgress(step: ApprovalWorkflowStep): ApprovalWorkflowStep {
+export function clearSlaProgress(
+	step: ApprovalWorkflowStep,
+): ApprovalWorkflowStep {
 	return {
 		...step,
 		startedAt: undefined,
@@ -295,7 +295,9 @@ async function resolveEscalationRecipients(
 			status: "active",
 		});
 		return uniqueIds(
-			users.map((u: { $id?: string; accountId?: string }) => u.accountId || u.$id),
+			users.map(
+				(u: { $id?: string; accountId?: string }) => u.accountId || u.$id,
+			),
 		);
 	} catch {
 		return [];
@@ -526,7 +528,11 @@ async function processEntityRows(
 			);
 			result.breached += 1;
 			dirty = true;
-		} else if (slaStatus === "breached" && level === 2 && current.slaBreachedAt) {
+		} else if (
+			slaStatus === "breached" &&
+			level === 2 &&
+			current.slaBreachedAt
+		) {
 			const breachedAt = new Date(current.slaBreachedAt).getTime();
 			const repeatMs = policy.repeatEscalationHours * 60 * 60 * 1000;
 			if (now.getTime() - breachedAt >= repeatMs) {
@@ -634,18 +640,12 @@ export async function computeSlaMetrics(
 		tablesDB.listRows({
 			databaseId: appwriteConfig.databaseId,
 			tableId: appwriteConfig.contractsCollectionId!,
-			queries: [
-				...queries,
-				excludeSoftDeletedQuery("contracts"),
-			],
+			queries: [...queries, excludeSoftDeletedQuery("contracts")],
 		}),
 		tablesDB.listRows({
 			databaseId: appwriteConfig.databaseId,
 			tableId: appwriteConfig.licensesCollectionId!,
-			queries: [
-				...queries,
-				excludeSoftDeletedQuery("licenses"),
-			],
+			queries: [...queries, excludeSoftDeletedQuery("licenses")],
 		}),
 	]);
 
@@ -689,7 +689,9 @@ export async function computeSlaMetrics(
 		atRisk,
 		breached,
 		avgStepHours:
-			durationCount > 0 ? Math.round((durations / durationCount) * 10) / 10 : null,
+			durationCount > 0
+				? Math.round((durations / durationCount) * 10) / 10
+				: null,
 		breachRate: openItems > 0 ? Math.round((breached / openItems) * 100) : 0,
 		byStepKind: Array.from(byKind.entries()).map(([stepKind, counts]) => ({
 			stepKind,

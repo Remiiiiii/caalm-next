@@ -127,9 +127,10 @@ export function polishNegotiationDocx(docx: Buffer): Buffer {
 				inTerm = false;
 			}
 			if (!inTerm) continue;
-			const range = /\bfrom\s+(\d{4}-\d{2}-\d{2})\s+through\s+(\d{4}-\d{2}-\d{2})\b/i.exec(
-				row.text,
-			);
+			const range =
+				/\bfrom\s+(\d{4}-\d{2}-\d{2})\s+through\s+(\d{4}-\d{2}-\d{2})\b/i.exec(
+					row.text,
+				);
 			if (!range || range[1] === effective) continue;
 			const oldStart = range[1];
 			// Prefer whole-run replace (Word often splits "from ", date, " through ").
@@ -139,10 +140,7 @@ export function polishNegotiationDocx(docx: Buffer): Buffer {
 			);
 			if (nextPara === row.xml) {
 				nextPara = row.xml.replace(
-					new RegExp(
-						`from\\s+${oldStart}\\s+through\\s+${range[2]}`,
-						"i",
-					),
+					new RegExp(`from\\s+${oldStart}\\s+through\\s+${range[2]}`, "i"),
 					`from ${effective} through ${range[2]}`,
 				);
 			}
@@ -181,7 +179,10 @@ export function polishNegotiationHtml(html: string): string {
 	const hasNamedGrantee = /\(\s*["']?Grantee["']?\s*\)/i.test(text);
 	if (hasNamedGrantor || hasNamedGrantee) {
 		next = next.replace(/<p\b[^>]*>[\s\S]*?<\/p>/gi, (paragraph) => {
-			const plain = paragraph.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+			const plain = paragraph
+				.replace(/<[^>]+>/g, " ")
+				.replace(/\s+/g, " ")
+				.trim();
 			if (/^Grantor\s*:/i.test(plain) && hasNamedGrantor) return "";
 			if (/^Grantee\s*:/i.test(plain) && hasNamedGrantee) return "";
 			return paragraph;

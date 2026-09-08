@@ -6,6 +6,7 @@
 
 import { ID, Query } from "node-appwrite";
 import { PERMISSIONS } from "@/constants/permissions";
+import { stampCurrentStepSla } from "@/lib/approvals/ApprovalSlaService";
 import {
 	applyReassignToCurrentStep,
 	assertDecisionAllowed,
@@ -21,18 +22,17 @@ import {
 	serializeWorkflowState,
 	upgradeAwaitingExecutiveStep,
 } from "@/lib/approvals/ContractApprovalWorkflowService";
-import { stampCurrentStepSla } from "@/lib/approvals/ApprovalSlaService";
-import {
-	assertWorkflowMutable,
-	isTerminalDocumentStatus,
-} from "@/lib/approvals/documentStatus";
-import { resolveAttestationId } from "@/lib/approvals/resolveAttestationId";
 import type {
 	ApprovalDecision,
 	ApprovalWorkflowNotification,
 	ApprovalWorkflowState,
 	ApprovalWorkflowViewerPayload,
 } from "@/lib/approvals/contractApprovalWorkflow.types";
+import {
+	assertWorkflowMutable,
+	isTerminalDocumentStatus,
+} from "@/lib/approvals/documentStatus";
+import { resolveAttestationId } from "@/lib/approvals/resolveAttestationId";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { writeRowWithSchemaDriftRecovery } from "@/lib/appwrite/schemaDriftRecovery";
@@ -253,7 +253,9 @@ async function ensureLicenseExecutiveStep(
 	return { state: upgradedState, upgraded: true };
 }
 
-async function collectAdminUserIds(orgId: string | undefined): Promise<string[]> {
+async function collectAdminUserIds(
+	orgId: string | undefined,
+): Promise<string[]> {
 	const [executives, admins] = await Promise.all([
 		getAllExecutives(orgId),
 		getAllAdmins(orgId),
@@ -319,7 +321,9 @@ export async function getLicenseWorkflowForViewer(
 			contractId: licenseId,
 			contractName: String(license.licenseName || "Untitled License"),
 			contractStatus,
-			department: (license.division || license.department) as string | undefined,
+			department: (license.division || license.department) as
+				| string
+				| undefined,
 			businessUnit: license.businessUnit as string | undefined,
 			subDepartment: license.subDepartment as string | undefined,
 			currentStepIndex: 0,
@@ -788,10 +792,7 @@ export async function resubmitLicenseAfterChanges({
 
 	await appendNotification(state, {
 		type: "resubmitted",
-		recipientUserIds: uniqueIds([
-			...(dept?.assigneeUserIds || []),
-			uploader,
-		]),
+		recipientUserIds: uniqueIds([...(dept?.assigneeUserIds || []), uploader]),
 		stepId: dept?.id,
 		label: "Resubmitted for review",
 	});

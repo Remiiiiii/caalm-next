@@ -79,10 +79,7 @@ export function readStepUpGrant(
 	};
 }
 
-export function hasValidStepUp(
-	request: NextRequest,
-	userId: string,
-): boolean {
+export function hasValidStepUp(request: NextRequest, userId: string): boolean {
 	return readStepUpGrant(request, userId).verified;
 }
 

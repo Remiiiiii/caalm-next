@@ -5,7 +5,11 @@ import {
 } from "date-fns";
 import { blueprintLabel } from "@/lib/templates/blueprint-catalog";
 import { WIZARD_STEP_COUNT } from "@/lib/templates/constants";
-import type { WizardIntake, WizardSession, WizardSessionSummary } from "@/types/contract-templates";
+import type {
+	WizardIntake,
+	WizardSession,
+	WizardSessionSummary,
+} from "@/types/contract-templates";
 
 export function draftDisplayName(intake: WizardIntake): string {
 	const name = intake.contractName.trim();
@@ -18,7 +22,8 @@ export function draftAgreementLabel(blueprintId: string | null): string {
 }
 
 export function draftEditedAt(session: WizardSession): string {
-	const iso = session.payload.lastSavedAt || session.$updatedAt || session.$createdAt;
+	const iso =
+		session.payload.lastSavedAt || session.$updatedAt || session.$createdAt;
 	const date = new Date(iso);
 	if (Number.isNaN(date.getTime())) return "";
 
@@ -37,9 +42,7 @@ function stepProgress(currentStep: number): { percent: number; label: string } {
 		return { percent: 0, label: "Not started" };
 	}
 	// 4 steps, 0-based: Fill = 33%, Assemble = 67%, Preview = 100%
-	const stepPercent = Math.round(
-		(currentStep / (WIZARD_STEP_COUNT - 1)) * 100,
-	);
+	const stepPercent = Math.round((currentStep / (WIZARD_STEP_COUNT - 1)) * 100);
 	return {
 		percent: Math.max(stepPercent, 8),
 		label: `${stepPercent}% complete`,
@@ -100,9 +103,10 @@ export function draftEditedAtFromSummary(
 	return date.toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
-export function draftProgressFromSummary(
-	summary: WizardSessionSummary,
-): { percent: number; label: string } {
+export function draftProgressFromSummary(summary: WizardSessionSummary): {
+	percent: number;
+	label: string;
+} {
 	if (!summary.blueprintId) {
 		return { percent: 0, label: "Not started" };
 	}

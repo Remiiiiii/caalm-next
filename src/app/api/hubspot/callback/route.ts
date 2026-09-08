@@ -3,11 +3,11 @@ import { type NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/actions/user.actions";
 import { getAppUrl } from "@/lib/config/environment";
 import { hubspotConnector } from "@/lib/crm/connectors/hubspot.connector";
-import { calculateTokenExpiry } from "@/lib/crm/tokens";
 import {
 	getCrmIntegration,
 	upsertCrmIntegration,
 } from "@/lib/crm/integrations.repository";
+import { calculateTokenExpiry } from "@/lib/crm/tokens";
 import { defaultCrmIntegrationConfig } from "@/lib/crm/types";
 
 function redirectToIntegrations(query: string): NextResponse {
@@ -50,9 +50,7 @@ export async function GET(request: NextRequest) {
 	try {
 		const tokens = await hubspotConnector.exchangeCode(code);
 		const existing = await getCrmIntegration(orgId, "hubspot");
-		const config = existing
-			? undefined
-			: defaultCrmIntegrationConfig();
+		const config = existing ? undefined : defaultCrmIntegrationConfig();
 
 		await upsertCrmIntegration({
 			orgId,

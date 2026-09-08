@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-	isCompanionPath,
-	isDesktopRequiredPath,
-} from "@/lib/ui/desktop-first";
+import { isCompanionPath, isDesktopRequiredPath } from "@/lib/ui/desktop-first";
 
 describe("desktop-first path policy", () => {
 	it("treats role dashboards as companion", () => {

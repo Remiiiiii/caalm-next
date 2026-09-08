@@ -6,10 +6,10 @@ import { type NextRequest, NextResponse } from "next/server";
 import { Query } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
-import { excludeSoftDeletedQuery } from "@/lib/soft-delete";
 import { logApiPerformance } from "@/lib/monitoring/performance";
 import { CACHE_KEYS, CACHE_TTLS } from "@/lib/services/cache-keys";
 import CacheManager from "@/lib/services/cache-manager";
+import { excludeSoftDeletedQuery } from "@/lib/soft-delete";
 
 export async function GET(request: NextRequest) {
 	const startTime = Date.now();

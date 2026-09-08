@@ -111,9 +111,7 @@ Effective Date: 2026-09-10
 	});
 
 	it("normalizes YYYY-MM-DD to noon UTC ISO", () => {
-		expect(toContractDatetime("2026-09-07")).toBe(
-			"2026-09-07T12:00:00.000Z",
-		);
+		expect(toContractDatetime("2026-09-07")).toBe("2026-09-07T12:00:00.000Z");
 		expect(toContractDatetime("—")).toBeUndefined();
 	});
 

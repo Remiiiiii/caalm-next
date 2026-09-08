@@ -6,12 +6,9 @@
 import { Query } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
-import { excludeSoftDeletedQuery } from "@/lib/soft-delete";
 import { getOrganization } from "@/lib/rbac/organizations";
-import {
-	type PricingTier,
-	TIER_LIMITS,
-} from "@/lib/stripe/prices";
+import { excludeSoftDeletedQuery } from "@/lib/soft-delete";
+import { type PricingTier, TIER_LIMITS } from "@/lib/stripe/prices";
 
 export type PlanLimitKind =
 	| "users"
@@ -120,8 +117,7 @@ async function countByOrg(tableId: string, orgId: string): Promise<number> {
 async function countPendingInvitations(orgId: string): Promise<number> {
 	try {
 		const { tablesDB } = await createAdminClient();
-		const tableId =
-			appwriteConfig.invitationsCollectionId || "invitations";
+		const tableId = appwriteConfig.invitationsCollectionId || "invitations";
 		const result = await tablesDB.listRows({
 			databaseId: appwriteConfig.databaseId || "default-db",
 			tableId,
@@ -148,17 +144,11 @@ export async function countBillableUsers(orgId: string): Promise<number> {
 }
 
 export async function countActiveContracts(orgId: string): Promise<number> {
-	return countByOrg(
-		appwriteConfig.contractsCollectionId || "contracts",
-		orgId,
-	);
+	return countByOrg(appwriteConfig.contractsCollectionId || "contracts", orgId);
 }
 
 export async function countActiveLicenses(orgId: string): Promise<number> {
-	return countByOrg(
-		appwriteConfig.licensesCollectionId || "licenses",
-		orgId,
-	);
+	return countByOrg(appwriteConfig.licensesCollectionId || "licenses", orgId);
 }
 
 export async function sumOrgStorageBytes(orgId: string): Promise<number> {

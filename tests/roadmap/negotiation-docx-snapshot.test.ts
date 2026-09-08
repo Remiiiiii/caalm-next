@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import PizZip from "pizzip";
+import { describe, expect, it } from "vitest";
 import {
 	buildClauseToc,
 	isDocxNegotiationSnapshot,
@@ -89,9 +89,7 @@ describe("DOCX negotiation snapshot", () => {
 
 	it("flags only old thin markdown snapshots for safe rebuilding", () => {
 		expect(
-			isThinNegotiationSnapshot(
-				"# Draft\n\n## 1. Payment\n\nPayment body.",
-			),
+			isThinNegotiationSnapshot("# Draft\n\n## 1. Payment\n\nPayment body."),
 		).toBe(true);
 		expect(
 			isThinNegotiationSnapshot(
@@ -99,9 +97,7 @@ describe("DOCX negotiation snapshot", () => {
 			),
 		).toBe(false);
 		expect(
-			isThinNegotiationSnapshot(
-				negotiationSnapshotFromHtml(GRANT_HTML, []),
-			),
+			isThinNegotiationSnapshot(negotiationSnapshotFromHtml(GRANT_HTML, [])),
 		).toBe(false);
 	});
 
@@ -135,9 +131,7 @@ describe("DOCX negotiation snapshot", () => {
 			],
 			"GRANT AGREEMENT",
 		);
-		const updatedXml = new PizZip(updated)
-			.file("word/document.xml")!
-			.asText();
+		const updatedXml = new PizZip(updated).file("word/document.xml")!.asText();
 		expect(updatedXml).toContain("CAALM LETTERHEAD");
 		expect(updatedXml).toContain("New preamble.");
 		expect(updatedXml).toContain("New terms.");
@@ -169,9 +163,7 @@ describe("DOCX negotiation snapshot", () => {
 			],
 			"GRANT AGREEMENT",
 		);
-		const updatedXml = new PizZip(updated)
-			.file("word/document.xml")!
-			.asText();
+		const updatedXml = new PizZip(updated).file("word/document.xml")!.asText();
 		expect(updatedXml).toContain("This paragraph is for testing purposes.");
 		expect(updatedXml).toContain('w:name="_RefTerms"');
 		expect(updatedXml).toContain("GRANTOR");

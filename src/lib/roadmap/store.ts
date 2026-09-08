@@ -7,10 +7,10 @@ import { ID, Query } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig, isAppwriteConfigured } from "@/lib/appwrite/config";
 import {
-	ROADMAP_CATALOG,
 	catalogPullRequestUrl,
 	catalogTasksHaveLinkedPr,
 	displayedPrNumberForTask,
+	ROADMAP_CATALOG,
 } from "./catalog";
 import { computeUnlocked, type LockSnapshot } from "./locking";
 import type {
@@ -81,7 +81,8 @@ function parseStringArray(raw: unknown): string[] {
 	return [];
 }
 
-function useAppwrite(): boolean {
+/** True when roadmap rows should go to Appwrite (not a React hook). */
+function isAppwriteBackend(): boolean {
 	return (
 		isAppwriteConfigured() &&
 		Boolean(appwriteConfig.roadmapSectionsCollectionId) &&
@@ -282,10 +283,16 @@ async function syncCatalogLayoutToAppwrite(
 		queries: [Query.limit(500)],
 	});
 	const existingSections = new Map(
-		existingSectionRows.rows.map((row) => [row.$id, row as unknown as RoadmapSection]),
+		existingSectionRows.rows.map((row) => [
+			row.$id,
+			row as unknown as RoadmapSection,
+		]),
 	);
 	const existingTasks = new Map(
-		existingTaskRows.rows.map((row) => [row.$id, row as unknown as RoadmapTask]),
+		existingTaskRows.rows.map((row) => [
+			row.$id,
+			row as unknown as RoadmapTask,
+		]),
 	);
 
 	// Skip the rewrite when identity/layout already matches the catalog.
@@ -305,7 +312,9 @@ async function syncCatalogLayoutToAppwrite(
 	const mergedTasks = seed.tasks.map((task) => {
 		const byPr =
 			task.prNumber != null
-				? [...existingTasks.values()].find((row) => row.prNumber === task.prNumber)
+				? [...existingTasks.values()].find(
+						(row) => row.prNumber === task.prNumber,
+					)
 				: undefined;
 		if (byPr) {
 			return enrichTaskPrFromCatalog({
@@ -379,7 +388,7 @@ async function syncCatalogLayoutToAppwrite(
 }
 
 async function ensureAppwriteSeeded(): Promise<void> {
-	if (!useAppwrite()) return;
+	if (!isAppwriteBackend()) return;
 	if (!appwriteSeedPromise) {
 		appwriteSeedPromise = seedRoadmapToAppwriteIfEmpty()
 			.then((result) => {
@@ -475,7 +484,7 @@ function ensureSeeded(): MemoryState {
 
 export async function listSections(): Promise<RoadmapSection[]> {
 	const state = ensureSeeded();
-	if (!useAppwrite()) {
+	if (!isAppwriteBackend()) {
 		return [...state.sections.values()].sort(
 			(a, b) => a.sectionNumber - b.sectionNumber,
 		);
@@ -503,11 +512,11 @@ function enrichTaskPrFromCatalog(task: RoadmapTask): RoadmapTask {
 
 export async function listTasks(sectionId?: string): Promise<RoadmapTask[]> {
 	const state = ensureSeeded();
-	if (!useAppwrite()) {
+	if (!isAppwriteBackend()) {
 		const all = [...state.tasks.values()].map(enrichTaskPrFromCatalog);
-		return (sectionId ? all.filter((t) => t.sectionId === sectionId) : all).sort(
-			(a, b) => a.orderIndex - b.orderIndex,
-		);
+		return (
+			sectionId ? all.filter((t) => t.sectionId === sectionId) : all
+		).sort((a, b) => a.orderIndex - b.orderIndex);
 	}
 
 	await ensureAppwriteSeeded();
@@ -533,7 +542,7 @@ export async function listTasks(sectionId?: string): Promise<RoadmapTask[]> {
 
 export async function getTaskById(taskId: string): Promise<RoadmapTask | null> {
 	const state = ensureSeeded();
-	if (!useAppwrite()) {
+	if (!isAppwriteBackend()) {
 		return state.tasks.get(taskId) || null;
 	}
 	await ensureAppwriteSeeded();
@@ -586,7 +595,7 @@ export async function getSectionById(
 export async function saveTask(task: RoadmapTask): Promise<RoadmapTask> {
 	const state = ensureSeeded();
 	const next = { ...task, $updatedAt: nowIso() };
-	if (!useAppwrite()) {
+	if (!isAppwriteBackend()) {
 		state.tasks.set(next.$id, next);
 		return next;
 	}
@@ -605,7 +614,7 @@ export async function saveSection(
 ): Promise<RoadmapSection> {
 	const state = ensureSeeded();
 	const next = { ...section, $updatedAt: nowIso() };
-	if (!useAppwrite()) {
+	if (!isAppwriteBackend()) {
 		state.sections.set(next.$id, next);
 		return next;
 	}
@@ -628,7 +637,7 @@ export async function appendStatusLog(
 		$id: id("log"),
 		$createdAt: nowIso(),
 	};
-	if (!useAppwrite()) {
+	if (!isAppwriteBackend()) {
 		state.logs.set(log.$id, log);
 		return log;
 	}
@@ -654,7 +663,7 @@ export async function listStatusLogs(
 	entityId: string,
 ): Promise<RoadmapStatusLog[]> {
 	const state = ensureSeeded();
-	if (!useAppwrite()) {
+	if (!isAppwriteBackend()) {
 		return [...state.logs.values()]
 			.filter((l) => l.entityId === entityId)
 			.sort((a, b) => a.$createdAt.localeCompare(b.$createdAt));
@@ -685,7 +694,7 @@ export async function createTestRun(
 		startedAt: input.startedAt || nowIso(),
 		finishedAt: input.finishedAt ?? nowIso(),
 	};
-	if (!useAppwrite()) {
+	if (!isAppwriteBackend()) {
 		state.testRuns.set(run.$id, run);
 		return run;
 	}
@@ -713,7 +722,7 @@ export async function getTestRunById(
 	runId: string,
 ): Promise<RoadmapTestRun | null> {
 	const state = ensureSeeded();
-	if (!useAppwrite()) {
+	if (!isAppwriteBackend()) {
 		return state.testRuns.get(runId) || null;
 	}
 	const { tablesDB } = await createAdminClient();
@@ -735,7 +744,7 @@ export async function findTestRunForCommit(params: {
 	result?: string;
 }): Promise<RoadmapTestRun | null> {
 	const state = ensureSeeded();
-	const runs = !useAppwrite()
+	const runs = !isAppwriteBackend()
 		? [...state.testRuns.values()]
 		: await (async () => {
 				const { tablesDB } = await createAdminClient();
@@ -757,7 +766,9 @@ export async function findTestRunForCommit(params: {
 		if (params.result && r.result !== params.result) return false;
 		return true;
 	});
-	return filtered.sort((a, b) => b.startedAt.localeCompare(a.startedAt))[0] || null;
+	return (
+		filtered.sort((a, b) => b.startedAt.localeCompare(a.startedAt))[0] || null
+	);
 }
 
 export async function findTestRunForPrCommit(params: {
@@ -766,7 +777,7 @@ export async function findTestRunForPrCommit(params: {
 	result?: string;
 }): Promise<RoadmapTestRun | null> {
 	const state = ensureSeeded();
-	const runs = !useAppwrite()
+	const runs = !isAppwriteBackend()
 		? [...state.testRuns.values()]
 		: await (async () => {
 				const { tablesDB } = await createAdminClient();
@@ -802,7 +813,7 @@ export async function persistUnlockedSnapshot(): Promise<LockSnapshot> {
 		const prev = sections.find((x) => x.$id === s.$id);
 		if (prev && prev.status !== s.status) {
 			await saveSection(s);
-		} else if (!useAppwrite()) {
+		} else if (!isAppwriteBackend()) {
 			await saveSection(s);
 		}
 	}
@@ -810,7 +821,7 @@ export async function persistUnlockedSnapshot(): Promise<LockSnapshot> {
 		const prev = tasks.find((x) => x.$id === t.$id);
 		if (prev && prev.status !== t.status) {
 			await saveTask(t);
-		} else if (!useAppwrite()) {
+		} else if (!isAppwriteBackend()) {
 			await saveTask(t);
 		}
 	}

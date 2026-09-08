@@ -132,7 +132,7 @@ export async function PUT(
 		return NextResponse.json({
 			success: true,
 			data: role,
-			sodWarnings: "warnings" in sod ? sod.warnings ?? [] : [],
+			sodWarnings: "warnings" in sod ? (sod.warnings ?? []) : [],
 		});
 	} catch (error) {
 		console.error("Error updating role:", error);

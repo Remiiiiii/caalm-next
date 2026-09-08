@@ -882,7 +882,10 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 					if (!open) setDraftToDelete(null);
 				}}
 			>
-				<DialogContent className="overflow-hidden p-0 gap-0 shadow-xl sm:max-w-md border border-slate-200" variant="destructive">
+				<DialogContent
+					className="overflow-hidden p-0 gap-0 shadow-xl sm:max-w-md border border-slate-200"
+					variant="destructive"
+				>
 					<DialogTitle className="sr-only">Delete Draft</DialogTitle>
 					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
 

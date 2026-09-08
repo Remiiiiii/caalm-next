@@ -11,8 +11,8 @@ import { RoadmapProgressBar } from "@/components/it/roadmap/RoadmapProgressBar";
 import { RoadmapTaskTree } from "@/components/it/roadmap/RoadmapTaskTree";
 import { PageIndex } from "@/components/ui/page-index";
 import { useRoadmapRealtime } from "@/hooks/useRoadmapRealtime";
-import type { RoadmapOverview, RoadmapTaskTreeNode } from "@/lib/roadmap/types";
 import { displayPullRequestTitle } from "@/lib/roadmap/github-pr-match";
+import type { RoadmapOverview, RoadmapTaskTreeNode } from "@/lib/roadmap/types";
 import { fetcher } from "@/lib/swr-config";
 import { cn } from "@/lib/utils";
 
@@ -53,9 +53,7 @@ function RoadmapPullRequestItem({ pr }: { pr: SectionPullRequest }) {
 						onClick={() => setExpanded((open) => !open)}
 					>
 						<p className="min-w-0 flex-1 truncate text-xs">
-							<span className="font-semibold text-slate-700">
-								#{pr.number}
-							</span>{" "}
+							<span className="font-semibold text-slate-700">#{pr.number}</span>{" "}
 							<span
 								className={cn(
 									complete
@@ -209,32 +207,27 @@ function RoadmapSectionCard({
 							{section.prLinks.map((pr) => {
 								const title = displayPullRequestTitle(pr.title);
 								return (
-								<li
-									key={pr.number}
-									className="text-xs text-slate-600 line-clamp-2"
-									title={
-										title
-											? `#${pr.number} ${title}`
-											: `#${pr.number}`
-									}
-								>
-									#{pr.number}
-									{title ? (
-										<span
-											className={cn(
-												(pr.checksPassed ||
-													section.status === "complete") &&
-													"line-through text-slate-500",
-											)}
-										>
-											{" "}
-											{title}
-										</span>
-									) : null}
-									{pr.state ? (
-										<span className="text-slate-500"> · {pr.state}</span>
-									) : null}
-								</li>
+									<li
+										key={pr.number}
+										className="text-xs text-slate-600 line-clamp-2"
+										title={title ? `#${pr.number} ${title}` : `#${pr.number}`}
+									>
+										#{pr.number}
+										{title ? (
+											<span
+												className={cn(
+													(pr.checksPassed || section.status === "complete") &&
+														"line-through text-slate-500",
+												)}
+											>
+												{" "}
+												{title}
+											</span>
+										) : null}
+										{pr.state ? (
+											<span className="text-slate-500"> · {pr.state}</span>
+										) : null}
+									</li>
 								);
 							})}
 						</ul>
@@ -319,11 +312,11 @@ export function ClmRoadmapPage() {
 		error: overviewError,
 		isLoading: overviewLoading,
 	} = useSWR<RoadmapOverview>("/api/roadmap/overview", fetcher, {
-			// Appwrite Realtime pushes updates; polling is a fallback only
-			refreshInterval: realtimeEnabled ? 0 : 30_000,
-			revalidateOnFocus: true,
-			keepPreviousData: true,
-		});
+		// Appwrite Realtime pushes updates; polling is a fallback only
+		refreshInterval: realtimeEnabled ? 0 : 30_000,
+		revalidateOnFocus: true,
+		keepPreviousData: true,
+	});
 
 	const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 	const [detailOpenIds, setDetailOpenIds] = useState<Set<string>>(new Set());
@@ -399,9 +392,7 @@ export function ClmRoadmapPage() {
 			) : (
 				<RoadmapUnavailableState
 					detail={
-						overviewError instanceof Error
-							? overviewError.message
-							: undefined
+						overviewError instanceof Error ? overviewError.message : undefined
 					}
 				/>
 			)}

@@ -2,7 +2,7 @@ import { ContractService } from "@/lib/api/contracts/services/ContractService";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { writeRowWithSchemaDriftRecovery } from "@/lib/appwrite/schemaDriftRecovery";
-import { loadContractForOrg, dbId } from "./contract-scope";
+import { dbId, loadContractForOrg } from "./contract-scope";
 import {
 	buildNegotiatedContractPatch,
 	type NegotiatedContractPatch,

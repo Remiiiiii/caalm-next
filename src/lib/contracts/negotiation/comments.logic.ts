@@ -111,14 +111,20 @@ export function assertRedlineAnchorAllowed(
 /** Swap the selected span for the proposed replacement text. */
 export function applyRedline(
 	extractedText: string,
-	comment: Pick<NegotiationCommentDraft, "anchorStart" | "anchorEnd" | "redlineProposal">,
+	comment: Pick<
+		NegotiationCommentDraft,
+		"anchorStart" | "anchorEnd" | "redlineProposal"
+	>,
 ): string {
 	const proposal = comment.redlineProposal.trim();
 	if (!proposal) {
 		throw new Error("Redline proposal is empty");
 	}
 	const start = Math.max(0, comment.anchorStart);
-	const end = Math.min(extractedText.length, Math.max(start, comment.anchorEnd));
+	const end = Math.min(
+		extractedText.length,
+		Math.max(start, comment.anchorEnd),
+	);
 	assertRedlineAnchorAllowed(extractedText, start, end);
 	return `${extractedText.slice(0, start)}${proposal}${extractedText.slice(end)}`;
 }

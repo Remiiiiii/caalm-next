@@ -1,7 +1,7 @@
 "use client";
 
-import FormattedDateTime from "@/components/FormattedDateTime";
 import { agingLabel } from "@/components/approvals/ApprovalsAttentionStrip";
+import FormattedDateTime from "@/components/FormattedDateTime";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -83,8 +83,9 @@ export default function ApprovalsMobileList({
 									</p>
 								) : null}
 								<p className="mt-1 text-xs text-slate-600">
-									{[item.itemType, item.department].filter(Boolean).join(" · ") ||
-										"—"}
+									{[item.itemType, item.department]
+										.filter(Boolean)
+										.join(" · ") || "—"}
 								</p>
 								<div className="mt-2 flex flex-wrap items-center gap-2">
 									<Badge

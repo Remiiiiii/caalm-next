@@ -20,7 +20,10 @@ export function splitParagraphs(text: string): string[] {
  * Myers-style LCS paragraph diff. Short texts only — typical contract drafts.
  * Returns rows you can paint as keep / add / remove.
  */
-export function diffParagraphs(leftText: string, rightText: string): DiffLine[] {
+export function diffParagraphs(
+	leftText: string,
+	rightText: string,
+): DiffLine[] {
 	const left = splitParagraphs(leftText);
 	const right = splitParagraphs(rightText);
 	const n = left.length;

@@ -1,12 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
+import { getCurrentUser } from "@/lib/actions/user.actions";
 import {
 	createPreExpiryAttestation,
+	type ExpirationReasonCategory,
 	getAttestationForEntity,
 	listAttestationsForOrg,
-	type ExpirationReasonCategory,
 } from "@/lib/approvals/ExpirationAttestationService";
-import { getCurrentUser } from "@/lib/actions/user.actions";
 import { getOrgIdFromRequest, requirePermission } from "@/lib/rbac/middleware";
 
 export async function GET(request: NextRequest) {
@@ -36,7 +36,11 @@ export async function GET(request: NextRequest) {
 		| null;
 
 	if (entityType && entityId) {
-		const attestation = await getAttestationForEntity(orgId, entityType, entityId);
+		const attestation = await getAttestationForEntity(
+			orgId,
+			entityType,
+			entityId,
+		);
 		return NextResponse.json({ success: true, attestation });
 	}
 
@@ -52,7 +56,10 @@ export async function POST(request: NextRequest) {
 
 	const user = await getCurrentUser();
 	if (!user) {
-		return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+		return NextResponse.json(
+			{ error: "Authentication required" },
+			{ status: 401 },
+		);
 	}
 
 	const orgId = getOrgIdFromRequest(request);

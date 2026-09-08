@@ -29,14 +29,15 @@ import ContractStatusPieChart from "@/components/ContractStatusPieChart";
 import DepartmentPerformanceWidget from "@/components/DepartmentPerformanceWidget";
 import { DashboardGreeting } from "@/components/dashboard/DashboardGreeting";
 import { RiskImpactHeroCard } from "@/components/dashboard/RiskImpactHeroCard";
+import { WeatherBriefingLauncher } from "@/components/dashboard-briefing/WeatherBriefingLauncher";
 import FormattedDateTime from "@/components/FormattedDateTime";
 import QuickNotesWidget from "@/components/QuickNotesWidget";
 import RecentActivity from "@/components/RecentActivity";
+import { OrgUnitPicker } from "@/components/settings/OrgUnitPicker";
 import Thumbnail from "@/components/Thumbnail";
 import Avatar from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import {
 	SelectItem,
 	SelectScrollable,
@@ -46,12 +47,11 @@ import {
 	StatCardSkeleton,
 	TableRowSkeleton,
 } from "@/components/ui/skeletons";
+import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import { WidgetCarousel } from "@/components/ui/widget-carousel";
-import { WeatherBriefingLauncher } from "@/components/dashboard-briefing/WeatherBriefingLauncher";
-import { OrgUnitPicker } from "@/components/settings/OrgUnitPicker";
 import { useOrganization } from "@/contexts/OrganizationContext";
-import { useToast } from "@/hooks/use-toast";
 import { useStepUp } from "@/contexts/StepUpContext";
+import { useToast } from "@/hooks/use-toast";
 import { useAdminStats } from "@/hooks/useAdminStats";
 import { useUnifiedDashboardData } from "@/hooks/useUnifiedDashboardData";
 import { cn } from "@/lib/utils";
@@ -524,10 +524,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 
 	return (
 		<div className="space-y-6">
-			<DashboardGreeting
-				user={user}
-				actions={<WeatherBriefingLauncher />}
-			/>
+			<DashboardGreeting user={user} actions={<WeatherBriefingLauncher />} />
 			<RiskImpactHeroCard
 				snapshot={riskImpact}
 				isLoading={unifiedLoading}

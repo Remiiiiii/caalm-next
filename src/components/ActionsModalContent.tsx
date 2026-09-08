@@ -692,7 +692,10 @@ export const FileDetails = ({
 				description: `Expiry date updated to ${selectedDate.toLocaleDateString()}.`,
 			});
 		} catch (error: any) {
-			console.error("[CLIENT] FileDetails: Failed to update expiry date:", error);
+			console.error(
+				"[CLIENT] FileDetails: Failed to update expiry date:",
+				error,
+			);
 			toast({
 				title: "Update Failed",
 				description:
@@ -841,8 +844,7 @@ export const FileDetails = ({
 		file.status?.toLowerCase() === "expired" ||
 		Boolean(file.isExpired) ||
 		Boolean(
-			file.contractExpiryDate &&
-				new Date(file.contractExpiryDate) < new Date(),
+			file.contractExpiryDate && new Date(file.contractExpiryDate) < new Date(),
 		);
 
 	const fieldGrid = (children: React.ReactNode) => (
@@ -994,10 +996,7 @@ export const FileDetails = ({
 												"Vendor/Supplier",
 												contractAttributes.vendor,
 											)}
-											{renderField(
-												"Department",
-												contractAttributes.department,
-											)}
+											{renderField("Department", contractAttributes.department)}
 											{renderField(
 												"Contract number",
 												contractAttributes.contractNumber,
@@ -1037,8 +1036,7 @@ export const FileDetails = ({
 												<p
 													className={cn(
 														"text-sm",
-														formatDateForDisplay(displayExpiry) ===
-															EMPTY_VALUE
+														formatDateForDisplay(displayExpiry) === EMPTY_VALUE
 															? "font-normal text-slate-400"
 															: "font-semibold text-slate-800",
 													)}
@@ -1172,10 +1170,7 @@ export const FileDetails = ({
 												"Address",
 												contractAttributes.counterpartyAddress,
 											)}
-											{renderField(
-												"Type",
-												contractAttributes.counterpartyType,
-											)}
+											{renderField("Type", contractAttributes.counterpartyType)}
 											{renderField(
 												"Tax ID",
 												contractAttributes.counterpartyTaxId,
@@ -1236,10 +1231,7 @@ export const FileDetails = ({
 												contractAttributes.compliance,
 												"compliance",
 											)}
-											{renderField(
-												"Risk level",
-												contractAttributes.riskLevel,
-											)}
+											{renderField("Risk level", contractAttributes.riskLevel)}
 											{renderField(
 												"Regulatory requirements",
 												contractAttributes.regulatoryRequirements,
@@ -1330,10 +1322,7 @@ export const FileDetails = ({
 									"Organization & ownership",
 									fieldGrid(
 										<>
-											{renderField(
-												"Organization ID",
-												contractAttributes.orgId,
-											)}
+											{renderField("Organization ID", contractAttributes.orgId)}
 											{renderField(
 												"Contract owner",
 												contractOwnerFullName ||
@@ -1351,10 +1340,7 @@ export const FileDetails = ({
 												"Sub department",
 												contractAttributes.subDepartment,
 											)}
-											{renderField(
-												"Division",
-												contractAttributes.division,
-											)}
+											{renderField("Division", contractAttributes.division)}
 										</>,
 									),
 								)}
@@ -1498,7 +1484,7 @@ export const FileDetails = ({
 				</div>
 			</div>
 		</div>
-	)
+	);
 };
 
 interface Props {
@@ -1557,9 +1543,7 @@ function ShareUserAvatar({
 	}, [avatarFileId]);
 
 	const imageUrl =
-		avatarFileId && !imageFailed
-			? getProfilePictureUrl(avatarFileId)
-			: null;
+		avatarFileId && !imageFailed ? getProfilePictureUrl(avatarFileId) : null;
 	const initials = userInitials(fullName);
 
 	return (
@@ -1831,10 +1815,7 @@ export const ShareInput = ({
 							{file.contractName || file.name}
 						</p>
 						<p className="caption text-slate-500">
-							<FormattedDateTime
-								date={file.$createdAt}
-								className="caption"
-							/>
+							<FormattedDateTime date={file.$createdAt} className="caption" />
 							<span className="mx-1.5">·</span>
 							{convertFileSize({ sizeInBytes: file.size })}
 						</p>
@@ -1843,260 +1824,257 @@ export const ShareInput = ({
 			</div>
 
 			<div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-4">
-			<nav
-				className="border-b border-slate-200"
-				aria-label="Share sections"
-			>
-				<div className="flex flex-wrap gap-1" role="tablist">
-					{shareTabs.map((tab) => {
-						const selected = shareTab === tab.id;
-						return (
-							<button
-								key={tab.id}
-								type="button"
-								role="tab"
-								aria-selected={selected}
-								data-state={selected ? "active" : undefined}
-								onClick={(e) => {
-									e.stopPropagation();
-									setShareTab(tab.id);
-								}}
-								className={cn(
-									"tabs-underline cursor-pointer px-3 py-2.5 text-sm font-medium",
-									"rounded-none border-0 bg-transparent shadow-none",
-									"text-slate-600 transition-colors duration-200 hover:text-slate-700",
-									"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
-									selected && "sidebar-gradient-text",
-								)}
-							>
-								{tab.label}
-							</button>
-						);
-					})}
-				</div>
-			</nav>
-
-			{shareTab === "invite" ? (
-				<div className="space-y-4">
-					<div className="relative">
-						<Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400" />
-						<Input
-							value={userSearch}
-							onChange={(e) => setUserSearch(e.target.value)}
-							placeholder="Search by name, email, or department"
-							data-with-leading-icon="true"
-							className="h-10 border-[0.25px] border-slate-300 bg-white pl-10"
-							onClick={(e) => e.stopPropagation()}
-						/>
+				<nav className="border-b border-slate-200" aria-label="Share sections">
+					<div className="flex flex-wrap gap-1" role="tablist">
+						{shareTabs.map((tab) => {
+							const selected = shareTab === tab.id;
+							return (
+								<button
+									key={tab.id}
+									type="button"
+									role="tab"
+									aria-selected={selected}
+									data-state={selected ? "active" : undefined}
+									onClick={(e) => {
+										e.stopPropagation();
+										setShareTab(tab.id);
+									}}
+									className={cn(
+										"tabs-underline cursor-pointer px-3 py-2.5 text-sm font-medium",
+										"rounded-none border-0 bg-transparent shadow-none",
+										"text-slate-600 transition-colors duration-200 hover:text-slate-700",
+										"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
+										selected && "sidebar-gradient-text",
+									)}
+								>
+									{tab.label}
+								</button>
+							);
+						})}
 					</div>
+				</nav>
 
-					<div className="max-h-48 overflow-y-auto rounded-lg border border-slate-200 bg-white">
-						{directoryLoading ? (
-							<div className="flex items-center justify-center gap-2 py-8 text-sm text-slate-500">
-								<Loader2 className="h-4 w-4 animate-spin" />
-								Loading users...
-							</div>
-						) : directoryError ? (
-							<p className="px-4 py-6 text-center text-sm text-slate-500">
-								{directoryError}. You can still share by email below.
-							</p>
-						) : usersByDepartment.length === 0 ? (
-							<p className="px-4 py-6 text-center text-sm text-slate-500">
-								No users match your search.
-							</p>
-						) : (
-							<div className="divide-y divide-slate-100">
-								{usersByDepartment.map(([department, users]) => (
-									<div key={department} className="p-2">
-										<p className="px-2 py-1.5 text-[11px] font-semibold tracking-wide text-slate-500 uppercase">
-											{formatDeptLabel(department)}{" "}
-											<span className="tabular-nums">{users.length}</span>
-										</p>
-										<ul className="space-y-0.5">
-											{users.map((user) => {
-												const checked = selectedSet.has(
-													normalizeEmail(user.email),
-												);
-												return (
-													<li key={user.$id}>
-														<label
-															className={cn(
-																"flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 transition-colors duration-200",
-																"hover:bg-blue-50",
-																checked && "bg-blue-50/80",
-															)}
-															onClick={(e) => e.stopPropagation()}
-														>
-															<ShareUserAvatar
-																userId={user.$id}
-																fullName={user.fullName}
-																avatarFileId={user.avatar}
-															/>
-															<span className="min-w-0 flex-1">
-																<span className="block truncate text-sm font-medium text-slate-800">
-																	{user.fullName}
-																</span>
-																<span className="block truncate text-xs text-slate-500">
-																	{user.email}
-																</span>
-															</span>
-															<span className="inline-block shrink-0 rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
-																Can view
-															</span>
-															<Checkbox
-																checked={checked}
-																onCheckedChange={(value) =>
-																	toggleDirectoryUser(user, value === true)
-																}
-																aria-label={`Share with ${user.fullName}`}
-																className="cursor-pointer"
-															/>
-														</label>
-													</li>
-												);
-											})}
-										</ul>
-									</div>
-								))}
-							</div>
-						)}
-					</div>
-
-					<div className="rounded-lg border border-slate-200 bg-white p-3">
-						<div className="flex items-center gap-2">
+				{shareTab === "invite" ? (
+					<div className="space-y-4">
+						<div className="relative">
+							<Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400" />
 							<Input
-								id="share-email"
-								type="email"
-								value={emailDraft}
-								placeholder="name@example.com"
-								onChange={(e) => setEmailDraft(e.target.value)}
-								onKeyDown={(e) => {
-									if (e.key === "Enter") {
-										e.preventDefault();
+								value={userSearch}
+								onChange={(e) => setUserSearch(e.target.value)}
+								placeholder="Search by name, email, or department"
+								data-with-leading-icon="true"
+								className="h-10 border-[0.25px] border-slate-300 bg-white pl-10"
+								onClick={(e) => e.stopPropagation()}
+							/>
+						</div>
+
+						<div className="max-h-48 overflow-y-auto rounded-lg border border-slate-200 bg-white">
+							{directoryLoading ? (
+								<div className="flex items-center justify-center gap-2 py-8 text-sm text-slate-500">
+									<Loader2 className="h-4 w-4 animate-spin" />
+									Loading users...
+								</div>
+							) : directoryError ? (
+								<p className="px-4 py-6 text-center text-sm text-slate-500">
+									{directoryError}. You can still share by email below.
+								</p>
+							) : usersByDepartment.length === 0 ? (
+								<p className="px-4 py-6 text-center text-sm text-slate-500">
+									No users match your search.
+								</p>
+							) : (
+								<div className="divide-y divide-slate-100">
+									{usersByDepartment.map(([department, users]) => (
+										<div key={department} className="p-2">
+											<p className="px-2 py-1.5 text-[11px] font-semibold tracking-wide text-slate-500 uppercase">
+												{formatDeptLabel(department)}{" "}
+												<span className="tabular-nums">{users.length}</span>
+											</p>
+											<ul className="space-y-0.5">
+												{users.map((user) => {
+													const checked = selectedSet.has(
+														normalizeEmail(user.email),
+													);
+													return (
+														<li key={user.$id}>
+															<label
+																className={cn(
+																	"flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 transition-colors duration-200",
+																	"hover:bg-blue-50",
+																	checked && "bg-blue-50/80",
+																)}
+																onClick={(e) => e.stopPropagation()}
+															>
+																<ShareUserAvatar
+																	userId={user.$id}
+																	fullName={user.fullName}
+																	avatarFileId={user.avatar}
+																/>
+																<span className="min-w-0 flex-1">
+																	<span className="block truncate text-sm font-medium text-slate-800">
+																		{user.fullName}
+																	</span>
+																	<span className="block truncate text-xs text-slate-500">
+																		{user.email}
+																	</span>
+																</span>
+																<span className="inline-block shrink-0 rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+																	Can view
+																</span>
+																<Checkbox
+																	checked={checked}
+																	onCheckedChange={(value) =>
+																		toggleDirectoryUser(user, value === true)
+																	}
+																	aria-label={`Share with ${user.fullName}`}
+																	className="cursor-pointer"
+																/>
+															</label>
+														</li>
+													);
+												})}
+											</ul>
+										</div>
+									))}
+								</div>
+							)}
+						</div>
+
+						<div className="rounded-lg border border-slate-200 bg-white p-3">
+							<div className="flex items-center gap-2">
+								<Input
+									id="share-email"
+									type="email"
+									value={emailDraft}
+									placeholder="name@example.com"
+									onChange={(e) => setEmailDraft(e.target.value)}
+									onKeyDown={(e) => {
+										if (e.key === "Enter") {
+											e.preventDefault();
+											e.stopPropagation();
+											handleAddEmail();
+										}
+									}}
+									onClick={(e) => e.stopPropagation()}
+									className="h-9 flex-1 border-[0.25px] border-slate-300 bg-white text-sm"
+								/>
+								<Button
+									type="button"
+									onClick={(e) => {
 										e.stopPropagation();
 										handleAddEmail();
-									}
-								}}
-								onClick={(e) => e.stopPropagation()}
-								className="h-9 flex-1 border-[0.25px] border-slate-300 bg-white text-sm"
-							/>
-							<Button
-								type="button"
-								onClick={(e) => {
-									e.stopPropagation();
-									handleAddEmail();
-								}}
-								className="primary-btn h-9! min-h-9! w-auto! shrink-0 px-3! py-1.5! text-sm sm:w-auto!"
-							>
-								<Plus className="h-3.5 w-3.5" />
-								Add
-							</Button>
-						</div>
-						<p className="mt-2 text-xs text-slate-500">
-							Use this for people who are not in CAALM yet.
-						</p>
-					</div>
-				</div>
-			) : null}
-
-			{shareTab === "shared" ? (
-				<div className="space-y-2">
-					{displayUsers.length > 0 ? (
-						displayUsers.map((email: string) => {
-							const trimmed = email.trim();
-							const directoryMatch = directoryUsers.find(
-								(u) => normalizeEmail(u.email) === normalizeEmail(trimmed),
-							);
-							const displayName =
-								emailDisplayNames[trimmed] ||
-								emailDisplayNames[normalizeEmail(trimmed)] ||
-								directoryMatch?.fullName ||
-								trimmed;
-							return (
-								<div
-									key={email}
-									className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5"
+									}}
+									className="primary-btn h-9! min-h-9! w-auto! shrink-0 px-3! py-1.5! text-sm sm:w-auto!"
 								>
-									<div className="flex min-w-0 items-center gap-3">
-										<ShareUserAvatar
-											userId={directoryMatch?.$id || trimmed}
-											fullName={displayName}
-											avatarFileId={directoryMatch?.avatar}
-										/>
-										<span
-											className="min-w-0 truncate text-sm text-slate-700"
-											title={
-												displayName !== trimmed
-													? `${displayName} (${trimmed})`
-													: trimmed
-											}
-										>
-											<span className="block font-medium text-slate-800">
-												{displayName}
-											</span>
-											{displayName !== trimmed ? (
-												<span className="block truncate text-xs text-slate-500">
-													{trimmed}
-												</span>
-											) : null}
-										</span>
-									</div>
-									<div className="flex shrink-0 items-center gap-2">
-										<span className="inline-block rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
-											Can view
-										</span>
-										<Button
-											onClick={(e) => {
-												e.stopPropagation();
-												onRemove(email);
-											}}
-											variant="ghost"
-											size="sm"
-											className="h-7 w-7 cursor-pointer rounded-full p-0 hover:bg-red/10"
-											aria-label={`Remove ${displayName}`}
-										>
-											<X className="h-4 w-4 text-red" />
-										</Button>
-									</div>
-								</div>
-							);
-						})
-					) : (
-						<p className="rounded-lg border border-dashed border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-500">
-							No one is shared yet. Invite people from the first tab.
-						</p>
-					)}
-				</div>
-			) : null}
-
-			{shareTab === "file-info" ? (
-				<div className="space-y-3">
-					{[
-						{ label: "Format", value: file.extension || "—" },
-						{
-							label: "Size",
-							value: convertFileSize({ sizeInBytes: file.size }),
-						},
-						{ label: "Owner", value: ownerName || "—" },
-						{
-							label: "Last modified",
-							value: formatDateTime(file.$updatedAt),
-						},
-					].map((row) => (
-						<div
-							key={row.label}
-							className="flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white px-4 py-3"
-						>
-							<span className="text-sm font-medium text-slate-600">
-								{row.label}
-							</span>
-							<span className="min-w-0 truncate text-sm font-semibold text-slate-800">
-								{row.value}
-							</span>
+									<Plus className="h-3.5 w-3.5" />
+									Add
+								</Button>
+							</div>
+							<p className="mt-2 text-xs text-slate-500">
+								Use this for people who are not in CAALM yet.
+							</p>
 						</div>
-					))}
-				</div>
-			) : null}
+					</div>
+				) : null}
+
+				{shareTab === "shared" ? (
+					<div className="space-y-2">
+						{displayUsers.length > 0 ? (
+							displayUsers.map((email: string) => {
+								const trimmed = email.trim();
+								const directoryMatch = directoryUsers.find(
+									(u) => normalizeEmail(u.email) === normalizeEmail(trimmed),
+								);
+								const displayName =
+									emailDisplayNames[trimmed] ||
+									emailDisplayNames[normalizeEmail(trimmed)] ||
+									directoryMatch?.fullName ||
+									trimmed;
+								return (
+									<div
+										key={email}
+										className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5"
+									>
+										<div className="flex min-w-0 items-center gap-3">
+											<ShareUserAvatar
+												userId={directoryMatch?.$id || trimmed}
+												fullName={displayName}
+												avatarFileId={directoryMatch?.avatar}
+											/>
+											<span
+												className="min-w-0 truncate text-sm text-slate-700"
+												title={
+													displayName !== trimmed
+														? `${displayName} (${trimmed})`
+														: trimmed
+												}
+											>
+												<span className="block font-medium text-slate-800">
+													{displayName}
+												</span>
+												{displayName !== trimmed ? (
+													<span className="block truncate text-xs text-slate-500">
+														{trimmed}
+													</span>
+												) : null}
+											</span>
+										</div>
+										<div className="flex shrink-0 items-center gap-2">
+											<span className="inline-block rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+												Can view
+											</span>
+											<Button
+												onClick={(e) => {
+													e.stopPropagation();
+													onRemove(email);
+												}}
+												variant="ghost"
+												size="sm"
+												className="h-7 w-7 cursor-pointer rounded-full p-0 hover:bg-red/10"
+												aria-label={`Remove ${displayName}`}
+											>
+												<X className="h-4 w-4 text-red" />
+											</Button>
+										</div>
+									</div>
+								);
+							})
+						) : (
+							<p className="rounded-lg border border-dashed border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-500">
+								No one is shared yet. Invite people from the first tab.
+							</p>
+						)}
+					</div>
+				) : null}
+
+				{shareTab === "file-info" ? (
+					<div className="space-y-3">
+						{[
+							{ label: "Format", value: file.extension || "—" },
+							{
+								label: "Size",
+								value: convertFileSize({ sizeInBytes: file.size }),
+							},
+							{ label: "Owner", value: ownerName || "—" },
+							{
+								label: "Last modified",
+								value: formatDateTime(file.$updatedAt),
+							},
+						].map((row) => (
+							<div
+								key={row.label}
+								className="flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white px-4 py-3"
+							>
+								<span className="text-sm font-medium text-slate-600">
+									{row.label}
+								</span>
+								<span className="min-w-0 truncate text-sm font-semibold text-slate-800">
+									{row.value}
+								</span>
+							</div>
+						))}
+					</div>
+				) : null}
 			</div>
 		</div>
 	);

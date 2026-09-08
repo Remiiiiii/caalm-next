@@ -16,7 +16,9 @@ export async function fetchStepUpStatus(): Promise<{
 	};
 }
 
-export async function isStepUpRequiredResponse(res: Response): Promise<boolean> {
+export async function isStepUpRequiredResponse(
+	res: Response,
+): Promise<boolean> {
 	if (res.status !== 403) return false;
 	try {
 		const body = await res.clone().json();
@@ -32,7 +34,7 @@ export async function fetchWithStepUp(
 	init: RequestInit,
 	ensureStepUp: () => Promise<boolean>,
 ): Promise<Response> {
-	let res = await fetch(url, init);
+	const res = await fetch(url, init);
 	if (!(await isStepUpRequiredResponse(res))) {
 		return res;
 	}

@@ -8,8 +8,8 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS, type PermissionKey } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
-import { isITDepartment } from "@/lib/rbac/it-department";
 import { getUserDepartmentProfile } from "@/lib/rbac/dashboard-access-policy";
+import { isITDepartment } from "@/lib/rbac/it-department";
 import {
 	getUserDefaultOrganization,
 	getUserRoles,

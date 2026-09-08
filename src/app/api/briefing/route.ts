@@ -25,9 +25,6 @@ export async function GET(request: NextRequest) {
 		});
 	} catch (error) {
 		console.error("[briefing]", error);
-		return NextResponse.json(
-			{ markets: [], news: [] },
-			{ status: 200 },
-		);
+		return NextResponse.json({ markets: [], news: [] }, { status: 200 });
 	}
 }

@@ -1,5 +1,5 @@
-import { EnterpriseSetupRequiredError } from "./types";
 import type { CrmOriginConnector } from "./types";
+import { EnterpriseSetupRequiredError } from "./types";
 
 function refuse(): never {
 	throw new EnterpriseSetupRequiredError();

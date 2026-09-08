@@ -1,12 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
+import { getCurrentUser } from "@/lib/actions/user.actions";
 import {
+	type AttestationIntent,
+	type ExpirationReasonCategory,
 	getAttestationById,
 	submitAttestation,
-	type ExpirationReasonCategory,
-	type AttestationIntent,
 } from "@/lib/approvals/ExpirationAttestationService";
-import { getCurrentUser } from "@/lib/actions/user.actions";
 import { requirePermission } from "@/lib/rbac/middleware";
 
 export async function GET(
@@ -21,7 +21,10 @@ export async function GET(
 	const { id } = await params;
 	const attestation = await getAttestationById(id);
 	if (!attestation) {
-		return NextResponse.json({ success: false, message: "Not found" }, { status: 404 });
+		return NextResponse.json(
+			{ success: false, message: "Not found" },
+			{ status: 404 },
+		);
 	}
 	return NextResponse.json({ success: true, attestation });
 }
@@ -37,7 +40,10 @@ export async function PATCH(
 
 	const user = await getCurrentUser();
 	if (!user) {
-		return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+		return NextResponse.json(
+			{ error: "Authentication required" },
+			{ status: 401 },
+		);
 	}
 
 	const { id } = await params;

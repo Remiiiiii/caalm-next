@@ -1,4 +1,4 @@
-import { readFileSync, existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { extractHeadings, stripMarkdown } from "./markdown";
 import { flattenDocsNav } from "./navigation";
@@ -35,7 +35,10 @@ function parseFrontmatter(raw: string): {
 	}
 
 	const audience = data.audience
-		? data.audience.split(",").map((s) => s.trim()).filter(Boolean)
+		? data.audience
+				.split(",")
+				.map((s) => s.trim())
+				.filter(Boolean)
 		: undefined;
 
 	return {

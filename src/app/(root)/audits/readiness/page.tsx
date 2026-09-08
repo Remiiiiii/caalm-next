@@ -2,28 +2,28 @@
 
 import {
 	ClipboardCheck,
-	SquareArrowRightExit,
 	ExternalLink,
 	FileText,
 	Loader2,
 	Play,
 	RefreshCw,
+	SquareArrowRightExit,
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
-import { useOrgTimezone } from "@/hooks/useOrgTimezone";
-import { formatInTimezone } from "@/lib/timezone";
 import useSWR from "swr";
 import { ReadinessAiPanel } from "@/components/audits/ReadinessAiPanel";
 import { ReadinessCharts } from "@/components/audits/ReadinessCharts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import { LoadingSpinner } from "@/components/ui/loading";
+import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import { PERMISSIONS } from "@/constants/permissions";
-import { usePermissions } from "@/hooks/usePermissions";
 import { useToast } from "@/hooks/use-toast";
+import { useOrgTimezone } from "@/hooks/useOrgTimezone";
+import { usePermissions } from "@/hooks/usePermissions";
 import { fetcher } from "@/lib/swr-config";
+import { formatInTimezone } from "@/lib/timezone";
 import { cn } from "@/lib/utils";
 
 interface ReadinessResponse {
@@ -69,7 +69,11 @@ interface ReadinessResponse {
 			websiteUrl: string;
 			healthHint: string;
 			issues: string[];
-			pages: Array<{ url: string; status: number | null; title: string | null }>;
+			pages: Array<{
+				url: string;
+				status: number | null;
+				title: string | null;
+			}>;
 			robotsTxtFound: boolean;
 			sitemapFound: boolean;
 		} | null;
@@ -209,9 +213,7 @@ export default function AuditReadinessPage() {
 	return (
 		<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 pb-10">
 			<div className="flex items-center gap-4 mb-4 justify-start self-start w-full">
-				<h1 className="h1 capitalize sidebar-gradient-text">
-					Audit readiness
-				</h1>
+				<h1 className="h1 capitalize sidebar-gradient-text">Audit readiness</h1>
 			</div>
 
 			<div className="mb-4 rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-900">
@@ -276,12 +278,15 @@ export default function AuditReadinessPage() {
 							Readiness score
 						</p>
 						<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-							<span>{score === null || score === undefined ? "N/A" : score}</span>
+							<span>
+								{score === null || score === undefined ? "N/A" : score}
+							</span>
 							<span
 								className={cn(
 									"ml-3 text-xs px-2 py-1 rounded border uppercase",
 									rag === "green" && "bg-green/10 text-green border-green/20",
-									rag === "amber" && "bg-orange/10 text-orange border-orange/20",
+									rag === "amber" &&
+										"bg-orange/10 text-orange border-orange/20",
 									rag === "red" && "bg-red/10 text-red border-red/20",
 								)}
 							>
@@ -300,9 +305,7 @@ export default function AuditReadinessPage() {
 							Critical items
 						</p>
 						<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-							<span>
-								{summary?.severity.critical ?? 0}
-							</span>
+							<span>{summary?.severity.critical ?? 0}</span>
 							<StatCardIcon className="ml-2" icon={ClipboardCheck} />
 						</div>
 						<p className="text-xs text-slate-600 mt-1">

@@ -133,13 +133,19 @@ function parseInline(input: string): InlineNode[] {
 	return nodes;
 }
 
-function parseTable(lines: string[], start: number): { block: MdBlock; next: number } {
+function parseTable(
+	lines: string[],
+	start: number,
+): { block: MdBlock; next: number } {
 	const header = lines[start]
 		.split("|")
 		.map((c) => c.trim())
 		.filter(Boolean);
 	let i = start + 1;
-	if (i < lines.length && /^\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)+\|?$/.test(lines[i])) {
+	if (
+		i < lines.length &&
+		/^\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)+\|?$/.test(lines[i])
+	) {
 		i += 1;
 	}
 	const rows: string[][] = [];
@@ -195,7 +201,7 @@ export function parseMarkdown(markdown: string): MdBlock[] {
 		if (heading) {
 			const level = heading[1].length;
 			const text = heading[2].trim();
-			const tag = (`h${level}` as "h1" | "h2" | "h3");
+			const tag = `h${level}` as "h1" | "h2" | "h3";
 			blocks.push({
 				type: tag,
 				id: level >= 2 ? slugifyHeading(text) : undefined,

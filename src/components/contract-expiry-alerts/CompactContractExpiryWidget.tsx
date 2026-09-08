@@ -24,8 +24,7 @@ interface CompactContractExpiryWidgetProps {
 	className?: string;
 }
 
-const COMPACT_HEIGHT =
-	"w-full h-[200px] sm:h-[250px] lg:h-[300px]";
+const COMPACT_HEIGHT = "w-full h-[200px] sm:h-[250px] lg:h-[300px]";
 
 export const CompactContractExpiryWidget: React.FC<
 	CompactContractExpiryWidgetProps

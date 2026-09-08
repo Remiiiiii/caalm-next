@@ -68,7 +68,10 @@ export async function rebuildNegotiationSnapshot(input: {
 	const versions = await listVersions(input.contractId);
 	const current = versions[0];
 	if (!current || !isThinNegotiationSnapshot(current.extractedText)) {
-		return { rebuilt: false, reason: "Current snapshot already has document structure" };
+		return {
+			rebuilt: false,
+			reason: "Current snapshot already has document structure",
+		};
 	}
 
 	const comments = await listComments(input.contractId);
@@ -116,7 +119,9 @@ export async function sendForReview(input: {
 	const gate = assertCanLeaveNegotiation({
 		lifecycleStatus: String(contract.lifecycleStatus || ""),
 		openCommentCount: countOpenComments(comments),
-		hasApprovePermission: input.permissions.includes(PERMISSIONS.CONTRACTS.APPROVE),
+		hasApprovePermission: input.permissions.includes(
+			PERMISSIONS.CONTRACTS.APPROVE,
+		),
 	});
 	if (!gate.ok) {
 		throw new Error(gate.reason || "Negotiation is not resolved");

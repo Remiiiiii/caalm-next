@@ -163,7 +163,10 @@ async function postWebhook(path, body) {
 
 		logWebhookHostHint(text);
 
-		if (!isRetryableWebhookFailure(res.status, text) || attempt === MAX_WEBHOOK_ATTEMPTS) {
+		if (
+			!isRetryableWebhookFailure(res.status, text) ||
+			attempt === MAX_WEBHOOK_ATTEMPTS
+		) {
 			return lastResult;
 		}
 
@@ -239,7 +242,9 @@ async function fetchPullRequest(repo, prNumber) {
 
 async function fetchMergedPrsForCommit(repo, sha) {
 	if (!GH_TOKEN) {
-		console.warn("[roadmap] GITHUB_TOKEN missing; cannot resolve PRs for commit");
+		console.warn(
+			"[roadmap] GITHUB_TOKEN missing; cannot resolve PRs for commit",
+		);
 		return [];
 	}
 	const url = `https://api.github.com/repos/${repo}/commits/${sha}/pulls`;
@@ -284,7 +289,11 @@ function dedupePrTargets(targets) {
 	return [...byPr.values()];
 }
 
-async function resolvePrTargetsForMainPush(repo, sha, { includeCatalogCatchup = false } = {}) {
+async function resolvePrTargetsForMainPush(
+	repo,
+	sha,
+	{ includeCatalogCatchup = false } = {},
+) {
 	const fromCommit = await fetchMergedPrsForCommit(repo, sha);
 	const fromEvent = parsePrNumbersFromPushEvent();
 
@@ -344,7 +353,9 @@ async function runCatchup() {
 		process.exit(1);
 	}
 	if (!GH_TOKEN) {
-		console.error("[roadmap] GITHUB_TOKEN missing — needed to look up merged PRs");
+		console.error(
+			"[roadmap] GITHUB_TOKEN missing — needed to look up merged PRs",
+		);
 		process.exit(1);
 	}
 
@@ -354,7 +365,9 @@ async function runCatchup() {
 		return;
 	}
 
-	console.log(`[roadmap] Catch-up: ${targets.length} merged catalog PR(s) in ${repo}`);
+	console.log(
+		`[roadmap] Catch-up: ${targets.length} merged catalog PR(s) in ${repo}`,
+	);
 	for (let i = 0; i < targets.length; i++) {
 		const { prNumber, mergeCommitSha } = targets[i];
 		await notifyRoadmapForPr({
@@ -414,7 +427,11 @@ async function main() {
 			prNumber: prFromEvent,
 			commitSha: headSha,
 		});
-		console.log("[roadmap] ci-test-result:", ci.status, JSON.stringify(ci.json));
+		console.log(
+			"[roadmap] ci-test-result:",
+			ci.status,
+			JSON.stringify(ci.json),
+		);
 		if (!ci.ok) process.exit(1);
 		return;
 	}

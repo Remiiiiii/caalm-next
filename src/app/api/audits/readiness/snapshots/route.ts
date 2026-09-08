@@ -17,12 +17,18 @@ export async function GET(request: NextRequest) {
 
 	const user = await getCurrentUser();
 	if (!user) {
-		return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+		return NextResponse.json(
+			{ error: "Authentication required" },
+			{ status: 401 },
+		);
 	}
 
 	const defaultOrg = await getUserDefaultOrganization(user.$id);
 	if (!defaultOrg?.orgId) {
-		return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+		return NextResponse.json(
+			{ error: "Organization not found" },
+			{ status: 404 },
+		);
 	}
 
 	const { searchParams } = new URL(request.url);
@@ -50,9 +56,7 @@ export async function GET(request: NextRequest) {
 			timezone: row.timezone,
 			createdAt: row.createdAt,
 			aiSummary: row.aiSummary,
-			...(includePayload
-				? { payload: parseSnapshotPayload(row.payload) }
-				: {}),
+			...(includePayload ? { payload: parseSnapshotPayload(row.payload) } : {}),
 		})),
 	});
 }

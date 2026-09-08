@@ -108,10 +108,7 @@ export async function PATCH(
 
 	try {
 		if (parsed.data.setDefault) {
-			const paymentMethods = await setDefaultOrgPaymentMethod(
-				resolved.org,
-				id,
-			);
+			const paymentMethods = await setDefaultOrgPaymentMethod(resolved.org, id);
 			return NextResponse.json({ paymentMethods });
 		}
 
@@ -123,7 +120,9 @@ export async function PATCH(
 		return NextResponse.json({ paymentMethod });
 	} catch (error: unknown) {
 		const message =
-			error instanceof Error ? error.message : "Failed to update payment method";
+			error instanceof Error
+				? error.message
+				: "Failed to update payment method";
 		console.error("[billing/payment-methods/PATCH]", error);
 		return NextResponse.json({ error: message }, { status: 400 });
 	}
@@ -166,7 +165,9 @@ export async function DELETE(
 		return NextResponse.json({ success: true });
 	} catch (error: unknown) {
 		const message =
-			error instanceof Error ? error.message : "Failed to remove payment method";
+			error instanceof Error
+				? error.message
+				: "Failed to remove payment method";
 		console.error("[billing/payment-methods/DELETE]", error);
 		return NextResponse.json({ error: message }, { status: 400 });
 	}

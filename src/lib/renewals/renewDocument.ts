@@ -1,5 +1,4 @@
 import { initializeOnUpload } from "@/lib/approvals/ContractApprovalWorkflowService";
-import { initializeLicenseOnUpload } from "@/lib/approvals/LicenseApprovalWorkflowService";
 import { isRenewalBlocked } from "@/lib/approvals/ExpirationAttestationService";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";

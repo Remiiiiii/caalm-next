@@ -1,3 +1,4 @@
+import { extractJsonObjectFromModelText } from "@/lib/ai/contractTypeSuggestionSchema";
 import { isClauseCategory } from "@/lib/clauses/clause-library.service";
 import type { Clause } from "@/types/clauses";
 import type {
@@ -10,7 +11,6 @@ import type {
 	ExtractedClauseInput,
 } from "@/types/playbook-deviations";
 import { DEVIATION_SEVERITIES } from "@/types/playbook-deviations";
-import { extractJsonObjectFromModelText } from "@/lib/ai/contractTypeSuggestionSchema";
 
 const MAX_RATIONALE = 800;
 const MAX_POINT = 280;

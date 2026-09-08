@@ -1,7 +1,7 @@
 "use client";
 
 import { KeyRound, Shield, Webhook } from "lucide-react";
-import { useMemo, useState, type ReactNode } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import { PageIndex } from "@/components/ui/page-index";
 import HubSpotIntegrationCard from "./HubSpotIntegrationCard";
 import IntegrationCard from "./IntegrationCard";
@@ -35,9 +35,7 @@ export default function IntegrationsPanel({
 		const items: ReactNode[] = [];
 
 		if (!isDemo) {
-			items.push(
-				<OutlookIntegrationCard key="outlook" userId={userId} />,
-			);
+			items.push(<OutlookIntegrationCard key="outlook" userId={userId} />);
 		}
 
 		items.push(
@@ -82,8 +80,8 @@ export default function IntegrationsPanel({
 				actions={
 					hasSso ? (
 						<p className="text-xs text-slate-500">
-							Configure your identity provider once SSO is provisioned for
-							your organization.
+							Configure your identity provider once SSO is provisioned for your
+							organization.
 						</p>
 					) : undefined
 				}
@@ -129,9 +127,7 @@ export default function IntegrationsPanel({
 				</p>
 			</div>
 
-			<div className="grid grid-cols-3 gap-6">
-				{pageCards}
-			</div>
+			<div className="grid grid-cols-3 gap-6">{pageCards}</div>
 
 			<PageIndex
 				page={safePage}

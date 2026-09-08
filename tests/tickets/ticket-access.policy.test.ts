@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { PERMISSIONS } from "@/constants/permissions";
+import type { Ticket } from "@/lib/tickets/ticket.types";
 import {
 	canClaimTicket,
 	canCloseTicket,
@@ -9,7 +10,6 @@ import {
 	canViewTicket,
 	filterVisibleTickets,
 } from "@/lib/tickets/ticket-access.policy";
-import type { Ticket } from "@/lib/tickets/ticket.types";
 
 const ticket: Ticket = {
 	$id: "t1",

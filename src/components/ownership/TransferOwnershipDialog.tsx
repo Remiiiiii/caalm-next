@@ -3,11 +3,7 @@
 import { ArrowRightLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
 	Select,
 	SelectContent,
@@ -65,9 +61,7 @@ export function TransferOwnershipDialog({
 				const list = (
 					Array.isArray(body) ? body : body.users || []
 				) as DirectoryUser[];
-				setUsers(
-					list.filter((row) => row.$id && row.$id !== excludeUserId),
-				);
+				setUsers(list.filter((row) => row.$id && row.$id !== excludeUserId));
 			})
 			.catch(() => setUsers([]))
 			.finally(() => setLoadingUsers(false));
@@ -99,8 +93,7 @@ export function TransferOwnershipDialog({
 		} catch (error) {
 			toast({
 				title: "Could not transfer",
-				description:
-					error instanceof Error ? error.message : "Try again",
+				description: error instanceof Error ? error.message : "Try again",
 				variant: "destructive",
 			});
 		} finally {

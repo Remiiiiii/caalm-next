@@ -3,11 +3,7 @@
  * Server is the source of truth; UI must not invent unlock rules.
  */
 
-import type {
-	RoadmapEntityStatus,
-	RoadmapSection,
-	RoadmapTask,
-} from "./types";
+import type { RoadmapEntityStatus, RoadmapSection, RoadmapTask } from "./types";
 
 export type LockSnapshot = {
 	sections: RoadmapSection[];

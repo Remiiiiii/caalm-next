@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { execFileSync } from "node:child_process";
 /**
  * Pre-render page-1 thumbnails from the 10 agreement .docx files.
  * Skips a file when sha256(docx) matches the last generated hash.
@@ -8,7 +9,6 @@
  *   node scripts/generate-blueprint-thumbnails.mjs --dir "C:/Users/victo/Downloads/files/updated"
  */
 import { createHash } from "node:crypto";
-import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -20,10 +20,14 @@ import {
 const ROOT = path.resolve(import.meta.dirname, "..");
 const dirArg = process.argv.find((arg, i) => process.argv[i - 1] === "--dir");
 const FORCE = process.argv.includes("--force");
-const SOURCE = dirArg || path.join(os.homedir(), "Downloads", "files", "updated");
+const SOURCE =
+	dirArg || path.join(os.homedir(), "Downloads", "files", "updated");
 const OUT = path.join(ROOT, ".tmp-blueprint-thumbs");
 const PUBLIC_DIR = path.join(ROOT, "public", "assets", "contract-blueprints");
-const HASH_FILE = path.join(ROOT, "src/lib/templates/blueprint-thumbnail-hashes.json");
+const HASH_FILE = path.join(
+	ROOT,
+	"src/lib/templates/blueprint-thumbnail-hashes.json",
+);
 
 const FILES = [
 	["vendor", "01_Vendor_Service_Agreement.docx"],
@@ -44,10 +48,22 @@ const HEIGHT = Math.round(WIDTH * (11 / 8.5));
 
 function findBrowser() {
 	const candidates = [
-		path.join(process.env["ProgramFiles"] || "", "Google/Chrome/Application/chrome.exe"),
-		path.join(process.env["ProgramFiles(x86)"] || "", "Google/Chrome/Application/chrome.exe"),
-		path.join(process.env.LOCALAPPDATA || "", "Google/Chrome/Application/chrome.exe"),
-		path.join(process.env["ProgramFiles"] || "", "Microsoft/Edge/Application/msedge.exe"),
+		path.join(
+			process.env.ProgramFiles || "",
+			"Google/Chrome/Application/chrome.exe",
+		),
+		path.join(
+			process.env["ProgramFiles(x86)"] || "",
+			"Google/Chrome/Application/chrome.exe",
+		),
+		path.join(
+			process.env.LOCALAPPDATA || "",
+			"Google/Chrome/Application/chrome.exe",
+		),
+		path.join(
+			process.env.ProgramFiles || "",
+			"Microsoft/Edge/Application/msedge.exe",
+		),
 	];
 	return candidates.find((row) => fs.existsSync(row));
 }
@@ -142,7 +158,10 @@ for (const [id, fileName] of FILES) {
 	fs.copyFileSync(pngPath, publicPng);
 	for (const name of fs.readdirSync(PUBLIC_DIR)) {
 		if (name === publicName) continue;
-		if (name === `${id}.png` || (name.startsWith(`${id}.`) && name.endsWith(".png"))) {
+		if (
+			name === `${id}.png` ||
+			(name.startsWith(`${id}.`) && name.endsWith(".png"))
+		) {
 			fs.unlinkSync(path.join(PUBLIC_DIR, name));
 		}
 	}

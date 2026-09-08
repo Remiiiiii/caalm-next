@@ -59,9 +59,8 @@ export function negotiationSnapshotFromHtml(
 ): string {
 	const cleaned = stripPresentationOnlyHtml(html);
 	const blocks =
-		cleaned.match(
-			/<(?:h[1-6]|p|li)\b[^>]*>[\s\S]*?<\/(?:h[1-6]|p|li)>/gi,
-		) || [];
+		cleaned.match(/<(?:h[1-6]|p|li)\b[^>]*>[\s\S]*?<\/(?:h[1-6]|p|li)>/gi) ||
+		[];
 	const body: string[] = [];
 	let title = "";
 	let sawSection = false;
@@ -71,9 +70,7 @@ export function negotiationSnapshotFromHtml(
 		if (!openTag) continue;
 		const tag = openTag[1].toLowerCase();
 		const attributes = openTag[2] || "";
-		const inner = block
-			.replace(/^<[^>]+>/, "")
-			.replace(/<\/[^>]+>$/, "");
+		const inner = block.replace(/^<[^>]+>/, "").replace(/<\/[^>]+>$/, "");
 		const text = inlineHtmlToMarkdown(inner);
 		if (!text) continue;
 

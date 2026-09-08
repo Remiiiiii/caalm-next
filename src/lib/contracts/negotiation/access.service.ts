@@ -4,15 +4,15 @@ import {
 	generateNegotiationToken,
 	hashNegotiationToken,
 	isAccessValid,
+	type NegotiationInvitee,
 	normalizeInvitees,
 	parseInviteesJson,
 	serializeInvitees,
-	type NegotiationInvitee,
 } from "./access.logic";
 import { accessTable, dbId, Query } from "./contract-scope";
 
-export type { NegotiationInvitee };
 export { flattenActiveInvitees } from "./access.logic";
+export type { NegotiationInvitee };
 
 export interface NegotiationAccess {
 	$id: string;
@@ -54,7 +54,9 @@ function mapAccess(row: Record<string, unknown>): NegotiationAccess {
 	};
 }
 
-export async function listAccess(contractId: string): Promise<NegotiationAccess[]> {
+export async function listAccess(
+	contractId: string,
+): Promise<NegotiationAccess[]> {
 	const { tablesDB } = await createAdminClient();
 	const response = await tablesDB.listRows({
 		databaseId: dbId(),
@@ -101,8 +103,11 @@ export async function createAccess(input: {
 
 	const primary = invitees[0];
 	const token = generateNegotiationToken();
-	const days = input.expiresInDays && input.expiresInDays > 0 ? input.expiresInDays : 14;
-	const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+	const days =
+		input.expiresInDays && input.expiresInDays > 0 ? input.expiresInDays : 14;
+	const expiresAt = new Date(
+		Date.now() + days * 24 * 60 * 60 * 1000,
+	).toISOString();
 	const { tablesDB } = await createAdminClient();
 	const baseData = {
 		contractId: input.contractId,
@@ -127,7 +132,9 @@ export async function createAccess(input: {
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
 		// Older schemas may not have inviteesJson yet — still create the link.
-		if (/inviteesJson|Unknown attribute|Invalid document structure/i.test(message)) {
+		if (
+			/inviteesJson|Unknown attribute|Invalid document structure/i.test(message)
+		) {
 			row = (await tablesDB.createRow({
 				databaseId: dbId(),
 				tableId: accessTable(),

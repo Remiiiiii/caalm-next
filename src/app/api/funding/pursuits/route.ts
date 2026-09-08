@@ -18,11 +18,17 @@ export async function GET(request: NextRequest) {
 
 	const user = await getCurrentUser();
 	if (!user) {
-		return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+		return NextResponse.json(
+			{ error: "Authentication required" },
+			{ status: 401 },
+		);
 	}
 	const org = await getUserDefaultOrganization(user.$id);
 	if (!org?.orgId) {
-		return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+		return NextResponse.json(
+			{ error: "Organization not found" },
+			{ status: 404 },
+		);
 	}
 
 	const stageParam = request.nextUrl.searchParams.get("stage");
@@ -48,11 +54,17 @@ export async function POST(request: NextRequest) {
 
 	const user = await getCurrentUser();
 	if (!user) {
-		return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+		return NextResponse.json(
+			{ error: "Authentication required" },
+			{ status: 401 },
+		);
 	}
 	const org = await getUserDefaultOrganization(user.$id);
 	if (!org?.orgId) {
-		return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+		return NextResponse.json(
+			{ error: "Organization not found" },
+			{ status: 404 },
+		);
 	}
 
 	try {
@@ -63,7 +75,10 @@ export async function POST(request: NextRequest) {
 			return NextResponse.json({ error: "title is required" }, { status: 400 });
 		}
 		if (!Number.isFinite(amount) || amount < 0) {
-			return NextResponse.json({ error: "amount must be a number ≥ 0" }, { status: 400 });
+			return NextResponse.json(
+				{ error: "amount must be a number ≥ 0" },
+				{ status: 400 },
+			);
 		}
 
 		const pursuit = await createPursuit({

@@ -1,5 +1,12 @@
 "use client";
-import { Check, EyeOff, Lock, MessageSquare, RotateCw, Send } from "lucide-react";
+import {
+	Check,
+	EyeOff,
+	Lock,
+	MessageSquare,
+	RotateCw,
+	Send,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -145,7 +152,8 @@ export function NegotiationCommentThread({
 		}
 		return {
 			title: "No open comments yet",
-			detail: "Click a paragraph in the draft to leave feedback or a suggested replacement.",
+			detail:
+				"Click a paragraph in the draft to leave feedback or a suggested replacement.",
 		};
 	})();
 
@@ -199,7 +207,10 @@ export function NegotiationCommentThread({
 					))}
 				</div>
 			</div>
-			<div ref={listRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
+			<div
+				ref={listRef}
+				className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3"
+			>
 				{visible.length === 0 ? (
 					<div className="flex h-full min-h-40 flex-col items-center justify-center px-4 text-center">
 						<MessageSquare
@@ -332,7 +343,10 @@ export function NegotiationCommentThread({
 														Resolve
 													</Button>
 												</TooltipTrigger>
-												<TooltipContent side="top" className="max-w-[220px] text-xs">
+												<TooltipContent
+													side="top"
+													className="max-w-[220px] text-xs"
+												>
 													Marks this thread done. Contract text stays unchanged.
 												</TooltipContent>
 											</Tooltip>
@@ -357,7 +371,10 @@ export function NegotiationCommentThread({
 														Accept redline
 													</Button>
 												</TooltipTrigger>
-												<TooltipContent side="top" className="max-w-[240px] text-xs">
+												<TooltipContent
+													side="top"
+													className="max-w-[240px] text-xs"
+												>
 													Creates a new text version. The PDF file stays
 													unchanged until you re-export.
 												</TooltipContent>

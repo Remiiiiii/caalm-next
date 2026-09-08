@@ -2,6 +2,7 @@
 
 import { ChevronDown, ChevronUp, CreditCard, Save } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import type { PaymentMethodRow } from "@/components/settings/PaymentMethodsSection";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -18,7 +19,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import type { PaymentMethodRow } from "@/components/settings/PaymentMethodsSection";
 import { cn } from "@/lib/utils";
 
 interface EditPaymentMethodDialogProps {
@@ -96,9 +96,7 @@ export default function EditPaymentMethodDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent
-				className="flex max-h-[90vh] w-[calc(100%-1.5rem)] max-w-[480px] flex-col overflow-hidden p-0 shadow-xl sm:w-full"
-			>
+			<DialogContent className="flex max-h-[90vh] w-[calc(100%-1.5rem)] max-w-[480px] flex-col overflow-hidden p-0 shadow-xl sm:w-full">
 				<div className="absolute top-0 right-0 left-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
 
 				<div className="glass-dialog-wizard-header mt-4">
@@ -128,11 +126,7 @@ export default function EditPaymentMethodDialog({
 								>
 									Month
 								</Label>
-								<Select
-									value={expMonth}
-									onValueChange={setExpMonth}
-									required
-								>
+								<Select value={expMonth} onValueChange={setExpMonth} required>
 									<SelectTrigger
 										id="pm-exp-month"
 										className="h-10 w-full cursor-pointer"

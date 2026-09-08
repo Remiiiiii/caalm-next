@@ -46,7 +46,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
 				),
 			]
 		: [];
-	const message = String(body.message || "").trim().slice(0, 2000);
+	const message = String(body.message || "")
+		.trim()
+		.slice(0, 2000);
 	const urlPath = String(body.urlPath || "");
 
 	if (emails.length === 0 || !NEGOTIATION_PATH_RE.test(urlPath)) {

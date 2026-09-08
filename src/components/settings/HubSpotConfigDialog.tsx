@@ -3,11 +3,7 @@
 import { ArrowRight, Info, RotateCcw, Save, Settings2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -18,7 +14,12 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import type { CrmDealProperty, CrmFieldMap, CrmIntegrationConfig, CrmPipeline } from "@/lib/crm/types";
+import type {
+	CrmDealProperty,
+	CrmFieldMap,
+	CrmIntegrationConfig,
+	CrmPipeline,
+} from "@/lib/crm/types";
 import {
 	CRM_FIELD_MAP_HINTS,
 	CRM_FIELD_MAP_KEYS,
@@ -95,13 +96,18 @@ export default function HubSpotConfigDialog({
 	}, [open, orgId, pipelineId, triggerStageId, fieldMap, toast]);
 
 	const stages =
-		pipelines.find((pipeline) => pipeline.id === selectedPipeline)?.stages || [];
+		pipelines.find((pipeline) => pipeline.id === selectedPipeline)?.stages ||
+		[];
 
 	const propertyOptionsByKey = useMemo(() => {
 		const result = {} as Record<keyof CrmFieldMap, CrmDealProperty[]>;
 		for (const key of CRM_FIELD_MAP_KEYS) {
 			// Each row only lists HubSpot props that match that field's type
-			result[key] = optionsForCrmFieldMapKey(key, dealProperties, mapDraft[key]);
+			result[key] = optionsForCrmFieldMapKey(
+				key,
+				dealProperties,
+				mapDraft[key],
+			);
 		}
 		return result;
 	}, [dealProperties, mapDraft]);
@@ -110,7 +116,9 @@ export default function HubSpotConfigDialog({
 
 	const selectedPropertyLabel = (key: keyof CrmFieldMap) => {
 		const name = mapDraft[key];
-		const match = propertyOptionsByKey[key].find((property) => property.name === name);
+		const match = propertyOptionsByKey[key].find(
+			(property) => property.name === name,
+		);
 		return match?.label || name;
 	};
 
@@ -165,8 +173,8 @@ export default function HubSpotConfigDialog({
 						</DialogTitle>
 					</div>
 					<p className="text-sm text-slate-600 mt-1 ml-14">
-						HubSpot deals open CAALM drafts. Choose when that happens, then which
-						HubSpot properties fill each draft field.
+						HubSpot deals open CAALM drafts. Choose when that happens, then
+						which HubSpot properties fill each draft field.
 					</p>
 				</div>
 
@@ -226,20 +234,23 @@ export default function HubSpotConfigDialog({
 								Property mapping (HubSpot → CAALM)
 							</p>
 							<p className="text-xs text-slate-600 mt-1 max-w-4xl">
-								You are choosing <span className="font-medium text-slate-700">property names</span>
-								{" "}(the HubSpot field labels), not values from a specific deal. Dollar
-								amounts and names still live on each deal in HubSpot; CAALM copies them
-								when a draft is created.
+								You are choosing{" "}
+								<span className="font-medium text-slate-700">
+									property names
+								</span>{" "}
+								(the HubSpot field labels), not values from a specific deal.
+								Dollar amounts and names still live on each deal in HubSpot;
+								CAALM copies them when a draft is created.
 							</p>
 						</div>
 
 						<div className="flex items-start gap-2 p-3 rounded-lg bg-blue/10 border border-blue/20">
 							<Info className="h-4 w-4 text-[#0f5384] mt-0.5 shrink-0" />
 							<p className="text-xs text-slate-700">
-								Example: map <span className="font-medium">Amount</span> to HubSpot’s{" "}
-								<span className="font-medium">Amount</span> property (
-								<span className="tabular-nums">amount</span>). Leave defaults unless
-								your portal stores deal value under a custom property.
+								Example: map <span className="font-medium">Amount</span> to
+								HubSpot’s <span className="font-medium">Amount</span> property (
+								<span className="tabular-nums">amount</span>). Leave defaults
+								unless your portal stores deal value under a custom property.
 							</p>
 						</div>
 
@@ -262,9 +273,7 @@ export default function HubSpotConfigDialog({
 								>
 									<div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1.2fr)] gap-2 items-center">
 										<div className="min-w-0">
-											<p className="hidden">
-												CAALM draft field
-											</p>
+											<p className="hidden">CAALM draft field</p>
 											<Label
 												htmlFor={`hubspot-map-${key}`}
 												className="text-sm font-medium text-slate-700"
@@ -276,14 +285,15 @@ export default function HubSpotConfigDialog({
 											</p>
 										</div>
 
-										<div className="flex justify-center text-slate-400" aria-hidden>
+										<div
+											className="flex justify-center text-slate-400"
+											aria-hidden
+										>
 											<ArrowRight className="h-4 w-4" />
 										</div>
 
 										<div className="min-w-0">
-											<p className="hidden">
-												Copy from HubSpot property
-											</p>
+											<p className="hidden">Copy from HubSpot property</p>
 											{usePropertyDropdowns ? (
 												<Select
 													value={mapDraft[key] || undefined}

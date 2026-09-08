@@ -1,6 +1,6 @@
-import { DocsShell } from "@/components/docs/DocsShell";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { DocsShell } from "@/components/docs/DocsShell";
 
 export const metadata: Metadata = {
 	title: {

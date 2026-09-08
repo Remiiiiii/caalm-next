@@ -17,7 +17,12 @@ describe("honest pricing catalog", () => {
 		expect(growth?.monthly).toBe(449);
 		expect(enterprise?.monthly).toBe(0);
 
-		const banned = [/SSO\/SAML/i, /Webhooks\/API/i, /Report scheduling/i, /99\.9%/];
+		const banned = [
+			/SSO\/SAML/i,
+			/Webhooks\/API/i,
+			/Report scheduling/i,
+			/99\.9%/,
+		];
 		for (const plan of [starter, growth]) {
 			const blob = (plan?.features || []).join("\n");
 			for (const re of banned) {

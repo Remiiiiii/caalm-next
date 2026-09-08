@@ -61,11 +61,11 @@ function CustomNavbar(props: NavProps) {
 }
 
 function EmptyNav(_props: NavProps) {
-	return <></>;
+	return null;
 }
 
 function EmptyMonthCaption(_props: MonthCaptionProps) {
-	return <></>;
+	return null;
 }
 
 /** True when the calendar day is before local midnight today. */
@@ -99,10 +99,7 @@ export function Calendar({
 			className={cn("caalm-picker-cal p-3", className)}
 			classNames={{
 				...classNames,
-				caption_label: cn(
-					"sidebar-gradient-text",
-					classNames?.caption_label,
-				),
+				caption_label: cn("sidebar-gradient-text", classNames?.caption_label),
 			}}
 			modifiers={{
 				...modifiers,

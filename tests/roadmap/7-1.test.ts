@@ -13,9 +13,9 @@ describe("roadmap task 7.1 build-vs-partner decision", () => {
 		expect(task).toBeDefined();
 		expect(task?.title).toMatch(/build-vs-partner/i);
 		expect(task?.description).toMatch(/007-native-negotiation-workspace/);
-		expect(task?.acceptanceCriteria.some((line) => /decision artifact/i.test(line))).toBe(
-			true,
-		);
+		expect(
+			task?.acceptanceCriteria.some((line) => /decision artifact/i.test(line)),
+		).toBe(true);
 	});
 
 	it("records the native decision on the section scope and ADR file", () => {

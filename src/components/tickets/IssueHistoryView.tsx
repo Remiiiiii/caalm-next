@@ -75,9 +75,7 @@ export function IssueHistoryView({
 					label={activeWindow.label}
 					canGoNewer={windowIndex > 0}
 					canGoOlder={windowIndex < calendarWindows.length - 1}
-					onGoNewer={() =>
-						setWindowIndex((index) => Math.max(0, index - 1))
-					}
+					onGoNewer={() => setWindowIndex((index) => Math.max(0, index - 1))}
 					onGoOlder={() =>
 						setWindowIndex((index) =>
 							Math.min(calendarWindows.length - 1, index + 1),

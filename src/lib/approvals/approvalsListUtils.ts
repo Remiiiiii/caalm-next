@@ -1,8 +1,8 @@
-import type { ApprovalSlaStatus } from "@/lib/approvals/contractApprovalWorkflow.types";
 import {
 	hoursRemaining,
 	slaCountdownLabel,
 } from "@/lib/approvals/approvalSlaDisplay";
+import type { ApprovalSlaStatus } from "@/lib/approvals/contractApprovalWorkflow.types";
 import type { UIFileDoc } from "@/types/files";
 import type { License } from "@/types/licenses";
 

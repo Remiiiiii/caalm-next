@@ -2,8 +2,8 @@ import type {
 	AuditReadinessInsight,
 	AuditReadinessSummary,
 } from "@/lib/analytics/audit-readiness.types";
-import { AUDIT_CONTROL_TABS } from "@/lib/audits/types";
 import type { AuditEvidenceRow, AuditPeriod } from "@/lib/audits/types";
+import { AUDIT_CONTROL_TABS } from "@/lib/audits/types";
 import { listEvidenceMap } from "./evidence-map.service";
 import { getOrgComplianceSnapshot } from "./org-compliance";
 import { computeRag } from "./score";
@@ -82,22 +82,24 @@ export async function buildOrgReadinessSummary(options: {
 		moderate:
 			(snapshot.contracts?.buckets["action-required"] ?? 0) +
 			(snapshot.licenses?.atRisk ?? 0),
-		low: Math.max(0, (snapshot.licenses?.expiringSoon ?? 0)),
+		low: Math.max(0, snapshot.licenses?.expiringSoon ?? 0),
 	};
 
-	const insights: AuditReadinessInsight[] = evidenceGaps.slice(0, 8).map((row) => ({
-		id: row.id,
-		title: row.title,
-		description: `${row.category ?? "Evidence"} · ${row.owner} · due ${row.dueDate}`,
-		severity:
-			row.status === "non_compliant"
-				? "critical"
-				: row.status === "at_risk"
-					? "moderate"
-					: "low",
-		moduleLink: row.moduleLink ?? "/audits/status",
-		moduleLabel: row.moduleLabel ?? "Audits",
-	}));
+	const insights: AuditReadinessInsight[] = evidenceGaps
+		.slice(0, 8)
+		.map((row) => ({
+			id: row.id,
+			title: row.title,
+			description: `${row.category ?? "Evidence"} · ${row.owner} · due ${row.dueDate}`,
+			severity:
+				row.status === "non_compliant"
+					? "critical"
+					: row.status === "at_risk"
+						? "moderate"
+						: "low",
+			moduleLink: row.moduleLink ?? "/audits/status",
+			moduleLabel: row.moduleLabel ?? "Audits",
+		}));
 
 	if (snapshot.liveScore === null) {
 		insights.unshift({
@@ -189,7 +191,12 @@ export async function buildOrgReadinessSummary(options: {
 	};
 
 	const evidenceMapHits = mapRows
-		.filter((row) => row.caalmModule === "contracts" || row.caalmModule === "licenses" || row.caalmModule === "site")
+		.filter(
+			(row) =>
+				row.caalmModule === "contracts" ||
+				row.caalmModule === "licenses" ||
+				row.caalmModule === "site",
+		)
 		.map((row) => ({
 			requirementId: row.requirementId,
 			label: row.label,

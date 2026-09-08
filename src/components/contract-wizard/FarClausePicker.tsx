@@ -6,10 +6,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { SearchField } from "@/components/ui/search-field";
 import {
+	type FarClause,
 	filterFarClauses,
 	parseFarClauseNumbers,
 	serializeFarClauseSelection,
-	type FarClause,
 } from "@/lib/templates/far-clauses";
 import { cn } from "@/lib/utils";
 
@@ -51,7 +51,9 @@ export function FarClausePicker({
 				setError(null);
 			} catch (err) {
 				if (cancelled) return;
-				setError(err instanceof Error ? err.message : "Could not load FAR clauses");
+				setError(
+					err instanceof Error ? err.message : "Could not load FAR clauses",
+				);
 			} finally {
 				if (!cancelled) setLoading(false);
 			}
@@ -144,9 +146,7 @@ export function FarClausePicker({
 					</p>
 				)}
 
-				{!loading && error && (
-					<p className="py-4 text-sm text-red">{error}</p>
-				)}
+				{!loading && error && <p className="py-4 text-sm text-red">{error}</p>}
 
 				{!loading && !error && (
 					<div

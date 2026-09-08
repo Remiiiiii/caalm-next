@@ -7,7 +7,10 @@
  * - sometimes: XLSX, CSV, PPTX — exhibits and supporting attachments only
  */
 
-export type EnterpriseFileFormatTier = "almostAlways" | "commonly" | "sometimes";
+export type EnterpriseFileFormatTier =
+	| "almostAlways"
+	| "commonly"
+	| "sometimes";
 
 /** Where the upload happens — each context allows a different extension set. */
 export type EnterpriseUploadContext =
@@ -161,7 +164,9 @@ export function getEnterpriseFormatLabels(
 	return labels;
 }
 
-export function getEnterpriseFormatHint(context: EnterpriseUploadContext): string {
+export function getEnterpriseFormatHint(
+	context: EnterpriseUploadContext,
+): string {
 	return `Supports ${getEnterpriseFormatLabels(context).join(", ")}`;
 }
 

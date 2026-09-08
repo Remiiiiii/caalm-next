@@ -5,11 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CardContent, Card as GlassCard } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-	Dialog,
-	DialogContent,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -20,8 +16,8 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { useOrganization } from "@/contexts/OrganizationContext";
-import { useToast } from "@/hooks/use-toast";
 import { useStepUp } from "@/contexts/StepUpContext";
+import { useToast } from "@/hooks/use-toast";
 import type { ApprovalSlaPolicy } from "@/lib/approvals/ApprovalSlaService";
 
 const STEP_LABELS: Record<string, string> = {
@@ -43,11 +39,7 @@ const emptyDraft = {
 	isActive: true,
 };
 
-export function ApprovalSlaPoliciesManager({
-	canEdit,
-}: {
-	canEdit: boolean;
-}) {
+export function ApprovalSlaPoliciesManager({ canEdit }: { canEdit: boolean }) {
 	const { orgId } = useOrganization();
 	const { toast } = useToast();
 	const { ensureStepUp } = useStepUp();

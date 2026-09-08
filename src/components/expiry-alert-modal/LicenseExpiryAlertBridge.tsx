@@ -35,11 +35,11 @@ export default function LicenseExpiryAlertBridge({
 	const [isBusy, setIsBusy] = useState(false);
 
 	const title = license.licenseName || "Untitled License";
-	const expiryDate =
-		license.licenseExpiryDate || license.expirationDate || "";
+	const expiryDate = license.licenseExpiryDate || license.expirationDate || "";
 	const vendor = license.vendor || license.issuingAuthority || "";
 
-	const amountRaw = (license as License & { amount?: number }).amount ?? license.cost;
+	const amountRaw =
+		(license as License & { amount?: number }).amount ?? license.cost;
 	const amount =
 		typeof amountRaw === "number" && Number.isFinite(amountRaw)
 			? amountRaw
@@ -60,7 +60,8 @@ export default function LicenseExpiryAlertBridge({
 		try {
 			toast({
 				title: "Reminder snoozed",
-				description: "This license won't show again until you start a new session.",
+				description:
+					"This license won't show again until you start a new session.",
 			});
 			onStatusChange?.();
 			onLicenseHandled(license.$id);
@@ -74,7 +75,8 @@ export default function LicenseExpiryAlertBridge({
 		try {
 			toast({
 				title: "Reminder dismissed",
-				description: "This license won't show again until you start a new session.",
+				description:
+					"This license won't show again until you start a new session.",
 			});
 			onStatusChange?.();
 			onLicenseHandled(license.$id);

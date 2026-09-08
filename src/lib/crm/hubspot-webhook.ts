@@ -40,7 +40,9 @@ function safeEqual(expected: string, actual: string): boolean {
 	return timingSafeEqual(a, b);
 }
 
-export function parseHubSpotWebhookEvents(payload: string): HubSpotWebhookEvent[] {
+export function parseHubSpotWebhookEvents(
+	payload: string,
+): HubSpotWebhookEvent[] {
 	const parsed = JSON.parse(payload) as unknown;
 	if (Array.isArray(parsed)) return parsed as HubSpotWebhookEvent[];
 	if (parsed && typeof parsed === "object" && "objectId" in parsed) {

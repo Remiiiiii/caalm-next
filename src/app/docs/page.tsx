@@ -1,7 +1,7 @@
-import { DOCS_NAV } from "@/lib/docs/navigation";
+import { ArrowRight, BookOpen, Compass, LifeBuoy, Shield } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, BookOpen, Compass, LifeBuoy, Shield } from "lucide-react";
+import { DOCS_NAV } from "@/lib/docs/navigation";
 
 export const metadata: Metadata = {
 	title: "CAALM Docs",

@@ -13,7 +13,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
 	const { token } = await context.params;
 	const access = await resolveAccessByToken(token);
 	if (!access) {
-		return NextResponse.json({ error: "Link expired or invalid" }, { status: 401 });
+		return NextResponse.json(
+			{ error: "Link expired or invalid" },
+			{ status: 401 },
+		);
 	}
 
 	const body = (await request.json().catch(() => ({}))) as { email?: string };
@@ -37,7 +40,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
 		});
 	} catch (error) {
 		const message =
-			error instanceof Error ? error.message : "Could not send verification code";
+			error instanceof Error
+				? error.message
+				: "Could not send verification code";
 		return NextResponse.json({ error: message }, { status: 429 });
 	}
 }

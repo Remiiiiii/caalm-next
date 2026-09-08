@@ -26,9 +26,12 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { PERMISSIONS } from "@/constants/permissions";
-import { useToast } from "@/hooks/use-toast";
 import { useStepUp } from "@/contexts/StepUpContext";
-import type { CostCenter, OrgUnit } from "@/lib/database/schemas/org-units.schema";
+import { useToast } from "@/hooks/use-toast";
+import type {
+	CostCenter,
+	OrgUnit,
+} from "@/lib/database/schemas/org-units.schema";
 import { fetcher } from "@/lib/swr-config";
 
 type UnitsResponse = { success: boolean; data: { units: OrgUnit[] } };
@@ -441,7 +444,9 @@ export function OrgStructureManager({
 															key={child.$id}
 															className="flex items-center justify-between gap-2 border-b border-slate-200 py-2 text-sm text-slate-700 last:border-b-0"
 														>
-															<span className="truncate pl-1">{child.name}</span>
+															<span className="truncate pl-1">
+																{child.name}
+															</span>
 															{canEdit ? (
 																child.active ? (
 																	<Button

@@ -3,8 +3,8 @@
 import { useRouter } from "next/navigation";
 import type React from "react";
 import { Suspense, useEffect, useMemo } from "react";
-import { DesktopFirstGate } from "@/components/DesktopFirstGate";
 import DashboardHeader from "@/components/DashboardHeader";
+import { DesktopFirstGate } from "@/components/DesktopFirstGate";
 import DemoTourLayer from "@/components/demo/tour/DemoTourLayer";
 import MobileNavigation from "@/components/MobileNavigation";
 import NotificationSoundListener from "@/components/NotificationSoundListener";

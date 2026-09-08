@@ -2,13 +2,10 @@ import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
-import {
-	getCostCenterById,
-	getOrgUnitById,
-} from "@/lib/org/org-units.service";
 import { toScimEnterpriseOrgFields } from "@/lib/org/org-unit-validation";
-import { getOrganization } from "@/lib/rbac/organizations";
+import { getCostCenterById, getOrgUnitById } from "@/lib/org/org-units.service";
 import { requirePermission } from "@/lib/rbac/middleware";
+import { getOrganization } from "@/lib/rbac/organizations";
 
 export async function GET(
 	request: NextRequest,
@@ -60,9 +57,7 @@ export async function GET(
 		return NextResponse.json({
 			success: true,
 			data: {
-				schemas: [
-					"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
-				],
+				schemas: ["urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"],
 				enterprise,
 				primaryOrgUnit: primaryUnit,
 			},

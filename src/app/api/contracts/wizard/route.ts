@@ -1,9 +1,8 @@
-import { type NextRequest, NextResponse } from "next/server";
 import { appendFile } from "node:fs/promises";
 import { join } from "node:path";
+import { type NextRequest, NextResponse } from "next/server";
 import { listTemplates } from "@/lib/templates/contract-template.service";
 import { requireContractCreateContext } from "@/lib/templates/require-org-permission";
-import { isEmptyWizardDraftSummary } from "@/lib/templates/wizard-draft-meta";
 import {
 	countWizardSessions,
 	createWizardSession,
@@ -13,6 +12,7 @@ import {
 	listWizardSessionSummaries,
 	listWizardSessions,
 } from "@/lib/templates/wizard.service";
+import { isEmptyWizardDraftSummary } from "@/lib/templates/wizard-draft-meta";
 
 export async function GET(request: NextRequest) {
 	const auth = await requireContractCreateContext(request);
@@ -172,7 +172,9 @@ export async function DELETE(request: NextRequest) {
 					failed: result.failed,
 					summaryCount: summaries.length,
 					summaryIds: summaries.map((s) => s.$id),
-					stillPresent: summaries.filter((s) => ids.includes(s.$id)).map((s) => s.$id),
+					stillPresent: summaries
+						.filter((s) => ids.includes(s.$id))
+						.map((s) => s.$id),
 				},
 				timestamp: Date.now(),
 			})}\n`,

@@ -3,8 +3,8 @@ import { PERMISSIONS } from "@/constants/permissions";
 import { requirePermission } from "@/lib/rbac/middleware";
 import {
 	getTaskDetail,
-	resolveTaskPullRequest,
 	RoadmapError,
+	resolveTaskPullRequest,
 } from "@/lib/roadmap/service";
 import { getSectionById } from "@/lib/roadmap/store";
 
@@ -13,10 +13,7 @@ export async function GET(
 	context: { params: Promise<{ taskId: string }> },
 ) {
 	const denied = await requirePermission(request, {
-		permission: [
-			PERMISSIONS.IT.VIEW_ROADMAP,
-			PERMISSIONS.IT.MANAGE_ROADMAP,
-		],
+		permission: [PERMISSIONS.IT.VIEW_ROADMAP, PERMISSIONS.IT.MANAGE_ROADMAP],
 	});
 	if (denied) return denied;
 
@@ -42,7 +39,10 @@ export async function GET(
 		return NextResponse.json({ ...detail, prStatus, resolvedPr });
 	} catch (error) {
 		if (error instanceof RoadmapError) {
-			return NextResponse.json({ error: error.message }, { status: error.status });
+			return NextResponse.json(
+				{ error: error.message },
+				{ status: error.status },
+			);
 		}
 		console.error("[SERVER] roadmap/tasks/[taskId]:", error);
 		return NextResponse.json({ error: "Failed to load task" }, { status: 500 });

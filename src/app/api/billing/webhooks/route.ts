@@ -25,8 +25,7 @@ export async function POST(request: NextRequest) {
 			duplicate: Boolean(result.duplicate),
 		});
 	} catch (error: unknown) {
-		const message =
-			error instanceof Error ? error.message : "Webhook error";
+		const message = error instanceof Error ? error.message : "Webhook error";
 		console.error("[billing/webhooks]", error);
 		return NextResponse.json({ error: message }, { status: 400 });
 	}

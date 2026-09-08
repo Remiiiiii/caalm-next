@@ -23,9 +23,7 @@ export function ContractCitationBadge({
 				: "Source excerpt";
 
 	const label =
-		citation.pages.length > 1
-			? citation.pages.join("-")
-			: String(citation.id);
+		citation.pages.length > 1 ? citation.pages.join("-") : String(citation.id);
 
 	return (
 		<HoverCard openDelay={120} closeDelay={80}>

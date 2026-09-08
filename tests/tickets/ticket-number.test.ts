@@ -1,7 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-	buildSequenceRowId,
-} from "@/lib/tickets/ticket-number.service";
+import { buildSequenceRowId } from "@/lib/tickets/ticket-number.service";
 import {
 	displayTicketNumber,
 	formatTicketNumber,

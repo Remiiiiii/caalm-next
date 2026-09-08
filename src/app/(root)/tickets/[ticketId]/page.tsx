@@ -4,7 +4,11 @@ import { notFound } from "next/navigation";
 import { TicketDetail } from "@/components/tickets/TicketDetail";
 import { PERMISSIONS } from "@/constants/permissions";
 import { requirePagePermission } from "@/lib/rbac/page-guards";
-import { getUserDefaultOrganization, getUserPermissions } from "@/lib/rbac/permissions";
+import {
+	getUserDefaultOrganization,
+	getUserPermissions,
+} from "@/lib/rbac/permissions";
+import { getTicketById } from "@/lib/tickets/ticket.repository";
 import {
 	canClaimTicket,
 	canCloseTicket,
@@ -13,7 +17,6 @@ import {
 	canViewTicket,
 } from "@/lib/tickets/ticket-access.policy";
 import { listTicketEvents } from "@/lib/tickets/ticket-events.repository";
-import { getTicketById } from "@/lib/tickets/ticket.repository";
 import { displayTicketNumber } from "@/lib/tickets/ticket-number.utils";
 
 export default async function TicketPage({

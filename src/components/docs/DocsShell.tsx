@@ -1,5 +1,9 @@
 "use client";
 
+import { Menu } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { useState } from "react";
 import { DocsSearch } from "@/components/docs/DocsSearch";
 import { DocsSidebar } from "@/components/docs/DocsSidebar";
 import {
@@ -8,10 +12,6 @@ import {
 } from "@/components/docs/DocsTheme";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu } from "lucide-react";
-import Image from "next/image";
-import Link from "next/link";
-import { useState } from "react";
 
 export function DocsHeader() {
 	const [open, setOpen] = useState(false);

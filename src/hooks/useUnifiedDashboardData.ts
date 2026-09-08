@@ -1,9 +1,12 @@
 import { useCallback, useMemo } from "react";
 import useSWR from "swr";
 import { useAuth } from "@/contexts/AuthContext";
-import { clearCachedData, getCachedData, setCachedData } from "@/lib/utils/client-cache";
-
 import type { RiskImpactSnapshot } from "@/lib/dashboard/risk-impact.types";
+import {
+	clearCachedData,
+	getCachedData,
+	setCachedData,
+} from "@/lib/utils/client-cache";
 import type { License } from "@/types/licenses";
 
 interface DashboardData {
@@ -92,7 +95,9 @@ export const useUnifiedDashboardData = (
 
 	const refresh = useCallback(
 		(
-			data?: UnifiedDashboardDataResponse | Promise<UnifiedDashboardDataResponse>,
+			data?:
+				| UnifiedDashboardDataResponse
+				| Promise<UnifiedDashboardDataResponse>,
 			options?: { revalidate?: boolean; populateCache?: boolean },
 		) => {
 			if (url && options?.revalidate !== false) {
@@ -112,9 +117,7 @@ export const useUnifiedDashboardData = (
 					const token = (invitation as { token?: string }).token;
 					if (
 						token &&
-						existing.some(
-							(inv) => (inv as { token?: string }).token === token,
-						)
+						existing.some((inv) => (inv as { token?: string }).token === token)
 					) {
 						return current;
 					}

@@ -2,10 +2,14 @@ import { type NextRequest, NextResponse } from "next/server";
 import { getSectionNumberForPr } from "@/lib/roadmap/catalog";
 import {
 	completeSectionFromMerge,
-	recordPassingRecheck,
 	RoadmapError,
+	recordPassingRecheck,
 } from "@/lib/roadmap/service";
-import { listSections, listTasks, getTasksByPrNumber } from "@/lib/roadmap/store";
+import {
+	getTasksByPrNumber,
+	listSections,
+	listTasks,
+} from "@/lib/roadmap/store";
 import {
 	getRoadmapWebhookSecret,
 	verifyRoadmapWebhookSignature,

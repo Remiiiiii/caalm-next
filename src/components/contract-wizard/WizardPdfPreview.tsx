@@ -9,11 +9,7 @@ import {
 	Printer,
 	Sparkles,
 } from "lucide-react";
-import {
-	useCallback,
-	useEffect,
-	useState,
-} from "react";
+import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Document, Page, pdfjs } from "react-pdf";
 import DocumentViewer from "@/components/DocumentViewer";
@@ -330,9 +326,7 @@ export function WizardPdfPreview({
 
 		void (async () => {
 			const src =
-				typeof viewerFile === "string"
-					? viewerFile
-					: objectUrl || pdfUrl;
+				typeof viewerFile === "string" ? viewerFile : objectUrl || pdfUrl;
 			if (src) {
 				try {
 					const response = await fetch(src, { credentials: "include" });
@@ -362,8 +356,7 @@ export function WizardPdfPreview({
 				fileName,
 				canvases
 					.map(
-						(canvas) =>
-							`<img src="${canvas.toDataURL("image/png")}" alt="" />`,
+						(canvas) => `<img src="${canvas.toDataURL("image/png")}" alt="" />`,
 					)
 					.join(""),
 			);
@@ -384,7 +377,9 @@ export function WizardPdfPreview({
 			const href = URL.createObjectURL(blob);
 			const anchor = document.createElement("a");
 			anchor.href = href;
-			anchor.download = fileName.endsWith(".pdf") ? fileName : `${fileName}.pdf`;
+			anchor.download = fileName.endsWith(".pdf")
+				? fileName
+				: `${fileName}.pdf`;
 			anchor.click();
 			URL.revokeObjectURL(href);
 		} catch {
@@ -548,9 +543,7 @@ export function WizardPdfPreview({
 
 	return (
 		<div
-			className={cn(
-				fillHeight ? "flex h-full min-h-0 flex-col" : "space-y-4",
-			)}
+			className={cn(fillHeight ? "flex h-full min-h-0 flex-col" : "space-y-4")}
 		>
 			{portaledToolbar}
 			{!compact ? (
@@ -570,9 +563,7 @@ export function WizardPdfPreview({
 			{showLoading && (
 				<PdfPreviewLoadingState
 					label={
-						loading
-							? "Building the PDF preview…"
-							: "Loading the PDF preview…"
+						loading ? "Building the PDF preview…" : "Loading the PDF preview…"
 					}
 					fillHeight={fillHeight}
 				/>

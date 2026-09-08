@@ -42,7 +42,10 @@ export async function POST(request: NextRequest) {
 	const sessionUserId = await resolveSessionAccountId();
 
 	if (!cronOk && !sessionUserId) {
-		return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+		return NextResponse.json(
+			{ error: "Authentication required" },
+			{ status: 401 },
+		);
 	}
 
 	if (process.env.NODE_ENV === "production" && !cronOk) {
@@ -112,7 +115,11 @@ export async function POST(request: NextRequest) {
 		const selected =
 			kind === "all"
 				? samples
-				: samples.filter((a) => a.tag?.startsWith(`${kind === "audit" ? "audit-upcoming" : `${kind}-expiry`}`));
+				: samples.filter((a) =>
+						a.tag?.startsWith(
+							`${kind === "audit" ? "audit-upcoming" : `${kind}-expiry`}`,
+						),
+					);
 
 		const results: { title: string; sent: boolean }[] = [];
 		for (const alert of selected) {

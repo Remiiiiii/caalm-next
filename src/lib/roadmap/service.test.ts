@@ -195,9 +195,13 @@ describe("roadmap service", () => {
 			baseBranch: "main",
 		});
 		expect(firstMerge.completed).toBe(false);
-		expect(firstMerge.tasks.filter((t) => t.status === "complete").length).toBe(1);
+		expect(firstMerge.tasks.filter((t) => t.status === "complete").length).toBe(
+			1,
+		);
 
-		const s1 = (await getOverview()).sections.find((s) => s.sectionNumber === 1)!;
+		const s1 = (await getOverview()).sections.find(
+			(s) => s.sectionNumber === 1,
+		)!;
 		expect(s1.progressPercent).toBeGreaterThan(0);
 		expect(s1.progressPercent).toBeLessThan(100);
 

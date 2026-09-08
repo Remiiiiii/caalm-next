@@ -10,8 +10,8 @@ import ExpiryAlertModal, {
 import { useToast } from "@/hooks/use-toast";
 import { useContractSnooze } from "@/hooks/useContractSnooze";
 import { useUpdateContractStatus } from "@/hooks/useUpdateContractStatus";
-import type { UIFileDoc } from "@/types/files";
 import { DESKTOP_MIN_WIDTH } from "@/lib/ui/desktop-first";
+import type { UIFileDoc } from "@/types/files";
 
 function isPhoneViewport() {
 	return typeof window !== "undefined" && window.innerWidth < DESKTOP_MIN_WIDTH;
@@ -43,8 +43,7 @@ export default function ContractExpiryAlertBridge({
 	const { updateStatus } = useUpdateContractStatus({ onStatusChange });
 	const [isBusy, setIsBusy] = useState(false);
 
-	const title =
-		contract.contractName || contract.name || "Untitled Contract";
+	const title = contract.contractName || contract.name || "Untitled Contract";
 	const expiryDate = contract.contractExpiryDate || "";
 	const vendor =
 		contract.vendor ||
@@ -144,11 +143,7 @@ export default function ContractExpiryAlertBridge({
 			title={title}
 			expiryDate={expiryDate}
 			daysRemaining={daysRemaining}
-			amount={
-				typeof contract.amount === "number"
-					? contract.amount
-					: undefined
-			}
+			amount={typeof contract.amount === "number" ? contract.amount : undefined}
 			status={contract.status || "active"}
 			typeLabel={formatExpiryTypeLabel(contract.contractType)}
 			vendor={vendor || "—"}

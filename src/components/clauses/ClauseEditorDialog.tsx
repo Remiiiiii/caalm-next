@@ -1,11 +1,7 @@
 import { FileText } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -88,7 +84,9 @@ export function ClauseEditorDialog({
 		setTitle(clause?.title || "");
 		setCategory(clause?.category || "other");
 		setBody(clause?.body || "");
-		setStatus(clause?.status === "archived" ? "draft" : clause?.status || "draft");
+		setStatus(
+			clause?.status === "archived" ? "draft" : clause?.status || "draft",
+		);
 		setChangeNote("");
 	}, [open, clause]);
 
@@ -140,9 +138,7 @@ export function ClauseEditorDialog({
 						<Label>Category</Label>
 						<Select
 							value={category}
-							onValueChange={(value) =>
-								setCategory(value as ClauseCategory)
-							}
+							onValueChange={(value) => setCategory(value as ClauseCategory)}
 						>
 							<SelectTrigger className="border-[0.25px] border-slate-300">
 								<SelectValue />

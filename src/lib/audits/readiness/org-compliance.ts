@@ -2,7 +2,6 @@ import { Query } from "node-appwrite";
 import { LicenseService } from "@/lib/api/licenses/services/LicenseService";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
-import { excludeSoftDeletedQuery } from "@/lib/soft-delete";
 import { dedupeEvidenceRows } from "@/lib/audits/evidence-utils";
 import type {
 	AuditEvidenceRow,
@@ -11,6 +10,7 @@ import type {
 	LiveContractCompliance,
 	LiveLicenseCompliance,
 } from "@/lib/audits/types";
+import { excludeSoftDeletedQuery } from "@/lib/soft-delete";
 import { computeLiveReadinessScore, computeRag } from "./score";
 
 const COMPLIANT_CONTRACT_STATUSES = new Set(["up-to-date", "compliant"]);
@@ -211,7 +211,9 @@ async function fetchLicensesForOrg(
 /** Admin/cron org-scoped snapshot (no user permission gating). */
 export async function getOrgComplianceSnapshot(
 	orgId: string,
-): Promise<ComplianceStatusSnapshot & { sourcesUsed: string[]; liveScore: number | null }> {
+): Promise<
+	ComplianceStatusSnapshot & { sourcesUsed: string[]; liveScore: number | null }
+> {
 	const contracts = await fetchContractsForOrg(orgId);
 	const licenses = await fetchLicensesForOrg(orgId);
 

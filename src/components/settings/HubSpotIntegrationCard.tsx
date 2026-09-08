@@ -21,12 +21,12 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useToast } from "@/hooks/use-toast";
 import { useStepUp } from "@/contexts/StepUpContext";
-import HubSpotConfigDialog from "./HubSpotConfigDialog";
-import IntegrationCard from "./IntegrationCard";
+import { useToast } from "@/hooks/use-toast";
 import type { CrmFieldMap, CrmIntegrationConfig } from "@/lib/crm/types";
 import { DEFAULT_CRM_FIELD_MAP } from "@/lib/crm/types";
+import HubSpotConfigDialog from "./HubSpotConfigDialog";
+import IntegrationCard from "./IntegrationCard";
 
 interface HubSpotIntegrationCardProps {
 	orgId: string;
@@ -113,7 +113,10 @@ export default function HubSpotIntegrationCard({
 				const data = await res.json();
 				throw new Error(data.error || "Disconnect failed");
 			}
-			toast({ title: "Disconnected", description: "HubSpot was disconnected." });
+			toast({
+				title: "Disconnected",
+				description: "HubSpot was disconnected.",
+			});
 			await loadStatus();
 		} catch (error) {
 			toast({

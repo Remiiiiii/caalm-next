@@ -1,12 +1,13 @@
 import type { Organization } from "@/lib/rbac/organizations";
-import {
-	DEFAULT_ORG_TIMEZONE,
-	type OrgAuditSettings,
-} from "./types";
 import { resolveOrgTimezone } from "./timezone";
+import { DEFAULT_ORG_TIMEZONE, type OrgAuditSettings } from "./types";
 
 export function getOrgAuditSettings(org: Organization): OrgAuditSettings {
-	const settings = org.settings || { maxUsers: 10, maxDepartments: 3, features: [] };
+	const settings = org.settings || {
+		maxUsers: 10,
+		maxDepartments: 3,
+		features: [],
+	};
 	const timezone = resolveOrgTimezone(
 		typeof settings.timezone === "string" ? settings.timezone : null,
 	);

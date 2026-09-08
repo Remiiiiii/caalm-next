@@ -1,10 +1,7 @@
-import { convertDocxBufferToPdf } from "@/lib/templates/docx-to-pdf";
 import { docxBufferToHtml } from "@/lib/templates/docx-preview";
+import { convertDocxBufferToPdf } from "@/lib/templates/docx-to-pdf";
 import { loadLatestNegotiationDocx } from "./accept-redline.service";
-import {
-	polishNegotiationDocx,
-	polishNegotiationHtml,
-} from "./print-polish";
+import { polishNegotiationDocx, polishNegotiationHtml } from "./print-polish";
 
 export type NegotiationPreviewResult =
 	| { kind: "pdf"; buffer: Buffer }

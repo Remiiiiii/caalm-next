@@ -28,8 +28,18 @@ describe("HubSpot connector parsers", () => {
 	it("parses deal properties and skips hidden/calculated", () => {
 		const properties = parseHubSpotDealProperties({
 			results: [
-				{ name: "dealname", label: "Deal Name", type: "string", fieldType: "text" },
-				{ name: "amount", label: "Amount", type: "number", fieldType: "number" },
+				{
+					name: "dealname",
+					label: "Deal Name",
+					type: "string",
+					fieldType: "text",
+				},
+				{
+					name: "amount",
+					label: "Amount",
+					type: "number",
+					fieldType: "number",
+				},
 				{ name: "hs_hidden", label: "Hidden", hidden: true },
 				{ name: "hs_calc", label: "Calc", calculated: true },
 			],
@@ -43,14 +53,24 @@ describe("HubSpot connector parsers", () => {
 	it("filters mapping options by field type and keeps defaults first", () => {
 		const properties = parseHubSpotDealProperties({
 			results: [
-				{ name: "dealname", label: "Deal Name", type: "string", fieldType: "text" },
+				{
+					name: "dealname",
+					label: "Deal Name",
+					type: "string",
+					fieldType: "text",
+				},
 				{
 					name: "closed_lost_reason",
 					label: "Closed Lost Reason",
 					type: "string",
 					fieldType: "textarea",
 				},
-				{ name: "amount", label: "Amount", type: "number", fieldType: "number" },
+				{
+					name: "amount",
+					label: "Amount",
+					type: "number",
+					fieldType: "number",
+				},
 				{
 					name: "hs_weighted_amount",
 					label: "Weighted amount",
@@ -69,7 +89,12 @@ describe("HubSpot connector parsers", () => {
 					type: "number",
 					fieldType: "number",
 				},
-				{ name: "closedate", label: "Close Date", type: "date", fieldType: "date" },
+				{
+					name: "closedate",
+					label: "Close Date",
+					type: "date",
+					fieldType: "date",
+				},
 				{
 					name: "engagements_last_meeting_booked",
 					label: "Date of last meeting booked in meetings tool",

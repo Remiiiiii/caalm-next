@@ -57,9 +57,7 @@ function documentText(docx: Buffer): string {
 
 function p(text: string, bold = false, color?: string, font?: string): string {
 	const colorTag = color ? `<w:color w:val="${color}"/>` : "";
-	const fontTag = font
-		? `<w:rFonts w:ascii="${font}" w:hAnsi="${font}"/>`
-		: "";
+	const fontTag = font ? `<w:rFonts w:ascii="${font}" w:hAnsi="${font}"/>` : "";
 	const rPr =
 		bold || color || font
 			? `<w:rPr>${bold ? "<w:b/>" : ""}${colorTag}${fontTag}</w:rPr>`
@@ -83,8 +81,7 @@ describe("mergeDocxTemplate", () => {
 	});
 
 	it("inserts clauses and additional terms as separate numbered sections", () => {
-		const ruleParagraph =
-			`<w:p><w:pPr><w:pBdr><w:bottom w:color="1b2a4a" w:space="0" w:sz="6" w:val="single"/></w:pBdr></w:pPr><w:r><w:t></w:t></w:r></w:p>`;
+		const ruleParagraph = `<w:p><w:pPr><w:pBdr><w:bottom w:color="1b2a4a" w:space="0" w:sz="6" w:val="single"/></w:pBdr></w:pPr><w:r><w:t></w:t></w:r></w:p>`;
 		const template = minimalDocx(
 			[
 				p("9. DISPUTES", true),
@@ -123,8 +120,7 @@ describe("mergeDocxTemplate", () => {
 	});
 
 	it("detects blueprint horizontal rule paragraphs before signatures", () => {
-		const rule =
-			`<w:p><w:pPr><w:pBdr><w:bottom w:val="single"/></w:pBdr></w:pPr><w:r><w:t></w:t></w:r></w:p>`;
+		const rule = `<w:p><w:pPr><w:pBdr><w:bottom w:val="single"/></w:pBdr></w:pPr><w:r><w:t></w:t></w:r></w:p>`;
 		expect(isHorizontalRuleParagraph(rule)).toBe(true);
 		expect(isHorizontalRuleParagraph(p("9. DISPUTES", true))).toBe(false);
 
@@ -175,8 +171,8 @@ describe("mergeDocxTemplate", () => {
 	it("round-trips a docxtemplater document", () => {
 		const template = minimalDocx(p("{{CLIENT_NAME}}"));
 		const zip = new PizZip(template);
-		expect(() =>
-			new Docxtemplater(zip, { delimiters: { start: "{{", end: "}}" } }),
+		expect(
+			() => new Docxtemplater(zip, { delimiters: { start: "{{", end: "}}" } }),
 		).not.toThrow();
 	});
 

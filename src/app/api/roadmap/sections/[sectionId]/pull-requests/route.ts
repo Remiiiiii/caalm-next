@@ -8,10 +8,7 @@ export async function GET(
 	context: { params: Promise<{ sectionId: string }> },
 ) {
 	const denied = await requirePermission(request, {
-		permission: [
-			PERMISSIONS.IT.VIEW_ROADMAP,
-			PERMISSIONS.IT.MANAGE_ROADMAP,
-		],
+		permission: [PERMISSIONS.IT.VIEW_ROADMAP, PERMISSIONS.IT.MANAGE_ROADMAP],
 	});
 	if (denied) return denied;
 

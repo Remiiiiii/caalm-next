@@ -85,26 +85,26 @@ export default function SplineExpiryScene({
 			{/* Hide iframes: Chrome JSON-prettifies raw .splinecode if it is embedded as a document */}
 			<div className="absolute inset-0 pointer-events-none [&_iframe]:hidden">
 				<SplineSceneGuard fallback={<GradientFallback className={className} />}>
-				<Suspense
-					fallback={
-						<div className="absolute inset-0 flex items-center justify-center bg-transparent">
-							<div className="text-slate-700 text-sm flex items-center gap-2">
-								<Loader2 className="h-4 w-4 animate-spin shrink-0" />
-								Loading 3D scene...
+					<Suspense
+						fallback={
+							<div className="absolute inset-0 flex items-center justify-center bg-transparent">
+								<div className="text-slate-700 text-sm flex items-center gap-2">
+									<Loader2 className="h-4 w-4 animate-spin shrink-0" />
+									Loading 3D scene...
+								</div>
 							</div>
-						</div>
-					}
-				>
-					<Spline
-						scene={sceneUrl}
-						onLoad={() => setIsLoading(false)}
-						onError={() => {
-							setHasError(true);
-							setIsLoading(false);
-						}}
-						className="w-full h-full"
-					/>
-				</Suspense>
+						}
+					>
+						<Spline
+							scene={sceneUrl}
+							onLoad={() => setIsLoading(false)}
+							onError={() => {
+								setHasError(true);
+								setIsLoading(false);
+							}}
+							className="w-full h-full"
+						/>
+					</Suspense>
 				</SplineSceneGuard>
 			</div>
 

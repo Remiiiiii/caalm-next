@@ -22,9 +22,7 @@ export function formatNegotiationParagraphDisplay(paragraph: string): string {
  * Does not strip bold — legally significant terms must stay visually distinct.
  */
 export function renderNegotiationInlineText(text: string): ReactNode {
-	const cleaned = text
-		.replace(/^#{1,6}\s+/gm, "")
-		.replace(/^[-*]\s+/gm, "• ");
+	const cleaned = text.replace(/^#{1,6}\s+/gm, "").replace(/^[-*]\s+/gm, "• ");
 	const parts = cleaned.split(/(\*\*[^*]+\*\*)/g);
 	return createElement(
 		Fragment,

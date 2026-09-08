@@ -6,6 +6,7 @@ import {
 	ExternalLink,
 	GitMerge,
 } from "lucide-react";
+import { useOrgTimezone } from "@/hooks/useOrgTimezone";
 import {
 	affectedService,
 	buildIncidentTimelineSteps,
@@ -14,8 +15,6 @@ import {
 	type TimelineIconKind,
 } from "@/lib/tickets/issue-history";
 import type { Ticket, TicketEvent } from "@/lib/tickets/ticket.types";
-
-import { useOrgTimezone } from "@/hooks/useOrgTimezone";
 import { AffectedServicesHoverInfo } from "./AffectedServicesHoverInfo";
 
 function TimelineIcon({ kind }: { kind: TimelineIconKind }) {

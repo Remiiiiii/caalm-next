@@ -3,13 +3,14 @@
 import { Check, ChevronsUpDown } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { SearchField } from "@/components/ui/search-field";
-import { cn } from "@/lib/utils";
 import {
-	getTimezoneOffsetLabel,
-	listIanaTimezones,
-} from "@/lib/timezone";
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "@/components/ui/popover";
+import { SearchField } from "@/components/ui/search-field";
+import { getTimezoneOffsetLabel, listIanaTimezones } from "@/lib/timezone";
+import { cn } from "@/lib/utils";
 
 type TimezoneSelectProps = {
 	id?: string;

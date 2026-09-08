@@ -11,8 +11,8 @@ import {
 	Trash2,
 } from "lucide-react";
 import { useState } from "react";
-import EditPaymentMethodDialog from "@/components/settings/EditPaymentMethodDialog";
 import CardBrandIcon from "@/components/billing/CardBrandIcon";
+import EditPaymentMethodDialog from "@/components/settings/EditPaymentMethodDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -43,14 +43,14 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useStepUp } from "@/contexts/StepUpContext";
+import { useToast } from "@/hooks/use-toast";
 import {
 	DATA_TABLE_BODY_ROW_BASE,
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
 } from "@/lib/ui/data-table-styles";
 import { cn } from "@/lib/utils";
-import { useToast } from "@/hooks/use-toast";
-import { useStepUp } from "@/contexts/StepUpContext";
 
 export interface PaymentMethodRow {
 	id: string;
@@ -226,20 +226,17 @@ export default function PaymentMethodsSection({
 		try {
 			setSettingDefaultId(method.id);
 			setLocalError(null);
-			const res = await fetch(
-				`/api/billing/payment-methods/${method.id}`,
-				{
-					method: "PATCH",
-					headers: {
-						"Content-Type": "application/json",
-						"x-org-id": orgId,
-					},
-					body: JSON.stringify({
-						orgId,
-						setDefault: true,
-					}),
+			const res = await fetch(`/api/billing/payment-methods/${method.id}`, {
+				method: "PATCH",
+				headers: {
+					"Content-Type": "application/json",
+					"x-org-id": orgId,
 				},
-			);
+				body: JSON.stringify({
+					orgId,
+					setDefault: true,
+				}),
+			});
 			const data = await res.json();
 			if (!res.ok) {
 				throw new Error(data.error || "Could not set default payment method");
@@ -358,10 +355,7 @@ export default function PaymentMethodsSection({
 														{method.name || "—"}
 													</TableCell>
 													<TableCell className="text-sm text-slate-700">
-														{formatExpiration(
-															method.expMonth,
-															method.expYear,
-														)}
+														{formatExpiration(method.expMonth, method.expYear)}
 													</TableCell>
 													<TableCell className="text-right">
 														<DropdownMenu modal={false}>
@@ -567,9 +561,9 @@ export default function PaymentMethodsSection({
 					<div className="glass-dialog-body-padded">
 						<DialogDescription className="text-sm leading-relaxed text-slate-600">
 							The default payment method cannot be removed as{" "}
-							<span className="font-semibold text-slate-700">{orgName}</span> has
-							an upcoming invoice. To proceed, set a backup or add a new default
-							payment method.
+							<span className="font-semibold text-slate-700">{orgName}</span>{" "}
+							has an upcoming invoice. To proceed, set a backup or add a new
+							default payment method.
 						</DialogDescription>
 					</div>
 				</DialogContent>

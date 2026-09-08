@@ -3,11 +3,7 @@
 import { FileWarning, Save } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import {
 	Select,
@@ -20,8 +16,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useToast } from "@/hooks/use-toast";
 import {
-	REASON_CATEGORY_LABELS,
 	type ExpirationReasonCategory,
+	REASON_CATEGORY_LABELS,
 } from "@/lib/approvals/expirationAttestation.types";
 
 interface ExpirationAttestationDialogProps {
@@ -130,11 +126,13 @@ export function ExpirationAttestationDialog({
 								<SelectValue />
 							</SelectTrigger>
 							<SelectContent>
-								{Object.entries(REASON_CATEGORY_LABELS).map(([value, label]) => (
-									<SelectItem key={value} value={value}>
-										{label}
-									</SelectItem>
-								))}
+								{Object.entries(REASON_CATEGORY_LABELS).map(
+									([value, label]) => (
+										<SelectItem key={value} value={value}>
+											{label}
+										</SelectItem>
+									),
+								)}
 							</SelectContent>
 						</Select>
 					</div>

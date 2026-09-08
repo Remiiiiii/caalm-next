@@ -16,9 +16,7 @@ export default function ContactForm() {
 	const handleSubmit = (event: React.FormEvent) => {
 		event.preventDefault();
 		const subject = encodeURIComponent(
-			organization
-				? `CAALM contact — ${organization}`
-				: "CAALM contact",
+			organization ? `CAALM contact — ${organization}` : "CAALM contact",
 		);
 		const body = encodeURIComponent(
 			`Name: ${name}\nEmail: ${email}\nOrganization: ${organization || "—"}\n\n${message}`,
@@ -81,7 +79,10 @@ export default function ContactForm() {
 				/>
 			</div>
 			<div className="flex flex-wrap items-center gap-3">
-				<Button type="submit" className="primary-btn cursor-pointer px-3 sm:px-4">
+				<Button
+					type="submit"
+					className="primary-btn cursor-pointer px-3 sm:px-4"
+				>
 					<Send className="h-4 w-4" />
 					Send message
 				</Button>

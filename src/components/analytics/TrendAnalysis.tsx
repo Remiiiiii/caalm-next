@@ -5,9 +5,9 @@ import {
 	ArrowUpRight,
 	BarChart3,
 	Calendar,
-	SquareArrowRightExit,
 	LineChart,
 	PieChart,
+	SquareArrowRightExit,
 	TrendingDown,
 	TrendingUp,
 } from "lucide-react";

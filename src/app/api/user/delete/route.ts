@@ -10,7 +10,9 @@ function resolveErrorMessage(error: unknown, fallback: string): string {
 		return error.message;
 	}
 	if (typeof error === "object" && error !== null && "message" in error) {
-		const message = String((error as { message?: unknown }).message || "").trim();
+		const message = String(
+			(error as { message?: unknown }).message || "",
+		).trim();
 		if (message) return message;
 	}
 	return fallback;

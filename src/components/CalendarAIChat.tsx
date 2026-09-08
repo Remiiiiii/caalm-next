@@ -18,8 +18,8 @@ import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AssistantAvatar from "@/components/assistant/AssistantAvatar";
 import { Button } from "@/components/ui/button";
-import { SheetHeaderIcon } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { SheetHeaderIcon } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 
 interface ChatMessage {
@@ -49,9 +49,7 @@ const isAttachmentObject = (
 	typeof attachment !== "string";
 
 /** PDF text is loaded on first chat send, not when the panel opens. */
-async function loadContractPdfContent(
-	contractId: string,
-): Promise<string> {
+async function loadContractPdfContent(contractId: string): Promise<string> {
 	try {
 		const detailsRes = await fetch(
 			`/api/contracts/get-details?contractId=${encodeURIComponent(contractId)}`,

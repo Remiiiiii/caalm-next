@@ -3,11 +3,7 @@
 import { Check, CheckCircle2, Copy, Ticket } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 type TicketSubmittedConfirmDialogProps = {
@@ -82,7 +78,9 @@ export function TicketSubmittedConfirmDialog({
 								"hover:bg-slate-50 hover:text-[#0f5384] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 focus-visible:ring-inset",
 								copied && "text-green",
 							)}
-							aria-label={copied ? "Ticket number copied" : "Copy ticket number"}
+							aria-label={
+								copied ? "Ticket number copied" : "Copy ticket number"
+							}
 						>
 							{copied ? (
 								<Check className="h-4 w-4" aria-hidden />

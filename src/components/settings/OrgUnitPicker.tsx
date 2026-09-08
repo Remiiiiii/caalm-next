@@ -2,13 +2,6 @@
 
 import { useMemo } from "react";
 import useSWR from "swr";
-import {
-	CONTRACT_DEPARTMENTS,
-	DIVISION_TO_DEPARTMENT,
-	USER_DIVISIONS,
-	formatDivisionName,
-	type UserDivision,
-} from "../../../constants";
 import { Label } from "@/components/ui/label";
 import {
 	Select,
@@ -20,6 +13,13 @@ import {
 import type { OrgUnit } from "@/lib/database/schemas/org-units.schema";
 import { fetcher } from "@/lib/swr-config";
 import { cn } from "@/lib/utils";
+import {
+	CONTRACT_DEPARTMENTS,
+	DIVISION_TO_DEPARTMENT,
+	formatDivisionName,
+	USER_DIVISIONS,
+	type UserDivision,
+} from "../../../constants";
 
 type UnitsResponse = { success: boolean; data: { units: OrgUnit[] } };
 
@@ -79,8 +79,7 @@ export function OrgUnitPicker({
 		return [...deptUnits, ...divUnits];
 	}, [orgId]);
 
-	const units =
-		apiUnits.length > 0 ? apiUnits : !isLoading ? catalogUnits : [];
+	const units = apiUnits.length > 0 ? apiUnits : !isLoading ? catalogUnits : [];
 
 	const departments = useMemo(
 		() =>
@@ -107,9 +106,7 @@ export function OrgUnitPicker({
 	return (
 		<div
 			className={cn(
-				layout === "inline"
-					? "contents"
-					: "grid grid-cols-2 gap-4",
+				layout === "inline" ? "contents" : "grid grid-cols-2 gap-4",
 			)}
 		>
 			<div className="min-w-0 space-y-2">
@@ -170,7 +167,9 @@ export function OrgUnitPicker({
 				<Select
 					value={divisionCode || undefined}
 					onValueChange={onDivisionChange}
-					disabled={disabled || isLoading || !selectedDept || divisions.length === 0}
+					disabled={
+						disabled || isLoading || !selectedDept || divisions.length === 0
+					}
 				>
 					<SelectTrigger
 						id="org-unit-division"

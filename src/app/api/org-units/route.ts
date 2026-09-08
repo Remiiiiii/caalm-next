@@ -1,10 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
-import { createOrgUnit, listOrgUnits } from "@/lib/org/org-units.service";
 import type { OrgUnitType } from "@/lib/database/schemas/org-units.schema";
-import { hasPermission } from "@/lib/rbac/permissions";
+import { createOrgUnit, listOrgUnits } from "@/lib/org/org-units.service";
 import { requirePermission } from "@/lib/rbac/middleware";
+import { hasPermission } from "@/lib/rbac/permissions";
 
 async function canReadOrgUnits(userId: string, orgId?: string) {
 	const checks = [
@@ -79,11 +79,8 @@ export async function POST(request: NextRequest) {
 		}
 
 		const { getOrganization } = await import("@/lib/rbac/organizations");
-		const {
-			assertBillingWriteAccess,
-			assertWithinLimit,
-			getEffectiveLimits,
-		} = await import("@/lib/billing/entitlements");
+		const { assertBillingWriteAccess, assertWithinLimit, getEffectiveLimits } =
+			await import("@/lib/billing/entitlements");
 		const { countActiveDepartments } = await import("@/lib/billing/usage");
 
 		const org = await getOrganization(orgId);
@@ -113,7 +110,10 @@ export async function POST(request: NextRequest) {
 			parentId: body.parentId ?? null,
 			sortOrder: body.sortOrder,
 		});
-		return NextResponse.json({ success: true, data: { unit } }, { status: 201 });
+		return NextResponse.json(
+			{ success: true, data: { unit } },
+			{ status: 201 },
+		);
 	} catch (error) {
 		const { BillingLimitError } = await import("@/lib/billing/entitlements");
 		if (error instanceof BillingLimitError) {
@@ -124,6 +124,9 @@ export async function POST(request: NextRequest) {
 		}
 		const message =
 			error instanceof Error ? error.message : "Internal server error";
-		return NextResponse.json({ success: false, error: message }, { status: 400 });
+		return NextResponse.json(
+			{ success: false, error: message },
+			{ status: 400 },
+		);
 	}
 }

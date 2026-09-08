@@ -21,12 +21,16 @@ describe("blueprint token schema", () => {
 		const fields = getVisibleFillFields("government");
 		expect(
 			fields.some(
-				(field) => field.kind === "token" && field.token.includes("SIGNATURE_HASH"),
+				(field) =>
+					field.kind === "token" && field.token.includes("SIGNATURE_HASH"),
 			),
 		).toBe(false);
-		expect(fields.some((field) => field.kind === "intake" && field.intakeField === "counterparty")).toBe(
-			true,
-		);
+		expect(
+			fields.some(
+				(field) =>
+					field.kind === "intake" && field.intakeField === "counterparty",
+			),
+		).toBe(true);
 	});
 
 	it("gives payment schedule a written-plan example, not a bare number", () => {
@@ -47,9 +51,9 @@ describe("blueprint token schema", () => {
 		const errors = validateBlueprintTokens("vendor", payload.intake, {});
 		expect(errors.length).toBeGreaterThan(1);
 		expect(errors.some((row) => /contract/i.test(row))).toBe(true);
-		expect(errors.some((row) => /vendor|other party|counterparty/i.test(row))).toBe(
-			true,
-		);
+		expect(
+			errors.some((row) => /vendor|other party|counterparty/i.test(row)),
+		).toBe(true);
 	});
 
 	it("maps intake values onto docx tokens", () => {
@@ -73,13 +77,18 @@ describe("blueprint token schema", () => {
 
 	it("bakes org letterhead tokens into the merge map", () => {
 		const payload = emptyWizardPayload();
-		const values = buildMergeTokenValues("vendor", payload.intake, {}, {
-			org_name: "CFCE",
-			org_address: "123 Main St",
-			org_phone_number: "202-555-0100",
-			org_email: "hello@cfcecares.org",
-			org_website: "https://cfcecares.org",
-		});
+		const values = buildMergeTokenValues(
+			"vendor",
+			payload.intake,
+			{},
+			{
+				org_name: "CFCE",
+				org_address: "123 Main St",
+				org_phone_number: "202-555-0100",
+				org_email: "hello@cfcecares.org",
+				org_website: "https://cfcecares.org",
+			},
+		);
 		expect(values.org_name).toBe("CFCE");
 		expect(values.org_website).toBe("https://cfcecares.org");
 	});

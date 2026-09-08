@@ -1,10 +1,4 @@
-import {
-	Document,
-	Page,
-	StyleSheet,
-	Text,
-	View,
-} from "@react-pdf/renderer";
+import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import type { AuditReadinessSnapshotPayload } from "@/lib/audits/readiness/types";
 import { READINESS_DISCLAIMER } from "@/lib/audits/readiness/types";
 
@@ -161,7 +155,9 @@ function DomainBarChart({
 }) {
 	return (
 		<View style={styles.chartFrame}>
-			<Text style={{ fontSize: 9, fontFamily: "Helvetica-Bold", marginBottom: 8 }}>
+			<Text
+				style={{ fontSize: 9, fontFamily: "Helvetica-Bold", marginBottom: 8 }}
+			>
 				Domain readiness (%)
 			</Text>
 			{domains.map((domain) => (
@@ -171,7 +167,9 @@ function DomainBarChart({
 						<View
 							style={[
 								styles.barFill,
-								{ width: `${Math.max(0, Math.min(100, domain.readinessPercent))}%` },
+								{
+									width: `${Math.max(0, Math.min(100, domain.readinessPercent))}%`,
+								},
 							]}
 						/>
 					</View>
@@ -195,7 +193,9 @@ function SeverityBars({
 	];
 	return (
 		<View style={styles.chartFrame}>
-			<Text style={{ fontSize: 9, fontFamily: "Helvetica-Bold", marginBottom: 8 }}>
+			<Text
+				style={{ fontSize: 9, fontFamily: "Helvetica-Bold", marginBottom: 8 }}
+			>
 				Severity breakdown (counts)
 			</Text>
 			{rows.map((row) => (
@@ -232,10 +232,19 @@ function HistoryLine({
 	const max = Math.max(...points.map((p) => p.value), 1);
 	return (
 		<View style={styles.chartFrame}>
-			<Text style={{ fontSize: 9, fontFamily: "Helvetica-Bold", marginBottom: 8 }}>
+			<Text
+				style={{ fontSize: 9, fontFamily: "Helvetica-Bold", marginBottom: 8 }}
+			>
 				Score history
 			</Text>
-			<View style={{ flexDirection: "row", alignItems: "flex-end", height: 80, gap: 6 }}>
+			<View
+				style={{
+					flexDirection: "row",
+					alignItems: "flex-end",
+					height: 80,
+					gap: 6,
+				}}
+			>
 				{points.map((point) => (
 					<View key={point.label} style={{ flex: 1, alignItems: "center" }}>
 						<Text style={{ fontSize: 7, marginBottom: 2 }}>{point.value}</Text>
@@ -271,9 +280,7 @@ export function AuditReadinessPdfDocument({
 }) {
 	const summary = payload.summary;
 	const scoreLabel =
-		payload.sourcesUsed.length === 0
-			? "N/A"
-			: `${summary.readinessScore}`;
+		payload.sourcesUsed.length === 0 ? "N/A" : `${summary.readinessScore}`;
 
 	return (
 		<Document
@@ -377,9 +384,7 @@ export function AuditReadinessPdfDocument({
 				<Text style={styles.sectionTitle}>5. Public site (informational)</Text>
 				{payload.siteCrawl ? (
 					<View>
-						<Text style={styles.body}>
-							URL: {payload.siteCrawl.websiteUrl}
-						</Text>
+						<Text style={styles.body}>URL: {payload.siteCrawl.websiteUrl}</Text>
 						<Text style={styles.body}>
 							Health hint: {payload.siteCrawl.healthHint} · Pages crawled:{" "}
 							{payload.siteCrawl.pages.length} · robots.txt:{" "}

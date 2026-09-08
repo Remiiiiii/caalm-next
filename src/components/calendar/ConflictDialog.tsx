@@ -1,12 +1,7 @@
 "use client";
 
 import * as VisuallyHiddenPrimitive from "@radix-ui/react-visually-hidden";
-import {
-	AlertCircle,
-	AlertTriangle,
-	Clock,
-	Loader2,
-} from "lucide-react";
+import { AlertCircle, AlertTriangle, Clock, Loader2 } from "lucide-react";
 import type React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -161,21 +156,23 @@ export function ConflictDialog({
 										Suggested Alternate Times:
 									</h3>
 									<div className="space-y-2">
-										{conflictData.alternateSlots.slice(0, 5).map((slot, index) => (
-											<div
-												key={`${slot.startDate}-${slot.startTime}-${index}`}
-												className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm"
-											>
-												<div className="flex items-center gap-2">
-													<Clock className="w-4 h-4 text-blue-600" />
-													<span className="text-slate-700">
-														{slot.startDate} at{" "}
-														{formatTimeForDisplay(slot.startTime)} -{" "}
-														{formatTimeForDisplay(slot.endTime)}
-													</span>
+										{conflictData.alternateSlots
+											.slice(0, 5)
+											.map((slot, index) => (
+												<div
+													key={`${slot.startDate}-${slot.startTime}-${index}`}
+													className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm"
+												>
+													<div className="flex items-center gap-2">
+														<Clock className="w-4 h-4 text-blue-600" />
+														<span className="text-slate-700">
+															{slot.startDate} at{" "}
+															{formatTimeForDisplay(slot.startTime)} -{" "}
+															{formatTimeForDisplay(slot.endTime)}
+														</span>
+													</div>
 												</div>
-											</div>
-										))}
+											))}
 									</div>
 								</div>
 							)}

@@ -12,14 +12,10 @@ describe("google news url helpers", () => {
 	it("reads the article id from rss and web paths", () => {
 		const id = "CBMickFVX3lxTE9mWU";
 		expect(
-			googleNewsArticleId(
-				`https://news.google.com/rss/articles/${id}?oc=5`,
-			),
+			googleNewsArticleId(`https://news.google.com/rss/articles/${id}?oc=5`),
 		).toBe(id);
 		expect(
-			isGoogleNewsArticleUrl(
-				`https://news.google.com/articles/${id}`,
-			),
+			isGoogleNewsArticleUrl(`https://news.google.com/articles/${id}`),
 		).toBe(true);
 		expect(isGoogleNewsArticleUrl("https://www.cnn.com/world")).toBe(false);
 	});
@@ -59,13 +55,11 @@ describe("google news url helpers", () => {
 
 	it("accepts MP4 news videos and rejects YouTube and HLS", () => {
 		expect(
-			isPlayableNewsVideo(
-				"https://media.cnn.com/video/clip.mp4?c=16x9",
-			),
+			isPlayableNewsVideo("https://media.cnn.com/video/clip.mp4?c=16x9"),
 		).toBe(true);
-		expect(
-			isPlayableNewsVideo("https://www.youtube.com/watch?v=abc"),
-		).toBe(false);
+		expect(isPlayableNewsVideo("https://www.youtube.com/watch?v=abc")).toBe(
+			false,
+		);
 		expect(
 			isPlayableNewsVideo("https://cdn.example.com/live/stream.m3u8"),
 		).toBe(false);

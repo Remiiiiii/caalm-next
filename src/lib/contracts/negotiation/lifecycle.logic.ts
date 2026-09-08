@@ -1,5 +1,5 @@
-import { ELIGIBLE_START_LIFECYCLES, NEGOTIATION_LIFECYCLE } from "./constants";
 import { canSendForReview } from "./comments.logic";
+import { ELIGIBLE_START_LIFECYCLES, NEGOTIATION_LIFECYCLE } from "./constants";
 
 export function canStartNegotiation(lifecycleStatus?: string): boolean {
 	const status = (lifecycleStatus || "draft").toLowerCase();

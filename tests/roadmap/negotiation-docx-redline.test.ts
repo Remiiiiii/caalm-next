@@ -52,7 +52,11 @@ describe("applyPlainTextReplacementInDocx", () => {
 			`<w:p><w:r><w:t>Hello </w:t></w:r><w:r><w:t>world</w:t></w:r></w:p>
 <w:p><w:r><w:t>Keep me</w:t></w:r></w:p>`,
 		);
-		const next = applyPlainTextReplacementInDocx(docx, "Hello world", "Hi earth");
+		const next = applyPlainTextReplacementInDocx(
+			docx,
+			"Hello world",
+			"Hi earth",
+		);
 		const text = documentText(next);
 		expect(text).toContain("Hi earth");
 		expect(text).toContain("Keep me");

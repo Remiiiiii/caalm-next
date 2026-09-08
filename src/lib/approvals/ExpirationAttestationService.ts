@@ -213,7 +213,9 @@ export async function createPreExpiryAttestation(input: {
 				data,
 			});
 
-	const attestation = rowToAttestation(row as unknown as Record<string, unknown>);
+	const attestation = rowToAttestation(
+		row as unknown as Record<string, unknown>,
+	);
 	await audit(
 		`Intentional expiration declared: ${input.entityName}`,
 		input.orgId,
@@ -280,7 +282,9 @@ export async function createPendingPostExpiryAttestation(input: {
 		},
 	});
 
-	const attestation = rowToAttestation(row as unknown as Record<string, unknown>);
+	const attestation = rowToAttestation(
+		row as unknown as Record<string, unknown>,
+	);
 
 	const recipients = new Set<string>();
 	if (input.accountableUserId) recipients.add(input.accountableUserId);
@@ -363,7 +367,9 @@ export async function submitAttestation(input: {
 			renewalBlocked: nextStatus !== "reviewed",
 		},
 	});
-	const attestation = rowToAttestation(row as unknown as Record<string, unknown>);
+	const attestation = rowToAttestation(
+		row as unknown as Record<string, unknown>,
+	);
 	await audit(
 		`Expiration attestation submitted: ${existing.entityName}`,
 		existing.orgId,
@@ -401,7 +407,9 @@ export async function reviewAttestation(input: {
 				: existing.narrative,
 		},
 	});
-	const attestation = rowToAttestation(row as unknown as Record<string, unknown>);
+	const attestation = rowToAttestation(
+		row as unknown as Record<string, unknown>,
+	);
 	await audit(
 		`Expiration attestation reviewed: ${existing.entityName}`,
 		existing.orgId,

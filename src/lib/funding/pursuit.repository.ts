@@ -4,9 +4,7 @@ import { appwriteConfig } from "@/lib/appwrite/config";
 import type { FundingPursuit, PursuitSource, PursuitStage } from "./types";
 
 function tableId(): string {
-	return (
-		appwriteConfig.fundingPursuitsCollectionId || "69c4f201001a2b3c4d01"
-	);
+	return appwriteConfig.fundingPursuitsCollectionId || "69c4f201001a2b3c4d01";
 }
 
 function dbId(): string {

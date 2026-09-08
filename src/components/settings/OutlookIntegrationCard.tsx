@@ -14,8 +14,8 @@ import { VscDebugConnectedCompact } from "react-icons/vsc";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { useToast } from "@/hooks/use-toast";
 import { useStepUp } from "@/contexts/StepUpContext";
+import { useToast } from "@/hooks/use-toast";
 import {
 	getMicrosoftCalendarIntegrationStatus,
 	syncMicrosoftCalendar,

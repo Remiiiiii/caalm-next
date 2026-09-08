@@ -129,7 +129,9 @@ export async function POST(request: NextRequest) {
 		return NextResponse.json({ url });
 	} catch (error: unknown) {
 		const message =
-			error instanceof Error ? error.message : "Failed to create checkout session";
+			error instanceof Error
+				? error.message
+				: "Failed to create checkout session";
 		console.error("[billing/checkout]", error);
 		const salesOnly = /sales-assisted|Enterprise/i.test(message);
 		return NextResponse.json(

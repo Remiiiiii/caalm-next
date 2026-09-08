@@ -220,9 +220,12 @@ async function buildDepartmentAnalytics() {
 			.filter(([, dept]) => dept === deptKey)
 			.map(([division]) => division);
 
-		const departmentStaffCount = departmentDivisions.reduce((count, division) => {
-			return count + (usersByDivision[division]?.length || 0);
-		}, 0);
+		const departmentStaffCount = departmentDivisions.reduce(
+			(count, division) => {
+				return count + (usersByDivision[division]?.length || 0);
+			},
+			0,
+		);
 
 		departmentStats.staffCount = departmentStaffCount;
 

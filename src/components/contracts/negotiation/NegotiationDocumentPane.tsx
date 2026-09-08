@@ -125,11 +125,7 @@ export function NegotiationDocumentPane({
 					) : (
 						<div className="space-y-8 font-[Georgia,serif]">
 							{model.clauses.map((clause) => (
-								<section
-									key={clause.id}
-									id={clause.id}
-									className="scroll-mt-4"
-								>
+								<section key={clause.id} id={clause.id} className="scroll-mt-4">
 									{clause.index > 0 ? (
 										<h3 className="mb-2 border-b border-slate-200 pb-1 text-sm font-bold tracking-wide text-[#0f5384] uppercase">
 											{clause.index}. {clause.title}

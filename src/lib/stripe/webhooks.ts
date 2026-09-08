@@ -1,4 +1,5 @@
 import type Stripe from "stripe";
+import { getOrganization } from "@/lib/rbac/organizations";
 import {
 	clearOrgSubscription,
 	completePaymentMethodReplace,
@@ -11,7 +12,6 @@ import {
 import { getStripe } from "./client";
 import { resolveOrgIdFromInvoice } from "./invoice-utils";
 import { claimStripeEvent } from "./webhook-idempotency";
-import { getOrganization } from "@/lib/rbac/organizations";
 
 /**
  * Subscribe the endpoint to:
@@ -53,8 +53,7 @@ export async function handleStripeWebhookEvent(
 						typeof session.setup_intent === "string"
 							? session.setup_intent
 							: session.setup_intent.id;
-					const setupIntent =
-						await stripe.setupIntents.retrieve(setupIntentId);
+					const setupIntent = await stripe.setupIntents.retrieve(setupIntentId);
 					const newPaymentMethodId =
 						typeof setupIntent.payment_method === "string"
 							? setupIntent.payment_method

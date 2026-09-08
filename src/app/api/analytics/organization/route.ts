@@ -358,10 +358,7 @@ export async function GET(request: NextRequest) {
 				);
 				const totalActiveStaff = allUsers.total;
 
-				const overall = calculateStats(
-					allContracts.rows,
-					allLicenses.rows,
-				);
+				const overall = calculateStats(allContracts.rows, allLicenses.rows);
 				const totalStats = {
 					totalContracts,
 					totalBudget,

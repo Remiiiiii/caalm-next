@@ -37,10 +37,19 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import {
+	getEnterpriseFormatHint,
+	getEnterpriseInputAccept,
+	validateEnterpriseFile,
+} from "@/lib/files/enterprise-file-formats";
+import {
 	resolveSubmitterDepartmentLabel,
 	type SubmitterPlacementInput,
 } from "@/lib/tickets/submitter-placement";
-import type { Ticket, TicketLane, TicketSeverity } from "@/lib/tickets/ticket.types";
+import type {
+	Ticket,
+	TicketLane,
+	TicketSeverity,
+} from "@/lib/tickets/ticket.types";
 import {
 	categoriesForLane,
 	deriveSeverityFromMatrix,
@@ -51,11 +60,6 @@ import {
 } from "@/lib/tickets/ticket-intake.constants";
 import { displayTicketNumber } from "@/lib/tickets/ticket-number.utils";
 import { cn } from "@/lib/utils";
-import {
-	getEnterpriseFormatHint,
-	getEnterpriseInputAccept,
-	validateEnterpriseFile,
-} from "@/lib/files/enterprise-file-formats";
 
 type MatrixLevel = "Critical" | "High" | "Medium" | "Low";
 
@@ -75,7 +79,10 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
 type AttachmentEntry = { id: string; file: File };
 type TouchedFields = Partial<
-	Record<"lane" | "title" | "category" | "impact" | "urgency" | "description", boolean>
+	Record<
+		"lane" | "title" | "category" | "impact" | "urgency" | "description",
+		boolean
+	>
 >;
 
 function getInitials(name?: string | null): string {
@@ -242,12 +249,10 @@ export function TicketSubmitForm() {
 	const { user } = useAuth();
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
-	const [lane, setLane] = useState<TicketLane | "">(
-		() => {
-			const raw = searchParams?.get("lane");
-			return raw === "help" || raw === "engineering" ? raw : "";
-		},
-	);
+	const [lane, setLane] = useState<TicketLane | "">(() => {
+		const raw = searchParams?.get("lane");
+		return raw === "help" || raw === "engineering" ? raw : "";
+	});
 	const [title, setTitle] = useState(() => searchParams?.get("title") ?? "");
 	const [category, setCategory] = useState(
 		() => searchParams?.get("category") ?? "",
@@ -529,9 +534,7 @@ export function TicketSubmitForm() {
 										setTouched((prev) => ({ ...prev, category: true }))
 									}
 									options={categoryOptions}
-									placeholder={
-										lane ? "Choose a category" : "Pick a lane first"
-									}
+									placeholder={lane ? "Choose a category" : "Pick a lane first"}
 									error={Boolean(touched.category && errors.category)}
 									disabled={!lane}
 								/>
@@ -575,53 +578,56 @@ export function TicketSubmitForm() {
 								/>
 							</div>
 						) : lane === "engineering" ? (
-						<div>
-							<p className="mb-1 text-sm font-medium text-slate-700">
-								How much is this affecting people? <RequiredMark />
-							</p>
-							<p className="mb-3 text-xs text-slate-600">
-								We use this to set severity and response time; no need to guess
-								a priority level yourself.
-							</p>
-							<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-								<PillGroup
-									label="Who's affected"
-									value={impact}
-									onChange={(value) => {
-										setImpact(value);
-										setTouched((prev) => ({ ...prev, impact: true }));
-									}}
-									options={TICKET_IMPACT_LEVELS}
-									error={touched.impact ? errors.impact : null}
-								/>
-								<PillGroup
-									label="How urgent"
-									value={urgency}
-									onChange={(value) => {
-										setUrgency(value);
-										setTouched((prev) => ({ ...prev, urgency: true }));
-									}}
-									options={TICKET_URGENCY_LEVELS}
-									error={touched.urgency ? errors.urgency : null}
-								/>
-							</div>
-							{derived ? (
-								<div className="mt-4 flex flex-wrap items-center gap-3">
-									<span
-										className={cn(
-											"rounded-full border px-2.5 py-1 text-xs font-medium",
-											SEVERITY_BADGE[derived.level],
-										)}
-									>
-										{derived.level} severity
-									</span>
-									<span className="flex items-center gap-1 text-xs text-slate-600">
-										<Clock className="h-3.5 w-3.5 text-[#0f5384]" aria-hidden />
-										Expected response within {derived.hours} hours
-									</span>
+							<div>
+								<p className="mb-1 text-sm font-medium text-slate-700">
+									How much is this affecting people? <RequiredMark />
+								</p>
+								<p className="mb-3 text-xs text-slate-600">
+									We use this to set severity and response time; no need to
+									guess a priority level yourself.
+								</p>
+								<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+									<PillGroup
+										label="Who's affected"
+										value={impact}
+										onChange={(value) => {
+											setImpact(value);
+											setTouched((prev) => ({ ...prev, impact: true }));
+										}}
+										options={TICKET_IMPACT_LEVELS}
+										error={touched.impact ? errors.impact : null}
+									/>
+									<PillGroup
+										label="How urgent"
+										value={urgency}
+										onChange={(value) => {
+											setUrgency(value);
+											setTouched((prev) => ({ ...prev, urgency: true }));
+										}}
+										options={TICKET_URGENCY_LEVELS}
+										error={touched.urgency ? errors.urgency : null}
+									/>
 								</div>
-							) : null}
-						</div>
+								{derived ? (
+									<div className="mt-4 flex flex-wrap items-center gap-3">
+										<span
+											className={cn(
+												"rounded-full border px-2.5 py-1 text-xs font-medium",
+												SEVERITY_BADGE[derived.level],
+											)}
+										>
+											{derived.level} severity
+										</span>
+										<span className="flex items-center gap-1 text-xs text-slate-600">
+											<Clock
+												className="h-3.5 w-3.5 text-[#0f5384]"
+												aria-hidden
+											/>
+											Expected response within {derived.hours} hours
+										</span>
+									</div>
+								) : null}
+							</div>
 						) : null}
 
 						<FormField
@@ -693,8 +699,8 @@ export function TicketSubmitForm() {
 									Drop files here, or click to browse
 								</p>
 								<p className="text-xs text-slate-500">
-									{getEnterpriseFormatHint("attachment")} — up to 10 MB each (max{" "}
-									{MAX_FILES} files)
+									{getEnterpriseFormatHint("attachment")} — up to 10 MB each
+									(max {MAX_FILES} files)
 								</p>
 								<input
 									ref={fileInputRef}

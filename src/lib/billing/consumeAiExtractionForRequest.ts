@@ -49,7 +49,10 @@ export async function consumeAiExtractionForRequest(request: NextRequest) {
 	});
 }
 
-export async function getAiExtractionMeter(orgId: string, billingStatus?: string | null) {
+export async function getAiExtractionMeter(
+	orgId: string,
+	billingStatus?: string | null,
+) {
 	const org = await getOrganization(orgId);
 	const tier = resolveTier(org?.subscriptionTier);
 	const status = billingStatus ?? org?.billingStatus ?? "none";

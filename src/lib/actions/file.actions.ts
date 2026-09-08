@@ -192,10 +192,8 @@ export const uploadFile = async ({
 			await assertCanCreateLicense(defaultOrg.orgId);
 		}
 
-		const {
-			assertEnterpriseFileAllowed,
-			resolveUploadContextFromMetadata,
-		} = await import("@/lib/files/enterprise-file-formats");
+		const { assertEnterpriseFileAllowed, resolveUploadContextFromMetadata } =
+			await import("@/lib/files/enterprise-file-formats");
 		assertEnterpriseFileAllowed(
 			file,
 			resolveUploadContextFromMetadata({ contractMetadata, licenseMetadata }),
@@ -2080,8 +2078,7 @@ export const deleteFile = async ({
 						user_name: userName,
 						user_email: actor.email || "",
 						orgId:
-							orgId ||
-							(await getUserDefaultOrganization(actor.$id))?.orgId,
+							orgId || (await getUserDefaultOrganization(actor.$id))?.orgId,
 						status: "success",
 						module: "contracts",
 						target_type: "contract",
@@ -2429,8 +2426,11 @@ export const assignContract = async ({
 			throw new Error("Invalid contract document. Cannot assign.");
 		}
 
-		const { parseWorkflowState, serializeWorkflowState, syncDepartmentAssigneesIfCurrent } =
-			await import("@/lib/approvals/ContractApprovalWorkflowService");
+		const {
+			parseWorkflowState,
+			serializeWorkflowState,
+			syncDepartmentAssigneesIfCurrent,
+		} = await import("@/lib/approvals/ContractApprovalWorkflowService");
 		const existingState = parseWorkflowState(
 			(contractDoc as { approvalWorkflowState?: string }).approvalWorkflowState,
 		);

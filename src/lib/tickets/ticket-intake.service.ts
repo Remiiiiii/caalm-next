@@ -2,14 +2,20 @@ import { ID } from "node-appwrite";
 import { InputFile } from "node-appwrite/file";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
-import {
-	assertEnterpriseFileAllowed,
-} from "@/lib/files/enterprise-file-formats";
+import { assertEnterpriseFileAllowed } from "@/lib/files/enterprise-file-formats";
 import {
 	buildGitHubIssueBody,
 	createGitHubIssue,
 } from "./github-tickets.service";
 import { resolveSubmitterDepartmentLabel } from "./submitter-placement";
+import { createTicketRow, updateTicket } from "./ticket.repository";
+import type {
+	CreateTicketInput,
+	Ticket,
+	TicketLane,
+	TicketSeverity,
+} from "./ticket.types";
+import { getTicketsRepo, isTicketsEnabled, TICKET_LANES } from "./ticket.types";
 import { appendTicketEvent } from "./ticket-events.repository";
 import {
 	deriveSeverityFromMatrix,
@@ -23,14 +29,6 @@ import {
 	notifyTicketSubmitter,
 } from "./ticket-notification.service";
 import { allocateTicketNumber } from "./ticket-number.service";
-import { createTicketRow, updateTicket } from "./ticket.repository";
-import type {
-	CreateTicketInput,
-	Ticket,
-	TicketLane,
-	TicketSeverity,
-} from "./ticket.types";
-import { getTicketsRepo, isTicketsEnabled, TICKET_LANES } from "./ticket.types";
 
 export type IntakeActor = {
 	$id: string;

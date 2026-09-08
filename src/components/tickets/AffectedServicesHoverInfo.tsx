@@ -7,11 +7,7 @@ import {
 	HoverCardTrigger,
 } from "@/components/ui/hover-card";
 
-export function AffectedServicesHoverInfo({
-	service,
-}: {
-	service: string;
-}) {
+export function AffectedServicesHoverInfo({ service }: { service: string }) {
 	return (
 		<HoverCard openDelay={120} closeDelay={80}>
 			<HoverCardTrigger asChild>

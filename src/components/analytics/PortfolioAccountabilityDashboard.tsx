@@ -26,8 +26,8 @@ import useSWR from "swr";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { StatCardIcon } from "@/components/ui/stat-card-icon";
-import type { PortfolioAccountabilityMetrics } from "@/lib/analytics/portfolioAccountability.types";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import type { PortfolioAccountabilityMetrics } from "@/lib/analytics/portfolioAccountability.types";
 
 type Period = "30d" | "90d" | "1y";
 
@@ -93,9 +93,13 @@ export function PortfolioAccountabilityDashboard() {
 				[row.label, row.count].map(escapeCsv).join(","),
 			),
 			"",
-			["Department", "Documents", "Expired", "Pending attestations", "Value"].join(
-				",",
-			),
+			[
+				"Department",
+				"Documents",
+				"Expired",
+				"Pending attestations",
+				"Value",
+			].join(","),
 			...metrics.departments.map((row) =>
 				[
 					row.department,
@@ -123,7 +127,9 @@ export function PortfolioAccountabilityDashboard() {
 		return (
 			<div className="flex items-center justify-center py-12">
 				<RefreshCw className="h-6 w-6 animate-spin text-[#0f5384]" />
-				<span className="ml-3 text-slate-600">Loading portfolio analytics…</span>
+				<span className="ml-3 text-slate-600">
+					Loading portfolio analytics…
+				</span>
 			</div>
 		);
 	}
@@ -364,7 +370,9 @@ export function PortfolioAccountabilityDashboard() {
 									<th className="py-2 pr-4 font-medium">Department</th>
 									<th className="py-2 pr-4 font-medium">Documents</th>
 									<th className="py-2 pr-4 font-medium">Expired</th>
-									<th className="py-2 pr-4 font-medium">Pending attestations</th>
+									<th className="py-2 pr-4 font-medium">
+										Pending attestations
+									</th>
 									<th className="py-2 font-medium">Value</th>
 								</tr>
 							</thead>

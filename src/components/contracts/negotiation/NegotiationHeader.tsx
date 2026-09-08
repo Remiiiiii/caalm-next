@@ -1,8 +1,8 @@
 "use client";
 
 import { Eye, RotateCw, Send, UserPlus } from "lucide-react";
-import { NegotiationInviteeAvatars } from "@/components/contracts/negotiation/NegotiationInviteeAvatars";
 import type { NegotiationParticipant } from "@/components/contracts/negotiation/NegotiationInviteeAvatars";
+import { NegotiationInviteeAvatars } from "@/components/contracts/negotiation/NegotiationInviteeAvatars";
 import { Button } from "@/components/ui/button";
 
 interface NegotiationHeaderProps {

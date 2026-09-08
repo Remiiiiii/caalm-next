@@ -3,7 +3,7 @@
 import { TrendingUp } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { YAHOO_FINANCE_MARKETS_URL, type MarketQuote } from "@/types/briefing";
+import { type MarketQuote, YAHOO_FINANCE_MARKETS_URL } from "@/types/briefing";
 
 function Sparkline({
 	points,
@@ -74,7 +74,10 @@ export function MarketsCard({ markets, loading = false }: MarketsCardProps) {
 				{loading ? (
 					<div className="space-y-3">
 						{[1, 2, 3, 4, 5].map((row) => (
-							<div key={row} className="flex items-center justify-between gap-3">
+							<div
+								key={row}
+								className="flex items-center justify-between gap-3"
+							>
 								<div className="space-y-1">
 									<div className="h-4 w-24 animate-pulse rounded bg-slate-200" />
 									<div className="h-3 w-10 animate-pulse rounded bg-slate-200" />

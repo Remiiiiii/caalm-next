@@ -166,10 +166,7 @@ _Source: template · v1_
 			"REPORTING",
 		]);
 		const toc = buildClauseToc(model.clauses);
-		expect(toc.map((row) => row.title)).toEqual([
-			"GRANT PURPOSE",
-			"REPORTING",
-		]);
+		expect(toc.map((row) => row.title)).toEqual(["GRANT PURPOSE", "REPORTING"]);
 
 		const purpose = model.clauses.find((c) => c.title === "GRANT PURPOSE")!;
 		expect(purpose.paragraphs).toHaveLength(3);
@@ -186,9 +183,9 @@ _Source: template · v1_
 		for (const row of model.negotiableParagraphs) {
 			expect(text.slice(row.start, row.end)).toBe(row.text);
 		}
-		expect(model.negotiableParagraphs.map((p) => p.text).join("\n")).not.toContain(
-			"Other party:",
-		);
+		expect(
+			model.negotiableParagraphs.map((p) => p.text).join("\n"),
+		).not.toContain("Other party:");
 	});
 
 	it("splitBlockIntoUnits keeps offsets into the parent block", () => {
@@ -233,9 +230,7 @@ The **Effective Date** controls when performance begins.
 `;
 		const model = parseNegotiationDocument(text);
 		const [grantee, effectiveDate] = model.negotiableParagraphs;
-		expect(grantee.protectedEnd).toBe(
-			grantee.start + "**Grantee:** ".length,
-		);
+		expect(grantee.protectedEnd).toBe(grantee.start + "**Grantee:** ".length);
 		expect(grantee.redlineAllowed).toBe(true);
 		expect(effectiveDate.redlineAllowed).toBe(false);
 
@@ -249,9 +244,9 @@ The **Effective Date** controls when performance begins.
 			kind: "text",
 			text: "**Grantee:** ",
 		});
-		expect(segments.some((segment) => segment.text.includes("**Grantee:**"))).toBe(
-			true,
-		);
+		expect(
+			segments.some((segment) => segment.text.includes("**Grantee:**")),
+		).toBe(true);
 	});
 });
 

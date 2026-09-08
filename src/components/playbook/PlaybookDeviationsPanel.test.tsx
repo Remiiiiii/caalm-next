@@ -6,9 +6,7 @@ import { buildSeededDeviationReport } from "@/lib/playbook/seeded-deviations";
 describe("PlaybookDeviationsPanel", () => {
 	it("shows severity badges for seeded deviations", () => {
 		const report = buildSeededDeviationReport();
-		render(
-			<PlaybookDeviationsPanel report={report} seeded />,
-		);
+		render(<PlaybookDeviationsPanel report={report} seeded />);
 
 		expect(screen.getByTestId("playbook-deviations-panel")).toBeTruthy();
 		expect(screen.getByText("High severity")).toBeTruthy();

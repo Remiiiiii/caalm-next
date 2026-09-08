@@ -12,8 +12,8 @@ import {
 	LayoutGrid,
 	Search,
 	ShieldAlert,
-	Table,
 	SquareArrowRightExit,
+	Table,
 	Upload,
 } from "lucide-react";
 import Image from "next/image";

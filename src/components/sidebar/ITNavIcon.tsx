@@ -119,11 +119,7 @@ type ITNavIconProps = {
 	size?: number;
 };
 
-export function ITNavIcon({
-	name,
-	className,
-	size = 18,
-}: ITNavIconProps) {
+export function ITNavIcon({ name, className, size = 18 }: ITNavIconProps) {
 	const Icon = IT_LUCIDE_ICONS[name] ?? LayoutDashboard;
 	return (
 		<Icon

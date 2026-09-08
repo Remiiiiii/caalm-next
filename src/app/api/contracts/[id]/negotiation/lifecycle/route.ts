@@ -19,10 +19,16 @@ export async function POST(request: NextRequest, context: RouteContext) {
 	const user = await getCurrentUser();
 	const orgId = getOrgIdFromRequest(request);
 	if (!user || !orgId) {
-		return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+		return NextResponse.json(
+			{ error: "Authentication required" },
+			{ status: 401 },
+		);
 	}
 	const { id } = await context.params;
-	const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+	const body = (await request.json().catch(() => ({}))) as Record<
+		string,
+		unknown
+	>;
 	const action = String(body.action || "");
 	try {
 		if (action === "start") {
@@ -30,7 +36,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
 				contractId: id,
 				orgId,
 				userId: user.$id,
-				extractedText: typeof body.extractedText === "string" ? body.extractedText : undefined,
+				extractedText:
+					typeof body.extractedText === "string"
+						? body.extractedText
+						: undefined,
 			});
 			return NextResponse.json(result);
 		}
@@ -53,7 +62,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
 		}
 		return NextResponse.json({ error: "Unknown action" }, { status: 400 });
 	} catch (error) {
-		const message = error instanceof Error ? error.message : "Lifecycle update failed";
+		const message =
+			error instanceof Error ? error.message : "Lifecycle update failed";
 		return NextResponse.json({ error: message }, { status: 400 });
 	}
 }

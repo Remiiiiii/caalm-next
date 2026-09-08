@@ -1,11 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
-import {
-	softDeleteOrgUnit,
-	updateOrgUnit,
-} from "@/lib/org/org-units.service";
-import type { OrgUnitType } from "@/lib/database/schemas/org-units.schema";
 import { requireStepUpForSession } from "@/lib/auth/step-up";
+import type { OrgUnitType } from "@/lib/database/schemas/org-units.schema";
+import { softDeleteOrgUnit, updateOrgUnit } from "@/lib/org/org-units.service";
 import { requirePermission } from "@/lib/rbac/middleware";
 
 export async function PATCH(
@@ -35,7 +32,10 @@ export async function PATCH(
 	} catch (error) {
 		const message =
 			error instanceof Error ? error.message : "Internal server error";
-		return NextResponse.json({ success: false, error: message }, { status: 400 });
+		return NextResponse.json(
+			{ success: false, error: message },
+			{ status: 400 },
+		);
 	}
 }
 
@@ -58,6 +58,9 @@ export async function DELETE(
 	} catch (error) {
 		const message =
 			error instanceof Error ? error.message : "Internal server error";
-		return NextResponse.json({ success: false, error: message }, { status: 400 });
+		return NextResponse.json(
+			{ success: false, error: message },
+			{ status: 400 },
+		);
 	}
 }

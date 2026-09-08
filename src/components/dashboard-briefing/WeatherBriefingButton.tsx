@@ -24,9 +24,7 @@ export function WeatherBriefingButton({
 	});
 
 	const condition = weatherData?.weather[0]?.description ?? "";
-	const tempLabel = weatherData
-		? formatTemperature(weatherData.main.temp)
-		: "";
+	const tempLabel = weatherData ? formatTemperature(weatherData.main.temp) : "";
 	const ariaLabel = weatherData
 		? `Weather, ${Math.round(weatherData.main.temp)} degrees, ${condition}. Open briefing.`
 		: "Open weather briefing";

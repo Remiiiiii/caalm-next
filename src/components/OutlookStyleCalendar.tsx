@@ -86,13 +86,13 @@ import {
 	DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { SearchField } from "@/components/ui/search-field";
 import { Label } from "@/components/ui/label";
 import {
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
+import { SearchField } from "@/components/ui/search-field";
 import {
 	Select,
 	SelectContent,
@@ -109,12 +109,12 @@ import {
 	type PermissionOverrideRecord,
 	SENSITIVITY_LABELS,
 } from "@/constants/rbac";
-import { useOrgTimezone } from "@/hooks/useOrgTimezone";
 import { useToast } from "@/hooks/use-toast";
 import { useAutoSync } from "@/hooks/useAutoSync";
 import { useCalendarApprovals } from "@/hooks/useCalendarApprovals";
 import { useCalendarEvents } from "@/hooks/useCalendarEvents";
 import { useCalendarPermissions } from "@/hooks/useCalendarPermissions";
+import { useOrgTimezone } from "@/hooks/useOrgTimezone";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useSharedCalendars } from "@/hooks/useSharedCalendars";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -137,11 +137,11 @@ import {
 	formatTimeForDisplay,
 	parseTimeToMinutes,
 } from "@/lib/calendar/eventDisplayFormat";
-import { cn, convertFileSize, getFileType } from "@/lib/utils";
 import {
 	getEnterpriseInputAccept,
 	validateEnterpriseFile,
 } from "@/lib/files/enterprise-file-formats";
+import { cn, convertFileSize, getFileType } from "@/lib/utils";
 import { getUSHolidaysForMonth, parseHolidayDate } from "@/lib/utils/holidays";
 
 type CalendarViewMode = "day" | "week" | "month" | "agenda";
@@ -4160,7 +4160,6 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 					onDecision={handleApprovalDecision}
 				/>
 
-
 				<EventReviewDialog
 					isOpen={isEditEventOpen}
 					onOpenChange={setIsEditEventOpen}
@@ -4178,7 +4177,6 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 					onEditEvent={handleEditSelectedEvent}
 					onDeleteEvent={handleDeleteEvent}
 				/>
-
 
 				{/* Share Dialog */}
 				<ShareEventDialog

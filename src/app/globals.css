@@ -2037,7 +2037,8 @@ button[data-state="active"] > span {
 	--rdp-today-color: #2563eb;
 }
 
-.caalm-picker-cal:not(.caalm-mini-cal):not(.caalm-dashboard-cal) .rdp-day_button {
+.caalm-picker-cal:not(.caalm-mini-cal):not(.caalm-dashboard-cal)
+	.rdp-day_button {
 	border-radius: 9999px;
 	border: none !important;
 	box-shadow: none !important;
@@ -2075,8 +2076,9 @@ button[data-state="active"] > span {
 }
 
 /* Past / disabled days: muted text (do not mute next-month outside days) */
-.caalm-picker-cal:not(.caalm-mini-cal):not(.caalm-dashboard-cal)
-	.rdp-past:not(.rdp-selected):not(.rdp-today)
+.caalm-picker-cal:not(.caalm-mini-cal):not(.caalm-dashboard-cal) .rdp-past:not(
+		.rdp-selected
+	):not(.rdp-today)
 	.rdp-day_button,
 .caalm-picker-cal:not(.caalm-mini-cal):not(.caalm-dashboard-cal)
 	.rdp-disabled
@@ -2087,8 +2089,9 @@ button[data-state="active"] > span {
 }
 
 /* Next/prev month spillover days: same weight as in-month days when selectable */
-.caalm-picker-cal:not(.caalm-mini-cal):not(.caalm-dashboard-cal)
-	.rdp-outside:not(.rdp-past):not(.rdp-disabled)
+.caalm-picker-cal:not(.caalm-mini-cal):not(
+		.caalm-dashboard-cal
+	) .rdp-outside:not(.rdp-past):not(.rdp-disabled)
 	.rdp-day_button {
 	color: #334155 !important;
 	opacity: 1;

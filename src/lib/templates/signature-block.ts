@@ -30,7 +30,8 @@ function partyHeading(prefix: string): string {
 }
 
 function partyShortLabel(prefix: string): string {
-	if (prefix.includes("GOVERNMENT") || prefix.includes("AGENCY")) return "Agency";
+	if (prefix.includes("GOVERNMENT") || prefix.includes("AGENCY"))
+		return "Agency";
 	if (prefix === "CONTRACTOR") return "Contractor";
 	if (prefix.includes("CLIENT")) return "Client";
 	if (prefix.includes("VENDOR")) return "Vendor";
@@ -52,7 +53,9 @@ function partyShortLabel(prefix: string): string {
 	return last.charAt(0) + last.slice(1).toLowerCase();
 }
 
-export function signaturePartiesForBlueprint(blueprintId: string): SignatureParty[] {
+export function signaturePartiesForBlueprint(
+	blueprintId: string,
+): SignatureParty[] {
 	return tokensForBlueprint(blueprintId)
 		.filter((token) => token.endsWith("_SIGNEE_NAME"))
 		.map((signeeToken) => {
@@ -141,7 +144,10 @@ function buildManualPartyCell(party: SignatureParty): string {
 	];
 	const body = [
 		partyHeaderParagraph(party.heading),
-		...fields.flatMap((label) => [signatureLineParagraph(), fieldLabelParagraph(label)]),
+		...fields.flatMap((label) => [
+			signatureLineParagraph(),
+			fieldLabelParagraph(label),
+		]),
 	].join("");
 	return `<w:tc><w:tcPr><w:tcW w:w="4680" w:type="dxa"/></w:tcPr>${body}</w:tc>`;
 }
@@ -264,7 +270,9 @@ export function buildSignatureSectionXml(
 
 	const manualCells = parties.map((party) => buildManualPartyCell(party));
 	while (manualCells.length < 2) {
-		manualCells.push(`<w:tc><w:tcPr><w:tcW w:w="4680" w:type="dxa"/></w:tcPr></w:tc>`);
+		manualCells.push(
+			`<w:tc><w:tcPr><w:tcW w:w="4680" w:type="dxa"/></w:tcPr></w:tc>`,
+		);
 	}
 
 	return [

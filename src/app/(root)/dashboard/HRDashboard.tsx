@@ -275,7 +275,9 @@ const HRDashboard = ({ user }: HRDashboardProps) => {
 											</p>
 											<p className="text-xs text-slate-500">{doc.employee}</p>
 										</div>
-										<span className="text-xs text-slate-500">{doc.uploaded}</span>
+										<span className="text-xs text-slate-500">
+											{doc.uploaded}
+										</span>
 									</div>
 								))}
 							</div>

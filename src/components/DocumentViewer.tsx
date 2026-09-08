@@ -26,8 +26,8 @@ import type {
 	ContractStarterPrompt,
 	PdfPageText,
 } from "@/lib/ai/contract-assistant.types";
-import { convertFileSize, cn } from "@/lib/utils";
 import { validateEnterpriseFile } from "@/lib/files/enterprise-file-formats";
+import { cn, convertFileSize } from "@/lib/utils";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
@@ -287,7 +287,15 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 			});
 			extractText();
 		}
-	}, [assistantMode, isOpen, file.id, file.url, file.type, file.name, extractText]);
+	}, [
+		assistantMode,
+		isOpen,
+		file.id,
+		file.url,
+		file.type,
+		file.name,
+		extractText,
+	]);
 
 	useEffect(() => {
 		// Only scroll to bottom when new messages are added (not on initial load)
@@ -837,9 +845,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 		const validation = validateEnterpriseFile(uploadedFile, "contractPrimary");
 		if (!validation.ok || validation.extension !== "pdf") {
 			console.error(
-				validation.ok
-					? "AI analysis requires a PDF file."
-					: validation.reason,
+				validation.ok ? "AI analysis requires a PDF file." : validation.reason,
 			);
 			return;
 		}
@@ -1249,9 +1255,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 					<div
 						className={cn(
 							"relative min-h-0 bg-light-400 pl-8",
-							showAIAssistant
-								? "w-[72%] border-r border-light-300"
-								: "w-full",
+							showAIAssistant ? "w-[72%] border-r border-light-300" : "w-full",
 						)}
 					>
 						{previewError ? (
@@ -1279,224 +1283,226 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 
 					{/* AI Analysis Panel */}
 					{showAIAssistant ? (
-					<div
-						className="flex w-[28%] min-h-0 flex-col border-l border-light-300 bg-light-400/30 text-left backdrop-blur"
-						dir="ltr"
-						onClick={(e) => e.stopPropagation()}
-					>
-						{/* Header — no collapse control; toggle lives next to dialog X */}
-						<div className="flex shrink-0 items-center gap-2 border-b border-light-300 bg-white/80 p-4 text-left backdrop-blur">
-							<AssistantAvatar size="sm" alt="" />
-							<h3 className="font-bold sidebar-gradient-text">
-								{assistantMode === "contract"
-									? "CAALM Contract Assistant"
-									: "AI Assistant"}
-							</h3>
-						</div>
+						<div
+							className="flex w-[28%] min-h-0 flex-col border-l border-light-300 bg-light-400/30 text-left backdrop-blur"
+							dir="ltr"
+							onClick={(e) => e.stopPropagation()}
+						>
+							{/* Header — no collapse control; toggle lives next to dialog X */}
+							<div className="flex shrink-0 items-center gap-2 border-b border-light-300 bg-white/80 p-4 text-left backdrop-blur">
+								<AssistantAvatar size="sm" alt="" />
+								<h3 className="font-bold sidebar-gradient-text">
+									{assistantMode === "contract"
+										? "CAALM Contract Assistant"
+										: "AI Assistant"}
+								</h3>
+							</div>
 
-						{assistantMode === "contract" ? (
-							<ContractAssistantChat
-								messages={contractMessages}
-								starterPrompts={starterPrompts}
-								suggestedQuestions={suggestedQuestions}
-								loading={isLoading}
-								analyzing={isContractAnalyzing}
-								onSend={sendContractMessage}
-								onJumpToPage={setPdfPageNumber}
-							/>
-						) : null}
+							{assistantMode === "contract" ? (
+								<ContractAssistantChat
+									messages={contractMessages}
+									starterPrompts={starterPrompts}
+									suggestedQuestions={suggestedQuestions}
+									loading={isLoading}
+									analyzing={isContractAnalyzing}
+									onSend={sendContractMessage}
+									onJumpToPage={setPdfPageNumber}
+								/>
+							) : null}
 
-						{/* Scrollable summary + chat; composer pinned to bottom */}
-						{assistantMode !== "contract" && (
-							<>
-								<div
-									className="min-h-0 flex-1 overflow-y-auto text-left"
-									onClick={(e) => e.stopPropagation()}
-								>
+							{/* Scrollable summary + chat; composer pinned to bottom */}
+							{assistantMode !== "contract" && (
+								<>
 									<div
-										className="space-y-4 p-4 text-left"
+										className="min-h-0 flex-1 overflow-y-auto text-left"
 										onClick={(e) => e.stopPropagation()}
 									>
-										{/* Gemini-style structured summary (primary content) */}
-										<div className="rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm">
-											<div className="mb-3 flex items-center gap-2">
-												<Sparkles className="h-4 w-4 text-[#0f5384]" />
-												<span className="text-sm font-semibold sidebar-gradient-text">
-													Document summary
-												</span>
-											</div>
-											{isGeneratingSummary && !documentSummary ? (
-												<div className="flex items-center gap-2 text-sm text-slate-500">
-													<Loader2 className="h-4 w-4 animate-spin" />
-													Generating summary…
+										<div
+											className="space-y-4 p-4 text-left"
+											onClick={(e) => e.stopPropagation()}
+										>
+											{/* Gemini-style structured summary (primary content) */}
+											<div className="rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm">
+												<div className="mb-3 flex items-center gap-2">
+													<Sparkles className="h-4 w-4 text-[#0f5384]" />
+													<span className="text-sm font-semibold sidebar-gradient-text">
+														Document summary
+													</span>
 												</div>
-											) : (
-												<div
-													className="text-left text-sm leading-relaxed text-slate-700 [&_strong]:text-slate-800"
-													dir="ltr"
-													dangerouslySetInnerHTML={{
-														__html: formatAIResponseHTML(
-															documentSummary ||
-																file.description ||
-																"Open Ask CAALM to summarize this document.",
-														),
-													}}
-												/>
-											)}
-											{/* Compact file meta under summary */}
-											<div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 border-t border-slate-100 pt-3 text-xs text-slate-500">
-												<span>
-													<span className="font-medium text-slate-600">
-														Type:
-													</span>{" "}
-													{file.type.toUpperCase()}
-												</span>
-												<span>
-													<span className="font-medium text-slate-600">
-														Size:
-													</span>{" "}
-													{convertFileSize({
-														sizeInBytes: (() => {
-															if (file.size === "" || file.size == null) {
-																return null;
-															}
-															const n =
-																typeof file.size === "string"
-																	? Number(file.size)
-																	: file.size;
-															if (Number.isNaN(n) || n <= 0) return null;
-															return n;
-														})(),
-													})}
-												</span>
-												<span>
-													<span className="font-medium text-slate-600">
-														Created:
-													</span>{" "}
-													{formatDate(file.createdAt)}
-												</span>
-											</div>
-										</div>
-
-										{/* Quick questions — only show model-generated follow-ups */}
-										{suggestedQuestions.length > 0 ? (
-										<div>
-											<h4 className="mb-2 flex items-center gap-2 text-sm font-semibold sidebar-gradient-text">
-												<Sparkles className="h-4 w-4 text-[#0f5384]" />
-												Quick questions
-											</h4>
-											<div className="flex flex-wrap gap-2">
-												{suggestedQuestions.map((q) => (
-													<Button
-														key={q}
-														variant="outline"
-														size="sm"
-														className="cursor-pointer rounded-full border-light-300 bg-white text-xs shadow-drop-1 transition-all duration-200 hover:border-[#00C1CB] hover:bg-light-400 focus:outline-none focus:ring-2 focus:ring-[#078FAB]"
-														onClick={(e) => {
-															e.stopPropagation();
-															handleSendMessage({ message: q });
+												{isGeneratingSummary && !documentSummary ? (
+													<div className="flex items-center gap-2 text-sm text-slate-500">
+														<Loader2 className="h-4 w-4 animate-spin" />
+														Generating summary…
+													</div>
+												) : (
+													<div
+														className="text-left text-sm leading-relaxed text-slate-700 [&_strong]:text-slate-800"
+														dir="ltr"
+														dangerouslySetInnerHTML={{
+															__html: formatAIResponseHTML(
+																documentSummary ||
+																	file.description ||
+																	"Open Ask CAALM to summarize this document.",
+															),
 														}}
-														disabled={isLoading}
-													>
-														{q}
-													</Button>
-												))}
+													/>
+												)}
+												{/* Compact file meta under summary */}
+												<div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 border-t border-slate-100 pt-3 text-xs text-slate-500">
+													<span>
+														<span className="font-medium text-slate-600">
+															Type:
+														</span>{" "}
+														{file.type.toUpperCase()}
+													</span>
+													<span>
+														<span className="font-medium text-slate-600">
+															Size:
+														</span>{" "}
+														{convertFileSize({
+															sizeInBytes: (() => {
+																if (file.size === "" || file.size == null) {
+																	return null;
+																}
+																const n =
+																	typeof file.size === "string"
+																		? Number(file.size)
+																		: file.size;
+																if (Number.isNaN(n) || n <= 0) return null;
+																return n;
+															})(),
+														})}
+													</span>
+													<span>
+														<span className="font-medium text-slate-600">
+															Created:
+														</span>{" "}
+														{formatDate(file.createdAt)}
+													</span>
+												</div>
 											</div>
-										</div>
-										) : null}
 
-										{/* Chat Messages — exclude greeting shown at top */}
-										{chatMessages.length > 1 && (
-											<div className="space-y-3 text-left">
-												{chatMessages
-													.filter((message) => message.id !== "greeting")
-													.map((message) => (
-														<div
-															key={message.id}
-															className={`rounded-lg p-3 text-left ${
-																message.sender === "user"
-																	? "bg-gradient-to-r from-[#00C1CB] via-[#0E638F] to-[#162768] text-white"
-																	: "bg-slate-50 text-slate-700"
-															}`}
-														>
-															{message.sender === "assistant" ? (
-																<div
-																	className="prose prose-sm max-w-none text-left text-sm text-gray-700 prose-headings:mt-2 prose-headings:mb-1 prose-p:my-1"
-																	dangerouslySetInnerHTML={{
-																		__html: formatAIResponseHTML(message.text),
-																	}}
-																/>
-															) : (
-																<p className="whitespace-pre-line text-left text-sm">
-																	{message.text}
-																</p>
-															)}
-															<p
-																className={`mt-2 text-left text-xs ${
+											{/* Quick questions — only show model-generated follow-ups */}
+											{suggestedQuestions.length > 0 ? (
+												<div>
+													<h4 className="mb-2 flex items-center gap-2 text-sm font-semibold sidebar-gradient-text">
+														<Sparkles className="h-4 w-4 text-[#0f5384]" />
+														Quick questions
+													</h4>
+													<div className="flex flex-wrap gap-2">
+														{suggestedQuestions.map((q) => (
+															<Button
+																key={q}
+																variant="outline"
+																size="sm"
+																className="cursor-pointer rounded-full border-light-300 bg-white text-xs shadow-drop-1 transition-all duration-200 hover:border-[#00C1CB] hover:bg-light-400 focus:outline-none focus:ring-2 focus:ring-[#078FAB]"
+																onClick={(e) => {
+																	e.stopPropagation();
+																	handleSendMessage({ message: q });
+																}}
+																disabled={isLoading}
+															>
+																{q}
+															</Button>
+														))}
+													</div>
+												</div>
+											) : null}
+
+											{/* Chat Messages — exclude greeting shown at top */}
+											{chatMessages.length > 1 && (
+												<div className="space-y-3 text-left">
+													{chatMessages
+														.filter((message) => message.id !== "greeting")
+														.map((message) => (
+															<div
+																key={message.id}
+																className={`rounded-lg p-3 text-left ${
 																	message.sender === "user"
-																		? "text-blue-100"
-																		: "text-gray-400"
+																		? "bg-gradient-to-r from-[#00C1CB] via-[#0E638F] to-[#162768] text-white"
+																		: "bg-slate-50 text-slate-700"
 																}`}
 															>
-																{message.timestamp.toLocaleTimeString()}
-															</p>
+																{message.sender === "assistant" ? (
+																	<div
+																		className="prose prose-sm max-w-none text-left text-sm text-gray-700 prose-headings:mt-2 prose-headings:mb-1 prose-p:my-1"
+																		dangerouslySetInnerHTML={{
+																			__html: formatAIResponseHTML(
+																				message.text,
+																			),
+																		}}
+																	/>
+																) : (
+																	<p className="whitespace-pre-line text-left text-sm">
+																		{message.text}
+																	</p>
+																)}
+																<p
+																	className={`mt-2 text-left text-xs ${
+																		message.sender === "user"
+																			? "text-blue-100"
+																			: "text-gray-400"
+																	}`}
+																>
+																	{message.timestamp.toLocaleTimeString()}
+																</p>
+															</div>
+														))}
+													{isLoading && (
+														<div className="flex items-center gap-2 rounded-lg bg-slate-50 p-3">
+															<Loader2 className="h-4 w-4 animate-spin text-cyan-600" />
+															<span className="text-sm text-gray-600">
+																Thinking...
+															</span>
 														</div>
-													))}
-												{isLoading && (
-													<div className="flex items-center gap-2 rounded-lg bg-slate-50 p-3">
-														<Loader2 className="h-4 w-4 animate-spin text-cyan-600" />
-														<span className="text-sm text-gray-600">
-															Thinking...
-														</span>
-													</div>
-												)}
-												<div ref={chatEndRef} />
-											</div>
-										)}
-									</div>
-								</div>
-
-								{/* Composer — pinned to bottom */}
-								<div
-									className="shrink-0 border-t border-light-300 bg-white/95 p-4 text-left backdrop-blur"
-									onClick={(e) => e.stopPropagation()}
-								>
-									<div className="mb-2 flex items-center gap-2 text-sm font-semibold sidebar-gradient-text">
-										<Sparkles className="h-4 w-4 text-cyan-600" />
-										Ask CAALM
-									</div>
-									<div className="flex items-end gap-2">
-										<Textarea
-											placeholder="Ask a question about this document..."
-											value={newMessage}
-											onChange={(e) => setNewMessage(e.target.value)}
-											onKeyPress={handleKeyPress}
-											onClick={(e) => e.stopPropagation()}
-											className="min-h-[72px] flex-1 resize-none border! border-slate-300! bg-white text-left text-sm shadow-sm focus-visible:border-[#078FAB]! focus-visible:ring-1 focus-visible:ring-[#078FAB]"
-											rows={2}
-											aria-label="Ask CAALM"
-										/>
-										<Button
-											onClick={(e) => {
-												e.stopPropagation();
-												handleSendMessage({ message: undefined });
-											}}
-											disabled={!newMessage.trim() || isLoading}
-											size="icon"
-											className="primary-btn size-8! min-h-8! min-w-8! max-h-8! max-w-8! shrink-0 rounded-full! p-0! px-0! py-0! sm:w-8!"
-											aria-label="Send message"
-										>
-											{isLoading ? (
-												<Loader2 className="h-3.5 w-3.5 animate-spin" />
-											) : (
-												<Send className="h-3.5 w-3.5" />
+													)}
+													<div ref={chatEndRef} />
+												</div>
 											)}
-										</Button>
+										</div>
 									</div>
-								</div>
-							</>
-						)}
-					</div>
+
+									{/* Composer — pinned to bottom */}
+									<div
+										className="shrink-0 border-t border-light-300 bg-white/95 p-4 text-left backdrop-blur"
+										onClick={(e) => e.stopPropagation()}
+									>
+										<div className="mb-2 flex items-center gap-2 text-sm font-semibold sidebar-gradient-text">
+											<Sparkles className="h-4 w-4 text-cyan-600" />
+											Ask CAALM
+										</div>
+										<div className="flex items-end gap-2">
+											<Textarea
+												placeholder="Ask a question about this document..."
+												value={newMessage}
+												onChange={(e) => setNewMessage(e.target.value)}
+												onKeyPress={handleKeyPress}
+												onClick={(e) => e.stopPropagation()}
+												className="min-h-[72px] flex-1 resize-none border! border-slate-300! bg-white text-left text-sm shadow-sm focus-visible:border-[#078FAB]! focus-visible:ring-1 focus-visible:ring-[#078FAB]"
+												rows={2}
+												aria-label="Ask CAALM"
+											/>
+											<Button
+												onClick={(e) => {
+													e.stopPropagation();
+													handleSendMessage({ message: undefined });
+												}}
+												disabled={!newMessage.trim() || isLoading}
+												size="icon"
+												className="primary-btn size-8! min-h-8! min-w-8! max-h-8! max-w-8! shrink-0 rounded-full! p-0! px-0! py-0! sm:w-8!"
+												aria-label="Send message"
+											>
+												{isLoading ? (
+													<Loader2 className="h-3.5 w-3.5 animate-spin" />
+												) : (
+													<Send className="h-3.5 w-3.5" />
+												)}
+											</Button>
+										</div>
+									</div>
+								</>
+							)}
+						</div>
 					) : null}
 				</div>
 			</div>

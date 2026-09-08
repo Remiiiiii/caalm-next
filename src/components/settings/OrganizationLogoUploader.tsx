@@ -133,7 +133,10 @@ export function OrganizationLogoUploader({
 	return (
 		<div className="space-y-2 min-w-0">
 			<div className="flex items-center gap-2">
-				<Label htmlFor="org-logo-upload" className="text-sm font-medium text-slate-700">
+				<Label
+					htmlFor="org-logo-upload"
+					className="text-sm font-medium text-slate-700"
+				>
 					Company logo
 				</Label>
 				<span className="text-xs text-slate-500">Optional</span>

@@ -2,16 +2,16 @@
 
 import {
 	createContext,
+	type ReactNode,
 	useCallback,
 	useContext,
 	useMemo,
 	useRef,
 	useState,
-	type ReactNode,
 } from "react";
 import { StepUpOtpDialog } from "@/components/auth/StepUpOtpDialog";
-import { fetchStepUpStatus } from "@/lib/auth/step-up-client";
 import { useAuth } from "@/contexts/AuthContext";
+import { fetchStepUpStatus } from "@/lib/auth/step-up-client";
 
 interface StepUpContextValue {
 	ensureStepUp: () => Promise<boolean>;

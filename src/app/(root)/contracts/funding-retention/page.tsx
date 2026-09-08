@@ -22,8 +22,8 @@ export default async function FundingRetentionPage() {
 			<p className="mb-6 max-w-4xl text-sm text-slate-600">
 				Turn “something is expiring” into “this dollar stream is protected,” and
 				“this bid is being won.” Retention ranks live contracts by money at
-				stake. Pursuits track new funding from SAM.gov or manual leads through to
-				Proposals & Approvals.
+				stake. Pursuits track new funding from SAM.gov or manual leads through
+				to Proposals & Approvals.
 			</p>
 			<FundingRetentionClient />
 		</div>

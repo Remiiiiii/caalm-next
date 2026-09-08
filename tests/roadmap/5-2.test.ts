@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { ROADMAP_CATALOG } from "@/lib/roadmap/catalog";
 import {
 	assembleContract,
 	assertCreatesNewContract,
 	emptyWizardPayload,
 } from "@/lib/templates/assemble-contract";
-import { ROADMAP_CATALOG } from "@/lib/roadmap/catalog";
 import type { ClauseSnapshot } from "@/types/contract-templates";
 
 describe("roadmap task 5.2 contract templates", () => {

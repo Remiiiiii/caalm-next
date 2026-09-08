@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
 	assertCrmProviderAccess,
-	canAccessCrmProvider,
 	CrmEntitlementError,
+	canAccessCrmProvider,
 } from "./entitlements";
 
 describe("CRM provider entitlements", () => {

@@ -1,8 +1,15 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
-import { getCrmIntegration, updateCrmIntegration } from "@/lib/crm/integrations.repository";
+import {
+	getCrmIntegration,
+	updateCrmIntegration,
+} from "@/lib/crm/integrations.repository";
 import { resolveCrmOrgRequest } from "@/lib/crm/request-context";
-import { DEFAULT_CRM_FIELD_MAP, parseCrmConfig, sanitizeCrmFieldMap } from "@/lib/crm/types";
+import {
+	DEFAULT_CRM_FIELD_MAP,
+	parseCrmConfig,
+	sanitizeCrmFieldMap,
+} from "@/lib/crm/types";
 import { requirePermission } from "@/lib/rbac/middleware";
 
 export async function PUT(request: NextRequest) {

@@ -1,8 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import type { DocsHeading } from "@/lib/docs/types";
 import { cn } from "@/lib/utils";
-import { useEffect, useState } from "react";
 
 export function DocsToc({ headings }: { headings: DocsHeading[] }) {
 	const [activeId, setActiveId] = useState<string>("");

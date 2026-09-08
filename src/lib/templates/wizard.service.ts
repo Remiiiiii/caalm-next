@@ -10,9 +10,10 @@ import { assertCanCreateContract } from "@/lib/billing/planLimits";
 import { listClauses } from "@/lib/clauses/clause-library.service";
 import { getContractTypeConfig } from "@/lib/contracts/contractTypeConfigs";
 import {
-	negotiationSnapshotFromDocx,
 	type NegotiationSnapshotMetadata,
+	negotiationSnapshotFromDocx,
 } from "@/lib/contracts/negotiation/docx-snapshot";
+import { applyOrgLogoToDocx } from "@/lib/organizations/org-logo.server";
 import { getOrganization } from "@/lib/rbac/organizations";
 import { logAuditEvent } from "@/lib/services/audit-logger";
 import {
@@ -37,7 +38,6 @@ import {
 	type InjectedClause,
 	mergeBlueprintDocument,
 } from "@/lib/templates/merge-docx";
-import { applyOrgLogoToDocx } from "@/lib/organizations/org-logo.server";
 import { orgLetterheadValues } from "@/lib/templates/org-letterhead";
 import {
 	buildMergeTokenValues,
@@ -333,7 +333,14 @@ function payloadFieldsForSummary(raw: unknown): {
 					),
 				)
 			: {};
-	return { contractName, blueprintId, templateId, lastSavedAt, intake, tokenValues };
+	return {
+		contractName,
+		blueprintId,
+		templateId,
+		lastSavedAt,
+		intake,
+		tokenValues,
+	};
 }
 
 function mapSessionSummary(row: Record<string, unknown>): WizardSessionSummary {
@@ -343,11 +350,7 @@ function mapSessionSummary(row: Record<string, unknown>): WizardSessionSummary {
 			? row.templateId
 			: null;
 	const fillPercent = fields.blueprintId
-		? filledTokenPercent(
-				fields.blueprintId,
-				fields.intake,
-				fields.tokenValues,
-			)
+		? filledTokenPercent(fields.blueprintId, fields.intake, fields.tokenValues)
 		: 0;
 	return {
 		$id: String(row.$id),
@@ -581,9 +584,9 @@ export async function getWizardSessionForContract(input: {
 			Query.limit(10),
 		],
 	});
-	const sessions = (
-		response.rows as unknown as Record<string, unknown>[]
-	).map(mapSession);
+	const sessions = (response.rows as unknown as Record<string, unknown>[]).map(
+		mapSession,
+	);
 	return (
 		sessions.find(
 			(session) =>
@@ -752,9 +755,7 @@ function mappedCurrency(code: string): string {
 
 function mappedDepartment(department: string): string {
 	const trimmed = department.trim();
-	if (
-		(CONTRACT_DEPARTMENTS as readonly string[]).includes(trimmed)
-	) {
+	if ((CONTRACT_DEPARTMENTS as readonly string[]).includes(trimmed)) {
 		return trimmed;
 	}
 	return "Administration";
@@ -826,7 +827,9 @@ export async function buildNegotiationSnapshotFromWizardPayload(input: {
 	orgId: string;
 }): Promise<string> {
 	if (!input.payload.blueprintId) {
-		throw new Error("A blueprint is required to rebuild this negotiation snapshot");
+		throw new Error(
+			"A blueprint is required to rebuild this negotiation snapshot",
+		);
 	}
 	const assembly = await previewWizard({
 		orgId: input.orgId,
@@ -978,8 +981,7 @@ export async function submitWizard(input: {
 		contractName: payload.intake.contractName.slice(0, 128),
 		contractNumber: buildWizardContractNumber(input.session.$id),
 		orgId: input.orgId,
-		amount:
-			Number(String(payload.intake.amount).replace(/[$,]/g, "")) || 0,
+		amount: Number(String(payload.intake.amount).replace(/[$,]/g, "")) || 0,
 		currencyCode: mappedCurrency(payload.intake.currency || "USD"),
 		// lifecycleStatus = negotiation phase; status = operational enum (no "draft").
 		lifecycleStatus: "negotiation",
@@ -987,16 +989,15 @@ export async function submitWizard(input: {
 		description,
 		contractOwnerId: input.userId,
 		// Required on Contracts; wizard intake allows "Not set".
-		department: mappedDepartment(
-			payload.intake.department || "Administration",
-		),
+		department: mappedDepartment(payload.intake.department || "Administration"),
 		vendor: payload.intake.counterparty.slice(0, 50),
 		contractType: mappedContractType(payload.intake.contractType),
 		contractExpiryDate: resolveWizardExpiryDate(payload.intake.expiryDate),
-		templateUsed: (payload.blueprintId || payload.templateId || "guided-wizard").slice(
-			0,
-			255,
-		),
+		templateUsed: (
+			payload.blueprintId ||
+			payload.templateId ||
+			"guided-wizard"
+		).slice(0, 255),
 		priority: "Medium",
 	};
 	if (startDateIso) {
@@ -1073,8 +1074,7 @@ export async function submitWizard(input: {
 		target_type: "contract",
 		target_id: contractId,
 		target_label: payload.intake.contractName,
-		summary:
-			"Created a new negotiation draft from the guided template wizard",
+		summary: "Created a new negotiation draft from the guided template wizard",
 		metadata: {
 			sessionId: input.session.$id,
 			templateId: payload.templateId,

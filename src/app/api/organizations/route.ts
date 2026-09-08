@@ -100,10 +100,7 @@ export async function PUT(request: NextRequest) {
 
 		const body = await request.json();
 
-		if (
-			orgPutRequiresStepUp(body) ||
-			orgPutRequiresStepUpForRequire2fa(body)
-		) {
+		if (orgPutRequiresStepUp(body) || orgPutRequiresStepUpForRequire2fa(body)) {
 			const stepUpCheck = requireStepUp(request, user.$id);
 			if (stepUpCheck) return stepUpCheck;
 		}
@@ -154,7 +151,9 @@ export async function PUT(request: NextRequest) {
 					...(validated.settings.city !== undefined
 						? {
 								city:
-									validated.settings.city === null ? "" : validated.settings.city,
+									validated.settings.city === null
+										? ""
+										: validated.settings.city,
 							}
 						: {}),
 					...(validated.settings.state !== undefined
@@ -176,13 +175,17 @@ export async function PUT(request: NextRequest) {
 					...(validated.settings.phone !== undefined
 						? {
 								phone:
-									validated.settings.phone === null ? "" : validated.settings.phone,
+									validated.settings.phone === null
+										? ""
+										: validated.settings.phone,
 							}
 						: {}),
 					...(validated.settings.email !== undefined
 						? {
 								email:
-									validated.settings.email === null ? "" : validated.settings.email,
+									validated.settings.email === null
+										? ""
+										: validated.settings.email,
 							}
 						: {}),
 				}

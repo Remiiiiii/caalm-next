@@ -2,13 +2,7 @@
 
 import { Key } from "lucide-react";
 import { useMemo } from "react";
-import {
-	Cell,
-	Pie,
-	PieChart,
-	ResponsiveContainer,
-	Tooltip,
-} from "recharts";
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import useSWR from "swr";
 import { Card, CardContent } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading";
@@ -137,27 +131,25 @@ export default function LicenseStatusPieChart({
 								fill="#8884d8"
 								dataKey="value"
 							>
-							{chartData.map((entry, index) => (
-								<Cell key={`cell-${index}`} fill={entry.color} />
-							))}
-						</Pie>
-						<Tooltip
-							formatter={(value, _name, item) => {
-								const safeValue =
-									typeof value === "number"
-										? value
-										: Number(value ?? 0);
-								const payload = item?.payload as
-									| { percentage?: number; name?: string }
-									| undefined;
-								return [
-									`${safeValue} (${payload?.percentage ?? 0}%)`,
-									payload?.name ?? "Unknown",
-								];
-							}}
-						/>
-					</PieChart>
-				</ResponsiveContainer>
+								{chartData.map((entry, index) => (
+									<Cell key={`cell-${index}`} fill={entry.color} />
+								))}
+							</Pie>
+							<Tooltip
+								formatter={(value, _name, item) => {
+									const safeValue =
+										typeof value === "number" ? value : Number(value ?? 0);
+									const payload = item?.payload as
+										| { percentage?: number; name?: string }
+										| undefined;
+									return [
+										`${safeValue} (${payload?.percentage ?? 0}%)`,
+										payload?.name ?? "Unknown",
+									];
+								}}
+							/>
+						</PieChart>
+					</ResponsiveContainer>
 				</div>
 				<div className="mt-4 space-y-2">
 					{chartData.map((item) => (

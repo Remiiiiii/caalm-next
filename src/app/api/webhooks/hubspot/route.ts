@@ -1,17 +1,19 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { getCrmIntegrationByPortalId } from "@/lib/crm/integrations.repository";
 import {
 	isDealStageChange,
 	parseHubSpotWebhookEvents,
 	verifyHubSpotSignature,
 } from "@/lib/crm/hubspot-webhook";
+import { getCrmIntegrationByPortalId } from "@/lib/crm/integrations.repository";
 import { ingestHubSpotDeal } from "@/lib/crm/sync-hubspot";
 
 export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
 	const secret =
-		process.env.HUBSPOT_WEBHOOK_SECRET || process.env.HUBSPOT_CLIENT_SECRET || "";
+		process.env.HUBSPOT_WEBHOOK_SECRET ||
+		process.env.HUBSPOT_CLIENT_SECRET ||
+		"";
 	const signature =
 		request.headers.get("x-hubspot-signature-v3") ||
 		request.headers.get("x-hubspot-signature");

@@ -298,7 +298,9 @@ describe("reassign helpers", () => {
 describe("assigneeHintForKind", () => {
 	it("labels executive steps for Super Admin / Org Admin", () => {
 		expect(assigneeHintForKind("executive_approval")).toMatch(/Super Admin/);
-		expect(assigneeHintForKind("awaiting_executive")).toMatch(/Organization Admin/);
+		expect(assigneeHintForKind("awaiting_executive")).toMatch(
+			/Organization Admin/,
+		);
 	});
 });
 

@@ -15,24 +15,24 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { useOrgTimezone } from "@/hooks/useOrgTimezone";
+import {
+	getEnterpriseFormatHint,
+	getEnterpriseInputAccept,
+	validateEnterpriseFile,
+} from "@/lib/files/enterprise-file-formats";
 import type {
 	GitHubIssueSnapshot,
 	Ticket,
 	TicketEvent,
 } from "@/lib/tickets/ticket.types";
 import { resolveTicketLane } from "@/lib/tickets/ticket.types";
-import { useOrgTimezone } from "@/hooks/useOrgTimezone";
 import {
 	getImpactLabel,
 	getUrgencyLabel,
 } from "@/lib/tickets/ticket-intake.constants";
 import { displayTicketNumber } from "@/lib/tickets/ticket-number.utils";
 import { cn } from "@/lib/utils";
-import {
-	getEnterpriseFormatHint,
-	getEnterpriseInputAccept,
-	validateEnterpriseFile,
-} from "@/lib/files/enterprise-file-formats";
 import {
 	TicketLanePill,
 	TicketSeverityPill,
@@ -125,7 +125,8 @@ export function TicketDetail({
 	const showClaim = canClaim && !ticket.assigneeCaalmUserId && isOpen;
 	const showClose = canClose && isOpen;
 	const showEscalate = canEscalate && lane === "help" && isOpen;
-	const showAgentPanel = lane === "engineering" || Boolean(ticket.githubIssueNumber);
+	const showAgentPanel =
+		lane === "engineering" || Boolean(ticket.githubIssueNumber);
 
 	const [issue, setIssue] = useState<GitHubIssueSnapshot | null>(null);
 	const [loading, setLoading] = useState(false);
@@ -483,7 +484,9 @@ export function TicketDetail({
 								</ul>
 							) : null}
 							{fileError ? (
-								<p className="px-3.5 pb-1.5 text-[11px] text-red">{fileError}</p>
+								<p className="px-3.5 pb-1.5 text-[11px] text-red">
+									{fileError}
+								</p>
 							) : null}
 							<div className="flex items-center gap-2 px-2.5 pb-2.5 pl-3">
 								<button

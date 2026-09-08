@@ -9,6 +9,10 @@ export async function resolveAttestationId(
 	const { getAttestationForEntity } = await import(
 		"@/lib/approvals/ExpirationAttestationService"
 	);
-	const attestation = await getAttestationForEntity(orgId, entityType, entityId);
+	const attestation = await getAttestationForEntity(
+		orgId,
+		entityType,
+		entityId,
+	);
 	return attestation?.$id;
 }

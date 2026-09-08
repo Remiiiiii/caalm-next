@@ -6,12 +6,12 @@
 
 import { type NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/actions/user.actions";
+import { appendSessionChangedNotice } from "@/lib/auth/session-sync";
 import {
 	isRoleDashboardHomePath,
 	resolveDashboardHomePath,
 	userMayAccessDashboardPath,
 } from "@/lib/rbac/dashboard-access-policy";
-import { appendSessionChangedNotice } from "@/lib/auth/session-sync";
 import {
 	getUserDefaultOrganization,
 	getUserRoles,

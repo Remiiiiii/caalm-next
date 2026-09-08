@@ -117,7 +117,10 @@ export type CrmDealProperty = {
 };
 
 /** HubSpot types that make sense for each CAALM mapping row. */
-const CRM_FIELD_MAP_PROPERTY_TYPES: Record<keyof CrmFieldMap, ReadonlySet<string>> = {
+const CRM_FIELD_MAP_PROPERTY_TYPES: Record<
+	keyof CrmFieldMap,
+	ReadonlySet<string>
+> = {
 	dealName: new Set(["string"]),
 	amount: new Set(["number"]),
 	company: new Set(["string"]),
@@ -268,7 +271,8 @@ export function optionsForCrmFieldMapKey(
 			name,
 			fromAll || {
 				name,
-				label: name === current && name !== recommended ? `${name} (saved)` : name,
+				label:
+					name === current && name !== recommended ? `${name} (saved)` : name,
 				type: "",
 				fieldType: "",
 			},

@@ -536,7 +536,8 @@ export const PERMISSION_DEFINITIONS = [
 		key: PERMISSIONS.IT.MANAGE_ROADMAP,
 		name: "Manage CLM Roadmap",
 		category: "it",
-		description: "Start roadmap tasks and bind branches/PRs (cannot force-complete)",
+		description:
+			"Start roadmap tasks and bind branches/PRs (cannot force-complete)",
 	},
 
 	// News
@@ -733,7 +734,8 @@ export const PERMISSION_DEFINITIONS = [
 		key: PERMISSIONS.CONTRACT_TEMPLATES.VIEW,
 		name: "View Contract Templates",
 		category: "contract_templates",
-		description: "View org-owned contract templates built from the clause library",
+		description:
+			"View org-owned contract templates built from the clause library",
 	},
 	{
 		key: PERMISSIONS.CONTRACT_TEMPLATES.CREATE,

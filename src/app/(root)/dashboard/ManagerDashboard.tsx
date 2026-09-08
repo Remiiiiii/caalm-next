@@ -12,11 +12,11 @@ import { DashboardGreeting } from "@/components/dashboard/DashboardGreeting";
 import RecentActivity from "@/components/RecentActivity";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import {
 	ContractCardSkeleton,
 	StatCardSkeleton,
 } from "@/components/ui/skeletons";
+import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import { useManagerContracts } from "@/hooks/useManagerContracts";
 
 const ManagerDashboard = () => {

@@ -18,8 +18,8 @@ import { NavItemIcon } from "@/components/sidebar/NavItemIcon";
 import {
 	DASHBOARD_ITEM_COLORS,
 	ITEM_ICONS,
-	NAV_ICON_FILL_GREY,
 	isNavItemActive,
+	NAV_ICON_FILL_GREY,
 } from "@/components/sidebar/sidebar-icons";
 import {
 	Tooltip,

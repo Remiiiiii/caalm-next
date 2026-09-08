@@ -66,12 +66,18 @@ export async function POST(request: NextRequest) {
 
 	const user = await getCurrentUser();
 	if (!user) {
-		return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+		return NextResponse.json(
+			{ error: "Authentication required" },
+			{ status: 401 },
+		);
 	}
 
 	const defaultOrg = await getUserDefaultOrganization(user.$id);
 	if (!defaultOrg?.orgId) {
-		return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+		return NextResponse.json(
+			{ error: "Organization not found" },
+			{ status: 404 },
+		);
 	}
 
 	const body = await request.json();
@@ -82,8 +88,7 @@ export async function POST(request: NextRequest) {
 	);
 
 	if (validated.action === "summary" || validated.action === "analyze") {
-		const summary =
-			aiSummary || (await generateReadinessAutoSummary(payload));
+		const summary = aiSummary || (await generateReadinessAutoSummary(payload));
 		const suggestedQuestions = payload.summary.insights
 			.slice(0, 4)
 			.map((insight) => `What should we do about: ${insight.title}?`);

@@ -1,6 +1,15 @@
 import { ID, Query } from "node-appwrite";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getUserById } from "@/lib/actions/user.actions";
+import {
+	clearSlaProgress,
+	stampCurrentStepSla,
+} from "@/lib/approvals/ApprovalSlaService";
+import {
+	assertWorkflowMutable,
+	isTerminalDocumentStatus,
+} from "@/lib/approvals/documentStatus";
+import { resolveAttestationId } from "@/lib/approvals/resolveAttestationId";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { writeRowWithSchemaDriftRecovery } from "@/lib/appwrite/schemaDriftRecovery";
@@ -13,15 +22,6 @@ import {
 	getUsersByRoleNames,
 } from "@/lib/utils/get-users-by-role";
 import { triggerNotification } from "@/lib/utils/notificationTriggers";
-import {
-	clearSlaProgress,
-	stampCurrentStepSla,
-} from "@/lib/approvals/ApprovalSlaService";
-import {
-	assertWorkflowMutable,
-	isTerminalDocumentStatus,
-} from "@/lib/approvals/documentStatus";
-import { resolveAttestationId } from "@/lib/approvals/resolveAttestationId";
 import type {
 	ApprovalDecision,
 	ApprovalParticipant,
@@ -123,7 +123,9 @@ export function resolveStatusAfterApprove(
 	return "pending-review";
 }
 
-export function assigneeHintForKind(kind: ApprovalStepKind): string | undefined {
+export function assigneeHintForKind(
+	kind: ApprovalStepKind,
+): string | undefined {
 	switch (kind) {
 		case "executive_approval":
 		case "awaiting_executive":
@@ -287,9 +289,7 @@ export function needsExecutiveAssignmentFlag(
 	state: ApprovalWorkflowState,
 ): boolean {
 	const current = state.steps[state.currentStepIndex];
-	return (
-		current?.status === "current" && current.kind === "awaiting_executive"
-	);
+	return current?.status === "current" && current.kind === "awaiting_executive";
 }
 
 function toReassignCandidate(
@@ -342,10 +342,7 @@ export async function buildReassignCandidates(
 		}
 	};
 
-	if (
-		stepKind === "executive_approval" ||
-		stepKind === "awaiting_executive"
-	) {
+	if (stepKind === "executive_approval" || stepKind === "awaiting_executive") {
 		const [execs, admins] = await Promise.all([
 			getAllExecutives(orgId),
 			getAllAdmins(orgId),
@@ -742,7 +739,9 @@ export async function ensureActionableExecutiveStep(
 	return { state: upgradedState, upgraded: true };
 }
 
-async function collectAdminUserIds(orgId: string | undefined): Promise<string[]> {
+async function collectAdminUserIds(
+	orgId: string | undefined,
+): Promise<string[]> {
 	const [executives, admins] = await Promise.all([
 		getAllExecutives(orgId),
 		getAllAdmins(orgId),
@@ -867,11 +866,7 @@ export async function getWorkflowForViewer(
 	const isAssignee = !!current?.assigneeUserIds.includes(viewerUserId);
 	const isExecStep = current?.kind === "executive_approval";
 	const canDecideByRole = isExecStep
-		? await hasPermission(
-				viewerUserId,
-				PERMISSIONS.CONTRACTS.APPROVE,
-				orgId,
-			)
+		? await hasPermission(viewerUserId, PERMISSIONS.CONTRACTS.APPROVE, orgId)
 		: await hasPermission(
 				viewerUserId,
 				PERMISSIONS.CONTRACTS.REVIEW,
@@ -1354,10 +1349,7 @@ export async function resubmitAfterChanges({
 
 	await appendNotification(state, {
 		type: "resubmitted",
-		recipientUserIds: uniqueIds([
-			...(dept?.assigneeUserIds || []),
-			uploader,
-		]),
+		recipientUserIds: uniqueIds([...(dept?.assigneeUserIds || []), uploader]),
 		stepId: dept?.id,
 		label: "Resubmitted for review",
 	});

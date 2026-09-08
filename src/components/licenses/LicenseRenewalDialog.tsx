@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import type { z } from "zod";
 import { Button } from "@/components/ui/button";
+import { CurrencySelect } from "@/components/ui/currency-select";
 import {
 	Dialog,
 	DialogContent,
@@ -21,7 +22,6 @@ import {
 	FormLabel,
 	FormMessage,
 } from "@/components/ui/form";
-import { CurrencySelect } from "@/components/ui/currency-select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";

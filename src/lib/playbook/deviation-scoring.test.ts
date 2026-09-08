@@ -30,8 +30,14 @@ function clause(overrides: Partial<Clause> = {}): Clause {
 describe("normalizeClauseBody", () => {
 	it("collapses whitespace and casing so identical wording matches", () => {
 		expect(
-			normalizeClauseBody("  Each Party SHALL keep\nconfidential information secret. "),
-		).toBe(normalizeClauseBody("Each party shall keep confidential information secret."));
+			normalizeClauseBody(
+				"  Each Party SHALL keep\nconfidential information secret. ",
+			),
+		).toBe(
+			normalizeClauseBody(
+				"Each party shall keep confidential information secret.",
+			),
+		);
 	});
 });
 
@@ -106,7 +112,11 @@ describe("parseExtractedClauses", () => {
 	it("keeps only rows with a body and a known category", () => {
 		const clauses = parseExtractedClauses({
 			clauses: [
-				{ title: "Confidentiality", category: "confidentiality", body: "Keep secrets." },
+				{
+					title: "Confidentiality",
+					category: "confidentiality",
+					body: "Keep secrets.",
+				},
 				{ title: "Skip", category: "not-a-category", body: "x" },
 				{ title: "Empty", category: "payment", body: "  " },
 			],

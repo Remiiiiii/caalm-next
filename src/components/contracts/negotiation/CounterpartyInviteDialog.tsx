@@ -3,11 +3,7 @@
 import { Check, Copy, Info, Link2, Send, UserPlus, X } from "lucide-react";
 import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -125,10 +121,7 @@ export function CounterpartyInviteDialog({
 		EMAIL_RE.test(email.trim().toLowerCase()) && fullName.trim()
 			? [{ email: email.trim().toLowerCase(), name: fullName.trim() }]
 			: [];
-	const chosenInvitees =
-		invitees.length > 0
-			? invitees
-			: draftInvitee;
+	const chosenInvitees = invitees.length > 0 ? invitees : draftInvitee;
 	const canCreateLink = !busy && chosenInvitees.length > 0 && !link;
 
 	return (
@@ -184,9 +177,7 @@ export function CounterpartyInviteDialog({
 						<p className="text-xs text-slate-500">
 							Press Enter after both fields to add another person.
 						</p>
-						{formError ? (
-							<p className="text-xs text-red">{formError}</p>
-						) : null}
+						{formError ? <p className="text-xs text-red">{formError}</p> : null}
 						{invitees.length > 0 ? (
 							<div className="space-y-2">
 								{invitees.map((item) => (
@@ -277,8 +268,8 @@ export function CounterpartyInviteDialog({
 							aria-hidden
 						/>
 						<span>
-							Everyone on this list shares one link. Invited emails must
-							verify with a code before they can view the draft.
+							Everyone on this list shares one link. Invited emails must verify
+							with a code before they can view the draft.
 						</span>
 					</p>
 					{!link ? (

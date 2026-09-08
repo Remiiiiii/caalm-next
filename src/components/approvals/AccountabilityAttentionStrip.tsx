@@ -11,12 +11,10 @@ export function AccountabilityAttentionStrip() {
 	const { orgId } = useOrganization();
 	const [pending, setPending] = useState<ExpirationAttestation[]>([]);
 	const [submitted, setSubmitted] = useState<ExpirationAttestation[]>([]);
-	const [attestTarget, setAttestTarget] = useState<ExpirationAttestation | null>(
-		null,
-	);
-	const [reviewTarget, setReviewTarget] = useState<ExpirationAttestation | null>(
-		null,
-	);
+	const [attestTarget, setAttestTarget] =
+		useState<ExpirationAttestation | null>(null);
+	const [reviewTarget, setReviewTarget] =
+		useState<ExpirationAttestation | null>(null);
 
 	const reload = () => {
 		if (!orgId) return;

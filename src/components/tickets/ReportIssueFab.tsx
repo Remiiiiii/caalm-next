@@ -11,12 +11,12 @@ import {
 	useRef,
 	useState,
 } from "react";
-import { Button } from "@/components/ui/button";
 import ShimmerBadge from "@/components/landing/ShimmerBadge";
 import {
 	createSubmitProgressTicker,
 	SubmitProgressIndicator,
 } from "@/components/tickets/SubmitProgressIndicator";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -30,14 +30,14 @@ import { PERMISSIONS } from "@/constants/permissions";
 import { useFullWindowOverlayOpen } from "@/hooks/useFullWindowOverlayOpen";
 import { usePermissions } from "@/hooks/usePermissions";
 import {
-	categoriesForLane,
-	TICKET_LANE_OPTIONS,
-} from "@/lib/tickets/ticket-intake.constants";
-import type { TicketLane } from "@/lib/tickets/ticket.types";
-import {
 	resolveTicketContextFromPath,
 	shouldHideReportIssueFab,
 } from "@/lib/tickets/route-module-map";
+import type { TicketLane } from "@/lib/tickets/ticket.types";
+import {
+	categoriesForLane,
+	TICKET_LANE_OPTIONS,
+} from "@/lib/tickets/ticket-intake.constants";
 import { cn } from "@/lib/utils";
 
 export default function ReportIssueFab() {
@@ -60,10 +60,7 @@ export default function ReportIssueFab() {
 
 	const canCreate = permissions.includes(PERMISSIONS.TICKETS.CREATE);
 	const hidden =
-		loading ||
-		!canCreate ||
-		shouldHideReportIssueFab(pathname) ||
-		overlayOpen;
+		loading || !canCreate || shouldHideReportIssueFab(pathname) || overlayOpen;
 
 	const categoryOptions = useMemo(
 		() => (lane ? categoriesForLane(lane) : []),
@@ -85,7 +82,10 @@ export default function ReportIssueFab() {
 		if (!open) return;
 
 		function handlePointerDown(event: MouseEvent) {
-			if (panelRef.current && !panelRef.current.contains(event.target as Node)) {
+			if (
+				panelRef.current &&
+				!panelRef.current.contains(event.target as Node)
+			) {
 				setOpen(false);
 			}
 		}
@@ -184,7 +184,9 @@ export default function ReportIssueFab() {
 							<div className="mx-auto mb-3 flex h-9 w-9 items-center justify-center rounded-full bg-blue/10">
 								<Send className="h-4 w-4 text-[#0f5384]" aria-hidden />
 							</div>
-							<p className="text-sm font-medium text-slate-700">Ticket logged</p>
+							<p className="text-sm font-medium text-slate-700">
+								Ticket logged
+							</p>
 							<p className="mt-1 text-xs text-slate-600">
 								We tagged it under {routeContext.pageLabel}.
 							</p>
@@ -276,7 +278,9 @@ export default function ReportIssueFab() {
 											)}
 										>
 											<SelectValue
-												placeholder={lane ? "Choose a category" : "Pick a lane first"}
+												placeholder={
+													lane ? "Choose a category" : "Pick a lane first"
+												}
 											/>
 										</SelectTrigger>
 										<SelectContent className="border-slate-200 bg-white/95 shadow-xl backdrop-blur-xl">

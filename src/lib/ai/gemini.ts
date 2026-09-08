@@ -188,7 +188,11 @@ ${fileUrl ? `URL: ${fileUrl}` : ""}
 		}
 		if (keyPoints.length === 0) {
 			for (const line of lines) {
-				if (line.startsWith("- ") || line.startsWith("* ") || line.startsWith("• ")) {
+				if (
+					line.startsWith("- ") ||
+					line.startsWith("* ") ||
+					line.startsWith("• ")
+				) {
 					keyPoints.push(line.replace(/^[-*•]\s+/, "").replace(/\*\*/g, ""));
 				}
 				if (keyPoints.length >= 8) break;
@@ -196,7 +200,9 @@ ${fileUrl ? `URL: ${fileUrl}` : ""}
 		}
 
 		const suggestedQuestions = [
-			...topics.slice(0, 2).map((topic) => `What should I know about ${topic}?`),
+			...topics
+				.slice(0, 2)
+				.map((topic) => `What should I know about ${topic}?`),
 			...keyPoints.slice(0, 3).map((point) => {
 				const label = point.split(":")[0]?.trim();
 				return label

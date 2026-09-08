@@ -22,7 +22,9 @@ describe("org timezone helpers", () => {
 
 	it("formats a UTC instant in New York and London", () => {
 		const instant = new Date("2026-08-17T13:30:00.000Z");
-		expect(formatInTimezone(instant, "HH:mm", "America/New_York")).toBe("09:30");
+		expect(formatInTimezone(instant, "HH:mm", "America/New_York")).toBe(
+			"09:30",
+		);
 		expect(formatInTimezone(instant, "HH:mm", "Europe/London")).toBe("14:30");
 	});
 

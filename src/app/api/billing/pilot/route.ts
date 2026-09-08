@@ -7,17 +7,20 @@ import {
 	type PilotMonths,
 } from "@/lib/billing/entitlements";
 import { requirePermission } from "@/lib/rbac/middleware";
-import { startOrgPilot } from "@/lib/stripe/billing";
 import { logAuditEvent } from "@/lib/services/audit-logger";
+import { startOrgPilot } from "@/lib/stripe/billing";
 
 const bodySchema = z.object({
 	orgId: z.string().min(1),
 	tier: z.enum(["starter", "growth", "enterprise"]),
-	months: z.number().int().refine(
-		(m): m is PilotMonths =>
-			(PILOT_MONTH_OPTIONS as readonly number[]).includes(m),
-		{ message: "months must be 3, 4, 5, or 6" },
-	),
+	months: z
+		.number()
+		.int()
+		.refine(
+			(m): m is PilotMonths =>
+				(PILOT_MONTH_OPTIONS as readonly number[]).includes(m),
+			{ message: "months must be 3, 4, 5, or 6" },
+		),
 });
 
 /**

@@ -32,10 +32,7 @@ export default function StatusUnderlineTabs({
 			className="mt-4 border-b border-slate-200/80 px-4 pt-1 sm:px-6"
 			aria-label="Filter by status"
 		>
-			<div
-				role="tablist"
-				className={cn("grid w-full gap-1", listClassName)}
-			>
+			<div role="tablist" className={cn("grid w-full gap-1", listClassName)}>
 				{tabs.map((tab) => {
 					const selected = value === tab.value;
 					return (
@@ -73,4 +70,4 @@ export default function StatusUnderlineTabs({
 	);
 }
 
-export type { UnderlineTab, StatusUnderlineTabsProps };
+export type { StatusUnderlineTabsProps, UnderlineTab };

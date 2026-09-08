@@ -11,9 +11,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useContractSnooze } from "@/hooks/useContractSnooze";
 import { useUpdateContractStatus } from "@/hooks/useUpdateContractStatus";
 import type { ExpiryQueueItem } from "@/lib/expiry/expiry-queue";
+import { DESKTOP_MIN_WIDTH } from "@/lib/ui/desktop-first";
 import type { UIFileDoc } from "@/types/files";
 import type { License } from "@/types/licenses";
-import { DESKTOP_MIN_WIDTH } from "@/lib/ui/desktop-first";
 
 function isPhoneViewport() {
 	return typeof window !== "undefined" && window.innerWidth < DESKTOP_MIN_WIDTH;
@@ -55,8 +55,7 @@ export default function ExpiryQueueAlertBridge({
 
 	if (item.kind === "contract") {
 		const contract = item.file;
-		const title =
-			contract.contractName || contract.name || "Untitled Contract";
+		const title = contract.contractName || contract.name || "Untitled Contract";
 		const expiryDate = contract.contractExpiryDate || "";
 		const vendor =
 			contract.vendor ||
@@ -68,7 +67,8 @@ export default function ExpiryQueueAlertBridge({
 			if (isPhoneViewport()) {
 				toast({
 					title: "Open on a laptop",
-					description: "Renew from the contract library on a desktop or laptop.",
+					description:
+						"Renew from the contract library on a desktop or laptop.",
 				});
 				onItemHandled(item);
 				return;
@@ -86,9 +86,7 @@ export default function ExpiryQueueAlertBridge({
 				onItemHandled(item);
 				return;
 			}
-			router.push(
-				`/contracts?highlight=${encodeURIComponent(contract.$id)}`,
-			);
+			router.push(`/contracts?highlight=${encodeURIComponent(contract.$id)}`);
 			onItemHandled(item);
 		};
 

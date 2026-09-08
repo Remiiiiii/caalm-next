@@ -19,7 +19,12 @@ export function splitProseParagraphs(
 	if (/\n\s*\n/.test(withSectionBreaks)) {
 		return withSectionBreaks
 			.split(/\n\s*\n/)
-			.map((part) => part.replace(/[ \t]+/g, " ").replace(/\n/g, " ").trim())
+			.map((part) =>
+				part
+					.replace(/[ \t]+/g, " ")
+					.replace(/\n/g, " ")
+					.trim(),
+			)
 			.filter(Boolean);
 	}
 

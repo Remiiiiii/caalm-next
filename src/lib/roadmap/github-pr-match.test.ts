@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+	displayPullRequestTitle,
 	findSectionPullRequest,
 	matchPullRequestToSection,
 	matchPullRequestToTask,
 	resolveSectionFromPrMatch,
-	displayPullRequestTitle,
 	stripHtmlFromPrBody,
 } from "./github-pr-match";
 

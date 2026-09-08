@@ -22,8 +22,7 @@ export const HUBSPOT_SCOPES = [
 
 export function getHubSpotRedirectUri(): string {
 	return (
-		process.env.HUBSPOT_REDIRECT_URI ||
-		`${getAppUrl()}/api/hubspot/callback`
+		process.env.HUBSPOT_REDIRECT_URI || `${getAppUrl()}/api/hubspot/callback`
 	);
 }
 
@@ -165,9 +164,7 @@ async function hubspotJson<T>(
 	return response.json() as Promise<T>;
 }
 
-async function exchangeOrRefresh(
-	body: URLSearchParams,
-): Promise<CrmTokens> {
+async function exchangeOrRefresh(body: URLSearchParams): Promise<CrmTokens> {
 	validateHubSpotConfig();
 	const response = await fetch(HUBSPOT_TOKEN, {
 		method: "POST",

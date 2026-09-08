@@ -36,14 +36,13 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useMemo, useState } from "react";
-import { useOrgTimezone } from "@/hooks/useOrgTimezone";
 import { useToast } from "@/hooks/use-toast";
-import { formatInTimezone } from "@/lib/timezone";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useOrgTimezone } from "@/hooks/useOrgTimezone";
 import { isFileShareNotification } from "@/lib/files/fileShareNotification";
+import { formatInTimezone } from "@/lib/timezone";
 import NotificationSettings from "./NotificationSettings";
 import { Button } from "./ui/button";
-import { PageIndex } from "./ui/page-index";
 import { Checkbox } from "./ui/checkbox";
 import {
 	Dialog,
@@ -52,6 +51,7 @@ import {
 	DialogTitle,
 } from "./ui/dialog";
 import { Input } from "./ui/input";
+import { PageIndex } from "./ui/page-index";
 import {
 	Select,
 	SelectContent,

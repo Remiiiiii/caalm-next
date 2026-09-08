@@ -1,4 +1,8 @@
 import { describe, expect, it } from "vitest";
+import type {
+	WizardSession,
+	WizardSessionSummary,
+} from "@/types/contract-templates";
 import { emptyWizardPayload } from "./assemble-contract";
 import {
 	draftAgreementLabel,
@@ -10,7 +14,6 @@ import {
 	isEmptyWizardDraft,
 	isEmptyWizardDraftSummary,
 } from "./wizard-draft-meta";
-import type { WizardSession, WizardSessionSummary } from "@/types/contract-templates";
 
 function session(overrides: Partial<WizardSession> = {}): WizardSession {
 	return {
@@ -31,12 +34,17 @@ function session(overrides: Partial<WizardSession> = {}): WizardSession {
 describe("wizard draft metadata", () => {
 	it("uses the typed contract name when present", () => {
 		expect(
-			draftDisplayName({ ...emptyWizardPayload().intake, contractName: "Acme vendor renewal" }),
+			draftDisplayName({
+				...emptyWizardPayload().intake,
+				contractName: "Acme vendor renewal",
+			}),
 		).toBe("Acme vendor renewal");
 	});
 
 	it("falls back to Untitled draft when the name is blank", () => {
-		expect(draftDisplayName(emptyWizardPayload().intake)).toBe("Untitled draft");
+		expect(draftDisplayName(emptyWizardPayload().intake)).toBe(
+			"Untitled draft",
+		);
 	});
 
 	it("labels missing blueprint as no agreement type chosen", () => {
@@ -116,15 +124,18 @@ describe("wizard draft metadata", () => {
 		payload.intake.expiryDate = "2027-09-01";
 		payload.intake.amount = "10000";
 
-		expect(
-			draftProgress(session({ payload, currentStep: 1 })),
-		).toEqual({ percent: 33, label: "33% complete" });
-		expect(
-			draftProgress(session({ payload, currentStep: 2 })),
-		).toEqual({ percent: 67, label: "67% complete" });
-		expect(
-			draftProgress(session({ payload, currentStep: 3 })),
-		).toEqual({ percent: 100, label: "100% complete" });
+		expect(draftProgress(session({ payload, currentStep: 1 }))).toEqual({
+			percent: 33,
+			label: "33% complete",
+		});
+		expect(draftProgress(session({ payload, currentStep: 2 }))).toEqual({
+			percent: 67,
+			label: "67% complete",
+		});
+		expect(draftProgress(session({ payload, currentStep: 3 }))).toEqual({
+			percent: 100,
+			label: "100% complete",
+		});
 
 		const summary: WizardSessionSummary = {
 			$id: "sess1",

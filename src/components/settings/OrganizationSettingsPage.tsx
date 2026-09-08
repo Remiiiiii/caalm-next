@@ -1,7 +1,7 @@
 "use client";
 
 import { Building2, Save } from "lucide-react";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { type ReactNode, useCallback, useEffect, useState } from "react";
 import useSWR from "swr";
 import { PermissionGate } from "@/components/PermissionGate";
 import { ApprovalSlaPoliciesManager } from "@/components/settings/ApprovalSlaPoliciesManager";
@@ -19,25 +19,19 @@ import { useOrganization } from "@/contexts/OrganizationContext";
 import { useStepUp } from "@/contexts/StepUpContext";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
+import { resolveOrgLogoFileId } from "@/lib/organizations/org-logo";
 import {
 	firstOrgProfileErrors,
-	organizationProfileFormSchema,
 	type OrganizationProfileForm,
+	organizationProfileFormSchema,
 } from "@/lib/rbac/organization-profile.schema";
 import type { Organization } from "@/lib/rbac/organizations";
 import { fetcher } from "@/lib/swr-config";
-import { resolveOrgLogoFileId } from "@/lib/organizations/org-logo";
 
 const FIELD_INPUT_CLASS =
 	"bg-white border-[0.25px] border-slate-300 hover:border-blue-300";
 
-function FieldError({
-	id,
-	message,
-}: {
-	id: string;
-	message?: string;
-}) {
+function FieldError({ id, message }: { id: string; message?: string }) {
 	if (!message) return null;
 	return (
 		<p id={id} className="text-xs text-red" role="alert">
@@ -57,10 +51,7 @@ function FieldLabel({
 }) {
 	return (
 		<div className="flex items-center gap-2">
-			<Label
-				htmlFor={htmlFor}
-				className="text-sm font-medium text-slate-700"
-			>
+			<Label htmlFor={htmlFor} className="text-sm font-medium text-slate-700">
 				{children}
 			</Label>
 			<span className="text-xs text-slate-500">
@@ -446,8 +437,8 @@ export default function OrganizationSettingsPage() {
 										/>
 										<p className="text-xs text-slate-500">
 											Used for date and time display across CAALM, plus
-											scheduled jobs (readiness, digests, expiry notices) at
-											the local 9:00 window.
+											scheduled jobs (readiness, digests, expiry notices) at the
+											local 9:00 window.
 										</p>
 										<FieldError
 											id="org-timezone-error"
@@ -550,9 +541,7 @@ export default function OrganizationSettingsPage() {
 												placeholder="33156"
 												aria-invalid={Boolean(fieldErrors.zipcode)}
 												aria-describedby={
-													fieldErrors.zipcode
-														? "org-zipcode-error"
-														: undefined
+													fieldErrors.zipcode ? "org-zipcode-error" : undefined
 												}
 												className={FIELD_INPUT_CLASS}
 											/>

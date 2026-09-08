@@ -156,10 +156,9 @@ export default function ApprovalFlowNode({
 		"Awaiting\u00A0executive",
 	);
 	const countdown = isCurrent && !frozen ? slaCountdownLabel(step.dueAt) : "";
-	const slaPill =
-		frozen
-			? null
-			: isCurrent && step.slaStatus === "breached"
+	const slaPill = frozen
+		? null
+		: isCurrent && step.slaStatus === "breached"
 			? {
 					label: countdown || "SLA breached",
 					className: "bg-red/10 text-red border-red/20",
@@ -181,8 +180,7 @@ export default function ApprovalFlowNode({
 			className={cn(
 				"relative w-[300px] shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm sm:w-[320px]",
 				"transition-all duration-200",
-				isCurrent &&
-					"border-[#0f5384]/20 shadow-md ring-2 ring-[#0f5384]/30",
+				isCurrent && "border-[#0f5384]/20 shadow-md ring-2 ring-[#0f5384]/30",
 			)}
 		>
 			<div className="glass-card-cap" />

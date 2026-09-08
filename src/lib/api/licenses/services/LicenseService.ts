@@ -176,9 +176,7 @@ export class LicenseService {
 			throw new Error("Could not determine user organization");
 		}
 
-		const { assertCanCreateLicense } = await import(
-			"@/lib/billing/planLimits"
-		);
+		const { assertCanCreateLicense } = await import("@/lib/billing/planLimits");
 		await assertCanCreateLicense(defaultOrg.orgId);
 
 		// Map legacy field names to database field names
@@ -368,7 +366,8 @@ export class LicenseService {
 					syncDepartmentAssigneesIfCurrent,
 				} = await import("@/lib/approvals/ContractApprovalWorkflowService");
 				const existingState = parseWorkflowState(
-					(existing as { approvalWorkflowState?: string }).approvalWorkflowState,
+					(existing as { approvalWorkflowState?: string })
+						.approvalWorkflowState,
 				);
 				const synced = existingState
 					? syncDepartmentAssigneesIfCurrent(
@@ -492,10 +491,7 @@ export class LicenseService {
 			);
 			await notifyLicenseDeleted({
 				licenseId,
-				licenseName:
-					mapped.licenseName ||
-					existing?.licenseName ||
-					licenseId,
+				licenseName: mapped.licenseName || existing?.licenseName || licenseId,
 				orgId: mapped.orgId || existing?.orgId,
 				department:
 					mapped.department ||

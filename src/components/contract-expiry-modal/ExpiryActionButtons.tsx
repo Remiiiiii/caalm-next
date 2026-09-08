@@ -4,6 +4,8 @@ import { motion } from "framer-motion";
 import { Clock, Eye, Mail, RotateCcw, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { ExpirationAttestationDialog } from "@/components/approvals/ExpirationAttestationDialog";
+import { ContractRenewalDialog } from "@/components/contracts/ContractRenewalDialog";
 import { Button } from "@/components/ui/button";
 import {
 	Select,
@@ -15,10 +17,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useContractSnooze } from "@/hooks/useContractSnooze";
 import { useUpdateContractStatus } from "@/hooks/useUpdateContractStatus";
-import type { UIFileDoc } from "@/types/files";
 import { DESKTOP_MIN_WIDTH } from "@/lib/ui/desktop-first";
-import { ExpirationAttestationDialog } from "@/components/approvals/ExpirationAttestationDialog";
-import { ContractRenewalDialog } from "@/components/contracts/ContractRenewalDialog";
+import type { UIFileDoc } from "@/types/files";
 import ContractDismissalSignatureModal from "./ContractDismissalSignatureModal";
 
 interface ExpiryActionButtonsProps {
@@ -189,7 +189,10 @@ export default function ExpiryActionButtons({
 
 	const handleViewDetails = () => {
 		// Contracts library is desktop-required; keep phone users on companion flows.
-		if (typeof window !== "undefined" && window.innerWidth < DESKTOP_MIN_WIDTH) {
+		if (
+			typeof window !== "undefined" &&
+			window.innerWidth < DESKTOP_MIN_WIDTH
+		) {
 			toast({
 				title: "Open on a laptop",
 				description:

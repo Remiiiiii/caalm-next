@@ -4,8 +4,8 @@ import useSWR from "swr";
 import { PERMISSIONS } from "@/constants/permissions";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { usePermissions } from "@/hooks/usePermissions";
-import { DEFAULT_PRICING_PLANS } from "@/lib/pricing-defaults";
 import type { PricingPlan } from "@/lib/pricing";
+import { DEFAULT_PRICING_PLANS } from "@/lib/pricing-defaults";
 
 export type BillingSubscriptionPayload = {
 	subscriptionTier: "starter" | "growth" | "enterprise";
@@ -53,8 +53,9 @@ export function useBillingSubscription() {
 		},
 	);
 
-	const plans: PricingPlan[] =
-		data?.plans?.length ? data.plans : DEFAULT_PRICING_PLANS;
+	const plans: PricingPlan[] = data?.plans?.length
+		? data.plans
+		: DEFAULT_PRICING_PLANS;
 
 	return {
 		canBilling,

@@ -5,9 +5,7 @@
 import PizZip from "pizzip";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
-import {
-	resolveOrgLogoFileId,
-} from "@/lib/organizations/org-logo";
+import { resolveOrgLogoFileId } from "@/lib/organizations/org-logo";
 import type { Organization } from "@/lib/rbac/organizations";
 
 /** Download logo bytes from Appwrite storage. */

@@ -59,9 +59,7 @@ describe("useElevenLabsTTS single-flight", () => {
 			.mockImplementationOnce(() => delayedOkResponse(40))
 			.mockImplementationOnce(() => delayedOkResponse(10));
 
-		const { result } = renderHook(() =>
-			useElevenLabsTTS({ autoPlay: true }),
-		);
+		const { result } = renderHook(() => useElevenLabsTTS({ autoPlay: true }));
 
 		await act(async () => {
 			void result.current.generateSpeech("first clip");
@@ -89,9 +87,7 @@ describe("useElevenLabsTTS single-flight", () => {
 	it("stop() prevents an in-flight generateSpeech from playing", async () => {
 		fetchMock.mockImplementationOnce(() => delayedOkResponse(40));
 
-		const { result } = renderHook(() =>
-			useElevenLabsTTS({ autoPlay: true }),
-		);
+		const { result } = renderHook(() => useElevenLabsTTS({ autoPlay: true }));
 
 		await act(async () => {
 			void result.current.generateSpeech("clip");

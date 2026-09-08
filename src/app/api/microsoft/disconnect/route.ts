@@ -6,8 +6,8 @@ import {
 } from "@/lib/actions/calendar-integration.actions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
 import { requireStepUp } from "@/lib/auth/step-up";
-import { requirePermission } from "@/lib/rbac/middleware";
 import { getCurrentUserId } from "@/lib/microsoft/auth-utils";
+import { requirePermission } from "@/lib/rbac/middleware";
 
 export async function POST(request: NextRequest) {
 	try {

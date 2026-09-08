@@ -297,7 +297,9 @@ export default function LicensesView({
 		? (next: number) => onPageChange?.(next)
 		: setInternalPage;
 
-	const totalItems = serverPaginated ? (totalCount ?? licenses.length) : licenses.length;
+	const totalItems = serverPaginated
+		? (totalCount ?? licenses.length)
+		: licenses.length;
 	const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
 
 	const validCurrentPage = useMemo(() => {
@@ -314,8 +316,12 @@ export default function LicensesView({
 		}
 	}, [totalPages, currentPage, serverPaginated]);
 
-	const startIndex = serverPaginated ? 0 : (validCurrentPage - 1) * itemsPerPage;
-	const endIndex = serverPaginated ? licenses.length : startIndex + itemsPerPage;
+	const startIndex = serverPaginated
+		? 0
+		: (validCurrentPage - 1) * itemsPerPage;
+	const endIndex = serverPaginated
+		? licenses.length
+		: startIndex + itemsPerPage;
 	const paginatedLicenses = useMemo(
 		() => (serverPaginated ? licenses : licenses.slice(startIndex, endIndex)),
 		[licenses, startIndex, endIndex, serverPaginated],

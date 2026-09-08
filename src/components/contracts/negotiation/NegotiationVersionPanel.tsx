@@ -35,9 +35,7 @@ export function NegotiationVersionPanel({
 		toc.findIndex((entry) => entry.id === activeClauseId),
 	);
 	const sectionLabel =
-		toc.length > 0
-			? `Section ${activeIndex + 1} of ${toc.length}`
-			: null;
+		toc.length > 0 ? `Section ${activeIndex + 1} of ${toc.length}` : null;
 
 	return (
 		<aside className="flex max-h-[32vh] min-h-0 w-full shrink-0 flex-col border-r border-slate-200 bg-white/70 xl:max-h-none xl:w-[230px]">

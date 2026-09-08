@@ -3,11 +3,7 @@
 import { ShieldCheck } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
 	InputOTP,
 	InputOTPGroup,
@@ -77,7 +73,9 @@ export function StepUpOtpDialog({
 				startCountdown();
 			} catch (err) {
 				setError(
-					err instanceof Error ? err.message : "Could not send verification code",
+					err instanceof Error
+						? err.message
+						: "Could not send verification code",
 				);
 			}
 		})();
@@ -145,7 +143,9 @@ export function StepUpOtpDialog({
 			startCountdown();
 		} catch (err) {
 			setError(
-				err instanceof Error ? err.message : "Could not resend verification code",
+				err instanceof Error
+					? err.message
+					: "Could not resend verification code",
 			);
 		} finally {
 			setIsResending(false);
@@ -169,8 +169,8 @@ export function StepUpOtpDialog({
 						</DialogTitle>
 					</div>
 					<p className="text-sm text-slate-600 mt-1 ml-14">
-						Enter the code we emailed to {email}. You won&apos;t need to enter it
-						again for 5 minutes.
+						Enter the code we emailed to {email}. You won&apos;t need to enter
+						it again for 5 minutes.
 					</p>
 				</div>
 				<div className="flex-1 overflow-y-auto p-6 bg-slate-50 space-y-4">

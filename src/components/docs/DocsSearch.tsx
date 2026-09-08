@@ -1,10 +1,10 @@
 "use client";
 
-import type { DocsSearchHit } from "@/lib/docs/types";
-import { cn } from "@/lib/utils";
 import { Search } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
+import type { DocsSearchHit } from "@/lib/docs/types";
+import { cn } from "@/lib/utils";
 
 const SECTION_LABEL: Record<string, string> = {
 	learn: "Learn",
@@ -63,10 +63,9 @@ export function DocsSearch() {
 		const controller = new AbortController();
 		const timer = window.setTimeout(async () => {
 			try {
-				const res = await fetch(
-					`/api/docs/search?q=${encodeURIComponent(q)}`,
-					{ signal: controller.signal },
-				);
+				const res = await fetch(`/api/docs/search?q=${encodeURIComponent(q)}`, {
+					signal: controller.signal,
+				});
 				const data = (await res.json()) as { hits: DocsSearchHit[] };
 				setHits(data.hits || []);
 				setActive(0);

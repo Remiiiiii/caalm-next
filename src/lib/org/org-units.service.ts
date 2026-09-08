@@ -3,13 +3,6 @@
  */
 
 import { ID, Query } from "node-appwrite";
-import {
-	CONTRACT_DEPARTMENTS,
-	DIVISION_TO_DEPARTMENT,
-	USER_DIVISIONS,
-	type UserDivision,
-	formatDivisionName,
-} from "../../../constants";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import type {
@@ -22,6 +15,13 @@ import {
 	normalizeOrgPlacement,
 	pairsMismatch,
 } from "@/lib/org/org-unit-validation";
+import {
+	CONTRACT_DEPARTMENTS,
+	DIVISION_TO_DEPARTMENT,
+	formatDivisionName,
+	USER_DIVISIONS,
+	type UserDivision,
+} from "../../../constants";
 
 const db = () => appwriteConfig.databaseId || "default-db";
 const orgUnitsTable = () =>
@@ -77,9 +77,7 @@ export async function listOrgUnits(
 	return units.filter((u) => u.active);
 }
 
-export async function getOrgUnitById(
-	id: string,
-): Promise<OrgUnit | null> {
+export async function getOrgUnitById(id: string): Promise<OrgUnit | null> {
 	const { tablesDB } = await createAdminClient();
 	try {
 		const row = await tablesDB.getRow({
@@ -123,7 +121,9 @@ export async function createOrgUnit(input: {
 	const code = input.code.trim();
 	const existing = await findOrgUnitByCode(input.orgId, code);
 	if (existing) {
-		throw new Error(`Org unit code "${code}" already exists for this organization.`);
+		throw new Error(
+			`Org unit code "${code}" already exists for this organization.`,
+		);
 	}
 	if (input.parentId) {
 		const parent = await getOrgUnitById(input.parentId);
@@ -326,8 +326,7 @@ export async function assignUserOrgUnit(input: {
 				divisionCode &&
 				(USER_DIVISIONS as string[]).includes(divisionCode)
 			) {
-				departmentCode =
-					DIVISION_TO_DEPARTMENT[divisionCode as UserDivision];
+				departmentCode = DIVISION_TO_DEPARTMENT[divisionCode as UserDivision];
 			}
 		} else if (
 			divisionCode &&

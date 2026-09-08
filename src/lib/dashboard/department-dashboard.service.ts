@@ -2,13 +2,13 @@ import { Query } from "node-appwrite";
 import { listCalendarApprovalRequests } from "@/lib/actions/calendar-approval.actions";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
-import { excludeSoftDeletedQuery } from "@/lib/soft-delete";
 import type {
 	DepartmentActionItem,
 	DepartmentContractAtRisk,
 	DepartmentDashboardData,
 	DepartmentRecentActivityItem,
 } from "@/lib/dashboard/department-dashboard.types";
+import { excludeSoftDeletedQuery } from "@/lib/soft-delete";
 import {
 	DIVISION_TO_DEPARTMENT,
 	formatDivisionName,

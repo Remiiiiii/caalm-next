@@ -17,7 +17,9 @@ const PROD_DB =
 	process.env.PROD_APPWRITE_DATABASE_ID ||
 	process.env.NEXT_PUBLIC_APPWRITE_DATABASE;
 if (!PROD_DB) {
-	console.error("Missing PROD_APPWRITE_DATABASE_ID or NEXT_PUBLIC_APPWRITE_DATABASE");
+	console.error(
+		"Missing PROD_APPWRITE_DATABASE_ID or NEXT_PUBLIC_APPWRITE_DATABASE",
+	);
 	process.exit(1);
 }
 const DEMO_DB = "caalm-demo";
@@ -26,9 +28,10 @@ const PERMISSIONS_TABLE =
 	"685ed87c0009d8189fc8";
 const ROLE_PERMISSIONS_TABLE = "role_permissions";
 
-const ENDPOINT = (
-	process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || ""
-).replace(/\/$/, "");
+const ENDPOINT = (process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || "").replace(
+	/\/$/,
+	"",
+);
 const PROJECT = process.env.NEXT_PUBLIC_APPWRITE_PROJECT;
 const API_KEY =
 	process.env.NEXT_APPWRITE_API_KEY || process.env.NEXT_APPWRITE_KEY;
@@ -119,9 +122,7 @@ async function upsertPermission(databaseId, permission) {
 	}
 	const byKey = await findPermissionByKey(databaseId, permission.key);
 	if (byKey) {
-		console.log(
-			`  permission exists by key: ${permission.key} (${byKey.$id})`,
-		);
+		console.log(`  permission exists by key: ${permission.key} (${byKey.$id})`);
 		return byKey.$id;
 	}
 	await appwrite(`/tablesdb/${databaseId}/tables/${PERMISSIONS_TABLE}/rows`, {

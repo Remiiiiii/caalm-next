@@ -18,7 +18,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
 	const orgId = getOrgIdFromRequest(request);
 	if (!orgId) {
-		return NextResponse.json({ error: "Organization is required" }, { status: 400 });
+		return NextResponse.json(
+			{ error: "Organization is required" },
+			{ status: 400 },
+		);
 	}
 	const { id, versionId } = await context.params;
 	const against = request.nextUrl.searchParams.get("against") || "";
@@ -40,7 +43,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
 			rows,
 		});
 	} catch (error) {
-		const message = error instanceof Error ? error.message : "Failed to diff versions";
+		const message =
+			error instanceof Error ? error.message : "Failed to diff versions";
 		return NextResponse.json({ error: message }, { status: 400 });
 	}
 }

@@ -33,7 +33,9 @@ export async function POST(request: NextRequest) {
 		return NextResponse.json(
 			{
 				error:
-					error instanceof Error ? error.message : "Failed to sync HubSpot deals",
+					error instanceof Error
+						? error.message
+						: "Failed to sync HubSpot deals",
 			},
 			{ status: 500 },
 		);

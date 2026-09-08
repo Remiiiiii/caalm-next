@@ -1,6 +1,13 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Download, ExternalLink, FileText, Inbox } from "lucide-react";
+import {
+	ChevronLeft,
+	ChevronRight,
+	Download,
+	ExternalLink,
+	FileText,
+	Inbox,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -113,7 +120,9 @@ async function downloadInvoicePdf(invoice: InvoiceRow, orgId?: string) {
 	const anchor = document.createElement("a");
 	anchor.href = url;
 	anchor.download =
-		response.headers.get("Content-Disposition")?.match(/filename="(.+)"/)?.[1] ||
+		response.headers
+			.get("Content-Disposition")
+			?.match(/filename="(.+)"/)?.[1] ||
 		`invoice-${invoice.number || invoice.id}.pdf`;
 	document.body.appendChild(anchor);
 	anchor.click();
@@ -134,7 +143,10 @@ export default function InvoiceHistoryTable({
 		setPage(1);
 	}, [invoices.length]);
 
-	const totalPages = Math.max(1, Math.ceil(invoices.length / INVOICES_PER_PAGE));
+	const totalPages = Math.max(
+		1,
+		Math.ceil(invoices.length / INVOICES_PER_PAGE),
+	);
 	const safePage = Math.min(page, totalPages);
 
 	const pagedInvoices = useMemo(() => {
@@ -216,7 +228,9 @@ export default function InvoiceHistoryTable({
 													className={cn(DATA_TABLE_BODY_ROW_BASE)}
 												>
 													<TableCell className="text-sm text-slate-700">
-														{new Date(invoice.created * 1000).toLocaleDateString()}
+														{new Date(
+															invoice.created * 1000,
+														).toLocaleDateString()}
 													</TableCell>
 													<TableCell className="text-sm text-slate-600">
 														{invoice.number || invoice.id.slice(0, 12)}
@@ -251,7 +265,9 @@ export default function InvoiceHistoryTable({
 																	rel="noopener noreferrer"
 																>
 																	<ExternalLink className="h-4 w-4" />
-																	<span className="sr-only">View invoice PDF</span>
+																	<span className="sr-only">
+																		View invoice PDF
+																	</span>
 																</a>
 															</Button>
 														) : (
@@ -275,7 +291,9 @@ export default function InvoiceHistoryTable({
 																}}
 															>
 																<Download className="h-4 w-4" />
-																<span className="sr-only">Download invoice</span>
+																<span className="sr-only">
+																	Download invoice
+																</span>
 															</Button>
 														) : (
 															<FileText className="h-4 w-4 text-slate-300" />
@@ -293,7 +311,9 @@ export default function InvoiceHistoryTable({
 											type="button"
 											className={paginationControlClassName}
 											disabled={atStart}
-											onClick={() => setPage((current) => Math.max(1, current - 1))}
+											onClick={() =>
+												setPage((current) => Math.max(1, current - 1))
+											}
 										>
 											<ChevronLeft className="h-4 w-4" />
 											Prev

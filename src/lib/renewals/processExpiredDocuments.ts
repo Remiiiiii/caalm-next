@@ -1,6 +1,7 @@
 import { Query } from "node-appwrite";
 import { PERMISSIONS } from "@/constants/permissions";
 import { createNotification } from "@/lib/actions/notification.actions";
+import { createPendingPostExpiryAttestation } from "@/lib/approvals/ExpirationAttestationService";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { hasPermission } from "@/lib/rbac/permissions";
@@ -11,7 +12,6 @@ import {
 	shouldAutoRenew,
 	toDateOnlyString,
 } from "@/lib/renewals/autoRenew";
-import { createPendingPostExpiryAttestation } from "@/lib/approvals/ExpirationAttestationService";
 import { excludeSoftDeletedQuery } from "@/lib/soft-delete";
 import { getOrganizationTimezone } from "@/lib/timezone/org";
 import type { RenewalRecord } from "@/types/licenses";
@@ -349,8 +349,7 @@ async function processLicenses(now: Date): Promise<{
 						orgId: typeof license.orgId === "string" ? license.orgId : "",
 						entityType: "license",
 						entityId: license.$id,
-						entityName:
-							(license.licenseName as string) || "Untitled License",
+						entityName: (license.licenseName as string) || "Untitled License",
 						accountableUserId: String(
 							license.licenseOwnerId || license.createdBy || "",
 						),

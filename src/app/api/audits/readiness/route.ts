@@ -6,9 +6,7 @@ import { buildOrgReadinessSummary } from "@/lib/audits/readiness/build-summary";
 import { getOrgAuditSettings } from "@/lib/audits/readiness/org-settings";
 import { runReadinessAuditForOrg } from "@/lib/audits/readiness/run-audit";
 import { crawlPublicSite } from "@/lib/audits/readiness/site-crawl";
-import {
-	listReadinessSnapshots,
-} from "@/lib/audits/readiness/snapshot.service";
+import { listReadinessSnapshots } from "@/lib/audits/readiness/snapshot.service";
 import { requirePermission } from "@/lib/rbac/middleware";
 import { getOrganization } from "@/lib/rbac/organizations";
 import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
@@ -21,12 +19,18 @@ export async function GET(request: NextRequest) {
 
 	const user = await getCurrentUser();
 	if (!user) {
-		return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+		return NextResponse.json(
+			{ error: "Authentication required" },
+			{ status: 401 },
+		);
 	}
 
 	const defaultOrg = await getUserDefaultOrganization(user.$id);
 	if (!defaultOrg?.orgId) {
-		return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+		return NextResponse.json(
+			{ error: "Organization not found" },
+			{ status: 404 },
+		);
 	}
 
 	const org = await getOrganization(defaultOrg.orgId);
@@ -115,12 +119,18 @@ export async function POST(request: NextRequest) {
 
 	const user = await getCurrentUser();
 	if (!user) {
-		return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+		return NextResponse.json(
+			{ error: "Authentication required" },
+			{ status: 401 },
+		);
 	}
 
 	const defaultOrg = await getUserDefaultOrganization(user.$id);
 	if (!defaultOrg?.orgId) {
-		return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+		return NextResponse.json(
+			{ error: "Organization not found" },
+			{ status: 404 },
+		);
 	}
 
 	const body = await request.json().catch(() => ({}));

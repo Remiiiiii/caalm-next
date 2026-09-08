@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { PERMISSIONS } from "@/constants/permissions";
 import {
-	getPolicyEntryForPath,
-	isRoleDashboardHomePath,
-} from "@/lib/rbac/dashboard-access-policy";
-import {
 	appendSessionChangedNotice,
 	getCachedUserId,
 	parseCachedAuthUser,
 } from "@/lib/auth/session-sync";
+import {
+	getPolicyEntryForPath,
+	isRoleDashboardHomePath,
+} from "@/lib/rbac/dashboard-access-policy";
 import { validatePermissionsForSod } from "@/lib/rbac/separation-of-duties";
 
 describe("session-sync", () => {

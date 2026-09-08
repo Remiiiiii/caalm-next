@@ -147,9 +147,7 @@ export async function hasAnyPermission(
 
 	try {
 		const permissions = await getUserPermissions(userId, orgId);
-		return permissionKeys.some((key) =>
-			permissionSatisfied(permissions, key),
-		);
+		return permissionKeys.some((key) => permissionSatisfied(permissions, key));
 	} catch (error) {
 		console.error("[hasAnyPermission] Error checking permissions:", error);
 		return false;
@@ -170,9 +168,7 @@ export async function hasAllPermissions(
 
 	try {
 		const permissions = await getUserPermissions(userId, orgId);
-		return permissionKeys.every((key) =>
-			permissionSatisfied(permissions, key),
-		);
+		return permissionKeys.every((key) => permissionSatisfied(permissions, key));
 	} catch (error) {
 		console.error("[hasAllPermissions] Error checking permissions:", error);
 		return false;
@@ -365,9 +361,7 @@ async function getUserRolesImpl(
 					queries: [
 						candidateIds.length === 1
 							? Query.equal("userId", candidateIds[0])
-							: Query.or(
-									candidateIds.map((id) => Query.equal("userId", id)),
-								),
+							: Query.or(candidateIds.map((id) => Query.equal("userId", id))),
 						Query.equal("orgId", orgId),
 						Query.limit(50),
 					],

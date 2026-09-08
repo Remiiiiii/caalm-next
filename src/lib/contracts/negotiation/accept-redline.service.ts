@@ -5,21 +5,24 @@ import {
 } from "@/lib/templates/wizard.service";
 import { applyRedline } from "./comments.logic";
 import type { NegotiationComment } from "./comments.service";
-import {
-	negotiationSnapshotFromDocx,
-	type NegotiationSnapshotMetadata,
-} from "./docx-snapshot";
 import { applyRedlineToDocx } from "./docx-redline";
+import {
+	type NegotiationSnapshotMetadata,
+	negotiationSnapshotFromDocx,
+} from "./docx-snapshot";
+import {
+	polishNegotiationDocx,
+	polishNegotiationPlainText,
+} from "./print-polish";
 import {
 	refreshSnapshotMetadata,
 	withRefreshedMetadataBlock,
 } from "./sync-metadata.logic";
-import { polishNegotiationDocx, polishNegotiationPlainText } from "./print-polish";
 import {
+	type ContractDocumentVersion,
 	createVersion,
 	getVersion,
 	listVersions,
-	type ContractDocumentVersion,
 	updateVersionBucketFileId,
 } from "./versions.service";
 

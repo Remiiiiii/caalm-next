@@ -1,14 +1,10 @@
 "use client";
 
 import { AlertTriangle, FileText, Loader2, Trash2 } from "lucide-react";
-import { useMemo, useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-	Dialog,
-	DialogContent,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { SearchField } from "@/components/ui/search-field";
 import {
 	draftAgreementLabel,
@@ -55,7 +51,10 @@ export function WizardDraftsList({
 		setSelected(new Set());
 	};
 
-	const sortedDrafts = useMemo(() => sortDraftSummariesByEdited(drafts), [drafts]);
+	const sortedDrafts = useMemo(
+		() => sortDraftSummariesByEdited(drafts),
+		[drafts],
+	);
 
 	const visibleDrafts = useMemo(() => {
 		const q = query.trim().toLowerCase();
@@ -163,8 +162,7 @@ export function WizardDraftsList({
 	const deleteCount = pendingDeleteAllEmpty
 		? emptyDraftIds.length
 		: pendingDeleteIds.length;
-	const deleteDialogOpen =
-		pendingDeleteIds.length > 0 || pendingDeleteAllEmpty;
+	const deleteDialogOpen = pendingDeleteIds.length > 0 || pendingDeleteAllEmpty;
 	const selectedCount = selected.size;
 
 	return (

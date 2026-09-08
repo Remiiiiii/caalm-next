@@ -20,9 +20,9 @@ import { CSS } from "@dnd-kit/utilities";
 import {
 	ArrowLeft,
 	ArrowRight,
+	FileBox,
 	FileCheck,
 	FileText,
-	FileBox,
 	GripVertical,
 	Inbox,
 	Loader2,
@@ -1248,7 +1248,8 @@ function SortableInjectSectionItem({
 					</label>
 				</div>
 				<div className="flex shrink-0 items-center gap-2 self-center">
-					<div
+					<button
+						type="button"
 						{...attributes}
 						{...listeners}
 						className="cursor-grab rounded-md border border-slate-200 p-2 text-slate-400 transition-colors duration-200 hover:bg-slate-50 hover:text-[#0f5384] active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
@@ -1256,7 +1257,7 @@ function SortableInjectSectionItem({
 						aria-label="Drag to reorder"
 					>
 						<GripVertical className="h-4 w-4" />
-					</div>
+					</button>
 					{!section.required && (
 						<>
 							<div className="h-8 w-px bg-slate-200" aria-hidden />

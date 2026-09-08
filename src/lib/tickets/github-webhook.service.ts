@@ -1,14 +1,18 @@
 import { ID, Query } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
-import { appendTicketEvent } from "./ticket-events.repository";
 import { listPullsForCommit } from "./github-tickets.service";
 import {
 	getTicketByGithubIssue,
 	getTicketByPrNumber,
 	updateTicket,
 } from "./ticket.repository";
-import { getTicketsRepo, type Ticket, type TicketEventType } from "./ticket.types";
+import {
+	getTicketsRepo,
+	type Ticket,
+	type TicketEventType,
+} from "./ticket.types";
+import { appendTicketEvent } from "./ticket-events.repository";
 
 export type GitHubWebhookEvent = {
 	action?: string;
@@ -40,7 +44,9 @@ function deliveriesTable(): string {
 	return appwriteConfig.webhookDeliveriesCollectionId || "webhook_deliveries";
 }
 
-export async function claimGitHubDelivery(deliveryId: string): Promise<boolean> {
+export async function claimGitHubDelivery(
+	deliveryId: string,
+): Promise<boolean> {
 	const { tablesDB } = await createAdminClient();
 	try {
 		await tablesDB.createRow({

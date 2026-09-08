@@ -21,15 +21,16 @@ function mapComment(row: Record<string, unknown>): NegotiationComment {
 		contractId: String(row.contractId || ""),
 		orgId: String(row.orgId || ""),
 		versionId: String(row.versionId || ""),
-		anchorType: (row.anchorType as NegotiationComment["anchorType"]) || "paragraph",
+		anchorType:
+			(row.anchorType as NegotiationComment["anchorType"]) || "paragraph",
 		anchorStart: Number(row.anchorStart || 0),
 		anchorEnd: Number(row.anchorEnd || 0),
 		body: String(row.body || ""),
-		authorType: (row.authorType as NegotiationComment["authorType"]) || "internal",
+		authorType:
+			(row.authorType as NegotiationComment["authorType"]) || "internal",
 		authorId: String(row.authorId || ""),
 		authorEmail,
-		authorName:
-			storedName || displayNameFromEmail(authorEmail) || undefined,
+		authorName: storedName || displayNameFromEmail(authorEmail) || undefined,
 		status: (row.status as NegotiationComment["status"]) || "open",
 		redlineProposal: String(row.redlineProposal || ""),
 		visibility:
@@ -145,7 +146,11 @@ export async function createComment(
 
 export async function updateComment(
 	commentId: string,
-	patch: { status?: "open" | "resolved"; redlineProposal?: string; body?: string },
+	patch: {
+		status?: "open" | "resolved";
+		redlineProposal?: string;
+		body?: string;
+	},
 ): Promise<NegotiationComment> {
 	const { tablesDB } = await createAdminClient();
 	const data: Record<string, unknown> = {};

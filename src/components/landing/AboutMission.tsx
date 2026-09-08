@@ -3,6 +3,7 @@
 import { motion, useReducedMotion } from "framer-motion";
 import { Building2 } from "lucide-react";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 import LandingSection from "./LandingSection";
 import { ABOUT_TRUST_BULLETS } from "./landingContent";
 import {
@@ -12,7 +13,6 @@ import {
 	staggerContainer,
 	viewportOnce,
 } from "./motion";
-import { cn } from "@/lib/utils";
 
 const CAALM = {
 	teal: "#00C1CB",
@@ -30,10 +30,15 @@ function PermissionVisual({ animate }: { animate: boolean }) {
 					<stop offset="100%" stopColor={CAALM.blue} stopOpacity="0.05" />
 				</linearGradient>
 			</defs>
-			
+
 			{/* Grid background */}
 			<pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
-				<path d="M 20 0 L 0 0 0 20" fill="none" stroke="currentColor" strokeOpacity="0.03" />
+				<path
+					d="M 20 0 L 0 0 0 20"
+					fill="none"
+					stroke="currentColor"
+					strokeOpacity="0.03"
+				/>
 			</pattern>
 			<rect width="200" height="160" fill="url(#grid)" />
 
@@ -50,10 +55,14 @@ function PermissionVisual({ animate }: { animate: boolean }) {
 						stroke={node.access ? CAALM.teal : "#cbd5e1"}
 						strokeWidth="1.5"
 						strokeDasharray={node.access ? "4 4" : "2 6"}
-						animate={animate && node.access ? { strokeDashoffset: [0, -16] } : undefined}
+						animate={
+							animate && node.access
+								? { strokeDashoffset: [0, -16] }
+								: undefined
+						}
 						transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
 					/>
-					
+
 					<motion.circle
 						cx={node.x}
 						cy={node.y}
@@ -62,35 +71,81 @@ function PermissionVisual({ animate }: { animate: boolean }) {
 						stroke={node.access ? CAALM.teal : "#e2e8f0"}
 						strokeWidth="1.5"
 					/>
-					
+
 					{/* Embedded user icon matching the center graphic */}
-					<circle cx={node.x} cy={node.y - 3} r="3.5" fill={CAALM.navy} opacity={node.access ? 1 : 0.4} />
-					<path d={`M${node.x - 7} ${node.y + 7} C${node.x - 7} ${node.y + 2} ${node.x - 3} ${node.y + 1} ${node.x} ${node.y + 1} C${node.x + 3} ${node.y + 1} ${node.x + 7} ${node.y + 2} ${node.x + 7} ${node.y + 7} Z`} fill={CAALM.navy} opacity={node.access ? 1 : 0.4} />
-					
+					<circle
+						cx={node.x}
+						cy={node.y - 3}
+						r="3.5"
+						fill={CAALM.navy}
+						opacity={node.access ? 1 : 0.4}
+					/>
+					<path
+						d={`M${node.x - 7} ${node.y + 7} C${node.x - 7} ${node.y + 2} ${node.x - 3} ${node.y + 1} ${node.x} ${node.y + 1} C${node.x + 3} ${node.y + 1} ${node.x + 7} ${node.y + 2} ${node.x + 7} ${node.y + 7} Z`}
+						fill={CAALM.navy}
+						opacity={node.access ? 1 : 0.4}
+					/>
+
 					{/* Status badges overlaid on the outer circles */}
 					{node.access ? (
 						<g transform={`translate(${node.x + 8}, ${node.y - 8})`}>
-							<circle cx="0" cy="0" r="7" fill="white" stroke={CAALM.teal} strokeWidth="1.2" />
-							<path d="M-3 0 L-1 2 L3 -2" fill="none" stroke={CAALM.teal} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+							<circle
+								cx="0"
+								cy="0"
+								r="7"
+								fill="white"
+								stroke={CAALM.teal}
+								strokeWidth="1.2"
+							/>
+							<path
+								d="M-3 0 L-1 2 L3 -2"
+								fill="none"
+								stroke={CAALM.teal}
+								strokeWidth="1.5"
+								strokeLinecap="round"
+								strokeLinejoin="round"
+							/>
 						</g>
 					) : (
 						<g transform={`translate(${node.x + 8}, ${node.y - 8})`}>
-							<circle cx="0" cy="0" r="7" fill="white" stroke="#94a3b8" strokeWidth="1.2" />
-							<path d="M-2 -2 L2 2 M2 -2 L-2 2" fill="none" stroke="#94a3b8" strokeWidth="1.2" strokeLinecap="round" />
+							<circle
+								cx="0"
+								cy="0"
+								r="7"
+								fill="white"
+								stroke="#94a3b8"
+								strokeWidth="1.2"
+							/>
+							<path
+								d="M-2 -2 L2 2 M2 -2 L-2 2"
+								fill="none"
+								stroke="#94a3b8"
+								strokeWidth="1.2"
+								strokeLinecap="round"
+							/>
 						</g>
 					)}
-					
+
 					{/* Flowing token for access=true */}
 					{node.access && (
 						<motion.circle
 							r="3"
 							fill={CAALM.teal}
-							animate={animate ? {
-								cx: [100, node.x],
-								cy: [80, node.y],
-								opacity: [0, 1, 0]
-							} : { cx: 100, cy: 80, opacity: 0 }}
-							transition={{ duration: 2, repeat: Infinity, delay: i * 0.5, ease: "easeOut" }}
+							animate={
+								animate
+									? {
+											cx: [100, node.x],
+											cy: [80, node.y],
+											opacity: [0, 1, 0],
+										}
+									: { cx: 100, cy: 80, opacity: 0 }
+							}
+							transition={{
+								duration: 2,
+								repeat: Infinity,
+								delay: i * 0.5,
+								ease: "easeOut",
+							}}
 						/>
 					)}
 				</motion.g>
@@ -113,10 +168,13 @@ function PermissionVisual({ animate }: { animate: boolean }) {
 				stroke="none"
 				opacity="0.85"
 			/>
-			
+
 			{/* Inner user icon */}
 			<circle cx="100" cy="73" r="5" fill={CAALM.navy} />
-			<path d="M90 89 C90 83 95 81 100 81 C105 81 110 83 110 89 Z" fill={CAALM.navy} />
+			<path
+				d="M90 89 C90 83 95 81 100 81 C105 81 110 83 110 89 Z"
+				fill={CAALM.navy}
+			/>
 		</svg>
 	);
 }
@@ -131,28 +189,72 @@ function AuditVisual({ animate }: { animate: boolean }) {
 				</linearGradient>
 			</defs>
 			<pattern id="grid2" width="20" height="20" patternUnits="userSpaceOnUse">
-				<path d="M 20 0 L 0 0 0 20" fill="none" stroke="currentColor" strokeOpacity="0.03" />
+				<path
+					d="M 20 0 L 0 0 0 20"
+					fill="none"
+					stroke="currentColor"
+					strokeOpacity="0.03"
+				/>
 			</pattern>
 			<rect width="200" height="160" fill="url(#grid2)" />
 
 			{/* Timeline base */}
 			<line x1="60" y1="20" x2="60" y2="140" stroke="#e2e8f0" strokeWidth="2" />
-			
+
 			{[
 				{ y: 30, title: "Created", user: "Admin", delay: 0 },
 				{ y: 70, title: "Approved", user: "Manager", delay: 0.5 },
 				{ y: 110, title: "Signed", user: "Client", delay: 1.0 },
 			].map((event, i) => (
-				<motion.g 
+				<motion.g
 					key={i}
 					animate={animate ? { opacity: [0.3, 1, 0.3] } : undefined}
 					transition={{ duration: 3, repeat: Infinity, delay: event.delay }}
 				>
-					<circle cx="60" cy={event.y} r="5" fill="white" stroke={CAALM.teal} strokeWidth="2" />
-					<rect x="75" y={event.y - 12} width="90" height="24" rx="4" fill="white" stroke="#e2e8f0" strokeWidth="1" />
-					<rect x="85" y={event.y - 4} width="40" height="3" rx="1.5" fill={CAALM.navy} opacity="0.6" />
-					<rect x="85" y={event.y + 3} width="20" height="2" rx="1" fill={CAALM.mid} opacity="0.4" />
-					<circle cx="150" cy={event.y} r="6" fill="url(#audit-grad)" stroke={CAALM.blue} strokeWidth="0.5" />
+					<circle
+						cx="60"
+						cy={event.y}
+						r="5"
+						fill="white"
+						stroke={CAALM.teal}
+						strokeWidth="2"
+					/>
+					<rect
+						x="75"
+						y={event.y - 12}
+						width="90"
+						height="24"
+						rx="4"
+						fill="white"
+						stroke="#e2e8f0"
+						strokeWidth="1"
+					/>
+					<rect
+						x="85"
+						y={event.y - 4}
+						width="40"
+						height="3"
+						rx="1.5"
+						fill={CAALM.navy}
+						opacity="0.6"
+					/>
+					<rect
+						x="85"
+						y={event.y + 3}
+						width="20"
+						height="2"
+						rx="1"
+						fill={CAALM.mid}
+						opacity="0.4"
+					/>
+					<circle
+						cx="150"
+						cy={event.y}
+						r="6"
+						fill="url(#audit-grad)"
+						stroke={CAALM.blue}
+						strokeWidth="0.5"
+					/>
 				</motion.g>
 			))}
 
@@ -191,7 +293,12 @@ function EncryptionVisual({ animate }: { animate: boolean }) {
 				</linearGradient>
 			</defs>
 			<pattern id="grid3" width="20" height="20" patternUnits="userSpaceOnUse">
-				<path d="M 20 0 L 0 0 0 20" fill="none" stroke="currentColor" strokeOpacity="0.03" />
+				<path
+					d="M 20 0 L 0 0 0 20"
+					fill="none"
+					stroke="currentColor"
+					strokeOpacity="0.03"
+				/>
 			</pattern>
 			<rect width="200" height="160" fill="url(#grid3)" />
 
@@ -201,7 +308,15 @@ function EncryptionVisual({ animate }: { animate: boolean }) {
 				transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
 				style={{ transformOrigin: "100px 80px" }}
 			>
-				<circle cx="100" cy="80" r="50" fill="none" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4 4" />
+				<circle
+					cx="100"
+					cy="80"
+					r="50"
+					fill="none"
+					stroke="#e2e8f0"
+					strokeWidth="1"
+					strokeDasharray="4 4"
+				/>
 				<circle cx="150" cy="80" r="4" fill={CAALM.teal} />
 				<circle cx="50" cy="80" r="4" fill={CAALM.blue} />
 				<circle cx="100" cy="30" r="4" fill={CAALM.mid} />
@@ -209,10 +324,40 @@ function EncryptionVisual({ animate }: { animate: boolean }) {
 			</motion.g>
 
 			{/* Center lock/file */}
-			<rect x="75" y="60" width="50" height="40" rx="4" fill="white" stroke={CAALM.blue} strokeWidth="1.5" />
-			<path d="M75 75 L125 75" stroke={CAALM.blue} strokeWidth="1.5" opacity="0.3" />
-			<rect x="85" y="85" width="30" height="4" rx="2" fill={CAALM.teal} opacity="0.6" />
-			<rect x="85" y="70" width="20" height="4" rx="2" fill={CAALM.mid} opacity="0.4" />
+			<rect
+				x="75"
+				y="60"
+				width="50"
+				height="40"
+				rx="4"
+				fill="white"
+				stroke={CAALM.blue}
+				strokeWidth="1.5"
+			/>
+			<path
+				d="M75 75 L125 75"
+				stroke={CAALM.blue}
+				strokeWidth="1.5"
+				opacity="0.3"
+			/>
+			<rect
+				x="85"
+				y="85"
+				width="30"
+				height="4"
+				rx="2"
+				fill={CAALM.teal}
+				opacity="0.6"
+			/>
+			<rect
+				x="85"
+				y="70"
+				width="20"
+				height="4"
+				rx="2"
+				fill={CAALM.mid}
+				opacity="0.4"
+			/>
 
 			{/* Shield overlay */}
 			<motion.path
@@ -220,7 +365,9 @@ function EncryptionVisual({ animate }: { animate: boolean }) {
 				fill="url(#enc-grad)"
 				stroke={CAALM.teal}
 				strokeWidth="2"
-				animate={animate ? { scale: [1, 1.05, 1], opacity: [0.8, 1, 0.8] } : undefined}
+				animate={
+					animate ? { scale: [1, 1.05, 1], opacity: [0.8, 1, 0.8] } : undefined
+				}
 				transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
 				style={{ transformOrigin: "100px 65px" }}
 			/>
@@ -238,7 +385,12 @@ function DepartmentVisual({ animate }: { animate: boolean }) {
 				</linearGradient>
 			</defs>
 			<pattern id="grid4" width="20" height="20" patternUnits="userSpaceOnUse">
-				<path d="M 20 0 L 0 0 0 20" fill="none" stroke="currentColor" strokeOpacity="0.03" />
+				<path
+					d="M 20 0 L 0 0 0 20"
+					fill="none"
+					stroke="currentColor"
+					strokeOpacity="0.03"
+				/>
 			</pattern>
 			<rect width="200" height="160" fill="url(#grid4)" />
 
@@ -258,10 +410,29 @@ function DepartmentVisual({ animate }: { animate: boolean }) {
 						animate={animate ? { strokeDashoffset: [0, -16] } : undefined}
 						transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
 					/>
-					<rect x={dep.x - 20} y={dep.y - 15} width="40" height="30" rx="6" fill="white" stroke={dep.color} strokeWidth="1.5" />
-					<circle cx={dep.x} cy={dep.y - 4} r="5" fill={dep.color} opacity="0.8" />
-					<path d={`M${dep.x - 8} ${dep.y + 8} Q${dep.x} ${dep.y} ${dep.x + 8} ${dep.y + 8} Z`} fill={dep.color} opacity="0.8" />
-					
+					<rect
+						x={dep.x - 20}
+						y={dep.y - 15}
+						width="40"
+						height="30"
+						rx="6"
+						fill="white"
+						stroke={dep.color}
+						strokeWidth="1.5"
+					/>
+					<circle
+						cx={dep.x}
+						cy={dep.y - 4}
+						r="5"
+						fill={dep.color}
+						opacity="0.8"
+					/>
+					<path
+						d={`M${dep.x - 8} ${dep.y + 8} Q${dep.x} ${dep.y} ${dep.x + 8} ${dep.y + 8} Z`}
+						fill={dep.color}
+						opacity="0.8"
+					/>
+
 					{/* Flowing doc indicator */}
 					<motion.rect
 						width="12"
@@ -270,13 +441,22 @@ function DepartmentVisual({ animate }: { animate: boolean }) {
 						fill="white"
 						stroke={dep.color}
 						strokeWidth="1"
-						animate={animate ? {
-							x: [100 - 6, dep.x - 6],
-							y: [70, dep.y - 25],
-							opacity: [0, 1, 0],
-							scale: [0.8, 1, 0.8]
-						} : { x: 100 - 6, y: 70, opacity: 0 }}
-						transition={{ duration: 2.5, repeat: Infinity, delay: i * 0.8, ease: "easeOut" }}
+						animate={
+							animate
+								? {
+										x: [100 - 6, dep.x - 6],
+										y: [70, dep.y - 25],
+										opacity: [0, 1, 0],
+										scale: [0.8, 1, 0.8],
+									}
+								: { x: 100 - 6, y: 70, opacity: 0 }
+						}
+						transition={{
+							duration: 2.5,
+							repeat: Infinity,
+							delay: i * 0.8,
+							ease: "easeOut",
+						}}
 					/>
 				</motion.g>
 			))}
@@ -294,33 +474,38 @@ function DepartmentVisual({ animate }: { animate: boolean }) {
 				animate={animate ? { y: [30, 25, 30] } : undefined}
 				transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
 			/>
-			<motion.rect 
-				x="92" 
-				y="40" 
-				width="16" 
-				height="3" 
-				rx="1.5" 
-				fill={CAALM.blue} 
+			<motion.rect
+				x="92"
+				y="40"
+				width="16"
+				height="3"
+				rx="1.5"
+				fill={CAALM.blue}
 				opacity="0.4"
 				animate={animate ? { y: [40, 35, 40] } : undefined}
-				transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }} 
+				transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
 			/>
-			<motion.rect 
-				x="92" 
-				y="48" 
-				width="10" 
-				height="3" 
-				rx="1.5" 
-				fill={CAALM.teal} 
+			<motion.rect
+				x="92"
+				y="48"
+				width="10"
+				height="3"
+				rx="1.5"
+				fill={CAALM.teal}
 				opacity="0.6"
 				animate={animate ? { y: [48, 43, 48] } : undefined}
-				transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }} 
+				transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
 			/>
 		</svg>
 	);
 }
 
-const VISUALS = [PermissionVisual, AuditVisual, EncryptionVisual, DepartmentVisual];
+const VISUALS = [
+	PermissionVisual,
+	AuditVisual,
+	EncryptionVisual,
+	DepartmentVisual,
+];
 
 export default function AboutMission() {
 	const reduceMotion = useReducedMotion();
@@ -355,7 +540,10 @@ export default function AboutMission() {
 				{/* 4-column grid reflecting the Saaszai template style */}
 				<div className="relative grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-0 rounded-2xl border border-slate-200 bg-white/50 shadow-sm overflow-hidden backdrop-blur-sm pt-2">
 					{/* Card Cap */}
-					<div className="absolute top-0 left-0 right-0 h-2 bg-[#d6d7d8] opacity-70 z-10" aria-hidden />
+					<div
+						className="absolute top-0 left-0 right-0 h-2 bg-[#d6d7d8] opacity-70 z-10"
+						aria-hidden
+					/>
 
 					{ABOUT_TRUST_BULLETS.map((bullet, idx) => {
 						const Visual = VISUALS[idx];
@@ -380,7 +568,7 @@ export default function AboutMission() {
 										{bullet.description}
 									</p>
 								</div>
-								
+
 								{/* Animation area at bottom */}
 								<div className="w-full aspect-[5/4] sm:aspect-video xl:aspect-[4/3] bg-slate-50/50 border-t border-slate-100 overflow-hidden relative">
 									<Visual animate={!reduceMotion} />

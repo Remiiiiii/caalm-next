@@ -58,7 +58,8 @@
 			},
 			"complexity": {
 				"noStaticOnlyClass": "off",
-				"noBannedTypes": "off"
+				"noBannedTypes": "off",
+				"noImportantStyles": "off"
 			},
 			"performance": {
 				"noImgElement": "off"

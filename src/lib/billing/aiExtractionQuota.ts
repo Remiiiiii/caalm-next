@@ -3,12 +3,12 @@
  * Uses Redis/KV when available; in-memory fallback for local/dev/tests.
  */
 
+import { PlanLimitError } from "@/lib/billing/planLimits";
 import {
 	PILOT_AI_EXTRACTIONS_PER_MONTH,
 	type PricingTier,
 	TIER_LIMITS,
 } from "@/lib/stripe/prices";
-import { PlanLimitError } from "@/lib/billing/planLimits";
 
 type MemoryBucket = { count: number; monthKey: string };
 

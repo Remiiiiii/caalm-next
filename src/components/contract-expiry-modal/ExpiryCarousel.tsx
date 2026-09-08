@@ -6,10 +6,7 @@ import ExpiryQueueAlertBridge from "@/components/expiry-alert-modal/ExpiryQueueA
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useElevenLabsTTS } from "@/hooks/useElevenLabsTTS";
-import {
-	expiryItemKey,
-	type ExpiryQueueItem,
-} from "@/lib/expiry/expiry-queue";
+import { type ExpiryQueueItem, expiryItemKey } from "@/lib/expiry/expiry-queue";
 import {
 	type ExpirySpeechMode,
 	formatExpiryQueueSpeech,

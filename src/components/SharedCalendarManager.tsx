@@ -1157,7 +1157,10 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
 					if (!open) setCalendarToDelete(null);
 				}}
 			>
-				<DialogContent className="overflow-hidden p-0 shadow-xl sm:max-w-md" variant="destructive">
+				<DialogContent
+					className="overflow-hidden p-0 shadow-xl sm:max-w-md"
+					variant="destructive"
+				>
 					<VisuallyHiddenPrimitive.Root>
 						<DialogTitle>Delete Shared Calendar</DialogTitle>
 					</VisuallyHiddenPrimitive.Root>

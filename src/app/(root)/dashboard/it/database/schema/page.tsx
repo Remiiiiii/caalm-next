@@ -47,8 +47,7 @@ export default function DatabaseSchemaPage() {
 				<ITGlassPanel>
 					<p className="text-sm text-slate-600">
 						Could not load schema. Confirm you have{" "}
-						<span className="text-xs">it.manage_database</span>{" "}
-						permission.
+						<span className="text-xs">it.manage_database</span> permission.
 					</p>
 				</ITGlassPanel>
 			) : (

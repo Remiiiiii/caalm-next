@@ -23,7 +23,8 @@ const APPLY = process.argv.includes("--apply");
 const INCLUDE_DEMO = process.argv.includes("--demo");
 
 const ENDPOINT = (
-	process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || "https://fra.cloud.appwrite.io/v1"
+	process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT ||
+	"https://fra.cloud.appwrite.io/v1"
 ).replace(/\/$/, "");
 const PROJECT = process.env.NEXT_PUBLIC_APPWRITE_PROJECT;
 const API_KEY =
@@ -32,7 +33,9 @@ const PROD_DB =
 	process.env.NEXT_PUBLIC_APPWRITE_DATABASE ||
 	process.env.PROD_APPWRITE_DATABASE_ID;
 if (!PROD_DB) {
-	console.error("Missing NEXT_PUBLIC_APPWRITE_DATABASE or PROD_APPWRITE_DATABASE_ID");
+	console.error(
+		"Missing NEXT_PUBLIC_APPWRITE_DATABASE or PROD_APPWRITE_DATABASE_ID",
+	);
 	process.exit(1);
 }
 const DEMO_DB = "caalm-demo";
@@ -160,7 +163,9 @@ async function appwrite(pathname, { method = "GET", body } = {}) {
 	}
 	if (!res.ok) {
 		const message = json.message || json.error || text || res.statusText;
-		const err = new Error(`${method} ${pathname} failed (${res.status}): ${message}`);
+		const err = new Error(
+			`${method} ${pathname} failed (${res.status}): ${message}`,
+		);
 		err.status = res.status;
 		throw err;
 	}
@@ -183,7 +188,12 @@ async function createTable(databaseId, table) {
 		body: {
 			tableId: table.tableId,
 			name: table.name,
-			permissions: ['read("users")', 'create("users")', 'update("users")', 'delete("users")'],
+			permissions: [
+				'read("users")',
+				'create("users")',
+				'update("users")',
+				'delete("users")',
+			],
 			rowSecurity: false,
 			enabled: true,
 		},
@@ -257,17 +267,14 @@ async function createIndex(databaseId, tableId, index) {
 			},
 		});
 	} catch (error) {
-		await appwrite(
-			`/databases/${databaseId}/collections/${tableId}/indexes`,
-			{
-				method: "POST",
-				body: {
-					key: index.key,
-					type: index.type,
-					attributes: columns,
-				},
+		await appwrite(`/databases/${databaseId}/collections/${tableId}/indexes`, {
+			method: "POST",
+			body: {
+				key: index.key,
+				type: index.type,
+				attributes: columns,
 			},
-		);
+		});
 	}
 }
 
@@ -293,9 +300,7 @@ async function provisionDatabase(databaseId) {
 			console.log(`  = table exists ${table.tableId} (${table.name})`);
 		}
 
-		const existingCols = new Set(
-			(existing.columns || []).map((c) => c.key),
-		);
+		const existingCols = new Set((existing.columns || []).map((c) => c.key));
 		for (const col of table.columns) {
 			if (existingCols.has(col.key)) {
 				console.log(`    = column ${col.key}`);
@@ -307,9 +312,7 @@ async function provisionDatabase(databaseId) {
 			await new Promise((r) => setTimeout(r, 400));
 		}
 
-		const existingIndexes = new Set(
-			(existing.indexes || []).map((i) => i.key),
-		);
+		const existingIndexes = new Set((existing.indexes || []).map((i) => i.key));
 		for (const index of table.indexes) {
 			if (existingIndexes.has(index.key)) {
 				console.log(`    = index ${index.key}`);

@@ -2,9 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { SearchField } from "@/components/ui/search-field";
-import { normalizeTicketNumberQuery } from "@/lib/tickets/ticket-number.utils";
 import type { Ticket, TicketLane } from "@/lib/tickets/ticket.types";
 import { resolveTicketLane } from "@/lib/tickets/ticket.types";
+import { normalizeTicketNumberQuery } from "@/lib/tickets/ticket-number.utils";
 import { cn } from "@/lib/utils";
 import { TicketQueue } from "./TicketQueue";
 
@@ -48,10 +48,7 @@ export function TicketsListWithSearch({
 	const filteredActive = useMemo(
 		() =>
 			activeTickets.filter((ticket) => {
-				if (
-					laneFilter !== "all" &&
-					resolveTicketLane(ticket) !== laneFilter
-				) {
+				if (laneFilter !== "all" && resolveTicketLane(ticket) !== laneFilter) {
 					return false;
 				}
 				return matchesTicketSearch(ticket, query);

@@ -17,16 +17,16 @@ import { NegotiationPreviewDialog } from "@/components/contracts/negotiation/Neg
 import { NegotiationVersionPanel } from "@/components/contracts/negotiation/NegotiationVersionPanel";
 import DocumentViewer from "@/components/DocumentViewer";
 import { PERMISSIONS } from "@/constants/permissions";
-import { useOrganization } from "@/contexts/OrganizationContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { useNegotiationPoll } from "@/hooks/useNegotiationPoll";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import { useToast } from "@/hooks/use-toast";
+import { useNegotiationPoll } from "@/hooks/useNegotiationPoll";
 import { usePermissions } from "@/hooks/usePermissions";
-import { canSendForReview } from "@/lib/contracts/negotiation/comments.logic";
 import {
 	flattenActiveInvitees,
 	type NegotiationInvitee,
 } from "@/lib/contracts/negotiation/access.logic";
+import { canSendForReview } from "@/lib/contracts/negotiation/comments.logic";
 import type { NegotiationComment } from "@/lib/contracts/negotiation/comments.service";
 import {
 	countDiffKinds,
@@ -78,7 +78,9 @@ interface NegotiationWorkspaceProps {
 	contractId: string;
 }
 
-export function NegotiationWorkspace({ contractId }: NegotiationWorkspaceProps) {
+export function NegotiationWorkspace({
+	contractId,
+}: NegotiationWorkspaceProps) {
 	const { orgId } = useOrganization();
 	const { user: authUser } = useAuth();
 	const { permissions } = usePermissions();
@@ -127,7 +129,8 @@ export function NegotiationWorkspace({ contractId }: NegotiationWorkspaceProps) 
 		[orgId],
 	);
 
-	const selected = versions.find((row) => row.$id === selectedId) || versions[0];
+	const selected =
+		versions.find((row) => row.$id === selectedId) || versions[0];
 	const versionText = selected?.extractedText || "";
 	const model = useMemo(
 		() => parseNegotiationDocument(versionText),
@@ -442,8 +445,7 @@ export function NegotiationWorkspace({ contractId }: NegotiationWorkspaceProps) 
 		(comment: NegotiationComment) => {
 			setActiveCommentId(comment.$id);
 			const paragraph = model.negotiableParagraphs.find(
-				(row) =>
-					comment.anchorStart < row.end && comment.anchorEnd > row.start,
+				(row) => comment.anchorStart < row.end && comment.anchorEnd > row.start,
 			);
 			if (!paragraph) return;
 			const editableStart =
@@ -691,9 +693,7 @@ export function NegotiationWorkspace({ contractId }: NegotiationWorkspaceProps) 
 								);
 								const body = await res.json().catch(() => ({}));
 								if (!res.ok) {
-									throw new Error(
-										body.error || "Could not accept redline",
-									);
+									throw new Error(body.error || "Could not accept redline");
 								}
 								// Pin the new version so load() does not keep the pre-accept snapshot.
 								const nextId = String(body.version?.$id || "");
@@ -796,9 +796,7 @@ export function NegotiationWorkspace({ contractId }: NegotiationWorkspaceProps) 
 
 			{fileId ? (
 				<>
-					<NegotiationPdfFab
-						onOpen={() => void openFreshPreview("preview")}
-					/>
+					<NegotiationPdfFab onOpen={() => void openFreshPreview("preview")} />
 					<DocumentViewer
 						isOpen={pdfOpen}
 						onClose={() => setPdfOpen(false)}

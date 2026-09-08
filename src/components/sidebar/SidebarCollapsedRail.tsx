@@ -58,52 +58,52 @@ export default function SidebarCollapsedRail({
 							/>
 						)}
 						<HoverCard key={section.header} openDelay={0} closeDelay={150}>
-						<HoverCardTrigger asChild>
-							<button
-								type="button"
-								aria-label={section.header}
-								tabIndex={0}
-								data-tour={sectionTourId(section.header)}
-								className={cn(
-									"sidebar-rail-icon flex h-10 w-10 items-center justify-center rounded-xl cursor-pointer",
-									"transition-all duration-200 border border-transparent",
-									"hover:bg-blue/10 hover:border-blue/20",
-									"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
-									active && "bg-blue/10 border-[#0f5384]/30 shadow-sm",
-								)}
+							<HoverCardTrigger asChild>
+								<button
+									type="button"
+									aria-label={section.header}
+									tabIndex={0}
+									data-tour={sectionTourId(section.header)}
+									className={cn(
+										"sidebar-rail-icon flex h-10 w-10 items-center justify-center rounded-xl cursor-pointer",
+										"transition-all duration-200 border border-transparent",
+										"hover:bg-blue/10 hover:border-blue/20",
+										"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
+										active && "bg-blue/10 border-[#0f5384]/30 shadow-sm",
+									)}
+								>
+									{section.iconNode ? (
+										<span className="inline-flex text-[#03AFBF]">
+											{section.iconNode}
+										</span>
+									) : (
+										<SectionNavIcon
+											header={section.header}
+											iconSrc={section.iconSrc}
+											priority={
+												section.header === "Dashboard" ||
+												section.header === "Calendar" ||
+												section.header === "Overview"
+											}
+										/>
+									)}
+								</button>
+							</HoverCardTrigger>
+							<HoverCardContent
+								side="right"
+								align="start"
+								sideOffset={12}
+								className="z-50 w-auto border-0 bg-transparent p-0 shadow-none"
 							>
-								{section.iconNode ? (
-									<span className="inline-flex text-[#03AFBF]">
-										{section.iconNode}
-									</span>
-								) : (
-									<SectionNavIcon
-										header={section.header}
-										iconSrc={section.iconSrc}
-										priority={
-											section.header === "Dashboard" ||
-											section.header === "Calendar" ||
-											section.header === "Overview"
-										}
-									/>
-								)}
-							</button>
-						</HoverCardTrigger>
-						<HoverCardContent
-							side="right"
-							align="start"
-							sideOffset={12}
-							className="z-50 w-auto border-0 bg-transparent p-0 shadow-none"
-						>
-							<SidebarSectionFlyout
-								sectionHeader={section.header}
-								items={section.items}
-								isViewer={isViewer}
-								shouldShowLock={shouldShowLock}
-								rootException={rootException}
-							/>
-						</HoverCardContent>
-					</HoverCard>
+								<SidebarSectionFlyout
+									sectionHeader={section.header}
+									items={section.items}
+									isViewer={isViewer}
+									shouldShowLock={shouldShowLock}
+									rootException={rootException}
+								/>
+							</HoverCardContent>
+						</HoverCard>
 					</Fragment>
 				);
 			})}

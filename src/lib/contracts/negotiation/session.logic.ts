@@ -43,7 +43,7 @@ export function encodeNegotiateSession(
 export function decodeNegotiateSession(
 	raw: string | undefined | null,
 ): NegotiateSessionPayload | null {
-	if (!raw || !raw.includes(".")) return null;
+	if (!raw?.includes(".")) return null;
 	const [body, signature] = raw.split(".");
 	if (!body || !signature) return null;
 	const expected = sign(body);

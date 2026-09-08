@@ -81,7 +81,9 @@ describe("SettingsPermissionsPage - Content Display", () => {
 		render(element);
 
 		expect(
-			screen.getByText(/contact your administrator if you need additional access/i),
+			screen.getByText(
+				/contact your administrator if you need additional access/i,
+			),
 		).toBeInTheDocument();
 	});
 

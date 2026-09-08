@@ -1,11 +1,14 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
-import { getUserDefaultOrganization, getUserPermissions } from "@/lib/rbac/permissions";
 import { requirePermission } from "@/lib/rbac/middleware";
-import { canViewTicket } from "@/lib/tickets/ticket-access.policy";
+import {
+	getUserDefaultOrganization,
+	getUserPermissions,
+} from "@/lib/rbac/permissions";
 import { fetchGitHubIssue } from "@/lib/tickets/github-tickets.service";
 import { getTicketById } from "@/lib/tickets/ticket.repository";
+import { canViewTicket } from "@/lib/tickets/ticket-access.policy";
 
 export async function GET(
 	request: NextRequest,
@@ -18,7 +21,10 @@ export async function GET(
 
 	const user = await getCurrentUser();
 	if (!user) {
-		return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+		return NextResponse.json(
+			{ error: "Authentication required" },
+			{ status: 401 },
+		);
 	}
 
 	const org = await getUserDefaultOrganization(user.$id);
@@ -32,7 +38,10 @@ export async function GET(
 		return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 	}
 	if (!ticket.githubIssueNumber) {
-		return NextResponse.json({ error: "No GitHub issue linked" }, { status: 409 });
+		return NextResponse.json(
+			{ error: "No GitHub issue linked" },
+			{ status: 409 },
+		);
 	}
 
 	const issue = await fetchGitHubIssue(

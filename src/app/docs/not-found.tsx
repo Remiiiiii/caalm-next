@@ -10,8 +10,8 @@ export default function DocsNotFound() {
 				Page not found
 			</h1>
 			<p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-400">
-				That docs page does not exist. Head back to the docs home or search
-				with ⌘K.
+				That docs page does not exist. Head back to the docs home or search with
+				⌘K.
 			</p>
 			<Link
 				href="/docs"

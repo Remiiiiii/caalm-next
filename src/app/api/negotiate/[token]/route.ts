@@ -33,7 +33,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
 	const { token } = await context.params;
 	const access = await resolveAccessByToken(token);
 	if (!access) {
-		return NextResponse.json({ error: "Link expired or invalid" }, { status: 401 });
+		return NextResponse.json(
+			{ error: "Link expired or invalid" },
+			{ status: 401 },
+		);
 	}
 
 	const { tablesDB } = await createAdminClient();
@@ -44,7 +47,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
 	});
 
 	const ownerId = String(
-		(contract as { contractOwnerId?: string; owner?: string }).contractOwnerId ||
+		(contract as { contractOwnerId?: string; owner?: string })
+			.contractOwnerId ||
 			(contract as { owner?: string }).owner ||
 			"",
 	).trim();
