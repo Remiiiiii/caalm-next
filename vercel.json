@@ -3,7 +3,7 @@
 	"git": {
 		"deploymentEnabled": true
 	},
-	"ignoreCommand": "exit 1",
+	"ignoreCommand": "bash scripts/vercel-ignored-build.sh",
 	"crons": [
 		{
 			"path": "/api/notifications/process-digest",

@@ -21,6 +21,7 @@ export interface UIFileDoc extends Models.Document {
 		| "active"
 		| "inactive"
 		| "pending-review"
+		| "pending-signature"
 		| "action-required"
 		| "expired";
 	contractType?: string;

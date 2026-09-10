@@ -185,6 +185,7 @@ export async function proxy(request: NextRequest) {
 	// Define protected route prefixes
 	const protectedPrefixes = [
 		"/dashboard",
+		"/esign",
 		"/contracts",
 		"/licenses",
 		"/analytics",

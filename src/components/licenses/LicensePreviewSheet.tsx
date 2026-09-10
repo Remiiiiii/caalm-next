@@ -59,6 +59,8 @@ function statusBannerClasses(license: License): string {
 			return "bg-green/10 text-green border-green/15";
 		case "pending-review":
 			return "bg-orange/10 text-orange border-orange/15";
+		case "pending-signature":
+			return "bg-blue/10 text-blue border-blue/15";
 		case "action-required":
 			return "bg-red/10 text-red border-red/15";
 		default:

@@ -10,6 +10,7 @@ import {
 	Info,
 	KeyRound,
 	Minimize2,
+	PenLine,
 	Pencil,
 	RefreshCw,
 	Share2,
@@ -18,7 +19,9 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import type React from "react";
+import { useRouter } from "next/navigation";
 import { Fragment, useState } from "react";
+import { SendForSignatureDialog } from "@/components/esign/SendForSignatureDialog";
 import { TransferOwnershipDialog } from "@/components/ownership/TransferOwnershipDialog";
 import { Button } from "@/components/ui/button";
 import { DeleteConfirmBody } from "@/components/ui/delete-confirmation-dialog";
@@ -32,6 +35,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { PERMISSIONS } from "@/constants/permissions";
+import { useStepUp } from "@/contexts/StepUpContext";
 import { useToast } from "@/hooks/use-toast";
 import { useDepartmentAssignment } from "@/hooks/useDepartmentAssignment";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -104,6 +108,11 @@ const licenseActionsDropdownItems = [
 		value: "status",
 	},
 	{
+		label: "Send for signature",
+		icon: "/assets/icons/contract-status.svg",
+		value: "sign",
+	},
+	{
 		label: "Download",
 		icon: "/assets/icons/download.svg",
 		value: "download",
@@ -154,10 +163,13 @@ const LicenseActionDropdown = ({
 	const [showDelete, setShowDelete] = useState(false);
 	const [deleteConfirmed, setDeleteConfirmed] = useState(false);
 	const [showShare, setShowShare] = useState(false);
+	const [showSign, setShowSign] = useState(false);
 	const [_emails, _setEmails] = useState<string[]>([]);
 
+	const router = useRouter();
 	const { toast } = useToast();
 	const { permissions } = usePermissions();
+	const { ensureStepUp } = useStepUp();
 	const { roles: userRoles } = useUserRoles();
 	const {
 		departmentEnums,
@@ -184,6 +196,7 @@ const LicenseActionDropdown = ({
 		setShowRenew(false);
 		setShowAssign(false);
 		setShowStatus(false);
+		setShowSign(false);
 		setShowDelete(false);
 		setShowShare(false);
 		setDeleteConfirmed(false);
@@ -195,6 +208,11 @@ const LicenseActionDropdown = ({
 
 		try {
 			if (action.value === "delete") {
+				if (!(await ensureStepUp())) {
+					setIsLoading(false);
+					return;
+				}
+
 				const res = await fetch(`/api/licenses/${license.$id}`, {
 					method: "DELETE",
 				});
@@ -275,6 +293,11 @@ const LicenseActionDropdown = ({
 				return canLicenseAction(permissions, "allocate");
 			case "renew":
 				return canLicenseAction(permissions, "renew");
+			case "sign":
+				return (
+					permissions.includes(PERMISSIONS.LICENSES.SIGN) &&
+					license.status === "pending-signature"
+				);
 			case "details":
 			case "download":
 			case "share":
@@ -374,6 +397,7 @@ const LicenseActionDropdown = ({
 							assign: UserRoundCheck,
 							transfer: ArrowRightLeft,
 							status: GitBranch,
+							sign: PenLine,
 							delete: Trash2,
 							download: Download,
 							share: Share2,
@@ -418,6 +442,8 @@ const LicenseActionDropdown = ({
 											setIsModalOpen(true);
 										} else if (actionItem.value === "transfer") {
 											setShowTransfer(true);
+										} else if (actionItem.value === "sign") {
+											router.push(`/esign/prepare/license/${license.$id}`);
 										} else if (actionItem.value === "status") {
 											setShowStatus(true);
 											setIsModalOpen(true);
@@ -888,6 +914,15 @@ const LicenseActionDropdown = ({
 					</DialogContent>
 				</Dialog>
 			)}
+			<SendForSignatureDialog
+				open={showSign}
+				onOpenChange={setShowSign}
+				resourceType="license"
+				resourceId={license.$id}
+				title={license.licenseName || "License"}
+				documentFileId={license.fileId}
+				onSent={() => onRefresh?.()}
+			/>
 			<TransferOwnershipDialog
 				open={showTransfer}
 				onOpenChange={setShowTransfer}

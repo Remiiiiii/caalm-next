@@ -180,6 +180,14 @@ describe("resolveStatusAfterApprove", () => {
 		);
 	});
 
+	it("holds for signature when digitalSignatureRequired", () => {
+		expect(
+			resolveStatusAfterApprove("executive_approval", "activated", {
+				digitalSignatureRequired: true,
+			}),
+		).toBe("pending-signature");
+	});
+
 	it("blocks activation when next step is activated without executive", () => {
 		expect(() =>
 			resolveStatusAfterApprove("department_review", "activated"),

@@ -9,17 +9,18 @@ import { Button } from "@/components/ui/button";
 import Logo from "../Logo";
 import SectionDivider from "../SectionDivider";
 import SignupSuccessBanner from "../SignupSuccessBanner";
+import { MEDIA_URLS } from "@/lib/media/urls";
 import { TRUSTED_BRAND_LOGOS } from "./landingContent";
 import { fadeUp, staggerContainer } from "./motion";
 import PillSwing3D from "./PillSwing3D";
 import ShimmerBadge from "./ShimmerBadge";
 
-const VIDEO_SRC = "/assets/video/wave.mp4";
-/** Full-quality desktop demo (~25MB / ~18Mbps) — dual soft-loop only above lg */
-const DEMO_VIDEO_DESKTOP_SRC = "/assets/video/demo-landing.mp4";
-/** Mobile-friendly encode (~5.4MB / ~3Mbps) — single player below lg */
-const DEMO_VIDEO_MOBILE_SRC = "/assets/video/caalm-demo-15s.mp4";
-const DEMO_POSTER_SRC = "/assets/video/demo-screenshots/06-landing-hero.png";
+const VIDEO_SRC = MEDIA_URLS.waveVideo;
+/** Full-quality desktop demo — dual soft-loop only above lg (Blob-hosted) */
+const DEMO_VIDEO_DESKTOP_SRC = MEDIA_URLS.demoLandingVideo;
+/** Mobile-friendly encode — single player below lg (Blob-hosted) */
+const DEMO_VIDEO_MOBILE_SRC = MEDIA_URLS.demoLandingMobileVideo;
+const DEMO_POSTER_SRC = MEDIA_URLS.demoLandingPoster;
 const NARROW_QUERY = "(max-width: 1023px)";
 
 /** Crossfade lines under the hero H1 — previous copy + current block */

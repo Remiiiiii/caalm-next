@@ -3,7 +3,7 @@
 import { Loader2 } from "lucide-react";
 import type { Models } from "node-appwrite";
 import type React from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { type AppUser, fetchUserNamesByIds } from "@/lib/actions/user.actions";
 import { convertFileSize } from "@/lib/utils";
 import type { UIFileDoc } from "@/types/files";
@@ -36,6 +36,12 @@ const statusBadge = (
 			return (
 				<span className="inline-block px-1.5 py-0.5 border border-orange/20 bg-orange/10 text-orange text-xs rounded-full font-medium">
 					Pending Review
+				</span>
+			);
+		case "pending-signature":
+			return (
+				<span className="inline-block px-1.5 py-0.5 border border-blue/20 bg-blue/10 text-blue text-xs rounded-full font-medium">
+					Pending Signature
 				</span>
 			);
 		case "action-required":
@@ -381,6 +387,19 @@ const Card = ({
 	]);
 
 	// Fetch assigned manager user data - render immediately, fetch async
+	const managersKey = useMemo(() => {
+		if (
+			Array.isArray(file.assignedManagers) &&
+			file.assignedManagers.length > 0
+		) {
+			return file.assignedManagers.map((m) => String(m).trim()).join("|");
+		}
+		if (typeof file.assignedManagers === "string") {
+			return String(file.assignedManagers).trim();
+		}
+		return typeof assignedTo === "string" ? assignedTo.trim() : "";
+	}, [file.assignedManagers, assignedTo]);
+
 	useEffect(() => {
 		const fetchAssignedManagers = async () => {
 			let managers: string[] = [];
@@ -491,7 +510,8 @@ const Card = ({
 		};
 
 		fetchAssignedManagers();
-	}, [file.assignedManagers, assignedTo]);
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- managersKey is content-stable
+	}, [managersKey]);
 
 	// Memoized handler for image load errors
 	const handleImageError = useCallback((userId: string, accountId?: string) => {

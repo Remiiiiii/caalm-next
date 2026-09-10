@@ -4,6 +4,7 @@ import { motion, useInView, useReducedMotion } from "framer-motion";
 import { ArrowRight, Workflow } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { fireCaalmConfetti } from "@/lib/ui/confetti";
+import { MEDIA_URLS } from "@/lib/media/urls";
 import { cn } from "@/lib/utils";
 import LandingFrostedCard from "./LandingFrostedCard";
 import LandingSection from "./LandingSection";
@@ -280,7 +281,7 @@ export default function HowItWorks() {
 								<div className="overflow-hidden rounded-2xl border border-white/70 bg-white/60 shadow-[0_12px_40px_rgba(15,23,42,0.18)] backdrop-blur-md relative z-10">
 									<video
 										ref={videoRef}
-										src="/assets/video/onboarding-steps.mp4"
+										src={MEDIA_URLS.onboardingStepsVideo}
 										muted
 										playsInline
 										loop

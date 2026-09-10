@@ -89,7 +89,27 @@ const nextConfig: NextConfig = {
 
 		return config;
 	},
-	serverExternalPackages: ["ioredis"],
+	serverExternalPackages: ["ioredis", "@adobe/pdfservices-node-sdk"],
+	// Keep Remotion/AE side projects, local dumps, and Blob-hosted media out of
+	// serverless function file tracing (variable fs walks can otherwise pull dirs in).
+	outputFileTracingExcludes: {
+		"*": [
+			"./brew-bros/**",
+			"./caalm-demo-video/**",
+			"./graft/**",
+			"./document/**",
+			"./public/assets/video/**",
+			"./public/assets/demo/tour/**",
+			"./public/assets/demo/ae-mcp-setup/**",
+			"./tests/**",
+			"./test-results/**",
+			"./playwright-report/**",
+			"./coverage/**",
+			"./scripts/**",
+			"./.cursor/**",
+			"./agent-transcripts/**",
+		],
+	},
 	experimental: {
 		serverActions: {
 			bodySizeLimit: "100MB",
@@ -148,6 +168,10 @@ const nextConfig: NextConfig = {
 			{
 				protocol: "https",
 				hostname: "api.qrserver.com",
+			},
+			{
+				protocol: "https",
+				hostname: "pbzguikxxqv1zlwl.public.blob.vercel-storage.com",
 			},
 		],
 	},

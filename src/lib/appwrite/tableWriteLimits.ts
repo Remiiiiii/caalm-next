@@ -16,6 +16,7 @@ const CONTRACTS_ENUM_FIELDS: Record<string, readonly string[]> = {
 		"active",
 		"inactive",
 		"pending-review",
+		"pending-signature",
 		"action-required",
 		"expired",
 	],

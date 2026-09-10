@@ -95,9 +95,8 @@ export const contractSchema = z.object({
 	serviceCreditTerms: z.string().optional(),
 	escalationProcedures: z.string().optional(),
 	obligationOwners: z.string().optional(),
-	assignedManagers: z
-		.array(z.string())
-		.min(1, "Select at least one department manager"),
+	// Empty is allowed when the department has no managers to assign.
+	assignedManagers: z.array(z.string()).default([]),
 	internalApproverIds: z.array(z.string()).optional(),
 	approvalWorkflowTemplate: z.string().optional(),
 	currentApprovalStage: z.string().optional(),

@@ -71,7 +71,7 @@ function FormSection({
 	children: ReactNode;
 }) {
 	return (
-		<section className="space-y-4 min-w-0">
+		<section className="min-w-0 space-y-4 rounded-lg bg-white/60 p-4 shadow-sm sm:p-6">
 			<div className="space-y-1">
 				<p className="text-sm font-medium uppercase tracking-[0.1em] text-slate-700">
 					{title}
@@ -339,8 +339,8 @@ export default function OrganizationSettingsPage() {
 				<TabsContent value="profile" className="mt-4">
 					<GlassCard className="glass-card">
 						<div className="glass-card-cap" />
-						<CardContent className="p-4 sm:p-6 bg-slate-50">
-							<div className="w-full min-w-0 space-y-8">
+						<CardContent className="p-4 sm:p-6">
+							<div className="w-full min-w-0 space-y-4">
 								<FormSection
 									title="Branding"
 									description="Shown on agreements and public-facing pages."

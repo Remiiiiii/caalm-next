@@ -32,6 +32,7 @@ export default function ContractsStatusTabs({
 			if (file.status === "active") active++;
 			if (
 				file.status === "pending-review" ||
+				file.status === "pending-signature" ||
 				file.status === "action-required"
 			) {
 				pending++;

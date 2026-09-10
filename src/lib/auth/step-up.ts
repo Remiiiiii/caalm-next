@@ -142,3 +142,24 @@ export async function requireStepUpForSession(
 	}
 	return requireStepUp(request, user.$id);
 }
+
+/** Read the step-up cookie outside a NextRequest (server actions). */
+export async function hasValidStepUpCookie(userId: string): Promise<boolean> {
+	const { cookies } = await import("next/headers");
+	const token = (await cookies()).get(STEP_UP_COOKIE)?.value;
+	const payload = parseGrant(token);
+	return Boolean(payload && payload.userId === userId);
+}
+
+/**
+ * Throws when step-up is missing. Use in server actions (not route handlers).
+ * Clients should call ensureStepUp() first so the OTP dialog runs.
+ */
+export async function assertStepUpCookie(userId: string): Promise<void> {
+	if (await hasValidStepUpCookie(userId)) return;
+	const error = new Error("Verification required") as Error & {
+		code: string;
+	};
+	error.code = STEP_UP_REQUIRED_CODE;
+	throw error;
+}

@@ -55,6 +55,7 @@ type LicenseRow = Record<string, unknown> & {
 	assignedManagers?: string[];
 	approvalWorkflowState?: string;
 	currentApprovalStage?: string;
+	digitalSignatureRequired?: boolean | string;
 };
 
 const WORKFLOW_VERSION = 1 as const;
@@ -568,7 +569,12 @@ export async function decideLicense({
 		current.status = "complete";
 		const nextIndex = state.currentStepIndex + 1;
 		const nextStep = state.steps[nextIndex];
-		nextStatus = resolveStatusAfterApprove(current.kind, nextStep?.kind);
+		const digitalSignatureRequired =
+			license.digitalSignatureRequired === true ||
+			license.digitalSignatureRequired === "true";
+		nextStatus = resolveStatusAfterApprove(current.kind, nextStep?.kind, {
+			digitalSignatureRequired,
+		});
 
 		if (current.kind === "executive_approval") {
 			if (nextStep?.kind === "activated") {
@@ -594,8 +600,12 @@ export async function decideLicense({
 			await notifyUsers(
 				recipients,
 				"info",
-				`License activated: ${license.licenseName || "License"}`,
-				`"${license.licenseName || "License"}" is now active.`,
+				nextStatus === "pending-signature"
+					? `License ready for signature: ${license.licenseName || "License"}`
+					: `License activated: ${license.licenseName || "License"}`,
+				nextStatus === "pending-signature"
+					? `"${license.licenseName || "License"}" is approved and waiting for e-signature.`
+					: `"${license.licenseName || "License"}" is now active.`,
 				{ licenseId, actionUrl: "/licenses", actionText: "View Licenses" },
 			);
 		} else if (nextStep) {

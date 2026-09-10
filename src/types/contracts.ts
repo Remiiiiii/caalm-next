@@ -133,6 +133,7 @@ export interface ContractMetadataPayload {
 	donorRestrictions?: string;
 	projectDescription?: string;
 	propertyDescription?: string;
+	digitalSignatureRequired?: boolean;
 	enterpriseMetadata?: ContractEnterpriseMetadata;
 	deletedAt?: string | null;
 	deletedBy?: string | null;

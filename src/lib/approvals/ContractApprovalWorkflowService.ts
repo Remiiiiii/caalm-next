@@ -48,6 +48,7 @@ type ContractRow = Record<string, unknown> & {
 	assignedManagers?: string[];
 	internalApproverIds?: string[];
 	approvalWorkflowState?: string;
+	digitalSignatureRequired?: boolean | string;
 };
 
 export type BuildDerivedStepsInput = {
@@ -113,9 +114,10 @@ export function assertDecisionAllowed({
 export function resolveStatusAfterApprove(
 	currentKind: ApprovalWorkflowStep["kind"],
 	nextKind?: ApprovalWorkflowStep["kind"],
+	options?: { digitalSignatureRequired?: boolean },
 ): string {
 	if (currentKind === "executive_approval") {
-		return "active";
+		return options?.digitalSignatureRequired ? "pending-signature" : "active";
 	}
 	if (nextKind === "activated") {
 		throw new Error("Executive approval is required before activation");
@@ -1121,7 +1123,12 @@ export async function decide({
 		current.status = "complete";
 		const nextIndex = state.currentStepIndex + 1;
 		const nextStep = state.steps[nextIndex];
-		nextStatus = resolveStatusAfterApprove(current.kind, nextStep?.kind);
+		const digitalSignatureRequired =
+			contract.digitalSignatureRequired === true ||
+			contract.digitalSignatureRequired === "true";
+		nextStatus = resolveStatusAfterApprove(current.kind, nextStep?.kind, {
+			digitalSignatureRequired,
+		});
 
 		if (current.kind === "executive_approval") {
 			if (nextStep?.kind === "activated") {
@@ -1147,8 +1154,12 @@ export async function decide({
 			await notifyUsers(
 				recipients,
 				"info",
-				`Contract activated: ${contract.contractName || "Contract"}`,
-				`"${contract.contractName || "Contract"}" is now active.`,
+				nextStatus === "pending-signature"
+					? `Contract ready for signature: ${contract.contractName || "Contract"}`
+					: `Contract activated: ${contract.contractName || "Contract"}`,
+				nextStatus === "pending-signature"
+					? `"${contract.contractName || "Contract"}" is approved and waiting for e-signature.`
+					: `"${contract.contractName || "Contract"}" is now active.`,
 				{ contractId, actionUrl: "/contracts", actionText: "View Contracts" },
 			);
 		} else if (nextStep) {

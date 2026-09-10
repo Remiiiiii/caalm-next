@@ -635,9 +635,8 @@ const contractSchema = z.object({
 	serviceCreditTerms: z.string().optional(),
 	escalationProcedures: z.string().optional(),
 	obligationOwners: z.string().optional(),
-	assignedManagers: z
-		.array(z.string())
-		.min(1, "Select at least one department manager"),
+	// Empty is allowed when the department has no managers to assign.
+	assignedManagers: z.array(z.string()).default([]),
 	internalApproverIds: z.array(z.string()).optional(),
 	approvalWorkflowTemplate: z.string().optional(),
 	currentApprovalStage: z.string().optional(),
@@ -933,6 +932,10 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 	const totalSteps = contentSteps + 1;
 	const stepTitles = [...contentStepTitles, "Review"];
 	const isReviewStep = currentStep === totalSteps;
+	// Typed wizards (government, grant, …) have fewer than 10 steps — match by title.
+	const isDigitalSignaturesStep =
+		!isReviewStep &&
+		contentStepTitles[currentStep - 1] === "Digital Signatures";
 
 	type ContractFormData = z.infer<typeof contractSchema>;
 
@@ -1126,6 +1129,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 						setFilteredManagers([]);
 						setSelectedManagers([]);
 						form.setValue("assignedManagers", []);
+						form.clearErrors("assignedManagers");
 						form.setValue("departmentOwner", "");
 					}
 				} catch (error) {
@@ -1369,6 +1373,27 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
 	// Validate current step before proceeding
 	const validateStep = async (step: number): Promise<boolean> => {
+		// Managers UI is on step 6 — only required when the department has options.
+		if (
+			step === 6 &&
+			filteredManagers.length > 0 &&
+			selectedManagers.length === 0
+		) {
+			form.setError("assignedManagers", {
+				type: "manual",
+				message: "Select at least one department manager",
+			});
+			toast({
+				title: "Required Fields Missing",
+				description: "Select at least one department manager before continuing.",
+				variant: "destructive",
+			});
+			return false;
+		}
+		if (step === 6 && filteredManagers.length === 0) {
+			form.clearErrors("assignedManagers");
+		}
+
 		const requiredFields = getRequiredFieldsForStep(step);
 
 		if (requiredFields.length === 0) {
@@ -2312,7 +2337,8 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 			});
 			return;
 		}
-		if (!selectedManagers?.length) {
+		// Only require a manager when the department actually has managers.
+		if (filteredManagers.length > 0 && !selectedManagers?.length) {
 			toast({
 				title: "Department manager required",
 				description: "Select at least one department manager before upload.",
@@ -2468,6 +2494,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 				reviewerComments: sanitizeString(values.reviewerComments),
 				assignedManagers: selectedManagers,
 				internalApproverIds: selectedApprovers,
+				digitalSignatureRequired: values.digitalSignatureRequired,
 			};
 
 			const enterpriseMetadata = {
@@ -3605,7 +3632,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 												</div>
 												<div className="space-y-6">
 													{/* Step 2: Contract Basics & Timeline */}
-													{currentStep === 2 && (
+													{!isDigitalSignaturesStep && currentStep === 2 && (
 														<div className="space-y-4">
 															<div className="grid grid-cols-1 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
 																<FormField
@@ -4142,7 +4169,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 													)}
 
 													{/* Step 3: Parties & Key Contacts */}
-													{currentStep === 3 && (
+													{!isDigitalSignaturesStep && currentStep === 3 && (
 														<div className="space-y-4">
 															<div className="grid grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
 																<FormField
@@ -4447,7 +4474,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 													)}
 
 													{/* Step 4: Financials & Payment Terms */}
-													{currentStep === 4 && (
+													{!isDigitalSignaturesStep && currentStep === 4 && (
 														<div className="space-y-4">
 															<div className="grid grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
 																<FormField
@@ -4697,7 +4724,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 													)}
 
 													{/* Step 5: Risk & Compliance */}
-													{currentStep === 5 && (
+													{!isDigitalSignaturesStep && currentStep === 5 && (
 														<div className="space-y-4">
 															<div className="grid grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
 																<FormField
@@ -5319,7 +5346,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 													)}
 
 													{/* Step 6: Workflow, Ownership & Approvals */}
-													{currentStep === 6 && (
+													{!isDigitalSignaturesStep && currentStep === 6 && (
 														<div className="space-y-4">
 															<FormField
 																control={form.control}
@@ -5388,7 +5415,8 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																					))
 																				) : watchedAssignToDepartment ? (
 																					<p className="text-sm text-slate-500 p-2">
-																						No managers in this department
+																						No managers in this department. You
+																						can continue without assigning one.
 																					</p>
 																				) : (
 																					<p className="text-sm text-slate-500 p-2">
@@ -5403,7 +5431,9 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																				</div>
 																			)}
 																		</div>
-																		<FormMessage />
+																		{filteredManagers.length > 0 ? (
+																			<FormMessage />
+																		) : null}
 																	</FormItem>
 																)}
 															/>
@@ -5625,7 +5655,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 													)}
 
 													{/* Step 7: Notifications & Renewal Alerts */}
-													{currentStep === 7 && (
+													{!isDigitalSignaturesStep && currentStep === 7 && (
 														<div className="space-y-4">
 															<div className="grid grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
 																<FormField
@@ -5890,7 +5920,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 													)}
 
 													{/* Step 8: Documents, Attachments & Metadata */}
-													{currentStep === 8 && (
+													{!isDigitalSignaturesStep && currentStep === 8 && (
 														<div className="space-y-4">
 															<div className="grid grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
 																<FormField
@@ -6063,7 +6093,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 													)}
 
 													{/* Step 9: Legal & Governance */}
-													{currentStep === 9 && (
+													{!isDigitalSignaturesStep && currentStep === 9 && (
 														<div className="space-y-4">
 															<div className="grid grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
 																<FormField
@@ -6240,7 +6270,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 													)}
 
 													{/* Step 10: Digital Signatures & Access Controls */}
-													{currentStep === 10 && (
+													{isDigitalSignaturesStep && (
 														<div className="space-y-4">
 															<div className="grid grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
 																<FormField

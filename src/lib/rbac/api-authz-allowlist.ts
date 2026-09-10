@@ -167,6 +167,21 @@ export const API_AUTHZ_ALLOWLIST: readonly ApiAuthzAllowEntry[] = [
 		class: "token",
 		reason: "Confirm OTP and set httpOnly negotiate session cookie",
 	},
+	{
+		path: "esign/webhooks",
+		class: "webhook",
+		reason: "CAALM Execute HMAC signature (X-Esign-Signature)",
+	},
+	{
+		path: "esign/sign/[token]",
+		class: "token",
+		reason: "Public recipient signing via HMAC token",
+	},
+	{
+		path: "esign/sign/[token]/document",
+		class: "token",
+		reason: "Public recipient PDF preview/download via HMAC token",
+	},
 ] as const;
 
 export const API_AUTHZ_ALLOWLIST_PATHS = new Set(

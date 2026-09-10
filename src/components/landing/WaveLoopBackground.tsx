@@ -2,9 +2,10 @@
 
 import { useReducedMotion } from "framer-motion";
 import { useEffect, useRef } from "react";
+import { MEDIA_URLS } from "@/lib/media/urls";
 import { cn } from "@/lib/utils";
 
-const VIDEO_SRC = "/assets/video/wave.mp4";
+const VIDEO_SRC = MEDIA_URLS.waveVideo;
 
 function safePlay(video: HTMLVideoElement | null) {
 	if (!video) return;

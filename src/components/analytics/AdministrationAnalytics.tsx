@@ -33,6 +33,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import { MEDIA_URLS } from "@/lib/media/urls";
 
 // Mock data for Administrative Analytics
 const mockData = {
@@ -140,7 +141,7 @@ const AdministrationAnalytics = () => {
 		<div className="relative space-y-6">
 			{/* Background Video to match ExecutiveDashboard styling */}
 
-			<source src="/assets/video/wave.mp4" type="video/mp4" />
+			<source src={MEDIA_URLS.waveVideo} type="video/mp4" />
 
 			{/* Header Actions */}
 			<div className="flex justify-between items-end">

@@ -147,7 +147,9 @@ export function matchesStatusTab(
 	}
 	if (tab === "pending") {
 		return (
-			license.status === "pending-review" || license.status === "suspended"
+			license.status === "pending-review" ||
+				license.status === "pending-signature" ||
+				license.status === "suspended"
 		);
 	}
 	if (tab === "expiring") return isLicenseExpiringWithinDays(license, 90);
@@ -211,7 +213,12 @@ export function computeLicenseMetrics(licenses: License[]): LicenseMetrics {
 		if (license.cost) totalCost += license.cost;
 
 		if (status === "active" && !isLicenseExpired(license)) activeCount++;
-		if (status === "pending-review" || status === "suspended") pendingCount++;
+		if (
+			status === "pending-review" ||
+			status === "pending-signature" ||
+			status === "suspended"
+		)
+			pendingCount++;
 		if (status === "action-required") actionRequiredCount++;
 		if (status === "inactive") inactiveCount++;
 		if (isLicenseExpired(license)) expiredCount++;

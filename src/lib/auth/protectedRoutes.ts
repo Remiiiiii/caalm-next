@@ -13,6 +13,7 @@ export function isProtectedAppRoute(
 		"/dashboard",
 		"/analytics",
 		"/contracts",
+		"/esign",
 		"/my-contracts",
 		"/settings",
 		"/search",

@@ -36,6 +36,41 @@ const handleError = (error: unknown, message: string) => {
 	throw error;
 };
 
+/**
+ * Require assigned managers only when the department has people to pick from.
+ * Empty departments (new orgs, sparse demo data) must not block upload.
+ */
+const assertManagersAssignedWhenAvailable = async (params: {
+	assignedManagerIds: unknown;
+	department?: string | null;
+	orgId?: string;
+}) => {
+	const ids = Array.isArray(params.assignedManagerIds)
+		? params.assignedManagerIds.filter(
+				(id): id is string => typeof id === "string" && id.trim().length > 0,
+			)
+		: [];
+	if (ids.length > 0) return;
+
+	const department =
+		typeof params.department === "string" ? params.department.trim() : "";
+	if (!department) {
+		throw new Error(
+			"At least one department manager is required before upload.",
+		);
+	}
+
+	const { getManagersByDepartment } = await import(
+		"@/lib/utils/get-users-by-role"
+	);
+	const managers = await getManagersByDepartment(department, params.orgId);
+	if (managers.length > 0) {
+		throw new Error(
+			"At least one department manager is required before upload.",
+		);
+	}
+};
+
 const sanitizePayload = <T extends Record<string, unknown>>(payload: T) =>
 	Object.fromEntries(
 		Object.entries(payload).filter(([_, value]) => {
@@ -342,14 +377,11 @@ export const uploadFile = async ({
 			}
 
 			const assignedManagerIds = metadata?.assignedManagers || [];
-			if (
-				!Array.isArray(assignedManagerIds) ||
-				assignedManagerIds.length === 0
-			) {
-				throw new Error(
-					"At least one department manager is required before upload.",
-				);
-			}
+			await assertManagersAssignedWhenAvailable({
+				assignedManagerIds,
+				department: metadata?.assignToDepartment,
+				orgId: resolvedOrgId,
+			});
 
 			// Build contract document, explicitly excluding contractId (not in Contracts collection schema)
 			const contractDocumentRaw: any = {
@@ -553,6 +585,10 @@ export const uploadFile = async ({
 				propertyDescription: clampAppwriteString(
 					metadata?.propertyDescription,
 					1000,
+				),
+				digitalSignatureRequired: Boolean(
+					metadata?.digitalSignatureRequired ??
+						metadata?.enterpriseMetadata?.digitalSignatureRequired,
 				),
 			};
 
@@ -933,8 +969,7 @@ export const uploadFile = async ({
 						// Include other enterprise metadata fields
 						...Object.fromEntries(
 							Object.entries(metadata.enterpriseMetadata).filter(
-								([key]) =>
-									key !== "digitalSignatureRequired" && key !== "accessScope",
+								([key]) => key !== "accessScope",
 								// contractId is required, so we set it explicitly above
 							),
 						),
@@ -1058,14 +1093,13 @@ export const uploadFile = async ({
 				}
 
 				const licenseManagerIds = licenseMetadata.assignedManagers || [];
-				if (
-					!Array.isArray(licenseManagerIds) ||
-					licenseManagerIds.length === 0
-				) {
-					throw new Error(
-						"At least one department manager is required before upload.",
-					);
-				}
+				await assertManagersAssignedWhenAvailable({
+					assignedManagerIds: licenseManagerIds,
+					department:
+						licenseMetadata.department ||
+						(licenseMetadata as { division?: string }).division,
+					orgId: resolvedOrgId,
+				});
 
 				// Convert assignedManagers IDs to names
 				const assignedManagers = await (async () => {
@@ -1992,6 +2026,12 @@ export const deleteFile = async ({
 		if (isContract) {
 			const contractIdToDelete = fileId;
 			const actor = await getCurrentUser();
+			if (!actor?.$id) {
+				throw new Error("Authentication required");
+			}
+			const { assertStepUpCookie } = await import("@/lib/auth/step-up");
+			await assertStepUpCookie(actor.$id);
+
 			let contractLabel = contractIdToDelete;
 			let orgId: string | undefined;
 			let department: string | undefined;

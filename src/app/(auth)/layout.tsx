@@ -12,6 +12,7 @@ import { TRUSTED_BRAND_LOGOS } from "@/components/landing/landingContent";
 import OrbitingBlocks from "@/components/OrbitingBlocks";
 import SplineCanvas from "@/components/SplineCanvas";
 import { useSplineWatermarkRemoval } from "@/hooks/useSplineWatermarkRemoval";
+import { MEDIA_URLS } from "@/lib/media/urls";
 
 /**
  * Match SplineCanvas opacity transition (`ease-in-out`).
@@ -61,7 +62,7 @@ const layout = ({ children }: { children: React.ReactNode }) => {
 					playsInline
 					className="absolute inset-0 z-0 w-full h-full object-cover"
 				>
-					<source src="/assets/video/wave.mp4" type="video/mp4" />
+					<source src={MEDIA_URLS.waveVideo} type="video/mp4" />
 				</video>
 
 				{/* Soft gradients above video */}

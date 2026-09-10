@@ -16,8 +16,19 @@ export interface License {
 		| "inactive"
 		| "expired"
 		| "pending-review"
+		| "pending-signature"
 		| "suspended"
 		| "action-required";
+	digitalSignatureRequired?: boolean;
+	digitalSignatureStatus?:
+		| "not_started"
+		| "pending"
+		| "completed"
+		| "declined"
+		| "expired";
+	digitalSignatureEnvelopeId?: string;
+	digitalSignatureCompletedAt?: string;
+	digitalSignaturePlatform?: string;
 
 	// Optional - Core fields
 	description?: string;

@@ -342,6 +342,11 @@ export async function writeRowWithSchemaDriftRecovery(params: {
 
 	for (let attempt = 0; attempt < maxAttempts; attempt++) {
 		try {
+			// All fields stripped as unknown / invalid — treat as no-op success.
+			if (Object.keys(data).length === 0) {
+				return null;
+			}
+
 			if (params.mode === "create") {
 				return await params.tablesDB.createRow({
 					databaseId: params.databaseId,

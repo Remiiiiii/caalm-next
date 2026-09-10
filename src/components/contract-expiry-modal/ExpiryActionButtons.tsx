@@ -19,7 +19,7 @@ import { useContractSnooze } from "@/hooks/useContractSnooze";
 import { useUpdateContractStatus } from "@/hooks/useUpdateContractStatus";
 import { DESKTOP_MIN_WIDTH } from "@/lib/ui/desktop-first";
 import type { UIFileDoc } from "@/types/files";
-import ContractDismissalSignatureModal from "./ContractDismissalSignatureModal";
+import ContractDismissalAcknowledgmentModal from "./ContractDismissalAcknowledgmentModal";
 
 interface ExpiryActionButtonsProps {
 	contract: UIFileDoc;
@@ -363,7 +363,7 @@ export default function ExpiryActionButtons({
 					onDismiss();
 				}}
 			/>
-			<ContractDismissalSignatureModal
+			<ContractDismissalAcknowledgmentModal
 				isOpen={showSignatureModal}
 				onClose={() => setShowSignatureModal(false)}
 				contract={contract}

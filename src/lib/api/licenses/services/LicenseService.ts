@@ -269,6 +269,7 @@ export class LicenseService {
 			allowsDistribution: mappedData.allowsDistribution,
 			allowsCommercialUse: mappedData.allowsCommercialUse,
 			requiresAttribution: mappedData.requiresAttribution,
+			digitalSignatureRequired: Boolean(mappedData.digitalSignatureRequired),
 			createdBy: ownerId,
 		});
 

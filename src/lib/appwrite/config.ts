@@ -404,6 +404,12 @@ export const appwriteConfig = {
 		"69e4c201001b3c4d5e02",
 	),
 
+	/** CAALM Execute envelopes (name: signature_envelopes) */
+	signatureEnvelopesCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_SIGNATURE_ENVELOPES_COLLECTION",
+		"69c8e20100a1f5e8c061",
+	),
+
 	// Imagine Art API (AI Image Generation)
 	imagineArtApiKey: process.env.IMAGINE_ART_API_KEY,
 
