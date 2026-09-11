@@ -15,6 +15,7 @@ import { appwriteConfig } from "@/lib/appwrite/config";
 import { writeRowWithSchemaDriftRecovery } from "@/lib/appwrite/schemaDriftRecovery";
 import { isDemoMode } from "@/lib/config/demo-mode";
 import { getUserRoles, hasPermission } from "@/lib/rbac/permissions";
+import { logAuditEvent } from "@/lib/services/audit-logger";
 import { getProfilePictureUrl } from "@/lib/utils";
 import {
 	getAllAdmins,
@@ -1258,6 +1259,43 @@ export async function decide({
 			? String(notes).slice(0, 500)
 			: contract.reviewerComments,
 	});
+
+	try {
+		const actor = await lookupUserRow(viewerUserId);
+		await logAuditEvent({
+			event_id: ID.unique(),
+			event_title: `Contract ${decision.replace(/_/g, " ")}`,
+			action: "approval_decided",
+			source: "caalm",
+			user_id: viewerUserId,
+			user_name: String(actor?.fullName || "Unknown"),
+			user_email: String(actor?.email || ""),
+			orgId,
+			status: "success",
+			module: "contracts",
+			target_type: "contract",
+			target_id: contractId,
+			target_label: String(contract.contractName || "Contract"),
+			summary: `${decision} at ${current.kind}`,
+			changes: [
+				{
+					field: "status",
+					before: String(contract.status || ""),
+					after: nextStatus,
+				},
+				{
+					field: "approvalStep",
+					before: current.kind,
+					after: state.steps[state.currentStepIndex]?.kind || current.kind,
+				},
+			],
+		});
+	} catch (error) {
+		console.warn(
+			"[SERVER] decide: audit log failed:",
+			error instanceof Error ? error.message : error,
+		);
+	}
 
 	return { state, contractStatus: nextStatus };
 }

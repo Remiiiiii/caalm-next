@@ -154,7 +154,8 @@ src/pages/api/caalm-466120-c3e75c165eeb.json
 .tests.md
 *.ps1
 uploads/
-document/
+# Root-only dump folder — do not use bare `document/` (it also ignores API routes like esign/.../document/)
+/document/
 *.csv
 *.html
 mcpjson.txt

@@ -91,6 +91,12 @@ export default async function ContractsApprovalsPage() {
 					approvalWorkflowState: contract.approvalWorkflowState as
 						| string
 						| undefined,
+					digitalSignatureStatus: contract.digitalSignatureStatus as
+						| string
+						| undefined,
+					digitalSignatureEnvelopeId: contract.digitalSignatureEnvelopeId as
+						| string
+						| undefined,
 					assignedManagers: contract.assignedManagers as string[] | undefined,
 					description: contract.description as string | undefined,
 					bucketFileId: String(

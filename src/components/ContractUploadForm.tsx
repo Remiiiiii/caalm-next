@@ -49,6 +49,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CurrencyAmountInput } from "@/components/ui/currency-amount-input";
 import { CurrencySelect } from "@/components/ui/currency-select";
 import {
 	Dialog,
@@ -120,6 +121,7 @@ import {
 	buildContractTypeFallbackResult,
 	type ContractTypeSuggestionResult,
 } from "@/lib/ai/contractTypeSuggestionSchema";
+import { scrubTemplateTokenValue } from "@/lib/ai/scrubTemplateTokens";
 import { isDemoMode } from "@/lib/config/demo-mode";
 import {
 	CONTRACT_TYPE_CONFIGS,
@@ -128,6 +130,11 @@ import {
 	getRequiredFields,
 	resolveDraftContractTypeId,
 } from "@/lib/contracts/contractTypeConfigs";
+import {
+	generateDocumentNumber,
+	needsDocumentNumber,
+} from "@/lib/contracts/documentNumber";
+import { currencySymbol } from "@/lib/currency";
 import {
 	getEnterpriseDropzoneAccept,
 	getEnterpriseFormatHint,
@@ -385,16 +392,6 @@ const AI_QUIZ_LOADING_MIN_MS = (() => {
 	return 5000;
 })();
 
-const LIFECYCLE_STATUSES = [
-	{ value: "draft", label: "Draft" },
-	{ value: "under_review", label: "Under Review" },
-	{ value: "approved", label: "Approved" },
-	{ value: "active", label: "Active" },
-	{ value: "expired", label: "Expired" },
-	{ value: "terminated", label: "Terminated" },
-	{ value: "on_hold", label: "On Hold" },
-];
-
 const RISK_LEVELS = [
 	{ value: "critical", label: "Critical" },
 	{ value: "high", label: "High" },
@@ -481,17 +478,63 @@ const ALERT_STRATEGY_OPTIONS = [
 	{ value: "custom", label: "Custom" },
 ];
 
-const SIGNATURE_PLATFORM_OPTIONS = [
-	{ value: "docusign", label: "DocuSign" },
-	{ value: "adobe_sign", label: "Adobe Sign" },
-	{ value: "hellosign", label: "HelloSign / Dropbox Sign" },
-	{ value: "built_in", label: "Built-in" },
-	{ value: "other", label: "Other" },
-];
-
 function divisionsForDepartment(department: string): UserDivision[] {
 	return USER_DIVISIONS.filter(
 		(div) => DIVISION_TO_DEPARTMENT[div] === department,
+	);
+}
+
+function normalizeLocalDate(date: Date): Date {
+	return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function WizardDateButton({
+	value,
+	onChange,
+	placeholder,
+	disablePast = false,
+}: {
+	value?: Date;
+	onChange: (date: Date | undefined) => void;
+	placeholder: string;
+	disablePast?: boolean;
+}) {
+	return (
+		<Popover>
+			<PopoverTrigger asChild>
+				<Button
+					type="button"
+					variant="outline"
+					className="w-full justify-start text-left font-normal bg-white border-[0.25px] border-slate-300"
+				>
+					<CalendarIcon className="mr-2 h-4 w-4" />
+					{value ? (
+						format(value, "PPP")
+					) : (
+						<span className="text-slate-500">{placeholder}</span>
+					)}
+				</Button>
+			</PopoverTrigger>
+			<PopoverContent className="w-auto p-0" align="start">
+				<Calendar
+					mode="single"
+					selected={value}
+					onSelect={(date) => {
+						onChange(date ? normalizeLocalDate(date) : undefined);
+					}}
+					disabled={
+						disablePast
+							? (date) => {
+									const today = new Date();
+									today.setHours(0, 0, 0, 0);
+									return date < today;
+								}
+							: undefined
+					}
+					initialFocus
+				/>
+			</PopoverContent>
+		</Popover>
 	);
 }
 
@@ -516,23 +559,6 @@ const CONFIDENTIALITY_CLASSES = [
 	"internal",
 	"confidential",
 	"restricted",
-];
-
-const SIGNATURE_STATUS_OPTIONS = [
-	"pending",
-	"completed",
-	"waived",
-	"cancelled",
-];
-
-const ACCESS_SCOPE_OPTIONS = ["organization", "department", "restricted"];
-
-const VISIBILITY_ROLE_OPTIONS = [
-	"Super Admin",
-	"Organization Admin",
-	"Department Manager",
-	"Viewer",
-	"IT",
 ];
 
 const RETENTION_MONTH_OPTIONS = [
@@ -672,6 +698,26 @@ const contractSchema = z.object({
 	donorRestrictions: z.string().optional(),
 	projectDescription: z.string().optional(),
 	propertyDescription: z.string().optional(),
+}).superRefine((data, ctx) => {
+	if (!data.notToExceedAmount?.trim()) return;
+	const amount = parseFloat(data.amount.replace(/[$,]/g, ""));
+	const nte = parseFloat(data.notToExceedAmount.replace(/[$,]/g, ""));
+	if (Number.isNaN(nte)) {
+		ctx.addIssue({
+			code: z.ZodIssueCode.custom,
+			path: ["notToExceedAmount"],
+			message: "Enter a valid not-to-exceed amount",
+		});
+		return;
+	}
+	if (!Number.isNaN(amount) && nte < amount) {
+		ctx.addIssue({
+			code: z.ZodIssueCode.custom,
+			path: ["notToExceedAmount"],
+			message:
+				"Not-to-exceed amount cannot be less than the contract amount",
+		});
+	}
 });
 
 const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
@@ -730,6 +776,10 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 	const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 	const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
 	const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
+	const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+	const [previewText, setPreviewText] = useState<string | null>(null);
+	const [previewDownloadOnly, setPreviewDownloadOnly] = useState(false);
+	const stepScrollRef = useRef<HTMLDivElement | null>(null);
 	const isResumingDraftRef = React.useRef(false);
 
 	// Contract type selection state
@@ -1395,6 +1445,9 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 		}
 
 		const requiredFields = getRequiredFieldsForStep(step);
+		if (requiredFields.includes("amount") && !requiredFields.includes("notToExceedAmount")) {
+			requiredFields.push("notToExceedAmount");
+		}
 
 		if (requiredFields.length === 0) {
 			return true; // No required fields for this step
@@ -1445,13 +1498,48 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 		}
 	};
 
+	useEffect(() => {
+		if (stepScrollRef.current) {
+			stepScrollRef.current.scrollTop = 0;
+		}
+	}, [currentStep]);
+
 	const closePdfPreview = useCallback(() => {
 		setPdfPreviewOpen(false);
+		setPreviewHtml(null);
+		setPreviewText(null);
+		setPreviewDownloadOnly(false);
 		setPdfPreviewUrl((prev) => {
 			if (prev) URL.revokeObjectURL(prev);
 			return null;
 		});
 	}, []);
+
+	const getLoadedFileBuffer = useCallback((): ArrayBuffer | null => {
+		if (!processedFileData) return null;
+		return (
+			fileBytesRef.current ||
+			toArrayBuffer(processedFileData.arrayBuffer) ||
+			(processedFileData.base64Content
+				? base64ToArrayBuffer(processedFileData.base64Content)
+				: null)
+		);
+	}, [processedFileData]);
+
+	const downloadLoadedFile = useCallback(() => {
+		const buffer = getLoadedFileBuffer();
+		if (!processedFileData || !buffer) return;
+		const url = URL.createObjectURL(
+			new Blob([new Uint8Array(buffer)], {
+				type: processedFileData.type || "application/octet-stream",
+			}),
+		);
+		const link = document.createElement("a");
+		link.href = url;
+		link.download = processedFileData.name;
+		link.click();
+		URL.revokeObjectURL(url);
+	}, [getLoadedFileBuffer, processedFileData]);
 
 	const openPdfPreview = useCallback(async () => {
 		if (!processedFileData) {
@@ -1463,23 +1551,79 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 			return;
 		}
 
+		const fileName = processedFileData.name.toLowerCase();
 		const isPdf =
-			processedFileData.type === "application/pdf" ||
-			processedFileData.name.toLowerCase().endsWith(".pdf");
-		if (!isPdf) {
+			processedFileData.type === "application/pdf" || fileName.endsWith(".pdf");
+		const isDocx =
+			fileName.endsWith(".docx") ||
+			processedFileData.type.includes(
+				"application/vnd.openxmlformats-officedocument.wordprocessingml",
+			);
+		const isTxt =
+			fileName.endsWith(".txt") || processedFileData.type.startsWith("text/");
+		const isLegacyDoc =
+			fileName.endsWith(".doc") && !fileName.endsWith(".docx");
+
+		if (!isPdf && !isDocx && !isTxt && !isLegacyDoc) {
 			toast({
 				title: "Preview unavailable",
-				description: "Only PDF files can be opened in the viewer.",
+				description: "This file type can't be opened in the viewer.",
 				variant: "destructive",
 			});
 			return;
 		}
 
-		const setPreviewFromBuffer = (buffer: ArrayBuffer) => {
+		if (isLegacyDoc) {
+			setPdfPreviewUrl((prev) => {
+				if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
+				return null;
+			});
+			setPreviewHtml(null);
+			setPreviewText(null);
+			setPreviewDownloadOnly(true);
+			setPdfPreviewOpen(true);
+			return;
+		}
+
+		const openFromBuffer = async (buffer: ArrayBuffer) => {
 			fileBytesRef.current = buffer;
+			setPreviewDownloadOnly(false);
+			if (isDocx) {
+				try {
+					const mammoth = (await import("mammoth")).default;
+					const result = await mammoth.convertToHtml({ arrayBuffer: buffer });
+					setPdfPreviewUrl((prev) => {
+						if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
+						return null;
+					});
+					setPreviewText(null);
+					setPreviewHtml(result.value || "<p></p>");
+					setPdfPreviewOpen(true);
+				} catch {
+					toast({
+						title: "Preview unavailable",
+						description: "Could not convert this Word file for preview.",
+						variant: "destructive",
+					});
+				}
+				return;
+			}
+			if (isTxt) {
+				const text = new TextDecoder().decode(buffer);
+				setPdfPreviewUrl((prev) => {
+					if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
+					return null;
+				});
+				setPreviewHtml(null);
+				setPreviewText(text);
+				setPdfPreviewOpen(true);
+				return;
+			}
 			const url = URL.createObjectURL(
 				new Blob([new Uint8Array(buffer)], { type: "application/pdf" }),
 			);
+			setPreviewHtml(null);
+			setPreviewText(null);
 			setPdfPreviewUrl((prev) => {
 				if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
 				return url;
@@ -1489,20 +1633,20 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
 		const fromRef = fileBytesRef.current;
 		if (fromRef && fromRef.byteLength > 0) {
-			setPreviewFromBuffer(fromRef);
+			await openFromBuffer(fromRef);
 			return;
 		}
 
 		const fromState = toArrayBuffer(processedFileData.arrayBuffer);
 		if (fromState) {
-			setPreviewFromBuffer(fromState);
+			await openFromBuffer(fromState);
 			return;
 		}
 
 		if (processedFileData.base64Content) {
 			const fromBase64 = base64ToArrayBuffer(processedFileData.base64Content);
 			if (fromBase64) {
-				setPreviewFromBuffer(fromBase64);
+				await openFromBuffer(fromBase64);
 				return;
 			}
 		}
@@ -1529,10 +1673,13 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 									}
 								: prev,
 						);
-						setPreviewFromBuffer(fetched);
+						await openFromBuffer(fetched);
 						return;
 					}
-					if (file?.downloadUrl) {
+					if (file?.downloadUrl && isPdf) {
+						setPreviewHtml(null);
+						setPreviewText(null);
+						setPreviewDownloadOnly(false);
 						setPdfPreviewUrl((prev) => {
 							if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
 							return file.downloadUrl as string;
@@ -1542,7 +1689,10 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 					}
 				}
 				const viewUrl = constructFileUrl(bucketFileId);
-				if (viewUrl) {
+				if (viewUrl && isPdf) {
+					setPreviewHtml(null);
+					setPreviewText(null);
+					setPreviewDownloadOnly(false);
 					setPdfPreviewUrl((prev) => {
 						if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
 						return viewUrl;
@@ -1551,14 +1701,14 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 					return;
 				}
 			} catch (error) {
-				console.error("Failed to fetch draft PDF for preview:", error);
+				console.error("Failed to fetch draft file for preview:", error);
 			}
 		}
 
 		toast({
 			title: "Preview unavailable",
 			description:
-				"Could not read the file data. Re-upload the PDF on step 1, then try again.",
+				"Could not read the file data. Re-upload the file on step 1, then try again.",
 			variant: "destructive",
 		});
 	}, [processedFileData, toast]);
@@ -1647,6 +1797,16 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 							);
 
 							if (isRealExtractionMethod(method)) {
+								if (
+									needsDocumentNumber(
+										typeof patch.contractNumber === "string"
+											? patch.contractNumber
+											: form.getValues("contractNumber"),
+									)
+								) {
+									patch.contractNumber = generateDocumentNumber("CTR");
+								}
+								patch.lifecycleStatus = "draft";
 								form.reset({
 									...form.getValues(),
 									...patch,
@@ -1665,6 +1825,14 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 						console.error("Failed to extract contract data:", error);
 						// Continue with manual input if extraction fails
 					} finally {
+						if (needsDocumentNumber(form.getValues("contractNumber"))) {
+							form.setValue(
+								"contractNumber",
+								generateDocumentNumber("CTR"),
+								{ shouldDirty: true },
+							);
+						}
+						form.setValue("lifecycleStatus", "draft");
 						clearInterval(extractTick);
 						setIsExtracting(false);
 						setFileIngestProgress(100);
@@ -1753,7 +1921,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 			: [];
 
 	const sanitizeString = (value?: string) =>
-		value && value.trim().length > 0 ? value.trim() : undefined;
+		scrubTemplateTokenValue(value);
 
 	// Auto-save draft
 	const autoSaveDraft = useCallback(
@@ -2363,20 +2531,24 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 			}, 200);
 
 			const amountAsNumber = parseCurrencyInput(values.amount) ?? 0;
+			const contractNumber = needsDocumentNumber(values.contractNumber)
+				? generateDocumentNumber("CTR")
+				: values.contractNumber.trim();
 
 			const contractPayload = {
 				contractName: values.contractName,
 				contractType: values.contractType,
 				contractCategory: values.contractCategory,
-				lifecycleStatus: values.lifecycleStatus,
-				contractNumber: values.contractNumber,
+				lifecycleStatus: "draft",
+				contractNumber,
 				description: (() => {
 					const d = sanitizeString(values.description);
 					return d && d.length > 1000 ? d.slice(0, 1000) : d;
 				})(),
 				assignToDepartment: values.assignToDepartment,
 				department: values.assignToDepartment,
-				businessUnit: sanitizeString(values.businessUnit),
+				businessUnit:
+					sanitizeString(values.businessUnit) || values.assignToDepartment,
 				subDepartment: sanitizeString(values.subDepartment),
 				departmentOwner: (() => {
 					const raw = sanitizeString(values.departmentOwner);
@@ -2446,7 +2618,9 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 				budgetCode: sanitizeString(values.budgetCode),
 				costCenter: sanitizeString(values.costCenter),
 				riskLevel: values.riskLevel as "critical" | "high" | "medium" | "low",
-				counterpartyLegalName: values.counterpartyLegalName,
+				counterpartyLegalName:
+					sanitizeString(values.counterpartyLegalName) ||
+					values.counterpartyLegalName,
 				vendor: sanitizeString(values.counterpartyLegalName),
 				counterpartyContactEmail: sanitizeString(
 					values.counterpartyContactEmail,
@@ -2561,24 +2735,9 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 				),
 				workflowNotes: sanitizeString(values.workflowNotes),
 				digitalSignatureRequired: values.digitalSignatureRequired,
-				digitalSignatureStatus: values.digitalSignatureStatus
-					? (values.digitalSignatureStatus as
-							| "not_started"
-							| "pending"
-							| "completed"
-							| "declined"
-							| "expired")
+				digitalSignatureStatus: values.digitalSignatureRequired
+					? "pending"
 					: undefined,
-				digitalSignaturePlatform: sanitizeString(
-					values.digitalSignaturePlatform,
-				),
-				digitalSignatureCompletedAt:
-					values.digitalSignatureCompletedAt?.toISOString(),
-				digitalSignatureEnvelopeId: sanitizeString(
-					values.digitalSignatureEnvelopeId,
-				),
-				signatureRecipientIds: parseListInput(values.signatureRecipientIds),
-				visibilityRoles: parseListInput(values.visibilityRoles),
 				searchKeywords: sanitizeString(values.searchKeywords),
 				accessScope: sanitizeString(values.accessScope),
 			};
@@ -3487,7 +3646,10 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 							</div>
 
 							{/* Scrollable Content */}
-							<div className="min-h-0 flex-1 overflow-y-auto bg-transparent p-4">
+							<div
+								ref={stepScrollRef}
+								className="min-h-0 flex-1 overflow-y-auto bg-transparent p-4"
+							>
 								<Form {...form}>
 									<form
 										id="contract-upload-form"
@@ -3734,32 +3896,21 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																<FormField
 																	control={form.control}
 																	name="lifecycleStatus"
-																	render={({ field }) => (
+																	render={() => (
 																		<FormItem>
 																			<FormLabel className="text-sm text-slate-700 mb-1 block">
 																				Lifecycle Status{" "}
 																				<span className="text-red">*</span>
 																			</FormLabel>
-																			<Select
-																				onValueChange={field.onChange}
-																				value={field.value}
-																			>
-																				<FormControl>
-																					<SelectTrigger className="bg-white border-slate-300">
-																						<SelectValue placeholder="Select status" />
-																					</SelectTrigger>
-																				</FormControl>
-																				<SelectContent>
-																					{LIFECYCLE_STATUSES.map((status) => (
-																						<SelectItem
-																							key={status.value}
-																							value={status.value}
-																						>
-																							{status.label}
-																						</SelectItem>
-																					))}
-																				</SelectContent>
-																			</Select>
+																			<FormControl>
+																				<span className="inline-block px-2 py-0.5 text-xs rounded-full font-medium border bg-orange/10 text-orange border-orange/20">
+																					Draft
+																				</span>
+																			</FormControl>
+																			<p className="text-xs text-slate-500 mt-1">
+																				New uploads start as Draft. Review and
+																				Execute move the status later.
+																			</p>
 																			<FormMessage />
 																		</FormItem>
 																	)}
@@ -3798,48 +3949,13 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																			<Select
 																				onValueChange={(value) => {
 																					field.onChange(value);
-																					if (!form.getValues("businessUnit")) {
-																						form.setValue(
-																							"businessUnit",
-																							value,
-																						);
-																					}
+																					form.setValue("businessUnit", value);
 																				}}
 																				value={field.value}
 																			>
 																				<FormControl>
 																					<SelectTrigger className="bg-white border-slate-300">
 																						<SelectValue placeholder="Select department" />
-																					</SelectTrigger>
-																				</FormControl>
-																				<SelectContent>
-																					{CONTRACT_DEPARTMENTS.map((dept) => (
-																						<SelectItem key={dept} value={dept}>
-																							{dept}
-																						</SelectItem>
-																					))}
-																				</SelectContent>
-																			</Select>
-																			<FormMessage />
-																		</FormItem>
-																	)}
-																/>
-
-																<FormField
-																	control={form.control}
-																	name="businessUnit"
-																	render={({ field }) => (
-																		<FormItem>
-																			<FormLabel className="text-sm text-slate-700 mb-1 block">
-																				Business Unit
-																			</FormLabel>
-																			<Select
-																				onValueChange={field.onChange}
-																				value={field.value || undefined}
-																			>
-																				<FormControl>
-																					<SelectTrigger className="bg-white border-slate-300">
-																						<SelectValue placeholder="Select business unit" />
 																					</SelectTrigger>
 																				</FormControl>
 																				<SelectContent>
@@ -3961,24 +4077,10 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																				Start Date
 																			</FormLabel>
 																			<FormControl>
-																				<DatePicker
-																					selected={field.value}
-																					onChange={(date: Date | null) => {
-																						// Normalize the date to midnight local time to avoid timezone issues
-																						if (date) {
-																							const normalized = new Date(
-																								date.getFullYear(),
-																								date.getMonth(),
-																								date.getDate(),
-																							);
-																							field.onChange(normalized);
-																						} else {
-																							field.onChange(undefined);
-																						}
-																					}}
-																					dateFormat="MM/dd/yyyy"
-																					className="w-full px-3 py-2 bg-white border-slate-300 rounded-md"
-																					placeholderText="Select start date"
+																				<WizardDateButton
+																					value={field.value}
+																					onChange={field.onChange}
+																					placeholder="Select start date"
 																				/>
 																			</FormControl>
 																			<FormMessage />
@@ -3995,24 +4097,10 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																				Execution Date
 																			</FormLabel>
 																			<FormControl>
-																				<DatePicker
-																					selected={field.value}
-																					onChange={(date: Date | null) => {
-																						// Normalize the date to midnight local time to avoid timezone issues
-																						if (date) {
-																							const normalized = new Date(
-																								date.getFullYear(),
-																								date.getMonth(),
-																								date.getDate(),
-																							);
-																							field.onChange(normalized);
-																						} else {
-																							field.onChange(undefined);
-																						}
-																					}}
-																					dateFormat="MM/dd/yyyy"
-																					className="w-full px-3 py-2 bg-white border-slate-300 rounded-md"
-																					placeholderText="Select execution date"
+																				<WizardDateButton
+																					value={field.value}
+																					onChange={field.onChange}
+																					placeholder="Select execution date"
 																				/>
 																			</FormControl>
 																			<FormMessage />
@@ -4030,51 +4118,11 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																				<span className="text-red">*</span>
 																			</FormLabel>
 																			<FormControl>
-																				<Popover>
-																					<PopoverTrigger asChild>
-																						<Button
-																							variant="outline"
-																							className="w-full justify-start text-left font-normal bg-white border-slate-300"
-																						>
-																							<CalendarIcon className="mr-2 h-4 w-4" />
-																							{field.value ? (
-																								format(field.value, "PPP")
-																							) : (
-																								<span className="text-slate-500">
-																									Select expiry date
-																								</span>
-																							)}
-																						</Button>
-																					</PopoverTrigger>
-																					<PopoverContent
-																						className="w-auto p-0"
-																						align="start"
-																					>
-																						<Calendar
-																							mode="single"
-																							selected={field.value}
-																							onSelect={(date) => {
-																								// Normalize the date to midnight local time to avoid timezone issues
-																								if (date) {
-																									const normalized = new Date(
-																										date.getFullYear(),
-																										date.getMonth(),
-																										date.getDate(),
-																									);
-																									field.onChange(normalized);
-																								} else {
-																									field.onChange(undefined);
-																								}
-																							}}
-																							disabled={(date) => {
-																								const today = new Date();
-																								today.setHours(0, 0, 0, 0);
-																								return date < today;
-																							}}
-																							initialFocus
-																						/>
-																					</PopoverContent>
-																				</Popover>
+																				<WizardDateButton
+																					value={field.value}
+																					onChange={field.onChange}
+																					placeholder="Select expiry date"
+																				/>
 																			</FormControl>
 																			<FormMessage />
 																		</FormItem>
@@ -4498,10 +4546,13 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																				/>
 																			</FormLabel>
 																			<FormControl>
-																				<Input
-																					placeholder="Enter amount (e.g., $50,000)"
-																					{...field}
-																					className="bg-white border-slate-300"
+																				<CurrencyAmountInput
+																					symbol={currencySymbol(
+																						form.watch("currencyCode"),
+																					)}
+																					placeholder="50,000"
+																					value={field.value}
+																					onChange={field.onChange}
 																				/>
 																			</FormControl>
 																			<FormMessage />
@@ -4537,10 +4588,13 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																				Not-to-Exceed Amount
 																			</FormLabel>
 																			<FormControl>
-																				<Input
-																					placeholder="$100,000 cap"
-																					{...field}
-																					className="bg-white border-slate-300"
+																				<CurrencyAmountInput
+																					symbol={currencySymbol(
+																						form.watch("currencyCode"),
+																					)}
+																					placeholder="100,000 cap"
+																					value={field.value}
+																					onChange={field.onChange}
 																				/>
 																			</FormControl>
 																			<FormMessage />
@@ -6269,10 +6323,10 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 														</div>
 													)}
 
-													{/* Step 10: Digital Signatures & Access Controls */}
+													{/* Digital Signatures */}
 													{isDigitalSignaturesStep && (
 														<div className="space-y-4">
-															<div className="grid grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+															<div className="bg-slate-50 rounded-lg p-4 border border-slate-200 space-y-3">
 																<FormField
 																	control={form.control}
 																	name="digitalSignatureRequired"
@@ -6287,278 +6341,14 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																					onCheckedChange={field.onChange}
 																				/>
 																			</FormControl>
+																			<p className="text-xs text-slate-500">
+																				Turn this on if the document needs a
+																				signature. You will add signers later in
+																				Execute.
+																			</p>
 																			<FormMessage />
 																		</FormItem>
 																	)}
-																/>
-
-																<FormField
-																	control={form.control}
-																	name="digitalSignatureStatus"
-																	render={({ field }) => (
-																		<FormItem>
-																			<FormLabel className="text-sm text-slate-700 mb-1 block">
-																				Signature Status
-																			</FormLabel>
-																			<Select
-																				onValueChange={field.onChange}
-																				value={field.value}
-																			>
-																				<FormControl>
-																					<SelectTrigger className="bg-white border-slate-300">
-																						<SelectValue placeholder="Status" />
-																					</SelectTrigger>
-																				</FormControl>
-																				<SelectContent>
-																					{SIGNATURE_STATUS_OPTIONS.map(
-																						(status) => (
-																							<SelectItem
-																								key={status}
-																								value={status}
-																							>
-																								{status.replace("_", " ")}
-																							</SelectItem>
-																						),
-																					)}
-																				</SelectContent>
-																			</Select>
-																			<FormMessage />
-																		</FormItem>
-																	)}
-																/>
-
-																<FormField
-																	control={form.control}
-																	name="digitalSignaturePlatform"
-																	render={({ field }) => (
-																		<FormItem>
-																			<FormLabel className="text-sm text-slate-700 mb-1 block">
-																				Signature Platform
-																			</FormLabel>
-																			<Select
-																				onValueChange={field.onChange}
-																				value={field.value || undefined}
-																			>
-																				<FormControl>
-																					<SelectTrigger className="bg-white border-slate-300">
-																						<SelectValue placeholder="Select platform" />
-																					</SelectTrigger>
-																				</FormControl>
-																				<SelectContent>
-																					{SIGNATURE_PLATFORM_OPTIONS.map(
-																						(opt) => (
-																							<SelectItem
-																								key={opt.value}
-																								value={opt.value}
-																							>
-																								{opt.label}
-																							</SelectItem>
-																						),
-																					)}
-																				</SelectContent>
-																			</Select>
-																			<FormMessage />
-																		</FormItem>
-																	)}
-																/>
-															</div>
-
-															<div className="grid grid-cols-3 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
-																<FormField
-																	control={form.control}
-																	name="digitalSignatureCompletedAt"
-																	render={({ field }) => (
-																		<FormItem>
-																			<FormLabel className="text-sm text-slate-700 mb-1 block">
-																				Signature Completed At
-																			</FormLabel>
-																			<FormControl>
-																				<DatePicker
-																					selected={field.value}
-																					onChange={(date: Date | null) =>
-																						field.onChange(date)
-																					}
-																					dateFormat="MM/dd/yyyy"
-																					className="w-full px-3 py-2 bg-white border-slate-300 rounded-md"
-																					placeholderText="Completion date"
-																				/>
-																			</FormControl>
-																			<FormMessage />
-																		</FormItem>
-																	)}
-																/>
-
-																<FormField
-																	control={form.control}
-																	name="digitalSignatureEnvelopeId"
-																	render={({ field }) => (
-																		<FormItem>
-																			<FormLabel className="text-sm text-slate-700 mb-1 block">
-																				Envelope / Packet ID
-																			</FormLabel>
-																			<FormControl>
-																				<Input
-																					placeholder="DocuSign envelope ID"
-																					{...field}
-																					className="bg-white border-slate-300"
-																				/>
-																			</FormControl>
-																			<FormMessage />
-																		</FormItem>
-																	)}
-																/>
-
-																<FormField
-																	control={form.control}
-																	name="accessScope"
-																	render={({ field }) => (
-																		<FormItem>
-																			<FormLabel className="text-sm text-slate-700 mb-1 block">
-																				Access Scope
-																			</FormLabel>
-																			<Select
-																				onValueChange={field.onChange}
-																				value={field.value}
-																			>
-																				<FormControl>
-																					<SelectTrigger className="bg-white border-slate-300">
-																						<SelectValue placeholder="Who can view this?" />
-																					</SelectTrigger>
-																				</FormControl>
-																				<SelectContent>
-																					{ACCESS_SCOPE_OPTIONS.map((scope) => (
-																						<SelectItem
-																							key={scope}
-																							value={scope}
-																						>
-																							{scope}
-																						</SelectItem>
-																					))}
-																				</SelectContent>
-																			</Select>
-																			<FormMessage />
-																		</FormItem>
-																	)}
-																/>
-															</div>
-
-															<div className="grid grid-cols-2 gap-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
-																<FormField
-																	control={form.control}
-																	name="signatureRecipientIds"
-																	render={({ field }) => {
-																		const contacts =
-																			filteredManagers.length > 0
-																				? filteredManagers
-																				: availableManagers;
-																		const selected = (field.value || "")
-																			.split(/[,\n]/)
-																			.map((s: string) => s.trim())
-																			.filter(Boolean);
-																		return (
-																			<FormItem>
-																				<FormLabel className="text-sm text-slate-700 mb-1 block">
-																					Signature Recipients
-																				</FormLabel>
-																				<div className="max-h-40 overflow-y-auto space-y-2 rounded-md border border-slate-200 bg-white p-3">
-																					{contacts.length === 0 ? (
-																						<p className="text-xs text-slate-500">
-																							No department managers available
-																						</p>
-																					) : (
-																						contacts.map((user) => {
-																							const checked = selected.includes(
-																								user.$id,
-																							);
-																							return (
-																								<label
-																									key={user.$id}
-																									className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer"
-																								>
-																									<input
-																										type="checkbox"
-																										className="rounded border-slate-300"
-																										checked={checked}
-																										onChange={() => {
-																											const next = checked
-																												? selected.filter(
-																														(id) =>
-																															id !== user.$id,
-																													)
-																												: [
-																														...selected,
-																														user.$id,
-																													];
-																											field.onChange(
-																												next.join(","),
-																											);
-																										}}
-																									/>
-																									<span>
-																										{user.fullName}
-																										{user.email
-																											? ` (${user.email})`
-																											: ""}
-																									</span>
-																								</label>
-																							);
-																						})
-																					)}
-																				</div>
-																				<FormMessage />
-																			</FormItem>
-																		);
-																	}}
-																/>
-
-																<FormField
-																	control={form.control}
-																	name="visibilityRoles"
-																	render={({ field }) => {
-																		const selected = (field.value || "")
-																			.split(/[,\n]/)
-																			.map((s: string) => s.trim())
-																			.filter(Boolean);
-																		return (
-																			<FormItem>
-																				<FormLabel className="text-sm text-slate-700 mb-1 block">
-																					Visibility Roles
-																				</FormLabel>
-																				<div className="max-h-40 overflow-y-auto space-y-2 rounded-md border border-slate-200 bg-white p-3">
-																					{VISIBILITY_ROLE_OPTIONS.map(
-																						(role) => {
-																							const checked =
-																								selected.includes(role);
-																							return (
-																								<label
-																									key={role}
-																									className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer"
-																								>
-																									<input
-																										type="checkbox"
-																										className="rounded border-slate-300"
-																										checked={checked}
-																										onChange={() => {
-																											const next = checked
-																												? selected.filter(
-																														(r) => r !== role,
-																													)
-																												: [...selected, role];
-																											field.onChange(
-																												next.join(","),
-																											);
-																										}}
-																									/>
-																									<span>{role}</span>
-																								</label>
-																							);
-																						},
-																					)}
-																				</div>
-																				<FormMessage />
-																			</FormItem>
-																		);
-																	}}
 																/>
 															</div>
 														</div>
@@ -6583,10 +6373,6 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 													onEditStep={goToStep}
 													canPreviewFile={Boolean(
 														processedFileData &&
-															(processedFileData.type === "application/pdf" ||
-																processedFileData.name
-																	.toLowerCase()
-																	.endsWith(".pdf")) &&
 															(Boolean(fileBytesRef.current?.byteLength) ||
 																Boolean(
 																	toArrayBuffer(processedFileData.arrayBuffer),
@@ -6869,8 +6655,12 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 					if (!open) closePdfPreview();
 					else setPdfPreviewOpen(true);
 				}}
-				fileName={processedFileData?.name || "Contract PDF"}
+				fileName={processedFileData?.name || "Contract document"}
 				pdfUrl={pdfPreviewUrl}
+				htmlContent={previewHtml}
+				textContent={previewText}
+				downloadOnly={previewDownloadOnly}
+				onDownload={downloadLoadedFile}
 			/>
 		</>
 	);

@@ -41,6 +41,10 @@ import {
 	isRealLicenseExtractionMethod,
 	parseLicenseExtractionJson,
 } from "@/lib/ai/licenseExtractionSchema";
+import {
+	generateDocumentNumber,
+	needsDocumentNumber,
+} from "@/lib/contracts/documentNumber";
 import { refreshStorageUsage } from "@/lib/storage/refreshStorageUsage";
 import { STEP_TITLES, TOTAL_STEPS } from "./constants";
 import { useDraftManagement } from "./hooks/useDraftManagement";
@@ -136,6 +140,7 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 	const [draftToDelete, setDraftToDelete] = useState<string | null>(null);
 	const [isValidating, setIsValidating] = useState(false);
+	const stepScrollRef = useRef<HTMLDivElement | null>(null);
 
 	// Initialize form
 	const { form, processFileSynchronously, extractLicenseData } =
@@ -279,6 +284,12 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 		}
 	};
 
+	useEffect(() => {
+		if (stepScrollRef.current) {
+			stepScrollRef.current.scrollTop = 0;
+		}
+	}, [currentStep]);
+
 	// File drop handling
 	const onDrop = useCallback(
 		async (acceptedFiles: File[]) => {
@@ -341,6 +352,15 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 								parsed.fieldConfidence;
 
 							if (isRealLicenseExtractionMethod(method)) {
+								if (
+									needsDocumentNumber(
+										typeof patch.licenseNumber === "string"
+											? patch.licenseNumber
+											: form.getValues("licenseNumber"),
+									)
+								) {
+									patch.licenseNumber = generateDocumentNumber("LIC");
+								}
 								setAiFilledFields(filledFromApi);
 								setLowConfidenceFields(lowFromApi);
 								setFieldConfidence(confMap);
@@ -365,6 +385,11 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 					} catch (error) {
 						console.error("Failed to extract license data:", error);
 					} finally {
+						if (needsDocumentNumber(form.getValues("licenseNumber"))) {
+							form.setValue("licenseNumber", generateDocumentNumber("LIC"), {
+								shouldDirty: true,
+							});
+						}
 						clearInterval(extractTick);
 						setIsExtracting(false);
 						setFileIngestProgress(100);
@@ -500,7 +525,9 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 				path: "/licenses",
 				licenseMetadata: {
 					licenseName: values.licenseName,
-					licenseNumber: values.licenseNumber || `LIC-${Date.now()}`,
+					licenseNumber: needsDocumentNumber(values.licenseNumber)
+						? generateDocumentNumber("LIC")
+						: values.licenseNumber,
 					licenseType: values.licenseType,
 					category: values.category,
 					// Document uploads always start in review (same as contracts)
@@ -711,7 +738,7 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 					</div>
 
 					{/* Scrollable Content */}
-					<div className="glass-dialog-scroll-area">
+					<div ref={stepScrollRef} className="glass-dialog-scroll-area">
 						<Form {...form}>
 							<form
 								id="license-upload-form"

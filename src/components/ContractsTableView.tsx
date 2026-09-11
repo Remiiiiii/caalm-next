@@ -3,6 +3,7 @@
 import { Loader2 } from "lucide-react";
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ContractApprovalStatusCell } from "@/components/contracts/ContractApprovalStatusCell";
 import { useContractsView } from "@/components/ContractsViewContext";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -16,10 +17,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import type { AppUser } from "@/lib/actions/user.actions";
 import { fetchUserNamesByIds } from "@/lib/actions/user.actions";
-import {
-	getExpiryUrgency,
-	isContractExpired,
-} from "@/lib/contracts/contractsListUtils";
+import { getExpiryUrgency } from "@/lib/contracts/contractsListUtils";
 import {
 	DATA_TABLE_BODY_ROW_CLICKABLE,
 	DATA_TABLE_HEADER_CELL,
@@ -99,41 +97,6 @@ function assignedManagersKey(file: UIFileDoc): string {
 		return String(file.assignedManagers).trim();
 	}
 	return "";
-}
-
-function statusBadge(file: UIFileDoc) {
-	const expired = isContractExpired(file);
-	const status = expired
-		? "expired"
-		: file.lifecycleStatus === "negotiation"
-			? "negotiation"
-			: file.status || "";
-	const labelMap: Record<string, string> = {
-		"pending-review": "Pending Review",
-		"action-required": "Action Required",
-		active: "Active",
-		inactive: "Inactive",
-		expired: "Expired",
-		negotiation: "Negotiation",
-	};
-	const classMap: Record<string, string> = {
-		active: "bg-green/10 text-green border-green/20",
-		"pending-review": "bg-orange/10 text-orange border-orange/20",
-		"action-required": "bg-red/10 text-red border-red/20",
-		inactive: "bg-slate-100 text-slate-600 border-slate-200",
-		expired: "bg-red/10 text-red border-red/20",
-		negotiation: "bg-orange/10 text-orange border-orange/20",
-	};
-	return (
-		<span
-			className={cn(
-				"inline-block px-2 py-0.5 text-xs rounded-full font-medium border",
-				classMap[status] || "bg-slate-100 text-slate-700 border-slate-200",
-			)}
-		>
-			{labelMap[status] || status || "—"}
-		</span>
-	);
 }
 
 function expiryCell(file: UIFileDoc) {
@@ -684,8 +647,15 @@ export default function ContractsTableView({
 									</p>
 								</div>
 							</TableCell>
-							<TableCell className={cn(rowPad, "whitespace-nowrap")}>
-								{statusBadge(file)}
+							<TableCell
+								className={cn(rowPad, "whitespace-nowrap")}
+								onClick={(e) => e.stopPropagation()}
+								onMouseDown={(e) => e.stopPropagation()}
+							>
+								<ContractApprovalStatusCell
+									file={file}
+									onRefresh={onRefresh}
+								/>
 							</TableCell>
 							<TableCell
 								className={cn(

@@ -91,7 +91,6 @@ import {
 	MessageSquareText,
 	PenLine,
 	Pencil,
-	RefreshCw,
 	ScanEye,
 	Share2,
 	Trash2,
@@ -100,7 +99,6 @@ import {
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { ShareInput } from "@/components/ActionsModalContent";
-import ContractApprovalFlowDialog from "@/components/contracts/approval/ContractApprovalFlowDialog";
 import { SendForSignatureDialog } from "@/components/esign/SendForSignatureDialog";
 import { TransferOwnershipDialog } from "@/components/ownership/TransferOwnershipDialog";
 import { PERMISSIONS } from "@/constants/permissions";
@@ -940,11 +938,6 @@ const ActionDropdown = ({
 				</DialogContent>
 			);
 		}
-		// Approval workflow is rendered outside renderDialogContent
-		if (value === "status") {
-			return null;
-		}
-
 		if (value === "review") {
 			return null; // DocumentViewer is rendered separately
 		}
@@ -989,13 +982,6 @@ const ActionDropdown = ({
 					permissions.includes(PERMISSIONS.CONTRACTS.EDIT) ||
 					permissions.includes(PERMISSIONS.CONTRACTS.REVIEW)
 				);
-			case "status":
-				// Workflow viewer: view/review/approve
-				return (
-					permissions.includes(PERMISSIONS.CONTRACTS.VIEW) ||
-					permissions.includes(PERMISSIONS.CONTRACTS.REVIEW) ||
-					permissions.includes(PERMISSIONS.CONTRACTS.APPROVE)
-				);
 			case "sign":
 				return (
 					permissions.includes(PERMISSIONS.CONTRACTS.SIGN) &&
@@ -1020,10 +1006,9 @@ const ActionDropdown = ({
 	});
 
 	// Additional filtering for contract files
-	// Only show Assign and Status for actual contract files
 	if (!isContractFile) {
 		filteredActions = filteredActions.filter(
-			(action) => !["assign", "status", "transfer"].includes(action.value),
+			(action) => !["assign", "transfer"].includes(action.value),
 		);
 	}
 
@@ -1035,10 +1020,10 @@ const ActionDropdown = ({
 		);
 	}
 
-	// If contract is expired, only show: Delete, Details, Download, Status
+	// If contract is expired, only show: Delete, Details, Download
 	if (isContractExpired) {
 		filteredActions = filteredActions.filter((action) =>
-			["delete", "details", "download", "status"].includes(action.value),
+			["delete", "details", "download"].includes(action.value),
 		);
 	}
 
@@ -1052,7 +1037,7 @@ const ActionDropdown = ({
 	return (
 		<>
 			<Dialog
-				open={isModalOpen && action?.value !== "status"}
+				open={isModalOpen}
 				onOpenChange={(open) => {
 					setIsModalOpen(open);
 					if (!open) setDeleteConfirmed(false);
@@ -1080,7 +1065,6 @@ const ActionDropdown = ({
 								share: Share2,
 								delete: Trash2,
 								details: Info,
-								status: RefreshCw,
 								sign: PenLine,
 								download: Download,
 								review: ScanEye,
@@ -1213,7 +1197,6 @@ const ActionDropdown = ({
 												"delete",
 												"share",
 												"details",
-												"status",
 											].includes(actionItem.value)
 										) {
 											setIsModalOpen(true);
@@ -1271,18 +1254,6 @@ const ActionDropdown = ({
 					/>
 				) : null}
 			</Dialog>
-			<ContractApprovalFlowDialog
-				open={isModalOpen && action?.value === "status"}
-				onOpenChange={(open) => {
-					if (!open) {
-						closeAllModals();
-						onStatusChange?.();
-						onRefresh?.();
-					}
-				}}
-				contractId={String(file.contractId || file.$id)}
-				contractName={file.contractName || file.name}
-			/>
 			<SendForSignatureDialog
 				open={showSign}
 				onOpenChange={setShowSign}

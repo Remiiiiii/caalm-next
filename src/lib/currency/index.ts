@@ -57,6 +57,23 @@ export function currencySelectOptions(
 	}));
 }
 
+/** Narrow symbol for the selected ISO code (USD → $). */
+export function currencySymbol(code?: string | null): string {
+	const normalized = normalizeCurrencyCode(code);
+	try {
+		const part = new Intl.NumberFormat("en-US", {
+			style: "currency",
+			currency: normalized,
+			currencyDisplay: "narrowSymbol",
+		})
+			.formatToParts(0)
+			.find((entry) => entry.type === "currency");
+		return part?.value || "$";
+	} catch {
+		return "$";
+	}
+}
+
 export function parseMoneyAmount(
 	raw: string | number | undefined | null,
 ): number | null {

@@ -172,3 +172,41 @@ export async function findLatestEnvelopeForResource(
 	const row = result.rows?.[0] as EnvelopeRow | undefined;
 	return row ? rowToEnvelope(row) : null;
 }
+
+const ENVELOPE_ID_BATCH = 80;
+
+export async function getEnvelopesByIds(
+	ids: string[],
+): Promise<EsignEnvelope[]> {
+	const unique = [...new Set(ids.filter(Boolean))];
+	if (unique.length === 0) return [];
+	try {
+		const { tablesDB } = await createAdminClient();
+		const envelopes: EsignEnvelope[] = [];
+		for (let i = 0; i < unique.length; i += ENVELOPE_ID_BATCH) {
+			const batch = unique.slice(i, i + ENVELOPE_ID_BATCH);
+			const queries =
+				batch.length === 1
+					? [Query.equal("$id", batch[0]), Query.limit(batch.length)]
+					: [
+							Query.or(batch.map((id) => Query.equal("$id", id))),
+							Query.limit(batch.length),
+						];
+			const result = await tablesDB.listRows({
+				databaseId: appwriteConfig.databaseId!,
+				tableId: tableId(),
+				queries,
+			});
+			for (const row of result.rows as EnvelopeRow[]) {
+				envelopes.push(rowToEnvelope(row));
+			}
+		}
+		return envelopes;
+	} catch (error) {
+		console.warn(
+			"[esign] getEnvelopesByIds failed:",
+			error instanceof Error ? error.message : error,
+		);
+		return [];
+	}
+}

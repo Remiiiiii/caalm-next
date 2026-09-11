@@ -13,6 +13,7 @@ import {
 } from "@/components/contract-upload/AiExtractionReview";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import { CurrencyAmountInput } from "@/components/ui/currency-amount-input";
 import { CurrencySelect } from "@/components/ui/currency-select";
 import {
 	FormControl,
@@ -36,6 +37,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { currencySymbol } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 import { CATEGORIES, COMPLIANCE_STATUSES, LICENSE_TYPES } from "../constants";
 import type { LicenseUploadFormData } from "../schema";
@@ -463,12 +465,11 @@ export default function Step2LicenseDetails({
 									<AiHint name="cost" />
 								</FormLabel>
 								<FormControl>
-									<Input
-										type="text"
+									<CurrencyAmountInput
+										symbol={currencySymbol(form.watch("currencyCode"))}
 										placeholder="0.00"
-										{...field}
 										value={field.value || ""}
-										className="bg-white border-slate-300"
+										onChange={field.onChange}
 									/>
 								</FormControl>
 								<FormMessage />

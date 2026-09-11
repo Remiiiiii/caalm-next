@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { extractJsonObjectFromModelText } from "./contractTypeSuggestionSchema";
+import { isTemplateTokenValue } from "./scrubTemplateTokens";
 
 export const CONTRACT_EXTRACTION_METHOD = {
 	gemini: "gemini-structured",
@@ -162,20 +163,6 @@ export type ParsedContractExtraction = {
 	fieldConfidence: Partial<Record<ExtractableContractField, number>>;
 	filledFieldNames: ExtractableContractField[];
 	lowConfidenceFields: ExtractableContractField[];
-};
-
-const LIFECYCLE_MAP: Record<string, string> = {
-	draft: "draft",
-	"under review": "under_review",
-	under_review: "under_review",
-	underreview: "under_review",
-	approved: "approved",
-	active: "active",
-	expired: "expired",
-	terminated: "terminated",
-	"on hold": "on_hold",
-	on_hold: "on_hold",
-	onhold: "on_hold",
 };
 
 const RISK_MAP: Record<string, string> = {
@@ -374,9 +361,7 @@ export function parseContractExtractionJson(
 		fields.assignToDepartment = data.assignToDepartment;
 	}
 
-	const lifecycle = mapEnum(data.lifecycleStatus, LIFECYCLE_MAP);
-	if (lifecycle) fields.lifecycleStatus = lifecycle;
-
+	// Uploads always start as draft; workflow owns later statuses.
 	const start = normalizeDateString(data.startDate);
 	if (start) fields.startDate = start;
 	const execution = normalizeDateString(data.executionDate);
@@ -465,6 +450,13 @@ export function parseContractExtractionJson(
 		if (typeof val === "boolean") fields[key] = val;
 	}
 
+	for (const key of Object.keys(fields) as ExtractableContractField[]) {
+		const value = fields[key];
+		if (typeof value === "string" && isTemplateTokenValue(value)) {
+			delete fields[key];
+		}
+	}
+
 	const fieldConfidence: ParsedContractExtraction["fieldConfidence"] = {};
 	const rawConf = data.fieldConfidence || {};
 	for (const key of EXTRACTABLE_CONTRACT_FIELDS) {
@@ -522,6 +514,7 @@ export function buildFormPatchFromExtraction(
 
 	for (const [key, value] of Object.entries(fields)) {
 		if (value === undefined || value === "") continue;
+		if (key === "lifecycleStatus") continue;
 		if (
 			key === "startDate" ||
 			key === "executionDate" ||

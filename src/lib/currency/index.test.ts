@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
 	convertToUsd,
 	currencySelectOptions,
+	currencySymbol,
 	formatUsdAmount,
 	normalizeCurrencyCode,
 	parseMoneyAmount,
@@ -26,6 +27,11 @@ describe("currency helpers", () => {
 		expect(normalizeCurrencyCode("")).toBe("USD");
 		expect(normalizeCurrencyCode("other")).toBe("USD");
 		expect(normalizeCurrencyCode("eur")).toBe("EUR");
+	});
+
+	it("returns a narrow currency symbol", () => {
+		expect(currencySymbol("USD")).toBe("$");
+		expect(currencySymbol("EUR")).toBe("€");
 	});
 
 	it("parses typed money strings", () => {
