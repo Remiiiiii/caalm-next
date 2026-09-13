@@ -13,6 +13,7 @@ import {
 import {
 	decide,
 	getWorkflowForViewer,
+	overrideCompletedWorkflow,
 } from "@/lib/approvals/ContractApprovalWorkflowService";
 import type { ApprovalDecision } from "@/lib/approvals/contractApprovalWorkflow.types";
 import {
@@ -75,20 +76,39 @@ export async function POST(
 		const before = await getWorkflowForViewer(contractId, viewerUserId, {
 			isAdminOverride,
 		});
-		if (!before.canDecide && !isAdminOverride) {
+		if (
+			!before.canDecideAsAssignee &&
+			!before.canAdminOverrideActiveStep &&
+			!before.canAdminOverrideCompleted
+		) {
 			return forbiddenResponse(
 				"You cannot decide the current approval step",
 				requestId,
 			);
 		}
 
-		const result = await decide({
-			contractId,
-			viewerUserId,
-			decision,
-			notes,
-			adminOverride: isAdminOverride && !before.canDecide,
-		});
+		if (decision === "rejected" && !before.canReject) {
+			return forbiddenResponse(
+				"Department managers can request changes or approve, but cannot reject",
+				requestId,
+			);
+		}
+
+		const result = before.canAdminOverrideCompleted
+			? await overrideCompletedWorkflow({
+					contractId,
+					viewerUserId,
+					decision,
+					notes: notes || "",
+				})
+			: await decide({
+					contractId,
+					viewerUserId,
+					decision,
+					notes,
+					adminOverride:
+						isAdminOverride && !before.canDecideAsAssignee,
+				});
 
 		revalidatePath(path);
 		revalidatePath("/contracts");

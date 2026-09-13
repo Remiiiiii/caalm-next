@@ -11,6 +11,7 @@ import {
 	type ExpirationAttestation,
 	REASON_CATEGORY_LABELS,
 } from "@/lib/approvals/expirationAttestation.types";
+import { toUserFacingErrorMessage } from "@/lib/errors/user-facing";
 
 interface ExpirationAttestationReviewDialogProps {
 	open: boolean;
@@ -52,7 +53,10 @@ export function ExpirationAttestationReviewDialog({
 		} catch (error) {
 			toast({
 				title: "Could not review",
-				description: error instanceof Error ? error.message : "Try again",
+				description: toUserFacingErrorMessage(
+					error,
+					"Could not complete the review. Please try again.",
+				),
 				variant: "destructive",
 			});
 		} finally {

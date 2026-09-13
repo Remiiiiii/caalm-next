@@ -239,7 +239,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 			});
 			return;
 		}
-		if (!selectedManagers?.length) {
+		if (filteredManagers.length > 0 && !selectedManagers?.length) {
 			toast({
 				title: "Department manager required",
 				description: "Select at least one department manager before upload.",
@@ -637,7 +637,10 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 								<Button
 									type="button"
 									onClick={nextStep}
-									disabled={currentStep === 1 && !processedFileData}
+									disabled={
+										currentStep === 1 &&
+										(!processedFileData || isExtracting)
+									}
 									className="primary-btn flex items-center gap-2"
 								>
 									Next

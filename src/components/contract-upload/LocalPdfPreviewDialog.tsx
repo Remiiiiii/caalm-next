@@ -3,6 +3,7 @@
 import {
 	ChevronLeft,
 	ChevronRight,
+	Download,
 	FileText,
 	Minus,
 	Plus,
@@ -12,6 +13,7 @@ import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Document, Page, pdfjs } from "react-pdf";
 import { Button } from "@/components/ui/button";
+import "@/lib/templates/docx-preview.css";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 
@@ -24,6 +26,10 @@ type LocalPdfPreviewDialogProps = {
 	fileName: string;
 	/** Object URL or data URL for the PDF */
 	pdfUrl: string | null;
+	htmlContent?: string | null;
+	textContent?: string | null;
+	downloadOnly?: boolean;
+	onDownload?: () => void;
 };
 
 /**
@@ -35,6 +41,10 @@ export default function LocalPdfPreviewDialog({
 	onOpenChange,
 	fileName,
 	pdfUrl,
+	htmlContent = null,
+	textContent = null,
+	downloadOnly = false,
+	onDownload,
 }: LocalPdfPreviewDialogProps) {
 	const [numPages, setNumPages] = useState(0);
 	const [pageNumber, setPageNumber] = useState(1);
@@ -79,7 +89,7 @@ export default function LocalPdfPreviewDialog({
 			className="pointer-events-auto fixed inset-0 z-[100000] flex items-center justify-center p-3 sm:p-6"
 			role="dialog"
 			aria-modal="true"
-			aria-label={fileName || "PDF preview"}
+			aria-label={fileName || "Document preview"}
 			data-pdf-preview=""
 		>
 			<div
@@ -96,7 +106,7 @@ export default function LocalPdfPreviewDialog({
 						<div className="flex min-w-0 items-center gap-3">
 							<FileText className="h-5 w-5 shrink-0 text-[#0f5384]" />
 							<h2 className="truncate text-xl font-semibold sidebar-gradient-text">
-								{fileName || "PDF preview"}
+								{fileName || "Document preview"}
 							</h2>
 						</div>
 						<Button
@@ -179,7 +189,34 @@ export default function LocalPdfPreviewDialog({
 				)}
 
 				<div className="min-h-0 flex-1 overflow-auto bg-slate-50 p-4">
-					{pdfUrl ? (
+					{downloadOnly ? (
+						<div className="flex min-h-[min(40vh,360px)] flex-col items-center justify-center gap-3 text-center">
+							<p className="text-sm text-slate-600">
+								This file type can&apos;t be opened in the browser. Download it
+								to view it on your computer.
+							</p>
+							{onDownload ? (
+								<Button
+									type="button"
+									className="btn-primary px-3 sm:px-4"
+									onClick={onDownload}
+								>
+									<Download className="h-4 w-4" />
+									Download
+								</Button>
+							) : null}
+						</div>
+					) : htmlContent ? (
+						<div
+							className="docx-preview min-h-[min(50vh,480px)] rounded-md border border-slate-200 bg-white p-6 text-slate-700"
+							// Local mammoth HTML from the file the user just picked.
+							dangerouslySetInnerHTML={{ __html: htmlContent }}
+						/>
+					) : textContent !== null && textContent !== undefined ? (
+						<pre className="min-h-[min(50vh,480px)] whitespace-pre-wrap rounded-md border border-slate-200 bg-white p-4 text-sm text-slate-700">
+							{textContent || "This file is empty."}
+						</pre>
+					) : pdfUrl ? (
 						<div className="flex min-h-[min(70vh,720px)] justify-center">
 							<Document
 								file={pdfUrl}
@@ -210,7 +247,7 @@ export default function LocalPdfPreviewDialog({
 						</div>
 					) : (
 						<div className="flex h-[min(50vh,480px)] items-center justify-center text-sm text-slate-500">
-							No PDF available to preview
+							No document available to preview
 						</div>
 					)}
 				</div>

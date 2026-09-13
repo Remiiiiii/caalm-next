@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import ContractsDisplay from "@/components/ContractsDisplay";
+import { MEDIA_URLS } from "@/lib/media/urls";
 
 export const metadata: Metadata = {
 	title: "Advanced Resources - Government Contracts | CAALM",
@@ -18,7 +19,7 @@ export default function AdvancedResourcesPage() {
 				playsInline
 				className="fixed inset-0 w-full h-full object-cover z-[-10] opacity-60 pointer-events-none"
 			>
-				<source src="/assets/video/wave.mp4" type="video/mp4" />
+				<source src={MEDIA_URLS.waveVideo} type="video/mp4" />
 			</video>
 
 			{/* Main Content */}

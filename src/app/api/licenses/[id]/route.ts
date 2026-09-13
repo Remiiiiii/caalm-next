@@ -11,6 +11,7 @@ import {
 	notFoundResponse,
 	successResponse,
 } from "@/lib/api/licenses/utils/response.util";
+import { requireStepUpForSession } from "@/lib/auth/step-up";
 import { requirePermission } from "@/lib/rbac/middleware";
 import { logAuditEvent } from "@/lib/services/audit-logger";
 
@@ -128,6 +129,9 @@ export async function DELETE(
 			permission: PERMISSIONS.LICENSES.DELETE,
 		});
 		if (permissionCheck) return permissionCheck;
+
+		const stepUpCheck = await requireStepUpForSession(request);
+		if (stepUpCheck) return stepUpCheck;
 
 		const { id } = await params;
 		const user = await getCurrentUser();

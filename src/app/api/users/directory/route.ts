@@ -2,11 +2,14 @@ import { type NextRequest, NextResponse } from "next/server";
 import { Query } from "node-appwrite";
 import { PERMISSIONS } from "@/constants/permissions";
 import { createAdminClient } from "@/lib/appwrite";
+import { flattenTableRow } from "@/lib/appwrite/flatten-row";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { getOrgIdFromRequest, requirePermission } from "@/lib/rbac/middleware";
 
 export type ShareDirectoryUser = {
 	$id: string;
+	/** Auth account id used for assignees / delegations when present. */
+	accountId?: string | null;
 	fullName: string;
 	email: string;
 	department: string;
@@ -60,7 +63,8 @@ export async function GET(request: NextRequest) {
 		}
 
 		const users = rows
-			.map((user) => {
+			.map((raw) => {
+				const user = flattenTableRow(raw);
 				const email = String(user.email || "").trim();
 				const status = String(user.status || "active").toLowerCase();
 				if (!email || status === "inactive" || status === "suspended") {
@@ -73,7 +77,8 @@ export async function GET(request: NextRequest) {
 					avatarRaw &&
 					!avatarRaw.startsWith("/") &&
 					!/^https?:\/\//i.test(avatarRaw) &&
-					!avatarRaw.includes("avatar-placeholder")
+					!avatarRaw.includes("avatar-placeholder") &&
+					!avatarRaw.includes("3d-illustration-person-with-sunglasses")
 						? avatarRaw
 						: profileImageId || null;
 				const avatar =
@@ -85,6 +90,7 @@ export async function GET(request: NextRequest) {
 						: null;
 				const entry: ShareDirectoryUser = {
 					$id: String(user.$id || ""),
+					accountId: String(user.accountId || "").trim() || null,
 					fullName: String(user.fullName || "Unknown").trim() || "Unknown",
 					email,
 					department:

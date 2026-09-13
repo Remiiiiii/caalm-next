@@ -67,6 +67,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useCombinedExpiryModal } from "@/hooks/useCombinedExpiryModal";
 import { useUnifiedDashboardData } from "@/hooks/useUnifiedDashboardData";
 import { cn } from "@/lib/utils";
+import { MEDIA_URLS } from "@/lib/media/urls";
 import type { UIFileDoc } from "@/types/files";
 import { resolveInviteDepartment } from "../../../../constants";
 
@@ -756,7 +757,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 				playsInline
 				className="fixed inset-0 w-full h-full object-cover z-[-10] opacity-60 pointer-events-none"
 			>
-				<source src="/assets/video/wave.mp4" type="video/mp4" />
+				<source src={MEDIA_URLS.waveVideo} type="video/mp4" />
 			</video>
 			{/* Main Content Container */}
 			<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
@@ -1137,6 +1138,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 												<SelectItem value="Organization Admin">
 													Organization Admin
 												</SelectItem>
+												<SelectItem value="Executive">Executive</SelectItem>
 												<SelectItem value="Department Manager">
 													Department Manager
 												</SelectItem>

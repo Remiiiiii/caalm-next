@@ -9,6 +9,7 @@ export type RoleTemplateId =
 	| "blank"
 	| "viewer"
 	| "contract_reviewer"
+	| "executive"
 	| "department_manager"
 	| "content_creator"
 	| "it_operator";
@@ -55,6 +56,28 @@ export const ROLE_TEMPLATES: RoleTemplate[] = [
 			PERMISSIONS.FUNDING.VIEW,
 			PERMISSIONS.CLAUSES.VIEW,
 			PERMISSIONS.CONTRACT_TEMPLATES.VIEW,
+		],
+	},
+	{
+		id: "executive",
+		name: "Executive",
+		description:
+			"Final business approver for executive workflow steps; not org admin.",
+		permissionKeys: [
+			PERMISSIONS.CALENDAR.VIEW_TEAM,
+			PERMISSIONS.CONTRACTS.VIEW,
+			PERMISSIONS.CONTRACTS.VIEW_ALL,
+			PERMISSIONS.CONTRACTS.REVIEW,
+			PERMISSIONS.CONTRACTS.APPROVE,
+			PERMISSIONS.LICENSES.VIEW,
+			PERMISSIONS.LICENSES.VIEW_ALL,
+			PERMISSIONS.LICENSES.APPROVE,
+			PERMISSIONS.FUNDING.VIEW,
+			PERMISSIONS.CLAUSES.VIEW,
+			PERMISSIONS.CONTRACT_TEMPLATES.VIEW,
+			PERMISSIONS.AUDIT.VIEW,
+			PERMISSIONS.NEWS.READ,
+			PERMISSIONS.AI.CHAT,
 		],
 	},
 	{

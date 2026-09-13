@@ -89,7 +89,7 @@ describe("golden grant agreement extraction parse", () => {
 		expect(parsed.fields.notToExceedAmount).toBe("487500");
 		expect(parsed.fields.expiryDate).toBe("2027-09-30");
 		expect(parsed.fields.startDate).toBe("2026-10-01");
-		expect(parsed.fields.lifecycleStatus).toBe("under_review");
+		expect(parsed.fields.lifecycleStatus).toBeUndefined();
 		expect(parsed.fields.riskLevel).toBe("high");
 		expect(parsed.fields.paymentTerms).toBe("net_30");
 		expect(parsed.fields.paymentSchedule).toBe("quarterly");
@@ -120,5 +120,18 @@ describe("golden grant agreement extraction parse", () => {
 		expect((patch.expiryDate as Date).getDate()).toBe(30);
 		expect(patch.amount).toBe("487500");
 		expect(patch.counterpartyLegalName).toContain("Miami Community");
+		expect(patch.lifecycleStatus).toBeUndefined();
+	});
+
+	it("drops leftover {{TOKEN}} strings instead of saving them", () => {
+		const parsed = parseContractExtractionJson(
+			JSON.stringify({
+				...GOLDEN_GRANT_EXTRACTION,
+				counterpartyLegalName: "{{CONTRACTOR_NAME}}",
+				counterpartyContactName: "{{CONTRACTOR_SIGNEE_NAME}}",
+			}),
+		);
+		expect(parsed.fields.counterpartyLegalName).toBeUndefined();
+		expect(parsed.fields.counterpartyContactName).toBeUndefined();
 	});
 });

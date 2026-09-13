@@ -89,8 +89,8 @@ import {
 	FolderPen,
 	Info,
 	MessageSquareText,
+	PenLine,
 	Pencil,
-	RefreshCw,
 	ScanEye,
 	Share2,
 	Trash2,
@@ -99,9 +99,10 @@ import {
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { ShareInput } from "@/components/ActionsModalContent";
-import ContractApprovalFlowDialog from "@/components/contracts/approval/ContractApprovalFlowDialog";
+import { SendForSignatureDialog } from "@/components/esign/SendForSignatureDialog";
 import { TransferOwnershipDialog } from "@/components/ownership/TransferOwnershipDialog";
 import { PERMISSIONS } from "@/constants/permissions";
+import { useStepUp } from "@/contexts/StepUpContext";
 import { useDepartmentAssignment } from "@/hooks/useDepartmentAssignment";
 import { usePermissions } from "@/hooks/usePermissions";
 import {
@@ -149,6 +150,7 @@ const ActionDropdown = ({
 	const [emails, setEmails] = useState<string[]>([]);
 	const [downloading, setDownloading] = useState(false);
 	const [showTransfer, setShowTransfer] = useState(false);
+	const [showSign, setShowSign] = useState(false);
 
 	// Initialize emails from file.users when share dialog opens
 	useEffect(() => {
@@ -186,6 +188,7 @@ const ActionDropdown = ({
 	const router = useRouter();
 	const [isViewerOpen, setIsViewerOpen] = useState(false);
 	const { permissions } = usePermissions();
+	const { ensureStepUp } = useStepUp();
 
 	const filePreviewKind = React.useMemo(
 		() =>
@@ -216,6 +219,12 @@ const ActionDropdown = ({
 
 	const handleAction = async () => {
 		if (!action) return;
+
+		// Contract deletes require a fresh email OTP (step-up) before the server accepts them.
+		if (action.value === "delete" && file.contractId) {
+			if (!(await ensureStepUp())) return;
+		}
+
 		setIsLoading(true);
 		let success = false;
 
@@ -929,11 +938,6 @@ const ActionDropdown = ({
 				</DialogContent>
 			);
 		}
-		// Approval workflow is rendered outside renderDialogContent
-		if (value === "status") {
-			return null;
-		}
-
 		if (value === "review") {
 			return null; // DocumentViewer is rendered separately
 		}
@@ -978,12 +982,10 @@ const ActionDropdown = ({
 					permissions.includes(PERMISSIONS.CONTRACTS.EDIT) ||
 					permissions.includes(PERMISSIONS.CONTRACTS.REVIEW)
 				);
-			case "status":
-				// Workflow viewer: view/review/approve
+			case "sign":
 				return (
-					permissions.includes(PERMISSIONS.CONTRACTS.VIEW) ||
-					permissions.includes(PERMISSIONS.CONTRACTS.REVIEW) ||
-					permissions.includes(PERMISSIONS.CONTRACTS.APPROVE)
+					permissions.includes(PERMISSIONS.CONTRACTS.SIGN) &&
+					file.status === "pending-signature"
 				);
 			case "assign":
 				// Assign requires contracts.edit
@@ -1004,10 +1006,9 @@ const ActionDropdown = ({
 	});
 
 	// Additional filtering for contract files
-	// Only show Assign and Status for actual contract files
 	if (!isContractFile) {
 		filteredActions = filteredActions.filter(
-			(action) => !["assign", "status", "transfer"].includes(action.value),
+			(action) => !["assign", "transfer"].includes(action.value),
 		);
 	}
 
@@ -1019,10 +1020,10 @@ const ActionDropdown = ({
 		);
 	}
 
-	// If contract is expired, only show: Delete, Details, Download, Status
+	// If contract is expired, only show: Delete, Details, Download
 	if (isContractExpired) {
 		filteredActions = filteredActions.filter((action) =>
-			["delete", "details", "download", "status"].includes(action.value),
+			["delete", "details", "download"].includes(action.value),
 		);
 	}
 
@@ -1036,7 +1037,7 @@ const ActionDropdown = ({
 	return (
 		<>
 			<Dialog
-				open={isModalOpen && action?.value !== "status"}
+				open={isModalOpen}
 				onOpenChange={(open) => {
 					setIsModalOpen(open);
 					if (!open) setDeleteConfirmed(false);
@@ -1064,7 +1065,7 @@ const ActionDropdown = ({
 								share: Share2,
 								delete: Trash2,
 								details: Info,
-								status: RefreshCw,
+								sign: PenLine,
 								download: Download,
 								review: ScanEye,
 								negotiate: MessageSquareText,
@@ -1182,6 +1183,11 @@ const ActionDropdown = ({
 											setShowTransfer(true);
 											return;
 										}
+										if (actionItem.value === "sign") {
+											const id = file.contractId || file.$id;
+											if (id) router.push(`/esign/prepare/contract/${id}`);
+											return;
+										}
 										if (actionItem.value === "review") {
 											setIsViewerOpen(true);
 										} else if (
@@ -1191,7 +1197,6 @@ const ActionDropdown = ({
 												"delete",
 												"share",
 												"details",
-												"status",
 											].includes(actionItem.value)
 										) {
 											setIsModalOpen(true);
@@ -1249,17 +1254,17 @@ const ActionDropdown = ({
 					/>
 				) : null}
 			</Dialog>
-			<ContractApprovalFlowDialog
-				open={isModalOpen && action?.value === "status"}
-				onOpenChange={(open) => {
-					if (!open) {
-						closeAllModals();
-						onStatusChange?.();
-						onRefresh?.();
-					}
+			<SendForSignatureDialog
+				open={showSign}
+				onOpenChange={setShowSign}
+				resourceType="contract"
+				resourceId={String(file.contractId || file.$id)}
+				title={file.contractName || file.name || "Contract"}
+				documentFileId={file.bucketFileId}
+				onSent={() => {
+					onRefresh?.();
+					onStatusChange?.();
 				}}
-				contractId={String(file.contractId || file.$id)}
-				contractName={file.contractName || file.name}
 			/>
 			{(file.contractId || file.$id) && (
 				<TransferOwnershipDialog

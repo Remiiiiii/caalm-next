@@ -12,13 +12,29 @@ import {
 import { resolveAttestationId } from "@/lib/approvals/resolveAttestationId";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { flattenTableRow } from "@/lib/appwrite/flatten-row";
 import { writeRowWithSchemaDriftRecovery } from "@/lib/appwrite/schemaDriftRecovery";
 import { isDemoMode } from "@/lib/config/demo-mode";
 import { getUserRoles, hasPermission } from "@/lib/rbac/permissions";
-import { getProfilePictureUrl } from "@/lib/utils";
+import { ROLE_PRIORITY_ORDER } from "@/lib/utils/role-priority";
+import { logAuditEvent } from "@/lib/services/audit-logger";
+import { notifyApprovalAssignees } from "@/lib/approvals/approvalNotifications";
+import {
+	applyDelegationsToAssignees,
+	listActiveDelegations,
+} from "@/lib/approvals/approvalDelegations";
+import { isAssigneeMatch, userIdentityKeys } from "@/lib/approvals/assigneeIdentity";
+import { resolveAvatarDisplayUrl } from "@/lib/utils";
+import { computeViewerCapabilities, emptyViewerFlags } from "@/lib/approvals/viewerCapabilities";
+import { advanceWorkflowAfterApprove } from "@/lib/approvals/workflowAdvance";
+import {
+	buildStepsFromTemplate,
+	resolveTemplateForSubmit,
+} from "@/lib/approvals/workflowTemplates";
 import {
 	getAllAdmins,
 	getAllExecutives,
+	getAllSuperAdmins,
 	getUsersByRoleNames,
 } from "@/lib/utils/get-users-by-role";
 import { triggerNotification } from "@/lib/utils/notificationTriggers";
@@ -48,6 +64,13 @@ type ContractRow = Record<string, unknown> & {
 	assignedManagers?: string[];
 	internalApproverIds?: string[];
 	approvalWorkflowState?: string;
+	digitalSignatureRequired?: boolean | string;
+	amount?: number;
+	contractType?: string;
+	riskTier?: string;
+	fileRef?: string;
+	fileId?: string;
+	documentUrl?: string;
 };
 
 export type BuildDerivedStepsInput = {
@@ -64,8 +87,39 @@ function uniqueIds(ids: Array<string | undefined | null>): string[] {
 	];
 }
 
+function optionalRowString(value: unknown): string | undefined {
+	const text = String(value || "").trim();
+	return text || undefined;
+}
+
 function stepId(kind: string, index: number): string {
 	return `${kind}-${index}`;
+}
+
+/**
+ * When parallel siblings are all "current", pick the step this viewer
+ * can act on. Falls back to currentStepIndex for sequential flows.
+ */
+export function resolveViewerCurrentStep(
+	state: ApprovalWorkflowState,
+	viewerIdentityIds: string[],
+): { index: number; step: ApprovalWorkflowStep | undefined } {
+	const currentSteps = state.steps
+		.map((step, index) => ({ step, index }))
+		.filter(({ step }) => step.status === "current");
+
+	const matched = currentSteps.find(({ step }) =>
+		isAssigneeMatch(step.assigneeUserIds, viewerIdentityIds),
+	);
+	if (matched) {
+		return { index: matched.index, step: matched.step };
+	}
+
+	const fallback = state.steps[state.currentStepIndex];
+	return {
+		index: state.currentStepIndex,
+		step: fallback,
+	};
 }
 
 /**
@@ -76,11 +130,13 @@ export function assertDecisionAllowed({
 	viewerUserId,
 	uploaderUserId,
 	adminOverride = false,
+	viewerIdentityIds,
 }: {
 	current: ApprovalWorkflowStep | undefined;
 	viewerUserId: string;
 	uploaderUserId: string;
 	adminOverride?: boolean;
+	viewerIdentityIds?: string[];
 }): void {
 	if (!current || current.status !== "current") {
 		throw new Error("No active approval step");
@@ -89,19 +145,23 @@ export function assertDecisionAllowed({
 		throw new Error("This step cannot be decided");
 	}
 
-	const isAssignee = current.assigneeUserIds.includes(viewerUserId);
+	const viewerIds = [viewerUserId, ...(viewerIdentityIds || [])];
+	const isAssignee = isAssigneeMatch(current.assigneeUserIds, viewerIds);
 	if (!isAssignee && !adminOverride) {
 		throw new Error("You are not an assignee for the current approval step");
 	}
 
+	const isUploader = isAssigneeMatch([uploaderUserId], viewerIds);
 	if (
-		current.kind === "executive_approval" &&
-		viewerUserId === uploaderUserId &&
+		isUploader &&
 		!adminOverride &&
-		!isDemoMode()
+		!isDemoMode() &&
+		(current.kind === "department_review" ||
+			current.kind === "internal_approval" ||
+			current.kind === "executive_approval")
 	) {
 		throw new Error(
-			"Uploader cannot approve their own contract at executive step",
+			"Uploader cannot approve their own submission at this step",
 		);
 	}
 }
@@ -113,9 +173,10 @@ export function assertDecisionAllowed({
 export function resolveStatusAfterApprove(
 	currentKind: ApprovalWorkflowStep["kind"],
 	nextKind?: ApprovalWorkflowStep["kind"],
+	options?: { digitalSignatureRequired?: boolean },
 ): string {
 	if (currentKind === "executive_approval") {
-		return "active";
+		return options?.digitalSignatureRequired ? "pending-signature" : "active";
 	}
 	if (nextKind === "activated") {
 		throw new Error("Executive approval is required before activation");
@@ -129,7 +190,7 @@ export function assigneeHintForKind(
 	switch (kind) {
 		case "executive_approval":
 		case "awaiting_executive":
-			return "Super Admin or Organization Admin";
+			return "Executive role";
 		case "department_review":
 			return "Assigned department manager";
 		case "activated":
@@ -242,16 +303,17 @@ export function assertReassignAllowed({
 	}
 }
 
-/** Pure: apply new assignees to the current step (upgrades awaiting_executive). */
+/** Pure: apply new assignees to a step (defaults to currentStepIndex). */
 export function applyReassignToCurrentStep(
 	state: ApprovalWorkflowState,
 	assigneeUserIds: string[],
+	stepIndex = state.currentStepIndex,
 ): ApprovalWorkflowState {
 	const assignees = uniqueIds(assigneeUserIds);
 	if (assignees.length === 0) {
 		throw new Error("At least one assignee is required");
 	}
-	const idx = state.currentStepIndex;
+	const idx = stepIndex;
 	const current = state.steps[idx];
 	if (!current) throw new Error("No active approval step to reassign");
 
@@ -281,6 +343,7 @@ export function applyReassignToCurrentStep(
 	return {
 		...state,
 		steps,
+		currentStepIndex: idx,
 		derivedAt: new Date().toISOString(),
 	};
 }
@@ -311,8 +374,17 @@ function toReassignCandidate(
 		fullName: String(user.fullName || "Unknown").trim() || "Unknown",
 		email: String(user.email || "").trim(),
 		roleLabel,
+		roleLabels: [roleLabel],
 		profileImageUrl: resolveParticipantImageUrl(user),
 	};
+}
+
+function sortRoleLabels(labels: string[]): string[] {
+	const rank = (name: string) => {
+		const idx = (ROLE_PRIORITY_ORDER as readonly string[]).indexOf(name);
+		return idx === -1 ? 5000 : idx;
+	};
+	return [...labels].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
 }
 
 /** Eligible assignees for the current step (executives vs department managers). */
@@ -343,12 +415,8 @@ export async function buildReassignCandidates(
 	};
 
 	if (stepKind === "executive_approval" || stepKind === "awaiting_executive") {
-		const [execs, admins] = await Promise.all([
-			getAllExecutives(orgId),
-			getAllAdmins(orgId),
-		]);
-		add(execs || [], "Super Admin");
-		add(admins || [], "Organization Admin");
+		const execs = await getAllExecutives(orgId);
+		add(execs || [], "Executive");
 	} else if (
 		stepKind === "department_review" ||
 		stepKind === "internal_approval"
@@ -361,7 +429,34 @@ export async function buildReassignCandidates(
 		add(managers || [], "Department Manager");
 	}
 
-	return [...byId.values()].sort((a, b) =>
+	const enriched = await Promise.all(
+		[...byId.values()].map(async (candidate) => {
+			try {
+				const roles = await getUserRoles(candidate.userId, orgId);
+				const fromDb = roles
+					.map((r) => String(r.roleName || "").trim())
+					.filter(Boolean);
+				const labels = sortRoleLabels([
+					...new Set(
+						fromDb.length > 0
+							? fromDb
+							: [candidate.roleLabel].filter(Boolean),
+					),
+				]);
+				return {
+					...candidate,
+					roleLabels: labels,
+					roleLabel: labels.includes(candidate.roleLabel)
+						? candidate.roleLabel
+						: labels[0] || candidate.roleLabel,
+				};
+			} catch {
+				return candidate;
+			}
+		}),
+	);
+
+	return enriched.sort((a, b) =>
 		a.fullName.localeCompare(b.fullName, undefined, { sensitivity: "base" }),
 	);
 }
@@ -390,6 +485,96 @@ export function syncDepartmentAssigneesIfCurrent(
 		...state,
 		steps,
 		derivedAt: new Date().toISOString(),
+	};
+}
+
+/**
+ * Keep assignees who are still in the Executive pool.
+ * If none remain (stale Super/Org Admin IDs), use the full eligible list.
+ */
+export function pickExecutiveAssignees(
+	currentAssignees: string[],
+	eligibleExecutiveIds: string[],
+): string[] {
+	const eligible = uniqueIds(eligibleExecutiveIds);
+	const eligibleSet = new Set(eligible);
+	const kept = uniqueIds(currentAssignees).filter((id) => eligibleSet.has(id));
+	return kept.length > 0 ? kept : eligible;
+}
+
+/**
+ * Heal executive_approval steps whose saved assignees predate the Executive role rule.
+ * Pass the org’s current Executive pool (already filtered for approve permission).
+ */
+export async function reconcileExecutiveAssigneesIfCurrent(
+	state: ApprovalWorkflowState,
+	eligibleExecutiveIds: string[],
+): Promise<{ state: ApprovalWorkflowState; changed: boolean }> {
+	const current = state.steps[state.currentStepIndex];
+	if (
+		!current ||
+		current.status !== "current" ||
+		current.kind !== "executive_approval"
+	) {
+		return { state, changed: false };
+	}
+
+	const eligible = uniqueIds(eligibleExecutiveIds);
+	const eligibleKeys = new Set<string>(eligible);
+	const canonicalByKey = new Map<string, string>();
+	for (const id of eligible) {
+		canonicalByKey.set(id, id);
+		try {
+			const row = await lookupUserRow(id);
+			if (!row) continue;
+			for (const key of userIdentityKeys(row)) {
+				eligibleKeys.add(key);
+				canonicalByKey.set(key, id);
+			}
+		} catch {
+			// keep id-only matching
+		}
+	}
+
+	const keptCanonical: string[] = [];
+	for (const assigneeId of uniqueIds(current.assigneeUserIds)) {
+		if (eligibleKeys.has(assigneeId)) {
+			keptCanonical.push(canonicalByKey.get(assigneeId) || assigneeId);
+			continue;
+		}
+		try {
+			const row = await lookupUserRow(assigneeId);
+			if (!row) continue;
+			const hit = userIdentityKeys(row).find((key) => eligibleKeys.has(key));
+			if (hit) keptCanonical.push(canonicalByKey.get(hit) || hit);
+		} catch {
+			// drop unknown / ineligible assignee
+		}
+	}
+
+	const nextAssignees = pickExecutiveAssignees(keptCanonical, eligible);
+	const unchanged =
+		nextAssignees.length === current.assigneeUserIds.length &&
+		nextAssignees.every((id) => current.assigneeUserIds.includes(id));
+	if (unchanged) return { state, changed: false };
+
+	const steps = state.steps.map((step, index) => {
+		if (index === state.currentStepIndex) {
+			return { ...step, assigneeUserIds: nextAssignees };
+		}
+		if (step.kind === "activated") {
+			return { ...step, assigneeUserIds: nextAssignees };
+		}
+		return step;
+	});
+
+	return {
+		state: {
+			...state,
+			steps,
+			derivedAt: new Date().toISOString(),
+		},
+		changed: true,
 	};
 }
 
@@ -511,6 +696,47 @@ async function getContract(contractId: string): Promise<ContractRow> {
 	})) as unknown as ContractRow;
 }
 
+/** Resolve a viewable storage file from contract.fileId / fileRef. */
+async function resolveContractDocument(contract: ContractRow): Promise<{
+	fileRef?: string;
+	documentUrl?: string;
+	documentFileName?: string;
+}> {
+	const { tablesDB } = await createAdminClient();
+	const fileRowId = optionalRowString(contract.fileId) || optionalRowString(contract.fileRef);
+	if (fileRowId && appwriteConfig.filesCollectionId) {
+		try {
+			const fileRow = (await tablesDB.getRow({
+				databaseId: appwriteConfig.databaseId!,
+				tableId: appwriteConfig.filesCollectionId,
+				rowId: fileRowId,
+			})) as Record<string, unknown>;
+			const bucketFileId = optionalRowString(fileRow.bucketFileId);
+			const url = optionalRowString(fileRow.url);
+			const name = optionalRowString(fileRow.name);
+			if (bucketFileId || url) {
+				return {
+					fileRef: bucketFileId || undefined,
+					documentUrl: url || undefined,
+					documentFileName: name,
+				};
+			}
+		} catch {
+			/* fall through */
+		}
+	}
+
+	const directRef = optionalRowString(contract.fileRef);
+	const directUrl = optionalRowString(contract.documentUrl);
+	if (directRef || directUrl) {
+		return {
+			fileRef: directRef,
+			documentUrl: directUrl,
+		};
+	}
+	return {};
+}
+
 async function updateContract(
 	contractId: string,
 	data: Record<string, unknown>,
@@ -527,19 +753,16 @@ async function updateContract(
 }
 
 /**
- * Resolve executive approvers: org users with contracts.approve, excluding uploader.
+ * Resolve executive approvers: org users with the Executive role and
+ * contracts.approve. Org Admin alone is not enough (they may also hold Executive).
  */
 export async function resolveExecutiveApproverIds(
 	orgId: string | undefined,
 	uploaderUserId: string,
 ): Promise<string[]> {
-	const [executives, admins] = await Promise.all([
-		getAllExecutives(orgId),
-		getAllAdmins(orgId),
-	]);
-	const candidates = [...executives, ...admins];
+	const executives = await getAllExecutives(orgId);
 	const ids = uniqueIds(
-		candidates.map(
+		(executives || []).map(
 			(u: { $id?: string; accountId?: string }) => u.accountId || u.$id,
 		),
 	);
@@ -557,10 +780,8 @@ export async function resolveExecutiveApproverIds(
 		}
 	}
 
-	// Fallback: if permission lookup yields none, still use executives/admins excluding uploader
 	if (withPermission.length === 0) {
 		const others = ids.filter((id) => id !== uploaderUserId);
-		// Solo demo orgs: allow the uploader to complete executive approval.
 		if (others.length === 0 && isDemoMode() && uploaderUserId) {
 			return [uploaderUserId];
 		}
@@ -612,14 +833,22 @@ export async function buildStateForContract(
 			contract.assignedManagers as string[] | undefined,
 		));
 	const executiveIds = await resolveExecutiveApproverIds(orgId, uploader);
-
-	const steps = buildDerivedSteps({
+	const derivedInput = {
 		uploaderUserId: uploader,
 		departmentManagerIds: managerIds,
 		internalApproverIds: (contract.internalApproverIds as string[]) || [],
 		executiveApproverIds: executiveIds,
 		contractStatus: contract.status as string | undefined,
+	};
+	const template = await resolveTemplateForSubmit(orgId, "contract", {
+		amount: Number(contract.amount || 0),
+		contractType: contract.contractType as string | undefined,
+		department: contract.department as string | undefined,
+		riskTier: contract.riskTier as string | undefined,
 	});
+	const steps = template
+		? buildStepsFromTemplate(template, derivedInput)
+		: buildDerivedSteps(derivedInput);
 
 	const currentStepIndex = Math.max(
 		0,
@@ -640,42 +869,48 @@ function resolveParticipantImageUrl(user: {
 	avatar?: string | null;
 	profileImageId?: string | null;
 }): string | null {
-	const avatarValue = user.avatar?.trim();
-	if (avatarValue && /^https?:\/\//i.test(avatarValue)) {
-		return avatarValue;
-	}
-	if (avatarValue?.startsWith("/")) {
-		return avatarValue;
-	}
-	const imageId =
-		avatarValue && !/^https?:\/\//i.test(avatarValue)
-			? avatarValue
-			: user.profileImageId || null;
-	return getProfilePictureUrl(imageId);
+	return resolveAvatarDisplayUrl(user);
 }
 
-/** Resolve a users-table row by document $id, Auth accountId, or full name. */
+/** Resolve a users-table row by Auth accountId, document $id, or full name. */
 export async function lookupUserRow(
 	identifier: string,
 ): Promise<Record<string, any> | null> {
-	const byId = await getUserById(identifier);
-	if (byId) return byId as Record<string, any>;
+	if (!identifier?.trim()) return null;
 
 	try {
 		const { tablesDB } = await createAdminClient();
+		// Workflow / session ids are usually Auth accountId — query that first
+		// so we never hit a getRow 404 when the users-table $id differs.
 		const byAccount = await tablesDB.listRows({
 			databaseId: appwriteConfig.databaseId!,
 			tableId: appwriteConfig.usersCollectionId!,
 			queries: [Query.equal("accountId", identifier), Query.limit(1)],
 		});
-		if (byAccount.rows?.[0]) return byAccount.rows[0] as Record<string, any>;
+		if (byAccount.rows?.[0]) {
+			return flattenTableRow(
+				byAccount.rows[0] as Record<string, unknown>,
+			) as Record<string, any>;
+		}
+	} catch {
+		/* fall through to $id / name */
+	}
 
+	const byId = await getUserById(identifier);
+	if (byId) return flattenTableRow(byId as Record<string, unknown>) as Record<string, any>;
+
+	try {
+		const { tablesDB } = await createAdminClient();
 		const byName = await tablesDB.listRows({
 			databaseId: appwriteConfig.databaseId!,
 			tableId: appwriteConfig.usersCollectionId!,
 			queries: [Query.equal("fullName", identifier), Query.limit(1)],
 		});
-		if (byName.rows?.[0]) return byName.rows[0] as Record<string, any>;
+		if (byName.rows?.[0]) {
+			return flattenTableRow(
+				byName.rows[0] as Record<string, unknown>,
+			) as Record<string, any>;
+		}
 	} catch {
 		/* fall through */
 	}
@@ -739,31 +974,84 @@ export async function ensureActionableExecutiveStep(
 	return { state: upgradedState, upgraded: true };
 }
 
+export async function applyActiveDelegations(
+	state: ApprovalWorkflowState,
+	orgId: string | undefined,
+	entityType: "contract" | "license",
+): Promise<ApprovalWorkflowState> {
+	const current = state.steps[state.currentStepIndex];
+	if (!current || current.status !== "current" || !orgId) return state;
+	const delegations = await listActiveDelegations(orgId);
+	const nextAssignees = applyDelegationsToAssignees(
+		current.assigneeUserIds,
+		delegations,
+		entityType,
+	);
+	if (
+		nextAssignees.length === current.assigneeUserIds.length &&
+		nextAssignees.every((id) => current.assigneeUserIds.includes(id))
+	) {
+		return state;
+	}
+	const steps = state.steps.map((step, index) =>
+		index === state.currentStepIndex
+			? { ...step, assigneeUserIds: nextAssignees }
+			: step,
+	);
+	const nextState: ApprovalWorkflowState = {
+		...state,
+		steps,
+		derivedAt: new Date().toISOString(),
+	};
+	if (nextAssignees.some((id) => !current.assigneeUserIds.includes(id))) {
+		await appendNotification(nextState, {
+			type: "delegated",
+			recipientUserIds: nextAssignees,
+			stepId: current.id,
+			label: "Delegate added from out-of-office coverage",
+			detail: `${current.assigneeUserIds.join(",") || "(none)"} → ${nextAssignees.join(",")}`,
+		});
+	}
+	return nextState;
+}
+
 async function collectAdminUserIds(
 	orgId: string | undefined,
 ): Promise<string[]> {
-	const [executives, admins] = await Promise.all([
-		getAllExecutives(orgId),
+	const [supers, admins] = await Promise.all([
+		getAllSuperAdmins(orgId),
 		getAllAdmins(orgId),
 	]);
 	return uniqueIds(
-		[...executives, ...admins].map((u: { $id?: string }) => u.$id),
+		[...supers, ...admins].map(
+			(u: { $id?: string; accountId?: string }) => u.accountId || u.$id,
+		),
 	);
 }
 
-async function assertAssigneesAreExecOrAdmin(
+/** True when the user holds the Executive RBAC role (approval pool membership). */
+export async function userHasExecutiveRole(
+	userId: string,
+	orgId: string | undefined,
+): Promise<boolean> {
+	if (!orgId) return false;
+	try {
+		const roles = await getUserRoles(userId, orgId);
+		return roles.some((ur) => ur.roleName === "Executive");
+	} catch {
+		return false;
+	}
+}
+
+async function assertAssigneesAreExecutiveApprovers(
 	assigneeUserIds: string[],
 	orgId: string | undefined,
 ): Promise<void> {
 	for (const userId of uniqueIds(assigneeUserIds)) {
-		const roles = orgId ? await getUserRoles(userId, orgId) : [];
-		const ok = roles.some((r) => {
-			const name = r.roleName || "";
-			return name === "Super Admin" || name === "Organization Admin";
-		});
+		const ok = await userHasExecutiveRole(userId, orgId);
 		if (!ok) {
 			throw new Error(
-				"Executive approval assignees must be Super Admin or Organization Admin",
+				"Executive approval assignees must hold the Executive role",
 			);
 		}
 	}
@@ -791,9 +1079,26 @@ export async function getWorkflowForViewer(
 
 	if (!frozen && state) {
 		const ensured = await ensureActionableExecutiveStep(state, orgId, uploader);
-		state = await stampCurrentStepSla(ensured.state, orgId, "contract");
+		const eligibleExecs = await resolveExecutiveApproverIds(orgId, uploader);
+		const reconciled = await reconcileExecutiveAssigneesIfCurrent(
+			ensured.state,
+			eligibleExecs,
+		);
+		const beforeAssignees = [
+			...(reconciled.state.steps[reconciled.state.currentStepIndex]
+				?.assigneeUserIds || []),
+		];
+		state = await applyActiveDelegations(reconciled.state, orgId, "contract");
+		state = await stampCurrentStepSla(state, orgId, "contract");
+		const afterAssignees =
+			state.steps[state.currentStepIndex]?.assigneeUserIds || [];
+		const assigneesChanged =
+			beforeAssignees.length !== afterAssignees.length ||
+			afterAssignees.some((id) => !beforeAssignees.includes(id));
 		if (
 			ensured.upgraded ||
+			reconciled.changed ||
+			assigneesChanged ||
 			!parseWorkflowState(contract.approvalWorkflowState as string)?.steps[
 				ensured.state.currentStepIndex
 			]?.dueAt
@@ -818,6 +1123,7 @@ export async function getWorkflowForViewer(
 			notifications: [],
 			canDecide: false,
 			canOverride: false,
+			...emptyViewerFlags(),
 			needsExecutiveAssignment: false,
 			canAssignExecutive: false,
 			canResubmit: false,
@@ -828,6 +1134,15 @@ export async function getWorkflowForViewer(
 			expirationAttestationId: frozen
 				? await resolveAttestationId(orgId, "contract", contractId)
 				: undefined,
+			amount: Number(contract.amount || 0) || undefined,
+			contractType: optionalRowString(contract.contractType),
+			documentNumber: optionalRowString(contract.contractNumber),
+			counterpartyName: optionalRowString(
+				contract.counterpartyLegalName || contract.vendor,
+			),
+			renewalTerm: optionalRowString(
+				contract.renewalDate || contract.contractTerm || contract.termLength,
+			),
 		};
 	}
 
@@ -863,30 +1178,38 @@ export async function getWorkflowForViewer(
 	);
 
 	const current = state.steps[state.currentStepIndex];
-	const isAssignee = !!current?.assigneeUserIds.includes(viewerUserId);
-	const isExecStep = current?.kind === "executive_approval";
+	const viewerRow = await lookupUserRow(viewerUserId);
+	const viewerIds = viewerRow
+		? userIdentityKeys(viewerRow)
+		: [viewerUserId];
+	const resolved = resolveViewerCurrentStep(state, viewerIds);
+	const capabilityStep = resolved.step || current;
+	const isAssignee = isAssigneeMatch(capabilityStep?.assigneeUserIds, viewerIds);
+	const isExecStep =
+		capabilityStep?.kind === "executive_approval" ||
+		capabilityStep?.kind === "awaiting_executive";
+	const canApprove = await hasPermission(
+		viewerUserId,
+		PERMISSIONS.CONTRACTS.APPROVE,
+		orgId,
+	);
+	// Claim/decide on executive steps requires the Executive role + APPROVE.
 	const canDecideByRole = isExecStep
-		? await hasPermission(viewerUserId, PERMISSIONS.CONTRACTS.APPROVE, orgId)
+		? canApprove && (await userHasExecutiveRole(viewerUserId, orgId))
 		: await hasPermission(
 				viewerUserId,
 				PERMISSIONS.CONTRACTS.REVIEW,
 				orgId,
-			).then(
-				async (review) =>
-					review ||
-					(await hasPermission(
-						viewerUserId,
-						PERMISSIONS.CONTRACTS.APPROVE,
-						orgId,
-					)),
-			);
-
-	const canDecide =
-		current?.status === "current" &&
-		current.kind !== "activated" &&
-		current.kind !== "awaiting_executive" &&
-		(isAssignee || !!options?.isAdminOverride) &&
-		(!!options?.isAdminOverride || canDecideByRole);
+			).then((review) => review || canApprove);
+	const flags = computeViewerCapabilities({
+		frozen,
+		current: capabilityStep,
+		contractStatus,
+		isAssignee,
+		canDecideByRole,
+		isAdminOverride: !!options?.isAdminOverride,
+		canApprove,
+	});
 
 	const needsExecutiveAssignment = frozen
 		? false
@@ -900,12 +1223,13 @@ export async function getWorkflowForViewer(
 	const canReassignUi =
 		!frozen &&
 		!!options?.isAdminOverride &&
-		(needsExecutiveAssignment || current?.status === "current") &&
-		current?.kind !== "activated" &&
-		current?.kind !== "submitted";
+		(needsExecutiveAssignment || capabilityStep?.status === "current") &&
+		capabilityStep?.kind !== "activated" &&
+		capabilityStep?.kind !== "submitted";
 	const reassignCandidates = canReassignUi
-		? await buildReassignCandidates(orgId, current?.kind)
+		? await buildReassignCandidates(orgId, capabilityStep?.kind)
 		: [];
+	const document = await resolveContractDocument(contract);
 
 	return {
 		contractId,
@@ -914,11 +1238,10 @@ export async function getWorkflowForViewer(
 		department: contract.department as string | undefined,
 		businessUnit: contract.businessUnit as string | undefined,
 		subDepartment: contract.subDepartment as string | undefined,
-		currentStepIndex: state.currentStepIndex,
+		currentStepIndex: resolved.index >= 0 ? resolved.index : state.currentStepIndex,
 		steps,
 		notifications: state.notifications || [],
-		canDecide: frozen ? false : canDecide,
-		canOverride: frozen ? false : !!options?.isAdminOverride,
+		...flags,
 		needsExecutiveAssignment,
 		canAssignExecutive,
 		canResubmit,
@@ -929,6 +1252,18 @@ export async function getWorkflowForViewer(
 		expirationAttestationId: frozen
 			? await resolveAttestationId(orgId, "contract", contractId)
 			: undefined,
+		fileRef: document.fileRef,
+		documentUrl: document.documentUrl,
+		documentFileName: document.documentFileName,
+		amount: Number(contract.amount || 0) || undefined,
+		contractType: optionalRowString(contract.contractType),
+		documentNumber: optionalRowString(contract.contractNumber),
+		counterpartyName: optionalRowString(
+			contract.counterpartyLegalName || contract.vendor,
+		),
+		renewalTerm: optionalRowString(
+			contract.renewalDate || contract.contractTerm || contract.termLength,
+		),
 	};
 }
 
@@ -945,6 +1280,9 @@ async function appendNotification(
 		recipientUserIds: uniqueIds(notification.recipientUserIds),
 		stepId: notification.stepId,
 		label: notification.label,
+		actorUserId: notification.actorUserId,
+		reason: notification.reason,
+		detail: notification.detail,
 	};
 	state.notifications = [...(state.notifications || []), entry];
 	return entry;
@@ -952,24 +1290,36 @@ async function appendNotification(
 
 async function notifyUsers(
 	userIds: string[],
-	type: string,
+	_type: string,
 	title: string,
 	message: string,
 	metadata?: Record<string, unknown>,
 ): Promise<void> {
-	for (const userId of uniqueIds(userIds)) {
-		try {
-			await triggerNotification(type, {
-				userId,
-				title,
-				message,
-				priority: "high",
-				metadata,
-			});
-		} catch (error) {
-			console.error(`Failed to notify ${userId}:`, error);
+	const entityId = String(metadata?.contractId || "");
+	if (!entityId) {
+		for (const userId of uniqueIds(userIds)) {
+			try {
+				await triggerNotification("info", {
+					userId,
+					title,
+					message,
+					priority: "high",
+					metadata,
+				});
+			} catch (error) {
+				console.error(`Failed to notify ${userId}:`, error);
+			}
 		}
+		return;
 	}
+	await notifyApprovalAssignees({
+		entityType: "contract",
+		entityId,
+		userIds,
+		title,
+		message,
+		metadata,
+	});
 }
 
 export async function initializeOnUpload({
@@ -1057,19 +1407,30 @@ export async function decide({
 	const ensured = await ensureActionableExecutiveStep(state, orgId, uploader);
 	state = ensured.state;
 
-	const current = state.steps[state.currentStepIndex];
+	const viewerRow = await lookupUserRow(viewerUserId);
+	const viewerIdentityIds = viewerRow
+		? userIdentityKeys(viewerRow)
+		: [viewerUserId];
+	const resolved = resolveViewerCurrentStep(state, viewerIdentityIds);
+	const stepIndex = resolved.index;
+	const current = state.steps[stepIndex];
 	assertDecisionAllowed({
 		current,
 		viewerUserId,
 		uploaderUserId: uploader,
 		adminOverride,
+		viewerIdentityIds,
 	});
 
 	if (
-		(decision === "changes_requested" || decision === "rejected") &&
+		(decision === "changes_requested" || decision === "rejected" || adminOverride) &&
 		!notes?.trim()
 	) {
-		throw new Error("Notes are required for deny or request changes");
+		throw new Error(
+			adminOverride
+				? "Notes are required for an admin override"
+				: "Notes are required for deny or request changes",
+		);
 	}
 
 	const now = new Date().toISOString();
@@ -1087,6 +1448,7 @@ export async function decide({
 			type: "rejected",
 			recipientUserIds: uploader ? [uploader] : [],
 			stepId: current.id,
+			actorUserId: viewerUserId,
 			label: "Rejection notice",
 		});
 		if (uploader) {
@@ -1105,6 +1467,7 @@ export async function decide({
 			type: "changes_requested",
 			recipientUserIds: uploader ? [uploader] : [],
 			stepId: current.id,
+			actorUserId: viewerUserId,
 			label: "Changes requested",
 		});
 		if (uploader) {
@@ -1119,9 +1482,26 @@ export async function decide({
 	} else {
 		// approved
 		current.status = "complete";
-		const nextIndex = state.currentStepIndex + 1;
-		const nextStep = state.steps[nextIndex];
-		nextStatus = resolveStatusAfterApprove(current.kind, nextStep?.kind);
+		const groupId = current.parallelGroupId;
+		const siblingsIncomplete =
+			!!groupId &&
+			state.steps.some(
+				(step, index) =>
+					index !== stepIndex &&
+					step.parallelGroupId === groupId &&
+					step.status !== "complete" &&
+					step.status !== "skipped" &&
+					step.status !== "rejected",
+			);
+		state = advanceWorkflowAfterApprove(state, stepIndex);
+		const nextIndex = state.currentStepIndex;
+		const nextStep = siblingsIncomplete ? undefined : state.steps[nextIndex];
+		const digitalSignatureRequired =
+			contract.digitalSignatureRequired === true ||
+			contract.digitalSignatureRequired === "true";
+		nextStatus = resolveStatusAfterApprove(current.kind, nextStep?.kind, {
+			digitalSignatureRequired,
+		});
 
 		if (current.kind === "executive_approval") {
 			if (nextStep?.kind === "activated") {
@@ -1142,16 +1522,21 @@ export async function decide({
 				type: "executive_approved",
 				recipientUserIds: recipients,
 				stepId: current.id,
+				actorUserId: viewerUserId,
 				label: "Executive approved",
 			});
 			await notifyUsers(
 				recipients,
 				"info",
-				`Contract activated: ${contract.contractName || "Contract"}`,
-				`"${contract.contractName || "Contract"}" is now active.`,
+				nextStatus === "pending-signature"
+					? `Contract ready for signature: ${contract.contractName || "Contract"}`
+					: `Contract activated: ${contract.contractName || "Contract"}`,
+				nextStatus === "pending-signature"
+					? `"${contract.contractName || "Contract"}" is approved and waiting for e-signature.`
+					: `"${contract.contractName || "Contract"}" is now active.`,
 				{ contractId, actionUrl: "/contracts", actionText: "View Contracts" },
 			);
-		} else if (nextStep) {
+		} else if (nextStep && !siblingsIncomplete) {
 			if (nextStep.kind === "awaiting_executive") {
 				const execIds = await resolveExecutiveApproverIds(orgId, uploader);
 				const upgraded = upgradeAwaitingExecutiveStep(
@@ -1203,7 +1588,7 @@ export async function decide({
 						admins,
 						"info",
 						`Executive needed: ${contract.contractName || "Contract"}`,
-						`"${contract.contractName || "A contract"}" is waiting for an executive assignee (Super Admin or Organization Admin).`,
+						`"${contract.contractName || "A contract"}" is waiting for an executive assignee (Executive role).`,
 						{
 							contractId,
 							actionUrl: "/contracts/approvals",
@@ -1212,19 +1597,25 @@ export async function decide({
 					);
 				}
 			} else {
-				nextStep.status = "current";
-				state.currentStepIndex = nextIndex;
+				// advanceWorkflowAfterApprove already marked next (or parallel group) current
+				const notifyAssignees = uniqueIds(
+					state.steps
+						.filter(
+							(s) =>
+								s.status === "current" &&
+								(!nextStep.parallelGroupId ||
+									s.parallelGroupId === nextStep.parallelGroupId),
+						)
+						.flatMap((s) => s.assigneeUserIds),
+				);
 				await appendNotification(state, {
 					type: "stage_advanced",
-					recipientUserIds: uniqueIds([
-						...(nextStep.assigneeUserIds || []),
-						uploader,
-					]),
+					recipientUserIds: uniqueIds([...notifyAssignees, uploader]),
 					stepId: nextStep.id,
 					label: "Stage advanced",
 				});
 				await notifyUsers(
-					nextStep.assigneeUserIds || [],
+					notifyAssignees,
 					"info",
 					`Approval needed: ${contract.contractName || "Contract"}`,
 					`"${contract.contractName || "A contract"}" is ready for ${nextStep.label}.`,
@@ -1248,6 +1639,43 @@ export async function decide({
 			: contract.reviewerComments,
 	});
 
+	try {
+		const actor = await lookupUserRow(viewerUserId);
+		await logAuditEvent({
+			event_id: ID.unique(),
+			event_title: `Contract ${decision.replace(/_/g, " ")}`,
+			action: "approval_decided",
+			source: "caalm",
+			user_id: viewerUserId,
+			user_name: String(actor?.fullName || "Unknown"),
+			user_email: String(actor?.email || ""),
+			orgId,
+			status: "success",
+			module: "contracts",
+			target_type: "contract",
+			target_id: contractId,
+			target_label: String(contract.contractName || "Contract"),
+			summary: `${decision} at ${current.kind}`,
+			changes: [
+				{
+					field: "status",
+					before: String(contract.status || ""),
+					after: nextStatus,
+				},
+				{
+					field: "approvalStep",
+					before: current.kind,
+					after: state.steps[state.currentStepIndex]?.kind || current.kind,
+				},
+			],
+		});
+	} catch (error) {
+		console.warn(
+			"[SERVER] decide: audit log failed:",
+			error instanceof Error ? error.message : error,
+		);
+	}
+
 	return { state, contractStatus: nextStatus };
 }
 
@@ -1255,13 +1683,20 @@ export async function reassignCurrentStep({
 	contractId,
 	viewerUserId,
 	assigneeUserIds,
+	reason,
 	adminOverride = false,
 }: {
 	contractId: string;
 	viewerUserId: string;
 	assigneeUserIds: string[];
+	reason: string;
 	adminOverride?: boolean;
 }): Promise<ApprovalWorkflowState> {
+	const trimmedReason = reason.trim();
+	if (trimmedReason.length < 10) {
+		throw new Error("A reassignment reason of at least 10 characters is required");
+	}
+
 	const contract = await getContract(contractId);
 	assertWorkflowMutable(contract.status as string | undefined);
 	let state =
@@ -1276,13 +1711,27 @@ export async function reassignCurrentStep({
 	const current = state.steps[state.currentStepIndex];
 	assertReassignAllowed({ current, adminOverride });
 
+	// SoD: uploader must not be reassigned onto their own approval step.
+	if (
+		uploader &&
+		assigneeUserIds.some((id) => id === uploader) &&
+		(current?.kind === "department_review" ||
+			current?.kind === "internal_approval" ||
+			current?.kind === "executive_approval")
+	) {
+		throw new Error(
+			"Uploader cannot be assigned as an approver on their own submission",
+		);
+	}
+
 	if (
 		current?.kind === "executive_approval" ||
 		current?.kind === "awaiting_executive"
 	) {
-		await assertAssigneesAreExecOrAdmin(assigneeUserIds, orgId);
+		await assertAssigneesAreExecutiveApprovers(assigneeUserIds, orgId);
 	}
 
+	const previousAssignees = [...(current?.assigneeUserIds || [])];
 	state = applyReassignToCurrentStep(state, assigneeUserIds);
 	const nextCurrent = state.steps[state.currentStepIndex];
 
@@ -1294,7 +1743,10 @@ export async function reassignCurrentStep({
 			viewerUserId,
 		]),
 		stepId: nextCurrent?.id,
-		label: "Step reassigned",
+		actorUserId: viewerUserId,
+		reason: trimmedReason,
+		detail: `${previousAssignees.join(",") || "(none)"} → ${assigneeUserIds.join(",")}`,
+		label: `Reassigned: ${trimmedReason}`,
 	});
 	await notifyUsers(
 		nextCurrent?.assigneeUserIds || [],
@@ -1318,6 +1770,178 @@ export async function reassignCurrentStep({
 	});
 
 	return state;
+}
+
+export function assertClaimAllowed({
+	current,
+	viewerUserId,
+	viewerIdentityIds,
+}: {
+	current: ApprovalWorkflowStep | undefined;
+	viewerUserId: string;
+	viewerIdentityIds?: string[];
+}): void {
+	if (!current || current.status !== "current") {
+		throw new Error("No active approval step to claim");
+	}
+	if (!REASSIGNABLE_KINDS.includes(current.kind)) {
+		throw new Error("This step cannot be claimed");
+	}
+	if (isAssigneeMatch(current.assigneeUserIds, [viewerUserId, ...(viewerIdentityIds || [])])) {
+		throw new Error("You are already assigned to this step");
+	}
+}
+
+export async function claimCurrentStep({
+	contractId,
+	viewerUserId,
+}: {
+	contractId: string;
+	viewerUserId: string;
+}): Promise<ApprovalWorkflowState> {
+	const contract = await getContract(contractId);
+	assertWorkflowMutable(contract.status as string | undefined);
+	let state =
+		parseWorkflowState(contract.approvalWorkflowState as string) ||
+		(await buildStateForContract(contract));
+	const uploader = String(contract.contractOwnerId || contract.owner || "");
+	const orgId = contract.orgId as string | undefined;
+	const ensured = await ensureActionableExecutiveStep(state, orgId, uploader);
+	state = ensured.state;
+
+	const viewerRow = await lookupUserRow(viewerUserId);
+	const viewerIdentityIds = viewerRow
+		? userIdentityKeys(viewerRow)
+		: [viewerUserId];
+	// Prefer a current step the viewer is not already on (parallel claim).
+	const claimable = state.steps
+		.map((step, index) => ({ step, index }))
+		.find(
+			({ step }) =>
+				step.status === "current" &&
+				REASSIGNABLE_KINDS.includes(step.kind) &&
+				!isAssigneeMatch(step.assigneeUserIds, viewerIdentityIds),
+		);
+	const stepIndex = claimable?.index ?? state.currentStepIndex;
+	const current = state.steps[stepIndex];
+	assertClaimAllowed({
+		current,
+		viewerUserId,
+		viewerIdentityIds,
+	});
+
+	if (
+		current?.kind === "executive_approval" ||
+		current?.kind === "awaiting_executive"
+	) {
+		await assertAssigneesAreExecutiveApprovers([viewerUserId], orgId);
+	}
+
+	state = applyReassignToCurrentStep(
+		state,
+		uniqueIds([...(current?.assigneeUserIds || []), viewerUserId]),
+		stepIndex,
+	);
+	const nextCurrent = state.steps[stepIndex];
+	await appendNotification(state, {
+		type: "claimed",
+		recipientUserIds: uniqueIds([
+			...(nextCurrent?.assigneeUserIds || []),
+			uploader,
+			viewerUserId,
+		]),
+		stepId: nextCurrent?.id,
+		actorUserId: viewerUserId,
+		label: "Step claimed",
+	});
+	await notifyUsers(
+		nextCurrent?.assigneeUserIds || [],
+		"info",
+		`Claimed: ${contract.contractName || "Contract"}`,
+		`${viewerRow?.fullName || "A reviewer"} claimed "${nextCurrent?.label}" for "${contract.contractName || "a contract"}".`,
+		{
+			contractId,
+			actionUrl: "/contracts/approvals",
+			actionText: "Open Approvals",
+		},
+	);
+
+	state = await stampCurrentStepSla(state, orgId, "contract");
+	await updateContract(contractId, {
+		approvalWorkflowState: serializeWorkflowState(state),
+		currentApprovalStage: nextCurrent?.label || "",
+		...(current?.kind === "department_review"
+			? { assignedManagers: uniqueIds(nextCurrent?.assigneeUserIds || []) }
+			: {}),
+	});
+
+	try {
+		await logAuditEvent({
+			event_id: ID.unique(),
+			event_title: "Approval step claimed",
+			action: "approval_claimed",
+			source: "caalm",
+			user_id: viewerUserId,
+			user_name: String(viewerRow?.fullName || "Unknown"),
+			user_email: String(viewerRow?.email || ""),
+			orgId,
+			status: "success",
+			module: "contracts",
+			target_type: "contract",
+			target_id: contractId,
+			target_label: String(contract.contractName || "Contract"),
+			summary: `claimed ${nextCurrent?.kind}`,
+		});
+	} catch (error) {
+		console.warn(
+			"[SERVER] claim: audit log failed:",
+			error instanceof Error ? error.message : error,
+		);
+	}
+
+	return state;
+}
+
+export async function overrideCompletedWorkflow({
+	contractId,
+	viewerUserId,
+	decision,
+	notes,
+}: {
+	contractId: string;
+	viewerUserId: string;
+	decision: ApprovalDecision;
+	notes: string;
+}): Promise<{ state: ApprovalWorkflowState; contractStatus: string }> {
+	if (!notes.trim()) {
+		throw new Error("Notes are required for an admin override");
+	}
+	if (decision === "approved") {
+		throw new Error("Completed workflows can only be rejected or sent back");
+	}
+	const contract = await getContract(contractId);
+	let state =
+		parseWorkflowState(contract.approvalWorkflowState as string) ||
+		(await buildStateForContract(contract));
+	const uploader = String(contract.contractOwnerId || contract.owner || "");
+	const orgId = contract.orgId as string | undefined;
+	const nextStatus = decision === "rejected" ? "inactive" : "action-required";
+	if (decision === "changes_requested") {
+		state = resetWorkflowForResubmit(state);
+	}
+	await appendNotification(state, {
+		type: decision === "rejected" ? "rejected" : "changes_requested",
+		recipientUserIds: uploader ? [uploader] : [],
+		stepId: state.steps[state.currentStepIndex]?.id,
+		label: "Admin override after completion",
+	});
+	await updateContract(contractId, {
+		approvalWorkflowState: serializeWorkflowState(state),
+		status: nextStatus,
+		currentApprovalStage: state.steps[state.currentStepIndex]?.label || "",
+		reviewerComments: notes.trim().slice(0, 500),
+	});
+	return { state, contractStatus: nextStatus };
 }
 
 export async function resubmitAfterChanges({

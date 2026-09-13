@@ -12,7 +12,7 @@ export type ContractReviewStepProps = {
 	contentStepTitles: string[];
 	lowConfidenceFields?: string[];
 	onEditStep: (step: number) => void;
-	/** Opens the uploaded PDF in a viewer */
+	/** Opens the uploaded document in a viewer */
 	onPreviewFile?: () => void;
 	canPreviewFile?: boolean;
 };
@@ -184,7 +184,7 @@ export default function ContractReviewStep({
 			</span>
 			<span className="inline-flex shrink-0 items-center gap-1 text-[11px] text-[#0f5384]">
 				<Eye className="h-3.5 w-3.5" />
-				View PDF
+				View document
 			</span>
 		</button>
 	) : null;
@@ -201,7 +201,7 @@ export default function ContractReviewStep({
 						<p className="mt-0.5 text-xs text-slate-600">
 							Confirm the details below. Use Edit to jump back to any step.
 							{canPreviewFile
-								? " Click the file to open it in the PDF viewer."
+								? " Click the file to open it in the document viewer."
 								: ""}
 						</p>
 					</div>

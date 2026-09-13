@@ -2,7 +2,8 @@
 
 import { Loader2 } from "lucide-react";
 import Image from "next/image";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ContractApprovalStatusCell } from "@/components/contracts/ContractApprovalStatusCell";
 import { useContractsView } from "@/components/ContractsViewContext";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -16,16 +17,13 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import type { AppUser } from "@/lib/actions/user.actions";
 import { fetchUserNamesByIds } from "@/lib/actions/user.actions";
-import {
-	getExpiryUrgency,
-	isContractExpired,
-} from "@/lib/contracts/contractsListUtils";
+import { getExpiryUrgency } from "@/lib/contracts/contractsListUtils";
 import {
 	DATA_TABLE_BODY_ROW_CLICKABLE,
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
 } from "@/lib/ui/data-table-styles";
-import { cn, convertFileSize } from "@/lib/utils";
+import { cn, convertFileSize, getProfilePictureUrl } from "@/lib/utils";
 import type { UIFileDoc } from "@/types/files";
 import ActionDropdown from "./ActionDropdown";
 import FormattedDateTime, { FormattedDate } from "./FormattedDateTime";
@@ -47,39 +45,58 @@ function formatContractValue(amount: number): string {
 	}).format(amount);
 }
 
-function statusBadge(file: UIFileDoc) {
-	const expired = isContractExpired(file);
-	const status = expired
-		? "expired"
-		: file.lifecycleStatus === "negotiation"
-			? "negotiation"
-			: file.status || "";
-	const labelMap: Record<string, string> = {
-		"pending-review": "Pending Review",
-		"action-required": "Action Required",
-		active: "Active",
-		inactive: "Inactive",
-		expired: "Expired",
-		negotiation: "Negotiation",
+/** Build avatar URL map from user docs (uploaded photo or storage file id). */
+function collectProfileImages(users: AppUser[]): Record<string, string> {
+	const images: Record<string, string> = {};
+	for (const user of users) {
+		const avatarValue = user.avatar?.trim();
+		let url: string | null = null;
+		if (avatarValue && /^https?:\/\//i.test(avatarValue)) {
+			url = avatarValue;
+		} else if (avatarValue?.startsWith("/")) {
+			url = avatarValue;
+		} else {
+			const fileId =
+				(avatarValue &&
+				!avatarValue.startsWith("/") &&
+				!/^https?:\/\//i.test(avatarValue)
+					? avatarValue
+					: null) ||
+				user.profileImageId?.trim() ||
+				null;
+			url = getProfilePictureUrl(fileId);
+		}
+		if (!url) continue;
+		if (user.$id) images[user.$id] = url;
+		if (user.accountId) images[user.accountId] = url;
+	}
+	return images;
+}
+
+function stubUserFromLabel(label: string): AppUser {
+	return {
+		$id: label,
+		fullName: label,
+		email: "",
+		avatar: "",
+		accountId: label,
+		role: "viewer" as const,
+		profileImageId: null,
 	};
-	const classMap: Record<string, string> = {
-		active: "bg-green/10 text-green border-green/20",
-		"pending-review": "bg-orange/10 text-orange border-orange/20",
-		"action-required": "bg-red/10 text-red border-red/20",
-		inactive: "bg-slate-100 text-slate-600 border-slate-200",
-		expired: "bg-red/10 text-red border-red/20",
-		negotiation: "bg-orange/10 text-orange border-orange/20",
-	};
-	return (
-		<span
-			className={cn(
-				"inline-block px-2 py-0.5 text-xs rounded-full font-medium border",
-				classMap[status] || "bg-slate-100 text-slate-700 border-slate-200",
-			)}
-		>
-			{labelMap[status] || status || "—"}
-		</span>
-	);
+}
+
+/** Stable id list so new array refs from RSC refresh don't re-fetch forever. */
+function assignedManagersKey(file: UIFileDoc): string {
+	if (Array.isArray(file.assignedManagers) && file.assignedManagers.length > 0) {
+		return file.assignedManagers
+			.map((manager) => String(manager).trim())
+			.filter(Boolean)
+			.join("|");
+	}
+	if (typeof file.assignedManagers === "string") {
+		return String(file.assignedManagers).trim();
+	}
+	return "";
 }
 
 function expiryCell(file: UIFileDoc) {
@@ -136,7 +153,7 @@ export default function ContractsTableView({
 		density,
 		setPreviewFile,
 	} = useContractsView();
-	const [ownerNames, setOwnerNames] = useState<Record<string, string>>({});
+	const [ownerUsers, setOwnerUsers] = useState<Record<string, AppUser>>({});
 	const [loadingOwners, setLoadingOwners] = useState<Record<string, boolean>>(
 		{},
 	);
@@ -146,9 +163,9 @@ export default function ContractsTableView({
 	const [loadingManagers, setLoadingManagers] = useState<
 		Record<string, boolean>
 	>({});
-	const [managerProfileImages, setManagerProfileImages] = useState<
-		Record<string, string>
-	>({});
+	const [profileImages, setProfileImages] = useState<Record<string, string>>(
+		{},
+	);
 	const [failedProfileImages, setFailedProfileImages] = useState<Set<string>>(
 		new Set(),
 	);
@@ -158,17 +175,53 @@ export default function ContractsTableView({
 		visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
 	const rowPad = density === "compact" ? "py-2" : "py-4";
 
-	// Fetch owner names for all contracts
+	// Content-stable keys: RSC/HMR refresh gives new array refs with the same data.
+	const ownersSignature = useMemo(
+		() =>
+			files
+				.map((file) => {
+					const ownerId =
+						(typeof file.contractOwnerId === "string" &&
+							file.contractOwnerId.trim()) ||
+						(typeof file.owner === "string" && file.owner.trim()) ||
+						(typeof file.owner === "object" &&
+						file.owner &&
+						"fullName" in file.owner
+							? `name:${(file.owner as { fullName: string }).fullName}`
+							: "");
+					return `${file.$id}:${ownerId}`;
+				})
+				.sort()
+				.join(";"),
+		[files],
+	);
+	const managersSignature = useMemo(
+		() =>
+			files
+				.map((file) => `${file.$id}:${assignedManagersKey(file)}`)
+				.sort()
+				.join(";"),
+		[files],
+	);
+	const loadedOwnersSignatureRef = useRef("");
+	const loadedManagersSignatureRef = useRef("");
+	const ownerUsersRef = useRef(ownerUsers);
+	ownerUsersRef.current = ownerUsers;
+	const assignedManagerUsersRef = useRef(assignedManagerUsers);
+	assignedManagerUsersRef.current = assignedManagerUsers;
+
+	// Fetch owner users for all contracts (avatar / initials in the By column)
 	useEffect(() => {
-		const fetchAllOwnerNames = async () => {
+		if (ownersSignature === loadedOwnersSignatureRef.current) return;
+
+		const fetchAllOwners = async () => {
 			const ownerIds = new Set<string>();
 			const ownerIdToFileId = new Map<string, string[]>();
+			const inlineOwners: Record<string, AppUser> = {};
 
 			files.forEach((file) => {
 				let userId: string | null = null;
 
-				// Try to get owner ID from various sources
-				// Check for contractOwnerId first (contracts collection field)
 				if (
 					file.contractOwnerId &&
 					typeof file.contractOwnerId === "string" &&
@@ -186,18 +239,34 @@ export default function ContractsTableView({
 					file.owner &&
 					"fullName" in file.owner
 				) {
-					// Already have the name, skip
-					const ownerObj = file.owner as { fullName: string };
+					const ownerObj = file.owner as {
+						fullName: string;
+						$id?: string;
+						accountId?: string;
+						avatar?: string;
+						profileImageId?: string | null;
+						email?: string;
+					};
 					if (ownerObj.fullName) {
-						setOwnerNames((prev) => ({
-							...prev,
-							[file.$id]: ownerObj.fullName,
-						}));
+						inlineOwners[file.$id] = {
+							$id: ownerObj.$id || ownerObj.fullName,
+							fullName: ownerObj.fullName,
+							email: ownerObj.email || "",
+							avatar: ownerObj.avatar || "",
+							accountId: ownerObj.accountId || ownerObj.$id || ownerObj.fullName,
+							role: "viewer" as const,
+							profileImageId: ownerObj.profileImageId ?? null,
+						};
 						return;
 					}
 				}
 
-				if (userId && userId.length > 0 && !ownerNames[file.$id]) {
+				if (
+					userId &&
+					userId.length > 0 &&
+					!ownerUsersRef.current[file.$id] &&
+					!inlineOwners[file.$id]
+				) {
 					ownerIds.add(userId);
 					if (!ownerIdToFileId.has(userId)) {
 						ownerIdToFileId.set(userId, []);
@@ -206,14 +275,27 @@ export default function ContractsTableView({
 				}
 			});
 
-			if (ownerIds.size === 0) return;
+			if (Object.keys(inlineOwners).length > 0) {
+				setOwnerUsers((prev) => ({ ...prev, ...inlineOwners }));
+				setProfileImages((prev) => ({
+					...prev,
+					...collectProfileImages(Object.values(inlineOwners)),
+				}));
+			}
+
+			if (ownerIds.size === 0) {
+				loadedOwnersSignatureRef.current = ownersSignature;
+				return;
+			}
 
 			const userIdsArray = Array.from(ownerIds);
 			setLoadingOwners((prev) => {
 				const newLoading = { ...prev };
 				userIdsArray.forEach((id) => {
 					ownerIdToFileId.get(id)?.forEach((fileId) => {
-						newLoading[fileId] = true;
+						if (!ownerUsersRef.current[fileId]) {
+							newLoading[fileId] = true;
+						}
 					});
 				});
 				return newLoading;
@@ -221,28 +303,26 @@ export default function ContractsTableView({
 
 			try {
 				const users = await fetchUserNamesByIds(userIdsArray);
-
-				const namesMap: Record<string, string> = {};
-
-				// Convert users array to a map by $id and accountId
+				const userMap = new Map<string, AppUser>();
 				users.forEach((user) => {
-					if (user.$id) {
-						namesMap[user.$id] = user.fullName || "Unknown";
-					}
-					if (user.accountId) {
-						namesMap[user.accountId] = user.fullName || "Unknown";
-					}
+					if (user.$id) userMap.set(user.$id, user);
+					if (user.accountId) userMap.set(user.accountId, user);
 				});
 
-				const newOwnerNames: Record<string, string> = {};
+				const newOwnerUsers: Record<string, AppUser> = {};
 				userIdsArray.forEach((userId) => {
-					const name = namesMap[userId] || "Unknown";
+					const user = userMap.get(userId) || stubUserFromLabel("Unknown");
 					ownerIdToFileId.get(userId)?.forEach((fileId) => {
-						newOwnerNames[fileId] = name;
+						newOwnerUsers[fileId] = user;
 					});
 				});
 
-				setOwnerNames((prev) => ({ ...prev, ...newOwnerNames }));
+				setOwnerUsers((prev) => ({ ...prev, ...newOwnerUsers }));
+				setProfileImages((prev) => ({
+					...prev,
+					...collectProfileImages(users),
+				}));
+				loadedOwnersSignatureRef.current = ownersSignature;
 			} catch (error) {
 				console.error("Failed to fetch owner names:", error);
 				toast({
@@ -252,9 +332,13 @@ export default function ContractsTableView({
 				});
 				userIdsArray.forEach((userId) => {
 					ownerIdToFileId.get(userId)?.forEach((fileId) => {
-						setOwnerNames((prev) => ({ ...prev, [fileId]: "Unknown" }));
+						setOwnerUsers((prev) => ({
+							...prev,
+							[fileId]: stubUserFromLabel("Unknown"),
+						}));
 					});
 				});
+				loadedOwnersSignatureRef.current = ownersSignature;
 			} finally {
 				setLoadingOwners((prev) => {
 					const newLoading = { ...prev };
@@ -268,43 +352,35 @@ export default function ContractsTableView({
 			}
 		};
 
-		fetchAllOwnerNames();
-	}, [files, ownerNames, toast]);
+		void fetchAllOwners();
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- files covered by ownersSignature
+	}, [ownersSignature, toast]);
 
 	// Fetch assigned manager user data
 	useEffect(() => {
+		if (managersSignature === loadedManagersSignatureRef.current) return;
+
 		const fetchAssignedManagers = async () => {
 			const managerIds = new Set<string>();
 			const managerIdToFileId = new Map<string, string[]>();
 
 			files.forEach((file) => {
-				let managers: string[] = [];
-
-				// Get manager IDs - could be IDs or names
-				if (
-					Array.isArray(file.assignedManagers) &&
-					file.assignedManagers.length > 0
-				) {
-					managers = file.assignedManagers;
-				} else if (typeof file.assignedManagers === "string") {
-					managers = [file.assignedManagers];
-				}
-
-				// Filter out names (strings that look like names) and keep IDs
-				managers.forEach((manager) => {
-					// If it looks like a user ID (alphanumeric, longer than typical names) or is a valid ID format
-					// We'll try to fetch it - if it fails, we'll handle it gracefully
-					if (manager?.trim()) {
-						managerIds.add(manager.trim());
-						if (!managerIdToFileId.has(manager.trim())) {
-							managerIdToFileId.set(manager.trim(), []);
-						}
-						managerIdToFileId.get(manager.trim())?.push(file.$id);
+				const key = assignedManagersKey(file);
+				if (!key) return;
+				key.split("|").forEach((manager) => {
+					if (!manager) return;
+					managerIds.add(manager);
+					if (!managerIdToFileId.has(manager)) {
+						managerIdToFileId.set(manager, []);
 					}
+					managerIdToFileId.get(manager)?.push(file.$id);
 				});
 			});
 
-			if (managerIds.size === 0) return;
+			if (managerIds.size === 0) {
+				loadedManagersSignatureRef.current = managersSignature;
+				return;
+			}
 
 			const managerIdsArray = Array.from(managerIds);
 
@@ -312,7 +388,9 @@ export default function ContractsTableView({
 				const newLoading = { ...prev };
 				managerIdsArray.forEach((id) => {
 					managerIdToFileId.get(id)?.forEach((fileId) => {
-						newLoading[fileId] = true;
+						if (!assignedManagerUsersRef.current[fileId]) {
+							newLoading[fileId] = true;
+						}
 					});
 				});
 				return newLoading;
@@ -322,7 +400,6 @@ export default function ContractsTableView({
 				const users = await fetchUserNamesByIds(managerIdsArray);
 				const newManagerUsers: Record<string, AppUser[]> = {};
 
-				// Map users by their IDs, accountIds, and fullNames (since assignedManagers might be stored as names)
 				const userMap = new Map<string, AppUser>();
 				users.forEach((user) => {
 					if (user.$id) userMap.set(user.$id, user);
@@ -330,71 +407,29 @@ export default function ContractsTableView({
 					if (user.fullName) userMap.set(user.fullName, user);
 				});
 
-				// For each file, find matching users
 				files.forEach((file) => {
+					const key = assignedManagersKey(file);
+					if (!key) return;
 					const fileManagers: AppUser[] = [];
-					let managers: string[] = [];
-
-					if (
-						Array.isArray(file.assignedManagers) &&
-						file.assignedManagers.length > 0
-					) {
-						managers = file.assignedManagers;
-					} else if (typeof file.assignedManagers === "string") {
-						managers = [file.assignedManagers];
-					}
-
-					managers.forEach((manager) => {
-						const user = userMap.get(manager.trim());
+					key.split("|").forEach((manager) => {
+						const user = userMap.get(manager);
 						if (user) {
 							fileManagers.push(user);
 						} else {
-							// If not found, create a mock user from the name
-							fileManagers.push({
-								$id: manager.trim(),
-								fullName: manager.trim(),
-								email: "",
-								avatar: "",
-								accountId: manager.trim(),
-								role: "viewer" as const,
-								profileImageId: null,
-							});
+							fileManagers.push(stubUserFromLabel(manager));
 						}
 					});
-
 					if (fileManagers.length > 0) {
 						newManagerUsers[file.$id] = fileManagers;
 					}
 				});
 
-				// Generate profile image URLs for users with profileImageId
-				// Memoize URL generation constants to avoid redundant lookups
-				const bucketId =
-					process.env.NEXT_PUBLIC_APPWRITE_PROFILE_PICTURES_BUCKET;
-				const endpoint = process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT;
-				const projectId = process.env.NEXT_PUBLIC_APPWRITE_PROJECT;
-
-				const newProfileImages: Record<string, string> = {};
-
-				if (bucketId && endpoint && projectId) {
-					// Pre-compute base URL for better performance
-					const baseUrl = `${endpoint}/storage/buckets/${bucketId}/files`;
-					users.forEach((user) => {
-						if (user.profileImageId) {
-							const imageUrl = `${baseUrl}/${user.profileImageId}/view?project=${projectId}`;
-							// Map by both $id and accountId for lookup
-							if (user.$id) {
-								newProfileImages[user.$id] = imageUrl;
-							}
-							if (user.accountId) {
-								newProfileImages[user.accountId] = imageUrl;
-							}
-						}
-					});
-				}
-
-				setManagerProfileImages((prev) => ({ ...prev, ...newProfileImages }));
+				setProfileImages((prev) => ({
+					...prev,
+					...collectProfileImages(users),
+				}));
 				setAssignedManagerUsers((prev) => ({ ...prev, ...newManagerUsers }));
+				loadedManagersSignatureRef.current = managersSignature;
 			} catch (error) {
 				console.error("Failed to fetch assigned manager users:", error);
 				toast({
@@ -415,23 +450,9 @@ export default function ContractsTableView({
 			}
 		};
 
-		fetchAssignedManagers();
-	}, [files, toast]);
-
-	const getOwnerName = (file: UIFileDoc): string => {
-		if (ownerNames[file.$id]) {
-			return ownerNames[file.$id];
-		}
-		if (
-			typeof file.owner === "object" &&
-			file.owner &&
-			"fullName" in file.owner
-		) {
-			return (file.owner as { fullName: string }).fullName;
-		}
-
-		return "Unknown";
-	};
+		void fetchAssignedManagers();
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- files covered by managersSignature
+	}, [managersSignature, toast]);
 
 	const truncateContractName = (name: string): string => {
 		if (!name) return "Untitled Contract";
@@ -463,22 +484,18 @@ export default function ContractsTableView({
 		}
 
 		if (managers.length === 0) {
-			// Fallback to original display if no user data
-			if (
-				Array.isArray(file.assignedManagers) &&
-				file.assignedManagers.length > 0
-			) {
+			// Fallback: show initials from raw assignedManagers labels
+			const key = assignedManagersKey(file);
+			if (key) {
+				const stubs = key.split("|").filter(Boolean).map(stubUserFromLabel);
 				return (
-					<span
-						className="body-2 truncate block"
-						title={file.assignedManagers.join(", ")}
-					>
-						{file.assignedManagers.join(", ")}
-					</span>
+					<ManagerAvatars
+						managers={stubs}
+						profileImages={profileImages}
+						failedImages={failedProfileImages}
+						onImageError={handleImageError}
+					/>
 				);
-			}
-			if (typeof file.assignedManagers === "string") {
-				return <span className="body-2">{file.assignedManagers}</span>;
 			}
 			return <span className="body-2 text-slate-400">-</span>;
 		}
@@ -486,9 +503,37 @@ export default function ContractsTableView({
 		return (
 			<ManagerAvatars
 				managers={managers}
-				profileImages={managerProfileImages}
+				profileImages={profileImages}
 				failedImages={failedProfileImages}
 				onImageError={handleImageError}
+			/>
+		);
+	};
+
+	const renderOwner = (file: UIFileDoc) => {
+		const owner = ownerUsers[file.$id];
+		const isLoading = loadingOwners[file.$id] && !owner;
+
+		if (isLoading) {
+			return (
+				<span className="body-2 text-slate-400 inline-flex items-center gap-1.5">
+					<Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+					Loading...
+				</span>
+			);
+		}
+
+		if (!owner) {
+			return <span className="body-2 text-slate-400">-</span>;
+		}
+
+		return (
+			<ManagerAvatars
+				managers={[owner]}
+				profileImages={profileImages}
+				failedImages={failedProfileImages}
+				onImageError={handleImageError}
+				ariaLabel="Contract owner"
 			/>
 		);
 	};
@@ -602,8 +647,15 @@ export default function ContractsTableView({
 									</p>
 								</div>
 							</TableCell>
-							<TableCell className={cn(rowPad, "whitespace-nowrap")}>
-								{statusBadge(file)}
+							<TableCell
+								className={cn(rowPad, "whitespace-nowrap")}
+								onClick={(e) => e.stopPropagation()}
+								onMouseDown={(e) => e.stopPropagation()}
+							>
+								<ContractApprovalStatusCell
+									file={file}
+									onRefresh={onRefresh}
+								/>
 							</TableCell>
 							<TableCell
 								className={cn(
@@ -647,25 +699,7 @@ export default function ContractsTableView({
 							<TableCell
 								className={cn(rowPad, "text-slate-700 whitespace-nowrap")}
 							>
-								{loadingOwners[file.$id] &&
-								!ownerNames[file.$id] &&
-								!(
-									typeof file.owner === "object" &&
-									file.owner &&
-									"fullName" in file.owner
-								) ? (
-									<span className="body-2 text-slate-400 inline-flex items-center gap-1.5">
-										<Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
-										Loading...
-									</span>
-								) : (
-									<span
-										className="body-2 truncate block"
-										title={getOwnerName(file)}
-									>
-										{getOwnerName(file)}
-									</span>
-								)}
+								{renderOwner(file)}
 							</TableCell>
 							<TableCell
 								className={cn(rowPad, "text-right")}

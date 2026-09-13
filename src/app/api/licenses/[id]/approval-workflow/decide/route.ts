@@ -14,6 +14,7 @@ import type { ApprovalDecision } from "@/lib/approvals/contractApprovalWorkflow.
 import {
 	decideLicense,
 	getLicenseWorkflowForViewer,
+	overrideCompletedLicenseWorkflow,
 } from "@/lib/approvals/LicenseApprovalWorkflowService";
 import {
 	getUserDefaultOrganization,
@@ -75,20 +76,38 @@ export async function POST(
 		const before = await getLicenseWorkflowForViewer(licenseId, viewerUserId, {
 			isAdminOverride,
 		});
-		if (!before.canDecide && !isAdminOverride) {
+		if (
+			!before.canDecideAsAssignee &&
+			!before.canAdminOverrideActiveStep &&
+			!before.canAdminOverrideCompleted
+		) {
 			return forbiddenResponse(
 				"You cannot decide the current approval step",
 				requestId,
 			);
 		}
 
-		const result = await decideLicense({
-			licenseId,
-			viewerUserId,
-			decision,
-			notes,
-			adminOverride: isAdminOverride && !before.canDecide,
-		});
+		if (decision === "rejected" && !before.canReject) {
+			return forbiddenResponse(
+				"Department managers can request changes or approve, but cannot reject",
+				requestId,
+			);
+		}
+
+		const result = before.canAdminOverrideCompleted
+			? await overrideCompletedLicenseWorkflow({
+					licenseId,
+					decision,
+					notes: notes || "",
+				})
+			: await decideLicense({
+					licenseId,
+					viewerUserId,
+					decision,
+					notes,
+					adminOverride:
+						isAdminOverride && !before.canDecideAsAssignee,
+				});
 
 		revalidatePath(path);
 		revalidatePath("/licenses");

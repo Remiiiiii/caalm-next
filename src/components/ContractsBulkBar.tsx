@@ -7,6 +7,7 @@ import { useContractsView } from "@/components/ContractsViewContext";
 import { Button } from "@/components/ui/button";
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
 import { PERMISSIONS } from "@/constants/permissions";
+import { useStepUp } from "@/contexts/StepUpContext";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { deleteFile } from "@/lib/actions/file.actions";
@@ -23,6 +24,7 @@ export default function ContractsBulkBar({ files }: ContractsBulkBarProps) {
 	const { toast } = useToast();
 	const { selectedIds, clearSelection } = useContractsView();
 	const { permissions } = usePermissions();
+	const { ensureStepUp } = useStepUp();
 	const [confirmOpen, setConfirmOpen] = useState(false);
 	const [isDeleting, setIsDeleting] = useState(false);
 
@@ -86,6 +88,8 @@ export default function ContractsBulkBar({ files }: ContractsBulkBarProps) {
 	};
 
 	const handleBulkDelete = async () => {
+		if (!(await ensureStepUp())) return;
+
 		setIsDeleting(true);
 		let successCount = 0;
 		let failCount = 0;

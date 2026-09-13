@@ -337,6 +337,36 @@ export const getProfilePictureUrl = (
 	return `${endpoint}/storage/buckets/${bucketId}/files/${profileImageId}/view?project=${projectId}`;
 };
 
+/**
+ * Turn a users-table avatar / profileImageId into a displayable image URL.
+ * Uploaded photos are stored as Appwrite file IDs (not full URLs). Returns null
+ * for empty values and the stock placeholder so callers can fall back to initials.
+ */
+export const resolveAvatarDisplayUrl = (user: {
+	avatar?: string | null;
+	profileImageId?: string | null;
+} | null | undefined): string | null => {
+	if (!user) return null;
+
+	const avatarValue = user.avatar?.trim() || "";
+	const profileImageId = user.profileImageId?.trim() || "";
+
+	if (
+		!avatarValue ||
+		avatarValue.includes("avatar-placeholder") ||
+		avatarValue.includes("3d-illustration-person-with-sunglasses")
+	) {
+		return getProfilePictureUrl(profileImageId || null);
+	}
+
+	if (/^https?:\/\//i.test(avatarValue) || avatarValue.startsWith("/")) {
+		return avatarValue;
+	}
+
+	// File ID in avatar (current upload path) or legacy profileImageId
+	return getProfilePictureUrl(avatarValue || profileImageId || null);
+};
+
 // DASHBOARD UTILS
 interface FileTypeSummary {
 	size: number;

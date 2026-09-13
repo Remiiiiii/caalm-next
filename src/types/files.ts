@@ -21,6 +21,7 @@ export interface UIFileDoc extends Models.Document {
 		| "active"
 		| "inactive"
 		| "pending-review"
+		| "pending-signature"
 		| "action-required"
 		| "expired";
 	contractType?: string;
@@ -40,4 +41,11 @@ export interface UIFileDoc extends Models.Document {
 	deletedBy?: string | null;
 	approvalWorkflowState?: string;
 	lifecycleStatus?: string;
+	digitalSignatureStatus?: string;
+	digitalSignatureEnvelopeId?: string;
+	signatureDisplay?: {
+		stage: "not_sent" | "sent" | "countersign";
+		signedCount?: number;
+		totalSigners?: number;
+	};
 }

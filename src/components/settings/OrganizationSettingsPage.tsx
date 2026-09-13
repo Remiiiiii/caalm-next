@@ -4,7 +4,9 @@ import { Building2, Save } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useState } from "react";
 import useSWR from "swr";
 import { PermissionGate } from "@/components/PermissionGate";
+import { ApprovalDelegationsManager } from "@/components/settings/ApprovalDelegationsManager";
 import { ApprovalSlaPoliciesManager } from "@/components/settings/ApprovalSlaPoliciesManager";
+import { ApprovalWorkflowTemplatesManager } from "@/components/settings/ApprovalWorkflowTemplatesManager";
 import { OrganizationLogoUploader } from "@/components/settings/OrganizationLogoUploader";
 import { OrgStructureManager } from "@/components/settings/OrgStructureManager";
 import { TimezoneSelect } from "@/components/settings/TimezoneSelect";
@@ -71,7 +73,7 @@ function FormSection({
 	children: ReactNode;
 }) {
 	return (
-		<section className="space-y-4 min-w-0">
+		<section className="min-w-0 space-y-4 rounded-lg bg-white/60 p-4 shadow-sm sm:p-6">
 			<div className="space-y-1">
 				<p className="text-sm font-medium uppercase tracking-[0.1em] text-slate-700">
 					{title}
@@ -334,13 +336,19 @@ export default function OrganizationSettingsPage() {
 					<TabsTrigger value="approval-sla" className="cursor-pointer">
 						Approval SLAs
 					</TabsTrigger>
+					<TabsTrigger value="approval-routing" className="cursor-pointer">
+						Approval routing
+					</TabsTrigger>
+					<TabsTrigger value="approval-delegation" className="cursor-pointer">
+						Delegation
+					</TabsTrigger>
 				</TabsList>
 
 				<TabsContent value="profile" className="mt-4">
 					<GlassCard className="glass-card">
 						<div className="glass-card-cap" />
-						<CardContent className="p-4 sm:p-6 bg-slate-50">
-							<div className="w-full min-w-0 space-y-8">
+						<CardContent className="p-4 sm:p-6">
+							<div className="w-full min-w-0 space-y-4">
 								<FormSection
 									title="Branding"
 									description="Shown on agreements and public-facing pages."
@@ -699,6 +707,12 @@ export default function OrganizationSettingsPage() {
 
 				<TabsContent value="approval-sla" className="mt-4">
 					<ApprovalSlaPoliciesManager canEdit={canEdit} />
+				</TabsContent>
+				<TabsContent value="approval-routing" className="mt-4">
+					<ApprovalWorkflowTemplatesManager canEdit={canEdit} />
+				</TabsContent>
+				<TabsContent value="approval-delegation" className="mt-4">
+					<ApprovalDelegationsManager />
 				</TabsContent>
 
 				<TabsContent value="structure" className="mt-4">

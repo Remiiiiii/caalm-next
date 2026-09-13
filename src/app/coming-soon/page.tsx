@@ -16,6 +16,7 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import OrbitingBlocks from "@/components/OrbitingBlocks";
 import SplineCanvas from "@/components/SplineCanvas";
+import { MEDIA_URLS } from "@/lib/media/urls";
 
 export default function ComingSoonPage() {
 	const [email, setEmail] = useState("");
@@ -177,7 +178,7 @@ export default function ComingSoonPage() {
 						preload="metadata"
 						className="absolute inset-0 w-full h-full object-cover pointer-events-none"
 					>
-						<source src="/assets/video/wave.mp4" type="video/mp4" />
+						<source src={MEDIA_URLS.waveVideo} type="video/mp4" />
 					</video>
 				</div>
 

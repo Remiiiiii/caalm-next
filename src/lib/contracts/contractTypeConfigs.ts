@@ -646,13 +646,48 @@ export const CONTRACT_TYPE_CONFIGS: ContractTypeConfig[] = [
 	},
 ];
 
+const DIGITAL_SIGNATURES_STEP_TITLE = "Digital Signatures";
+
+const DIGITAL_SIGNATURES_FIELDS = [
+	"digitalSignatureRequired",
+	"digitalSignatureStatus",
+	"digitalSignaturePlatform",
+	"digitalSignatureCompletedAt",
+	"digitalSignatureEnvelopeId",
+	"accessScope",
+] as const;
+
+/**
+ * Every contract type ends with a Digital Signatures step so Execute can be
+ * opted into at upload time (toggle defaults off).
+ */
+export function ensureDigitalSignaturesStep(
+	config: ContractTypeConfig,
+): ContractTypeConfig {
+	if (config.stepTitles.includes(DIGITAL_SIGNATURES_STEP_TITLE)) {
+		return config;
+	}
+
+	const nextStep = config.steps + 1;
+	return {
+		...config,
+		steps: nextStep,
+		stepTitles: [...config.stepTitles, DIGITAL_SIGNATURES_STEP_TITLE],
+		fieldsByStep: {
+			...config.fieldsByStep,
+			[nextStep]: [...DIGITAL_SIGNATURES_FIELDS],
+		},
+	};
+}
+
 /**
  * Get contract type configuration by ID
  */
 export function getContractTypeConfig(
 	typeId: string,
 ): ContractTypeConfig | undefined {
-	return CONTRACT_TYPE_CONFIGS.find((config) => config.id === typeId);
+	const config = CONTRACT_TYPE_CONFIGS.find((entry) => entry.id === typeId);
+	return config ? ensureDigitalSignaturesStep(config) : undefined;
 }
 
 /**

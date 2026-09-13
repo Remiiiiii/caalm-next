@@ -7,6 +7,7 @@ export const CONTRACT_STATUS_ENUM = [
 	"active",
 	"inactive",
 	"pending-review",
+	"pending-signature",
 	"action-required",
 	"expired",
 ] as const;
@@ -20,6 +21,7 @@ export const CONTRACT_STATUS_OPTIONS = [
 	{ value: "active" as const, label: "Active" },
 	{ value: "inactive" as const, label: "Inactive" },
 	{ value: "pending-review" as const, label: "Pending Review" },
+	{ value: "pending-signature" as const, label: "Pending Signature" },
 	{ value: "action-required" as const, label: "Action Required" },
 	{ value: "expired" as const, label: "Expired" },
 ] as const;

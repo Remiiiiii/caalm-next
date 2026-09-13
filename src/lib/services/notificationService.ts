@@ -1181,6 +1181,14 @@ class NotificationService {
 		metadata?: Record<string, unknown>,
 	): Promise<Notification> {
 		try {
+			const actionUrl =
+				typeof metadata?.actionUrl === "string"
+					? metadata.actionUrl
+					: undefined;
+			const actionText =
+				typeof metadata?.actionText === "string"
+					? metadata.actionText
+					: undefined;
 			return await this.createNotification({
 				userId,
 				title,
@@ -1189,6 +1197,8 @@ class NotificationService {
 				triggerType: "automatic",
 				triggeredBy: "system",
 				metadata,
+				actionUrl,
+				actionText,
 			});
 		} catch (error) {
 			console.error("Failed to trigger automatic notification:", error);

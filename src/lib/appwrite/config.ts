@@ -398,10 +398,34 @@ export const appwriteConfig = {
 		"69e4a101001a2b3c4d01",
 	),
 
+	/** Org approval routing templates (name: approval_workflow_templates) */
+	approvalWorkflowTemplatesCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_APPROVAL_WORKFLOW_TEMPLATES_COLLECTION",
+		"69e5a101001a2b3c4d01",
+	),
+
+	/** Out-of-office approval delegates (name: approval_delegations) */
+	approvalDelegationsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_APPROVAL_DELEGATIONS_COLLECTION",
+		"69e5a102002b3c4d5e02",
+	),
+
+	/** Email/Slack approval action tokens (name: approval_action_tokens) */
+	approvalActionTokensCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_APPROVAL_ACTION_TOKENS_COLLECTION",
+		"69e5a103003c4d5e6f03",
+	),
+
 	/** Expiration accountability records (name: document_expiration_attestations) */
 	documentExpirationAttestationsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_DOCUMENT_EXPIRATION_ATTESTATIONS_COLLECTION",
 		"69e4c201001b3c4d5e02",
+	),
+
+	/** CAALM Execute envelopes (name: signature_envelopes) */
+	signatureEnvelopesCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_SIGNATURE_ENVELOPES_COLLECTION",
+		"69c8e20100a1f5e8c061",
 	),
 
 	// Imagine Art API (AI Image Generation)

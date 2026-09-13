@@ -11,7 +11,8 @@ import { appwriteConfig } from "@/lib/appwrite/config";
  * Map legacy role names to new RBAC role names
  */
 const LEGACY_ROLE_MAP: Record<string, string[]> = {
-	executive: ["Super Admin"],
+	// Legacy invite/string "executive" → RBAC Executive role (not Super Admin).
+	executive: ["Executive"],
 	admin: ["Organization Admin"],
 	manager: ["Department Manager"],
 	reviewer: ["Organization Admin"], // Reviewer was merged into Organization Admin
@@ -251,11 +252,16 @@ export async function getManagersByDepartment(
 }
 
 /**
- * Get executives (Super Admins) - convenience function
+ * Users with the Executive RBAC role (final business approvers).
+ * Not Super Admin / Org Admin — those are separate admin roles.
  */
 export async function getAllExecutives(orgId?: string): Promise<any[]> {
-	// Do not require status=active — many admins have null status and would be skipped.
-	return getUsersByRoleNames(["Super Admin", "executive"], orgId);
+	return getUsersByRoleNames(["Executive", "executive"], orgId);
+}
+
+/** Super Admins only (platform / break-glass). */
+export async function getAllSuperAdmins(orgId?: string): Promise<any[]> {
+	return getUsersByRoleNames(["Super Admin"], orgId);
 }
 
 /**

@@ -1,0 +1,22 @@
+# Remotion / AE side projects — not part of the Next.js app
+brew-bros/
+caalm-demo-video/
+
+# Local engineering indexes and dumps
+graft/
+document/
+.tmp-*/
+biome-out.json
+biome-diagnostics*.json
+
+# Large media is served from Vercel Blob (src/lib/media/urls.ts)
+public/assets/video/**/*.mp4
+!public/assets/video/doc-upload.mp4
+public/assets/demo/tour/*.webp
+
+# Test / agent noise
+test-results/
+playwright-report/
+coverage/
+.tests.md
+agent-transcripts/

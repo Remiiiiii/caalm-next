@@ -95,9 +95,8 @@ export const contractSchema = z.object({
 	serviceCreditTerms: z.string().optional(),
 	escalationProcedures: z.string().optional(),
 	obligationOwners: z.string().optional(),
-	assignedManagers: z
-		.array(z.string())
-		.min(1, "Select at least one department manager"),
+	// Empty is allowed when the department has no managers to assign.
+	assignedManagers: z.array(z.string()).default([]),
 	internalApproverIds: z.array(z.string()).optional(),
 	approvalWorkflowTemplate: z.string().optional(),
 	currentApprovalStage: z.string().optional(),
@@ -127,6 +126,25 @@ export const contractSchema = z.object({
 	signatureRecipientIds: z.string().optional(),
 	visibilityRoles: z.string().optional(),
 	accessScope: z.string().optional(),
+}).superRefine((data, ctx) => {
+	if (!data.notToExceedAmount?.trim()) return;
+	const amount = parseFloat(data.amount.replace(/[$,]/g, ""));
+	const nte = parseFloat(data.notToExceedAmount.replace(/[$,]/g, ""));
+	if (Number.isNaN(nte)) {
+		ctx.addIssue({
+			code: z.ZodIssueCode.custom,
+			path: ["notToExceedAmount"],
+			message: "Enter a valid not-to-exceed amount",
+		});
+		return;
+	}
+	if (!Number.isNaN(amount) && nte < amount) {
+		ctx.addIssue({
+			code: z.ZodIssueCode.custom,
+			path: ["notToExceedAmount"],
+			message: "Not-to-exceed amount cannot be less than the contract amount",
+		});
+	}
 });
 
 export type ContractFormData = z.infer<typeof contractSchema>;

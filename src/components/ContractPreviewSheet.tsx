@@ -12,6 +12,7 @@ import {
 	Users,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import ContractApprovalFlowDialog from "@/components/contracts/approval/ContractApprovalFlowDialog";
 import FormattedDateTime, {
 	FormattedDate,
 } from "@/components/FormattedDateTime";
@@ -25,6 +26,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { updateContractPreviewFields } from "@/lib/actions/file.actions";
+import { getContractLifecycleDisplay } from "@/lib/contracts/contractLifecycleDisplay";
 import {
 	getExpiryUrgency,
 	isContractExpired,
@@ -60,6 +62,8 @@ function statusBannerClasses(file: UIFileDoc): string {
 			return "bg-green/10 text-green border-green/15";
 		case "pending-review":
 			return "bg-orange/10 text-orange border-orange/15";
+		case "pending-signature":
+			return "bg-blue/10 text-blue border-blue/15";
 		case "action-required":
 			return "bg-red/10 text-red border-red/15";
 		default:
@@ -100,6 +104,7 @@ export default function ContractPreviewSheet({
 		status: "",
 	});
 	const [saving, setSaving] = useState(false);
+	const [workflowOpen, setWorkflowOpen] = useState(false);
 
 	useEffect(() => {
 		if (!file) return;
@@ -108,6 +113,7 @@ export default function ContractPreviewSheet({
 			contractType: file.contractType || "",
 			status: file.status || "",
 		});
+		setWorkflowOpen(false);
 	}, [file?.$id, file?.department, file?.contractType, file?.status]);
 
 	const departmentOptions = useMemo(
@@ -126,6 +132,7 @@ export default function ContractPreviewSheet({
 	if (!file) return null;
 
 	const urgency = getExpiryUrgency(file);
+	const lifecycle = getContractLifecycleDisplay(file);
 	const title = file.contractName || file.name || "Untitled Contract";
 	const amountValue =
 		file.amount != null && Number.isFinite(Number(file.amount))
@@ -186,6 +193,7 @@ export default function ContractPreviewSheet({
 	};
 
 	return (
+		<>
 		<EntityPreviewSheetShell
 			open={open}
 			onOpenChange={onOpenChange}
@@ -214,17 +222,40 @@ export default function ContractPreviewSheet({
 			}
 			icon={FileText}
 			statusBanner={
-				<div
-					className={cn(
-						"border-b px-5 py-2.5 text-center text-xs font-semibold capitalize tracking-wide",
-						statusBannerClasses(file),
-					)}
-				>
-					{statusLabel(file)}
-					{urgency !== "none" && urgency !== "expired" ? (
-						<span className="font-medium"> · Expires in {urgency} days</span>
-					) : null}
-				</div>
+				lifecycle.clickable ? (
+					<button
+						type="button"
+						className={cn(
+							"w-full border-b px-5 py-2.5 text-center text-xs font-semibold capitalize tracking-wide cursor-pointer transition-colors duration-200 hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#0f5384]/40",
+							statusBannerClasses(file),
+						)}
+						onClick={() => setWorkflowOpen(true)}
+						aria-label={`Open approval workflow for ${title}`}
+					>
+						{lifecycle.label}
+						{lifecycle.subtext ? (
+							<span className="font-medium normal-case">
+								{" "}
+								· {lifecycle.subtext}
+							</span>
+						) : null}
+						{urgency !== "none" && urgency !== "expired" ? (
+							<span className="font-medium"> · Expires in {urgency} days</span>
+						) : null}
+					</button>
+				) : (
+					<div
+						className={cn(
+							"border-b px-5 py-2.5 text-center text-xs font-semibold capitalize tracking-wide",
+							statusBannerClasses(file),
+						)}
+					>
+						{statusLabel(file)}
+						{urgency !== "none" && urgency !== "expired" ? (
+							<span className="font-medium"> · Expires in {urgency} days</span>
+						) : null}
+					</div>
+				)
 			}
 			footer={
 				isDirty || file.url ? (
@@ -372,5 +403,17 @@ export default function ContractPreviewSheet({
 				</div>
 			</section>
 		</EntityPreviewSheetShell>
+		{lifecycle.clickable ? (
+			<ContractApprovalFlowDialog
+				open={workflowOpen}
+				onOpenChange={(next) => {
+					setWorkflowOpen(next);
+					if (!next) onUpdated?.();
+				}}
+				contractId={String(file.contractId || file.$id)}
+				contractName={file.contractName || file.name}
+			/>
+		) : null}
+		</>
 	);
 }

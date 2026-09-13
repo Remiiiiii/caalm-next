@@ -1,3 +1,5 @@
+import { MEDIA_URLS } from "@/lib/media/urls";
+
 export type DemoTip = {
 	id: string;
 	title: string;
@@ -23,7 +25,7 @@ export const DEMO_TIPS: DemoTip[] = [
 		targetSelector: '[data-tour="nav-dashboard"]',
 		position: "center",
 		ctaLabel: "Got it",
-		image: "/assets/demo/tour/welcome.webp",
+		image: MEDIA_URLS.demoTourWelcome,
 	},
 	{
 		id: "demo-contracts",
@@ -34,7 +36,7 @@ export const DEMO_TIPS: DemoTip[] = [
 		targetSelector: '[data-tour="nav-contracts"]',
 		ctaLabel: "Explore contracts",
 		ctaHref: "/contracts",
-		image: "/assets/demo/tour/contracts.webp",
+		image: MEDIA_URLS.demoTourContracts,
 	},
 	{
 		id: "demo-licenses",
@@ -45,7 +47,7 @@ export const DEMO_TIPS: DemoTip[] = [
 		targetSelector: '[data-tour="nav-licenses"]',
 		ctaLabel: "Explore licenses",
 		ctaHref: "/licenses",
-		image: "/assets/demo/tour/licenses.webp",
+		image: MEDIA_URLS.demoTourLicenses,
 	},
 	{
 		id: "demo-audits",
@@ -56,7 +58,7 @@ export const DEMO_TIPS: DemoTip[] = [
 		targetSelector: '[data-tour="nav-audits"]',
 		ctaLabel: "Open compliance",
 		ctaHref: "/audits/status",
-		image: "/assets/demo/tour/audits.webp",
+		image: MEDIA_URLS.demoTourAudits,
 	},
 	{
 		id: "demo-analytics",
@@ -67,7 +69,7 @@ export const DEMO_TIPS: DemoTip[] = [
 		targetSelector: '[data-tour="nav-reports-analytics"]',
 		ctaLabel: "Open analytics",
 		ctaHref: "/analytics",
-		image: "/assets/demo/tour/analytics.webp",
+		image: MEDIA_URLS.demoTourAnalytics,
 	},
 ];
 

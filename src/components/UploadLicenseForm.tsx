@@ -317,7 +317,7 @@ const UploadLicenseForm: React.FC<LicenseUploadFormProps> = ({
 			});
 			return;
 		}
-		if (!selectedManagers?.length) {
+		if (filteredManagers.length > 0 && !selectedManagers?.length) {
 			toast({
 				title: "Department manager required",
 				description: "Select at least one department manager before upload.",

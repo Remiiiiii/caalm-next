@@ -154,7 +154,8 @@ src/pages/api/caalm-466120-c3e75c165eeb.json
 .tests.md
 *.ps1
 uploads/
-document/
+# Root-only dump folder — do not use bare `document/` (it also ignores API routes like esign/.../document/)
+/document/
 *.csv
 *.html
 mcpjson.txt
@@ -172,7 +173,21 @@ graft/
 # Local After Effects MCP clone (setup scripts install this separately)
 public/assets/demo/ae-mcp-setup/after-effects-mcp/
 
+# Remotion / AE side projects (not deployed with the Next app)
+brew-bros/
+caalm-demo-video/
+
+# Large media hosted on Vercel Blob (see src/lib/media/urls.ts)
+public/assets/video/*.mp4
+!public/assets/video/doc-upload.mp4
+public/assets/video/wave.original.mp4
+public/assets/demo/tour/*.webp
+scripts/.blob-media-urls.json
+
 # Local Vercel/env dumps (never commit)
 .tmp-*.env
 .tmp-vercel*.env
+
+# Approval report visual-check output
+scripts/approval_audit_report/.verify/
 

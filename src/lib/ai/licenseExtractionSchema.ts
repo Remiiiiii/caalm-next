@@ -5,6 +5,7 @@ import {
 	parseLocalDateString,
 } from "./contractExtractionSchema";
 import { extractJsonObjectFromModelText } from "./contractTypeSuggestionSchema";
+import { isTemplateTokenValue } from "./scrubTemplateTokens";
 
 export const LICENSE_EXTRACTION_METHOD = {
 	gemini: "gemini-structured",
@@ -374,6 +375,13 @@ export function parseLicenseExtractionJson(
 	if (data.notes) fields.notes = data.notes;
 	if (data.subDepartment) fields.subDepartment = data.subDepartment;
 	if (data.businessUnit) fields.businessUnit = data.businessUnit;
+
+	for (const key of Object.keys(fields) as ExtractableLicenseField[]) {
+		const value = fields[key];
+		if (typeof value === "string" && isTemplateTokenValue(value)) {
+			delete fields[key];
+		}
+	}
 
 	const fieldConfidence: ParsedLicenseExtraction["fieldConfidence"] = {};
 	const rawConf = data.fieldConfidence || {};

@@ -25,6 +25,7 @@ type FileType = "image" | "video" | "audio" | "document" | "other";
 import { Query } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite/admin";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { enrichContractFilesForList } from "@/lib/contracts/enrichContractListDisplay";
 import { excludeSoftDeletedQuery } from "@/lib/soft-delete";
 
 interface SearchParamProps {
@@ -164,13 +165,18 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
 				description: contract.description,
 				riskLevel: contract.riskLevel,
 				bucketFileId: fileData?.bucketFileId || contract.bucketFileId,
+				approvalWorkflowState: contract.approvalWorkflowState,
+				digitalSignatureStatus: contract.digitalSignatureStatus,
+				digitalSignatureEnvelopeId: contract.digitalSignatureEnvelopeId,
 			};
 
 			return contractAsFile;
 		});
 
-		files = { documents: contractDocuments };
-		filteredDocuments = contractDocuments;
+		files = {
+			documents: await enrichContractFilesForList(contractDocuments),
+		};
+		filteredDocuments = files.documents;
 
 		// Extract unique departments and assigned managers for filter options
 		uniqueDepartments = Array.from(

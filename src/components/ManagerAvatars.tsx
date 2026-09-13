@@ -9,13 +9,41 @@ import {
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { AppUser } from "@/lib/actions/user.actions";
-import { cn } from "@/lib/utils";
+import { cn, getProfilePictureUrl } from "@/lib/utils";
 
 interface ManagerAvatarsProps {
 	managers: AppUser[];
 	profileImages: Record<string, string>;
 	failedImages: Set<string>;
 	onImageError: (userId: string, accountId?: string) => void;
+	/** Accessible name for the avatar group (default: assigned managers). */
+	ariaLabel?: string;
+}
+
+/** Prefer an uploaded photo URL; otherwise fall back to storage file id. */
+function resolveManagerImageUrl(
+	manager: AppUser,
+	profileImages: Record<string, string>,
+): string | null {
+	const fromMap =
+		profileImages[manager.$id] ||
+		(manager.accountId ? profileImages[manager.accountId] : undefined);
+	if (fromMap) return fromMap;
+
+	const avatarValue = manager.avatar?.trim();
+	if (avatarValue && /^https?:\/\//i.test(avatarValue)) return avatarValue;
+	if (avatarValue?.startsWith("/")) return avatarValue;
+
+	const fileId =
+		(avatarValue &&
+		!avatarValue.startsWith("/") &&
+		!/^https?:\/\//i.test(avatarValue)
+			? avatarValue
+			: null) ||
+		manager.profileImageId?.trim() ||
+		null;
+
+	return getProfilePictureUrl(fileId);
 }
 
 const ManagerAvatars: React.FC<ManagerAvatarsProps> = ({
@@ -23,6 +51,7 @@ const ManagerAvatars: React.FC<ManagerAvatarsProps> = ({
 	profileImages,
 	failedImages,
 	onImageError,
+	ariaLabel = "Assigned managers",
 }) => {
 	if (managers.length === 0) {
 		return null;
@@ -35,11 +64,7 @@ const ManagerAvatars: React.FC<ManagerAvatarsProps> = ({
 	const displayManagers = managers.slice(0, maxDisplay);
 
 	return (
-		<div
-			className="flex items-center"
-			role="list"
-			aria-label="Assigned managers"
-		>
+		<div className="flex items-center" role="list" aria-label={ariaLabel}>
 			{displayManagers.map((manager, index) => {
 				const initials = manager.fullName
 					? manager.fullName
@@ -54,17 +79,17 @@ const ManagerAvatars: React.FC<ManagerAvatarsProps> = ({
 				const userId = manager.$id;
 				const avatarColor = getAvatarColor(userId);
 
-				// Get profile image URL if available
-				const profileImageUrl =
-					profileImages[manager.$id] ||
-					(manager.accountId ? profileImages[manager.accountId] : null);
+				const profileImageUrl = resolveManagerImageUrl(
+					manager,
+					profileImages,
+				);
 
 				// Check if this image failed to load
 				const imageFailed =
 					failedImages.has(manager.$id) ||
 					(manager.accountId && failedImages.has(manager.accountId));
 
-				const shouldShowImage = profileImageUrl && !imageFailed;
+				const shouldShowImage = Boolean(profileImageUrl) && !imageFailed;
 
 				return (
 					<TooltipProvider key={`${manager.$id || index}`}>
@@ -76,12 +101,11 @@ const ManagerAvatars: React.FC<ManagerAvatarsProps> = ({
 										index > 0 && "-ml-2",
 										"focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-full",
 									)}
-									aria-label={`View ${manager.fullName}'s profile`}
+									aria-label={manager.fullName || "User"}
 									tabIndex={0}
 									onKeyDown={(e) => {
 										if (e.key === "Enter" || e.key === " ") {
 											e.preventDefault();
-											// Tooltip will show on focus/hover, no additional action needed
 										}
 									}}
 								>
@@ -97,7 +121,7 @@ const ManagerAvatars: React.FC<ManagerAvatarsProps> = ({
 											}}
 										>
 											<img
-												src={profileImageUrl}
+												src={profileImageUrl!}
 												alt={manager.fullName}
 												className="w-full h-full object-cover rounded-full border border-[#FCFEFF]"
 												onError={() => {

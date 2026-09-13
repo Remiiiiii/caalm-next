@@ -33,6 +33,12 @@ function statusBadge(
 					Pending Review
 				</span>
 			);
+		case "pending-signature":
+			return (
+				<span className="inline-block px-1.5 py-0.5 border border-blue/20 bg-blue/10 text-blue text-xs rounded-full font-medium">
+					Pending Signature
+				</span>
+			);
 		case "action-required":
 			return (
 				<span className="inline-block px-1.5 py-0.5 border border-red/20 bg-red/10 text-red text-xs rounded-full font-medium">

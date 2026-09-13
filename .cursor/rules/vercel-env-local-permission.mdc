@@ -1,0 +1,40 @@
+---
+description: Require explicit permission before any Vercel command that syncs remote development env vars into .env.local
+alwaysApply: true
+---
+
+# Vercel → `.env.local` sync permission
+
+`.env.local` is the developer’s local secret file. Vercel CLI can silently overwrite it when linking stores, pulling env, or creating Blob stores.
+
+## Hard rule
+
+**Before** any action that may sync Vercel project **development** env vars into `.env.local`, you must:
+
+1. **State the action** in plain English (what command/tool, and that it can rewrite `.env.local`).
+2. **Ask for permission** and wait for an explicit yes.
+3. **Do not run** the command until the user agrees.
+
+## Commands / flows that trigger this (non-exhaustive)
+
+Treat these as permission-gated unless the user already asked for that exact sync:
+
+- `vercel env pull` / `vercel pull` (any env download into `.env.local`)
+- `vercel blob create-store` (often auto-pulls development env after link)
+- `vercel link` when it downloads or refreshes local env
+- Any MCP / script / wrapper that writes Vercel remote env into `.env.local`
+
+## Allowed without asking
+
+- Reading `.env.local` key **names** only (no values) when debugging
+- Adding a **single** agreed key (e.g. `BLOB_READ_WRITE_TOKEN`) after the user approved that specific write
+- Editing `.env.example` / `.env.demo.example` (not `.env.local`)
+
+## After an approved sync
+
+- Tell the user `.env.local` was updated by Vercel.
+- Offer to restore from backup/history and keep only newly needed keys if they want.
+
+## Example
+
+> Next step would run `vercel blob create-store`, which can pull the project’s development env vars and overwrite `.env.local`. That may replace local secrets with remote ones. Should I proceed?

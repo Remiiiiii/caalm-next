@@ -116,6 +116,7 @@ export const PERMISSIONS = {
 		ALLOCATE: "licenses.allocate",
 		RENEW: "licenses.renew",
 		APPROVE: "licenses.approve",
+		SIGN: "licenses.sign",
 	},
 
 	// Approval workflow overrides (explicit; never inferred from role names)
@@ -178,6 +179,7 @@ export const SENSITIVE_PERMISSIONS: readonly string[] = [
 	PERMISSIONS.CONTRACTS.APPROVE,
 	PERMISSIONS.CONTRACTS.SIGN,
 	PERMISSIONS.LICENSES.APPROVE,
+	PERMISSIONS.LICENSES.SIGN,
 	PERMISSIONS.LICENSES.DELETE,
 	PERMISSIONS.CLAUSES.DELETE,
 	PERMISSIONS.CONTRACT_TEMPLATES.DELETE,
@@ -640,6 +642,12 @@ export const PERMISSION_DEFINITIONS = [
 		name: "Approve Licenses",
 		category: "licenses",
 		description: "Approve license requests and renewals",
+	},
+	{
+		key: PERMISSIONS.LICENSES.SIGN,
+		name: "Sign Licenses",
+		category: "licenses",
+		description: "Send licenses for e-signature and manage Execute envelopes",
 	},
 
 	// Approvals

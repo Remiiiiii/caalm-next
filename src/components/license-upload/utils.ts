@@ -2,6 +2,8 @@
  * Utility functions for license upload form
  */
 
+import { scrubTemplateTokenValue } from "@/lib/ai/scrubTemplateTokens";
+
 // Parse comma-separated string into array
 export const parseListInput = (value?: string): string[] | undefined => {
 	if (!value || value.trim().length === 0) return undefined;
@@ -27,7 +29,7 @@ export const parseIntegerInput = (value?: string): number | undefined => {
 
 // Sanitize string (trim and return undefined if empty)
 export const sanitizeString = (value?: string): string | undefined => {
-	return value && value.trim().length > 0 ? value.trim() : undefined;
+	return scrubTemplateTokenValue(value);
 };
 
 // Format date for display

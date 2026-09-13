@@ -3,7 +3,8 @@
 import { Loader2 } from "lucide-react";
 import type { Models } from "node-appwrite";
 import type React from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { ContractApprovalStatusCell } from "@/components/contracts/ContractApprovalStatusCell";
 import { type AppUser, fetchUserNamesByIds } from "@/lib/actions/user.actions";
 import { convertFileSize } from "@/lib/utils";
 import type { UIFileDoc } from "@/types/files";
@@ -11,59 +12,6 @@ import ActionDropdown from "./ActionDropdown";
 import FormattedDateTime, { FormattedDate } from "./FormattedDateTime";
 import ManagerAvatars from "./ManagerAvatars";
 import Thumbnail from "./Thumbnail";
-
-// Map contract status to badge color and label (aligned with licenses / style guide)
-const statusBadge = (
-	status: string,
-	isExpired?: boolean,
-	contractExpiryDate?: string,
-) => {
-	const isContractExpired =
-		status?.toLowerCase() === "expired" ||
-		isExpired ||
-		(contractExpiryDate && new Date(contractExpiryDate) < new Date());
-
-	if (isContractExpired) {
-		return (
-			<span className="inline-block px-1.5 py-0.5 border border-red/20 bg-red/10 text-red text-xs rounded-full font-medium">
-				Expired
-			</span>
-		);
-	}
-
-	switch (status) {
-		case "pending-review":
-			return (
-				<span className="inline-block px-1.5 py-0.5 border border-orange/20 bg-orange/10 text-orange text-xs rounded-full font-medium">
-					Pending Review
-				</span>
-			);
-		case "action-required":
-			return (
-				<span className="inline-block px-1.5 py-0.5 border border-red/20 bg-red/10 text-red text-xs rounded-full font-medium">
-					Action Required
-				</span>
-			);
-		case "active":
-			return (
-				<span className="inline-block px-1.5 py-0.5 border border-green/20 bg-green/10 text-green text-xs rounded-full font-medium">
-					Active
-				</span>
-			);
-		case "inactive":
-			return (
-				<span className="inline-block px-1.5 py-0.5 border border-slate-200 bg-slate-100 text-slate-600 text-xs rounded-full font-medium">
-					Inactive
-				</span>
-			);
-		default:
-			return (
-				<span className="inline-block px-1.5 py-0.5 border border-slate-200 bg-slate-100 text-slate-800 text-xs rounded-full font-medium">
-					{status || "Unknown"}
-				</span>
-			);
-	}
-};
 
 // Map risk level to badge color and label
 const riskLevelBadge = (risk: string) => {
@@ -381,6 +329,19 @@ const Card = ({
 	]);
 
 	// Fetch assigned manager user data - render immediately, fetch async
+	const managersKey = useMemo(() => {
+		if (
+			Array.isArray(file.assignedManagers) &&
+			file.assignedManagers.length > 0
+		) {
+			return file.assignedManagers.map((m) => String(m).trim()).join("|");
+		}
+		if (typeof file.assignedManagers === "string") {
+			return String(file.assignedManagers).trim();
+		}
+		return typeof assignedTo === "string" ? assignedTo.trim() : "";
+	}, [file.assignedManagers, assignedTo]);
+
 	useEffect(() => {
 		const fetchAssignedManagers = async () => {
 			let managers: string[] = [];
@@ -491,7 +452,8 @@ const Card = ({
 		};
 
 		fetchAssignedManagers();
-	}, [file.assignedManagers, assignedTo]);
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- managersKey is content-stable
+	}, [managersKey]);
 
 	// Memoized handler for image load errors
 	const handleImageError = useCallback((userId: string, accountId?: string) => {
@@ -632,12 +594,19 @@ const Card = ({
 					{displayName}
 				</p>
 				<div className="flex items-center gap-2 flex-wrap">
-					{(contractStatus || isExpired) &&
-						statusBadge(
-							contractStatus || "expired",
-							file.isExpired,
-							contractExpiryDate,
-						)}
+					{(contractStatus || isExpired) && (
+						<ContractApprovalStatusCell
+							file={{
+								...file,
+								status: (isExpired
+									? "expired"
+									: contractStatus || file.status) as UIFileDoc["status"],
+								contractExpiryDate,
+								isExpired,
+							}}
+							onRefresh={onRefresh}
+						/>
+					)}
 					{riskLevel && riskLevelBadge(riskLevel)}
 					{departmentLabel && (
 						<span className="inline-block px-1.5 py-0.5 border border-slate-200 bg-white/50 text-slate-600 text-xs rounded-full font-medium capitalize">
