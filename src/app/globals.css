@@ -1636,6 +1636,68 @@ button[data-state="active"] > span {
 	}
 }
 
+@keyframes approval-step-pulse {
+	0%,
+	100% {
+		box-shadow: 0 0 0 2px rgba(15, 83, 132, 0.25), 0 0 0 0 rgba(14, 124, 134, 0.35);
+	}
+	50% {
+		box-shadow: 0 0 0 2px rgba(15, 83, 132, 0.45), 0 0 12px 4px rgba(14, 124, 134, 0.35);
+	}
+}
+
+.approval-step-current-pulse {
+	border-color: rgba(15, 83, 132, 0.35);
+	animation: approval-step-pulse 2.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.approval-step-current-pulse {
+		animation: none;
+		box-shadow: 0 0 0 2px rgba(15, 83, 132, 0.35);
+	}
+}
+
+/* Activity timeline — How-it-works style sonar rings around the current-step dot */
+.approval-activity-sonar {
+	position: absolute;
+	display: block;
+}
+
+.approval-activity-sonar-ring {
+	pointer-events: none;
+	position: absolute;
+	inset: 0;
+	border-radius: 9999px;
+	border: 2px solid var(--approval-sonar-color, #0e7c86);
+	animation: approval-activity-sonar 2.8s linear infinite;
+}
+
+.approval-activity-sonar-ring-delay {
+	animation-delay: 1.4s;
+}
+
+@keyframes approval-activity-sonar {
+	0% {
+		transform: scale(0.8);
+		opacity: 0;
+	}
+	15% {
+		opacity: 0.45;
+	}
+	100% {
+		transform: scale(2.2);
+		opacity: 0;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.approval-activity-sonar-ring {
+		animation: none;
+		opacity: 0;
+	}
+}
+
 /* Error states */
 .calendar-error {
 	border-color: #ef4444;

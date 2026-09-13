@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { cn, getProfilePictureUrl } from "@/lib/utils";
+import { cn, resolveAvatarDisplayUrl } from "@/lib/utils";
 
 interface ProfilePictureProps {
 	user: Models.User<Models.Preferences> | null;
@@ -43,23 +43,20 @@ function resolveProfileImageUrl(
 		| undefined;
 
 	const prefUrl = prefs?.profileImage?.trim();
-	if (prefUrl) return prefUrl;
+	// Ignore stock placeholder URLs stored in prefs from older clients
+	if (
+		prefUrl &&
+		!prefUrl.includes("avatar-placeholder") &&
+		!prefUrl.includes("3d-illustration-person-with-sunglasses")
+	) {
+		return prefUrl;
+	}
 
-	const avatarValue = user.avatar?.trim();
-	if (avatarValue && /^https?:\/\//i.test(avatarValue)) return avatarValue;
-	if (avatarValue?.startsWith("/")) return avatarValue;
-
-	const fileId =
-		(avatarValue &&
-		!avatarValue.startsWith("/") &&
-		!/^https?:\/\//i.test(avatarValue)
-			? avatarValue
-			: null) ||
-		user.profileImageId?.trim() ||
-		prefs?.profileImageId?.trim() ||
-		null;
-
-	return getProfilePictureUrl(fileId);
+	return resolveAvatarDisplayUrl({
+		avatar: user.avatar,
+		profileImageId:
+			user.profileImageId?.trim() || prefs?.profileImageId?.trim() || null,
+	});
 }
 
 const ProfilePicture: React.FC<ProfilePictureProps> = ({

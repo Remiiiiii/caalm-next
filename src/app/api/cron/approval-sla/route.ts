@@ -1,5 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { processApprovalSlas } from "@/lib/approvals/ApprovalSlaService";
+import { processApprovalDelegations } from "@/lib/approvals/approvalDelegationCron";
+import { listActiveDelegations } from "@/lib/approvals/approvalDelegations";
 
 function isAuthorizedCron(request: NextRequest): boolean {
 	const authHeader = request.headers.get("authorization");
@@ -17,9 +19,15 @@ export async function GET(request: NextRequest) {
 
 	try {
 		const result = await processApprovalSlas();
+		const delegationResult = await processApprovalDelegations();
+		const activeDelegations = await listActiveDelegations();
 		return NextResponse.json({
 			success: true,
 			...result,
+			activeDelegations: activeDelegations.length,
+			delegationsApplied: delegationResult.updated,
+			delegatesNotified: delegationResult.notified,
+			delegationRowsScanned: delegationResult.scanned,
 			timestamp: new Date().toISOString(),
 		});
 	} catch (error) {

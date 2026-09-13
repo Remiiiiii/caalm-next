@@ -222,21 +222,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 								console.log("AuthContext: Using 2FA-based user for dashboard");
 							}
 
-							// Generate profile image URL from fileId
+							// Generate profile image URL from file id (avatar field or legacy profileImageId)
 							let profileImageUrl = null;
-							if (twoFAUser.profileImageId) {
+							const imageId =
+								twoFAUser.profileImageId ||
+								(twoFAUser.avatar &&
+								!String(twoFAUser.avatar).startsWith("http") &&
+								!String(twoFAUser.avatar).startsWith("/")
+									? twoFAUser.avatar
+									: null);
+							if (imageId) {
 								const bucketId =
 									process.env.NEXT_PUBLIC_APPWRITE_PROFILE_PICTURES_BUCKET;
 								const endpoint = process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT;
 								const projectId = process.env.NEXT_PUBLIC_APPWRITE_PROJECT;
 
 								if (bucketId && endpoint && projectId) {
-									// Use direct Appwrite URL (bucket must have "Any" read permission)
-									profileImageUrl = `${endpoint}/storage/buckets/${bucketId}/files/${twoFAUser.profileImageId}/view?project=${projectId}`;
-									console.log(
-										"AuthContext: Generated profile image URL:",
-										profileImageUrl,
-									);
+									profileImageUrl = `${endpoint}/storage/buckets/${bucketId}/files/${imageId}/view?project=${projectId}`;
 								}
 							}
 
@@ -420,21 +422,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 			if (isDashboardRoute) {
 				const twoFAUser = await getCurrentUserFrom2FA();
 				if (twoFAUser) {
-					// Generate profile image URL from fileId
+					// Generate profile image URL from file id (avatar field or legacy profileImageId)
 					let profileImageUrl = null;
-					if (twoFAUser.profileImageId) {
+					const imageId =
+						twoFAUser.profileImageId ||
+						(twoFAUser.avatar &&
+						!String(twoFAUser.avatar).startsWith("http") &&
+						!String(twoFAUser.avatar).startsWith("/")
+							? twoFAUser.avatar
+							: null);
+					if (imageId) {
 						const bucketId =
 							process.env.NEXT_PUBLIC_APPWRITE_PROFILE_PICTURES_BUCKET;
 						const endpoint = process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT;
 						const projectId = process.env.NEXT_PUBLIC_APPWRITE_PROJECT;
 
 						if (bucketId && endpoint && projectId) {
-							// Use direct Appwrite URL (bucket must have "Any" read permission)
-							profileImageUrl = `${endpoint}/storage/buckets/${bucketId}/files/${twoFAUser.profileImageId}/view?project=${projectId}`;
-							console.log(
-								"refreshUser: Generated profile image URL:",
-								profileImageUrl,
-							);
+							profileImageUrl = `${endpoint}/storage/buckets/${bucketId}/files/${imageId}/view?project=${projectId}`;
 						}
 					}
 

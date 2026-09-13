@@ -316,11 +316,11 @@ export async function triggerNewUserRequestNotification(
 	userFullName: string,
 ): Promise<void> {
 	try {
-		const { getAllExecutives, getAllAdmins } = await import(
+		const { getAllSuperAdmins, getAllAdmins } = await import(
 			"./get-users-by-role"
 		);
 		const recipients = [
-			...(await getAllExecutives()),
+			...(await getAllSuperAdmins()),
 			...(await getAllAdmins()),
 		];
 		// Dedupe by user document id

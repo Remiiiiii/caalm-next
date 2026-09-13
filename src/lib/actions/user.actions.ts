@@ -21,11 +21,12 @@ import CacheManager from "@/lib/services/cache-manager";
 import { avatarPlaceholderUrl, type UserDivision } from "../../../constants";
 import { createAdminClient, createSessionClient } from "../appwrite";
 import { appwriteConfig } from "../appwrite/config";
+import { flattenTableRow } from "../appwrite/flatten-row";
 import {
 	normalizeOrgPlacement,
 	OrgUnitValidationError,
 } from "../org/org-unit-validation";
-import { parseStringify } from "../utils";
+import { parseStringify, resolveAvatarDisplayUrl } from "../utils";
 import { triggerUserInvitationNotification } from "../utils/notificationTriggers";
 import {
 	notifyInvitationAccepted,
@@ -108,6 +109,19 @@ export const getUserById = async (userId: string) => {
 		});
 		return result;
 	} catch (error) {
+		// Missing row is a normal miss (often Auth accountId ≠ users-table $id).
+		// Callers fall back to accountId lookup; don't treat that as a hard failure.
+		const code =
+			error && typeof error === "object" && "code" in error
+				? Number((error as { code?: number }).code)
+				: undefined;
+		const type =
+			error && typeof error === "object" && "type" in error
+				? String((error as { type?: string }).type || "")
+				: "";
+		if (code === 404 || type === "row_not_found") {
+			return null;
+		}
 		console.error("Failed to get user by ID:", error);
 		return null;
 	}
@@ -128,26 +142,26 @@ export const getUserByAccountId = async (
 			return null;
 		}
 
-		const user = result.rows[0];
+		const user = flattenTableRow(result.rows[0] as Record<string, unknown>);
 
 		// Get user's role from database (for calendar permissions compatibility)
 		// Both functions are now cached, so this is fast
-		const defaultOrg = await getUserDefaultOrganization(user.$id);
+		const defaultOrg = await getUserDefaultOrganization(String(user.$id));
 		const userRoles = defaultOrg
-			? await getUserRoles(user.$id, defaultOrg.orgId)
+			? await getUserRoles(String(user.$id), defaultOrg.orgId)
 			: [];
 		const roleName = userRoles[0]?.roleName || "";
 
 		return {
-			$id: user.$id,
-			fullName: user.fullName,
-			email: user.email,
-			avatar: user.avatar,
-			accountId: user.accountId,
+			$id: String(user.$id),
+			fullName: String(user.fullName || ""),
+			email: String(user.email || ""),
+			avatar: String(user.avatar || ""),
+			accountId: String(user.accountId || ""),
 			// Display/compat only — calendar authz uses permission keys.
 			role: calendarRoleFromRbacName(roleName),
-			division: user.division,
-			status: user.status,
+			division: user.division as string | undefined,
+			status: user.status as string | undefined,
 		};
 	} catch (error) {
 		console.error("Failed to get user by accountId:", error);
@@ -812,11 +826,13 @@ const getCurrentUserFrom2FAImpl = async () => {
 				return null;
 			}
 
-			const user = userResponse.rows[0];
+			const user = flattenTableRow(
+				userResponse.rows[0] as Record<string, unknown>,
+			);
 
-			const defaultOrg = await getUserDefaultOrganization(user.$id);
+			const defaultOrg = await getUserDefaultOrganization(String(user.$id));
 			const userRoles = defaultOrg
-				? await getUserRoles(user.$id, defaultOrg.orgId)
+				? await getUserRoles(String(user.$id), defaultOrg.orgId)
 				: [];
 			const roleName = userRoles[0]?.roleName || "";
 
@@ -834,8 +850,8 @@ const getCurrentUserFrom2FAImpl = async () => {
 				divisionLabel: user.divisionLabel,
 				status: user.status,
 				profileImageId: resolveProfileImageId({
-					avatar: user.avatar,
-					profileImageId: user.profileImageId,
+					avatar: user.avatar as string | undefined,
+					profileImageId: user.profileImageId as string | null | undefined,
 				}),
 				$createdAt: user.$createdAt,
 				$updatedAt: user.$updatedAt,
@@ -1068,12 +1084,13 @@ interface ListPendingInvitationsParams {
 const VALID_RBAC_ROLES = [
 	"Super Admin",
 	"Organization Admin",
+	"Executive",
 	"Department Manager",
 	"Viewer",
 ];
 
 const LEGACY_INVITE_ROLE_MAP: Record<string, string> = {
-	executive: "Super Admin",
+	executive: "Executive",
 	admin: "Organization Admin",
 	manager: "Department Manager",
 	viewer: "Viewer",
@@ -1944,27 +1961,9 @@ function resolveProfileAvatarUrl(user: {
 	avatar?: string;
 	profileImageId?: string | null;
 }): string {
-	const avatarValue = user.avatar?.trim();
-	const profileImageId = user.profileImageId?.trim();
-
-	if (avatarValue && /^https?:\/\//i.test(avatarValue)) {
-		return avatarValue;
-	}
-	if (avatarValue?.startsWith("/")) {
-		return avatarValue;
-	}
-
-	const imageId = avatarValue || profileImageId;
-	if (
-		imageId &&
-		appwriteConfig.endpointUrl &&
-		appwriteConfig.profilePicturesBucketId &&
-		appwriteConfig.projectId
-	) {
-		return `${appwriteConfig.endpointUrl}/storage/buckets/${appwriteConfig.profilePicturesBucketId}/files/${imageId}/view?project=${appwriteConfig.projectId}`;
-	}
-
-	return avatarPlaceholderUrl;
+	// Prefer a real uploaded photo URL; never ship the stock Freepik placeholder
+	// as "avatar" — other accounts treat that as a missing photo (initials).
+	return resolveAvatarDisplayUrl(user) || "";
 }
 
 function resolveProfileImageId(user: {
@@ -2092,17 +2091,16 @@ export const listUsersForManagement = async (
 		const profileIds = new Set<string>();
 		const accountIdToProfileId = new Map<string, string>();
 		for (const user of usersResult.rows) {
-			const userId = String((user as { $id?: string }).$id || "");
+			const flat = flattenTableRow(user as Record<string, unknown>);
+			const userId = String(flat.$id || "");
 			if (!userId) continue;
 			profileIds.add(userId);
 			usersById.set(userId, {
-				fullName: String((user as { fullName?: string }).fullName || "Unknown"),
-				email: String((user as { email?: string }).email || ""),
-				avatar: (user as { avatar?: string }).avatar,
+				fullName: String(flat.fullName || "Unknown"),
+				email: String(flat.email || ""),
+				avatar: flat.avatar as string | undefined,
 			});
-			const accountId = String(
-				(user as { accountId?: string }).accountId || "",
-			);
+			const accountId = String(flat.accountId || "");
 			if (accountId) accountIdToProfileId.set(accountId, userId);
 		}
 
@@ -2172,32 +2170,30 @@ export const listUsersForManagement = async (
 		}
 
 		return usersResult.rows
+			.map((raw) => flattenTableRow(raw as Record<string, unknown>))
 			.filter((user) => {
-				const userId = String((user as { $id?: string }).$id || "");
-				const docOrgId = (user as { orgId?: string }).orgId;
+				const userId = String(user.$id || "");
+				const docOrgId = user.orgId as string | undefined;
 				if (docOrgId === orgId) return true;
 				if (primaryAssignmentsByProfileId.has(userId)) return true;
 				if (orgMemberProfileIds.has(userId)) return true;
 				return false;
 			})
 			.map((user) => {
-				const userId = String((user as { $id?: string }).$id || "");
+				const userId = String(user.$id || "");
 				const assignment = primaryAssignmentsByProfileId.get(userId);
-				const createdAt = (user as { $createdAt?: string }).$createdAt;
-				const updatedAt = (user as { $updatedAt?: string }).$updatedAt;
+				const createdAt = user.$createdAt as string | undefined;
+				const updatedAt = user.$updatedAt as string | undefined;
 				const roleName = assignment?.roleName || "Unassigned";
-				const accountId = String(
-					(user as { accountId?: string }).accountId || "",
-				);
+				const accountId = String(user.accountId || "");
 				return {
 					$id: userId,
-					fullName: String(
-						(user as { fullName?: string }).fullName || "Unknown",
-					),
-					email: String((user as { email?: string }).email || ""),
-					avatar: resolveProfileAvatarUrl(
-						user as { avatar?: string; profileImageId?: string | null },
-					),
+					fullName: String(user.fullName || "Unknown"),
+					email: String(user.email || ""),
+					avatar: resolveProfileAvatarUrl({
+						avatar: user.avatar as string | undefined,
+						profileImageId: user.profileImageId as string | null | undefined,
+					}),
 					accountId,
 					role: calendarRoleFromRbacName(roleName),
 					roleName,
@@ -2206,9 +2202,9 @@ export const listUsersForManagement = async (
 					lastActiveAt: updatedAt || createdAt,
 					$createdAt: createdAt,
 					$updatedAt: updatedAt,
-					department: (user as { department?: string }).department,
-					division: (user as { division?: string }).division,
-					status: (user as { status?: string }).status,
+					department: user.department as string | undefined,
+					division: user.division as string | undefined,
+					status: user.status as string | undefined,
 				};
 			});
 	} catch (error) {

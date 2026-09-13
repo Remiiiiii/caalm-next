@@ -1138,6 +1138,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 												<SelectItem value="Organization Admin">
 													Organization Admin
 												</SelectItem>
+												<SelectItem value="Executive">Executive</SelectItem>
 												<SelectItem value="Department Manager">
 													Department Manager
 												</SelectItem>

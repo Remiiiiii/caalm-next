@@ -8,7 +8,6 @@ import {
 	TriangleAlert,
 	UserRound,
 } from "lucide-react";
-import Image from "next/image";
 import { useEffect, useState } from "react";
 import useSWR from "swr";
 import { OrgUnitPicker } from "@/components/settings/OrgUnitPicker";
@@ -27,24 +26,7 @@ import {
 import { useOrganization } from "@/contexts/OrganizationContext";
 import type { UserManagementUser } from "@/hooks/useUsers";
 import { fetcher } from "@/lib/swr-config";
-import { avatarPlaceholderUrl } from "../../../constants";
-
-function isSafeNextImageSrc(src: string): boolean {
-	const s = src.trim();
-	if (!s) return false;
-	if (/^https?:\/\//i.test(s)) return true;
-	if (s.startsWith("/") && !s.startsWith("//")) return true;
-	return false;
-}
-
-function hasCustomAvatar(avatar: string | undefined): boolean {
-	const a = avatar?.trim();
-	if (!a) return false;
-	if (!isSafeNextImageSrc(a)) return false;
-	if (a === avatarPlaceholderUrl) return false;
-	if (a.includes("avatar-placeholder")) return false;
-	return true;
-}
+import { resolveAvatarDisplayUrl } from "@/lib/utils";
 
 function formatLastActiveLabel(iso?: string): string {
 	if (!iso) return "—";
@@ -202,33 +184,13 @@ export function UserManagementActionDialogs({
 			>
 				<div className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
 					<div className="flex items-center gap-3">
-						{hasCustomAvatar(user.avatar) ? (
-							<div
-								className="shrink-0 overflow-hidden rounded-full"
-								style={{
-									background:
-										"linear-gradient(135deg, #12477d 0%, #03afbf 100%)",
-									padding: "2px",
-									width: "48px",
-									height: "48px",
-								}}
-							>
-								<Image
-									src={user.avatar!}
-									alt=""
-									width={44}
-									height={44}
-									className="h-11 w-11 rounded-full border-2 border-white object-cover"
-								/>
-							</div>
-						) : (
-							<Avatar
-								name={user.fullName}
-								userId={user.$id}
-								size="lg"
-								className="shrink-0 gap-0"
-							/>
-						)}
+						<Avatar
+							name={user.fullName}
+							userId={user.$id}
+							size="lg"
+							className="shrink-0 gap-0"
+							imageUrl={resolveAvatarDisplayUrl(user)}
+						/>
 						<div>
 							<p className="font-semibold text-slate-700">{user.fullName}</p>
 							<p className="text-sm text-slate-600">{user.email}</p>
@@ -459,31 +421,13 @@ export function UserManagementActionDialogs({
 
 					<div className="flex-1 space-y-3 overflow-y-auto bg-slate-50 px-6 py-4">
 						<div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-3">
-							{hasCustomAvatar(user.avatar) ? (
-								<div
-									className="h-10 w-10 shrink-0 overflow-hidden rounded-full"
-									style={{
-										background:
-											"linear-gradient(135deg, #12477d 0%, #03afbf 100%)",
-										padding: "2px",
-									}}
-								>
-									<Image
-										src={user.avatar!}
-										alt=""
-										width={36}
-										height={36}
-										className="h-9 w-9 rounded-full border-2 border-white object-cover"
-									/>
-								</div>
-							) : (
-								<Avatar
-									name={user.fullName}
-									userId={user.$id}
-									size="md"
-									className="shrink-0 gap-0"
-								/>
-							)}
+							<Avatar
+								name={user.fullName}
+								userId={user.$id}
+								size="md"
+								className="shrink-0 gap-0"
+								imageUrl={resolveAvatarDisplayUrl(user)}
+							/>
 							<div className="min-w-0 flex-1">
 								<p className="truncate text-sm font-semibold text-slate-700">
 									{user.fullName}

@@ -484,6 +484,7 @@ export function isITSidebarPath(pathname: string | null | undefined): boolean {
 export const WORKSPACE_ICON_BY_NAME: Record<string, ITNavIconKey> = {
 	"Super Admin": "crown",
 	"Organization Admin": "building2",
+	Executive: "crown",
 	"Department Manager": "building",
 	Viewer: "eye",
 	IT: "server",

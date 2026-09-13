@@ -13,8 +13,15 @@ export default function ContractApprovalFlowCanvas({
 }: ContractApprovalFlowCanvasProps) {
 	const { steps, currentStepIndex, department, subDepartment } = workflow;
 
+	const hasParallel = steps.some((step) => step.parallelGroupId);
+
 	return (
 		<div className="landing-grid-bg w-full overflow-x-auto rounded-xl border border-slate-200/70 bg-slate-50/80 pb-2">
+			{hasParallel ? (
+				<p className="px-4 pt-3 text-xs text-slate-500">
+					Steps that share a group can be reviewed at the same time.
+				</p>
+			) : null}
 			<div className="flex min-w-min items-stretch gap-0 px-3 py-4 sm:px-4">
 				{steps.map((step, index) => {
 					const filled = index < currentStepIndex;

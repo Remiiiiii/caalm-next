@@ -4,7 +4,9 @@ import {
 	AlertTriangle,
 	CheckCircle2,
 	ExternalLink,
+	Eye,
 	FileText,
+	Info,
 	Loader2,
 	Users,
 	X,
@@ -14,7 +16,10 @@ import { useEffect, useState } from "react";
 import { agingLabel } from "@/components/approvals/ApprovalsAttentionStrip";
 import { useApprovalsView } from "@/components/approvals/ApprovalsViewContext";
 import ApprovalWorkflowActions from "@/components/contracts/approval/ApprovalWorkflowActions";
+import ApprovalWaitingBanner from "@/components/contracts/approval/ApprovalWaitingBanner";
 import ContractApprovalFlowCanvas from "@/components/contracts/approval/ContractApprovalFlowCanvas";
+import ContractApprovalFlowDialog from "@/components/contracts/approval/ContractApprovalFlowDialog";
+import LicenseApprovalFlowDialog from "@/components/licenses/LicenseApprovalFlowDialog";
 import DocumentViewer from "@/components/DocumentViewer";
 import FormattedDateTime from "@/components/FormattedDateTime";
 import { PlaybookDeviationsPanel } from "@/components/playbook/PlaybookDeviationsPanel";
@@ -38,6 +43,7 @@ import {
 	statusBadgeClasses,
 	statusLabel,
 } from "@/lib/approvals/approvalsListUtils";
+import { toUserFacingErrorMessage } from "@/lib/errors/user-facing";
 import { buildSeededDeviationReport } from "@/lib/playbook/seeded-deviations";
 import { cn, constructFileUrl } from "@/lib/utils";
 import type { DeviationReport } from "@/types/playbook-deviations";
@@ -74,14 +80,18 @@ export default function ApprovalDecideSheet({
 		decide: decideContractWorkflow,
 		reassign: reassignContractWorkflow,
 		resubmit: resubmitContractWorkflow,
+		claim: claimContractWorkflow,
 		isLoading: contractWorkflowLoading,
+		refresh: refreshContractWorkflow,
 	} = useContractApprovalWorkflow(contractIdForWorkflow);
 	const {
 		workflow: licenseWorkflow,
 		decide: decideLicenseWorkflow,
 		reassign: reassignLicenseWorkflow,
 		resubmit: resubmitLicenseWorkflow,
+		claim: claimLicenseWorkflow,
 		isLoading: licenseWorkflowLoading,
+		refresh: refreshLicenseWorkflow,
 	} = useLicenseApprovalWorkflow(licenseIdForWorkflow);
 	const workflow =
 		item?.entity === "contract" ? contractWorkflow : licenseWorkflow;
@@ -97,6 +107,10 @@ export default function ApprovalDecideSheet({
 		item?.entity === "contract"
 			? resubmitContractWorkflow
 			: resubmitLicenseWorkflow;
+	const claimWorkflow =
+		item?.entity === "contract"
+			? claimContractWorkflow
+			: claimLicenseWorkflow;
 	const workflowLoading =
 		item?.entity === "contract"
 			? contractWorkflowLoading
@@ -104,11 +118,16 @@ export default function ApprovalDecideSheet({
 	const [notes, setNotes] = useState("");
 	const [busy, setBusy] = useState(false);
 	const [viewerOpen, setViewerOpen] = useState(false);
+	const [managerDialogOpen, setManagerDialogOpen] = useState(false);
 	const [playbookReport, setPlaybookReport] = useState<DeviationReport | null>(
 		null,
 	);
 	const [playbookLoading, setPlaybookLoading] = useState(false);
 	const [playbookSeeded, setPlaybookSeeded] = useState(false);
+
+	useEffect(() => {
+		if (!open) setManagerDialogOpen(false);
+	}, [open]);
 
 	useEffect(() => {
 		if (!open || item?.entity !== "contract") {
@@ -147,7 +166,13 @@ export default function ApprovalDecideSheet({
 			: item.documentUrl;
 
 	const handleDecision = async (decision: Decision) => {
-		if (!canDecide && !(workflow?.canDecide || workflow?.canOverride)) return;
+		if (
+			!workflow?.canDecideAsAssignee &&
+			!workflow?.canAdminOverrideActiveStep &&
+			!workflow?.canAdminOverrideCompleted
+		)
+			return;
+		if (decision === "rejected" && !workflow.canReject) return;
 		if (
 			(decision === "rejected" || decision === "changes_requested") &&
 			!notes.trim()
@@ -193,8 +218,10 @@ export default function ApprovalDecideSheet({
 		} catch (err) {
 			toast({
 				title: "Error",
-				description:
-					err instanceof Error ? err.message : "Could not complete decision.",
+				description: toUserFacingErrorMessage(
+					err,
+					"Could not complete that decision. Please try again.",
+				),
 				variant: "destructive",
 			});
 		} finally {
@@ -206,7 +233,10 @@ export default function ApprovalDecideSheet({
 		item.status === "pending-review" || item.status === "action-required";
 
 	const canActOnWorkflow =
-		!!(workflow?.canDecide || workflow?.canOverride || canDecide) && isPending;
+		!!(
+			workflow?.canDecideAsAssignee ||
+			workflow?.canAdminOverrideActiveStep
+		) && isPending;
 
 	return (
 		<>
@@ -282,20 +312,24 @@ export default function ApprovalDecideSheet({
 
 						{canActOnWorkflow ? (
 							<div className="flex flex-wrap items-center justify-between gap-2">
-								<Button
-									type="button"
-									variant="outline"
-									className="cursor-pointer text-red border-red/20 hover:bg-red/10"
-									disabled={busy}
-									onClick={() => handleDecision("rejected")}
-								>
-									{busy ? (
-										<Loader2 className="h-4 w-4 animate-spin" />
-									) : (
-										<X className="h-4 w-4" />
-									)}
-									Deny
-								</Button>
+								{workflow?.canReject ? (
+									<Button
+										type="button"
+										variant="outline"
+										className="cursor-pointer text-red border-red/20 hover:bg-red/10"
+										disabled={busy}
+										onClick={() => handleDecision("rejected")}
+									>
+										{busy ? (
+											<Loader2 className="h-4 w-4 animate-spin" />
+										) : (
+											<X className="h-4 w-4" />
+										)}
+										Deny
+									</Button>
+								) : (
+									<span />
+								)}
 								<div className="flex flex-wrap items-center gap-2">
 									<Button
 										type="button"
@@ -327,10 +361,25 @@ export default function ApprovalDecideSheet({
 			>
 				{(item.entity === "contract" || item.entity === "license") && (
 					<section className={cn(previewSectionClass, "overflow-hidden p-0")}>
-						<div className={previewSectionHeaderClass}>
+						<div
+							className={cn(
+								previewSectionHeaderClass,
+								"flex items-center justify-between gap-2",
+							)}
+						>
 							<p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
 								Approval workflow
 							</p>
+							{workflow ? (
+								<button
+									type="button"
+									aria-label="Open approval workflow"
+									className="cursor-pointer rounded-md p-1 text-[#0f5384] transition-colors duration-200 hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
+									onClick={() => setManagerDialogOpen(true)}
+								>
+									<Eye className="h-4 w-4" />
+								</button>
+							) : null}
 						</div>
 						<div className="p-3">
 							{workflowLoading ? (
@@ -343,12 +392,33 @@ export default function ApprovalDecideSheet({
 									<div className="overflow-x-auto">
 										<ContractApprovalFlowCanvas workflow={workflow} />
 									</div>
+									<ApprovalWaitingBanner
+										workflow={workflow}
+										entityLabel={
+											item.entity === "license" ? "license" : "contract"
+										}
+									/>
 									<ApprovalWorkflowActions
 										workflow={workflow}
 										busy={busy}
-										onReassign={async (assigneeUserIds) => {
+										onClaim={async () => {
+											await claimWorkflow({
+												path:
+													pathname ||
+													(item.entity === "contract"
+														? "/contracts/approvals"
+														: "/licenses/approvals"),
+											});
+											toast({
+												title: "Step claimed",
+												description: "You are now assigned to this step.",
+											});
+											router.refresh();
+										}}
+										onReassign={async (assigneeUserIds, reason) => {
 											await reassignWorkflow({
 												assigneeUserIds,
+												reason,
 												path:
 													pathname ||
 													(item.entity === "contract"
@@ -465,6 +535,13 @@ export default function ApprovalDecideSheet({
 							placeholder="Required for deny or request changes"
 							className="min-h-[88px] border-[0.25px] border-slate-300 bg-white shadow-none focus-visible:border-[#078FAB]"
 						/>
+						<p className="flex items-start gap-2 text-xs text-slate-500">
+							<Info
+								className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-500"
+								aria-hidden
+							/>
+							<span>Notes are shared with the submitter log.</span>
+						</p>
 					</div>
 				) : null}
 			</EntityPreviewSheetShell>
@@ -482,6 +559,33 @@ export default function ApprovalDecideSheet({
 						createdAt: item.submittedAt,
 						createdBy: item.ownerLabel || "Unknown",
 					}}
+				/>
+			)}
+			{item.entity === "contract" ? (
+				<ContractApprovalFlowDialog
+					open={managerDialogOpen}
+					onOpenChange={(next) => {
+						setManagerDialogOpen(next);
+						if (!next) {
+							void refreshContractWorkflow();
+							router.refresh();
+						}
+					}}
+					contractId={item.decisionId}
+					contractName={item.title}
+				/>
+			) : (
+				<LicenseApprovalFlowDialog
+					open={managerDialogOpen}
+					onOpenChange={(next) => {
+						setManagerDialogOpen(next);
+						if (!next) {
+							void refreshLicenseWorkflow();
+							router.refresh();
+						}
+					}}
+					licenseId={item.decisionId}
+					licenseName={item.title}
 				/>
 			)}
 		</>

@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
+import { toUserFacingErrorMessage } from "@/lib/errors/user-facing";
 
 /**
  * Standard API response interface
@@ -73,7 +74,14 @@ export function errorResponse(
 		errorCode?: string;
 	},
 ): NextResponse<ApiResponse> {
-	const errorMessage = error instanceof Error ? error.message : error;
+	const rawMessage = error instanceof Error ? error.message : error;
+	// Clients only get plain-English copy; keep the raw message in server logs.
+	const errorMessage = toUserFacingErrorMessage(
+		rawMessage,
+		status >= 500
+			? "Something went wrong. Please try again."
+			: "We couldn't complete that request. Please try again.",
+	);
 	const errorCode =
 		options?.errorCode ||
 		(error instanceof Error && "code" in error
@@ -113,6 +121,7 @@ export function errorResponse(
 		errorCode,
 		status: finalStatus,
 		message: errorMessage,
+		rawMessage,
 		...(error instanceof Error && { stack: error.stack }),
 		...(options?.details ? { details: options.details } : {}),
 	});

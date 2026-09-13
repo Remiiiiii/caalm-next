@@ -182,6 +182,11 @@ export const API_AUTHZ_ALLOWLIST: readonly ApiAuthzAllowEntry[] = [
 		class: "token",
 		reason: "Public recipient PDF preview/download via HMAC token",
 	},
+	{
+		path: "approve/[token]",
+		class: "token",
+		reason: "Public approval decision via hashed email action token",
+	},
 ] as const;
 
 export const API_AUTHZ_ALLOWLIST_PATHS = new Set(

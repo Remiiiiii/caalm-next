@@ -101,47 +101,47 @@ export const appwriteConfig = {
 	/** Org clause library (name: clauses) */
 	clausesCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_CLAUSES_COLLECTION",
-		"69c8f401001a2b3c4d01",
+		"test-clauses",
 	),
 
 	/** Contract recipes that reference clause families (name: contract_templates) */
 	contractTemplatesCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_CONTRACT_TEMPLATES_COLLECTION",
-		"69c8f501001a2b3c4d02",
+		"test-contract-templates",
 	),
 
 	/** Guided create-from-template wizard drafts (name: contract_wizard_sessions) */
 	contractWizardSessionsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_CONTRACT_WIZARD_SESSIONS_COLLECTION",
-		"69c8f502002b3c4d5e03",
+		"test-contract-wizard-sessions",
 	),
 
 	/** Contract document snapshots for negotiation diffs (name: contract_document_versions) */
 	contractDocumentVersionsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_CONTRACT_DOCUMENT_VERSIONS_COLLECTION",
-		"69c9a101001b2c3d4e01",
+		"test-contract-document-versions",
 	),
 
 	/** Inline comments / redlines on a draft (name: contract_negotiation_comments) */
 	contractNegotiationCommentsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_CONTRACT_NEGOTIATION_COMMENTS_COLLECTION",
-		"69c9a102002c3d4e5f02",
+		"test-contract-negotiation-comments",
 	),
 
 	/** Hashed counterparty invite tokens (name: contract_negotiation_access) */
 	contractNegotiationAccessCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_CONTRACT_NEGOTIATION_ACCESS_COLLECTION",
-		"69c9a103003d4e5f6a03",
+		"test-contract-negotiation-access",
 	),
 
 	tasksCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_TASKS_COLLECTION",
-		"tasks",
+		"test-tasks",
 	),
 
 	permissionsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_PERMISSIONS_COLLECTION",
-		"685ed87c0009d8189fc8",
+		"test-permissions",
 	),
 
 	otpTokensCollectionId: getTestFallback(
@@ -166,7 +166,7 @@ export const appwriteConfig = {
 
 	pushSubscriptionsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_PUSH_SUBSCRIPTIONS_COLLECTION",
-		"69b8a208008a1f5d9b08",
+		"test-push-subscriptions",
 	),
 
 	smsFormSubmissionsCollectionId: getTestFallback(
@@ -186,12 +186,12 @@ export const appwriteConfig = {
 
 	assistantConversationsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_ASSISTANT_CONVERSATIONS_COLLECTION",
-		"assistant_conversations",
+		"test-assistant-conversations",
 	),
 
 	assistantMessagesCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_ASSISTANT_MESSAGES_COLLECTION",
-		"assistant_messages",
+		"test-assistant-messages",
 	),
 
 	calendarApprovalRequestsCollectionId: getTestFallback(
@@ -209,7 +209,7 @@ export const appwriteConfig = {
 	/** Agreement blueprints + wizard draft artifacts (name: contract_blueprints) */
 	contractBlueprintsBucketId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_CONTRACT_BLUEPRINTS_BUCKET",
-		"69c8f503003c4d5e6f04",
+		"test-contract-blueprints-bucket",
 	),
 
 	profilePicturesBucketId: getTestFallback(
@@ -220,7 +220,7 @@ export const appwriteConfig = {
 	/** Optional company logos for agreement letterheads (name: organization_logos) */
 	organizationLogosBucketId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_ORGANIZATION_LOGOS_BUCKET",
-		"69d1f8a00012c4e8f901",
+		"test-organization-logos-bucket",
 	),
 
 	auditLogsCollectionId: getTestFallback(
@@ -282,132 +282,150 @@ export const appwriteConfig = {
 
 	calendarRemindersCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_CALENDAR_REMINDERS_COLLECTION",
-		"69c0b101001a2b3c4d11",
+		"test-calendar-reminders",
 	),
 	escalationRulesCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_ESCALATION_RULES_COLLECTION",
-		"69c0b102002b3c4d5e12",
+		"test-escalation-rules",
 	),
 	escalationJobsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_ESCALATION_JOBS_COLLECTION",
-		"69c0b103003c4d5e6f13",
+		"test-escalation-jobs",
 	),
 
 	// News Articles
 	newsArticlesCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_NEWS_ARTICLES_COLLECTION",
-		"newsarticles",
+		"test-news-articles",
 	),
 	newsVersionsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_NEWS_VERSIONS_COLLECTION",
-		"newsversions",
+		"test-news-versions",
 	),
 
 	// IT Runbooks
 	runbooksCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_RUNBOOKS_COLLECTION",
-		"69a3f91200a8c4d1e2f0",
+		"test-runbooks",
 	),
 
 	ticketsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_TICKETS_COLLECTION",
-		"69b8a201001f4e8c2a01",
+		"test-tickets",
 	),
 
 	ticketEventsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_TICKET_EVENTS_COLLECTION",
-		"69b8a202002e5f9d3b02",
+		"test-ticket-events",
 	),
 
 	/** Per-org year counters for TKT-YYYY-#### numbers (name: ticket_sequences). */
 	ticketSequencesCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_TICKET_SEQUENCES_COLLECTION",
-		"69b8a209009b2a6e0c09",
+		"test-ticket-sequences",
 	),
 
 	webhookDeliveriesCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_WEBHOOK_DELIVERIES_COLLECTION",
-		"69b8a203003d6a0e4c03",
+		"test-webhook-deliveries",
 	),
 
 	ticketAttachmentsBucketId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_TICKET_ATTACHMENTS_BUCKET",
-		"69b8a204004c7b1f5d04",
+		"test-ticket-attachments-bucket",
 	),
 
 	orgUnitsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_ORG_UNITS_COLLECTION",
-		"69b8a205005d8c2a6e05",
+		"test-org-units",
 	),
 
 	costCentersCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_COST_CENTERS_COLLECTION",
-		"69b8a206006e9d3b7f06",
+		"test-cost-centers",
 	),
 
 	orgUnitHistoryCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_ORG_UNIT_HISTORY_COLLECTION",
-		"69b8a207007f0e4c8a07",
+		"test-org-unit-history",
 	),
 
-	/** CLM Completion Roadmap — alphanumeric Appwrite table IDs */
+	/** CLM Completion Roadmap — IDs come from env; test fallbacks only for CI */
 	roadmapSectionsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_ROADMAP_SECTIONS_COLLECTION",
-		"69c0a101001a2b3c4d01",
+		"test-roadmap-sections",
 	),
 	roadmapTasksCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_ROADMAP_TASKS_COLLECTION",
-		"69c0a102002b3c4d5e02",
+		"test-roadmap-tasks",
 	),
 	roadmapTestRunsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_ROADMAP_TEST_RUNS_COLLECTION",
-		"69c0a103003c4d5e6f03",
+		"test-roadmap-test-runs",
 	),
 	roadmapStatusLogCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_ROADMAP_STATUS_LOG_COLLECTION",
-		"69c0a104004d5e6f7a04",
+		"test-roadmap-status-log",
 	),
 
 	/** Funding pursuits pipeline (name: funding_pursuits) */
 	fundingPursuitsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_FUNDING_PURSUITS_COLLECTION",
-		"69c4f201001a2b3c4d01",
+		"test-funding-pursuits",
 	),
 
 	/** Contract obligations for retention (name: contract_obligations) */
 	contractObligationsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_CONTRACT_OBLIGATIONS_COLLECTION",
-		"69c4f202002b3c4d5e02",
+		"test-contract-obligations",
 	),
 
 	/** Org-level CRM connections (name: crm_integrations) */
 	crmIntegrationsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_CRM_INTEGRATIONS_COLLECTION",
-		"69d2a101001a2b3c4d01",
+		"test-crm-integrations",
 	),
 
 	/** CRM deal → contract idempotency (name: crm_origin_links) */
 	crmOriginLinksCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_CRM_ORIGIN_LINKS_COLLECTION",
-		"69d2a102002b3c4d5e02",
+		"test-crm-origin-links",
 	),
 
 	/** Per-org approval step SLA policies (name: approval_sla_policies) */
 	approvalSlaPoliciesCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_APPROVAL_SLA_POLICIES_COLLECTION",
-		"69e4a101001a2b3c4d01",
+		"test-approval-sla-policies",
+	),
+
+	/** Org approval routing templates (name: approval_workflow_templates) */
+	approvalWorkflowTemplatesCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_APPROVAL_WORKFLOW_TEMPLATES_COLLECTION",
+		"test-approval-workflow-templates",
+	),
+
+	/** Out-of-office approval delegates (name: approval_delegations) */
+	approvalDelegationsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_APPROVAL_DELEGATIONS_COLLECTION",
+		"test-approval-delegations",
+	),
+
+	/** Email/Slack approval action tokens (name: approval_action_tokens) */
+	approvalActionTokensCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_APPROVAL_ACTION_TOKENS_COLLECTION",
+		"test-approval-action-tokens",
 	),
 
 	/** Expiration accountability records (name: document_expiration_attestations) */
 	documentExpirationAttestationsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_DOCUMENT_EXPIRATION_ATTESTATIONS_COLLECTION",
-		"69e4c201001b3c4d5e02",
+		"test-document-expiration-attestations",
 	),
 
 	/** CAALM Execute envelopes (name: signature_envelopes) */
 	signatureEnvelopesCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_SIGNATURE_ENVELOPES_COLLECTION",
-		"69c8e20100a1f5e8c061",
+		"test-signature-envelopes",
 	),
 
 	// Imagine Art API (AI Image Generation)
@@ -419,9 +437,7 @@ export const appwriteConfig = {
 
 	// Legacy: Replicate API (deprecated - kept for reference)
 	replicateApiToken: process.env.REPLICATE_API_TOKEN,
-	replicateModel:
-		process.env.REPLICATE_MODEL ||
-		"stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
+	replicateModel: process.env.REPLICATE_MODEL || "stability-ai/sdxl",
 };
 
 /**

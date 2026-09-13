@@ -19,6 +19,7 @@ import {
 	type ExpirationReasonCategory,
 	REASON_CATEGORY_LABELS,
 } from "@/lib/approvals/expirationAttestation.types";
+import { toUserFacingErrorMessage } from "@/lib/errors/user-facing";
 
 interface ExpirationAttestationDialogProps {
 	open: boolean;
@@ -88,7 +89,10 @@ export function ExpirationAttestationDialog({
 		} catch (error) {
 			toast({
 				title: "Could not save",
-				description: error instanceof Error ? error.message : "Try again",
+				description: toUserFacingErrorMessage(
+					error,
+					"Could not save the attestation. Please try again.",
+				),
 				variant: "destructive",
 			});
 		} finally {

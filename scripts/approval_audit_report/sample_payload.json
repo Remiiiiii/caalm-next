@@ -1,0 +1,142 @@
+{
+  "companyName": "CAALM",
+  "reportTitle": "Contract Approval & Audit Report",
+  "generatedAt": "2026-09-11T16:40:00.000Z",
+  "entityType": "contract",
+  "footerLine": "Approval & Audit Report • Master Services Agreement — Northwind Logistics • Generated September 11, 2026",
+  "workflowStatusLine": "Status: pending-signature · Track: Legal · Commercial",
+  "sections": {
+    "workflow": {
+      "number": 1,
+      "title": "Approval Workflow",
+      "description": "Four-stage sequential approval chain. All stages completed with an Approve decision; no rejections or change requests were recorded."
+    },
+    "timeline": {
+      "number": 2,
+      "title": "Approval Timeline"
+    },
+    "details": {
+      "number": 3,
+      "title": "Contract Details"
+    },
+    "parties": {
+      "number": 4,
+      "title": "Parties & Roles"
+    },
+    "audit": {
+      "number": 5,
+      "title": "Full Audit Trail",
+      "description": "Chronological record of every notification and decision event captured for this approval chain."
+    }
+  },
+  "cover": {
+    "title": "Contract Approval & Audit Report",
+    "subtitle": "Master Services Agreement — Northwind Logistics · Legal · Commercial",
+    "statusPills": ["ACTIVATED", "PENDING SIGNATURE"],
+    "facts": [
+      { "label": "Contract name", "value": "Master Services Agreement — Northwind Logistics" },
+      { "label": "Contract ID", "value": "69f2c80100a1b2c3d4e5" },
+      { "label": "Department · track", "value": "Legal · Commercial" },
+      { "label": "Total contract value", "value": "$420,000" },
+      { "label": "Submitted by", "value": "Maya Chen" },
+      { "label": "Current status", "value": "ACTIVATED — PENDING SIGNATURE" },
+      { "label": "Approval steps", "value": "4 (Submitted, Department Review, Executive Approval, Activated)" },
+      { "label": "Total cycle time", "value": "8 business days (Aug 31 – Sep 11)" }
+    ],
+    "executiveSummary": "Master Services Agreement — Northwind Logistics moved through Department Review and Executive Approval stages and currently sits at ACTIVATED — PENDING SIGNATURE. The full chain completed in 8 business days (Aug 31, 9:12 AM → Sep 11, 8:03 AM).",
+    "flaggingIntro": "For the executive meeting, the three items worth flagging are:",
+    "flagging": [
+      "no segregation-of-duties conflict — submitter and approvers are distinct people",
+      "an assignment change mid-flow (claim or reassignment) before a decision completed",
+      "post-activation changes remain possible via admin override — confirm that path stays guarded"
+    ]
+  },
+  "stages": [
+    {
+      "number": 1,
+      "name": "Submitted",
+      "status": "COMPLETE",
+      "assignees": "Maya Chen",
+      "role": "Uploader",
+      "timestamp": "Aug 31, 9:12 AM",
+      "eligible": "Maya Chen (Uploader)",
+      "assigned": "Maya Chen",
+      "notified": "Maya Chen, Jordan Hale",
+      "sla": "—"
+    },
+    {
+      "number": 2,
+      "name": "Department Review",
+      "status": "COMPLETE",
+      "assignees": "Jordan Hale",
+      "role": "Department Manager",
+      "timestamp": "Sep 7, 4:05 PM",
+      "eligible": "Jordan Hale, Alex Rivera (Department Manager)",
+      "assigned": "Jordan Hale",
+      "notified": "Jordan Hale, Maya Chen, Priya Nair",
+      "sla": "7d 7h"
+    },
+    {
+      "number": 3,
+      "name": "Executive Approval",
+      "status": "COMPLETE",
+      "assignees": "Priya Nair",
+      "role": "Super Admin / Org Admin",
+      "timestamp": "Sep 10, 11:20 AM",
+      "eligible": "Priya Nair, Remy Ouji (Organization Admin)",
+      "assigned": "Priya Nair",
+      "notified": "Priya Nair, Maya Chen",
+      "sla": "2d 19h"
+    },
+    {
+      "number": 4,
+      "name": "Activated",
+      "status": "COMPLETE",
+      "assignees": "System",
+      "role": "System",
+      "timestamp": "Sep 11, 8:03 AM",
+      "eligible": "System-triggered on Executive Approval result",
+      "assigned": "—",
+      "notified": "All stage participants",
+      "sla": "—"
+    }
+  ],
+  "timeline": [
+    { "at": "Aug 31, 9:12 AM", "action": "Upload submitted", "actor": "Maya Chen", "outcome": "info" },
+    { "at": "Aug 31, 9:13 AM", "action": "Department review opened", "actor": "System", "outcome": "info" },
+    { "at": "Sep 2, 10:40 AM", "action": "Failed decision — notes required", "actor": "Jordan Hale", "outcome": "fail" },
+    { "at": "Sep 3, 2:15 PM", "action": "Reassigned to Jordan Hale", "actor": "Priya Nair", "outcome": "warn" },
+    { "at": "Sep 7, 4:05 PM", "action": "Department review approved", "actor": "Jordan Hale", "outcome": "ok" },
+    { "at": "Sep 7, 4:06 PM", "action": "Executive step opened", "actor": "System", "outcome": "info" },
+    { "at": "Sep 10, 11:20 AM", "action": "Executive approved", "actor": "Priya Nair", "outcome": "ok" },
+    { "at": "Sep 11, 8:03 AM", "action": "Contract activated", "actor": "System", "outcome": "ok" }
+  ],
+  "timelineTakeaway": "Total elapsed time from submission to activation: 8 business days. Of that, ~70% of the elapsed time (Aug 31, 9:13 AM → Sep 7, 4:05 PM) was spent waiting in Department review before the first approval action was even attempted — worth watching if this pattern repeats across contracts, since it may point to reviewer load or notification visibility rather than the workflow logic itself.",
+  "details": {
+    "facts": [
+      { "label": "Contract type", "value": "Master services" },
+      { "label": "Governing department", "value": "Legal" },
+      { "label": "Approval track", "value": "Legal · Commercial" },
+      { "label": "Contract number", "value": "CTR-2026-1842" },
+      { "label": "Renewal / term", "value": "12 months" },
+      { "label": "Counterparty", "value": "Northwind Logistics LLC" }
+    ],
+    "parties": [
+      { "name": "Maya Chen", "email": "maya.chen@caalm.app", "role": "Contract owner", "function": "Submitter" },
+      { "name": "Jordan Hale", "email": "jordan.hale@caalm.app", "role": "Department Manager", "function": "Department reviewer" },
+      { "name": "Priya Nair", "email": "priya.nair@caalm.app", "role": "Organization Admin", "function": "Executive approver" },
+      { "name": "Alex Rivera", "email": "alex.rivera@caalm.app", "role": "Legal ops", "function": "Notified — not assigned as approver" }
+    ],
+    "sodNote": null
+  },
+  "audit": [
+    { "at": "Aug 31, 2026, 9:12 AM", "actor": "Maya Chen", "action": "Upload submitted", "result": "Success", "detail": "Contract uploaded and routed to Legal / Commercial." },
+    { "at": "Aug 31, 2026, 9:13 AM", "actor": "System", "action": "Pending review", "result": "Success", "detail": "Department review opened for Jordan Hale." },
+    { "at": "Sep 2, 2026, 10:40 AM", "actor": "Jordan Hale", "action": "Decision blocked", "result": "Failed", "detail": "Notes required before deny or request changes." },
+    { "at": "Sep 3, 2026, 2:15 PM", "actor": "Priya Nair", "action": "Step reassigned", "result": "Success", "detail": "Assignee set to Jordan Hale." },
+    { "at": "Sep 7, 2026, 4:05 PM", "actor": "Jordan Hale", "action": "Department approved", "result": "Success", "detail": "Stage advanced to executive approval." },
+    { "at": "Sep 7, 2026, 4:06 PM", "actor": "System", "action": "Executive step opened", "result": "Success", "detail": "Priya Nair notified." },
+    { "at": "Sep 10, 2026, 11:20 AM", "actor": "Priya Nair", "action": "Executive approved", "result": "Success", "detail": "Workflow completed; contract marked active." },
+    { "at": "Sep 11, 2026, 8:03 AM", "actor": "System", "action": "Activated", "result": "Success", "detail": "Activation notification sent to four recipients." }
+  ]
+}

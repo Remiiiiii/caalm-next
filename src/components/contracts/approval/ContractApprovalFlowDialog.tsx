@@ -1,28 +1,37 @@
 "use client";
 
 import {
-	CheckCircle2,
+	ArrowLeftToLine,
+	Eye,
+	FileText,
 	GitBranch,
-	InfoIcon,
+	Info,
 	Loader2,
-	MessageSquareWarning,
+	PenLine,
 	RefreshCw,
-	XCircle,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ExpirationAttestationDialog } from "@/components/approvals/ExpirationAttestationDialog";
 import { WorkflowFrozenBanner } from "@/components/approvals/WorkflowFrozenBanner";
+import ApprovalDecisionControls from "@/components/contracts/approval/ApprovalDecisionControls";
 import ApprovalWorkflowActions from "@/components/contracts/approval/ApprovalWorkflowActions";
+import ApprovalWorkflowActivity from "@/components/contracts/approval/ApprovalWorkflowActivity";
+import ApprovalWaitingBanner from "@/components/contracts/approval/ApprovalWaitingBanner";
 import ContractApprovalFlowCanvas from "@/components/contracts/approval/ContractApprovalFlowCanvas";
 import { WorkflowStatusBadge } from "@/components/contracts/approval/WorkflowStatusBadge";
 import { ContractRenewalDialog } from "@/components/contracts/ContractRenewalDialog";
+import { WizardPdfPreview } from "@/components/contract-wizard/WizardPdfPreview";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
+import { PERMISSIONS } from "@/constants/permissions";
 import { useToast } from "@/hooks/use-toast";
 import { useContractApprovalWorkflow } from "@/hooks/useContractApprovalWorkflow";
+import { usePermissions } from "@/hooks/usePermissions";
+import { historyFromNotifications } from "@/lib/approvals/approvalHistory";
 import type { ApprovalDecision } from "@/lib/approvals/contractApprovalWorkflow.types";
+import { toUserFacingErrorMessage } from "@/lib/errors/user-facing";
+import { cn, constructFileUrl } from "@/lib/utils";
 
 interface ContractApprovalFlowDialogProps {
 	open: boolean;
@@ -37,17 +46,37 @@ export default function ContractApprovalFlowDialog({
 	contractId,
 	contractName,
 }: ContractApprovalFlowDialogProps) {
-	const { workflow, isLoading, error, decide, reassign, resubmit, refresh } =
+	const { workflow, isLoading, error, decide, reassign, resubmit, claim, refresh } =
 		useContractApprovalWorkflow(open ? contractId : null);
 	const { toast } = useToast();
+	const { permissions } = usePermissions();
 	const router = useRouter();
 	const pathname = usePathname();
 	const [notes, setNotes] = useState("");
 	const [busy, setBusy] = useState(false);
 	const [attestOpen, setAttestOpen] = useState(false);
 	const [renewOpen, setRenewOpen] = useState(false);
+	const [documentSplit, setDocumentSplit] = useState(false);
+
+	const isPendingSignature = workflow?.contractStatus === "pending-signature";
+	const canStartEsign =
+		isPendingSignature && permissions.includes(PERMISSIONS.CONTRACTS.SIGN);
+	const documentUrl =
+		workflow?.documentUrl ||
+		(workflow?.fileRef ? constructFileUrl(workflow.fileRef) : null);
+	const documentLabel =
+		workflow?.documentFileName ||
+		contractName ||
+		workflow?.contractName ||
+		"Document";
+	const documentSplitOpen = Boolean(documentUrl && documentSplit);
+
+	useEffect(() => {
+		if (!open) setDocumentSplit(false);
+	}, [open]);
 
 	const handleDecision = async (decision: ApprovalDecision) => {
+		if (decision === "rejected" && workflow && !workflow.canReject) return;
 		if (
 			(decision === "rejected" || decision === "changes_requested") &&
 			!notes.trim()
@@ -86,8 +115,10 @@ export default function ContractApprovalFlowDialog({
 		} catch (err) {
 			toast({
 				title: "Decision failed",
-				description:
-					err instanceof Error ? err.message : "Could not record decision",
+				description: toUserFacingErrorMessage(
+					err,
+					"Could not record your decision. Please try again.",
+				),
 				variant: "destructive",
 			});
 		} finally {
@@ -98,7 +129,15 @@ export default function ContractApprovalFlowDialog({
 	return (
 		<>
 			<Dialog open={open} onOpenChange={onOpenChange}>
-				<DialogContent className="flex max-h-[90vh] max-w-[960px] flex-col overflow-hidden border border-slate-200 p-0 shadow-xl">
+				<DialogContent
+					overlayClassName="z-[60]"
+					className={cn(
+						"z-[60] flex max-h-[90vh] flex-col overflow-hidden border border-slate-200 p-0 shadow-xl",
+						documentSplitOpen
+							? "w-[min(98vw,1700px)] max-w-[1700px]"
+							: "max-w-[960px]",
+					)}
+				>
 					<div className="absolute top-0 right-0 left-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
 
 					<div className="sticky top-0 z-10 mt-4 border-b border-slate-200 bg-linear-to-r from-blue-50 to-indigo-50 py-4">
@@ -114,7 +153,18 @@ export default function ContractApprovalFlowDialog({
 						</p>
 					</div>
 
-					<div className="min-h-0 flex-1 overflow-y-auto bg-slate-50 p-6">
+					<div
+						className={cn(
+							"min-h-0 flex-1 bg-slate-50",
+							documentSplitOpen ? "flex overflow-hidden" : "overflow-y-auto p-6",
+						)}
+					>
+						<div
+							className={cn(
+								documentSplitOpen &&
+									"min-h-0 w-[min(900px,52%)] shrink-0 overflow-y-auto p-6",
+							)}
+						>
 						{isLoading ? (
 							<div className="flex h-48 items-center justify-center text-sm text-slate-500">
 								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -122,7 +172,10 @@ export default function ContractApprovalFlowDialog({
 							</div>
 						) : error ? (
 							<div className="rounded-lg border border-red/20 bg-red/5 p-4 text-sm text-red">
-								{(error as Error).message || "Failed to load workflow"}
+								{toUserFacingErrorMessage(
+									error,
+									"Could not load the approval workflow. Please try again.",
+								)}
 								<Button
 									type="button"
 									variant="outline"
@@ -155,15 +208,64 @@ export default function ContractApprovalFlowDialog({
 										</span>
 									) : null}
 								</div>
+								{documentUrl ? (
+									<button
+										type="button"
+										onClick={() => setDocumentSplit((value) => !value)}
+										className="flex w-full cursor-pointer items-center gap-2 rounded-lg border border-blue-300 bg-blue-50 px-4 py-3 text-left text-xs text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#078FAB]"
+										aria-expanded={documentSplit}
+										aria-label={
+											documentSplit
+												? `Hide ${documentLabel}`
+												: `View ${documentLabel}`
+										}
+									>
+										<FileText className="h-4 w-4 shrink-0 text-[#0f5384]" />
+										<span className="min-w-0 flex-1 truncate font-medium text-slate-800">
+											{documentLabel}
+										</span>
+										<span className="inline-flex shrink-0 items-center gap-1 text-[11px] text-[#0f5384]">
+											<Eye className="h-3.5 w-3.5" />
+											{documentSplit ? "Hide document" : "View document"}
+										</span>
+									</button>
+								) : null}
 								<ContractApprovalFlowCanvas workflow={workflow} />
+								{workflow.workflowFrozen ? null : (
+									<ApprovalWaitingBanner
+										workflow={workflow}
+										entityLabel="contract"
+									/>
+								)}
 								{workflow.workflowFrozen ? null : (
 									<ApprovalWorkflowActions
 										workflow={workflow}
 										busy={busy}
-										onReassign={async (assigneeUserIds) => {
+										onClaim={async () => {
+											try {
+												await claim({ path: pathname || "/contracts" });
+												toast({
+													title: "Step claimed",
+													description: "You are now assigned to this step.",
+												});
+												router.refresh();
+											} catch (err) {
+												toast({
+													title: "Claim failed",
+													description: toUserFacingErrorMessage(
+														err,
+														"Could not claim this step. Please try again.",
+													),
+													variant: "destructive",
+												});
+												throw err;
+											}
+										}}
+										onReassign={async (assigneeUserIds, reason) => {
 											try {
 												await reassign({
 													assigneeUserIds,
+													reason,
 													path: pathname || "/contracts",
 												});
 												toast({
@@ -174,10 +276,10 @@ export default function ContractApprovalFlowDialog({
 											} catch (err) {
 												toast({
 													title: "Reassign failed",
-													description:
-														err instanceof Error
-															? err.message
-															: "Could not reassign",
+													description: toUserFacingErrorMessage(
+														err,
+														"Could not reassign this step. Please try again.",
+													),
 													variant: "destructive",
 												});
 												throw err;
@@ -194,10 +296,10 @@ export default function ContractApprovalFlowDialog({
 											} catch (err) {
 												toast({
 													title: "Resubmit failed",
-													description:
-														err instanceof Error
-															? err.message
-															: "Could not resubmit",
+													description: toUserFacingErrorMessage(
+														err,
+														"Could not resubmit. Please try again.",
+													),
 													variant: "destructive",
 												});
 												throw err;
@@ -205,66 +307,82 @@ export default function ContractApprovalFlowDialog({
 										}}
 									/>
 								)}
-								{(workflow.canDecide || workflow.canOverride) && (
-									<div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-										<p className="mb-2 text-sm font-medium text-slate-700">
-											{workflow.canDecide
-												? "Your decision on this step"
-												: "Admin override"}
-										</p>
-										<Textarea
-											value={notes}
-											onChange={(e) => setNotes(e.target.value)}
-											placeholder="Add notes (required for Reject or Request changes)"
-											className="min-h-[72px] border-[0.25px] border-slate-300 bg-white shadow-none focus-visible:border-[#078FAB]"
-										/>
-										<div className="flex items-center gap-2 mt-2">
-											<InfoIcon className="h-3.5 w-3.5 text-slate-500 mt-2" />
-											<p className="mt-2 text-xs text-slate-500">
-												Notes are shared with the submitter log.
-											</p>
-										</div>
-									</div>
-								)}
+								<ApprovalWorkflowActivity
+									events={historyFromNotifications(workflow.notifications)}
+									workflow={workflow}
+									entityType="contract"
+								/>
+								<ApprovalDecisionControls
+									workflow={workflow}
+									notes={notes}
+									onNotesChange={setNotes}
+									busy={busy}
+									onDecide={(decision) => void handleDecision(decision)}
+								/>
 							</div>
+						) : null}
+						</div>
+						{documentSplitOpen && documentUrl ? (
+							<>
+								<div className="w-px shrink-0 bg-slate-200" />
+								<div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white">
+									<div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-2">
+										<p className="truncate text-xs font-medium text-slate-600">
+											{documentLabel}
+										</p>
+										<button
+											type="button"
+											className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-[#0f5384] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
+											onClick={() => setDocumentSplit(false)}
+											aria-label="Collapse document view"
+										>
+											<ArrowLeftToLine className="h-4 w-4" />
+										</button>
+									</div>
+									<div className="min-h-0 flex-1 overflow-hidden">
+										<WizardPdfPreview
+											sessionId={contractId}
+											fileName={documentLabel}
+											pdfUrl={documentUrl}
+											fileId={contractId}
+											loading={false}
+											error={null}
+											compact
+											fillHeight
+										/>
+									</div>
+								</div>
+							</>
 						) : null}
 					</div>
 
-					<div className="flex flex-wrap items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
-						{workflow && (workflow.canDecide || workflow.canOverride) ? (
-							<>
-								<Button
-									type="button"
-									className="primary-btn px-3 sm:px-4"
-									disabled={busy}
-									onClick={() => void handleDecision("rejected")}
-								>
-									<XCircle className="h-4 w-4" />
-									Reject
-								</Button>
-								<Button
-									type="button"
-									className="primary-btn px-3 sm:px-4"
-									disabled={busy}
-									onClick={() => void handleDecision("changes_requested")}
-								>
-									<MessageSquareWarning className="h-4 w-4" />
-									Request changes
-								</Button>
-								<Button
-									type="button"
-									className="primary-btn px-3 sm:px-4"
-									disabled={busy}
-									onClick={() => void handleDecision("approved")}
-								>
-									{busy ? (
-										<Loader2 className="h-4 w-4 animate-spin" />
-									) : (
-										<CheckCircle2 className="h-4 w-4" />
-									)}
-									Approve
-								</Button>
-							</>
+					<div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
+						{!workflow?.canDecideAsAssignee &&
+						!workflow?.canAdminOverrideActiveStep ? (
+							<p className="flex min-w-0 flex-1 items-start gap-2 text-xs text-slate-500">
+								<Info
+									className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-500"
+									aria-hidden
+								/>
+								<span>
+									{workflow?.decisionBlockReason ||
+										"Decision buttons appear when you are assigned to the current step."}
+								</span>
+							</p>
+						) : (
+							<span className="flex-1" />
+						)}
+						{canStartEsign ? (
+							<Button
+								type="button"
+								className="primary-btn px-3 sm:px-4"
+								onClick={() =>
+									router.push(`/esign/prepare/contract/${contractId}`)
+								}
+							>
+								<PenLine className="h-4 w-4" />
+								Send for signature
+							</Button>
 						) : null}
 					</div>
 				</DialogContent>

@@ -6,6 +6,7 @@ import type {
 	ApprovalWorkflowState,
 	ApprovalWorkflowStep,
 } from "@/lib/approvals/contractApprovalWorkflow.types";
+import { notifyApprovalAssignees } from "@/lib/approvals/approvalNotifications";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { logAuditEvent } from "@/lib/services/audit-logger";
@@ -270,6 +271,19 @@ async function notifyUsers(
 	message: string,
 	metadata?: Record<string, unknown>,
 ): Promise<void> {
+	const contractId = String(metadata?.contractId || "");
+	const licenseId = String(metadata?.licenseId || "");
+	if (contractId || licenseId) {
+		await notifyApprovalAssignees({
+			entityType: licenseId ? "license" : "contract",
+			entityId: licenseId || contractId,
+			userIds,
+			title,
+			message,
+			metadata,
+		});
+		return;
+	}
 	for (const userId of uniqueIds(userIds)) {
 		try {
 			await triggerNotification("info", {

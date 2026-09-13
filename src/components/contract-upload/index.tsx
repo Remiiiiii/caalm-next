@@ -637,7 +637,10 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 								<Button
 									type="button"
 									onClick={nextStep}
-									disabled={currentStep === 1 && !processedFileData}
+									disabled={
+										currentStep === 1 &&
+										(!processedFileData || isExtracting)
+									}
 									className="primary-btn flex items-center gap-2"
 								>
 									Next

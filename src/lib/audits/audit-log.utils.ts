@@ -9,6 +9,8 @@ export type AuditAction =
 	| "sync_delete"
 	| "restore"
 	| "approval_decided"
+	| "approval_claimed"
+	| "approval_reassigned"
 	| "export"
 	| "login"
 	| "logout";

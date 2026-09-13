@@ -63,7 +63,7 @@ export const DASHBOARD_ROUTE_POLICY: DashboardPolicyEntry[] = [
 	{
 		pathPrefix: "/dashboard/viewer",
 		anyOf: [PERMISSIONS.CALENDAR.VIEW_OWN, PERMISSIONS.CONTRACTS.VIEW],
-		allowedRoleIds: ["role_viewer"],
+		allowedRoleIds: ["role_viewer", "role_executive"],
 	},
 	{
 		pathPrefix: "/dashboard/it",

@@ -10,7 +10,7 @@ import type { UserRole } from "@/constants/rbac";
 export function calendarRoleFromRbacName(roleName: string): UserRole {
 	const name = roleName.trim();
 	if (name === "Super Admin" || name === "Organization Admin") return "admin";
-	if (name === "Department Manager") return "approver";
+	if (name === "Executive" || name === "Department Manager") return "approver";
 	if (name === "Viewer") return "viewer";
 	if (name === "IT") return "viewer";
 	return "viewer";

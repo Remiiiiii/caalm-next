@@ -19,6 +19,10 @@ export const ROLE_DASHBOARD_FALLBACK: Record<
 		priority: 30,
 		homeDashboardPath: "/dashboard/organizationadmin",
 	},
+	role_executive: {
+		priority: 35,
+		homeDashboardPath: "/dashboard/viewer",
+	},
 	role_content_creator: {
 		priority: 40,
 		homeDashboardPath: "/dashboard/content-creator",

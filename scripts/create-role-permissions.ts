@@ -55,6 +55,7 @@ const PERMISSION_ID_MAP: Record<string, string> = {
 const ROLE_ID_MAP: Record<string, string> = {
 	"Super Admin": "role_super_admin",
 	"Organization Admin": "role_org_admin",
+	"Executive": "role_executive",
 	"Department Manager": "role_dept_manager",
 	Scheduler: "role_scheduler",
 	Reviewer: "role_reviewer",
