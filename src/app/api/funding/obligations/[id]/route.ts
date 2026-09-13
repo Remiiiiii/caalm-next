@@ -56,6 +56,10 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 		if (body.renewalLinked != null)
 			patch.renewalLinked = Boolean(body.renewalLinked);
 		if (body.linkUrl != null) patch.linkUrl = String(body.linkUrl);
+		if (body.reminderDaysBefore != null) {
+			const days = Number(body.reminderDaysBefore);
+			if (Number.isFinite(days)) patch.reminderDaysBefore = days;
+		}
 
 		const obligation = await updateObligation(id, patch);
 		return NextResponse.json({ obligation });
