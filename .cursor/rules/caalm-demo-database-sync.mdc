@@ -54,3 +54,4 @@ When permissions or role-permission **documents** change in prod, also seed thos
 - Never point demo env vars at `685ed87c0009d8189fc7` (`assertDemoDatabaseGuard` blocks this).
 - Never write demo seed data into production.
 - Use MCP tools or `scripts/sync-demo-database-schema.mjs` for schema work; avoid one-off throwaway DB scripts.
+- Demo **env values** (collection IDs, cron secrets) live in gitignored `.env.demo.local` and Vercel `caalm-demo`. Committed `.env.demo.example` stays placeholders-only (`pnpm demo:env:init`).

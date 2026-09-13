@@ -127,18 +127,22 @@ def draw_chrome(c: canvas.Canvas, doc: BaseDocTemplate, payload: dict) -> None:
     c.setFont("Helvetica", 8)
     c.drawRightString(PAGE_W - MARGIN, PAGE_H - 23, "CONFIDENTIAL — INTERNAL USE")
 
-    # Light footer: rule + muted metadata (matches Image #3)
+    # Light meta row + navy footer bar (mirrors header chrome)
+    footer_bar_h = 10
+    meta_y = footer_bar_h + 8
     c.setStrokeColor(LINE)
     c.setLineWidth(0.6)
-    c.line(MARGIN, FOOTER_H - 2, PAGE_W - MARGIN, FOOTER_H - 2)
+    c.line(MARGIN, meta_y + 10, PAGE_W - MARGIN, meta_y + 10)
     c.setFillColor(MUTED)
     c.setFont("Helvetica", 7.5)
     footer = payload.get("footerLine") or (
         f"Approval & Audit Report • {payload.get('reportTitle') or ''} • "
         f"Generated {fmt_generated(payload.get('generatedAt') or '')}"
     )
-    c.drawString(MARGIN, 10, fit_text(footer, "Helvetica", 7.5, CONTENT_W - 60))
-    c.drawRightString(PAGE_W - MARGIN, 10, f"Page {doc.page}")
+    c.drawString(MARGIN, meta_y, fit_text(footer, "Helvetica", 7.5, CONTENT_W - 60))
+    c.drawRightString(PAGE_W - MARGIN, meta_y, f"Page {doc.page}")
+    c.setFillColor(NAVY)
+    c.rect(0, 0, PAGE_W, footer_bar_h, fill=1, stroke=0)
     c.restoreState()
 
 

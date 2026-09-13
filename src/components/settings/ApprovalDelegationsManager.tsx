@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Trash2, UserRoundArrowRight } from "lucide-react";
+import { Plus, Trash2, UserRoundArrowLeft } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CardContent, Card as GlassCard } from "@/components/ui/card";
@@ -114,8 +114,8 @@ export function ApprovalDelegationsManager() {
 						Out-of-office delegates
 					</p>
 					<p className="text-xs text-slate-600">
-						While you are away, your delegate is added to current approval
-						steps (and applied by the nightly SLA cron).
+						While you are away, your delegate is added to current approval steps
+						(and applied by the nightly SLA cron).
 					</p>
 				</div>
 				<div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
@@ -185,7 +185,7 @@ export function ApprovalDelegationsManager() {
 							className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2"
 						>
 							<p className="flex min-w-0 items-center gap-2 text-sm text-slate-700">
-								<UserRoundArrowRight className="h-4 w-4 shrink-0 text-[#0f5384]" />
+								<UserRoundArrowLeft className="h-4 w-4 shrink-0 text-[#0f5384]" />
 								<span className="truncate">
 									{nameForId(row.delegateUserId)} · {row.entityType} ·{" "}
 									{new Date(row.startsAt).toLocaleDateString()} –{" "}

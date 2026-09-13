@@ -34,7 +34,7 @@ const styles = StyleSheet.create({
 		fontSize: 9,
 		color: SLATE,
 		paddingTop: 52,
-		paddingBottom: 52,
+		paddingBottom: 58,
 		paddingHorizontal: 47,
 	},
 	header: {
@@ -58,23 +58,39 @@ const styles = StyleSheet.create({
 		color: "#ffffff",
 		fontSize: 8,
 	},
+	/* Light meta row sits above the navy footer bar (mirrors header chrome). */
 	footer: {
 		position: "absolute",
-		bottom: 18,
+		bottom: 10,
 		left: 47,
 		right: 47,
+		height: 32,
 		paddingTop: 8,
-		paddingBottom: 4,
 		borderTopWidth: 0.6,
 		borderTopColor: LINE,
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "space-between",
 	},
-	footerText: {
+	footerLine: {
+		paddingRight: 56,
 		color: MUTED,
 		fontSize: 7.5,
 		lineHeight: 1.3,
+	},
+	footerPage: {
+		position: "absolute",
+		bottom: 26,
+		right: 47,
+		width: 56,
+		color: MUTED,
+		fontSize: 7.5,
+		textAlign: "right",
+	},
+	footerBar: {
+		position: "absolute",
+		bottom: 0,
+		left: 0,
+		right: 0,
+		height: 10,
+		backgroundColor: NAVY,
 	},
 	title: {
 		fontSize: 18,
@@ -196,7 +212,7 @@ const styles = StyleSheet.create({
 		fontFamily: "Helvetica-Oblique",
 		color: MUTED,
 		textAlign: "center",
-		marginTop: 4,
+		marginTop: 8,
 		marginBottom: 12,
 		paddingHorizontal: 8,
 	},
@@ -207,21 +223,29 @@ const styles = StyleSheet.create({
 		marginTop: 4,
 		marginBottom: 8,
 	},
+	/*
+	 * react-pdf often measures flex rows as ~0 height, so content below
+	 * overlaps the stage cards. Fixed height keeps the table under the pipeline.
+	 */
 	pipeline: {
 		flexDirection: "row",
 		alignItems: "stretch",
-		marginBottom: 10,
+		marginBottom: 12,
 		marginTop: 4,
-		gap: 4,
+		height: 130,
+	},
+	stageCol: {
+		flex: 1,
+		height: 122,
+		minWidth: 0,
 	},
 	stageCard: {
-		flex: 1,
+		height: 122,
 		borderWidth: 0.8,
 		borderColor: LINE,
 		borderRadius: 5,
 		overflow: "hidden",
 		backgroundColor: "#ffffff",
-		minHeight: 118,
 	},
 	stageCap: {
 		height: 6,
@@ -232,7 +256,6 @@ const styles = StyleSheet.create({
 		paddingTop: 8,
 		paddingBottom: 8,
 		alignItems: "center",
-		position: "relative",
 	},
 	stageTitleRow: {
 		flexDirection: "row",
@@ -301,10 +324,10 @@ const styles = StyleSheet.create({
 		textAlign: "center",
 	},
 	arrowWrap: {
-		width: 12,
+		width: 14,
+		height: 122,
 		justifyContent: "center",
 		alignItems: "center",
-		alignSelf: "center",
 		flexShrink: 0,
 	},
 	timelineBlock: {
@@ -429,15 +452,27 @@ function Chrome({ payload }: { payload: ApprovalAuditReportPayload }) {
 				<Text style={styles.headerText}>{payload.companyName}</Text>
 				<Text style={styles.headerMuted}>CONFIDENTIAL — INTERNAL USE</Text>
 			</View>
+			{/* fixed chrome repeats on every page; bar is the navy strip at the page edge */}
 			<View style={styles.footer} fixed>
-				<Text style={styles.footerText}>{payload.footerLine}</Text>
-				<Text
-					style={styles.footerText}
-					render={({ pageNumber }) => `Page ${pageNumber}`}
-				/>
+				<Text style={styles.footerLine}>{payload.footerLine}</Text>
 			</View>
+			<Text
+				style={styles.footerPage}
+				fixed
+				render={({ pageNumber }) => `Page ${pageNumber}`}
+			>
+				{" "}
+			</Text>
+			<View style={styles.footerBar} fixed />
 		</>
 	);
+}
+
+/** Keep stage-card lines short so fixed card height stays even across the row. */
+function clipPdf(text: string, max = 28): string {
+	const value = (text || "—").trim();
+	if (value.length <= max) return value;
+	return `${value.slice(0, Math.max(0, max - 1)).trimEnd()}…`;
 }
 
 function FactsGrid({ facts }: { facts: ApprovalAuditFact[] }) {
@@ -512,7 +547,7 @@ function StageBox({ stage }: { stage: ApprovalAuditStage }) {
 					<View style={styles.stageBadge}>
 						<Text style={styles.stageBadgeText}>{String(stage.number)}</Text>
 					</View>
-					<Text style={styles.stageTitle}>{stage.name}</Text>
+					<Text style={styles.stageTitle}>{clipPdf(stage.name, 18)}</Text>
 				</View>
 				<Text
 					style={[
@@ -523,12 +558,16 @@ function StageBox({ stage }: { stage: ApprovalAuditStage }) {
 						},
 					]}
 				>
-					{stage.status}
+					{clipPdf(stage.status, 14)}
 				</Text>
-				<Text style={styles.stageName}>{stage.assignees || "—"}</Text>
-				<Text style={styles.stageRole}>{stage.role || "—"}</Text>
+				<Text style={styles.stageName}>
+					{clipPdf(stage.assignees || "—", 22)}
+				</Text>
+				<Text style={styles.stageRole}>{clipPdf(stage.role || "—", 24)}</Text>
 				<View style={styles.stageDivider} />
-				<Text style={styles.stageTime}>{stage.timestamp || "—"}</Text>
+				<Text style={styles.stageTime}>
+					{clipPdf(stage.timestamp || "—", 22)}
+				</Text>
 			</View>
 		</View>
 	);
@@ -753,11 +792,11 @@ export function ApprovalAuditReportDocument({
 			<Page size="LETTER" style={styles.page}>
 				<Chrome payload={payload} />
 				<SectionHeading section={payload.sections.workflow} />
-				<View style={styles.pipeline}>
+				<View style={styles.pipeline} wrap={false}>
 					{payload.stages.slice(0, 6).flatMap((stage, index) => {
 						const maxIndex = Math.min(5, payload.stages.length - 1);
 						const nodes = [
-							<View key={stage.name} style={{ flex: 1, minWidth: 0 }}>
+							<View key={stage.name} style={styles.stageCol}>
 								<StageBox stage={stage} />
 							</View>,
 						];

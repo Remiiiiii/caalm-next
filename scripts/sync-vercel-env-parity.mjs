@@ -2,6 +2,9 @@
 /**
  * Compare local env files vs Vercel (key parity) and optionally push missing keys.
  *
+ * Demo uses gitignored `.env.demo.local` for real values. Committed
+ * `.env.demo.example` is placeholders-only (key checklist).
+ *
  * Usage:
  *   node scripts/sync-vercel-env-parity.mjs
  *   node scripts/sync-vercel-env-parity.mjs --apply
@@ -35,7 +38,9 @@ const SYNC_PLAN = {
 	},
 	"caalm-demo": {
 		label: "Demo (caalm-demo)",
-		localFile: path.join(ROOT, ".env.demo.example"),
+		// Real IDs/secrets (gitignored). Example file is placeholders only.
+		localFile: path.join(ROOT, ".env.demo.local"),
+		exampleFile: path.join(ROOT, ".env.demo.example"),
 		sharedFromLocal: [
 			"NEXT_APPWRITE_API_KEY",
 			"GOOGLE_API_KEY",
@@ -121,19 +126,44 @@ function isVercelManagedKey(key) {
 }
 
 function isPlaceholder(value) {
+	const v = value.toLowerCase();
 	return (
-		value.includes("your_") ||
-		value.includes("...") ||
-		value.endsWith("_api_key") ||
-		value === "demo_bucket_id" ||
-		value === "generate_a_unique_key_for_demo" ||
-		value === "github_app_id" ||
-		value === "pk_test_..."
+		v.includes("your_") ||
+		v.includes("...") ||
+		v.endsWith("_api_key") ||
+		v.endsWith("_collection_id") ||
+		v.endsWith("_bucket_id") ||
+		v.endsWith("_placeholder") ||
+		v === "demo_bucket_id" ||
+		v === "generate_a_unique_key_for_demo" ||
+		v === "github_app_id" ||
+		v === "github_app_private_key" ||
+		v === "github_webhook_secret" ||
+		v === "github_installation_id" ||
+		v === "project_id" ||
+		v === "prod_appwrite_database_id" ||
+		v === "pk_test_..." ||
+		v === "owner/repo" ||
+		v === "cursor_api_key"
 	);
 }
 
+/**
+ * Prefer real local values. For demo, overlay onto example keys so the
+ * checklist stays complete even when `.env.demo.local` is incomplete.
+ */
 function mergeLocal(plan) {
-	const base = parseEnvFile(plan.localFile);
+	const example = plan.exampleFile ? parseEnvFile(plan.exampleFile) : {};
+	const local = parseEnvFile(plan.localFile);
+
+	if (plan.exampleFile && !fs.existsSync(plan.localFile)) {
+		console.warn(
+			`[warn] Missing ${path.basename(plan.localFile)}. Run \`pnpm demo:env:init\` and fill real values. Using example keys only (placeholders will not be pushed).`,
+		);
+	}
+
+	const base = { ...example, ...local };
+
 	if (!plan.sharedFromLocal) return base;
 	const overrides = parseEnvFile(path.join(ROOT, ".env.local"));
 	for (const key of plan.sharedFromLocal) {
@@ -168,6 +198,10 @@ for (const [project, plan] of Object.entries(SYNC_PLAN)) {
 	);
 
 	console.log(`\n=== ${plan.label} ===`);
+	console.log(`Local file: ${path.basename(plan.localFile)}`);
+	if (plan.exampleFile) {
+		console.log(`Example checklist: ${path.basename(plan.exampleFile)}`);
+	}
 	console.log(`Local keys: ${Object.keys(local).length}`);
 	console.log(`Vercel keys: ${remote.size}`);
 	console.log(`Missing on Vercel: ${missingOnVercel.length}`);

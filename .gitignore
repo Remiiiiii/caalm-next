@@ -167,8 +167,12 @@ mcpjson.txt
 
 # Graft
 graft/
+
+# Env secrets (local / demo local). Keep example templates tracked.
 .env*
 .env*.local
+!.env.example
+!.env.demo.example
 
 # Local After Effects MCP clone (setup scripts install this separately)
 public/assets/demo/ae-mcp-setup/after-effects-mcp/

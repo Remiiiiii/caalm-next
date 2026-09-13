@@ -39,6 +39,7 @@
 		"vercel:delete-env": "node src/scripts/delete-vercel-env-vars.js",
 		"sync:demo-db": "node scripts/sync-demo-database-schema.mjs",
 		"sync:demo-db:apply": "node scripts/sync-demo-database-schema.mjs --apply",
+		"demo:env:init": "node scripts/init-demo-env.mjs",
 		"sync:vercel-env": "node scripts/sync-vercel-env-parity.mjs",
 		"sync:vercel-env:apply": "node scripts/sync-vercel-env-parity.mjs --apply",
 		"preinstall": "npx only-allow pnpm",
