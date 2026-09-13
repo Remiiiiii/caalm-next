@@ -7,6 +7,7 @@ import {
 	Text,
 	View,
 } from "@react-pdf/renderer";
+import type { ComponentProps, ReactNode } from "react";
 import type {
 	ApprovalAuditFact,
 	ApprovalAuditOutcome,
@@ -111,6 +112,10 @@ const styles = StyleSheet.create({
 		marginBottom: 6,
 		borderBottomWidth: 1.5,
 		borderBottomColor: TEAL,
+	},
+	/* Space between flowed sections (no hard page break). */
+	sectionBlock: {
+		marginTop: 16,
 	},
 	sectionDesc: {
 		fontSize: 9,
@@ -438,9 +443,7 @@ function pickTimeline(
 	if (events.length <= 8) return events;
 	const last = events.length - 1;
 	const indexes = [
-		...new Set(
-			Array.from({ length: 8 }, (_, i) => Math.round((i * last) / 7)),
-		),
+		...new Set(Array.from({ length: 8 }, (_, i) => Math.round((i * last) / 7))),
 	].sort((a, b) => a - b);
 	return indexes.map((i) => events[i]);
 }
@@ -450,7 +453,7 @@ function Chrome({ payload }: { payload: ApprovalAuditReportPayload }) {
 		<>
 			<View style={styles.header} fixed>
 				<Text style={styles.headerText}>{payload.companyName}</Text>
-				<Text style={styles.headerMuted}>CONFIDENTIAL — INTERNAL USE</Text>
+				<Text style={styles.headerMuted}>INTERNAL USE</Text>
 			</View>
 			{/* fixed chrome repeats on every page; bar is the navy strip at the page edge */}
 			<View style={styles.footer} fixed>
@@ -497,20 +500,18 @@ function FactsGrid({ facts }: { facts: ApprovalAuditFact[] }) {
 	);
 }
 
-function SectionHeading({
-	section,
-}: {
-	section: ApprovalAuditSectionMeta;
-}) {
+function SectionHeading({ section }: { section: ApprovalAuditSectionMeta }) {
 	return (
-		<>
+		// Keep the heading with the start of its body so it does not sit alone
+		// at the bottom of a page when content flows.
+		<View minPresenceAhead={72} wrap={false}>
 			<Text style={styles.heading}>
 				{section.number}. {section.title}
 			</Text>
 			{section.description ? (
 				<Text style={styles.sectionDesc}>{section.description}</Text>
 			) : null}
-		</>
+		</View>
 	);
 }
 
@@ -519,10 +520,7 @@ function PipelineArrow() {
 		<View style={styles.arrowWrap}>
 			<Svg width={12} height={10} viewBox="0 0 16 12">
 				{/* Thick shaft */}
-				<Polygon
-					points="0,4.5 9,4.5 9,7.5 0,7.5"
-					fill={ARROW_GRAY}
-				/>
+				<Polygon points="0,4.5 9,4.5 9,7.5 0,7.5" fill={ARROW_GRAY} />
 				{/* Arrow head */}
 				<Polygon points="8,0 16,6 8,12" fill={ARROW_GRAY} />
 			</Svg>
@@ -587,7 +585,7 @@ function TimelineRow({ events }: { events: ApprovalAuditTimelineEvent[] }) {
 	}
 
 	return (
-		<View style={styles.timelineBlock}>
+		<View style={styles.timelineBlock} wrap={false}>
 			<View style={styles.timelineBaseline} />
 			<View style={styles.timelineRow}>
 				{padded.map((event, index) => {
@@ -709,10 +707,17 @@ function DataTable({
 	flexes: number[];
 }) {
 	return (
-		<View style={styles.table}>
+		// Never split header/rows across pages — whole table moves together.
+		<View style={styles.table} wrap={false}>
 			<View style={styles.tr}>
 				{headers.map((h, i) => (
-					<View key={h} style={[styles.tdCell, { flex: flexes[i] || 1, backgroundColor: NAVY }]}>
+					<View
+						key={h}
+						style={[
+							styles.tdCell,
+							{ flex: flexes[i] || 1, backgroundColor: NAVY },
+						]}
+					>
 						<Text style={[styles.th]}>{h}</Text>
 					</View>
 				))}
@@ -753,6 +758,21 @@ function DataTable({
 	);
 }
 
+/** Title + table stay on one page; if they don't fit, the whole block moves. */
+function TableBlock({
+	children,
+	style,
+}: {
+	children: ReactNode;
+	style?: ComponentProps<typeof View>["style"];
+}) {
+	return (
+		<View wrap={false} style={style}>
+			{children}
+		</View>
+	);
+}
+
 export function ApprovalAuditReportDocument({
 	payload,
 }: {
@@ -766,9 +786,14 @@ export function ApprovalAuditReportDocument({
 
 	return (
 		<Document title={payload.reportTitle} author={payload.companyName}>
-			{/* Page 1 — Cover */}
-			<Page size="LETTER" style={styles.page}>
+			{/*
+			 * One continuous Page so react-pdf fills leftover space and only
+			 * starts a new sheet when content overflows (no empty half-pages).
+			 */}
+			<Page size="LETTER" style={styles.page} wrap>
 				<Chrome payload={payload} />
+
+				{/* Cover */}
 				<Text style={styles.title}>{payload.cover.title}</Text>
 				<Text style={styles.subtitle}>{payload.cover.subtitle}</Text>
 				<View style={styles.pills}>
@@ -782,115 +807,118 @@ export function ApprovalAuditReportDocument({
 					))}
 				</View>
 				<FactsGrid facts={payload.cover.facts} />
-				<Text style={styles.heading}>Executive Summary</Text>
+				<View minPresenceAhead={48} wrap={false}>
+					<Text style={styles.heading}>Executive Summary</Text>
+				</View>
 				<Text style={styles.body}>{payload.cover.executiveSummary}</Text>
 				<Text style={styles.flagIntro}>{payload.cover.flaggingIntro}</Text>
 				<Text style={styles.flagInline}>{flaggingText}</Text>
-			</Page>
 
-			{/* Page 2 — Workflow + Notification */}
-			<Page size="LETTER" style={styles.page}>
-				<Chrome payload={payload} />
-				<SectionHeading section={payload.sections.workflow} />
-				<View style={styles.pipeline} wrap={false}>
-					{payload.stages.slice(0, 6).flatMap((stage, index) => {
-						const maxIndex = Math.min(5, payload.stages.length - 1);
-						const nodes = [
-							<View key={stage.name} style={styles.stageCol}>
-								<StageBox stage={stage} />
-							</View>,
-						];
-						if (index < maxIndex) {
-							nodes.push(
-								<PipelineArrow key={`arrow-${stage.name}`} />,
-							);
-						}
-						return nodes;
-					})}
+				{/* 1. Workflow + notification table */}
+				<View style={styles.sectionBlock}>
+					<SectionHeading section={payload.sections.workflow} />
+					<View style={styles.pipeline} wrap={false}>
+						{payload.stages.slice(0, 6).flatMap((stage, index) => {
+							const maxIndex = Math.min(5, payload.stages.length - 1);
+							const nodes = [
+								<View key={stage.name} style={styles.stageCol}>
+									<StageBox stage={stage} />
+								</View>,
+							];
+							if (index < maxIndex) {
+								nodes.push(<PipelineArrow key={`arrow-${stage.name}`} />);
+							}
+							return nodes;
+						})}
+					</View>
+
+					<Text style={styles.statusLine}>{payload.workflowStatusLine}</Text>
+					{/* Keep subtitle + table together — never orphan one row under the footer */}
+					<TableBlock>
+						<Text style={styles.notifHeading}>
+							Notification & Eligibility Detail
+						</Text>
+						<DataTable
+							headers={[
+								"Stage",
+								"Eligible Approvers",
+								"Assigned",
+								"Notified",
+								"SLA",
+							]}
+							flexes={[1.1, 2.2, 1.3, 1.3, 0.7]}
+							rows={payload.stages.map((stage) => [
+								stage.name,
+								stage.eligible,
+								stage.assigned,
+								stage.notified,
+								stage.sla,
+							])}
+						/>
+					</TableBlock>
 				</View>
 
-				<Text style={styles.statusLine}>{payload.workflowStatusLine}</Text>
-				<Text style={styles.notifHeading}>
-					Notification & Eligibility Detail
-				</Text>
-				<DataTable
-					headers={[
-						"Stage",
-						"Eligible Approvers",
-						"Assigned",
-						"Notified",
-						"SLA",
-					]}
-					flexes={[1.1, 2.2, 1.3, 1.3, 0.7]}
-					rows={payload.stages.map((stage) => [
-						stage.name,
-						stage.eligible,
-						stage.assigned,
-						stage.notified,
-						stage.sla,
-					])}
-				/>
-			</Page>
+				{/* 2. Timeline */}
+				<View style={styles.sectionBlock}>
+					<SectionHeading section={payload.sections.timeline} />
+					{timelineRows.map((row) => (
+						<TimelineRow
+							key={row.map((e) => e.at + e.action).join("|")}
+							events={row}
+						/>
+					))}
+					<Text style={styles.takeaway}>{payload.timelineTakeaway}</Text>
+				</View>
 
-			{/* Page 3 — Timeline */}
-			<Page size="LETTER" style={styles.page}>
-				<Chrome payload={payload} />
-				<SectionHeading section={payload.sections.timeline} />
-				{timelineRows.map((row) => (
-					<TimelineRow
-						key={row.map((e) => e.at + e.action).join("|")}
-						events={row}
+				{/* 3. Details */}
+				<View style={styles.sectionBlock}>
+					<SectionHeading section={payload.sections.details} />
+					<FactsGrid facts={payload.details.facts} />
+				</View>
+
+				{/* 4. Parties — heading + table (+ note) move as one unit */}
+				<TableBlock style={styles.sectionBlock}>
+					<SectionHeading section={payload.sections.parties} />
+					<DataTable
+						headers={["Name", "Email", "Role", "Function in This Approval"]}
+						flexes={[1.1, 1.5, 1.2, 1.6]}
+						rows={payload.details.parties.map((party) => [
+							party.name,
+							party.email,
+							party.role,
+							party.function,
+						])}
 					/>
-				))}
-				<Text style={styles.takeaway}>{payload.timelineTakeaway}</Text>
-			</Page>
+					{payload.details.sodNote ? (
+						<Text style={styles.sodNote}>
+							<Text style={styles.sodPrefix}>Segregation-of-duties note: </Text>
+							{payload.details.sodNote.replace(
+								/^Segregation-of-duties note:\s*/i,
+								"",
+							)}
+						</Text>
+					) : null}
+				</TableBlock>
 
-			{/* Page 4 — Details + Parties */}
-			<Page size="LETTER" style={styles.page}>
-				<Chrome payload={payload} />
-				<SectionHeading section={payload.sections.details} />
-				<FactsGrid facts={payload.details.facts} />
-				<SectionHeading section={payload.sections.parties} />
-				<DataTable
-					headers={["Name", "Email", "Role", "Function in This Approval"]}
-					flexes={[1.1, 1.5, 1.2, 1.6]}
-					rows={payload.details.parties.map((party) => [
-						party.name,
-						party.email,
-						party.role,
-						party.function,
-					])}
-				/>
-				{payload.details.sodNote ? (
-					<Text style={styles.sodNote}>
-						<Text style={styles.sodPrefix}>Segregation-of-duties note: </Text>
-						{payload.details.sodNote.replace(
-							/^Segregation-of-duties note:\s*/i,
-							"",
-						)}
-					</Text>
-				) : null}
-			</Page>
-
-			{/* Page 5 — Full audit trail */}
-			<Page size="LETTER" style={styles.page}>
-				<Chrome payload={payload} />
-				<SectionHeading section={payload.sections.audit} />
-				<DataTable
-					headers={["Timestamp", "Actor", "Action", "Result", "Detail"]}
-					flexes={[1.4, 1.1, 1.2, 0.7, 1.8]}
-					rows={payload.audit.map((row) => [
-						row.at,
-						row.actor,
-						row.action,
-						{
-							text: row.result,
-							bold: true,
-							color: row.result === "Failed" ? RED : GREEN,
-						},
-						row.detail,
-					])}
-				/>
+				{/* 5. Full audit trail — heading + table move as one unit */}
+				<TableBlock style={styles.sectionBlock}>
+					<SectionHeading section={payload.sections.audit} />
+					<DataTable
+						headers={["Timestamp", "Actor", "Action", "Result", "Detail"]}
+						flexes={[1.4, 1.1, 1.2, 0.7, 1.8]}
+						rows={payload.audit.map((row) => [
+							row.at,
+							row.actor,
+							row.action,
+							{
+								text: row.result,
+								bold: true,
+								color: row.result === "Failed" ? RED : GREEN,
+							},
+							row.detail,
+						])}
+					/>
+				</TableBlock>
 			</Page>
 		</Document>
 	);

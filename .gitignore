@@ -192,6 +192,3 @@ scripts/.blob-media-urls.json
 .tmp-*.env
 .tmp-vercel*.env
 
-# Approval report visual-check output
-scripts/approval_audit_report/.verify/
-
