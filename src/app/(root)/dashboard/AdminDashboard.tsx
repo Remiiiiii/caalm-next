@@ -1066,6 +1066,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 									<SelectItem value="Organization Admin">
 										Organization Admin
 									</SelectItem>
+									<SelectItem value="Executive">Executive</SelectItem>
 									<SelectItem value="Department Manager">
 										Department Manager
 									</SelectItem>

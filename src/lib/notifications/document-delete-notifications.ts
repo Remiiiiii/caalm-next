@@ -13,7 +13,7 @@ import {
 } from "@/lib/services/notificationService";
 import {
 	getAllAdmins,
-	getAllExecutives,
+	getAllSuperAdmins,
 	getUsersByRoleNames,
 } from "@/lib/utils/get-users-by-role";
 
@@ -135,8 +135,8 @@ async function collectDeleteRecipients(params: {
 		}
 	};
 
-	const [executives, admins, managers] = await Promise.all([
-		getAllExecutives(orgId).catch(() => []),
+	const [supers, admins, managers] = await Promise.all([
+		getAllSuperAdmins(orgId).catch(() => []),
 		getAllAdmins(orgId).catch(() => []),
 		// No status=active filter — many manager profiles have null status.
 		getUsersByRoleNames(["Department Manager", "manager"], orgId).catch(
@@ -144,7 +144,7 @@ async function collectDeleteRecipients(params: {
 		),
 	]);
 
-	addUsers(executives);
+	addUsers(supers);
 	addUsers(admins);
 
 	if (targetDept) {

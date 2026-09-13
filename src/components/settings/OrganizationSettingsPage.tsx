@@ -4,7 +4,9 @@ import { Building2, Save } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useState } from "react";
 import useSWR from "swr";
 import { PermissionGate } from "@/components/PermissionGate";
+import { ApprovalDelegationsManager } from "@/components/settings/ApprovalDelegationsManager";
 import { ApprovalSlaPoliciesManager } from "@/components/settings/ApprovalSlaPoliciesManager";
+import { ApprovalWorkflowTemplatesManager } from "@/components/settings/ApprovalWorkflowTemplatesManager";
 import { OrganizationLogoUploader } from "@/components/settings/OrganizationLogoUploader";
 import { OrgStructureManager } from "@/components/settings/OrgStructureManager";
 import { TimezoneSelect } from "@/components/settings/TimezoneSelect";
@@ -333,6 +335,12 @@ export default function OrganizationSettingsPage() {
 					</TabsTrigger>
 					<TabsTrigger value="approval-sla" className="cursor-pointer">
 						Approval SLAs
+					</TabsTrigger>
+					<TabsTrigger value="approval-routing" className="cursor-pointer">
+						Approval routing
+					</TabsTrigger>
+					<TabsTrigger value="approval-delegation" className="cursor-pointer">
+						Delegation
 					</TabsTrigger>
 				</TabsList>
 
@@ -699,6 +707,12 @@ export default function OrganizationSettingsPage() {
 
 				<TabsContent value="approval-sla" className="mt-4">
 					<ApprovalSlaPoliciesManager canEdit={canEdit} />
+				</TabsContent>
+				<TabsContent value="approval-routing" className="mt-4">
+					<ApprovalWorkflowTemplatesManager canEdit={canEdit} />
+				</TabsContent>
+				<TabsContent value="approval-delegation" className="mt-4">
+					<ApprovalDelegationsManager />
 				</TabsContent>
 
 				<TabsContent value="structure" className="mt-4">

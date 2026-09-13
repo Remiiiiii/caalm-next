@@ -21,6 +21,7 @@ import {
 import { PERMISSIONS } from "@/constants/permissions";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
+import { toUserFacingErrorMessage } from "@/lib/errors/user-facing";
 import {
 	type ApprovalQueueItem,
 	isSlaAtRisk,
@@ -134,8 +135,10 @@ export default function ApprovalsTable({
 		} catch (err) {
 			toast({
 				title: "Error",
-				description:
-					err instanceof Error ? err.message : "Failed to approve item.",
+				description: toUserFacingErrorMessage(
+					err,
+					"Could not approve this item. Please try again.",
+				),
 				variant: "destructive",
 			});
 		} finally {

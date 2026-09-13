@@ -10,6 +10,7 @@ export const ROLE_PRIORITY_ORDER = [
 	"Super Admin",
 	"IT",
 	"Organization Admin",
+	"Executive",
 	"Content Creator",
 	"Department Manager",
 	"Viewer",

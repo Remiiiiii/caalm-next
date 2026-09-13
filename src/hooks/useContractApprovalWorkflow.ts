@@ -2,10 +2,12 @@
 
 import { useCallback } from "react";
 import useSWR from "swr";
+import { useApprovalWorkflowRealtime } from "@/hooks/useApprovalWorkflowRealtime";
 import type {
 	ApprovalDecision,
 	ApprovalWorkflowViewerPayload,
 } from "@/lib/approvals/contractApprovalWorkflow.types";
+import { toUserFacingErrorMessage } from "@/lib/errors/user-facing";
 
 async function fetchWorkflow(
 	url: string,
@@ -13,9 +15,18 @@ async function fetchWorkflow(
 	const res = await fetch(url);
 	const json = await res.json();
 	if (!res.ok || !json.success) {
-		throw new Error(json.error || "Failed to load approval workflow");
+		throw new Error(
+			toUserFacingErrorMessage(
+				json.error,
+				"Could not load the approval workflow. Please try again.",
+			),
+		);
 	}
 	return json.data as ApprovalWorkflowViewerPayload;
+}
+
+function actionError(json: { error?: string }, fallback: string): Error {
+	return new Error(toUserFacingErrorMessage(json.error, fallback));
 }
 
 export function useContractApprovalWorkflow(contractId: string | null) {
@@ -27,6 +38,8 @@ export function useContractApprovalWorkflow(contractId: string | null) {
 		revalidateOnFocus: false,
 	});
 
+	useApprovalWorkflowRealtime("contract", contractId);
+
 	const decide = useCallback(
 		async ({
 			decision,
@@ -37,7 +50,11 @@ export function useContractApprovalWorkflow(contractId: string | null) {
 			notes?: string;
 			path?: string;
 		}) => {
-			if (!contractId) throw new Error("Missing contract id");
+			if (!contractId) {
+				throw new Error(
+					"This contract could not be found. Refresh and try again.",
+				);
+			}
 			const res = await fetch(
 				`/api/contracts/${contractId}/approval-workflow/decide`,
 				{
@@ -48,7 +65,10 @@ export function useContractApprovalWorkflow(contractId: string | null) {
 			);
 			const json = await res.json();
 			if (!res.ok || !json.success) {
-				throw new Error(json.error || "Failed to record decision");
+				throw actionError(
+					json,
+					"Could not record your decision. Please try again.",
+				);
 			}
 			await mutate(json.data, false);
 			return json.data as ApprovalWorkflowViewerPayload;
@@ -59,23 +79,57 @@ export function useContractApprovalWorkflow(contractId: string | null) {
 	const reassign = useCallback(
 		async ({
 			assigneeUserIds,
+			reason,
 			path,
 		}: {
 			assigneeUserIds: string[];
+			reason: string;
 			path?: string;
 		}) => {
-			if (!contractId) throw new Error("Missing contract id");
+			if (!contractId) {
+				throw new Error(
+					"This contract could not be found. Refresh and try again.",
+				);
+			}
 			const res = await fetch(
 				`/api/contracts/${contractId}/approval-workflow/reassign`,
 				{
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({ assigneeUserIds, path }),
+					body: JSON.stringify({ assigneeUserIds, reason, path }),
 				},
 			);
 			const json = await res.json();
 			if (!res.ok || !json.success) {
-				throw new Error(json.error || "Failed to reassign step");
+				throw actionError(
+					json,
+					"Could not reassign this step. Please try again.",
+				);
+			}
+			await mutate(json.data, false);
+			return json.data as ApprovalWorkflowViewerPayload;
+		},
+		[contractId, mutate],
+	);
+
+	const claim = useCallback(
+		async ({ path }: { path?: string } = {}) => {
+			if (!contractId) {
+				throw new Error(
+					"This contract could not be found. Refresh and try again.",
+				);
+			}
+			const res = await fetch(
+				`/api/contracts/${contractId}/approval-workflow/claim`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ path }),
+				},
+			);
+			const json = await res.json();
+			if (!res.ok || !json.success) {
+				throw actionError(json, "Could not claim this step. Please try again.");
 			}
 			await mutate(json.data, false);
 			return json.data as ApprovalWorkflowViewerPayload;
@@ -85,7 +139,11 @@ export function useContractApprovalWorkflow(contractId: string | null) {
 
 	const resubmit = useCallback(
 		async ({ path }: { path?: string } = {}) => {
-			if (!contractId) throw new Error("Missing contract id");
+			if (!contractId) {
+				throw new Error(
+					"This contract could not be found. Refresh and try again.",
+				);
+			}
 			const res = await fetch(
 				`/api/contracts/${contractId}/approval-workflow/resubmit`,
 				{
@@ -96,7 +154,7 @@ export function useContractApprovalWorkflow(contractId: string | null) {
 			);
 			const json = await res.json();
 			if (!res.ok || !json.success) {
-				throw new Error(json.error || "Failed to resubmit");
+				throw actionError(json, "Could not resubmit. Please try again.");
 			}
 			await mutate(json.data, false);
 			return json.data as ApprovalWorkflowViewerPayload;
@@ -112,5 +170,6 @@ export function useContractApprovalWorkflow(contractId: string | null) {
 		decide,
 		reassign,
 		resubmit,
+		claim,
 	};
 }

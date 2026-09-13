@@ -6481,7 +6481,11 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 												onClick={nextStep}
 												disabled={
 													isUploading ||
-													(currentStep === 1 && !processedFileData)
+													(currentStep === 1 &&
+														(!processedFileData ||
+															fileIngestUi === "progress" ||
+															isExtracting ||
+															fileIngestProgress < 100))
 												}
 												className="primary-btn sm:px-4 px-3"
 											>

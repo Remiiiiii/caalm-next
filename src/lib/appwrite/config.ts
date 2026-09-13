@@ -398,6 +398,24 @@ export const appwriteConfig = {
 		"69e4a101001a2b3c4d01",
 	),
 
+	/** Org approval routing templates (name: approval_workflow_templates) */
+	approvalWorkflowTemplatesCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_APPROVAL_WORKFLOW_TEMPLATES_COLLECTION",
+		"69e5a101001a2b3c4d01",
+	),
+
+	/** Out-of-office approval delegates (name: approval_delegations) */
+	approvalDelegationsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_APPROVAL_DELEGATIONS_COLLECTION",
+		"69e5a102002b3c4d5e02",
+	),
+
+	/** Email/Slack approval action tokens (name: approval_action_tokens) */
+	approvalActionTokensCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_APPROVAL_ACTION_TOKENS_COLLECTION",
+		"69e5a103003c4d5e6f03",
+	),
+
 	/** Expiration accountability records (name: document_expiration_attestations) */
 	documentExpirationAttestationsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_DOCUMENT_EXPIRATION_ATTESTATIONS_COLLECTION",

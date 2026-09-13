@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
+import { isAssigneeMatch } from "@/lib/approvals/assigneeIdentity";
 import {
 	applyReassignToCurrentStep,
+	assertClaimAllowed,
 	assertDecisionAllowed,
 	assertReassignAllowed,
 	assigneeHintForKind,
@@ -8,10 +10,20 @@ import {
 	needsExecutiveAssignmentFlag,
 	resetWorkflowForResubmit,
 	resolveStatusAfterApprove,
+	resolveViewerCurrentStep,
 	syncDepartmentAssigneesIfCurrent,
 	upgradeAwaitingExecutiveStep,
+	pickExecutiveAssignees,
 } from "@/lib/approvals/ContractApprovalWorkflowService";
+import { historyFromNotifications } from "@/lib/approvals/approvalHistory";
+import { computeViewerCapabilities } from "@/lib/approvals/viewerCapabilities";
+import { advanceWorkflowAfterApprove } from "@/lib/approvals/workflowAdvance";
+import {
+	pickWorkflowTemplate,
+	type ApprovalWorkflowTemplate,
+} from "@/lib/approvals/workflowTemplates";
 import type {
+	ApprovalWorkflowNotification,
 	ApprovalWorkflowState,
 	ApprovalWorkflowStep,
 } from "@/lib/approvals/contractApprovalWorkflow.types";
@@ -138,6 +150,27 @@ describe("assertDecisionAllowed", () => {
 				uploaderUserId: "uploader-1",
 			}),
 		).toThrow(/Uploader cannot approve/);
+	});
+
+	it("blocks submitter from department review (SoD)", () => {
+		expect(() =>
+			assertDecisionAllowed({
+				current: currentStep({ assigneeUserIds: ["uploader-1"] }),
+				viewerUserId: "uploader-1",
+				uploaderUserId: "uploader-1",
+			}),
+		).toThrow(/Uploader cannot approve/);
+	});
+
+	it("matches assignee by identity alias", () => {
+		expect(() =>
+			assertDecisionAllowed({
+				current: currentStep({ assigneeUserIds: ["acct-1"] }),
+				viewerUserId: "row-1",
+				uploaderUserId: "uploader-1",
+				viewerIdentityIds: ["row-1", "acct-1"],
+			}),
+		).not.toThrow();
 	});
 
 	it("allows admin override for wrong assignee", () => {
@@ -304,11 +337,9 @@ describe("reassign helpers", () => {
 });
 
 describe("assigneeHintForKind", () => {
-	it("labels executive steps for Super Admin / Org Admin", () => {
-		expect(assigneeHintForKind("executive_approval")).toMatch(/Super Admin/);
-		expect(assigneeHintForKind("awaiting_executive")).toMatch(
-			/Organization Admin/,
-		);
+	it("labels executive steps for the Executive role", () => {
+		expect(assigneeHintForKind("executive_approval")).toMatch(/Executive/);
+		expect(assigneeHintForKind("awaiting_executive")).toMatch(/Executive/);
 	});
 });
 
@@ -346,5 +377,346 @@ describe("syncDepartmentAssigneesIfCurrent", () => {
 			notifications: [],
 		};
 		expect(syncDepartmentAssigneesIfCurrent(state, ["mgr-2"])).toBeNull();
+	});
+});
+
+describe("pickExecutiveAssignees", () => {
+	it("keeps only assignees still in the Executive pool", () => {
+		expect(
+			pickExecutiveAssignees(["victor", "remy", "jimmy"], ["jimmy"]),
+		).toEqual(["jimmy"]);
+	});
+
+	it("falls back to the full pool when none of the saved assignees qualify", () => {
+		expect(
+			pickExecutiveAssignees(["victor", "remy"], ["jimmy"]),
+		).toEqual(["jimmy"]);
+	});
+
+	it("preserves a valid subset without forcing every eligible person", () => {
+		expect(
+			pickExecutiveAssignees(["jimmy"], ["jimmy", "other-exec"]),
+		).toEqual(["jimmy"]);
+	});
+});
+
+describe("viewer capabilities", () => {
+	it("does not treat override as canDecide", () => {
+		const flags = computeViewerCapabilities({
+			frozen: false,
+			current: { kind: "department_review", status: "current" },
+			contractStatus: "pending-review",
+			isAssignee: false,
+			canDecideByRole: true,
+			isAdminOverride: true,
+		});
+		expect(flags.canDecide).toBe(false);
+		expect(flags.canDecideAsAssignee).toBe(false);
+		expect(flags.canAdminOverrideActiveStep).toBe(true);
+		expect(flags.canClaimStep).toBe(true);
+	});
+
+	it("hides active decisions when workflow is complete", () => {
+		const flags = computeViewerCapabilities({
+			frozen: false,
+			current: { kind: "activated", status: "complete" },
+			contractStatus: "pending-signature",
+			isAssignee: true,
+			canDecideByRole: true,
+			isAdminOverride: true,
+		});
+		expect(flags.canDecideAsAssignee).toBe(false);
+		expect(flags.canAdminOverrideCompleted).toBe(true);
+	});
+
+	it("hides reject for REVIEW-only department managers", () => {
+		const flags = computeViewerCapabilities({
+			frozen: false,
+			current: { kind: "department_review", status: "current" },
+			contractStatus: "pending-review",
+			isAssignee: true,
+			canDecideByRole: true,
+			isAdminOverride: false,
+			canApprove: false,
+		});
+		expect(flags.canDecideAsAssignee).toBe(true);
+		expect(flags.canReject).toBe(false);
+	});
+});
+
+describe("claim", () => {
+	it("rejects an existing assignee", () => {
+		expect(() =>
+			assertClaimAllowed({
+				current: {
+					id: "department_review-1",
+					kind: "department_review",
+					label: "Department review",
+					assigneeUserIds: ["mgr-1"],
+					status: "current",
+				},
+				viewerUserId: "mgr-1",
+			}),
+		).toThrow(/already assigned/);
+	});
+
+	it("allows an eligible non-assignee", () => {
+		expect(() =>
+			assertClaimAllowed({
+				current: {
+					id: "department_review-1",
+					kind: "department_review",
+					label: "Department review",
+					assigneeUserIds: ["mgr-1"],
+					status: "current",
+				},
+				viewerUserId: "mgr-2",
+			}),
+		).not.toThrow();
+	});
+});
+
+describe("identity match", () => {
+	it("matches accountId against stored assignee", () => {
+		expect(isAssigneeMatch(["acct-1"], ["row-1", "acct-1"])).toBe(true);
+		expect(isAssigneeMatch(["acct-1"], ["row-2"])).toBe(false);
+	});
+});
+
+describe("parallel advance", () => {
+	it("holds until sibling steps complete", () => {
+		const state = {
+			version: 1 as const,
+			currentStepIndex: 1,
+			derivedAt: new Date().toISOString(),
+			notifications: [],
+			steps: [
+				{
+					id: "submitted-0",
+					kind: "submitted" as const,
+					label: "Submitted",
+					assigneeUserIds: ["u1"],
+					status: "complete" as const,
+				},
+				{
+					id: "legal-1",
+					kind: "internal_approval" as const,
+					label: "Legal",
+					assigneeUserIds: ["a"],
+					status: "complete" as const,
+					parallelGroupId: "g1",
+				},
+				{
+					id: "finance-2",
+					kind: "internal_approval" as const,
+					label: "Finance",
+					assigneeUserIds: ["b"],
+					status: "current" as const,
+					parallelGroupId: "g1",
+				},
+				{
+					id: "exec-3",
+					kind: "executive_approval" as const,
+					label: "Executive",
+					assigneeUserIds: ["e"],
+					status: "pending" as const,
+				},
+			],
+		};
+		const held = advanceWorkflowAfterApprove(state, 1);
+		expect(held.currentStepIndex).toBe(2);
+		expect(held.steps[3].status).toBe("pending");
+	});
+
+	it("resolves the viewer to their parallel sibling step", () => {
+		const state: ApprovalWorkflowState = {
+			version: 1,
+			currentStepIndex: 1,
+			derivedAt: new Date().toISOString(),
+			notifications: [],
+			steps: [
+				{
+					id: "submitted-0",
+					kind: "submitted",
+					label: "Submitted",
+					assigneeUserIds: ["u1"],
+					status: "complete",
+				},
+				{
+					id: "legal-1",
+					kind: "internal_approval",
+					label: "Legal",
+					assigneeUserIds: ["legal-user"],
+					status: "current",
+					parallelGroupId: "g1",
+				},
+				{
+					id: "finance-2",
+					kind: "internal_approval",
+					label: "Finance",
+					assigneeUserIds: ["finance-user"],
+					status: "current",
+					parallelGroupId: "g1",
+				},
+			],
+		};
+		const finance = resolveViewerCurrentStep(state, ["finance-user"]);
+		expect(finance.index).toBe(2);
+		expect(finance.step?.label).toBe("Finance");
+		const legal = resolveViewerCurrentStep(state, ["legal-user"]);
+		expect(legal.index).toBe(1);
+	});
+
+	it("advances past the group when the last sibling completes", () => {
+		const state: ApprovalWorkflowState = {
+			version: 1,
+			currentStepIndex: 2,
+			derivedAt: new Date().toISOString(),
+			notifications: [],
+			steps: [
+				{
+					id: "submitted-0",
+					kind: "submitted",
+					label: "Submitted",
+					assigneeUserIds: ["u1"],
+					status: "complete",
+				},
+				{
+					id: "legal-1",
+					kind: "internal_approval",
+					label: "Legal",
+					assigneeUserIds: ["a"],
+					status: "complete",
+					parallelGroupId: "g1",
+				},
+				{
+					id: "finance-2",
+					kind: "internal_approval",
+					label: "Finance",
+					assigneeUserIds: ["b"],
+					status: "complete",
+					parallelGroupId: "g1",
+				},
+				{
+					id: "exec-3",
+					kind: "executive_approval",
+					label: "Executive",
+					assigneeUserIds: ["e"],
+					status: "pending",
+				},
+			],
+		};
+		const advanced = advanceWorkflowAfterApprove(state, 2);
+		expect(advanced.currentStepIndex).toBe(3);
+		expect(advanced.steps[3].status).toBe("current");
+	});
+});
+
+describe("template routing", () => {
+	it("picks the first matching value rule", () => {
+		const high: ApprovalWorkflowTemplate = {
+			$id: "high",
+			orgId: "org",
+			name: "High value",
+			entityType: "contract",
+			rules: [{ field: "contractValue", op: "gte", value: 50000 }],
+			steps: [],
+			isDefault: false,
+			isActive: true,
+		};
+		const fallback: ApprovalWorkflowTemplate = {
+			$id: "def",
+			orgId: "org",
+			name: "Default",
+			entityType: "both",
+			rules: [],
+			steps: [],
+			isDefault: true,
+			isActive: true,
+		};
+		expect(
+			pickWorkflowTemplate([fallback, high], "contract", { amount: 80000 })
+				?.$id,
+		).toBe("high");
+		expect(
+			pickWorkflowTemplate([fallback, high], "contract", { amount: 100 })?.$id,
+		).toBe("def");
+	});
+
+	it("matches risk tier and contract type rules", () => {
+		const risky: ApprovalWorkflowTemplate = {
+			$id: "risky",
+			orgId: "org",
+			name: "High risk",
+			entityType: "contract",
+			rules: [
+				{ field: "riskTier", op: "eq", value: "High" },
+				{ field: "contractType", op: "eq", value: "Government" },
+			],
+			steps: [],
+			isDefault: false,
+			isActive: true,
+		};
+		const fallback: ApprovalWorkflowTemplate = {
+			$id: "def",
+			orgId: "org",
+			name: "Default",
+			entityType: "both",
+			rules: [],
+			steps: [],
+			isDefault: true,
+			isActive: true,
+		};
+		expect(
+			pickWorkflowTemplate([fallback, risky], "contract", {
+				riskTier: "High",
+				contractType: "Government",
+			})?.$id,
+		).toBe("risky");
+		expect(
+			pickWorkflowTemplate([fallback, risky], "contract", {
+				riskTier: "Low",
+				contractType: "Government",
+			})?.$id,
+		).toBe("def");
+	});
+});
+
+describe("history actors", () => {
+	it("prefers actorUserId over recipients", () => {
+		const notes: ApprovalWorkflowNotification[] = [
+			{
+				id: "1",
+				type: "reassigned",
+				sentAt: "2026-01-01T00:00:00.000Z",
+				recipientUserIds: ["a", "b"],
+				actorUserId: "admin-1",
+				reason: "Coverage while manager is OOO",
+				detail: "a → b",
+				label: "Reassigned: Coverage while manager is OOO",
+			},
+		];
+		const events = historyFromNotifications(notes);
+		expect(events[0].actorUserIds).toEqual(["admin-1"]);
+		expect(events[0].reason).toBe("Coverage while manager is OOO");
+		expect(events[0].detail).toBe("a → b");
+	});
+});
+
+describe("uploader SoD", () => {
+	it("blocks the uploader from approving their own review step", () => {
+		expect(() =>
+			assertDecisionAllowed({
+				current: {
+					id: "department_review-1",
+					kind: "department_review",
+					label: "Department review",
+					assigneeUserIds: ["uploader-1"],
+					status: "current",
+				},
+				viewerUserId: "uploader-1",
+				uploaderUserId: "uploader-1",
+			}),
+		).toThrow(/Uploader cannot approve/);
 	});
 });

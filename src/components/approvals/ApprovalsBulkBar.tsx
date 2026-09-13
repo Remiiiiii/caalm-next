@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import type { ApprovalQueueItem } from "@/lib/approvals/approvalsListUtils";
+import { toUserFacingErrorMessage } from "@/lib/errors/user-facing";
 
 interface ApprovalsBulkBarProps {
 	items: ApprovalQueueItem[];
@@ -149,10 +150,10 @@ export default function ApprovalsBulkBar({
 		} catch (err) {
 			toast({
 				title: "Error",
-				description:
-					err instanceof Error
-						? err.message
-						: "Some items could not be updated.",
+				description: toUserFacingErrorMessage(
+					err,
+					"Some items could not be updated. Please try again.",
+				),
 				variant: "destructive",
 			});
 		} finally {

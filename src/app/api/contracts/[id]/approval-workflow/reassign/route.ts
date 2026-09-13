@@ -1,5 +1,6 @@
 import { revalidatePath } from "next/cache";
 import type { NextRequest } from "next/server";
+import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
 import {
 	errorResponse,
@@ -15,7 +16,7 @@ import {
 } from "@/lib/approvals/ContractApprovalWorkflowService";
 import {
 	getUserDefaultOrganization,
-	getUserRoles,
+	hasPermission,
 } from "@/lib/rbac/permissions";
 
 export async function POST(
@@ -37,6 +38,7 @@ export async function POST(
 		const assigneeUserIds = Array.isArray(body.assigneeUserIds)
 			? body.assigneeUserIds.filter((id: unknown) => typeof id === "string")
 			: [];
+		const reason = typeof body.reason === "string" ? body.reason.trim() : "";
 		const path =
 			typeof body.path === "string" ? body.path : "/contracts/approvals";
 
@@ -46,19 +48,23 @@ export async function POST(
 				requestId,
 			);
 		}
+		if (reason.length < 10) {
+			return validationErrorResponse(
+				"A reassignment reason of at least 10 characters is required",
+				requestId,
+			);
+		}
 
 		const viewerUserId = user.accountId || user.$id;
 		const org = await getUserDefaultOrganization(user.$id);
 		const orgId = org?.orgId;
-		const roles = orgId ? await getUserRoles(viewerUserId, orgId) : [];
-		const isAdminOverride = roles.some((r) => {
-			const name = r.roleName || "";
-			return name === "Super Admin" || name === "Organization Admin";
-		});
+		const isAdminOverride = orgId
+			? await hasPermission(user.$id, PERMISSIONS.APPROVALS.OVERRIDE, orgId)
+			: false;
 
 		if (!isAdminOverride) {
 			return forbiddenResponse(
-				"Only Super Admin or Organization Admin can reassign",
+				"Permission denied: reassign approval step",
 				requestId,
 			);
 		}
@@ -67,6 +73,7 @@ export async function POST(
 			contractId,
 			viewerUserId,
 			assigneeUserIds,
+			reason,
 			adminOverride: true,
 		});
 
@@ -89,7 +96,9 @@ export async function POST(
 		const status =
 			message.includes("Only Super Admin") ||
 			message.includes("cannot be reassigned") ||
-			message.includes("must be Super Admin")
+			message.includes("must hold the Executive") ||
+			message.includes("must be Super Admin") ||
+			message.includes("Permission denied")
 				? 403
 				: message.includes("required")
 					? 400

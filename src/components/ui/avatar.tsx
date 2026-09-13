@@ -1,4 +1,7 @@
+"use client";
+
 import type React from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
 // Export color generation logic so it can be shared
@@ -34,6 +37,8 @@ interface AvatarProps {
 	size?: "sm" | "md" | "lg";
 	className?: string;
 	showName?: boolean;
+	/** When set (and loads), show the photo instead of initials. */
+	imageUrl?: string | null;
 }
 
 const Avatar: React.FC<AvatarProps> = ({
@@ -42,13 +47,20 @@ const Avatar: React.FC<AvatarProps> = ({
 	size = "md",
 	className,
 	showName = false,
+	imageUrl,
 }) => {
+	const [imageFailed, setImageFailed] = useState(false);
+
+	useEffect(() => {
+		setImageFailed(false);
+	}, [imageUrl]);
+
 	// Generate initials from full name, handle undefined/null names
 	const initials =
 		name && typeof name === "string"
 			? name
 					.split(" ")
-					.map((name) => name.charAt(0))
+					.map((part) => part.charAt(0))
 					.join("")
 					.toUpperCase()
 					.slice(0, 2)
@@ -56,6 +68,7 @@ const Avatar: React.FC<AvatarProps> = ({
 
 	// Use the shared color generation function
 	const avatarColor = getAvatarColor(userId);
+	const showImage = Boolean(imageUrl) && !imageFailed;
 
 	// Size classes
 	const sizeClasses = {
@@ -68,12 +81,22 @@ const Avatar: React.FC<AvatarProps> = ({
 		<div className={cn("flex items-center gap-2", className)}>
 			<div
 				className={cn(
-					"rounded-full flex items-center justify-center text-white font-medium",
+					"rounded-full flex items-center justify-center text-white font-medium overflow-hidden",
 					sizeClasses[size],
 				)}
-				style={{ backgroundColor: avatarColor }}
+				style={showImage ? undefined : { backgroundColor: avatarColor }}
 			>
-				{initials}
+				{showImage ? (
+					// eslint-disable-next-line @next/next/no-img-element -- remote Appwrite / CDN URLs
+					<img
+						src={imageUrl || ""}
+						alt=""
+						className="h-full w-full object-cover"
+						onError={() => setImageFailed(true)}
+					/>
+				) : (
+					initials
+				)}
 			</div>
 			{showName && <span className="text-sm text-slate-700">{name}</span>}
 		</div>

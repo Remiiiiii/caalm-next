@@ -129,6 +129,25 @@ export function fireConfetti(options?: {
 	frame = requestAnimationFrame(tick);
 }
 
+/** Burst CAALM confetti from the center of an element (viewport-fixed overlay). */
+export function fireCaalmConfettiFromElement(
+	el: HTMLElement | null,
+	options: Omit<ConfettiOptions, "origin"> = {},
+) {
+	if (typeof window === "undefined" || !el) {
+		fireCaalmConfetti(options);
+		return;
+	}
+	const rect = el.getBoundingClientRect();
+	fireCaalmConfetti({
+		...options,
+		origin: {
+			x: (rect.left + rect.width / 2) / Math.max(window.innerWidth, 1),
+			y: (rect.top + rect.height / 2) / Math.max(window.innerHeight, 1),
+		},
+	});
+}
+
 export function fireCaalmConfetti(options: ConfettiOptions = {}) {
 	if (typeof document === "undefined") return;
 	if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;

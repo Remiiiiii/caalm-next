@@ -56,31 +56,12 @@ import {
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
 } from "@/lib/ui/data-table-styles";
-import { cn } from "@/lib/utils";
-import { avatarPlaceholderUrl } from "../../../../constants";
+import { cn, resolveAvatarDisplayUrl } from "@/lib/utils";
 
 const FILTER_SECTION_SCROLL =
 	"max-h-36 overflow-y-auto overscroll-contain [-ms-overflow-style:none] [scrollbar-width:thin]";
 
 type DateRangeFilter = "all" | "today" | "last7days" | "last30days";
-
-function isSafeNextImageSrc(src: string): boolean {
-	const s = src.trim();
-	if (!s) return false;
-	if (/^https?:\/\//i.test(s)) return true;
-	// Public folder paths must start with /
-	if (s.startsWith("/") && !s.startsWith("//")) return true;
-	return false;
-}
-
-function hasCustomAvatar(avatar: string | undefined): boolean {
-	const a = avatar?.trim();
-	if (!a) return false;
-	if (!isSafeNextImageSrc(a)) return false;
-	if (a === avatarPlaceholderUrl) return false;
-	if (a.includes("avatar-placeholder")) return false;
-	return true;
-}
 
 type SortKey =
 	| "fullName"
@@ -705,31 +686,13 @@ const UserManagement = () => {
 											>
 												<TableCell className="py-3 pl-4 pr-3">
 													<div className="flex min-w-55 items-center gap-2.5">
-														{hasCustomAvatar(user.avatar) ? (
-															<div
-																className="h-7.5 w-7.5 shrink-0 overflow-hidden rounded-full"
-																style={{
-																	background:
-																		"linear-gradient(135deg, #12477d 0%, #03afbf 100%)",
-																	padding: "2px",
-																}}
-															>
-																<Image
-																	src={user.avatar!}
-																	alt=""
-																	width={26}
-																	height={26}
-																	className="h-6.5 w-6.5 rounded-full border-2 border-white object-cover"
-																/>
-															</div>
-														) : (
-															<Avatar
-																name={user.fullName}
-																userId={user.$id}
-																size="sm"
-																className="shrink-0 gap-0"
-															/>
-														)}
+														<Avatar
+															name={user.fullName}
+															userId={user.$id}
+															size="sm"
+															className="shrink-0 gap-0"
+															imageUrl={resolveAvatarDisplayUrl(user)}
+														/>
 														<div className="min-w-0">
 															<p className="truncate text-sm font-semibold text-slate-700">
 																{user.fullName}

@@ -12,6 +12,7 @@ export const COMPANION_PATH_PREFIXES = [
 	"/tickets",
 	"/team/tasks",
 	"/company-news",
+	"/approve",
 ] as const;
 
 /** Dense trees under an otherwise companion prefix (IT portal, admin tools). */
