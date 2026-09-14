@@ -1,5 +1,6 @@
 "use client";
 
+import { RefreshCw, Shield, Target } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { ObligationsPanel } from "@/components/funding/ObligationsPanel";
 import { PursuitsBoard } from "@/components/funding/PursuitsBoard";
@@ -76,7 +77,7 @@ export function FundingRetentionClient() {
 				/>
 			</div>
 
-			<div className="flex flex-wrap items-center gap-3">
+			<div className="flex flex-wrap items-center justify-end gap-3">
 				<Button
 					className={cn(
 						"primary-btn px-3 sm:px-4",
@@ -85,6 +86,7 @@ export function FundingRetentionClient() {
 					variant={tab === "retention" ? "default" : "outline"}
 					onClick={() => setTab("retention")}
 				>
+					<Shield className="h-4 w-4" />
 					Retention
 				</Button>
 				<Button
@@ -95,6 +97,7 @@ export function FundingRetentionClient() {
 					variant={tab === "pursuits" ? "default" : "outline"}
 					onClick={() => setTab("pursuits")}
 				>
+					<Target className="h-4 w-4" />
 					Pursuits
 				</Button>
 				<Button
@@ -103,6 +106,7 @@ export function FundingRetentionClient() {
 					onClick={() => void load()}
 					disabled={loading}
 				>
+					<RefreshCw className="h-4 w-4" />
 					Refresh
 				</Button>
 			</div>

@@ -52,6 +52,9 @@ Public pages stay usable on a phone:
 - Marketing / landing
 - Docs (this site)
 - Counterparty negotiation at `/negotiate/[token]`
+- Guest e-signature at `/sign/[token]` and the disclosure page at `/sign/disclosure`
+
+Preparing a signature package (`/esign/prepare/...`) is laptop-only. See [E-signature](/docs/reference/e-signature).
 
 ## If you landed here from a phone
 
@@ -66,4 +69,5 @@ A tablet at laptop width does not need this step. If your tablet is in a narrow 
 - [Quick start](/docs/learn/quick-start) — first useful action (some steps need a laptop)
 - [Dashboards](/docs/reference/dashboards) — morning briefing, including phone glance
 - [Approvals](/docs/reference/approvals) — the main phone workflow
+- [E-signature](/docs/reference/e-signature) — guest signing links work on a phone; prepare needs a laptop
 - [Notifications and deadlines](/docs/concepts/notifications-deadlines)

@@ -1,5 +1,6 @@
 "use client";
 
+import { FilePlus2, Plus } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -128,13 +129,16 @@ export function PursuitsBoard({
 					/>
 					<div className="sm:col-span-3">
 						{error ? <p className="mb-2 text-xs text-red">{error}</p> : null}
-						<Button
-							className="primary-btn px-3 sm:px-4"
-							disabled={saving}
-							onClick={() => void createManual()}
-						>
-							{saving ? "Saving…" : "Create pursuit"}
-						</Button>
+						<div className="flex justify-end">
+							<Button
+								className="primary-btn px-3 sm:px-4"
+								disabled={saving}
+								onClick={() => void createManual()}
+							>
+								<Plus className="h-4 w-4" />
+								{saving ? "Saving…" : "Create pursuit"}
+							</Button>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -207,6 +211,7 @@ export function PursuitsBoard({
 											})();
 										}}
 									>
+										<FilePlus2 className="h-4 w-4" />
 										{p.linkedProposalId ? "Linked" : "Mark won → proposal"}
 									</Button>
 								</div>

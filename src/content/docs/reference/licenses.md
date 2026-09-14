@@ -23,9 +23,11 @@ Licenses are easy to underestimate until one lapses.
 
 ## Lifecycle
 
-Capture → assign owner → track expiry → renew with evidence → keep status honest.
+Capture → assign owner → review/approve when required → [send for signature](/docs/reference/e-signature) when parties must execute → track expiry → renew with evidence → keep status honest.
 
-Permissions commonly involved: `licenses.view`, `create`, `edit`, `delete`, `allocate`, `renew`.
+Permissions commonly involved: `licenses.view`, `create`, `edit`, `delete`, `allocate`, `renew`, `sign`.
+
+When a license sits in **Pending Signature**, people with `licenses.sign` use **Send for signature** (same CAALM Execute flow as contracts).
 
 ## Manager tip
 

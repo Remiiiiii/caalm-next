@@ -45,7 +45,7 @@ export function RetentionBoard({
 		<div className="glass-card overflow-hidden rounded-xl">
 			<div className="glass-card-cap" />
 			<div className="border-b border-slate-200 px-4 py-3 sm:px-6">
-				<h2 className="text-xl font-semibold sidebar-gradient-text">
+				<h2 className="text-xl mt-4 font-semibold sidebar-gradient-text">
 					Retention (dollar-ranked)
 				</h2>
 				<p className="mt-1 text-sm text-slate-600">

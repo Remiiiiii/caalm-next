@@ -114,9 +114,7 @@ export function ObligationsPanel({
 					status: form.status,
 					ownerName: form.ownerName.trim() || undefined,
 					dueDate: form.dueDate || undefined,
-					reminderDaysBefore: Number.isFinite(reminder)
-						? reminder
-						: undefined,
+					reminderDaysBefore: Number.isFinite(reminder) ? reminder : undefined,
 					linkUrl: form.linkUrl.trim() || undefined,
 					renewalLinked: form.renewalLinked,
 				}),
@@ -134,10 +132,7 @@ export function ObligationsPanel({
 		}
 	}
 
-	async function patchObligation(
-		id: string,
-		body: Record<string, unknown>,
-	) {
+	async function patchObligation(id: string, body: Record<string, unknown>) {
 		setBusyId(id);
 		setError(null);
 		try {
@@ -181,7 +176,7 @@ export function ObligationsPanel({
 		<div className="glass-card rounded-xl">
 			<div className="glass-card-cap" />
 			<div className="border-b border-slate-200 px-4 py-3 sm:px-6">
-				<h2 className="text-xl font-semibold sidebar-gradient-text">
+				<h2 className="text-xl mt-4 font-semibold sidebar-gradient-text">
 					Obligations
 				</h2>
 				<p className="mt-1 text-sm text-slate-600">
@@ -305,14 +300,16 @@ export function ObligationsPanel({
 						Link to renewal / retention checklist
 					</label>
 					{error ? <p className="text-xs text-red">{error}</p> : null}
-					<Button
-						className="primary-btn px-3 sm:px-4"
-						disabled={saving || !form.title.trim()}
-						onClick={() => void addObligation()}
-					>
-						<Plus className="h-4 w-4" />
-						{saving ? "Saving…" : "Add obligation"}
-					</Button>
+					<div className="flex justify-end">
+						<Button
+							className="primary-btn px-3 sm:px-4"
+							disabled={saving || !form.title.trim()}
+							onClick={() => void addObligation()}
+						>
+							<Plus className="h-4 w-4" />
+							{saving ? "Saving…" : "Add obligation"}
+						</Button>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -332,8 +329,7 @@ function ObligationRow({
 	onMarkDone: () => void;
 	onDelete: () => void;
 }) {
-	const closed =
-		obligation.status === "done" || obligation.status === "waived";
+	const closed = obligation.status === "done" || obligation.status === "waived";
 
 	return (
 		<li className="rounded-lg border border-slate-200 bg-white p-3">
@@ -405,9 +401,7 @@ function ObligationRow({
 				<div className="mt-3 max-w-xs">
 					<Select
 						value={obligation.status}
-						onValueChange={(value) =>
-							onStatusChange(value as ObligationStatus)
-						}
+						onValueChange={(value) => onStatusChange(value as ObligationStatus)}
 						disabled={busy}
 					>
 						<SelectTrigger className="h-9 border-[0.25px] border-slate-300">

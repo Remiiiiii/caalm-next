@@ -37,7 +37,7 @@ This catalog explains permission keys in everyday language. Exact availability c
 | `contracts.edit` | Change contract metadata/files |
 | `contracts.review` | Enter review workflows |
 | `contracts.approve` | Approve contract proposals |
-| `contracts.sign` | Sign where enabled |
+| `contracts.sign` | Prepare and send contract e-signature packages (CAALM Execute) |
 
 ## Clause Library
 
@@ -74,6 +74,7 @@ This catalog explains permission keys in everyday language. Exact availability c
 | `licenses.delete` | Delete licenses |
 | `licenses.allocate` | Allocate licenses |
 | `licenses.renew` | Perform renewals |
+| `licenses.sign` | Prepare and send license e-signature packages (CAALM Execute) |
 
 ## News
 
