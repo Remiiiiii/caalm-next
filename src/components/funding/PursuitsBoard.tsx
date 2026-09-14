@@ -1,5 +1,6 @@
 "use client";
 
+import { FilePlus2, Plus } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -104,7 +105,7 @@ export function PursuitsBoard({
 		<div className="space-y-6">
 			<div className="glass-card rounded-xl">
 				<div className="glass-card-cap" />
-				<div className="border-b border-slate-200 px-4 py-3 sm:px-6">
+				<div className="border-b border-slate-200 px-4 mt-4 py-3 sm:px-6">
 					<h2 className="text-xl font-semibold sidebar-gradient-text">
 						Add pursuit
 					</h2>
@@ -128,20 +129,23 @@ export function PursuitsBoard({
 					/>
 					<div className="sm:col-span-3">
 						{error ? <p className="mb-2 text-xs text-red">{error}</p> : null}
-						<Button
-							className="primary-btn px-3 sm:px-4"
-							disabled={saving}
-							onClick={() => void createManual()}
-						>
-							{saving ? "Saving…" : "Create pursuit"}
-						</Button>
+						<div className="flex justify-end">
+							<Button
+								className="primary-btn px-3 sm:px-4"
+								disabled={saving}
+								onClick={() => void createManual()}
+							>
+								<Plus className="h-4 w-4" />
+								{saving ? "Saving…" : "Create pursuit"}
+							</Button>
+						</div>
 					</div>
 				</div>
 			</div>
 
 			<div className="glass-card overflow-hidden rounded-xl">
 				<div className="glass-card-cap" />
-				<div className="border-b border-slate-200 px-4 py-3 sm:px-6">
+				<div className="border-b border-slate-200 px-4 mt-4 py-3 sm:px-6">
 					<h2 className="text-xl font-semibold sidebar-gradient-text">
 						Pursuit pipeline
 					</h2>
@@ -207,6 +211,7 @@ export function PursuitsBoard({
 											})();
 										}}
 									>
+										<FilePlus2 className="h-4 w-4" />
 										{p.linkedProposalId ? "Linked" : "Mark won → proposal"}
 									</Button>
 								</div>

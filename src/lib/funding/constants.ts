@@ -23,6 +23,68 @@ export const RETENTION_WINDOWS = {
 	warningDays: 90,
 } as const;
 
+/** Visible-row budget for the retention list scroll pane (~8 rows). */
+export const RETENTION_LIST_VISIBLE_ROWS = 8;
+
+/** Fixed board height so left/right panels stay matched while the list scrolls. */
+export const RETENTION_BOARD_HEIGHT_CLASS = "h-[42rem]";
+
+export const RETENTION_HEALTH_LABEL: Record<RetentionHealth, string> = {
+	at_risk: "At risk",
+	protecting: "Protecting",
+	protected: "Protected",
+	expired: "Expired",
+};
+
+/** Stable demo departments when a contract has none on file (filter testing). */
+export const RETENTION_DEMO_DEPARTMENTS = [
+	"Child Welfare",
+	"Behavioral Health",
+	"CFS",
+	"Residential",
+	"Clinic",
+	"Administration",
+] as const;
+
+export function seedRetentionDepartment(
+	contractId: string,
+	existing?: string | null,
+): string {
+	const trimmed = typeof existing === "string" ? existing.trim() : "";
+	if (trimmed) return trimmed;
+	let hash = 0;
+	for (let i = 0; i < contractId.length; i++) {
+		hash = (hash * 31 + contractId.charCodeAt(i)) >>> 0;
+	}
+	return RETENTION_DEMO_DEPARTMENTS[hash % RETENTION_DEMO_DEPARTMENTS.length];
+}
+
+/** List row expiry: "Expires 2027-05-12 · 240d" or "Expired 1d ago". */
+export function formatRetentionExpiryLine(
+	expiryDate: string | null,
+	daysUntilExpiry: number | null,
+): string {
+	if (!expiryDate) return "No expiry on file";
+	const date = expiryDate.slice(0, 10);
+	if (daysUntilExpiry == null) return `Expires ${date}`;
+	if (daysUntilExpiry < 0) {
+		return `Expires ${date} · Expired ${Math.abs(daysUntilExpiry)}d ago`;
+	}
+	return `Expires ${date} · ${daysUntilExpiry}d`;
+}
+
+/** Banner phrase: "expires in 78 days". */
+export function formatRetentionExpiryPhrase(
+	daysUntilExpiry: number | null,
+): string {
+	if (daysUntilExpiry == null) return "no expiry on file";
+	if (daysUntilExpiry < 0) {
+		return `expired ${Math.abs(daysUntilExpiry)}d ago`;
+	}
+	if (daysUntilExpiry === 0) return "expires today";
+	return `expires in ${daysUntilExpiry} days`;
+}
+
 export function isPursuitStage(
 	value: unknown,
 ): value is (typeof PURSUIT_STAGES)[number] {

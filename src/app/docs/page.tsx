@@ -1,6 +1,7 @@
 import { ArrowRight, BookOpen, Compass, LifeBuoy, Shield } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { DocsHeroSpline } from "@/components/docs/DocsHeroSpline";
 import { DOCS_NAV } from "@/lib/docs/navigation";
 
 export const metadata: Metadata = {
@@ -44,33 +45,41 @@ export default function DocsHomePage() {
 					aria-hidden
 					className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(15,83,132,0.12),_transparent_45%),radial-gradient(circle_at_bottom_left,_rgba(14,165,233,0.08),_transparent_40%)] dark:bg-[radial-gradient(circle_at_top_right,_rgba(56,189,248,0.12),_transparent_45%),radial-gradient(circle_at_bottom_left,_rgba(14,165,233,0.06),_transparent_40%)]"
 				/>
-				<div className="relative max-w-3xl">
-					<p className="text-sm font-semibold uppercase tracking-wider text-[#0f5384] dark:text-sky-300">
-						Documentation
-					</p>
-					<h1 className="mt-2 text-4xl font-semibold tracking-tight text-slate-700 sm:text-5xl dark:text-slate-50">
-						Everything you need to run CAALM with confidence
-					</h1>
-					<p className="mt-4 text-base leading-7 text-slate-600 sm:text-lg dark:text-slate-300">
-						CAALM Docs is the in-depth guide for every role — from first login
-						to renewals, approvals, analytics, and admin governance. Built like
-						a product manual you can live in, not a brochure.
-					</p>
-					<div className="mt-6 flex flex-wrap gap-3">
-						<Link
-							href="/docs/learn/quick-start"
-							className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#0f5384] px-4 text-sm font-medium text-white transition-opacity hover:opacity-90"
-						>
-							Start with Quick start
-							<ArrowRight className="h-4 w-4" />
-						</Link>
-						<Link
-							href="/docs/reference/permissions-catalog"
-							className="inline-flex h-10 items-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition-colors hover:border-blue-300 hover:bg-blue-50/50 dark:border-slate-600 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-sky-700 dark:hover:bg-slate-800"
-						>
-							Permissions catalog
-						</Link>
+				<div className="relative lg:min-h-[340px]">
+					{/* Full-width copy on phone/tablet; wider column on laptop+ so the robot can overlap */}
+					<div className="relative z-0 w-full lg:max-w-[68%]">
+						<p className="text-sm font-semibold uppercase tracking-wider text-[#0f5384] dark:text-sky-300">
+							Documentation
+						</p>
+						<h1 className="mt-2 text-4xl font-semibold tracking-tight text-slate-700 sm:text-5xl dark:text-slate-50">
+							<span className="lg:whitespace-nowrap">
+								Everything you need to run
+							</span>{" "}
+							CAALM with confidence
+						</h1>
+						<p className="mt-4 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg dark:text-slate-300">
+							CAALM Docs is the in-depth guide for every role — from first login
+							to renewals, approvals, analytics, and admin governance. Built
+							like a product manual you can live in, not a brochure.
+						</p>
+						<div className="mt-6 flex flex-wrap gap-3">
+							<Link
+								href="/docs/learn/quick-start"
+								className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#0f5384] px-4 text-sm font-medium text-white transition-opacity hover:opacity-90"
+							>
+								Start with Quick start
+								<ArrowRight className="h-4 w-4" />
+							</Link>
+							<Link
+								href="/docs/reference/permissions-catalog"
+								className="inline-flex h-10 items-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition-colors hover:border-blue-300 hover:bg-blue-50/50 dark:border-slate-600 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-sky-700 dark:hover:bg-slate-800"
+							>
+								Permissions catalog
+							</Link>
+						</div>
 					</div>
+					{/* Laptop/desktop only (≥1024px) — not mounted on phone/tablet */}
+					<DocsHeroSpline />
 				</div>
 			</section>
 
