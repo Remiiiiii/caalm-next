@@ -199,6 +199,13 @@ export const DOCS_NAV: DocsNavGroup[] = [
 				summary: "Queues, decision flows, and separation of duties.",
 			},
 			{
+				title: "E-signature (CAALM Execute)",
+				slug: "reference/e-signature",
+				path: "reference/e-signature",
+				summary:
+					"Send approved contracts and licenses for electronic signature and activate when complete.",
+			},
+			{
 				title: "Calendar",
 				slug: "reference/calendar",
 				path: "reference/calendar",

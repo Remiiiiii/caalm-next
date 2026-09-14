@@ -1,7 +1,7 @@
 import { Query } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
-import { computeRetentionHealth, daysUntil } from "./constants";
+import { computeRetentionHealth, daysUntil, seedRetentionDepartment } from "./constants";
 // computeRetentionHealth ranks streams by expiry + obligation pressure
 import { listObligations } from "./obligation.repository";
 import type {
@@ -14,6 +14,9 @@ type ContractRow = {
 	$id: string;
 	contractName?: string;
 	name?: string;
+	contractNumber?: string;
+	counterpartyLegalName?: string;
+	vendor?: string;
 	amount?: number | string;
 	currencyCode?: string;
 	currency?: string;
@@ -83,16 +86,30 @@ export async function buildRetentionSummary(input: {
 			return d != null && d < 0;
 		});
 
+		const contractName = c.contractName || c.name || "Untitled contract";
+		const counterpartyName =
+			(typeof c.counterpartyLegalName === "string" &&
+				c.counterpartyLegalName.trim()) ||
+			(typeof c.vendor === "string" && c.vendor.trim()) ||
+			undefined;
+		const contractNumber =
+			typeof c.contractNumber === "string" && c.contractNumber.trim()
+				? c.contractNumber.trim()
+				: undefined;
+
 		return {
 			contractId: c.$id,
-			contractName: c.contractName || c.name || "Untitled contract",
+			contractName,
+			contractNumber,
+			counterpartyName,
+			nameIsDuplicate: false,
 			amount,
 			currency: c.currencyCode || c.currency || "USD",
 			expiryDate: expiry,
 			daysUntilExpiry: days,
 			lifecycleStatus: c.lifecycleStatus,
 			status: c.status,
-			department: c.department,
+			department: seedRetentionDepartment(c.$id, c.department),
 			ownerName: c.ownerName,
 			health: computeRetentionHealth({
 				daysUntilExpiry: days,
@@ -108,6 +125,16 @@ export async function buildRetentionSummary(input: {
 
 	streams.sort((a, b) => b.amount - a.amount);
 
+	const nameCounts = new Map<string, number>();
+	for (const stream of streams) {
+		const key = stream.contractName.trim().toLowerCase();
+		nameCounts.set(key, (nameCounts.get(key) || 0) + 1);
+	}
+	for (const stream of streams) {
+		stream.nameIsDuplicate =
+			(nameCounts.get(stream.contractName.trim().toLowerCase()) || 0) > 1;
+	}
+
 	let totalAtRiskAmount = 0;
 	let totalProtectingAmount = 0;
 	let totalProtectedAmount = 0;
@@ -121,11 +148,20 @@ export async function buildRetentionSummary(input: {
 		}
 	}
 
+	const departments = [
+		...new Set(
+			streams
+				.map((s) => s.department)
+				.filter((d): d is string => Boolean(d?.trim())),
+		),
+	].sort((a, b) => a.localeCompare(b));
+
 	return {
 		totalAtRiskAmount,
 		totalProtectingAmount,
 		totalProtectedAmount,
 		streamCount: streams.length,
+		departments,
 		streams,
 	};
 }

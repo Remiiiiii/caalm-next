@@ -1,6 +1,7 @@
 import { ID } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { resolveContractExpiryDate } from "@/lib/crm/create-draft-from-deal";
 import { getPursuitById, updatePursuit } from "./pursuit.repository";
 import type { FundingPursuit } from "./types";
 
@@ -49,12 +50,19 @@ export async function convertWonPursuitToProposal(input: {
 	].filter(Boolean);
 
 	const proposalId = ID.unique();
+	const contractNumber = (
+		pursuit.source === "sam_gov" && pursuit.samNoticeId
+			? `SAM-${pursuit.samNoticeId}`
+			: `FP-${proposalId}`
+	).slice(0, 50);
+
 	await tablesDB.createRow({
 		databaseId: appwriteConfig.databaseId || "",
 		tableId: contractsTable,
 		rowId: proposalId,
 		data: {
 			contractName: pursuit.title.slice(0, 256),
+			contractNumber,
 			orgId: input.orgId,
 			amount: pursuit.amount,
 			currencyCode: pursuit.currency || "USD",
@@ -62,10 +70,13 @@ export async function convertWonPursuitToProposal(input: {
 			status: "pending-review",
 			description: descriptionParts.join(" ").slice(0, 5000),
 			contractOwnerId: pursuit.ownerUserId || input.userId,
-			department: pursuit.department,
+			department: pursuit.department || "Sales",
 			vendor: pursuit.source === "sam_gov" ? "SAM.gov opportunity" : undefined,
-			contractType: "other",
+			// Appwrite Contracts.contractType enum uses capital O
+			contractType: "Other",
 			priority: pursuit.amount >= 50000 ? "High" : "Medium",
+			// Required on Contracts — use SAM response deadline when present
+			contractExpiryDate: resolveContractExpiryDate(pursuit.responseDeadline),
 		},
 	});
 

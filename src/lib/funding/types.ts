@@ -94,6 +94,9 @@ export type ContractObligation = {
 export type RetentionStream = {
 	contractId: string;
 	contractName: string;
+	contractNumber?: string;
+	counterpartyName?: string;
+	nameIsDuplicate: boolean;
 	amount: number;
 	currency: string;
 	expiryDate: string | null;
@@ -113,5 +116,6 @@ export type RetentionSummary = {
 	totalProtectingAmount: number;
 	totalProtectedAmount: number;
 	streamCount: number;
+	departments: string[];
 	streams: RetentionStream[];
 };

@@ -167,7 +167,7 @@ async function saveAsPursuit(contract: SAMContract) {
 		const data = await res.json().catch(() => ({}));
 		throw new Error(data.error || "Could not save pursuit");
 	}
-	window.location.href = "/contracts/funding-retention";
+	window.location.href = "/contracts/funding-retention?tab=pursuits";
 }
 
 type SearchFilterChipKey =

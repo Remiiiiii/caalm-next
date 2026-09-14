@@ -1,6 +1,6 @@
 ---
 title: "Lifecycle of a record"
-description: "Upload → review → approve → monitor → renew — the loop that prevents silent expiry."
+description: "Upload → review → approve → execute → monitor → renew — the loop that prevents silent expiry."
 section: concepts
 audience: "Managers, Admins, Reviewers"
 ---
@@ -14,8 +14,9 @@ Every important agreement in CAALM should move through a living lifecycle. If a 
 3. **Negotiate** (contracts) — comment, redline, and invite the counterparty until wording is ready ([Negotiate contracts](/docs/reference/negotiate))
 4. **Review** — someone with review permission checks correctness
 5. **Approve** — authorized approvers accept (or reject) as required
-6. **Monitor** — dashboards + notifications watch the expiration window
-7. **Renew / close** — extend, replace, or archive with evidence
+6. **Execute** — send for electronic signature when the parties must legally sign ([E-signature](/docs/reference/e-signature)); the record activates when everyone has signed
+7. **Monitor** — dashboards + notifications watch the expiration window
+8. **Renew / close** — extend, replace, or archive with evidence
 
 ## Where teams lose the plot
 
@@ -34,4 +35,5 @@ Use statuses the way your org agreed to use them. If “in review” means three
 - [Negotiate contracts](/docs/reference/negotiate)
 - [Licenses](/docs/reference/licenses)
 - [Approvals](/docs/reference/approvals)
+- [E-signature (CAALM Execute)](/docs/reference/e-signature)
 - [Notifications and deadlines](/docs/concepts/notifications-deadlines)

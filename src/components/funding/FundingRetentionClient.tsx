@@ -1,19 +1,27 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { RefreshCw } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FundingViewSwitch } from "@/components/funding/FundingViewSwitch";
 import { ObligationsPanel } from "@/components/funding/ObligationsPanel";
 import { PursuitsBoard } from "@/components/funding/PursuitsBoard";
 import { RetentionBoard } from "@/components/funding/RetentionBoard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { formatUsd } from "@/lib/funding/constants";
+import { formatUsd, RETENTION_BOARD_HEIGHT_CLASS } from "@/lib/funding/constants";
 import type { FundingPursuit, RetentionSummary } from "@/lib/funding/types";
 import { cn } from "@/lib/utils";
 
 type Tab = "retention" | "pursuits";
 
+function tabFromSearch(params: URLSearchParams | null): Tab {
+	return params?.get("tab") === "pursuits" ? "pursuits" : "retention";
+}
+
 export function FundingRetentionClient() {
-	const [tab, setTab] = useState<Tab>("retention");
+	const searchParams = useSearchParams();
+	const [tab, setTab] = useState<Tab>(() => tabFromSearch(searchParams));
 	const [summary, setSummary] = useState<RetentionSummary | null>(null);
 	const [pursuits, setPursuits] = useState<FundingPursuit[]>([]);
 	const [loading, setLoading] = useState(true);
@@ -21,23 +29,21 @@ export function FundingRetentionClient() {
 	const [selectedContractId, setSelectedContractId] = useState<string | null>(
 		null,
 	);
+	const hasLoadedRef = useRef(false);
 
-	const load = useCallback(async () => {
-		setLoading(true);
+	useEffect(() => {
+		setTab(tabFromSearch(searchParams));
+	}, [searchParams]);
+
+	const loadRetention = useCallback(async () => {
+		if (!hasLoadedRef.current) setLoading(true);
 		setError(null);
 		try {
-			const [retentionRes, pursuitsRes] = await Promise.all([
-				fetch("/api/funding/retention"),
-				fetch("/api/funding/pursuits"),
-			]);
+			const retentionRes = await fetch("/api/funding/retention");
 			if (!retentionRes.ok) throw new Error("Could not load retention streams");
-			if (!pursuitsRes.ok) throw new Error("Could not load pursuits");
 			const retentionJson = (await retentionRes.json()) as RetentionSummary;
-			const pursuitsJson = (await pursuitsRes.json()) as {
-				items?: FundingPursuit[];
-			};
 			setSummary(retentionJson);
-			setPursuits(pursuitsJson.items || []);
+			hasLoadedRef.current = true;
 			setSelectedContractId((prev) => {
 				if (prev) return prev;
 				return retentionJson.streams?.[0]?.contractId ?? null;
@@ -49,12 +55,37 @@ export function FundingRetentionClient() {
 		}
 	}, []);
 
-	useEffect(() => {
-		void load();
-	}, [load]);
+	const loadPursuits = useCallback(async () => {
+		try {
+			const pursuitsRes = await fetch("/api/funding/pursuits");
+			if (!pursuitsRes.ok) throw new Error("Could not load pursuits");
+			const pursuitsJson = (await pursuitsRes.json()) as {
+				items?: FundingPursuit[];
+			};
+			setPursuits(pursuitsJson.items || []);
+		} catch (err) {
+			setError(err instanceof Error ? err.message : "Failed to load");
+		}
+	}, []);
 
-	const selectedStream =
-		summary?.streams.find((s) => s.contractId === selectedContractId) || null;
+	const load = useCallback(async () => {
+		await Promise.all([loadRetention(), loadPursuits()]);
+	}, [loadRetention, loadPursuits]);
+
+	useEffect(() => {
+		void loadRetention();
+	}, [loadRetention]);
+
+	useEffect(() => {
+		void loadPursuits();
+	}, [loadPursuits]);
+
+	const selectedStream = useMemo(() => {
+		if (!summary || !selectedContractId) return null;
+		return (
+			summary.streams.find((s) => s.contractId === selectedContractId) || null
+		);
+	}, [summary, selectedContractId]);
 
 	return (
 		<div className="space-y-6">
@@ -76,34 +107,23 @@ export function FundingRetentionClient() {
 				/>
 			</div>
 
-			<div className="flex flex-wrap items-center gap-3">
+			<div className="flex items-center justify-between gap-3">
+				<FundingViewSwitch value={tab} onChange={setTab} />
 				<Button
-					className={cn(
-						"primary-btn px-3 sm:px-4",
-						tab !== "retention" && "opacity-70",
-					)}
-					variant={tab === "retention" ? "default" : "outline"}
-					onClick={() => setTab("retention")}
-				>
-					Retention
-				</Button>
-				<Button
-					className={cn(
-						"primary-btn px-3 sm:px-4",
-						tab !== "pursuits" && "opacity-70",
-					)}
-					variant={tab === "pursuits" ? "default" : "outline"}
-					onClick={() => setTab("pursuits")}
-				>
-					Pursuits
-				</Button>
-				<Button
+					type="button"
 					variant="outline"
-					className="primary-btn px-3 sm:px-4"
+					size="icon"
+					aria-label="Refresh"
+					className="h-10 w-10 rounded-full border-[0.25px] border-slate-300"
 					onClick={() => void load()}
 					disabled={loading}
 				>
-					Refresh
+					<RefreshCw
+						className={cn(
+							"h-4 w-4 text-[#0f5384]",
+							loading && "animate-spin",
+						)}
+					/>
 				</Button>
 			</div>
 
@@ -122,15 +142,16 @@ export function FundingRetentionClient() {
 
 			{tab === "retention" ? (
 				<div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
-					<div className="lg:col-span-3">
+					<div className={cn("lg:col-span-3", RETENTION_BOARD_HEIGHT_CLASS)}>
 						<RetentionBoard
 							loading={loading}
 							streams={summary?.streams || []}
+							departments={summary?.departments || []}
 							selectedContractId={selectedContractId}
 							onSelect={setSelectedContractId}
 						/>
 					</div>
-					<div className="lg:col-span-2">
+					<div className={cn("lg:col-span-2", RETENTION_BOARD_HEIGHT_CLASS)}>
 						<ObligationsPanel
 							stream={selectedStream}
 							onChanged={() => void load()}
