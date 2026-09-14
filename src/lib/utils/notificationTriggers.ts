@@ -135,6 +135,12 @@ function getFallbackTriggers(): Record<string, NotificationTrigger> {
 			defaultTitle: "Deadline Approaching",
 			defaultMessage: "A deadline is approaching.",
 		},
+		"obligation-reminder": {
+			type: "obligation-reminder",
+			priority: "high" as const,
+			defaultTitle: "Obligation reminder",
+			defaultMessage: "A contract obligation is due soon.",
+		},
 		"task-completed": {
 			type: "task-completed",
 			priority: "low" as const,
@@ -259,6 +265,56 @@ export async function triggerContractExpiryNotification(
 			daysUntilExpiry,
 			actionUrl: "/contracts",
 			actionText: "View Contracts",
+		},
+	});
+}
+
+/**
+ * Contract obligation reminder (dueDate minus reminderDaysBefore).
+ */
+export async function triggerObligationReminderNotification({
+	userId,
+	obligationTitle,
+	contractName,
+	dueDate,
+	daysUntilDue,
+	contractId,
+	obligationId,
+	reminderDaysBefore,
+}: {
+	userId: string;
+	obligationTitle: string;
+	contractName: string;
+	dueDate: string;
+	daysUntilDue: number;
+	contractId: string;
+	obligationId: string;
+	reminderDaysBefore: number;
+}): Promise<void> {
+	const { formatObligationDueLine } = await import(
+		"@/lib/funding/obligation-display"
+	);
+	const { normalizeObligationDueDate } = await import(
+		"@/lib/funding/obligation-reminder-notice"
+	);
+	const dueLine = formatObligationDueLine(dueDate);
+	const dueSlice = normalizeObligationDueDate(dueDate);
+	const priority = daysUntilDue <= 3 ? "high" : "medium";
+
+	await triggerNotification("obligation-reminder", {
+		userId,
+		title: `Obligation reminder: ${obligationTitle}`,
+		message: dueLine
+			? `Obligation "${obligationTitle}" on "${contractName}" ${dueLine.toLowerCase()}.`
+			: `Obligation "${obligationTitle}" on "${contractName}" is due on ${dueSlice}.`,
+		priority,
+		metadata: {
+			obligationId,
+			dueDate: dueSlice,
+			reminderDaysBefore,
+			contractId,
+			actionUrl: `/contracts/funding-retention?tab=retention&stream=${contractId}`,
+			actionText: "View obligation",
 		},
 	});
 }

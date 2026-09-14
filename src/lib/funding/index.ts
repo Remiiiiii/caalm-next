@@ -36,8 +36,27 @@ export {
 	deleteObligation,
 	getObligationById,
 	listObligations,
+	listObligationsWithDueDate,
 	updateObligation,
 } from "./obligation.repository";
+export type { ObligationReminderMetadata } from "./obligation-reminder-notice";
+export {
+	buildObligationReminderMetadata,
+	normalizeObligationDueDate,
+	obligationReminderSentKey,
+	parseObligationReminderMetadata,
+} from "./obligation-reminder-notice";
+export { ensureObligationReminderNotificationTypes } from "./obligation-reminder-notification-types";
+export type {
+	ObligationReminderDeps,
+	ObligationReminderSendInput,
+	ObligationReminderStats,
+} from "./obligation-reminder.service";
+export {
+	processObligationReminders,
+	resolveObligationReminderRecipient,
+	shouldSendObligationReminderToday,
+} from "./obligation-reminder.service";
 export {
 	formatObligationDueLine,
 	OBLIGATION_KIND_LABEL,

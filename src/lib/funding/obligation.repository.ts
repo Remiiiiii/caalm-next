@@ -70,6 +70,19 @@ export async function listObligations(input: {
 	return (result.rows as unknown as Record<string, unknown>[]).map(mapRow);
 }
 
+/** First 1000 rows with a due date. Cron reminder scan; paginate later if volume grows. */
+export async function listObligationsWithDueDate(
+	limit = 1000,
+): Promise<ContractObligation[]> {
+	const { tablesDB } = await createAdminClient();
+	const result = await tablesDB.listRows({
+		databaseId: dbId(),
+		tableId: tableId(),
+		queries: [Query.isNotNull("dueDate"), Query.limit(limit)],
+	});
+	return (result.rows as unknown as Record<string, unknown>[]).map(mapRow);
+}
+
 export async function getObligationById(
 	id: string,
 ): Promise<ContractObligation | null> {
