@@ -18,8 +18,21 @@ export {
 	seedRetentionDepartment,
 } from "./constants";
 export { convertWonPursuitToProposal } from "./convert-pursuit.service";
+export type {
+	KeyObligationMigrationStats,
+	PlannedLegacyObligation,
+} from "./migrate-key-obligations.service";
+export {
+	inferObligationKind,
+	legacyObligationRowId,
+	migrateKeyObligationsForOrg,
+	normalizeKeyObligationEntries,
+	planLegacyObligations,
+	splitObligationText,
+} from "./migrate-key-obligations.service";
 export {
 	createObligation,
+	createObligationWithId,
 	deleteObligation,
 	getObligationById,
 	listObligations,
