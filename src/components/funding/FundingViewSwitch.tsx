@@ -1,11 +1,27 @@
 "use client";
 
-import { Shield, Target } from "lucide-react";
+import { ListChecks, Shield, Target } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type FundingView = "retention" | "pursuits";
+export type FundingView = "retention" | "pursuits" | "queue";
 
-/** Segmented Retention / Pursuits switch — white thumb on slate track. */
+const TABS: Array<{
+	value: FundingView;
+	label: string;
+	icon: typeof Shield;
+}> = [
+	{ value: "retention", label: "Retention", icon: Shield },
+	{ value: "pursuits", label: "Pursuits", icon: Target },
+	{ value: "queue", label: "Obligation queue", icon: ListChecks },
+];
+
+function thumbOffset(value: FundingView): string {
+	if (value === "pursuits") return "translate-x-full";
+	if (value === "queue") return "translate-x-[200%]";
+	return "translate-x-0";
+}
+
+/** Segmented Retention / Pursuits / Queue switch — white thumb on slate track. */
 export function FundingViewSwitch({
 	value,
 	onChange,
@@ -15,56 +31,46 @@ export function FundingViewSwitch({
 	onChange: (value: FundingView) => void;
 	className?: string;
 }) {
-	const isRetention = value === "retention";
-
 	return (
 		<div
 			role="tablist"
 			aria-label="Funding views"
 			className={cn(
-				"relative inline-grid grid-cols-2 items-center rounded-full border border-slate-200 bg-slate-100 p-1",
+				"relative inline-grid grid-cols-3 items-center rounded-full border border-slate-200 bg-slate-100 p-1",
 				className,
 			)}
 		>
-			{/* Sliding white thumb behind the active label */}
 			<span
 				aria-hidden
 				className={cn(
-					"pointer-events-none absolute top-1 bottom-1 left-1 w-[calc(50%-0.25rem)] rounded-full bg-white shadow-sm",
+					"pointer-events-none absolute top-1 bottom-1 left-1 w-[calc((100%-0.5rem)/3)] rounded-full bg-white shadow-sm",
 					"transition-transform duration-200 ease-out",
-					isRetention ? "translate-x-0" : "translate-x-full",
+					thumbOffset(value),
 				)}
 			/>
-			<button
-				type="button"
-				role="tab"
-				aria-selected={isRetention}
-				onClick={() => onChange("retention")}
-				className={cn(
-					"relative z-10 inline-flex cursor-pointer items-center justify-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium transition-colors duration-200",
-					"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
-					isRetention ? "text-slate-700" : "text-slate-500 hover:text-slate-700",
-				)}
-			>
-				<Shield className="h-4 w-4 text-[#0f5384]" aria-hidden />
-				Retention
-			</button>
-			<button
-				type="button"
-				role="tab"
-				aria-selected={!isRetention}
-				onClick={() => onChange("pursuits")}
-				className={cn(
-					"relative z-10 inline-flex cursor-pointer items-center justify-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium transition-colors duration-200",
-					"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
-					!isRetention
-						? "text-slate-700"
-						: "text-slate-500 hover:text-slate-700",
-				)}
-			>
-				<Target className="h-4 w-4 text-[#0f5384]" aria-hidden />
-				Pursuits
-			</button>
+			{TABS.map((tab) => {
+				const selected = value === tab.value;
+				const Icon = tab.icon;
+				return (
+					<button
+						key={tab.value}
+						type="button"
+						role="tab"
+						aria-selected={selected}
+						onClick={() => onChange(tab.value)}
+						className={cn(
+							"relative z-10 inline-flex cursor-pointer items-center justify-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium transition-colors duration-200",
+							"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
+							selected
+								? "text-[#0f5384]"
+								: "text-slate-500 hover:text-slate-700",
+						)}
+					>
+						<Icon className="h-4 w-4" aria-hidden />
+						{tab.label}
+					</button>
+				);
+			})}
 		</div>
 	);
 }

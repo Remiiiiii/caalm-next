@@ -25,11 +25,16 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
-	daysUntil,
 	formatRetentionExpiryPhrase,
 	formatUsd,
 	RETENTION_HEALTH_LABEL,
 } from "@/lib/funding/constants";
+import {
+	formatObligationDueLine,
+	OBLIGATION_KIND_LABEL,
+	OBLIGATION_STATUS_LABEL,
+	obligationStatusBadgeClass,
+} from "@/lib/funding/obligation-display";
 import {
 	type ContractObligation,
 	OBLIGATION_KINDS,
@@ -39,23 +44,6 @@ import {
 	type RetentionStream,
 } from "@/lib/funding/types";
 import { cn } from "@/lib/utils";
-
-const KIND_LABEL: Record<ObligationKind, string> = {
-	renewal: "Renewal",
-	reporting: "Reporting",
-	deliverable: "Deliverable",
-	compliance: "Compliance",
-	payment: "Payment",
-	other: "Other",
-};
-
-const STATUS_LABEL: Record<ObligationStatus, string> = {
-	open: "Open",
-	in_progress: "In progress",
-	done: "Done",
-	waived: "Waived",
-	overdue: "Overdue",
-};
 
 /** Statuses a user can pick in the pill dropdown — Done is Mark done only. */
 const STATUS_DROPDOWN_OPTIONS: ObligationStatus[] = [
@@ -76,38 +64,6 @@ const emptyForm = {
 	linkUrl: "",
 	renewalLinked: true,
 };
-
-function statusBadgeClass(status: ObligationStatus): string {
-	if (status === "done") {
-		return "bg-green/10 text-green border-green/20";
-	}
-	if (status === "overdue") {
-		return "bg-red/10 text-red border-red/20";
-	}
-	if (status === "in_progress") {
-		return "bg-blue/10 text-blue border-blue/20";
-	}
-	if (status === "waived") {
-		return "bg-slate-100 text-slate-600 border-slate-200";
-	}
-	return "bg-orange/10 text-orange border-orange/20";
-}
-
-function formatDueLine(dueDate?: string): string | null {
-	if (!dueDate) return null;
-	const raw = dueDate.slice(0, 10);
-	const [y, m, d] = raw.split("-").map(Number);
-	if (!y || !m || !d) return null;
-	const label = new Date(y, m - 1, d).toLocaleDateString("en-US", {
-		month: "short",
-		day: "numeric",
-	});
-	const days = daysUntil(dueDate);
-	if (days == null) return `Due ${label}`;
-	if (days < 0) return `Due ${label} · ${Math.abs(days)}d overdue`;
-	if (days === 0) return `Due ${label} · today`;
-	return `Due ${label} · in ${days} days`;
-}
 
 function SectionLabel({ children }: { children: string }) {
 	return (
@@ -312,7 +268,7 @@ export function ObligationsPanel({
 								<SelectContent>
 									{OBLIGATION_KINDS.map((kind) => (
 										<SelectItem key={kind} value={kind}>
-											{KIND_LABEL[kind]}
+											{OBLIGATION_KIND_LABEL[kind]}
 										</SelectItem>
 									))}
 								</SelectContent>
@@ -335,7 +291,7 @@ export function ObligationsPanel({
 								<SelectContent>
 									{OBLIGATION_STATUSES.map((status) => (
 										<SelectItem key={status} value={status}>
-											{STATUS_LABEL[status]}
+											{OBLIGATION_STATUS_LABEL[status]}
 										</SelectItem>
 									))}
 								</SelectContent>
@@ -368,7 +324,9 @@ export function ObligationsPanel({
 							/>
 						</div>
 						<div className="space-y-1.5">
-							<Label htmlFor="obligation-remind">Remind before due (days)</Label>
+							<Label htmlFor="obligation-remind">
+								Remind before due (days)
+							</Label>
 							<Input
 								id="obligation-remind"
 								type="number"
@@ -437,7 +395,7 @@ function ObligationRow({
 	onDelete: () => void;
 }) {
 	const isDone = obligation.status === "done";
-	const dueLine = formatDueLine(obligation.dueDate);
+	const dueLine = formatObligationDueLine(obligation.dueDate);
 
 	return (
 		<li className="rounded-lg border border-slate-200 bg-white p-4">
@@ -449,7 +407,7 @@ function ObligationRow({
 					<span
 						className={cn(
 							"inline-block shrink-0 rounded-full border px-2 py-0.5 text-xs font-medium",
-							statusBadgeClass("done"),
+							obligationStatusBadgeClass("done"),
 						)}
 					>
 						Done
@@ -457,9 +415,7 @@ function ObligationRow({
 				) : (
 					<Select
 						value={obligation.status}
-						onValueChange={(value) =>
-							onStatusChange(value as ObligationStatus)
-						}
+						onValueChange={(value) => onStatusChange(value as ObligationStatus)}
 						disabled={busy}
 					>
 						<SelectTrigger
@@ -468,7 +424,7 @@ function ObligationRow({
 								"h-auto w-auto shrink-0 gap-1 rounded-md border px-2 py-0.5 text-xs font-medium shadow-none",
 								"hover:opacity-90 focus:ring-0 focus:ring-offset-0 focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
 								"[&_svg]:h-3 [&_svg]:w-3 [&_svg]:text-slate-500 [&_svg]:opacity-100",
-								statusBadgeClass(obligation.status),
+								obligationStatusBadgeClass(obligation.status),
 							)}
 						>
 							<SelectValue />
@@ -476,7 +432,7 @@ function ObligationRow({
 						<SelectContent align="end">
 							{STATUS_DROPDOWN_OPTIONS.map((status) => (
 								<SelectItem key={status} value={status}>
-									{STATUS_LABEL[status]}
+									{OBLIGATION_STATUS_LABEL[status]}
 								</SelectItem>
 							))}
 						</SelectContent>
@@ -492,7 +448,7 @@ function ObligationRow({
 				<div className="flex min-w-0 items-center gap-2">
 					<Tag className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden />
 					<span className="inline-block rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
-						{KIND_LABEL[obligation.kind]}
+						{OBLIGATION_KIND_LABEL[obligation.kind]}
 					</span>
 				</div>
 				<div className="flex min-w-0 items-center gap-2">

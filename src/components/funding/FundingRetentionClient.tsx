@@ -1,38 +1,67 @@
 "use client";
 
 import { RefreshCw } from "lucide-react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { FundingView } from "@/components/funding/FundingViewSwitch";
 import { FundingViewSwitch } from "@/components/funding/FundingViewSwitch";
 import { ObligationsPanel } from "@/components/funding/ObligationsPanel";
+import { ObligationsQueueBoard } from "@/components/funding/ObligationsQueueBoard";
 import { PursuitsBoard } from "@/components/funding/PursuitsBoard";
 import { RetentionBoard } from "@/components/funding/RetentionBoard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { formatUsd, RETENTION_BOARD_HEIGHT_CLASS } from "@/lib/funding/constants";
+import {
+	formatUsd,
+	RETENTION_BOARD_HEIGHT_CLASS,
+} from "@/lib/funding/constants";
 import type { FundingPursuit, RetentionSummary } from "@/lib/funding/types";
 import { cn } from "@/lib/utils";
 
-type Tab = "retention" | "pursuits";
+function tabFromSearch(params: URLSearchParams | null): FundingView {
+	if (params?.get("stream")) return "retention";
+	const tab = params?.get("tab");
+	if (tab === "pursuits") return "pursuits";
+	if (tab === "queue") return "queue";
+	return "retention";
+}
 
-function tabFromSearch(params: URLSearchParams | null): Tab {
-	return params?.get("tab") === "pursuits" ? "pursuits" : "retention";
+function fundingRetentionHref(
+	tab: FundingView,
+	streamId?: string | null,
+): string {
+	const params = new URLSearchParams();
+	if (tab !== "retention") params.set("tab", tab);
+	if (streamId && tab === "retention") params.set("stream", streamId);
+	const query = params.toString();
+	return query
+		? `/contracts/funding-retention?${query}`
+		: "/contracts/funding-retention";
 }
 
 export function FundingRetentionClient() {
+	const router = useRouter();
 	const searchParams = useSearchParams();
-	const [tab, setTab] = useState<Tab>(() => tabFromSearch(searchParams));
+	const [tab, setTab] = useState<FundingView>(() =>
+		tabFromSearch(searchParams),
+	);
 	const [summary, setSummary] = useState<RetentionSummary | null>(null);
 	const [pursuits, setPursuits] = useState<FundingPursuit[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [selectedContractId, setSelectedContractId] = useState<string | null>(
-		null,
+		() => searchParams.get("stream"),
 	);
+	const [queueRefresh, setQueueRefresh] = useState(0);
 	const hasLoadedRef = useRef(false);
 
 	useEffect(() => {
-		setTab(tabFromSearch(searchParams));
+		const nextTab = tabFromSearch(searchParams);
+		const stream = searchParams.get("stream");
+		setTab(nextTab);
+		if (stream) {
+			setSelectedContractId(stream);
+		}
 	}, [searchParams]);
 
 	const loadRetention = useCallback(async () => {
@@ -70,6 +99,7 @@ export function FundingRetentionClient() {
 
 	const load = useCallback(async () => {
 		await Promise.all([loadRetention(), loadPursuits()]);
+		setQueueRefresh((n) => n + 1);
 	}, [loadRetention, loadPursuits]);
 
 	useEffect(() => {
@@ -87,28 +117,43 @@ export function FundingRetentionClient() {
 		);
 	}, [summary, selectedContractId]);
 
+	function changeTab(next: FundingView) {
+		setTab(next);
+		router.replace(fundingRetentionHref(next), { scroll: false });
+	}
+
+	function viewStream(contractId: string) {
+		setSelectedContractId(contractId);
+		setTab("retention");
+		router.replace(fundingRetentionHref("retention", contractId), {
+			scroll: false,
+		});
+	}
+
 	return (
 		<div className="space-y-6">
-			<div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-3">
-				<StatCard
-					title="At risk"
-					value={formatUsd(summary?.totalAtRiskAmount || 0)}
-					hint="Funding that needs action soon"
-				/>
-				<StatCard
-					title="Protecting"
-					value={formatUsd(summary?.totalProtectingAmount || 0)}
-					hint="Work underway to keep the money"
-				/>
-				<StatCard
-					title="Protected"
-					value={formatUsd(summary?.totalProtectedAmount || 0)}
-					hint="Streams in good standing"
-				/>
-			</div>
+			{tab !== "queue" ? (
+				<div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-3">
+					<StatCard
+						title="At risk"
+						value={formatUsd(summary?.totalAtRiskAmount || 0)}
+						hint="Funding that needs action soon"
+					/>
+					<StatCard
+						title="Protecting"
+						value={formatUsd(summary?.totalProtectingAmount || 0)}
+						hint="Work underway to keep the money"
+					/>
+					<StatCard
+						title="Protected"
+						value={formatUsd(summary?.totalProtectedAmount || 0)}
+						hint="Streams in good standing"
+					/>
+				</div>
+			) : null}
 
 			<div className="flex items-center justify-between gap-3">
-				<FundingViewSwitch value={tab} onChange={setTab} />
+				<FundingViewSwitch value={tab} onChange={changeTab} />
 				<Button
 					type="button"
 					variant="outline"
@@ -119,10 +164,7 @@ export function FundingRetentionClient() {
 					disabled={loading}
 				>
 					<RefreshCw
-						className={cn(
-							"h-4 w-4 text-[#0f5384]",
-							loading && "animate-spin",
-						)}
+						className={cn("h-4 w-4 text-[#0f5384]", loading && "animate-spin")}
 					/>
 				</Button>
 			</div>
@@ -158,13 +200,22 @@ export function FundingRetentionClient() {
 						/>
 					</div>
 				</div>
-			) : (
+			) : null}
+
+			{tab === "pursuits" ? (
 				<PursuitsBoard
 					loading={loading}
 					pursuits={pursuits}
 					onChanged={() => void load()}
 				/>
-			)}
+			) : null}
+
+			{tab === "queue" ? (
+				<ObligationsQueueBoard
+					refreshToken={queueRefresh}
+					onViewStream={viewStream}
+				/>
+			) : null}
 		</div>
 	);
 }

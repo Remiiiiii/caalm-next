@@ -39,6 +39,23 @@ export {
 	updateObligation,
 } from "./obligation.repository";
 export {
+	formatObligationDueLine,
+	OBLIGATION_KIND_LABEL,
+	OBLIGATION_STATUS_LABEL,
+	obligationStatusBadgeClass,
+} from "./obligation-display";
+export type {
+	ObligationQueueResult,
+	QueueObligation,
+} from "./obligation-queue.service";
+export {
+	buildObligationQueue,
+	compareObligationQueue,
+	isObligationOpen,
+	isObligationOverdue,
+	OPEN_OBLIGATION_STATUSES,
+} from "./obligation-queue.service";
+export {
 	createPursuit,
 	deletePursuit,
 	getPursuitById,
