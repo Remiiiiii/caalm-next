@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { FundingRetentionClient } from "@/components/funding/FundingRetentionClient";
 import { PERMISSIONS } from "@/constants/permissions";
 import { requirePagePermission } from "@/lib/rbac/page-guards";
@@ -25,7 +26,9 @@ export default async function FundingRetentionPage() {
 				stake. Pursuits track new funding from SAM.gov or manual leads through
 				to Proposals & Approvals.
 			</p>
-			<FundingRetentionClient />
+			<Suspense fallback={null}>
+				<FundingRetentionClient />
+			</Suspense>
 		</div>
 	);
 }

@@ -372,12 +372,13 @@ Use custom colors defined in `tailwind.config.ts` without intermediate suffixes 
 **Primary buttons** (`.primary-btn` and `.btn-primary` are aliases — same styles):
 ```tsx
 <Button className="btn-primary px-3 sm:px-4">
-  <Icon className="h-4 w-4" />
-  Button Text
+ <Icon className="h-4 w-4" />
+ Button Text
 </Button>
 ```
 
 - **ALWAYS** include a Lucide icon (`h-4 w-4`) on buttons that use `btn-primary` or `primary-btn` — icon + label, never text-only
+- **ALWAYS** place action buttons on the **right** (`justify-end` / `ml-auto`) unless the user asks otherwise — see `button-placement.mdc`
 - Use consistent spacing: `gap-3` between buttons
 - Responsive padding: `px-3 sm:px-4`
 

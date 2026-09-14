@@ -103,10 +103,9 @@ export type CreateObligationInput = {
 	createdByUserId: string;
 };
 
-export async function createObligation(
+function toObligationRowData(
 	input: CreateObligationInput,
-): Promise<ContractObligation> {
-	const { tablesDB } = await createAdminClient();
+): Record<string, unknown> {
 	const data: Record<string, unknown> = {
 		orgId: input.orgId,
 		contractId: input.contractId,
@@ -125,14 +124,51 @@ export async function createObligation(
 		data.reminderDaysBefore = input.reminderDaysBefore;
 	}
 	if (input.linkUrl) data.linkUrl = input.linkUrl.slice(0, 2048);
+	return data;
+}
 
+export async function createObligation(
+	input: CreateObligationInput,
+): Promise<ContractObligation> {
+	const { tablesDB } = await createAdminClient();
 	const row = await tablesDB.createRow({
 		databaseId: dbId(),
 		tableId: tableId(),
 		rowId: ID.unique(),
-		data,
+		data: toObligationRowData(input),
 	});
 	return mapRow(row as unknown as Record<string, unknown>);
+}
+
+/** Idempotent create: skip when the deterministic row id already exists. */
+export async function createObligationWithId(
+	rowId: string,
+	input: CreateObligationInput,
+): Promise<{ obligation: ContractObligation; created: boolean }> {
+	const existing = await getObligationById(rowId);
+	if (existing) {
+		return { obligation: existing, created: false };
+	}
+
+	const { tablesDB } = await createAdminClient();
+	try {
+		const row = await tablesDB.createRow({
+			databaseId: dbId(),
+			tableId: tableId(),
+			rowId,
+			data: toObligationRowData(input),
+		});
+		return {
+			obligation: mapRow(row as unknown as Record<string, unknown>),
+			created: true,
+		};
+	} catch (error) {
+		const raced = await getObligationById(rowId);
+		if (raced) {
+			return { obligation: raced, created: false };
+		}
+		throw error;
+	}
 }
 
 export async function updateObligation(

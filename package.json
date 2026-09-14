@@ -37,6 +37,7 @@
 		"vercel:link:demo": "vercel link --project caalm-demo --scope team_GWg5ooNk0faHlJn0L7sIS0zh --yes",
 		"vercel:cleanup": "node src/scripts/cleanup-vercel-deployments.js",
 		"vercel:delete-env": "node src/scripts/delete-vercel-env-vars.js",
+		"migrate:key-obligations": "tsx scripts/migrate-key-obligations.ts",
 		"sync:demo-db": "node scripts/sync-demo-database-schema.mjs",
 		"sync:demo-db:apply": "node scripts/sync-demo-database-schema.mjs --apply",
 		"demo:env:init": "node scripts/init-demo-env.mjs",

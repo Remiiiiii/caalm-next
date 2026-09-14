@@ -47,5 +47,7 @@ Admin response: reassign ownership, fix roles, or convene a decision — do not 
 
 Approval queues work on a phone. Starting a negotiation or opening the contracts library needs a laptop. See [Desktop, tablet, and phone](/docs/concepts/desktop-and-mobile).
 
-Related: [Negotiate contracts](/docs/reference/negotiate), [Contract templates](/docs/reference/contract-templates), [Contracts](/docs/reference/contracts), [Funding and retention](/docs/reference/funding-retention).
+After approvals finish, many records still need parties to sign. That handoff is [E-signature (CAALM Execute)](/docs/reference/e-signature), not another approval click.
+
+Related: [Negotiate contracts](/docs/reference/negotiate), [E-signature](/docs/reference/e-signature), [Contract templates](/docs/reference/contract-templates), [Contracts](/docs/reference/contracts), [Funding and retention](/docs/reference/funding-retention).
 
