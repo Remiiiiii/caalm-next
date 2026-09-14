@@ -67,6 +67,14 @@ export type {
 	ObligationQueueResult,
 	QueueObligation,
 } from "./obligation-queue.service";
+export type {
+	RenewalObligationItem,
+	RenewalObligationsResult,
+} from "./obligation-renewal.service";
+export {
+	buildRenewalObligationsForContract,
+	filterRenewalLinkedOpenObligations,
+} from "./obligation-renewal.service";
 export {
 	buildObligationQueue,
 	compareObligationQueue,

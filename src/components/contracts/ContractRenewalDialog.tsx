@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { RenewalObligationsChecklist } from "@/components/contracts/RenewalObligationsChecklist";
 import { useToast } from "@/hooks/use-toast";
 
 interface ContractRenewalDialogProps {
@@ -86,6 +87,7 @@ export function ContractRenewalDialog({
 					</p>
 				</div>
 				<div className="flex-1 space-y-4 overflow-y-auto bg-slate-50 p-6">
+					<RenewalObligationsChecklist open={open} contractId={contractId} />
 					<div className="space-y-2">
 						<Label>New expiry date</Label>
 						<Input
