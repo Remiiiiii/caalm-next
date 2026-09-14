@@ -105,7 +105,7 @@ export function PursuitsBoard({
 		<div className="space-y-6">
 			<div className="glass-card rounded-xl">
 				<div className="glass-card-cap" />
-				<div className="border-b border-slate-200 px-4 py-3 sm:px-6">
+				<div className="border-b border-slate-200 px-4 mt-4 py-3 sm:px-6">
 					<h2 className="text-xl font-semibold sidebar-gradient-text">
 						Add pursuit
 					</h2>
@@ -145,7 +145,7 @@ export function PursuitsBoard({
 
 			<div className="glass-card overflow-hidden rounded-xl">
 				<div className="glass-card-cap" />
-				<div className="border-b border-slate-200 px-4 py-3 sm:px-6">
+				<div className="border-b border-slate-200 px-4 mt-4 py-3 sm:px-6">
 					<h2 className="text-xl font-semibold sidebar-gradient-text">
 						Pursuit pipeline
 					</h2>

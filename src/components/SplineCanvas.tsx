@@ -39,6 +39,9 @@ export default function SplineCanvas({
 	const [isSmallScreen, setIsSmallScreen] = useState(false);
 	const containerRef = useRef<HTMLDivElement | null>(null);
 	const appRef = useRef<Application | null>(null);
+	// Docs hero passes zoom inside a square box. Auth/coming-soon omit zoom —
+	// forcing setSize there stretches the scene into a wide rectangle and squishes the robot.
+	const fitToBox = typeof zoom === "number" && zoom > 0;
 
 	// Remove Spline watermark badges
 	useSplineWatermarkRemoval();
@@ -68,8 +71,9 @@ export default function SplineCanvas({
 		return () => window.clearTimeout(timer);
 	}, [delayMs]);
 
-	// Keep the WebGL canvas matched to the layout box (ParentSize can stick at 512²)
+	// Docs only: keep WebGL canvas matched to the square layout box
 	useEffect(() => {
+		if (!fitToBox) return;
 		const container = containerRef.current;
 		if (!container) return;
 
@@ -79,7 +83,7 @@ export default function SplineCanvas({
 		});
 		observer.observe(container);
 		return () => observer.disconnect();
-	}, [zoom]);
+	}, [fitToBox, zoom]);
 
 	const wrapperStyle: React.CSSProperties = {
 		transition: `opacity ${durationMs}ms ease-in-out`,
@@ -124,7 +128,7 @@ export default function SplineCanvas({
 	return (
 		<div
 			ref={containerRef}
-			className={`${className} ${visible ? "opacity-100" : "opacity-0"} overflow-hidden [&_iframe]:hidden [&_canvas]:!h-full [&_canvas]:!w-full`}
+			className={`${className} ${visible ? "opacity-100" : "opacity-0"} overflow-hidden [&_iframe]:hidden${fitToBox ? " [&_canvas]:!h-full [&_canvas]:!w-full" : ""}`}
 			style={wrapperStyle}
 		>
 			<Spline
@@ -133,11 +137,13 @@ export default function SplineCanvas({
 				onLoad={(splineApp: Application) => {
 					setHasError(false);
 					appRef.current = splineApp;
-					const container = containerRef.current;
-					if (container) {
-						fitSplineToContainer(splineApp, container, zoom);
-					} else if (typeof zoom === "number" && zoom > 0) {
-						splineApp.setZoom(zoom);
+					if (fitToBox) {
+						const container = containerRef.current;
+						if (container) {
+							fitSplineToContainer(splineApp, container, zoom);
+						} else {
+							splineApp.setZoom(zoom);
+						}
 					}
 					// Force watermark removal after load
 					setTimeout(() => {

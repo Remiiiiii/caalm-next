@@ -2,8 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
 	computeRetentionHealth,
 	daysUntil,
+	formatRetentionExpiryLine,
+	formatRetentionExpiryPhrase,
 	formatUsd,
 	isPursuitStage,
+	seedRetentionDepartment,
 } from "@/lib/funding/constants";
 
 describe("funding retention health", () => {
@@ -73,5 +76,34 @@ describe("funding helpers", () => {
 	it("validates pursuit stages", () => {
 		expect(isPursuitStage("watching")).toBe(true);
 		expect(isPursuitStage("nope")).toBe(false);
+	});
+});
+
+describe("retention department seeding", () => {
+	it("keeps a real department when one is on file", () => {
+		expect(seedRetentionDepartment("abc", "Clinic")).toBe("Clinic");
+	});
+
+	it("assigns a stable demo department when none is on file", () => {
+		const first = seedRetentionDepartment("contract-a");
+		const second = seedRetentionDepartment("contract-a");
+		expect(first).toBe(second);
+		expect(first.length).toBeGreaterThan(0);
+	});
+});
+
+describe("retention expiry copy", () => {
+	it("formats a future expiry for the list and banner", () => {
+		expect(formatRetentionExpiryLine("2027-05-12", 240)).toBe(
+			"Expires 2027-05-12 · 240d",
+		);
+		expect(formatRetentionExpiryPhrase(78)).toBe("expires in 78 days");
+	});
+
+	it("formats an expired stream as no longer actionable", () => {
+		expect(formatRetentionExpiryLine("2026-09-13", -1)).toBe(
+			"Expires 2026-09-13 · Expired 1d ago",
+		);
+		expect(formatRetentionExpiryPhrase(-12)).toBe("expired 12d ago");
 	});
 });

@@ -1,9 +1,21 @@
 "use client";
 
-import { Check, Link2, Plus, Trash2 } from "lucide-react";
+import {
+	Bell,
+	Check,
+	Clock,
+	ExternalLink,
+	Loader2,
+	Plus,
+	Tag,
+	Trash2,
+	User,
+} from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
 	Select,
 	SelectContent,
@@ -11,6 +23,13 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import {
+	daysUntil,
+	formatRetentionExpiryPhrase,
+	formatUsd,
+	RETENTION_HEALTH_LABEL,
+} from "@/lib/funding/constants";
 import {
 	type ContractObligation,
 	OBLIGATION_KINDS,
@@ -37,6 +56,14 @@ const STATUS_LABEL: Record<ObligationStatus, string> = {
 	waived: "Waived",
 	overdue: "Overdue",
 };
+
+/** Statuses a user can pick in the pill dropdown — Done is Mark done only. */
+const STATUS_DROPDOWN_OPTIONS: ObligationStatus[] = [
+	"open",
+	"in_progress",
+	"waived",
+	"overdue",
+];
 
 const emptyForm = {
 	title: "",
@@ -66,6 +93,30 @@ function statusBadgeClass(status: ObligationStatus): string {
 	return "bg-orange/10 text-orange border-orange/20";
 }
 
+function formatDueLine(dueDate?: string): string | null {
+	if (!dueDate) return null;
+	const raw = dueDate.slice(0, 10);
+	const [y, m, d] = raw.split("-").map(Number);
+	if (!y || !m || !d) return null;
+	const label = new Date(y, m - 1, d).toLocaleDateString("en-US", {
+		month: "short",
+		day: "numeric",
+	});
+	const days = daysUntil(dueDate);
+	if (days == null) return `Due ${label}`;
+	if (days < 0) return `Due ${label} · ${Math.abs(days)}d overdue`;
+	if (days === 0) return `Due ${label} · today`;
+	return `Due ${label} · in ${days} days`;
+}
+
+function SectionLabel({ children }: { children: string }) {
+	return (
+		<p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+			{children}
+		</p>
+	);
+}
+
 export function ObligationsPanel({
 	stream,
 	onChanged,
@@ -80,7 +131,7 @@ export function ObligationsPanel({
 
 	if (!stream) {
 		return (
-			<div className="glass-card rounded-xl p-4 text-sm text-slate-600 sm:p-6">
+			<div className="glass-card flex h-full flex-col rounded-xl p-4 text-sm text-slate-600 sm:p-6">
 				<div className="glass-card-cap" />
 				Select a funding stream to see and add obligations (renewal checklist,
 				reporting, deliverables).
@@ -173,24 +224,28 @@ export function ObligationsPanel({
 	}
 
 	return (
-		<div className="glass-card rounded-xl">
+		<div className="glass-card flex h-full min-h-0 flex-col overflow-hidden rounded-xl">
 			<div className="glass-card-cap" />
-			<div className="border-b border-slate-200 px-4 py-3 sm:px-6">
-				<h2 className="text-xl mt-4 font-semibold sidebar-gradient-text">
-					Obligations
+			<div className="sticky top-0 z-10 shrink-0 border-b border-slate-200 bg-linear-to-r from-blue-50 to-indigo-50 px-4 py-4 mt-4 sm:px-6">
+				<h2 className="truncate text-xl font-semibold">
+					<span className="sidebar-gradient-text">{stream.contractName}</span>
+					{stream.contractNumber ? (
+						<span className="ml-2 text-sm font-normal text-slate-500">
+							· #{stream.contractNumber}
+						</span>
+					) : null}
 				</h2>
-				<p className="mt-1 text-sm text-slate-600">
-					Structured work that keeps{" "}
-					<span className="font-medium text-slate-700">
-						{stream.contractName}
-					</span>{" "}
-					funded — owner, due date, status, link, and reminders.
+				<p className="mt-1 truncate text-sm text-slate-600">
+					{formatUsd(stream.amount, stream.currency)} ·{" "}
+					{RETENTION_HEALTH_LABEL[stream.health]} ·{" "}
+					{formatRetentionExpiryPhrase(stream.daysUntilExpiry)}
 				</p>
 			</div>
-			<div className="space-y-4 p-4 sm:p-6">
+
+			<div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-4 sm:p-6">
 				<ul className="space-y-2">
 					{stream.obligations.length === 0 ? (
-						<li className="text-sm text-slate-500">
+						<li className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
 							No obligations yet. Add a checklist item with an owner and due
 							date to start protecting this stream.
 						</li>
@@ -212,105 +267,157 @@ export function ObligationsPanel({
 					)}
 				</ul>
 
-				<div className="space-y-3 border-t border-slate-200 pt-4">
-					<p className="text-sm font-medium text-slate-700">Add obligation</p>
-					<Input
-						className="border-[0.25px] border-slate-300"
-						placeholder="Title — e.g. Confirm renewal owner + evidence plan"
-						value={form.title}
-						onChange={(e) => updateField("title", e.target.value)}
-					/>
-					<textarea
-						className="min-h-18 w-full rounded-md border-[0.25px] border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus-visible:border-[#078FAB] focus-visible:outline-none"
-						placeholder="Description (optional)"
-						value={form.description}
-						onChange={(e) => updateField("description", e.target.value)}
-					/>
-					<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-						<Select
-							value={form.kind}
-							onValueChange={(value) =>
-								updateField("kind", value as ObligationKind)
-							}
-						>
-							<SelectTrigger className="border-[0.25px] border-slate-300">
-								<SelectValue placeholder="Kind" />
-							</SelectTrigger>
-							<SelectContent>
-								{OBLIGATION_KINDS.map((kind) => (
-									<SelectItem key={kind} value={kind}>
-										{KIND_LABEL[kind]}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-						<Select
-							value={form.status}
-							onValueChange={(value) =>
-								updateField("status", value as ObligationStatus)
-							}
-						>
-							<SelectTrigger className="border-[0.25px] border-slate-300">
-								<SelectValue placeholder="Status" />
-							</SelectTrigger>
-							<SelectContent>
-								{OBLIGATION_STATUSES.map((status) => (
-									<SelectItem key={status} value={status}>
-										{STATUS_LABEL[status]}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
+				<div className="space-y-3">
+					<SectionLabel>What needs to happen</SectionLabel>
+					<div className="space-y-1.5">
+						<Label htmlFor="obligation-title">Title</Label>
 						<Input
+							id="obligation-title"
 							className="border-[0.25px] border-slate-300"
-							placeholder="Owner name"
-							value={form.ownerName}
-							onChange={(e) => updateField("ownerName", e.target.value)}
-						/>
-						<Input
-							type="date"
-							className="border-[0.25px] border-slate-300"
-							value={form.dueDate}
-							onChange={(e) => updateField("dueDate", e.target.value)}
-						/>
-						<Input
-							type="number"
-							min={0}
-							className="border-[0.25px] border-slate-300"
-							placeholder="Remind N days before due"
-							value={form.reminderDaysBefore}
-							onChange={(e) =>
-								updateField("reminderDaysBefore", e.target.value)
-							}
-						/>
-						<Input
-							className="border-[0.25px] border-slate-300"
-							placeholder="Link URL (optional)"
-							value={form.linkUrl}
-							onChange={(e) => updateField("linkUrl", e.target.value)}
+							placeholder="e.g. Confirm renewal owner + evidence"
+							value={form.title}
+							onChange={(e) => updateField("title", e.target.value)}
 						/>
 					</div>
-					<label className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
-						<input
-							type="checkbox"
-							className="h-4 w-4 rounded border-slate-300"
-							checked={form.renewalLinked}
-							onChange={(e) => updateField("renewalLinked", e.target.checked)}
+					<div className="space-y-1.5">
+						<Label htmlFor="obligation-description">
+							Description (optional)
+						</Label>
+						<Textarea
+							id="obligation-description"
+							placeholder="Description (optional)"
+							value={form.description}
+							onChange={(e) => updateField("description", e.target.value)}
 						/>
-						Link to renewal / retention checklist
-					</label>
-					{error ? <p className="text-xs text-red">{error}</p> : null}
-					<div className="flex justify-end">
-						<Button
-							className="primary-btn px-3 sm:px-4"
-							disabled={saving || !form.title.trim()}
-							onClick={() => void addObligation()}
-						>
-							<Plus className="h-4 w-4" />
-							{saving ? "Saving…" : "Add obligation"}
-						</Button>
 					</div>
 				</div>
+
+				<div className="space-y-3">
+					<SectionLabel>Classification</SectionLabel>
+					<div className="grid grid-cols-2 gap-3">
+						<div className="space-y-1.5">
+							<Label htmlFor="obligation-kind">Type</Label>
+							<Select
+								value={form.kind}
+								onValueChange={(value) =>
+									updateField("kind", value as ObligationKind)
+								}
+							>
+								<SelectTrigger
+									id="obligation-kind"
+									className="border-[0.25px] border-slate-300"
+								>
+									<SelectValue placeholder="Type" />
+								</SelectTrigger>
+								<SelectContent>
+									{OBLIGATION_KINDS.map((kind) => (
+										<SelectItem key={kind} value={kind}>
+											{KIND_LABEL[kind]}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+						<div className="space-y-1.5">
+							<Label htmlFor="obligation-status">Status</Label>
+							<Select
+								value={form.status}
+								onValueChange={(value) =>
+									updateField("status", value as ObligationStatus)
+								}
+							>
+								<SelectTrigger
+									id="obligation-status"
+									className="border-[0.25px] border-slate-300"
+								>
+									<SelectValue placeholder="Status" />
+								</SelectTrigger>
+								<SelectContent>
+									{OBLIGATION_STATUSES.map((status) => (
+										<SelectItem key={status} value={status}>
+											{STATUS_LABEL[status]}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+					</div>
+				</div>
+
+				<div className="space-y-3">
+					<SectionLabel>Assignment & schedule</SectionLabel>
+					<div className="grid grid-cols-2 gap-3">
+						<div className="space-y-1.5">
+							<Label htmlFor="obligation-owner">Owner</Label>
+							<Input
+								id="obligation-owner"
+								className="border-[0.25px] border-slate-300"
+								placeholder="Owner name"
+								value={form.ownerName}
+								onChange={(e) => updateField("ownerName", e.target.value)}
+							/>
+						</div>
+						<div className="space-y-1.5">
+							<Label htmlFor="obligation-due">Due date</Label>
+							<Input
+								id="obligation-due"
+								type="date"
+								className="border-[0.25px] border-slate-300"
+								value={form.dueDate}
+								onChange={(e) => updateField("dueDate", e.target.value)}
+							/>
+						</div>
+						<div className="space-y-1.5">
+							<Label htmlFor="obligation-remind">Remind before due (days)</Label>
+							<Input
+								id="obligation-remind"
+								type="number"
+								min={0}
+								className="border-[0.25px] border-slate-300"
+								value={form.reminderDaysBefore}
+								onChange={(e) =>
+									updateField("reminderDaysBefore", e.target.value)
+								}
+							/>
+						</div>
+						<div className="space-y-1.5">
+							<Label htmlFor="obligation-link">Link URL (optional)</Label>
+							<Input
+								id="obligation-link"
+								className="border-[0.25px] border-slate-300"
+								placeholder="https://"
+								value={form.linkUrl}
+								onChange={(e) => updateField("linkUrl", e.target.value)}
+							/>
+						</div>
+					</div>
+				</div>
+
+				<label className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+					<Checkbox
+						checked={form.renewalLinked}
+						onCheckedChange={(checked) =>
+							updateField("renewalLinked", checked === true)
+						}
+					/>
+					Link to renewal / retention checklist
+				</label>
+			</div>
+
+			<div className="shrink-0 space-y-3 border-t border-slate-200 px-4 py-4 sm:px-6">
+				{error ? <p className="text-xs text-red">{error}</p> : null}
+				<Button
+					className="primary-btn w-full! px-3 sm:px-4"
+					disabled={saving || !form.title.trim()}
+					onClick={() => void addObligation()}
+				>
+					{saving ? (
+						<Loader2 className="h-4 w-4 animate-spin" />
+					) : (
+						<Plus className="h-4 w-4" />
+					)}
+					{saving ? "Saving…" : "Add obligation"}
+				</Button>
 			</div>
 		</div>
 	);
@@ -329,65 +436,113 @@ function ObligationRow({
 	onMarkDone: () => void;
 	onDelete: () => void;
 }) {
-	const closed = obligation.status === "done" || obligation.status === "waived";
+	const isDone = obligation.status === "done";
+	const dueLine = formatDueLine(obligation.dueDate);
 
 	return (
-		<li className="rounded-lg border border-slate-200 bg-white p-3">
+		<li className="rounded-lg border border-slate-200 bg-white p-4">
 			<div className="flex items-start justify-between gap-3">
-				<div className="min-w-0 space-y-1">
-					<div className="flex flex-wrap items-center gap-2">
-						<p className="text-sm font-medium text-slate-700">
-							{obligation.title}
-						</p>
-						<span
+				<p className="min-w-0 text-sm font-semibold text-slate-700">
+					{obligation.title}
+				</p>
+				{isDone ? (
+					<span
+						className={cn(
+							"inline-block shrink-0 rounded-full border px-2 py-0.5 text-xs font-medium",
+							statusBadgeClass("done"),
+						)}
+					>
+						Done
+					</span>
+				) : (
+					<Select
+						value={obligation.status}
+						onValueChange={(value) =>
+							onStatusChange(value as ObligationStatus)
+						}
+						disabled={busy}
+					>
+						<SelectTrigger
+							aria-label={`Status for ${obligation.title}`}
 							className={cn(
-								"inline-block rounded-full border px-2 py-0.5 text-xs font-medium",
+								"h-auto w-auto shrink-0 gap-1 rounded-md border px-2 py-0.5 text-xs font-medium shadow-none",
+								"hover:opacity-90 focus:ring-0 focus:ring-offset-0 focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
+								"[&_svg]:h-3 [&_svg]:w-3 [&_svg]:text-slate-500 [&_svg]:opacity-100",
 								statusBadgeClass(obligation.status),
 							)}
 						>
-							{STATUS_LABEL[obligation.status]}
-						</span>
-					</div>
-					{obligation.description ? (
-						<p className="text-xs text-slate-600">{obligation.description}</p>
-					) : null}
-					<p className="text-xs text-slate-500">
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent align="end">
+							{STATUS_DROPDOWN_OPTIONS.map((status) => (
+								<SelectItem key={status} value={status}>
+									{STATUS_LABEL[status]}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				)}
+			</div>
+
+			{obligation.description ? (
+				<p className="mt-1 text-sm text-slate-600">{obligation.description}</p>
+			) : null}
+
+			<div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 border-y border-slate-200 py-3 text-xs text-slate-600">
+				<div className="flex min-w-0 items-center gap-2">
+					<Tag className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden />
+					<span className="inline-block rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
 						{KIND_LABEL[obligation.kind]}
-						{obligation.ownerName ? ` · ${obligation.ownerName}` : ""}
-						{obligation.dueDate
-							? ` · due ${obligation.dueDate.slice(0, 10)}`
-							: ""}
-						{obligation.reminderDaysBefore != null
-							? ` · remind ${obligation.reminderDaysBefore}d before`
-							: ""}
-						{obligation.renewalLinked ? " · renewal-linked" : ""}
-					</p>
-					{obligation.linkUrl ? (
-						<a
-							href={obligation.linkUrl}
-							target="_blank"
-							rel="noreferrer"
-							className="inline-flex items-center gap-1 text-xs text-[#0f5384] hover:underline"
-						>
-							<Link2 className="h-3 w-3" />
-							Open link
-						</a>
-					) : null}
+					</span>
 				</div>
-				<div className="flex shrink-0 flex-col items-end gap-2">
-					{!closed ? (
+				<div className="flex min-w-0 items-center gap-2">
+					<User className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden />
+					<span className="truncate">
+						{obligation.ownerName?.trim() || "Unassigned"}
+					</span>
+				</div>
+				<div className="flex min-w-0 items-center gap-2 text-slate-600">
+					<Clock className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden />
+					<span className="truncate">{dueLine || "No due date"}</span>
+				</div>
+				<div className="flex min-w-0 items-center gap-2">
+					<Bell className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden />
+					<span className="truncate">
+						{obligation.reminderDaysBefore != null
+							? `Reminds ${obligation.reminderDaysBefore}d before`
+							: "No reminder"}
+					</span>
+				</div>
+			</div>
+
+			<div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+				{obligation.linkUrl ? (
+					<a
+						href={obligation.linkUrl}
+						target="_blank"
+						rel="noreferrer"
+						className="inline-flex items-center gap-1.5 text-sm text-[#0f5384] hover:underline"
+					>
+						<ExternalLink className="h-3.5 w-3.5" aria-hidden />
+						Open link
+					</a>
+				) : (
+					<span />
+				)}
+				<div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+					{!isDone ? (
 						<Button
-							className="primary-btn px-3"
+							className="primary-btn px-3 sm:px-4"
 							disabled={busy}
 							onClick={onMarkDone}
 						>
 							<Check className="h-4 w-4" />
-							Done
+							Mark done
 						</Button>
 					) : null}
 					<Button
 						variant="outline"
-						className="delete-btn px-3"
+						className="delete-btn px-3 sm:px-4"
 						disabled={busy}
 						onClick={onDelete}
 						aria-label={`Delete ${obligation.title}`}
@@ -397,26 +552,6 @@ function ObligationRow({
 					</Button>
 				</div>
 			</div>
-			{!closed ? (
-				<div className="mt-3 max-w-xs">
-					<Select
-						value={obligation.status}
-						onValueChange={(value) => onStatusChange(value as ObligationStatus)}
-						disabled={busy}
-					>
-						<SelectTrigger className="h-9 border-[0.25px] border-slate-300">
-							<SelectValue placeholder="Status" />
-						</SelectTrigger>
-						<SelectContent>
-							{OBLIGATION_STATUSES.map((status) => (
-								<SelectItem key={status} value={status}>
-									{STATUS_LABEL[status]}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-				</div>
-			) : null}
 		</li>
 	);
 }
