@@ -486,7 +486,9 @@ export const ROADMAP_CATALOG: RoadmapCatalogSection[] = [
 		sectionNumber: 10,
 		title: "Obligation Management System",
 		sourceRef: "CLM lifecycle — Obligation tracking; Mid-term #2",
-		linkedPrNumbers: [20, 27, 32],
+		// #66 landed the entity + Funding & Retention UI. Remaining tasks use
+		// dedicated tracking PRs #72–#75 (not the unrelated #20/#27/#32).
+		linkedPrNumbers: [66, 72, 73, 74, 75],
 		tasks: [
 			t(
 				"10.1",
@@ -494,7 +496,7 @@ export const ROADMAP_CATALOG: RoadmapCatalogSection[] = [
 				"Structured fields: description, owner, due, status, link, reminders.",
 				["CRUD works against obligations collection"],
 				undefined,
-				20,
+				66,
 			),
 			t(
 				"10.2",
@@ -502,7 +504,7 @@ export const ROADMAP_CATALOG: RoadmapCatalogSection[] = [
 				"Move legacy text into structured records.",
 				["Row-count and field-mapping parity with legacy text data"],
 				undefined,
-				27,
+				72,
 			),
 			t(
 				"10.3",
@@ -510,7 +512,7 @@ export const ROADMAP_CATALOG: RoadmapCatalogSection[] = [
 				"By owner, due date, overdue flagging.",
 				["Queue filters by owner and overdue correctly"],
 				undefined,
-				32,
+				73,
 			),
 			t(
 				"10.4",
@@ -518,7 +520,7 @@ export const ROADMAP_CATALOG: RoadmapCatalogSection[] = [
 				"Wire into existing notification channels.",
 				["Reminder fires at configured offset before due date"],
 				undefined,
-				32,
+				74,
 			),
 			t(
 				"10.5",
@@ -526,7 +528,7 @@ export const ROADMAP_CATALOG: RoadmapCatalogSection[] = [
 				"Renewal view surfaces open/overdue obligations.",
 				["Renewal view lists linked open/overdue obligations"],
 				undefined,
-				32,
+				75,
 			),
 		],
 	},

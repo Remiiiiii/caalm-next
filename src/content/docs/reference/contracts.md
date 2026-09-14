@@ -24,12 +24,13 @@ Contracts are one of CAALM’s primary systems of record.
 3. **Assign owner** and confirm department/division context
 4. **Set expiration / key dates**
 5. **Send through review/approval** when required
-6. **Monitor** via dashboard + notifications
-7. **Renew or close** with updated evidence
+6. **Send for signature** when the parties must execute ([E-signature](/docs/reference/e-signature))
+7. **Monitor** via dashboard + notifications
+8. **Renew or close** with updated evidence
 
 ## Actions you may see on a record
 
-Depending on permissions, contract file actions can include: open details, download, rename, share, re-assign, review, approval workflow, delete.
+Depending on permissions, contract file actions can include: open details, download, rename, share, re-assign, review, approval workflow, **Send for signature** (when status is Pending Signature and you have `contracts.sign`), delete.
 
 > [!WARNING]
 > Deleting is not a cleanup convenience — it is an evidentiary event. Prefer correct status transitions unless policy says otherwise.
@@ -98,3 +99,7 @@ A contract should not sit in “draft/review” because people are negotiating i
 - Update CAALM when interim decisions happen offline
 
 The anti-pattern is an approved-looking record whose file is still a redlined draft.
+
+## Signature handoff
+
+When approvals complete, status often becomes **Pending Signature**. People with `contracts.sign` open **Send for signature**, place stamps, and email signers through [CAALM Execute](/docs/reference/e-signature). When every signer finishes, the contract activates and a sealed signed PDF is retained.

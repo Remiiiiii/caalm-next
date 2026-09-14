@@ -140,6 +140,13 @@ const NOTIFICATION_TYPES = {
 		bgColor: "bg-pink-50/30 border-pink-400",
 		priority: "high" as const,
 	},
+	"obligation-reminder": {
+		label: "Obligation reminder",
+		icon: <Clock className="w-4 h-4" />,
+		color: "bg-blue-100 text-blue-800",
+		bgColor: "bg-blue-50/30 border-blue-400",
+		priority: "high" as const,
+	},
 	"task-completed": {
 		label: "Task Completed",
 		icon: <CheckCircle className="w-4 h-4" />,

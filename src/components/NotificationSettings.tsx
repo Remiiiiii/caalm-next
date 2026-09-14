@@ -125,6 +125,12 @@ const NOTIFICATION_TYPES = {
 		description: "Notifications for approaching deadlines",
 		defaultPriority: "high" as const,
 	},
+	"obligation-reminder": {
+		label: "Obligation reminder",
+		icon: <Clock className="w-4 h-4 text-[#0f5384]" />,
+		description: "Notifications when a contract obligation is due soon",
+		defaultPriority: "high" as const,
+	},
 	"task-completed": {
 		label: "Task Completed",
 		icon: <CheckCircle className="w-4 h-4 text-[#0f5384]" />,

@@ -729,6 +729,16 @@ export const verifySecret = async ({
 	}
 };
 
+/** Next throws this so the route can bail out of static generation. Never swallow it. */
+function isNextDynamicServerError(error: unknown): boolean {
+	return (
+		typeof error === "object" &&
+		error !== null &&
+		"digest" in error &&
+		(error as { digest?: unknown }).digest === "DYNAMIC_SERVER_USAGE"
+	);
+}
+
 const getCurrentUserImpl = async () => {
 	try {
 		const { tablesDB, account } = await createSessionClient();
@@ -783,6 +793,8 @@ const getCurrentUserImpl = async () => {
 			$updatedAt: userData.$updatedAt,
 		});
 	} catch (error) {
+		// Let Next mark the route dynamic (cookies() during static gen)
+		if (isNextDynamicServerError(error)) throw error;
 		// Session missing is normal during 2FA — fall through quietly
 		if (error instanceof Error && error.message.includes("No session found")) {
 			return await getCurrentUserFrom2FA();
@@ -864,6 +876,8 @@ const getCurrentUserFrom2FAImpl = async () => {
 			return null;
 		}
 	} catch (error) {
+		// Let Next mark the route dynamic (cookies() during static gen)
+		if (isNextDynamicServerError(error)) throw error;
 		console.error("getCurrentUserFrom2FA - Error occurred:", error);
 		return null;
 	}

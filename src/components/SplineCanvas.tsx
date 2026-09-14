@@ -1,7 +1,8 @@
 "use client";
 
 import Spline from "@splinetool/react-spline";
-import { useEffect, useState } from "react";
+import type { Application } from "@splinetool/runtime";
+import { useEffect, useRef, useState } from "react";
 import { useSplineWatermarkRemoval } from "@/hooks/useSplineWatermarkRemoval";
 
 type SplineCanvasProps = {
@@ -9,26 +10,43 @@ type SplineCanvasProps = {
 	className?: string;
 	delayMs?: number; // time before fade starts
 	durationMs?: number; // fade duration
+	/** Camera zoom; 1 = scene default, >1 zooms in, <1 zooms out */
+	zoom?: number;
 };
+
+function fitSplineToContainer(
+	app: Application,
+	container: HTMLElement,
+	zoom?: number,
+) {
+	const { width, height } = container.getBoundingClientRect();
+	if (width < 2 || height < 2) return;
+	app.setSize(width, height);
+	if (typeof zoom === "number" && zoom > 0) {
+		app.setZoom(zoom);
+	}
+}
 
 export default function SplineCanvas({
 	scene,
 	className = "",
 	delayMs = 3000,
 	durationMs = 700,
+	zoom,
 }: SplineCanvasProps) {
 	const [visible, setVisible] = useState(false);
 	const [hasError, setHasError] = useState(false);
 	const [isSmallScreen, setIsSmallScreen] = useState(false);
-	const [_containerRef, setContainerRef] = useState<HTMLDivElement | null>(
-		null,
-	);
+	const containerRef = useRef<HTMLDivElement | null>(null);
+	const appRef = useRef<Application | null>(null);
+	// Docs hero passes zoom inside a square box. Auth/coming-soon omit zoom —
+	// forcing setSize there stretches the scene into a wide rectangle and squishes the robot.
+	const fitToBox = typeof zoom === "number" && zoom > 0;
 
 	// Remove Spline watermark badges
 	useSplineWatermarkRemoval();
 
 	useEffect(() => {
-		// Check screen size
 		const checkScreenSize = () => {
 			setIsSmallScreen(window.innerWidth < 640); // sm breakpoint
 		};
@@ -52,6 +70,20 @@ export default function SplineCanvas({
 		const timer = window.setTimeout(() => setVisible(true), delayMs);
 		return () => window.clearTimeout(timer);
 	}, [delayMs]);
+
+	// Docs only: keep WebGL canvas matched to the square layout box
+	useEffect(() => {
+		if (!fitToBox) return;
+		const container = containerRef.current;
+		if (!container) return;
+
+		const observer = new ResizeObserver(() => {
+			if (!appRef.current) return;
+			fitSplineToContainer(appRef.current, container, zoom);
+		});
+		observer.observe(container);
+		return () => observer.disconnect();
+	}, [fitToBox, zoom]);
 
 	const wrapperStyle: React.CSSProperties = {
 		transition: `opacity ${durationMs}ms ease-in-out`,
@@ -95,15 +127,24 @@ export default function SplineCanvas({
 
 	return (
 		<div
-			ref={setContainerRef}
-			className={`${className} ${visible ? "opacity-100" : "opacity-0"} overflow-hidden [&_iframe]:hidden`}
+			ref={containerRef}
+			className={`${className} ${visible ? "opacity-100" : "opacity-0"} overflow-hidden [&_iframe]:hidden${fitToBox ? " [&_canvas]:!h-full [&_canvas]:!w-full" : ""}`}
 			style={wrapperStyle}
 		>
 			<Spline
 				scene={scene}
-				className="w-full h-full"
-				onLoad={() => {
+				className="h-full w-full"
+				onLoad={(splineApp: Application) => {
 					setHasError(false);
+					appRef.current = splineApp;
+					if (fitToBox) {
+						const container = containerRef.current;
+						if (container) {
+							fitSplineToContainer(splineApp, container, zoom);
+						} else {
+							splineApp.setZoom(zoom);
+						}
+					}
 					// Force watermark removal after load
 					setTimeout(() => {
 						const watermarkLinks = document.querySelectorAll<HTMLAnchorElement>(

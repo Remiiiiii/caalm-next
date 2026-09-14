@@ -1,30 +1,94 @@
 "use client";
 
-import { formatUsd } from "@/lib/funding/constants";
-import type { RetentionStream } from "@/lib/funding/types";
+import { ArrowDown, ArrowUp } from "lucide-react";
+import { useMemo, useState } from "react";
+import { SearchField } from "@/components/ui/search-field";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
+import {
+	formatRetentionExpiryLine,
+	formatUsd,
+	RETENTION_BOARD_HEIGHT_CLASS,
+	RETENTION_HEALTH_LABEL,
+} from "@/lib/funding/constants";
+import type { RetentionHealth, RetentionStream } from "@/lib/funding/types";
+import { RETENTION_HEALTH } from "@/lib/funding/types";
 import { cn } from "@/lib/utils";
 
-const HEALTH_LABEL: Record<RetentionStream["health"], string> = {
-	at_risk: "At risk",
-	protecting: "Protecting",
-	protected: "Protected",
-	expired: "Expired",
-};
+type SortDir = "desc" | "asc";
+
+function healthBadgeClass(health: RetentionStream["health"]): string {
+	if (health === "at_risk") {
+		return "bg-orange/10 text-orange border-orange/20";
+	}
+	if (health === "protecting") {
+		return "bg-blue/10 text-blue border-blue/20";
+	}
+	if (health === "protected") {
+		return "bg-green/10 text-green border-green/20";
+	}
+	return "bg-slate-100 text-slate-600 border-slate-200";
+}
 
 export function RetentionBoard({
 	loading,
 	streams,
+	departments,
 	selectedContractId,
 	onSelect,
 }: {
 	loading: boolean;
 	streams: RetentionStream[];
+	departments: string[];
 	selectedContractId: string | null;
 	onSelect: (contractId: string) => void;
 }) {
+	const [query, setQuery] = useState("");
+	const [department, setDepartment] = useState<string>("all");
+	const [health, setHealth] = useState<string>("all");
+	const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+	const filtered = useMemo(() => {
+		const q = query.trim().toLowerCase();
+		const next = streams.filter((stream) => {
+			if (department !== "all" && stream.department !== department) {
+				return false;
+			}
+			if (health !== "all" && stream.health !== health) {
+				return false;
+			}
+			if (!q) return true;
+			const haystack = [
+				stream.contractName,
+				stream.contractNumber,
+				stream.counterpartyName,
+				stream.department,
+				stream.ownerName,
+			]
+				.filter(Boolean)
+				.join(" ")
+				.toLowerCase();
+			return haystack.includes(q);
+		});
+		next.sort((a, b) =>
+			sortDir === "desc" ? b.amount - a.amount : a.amount - b.amount,
+		);
+		return next;
+	}, [streams, query, department, health, sortDir]);
+
 	if (loading) {
 		return (
-			<div className="glass-card rounded-xl p-4 text-sm text-slate-600 sm:p-6">
+			<div
+				className={cn(
+					"glass-card flex flex-col rounded-xl p-4 text-sm text-slate-600 sm:p-6",
+					RETENTION_BOARD_HEIGHT_CLASS,
+				)}
+			>
 				<div className="glass-card-cap" />
 				Loading dollar-ranked retention streams…
 			</div>
@@ -33,7 +97,12 @@ export function RetentionBoard({
 
 	if (streams.length === 0) {
 		return (
-			<div className="glass-card rounded-xl p-4 text-sm text-slate-600 sm:p-6">
+			<div
+				className={cn(
+					"glass-card flex flex-col rounded-xl p-4 text-sm text-slate-600 sm:p-6",
+					RETENTION_BOARD_HEIGHT_CLASS,
+				)}
+			>
 				<div className="glass-card-cap" />
 				No contracts with funding amounts yet. Add amounts on contracts to see
 				which dollar streams need protection.
@@ -42,70 +111,163 @@ export function RetentionBoard({
 	}
 
 	return (
-		<div className="glass-card overflow-hidden rounded-xl">
+		<div
+			className={cn(
+				"glass-card flex flex-col overflow-hidden rounded-xl",
+				RETENTION_BOARD_HEIGHT_CLASS,
+			)}
+		>
 			<div className="glass-card-cap" />
-			<div className="border-b border-slate-200 px-4 py-3 sm:px-6">
-				<h2 className="text-xl font-semibold sidebar-gradient-text">
+			<div className="shrink-0 border-b border-slate-200 px-4 py-3 sm:px-6">
+				<h2 className="mt-4 text-xl font-semibold sidebar-gradient-text">
 					Retention (dollar-ranked)
 				</h2>
 				<p className="mt-1 text-sm text-slate-600">
 					Highest-value streams first. Click a row to manage obligations that
 					keep the money.
 				</p>
+				<div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+					<SearchField
+						containerClassName="sm:col-span-1"
+						value={query}
+						onChange={(e) => setQuery(e.target.value)}
+						placeholder="Search streams…"
+						aria-label="Search retention streams"
+					/>
+					<Select value={department} onValueChange={setDepartment}>
+						<SelectTrigger
+							className="h-10 border-[0.25px] border-slate-300"
+							aria-label="Filter by department"
+						>
+							<SelectValue placeholder="Department" />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="all">All departments</SelectItem>
+							{departments.map((dept) => (
+								<SelectItem key={dept} value={dept}>
+									{dept}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+					<Select value={health} onValueChange={setHealth}>
+						<SelectTrigger
+							className="h-10 border-[0.25px] border-slate-300"
+							aria-label="Filter by health"
+						>
+							<SelectValue placeholder="Health" />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="all">All health</SelectItem>
+							{RETENTION_HEALTH.map((value) => (
+								<SelectItem key={value} value={value}>
+									{RETENTION_HEALTH_LABEL[value as RetentionHealth]}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				</div>
 			</div>
-			<ul className="divide-y divide-slate-200">
-				{streams.map((stream) => {
-					const selected = stream.contractId === selectedContractId;
-					return (
-						<li key={stream.contractId}>
-							<button
-								type="button"
-								onClick={() => onSelect(stream.contractId)}
-								className={cn(
-									"flex w-full cursor-pointer items-start justify-between gap-4 px-4 py-4 text-left transition-all duration-200 sm:px-6",
-									"hover:bg-blue-50",
-									selected && "bg-blue-50",
-									"focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
-								)}
-							>
-								<div className="min-w-0">
-									<p className="truncate font-medium text-slate-700">
-										{stream.contractName}
-									</p>
-									<p className="mt-1 text-xs text-slate-500">
-										{stream.expiryDate
-											? `Expires ${stream.expiryDate.slice(0, 10)}`
-											: "No expiry on file"}
-										{stream.daysUntilExpiry != null
-											? ` · ${stream.daysUntilExpiry}d`
-											: ""}
-										{stream.openObligationCount
-											? ` · ${stream.openObligationCount} open obligations`
-											: ""}
-									</p>
-								</div>
-								<div className="shrink-0 text-right">
-									<p className="text-lg font-semibold tabular-nums text-slate-700">
-										{formatUsd(stream.amount, stream.currency)}
-									</p>
-									<span
-										className={cn(
-											"mt-1 inline-block rounded-md px-2 py-0.5 text-xs font-medium",
-											stream.health === "at_risk" && "bg-red/15 text-red",
-											stream.health === "protecting" &&
-												"bg-orange/15 text-orange",
-											stream.health === "protected" && "bg-green/15 text-green",
-											stream.health === "expired" &&
-												"bg-slate-200 text-slate-600",
-										)}
-									>
-										{HEALTH_LABEL[stream.health]}
-									</span>
-								</div>
-							</button>
-						</li>
-					);
-				})}
+			<div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-600 sm:px-6">
+				<span>
+					Showing {filtered.length} of {streams.length} streams
+				</span>
+				<button
+					type="button"
+					className="inline-flex cursor-pointer items-center gap-1 rounded-md px-1.5 py-0.5 font-medium text-slate-700 transition-colors duration-200 hover:bg-white hover:text-[#0f5384] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
+					onClick={() =>
+						setSortDir((prev) => (prev === "desc" ? "asc" : "desc"))
+					}
+					aria-label={
+						sortDir === "desc"
+							? "Sort by value ascending"
+							: "Sort by value descending"
+					}
+				>
+					Sorted by value
+					{sortDir === "desc" ? (
+						<ArrowDown className="h-3 w-3" aria-hidden />
+					) : (
+						<ArrowUp className="h-3 w-3" aria-hidden />
+					)}
+				</button>
+			</div>
+			<ul className="min-h-0 flex-1 divide-y divide-slate-200 overflow-y-auto">
+				{filtered.length === 0 ? (
+					<li className="px-4 py-6 text-sm text-slate-500 sm:px-6">
+						No streams match this search or filter.
+					</li>
+				) : (
+					filtered.map((stream) => {
+						const selected = stream.contractId === selectedContractId;
+						const expired = stream.health === "expired";
+						const metaParts = [
+							stream.department || null,
+							stream.nameIsDuplicate && stream.counterpartyName
+								? stream.counterpartyName
+								: null,
+							formatRetentionExpiryLine(
+								stream.expiryDate,
+								stream.daysUntilExpiry,
+							),
+						].filter(Boolean);
+
+						return (
+							<li key={stream.contractId}>
+								<button
+									type="button"
+									onClick={() => onSelect(stream.contractId)}
+									className={cn(
+										"flex w-full cursor-pointer items-start justify-between gap-4 border-l-4 px-4 py-4 text-left transition-all duration-200 sm:px-6",
+										"hover:bg-blue-50",
+										"focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
+										selected
+											? "border-l-[#0f5384] bg-blue-50"
+											: "border-l-transparent",
+										expired && "opacity-50",
+									)}
+								>
+									<div className="min-w-0">
+										<p
+											className={cn(
+												"truncate font-medium",
+												expired ? "text-slate-500" : "text-slate-700",
+											)}
+										>
+											{stream.contractName}
+											{stream.contractNumber ? (
+												<span className="ml-2 font-normal text-slate-500">
+													#{stream.contractNumber}
+												</span>
+											) : null}
+										</p>
+										<p className="mt-1 text-xs text-slate-500">
+											{metaParts.join(" · ")}
+										</p>
+									</div>
+									<div className="shrink-0 text-right">
+										<p
+											className={cn(
+												"text-lg font-semibold tabular-nums",
+												expired ? "text-slate-500" : "text-slate-700",
+											)}
+										>
+											{formatUsd(stream.amount, stream.currency)}
+										</p>
+										<span
+											className={cn(
+												"mt-1 inline-block rounded-full border px-2 py-0.5 text-xs font-medium",
+												healthBadgeClass(stream.health),
+											)}
+										>
+											{RETENTION_HEALTH_LABEL[stream.health]}
+										</span>
+									</div>
+								</button>
+							</li>
+						);
+					})
+				)}
 			</ul>
 		</div>
 	);

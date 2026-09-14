@@ -1,0 +1,42 @@
+---
+description: Action buttons align right; primary/btn-primary always include Lucide icons
+alwaysApply: true
+---
+
+# Button placement and icons
+
+## Placement (hard rule)
+
+- Put action buttons on the **right** of their row, toolbar, form footer, or card action strip.
+- Use `flex … justify-end` (or `ml-auto` on the button group when the row mixes left content with right actions).
+- Do **not** leave primary actions flush-left unless the user explicitly asks for left placement.
+- Tab/segment controls that sit with a separate action (e.g. Refresh) still keep the whole control group right-aligned, or put tabs left and actions right with `justify-between` — never leave a lone primary CTA on the left.
+
+```tsx
+{/* Page / section actions */}
+<div className="mb-6 flex items-center justify-end gap-3">
+  <Button className="primary-btn px-3 sm:px-4">
+    <Plus className="h-4 w-4" />
+    Add
+  </Button>
+</div>
+
+{/* Form submit under fields */}
+<div className="flex justify-end">
+  <Button className="primary-btn px-3 sm:px-4">
+    <Plus className="h-4 w-4" />
+    Save
+  </Button>
+</div>
+```
+
+## Icons (hard rule)
+
+- Every `primary-btn` / `btn-primary` button must include a Lucide icon (`h-4 w-4`) plus a label — never text-only.
+- Prefer the same for outline action buttons in funding/forms toolbars (Refresh, Convert, etc.).
+- Icon before label; match existing CAALM patterns (`Plus`, `Check`, `Trash2`, `RefreshCw`, etc.).
+
+## Exceptions
+
+- Only deviate when the user explicitly requests a different position or an icon-only control.
+- Row overflow menus stay as documented in `global-style-guide.mdc` (dots.svg), not this rule.
