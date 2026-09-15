@@ -144,8 +144,7 @@ describe("13.1 tenant data export", () => {
 		expect(joined).toContain(Query.equal("organizationId", "org-1"));
 	});
 
-	it("tracks 13.1 in the catalog test suite map", () => {
-		expect(typeof getCatalogTaskLinkedPrNumber("13.1") === "number" ||
-			getCatalogTaskLinkedPrNumber("13.1") === undefined).toBe(true);
+	it("binds 13.1 to catalog PR 77", () => {
+		expect(getCatalogTaskLinkedPrNumber("13.1")).toBe(77);
 	});
 });
