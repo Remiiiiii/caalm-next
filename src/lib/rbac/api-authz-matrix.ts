@@ -51,14 +51,14 @@ const SIGNAL_PATTERNS: Array<{
 		re: /\brequireContractCreateContext\s*\(/,
 	},
 	{
+		signal: "requireFundingOrgContext",
+		class: "permission",
+		re: /\brequireFundingOrgContext\s*\(/,
+	},
+	{
 		signal: "requireITPermission",
 		class: "permission",
 		re: /\brequireITPermission\s*\(/,
-	},
-	{
-		signal: "requireContractCreateContext",
-		class: "permission",
-		re: /\brequireContractCreateContext\s*\(/,
 	},
 	{
 		signal: "hasPermission",
