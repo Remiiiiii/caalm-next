@@ -596,8 +596,8 @@ export const ROADMAP_CATALOG: RoadmapCatalogSection[] = [
 		sectionNumber: 13,
 		title: "Data Portability & Regulatory Readiness",
 		sourceRef: "GDPR/CCPA; security questionnaire",
-		// #77 = 13.1 export. #79 = 13.2 deletion. Do not link closed #42.
-		linkedPrNumbers: [77, 79],
+		// #77 = 13.1 export. #79 = 13.2 deletion. #80 = 13.3 evidence. Do not link closed #42.
+		linkedPrNumbers: [77, 79, 80],
 		tasks: [
 			t(
 				"13.1",
@@ -620,6 +620,8 @@ export const ROADMAP_CATALOG: RoadmapCatalogSection[] = [
 				"Security questionnaire evidence pack",
 				"Document only controls that exist in code.",
 				["Evidence pack cross-references completed tasks/tests"],
+				undefined,
+				80,
 			),
 		],
 	},

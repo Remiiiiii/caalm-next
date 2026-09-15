@@ -91,15 +91,18 @@ describe("roadmap catalog PR links", () => {
 		expect(getCatalogLinkedPrNumbers(15)).toEqual([65]);
 	});
 
-	it("maps section 13.1–13.2 to catalog PRs 77 and 79", () => {
-		expect(getCatalogLinkedPrNumbers(13)).toEqual([77, 79]);
-		expect(getCatalogLinkedPrNumber(13)).toBe(79);
+	it("maps section 13.1–13.3 to catalog PRs 77, 79, and 80", () => {
+		expect(getCatalogLinkedPrNumbers(13)).toEqual([77, 79, 80]);
+		expect(getCatalogLinkedPrNumber(13)).toBe(80);
 		expect(getCatalogTaskLinkedPrNumber("13.1")).toBe(77);
 		expect(getCatalogTaskLinkedPrNumber("13.2")).toBe(79);
+		expect(getCatalogTaskLinkedPrNumber("13.3")).toBe(80);
 		expect(getSectionNumberForPr(77)).toBe(13);
 		expect(getSectionNumberForPr(79)).toBe(13);
+		expect(getSectionNumberForPr(80)).toBe(13);
 		expect(getSectionNumberForPr(42)).toBeUndefined();
-		expect(getUnlinkedCatalogTaskCodes(13)).toEqual(["13.3"]);
+		expect(getUnlinkedCatalogTaskCodes(13)).toEqual([]);
+		expect(sectionUsesPerTaskPrCompletion(13)).toBe(true);
 	});
 
 	it("binds section 5 per-task PRs 67-71", () => {
