@@ -1,65 +1,68 @@
 # Backend Configuration Checklist
 
+Status synced to the caalm-next codebase (Appwrite + Next.js API routes). Items marked
+**out of scope** are not a first-class product module yet (e.g. mock-only training UI).
+
 ## 1. Database Setup
 
-- [ ] **Define Database Schema**
-  - [ ] Users collection (roles, departments, status, etc.)
-  - [ ] Contracts collection (title, parties, status, deadlines, etc.)
-  - [ ] Documents collection (file metadata, owner, contract link, etc.)
-  - [ ] Training/Certifications collection (employee, type, due date, status)
-  - [ ] Audit logs collection (user, action, timestamp, target)
-  - [ ] Invitations collection (email, role, token, status, expiry)
-- [ ] **Indexes**
-  - [ ] Add indexes for common queries (by user, contract, status, etc.)
-- [ ] **Relationships**
-  - [ ] Set up foreign keys/relations (e.g., user to department, document to contract)
-- [ ] **Permissions**
-  - [ ] Role-based access at the collection/document level
+- [x] **Define Database Schema**
+  - [x] Users collection (roles, departments, status, etc.)
+  - [x] Contracts collection (title, parties, status, deadlines, etc.)
+  - [x] Documents / Files collection (file metadata, owner, contract link, etc.)
+  - [ ] Training/Certifications collection (employee, type, due date, status) — **out of scope** (HR dashboard still uses mock rows; no Appwrite training table)
+  - [x] Audit logs collection (user, action, timestamp, target)
+  - [x] Invitations collection (email, role, token, status, expiry)
+- [x] **Indexes**
+  - [x] Indexes for common queries (by user, contract, status, org, etc.)
+- [x] **Relationships**
+  - [x] Appwrite relationship / reference attributes (user↔org, document↔contract, etc.)
+- [x] **Permissions**
+  - [x] Role-based access via `permissions` / `role_permissions` / `user_roles` + `requirePermission()`
 
 ## 2. API Endpoints
 
-- [ ] **User Management**
+- [x] **User Management**
   - [x] Invite user (send invite, create invite record)
   - [x] Accept invite (create user after invite accepted)
   - [x] Resend/revoke invite
-  - [x] Authentication (sign-in, sign-up, OTP/email verification)
-  - [ ] Update user profile (name, department, role)
-  - [ ] Deactivate/delete user
-- [ ] **Contract Management**
-  - [ ] Create, read, update, delete contracts
-  - [ ] Assign contracts to users/departments
-  - [ ] Approve/reject contract proposals
-- [ ] **Document Management**
+  - [x] Authentication (sign-in, sign-up, OTP/email verification, step-up)
+  - [x] Update user profile (name, department, role/status) — `updateUserProfile` in `user.actions.ts` + admin user management; settings `ProfileSettings` UI still needs to call the real action (mock TODO remains in that component)
+  - [x] Deactivate/delete user — status updates + `deleteUserAccount` / revoke-sessions admin APIs
+- [x] **Contract Management**
+  - [x] Create, read, update, delete contracts
+  - [x] Assign contracts to users/departments
+  - [x] Approve/reject contract proposals (approval workflows)
+- [x] **Document Management**
   - [x] Upload document
-  - [ ] Link document to contract/user
-  - [ ] Download/view document
-  - [ ] Delete document
-- [ ] **Training/Certification**
+  - [x] Link document to contract/user
+  - [x] Download/view document
+  - [x] Delete document
+- [ ] **Training/Certification** — **out of scope** (no dedicated APIs; licenses/certs cover credentials separately)
   - [ ] Add/update training records
   - [ ] Track certification status
   - [ ] Send reminders for expiring certifications
-- [ ] **Audit Logging**
-  - [ ] Log user actions (who, what, when)
-  - [ ] Retrieve audit logs (for admin/executive)
-- [ ] **Notifications**
-  - [ ] Send email/in-app notifications for deadlines, approvals, etc.
-  - [ ] Retrieve notification history
+- [x] **Audit Logging**
+  - [x] Log user actions (who, what, when)
+  - [x] Retrieve audit logs (for admin/executive / audit readiness)
+- [x] **Notifications**
+  - [x] Send email/in-app notifications for deadlines, approvals, etc.
+  - [x] Retrieve notification history
 
 ## 3. Environment & Security
 
-- [ ] **Environment Variables**
-  - [ ] Database connection strings
-  - [ ] API keys/secrets
-- [ ] **Validation & Sanitization**
-  - [ ] Input validation for all endpoints
-- [ ] **Error Handling**
-  - [ ] Consistent error responses
-- [ ] **Rate Limiting/Throttling**
-- [ ] **Logging & Monitoring**
+- [x] **Environment Variables**
+  - [x] Database connection / Appwrite IDs (`.env.example` + Vercel)
+  - [x] API keys/secrets (Appwrite, Stripe, Mailgun, GitHub, etc.)
+- [x] **Validation & Sanitization**
+  - [x] Input validation for API endpoints (Zod / route guards on gated handlers)
+- [x] **Error Handling**
+  - [x] Consistent user-facing error helpers on major surfaces
+- [x] **Rate Limiting/Throttling**
+- [x] **Logging & Monitoring** (server logs + audit trail; ops/alerting continues to evolve)
 
 ---
 
-## Focusing on a Specific Missing Backend Feature
+## Remaining follow-ups (not checklist blockers)
 
 ### User Profile Update API
 
@@ -82,3 +85,7 @@ Currently, there is no clear endpoint or action for updating user profile detail
 ---
 
 Would you like to proceed with implementing the **User Profile Update API** as the first missing backend feature, or focus on another item from the checklist?
+
+## Remaining follow-ups
+
+- Keep tracked environment (env) checklists in parity: `.env.example` (local/production key names) and `.env.demo.example` (demo placeholders). Real values stay in gitignored `.env.local` / `.env.demo.local`. Create demo env with `pnpm demo:env:init`; push demo keys with `pnpm sync:vercel-env:apply`. Do not run `vercel env pull` unless you intend to overwrite `.env.local`.

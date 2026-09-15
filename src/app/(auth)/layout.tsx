@@ -6,9 +6,7 @@ import Link from "next/link";
 import type React from "react";
 import AuthHeadlineTypewriter from "@/components/auth/AuthHeadlineTypewriter";
 import AuthTourFanCards from "@/components/auth/AuthTourFanCards";
-import CountUp from "@/components/CountUp";
 import DemoBanner from "@/components/DemoBanner";
-import { TRUSTED_BRAND_LOGOS } from "@/components/landing/landingContent";
 import OrbitingBlocks from "@/components/OrbitingBlocks";
 import SplineCanvas from "@/components/SplineCanvas";
 import { useSplineWatermarkRemoval } from "@/hooks/useSplineWatermarkRemoval";
@@ -108,6 +106,7 @@ const layout = ({ children }: { children: React.ReactNode }) => {
 														width={48}
 														height={48}
 														className="h-auto w-12"
+														style={{ height: "auto" }}
 													/>
 													<span className="text-2xl font-bold text-light-100">
 														CAALM
@@ -146,61 +145,6 @@ const layout = ({ children }: { children: React.ReactNode }) => {
 											durationMs={reduceMotion ? 0 : SPLINE_FADE_DURATION_MS}
 										/>
 									</div>
-
-									{/* Trusted brand logos + social proof */}
-									<div className="mt-2">
-										<div className="flex flex-wrap items-center justify-start gap-x-6 gap-y-3 pb-4 opacity-70">
-											{TRUSTED_BRAND_LOGOS.map((logo) => (
-												<div
-													key={logo.alt}
-													className="flex shrink-0 items-center"
-												>
-													<Image
-														src={logo.src}
-														alt={logo.alt}
-														width={120}
-														height={28}
-														className="h-6 w-auto"
-													/>
-												</div>
-											))}
-										</div>
-										<div className="flex items-center gap-3 border-t border-slate-200/70 pt-4">
-											<div className="flex -space-x-2">
-												<Image
-													src="/assets/images/1.png"
-													alt="avatar"
-													width={32}
-													height={32}
-													className="h-auto w-8 rounded-full border-2 border-white shadow-lg"
-												/>
-												<Image
-													src="/assets/images/2.png"
-													alt="avatar"
-													width={32}
-													height={32}
-													className="h-auto w-8 rounded-full border-2 border-white shadow-lg"
-												/>
-												<Image
-													src="/assets/images/3.png"
-													alt="avatar"
-													width={32}
-													height={32}
-													className="h-auto w-8 rounded-full border-2 border-white shadow-lg"
-												/>
-												<Image
-													src="/assets/images/5.png"
-													alt="avatar"
-													width={32}
-													height={32}
-													className="h-auto w-8 rounded-full border-2 border-white shadow-lg"
-												/>
-											</div>
-											<span className="text-sm text-slate-600">
-												Trusted by <CountUp />+ innovators worldwide
-											</span>
-										</div>
-									</div>
 								</div>
 							</section>
 							<section className="flex flex-1 flex-col items-center lg:items-start lg:justify-center p-4 sm:p-6 lg:pl-3 lg:pr-8 xl:pr-10 py-8 bg-transparent">
@@ -211,6 +155,7 @@ const layout = ({ children }: { children: React.ReactNode }) => {
 										width={50}
 										height={50}
 										className="h-auto w-[50px]"
+										style={{ height: "auto" }}
 									/>
 								</div>
 								{children}

@@ -209,7 +209,7 @@ export function PrLogPage() {
 
 	return (
 		<ITPageShell
-			title="PR log"
+			title="PR log - Cursor Cloud Agent"
 			subtitle="Cloud agent pull requests — each open cursor/ branch appears as a section. Merge with green tests to complete it."
 			icon={GitPullRequest}
 		>

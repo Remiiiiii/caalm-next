@@ -167,6 +167,7 @@ export const Header = () => {
 							width={40}
 							height={40}
 							className="h-auto w-9 shrink-0"
+							style={{ height: "auto" }}
 						/>
 						<span
 							className={cn(
@@ -256,7 +257,8 @@ export const Header = () => {
 									alt=""
 									width={32}
 									height={32}
-									className="h-8 w-8 shrink-0"
+									className="h-auto w-8 shrink-0"
+									style={{ height: "auto" }}
 								/>
 								<span className="font-bold text-lg text-slate-800">CAALM</span>
 							</Link>

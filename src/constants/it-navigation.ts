@@ -282,7 +282,7 @@ export const IT_NAVIGATION: ITSidebarSection[] = [
 				permission: PERMISSIONS.IT.VIEW_ROADMAP,
 			},
 			{
-				name: "PR log",
+				name: "PR log - (Cursor Cloud Agent)",
 				icon: "gitPullRequest",
 				url: "/dashboard/it/development/pr-log",
 				permission: PERMISSIONS.IT.VIEW_ROADMAP,

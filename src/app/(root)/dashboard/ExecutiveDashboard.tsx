@@ -1024,10 +1024,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 							<div className="glass-card-cap" />
 							{/* Header */}
 							<div className="border-b border-slate-200/80 px-5 py-5 sm:px-6">
-								<p className="mb-1.5 text-[10.5px] font-medium uppercase tracking-[0.1em] text-[#0f5384]">
-									User management
-								</p>
-								<h2 className="text-xl font-semibold tracking-tight text-slate-700">
+								<h2 className="text-xl mt-1 font-bold tracking-tight sidebar-gradient-text">
 									Send invite link
 								</h2>
 								<p className="mt-1.5 text-[12.5px] leading-relaxed text-slate-600">
