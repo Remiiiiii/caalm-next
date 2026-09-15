@@ -64,9 +64,13 @@ function RoadmapPullRequestItem({ pr }: { pr: SectionPullRequest }) {
 								{displayPullRequestTitle(pr.title)}
 							</span>
 						</p>
-						{pr.state ? (
+						{pr.state && pr.state !== "unknown" ? (
 							<span className="shrink-0 text-xs font-normal text-slate-500 capitalize">
 								{pr.state}
+							</span>
+						) : pr.state === "unknown" ? (
+							<span className="shrink-0 text-xs font-normal text-slate-500">
+								Unavailable
 							</span>
 						) : null}
 						<span
@@ -100,6 +104,11 @@ function RoadmapPullRequestItem({ pr }: { pr: SectionPullRequest }) {
 						<div className="text-xs text-slate-600 [&_.docs-prose]:max-w-none [&_h1]:mb-2 [&_h1]:mt-1 [&_h1]:text-sm [&_h2]:mb-1 [&_h2]:mt-3 [&_h2]:text-sm [&_h3]:mb-1 [&_h3]:mt-2 [&_h3]:text-xs [&_ol]:my-2 [&_ol]:text-xs [&_ol]:leading-5 [&_p]:my-2 [&_p]:text-xs [&_p]:leading-5 [&_pre]:my-2 [&_pre]:p-2 [&_pre]:text-[11px] [&_ul]:my-2 [&_ul]:text-xs [&_ul]:leading-5">
 							<DocsMarkdown markdown={pr.body} />
 						</div>
+					) : pr.state === "unknown" ? (
+						<p className="text-xs text-slate-600">
+							Couldn&apos;t load this PR from GitHub right now (rate limit or
+							auth). Open it on GitHub to read the description.
+						</p>
 					) : (
 						<p className="text-xs text-slate-600">
 							This PR has no description.
@@ -224,8 +233,10 @@ function RoadmapSectionCard({
 												{title}
 											</span>
 										) : null}
-										{pr.state ? (
+										{pr.state && pr.state !== "unknown" ? (
 											<span className="text-slate-500"> · {pr.state}</span>
+										) : pr.state === "unknown" ? (
+											<span className="text-slate-500"> · unavailable</span>
 										) : null}
 									</li>
 								);

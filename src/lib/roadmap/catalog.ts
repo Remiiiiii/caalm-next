@@ -760,6 +760,26 @@ export function getCatalogTaskCodesForPr(prNumber: number): string[] {
 	return codes;
 }
 
+/**
+ * Fallback label when GitHub is unreachable or returns no title.
+ * Prefer task titles from the seed catalog over a bare "#N".
+ */
+export function catalogDisplayTitleForPr(prNumber: number): string {
+	const titles: string[] = [];
+	for (const section of ROADMAP_CATALOG) {
+		const walk = (tasks: RoadmapCatalogSection["tasks"]) => {
+			for (const task of tasks) {
+				if (task.linkedPrNumber === prNumber) {
+					titles.push(`${task.taskCode} ${task.title}`);
+				}
+				if (task.children?.length) walk(task.children);
+			}
+		};
+		walk(section.tasks);
+	}
+	return titles.join(" · ");
+}
+
 /** Task codes in a section that have no catalog `linkedPrNumber`. */
 export function getUnlinkedCatalogTaskCodes(sectionNumber: number): string[] {
 	const section = ROADMAP_CATALOG.find(

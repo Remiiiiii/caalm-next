@@ -5,6 +5,8 @@
  */
 
 import {
+	catalogDisplayTitleForPr,
+	catalogPullRequestUrl,
 	getCatalogLinkedPrNumber,
 	getCatalogLinkedPrNumbers,
 	getSectionNumberForPr,
@@ -263,20 +265,30 @@ async function resolveCatalogPrLookup(
 ): Promise<Map<number, CatalogPrLinkMeta>> {
 	const lookup = new Map<number, CatalogPrLinkMeta>();
 	for (const pr of openPrs) {
-		lookup.set(pr.number, { title: pr.title, state: pr.state });
+		lookup.set(pr.number, {
+			title: pr.title?.trim() || catalogDisplayTitleForPr(pr.number),
+			state: pr.state,
+		});
 	}
 	const missing = [...new Set(catalogNumbers)].filter((n) => !lookup.has(n));
 	await Promise.all(
 		missing.map(async (number) => {
 			const live = await fetchPullRequestStatus({ prNumber: number });
-			if (live.state === "unknown" && !live.title) return;
+			const fallbackTitle = catalogDisplayTitleForPr(number);
+			if (live.state === "unknown" && !live.title && !fallbackTitle) return;
 			lookup.set(number, {
-				title: live.title ?? "",
+				title: live.title?.trim() || fallbackTitle,
 				state: live.state,
 				mergeCommitSha: live.mergeCommitSha,
 			});
 		}),
 	);
+	for (const number of catalogNumbers) {
+		if (lookup.has(number)) continue;
+		const fallbackTitle = catalogDisplayTitleForPr(number);
+		if (!fallbackTitle) continue;
+		lookup.set(number, { title: fallbackTitle, state: "unknown" });
+	}
 	return lookup;
 }
 
@@ -461,7 +473,7 @@ export async function getOverview(options?: {
 			const meta = prLookup.get(number);
 			return {
 				number,
-				title: meta?.title ?? "",
+				title: meta?.title?.trim() || catalogDisplayTitleForPr(number) || "",
 				state: meta?.state,
 				checksPassed: checksPassedByPr.get(number) === true,
 			};
@@ -573,9 +585,12 @@ export async function getSectionPullRequests(sectionId: string): Promise<
 			}
 			return {
 				number,
-				title: live.title || `PR #${number}`,
+				title:
+					live.title?.trim() ||
+					catalogDisplayTitleForPr(number) ||
+					`PR #${number}`,
 				state: live.state,
-				htmlUrl: live.htmlUrl || "",
+				htmlUrl: live.htmlUrl || catalogPullRequestUrl(number),
 				headRef: live.headRef?.trim() || "",
 				body: live.body || "",
 				checksPassed,

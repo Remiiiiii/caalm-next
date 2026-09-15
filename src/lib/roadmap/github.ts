@@ -14,7 +14,9 @@ import {
 
 function getRepo(): string {
 	return (
-		process.env.GITHUB_TICKETS_REPO || process.env.ROADMAP_GITHUB_REPO || ""
+		process.env.GITHUB_TICKETS_REPO ||
+		process.env.ROADMAP_GITHUB_REPO ||
+		"Remiiiiii/caalm-next"
 	);
 }
 
@@ -23,10 +25,8 @@ const TOKEN_CACHE_MS = 50 * 60 * 1000;
 
 let installationTokenCache: { token: string; fetchedAt: number } | null = null;
 
-async function getGitHubToken(): Promise<string | null> {
-	const pat = process.env.GITHUB_TOKEN || process.env.ROADMAP_GITHUB_TOKEN;
-	if (pat) return pat;
-
+/** Prefer App installation token — PATs burn rate limits fast on roadmap polling. */
+async function getInstallationAccessToken(): Promise<string | null> {
 	if (
 		installationTokenCache &&
 		Date.now() - installationTokenCache.fetchedAt < TOKEN_CACHE_MS
@@ -63,12 +63,62 @@ async function getGitHubToken(): Promise<string | null> {
 	}
 }
 
+function getPersonalAccessToken(): string | null {
+	const pat = process.env.GITHUB_TOKEN || process.env.ROADMAP_GITHUB_TOKEN;
+	return pat?.trim() || null;
+}
+
+async function getGitHubToken(): Promise<string | null> {
+	return (
+		(await getInstallationAccessToken()) || getPersonalAccessToken() || null
+	);
+}
+
+/** App token first, then PAT — used to retry after 401/403 rate-limit. */
+async function getGitHubTokenCandidates(): Promise<string[]> {
+	const tokens: string[] = [];
+	const app = await getInstallationAccessToken();
+	if (app) tokens.push(app);
+	const pat = getPersonalAccessToken();
+	if (pat && !tokens.includes(pat)) tokens.push(pat);
+	return tokens;
+}
+
 function githubHeaders(token: string): HeadersInit {
 	return {
 		Authorization: `Bearer ${token}`,
 		Accept: "application/vnd.github+json",
 		"User-Agent": "caalm-roadmap-engine",
 	};
+}
+
+/** Try each token until one succeeds; skip burned PAT when App works. */
+async function githubFetch(
+	url: string,
+	init?: Omit<RequestInit, "headers"> & { headers?: HeadersInit },
+): Promise<Response | null> {
+	const tokens = await getGitHubTokenCandidates();
+	if (tokens.length === 0) return null;
+
+	let last: Response | null = null;
+	for (const token of tokens) {
+		try {
+			const res = await fetch(url, {
+				...init,
+				headers: {
+					...githubHeaders(token),
+					...(init?.headers ?? {}),
+				},
+				signal: init?.signal ?? AbortSignal.timeout(GITHUB_FETCH_MS),
+			});
+			if (res.ok) return res;
+			last = res;
+			// Auth / rate-limit — try the next credential.
+			if (res.status === 401 || res.status === 403) continue;
+			return res;
+		} catch {}
+	}
+	return last;
 }
 
 let openPullRequestsCache: {
@@ -82,8 +132,7 @@ export async function listOpenPullRequests(): Promise<
 	GitHubPullRequestSummary[]
 > {
 	const repo = getRepo();
-	const token = await getGitHubToken();
-	if (!token || !repo.includes("/")) return [];
+	if (!repo.includes("/")) return [];
 
 	const now = Date.now();
 	if (
@@ -94,19 +143,10 @@ export async function listOpenPullRequests(): Promise<
 	}
 
 	const [owner, name] = repo.split("/");
-	let res: Response;
-	try {
-		res = await fetch(
-			`https://api.github.com/repos/${owner}/${name}/pulls?state=open&per_page=100`,
-			{
-				headers: githubHeaders(token),
-				signal: AbortSignal.timeout(GITHUB_FETCH_MS),
-			},
-		);
-	} catch {
-		return [];
-	}
-	if (!res.ok) return [];
+	const res = await githubFetch(
+		`https://api.github.com/repos/${owner}/${name}/pulls?state=open&per_page=100`,
+	);
+	if (!res?.ok) return [];
 
 	const json = (await res.json()) as Array<{
 		number: number;
@@ -193,25 +233,15 @@ export async function fetchPullRequestStatus(params: {
 		return cached.value;
 	}
 
-	const token = await getGitHubToken();
 	const repo = getRepo();
-	if (!token || !repo.includes("/")) {
+	if (!repo.includes("/")) {
 		return { state: "unknown" };
 	}
 	const [owner, name] = repo.split("/");
-	let res: Response;
-	try {
-		res = await fetch(
-			`https://api.github.com/repos/${owner}/${name}/pulls/${params.prNumber}`,
-			{
-				headers: githubHeaders(token),
-				signal: AbortSignal.timeout(GITHUB_FETCH_MS),
-			},
-		);
-	} catch {
-		return { state: "unknown" };
-	}
-	if (!res.ok) return { state: "unknown" };
+	const res = await githubFetch(
+		`https://api.github.com/repos/${owner}/${name}/pulls/${params.prNumber}`,
+	);
+	if (!res?.ok) return { state: "unknown" };
 	const json = (await res.json()) as {
 		number: number;
 		state: string;
@@ -282,9 +312,8 @@ export async function fetchRoadmapCompletionGate(params: {
 		return cached.value;
 	}
 
-	const token = await getGitHubToken();
 	const repo = getRepo();
-	if (!token || !repo.includes("/")) {
+	if (!repo.includes("/")) {
 		const value: RoadmapCompletionGate = {
 			ok: false,
 			reason:
@@ -297,16 +326,10 @@ export async function fetchRoadmapCompletionGate(params: {
 	}
 
 	const [owner, name] = repo.split("/");
-	let runsRes: Response;
-	try {
-		runsRes = await fetch(
-			`https://api.github.com/repos/${owner}/${name}/actions/runs?head_sha=${encodeURIComponent(sha)}&per_page=30`,
-			{
-				headers: githubHeaders(token),
-				signal: AbortSignal.timeout(GITHUB_FETCH_MS),
-			},
-		);
-	} catch {
+	const runsRes = await githubFetch(
+		`https://api.github.com/repos/${owner}/${name}/actions/runs?head_sha=${encodeURIComponent(sha)}&per_page=30`,
+	);
+	if (!runsRes) {
 		const value: RoadmapCompletionGate = {
 			ok: false,
 			reason: `Could not load Actions runs for ${sha.slice(0, 7)}`,
@@ -337,14 +360,10 @@ export async function fetchRoadmapCompletionGate(params: {
 		workflowRuns.map(async (run) => {
 			let jobs: ActionsJobJson[] = [];
 			try {
-				const jobsRes = await fetch(
+				const jobsRes = await githubFetch(
 					`https://api.github.com/repos/${owner}/${name}/actions/runs/${run.id}/jobs?per_page=50`,
-					{
-						headers: githubHeaders(token),
-						signal: AbortSignal.timeout(GITHUB_FETCH_MS),
-					},
 				);
-				if (jobsRes.ok) {
+				if (jobsRes?.ok) {
 					const jobsJson = (await jobsRes.json()) as {
 						jobs?: ActionsJobJson[];
 					};

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+	catalogDisplayTitleForPr,
 	displayedPrNumberForTask,
 	findDuplicateCatalogPrNumbers,
 	getCatalogLinkedPrNumber,
@@ -103,6 +104,11 @@ describe("roadmap catalog PR links", () => {
 		expect(getSectionNumberForPr(42)).toBeUndefined();
 		expect(getUnlinkedCatalogTaskCodes(13)).toEqual([]);
 		expect(sectionUsesPerTaskPrCompletion(13)).toBe(true);
+		expect(catalogDisplayTitleForPr(77)).toBe("13.1 Tenant data export");
+		expect(catalogDisplayTitleForPr(79)).toBe("13.2 Tenant deletion workflow");
+		expect(catalogDisplayTitleForPr(80)).toBe(
+			"13.3 Security questionnaire evidence pack",
+		);
 	});
 
 	it("binds section 5 per-task PRs 67-71", () => {
