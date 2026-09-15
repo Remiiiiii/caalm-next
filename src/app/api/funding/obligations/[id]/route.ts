@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
-import { getCurrentUser } from "@/lib/actions/user.actions";
 import {
 	deleteObligation,
 	getObligationById,
@@ -8,35 +7,21 @@ import {
 	isObligationStatus,
 	updateObligation,
 } from "@/lib/funding";
-import { requirePermission } from "@/lib/rbac/middleware";
-import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
+import { requireFundingOrgContext } from "@/lib/funding/request-context";
+import { parseAllowedHttpUrl } from "@/lib/funding/safe-link-url";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: NextRequest, context: RouteContext) {
-	const denied = await requirePermission(request, {
-		permission: PERMISSIONS.FUNDING.MANAGE,
-	});
-	if (denied) return denied;
-
-	const user = await getCurrentUser();
-	if (!user) {
-		return NextResponse.json(
-			{ error: "Authentication required" },
-			{ status: 401 },
-		);
-	}
-	const org = await getUserDefaultOrganization(user.$id);
-	if (!org?.orgId) {
-		return NextResponse.json(
-			{ error: "Organization not found" },
-			{ status: 404 },
-		);
-	}
+	const ctx = await requireFundingOrgContext(
+		request,
+		PERMISSIONS.FUNDING.MANAGE,
+	);
+	if (!ctx.ok) return ctx.response;
 
 	const { id } = await context.params;
 	const existing = await getObligationById(id);
-	if (!existing || existing.orgId !== org.orgId) {
+	if (!existing || existing.orgId !== ctx.orgId) {
 		return NextResponse.json(
 			{ error: "Obligation not found" },
 			{ status: 404 },
@@ -55,7 +40,21 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 		if (body.ownerName != null) patch.ownerName = String(body.ownerName);
 		if (body.renewalLinked != null)
 			patch.renewalLinked = Boolean(body.renewalLinked);
-		if (body.linkUrl != null) patch.linkUrl = String(body.linkUrl);
+		if (body.linkUrl != null) {
+			const raw = String(body.linkUrl).trim();
+			if (!raw) {
+				patch.linkUrl = "";
+			} else {
+				const parsed = parseAllowedHttpUrl(raw);
+				if (!parsed) {
+					return NextResponse.json(
+						{ error: "Invalid link URL; use http or https" },
+						{ status: 400 },
+					);
+				}
+				patch.linkUrl = parsed.slice(0, 2048);
+			}
+		}
 		if (body.reminderDaysBefore != null) {
 			const days = Number(body.reminderDaysBefore);
 			if (Number.isFinite(days)) patch.reminderDaysBefore = days;
@@ -73,29 +72,15 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 }
 
 export async function DELETE(request: NextRequest, context: RouteContext) {
-	const denied = await requirePermission(request, {
-		permission: PERMISSIONS.FUNDING.MANAGE,
-	});
-	if (denied) return denied;
-
-	const user = await getCurrentUser();
-	if (!user) {
-		return NextResponse.json(
-			{ error: "Authentication required" },
-			{ status: 401 },
-		);
-	}
-	const org = await getUserDefaultOrganization(user.$id);
-	if (!org?.orgId) {
-		return NextResponse.json(
-			{ error: "Organization not found" },
-			{ status: 404 },
-		);
-	}
+	const ctx = await requireFundingOrgContext(
+		request,
+		PERMISSIONS.FUNDING.MANAGE,
+	);
+	if (!ctx.ok) return ctx.response;
 
 	const { id } = await context.params;
 	const existing = await getObligationById(id);
-	if (!existing || existing.orgId !== org.orgId) {
+	if (!existing || existing.orgId !== ctx.orgId) {
 		return NextResponse.json(
 			{ error: "Obligation not found" },
 			{ status: 404 },
