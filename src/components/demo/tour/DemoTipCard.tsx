@@ -104,6 +104,8 @@ export function DemoTipCard({
 						fill
 						className="object-cover"
 						sizes="340px"
+						// Tip card sits above the fold when shown — avoid lazy LCP warnings.
+						priority
 					/>
 				</div>
 			) : null}

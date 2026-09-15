@@ -46,6 +46,7 @@ export default function Logo() {
 						width={52}
 						height={52}
 						className="h-auto w-[52px]"
+						style={{ height: "auto" }}
 						priority
 						sizes="52px"
 					/>
