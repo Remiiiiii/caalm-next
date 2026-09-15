@@ -596,8 +596,8 @@ export const ROADMAP_CATALOG: RoadmapCatalogSection[] = [
 		sectionNumber: 13,
 		title: "Data Portability & Regulatory Readiness",
 		sourceRef: "GDPR/CCPA; security questionnaire",
-		// #77 is 13.1 tenant export. Do not link closed #42 (audit readiness V1 — wrong topic).
-		linkedPrNumbers: [77],
+		// #77 = 13.1 export. #79 = 13.2 deletion. Do not link closed #42.
+		linkedPrNumbers: [77, 79],
 		tasks: [
 			t(
 				"13.1",
@@ -612,6 +612,8 @@ export const ROADMAP_CATALOG: RoadmapCatalogSection[] = [
 				"Tenant deletion workflow",
 				"Confirmation, grace period, audit trail.",
 				["Data unreachable post-grace; deletion audit persists"],
+				undefined,
+				79,
 			),
 			t(
 				"13.3",
