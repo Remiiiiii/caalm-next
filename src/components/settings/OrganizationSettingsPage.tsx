@@ -10,6 +10,7 @@ import { ApprovalWorkflowTemplatesManager } from "@/components/settings/Approval
 import { OrganizationLogoUploader } from "@/components/settings/OrganizationLogoUploader";
 import { OrgStructureManager } from "@/components/settings/OrgStructureManager";
 import { TenantDataExportCard } from "@/components/settings/TenantDataExportCard";
+import { TenantDeletionCard } from "@/components/settings/TenantDeletionCard";
 import { TimezoneSelect } from "@/components/settings/TimezoneSelect";
 import { Button } from "@/components/ui/button";
 import { CardContent, Card as GlassCard } from "@/components/ui/card";
@@ -727,8 +728,9 @@ export default function OrganizationSettingsPage() {
 					/>
 				</TabsContent>
 
-				<TabsContent value="data-portability" className="mt-4">
+				<TabsContent value="data-portability" className="mt-4 space-y-6">
 					<TenantDataExportCard orgId={org.$id} canEdit={canEdit} />
+					<TenantDeletionCard orgId={org.$id} canEdit={canEdit} />
 				</TabsContent>
 			</Tabs>
 		</div>
