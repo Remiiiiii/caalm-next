@@ -192,7 +192,8 @@ export async function evaluateSectionMergeBlock(
 	options?: { triggeringPr?: { prNumber: number; mergeCommitSha: string } },
 ): Promise<string | null> {
 	const numbers = getCatalogLinkedPrNumbers(sectionNumber);
-	if (!numbers.length) return "No catalog PRs linked to this section";
+	// Empty means backlog with no tracking PR yet — not a merge failure.
+	if (!numbers.length) return null;
 
 	const openNumbers = new Set(
 		(await listOpenPullRequests().catch(() => [])).map((pr) => pr.number),

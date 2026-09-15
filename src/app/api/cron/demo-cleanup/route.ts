@@ -9,31 +9,12 @@ import { Query } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { getDemoOrgTtlDays, isDemoMode } from "@/lib/config/demo-mode";
+import {
+	getOrgExportCatalog,
+	type OrgExportOrgField,
+} from "@/lib/portability/org-export-catalog";
 
 const DEMO_AUTH_EMAIL_SUFFIX = "@caalm.demo";
-
-const ORG_SCOPED_TABLES = [
-	appwriteConfig.contractsCollectionId,
-	appwriteConfig.licensesCollectionId,
-	appwriteConfig.calendarEventsCollectionId,
-	appwriteConfig.calendarApprovalRequestsCollectionId,
-	appwriteConfig.newsArticlesCollectionId,
-	appwriteConfig.notesCollectionId,
-	appwriteConfig.notificationsCollectionId,
-	appwriteConfig.recentActivityCollectionId,
-	appwriteConfig.filesCollectionId,
-	appwriteConfig.reportsCollectionId,
-	appwriteConfig.auditLogsCollectionId,
-	appwriteConfig.tasksCollectionId,
-	appwriteConfig.ticketsCollectionId,
-	appwriteConfig.ticketEventsCollectionId,
-	appwriteConfig.contractDraftsCollectionId,
-	appwriteConfig.licenseDraftsCollectionId,
-	appwriteConfig.invitationsCollectionId,
-	appwriteConfig.calendarResourcesCollectionId,
-	appwriteConfig.resourceBookingsCollectionId,
-	appwriteConfig.contractExtensionsCollectionId,
-].filter(Boolean) as string[];
 
 function parseSettings(raw: unknown): Record<string, unknown> {
 	if (typeof raw === "string") {
@@ -52,6 +33,7 @@ function parseSettings(raw: unknown): Record<string, unknown> {
 async function deleteRowsByOrg(
 	tableId: string,
 	orgId: string,
+	orgField: OrgExportOrgField = "orgId",
 ): Promise<number> {
 	const { tablesDB } = await createAdminClient();
 	let deleted = 0;
@@ -61,7 +43,7 @@ async function deleteRowsByOrg(
 		const batch = await tablesDB.listRows({
 			databaseId: appwriteConfig.databaseId || "default-db",
 			tableId,
-			queries: [Query.equal("orgId", orgId), Query.limit(50)],
+			queries: [Query.equal(orgField, orgId), Query.limit(50)],
 		});
 
 		if (batch.rows.length === 0) {
@@ -198,49 +180,13 @@ export async function GET(request: NextRequest) {
 			const orgId = org.$id;
 
 			try {
-				for (const tableId of ORG_SCOPED_TABLES) {
-					await deleteRowsByOrg(tableId, orgId);
-				}
-
-				// Shared calendars use organizationId (not orgId)
-				if (appwriteConfig.sharedCalendarsCollectionId) {
+				for (const entry of getOrgExportCatalog()) {
 					try {
-						let hasMore = true;
-						while (hasMore) {
-							const batch = await tablesDB.listRows({
-								databaseId: appwriteConfig.databaseId || "default-db",
-								tableId: appwriteConfig.sharedCalendarsCollectionId,
-								queries: [
-									Query.equal("organizationId", orgId),
-									Query.limit(50),
-								],
-							});
-							if (batch.rows.length === 0) {
-								hasMore = false;
-								break;
-							}
-							for (const row of batch.rows) {
-								await tablesDB.deleteRow({
-									databaseId: appwriteConfig.databaseId || "default-db",
-									tableId: appwriteConfig.sharedCalendarsCollectionId,
-									rowId: row.$id,
-								});
-							}
-							if (batch.rows.length < 50) hasMore = false;
-						}
+						await deleteRowsByOrg(entry.tableId, orgId, entry.orgField);
 					} catch {
 						// table may be empty / missing columns
 					}
 				}
-
-				await deleteRowsByOrg("user_organizations", orgId);
-				await deleteRowsByOrg("user_roles", orgId);
-
-				// Demo team users (fictional) share orgId on users table
-				await deleteRowsByOrg(
-					appwriteConfig.usersCollectionId || "users",
-					orgId,
-				);
 
 				await tablesDB.deleteRow({
 					databaseId: appwriteConfig.databaseId || "default-db",

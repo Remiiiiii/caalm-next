@@ -91,6 +91,12 @@ describe("roadmap catalog PR links", () => {
 		expect(getCatalogLinkedPrNumbers(15)).toEqual([65]);
 	});
 
+	it("leaves section 13 unlinked until a real portability PR exists", () => {
+		expect(getCatalogLinkedPrNumbers(13)).toEqual([]);
+		expect(getCatalogLinkedPrNumber(13)).toBeUndefined();
+		expect(getSectionNumberForPr(42)).toBeUndefined();
+	});
+
 	it("binds section 5 per-task PRs 67-71", () => {
 		expect(getCatalogTaskLinkedPrNumber("5.1")).toBe(67);
 		expect(getCatalogTaskLinkedPrNumber("5.2")).toBe(68);
