@@ -91,6 +91,15 @@ describe("roadmap catalog PR links", () => {
 		expect(getCatalogLinkedPrNumbers(15)).toEqual([65]);
 	});
 
+	it("maps section 13.1 tenant export to catalog PR 77", () => {
+		expect(getCatalogLinkedPrNumbers(13)).toEqual([77]);
+		expect(getCatalogLinkedPrNumber(13)).toBe(77);
+		expect(getCatalogTaskLinkedPrNumber("13.1")).toBe(77);
+		expect(getSectionNumberForPr(77)).toBe(13);
+		expect(getSectionNumberForPr(42)).toBeUndefined();
+		expect(getUnlinkedCatalogTaskCodes(13)).toEqual(["13.2", "13.3"]);
+	});
+
 	it("binds section 5 per-task PRs 67-71", () => {
 		expect(getCatalogTaskLinkedPrNumber("5.1")).toBe(67);
 		expect(getCatalogTaskLinkedPrNumber("5.2")).toBe(68);

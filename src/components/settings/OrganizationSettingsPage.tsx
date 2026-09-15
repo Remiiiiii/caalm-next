@@ -9,6 +9,7 @@ import { ApprovalSlaPoliciesManager } from "@/components/settings/ApprovalSlaPol
 import { ApprovalWorkflowTemplatesManager } from "@/components/settings/ApprovalWorkflowTemplatesManager";
 import { OrganizationLogoUploader } from "@/components/settings/OrganizationLogoUploader";
 import { OrgStructureManager } from "@/components/settings/OrgStructureManager";
+import { TenantDataExportCard } from "@/components/settings/TenantDataExportCard";
 import { TimezoneSelect } from "@/components/settings/TimezoneSelect";
 import { Button } from "@/components/ui/button";
 import { CardContent, Card as GlassCard } from "@/components/ui/card";
@@ -341,6 +342,9 @@ export default function OrganizationSettingsPage() {
 					</TabsTrigger>
 					<TabsTrigger value="approval-delegation" className="cursor-pointer">
 						Delegation
+					</TabsTrigger>
+					<TabsTrigger value="data-portability" className="cursor-pointer">
+						Data portability
 					</TabsTrigger>
 				</TabsList>
 
@@ -721,6 +725,10 @@ export default function OrganizationSettingsPage() {
 						canEdit={canEdit}
 						maxDepartments={maxDepartments}
 					/>
+				</TabsContent>
+
+				<TabsContent value="data-portability" className="mt-4">
+					<TenantDataExportCard orgId={org.$id} canEdit={canEdit} />
 				</TabsContent>
 			</Tabs>
 		</div>

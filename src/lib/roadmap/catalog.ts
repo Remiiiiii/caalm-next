@@ -596,11 +596,17 @@ export const ROADMAP_CATALOG: RoadmapCatalogSection[] = [
 		sectionNumber: 13,
 		title: "Data Portability & Regulatory Readiness",
 		sourceRef: "GDPR/CCPA; security questionnaire",
-		linkedPrNumbers: [42],
+		// #77 is 13.1 tenant export. Do not link closed #42 (audit readiness V1 — wrong topic).
+		linkedPrNumbers: [77],
 		tasks: [
-			t("13.1", "Tenant data export", "Full org data, machine-readable.", [
-				"Export row counts match source across org-scoped collections",
-			]),
+			t(
+				"13.1",
+				"Tenant data export",
+				"Full org data, machine-readable.",
+				["Export row counts match source across org-scoped collections"],
+				undefined,
+				77,
+			),
 			t(
 				"13.2",
 				"Tenant deletion workflow",
