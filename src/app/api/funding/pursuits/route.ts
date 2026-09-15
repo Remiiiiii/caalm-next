@@ -1,41 +1,25 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
-import { getCurrentUser } from "@/lib/actions/user.actions";
 import {
 	createPursuit,
 	isPursuitSource,
 	isPursuitStage,
 	listPursuits,
 } from "@/lib/funding";
-import { requirePermission } from "@/lib/rbac/middleware";
-import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
+import { requireFundingOrgContext } from "@/lib/funding/request-context";
 
 export async function GET(request: NextRequest) {
-	const denied = await requirePermission(request, {
-		permission: PERMISSIONS.FUNDING.VIEW,
-	});
-	if (denied) return denied;
-
-	const user = await getCurrentUser();
-	if (!user) {
-		return NextResponse.json(
-			{ error: "Authentication required" },
-			{ status: 401 },
-		);
-	}
-	const org = await getUserDefaultOrganization(user.$id);
-	if (!org?.orgId) {
-		return NextResponse.json(
-			{ error: "Organization not found" },
-			{ status: 404 },
-		);
-	}
+	const ctx = await requireFundingOrgContext(
+		request,
+		PERMISSIONS.FUNDING.VIEW,
+	);
+	if (!ctx.ok) return ctx.response;
 
 	const stageParam = request.nextUrl.searchParams.get("stage");
 	const stage = isPursuitStage(stageParam) ? stageParam : undefined;
 
 	try {
-		const items = await listPursuits({ orgId: org.orgId, stage });
+		const items = await listPursuits({ orgId: ctx.orgId, stage });
 		return NextResponse.json({ items });
 	} catch (error) {
 		console.error("[funding/pursuits GET]", error);
@@ -47,25 +31,11 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-	const denied = await requirePermission(request, {
-		permission: PERMISSIONS.FUNDING.MANAGE,
-	});
-	if (denied) return denied;
-
-	const user = await getCurrentUser();
-	if (!user) {
-		return NextResponse.json(
-			{ error: "Authentication required" },
-			{ status: 401 },
-		);
-	}
-	const org = await getUserDefaultOrganization(user.$id);
-	if (!org?.orgId) {
-		return NextResponse.json(
-			{ error: "Organization not found" },
-			{ status: 404 },
-		);
-	}
+	const ctx = await requireFundingOrgContext(
+		request,
+		PERMISSIONS.FUNDING.MANAGE,
+	);
+	if (!ctx.ok) return ctx.response;
 
 	try {
 		const body = await request.json();
@@ -82,7 +52,7 @@ export async function POST(request: NextRequest) {
 		}
 
 		const pursuit = await createPursuit({
-			orgId: org.orgId,
+			orgId: ctx.orgId,
 			title,
 			description: body.description ? String(body.description) : undefined,
 			amount,
@@ -94,14 +64,14 @@ export async function POST(request: NextRequest) {
 			responseDeadline: body.responseDeadline
 				? String(body.responseDeadline)
 				: undefined,
-			ownerUserId: body.ownerUserId ? String(body.ownerUserId) : user.$id,
+			ownerUserId: body.ownerUserId ? String(body.ownerUserId) : ctx.user.$id,
 			ownerName: body.ownerName
 				? String(body.ownerName)
-				: user.fullName || user.name,
+				: ctx.user.fullName || ctx.user.name,
 			department: body.department ? String(body.department) : undefined,
 			notes: body.notes ? String(body.notes) : undefined,
-			createdByUserId: user.$id,
-			createdByName: user.fullName || user.name,
+			createdByUserId: ctx.user.$id,
+			createdByName: ctx.user.fullName || ctx.user.name,
 		});
 
 		return NextResponse.json({ pursuit }, { status: 201 });
