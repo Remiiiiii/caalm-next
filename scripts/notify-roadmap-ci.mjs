@@ -105,7 +105,23 @@ function sleep(ms) {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/** True when the roadmap API has no task/section for this PR (expected for non-CLM PRs). */
+function isUnlinkedRoadmapResponse(status, jsonOrRaw) {
+	if (status !== 404) return false;
+	const err = String(
+		typeof jsonOrRaw === "object" && jsonOrRaw != null
+			? (jsonOrRaw.error ?? jsonOrRaw.raw ?? JSON.stringify(jsonOrRaw))
+			: jsonOrRaw,
+	);
+	return (
+		/Unknown prNumber\/taskCode/i.test(err) ||
+		/not linked to a roadmap/i.test(err)
+	);
+}
+
 function isRetryableWebhookFailure(status, rawBody) {
+	// Semantic 404s (PR not on the roadmap) will never succeed on retry.
+	if (isUnlinkedRoadmapResponse(status, rawBody)) return false;
 	if (RETRYABLE_STATUSES.has(status)) return true;
 	return String(rawBody).includes("DEPLOYMENT_NOT_FOUND");
 }
@@ -335,12 +351,24 @@ async function notifyRoadmapForPr({ prNumber, commitSha, summary }) {
 		summary: summary || `Playwright E2E passed on ${commitSha.slice(0, 7)}`,
 	});
 	console.log("[roadmap] ci-test-result:", ci.status, JSON.stringify(ci.json));
+	if (isUnlinkedRoadmapResponse(ci.status, ci.json)) {
+		console.log(
+			`[roadmap] PR #${prNumber} is not linked to a roadmap task — skipping (ok for non-CLM PRs)`,
+		);
+		return;
+	}
 	await sleep(INTER_WEBHOOK_DELAY_MS);
 	const merge = await notifyPrMerged({
 		prNumber,
 		mergeCommitSha: commitSha,
 	});
 	console.log("[roadmap] pr-merged:", merge.status, JSON.stringify(merge.json));
+	if (isUnlinkedRoadmapResponse(merge.status, merge.json)) {
+		console.log(
+			`[roadmap] PR #${prNumber} is not linked to a roadmap section — skipping merge notify`,
+		);
+		return;
+	}
 	if (!ci.ok || !merge.ok) process.exit(1);
 }
 
@@ -432,6 +460,12 @@ async function main() {
 			ci.status,
 			JSON.stringify(ci.json),
 		);
+		if (isUnlinkedRoadmapResponse(ci.status, ci.json)) {
+			console.log(
+				`[roadmap] PR #${prFromEvent} is not linked to a roadmap task — skipping (ok for non-CLM PRs)`,
+			);
+			return;
+		}
 		if (!ci.ok) process.exit(1);
 		return;
 	}
