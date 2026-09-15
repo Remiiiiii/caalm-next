@@ -43,6 +43,7 @@ import {
 	type ObligationStatus,
 	type RetentionStream,
 } from "@/lib/funding/types";
+import { parseAllowedHttpUrl } from "@/lib/funding/safe-link-url";
 import { cn } from "@/lib/utils";
 
 /** Statuses a user can pick in the pill dropdown — Done is Mark done only. */
@@ -396,6 +397,7 @@ function ObligationRow({
 }) {
 	const isDone = obligation.status === "done";
 	const dueLine = formatObligationDueLine(obligation.dueDate);
+	const safeLinkHref = parseAllowedHttpUrl(obligation.linkUrl);
 
 	return (
 		<li className="rounded-lg border border-slate-200 bg-white p-4">
@@ -472,11 +474,11 @@ function ObligationRow({
 			</div>
 
 			<div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-				{obligation.linkUrl ? (
+				{safeLinkHref ? (
 					<a
-						href={obligation.linkUrl}
+						href={safeLinkHref}
 						target="_blank"
-						rel="noreferrer"
+						rel="noopener noreferrer"
 						className="inline-flex items-center gap-1.5 text-sm text-[#0f5384] hover:underline"
 					>
 						<ExternalLink className="h-3.5 w-3.5" aria-hidden />
