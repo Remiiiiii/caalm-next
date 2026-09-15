@@ -342,10 +342,15 @@ export const getProfilePictureUrl = (
  * Uploaded photos are stored as Appwrite file IDs (not full URLs). Returns null
  * for empty values and the stock placeholder so callers can fall back to initials.
  */
-export const resolveAvatarDisplayUrl = (user: {
-	avatar?: string | null;
-	profileImageId?: string | null;
-} | null | undefined): string | null => {
+export const resolveAvatarDisplayUrl = (
+	user:
+		| {
+				avatar?: string | null;
+				profileImageId?: string | null;
+		  }
+		| null
+		| undefined,
+): string | null => {
 	if (!user) return null;
 
 	const avatarValue = user.avatar?.trim() || "";

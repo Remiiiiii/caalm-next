@@ -9,9 +9,9 @@ import { ApprovalSlaPoliciesManager } from "@/components/settings/ApprovalSlaPol
 import { ApprovalWorkflowTemplatesManager } from "@/components/settings/ApprovalWorkflowTemplatesManager";
 import { OrganizationLogoUploader } from "@/components/settings/OrganizationLogoUploader";
 import { OrgStructureManager } from "@/components/settings/OrgStructureManager";
+import { SecurityEvidencePackCard } from "@/components/settings/SecurityEvidencePackCard";
 import { TenantDataExportCard } from "@/components/settings/TenantDataExportCard";
 import { TenantDeletionCard } from "@/components/settings/TenantDeletionCard";
-import { SecurityEvidencePackCard } from "@/components/settings/SecurityEvidencePackCard";
 import { TimezoneSelect } from "@/components/settings/TimezoneSelect";
 import { Button } from "@/components/ui/button";
 import { CardContent, Card as GlassCard } from "@/components/ui/card";

@@ -1,7 +1,7 @@
 "use client";
 
 import { FileText, History, Loader2 } from "lucide-react";
-import { useState, type CSSProperties } from "react";
+import { type CSSProperties, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import type { ApprovalHistoryEvent } from "@/lib/approvals/approvalHistory";
@@ -103,7 +103,7 @@ export default function ApprovalWorkflowActivity({
 			const link = document.createElement("a");
 			link.href = url;
 			const safeName = (workflow.contractName || entityType)
-				.replace(/[^\w\-]+/g, "-")
+				.replace(/[^\w-]+/g, "-")
 				.replace(/-+/g, "-");
 			link.download = `${safeName}-approval-audit-report.pdf`;
 			link.click();
@@ -195,7 +195,9 @@ export default function ApprovalWorkflowActivity({
 										</p>
 									) : null}
 									{event.detail ? (
-										<p className="mt-0.5 text-xs text-slate-600">{event.detail}</p>
+										<p className="mt-0.5 text-xs text-slate-600">
+											{event.detail}
+										</p>
 									) : null}
 									<p className="text-xs text-slate-500">
 										{new Date(event.at).toLocaleString()} · {event.type}

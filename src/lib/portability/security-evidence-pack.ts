@@ -162,7 +162,10 @@ export function evidencePackCrossReferencesCompletedTasks(
 	);
 }
 
-export function evidencePackFilename(orgId: string, generatedAt: string): string {
+export function evidencePackFilename(
+	orgId: string,
+	generatedAt: string,
+): string {
 	const stamp = generatedAt.replace(/[:.]/g, "-");
 	return `caalm-security-evidence-${orgId}-${stamp}.json`;
 }

@@ -34,9 +34,7 @@ export interface ViewerCapabilityFlags {
 	decisionBlockReason?: string;
 }
 
-export function emptyViewerFlags(
-	reason?: string,
-): ViewerCapabilityFlags {
+export function emptyViewerFlags(reason?: string): ViewerCapabilityFlags {
 	return {
 		canDecideAsAssignee: false,
 		canClaimStep: false,

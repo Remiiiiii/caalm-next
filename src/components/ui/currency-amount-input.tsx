@@ -36,10 +36,7 @@ export function CurrencyAmountInput({
 				}}
 				// glass-form-control sets padding-left in CSS; this attr bumps it to 3rem
 				data-with-leading-icon="true"
-				className={cn(
-					"border-[0.25px] border-slate-300 bg-white",
-					className,
-				)}
+				className={cn("border-[0.25px] border-slate-300 bg-white", className)}
 			/>
 		</div>
 	);

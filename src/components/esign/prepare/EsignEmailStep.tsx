@@ -31,7 +31,9 @@ export function EsignEmailStep({
 				/>
 			</div>
 			<div className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-600">
-				<p className="mb-2">You can use the following variables in your message:</p>
+				<p className="mb-2">
+					You can use the following variables in your message:
+				</p>
 				<p>
 					<code className="rounded bg-slate-100 px-1">{"{signer.name}"}</code>{" "}
 					signer full name

@@ -41,7 +41,10 @@ export type TenantExportTablesDb = {
 
 const DEFAULT_PAGE_SIZE = 100;
 
-export function tenantExportFilename(orgId: string, exportedAt: string): string {
+export function tenantExportFilename(
+	orgId: string,
+	exportedAt: string,
+): string {
 	const stamp = exportedAt.replace(/[:.]/g, "-");
 	return `caalm-tenant-export-${orgId}-${stamp}.json`;
 }
@@ -75,10 +78,7 @@ export async function listAllOrgRows(
 	let cursor: string | undefined;
 
 	for (;;) {
-		const queries = [
-			Query.equal(orgField, orgId),
-			Query.limit(pageSize),
-		];
+		const queries = [Query.equal(orgField, orgId), Query.limit(pageSize)];
 		if (cursor) queries.push(Query.cursorAfter(cursor));
 
 		const batch = await tablesDB.listRows({

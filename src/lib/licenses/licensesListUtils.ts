@@ -148,8 +148,8 @@ export function matchesStatusTab(
 	if (tab === "pending") {
 		return (
 			license.status === "pending-review" ||
-				license.status === "pending-signature" ||
-				license.status === "suspended"
+			license.status === "pending-signature" ||
+			license.status === "suspended"
 		);
 	}
 	if (tab === "expiring") return isLicenseExpiringWithinDays(license, 90);

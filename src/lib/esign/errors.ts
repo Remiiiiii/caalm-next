@@ -62,7 +62,6 @@ export function explanationForEsignCode(code: EsignErrorCode | null): string {
 			return "This signing link is no longer valid. The envelope was voided or declined.";
 		case "ESIGN-403":
 			return "This document was already signed with this link.";
-		case "ESIGN-404":
 		default:
 			return "This signing link is invalid or was tampered with. Check the address or ask the sender for a new invite.";
 	}

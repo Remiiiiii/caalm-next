@@ -45,7 +45,10 @@ export async function GET() {
 		}
 
 		return NextResponse.json(
-			{ valid: false, reason: session?.value ? "invalid_session" : "no_session" },
+			{
+				valid: false,
+				reason: session?.value ? "invalid_session" : "no_session",
+			},
 			{ status: 401 },
 		);
 	} catch (error) {

@@ -15,13 +15,13 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { agingLabel } from "@/components/approvals/ApprovalsAttentionStrip";
 import { useApprovalsView } from "@/components/approvals/ApprovalsViewContext";
-import ApprovalWorkflowActions from "@/components/contracts/approval/ApprovalWorkflowActions";
 import ApprovalWaitingBanner from "@/components/contracts/approval/ApprovalWaitingBanner";
+import ApprovalWorkflowActions from "@/components/contracts/approval/ApprovalWorkflowActions";
 import ContractApprovalFlowCanvas from "@/components/contracts/approval/ContractApprovalFlowCanvas";
 import ContractApprovalFlowDialog from "@/components/contracts/approval/ContractApprovalFlowDialog";
-import LicenseApprovalFlowDialog from "@/components/licenses/LicenseApprovalFlowDialog";
 import DocumentViewer from "@/components/DocumentViewer";
 import FormattedDateTime from "@/components/FormattedDateTime";
+import LicenseApprovalFlowDialog from "@/components/licenses/LicenseApprovalFlowDialog";
 import { PlaybookDeviationsPanel } from "@/components/playbook/PlaybookDeviationsPanel";
 import EntityPreviewSheetShell from "@/components/preview/EntityPreviewSheetShell";
 import {
@@ -108,9 +108,7 @@ export default function ApprovalDecideSheet({
 			? resubmitContractWorkflow
 			: resubmitLicenseWorkflow;
 	const claimWorkflow =
-		item?.entity === "contract"
-			? claimContractWorkflow
-			: claimLicenseWorkflow;
+		item?.entity === "contract" ? claimContractWorkflow : claimLicenseWorkflow;
 	const workflowLoading =
 		item?.entity === "contract"
 			? contractWorkflowLoading
@@ -233,10 +231,8 @@ export default function ApprovalDecideSheet({
 		item.status === "pending-review" || item.status === "action-required";
 
 	const canActOnWorkflow =
-		!!(
-			workflow?.canDecideAsAssignee ||
-			workflow?.canAdminOverrideActiveStep
-		) && isPending;
+		!!(workflow?.canDecideAsAssignee || workflow?.canAdminOverrideActiveStep) &&
+		isPending;
 
 	return (
 		<>

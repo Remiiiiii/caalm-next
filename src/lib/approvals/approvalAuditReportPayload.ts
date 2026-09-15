@@ -1,15 +1,13 @@
+import type { ApprovalHistoryEvent } from "@/lib/approvals/approvalHistory";
 import { historyFromNotifications } from "@/lib/approvals/approvalHistory";
-import type {
-	ApprovalHistoryEvent,
-} from "@/lib/approvals/approvalHistory";
-import type {
-	ApprovalStepKind,
-	ApprovalWorkflowViewerPayload,
-} from "@/lib/approvals/contractApprovalWorkflow.types";
 import {
 	buildReassignCandidates,
 	resolveParticipant,
 } from "@/lib/approvals/ContractApprovalWorkflowService";
+import type {
+	ApprovalStepKind,
+	ApprovalWorkflowViewerPayload,
+} from "@/lib/approvals/contractApprovalWorkflow.types";
 
 export type ApprovalAuditEntityType = "contract" | "license";
 export type ApprovalAuditOutcome = "ok" | "info" | "warn" | "fail";
@@ -122,7 +120,8 @@ function titleCaseStatus(status: string): string {
 }
 
 function formatMoney(amount?: number): string | undefined {
-	if (amount === undefined || Number.isNaN(amount) || amount <= 0) return undefined;
+	if (amount === undefined || Number.isNaN(amount) || amount <= 0)
+		return undefined;
 	return new Intl.NumberFormat("en-US", {
 		style: "currency",
 		currency: "USD",
@@ -351,8 +350,7 @@ function stepSlaPhrase(
 	const step = workflow.steps.find((item) => item.id === stepId);
 	if (!step?.startedAt) return "";
 	const endIso = step.completedAt || atIso;
-	const ms =
-		new Date(endIso).getTime() - new Date(step.startedAt).getTime();
+	const ms = new Date(endIso).getTime() - new Date(step.startedAt).getTime();
 	if (!(ms > 0)) return "";
 	return `; SLA ${formatCompactDuration(ms)}`;
 }
@@ -410,13 +408,9 @@ function buildAuditDetail(
 		}
 		case "reassigned":
 			if (storedDetail && !storedLooksMachine) {
-				return event.reason
-					? `${storedDetail}; ${event.reason}`
-					: storedDetail;
+				return event.reason ? `${storedDetail}; ${event.reason}` : storedDetail;
 			}
-			return event.reason
-				? `Reassigned; ${event.reason}`
-				: "Step reassigned";
+			return event.reason ? `Reassigned; ${event.reason}` : "Step reassigned";
 		case "executive_approved":
 			if (event.reason) return event.reason;
 			if (step?.notes?.trim()) return step.notes.trim();
@@ -470,10 +464,7 @@ function joinNames(names: string[]): string {
 	return unique.length > 0 ? unique.join(", ") : "—";
 }
 
-function formatEligibleList(
-	names: string[],
-	roleLabel: string,
-): string {
+function formatEligibleList(names: string[], roleLabel: string): string {
 	if (names.length === 0) return roleLabel || "—";
 	return `${names.join(", ")} (${roleLabel})`;
 }
@@ -520,8 +511,8 @@ async function buildStages(
 				if (candidates.length > 0) {
 					const role =
 						candidates[0]?.roleLabel ||
-						(def.kinds.some((k) =>
-							k === "executive_approval" || k === "awaiting_executive",
+						(def.kinds.some(
+							(k) => k === "executive_approval" || k === "awaiting_executive",
 						)
 							? "Super/Org Admin"
 							: def.role);
@@ -742,9 +733,7 @@ function buildWorkflowDescription(
 	if (allComplete && !hadReject && !hadChanges) {
 		return `${count === 4 ? "Four" : String(count)}-stage sequential approval chain. All stages completed with an Approve decision; no rejections or change requests were recorded.`;
 	}
-	const parts: string[] = [
-		`${count}-stage sequential approval chain.`,
-	];
+	const parts: string[] = [`${count}-stage sequential approval chain.`];
 	if (hadReject) parts.push("At least one rejection was recorded.");
 	if (hadChanges) parts.push("Change requests were recorded.");
 	if (!allComplete) parts.push("Not all stages are complete.");
@@ -778,7 +767,10 @@ export async function buildApprovalAuditReportPayload(
 		generatedAt;
 	const cycleMs =
 		submittedAt && lastAt
-			? Math.max(0, new Date(lastAt).getTime() - new Date(submittedAt).getTime())
+			? Math.max(
+					0,
+					new Date(lastAt).getTime() - new Date(submittedAt).getTime(),
+				)
 			: 0;
 	const bizDays =
 		submittedAt && lastAt ? businessDaysBetween(submittedAt, lastAt) : 0;
@@ -835,9 +827,7 @@ export async function buildApprovalAuditReportPayload(
 
 	const timeline: ApprovalAuditTimelineEvent[] = history.map((event) => ({
 		at: formatWhenShort(event.at) || event.at,
-		action: event.reason
-			? `${event.label} — ${event.reason}`
-			: event.label,
+		action: event.reason ? `${event.label} — ${event.reason}` : event.label,
 		actor: event.actorUserIds[0]
 			? personName(workflow, event.actorUserIds[0], directory)
 			: "System",
@@ -1005,7 +995,7 @@ export function reportFileName(
 	entityType: ApprovalAuditEntityType,
 ): string {
 	const safe = (workflow.contractName || entityType)
-		.replace(/[^\w\-]+/g, "-")
+		.replace(/[^\w-]+/g, "-")
 		.replace(/-+/g, "-")
 		.replace(/^-|-$/g, "");
 	return `${safe || entityType}-approval-audit-report.pdf`;

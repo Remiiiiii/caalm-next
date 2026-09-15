@@ -44,7 +44,9 @@ export function EsignRejectConfirmDialog({
 						{title}
 					</div>
 					<p className="text-sm text-slate-600">
-						<strong className="font-medium text-slate-700">Reject Document</strong>{" "}
+						<strong className="font-medium text-slate-700">
+							Reject Document
+						</strong>{" "}
 						tells the sender you will not sign. The signing link stops working,
 						and the sender must start a new CAALM Execute package if they still
 						need a signature.

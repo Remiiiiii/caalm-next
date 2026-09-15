@@ -35,17 +35,20 @@ export async function sealSignedPdf(envelope: EsignEnvelope): Promise<string> {
 			if (!page) continue;
 			const { width, height } = page.getSize();
 			const x = (field.x / 100) * width;
-			const y = height - (field.y / 100) * height - (field.height / 100) * height;
+			const y =
+				height - (field.y / 100) * height - (field.height / 100) * height;
 			const w = (field.width / 100) * width;
 			const h = (field.height / 100) * height;
-			const recipient = envelope.recipients.find((r) => r.id === field.recipientId);
+			const recipient = envelope.recipients.find(
+				(r) => r.id === field.recipientId,
+			);
 
 			if (field.type === "signature" && recipient?.signatureDataUrl) {
 				const bytes = dataUrlToBytes(recipient.signatureDataUrl);
 				if (bytes) {
-					const image = await pdf.embedPng(bytes).catch(async () =>
-						pdf.embedJpg(bytes),
-					);
+					const image = await pdf
+						.embedPng(bytes)
+						.catch(async () => pdf.embedJpg(bytes));
 					page.drawImage(image, { x, y, width: w, height: h });
 					continue;
 				}
@@ -111,13 +114,16 @@ function appendCertificatePage(
 		font,
 		color: rgb(0.2, 0.25, 0.3),
 	});
-	page.drawText(`Completed: ${envelope.completedAt || new Date().toISOString()}`, {
-		x: 48,
-		y: height - 128,
-		size: 11,
-		font,
-		color: rgb(0.2, 0.25, 0.3),
-	});
+	page.drawText(
+		`Completed: ${envelope.completedAt || new Date().toISOString()}`,
+		{
+			x: 48,
+			y: height - 128,
+			size: 11,
+			font,
+			color: rgb(0.2, 0.25, 0.3),
+		},
+	);
 
 	envelope.recipients
 		.filter((r: EsignRecipient) => r.role === "signer")

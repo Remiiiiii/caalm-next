@@ -1,20 +1,16 @@
 import { type NextRequest, NextResponse } from "next/server";
-import type { ApprovalDecision } from "@/lib/approvals/contractApprovalWorkflow.types";
 import {
 	markApprovalActionTokenUsed,
 	resolveApprovalActionToken,
 } from "@/lib/approvals/approvalActionTokens";
 import { decide } from "@/lib/approvals/ContractApprovalWorkflowService";
+import type { ApprovalDecision } from "@/lib/approvals/contractApprovalWorkflow.types";
 import { decideLicense } from "@/lib/approvals/LicenseApprovalWorkflowService";
 import { createAdminClient } from "@/lib/appwrite";
-import { flattenTableRow } from "@/lib/appwrite/flatten-row";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { flattenTableRow } from "@/lib/appwrite/flatten-row";
 
-const VALID: ApprovalDecision[] = [
-	"approved",
-	"changes_requested",
-	"rejected",
-];
+const VALID: ApprovalDecision[] = ["approved", "changes_requested", "rejected"];
 
 async function loadEntitySummary(
 	entityType: "contract" | "license",
@@ -54,7 +50,10 @@ export async function GET(
 	const { token } = await context.params;
 	const parsed = await resolveApprovalActionToken(decodeURIComponent(token));
 	if (!parsed) {
-		return NextResponse.json({ error: "Invalid or expired link" }, { status: 404 });
+		return NextResponse.json(
+			{ error: "Invalid or expired link" },
+			{ status: 404 },
+		);
 	}
 	const summary = await loadEntitySummary(parsed.entityType, parsed.entityId);
 	return NextResponse.json({
@@ -73,7 +72,10 @@ export async function POST(
 	const { token } = await context.params;
 	const parsed = await resolveApprovalActionToken(decodeURIComponent(token));
 	if (!parsed) {
-		return NextResponse.json({ error: "Invalid or expired link" }, { status: 404 });
+		return NextResponse.json(
+			{ error: "Invalid or expired link" },
+			{ status: 404 },
+		);
 	}
 
 	const body = await request.json().catch(() => ({}));

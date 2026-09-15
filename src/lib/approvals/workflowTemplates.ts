@@ -11,6 +11,7 @@ export type BuildDerivedStepsInput = {
 	executiveApproverIds?: string[];
 	contractStatus?: string;
 };
+
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { writeRowWithSchemaDriftRecovery } from "@/lib/appwrite/schemaDriftRecovery";
@@ -132,7 +133,9 @@ function ruleMatches(
 		return Number(actual ?? 0) <= Number(rule.value);
 	}
 	if (rule.op === "in") {
-		const allowed = Array.isArray(rule.value) ? rule.value : [String(rule.value)];
+		const allowed = Array.isArray(rule.value)
+			? rule.value
+			: [String(rule.value)];
 		return allowed.map(String).includes(String(actual ?? ""));
 	}
 	return String(actual ?? "") === String(rule.value);
@@ -153,8 +156,7 @@ export function pickWorkflowTemplate(
 ): ApprovalWorkflowTemplate | null {
 	const active = templates.filter(
 		(t) =>
-			t.isActive &&
-			(t.entityType === entityType || t.entityType === "both"),
+			t.isActive && (t.entityType === entityType || t.entityType === "both"),
 	);
 	const matched = active.find(
 		(t) => t.rules.length > 0 && templateMatchesMetadata(t, meta),

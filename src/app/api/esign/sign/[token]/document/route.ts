@@ -1,9 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { loadEsignDocumentBuffer } from "@/lib/esign/document-bytes";
-import {
-	getEnvelope,
-	publicSigningView,
-} from "@/lib/esign/envelope-service";
+import { getEnvelope, publicSigningView } from "@/lib/esign/envelope-service";
 import { EsignLinkError } from "@/lib/esign/errors";
 import { parseSigningToken } from "@/lib/esign/token";
 

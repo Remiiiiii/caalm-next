@@ -75,7 +75,9 @@ export async function POST(
 		);
 	}
 
-	const recipient = envelope.recipients.find((r) => r.id === parsed.recipientId);
+	const recipient = envelope.recipients.find(
+		(r) => r.id === parsed.recipientId,
+	);
 	if (recipient?.status === "signed") {
 		return NextResponse.json(
 			{ error: "This document was already signed", code: "ESIGN-403" },

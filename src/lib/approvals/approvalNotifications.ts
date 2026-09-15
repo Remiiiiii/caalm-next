@@ -1,10 +1,10 @@
+import { Query } from "node-appwrite";
 import { issueApprovalActionToken } from "@/lib/approvals/approvalActionTokens";
 import { createAdminClient } from "@/lib/appwrite";
-import { flattenTableRow } from "@/lib/appwrite/flatten-row";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { flattenTableRow } from "@/lib/appwrite/flatten-row";
 import { isDemoMode } from "@/lib/config/demo-mode";
 import { triggerNotification } from "@/lib/utils/notificationTriggers";
-import { Query } from "node-appwrite";
 
 function uniqueIds(ids: Array<string | undefined | null>): string[] {
 	return [
@@ -126,10 +126,7 @@ export async function notifyApprovalAssignees(input: {
 							actionUrl,
 						});
 					} catch (emailError) {
-						console.warn(
-							`Approval email failed for ${userId}:`,
-							emailError,
-						);
+						console.warn(`Approval email failed for ${userId}:`, emailError);
 					}
 				}
 			}

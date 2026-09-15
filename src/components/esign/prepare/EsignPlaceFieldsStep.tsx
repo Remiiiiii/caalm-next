@@ -1,6 +1,14 @@
 "use client";
 
-import { Calendar, Check, ChevronDown, Mail, PenLine, Type, User } from "lucide-react";
+import {
+	Calendar,
+	Check,
+	ChevronDown,
+	Mail,
+	PenLine,
+	Type,
+	User,
+} from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { getSignerColorWay } from "@/lib/esign/signer-colors";
@@ -76,9 +84,7 @@ export function EsignPlaceFieldsStep({
 			// clientX/Y are 0 on some dragend events — ignore those.
 			if (event.clientX === 0 && event.clientY === 0) return;
 			setDragPreview((current) =>
-				current
-					? { ...current, x: event.clientX, y: event.clientY }
-					: current,
+				current ? { ...current, x: event.clientX, y: event.clientY } : current,
 			);
 		};
 		const end = () => {
@@ -242,7 +248,9 @@ export function EsignPlaceFieldsStep({
 						>
 							<Icon className="h-5 w-5 text-[#0f5384]" />
 							<div>
-								<p className="text-sm font-medium text-slate-700">{item.label}</p>
+								<p className="text-sm font-medium text-slate-700">
+									{item.label}
+								</p>
 								<p className="text-xs text-slate-500">{item.hint}</p>
 							</div>
 						</button>

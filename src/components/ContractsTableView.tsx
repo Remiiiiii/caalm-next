@@ -3,8 +3,8 @@
 import { Loader2 } from "lucide-react";
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ContractApprovalStatusCell } from "@/components/contracts/ContractApprovalStatusCell";
 import { useContractsView } from "@/components/ContractsViewContext";
+import { ContractApprovalStatusCell } from "@/components/contracts/ContractApprovalStatusCell";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
 	Table,
@@ -87,7 +87,10 @@ function stubUserFromLabel(label: string): AppUser {
 
 /** Stable id list so new array refs from RSC refresh don't re-fetch forever. */
 function assignedManagersKey(file: UIFileDoc): string {
-	if (Array.isArray(file.assignedManagers) && file.assignedManagers.length > 0) {
+	if (
+		Array.isArray(file.assignedManagers) &&
+		file.assignedManagers.length > 0
+	) {
 		return file.assignedManagers
 			.map((manager) => String(manager).trim())
 			.filter(Boolean)
@@ -253,7 +256,8 @@ export default function ContractsTableView({
 							fullName: ownerObj.fullName,
 							email: ownerObj.email || "",
 							avatar: ownerObj.avatar || "",
-							accountId: ownerObj.accountId || ownerObj.$id || ownerObj.fullName,
+							accountId:
+								ownerObj.accountId || ownerObj.$id || ownerObj.fullName,
 							role: "viewer" as const,
 							profileImageId: ownerObj.profileImageId ?? null,
 						};
@@ -652,10 +656,7 @@ export default function ContractsTableView({
 								onClick={(e) => e.stopPropagation()}
 								onMouseDown={(e) => e.stopPropagation()}
 							>
-								<ContractApprovalStatusCell
-									file={file}
-									onRefresh={onRefresh}
-								/>
+								<ContractApprovalStatusCell file={file} onRefresh={onRefresh} />
 							</TableCell>
 							<TableCell
 								className={cn(

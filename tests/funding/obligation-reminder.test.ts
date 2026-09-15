@@ -1,15 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+	type ObligationReminderSendInput,
+	processObligationReminders,
+	resolveObligationReminderRecipient,
+	shouldSendObligationReminderToday,
+} from "@/lib/funding/obligation-reminder.service";
+import {
 	buildObligationReminderMetadata,
 	obligationReminderSentKey,
 	parseObligationReminderMetadata,
 } from "@/lib/funding/obligation-reminder-notice";
-import {
-	processObligationReminders,
-	resolveObligationReminderRecipient,
-	shouldSendObligationReminderToday,
-	type ObligationReminderSendInput,
-} from "@/lib/funding/obligation-reminder.service";
 import type { ContractObligation } from "@/lib/funding/types";
 
 function isoOffset(days: number): string {

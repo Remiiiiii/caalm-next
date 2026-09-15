@@ -86,7 +86,9 @@ export function EsignSignedConfirmation({
 					</Button>
 				) : null}
 				{authState === "loading" ? (
-					<p className="w-full text-xs text-slate-400">Checking your CAALM session…</p>
+					<p className="w-full text-xs text-slate-400">
+						Checking your CAALM session…
+					</p>
 				) : null}
 			</div>
 			{authState === "guest" ? (

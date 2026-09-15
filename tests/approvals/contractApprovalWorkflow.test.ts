@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { historyFromNotifications } from "@/lib/approvals/approvalHistory";
 import { isAssigneeMatch } from "@/lib/approvals/assigneeIdentity";
 import {
 	applyReassignToCurrentStep,
@@ -8,25 +9,24 @@ import {
 	assigneeHintForKind,
 	buildDerivedSteps,
 	needsExecutiveAssignmentFlag,
+	pickExecutiveAssignees,
 	resetWorkflowForResubmit,
 	resolveStatusAfterApprove,
 	resolveViewerCurrentStep,
 	syncDepartmentAssigneesIfCurrent,
 	upgradeAwaitingExecutiveStep,
-	pickExecutiveAssignees,
 } from "@/lib/approvals/ContractApprovalWorkflowService";
-import { historyFromNotifications } from "@/lib/approvals/approvalHistory";
-import { computeViewerCapabilities } from "@/lib/approvals/viewerCapabilities";
-import { advanceWorkflowAfterApprove } from "@/lib/approvals/workflowAdvance";
-import {
-	pickWorkflowTemplate,
-	type ApprovalWorkflowTemplate,
-} from "@/lib/approvals/workflowTemplates";
 import type {
 	ApprovalWorkflowNotification,
 	ApprovalWorkflowState,
 	ApprovalWorkflowStep,
 } from "@/lib/approvals/contractApprovalWorkflow.types";
+import { computeViewerCapabilities } from "@/lib/approvals/viewerCapabilities";
+import { advanceWorkflowAfterApprove } from "@/lib/approvals/workflowAdvance";
+import {
+	type ApprovalWorkflowTemplate,
+	pickWorkflowTemplate,
+} from "@/lib/approvals/workflowTemplates";
 
 vi.mock("@/lib/config/demo-mode", () => ({
 	isDemoMode: () => false,
@@ -388,15 +388,15 @@ describe("pickExecutiveAssignees", () => {
 	});
 
 	it("falls back to the full pool when none of the saved assignees qualify", () => {
-		expect(
-			pickExecutiveAssignees(["victor", "remy"], ["jimmy"]),
-		).toEqual(["jimmy"]);
+		expect(pickExecutiveAssignees(["victor", "remy"], ["jimmy"])).toEqual([
+			"jimmy",
+		]);
 	});
 
 	it("preserves a valid subset without forcing every eligible person", () => {
-		expect(
-			pickExecutiveAssignees(["jimmy"], ["jimmy", "other-exec"]),
-		).toEqual(["jimmy"]);
+		expect(pickExecutiveAssignees(["jimmy"], ["jimmy", "other-exec"])).toEqual([
+			"jimmy",
+		]);
 	});
 });
 

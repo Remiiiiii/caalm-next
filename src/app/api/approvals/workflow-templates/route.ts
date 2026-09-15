@@ -1,10 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import {
+	type ApprovalTemplateRule,
+	type ApprovalTemplateStepSpec,
 	createWorkflowTemplate,
 	listWorkflowTemplates,
-	type ApprovalTemplateStepSpec,
-	type ApprovalTemplateRule,
 } from "@/lib/approvals/workflowTemplates";
 import { getOrgIdFromRequest, requirePermission } from "@/lib/rbac/middleware";
 

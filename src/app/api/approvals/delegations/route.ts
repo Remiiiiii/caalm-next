@@ -58,7 +58,8 @@ export async function POST(request: NextRequest) {
 		entityType: (body.entityType as "contract" | "license" | "both") || "both",
 		startsAt: String(body.startsAt || new Date().toISOString()),
 		endsAt: String(
-			body.endsAt || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+			body.endsAt ||
+				new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
 		),
 	});
 

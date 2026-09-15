@@ -1,15 +1,11 @@
-import {
-	createEnvelope,
-	getEnvelope,
-	sendEnvelope,
-} from "../envelope-service";
-import { handleNativeWebhook } from "../webhook";
+import { createEnvelope, getEnvelope, sendEnvelope } from "../envelope-service";
 import { signingPageUrl } from "../token";
 import type {
 	CreateEnvelopeInput,
 	EsignProvider,
 	WebhookResult,
 } from "../types";
+import { handleNativeWebhook } from "../webhook";
 
 export const nativeEsignProvider: EsignProvider = {
 	async createEnvelope(input: CreateEnvelopeInput) {
@@ -26,7 +22,9 @@ export const nativeEsignProvider: EsignProvider = {
 	},
 
 	async handleWebhook(payload: unknown): Promise<WebhookResult> {
-		return handleNativeWebhook(payload as Parameters<typeof handleNativeWebhook>[0]);
+		return handleNativeWebhook(
+			payload as Parameters<typeof handleNativeWebhook>[0],
+		);
 	},
 };
 

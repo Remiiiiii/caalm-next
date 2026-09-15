@@ -25,8 +25,9 @@ export async function POST(
 		const sent = await sendEnvelope(id);
 		return NextResponse.json({ envelope: sent });
 	} catch (error) {
-		const missing = (error as { missing?: Array<{ email: string; name: string }> })
-			.missing;
+		const missing = (
+			error as { missing?: Array<{ email: string; name: string }> }
+		).missing;
 		if (missing?.length) {
 			return NextResponse.json(
 				{

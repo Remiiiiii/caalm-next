@@ -33,7 +33,9 @@ type FieldsPayload = {
 	emailMessage?: string;
 };
 
-function parseFieldsPayload(value: unknown): FieldsPayload & { fields: EsignField[] } {
+function parseFieldsPayload(
+	value: unknown,
+): FieldsPayload & { fields: EsignField[] } {
 	const parsed = parseJson<EsignField[] | FieldsPayload>(value, []);
 	if (Array.isArray(parsed)) {
 		return { fields: parsed };
@@ -75,10 +77,13 @@ export function rowToEnvelope(row: EnvelopeRow): EsignEnvelope {
 	};
 }
 
-function envelopeToData(envelope: Partial<EsignEnvelope>): Record<string, unknown> {
+function envelopeToData(
+	envelope: Partial<EsignEnvelope>,
+): Record<string, unknown> {
 	const data: Record<string, unknown> = {};
 	if (envelope.orgId !== undefined) data.orgId = envelope.orgId;
-	if (envelope.resourceType !== undefined) data.resourceType = envelope.resourceType;
+	if (envelope.resourceType !== undefined)
+		data.resourceType = envelope.resourceType;
 	if (envelope.resourceId !== undefined) data.resourceId = envelope.resourceId;
 	if (envelope.status !== undefined) data.status = envelope.status;
 	if (envelope.provider !== undefined) data.provider = envelope.provider;
@@ -107,7 +112,8 @@ function envelopeToData(envelope: Partial<EsignEnvelope>): Record<string, unknow
 		data.processedEventIds = JSON.stringify(envelope.processedEventIds);
 	}
 	if (envelope.expiresAt !== undefined) data.expiresAt = envelope.expiresAt;
-	if (envelope.completedAt !== undefined) data.completedAt = envelope.completedAt;
+	if (envelope.completedAt !== undefined)
+		data.completedAt = envelope.completedAt;
 	if (envelope.createdBy !== undefined) data.createdBy = envelope.createdBy;
 	if (envelope.title !== undefined) data.title = envelope.title;
 	return data;
@@ -126,7 +132,9 @@ export async function createEnvelopeRow(
 	return rowToEnvelope(row);
 }
 
-export async function getEnvelopeById(envelopeId: string): Promise<EsignEnvelope | null> {
+export async function getEnvelopeById(
+	envelopeId: string,
+): Promise<EsignEnvelope | null> {
 	const { tablesDB } = await createAdminClient();
 	try {
 		const row = (await tablesDB.getRow({

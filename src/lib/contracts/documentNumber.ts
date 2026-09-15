@@ -26,6 +26,6 @@ export function generateDocumentNumber(prefix: "CTR" | "LIC"): string {
 }
 
 export function needsDocumentNumber(value?: string | null): boolean {
-	if (!value || !value.trim()) return true;
+	if (!value?.trim()) return true;
 	return isTemplateTokenValue(value);
 }

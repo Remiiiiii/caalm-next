@@ -206,7 +206,10 @@ export async function updateResourceSignatureState(input: {
 	}
 
 	// Contracts: also mirror detail fields onto enterprise metadata (columns exist there).
-	if (input.resourceType === "contract" && Object.keys(signatureFields).length) {
+	if (
+		input.resourceType === "contract" &&
+		Object.keys(signatureFields).length
+	) {
 		let orgId: string | undefined;
 		try {
 			const row = (await tablesDB.getRow({

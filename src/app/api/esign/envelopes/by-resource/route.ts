@@ -17,7 +17,10 @@ export async function GET(request: NextRequest) {
 		resourceTypeParam === "license" ? "license" : "contract";
 
 	if (!resourceId) {
-		return NextResponse.json({ error: "resourceId is required" }, { status: 400 });
+		return NextResponse.json(
+			{ error: "resourceId is required" },
+			{ status: 400 },
+		);
 	}
 
 	const resource = await loadEsignResource(resourceType, resourceId);

@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useToast } from "@/hooks/use-toast";
+import type { ApprovalStepKind } from "@/lib/approvals/contractApprovalWorkflow.types";
 import type {
 	ApprovalAssigneeStrategy,
 	ApprovalTemplateEntityType,
@@ -16,7 +17,6 @@ import type {
 	ApprovalTemplateStepSpec,
 	ApprovalWorkflowTemplate,
 } from "@/lib/approvals/workflowTemplates";
-import type { ApprovalStepKind } from "@/lib/approvals/contractApprovalWorkflow.types";
 
 type DraftRule = {
 	field: ApprovalTemplateRule["field"];
@@ -41,20 +41,23 @@ type Draft = {
 	steps: DraftStep[];
 };
 
-const FIELD_OPTIONS: Array<{ value: ApprovalTemplateRule["field"]; label: string }> =
-	[
-		{ value: "contractValue", label: "Amount / value" },
-		{ value: "contractType", label: "Type" },
-		{ value: "department", label: "Department" },
-		{ value: "riskTier", label: "Risk tier" },
-	];
-
-const OP_OPTIONS: Array<{ value: ApprovalTemplateRule["op"]; label: string }> = [
-	{ value: "gte", label: "≥" },
-	{ value: "lte", label: "≤" },
-	{ value: "eq", label: "equals" },
-	{ value: "in", label: "in list" },
+const FIELD_OPTIONS: Array<{
+	value: ApprovalTemplateRule["field"];
+	label: string;
+}> = [
+	{ value: "contractValue", label: "Amount / value" },
+	{ value: "contractType", label: "Type" },
+	{ value: "department", label: "Department" },
+	{ value: "riskTier", label: "Risk tier" },
 ];
+
+const OP_OPTIONS: Array<{ value: ApprovalTemplateRule["op"]; label: string }> =
+	[
+		{ value: "gte", label: "≥" },
+		{ value: "lte", label: "≤" },
+		{ value: "eq", label: "equals" },
+		{ value: "in", label: "in list" },
+	];
 
 const KIND_OPTIONS: ApprovalStepKind[] = [
 	"submitted",

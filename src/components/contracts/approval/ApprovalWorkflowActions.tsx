@@ -173,9 +173,7 @@ export default function ApprovalWorkflowActions({
 		? selectableCandidates
 		: selectableCandidates.slice(0, VISIBLE_LIMIT);
 	const hiddenCount = Math.max(0, selectableCandidates.length - VISIBLE_LIMIT);
-	const roleGroupLabel = isExecutiveStep
-		? "Executive"
-		: "Department Manager";
+	const roleGroupLabel = isExecutiveStep ? "Executive" : "Department Manager";
 	const panelTitle = firstAssignmentNeeded
 		? isExecutiveStep
 			? "Assign executive"
@@ -327,7 +325,9 @@ export default function ApprovalWorkflowActions({
 												className="text-xs font-medium text-slate-700"
 											>
 												{person.fullName}
-												{person.userId === workflow.viewerUserId ? " (you)" : ""}
+												{person.userId === workflow.viewerUserId
+													? " (you)"
+													: ""}
 											</li>
 										))}
 									</ul>
@@ -559,9 +559,7 @@ export default function ApprovalWorkflowActions({
 												variant="outline"
 												className="primary-btn px-3 sm:px-4"
 												disabled={pending}
-												onClick={() =>
-													submitReassign([workflow.viewerUserId])
-												}
+												onClick={() => submitReassign([workflow.viewerUserId])}
 											>
 												<UserRoundArrowLeft className="h-4 w-4" />
 												Assign me
@@ -573,10 +571,7 @@ export default function ApprovalWorkflowActions({
 											disabled={pending || !selectedUserId}
 											onClick={() => {
 												if (!selectedUserId) return;
-												if (
-													selectedUserId === ALL_ELIGIBLE &&
-													!confirmBulk
-												) {
+												if (selectedUserId === ALL_ELIGIBLE && !confirmBulk) {
 													setConfirmBulk(true);
 													return;
 												}

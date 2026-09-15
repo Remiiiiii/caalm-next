@@ -2,9 +2,9 @@ import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
 import { createEnvelope } from "@/lib/esign/envelope-service";
+import type { EsignResourceType } from "@/lib/esign/types";
 import { getOrgIdFromRequest, requirePermission } from "@/lib/rbac/middleware";
 import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
-import type { EsignResourceType } from "@/lib/esign/types";
 
 export async function POST(request: NextRequest) {
 	const body = (await request.json()) as {
@@ -30,7 +30,10 @@ export async function POST(request: NextRequest) {
 
 	const user = await getCurrentUser();
 	if (!user) {
-		return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+		return NextResponse.json(
+			{ error: "Authentication required" },
+			{ status: 401 },
+		);
 	}
 
 	if (!body.resourceId || !body.recipients?.length) {
@@ -44,7 +47,10 @@ export async function POST(request: NextRequest) {
 		getOrgIdFromRequest(request) ||
 		(await getUserDefaultOrganization(user.$id))?.orgId;
 	if (!org) {
-		return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+		return NextResponse.json(
+			{ error: "Organization not found" },
+			{ status: 404 },
+		);
 	}
 
 	try {

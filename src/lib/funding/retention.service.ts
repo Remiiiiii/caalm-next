@@ -1,7 +1,11 @@
 import { Query } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
-import { computeRetentionHealth, daysUntil, seedRetentionDepartment } from "./constants";
+import {
+	computeRetentionHealth,
+	daysUntil,
+	seedRetentionDepartment,
+} from "./constants";
 // computeRetentionHealth ranks streams by expiry + obligation pressure
 import { listObligations } from "./obligation.repository";
 import type {

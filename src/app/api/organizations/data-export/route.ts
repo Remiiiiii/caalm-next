@@ -101,7 +101,9 @@ export async function POST(request: NextRequest) {
 		return NextResponse.json(
 			{
 				error:
-					error instanceof Error ? error.message : "Failed to export tenant data",
+					error instanceof Error
+						? error.message
+						: "Failed to export tenant data",
 			},
 			{ status: 500 },
 		);

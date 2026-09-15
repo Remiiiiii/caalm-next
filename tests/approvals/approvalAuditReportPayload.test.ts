@@ -19,7 +19,10 @@ vi.mock("@/lib/approvals/ContractApprovalWorkflowService", () => ({
 				},
 			];
 		}
-		if (stepKind === "executive_approval" || stepKind === "awaiting_executive") {
+		if (
+			stepKind === "executive_approval" ||
+			stepKind === "awaiting_executive"
+		) {
 			return [
 				{
 					userId: "exec-1",
@@ -34,13 +37,8 @@ vi.mock("@/lib/approvals/ContractApprovalWorkflowService", () => ({
 	resolveParticipant: vi.fn(async (userId: string) => ({
 		userId,
 		fullName:
-			userId === "68ec4642000d7a481510"
-				? "Casey Nguyen"
-				: "Unknown user",
-		email:
-			userId === "68ec4642000d7a481510"
-				? "casey@caalm.app"
-				: undefined,
+			userId === "68ec4642000d7a481510" ? "Casey Nguyen" : "Unknown user",
+		email: userId === "68ec4642000d7a481510" ? "casey@caalm.app" : undefined,
 	})),
 }));
 
@@ -244,7 +242,9 @@ describe("buildApprovalAuditReportPayload", () => {
 			orgId: "org-1",
 		});
 		expect(contract.sections.details.title).toBe("Contract Details");
-		const detailLabels = contract.details.facts.map((f) => f.label.toLowerCase());
+		const detailLabels = contract.details.facts.map((f) =>
+			f.label.toLowerCase(),
+		);
 		expect(detailLabels).not.toContain("total contract value");
 		expect(detailLabels).not.toContain("current status");
 		expect(detailLabels).toContain("contract type");
@@ -388,10 +388,12 @@ describe("buildApprovalAuditReportPayload", () => {
 		expect(payload.details.parties.some((p) => p.name === opaqueId)).toBe(
 			false,
 		);
-		expect(
-			payload.details.parties.some((p) => p.name === "Casey Nguyen"),
-		).toBe(true);
-		const execStage = payload.stages.find((s) => s.name === "Executive Approval");
+		expect(payload.details.parties.some((p) => p.name === "Casey Nguyen")).toBe(
+			true,
+		);
+		const execStage = payload.stages.find(
+			(s) => s.name === "Executive Approval",
+		);
 		expect(execStage?.notified).toContain("Casey Nguyen");
 		expect(execStage?.notified).not.toContain(opaqueId);
 	});
@@ -404,18 +406,16 @@ describe("buildApprovalAuditReportPayload", () => {
 		const details = payload.audit.map((row) => row.detail);
 		expect(details.some((d) => /recorded for step/i.test(d))).toBe(false);
 		expect(details).toContain("Uploader; initiated approval workflow");
-		expect(
-			details.some((d) => d.startsWith("Assigned: Jordan Hale")),
-		).toBe(true);
+		expect(details.some((d) => d.startsWith("Assigned: Jordan Hale"))).toBe(
+			true,
+		);
 		expect(
 			details.some((d) =>
 				d.includes("No note attached (notes optional on Approve)"),
 			),
 		).toBe(true);
 		expect(
-			details.some((d) =>
-				d.includes("Result of executive approval; status →"),
-			),
+			details.some((d) => d.includes("Result of executive approval; status →")),
 		).toBe(true);
 	});
 });

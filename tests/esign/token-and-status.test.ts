@@ -7,10 +7,7 @@ import { createSigningToken, parseSigningToken } from "@/lib/esign/token";
 import type { EsignRecipient } from "@/lib/esign/types";
 import { verifyEsignWebhookSignature } from "@/lib/esign/webhook";
 
-function signer(
-	status: EsignRecipient["status"],
-	id = "r1",
-): EsignRecipient {
+function signer(status: EsignRecipient["status"], id = "r1"): EsignRecipient {
 	return {
 		id,
 		email: `${id}@example.com`,
@@ -64,7 +61,8 @@ describe("esign status machine", () => {
 describe("esign webhook hmac", () => {
 	it("accepts a matching signature and rejects a mismatch", () => {
 		const payload = JSON.stringify({ eventId: "evt-1" });
-		const { createHmac } = require("node:crypto") as typeof import("node:crypto");
+		const { createHmac } =
+			require("node:crypto") as typeof import("node:crypto");
 		const good = `sha256=${createHmac("sha256", "whsec").update(payload).digest("hex")}`;
 		expect(verifyEsignWebhookSignature(payload, good, "whsec")).toBe(true);
 		expect(verifyEsignWebhookSignature(payload, good, "other")).toBe(false);

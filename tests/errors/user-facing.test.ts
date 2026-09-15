@@ -6,9 +6,9 @@ import {
 
 describe("toUserFacingErrorMessage", () => {
 	it("keeps plain product messages", () => {
-		expect(
-			toUserFacingErrorMessage("You cannot claim this step"),
-		).toBe("You cannot claim this step");
+		expect(toUserFacingErrorMessage("You cannot claim this step")).toBe(
+			"You cannot claim this step",
+		);
 	});
 
 	it("hides Turbopack / module binding noise", () => {

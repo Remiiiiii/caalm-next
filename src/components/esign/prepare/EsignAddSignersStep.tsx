@@ -17,7 +17,9 @@ export function EsignAddSignersStep({
 	onAddMyself: () => void;
 }) {
 	const update = (index: number, patch: Partial<SignerDraft>) => {
-		onChange(signers.map((row, i) => (i === index ? { ...row, ...patch } : row)));
+		onChange(
+			signers.map((row, i) => (i === index ? { ...row, ...patch } : row)),
+		);
 	};
 
 	return (

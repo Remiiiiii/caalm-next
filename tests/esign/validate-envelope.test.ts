@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
+import type { EsignEnvelope } from "@/lib/esign/types";
 import {
 	dedupeSignerEmails,
 	getSignersMissingSignatureFields,
 	getUnfilledRequiredFields,
 } from "@/lib/esign/validate-envelope";
-import type { EsignEnvelope } from "@/lib/esign/types";
 
 function envelope(
 	overrides: Partial<EsignEnvelope> = {},

@@ -12,8 +12,6 @@ describe("applyEsignEmailTemplate", () => {
 					documentName: "Grant Agreement",
 				},
 			),
-		).toBe(
-			"Hi Jordan Lee (jordan@example.com) — please sign Grant Agreement",
-		);
+		).toBe("Hi Jordan Lee (jordan@example.com) — please sign Grant Agreement");
 	});
 });

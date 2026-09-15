@@ -21,9 +21,9 @@ describe("esign error codes", () => {
 	});
 
 	it("maps voided envelopes to ESIGN-409", () => {
-		expect(esignErrorFromMessage("This signing link is no longer valid").code).toBe(
-			"ESIGN-409",
-		);
+		expect(
+			esignErrorFromMessage("This signing link is no longer valid").code,
+		).toBe("ESIGN-409");
 	});
 
 	it("maps already signed to ESIGN-403", () => {

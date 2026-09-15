@@ -6,31 +6,36 @@ import {
 	stampCurrentStepSla,
 } from "@/lib/approvals/ApprovalSlaService";
 import {
+	applyDelegationsToAssignees,
+	listActiveDelegations,
+} from "@/lib/approvals/approvalDelegations";
+import { notifyApprovalAssignees } from "@/lib/approvals/approvalNotifications";
+import {
+	isAssigneeMatch,
+	userIdentityKeys,
+} from "@/lib/approvals/assigneeIdentity";
+import {
 	assertWorkflowMutable,
 	isTerminalDocumentStatus,
 } from "@/lib/approvals/documentStatus";
 import { resolveAttestationId } from "@/lib/approvals/resolveAttestationId";
+import {
+	computeViewerCapabilities,
+	emptyViewerFlags,
+} from "@/lib/approvals/viewerCapabilities";
+import { advanceWorkflowAfterApprove } from "@/lib/approvals/workflowAdvance";
+import {
+	buildStepsFromTemplate,
+	resolveTemplateForSubmit,
+} from "@/lib/approvals/workflowTemplates";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { flattenTableRow } from "@/lib/appwrite/flatten-row";
 import { writeRowWithSchemaDriftRecovery } from "@/lib/appwrite/schemaDriftRecovery";
 import { isDemoMode } from "@/lib/config/demo-mode";
 import { getUserRoles, hasPermission } from "@/lib/rbac/permissions";
-import { ROLE_PRIORITY_ORDER } from "@/lib/utils/role-priority";
 import { logAuditEvent } from "@/lib/services/audit-logger";
-import { notifyApprovalAssignees } from "@/lib/approvals/approvalNotifications";
-import {
-	applyDelegationsToAssignees,
-	listActiveDelegations,
-} from "@/lib/approvals/approvalDelegations";
-import { isAssigneeMatch, userIdentityKeys } from "@/lib/approvals/assigneeIdentity";
 import { resolveAvatarDisplayUrl } from "@/lib/utils";
-import { computeViewerCapabilities, emptyViewerFlags } from "@/lib/approvals/viewerCapabilities";
-import { advanceWorkflowAfterApprove } from "@/lib/approvals/workflowAdvance";
-import {
-	buildStepsFromTemplate,
-	resolveTemplateForSubmit,
-} from "@/lib/approvals/workflowTemplates";
 import {
 	getAllAdmins,
 	getAllExecutives,
@@ -38,6 +43,7 @@ import {
 	getUsersByRoleNames,
 } from "@/lib/utils/get-users-by-role";
 import { triggerNotification } from "@/lib/utils/notificationTriggers";
+import { ROLE_PRIORITY_ORDER } from "@/lib/utils/role-priority";
 import type {
 	ApprovalDecision,
 	ApprovalParticipant,
@@ -438,9 +444,7 @@ export async function buildReassignCandidates(
 					.filter(Boolean);
 				const labels = sortRoleLabels([
 					...new Set(
-						fromDb.length > 0
-							? fromDb
-							: [candidate.roleLabel].filter(Boolean),
+						fromDb.length > 0 ? fromDb : [candidate.roleLabel].filter(Boolean),
 					),
 				]);
 				return {
@@ -703,7 +707,8 @@ async function resolveContractDocument(contract: ContractRow): Promise<{
 	documentFileName?: string;
 }> {
 	const { tablesDB } = await createAdminClient();
-	const fileRowId = optionalRowString(contract.fileId) || optionalRowString(contract.fileRef);
+	const fileRowId =
+		optionalRowString(contract.fileId) || optionalRowString(contract.fileRef);
 	if (fileRowId && appwriteConfig.filesCollectionId) {
 		try {
 			const fileRow = (await tablesDB.getRow({
@@ -897,7 +902,11 @@ export async function lookupUserRow(
 	}
 
 	const byId = await getUserById(identifier);
-	if (byId) return flattenTableRow(byId as Record<string, unknown>) as Record<string, any>;
+	if (byId)
+		return flattenTableRow(byId as Record<string, unknown>) as Record<
+			string,
+			any
+		>;
 
 	try {
 		const { tablesDB } = await createAdminClient();
@@ -1179,12 +1188,13 @@ export async function getWorkflowForViewer(
 
 	const current = state.steps[state.currentStepIndex];
 	const viewerRow = await lookupUserRow(viewerUserId);
-	const viewerIds = viewerRow
-		? userIdentityKeys(viewerRow)
-		: [viewerUserId];
+	const viewerIds = viewerRow ? userIdentityKeys(viewerRow) : [viewerUserId];
 	const resolved = resolveViewerCurrentStep(state, viewerIds);
 	const capabilityStep = resolved.step || current;
-	const isAssignee = isAssigneeMatch(capabilityStep?.assigneeUserIds, viewerIds);
+	const isAssignee = isAssigneeMatch(
+		capabilityStep?.assigneeUserIds,
+		viewerIds,
+	);
 	const isExecStep =
 		capabilityStep?.kind === "executive_approval" ||
 		capabilityStep?.kind === "awaiting_executive";
@@ -1238,7 +1248,8 @@ export async function getWorkflowForViewer(
 		department: contract.department as string | undefined,
 		businessUnit: contract.businessUnit as string | undefined,
 		subDepartment: contract.subDepartment as string | undefined,
-		currentStepIndex: resolved.index >= 0 ? resolved.index : state.currentStepIndex,
+		currentStepIndex:
+			resolved.index >= 0 ? resolved.index : state.currentStepIndex,
 		steps,
 		notifications: state.notifications || [],
 		...flags,
@@ -1423,7 +1434,9 @@ export async function decide({
 	});
 
 	if (
-		(decision === "changes_requested" || decision === "rejected" || adminOverride) &&
+		(decision === "changes_requested" ||
+			decision === "rejected" ||
+			adminOverride) &&
 		!notes?.trim()
 	) {
 		throw new Error(
@@ -1694,7 +1707,9 @@ export async function reassignCurrentStep({
 }): Promise<ApprovalWorkflowState> {
 	const trimmedReason = reason.trim();
 	if (trimmedReason.length < 10) {
-		throw new Error("A reassignment reason of at least 10 characters is required");
+		throw new Error(
+			"A reassignment reason of at least 10 characters is required",
+		);
 	}
 
 	const contract = await getContract(contractId);
@@ -1787,7 +1802,12 @@ export function assertClaimAllowed({
 	if (!REASSIGNABLE_KINDS.includes(current.kind)) {
 		throw new Error("This step cannot be claimed");
 	}
-	if (isAssigneeMatch(current.assigneeUserIds, [viewerUserId, ...(viewerIdentityIds || [])])) {
+	if (
+		isAssigneeMatch(current.assigneeUserIds, [
+			viewerUserId,
+			...(viewerIdentityIds || []),
+		])
+	) {
 		throw new Error("You are already assigned to this step");
 	}
 }

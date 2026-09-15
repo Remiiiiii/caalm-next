@@ -1639,10 +1639,14 @@ button[data-state="active"] > span {
 @keyframes approval-step-pulse {
 	0%,
 	100% {
-		box-shadow: 0 0 0 2px rgba(15, 83, 132, 0.25), 0 0 0 0 rgba(14, 124, 134, 0.35);
+		box-shadow:
+			0 0 0 2px rgba(15, 83, 132, 0.25),
+			0 0 0 0 rgba(14, 124, 134, 0.35);
 	}
 	50% {
-		box-shadow: 0 0 0 2px rgba(15, 83, 132, 0.45), 0 0 12px 4px rgba(14, 124, 134, 0.35);
+		box-shadow:
+			0 0 0 2px rgba(15, 83, 132, 0.45),
+			0 0 12px 4px rgba(14, 124, 134, 0.35);
 	}
 }
 

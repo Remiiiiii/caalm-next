@@ -39,10 +39,7 @@ export async function deleteOrgScopedRows(
 				const batch = await tablesDB.listRows({
 					databaseId,
 					tableId: entry.tableId,
-					queries: [
-						Query.equal(entry.orgField, orgId),
-						Query.limit(pageSize),
-					],
+					queries: [Query.equal(entry.orgField, orgId), Query.limit(pageSize)],
 				});
 				if (batch.rows.length === 0) {
 					hasMore = false;
@@ -96,7 +93,11 @@ export async function purgeTenantOrganization(orgId: string): Promise<{
 }
 
 export async function listOrgsPendingTenantDeletion(now = new Date()): Promise<
-	Array<{ orgId: string; scheduledAt: string; settings: Record<string, unknown> }>
+	Array<{
+		orgId: string;
+		scheduledAt: string;
+		settings: Record<string, unknown>;
+	}>
 > {
 	const { tablesDB } = await createAdminClient();
 	const databaseId = appwriteConfig.databaseId || "default-db";

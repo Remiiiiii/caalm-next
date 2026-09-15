@@ -7,6 +7,11 @@
 import { ID, Query } from "node-appwrite";
 import { PERMISSIONS } from "@/constants/permissions";
 import { stampCurrentStepSla } from "@/lib/approvals/ApprovalSlaService";
+import { notifyApprovalAssignees } from "@/lib/approvals/approvalNotifications";
+import {
+	isAssigneeMatch,
+	userIdentityKeys,
+} from "@/lib/approvals/assigneeIdentity";
 import {
 	applyActiveDelegations,
 	applyReassignToCurrentStep,
@@ -28,14 +33,6 @@ import {
 	upgradeAwaitingExecutiveStep,
 	userHasExecutiveRole,
 } from "@/lib/approvals/ContractApprovalWorkflowService";
-import { isAssigneeMatch, userIdentityKeys } from "@/lib/approvals/assigneeIdentity";
-import { computeViewerCapabilities, emptyViewerFlags } from "@/lib/approvals/viewerCapabilities";
-import { advanceWorkflowAfterApprove } from "@/lib/approvals/workflowAdvance";
-import { notifyApprovalAssignees } from "@/lib/approvals/approvalNotifications";
-import {
-	buildStepsFromTemplate,
-	resolveTemplateForSubmit,
-} from "@/lib/approvals/workflowTemplates";
 import type {
 	ApprovalDecision,
 	ApprovalWorkflowNotification,
@@ -47,13 +44,26 @@ import {
 	isTerminalDocumentStatus,
 } from "@/lib/approvals/documentStatus";
 import { resolveAttestationId } from "@/lib/approvals/resolveAttestationId";
+import {
+	computeViewerCapabilities,
+	emptyViewerFlags,
+} from "@/lib/approvals/viewerCapabilities";
+import { advanceWorkflowAfterApprove } from "@/lib/approvals/workflowAdvance";
+import {
+	buildStepsFromTemplate,
+	resolveTemplateForSubmit,
+} from "@/lib/approvals/workflowTemplates";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { writeRowWithSchemaDriftRecovery } from "@/lib/appwrite/schemaDriftRecovery";
 import { isDemoMode } from "@/lib/config/demo-mode";
 import { hasPermission } from "@/lib/rbac/permissions";
 import { logAuditEvent } from "@/lib/services/audit-logger";
-import { getAllAdmins, getAllSuperAdmins, getAllExecutives } from "@/lib/utils/get-users-by-role";
+import {
+	getAllAdmins,
+	getAllExecutives,
+	getAllSuperAdmins,
+} from "@/lib/utils/get-users-by-role";
 import { triggerNotification } from "@/lib/utils/notificationTriggers";
 
 type LicenseRow = Record<string, unknown> & {
@@ -435,7 +445,10 @@ export async function getLicenseWorkflowForViewer(
 	const viewerIds = viewerRow ? userIdentityKeys(viewerRow) : [viewerUserId];
 	const resolved = resolveViewerCurrentStep(state, viewerIds);
 	const capabilityStep = resolved.step || current;
-	const isAssignee = isAssigneeMatch(capabilityStep?.assigneeUserIds, viewerIds);
+	const isAssignee = isAssigneeMatch(
+		capabilityStep?.assigneeUserIds,
+		viewerIds,
+	);
 	const isExecStep =
 		capabilityStep?.kind === "executive_approval" ||
 		capabilityStep?.kind === "awaiting_executive";
@@ -447,11 +460,9 @@ export async function getLicenseWorkflowForViewer(
 	// Claim/decide on executive steps requires the Executive role + APPROVE.
 	const canDecideByRole = isExecStep
 		? canApprove && (await userHasExecutiveRole(viewerUserId, orgId))
-		: await hasPermission(
-				viewerUserId,
-				PERMISSIONS.LICENSES.EDIT,
-				orgId,
-			).then((edit) => edit || canApprove);
+		: await hasPermission(viewerUserId, PERMISSIONS.LICENSES.EDIT, orgId).then(
+				(edit) => edit || canApprove,
+			);
 	const flags = computeViewerCapabilities({
 		frozen,
 		current: capabilityStep,
@@ -840,7 +851,9 @@ export async function reassignLicenseCurrentStep({
 }): Promise<ApprovalWorkflowState> {
 	const trimmedReason = reason.trim();
 	if (trimmedReason.length < 10) {
-		throw new Error("A reassignment reason of at least 10 characters is required");
+		throw new Error(
+			"A reassignment reason of at least 10 characters is required",
+		);
 	}
 
 	const license = await getLicense(licenseId);

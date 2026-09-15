@@ -2,12 +2,12 @@
 
 import { useCallback } from "react";
 import useSWR from "swr";
+import { useApprovalWorkflowRealtime } from "@/hooks/useApprovalWorkflowRealtime";
 import type {
 	ApprovalDecision,
 	ApprovalWorkflowViewerPayload,
 } from "@/lib/approvals/contractApprovalWorkflow.types";
 import { toUserFacingErrorMessage } from "@/lib/errors/user-facing";
-import { useApprovalWorkflowRealtime } from "@/hooks/useApprovalWorkflowRealtime";
 
 async function fetchWorkflow(
 	url: string,
@@ -49,7 +49,9 @@ export function useLicenseApprovalWorkflow(licenseId: string | null) {
 			path?: string;
 		}) => {
 			if (!licenseId) {
-				throw new Error("This license could not be found. Refresh and try again.");
+				throw new Error(
+					"This license could not be found. Refresh and try again.",
+				);
 			}
 			const res = await fetch(
 				`/api/licenses/${licenseId}/approval-workflow/decide`,
@@ -61,7 +63,10 @@ export function useLicenseApprovalWorkflow(licenseId: string | null) {
 			);
 			const json = await res.json();
 			if (!res.ok || !json.success) {
-				throw actionError(json, "Could not record your decision. Please try again.");
+				throw actionError(
+					json,
+					"Could not record your decision. Please try again.",
+				);
 			}
 			await mutate(json.data, false);
 			return json.data as ApprovalWorkflowViewerPayload;
@@ -80,7 +85,9 @@ export function useLicenseApprovalWorkflow(licenseId: string | null) {
 			path?: string;
 		}) => {
 			if (!licenseId) {
-				throw new Error("This license could not be found. Refresh and try again.");
+				throw new Error(
+					"This license could not be found. Refresh and try again.",
+				);
 			}
 			const res = await fetch(
 				`/api/licenses/${licenseId}/approval-workflow/reassign`,
@@ -92,7 +99,10 @@ export function useLicenseApprovalWorkflow(licenseId: string | null) {
 			);
 			const json = await res.json();
 			if (!res.ok || !json.success) {
-				throw actionError(json, "Could not reassign this step. Please try again.");
+				throw actionError(
+					json,
+					"Could not reassign this step. Please try again.",
+				);
 			}
 			await mutate(json.data, false);
 			return json.data as ApprovalWorkflowViewerPayload;
@@ -103,7 +113,9 @@ export function useLicenseApprovalWorkflow(licenseId: string | null) {
 	const claim = useCallback(
 		async ({ path }: { path?: string } = {}) => {
 			if (!licenseId) {
-				throw new Error("This license could not be found. Refresh and try again.");
+				throw new Error(
+					"This license could not be found. Refresh and try again.",
+				);
 			}
 			const res = await fetch(
 				`/api/licenses/${licenseId}/approval-workflow/claim`,
@@ -126,7 +138,9 @@ export function useLicenseApprovalWorkflow(licenseId: string | null) {
 	const resubmit = useCallback(
 		async ({ path }: { path?: string } = {}) => {
 			if (!licenseId) {
-				throw new Error("This license could not be found. Refresh and try again.");
+				throw new Error(
+					"This license could not be found. Refresh and try again.",
+				);
 			}
 			const res = await fetch(
 				`/api/licenses/${licenseId}/approval-workflow/resubmit`,

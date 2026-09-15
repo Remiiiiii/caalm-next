@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { daysUntil } from "./constants";
 import { listObligationsWithDueDate } from "./obligation.repository";
+import { isObligationOpen } from "./obligation-queue.service";
 import {
 	normalizeObligationDueDate,
 	obligationReminderSentKey,
@@ -12,7 +13,6 @@ import {
 	ensureObligationReminderNotificationTypes,
 	OBLIGATION_REMINDER_TYPE_KEY,
 } from "./obligation-reminder-notification-types";
-import { isObligationOpen } from "./obligation-queue.service";
 import type { ContractObligation } from "./types";
 
 export type ObligationReminderStats = {

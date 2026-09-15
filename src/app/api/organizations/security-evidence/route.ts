@@ -56,7 +56,9 @@ export async function POST(request: NextRequest) {
 		const payload = buildSecurityEvidencePack({ orgId });
 		if (!evidencePackCrossReferencesCompletedTasks(payload)) {
 			return NextResponse.json(
-				{ error: "Evidence pack controls are missing roadmap cross-references" },
+				{
+					error: "Evidence pack controls are missing roadmap cross-references",
+				},
 				{ status: 500 },
 			);
 		}

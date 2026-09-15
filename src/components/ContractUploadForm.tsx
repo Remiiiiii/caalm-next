@@ -570,155 +570,156 @@ const RETENTION_MONTH_OPTIONS = [
 	{ value: "120", label: "120 months (10 years)" },
 ];
 
-const contractSchema = z.object({
-	contractName: z
-		.string()
-		.min(1, "Contract title is required")
-		.max(200, "Keep the title under 200 characters"),
-	contractType: z.string().min(1, "Contract type is required"),
-	contractCategory: z.string().optional(), // Category field removed from UI, made optional
-	lifecycleStatus: z.string().min(1, "Lifecycle status is required"),
-	contractNumber: z.string().min(1, "Contract number is required"),
-	description: z.string().optional(),
-	assignToDepartment: z
-		.string()
-		.min(1, "Business unit / department is required"),
-	businessUnit: z.string().optional(),
-	subDepartment: z.string().optional(),
-	departmentOwner: z.string().optional(),
-	contractOwnerId: z.string().min(1, "Owner is required"),
-	startDate: z.date().optional(),
-	executionDate: z.date().optional(),
-	expiryDate: z
-		.date({ message: "Expiry date is required" })
-		.refine((val) => !Number.isNaN(val.getTime()), {
-			message: "Expiry date is required",
-		}),
-	autoRenew: z.boolean().default(false),
-	renewalNoticeDays: z.string().optional(),
-	amount: z
-		.string()
-		.min(1, "Contract amount is required")
-		.refine((val) => {
-			const num = parseFloat(val.replace(/[$,]/g, ""));
-			return !Number.isNaN(num) && num >= 0;
-		}, "Please enter a valid amount"),
-	currencyCode: z.string().min(1, "Currency is required"),
-	notToExceedAmount: z.string().optional(),
-	paymentTerms: z.string().optional(),
-	paymentSchedule: z.string().optional(),
-	budgetCode: z.string().optional(),
-	costCenter: z.string().optional(),
-	riskLevel: z.string().min(1, "Risk level is required"),
-	counterpartyLegalName: z
-		.string()
-		.min(1, "Counterparty legal entity name is required"),
-	counterpartyContactName: z.string().optional(),
-	counterpartyContactTitle: z.string().optional(),
-	counterpartyContactEmail: z
-		.string()
-		.email("Provide a valid email address")
-		.optional()
-		.or(z.literal("")),
-	counterpartyContactPhone: z.string().optional(),
-	counterpartyAddress: z.string().optional(),
-	counterpartyType: z.string().optional(),
-	counterpartyTaxId: z.string().optional(),
-	counterpartyDunsNumber: z.string().optional(),
-	insuranceRequired: z.boolean().default(false),
-	insuranceVerifiedDate: z.date().optional(),
-	insuranceExpiryDate: z.date().optional(),
-	insuranceCoveragePerIncident: z.string().optional(),
-	insuranceCoverageAggregate: z.string().optional(),
-	indemnificationIncluded: z.boolean().default(false),
-	hipaaRequired: z.boolean().default(false),
-	dataPrivacyRequirements: z.string().optional(),
-	backgroundCheckRequired: z.boolean().default(false),
-	regulatoryRequirements: z.string().optional(),
-	auditRightsGranted: z.boolean().default(false),
-	versionNumber: z.string().optional(),
-	templateUsed: z.string().optional(),
-	parentContractId: z.string().optional(),
-	relatedDocumentIds: z.string().optional(),
-	attachmentReferences: z.string().optional(),
-	tags: z.string().optional(),
-	businessPurpose: z.string().optional(),
-	projectMatterId: z.string().optional(),
-	erpReference: z.string().optional(),
-	crmReference: z.string().optional(),
-	keyObligations: z.string().optional(),
-	serviceLevelAgreements: z.string().optional(),
-	performanceMetrics: z.string().optional(),
-	reportingRequirements: z.string().optional(),
-	postTerminationObligations: z.string().optional(),
-	terminationNoticeDays: z.string().optional(),
-	terminationRights: z.string().optional(),
-	curePeriodDays: z.string().optional(),
-	riskMitigationPlan: z.string().optional(),
-	milestones: z.string().optional(),
-	deliverables: z.string().optional(),
-	slaPenalties: z.string().optional(),
-	serviceCreditTerms: z.string().optional(),
-	escalationProcedures: z.string().optional(),
-	obligationOwners: z.string().optional(),
-	// Empty is allowed when the department has no managers to assign.
-	assignedManagers: z.array(z.string()).default([]),
-	internalApproverIds: z.array(z.string()).optional(),
-	approvalWorkflowTemplate: z.string().optional(),
-	currentApprovalStage: z.string().optional(),
-	reviewerComments: z.string().optional(),
-	approvalDueDate: z.date().optional(),
-	approvalEscalationContactIds: z.string().optional(),
-	workflowNotes: z.string().optional(),
-	primaryInternalContactId: z.string().optional(),
-	secondaryInternalContactId: z.string().optional(),
-	alertRecipientIds: z.string().optional(),
-	alertEscalationContactIds: z.string().optional(),
-	alertLeadTimes: z.string().optional(),
-	alertChannels: z.string().optional(),
-	alertNotes: z.string().optional(),
-	alertStrategy: z.string().optional(),
-	governingLaw: z.string().optional(),
-	jurisdiction: z.string().optional(),
-	disputeResolutionMethod: z.string().optional(),
-	confidentialityClassification: z.string().optional(),
-	recordsRetentionPeriodMonths: z.string().optional(),
-	searchKeywords: z.string().optional(),
-	digitalSignatureRequired: z.boolean().default(false),
-	digitalSignatureStatus: z.string().optional(),
-	digitalSignaturePlatform: z.string().optional(),
-	digitalSignatureCompletedAt: z.date().optional(),
-	digitalSignatureEnvelopeId: z.string().optional(),
-	signatureRecipientIds: z.string().optional(),
-	visibilityRoles: z.string().optional(),
-	accessScope: z.string().optional(),
+const contractSchema = z
+	.object({
+		contractName: z
+			.string()
+			.min(1, "Contract title is required")
+			.max(200, "Keep the title under 200 characters"),
+		contractType: z.string().min(1, "Contract type is required"),
+		contractCategory: z.string().optional(), // Category field removed from UI, made optional
+		lifecycleStatus: z.string().min(1, "Lifecycle status is required"),
+		contractNumber: z.string().min(1, "Contract number is required"),
+		description: z.string().optional(),
+		assignToDepartment: z
+			.string()
+			.min(1, "Business unit / department is required"),
+		businessUnit: z.string().optional(),
+		subDepartment: z.string().optional(),
+		departmentOwner: z.string().optional(),
+		contractOwnerId: z.string().min(1, "Owner is required"),
+		startDate: z.date().optional(),
+		executionDate: z.date().optional(),
+		expiryDate: z
+			.date({ message: "Expiry date is required" })
+			.refine((val) => !Number.isNaN(val.getTime()), {
+				message: "Expiry date is required",
+			}),
+		autoRenew: z.boolean().default(false),
+		renewalNoticeDays: z.string().optional(),
+		amount: z
+			.string()
+			.min(1, "Contract amount is required")
+			.refine((val) => {
+				const num = parseFloat(val.replace(/[$,]/g, ""));
+				return !Number.isNaN(num) && num >= 0;
+			}, "Please enter a valid amount"),
+		currencyCode: z.string().min(1, "Currency is required"),
+		notToExceedAmount: z.string().optional(),
+		paymentTerms: z.string().optional(),
+		paymentSchedule: z.string().optional(),
+		budgetCode: z.string().optional(),
+		costCenter: z.string().optional(),
+		riskLevel: z.string().min(1, "Risk level is required"),
+		counterpartyLegalName: z
+			.string()
+			.min(1, "Counterparty legal entity name is required"),
+		counterpartyContactName: z.string().optional(),
+		counterpartyContactTitle: z.string().optional(),
+		counterpartyContactEmail: z
+			.string()
+			.email("Provide a valid email address")
+			.optional()
+			.or(z.literal("")),
+		counterpartyContactPhone: z.string().optional(),
+		counterpartyAddress: z.string().optional(),
+		counterpartyType: z.string().optional(),
+		counterpartyTaxId: z.string().optional(),
+		counterpartyDunsNumber: z.string().optional(),
+		insuranceRequired: z.boolean().default(false),
+		insuranceVerifiedDate: z.date().optional(),
+		insuranceExpiryDate: z.date().optional(),
+		insuranceCoveragePerIncident: z.string().optional(),
+		insuranceCoverageAggregate: z.string().optional(),
+		indemnificationIncluded: z.boolean().default(false),
+		hipaaRequired: z.boolean().default(false),
+		dataPrivacyRequirements: z.string().optional(),
+		backgroundCheckRequired: z.boolean().default(false),
+		regulatoryRequirements: z.string().optional(),
+		auditRightsGranted: z.boolean().default(false),
+		versionNumber: z.string().optional(),
+		templateUsed: z.string().optional(),
+		parentContractId: z.string().optional(),
+		relatedDocumentIds: z.string().optional(),
+		attachmentReferences: z.string().optional(),
+		tags: z.string().optional(),
+		businessPurpose: z.string().optional(),
+		projectMatterId: z.string().optional(),
+		erpReference: z.string().optional(),
+		crmReference: z.string().optional(),
+		keyObligations: z.string().optional(),
+		serviceLevelAgreements: z.string().optional(),
+		performanceMetrics: z.string().optional(),
+		reportingRequirements: z.string().optional(),
+		postTerminationObligations: z.string().optional(),
+		terminationNoticeDays: z.string().optional(),
+		terminationRights: z.string().optional(),
+		curePeriodDays: z.string().optional(),
+		riskMitigationPlan: z.string().optional(),
+		milestones: z.string().optional(),
+		deliverables: z.string().optional(),
+		slaPenalties: z.string().optional(),
+		serviceCreditTerms: z.string().optional(),
+		escalationProcedures: z.string().optional(),
+		obligationOwners: z.string().optional(),
+		// Empty is allowed when the department has no managers to assign.
+		assignedManagers: z.array(z.string()).default([]),
+		internalApproverIds: z.array(z.string()).optional(),
+		approvalWorkflowTemplate: z.string().optional(),
+		currentApprovalStage: z.string().optional(),
+		reviewerComments: z.string().optional(),
+		approvalDueDate: z.date().optional(),
+		approvalEscalationContactIds: z.string().optional(),
+		workflowNotes: z.string().optional(),
+		primaryInternalContactId: z.string().optional(),
+		secondaryInternalContactId: z.string().optional(),
+		alertRecipientIds: z.string().optional(),
+		alertEscalationContactIds: z.string().optional(),
+		alertLeadTimes: z.string().optional(),
+		alertChannels: z.string().optional(),
+		alertNotes: z.string().optional(),
+		alertStrategy: z.string().optional(),
+		governingLaw: z.string().optional(),
+		jurisdiction: z.string().optional(),
+		disputeResolutionMethod: z.string().optional(),
+		confidentialityClassification: z.string().optional(),
+		recordsRetentionPeriodMonths: z.string().optional(),
+		searchKeywords: z.string().optional(),
+		digitalSignatureRequired: z.boolean().default(false),
+		digitalSignatureStatus: z.string().optional(),
+		digitalSignaturePlatform: z.string().optional(),
+		digitalSignatureCompletedAt: z.date().optional(),
+		digitalSignatureEnvelopeId: z.string().optional(),
+		signatureRecipientIds: z.string().optional(),
+		visibilityRoles: z.string().optional(),
+		accessScope: z.string().optional(),
 
-	// Type-specific fields
-	grantTerms: z.string().optional(),
-	donorRestrictions: z.string().optional(),
-	projectDescription: z.string().optional(),
-	propertyDescription: z.string().optional(),
-}).superRefine((data, ctx) => {
-	if (!data.notToExceedAmount?.trim()) return;
-	const amount = parseFloat(data.amount.replace(/[$,]/g, ""));
-	const nte = parseFloat(data.notToExceedAmount.replace(/[$,]/g, ""));
-	if (Number.isNaN(nte)) {
-		ctx.addIssue({
-			code: z.ZodIssueCode.custom,
-			path: ["notToExceedAmount"],
-			message: "Enter a valid not-to-exceed amount",
-		});
-		return;
-	}
-	if (!Number.isNaN(amount) && nte < amount) {
-		ctx.addIssue({
-			code: z.ZodIssueCode.custom,
-			path: ["notToExceedAmount"],
-			message:
-				"Not-to-exceed amount cannot be less than the contract amount",
-		});
-	}
-});
+		// Type-specific fields
+		grantTerms: z.string().optional(),
+		donorRestrictions: z.string().optional(),
+		projectDescription: z.string().optional(),
+		propertyDescription: z.string().optional(),
+	})
+	.superRefine((data, ctx) => {
+		if (!data.notToExceedAmount?.trim()) return;
+		const amount = parseFloat(data.amount.replace(/[$,]/g, ""));
+		const nte = parseFloat(data.notToExceedAmount.replace(/[$,]/g, ""));
+		if (Number.isNaN(nte)) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["notToExceedAmount"],
+				message: "Enter a valid not-to-exceed amount",
+			});
+			return;
+		}
+		if (!Number.isNaN(amount) && nte < amount) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["notToExceedAmount"],
+				message: "Not-to-exceed amount cannot be less than the contract amount",
+			});
+		}
+	});
 
 const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 	ownerId,
@@ -1435,7 +1436,8 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 			});
 			toast({
 				title: "Required Fields Missing",
-				description: "Select at least one department manager before continuing.",
+				description:
+					"Select at least one department manager before continuing.",
 				variant: "destructive",
 			});
 			return false;
@@ -1445,7 +1447,10 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 		}
 
 		const requiredFields = getRequiredFieldsForStep(step);
-		if (requiredFields.includes("amount") && !requiredFields.includes("notToExceedAmount")) {
+		if (
+			requiredFields.includes("amount") &&
+			!requiredFields.includes("notToExceedAmount")
+		) {
 			requiredFields.push("notToExceedAmount");
 		}
 
@@ -1826,11 +1831,9 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 						// Continue with manual input if extraction fails
 					} finally {
 						if (needsDocumentNumber(form.getValues("contractNumber"))) {
-							form.setValue(
-								"contractNumber",
-								generateDocumentNumber("CTR"),
-								{ shouldDirty: true },
-							);
+							form.setValue("contractNumber", generateDocumentNumber("CTR"), {
+								shouldDirty: true,
+							});
 						}
 						form.setValue("lifecycleStatus", "draft");
 						clearInterval(extractTick);
@@ -1920,8 +1923,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 					.filter(Boolean)
 			: [];
 
-	const sanitizeString = (value?: string) =>
-		scrubTemplateTokenValue(value);
+	const sanitizeString = (value?: string) => scrubTemplateTokenValue(value);
 
 	// Auto-save draft
 	const autoSaveDraft = useCallback(

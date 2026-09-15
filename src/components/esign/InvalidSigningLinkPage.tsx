@@ -2,9 +2,9 @@
 
 import Image from "next/image";
 import {
+	type EsignErrorCode,
 	explanationForEsignCode,
 	isEsignErrorCode,
-	type EsignErrorCode,
 } from "@/lib/esign/errors";
 
 export function InvalidSigningLinkPage({

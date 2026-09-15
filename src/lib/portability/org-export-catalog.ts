@@ -104,15 +104,24 @@ export function getOrgExportCatalog(): OrgExportEntry[] {
 		entry("costCenters", appwriteConfig.costCentersCollectionId),
 		entry("orgUnitHistory", appwriteConfig.orgUnitHistoryCollectionId),
 		entry("fundingPursuits", appwriteConfig.fundingPursuitsCollectionId),
-		entry("contractObligations", appwriteConfig.contractObligationsCollectionId),
+		entry(
+			"contractObligations",
+			appwriteConfig.contractObligationsCollectionId,
+		),
 		entry("crmIntegrations", appwriteConfig.crmIntegrationsCollectionId),
 		entry("crmOriginLinks", appwriteConfig.crmOriginLinksCollectionId),
-		entry("approvalSlaPolicies", appwriteConfig.approvalSlaPoliciesCollectionId),
+		entry(
+			"approvalSlaPolicies",
+			appwriteConfig.approvalSlaPoliciesCollectionId,
+		),
 		entry(
 			"approvalWorkflowTemplates",
 			appwriteConfig.approvalWorkflowTemplatesCollectionId,
 		),
-		entry("approvalDelegations", appwriteConfig.approvalDelegationsCollectionId),
+		entry(
+			"approvalDelegations",
+			appwriteConfig.approvalDelegationsCollectionId,
+		),
 		entry(
 			"approvalActionTokens",
 			appwriteConfig.approvalActionTokensCollectionId,

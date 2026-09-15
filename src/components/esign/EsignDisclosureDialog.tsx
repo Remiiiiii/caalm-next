@@ -38,11 +38,14 @@ export function EsignDisclosureDialog({
 						{title}
 					</div>
 					<p className="text-sm text-slate-600">
-						By finishing in <strong className="font-medium text-slate-700">CAALM Execute</strong>,
-						you agree to sign and receive related notices electronically under
-						the E-Sign Act and other applicable law. The mark you apply —
-						drawn, typed, or otherwise captured in CAALM Execute — is treated
-						like ink on paper for this transaction.
+						By finishing in{" "}
+						<strong className="font-medium text-slate-700">
+							CAALM Execute
+						</strong>
+						, you agree to sign and receive related notices electronically under
+						the E-Sign Act and other applicable law. The mark you apply — drawn,
+						typed, or otherwise captured in CAALM Execute — is treated like ink
+						on paper for this transaction.
 					</p>
 					<p className="text-sm text-slate-600">
 						You confirm you can open this document on your device, keep a copy

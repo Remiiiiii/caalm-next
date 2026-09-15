@@ -3,8 +3,8 @@
 import { motion, useInView, useReducedMotion } from "framer-motion";
 import { ArrowRight, Workflow } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { fireCaalmConfetti } from "@/lib/ui/confetti";
 import { MEDIA_URLS } from "@/lib/media/urls";
+import { fireCaalmConfetti } from "@/lib/ui/confetti";
 import { cn } from "@/lib/utils";
 import LandingFrostedCard from "./LandingFrostedCard";
 import LandingSection from "./LandingSection";

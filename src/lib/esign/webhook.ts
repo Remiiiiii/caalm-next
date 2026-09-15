@@ -12,7 +12,9 @@ export type NativeWebhookPayload = {
 };
 
 function webhookSecret(): string {
-	return process.env.ESIGN_WEBHOOK_SECRET || process.env.ESIGN_TOKEN_SECRET || "";
+	return (
+		process.env.ESIGN_WEBHOOK_SECRET || process.env.ESIGN_TOKEN_SECRET || ""
+	);
 }
 
 export function verifyEsignWebhookSignature(

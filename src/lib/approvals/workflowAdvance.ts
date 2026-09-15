@@ -22,8 +22,7 @@ export function advanceWorkflowAfterApprove(
 		);
 		if (siblingsIncomplete) {
 			const nextCurrent = state.steps.findIndex(
-				(step) =>
-					step.parallelGroupId === groupId && step.status === "current",
+				(step) => step.parallelGroupId === groupId && step.status === "current",
 			);
 			return {
 				...state,

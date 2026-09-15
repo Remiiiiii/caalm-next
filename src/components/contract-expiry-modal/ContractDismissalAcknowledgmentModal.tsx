@@ -330,8 +330,8 @@ export default function ContractDismissalAcknowledgmentModal({
 									htmlFor="confirmation"
 									className="text-sm text-slate-700 leading-relaxed cursor-pointer"
 								>
-									I acknowledge I reviewed this expiry alert. This mark is not
-									a legal e-signature and does not execute the contract.
+									I acknowledge I reviewed this expiry alert. This mark is not a
+									legal e-signature and does not execute the contract.
 								</Label>
 							</div>
 						</div>

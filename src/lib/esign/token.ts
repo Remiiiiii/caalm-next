@@ -13,7 +13,11 @@ function signingSecret(): string {
 	);
 }
 
-function hmacPart(envelopeId: string, recipientId: string, secret: string): string {
+function hmacPart(
+	envelopeId: string,
+	recipientId: string,
+	secret: string,
+): string {
 	return createHmac("sha256", secret)
 		.update(`${envelopeId}.${recipientId}`)
 		.digest("base64url");

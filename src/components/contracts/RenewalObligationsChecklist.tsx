@@ -6,8 +6,8 @@ import { useEffect, useState } from "react";
 import {
 	formatObligationDueLine,
 	OBLIGATION_KIND_LABEL,
-	obligationStatusBadgeClass,
 	OBLIGATION_STATUS_LABEL,
+	obligationStatusBadgeClass,
 } from "@/lib/funding/obligation-display";
 import type { RenewalObligationsResult } from "@/lib/funding/obligation-renewal.service";
 import { cn } from "@/lib/utils";
@@ -84,9 +84,7 @@ export function RenewalObligationsChecklist({
 			{loading ? (
 				<p className="mt-3 text-sm text-slate-600">Loading obligations…</p>
 			) : null}
-			{error ? (
-				<p className="mt-3 text-sm text-red">{error}</p>
-			) : null}
+			{error ? <p className="mt-3 text-sm text-red">{error}</p> : null}
 			{!loading && !error && items.length === 0 ? (
 				<p className="mt-3 text-sm text-slate-600">
 					No open renewal-linked obligations on this contract.

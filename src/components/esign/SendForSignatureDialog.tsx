@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import type { EsignResourceType } from "@/lib/esign/types";
 
 /** Thin launcher: the prepare workspace lives on a returnable route. */

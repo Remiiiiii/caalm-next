@@ -1,9 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import {
+	type DraftEnvelopePatch,
 	getEnvelope,
 	updateDraftEnvelope,
-	type DraftEnvelopePatch,
 } from "@/lib/esign/envelope-service";
 import { EsignLinkError } from "@/lib/esign/errors";
 import { requirePermission } from "@/lib/rbac/middleware";

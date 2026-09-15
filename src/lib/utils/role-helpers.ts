@@ -21,9 +21,11 @@ export async function isViewerRole(
 	try {
 		const targetOrgId =
 			orgId ||
-			(await import("@/lib/rbac/permissions").then((m) =>
-				m.getUserDefaultOrganization(userId),
-			))?.orgId;
+			(
+				await import("@/lib/rbac/permissions").then((m) =>
+					m.getUserDefaultOrganization(userId),
+				)
+			)?.orgId;
 		if (!targetOrgId) return false;
 
 		const userRoles = await loadUserRoles(userId, targetOrgId);
@@ -74,9 +76,11 @@ export async function getUserPrimaryRole(
 	try {
 		const targetOrgId =
 			orgId ||
-			(await import("@/lib/rbac/permissions").then((m) =>
-				m.getUserDefaultOrganization(userId),
-			))?.orgId;
+			(
+				await import("@/lib/rbac/permissions").then((m) =>
+					m.getUserDefaultOrganization(userId),
+				)
+			)?.orgId;
 		if (!targetOrgId) return null;
 
 		const userRoles = await loadUserRoles(userId, targetOrgId);

@@ -53,10 +53,7 @@ export function TenantDeletionCard({
 			}
 			await mutate();
 			toast({
-				title:
-					method === "POST"
-						? "Deletion scheduled"
-						: "Deletion cancelled",
+				title: method === "POST" ? "Deletion scheduled" : "Deletion cancelled",
 				description:
 					method === "POST"
 						? `Org data will be purged after ${TENANT_DELETION_GRACE_DAYS} days unless you cancel.`

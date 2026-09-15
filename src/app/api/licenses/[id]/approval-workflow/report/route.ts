@@ -50,9 +50,13 @@ export async function POST(
 		const isAdminOverride = orgId
 			? await hasPermission(user.$id, PERMISSIONS.APPROVALS.OVERRIDE, orgId)
 			: false;
-		const workflow = await getLicenseWorkflowForViewer(licenseId, viewerUserId, {
-			isAdminOverride,
-		});
+		const workflow = await getLicenseWorkflowForViewer(
+			licenseId,
+			viewerUserId,
+			{
+				isAdminOverride,
+			},
+		);
 		if (!canExportApprovalAuditReport(workflow.contractStatus)) {
 			return errorResponse(
 				"Export is available after final approval when the item is active or pending signature",

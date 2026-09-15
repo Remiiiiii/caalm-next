@@ -1,4 +1,5 @@
 import { ID, Query } from "node-appwrite";
+import { notifyApprovalAssignees } from "@/lib/approvals/approvalNotifications";
 import { slaCountdownLabel } from "@/lib/approvals/approvalSlaDisplay";
 import type {
 	ApprovalSlaStatus,
@@ -6,7 +7,6 @@ import type {
 	ApprovalWorkflowState,
 	ApprovalWorkflowStep,
 } from "@/lib/approvals/contractApprovalWorkflow.types";
-import { notifyApprovalAssignees } from "@/lib/approvals/approvalNotifications";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { logAuditEvent } from "@/lib/services/audit-logger";

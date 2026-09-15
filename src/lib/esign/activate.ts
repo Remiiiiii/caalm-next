@@ -1,8 +1,8 @@
 import { ID } from "node-appwrite";
 import { logAuditEvent } from "@/lib/services/audit-logger";
+import { updateEnvelopeRow } from "./envelope-repository";
 import { sendEnvelopeCompletedNotice } from "./mail";
 import { sealSignedPdf } from "./pdf";
-import { updateEnvelopeRow } from "./envelope-repository";
 import { loadEsignResource, updateResourceSignatureState } from "./resource";
 import type { EsignEnvelope } from "./types";
 
@@ -53,7 +53,11 @@ export async function activateOnEnvelopeCompleted(
 		summary: `Envelope ${envelope.$id} completed; resource activated`,
 		changes: [
 			{ field: "status", before: "pending-signature", after: "active" },
-			{ field: "digitalSignatureStatus", before: "pending", after: "completed" },
+			{
+				field: "digitalSignatureStatus",
+				before: "pending",
+				after: "completed",
+			},
 		],
 	});
 

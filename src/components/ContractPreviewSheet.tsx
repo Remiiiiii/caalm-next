@@ -194,226 +194,232 @@ export default function ContractPreviewSheet({
 
 	return (
 		<>
-		<EntityPreviewSheetShell
-			open={open}
-			onOpenChange={onOpenChange}
-			title={title}
-			description={
-				<>
-					{file.contractNumber ? (
-						<span className="inline-flex items-center gap-1 font-medium text-slate-700">
-							<Hash className="h-3.5 w-3.5 text-slate-400" />
-							{file.contractNumber}
-						</span>
+			<EntityPreviewSheetShell
+				open={open}
+				onOpenChange={onOpenChange}
+				title={title}
+				description={
+					<>
+						{file.contractNumber ? (
+							<span className="inline-flex items-center gap-1 font-medium text-slate-700">
+								<Hash className="h-3.5 w-3.5 text-slate-400" />
+								{file.contractNumber}
+							</span>
+						) : (
+							<span>Contract summary</span>
+						)}
+						{file.contractType ? (
+							<>
+								<span className="text-slate-300" aria-hidden>
+									·
+								</span>
+								<span className="capitalize">
+									{formatContractType(file.contractType)}
+								</span>
+							</>
+						) : null}
+					</>
+				}
+				icon={FileText}
+				statusBanner={
+					lifecycle.clickable ? (
+						<button
+							type="button"
+							className={cn(
+								"w-full border-b px-5 py-2.5 text-center text-xs font-semibold capitalize tracking-wide cursor-pointer transition-colors duration-200 hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#0f5384]/40",
+								statusBannerClasses(file),
+							)}
+							onClick={() => setWorkflowOpen(true)}
+							aria-label={`Open approval workflow for ${title}`}
+						>
+							{lifecycle.label}
+							{lifecycle.subtext ? (
+								<span className="font-medium normal-case">
+									{" "}
+									· {lifecycle.subtext}
+								</span>
+							) : null}
+							{urgency !== "none" && urgency !== "expired" ? (
+								<span className="font-medium">
+									{" "}
+									· Expires in {urgency} days
+								</span>
+							) : null}
+						</button>
 					) : (
-						<span>Contract summary</span>
-					)}
-					{file.contractType ? (
-						<>
-							<span className="text-slate-300" aria-hidden>
-								·
-							</span>
-							<span className="capitalize">
-								{formatContractType(file.contractType)}
-							</span>
-						</>
+						<div
+							className={cn(
+								"border-b px-5 py-2.5 text-center text-xs font-semibold capitalize tracking-wide",
+								statusBannerClasses(file),
+							)}
+						>
+							{statusLabel(file)}
+							{urgency !== "none" && urgency !== "expired" ? (
+								<span className="font-medium">
+									{" "}
+									· Expires in {urgency} days
+								</span>
+							) : null}
+						</div>
+					)
+				}
+				footer={
+					isDirty || file.url ? (
+						<div className="flex w-full flex-wrap items-center justify-end gap-2">
+							{isDirty ? (
+								<Button
+									className="primary-btn cursor-pointer px-3 sm:px-4"
+									disabled={saving}
+									onClick={handleSave}
+								>
+									{saving ? (
+										<Loader2 className="h-4 w-4 animate-spin" />
+									) : (
+										<Save className="h-4 w-4" />
+									)}
+									Save
+								</Button>
+							) : null}
+							{file.url ? (
+								<Button
+									asChild
+									className="primary-btn cursor-pointer px-3 sm:px-4"
+								>
+									<a href={file.url} target="_blank" rel="noopener noreferrer">
+										<ExternalLink className="h-4 w-4" />
+										Open document
+									</a>
+								</Button>
+							) : null}
+						</div>
+					) : undefined
+				}
+			>
+				<div className={cn(previewSectionClass, "p-4")}>
+					<p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+						Contract value
+					</p>
+					<p className="mt-1 text-2xl font-bold tracking-tight text-slate-700">
+						{amountValue != null ? formatCurrency(amountValue) : "—"}
+					</p>
+					{file.vendor ? (
+						<div className="mt-3 flex items-start gap-2 border-t border-white/50 pt-3">
+							<Building2 className="mt-0.5 h-4 w-4 shrink-0 text-[#0f5384]" />
+							<div className="min-w-0">
+								<p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+									Vendor / counterparty
+								</p>
+								<p className="mt-0.5 text-sm font-medium leading-snug text-slate-700">
+									{file.vendor}
+								</p>
+							</div>
+						</div>
 					) : null}
-				</>
-			}
-			icon={FileText}
-			statusBanner={
-				lifecycle.clickable ? (
-					<button
-						type="button"
-						className={cn(
-							"w-full border-b px-5 py-2.5 text-center text-xs font-semibold capitalize tracking-wide cursor-pointer transition-colors duration-200 hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#0f5384]/40",
-							statusBannerClasses(file),
-						)}
-						onClick={() => setWorkflowOpen(true)}
-						aria-label={`Open approval workflow for ${title}`}
-					>
-						{lifecycle.label}
-						{lifecycle.subtext ? (
-							<span className="font-medium normal-case">
-								{" "}
-								· {lifecycle.subtext}
-							</span>
-						) : null}
-						{urgency !== "none" && urgency !== "expired" ? (
-							<span className="font-medium"> · Expires in {urgency} days</span>
-						) : null}
-					</button>
-				) : (
-					<div
-						className={cn(
-							"border-b px-5 py-2.5 text-center text-xs font-semibold capitalize tracking-wide",
-							statusBannerClasses(file),
-						)}
-					>
-						{statusLabel(file)}
-						{urgency !== "none" && urgency !== "expired" ? (
-							<span className="font-medium"> · Expires in {urgency} days</span>
-						) : null}
-					</div>
-				)
-			}
-			footer={
-				isDirty || file.url ? (
-					<div className="flex w-full flex-wrap items-center justify-end gap-2">
-						{isDirty ? (
-							<Button
-								className="primary-btn cursor-pointer px-3 sm:px-4"
-								disabled={saving}
-								onClick={handleSave}
-							>
-								{saving ? (
-									<Loader2 className="h-4 w-4 animate-spin" />
-								) : (
-									<Save className="h-4 w-4" />
-								)}
-								Save
-							</Button>
-						) : null}
-						{file.url ? (
-							<Button
-								asChild
-								className="primary-btn cursor-pointer px-3 sm:px-4"
-							>
-								<a href={file.url} target="_blank" rel="noopener noreferrer">
-									<ExternalLink className="h-4 w-4" />
-									Open document
-								</a>
-							</Button>
-						) : null}
-					</div>
-				) : undefined
-			}
-		>
-			<div className={cn(previewSectionClass, "p-4")}>
-				<p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-					Contract value
-				</p>
-				<p className="mt-1 text-2xl font-bold tracking-tight text-slate-700">
-					{amountValue != null ? formatCurrency(amountValue) : "—"}
-				</p>
-				{file.vendor ? (
-					<div className="mt-3 flex items-start gap-2 border-t border-white/50 pt-3">
-						<Building2 className="mt-0.5 h-4 w-4 shrink-0 text-[#0f5384]" />
-						<div className="min-w-0">
-							<p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-								Vendor / counterparty
-							</p>
-							<p className="mt-0.5 text-sm font-medium leading-snug text-slate-700">
-								{file.vendor}
-							</p>
+				</div>
+
+				<section className={cn(previewSectionClass, "overflow-hidden p-0")}>
+					<div className={previewSectionHeaderClass}>
+						<div className="flex items-center gap-2">
+							<Calendar className="h-3.5 w-3.5 text-[#0f5384]" />
+							<h3 className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+								Timeline
+							</h3>
 						</div>
 					</div>
-				) : null}
-			</div>
-
-			<section className={cn(previewSectionClass, "overflow-hidden p-0")}>
-				<div className={previewSectionHeaderClass}>
-					<div className="flex items-center gap-2">
-						<Calendar className="h-3.5 w-3.5 text-[#0f5384]" />
-						<h3 className="text-xs font-semibold uppercase tracking-wide text-slate-600">
-							Timeline
-						</h3>
-					</div>
-				</div>
-				<div className="divide-y divide-white/45 px-4">
-					<DetailRow label="Uploaded">
-						{file.$createdAt ? (
-							<FormattedDateTime
-								date={file.$createdAt}
-								className="body-2 font-medium text-slate-700"
-							/>
-						) : (
-							"—"
-						)}
-					</DetailRow>
-					<DetailRow label="Expires">
-						{file.contractExpiryDate ? (
-							<span
-								className={cn(
-									urgency !== "none" &&
-										urgency !== "expired" &&
-										"inline-flex items-center gap-1.5 text-orange",
-									isContractExpired(file) && "text-red",
-								)}
-							>
-								{(urgency !== "none" && urgency !== "expired") ||
-								isContractExpired(file) ? (
-									<AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-								) : null}
-								<FormattedDate
-									date={file.contractExpiryDate}
-									className="body-2 font-medium"
+					<div className="divide-y divide-white/45 px-4">
+						<DetailRow label="Uploaded">
+							{file.$createdAt ? (
+								<FormattedDateTime
+									date={file.$createdAt}
+									className="body-2 font-medium text-slate-700"
 								/>
-							</span>
-						) : (
-							"—"
-						)}
-					</DetailRow>
-				</div>
-			</section>
-
-			<section className={cn(previewSectionClass, "overflow-hidden p-0")}>
-				<div className={previewSectionHeaderClass}>
-					<div className="flex items-center gap-2">
-						<Users className="h-3.5 w-3.5 text-[#0f5384]" />
-						<h3 className="text-xs font-semibold uppercase tracking-wide text-slate-600">
-							Ownership
-						</h3>
+							) : (
+								"—"
+							)}
+						</DetailRow>
+						<DetailRow label="Expires">
+							{file.contractExpiryDate ? (
+								<span
+									className={cn(
+										urgency !== "none" &&
+											urgency !== "expired" &&
+											"inline-flex items-center gap-1.5 text-orange",
+										isContractExpired(file) && "text-red",
+									)}
+								>
+									{(urgency !== "none" && urgency !== "expired") ||
+									isContractExpired(file) ? (
+										<AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+									) : null}
+									<FormattedDate
+										date={file.contractExpiryDate}
+										className="body-2 font-medium"
+									/>
+								</span>
+							) : (
+								"—"
+							)}
+						</DetailRow>
 					</div>
-				</div>
-				<div className="divide-y divide-white/45 px-4">
-					<DetailRow label="Department">
-						<PreviewFieldSelect
-							value={draft.department}
-							onValueChange={(value) =>
-								setDraft((prev) => ({ ...prev, department: value }))
-							}
-							options={departmentOptions}
-							formatLabel={(value) => value}
-						/>
-					</DetailRow>
-					<DetailRow label="Assignees">{assignees || "—"}</DetailRow>
-					<DetailRow label="Type">
-						<PreviewFieldSelect
-							value={draft.contractType}
-							onValueChange={(value) =>
-								setDraft((prev) => ({ ...prev, contractType: value }))
-							}
-							options={typeOptions}
-							formatLabel={formatEnumLabel}
-						/>
-					</DetailRow>
-					{canEditStatus ? (
-						<DetailRow label="Status">
+				</section>
+
+				<section className={cn(previewSectionClass, "overflow-hidden p-0")}>
+					<div className={previewSectionHeaderClass}>
+						<div className="flex items-center gap-2">
+							<Users className="h-3.5 w-3.5 text-[#0f5384]" />
+							<h3 className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+								Ownership
+							</h3>
+						</div>
+					</div>
+					<div className="divide-y divide-white/45 px-4">
+						<DetailRow label="Department">
 							<PreviewFieldSelect
-								value={draft.status}
+								value={draft.department}
 								onValueChange={(value) =>
-									setDraft((prev) => ({ ...prev, status: value }))
+									setDraft((prev) => ({ ...prev, department: value }))
 								}
-								options={statusOptions}
+								options={departmentOptions}
+								formatLabel={(value) => value}
+							/>
+						</DetailRow>
+						<DetailRow label="Assignees">{assignees || "—"}</DetailRow>
+						<DetailRow label="Type">
+							<PreviewFieldSelect
+								value={draft.contractType}
+								onValueChange={(value) =>
+									setDraft((prev) => ({ ...prev, contractType: value }))
+								}
+								options={typeOptions}
 								formatLabel={formatEnumLabel}
 							/>
 						</DetailRow>
-					) : null}
-				</div>
-			</section>
-		</EntityPreviewSheetShell>
-		{lifecycle.clickable ? (
-			<ContractApprovalFlowDialog
-				open={workflowOpen}
-				onOpenChange={(next) => {
-					setWorkflowOpen(next);
-					if (!next) onUpdated?.();
-				}}
-				contractId={String(file.contractId || file.$id)}
-				contractName={file.contractName || file.name}
-			/>
-		) : null}
+						{canEditStatus ? (
+							<DetailRow label="Status">
+								<PreviewFieldSelect
+									value={draft.status}
+									onValueChange={(value) =>
+										setDraft((prev) => ({ ...prev, status: value }))
+									}
+									options={statusOptions}
+									formatLabel={formatEnumLabel}
+								/>
+							</DetailRow>
+						) : null}
+					</div>
+				</section>
+			</EntityPreviewSheetShell>
+			{lifecycle.clickable ? (
+				<ContractApprovalFlowDialog
+					open={workflowOpen}
+					onOpenChange={(next) => {
+						setWorkflowOpen(next);
+						if (!next) onUpdated?.();
+					}}
+					contractId={String(file.contractId || file.$id)}
+					contractName={file.contractName || file.name}
+				/>
+			) : null}
 		</>
 	);
 }

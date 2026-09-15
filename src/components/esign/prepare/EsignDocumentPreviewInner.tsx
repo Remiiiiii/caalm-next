@@ -5,8 +5,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/ui/loading";
-import type { EsignField, EsignFieldType, EsignRecipient } from "@/lib/esign/types";
 import { getSignerColorWay } from "@/lib/esign/signer-colors";
+import type {
+	EsignField,
+	EsignFieldType,
+	EsignRecipient,
+} from "@/lib/esign/types";
 import { ESIGN_FIELD_DRAG_TYPE } from "./EsignPlaceFieldsStep";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
@@ -106,7 +110,12 @@ export function EsignDocumentPreview({
 	selectedFieldId?: string | null;
 	/** Bump to re-scroll even when selectedFieldId is unchanged (Next Field). */
 	scrollToFieldToken?: number;
-	onPlaceField?: (page: number, x: number, y: number, type?: EsignFieldType) => void;
+	onPlaceField?: (
+		page: number,
+		x: number,
+		y: number,
+		type?: EsignFieldType,
+	) => void;
 	onMoveField?: (fieldId: string, page: number, x: number, y: number) => void;
 	onDeleteField?: (fieldId: string) => void;
 	onFieldClick?: (field: EsignField) => void;
@@ -150,9 +159,9 @@ export function EsignDocumentPreview({
 				block: "center",
 				inline: "nearest",
 			});
-			const pageAttr = target.closest("[data-esign-page]")?.getAttribute(
-				"data-esign-page",
-			);
+			const pageAttr = target
+				.closest("[data-esign-page]")
+				?.getAttribute("data-esign-page");
 			const pageNum = pageAttr ? Number(pageAttr) : NaN;
 			if (Number.isFinite(pageNum) && pageNum > 0) setVisiblePage(pageNum);
 		});
@@ -211,10 +220,7 @@ export function EsignDocumentPreview({
 			if (!pageEl) return;
 			movedRef.current = true;
 			const point = percentPoint(event.clientX, event.clientY, pageEl);
-			const x = Math.min(
-				100 - drag.width,
-				Math.max(0, point.x - drag.offsetX),
-			);
+			const x = Math.min(100 - drag.width, Math.max(0, point.x - drag.offsetX));
 			const y = Math.min(
 				100 - drag.height,
 				Math.max(0, point.y - drag.offsetY),
@@ -232,8 +238,7 @@ export function EsignDocumentPreview({
 		};
 	}, [onMoveField]);
 
-	const pageLabel =
-		numPages > 0 ? `Page ${visiblePage} of ${numPages}` : "—";
+	const pageLabel = numPages > 0 ? `Page ${visiblePage} of ${numPages}` : "—";
 
 	return (
 		<div className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
@@ -292,9 +297,8 @@ export function EsignDocumentPreview({
 					className="min-h-0 flex-1 overflow-y-auto bg-slate-50 p-4"
 					onScroll={(event) => {
 						const scroller = event.currentTarget;
-						const pages = scroller.querySelectorAll<HTMLElement>(
-							"[data-esign-page]",
-						);
+						const pages =
+							scroller.querySelectorAll<HTMLElement>("[data-esign-page]");
 						if (pages.length === 0) return;
 						const top = scroller.getBoundingClientRect().top;
 						let best = 1;
@@ -434,7 +438,9 @@ export function EsignDocumentPreview({
 														height: field.height,
 													};
 													onFieldClick?.(field);
-													event.currentTarget.setPointerCapture(event.pointerId);
+													event.currentTarget.setPointerCapture(
+														event.pointerId,
+													);
 												}}
 												onClick={(event) => {
 													event.stopPropagation();

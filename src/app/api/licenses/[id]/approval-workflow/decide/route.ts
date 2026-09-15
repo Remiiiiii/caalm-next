@@ -105,8 +105,7 @@ export async function POST(
 					viewerUserId,
 					decision,
 					notes,
-					adminOverride:
-						isAdminOverride && !before.canDecideAsAssignee,
+					adminOverride: isAdminOverride && !before.canDecideAsAssignee,
 				});
 
 		revalidatePath(path);

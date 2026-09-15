@@ -2,8 +2,8 @@ import { type NextRequest, NextResponse } from "next/server";
 import { Query } from "node-appwrite";
 import { PERMISSIONS } from "@/constants/permissions";
 import { createAdminClient } from "@/lib/appwrite";
-import { flattenTableRow } from "@/lib/appwrite/flatten-row";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { flattenTableRow } from "@/lib/appwrite/flatten-row";
 import { getOrgIdFromRequest, requirePermission } from "@/lib/rbac/middleware";
 
 export type ShareDirectoryUser = {

@@ -39,24 +39,6 @@ export {
 	listObligationsWithDueDate,
 	updateObligation,
 } from "./obligation.repository";
-export type { ObligationReminderMetadata } from "./obligation-reminder-notice";
-export {
-	buildObligationReminderMetadata,
-	normalizeObligationDueDate,
-	obligationReminderSentKey,
-	parseObligationReminderMetadata,
-} from "./obligation-reminder-notice";
-export { ensureObligationReminderNotificationTypes } from "./obligation-reminder-notification-types";
-export type {
-	ObligationReminderDeps,
-	ObligationReminderSendInput,
-	ObligationReminderStats,
-} from "./obligation-reminder.service";
-export {
-	processObligationReminders,
-	resolveObligationReminderRecipient,
-	shouldSendObligationReminderToday,
-} from "./obligation-reminder.service";
 export {
 	formatObligationDueLine,
 	OBLIGATION_KIND_LABEL,
@@ -67,6 +49,31 @@ export type {
 	ObligationQueueResult,
 	QueueObligation,
 } from "./obligation-queue.service";
+export {
+	buildObligationQueue,
+	compareObligationQueue,
+	isObligationOpen,
+	isObligationOverdue,
+	OPEN_OBLIGATION_STATUSES,
+} from "./obligation-queue.service";
+export type {
+	ObligationReminderDeps,
+	ObligationReminderSendInput,
+	ObligationReminderStats,
+} from "./obligation-reminder.service";
+export {
+	processObligationReminders,
+	resolveObligationReminderRecipient,
+	shouldSendObligationReminderToday,
+} from "./obligation-reminder.service";
+export type { ObligationReminderMetadata } from "./obligation-reminder-notice";
+export {
+	buildObligationReminderMetadata,
+	normalizeObligationDueDate,
+	obligationReminderSentKey,
+	parseObligationReminderMetadata,
+} from "./obligation-reminder-notice";
+export { ensureObligationReminderNotificationTypes } from "./obligation-reminder-notification-types";
 export type {
 	RenewalObligationItem,
 	RenewalObligationsResult,
@@ -75,13 +82,6 @@ export {
 	buildRenewalObligationsForContract,
 	filterRenewalLinkedOpenObligations,
 } from "./obligation-renewal.service";
-export {
-	buildObligationQueue,
-	compareObligationQueue,
-	isObligationOpen,
-	isObligationOverdue,
-	OPEN_OBLIGATION_STATUSES,
-} from "./obligation-queue.service";
 export {
 	createPursuit,
 	deletePursuit,

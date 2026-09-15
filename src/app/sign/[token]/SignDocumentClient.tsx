@@ -6,8 +6,8 @@ import { EsignDisclosureDialog } from "@/components/esign/EsignDisclosureDialog"
 import { EsignRejectConfirmDialog } from "@/components/esign/EsignRejectConfirmDialog";
 import { EsignSignedConfirmation } from "@/components/esign/EsignSignedConfirmation";
 import { InvalidSigningLinkPage } from "@/components/esign/InvalidSigningLinkPage";
-import { SignatureCaptureDialog } from "@/components/esign/SignatureCaptureDialog";
 import { EsignDocumentPreview } from "@/components/esign/prepare/EsignDocumentPreview";
+import { SignatureCaptureDialog } from "@/components/esign/SignatureCaptureDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -64,7 +64,9 @@ export default function SignDocumentClient({ token }: { token: string }) {
 			.then(async (res) => {
 				const data = await res.json();
 				if (!res.ok) {
-					const err = new Error(data.error || "Invalid signing link") as Error & {
+					const err = new Error(
+						data.error || "Invalid signing link",
+					) as Error & {
 						code?: string;
 					};
 					err.code = data.code;
@@ -265,14 +267,17 @@ export default function SignDocumentClient({ token }: { token: string }) {
 		<div className="flex min-h-screen flex-col">
 			<header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 sm:px-6">
 				<div className="flex min-w-0 items-center gap-3">
-					<p className="truncate text-sm font-medium text-slate-700">{view.title}</p>
+					<p className="truncate text-sm font-medium text-slate-700">
+						{view.title}
+					</p>
 					<span className="inline-block px-2 py-0.5 text-xs rounded-full font-medium border bg-green/10 text-green border-green/20">
 						Signer
 					</span>
 				</div>
 				<div className="flex items-center gap-3">
 					<p className="text-sm text-slate-500">
-						{remaining.length} Field{remaining.length === 1 ? "" : "s"} Remaining
+						{remaining.length} Field{remaining.length === 1 ? "" : "s"}{" "}
+						Remaining
 					</p>
 					<Button
 						className="primary-btn px-3 sm:px-4"
@@ -300,7 +305,8 @@ export default function SignDocumentClient({ token }: { token: string }) {
 							Sign Document
 						</h1>
 						<p className="text-xs text-slate-500">
-							{remaining.length} field{remaining.length === 1 ? "" : "s"} remaining
+							{remaining.length} field{remaining.length === 1 ? "" : "s"}{" "}
+							remaining
 						</p>
 					</div>
 					<div>
@@ -438,7 +444,10 @@ export default function SignDocumentClient({ token }: { token: string }) {
 								return;
 							}
 							if (field.type === "date") {
-								setFieldValue(field.id, fieldValues[field.id] || todayIsoDate());
+								setFieldValue(
+									field.id,
+									fieldValues[field.id] || todayIsoDate(),
+								);
 							}
 						}}
 					/>

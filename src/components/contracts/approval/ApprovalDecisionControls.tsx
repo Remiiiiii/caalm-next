@@ -165,8 +165,8 @@ export default function ApprovalDecisionControls({
 									Audit note
 								</p>
 								<p className="mt-1 text-xs leading-relaxed text-slate-600">
-									This action will be logged with your name and timestamp in
-									the audit trail.
+									This action will be logged with your name and timestamp in the
+									audit trail.
 								</p>
 							</div>
 							<div className="flex items-center px-5 py-4">

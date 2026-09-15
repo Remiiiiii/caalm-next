@@ -5,7 +5,8 @@ import { EsignPrepareWorkspace } from "@/components/esign/prepare/EsignPrepareWo
 
 export default function EsignPreparePage() {
 	const params = useParams<{ resourceType: string; resourceId: string }>();
-	const resourceType = params.resourceType === "license" ? "license" : "contract";
+	const resourceType =
+		params.resourceType === "license" ? "license" : "contract";
 	return (
 		<EsignPrepareWorkspace
 			resourceType={resourceType}

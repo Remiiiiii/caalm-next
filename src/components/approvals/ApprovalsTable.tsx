@@ -21,7 +21,6 @@ import {
 import { PERMISSIONS } from "@/constants/permissions";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
-import { toUserFacingErrorMessage } from "@/lib/errors/user-facing";
 import {
 	type ApprovalQueueItem,
 	isSlaAtRisk,
@@ -31,6 +30,7 @@ import {
 	statusBadgeClasses,
 	statusLabel,
 } from "@/lib/approvals/approvalsListUtils";
+import { toUserFacingErrorMessage } from "@/lib/errors/user-facing";
 import {
 	DATA_TABLE_BODY_ROW_CLICKABLE,
 	DATA_TABLE_HEADER_CELL,

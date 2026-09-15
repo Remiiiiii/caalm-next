@@ -79,10 +79,7 @@ const ManagerAvatars: React.FC<ManagerAvatarsProps> = ({
 				const userId = manager.$id;
 				const avatarColor = getAvatarColor(userId);
 
-				const profileImageUrl = resolveManagerImageUrl(
-					manager,
-					profileImages,
-				);
+				const profileImageUrl = resolveManagerImageUrl(manager, profileImages);
 
 				// Check if this image failed to load
 				const imageFailed =

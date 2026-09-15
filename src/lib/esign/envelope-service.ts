@@ -1,5 +1,7 @@
 import { ID } from "node-appwrite";
 import { isDemoMode } from "@/lib/config/demo-mode";
+import { activateOnEnvelopeCompleted } from "./activate";
+import { resolveStorageFileId } from "./document-bytes";
 import {
 	createEnvelopeRow,
 	findLatestEnvelopeForResource,
@@ -8,8 +10,6 @@ import {
 } from "./envelope-repository";
 import { EsignLinkError } from "./errors";
 import { sendSigningInvitation } from "./mail";
-import { activateOnEnvelopeCompleted } from "./activate";
-import { resolveStorageFileId } from "./document-bytes";
 import { loadEsignResource, updateResourceSignatureState } from "./resource";
 import { applyRecipientTransition, deriveEnvelopeStatus } from "./status";
 import { createSigningToken, signingPageUrl } from "./token";
@@ -42,7 +42,10 @@ function normalizeRecipients(
 export async function createEnvelope(
 	input: CreateEnvelopeInput,
 ): Promise<EsignEnvelope> {
-	const resource = await loadEsignResource(input.resourceType, input.resourceId);
+	const resource = await loadEsignResource(
+		input.resourceType,
+		input.resourceId,
+	);
 	if (!resource) throw new Error("Document not found");
 	if (resource.orgId && input.orgId && resource.orgId !== input.orgId) {
 		throw new Error("Document is outside this organization");
@@ -195,14 +198,19 @@ export async function sendEnvelope(envelopeId: string): Promise<EsignEnvelope> {
 
 	const missing = getSignersMissingSignatureFields(envelope);
 	if (missing.length > 0) {
-		const error = new Error("The following signers are missing signature fields");
+		const error = new Error(
+			"The following signers are missing signature fields",
+		);
 		(error as Error & { missing: typeof missing }).missing = missing;
 		throw error;
 	}
 
 	const recipients = envelope.recipients.map((recipient) =>
 		recipient.role === "signer"
-			? { ...recipient, status: applyRecipientTransition(recipient.status, "sent") }
+			? {
+					...recipient,
+					status: applyRecipientTransition(recipient.status, "sent"),
+				}
 			: recipient,
 	);
 
@@ -217,7 +225,9 @@ export async function sendEnvelope(envelopeId: string): Promise<EsignEnvelope> {
 	return updateEnvelopeRow(envelopeId, { recipients, status });
 }
 
-export async function getEnvelope(envelopeId: string): Promise<EsignEnvelope | null> {
+export async function getEnvelope(
+	envelopeId: string,
+): Promise<EsignEnvelope | null> {
 	return getEnvelopeById(envelopeId);
 }
 
@@ -276,7 +286,9 @@ export async function recordRecipientEvent(input: {
 			...recipient,
 			status,
 			viewedAt:
-				input.nextStatus === "viewed" ? recipient.viewedAt || now : recipient.viewedAt,
+				input.nextStatus === "viewed"
+					? recipient.viewedAt || now
+					: recipient.viewedAt,
 			signedAt: input.nextStatus === "signed" ? now : recipient.signedAt,
 			declinedAt: input.nextStatus === "declined" ? now : recipient.declinedAt,
 			signatureDataUrl: input.signatureDataUrl || recipient.signatureDataUrl,
@@ -323,10 +335,15 @@ export function assertSignFieldsComplete(
 ): void {
 	const recipient = envelope.recipients.find((r) => r.id === recipientId);
 	if (!recipient) throw new EsignLinkError("ESIGN-404", "Recipient not found");
-	const fields = envelope.fields.filter((field) => field.recipientId === recipientId);
+	const fields = envelope.fields.filter(
+		(field) => field.recipientId === recipientId,
+	);
 	const unfilled = getUnfilledRequiredFields(
 		fields,
-		{ ...recipient, signatureDataUrl: signatureDataUrl || recipient.signatureDataUrl },
+		{
+			...recipient,
+			signatureDataUrl: signatureDataUrl || recipient.signatureDataUrl,
+		},
 		fieldValues,
 	);
 	if (unfilled.length > 0) {
@@ -334,16 +351,25 @@ export function assertSignFieldsComplete(
 	}
 }
 
-export function publicSigningView(envelope: EsignEnvelope, recipientId: string) {
+export function publicSigningView(
+	envelope: EsignEnvelope,
+	recipientId: string,
+) {
 	const recipient = envelope.recipients.find((r) => r.id === recipientId);
 	if (!recipient) throw new EsignLinkError("ESIGN-404", "Recipient not found");
 	if (envelope.status === "voided" || envelope.status === "expired") {
-		throw new EsignLinkError("ESIGN-409", "This signing link is no longer valid");
+		throw new EsignLinkError(
+			"ESIGN-409",
+			"This signing link is no longer valid",
+		);
 	}
 	if (envelope.status === "declined") {
 		throw new EsignLinkError("ESIGN-409", "This envelope was declined");
 	}
-	if (envelope.expiresAt && new Date(envelope.expiresAt).getTime() < Date.now()) {
+	if (
+		envelope.expiresAt &&
+		new Date(envelope.expiresAt).getTime() < Date.now()
+	) {
 		throw new EsignLinkError("ESIGN-410", "This signing link has expired");
 	}
 
@@ -360,7 +386,9 @@ export function publicSigningView(envelope: EsignEnvelope, recipientId: string) 
 			role: recipient.role,
 			status: recipient.status,
 		},
-		fields: envelope.fields.filter((field) => field.recipientId === recipient.id),
+		fields: envelope.fields.filter(
+			(field) => field.recipientId === recipient.id,
+		),
 		documentFileId: envelope.documentFileId,
 		alreadySigned: recipient.status === "signed",
 		declined: recipient.status === "declined",

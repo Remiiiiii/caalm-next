@@ -89,7 +89,11 @@ describe("13.1 tenant data export", () => {
 
 	it("builds a payload whose manifest counts match collection lengths", async () => {
 		const catalog = [
-			{ key: "contracts", tableId: "contracts-table", orgField: "orgId" as const },
+			{
+				key: "contracts",
+				tableId: "contracts-table",
+				orgField: "orgId" as const,
+			},
 			{
 				key: "sharedCalendars",
 				tableId: "calendars-table",
@@ -109,7 +113,10 @@ describe("13.1 tenant data export", () => {
 				}
 				if (tableId === "contracts-table") {
 					return {
-						rows: [row("c1", { orgId: "org-1" }), row("c2", { orgId: "org-1" })],
+						rows: [
+							row("c1", { orgId: "org-1" }),
+							row("c2", { orgId: "org-1" }),
+						],
 					};
 				}
 				if (tableId === "calendars-table") {

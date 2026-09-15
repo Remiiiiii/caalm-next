@@ -1,11 +1,11 @@
 import { Query } from "node-appwrite";
+import { listActiveDelegations } from "@/lib/approvals/approvalDelegations";
+import { notifyApprovalAssignees } from "@/lib/approvals/approvalNotifications";
 import {
 	applyActiveDelegations,
 	parseWorkflowState,
 	serializeWorkflowState,
 } from "@/lib/approvals/ContractApprovalWorkflowService";
-import { listActiveDelegations } from "@/lib/approvals/approvalDelegations";
-import { notifyApprovalAssignees } from "@/lib/approvals/approvalNotifications";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { writeRowWithSchemaDriftRecovery } from "@/lib/appwrite/schemaDriftRecovery";
@@ -50,11 +50,9 @@ async function processEntity(
 		const state = parseWorkflowState(row.approvalWorkflowState as string);
 		if (!state || !orgId) continue;
 
-		const before =
-			state.steps[state.currentStepIndex]?.assigneeUserIds || [];
+		const before = state.steps[state.currentStepIndex]?.assigneeUserIds || [];
 		const next = await applyActiveDelegations(state, orgId, entityType);
-		const after =
-			next.steps[next.currentStepIndex]?.assigneeUserIds || [];
+		const after = next.steps[next.currentStepIndex]?.assigneeUserIds || [];
 		const added = after.filter((id) => !before.includes(id));
 		if (added.length === 0) continue;
 
@@ -67,8 +65,7 @@ async function processEntity(
 			rowId: String(row.$id),
 			data: {
 				approvalWorkflowState: serializeWorkflowState(next),
-				currentApprovalStage:
-					next.steps[next.currentStepIndex]?.label || "",
+				currentApprovalStage: next.steps[next.currentStepIndex]?.label || "",
 			},
 		});
 

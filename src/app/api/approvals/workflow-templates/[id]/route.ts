@@ -1,9 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import {
+	type ApprovalTemplateInput,
 	deleteWorkflowTemplate,
 	updateWorkflowTemplate,
-	type ApprovalTemplateInput,
 } from "@/lib/approvals/workflowTemplates";
 import { requirePermission } from "@/lib/rbac/middleware";
 

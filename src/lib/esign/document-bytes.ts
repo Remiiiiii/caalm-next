@@ -1,7 +1,7 @@
 import { FileService } from "@/lib/api/contracts/services/FileService";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
-import { loadEsignResource, type EsignResourceType } from "./resource";
+import { type EsignResourceType, loadEsignResource } from "./resource";
 
 function isPlausibleStorageId(id: string | null | undefined): boolean {
 	if (!id || typeof id !== "string") return false;

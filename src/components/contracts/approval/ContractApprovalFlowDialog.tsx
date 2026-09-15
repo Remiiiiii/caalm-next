@@ -14,14 +14,14 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ExpirationAttestationDialog } from "@/components/approvals/ExpirationAttestationDialog";
 import { WorkflowFrozenBanner } from "@/components/approvals/WorkflowFrozenBanner";
+import { WizardPdfPreview } from "@/components/contract-wizard/WizardPdfPreview";
 import ApprovalDecisionControls from "@/components/contracts/approval/ApprovalDecisionControls";
+import ApprovalWaitingBanner from "@/components/contracts/approval/ApprovalWaitingBanner";
 import ApprovalWorkflowActions from "@/components/contracts/approval/ApprovalWorkflowActions";
 import ApprovalWorkflowActivity from "@/components/contracts/approval/ApprovalWorkflowActivity";
-import ApprovalWaitingBanner from "@/components/contracts/approval/ApprovalWaitingBanner";
 import ContractApprovalFlowCanvas from "@/components/contracts/approval/ContractApprovalFlowCanvas";
 import { WorkflowStatusBadge } from "@/components/contracts/approval/WorkflowStatusBadge";
 import { ContractRenewalDialog } from "@/components/contracts/ContractRenewalDialog";
-import { WizardPdfPreview } from "@/components/contract-wizard/WizardPdfPreview";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { PERMISSIONS } from "@/constants/permissions";
@@ -46,8 +46,16 @@ export default function ContractApprovalFlowDialog({
 	contractId,
 	contractName,
 }: ContractApprovalFlowDialogProps) {
-	const { workflow, isLoading, error, decide, reassign, resubmit, claim, refresh } =
-		useContractApprovalWorkflow(open ? contractId : null);
+	const {
+		workflow,
+		isLoading,
+		error,
+		decide,
+		reassign,
+		resubmit,
+		claim,
+		refresh,
+	} = useContractApprovalWorkflow(open ? contractId : null);
 	const { toast } = useToast();
 	const { permissions } = usePermissions();
 	const router = useRouter();
@@ -156,7 +164,9 @@ export default function ContractApprovalFlowDialog({
 					<div
 						className={cn(
 							"min-h-0 flex-1 bg-slate-50",
-							documentSplitOpen ? "flex overflow-hidden" : "overflow-y-auto p-6",
+							documentSplitOpen
+								? "flex overflow-hidden"
+								: "overflow-y-auto p-6",
 						)}
 					>
 						<div
@@ -165,162 +175,162 @@ export default function ContractApprovalFlowDialog({
 									"min-h-0 w-[min(900px,52%)] shrink-0 overflow-y-auto p-6",
 							)}
 						>
-						{isLoading ? (
-							<div className="flex h-48 items-center justify-center text-sm text-slate-500">
-								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-								Loading workflow…
-							</div>
-						) : error ? (
-							<div className="rounded-lg border border-red/20 bg-red/5 p-4 text-sm text-red">
-								{toUserFacingErrorMessage(
-									error,
-									"Could not load the approval workflow. Please try again.",
-								)}
-								<Button
-									type="button"
-									variant="outline"
-									size="sm"
-									className="ml-3 primary-btn"
-									onClick={() => void refresh()}
-								>
-									<RefreshCw className="h-3.5 w-3.5" />
-									Retry
-								</Button>
-							</div>
-						) : workflow ? (
-							<div className="space-y-4">
-								{workflow.workflowFrozen ? (
-									<WorkflowFrozenBanner
-										status={workflow.contractStatus}
-										attestPending
-										onAttest={() => setAttestOpen(true)}
-										onRenew={() => setRenewOpen(true)}
-									/>
-								) : null}
-								<div className="flex flex-wrap items-center gap-2">
-									<WorkflowStatusBadge status={workflow.contractStatus} />
-									{workflow.department ? (
-										<span className="inline-block rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
-											{workflow.department}
-											{workflow.subDepartment
-												? ` · ${workflow.subDepartment}`
-												: ""}
-										</span>
-									) : null}
+							{isLoading ? (
+								<div className="flex h-48 items-center justify-center text-sm text-slate-500">
+									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+									Loading workflow…
 								</div>
-								{documentUrl ? (
-									<button
+							) : error ? (
+								<div className="rounded-lg border border-red/20 bg-red/5 p-4 text-sm text-red">
+									{toUserFacingErrorMessage(
+										error,
+										"Could not load the approval workflow. Please try again.",
+									)}
+									<Button
 										type="button"
-										onClick={() => setDocumentSplit((value) => !value)}
-										className="flex w-full cursor-pointer items-center gap-2 rounded-lg border border-blue-300 bg-blue-50 px-4 py-3 text-left text-xs text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#078FAB]"
-										aria-expanded={documentSplit}
-										aria-label={
-											documentSplit
-												? `Hide ${documentLabel}`
-												: `View ${documentLabel}`
-										}
+										variant="outline"
+										size="sm"
+										className="ml-3 primary-btn"
+										onClick={() => void refresh()}
 									>
-										<FileText className="h-4 w-4 shrink-0 text-[#0f5384]" />
-										<span className="min-w-0 flex-1 truncate font-medium text-slate-800">
-											{documentLabel}
-										</span>
-										<span className="inline-flex shrink-0 items-center gap-1 text-[11px] text-[#0f5384]">
-											<Eye className="h-3.5 w-3.5" />
-											{documentSplit ? "Hide document" : "View document"}
-										</span>
-									</button>
-								) : null}
-								<ContractApprovalFlowCanvas workflow={workflow} />
-								{workflow.workflowFrozen ? null : (
-									<ApprovalWaitingBanner
+										<RefreshCw className="h-3.5 w-3.5" />
+										Retry
+									</Button>
+								</div>
+							) : workflow ? (
+								<div className="space-y-4">
+									{workflow.workflowFrozen ? (
+										<WorkflowFrozenBanner
+											status={workflow.contractStatus}
+											attestPending
+											onAttest={() => setAttestOpen(true)}
+											onRenew={() => setRenewOpen(true)}
+										/>
+									) : null}
+									<div className="flex flex-wrap items-center gap-2">
+										<WorkflowStatusBadge status={workflow.contractStatus} />
+										{workflow.department ? (
+											<span className="inline-block rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+												{workflow.department}
+												{workflow.subDepartment
+													? ` · ${workflow.subDepartment}`
+													: ""}
+											</span>
+										) : null}
+									</div>
+									{documentUrl ? (
+										<button
+											type="button"
+											onClick={() => setDocumentSplit((value) => !value)}
+											className="flex w-full cursor-pointer items-center gap-2 rounded-lg border border-blue-300 bg-blue-50 px-4 py-3 text-left text-xs text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#078FAB]"
+											aria-expanded={documentSplit}
+											aria-label={
+												documentSplit
+													? `Hide ${documentLabel}`
+													: `View ${documentLabel}`
+											}
+										>
+											<FileText className="h-4 w-4 shrink-0 text-[#0f5384]" />
+											<span className="min-w-0 flex-1 truncate font-medium text-slate-800">
+												{documentLabel}
+											</span>
+											<span className="inline-flex shrink-0 items-center gap-1 text-[11px] text-[#0f5384]">
+												<Eye className="h-3.5 w-3.5" />
+												{documentSplit ? "Hide document" : "View document"}
+											</span>
+										</button>
+									) : null}
+									<ContractApprovalFlowCanvas workflow={workflow} />
+									{workflow.workflowFrozen ? null : (
+										<ApprovalWaitingBanner
+											workflow={workflow}
+											entityLabel="contract"
+										/>
+									)}
+									{workflow.workflowFrozen ? null : (
+										<ApprovalWorkflowActions
+											workflow={workflow}
+											busy={busy}
+											onClaim={async () => {
+												try {
+													await claim({ path: pathname || "/contracts" });
+													toast({
+														title: "Step claimed",
+														description: "You are now assigned to this step.",
+													});
+													router.refresh();
+												} catch (err) {
+													toast({
+														title: "Claim failed",
+														description: toUserFacingErrorMessage(
+															err,
+															"Could not claim this step. Please try again.",
+														),
+														variant: "destructive",
+													});
+													throw err;
+												}
+											}}
+											onReassign={async (assigneeUserIds, reason) => {
+												try {
+													await reassign({
+														assigneeUserIds,
+														reason,
+														path: pathname || "/contracts",
+													});
+													toast({
+														title: "Step reassigned",
+														description: "Approval assignees were updated.",
+													});
+													router.refresh();
+												} catch (err) {
+													toast({
+														title: "Reassign failed",
+														description: toUserFacingErrorMessage(
+															err,
+															"Could not reassign this step. Please try again.",
+														),
+														variant: "destructive",
+													});
+													throw err;
+												}
+											}}
+											onResubmit={async () => {
+												try {
+													await resubmit({ path: pathname || "/contracts" });
+													toast({
+														title: "Resubmitted",
+														description: "Department review restarted.",
+													});
+													router.refresh();
+												} catch (err) {
+													toast({
+														title: "Resubmit failed",
+														description: toUserFacingErrorMessage(
+															err,
+															"Could not resubmit. Please try again.",
+														),
+														variant: "destructive",
+													});
+													throw err;
+												}
+											}}
+										/>
+									)}
+									<ApprovalWorkflowActivity
+										events={historyFromNotifications(workflow.notifications)}
 										workflow={workflow}
-										entityLabel="contract"
+										entityType="contract"
 									/>
-								)}
-								{workflow.workflowFrozen ? null : (
-									<ApprovalWorkflowActions
+									<ApprovalDecisionControls
 										workflow={workflow}
+										notes={notes}
+										onNotesChange={setNotes}
 										busy={busy}
-										onClaim={async () => {
-											try {
-												await claim({ path: pathname || "/contracts" });
-												toast({
-													title: "Step claimed",
-													description: "You are now assigned to this step.",
-												});
-												router.refresh();
-											} catch (err) {
-												toast({
-													title: "Claim failed",
-													description: toUserFacingErrorMessage(
-														err,
-														"Could not claim this step. Please try again.",
-													),
-													variant: "destructive",
-												});
-												throw err;
-											}
-										}}
-										onReassign={async (assigneeUserIds, reason) => {
-											try {
-												await reassign({
-													assigneeUserIds,
-													reason,
-													path: pathname || "/contracts",
-												});
-												toast({
-													title: "Step reassigned",
-													description: "Approval assignees were updated.",
-												});
-												router.refresh();
-											} catch (err) {
-												toast({
-													title: "Reassign failed",
-													description: toUserFacingErrorMessage(
-														err,
-														"Could not reassign this step. Please try again.",
-													),
-													variant: "destructive",
-												});
-												throw err;
-											}
-										}}
-										onResubmit={async () => {
-											try {
-												await resubmit({ path: pathname || "/contracts" });
-												toast({
-													title: "Resubmitted",
-													description: "Department review restarted.",
-												});
-												router.refresh();
-											} catch (err) {
-												toast({
-													title: "Resubmit failed",
-													description: toUserFacingErrorMessage(
-														err,
-														"Could not resubmit. Please try again.",
-													),
-													variant: "destructive",
-												});
-												throw err;
-											}
-										}}
+										onDecide={(decision) => void handleDecision(decision)}
 									/>
-								)}
-								<ApprovalWorkflowActivity
-									events={historyFromNotifications(workflow.notifications)}
-									workflow={workflow}
-									entityType="contract"
-								/>
-								<ApprovalDecisionControls
-									workflow={workflow}
-									notes={notes}
-									onNotesChange={setNotes}
-									busy={busy}
-									onDecide={(decision) => void handleDecision(decision)}
-								/>
-							</div>
-						) : null}
+								</div>
+							) : null}
 						</div>
 						{documentSplitOpen && documentUrl ? (
 							<>
