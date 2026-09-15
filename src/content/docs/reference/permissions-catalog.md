@@ -95,6 +95,7 @@ This catalog explains permission keys in everyday language. Exact availability c
 | `users.edit` | Edit users |
 | `users.assign_roles` | Change role assignments |
 | `users.deactivate` | Deactivate users |
+| `users.impersonate` | Start a time-boxed “View as user” session (must be assigned in `role_permissions`; not a Super Admin bypass) |
 
 ## Settings & integrations
 
