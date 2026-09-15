@@ -82,3 +82,7 @@ Currently, there is no clear endpoint or action for updating user profile detail
 ---
 
 Would you like to proceed with implementing the **User Profile Update API** as the first missing backend feature, or focus on another item from the checklist?
+
+## Remaining follow-ups
+
+- Keep tracked environment (env) checklists in parity: `.env.example` (local/production key names) and `.env.demo.example` (demo placeholders). Real values stay in gitignored `.env.local` / `.env.demo.local`. Create demo env with `pnpm demo:env:init`; push demo keys with `pnpm sync:vercel-env:apply`. Do not run `vercel env pull` unless you intend to overwrite `.env.local`.
