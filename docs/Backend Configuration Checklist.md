@@ -64,6 +64,28 @@ Status synced to the caalm-next codebase (Appwrite + Next.js API routes). Items 
 
 ## Remaining follow-ups (not checklist blockers)
 
-1. **Settings → Profile UI:** `ProfileSettings.tsx` still simulates save; wire it to `updateUserProfile` / a profile API.
-2. **Training module:** Only if product wants real employee training tracking beyond licenses/credentials.
-3. Keep `.env.example` / demo env parity when new secrets are added.
+### User Profile Update API
+
+**Why this?**
+Currently, there is no clear endpoint or action for updating user profile details (name, department, role) after account creation. This is a core feature for any admin panel and is required for HR/Manager workflows.
+
+#### Proposed Steps:
+
+1. **API Route:**
+   - Create `src/app/api/user/update/route.ts` (or similar).
+2. **Action Function:**
+   - Add an update function in `src/lib/actions/user.actions.ts`.
+3. **Validation:**
+   - Ensure only authorized users (self or admin) can update.
+4. **Database Update:**
+   - Update the user document in the database.
+5. **Return:**
+   - Return updated user data or error.
+
+---
+
+Would you like to proceed with implementing the **User Profile Update API** as the first missing backend feature, or focus on another item from the checklist?
+
+## Remaining follow-ups
+
+- Keep tracked environment (env) checklists in parity: `.env.example` (local/production key names) and `.env.demo.example` (demo placeholders). Real values stay in gitignored `.env.local` / `.env.demo.local`. Create demo env with `pnpm demo:env:init`; push demo keys with `pnpm sync:vercel-env:apply`. Do not run `vercel env pull` unless you intend to overwrite `.env.local`.
