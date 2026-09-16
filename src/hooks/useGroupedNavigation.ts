@@ -7,6 +7,7 @@ import {
 	PERMISSION_BASED_NAV,
 } from "@/constants/navigation-permissions";
 import { useAuth } from "@/contexts/AuthContext";
+import { useImpersonation } from "@/contexts/ImpersonationContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import {
@@ -16,17 +17,23 @@ import {
 
 export function useGroupedNavigation() {
 	const { user } = useAuth();
+	const { isImpersonating, status } = useImpersonation();
 	const { permissions, loading: permissionsLoading } = usePermissions();
 	const { roles: userRoles, loading: rolesLoading } = useUserRoles();
 
-	const departmentProfile = useMemo(
-		() => ({
+	const departmentProfile = useMemo(() => {
+		if (isImpersonating && status.target) {
+			return {
+				department: status.target.department,
+				departmentLabel: status.target.departmentLabel,
+			};
+		}
+		return {
 			department: (user as { department?: string } | null)?.department,
 			departmentLabel: (user as { departmentLabel?: string } | null)
 				?.departmentLabel,
-		}),
-		[user],
-	);
+		};
+	}, [user, isImpersonating, status.target]);
 
 	const { isViewer, primaryRole, isITUser } = useMemo(() => {
 		if (userRoles.length === 0) {

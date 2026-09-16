@@ -4,9 +4,14 @@
 
 "use server";
 
+import { cookies } from "next/headers";
 import { type NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/actions/user.actions";
 import { appendSessionChangedNotice } from "@/lib/auth/session-sync";
+import {
+	getEffectiveUser,
+	getEffectiveUserFromToken,
+} from "@/lib/impersonation/effective-user";
+import { IMPERSONATION_COOKIE } from "@/lib/impersonation/mutation-guard";
 import {
 	isRoleDashboardHomePath,
 	resolveDashboardHomePath,
@@ -23,7 +28,9 @@ import {
  */
 export async function getDashboardHomeRedirectPath(): Promise<string | null> {
 	try {
-		const user = await getCurrentUser();
+		const token = (await cookies()).get(IMPERSONATION_COOKIE)?.value;
+		const context = await getEffectiveUserFromToken(token);
+		const user = context?.effectiveUser;
 		if (!user) {
 			return null;
 		}
@@ -54,7 +61,8 @@ export async function redirectIfNotAuthorizedForDashboard(
 			return null;
 		}
 
-		const user = await getCurrentUser();
+		const context = await getEffectiveUser(request);
+		const user = context?.effectiveUser;
 		if (!user) {
 			return NextResponse.redirect(new URL("/sign-in", request.url));
 		}

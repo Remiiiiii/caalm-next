@@ -53,6 +53,8 @@ export const PERMISSIONS = {
 		EDIT: "users.edit",
 		ASSIGN_ROLES: "users.assign_roles",
 		DEACTIVATE: "users.deactivate",
+		/** Time-boxed “View as user”. Assign in role_permissions — never a role-name bypass. */
+		IMPERSONATE: "users.impersonate",
 	},
 
 	// Organization Settings Permissions
@@ -175,6 +177,7 @@ export const PERMISSIONS = {
 export const SENSITIVE_PERMISSIONS: readonly string[] = [
 	PERMISSIONS.USERS.ASSIGN_ROLES,
 	PERMISSIONS.USERS.DEACTIVATE,
+	PERMISSIONS.USERS.IMPERSONATE,
 	PERMISSIONS.SETTINGS.BILLING,
 	PERMISSIONS.CONTRACTS.APPROVE,
 	PERMISSIONS.CONTRACTS.SIGN,
@@ -393,6 +396,13 @@ export const PERMISSION_DEFINITIONS = [
 		name: "Deactivate Users",
 		category: "users",
 		description: "Deactivate users",
+	},
+	{
+		key: PERMISSIONS.USERS.IMPERSONATE,
+		name: "View as User",
+		category: "users",
+		description:
+			"Start a time-boxed, audited impersonation session to view the app as another user in the same organization. Super Admin and Organization Admin receive this only when it is assigned in role_permissions.",
 	},
 
 	// Settings
@@ -805,8 +815,11 @@ export const PERMISSION_DEFINITIONS = [
 
 export type PermissionKey = (typeof ALL_PERMISSIONS)[number];
 
-/** Org Admin baseline: everything except platform break-glass keys */
+/** Org Admin baseline: everything except platform break-glass and impersonation. */
 export function getOrganizationAdminPermissionKeys(): string[] {
-	const platformKeys = new Set<string>(Object.values(PERMISSIONS.PLATFORM));
-	return ALL_PERMISSIONS.filter((key) => !platformKeys.has(key));
+	const excluded = new Set<string>([
+		...Object.values(PERMISSIONS.PLATFORM),
+		PERMISSIONS.USERS.IMPERSONATE,
+	]);
+	return ALL_PERMISSIONS.filter((key) => !excluded.has(key));
 }

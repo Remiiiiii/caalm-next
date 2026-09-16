@@ -6,6 +6,7 @@ import {
 	CalendarClock,
 	ChevronDown,
 	ChevronsUpDown,
+	Eye,
 	Filter,
 	FunnelX,
 	KeyRound,
@@ -46,11 +47,17 @@ import {
 	UserManagementActionDialogs,
 } from "@/components/users/UserManagementActionDialogs";
 import { PERMISSIONS } from "@/constants/permissions";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+	setViewAsClientHint,
+	useImpersonation,
+} from "@/contexts/ImpersonationContext";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useStepUp } from "@/contexts/StepUpContext";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { type UserManagementUser, useUsers } from "@/hooks/useUsers";
+import { isSameUserIdentity } from "@/lib/impersonation/policy";
 import {
 	DATA_TABLE_BODY_ROW_BASE,
 	DATA_TABLE_HEADER_CELL,
@@ -109,10 +116,16 @@ const formatDateTimeLabel = (iso?: string): string => {
 
 const UserManagement = () => {
 	const { toast } = useToast();
+	const { user: actor } = useAuth();
 	const { ensureStepUp } = useStepUp();
+	const { isImpersonating, readOnly } = useImpersonation();
 	const { permissions } = usePermissions();
-	const canManageUsers = permissions.includes(PERMISSIONS.USERS.EDIT);
-	const canAssignRoles = permissions.includes(PERMISSIONS.USERS.ASSIGN_ROLES);
+	const canManageUsers =
+		permissions.includes(PERMISSIONS.USERS.EDIT) && !readOnly;
+	const canAssignRoles =
+		permissions.includes(PERMISSIONS.USERS.ASSIGN_ROLES) && !readOnly;
+	const canImpersonate =
+		permissions.includes(PERMISSIONS.USERS.IMPERSONATE) && !isImpersonating;
 
 	const [searchTerm, setSearchTerm] = useState("");
 	const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
@@ -760,6 +773,28 @@ const UserManagement = () => {
 															>
 																View profile
 															</AppDropdownMenuItem>
+															{canImpersonate ? (
+																<AppDropdownMenuItem
+																	icon={Eye}
+																	disabled={isSameUserIdentity(
+																		{
+																			$id: actor?.$id,
+																			accountId:
+																				(actor as { accountId?: string } | null)
+																					?.accountId || actor?.$id,
+																		},
+																		{
+																			$id: user.$id,
+																			accountId: user.accountId,
+																		},
+																	)}
+																	onSelect={() =>
+																		openAction(user, "impersonate")
+																	}
+																>
+																	View as user
+																</AppDropdownMenuItem>
+															) : null}
 															<AppDropdownMenuItem
 																icon={PencilIcon}
 																disabled={!canManageUsers}
@@ -969,6 +1004,45 @@ const UserManagement = () => {
 						"User deleted",
 						`${actionUser.fullName} was removed`,
 					);
+				}}
+				onConfirmImpersonate={async (reason) => {
+					if (!actionUser) return;
+					setActionBusy(true);
+					try {
+						if (!(await ensureStepUp())) {
+							setActionBusy(false);
+							return;
+						}
+						const res = await fetch("/api/impersonation/start", {
+							method: "POST",
+							headers: { "Content-Type": "application/json" },
+							credentials: "same-origin",
+							body: JSON.stringify({
+								targetUserId: actionUser.$id,
+								reason,
+								orgId,
+							}),
+						});
+						const data = (await res.json().catch(() => ({}))) as {
+							error?: string;
+						};
+						if (!res.ok) {
+							throw new Error(data.error || "Failed to start View as user");
+						}
+						setViewAsClientHint(actionUser.$id);
+						toast({
+							title: "Viewing as user",
+							description: `You are viewing as ${actionUser.fullName}.`,
+						});
+						window.location.reload();
+					} catch (err) {
+						toast({
+							title: "Could not start View as user",
+							description: err instanceof Error ? err.message : "Unknown error",
+							variant: "destructive",
+						});
+						setActionBusy(false);
+					}
 				}}
 			/>
 		</div>

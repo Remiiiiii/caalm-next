@@ -12,6 +12,12 @@ import {
 	getUserTier,
 	shouldBypassRateLimit as shouldBypassConfig,
 } from "@/lib/config/rate-limit.config";
+import {
+	hasImpersonationCookie,
+	IMPERSONATION_COOKIE,
+	IMPERSONATION_READ_ONLY_ERROR,
+	shouldBlockImpersonationMutation,
+} from "@/lib/impersonation/mutation-guard";
 import { rateLimitMonitoring } from "@/lib/services/rate-limit-monitoring";
 import { rateLimiter } from "@/lib/services/rate-limiter";
 import { penaltyService } from "@/lib/services/rate-limiter-penalties";
@@ -38,6 +44,22 @@ function hasAuthenticatedSession(request: NextRequest): boolean {
 
 export async function proxy(request: NextRequest) {
 	const { pathname } = request.nextUrl;
+
+	if (
+		shouldBlockImpersonationMutation(
+			request.method,
+			pathname,
+			hasImpersonationCookie(request.cookies.get(IMPERSONATION_COOKIE)?.value),
+		)
+	) {
+		return NextResponse.json(
+			{
+				error: IMPERSONATION_READ_ONLY_ERROR,
+				code: "IMPERSONATION_READ_ONLY",
+			},
+			{ status: 403 },
+		);
+	}
 
 	// Rate limiting for API routes (Edge-compatible)
 	if (pathname.startsWith("/api")) {
