@@ -2,6 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import {
+	getViewAsClientHint,
+	useImpersonation,
+} from "@/contexts/ImpersonationContext";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { getCachedData, setCachedData } from "@/lib/utils/client-cache";
 
@@ -23,19 +27,23 @@ interface UseUserRolesResult {
 export function useUserRoles(): UseUserRolesResult {
 	const { user } = useAuth();
 	const { orgId } = useOrganization();
+	const { isImpersonating, status } = useImpersonation();
+	const viewAsHint = getViewAsClientHint();
+	const effectiveUserId =
+		(isImpersonating && status.target?.$id) || viewAsHint || user?.$id;
 	const [roles, setRoles] = useState<UserRole[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
-		if (!user?.$id) {
+		if (!effectiveUserId) {
 			setRoles([]);
 			setLoading(false);
 			return;
 		}
 
 		// Check client-side cache first (stale-while-revalidate pattern)
-		const cacheKey = `userRoles:${user.$id}:${orgId || "default"}`;
+		const cacheKey = `userRoles:${effectiveUserId}:${orgId || "default"}`;
 		const cachedRoles = getCachedData<UserRole[]>(cacheKey);
 
 		if (cachedRoles) {
@@ -50,13 +58,16 @@ export function useUserRoles(): UseUserRolesResult {
 			const hasCachedData = !!cachedRoles;
 
 			try {
-				const url = `/api/users/${user.$id}/roles${orgId ? `?orgId=${orgId}` : ""}`;
+				const impersonating = Boolean(isImpersonating) || Boolean(viewAsHint);
+				const url = impersonating
+					? `/api/permissions/check${orgId ? `?orgId=${orgId}` : ""}`
+					: `/api/users/${effectiveUserId}/roles${orgId ? `?orgId=${orgId}` : ""}`;
 
 				// Use request deduplication to prevent concurrent requests
 				const { deduplicateRequest } = await import(
 					"@/lib/utils/request-deduplication"
 				);
-				const requestKey = `userRoles:${user.$id}:${orgId || "default"}`;
+				const requestKey = `userRoles:${effectiveUserId}:${orgId || "default"}`;
 
 				const data = await deduplicateRequest(requestKey, async () => {
 					const response = await fetch(url);
@@ -66,11 +77,24 @@ export function useUserRoles(): UseUserRolesResult {
 					return response.json();
 				});
 
-				if (data.success && data.data?.roles) {
-					const userRoles = data.data.roles.map((role: any) => ({
-						roleId: role.$id,
-						roleName: role.name || null,
-					}));
+				const roleRows = impersonating
+					? data.roles
+					: data.success && data.data?.roles
+						? data.data.roles
+						: null;
+
+				if (data.success && Array.isArray(roleRows)) {
+					const userRoles = roleRows.map(
+						(role: {
+							$id?: string;
+							roleId?: string;
+							name?: string;
+							roleName?: string | null;
+						}) => ({
+							roleId: role.roleId || role.$id || "",
+							roleName: role.roleName || role.name || null,
+						}),
+					);
 
 					// Cache for 5 minutes
 					setCachedData(cacheKey, userRoles, 300000);
@@ -93,7 +117,7 @@ export function useUserRoles(): UseUserRolesResult {
 		};
 
 		fetchRoles();
-	}, [user?.$id, orgId]);
+	}, [effectiveUserId, orgId, isImpersonating, viewAsHint]);
 
 	return { roles, loading, error };
 }

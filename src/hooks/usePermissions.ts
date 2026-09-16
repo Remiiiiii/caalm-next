@@ -6,6 +6,10 @@
 import { useEffect, useMemo, useState } from "react";
 import type { PermissionKey } from "@/constants/permissions";
 import { useAuth } from "@/contexts/AuthContext";
+import {
+	getViewAsClientHint,
+	useImpersonation,
+} from "@/contexts/ImpersonationContext";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { getCachedData, setCachedData } from "@/lib/utils/client-cache";
 
@@ -23,6 +27,10 @@ interface UsePermissionsResult {
 export function usePermissions(): UsePermissionsResult {
 	const { user, loading: authLoading } = useAuth();
 	const { orgId } = useOrganization();
+	const { isImpersonating, status } = useImpersonation();
+	const viewAsHint = getViewAsClientHint();
+	const effectiveUserId =
+		(isImpersonating && status.target?.$id) || viewAsHint || user?.$id;
 	const [permissions, setPermissions] = useState<PermissionKey[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [settled, setSettled] = useState(false);
@@ -47,7 +55,7 @@ export function usePermissions(): UsePermissionsResult {
 		setSettled(false);
 
 		// Check client-side cache first (stale-while-revalidate pattern)
-		const cacheKey = `permissions:${user.$id}:${orgId || "default"}`;
+		const cacheKey = `permissions:${effectiveUserId}:${orgId || "default"}`;
 		const cachedPermissions = getCachedData<PermissionKey[]>(cacheKey);
 		const usableCache =
 			Array.isArray(cachedPermissions) && cachedPermissions.length > 0
@@ -72,7 +80,7 @@ export function usePermissions(): UsePermissionsResult {
 				const { deduplicateRequest } = await import(
 					"@/lib/utils/request-deduplication"
 				);
-				const requestKey = `permissions:${user.$id}:${orgId || "default"}`;
+				const requestKey = `permissions:${effectiveUserId}:${orgId || "default"}`;
 
 				const data = await deduplicateRequest(requestKey, async () => {
 					const response = await fetch(url, {
@@ -111,30 +119,30 @@ export function usePermissions(): UsePermissionsResult {
 		};
 
 		fetchPermissions();
-	}, [user?.$id, orgId, authLoading]);
+	}, [user?.$id, effectiveUserId, orgId, authLoading]);
 
 	const checkPermission = useMemo(
 		() => async (key: PermissionKey) => {
-			if (!user?.$id || !permissions.length) return false;
+			if (!effectiveUserId || !permissions.length) return false;
 			return permissions.includes(key);
 		},
-		[user?.$id, permissions],
+		[effectiveUserId, permissions],
 	);
 
 	const checkAnyPermission = useMemo(
 		() => async (keys: PermissionKey[]) => {
-			if (!user?.$id || !permissions.length) return false;
+			if (!effectiveUserId || !permissions.length) return false;
 			return keys.some((key) => permissions.includes(key));
 		},
-		[user?.$id, permissions],
+		[effectiveUserId, permissions],
 	);
 
 	const checkAllPermissions = useMemo(
 		() => async (keys: PermissionKey[]) => {
-			if (!user?.$id || !permissions.length) return false;
+			if (!effectiveUserId || !permissions.length) return false;
 			return keys.every((key) => permissions.includes(key));
 		},
-		[user?.$id, permissions],
+		[effectiveUserId, permissions],
 	);
 
 	return {

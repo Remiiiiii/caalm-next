@@ -1,6 +1,7 @@
 "use client";
 
 import {
+	Eye,
 	Loader2,
 	Save,
 	ShieldCheck,
@@ -23,8 +24,10 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import type { UserManagementUser } from "@/hooks/useUsers";
+import { MIN_IMPERSONATION_REASON_LENGTH } from "@/lib/impersonation/policy";
 import { fetcher } from "@/lib/swr-config";
 import { resolveAvatarDisplayUrl } from "@/lib/utils";
 
@@ -49,6 +52,7 @@ function formatLastActiveLabel(iso?: string): string {
 
 export type UserActionKind =
 	| "view"
+	| "impersonate"
 	| "edit"
 	| "role"
 	| "reset"
@@ -74,6 +78,7 @@ interface UserManagementActionDialogsProps {
 	onConfirmRevoke: () => void;
 	onConfirmSuspend: () => void;
 	onConfirmDelete: () => void;
+	onConfirmImpersonate: (reason: string) => void;
 }
 
 function DialogShell({
@@ -133,6 +138,7 @@ export function UserManagementActionDialogs({
 	onConfirmRevoke,
 	onConfirmSuspend,
 	onConfirmDelete,
+	onConfirmImpersonate,
 }: UserManagementActionDialogsProps) {
 	const { orgId } = useOrganization();
 	const [fullName, setFullName] = useState("");
@@ -140,6 +146,7 @@ export function UserManagementActionDialogs({
 	const [division, setDivision] = useState("");
 	const [managerUserId, setManagerUserId] = useState<string>("");
 	const [roleName, setRoleName] = useState("");
+	const [impersonationReason, setImpersonationReason] = useState("");
 
 	const historyUrl =
 		user && action === "edit" ? `/api/users/${user.$id}/org-history` : null;
@@ -167,6 +174,7 @@ export function UserManagementActionDialogs({
 		setDivision(user.division || "");
 		setManagerUserId(user.managerUserId || "");
 		setRoleName(user.roleName || "");
+		setImpersonationReason("");
 	}, [user, action]);
 
 	if (!user || !action) return null;
@@ -228,6 +236,64 @@ export function UserManagementActionDialogs({
 							</dd>
 						</div>
 					</dl>
+				</div>
+			</DialogShell>
+		);
+	}
+
+	if (action === "impersonate") {
+		const reasonReady =
+			impersonationReason.trim().length >= MIN_IMPERSONATION_REASON_LENGTH;
+		return (
+			<DialogShell
+				open
+				onClose={onClose}
+				title="View as user"
+				icon={<Eye className="h-5 w-5 text-[#0f5384]" />}
+				subtitle={`You will browse CAALM as ${user.fullName}. Your admin session stays signed in.`}
+				footer={
+					<div className="flex items-center justify-end gap-3">
+						<Button
+							disabled={busy || !reasonReady}
+							onClick={() => onConfirmImpersonate(impersonationReason.trim())}
+							className="primary-btn px-3 sm:px-4"
+							data-impersonation-allow=""
+						>
+							{busy ? (
+								<Loader2 className="h-4 w-4 animate-spin" />
+							) : (
+								<Eye className="h-4 w-4" />
+							)}
+							View as {user.fullName}
+						</Button>
+					</div>
+				}
+			>
+				<div className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+					<p className="text-sm text-slate-700">
+						This session is read-only, time-boxed, and written to the audit log.
+						You cannot impersonate another admin or nest sessions.
+					</p>
+					<div>
+						<Label
+							htmlFor="impersonation-reason"
+							className="mb-1 text-sm text-slate-700"
+						>
+							Reason (ticket ID or note)
+						</Label>
+						<Textarea
+							id="impersonation-reason"
+							value={impersonationReason}
+							onChange={(e) => setImpersonationReason(e.target.value)}
+							placeholder="TKT-2026-0042: reproduce missing contracts"
+							disabled={busy}
+							className="min-h-[96px] resize-y"
+						/>
+						<p className="mt-1 text-xs text-slate-500">
+							At least {MIN_IMPERSONATION_REASON_LENGTH} characters. Required
+							before step-up authentication.
+						</p>
+					</div>
 				</div>
 			</DialogShell>
 		);

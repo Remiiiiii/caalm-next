@@ -134,6 +134,7 @@ describe("impersonation APIs", () => {
 			expect.anything(),
 			expect.objectContaining({
 				permission: PERMISSIONS.USERS.IMPERSONATE,
+				useActor: true,
 			}),
 		);
 	});
