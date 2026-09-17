@@ -24,6 +24,7 @@ import {
 export async function POST(request: NextRequest) {
 	const permissionCheck = await requirePermission(request, {
 		permission: PERMISSIONS.USERS.IMPERSONATE,
+		useActor: true,
 	});
 	if (permissionCheck) {
 		const actor = await getCurrentUser();

@@ -1,9 +1,16 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { NextRequest, NextResponse } from "next/server";
+import { IMPERSONATION_COOKIE } from "@/lib/impersonation/mutation-guard";
 import { clampImpersonationTtlMinutes } from "@/lib/impersonation/policy";
 
-export const IMPERSONATION_COOKIE = "caalm_impersonation";
-export const IMPERSONATION_PATH_PREFIX = "/api/impersonation";
+export {
+	hasImpersonationCookie,
+	IMPERSONATION_COOKIE,
+	IMPERSONATION_PATH_PREFIX,
+	IMPERSONATION_READ_ONLY_ERROR,
+	isImpersonationControlPath,
+	shouldBlockImpersonationMutation,
+} from "@/lib/impersonation/mutation-guard";
 
 export type ImpersonationClaim = {
 	actorUserId: string;
@@ -131,24 +138,4 @@ export function clearImpersonationCookie(response: NextResponse): void {
 		path: "/",
 		maxAge: 0,
 	});
-}
-
-export function isImpersonationControlPath(pathname: string): boolean {
-	return (
-		pathname === IMPERSONATION_PATH_PREFIX ||
-		pathname.startsWith(`${IMPERSONATION_PATH_PREFIX}/`)
-	);
-}
-
-/** True when a mutating API call should be blocked during Phase 1 impersonation. */
-export function shouldBlockImpersonationMutation(
-	method: string,
-	pathname: string,
-	hasActiveClaim: boolean,
-): boolean {
-	if (!hasActiveClaim) return false;
-	const verb = method.toUpperCase();
-	if (verb === "GET" || verb === "HEAD" || verb === "OPTIONS") return false;
-	if (isImpersonationControlPath(pathname)) return false;
-	return pathname.startsWith("/api/");
 }

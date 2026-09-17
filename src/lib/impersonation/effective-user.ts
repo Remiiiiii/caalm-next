@@ -1,8 +1,9 @@
 import type { NextRequest } from "next/server";
 import { getCurrentUser, getUserById } from "@/lib/actions/user.actions";
 import {
+	IMPERSONATION_COOKIE,
 	isImpersonationClaimActive,
-	readImpersonationClaim,
+	parseImpersonationClaim,
 } from "@/lib/impersonation/session";
 
 export type ImpersonationProfile = {
@@ -14,6 +15,7 @@ export type ImpersonationProfile = {
 	role?: string;
 	division?: string;
 	department?: string;
+	departmentLabel?: string;
 };
 
 export type EffectiveUserContext = {
@@ -30,6 +32,8 @@ export type EffectiveUserContext = {
 			$id: string;
 			fullName: string;
 			email: string;
+			department?: string;
+			departmentLabel?: string;
 		};
 	} | null;
 };
@@ -44,6 +48,7 @@ function asProfile(user: {
 	role?: string;
 	division?: string;
 	department?: string;
+	departmentLabel?: string;
 }): ImpersonationProfile {
 	return {
 		$id: user.$id,
@@ -54,6 +59,7 @@ function asProfile(user: {
 		role: user.role,
 		division: user.division,
 		department: user.department,
+		departmentLabel: user.departmentLabel,
 	};
 }
 
@@ -61,14 +67,14 @@ function asProfile(user: {
  * Actor is the signed-in admin. While an impersonation cookie is active,
  * effectiveUser is the target (product UI/API should authorize as the target).
  */
-export async function getEffectiveUser(
-	request: NextRequest,
+export async function getEffectiveUserFromToken(
+	token: string | undefined,
 ): Promise<EffectiveUserContext | null> {
 	const actorRaw = await getCurrentUser();
 	if (!actorRaw) return null;
 
 	const actor = asProfile(actorRaw);
-	const claim = readImpersonationClaim(request);
+	const claim = parseImpersonationClaim(token);
 	if (!isImpersonationClaimActive(claim) || claim.actorUserId !== actor.$id) {
 		return { actor, effectiveUser: actor, impersonation: null };
 	}
@@ -87,6 +93,9 @@ export async function getEffectiveUser(
 		role: String((targetRow as { role?: string }).role || ""),
 		division: String((targetRow as { division?: string }).division || ""),
 		department: String((targetRow as { department?: string }).department || ""),
+		departmentLabel: String(
+			(targetRow as { departmentLabel?: string }).departmentLabel || "",
+		),
 	});
 
 	return {
@@ -103,7 +112,17 @@ export async function getEffectiveUser(
 				$id: target.$id,
 				fullName: target.fullName || target.email || "User",
 				email: target.email || "",
+				department: target.department,
+				departmentLabel: target.departmentLabel,
 			},
 		},
 	};
+}
+
+export async function getEffectiveUser(
+	request: NextRequest,
+): Promise<EffectiveUserContext | null> {
+	return getEffectiveUserFromToken(
+		request.cookies.get(IMPERSONATION_COOKIE)?.value,
+	);
 }

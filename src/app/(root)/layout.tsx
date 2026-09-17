@@ -6,6 +6,7 @@ import { Suspense, useEffect, useMemo } from "react";
 import DashboardHeader from "@/components/DashboardHeader";
 import { DesktopFirstGate } from "@/components/DesktopFirstGate";
 import DemoTourLayer from "@/components/demo/tour/DemoTourLayer";
+import { ImpersonationBanner } from "@/components/impersonation/ImpersonationBanner";
 import MobileNavigation from "@/components/MobileNavigation";
 import NotificationSoundListener from "@/components/NotificationSoundListener";
 import Sidebar from "@/components/Sidebar";
@@ -13,6 +14,7 @@ import ReportIssueFab from "@/components/tickets/ReportIssueFab";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { ImpersonationProvider } from "@/contexts/ImpersonationContext";
 import { OrganizationProvider } from "@/contexts/OrganizationContext";
 import { SidebarProvider } from "@/contexts/SidebarContext";
 import { StepUpProvider } from "@/contexts/StepUpContext";
@@ -103,30 +105,33 @@ const LayoutContent = ({ children }: { children: React.ReactNode }) => {
 			) : (
 				<SidebarProvider>
 					<NotificationSoundListener />
-					<main className="flex h-screen overflow-hidden">
-						<Sidebar {...sidebarProps} />
-						<section className="flex h-full flex-1 flex-col min-w-0 pt-4 sm:pt-5 md:pt-6 lg:pt-7">
-							<MobileNavigation {...navigationProps} />
-							<div className="px-3 sm:px-4 lg:pr-7 pb-2 sm:pb-3 min-w-0 shrink-0">
-								<DashboardHeader user={user} />
-							</div>
-							<div className="main-content">
-								<DesktopFirstGate>
-									<Suspense
-										fallback={
-											<div className="flex min-h-[200px] items-center justify-center">
-												<LoadingSpinner size="md" />
-											</div>
-										}
-									>
-										{children}
-									</Suspense>
-								</DesktopFirstGate>
-							</div>
-						</section>
-						<Toaster />
-						<DemoTourLayer />
-						<ReportIssueFab />
+					<main className="flex h-screen flex-col overflow-hidden">
+						<ImpersonationBanner />
+						<div className="flex min-h-0 flex-1 overflow-hidden">
+							<Sidebar {...sidebarProps} />
+							<section className="flex h-full min-w-0 flex-1 flex-col pt-4 sm:pt-5 md:pt-6 lg:pt-7">
+								<MobileNavigation {...navigationProps} />
+								<div className="min-w-0 shrink-0 px-3 pb-2 sm:px-4 sm:pb-3 lg:pr-7">
+									<DashboardHeader user={user} />
+								</div>
+								<div className="main-content">
+									<DesktopFirstGate>
+										<Suspense
+											fallback={
+												<div className="flex min-h-[200px] items-center justify-center">
+													<LoadingSpinner size="md" />
+												</div>
+											}
+										>
+											{children}
+										</Suspense>
+									</DesktopFirstGate>
+								</div>
+							</section>
+							<Toaster />
+							<DemoTourLayer />
+							<ReportIssueFab />
+						</div>
 					</main>
 				</SidebarProvider>
 			)}
@@ -139,7 +144,9 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 		<AuthProvider>
 			<OrganizationProvider>
 				<StepUpProvider>
-					<LayoutContent>{children}</LayoutContent>
+					<ImpersonationProvider>
+						<LayoutContent>{children}</LayoutContent>
+					</ImpersonationProvider>
 				</StepUpProvider>
 			</OrganizationProvider>
 		</AuthProvider>

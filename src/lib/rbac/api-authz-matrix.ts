@@ -86,6 +86,11 @@ const SIGNAL_PATTERNS: Array<{
 		re: /\brequireContractPermission\s*\(/,
 	},
 	{
+		signal: "getEffectiveUser",
+		class: "session",
+		re: /\bgetEffectiveUser(FromToken)?\s*\(/,
+	},
+	{
 		signal: "getCurrentUser",
 		class: "session",
 		re: /\bgetCurrentUser\s*\(/,
