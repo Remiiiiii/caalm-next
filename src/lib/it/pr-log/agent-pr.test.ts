@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
-import type { GitHubPullRequestSummary } from "@/lib/roadmap/github-pr-match";
 import {
 	agentPrToSection,
 	buildPrLogOverview,
 	isAgentPullRequestBranch,
+	type PrLogSourcePr,
+	shouldKeepAgentPrOnLog,
 } from "./agent-pr";
 
 function pr(
-	overrides: Partial<GitHubPullRequestSummary> &
-		Pick<GitHubPullRequestSummary, "number" | "headRef">,
-): GitHubPullRequestSummary {
+	overrides: Partial<PrLogSourcePr> & Pick<PrLogSourcePr, "number" | "headRef">,
+): PrLogSourcePr {
 	return {
 		title: "Sample",
 		htmlUrl: `https://github.com/Remiiiiii/caalm-next/pull/${overrides.number}`,
@@ -58,17 +58,58 @@ describe("buildPrLogOverview", () => {
 		expect(overview.overallProgressPercent).toBe(0);
 	});
 
-	it("marks a merged agent PR complete", () => {
-		const section = agentPrToSection(
+	it("keeps a merged agent PR until checks pass", () => {
+		const waiting = pr({
+			number: 49,
+			title: "Roadmap engine",
+			headRef: "cursor/clm-roadmap-engine-5329",
+			state: "merged",
+			checksPassed: false,
+			checksReason: "Waiting for GitHub checks to finish (Playwright E2E)",
+		});
+		expect(shouldKeepAgentPrOnLog(waiting)).toBe(true);
+		const section = agentPrToSection(waiting);
+		expect(section.status).toBe("in_progress");
+		expect(section.progressPercent).toBe(50);
+		expect(section.mergeBlockReason).toContain("Playwright E2E");
+	});
+
+	it("drops a merged agent PR after checks succeed", () => {
+		expect(
+			shouldKeepAgentPrOnLog(
+				pr({
+					number: 49,
+					title: "Roadmap engine",
+					headRef: "cursor/clm-roadmap-engine-5329",
+					state: "merged",
+					checksPassed: true,
+				}),
+			),
+		).toBe(false);
+	});
+
+	it("omits green merges from the live overview", () => {
+		const overview = buildPrLogOverview([
 			pr({
-				number: 49,
-				title: "Roadmap engine",
-				headRef: "cursor/clm-roadmap-engine-5329",
-				state: "merged",
+				number: 80,
+				title: "Open agent PR",
+				headRef: "cursor/open-work-aaaa",
 			}),
-		);
-		expect(section.status).toBe("complete");
-		expect(section.progressPercent).toBe(100);
-		expect(section.mergeBlockReason).toBeNull();
+			pr({
+				number: 79,
+				title: "Merged, checks still running",
+				headRef: "cursor/merged-pending-bbbb",
+				state: "merged",
+				checksPassed: false,
+			}),
+			pr({
+				number: 78,
+				title: "Merged and green",
+				headRef: "cursor/merged-green-cccc",
+				state: "merged",
+				checksPassed: true,
+			}),
+		]);
+		expect(overview.sections.map((s) => s.prNumber)).toEqual([80, 79]);
 	});
 });

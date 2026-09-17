@@ -11,8 +11,6 @@ import {
 	FunnelX,
 	KeyRound,
 	LogOut,
-	PencilIcon,
-	Power,
 	ShieldCheck,
 	UserCheck,
 	UserRound,
@@ -796,13 +794,6 @@ const UserManagement = () => {
 																</AppDropdownMenuItem>
 															) : null}
 															<AppDropdownMenuItem
-																icon={PencilIcon}
-																disabled={!canManageUsers}
-																onSelect={() => openAction(user, "edit")}
-															>
-																Edit user details
-															</AppDropdownMenuItem>
-															<AppDropdownMenuItem
 																icon={ShieldCheck}
 																disabled={!canAssignRoles}
 																onSelect={() => openAction(user, "role")}
@@ -823,13 +814,6 @@ const UserManagement = () => {
 																onSelect={() => openAction(user, "revoke")}
 															>
 																Revoke active sessions
-															</AppDropdownMenuItem>
-															<AppDropdownMenuItem
-																icon={Power}
-																disabled={!canManageUsers}
-																onSelect={() => openAction(user, "suspend")}
-															>
-																Suspend / reactivate account
 															</AppDropdownMenuItem>
 															<DropdownMenuSeparator />
 															<AppDropdownMenuItem
@@ -876,7 +860,12 @@ const UserManagement = () => {
 				action={actionKind}
 				roleOptions={allRoles.filter((r) => r !== "Unassigned")}
 				busy={actionBusy}
+				canManageUsers={canManageUsers}
 				onClose={closeAction}
+				onOpenAction={(kind) => {
+					if (!actionUser) return;
+					openAction(actionUser, kind);
+				}}
 				onSaveEdit={async ({
 					fullName,
 					department,
@@ -985,7 +974,7 @@ const UserManagement = () => {
 						},
 						nextStatus === "active"
 							? "Account reactivated"
-							: "Account suspended",
+							: "Account deactivated",
 					);
 				}}
 				onConfirmDelete={async () => {

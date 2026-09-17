@@ -1,8 +1,15 @@
 import {
+	fetchCommitCheckRuns,
 	fetchPullRequestStatus,
 	listOpenPullRequests,
+	listRecentlyClosedPullRequests,
 } from "@/lib/roadmap/github";
-import { buildPrLogOverview, isAgentPullRequestBranch } from "./agent-pr";
+import {
+	buildPrLogOverview,
+	isAgentPullRequestBranch,
+	type PrLogSourcePr,
+} from "./agent-pr";
+import { evaluateCommitCheckGate } from "./checks";
 import type { PrLogOverview, PrLogPullRequestDetail } from "./types";
 
 export class PrLogError extends Error {
@@ -14,9 +21,52 @@ export class PrLogError extends Error {
 	}
 }
 
+async function enrichMergedAgentPr(pr: PrLogSourcePr): Promise<PrLogSourcePr> {
+	const sha =
+		pr.mergeCommitSha?.trim() ||
+		(await fetchPullRequestStatus({ prNumber: pr.number })).mergeCommitSha ||
+		"";
+	if (!sha) {
+		return {
+			...pr,
+			checksPassed: false,
+			checksReason: "Merged — waiting for a merge commit SHA",
+		};
+	}
+	const runs = await fetchCommitCheckRuns({ commitSha: sha }).catch(() => []);
+	const gate = evaluateCommitCheckGate(runs);
+	return {
+		...pr,
+		mergeCommitSha: sha,
+		checksPassed: gate.ok,
+		checksReason: gate.reason,
+	};
+}
+
 export async function getPrLogOverview(): Promise<PrLogOverview> {
-	const prs = await listOpenPullRequests().catch(() => []);
-	return buildPrLogOverview(prs);
+	const [open, closed] = await Promise.all([
+		listOpenPullRequests().catch(() => []),
+		listRecentlyClosedPullRequests().catch(() => []),
+	]);
+
+	const seen = new Set<number>();
+	const combined: PrLogSourcePr[] = [];
+	for (const pr of [...open, ...closed]) {
+		if (seen.has(pr.number)) continue;
+		seen.add(pr.number);
+		combined.push(pr);
+	}
+
+	const enriched = await Promise.all(
+		combined.map(async (pr) => {
+			if (pr.state !== "merged" || !isAgentPullRequestBranch(pr.headRef)) {
+				return pr;
+			}
+			return enrichMergedAgentPr(pr);
+		}),
+	);
+
+	return buildPrLogOverview(enriched);
 }
 
 export async function getPrLogPullRequest(

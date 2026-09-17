@@ -210,7 +210,7 @@ export function PrLogPage() {
 	return (
 		<ITPageShell
 			title="PR log - Cursor Cloud Agent"
-			subtitle="Cloud agent pull requests — each open cursor/ branch appears as a section. Merge with green tests to complete it."
+			subtitle="Cloud agent pull requests — cursor/ branches stay listed after merge until every GitHub check on the merge commit succeeds."
 			icon={GitPullRequest}
 		>
 			{overviewLoading && !overview ? (
@@ -220,11 +220,12 @@ export function PrLogPage() {
 					<ITGlassPanel>
 						<RoadmapProgressBar
 							percent={overview.overallProgressPercent}
-							label="Agent PRs merged"
+							label="Agent PRs with green merge checks"
 							size="md"
 						/>
 						<p className="text-xs text-slate-500 mt-2">
-							Progress = merged agent PRs ÷ open agent PRs on this list.
+							Progress = PRs with all merge-commit checks green ÷ PRs still on
+							this list. Merged PRs drop off only after those checks succeed.
 						</p>
 					</ITGlassPanel>
 

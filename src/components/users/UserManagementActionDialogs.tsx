@@ -3,11 +3,14 @@
 import {
 	Eye,
 	Loader2,
+	Pencil,
+	Power,
 	Save,
 	ShieldCheck,
 	Trash2,
 	TriangleAlert,
 	UserRound,
+	X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import useSWR from "swr";
@@ -66,7 +69,11 @@ interface UserManagementActionDialogsProps {
 	action: UserActionKind;
 	roleOptions: string[];
 	busy: boolean;
+	canManageUsers?: boolean;
 	onClose: () => void;
+	onOpenAction?: (
+		kind: Extract<UserActionKind, "view" | "edit" | "suspend">,
+	) => void;
 	onSaveEdit: (payload: {
 		fullName: string;
 		department: string;
@@ -131,7 +138,9 @@ export function UserManagementActionDialogs({
 	action,
 	roleOptions,
 	busy,
+	canManageUsers = false,
 	onClose,
+	onOpenAction,
 	onSaveEdit,
 	onSaveRole,
 	onConfirmReset,
@@ -182,6 +191,12 @@ export function UserManagementActionDialogs({
 	const isSuspended = user.status === "suspended" || user.status === "inactive";
 
 	if (action === "view") {
+		const statusLabel = isSuspended ? "Deactivated" : "Active";
+		const statusBadgeClass = isSuspended
+			? "bg-orange/10 text-orange border-orange/20"
+			: "bg-green/10 text-green border-green/20";
+		const emptyOrgLabel = "Not assigned";
+
 		return (
 			<DialogShell
 				open
@@ -189,8 +204,34 @@ export function UserManagementActionDialogs({
 				title="User profile"
 				icon={<UserRound className="h-5 w-5 text-[#0f5384]" />}
 				subtitle={user.email}
+				footer={
+					<div className="flex items-center justify-end gap-3">
+						<Button
+							type="button"
+							disabled={busy || !canManageUsers}
+							onClick={() => onOpenAction?.("suspend")}
+							className={
+								isSuspended
+									? "primary-btn px-3 sm:px-4"
+									: "delete-btn px-3 sm:px-4"
+							}
+						>
+							<Power className="h-4 w-4" />
+							{isSuspended ? "Reactivate" : "Deactivate"}
+						</Button>
+						<Button
+							type="button"
+							disabled={busy || !canManageUsers}
+							onClick={() => onOpenAction?.("edit")}
+							className="primary-btn px-3 sm:px-4"
+						>
+							<Pencil className="h-4 w-4" />
+							Edit user
+						</Button>
+					</div>
+				}
 			>
-				<div className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+				<div className="rounded-lg border border-slate-200 bg-white p-4 sm:p-6">
 					<div className="flex items-center gap-3">
 						<Avatar
 							name={user.fullName}
@@ -199,40 +240,41 @@ export function UserManagementActionDialogs({
 							className="shrink-0 gap-0"
 							imageUrl={resolveAvatarDisplayUrl(user)}
 						/>
-						<div>
-							<p className="font-semibold text-slate-700">{user.fullName}</p>
-							<p className="text-sm text-slate-600">{user.email}</p>
+						<div className="min-w-0">
+							<p className="truncate font-semibold text-slate-700">
+								{user.fullName}
+							</p>
+							<p className="truncate text-sm text-slate-600">{user.email}</p>
+							<span
+								className={`mt-2 inline-block px-2 py-0.5 text-xs rounded-full font-medium border ${statusBadgeClass}`}
+							>
+								{statusLabel}
+							</span>
 						</div>
 					</div>
-					<dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+					<dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-4 border-t border-slate-200 pt-4 text-sm">
 						<div>
 							<dt className="text-slate-500">Role</dt>
-							<dd className="font-medium text-slate-800">
+							<dd className="font-medium text-slate-700">
 								{user.roleName || "Unassigned"}
 							</dd>
 						</div>
 						<div>
 							<dt className="text-slate-500">Department</dt>
-							<dd className="font-medium text-slate-800">
-								{user.department || "—"}
+							<dd className="font-medium text-slate-700">
+								{user.department?.trim() || emptyOrgLabel}
 							</dd>
 						</div>
 						<div>
 							<dt className="text-slate-500">Division</dt>
-							<dd className="font-medium text-slate-800">
-								{user.division || "—"}
+							<dd className="font-medium text-slate-700">
+								{user.division?.trim() || emptyOrgLabel}
 							</dd>
 						</div>
 						<div>
 							<dt className="text-slate-500">Assigned by</dt>
-							<dd className="font-medium text-slate-800">
+							<dd className="font-medium text-slate-700">
 								{user.assignedByName || "System"}
-							</dd>
-						</div>
-						<div>
-							<dt className="text-slate-500">Status</dt>
-							<dd className="font-medium text-slate-800 capitalize">
-								{user.status || "active"}
 							</dd>
 						</div>
 					</dl>
@@ -452,14 +494,6 @@ export function UserManagementActionDialogs({
 			confirm: "Revoke sessions",
 			onConfirm: onConfirmRevoke,
 		},
-		suspend: {
-			title: isSuspended ? "Reactivate account" : "Suspend account",
-			body: isSuspended
-				? `Reactivate ${user.fullName}'s account?`
-				: `Suspend ${user.fullName}? They won't be able to sign in until reactivated.`,
-			confirm: isSuspended ? "Reactivate" : "Suspend",
-			onConfirm: onConfirmSuspend,
-		},
 	} as const;
 
 	if (action === "delete") {
@@ -558,7 +592,79 @@ export function UserManagementActionDialogs({
 		);
 	}
 
-	if (action === "reset" || action === "revoke" || action === "suspend") {
+	if (action === "suspend") {
+		return (
+			<DialogShell
+				open
+				onClose={onClose}
+				title={isSuspended ? "Reactivate account" : "Deactivate account"}
+				icon={<Power className="h-5 w-5 text-[#0f5384]" />}
+				footer={
+					<div className="flex items-center justify-end gap-3">
+						<Button
+							type="button"
+							disabled={busy}
+							onClick={() => onOpenAction?.("view")}
+							className="primary-btn cursor-pointer px-3 sm:px-4"
+						>
+							<X className="h-4 w-4" />
+							Cancel
+						</Button>
+						<Button
+							type="button"
+							disabled={busy}
+							onClick={onConfirmSuspend}
+							className={
+								isSuspended
+									? "primary-btn cursor-pointer px-3 sm:px-4"
+									: "delete-btn cursor-pointer px-3 sm:px-4"
+							}
+						>
+							{busy ? (
+								<Loader2 className="h-4 w-4 animate-spin" />
+							) : (
+								<Power className="h-4 w-4" />
+							)}
+							{isSuspended ? "Reactivate" : "Deactivate"}
+						</Button>
+					</div>
+				}
+			>
+				<div className="space-y-4">
+					<div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-3">
+						<Avatar
+							name={user.fullName}
+							userId={user.$id}
+							size="md"
+							className="shrink-0 gap-0"
+							imageUrl={resolveAvatarDisplayUrl(user)}
+						/>
+						<div className="min-w-0">
+							<p className="truncate text-sm font-semibold text-slate-700">
+								{user.fullName}
+							</p>
+							<p className="truncate text-xs text-slate-600">{user.email}</p>
+						</div>
+					</div>
+					<p className="text-sm leading-relaxed text-slate-700">
+						{isSuspended
+							? "They'll be able to sign in again. This does not change their data or history."
+							: (
+								<>
+									They won&apos;t be able to sign in until an admin reactivates
+									the account.{" "}
+									<span className="font-bold">
+										This does not delete their data or history.
+									</span>
+								</>
+							)}
+					</p>
+				</div>
+			</DialogShell>
+		);
+	}
+
+	if (action === "reset" || action === "revoke") {
 		const cfg = confirmConfig[action];
 		return (
 			<DialogShell
@@ -571,7 +677,7 @@ export function UserManagementActionDialogs({
 						<Button
 							disabled={busy}
 							onClick={cfg.onConfirm}
-							className="primary-btn px-3 sm:px-4"
+							className="primary-btn cursor-pointer px-3 sm:px-4"
 						>
 							{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
 							{cfg.confirm}

@@ -79,10 +79,17 @@ export async function PATCH(req: NextRequest) {
 			return NextResponse.json({ error: "Account not found" }, { status: 400 });
 		}
 
-		const updatedUser = await updateUserProfile({
+		const result = await updateUserProfile({
 			accountId,
 			fullName,
 		});
+		if (!result?.user) {
+			return NextResponse.json(
+				{ error: "Failed to update profile" },
+				{ status: 500 },
+			);
+		}
+		const { user: updatedUser } = result;
 
 		await CacheManager.invalidateUsers(
 			currentUser.email,

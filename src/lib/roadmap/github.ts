@@ -172,6 +172,62 @@ export async function listOpenPullRequests(): Promise<
 	return prs;
 }
 
+let closedPullRequestsCache: {
+	fetchedAt: number;
+	prs: GitHubPullRequestSummary[];
+} | null = null;
+
+/**
+ * Recently closed/merged PRs (GitHub `state=closed` includes merges).
+ * Used by the PR log so a merge does not drop a card before checks finish.
+ */
+export async function listRecentlyClosedPullRequests(): Promise<
+	GitHubPullRequestSummary[]
+> {
+	const repo = getRepo();
+	if (!repo.includes("/")) return [];
+
+	const now = Date.now();
+	if (
+		closedPullRequestsCache &&
+		now - closedPullRequestsCache.fetchedAt < OPEN_PRS_CACHE_MS
+	) {
+		return closedPullRequestsCache.prs;
+	}
+
+	const [owner, name] = repo.split("/");
+	const res = await githubFetch(
+		`https://api.github.com/repos/${owner}/${name}/pulls?state=closed&sort=updated&direction=desc&per_page=50`,
+	);
+	if (!res?.ok) return [];
+
+	const json = (await res.json()) as Array<{
+		number: number;
+		title: string;
+		html_url: string;
+		state: string;
+		draft?: boolean;
+		created_at?: string;
+		merged_at?: string | null;
+		merge_commit_sha?: string | null;
+		head?: { ref?: string };
+	}>;
+
+	const prs: GitHubPullRequestSummary[] = json.map((pr) => ({
+		number: pr.number,
+		title: pr.title,
+		htmlUrl: pr.html_url,
+		headRef: pr.head?.ref ?? "",
+		state: pr.merged_at ? "merged" : "closed",
+		draft: Boolean(pr.draft),
+		createdAt: pr.created_at,
+		mergeCommitSha: pr.merge_commit_sha ?? undefined,
+	}));
+
+	closedPullRequestsCache = { fetchedAt: now, prs };
+	return prs;
+}
+
 export async function postPullRequestComment(params: {
 	prNumber: number;
 	body: string;
@@ -393,4 +449,46 @@ export async function fetchRoadmapCompletionGate(params: {
 /** Test helper — clears completion-gate cache between vitest cases. */
 export function clearRoadmapCompletionGateCacheForTests(): void {
 	completionGateCache.clear();
+}
+
+const CHECK_RUNS_CACHE_MS = 30_000;
+const checkRunsCache = new Map<
+	string,
+	{ fetchedAt: number; runs: CommitCheckRunJson[] }
+>();
+
+type CommitCheckRunJson = {
+	name: string;
+	status: string;
+	conclusion: string | null;
+};
+
+/** Check runs on a commit (Actions + Vercel GitHub checks). */
+export async function fetchCommitCheckRuns(params: {
+	commitSha: string;
+}): Promise<CommitCheckRunJson[]> {
+	const sha = params.commitSha.trim();
+	if (!sha) return [];
+
+	const cached = checkRunsCache.get(sha);
+	if (cached && Date.now() - cached.fetchedAt < CHECK_RUNS_CACHE_MS) {
+		return cached.runs;
+	}
+
+	const repo = getRepo();
+	if (!repo.includes("/")) return [];
+	const [owner, name] = repo.split("/");
+	const res = await githubFetch(
+		`https://api.github.com/repos/${owner}/${name}/commits/${encodeURIComponent(sha)}/check-runs?per_page=100`,
+	);
+	if (!res?.ok) return [];
+
+	const json = (await res.json()) as { check_runs?: CommitCheckRunJson[] };
+	const runs = (json.check_runs ?? []).map((run) => ({
+		name: run.name,
+		status: run.status,
+		conclusion: run.conclusion,
+	}));
+	checkRunsCache.set(sha, { fetchedAt: Date.now(), runs });
+	return runs;
 }

@@ -1,20 +1,42 @@
 import type { GitHubPullRequestSummary } from "@/lib/roadmap/github-pr-match";
 import type { PrLogOverview, PrLogSection } from "./types";
 
+export type PrLogSourcePr = GitHubPullRequestSummary & {
+	/** True only when every GitHub check on the merge commit succeeded. */
+	checksPassed?: boolean;
+	checksReason?: string;
+};
+
 /** Cloud agent branches look like `cursor/funding-retention-pursuit-9ee5`. */
 export function isAgentPullRequestBranch(headRef: string): boolean {
 	return /(?:^|\/)cursor\//i.test(headRef.trim());
 }
 
-export function agentPrMergeBlockReason(pr: GitHubPullRequestSummary): string {
+/**
+ * Merged agent PRs stay on the log until checksPassed. Closed-without-merge
+ * and fully green merges are dropped from the live list.
+ */
+export function shouldKeepAgentPrOnLog(pr: PrLogSourcePr): boolean {
+	if (!isAgentPullRequestBranch(pr.headRef)) return false;
+	if (pr.state === "closed") return false;
+	if (pr.state === "merged") return pr.checksPassed !== true;
+	return true;
+}
+
+export function agentPrMergeBlockReason(pr: PrLogSourcePr): string {
 	if (pr.draft) return "Draft — not ready to merge";
-	if (pr.state === "merged") return "";
+	if (pr.state === "merged") {
+		return pr.checksPassed === true
+			? ""
+			: pr.checksReason || "Merged — waiting for GitHub checks to succeed";
+	}
 	if (pr.state === "closed") return "Closed without merge";
 	return "Waiting to merge";
 }
 
-export function agentPrToSection(pr: GitHubPullRequestSummary): PrLogSection {
-	const complete = pr.state === "merged";
+export function agentPrToSection(pr: PrLogSourcePr): PrLogSection {
+	const complete = pr.state === "merged" && pr.checksPassed === true;
+	const checksPending = pr.state === "merged" && pr.checksPassed !== true;
 	const closed = pr.state === "closed";
 	const status = complete ? "complete" : closed ? "locked" : "in_progress";
 	const block = agentPrMergeBlockReason(pr);
@@ -24,7 +46,7 @@ export function agentPrToSection(pr: GitHubPullRequestSummary): PrLogSection {
 		sectionNumber: pr.number,
 		title: pr.title,
 		status,
-		progressPercent: complete ? 100 : 0,
+		progressPercent: complete ? 100 : checksPending ? 50 : 0,
 		taskCounts: {
 			total: 1,
 			complete: complete ? 1 : 0,
@@ -40,6 +62,7 @@ export function agentPrToSection(pr: GitHubPullRequestSummary): PrLogSection {
 				number: pr.number,
 				title: pr.title,
 				state: pr.state,
+				checksPassed: pr.checksPassed === true,
 			},
 		],
 		mergeBlockReason: complete ? null : block,
@@ -50,11 +73,9 @@ export function agentPrToSection(pr: GitHubPullRequestSummary): PrLogSection {
 	};
 }
 
-export function buildPrLogOverview(
-	prs: GitHubPullRequestSummary[],
-): PrLogOverview {
+export function buildPrLogOverview(prs: PrLogSourcePr[]): PrLogOverview {
 	const sections = prs
-		.filter((pr) => isAgentPullRequestBranch(pr.headRef))
+		.filter(shouldKeepAgentPrOnLog)
 		.sort((a, b) => b.number - a.number)
 		.map(agentPrToSection);
 

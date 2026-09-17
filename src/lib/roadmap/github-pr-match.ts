@@ -17,6 +17,8 @@ export type GitHubPullRequestSummary = {
 	state: "open" | "closed" | "merged";
 	draft?: boolean;
 	createdAt?: string;
+	/** Present on merged PRs from the GitHub pulls payload. */
+	mergeCommitSha?: string;
 };
 
 export type ResolvedPullRequest = GitHubPullRequestSummary & {

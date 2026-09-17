@@ -1857,7 +1857,11 @@ export const updateUserProfile = async ({
 			rowId: userDoc.$id,
 			data: updatePayload,
 		});
-		return updatedUser;
+		const previousStatus =
+			userDoc.status === "inactive" || userDoc.status === "suspended"
+				? userDoc.status
+				: "active";
+		return { user: updatedUser, previousStatus };
 	} catch (error) {
 		if (error instanceof OrgUnitValidationError) {
 			throw error;

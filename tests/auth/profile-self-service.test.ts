@@ -30,9 +30,12 @@ describe("PATCH /api/user/profile", () => {
 			fullName: "Alex Rivera",
 		});
 		mockUpdateUserProfile.mockResolvedValue({
-			$id: "user-1",
-			accountId: "acct-1",
-			fullName: "Alex Rivera",
+			user: {
+				$id: "user-1",
+				accountId: "acct-1",
+				fullName: "Alex Rivera",
+			},
+			previousStatus: "active",
 		});
 		mockInvalidateUsers.mockResolvedValue(undefined);
 	});

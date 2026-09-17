@@ -1,12 +1,14 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
-import { updateUserProfile } from "@/lib/actions/user.actions";
+import { getCurrentUser, updateUserProfile } from "@/lib/actions/user.actions";
 import { requireStepUpForSession } from "@/lib/auth/step-up";
 import {
 	normalizeOrgPlacement,
 	OrgUnitValidationError,
 } from "@/lib/org/org-unit-validation";
-import { requirePermission } from "@/lib/rbac/middleware";
+import { getOrgIdFromRequest, requirePermission } from "@/lib/rbac/middleware";
+import CacheManager from "@/lib/services/cache-manager";
+import { logAccountStatusChange } from "@/lib/users/account-status-audit";
 
 export async function PATCH(req: NextRequest) {
 	try {
@@ -60,7 +62,7 @@ export async function PATCH(req: NextRequest) {
 			}
 		}
 
-		const updatedUser = await updateUserProfile({
+		const result = await updateUserProfile({
 			accountId,
 			fullName,
 			role,
@@ -73,6 +75,46 @@ export async function PATCH(req: NextRequest) {
 			departmentId,
 			divisionId,
 		});
+		if (!result?.user) {
+			return NextResponse.json(
+				{ error: "Failed to update user profile" },
+				{ status: 500 },
+			);
+		}
+		const { user: updatedUser, previousStatus } = result;
+
+		if (status !== undefined) {
+			try {
+				const actor = await getCurrentUser();
+				if (actor) {
+					const target = updatedUser as {
+						$id?: string;
+						fullName?: string;
+						email?: string;
+						orgId?: string;
+					};
+					await logAccountStatusChange({
+						actor: {
+							$id: actor.$id,
+							fullName: actor.fullName,
+							email: actor.email,
+						},
+						target,
+						previousStatus,
+						nextStatus: status,
+						orgId: getOrgIdFromRequest(req) || target.orgId,
+						request: req,
+					});
+					await CacheManager.invalidateAudits();
+				}
+			} catch (auditError) {
+				console.error(
+					"[SERVER] PATCH /api/user/update: failed to write status audit",
+					auditError,
+				);
+			}
+		}
+
 		return NextResponse.json({ user: updatedUser });
 	} catch (error) {
 		const message =
