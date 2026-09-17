@@ -11,6 +11,7 @@ interface UseUsersOptions {
 
 export interface UserManagementUser extends AppUser {
 	roleName?: string;
+	assignedById?: string;
 	assignedByName?: string;
 	assignedDate?: string;
 	lastActiveAt?: string;
@@ -69,6 +70,7 @@ export const useUsers = ({
 						? u.status
 						: "active",
 				roleName: u.roleName,
+				assignedById: (u as { assignedById?: string }).assignedById,
 				assignedByName: u.assignedByName,
 				assignedDate: u.assignedDate,
 				lastActiveAt: u.lastActiveAt,

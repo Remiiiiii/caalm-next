@@ -28,30 +28,13 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { UserManagementProfileSummary } from "@/components/users/UserManagementProfileSummary";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import type { UserManagementUser } from "@/hooks/useUsers";
 import { MIN_IMPERSONATION_REASON_LENGTH } from "@/lib/impersonation/policy";
 import { fetcher } from "@/lib/swr-config";
+import { formatUserLastActiveLabel } from "@/lib/users/user-management-display";
 import { resolveAvatarDisplayUrl } from "@/lib/utils";
-
-function formatLastActiveLabel(iso?: string): string {
-	if (!iso) return "—";
-	const date = new Date(iso);
-	if (Number.isNaN(date.getTime())) return "—";
-
-	const now = Date.now();
-	const diffDays = Math.floor((now - date.getTime()) / (1000 * 60 * 60 * 24));
-
-	if (diffDays <= 0) return "Today";
-	if (diffDays === 1) return "Yesterday";
-	if (diffDays < 30) return `${diffDays} days ago`;
-
-	return date.toLocaleDateString("en-US", {
-		month: "short",
-		day: "numeric",
-		year: "numeric",
-	});
-}
 
 export type UserActionKind =
 	| "view"
@@ -191,12 +174,6 @@ export function UserManagementActionDialogs({
 	const isSuspended = user.status === "suspended" || user.status === "inactive";
 
 	if (action === "view") {
-		const statusLabel = isSuspended ? "Deactivated" : "Active";
-		const statusBadgeClass = isSuspended
-			? "bg-orange/10 text-orange border-orange/20"
-			: "bg-green/10 text-green border-green/20";
-		const emptyOrgLabel = "Not assigned";
-
 		return (
 			<DialogShell
 				open
@@ -231,54 +208,7 @@ export function UserManagementActionDialogs({
 					</div>
 				}
 			>
-				<div className="rounded-lg border border-slate-200 bg-white p-4 sm:p-6">
-					<div className="flex items-center gap-3">
-						<Avatar
-							name={user.fullName}
-							userId={user.$id}
-							size="lg"
-							className="shrink-0 gap-0"
-							imageUrl={resolveAvatarDisplayUrl(user)}
-						/>
-						<div className="min-w-0">
-							<p className="truncate font-semibold text-slate-700">
-								{user.fullName}
-							</p>
-							<p className="truncate text-sm text-slate-600">{user.email}</p>
-							<span
-								className={`mt-2 inline-block px-2 py-0.5 text-xs rounded-full font-medium border ${statusBadgeClass}`}
-							>
-								{statusLabel}
-							</span>
-						</div>
-					</div>
-					<dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-4 border-t border-slate-200 pt-4 text-sm">
-						<div>
-							<dt className="text-slate-500">Role</dt>
-							<dd className="font-medium text-slate-700">
-								{user.roleName || "Unassigned"}
-							</dd>
-						</div>
-						<div>
-							<dt className="text-slate-500">Department</dt>
-							<dd className="font-medium text-slate-700">
-								{user.department?.trim() || emptyOrgLabel}
-							</dd>
-						</div>
-						<div>
-							<dt className="text-slate-500">Division</dt>
-							<dd className="font-medium text-slate-700">
-								{user.division?.trim() || emptyOrgLabel}
-							</dd>
-						</div>
-						<div>
-							<dt className="text-slate-500">Assigned by</dt>
-							<dd className="font-medium text-slate-700">
-								{user.assignedByName || "System"}
-							</dd>
-						</div>
-					</dl>
-				</div>
+				<UserManagementProfileSummary user={user} />
 			</DialogShell>
 		);
 	}
@@ -547,7 +477,7 @@ export function UserManagementActionDialogs({
 											Last active
 										</p>
 										<p className="text-xs font-semibold text-slate-800">
-											{formatLastActiveLabel(
+											{formatUserLastActiveLabel(
 												user.lastActiveAt || user.$updatedAt,
 											)}
 										</p>
@@ -647,17 +577,17 @@ export function UserManagementActionDialogs({
 						</div>
 					</div>
 					<p className="text-sm leading-relaxed text-slate-700">
-						{isSuspended
-							? "They'll be able to sign in again. This does not change their data or history."
-							: (
-								<>
-									They won&apos;t be able to sign in until an admin reactivates
-									the account.{" "}
-									<span className="font-bold">
-										This does not delete their data or history.
-									</span>
-								</>
-							)}
+						{isSuspended ? (
+							"They'll be able to sign in again. This does not change their data or history."
+						) : (
+							<>
+								They won&apos;t be able to sign in until an admin reactivates
+								the account.{" "}
+								<span className="font-bold">
+									This does not delete their data or history.
+								</span>
+							</>
+						)}
 					</p>
 				</div>
 			</DialogShell>

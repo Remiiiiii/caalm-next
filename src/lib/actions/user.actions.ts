@@ -1965,6 +1965,7 @@ export interface UserManagementRow {
 	accountId: string;
 	role: CalendarRole;
 	roleName: string;
+	assignedById: string;
 	assignedByName: string;
 	assignedDate?: string;
 	lastActiveAt?: string;
@@ -2004,6 +2005,7 @@ type RoleMeta = { name: string; priority: number };
 type UserManagementAssignment = {
 	roleName: string;
 	priority: number;
+	assignedById: string;
 	assignedByName: string;
 	assignedDate?: string;
 };
@@ -2017,28 +2019,33 @@ function resolveProfileIdFromRoleUserId(
 	return accountIdToProfileId.get(rawUserId) ?? null;
 }
 
-function resolveAssignedByDisplayName(
+function resolveAssignedByRef(
 	assignedById: string,
 	usersById: Map<string, { fullName: string }>,
 	accountIdToProfileId: Map<string, string>,
-): string {
+): { assignedById: string; assignedByName: string } {
 	if (
 		!assignedById ||
 		assignedById === "system" ||
 		assignedById === "admin_manual"
 	) {
-		return "System";
+		return { assignedById: "system", assignedByName: "System" };
 	}
 
 	const direct = usersById.get(assignedById);
-	if (direct?.fullName) return direct.fullName;
+	if (direct?.fullName) {
+		return { assignedById, assignedByName: direct.fullName };
+	}
 
 	const profileId = accountIdToProfileId.get(assignedById);
 	if (profileId) {
-		return usersById.get(profileId)?.fullName || "System";
+		return {
+			assignedById: profileId,
+			assignedByName: usersById.get(profileId)?.fullName || "System",
+		};
 	}
 
-	return "System";
+	return { assignedById, assignedByName: "System" };
 }
 
 function pickPrimaryUserManagementAssignment(
@@ -2149,14 +2156,16 @@ export const listUsersForManagement = async (
 				(assignment as { assignedAt?: string }).assignedAt ||
 				(assignment as { $createdAt?: string }).$createdAt;
 
+			const assignedBy = resolveAssignedByRef(
+				assignedById,
+				usersById,
+				accountIdToProfileId,
+			);
 			const entry: UserManagementAssignment = {
 				roleName: roleMeta?.name ?? "N/A",
 				priority: roleMeta?.priority ?? 9999,
-				assignedByName: resolveAssignedByDisplayName(
-					assignedById,
-					usersById,
-					accountIdToProfileId,
-				),
+				assignedById: assignedBy.assignedById,
+				assignedByName: assignedBy.assignedByName,
 				assignedDate,
 			};
 
@@ -2215,6 +2224,7 @@ export const listUsersForManagement = async (
 					accountId,
 					role: calendarRoleFromRbacName(roleName),
 					roleName,
+					assignedById: assignment?.assignedById || "system",
 					assignedByName: assignment?.assignedByName || "System",
 					assignedDate: assignment?.assignedDate || createdAt,
 					lastActiveAt: updatedAt || createdAt,

@@ -6,17 +6,11 @@ import {
 	CalendarClock,
 	ChevronDown,
 	ChevronsUpDown,
-	Eye,
 	Filter,
 	FunnelX,
-	KeyRound,
-	LogOut,
 	ShieldCheck,
 	UserCheck,
-	UserRound,
-	UserX,
 } from "lucide-react";
-import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import Avatar from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -29,9 +23,8 @@ import {
 	DropdownMenu,
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
-	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/search-field";
 import {
 	Table,
 	TableBody,
@@ -40,10 +33,18 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { UserAssignmentGraph } from "@/components/users/UserAssignmentGraph";
+import { UserAssignmentNodeCard } from "@/components/users/UserAssignmentNodeCard";
 import {
 	type UserActionKind,
 	UserManagementActionDialogs,
 } from "@/components/users/UserManagementActionDialogs";
+import { UserManagementRowActions } from "@/components/users/UserManagementRowActions";
+import {
+	USER_MANAGEMENT_VIEW_STORAGE_KEY,
+	UserManagementViewToggle,
+	type UserManagementViewType,
+} from "@/components/users/UserManagementViewToggle";
 import { PERMISSIONS } from "@/constants/permissions";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -55,12 +56,12 @@ import { useStepUp } from "@/contexts/StepUpContext";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { type UserManagementUser, useUsers } from "@/hooks/useUsers";
-import { isSameUserIdentity } from "@/lib/impersonation/policy";
 import {
 	DATA_TABLE_BODY_ROW_BASE,
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
 } from "@/lib/ui/data-table-styles";
+import { formatUserDateTimeLabel } from "@/lib/users/user-management-display";
 import { cn, resolveAvatarDisplayUrl } from "@/lib/utils";
 
 const FILTER_SECTION_SCROLL =
@@ -77,40 +78,6 @@ type SortKey =
 	| "lastActiveAt";
 
 type SortDirection = "asc" | "desc";
-
-const formatDateTimeLabel = (iso?: string): string => {
-	if (!iso) return "—";
-	const date = new Date(iso);
-	if (Number.isNaN(date.getTime())) return "—";
-
-	const now = new Date();
-	const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-	const yesterdayStart = new Date(todayStart);
-	yesterdayStart.setDate(todayStart.getDate() - 1);
-	const tomorrowStart = new Date(todayStart);
-	tomorrowStart.setDate(todayStart.getDate() + 1);
-
-	const timeLabel = date.toLocaleString("en-US", {
-		hour: "2-digit",
-		minute: "2-digit",
-		hour12: true,
-	});
-
-	if (date >= todayStart && date < tomorrowStart) {
-		return `Today at ${timeLabel}`;
-	}
-	if (date >= yesterdayStart && date < todayStart) {
-		return `Yesterday at ${timeLabel}`;
-	}
-
-	const dateLabel = date.toLocaleDateString("en-US", {
-		month: "short",
-		day: "2-digit",
-		year: "numeric",
-	});
-
-	return `${dateLabel} at ${timeLabel}`;
-};
 
 const UserManagement = () => {
 	const { toast } = useToast();
@@ -142,6 +109,10 @@ const UserManagement = () => {
 	const [actionUser, setActionUser] = useState<UserManagementUser | null>(null);
 	const [actionKind, setActionKind] = useState<UserActionKind>(null);
 	const [actionBusy, setActionBusy] = useState(false);
+	const [view, setView] = useState<UserManagementViewType>("table");
+	const [selectedGraphUserId, setSelectedGraphUserId] = useState<string | null>(
+		null,
+	);
 	const [orgRoleNames, setOrgRoleNames] = useState<string[]>([]);
 	const [orgDepartmentNames, setOrgDepartmentNames] = useState<string[]>([]);
 
@@ -152,6 +123,15 @@ const UserManagement = () => {
 		pollingInterval: 15000,
 	});
 	const listLoading = orgLoading || !orgId || isLoading;
+
+	useEffect(() => {
+		const saved = window.localStorage.getItem(
+			USER_MANAGEMENT_VIEW_STORAGE_KEY,
+		) as UserManagementViewType | null;
+		if (saved === "table" || saved === "diagram") {
+			setView(saved);
+		}
+	}, []);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -352,7 +332,14 @@ const UserManagement = () => {
 		setSortConfig({ key, direction });
 	};
 
+	const handleViewChange = (next: UserManagementViewType) => {
+		setView(next);
+		setSelectedGraphUserId(null);
+		window.localStorage.setItem(USER_MANAGEMENT_VIEW_STORAGE_KEY, next);
+	};
+
 	const openAction = (user: UserManagementUser, kind: UserActionKind) => {
+		setSelectedGraphUserId(null);
 		setActionUser(user);
 		setActionKind(kind);
 	};
@@ -434,6 +421,7 @@ const UserManagement = () => {
 			</div>
 
 			<div className="flex items-center justify-end gap-2">
+				<UserManagementViewToggle view={view} onViewChange={handleViewChange} />
 				<DropdownMenu>
 					<AppDropdownMenuTrigger
 						asChild
@@ -639,9 +627,10 @@ const UserManagement = () => {
 				<div className="glass-card-cap" />
 				<CardContent className="p-0">
 					<div className="px-4 pb-3 pt-6 sm:px-6 sm:pt-7">
-						<Input
+						<SearchField
 							placeholder="Search users by full name or email..."
-							className="max-w-md border-slate-200 bg-white"
+							className="max-w-md"
+							containerClassName="max-w-md"
 							value={searchTerm}
 							onChange={(e) => setSearchTerm(e.target.value)}
 						/>
@@ -654,6 +643,42 @@ const UserManagement = () => {
 								<p className="mt-2 text-sm text-slate-600">Loading users...</p>
 							</div>
 						</div>
+					) : view === "diagram" ? (
+						filteredAndSortedUsers.length === 0 ? (
+							<div className="px-4 pb-10 text-center text-slate-500 sm:px-6">
+								<p className="body-2">
+									No users match the current search or filters.
+								</p>
+								{activeFilterCount > 0 && (
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={clearAllFilters}
+										className="mt-3"
+									>
+										Clear filters
+									</Button>
+								)}
+							</div>
+						) : (
+							<UserAssignmentGraph
+								users={filteredAndSortedUsers}
+								allUsers={users}
+								selectedUserId={selectedGraphUserId}
+								onSelectUser={(user) => setSelectedGraphUserId(user.$id)}
+								onCloseCard={() => setSelectedGraphUserId(null)}
+								renderCard={(user) => (
+									<UserAssignmentNodeCard
+										user={user}
+										actor={actor}
+										canManageUsers={canManageUsers}
+										canAssignRoles={canAssignRoles}
+										canImpersonate={canImpersonate}
+										onAction={openAction}
+									/>
+								)}
+							/>
+						)
 					) : (
 						<div className="w-full overflow-x-auto px-2 pb-4 sm:px-4">
 							<Table className="border-separate border-spacing-0">
@@ -731,101 +756,27 @@ const UserManagement = () => {
 												</TableCell>
 												<TableCell className="whitespace-nowrap px-3 py-3">
 													<span className="text-sm tabular-nums text-slate-600">
-														{formatDateTimeLabel(
+														{formatUserDateTimeLabel(
 															user.assignedDate || user.$createdAt,
 														)}
 													</span>
 												</TableCell>
 												<TableCell className="whitespace-nowrap px-3 py-3">
 													<span className="text-sm tabular-nums text-slate-600">
-														{formatDateTimeLabel(
+														{formatUserDateTimeLabel(
 															user.lastActiveAt || user.$updatedAt,
 														)}
 													</span>
 												</TableCell>
 												<TableCell className="py-3 pr-4 pl-3 text-right">
-													<DropdownMenu>
-														<DropdownMenuTrigger asChild>
-															<Button
-																variant="ghost"
-																size="icon"
-																className="ml-auto h-8 w-8 shad-no-focus border-0 bg-transparent p-0 shadow-none text-slate-500 hover:bg-transparent hover:text-[#0f5384] focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
-																aria-label={`Actions for ${user.fullName}`}
-															>
-																<Image
-																	src="/assets/icons/dots.svg"
-																	alt=""
-																	width={24}
-																	height={24}
-																	className="h-6 w-6"
-																/>
-															</Button>
-														</DropdownMenuTrigger>
-														<AppDropdownMenuContent
-															align="end"
-															className="min-w-[230px]"
-														>
-															<AppDropdownMenuItem
-																icon={UserRound}
-																onSelect={() => openAction(user, "view")}
-															>
-																View profile
-															</AppDropdownMenuItem>
-															{canImpersonate ? (
-																<AppDropdownMenuItem
-																	icon={Eye}
-																	disabled={isSameUserIdentity(
-																		{
-																			$id: actor?.$id,
-																			accountId:
-																				(actor as { accountId?: string } | null)
-																					?.accountId || actor?.$id,
-																		},
-																		{
-																			$id: user.$id,
-																			accountId: user.accountId,
-																		},
-																	)}
-																	onSelect={() =>
-																		openAction(user, "impersonate")
-																	}
-																>
-																	View as user
-																</AppDropdownMenuItem>
-															) : null}
-															<AppDropdownMenuItem
-																icon={ShieldCheck}
-																disabled={!canAssignRoles}
-																onSelect={() => openAction(user, "role")}
-															>
-																Change role
-															</AppDropdownMenuItem>
-															<DropdownMenuSeparator />
-															<AppDropdownMenuItem
-																icon={KeyRound}
-																disabled={!canManageUsers}
-																onSelect={() => openAction(user, "reset")}
-															>
-																Reset password
-															</AppDropdownMenuItem>
-															<AppDropdownMenuItem
-																icon={LogOut}
-																disabled={!canManageUsers}
-																onSelect={() => openAction(user, "revoke")}
-															>
-																Revoke active sessions
-															</AppDropdownMenuItem>
-															<DropdownMenuSeparator />
-															<AppDropdownMenuItem
-																icon={UserX}
-																tone="danger"
-																disabled={!canManageUsers}
-																onSelect={() => openAction(user, "delete")}
-															>
-																Delete user
-															</AppDropdownMenuItem>
-														</AppDropdownMenuContent>
-													</DropdownMenu>
+													<UserManagementRowActions
+														user={user}
+														actor={actor}
+														canManageUsers={canManageUsers}
+														canAssignRoles={canAssignRoles}
+														canImpersonate={canImpersonate}
+														onAction={openAction}
+													/>
 												</TableCell>
 											</TableRow>
 										);
