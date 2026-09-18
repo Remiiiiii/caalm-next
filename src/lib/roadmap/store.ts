@@ -15,6 +15,7 @@ import {
 } from "./catalog-key";
 import {
 	catalogTasksHaveLinkedPr,
+	catalogUsesSequentialTasks,
 	displayedPrNumberForTaskIn,
 } from "./catalog-query";
 import { catalogForKey } from "./catalogs";
@@ -364,6 +365,7 @@ async function syncCatalogLayoutToAppwrite(
 	const unlocked = computeUnlocked({
 		sections: mergedSections,
 		tasks: mergedTasks,
+		sequentialTasks: catalogUsesSequentialTasks(catalogForKey("clm")),
 	});
 
 	for (const section of unlocked.snapshot.sections) {
@@ -497,8 +499,11 @@ export function buildSeedSnapshot(
 		walk(catalogSection.tasks, null);
 	}
 
-	// Unlock section 0 / first top-level task via locking engine
-	const unlocked = computeUnlocked({ sections, tasks });
+	const unlocked = computeUnlocked({
+		sections,
+		tasks,
+		sequentialTasks: catalogUsesSequentialTasks(catalog),
+	});
 	return unlocked.snapshot;
 }
 
@@ -880,7 +885,11 @@ export async function persistUnlockedSnapshot(
 ): Promise<LockSnapshot> {
 	const sections = await listSections(catalogKey);
 	const tasks = await listTasks(undefined, catalogKey);
-	const { snapshot, transitions } = computeUnlocked({ sections, tasks });
+	const { snapshot, transitions } = computeUnlocked({
+		sections,
+		tasks,
+		sequentialTasks: catalogUsesSequentialTasks(catalogForKey(catalogKey)),
+	});
 
 	for (const s of snapshot.sections) {
 		const prev = sections.find((x) => x.$id === s.$id);

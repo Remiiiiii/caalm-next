@@ -58,7 +58,15 @@ export function sectionUsesPerTaskPrCompletionIn(
 ): boolean {
 	const section = catalog.find((s) => s.sectionNumber === sectionNumber);
 	if (!section) return false;
+	if (section.perTaskPrCompletion === true) return true;
+	if (section.perTaskPrCompletion === false) return false;
 	return catalogTasksHaveLinkedPr(section.tasks);
+}
+
+export function catalogUsesSequentialTasks(
+	catalog: RoadmapCatalogSection[],
+): boolean {
+	return catalog.some((section) => section.sequentialTasks === true);
 }
 
 export function catalogTaskLinkedPrNumberIn(

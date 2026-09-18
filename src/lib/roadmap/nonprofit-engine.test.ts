@@ -52,11 +52,22 @@ describe("nonprofit roadmap engine", () => {
 		expect(npo.sections.every((s) => s.id.startsWith("npo_"))).toBe(true);
 	});
 
-	it("unlocks NPO section 0 and keeps section 1 locked", async () => {
+	it("unlocks NPO 0.1 only and keeps later tasks and section 1 locked", async () => {
+		const seed = buildSeedSnapshot("npo");
+		expect(seed.tasks.find((t) => t.taskCode === "0.1")?.status).toBe(
+			"available",
+		);
+		expect(seed.tasks.find((t) => t.taskCode === "0.2")?.status).toBe("locked");
+		expect(seed.tasks.find((t) => t.taskCode === "1.1")?.status).toBe("locked");
+		expect(seed.sections[0]?.status).toBe("in_progress");
+		expect(seed.sections[1]?.status).toBe("locked");
+
 		const npo = await getOverview({ catalogKey: "npo" });
 		expect(npo.overallProgressPercent).toBe(0);
-		expect(npo.sections[0]?.status).toBe("available");
+		expect(npo.sections[0]?.status).toBe("in_progress");
+		expect(npo.sections[0]?.nextTaskCode).toBe("0.1");
 		expect(npo.sections[1]?.status).toBe("locked");
 		expect(npo.sections[1]?.title).toBe("Constituent CRM Foundation");
+		expect(npo.sections[0]?.mergeBlockReason).toMatch(/0\.1/);
 	});
 });

@@ -16,6 +16,7 @@ import {
 } from "./catalog-key";
 import {
 	catalogDisplayTitleForPrIn,
+	catalogUsesSequentialTasks,
 	linkedPrNumbersInCatalog,
 	sectionCompletesOnMergedCatalogPrIn,
 	sectionNumberForPrIn,
@@ -40,6 +41,7 @@ import {
 	computeProgressPercent,
 	computeUnlocked,
 	countByStatus,
+	firstIncompleteSequentialTask,
 } from "./locking";
 import {
 	appendStatusLog,
@@ -118,6 +120,12 @@ function sectionCompletesOnMergedCatalogPr(
 
 function keyFromTasks(tasks: RoadmapTask[]): RoadmapCatalogKey {
 	return catalogKeyFromEntityId(tasks[0]?.$id ?? "sec_00");
+}
+
+function sequentialLockOptions(catalogKey: RoadmapCatalogKey) {
+	return {
+		sequentialTasks: catalogUsesSequentialTasks(catalogOf(catalogKey)),
+	};
 }
 
 /** Prefer an active in-flight PR; otherwise the first linked PR in the section. */
@@ -466,7 +474,11 @@ export async function getOverview(options?: {
 		listTasks(undefined, catalogKey),
 		listOpenPullRequests().catch(() => []),
 	]);
-	const { snapshot } = computeUnlocked({ sections, tasks });
+	const { snapshot } = computeUnlocked({
+		sections,
+		tasks,
+		...sequentialLockOptions(catalogKey),
+	});
 	const unlockedSections = snapshot.sections;
 	const unlockedTasks = snapshot.tasks;
 	const openByNumber = new Map(openPrs.map((pr) => [pr.number, pr]));
@@ -526,6 +538,7 @@ export async function getOverview(options?: {
 		const refreshed = computeUnlocked({
 			sections: freshSections,
 			tasks: freshTasks,
+			...sequentialLockOptions(catalogKey),
 		});
 		viewSections = refreshed.snapshot.sections;
 		viewTasks = refreshed.snapshot.tasks;
@@ -566,6 +579,15 @@ export async function getOverview(options?: {
 				prLookup.get(number)?.state === "merged" &&
 				checksPassedByPr.get(number) !== true,
 		);
+		const sequential = catalogUsesSequentialTasks(catalogOf(catalogKey));
+		const nextTask =
+			section.status === "complete" || !sequential
+				? undefined
+				: firstIncompleteSequentialTask(sectionTasks, section.$id);
+		const perTask = sectionUsesPerTaskPrCompletion(
+			section.sectionNumber,
+			catalogKey,
+		);
 		return {
 			id: section.$id,
 			sectionNumber: section.sectionNumber,
@@ -575,19 +597,23 @@ export async function getOverview(options?: {
 			taskCounts,
 			prTitle: prLinks.at(-1)?.title ?? null,
 			prLinks,
+			nextTaskCode: nextTask?.taskCode ?? null,
+			nextTaskTitle: nextTask?.title ?? null,
 			mergeBlockReason:
 				section.status === "complete"
 					? null
-					: sectionUsesPerTaskPrCompletion(section.sectionNumber, catalogKey)
-						? `${taskCounts.complete} of ${taskCounts.total} tasks complete`
-						: waitingNumber
-							? `Waiting for PR #${waitingNumber} to merge`
-							: waitingChecksNumber
-								? `PR #${waitingChecksNumber}: ${
-										gateReasonByPr.get(waitingChecksNumber) ||
-										"Waiting for required checks"
-									}`
-								: null,
+					: nextTask
+						? `Next: ${nextTask.taskCode} ${nextTask.title} — finish this PR before later tasks unlock`
+						: perTask
+							? `${taskCounts.complete} of ${taskCounts.total} tasks complete`
+							: waitingNumber
+								? `Waiting for PR #${waitingNumber} to merge`
+								: waitingChecksNumber
+									? `PR #${waitingChecksNumber}: ${
+											gateReasonByPr.get(waitingChecksNumber) ||
+											"Waiting for required checks"
+										}`
+									: null,
 		};
 	});
 

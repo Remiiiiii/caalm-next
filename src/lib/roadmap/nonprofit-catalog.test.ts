@@ -43,9 +43,34 @@ describe("nonprofit roadmap catalog", () => {
 		expect(NONPROFIT_ROADMAP_CATALOG[0]?.linkedPrNumbers).toEqual([86]);
 	});
 
+	it("uses sequential per-task PRs on product sections, not one mono-PR", () => {
+		const product = NONPROFIT_ROADMAP_CATALOG.filter(
+			(section) => section.sectionNumber > 0,
+		);
+		expect(product.length).toBe(10);
+		for (const section of product) {
+			expect(section.sequentialTasks).toBe(true);
+			expect(section.perTaskPrCompletion).toBe(true);
+			expect(section.linkedPrNumbers ?? []).toEqual([]);
+			expect(section.tasks.length).toBeGreaterThanOrEqual(8);
+		}
+		expect(NONPROFIT_ROADMAP_CATALOG[0]?.sequentialTasks).toBe(true);
+		const nested = flattenCatalogTasks(NONPROFIT_ROADMAP_CATALOG).filter(
+			(task) => task.taskCode.split(".").length > 2,
+		);
+		expect(nested.length).toBeGreaterThan(8);
+	});
+
+	it("keeps unique task codes inside the nonprofit catalog", () => {
+		const codes = flattenCatalogTasks(NONPROFIT_ROADMAP_CATALOG).map(
+			(task) => task.taskCode,
+		);
+		expect(new Set(codes).size).toBe(codes.length);
+	});
+
 	it("points NPO tests at tests/roadmap/npo/ so they do not collide with CLM suites", () => {
 		const tasks = flattenCatalogTasks(NONPROFIT_ROADMAP_CATALOG);
-		expect(tasks.length).toBeGreaterThan(30);
+		expect(tasks.length).toBeGreaterThan(80);
 		for (const task of tasks) {
 			expect(task.testSuiteRef).toMatch(/^tests\/roadmap\/npo\//);
 		}
