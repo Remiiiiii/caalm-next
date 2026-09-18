@@ -39,8 +39,12 @@ describe("nonprofit roadmap catalog", () => {
 		expect(npoLinked.filter((n) => clmNumbers.has(n))).toEqual([]);
 	});
 
-	it("binds the engine section to PR 86", () => {
-		expect(NONPROFIT_ROADMAP_CATALOG[0]?.linkedPrNumbers).toEqual([86]);
+	it("does not treat the nonprofit project as one linked PR", () => {
+		expect(NONPROFIT_ROADMAP_CATALOG[0]?.linkedPrNumbers ?? []).toEqual([]);
+		expect(NONPROFIT_ROADMAP_CATALOG[0]?.seedComplete).toBe(true);
+		for (const section of NONPROFIT_ROADMAP_CATALOG) {
+			expect(section.linkedPrNumbers ?? []).toEqual([]);
+		}
 	});
 
 	it("uses sequential per-task PRs on product sections, not one mono-PR", () => {

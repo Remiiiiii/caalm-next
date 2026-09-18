@@ -150,6 +150,11 @@ export type RoadmapCatalogSection = {
 	 * later sections stay locked until that PR merges with green tests.
 	 */
 	sequentialTasks?: boolean;
+	/**
+	 * Seed every task in this section as complete. Use for engine work that
+	 * already lives in-tree so the board is a project, not one tracking PR.
+	 */
+	seedComplete?: boolean;
 	tasks: RoadmapCatalogTask[];
 };
 

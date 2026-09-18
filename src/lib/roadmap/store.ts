@@ -464,7 +464,9 @@ export function buildSeedSnapshot(
 			parentTaskId: string | null,
 		) => {
 			const sectionPrs = catalogSection.linkedPrNumbers ?? [];
+			const seedComplete = catalogSection.seedComplete === true;
 			const inheritSolePr =
+				!seedComplete &&
 				sectionPrs.length === 1 &&
 				!catalogTasksHaveLinkedPr(catalogSection.tasks);
 			const soleSectionPr = inheritSolePr ? sectionPrs[0] : undefined;
@@ -480,13 +482,15 @@ export function buildSeedSnapshot(
 					description: item.description,
 					acceptanceCriteria: item.acceptanceCriteria,
 					orderIndex: index,
-					status: "locked",
+					status: seedComplete ? "complete" : "locked",
 					branchName: null,
 					prUrl: null,
-					prNumber: item.linkedPrNumber ?? soleSectionPr ?? null,
+					prNumber: seedComplete
+						? null
+						: (item.linkedPrNumber ?? soleSectionPr ?? null),
 					testSuiteRef: item.testSuiteRef,
 					latestTestRunId: null,
-					completedAt: null,
+					completedAt: seedComplete ? ts : null,
 					completedCommitSha: null,
 					$createdAt: ts,
 					$updatedAt: ts,

@@ -283,8 +283,8 @@ export const IT_NAVIGATION: ITSidebarSection[] = [
 			},
 			{
 				name: "Nonprofit Roadmap",
-				icon: "map",
-				url: "/dashboard/it/development/npo-roadmap",
+				icon: "users",
+				url: "/dashboard/it/development/nonprofit-roadmap",
 				permission: PERMISSIONS.IT.VIEW_ROADMAP,
 			},
 			{

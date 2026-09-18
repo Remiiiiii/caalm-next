@@ -66,8 +66,8 @@ export const NONPROFIT_ROADMAP_CATALOG: RoadmapCatalogSection[] = [
 		title: "Nonprofit Roadmap Engine",
 		sourceRef:
 			"Plan engine prerequisite — reuse CLM UI; isolate catalogs; sequential per-task unlock so product work is a timeline of PRs, not one board dump",
-		linkedPrNumbers: [86],
 		sequentialTasks: true,
+		seedComplete: true,
 		tasks: [
 			t(
 				"0.1",
@@ -97,7 +97,7 @@ export const NONPROFIT_ROADMAP_CATALOG: RoadmapCatalogSection[] = [
 					"Pass sequentialTasks from catalogUsesSequentialTasks; auto-complete a parent when all children are complete; never concatenate CLM+NPO rows",
 				),
 				[
-					"NPO 0.1 is available while 0.2 and section 1 stay locked",
+					"NPO section 0 seeds complete so 1.1 is the first available product task",
 					"Completing a CLM task does not unlock an NPO section",
 				],
 			),
@@ -106,14 +106,14 @@ export const NONPROFIT_ROADMAP_CATALOG: RoadmapCatalogSection[] = [
 				"IT portal board",
 				spec(
 					"IT operators",
-					"Nonprofit Completion Roadmap page matching CLM chrome (progress bar, task tree, next-PR hint, PR pane)",
-					"/dashboard/it/development/npo-roadmap",
-					"The plan has to live where engineers already track CLM work",
+					"Nonprofit Roadmap project page matching CLM chrome (progress bar, task tree, next-PR hint)",
+					"/dashboard/it/development/nonprofit-roadmap",
+					"The plan is a Development project next to CLM Roadmap, not a single card on the PR log",
 					"Section 0 of this catalog",
-					"Shared RoadmapBoardPage; overview ?catalog=npo; permission it.view_roadmap (database-assigned, no Super Admin name check)",
+					"Shared RoadmapBoardPage; overview ?catalog=npo; permission it.view_roadmap (database-assigned, no Super Admin name check). /nonprofit-roadmap redirects here",
 				),
 				[
-					"IT nav lists Nonprofit Roadmap next to CLM Roadmap",
+					"IT Development lists Nonprofit Roadmap as its own link, separate from PR log",
 					"Unauthenticated / missing it.view_roadmap cannot load /api/roadmap/overview?catalog=npo",
 				],
 			),

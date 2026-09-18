@@ -70,13 +70,19 @@ describe("isITSidebarPath", () => {
 });
 
 describe("IT development roadmaps", () => {
-	it("lists both CLM and Nonprofit roadmap routes", () => {
+	it("lists Nonprofit Roadmap as its own Development project, not the PR log", () => {
 		const development = IT_NAVIGATION.find((s) => s.header === "Development");
 		const names = development?.items.map((item) => item.name) ?? [];
 		const urls = development?.items.map((item) => item.url) ?? [];
 		expect(names).toContain("CLM Roadmap");
 		expect(names).toContain("Nonprofit Roadmap");
+		expect(names).toContain("PR log - (Cursor Cloud Agent)");
 		expect(urls).toContain("/dashboard/it/development/clm-roadmap");
-		expect(urls).toContain("/dashboard/it/development/npo-roadmap");
+		expect(urls).toContain("/dashboard/it/development/nonprofit-roadmap");
+		expect(urls).not.toContain("/dashboard/it/development/npo-roadmap");
+		expect(urls).toContain("/dashboard/it/development/pr-log");
+		expect(
+			development?.items.find((item) => item.name === "Nonprofit Roadmap")?.url,
+		).not.toBe("/dashboard/it/development/pr-log");
 	});
 });
