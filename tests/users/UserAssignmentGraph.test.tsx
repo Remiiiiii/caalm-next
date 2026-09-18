@@ -81,7 +81,7 @@ describe("UserAssignmentGraph", () => {
 		).toBeInTheDocument();
 		expect(screen.getByText("All users")).toBeInTheDocument();
 		const directions =
-			"Drag a card to move it · drag a dot to a card to connect · hover a line and click the scissors to disconnect";
+			"Drag a card to move it · drag a dot to a card to connect · hover a line and click the scissors to disconnect · Ctrl+Z undoes the last cut";
 		expect(screen.getByText(directions)).toBeInTheDocument();
 		await userEvent.click(screen.getByRole("button", { name: "Close directions" }));
 		expect(screen.queryByText(directions)).not.toBeInTheDocument();

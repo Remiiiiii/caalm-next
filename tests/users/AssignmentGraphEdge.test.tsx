@@ -64,6 +64,8 @@ describe("AssignmentGraphEdge", () => {
 		const button = screen.getByRole("button", {
 			name: "Disconnect assignment",
 		});
+		expect(button).not.toHaveTextContent("Disconnect");
+		expect(button.className).toContain("bg-red/10");
 		fireEvent.pointerDown(button);
 		expect(onDisconnect).toHaveBeenCalledTimes(1);
 
@@ -71,7 +73,7 @@ describe("AssignmentGraphEdge", () => {
 		expect(onDisconnect).toHaveBeenCalledTimes(2);
 	});
 
-	it("hides scissors on dashed matrix edges", () => {
+	it("hides the disconnect badge on dashed matrix edges", () => {
 		const onDisconnect = vi.fn();
 		render(
 			<div style={{ width: 400, height: 200 }}>
@@ -162,14 +164,14 @@ describe("AssignmentGraphEdge", () => {
 		expect(hitPath).toBeTruthy();
 		const before = screen.getByRole("button", {
 			name: "Disconnect assignment",
-		}).parentElement?.parentElement;
+		}).parentElement;
 		const startX = Number(before?.getAttribute("data-cut-x"));
 
 		fireEvent.mouseMove(hitPath as Element, { clientX: 28, clientY: 40 });
 
 		const after = screen.getByRole("button", {
 			name: "Disconnect assignment",
-		}).parentElement?.parentElement;
+		}).parentElement;
 		const nextX = Number(after?.getAttribute("data-cut-x"));
 		expect(nextX).not.toBe(startX);
 		expect(nextX).toBeLessThan(startX);
