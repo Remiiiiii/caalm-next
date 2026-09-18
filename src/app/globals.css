@@ -1667,9 +1667,87 @@ button[data-state="active"] > span {
 	animation: approval-step-pulse 2.8s ease-in-out infinite;
 }
 
+@keyframes user-graph-self-pulse {
+	0%,
+	100% {
+		border-color: rgba(15, 83, 132, 0.55);
+		box-shadow:
+			0 0 0 2px rgba(15, 83, 132, 0.22),
+			0 8px 32px 0 rgba(31, 38, 135, 0.15);
+	}
+	50% {
+		border-color: rgba(3, 175, 191, 0.95);
+		box-shadow:
+			0 0 0 3px rgba(3, 175, 191, 0.4),
+			0 0 16px 4px rgba(3, 175, 191, 0.28);
+	}
+}
+
+.user-graph-self-pulse {
+	animation: user-graph-self-pulse 3.2s ease-in-out infinite;
+}
+
+/* Marquee box for selecting several user cards at once. */
+.user-graph-flow .react-flow__selection {
+	background: rgb(15 83 132 / 0.08);
+	border: 1px solid rgb(15 83 132 / 0.45);
+}
+
+.user-graph-flow .react-flow__nodesselection-rect {
+	background: rgb(15 83 132 / 0.06);
+	border: 1px solid rgb(15 83 132 / 0.35);
+}
+
+.user-graph-flow .react-flow__node.selected > * {
+	outline: 2px solid rgb(15 83 132 / 0.45);
+	outline-offset: 2px;
+}
+
+/* Soft-fade the assignment grid so it does not hit the canvas edges. */
+.user-graph-flow .react-flow__background {
+	-webkit-mask-image:
+		linear-gradient(
+			to right,
+			transparent 0%,
+			#000 80px,
+			#000 calc(100% - 80px),
+			transparent 100%
+		),
+		linear-gradient(
+			to bottom,
+			transparent 0%,
+			#000 64px,
+			#000 calc(100% - 64px),
+			transparent 100%
+		);
+	-webkit-mask-composite: source-in;
+	mask-image:
+		linear-gradient(
+			to right,
+			transparent 0%,
+			#000 80px,
+			#000 calc(100% - 80px),
+			transparent 100%
+		),
+		linear-gradient(
+			to bottom,
+			transparent 0%,
+			#000 64px,
+			#000 calc(100% - 64px),
+			transparent 100%
+		);
+	mask-composite: intersect;
+}
+
 @media (prefers-reduced-motion: reduce) {
 	.approval-step-current-pulse {
 		animation: none;
+		box-shadow: 0 0 0 2px rgba(15, 83, 132, 0.35);
+	}
+
+	.user-graph-self-pulse {
+		animation: none;
+		border-color: rgba(15, 83, 132, 0.7);
 		box-shadow: 0 0 0 2px rgba(15, 83, 132, 0.35);
 	}
 }

@@ -11,10 +11,10 @@ import {
 	ShieldCheck,
 	UserCheck,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import Avatar from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
 	AppDropdownMenuCheckboxItem,
 	AppDropdownMenuContent,
@@ -34,7 +34,6 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { UserAssignmentGraph } from "@/components/users/UserAssignmentGraph";
-import { UserAssignmentNodeCard } from "@/components/users/UserAssignmentNodeCard";
 import {
 	type UserActionKind,
 	UserManagementActionDialogs,
@@ -42,7 +41,9 @@ import {
 import { UserManagementRowActions } from "@/components/users/UserManagementRowActions";
 import {
 	USER_MANAGEMENT_VIEW_STORAGE_KEY,
+	UserManagementLineageToggle,
 	UserManagementViewToggle,
+	type GraphLineage,
 	type UserManagementViewType,
 } from "@/components/users/UserManagementViewToggle";
 import { PERMISSIONS } from "@/constants/permissions";
@@ -55,7 +56,9 @@ import { useOrganization } from "@/contexts/OrganizationContext";
 import { useStepUp } from "@/contexts/StepUpContext";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useRealtime } from "@/hooks/useRealtime";
 import { type UserManagementUser, useUsers } from "@/hooks/useUsers";
+import { appwriteConfig } from "@/lib/appwrite/config";
 import {
 	DATA_TABLE_BODY_ROW_BASE,
 	DATA_TABLE_HEADER_CELL,
@@ -79,6 +82,28 @@ type SortKey =
 
 type SortDirection = "asc" | "desc";
 
+function UsersNotFoundState({
+	message,
+	action,
+}: {
+	message: string;
+	action?: ReactNode;
+}) {
+	return (
+		<div className="flex flex-col items-center justify-center text-center py-12 px-4">
+			<Image
+				src="/assets/icons/no-data.svg"
+				alt={message}
+				width={250}
+				height={250}
+				className="mx-auto mb-4"
+			/>
+			<p className="body-1 text-slate-700">{message}</p>
+			{action}
+		</div>
+	);
+}
+
 const UserManagement = () => {
 	const { toast } = useToast();
 	const { user: actor } = useAuth();
@@ -87,6 +112,9 @@ const UserManagement = () => {
 	const { permissions } = usePermissions();
 	const canManageUsers =
 		permissions.includes(PERMISSIONS.USERS.EDIT) && !readOnly;
+	const canDeactivateUsers =
+		permissions.includes(PERMISSIONS.USERS.DEACTIVATE) && !readOnly;
+	const canViewUsers = permissions.includes(PERMISSIONS.USERS.VIEW);
 	const canAssignRoles =
 		permissions.includes(PERMISSIONS.USERS.ASSIGN_ROLES) && !readOnly;
 	const canImpersonate =
@@ -110,9 +138,7 @@ const UserManagement = () => {
 	const [actionKind, setActionKind] = useState<UserActionKind>(null);
 	const [actionBusy, setActionBusy] = useState(false);
 	const [view, setView] = useState<UserManagementViewType>("table");
-	const [selectedGraphUserId, setSelectedGraphUserId] = useState<string | null>(
-		null,
-	);
+	const [lineage, setLineage] = useState<GraphLineage>("reporting");
 	const [orgRoleNames, setOrgRoleNames] = useState<string[]>([]);
 	const [orgDepartmentNames, setOrgDepartmentNames] = useState<string[]>([]);
 
@@ -123,6 +149,12 @@ const UserManagement = () => {
 		pollingInterval: 15000,
 	});
 	const listLoading = orgLoading || !orgId || isLoading;
+
+	useRealtime({
+		collectionId: appwriteConfig.usersCollectionId,
+		enabled: Boolean(orgId),
+		onUpdate: refresh,
+	});
 
 	useEffect(() => {
 		const saved = window.localStorage.getItem(
@@ -399,14 +431,18 @@ const UserManagement = () => {
 
 	if (error) {
 		return (
-			<Card className="glass-card">
-				<div className="glass-card-cap" />
-				<CardContent className="p-6">
-					<div className="text-center text-red-600">
-						<p>Failed to load users</p>
-					</div>
-				</CardContent>
-			</Card>
+			<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 space-y-6">
+				<div className="mb-4 flex w-full flex-col gap-1">
+					<h1 className="h1 capitalize sidebar-gradient-text">
+						User management
+					</h1>
+					<p className="text-sm text-slate-600">
+						View and manage user accounts, roles, assignments, activity, and
+						account actions in one place.
+					</p>
+				</div>
+				<UsersNotFoundState message="No users found" />
+			</div>
 		);
 	}
 
@@ -420,7 +456,20 @@ const UserManagement = () => {
 				</p>
 			</div>
 
-			<div className="flex items-center justify-end gap-2">
+			<div className="flex items-center justify-between gap-3">
+				<SearchField
+					placeholder="Search users by full name or email..."
+					containerClassName="w-[26rem] max-w-full shrink-0"
+					value={searchTerm}
+					onChange={(e) => setSearchTerm(e.target.value)}
+				/>
+				<div className="flex items-center justify-end gap-2">
+				{view === "diagram" ? (
+					<UserManagementLineageToggle
+						lineage={lineage}
+						onLineageChange={setLineage}
+					/>
+				) : null}
 				<UserManagementViewToggle view={view} onViewChange={handleViewChange} />
 				<DropdownMenu>
 					<AppDropdownMenuTrigger
@@ -621,20 +670,8 @@ const UserManagement = () => {
 						</AppDropdownMenuItem>
 					</AppDropdownMenuContent>
 				</DropdownMenu>
+				</div>
 			</div>
-
-			<Card className="glass-card w-full">
-				<div className="glass-card-cap" />
-				<CardContent className="p-0">
-					<div className="px-4 pb-3 pt-6 sm:px-6 sm:pt-7">
-						<SearchField
-							placeholder="Search users by full name or email..."
-							className="max-w-md"
-							containerClassName="max-w-md"
-							value={searchTerm}
-							onChange={(e) => setSearchTerm(e.target.value)}
-						/>
-					</div>
 
 					{listLoading ? (
 						<div className="flex items-center justify-center py-8">
@@ -645,42 +682,39 @@ const UserManagement = () => {
 						</div>
 					) : view === "diagram" ? (
 						filteredAndSortedUsers.length === 0 ? (
-							<div className="px-4 pb-10 text-center text-slate-500 sm:px-6">
-								<p className="body-2">
-									No users match the current search or filters.
-								</p>
-								{activeFilterCount > 0 && (
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={clearAllFilters}
-										className="mt-3"
-									>
-										Clear filters
-									</Button>
-								)}
-							</div>
+							<UsersNotFoundState
+								message="No users found"
+								action={
+									activeFilterCount > 0 ? (
+										<Button
+											variant="outline"
+											size="sm"
+											onClick={clearAllFilters}
+											className="mt-3"
+										>
+											Clear filters
+										</Button>
+									) : undefined
+								}
+							/>
 						) : (
 							<UserAssignmentGraph
 								users={filteredAndSortedUsers}
 								allUsers={users}
-								selectedUserId={selectedGraphUserId}
-								onSelectUser={(user) => setSelectedGraphUserId(user.$id)}
-								onCloseCard={() => setSelectedGraphUserId(null)}
-								renderCard={(user) => (
-									<UserAssignmentNodeCard
-										user={user}
-										actor={actor}
-										canManageUsers={canManageUsers}
-										canAssignRoles={canAssignRoles}
-										canImpersonate={canImpersonate}
-										onAction={openAction}
-									/>
-								)}
+								lineage={lineage}
+								canEditGraph={canManageUsers}
+								canView={canViewUsers}
+								canEdit={canManageUsers}
+								canDeactivate={canDeactivateUsers}
+								canAssignRoles={canAssignRoles}
+								canImpersonate={canImpersonate}
+								actor={actor}
+								onAction={openAction}
+								onRefresh={refresh}
 							/>
 						)
 					) : (
-						<div className="w-full overflow-x-auto px-2 pb-4 sm:px-4">
+						<div className="w-full overflow-x-auto">
 							<Table className="border-separate border-spacing-0">
 								<TableHeader className="[&_tr]:border-b-0">
 									<TableRow className={DATA_TABLE_HEADER_ROW}>
@@ -785,26 +819,24 @@ const UserManagement = () => {
 							</Table>
 
 							{filteredAndSortedUsers.length === 0 && (
-								<div className="text-center py-10 text-slate-500">
-									<p className="body-2">
-										No users match the current search or filters.
-									</p>
-									{activeFilterCount > 0 && (
-										<Button
-											variant="outline"
-											size="sm"
-											onClick={clearAllFilters}
-											className="mt-3"
-										>
-											Clear filters
-										</Button>
-									)}
-								</div>
+								<UsersNotFoundState
+									message="No users found"
+									action={
+										activeFilterCount > 0 ? (
+											<Button
+												variant="outline"
+												size="sm"
+												onClick={clearAllFilters}
+												className="mt-3"
+											>
+												Clear filters
+											</Button>
+										) : undefined
+									}
+								/>
 							)}
 						</div>
 					)}
-				</CardContent>
-			</Card>
 
 			<UserManagementActionDialogs
 				user={actionUser}
@@ -822,6 +854,10 @@ const UserManagement = () => {
 					department,
 					division,
 					managerUserId,
+					jobTitle,
+					workLocation,
+					costCenterId,
+					matrixManagerUserId,
 				}) => {
 					if (!actionUser) return;
 					await runAction(
@@ -835,6 +871,10 @@ const UserManagement = () => {
 									department: department || undefined,
 									division: division || undefined,
 									managerUserId,
+									jobTitle,
+									workLocation,
+									costCenterId,
+									matrixManagerUserId,
 								}),
 							});
 							const data = await res.json().catch(() => ({}));

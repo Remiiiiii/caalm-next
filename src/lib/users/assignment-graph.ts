@@ -1,7 +1,7 @@
 /**
  * Builds a directed assignment graph from user-management "Assigned by"
- * values and lays it out as a top-down tree with orthogonal (right-angle)
- * connectors. Nothing here is hand-placed per user — add a row and a
+ * values and lays it out left-to-right by rank, wrapping leaf reports
+ * top-to-bottom. Nothing here is hand-placed per user — add a row and a
  * new branch appears automatically.
  */
 
@@ -62,6 +62,23 @@ export const GRAPH_BUS_STUB = 24;
 export const GRAPH_LABEL_BLOCK = 40;
 export const GRAPH_JUNCTION_SIZE = 7;
 
+/** Card size used by the interactive React Flow canvas (top-left origin). */
+export const FLOW_CARD_WIDTH = 252;
+export const FLOW_CARD_HEIGHT = 176;
+/** Vertical gap between stacked sibling cards. */
+export const FLOW_ROW_GAP = 20;
+/** Horizontal gap between tree levels (handles + a short bezier). */
+export const FLOW_COL_GAP = 56;
+/** Vertical span reserved for one leaf row. */
+export const FLOW_ROW_EXTENT = FLOW_CARD_HEIGHT + FLOW_ROW_GAP;
+/** Horizontal gap between tree levels (System on the left, reports to the right). */
+export const FLOW_RANK_GAP = FLOW_CARD_WIDTH + FLOW_COL_GAP;
+/** Leaf reports wrap this many cards per row so a team reads left-to-right. */
+export const FLOW_LEAF_WRAP = 3;
+
+export const SYSTEM_ASSIGN_COLOR = "#0f5384";
+export const ADMIN_ASSIGN_COLOR = "#03afbf";
+
 const GHOST_PREFIX = "ghost:";
 
 export function graphInitials(name: string): string {
@@ -77,6 +94,11 @@ export function isSystemAssigner(id?: string, name?: string): boolean {
 	const label = (name || "").trim();
 	if (!raw && (!label || label.toLowerCase() === "system")) return true;
 	return false;
+}
+
+/** Person-to-person lines only. System/ghost assigners have no inbound edge (a cut). */
+export function isDrawnAssignmentSource(fromId: string): boolean {
+	return fromId !== SYSTEM_NODE_ID && !fromId.startsWith(GHOST_PREFIX);
 }
 
 export function ghostAssignerId(label: string): string {
@@ -156,7 +178,7 @@ export function collectGraphUsers(
 
 type TreeChildMap = Map<string, string[]>;
 
-function wouldCreateCycle(
+export function wouldCreateCycle(
 	parentId: string,
 	childId: string,
 	parentOf: Map<string, string>,
@@ -428,6 +450,183 @@ export function layoutAssignmentGraph(
 		width: Math.ceil(maxX + GRAPH_PAD_X),
 		height: Math.ceil(maxY + GRAPH_PAD_Y),
 	};
+}
+
+function flowRoleRank(roleName?: string): number {
+	const name = (roleName || "").trim().toLowerCase();
+	if (name === "super admin") return 0;
+	if (name === "organization admin") return 1;
+	if (name === "executive") return 2;
+	if (name === "department manager") return 3;
+	if (name === "viewer") return 4;
+	return 5;
+}
+
+function flowChildOrder(
+	ids: string[],
+	usersById: Map<string, AssignmentGraphUser>,
+): string[] {
+	return [...ids].sort((a, b) => {
+		const left = usersById.get(a);
+		const right = usersById.get(b);
+		const rankDelta = flowRoleRank(left?.roleName) - flowRoleRank(right?.roleName);
+		if (rankDelta !== 0) return rankDelta;
+		return (left?.fullName || a).localeCompare(right?.fullName || b, undefined, {
+			sensitivity: "base",
+		});
+	});
+}
+
+function flowIsLeaf(id: string, childrenOf: TreeChildMap): boolean {
+	return (childrenOf.get(id) || []).length === 0;
+}
+
+function flowLeafWrapRows(count: number): number {
+	if (count <= 0) return 0;
+	return Math.ceil(count / FLOW_LEAF_WRAP);
+}
+
+/**
+ * Walk children in role/name order, but group consecutive leaves so they
+ * can wrap left-to-right. Branches (people who have their own reports)
+ * still stack top-to-bottom — otherwise two managers' staff would overlap.
+ */
+function flowChildLayoutGroups(
+	kids: string[],
+	childrenOf: TreeChildMap,
+): Array<{ kind: "leaves"; ids: string[] } | { kind: "branch"; id: string }> {
+	const groups: Array<
+		{ kind: "leaves"; ids: string[] } | { kind: "branch"; id: string }
+	> = [];
+	let run: string[] = [];
+	const flushLeaves = () => {
+		if (run.length === 0) return;
+		groups.push({ kind: "leaves", ids: run });
+		run = [];
+	};
+	for (const id of kids) {
+		if (flowIsLeaf(id, childrenOf)) {
+			run.push(id);
+			continue;
+		}
+		flushLeaves();
+		groups.push({ kind: "branch", id });
+	}
+	flushLeaves();
+	return groups;
+}
+
+function flowSubtreeHeight(
+	id: string,
+	childrenOf: TreeChildMap,
+	memo: Map<string, number>,
+	usersById: Map<string, AssignmentGraphUser>,
+): number {
+	const cached = memo.get(id);
+	if (cached != null) return cached;
+	const kids = flowChildOrder(childrenOf.get(id) || [], usersById);
+	if (kids.length === 0) {
+		memo.set(id, FLOW_ROW_EXTENT);
+		return FLOW_ROW_EXTENT;
+	}
+	let height = 0;
+	for (const group of flowChildLayoutGroups(kids, childrenOf)) {
+		if (group.kind === "leaves") {
+			height += flowLeafWrapRows(group.ids.length) * FLOW_ROW_EXTENT;
+			continue;
+		}
+		height += flowSubtreeHeight(group.id, childrenOf, memo, usersById);
+	}
+	const extent = Math.max(FLOW_ROW_EXTENT, height);
+	memo.set(id, extent);
+	return extent;
+}
+
+/**
+ * Top-left canvas positions for React Flow. Saved (x, y) wins; everyone
+ * else is packed left-to-right by assignment depth and top-to-bottom by
+ * siblings so a parent lines up with its first child instead of sitting
+ * in the middle of a tall waterfall.
+ */
+export function seedFlowNodePositions(
+	visibleUsers: AssignmentGraphUser[],
+	allUsers: AssignmentGraphUser[],
+	saved: Map<string, { x: number; y: number }>,
+): Map<string, { x: number; y: number }> {
+	const graphUsers = collectGraphUsers(visibleUsers, allUsers);
+	const lookup = allUsers.length > 0 ? allUsers : graphUsers;
+	const { childrenOf } = buildParentChildMaps(graphUsers, lookup);
+	const usersById = new Map(graphUsers.map((user) => [user.$id, user]));
+
+	const ghostIds = new Set<string>();
+	for (const user of graphUsers) {
+		const fromId = resolveAssignerNodeId(user, lookup);
+		if (fromId.startsWith(GHOST_PREFIX)) ghostIds.add(fromId);
+	}
+
+	const extentMemo = new Map<string, number>();
+	const positions = new Map<string, AssignmentGraphPoint>();
+	const forestRoots = [SYSTEM_NODE_ID, ...ghostIds];
+
+	const place = (id: string, top: number, depth: number) => {
+		// Top-left of the card. Parent shares Y with its first child so the
+		// first link is a short horizontal. Leaf reports wrap LTR; managers
+		// with their own teams stack TTB.
+		positions.set(id, {
+			x: GRAPH_PAD_X + depth * FLOW_RANK_GAP,
+			y: top,
+		});
+		let cursor = top;
+		const kids = flowChildOrder(childrenOf.get(id) || [], usersById);
+		for (const group of flowChildLayoutGroups(kids, childrenOf)) {
+			if (group.kind === "leaves") {
+				group.ids.forEach((leafId, index) => {
+					const col = index % FLOW_LEAF_WRAP;
+					const row = Math.floor(index / FLOW_LEAF_WRAP);
+					positions.set(leafId, {
+						x: GRAPH_PAD_X + (depth + 1 + col) * FLOW_RANK_GAP,
+						y: cursor + row * FLOW_ROW_EXTENT,
+					});
+				});
+				cursor += flowLeafWrapRows(group.ids.length) * FLOW_ROW_EXTENT;
+				continue;
+			}
+			place(group.id, cursor, depth + 1);
+			cursor += flowSubtreeHeight(
+				group.id,
+				childrenOf,
+				extentMemo,
+				usersById,
+			);
+		}
+	};
+
+	let rootCursor = GRAPH_PAD_Y;
+	for (const rootId of forestRoots) {
+		const extent = flowSubtreeHeight(
+			rootId,
+			childrenOf,
+			extentMemo,
+			usersById,
+		);
+		place(rootId, rootCursor, 0);
+		rootCursor += extent;
+	}
+
+	const result = new Map<string, { x: number; y: number }>();
+	for (const [id, position] of positions) {
+		const stored = saved.get(id);
+		if (
+			stored &&
+			Number.isFinite(stored.x) &&
+			Number.isFinite(stored.y)
+		) {
+			result.set(id, stored);
+			continue;
+		}
+		result.set(id, position);
+	}
+	return result;
 }
 
 export const SPEC_SAMPLE_USERS: AssignmentGraphUser[] = [
