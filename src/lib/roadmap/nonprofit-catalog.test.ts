@@ -39,6 +39,10 @@ describe("nonprofit roadmap catalog", () => {
 		expect(npoLinked.filter((n) => clmNumbers.has(n))).toEqual([]);
 	});
 
+	it("binds the engine section to PR 86", () => {
+		expect(NONPROFIT_ROADMAP_CATALOG[0]?.linkedPrNumbers).toEqual([86]);
+	});
+
 	it("points NPO tests at tests/roadmap/npo/ so they do not collide with CLM suites", () => {
 		const tasks = flattenCatalogTasks(NONPROFIT_ROADMAP_CATALOG);
 		expect(tasks.length).toBeGreaterThan(30);

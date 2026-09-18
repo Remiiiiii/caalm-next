@@ -54,6 +54,7 @@ export const NONPROFIT_ROADMAP_CATALOG: RoadmapCatalogSection[] = [
 		title: "Nonprofit Roadmap Engine",
 		sourceRef:
 			"Plan engine prerequisite — reuse CLM locking/UI; isolate catalogs so CLM Appwrite rows never mix with NPO memory seed",
+		linkedPrNumbers: [86],
 		tasks: [
 			t(
 				"0.1",
