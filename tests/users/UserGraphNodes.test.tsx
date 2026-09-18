@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { ReactFlow, ReactFlowProvider } from "@xyflow/react";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -40,6 +41,41 @@ const cardUser: UserManagementUser = {
 	status: "active",
 };
 
+function renderUserCard(userOverride: UserManagementUser = cardUser) {
+	return render(
+		<div style={{ width: 400, height: 360 }}>
+			<ReactFlowProvider>
+				<ReactFlow
+					nodes={[
+						{
+							id: "cfo",
+							type: "user",
+							position: { x: 0, y: 0 },
+							data: {
+								user: userOverride,
+								assignerKind: "admin",
+								lineage: "reporting",
+								skipLevelName: "Victor Ramirez",
+								canEditGraph: false,
+								canView: true,
+								canEdit: false,
+								canDeactivate: false,
+								canAssignRoles: false,
+								canImpersonate: false,
+								actor: null,
+								emphasis: "normal",
+								onAction: () => undefined,
+							},
+						},
+					]}
+					nodeTypes={{ user: UserGraphUserNode }}
+					fitView
+				/>
+			</ReactFlowProvider>
+		</div>,
+	);
+}
+
 describe("UserGraphNodes current-user card", () => {
 	it("labels the signed-in user as You", () => {
 		expect(
@@ -73,44 +109,32 @@ describe("UserGraphNodes current-user card", () => {
 		);
 	});
 
-	it("shows title, location, and cost center on the card", () => {
-		render(
-			<div style={{ width: 400, height: 360 }}>
-				<ReactFlowProvider>
-					<ReactFlow
-						nodes={[
-							{
-								id: "cfo",
-								type: "user",
-								position: { x: 0, y: 0 },
-								data: {
-									user: cardUser,
-									assignerKind: "admin",
-									lineage: "reporting",
-									skipLevelName: "Victor Ramirez",
-									canEditGraph: false,
-									canView: true,
-									canEdit: false,
-									canDeactivate: false,
-									canAssignRoles: false,
-									canImpersonate: false,
-									actor: null,
-									emphasis: "normal",
-									onAction: () => undefined,
-								},
-							},
-						]}
-						nodeTypes={{ user: UserGraphUserNode }}
-						fitView
-					/>
-				</ReactFlowProvider>
-			</div>,
-		);
+	it("shows department and division with extra details collapsed", () => {
+		renderUserCard();
 
 		expect(screen.getByText("Chief Financial Officer")).toBeInTheDocument();
+		expect(screen.getByText("Department").closest("div")).toHaveTextContent(
+			"Finance",
+		);
+		expect(screen.getByText("Division").closest("div")).toHaveTextContent(
+			"accounting",
+		);
+		expect(screen.getByText("Executive")).toBeInTheDocument();
+		expect(screen.queryByText("Location")).not.toBeInTheDocument();
+		expect(screen.queryByText("Cost center")).not.toBeInTheDocument();
+		expect(screen.queryByText("Skip-level")).not.toBeInTheDocument();
+		expect(screen.queryByText("Austin office")).not.toBeInTheDocument();
+	});
+
+	it("reveals location, cost center, and skip-level when expanded", async () => {
+		renderUserCard();
+
+		await userEvent.click(screen.getByTestId("graph-node-extra-details"));
+
 		expect(screen.getByText("Austin office")).toBeInTheDocument();
 		expect(screen.getByText("FIN-100 Corporate")).toBeInTheDocument();
-		expect(screen.getByText("Executive")).toBeInTheDocument();
-		expect(screen.getByText("Victor Ramirez")).toBeInTheDocument();
+		expect(screen.getByText("Skip-level").closest("div")).toHaveTextContent(
+			"Victor Ramirez",
+		);
 	});
 });

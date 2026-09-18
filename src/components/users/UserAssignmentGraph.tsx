@@ -15,6 +15,7 @@ import {
 	useEdgesState,
 	useNodesState,
 	useReactFlow,
+	useViewport,
 } from "@xyflow/react";
 import { X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -55,8 +56,21 @@ import {
 	userMatchesGraphHighlight,
 	type GraphHighlight,
 } from "@/lib/users/graph-sidebar-stats";
-import { nodeHitsMarquee } from "@/lib/users/graph-marquee";
+import {
+	clientDragToFlowRect,
+	isTinyMarquee,
+	nodeHitsMarquee,
+	pointInRect,
+	selectionBounds,
+	type GraphRect,
+} from "@/lib/users/graph-marquee";
 import { usersVisibleOnGraph } from "@/lib/users/graph-visibility";
+import {
+	isUndoLastCutHotkey,
+	lastSolidInboundCut,
+	withCutLineage,
+	type LastGraphCut,
+} from "@/lib/users/graph-undo-cut";
 
 import "@xyflow/react/dist/style.css";
 
@@ -202,6 +216,7 @@ function UserAssignmentGraphCanvas({
 }) {
 	const { toast } = useToast();
 	const { fitView, screenToFlowPosition } = useReactFlow();
+	const viewport = useViewport();
 	const { orgId } = useOrganization();
 	const [highlight, setHighlight] = useState<GraphHighlight | null>(null);
 	const [focusUserId, setFocusUserId] = useState<string | null>(null);
@@ -212,7 +227,9 @@ function UserAssignmentGraphCanvas({
 		w: number;
 		h: number;
 	} | null>(null);
+	const [keepSelectionFrame, setKeepSelectionFrame] = useState(false);
 	const canvasRef = useRef<HTMLDivElement>(null);
+	const marqueeSelectedIdsRef = useRef<Set<string>>(new Set());
 	const rightSelectRef = useRef<{
 		pointerId: number;
 		startClientX: number;
@@ -230,6 +247,10 @@ function UserAssignmentGraphCanvas({
 	onRefreshRef.current = onRefresh;
 	const disconnectRef = useRef<(userId: string) => void>(() => undefined);
 	const disconnectingRef = useRef(new Set<string>());
+	const disconnectWaitRef = useRef(new Map<string, Promise<void>>());
+	const lastCutRef = useRef<LastGraphCut | null>(null);
+	const undoLastCutRef = useRef<() => void>(() => undefined);
+	const undoInFlightRef = useRef(false);
 
 	useEffect(() => {
 		setDirectionsDismissed(
@@ -463,6 +484,10 @@ function UserAssignmentGraphCanvas({
 			let snapshot: Edge[] = [];
 			setEdges((current) => {
 				snapshot = current;
+				const inbound = lastSolidInboundCut(current, targetUserId);
+				if (inbound) {
+					lastCutRef.current = withCutLineage(inbound, lineage);
+				}
 				return current.filter((edge) => edge.target !== targetUserId);
 			});
 			setNodes((current) =>
@@ -475,15 +500,94 @@ function UserAssignmentGraphCanvas({
 				}),
 			);
 
-			void (
+			const persist =
 				lineage === "reporting"
 					? reassignReportingManager(targetUserId, null)
-					: reassign(targetUserId, "system")
-			)
+					: reassign(targetUserId, "system");
+			const settled = persist
 				.catch((error: unknown) => {
+					lastCutRef.current = null;
 					setEdges(snapshot);
+					const message =
+						error instanceof Error ? error.message : "Try again";
+					const needsManualSource =
+						/manager source to manual/i.test(message) ||
+						/owned by SCIM/i.test(message);
 					toast({
 						title: "Could not disconnect",
+						description: needsManualSource
+							? `${message}. Open Settings → System → Integrations and set Manager field source to CAALM (manual), then try again.`
+							: message,
+						variant: "destructive",
+					});
+					onRefreshRef.current();
+					throw error;
+				})
+				.finally(() => {
+					disconnectingRef.current.delete(targetUserId);
+					disconnectWaitRef.current.delete(targetUserId);
+				});
+			disconnectWaitRef.current.set(targetUserId, settled);
+		},
+		[canEditGraph, lineage, reassign, reassignReportingManager, setEdges, setNodes, toast],
+	);
+	disconnectRef.current = disconnectUser;
+
+	const undoLastCut = useCallback(() => {
+		const cut = lastCutRef.current;
+		if (!canEditGraph || !cut || undoInFlightRef.current) return;
+		lastCutRef.current = null;
+		undoInFlightRef.current = true;
+
+		const restore = () => {
+			const restored = assignmentFlowEdge(
+				cut.sourceId,
+				cut.targetUserId,
+				canEditGraph,
+				() => disconnectRef.current(cut.targetUserId),
+			);
+			if (restored) {
+				setEdges((current) => {
+					const withoutInbound = current.filter(
+						(edge) =>
+							edge.target !== cut.targetUserId ||
+							Boolean(
+								(edge.data as { dashed?: boolean } | undefined)?.dashed,
+							),
+					);
+					return [...withoutInbound, restored];
+				});
+				setNodes((current) =>
+					current.map((node) => {
+						if (node.id !== cut.targetUserId || node.type !== "user") {
+							return node;
+						}
+						return {
+							...node,
+							data: {
+								...node.data,
+								assignerKind: kindForAssigner(cut.sourceId),
+							},
+						};
+					}),
+				);
+			}
+
+			const persist =
+				cut.lineage === "reporting"
+					? reassignReportingManager(cut.targetUserId, cut.sourceId)
+					: reassign(
+							cut.targetUserId,
+							cut.sourceId === SYSTEM_NODE_ID ? "system" : cut.sourceId,
+						);
+
+			void persist
+				.then(() => {
+					toast({ title: "Connection restored" });
+				})
+				.catch((error: unknown) => {
+					toast({
+						title: "Could not undo disconnect",
 						description:
 							error instanceof Error ? error.message : "Try again",
 						variant: "destructive",
@@ -491,12 +595,39 @@ function UserAssignmentGraphCanvas({
 					onRefreshRef.current();
 				})
 				.finally(() => {
-					disconnectingRef.current.delete(targetUserId);
+					undoInFlightRef.current = false;
 				});
-		},
-		[canEditGraph, lineage, reassign, reassignReportingManager, setEdges, setNodes, toast],
-	);
-	disconnectRef.current = disconnectUser;
+		};
+
+		const pending = disconnectWaitRef.current.get(cut.targetUserId);
+		void (pending ?? Promise.resolve()).then(restore, () => {
+			undoInFlightRef.current = false;
+		});
+	}, [
+		canEditGraph,
+		reassign,
+		reassignReportingManager,
+		setEdges,
+		setNodes,
+		toast,
+	]);
+	undoLastCutRef.current = undoLastCut;
+
+	useEffect(() => {
+		lastCutRef.current = null;
+	}, [lineage]);
+
+	useEffect(() => {
+		if (!canEditGraph) return;
+		const onKeyDown = (event: KeyboardEvent) => {
+			if (!isUndoLastCutHotkey(event)) return;
+			if (!lastCutRef.current) return;
+			event.preventDefault();
+			undoLastCutRef.current();
+		};
+		window.addEventListener("keydown", onKeyDown);
+		return () => window.removeEventListener("keydown", onKeyDown);
+	}, [canEditGraph]);
 
 	const signature = useMemo(
 		() =>
@@ -571,6 +702,9 @@ function UserAssignmentGraphCanvas({
 			const target = connection.target;
 			if (!source || !target || target === SYSTEM_NODE_ID) return;
 			if (source === target) return;
+			if (lastCutRef.current?.targetUserId === target) {
+				lastCutRef.current = null;
+			}
 
 			if (lineage === "assignment" && source === SYSTEM_NODE_ID) {
 				disconnectRef.current(target);
@@ -699,46 +833,98 @@ function UserAssignmentGraphCanvas({
 		setFocusUserId(null);
 	}, []);
 
-	const localBoxFromClient = (clientX: number, clientY: number) => {
-		const rect = canvasRef.current?.getBoundingClientRect();
-		if (!rect) return { x: 0, y: 0 };
-		return { x: clientX - rect.left, y: clientY - rect.top };
-	};
+	const overlayRect = useMemo((): GraphRect | null => {
+		if (keepSelectionFrame) {
+			const snapped = selectionBounds(
+				nodes,
+				FLOW_CARD_WIDTH,
+				FLOW_CARD_HEIGHT,
+			);
+			if (snapped) return snapped;
+		}
+		if (!rightMarquee) return null;
+		return {
+			x: rightMarquee.x,
+			y: rightMarquee.y,
+			width: rightMarquee.w,
+			height: rightMarquee.h,
+		};
+	}, [keepSelectionFrame, nodes, rightMarquee]);
+	const overlayRectRef = useRef(overlayRect);
+	overlayRectRef.current = overlayRect;
 
 	const applyRightMarquee = useCallback(
 		(startClientX: number, startClientY: number, clientX: number, clientY: number) => {
-			const start = localBoxFromClient(startClientX, startClientY);
-			const end = localBoxFromClient(clientX, clientY);
+			const box = clientDragToFlowRect(
+				screenToFlowPosition({ x: startClientX, y: startClientY }),
+				screenToFlowPosition({ x: clientX, y: clientY }),
+			);
 			setRightMarquee({
-				x: Math.min(start.x, end.x),
-				y: Math.min(start.y, end.y),
-				w: Math.abs(end.x - start.x),
-				h: Math.abs(end.y - start.y),
+				x: box.x,
+				y: box.y,
+				w: box.width,
+				h: box.height,
 			});
 		},
-		[],
+		[screenToFlowPosition],
+	);
+
+	const restoreMarqueeSelection = useCallback(() => {
+		const ids = marqueeSelectedIdsRef.current;
+		if (ids.size === 0) return;
+		setNodes((current) =>
+			current.map((node) => {
+				const selected = ids.has(node.id);
+				return node.selected === selected ? node : { ...node, selected };
+			}),
+		);
+	}, [setNodes]);
+
+	const dismissMarquee = useCallback(() => {
+		overlayRectRef.current = null;
+		marqueeSelectedIdsRef.current = new Set();
+		setKeepSelectionFrame(false);
+		setRightMarquee(null);
+		setNodes((current) =>
+			current.map((node) =>
+				node.selected ? { ...node, selected: false } : node,
+			),
+		);
+	}, [setNodes]);
+
+	const clientHitsPersistedMarquee = useCallback(
+		(clientX: number, clientY: number) => {
+			const box = overlayRectRef.current;
+			if (!box) return false;
+			return pointInRect(screenToFlowPosition({ x: clientX, y: clientY }), box);
+		},
+		[screenToFlowPosition],
 	);
 
 	const finishRightSelect = useCallback(
 		(clientX: number, clientY: number) => {
 			const start = rightSelectRef.current;
 			rightSelectRef.current = null;
-			setRightMarquee(null);
-			if (!start || !canEditGraph) return;
-			const a = screenToFlowPosition({
-				x: start.startClientX,
-				y: start.startClientY,
-			});
-			const b = screenToFlowPosition({ x: clientX, y: clientY });
-			const box = {
-				x: Math.min(a.x, b.x),
-				y: Math.min(a.y, b.y),
-				width: Math.abs(b.x - a.x),
-				height: Math.abs(b.y - a.y),
-			};
-			if (box.width < 8 && box.height < 8) return;
-			setNodes((current) =>
-				current.map((node) => {
+			if (!start || !canEditGraph) {
+				setKeepSelectionFrame(false);
+				setRightMarquee(null);
+				return;
+			}
+			const box = clientDragToFlowRect(
+				screenToFlowPosition({
+					x: start.startClientX,
+					y: start.startClientY,
+				}),
+				screenToFlowPosition({ x: clientX, y: clientY }),
+			);
+			if (isTinyMarquee(box)) {
+				marqueeSelectedIdsRef.current = new Set();
+				setKeepSelectionFrame(false);
+				setRightMarquee(null);
+				return;
+			}
+			setNodes((current) => {
+				const next = current.map((node) => {
 					const selected = nodeHitsMarquee(
 						node,
 						box,
@@ -746,8 +932,24 @@ function UserAssignmentGraphCanvas({
 						FLOW_CARD_HEIGHT,
 					);
 					return node.selected === selected ? node : { ...node, selected };
-				}),
-			);
+				});
+				const ids = next
+					.filter((node) => node.selected)
+					.map((node) => node.id);
+				marqueeSelectedIdsRef.current = new Set(ids);
+				setKeepSelectionFrame(ids.length > 0);
+				if (ids.length > 0) {
+					setRightMarquee(null);
+				} else {
+					setRightMarquee({
+						x: box.x,
+						y: box.y,
+						w: box.width,
+						h: box.height,
+					});
+				}
+				return next;
+			});
 		},
 		[canEditGraph, screenToFlowPosition, setNodes],
 	);
@@ -768,6 +970,7 @@ function UserAssignmentGraphCanvas({
 			}
 			event.preventDefault();
 			rightSelectCleanupRef.current?.();
+			setKeepSelectionFrame(false);
 			rightSelectRef.current = {
 				pointerId: event.pointerId,
 				startClientX: event.clientX,
@@ -853,7 +1056,8 @@ function UserAssignmentGraphCanvas({
 						<div className="flex max-w-xs items-start gap-2 rounded-xl border border-slate-200 bg-white/85 px-3 py-1.5 text-left text-[11px] leading-snug text-slate-600">
 							<p>
 								Drag a card to move it · drag a dot to a card to connect · hover
-								a line and click the scissors to disconnect
+								a line and click the scissors to disconnect · Ctrl+Z undoes the
+								last cut
 							</p>
 							<button
 								type="button"
@@ -954,12 +1158,27 @@ function UserAssignmentGraphCanvas({
 					minZoom={0.2}
 					maxZoom={1.5}
 					isValidConnection={isValidConnection}
-					onNodeClick={(_event, node) => {
+					onNodeClick={(event, node) => {
+						if (overlayRectRef.current && !rightSelectRef.current) {
+							if (clientHitsPersistedMarquee(event.clientX, event.clientY)) {
+								restoreMarqueeSelection();
+							} else {
+								dismissMarquee();
+							}
+						}
 						if (node.id === SYSTEM_NODE_ID || node.type !== "user") return;
 						const userId = (node.data as UserGraphUserNodeData).user?.$id;
 						if (userId) handleFocusUser(userId);
 					}}
-					onPaneClick={handleClearHighlight}
+					onPaneClick={(event) => {
+						handleClearHighlight();
+						if (!overlayRectRef.current || rightSelectRef.current) return;
+						if (clientHitsPersistedMarquee(event.clientX, event.clientY)) {
+							restoreMarqueeSelection();
+							return;
+						}
+						dismissMarquee();
+					}}
 					connectionLineType={ConnectionLineType.Bezier}
 					connectionLineStyle={CONNECTION_LINE_STYLE}
 					onInit={(instance) => {
@@ -983,14 +1202,15 @@ function UserAssignmentGraphCanvas({
 						className="shadow-md! border-slate-200! overflow-hidden! rounded-md!"
 					/>
 				</ReactFlow>
-				{rightMarquee ? (
+				{overlayRect ? (
 					<div
-						className="pointer-events-none absolute z-30 border border-[#0f5384]/45 bg-[#0f5384]/8"
+						data-testid="user-graph-marquee"
+						className="user-graph-marquee"
 						style={{
-							left: rightMarquee.x,
-							top: rightMarquee.y,
-							width: rightMarquee.w,
-							height: rightMarquee.h,
+							left: overlayRect.x * viewport.zoom + viewport.x,
+							top: overlayRect.y * viewport.zoom + viewport.y,
+							width: overlayRect.width * viewport.zoom,
+							height: overlayRect.height * viewport.zoom,
 						}}
 					/>
 				) : null}

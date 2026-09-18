@@ -1,7 +1,8 @@
 "use client";
 
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
-import { Cpu } from "lucide-react";
+import { ChevronDown, ChevronUp, Cpu } from "lucide-react";
+import { useState } from "react";
 import Avatar from "@/components/ui/avatar";
 import { UserGraphCardMenu } from "@/components/users/UserGraphCardMenu";
 import type { UserActionKind } from "@/components/users/UserManagementActionDialogs";
@@ -95,20 +96,56 @@ export function graphUserJobLabel(
 	return role || "Unassigned";
 }
 
+const EMPTY_ORG = "Not assigned";
+
+function graphOrgValue(value: string | null | undefined): {
+	label: string;
+	empty: boolean;
+} {
+	const label = value?.trim() || EMPTY_ORG;
+	return { label, empty: label === EMPTY_ORG };
+}
+
+function GraphDetailRow({
+	label,
+	value,
+	empty = false,
+}: {
+	label: string;
+	value: string;
+	empty?: boolean;
+}) {
+	return (
+		<div className="flex items-baseline justify-between gap-3">
+			<p className="shrink-0 text-slate-500">{label}</p>
+			<p
+				className={cn(
+					"min-w-0 truncate text-right text-slate-700",
+					empty ? "italic font-normal text-slate-500" : "font-medium",
+				)}
+			>
+				{value}
+			</p>
+		</div>
+	);
+}
+
 export function UserGraphUserNode({ data }: NodeProps<UserGraphUserNodeType>) {
 	const { user, assignerKind, canEditGraph, skipLevelName } = data;
+	const [detailsCollapsed, setDetailsCollapsed] = useState(true);
 	const isSelf = isCurrentGraphUser(data.actor, user);
 	const isSuspended =
 		user.status === "suspended" || user.status === "inactive";
 	const border = kindColor(assignerKind);
-	const emptyOrg = "Not assigned";
 	const jobLabel = graphUserJobLabel(user);
 	const showRoleBadge = Boolean(user.jobTitle?.trim() && user.roleName?.trim());
-	const locationLabel = user.workLocation?.trim() || emptyOrg;
-	const costCenterLabel =
-		user.costCenterName?.trim() ||
-		user.costCenterCode?.trim() ||
-		emptyOrg;
+	const department = graphOrgValue(user.department);
+	const division = graphOrgValue(user.division);
+	const location = graphOrgValue(user.workLocation);
+	const costCenter = graphOrgValue(
+		user.costCenterName?.trim() || user.costCenterCode,
+	);
+	const skipLevel = graphOrgValue(skipLevelName);
 	const targetPosition = Position.Left;
 	const sourcePosition = Position.Right;
 
@@ -158,7 +195,7 @@ export function UserGraphUserNode({ data }: NodeProps<UserGraphUserNodeType>) {
 					onAction={data.onAction}
 				/>
 			</div>
-			<div className="space-y-2 px-3 py-2 text-xs">
+			<div className="space-y-1.5 px-3 py-2 text-xs">
 				{isSuspended ? (
 					<span className="inline-block rounded-full border border-orange/20 bg-orange/10 px-2 py-0.5 font-medium text-orange">
 						Inactive
@@ -169,32 +206,57 @@ export function UserGraphUserNode({ data }: NodeProps<UserGraphUserNodeType>) {
 						{user.roleName}
 					</span>
 				) : null}
-				<div>
-					<p className="text-slate-500">Department</p>
-					<p className="truncate font-medium text-slate-700">
-						{user.department || emptyOrg}
-					</p>
-				</div>
-				<div>
-					<p className="text-slate-500">Division</p>
-					<p className="truncate font-medium text-slate-700">
-						{user.division || emptyOrg}
-					</p>
-				</div>
-				<div>
-					<p className="text-slate-500">Location</p>
-					<p className="truncate font-medium text-slate-700">{locationLabel}</p>
-				</div>
-				<div>
-					<p className="text-slate-500">Cost center</p>
-					<p className="truncate font-medium text-slate-700">{costCenterLabel}</p>
-				</div>
-				{skipLevelName ? (
-					<div>
-						<p className="text-slate-500">Skip-level</p>
-						<p className="truncate font-medium text-slate-700">{skipLevelName}</p>
-					</div>
-				) : null}
+				<GraphDetailRow
+					label="Department"
+					value={department.label}
+					empty={department.empty}
+				/>
+				<GraphDetailRow
+					label="Division"
+					value={division.label}
+					empty={division.empty}
+				/>
+				{detailsCollapsed ? null : (
+					<>
+						<GraphDetailRow
+							label="Location"
+							value={location.label}
+							empty={location.empty}
+						/>
+						<GraphDetailRow
+							label="Cost center"
+							value={costCenter.label}
+							empty={costCenter.empty}
+						/>
+						<GraphDetailRow
+							label="Skip-level"
+							value={skipLevel.label}
+							empty={skipLevel.empty}
+						/>
+					</>
+				)}
+				<button
+					type="button"
+					className="nodrag nopan nowheel flex w-full cursor-pointer items-center justify-center rounded-md py-0.5 text-slate-500 transition-all duration-200 hover:bg-blue/10 hover:text-[#0f5384] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
+					aria-expanded={!detailsCollapsed}
+					aria-label={
+						detailsCollapsed
+							? "Show location, cost center, and skip-level"
+							: "Hide location, cost center, and skip-level"
+					}
+					data-testid="graph-node-extra-details"
+					onClick={(event) => {
+						event.stopPropagation();
+						setDetailsCollapsed((prev) => !prev);
+					}}
+					onPointerDown={(event) => event.stopPropagation()}
+				>
+					{detailsCollapsed ? (
+						<ChevronDown className="h-4 w-4" />
+					) : (
+						<ChevronUp className="h-4 w-4" />
+					)}
+				</button>
 			</div>
 			{canEditGraph ? (
 				<>

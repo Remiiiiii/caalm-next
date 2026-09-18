@@ -57,11 +57,11 @@ export function AssignmentGraphEdge({
 	const color =
 		data?.kind === "admin" ? ADMIN_ASSIGN_COLOR : SYSTEM_ASSIGN_COLOR;
 	const canEdit = Boolean(data?.canEditGraph) && !data?.dashed;
-	const showScissors = canEdit && (hovered || selected);
-	const scissorsX = cutPos?.x ?? labelX;
-	const scissorsY = cutPos?.y ?? labelY;
+	const showCut = canEdit && (hovered || selected);
+	const cutX = cutPos?.x ?? labelX;
+	const cutY = cutPos?.y ?? labelY;
 
-	const placeScissorsAtPointer = (clientX: number, clientY: number) => {
+	const placeCutAtPointer = (clientX: number, clientY: number) => {
 		const pointer = screenToFlowPosition({ x: clientX, y: clientY });
 		setCutPos(
 			cutPositionAlongEdge(edgePath, pointer, { x: labelX, y: labelY }),
@@ -118,49 +118,43 @@ export function AssignmentGraphEdge({
 					style={{ pointerEvents: "stroke", vectorEffect: "non-scaling-stroke" }}
 					onMouseEnter={(event) => {
 						setHover(true);
-						placeScissorsAtPointer(event.clientX, event.clientY);
+						placeCutAtPointer(event.clientX, event.clientY);
 					}}
 					onMouseMove={(event) => {
-						placeScissorsAtPointer(event.clientX, event.clientY);
+						placeCutAtPointer(event.clientX, event.clientY);
 					}}
 					onMouseLeave={() => setHover(false)}
 				/>
 			) : null}
-			{showScissors ? (
+			{showCut ? (
 				<EdgeLabelRenderer>
 					<div
 						className="nodrag nopan nowheel"
-						data-cut-x={scissorsX}
-						data-cut-y={scissorsY}
+						data-cut-x={cutX}
+						data-cut-y={cutY}
 						style={{
 							position: "absolute",
-							transform: `translate(-50%, -50%) translate(${scissorsX}px, ${scissorsY}px)`,
+							transform: `translate(-50%, -50%) translate(${cutX}px, ${cutY}px)`,
 							pointerEvents: "all",
 							zIndex: 1001,
 						}}
 						onMouseEnter={() => setHover(true)}
 						onMouseMove={(event) => {
-							placeScissorsAtPointer(event.clientX, event.clientY);
+							placeCutAtPointer(event.clientX, event.clientY);
 						}}
 						onMouseLeave={() => setHover(false)}
 					>
-						<div className="relative flex h-7 w-7 items-center justify-center">
-							<span className="absolute bottom-full mb-1 whitespace-nowrap rounded-md bg-slate-800 px-1.5 py-0.5 text-[10px] font-medium text-white">
-								Disconnect
-							</span>
-							<button
-								type="button"
-								title="Disconnect"
-								aria-label="Disconnect assignment"
-								className="nodrag nopan nowheel flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-[#0f5384] text-white shadow-md transition-colors duration-200 hover:bg-[#0c436a]"
-								onPointerDown={cutConnection}
-								onPointerUp={stopFlowEvent}
-								onMouseDown={stopFlowEvent}
-								onClick={cutConnection}
-							>
-								<Scissors className="h-3.5 w-3.5" />
-							</button>
-						</div>
+						<button
+							type="button"
+							aria-label="Disconnect assignment"
+							className="nodrag nopan nowheel inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border border-red/20 bg-red/10 text-red shadow-sm transition-all duration-200 hover:border-red/30 hover:bg-red/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red/40"
+							onPointerDown={cutConnection}
+							onPointerUp={stopFlowEvent}
+							onMouseDown={stopFlowEvent}
+							onClick={cutConnection}
+						>
+							<Scissors className="h-3 w-3" aria-hidden />
+						</button>
 					</div>
 				</EdgeLabelRenderer>
 			) : null}

@@ -4,6 +4,7 @@
  */
 
 import {
+	FLOW_CARD_HEIGHT,
 	FLOW_CARD_WIDTH,
 	FLOW_RANK_GAP,
 	FLOW_ROW_EXTENT,
@@ -160,16 +161,23 @@ export function seedReportingNodePositions<T extends ReportingGraphUser>(
 	const positions = new Map<string, { x: number; y: number }>();
 
 	const place = (id: string, top: number, depth: number) => {
-		positions.set(id, {
-			x: GRAPH_PAD_X + depth * REPORTING_RANK_GAP,
-			y: top,
-		});
+		const kids = childrenOf.get(id) || [];
 		let cursor = top;
-		for (const childId of childrenOf.get(id) || []) {
+		for (const childId of kids) {
 			const childHeight = subtreeHeight(childId, childrenOf, heightMemo);
 			place(childId, cursor, depth + 1);
 			cursor += childHeight;
 		}
+		const subtreeH = subtreeHeight(id, childrenOf, heightMemo);
+		// Center the parent beside its stack so first-time layout reads like an org chart.
+		const y =
+			kids.length === 0
+				? top
+				: top + Math.max(0, (subtreeH - FLOW_CARD_HEIGHT) / 2);
+		positions.set(id, {
+			x: GRAPH_PAD_X + depth * REPORTING_RANK_GAP,
+			y,
+		});
 	};
 
 	let rootCursor = GRAPH_PAD_Y;
