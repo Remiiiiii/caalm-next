@@ -103,6 +103,7 @@
 		"@tiptap/starter-kit": "^3.19.0",
 		"@types/pdf-parse": "^1.1.5",
 		"@vercel/kv": "^3.0.0",
+		"@xyflow/react": "^12.11.6",
 		"aos": "^2.3.4",
 		"appwrite": "^22.4.1",
 		"class-variance-authority": "^0.7.1",

@@ -2,10 +2,15 @@ import { describe, expect, it } from "vitest";
 import {
 	type AssignmentGraphUser,
 	collectGraphUsers,
+	FLOW_LEAF_WRAP,
+	FLOW_RANK_GAP,
+	FLOW_ROW_EXTENT,
 	GRAPH_NODE_SIZE,
+	isDrawnAssignmentSource,
 	layoutAssignmentGraph,
 	nodesOverlap,
 	resolveAssignerNodeId,
+	seedFlowNodePositions,
 	SPEC_SAMPLE_USERS,
 	SYSTEM_NODE_ID,
 	segmentIntersectsNodeBox,
@@ -249,6 +254,12 @@ describe("assignment graph", () => {
 		).toBe(true);
 	});
 
+	it("treats System and ghost assigners as a cut with no drawn line", () => {
+		expect(isDrawnAssignmentSource(SYSTEM_NODE_ID)).toBe(false);
+		expect(isDrawnAssignmentSource("ghost:retired-admin")).toBe(false);
+		expect(isDrawnAssignmentSource("victor")).toBe(true);
+	});
+
 	it("does not invent a System edge when Assigned by is another person", () => {
 		const layout = layoutAssignmentGraph(SPEC_SAMPLE_USERS);
 		expect(
@@ -256,5 +267,94 @@ describe("assignment graph", () => {
 				(edge) => edge.fromId === SYSTEM_NODE_ID && edge.toId === "jimmy",
 			),
 		).toBe(false);
+	});
+
+	it("seeds flow positions from the tree and keeps saved coordinates", () => {
+		const saved = new Map<string, { x: number; y: number }>([
+			["victor", { x: 12, y: 34 }],
+		]);
+		const positions = seedFlowNodePositions(
+			SPEC_SAMPLE_USERS,
+			SPEC_SAMPLE_USERS,
+			saved,
+		);
+		expect(positions.get("victor")).toEqual({ x: 12, y: 34 });
+		expect(positions.get("jimmy")).toBeTruthy();
+		expect(positions.get(SYSTEM_NODE_ID)).toBeTruthy();
+	});
+
+	it("places System on the left and assignees to the right", () => {
+		const positions = seedFlowNodePositions(
+			SPEC_SAMPLE_USERS,
+			SPEC_SAMPLE_USERS,
+			new Map(),
+		);
+		const system = positions.get(SYSTEM_NODE_ID);
+		const victor = positions.get("victor");
+		const jimmy = positions.get("jimmy");
+		expect(system && victor && jimmy).toBeTruthy();
+		expect(system!.x).toBeLessThan(victor!.x);
+		expect(victor!.x).toBeLessThan(jimmy!.x);
+	});
+
+	it("packs the flow tree left-to-right by depth and top-to-bottom by siblings", () => {
+		const positions = seedFlowNodePositions(
+			SPEC_SAMPLE_USERS,
+			SPEC_SAMPLE_USERS,
+			new Map(),
+		);
+		const system = positions.get(SYSTEM_NODE_ID)!;
+		const victor = positions.get("victor")!;
+		const remy = positions.get("remy")!;
+		const jimmy = positions.get("jimmy")!;
+		const john = positions.get("john")!;
+		const lylla = positions.get("lylla")!;
+
+		expect(victor.x - system.x).toBe(FLOW_RANK_GAP);
+		expect(jimmy.x - victor.x).toBe(FLOW_RANK_GAP);
+		expect(remy.x).toBe(victor.x);
+		expect(system.y).toBe(victor.y);
+		expect(victor.y).toBe(jimmy.y);
+		expect(remy.y).toBe(victor.y + FLOW_ROW_EXTENT);
+		// Remy, John, and Lylla are leaves under System — one wrap row.
+		expect(john.y).toBe(remy.y);
+		expect(lylla.y).toBe(remy.y);
+		expect(john.x - remy.x).toBe(FLOW_RANK_GAP);
+		expect(lylla.x - john.x).toBe(FLOW_RANK_GAP);
+	});
+
+	it("wraps leaf reports left-to-right then top-to-bottom", () => {
+		const users: AssignmentGraphUser[] = [
+			{
+				$id: "mgr",
+				fullName: "Morgan Lee",
+				roleName: "Department Manager",
+				assignedById: "system",
+				assignedByName: "System",
+			},
+			...["Alex", "Blair", "Cam", "Drew"].map((name, index) => ({
+				$id: `staff-${index}`,
+				fullName: `${name} Staff`,
+				roleName: "Viewer",
+				assignedById: "mgr",
+				assignedByName: "Morgan Lee",
+			})),
+		];
+		const positions = seedFlowNodePositions(users, users, new Map());
+		const mgr = positions.get("mgr")!;
+		const first = positions.get("staff-0")!;
+		const second = positions.get("staff-1")!;
+		const third = positions.get("staff-2")!;
+		const fourth = positions.get("staff-3")!;
+
+		expect(FLOW_LEAF_WRAP).toBe(3);
+		expect(first.x - mgr.x).toBe(FLOW_RANK_GAP);
+		expect(second.x - first.x).toBe(FLOW_RANK_GAP);
+		expect(third.x - second.x).toBe(FLOW_RANK_GAP);
+		expect(first.y).toBe(mgr.y);
+		expect(second.y).toBe(mgr.y);
+		expect(third.y).toBe(mgr.y);
+		expect(fourth.x).toBe(first.x);
+		expect(fourth.y).toBe(mgr.y + FLOW_ROW_EXTENT);
 	});
 });

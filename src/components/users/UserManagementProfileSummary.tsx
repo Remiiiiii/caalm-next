@@ -83,6 +83,10 @@ export function UserManagementProfileSummary({
 			</div>
 			<dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-4 border-t border-slate-200 pt-4 text-sm">
 				<div>
+					<dt className="text-slate-500">Title</dt>
+					<FieldValue value={user.jobTitle} emptyLabel={emptyOrgLabel} />
+				</div>
+				<div>
 					<dt className="text-slate-500">Role</dt>
 					<FieldValue value={user.roleName} emptyLabel="Unassigned" />
 				</div>
@@ -93,6 +97,17 @@ export function UserManagementProfileSummary({
 				<div>
 					<dt className="text-slate-500">Division</dt>
 					<FieldValue value={user.division} emptyLabel={emptyOrgLabel} />
+				</div>
+				<div>
+					<dt className="text-slate-500">Location</dt>
+					<FieldValue value={user.workLocation} emptyLabel={emptyOrgLabel} />
+				</div>
+				<div>
+					<dt className="text-slate-500">Cost center</dt>
+					<FieldValue
+						value={user.costCenterName || user.costCenterCode}
+						emptyLabel={emptyOrgLabel}
+					/>
 				</div>
 				<div>
 					<dt className="text-slate-500">Assigned by</dt>
