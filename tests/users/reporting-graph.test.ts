@@ -80,4 +80,19 @@ describe("reporting graph layout", () => {
 		expect(skipLevelManagerId("cfo", users)).toBeNull();
 		expect(skipLevelManagerId("ceo", users)).toBeNull();
 	});
+
+	it("centers a manager beside its stack on first-time layout", () => {
+		const users = [
+			person("ceo"),
+			person("cfo", "ceo"),
+			person("cio", "ceo"),
+		];
+		const positions = seedReportingNodePositions(users, users, new Map());
+		const ceoY = positions.get("ceo")?.y ?? 0;
+		const cfoY = positions.get("cfo")?.y ?? 0;
+		const cioY = positions.get("cio")?.y ?? 0;
+		expect(cfoY).toBeLessThan(cioY);
+		expect(ceoY).toBeGreaterThan(cfoY);
+		expect(ceoY).toBeLessThan(cioY);
+	});
 });

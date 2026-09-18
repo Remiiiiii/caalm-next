@@ -1688,14 +1688,22 @@ button[data-state="active"] > span {
 }
 
 /* Marquee box for selecting several user cards at once. */
-.user-graph-flow .react-flow__selection {
+.user-graph-marquee {
+	pointer-events: none;
+	position: absolute;
+	z-index: 30;
+	border: 1.5px dashed rgb(15 83 132 / 0.55);
 	background: rgb(15 83 132 / 0.08);
-	border: 1px solid rgb(15 83 132 / 0.45);
 }
 
+.user-graph-flow .react-flow__selection {
+	background: rgb(15 83 132 / 0.08);
+	border: 1.5px dashed rgb(15 83 132 / 0.55);
+}
+
+/* Custom overlay owns the persistent box; hide xyflow's extra frame. */
 .user-graph-flow .react-flow__nodesselection-rect {
-	background: rgb(15 83 132 / 0.06);
-	border: 1px solid rgb(15 83 132 / 0.35);
+	display: none;
 }
 
 .user-graph-flow .react-flow__node.selected > * {
