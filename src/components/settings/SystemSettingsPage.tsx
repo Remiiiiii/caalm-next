@@ -10,6 +10,13 @@ import { Button } from "@/components/ui/button";
 import { CardContent, Card as GlassCard } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { LoadingSpinner } from "@/components/ui/loading";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PERMISSIONS } from "@/constants/permissions";
@@ -18,6 +25,10 @@ import { useStepUp } from "@/contexts/StepUpContext";
 import { useToast } from "@/hooks/use-toast";
 import type { Organization } from "@/lib/rbac/organizations";
 import { fetcher } from "@/lib/swr-config";
+import {
+	type ManagerUserIdSource,
+	parseManagerUserIdSource,
+} from "@/lib/users/manager-user-id-source";
 
 interface OrgResponse {
 	success: boolean;
@@ -44,6 +55,9 @@ export default function SystemSettingsPage() {
 
 	const [features, setFeatures] = useState<string[]>([]);
 	const [require2fa, setRequire2fa] = useState(false);
+	const [managerUserIdSource, setManagerUserIdSource] = useState<
+		ManagerUserIdSource | ""
+	>("");
 	const [saving, setSaving] = useState(false);
 
 	useEffect(() => {
@@ -51,6 +65,9 @@ export default function SystemSettingsPage() {
 		const feats = org.settings?.features || [];
 		setFeatures(feats);
 		setRequire2fa(Boolean(org.settings?.require2fa));
+		setManagerUserIdSource(
+			parseManagerUserIdSource(org.settings?.managerUserId_source) || "",
+		);
 	}, [org]);
 
 	const toggleFeature = (key: string) => {
@@ -100,6 +117,48 @@ export default function SystemSettingsPage() {
 			setSaving(false);
 		}
 	}, [orgId, org, features, require2fa, mutate, toast, ensureStepUp]);
+
+	const handleSaveManagerSource = useCallback(async () => {
+		if (!managerUserIdSource) {
+			toast({
+				title: "Choose a source",
+				description: "Pick CAALM or SCIM before saving.",
+				variant: "destructive",
+			});
+			return;
+		}
+		setSaving(true);
+		try {
+			const res = await fetch(
+				orgId
+					? `/api/organizations?orgId=${encodeURIComponent(orgId)}`
+					: "/api/organizations",
+				{
+					method: "PUT",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						settings: {
+							managerUserId_source: managerUserIdSource,
+						},
+					}),
+				},
+			);
+			if (!res.ok) {
+				const body = await res.json().catch(() => ({}));
+				throw new Error(body.error || "Save failed");
+			}
+			toast({ title: "Manager field source saved" });
+			await mutate();
+		} catch (error) {
+			toast({
+				title: "Could not save",
+				description: error instanceof Error ? error.message : "Try again",
+				variant: "destructive",
+			});
+		} finally {
+			setSaving(false);
+		}
+	}, [orgId, managerUserIdSource, mutate, toast]);
 
 	if (isLoading) {
 		return (
@@ -218,6 +277,46 @@ export default function SystemSettingsPage() {
 								<p className="text-sm font-medium sidebar-gradient-text">
 									Integrations overview
 								</p>
+							</div>
+							<div className="rounded-md border border-slate-200 bg-white px-3 py-3 space-y-3">
+								<div>
+									<p className="text-sm font-medium text-slate-700">
+										Manager field source
+									</p>
+									<p className="text-xs text-slate-500">
+										When reconnecting the user assignment graph, copy the new
+										assigner onto managerUserId only if CAALM owns that field.
+									</p>
+								</div>
+								<Select
+									value={managerUserIdSource || undefined}
+									onValueChange={(value) =>
+										setManagerUserIdSource(value as ManagerUserIdSource)
+									}
+								>
+									<SelectTrigger className="max-w-md">
+										<SelectValue placeholder="Not set — leave manager unchanged" />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="manual">
+											CAALM (manual)
+										</SelectItem>
+										<SelectItem value="scim">SCIM / IdP</SelectItem>
+									</SelectContent>
+								</Select>
+								<PermissionGate permission={PERMISSIONS.SETTINGS.EDIT}>
+									<div className="flex justify-end">
+										<Button
+											type="button"
+											className="primary-btn px-3 sm:px-4 cursor-pointer"
+											disabled={saving}
+											onClick={handleSaveManagerSource}
+										>
+											<Save className="h-4 w-4" />
+											Save manager source
+										</Button>
+									</div>
+								</PermissionGate>
 							</div>
 							<div className="rounded-md border border-slate-200 bg-white px-3 py-3 flex items-center justify-between">
 								<div>

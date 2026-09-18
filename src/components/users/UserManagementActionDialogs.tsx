@@ -31,6 +31,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { UserManagementProfileSummary } from "@/components/users/UserManagementProfileSummary";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import type { UserManagementUser } from "@/hooks/useUsers";
+import type { CostCenter } from "@/lib/database/schemas/org-units.schema";
 import { MIN_IMPERSONATION_REASON_LENGTH } from "@/lib/impersonation/policy";
 import { fetcher } from "@/lib/swr-config";
 import { formatUserLastActiveLabel } from "@/lib/users/user-management-display";
@@ -62,6 +63,10 @@ interface UserManagementActionDialogsProps {
 		department: string;
 		division: string;
 		managerUserId: string | null;
+		jobTitle: string | null;
+		workLocation: string | null;
+		costCenterId: string | null;
+		matrixManagerUserId: string | null;
 	}) => void;
 	onSaveRole: (roleName: string) => void;
 	onConfirmReset: () => void;
@@ -137,6 +142,10 @@ export function UserManagementActionDialogs({
 	const [department, setDepartment] = useState("");
 	const [division, setDivision] = useState("");
 	const [managerUserId, setManagerUserId] = useState<string>("");
+	const [jobTitle, setJobTitle] = useState("");
+	const [workLocation, setWorkLocation] = useState("");
+	const [costCenterId, setCostCenterId] = useState<string>("");
+	const [matrixManagerUserId, setMatrixManagerUserId] = useState<string>("");
 	const [roleName, setRoleName] = useState("");
 	const [impersonationReason, setImpersonationReason] = useState("");
 
@@ -158,6 +167,14 @@ export function UserManagementActionDialogs({
 		? `/api/users?orgId=${encodeURIComponent(orgId)}`
 		: null;
 	const { data: orgUsersRaw } = useSWR(usersUrl, fetcher);
+	const costCentersUrl =
+		orgId && action === "edit"
+			? `/api/cost-centers?orgId=${encodeURIComponent(orgId)}&includeInactive=true`
+			: null;
+	const { data: costCentersPayload } = useSWR<{
+		success: boolean;
+		data: { costCenters: CostCenter[] };
+	}>(costCentersUrl, fetcher);
 
 	useEffect(() => {
 		if (!user) return;
@@ -165,6 +182,10 @@ export function UserManagementActionDialogs({
 		setDepartment(user.department || "");
 		setDivision(user.division || "");
 		setManagerUserId(user.managerUserId || "");
+		setJobTitle(user.jobTitle || "");
+		setWorkLocation(user.workLocation || "");
+		setCostCenterId(user.costCenterId || "");
+		setMatrixManagerUserId(user.matrixManagerUserId || "");
 		setRoleName(user.roleName || "");
 		setImpersonationReason("");
 	}, [user, action]);
@@ -272,6 +293,15 @@ export function UserManagementActionDialogs({
 	}
 
 	if (action === "edit") {
+		const orgUsers = (
+			Array.isArray(orgUsersRaw) ? orgUsersRaw : []
+		) as Array<{ $id: string; fullName?: string; email?: string }>;
+		const costCenters = costCentersPayload?.data?.costCenters ?? [];
+		const matrixConflictsWithManager = Boolean(
+			managerUserId &&
+				matrixManagerUserId &&
+				managerUserId === matrixManagerUserId,
+		);
 		return (
 			<DialogShell
 				open
@@ -282,13 +312,19 @@ export function UserManagementActionDialogs({
 				footer={
 					<div className="flex items-center justify-end gap-3">
 						<Button
-							disabled={busy || !fullName.trim()}
+							disabled={
+								busy || !fullName.trim() || matrixConflictsWithManager
+							}
 							onClick={() =>
 								onSaveEdit({
 									fullName: fullName.trim(),
 									department,
 									division,
 									managerUserId: managerUserId || null,
+									jobTitle: jobTitle.trim() || null,
+									workLocation: workLocation.trim() || null,
+									costCenterId: costCenterId || null,
+									matrixManagerUserId: matrixManagerUserId || null,
 								})
 							}
 							className="primary-btn px-3 sm:px-4"
@@ -312,6 +348,16 @@ export function UserManagementActionDialogs({
 							className="bg-white"
 						/>
 					</div>
+					<div>
+						<Label className="mb-1 text-sm text-slate-700">Job title</Label>
+						<Input
+							value={jobTitle}
+							onChange={(e) => setJobTitle(e.target.value)}
+							placeholder="Chief Financial Officer"
+							maxLength={128}
+							className="bg-white"
+						/>
+					</div>
 					<OrgUnitPicker
 						orgId={orgId || "default_organization"}
 						departmentCode={department}
@@ -321,27 +367,88 @@ export function UserManagementActionDialogs({
 						disabled={busy}
 					/>
 					<div>
+						<Label className="mb-1 text-sm text-slate-700">Location</Label>
+						<Input
+							value={workLocation}
+							onChange={(e) => setWorkLocation(e.target.value)}
+							placeholder="Austin office"
+							maxLength={128}
+							className="bg-white"
+						/>
+					</div>
+					<div>
+						<Label className="mb-1 text-sm text-slate-700">Cost center</Label>
+						<Select
+							value={costCenterId || "__none"}
+							onValueChange={(v) => setCostCenterId(v === "__none" ? "" : v)}
+						>
+							<SelectTrigger className="cursor-pointer bg-white">
+								<SelectValue placeholder="Select cost center" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="__none">None</SelectItem>
+								{costCenters.map((center) => (
+									<SelectItem key={center.$id} value={center.$id}>
+										{center.code} — {center.name}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					</div>
+					<div>
 						<Label className="mb-1 text-sm text-slate-700">Manager</Label>
 						<Select
 							value={managerUserId || "__none"}
 							onValueChange={(v) => setManagerUserId(v === "__none" ? "" : v)}
 						>
-							<SelectTrigger className="bg-white cursor-pointer">
+							<SelectTrigger className="cursor-pointer bg-white">
 								<SelectValue placeholder="Select manager" />
 							</SelectTrigger>
 							<SelectContent>
 								<SelectItem value="__none">None</SelectItem>
-								{(Array.isArray(orgUsersRaw) ? orgUsersRaw : [])
-									.filter((u: { $id?: string }) => u.$id && u.$id !== user.$id)
-									.map(
-										(u: { $id: string; fullName?: string; email?: string }) => (
-											<SelectItem key={u.$id} value={u.$id}>
-												{u.fullName || u.email || u.$id}
-											</SelectItem>
-										),
-									)}
+								{orgUsers
+									.filter((u) => u.$id && u.$id !== user.$id)
+									.map((u) => (
+										<SelectItem key={u.$id} value={u.$id}>
+											{u.fullName || u.email || u.$id}
+										</SelectItem>
+									))}
 							</SelectContent>
 						</Select>
+					</div>
+					<div>
+						<Label className="mb-1 text-sm text-slate-700">
+							Matrix manager
+						</Label>
+						<Select
+							value={matrixManagerUserId || "__none"}
+							onValueChange={(v) =>
+								setMatrixManagerUserId(v === "__none" ? "" : v)
+							}
+						>
+							<SelectTrigger className="cursor-pointer bg-white">
+								<SelectValue placeholder="Select matrix manager" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="__none">None</SelectItem>
+								{orgUsers
+									.filter((u) => u.$id && u.$id !== user.$id)
+									.map((u) => (
+										<SelectItem key={u.$id} value={u.$id}>
+											{u.fullName || u.email || u.$id}
+										</SelectItem>
+									))}
+							</SelectContent>
+						</Select>
+						{matrixConflictsWithManager ? (
+							<p className="mt-1 text-xs text-red">
+								Matrix manager must be different from the solid-line manager.
+							</p>
+						) : (
+							<p className="mt-1 text-xs text-slate-500">
+								Dotted-line manager. Shown on the reporting diagram only.
+							</p>
+						)}
 					</div>
 					{historyData?.data?.history?.length ? (
 						<div>
