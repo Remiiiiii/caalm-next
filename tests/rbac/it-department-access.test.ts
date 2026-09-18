@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isITSidebarPath } from "@/constants/it-navigation";
+import { IT_NAVIGATION, isITSidebarPath } from "@/constants/it-navigation";
 import { PERMISSIONS } from "@/constants/permissions";
 import {
 	canAccessITPortal,
@@ -66,5 +66,17 @@ describe("isITSidebarPath", () => {
 	it("does not treat other dashboards as IT chrome", () => {
 		expect(isITSidebarPath("/dashboard/superadmin")).toBe(false);
 		expect(isITSidebarPath("/licenses")).toBe(false);
+	});
+});
+
+describe("IT development roadmaps", () => {
+	it("lists both CLM and Nonprofit roadmap routes", () => {
+		const development = IT_NAVIGATION.find((s) => s.header === "Development");
+		const names = development?.items.map((item) => item.name) ?? [];
+		const urls = development?.items.map((item) => item.url) ?? [];
+		expect(names).toContain("CLM Roadmap");
+		expect(names).toContain("Nonprofit Roadmap");
+		expect(urls).toContain("/dashboard/it/development/clm-roadmap");
+		expect(urls).toContain("/dashboard/it/development/npo-roadmap");
 	});
 });

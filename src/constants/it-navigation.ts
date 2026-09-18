@@ -282,6 +282,12 @@ export const IT_NAVIGATION: ITSidebarSection[] = [
 				permission: PERMISSIONS.IT.VIEW_ROADMAP,
 			},
 			{
+				name: "Nonprofit Roadmap",
+				icon: "map",
+				url: "/dashboard/it/development/npo-roadmap",
+				permission: PERMISSIONS.IT.VIEW_ROADMAP,
+			},
+			{
 				name: "PR log - (Cursor Cloud Agent)",
 				icon: "gitPullRequest",
 				url: "/dashboard/it/development/pr-log",

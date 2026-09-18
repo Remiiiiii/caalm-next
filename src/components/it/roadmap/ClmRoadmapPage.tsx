@@ -316,13 +316,23 @@ function RoadmapSectionCard({
 	);
 }
 
-export function ClmRoadmapPage() {
-	const { realtimeEnabled } = useRoadmapRealtime();
+export function ClmRoadmapPage({
+	title = "CLM Completion Roadmap",
+	subtitle = "Interactive plan engine — A section completes only when every catalog PR merges to main with green tests.",
+	progressLabel = "Overall CLM buildout",
+	overviewPath = "/api/roadmap/overview",
+}: {
+	title?: string;
+	subtitle?: string;
+	progressLabel?: string;
+	overviewPath?: string;
+} = {}) {
+	const { realtimeEnabled } = useRoadmapRealtime(overviewPath);
 	const {
 		data: overview,
 		error: overviewError,
 		isLoading: overviewLoading,
-	} = useSWR<RoadmapOverview>("/api/roadmap/overview", fetcher, {
+	} = useSWR<RoadmapOverview>(overviewPath, fetcher, {
 		// Appwrite Realtime pushes updates; polling is a fallback only
 		refreshInterval: realtimeEnabled ? 0 : 30_000,
 		revalidateOnFocus: true,
@@ -358,11 +368,7 @@ export function ClmRoadmapPage() {
 	};
 
 	return (
-		<ITPageShell
-			title="CLM Completion Roadmap"
-			subtitle="Interactive plan engine — A section completes only when every catalog PR merges to main with green tests."
-			icon={MapIcon}
-		>
+		<ITPageShell title={title} subtitle={subtitle} icon={MapIcon}>
 			{overviewLoading && !overview ? (
 				<p className="text-sm text-slate-600">Loading roadmap…</p>
 			) : overview?.sections?.length ? (
@@ -370,7 +376,7 @@ export function ClmRoadmapPage() {
 					<ITGlassPanel>
 						<RoadmapProgressBar
 							percent={overview.overallProgressPercent}
-							label="Overall CLM buildout"
+							label={progressLabel}
 							size="md"
 						/>
 						<p className="text-xs text-slate-500 mt-2">
