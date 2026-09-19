@@ -39,7 +39,7 @@ const OrganizationProvider = ({ children }: { children: ReactNode }) => {
 		try {
 			const res = await fetch(
 				`/api/organization/default?orgId=${encodeURIComponent(id)}`,
-				{ cache: "no-store" },
+				{ cache: "no-store", signal: AbortSignal.timeout(8000) },
 			);
 			if (res.ok) {
 				const data = await res.json();
@@ -70,6 +70,7 @@ const OrganizationProvider = ({ children }: { children: ReactNode }) => {
 			try {
 				const res = await fetch("/api/organization/default", {
 					cache: "no-store",
+					signal: AbortSignal.timeout(8000),
 				});
 				if (res.ok) {
 					const data = await res.json();

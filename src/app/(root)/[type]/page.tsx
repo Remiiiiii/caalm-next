@@ -298,7 +298,7 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
 								<FileUploader
 									ownerId={user.$id}
 									accountId={user.$id}
-									className="primary-btn h-10 px-4 shadow-drop-1 text-sm"
+									className="primary-btn px-4 shadow-drop-1 text-sm"
 								/>
 							</div>
 						)}

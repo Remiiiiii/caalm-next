@@ -540,13 +540,14 @@ export const PERMISSION_DEFINITIONS = [
 	},
 	{
 		key: PERMISSIONS.IT.VIEW_ROADMAP,
-		name: "View CLM Roadmap",
+		name: "View Roadmaps",
 		category: "it",
-		description: "View the in-app CLM completion roadmap and progress",
+		description:
+			"View the in-app CLM and Nonprofit completion roadmaps and progress",
 	},
 	{
 		key: PERMISSIONS.IT.MANAGE_ROADMAP,
-		name: "Manage CLM Roadmap",
+		name: "Manage Roadmaps",
 		category: "it",
 		description:
 			"Start roadmap tasks and bind branches/PRs (cannot force-complete)",

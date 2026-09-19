@@ -56,7 +56,7 @@ function ActionLinkButton({
 }) {
 	return (
 		<Link href={href} className="shrink-0">
-			<Button className="primary-btn h-9 px-4! gap-2 justify-center text-xs whitespace-nowrap shadow-drop-1 border-0">
+			<Button className="primary-btn px-4! gap-2 justify-center text-xs whitespace-nowrap shadow-drop-1 border-0">
 				<Icon className="h-4 w-4 shrink-0" />
 				{label}
 			</Button>

@@ -7,6 +7,7 @@ import {
 import {
 	buildPrLogOverview,
 	isAgentPullRequestBranch,
+	isNonprofitCatalogStubPr,
 	type PrLogSourcePr,
 } from "./agent-pr";
 import { evaluateCommitCheckGate } from "./checks";
@@ -81,7 +82,13 @@ export async function getPrLogPullRequest(
 		throw new PrLogError(`Pull request #${prNumber} was not found`, 404);
 	}
 
-	if (!isAgentPullRequestBranch(live.headRef ?? "")) {
+	if (
+		!isAgentPullRequestBranch(live.headRef ?? "") ||
+		isNonprofitCatalogStubPr({
+			headRef: live.headRef,
+			title: live.title,
+		})
+	) {
 		throw new PrLogError(
 			`Pull request #${prNumber} is not a cloud agent branch`,
 			404,
