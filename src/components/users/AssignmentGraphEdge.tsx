@@ -104,8 +104,14 @@ export function AssignmentGraphEdge({
 				interactionWidth={24}
 				style={{
 					stroke: color,
-					strokeWidth: selected || hovered ? 2.5 : 1.75,
-					strokeDasharray: data?.dashed ? "6 4" : "none",
+					strokeWidth: data?.dashed
+						? selected || hovered
+							? 3
+							: 2.25
+						: selected || hovered
+							? 2.5
+							: 1.75,
+					strokeDasharray: data?.dashed ? "18 12" : "none",
 				}}
 			/>
 			{canEdit ? (

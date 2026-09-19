@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
 	GRAPH_PAD_X,
+	GRAPH_PAD_Y,
 	wouldCreateCycle,
+	FLOW_TB_RANK_GAP,
 } from "@/lib/users/assignment-graph";
 import {
 	buildReportingParentOf,
+	hoistSuperAdminReportingRoots,
+	collectReportingUsers,
 	matrixReportingEdges,
 	REPORTING_RANK_GAP,
 	reportingWouldCycle,
@@ -17,8 +21,15 @@ function person(
 	id: string,
 	managerUserId?: string | null,
 	matrixManagerUserId?: string | null,
+	roleName?: string | null,
 ): ReportingGraphUser {
-	return { $id: id, accountId: `${id}-account`, managerUserId, matrixManagerUserId };
+	return {
+		$id: id,
+		accountId: `${id}-account`,
+		managerUserId,
+		matrixManagerUserId,
+		roleName,
+	};
 }
 
 describe("reporting graph layout", () => {
@@ -94,5 +105,82 @@ describe("reporting graph layout", () => {
 		expect(cfoY).toBeLessThan(cioY);
 		expect(ceoY).toBeGreaterThan(cfoY);
 		expect(ceoY).toBeLessThan(cioY);
+	});
+
+	it("places ranks on Y in top-down layout", () => {
+		const users = [
+			person("ceo"),
+			person("cfo", "ceo"),
+			person("controller", "cfo"),
+		];
+		const positions = seedReportingNodePositions(users, users, new Map(), {
+			orientation: "tb",
+		});
+		expect(positions.get("ceo")?.y).toBe(GRAPH_PAD_Y);
+		expect(positions.get("cfo")?.y).toBe(GRAPH_PAD_Y + FLOW_TB_RANK_GAP);
+		expect(positions.get("controller")?.y).toBe(
+			GRAPH_PAD_Y + FLOW_TB_RANK_GAP * 2,
+		);
+		expect(positions.get("ceo")?.x).toBeDefined();
+	});
+
+	it("keeps saved coordinates in top-down layout", () => {
+		const users = [person("ceo"), person("cfo", "ceo")];
+		const saved = new Map([["ceo", { x: 9, y: 9 }]]);
+		const positions = seedReportingNodePositions(users, users, saved, {
+			orientation: "tb",
+		});
+		expect(positions.get("ceo")).toEqual({ x: 9, y: 9 });
+	});
+
+	it("pulls a matrix manager into the reporting set", () => {
+		const visible = [person("cfo", "ceo", "coo")];
+		const all = [person("ceo"), person("cfo", "ceo", "coo"), person("coo")];
+		const collected = collectReportingUsers(visible, all).map(
+			(user) => user.$id,
+		);
+		expect(collected.sort()).toEqual(["ceo", "cfo", "coo"]);
+	});
+
+	it("hoists Super Admin above other reporting roots in top-down", () => {
+		const users = [
+			person("sa", null, null, "Super Admin"),
+			person("ceo"),
+			person("cfo", "ceo"),
+			person("orphan"),
+		];
+		const { parentOf, syntheticChildIds } = hoistSuperAdminReportingRoots(
+			buildReportingParentOf(users),
+			users,
+			"sa",
+		);
+		expect(parentOf.get("ceo")).toBe("sa");
+		expect(parentOf.get("orphan")).toBe("sa");
+		expect(parentOf.get("cfo")).toBe("ceo");
+		expect(parentOf.has("sa")).toBe(false);
+		expect(syntheticChildIds.sort()).toEqual(["ceo", "orphan"]);
+
+		const positions = seedReportingNodePositions(users, users, new Map(), {
+			orientation: "tb",
+			hoistSuperAdminId: "sa",
+		});
+		expect(positions.get("sa")?.y).toBe(GRAPH_PAD_Y);
+		expect(positions.get("ceo")?.y).toBe(GRAPH_PAD_Y + FLOW_TB_RANK_GAP);
+		expect(positions.get("orphan")?.y).toBe(GRAPH_PAD_Y + FLOW_TB_RANK_GAP);
+		expect(positions.get("cfo")?.y).toBe(GRAPH_PAD_Y + FLOW_TB_RANK_GAP * 2);
+	});
+
+	it("does not duplicate a Super Admin edge that already exists", () => {
+		const users = [
+			person("sa", null, null, "Super Admin"),
+			person("ceo", "sa"),
+		];
+		const { parentOf, syntheticChildIds } = hoistSuperAdminReportingRoots(
+			buildReportingParentOf(users),
+			users,
+			"sa",
+		);
+		expect(parentOf.get("ceo")).toBe("sa");
+		expect(syntheticChildIds).toEqual([]);
 	});
 });

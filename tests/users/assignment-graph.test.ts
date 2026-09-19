@@ -2,17 +2,18 @@ import { describe, expect, it } from "vitest";
 import {
 	type AssignmentGraphUser,
 	collectGraphUsers,
-	FLOW_LEAF_WRAP,
 	FLOW_RANK_GAP,
 	FLOW_ROW_EXTENT,
+	FLOW_TB_RANK_GAP,
 	GRAPH_NODE_SIZE,
+	GRAPH_PAD_Y,
 	isDrawnAssignmentSource,
 	layoutAssignmentGraph,
 	nodesOverlap,
 	resolveAssignerNodeId,
-	seedFlowNodePositions,
 	SPEC_SAMPLE_USERS,
 	SYSTEM_NODE_ID,
+	seedFlowNodePositions,
 	segmentIntersectsNodeBox,
 } from "@/lib/users/assignment-graph";
 
@@ -313,17 +314,16 @@ describe("assignment graph", () => {
 		expect(victor.x - system.x).toBe(FLOW_RANK_GAP);
 		expect(jimmy.x - victor.x).toBe(FLOW_RANK_GAP);
 		expect(remy.x).toBe(victor.x);
-		expect(system.y).toBe(victor.y);
-		expect(victor.y).toBe(jimmy.y);
-		expect(remy.y).toBe(victor.y + FLOW_ROW_EXTENT);
-		// Remy, John, and Lylla are leaves under System — one wrap row.
-		expect(john.y).toBe(remy.y);
-		expect(lylla.y).toBe(remy.y);
-		expect(john.x - remy.x).toBe(FLOW_RANK_GAP);
-		expect(lylla.x - john.x).toBe(FLOW_RANK_GAP);
+		expect(john.x).toBe(victor.x);
+		expect(lylla.x).toBe(victor.x);
+		expect(john.y).toBe(remy.y + FLOW_ROW_EXTENT);
+		expect(lylla.y).toBe(john.y + FLOW_ROW_EXTENT);
+		expect(remy.y).toBeGreaterThan(victor.y);
+		expect(system.y).toBeGreaterThan(victor.y - FLOW_ROW_EXTENT);
+		expect(system.y).toBeLessThan(lylla.y + FLOW_ROW_EXTENT);
 	});
 
-	it("wraps leaf reports left-to-right then top-to-bottom", () => {
+	it("stacks leaf assignees in one column like reporting", () => {
 		const users: AssignmentGraphUser[] = [
 			{
 				$id: "mgr",
@@ -347,14 +347,44 @@ describe("assignment graph", () => {
 		const third = positions.get("staff-2")!;
 		const fourth = positions.get("staff-3")!;
 
-		expect(FLOW_LEAF_WRAP).toBe(3);
 		expect(first.x - mgr.x).toBe(FLOW_RANK_GAP);
-		expect(second.x - first.x).toBe(FLOW_RANK_GAP);
-		expect(third.x - second.x).toBe(FLOW_RANK_GAP);
-		expect(first.y).toBe(mgr.y);
-		expect(second.y).toBe(mgr.y);
-		expect(third.y).toBe(mgr.y);
+		expect(second.x).toBe(first.x);
+		expect(third.x).toBe(first.x);
 		expect(fourth.x).toBe(first.x);
-		expect(fourth.y).toBe(mgr.y + FLOW_ROW_EXTENT);
+		expect(second.y).toBe(first.y + FLOW_ROW_EXTENT);
+		expect(third.y).toBe(second.y + FLOW_ROW_EXTENT);
+		expect(fourth.y).toBe(third.y + FLOW_ROW_EXTENT);
+		expect(mgr.y).toBeGreaterThan(first.y - FLOW_ROW_EXTENT);
+		expect(mgr.y).toBeLessThan(fourth.y + FLOW_ROW_EXTENT);
+	});
+
+	it("places System above assignees in top-down layout", () => {
+		const positions = seedFlowNodePositions(
+			SPEC_SAMPLE_USERS,
+			SPEC_SAMPLE_USERS,
+			new Map(),
+			{ orientation: "tb" },
+		);
+		const system = positions.get(SYSTEM_NODE_ID)!;
+		const victor = positions.get("victor")!;
+		const jimmy = positions.get("jimmy")!;
+		expect(system.y).toBe(GRAPH_PAD_Y);
+		expect(victor.y).toBe(GRAPH_PAD_Y + FLOW_TB_RANK_GAP);
+		expect(jimmy.y).toBe(GRAPH_PAD_Y + FLOW_TB_RANK_GAP * 2);
+		expect(system.y).toBeLessThan(victor.y);
+		expect(victor.y).toBeLessThan(jimmy.y);
+	});
+
+	it("keeps saved coordinates in top-down assignment layout", () => {
+		const saved = new Map<string, { x: number; y: number }>([
+			["victor", { x: 12, y: 34 }],
+		]);
+		const positions = seedFlowNodePositions(
+			SPEC_SAMPLE_USERS,
+			SPEC_SAMPLE_USERS,
+			saved,
+			{ orientation: "tb" },
+		);
+		expect(positions.get("victor")).toEqual({ x: 12, y: 34 });
 	});
 });

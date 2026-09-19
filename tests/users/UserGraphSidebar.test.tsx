@@ -166,6 +166,115 @@ describe("UserGraphSidebar", () => {
 		});
 	});
 
+	it("omits users with a department and division from Unassigned users", () => {
+		const placed = user({
+			$id: "john",
+			fullName: "John Doe",
+			assignedById: "system",
+			assignedByName: "System",
+			department: "Executive",
+			division: "c-suite",
+		});
+		const missingDivision = user({
+			$id: "sam",
+			fullName: "Sam Rivera",
+			department: "Finance",
+		});
+		const localUsers = [placed, missingDivision];
+		render(
+			<UserGraphSidebar
+				users={localUsers}
+				stats={computeGraphSidebarStats(localUsers)}
+				focusUserId={null}
+				onFocusUser={() => undefined}
+				highlight={null}
+				onSelectHighlight={() => undefined}
+			/>,
+		);
+
+		expect(screen.queryByText("John Doe")).not.toBeInTheDocument();
+		expect(screen.getByText("Sam Rivera")).toBeInTheDocument();
+	});
+
+	it("shows a green up trend when more users were added this week than last", () => {
+		const now = Date.now();
+		const thisWeek = new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString();
+		const lastWeek = new Date(now - 10 * 24 * 60 * 60 * 1000).toISOString();
+		const localUsers = [
+			user({ $id: "n1", fullName: "New One", $createdAt: thisWeek }),
+			user({ $id: "n2", fullName: "New Two", $createdAt: thisWeek }),
+			user({ $id: "o1", fullName: "Old One", $createdAt: lastWeek }),
+		];
+		render(
+			<UserGraphSidebar
+				users={localUsers}
+				stats={computeGraphSidebarStats(localUsers, now)}
+				focusUserId={null}
+				onFocusUser={() => undefined}
+				highlight={null}
+				onSelectHighlight={() => undefined}
+			/>,
+		);
+
+		expect(screen.getByLabelText("Users added up this week")).toBeInTheDocument();
+		expect(screen.getByText("+2 this week")).toHaveClass("text-green");
+		expect(screen.getByLabelText("Users added up this month")).toBeInTheDocument();
+		expect(screen.getByText("+3 this month")).toHaveClass("text-green");
+	});
+
+	it("shows a red down trend when fewer users were added this week than last", () => {
+		const now = Date.now();
+		const thisWeek = new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString();
+		const lastWeek = new Date(now - 10 * 24 * 60 * 60 * 1000).toISOString();
+		const localUsers = [
+			user({ $id: "n1", fullName: "New One", $createdAt: thisWeek }),
+			user({ $id: "o1", fullName: "Old One", $createdAt: lastWeek }),
+			user({ $id: "o2", fullName: "Old Two", $createdAt: lastWeek }),
+		];
+		render(
+			<UserGraphSidebar
+				users={localUsers}
+				stats={computeGraphSidebarStats(localUsers, now)}
+				focusUserId={null}
+				onFocusUser={() => undefined}
+				highlight={null}
+				onSelectHighlight={() => undefined}
+			/>,
+		);
+
+		expect(screen.getByLabelText("Users added down this week")).toBeInTheDocument();
+		expect(screen.getByText("+1 this week")).toHaveClass("text-red");
+	});
+
+	it("shows a red down trend when fewer users were added this month than last", () => {
+		const now = Date.now();
+		const date = new Date(now);
+		const thisMonth = new Date(date.getFullYear(), date.getMonth(), 2).toISOString();
+		const lastMonth = new Date(
+			date.getFullYear(),
+			date.getMonth() - 1,
+			10,
+		).toISOString();
+		const localUsers = [
+			user({ $id: "n1", fullName: "New One", $createdAt: thisMonth }),
+			user({ $id: "o1", fullName: "Old One", $createdAt: lastMonth }),
+			user({ $id: "o2", fullName: "Old Two", $createdAt: lastMonth }),
+		];
+		render(
+			<UserGraphSidebar
+				users={localUsers}
+				stats={computeGraphSidebarStats(localUsers, now)}
+				focusUserId={null}
+				onFocusUser={() => undefined}
+				highlight={null}
+				onSelectHighlight={() => undefined}
+			/>,
+		);
+
+		expect(screen.getByLabelText("Users added down this month")).toBeInTheDocument();
+		expect(screen.getByText("+1 this month")).toHaveClass("text-red");
+	});
+
 	it("offers Assign on unassigned users when allowed", async () => {
 		const onAssignUser = vi.fn();
 		render(

@@ -3,7 +3,9 @@ import type { UserManagementUser } from "@/hooks/useUsers";
 import {
 	computeGraphSidebarStats,
 	countNeedsAttention,
+	graphCreatedTrend,
 	hasAssignerManagerMismatch,
+	hasOrgAssignment,
 	userMatchesGraphHighlight,
 } from "@/lib/users/graph-sidebar-stats";
 
@@ -214,6 +216,82 @@ describe("computeGraphSidebarStats", () => {
 		expect(stats.passwordHistoryAvailable).toBe(false);
 		expect(stats.passwordNever).toBe(0);
 		expect(stats.passwordStale).toBe(0);
+	});
+
+	it("lists unassigned users by missing department or division, not System assigner", () => {
+		const users = [
+			user({
+				$id: "john",
+				fullName: "John Doe",
+				assignedById: "system",
+				assignedByName: "System",
+				department: "Executive",
+				division: "c-suite",
+			}),
+			user({
+				$id: "no-div",
+				fullName: "Sam Rivera",
+				assignedById: "john",
+				assignedByName: "John Doe",
+				department: "Finance",
+			}),
+			user({
+				$id: "no-dept",
+				fullName: "Lee Park",
+				assignedById: "john",
+				assignedByName: "John Doe",
+				division: "Help Desk",
+			}),
+		];
+
+		expect(hasOrgAssignment(users[0])).toBe(true);
+		expect(hasOrgAssignment(users[1])).toBe(false);
+		expect(hasOrgAssignment(users[2])).toBe(false);
+
+		const stats = computeGraphSidebarStats(users, NOW);
+		expect(stats.systemAssigned).toBe(1);
+		expect(stats.unassignedUsers.map((item) => item.$id)).toEqual([
+			"no-div",
+			"no-dept",
+		]);
+		expect(
+			userMatchesGraphHighlight(
+				users[0],
+				{ kind: "issue", value: "unassigned" },
+				stats,
+			),
+		).toBe(false);
+		expect(
+			userMatchesGraphHighlight(
+				users[1],
+				{ kind: "issue", value: "unassigned" },
+				stats,
+			),
+		).toBe(true);
+	});
+
+	it("counts created users this week vs last week for the All users trend", () => {
+		const thisWeek = new Date(NOW - 2 * 24 * 60 * 60 * 1000).toISOString();
+		const lastWeek = new Date(NOW - 10 * 24 * 60 * 60 * 1000).toISOString();
+		const lastMonth = "2026-08-10T12:00:00.000Z";
+
+		const users = [
+			user({ $id: "new-a", fullName: "New A", $createdAt: thisWeek }),
+			user({ $id: "new-b", fullName: "New B", $createdAt: thisWeek }),
+			user({ $id: "old-a", fullName: "Old A", $createdAt: lastWeek }),
+			user({ $id: "aug", fullName: "August Hire", $createdAt: lastMonth }),
+		];
+
+		const stats = computeGraphSidebarStats(users, NOW);
+		expect(stats.createdThisWeek).toBe(2);
+		expect(stats.createdLastWeek).toBe(1);
+		expect(stats.createdThisMonth).toBe(3);
+		expect(stats.createdLastMonth).toBe(1);
+		expect(graphCreatedTrend(stats.createdThisWeek, stats.createdLastWeek)).toBe(
+			"up",
+		);
+		expect(graphCreatedTrend(0, 2)).toBe("down");
+		expect(graphCreatedTrend(1, 1)).toBe("flat");
 	});
 
 	it("groups location and cost center rows", () => {

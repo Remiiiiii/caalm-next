@@ -1,6 +1,14 @@
 "use client";
 
-import { ChevronDown, ChevronUp, Lock, PanelLeft, PanelRight } from "lucide-react";
+import {
+	ChevronDown,
+	ChevronUp,
+	Lock,
+	PanelLeft,
+	PanelRight,
+	TrendingDown,
+	TrendingUp,
+} from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import {
 	Tooltip,
@@ -12,6 +20,7 @@ import type { UserManagementUser } from "@/hooks/useUsers";
 import {
 	EMPTY_ORG_LABEL,
 	countNeedsAttention,
+	graphCreatedTrend,
 	graphHighlightsEqual,
 	type GraphHighlight,
 	type GraphSidebarStats,
@@ -431,6 +440,14 @@ export function UserGraphSidebar({
 	const total = stats.total;
 	const pct = (count: number) => (total > 0 ? (count / total) * 100 : 0);
 	const attentionCount = countNeedsAttention(stats);
+	const createdTrend = graphCreatedTrend(
+		stats.createdThisWeek,
+		stats.createdLastWeek,
+	);
+	const createdMonthTrend = graphCreatedTrend(
+		stats.createdThisMonth,
+		stats.createdLastMonth,
+	);
 
 	const toggle = (next: GraphHighlight) => {
 		onSelectHighlight(graphHighlightsEqual(highlight, next) ? null : next);
@@ -463,9 +480,10 @@ export function UserGraphSidebar({
 	if (collapsed) {
 		return (
 			<aside
-				className="flex h-full w-11 shrink-0 flex-col items-center rounded-xl border border-slate-200 bg-white/90 py-3 shadow-md"
+				className="relative flex h-full w-11 shrink-0 flex-col items-center overflow-hidden rounded-xl border border-slate-200 bg-white/90 py-3 pt-5 shadow-md"
 				data-collapsed="true"
 			>
+				<div className="glass-card-cap" />
 				<GraphSidebarCollapseButton collapsed onToggle={toggleCollapsed} />
 				{highlightActive ? (
 					<span
@@ -478,7 +496,9 @@ export function UserGraphSidebar({
 	}
 
 	return (
-		<aside className="flex h-full w-65 shrink-0 flex-col overflow-y-auto rounded-xl border border-slate-200 bg-white/90 p-3 shadow-md">
+		<aside className="relative flex h-full w-65 shrink-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white/90 shadow-md">
+			<div className="glass-card-cap" />
+			<div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-3 pt-5">
 			<div className="mb-1 flex items-center justify-end">
 				<GraphSidebarCollapseButton
 					collapsed={false}
@@ -512,13 +532,46 @@ export function UserGraphSidebar({
 					<>
 						<p
 							className={cn(
-								"mt-0.5 text-xs",
-								stats.createdThisWeek > 0 ? "font-medium text-green" : "text-slate-500",
+								"mt-0.5 flex items-center gap-1 text-xs",
+								createdTrend === "up" && "font-medium text-green",
+								createdTrend === "down" && "font-medium text-red",
+								createdTrend === "flat" && "text-slate-500",
 							)}
 						>
+							{createdTrend === "up" ? (
+								<TrendingUp
+									className="h-3.5 w-3.5"
+									aria-label="Users added up this week"
+								/>
+							) : null}
+							{createdTrend === "down" ? (
+								<TrendingDown
+									className="h-3.5 w-3.5"
+									aria-label="Users added down this week"
+								/>
+							) : null}
 							+{stats.createdThisWeek} this week
 						</p>
-						<p className="text-xs text-slate-500">
+						<p
+							className={cn(
+								"flex items-center gap-1 text-xs",
+								createdMonthTrend === "up" && "font-medium text-green",
+								createdMonthTrend === "down" && "font-medium text-red",
+								createdMonthTrend === "flat" && "text-slate-500",
+							)}
+						>
+							{createdMonthTrend === "up" ? (
+								<TrendingUp
+									className="h-3.5 w-3.5"
+									aria-label="Users added up this month"
+								/>
+							) : null}
+							{createdMonthTrend === "down" ? (
+								<TrendingDown
+									className="h-3.5 w-3.5"
+									aria-label="Users added down this month"
+								/>
+							) : null}
 							+{stats.createdThisMonth} this month
 						</p>
 					</>
@@ -621,9 +674,11 @@ export function UserGraphSidebar({
 					tint="warn"
 				>
 					{stats.unassignedUsers.length === 0 ? (
-						<p className="px-1.5 text-xs text-slate-600">Everyone has a manager</p>
+						<p className="px-1.5 text-xs text-slate-600">
+							Everyone has a department and division
+						</p>
 					) : (
-						<ul className="space-y-0.5">
+						<ul className="max-h-40 space-y-0.5 overflow-y-auto overscroll-contain pr-0.5">
 							{stats.unassignedUsers.map((user) => (
 								<li key={user.$id} className="flex items-center gap-1">
 									<button
@@ -1004,6 +1059,7 @@ export function UserGraphSidebar({
 					</dl>
 				</div>
 			) : null}
+			</div>
 		</aside>
 	);
 }
