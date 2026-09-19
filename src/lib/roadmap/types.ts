@@ -118,6 +118,9 @@ export type RoadmapSectionOverview = {
 	}>;
 	/** Why tasks in this section stay locked (missing merge or green tests). */
 	mergeBlockReason?: string | null;
+	/** Sequential catalogs: the next PR that must land before later work unlocks. */
+	nextTaskCode?: string | null;
+	nextTaskTitle?: string | null;
 };
 
 export type RoadmapOverview = {
@@ -137,6 +140,21 @@ export type RoadmapCatalogSection = {
 	 * main without the product work.
 	 */
 	completesOnMerge?: boolean;
+	/**
+	 * When true, each task completes from its own PR (title `NPO {code}` or
+	 * branch `npo/{section}-{code}-*`), even before `linkedPrNumber` is filled in.
+	 */
+	perTaskPrCompletion?: boolean;
+	/**
+	 * When true, only the next incomplete task is available. Later tasks and
+	 * later sections stay locked until that PR merges with green tests.
+	 */
+	sequentialTasks?: boolean;
+	/**
+	 * Seed every task in this section as complete. Use for engine work that
+	 * already lives in-tree so the board is a project, not one tracking PR.
+	 */
+	seedComplete?: boolean;
 	tasks: RoadmapCatalogTask[];
 };
 
