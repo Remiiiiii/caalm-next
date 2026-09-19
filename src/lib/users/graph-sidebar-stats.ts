@@ -49,7 +49,9 @@ export type GraphSidebarLabelCount = { label: string; count: number };
 export type GraphSidebarStats = {
 	total: number;
 	createdThisWeek: number;
+	createdLastWeek: number;
 	createdThisMonth: number;
+	createdLastMonth: number;
 	assignedThisWeek: number;
 	assignedThisMonth: number;
 	active: number;
@@ -86,7 +88,9 @@ export type GraphSidebarStats = {
 	directReportsByUserId: Map<string, number>;
 	ids: {
 		createdWeek: Set<string>;
+		createdLastWeek: Set<string>;
 		createdMonth: Set<string>;
+		createdLastMonth: Set<string>;
 		assignedWeek: Set<string>;
 		assignedMonth: Set<string>;
 		status: {
@@ -144,6 +148,26 @@ function parseTime(iso?: string | null): number | null {
 function startOfMonth(now: number): number {
 	const date = new Date(now);
 	return new Date(date.getFullYear(), date.getMonth(), 1).getTime();
+}
+
+function startOfLastMonth(now: number): number {
+	const date = new Date(now);
+	return new Date(date.getFullYear(), date.getMonth() - 1, 1).getTime();
+}
+
+/** Both org fields filled — same rule the diagram node uses for a real placement. */
+export function hasOrgAssignment(user: UserManagementUser): boolean {
+	return Boolean(user.department?.trim() && user.division?.trim());
+}
+
+/** Week-over-week created users: more than last week is up, fewer is down. */
+export function graphCreatedTrend(
+	thisCount: number,
+	lastCount: number,
+): "up" | "down" | "flat" {
+	if (thisCount > lastCount) return "up";
+	if (thisCount < lastCount) return "down";
+	return "flat";
 }
 
 function isInactiveStatus(status?: string): boolean {
@@ -239,9 +263,12 @@ export function computeGraphSidebarStats(
 	now = Date.now(),
 ): GraphSidebarStats {
 	const monthStart = startOfMonth(now);
+	const lastMonthStart = startOfLastMonth(now);
 	const ids = {
 		createdWeek: emptySet(),
+		createdLastWeek: emptySet(),
 		createdMonth: emptySet(),
+		createdLastMonth: emptySet(),
 		assignedWeek: emptySet(),
 		assignedMonth: emptySet(),
 		status: {
@@ -348,7 +375,9 @@ export function computeGraphSidebarStats(
 		const created = parseTime(user.$createdAt);
 		if (created !== null) {
 			if (now - created <= WEEK_MS) ids.createdWeek.add(user.$id);
+			else if (now - created <= 2 * WEEK_MS) ids.createdLastWeek.add(user.$id);
 			if (created >= monthStart) ids.createdMonth.add(user.$id);
+			else if (created >= lastMonthStart) ids.createdLastMonth.add(user.$id);
 		}
 
 		const assigned = parseTime(user.assignedDate);
@@ -374,8 +403,6 @@ export function computeGraphSidebarStats(
 			ghostUsers.push(user);
 		} else {
 			ids.assignment.system.add(user.$id);
-			ids.issue.unassigned.add(user.$id);
-			unassignedUsers.push(user);
 		}
 
 		const reports = directReportsByUserId.get(user.$id) ?? 0;
@@ -385,6 +412,10 @@ export function computeGraphSidebarStats(
 
 		if (!user.department?.trim()) ids.hygiene.noDepartment.add(user.$id);
 		if (!user.division?.trim()) ids.hygiene.noDivision.add(user.$id);
+		if (!hasOrgAssignment(user)) {
+			ids.issue.unassigned.add(user.$id);
+			unassignedUsers.push(user);
+		}
 		if (hasNoRole(user)) ids.hygiene.noRole.add(user.$id);
 		if (hasAssignerManagerMismatch(user, users)) {
 			ids.hygiene.mismatch.add(user.$id);
@@ -457,7 +488,9 @@ export function computeGraphSidebarStats(
 	return {
 		total: users.length,
 		createdThisWeek: ids.createdWeek.size,
+		createdLastWeek: ids.createdLastWeek.size,
 		createdThisMonth: ids.createdMonth.size,
+		createdLastMonth: ids.createdLastMonth.size,
 		assignedThisWeek: ids.assignedWeek.size,
 		assignedThisMonth: ids.assignedMonth.size,
 		active: ids.status.active.size,

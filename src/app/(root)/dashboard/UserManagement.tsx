@@ -1,29 +1,16 @@
 "use client";
 
-import {
-	ArrowUpDown,
-	Building2,
-	CalendarClock,
-	ChevronDown,
-	ChevronsUpDown,
-	Filter,
-	FunnelX,
-	ShieldCheck,
-	UserCheck,
-} from "lucide-react";
+import { ArrowUpDown, ChevronDown, ChevronsUpDown, Filter, TriangleAlert } from "lucide-react";
 import Image from "next/image";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import Avatar from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
-	AppDropdownMenuCheckboxItem,
-	AppDropdownMenuContent,
-	AppDropdownMenuItem,
 	AppDropdownMenuTrigger,
 	DropdownMenu,
-	DropdownMenuLabel,
-	DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { PageIndex } from "@/components/ui/page-index";
 import { SearchField } from "@/components/ui/search-field";
 import {
 	Table,
@@ -39,6 +26,11 @@ import {
 	UserManagementActionDialogs,
 } from "@/components/users/UserManagementActionDialogs";
 import { UserManagementRowActions } from "@/components/users/UserManagementRowActions";
+import {
+	UserManagementBulkBar,
+	UserManagementFilterMenu,
+	UserManagementSortMenu,
+} from "@/components/users/UserManagementTableMenus";
 import {
 	USER_MANAGEMENT_VIEW_STORAGE_KEY,
 	UserManagementLineageToggle,
@@ -64,11 +56,16 @@ import {
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
 } from "@/lib/ui/data-table-styles";
-import { formatUserDateTimeLabel } from "@/lib/users/user-management-display";
+import { isSameUserIdentity } from "@/lib/impersonation/policy";
+import {
+	USER_MANAGEMENT_PAGE_SIZE,
+	formatUserDateTimeLabel,
+	USER_ROLE_BADGE_SHAPE,
+	hasAssignedRole,
+	pageSlice,
+	userRoleBadgeClass,
+} from "@/lib/users/user-management-display";
 import { cn, resolveAvatarDisplayUrl } from "@/lib/utils";
-
-const FILTER_SECTION_SCROLL =
-	"max-h-36 overflow-y-auto overscroll-contain [-ms-overflow-style:none] [scrollbar-width:thin]";
 
 type DateRangeFilter = "all" | "today" | "last7days" | "last30days";
 
@@ -139,6 +136,9 @@ const UserManagement = () => {
 	const [actionBusy, setActionBusy] = useState(false);
 	const [view, setView] = useState<UserManagementViewType>("table");
 	const [lineage, setLineage] = useState<GraphLineage>("reporting");
+	const [page, setPage] = useState(1);
+	const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+	const [bulkAction, setBulkAction] = useState(false);
 	const [orgRoleNames, setOrgRoleNames] = useState<string[]>([]);
 	const [orgDepartmentNames, setOrgDepartmentNames] = useState<string[]>([]);
 
@@ -345,6 +345,98 @@ const UserManagement = () => {
 		selectedDepartments.length +
 		(dateRangeFilter === "all" ? 0 : 1);
 
+	const pagedUsers = useMemo(
+		() => pageSlice(filteredAndSortedUsers, page, USER_MANAGEMENT_PAGE_SIZE),
+		[filteredAndSortedUsers, page],
+	);
+
+	const selectedUsers = useMemo(
+		() => filteredAndSortedUsers.filter((user) => selectedIds.has(user.$id)),
+		[filteredAndSortedUsers, selectedIds],
+	);
+
+	const pageIds = pagedUsers.map((user) => user.$id);
+	const allPageSelected =
+		pageIds.length > 0 && pageIds.every((id) => selectedIds.has(id));
+	const somePageSelected = pageIds.some((id) => selectedIds.has(id));
+	const canSelectUsers = canAssignRoles || canManageUsers;
+
+	useEffect(() => {
+		setPage(1);
+	}, [
+		searchTerm,
+		selectedRoles,
+		selectedAssignedBy,
+		selectedDepartments,
+		dateRangeFilter,
+		sortConfig,
+	]);
+
+	useEffect(() => {
+		const totalPages = Math.max(
+			1,
+			Math.ceil(filteredAndSortedUsers.length / USER_MANAGEMENT_PAGE_SIZE),
+		);
+		if (page > totalPages) setPage(totalPages);
+	}, [filteredAndSortedUsers.length, page]);
+
+	useEffect(() => {
+		setSelectedIds((prev) => {
+			if (prev.size === 0) return prev;
+			const visible = new Set(filteredAndSortedUsers.map((user) => user.$id));
+			const next = new Set([...prev].filter((id) => visible.has(id)));
+			return next.size === prev.size ? prev : next;
+		});
+	}, [filteredAndSortedUsers]);
+
+	useEffect(() => {
+		if (view !== "table") setSelectedIds(new Set());
+	}, [view]);
+
+	const isActorUser = (user: UserManagementUser) =>
+		isSameUserIdentity(
+			{
+				$id: actor?.$id,
+				accountId: actor?.$id,
+			},
+			{ $id: user.$id, accountId: user.accountId },
+		);
+
+	const toggleSelected = (userId: string, checked: boolean) => {
+		setSelectedIds((prev) => {
+			const next = new Set(prev);
+			if (checked) next.add(userId);
+			else next.delete(userId);
+			return next;
+		});
+	};
+
+	const toggleSelectPage = (checked: boolean) => {
+		setSelectedIds((prev) => {
+			const next = new Set(prev);
+			for (const id of pageIds) {
+				if (checked) next.add(id);
+				else next.delete(id);
+			}
+			return next;
+		});
+	};
+
+	const openBulkAction = (kind: Extract<UserActionKind, "role" | "revoke" | "delete">) => {
+		if (selectedUsers.length === 0) return;
+		if ((kind === "revoke" || kind === "delete") && selectedUsers.every(isActorUser)) {
+			toast({
+				title: "Cannot update your own account this way",
+				description: "Select at least one other user.",
+				variant: "destructive",
+			});
+			return;
+		}
+		setBulkAction(true);
+		setActionUser(selectedUsers[0]);
+		setActionKind(kind);
+	};
+
 	const clearAllFilters = () => {
 		setSelectedRoles([]);
 		setSelectedAssignedBy([]);
@@ -366,12 +458,11 @@ const UserManagement = () => {
 
 	const handleViewChange = (next: UserManagementViewType) => {
 		setView(next);
-		setSelectedGraphUserId(null);
 		window.localStorage.setItem(USER_MANAGEMENT_VIEW_STORAGE_KEY, next);
 	};
 
 	const openAction = (user: UserManagementUser, kind: UserActionKind) => {
-		setSelectedGraphUserId(null);
+		setBulkAction(false);
 		setActionUser(user);
 		setActionKind(kind);
 	};
@@ -379,6 +470,7 @@ const UserManagement = () => {
 	const closeAction = () => {
 		setActionUser(null);
 		setActionKind(null);
+		setBulkAction(false);
 	};
 
 	const runAction = async (
@@ -395,6 +487,7 @@ const UserManagement = () => {
 			});
 			setActionUser(null);
 			setActionKind(null);
+			setBulkAction(false);
 			refresh();
 		} catch (err) {
 			toast({
@@ -451,8 +544,11 @@ const UserManagement = () => {
 			<div className="mb-4 flex w-full flex-col gap-1">
 				<h1 className="h1 capitalize sidebar-gradient-text">User management</h1>
 				<p className="text-sm text-slate-600">
-					View and manage user accounts, roles, assignments, activity, and
-					account actions in one place.
+					{view === "diagram" && lineage === "assignment"
+						? "Access grant shows who gave each person their CAALM login or role. System is automatic setup. A line from a person means that admin invited or assigned them."
+						: view === "diagram"
+							? "Reporting shows who each person reports to at work. Solid lines are the manager. Dashed lines are a matrix manager."
+							: "View and manage user accounts, roles, assignments, activity, and account actions in one place."}
 				</p>
 			</div>
 
@@ -479,7 +575,7 @@ const UserManagement = () => {
 						<Button
 							variant="ghost"
 							size="sm"
-							className="primary-btn border-0 px-3 shadow-none focus-visible:ring-0 sm:px-4"
+							className="primary-btn h-8 border-0 px-3 shadow-none focus-visible:ring-0 sm:px-4"
 						>
 							<Filter className="h-4 w-4" />
 							<span className="hidden sm:inline">Filter</span>
@@ -487,121 +583,40 @@ const UserManagement = () => {
 							<ChevronDown className="h-4 w-4" />
 						</Button>
 					</AppDropdownMenuTrigger>
-					<AppDropdownMenuContent align="end" className="w-72">
-						<DropdownMenuLabel className="sidebar-gradient-text">
-							Filter by role
-						</DropdownMenuLabel>
-						{allRoles.map((role) => (
-							<AppDropdownMenuCheckboxItem
-								icon={ShieldCheck}
-								key={role}
-								checked={selectedRoles.includes(role)}
-								onCheckedChange={(checked) =>
-									setSelectedRoles((prev) =>
-										checked ? [...prev, role] : prev.filter((r) => r !== role),
-									)
-								}
-							>
-								{role}
-							</AppDropdownMenuCheckboxItem>
-						))}
-
-						<DropdownMenuSeparator />
-						<DropdownMenuLabel className="sidebar-gradient-text">
-							Filter by department
-						</DropdownMenuLabel>
-						<div className={FILTER_SECTION_SCROLL}>
-							{allDepartments.map((department) => (
-								<AppDropdownMenuCheckboxItem
-									icon={Building2}
-									key={department}
-									checked={selectedDepartments.includes(department)}
-									onCheckedChange={(checked) =>
-										setSelectedDepartments((prev) =>
-											checked
-												? [...prev, department]
-												: prev.filter((d) => d !== department),
-										)
-									}
-								>
-									{department}
-								</AppDropdownMenuCheckboxItem>
-							))}
-						</div>
-
-						<DropdownMenuSeparator />
-						<DropdownMenuLabel className="sidebar-gradient-text">
-							Filter by assigned by
-						</DropdownMenuLabel>
-						<div className={FILTER_SECTION_SCROLL}>
-							{allAssigners.map((assigner) => (
-								<AppDropdownMenuCheckboxItem
-									icon={UserCheck}
-									key={assigner}
-									checked={selectedAssignedBy.includes(assigner)}
-									onCheckedChange={(checked) =>
-										setSelectedAssignedBy((prev) =>
-											checked
-												? [...prev, assigner]
-												: prev.filter((v) => v !== assigner),
-										)
-									}
-								>
-									{assigner}
-								</AppDropdownMenuCheckboxItem>
-							))}
-						</div>
-
-						<DropdownMenuSeparator />
-						<DropdownMenuLabel className="sidebar-gradient-text">
-							Assigned date
-						</DropdownMenuLabel>
-						<AppDropdownMenuCheckboxItem
-							icon={UserCheck}
-							checked={dateRangeFilter === "today"}
-							onCheckedChange={() => setDateRangeFilter("today")}
-						>
-							Today
-						</AppDropdownMenuCheckboxItem>
-						<AppDropdownMenuCheckboxItem
-							icon={UserCheck}
-							checked={dateRangeFilter === "last7days"}
-							onCheckedChange={() => setDateRangeFilter("last7days")}
-						>
-							Last 7 days
-						</AppDropdownMenuCheckboxItem>
-						<AppDropdownMenuCheckboxItem
-							icon={UserCheck}
-							checked={dateRangeFilter === "last30days"}
-							onCheckedChange={() => setDateRangeFilter("last30days")}
-						>
-							Last 30 days
-						</AppDropdownMenuCheckboxItem>
-						<AppDropdownMenuCheckboxItem
-							icon={CalendarClock}
-							checked={dateRangeFilter === "all"}
-							onCheckedChange={() => setDateRangeFilter("all")}
-						>
-							All dates
-						</AppDropdownMenuCheckboxItem>
-
-						{activeFilterCount > 0 && (
-							<>
-								<DropdownMenuSeparator />
-								<AppDropdownMenuItem
-									icon={FunnelX}
-									onSelect={(e) => {
-										e.preventDefault();
-										clearAllFilters();
-									}}
-								>
-									Clear filters
-								</AppDropdownMenuItem>
-							</>
-						)}
-					</AppDropdownMenuContent>
+					<UserManagementFilterMenu
+						roles={allRoles}
+						departments={allDepartments}
+						assigners={allAssigners}
+						selectedRoles={selectedRoles}
+						selectedDepartments={selectedDepartments}
+						selectedAssignedBy={selectedAssignedBy}
+						dateRange={dateRangeFilter}
+						activeFilterCount={activeFilterCount}
+						onToggleRole={(role, checked) =>
+							setSelectedRoles((prev) =>
+								checked ? [...prev, role] : prev.filter((item) => item !== role),
+							)
+						}
+						onToggleDepartment={(department, checked) =>
+							setSelectedDepartments((prev) =>
+								checked
+									? [...prev, department]
+									: prev.filter((item) => item !== department),
+							)
+						}
+						onToggleAssigner={(assigner, checked) =>
+							setSelectedAssignedBy((prev) =>
+								checked
+									? [...prev, assigner]
+									: prev.filter((item) => item !== assigner),
+							)
+						}
+						onDateRangeChange={setDateRangeFilter}
+						onClear={clearAllFilters}
+					/>
 				</DropdownMenu>
 
+				{view === "table" ? (
 				<DropdownMenu>
 					<AppDropdownMenuTrigger
 						asChild
@@ -610,66 +625,20 @@ const UserManagement = () => {
 						<Button
 							variant="ghost"
 							size="sm"
-							className="primary-btn border-0 px-3 shadow-none focus-visible:ring-0 sm:px-4"
+							className="primary-btn h-8 border-0 px-3 shadow-none focus-visible:ring-0 sm:px-4"
 						>
 							<ArrowUpDown className="h-4 w-4" />
 							<span className="hidden sm:inline">Sort by</span>
 							<ChevronDown className="h-4 w-4" />
 						</Button>
 					</AppDropdownMenuTrigger>
-					<AppDropdownMenuContent align="end" className="w-64">
-						<AppDropdownMenuItem
-							icon={ChevronsUpDown}
-							onSelect={() => applySortPreset("fullName", "asc")}
-						>
-							Full Name (A-Z)
-						</AppDropdownMenuItem>
-						<AppDropdownMenuItem
-							icon={ChevronsUpDown}
-							onSelect={() => applySortPreset("fullName", "desc")}
-						>
-							Full Name (Z-A)
-						</AppDropdownMenuItem>
-						<AppDropdownMenuItem
-							icon={ChevronsUpDown}
-							onSelect={() => applySortPreset("email", "asc")}
-						>
-							Email (A-Z)
-						</AppDropdownMenuItem>
-						<AppDropdownMenuItem
-							icon={ChevronsUpDown}
-							onSelect={() => applySortPreset("email", "desc")}
-						>
-							Email (Z-A)
-						</AppDropdownMenuItem>
-						<DropdownMenuSeparator />
-						<AppDropdownMenuItem
-							icon={ChevronsUpDown}
-							onSelect={() => applySortPreset("assignedDate", "desc")}
-						>
-							Assigned Date (Newest)
-						</AppDropdownMenuItem>
-						<AppDropdownMenuItem
-							icon={ChevronsUpDown}
-							onSelect={() => applySortPreset("assignedDate", "asc")}
-						>
-							Assigned Date (Oldest)
-						</AppDropdownMenuItem>
-						<DropdownMenuSeparator />
-						<AppDropdownMenuItem
-							icon={ChevronsUpDown}
-							onSelect={() => applySortPreset("lastActiveAt", "desc")}
-						>
-							Last Active (Most recent)
-						</AppDropdownMenuItem>
-						<AppDropdownMenuItem
-							icon={ChevronsUpDown}
-							onSelect={() => applySortPreset("lastActiveAt", "asc")}
-						>
-							Last Active (Least recent)
-						</AppDropdownMenuItem>
-					</AppDropdownMenuContent>
+					<UserManagementSortMenu
+						sortKey={sortConfig.key}
+						direction={sortConfig.direction}
+						onSort={applySortPreset}
+					/>
 				</DropdownMenu>
+				) : null}
 				</div>
 			</div>
 
@@ -715,9 +684,41 @@ const UserManagement = () => {
 						)
 					) : (
 						<div className="w-full overflow-x-auto">
+							{canSelectUsers ? (
+								<div className="mb-3">
+									<UserManagementBulkBar
+										count={selectedUsers.length}
+										canAssignRoles={canAssignRoles}
+										canManageUsers={canManageUsers}
+										onChangeRole={() => openBulkAction("role")}
+										onRevokeSessions={() => openBulkAction("revoke")}
+										onDelete={() => openBulkAction("delete")}
+									/>
+								</div>
+							) : null}
 							<Table className="border-separate border-spacing-0">
 								<TableHeader className="[&_tr]:border-b-0">
 									<TableRow className={DATA_TABLE_HEADER_ROW}>
+										{canSelectUsers ? (
+											<TableHead
+												className={cn(DATA_TABLE_HEADER_CELL, "w-10 pl-4 pr-2")}
+											>
+												<Checkbox
+													checked={
+														allPageSelected
+															? true
+															: somePageSelected
+																? "indeterminate"
+																: false
+													}
+													onCheckedChange={(checked) =>
+														toggleSelectPage(checked === true)
+													}
+													aria-label="Select all users on this page"
+													className="cursor-pointer"
+												/>
+											</TableHead>
+										) : null}
 										{renderSortableHead("Full name", "fullName", "pl-4 pr-3")}
 										{renderSortableHead(
 											"Role / Dept · Division",
@@ -746,14 +747,30 @@ const UserManagement = () => {
 									</TableRow>
 								</TableHeader>
 								<TableBody className="[&_tr:last-child>td]:border-b-0">
-									{filteredAndSortedUsers.map((user) => {
+									{pagedUsers.map((user) => {
 										const department = user.department?.trim() || "—";
 										const division = user.division?.trim() || "—";
+										const assigned = hasAssignedRole(user.roleName);
 										return (
 											<TableRow
 												key={user.$id}
-												className={DATA_TABLE_BODY_ROW_BASE}
+												className={cn(
+													DATA_TABLE_BODY_ROW_BASE,
+													selectedIds.has(user.$id) && "bg-blue-50/50",
+												)}
 											>
+												{canSelectUsers ? (
+													<TableCell className="py-3 pl-4 pr-2">
+														<Checkbox
+															checked={selectedIds.has(user.$id)}
+															onCheckedChange={(checked) =>
+																toggleSelected(user.$id, checked === true)
+															}
+															aria-label={`Select ${user.fullName}`}
+															className="cursor-pointer"
+														/>
+													</TableCell>
+												) : null}
 												<TableCell className="py-3 pl-4 pr-3">
 													<div className="flex min-w-55 items-center gap-2.5">
 														<Avatar
@@ -775,9 +792,26 @@ const UserManagement = () => {
 												</TableCell>
 												<TableCell className="px-3 py-3">
 													<div className="min-w-0">
-														<p className="truncate text-sm font-semibold text-slate-700">
-															{user.roleName || "Unassigned"}
-														</p>
+														{assigned ? (
+															<span
+																className={cn(
+																	USER_ROLE_BADGE_SHAPE,
+																	userRoleBadgeClass(user.roleName),
+																)}
+															>
+																{user.roleName}
+															</span>
+														) : (
+															<span
+																className={cn(
+																	USER_ROLE_BADGE_SHAPE,
+																	userRoleBadgeClass(user.roleName),
+																)}
+															>
+																<TriangleAlert className="h-3 w-3" />
+																Unassigned
+															</span>
+														)}
 														<p className="mt-0.5 truncate text-xs text-slate-500">
 															{department} · {division}
 														</p>
@@ -835,6 +869,16 @@ const UserManagement = () => {
 									}
 								/>
 							)}
+							<PageIndex
+								page={page}
+								totalItems={filteredAndSortedUsers.length}
+								pageSize={USER_MANAGEMENT_PAGE_SIZE}
+								onPageChange={setPage}
+								hideWhenSinglePage
+								showRange
+								itemLabel="users"
+								scrollToTop
+							/>
 						</div>
 					)}
 
@@ -844,6 +888,7 @@ const UserManagement = () => {
 				roleOptions={allRoles.filter((r) => r !== "Unassigned")}
 				busy={actionBusy}
 				canManageUsers={canManageUsers}
+				selectedUsers={bulkAction ? selectedUsers : undefined}
 				onClose={closeAction}
 				onOpenAction={(kind) => {
 					if (!actionUser) return;
@@ -886,25 +931,35 @@ const UserManagement = () => {
 					);
 				}}
 				onSaveRole={async (roleName) => {
-					if (!actionUser) return;
+					const targets = bulkAction
+						? selectedUsers
+						: actionUser
+							? [actionUser]
+							: [];
+					if (targets.length === 0) return;
 					if (!(await ensureStepUp())) return;
 					await runAction(
 						async () => {
-							const res = await fetch("/api/admin/set-user-role", {
-								method: "POST",
-								headers: { "Content-Type": "application/json" },
-								body: JSON.stringify({
-									email: actionUser.email,
-									roleName,
-									orgId,
-								}),
-							});
-							const data = await res.json().catch(() => ({}));
-							if (!res.ok)
-								throw new Error(data.error || "Failed to change role");
+							for (const target of targets) {
+								const res = await fetch("/api/admin/set-user-role", {
+									method: "POST",
+									headers: { "Content-Type": "application/json" },
+									body: JSON.stringify({
+										email: target.email,
+										roleName,
+										orgId,
+									}),
+								});
+								const data = await res.json().catch(() => ({}));
+								if (!res.ok)
+									throw new Error(data.error || "Failed to change role");
+							}
+							setSelectedIds(new Set());
 						},
-						"Role updated",
-						`${actionUser.fullName} is now ${roleName}`,
+						targets.length > 1 ? "Roles updated" : "Role updated",
+						targets.length > 1
+							? `${targets.length} users are now ${roleName}`
+							: `${targets[0].fullName} is now ${roleName}`,
 					);
 				}}
 				onConfirmReset={async () => {
@@ -925,20 +980,32 @@ const UserManagement = () => {
 					);
 				}}
 				onConfirmRevoke={async () => {
-					if (!actionUser) return;
+					const targets = (
+						bulkAction && selectedUsers.length > 0
+							? selectedUsers
+							: actionUser
+								? [actionUser]
+								: []
+					).filter((user) => !isActorUser(user));
+					if (targets.length === 0) return;
 					if (!(await ensureStepUp())) return;
 					await runAction(
 						async () => {
-							const res = await fetch(
-								`/api/admin/users/${actionUser.$id}/revoke-sessions`,
-								{ method: "POST" },
-							);
-							const data = await res.json().catch(() => ({}));
-							if (!res.ok)
-								throw new Error(data.error || "Failed to revoke sessions");
+							for (const target of targets) {
+								const res = await fetch(
+									`/api/admin/users/${target.$id}/revoke-sessions`,
+									{ method: "POST" },
+								);
+								const data = await res.json().catch(() => ({}));
+								if (!res.ok)
+									throw new Error(data.error || "Failed to revoke sessions");
+							}
+							setSelectedIds(new Set());
 						},
 						"Sessions revoked",
-						`${actionUser.fullName} was signed out everywhere`,
+						targets.length > 1
+							? `${targets.length} users were signed out everywhere`
+							: `${targets[0].fullName} was signed out everywhere`,
 					);
 				}}
 				onConfirmSuspend={async () => {
@@ -969,20 +1036,32 @@ const UserManagement = () => {
 					);
 				}}
 				onConfirmDelete={async () => {
-					if (!actionUser) return;
+					const targets = (
+						bulkAction && selectedUsers.length > 0
+							? selectedUsers
+							: actionUser
+								? [actionUser]
+								: []
+					).filter((user) => !isActorUser(user));
+					if (targets.length === 0) return;
 					if (!(await ensureStepUp())) return;
 					await runAction(
 						async () => {
-							const res = await fetch(
-								`/api/user/delete?userId=${encodeURIComponent(actionUser.$id)}`,
-								{ method: "DELETE" },
-							);
-							const data = await res.json().catch(() => ({}));
-							if (!res.ok)
-								throw new Error(data.error || "Failed to delete user");
+							for (const target of targets) {
+								const res = await fetch(
+									`/api/user/delete?userId=${encodeURIComponent(target.$id)}`,
+									{ method: "DELETE" },
+								);
+								const data = await res.json().catch(() => ({}));
+								if (!res.ok)
+									throw new Error(data.error || "Failed to delete user");
+							}
+							setSelectedIds(new Set());
 						},
-						"User deleted",
-						`${actionUser.fullName} was removed`,
+						targets.length > 1 ? "Users deleted" : "User deleted",
+						targets.length > 1
+							? `${targets.length} users were removed`
+							: `${targets[0].fullName} was removed`,
 					);
 				}}
 				onConfirmImpersonate={async (reason) => {

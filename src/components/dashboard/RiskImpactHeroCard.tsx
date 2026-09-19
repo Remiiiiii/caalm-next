@@ -322,7 +322,7 @@ export function RiskImpactHeroCard({
 						<Link href={breakdownHref} className="mt-1.5 self-start">
 							<Button
 								type="button"
-								className="primary-btn h-9 px-4 gap-1.5 text-[12.5px] font-semibold"
+								className="primary-btn px-4 gap-1.5 text-[12.5px] font-semibold"
 							>
 								View breakdown
 								<ChevronRight className="h-3.5 w-3.5" />

@@ -3,15 +3,14 @@
 import {
 	Background,
 	BackgroundVariant,
-	ConnectionLineType,
-	Controls,
-	ReactFlow,
-	ReactFlowProvider,
-	SelectionMode,
 	type Connection,
+	ConnectionLineType,
 	type Edge,
 	type Node,
 	type OnNodeDrag,
+	ReactFlow,
+	ReactFlowProvider,
+	SelectionMode,
 	useEdgesState,
 	useNodesState,
 	useReactFlow,
@@ -21,56 +20,75 @@ import { X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import useSWR from "swr";
 import { AssignmentGraphEdge } from "@/components/users/AssignmentGraphEdge";
-import type { UserActionKind } from "@/components/users/UserManagementActionDialogs";
 import {
+	type GraphNodeEmphasis,
 	UserGraphSystemNode,
 	UserGraphUserNode,
-	type GraphNodeEmphasis,
 	type UserGraphUserNodeData,
 } from "@/components/users/UserGraphNodes";
 import { UserGraphSidebar } from "@/components/users/UserGraphSidebar";
+import type { UserActionKind } from "@/components/users/UserManagementActionDialogs";
 import type { GraphLineage } from "@/components/users/UserManagementViewToggle";
+import { UserManagementOrientationToggle } from "@/components/users/UserManagementViewToggle";
+import {
+	USER_GRAPH_MAX_ZOOM,
+	USER_GRAPH_MIN_ZOOM,
+	UserGraphZoomControls,
+} from "@/components/users/UserGraphZoomControls";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useToast } from "@/hooks/use-toast";
 import type { UserManagementUser } from "@/hooks/useUsers";
 import {
 	ADMIN_ASSIGN_COLOR,
+	type AssignmentEdgeKind,
 	FLOW_CARD_HEIGHT,
 	FLOW_CARD_WIDTH,
 	isDrawnAssignmentSource,
 	resolveAssignerNodeId,
-	seedFlowNodePositions,
 	SYSTEM_ASSIGN_COLOR,
 	SYSTEM_NODE_ID,
-	type AssignmentEdgeKind,
+	seedFlowNodePositions,
 } from "@/lib/users/assignment-graph";
+import {
+	clientDragToFlowRect,
+	type GraphRect,
+	isTinyMarquee,
+	nodeHitsMarquee,
+	pointInRect,
+	selectionBounds,
+} from "@/lib/users/graph-marquee";
+import {
+	readGraphLayoutPositions,
+	writeGraphLayoutPositions,
+} from "@/lib/users/graph-layout-storage";
+import {
+	GRAPH_ORIENTATION_STORAGE_KEY,
+	type GraphOrientation,
+	parseGraphOrientation,
+} from "@/lib/users/graph-orientation";
+import {
+	computeGraphSidebarStats,
+	type GraphHighlight,
+	userMatchesGraphHighlight,
+} from "@/lib/users/graph-sidebar-stats";
+import {
+	isSolidCuttableEdge,
+	isUndoLastCutHotkey,
+	type LastGraphCut,
+	type LastGraphMove,
+	lastGraphMoveFromDrag,
+	lastSolidInboundCut,
+	withCutLineage,
+} from "@/lib/users/graph-undo-cut";
+import { usersVisibleOnGraph } from "@/lib/users/graph-visibility";
 import {
 	managerChainIds,
 	matrixReportingEdges,
 	resolveManagerProfileId,
 	seedReportingNodePositions,
 	skipLevelManagerId,
+	superAdminIdInUsers,
 } from "@/lib/users/reporting-graph";
-import {
-	computeGraphSidebarStats,
-	userMatchesGraphHighlight,
-	type GraphHighlight,
-} from "@/lib/users/graph-sidebar-stats";
-import {
-	clientDragToFlowRect,
-	isTinyMarquee,
-	nodeHitsMarquee,
-	pointInRect,
-	selectionBounds,
-	type GraphRect,
-} from "@/lib/users/graph-marquee";
-import { usersVisibleOnGraph } from "@/lib/users/graph-visibility";
-import {
-	isUndoLastCutHotkey,
-	lastSolidInboundCut,
-	withCutLineage,
-	type LastGraphCut,
-} from "@/lib/users/graph-undo-cut";
 
 import "@xyflow/react/dist/style.css";
 
@@ -135,28 +153,28 @@ function graphSignature(
 	canAssignRoles: boolean,
 	canImpersonate: boolean,
 	lineage: GraphLineage,
+	orientation: GraphOrientation,
 ): string {
 	const userPart = users
-		.map(
-			(user) =>
-				[
-					user.$id,
-					user.assignedById ?? "",
-					user.managerUserId ?? "",
-					user.matrixManagerUserId ?? "",
-					user.status,
-					user.department ?? "",
-					user.division ?? "",
-					user.jobTitle ?? "",
-					user.workLocation ?? "",
-					user.costCenterId ?? "",
-					user.fullName,
-					user.roleName ?? "",
-				].join(":"),
+		.map((user) =>
+			[
+				user.$id,
+				user.assignedById ?? "",
+				user.managerUserId ?? "",
+				user.matrixManagerUserId ?? "",
+				user.status,
+				user.department ?? "",
+				user.division ?? "",
+				user.jobTitle ?? "",
+				user.workLocation ?? "",
+				user.costCenterId ?? "",
+				user.fullName,
+				user.roleName ?? "",
+			].join(":"),
 		)
 		.join("|");
 	const lookupPart = lookup.map((user) => user.$id).join(",");
-	return `${lineage}#${userPart}#${lookupPart}#${Number(canEditGraph)}${Number(canView)}${Number(canEdit)}${Number(canDeactivate)}${Number(canAssignRoles)}${Number(canImpersonate)}`;
+	return `${lineage}#${orientation}#${userPart}#${lookupPart}#${Number(canEditGraph)}${Number(canView)}${Number(canEdit)}${Number(canDeactivate)}${Number(canAssignRoles)}${Number(canImpersonate)}`;
 }
 
 function nodeEmphasis(
@@ -221,6 +239,7 @@ function UserAssignmentGraphCanvas({
 	const [highlight, setHighlight] = useState<GraphHighlight | null>(null);
 	const [focusUserId, setFocusUserId] = useState<string | null>(null);
 	const [directionsDismissed, setDirectionsDismissed] = useState(false);
+	const [orientation, setOrientation] = useState<GraphOrientation>("ltr");
 	const [rightMarquee, setRightMarquee] = useState<{
 		x: number;
 		y: number;
@@ -236,7 +255,16 @@ function UserAssignmentGraphCanvas({
 		startClientY: number;
 	} | null>(null);
 	const rightSelectCleanupRef = useRef<(() => void) | null>(null);
-	const positionsRef = useRef(new Map<string, { x: number; y: number }>());
+	const positionsByLineageRef = useRef({
+		reporting: {
+			ltr: new Map<string, { x: number; y: number }>(),
+			tb: new Map<string, { x: number; y: number }>(),
+		},
+		assignment: {
+			ltr: new Map<string, { x: number; y: number }>(),
+			tb: new Map<string, { x: number; y: number }>(),
+		},
+	});
 	const positionTimersRef = useRef(
 		new Map<string, ReturnType<typeof setTimeout>>(),
 	);
@@ -249,12 +277,27 @@ function UserAssignmentGraphCanvas({
 	const disconnectingRef = useRef(new Set<string>());
 	const disconnectWaitRef = useRef(new Map<string, Promise<void>>());
 	const lastCutRef = useRef<LastGraphCut | null>(null);
+	const lastMoveRef = useRef<LastGraphMove | null>(null);
+	const lastUndoKindRef = useRef<"cut" | "move" | null>(null);
+	const dragStartPositionsRef = useRef(new Map<string, { x: number; y: number }>());
+	/** Cuts that must stay gone if a stale users list still has the old manager. */
+	const clearedTargetIdsRef = useRef({
+		reporting: new Set<string>(),
+		assignment: new Set<string>(),
+	});
 	const undoLastCutRef = useRef<() => void>(() => undefined);
+	const undoLastMoveRef = useRef<() => void>(() => undefined);
+	const undoLastActionRef = useRef<() => void>(() => undefined);
 	const undoInFlightRef = useRef(false);
 
 	useEffect(() => {
 		setDirectionsDismissed(
 			window.localStorage.getItem(GRAPH_DIRECTIONS_DISMISSED_KEY) === "true",
+		);
+		setOrientation(
+			parseGraphOrientation(
+				window.localStorage.getItem(GRAPH_ORIENTATION_STORAGE_KEY),
+			),
 		);
 	}, []);
 
@@ -337,7 +380,9 @@ function UserAssignmentGraphCanvas({
 	);
 	const { data: invitesPayload } = useSWR(
 		invitesKey,
-		fetchOptionalJson<{ data: Array<{ $id: string; name: string; email: string; role: string }> }>,
+		fetchOptionalJson<{
+			data: Array<{ $id: string; name: string; email: string; role: string }>;
+		}>,
 		{ revalidateOnFocus: false, shouldRetryOnError: false },
 	);
 
@@ -346,14 +391,30 @@ function UserAssignmentGraphCanvas({
 		return new Set(managerChainIds(focusUserId, lookup));
 	}, [focusUserId, lookup]);
 
+	const hoistSuperAdminId =
+		lineage === "reporting" && orientation === "tb"
+			? superAdminIdInUsers(lookup)
+			: null;
+
 	const initial = useMemo(() => {
+		const sessionPositions =
+			positionsByLineageRef.current[lineage][orientation];
+		if (sessionPositions.size === 0) {
+			for (const [id, point] of readGraphLayoutPositions(lineage, orientation)) {
+				sessionPositions.set(id, point);
+			}
+		}
 		const saved = new Map<string, { x: number; y: number }>();
 		for (const user of lookup) {
-			const local = positionsRef.current.get(user.$id);
+			const local = sessionPositions.get(user.$id);
 			if (local) {
 				saved.set(user.$id, local);
 				continue;
 			}
+			// Reporting LTR stores card spots on the user row. Access grant
+			// always re-seeds from Assigned-by so those spots do not scramble
+			// the tree when you switch lineage.
+			if (lineage !== "reporting" || orientation === "tb") continue;
 			if (
 				typeof user.diagramPositionX === "number" &&
 				typeof user.diagramPositionY === "number"
@@ -364,15 +425,17 @@ function UserAssignmentGraphCanvas({
 				});
 			}
 		}
+		const seedOptions = { orientation, hoistSuperAdminId };
 		const seeded =
 			lineage === "reporting"
-				? seedReportingNodePositions(graphUsers, lookup, saved)
-				: seedFlowNodePositions(graphUsers, lookup, saved);
+				? seedReportingNodePositions(graphUsers, lookup, saved, seedOptions)
+				: seedFlowNodePositions(graphUsers, lookup, saved, seedOptions);
 		const usersById = new Map(lookup.map((user) => [user.$id, user]));
 
 		const nodes: Node[] = [];
 		if (lineage === "assignment") {
-			const systemPos = seeded.get(SYSTEM_NODE_ID) || { x: 48, y: 36 };
+			const systemPos = seeded.get(SYSTEM_NODE_ID) ||
+				sessionPositions.get(SYSTEM_NODE_ID) || { x: 48, y: 36 };
 			nodes.push({
 				id: SYSTEM_NODE_ID,
 				type: "system",
@@ -382,6 +445,7 @@ function UserAssignmentGraphCanvas({
 				data: {
 					canEditGraph,
 					emphasis: "normal" as GraphNodeEmphasis,
+					orientation,
 				},
 			});
 		}
@@ -402,7 +466,10 @@ function UserAssignmentGraphCanvas({
 					user,
 					assignerKind: kindForAssigner(fromId),
 					lineage,
-					skipLevelName: skipId ? usersById.get(skipId)?.fullName || null : null,
+					orientation,
+					skipLevelName: skipId
+						? usersById.get(skipId)?.fullName || null
+						: null,
 					canEditGraph,
 					canView,
 					canEdit,
@@ -423,6 +490,9 @@ function UserAssignmentGraphCanvas({
 			lineage === "reporting"
 				? [
 						...graphUsers.flatMap((user) => {
+							if (clearedTargetIdsRef.current.reporting.has(user.$id)) {
+								return [];
+							}
 							const fromId = resolveManagerProfileId(user, lookup);
 							if (!fromId) return [];
 							const edge = assignmentFlowEdge(
@@ -448,6 +518,9 @@ function UserAssignmentGraphCanvas({
 						}),
 					]
 				: graphUsers.flatMap((user) => {
+						if (clearedTargetIdsRef.current.assignment.has(user.$id)) {
+							return [];
+						}
 						const fromId = resolveAssignerNodeId(user, lookup);
 						const edge = assignmentFlowEdge(
 							fromId,
@@ -470,6 +543,8 @@ function UserAssignmentGraphCanvas({
 		canImpersonate,
 		actor,
 		lineage,
+		orientation,
+		hoistSuperAdminId,
 	]);
 
 	const [nodes, setNodes, onNodesChange] = useNodesState(initial.nodes);
@@ -480,6 +555,7 @@ function UserAssignmentGraphCanvas({
 			if (!canEditGraph || !targetUserId) return;
 			if (disconnectingRef.current.has(targetUserId)) return;
 			disconnectingRef.current.add(targetUserId);
+			clearedTargetIdsRef.current[lineage].add(targetUserId);
 
 			let snapshot: Edge[] = [];
 			setEdges((current) => {
@@ -487,6 +563,7 @@ function UserAssignmentGraphCanvas({
 				const inbound = lastSolidInboundCut(current, targetUserId);
 				if (inbound) {
 					lastCutRef.current = withCutLineage(inbound, lineage);
+					lastUndoKindRef.current = "cut";
 				}
 				return current.filter((edge) => edge.target !== targetUserId);
 			});
@@ -507,9 +584,12 @@ function UserAssignmentGraphCanvas({
 			const settled = persist
 				.catch((error: unknown) => {
 					lastCutRef.current = null;
+					if (lastUndoKindRef.current === "cut") {
+						lastUndoKindRef.current = lastMoveRef.current ? "move" : null;
+					}
+					clearedTargetIdsRef.current[lineage].delete(targetUserId);
 					setEdges(snapshot);
-					const message =
-						error instanceof Error ? error.message : "Try again";
+					const message = error instanceof Error ? error.message : "Try again";
 					const needsManualSource =
 						/manager source to manual/i.test(message) ||
 						/owned by SCIM/i.test(message);
@@ -529,7 +609,15 @@ function UserAssignmentGraphCanvas({
 				});
 			disconnectWaitRef.current.set(targetUserId, settled);
 		},
-		[canEditGraph, lineage, reassign, reassignReportingManager, setEdges, setNodes, toast],
+		[
+			canEditGraph,
+			lineage,
+			reassign,
+			reassignReportingManager,
+			setEdges,
+			setNodes,
+			toast,
+		],
 	);
 	disconnectRef.current = disconnectUser;
 
@@ -537,6 +625,7 @@ function UserAssignmentGraphCanvas({
 		const cut = lastCutRef.current;
 		if (!canEditGraph || !cut || undoInFlightRef.current) return;
 		lastCutRef.current = null;
+		clearedTargetIdsRef.current[cut.lineage].delete(cut.targetUserId);
 		undoInFlightRef.current = true;
 
 		const restore = () => {
@@ -551,9 +640,7 @@ function UserAssignmentGraphCanvas({
 					const withoutInbound = current.filter(
 						(edge) =>
 							edge.target !== cut.targetUserId ||
-							Boolean(
-								(edge.data as { dashed?: boolean } | undefined)?.dashed,
-							),
+							Boolean((edge.data as { dashed?: boolean } | undefined)?.dashed),
 					);
 					return [...withoutInbound, restored];
 				});
@@ -588,8 +675,7 @@ function UserAssignmentGraphCanvas({
 				.catch((error: unknown) => {
 					toast({
 						title: "Could not undo disconnect",
-						description:
-							error instanceof Error ? error.message : "Try again",
+						description: error instanceof Error ? error.message : "Try again",
 						variant: "destructive",
 					});
 					onRefreshRef.current();
@@ -613,17 +699,32 @@ function UserAssignmentGraphCanvas({
 	]);
 	undoLastCutRef.current = undoLastCut;
 
+	const undoLastAction = useCallback(() => {
+		if (lastUndoKindRef.current === "move") {
+			undoLastMoveRef.current();
+			lastUndoKindRef.current = lastCutRef.current ? "cut" : null;
+			return;
+		}
+		if (lastUndoKindRef.current === "cut") {
+			undoLastCutRef.current();
+			lastUndoKindRef.current = lastMoveRef.current ? "move" : null;
+		}
+	}, []);
+	undoLastActionRef.current = undoLastAction;
+
 	useEffect(() => {
 		lastCutRef.current = null;
+		lastMoveRef.current = null;
+		lastUndoKindRef.current = null;
 	}, [lineage]);
 
 	useEffect(() => {
 		if (!canEditGraph) return;
 		const onKeyDown = (event: KeyboardEvent) => {
 			if (!isUndoLastCutHotkey(event)) return;
-			if (!lastCutRef.current) return;
+			if (!lastUndoKindRef.current) return;
 			event.preventDefault();
-			undoLastCutRef.current();
+			undoLastActionRef.current();
 		};
 		window.addEventListener("keydown", onKeyDown);
 		return () => window.removeEventListener("keydown", onKeyDown);
@@ -641,6 +742,7 @@ function UserAssignmentGraphCanvas({
 				canAssignRoles,
 				canImpersonate,
 				lineage,
+				orientation,
 			),
 		[
 			graphUsers,
@@ -652,6 +754,7 @@ function UserAssignmentGraphCanvas({
 			canAssignRoles,
 			canImpersonate,
 			lineage,
+			orientation,
 		],
 	);
 
@@ -704,7 +807,11 @@ function UserAssignmentGraphCanvas({
 			if (source === target) return;
 			if (lastCutRef.current?.targetUserId === target) {
 				lastCutRef.current = null;
+				if (lastUndoKindRef.current === "cut") {
+					lastUndoKindRef.current = lastMoveRef.current ? "move" : null;
+				}
 			}
+			clearedTargetIdsRef.current[lineage].delete(target);
 
 			if (lineage === "assignment" && source === SYSTEM_NODE_ID) {
 				disconnectRef.current(target);
@@ -712,11 +819,8 @@ function UserAssignmentGraphCanvas({
 			}
 
 			const previous = edges;
-			const nextEdge = assignmentFlowEdge(
-				source,
-				target,
-				canEditGraph,
-				() => disconnectRef.current(target),
+			const nextEdge = assignmentFlowEdge(source, target, canEditGraph, () =>
+				disconnectRef.current(target),
 			);
 			setEdges((current) => {
 				const withoutInbound = current.filter(
@@ -739,8 +843,7 @@ function UserAssignmentGraphCanvas({
 						lineage === "reporting"
 							? "Could not update manager"
 							: "Could not update assignment",
-					description:
-						error instanceof Error ? error.message : "Try again",
+					description: error instanceof Error ? error.message : "Try again",
 					variant: "destructive",
 				});
 			});
@@ -757,8 +860,30 @@ function UserAssignmentGraphCanvas({
 	);
 
 	const persistNodePosition = useCallback(
-		(node: Node) => {
-			positionsRef.current.set(node.id, node.position);
+		(node: { id: string; position: { x: number; y: number } }) => {
+			positionsByLineageRef.current[lineage][orientation].set(
+				node.id,
+				node.position,
+			);
+			const persistLocal = () => {
+				writeGraphLayoutPositions(
+					lineage,
+					orientation,
+					positionsByLineageRef.current[lineage][orientation],
+				);
+			};
+			if (lineage !== "reporting" || orientation === "tb") {
+				const existing = positionTimersRef.current.get(node.id);
+				if (existing) clearTimeout(existing);
+				positionTimersRef.current.set(
+					node.id,
+					setTimeout(() => {
+						positionTimersRef.current.delete(node.id);
+						persistLocal();
+					}, POSITION_PATCH_DEBOUNCE_MS),
+				);
+				return;
+			}
 			if (node.id === SYSTEM_NODE_ID) return;
 
 			const existing = positionTimersRef.current.get(node.id);
@@ -792,16 +917,55 @@ function UserAssignmentGraphCanvas({
 				}, POSITION_PATCH_DEBOUNCE_MS),
 			);
 		},
-		[toast],
+		[lineage, orientation, toast],
 	);
+
+	const undoLastMove = useCallback(() => {
+		const move = lastMoveRef.current;
+		if (!canEditGraph || !move) return;
+		lastMoveRef.current = null;
+		const byId = new Map(move.nodes.map((item) => [item.id, item.from]));
+		setNodes((current) =>
+			current.map((node) => {
+				const from = byId.get(node.id);
+				if (!from) return node;
+				return { ...node, position: { x: from.x, y: from.y } };
+			}),
+		);
+		for (const item of move.nodes) {
+			persistNodePosition({
+				id: item.id,
+				position: { x: item.from.x, y: item.from.y },
+			});
+		}
+	}, [canEditGraph, persistNodePosition, setNodes]);
+	undoLastMoveRef.current = undoLastMove;
+
+	const onNodeDragStart: OnNodeDrag = useCallback((_event, node, dragged) => {
+		const items = dragged.length > 0 ? dragged : [node];
+		dragStartPositionsRef.current = new Map(
+			items.map((item) => [item.id, { x: item.position.x, y: item.position.y }]),
+		);
+	}, []);
 
 	const onNodeDragStop: OnNodeDrag = useCallback(
 		(_event, node, dragged) => {
 			if (!canEditGraph) return;
 			const moved = dragged.length > 0 ? dragged : [node];
+			const recorded = lastGraphMoveFromDrag(
+				dragStartPositionsRef.current,
+				moved,
+				lineage,
+				orientation,
+			);
+			dragStartPositionsRef.current.clear();
+			if (recorded) {
+				lastMoveRef.current = recorded;
+				lastUndoKindRef.current = "move";
+			}
 			for (const item of moved) persistNodePosition(item);
 		},
-		[canEditGraph, persistNodePosition],
+		[canEditGraph, lineage, orientation, persistNodePosition],
 	);
 
 	const isValidConnection = useCallback((connection: Connection | Edge) => {
@@ -828,6 +992,15 @@ function UserAssignmentGraphCanvas({
 		[fitView],
 	);
 
+	const handleOrientationChange = useCallback((next: GraphOrientation) => {
+		lastMoveRef.current = null;
+		if (lastUndoKindRef.current === "move") {
+			lastUndoKindRef.current = lastCutRef.current ? "cut" : null;
+		}
+		setOrientation(next);
+		window.localStorage.setItem(GRAPH_ORIENTATION_STORAGE_KEY, next);
+	}, []);
+
 	const handleClearHighlight = useCallback(() => {
 		setHighlight(null);
 		setFocusUserId(null);
@@ -835,11 +1008,7 @@ function UserAssignmentGraphCanvas({
 
 	const overlayRect = useMemo((): GraphRect | null => {
 		if (keepSelectionFrame) {
-			const snapped = selectionBounds(
-				nodes,
-				FLOW_CARD_WIDTH,
-				FLOW_CARD_HEIGHT,
-			);
+			const snapped = selectionBounds(nodes, FLOW_CARD_WIDTH, FLOW_CARD_HEIGHT);
 			if (snapped) return snapped;
 		}
 		if (!rightMarquee) return null;
@@ -854,7 +1023,12 @@ function UserAssignmentGraphCanvas({
 	overlayRectRef.current = overlayRect;
 
 	const applyRightMarquee = useCallback(
-		(startClientX: number, startClientY: number, clientX: number, clientY: number) => {
+		(
+			startClientX: number,
+			startClientY: number,
+			clientX: number,
+			clientY: number,
+		) => {
 			const box = clientDragToFlowRect(
 				screenToFlowPosition({ x: startClientX, y: startClientY }),
 				screenToFlowPosition({ x: clientX, y: clientY }),
@@ -933,9 +1107,7 @@ function UserAssignmentGraphCanvas({
 					);
 					return node.selected === selected ? node : { ...node, selected };
 				});
-				const ids = next
-					.filter((node) => node.selected)
-					.map((node) => node.id);
+				const ids = next.filter((node) => node.selected).map((node) => node.id);
 				marqueeSelectedIdsRef.current = new Set(ids);
 				setKeepSelectionFrame(ids.length > 0);
 				if (ids.length > 0) {
@@ -1027,7 +1199,7 @@ function UserAssignmentGraphCanvas({
 		window.requestAnimationFrame(() => {
 			void fitView({ padding: 0.18, duration: 280 });
 		});
-	}, [lineage, fitView]);
+	}, [lineage, orientation, fitView]);
 
 	return (
 		<div className="relative h-[min(76vh,880px)] overflow-hidden">
@@ -1052,12 +1224,12 @@ function UserAssignmentGraphCanvas({
 				className="relative h-full min-w-0"
 			>
 				{canEditGraph && !directionsDismissed ? (
-					<div className="pointer-events-none absolute top-3 left-65 right-0 z-10 flex justify-center">
+					<div className="pointer-events-none absolute top-3 left-65 right-48 z-10 flex justify-center">
 						<div className="flex max-w-xs items-start gap-2 rounded-xl border border-slate-200 bg-white/85 px-3 py-1.5 text-left text-[11px] leading-snug text-slate-600">
 							<p>
-								Drag a card to move it · drag a dot to a card to connect · hover
-								a line and click the scissors to disconnect · Ctrl+Z undoes the
-								last cut
+								{lineage === "assignment"
+									? "Access grant: who gave this account. Drag a card to move it · drag a dot to a card to connect · hover a line and click the scissors to disconnect · Ctrl+Z undoes the last cut or card move"
+									: "Reporting: who each person reports to. Drag a card to move it · drag a dot to a card to connect · hover a line and click the scissors to disconnect · Ctrl+Z undoes the last cut or card move"}
 							</p>
 							<button
 								type="button"
@@ -1076,6 +1248,18 @@ function UserAssignmentGraphCanvas({
 						</div>
 					</div>
 				) : null}
+
+				<div className="pointer-events-none absolute top-3 right-3 z-20 flex flex-col items-end gap-2">
+					<div className="pointer-events-auto">
+						<UserManagementOrientationToggle
+							orientation={orientation}
+							onOrientationChange={handleOrientationChange}
+						/>
+					</div>
+					<div className="pointer-events-auto">
+						<UserGraphZoomControls />
+					</div>
+				</div>
 
 				<div
 					role="group"
@@ -1098,7 +1282,7 @@ function UserAssignmentGraphCanvas({
 							</span>
 							<span className="flex items-center gap-1.5">
 								<span
-									className="inline-block h-0.5 w-2.5 rounded-sm border-t border-dashed"
+									className="inline-block w-4 border-t-2 border-dashed"
 									style={{ borderColor: SYSTEM_ASSIGN_COLOR }}
 									aria-hidden
 								/>
@@ -1135,9 +1319,10 @@ function UserAssignmentGraphCanvas({
 					onConnect={onConnect}
 					onEdgeClick={(_event, edge) => {
 						if (!canEditGraph) return;
-						if ((edge.data as { dashed?: boolean } | undefined)?.dashed) return;
+						if (!isSolidCuttableEdge(edge)) return;
 						disconnectRef.current(edge.target);
 					}}
+					onNodeDragStart={onNodeDragStart}
 					onNodeDragStop={onNodeDragStop}
 					nodeTypes={nodeTypes}
 					edgeTypes={edgeTypes}
@@ -1155,8 +1340,8 @@ function UserAssignmentGraphCanvas({
 					zoomOnScroll
 					fitView
 					fitViewOptions={{ padding: 0.18 }}
-					minZoom={0.2}
-					maxZoom={1.5}
+					minZoom={USER_GRAPH_MIN_ZOOM}
+					maxZoom={USER_GRAPH_MAX_ZOOM}
 					isValidConnection={isValidConnection}
 					onNodeClick={(event, node) => {
 						if (overlayRectRef.current && !rightSelectRef.current) {
@@ -1195,11 +1380,6 @@ function UserAssignmentGraphCanvas({
 						gap={40}
 						lineWidth={1}
 						color="rgba(0, 0, 0, 0.03)"
-					/>
-					<Controls
-						position="bottom-right"
-						showInteractive={false}
-						className="shadow-md! border-slate-200! overflow-hidden! rounded-md!"
 					/>
 				</ReactFlow>
 				{overlayRect ? (
@@ -1252,19 +1432,19 @@ export function UserAssignmentGraph({
 	return (
 		<ReactFlowProvider>
 			<UserAssignmentGraphCanvas
-					users={users}
-					allUsers={allUsers}
-					lineage={lineage}
-					canEditGraph={canEditGraph}
-					canView={canView}
-					canEdit={canEdit}
-					canDeactivate={canDeactivate}
-					canAssignRoles={canAssignRoles}
-					canImpersonate={canImpersonate}
-					actor={actor}
-					onAction={onAction}
-					onRefresh={onRefresh}
-				/>
+				users={users}
+				allUsers={allUsers}
+				lineage={lineage}
+				canEditGraph={canEditGraph}
+				canView={canView}
+				canEdit={canEdit}
+				canDeactivate={canDeactivate}
+				canAssignRoles={canAssignRoles}
+				canImpersonate={canImpersonate}
+				actor={actor}
+				onAction={onAction}
+				onRefresh={onRefresh}
+			/>
 		</ReactFlowProvider>
 	);
 }

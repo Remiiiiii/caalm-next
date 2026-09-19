@@ -8,10 +8,17 @@ import {
 	FLOW_CARD_WIDTH,
 	FLOW_RANK_GAP,
 	FLOW_ROW_EXTENT,
+	FLOW_TB_COL_EXTENT,
+	FLOW_TB_RANK_GAP,
 	GRAPH_PAD_X,
 	GRAPH_PAD_Y,
 	wouldCreateCycle,
 } from "@/lib/users/assignment-graph";
+import { isSuperAdminProfile } from "@/lib/users/graph-visibility";
+import {
+	isTopDownOrientation,
+	type GraphOrientation,
+} from "@/lib/users/graph-orientation";
 
 /** Horizontal gap between manager (left) and reports (right). */
 export const REPORTING_RANK_GAP = FLOW_RANK_GAP;
@@ -23,6 +30,7 @@ export type ReportingGraphUser = {
 	accountId?: string;
 	managerUserId?: string | null;
 	matrixManagerUserId?: string | null;
+	roleName?: string | null;
 };
 
 export function profileIdForRaw(
@@ -94,52 +102,120 @@ export function collectReportingUsers<T extends ReportingGraphUser>(
 	for (const user of visibleUsers) included.set(user.$id, user);
 
 	const queue = [...visibleUsers];
+	const enqueue = (id: string | null) => {
+		if (!id || included.has(id)) return;
+		const person = allUsers.find((item) => item.$id === id);
+		if (!person) return;
+		included.set(person.$id, person);
+		queue.push(person);
+	};
 	while (queue.length > 0) {
 		const current = queue.pop();
 		if (!current) continue;
-		const managerId = resolveManagerProfileId(current, allUsers);
-		if (!managerId || included.has(managerId)) continue;
-		const manager = allUsers.find((item) => item.$id === managerId);
-		if (!manager) continue;
-		included.set(manager.$id, manager);
-		queue.push(manager);
+		enqueue(resolveManagerProfileId(current, allUsers));
+		enqueue(resolveMatrixManagerProfileId(current, allUsers));
 	}
 
 	return [...included.values()];
 }
 
-function subtreeHeight(
+export function superAdminIdInUsers<T extends ReportingGraphUser>(
+	users: T[],
+): string | null {
+	return users.find((user) => isSuperAdminProfile(user))?.$id ?? null;
+}
+
+/**
+ * For top-down reporting: Super Admin becomes the sole forest root so
+ * other roots sit on the next row. This is layout-only — do not draw
+ * edges for syntheticChildIds. Real managerUserId values stay as-is.
+ */
+export function hoistSuperAdminReportingRoots<T extends ReportingGraphUser>(
+	parentOf: Map<string, string>,
+	users: T[],
+	superAdminId: string,
+): { parentOf: Map<string, string>; syntheticChildIds: string[] } {
+	if (!users.some((user) => user.$id === superAdminId)) {
+		return { parentOf, syntheticChildIds: [] };
+	}
+
+	const next = new Map(parentOf);
+	next.delete(superAdminId);
+	const syntheticChildIds: string[] = [];
+
+	for (const user of users) {
+		if (user.$id === superAdminId) continue;
+		if (next.has(user.$id)) continue;
+		if (reportingWouldCycle(superAdminId, user.$id, next)) continue;
+		next.set(user.$id, superAdminId);
+		if (parentOf.get(user.$id) !== superAdminId) {
+			syntheticChildIds.push(user.$id);
+		}
+	}
+
+	return { parentOf: next, syntheticChildIds };
+}
+
+export function reportingLayoutParentOf<T extends ReportingGraphUser>(
+	users: T[],
+	lookup: T[] = users,
+	hoistSuperAdminId?: string | null,
+): { parentOf: Map<string, string>; syntheticChildIds: string[] } {
+	const parentOf = buildReportingParentOf(users, lookup);
+	if (!hoistSuperAdminId) {
+		return { parentOf, syntheticChildIds: [] };
+	}
+	return hoistSuperAdminReportingRoots(parentOf, users, hoistSuperAdminId);
+}
+
+function subtreeSpan(
 	id: string,
 	childrenOf: Map<string, string[]>,
 	memo: Map<string, number>,
+	leafExtent: number,
 ): number {
 	const cached = memo.get(id);
 	if (cached != null) return cached;
 	const kids = childrenOf.get(id) || [];
 	if (kids.length === 0) {
-		memo.set(id, REPORTING_ROW_EXTENT);
-		return REPORTING_ROW_EXTENT;
+		memo.set(id, leafExtent);
+		return leafExtent;
 	}
-	const height = Math.max(
-		REPORTING_ROW_EXTENT,
-		kids.reduce((sum, child) => sum + subtreeHeight(child, childrenOf, memo), 0),
+	const span = Math.max(
+		leafExtent,
+		kids.reduce(
+			(sum, child) => sum + subtreeSpan(child, childrenOf, memo, leafExtent),
+			0,
+		),
 	);
-	memo.set(id, height);
-	return height;
+	memo.set(id, span);
+	return span;
 }
 
+export type SeedReportingOptions = {
+	orientation?: GraphOrientation;
+	hoistSuperAdminId?: string | null;
+};
+
 /**
- * Left-to-right positions (root on the left, reports to the right).
- * Saved diagram spots still win when present.
+ * Positions for React Flow. Left-to-right by default; top-down swaps axes.
+ * Saved spots apply in both orientations.
  */
 export function seedReportingNodePositions<T extends ReportingGraphUser>(
 	visibleUsers: T[],
 	allUsers: T[],
 	saved: Map<string, { x: number; y: number }>,
+	options?: SeedReportingOptions,
 ): Map<string, { x: number; y: number }> {
+	const orientation = options?.orientation ?? "ltr";
+	const topDown = isTopDownOrientation(orientation);
 	const graphUsers = collectReportingUsers(visibleUsers, allUsers);
 	const lookup = allUsers.length > 0 ? allUsers : graphUsers;
-	const parentOf = buildReportingParentOf(graphUsers, lookup);
+	const { parentOf } = reportingLayoutParentOf(
+		graphUsers,
+		lookup,
+		options?.hoistSuperAdminId,
+	);
 	const childrenOf = new Map<string, string[]>();
 
 	for (const user of graphUsers) {
@@ -157,34 +233,42 @@ export function seedReportingNodePositions<T extends ReportingGraphUser>(
 		.map((user) => user.$id)
 		.sort();
 
-	const heightMemo = new Map<string, number>();
+	const spanMemo = new Map<string, number>();
 	const positions = new Map<string, { x: number; y: number }>();
+	const leafExtent = topDown ? FLOW_TB_COL_EXTENT : REPORTING_ROW_EXTENT;
+	const rankGap = topDown ? FLOW_TB_RANK_GAP : REPORTING_RANK_GAP;
 
-	const place = (id: string, top: number, depth: number) => {
+	const place = (id: string, start: number, depth: number) => {
 		const kids = childrenOf.get(id) || [];
-		let cursor = top;
+		let cursor = start;
 		for (const childId of kids) {
-			const childHeight = subtreeHeight(childId, childrenOf, heightMemo);
+			const childSpan = subtreeSpan(childId, childrenOf, spanMemo, leafExtent);
 			place(childId, cursor, depth + 1);
-			cursor += childHeight;
+			cursor += childSpan;
 		}
-		const subtreeH = subtreeHeight(id, childrenOf, heightMemo);
-		// Center the parent beside its stack so first-time layout reads like an org chart.
-		const y =
+		const span = subtreeSpan(id, childrenOf, spanMemo, leafExtent);
+		const centered =
 			kids.length === 0
-				? top
-				: top + Math.max(0, (subtreeH - FLOW_CARD_HEIGHT) / 2);
+				? start
+				: start + Math.max(0, (span - (topDown ? FLOW_CARD_WIDTH : FLOW_CARD_HEIGHT)) / 2);
+		if (topDown) {
+			positions.set(id, {
+				x: centered,
+				y: GRAPH_PAD_Y + depth * rankGap,
+			});
+			return;
+		}
 		positions.set(id, {
-			x: GRAPH_PAD_X + depth * REPORTING_RANK_GAP,
-			y,
+			x: GRAPH_PAD_X + depth * rankGap,
+			y: centered,
 		});
 	};
 
-	let rootCursor = GRAPH_PAD_Y;
+	let rootCursor = topDown ? GRAPH_PAD_X : GRAPH_PAD_Y;
 	for (const rootId of roots) {
-		const height = subtreeHeight(rootId, childrenOf, heightMemo);
+		const span = subtreeSpan(rootId, childrenOf, spanMemo, leafExtent);
 		place(rootId, rootCursor, 0);
-		rootCursor += height;
+		rootCursor += span;
 	}
 
 	const result = new Map<string, { x: number; y: number }>();

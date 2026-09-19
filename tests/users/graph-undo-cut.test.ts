@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
 	isUndoLastCutHotkey,
+	lastGraphMoveFromDrag,
 	lastSolidInboundCut,
 	withCutLineage,
 } from "@/lib/users/graph-undo-cut";
@@ -33,6 +34,71 @@ describe("graph undo cut", () => {
 				"b",
 			),
 		).toBeNull();
+	});
+
+	it("skips layout-only Super Admin hoist lines", () => {
+		expect(
+			lastSolidInboundCut(
+				[
+					{
+						source: "super-admin",
+						target: "orphan",
+						data: { canEditGraph: false },
+					},
+				],
+				"orphan",
+			),
+		).toBeNull();
+	});
+
+	it("records only cards that actually moved in a drag", () => {
+		const starts = new Map([
+			["priya", { x: 10, y: 20 }],
+			["john", { x: 40, y: 50 }],
+		]);
+		expect(
+			lastGraphMoveFromDrag(
+				starts,
+				[
+					{ id: "priya", position: { x: 80, y: 20 } },
+					{ id: "john", position: { x: 40, y: 50 } },
+				],
+				"reporting",
+				"tb",
+			),
+		).toEqual({
+			nodes: [{ id: "priya", from: { x: 10, y: 20 } }],
+			lineage: "reporting",
+			orientation: "tb",
+		});
+		expect(
+			lastGraphMoveFromDrag(
+				starts,
+				[{ id: "priya", position: { x: 10, y: 20 } }],
+				"reporting",
+				"ltr",
+			),
+		).toBeNull();
+	});
+
+	it("records every card in a multi-select drag", () => {
+		const starts = new Map([
+			["priya", { x: 0, y: 0 }],
+			["john", { x: 8, y: 8 }],
+		]);
+		const move = lastGraphMoveFromDrag(
+			starts,
+			[
+				{ id: "priya", position: { x: 4, y: 0 } },
+				{ id: "john", position: { x: 12, y: 8 } },
+			],
+			"assignment",
+			"ltr",
+		);
+		expect(move?.nodes).toEqual([
+			{ id: "priya", from: { x: 0, y: 0 } },
+			{ id: "john", from: { x: 8, y: 8 } },
+		]);
 	});
 
 	it("matches Ctrl+Z and Cmd+Z outside of text fields", () => {

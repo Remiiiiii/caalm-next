@@ -51,11 +51,12 @@ describe("listAuthPasswordUpdatesByAccountId", () => {
 	});
 
 	it("returns passwordUpdate stamps when Auth list succeeds", async () => {
+		const lastChangedAt = "2026-01-01T00:00:00.000Z";
 		listMock.mockResolvedValue({
-			users: [{ $id: "acc-1", passwordUpdate: "2026-01-01T00:00:00.000Z" }],
+			users: [{ $id: "acc-1", passwordUpdate: lastChangedAt }],
 		});
 		const result = await listAuthPasswordUpdatesByAccountId();
 		expect(result.ok).toBe(true);
-		expect(result.byAccount.get("acc-1")).toBe("2026-01-01T00:00:00.000Z");
+		expect(result.byAccount.get("acc-1")).toBe(lastChangedAt);
 	});
 });

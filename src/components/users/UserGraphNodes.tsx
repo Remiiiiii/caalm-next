@@ -14,6 +14,10 @@ import {
 	SYSTEM_ASSIGN_COLOR,
 	type AssignmentEdgeKind,
 } from "@/lib/users/assignment-graph";
+import {
+	isTopDownOrientation,
+	type GraphOrientation,
+} from "@/lib/users/graph-orientation";
 import { resolveAvatarDisplayUrl, cn } from "@/lib/utils";
 
 export type GraphNodeEmphasis = "normal" | "match" | "dim";
@@ -27,6 +31,7 @@ export type UserGraphUserNodeData = {
 	user: UserManagementUser;
 	assignerKind: AssignmentEdgeKind;
 	lineage: "reporting" | "assignment";
+	orientation?: GraphOrientation;
 	skipLevelName?: string | null;
 	canEditGraph: boolean;
 	canView: boolean;
@@ -45,6 +50,7 @@ export type UserGraphUserNodeData = {
 export type UserGraphSystemNodeData = {
 	canEditGraph: boolean;
 	emphasis: GraphNodeEmphasis;
+	orientation?: GraphOrientation;
 };
 
 export type UserGraphUserNodeType = Node<UserGraphUserNodeData, "user">;
@@ -56,6 +62,16 @@ function kindColor(kind: AssignmentEdgeKind): string {
 
 const handleClass =
 	"h-2.5! w-2.5! border-2! bg-white! border-[#0f5384]! hover:bg-[#0f5384]!";
+
+export function graphHandlePositions(orientation?: GraphOrientation): {
+	target: Position;
+	source: Position;
+} {
+	if (isTopDownOrientation(orientation)) {
+		return { target: Position.Top, source: Position.Bottom };
+	}
+	return { target: Position.Left, source: Position.Right };
+}
 
 function emphasisClass(emphasis: GraphNodeEmphasis | undefined): string {
 	if (emphasis === "dim") return "opacity-35";
@@ -146,8 +162,8 @@ export function UserGraphUserNode({ data }: NodeProps<UserGraphUserNodeType>) {
 		user.costCenterName?.trim() || user.costCenterCode,
 	);
 	const skipLevel = graphOrgValue(skipLevelName);
-	const targetPosition = Position.Left;
-	const sourcePosition = Position.Right;
+	const { target: targetPosition, source: sourcePosition } =
+		graphHandlePositions(data.orientation);
 
 	return (
 		<div
@@ -196,16 +212,22 @@ export function UserGraphUserNode({ data }: NodeProps<UserGraphUserNodeType>) {
 				/>
 			</div>
 			<div className="space-y-1.5 px-3 py-2 text-xs">
-				{isSuspended ? (
-					<span className="inline-block rounded-full border border-orange/20 bg-orange/10 px-2 py-0.5 font-medium text-orange">
-						Inactive
+				<div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+					<span
+						className={
+							isSuspended
+								? "inline-block rounded-full border border-orange/20 bg-orange/10 px-2 py-0.5 font-medium text-orange"
+								: "inline-block rounded-full border border-green/20 bg-green/10 px-2 py-0.5 font-medium text-green"
+						}
+					>
+						{isSuspended ? "Inactive" : "Active"}
 					</span>
-				) : null}
-				{showRoleBadge ? (
-					<span className="inline-block rounded-full border border-blue/20 bg-blue/10 px-2 py-0.5 font-medium text-blue">
-						{user.roleName}
-					</span>
-				) : null}
+					{showRoleBadge ? (
+						<span className="inline-block rounded-full border border-blue/20 bg-blue/10 px-2 py-0.5 font-medium text-blue">
+							{user.roleName}
+						</span>
+					) : null}
+				</div>
 				<GraphDetailRow
 					label="Department"
 					value={department.label}
@@ -310,7 +332,7 @@ export function UserGraphSystemNode({
 			{data.canEditGraph ? (
 				<Handle
 					type="source"
-					position={Position.Right}
+					position={graphHandlePositions(data.orientation).source}
 					className={handleClass}
 				/>
 			) : null}

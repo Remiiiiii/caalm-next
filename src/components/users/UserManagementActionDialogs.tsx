@@ -54,6 +54,7 @@ interface UserManagementActionDialogsProps {
 	roleOptions: string[];
 	busy: boolean;
 	canManageUsers?: boolean;
+	selectedUsers?: UserManagementUser[];
 	onClose: () => void;
 	onOpenAction?: (
 		kind: Extract<UserActionKind, "view" | "edit" | "suspend">,
@@ -127,6 +128,7 @@ export function UserManagementActionDialogs({
 	roleOptions,
 	busy,
 	canManageUsers = false,
+	selectedUsers,
 	onClose,
 	onOpenAction,
 	onSaveEdit,
@@ -186,12 +188,18 @@ export function UserManagementActionDialogs({
 		setWorkLocation(user.workLocation || "");
 		setCostCenterId(user.costCenterId || "");
 		setMatrixManagerUserId(user.matrixManagerUserId || "");
-		setRoleName(user.roleName || "");
+		setRoleName(
+			selectedUsers && selectedUsers.length > 1 ? "" : user.roleName || "",
+		);
 		setImpersonationReason("");
-	}, [user, action]);
+	}, [user, action, selectedUsers]);
 
 	if (!user || !action) return null;
 
+	const targets =
+		selectedUsers && selectedUsers.length > 0 ? selectedUsers : [user];
+	const isBulk = targets.length > 1;
+	const bulkLabel = `${targets.length} selected users`;
 	const isSuspended = user.status === "suspended" || user.status === "inactive";
 
 	if (action === "view") {
@@ -477,7 +485,11 @@ export function UserManagementActionDialogs({
 				onClose={onClose}
 				title="Change role"
 				icon={<ShieldCheck className="h-5 w-5 text-[#0f5384]" />}
-				subtitle={`Assign a role for ${user.fullName}`}
+				subtitle={
+					isBulk
+						? `Assign a role for ${bulkLabel}`
+						: `Assign a role for ${user.fullName}`
+				}
 				footer={
 					<div className="flex items-center justify-end gap-3">
 						<Button
@@ -498,8 +510,9 @@ export function UserManagementActionDialogs({
 				<div className="rounded-lg border border-slate-200 bg-white p-4">
 					<Label className="mb-1 text-sm text-slate-700">Role</Label>
 					<p className="mb-2 text-xs text-slate-500">
-						A role sets this user&apos;s access. Permissions come from the role,
-						not from this dialog.
+						{isBulk
+							? "A role sets access for every selected user. Permissions come from the role, not from this dialog."
+							: "A role sets this user's access. Permissions come from the role, not from this dialog."}
 					</p>
 					<Select value={roleName} onValueChange={setRoleName}>
 						<SelectTrigger className="bg-white">
@@ -527,7 +540,9 @@ export function UserManagementActionDialogs({
 		},
 		revoke: {
 			title: "Revoke sessions",
-			body: `Sign ${user.fullName} out of all devices?`,
+			body: isBulk
+				? `Sign ${bulkLabel} out of all devices?`
+				: `Sign ${user.fullName} out of all devices?`,
 			confirm: "Revoke sessions",
 			onConfirm: onConfirmRevoke,
 		},
@@ -548,7 +563,7 @@ export function UserManagementActionDialogs({
 						</div>
 						<div className="min-w-0 pt-0.5">
 							<DialogTitle className="text-lg font-semibold sidebar-gradient-text">
-								Delete user
+								{isBulk ? "Delete users" : "Delete user"}
 							</DialogTitle>
 							<p className="mt-0.5 text-xs text-slate-600">
 								This action is permanent and cannot be undone.
@@ -557,41 +572,59 @@ export function UserManagementActionDialogs({
 					</div>
 
 					<div className="flex-1 space-y-3 overflow-y-auto bg-slate-50 px-6 py-4">
-						<div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-3">
-							<Avatar
-								name={user.fullName}
-								userId={user.$id}
-								size="md"
-								className="shrink-0 gap-0"
-								imageUrl={resolveAvatarDisplayUrl(user)}
-							/>
-							<div className="min-w-0 flex-1">
-								<p className="truncate text-sm font-semibold text-slate-700">
-									{user.fullName}
+						{isBulk ? (
+							<div className="rounded-lg border border-slate-200 bg-white p-3">
+								<p className="text-sm font-semibold text-slate-700">
+									{targets.length} users selected
 								</p>
-								<p className="truncate text-xs text-slate-600">{user.email}</p>
-								<div className="mt-1.5 flex flex-wrap gap-4">
-									<div>
-										<p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
-											Role
-										</p>
-										<p className="text-xs font-semibold text-slate-800">
-											{user.roleName || "Unassigned"}
-										</p>
-									</div>
-									<div>
-										<p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
-											Last active
-										</p>
-										<p className="text-xs font-semibold text-slate-800">
-											{formatUserLastActiveLabel(
-												user.lastActiveAt || user.$updatedAt,
-											)}
-										</p>
+								<ul className="mt-2 max-h-32 space-y-1 overflow-y-auto text-xs text-slate-600">
+									{targets.slice(0, 8).map((item) => (
+										<li key={item.$id} className="truncate">
+											{item.fullName}
+										</li>
+									))}
+									{targets.length > 8 ? (
+										<li>and {targets.length - 8} more</li>
+									) : null}
+								</ul>
+							</div>
+						) : (
+							<div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-3">
+								<Avatar
+									name={user.fullName}
+									userId={user.$id}
+									size="md"
+									className="shrink-0 gap-0"
+									imageUrl={resolveAvatarDisplayUrl(user)}
+								/>
+								<div className="min-w-0 flex-1">
+									<p className="truncate text-sm font-semibold text-slate-700">
+										{user.fullName}
+									</p>
+									<p className="truncate text-xs text-slate-600">{user.email}</p>
+									<div className="mt-1.5 flex flex-wrap gap-4">
+										<div>
+											<p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
+												Role
+											</p>
+											<p className="text-xs font-semibold text-slate-800">
+												{user.roleName || "Unassigned"}
+											</p>
+										</div>
+										<div>
+											<p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
+												Last active
+											</p>
+											<p className="text-xs font-semibold text-slate-800">
+												{formatUserLastActiveLabel(
+													user.lastActiveAt || user.$updatedAt,
+												)}
+											</p>
+										</div>
 									</div>
 								</div>
 							</div>
-						</div>
+						)}
 
 						<div className="flex gap-2.5 rounded-lg border border-red/20 bg-red/10 p-3">
 							<TriangleAlert
@@ -599,12 +632,21 @@ export function UserManagementActionDialogs({
 								aria-hidden
 							/>
 							<p className="text-xs leading-relaxed text-slate-800">
-								Removing{" "}
-								<span className="font-semibold text-slate-700">
-									{user.fullName}
-								</span>{" "}
-								revokes their CAALM access immediately and unassigns them from
-								all active tasks and contracts.
+								{isBulk ? (
+									<>
+										Removing these users revokes their CAALM access immediately
+										and unassigns them from all active tasks and contracts.
+									</>
+								) : (
+									<>
+										Removing{" "}
+										<span className="font-semibold text-slate-700">
+											{user.fullName}
+										</span>{" "}
+										revokes their CAALM access immediately and unassigns them
+										from all active tasks and contracts.
+									</>
+								)}
 							</p>
 						</div>
 					</div>
@@ -621,7 +663,7 @@ export function UserManagementActionDialogs({
 							) : (
 								<Trash2 className="h-4 w-4" aria-hidden />
 							)}
-							Delete user
+							{isBulk ? "Delete users" : "Delete user"}
 						</Button>
 					</div>
 				</DialogContent>

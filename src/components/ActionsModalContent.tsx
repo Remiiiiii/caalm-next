@@ -1964,7 +1964,7 @@ export const ShareInput = ({
 										e.stopPropagation();
 										handleAddEmail();
 									}}
-									className="primary-btn h-9! min-h-9! w-auto! shrink-0 px-3! py-1.5! text-sm sm:w-auto!"
+									className="primary-btn w-auto! shrink-0 px-3! text-sm sm:w-auto!"
 								>
 									<Plus className="h-3.5 w-3.5" />
 									Add
