@@ -73,6 +73,22 @@ describe("nonprofit roadmap engine", () => {
 		expect(npo.sections[1]?.prLinks?.map((pr) => pr.number)).toEqual([
 			88, 89, 92,
 		]);
+		expect(npo.sections[2]?.prLinks?.map((pr) => pr.number)).toEqual([90, 93]);
+		expect(npo.sections[3]?.prLinks?.map((pr) => pr.number)).toEqual([87, 91]);
+		expect(npo.sections[4]?.prLinks?.map((pr) => pr.number)).toEqual([94, 97]);
+		expect(npo.sections[5]?.prLinks?.map((pr) => pr.number)).toEqual([95, 100]);
+		expect(npo.sections[6]?.prLinks?.map((pr) => pr.number)).toEqual([98, 99]);
+		expect(npo.sections[7]?.prLinks?.map((pr) => pr.number)).toEqual([96, 103]);
+		expect(npo.sections[8]?.prLinks?.map((pr) => pr.number)).toEqual([
+			104, 102,
+		]);
+		expect(npo.sections[9]?.prLinks?.map((pr) => pr.number)).toEqual([
+			105, 107,
+		]);
+		expect(npo.sections[10]?.prLinks?.map((pr) => pr.number)).toEqual([
+			106, 101,
+		]);
+		expect(npo.sections[1]?.prLinks?.[0]?.title).toMatch(/S1 B1/);
 		expect(npo.sections[1]?.status).toBe("in_progress");
 		expect(npo.sections[1]?.title).toBe("Constituent CRM Foundation");
 		expect(npo.sections[1]?.nextTaskCode).toBe("1.1");

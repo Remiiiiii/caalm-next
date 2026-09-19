@@ -43,6 +43,7 @@ import {
 	countByStatus,
 	firstIncompleteSequentialTask,
 } from "./locking";
+import { npoCatalogDisplayTitleForPr } from "./nonprofit/npo-pr-batches";
 import {
 	appendStatusLog,
 	createTestRun,
@@ -101,7 +102,22 @@ function catalogDisplayTitleForPr(
 	prNumber: number,
 	key: RoadmapCatalogKey = DEFAULT_ROADMAP_CATALOG_KEY,
 ): string {
+	if (key === "npo") {
+		const batchTitle = npoCatalogDisplayTitleForPr(prNumber);
+		if (batchTitle) return batchTitle;
+	}
 	return catalogDisplayTitleForPrIn(catalogOf(key), prNumber);
+}
+
+/** NPO section cards use the batch label so stubs sit on the right module. */
+function resolvedCatalogPrTitle(
+	prNumber: number,
+	liveTitle: string | undefined,
+	catalogKey: RoadmapCatalogKey,
+): string {
+	const fallback = catalogDisplayTitleForPr(prNumber, catalogKey);
+	if (catalogKey === "npo") return fallback || liveTitle?.trim() || "";
+	return liveTitle?.trim() || fallback;
 }
 
 function sectionUsesPerTaskPrCompletion(
@@ -335,8 +351,7 @@ async function resolveCatalogPrLookup(
 	const lookup = new Map<number, CatalogPrLinkMeta>();
 	for (const pr of openPrs) {
 		lookup.set(pr.number, {
-			title:
-				pr.title?.trim() || catalogDisplayTitleForPr(pr.number, catalogKey),
+			title: resolvedCatalogPrTitle(pr.number, pr.title, catalogKey),
 			state: pr.state,
 		});
 	}
@@ -344,10 +359,10 @@ async function resolveCatalogPrLookup(
 	await Promise.all(
 		missing.map(async (number) => {
 			const live = await fetchPullRequestStatus({ prNumber: number });
-			const fallbackTitle = catalogDisplayTitleForPr(number, catalogKey);
-			if (live.state === "unknown" && !live.title && !fallbackTitle) return;
+			const title = resolvedCatalogPrTitle(number, live.title, catalogKey);
+			if (live.state === "unknown" && !title) return;
 			lookup.set(number, {
-				title: live.title?.trim() || fallbackTitle,
+				title,
 				state: live.state,
 				mergeCommitSha: live.mergeCommitSha,
 			});
@@ -566,10 +581,7 @@ export async function getOverview(options?: {
 			const meta = prLookup.get(number);
 			return {
 				number,
-				title:
-					meta?.title?.trim() ||
-					catalogDisplayTitleForPr(number, catalogKey) ||
-					"",
+				title: resolvedCatalogPrTitle(number, meta?.title, catalogKey),
 				state: meta?.state,
 				checksPassed: checksPassedByPr.get(number) === true,
 			};
@@ -699,8 +711,7 @@ export async function getSectionPullRequests(sectionId: string): Promise<
 			return {
 				number,
 				title:
-					live.title?.trim() ||
-					catalogDisplayTitleForPr(number, catalogKey) ||
+					resolvedCatalogPrTitle(number, live.title, catalogKey) ||
 					`PR #${number}`,
 				state: live.state,
 				htmlUrl: live.htmlUrl || catalogPullRequestUrl(number),

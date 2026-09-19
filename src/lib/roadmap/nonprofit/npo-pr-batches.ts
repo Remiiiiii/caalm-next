@@ -338,3 +338,15 @@ export function linkedPrNumbersForSection(sectionNumber: number): number[] {
 export function productNpoPrBatches(): NpoPrBatch[] {
 	return NPO_PR_BATCHES.filter((batch) => batch.sectionNumber > 0);
 }
+
+/** Section-card label when GitHub has not returned a title yet. */
+export function npoCatalogDisplayTitleForPr(prNumber: number): string {
+	const batch = NPO_PR_BATCHES.find((item) => item.linkedPrNumber === prNumber);
+	if (!batch) return "";
+	const last = batch.taskCodes[batch.taskCodes.length - 1];
+	const range =
+		batch.taskCodes.length === 1 || !last
+			? batch.taskCodes[0]
+			: `${batch.taskCodes[0]}–${last}`;
+	return `S${batch.sectionNumber} B${batch.batch} ${batch.sectionTitle} (${range})`;
+}

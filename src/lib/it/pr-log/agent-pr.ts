@@ -13,11 +13,26 @@ export function isAgentPullRequestBranch(headRef: string): boolean {
 }
 
 /**
+ * Nonprofit catalog stubs live on the Nonprofit Roadmap board, not the PR log.
+ * Their branches are `cursor/npo-s01-b1-340a`; titles are `NPO S1 B1 catalog stub`.
+ */
+export function isNonprofitCatalogStubPr(pr: {
+	headRef?: string | null;
+	title?: string | null;
+}): boolean {
+	if (/(?:^|\/)cursor\/npo-s\d+-b\d+/i.test(pr.headRef?.trim() ?? "")) {
+		return true;
+	}
+	return /\bNPO\s+S\d+\s+B\d+\s+catalog stub\b/i.test(pr.title?.trim() ?? "");
+}
+
+/**
  * Merged agent PRs stay on the log until checksPassed. Closed-without-merge
  * and fully green merges are dropped from the live list.
  */
 export function shouldKeepAgentPrOnLog(pr: PrLogSourcePr): boolean {
 	if (!isAgentPullRequestBranch(pr.headRef)) return false;
+	if (isNonprofitCatalogStubPr(pr)) return false;
 	if (pr.state === "closed") return false;
 	if (pr.state === "merged") return pr.checksPassed !== true;
 	return true;
