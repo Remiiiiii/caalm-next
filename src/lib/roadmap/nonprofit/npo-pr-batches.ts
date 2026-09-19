@@ -24,7 +24,7 @@ export const NPO_PR_BATCHES: NpoPrBatch[] = [
 			"Dual-catalog data model",
 			"Sequential per-task lock engine",
 			"IT portal board",
-			"npo/ PR matching",
+			"cursor/nonprofit/ PR matching",
 		],
 		linkedPrNumber: 86,
 	},
@@ -320,7 +320,7 @@ export const NPO_PR_BATCHES: NpoPrBatch[] = [
 
 export function npoStubBranchName(batch: NpoPrBatch): string {
 	const section = String(batch.sectionNumber).padStart(2, "0");
-	return `cursor/npo-s${section}-b${batch.batch}-340a`;
+	return `cursor/nonprofit/s${section}-b${batch.batch}-340a`;
 }
 
 export function npoStubFileId(batch: NpoPrBatch): string {

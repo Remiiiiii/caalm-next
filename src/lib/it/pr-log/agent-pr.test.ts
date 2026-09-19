@@ -38,7 +38,7 @@ describe("nonprofit catalog stubs stay off the PR log", () => {
 				pr({
 					number: 88,
 					title: "NPO S1 B1 catalog stub",
-					headRef: "cursor/npo-s01-b1-340a",
+					headRef: "cursor/nonprofit/s01-b1-340a",
 					draft: true,
 				}),
 			),
@@ -50,6 +50,15 @@ describe("nonprofit catalog stubs stay off the PR log", () => {
 					title: "NPO S9 B2 catalog stub",
 					headRef: "cursor/npo-s09-b2-340a",
 					draft: true,
+				}),
+			),
+		).toBe(false);
+		expect(
+			shouldKeepAgentPrOnLog(
+				pr({
+					number: 9101,
+					title: "NPO 1.1 Constituent record model",
+					headRef: "cursor/nonprofit/1-1.1-constituent-model",
 				}),
 			),
 		).toBe(false);
@@ -69,7 +78,7 @@ describe("nonprofit catalog stubs stay off the PR log", () => {
 			pr({
 				number: 88,
 				title: "NPO S1 B1 catalog stub",
-				headRef: "cursor/npo-s01-b1-340a",
+				headRef: "cursor/nonprofit/s01-b1-340a",
 			}),
 			pr({
 				number: 80,

@@ -305,7 +305,7 @@ export function lockReasonForTask(
 		if (task.prNumber != null) {
 			return `Waiting for PR #${task.prNumber} to merge with green tests`;
 		}
-		return `Open a PR titled NPO ${task.taskCode} … on branch npo/${section.sectionNumber}-${task.taskCode}-slug`;
+		return `Open a PR titled NPO ${task.taskCode} … on branch cursor/nonprofit/${section.sectionNumber}-${task.taskCode}-slug`;
 	}
 
 	return (
