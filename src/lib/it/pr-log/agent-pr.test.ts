@@ -31,6 +31,56 @@ describe("isAgentPullRequestBranch", () => {
 	});
 });
 
+describe("nonprofit catalog stubs stay off the PR log", () => {
+	it("drops NPO section stub branches and titles", () => {
+		expect(
+			shouldKeepAgentPrOnLog(
+				pr({
+					number: 88,
+					title: "NPO S1 B1 catalog stub",
+					headRef: "cursor/npo-s01-b1-340a",
+					draft: true,
+				}),
+			),
+		).toBe(false);
+		expect(
+			shouldKeepAgentPrOnLog(
+				pr({
+					number: 107,
+					title: "NPO S9 B2 catalog stub",
+					headRef: "cursor/npo-s09-b2-340a",
+					draft: true,
+				}),
+			),
+		).toBe(false);
+		expect(
+			shouldKeepAgentPrOnLog(
+				pr({
+					number: 86,
+					title: "Add Nonprofit Roadmap as a Development project",
+					headRef: "cursor/nonprofit-roadmap-340a",
+				}),
+			),
+		).toBe(true);
+	});
+
+	it("omits catalog stubs from the live overview", () => {
+		const overview = buildPrLogOverview([
+			pr({
+				number: 88,
+				title: "NPO S1 B1 catalog stub",
+				headRef: "cursor/npo-s01-b1-340a",
+			}),
+			pr({
+				number: 80,
+				title: "Open agent PR",
+				headRef: "cursor/open-work-aaaa",
+			}),
+		]);
+		expect(overview.sections.map((s) => s.prNumber)).toEqual([80]);
+	});
+});
+
 describe("buildPrLogOverview", () => {
 	it("turns agent PRs into section cards and skips the rest", () => {
 		const overview = buildPrLogOverview([

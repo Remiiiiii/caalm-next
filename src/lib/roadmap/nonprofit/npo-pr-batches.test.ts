@@ -3,6 +3,7 @@ import { NONPROFIT_ROADMAP_CATALOG } from "../nonprofit-catalog";
 import {
 	linkedPrNumbersForSection,
 	NPO_PR_BATCHES,
+	npoCatalogDisplayTitleForPr,
 	productNpoPrBatches,
 } from "./npo-pr-batches";
 import { NONPROFIT_SECTION_CATALOGS } from "./section-catalogs";
@@ -41,5 +42,12 @@ describe("nonprofit section catalogs", () => {
 				linkedPrNumbersForSection(section.sectionNumber),
 			);
 		}
+	});
+
+	it("labels a catalog PR with its section batch, not a bare number", () => {
+		expect(npoCatalogDisplayTitleForPr(88)).toMatch(/S1 B1/);
+		expect(npoCatalogDisplayTitleForPr(88)).toMatch(/1\.1–1\.5/);
+		expect(npoCatalogDisplayTitleForPr(92)).toMatch(/1\.11/);
+		expect(npoCatalogDisplayTitleForPr(86)).toMatch(/S0 B1/);
 	});
 });
