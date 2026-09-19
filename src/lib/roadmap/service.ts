@@ -35,6 +35,7 @@ import {
 	type ResolvedPullRequest,
 	resolveCatalogFromPrMatch,
 	resolveSectionFromPrMatch,
+	shouldListRoadmapSectionPullRequest,
 } from "./github-pr-match";
 import {
 	buildTaskTree,
@@ -577,15 +578,19 @@ export async function getOverview(options?: {
 		const waitingNumber = catalogNumbers.find((number) =>
 			openByNumber.has(number),
 		);
-		const prLinks = catalogNumbers.map((number) => {
-			const meta = prLookup.get(number);
-			return {
-				number,
-				title: resolvedCatalogPrTitle(number, meta?.title, catalogKey),
-				state: meta?.state,
-				checksPassed: checksPassedByPr.get(number) === true,
-			};
-		});
+		const prLinks = catalogNumbers
+			.map((number) => {
+				const meta = prLookup.get(number);
+				return {
+					number,
+					title: resolvedCatalogPrTitle(number, meta?.title, catalogKey),
+					state: meta?.state,
+					checksPassed: checksPassedByPr.get(number) === true,
+				};
+			})
+			.filter((pr) =>
+				shouldListRoadmapSectionPullRequest(pr.state, catalogKey),
+			);
 		const waitingChecksNumber = catalogNumbers.find(
 			(number) =>
 				prLookup.get(number)?.state === "merged" &&
@@ -698,7 +703,7 @@ export async function getSectionPullRequests(sectionId: string): Promise<
 	if (!section) throw new RoadmapError("Section not found", 404);
 	const catalogKey = catalogKeyFromEntityId(sectionId);
 	const numbers = getCatalogLinkedPrNumbers(section.sectionNumber, catalogKey);
-	return Promise.all(
+	const pullRequests = await Promise.all(
 		numbers.map(async (number) => {
 			const live = await fetchPullRequestStatus({ prNumber: number });
 			let checksPassed = false;
@@ -720,6 +725,9 @@ export async function getSectionPullRequests(sectionId: string): Promise<
 				checksPassed,
 			};
 		}),
+	);
+	return pullRequests.filter((pr) =>
+		shouldListRoadmapSectionPullRequest(pr.state, catalogKey),
 	);
 }
 

@@ -3,6 +3,7 @@ import {
 	matchPullRequestToSection,
 	matchPullRequestToTask,
 	resolveCatalogFromPrMatch,
+	shouldListRoadmapSectionPullRequest,
 } from "./github-pr-match";
 
 describe("nonprofit PR matching", () => {
@@ -36,5 +37,14 @@ describe("nonprofit PR matching", () => {
 	it("does not let a CLM 1.1 title complete the nonprofit 1.1 task", () => {
 		expect(matchPullRequestToTask(clmSecurity, 1, "1.1", "npo")).toBe(false);
 		expect(resolveCatalogFromPrMatch(clmSecurity)?.catalogKey).toBe("clm");
+	});
+
+	it("hides closed and merged PRs on the nonprofit board only", () => {
+		expect(shouldListRoadmapSectionPullRequest("open", "npo")).toBe(true);
+		expect(shouldListRoadmapSectionPullRequest("unknown", "npo")).toBe(true);
+		expect(shouldListRoadmapSectionPullRequest("closed", "npo")).toBe(false);
+		expect(shouldListRoadmapSectionPullRequest("merged", "npo")).toBe(false);
+		expect(shouldListRoadmapSectionPullRequest("closed", "clm")).toBe(true);
+		expect(shouldListRoadmapSectionPullRequest("merged", "clm")).toBe(true);
 	});
 });

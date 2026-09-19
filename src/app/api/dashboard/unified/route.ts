@@ -1,9 +1,11 @@
 import type { NextRequest } from "next/server";
 import { Query } from "node-appwrite";
 import { isPendingInvitationStatus } from "@/constants/status";
+import { getActiveUsersCount } from "@/lib/actions/user.actions";
 import { LicenseService } from "@/lib/api/licenses/services/LicenseService";
 import { createApiAdminClient } from "@/lib/appwrite/api-client";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { computeContractKpis } from "@/lib/dashboard/contract-kpis";
 import { computeRiskImpact } from "@/lib/dashboard/risk-impact.service";
 import { CACHE_KEYS, CACHE_TTLS } from "@/lib/services/cache-keys";
 import CacheManager from "@/lib/services/cache-manager";
@@ -41,8 +43,8 @@ export async function GET(request: NextRequest) {
 		}
 
 		// Check cache first (include pagination in cache key)
-		// v4: includes riskImpact + dashboardLicenses (fewer client round-trips)
-		const cacheKey = `${CACHE_KEYS.dashboard.unified(orgId, userId)}:v4:page:${page}:limit:${limit}`;
+		// v9: recent files list uses 20 rows so version badges can see re-uploads
+		const cacheKey = `${CACHE_KEYS.dashboard.unified(orgId, userId)}:v9:page:${page}:limit:${limit}`;
 
 		// Try to get cached data first to check ETag
 		const existingCache = (await import("@/lib/services/redis-cache").then(
@@ -80,7 +82,6 @@ export async function GET(request: NextRequest) {
 				// Fetch all data simultaneously using Promise.allSettled for error handling
 				const [
 					contractsResult,
-					dashboardContractsResult,
 					usersResult,
 					invitationsResult,
 					filesResult,
@@ -100,17 +101,6 @@ export async function GET(request: NextRequest) {
 							Query.orderDesc("$createdAt"),
 							Query.limit(limit),
 							Query.offset(offset),
-						],
-					}),
-
-					// Dashboard widgets: upcoming expiries (replaces separate /api/contracts/all)
-					tablesDB.listRows({
-						databaseId: appwriteConfig.databaseId || "default-db",
-						tableId: appwriteConfig.contractsCollectionId || "contracts",
-						queries: [
-							Query.isNotNull("contractExpiryDate"),
-							Query.orderAsc("contractExpiryDate"),
-							Query.limit(100),
 						],
 					}),
 
@@ -136,7 +126,7 @@ export async function GET(request: NextRequest) {
 					tablesDB.listRows({
 						databaseId: appwriteConfig.databaseId || "default-db",
 						tableId: appwriteConfig.filesCollectionId || "files",
-						queries: [Query.orderDesc("$createdAt"), Query.limit(5)],
+						queries: [Query.orderDesc("$createdAt"), Query.limit(20)],
 					}),
 
 					// Reports data - reduced limit
@@ -210,7 +200,6 @@ export async function GET(request: NextRequest) {
 
 				// Extract results safely
 				const contracts = getResult(contractsResult);
-				const dashboardContracts = getResult(dashboardContractsResult);
 				const users = getResult(usersResult);
 				const invitations = getResult(invitationsResult);
 				const files = getResult(filesResult);
@@ -220,9 +209,29 @@ export async function GET(request: NextRequest) {
 				const recentActivities = getResult(recentActivitiesResult);
 				const calendarEvents = getResult(calendarEventsResult);
 
+				const [kpiContractsResult, activeUsers] = await Promise.all([
+					tablesDB.listRows({
+						databaseId: appwriteConfig.databaseId || "default-db",
+						tableId: appwriteConfig.contractsCollectionId || "contracts",
+						queries: [Query.limit(500)],
+					}),
+					getActiveUsersCount(),
+				]);
+				const kpiRows =
+					kpiContractsResult.rows || kpiContractsResult.documents || [];
+				const {
+					totalContracts,
+					expiringContracts,
+					complianceRate,
+				} = computeContractKpis(
+					kpiRows,
+					kpiContractsResult.total ?? kpiRows.length,
+				);
+
+				// Same 500-row scan as /contracts metrics — widget counts stay in sync
 				const now = new Date();
 				now.setHours(0, 0, 0, 0);
-				const mappedDashboardContracts = dashboardContracts.documents.map(
+				const mappedDashboardContracts = kpiRows.map(
 					(contract: Record<string, unknown>) => {
 						let daysUntilExpiry: number | undefined =
 							typeof contract.daysUntilExpiry === "number"
@@ -230,6 +239,7 @@ export async function GET(request: NextRequest) {
 								: undefined;
 						let contractStatus =
 							typeof contract.status === "string" ? contract.status : undefined;
+						let expiredByDate = false;
 						const expiryRaw = contract.contractExpiryDate;
 						if (typeof expiryRaw === "string" && expiryRaw) {
 							const expiryStr = expiryRaw.split("T")[0];
@@ -242,7 +252,8 @@ export async function GET(request: NextRequest) {
 										(1000 * 60 * 60 * 24),
 								);
 							}
-							if (expiryDate <= now) {
+							if (expiryDate < now) {
+								expiredByDate = true;
 								contractStatus = "expired";
 							}
 						}
@@ -263,7 +274,7 @@ export async function GET(request: NextRequest) {
 							contractName: contract.contractName || "Unnamed Contract",
 							contractExpiryDate: contract.contractExpiryDate,
 							startDate: contract.startDate,
-							isExpired: contract.isExpired || false,
+							isExpired: Boolean(contract.isExpired) || expiredByDate,
 							daysUntilExpiry,
 							status: contractStatus,
 							department: contract.department,
@@ -293,31 +304,6 @@ export async function GET(request: NextRequest) {
 						};
 					},
 				);
-
-				// Calculate dashboard stats
-				const totalContracts = contracts.total;
-				const expiringContracts = contracts.documents.filter(
-					(contract: any) => {
-						const expiryDate = new Date(contract.expiryDate);
-						const thirtyDaysFromNow = new Date();
-						thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
-						return expiryDate <= thirtyDaysFromNow && expiryDate >= new Date();
-					},
-				).length;
-
-				const activeUsers = users.documents.filter(
-					(user: any) => user.status === "active",
-				).length;
-
-				const compliantContracts = contracts.documents.filter(
-					(contract: any) =>
-						contract.compliance === "up-to-date" ||
-						contract.compliance === "compliant",
-				).length;
-				const complianceRate =
-					totalContracts > 0
-						? Math.round((compliantContracts / totalContracts) * 100)
-						: 0;
 
 				// Calculate notifications stats
 				const unreadNotifications = notificationsStats.documents.filter(

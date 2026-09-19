@@ -71,22 +71,34 @@ describe("nonprofit roadmap engine", () => {
 		expect(npo.sections[0]?.status).toBe("complete");
 		expect(npo.sections[0]?.prLinks?.map((pr) => pr.number)).toEqual([86]);
 		expect(npo.sections[1]?.prLinks?.map((pr) => pr.number)).toEqual([
-			88, 89, 92,
+			109, 113, 117,
 		]);
-		expect(npo.sections[2]?.prLinks?.map((pr) => pr.number)).toEqual([90, 93]);
-		expect(npo.sections[3]?.prLinks?.map((pr) => pr.number)).toEqual([87, 91]);
-		expect(npo.sections[4]?.prLinks?.map((pr) => pr.number)).toEqual([94, 97]);
-		expect(npo.sections[5]?.prLinks?.map((pr) => pr.number)).toEqual([95, 100]);
-		expect(npo.sections[6]?.prLinks?.map((pr) => pr.number)).toEqual([98, 99]);
-		expect(npo.sections[7]?.prLinks?.map((pr) => pr.number)).toEqual([96, 103]);
+		expect(npo.sections[2]?.prLinks?.map((pr) => pr.number)).toEqual([
+			118, 114,
+		]);
+		expect(npo.sections[3]?.prLinks?.map((pr) => pr.number)).toEqual([
+			116, 110,
+		]);
+		expect(npo.sections[4]?.prLinks?.map((pr) => pr.number)).toEqual([
+			119, 115,
+		]);
+		expect(npo.sections[5]?.prLinks?.map((pr) => pr.number)).toEqual([
+			112, 111,
+		]);
+		expect(npo.sections[6]?.prLinks?.map((pr) => pr.number)).toEqual([
+			127, 126,
+		]);
+		expect(npo.sections[7]?.prLinks?.map((pr) => pr.number)).toEqual([
+			122, 128,
+		]);
 		expect(npo.sections[8]?.prLinks?.map((pr) => pr.number)).toEqual([
-			104, 102,
+			124, 129,
 		]);
 		expect(npo.sections[9]?.prLinks?.map((pr) => pr.number)).toEqual([
-			105, 107,
+			120, 121,
 		]);
 		expect(npo.sections[10]?.prLinks?.map((pr) => pr.number)).toEqual([
-			106, 101,
+			123, 125,
 		]);
 		expect(npo.sections[1]?.prLinks?.[0]?.title).toMatch(/S1 B1/);
 		expect(npo.sections[1]?.status).toBe("in_progress");

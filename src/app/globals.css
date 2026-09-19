@@ -229,6 +229,11 @@
 		width: 80%;
 		transition: width 150ms ease-in;
 	}
+
+	/* Sit the bar under a rounded tab box, not on its inner edge */
+	.tabs-underline-outside::after {
+		bottom: -0.75rem;
+	}
 	.primary-btn,
 	.btn-primary,
 	.shad-active,
@@ -829,6 +834,11 @@
 		@apply absolute top-0 left-0 right-0 h-4 rounded-t-md;
 		background: #d6d7d8;
 		opacity: 0.7;
+	}
+
+	/* Cap is absolute, so the next sibling needs a gap under the 16px bar */
+	.glass-card-cap + * {
+		margin-top: 1.25rem;
 	}
 
 	.glass-card-inner {

@@ -2,11 +2,14 @@
 
 import {
 	Activity,
+	AlertCircle,
 	AlertTriangle,
+	CalendarDays,
 	CheckCircle,
+	Clock,
 	Database,
 	FileStack,
-	FileText,
+	Link,
 	RefreshCw,
 	Send,
 	Server,
@@ -25,16 +28,19 @@ import useSWR from "swr";
 import CalendarView from "@/components/CalendarView";
 import CompanyNewsFeed from "@/components/CompanyNewsFeed";
 import ContractExpiryAlertsWidget from "@/components/ContractExpiryAlertsWidget";
+import type { Contract } from "@/components/contract-expiry-alerts/types";
 import ContractStatusPieChart from "@/components/ContractStatusPieChart";
 import DepartmentPerformanceWidget from "@/components/DepartmentPerformanceWidget";
 import { DashboardGreeting } from "@/components/dashboard/DashboardGreeting";
 import { RiskImpactHeroCard } from "@/components/dashboard/RiskImpactHeroCard";
 import { WeatherBriefingLauncher } from "@/components/dashboard-briefing/WeatherBriefingLauncher";
-import FormattedDateTime from "@/components/FormattedDateTime";
+import {
+	RecentFilesUploadedCard,
+	type RecentFileItem,
+} from "@/components/dashboard/RecentFilesList";
 import QuickNotesWidget from "@/components/QuickNotesWidget";
 import RecentActivity from "@/components/RecentActivity";
 import { OrgUnitPicker } from "@/components/settings/OrgUnitPicker";
-import Thumbnail from "@/components/Thumbnail";
 import Avatar from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,10 +49,15 @@ import {
 	SelectScrollable,
 } from "@/components/ui/select-scrollable";
 import {
-	FileItemSkeleton,
 	StatCardSkeleton,
 	TableRowSkeleton,
 } from "@/components/ui/skeletons";
+import {
+	complianceMetricTone,
+	complianceNeedReviewCount,
+	MetricStatCard,
+} from "@/components/ui/metric-stat-card";
+import { MailClock } from "@/components/ui/mail-clock-icon";
 import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import { WidgetCarousel } from "@/components/ui/widget-carousel";
 import { useOrganization } from "@/contexts/OrganizationContext";
@@ -93,20 +104,6 @@ const fetchUninvitedUsers = (refresh = false) =>
 		refresh ? "/api/users/uninvited?refresh=1" : "/api/users/uninvited",
 	);
 
-interface FileDocument {
-	$id: string;
-	$createdAt: string;
-	type: string;
-	name: string;
-	url: string;
-	extension: string;
-	size?: number;
-	owner?: string;
-	accountId?: string;
-	users?: string[];
-	bucketFileId?: string;
-}
-
 interface AdminDashboardProps {
 	user?:
 		| (Models.User<Models.Preferences> & {
@@ -134,6 +131,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 		stats: unifiedStats,
 		files,
 		invitations,
+		contracts,
 		riskImpact,
 		isLoading: unifiedLoading,
 		error: unifiedError,
@@ -153,6 +151,11 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 		},
 	);
 	const uninvitedUsers = uninvitedRes?.data ?? [];
+	const adminComplianceTone = complianceMetricTone(unifiedStats.complianceRate);
+	const adminNeedReview = complianceNeedReviewCount(
+		unifiedStats.totalContracts,
+		unifiedStats.complianceRate,
+	);
 
 	const { toast } = useToast();
 	const { ensureStepUp } = useStepUp();
@@ -540,6 +543,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 							maxVisible={2}
 							showSettings={false}
 							compact={true}
+							contracts={unifiedLoading ? undefined : (contracts as Contract[])}
 						/>
 						<ContractStatusPieChart />
 						<DepartmentPerformanceWidget />
@@ -555,77 +559,50 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 					[1, 2, 3, 4].map((index) => <StatCardSkeleton key={index} />)
 				) : (
 					<>
-						{/* Total Contracts */}
-						<Card className="glass-card">
-							<div className="glass-card-cap" />
-							<CardContent className="p-4 sm:p-6">
-								<div className="flex items-center justify-between">
-									<div>
-										<p className="text-sm font-medium sidebar-gradient-text">
-											Total Contracts
-										</p>
-										<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-											<span>{unifiedStats.totalContracts}</span>
-											<StatCardIcon className="ml-2" icon={FileStack} />
-										</div>
-									</div>
-								</div>
-							</CardContent>
-						</Card>
-
-						{/* Expiring Soon */}
-						<Card className="glass-card">
-							<div className="glass-card-cap" />
-							<CardContent className="p-4 sm:p-6">
-								<div className="flex items-center justify-between">
-									<div>
-										<p className="text-sm font-medium sidebar-gradient-text">
-											Expiring Soon
-										</p>
-										<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-											<span>{unifiedStats.expiringContracts}</span>
-											<StatCardIcon className="ml-2" icon={AlertTriangle} />
-										</div>
-									</div>
-								</div>
-							</CardContent>
-						</Card>
-
-						{/* Active Users */}
-						<Card className="glass-card">
-							<div className="glass-card-cap" />
-							<CardContent className="p-4 sm:p-6">
-								<div className="flex items-center justify-between">
-									<div>
-										<p className="text-sm font-medium sidebar-gradient-text">
-											Active Users
-										</p>
-										<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-											<span>{unifiedStats.activeUsers}</span>
-											<StatCardIcon className="ml-2" icon={Users} />
-										</div>
-									</div>
-								</div>
-							</CardContent>
-						</Card>
-
-						{/* Compliance Rate */}
-						<Card className="glass-card">
-							<div className="glass-card-cap" />
-							<CardContent className="p-4 sm:p-6">
-								<div className="flex items-center justify-between">
-									<div>
-										<p className="text-sm font-medium sidebar-gradient-text">
-											Compliance Rate
-										</p>
-										<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-											<span>{unifiedStats.complianceRate}</span>
-											<StatCardIcon className="ml-2" icon={CheckCircle} />
-										</div>
-									</div>
-								</div>
-							</CardContent>
-						</Card>
+						<MetricStatCard
+							title="Total Contracts"
+							value={unifiedStats.totalContracts}
+							description="Across all departments"
+							icon={FileStack}
+						/>
+						<MetricStatCard
+							title="Expiring Soon"
+							value={unifiedStats.expiringContracts}
+							description="Within 30 days"
+							icon={AlertTriangle}
+							iconTone={
+								unifiedStats.expiringContracts > 0 ? "warning" : "default"
+							}
+							dynamicIcon={
+								unifiedStats.expiringContracts > 0 ? Clock : undefined
+							}
+							dynamicTone="warning"
+							valueTone={
+								unifiedStats.expiringContracts > 0 ? "warning" : "default"
+							}
+						/>
+						<MetricStatCard
+							title="Active Users"
+							value={unifiedStats.activeUsers}
+							description="Active accounts in this org"
+							icon={Users}
+						/>
+						<MetricStatCard
+							title="Compliance Rate"
+							value={unifiedStats.complianceRate}
+							description={
+								adminNeedReview != null
+									? `${adminNeedReview} of ${unifiedStats.totalContracts} contracts need review`
+									: "Active contracts vs total"
+							}
+							icon={CheckCircle}
+							iconTone={adminComplianceTone}
+							dynamicIcon={
+								adminComplianceTone === "danger" ? AlertCircle : CheckCircle
+							}
+							dynamicTone={adminComplianceTone}
+							valueTone={adminComplianceTone}
+						/>
 					</>
 				)}
 			</div>
@@ -777,7 +754,13 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 					{user && (
 						<Card className="glass-card min-w-0">
 							<div className="glass-card-cap" />
-							<CardContent className="min-w-0 overflow-hidden p-3 sm:p-4">
+							<CardHeader className="mb-1 border-b border-slate-200/80 pb-4">
+								<CardTitle className="flex items-center gap-2.5 text-lg font-bold sidebar-gradient-text">
+									<StatCardIcon icon={CalendarDays} />
+									Calendar
+								</CardTitle>
+							</CardHeader>
+							<CardContent className="min-w-0 overflow-hidden px-3 pb-3 pt-2 sm:px-4 sm:pb-4">
 								<CalendarView
 									user={user as any}
 									onEventCreate={() =>
@@ -899,64 +882,13 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 
 				{/* Row 3: Recent Files Uploaded (col 1) | Recent Activity (col 2) */}
 				<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-					{/* Recent Files Uploaded */}
-					<Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
-						<CardHeader className="pb-3">
-							<CardTitle className="flex items-center text-lg font-bold text-center sidebar-gradient-text">
-								<FileText className="h-5 w-5 mr-2" />
-								Recent Files Uploaded
-							</CardTitle>
-						</CardHeader>
-						<CardContent className="pt-0">
-							{unifiedLoading ? (
-								<div className="space-y-3">
-									{[1, 2, 3].map((i) => (
-										<FileItemSkeleton key={i} />
-									))}
-								</div>
-							) : files && (files as any[]).length > 0 ? (
-								<div className="max-h-[400px] overflow-y-auto pr-2 space-y-3">
-									{(files as any[]).slice(0, 5).map((file: any) => {
-										const fileDoc = file as unknown as FileDocument;
-										return (
-											<div
-												key={fileDoc.$id}
-												className="flex items-center gap-2 p-3 border border-border rounded-lg"
-											>
-												<Thumbnail
-													type={fileDoc.type}
-													extension={fileDoc.extension}
-													url={fileDoc.url}
-												/>
-												<div className="flex flex-col gap-1 min-w-0 flex-1">
-													<h4 className="font-medium text-navy truncate text-sm">
-														{fileDoc.name}
-													</h4>
-													<p className="text-xs text-slate-dark">
-														<FormattedDateTime
-															date={fileDoc.$createdAt as unknown as string}
-															className="text-xs text-slate-light"
-														/>
-													</p>
-												</div>
-											</div>
-										);
-									})}
-									{(files as any[]).length > 5 && (
-										<div className="text-center py-2">
-											<p className="text-xs text-slate-light">
-												+{(files as any[]).length - 5} more files
-											</p>
-										</div>
-									)}
-								</div>
-							) : (
-								<p className="text-center text-slate-light text-sm py-4">
-									No files uploaded
-								</p>
-							)}
-						</CardContent>
-					</Card>
+					<RecentFilesUploadedCard
+						className="bg-white/30 backdrop-blur border border-white/40 shadow-lg"
+						showCap={false}
+						files={files as RecentFileItem[]}
+						isLoading={unifiedLoading}
+						limit={10}
+					/>
 
 					{/* Recent Activity */}
 					<RecentActivity />
@@ -970,8 +902,9 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 					<p className="mb-1.5 text-[10.5px] font-medium uppercase tracking-[0.1em] text-[#0f5384]">
 						User management
 					</p>
-					<h2 className="text-xl font-semibold tracking-tight text-slate-700">
-						Send invite link
+					<h2 className="flex items-center gap-2.5 text-xl font-semibold tracking-tight sidebar-gradient-text">
+						<StatCardIcon icon={Link} />
+						Send Invite Link
 					</h2>
 					<p className="mt-1.5 text-[12.5px] leading-relaxed text-slate-600">
 						Grant a new person access to CAALM by selecting their identity and
@@ -1123,8 +1056,9 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 
 			{/* Pending Invitations */}
 			<Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
-				<CardHeader>
-					<CardTitle className="flex left-0 text-lg font-bold text-center sidebar-gradient-text">
+				<CardHeader className="mb-4 border-b border-slate-200/80 pb-4">
+					<CardTitle className="flex items-center gap-2.5 text-lg font-bold sidebar-gradient-text">
+						<StatCardIcon icon={MailClock} />
 						Pending Invitations
 					</CardTitle>
 				</CardHeader>

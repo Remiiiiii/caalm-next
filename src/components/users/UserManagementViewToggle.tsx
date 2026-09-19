@@ -3,7 +3,6 @@
 import {
 	GitBranch,
 	KeyRound,
-	type LucideIcon,
 	Network,
 	Share2,
 	Table,
@@ -12,7 +11,10 @@ import {
 	GRAPH_ORIENTATION_STORAGE_KEY,
 	type GraphOrientation,
 } from "@/lib/users/graph-orientation";
-import { cn } from "@/lib/utils";
+import {
+	SegmentedToggle,
+	type SegmentedToggleTab,
+} from "@/components/ui/segmented-toggle";
 
 export type UserManagementViewType = "table" | "diagram";
 export type GraphLineage = "reporting" | "assignment";
@@ -22,75 +24,7 @@ export { GRAPH_ORIENTATION_STORAGE_KEY };
 export const USER_MANAGEMENT_VIEW_STORAGE_KEY =
 	"user-management-view-preference";
 
-type SegmentTab<T extends string> = {
-	value: T;
-	label: string;
-	icon: LucideIcon;
-	iconClassName?: string;
-	hideLabel?: boolean;
-	ariaLabel?: string;
-};
-
-function SegmentedToggle<T extends string>({
-	value,
-	onChange,
-	tabs,
-	ariaLabel,
-}: {
-	value: T;
-	onChange: (value: T) => void;
-	tabs: Array<SegmentTab<T>>;
-	ariaLabel: string;
-}) {
-	return (
-		<div
-			role="tablist"
-			aria-label={ariaLabel}
-			className="relative inline-grid grid-cols-2 items-center rounded-full border border-slate-200 bg-slate-100 p-1"
-		>
-			<span
-				aria-hidden
-				className={cn(
-					"pointer-events-none absolute top-1 bottom-1 left-1 w-[calc((100%-0.5rem)/2)] rounded-full bg-white shadow-sm",
-					"transition-transform duration-200 ease-out",
-					tabs[1] && value === tabs[1].value
-						? "translate-x-full"
-						: "translate-x-0",
-				)}
-			/>
-			{tabs.map((tab) => {
-				const selected = value === tab.value;
-				const Icon = tab.icon;
-				return (
-					<button
-						key={tab.value}
-						type="button"
-						role="tab"
-						aria-label={tab.ariaLabel ?? tab.label}
-						aria-selected={selected}
-						onClick={() => onChange(tab.value)}
-						className={cn(
-							"relative z-10 inline-flex cursor-pointer items-center justify-center gap-2 rounded-full py-1.5 text-sm font-medium transition-colors duration-200",
-							tab.hideLabel ? "px-2.5" : "px-4",
-							"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
-							selected
-								? "text-[#0f5384]"
-								: "text-slate-500 hover:text-slate-700",
-						)}
-					>
-						<Icon
-							className={cn("h-4 w-4", tab.iconClassName)}
-							aria-hidden
-						/>
-						{tab.hideLabel ? null : tab.label}
-					</button>
-				);
-			})}
-		</div>
-	);
-}
-
-const VIEW_TABS: Array<SegmentTab<UserManagementViewType>> = [
+const VIEW_TABS: Array<SegmentedToggleTab<UserManagementViewType>> = [
 	{ value: "table", label: "Table", icon: Table, ariaLabel: "Table view" },
 	{
 		value: "diagram",
@@ -100,7 +34,7 @@ const VIEW_TABS: Array<SegmentTab<UserManagementViewType>> = [
 	},
 ];
 
-const LINEAGE_TABS: Array<SegmentTab<GraphLineage>> = [
+const LINEAGE_TABS: Array<SegmentedToggleTab<GraphLineage>> = [
 	{
 		value: "reporting",
 		label: "Reporting",
@@ -115,7 +49,7 @@ const LINEAGE_TABS: Array<SegmentTab<GraphLineage>> = [
 	},
 ];
 
-const ORIENTATION_TABS: Array<SegmentTab<GraphOrientation>> = [
+const ORIENTATION_TABS: Array<SegmentedToggleTab<GraphOrientation>> = [
 	{
 		value: "ltr",
 		label: "Side",

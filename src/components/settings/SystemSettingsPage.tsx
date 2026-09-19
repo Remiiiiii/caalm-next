@@ -171,16 +171,10 @@ export default function SystemSettingsPage() {
 	return (
 		<div className="space-y-6">
 			<Tabs defaultValue="platform">
-				<TabsList className="bg-white/60">
-					<TabsTrigger value="platform" className="cursor-pointer">
-						Platform
-					</TabsTrigger>
-					<TabsTrigger value="security" className="cursor-pointer">
-						Security defaults
-					</TabsTrigger>
-					<TabsTrigger value="integrations" className="cursor-pointer">
-						Integrations
-					</TabsTrigger>
+				<TabsList>
+					<TabsTrigger value="platform">Platform</TabsTrigger>
+					<TabsTrigger value="security">Security defaults</TabsTrigger>
+					<TabsTrigger value="integrations">Integrations</TabsTrigger>
 				</TabsList>
 
 				<TabsContent value="platform" className="mt-4">

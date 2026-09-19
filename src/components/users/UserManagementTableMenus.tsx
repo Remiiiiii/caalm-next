@@ -14,6 +14,7 @@ import {
 	UserCheck,
 } from "lucide-react";
 import { useState } from "react";
+import RoundedUnderlineTabs from "@/components/RoundedUnderlineTabs";
 import { Button } from "@/components/ui/button";
 import {
 	AppDropdownMenuCheckboxItem,
@@ -86,34 +87,17 @@ export function UserManagementFilterMenu({
 
 	return (
 		<AppDropdownMenuContent align="end" className="w-80 p-0">
-			<div
-				role="tablist"
+			<RoundedUnderlineTabs
+				className="px-2 pt-1"
 				aria-label="Filter categories"
-				className="grid grid-cols-4 border-b border-slate-200/80 px-2 pt-1"
-			>
-				{FILTER_TABS.map((item) => {
-					const selected = tab === item.id;
-					return (
-						<button
-							key={item.id}
-							type="button"
-							role="tab"
-							aria-selected={selected}
-							data-state={selected ? "active" : undefined}
-							onClick={() => setTab(item.id)}
-							className={cn(
-								"tabs-underline inline-flex cursor-pointer items-center justify-center px-2 py-2.5 text-xs font-medium",
-								"rounded-none border-0 bg-transparent shadow-none",
-								"text-slate-600 transition-colors duration-200 hover:text-slate-700",
-								"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
-								selected && "sidebar-gradient-text",
-							)}
-						>
-							{item.label}
-						</button>
-					);
-				})}
-			</div>
+				variant="bar"
+				value={tab}
+				onValueChange={(next) => setTab(next as FilterTab)}
+				tabs={FILTER_TABS.map((item) => ({
+					value: item.id,
+					label: item.label,
+				}))}
+			/>
 
 			<div className="max-h-64 overflow-y-auto p-1">
 				{tab === "role" ? (

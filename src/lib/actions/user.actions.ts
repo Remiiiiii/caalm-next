@@ -19,6 +19,7 @@ import {
 import { ROLE_DASHBOARD_FALLBACK } from "@/lib/rbac/role-dashboard-metadata";
 import { listCostCenters } from "@/lib/org/org-units.service";
 import CacheManager from "@/lib/services/cache-manager";
+import { logAuditEvent } from "@/lib/services/audit-logger";
 import { avatarPlaceholderUrl, type UserDivision } from "../../../constants";
 import { createAdminClient, createSessionClient } from "../appwrite";
 import { appwriteConfig } from "../appwrite/config";
@@ -1227,6 +1228,23 @@ export const createInvitation = async ({
 		});
 		console.log("createInvitation: Database row created successfully");
 
+		void logAuditEvent({
+			event_id: `invite_create_${row.$id}`,
+			event_title: `Invitation sent: ${email}`,
+			action: "create",
+			source: "caalm",
+			user_id: invitedBy || "system",
+			user_name: invitedBy || "User",
+			user_email: "",
+			orgId: orgId || "default_organization",
+			status: "success",
+			module: "governance",
+			target_type: "invitation",
+			target_id: row.$id,
+			target_label: email,
+			summary: `Invited ${name || email} as ${normalizedRole}`,
+		});
+
 		// Send SMS notification to admins, executives, and managers
 		try {
 			await notifyInvitationSent(
@@ -1471,6 +1489,23 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
 		tableId: INVITATIONS_COLLECTION,
 		rowId: invite.$id,
 		data: { status: INVITATION_STATUS.ACCEPTED },
+	});
+
+	void logAuditEvent({
+		event_id: `invite_accept_${invite.$id}`,
+		event_title: `Invitation accepted: ${invite.email}`,
+		action: "update",
+		source: "caalm",
+		user_id: user.$id,
+		user_name: String(invite.name || user.fullName || invite.email),
+		user_email: String(invite.email || ""),
+		orgId: inviteOrgId,
+		status: "success",
+		module: "governance",
+		target_type: "invitation",
+		target_id: String(invite.$id),
+		target_label: String(invite.email || ""),
+		summary: `${invite.name || invite.email} accepted invite as ${normalizedInviteRole}`,
 	});
 
 	// Send SMS notification to admins, executives, and department managers
