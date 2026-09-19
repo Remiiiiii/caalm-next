@@ -99,6 +99,6 @@ describe("nonprofit roadmap catalog", () => {
 		expect(engine).toMatch(/What/);
 		expect(engine).toMatch(/Where/);
 		expect(engine).toMatch(/Why/);
-		expect(engine).toMatch(/npo\//);
+		expect(engine).toMatch(/cursor\/nonprofit\//);
 	});
 });

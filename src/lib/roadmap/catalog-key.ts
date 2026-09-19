@@ -21,7 +21,13 @@ export function catalogIdPrefix(key: RoadmapCatalogKey): string {
 	return key === "npo" ? "npo_" : "";
 }
 
-/** Git branch prefix: clm/0-0.1-slug vs npo/0-0.1-slug */
+/** Git branch prefix: clm/0-0.1-slug vs cursor/nonprofit/0-0.1-slug */
 export function catalogBranchPrefix(key: RoadmapCatalogKey): string {
-	return key === "npo" ? "npo" : "clm";
+	return key === "npo" ? "cursor/nonprofit" : "clm";
+}
+
+/** Canonical prefix plus legacy `npo/` so older stub branches still match. */
+export function catalogBranchPrefixes(key: RoadmapCatalogKey): string[] {
+	const canonical = catalogBranchPrefix(key);
+	return key === "npo" ? [canonical, "npo"] : [canonical];
 }
