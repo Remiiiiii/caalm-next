@@ -219,6 +219,218 @@ describe("computeUnlocked", () => {
 		expect(snapshot.tasks.find((t) => t.$id === "t2.1")?.status).toBe("locked");
 	});
 
+	it("sequential mode unlocks only the next incomplete task", () => {
+		const sections = [
+			section({
+				$id: "s0",
+				sectionNumber: 0,
+				title: "Engine",
+				status: "available",
+			}),
+			section({
+				$id: "s1",
+				sectionNumber: 1,
+				title: "CRM",
+				status: "locked",
+			}),
+		];
+		const tasks = [
+			task({
+				$id: "t0.1",
+				sectionId: "s0",
+				taskCode: "0.1",
+				title: "Dual catalog",
+				orderIndex: 0,
+				status: "locked",
+			}),
+			task({
+				$id: "t0.2",
+				sectionId: "s0",
+				taskCode: "0.2",
+				title: "Sequential lock",
+				orderIndex: 1,
+				status: "locked",
+			}),
+			task({
+				$id: "t1.1",
+				sectionId: "s1",
+				taskCode: "1.1",
+				orderIndex: 0,
+				status: "locked",
+			}),
+		];
+
+		const { snapshot } = computeUnlocked({
+			sections,
+			tasks,
+			sequentialTasks: true,
+		});
+		expect(snapshot.tasks.find((t) => t.$id === "t0.1")?.status).toBe(
+			"available",
+		);
+		expect(snapshot.tasks.find((t) => t.$id === "t0.2")?.status).toBe("locked");
+		expect(snapshot.tasks.find((t) => t.$id === "t1.1")?.status).toBe("locked");
+		expect(snapshot.sections.find((s) => s.$id === "s0")?.status).toBe(
+			"in_progress",
+		);
+		expect(snapshot.sections.find((s) => s.$id === "s1")?.status).toBe(
+			"locked",
+		);
+		expect(
+			lockReasonForTask(snapshot.tasks.find((t) => t.$id === "t0.2")!, {
+				...snapshot,
+				sequentialTasks: true,
+			}),
+		).toMatch(/0\.1/);
+		expect(
+			lockReasonForTask(snapshot.tasks.find((t) => t.$id === "t1.1")!, {
+				...snapshot,
+				sequentialTasks: true,
+			}),
+		).toMatch(/section 0/i);
+	});
+
+	it("sequential mode opens the next task after the current one completes", () => {
+		const sections = [
+			section({
+				$id: "s1",
+				sectionNumber: 1,
+				title: "CRM",
+				status: "in_progress",
+			}),
+		];
+		const tasks = [
+			task({
+				$id: "t1.1",
+				sectionId: "s1",
+				taskCode: "1.1",
+				orderIndex: 0,
+				status: "complete",
+			}),
+			task({
+				$id: "t1.2",
+				sectionId: "s1",
+				taskCode: "1.2",
+				orderIndex: 1,
+				status: "locked",
+			}),
+			task({
+				$id: "parent",
+				sectionId: "s1",
+				taskCode: "1.3",
+				orderIndex: 2,
+				status: "locked",
+			}),
+			task({
+				$id: "child-a",
+				sectionId: "s1",
+				parentTaskId: "parent",
+				taskCode: "1.3.a",
+				orderIndex: 0,
+				status: "locked",
+			}),
+			task({
+				$id: "child-b",
+				sectionId: "s1",
+				parentTaskId: "parent",
+				taskCode: "1.3.b",
+				orderIndex: 1,
+				status: "locked",
+			}),
+		];
+
+		const { snapshot } = computeUnlocked({
+			sections,
+			tasks,
+			sequentialTasks: true,
+		});
+		expect(snapshot.tasks.find((t) => t.$id === "t1.2")?.status).toBe(
+			"available",
+		);
+		expect(snapshot.tasks.find((t) => t.$id === "parent")?.status).toBe(
+			"locked",
+		);
+		expect(snapshot.tasks.find((t) => t.$id === "child-a")?.status).toBe(
+			"locked",
+		);
+	});
+
+	it("sequential mode unlocks the first child and completes the parent when children finish", () => {
+		const sections = [
+			section({
+				$id: "s1",
+				sectionNumber: 1,
+				title: "CRM",
+				status: "in_progress",
+			}),
+			section({
+				$id: "s2",
+				sectionNumber: 2,
+				title: "Gifts",
+				status: "locked",
+			}),
+		];
+		const tasks = [
+			task({
+				$id: "parent",
+				sectionId: "s1",
+				taskCode: "1.3",
+				orderIndex: 0,
+				status: "in_progress",
+			}),
+			task({
+				$id: "child-a",
+				sectionId: "s1",
+				parentTaskId: "parent",
+				taskCode: "1.3.a",
+				orderIndex: 0,
+				status: "complete",
+			}),
+			task({
+				$id: "child-b",
+				sectionId: "s1",
+				parentTaskId: "parent",
+				taskCode: "1.3.b",
+				orderIndex: 1,
+				status: "locked",
+			}),
+			task({
+				$id: "t2.1",
+				sectionId: "s2",
+				taskCode: "2.1",
+				orderIndex: 0,
+				status: "locked",
+			}),
+		];
+
+		const mid = computeUnlocked({
+			sections,
+			tasks,
+			sequentialTasks: true,
+		}).snapshot;
+		expect(mid.tasks.find((t) => t.$id === "child-b")?.status).toBe(
+			"available",
+		);
+		expect(mid.tasks.find((t) => t.$id === "parent")?.status).toBe(
+			"in_progress",
+		);
+		expect(mid.sections.find((s) => s.$id === "s2")?.status).toBe("locked");
+
+		const childB = mid.tasks.find((t) => t.$id === "child-b")!;
+		childB.status = "complete";
+		const done = computeUnlocked({
+			sections: mid.sections,
+			tasks: mid.tasks,
+			sequentialTasks: true,
+		}).snapshot;
+		expect(done.tasks.find((t) => t.$id === "parent")?.status).toBe("complete");
+		expect(done.sections.find((s) => s.$id === "s1")?.status).toBe("complete");
+		expect(done.sections.find((s) => s.$id === "s2")?.status).toBe(
+			"in_progress",
+		);
+		expect(done.tasks.find((t) => t.$id === "t2.1")?.status).toBe("available");
+	});
+
 	it("does not lock a later section whose tasks are already all complete", () => {
 		const sections = [
 			section({

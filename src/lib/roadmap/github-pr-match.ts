@@ -1,13 +1,19 @@
 /**
  * Match GitHub PRs to roadmap sections/tasks.
  * Section cards use catalog `linkedPrNumbers` (topic match), not "Section N:" titles.
+ * CLM branches are `clm/{section}-{code}-*`. Nonprofit branches are `npo/{section}-{code}-*`.
  */
 
+import type { RoadmapCatalogKey } from "./catalog-key";
 import {
-	getCatalogLinkedPrNumbers,
-	getSectionNumberForPr,
-	ROADMAP_CATALOG,
-} from "./catalog";
+	catalogBranchPrefix,
+	DEFAULT_ROADMAP_CATALOG_KEY,
+} from "./catalog-key";
+import {
+	linkedPrNumbersInCatalog,
+	sectionNumberForPrIn,
+} from "./catalog-query";
+import { catalogForKey } from "./catalogs";
 
 export type GitHubPullRequestSummary = {
 	number: number;
@@ -25,40 +31,59 @@ export type ResolvedPullRequest = GitHubPullRequestSummary & {
 	source: "linked" | "catalog" | "discovered_task" | "discovered_section";
 };
 
+export type CatalogSectionMatch = {
+	catalogKey: RoadmapCatalogKey;
+	sectionNumber: number;
+};
+
 export function matchPullRequestToSection(
 	pr: GitHubPullRequestSummary,
 	sectionNumber: number,
+	catalogKey: RoadmapCatalogKey = DEFAULT_ROADMAP_CATALOG_KEY,
 ): boolean {
-	const catalogMatch = getCatalogLinkedPrNumbers(sectionNumber).includes(
-		pr.number,
-	);
-	const branchMatch = new RegExp(`(?:^|/)clm/${sectionNumber}-`, "i").test(
-		pr.headRef,
-	);
+	const catalogMatch = linkedPrNumbersInCatalog(
+		catalogForKey(catalogKey),
+		sectionNumber,
+	).includes(pr.number);
+	const prefix = catalogBranchPrefix(catalogKey);
+	const branchMatch = new RegExp(
+		`(?:^|/)${prefix}/${sectionNumber}-`,
+		"i",
+	).test(pr.headRef);
 	return catalogMatch || branchMatch;
 }
 
-/** Task branch convention: clm/{section}-{taskCode}-slug */
+/** Task branch convention: clm/{section}-{taskCode}-slug or npo/{section}-{taskCode}-slug */
 export function matchPullRequestToTask(
 	pr: GitHubPullRequestSummary,
 	sectionNumber: number,
 	taskCode: string,
+	catalogKey: RoadmapCatalogKey = DEFAULT_ROADMAP_CATALOG_KEY,
 ): boolean {
+	const prefix = catalogBranchPrefix(catalogKey);
 	const escapedCode = taskCode.replace(/\./g, "\\.");
 	const branchMatch = new RegExp(
-		`clm/${sectionNumber}-${escapedCode}(?:-|$)`,
+		`${prefix}/${sectionNumber}-${escapedCode}(?:-|$)`,
 		"i",
 	).test(pr.headRef);
-	const titleMatch = new RegExp(`\\b${escapedCode}\\b`).test(pr.title);
+	// NPO titles must include "NPO 1.1" so they cannot complete CLM task 1.1.
+	const titleMatch =
+		catalogKey === "npo"
+			? new RegExp(`\\bNPO\\s+${escapedCode}\\b`, "i").test(pr.title)
+			: !/\bNPO\s+\d+\.\d+/i.test(pr.title) &&
+				new RegExp(`\\b${escapedCode}\\b`).test(pr.title);
 	return branchMatch || titleMatch;
 }
 
 export function findSectionPullRequest(
 	openPrs: GitHubPullRequestSummary[],
 	sectionNumber: number,
+	catalogKey: RoadmapCatalogKey = DEFAULT_ROADMAP_CATALOG_KEY,
 ): GitHubPullRequestSummary | null {
 	return (
-		openPrs.find((pr) => matchPullRequestToSection(pr, sectionNumber)) ?? null
+		openPrs.find((pr) =>
+			matchPullRequestToSection(pr, sectionNumber, catalogKey),
+		) ?? null
 	);
 }
 
@@ -66,45 +91,72 @@ export function findTaskPullRequest(
 	openPrs: GitHubPullRequestSummary[],
 	sectionNumber: number,
 	taskCode: string,
+	catalogKey: RoadmapCatalogKey = DEFAULT_ROADMAP_CATALOG_KEY,
 ): GitHubPullRequestSummary | null {
 	const taskMatch = openPrs.find((pr) =>
-		matchPullRequestToTask(pr, sectionNumber, taskCode),
+		matchPullRequestToTask(pr, sectionNumber, taskCode, catalogKey),
 	);
 	return taskMatch ?? null;
 }
 
 /**
- * Map a PR to a section when it is not yet in `linkedPrNumbers`.
- * Catalog number wins, then `clm/{section}-` branch, then task-code title/branch.
+ * Map a PR to a catalog + section when it is not yet in `linkedPrNumbers`.
+ * Linked numbers win, then `clm/` / `npo/` branch, then task-code title.
  */
-export function resolveSectionFromPrMatch(
+export function resolveCatalogFromPrMatch(
 	pr: GitHubPullRequestSummary,
-): number | undefined {
-	const fromCatalog = getSectionNumberForPr(pr.number);
-	if (fromCatalog != null) return fromCatalog;
-
-	for (const section of ROADMAP_CATALOG) {
-		if (matchPullRequestToSection(pr, section.sectionNumber)) {
-			return section.sectionNumber;
+): CatalogSectionMatch | undefined {
+	for (const catalogKey of ["clm", "npo"] as const) {
+		const fromCatalog = sectionNumberForPrIn(
+			catalogForKey(catalogKey),
+			pr.number,
+		);
+		if (fromCatalog != null) {
+			return { catalogKey, sectionNumber: fromCatalog };
 		}
-		const stack = [...section.tasks];
-		while (stack.length) {
-			const task = stack.pop()!;
-			if (matchPullRequestToTask(pr, section.sectionNumber, task.taskCode)) {
-				return section.sectionNumber;
+	}
+
+	for (const catalogKey of ["clm", "npo"] as const) {
+		for (const section of catalogForKey(catalogKey)) {
+			if (matchPullRequestToSection(pr, section.sectionNumber, catalogKey)) {
+				return { catalogKey, sectionNumber: section.sectionNumber };
 			}
-			if (task.children?.length) stack.push(...task.children);
+			const stack = [...section.tasks];
+			while (stack.length) {
+				const task = stack.pop()!;
+				if (
+					matchPullRequestToTask(
+						pr,
+						section.sectionNumber,
+						task.taskCode,
+						catalogKey,
+					)
+				) {
+					return { catalogKey, sectionNumber: section.sectionNumber };
+				}
+				if (task.children?.length) stack.push(...task.children);
+			}
 		}
 	}
 	return undefined;
 }
 
 /**
- * Drop a leading `5.1 ` task-code prefix so the pane title matches the catalog
- * task name (GitHub titles often start with the code for branch matching).
+ * Map a PR to a section when it is not yet in `linkedPrNumbers`.
+ * Defaults to CLM when both catalogs could match a bare task code.
+ */
+export function resolveSectionFromPrMatch(
+	pr: GitHubPullRequestSummary,
+): number | undefined {
+	return resolveCatalogFromPrMatch(pr)?.sectionNumber;
+}
+
+/**
+ * Drop a leading `5.1 ` or `NPO 5.1 ` task-code prefix so the pane title
+ * matches the catalog task name.
  */
 export function displayPullRequestTitle(title: string): string {
-	return title.replace(/^\d+\.\d+\s+/, "").trim();
+	return title.replace(/^(?:NPO\s+)?\d+\.\d+\s+/i, "").trim();
 }
 
 /**
