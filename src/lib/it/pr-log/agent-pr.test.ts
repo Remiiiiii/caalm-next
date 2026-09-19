@@ -111,9 +111,9 @@ describe("buildPrLogOverview", () => {
 
 	it("keeps a merged agent PR until checks pass", () => {
 		const waiting = pr({
-			number: 49,
+			number: 149,
 			title: "Roadmap engine",
-			headRef: "cursor/clm-roadmap-engine-5329",
+			headRef: "cursor/clm-roadmap-engine-aaaa",
 			state: "merged",
 			checksPassed: false,
 			checksReason: "Waiting for GitHub checks to finish (Playwright E2E)",
@@ -129,9 +129,9 @@ describe("buildPrLogOverview", () => {
 		expect(
 			shouldKeepAgentPrOnLog(
 				pr({
-					number: 49,
+					number: 149,
 					title: "Roadmap engine",
-					headRef: "cursor/clm-roadmap-engine-5329",
+					headRef: "cursor/clm-roadmap-engine-aaaa",
 					state: "merged",
 					checksPassed: true,
 				}),
@@ -154,7 +154,7 @@ describe("buildPrLogOverview", () => {
 				checksPassed: false,
 			}),
 			pr({
-				number: 78,
+				number: 148,
 				title: "Merged and green",
 				headRef: "cursor/merged-green-cccc",
 				state: "merged",
@@ -162,5 +162,57 @@ describe("buildPrLogOverview", () => {
 			}),
 		]);
 		expect(overview.sections.map((s) => s.prNumber)).toEqual([80, 79]);
+	});
+
+	it("drops resolved PRs #49 and #78 even when merge-SHA checks failed", () => {
+		expect(
+			shouldKeepAgentPrOnLog(
+				pr({
+					number: 49,
+					title: "Section 0: CLM Completion Roadmap engine (IT portal)",
+					headRef: "cursor/clm-roadmap-engine-5329",
+					state: "merged",
+					checksPassed: false,
+					checksReason: "GitHub checks have not all succeeded (Playwright E2E)",
+				}),
+			),
+		).toBe(false);
+		expect(
+			shouldKeepAgentPrOnLog(
+				pr({
+					number: 78,
+					title:
+						"Security: align funding org auth with data scope and validate obligation URLs",
+					headRef: "cursor/pr-security-audit-fc42",
+					state: "merged",
+					checksPassed: false,
+					checksReason:
+						"GitHub checks have not all succeeded (Deploy to Vercel (production))",
+				}),
+			),
+		).toBe(false);
+		const overview = buildPrLogOverview([
+			pr({
+				number: 78,
+				title: "Security: align funding org auth",
+				headRef: "cursor/pr-security-audit-fc42",
+				state: "merged",
+				checksPassed: false,
+			}),
+			pr({
+				number: 49,
+				title: "CLM roadmap engine",
+				headRef: "cursor/clm-roadmap-engine-5329",
+				state: "merged",
+				draft: true,
+				checksPassed: false,
+			}),
+			pr({
+				number: 80,
+				title: "Open agent PR",
+				headRef: "cursor/open-work-aaaa",
+			}),
+		]);
+		expect(overview.sections.map((s) => s.prNumber)).toEqual([80]);
 	});
 });

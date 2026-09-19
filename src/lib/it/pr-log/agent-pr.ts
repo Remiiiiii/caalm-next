@@ -20,11 +20,19 @@ export function isAgentPullRequestBranch(headRef: string): boolean {
 }
 
 /**
+ * Merged to main; later production deploys shipped the work. The merge-SHA
+ * check run is stale (#78 production deploy failed, #49 Playwright failed)
+ * so the live gate would keep them forever.
+ */
+export const PR_LOG_RESOLVED_NUMBERS = new Set([49, 78]);
+
+/**
  * Merged agent PRs stay on the log until checksPassed. Closed-without-merge
  * and fully green merges are dropped from the live list.
  */
 export function shouldKeepAgentPrOnLog(pr: PrLogSourcePr): boolean {
 	if (!isAgentPullRequestBranch(pr.headRef)) return false;
+	if (PR_LOG_RESOLVED_NUMBERS.has(pr.number)) return false;
 	if (pr.state === "closed") return false;
 	if (pr.state === "merged") return pr.checksPassed !== true;
 	return true;
