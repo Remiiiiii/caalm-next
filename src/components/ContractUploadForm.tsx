@@ -373,7 +373,7 @@ const AI_ASSISTANT_OPTION_CLASS =
 
 /** Gradient primary (alias: see `.btn-primary` in globals.css). */
 const AI_ASSISTANT_BTN_PRIMARY_CLASS =
-	"btn-primary h-10 px-5 shadow-drop-1 text-sm gap-2 sm:w-auto w-full shimmer-hover justify-center";
+	"btn-primary px-5 shadow-drop-1 text-sm gap-2 sm:w-auto w-full shimmer-hover justify-center";
 
 const AI_ASSISTANT_OPEN_CHIP_CLASS =
 	"inline-flex h-10 items-center gap-2 rounded-full border border-white/45 bg-white/38 px-4 text-sm font-medium text-slate-700 shadow-sm backdrop-blur-md transition-all hover:border-[#0f5384]/35 hover:bg-white/50";
@@ -2855,7 +2855,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 				<DialogTrigger asChild>
 					<Button
 						className={cn(
-							"primary-btn h-10 px-4 shadow-drop-1 text-sm gap-2",
+							"primary-btn px-4 shadow-drop-1 text-sm gap-2",
 							className,
 						)}
 					>

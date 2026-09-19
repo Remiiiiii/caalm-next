@@ -1112,7 +1112,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 								loadingInvite ||
 								(uninvitedUsers as UninvitedUser[]).length === 0
 							}
-							className="primary-btn h-10 shrink-0 gap-2 px-5 text-[13px] font-semibold"
+							className="primary-btn shrink-0 gap-2 px-5 text-[13px] font-semibold"
 						>
 							{loadingInvite ? "Sending…" : "Send invite"}
 							<Send className="h-3.5 w-3.5" />

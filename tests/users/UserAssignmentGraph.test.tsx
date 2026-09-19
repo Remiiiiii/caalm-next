@@ -1,11 +1,11 @@
-import { useState } from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { UserAssignmentGraph } from "@/components/users/UserAssignmentGraph";
 import {
-	UserManagementLineageToggle,
 	type GraphLineage,
+	UserManagementLineageToggle,
 } from "@/components/users/UserManagementViewToggle";
 import type { UserManagementUser } from "@/hooks/useUsers";
 import { SPEC_SAMPLE_USERS } from "@/lib/users/assignment-graph";
@@ -81,9 +81,11 @@ describe("UserAssignmentGraph", () => {
 		).toBeInTheDocument();
 		expect(screen.getByText("All users")).toBeInTheDocument();
 		const directions =
-			"Drag a card to move it · drag a dot to a card to connect · hover a line and click the scissors to disconnect · Ctrl+Z undoes the last cut";
+			"Reporting: who each person reports to. Drag a card to move it · drag a dot to a card to connect · hover a line and click the scissors to disconnect · Ctrl+Z undoes the last cut or card move";
 		expect(screen.getByText(directions)).toBeInTheDocument();
-		await userEvent.click(screen.getByRole("button", { name: "Close directions" }));
+		await userEvent.click(
+			screen.getByRole("button", { name: "Close directions" }),
+		);
 		expect(screen.queryByText(directions)).not.toBeInTheDocument();
 		expect(screen.getByTestId("rf__wrapper")).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Zoom In" })).toBeInTheDocument();
@@ -92,9 +94,32 @@ describe("UserAssignmentGraph", () => {
 		).toBeInTheDocument();
 
 		await userEvent.click(screen.getByRole("tab", { name: "Access grant" }));
-		expect(screen.getByLabelText("Assignment color legend")).toBeInTheDocument();
+		expect(
+			screen.getByLabelText("Assignment color legend"),
+		).toBeInTheDocument();
 		expect(screen.getAllByText("System assigned").length).toBeGreaterThan(0);
 		expect(screen.getAllByText("Admin assigned").length).toBeGreaterThan(0);
 		expect(screen.getByText("System", { hidden: true })).toBeInTheDocument();
+	});
+
+	it("defaults to side layout and can switch to top-down", async () => {
+		window.localStorage.removeItem("user-graph-orientation");
+		render(<GraphHarness />);
+
+		expect(
+			screen.getByRole("tab", { name: "Left to right layout" }),
+		).toHaveAttribute("aria-selected", "true");
+		expect(
+			screen.getByRole("tab", { name: "Top-down layout" }),
+		).toHaveAttribute("aria-selected", "false");
+
+		await userEvent.click(
+			screen.getByRole("tab", { name: "Top-down layout" }),
+		);
+
+		expect(
+			screen.getByRole("tab", { name: "Top-down layout" }),
+		).toHaveAttribute("aria-selected", "true");
+		expect(window.localStorage.getItem("user-graph-orientation")).toBe("tb");
 	});
 });

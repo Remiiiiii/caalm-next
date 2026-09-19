@@ -1,10 +1,23 @@
 "use client";
 
-import { GitBranch, KeyRound, Share2, Table, type LucideIcon } from "lucide-react";
+import {
+	GitBranch,
+	KeyRound,
+	type LucideIcon,
+	Network,
+	Share2,
+	Table,
+} from "lucide-react";
+import {
+	GRAPH_ORIENTATION_STORAGE_KEY,
+	type GraphOrientation,
+} from "@/lib/users/graph-orientation";
 import { cn } from "@/lib/utils";
 
 export type UserManagementViewType = "table" | "diagram";
 export type GraphLineage = "reporting" | "assignment";
+export type { GraphOrientation };
+export { GRAPH_ORIENTATION_STORAGE_KEY };
 
 export const USER_MANAGEMENT_VIEW_STORAGE_KEY =
 	"user-management-view-preference";
@@ -13,6 +26,8 @@ type SegmentTab<T extends string> = {
 	value: T;
 	label: string;
 	icon: LucideIcon;
+	iconClassName?: string;
+	hideLabel?: boolean;
 	ariaLabel?: string;
 };
 
@@ -55,15 +70,19 @@ function SegmentedToggle<T extends string>({
 						aria-selected={selected}
 						onClick={() => onChange(tab.value)}
 						className={cn(
-							"relative z-10 inline-flex cursor-pointer items-center justify-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium transition-colors duration-200",
+							"relative z-10 inline-flex cursor-pointer items-center justify-center gap-2 rounded-full py-1.5 text-sm font-medium transition-colors duration-200",
+							tab.hideLabel ? "px-2.5" : "px-4",
 							"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
 							selected
 								? "text-[#0f5384]"
 								: "text-slate-500 hover:text-slate-700",
 						)}
 					>
-						<Icon className="h-4 w-4" aria-hidden />
-						{tab.label}
+						<Icon
+							className={cn("h-4 w-4", tab.iconClassName)}
+							aria-hidden
+						/>
+						{tab.hideLabel ? null : tab.label}
 					</button>
 				);
 			})}
@@ -73,12 +92,45 @@ function SegmentedToggle<T extends string>({
 
 const VIEW_TABS: Array<SegmentTab<UserManagementViewType>> = [
 	{ value: "table", label: "Table", icon: Table, ariaLabel: "Table view" },
-	{ value: "diagram", label: "Diagram", icon: Share2, ariaLabel: "Diagram view" },
+	{
+		value: "diagram",
+		label: "Diagram",
+		icon: Share2,
+		ariaLabel: "Diagram view",
+	},
 ];
 
 const LINEAGE_TABS: Array<SegmentTab<GraphLineage>> = [
-	{ value: "reporting", label: "Reporting", icon: GitBranch },
-	{ value: "assignment", label: "Access grant", icon: KeyRound },
+	{
+		value: "reporting",
+		label: "Reporting",
+		icon: GitBranch,
+		ariaLabel: "Reporting",
+	},
+	{
+		value: "assignment",
+		label: "Access grant",
+		icon: KeyRound,
+		ariaLabel: "Access grant",
+	},
+];
+
+const ORIENTATION_TABS: Array<SegmentTab<GraphOrientation>> = [
+	{
+		value: "ltr",
+		label: "Side",
+		icon: Network,
+		iconClassName: "[transform:scaleX(-1)_rotate(90deg)]",
+		hideLabel: true,
+		ariaLabel: "Left to right layout",
+	},
+	{
+		value: "tb",
+		label: "Top-down",
+		icon: Network,
+		hideLabel: true,
+		ariaLabel: "Top-down layout",
+	},
 ];
 
 /** Segmented Table / Diagram switch — white raised pill on a slate track. */
@@ -113,6 +165,24 @@ export function UserManagementLineageToggle({
 			onChange={onLineageChange}
 			tabs={LINEAGE_TABS}
 			ariaLabel="Diagram lineage"
+		/>
+	);
+}
+
+/** Compact Side / Top-down switch for the diagram canvas. */
+export function UserManagementOrientationToggle({
+	orientation,
+	onOrientationChange,
+}: {
+	orientation: GraphOrientation;
+	onOrientationChange: (orientation: GraphOrientation) => void;
+}) {
+	return (
+		<SegmentedToggle
+			value={orientation}
+			onChange={onOrientationChange}
+			tabs={ORIENTATION_TABS}
+			ariaLabel="Diagram orientation"
 		/>
 	);
 }

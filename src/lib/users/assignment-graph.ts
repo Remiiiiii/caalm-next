@@ -1,9 +1,14 @@
 /**
  * Builds a directed assignment graph from user-management "Assigned by"
- * values and lays it out left-to-right by rank, wrapping leaf reports
- * top-to-bottom. Nothing here is hand-placed per user — add a row and a
- * new branch appears automatically.
+ * values. Access grant answers "who gave this person their account or role",
+ * not who they report to at work. Layout matches the reporting org chart:
+ * rank on one axis, siblings stacked on the other, parent centered.
  */
+
+import {
+	type GraphOrientation,
+	isTopDownOrientation,
+} from "@/lib/users/graph-orientation";
 
 export const SYSTEM_NODE_ID = "system";
 
@@ -73,8 +78,10 @@ export const FLOW_COL_GAP = 56;
 export const FLOW_ROW_EXTENT = FLOW_CARD_HEIGHT + FLOW_ROW_GAP;
 /** Horizontal gap between tree levels (System on the left, reports to the right). */
 export const FLOW_RANK_GAP = FLOW_CARD_WIDTH + FLOW_COL_GAP;
-/** Leaf reports wrap this many cards per row so a team reads left-to-right. */
-export const FLOW_LEAF_WRAP = 3;
+/** Vertical gap between tree levels in top-down layout. */
+export const FLOW_TB_RANK_GAP = FLOW_CARD_HEIGHT + FLOW_COL_GAP;
+/** Horizontal span reserved for one card in top-down sibling rows. */
+export const FLOW_TB_COL_EXTENT = FLOW_CARD_WIDTH + FLOW_ROW_GAP;
 
 export const SYSTEM_ASSIGN_COLOR = "#0f5384";
 export const ADMIN_ASSIGN_COLOR = "#03afbf";
@@ -469,51 +476,17 @@ function flowChildOrder(
 	return [...ids].sort((a, b) => {
 		const left = usersById.get(a);
 		const right = usersById.get(b);
-		const rankDelta = flowRoleRank(left?.roleName) - flowRoleRank(right?.roleName);
+		const rankDelta =
+			flowRoleRank(left?.roleName) - flowRoleRank(right?.roleName);
 		if (rankDelta !== 0) return rankDelta;
-		return (left?.fullName || a).localeCompare(right?.fullName || b, undefined, {
-			sensitivity: "base",
-		});
+		return (left?.fullName || a).localeCompare(
+			right?.fullName || b,
+			undefined,
+			{
+				sensitivity: "base",
+			},
+		);
 	});
-}
-
-function flowIsLeaf(id: string, childrenOf: TreeChildMap): boolean {
-	return (childrenOf.get(id) || []).length === 0;
-}
-
-function flowLeafWrapRows(count: number): number {
-	if (count <= 0) return 0;
-	return Math.ceil(count / FLOW_LEAF_WRAP);
-}
-
-/**
- * Walk children in role/name order, but group consecutive leaves so they
- * can wrap left-to-right. Branches (people who have their own reports)
- * still stack top-to-bottom — otherwise two managers' staff would overlap.
- */
-function flowChildLayoutGroups(
-	kids: string[],
-	childrenOf: TreeChildMap,
-): Array<{ kind: "leaves"; ids: string[] } | { kind: "branch"; id: string }> {
-	const groups: Array<
-		{ kind: "leaves"; ids: string[] } | { kind: "branch"; id: string }
-	> = [];
-	let run: string[] = [];
-	const flushLeaves = () => {
-		if (run.length === 0) return;
-		groups.push({ kind: "leaves", ids: run });
-		run = [];
-	};
-	for (const id of kids) {
-		if (flowIsLeaf(id, childrenOf)) {
-			run.push(id);
-			continue;
-		}
-		flushLeaves();
-		groups.push({ kind: "branch", id });
-	}
-	flushLeaves();
-	return groups;
 }
 
 function flowSubtreeHeight(
@@ -529,30 +502,55 @@ function flowSubtreeHeight(
 		memo.set(id, FLOW_ROW_EXTENT);
 		return FLOW_ROW_EXTENT;
 	}
-	let height = 0;
-	for (const group of flowChildLayoutGroups(kids, childrenOf)) {
-		if (group.kind === "leaves") {
-			height += flowLeafWrapRows(group.ids.length) * FLOW_ROW_EXTENT;
-			continue;
-		}
-		height += flowSubtreeHeight(group.id, childrenOf, memo, usersById);
+	const height = Math.max(
+		FLOW_ROW_EXTENT,
+		kids.reduce(
+			(sum, childId) =>
+				sum + flowSubtreeHeight(childId, childrenOf, memo, usersById),
+			0,
+		),
+	);
+	memo.set(id, height);
+	return height;
+}
+
+function flowSubtreeWidth(
+	id: string,
+	childrenOf: TreeChildMap,
+	memo: Map<string, number>,
+	usersById: Map<string, AssignmentGraphUser>,
+): number {
+	const cached = memo.get(id);
+	if (cached != null) return cached;
+	const kids = flowChildOrder(childrenOf.get(id) || [], usersById);
+	if (kids.length === 0) {
+		memo.set(id, FLOW_TB_COL_EXTENT);
+		return FLOW_TB_COL_EXTENT;
 	}
-	const extent = Math.max(FLOW_ROW_EXTENT, height);
-	memo.set(id, extent);
-	return extent;
+	const width = Math.max(
+		FLOW_TB_COL_EXTENT,
+		kids.reduce(
+			(sum, childId) =>
+				sum + flowSubtreeWidth(childId, childrenOf, memo, usersById),
+			0,
+		),
+	);
+	memo.set(id, width);
+	return width;
 }
 
 /**
- * Top-left canvas positions for React Flow. Saved (x, y) wins; everyone
- * else is packed left-to-right by assignment depth and top-to-bottom by
- * siblings so a parent lines up with its first child instead of sitting
- * in the middle of a tall waterfall.
+ * Canvas positions for Access grant. Same packing as reporting: rank along
+ * the depth axis, siblings stacked, parent centered on its stack. Saved
+ * spots apply in both orientations.
  */
 export function seedFlowNodePositions(
 	visibleUsers: AssignmentGraphUser[],
 	allUsers: AssignmentGraphUser[],
 	saved: Map<string, { x: number; y: number }>,
+	options?: { orientation?: GraphOrientation },
 ): Map<string, { x: number; y: number }> {
+	const topDown = isTopDownOrientation(options?.orientation);
 	const graphUsers = collectGraphUsers(visibleUsers, allUsers);
 	const lookup = allUsers.length > 0 ? allUsers : graphUsers;
 	const { childrenOf } = buildParentChildMaps(graphUsers, lookup);
@@ -568,59 +566,78 @@ export function seedFlowNodePositions(
 	const positions = new Map<string, AssignmentGraphPoint>();
 	const forestRoots = [SYSTEM_NODE_ID, ...ghostIds];
 
-	const place = (id: string, top: number, depth: number) => {
-		// Top-left of the card. Parent shares Y with its first child so the
-		// first link is a short horizontal. Leaf reports wrap LTR; managers
-		// with their own teams stack TTB.
-		positions.set(id, {
-			x: GRAPH_PAD_X + depth * FLOW_RANK_GAP,
-			y: top,
-		});
-		let cursor = top;
+	const placeLtr = (id: string, top: number, depth: number) => {
 		const kids = flowChildOrder(childrenOf.get(id) || [], usersById);
-		for (const group of flowChildLayoutGroups(kids, childrenOf)) {
-			if (group.kind === "leaves") {
-				group.ids.forEach((leafId, index) => {
-					const col = index % FLOW_LEAF_WRAP;
-					const row = Math.floor(index / FLOW_LEAF_WRAP);
-					positions.set(leafId, {
-						x: GRAPH_PAD_X + (depth + 1 + col) * FLOW_RANK_GAP,
-						y: cursor + row * FLOW_ROW_EXTENT,
-					});
-				});
-				cursor += flowLeafWrapRows(group.ids.length) * FLOW_ROW_EXTENT;
-				continue;
-			}
-			place(group.id, cursor, depth + 1);
-			cursor += flowSubtreeHeight(
-				group.id,
+		let cursor = top;
+		for (const childId of kids) {
+			const childHeight = flowSubtreeHeight(
+				childId,
 				childrenOf,
 				extentMemo,
 				usersById,
 			);
+			placeLtr(childId, cursor, depth + 1);
+			cursor += childHeight;
+		}
+		const span = flowSubtreeHeight(id, childrenOf, extentMemo, usersById);
+		const y =
+			kids.length === 0
+				? top
+				: top + Math.max(0, (span - FLOW_CARD_HEIGHT) / 2);
+		positions.set(id, {
+			x: GRAPH_PAD_X + depth * FLOW_RANK_GAP,
+			y,
+		});
+	};
+
+	const placeTb = (id: string, left: number, depth: number) => {
+		const kids = flowChildOrder(childrenOf.get(id) || [], usersById);
+		const subtreeW = flowSubtreeWidth(id, childrenOf, extentMemo, usersById);
+		positions.set(id, {
+			x:
+				kids.length === 0
+					? left
+					: left + Math.max(0, (subtreeW - FLOW_CARD_WIDTH) / 2),
+			y: GRAPH_PAD_Y + depth * FLOW_TB_RANK_GAP,
+		});
+		let cursor = left;
+		for (const childId of kids) {
+			const childW = flowSubtreeWidth(
+				childId,
+				childrenOf,
+				extentMemo,
+				usersById,
+			);
+			placeTb(childId, cursor, depth + 1);
+			cursor += childW;
 		}
 	};
 
-	let rootCursor = GRAPH_PAD_Y;
-	for (const rootId of forestRoots) {
-		const extent = flowSubtreeHeight(
-			rootId,
-			childrenOf,
-			extentMemo,
-			usersById,
-		);
-		place(rootId, rootCursor, 0);
-		rootCursor += extent;
+	if (topDown) {
+		let rootCursor = GRAPH_PAD_X;
+		for (const rootId of forestRoots) {
+			const width = flowSubtreeWidth(rootId, childrenOf, extentMemo, usersById);
+			placeTb(rootId, rootCursor, 0);
+			rootCursor += width;
+		}
+	} else {
+		let rootCursor = GRAPH_PAD_Y;
+		for (const rootId of forestRoots) {
+			const extent = flowSubtreeHeight(
+				rootId,
+				childrenOf,
+				extentMemo,
+				usersById,
+			);
+			placeLtr(rootId, rootCursor, 0);
+			rootCursor += extent;
+		}
 	}
 
 	const result = new Map<string, { x: number; y: number }>();
 	for (const [id, position] of positions) {
 		const stored = saved.get(id);
-		if (
-			stored &&
-			Number.isFinite(stored.x) &&
-			Number.isFinite(stored.y)
-		) {
+		if (stored && Number.isFinite(stored.x) && Number.isFinite(stored.y)) {
 			result.set(id, stored);
 			continue;
 		}

@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { ReactFlow, ReactFlowProvider } from "@xyflow/react";
 import { describe, expect, it, vi } from "vitest";
 import {
+	graphHandlePositions,
 	graphUserCardTitle,
 	graphUserJobLabel,
 	isCurrentGraphUser,
@@ -109,9 +110,25 @@ describe("UserGraphNodes current-user card", () => {
 		);
 	});
 
+	it("puts handles on the sides in left-to-right and top/bottom in top-down", () => {
+		expect(graphHandlePositions("ltr")).toEqual({
+			target: "left",
+			source: "right",
+		});
+		expect(graphHandlePositions()).toEqual({
+			target: "left",
+			source: "right",
+		});
+		expect(graphHandlePositions("tb")).toEqual({
+			target: "top",
+			source: "bottom",
+		});
+	});
+
 	it("shows department and division with extra details collapsed", () => {
 		renderUserCard();
 
+		expect(screen.getByText("Active")).toBeInTheDocument();
 		expect(screen.getByText("Chief Financial Officer")).toBeInTheDocument();
 		expect(screen.getByText("Department").closest("div")).toHaveTextContent(
 			"Finance",
