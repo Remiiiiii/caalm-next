@@ -52,9 +52,9 @@ describe("nonprofit section catalogs", () => {
 	});
 
 	it("labels a catalog PR with its section batch, not a bare number", () => {
-		expect(npoCatalogDisplayTitleForPr(88)).toMatch(/S1 B1/);
-		expect(npoCatalogDisplayTitleForPr(88)).toMatch(/1\.1–1\.5/);
-		expect(npoCatalogDisplayTitleForPr(92)).toMatch(/1\.11/);
+		expect(npoCatalogDisplayTitleForPr(109)).toMatch(/S1 B1/);
+		expect(npoCatalogDisplayTitleForPr(109)).toMatch(/1\.1–1\.5/);
+		expect(npoCatalogDisplayTitleForPr(117)).toMatch(/1\.11/);
 		expect(npoCatalogDisplayTitleForPr(86)).toMatch(/S0 B1/);
 	});
 });
