@@ -1,12 +1,13 @@
 /**
  * Match GitHub PRs to roadmap sections/tasks.
  * Section cards use catalog `linkedPrNumbers` (topic match), not "Section N:" titles.
- * CLM branches are `clm/{section}-{code}-*`. Nonprofit branches are `npo/{section}-{code}-*`.
+ * CLM branches are `clm/{section}-{code}-*`.
+ * Nonprofit branches are `cursor/nonprofit/{section}-{code}-*` (legacy `npo/` still matches).
  */
 
 import type { RoadmapCatalogKey } from "./catalog-key";
 import {
-	catalogBranchPrefix,
+	catalogBranchPrefixes,
 	DEFAULT_ROADMAP_CATALOG_KEY,
 } from "./catalog-key";
 import {
@@ -57,27 +58,25 @@ export function matchPullRequestToSection(
 		catalogForKey(catalogKey),
 		sectionNumber,
 	).includes(pr.number);
-	const prefix = catalogBranchPrefix(catalogKey);
-	const branchMatch = new RegExp(
-		`(?:^|/)${prefix}/${sectionNumber}-`,
-		"i",
-	).test(pr.headRef);
+	const branchMatch = catalogBranchPrefixes(catalogKey).some((prefix) =>
+		new RegExp(`(?:^|/)${prefix}/${sectionNumber}-`, "i").test(pr.headRef),
+	);
 	return catalogMatch || branchMatch;
 }
 
-/** Task branch convention: clm/{section}-{taskCode}-slug or npo/{section}-{taskCode}-slug */
+/** Task branch: clm/{section}-{taskCode}-slug or cursor/nonprofit/{section}-{taskCode}-slug */
 export function matchPullRequestToTask(
 	pr: GitHubPullRequestSummary,
 	sectionNumber: number,
 	taskCode: string,
 	catalogKey: RoadmapCatalogKey = DEFAULT_ROADMAP_CATALOG_KEY,
 ): boolean {
-	const prefix = catalogBranchPrefix(catalogKey);
 	const escapedCode = taskCode.replace(/\./g, "\\.");
-	const branchMatch = new RegExp(
-		`${prefix}/${sectionNumber}-${escapedCode}(?:-|$)`,
-		"i",
-	).test(pr.headRef);
+	const branchMatch = catalogBranchPrefixes(catalogKey).some((prefix) =>
+		new RegExp(`${prefix}/${sectionNumber}-${escapedCode}(?:-|$)`, "i").test(
+			pr.headRef,
+		),
+	);
 	// NPO titles must include "NPO 1.1" so they cannot complete CLM task 1.1.
 	const titleMatch =
 		catalogKey === "npo"
@@ -113,7 +112,7 @@ export function findTaskPullRequest(
 
 /**
  * Map a PR to a catalog + section when it is not yet in `linkedPrNumbers`.
- * Linked numbers win, then `clm/` / `npo/` branch, then task-code title.
+ * Linked numbers win, then `clm/` / `cursor/nonprofit/` branch, then task-code title.
  */
 export function resolveCatalogFromPrMatch(
 	pr: GitHubPullRequestSummary,

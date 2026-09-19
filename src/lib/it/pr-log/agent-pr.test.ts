@@ -25,30 +25,26 @@ describe("isAgentPullRequestBranch", () => {
 		).toBe(true);
 	});
 
-	it("ignores CLM tracking stubs and human branches", () => {
+	it("ignores CLM tracking stubs, human branches, and Nonprofit Roadmap", () => {
 		expect(isAgentPullRequestBranch("clm/5-e-signature")).toBe(false);
 		expect(isAgentPullRequestBranch("fix-billing-spinner")).toBe(false);
+		expect(isAgentPullRequestBranch("cursor/nonprofit/s01-b1-340a")).toBe(
+			false,
+		);
+		expect(isAgentPullRequestBranch("cursor/nonprofit-roadmap-340a")).toBe(
+			false,
+		);
 	});
 });
 
-describe("nonprofit catalog stubs stay off the PR log", () => {
-	it("drops NPO section stub branches and titles", () => {
+describe("Nonprofit Roadmap PRs stay off the PR log", () => {
+	it("drops cursor/nonprofit branches including the engine PR", () => {
 		expect(
 			shouldKeepAgentPrOnLog(
 				pr({
-					number: 88,
+					number: 109,
 					title: "NPO S1 B1 catalog stub",
-					headRef: "cursor/npo-s01-b1-340a",
-					draft: true,
-				}),
-			),
-		).toBe(false);
-		expect(
-			shouldKeepAgentPrOnLog(
-				pr({
-					number: 107,
-					title: "NPO S9 B2 catalog stub",
-					headRef: "cursor/npo-s09-b2-340a",
+					headRef: "cursor/nonprofit/s01-b1-340a",
 					draft: true,
 				}),
 			),
@@ -61,15 +57,20 @@ describe("nonprofit catalog stubs stay off the PR log", () => {
 					headRef: "cursor/nonprofit-roadmap-340a",
 				}),
 			),
-		).toBe(true);
+		).toBe(false);
 	});
 
-	it("omits catalog stubs from the live overview", () => {
+	it("omits those PRs from the live overview", () => {
 		const overview = buildPrLogOverview([
 			pr({
-				number: 88,
+				number: 109,
 				title: "NPO S1 B1 catalog stub",
-				headRef: "cursor/npo-s01-b1-340a",
+				headRef: "cursor/nonprofit/s01-b1-340a",
+			}),
+			pr({
+				number: 86,
+				title: "Add Nonprofit Roadmap as a Development project",
+				headRef: "cursor/nonprofit-roadmap-340a",
 			}),
 			pr({
 				number: 80,

@@ -142,7 +142,7 @@ export type RoadmapCatalogSection = {
 	completesOnMerge?: boolean;
 	/**
 	 * When true, each task completes from its own PR (title `NPO {code}` or
-	 * branch `npo/{section}-{code}-*`), even before `linkedPrNumber` is filled in.
+	 * branch `cursor/nonprofit/{section}-{code}-*`), even before `linkedPrNumber` is filled in.
 	 */
 	perTaskPrCompletion?: boolean;
 	/**
