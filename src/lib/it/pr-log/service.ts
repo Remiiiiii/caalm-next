@@ -7,7 +7,6 @@ import {
 import {
 	buildPrLogOverview,
 	isAgentPullRequestBranch,
-	isNonprofitRoadmapPr,
 	type PrLogSourcePr,
 } from "./agent-pr";
 import { evaluateCommitCheckGate } from "./checks";
@@ -54,15 +53,14 @@ export async function getPrLogOverview(): Promise<PrLogOverview> {
 	const combined: PrLogSourcePr[] = [];
 	for (const pr of [...open, ...closed]) {
 		if (seen.has(pr.number)) continue;
+		if (!isAgentPullRequestBranch(pr.headRef)) continue;
 		seen.add(pr.number);
 		combined.push(pr);
 	}
 
 	const enriched = await Promise.all(
 		combined.map(async (pr) => {
-			if (pr.state !== "merged" || !isAgentPullRequestBranch(pr.headRef)) {
-				return pr;
-			}
+			if (pr.state !== "merged") return pr;
 			return enrichMergedAgentPr(pr);
 		}),
 	);
@@ -82,13 +80,7 @@ export async function getPrLogPullRequest(
 		throw new PrLogError(`Pull request #${prNumber} was not found`, 404);
 	}
 
-	if (
-		!isAgentPullRequestBranch(live.headRef ?? "") ||
-		isNonprofitRoadmapPr({
-			headRef: live.headRef,
-			title: live.title,
-		})
-	) {
+	if (!isAgentPullRequestBranch(live.headRef ?? "")) {
 		throw new PrLogError(
 			`Pull request #${prNumber} is not a cloud agent branch`,
 			404,

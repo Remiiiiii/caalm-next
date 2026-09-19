@@ -31,3 +31,17 @@ export function catalogBranchPrefixes(key: RoadmapCatalogKey): string[] {
 	const canonical = catalogBranchPrefix(key);
 	return key === "npo" ? [canonical, "npo"] : [canonical];
 }
+
+/**
+ * Branches that belong on the Nonprofit Roadmap, never the PR log.
+ * Canonical: `cursor/nonprofit/…`. Engine: `cursor/nonprofit-roadmap-340a`.
+ * Retired: `npo/…` and `cursor/npo-s01-b1-340a`.
+ */
+export function isNonprofitRoadmapBranch(
+	headRef: string | null | undefined,
+): boolean {
+	const ref = headRef?.trim() ?? "";
+	if (/(?:^|\/)cursor\/nonprofit(?:\/|-)/i.test(ref)) return true;
+	if (/(?:^|\/)cursor\/npo-/i.test(ref)) return true;
+	return /^npo\//i.test(ref);
+}

@@ -1,3 +1,4 @@
+import { isNonprofitRoadmapBranch } from "@/lib/roadmap/catalog-key";
 import type { GitHubPullRequestSummary } from "@/lib/roadmap/github-pr-match";
 import type { PrLogOverview, PrLogSection } from "./types";
 
@@ -7,23 +8,15 @@ export type PrLogSourcePr = GitHubPullRequestSummary & {
 	checksReason?: string;
 };
 
-/** Cloud agent branches look like `cursor/funding-retention-pursuit-9ee5`. */
-export function isAgentPullRequestBranch(headRef: string): boolean {
-	return /(?:^|\/)cursor\//i.test(headRef.trim());
-}
-
 /**
- * Nonprofit Roadmap PRs use `cursor/nonprofit/...` so they stay off the PR log.
- * Legacy stub names `cursor/npo-s01-b1-340a` still count until those branches are renamed.
+ * PR log only lists Cursor agent branches such as
+ * `cursor/funding-retention-pursuit-9ee5`. Nonprofit Roadmap work uses
+ * `cursor/nonprofit/…` and is not an agent-log card.
  */
-export function isNonprofitRoadmapPr(pr: {
-	headRef?: string | null;
-	title?: string | null;
-}): boolean {
-	const ref = pr.headRef?.trim() ?? "";
-	if (/(?:^|\/)cursor\/nonprofit\//i.test(ref)) return true;
-	if (/(?:^|\/)cursor\/npo-s\d+-b\d+/i.test(ref)) return true;
-	return /\bNPO\s+S\d+\s+B\d+\s+catalog stub\b/i.test(pr.title?.trim() ?? "");
+export function isAgentPullRequestBranch(headRef: string): boolean {
+	const ref = headRef.trim();
+	if (isNonprofitRoadmapBranch(ref)) return false;
+	return /(?:^|\/)cursor\//i.test(ref);
 }
 
 /**
@@ -32,7 +25,6 @@ export function isNonprofitRoadmapPr(pr: {
  */
 export function shouldKeepAgentPrOnLog(pr: PrLogSourcePr): boolean {
 	if (!isAgentPullRequestBranch(pr.headRef)) return false;
-	if (isNonprofitRoadmapPr(pr)) return false;
 	if (pr.state === "closed") return false;
 	if (pr.state === "merged") return pr.checksPassed !== true;
 	return true;
