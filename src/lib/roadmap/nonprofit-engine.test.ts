@@ -69,7 +69,10 @@ describe("nonprofit roadmap engine", () => {
 
 		const npo = await getOverview({ catalogKey: "npo" });
 		expect(npo.sections[0]?.status).toBe("complete");
-		expect(npo.sections[0]?.prLinks ?? []).toEqual([]);
+		expect(npo.sections[0]?.prLinks?.map((pr) => pr.number)).toEqual([86]);
+		expect(npo.sections[1]?.prLinks?.map((pr) => pr.number)).toEqual([
+			88, 89, 92,
+		]);
 		expect(npo.sections[1]?.status).toBe("in_progress");
 		expect(npo.sections[1]?.title).toBe("Constituent CRM Foundation");
 		expect(npo.sections[1]?.nextTaskCode).toBe("1.1");

@@ -39,11 +39,15 @@ describe("nonprofit roadmap catalog", () => {
 		expect(npoLinked.filter((n) => clmNumbers.has(n))).toEqual([]);
 	});
 
-	it("does not treat the nonprofit project as one linked PR", () => {
-		expect(NONPROFIT_ROADMAP_CATALOG[0]?.linkedPrNumbers ?? []).toEqual([]);
+	it("links a catalog PR on every section, with a stub every 5 tasks", () => {
+		expect(NONPROFIT_ROADMAP_CATALOG[0]?.linkedPrNumbers).toEqual([86]);
 		expect(NONPROFIT_ROADMAP_CATALOG[0]?.seedComplete).toBe(true);
 		for (const section of NONPROFIT_ROADMAP_CATALOG) {
-			expect(section.linkedPrNumbers ?? []).toEqual([]);
+			const linked = section.linkedPrNumbers ?? [];
+			expect(linked.length).toBeGreaterThan(0);
+			if (section.sectionNumber === 0) continue;
+			const expectedBatches = Math.ceil(section.tasks.length / 5);
+			expect(linked).toHaveLength(expectedBatches);
 		}
 	});
 
@@ -55,7 +59,6 @@ describe("nonprofit roadmap catalog", () => {
 		for (const section of product) {
 			expect(section.sequentialTasks).toBe(true);
 			expect(section.perTaskPrCompletion).toBe(true);
-			expect(section.linkedPrNumbers ?? []).toEqual([]);
 			expect(section.tasks.length).toBeGreaterThanOrEqual(8);
 		}
 		expect(NONPROFIT_ROADMAP_CATALOG[0]?.sequentialTasks).toBe(true);

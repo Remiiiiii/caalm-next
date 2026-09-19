@@ -20,6 +20,7 @@
  * Product PRs: title `NPO {taskCode} {title}`, branch `npo/{section}-{taskCode}-slug`.
  */
 
+import { linkedPrNumbersForSection } from "./nonprofit/npo-pr-batches";
 import type { RoadmapCatalogSection } from "./types";
 
 const PR_CONVENTION =
@@ -60,7 +61,7 @@ const TIMELINE = {
 	perTaskPrCompletion: true,
 } as const;
 
-export const NONPROFIT_ROADMAP_CATALOG: RoadmapCatalogSection[] = [
+const NONPROFIT_ROADMAP_SECTIONS: RoadmapCatalogSection[] = [
 	{
 		sectionNumber: 0,
 		title: "Nonprofit Roadmap Engine",
@@ -2093,3 +2094,18 @@ export const NONPROFIT_ROADMAP_CATALOG: RoadmapCatalogSection[] = [
 		],
 	},
 ];
+
+export const NONPROFIT_ROADMAP_CATALOG: RoadmapCatalogSection[] =
+	NONPROFIT_ROADMAP_SECTIONS.map((section) => ({
+		...section,
+		linkedPrNumbers: linkedPrNumbersForSection(section.sectionNumber),
+	}));
+
+/** One catalog object per section so the board can load a section in isolation. */
+export const NONPROFIT_SECTION_CATALOGS: Record<number, RoadmapCatalogSection> =
+	Object.fromEntries(
+		NONPROFIT_ROADMAP_CATALOG.map((section) => [
+			section.sectionNumber,
+			section,
+		]),
+	);
