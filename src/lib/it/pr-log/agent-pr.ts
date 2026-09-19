@@ -13,16 +13,16 @@ export function isAgentPullRequestBranch(headRef: string): boolean {
 }
 
 /**
- * Nonprofit catalog stubs live on the Nonprofit Roadmap board, not the PR log.
- * Their branches are `cursor/npo-s01-b1-340a`; titles are `NPO S1 B1 catalog stub`.
+ * Nonprofit Roadmap PRs use `cursor/nonprofit/...` so they stay off the PR log.
+ * Legacy stub names `cursor/npo-s01-b1-340a` still count until those branches are renamed.
  */
-export function isNonprofitCatalogStubPr(pr: {
+export function isNonprofitRoadmapPr(pr: {
 	headRef?: string | null;
 	title?: string | null;
 }): boolean {
-	if (/(?:^|\/)cursor\/npo-s\d+-b\d+/i.test(pr.headRef?.trim() ?? "")) {
-		return true;
-	}
+	const ref = pr.headRef?.trim() ?? "";
+	if (/(?:^|\/)cursor\/nonprofit\//i.test(ref)) return true;
+	if (/(?:^|\/)cursor\/npo-s\d+-b\d+/i.test(ref)) return true;
 	return /\bNPO\s+S\d+\s+B\d+\s+catalog stub\b/i.test(pr.title?.trim() ?? "");
 }
 
@@ -32,7 +32,7 @@ export function isNonprofitCatalogStubPr(pr: {
  */
 export function shouldKeepAgentPrOnLog(pr: PrLogSourcePr): boolean {
 	if (!isAgentPullRequestBranch(pr.headRef)) return false;
-	if (isNonprofitCatalogStubPr(pr)) return false;
+	if (isNonprofitRoadmapPr(pr)) return false;
 	if (pr.state === "closed") return false;
 	if (pr.state === "merged") return pr.checksPassed !== true;
 	return true;

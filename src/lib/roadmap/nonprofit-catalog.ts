@@ -17,14 +17,14 @@
  *
  * Out of lane: payroll, Form 990 e-file, wealth scraping, a full general ledger.
  *
- * Product PRs: title `NPO {taskCode} {title}`, branch `npo/{section}-{taskCode}-slug`.
+ * Product PRs: title `NPO {taskCode} {title}`, branch `cursor/nonprofit/{section}-{taskCode}-slug`.
  */
 
 import { linkedPrNumbersForSection } from "./nonprofit/npo-pr-batches";
 import type { RoadmapCatalogSection } from "./types";
 
 const PR_CONVENTION =
-	"Title `NPO {code} {title}`. Branch `npo/{section}-{code}-slug`. PR body: Summary, Who, What, Where, Why, When, How, Test plan, Security notes.";
+	"Title `NPO {code} {title}`. Branch `cursor/nonprofit/{section}-{code}-slug`. PR body: Summary, Who, What, Where, Why, When, How, Test plan, Security notes.";
 
 function spec(
 	who: string,
@@ -120,17 +120,17 @@ const NONPROFIT_ROADMAP_SECTIONS: RoadmapCatalogSection[] = [
 			),
 			t(
 				"0.4",
-				"npo/ PR matching",
+				"cursor/nonprofit/ PR matching",
 				spec(
 					"Cursor cloud agents implementing later tasks",
-					"Match branches npo/{section}-{code}-* and titles starting with NPO {code}",
+					"Match branches cursor/nonprofit/{section}-{code}-* and titles starting with NPO {code}",
 					"github-pr-match.ts",
-					"A title of 1.1 would otherwise complete CLM Trust & Security",
+					"A title of 1.1 would otherwise complete CLM Trust & Security; cursor/nonprofit/ keeps these off the PR log",
 					"Before the first product PR",
 					"Catalog key on matchers; webhook resolveCatalogFromPrMatch prefers linkedPrNumbers then branch prefix; nested codes like 1.10.a match",
 				),
 				[
-					"Branch npo/1-1.1-constituent maps to NPO section 1, not CLM section 1",
+					"Branch cursor/nonprofit/1-1.1-constituent maps to NPO section 1, not CLM section 1",
 					"Title '1.1 Eliminate 2FA cookie-as-session' still maps only to CLM",
 				],
 			),

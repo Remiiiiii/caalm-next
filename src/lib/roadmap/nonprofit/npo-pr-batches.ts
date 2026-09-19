@@ -24,7 +24,7 @@ export const NPO_PR_BATCHES: NpoPrBatch[] = [
 			"Dual-catalog data model",
 			"Sequential per-task lock engine",
 			"IT portal board",
-			"npo/ PR matching",
+			"cursor/nonprofit/ PR matching",
 		],
 		linkedPrNumber: 86,
 	},
@@ -40,7 +40,7 @@ export const NPO_PR_BATCHES: NpoPrBatch[] = [
 			"Duplicate detection on email and name",
 			"Constituent list page",
 		],
-		linkedPrNumber: 88,
+		linkedPrNumber: 109,
 	},
 	{
 		sectionNumber: 1,
@@ -54,7 +54,7 @@ export const NPO_PR_BATCHES: NpoPrBatch[] = [
 			"Do-not-contact enforcement",
 			"Duplicate merge wizard",
 		],
-		linkedPrNumber: 89,
+		linkedPrNumber: 113,
 	},
 	{
 		sectionNumber: 1,
@@ -62,7 +62,7 @@ export const NPO_PR_BATCHES: NpoPrBatch[] = [
 		batch: 3,
 		taskCodes: ["1.11"],
 		taskTitles: ["PII access audit on profiles"],
-		linkedPrNumber: 92,
+		linkedPrNumber: 117,
 	},
 	{
 		sectionNumber: 2,
@@ -76,7 +76,7 @@ export const NPO_PR_BATCHES: NpoPrBatch[] = [
 			"Gift list and detail UI",
 			"Campaigns schema and UI",
 		],
-		linkedPrNumber: 90,
+		linkedPrNumber: 118,
 	},
 	{
 		sectionNumber: 2,
@@ -90,7 +90,7 @@ export const NPO_PR_BATCHES: NpoPrBatch[] = [
 			"Soft credits from household relationships",
 			"Link gifts to grant contracts",
 		],
-		linkedPrNumber: 93,
+		linkedPrNumber: 114,
 	},
 	{
 		sectionNumber: 3,
@@ -104,7 +104,7 @@ export const NPO_PR_BATCHES: NpoPrBatch[] = [
 			"Segment badges and list filter",
 			"Explainable lapse-risk score",
 		],
-		linkedPrNumber: 87,
+		linkedPrNumber: 116,
 	},
 	{
 		sectionNumber: 3,
@@ -118,7 +118,7 @@ export const NPO_PR_BATCHES: NpoPrBatch[] = [
 			"Wealth-screen CSV import",
 			"Score recompute tests and docs",
 		],
-		linkedPrNumber: 91,
+		linkedPrNumber: 110,
 	},
 	{
 		sectionNumber: 4,
@@ -132,7 +132,7 @@ export const NPO_PR_BATCHES: NpoPrBatch[] = [
 			"Grant budget lines",
 			"Budget vs actual from obligations and gifts",
 		],
-		linkedPrNumber: 94,
+		linkedPrNumber: 119,
 	},
 	{
 		sectionNumber: 4,
@@ -146,7 +146,7 @@ export const NPO_PR_BATCHES: NpoPrBatch[] = [
 			"Release appears on journal export later",
 			"Finance help copy and out-of-lane guards",
 		],
-		linkedPrNumber: 97,
+		linkedPrNumber: 115,
 	},
 	{
 		sectionNumber: 5,
@@ -160,7 +160,7 @@ export const NPO_PR_BATCHES: NpoPrBatch[] = [
 			"Shifts as calendar volunteer_shift events",
 			"Capacity and waitlist booking",
 		],
-		linkedPrNumber: 95,
+		linkedPrNumber: 112,
 	},
 	{
 		sectionNumber: 5,
@@ -174,7 +174,7 @@ export const NPO_PR_BATCHES: NpoPrBatch[] = [
 			"Tag hours to a grant program",
 			"Volunteer hour letter export",
 		],
-		linkedPrNumber: 100,
+		linkedPrNumber: 111,
 	},
 	{
 		sectionNumber: 6,
@@ -188,7 +188,7 @@ export const NPO_PR_BATCHES: NpoPrBatch[] = [
 			"Signed QR tokens and scanner",
 			"Ticket-type capacity enforcement",
 		],
-		linkedPrNumber: 98,
+		linkedPrNumber: 127,
 	},
 	{
 		sectionNumber: 6,
@@ -202,7 +202,7 @@ export const NPO_PR_BATCHES: NpoPrBatch[] = [
 			"No public PII on check-in success",
 			"Event roster export",
 		],
-		linkedPrNumber: 99,
+		linkedPrNumber: 126,
 	},
 	{
 		sectionNumber: 7,
@@ -216,7 +216,7 @@ export const NPO_PR_BATCHES: NpoPrBatch[] = [
 			"Contacted writeback",
 			"Next-best-action rules",
 		],
-		linkedPrNumber: 96,
+		linkedPrNumber: 122,
 	},
 	{
 		sectionNumber: 7,
@@ -230,7 +230,7 @@ export const NPO_PR_BATCHES: NpoPrBatch[] = [
 			"Invite action from upcoming public events",
 			"Stewardship metrics on the queue",
 		],
-		linkedPrNumber: 103,
+		linkedPrNumber: 128,
 	},
 	{
 		sectionNumber: 8,
@@ -244,7 +244,7 @@ export const NPO_PR_BATCHES: NpoPrBatch[] = [
 			"Campaign cost field",
 			"Campaign ROI view",
 		],
-		linkedPrNumber: 104,
+		linkedPrNumber: 124,
 	},
 	{
 		sectionNumber: 8,
@@ -258,7 +258,7 @@ export const NPO_PR_BATCHES: NpoPrBatch[] = [
 			"Insight empty states",
 			"Dashboard permission matrix tests",
 		],
-		linkedPrNumber: 102,
+		linkedPrNumber: 129,
 	},
 	{
 		sectionNumber: 9,
@@ -272,7 +272,7 @@ export const NPO_PR_BATCHES: NpoPrBatch[] = [
 			"Public give page allowlist",
 			"Stripe donation Checkout",
 		],
-		linkedPrNumber: 105,
+		linkedPrNumber: 120,
 	},
 	{
 		sectionNumber: 9,
@@ -286,7 +286,7 @@ export const NPO_PR_BATCHES: NpoPrBatch[] = [
 			"Import/export audit log",
 			"Finance export help copy",
 		],
-		linkedPrNumber: 107,
+		linkedPrNumber: 121,
 	},
 	{
 		sectionNumber: 10,
@@ -300,7 +300,7 @@ export const NPO_PR_BATCHES: NpoPrBatch[] = [
 			"Constituents in tenant export",
 			"Constituents in tenant delete",
 		],
-		linkedPrNumber: 106,
+		linkedPrNumber: 123,
 	},
 	{
 		sectionNumber: 10,
@@ -314,13 +314,13 @@ export const NPO_PR_BATCHES: NpoPrBatch[] = [
 			"Consent retention note for AI scores",
 			"Final dual-catalog isolation check",
 		],
-		linkedPrNumber: 101,
+		linkedPrNumber: 125,
 	},
 ];
 
 export function npoStubBranchName(batch: NpoPrBatch): string {
 	const section = String(batch.sectionNumber).padStart(2, "0");
-	return `cursor/npo-s${section}-b${batch.batch}-340a`;
+	return `cursor/nonprofit/s${section}-b${batch.batch}-340a`;
 }
 
 export function npoStubFileId(batch: NpoPrBatch): string {

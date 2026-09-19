@@ -7,7 +7,7 @@ import {
 import {
 	buildPrLogOverview,
 	isAgentPullRequestBranch,
-	isNonprofitCatalogStubPr,
+	isNonprofitRoadmapPr,
 	type PrLogSourcePr,
 } from "./agent-pr";
 import { evaluateCommitCheckGate } from "./checks";
@@ -84,7 +84,7 @@ export async function getPrLogPullRequest(
 
 	if (
 		!isAgentPullRequestBranch(live.headRef ?? "") ||
-		isNonprofitCatalogStubPr({
+		isNonprofitRoadmapPr({
 			headRef: live.headRef,
 			title: live.title,
 		})

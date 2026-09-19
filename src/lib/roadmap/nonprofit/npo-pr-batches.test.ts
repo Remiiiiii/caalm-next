@@ -4,6 +4,7 @@ import {
 	linkedPrNumbersForSection,
 	NPO_PR_BATCHES,
 	npoCatalogDisplayTitleForPr,
+	npoStubBranchName,
 	productNpoPrBatches,
 } from "./npo-pr-batches";
 import { NONPROFIT_SECTION_CATALOGS } from "./section-catalogs";
@@ -44,10 +45,16 @@ describe("nonprofit section catalogs", () => {
 		}
 	});
 
+	it("names stub branches under cursor/nonprofit/", () => {
+		expect(npoStubBranchName(NPO_PR_BATCHES[1]!)).toBe(
+			"cursor/nonprofit/s01-b1-340a",
+		);
+	});
+
 	it("labels a catalog PR with its section batch, not a bare number", () => {
-		expect(npoCatalogDisplayTitleForPr(88)).toMatch(/S1 B1/);
-		expect(npoCatalogDisplayTitleForPr(88)).toMatch(/1\.1–1\.5/);
-		expect(npoCatalogDisplayTitleForPr(92)).toMatch(/1\.11/);
+		expect(npoCatalogDisplayTitleForPr(109)).toMatch(/S1 B1/);
+		expect(npoCatalogDisplayTitleForPr(109)).toMatch(/1\.1–1\.5/);
+		expect(npoCatalogDisplayTitleForPr(117)).toMatch(/1\.11/);
 		expect(npoCatalogDisplayTitleForPr(86)).toMatch(/S0 B1/);
 	});
 });
