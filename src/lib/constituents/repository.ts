@@ -53,6 +53,7 @@ function mapRow(row: Record<string, unknown>): Constituent {
 		piiAccessedAt: optionalString(row.piiAccessedAt),
 		normalizedEmail: optionalString(row.normalizedEmail),
 		normalizedLastName: optionalString(row.normalizedLastName),
+		mergedIntoId: optionalString(row.mergedIntoId),
 	};
 }
 
@@ -107,9 +108,12 @@ export async function listConstituents(
 		tableId: tableId(),
 		queries,
 	});
+	const items = (result.rows as unknown as Record<string, unknown>[])
+		.map(mapRow)
+		.filter((row) => !row.mergedIntoId);
 	return {
-		items: (result.rows as unknown as Record<string, unknown>[]).map(mapRow),
-		total: result.total ?? result.rows.length,
+		items,
+		total: result.total ?? items.length,
 	};
 }
 
@@ -236,6 +240,7 @@ export async function updateConstituent(
 	if (patch.postalCode != null) data.postalCode = patch.postalCode.slice(0, 32);
 	if (patch.country != null) data.country = patch.country.slice(0, 128);
 	if (patch.doNotContact != null) data.doNotContact = patch.doNotContact;
+	if (patch.mergedIntoId != null) data.mergedIntoId = patch.mergedIntoId;
 	Object.assign(data, stampNormalized(patch));
 	const row = await tablesDB.updateRow({
 		databaseId: dbId(),

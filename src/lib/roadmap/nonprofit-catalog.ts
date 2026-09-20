@@ -1,10 +1,9 @@
 /**
  * Seed catalog for the Nonprofit Completion Roadmap (Sections 0–10).
  *
- * This is a timeline, not a mono-PR. Each product task is its own pull request.
- * Later tasks stay locked until the previous PR merges to main with green tests.
- * Nested children are extra PRs that must land before the parent milestone
- * counts as done.
+ * This is a timeline, not a mono-PR. Each batch PR (up to 5 top-level tasks)
+ * is the implementation ticket. Nested children ship in that same batch PR.
+ * Later batches stay on the board until the previous batch merges with green tests.
  *
  * Closes the gap between what nonprofits buy (Bloomerang, Raiser's Edge NXT,
  * iWave/DonorSearch, MIP/Intacct, Better Impact) and what CAALM already is:
@@ -17,14 +16,15 @@
  *
  * Out of lane: payroll, Form 990 e-file, wealth scraping, a full general ledger.
  *
- * Product PRs: title `NPO {taskCode} {title}`, branch `cursor/nonprofit/{section}-{taskCode}-slug`.
+ * Batch PRs: title `NPO S{n} B{n} …`, branch `cursor/nonprofit/s{nn}-b{n}-*`.
+ * Implement on that existing PR. Do not open one PR per task code.
  */
 
 import { linkedPrNumbersForSection } from "./nonprofit/npo-pr-batches";
 import type { RoadmapCatalogSection } from "./types";
 
 const PR_CONVENTION =
-	"Title `NPO {code} {title}`. Branch `cursor/nonprofit/{section}-{code}-slug`. PR body: Summary, Who, What, Where, Why, When, How, Test plan, Security notes.";
+	"Implement on the existing batch PR (`NPO S{n} B{n}`, branch `cursor/nonprofit/s{nn}-b{n}-*`). Body: Summary plus Who, What, Where, Why, When, How, Done when per task. Do not open one PR per task.";
 
 function spec(
 	who: string,
@@ -121,7 +121,7 @@ const NONPROFIT_ROADMAP_SECTIONS: RoadmapCatalogSection[] = [
 				"cursor/nonprofit/ PR matching",
 				spec(
 					"Cursor cloud agents implementing later tasks",
-					"Match branches cursor/nonprofit/{section}-{code}-* and titles starting with NPO {code}",
+					"Match batch branches cursor/nonprofit/s{nn}-b{n}-* and linked batch PR numbers; legacy NPO {code} titles still map",
 					"github-pr-match.ts",
 					"A title of 1.1 would otherwise complete CLM Trust & Security; cursor/nonprofit/ keeps these off the PR log",
 					"Before the first product PR",

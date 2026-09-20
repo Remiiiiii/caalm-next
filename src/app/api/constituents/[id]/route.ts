@@ -29,6 +29,18 @@ export async function GET(request: NextRequest, context: RouteContext) {
 	if (!existing) {
 		return NextResponse.json({ error: "Constituent not found" }, { status: 404 });
 	}
+	if (existing.mergedIntoId) {
+		return NextResponse.json(
+			{
+				error: "Constituent merged",
+				mergedIntoId: existing.mergedIntoId,
+			},
+			{
+				status: 410,
+				headers: { Location: `/constituents/${existing.mergedIntoId}` },
+			},
+		);
+	}
 
 	await markPiiAccessed(id);
 	return NextResponse.json({ constituent: existing });

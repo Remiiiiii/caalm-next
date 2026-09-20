@@ -1,7 +1,8 @@
 "use client";
 
-import { Trash2 } from "lucide-react";
+import { Eye, Trash2 } from "lucide-react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
 import {
@@ -22,6 +23,7 @@ export function ConstituentRowMenu({
 	canManage: boolean;
 	onDeleted: (id: string) => void;
 }) {
+	const router = useRouter();
 	const [confirmOpen, setConfirmOpen] = useState(false);
 	const [deleting, setDeleting] = useState(false);
 
@@ -41,8 +43,6 @@ export function ConstituentRowMenu({
 		}
 	};
 
-	if (!canManage) return null;
-
 	return (
 		<>
 			<DropdownMenu>
@@ -53,14 +53,24 @@ export function ConstituentRowMenu({
 					<Image src="/assets/icons/dots.svg" alt="" width={34} height={34} />
 				</DropdownMenuTrigger>
 				<AppDropdownMenuContent align="end">
-					<DropdownMenuSeparator />
 					<AppDropdownMenuItem
-						icon={Trash2}
-						tone="danger"
-						onClick={() => setConfirmOpen(true)}
+						icon={Eye}
+						onClick={() => router.push(`/constituents/${constituent.$id}`)}
 					>
-						Delete
+						View
 					</AppDropdownMenuItem>
+					{canManage ? (
+						<>
+							<DropdownMenuSeparator />
+							<AppDropdownMenuItem
+								icon={Trash2}
+								tone="danger"
+								onClick={() => setConfirmOpen(true)}
+							>
+								Delete
+							</AppDropdownMenuItem>
+						</>
+					) : null}
 				</AppDropdownMenuContent>
 			</DropdownMenu>
 			<DeleteConfirmationDialog

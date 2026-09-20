@@ -32,7 +32,66 @@ export type Constituent = {
 	piiAccessedAt?: string;
 	normalizedEmail?: string;
 	normalizedLastName?: string;
+	/** Set when this row lost a merge; GET then returns 410. */
+	mergedIntoId?: string;
 };
+
+export const RELATIONSHIP_TYPES = [
+	"household",
+	"spouse",
+	"employer",
+	"solicitor",
+] as const;
+export type RelationshipType = (typeof RELATIONSHIP_TYPES)[number];
+
+export function isRelationshipType(value: unknown): value is RelationshipType {
+	return (
+		typeof value === "string" &&
+		(RELATIONSHIP_TYPES as readonly string[]).includes(value)
+	);
+}
+
+export type ConstituentRelationship = {
+	$id: string;
+	$createdAt: string;
+	orgId: string;
+	fromId: string;
+	toId: string;
+	type: RelationshipType;
+	softCredit: boolean;
+};
+
+export const NOTE_KINDS = ["note", "meeting"] as const;
+export type ConstituentNoteKind = (typeof NOTE_KINDS)[number];
+
+export function isConstituentNoteKind(
+	value: unknown,
+): value is ConstituentNoteKind {
+	return (
+		typeof value === "string" &&
+		(NOTE_KINDS as readonly string[]).includes(value)
+	);
+}
+
+export type ConstituentNote = {
+	$id: string;
+	$createdAt: string;
+	orgId: string;
+	constituentId: string;
+	kind: ConstituentNoteKind;
+	body: string;
+	authorUserId: string;
+	authorName?: string;
+};
+
+export type DerivedAgreement = {
+	$id: string;
+	name: string;
+	kind: "contract" | "grant";
+	href: string;
+};
+
+export type ContactChannel = "email" | "sms" | "phone" | "mail";
 
 export type ConstituentListFilters = {
 	orgId: string;
@@ -68,4 +127,6 @@ export type CreateConstituentInput = {
 
 export type UpdateConstituentInput = Partial<
 	Omit<CreateConstituentInput, "orgId">
->;
+> & {
+	mergedIntoId?: string;
+};

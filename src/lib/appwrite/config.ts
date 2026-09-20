@@ -380,6 +380,18 @@ export const appwriteConfig = {
 		"69c8d4f100a8c4d1e2f0",
 	),
 
+	/** Household / relationship edges (name: constituent_relationships) */
+	constituentRelationshipsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CONSTITUENT_RELATIONSHIPS_COLLECTION",
+		"69c8e8a1001f4e8c2a10",
+	),
+
+	/** Timeline notes on a constituent (name: constituent_notes) */
+	constituentNotesCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CONSTITUENT_NOTES_COLLECTION",
+		"69c8e8a2001f4e8c2a11",
+	),
+
 	/** Contract obligations for retention (name: contract_obligations) */
 	contractObligationsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_CONTRACT_OBLIGATIONS_COLLECTION",

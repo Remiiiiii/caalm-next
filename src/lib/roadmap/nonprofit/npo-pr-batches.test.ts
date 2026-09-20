@@ -3,8 +3,11 @@ import { NONPROFIT_ROADMAP_CATALOG } from "../nonprofit-catalog";
 import {
 	linkedPrNumbersForSection,
 	NPO_PR_BATCHES,
+	npoBatchFromHeadRef,
+	npoBatchOwnsTaskCode,
 	npoCatalogDisplayTitleForPr,
 	npoStubBranchName,
+	npoTaskCodesCompletedByPr,
 	productNpoPrBatches,
 } from "./npo-pr-batches";
 import { NONPROFIT_SECTION_CATALOGS } from "./section-catalogs";
@@ -48,6 +51,30 @@ describe("nonprofit section catalogs", () => {
 	it("names stub branches under cursor/nonprofit/", () => {
 		expect(npoStubBranchName(NPO_PR_BATCHES[1]!)).toBe(
 			"cursor/nonprofit/s01-b1-340a",
+		);
+	});
+
+	it("completes batch task codes on the work PR, not a replaced stub", () => {
+		expect(npoTaskCodesCompletedByPr(113)).toEqual([
+			"1.6",
+			"1.7",
+			"1.8",
+			"1.9",
+			"1.10",
+		]);
+		expect(npoTaskCodesCompletedByPr(109)).toEqual([]);
+		expect(npoTaskCodesCompletedByPr(131)).toEqual([
+			"1.1",
+			"1.2",
+			"1.3",
+			"1.4",
+			"1.5",
+		]);
+		const batch113 = NPO_PR_BATCHES.find((row) => row.linkedPrNumber === 113);
+		expect(batch113 && npoBatchOwnsTaskCode(batch113, "1.7.a")).toBe(true);
+		expect(batch113 && npoBatchOwnsTaskCode(batch113, "1.1")).toBe(false);
+		expect(npoBatchFromHeadRef("cursor/nonprofit/s01-b2-340a")?.linkedPrNumber).toBe(
+			113,
 		);
 	});
 

@@ -1,7 +1,8 @@
 /**
  * Nonprofit Roadmap catalog PR batches.
- * Sections with more than 5 top-level tasks get one stub PR per group of 5.
- * Section 0 (4 tasks) uses the engine PR. Product batches are stubs only.
+ * Sections with more than 5 top-level tasks get one PR per group of 5.
+ * That batch PR is the implementation ticket — do not open one PR per task.
+ * When a batch also has productPrNumber (S1 B1), only that PR completes tasks.
  */
 
 export type NpoPrBatch = {
@@ -10,9 +11,9 @@ export type NpoPrBatch = {
 	batch: number;
 	taskCodes: string[];
 	taskTitles: string[];
-	/** Stub PR that reserved the batch on the board. */
+	/** Batch PR on the board. Completes tasks unless productPrNumber is set. */
 	linkedPrNumber?: number;
-	/** Merged product PR that completes this batch's task codes. */
+	/** Optional separate completer (S1 B1 stub #109 vs product #131). */
 	productPrNumber?: number;
 };
 
@@ -346,6 +347,46 @@ export function productNpoPrBatches(): NpoPrBatch[] {
 }
 
 /** Section-card label when GitHub has not returned a title yet. */
+export function npoBatchForPr(prNumber: number): NpoPrBatch | undefined {
+	return NPO_PR_BATCHES.find(
+		(item) =>
+			item.linkedPrNumber === prNumber || item.productPrNumber === prNumber,
+	);
+}
+
+export function npoBatchOwnsTaskCode(
+	batch: NpoPrBatch,
+	taskCode: string,
+): boolean {
+	return batch.taskCodes.some(
+		(code) => taskCode === code || taskCode.startsWith(`${code}.`),
+	);
+}
+
+/**
+ * Task codes this PR completes on merge (plus nested children like 1.7.a).
+ * A stub that has a separate productPrNumber (#109) completes nothing.
+ */
+export function npoTaskCodesCompletedByPr(prNumber: number): string[] {
+	const batch = npoBatchForPr(prNumber);
+	if (!batch) return [];
+	if (batch.productPrNumber != null && prNumber !== batch.productPrNumber) {
+		return [];
+	}
+	return batch.taskCodes;
+}
+
+export function npoBatchFromHeadRef(headRef: string): NpoPrBatch | undefined {
+	const match = headRef.match(/(?:^|\/)s(\d+)-b(\d+)(?:-|$)/i);
+	if (!match) return undefined;
+	const sectionNumber = Number(match[1]);
+	const batchNumber = Number(match[2]);
+	return NPO_PR_BATCHES.find(
+		(item) =>
+			item.sectionNumber === sectionNumber && item.batch === batchNumber,
+	);
+}
+
 export function npoCatalogDisplayTitleForPr(prNumber: number): string {
 	const batch = NPO_PR_BATCHES.find(
 		(item) =>

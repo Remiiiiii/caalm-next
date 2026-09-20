@@ -2,6 +2,7 @@
 
 import { Plus, Users } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { ConstituentRowMenu } from "@/components/constituents/ConstituentRowMenu";
 import { CreateConstituentDialog } from "@/components/constituents/CreateConstituentDialog";
@@ -19,17 +20,16 @@ import {
 } from "@/components/ui/select";
 import { PERMISSIONS } from "@/constants/permissions";
 import { usePermissions } from "@/hooks/usePermissions";
-import type { Constituent, ConstituentType } from "@/lib/constituents";
-import { CONSTITUENT_TYPES } from "@/lib/constituents";
+import {
+	CONSTITUENT_DNC_BADGE_CLASS,
+	CONSTITUENT_TYPES,
+	constituentDisplayName,
+	constituentTypeBadgeClass,
+	constituentTypeLabel,
+	type Constituent,
+} from "@/lib/constituents";
 
 const PAGE_SIZE = 20;
-
-function typeBadgeClass(type: ConstituentType): string {
-	if (type === "donor") return "bg-green/10 text-green border-green/20";
-	if (type === "volunteer") return "bg-blue/10 text-blue border-blue/20";
-	if (type === "member") return "bg-orange/10 text-orange border-orange/20";
-	return "bg-slate-100 text-slate-600 border-slate-200";
-}
 
 export function ConstituentsPageClient() {
 	const { permissions } = usePermissions();
@@ -166,27 +166,30 @@ export function ConstituentsPageClient() {
 					) : (
 						<div className="space-y-3">
 							{items.map((constituent) => {
-								const name =
-									`${constituent.firstName} ${constituent.lastName}`.trim();
+								const name = constituentDisplayName(constituent);
 								return (
 									<div
 										key={constituent.$id}
 										className="flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white p-4"
 									>
-										<div className="min-w-0">
+										<Link
+											href={`/constituents/${constituent.$id}`}
+											className="min-w-0 flex-1 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
+										>
 											<div className="flex items-center gap-2">
 												<Users className="h-4 w-4 text-[#0f5384] shrink-0" />
-												<p className="font-medium text-slate-700 truncate">
+												<p className="font-medium text-slate-700 truncate hover:underline">
 													{name}
 												</p>
 												<span
-													className={`inline-block px-2 py-0.5 text-xs rounded-full font-medium border ${typeBadgeClass(constituent.type)}`}
+													className={`inline-block px-2 py-0.5 text-xs rounded-full font-medium border ${constituentTypeBadgeClass(constituent.type)}`}
 												>
-													{constituent.type.charAt(0).toUpperCase() +
-														constituent.type.slice(1)}
+													{constituentTypeLabel(constituent.type)}
 												</span>
 												{constituent.doNotContact ? (
-													<span className="inline-block px-2 py-0.5 text-xs rounded-full font-medium border bg-red/10 text-red border-red/20">
+													<span
+														className={`inline-block px-2 py-0.5 text-xs rounded-full font-medium border ${CONSTITUENT_DNC_BADGE_CLASS}`}
+													>
 														Do not contact
 													</span>
 												) : null}
@@ -196,7 +199,7 @@ export function ConstituentsPageClient() {
 													.filter(Boolean)
 													.join(" · ") || "No email or city"}
 											</p>
-										</div>
+										</Link>
 										<ConstituentRowMenu
 											constituent={constituent}
 											canManage={canManage}

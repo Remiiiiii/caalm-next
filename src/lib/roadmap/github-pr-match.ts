@@ -15,6 +15,12 @@ import {
 	sectionNumberForPrIn,
 } from "./catalog-query";
 import { catalogForKey } from "./catalogs";
+import {
+	npoBatchForPr,
+	npoBatchFromHeadRef,
+	npoBatchOwnsTaskCode,
+	npoTaskCodesCompletedByPr,
+} from "./nonprofit/npo-pr-batches";
 
 export type GitHubPullRequestSummary = {
 	number: number;
@@ -67,13 +73,41 @@ export function matchPullRequestToSection(
 	return catalogMatch || branchMatch;
 }
 
-/** Task branch: clm/{section}-{taskCode}-slug or cursor/nonprofit/{section}-{taskCode}-slug */
+/**
+ * Task match: CLM uses clm/{section}-{code}-*.
+ * NPO uses a batch PR (linked number or s{nn}-b{n} branch), or a legacy
+ * cursor/nonprofit/{section}-{code}-* / "NPO {code}" title.
+ */
 export function matchPullRequestToTask(
 	pr: GitHubPullRequestSummary,
 	sectionNumber: number,
 	taskCode: string,
 	catalogKey: RoadmapCatalogKey = DEFAULT_ROADMAP_CATALOG_KEY,
 ): boolean {
+	if (catalogKey === "npo") {
+		const completing = npoTaskCodesCompletedByPr(pr.number);
+		const byNumber = npoBatchForPr(pr.number);
+		if (
+			completing.length > 0 &&
+			byNumber?.sectionNumber === sectionNumber &&
+			npoBatchOwnsTaskCode(byNumber, taskCode)
+		) {
+			return true;
+		}
+		const byBranch = npoBatchFromHeadRef(pr.headRef);
+		const branchIsStubOnly =
+			byBranch?.productPrNumber != null &&
+			pr.number === byBranch.linkedPrNumber;
+		if (
+			byBranch &&
+			!branchIsStubOnly &&
+			byBranch.sectionNumber === sectionNumber &&
+			npoBatchOwnsTaskCode(byBranch, taskCode)
+		) {
+			return true;
+		}
+	}
+
 	const escapedCode = taskCode.replace(/\./g, "\\.");
 	const branchMatch = catalogBranchPrefixes(catalogKey).some((prefix) =>
 		new RegExp(`${prefix}/${sectionNumber}-${escapedCode}(?:-|$)`, "i").test(
@@ -84,7 +118,7 @@ export function matchPullRequestToTask(
 	const titleMatch =
 		catalogKey === "npo"
 			? new RegExp(`\\bNPO\\s+${escapedCode}\\b`, "i").test(pr.title)
-			: !/\bNPO\s+\d+\.\d+/i.test(pr.title) &&
+			: !/\bNPO\b/i.test(pr.title) &&
 				new RegExp(`\\b${escapedCode}\\b`).test(pr.title);
 	return branchMatch || titleMatch;
 }

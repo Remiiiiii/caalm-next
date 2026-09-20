@@ -64,7 +64,7 @@ describe("nonprofit roadmap catalog", () => {
 		}
 	});
 
-	it("uses per-task catalog PRs like CLM, without sequential unlock", () => {
+	it("uses per-batch catalog PRs without sequential unlock", () => {
 		const product = NONPROFIT_ROADMAP_CATALOG.filter(
 			(section) => section.sectionNumber > 0,
 		);
