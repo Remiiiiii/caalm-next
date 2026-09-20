@@ -56,6 +56,11 @@ const SIGNAL_PATTERNS: Array<{
 		re: /\brequireFundingOrgContext\s*\(/,
 	},
 	{
+		signal: "requireConstituentOrgContext",
+		class: "permission",
+		re: /\brequireConstituentOrgContext\s*\(/,
+	},
+	{
 		signal: "requireITPermission",
 		class: "permission",
 		re: /\brequireITPermission\s*\(/,

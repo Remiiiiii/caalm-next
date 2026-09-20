@@ -76,6 +76,13 @@ This catalog explains permission keys in everyday language. Exact availability c
 | `licenses.renew` | Perform renewals |
 | `licenses.sign` | Prepare and send license e-signature packages (CAALM Execute) |
 
+## Constituents
+
+| Key | Meaning |
+|---|---|
+| `constituents.view` | Browse the org donor, volunteer, and member file |
+| `constituents.manage` | Create, edit, delete, and force-insert duplicate people |
+
 ## News
 
 | Key | Meaning |
