@@ -11,6 +11,7 @@ export const SECTION_ICONS: Record<
 	Calendar: { src: "/assets/icons/calendar2.svg", width: 22, height: 22 },
 	Contracts: { src: "/assets/icons/contracts.svg", width: 22, height: 22 },
 	Licenses: { src: "/assets/icons/license.svg", width: 22, height: 22 },
+	Constituents: { src: "/assets/icons/user-management.svg", width: 22, height: 22 },
 	Files: { src: "/assets/icons/folder-section.svg", width: 22, height: 22 },
 	Audits: { src: "/assets/icons/audit.svg", width: 22, height: 22 },
 	Team: { src: "/assets/icons/team.svg", width: 22, height: 22 },
@@ -81,6 +82,12 @@ export const ITEM_ICONS: Record<
 		src: "/assets/icons/licenses.svg",
 		width: 25,
 		height: 25,
+		color: SUBITEM_TEXT_GREY,
+	},
+	"All Constituents": {
+		src: "/assets/icons/user-management.svg",
+		width: 20,
+		height: 20,
 		color: SUBITEM_TEXT_GREY,
 	},
 	"Department Licenses": {

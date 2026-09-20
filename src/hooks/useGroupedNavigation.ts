@@ -116,6 +116,7 @@ export function useGroupedNavigation() {
 			"Calendar",
 			"Contracts",
 			"Licenses",
+			"Constituents",
 			"Audits",
 			"Files",
 			"Team",

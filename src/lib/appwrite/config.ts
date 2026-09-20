@@ -374,6 +374,12 @@ export const appwriteConfig = {
 		"test-funding-pursuits",
 	),
 
+	/** Constituent CRM people file (name: constituents) */
+	constituentsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CONSTITUENTS_COLLECTION",
+		"69c8d4f100a8c4d1e2f0",
+	),
+
 	/** Contract obligations for retention (name: contract_obligations) */
 	contractObligationsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_CONTRACT_OBLIGATIONS_COLLECTION",
