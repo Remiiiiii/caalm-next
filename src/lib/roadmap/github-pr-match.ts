@@ -37,16 +37,19 @@ export type CatalogSectionMatch = {
 	sectionNumber: number;
 };
 
-/**
- * Nonprofit section cards list work-ready PRs only. Closed/merged never render.
- * CLM still shows merged PRs so completed work can stay on the board.
- */
-export function shouldListRoadmapSectionPullRequest(
-	state: "open" | "closed" | "merged" | "unknown" | undefined,
-	catalogKey: RoadmapCatalogKey,
+/** Closed or merged PRs stay on the board with strikethrough + status. */
+export function isSettledRoadmapPullRequestState(
+	state: string | undefined,
 ): boolean {
-	if (catalogKey !== "npo") return true;
-	return state !== "closed" && state !== "merged";
+	return state === "closed" || state === "merged";
+}
+
+/** Catalog PRs stay listed after close/merge on every board. */
+export function shouldListRoadmapSectionPullRequest(
+	_state: "open" | "closed" | "merged" | "unknown" | undefined,
+	_catalogKey: RoadmapCatalogKey,
+): boolean {
+	return true;
 }
 
 export function matchPullRequestToSection(

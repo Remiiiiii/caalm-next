@@ -10,8 +10,10 @@ export type NpoPrBatch = {
 	batch: number;
 	taskCodes: string[];
 	taskTitles: string[];
-	/** Filled after the stub PR exists. */
+	/** Stub PR that reserved the batch on the board. */
 	linkedPrNumber?: number;
+	/** Merged product PR that completes this batch's task codes. */
+	productPrNumber?: number;
 };
 
 export const NPO_PR_BATCHES: NpoPrBatch[] = [
@@ -41,6 +43,7 @@ export const NPO_PR_BATCHES: NpoPrBatch[] = [
 			"Constituent list page",
 		],
 		linkedPrNumber: 109,
+		productPrNumber: 131,
 	},
 	{
 		sectionNumber: 1,
@@ -329,10 +332,13 @@ export function npoStubFileId(batch: NpoPrBatch): string {
 }
 
 export function linkedPrNumbersForSection(sectionNumber: number): number[] {
-	return NPO_PR_BATCHES.filter(
-		(batch) =>
-			batch.sectionNumber === sectionNumber && batch.linkedPrNumber != null,
-	).map((batch) => batch.linkedPrNumber as number);
+	const numbers: number[] = [];
+	for (const batch of NPO_PR_BATCHES) {
+		if (batch.sectionNumber !== sectionNumber) continue;
+		if (batch.linkedPrNumber != null) numbers.push(batch.linkedPrNumber);
+		if (batch.productPrNumber != null) numbers.push(batch.productPrNumber);
+	}
+	return numbers;
 }
 
 export function productNpoPrBatches(): NpoPrBatch[] {
@@ -341,7 +347,10 @@ export function productNpoPrBatches(): NpoPrBatch[] {
 
 /** Section-card label when GitHub has not returned a title yet. */
 export function npoCatalogDisplayTitleForPr(prNumber: number): string {
-	const batch = NPO_PR_BATCHES.find((item) => item.linkedPrNumber === prNumber);
+	const batch = NPO_PR_BATCHES.find(
+		(item) =>
+			item.linkedPrNumber === prNumber || item.productPrNumber === prNumber,
+	);
 	if (!batch) return "";
 	const last = batch.taskCodes[batch.taskCodes.length - 1];
 	const range =

@@ -57,7 +57,6 @@ function t(
 }
 
 const TIMELINE = {
-	sequentialTasks: true,
 	perTaskPrCompletion: true,
 } as const;
 
@@ -66,8 +65,7 @@ const NONPROFIT_ROADMAP_SECTIONS: RoadmapCatalogSection[] = [
 		sectionNumber: 0,
 		title: "Nonprofit Roadmap Engine",
 		sourceRef:
-			"Plan engine prerequisite — reuse CLM UI; isolate catalogs; sequential per-task unlock so product work is a timeline of PRs, not one board dump",
-		sequentialTasks: true,
+			"Plan engine prerequisite — reuse CLM UI and the same section-lock + catalog-PR merge rules; isolate catalogs so task codes do not collide",
 		seedComplete: true,
 		tasks: [
 			t(
@@ -158,6 +156,8 @@ const NONPROFIT_ROADMAP_SECTIONS: RoadmapCatalogSection[] = [
 					"PERMISSIONS.CONSTITUENTS.VIEW and .MANAGE exist and are assigned in role_permissions for Super Admin and Organization Admin",
 					"No file introduces if (role === 'Super Admin') around constituent access",
 				],
+				undefined,
+				131,
 			),
 			t(
 				"1.2",
@@ -174,6 +174,8 @@ const NONPROFIT_ROADMAP_SECTIONS: RoadmapCatalogSection[] = [
 					"Table $id is alphanumeric; name is constituents; demo schema matches prod columns/indexes",
 					".env.example and appwriteConfig use the alphanumeric id, not the snake_case name",
 				],
+				undefined,
+				131,
 			),
 			t(
 				"1.3",
@@ -190,6 +192,8 @@ const NONPROFIT_ROADMAP_SECTIONS: RoadmapCatalogSection[] = [
 					"GET/POST/PATCH/DELETE 403 without the matching permission",
 					"Org A cannot read, patch, or delete Org B's constituent by id",
 				],
+				undefined,
+				131,
 			),
 			t(
 				"1.4",
@@ -206,6 +210,8 @@ const NONPROFIT_ROADMAP_SECTIONS: RoadmapCatalogSection[] = [
 					"Normalized email match returns 409 with candidate ids",
 					"force=true still writes an audit log naming the actor and the skipped candidate",
 				],
+				undefined,
+				131,
 			),
 			t(
 				"1.5",
@@ -222,6 +228,8 @@ const NONPROFIT_ROADMAP_SECTIONS: RoadmapCatalogSection[] = [
 					"Search matches name and email; PageIndex hides on a single page",
 					"Missing constituents.view cannot open the route",
 				],
+				undefined,
+				131,
 			),
 			t(
 				"1.6",

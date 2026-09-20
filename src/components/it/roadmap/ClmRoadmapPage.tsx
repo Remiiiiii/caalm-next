@@ -11,7 +11,10 @@ import { RoadmapProgressBar } from "@/components/it/roadmap/RoadmapProgressBar";
 import { RoadmapTaskTree } from "@/components/it/roadmap/RoadmapTaskTree";
 import { PageIndex } from "@/components/ui/page-index";
 import { useRoadmapRealtime } from "@/hooks/useRoadmapRealtime";
-import { displayPullRequestTitle } from "@/lib/roadmap/github-pr-match";
+import {
+	displayPullRequestTitle,
+	isSettledRoadmapPullRequestState,
+} from "@/lib/roadmap/github-pr-match";
 import type { RoadmapOverview, RoadmapTaskTreeNode } from "@/lib/roadmap/types";
 import { fetcher } from "@/lib/swr-config";
 import { cn } from "@/lib/utils";
@@ -38,8 +41,8 @@ type SectionPullRequestsResponse = {
 
 function RoadmapPullRequestItem({ pr }: { pr: SectionPullRequest }) {
 	const [expanded, setExpanded] = useState(false);
-	// Only strike when roadmap completion checks passed — not merely GitHub "merged"
-	const complete = pr.checksPassed === true;
+	const settled =
+		pr.checksPassed === true || isSettledRoadmapPullRequestState(pr.state);
 
 	return (
 		<div className="space-y-1.5 py-3 first:pt-0 last:pb-0">
@@ -56,7 +59,7 @@ function RoadmapPullRequestItem({ pr }: { pr: SectionPullRequest }) {
 							<span className="font-semibold text-slate-700">#{pr.number}</span>{" "}
 							<span
 								className={cn(
-									complete
+									settled
 										? "line-through text-slate-500 font-normal"
 										: "text-slate-700",
 								)}
@@ -225,7 +228,9 @@ function RoadmapSectionCard({
 										{title ? (
 											<span
 												className={cn(
-													(pr.checksPassed || section.status === "complete") &&
+													(pr.checksPassed ||
+														isSettledRoadmapPullRequestState(pr.state) ||
+														section.status === "complete") &&
 														"line-through text-slate-500",
 												)}
 											>

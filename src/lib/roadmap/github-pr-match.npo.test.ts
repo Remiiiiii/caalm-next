@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+	isSettledRoadmapPullRequestState,
 	matchPullRequestToSection,
 	matchPullRequestToTask,
 	resolveCatalogFromPrMatch,
@@ -45,12 +46,19 @@ describe("nonprofit PR matching", () => {
 		expect(resolveCatalogFromPrMatch(clmSecurity)?.catalogKey).toBe("clm");
 	});
 
-	it("hides closed and merged PRs on the nonprofit board only", () => {
+	it("keeps closed and merged PRs on both boards", () => {
 		expect(shouldListRoadmapSectionPullRequest("open", "npo")).toBe(true);
 		expect(shouldListRoadmapSectionPullRequest("unknown", "npo")).toBe(true);
-		expect(shouldListRoadmapSectionPullRequest("closed", "npo")).toBe(false);
-		expect(shouldListRoadmapSectionPullRequest("merged", "npo")).toBe(false);
+		expect(shouldListRoadmapSectionPullRequest("closed", "npo")).toBe(true);
+		expect(shouldListRoadmapSectionPullRequest("merged", "npo")).toBe(true);
 		expect(shouldListRoadmapSectionPullRequest("closed", "clm")).toBe(true);
 		expect(shouldListRoadmapSectionPullRequest("merged", "clm")).toBe(true);
+	});
+
+	it("treats closed and merged as settled for strikethrough", () => {
+		expect(isSettledRoadmapPullRequestState("closed")).toBe(true);
+		expect(isSettledRoadmapPullRequestState("merged")).toBe(true);
+		expect(isSettledRoadmapPullRequestState("open")).toBe(false);
+		expect(isSettledRoadmapPullRequestState("unknown")).toBe(false);
 	});
 });

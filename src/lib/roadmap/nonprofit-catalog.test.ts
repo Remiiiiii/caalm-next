@@ -47,21 +47,34 @@ describe("nonprofit roadmap catalog", () => {
 			expect(linked.length).toBeGreaterThan(0);
 			if (section.sectionNumber === 0) continue;
 			const expectedBatches = Math.ceil(section.tasks.length / 5);
-			expect(linked).toHaveLength(expectedBatches);
+			expect(linked.length).toBeGreaterThanOrEqual(expectedBatches);
+		}
+		expect(NONPROFIT_ROADMAP_CATALOG[1]?.linkedPrNumbers).toEqual([
+			109, 131, 113, 117,
+		]);
+	});
+
+	it("wires product PR 131 to constituent tasks 1.1–1.5", () => {
+		const section = NONPROFIT_ROADMAP_CATALOG[1];
+		expect(section?.title).toBe("Constituent CRM Foundation");
+		for (const code of ["1.1", "1.2", "1.3", "1.4", "1.5"]) {
+			expect(
+				section?.tasks.find((task) => task.taskCode === code)?.linkedPrNumber,
+			).toBe(131);
 		}
 	});
 
-	it("uses sequential per-task PRs on product sections, not one mono-PR", () => {
+	it("uses per-task catalog PRs like CLM, without sequential unlock", () => {
 		const product = NONPROFIT_ROADMAP_CATALOG.filter(
 			(section) => section.sectionNumber > 0,
 		);
 		expect(product.length).toBe(10);
 		for (const section of product) {
-			expect(section.sequentialTasks).toBe(true);
+			expect(section.sequentialTasks).toBeUndefined();
 			expect(section.perTaskPrCompletion).toBe(true);
 			expect(section.tasks.length).toBeGreaterThanOrEqual(8);
 		}
-		expect(NONPROFIT_ROADMAP_CATALOG[0]?.sequentialTasks).toBe(true);
+		expect(NONPROFIT_ROADMAP_CATALOG[0]?.sequentialTasks).toBeUndefined();
 		const nested = flattenCatalogTasks(NONPROFIT_ROADMAP_CATALOG).filter(
 			(task) => task.taskCode.split(".").length > 2,
 		);

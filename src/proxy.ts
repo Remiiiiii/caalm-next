@@ -210,6 +210,7 @@ export async function proxy(request: NextRequest) {
 		"/esign",
 		"/contracts",
 		"/licenses",
+		"/constituents",
 		"/analytics",
 		"/uploads",
 		"/images",

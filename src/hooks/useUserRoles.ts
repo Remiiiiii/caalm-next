@@ -1,13 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
 	getViewAsClientHint,
 	useImpersonation,
 } from "@/contexts/ImpersonationContext";
 import { useOrganization } from "@/contexts/OrganizationContext";
-import { getCachedData, setCachedData } from "@/lib/utils/client-cache";
+import {
+	readCachedRoles,
+	writeCachedRoles,
+} from "@/lib/navigation/nav-rbac-cache";
 
 interface UserRole {
 	roleId: string;
@@ -31,9 +34,21 @@ export function useUserRoles(): UseUserRolesResult {
 	const viewAsHint = getViewAsClientHint();
 	const effectiveUserId =
 		(isImpersonating && status.target?.$id) || viewAsHint || user?.$id;
-	const [roles, setRoles] = useState<UserRole[]>([]);
-	const [loading, setLoading] = useState(true);
+	const [roles, setRoles] = useState<UserRole[]>(
+		() => readCachedRoles(effectiveUserId, orgId) ?? [],
+	);
+	const [loading, setLoading] = useState(
+		() => !readCachedRoles(effectiveUserId, orgId),
+	);
 	const [error, setError] = useState<string | null>(null);
+
+	useLayoutEffect(() => {
+		const cached = readCachedRoles(effectiveUserId, orgId);
+		if (cached) {
+			setRoles(cached);
+			setLoading(false);
+		}
+	}, [effectiveUserId, orgId]);
 
 	useEffect(() => {
 		if (!effectiveUserId) {
@@ -42,9 +57,7 @@ export function useUserRoles(): UseUserRolesResult {
 			return;
 		}
 
-		// Check client-side cache first (stale-while-revalidate pattern)
-		const cacheKey = `userRoles:${effectiveUserId}:${orgId || "default"}`;
-		const cachedRoles = getCachedData<UserRole[]>(cacheKey);
+		const cachedRoles = readCachedRoles(effectiveUserId, orgId);
 
 		if (cachedRoles) {
 			setRoles(cachedRoles);
@@ -96,8 +109,7 @@ export function useUserRoles(): UseUserRolesResult {
 						}),
 					);
 
-					// Cache for 5 minutes
-					setCachedData(cacheKey, userRoles, 300000);
+					writeCachedRoles(effectiveUserId, orgId, userRoles);
 
 					setRoles(userRoles);
 					setError(null);

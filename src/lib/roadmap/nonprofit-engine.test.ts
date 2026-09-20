@@ -6,10 +6,21 @@ import {
 } from "@/lib/roadmap/store";
 
 vi.mock("@/lib/roadmap/github", () => ({
-	fetchPullRequestStatus: async ({ prNumber }: { prNumber: number }) => ({
-		state: "unknown" as const,
-		number: prNumber,
-	}),
+	fetchPullRequestStatus: async ({ prNumber }: { prNumber: number }) => {
+		if (prNumber === 131) {
+			return {
+				state: "merged" as const,
+				number: 131,
+				title: "NPO 1.1 NPO 1.2 NPO 1.3 NPO 1.4 NPO 1.5 Constituent CRM Foundation",
+				mergeCommitSha: "cd630987f7c4acbbcccb2bc597d4acedf81f295d",
+				htmlUrl: "https://github.com/Remiiiiii/caalm-next/pull/131",
+			};
+		}
+		return {
+			state: "unknown" as const,
+			number: prNumber,
+		};
+	},
 	listOpenPullRequests: async () => [],
 	fetchRoadmapCompletionGate: async () => ({
 		ok: true as const,
@@ -52,7 +63,7 @@ describe("nonprofit roadmap engine", () => {
 		expect(npo.sections.every((s) => s.id.startsWith("npo_"))).toBe(true);
 	});
 
-	it("opens the project at 1.1 after the in-tree engine section", async () => {
+	it("opens section 1 after the in-tree engine section using CLM locks", async () => {
 		const seed = buildSeedSnapshot("npo");
 		expect(seed.tasks.find((t) => t.taskCode === "0.1")?.status).toBe(
 			"complete",
@@ -60,18 +71,16 @@ describe("nonprofit roadmap engine", () => {
 		expect(seed.tasks.find((t) => t.taskCode === "0.2")?.status).toBe(
 			"complete",
 		);
-		expect(seed.tasks.find((t) => t.taskCode === "1.1")?.status).toBe(
-			"available",
-		);
+		expect(seed.tasks.find((t) => t.taskCode === "1.1")?.status).toBe("locked");
 		expect(seed.tasks.find((t) => t.taskCode === "1.2")?.status).toBe("locked");
 		expect(seed.sections[0]?.status).toBe("complete");
-		expect(seed.sections[1]?.status).toBe("in_progress");
+		expect(seed.sections[1]?.status).toBe("available");
 
 		const npo = await getOverview({ catalogKey: "npo" });
 		expect(npo.sections[0]?.status).toBe("complete");
 		expect(npo.sections[0]?.prLinks?.map((pr) => pr.number)).toEqual([86]);
 		expect(npo.sections[1]?.prLinks?.map((pr) => pr.number)).toEqual([
-			109, 113, 117,
+			109, 131, 113, 117,
 		]);
 		expect(npo.sections[2]?.prLinks?.map((pr) => pr.number)).toEqual([
 			118, 114,
@@ -103,7 +112,8 @@ describe("nonprofit roadmap engine", () => {
 		expect(npo.sections[1]?.prLinks?.[0]?.title).toMatch(/S1 B1/);
 		expect(npo.sections[1]?.status).toBe("in_progress");
 		expect(npo.sections[1]?.title).toBe("Constituent CRM Foundation");
-		expect(npo.sections[1]?.nextTaskCode).toBe("1.1");
-		expect(npo.sections[1]?.mergeBlockReason).toMatch(/1\.1/);
+		expect(npo.sections[1]?.taskCounts.complete).toBe(5);
+		expect(npo.sections[1]?.nextTaskCode ?? null).toBeNull();
+		expect(npo.sections[1]?.mergeBlockReason).toMatch(/5 of 15 tasks complete/);
 	});
 });
