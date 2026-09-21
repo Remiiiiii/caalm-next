@@ -64,6 +64,7 @@ import {
 } from "./store";
 import type {
 	RoadmapOverview,
+	RoadmapSection,
 	RoadmapSectionOverview,
 	RoadmapTask,
 	RoadmapTaskTreeNode,
@@ -395,6 +396,49 @@ function toPrSummary(
 	};
 }
 
+function taskMatchesMergedCatalogPr(
+	task: RoadmapTask,
+	prNumber: number,
+	prSummary: GitHubPullRequestSummary,
+	sections: RoadmapSection[],
+	catalogKey: RoadmapCatalogKey,
+): boolean {
+	if (task.status === "complete") return false;
+	if (task.prNumber === prNumber) return true;
+	if (task.prNumber != null) return false;
+	const section = sections.find((item) => item.$id === task.sectionId);
+	if (!section) return false;
+	return matchPullRequestToTask(
+		prSummary,
+		section.sectionNumber,
+		task.taskCode,
+		catalogKey,
+	);
+}
+
+async function markTaskCompleteFromMergedPr(
+	task: RoadmapTask,
+	sha: string,
+	completedAt: string,
+): Promise<void> {
+	const next: RoadmapTask = {
+		...task,
+		status: "complete",
+		completedAt: task.completedAt ?? completedAt,
+		completedCommitSha: task.completedCommitSha ?? sha,
+	};
+	await saveTask(next);
+	await appendStatusLog({
+		entityType: "task",
+		entityId: task.$id,
+		fromStatus: task.status,
+		toStatus: "complete",
+		actor: "system:merged-catalog-pr",
+		commitSha: sha,
+		testRunId: null,
+	});
+}
+
 /**
  * Mark catalog-linked tasks complete only when the merge commit also has
  * Playwright E2E (push) + Deploy to Vercel (production) green.
@@ -403,6 +447,7 @@ async function persistTasksCompletedByMergedPrs(
 	tasks: RoadmapTask[],
 	prLookup: Map<number, CatalogPrLinkMeta>,
 	catalogKey: RoadmapCatalogKey = DEFAULT_ROADMAP_CATALOG_KEY,
+	sections: RoadmapSection[] = [],
 ): Promise<boolean> {
 	let changed = false;
 	const completedAt = new Date().toISOString();
@@ -410,6 +455,15 @@ async function persistTasksCompletedByMergedPrs(
 		string,
 		Awaited<ReturnType<typeof fetchRoadmapCompletionGate>>
 	>();
+
+	const gateForSha = async (sha: string) => {
+		let gate = gateBySha.get(sha);
+		if (!gate) {
+			gate = await fetchRoadmapCompletionGate({ commitSha: sha });
+			gateBySha.set(sha, gate);
+		}
+		return gate;
+	};
 
 	for (const task of tasks) {
 		if (task.status === "complete" || task.prNumber == null) continue;
@@ -427,31 +481,56 @@ async function persistTasksCompletedByMergedPrs(
 		const sha = meta.mergeCommitSha?.trim();
 		if (!sha) continue;
 
-		let gate = gateBySha.get(sha);
-		if (!gate) {
-			gate = await fetchRoadmapCompletionGate({ commitSha: sha });
-			gateBySha.set(sha, gate);
-		}
+		const gate = await gateForSha(sha);
 		if (!gate.ok) continue;
 
-		const next: RoadmapTask = {
-			...task,
-			status: "complete",
-			completedAt: task.completedAt ?? completedAt,
-			completedCommitSha: task.completedCommitSha ?? sha,
-		};
-		await saveTask(next);
-		await appendStatusLog({
-			entityType: "task",
-			entityId: task.$id,
-			fromStatus: task.status,
-			toStatus: "complete",
-			actor: "system:merged-catalog-pr",
-			commitSha: sha,
-			testRunId: null,
-		});
+		await markTaskCompleteFromMergedPr(task, sha, completedAt);
 		changed = true;
 	}
+
+	// NPO batch PRs (e.g. #113 for 1.6–1.10) often have no per-task linkedPrNumber.
+	for (const [prNumber, meta] of prLookup.entries()) {
+		if (meta.state !== "merged") continue;
+		const sha = meta.mergeCommitSha?.trim();
+		if (!sha) continue;
+		const sectionNumber =
+			sectionNumberForPrIn(catalogOf(catalogKey), prNumber) ??
+			getSectionNumberForPr(prNumber);
+		if (
+			sectionNumber != null &&
+			!sectionCompletesOnMergedCatalogPr(sectionNumber, catalogKey)
+		) {
+			continue;
+		}
+		const gate = await gateForSha(sha);
+		if (!gate.ok) continue;
+
+		const prSummary = toPrSummary(prNumber, {
+			state: "merged",
+			number: prNumber,
+			title: meta.title,
+			htmlUrl: "",
+			headRef: "",
+			mergeCommitSha: sha,
+		});
+
+		for (const task of tasks) {
+			if (
+				!taskMatchesMergedCatalogPr(
+					task,
+					prNumber,
+					prSummary,
+					sections,
+					catalogKey,
+				)
+			) {
+				continue;
+			}
+			await markTaskCompleteFromMergedPr(task, sha, completedAt);
+			changed = true;
+		}
+	}
+
 	return changed;
 }
 
@@ -510,6 +589,7 @@ export async function getOverview(options?: {
 		unlockedTasks,
 		prLookup,
 		catalogKey,
+		unlockedSections,
 	);
 
 	// Same completion gate used to finish sections — used for PR strikethrough UI
