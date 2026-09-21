@@ -24,6 +24,7 @@ export type Gift = {
 	constituentId: string;
 	campaignId?: string;
 	designationId?: string;
+	fundCode: string;
 	contractId?: string;
 	receiptNumber?: number;
 	anonymous: boolean;

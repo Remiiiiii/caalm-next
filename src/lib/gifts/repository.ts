@@ -3,7 +3,15 @@ import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { getConstituentById } from "@/lib/constituents/repository";
 import { getCampaignById } from "@/lib/campaigns/repository";
+import {
+	DesignationDomainError,
+	resolveFundForGift,
+	UNRESTRICTED_FUND_CODE,
+} from "@/lib/designations";
 import { allocateReceiptNumber } from "./receipt";
+import { assertGrantContractForOrg } from "./grant-contract";
+import { mapGiftRow } from "./repository-rows";
+import { createSoftCreditsForPostedGift } from "./soft-credits";
 import type {
 	CreateGiftInput,
 	Gift,
@@ -12,7 +20,7 @@ import type {
 	GiftStatus,
 	UpdateDraftGiftInput,
 } from "./types";
-import { isGiftMethod, isGiftStatus } from "./types";
+import { isGiftMethod } from "./types";
 
 const PAGE_SIZE_MAX = 100;
 function giftsTableId(): string {
@@ -23,29 +31,7 @@ function dbId(): string {
 	return appwriteConfig.databaseId || "";
 }
 
-function mapRow(row: Record<string, unknown>): Gift {
-	const method = isGiftMethod(row.method) ? row.method : "other";
-	const status = isGiftStatus(row.status) ? row.status : "draft";
-	return {
-		$id: String(row.$id),
-		$createdAt: String(row.$createdAt || ""),
-		$updatedAt: String(row.$updatedAt || ""),
-		orgId: String(row.orgId || ""),
-		amount: Number(row.amount),
-		currency: String(row.currency || "USD"),
-		giftDate: String(row.giftDate || ""),
-		method,
-		status,
-		constituentId: String(row.constituentId || ""),
-		campaignId: row.campaignId ? String(row.campaignId) : undefined,
-		designationId: row.designationId ? String(row.designationId) : undefined,
-		contractId: row.contractId ? String(row.contractId) : undefined,
-		receiptNumber:
-			row.receiptNumber != null ? Number(row.receiptNumber) : undefined,
-		anonymous: Boolean(row.anonymous),
-		voidOfId: row.voidOfId ? String(row.voidOfId) : undefined,
-	};
-}
+const mapRow = mapGiftRow;
 
 async function assertConstituentInOrg(
 	constituentId: string,
@@ -66,6 +52,14 @@ async function assertCampaignInOrg(
 	if (!campaign || campaign.orgId !== orgId) {
 		throw new GiftDomainError("Campaign not found", 404);
 	}
+}
+
+async function assertContractForGift(
+	contractId: string | undefined,
+	orgId: string,
+): Promise<void> {
+	if (!contractId) return;
+	await assertGrantContractForOrg(contractId, orgId);
 }
 
 export class GiftDomainError extends Error {
@@ -132,6 +126,20 @@ export async function getGiftById(
 export async function createDraftGift(input: CreateGiftInput): Promise<Gift> {
 	await assertConstituentInOrg(input.constituentId, input.orgId);
 	await assertCampaignInOrg(input.campaignId, input.orgId);
+	await assertContractForGift(input.contractId, input.orgId);
+	let fundCode = UNRESTRICTED_FUND_CODE;
+	try {
+		const resolved = await resolveFundForGift(
+			input.orgId,
+			input.designationId,
+		);
+		fundCode = resolved.fundCode;
+	} catch (error) {
+		if (error instanceof DesignationDomainError) {
+			throw new GiftDomainError(error.message, error.status);
+		}
+		throw error;
+	}
 	const { tablesDB } = await createAdminClient();
 	const row = await tablesDB.createRow({
 		databaseId: dbId(),
@@ -147,6 +155,7 @@ export async function createDraftGift(input: CreateGiftInput): Promise<Gift> {
 			constituentId: input.constituentId,
 			campaignId: input.campaignId || null,
 			designationId: input.designationId || null,
+			fundCode,
 			contractId: input.contractId || null,
 			receiptNumber: null,
 			anonymous: input.anonymous ?? false,
@@ -172,6 +181,26 @@ export async function updateDraftGift(
 	const nextCampaign =
 		patch.campaignId === null ? undefined : patch.campaignId ?? existing.campaignId;
 	await assertCampaignInOrg(nextCampaign, orgId);
+	const nextContract =
+		patch.contractId === null ? undefined : patch.contractId ?? existing.contractId;
+	await assertContractForGift(nextContract, orgId);
+
+	const nextDesignation =
+		patch.designationId === null
+			? undefined
+			: patch.designationId ?? existing.designationId;
+	let fundCode = existing.fundCode;
+	if (patch.designationId !== undefined) {
+		try {
+			const resolved = await resolveFundForGift(orgId, nextDesignation);
+			fundCode = resolved.fundCode;
+		} catch (error) {
+			if (error instanceof DesignationDomainError) {
+				throw new GiftDomainError(error.message, error.status);
+			}
+			throw error;
+		}
+	}
 
 	const { tablesDB } = await createAdminClient();
 	const data: Record<string, unknown> = {};
@@ -181,7 +210,10 @@ export async function updateDraftGift(
 	if (patch.method != null) data.method = patch.method;
 	if (patch.constituentId != null) data.constituentId = patch.constituentId;
 	if (patch.campaignId !== undefined) data.campaignId = patch.campaignId;
-	if (patch.designationId !== undefined) data.designationId = patch.designationId;
+	if (patch.designationId !== undefined) {
+		data.designationId = patch.designationId;
+		data.fundCode = fundCode;
+	}
 	if (patch.contractId !== undefined) data.contractId = patch.contractId;
 	if (patch.anonymous != null) data.anonymous = patch.anonymous;
 
@@ -208,7 +240,9 @@ export async function postGift(id: string, orgId: string): Promise<Gift> {
 		rowId: id,
 		data: { status: "posted", receiptNumber },
 	});
-	return mapRow(row as unknown as Record<string, unknown>);
+	const posted = mapRow(row as unknown as Record<string, unknown>);
+	await createSoftCreditsForPostedGift(posted);
+	return posted;
 }
 
 export async function voidPostedGift(id: string, orgId: string): Promise<Gift> {
@@ -237,6 +271,7 @@ export async function voidPostedGift(id: string, orgId: string): Promise<Gift> {
 			constituentId: existing.constituentId,
 			campaignId: existing.campaignId || null,
 			designationId: existing.designationId || null,
+			fundCode: existing.fundCode,
 			contractId: existing.contractId || null,
 			receiptNumber,
 			anonymous: existing.anonymous,
