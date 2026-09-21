@@ -146,6 +146,23 @@ export const PERMISSIONS = {
 		MANAGE: "funding.manage",
 	},
 
+	/**
+	 * Constituent CRM — donor / volunteer / member file.
+	 * Separate from CONTRACTS so gift processors can work people
+	 * without contract edit/approve powers.
+	 */
+	CONSTITUENTS: {
+		VIEW: "constituents.view",
+		MANAGE: "constituents.manage",
+	},
+
+	/** Individual gifts and receipts — separate from constituents.manage */
+	GIFTS: {
+		VIEW: "gifts.view",
+		CREATE: "gifts.create",
+		VOID: "gifts.void",
+	},
+
 	// Standard clause library (org playbooks)
 	CLAUSES: {
 		VIEW: "clauses.view",
@@ -540,13 +557,14 @@ export const PERMISSION_DEFINITIONS = [
 	},
 	{
 		key: PERMISSIONS.IT.VIEW_ROADMAP,
-		name: "View CLM Roadmap",
+		name: "View Roadmaps",
 		category: "it",
-		description: "View the in-app CLM completion roadmap and progress",
+		description:
+			"View the in-app CLM and Nonprofit completion roadmaps and progress",
 	},
 	{
 		key: PERMISSIONS.IT.MANAGE_ROADMAP,
-		name: "Manage CLM Roadmap",
+		name: "Manage Roadmaps",
 		category: "it",
 		description:
 			"Start roadmap tasks and bind branches/PRs (cannot force-complete)",
@@ -721,6 +739,39 @@ export const PERMISSION_DEFINITIONS = [
 		category: "funding",
 		description:
 			"Create/edit pursuits and obligations, mark wins, and spawn proposals from won bids",
+	},
+
+	// Constituent CRM
+	{
+		key: PERMISSIONS.CONSTITUENTS.VIEW,
+		name: "View Constituents",
+		category: "constituents",
+		description: "Browse the org donor, volunteer, and member file",
+	},
+	{
+		key: PERMISSIONS.CONSTITUENTS.MANAGE,
+		name: "Manage Constituents",
+		category: "constituents",
+		description: "Create, edit, delete, and force-insert duplicate constituents",
+	},
+
+	{
+		key: PERMISSIONS.GIFTS.VIEW,
+		name: "View Gifts",
+		category: "gifts",
+		description: "Browse posted and draft gifts and receipt numbers",
+	},
+	{
+		key: PERMISSIONS.GIFTS.CREATE,
+		name: "Create and Post Gifts",
+		category: "gifts",
+		description: "Create draft gifts and post them to the ledger",
+	},
+	{
+		key: PERMISSIONS.GIFTS.VOID,
+		name: "Void Posted Gifts",
+		category: "gifts",
+		description: "Void posted gifts with a reversing ledger row",
 	},
 
 	// Clause library

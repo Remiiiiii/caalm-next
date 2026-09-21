@@ -3,20 +3,29 @@
  * Defers data fetching until dialog is opened
  */
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
 	getAllManagers,
 	getUsersByDepartment,
 } from "@/lib/actions/database.actions";
+import {
+	type AssigneeSource,
+	pickAssigneeIds,
+} from "@/lib/assignments/resolve-default-assignee";
 import type { Manager } from "../types";
 
-export function useManagers(isDialogOpen: boolean) {
+export function useManagers(
+	isDialogOpen: boolean,
+	fallbackUser?: { $id: string; fullName: string; email?: string },
+) {
 	const [availableManagers, setAvailableManagers] = useState<Manager[]>([]);
 	const [filteredManagers, setFilteredManagers] = useState<Manager[]>([]);
 	const [selectedManagers, setSelectedManagers] = useState<string[]>([]);
 	const [selectedApprovers, setSelectedApprovers] = useState<string[]>([]);
+	const [assigneeSource, setAssigneeSource] =
+		useState<AssigneeSource>("selected");
 
-	const fetchManagers = async () => {
+	const fetchManagers = useCallback(async () => {
 		try {
 			const managers = await getAllManagers();
 			if (managers) {
@@ -39,20 +48,22 @@ export function useManagers(isDialogOpen: boolean) {
 		} catch (error) {
 			console.error("Failed to fetch managers:", error);
 		}
-	};
+	}, []);
 
 	// Fetch all managers when dialog opens (deferred loading)
 	useEffect(() => {
 		if (isDialogOpen && availableManagers.length === 0) {
-			fetchManagers();
+			void fetchManagers();
 		}
 	}, [isDialogOpen, availableManagers.length, fetchManagers]);
 
-	const fetchDepartmentManagers = async (department: string) => {
-		try {
-			const departmentManagers = await getUsersByDepartment(department);
-			if (departmentManagers && departmentManagers.length > 0) {
-				const typedManagers = departmentManagers.map(
+	const fetchDepartmentManagers = useCallback(
+		async (department: string, division?: string) => {
+			try {
+				const departmentManagers = department
+					? await getUsersByDepartment(department)
+					: [];
+				const typedDept = (departmentManagers || []).map(
 					(manager: {
 						$id: string;
 						fullName?: string;
@@ -65,18 +76,41 @@ export function useManagers(isDialogOpen: boolean) {
 						division: manager.division,
 					}),
 				);
-				setFilteredManagers(typedManagers);
-				// Clear selected managers when department changes
-				setSelectedManagers([]);
-			} else {
-				// No managers found in this department
-				setFilteredManagers([]);
-				setSelectedManagers([]);
+				const pick = pickAssigneeIds({
+					divisionCandidates: typedDept,
+					departmentCandidates: typedDept,
+					orgCandidates: availableManagers,
+					fallbackUser,
+					division,
+				});
+				// Show the widest pool the user can still pick from; auto-select the fallback.
+				const display =
+					typedDept.length > 0
+						? typedDept
+						: (pick.managers as Manager[]);
+				setFilteredManagers(display);
+				setAssigneeSource(pick.source);
+				setSelectedManagers(pick.ids);
+			} catch (error) {
+				console.error("Failed to fetch department managers:", error);
+				if (fallbackUser?.$id) {
+					setFilteredManagers([
+						{
+							$id: fallbackUser.$id,
+							fullName: fallbackUser.fullName || "You",
+							email: fallbackUser.email || "",
+						},
+					]);
+					setSelectedManagers([fallbackUser.$id]);
+					setAssigneeSource("uploader");
+				} else {
+					setFilteredManagers([]);
+					setSelectedManagers([]);
+				}
 			}
-		} catch (error) {
-			console.error("Failed to fetch department managers:", error);
-		}
-	};
+		},
+		[availableManagers, fallbackUser],
+	);
 
 	return {
 		availableManagers,
@@ -87,5 +121,6 @@ export function useManagers(isDialogOpen: boolean) {
 		setSelectedApprovers,
 		fetchManagers,
 		fetchDepartmentManagers,
+		assigneeSource,
 	};
 }

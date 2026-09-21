@@ -517,12 +517,12 @@ const OrganizationAnalyticsDashboard = () => {
 							className="w-full"
 							onValueChange={(value) => setSelectedDepartmentTab(value)}
 						>
-							<TabsList className="flex h-auto w-full flex-wrap gap-1 bg-white/20 backdrop-blur border border-white/40 p-1">
+							<TabsList>
 								{analyticsData.departments.map((dept) => (
 									<TabsTrigger
 										key={dept.name}
 										value={dept.name.toLowerCase()}
-										className="flex-1 min-w-[4.5rem] data-[state=active]:bg-white data-[state=active]:text-navy data-[state=active]:shadow-sm"
+										className="min-w-[4.5rem]"
 									>
 										{dept.name}
 									</TabsTrigger>
@@ -724,32 +724,20 @@ const OrganizationAnalyticsDashboard = () => {
 			{/* Tabbed Analytics Content */}
 			<div ref={detailRef}>
 				<Tabs defaultValue="overview" className="w-full">
-					<TabsList className="responsive-tab-list h-auto bg-white/20 backdrop-blur border border-white/40 p-1">
-						<TabsTrigger
-							value="overview"
-							className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-navy data-[state=active]:shadow-sm"
-						>
+					<TabsList>
+						<TabsTrigger value="overview">
 							<BarChart3 className="h-4 w-4" />
 							Overview
 						</TabsTrigger>
-						<TabsTrigger
-							value="metrics"
-							className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-navy data-[state=active]:shadow-sm"
-						>
+						<TabsTrigger value="metrics">
 							<Activity className="h-4 w-4" />
 							Metrics
 						</TabsTrigger>
-						<TabsTrigger
-							value="compliance"
-							className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-navy data-[state=active]:shadow-sm"
-						>
+						<TabsTrigger value="compliance">
 							<Shield className="h-4 w-4" />
 							Compliance
 						</TabsTrigger>
-						<TabsTrigger
-							value="trends"
-							className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-navy data-[state=active]:shadow-sm"
-						>
+						<TabsTrigger value="trends">
 							<TrendingUp className="h-4 w-4" />
 							Trends
 						</TabsTrigger>

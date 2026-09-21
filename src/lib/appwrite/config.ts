@@ -374,6 +374,42 @@ export const appwriteConfig = {
 		"test-funding-pursuits",
 	),
 
+	/** Constituent CRM people file (name: constituents) */
+	constituentsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CONSTITUENTS_COLLECTION",
+		"69c8d4f100a8c4d1e2f0",
+	),
+
+	/** Household / relationship edges (name: constituent_relationships) */
+	constituentRelationshipsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CONSTITUENT_RELATIONSHIPS_COLLECTION",
+		"69c8e8a1001f4e8c2a10",
+	),
+
+	/** Timeline notes on a constituent (name: constituent_notes) */
+	constituentNotesCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CONSTITUENT_NOTES_COLLECTION",
+		"69c8e8a2001f4e8c2a11",
+	),
+
+	/** Posted and draft gifts (name: gifts) */
+	giftsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_GIFTS_COLLECTION",
+		"69d91201001f4e8c2b01",
+	),
+
+	/** Fundraising campaigns (name: campaigns) */
+	campaignsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CAMPAIGNS_COLLECTION",
+		"69d91202001f4e8c2b02",
+	),
+
+	/** Per-org receipt sequence (name: gift_receipt_counters) */
+	giftReceiptCountersCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_GIFT_RECEIPT_COUNTERS_COLLECTION",
+		"69d91203001f4e8c2b03",
+	),
+
 	/** Contract obligations for retention (name: contract_obligations) */
 	contractObligationsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_CONTRACT_OBLIGATIONS_COLLECTION",

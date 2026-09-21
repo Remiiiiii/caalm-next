@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import { requirePermission } from "@/lib/rbac/middleware";
+import { parseRoadmapCatalogKey } from "@/lib/roadmap/catalog-key";
 import { getOverview, RoadmapError } from "@/lib/roadmap/service";
 
 export async function GET(request: NextRequest) {
@@ -11,7 +12,10 @@ export async function GET(request: NextRequest) {
 
 	try {
 		const skipCache = request.nextUrl.searchParams.get("fresh") === "1";
-		const overview = await getOverview({ skipCache });
+		const catalogKey = parseRoadmapCatalogKey(
+			request.nextUrl.searchParams.get("catalog"),
+		);
+		const overview = await getOverview({ skipCache, catalogKey });
 		return NextResponse.json(overview);
 	} catch (error) {
 		if (error instanceof RoadmapError) {
