@@ -5,22 +5,14 @@ import {
 	resetRoadmapMemoryForTests,
 } from "@/lib/roadmap/store";
 
+const fetchPullRequestStatus = vi.fn(
+	async ({ prNumber }: { prNumber: number }) =>
+		defaultMergedPrLookup(prNumber),
+);
+
 vi.mock("@/lib/roadmap/github", () => ({
-	fetchPullRequestStatus: async ({ prNumber }: { prNumber: number }) => {
-		if (prNumber === 131) {
-			return {
-				state: "merged" as const,
-				number: 131,
-				title: "NPO 1.1 NPO 1.2 NPO 1.3 NPO 1.4 NPO 1.5 Constituent CRM Foundation",
-				mergeCommitSha: "cd630987f7c4acbbcccb2bc597d4acedf81f295d",
-				htmlUrl: "https://github.com/Remiiiiii/caalm-next/pull/131",
-			};
-		}
-		return {
-			state: "unknown" as const,
-			number: prNumber,
-		};
-	},
+	fetchPullRequestStatus: (args: { prNumber: number }) =>
+		fetchPullRequestStatus(args),
 	listOpenPullRequests: async () => [],
 	fetchRoadmapCompletionGate: async () => ({
 		ok: true as const,
@@ -33,10 +25,29 @@ vi.mock("@/lib/roadmap/github", () => ({
 	})),
 }));
 
+function defaultMergedPrLookup(prNumber: number) {
+	if (prNumber === 131) {
+		return {
+			state: "merged" as const,
+			number: 131,
+			title: "NPO 1.1 NPO 1.2 NPO 1.3 NPO 1.4 NPO 1.5 Constituent CRM Foundation",
+			mergeCommitSha: "cd630987f7c4acbbcccb2bc597d4acedf81f295d",
+			htmlUrl: "https://github.com/Remiiiiii/caalm-next/pull/131",
+		};
+	}
+	return {
+		state: "unknown" as const,
+		number: prNumber,
+	};
+}
+
 describe("nonprofit roadmap engine", () => {
 	beforeEach(() => {
 		resetRoadmapMemoryForTests();
 		clearOverviewCacheForTests();
+		fetchPullRequestStatus.mockImplementation(async ({ prNumber }) =>
+			defaultMergedPrLookup(prNumber),
+		);
 	});
 
 	it("seeds NPO ids with npo_ and leaves CLM ids unprefixed", () => {
@@ -115,5 +126,59 @@ describe("nonprofit roadmap engine", () => {
 		expect(npo.sections[1]?.taskCounts.complete).toBe(5);
 		expect(npo.sections[1]?.nextTaskCode ?? null).toBeNull();
 		expect(npo.sections[1]?.mergeBlockReason).toMatch(/5 of 15 tasks complete/);
+	});
+
+	it("marks batch PR 113 tasks 1.6–1.10 complete on overview reconcile", async () => {
+		fetchPullRequestStatus.mockImplementation(
+			async ({ prNumber }: { prNumber: number }) => {
+				if (prNumber === 131) {
+					return {
+						state: "merged" as const,
+						number: 131,
+						title:
+							"NPO 1.1 NPO 1.2 NPO 1.3 NPO 1.4 NPO 1.5 Constituent CRM Foundation",
+						mergeCommitSha: "cd630987f7c4acbbcccb2bc597d4acedf81f295d",
+						htmlUrl: "https://github.com/Remiiiiii/caalm-next/pull/131",
+					};
+				}
+				if (prNumber === 113) {
+					return {
+						state: "merged" as const,
+						number: 113,
+						title: "NPO S1 B2 Constituent CRM Foundation (1.6-1.10)",
+						mergeCommitSha: "merge113sha000000000000000000000000000001",
+						htmlUrl: "https://github.com/Remiiiiii/caalm-next/pull/113",
+						headRef: "cursor/nonprofit/s01-b2-340a",
+					};
+				}
+				return {
+					state: "unknown" as const,
+					number: prNumber,
+				};
+			},
+		);
+
+		const npo = await getOverview({ catalogKey: "npo", skipCache: true });
+		const section1 = npo.sections.find((s) => s.sectionNumber === 1)!;
+		expect(section1.taskCounts.complete).toBe(14);
+		expect(section1.status).toBe("in_progress");
+
+		const { getSectionTaskTree } = await import("./service");
+		const tree = await getSectionTaskTree(section1.id);
+		const byCode = Object.fromEntries(
+			tree.tasks.flatMap(function flatten(node): [string, string][] {
+				return [
+					[node.taskCode, node.status],
+					...node.children.flatMap(flatten),
+				];
+			}),
+		);
+		expect(byCode["1.6"]).toBe("complete");
+		expect(byCode["1.7.a"]).toBe("complete");
+		expect(byCode["1.7.b"]).toBe("complete");
+		expect(byCode["1.8"]).toBe("complete");
+		expect(byCode["1.9"]).toBe("complete");
+		expect(byCode["1.10.a"]).toBe("complete");
+		expect(byCode["1.10.b"]).toBe("complete");
 	});
 });
