@@ -1,12 +1,13 @@
 /**
- * Nonprofit Roadmap catalog stub — no product implementation.
+ * Nonprofit Roadmap batch implementation ticket — implement all tasks on this PR branch.
  * Section 10 batch 2: Consent, Privacy, and Packaging
  */
-export const NPO_STUB_S10_B2 = {
+export const NPO_BATCH_S10_B2 = {
 	sectionNumber: 10,
 	sectionTitle: "Consent, Privacy, and Packaging",
 	batch: 2,
-	stub: true,
+	markerPath: "src/lib/roadmap/npo-batches/s10-b2.ts",
+	batchTicket: true,
 	tasks: [
 		{ taskCode: "10.6", title: "Packaging grep for banned NPO claims" },
 		{ taskCode: "10.7", title: "Pricing and docs match shipped routes" },

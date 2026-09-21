@@ -1,6 +1,6 @@
 /**
  * Per-section Nonprofit Roadmap catalogs.
- * Import a single section when a stub or product PR only needs that slice.
+ * Import a single section when a batch PR only needs that slice.
  */
 
 import { NONPROFIT_SECTION_CATALOGS } from "../nonprofit-catalog";

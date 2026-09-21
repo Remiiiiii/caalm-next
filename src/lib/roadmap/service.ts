@@ -111,7 +111,7 @@ function catalogDisplayTitleForPr(
 	return catalogDisplayTitleForPrIn(catalogOf(key), prNumber);
 }
 
-/** NPO section cards use the batch label so stubs sit on the right module. */
+/** NPO section cards use the batch label so batch PRs sit on the right module. */
 function resolvedCatalogPrTitle(
 	prNumber: number,
 	liveTitle: string | undefined,

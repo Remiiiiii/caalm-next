@@ -39,7 +39,7 @@ describe("nonprofit roadmap catalog", () => {
 		expect(npoLinked.filter((n) => clmNumbers.has(n))).toEqual([]);
 	});
 
-	it("links a catalog PR on every section, with a stub every 5 tasks", () => {
+	it("links a catalog PR on every section, with a batch PR every 5 tasks", () => {
 		expect(NONPROFIT_ROADMAP_CATALOG[0]?.linkedPrNumbers).toEqual([86]);
 		expect(NONPROFIT_ROADMAP_CATALOG[0]?.seedComplete).toBe(true);
 		for (const section of NONPROFIT_ROADMAP_CATALOG) {

@@ -1,0 +1,38 @@
+---
+description: Nonprofit Roadmap batch PRs — implement on the existing PR, not new stubs
+globs:
+  - src/lib/roadmap/nonprofit/**
+  - src/lib/roadmap/npo-batches/**
+  - src/lib/roadmap/nonprofit-catalog.ts
+  - cursor/nonprofit/**
+alwaysApply: false
+---
+
+# Nonprofit Roadmap batch pull requests
+
+Each **batch PR** (up to five top-level task codes, e.g. 2.1–2.5) is the **implementation ticket**. Work happens on **that PR and branch**, not on follow-up PRs per task.
+
+## Do
+
+- Branch prefix: `cursor/nonprofit/` (e.g. `cursor/nonprofit/s02-b1-340a`).
+- Title: `NPO S{n} B{n} {section title} ({task range})` — **never** put "stub" in the title or body.
+- Read task specs from the catalog (`nonprofit-catalog.ts`) or generate a fresh body: `pnpm npo:batch-pr-body --pr <number>`.
+- Implement **every task in the batch** on the same branch; use Who / What / Where / Why / When / How and **Done when** from the catalog.
+- Merge with green CI to mark those task codes complete on the Nonprofit Roadmap board.
+
+## Do not
+
+- Do **not** treat batch PRs as placeholders that forbid product code.
+- Do **not** open separate PRs per task code (`NPO 2.1 …`, `cursor/nonprofit/2-2.1-slug`, etc.) unless the user explicitly asks for an exception.
+- Do **not** copy legacy "catalog stub only" or "merging does not mark tasks complete" text into new PR descriptions (that was wrong for most batches).
+
+## Exception: Section 1 batch 1
+
+- PR **#109** is a **board placeholder only** (merge completes nothing).
+- Implement tasks **1.1–1.5** on PR **#131** (same batch scope).
+
+## Reference
+
+- Batch table: `src/lib/roadmap/nonprofit/npo-pr-batches.ts`
+- PR body builder: `src/lib/roadmap/nonprofit/npo-batch-pr-body.ts`
+- Catalog convention string: `PR_CONVENTION` in `nonprofit-catalog.ts`

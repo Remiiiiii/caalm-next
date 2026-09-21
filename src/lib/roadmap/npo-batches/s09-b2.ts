@@ -1,12 +1,13 @@
 /**
- * Nonprofit Roadmap catalog stub — no product implementation.
+ * Nonprofit Roadmap batch implementation ticket — implement all tasks on this PR branch.
  * Section 9 batch 2: Imports, Payments, and Finance Export
  */
-export const NPO_STUB_S09_B2 = {
+export const NPO_BATCH_S09_B2 = {
 	sectionNumber: 9,
 	sectionTitle: "Imports, Payments, and Finance Export",
 	batch: 2,
-	stub: true,
+	markerPath: "src/lib/roadmap/npo-batches/s09-b2.ts",
+	batchTicket: true,
 	tasks: [
 		{ taskCode: "9.6", title: "Give page UI" },
 		{ taskCode: "9.7", title: "Journal export CSV/IIF" },
