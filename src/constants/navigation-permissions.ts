@@ -166,14 +166,14 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 		items: [
 			{
 				name: "All Constituents",
-				icon: "/assets/icons/user-management.svg",
+				icon: "/assets/icons/constituents.svg",
 				url: "/constituents",
 				permissions: [PERMISSIONS.CONSTITUENTS.VIEW],
 				viewerReadOnly: true,
 			},
 			{
 				name: "Gifts",
-				icon: "/assets/icons/dollar-circle.svg",
+				icon: "/assets/icons/gift.svg",
 				url: "/gifts",
 				permissions: [PERMISSIONS.GIFTS.VIEW],
 				viewerReadOnly: true,
