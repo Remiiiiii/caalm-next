@@ -43,7 +43,7 @@ describe("Nonprofit Roadmap PRs stay off the PR log", () => {
 			shouldKeepAgentPrOnLog(
 				pr({
 					number: 109,
-					title: "NPO S1 B1 catalog stub",
+					title: "NPO S1 B1 Constituent CRM Foundation (1.1–1.5)",
 					headRef: "cursor/nonprofit/s01-b1-340a",
 					draft: true,
 				}),
@@ -64,7 +64,7 @@ describe("Nonprofit Roadmap PRs stay off the PR log", () => {
 		const overview = buildPrLogOverview([
 			pr({
 				number: 109,
-				title: "NPO S1 B1 catalog stub",
+				title: "NPO S1 B1 Constituent CRM Foundation (1.1–1.5)",
 				headRef: "cursor/nonprofit/s01-b1-340a",
 			}),
 			pr({

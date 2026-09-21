@@ -93,10 +93,10 @@ describe("nonprofit PR matching", () => {
 		});
 	});
 
-	it("does not let stub 109 complete 1.1–1.5; product 131 does", () => {
+	it("does not let placeholder 109 complete 1.1–1.5; product 131 does", () => {
 		const stub109 = {
 			number: 109,
-			title: "NPO S1 B1 catalog stub",
+			title: "NPO S1 B1 Constituent CRM Foundation (1.1–1.5)",
 			htmlUrl: "https://github.com/Remiiiiii/caalm-next/pull/109",
 			headRef: "cursor/nonprofit/s01-b1-340a",
 			state: "closed" as const,

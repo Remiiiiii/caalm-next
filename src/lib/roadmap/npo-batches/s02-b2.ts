@@ -1,12 +1,13 @@
 /**
- * Nonprofit Roadmap catalog stub — no product implementation.
+ * Nonprofit Roadmap batch implementation ticket — implement all tasks on this PR branch.
  * Section 2 batch 2: Gift and Campaign Ledger
  */
-export const NPO_STUB_S02_B2 = {
+export const NPO_BATCH_S02_B2 = {
 	sectionNumber: 2,
 	sectionTitle: "Gift and Campaign Ledger",
 	batch: 2,
-	stub: true,
+	markerPath: "src/lib/roadmap/npo-batches/s02-b2.ts",
+	batchTicket: true,
 	tasks: [
 		{ taskCode: "2.6", title: "Designations mapped to fund codes" },
 		{ taskCode: "2.7", title: "Recurring gift schedules" },

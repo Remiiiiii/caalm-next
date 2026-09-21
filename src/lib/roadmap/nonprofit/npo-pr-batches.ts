@@ -13,7 +13,7 @@ export type NpoPrBatch = {
 	taskTitles: string[];
 	/** Batch PR on the board. Completes tasks unless productPrNumber is set. */
 	linkedPrNumber?: number;
-	/** Optional separate completer (S1 B1 stub #109 vs product #131). */
+	/** Optional implementation PR when linkedPrNumber is board placeholder only (S1 B1: #109 → #131). */
 	productPrNumber?: number;
 };
 
@@ -322,15 +322,23 @@ export const NPO_PR_BATCHES: NpoPrBatch[] = [
 	},
 ];
 
-export function npoStubBranchName(batch: NpoPrBatch): string {
+/** Git branch for a nonprofit batch implementation PR. */
+export function npoBatchBranchName(batch: NpoPrBatch): string {
 	const section = String(batch.sectionNumber).padStart(2, "0");
 	return `cursor/nonprofit/s${section}-b${batch.batch}-340a`;
 }
 
-export function npoStubFileId(batch: NpoPrBatch): string {
+/** @deprecated Use npoBatchBranchName */
+export const npoStubBranchName = npoBatchBranchName;
+
+/** File id under src/lib/roadmap/npo-batches/ (e.g. s02-b1). */
+export function npoBatchFileId(batch: NpoPrBatch): string {
 	const section = String(batch.sectionNumber).padStart(2, "0");
 	return `s${section}-b${batch.batch}`;
 }
+
+/** @deprecated Use npoBatchFileId */
+export const npoStubFileId = npoBatchFileId;
 
 export function linkedPrNumbersForSection(sectionNumber: number): number[] {
 	const numbers: number[] = [];
@@ -365,7 +373,7 @@ export function npoBatchOwnsTaskCode(
 
 /**
  * Task codes this PR completes on merge (plus nested children like 1.7.a).
- * A stub that has a separate productPrNumber (#109) completes nothing.
+ * Placeholder PR #109 (S1 B1) completes nothing; productPrNumber #131 completes the batch.
  */
 export function npoTaskCodesCompletedByPr(prNumber: number): string[] {
 	const batch = npoBatchForPr(prNumber);

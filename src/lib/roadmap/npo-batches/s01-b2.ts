@@ -1,12 +1,13 @@
 /**
- * Nonprofit Roadmap catalog stub — no product implementation.
+ * Nonprofit Roadmap batch implementation ticket — implement all tasks on this PR branch.
  * Section 1 batch 2: Constituent CRM Foundation
  */
-export const NPO_STUB_S01_B2 = {
+export const NPO_BATCH_S01_B2 = {
 	sectionNumber: 1,
 	sectionTitle: "Constituent CRM Foundation",
 	batch: 2,
-	stub: true,
+	markerPath: "src/lib/roadmap/npo-batches/s01-b2.ts",
+	batchTicket: true,
 	tasks: [
 		{ taskCode: "1.6", title: "Constituent profile" },
 		{ taskCode: "1.7", title: "Households and relationship graph" },

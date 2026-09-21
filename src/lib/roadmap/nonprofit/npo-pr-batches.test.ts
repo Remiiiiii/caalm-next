@@ -6,7 +6,7 @@ import {
 	npoBatchFromHeadRef,
 	npoBatchOwnsTaskCode,
 	npoCatalogDisplayTitleForPr,
-	npoStubBranchName,
+	npoBatchBranchName,
 	npoTaskCodesCompletedByPr,
 	productNpoPrBatches,
 } from "./npo-pr-batches";
@@ -26,7 +26,7 @@ describe("nonprofit section catalogs", () => {
 		}
 	});
 
-	it("keeps product stub batches at most 5 top-level tasks", () => {
+	it("keeps product batch PRs at most 5 top-level tasks", () => {
 		for (const batch of productNpoPrBatches()) {
 			expect(batch.taskCodes.length).toBeGreaterThan(0);
 			expect(batch.taskCodes.length).toBeLessThanOrEqual(5);
@@ -48,13 +48,13 @@ describe("nonprofit section catalogs", () => {
 		}
 	});
 
-	it("names stub branches under cursor/nonprofit/", () => {
-		expect(npoStubBranchName(NPO_PR_BATCHES[1]!)).toBe(
+	it("names batch branches under cursor/nonprofit/", () => {
+		expect(npoBatchBranchName(NPO_PR_BATCHES[1]!)).toBe(
 			"cursor/nonprofit/s01-b1-340a",
 		);
 	});
 
-	it("completes batch task codes on the work PR, not a replaced stub", () => {
+	it("completes batch task codes on the work PR, not the S1 B1 placeholder", () => {
 		expect(npoTaskCodesCompletedByPr(113)).toEqual([
 			"1.6",
 			"1.7",

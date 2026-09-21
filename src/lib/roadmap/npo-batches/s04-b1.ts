@@ -1,12 +1,13 @@
 /**
- * Nonprofit Roadmap catalog stub — no product implementation.
+ * Nonprofit Roadmap batch implementation ticket — implement all tasks on this PR branch.
  * Section 4 batch 1: Restricted-Fund Finance
  */
-export const NPO_STUB_S04_B1 = {
+export const NPO_BATCH_S04_B1 = {
 	sectionNumber: 4,
 	sectionTitle: "Restricted-Fund Finance",
 	batch: 1,
-	stub: true,
+	markerPath: "src/lib/roadmap/npo-batches/s04-b1.ts",
+	batchTicket: true,
 	tasks: [
 		{ taskCode: "4.1", title: "Funds table (net-asset classes)" },
 		{ taskCode: "4.2", title: "Require fundId on grant contracts" },

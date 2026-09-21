@@ -1,12 +1,13 @@
 /**
- * Nonprofit Roadmap catalog stub — no product implementation.
+ * Nonprofit Roadmap batch implementation ticket — implement all tasks on this PR branch.
  * Section 5 batch 2: Volunteer Programs
  */
-export const NPO_STUB_S05_B2 = {
+export const NPO_BATCH_S05_B2 = {
 	sectionNumber: 5,
 	sectionTitle: "Volunteer Programs",
 	batch: 2,
-	stub: true,
+	markerPath: "src/lib/roadmap/npo-batches/s05-b2.ts",
+	batchTicket: true,
 	tasks: [
 		{ taskCode: "5.6", title: "Hour log and approval" },
 		{ taskCode: "5.7", title: "Coordinator proxy logging" },
