@@ -31,6 +31,12 @@ Each **batch PR** (up to five top-level task codes, e.g. 2.1–2.5) is the **imp
 - PR **#109** is a **board placeholder only** (merge completes nothing).
 - Implement tasks **1.1–1.5** on PR **#131** (same batch scope).
 
+## New sidebar pages (auth)
+
+App pages under `src/app/(root)/` are **protected by default** (`src/lib/auth/protectedRoutes.ts`). You do **not** need a PR one-liner to register each path — only add a **public** prefix if the route is intentionally unauthenticated (marketing, `/negotiate/[token]`, etc.).
+
+Edge proxy and AuthContext share the same rule via `isProtectedAppRoute` / `isProxyProtectedPath`.
+
 ## Reference
 
 - Batch table: `src/lib/roadmap/nonprofit/npo-pr-batches.ts`
