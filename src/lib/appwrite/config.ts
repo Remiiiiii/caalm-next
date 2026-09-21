@@ -410,6 +410,36 @@ export const appwriteConfig = {
 		"69d91203001f4e8c2b03",
 	),
 
+	/** Gift designations → fundCode (name: gift_designations) */
+	giftDesignationsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_GIFT_DESIGNATIONS_COLLECTION",
+		"69d91401001f4e8c2b04",
+	),
+
+	/** Recurring sustainer schedules (name: recurring_gift_schedules) */
+	recurringGiftSchedulesCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_RECURRING_GIFT_SCHEDULES_COLLECTION",
+		"69d91402001f4e8c2b05",
+	),
+
+	/** Pledges (name: pledges) */
+	pledgesCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_PLEDGES_COLLECTION",
+		"69d91403001f4e8c2b06",
+	),
+
+	/** Pledge installment rows (name: pledge_installments) */
+	pledgeInstallmentsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_PLEDGE_INSTALLMENTS_COLLECTION",
+		"69d91404001f4e8c2b07",
+	),
+
+	/** Soft-credit recognition rows (name: gift_soft_credits) */
+	giftSoftCreditsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_GIFT_SOFT_CREDITS_COLLECTION",
+		"69d91405001f4e8c2b08",
+	),
+
 	/** Contract obligations for retention (name: contract_obligations) */
 	contractObligationsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_CONTRACT_OBLIGATIONS_COLLECTION",
