@@ -162,6 +162,18 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 		],
 	},
 	{
+		header: "Constituents",
+		items: [
+			{
+				name: "All Constituents",
+				icon: "/assets/icons/user-management.svg",
+				url: "/constituents",
+				permissions: [PERMISSIONS.CONSTITUENTS.VIEW],
+				viewerReadOnly: true,
+			},
+		],
+	},
+	{
 		header: "Audits",
 		items: [
 			{

@@ -348,38 +348,38 @@ const AnalyticsPage = () => {
 				className="w-full"
 			>
 				<div className="mb-6 flex justify-center">
-					<TabsList className="inline-flex h-auto w-auto max-w-full flex-wrap justify-center gap-1 bg-white/30 backdrop-blur border border-white/40 p-1">
+					<TabsList className="inline-flex w-auto max-w-full flex-wrap justify-center">
 						<TabsTrigger
 							value="organization"
-							className="flex shrink-0 items-center gap-2 whitespace-nowrap data-[state=active]:bg-white data-[state=active]:text-navy data-[state=active]:shadow-sm"
+							className="shrink-0"
 						>
 							<Building2 className="h-4 w-4" />
 							<span>Organization</span>
 						</TabsTrigger>
 						<TabsTrigger
 							value="portfolio"
-							className="flex shrink-0 items-center gap-2 whitespace-nowrap data-[state=active]:bg-white data-[state=active]:text-navy data-[state=active]:shadow-sm"
+							className="shrink-0"
 						>
 							<Scale className="h-4 w-4" />
 							<span>Portfolio</span>
 						</TabsTrigger>
 						<TabsTrigger
 							value="contracts"
-							className="flex shrink-0 items-center gap-2 whitespace-nowrap data-[state=active]:bg-white data-[state=active]:text-navy data-[state=active]:shadow-sm"
+							className="shrink-0"
 						>
 							<FileText className="h-4 w-4" />
 							<span>Contracts</span>
 						</TabsTrigger>
 						<TabsTrigger
 							value="compliance"
-							className="flex shrink-0 items-center gap-2 whitespace-nowrap data-[state=active]:bg-white data-[state=active]:text-navy data-[state=active]:shadow-sm"
+							className="shrink-0"
 						>
 							<Shield className="h-4 w-4" />
 							<span>Compliance & audit</span>
 						</TabsTrigger>
 						<TabsTrigger
 							value="calendar"
-							className="flex shrink-0 items-center gap-2 whitespace-nowrap data-[state=active]:bg-white data-[state=active]:text-navy data-[state=active]:shadow-sm"
+							className="shrink-0"
 						>
 							<Calendar className="h-4 w-4" />
 							<span>Calendar</span>
@@ -490,14 +490,14 @@ const AnalyticsPage = () => {
 									onValueChange={handleTabChange}
 									className="w-full"
 								>
-									<TabsList className="flex w-full flex-wrap h-auto gap-1 bg-white/20 backdrop-blur border border-white/40 p-1">
+									<TabsList>
 										{departments.map((department) => {
 											const dept = department as { name: string };
 											return (
 												<TabsTrigger
 													key={dept.name}
 													value={dept.name}
-													className="flex-1 min-w-[4.5rem] data-[state=active]:bg-white data-[state=active]:text-navy data-[state=active]:shadow-sm"
+													className="min-w-[4.5rem]"
 												>
 													{dept.name}
 												</TabsTrigger>

@@ -18,6 +18,7 @@ export function isProtectedAppRoute(
 		"/settings",
 		"/search",
 		"/licenses",
+		"/constituents",
 		"/uploads",
 		"/images",
 		"/media",

@@ -15,19 +15,48 @@ export type BillingSubscriptionPayload = {
 	plans: PricingPlan[];
 };
 
-async function fetchBillingSubscription([url, orgId]: [
+const BILLING_FETCH_MS = 10000;
+
+export function emptyBillingSubscription(): BillingSubscriptionPayload {
+	return {
+		subscriptionTier: "starter",
+		billingInterval: null,
+		stripeConfigured: false,
+		plans: [],
+	};
+}
+
+export async function fetchBillingSubscription([url, orgId]: [
 	string,
 	string,
 ]): Promise<BillingSubscriptionPayload> {
-	const res = await fetch(url, {
-		cache: "no-store",
-		headers: { "x-org-id": orgId },
-	});
-	if (!res.ok) {
-		const err = await res.json().catch(() => ({}));
-		throw new Error(err.error || "Failed to load plans");
+	try {
+		const res = await fetch(url, {
+			cache: "no-store",
+			headers: { "x-org-id": orgId },
+			signal: AbortSignal.timeout(BILLING_FETCH_MS),
+		});
+		if (res.status === 404 || res.status >= 500) {
+			return emptyBillingSubscription();
+		}
+		if (!res.ok) {
+			const err = (await res.json().catch(() => ({}))) as {
+				error?: string;
+			};
+			const error = new Error(
+				err.error || "Failed to load plans",
+			) as Error & { status: number };
+			error.status = res.status;
+			throw error;
+		}
+		return res.json();
+	} catch (error) {
+		const status = (error as { status?: number })?.status;
+		if (status === 401 || status === 403) {
+			throw error;
+		}
+		return emptyBillingSubscription();
 	}
-	return res.json();
 }
 
 export function billingSubscriptionUrl(orgId: string): string {

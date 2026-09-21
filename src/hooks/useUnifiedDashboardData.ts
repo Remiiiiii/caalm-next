@@ -59,7 +59,7 @@ export const useUnifiedDashboardData = (
 	const { user } = useAuth();
 	const effectiveUserId = serverUserId || user?.$id;
 	const url = effectiveUserId
-		? `/api/dashboard/unified?orgId=${orgId}&userId=${effectiveUserId}&v=4`
+		? `/api/dashboard/unified?orgId=${orgId}&userId=${effectiveUserId}&v=13`
 		: null;
 
 	// Get cached data as fallback for stale-while-revalidate
@@ -141,7 +141,7 @@ export const useUnifiedDashboardData = (
 			totalContracts: 0,
 			expiringContracts: 0,
 			activeUsers: 0,
-			complianceRate: "94%",
+			complianceRate: "0%",
 		},
 		files: data?.data?.files || [],
 		invitations: data?.data?.invitations || [],

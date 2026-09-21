@@ -37,6 +37,8 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { assigneeFallbackMessage } from "@/lib/assignments/resolve-default-assignee";
+import type { AssigneeSource } from "@/lib/assignments/resolve-default-assignee";
 import { currencySymbol } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 import { CATEGORIES, COMPLIANCE_STATUSES, LICENSE_TYPES } from "../constants";
@@ -80,7 +82,8 @@ export interface Step2LicenseDetailsProps {
 	filteredManagers: Manager[];
 	selectedManagers: string[];
 	setSelectedManagers: (ids: string[]) => void;
-	fetchDepartmentManagers: (department: string) => Promise<void>;
+	fetchDepartmentManagers: (department: string, division?: string) => Promise<void>;
+	assigneeSource?: AssigneeSource;
 	aiFilledFields?: string[];
 	fieldConfidence?: Record<string, number>;
 }
@@ -92,10 +95,12 @@ export default function Step2LicenseDetails({
 	selectedManagers,
 	setSelectedManagers,
 	fetchDepartmentManagers,
+	assigneeSource = "selected",
 	aiFilledFields = [],
 	fieldConfidence = {},
 }: Step2LicenseDetailsProps) {
 	const selectedDepartment = form.watch("department");
+	const selectedDivision = form.watch("division");
 	const category = form.watch("category");
 	const showVendorProduct =
 		category !== "certificate" && category !== "insurance";
@@ -533,11 +538,19 @@ export default function Step2LicenseDetails({
 						render={({ field }) => (
 							<FormItem className={cn(aiClass("division"))}>
 								<FormLabel className="text-sm text-slate-700 mb-1 block">
-									Division
+									Division <span className="text-red">*</span>
 									<AiHint name="division" />
 								</FormLabel>
 								<Select
-									onValueChange={field.onChange}
+									onValueChange={(value) => {
+										field.onChange(value);
+										if (selectedDepartment) {
+											void fetchDepartmentManagers(
+												selectedDepartment,
+												value,
+											);
+										}
+									}}
 									value={field.value || ""}
 								>
 									<FormControl>
@@ -564,13 +577,12 @@ export default function Step2LicenseDetails({
 						render={({ field }) => (
 							<FormItem>
 								<FormLabel className="text-sm text-slate-700 mb-1 block">
-									Department
+									Department <span className="text-red">*</span>
 								</FormLabel>
 								<Select
 									onValueChange={(value) => {
 										field.onChange(value);
-										fetchDepartmentManagers(value);
-										setSelectedManagers([]);
+										void fetchDepartmentManagers(value, selectedDivision);
 									}}
 									value={field.value || ""}
 								>
@@ -641,34 +653,46 @@ export default function Step2LicenseDetails({
 
 				<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
 					<FormLabel className="text-sm text-slate-700 mb-1 block">
-						Assigned To
+						Assigned To <span className="text-red">*</span>
 					</FormLabel>
 					{!selectedDepartment ? (
 						<p className="text-sm text-slate-500">
-							Select a department first to see managers.
-						</p>
-					) : filteredManagers.length === 0 ? (
-						<p className="text-sm text-slate-500">
-							No managers in the selected department.
+							Select a department and division first to see assignees.
 						</p>
 					) : (
-						<Select
-							value={selectedManagers[0] || ""}
-							onValueChange={(value) =>
-								setSelectedManagers(value ? [value] : [])
-							}
-						>
-							<SelectTrigger className="bg-white border-slate-300 mt-1">
-								<SelectValue placeholder="Select manager" />
-							</SelectTrigger>
-							<SelectContent>
-								{filteredManagers.map((manager) => (
-									<SelectItem key={manager.$id} value={manager.$id}>
-										{manager.fullName}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
+						<>
+							<Select
+								value={selectedManagers[0] || ""}
+								onValueChange={(value) =>
+									setSelectedManagers(value ? [value] : [])
+								}
+							>
+								<SelectTrigger className="bg-white border-[0.25px] border-slate-300 mt-1">
+									<SelectValue placeholder="Select assignee" />
+								</SelectTrigger>
+								<SelectContent>
+									{filteredManagers.map((manager) => (
+										<SelectItem key={manager.$id} value={manager.$id}>
+											{manager.fullName}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+							{assigneeFallbackMessage(
+								assigneeSource,
+								filteredManagers.find((m) => m.$id === selectedManagers[0])
+									?.fullName,
+							) ? (
+								<p className="text-xs text-slate-600 mt-2">
+									{assigneeFallbackMessage(
+										assigneeSource,
+										filteredManagers.find(
+											(m) => m.$id === selectedManagers[0],
+										)?.fullName,
+									)}
+								</p>
+							) : null}
+						</>
 					)}
 				</div>
 			</section>

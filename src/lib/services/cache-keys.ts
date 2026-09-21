@@ -18,7 +18,7 @@ export const CACHE_KEYS = {
 			period: string,
 			division?: string,
 		) =>
-			`dashboard:risk-impact:v2:${orgId}:${userId}:${period}:${division || "all"}`,
+			`dashboard:risk-impact:v7:${orgId}:${userId}:${period}:${division || "all"}`,
 		stats: (orgId: string) => `dashboard:stats:${orgId}`,
 		invitations: (orgId: string) => `dashboard:invitations:${orgId}`,
 		files: (orgId?: string, limit?: number) =>
