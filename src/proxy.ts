@@ -204,26 +204,8 @@ export async function proxy(request: NextRequest) {
 		return response;
 	}
 
-	// Define protected route prefixes
-	const protectedPrefixes = [
-		"/dashboard",
-		"/esign",
-		"/contracts",
-		"/licenses",
-		"/constituents",
-		"/analytics",
-		"/uploads",
-		"/images",
-		"/media",
-		"/others",
-		"/documents",
-		"/audits",
-		"/team",
-		"/tickets",
-		"/incident",
-	];
-
-	const isProtectedPath = protectedPrefixes.some((p) => pathname.startsWith(p));
+	const { isProxyProtectedPath } = await import("@/lib/auth/protectedRoutes");
+	const isProtectedPath = isProxyProtectedPath(pathname);
 
 	// Legacy executive URL → canonical /dashboard (role-based home)
 	if (
