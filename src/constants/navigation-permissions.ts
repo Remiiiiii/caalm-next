@@ -171,6 +171,20 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 				permissions: [PERMISSIONS.CONSTITUENTS.VIEW],
 				viewerReadOnly: true,
 			},
+			{
+				name: "Gifts",
+				icon: "/assets/icons/dollar-circle.svg",
+				url: "/gifts",
+				permissions: [PERMISSIONS.GIFTS.VIEW],
+				viewerReadOnly: true,
+			},
+			{
+				name: "Campaigns",
+				icon: "/assets/icons/dollar-circle.svg",
+				url: "/campaigns",
+				permissions: [PERMISSIONS.GIFTS.VIEW],
+				viewerReadOnly: true,
+			},
 		],
 	},
 	{

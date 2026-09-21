@@ -392,6 +392,24 @@ export const appwriteConfig = {
 		"69c8e8a2001f4e8c2a11",
 	),
 
+	/** Posted and draft gifts (name: gifts) */
+	giftsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_GIFTS_COLLECTION",
+		"69d91201001f4e8c2b01",
+	),
+
+	/** Fundraising campaigns (name: campaigns) */
+	campaignsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CAMPAIGNS_COLLECTION",
+		"69d91202001f4e8c2b02",
+	),
+
+	/** Per-org receipt sequence (name: gift_receipt_counters) */
+	giftReceiptCountersCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_GIFT_RECEIPT_COUNTERS_COLLECTION",
+		"69d91203001f4e8c2b03",
+	),
+
 	/** Contract obligations for retention (name: contract_obligations) */
 	contractObligationsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_CONTRACT_OBLIGATIONS_COLLECTION",

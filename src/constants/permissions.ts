@@ -156,6 +156,13 @@ export const PERMISSIONS = {
 		MANAGE: "constituents.manage",
 	},
 
+	/** Individual gifts and receipts — separate from constituents.manage */
+	GIFTS: {
+		VIEW: "gifts.view",
+		CREATE: "gifts.create",
+		VOID: "gifts.void",
+	},
+
 	// Standard clause library (org playbooks)
 	CLAUSES: {
 		VIEW: "clauses.view",
@@ -746,6 +753,25 @@ export const PERMISSION_DEFINITIONS = [
 		name: "Manage Constituents",
 		category: "constituents",
 		description: "Create, edit, delete, and force-insert duplicate constituents",
+	},
+
+	{
+		key: PERMISSIONS.GIFTS.VIEW,
+		name: "View Gifts",
+		category: "gifts",
+		description: "Browse posted and draft gifts and receipt numbers",
+	},
+	{
+		key: PERMISSIONS.GIFTS.CREATE,
+		name: "Create and Post Gifts",
+		category: "gifts",
+		description: "Create draft gifts and post them to the ledger",
+	},
+	{
+		key: PERMISSIONS.GIFTS.VOID,
+		name: "Void Posted Gifts",
+		category: "gifts",
+		description: "Void posted gifts with a reversing ledger row",
 	},
 
 	// Clause library
