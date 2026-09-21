@@ -2,7 +2,7 @@
 
 import { Save } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,15 +15,27 @@ import {
 } from "@/components/ui/select";
 import { GIFT_METHODS } from "@/lib/gifts";
 
+type DesignationOption = { $id: string; label: string; fundCode: string };
+
 export function CreateGiftPageClient() {
 	const router = useRouter();
 	const [amount, setAmount] = useState("");
 	const [giftDate, setGiftDate] = useState("");
 	const [method, setMethod] = useState<string>(GIFT_METHODS[0]!);
 	const [constituentId, setConstituentId] = useState("");
+	const [designationId, setDesignationId] = useState("");
+	const [contractId, setContractId] = useState("");
+	const [designations, setDesignations] = useState<DesignationOption[]>([]);
 	const [anonymous, setAnonymous] = useState(false);
 	const [saving, setSaving] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+
+	useEffect(() => {
+		void fetch("/api/gifts/designations")
+			.then((r) => r.json())
+			.then((data) => setDesignations(data.items ?? []))
+			.catch(() => setDesignations([]));
+	}, []);
 
 	const submit = async () => {
 		setSaving(true);
@@ -37,6 +49,8 @@ export function CreateGiftPageClient() {
 					giftDate: new Date(giftDate).toISOString(),
 					method,
 					constituentId: constituentId.trim(),
+					designationId: designationId || undefined,
+					contractId: contractId.trim() || undefined,
 					anonymous,
 				}),
 			});
@@ -97,6 +111,36 @@ export function CreateGiftPageClient() {
 							type="date"
 							value={giftDate}
 							onChange={(e) => setGiftDate(e.target.value)}
+						/>
+					</label>
+					<label className="block text-sm text-slate-600">
+						Designation
+						<Select
+							value={designationId || "__unrestricted__"}
+							onValueChange={(v) =>
+								setDesignationId(v === "__unrestricted__" ? "" : v)
+							}
+						>
+							<SelectTrigger className="mt-1 border-[0.25px] border-slate-300">
+								<SelectValue placeholder="Unrestricted (default)" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="__unrestricted__">Unrestricted</SelectItem>
+								{designations.map((d) => (
+									<SelectItem key={d.$id} value={d.$id}>
+										{d.label} ({d.fundCode})
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					</label>
+					<label className="block text-sm text-slate-600">
+						Grant contract ID (optional)
+						<Input
+							className="mt-1 border-[0.25px] border-slate-300"
+							value={contractId}
+							onChange={(e) => setContractId(e.target.value)}
+							placeholder="Link cash to a grant agreement"
 						/>
 					</label>
 					<label className="block text-sm text-slate-600">

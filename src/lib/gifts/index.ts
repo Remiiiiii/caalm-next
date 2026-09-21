@@ -2,3 +2,8 @@ export * from "./types";
 export * from "./request-context";
 export * from "./repository";
 export * from "./receipt";
+export * from "./grant-contract";
+export * from "./soft-credits";
+export * from "./household-totals";
+export * from "./enrich";
+export * from "./contract-gifts";

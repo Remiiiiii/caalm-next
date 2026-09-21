@@ -7,6 +7,7 @@ import {
 	requireGiftOrgContext,
 	updateDraftGift,
 } from "@/lib/gifts";
+import { enrichGift } from "@/lib/gifts/enrich";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -18,7 +19,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 	if (!gift) {
 		return NextResponse.json({ error: "Gift not found" }, { status: 404 });
 	}
-	return NextResponse.json(gift);
+	return NextResponse.json(await enrichGift(gift));
 }
 
 export async function PATCH(request: NextRequest, context: RouteContext) {

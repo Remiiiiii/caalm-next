@@ -7,13 +7,17 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PERMISSIONS } from "@/constants/permissions";
 import { usePermissions } from "@/hooks/usePermissions";
-import { type Gift as GiftRow, giftStatusBadgeClass } from "@/lib/gifts";
+import {
+	type EnrichedGift,
+	type Gift as GiftRow,
+	giftStatusBadgeClass,
+} from "@/lib/gifts";
 
 export function GiftDetailClient({ giftId }: { giftId: string }) {
 	const { permissions } = usePermissions();
 	const canCreate = permissions.includes(PERMISSIONS.GIFTS.CREATE);
 	const canVoid = permissions.includes(PERMISSIONS.GIFTS.VOID);
-	const [gift, setGift] = useState<GiftRow | null>(null);
+	const [gift, setGift] = useState<EnrichedGift | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [busy, setBusy] = useState(false);
 
@@ -143,6 +147,21 @@ export function GiftDetailClient({ giftId }: { giftId: string }) {
 								)}
 							</dd>
 						</div>
+						<div>
+							<dt className="text-slate-500">Designation</dt>
+							<dd className="text-slate-700">
+								{gift.designationLabel}{" "}
+								<span className="text-slate-500 tabular-nums">
+									({gift.fundCode})
+								</span>
+							</dd>
+						</div>
+						{gift.contractId ? (
+							<div>
+								<dt className="text-slate-500">Grant contract</dt>
+								<dd className="text-slate-700 tabular-nums">{gift.contractId}</dd>
+							</div>
+						) : null}
 					</dl>
 				</CardContent>
 			</Card>
