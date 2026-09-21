@@ -59,7 +59,7 @@ export const useUnifiedDashboardData = (
 	const { user } = useAuth();
 	const effectiveUserId = serverUserId || user?.$id;
 	const url = effectiveUserId
-		? `/api/dashboard/unified?orgId=${orgId}&userId=${effectiveUserId}&v=9`
+		? `/api/dashboard/unified?orgId=${orgId}&userId=${effectiveUserId}&v=13`
 		: null;
 
 	// Get cached data as fallback for stale-while-revalidate

@@ -4,13 +4,105 @@ import { AlertTriangle, ChevronRight, RefreshCw, Shield } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { PERMISSIONS } from "@/constants/permissions";
-import { usePermissions } from "@/hooks/usePermissions";
+import { RiskTrackingChart } from "@/components/dashboard/RiskTrackingChart";
 import type {
 	RiskImpactSnapshot,
-	RiskImpactSparkPoint,
+	RiskImpactTrend,
 } from "@/lib/dashboard/risk-impact.types";
-import { cn } from "@/lib/utils";
+
+const COL_PAD = "flex flex-col justify-start gap-3.5 p-5 sm:p-6";
+const COL_RULE =
+	"border-b border-slate-300 last:border-b-0 md:[&:nth-child(-n+2)]:border-b md:[&:nth-child(n+3)]:border-b-0 lg:!border-b-0";
+const METRIC_ROW =
+	"flex items-baseline justify-between gap-3 min-h-11 pb-2.5 border-b border-slate-300 last:border-b-0 last:pb-0";
+
+function arrowTone(direction: RiskImpactTrend["direction"]): string {
+	if (direction === "down") return "text-red";
+	if (direction === "up" || direction === "new") return "text-green";
+	return "text-slate-600";
+}
+
+function TrendCopy({
+	trend,
+	variant,
+}: {
+	trend: RiskImpactTrend;
+	variant: "count" | "yoy";
+}) {
+	const arrow =
+		trend.direction === "down"
+			? "↓"
+			: trend.direction === "flat"
+				? variant === "count"
+					? "—"
+					: null
+				: "↑";
+	const prefix =
+		variant === "count"
+			? trend.direction === "flat"
+				? "vs"
+				: `vs ${trend.prior ?? 0}`
+			: trend.direction === "new"
+				? "vs"
+				: trend.direction === "flat"
+					? "0% vs"
+					: `${trend.percent}% vs`;
+	const underline = variant === "count" ? "last Q" : trend.vsLabel;
+
+	return (
+		<span className="inline-flex items-baseline gap-1 text-xs tabular-nums">
+			{arrow ? (
+				<span className={`font-medium ${arrowTone(trend.direction)}`}>
+					{arrow}
+				</span>
+			) : null}
+			<span className="text-slate-600">
+				{prefix} {underline}
+			</span>
+		</span>
+	);
+}
+
+function MetricRow({
+	label,
+	value,
+	trend,
+}: {
+	label: string;
+	value: number;
+	trend?: RiskImpactTrend | null;
+}) {
+	const showTrend = Boolean(
+		trend && !(value === 0 && trend.direction === "flat"),
+	);
+
+	return (
+		<div className={METRIC_ROW}>
+			<span className="text-xs text-slate-600 leading-snug">{label}</span>
+			<span className="flex items-baseline gap-1.5 shrink-0 text-right tabular-nums">
+				<span className="text-[13px] font-medium text-slate-700">
+					{value.toLocaleString()}
+				</span>
+				{showTrend && trend ? (
+					<TrendCopy trend={trend} variant="count" />
+				) : null}
+			</span>
+		</div>
+	);
+}
+
+function ColumnRule({ atMdOdd = false }: { atMdOdd?: boolean }) {
+	return (
+		<div
+			aria-hidden
+			className={
+				atMdOdd
+					? "hidden md:block lg:hidden absolute top-[12%] bottom-[12%] right-0 w-px bg-slate-300"
+					: "hidden lg:block absolute top-[12%] bottom-[12%] right-0 w-px bg-slate-300"
+			}
+		/>
+	);
+}
 
 interface RiskImpactHeroCardProps {
 	snapshot: RiskImpactSnapshot | null;
@@ -68,127 +160,47 @@ function buildTrackingNoteFromSnapshot(snapshot: RiskImpactSnapshot): string {
 	return `${status}. Risk-averted dollars update as compliance flags, closed gaps, and on-time renewals land ${yearPhrase}.`;
 }
 
-function RiskSparkline({
-	points,
-	className,
-}: {
-	points: RiskImpactSparkPoint[];
-	className?: string;
-}) {
-	const width = 400;
-	const height = 46;
-	const padY = 8;
-	const values = points.map((p) => p.value);
-	const max = Math.max(...values, 1);
-	const min = 0;
-	const range = Math.max(max - min, 1);
-
-	const coords = points.map((p, i) => {
-		const x = points.length <= 1 ? width : (i / (points.length - 1)) * width;
-		const y = height - padY - ((p.value - min) / range) * (height - padY * 2);
-		return { x, y, label: p.label };
-	});
-
-	const pathD =
-		coords.length === 0
-			? `M0 ${height - padY} L${width} ${height - padY}`
-			: coords
-					.map(
-						(c, i) =>
-							`${i === 0 ? "M" : "L"}${c.x.toFixed(1)} ${c.y.toFixed(1)}`,
-					)
-					.join(" ");
-
-	const last = coords[coords.length - 1];
-	const firstLabel = points[0]?.label ?? "";
-	const lastLabel = points[points.length - 1]?.label ?? "";
-
-	return (
-		<svg
-			className={cn("w-full h-12", className)}
-			viewBox={`0 0 ${width} ${height}`}
-			preserveAspectRatio="none"
-			aria-hidden
-		>
-			<line
-				x1="0"
-				y1={height - padY}
-				x2={width}
-				y2={height - padY}
-				stroke="#e2e8f0"
-				strokeWidth="1"
-			/>
-			<line
-				x1="0"
-				y1={height / 2}
-				x2={width}
-				y2={height / 2}
-				stroke="#f1f5f9"
-				strokeWidth="1"
-				strokeDasharray="2 4"
-			/>
-			<path
-				d={pathD}
-				fill="none"
-				stroke="#0f5384"
-				strokeWidth="2"
-				strokeLinecap="round"
-				strokeLinejoin="round"
-			/>
-			{last ? <circle cx={last.x} cy={last.y} r="3.5" fill="#03AFBF" /> : null}
-			{firstLabel ? (
-				<text x="0" y="12" className="fill-slate-400" fontSize="9">
-					{firstLabel}
-				</text>
-			) : null}
-			{lastLabel ? (
-				<text
-					x={width}
-					y="12"
-					textAnchor="end"
-					className="fill-slate-400"
-					fontSize="9"
-				>
-					{lastLabel}
-				</text>
-			) : null}
-		</svg>
-	);
-}
-
 export function RiskImpactHeroCard({
 	snapshot,
 	isLoading,
 	error,
 	onRetry,
 }: RiskImpactHeroCardProps) {
-	const { permissions } = usePermissions();
-	const canViewAudit = permissions.includes(PERMISSIONS.AUDIT.VIEW);
-	const breakdownHref = canViewAudit ? "/audits" : "/analytics";
+	const breakdownHref = "/analytics/risk-averted";
 
 	if (isLoading && !snapshot) {
 		return (
 			<Card className="glass-card mb-6 overflow-hidden">
 				<div className="glass-card-cap" />
 				<CardContent className="p-0">
-					<div className="grid grid-cols-1 lg:grid-cols-[minmax(0,17rem)_1fr_minmax(0,16rem)] animate-pulse">
-						<div className="p-5 sm:p-6 space-y-3 border-b lg:border-b-0 lg:border-r border-slate-200/80">
-							<div className="h-4 w-28 rounded bg-slate-200/80" />
-							<div className="h-3 w-36 rounded bg-slate-200/70" />
-							<div className="h-10 w-24 rounded bg-slate-200/80" />
-							<div className="h-3 w-full rounded bg-slate-200/60" />
+					<div className="animate-pulse">
+						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[minmax(13rem,17rem)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]">
+							<div className="p-5 sm:p-6 space-y-3 border-b lg:border-b-0">
+								<div className="h-4 w-28 rounded bg-slate-200/80" />
+								<div className="h-3 w-36 rounded bg-slate-200/70" />
+								<div className="h-10 w-24 rounded bg-slate-200/80" />
+								<div className="h-5 w-32 rounded bg-slate-200/60" />
+							</div>
+							<div className="p-5 sm:p-6 space-y-3 border-b lg:border-b-0">
+								<div className="h-11 w-full rounded bg-slate-200/70" />
+								<div className="h-11 w-full rounded bg-slate-200/70" />
+								<div className="h-11 w-full rounded bg-slate-200/70" />
+							</div>
+							<div className="p-5 sm:p-6 space-y-3 border-b lg:border-b-0">
+								<div className="h-11 w-full rounded bg-slate-200/70" />
+								<div className="h-11 w-full rounded bg-slate-200/70" />
+								<div className="h-11 w-full rounded bg-slate-200/70" />
+							</div>
+							<div className="p-5 sm:p-6 space-y-3">
+								<div className="h-11 w-full rounded bg-slate-200/70" />
+								<div className="h-11 w-full rounded bg-slate-200/70" />
+								<div className="h-11 w-full rounded bg-slate-200/70" />
+								<div className="h-9 w-36 rounded bg-slate-200/80" />
+							</div>
 						</div>
-						<div className="p-5 sm:p-6 space-y-3 border-b lg:border-b-0 lg:border-r border-slate-200/80">
+						<div className="p-5 sm:p-6 space-y-3 border-t border-slate-200/80">
 							<div className="h-3 w-32 rounded bg-slate-200/70" />
-							<div className="h-12 w-full rounded bg-slate-200/60" />
-							<div className="h-3 w-full rounded bg-slate-200/60" />
-							<div className="h-3 w-4/5 rounded bg-slate-200/50" />
-						</div>
-						<div className="p-5 sm:p-6 space-y-3">
-							<div className="h-4 w-full rounded bg-slate-200/70" />
-							<div className="h-4 w-full rounded bg-slate-200/70" />
-							<div className="h-4 w-full rounded bg-slate-200/70" />
-							<div className="h-9 w-36 rounded bg-slate-200/80" />
+							<div className="h-44 w-full rounded bg-slate-200/60" />
 						</div>
 					</div>
 				</CardContent>
@@ -230,104 +242,126 @@ export function RiskImpactHeroCard({
 
 	if (!snapshot) return null;
 
-	const hasRiskEvents = snapshot.primary.amount > 0;
-	const subtext = hasRiskEvents
-		? snapshot.narrative
-		: "No contract or grant risk events have been logged yet this year.";
 	const trackingNote = buildTrackingNoteFromSnapshot(snapshot);
-
 	const periodDisplay = snapshot.periodLabel.toUpperCase();
+	const yoyTrend = snapshot.yoyTrend;
+	const showYoy =
+		yoyTrend &&
+		!(snapshot.primary.amount === 0 && yoyTrend.direction === "flat");
 
 	return (
 		<Card className="glass-card mb-6 overflow-hidden border border-slate-200/80">
 			<div className="glass-card-cap" />
 			<CardContent className="p-0">
-				<div className="grid grid-cols-1 lg:grid-cols-[minmax(0,17.5rem)_minmax(0,1fr)_minmax(0,16.5rem)]">
-					{/* Primary stat */}
-					<div className="relative flex flex-col justify-center gap-2 p-5 sm:p-6 border-b border-slate-300 lg:border-b-0">
-						<div
-							aria-hidden
-							className="hidden lg:block absolute top-[18%] bottom-[18%] right-0 w-px bg-slate-300"
-						/>
-						<div className="flex items-center gap-2">
-							<Shield className="h-3.5 w-3.5 text-[#0f5384] shrink-0" />
-							<p className="text-[12.5px] font-semibold text-slate-700">
-								Risk averted
+				<div>
+					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[minmax(13rem,17rem)_minmax(0,1fr)_minmax(0,1fr)_minmax(12rem,1.15fr)] items-start">
+						<div className={`relative ${COL_PAD} ${COL_RULE}`}>
+							<ColumnRule />
+							<ColumnRule atMdOdd />
+							<div className="flex items-center gap-2 min-h-11">
+								<Shield className="h-3.5 w-3.5 text-[#0f5384] shrink-0" />
+								<p className="text-[12.5px] font-semibold text-slate-700">
+									Risk averted
+								</p>
+							</div>
+							<p className="text-[10.5px] tracking-wide text-slate-500">
+								{periodDisplay}
 							</p>
-						</div>
-						<p className="text-[10.5px] tracking-wide text-slate-500">
-							{periodDisplay}
-						</p>
-						<p className="text-[2.5rem] leading-none font-semibold text-slate-800 tracking-tight pt-1">
-							{snapshot.primary.amountFormatted}
-						</p>
-						{snapshot.secondary.amount > 0 ? (
-							<p className="text-xs text-slate-600">
-								{snapshot.secondary.label}:{" "}
-								<span className="font-semibold text-slate-800">
-									{snapshot.secondary.amountFormatted}
-								</span>
+							<p className="text-[2.5rem] leading-none font-semibold text-slate-800 tracking-tight">
+								{snapshot.primary.amountFormatted}
 							</p>
-						) : null}
-						<p className="text-xs text-slate-600 leading-relaxed max-w-60">
-							{subtext}
-						</p>
-					</div>
-
-					{/* Tracking context + sparkline */}
-					<div className="relative flex flex-col justify-center gap-3.5 p-5 sm:p-6 border-b border-slate-300 lg:border-b-0 min-w-0">
-						<div
-							aria-hidden
-							className="hidden lg:block absolute top-[18%] bottom-[18%] right-0 w-px bg-slate-300"
-						/>
-						<p className="text-[11px] font-bold tracking-[0.08em] uppercase text-slate-700">
-							Tracking status
-						</p>
-						<RiskSparkline points={snapshot.sparkline} />
-						<p className="text-[12.5px] text-slate-600 leading-relaxed max-w-xl">
-							{trackingNote.split(/(\d+)/).map((part, i) =>
-								/^\d+$/.test(part) ? (
-									<span key={i} className="font-semibold text-slate-700">
-										{part}
+							{snapshot.secondary.amount > 0 ? (
+								<p className="text-xs text-slate-600">
+									{snapshot.secondary.label}:{" "}
+									<span className="font-semibold text-slate-800">
+										{snapshot.secondary.amountFormatted}
 									</span>
-								) : (
-									<span key={i}>{part}</span>
-								),
-							)}
-						</p>
+								</p>
+							) : null}
+							{showYoy && yoyTrend ? (
+								<TrendCopy trend={yoyTrend} variant="yoy" />
+							) : null}
+						</div>
+
+						<div className={`relative ${COL_PAD} ${COL_RULE}`}>
+							<ColumnRule />
+							<MetricRow
+								label="Compliance flags caught"
+								value={snapshot.counts.complianceFlagsCaught}
+								trend={snapshot.countTrends?.complianceFlagsCaught}
+							/>
+							<MetricRow
+								label="Audit gaps closed"
+								value={snapshot.counts.auditGapsClosed}
+								trend={snapshot.countTrends?.auditGapsClosed}
+							/>
+							<MetricRow
+								label="Licenses renewed on time"
+								value={snapshot.counts.licensesRenewedOnTime}
+								trend={snapshot.countTrends?.licensesRenewedOnTime}
+							/>
+						</div>
+
+						<div className={`relative ${COL_PAD} ${COL_RULE}`}>
+							<ColumnRule />
+							<ColumnRule atMdOdd />
+							<MetricRow
+								label="High-risk contracts"
+								value={snapshot.openRisk?.highRisk ?? 0}
+							/>
+							<MetricRow
+								label="Expiring within 90 days"
+								value={snapshot.openRisk?.expiring90 ?? 0}
+							/>
+							<MetricRow
+								label="Expired still open"
+								value={snapshot.openRisk?.expired ?? 0}
+							/>
+						</div>
+
+						<div className={`${COL_PAD} min-w-0`}>
+							<MetricRow
+								label="Contracts monitored"
+								value={snapshot.monitoring.contractsMonitored}
+							/>
+							<MetricRow
+								label="Grants monitored"
+								value={snapshot.monitoring.grantsMonitored}
+							/>
+							<MetricRow
+								label="Clauses flagged"
+								value={snapshot.monitoring.clausesFlagged}
+							/>
+							<Button
+								asChild
+								className="primary-btn w-full max-w-full px-3 gap-1.5 text-[12.5px] font-semibold"
+								style={{ width: "100%", maxWidth: "100%" }}
+							>
+								<Link href={breakdownHref} className="block w-full min-w-0">
+									View breakdown
+									<ChevronRight className="h-3.5 w-3.5" />
+								</Link>
+							</Button>
+						</div>
 					</div>
 
-					{/* Breakdown + CTA */}
-					<div className="flex flex-col justify-center gap-3.5 p-5 sm:p-6">
-						<div className="flex items-baseline justify-between gap-3 pb-2.5 border-b border-slate-300">
-							<span className="text-xs text-slate-600">
-								Contracts monitored
-							</span>
-							<span className="text-[13px] font-medium text-slate-700">
-								{snapshot.monitoring.contractsMonitored.toLocaleString()}
-							</span>
-						</div>
-						<div className="flex items-baseline justify-between gap-3 pb-2.5 border-b border-slate-300">
-							<span className="text-xs text-slate-600">Grants monitored</span>
-							<span className="text-[13px] font-medium text-slate-700">
-								{snapshot.monitoring.grantsMonitored.toLocaleString()}
-							</span>
-						</div>
-						<div className="flex items-baseline justify-between gap-3">
-							<span className="text-xs text-slate-600">Clauses flagged</span>
-							<span className="text-[13px] font-medium text-slate-700">
-								{snapshot.monitoring.clausesFlagged.toLocaleString()}
-							</span>
-						</div>
-						<Link href={breakdownHref} className="mt-1.5 self-start">
-							<Button
-								type="button"
-								className="primary-btn px-4 gap-1.5 text-[12.5px] font-semibold"
-							>
-								View breakdown
-								<ChevronRight className="h-3.5 w-3.5" />
-							</Button>
-						</Link>
+					<div className="w-full min-w-0 border-t border-slate-300 p-5 sm:p-6">
+						<RiskTrackingChart
+							points={snapshot.sparkline}
+							period={snapshot.period}
+						>
+							<p className="mt-3 text-[12.5px] text-slate-600 leading-relaxed max-w-4xl">
+								{trackingNote.split(/(\d+)/).map((part, i) =>
+									/^\d+$/.test(part) ? (
+										<span key={i} className="font-semibold text-slate-700">
+											{part}
+										</span>
+									) : (
+										<span key={i}>{part}</span>
+									),
+								)}
+							</p>
+						</RiskTrackingChart>
 					</div>
 				</div>
 			</CardContent>

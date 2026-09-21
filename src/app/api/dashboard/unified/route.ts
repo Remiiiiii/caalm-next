@@ -43,8 +43,8 @@ export async function GET(request: NextRequest) {
 		}
 
 		// Check cache first (include pagination in cache key)
-		// v9: recent files list uses 20 rows so version badges can see re-uploads
-		const cacheKey = `${CACHE_KEYS.dashboard.unified(orgId, userId)}:v9:page:${page}:limit:${limit}`;
+		// v16: risk-averted events after classifier extract
+		const cacheKey = `${CACHE_KEYS.dashboard.unified(orgId, userId)}:v16:page:${page}:limit:${limit}`;
 
 		// Try to get cached data first to check ETag
 		const existingCache = (await import("@/lib/services/redis-cache").then(
