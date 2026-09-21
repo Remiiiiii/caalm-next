@@ -55,6 +55,24 @@ describe("nonprofit PR matching", () => {
 		expect(shouldListRoadmapSectionPullRequest("merged", "clm")).toBe(true);
 	});
 
+	it("maps batch PR 117 and s01-b3 branch to 1.11, not 1.6 or 1.10", () => {
+		const batch117 = {
+			number: 117,
+			title: "NPO S1 B3 Constituent CRM Foundation (1.11)",
+			htmlUrl: "https://github.com/Remiiiiii/caalm-next/pull/117",
+			headRef: "cursor/nonprofit/s01-b3-340a",
+			state: "open" as const,
+		};
+		expect(matchPullRequestToTask(batch117, 1, "1.11", "npo")).toBe(true);
+		expect(matchPullRequestToTask(batch117, 1, "1.6", "npo")).toBe(false);
+		expect(matchPullRequestToTask(batch117, 1, "1.10", "npo")).toBe(false);
+		expect(matchPullRequestToTask(batch117, 1, "1.11", "clm")).toBe(false);
+		expect(resolveCatalogFromPrMatch(batch117)).toEqual({
+			catalogKey: "npo",
+			sectionNumber: 1,
+		});
+	});
+
 	it("maps batch PR 113 and s01-b2 branch to 1.6–1.10, not 1.1 or 1.11", () => {
 		const batch113 = {
 			number: 113,
@@ -85,7 +103,8 @@ describe("nonprofit PR matching", () => {
 		};
 		const product131 = {
 			number: 131,
-			title: "NPO 1.1 NPO 1.2 NPO 1.3 NPO 1.4 NPO 1.5 Constituent CRM Foundation",
+			title:
+				"NPO 1.1 NPO 1.2 NPO 1.3 NPO 1.4 NPO 1.5 Constituent CRM Foundation",
 			htmlUrl: "https://github.com/Remiiiiii/caalm-next/pull/131",
 			headRef: "cursor/nonprofit/s01-b1-product",
 			state: "merged" as const,

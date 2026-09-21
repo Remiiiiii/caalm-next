@@ -1,15 +1,27 @@
-export { logConstituentAudit } from "./audit";
 export type { ConstituentActor } from "./audit";
 export {
-	canContact,
+	buildConstituentPiiViewEntry,
+	CONSTITUENT_PII_VIEW_ACTION,
+	constituentActorFromUser,
+	logConstituentAudit,
+	logConstituentPiiView,
+} from "./audit";
+export {
 	CAN_CONTACT_FUTURE_SENDER_PATHS,
 	CAN_CONTACT_REQUIRED_SENDER_PATHS,
+	canContact,
 } from "./consent";
-export { createConstituentWithDuplicateGate } from "./create-constituent.service";
 export type {
 	CreateConstituentActor,
 	CreateConstituentResult,
 } from "./create-constituent.service";
+export { createConstituentWithDuplicateGate } from "./create-constituent.service";
+export {
+	CONSTITUENT_DNC_BADGE_CLASS,
+	constituentDisplayName,
+	constituentTypeBadgeClass,
+	constituentTypeLabel,
+} from "./display";
 export {
 	matchesDuplicateSignals,
 	normalizeEmail,
@@ -17,11 +29,11 @@ export {
 	normalizeLastName,
 	toDuplicateCandidates,
 } from "./duplicates";
+export type { MergeFieldDiff, MergePreview } from "./merge";
 export {
 	commitConstituentMerge,
 	previewConstituentMerge,
 } from "./merge";
-export type { MergeFieldDiff, MergePreview } from "./merge";
 export {
 	createNote,
 	deleteNote,
@@ -47,14 +59,8 @@ export {
 	parseTypeParam,
 	updateConstituent,
 } from "./repository";
-export {
-	CONSTITUENT_DNC_BADGE_CLASS,
-	constituentDisplayName,
-	constituentTypeBadgeClass,
-	constituentTypeLabel,
-} from "./display";
-export { requireConstituentOrgContext } from "./request-context";
 export type { ConstituentOrgContext } from "./request-context";
+export { requireConstituentOrgContext } from "./request-context";
 export { listDerivedAgreements } from "./timeline";
 export type {
 	Constituent,

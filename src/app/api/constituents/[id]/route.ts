@@ -1,10 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import {
+	constituentActorFromUser,
 	deleteConstituent,
 	getConstituentById,
 	isConstituentType,
-	markPiiAccessed,
+	logConstituentPiiView,
 	requireConstituentOrgContext,
 	updateConstituent,
 } from "@/lib/constituents";
@@ -27,7 +28,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
 	const { id } = await context.params;
 	const existing = await loadOwnedConstituent(id, ctx.orgId);
 	if (!existing) {
-		return NextResponse.json({ error: "Constituent not found" }, { status: 404 });
+		return NextResponse.json(
+			{ error: "Constituent not found" },
+			{ status: 404 },
+		);
 	}
 	if (existing.mergedIntoId) {
 		return NextResponse.json(
@@ -42,7 +46,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
 		);
 	}
 
-	await markPiiAccessed(id);
+	await logConstituentPiiView({
+		actor: constituentActorFromUser(ctx.user),
+		orgId: ctx.orgId,
+		constituentId: id,
+	});
 	return NextResponse.json({ constituent: existing });
 }
 
@@ -56,7 +64,10 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 	const { id } = await context.params;
 	const existing = await loadOwnedConstituent(id, ctx.orgId);
 	if (!existing) {
-		return NextResponse.json({ error: "Constituent not found" }, { status: 404 });
+		return NextResponse.json(
+			{ error: "Constituent not found" },
+			{ status: 404 },
+		);
 	}
 
 	try {
@@ -66,12 +77,14 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 		if (body.lastName != null) patch.lastName = String(body.lastName);
 		if (body.email != null) patch.email = String(body.email);
 		if (body.phone != null) patch.phone = String(body.phone);
-		if (body.addressLine1 != null) patch.addressLine1 = String(body.addressLine1);
+		if (body.addressLine1 != null)
+			patch.addressLine1 = String(body.addressLine1);
 		if (body.city != null) patch.city = String(body.city);
 		if (body.region != null) patch.region = String(body.region);
 		if (body.postalCode != null) patch.postalCode = String(body.postalCode);
 		if (body.country != null) patch.country = String(body.country);
-		if (body.doNotContact != null) patch.doNotContact = Boolean(body.doNotContact);
+		if (body.doNotContact != null)
+			patch.doNotContact = Boolean(body.doNotContact);
 		if (isConstituentType(body.type)) patch.type = body.type;
 
 		const constituent = await updateConstituent(id, patch);
@@ -95,7 +108,10 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
 	const { id } = await context.params;
 	const existing = await loadOwnedConstituent(id, ctx.orgId);
 	if (!existing) {
-		return NextResponse.json({ error: "Constituent not found" }, { status: 404 });
+		return NextResponse.json(
+			{ error: "Constituent not found" },
+			{ status: 404 },
+		);
 	}
 
 	try {

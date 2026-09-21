@@ -2,8 +2,9 @@ import { notFound, redirect } from "next/navigation";
 import { ConstituentProfile } from "@/components/constituents/ConstituentProfile";
 import { PERMISSIONS } from "@/constants/permissions";
 import {
+	constituentActorFromUser,
 	getConstituentById,
-	markPiiAccessed,
+	logConstituentPiiView,
 } from "@/lib/constituents";
 import { requirePagePermission } from "@/lib/rbac/page-guards";
 import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
@@ -24,7 +25,11 @@ export default async function ConstituentProfilePage({
 		redirect(`/constituents/${constituent.mergedIntoId}`);
 	}
 
-	await markPiiAccessed(id);
+	await logConstituentPiiView({
+		actor: constituentActorFromUser(user),
+		orgId: org.orgId,
+		constituentId: id,
+	});
 
 	return (
 		<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
