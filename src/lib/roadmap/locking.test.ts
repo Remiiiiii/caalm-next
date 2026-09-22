@@ -47,6 +47,54 @@ function task(
 }
 
 describe("computeUnlocked", () => {
+	it("completes nested checklist tasks when the NPO batch parent is already complete", () => {
+		const sections = [
+			section({
+				$id: "s2",
+				sectionNumber: 2,
+				title: "Gifts",
+				status: "in_progress",
+			}),
+		];
+		const tasks = [
+			task({
+				$id: "t28",
+				sectionId: "s2",
+				taskCode: "2.8",
+				orderIndex: 0,
+				status: "complete",
+				completedAt: "2026-01-02T00:00:00.000Z",
+				completedCommitSha: "abc123",
+			}),
+			task({
+				$id: "t28a",
+				sectionId: "s2",
+				parentTaskId: "t28",
+				taskCode: "2.8.a",
+				orderIndex: 0,
+				status: "locked",
+			}),
+			task({
+				$id: "t28b",
+				sectionId: "s2",
+				parentTaskId: "t28",
+				taskCode: "2.8.b",
+				orderIndex: 1,
+				status: "locked",
+			}),
+		];
+		const { snapshot } = computeUnlocked({
+			sections,
+			tasks,
+			sequentialTasks: true,
+		});
+		const childA = snapshot.tasks.find((t) => t.taskCode === "2.8.a");
+		const childB = snapshot.tasks.find((t) => t.taskCode === "2.8.b");
+		expect(childA?.status).toBe("complete");
+		expect(childB?.status).toBe("complete");
+		expect(childA?.completedCommitSha).toBe("abc123");
+	});
+
 	it("keeps section 2 locked while section 1 is incomplete", () => {
 		const sections = [
 			section({

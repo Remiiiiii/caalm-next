@@ -36,8 +36,17 @@ export async function mergeLegacyNpoOverrideCompletions(
 		}
 		if (!byCode.size) return tasks;
 
+		const overrideRowForTask = (taskCode: string) => {
+			const exact = byCode.get(taskCode);
+			if (exact) return exact;
+			for (const [code, row] of byCode) {
+				if (taskCode.startsWith(`${code}.`)) return row;
+			}
+			return undefined;
+		};
+
 		return tasks.map((task) => {
-			const row = byCode.get(task.taskCode);
+			const row = overrideRowForTask(task.taskCode);
 			if (!row) return task;
 			return {
 				...task,
