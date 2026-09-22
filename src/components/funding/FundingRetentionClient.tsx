@@ -8,6 +8,8 @@ import { FundingViewSwitch } from "@/components/funding/FundingViewSwitch";
 import { ObligationsPanel } from "@/components/funding/ObligationsPanel";
 import { ObligationsQueueBoard } from "@/components/funding/ObligationsQueueBoard";
 import { PursuitsBoard } from "@/components/funding/PursuitsBoard";
+import { FinanceScopeHelp } from "@/components/funding/FinanceScopeHelp";
+import { Form990ExportPanel } from "@/components/funding/Form990ExportPanel";
 import { RetentionBoard } from "@/components/funding/RetentionBoard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -136,6 +138,8 @@ export function FundingRetentionClient() {
 
 	return (
 		<div className="space-y-6">
+			<FinanceScopeHelp />
+			{tab === "retention" ? <Form990ExportPanel /> : null}
 			{tab !== "queue" ? (
 				<div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-3">
 					<StatCard
