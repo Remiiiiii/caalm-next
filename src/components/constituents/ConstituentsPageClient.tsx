@@ -3,6 +3,7 @@
 import { Plus, Users } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { ConstituentRowMenu } from "@/components/constituents/ConstituentRowMenu";
 import { CreateConstituentDialog } from "@/components/constituents/CreateConstituentDialog";
@@ -28,13 +29,24 @@ import {
 	constituentTypeLabel,
 	type Constituent,
 } from "@/lib/constituents";
+import { LIFECYCLE_SEGMENTS } from "@/lib/fundraising/constants";
+import {
+	normalizeSegmentLabel,
+	segmentBadgeClass,
+} from "@/lib/fundraising/segment-display";
+
+type ConstituentRow = Constituent & { lifecycleSegment?: string | null };
 
 const PAGE_SIZE = 20;
 
 export function ConstituentsPageClient() {
+	const searchParams = useSearchParams();
 	const { permissions } = usePermissions();
 	const canManage = permissions.includes(PERMISSIONS.CONSTITUENTS.MANAGE);
-	const [items, setItems] = useState<Constituent[]>([]);
+	const [items, setItems] = useState<ConstituentRow[]>([]);
+	const [segment, setSegment] = useState<string>(
+		() => searchParams.get("segment") || "all",
+	);
 	const [total, setTotal] = useState(0);
 	const [page, setPage] = useState(1);
 	const [search, setSearch] = useState("");
@@ -66,6 +78,7 @@ export function ConstituentsPageClient() {
 		if (type !== "all") params.set("type", type);
 		if (debouncedCity.trim()) params.set("city", debouncedCity.trim());
 		if (doNotContact !== "all") params.set("doNotContact", doNotContact);
+		if (segment !== "all") params.set("segment", segment);
 		try {
 			const response = await fetch(`/api/constituents?${params.toString()}`);
 			const data = await response.json();
@@ -79,7 +92,7 @@ export function ConstituentsPageClient() {
 		} finally {
 			setLoading(false);
 		}
-	}, [page, debouncedSearch, type, debouncedCity, doNotContact]);
+	}, [page, debouncedSearch, type, debouncedCity, doNotContact, segment]);
 
 	useEffect(() => {
 		void load();
@@ -87,7 +100,7 @@ export function ConstituentsPageClient() {
 
 	useEffect(() => {
 		setPage(1);
-	}, [debouncedSearch, type, debouncedCity, doNotContact]);
+	}, [debouncedSearch, type, debouncedCity, doNotContact, segment]);
 
 	return (
 		<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
@@ -137,6 +150,19 @@ export function ConstituentsPageClient() {
 							onChange={(event) => setCity(event.target.value)}
 							aria-label="Filter by city"
 						/>
+						<Select value={segment} onValueChange={setSegment}>
+							<SelectTrigger className="h-10 w-44 border-[0.25px] border-slate-300 bg-white">
+								<SelectValue placeholder="Segment" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="all">All segments</SelectItem>
+								{LIFECYCLE_SEGMENTS.map((value) => (
+									<SelectItem key={value} value={value}>
+										{value}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
 						<Select value={doNotContact} onValueChange={setDoNotContact}>
 							<SelectTrigger className="h-10 w-48 border-[0.25px] border-slate-300 bg-white">
 								<SelectValue placeholder="Contact status" />
@@ -186,6 +212,13 @@ export function ConstituentsPageClient() {
 												>
 													{constituentTypeLabel(constituent.type)}
 												</span>
+												{constituent.lifecycleSegment ? (
+													<span
+														className={`inline-block px-2 py-0.5 text-xs rounded-full font-medium border ${segmentBadgeClass(constituent.lifecycleSegment)}`}
+													>
+														{normalizeSegmentLabel(constituent.lifecycleSegment)}
+													</span>
+												) : null}
 												{constituent.doNotContact ? (
 													<span
 														className={`inline-block px-2 py-0.5 text-xs rounded-full font-medium border ${CONSTITUENT_DNC_BADGE_CLASS}`}

@@ -94,6 +94,12 @@ export const ITEM_ICONS: Record<
 		height: 20,
 		color: SUBITEM_TEXT_GREY,
 	},
+	Gifts: {
+		src: "/assets/icons/gift.svg",
+		width: 20,
+		height: 20,
+		color: SUBITEM_TEXT_GREY,
+	},
 	"Department Licenses": {
 		src: "/assets/icons/dept-license.svg",
 		width: 20,
