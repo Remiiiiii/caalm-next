@@ -53,15 +53,14 @@ export async function getPrLogOverview(): Promise<PrLogOverview> {
 	const combined: PrLogSourcePr[] = [];
 	for (const pr of [...open, ...closed]) {
 		if (seen.has(pr.number)) continue;
+		if (!isAgentPullRequestBranch(pr.headRef)) continue;
 		seen.add(pr.number);
 		combined.push(pr);
 	}
 
 	const enriched = await Promise.all(
 		combined.map(async (pr) => {
-			if (pr.state !== "merged" || !isAgentPullRequestBranch(pr.headRef)) {
-				return pr;
-			}
+			if (pr.state !== "merged") return pr;
 			return enrichMergedAgentPr(pr);
 		}),
 	);

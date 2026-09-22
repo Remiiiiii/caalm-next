@@ -1,3 +1,4 @@
+import { isNonprofitRoadmapBranch } from "@/lib/roadmap/catalog-key";
 import type { GitHubPullRequestSummary } from "@/lib/roadmap/github-pr-match";
 import type { PrLogOverview, PrLogSection } from "./types";
 
@@ -7,10 +8,23 @@ export type PrLogSourcePr = GitHubPullRequestSummary & {
 	checksReason?: string;
 };
 
-/** Cloud agent branches look like `cursor/funding-retention-pursuit-9ee5`. */
+/**
+ * PR log only lists Cursor agent branches such as
+ * `cursor/funding-retention-pursuit-9ee5`. Nonprofit Roadmap work uses
+ * `cursor/nonprofit/…` and is not an agent-log card.
+ */
 export function isAgentPullRequestBranch(headRef: string): boolean {
-	return /(?:^|\/)cursor\//i.test(headRef.trim());
+	const ref = headRef.trim();
+	if (isNonprofitRoadmapBranch(ref)) return false;
+	return /(?:^|\/)cursor\//i.test(ref);
 }
+
+/**
+ * Merged to main; later production deploys shipped the work. The merge-SHA
+ * check run is stale (#78 production deploy failed, #49 Playwright failed)
+ * so the live gate would keep them forever.
+ */
+export const PR_LOG_RESOLVED_NUMBERS = new Set([49, 78]);
 
 /**
  * Merged agent PRs stay on the log until checksPassed. Closed-without-merge
@@ -18,6 +32,7 @@ export function isAgentPullRequestBranch(headRef: string): boolean {
  */
 export function shouldKeepAgentPrOnLog(pr: PrLogSourcePr): boolean {
 	if (!isAgentPullRequestBranch(pr.headRef)) return false;
+	if (PR_LOG_RESOLVED_NUMBERS.has(pr.number)) return false;
 	if (pr.state === "closed") return false;
 	if (pr.state === "merged") return pr.checksPassed !== true;
 	return true;

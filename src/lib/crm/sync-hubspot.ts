@@ -16,6 +16,11 @@ export async function syncHubSpotDeals(input: {
 			"Pick a HubSpot pipeline and trigger stage before syncing.",
 		);
 	}
+	if (!config.department || !config.division) {
+		throw new Error(
+			"Set a department and division in HubSpot settings before syncing.",
+		);
+	}
 
 	const accessToken = await getFreshHubSpotAccessToken(input.integration);
 	const deals = await hubspotConnector.searchDealsByStage(
@@ -34,6 +39,8 @@ export async function syncHubSpotDeals(input: {
 			ownerId: input.ownerId,
 			deal,
 			provider: "hubspot",
+			department: config.department,
+			division: config.division,
 		});
 		if (result.alreadyLinked) reused += 1;
 		else created += 1;
@@ -78,6 +85,8 @@ export async function ingestHubSpotDeal(input: {
 		ownerId: input.ownerId,
 		deal,
 		provider: "hubspot",
+		department: config.department,
+		division: config.division,
 	});
 	await updateCrmIntegration(input.integration.$id, {
 		last_sync_at: new Date().toISOString(),

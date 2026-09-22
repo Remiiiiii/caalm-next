@@ -6,6 +6,10 @@
 import { ID, Query } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import {
+	isAppwriteNotFoundError,
+	withAppwriteLookupTimeout,
+} from "@/lib/appwrite/errors";
 
 export type BillingStatus =
 	| "active"
@@ -43,6 +47,12 @@ export interface Organization {
 		email?: string;
 		/** Optional company logo file id (organization_logos bucket) */
 		logoFileId?: string;
+		/**
+		 * Who owns users.managerUserId.
+		 * "manual" = CAALM may update it on assignment-graph reconnect.
+		 * "scim" / omitted = leave managerUserId alone.
+		 */
+		managerUserId_source?: "manual" | "scim";
 		[key: string]: unknown;
 	};
 	stripeCustomerId?: string;
@@ -68,6 +78,7 @@ export async function createOrganization({
 		maxUsers: 10,
 		maxDepartments: 3,
 		features: [],
+		managerUserId_source: "manual",
 	},
 	createdBy,
 }: {
@@ -112,32 +123,53 @@ export async function createOrganization({
 	} as unknown as Organization;
 }
 
+export type OrganizationLookup =
+	| { reason: "ok"; org: Organization }
+	| { reason: "not_found"; org: null }
+	| { reason: "unavailable"; org: null };
+
+/**
+ * Get organization by ID. Timeouts and network errors are "unavailable",
+ * not "not found" — a hung Appwrite connect is not a missing org.
+ */
+export async function lookupOrganization(
+	orgId: string,
+): Promise<OrganizationLookup> {
+	try {
+		const { tablesDB } = await createAdminClient();
+
+		const org = await withAppwriteLookupTimeout(
+			tablesDB.getRow({
+				databaseId: appwriteConfig.databaseId || "default-db",
+				tableId: "organizations",
+				rowId: orgId,
+			}),
+		);
+
+		return {
+			reason: "ok",
+			org: parseOrganizationRow(org as Record<string, unknown>),
+		};
+	} catch (error) {
+		if (isAppwriteNotFoundError(error)) {
+			return { reason: "not_found", org: null };
+		}
+		console.warn(
+			"[getOrganization] unavailable:",
+			error instanceof Error ? error.message : error,
+		);
+		return { reason: "unavailable", org: null };
+	}
+}
+
 /**
  * Get organization by ID
  */
 export async function getOrganization(
 	orgId: string,
 ): Promise<Organization | null> {
-	try {
-		const { tablesDB } = await createAdminClient();
-
-		const org = await tablesDB.getRow({
-			databaseId: appwriteConfig.databaseId || "default-db",
-			tableId: "organizations",
-			rowId: orgId,
-		});
-
-		return {
-			...org,
-			settings:
-				typeof org.settings === "string"
-					? JSON.parse(org.settings)
-					: org.settings,
-		} as unknown as Organization;
-	} catch (error) {
-		console.error("[getOrganization] Error:", error);
-		return null;
-	}
+	const lookup = await lookupOrganization(orgId);
+	return lookup.org;
 }
 
 function parseOrganizationRow(org: Record<string, unknown>): Organization {

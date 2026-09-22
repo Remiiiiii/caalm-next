@@ -130,6 +130,16 @@ const nextConfig: NextConfig = {
 				destination: "/incident/:ticketId",
 				permanent: false,
 			},
+			{
+				source: "/nonprofit-roadmap",
+				destination: "/dashboard/it/development/nonprofit-roadmap",
+				permanent: false,
+			},
+			{
+				source: "/dashboard/it/development/npo-roadmap",
+				destination: "/dashboard/it/development/nonprofit-roadmap",
+				permanent: false,
+			},
 		];
 	},
 	// Improve development caching for faster reloads

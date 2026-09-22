@@ -3,6 +3,8 @@
 import { ID, Query } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { buildActivityAuditEntry } from "@/lib/audits/mirror-activity";
+import { logAuditEvent } from "@/lib/services/audit-logger";
 
 export interface RecentActivity {
 	$id: string;
@@ -33,6 +35,8 @@ export interface CreateRecentActivityData {
 	department?: string;
 	type: "contract" | "user" | "event" | "notification" | "file";
 	orgId?: string;
+	/** Skip the audit mirror when the caller already wrote a richer log. */
+	skipAudit?: boolean;
 }
 
 /**
@@ -76,11 +80,11 @@ export async function createRecentActivity(
 		// Use default organization if orgId is not provided
 		const orgId = data.orgId || "default_organization";
 
-		// Exclude department as it's not in the collection schema
-		const { department, ...dataWithoutDepartment } = data;
+		// Exclude fields that are not in the Recent Activity collection schema
+		const { department, skipAudit, ...dataWithoutExtras } = data;
 
 		const activityData = {
-			...dataWithoutDepartment,
+			...dataWithoutExtras,
 			orgId: orgId,
 			timestamp: new Date().toISOString(),
 		};
@@ -93,7 +97,25 @@ export async function createRecentActivity(
 			data: activityData,
 		});
 
-		return response as unknown as RecentActivity;
+		const created = response as unknown as RecentActivity;
+
+		if (!skipAudit) {
+			void logAuditEvent(
+				buildActivityAuditEntry({
+					$id: created.$id,
+					action: created.action || data.action,
+					description: created.description || data.description,
+					type: created.type || data.type,
+					userId: data.userId,
+					userName: data.userName,
+					orgId,
+					contractId: data.contractId,
+					eventId: data.eventId,
+				}),
+			);
+		}
+
+		return created;
 	} catch (error) {
 		console.error("Error creating recent activity:", error);
 		return null;
@@ -109,6 +131,7 @@ export async function createContractActivity(
 	contractId?: string,
 	userId?: string,
 	userName?: string,
+	options?: { skipAudit?: boolean },
 ): Promise<RecentActivity | null> {
 	return createRecentActivity({
 		action,
@@ -118,6 +141,7 @@ export async function createContractActivity(
 		userId,
 		userName,
 		type: "contract",
+		skipAudit: options?.skipAudit,
 	});
 }
 

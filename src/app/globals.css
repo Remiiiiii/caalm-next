@@ -229,11 +229,19 @@
 		width: 80%;
 		transition: width 150ms ease-in;
 	}
+
+	/* Sit the bar under a rounded tab box, not on its inner edge */
+	.tabs-underline-outside::after {
+		bottom: -0.75rem;
+	}
 	.primary-btn,
 	.btn-primary,
 	.shad-active,
 	.shad-submit-btn {
-		@apply text-white font-semibold rounded-full shadow-md px-4 py-2 sm:px-6 transition-all duration-200 w-full sm:w-auto flex items-center justify-center;
+		@apply flex h-8 min-h-8 items-center justify-center px-4 py-0 font-semibold text-white shadow-md transition-all duration-200 rounded-full w-full sm:w-auto sm:px-6;
+		/* Filter / toolbar source of truth: 32px, same as Button size="sm" */
+		height: 2rem !important;
+		min-height: 2rem !important;
 		/* Prevent text wrapping within buttons */
 		white-space: nowrap;
 		background-image: linear-gradient(
@@ -325,9 +333,26 @@
 	/* Destructive confirm — red outline, not the teal primary gradient */
 	.delete-btn,
 	.btn-delete {
-		@apply flex w-full items-center justify-center rounded-full border border-red/30! bg-red/10! px-4 py-2 font-semibold text-red! shadow-none transition-all duration-200 sm:w-auto sm:px-6;
+		@apply flex h-8 min-h-8 w-full items-center justify-center rounded-full border border-red/30! bg-red/10! px-4 py-0 font-semibold text-red! shadow-none transition-all duration-200 sm:w-auto sm:px-6;
+		height: 2rem !important;
+		min-height: 2rem !important;
 		white-space: nowrap;
 		background-image: none !important;
+	}
+
+	/* Marketing / mock chips may opt out of the 32px toolbar height */
+	.primary-btn-lg,
+	.btn-primary-lg {
+		height: auto !important;
+		min-height: 2.5rem !important;
+		padding-top: 0.625rem;
+		padding-bottom: 0.625rem;
+	}
+
+	span.primary-btn,
+	span.btn-primary {
+		height: auto !important;
+		min-height: 0 !important;
 	}
 
 	.delete-btn:hover,
@@ -600,8 +625,8 @@
 			padding-left: 0.875rem;
 			padding-right: 0.875rem;
 			font-size: 0.8125rem;
-			height: 2.25rem;
-			min-height: 2.25rem;
+			height: 2rem;
+			min-height: 2rem;
 		}
 
 		.quick-actions-container .primary-btn svg,
@@ -809,6 +834,11 @@
 		@apply absolute top-0 left-0 right-0 h-4 rounded-t-md;
 		background: #d6d7d8;
 		opacity: 0.7;
+	}
+
+	/* Cap is absolute, so the next sibling needs a gap under the 16px bar */
+	.glass-card-cap + * {
+		margin-top: 1.25rem;
 	}
 
 	.glass-card-inner {
@@ -1667,9 +1697,95 @@ button[data-state="active"] > span {
 	animation: approval-step-pulse 2.8s ease-in-out infinite;
 }
 
+@keyframes user-graph-self-pulse {
+	0%,
+	100% {
+		border-color: rgba(15, 83, 132, 0.55);
+		box-shadow:
+			0 0 0 2px rgba(15, 83, 132, 0.22),
+			0 8px 32px 0 rgba(31, 38, 135, 0.15);
+	}
+	50% {
+		border-color: rgba(3, 175, 191, 0.95);
+		box-shadow:
+			0 0 0 3px rgba(3, 175, 191, 0.4),
+			0 0 16px 4px rgba(3, 175, 191, 0.28);
+	}
+}
+
+.user-graph-self-pulse {
+	animation: user-graph-self-pulse 3.2s ease-in-out infinite;
+}
+
+/* Marquee box for selecting several user cards at once. */
+.user-graph-marquee {
+	pointer-events: none;
+	position: absolute;
+	z-index: 30;
+	border: 1.5px dashed rgb(15 83 132 / 0.55);
+	background: rgb(15 83 132 / 0.08);
+}
+
+.user-graph-flow .react-flow__selection {
+	background: rgb(15 83 132 / 0.08);
+	border: 1.5px dashed rgb(15 83 132 / 0.55);
+}
+
+/* Custom overlay owns the persistent box; hide xyflow's extra frame. */
+.user-graph-flow .react-flow__nodesselection-rect {
+	display: none;
+}
+
+.user-graph-flow .react-flow__node.selected > * {
+	outline: 2px solid rgb(15 83 132 / 0.45);
+	outline-offset: 2px;
+}
+
+/* Soft-fade the assignment grid so it does not hit the canvas edges. */
+.user-graph-flow .react-flow__background {
+	-webkit-mask-image:
+		linear-gradient(
+			to right,
+			transparent 0%,
+			#000 80px,
+			#000 calc(100% - 80px),
+			transparent 100%
+		),
+		linear-gradient(
+			to bottom,
+			transparent 0%,
+			#000 64px,
+			#000 calc(100% - 64px),
+			transparent 100%
+		);
+	-webkit-mask-composite: source-in;
+	mask-image:
+		linear-gradient(
+			to right,
+			transparent 0%,
+			#000 80px,
+			#000 calc(100% - 80px),
+			transparent 100%
+		),
+		linear-gradient(
+			to bottom,
+			transparent 0%,
+			#000 64px,
+			#000 calc(100% - 64px),
+			transparent 100%
+		);
+	mask-composite: intersect;
+}
+
 @media (prefers-reduced-motion: reduce) {
 	.approval-step-current-pulse {
 		animation: none;
+		box-shadow: 0 0 0 2px rgba(15, 83, 132, 0.35);
+	}
+
+	.user-graph-self-pulse {
+		animation: none;
+		border-color: rgba(15, 83, 132, 0.7);
 		box-shadow: 0 0 0 2px rgba(15, 83, 132, 0.35);
 	}
 }

@@ -1,6 +1,7 @@
 import { Query } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { isTransientAppwriteError } from "@/lib/appwrite/errors";
 import { CacheManager } from "@/lib/services/cache-manager";
 import type {
 	CreateNotificationRequest,
@@ -75,32 +76,13 @@ function isRecoverableNotificationBackendError(error: unknown): boolean {
 	if (!error || typeof error !== "object") return false;
 
 	const err = error as {
-		message?: string;
 		code?: string;
 		isTestConfig?: boolean;
-		cause?: { code?: string; message?: string };
 	};
 
 	if (err.isTestConfig || err.code === "TEST_CONFIG") return true;
 
-	const message = String(err.message ?? "");
-	if (
-		message.includes("AppwriteException") ||
-		message.includes("Project with the requested ID could not be found") ||
-		message.includes("fetch failed")
-	) {
-		return true;
-	}
-
-	const cause = err.cause;
-	if (!cause) return false;
-
-	return (
-		cause.code === "ENOTFOUND" ||
-		cause.code === "UND_ERR_CONNECT_TIMEOUT" ||
-		cause.code === "ETIMEDOUT" ||
-		String(cause.message ?? "").includes("fetch failed")
-	);
+	return isTransientAppwriteError(error);
 }
 
 class NotificationService {

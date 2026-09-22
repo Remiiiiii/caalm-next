@@ -20,6 +20,7 @@ import type {
 	CrmIntegrationConfig,
 	CrmPipeline,
 } from "@/lib/crm/types";
+import { OrgUnitPicker } from "@/components/settings/OrgUnitPicker";
 import {
 	CRM_FIELD_MAP_HINTS,
 	CRM_FIELD_MAP_KEYS,
@@ -35,6 +36,8 @@ interface HubSpotConfigDialogProps {
 	pipelineId: string;
 	triggerStageId: string;
 	fieldMap?: CrmFieldMap | null;
+	department?: string;
+	division?: string;
 	onSaved: (config: CrmIntegrationConfig) => void;
 }
 
@@ -45,6 +48,8 @@ export default function HubSpotConfigDialog({
 	pipelineId,
 	triggerStageId,
 	fieldMap,
+	department,
+	division,
 	onSaved,
 }: HubSpotConfigDialogProps) {
 	const { toast } = useToast();
@@ -57,11 +62,15 @@ export default function HubSpotConfigDialog({
 	const [mapDraft, setMapDraft] = useState<CrmFieldMap>({
 		...DEFAULT_CRM_FIELD_MAP,
 	});
+	const [departmentCode, setDepartmentCode] = useState(department || "");
+	const [divisionCode, setDivisionCode] = useState(division || "");
 
 	useEffect(() => {
 		if (!open) return;
 		setSelectedPipeline(pipelineId);
 		setSelectedStage(triggerStageId);
+		setDepartmentCode(department || "");
+		setDivisionCode(division || "");
 		setMapDraft({ ...DEFAULT_CRM_FIELD_MAP, ...(fieldMap || {}) });
 		setLoading(true);
 
@@ -123,6 +132,14 @@ export default function HubSpotConfigDialog({
 	};
 
 	const handleSave = async () => {
+		if (!departmentCode.trim() || !divisionCode.trim()) {
+			toast({
+				title: "Department and division are required",
+				description: "Every HubSpot draft needs both before you save.",
+				variant: "destructive",
+			});
+			return;
+		}
 		try {
 			setSaving(true);
 			const res = await fetch("/api/crm/hubspot/config", {
@@ -137,6 +154,8 @@ export default function HubSpotConfigDialog({
 					triggerStageId: selectedStage,
 					fieldMap: mapDraft,
 					enabled: true,
+					department: departmentCode,
+					division: divisionCode,
 				}),
 			});
 			const data = await res.json();
@@ -226,6 +245,23 @@ export default function HubSpotConfigDialog({
 								</SelectContent>
 							</Select>
 						</div>
+					</div>
+
+					<div className="space-y-2 rounded-lg border border-slate-200 bg-white p-4">
+						<p className="text-sm font-medium sidebar-gradient-text">
+							Department and division
+						</p>
+						<p className="text-xs text-slate-600">
+							Required on every HubSpot draft. Pick both before you save.
+						</p>
+						<OrgUnitPicker
+							orgId={orgId}
+							departmentCode={departmentCode}
+							divisionCode={divisionCode}
+							onDepartmentChange={setDepartmentCode}
+							onDivisionChange={setDivisionCode}
+							departmentRequired
+						/>
 					</div>
 
 					<div className="space-y-3">

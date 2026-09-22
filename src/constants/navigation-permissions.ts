@@ -162,6 +162,32 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 		],
 	},
 	{
+		header: "Constituents",
+		items: [
+			{
+				name: "All Constituents",
+				icon: "/assets/icons/constituents.svg",
+				url: "/constituents",
+				permissions: [PERMISSIONS.CONSTITUENTS.VIEW],
+				viewerReadOnly: true,
+			},
+			{
+				name: "Gifts",
+				icon: "/assets/icons/gift.svg",
+				url: "/gifts",
+				permissions: [PERMISSIONS.GIFTS.VIEW],
+				viewerReadOnly: true,
+			},
+			{
+				name: "Campaigns",
+				icon: "/assets/icons/dollar-circle.svg",
+				url: "/campaigns",
+				permissions: [PERMISSIONS.GIFTS.VIEW],
+				viewerReadOnly: true,
+			},
+		],
+	},
+	{
 		header: "Audits",
 		items: [
 			{
@@ -318,6 +344,12 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 				url: "/settings/organization",
 				permissions: [PERMISSIONS.SETTINGS.VIEW, PERMISSIONS.SETTINGS.EDIT],
 				viewerReadOnly: true,
+			},
+			{
+				name: "Funds",
+				icon: "/assets/icons/dollar-circle.svg",
+				url: "/settings/funds",
+				permissions: [PERMISSIONS.FUNDING.MANAGE],
 			},
 			{
 				name: "Billing & Integrations",

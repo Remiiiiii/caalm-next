@@ -201,6 +201,7 @@ export const useCalendarEvents = ({
 		mutate,
 	} = useSWR(key, swrConfig.fetcher || null, {
 		...swrConfig,
+		keepPreviousData: true,
 		refreshInterval: enableRealTime ? pollingInterval : 0,
 	});
 

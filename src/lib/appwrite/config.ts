@@ -374,6 +374,102 @@ export const appwriteConfig = {
 		"test-funding-pursuits",
 	),
 
+	/** Constituent CRM people file (name: constituents) */
+	constituentsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CONSTITUENTS_COLLECTION",
+		"69c8d4f100a8c4d1e2f0",
+	),
+
+	/** Household / relationship edges (name: constituent_relationships) */
+	constituentRelationshipsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CONSTITUENT_RELATIONSHIPS_COLLECTION",
+		"69c8e8a1001f4e8c2a10",
+	),
+
+	/** Timeline notes on a constituent (name: constituent_notes) */
+	constituentNotesCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CONSTITUENT_NOTES_COLLECTION",
+		"69c8e8a2001f4e8c2a11",
+	),
+
+	/** Posted and draft gifts (name: gifts) */
+	giftsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_GIFTS_COLLECTION",
+		"69d91201001f4e8c2b01",
+	),
+
+	/** Fundraising campaigns (name: campaigns) */
+	campaignsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CAMPAIGNS_COLLECTION",
+		"69d91202001f4e8c2b02",
+	),
+
+	/** Per-org receipt sequence (name: gift_receipt_counters) */
+	giftReceiptCountersCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_GIFT_RECEIPT_COUNTERS_COLLECTION",
+		"69d91203001f4e8c2b03",
+	),
+
+	/** Gift designations → fundCode (name: gift_designations) */
+	giftDesignationsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_GIFT_DESIGNATIONS_COLLECTION",
+		"69d91401001f4e8c2b04",
+	),
+
+	/** Recurring sustainer schedules (name: recurring_gift_schedules) */
+	recurringGiftSchedulesCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_RECURRING_GIFT_SCHEDULES_COLLECTION",
+		"69d91402001f4e8c2b05",
+	),
+
+	/** Pledges (name: pledges) */
+	pledgesCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_PLEDGES_COLLECTION",
+		"69d91403001f4e8c2b06",
+	),
+
+	/** Pledge installment rows (name: pledge_installments) */
+	pledgeInstallmentsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_PLEDGE_INSTALLMENTS_COLLECTION",
+		"69d91404001f4e8c2b07",
+	),
+
+	/** Soft-credit recognition rows (name: gift_soft_credits) */
+	giftSoftCreditsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_GIFT_SOFT_CREDITS_COLLECTION",
+		"69d91405001f4e8c2b08",
+	),
+
+	/** Stored RFM lifecycle segment per constituent (name: constituent_segments) */
+	constituentSegmentsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CONSTITUENT_SEGMENTS_COLLECTION",
+		"69d91501001f4e8c2b09",
+	),
+
+	/** Imported wealth-screen rows (name: constituent_wealth_screens) */
+	constituentWealthScreensCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CONSTITUENT_WEALTH_SCREENS_COLLECTION",
+		"69d91601001f4e8c2b10",
+	),
+
+	/** Org fund records (name: org_funds) */
+	orgFundsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_ORG_FUNDS_COLLECTION",
+		"69d91701001f4e8c2b11",
+	),
+
+	/** Grant budget lines (name: grant_budget_lines) */
+	grantBudgetLinesCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_GRANT_BUDGET_LINES_COLLECTION",
+		"69d91702001f4e8c2b12",
+	),
+
+	/** Grant contract → fundId (name: contract_grant_funds; Contracts table is at column cap) */
+	contractGrantFundsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CONTRACT_GRANT_FUNDS_COLLECTION",
+		"69d91703001f4e8c2b13",
+	),
+
 	/** Contract obligations for retention (name: contract_obligations) */
 	contractObligationsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_CONTRACT_OBLIGATIONS_COLLECTION",

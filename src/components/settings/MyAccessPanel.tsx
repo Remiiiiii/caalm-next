@@ -23,7 +23,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { StatCardIcon } from "@/components/ui/stat-card-icon";
+import { MetricStatCard } from "@/components/ui/metric-stat-card";
 import { PERMISSION_DEFINITIONS, PERMISSIONS } from "@/constants/permissions";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -138,55 +138,27 @@ export default function MyAccessPanel() {
 		<div className="space-y-6">
 			{/* Summary Stats */}
 			<div className="grid grid-cols-3 gap-6">
-				{/* Roles Card */}
-				<GlassCard className="glass-card">
-					<div className="glass-card-cap" />
-					<CardContent className="p-4 sm:p-6">
-						<div className="flex items-center justify-between">
-							<div>
-								<p className="text-sm font-medium sidebar-gradient-text">
-									Active Roles
-								</p>
-								<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-									<span>{roles.length}</span>
-									<StatCardIcon className="ml-2" icon={Users} />
-								</div>
-								<p className="text-xs text-slate-600 mt-1">
-									{roles.length === 1 ? "Role" : "Roles"} assigned
-								</p>
-							</div>
-						</div>
-					</CardContent>
-				</GlassCard>
-
-				{/* Permissions Card */}
-				<GlassCard className="glass-card">
-					<div className="glass-card-cap" />
-					<CardContent className="p-4 sm:p-6">
-						<div className="flex items-center justify-between">
-							<div>
-								<p className="text-sm font-medium sidebar-gradient-text">
-									Permissions
-								</p>
-								<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-									<span>{totalGranted}</span>
-									<span className="text-slate-500 text-lg mx-1">/</span>
-									<span className="text-slate-500 text-lg">
-										{totalPermissions}
-									</span>
-									<StatCardIcon
-										className="ml-2"
-										icon={CheckCircle2}
-										iconClassName="text-green"
-									/>
-								</div>
-								<p className="text-xs text-slate-600 mt-1">
-									Granted permissions
-								</p>
-							</div>
-						</div>
-					</CardContent>
-				</GlassCard>
+				<MetricStatCard
+					title="Active Roles"
+					value={roles.length}
+					description={roles.length === 1 ? "Role assigned" : "Roles assigned"}
+					icon={Users}
+				/>
+				<MetricStatCard
+					title="Permissions"
+					value={
+						<span className="inline-flex items-baseline gap-1">
+							{totalGranted}
+							<span className="text-lg font-semibold text-slate-500">/</span>
+							<span className="text-lg font-semibold text-slate-500">
+								{totalPermissions}
+							</span>
+						</span>
+					}
+					description="Granted permissions"
+					icon={CheckCircle2}
+					iconTone="success"
+				/>
 
 				{/* Organization Card */}
 				<GlassCard className="glass-card">
