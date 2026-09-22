@@ -1,10 +1,12 @@
 #!/usr/bin/env tsx
 /**
- * Seed roadmap_sections + roadmap_tasks from ROADMAP_CATALOG when tables are empty.
+ * Seed roadmap sections/tasks from catalog when Appwrite tables are empty.
  *
  * Usage:
  *   pnpm exec tsx scripts/seed-roadmap-appwrite.ts
+ *   pnpm exec tsx scripts/seed-roadmap-appwrite.ts --npo
  *   pnpm exec tsx scripts/seed-roadmap-appwrite.ts --demo
+ *   pnpm exec tsx scripts/seed-roadmap-appwrite.ts --demo --npo
  */
 
 import path from "node:path";
@@ -25,7 +27,8 @@ async function main() {
 		"../src/lib/roadmap/store"
 	);
 
-	const result = await seedRoadmapToAppwriteIfEmpty();
+	const catalogKey = process.argv.includes("--npo") ? "npo" : "clm";
+	const result = await seedRoadmapToAppwriteIfEmpty(catalogKey);
 
 	if (result.seeded) {
 		console.log(

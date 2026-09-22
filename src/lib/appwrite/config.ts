@@ -368,6 +368,30 @@ export const appwriteConfig = {
 		"test-roadmap-status-log",
 	),
 
+	/** Nonprofit roadmap — same schema as CLM roadmap_* tables */
+	npoRoadmapSectionsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_NPO_ROADMAP_SECTIONS_COLLECTION",
+		"69d91a01001f4e8c2b19",
+	),
+	npoRoadmapTasksCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_NPO_ROADMAP_TASKS_COLLECTION",
+		"69d91a02001f4e8c2b20",
+	),
+	npoRoadmapTestRunsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_NPO_ROADMAP_TEST_RUNS_COLLECTION",
+		"69d91a03001f4e8c2b21",
+	),
+	npoRoadmapStatusLogCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_NPO_ROADMAP_STATUS_LOG_COLLECTION",
+		"69d91a04001f4e8c2b22",
+	),
+
+	/** Legacy manual completions — merged into npo_roadmap_tasks on seed when present */
+	npoRoadmapTaskOverridesCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_NPO_ROADMAP_TASK_OVERRIDES_COLLECTION",
+		"69d91903001f4e8c2b18",
+	),
+
 	/** Funding pursuits pipeline (name: funding_pursuits) */
 	fundingPursuitsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_FUNDING_PURSUITS_COLLECTION",
