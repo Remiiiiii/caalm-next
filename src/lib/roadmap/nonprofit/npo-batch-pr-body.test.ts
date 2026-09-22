@@ -27,7 +27,7 @@ describe("npo batch PR body", () => {
 		expect(body).toMatch(/\*\*Who:\*\* Org admins/);
 		expect(body).toMatch(/## CI and merge/);
 		expect(body).toMatch(/Playwright E2E/);
-		expect(body).toMatch(/same batch branch\/PR only/);
+		expect(body).toMatch(/this batch branch\/PR only/);
 	});
 
 	it("includes Done when bullets from the catalog", () => {
