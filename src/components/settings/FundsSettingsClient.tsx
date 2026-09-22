@@ -13,6 +13,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { FinanceScopeHelp } from "@/components/funding/FinanceScopeHelp";
 import {
 	NET_ASSET_CLASSES,
 	netAssetClassLabel,
@@ -64,6 +65,7 @@ export function FundsSettingsClient() {
 
 	return (
 		<div className="space-y-6">
+			<FinanceScopeHelp />
 			<Card className="glass-card">
 				<div className="glass-card-cap" />
 				<CardContent className="p-4 sm:p-6 space-y-4">

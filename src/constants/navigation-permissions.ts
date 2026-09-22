@@ -352,6 +352,12 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 				permissions: [PERMISSIONS.FUNDING.MANAGE],
 			},
 			{
+				name: "990 worksheet mapping",
+				icon: "/assets/icons/dollar-circle.svg",
+				url: "/settings/form-990",
+				permissions: [PERMISSIONS.FUNDING.MANAGE],
+			},
+			{
 				name: "Billing & Integrations",
 				icon: "/assets/icons/settings.svg",
 				url: "/settings/billing",
