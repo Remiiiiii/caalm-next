@@ -346,6 +346,12 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 				viewerReadOnly: true,
 			},
 			{
+				name: "Funds",
+				icon: "/assets/icons/dollar-circle.svg",
+				url: "/settings/funds",
+				permissions: [PERMISSIONS.FUNDING.MANAGE],
+			},
+			{
 				name: "Billing & Integrations",
 				icon: "/assets/icons/settings.svg",
 				url: "/settings/billing",

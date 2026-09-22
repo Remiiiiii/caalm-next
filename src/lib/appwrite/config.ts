@@ -452,6 +452,24 @@ export const appwriteConfig = {
 		"69d91601001f4e8c2b10",
 	),
 
+	/** Org fund records (name: org_funds) */
+	orgFundsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_ORG_FUNDS_COLLECTION",
+		"69d91701001f4e8c2b11",
+	),
+
+	/** Grant budget lines (name: grant_budget_lines) */
+	grantBudgetLinesCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_GRANT_BUDGET_LINES_COLLECTION",
+		"69d91702001f4e8c2b12",
+	),
+
+	/** Grant contract → fundId (name: contract_grant_funds; Contracts table is at column cap) */
+	contractGrantFundsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CONTRACT_GRANT_FUNDS_COLLECTION",
+		"69d91703001f4e8c2b13",
+	),
+
 	/** Contract obligations for retention (name: contract_obligations) */
 	contractObligationsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_CONTRACT_OBLIGATIONS_COLLECTION",
