@@ -20,6 +20,8 @@ import {
 } from "./catalog-query";
 import { catalogForKey } from "./catalogs";
 import { computeUnlocked, type LockSnapshot } from "./locking";
+import { mergeLegacyNpoOverrideCompletions } from "./npo-seed-override-merge";
+import { roadmapAppwriteTableIds } from "./roadmap-appwrite-tables";
 import type {
 	RoadmapCatalogSection,
 	RoadmapSection,
@@ -105,17 +107,15 @@ function parseStringArray(raw: unknown): string[] {
 	return [];
 }
 
-/** True when CLM rows should go to Appwrite. NPO stays memory-only. */
+/** True when this catalog's roadmap rows live in Appwrite (mirrors CLM for NPO). */
 function isAppwriteBackend(
 	catalogKey: RoadmapCatalogKey = DEFAULT_ROADMAP_CATALOG_KEY,
 ): boolean {
-	if (catalogKey !== "clm") return false;
-	return (
-		isAppwriteConfigured() &&
-		Boolean(appwriteConfig.roadmapSectionsCollectionId) &&
-		Boolean(appwriteConfig.roadmapTasksCollectionId) &&
-		process.env.ROADMAP_USE_APPWRITE === "true"
-	);
+	if (process.env.ROADMAP_USE_APPWRITE !== "true" || !isAppwriteConfigured()) {
+		return false;
+	}
+	const ids = roadmapAppwriteTableIds(catalogKey);
+	return Boolean(ids.sectionsTableId && ids.tasksTableId);
 }
 
 function sectionRowData(section: RoadmapSection) {
@@ -148,26 +148,33 @@ function taskRowData(task: RoadmapTask) {
 	};
 }
 
-let appwriteSeedPromise: Promise<void> | null = null;
+const appwriteSeedPromises: Partial<
+	Record<RoadmapCatalogKey, Promise<void>>
+> = {};
 
 /** Insert catalog sections/tasks when Appwrite tables are empty. Idempotent. */
-export async function seedRoadmapToAppwriteIfEmpty(): Promise<{
+export async function seedRoadmapToAppwriteIfEmpty(
+	catalogKey: RoadmapCatalogKey = DEFAULT_ROADMAP_CATALOG_KEY,
+): Promise<{
 	seeded: boolean;
 	sectionCount: number;
 	taskCount: number;
 }> {
+	const ids = roadmapAppwriteTableIds(catalogKey);
 	if (
 		!isAppwriteConfigured() ||
-		!appwriteConfig.roadmapSectionsCollectionId ||
-		!appwriteConfig.roadmapTasksCollectionId
+		!ids.sectionsTableId ||
+		!ids.tasksTableId
 	) {
-		throw new Error("Roadmap Appwrite tables are not configured");
+		throw new Error(
+			`Roadmap Appwrite tables are not configured for catalog ${catalogKey}`,
+		);
 	}
 
 	const { tablesDB } = await createAdminClient();
 	const databaseId = appwriteConfig.databaseId!;
-	const sectionsTableId = appwriteConfig.roadmapSectionsCollectionId;
-	const tasksTableId = appwriteConfig.roadmapTasksCollectionId;
+	const sectionsTableId = ids.sectionsTableId;
+	const tasksTableId = ids.tasksTableId;
 
 	const existing = await tablesDB.listRows({
 		databaseId,
@@ -179,11 +186,22 @@ export async function seedRoadmapToAppwriteIfEmpty(): Promise<{
 		await syncCatalogLayoutToAppwrite(tablesDB, databaseId, {
 			sectionsTableId,
 			tasksTableId,
+			catalogKey,
 		});
 		return { seeded: false, sectionCount: 0, taskCount: 0 };
 	}
 
-	const { sections, tasks } = buildSeedSnapshot();
+	let { sections, tasks } = buildSeedSnapshot(catalogKey);
+	if (catalogKey === "npo") {
+		tasks = await mergeLegacyNpoOverrideCompletions(tasks);
+		const unlocked = computeUnlocked({
+			sections,
+			tasks,
+			sequentialTasks: catalogUsesSequentialTasks(catalogForKey("npo")),
+		});
+		sections = unlocked.snapshot.sections;
+		tasks = unlocked.snapshot.tasks;
+	}
 
 	for (const section of sections) {
 		await tablesDB.createRow({
@@ -294,9 +312,13 @@ function catalogLayoutMatchesExisting(
 async function syncCatalogLayoutToAppwrite(
 	tablesDB: Awaited<ReturnType<typeof createAdminClient>>["tablesDB"],
 	databaseId: string,
-	ids: { sectionsTableId: string; tasksTableId: string },
+	ids: {
+		sectionsTableId: string;
+		tasksTableId: string;
+		catalogKey: RoadmapCatalogKey;
+	},
 ): Promise<void> {
-	const seed = buildSeedSnapshot();
+	const seed = buildSeedSnapshot(ids.catalogKey);
 	const seedTaskIds = new Set(seed.tasks.map((task) => task.$id));
 
 	const existingSectionRows = await tablesDB.listRows({
@@ -365,7 +387,9 @@ async function syncCatalogLayoutToAppwrite(
 	const unlocked = computeUnlocked({
 		sections: mergedSections,
 		tasks: mergedTasks,
-		sequentialTasks: catalogUsesSequentialTasks(catalogForKey("clm")),
+		sequentialTasks: catalogUsesSequentialTasks(
+			catalogForKey(ids.catalogKey),
+		),
 	});
 
 	for (const section of unlocked.snapshot.sections) {
@@ -415,23 +439,27 @@ async function syncCatalogLayoutToAppwrite(
 	}
 }
 
-async function ensureAppwriteSeeded(): Promise<void> {
-	if (!isAppwriteBackend()) return;
-	if (!appwriteSeedPromise) {
-		appwriteSeedPromise = seedRoadmapToAppwriteIfEmpty()
+async function ensureAppwriteSeeded(
+	catalogKey: RoadmapCatalogKey = DEFAULT_ROADMAP_CATALOG_KEY,
+): Promise<void> {
+	if (!isAppwriteBackend(catalogKey)) return;
+	if (!appwriteSeedPromises[catalogKey]) {
+		appwriteSeedPromises[catalogKey] = seedRoadmapToAppwriteIfEmpty(
+			catalogKey,
+		)
 			.then((result) => {
 				if (result.seeded) {
 					console.info(
-						`[roadmap] Seeded Appwrite with ${result.sectionCount} sections and ${result.taskCount} tasks`,
+						`[roadmap] Seeded Appwrite (${catalogKey}) with ${result.sectionCount} sections and ${result.taskCount} tasks`,
 					);
 				}
 			})
 			.catch((error) => {
-				appwriteSeedPromise = null;
+				delete appwriteSeedPromises[catalogKey];
 				throw error;
 			});
 	}
-	await appwriteSeedPromise;
+	await appwriteSeedPromises[catalogKey];
 }
 
 export function buildSeedSnapshot(
@@ -533,12 +561,13 @@ export async function listSections(
 		);
 	}
 
-	await ensureAppwriteSeeded();
+	await ensureAppwriteSeeded(catalogKey);
 
 	const { tablesDB } = await createAdminClient();
+	const tableId = roadmapAppwriteTableIds(catalogKey).sectionsTableId!;
 	const result = await tablesDB.listRows({
 		databaseId: appwriteConfig.databaseId!,
-		tableId: appwriteConfig.roadmapSectionsCollectionId!,
+		tableId,
 		queries: [Query.limit(100)],
 	});
 	return result.rows.map((row) => row as unknown as RoadmapSection);
@@ -575,14 +604,15 @@ export async function listTasks(
 		).sort((a, b) => a.orderIndex - b.orderIndex);
 	}
 
-	await ensureAppwriteSeeded();
+	await ensureAppwriteSeeded(key);
 
 	const { tablesDB } = await createAdminClient();
 	const queries = [Query.limit(500)];
 	if (sectionId) queries.unshift(Query.equal("sectionId", sectionId));
+	const tableId = roadmapAppwriteTableIds(key).tasksTableId!;
 	const result = await tablesDB.listRows({
 		databaseId: appwriteConfig.databaseId!,
-		tableId: appwriteConfig.roadmapTasksCollectionId!,
+		tableId,
 		queries,
 	});
 	return result.rows.map((row) => {
@@ -602,12 +632,13 @@ export async function getTaskById(taskId: string): Promise<RoadmapTask | null> {
 	if (!isAppwriteBackend(key)) {
 		return state.tasks.get(taskId) || null;
 	}
-	await ensureAppwriteSeeded();
+	await ensureAppwriteSeeded(key);
 	const { tablesDB } = await createAdminClient();
+	const tableId = roadmapAppwriteTableIds(key).tasksTableId!;
 	try {
 		const row = await tablesDB.getRow({
 			databaseId: appwriteConfig.databaseId!,
-			tableId: appwriteConfig.roadmapTasksCollectionId!,
+			tableId,
 			rowId: taskId,
 		});
 		const r = row as Record<string, unknown>;
@@ -662,9 +693,10 @@ export async function saveTask(task: RoadmapTask): Promise<RoadmapTask> {
 		return next;
 	}
 	const { tablesDB } = await createAdminClient();
+	const tableId = roadmapAppwriteTableIds(key).tasksTableId!;
 	await tablesDB.updateRow({
 		databaseId: appwriteConfig.databaseId!,
-		tableId: appwriteConfig.roadmapTasksCollectionId!,
+		tableId,
 		rowId: next.$id,
 		data: taskRowData(next),
 	});
@@ -682,9 +714,10 @@ export async function saveSection(
 		return next;
 	}
 	const { tablesDB } = await createAdminClient();
+	const tableId = roadmapAppwriteTableIds(key).sectionsTableId!;
 	await tablesDB.updateRow({
 		databaseId: appwriteConfig.databaseId!,
-		tableId: appwriteConfig.roadmapSectionsCollectionId!,
+		tableId,
 		rowId: next.$id,
 		data: sectionRowData(next),
 	});
@@ -706,9 +739,14 @@ export async function appendStatusLog(
 		return log;
 	}
 	const { tablesDB } = await createAdminClient();
+	const tableId = roadmapAppwriteTableIds(key).statusLogTableId!;
+	if (!tableId) {
+		state.logs.set(log.$id, log);
+		return log;
+	}
 	const created = await tablesDB.createRow({
 		databaseId: appwriteConfig.databaseId!,
-		tableId: appwriteConfig.roadmapStatusLogCollectionId!,
+		tableId,
 		rowId: log.$id,
 		data: {
 			entityType: log.entityType,
@@ -734,9 +772,15 @@ export async function listStatusLogs(
 			.sort((a, b) => a.$createdAt.localeCompare(b.$createdAt));
 	}
 	const { tablesDB } = await createAdminClient();
+	const tableId = roadmapAppwriteTableIds(key).statusLogTableId!;
+	if (!tableId) {
+		return [...state.logs.values()]
+			.filter((l) => l.entityId === entityId)
+			.sort((a, b) => a.$createdAt.localeCompare(b.$createdAt));
+	}
 	const result = await tablesDB.listRows({
 		databaseId: appwriteConfig.databaseId!,
-		tableId: appwriteConfig.roadmapStatusLogCollectionId!,
+		tableId,
 		queries: [
 			Query.equal("entityId", entityId),
 			Query.orderAsc("$createdAt"),
@@ -765,9 +809,14 @@ export async function createTestRun(
 		return run;
 	}
 	const { tablesDB } = await createAdminClient();
+	const tableId = roadmapAppwriteTableIds(key).testRunsTableId!;
+	if (!tableId) {
+		state.testRuns.set(run.$id, run);
+		return run;
+	}
 	const created = await tablesDB.createRow({
 		databaseId: appwriteConfig.databaseId!,
-		tableId: appwriteConfig.roadmapTestRunsCollectionId!,
+		tableId,
 		rowId: run.$id,
 		data: {
 			taskId: run.taskId,
@@ -784,6 +833,26 @@ export async function createTestRun(
 	return { ...run, $id: String(created.$id) };
 }
 
+async function getTestRunFromAppwrite(
+	runId: string,
+	catalogKey: RoadmapCatalogKey,
+): Promise<RoadmapTestRun | null> {
+	if (!isAppwriteBackend(catalogKey)) return null;
+	const tableId = roadmapAppwriteTableIds(catalogKey).testRunsTableId;
+	if (!tableId) return null;
+	const { tablesDB } = await createAdminClient();
+	try {
+		const row = await tablesDB.getRow({
+			databaseId: appwriteConfig.databaseId!,
+			tableId,
+			rowId: runId,
+		});
+		return row as unknown as RoadmapTestRun;
+	} catch {
+		return null;
+	}
+}
+
 export async function getTestRunById(
 	runId: string,
 ): Promise<RoadmapTestRun | null> {
@@ -793,20 +862,10 @@ export async function getTestRunById(
 	if (fromClm) return fromClm;
 	const fromNpo = memory("npo").testRuns.get(runId);
 	if (fromNpo) return fromNpo;
-	if (!isAppwriteBackend("clm")) {
-		return null;
-	}
-	const { tablesDB } = await createAdminClient();
-	try {
-		const row = await tablesDB.getRow({
-			databaseId: appwriteConfig.databaseId!,
-			tableId: appwriteConfig.roadmapTestRunsCollectionId!,
-			rowId: runId,
-		});
-		return row as unknown as RoadmapTestRun;
-	} catch {
-		return null;
-	}
+	return (
+		(await getTestRunFromAppwrite(runId, "clm")) ??
+		(await getTestRunFromAppwrite(runId, "npo"))
+	);
 }
 
 export async function findTestRunForCommit(params: {
@@ -819,10 +878,12 @@ export async function findTestRunForCommit(params: {
 	const runs = !isAppwriteBackend(key)
 		? [...state.testRuns.values()]
 		: await (async () => {
+				const tableId = roadmapAppwriteTableIds(key).testRunsTableId;
+				if (!tableId) return [...state.testRuns.values()];
 				const { tablesDB } = await createAdminClient();
 				const result = await tablesDB.listRows({
 					databaseId: appwriteConfig.databaseId!,
-					tableId: appwriteConfig.roadmapTestRunsCollectionId!,
+					tableId,
 					queries: [
 						Query.equal("taskId", params.taskId),
 						Query.equal("commitSha", params.commitSha),
@@ -854,24 +915,33 @@ export async function findTestRunForPrCommit(params: {
 		...memory("clm").testRuns.values(),
 		...memory("npo").testRuns.values(),
 	];
-	const runs = !isAppwriteBackend("clm")
-		? memoryRuns
-		: await (async () => {
-				const { tablesDB } = await createAdminClient();
-				const result = await tablesDB.listRows({
-					databaseId: appwriteConfig.databaseId!,
-					tableId: appwriteConfig.roadmapTestRunsCollectionId!,
-					queries: [
-						Query.equal("prNumber", params.prNumber),
-						Query.equal("commitSha", params.commitSha),
-						Query.limit(20),
-					],
-				});
-				const appwriteRuns = result.rows.map(
-					(r) => r as unknown as RoadmapTestRun,
-				);
-				return [...memory("npo").testRuns.values(), ...appwriteRuns];
-			})();
+	const runs =
+		!isAppwriteBackend("clm") && !isAppwriteBackend("npo")
+			? memoryRuns
+			: await (async () => {
+					const { tablesDB } = await createAdminClient();
+					const databaseId = appwriteConfig.databaseId!;
+					const collected: RoadmapTestRun[] = [...memoryRuns];
+					for (const catalogKey of ["clm", "npo"] as const) {
+						if (!isAppwriteBackend(catalogKey)) continue;
+						const tableId =
+							roadmapAppwriteTableIds(catalogKey).testRunsTableId;
+						if (!tableId) continue;
+						const result = await tablesDB.listRows({
+							databaseId,
+							tableId,
+							queries: [
+								Query.equal("prNumber", params.prNumber),
+								Query.equal("commitSha", params.commitSha),
+								Query.limit(20),
+							],
+						});
+						collected.push(
+							...result.rows.map((r) => r as unknown as RoadmapTestRun),
+						);
+					}
+					return collected;
+				})();
 
 	const filtered = runs.filter((r) => {
 		if (r.prNumber !== params.prNumber) return false;
