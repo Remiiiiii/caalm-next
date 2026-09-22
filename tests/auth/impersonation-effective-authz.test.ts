@@ -78,7 +78,11 @@ describe("requirePermission during impersonation", () => {
 			"src/app/(root)/dashboard/UserManagement.tsx",
 			"utf8",
 		);
-		expect(users).toContain("View as user");
+		const rowActions = readFileSync(
+			"src/components/users/UserManagementRowActions.tsx",
+			"utf8",
+		);
+		expect(rowActions).toContain("View as user");
 		expect(users).toContain("PERMISSIONS.USERS.IMPERSONATE");
 		expect(users).not.toMatch(/role === ['"]Super Admin['"]/);
 	});

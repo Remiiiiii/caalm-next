@@ -967,12 +967,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 					CALENDAR_CARD_SHADOW,
 				)}
 			>
-				{isLoading && (
-					<div className="flex items-center justify-center py-4">
-						<div className="h-5 w-5 animate-spin rounded-full border-b-2 border-[#0f5384]" />
-					</div>
-				)}
-
 				<CalendarCalHead
 					currentMonth={currentMonth}
 					onPrevMonth={goToPrevMonth}

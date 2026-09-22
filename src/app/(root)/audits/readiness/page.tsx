@@ -1,13 +1,19 @@
 "use client";
 
 import {
+	AlertTriangle,
 	ClipboardCheck,
+	Clock,
 	ExternalLink,
 	FileText,
+	Gauge,
 	Loader2,
 	Play,
 	RefreshCw,
+	ShieldAlert,
 	SquareArrowRightExit,
+	TrendingDown,
+	TrendingUp,
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
@@ -17,7 +23,7 @@ import { ReadinessCharts } from "@/components/audits/ReadinessCharts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading";
-import { StatCardIcon } from "@/components/ui/stat-card-icon";
+import { MetricStatCard } from "@/components/ui/metric-stat-card";
 import { PERMISSIONS } from "@/constants/permissions";
 import { useToast } from "@/hooks/use-toast";
 import { useOrgTimezone } from "@/hooks/useOrgTimezone";
@@ -271,20 +277,16 @@ export default function AuditReadinessPage() {
 			</div>
 
 			<div className="grid grid-cols-4 gap-6 mb-6">
-				<Card className="glass-card">
-					<div className="glass-card-cap" />
-					<CardContent className="p-4 sm:p-6">
-						<p className="text-sm font-medium sidebar-gradient-text">
-							Readiness score
-						</p>
-						<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-							<span>
-								{score === null || score === undefined ? "N/A" : score}
-							</span>
+				<MetricStatCard
+					title="Readiness score"
+					value={
+						<span className="inline-flex items-center gap-2">
+							{score === null || score === undefined ? "N/A" : score}
 							<span
 								className={cn(
-									"ml-3 text-xs px-2 py-1 rounded border uppercase",
-									rag === "green" && "bg-green/10 text-green border-green/20",
+									"text-xs px-2 py-1 rounded border uppercase font-medium",
+									rag === "green" &&
+										"bg-green/10 text-green border-green/20",
 									rag === "amber" &&
 										"bg-orange/10 text-orange border-orange/20",
 									rag === "red" && "bg-red/10 text-red border-red/20",
@@ -292,56 +294,58 @@ export default function AuditReadinessPage() {
 							>
 								{payload?.sourcesUsed?.length ? rag : "—"}
 							</span>
-						</div>
-						<p className="text-xs text-slate-600 mt-1">
-							Sources: {payload?.sourcesUsed?.join(", ") || "None yet"}
-						</p>
-					</CardContent>
-				</Card>
-				<Card className="glass-card">
-					<div className="glass-card-cap" />
-					<CardContent className="p-4 sm:p-6">
-						<p className="text-sm font-medium sidebar-gradient-text">
-							Critical items
-						</p>
-						<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-							<span>{summary?.severity.critical ?? 0}</span>
-							<StatCardIcon className="ml-2" icon={ClipboardCheck} />
-						</div>
-						<p className="text-xs text-slate-600 mt-1">
-							Moderate {summary?.severity.moderate ?? 0} · Low{" "}
-							{summary?.severity.low ?? 0}
-						</p>
-					</CardContent>
-				</Card>
-				<Card className="glass-card">
-					<div className="glass-card-cap" />
-					<CardContent className="p-4 sm:p-6">
-						<p className="text-sm font-medium sidebar-gradient-text">
-							Contracts
-						</p>
-						<div className="text-3xl font-bold text-slate-700 pt-2">
-							{summary?.kpis.totalContracts ?? 0}
-						</div>
-						<p className="text-xs text-slate-600 mt-1">
-							Expiring soon: {summary?.kpis.expiringSoon ?? 0}
-						</p>
-					</CardContent>
-				</Card>
-				<Card className="glass-card">
-					<div className="glass-card-cap" />
-					<CardContent className="p-4 sm:p-6">
-						<p className="text-sm font-medium sidebar-gradient-text">
-							Licenses at risk
-						</p>
-						<div className="text-3xl font-bold text-slate-700 pt-2">
-							{summary?.kpis.licensesAtRisk ?? 0}
-						</div>
-						<p className="text-xs text-slate-600 mt-1">
-							Evidence gaps: {summary?.kpis.evidenceGaps ?? 0}
-						</p>
-					</CardContent>
-				</Card>
+						</span>
+					}
+					description={`Sources: ${payload?.sourcesUsed?.join(", ") || "None yet"}`}
+					icon={Gauge}
+					iconTone={
+						rag === "green" ? "success" : rag === "amber" ? "warning" : "danger"
+					}
+					dynamicIcon={
+						rag === "green"
+							? TrendingUp
+							: rag === "amber"
+								? Clock
+								: TrendingDown
+					}
+					dynamicTone={
+						rag === "green" ? "success" : rag === "amber" ? "warning" : "danger"
+					}
+				/>
+				<MetricStatCard
+					title="Critical items"
+					value={summary?.severity.critical ?? 0}
+					description={`Moderate ${summary?.severity.moderate ?? 0} · Low ${summary?.severity.low ?? 0}`}
+					icon={ClipboardCheck}
+					iconTone={(summary?.severity.critical ?? 0) > 0 ? "danger" : "default"}
+					dynamicIcon={
+						(summary?.severity.critical ?? 0) > 0 ? AlertTriangle : undefined
+					}
+					dynamicTone="danger"
+					valueTone={(summary?.severity.critical ?? 0) > 0 ? "danger" : "default"}
+				/>
+				<MetricStatCard
+					title="Contracts"
+					value={summary?.kpis.totalContracts ?? 0}
+					description={`Expiring soon: ${summary?.kpis.expiringSoon ?? 0}`}
+					icon={FileText}
+				/>
+				<MetricStatCard
+					title="Licenses at risk"
+					value={summary?.kpis.licensesAtRisk ?? 0}
+					description={`Evidence gaps: ${summary?.kpis.evidenceGaps ?? 0}`}
+					icon={ShieldAlert}
+					iconTone={
+						(summary?.kpis.licensesAtRisk ?? 0) > 0 ? "warning" : "default"
+					}
+					dynamicIcon={
+						(summary?.kpis.licensesAtRisk ?? 0) > 0 ? AlertTriangle : undefined
+					}
+					dynamicTone="warning"
+					valueTone={
+						(summary?.kpis.licensesAtRisk ?? 0) > 0 ? "warning" : "default"
+					}
+				/>
 			</div>
 
 			{summary && (
