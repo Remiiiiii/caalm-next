@@ -53,6 +53,7 @@ export function FundingRetentionClient() {
 		() => searchParams.get("stream"),
 	);
 	const [queueRefresh, setQueueRefresh] = useState(0);
+	const [missingFundOnly, setMissingFundOnly] = useState(false);
 	const hasLoadedRef = useRef(false);
 
 	useEffect(() => {
@@ -68,7 +69,10 @@ export function FundingRetentionClient() {
 		if (!hasLoadedRef.current) setLoading(true);
 		setError(null);
 		try {
-			const retentionRes = await fetch("/api/funding/retention");
+			const retentionUrl = missingFundOnly
+				? "/api/funding/retention?missingFund=true"
+				: "/api/funding/retention";
+			const retentionRes = await fetch(retentionUrl);
 			if (!retentionRes.ok) throw new Error("Could not load retention streams");
 			const retentionJson = (await retentionRes.json()) as RetentionSummary;
 			setSummary(retentionJson);
@@ -82,7 +86,7 @@ export function FundingRetentionClient() {
 		} finally {
 			setLoading(false);
 		}
-	}, []);
+	}, [missingFundOnly]);
 
 	const loadPursuits = useCallback(async () => {
 		try {
@@ -104,7 +108,7 @@ export function FundingRetentionClient() {
 
 	useEffect(() => {
 		void loadRetention();
-	}, [loadRetention]);
+	}, [loadRetention, missingFundOnly]);
 
 	useEffect(() => {
 		void loadPursuits();
@@ -191,6 +195,8 @@ export function FundingRetentionClient() {
 							departments={summary?.departments || []}
 							selectedContractId={selectedContractId}
 							onSelect={setSelectedContractId}
+							missingFundOnly={missingFundOnly}
+							onMissingFundOnlyChange={setMissingFundOnly}
 						/>
 					</div>
 					<div className={cn("lg:col-span-2", RETENTION_BOARD_HEIGHT_CLASS)}>

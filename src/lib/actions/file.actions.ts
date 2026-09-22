@@ -370,6 +370,22 @@ export const uploadFile = async ({
 				fallbackUserId: ownerId,
 			});
 
+			const mappedContractType = ContractTypeMapper.map(metadata?.contractType);
+			const { assertGrantFundIdOnSave, GrantFundValidationError } = await import(
+				"@/lib/funding/grant-fund"
+			);
+			try {
+				assertGrantFundIdOnSave({
+					contractType: mappedContractType,
+					fundId: metadata?.fundId,
+				});
+			} catch (grantFundError) {
+				if (grantFundError instanceof GrantFundValidationError) {
+					throw new Error(grantFundError.message);
+				}
+				throw grantFundError;
+			}
+
 			// Build contract document, explicitly excluding contractId (not in Contracts collection schema)
 			const contractDocumentRaw: any = {
 				contractName: clampAppwriteString(
@@ -437,7 +453,7 @@ export const uploadFile = async ({
 					metadata?.departmentOwner,
 					CONTRACT_STRING_LIMITS.departmentOwner,
 				),
-				contractType: ContractTypeMapper.map(metadata?.contractType),
+				contractType: mappedContractType,
 				contractCategory: metadata?.contractCategory,
 				vendor: clampAppwriteString(
 					metadata?.vendor ?? metadata?.counterpartyLegalName,
@@ -612,6 +628,20 @@ export const uploadFile = async ({
 				rowId: ID.unique(),
 				data: contractDocument as Record<string, unknown>,
 			});
+
+			const grantFundId = clampAppwriteString(metadata?.fundId, 64);
+			if (grantFundId) {
+				const { assertFundInOrg } = await import("@/lib/funds");
+				const { setGrantFundIdForContract } = await import(
+					"@/lib/funding/grant-fund.repository"
+				);
+				await assertFundInOrg(resolvedOrgId, grantFundId);
+				await setGrantFundIdForContract({
+					orgId: resolvedOrgId,
+					contractId: contract.$id,
+					fundId: grantFundId,
+				});
+			}
 
 			// Initialize multi-step approval workflow (pending-review → exec → active)
 			try {

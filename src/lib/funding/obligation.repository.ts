@@ -39,6 +39,8 @@ function mapRow(row: Record<string, unknown>): ContractObligation {
 		linkUrl: row.linkUrl ? String(row.linkUrl) : undefined,
 		renewalLinked: Boolean(row.renewalLinked),
 		completedAt: row.completedAt ? String(row.completedAt) : undefined,
+		actualAmount:
+			row.actualAmount != null ? Number(row.actualAmount) : undefined,
 		createdByUserId: String(row.createdByUserId || ""),
 	};
 }
