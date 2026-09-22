@@ -440,6 +440,12 @@ export const appwriteConfig = {
 		"69d91405001f4e8c2b08",
 	),
 
+	/** Stored RFM lifecycle segment per constituent (name: constituent_segments) */
+	constituentSegmentsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CONSTITUENT_SEGMENTS_COLLECTION",
+		"69d91501001f4e8c2b09",
+	),
+
 	/** Contract obligations for retention (name: contract_obligations) */
 	contractObligationsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_CONTRACT_OBLIGATIONS_COLLECTION",

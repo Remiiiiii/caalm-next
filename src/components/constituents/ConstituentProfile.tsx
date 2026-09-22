@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { FundraisingIntelligenceTab } from "@/components/constituents/FundraisingIntelligenceTab";
 import { HouseholdTab } from "@/components/constituents/HouseholdTab";
 import { MergeConstituentsDialog } from "@/components/constituents/MergeConstituentsDialog";
 import { TimelineTab } from "@/components/constituents/TimelineTab";
@@ -170,11 +171,7 @@ export function ConstituentProfile({
 							/>
 						</TabsContent>
 						<TabsContent value="intelligence">
-							<EmptyTab
-								icon={Brain}
-								title="No scores yet"
-								message="Fundraising scores will appear here after they are computed."
-							/>
+							<FundraisingIntelligenceTab constituentId={constituent.$id} />
 						</TabsContent>
 					</Tabs>
 				</CardContent>

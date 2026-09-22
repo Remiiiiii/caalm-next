@@ -71,6 +71,7 @@ export const PERMISSIONS = {
 		DOCUMENT_ANALYSIS: "ai.document_analysis",
 		MEETING_PREP: "ai.meeting_prep",
 		IMAGE_GENERATE: "ai.image_generate",
+		FUNDRAISING: "ai.fundraising",
 	},
 
 	// Audit Permissions
@@ -466,6 +467,13 @@ export const PERMISSION_DEFINITIONS = [
 		name: "AI Meeting Prep",
 		category: "ai",
 		description: "Get AI meeting preparation suggestions",
+	},
+	{
+		key: PERMISSIONS.AI.FUNDRAISING,
+		name: "AI Fundraising Intelligence",
+		category: "ai",
+		description:
+			"View explainable donor scores, lapse risk, and fundraising intelligence cards",
 	},
 
 	// Audit

@@ -8,6 +8,10 @@ import {
 	parseTypeParam,
 	requireConstituentOrgContext,
 } from "@/lib/constituents";
+import {
+	listConstituentIdsForSegment,
+	listSegmentsForOrg,
+} from "@/lib/fundraising/segments-repository";
 
 export async function GET(request: NextRequest) {
 	const ctx = await requireConstituentOrgContext(
@@ -21,18 +25,50 @@ export async function GET(request: NextRequest) {
 	const pageSize = Math.min(Math.max(Number(params.get("pageSize") || "20"), 1), 100);
 
 	try {
+		const segment = params.get("segment")?.trim() || undefined;
+		let segmentIds: string[] | undefined;
+		if (segment) {
+			segmentIds = await listConstituentIdsForSegment(ctx.orgId, segment);
+			if (segmentIds.length === 0) {
+				return NextResponse.json({
+					items: [],
+					total: 0,
+					page,
+					pageSize,
+				});
+			}
+		}
+
 		const result = await listConstituents({
 			orgId: ctx.orgId,
 			search: params.get("search") || undefined,
 			type: parseTypeParam(params.get("type")),
 			city: params.get("city")?.trim() || undefined,
 			doNotContact: parseDoNotContactParam(params.get("doNotContact")),
-			limit: pageSize,
-			offset: (page - 1) * pageSize,
+			limit: segment ? 500 : pageSize,
+			offset: segment ? 0 : (page - 1) * pageSize,
 		});
+
+		let items = result.items;
+		if (segmentIds) {
+			const allowed = new Set(segmentIds);
+			items = items.filter((row) => allowed.has(row.$id));
+			const start = (page - 1) * pageSize;
+			items = items.slice(start, start + pageSize);
+		}
+
+		const segments = await listSegmentsForOrg(ctx.orgId);
+		const segmentByConstituent = new Map(
+			segments.map((row) => [row.constituentId, row.segment]),
+		);
+		const enriched = items.map((row) => ({
+			...row,
+			lifecycleSegment: segmentByConstituent.get(row.$id) ?? null,
+		}));
+
 		return NextResponse.json({
-			items: result.items,
-			total: result.total,
+			items: enriched,
+			total: segmentIds ? segmentIds.length : result.total,
 			page,
 			pageSize,
 		});
