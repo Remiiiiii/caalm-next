@@ -121,6 +121,7 @@ export function buildNpoBatchPrBody(
 				"2. Implement in dependency order on **this branch**.",
 				"3. Optionally note completion per task in the PR description as you go.",
 				"4. Use `requirePermission`, org-scoped queries, and MCP for schema — no Super Admin bypasses.",
+				"5. Do **not** merge while **Tests and Vercel deploy / Playwright E2E** is red on this PR. If deploy fails after merge, fix on **this same branch/PR** — no separate deploy-fix PR.",
 			];
 
 	const taskSections: string[] = [];
@@ -153,8 +154,20 @@ export function buildNpoBatchPrBody(
 	if (!isS1B1Placeholder) {
 		testPlan.push(
 			"- [ ] Demo schema synced when prod schema changes (`node scripts/sync-demo-database-schema.mjs --apply`)",
+			"- [ ] **Tests and Vercel deploy / Playwright E2E** green on this PR before merge",
 		);
 	}
+
+	const ciMergeSection = isS1B1Placeholder
+		? []
+		: [
+				"## CI and merge",
+				"",
+				"- Block merge on **main** until **Tests and Vercel deploy → Playwright E2E** passes on this PR.",
+				"- **Deploy to Vercel (production)** runs on push to **main** after merge; roadmap completion also needs that job (and Playwright on push) green on the merge commit.",
+				"- Deploy or E2E failure: fix on **this batch branch/PR only** — do not open a separate fix PR for batch scope.",
+				"",
+			];
 
 	return [
 		"## Summary",
@@ -169,6 +182,7 @@ export function buildNpoBatchPrBody(
 		"## Test plan",
 		...testPlan,
 		"",
+		...ciMergeSection,
 		"## Security notes",
 		isS1B1Placeholder
 			? "Product work on the implementation PR must use permission gates and org-scoped data access."

@@ -20,6 +20,24 @@ Each **batch PR** (up to five top-level task codes, e.g. 2.1–2.5) is the **imp
 - Implement **every task in the batch** on the same branch; use Who / What / Where / Why / When / How and **Done when** from the catalog.
 - Merge with green CI to mark those task codes complete on the Nonprofit Roadmap board.
 
+## GitHub: block merge until the right checks pass
+
+On **main**, use branch protection so merges wait on CI:
+
+- **Require before merge (on the PR):** workflow **Tests and Vercel deploy** → job **Playwright E2E** (GitHub may show `(pull_request)` on PR runs).
+- **After merge on main:** the same workflow runs on **push**; **Deploy to Vercel (production)** only runs there. Roadmap task completion also needs **Playwright E2E (push)** and **Deploy to Vercel (production)** green on the **merge commit SHA** (see `src/lib/roadmap/required-checks.ts`).
+- **Do not merge** an NPO batch PR while **Tests and Vercel deploy / Playwright E2E** is red on that PR.
+
+Optional: require the production deploy check only if you gate merges on post-merge push runs; you can still require Playwright on the PR and treat a red post-merge deploy as a fix-on-branch problem below.
+
+## Deploy failure / same PR only
+
+If **Playwright** or **production deploy** fails on a batch PR or on **main** right after that batch merged:
+
+- **Fix on the same batch branch and PR** — push commits to `cursor/nonprofit/s…-b…-340a`, re-run CI, then merge (or merge again after revert if already on main).
+- **Do not** open a unrelated “deploy fix” PR for batch scope; that does not re-run completion on the batch merge SHA agents expect.
+- After merge, if tasks stay **locked** because push deploy was cancelled or red, re-run **Tests and Vercel deploy** on the merge SHA or use workflow_dispatch **roadmap_backfill_pr** + **roadmap_backfill_sha** in `.github/workflows/run-tests.yml` (see roadmap webhook backfill).
+
 ## Do not
 
 - Do **not** treat batch PRs as placeholders that forbid product code.
