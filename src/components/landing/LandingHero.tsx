@@ -913,7 +913,7 @@ export default function LandingHero() {
 							className="flex flex-wrap items-center justify-center lg:justify-start gap-3 mt-2"
 						>
 							<Link href="/sign-in">
-								<Button className="primary-btn px-4 sm:px-6 cursor-pointer group">
+								<Button className="primary-btn primary-btn-lg px-4 sm:px-6 cursor-pointer group">
 									Get Started
 									<ArrowRight className="ml-2 h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
 								</Button>

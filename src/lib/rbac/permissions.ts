@@ -11,6 +11,7 @@ import { cache } from "react";
 import type { PermissionKey } from "@/constants/permissions";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { withAppwriteLookupTimeout } from "@/lib/appwrite/errors";
 import { permissionSatisfied } from "@/lib/rbac/permission-implications";
 import { ROLE_DASHBOARD_FALLBACK } from "@/lib/rbac/role-dashboard-metadata";
 import { CACHE_KEYS, CACHE_TTLS } from "@/lib/services/cache-keys";
@@ -492,50 +493,54 @@ export async function getUserOrganizations(
 	}
 
 	try {
-		const { tablesDB } = await createAdminClient();
-		const databaseId = appwriteConfig.databaseId || "default-db";
-		const usersTableId = appwriteConfig.usersCollectionId || "users";
-		const accountId = await resolveAuthAccountId(userId);
+		return await withAppwriteLookupTimeout(
+			(async () => {
+				const { tablesDB } = await createAdminClient();
+				const databaseId = appwriteConfig.databaseId || "default-db";
+				const usersTableId = appwriteConfig.usersCollectionId || "users";
+				const accountId = await resolveAuthAccountId(userId);
 
-		let profileDocId = userId;
-		try {
-			const byAccount = await tablesDB.listRows({
-				databaseId,
-				tableId: usersTableId,
-				queries: [Query.equal("accountId", accountId), Query.limit(1)],
-			});
-			if (byAccount.rows[0]?.$id) {
-				profileDocId = String(byAccount.rows[0].$id);
-			}
-		} catch {
-			// keep profileDocId as provided userId
-		}
+				let profileDocId = userId;
+				try {
+					const byAccount = await tablesDB.listRows({
+						databaseId,
+						tableId: usersTableId,
+						queries: [Query.equal("accountId", accountId), Query.limit(1)],
+					});
+					if (byAccount.rows[0]?.$id) {
+						profileDocId = String(byAccount.rows[0].$id);
+					}
+				} catch {
+					// keep profileDocId as provided userId
+				}
 
-		// user_organizations rows may store profile $id or Auth accountId
-		const candidateIds = [
-			...new Set([userId, accountId, profileDocId].filter(Boolean)),
-		];
+				// user_organizations rows may store profile $id or Auth accountId
+				const candidateIds = [
+					...new Set([userId, accountId, profileDocId].filter(Boolean)),
+				];
 
-		const userOrgs = await tablesDB.listRows({
-			databaseId,
-			tableId: "user_organizations",
-			queries: [
-				candidateIds.length === 1
-					? Query.equal("userId", candidateIds[0])
-					: Query.or(candidateIds.map((id) => Query.equal("userId", id))),
-				Query.limit(100),
-			],
-		});
+				const userOrgs = await tablesDB.listRows({
+					databaseId,
+					tableId: "user_organizations",
+					queries: [
+						candidateIds.length === 1
+							? Query.equal("userId", candidateIds[0])
+							: Query.or(candidateIds.map((id) => Query.equal("userId", id))),
+						Query.limit(100),
+					],
+				});
 
-		return userOrgs.rows.map((uo: any) => ({
-			orgId: uo.orgId,
-			orgRole: uo.orgRole,
-			isDefault: uo.isDefault || false,
-		}));
+				return userOrgs.rows.map((uo: any) => ({
+					orgId: uo.orgId,
+					orgRole: uo.orgRole,
+					isDefault: uo.isDefault || false,
+				}));
+			})(),
+		);
 	} catch (error) {
-		console.error(
+		console.warn(
 			"[getUserOrganizations] Error fetching organizations:",
-			error,
+			error instanceof Error ? error.message : error,
 		);
 		return [];
 	}

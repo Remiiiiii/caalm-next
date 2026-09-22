@@ -1,13 +1,12 @@
 "use client";
 
-import { Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import ApprovalsFilter from "@/components/approvals/ApprovalsFilter";
 import ApprovalsFilterChips from "@/components/approvals/ApprovalsFilterChips";
 import ApprovalsSavedViews from "@/components/approvals/ApprovalsSavedViews";
 import ApprovalsStatusTabs from "@/components/approvals/ApprovalsStatusTabs";
 import { useApprovalsView } from "@/components/approvals/ApprovalsViewContext";
-import { Input } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/search-field";
 import type { ApprovalQueueItem } from "@/lib/approvals/approvalsListUtils";
 
 interface ApprovalsControlBarProps {
@@ -44,16 +43,12 @@ export default function ApprovalsControlBar({
 		<div ref={listAnchorRef} className="w-full scroll-mt-4">
 			<ApprovalsStatusTabs items={items} />
 			<div className="flex pt-4 pb-3 px-4 sm:px-6 gap-3 justify-between flex-wrap">
-				<div className="relative w-full sm:w-72 max-w-full">
-					<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
-					<Input
-						placeholder="Search approvals..."
-						value={searchQuery}
-						onChange={(e) => setSearchQuery(e.target.value)}
-						data-with-leading-icon="true"
-						className="w-full bg-white border-slate-200"
-					/>
-				</div>
+				<SearchField
+					placeholder="Search approvals..."
+					value={searchQuery}
+					onChange={(e) => setSearchQuery(e.target.value)}
+					containerClassName="w-full sm:w-72 max-w-full"
+				/>
 				<div className="flex items-center gap-2 justify-end flex-wrap">
 					<ApprovalsFilter
 						departments={departments}

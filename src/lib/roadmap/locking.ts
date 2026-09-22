@@ -10,6 +10,8 @@ export type LockSnapshot = {
 	tasks: RoadmapTask[];
 	/** Per-section merge blocker shown on locked tasks */
 	mergeBlockReasons?: Record<string, string>;
+	/** Nonprofit timeline: unlock one task at a time inside an open section. */
+	sequentialTasks?: boolean;
 };
 
 export type StatusTransition = {
@@ -35,6 +37,24 @@ function childrenOf(tasks: RoadmapTask[], parentId: string): RoadmapTask[] {
 	return tasks
 		.filter((t) => t.parentTaskId === parentId)
 		.sort((a, b) => a.orderIndex - b.orderIndex);
+}
+
+/**
+ * Next PR on a sequential timeline: first incomplete child under the first
+ * incomplete parent, or the parent itself when it has no unfinished children.
+ */
+export function firstIncompleteSequentialTask(
+	tasks: RoadmapTask[],
+	sectionId: string,
+): RoadmapTask | undefined {
+	for (const parent of topLevelTasks(tasks, sectionId)) {
+		if (parent.status === "complete") continue;
+		const child = childrenOf(tasks, parent.$id).find(
+			(item) => item.status !== "complete",
+		);
+		return child ?? parent;
+	}
+	return undefined;
 }
 
 function allPriorSectionsComplete(
@@ -78,16 +98,69 @@ export function computeUnlocked(snapshot: LockSnapshot): {
 	const tasks = snapshot.tasks.map((t) => ({ ...t }));
 	const transitions: StatusTransition[] = [];
 
-	const relockAvailable = (task: RoadmapTask) => {
-		if (task.status !== "available") return;
+	const setTaskStatus = (task: RoadmapTask, to: RoadmapTask["status"]) => {
+		if (task.status === to) return;
+		if (task.status === "complete" && to !== "complete") return;
 		transitions.push({
 			entityType: "task",
 			entityId: task.$id,
 			fromStatus: task.status,
-			toStatus: "locked",
+			toStatus: to,
 		});
-		task.status = "locked";
+		task.status = to;
 		task.$updatedAt = new Date().toISOString();
+	};
+
+	const relockAvailable = (task: RoadmapTask) => {
+		if (task.status !== "available") return;
+		setTaskStatus(task, "locked");
+	};
+
+	const unlockIfLocked = (task: RoadmapTask) => {
+		if (task.status === "locked") {
+			setTaskStatus(task, "available");
+		}
+	};
+
+	/** Sequential catalogs: only the next incomplete PR is available. */
+	const applySequentialUnlock = (sectionId: string) => {
+		for (const parent of topLevelTasks(tasks, sectionId)) {
+			const kids = childrenOf(tasks, parent.$id);
+			if (
+				kids.length > 0 &&
+				kids.every((child) => child.status === "complete") &&
+				parent.status !== "complete"
+			) {
+				setTaskStatus(parent, "complete");
+				parent.completedAt = parent.completedAt ?? new Date().toISOString();
+			}
+		}
+
+		let openedParent = false;
+		for (const parent of topLevelTasks(tasks, sectionId)) {
+			if (parent.status === "complete") continue;
+			if (openedParent) {
+				relockAvailable(parent);
+				for (const child of childrenOf(tasks, parent.$id)) {
+					relockAvailable(child);
+				}
+				continue;
+			}
+			openedParent = true;
+			unlockIfLocked(parent);
+			const kids = childrenOf(tasks, parent.$id);
+			if (kids.length === 0) continue;
+			let openedChild = false;
+			for (const child of kids) {
+				if (child.status === "complete") continue;
+				if (openedChild) {
+					relockAvailable(child);
+					continue;
+				}
+				openedChild = true;
+				unlockIfLocked(child);
+			}
+		}
 	};
 
 	const bumpSection = (section: RoadmapSection, to: RoadmapEntityStatus) => {
@@ -133,9 +206,24 @@ export function computeUnlocked(snapshot: LockSnapshot): {
 			bumpSection(section, "available");
 		}
 
-		// Tasks stay locked until the section's catalog PRs all merge.
-		for (const task of sectionTasks) {
-			relockAvailable(task);
+		if (snapshot.sequentialTasks) {
+			applySequentialUnlock(section.$id);
+			const derivedAfter = deriveSectionStatus(
+				section,
+				tasks.filter((t) => t.sectionId === section.$id),
+				priorComplete,
+			);
+			if (section.status !== derivedAfter) {
+				bumpSection(section, derivedAfter);
+			}
+			if (section.status === "complete") {
+				continue;
+			}
+		} else {
+			// CLM: tasks stay locked until the section's catalog PRs all merge.
+			for (const task of sectionTasks) {
+				relockAvailable(task);
+			}
 		}
 
 		openedIncompleteSection = true;
@@ -204,6 +292,20 @@ export function lockReasonForTask(
 		return prior
 			? `Finish section ${prior.sectionNumber} (${prior.title}) first`
 			: "Finish prior sections first";
+	}
+
+	if (snapshot.sequentialTasks) {
+		const current = firstIncompleteSequentialTask(
+			snapshot.tasks,
+			task.sectionId,
+		);
+		if (current && current.$id !== task.$id) {
+			return `Finish task ${current.taskCode} (${current.title}) first`;
+		}
+		if (task.prNumber != null) {
+			return `Waiting for PR #${task.prNumber} to merge with green tests`;
+		}
+		return `Open a PR titled NPO ${task.taskCode} … on branch cursor/nonprofit/${section.sectionNumber}-${task.taskCode}-slug`;
 	}
 
 	return (

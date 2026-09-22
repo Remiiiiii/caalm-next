@@ -62,7 +62,6 @@ export default function LicensesStatusTabs({
 			tabs={tabs}
 			value={statusTab}
 			indicatorId="licenses-status-underline"
-			listClassName="grid-cols-2 sm:grid-cols-4 lg:grid-cols-7"
 			onValueChange={(v) => {
 				setStatusTab(v as LicenseStatusTab);
 				scrollToList();

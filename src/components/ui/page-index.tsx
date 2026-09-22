@@ -88,7 +88,7 @@ export function PageIndex({
 		<nav
 			aria-label={ariaLabel}
 			className={cn(
-				"flex flex-wrap items-center gap-3 text-xs text-slate-600",
+				"mx-4 my-4 flex flex-wrap items-center gap-3 text-xs text-slate-600 sm:mx-6",
 				className,
 			)}
 		>

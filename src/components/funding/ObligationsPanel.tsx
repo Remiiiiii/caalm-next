@@ -45,6 +45,7 @@ import {
 } from "@/lib/funding/types";
 import { parseAllowedHttpUrl } from "@/lib/funding/safe-link-url";
 import { cn } from "@/lib/utils";
+import { FundingLinkedGifts } from "@/components/funding/FundingLinkedGifts";
 
 /** Statuses a user can pick in the pill dropdown — Done is Mark done only. */
 const STATUS_DROPDOWN_OPTIONS: ObligationStatus[] = [
@@ -200,6 +201,8 @@ export function ObligationsPanel({
 			</div>
 
 			<div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-4 sm:p-6">
+				<FundingLinkedGifts contractId={stream.contractId} />
+
 				<ul className="space-y-2">
 					{stream.obligations.length === 0 ? (
 						<li className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">

@@ -1181,7 +1181,7 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 										setViewMode(value as "month" | "week")
 									}
 								>
-									<TabsList className="grid w-full grid-cols-2">
+									<TabsList>
 										<TabsTrigger
 											value="month"
 											className="flex items-center space-x-2"
