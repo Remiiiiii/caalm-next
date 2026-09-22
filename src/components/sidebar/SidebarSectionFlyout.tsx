@@ -8,6 +8,7 @@ import {
 	Eye,
 	HandCoins,
 	Lock,
+	Megaphone,
 	Server,
 } from "lucide-react";
 import Image from "next/image";
@@ -93,6 +94,16 @@ function ItemIcon({
 	if (item.name === "Funding & Retention") {
 		return (
 			<HandCoins
+				className="h-4 w-4 shrink-0"
+				style={{ color: NAV_ICON_FILL_GREY }}
+				aria-hidden
+			/>
+		);
+	}
+
+	if (item.name === "Campaigns") {
+		return (
+			<Megaphone
 				className="h-4 w-4 shrink-0"
 				style={{ color: NAV_ICON_FILL_GREY }}
 				aria-hidden

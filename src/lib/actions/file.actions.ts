@@ -36,39 +36,17 @@ const handleError = (error: unknown, message: string) => {
 	throw error;
 };
 
-/**
- * Require assigned managers only when the department has people to pick from.
- * Empty departments (new orgs, sparse demo data) must not block upload.
- */
-const assertManagersAssignedWhenAvailable = async (params: {
+const resolveRequiredAssignees = async (params: {
 	assignedManagerIds: unknown;
 	department?: string | null;
+	division?: string | null;
 	orgId?: string;
+	fallbackUserId?: string;
 }) => {
-	const ids = Array.isArray(params.assignedManagerIds)
-		? params.assignedManagerIds.filter(
-				(id): id is string => typeof id === "string" && id.trim().length > 0,
-			)
-		: [];
-	if (ids.length > 0) return;
-
-	const department =
-		typeof params.department === "string" ? params.department.trim() : "";
-	if (!department) {
-		throw new Error(
-			"At least one department manager is required before upload.",
-		);
-	}
-
-	const { getManagersByDepartment } = await import(
-		"@/lib/utils/get-users-by-role"
+	const { resolveAssignedManagerIds } = await import(
+		"@/lib/assignments/resolve-default-assignee"
 	);
-	const managers = await getManagersByDepartment(department, params.orgId);
-	if (managers.length > 0) {
-		throw new Error(
-			"At least one department manager is required before upload.",
-		);
-	}
+	return resolveAssignedManagerIds(params);
 };
 
 const sanitizePayload = <T extends Record<string, unknown>>(payload: T) =>
@@ -376,11 +354,20 @@ export const uploadFile = async ({
 				);
 			}
 
-			const assignedManagerIds = metadata?.assignedManagers || [];
-			await assertManagersAssignedWhenAvailable({
-				assignedManagerIds,
-				department: metadata?.assignToDepartment,
+			const department =
+				metadata?.assignToDepartment || metadata?.department || "";
+			const division = metadata?.division || metadata?.subDepartment || "";
+			if (!department || !division) {
+				throw new Error(
+					"Department and division are required before creating a contract.",
+				);
+			}
+			const assignedManagerIds = await resolveRequiredAssignees({
+				assignedManagerIds: metadata?.assignedManagers || [],
+				department,
+				division,
 				orgId: resolvedOrgId,
+				fallbackUserId: ownerId,
 			});
 
 			// Build contract document, explicitly excluding contractId (not in Contracts collection schema)
@@ -436,7 +423,8 @@ export const uploadFile = async ({
 					assignedManagerIds,
 					CONTRACT_STRING_LIMITS.assignedManagers,
 				),
-				department: metadata?.assignToDepartment,
+				department,
+				division,
 				businessUnit: clampAppwriteString(
 					metadata?.businessUnit,
 					CONTRACT_STRING_LIMITS.businessUnit,
@@ -1092,13 +1080,14 @@ export const uploadFile = async ({
 					);
 				}
 
-				const licenseManagerIds = licenseMetadata.assignedManagers || [];
-				await assertManagersAssignedWhenAvailable({
-					assignedManagerIds: licenseManagerIds,
+				const licenseManagerIds = await resolveRequiredAssignees({
+					assignedManagerIds: licenseMetadata.assignedManagers || [],
 					department:
 						licenseMetadata.department ||
 						(licenseMetadata as { division?: string }).division,
+					division: (licenseMetadata as { division?: string }).division,
 					orgId: resolvedOrgId,
+					fallbackUserId: ownerId,
 				});
 
 				// Convert assignedManagers IDs to names
@@ -1152,7 +1141,7 @@ export const uploadFile = async ({
 					);
 					await initializeLicenseOnUpload({
 						licenseId: license.$id,
-						departmentManagerIds: licenseMetadata.assignedManagers || [],
+						departmentManagerIds: licenseManagerIds,
 					});
 				} catch (workflowError) {
 					console.error(
@@ -2900,6 +2889,7 @@ export const contractStatus = async ({
 					fileId,
 					"User",
 					"User",
+					{ skipAudit: true },
 				);
 			} catch (error) {
 				console.error("Failed to create contract status activity:", error);
@@ -3206,7 +3196,7 @@ export const getContracts = async () => {
 		const contracts = await tablesDB.listRows({
 			databaseId: appwriteConfig.databaseId!,
 			tableId: appwriteConfig.contractsCollectionId!,
-			queries: [excludeSoftDeletedQuery()],
+			queries: [Query.limit(500)],
 		});
 		return parseStringify(contracts);
 	} catch (error) {
@@ -3315,6 +3305,25 @@ export const getExpiringContractsCount = async () => {
 	}
 };
 
+export const getCompliantContractsCount = async () => {
+	try {
+		const { tablesDB } = await createAdminClient();
+		const contracts = await tablesDB.listRows({
+			databaseId: appwriteConfig.databaseId!,
+			tableId: appwriteConfig.contractsCollectionId!,
+			queries: [
+				excludeSoftDeletedQuery(),
+				Query.equal("compliance", "up-to-date"),
+				Query.limit(1),
+			],
+		});
+		return contracts.total;
+	} catch (error: unknown) {
+		console.error("Failed to fetch compliant contracts count:", error);
+		return 0;
+	}
+};
+
 // Get contracts filtered by user's division
 export const getContractsByUserDivision = async (userDivision: string) => {
 	const { tablesDB } = await createAdminClient();
@@ -3323,7 +3332,7 @@ export const getContractsByUserDivision = async (userDivision: string) => {
 		const contracts = await tablesDB.listRows({
 			databaseId: appwriteConfig.databaseId!,
 			tableId: appwriteConfig.contractsCollectionId!,
-			queries: [excludeSoftDeletedQuery()],
+			queries: [Query.limit(500)],
 		});
 
 		// Filter contracts where assigned managers belong to the user's division

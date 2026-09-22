@@ -70,6 +70,8 @@ export type CrmIntegrationConfig = {
 	triggerStageId: string;
 	fieldMap: CrmFieldMap;
 	enabled: boolean;
+	department: string;
+	division: string;
 };
 
 export function defaultCrmIntegrationConfig(): CrmIntegrationConfig {
@@ -78,6 +80,8 @@ export function defaultCrmIntegrationConfig(): CrmIntegrationConfig {
 		triggerStageId: "",
 		fieldMap: { ...DEFAULT_CRM_FIELD_MAP },
 		enabled: true,
+		department: "",
+		division: "",
 	};
 }
 
@@ -346,6 +350,14 @@ export function parseCrmConfig(
 					: fallback.triggerStageId,
 			fieldMap: sanitizeCrmFieldMap(parsed.fieldMap, fallback.fieldMap),
 			enabled: parsed.enabled !== false,
+			department:
+				typeof parsed.department === "string"
+					? parsed.department
+					: fallback.department,
+			division:
+				typeof parsed.division === "string"
+					? parsed.division
+					: fallback.division,
 		};
 	} catch {
 		return fallback;

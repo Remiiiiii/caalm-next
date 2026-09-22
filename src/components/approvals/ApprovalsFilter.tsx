@@ -1,7 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
-import { Filter } from "lucide-react";
+import { Filter, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useApprovalsView } from "@/components/approvals/ApprovalsViewContext";
 import { Badge } from "@/components/ui/badge";
@@ -253,12 +253,12 @@ export default function ApprovalsFilter({
 					</div>
 					<div className="flex items-center gap-2">
 						<Button
-							variant="outline"
 							size="sm"
 							onClick={() => clearFilters()}
-							className="primary-btn px-3 sm:px-4 cursor-pointer"
+							className="btn-primary px-3 sm:px-4 cursor-pointer"
 							disabled={activeCount === 0 && !filters.searchQuery}
 						>
+							<X className="h-4 w-4" />
 							Clear all
 						</Button>
 						<Button

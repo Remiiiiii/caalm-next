@@ -3011,7 +3011,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 										setViewMode(value as CalendarViewMode)
 									}
 								>
-									<TabsList className="grid w-full grid-cols-4">
+									<TabsList>
 										<TabsTrigger
 											value="day"
 											className="flex items-center space-x-1 cursor-pointer"

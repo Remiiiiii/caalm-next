@@ -1,11 +1,16 @@
 "use client";
 
 import {
+	AlertCircle,
 	AlertTriangle,
 	Ban,
+	BarChart3,
+	CalendarDays,
 	CheckCircle,
+	ClipboardList,
 	Clock,
 	FileText,
+	Link as LinkIcon,
 	Pencil,
 	RefreshCw,
 	Send,
@@ -29,13 +34,15 @@ import DepartmentPerformanceWidget from "@/components/DepartmentPerformanceWidge
 import { DashboardGreeting } from "@/components/dashboard/DashboardGreeting";
 import { RiskImpactHeroCard } from "@/components/dashboard/RiskImpactHeroCard";
 import { WeatherBriefingLauncher } from "@/components/dashboard-briefing/WeatherBriefingLauncher";
-import FormattedDateTime from "@/components/FormattedDateTime";
+import {
+	RecentFilesUploadedCard,
+	type RecentFileItem,
+} from "@/components/dashboard/RecentFilesList";
 import LicenseExpiryAlertsWidget from "@/components/LicenseExpiryAlertsWidget";
 import LicenseStatusPieChart from "@/components/LicenseStatusPieChart";
 import QuickNotesWidget from "@/components/QuickNotesWidget";
 import RecentActivity from "@/components/RecentActivity";
 import { OrgUnitPicker } from "@/components/settings/OrgUnitPicker";
-import Thumbnail from "@/components/Thumbnail";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -49,12 +56,17 @@ import {
 import Avatar from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MailClock } from "@/components/ui/mail-clock-icon";
+import {
+	complianceMetricTone,
+	complianceNeedReviewCount,
+	MetricStatCard,
+} from "@/components/ui/metric-stat-card";
 import {
 	SelectItem,
 	SelectScrollable,
 } from "@/components/ui/select-scrollable";
 import {
-	FileItemSkeleton,
 	StatCardSkeleton,
 	TableRowSkeleton,
 } from "@/components/ui/skeletons";
@@ -139,21 +151,6 @@ interface Invitation {
 	status: ContractStatus;
 	revoked: boolean;
 	$createdAt: string;
-}
-
-// Add File type
-interface FileDocument {
-	$id: string;
-	$createdAt: string;
-	type: string;
-	name: string;
-	url: string;
-	extension: string;
-	size?: number;
-	owner?: string;
-	accountId?: string;
-	users?: string[];
-	bucketFileId?: string;
 }
 
 interface ExecutiveDashboardProps {
@@ -359,31 +356,53 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 		}
 	};
 
-	// Transform dashboard stats to match component format
+	const executiveComplianceTone = complianceMetricTone(
+		dashboardStats.complianceRate,
+	);
+	const executiveNeedReview = complianceNeedReviewCount(
+		dashboardStats.totalContracts,
+		dashboardStats.complianceRate,
+	);
+	const expiringSoonCount = dashboardStats.expiringContracts ?? 0;
+
 	const stats = [
 		{
 			title: "Total Contracts",
 			value: dashboardStats.totalContracts?.toString() || "0",
+			description: "Across all departments",
 			icon: FileText,
-			color: "text-[#524E4E]",
 		},
 		{
 			title: "Expiring Soon",
-			value: dashboardStats.expiringContracts?.toString() || "0",
+			value: expiringSoonCount.toString(),
+			description: "Within 30 days",
 			icon: AlertTriangle,
-			color: "text-[#FF7474]",
+			iconTone:
+				expiringSoonCount > 0 ? ("warning" as const) : ("default" as const),
+			dynamicIcon: expiringSoonCount > 0 ? Clock : undefined,
+			dynamicTone: "warning" as const,
+			valueTone:
+				expiringSoonCount > 0 ? ("warning" as const) : ("default" as const),
 		},
 		{
 			title: "Active Users",
 			value: dashboardStats.activeUsers?.toString() || "0",
+			description: "Active accounts in this org",
 			icon: Users,
-			color: "text-[#56B8FF]",
 		},
 		{
 			title: "Compliance Rate",
-			value: dashboardStats.complianceRate || "94%",
+			value: dashboardStats.complianceRate || "0%",
+			description:
+				executiveNeedReview != null
+					? `${executiveNeedReview} of ${dashboardStats.totalContracts} contracts need review`
+					: "Active contracts vs total",
 			icon: CheckCircle,
-			color: "text-[#03AFBF]",
+			iconTone: executiveComplianceTone,
+			dynamicIcon:
+				executiveComplianceTone === "danger" ? AlertCircle : CheckCircle,
+			dynamicTone: executiveComplianceTone,
+			valueTone: executiveComplianceTone,
 		},
 	];
 
@@ -807,6 +826,25 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 					error={null}
 					onRetry={() => refreshUnified()}
 				/>
+				{/* Stats Grid */}
+				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+					{unifiedLoading
+						? [1, 2, 3, 4].map((index) => <StatCardSkeleton key={index} />)
+						: stats.map((stat) => (
+								<MetricStatCard
+									key={stat.title}
+									title={stat.title}
+									value={stat.value}
+									description={stat.description}
+									icon={stat.icon}
+									iconTone={stat.iconTone}
+									dynamicIcon={stat.dynamicIcon}
+									dynamicTone={stat.dynamicTone}
+									valueTone={stat.valueTone}
+								/>
+							))}
+				</div>
+
 				<Card className="glass-card mb-6 overflow-visible">
 					<div className="glass-card-cap" />
 					<CardContent className="relative p-3 sm:p-4 lg:p-6">
@@ -815,7 +853,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 								maxVisible={2}
 								showSettings={false}
 								compact={true}
-								contracts={contractsFromApi}
+								contracts={unifiedLoading ? undefined : contractsFromApi}
 								alarmEnabled={!isModalOpen}
 							/>
 							<LicenseExpiryAlertsWidget
@@ -832,47 +870,23 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 					</CardContent>
 				</Card>
 
-				{/* Stats Grid */}
-				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-					{unifiedLoading
-						? [1, 2, 3, 4].map((index) => <StatCardSkeleton key={index} />)
-						: stats.map((stat, index) => (
-								<Card key={index} className="glass-card">
-									<div className="glass-card-cap" />
-									<CardContent className="p-4 sm:p-6">
-										<div className="flex items-center justify-between">
-											<div>
-												<p className="text-sm font-medium sidebar-gradient-text">
-													{stat.title}
-												</p>
-												<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-													<span>{stat.value}</span>
-													<StatCardIcon
-														className="ml-2"
-														icon={stat.icon}
-														iconClassName={stat.color}
-													/>
-												</div>
-											</div>
-										</div>
-									</CardContent>
-								</Card>
-							))}
-				</div>
-
 				{/* Dashboard Content */}
 				<div className="relative z-10 py-8">
 					<div className="space-y-6">
 						<div className="grid items-stretch gap-6 lg:grid-cols-6">
-							{/* Recent Activity */}
 							<div className="lg:col-span-3">
-								<RecentActivity limit={25} />
+								<RecentActivity limit={10} />
 							</div>
 
-							{/* Calendar View */}
-							<Card className="glass-card flex h-full min-w-0 flex-col lg:col-span-3">
+							<Card className="glass-card flex h-full min-h-0 min-w-0 flex-col overflow-hidden lg:col-span-3">
 								<div className="glass-card-cap" />
-								<CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden p-3 sm:p-4 md:p-6">
+								<CardHeader className="mb-1 border-b border-slate-200/80 pb-4">
+									<CardTitle className="flex items-center gap-2.5 text-lg font-bold sidebar-gradient-text">
+										<StatCardIcon icon={CalendarDays} />
+										Calendar
+									</CardTitle>
+								</CardHeader>
+								<CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden px-3 pb-3 pt-2 sm:px-4 sm:pb-4 md:px-6 md:pb-6">
 									<CalendarView
 										user={user}
 										onEventClick={(event) => {
@@ -898,88 +912,24 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 
 						{/* Recent files uploaded and Pending Approvals */}
 						<div className="grid lg:grid-cols-2 gap-6">
-							{/* Recent files uploaded */}
-							<Card className="glass-card">
-								<div className="glass-card-cap" />
-								<CardHeader>
-									<CardTitle className="flex left-0 text-lg font-bold text-center sidebar-gradient-text">
-										Recent Files Uploaded
-									</CardTitle>
-								</CardHeader>
-								<CardContent>
-									{unifiedLoading ? (
-										<div className="space-y-4">
-											{[1, 2, 3].map((i) => (
-												<FileItemSkeleton key={i} />
-											))}
-										</div>
-									) : files && files.length > 0 ? (
-										<div className="max-h-[400px] overflow-y-auto pr-2 space-y-3">
-											{(files as Models.Document[])
-												.slice(0, 10)
-												.map((file: Models.Document) => {
-													const fileDoc = file as unknown as FileDocument;
-													return (
-														<div
-															key={file.$id}
-															className="bg-white/20 backdrop-blur-md border border-white/30 rounded-lg p-3 shadow-sm"
-														>
-															<div className="flex justify-between items-start">
-																<div className="flex items-center gap-3 flex-1 min-w-0">
-																	<Thumbnail
-																		type={fileDoc.type}
-																		extension={fileDoc.extension}
-																		url={fileDoc.url}
-																	/>
-																	<div className="flex flex-col gap-1 min-w-0 flex-1">
-																		<h4 className="font-medium text-slate-700 truncate max-w-[200px]">
-																			{fileDoc.name}
-																		</h4>
-																		<p className="text-xs text-slate-600 mt-1">
-																			<FormattedDateTime
-																				date={file.$createdAt}
-																				className="text-xs text-slate-600"
-																			/>
-																		</p>
-																	</div>
-																</div>
-																<div className="ml-3 flex-shrink-0">
-																	{/* <ActionDropdown
-                                file={file} 
-                                onStatusChange={refreshFiles}
-                              /> */}
-																</div>
-															</div>
-														</div>
-													);
-												})}
-											{files.length > 10 && (
-												<div className="text-center py-2">
-													<p className="text-xs text-slate-light">
-														+{files.length - 10} more files
-													</p>
-												</div>
-											)}
-										</div>
-									) : (
-										<p className="text-center text-slate-light">
-											No files uploaded
-										</p>
-									)}
-								</CardContent>
-							</Card>
+							<RecentFilesUploadedCard
+								className="glass-card h-full"
+								files={files as RecentFileItem[]}
+								isLoading={unifiedLoading}
+								limit={10}
+							/>
 
 							{/* Approval SLA accountability */}
-							<Card className="glass-card">
+							<Card className="glass-card flex h-full flex-col">
 								<div className="glass-card-cap" />
-								<CardHeader>
-									<CardTitle className="flex items-center gap-2 left-0 text-lg font-bold text-center sidebar-gradient-text">
-										<Clock className="h-5 w-5 text-[#0f5384]" />
-										Approvals & expirations
+								<CardHeader className="mb-4 border-b border-slate-200/80 pb-4">
+									<CardTitle className="flex items-center gap-2.5 text-lg font-bold sidebar-gradient-text">
+										<StatCardIcon icon={Clock} />
+										Approvals & Expirations
 									</CardTitle>
 								</CardHeader>
-								<CardContent>
-									<div className="space-y-3">
+								<CardContent className="flex flex-1 flex-col">
+									<div className="flex flex-1 flex-col gap-3">
 										{slaStatCards.map((stat) => (
 											<div
 												key={stat.title}
@@ -1000,20 +950,26 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 												</div>
 											</div>
 										))}
-										<Button
-											asChild
-											className="primary-btn hidden md:inline-flex w-full cursor-pointer"
-										>
-											<Link href="/analytics?tab=portfolio">
-												Open portfolio analytics
-											</Link>
-										</Button>
-										<Button
-											asChild
-											className="primary-btn inline-flex w-full cursor-pointer md:hidden"
-										>
-											<Link href="/contracts/approvals">Open approvals</Link>
-										</Button>
+										<div className="mt-auto flex items-center justify-end gap-3">
+											<Button
+												asChild
+												className="primary-btn flex-1 cursor-pointer px-3 sm:px-4"
+											>
+												<Link href="/analytics?tab=portfolio">
+													<BarChart3 className="h-4 w-4" />
+													Open portfolio analytics
+												</Link>
+											</Button>
+											<Button
+												asChild
+												className="primary-btn flex-1 cursor-pointer px-3 sm:px-4"
+											>
+												<Link href="/contracts/approvals">
+													<ClipboardList className="h-4 w-4" />
+													Open approvals
+												</Link>
+											</Button>
+										</div>
 									</div>
 								</CardContent>
 							</Card>
@@ -1024,8 +980,9 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 							<div className="glass-card-cap" />
 							{/* Header */}
 							<div className="border-b border-slate-200/80 px-5 py-5 sm:px-6">
-								<h2 className="text-xl mt-1 font-bold tracking-tight sidebar-gradient-text">
-									Send invite link
+								<h2 className="flex items-center gap-2.5 text-xl font-bold tracking-tight sidebar-gradient-text">
+									<StatCardIcon icon={LinkIcon} />
+									Send Invite Link
 								</h2>
 								<p className="mt-1.5 text-[12.5px] leading-relaxed text-slate-600">
 									Grant a new person access to CAALM by selecting their identity
@@ -1182,7 +1139,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 											loading ||
 											(uninvitedUsers as UninvitedUser[]).length === 0
 										}
-										className="primary-btn h-10 shrink-0 gap-2 px-5 text-[13px] font-semibold"
+										className="primary-btn shrink-0 gap-2 px-5 text-[13px] font-semibold"
 									>
 										<Send className="h-3.5 w-3.5" />
 										{loading ? "Sending…" : "Send invite"}
@@ -1193,8 +1150,9 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 
 						<Card className="glass-card">
 							<div className="glass-card-cap" />
-							<CardHeader>
-								<CardTitle className="flex left-0 text-lg font-bold text-center sidebar-gradient-text">
+							<CardHeader className="mb-4 border-b border-slate-200/80 pb-4">
+								<CardTitle className="flex items-center gap-2.5 text-lg font-bold sidebar-gradient-text">
+									<StatCardIcon icon={MailClock} />
 									Pending Invitations
 								</CardTitle>
 							</CardHeader>

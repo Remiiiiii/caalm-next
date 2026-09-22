@@ -308,13 +308,12 @@ const AnalyticsLayout: React.FC<AnalyticsLayoutProps> = ({
 				</CardHeader>
 				<CardContent>
 					<Tabs defaultValue={division} className="w-full">
-						<TabsList className="flex w-full bg-white/20 backdrop-blur border border-white/40">
+						<TabsList>
 							{accessibleDivisions.map(([key, division]) => (
 								<TabsTrigger
 									key={key}
 									value={key}
 									asChild
-									className="tabs-underline flex-1 data-[state=active]:bg-white/30 data-[state=active]:text-navy"
 								>
 									<Link href={division.route} className="w-full body-2">
 										{tabNames[key as keyof typeof tabNames] || division.name}

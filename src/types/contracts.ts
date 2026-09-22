@@ -68,6 +68,7 @@ export interface ContractMetadataPayload {
 	orgId?: string;
 	assignToDepartment?: string;
 	department?: string;
+	division?: string;
 	departmentOwner?: string;
 	businessUnit?: string;
 	subDepartment?: string;

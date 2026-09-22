@@ -111,6 +111,11 @@ import {
 	getAllManagers,
 	getUsersByDepartment,
 } from "@/lib/actions/database.actions";
+import {
+	type AssigneeSource,
+	assigneeFallbackMessage,
+	pickAssigneeIds,
+} from "@/lib/assignments/resolve-default-assignee";
 import { uploadFile } from "@/lib/actions/file.actions";
 import {
 	buildFormPatchFromExtraction,
@@ -373,7 +378,7 @@ const AI_ASSISTANT_OPTION_CLASS =
 
 /** Gradient primary (alias: see `.btn-primary` in globals.css). */
 const AI_ASSISTANT_BTN_PRIMARY_CLASS =
-	"btn-primary h-10 px-5 shadow-drop-1 text-sm gap-2 sm:w-auto w-full shimmer-hover justify-center";
+	"btn-primary px-5 shadow-drop-1 text-sm gap-2 sm:w-auto w-full shimmer-hover justify-center";
 
 const AI_ASSISTANT_OPEN_CHIP_CLASS =
 	"inline-flex h-10 items-center gap-2 rounded-full border border-white/45 bg-white/38 px-4 text-sm font-medium text-slate-700 shadow-sm backdrop-blur-md transition-all hover:border-[#0f5384]/35 hover:bg-white/50";
@@ -585,7 +590,7 @@ const contractSchema = z
 			.string()
 			.min(1, "Business unit / department is required"),
 		businessUnit: z.string().optional(),
-		subDepartment: z.string().optional(),
+		subDepartment: z.string().min(1, "Division is required"),
 		departmentOwner: z.string().optional(),
 		contractOwnerId: z.string().min(1, "Owner is required"),
 		startDate: z.date().optional(),
@@ -662,8 +667,9 @@ const contractSchema = z
 		serviceCreditTerms: z.string().optional(),
 		escalationProcedures: z.string().optional(),
 		obligationOwners: z.string().optional(),
-		// Empty is allowed when the department has no managers to assign.
-		assignedManagers: z.array(z.string()).default([]),
+		assignedManagers: z
+			.array(z.string())
+			.min(1, "Assigned To is required"),
 		internalApproverIds: z.array(z.string()).optional(),
 		approvalWorkflowTemplate: z.string().optional(),
 		currentApprovalStage: z.string().optional(),
@@ -766,6 +772,8 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 		Array<{ $id: string; fullName: string; email: string; division?: string }>
 	>([]);
 	const [selectedManagers, setSelectedManagers] = useState<string[]>([]);
+	const [assigneeSource, setAssigneeSource] =
+		useState<AssigneeSource>("selected");
 	const [selectedApprovers, setSelectedApprovers] = useState<string[]>([]);
 	const [currentStep, setCurrentStep] = useState(1);
 	const [savedDrafts, setSavedDrafts] = useState<any[]>([]);
@@ -1126,73 +1134,99 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 		}
 	}, [isOpen, availableManagers.length]);
 
-	// Filter managers when assignToDepartment changes
+	// Filter managers when department or division changes; always keep a default assignee.
 	const watchedAssignToDepartment = form.watch("assignToDepartment");
+	const watchedSubDepartment = form.watch("subDepartment");
 	useEffect(() => {
-		if (watchedAssignToDepartment) {
-			const fetchDepartmentManagers = async () => {
-				try {
-					const departmentManagers = await getUsersByDepartment(
-						watchedAssignToDepartment,
+		if (!watchedAssignToDepartment) {
+			setFilteredManagers([]);
+			return;
+		}
+		const fetchDepartmentManagers = async () => {
+			try {
+				const departmentManagers = await getUsersByDepartment(
+					watchedAssignToDepartment,
+				);
+				const typedManagers = (departmentManagers || []).map(
+					(manager: {
+						$id: string;
+						fullName?: string;
+						email?: string;
+						division?: string;
+					}) => ({
+						$id: manager.$id,
+						fullName: manager.fullName || "Unknown",
+						email: manager.email || "",
+						division: manager.division,
+					}),
+				);
+				const pick = pickAssigneeIds({
+					divisionCandidates: typedManagers,
+					departmentCandidates: typedManagers,
+					orgCandidates: availableManagers,
+					fallbackUser: ownerId
+						? { $id: ownerId, fullName: "You" }
+						: undefined,
+					division: watchedSubDepartment,
+				});
+				const display =
+					typedManagers.length > 0 ? typedManagers : pick.managers;
+				setFilteredManagers(
+					display.map((manager) => ({
+						$id: manager.$id,
+						fullName: manager.fullName || "Unknown",
+						email: manager.email || "",
+						division: manager.division,
+					})),
+				);
+				setAssigneeSource(pick.source);
+				setSelectedManagers(pick.ids);
+				form.setValue("assignedManagers", pick.ids, {
+					shouldValidate: pick.ids.length > 0,
+				});
+
+				const currentOwner = form.getValues("departmentOwner");
+				const ownerStillValid = display.some(
+					(m) => m.$id === currentOwner || m.fullName === currentOwner,
+				);
+				if (!ownerStillValid) {
+					form.setValue(
+						"departmentOwner",
+						display.length === 1 ? display[0].$id : pick.ids[0] || "",
 					);
-					if (departmentManagers && departmentManagers.length > 0) {
-						const typedManagers = departmentManagers.map(
-							(manager: {
-								$id: string;
-								fullName?: string;
-								email?: string;
-								division?: string;
-							}) => ({
-								$id: manager.$id,
-								fullName: manager.fullName || "Unknown",
-								email: manager.email || "",
-								division: manager.division,
-							}),
-						);
-						setFilteredManagers(typedManagers);
-						setSelectedManagers([]);
-						form.setValue("assignedManagers", []);
+				}
 
-						// Default department owner when only one manager matches
-						const currentOwner = form.getValues("departmentOwner");
-						const ownerStillValid = typedManagers.some(
-							(m) => m.$id === currentOwner || m.fullName === currentOwner,
-						);
-						if (!ownerStillValid) {
-							form.setValue(
-								"departmentOwner",
-								typedManagers.length === 1 ? typedManagers[0].$id : "",
-							);
-						}
+				const currentSub = form.getValues("subDepartment") as UserDivision;
+				const allowed = divisionsForDepartment(watchedAssignToDepartment);
+				if (currentSub && !allowed.includes(currentSub)) {
+					form.setValue("subDepartment", "");
+				}
 
-						// Clear sub-department if it doesn't belong to this department
-						const currentSub = form.getValues("subDepartment") as UserDivision;
-						const allowed = divisionsForDepartment(watchedAssignToDepartment);
-						if (currentSub && !allowed.includes(currentSub)) {
-							form.setValue("subDepartment", "");
-						}
-
-						// Keep business unit aligned with department when empty
-						if (!form.getValues("businessUnit")) {
-							form.setValue("businessUnit", watchedAssignToDepartment);
-						}
-					} else {
-						setFilteredManagers([]);
-						setSelectedManagers([]);
-						form.setValue("assignedManagers", []);
-						form.clearErrors("assignedManagers");
-						form.setValue("departmentOwner", "");
-					}
-				} catch (error) {
-					console.error("Failed to fetch department managers:", error);
+				if (!form.getValues("businessUnit")) {
+					form.setValue("businessUnit", watchedAssignToDepartment);
+				}
+			} catch (error) {
+				console.error("Failed to fetch department managers:", error);
+				if (ownerId) {
+					setFilteredManagers([
+						{ $id: ownerId, fullName: "You", email: "" },
+					]);
+					setSelectedManagers([ownerId]);
+					setAssigneeSource("uploader");
+					form.setValue("assignedManagers", [ownerId]);
+				} else {
 					setFilteredManagers([]);
 				}
-			};
-			fetchDepartmentManagers();
-		} else {
-			setFilteredManagers([]);
-		}
-	}, [watchedAssignToDepartment, form]);
+			}
+		};
+		void fetchDepartmentManagers();
+	}, [
+		watchedAssignToDepartment,
+		watchedSubDepartment,
+		availableManagers,
+		form,
+		ownerId,
+	]);
 
 	// Keep alert lead times in sync with Renewal Notice (Days) from Step 2
 	const watchedRenewalNoticeDays = form.watch("renewalNoticeDays");
@@ -1399,6 +1433,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 					"lifecycleStatus",
 					"contractNumber",
 					"assignToDepartment",
+					"subDepartment",
 					"expiryDate",
 				];
 			case 3: // Parties & Contacts
@@ -1424,25 +1459,27 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
 	// Validate current step before proceeding
 	const validateStep = async (step: number): Promise<boolean> => {
-		// Managers UI is on step 6 — only required when the department has options.
-		if (
-			step === 6 &&
-			filteredManagers.length > 0 &&
-			selectedManagers.length === 0
-		) {
-			form.setError("assignedManagers", {
-				type: "manual",
-				message: "Select at least one department manager",
-			});
-			toast({
-				title: "Required Fields Missing",
-				description:
-					"Select at least one department manager before continuing.",
-				variant: "destructive",
-			});
-			return false;
-		}
-		if (step === 6 && filteredManagers.length === 0) {
+		// Assigned To is required. If the department has nobody, keep the fallback.
+		if (step === 6) {
+			if (selectedManagers.length === 0 && filteredManagers.length > 0) {
+				const fallbackId = filteredManagers[0].$id;
+				setSelectedManagers([fallbackId]);
+				form.setValue("assignedManagers", [fallbackId]);
+			} else if (selectedManagers.length === 0 && ownerId) {
+				setSelectedManagers([ownerId]);
+				form.setValue("assignedManagers", [ownerId]);
+			} else if (selectedManagers.length === 0) {
+				form.setError("assignedManagers", {
+					type: "manual",
+					message: "Assigned To is required",
+				});
+				toast({
+					title: "Required Fields Missing",
+					description: "Assigned To is required before continuing.",
+					variant: "destructive",
+				});
+				return false;
+			}
 			form.clearErrors("assignedManagers");
 		}
 
@@ -2507,14 +2544,24 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 			});
 			return;
 		}
-		// Only require a manager when the department actually has managers.
-		if (filteredManagers.length > 0 && !selectedManagers?.length) {
+		const resolvedAssignees =
+			selectedManagers?.length > 0
+				? selectedManagers
+				: filteredManagers[0]
+					? [filteredManagers[0].$id]
+					: ownerId
+						? [ownerId]
+						: [];
+		if (resolvedAssignees.length === 0) {
 			toast({
-				title: "Department manager required",
-				description: "Select at least one department manager before upload.",
+				title: "Assigned To is required",
+				description: "Every contract needs an assignee before upload.",
 				variant: "destructive",
 			});
 			return;
+		}
+		if (resolvedAssignees !== selectedManagers) {
+			setSelectedManagers(resolvedAssignees);
 		}
 
 		setIsUploading(true);
@@ -2552,6 +2599,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 				businessUnit:
 					sanitizeString(values.businessUnit) || values.assignToDepartment,
 				subDepartment: sanitizeString(values.subDepartment),
+				division: sanitizeString(values.subDepartment),
 				departmentOwner: (() => {
 					const raw = sanitizeString(values.departmentOwner);
 					if (!raw) return undefined;
@@ -2668,7 +2716,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 				),
 				currentApprovalStage: sanitizeString(values.currentApprovalStage),
 				reviewerComments: sanitizeString(values.reviewerComments),
-				assignedManagers: selectedManagers,
+				assignedManagers: resolvedAssignees,
 				internalApproverIds: selectedApprovers,
 				digitalSignatureRequired: values.digitalSignatureRequired,
 			};
@@ -2855,7 +2903,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 				<DialogTrigger asChild>
 					<Button
 						className={cn(
-							"primary-btn h-10 px-4 shadow-drop-1 text-sm gap-2",
+							"primary-btn px-4 shadow-drop-1 text-sm gap-2",
 							className,
 						)}
 					>
@@ -3945,7 +3993,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																	render={({ field }) => (
 																		<FormItem>
 																			<FormLabel className="text-sm text-slate-700 mb-1 block">
-																				Business Unit / Department{" "}
+																				Department{" "}
 																				<span className="text-red">*</span>
 																			</FormLabel>
 																			<Select
@@ -3987,7 +4035,8 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																		return (
 																			<FormItem>
 																				<FormLabel className="text-sm text-slate-700 mb-1 block">
-																					Sub-Department
+																					Division{" "}
+																					<span className="text-red">*</span>
 																				</FormLabel>
 																				<Select
 																					onValueChange={field.onChange}
@@ -5410,7 +5459,8 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																render={({ field }) => (
 																	<FormItem>
 																		<FormLabel className="shad-form-label">
-																			Assign To Manager(s)
+																			Assigned To{" "}
+																			<span className="text-red">*</span>
 																		</FormLabel>
 																		<div className="space-y-2">
 																			<div className="max-h-40 overflow-y-auto border border-slate-300 rounded-md bg-white p-2">
@@ -5471,15 +5521,36 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																					))
 																				) : watchedAssignToDepartment ? (
 																					<p className="text-sm text-slate-500 p-2">
-																						No managers in this department. You
-																						can continue without assigning one.
+																						{assigneeFallbackMessage(
+																							assigneeSource,
+																						) ||
+																							"No managers in this department yet. You will be assigned as the default owner."}
 																					</p>
 																				) : (
 																					<p className="text-sm text-slate-500 p-2">
-																						Select a department to load managers
+																						Select a department and division to
+																						load assignees
 																					</p>
 																				)}
 																			</div>
+																			{assigneeFallbackMessage(
+																				assigneeSource,
+																				filteredManagers.find(
+																					(m) =>
+																						m.$id === selectedManagers[0],
+																				)?.fullName,
+																			) ? (
+																				<p className="text-xs text-slate-600">
+																					{assigneeFallbackMessage(
+																						assigneeSource,
+																						filteredManagers.find(
+																							(m) =>
+																								m.$id ===
+																								selectedManagers[0],
+																						)?.fullName,
+																					)}
+																				</p>
+																			) : null}
 																			{selectedManagers.length > 0 && (
 																				<div className="text-xs text-slate-600">
 																					Selected: {selectedManagers.length}{" "}

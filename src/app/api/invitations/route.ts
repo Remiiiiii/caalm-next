@@ -1,8 +1,73 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
-import { createInvitation, getCurrentUser } from "@/lib/actions/user.actions";
-import { requirePermission } from "@/lib/rbac/middleware";
+import {
+	createInvitation,
+	getCurrentUser,
+	listPendingInvitations,
+} from "@/lib/actions/user.actions";
+import { getOrgIdFromRequest, requirePermission } from "@/lib/rbac/middleware";
 import { validateUserOrgAccess } from "@/lib/rbac/permissions";
+
+export async function GET(request: NextRequest) {
+	const denied = await requirePermission(request, {
+		permission: PERMISSIONS.USERS.VIEW,
+	});
+	if (denied) return denied;
+
+	try {
+		const orgId = getOrgIdFromRequest(request);
+		if (!orgId) {
+			return NextResponse.json(
+				{ error: "Organization context required" },
+				{ status: 400 },
+			);
+		}
+
+		const currentUser = await getCurrentUser();
+		if (!currentUser) {
+			return NextResponse.json(
+				{ error: "Authentication required" },
+				{ status: 401 },
+			);
+		}
+
+		const hasOrgAccess = await validateUserOrgAccess(currentUser.$id, orgId);
+		if (!hasOrgAccess) {
+			return NextResponse.json(
+				{ error: "Access denied to this organization" },
+				{ status: 403 },
+			);
+		}
+
+		const rows = await listPendingInvitations({ orgId });
+		const data = rows.map((row) => {
+			const rec = row as {
+				$id?: string;
+				name?: string;
+				email?: string;
+				role?: string;
+				expiresAt?: string;
+				status?: string;
+			};
+			return {
+				$id: String(rec.$id || ""),
+				name: String(rec.name || "").trim(),
+				email: String(rec.email || "").trim(),
+				role: String(rec.role || "").trim(),
+				expiresAt: rec.expiresAt ? String(rec.expiresAt) : undefined,
+				status: rec.status ? String(rec.status) : undefined,
+			};
+		});
+
+		return NextResponse.json({ data });
+	} catch (error) {
+		console.error("[SERVER] GET /api/invitations:", error);
+		return NextResponse.json(
+			{ error: "Failed to load pending invitations" },
+			{ status: 500 },
+		);
+	}
+}
 
 export async function POST(request: NextRequest) {
 	try {

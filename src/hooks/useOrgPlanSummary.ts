@@ -14,11 +14,18 @@ type OrgPlanPayload = {
 };
 
 async function fetchOrgPlan(url: string): Promise<OrgPlanPayload> {
-	const res = await fetch(url, { cache: "no-store" });
-	if (!res.ok) {
-		throw new Error("Could not load plan");
+	try {
+		const res = await fetch(url, {
+			cache: "no-store",
+			signal: AbortSignal.timeout(8000),
+		});
+		if (!res.ok) {
+			return { orgId: null };
+		}
+		return res.json();
+	} catch {
+		return { orgId: null };
 	}
-	return res.json();
 }
 
 export function useOrgPlanSummary() {
