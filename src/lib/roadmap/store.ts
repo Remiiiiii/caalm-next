@@ -20,6 +20,10 @@ import {
 } from "./catalog-query";
 import { catalogForKey } from "./catalogs";
 import { computeUnlocked, type LockSnapshot } from "./locking";
+import {
+	applyNpoTaskCompletionOverrides,
+	fetchNpoTaskCompletionOverrides,
+} from "./npo-task-overrides";
 import type {
 	RoadmapCatalogSection,
 	RoadmapSection,
@@ -569,7 +573,11 @@ export async function listTasks(
 			: DEFAULT_ROADMAP_CATALOG_KEY);
 	const state = ensureSeeded(key);
 	if (!isAppwriteBackend(key)) {
-		const all = [...state.tasks.values()].map(enrichTaskPrFromCatalog);
+		let all = [...state.tasks.values()].map(enrichTaskPrFromCatalog);
+		if (key === "npo") {
+			const overrides = await fetchNpoTaskCompletionOverrides();
+			all = applyNpoTaskCompletionOverrides(all, overrides);
+		}
 		return (
 			sectionId ? all.filter((t) => t.sectionId === sectionId) : all
 		).sort((a, b) => a.orderIndex - b.orderIndex);

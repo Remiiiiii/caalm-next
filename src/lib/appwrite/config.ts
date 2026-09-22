@@ -368,6 +368,12 @@ export const appwriteConfig = {
 		"test-roadmap-status-log",
 	),
 
+	/** Manual NPO task completion rows (name: npo_roadmap_task_overrides) */
+	npoRoadmapTaskOverridesCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_NPO_ROADMAP_TASK_OVERRIDES_COLLECTION",
+		"69d91903001f4e8c2b18",
+	),
+
 	/** Funding pursuits pipeline (name: funding_pursuits) */
 	fundingPursuitsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_FUNDING_PURSUITS_COLLECTION",
