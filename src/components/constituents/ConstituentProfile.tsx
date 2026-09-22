@@ -63,6 +63,7 @@ export function ConstituentProfile({
 }) {
 	const { permissions } = usePermissions();
 	const canManage = permissions.includes(PERMISSIONS.CONSTITUENTS.MANAGE);
+	const canFundraising = permissions.includes(PERMISSIONS.AI.FUNDRAISING);
 	const [mergeOpen, setMergeOpen] = useState(false);
 	const name = constituentDisplayName(constituent);
 	const address = [
@@ -149,7 +150,9 @@ export function ConstituentProfile({
 							<TabsTrigger value="timeline">Timeline</TabsTrigger>
 							<TabsTrigger value="household">Household</TabsTrigger>
 							<TabsTrigger value="volunteer">Volunteer</TabsTrigger>
-							<TabsTrigger value="intelligence">Intelligence</TabsTrigger>
+							{canFundraising ? (
+								<TabsTrigger value="intelligence">Intelligence</TabsTrigger>
+							) : null}
 						</TabsList>
 						<TabsContent value="timeline">
 							<TimelineTab
@@ -170,9 +173,11 @@ export function ConstituentProfile({
 								message="Shifts and approved hours will appear here."
 							/>
 						</TabsContent>
-						<TabsContent value="intelligence">
-							<FundraisingIntelligenceTab constituentId={constituent.$id} />
-						</TabsContent>
+						{canFundraising ? (
+							<TabsContent value="intelligence">
+								<FundraisingIntelligenceTab constituentId={constituent.$id} />
+							</TabsContent>
+						) : null}
 					</Tabs>
 				</CardContent>
 			</Card>

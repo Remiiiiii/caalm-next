@@ -446,6 +446,12 @@ export const appwriteConfig = {
 		"69d91501001f4e8c2b09",
 	),
 
+	/** Imported wealth-screen rows (name: constituent_wealth_screens) */
+	constituentWealthScreensCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CONSTITUENT_WEALTH_SCREENS_COLLECTION",
+		"69d91601001f4e8c2b10",
+	),
+
 	/** Contract obligations for retention (name: contract_obligations) */
 	contractObligationsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_CONTRACT_OBLIGATIONS_COLLECTION",
