@@ -470,6 +470,18 @@ export const appwriteConfig = {
 		"69d91703001f4e8c2b13",
 	),
 
+	/** 990 Part IX category mappings (name: form_990_expense_mappings) */
+	form990ExpenseMappingsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_FORM_990_EXPENSE_MAPPINGS_COLLECTION",
+		"69d91801001f4e8c2b14",
+	),
+
+	/** ASC 958 restriction release events (name: restriction_releases) */
+	restrictionReleasesCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_RESTRICTION_RELEASES_COLLECTION",
+		"69d91802001f4e8c2b15",
+	),
+
 	/** Contract obligations for retention (name: contract_obligations) */
 	contractObligationsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_CONTRACT_OBLIGATIONS_COLLECTION",
