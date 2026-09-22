@@ -3,7 +3,7 @@ import { ArrowLeft, Landmark } from "lucide-react";
 import { FundsSettingsClient } from "@/components/settings/FundsSettingsClient";
 import { Button } from "@/components/ui/button";
 import { PERMISSIONS } from "@/constants/permissions";
-import { requirePagePermission } from "@/lib/rbac/page-guard";
+import { requirePagePermission } from "@/lib/rbac/page-guards";
 
 export default async function FundsSettingsPage() {
 	await requirePagePermission(PERMISSIONS.FUNDING.MANAGE);
