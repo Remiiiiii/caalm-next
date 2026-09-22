@@ -48,6 +48,7 @@ import { cn } from "@/lib/utils";
 import { FundingLinkedGifts } from "@/components/funding/FundingLinkedGifts";
 import { GrantBudgetPanel } from "@/components/funding/GrantBudgetPanel";
 import { GrantFundSelector } from "@/components/funding/GrantFundSelector";
+import { RestrictionReleasePanel } from "@/components/funding/RestrictionReleasePanel";
 import { contractRequiresFundId } from "@/lib/funding/grant-fund";
 
 /** Statuses a user can pick in the pill dropdown — Done is Mark done only. */
@@ -213,6 +214,7 @@ export function ObligationsPanel({
 					<>
 						<GrantFundSelector stream={stream} onUpdated={onChanged} />
 						<GrantBudgetPanel stream={stream} />
+						<RestrictionReleasePanel stream={stream} />
 					</>
 				) : null}
 
