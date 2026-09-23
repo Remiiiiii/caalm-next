@@ -506,6 +506,18 @@ export const appwriteConfig = {
 		"69d91802001f4e8c2b15",
 	),
 
+	/** Volunteer shift templates (name: volunteer_shift_templates) */
+	volunteerShiftTemplatesCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_VOLUNTEER_SHIFT_TEMPLATES_COLLECTION",
+		"69d92301001f4e8c2b23",
+	),
+
+	/** Volunteer shift registrations (name: volunteer_shift_bookings) */
+	volunteerShiftBookingsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_VOLUNTEER_SHIFT_BOOKINGS_COLLECTION",
+		"69d92302001f4e8c2b24",
+	),
+
 	/** Contract obligations for retention (name: contract_obligations) */
 	contractObligationsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_CONTRACT_OBLIGATIONS_COLLECTION",

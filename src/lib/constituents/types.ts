@@ -34,6 +34,10 @@ export type Constituent = {
 	normalizedLastName?: string;
 	/** Set when this row lost a merge; GET then returns 410. */
 	mergedIntoId?: string;
+	volunteerSkills?: string;
+	volunteerAvailability?: string;
+	volunteerEmergencyContact?: string;
+	volunteerBackgroundCheckDate?: string;
 };
 
 export const RELATIONSHIP_TYPES = [

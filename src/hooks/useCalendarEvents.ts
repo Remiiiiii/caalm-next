@@ -13,7 +13,13 @@ interface LocalCalendarEvent {
 	title: string;
 	startDate?: Date;
 	endDate?: Date;
-	type: "contract" | "deadline" | "meeting" | "review" | "audit";
+	type:
+		| "contract"
+		| "deadline"
+		| "meeting"
+		| "review"
+		| "audit"
+		| "volunteer_shift";
 	description?: string;
 	participants?: string[];
 	contractName?: string;

@@ -30,7 +30,13 @@ export interface CalendarEvent {
 	title: string;
 	startDate: string;
 	endDate?: string;
-	type: "contract" | "deadline" | "meeting" | "review" | "audit";
+	type:
+		| "contract"
+		| "deadline"
+		| "meeting"
+		| "review"
+		| "audit"
+		| "volunteer_shift";
 	description?: string;
 	contractName?: string;
 	amount?: string;
@@ -55,6 +61,8 @@ export interface CalendarEvent {
 	approvalStatus?: CalendarApprovalStatus;
 	pendingApprovalId?: string | null;
 	overrides?: PermissionOverrideRecord[] | string; // Can be array (in-memory) or JSON string (from DB)
+	shiftCapacity?: number;
+	shiftTemplateId?: string;
 	$createdAt?: string;
 	$updatedAt?: string;
 }
@@ -69,7 +77,13 @@ export interface CreateCalendarEventData {
 	title: string;
 	startDate: string;
 	endDate?: string;
-	type: "contract" | "deadline" | "meeting" | "review" | "audit";
+	type:
+		| "contract"
+		| "deadline"
+		| "meeting"
+		| "review"
+		| "audit"
+		| "volunteer_shift";
 	description?: string;
 	contractName?: string;
 	amount?: string;
@@ -89,6 +103,8 @@ export interface CreateCalendarEventData {
 	overrides?: PermissionOverrideRecord[];
 	reminders?: EventReminderConfig[]; // Priority 2: Advanced notifications
 	resourceId?: string; // Priority 2: Resource management
+	shiftCapacity?: number;
+	shiftTemplateId?: string;
 }
 
 // Get all calendar events
