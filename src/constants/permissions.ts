@@ -164,6 +164,12 @@ export const PERMISSIONS = {
 		VOID: "gifts.void",
 	},
 
+	/** Volunteer programs — separate from constituents.view */
+	VOLUNTEERS: {
+		VIEW: "volunteers.view",
+		MANAGE: "volunteers.manage",
+	},
+
 	// Standard clause library (org playbooks)
 	CLAUSES: {
 		VIEW: "clauses.view",
@@ -780,6 +786,20 @@ export const PERMISSION_DEFINITIONS = [
 		name: "Void Posted Gifts",
 		category: "gifts",
 		description: "Void posted gifts with a reversing ledger row",
+	},
+
+	{
+		key: PERMISSIONS.VOLUNTEERS.VIEW,
+		name: "View Volunteers",
+		category: "volunteers",
+		description: "View volunteer profiles, shifts, and registrations",
+	},
+	{
+		key: PERMISSIONS.VOLUNTEERS.MANAGE,
+		name: "Manage Volunteers",
+		category: "volunteers",
+		description:
+			"Edit volunteer fields, shift templates, bookings, and waitlist promotion",
 	},
 
 	// Clause library

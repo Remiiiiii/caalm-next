@@ -54,6 +54,12 @@ function mapRow(row: Record<string, unknown>): Constituent {
 		normalizedEmail: optionalString(row.normalizedEmail),
 		normalizedLastName: optionalString(row.normalizedLastName),
 		mergedIntoId: optionalString(row.mergedIntoId),
+		volunteerSkills: optionalString(row.volunteerSkills),
+		volunteerAvailability: optionalString(row.volunteerAvailability),
+		volunteerEmergencyContact: optionalString(row.volunteerEmergencyContact),
+		volunteerBackgroundCheckDate: optionalString(
+			row.volunteerBackgroundCheckDate,
+		),
 	};
 }
 

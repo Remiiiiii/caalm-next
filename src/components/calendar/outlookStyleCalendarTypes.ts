@@ -23,7 +23,8 @@ export type LocalCalendarEventType =
 	| "deadline discussion"
 	| "meeting"
 	| "internal review"
-	| "audit";
+	| "audit"
+	| "volunteer_shift";
 
 export interface LocalCalendarEvent {
 	$id?: string;

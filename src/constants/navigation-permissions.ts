@@ -188,6 +188,18 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 		],
 	},
 	{
+		header: "Volunteers",
+		items: [
+			{
+				name: "Volunteer Shifts",
+				icon: "/assets/icons/calendar.svg",
+				url: "/volunteers/shifts",
+				permissions: [PERMISSIONS.VOLUNTEERS.VIEW],
+				viewerReadOnly: true,
+			},
+		],
+	},
+	{
 		header: "Audits",
 		items: [
 			{

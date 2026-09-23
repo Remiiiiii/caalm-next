@@ -4,7 +4,6 @@ import {
 	ArrowLeft,
 	Brain,
 	GitMerge,
-	HeartHandshake,
 	Mail,
 	MapPin,
 	Phone,
@@ -13,6 +12,7 @@ import {
 import Link from "next/link";
 import { useState } from "react";
 import { FundraisingIntelligenceTab } from "@/components/constituents/FundraisingIntelligenceTab";
+import { VolunteerTab } from "@/components/constituents/VolunteerTab";
 import { HouseholdTab } from "@/components/constituents/HouseholdTab";
 import { MergeConstituentsDialog } from "@/components/constituents/MergeConstituentsDialog";
 import { TimelineTab } from "@/components/constituents/TimelineTab";
@@ -64,6 +64,7 @@ export function ConstituentProfile({
 	const { permissions } = usePermissions();
 	const canManage = permissions.includes(PERMISSIONS.CONSTITUENTS.MANAGE);
 	const canFundraising = permissions.includes(PERMISSIONS.AI.FUNDRAISING);
+	const canVolunteers = permissions.includes(PERMISSIONS.VOLUNTEERS.VIEW);
 	const [mergeOpen, setMergeOpen] = useState(false);
 	const name = constituentDisplayName(constituent);
 	const address = [
@@ -149,7 +150,9 @@ export function ConstituentProfile({
 						<TabsList>
 							<TabsTrigger value="timeline">Timeline</TabsTrigger>
 							<TabsTrigger value="household">Household</TabsTrigger>
-							<TabsTrigger value="volunteer">Volunteer</TabsTrigger>
+							{canVolunteers ? (
+								<TabsTrigger value="volunteer">Volunteer</TabsTrigger>
+							) : null}
 							{canFundraising ? (
 								<TabsTrigger value="intelligence">Intelligence</TabsTrigger>
 							) : null}
@@ -166,13 +169,14 @@ export function ConstituentProfile({
 								canManage={canManage}
 							/>
 						</TabsContent>
-						<TabsContent value="volunteer">
-							<EmptyTab
-								icon={HeartHandshake}
-								title="No volunteer record yet"
-								message="Shifts and approved hours will appear here."
-							/>
-						</TabsContent>
+						{canVolunteers ? (
+							<TabsContent value="volunteer">
+								<VolunteerTab
+									constituentId={constituent.$id}
+									constituentType={constituent.type}
+								/>
+							</TabsContent>
+						) : null}
 						{canFundraising ? (
 							<TabsContent value="intelligence">
 								<FundraisingIntelligenceTab constituentId={constituent.$id} />
