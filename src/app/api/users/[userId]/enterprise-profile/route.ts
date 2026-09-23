@@ -60,6 +60,11 @@ export async function GET(
 				schemas: ["urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"],
 				enterprise,
 				primaryOrgUnit: primaryUnit,
+				title: (user.jobTitle as string | null | undefined) || null,
+				location: (user.workLocation as string | null | undefined) || null,
+				matrixManager: user.matrixManagerUserId
+					? { value: String(user.matrixManagerUserId) }
+					: null,
 			},
 		});
 	} catch (error) {

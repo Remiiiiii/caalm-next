@@ -90,52 +90,60 @@ const LayoutContent = ({ children }: { children: React.ReactNode }) => {
 		user,
 	]);
 
-	// Only block with a full-screen spinner when we have no user yet.
-	// Cached/hydrated users paint the shell immediately while session revalidates.
-	return (
-		<>
-			{loading && !user ? (
-				<LoadingSpinner fullScreen label="Loading..." />
-			) : !user ? (
-				<div className="flex h-screen items-center justify-center">
-					<div className="text-center">
-						<p className="text-gray-600">Redirecting to sign in...</p>
-					</div>
+	const pageSlot = (
+		<Suspense
+			fallback={
+				<div className="flex min-h-[200px] items-center justify-center">
+					<LoadingSpinner size="md" />
 				</div>
-			) : (
-				<SidebarProvider>
-					<NotificationSoundListener />
-					<main className="flex h-screen flex-col overflow-hidden">
-						<ImpersonationBanner />
-						<div className="flex min-h-0 flex-1 overflow-hidden">
-							<Sidebar {...sidebarProps} />
-							<section className="flex h-full min-w-0 flex-1 flex-col pt-4 sm:pt-5 md:pt-6 lg:pt-7">
-								<MobileNavigation {...navigationProps} />
-								<div className="min-w-0 shrink-0 px-3 pb-2 sm:px-4 sm:pb-3 lg:pr-7">
-									<DashboardHeader user={user} />
-								</div>
-								<div className="main-content">
-									<DesktopFirstGate>
-										<Suspense
-											fallback={
-												<div className="flex min-h-[200px] items-center justify-center">
-													<LoadingSpinner size="md" />
-												</div>
-											}
-										>
-											{children}
-										</Suspense>
-									</DesktopFirstGate>
-								</div>
-							</section>
-							<Toaster />
-							<DemoTourLayer />
-							<ReportIssueFab />
+			}
+		>
+			{children}
+		</Suspense>
+	);
+
+	// App Router layouts must always render `children`. If the page slot is
+	// omitted during SSR (auth still loading), Next 16 serves a 404 even when
+	// the route file exists.
+	if (!user) {
+		return (
+			<>
+				{loading ? (
+					<LoadingSpinner fullScreen label="Loading..." />
+				) : (
+					<div className="flex h-screen items-center justify-center">
+						<div className="text-center">
+							<p className="text-gray-600">Redirecting to sign in...</p>
 						</div>
-					</main>
-				</SidebarProvider>
-			)}
-		</>
+					</div>
+				)}
+				<div hidden>{pageSlot}</div>
+			</>
+		);
+	}
+
+	return (
+		<SidebarProvider>
+			<NotificationSoundListener />
+			<main className="flex h-screen flex-col overflow-hidden">
+				<ImpersonationBanner />
+				<div className="flex min-h-0 flex-1 overflow-hidden">
+					<Sidebar {...sidebarProps} />
+					<section className="flex h-full min-w-0 flex-1 flex-col pt-4 sm:pt-5 md:pt-6 lg:pt-7">
+						<MobileNavigation {...navigationProps} />
+						<div className="min-w-0 shrink-0 px-3 pb-2 sm:px-4 sm:pb-3 lg:pr-7">
+							<DashboardHeader user={user} />
+						</div>
+						<div className="main-content">
+							<DesktopFirstGate>{pageSlot}</DesktopFirstGate>
+						</div>
+					</section>
+					<Toaster />
+					<DemoTourLayer />
+					<ReportIssueFab />
+				</div>
+			</main>
+		</SidebarProvider>
 	);
 };
 

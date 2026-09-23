@@ -21,7 +21,7 @@ import {
 } from "@/components/dashboard/DashboardGreeting";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { StatCardIcon } from "@/components/ui/stat-card-icon";
+import { MetricStatCard } from "@/components/ui/metric-stat-card";
 import { useITDashboard } from "@/hooks/useITDashboard";
 import { useITMetrics } from "@/hooks/useITMetrics";
 import { useITUser } from "@/hooks/useITUser";
@@ -73,11 +73,8 @@ const ITDashboard: React.FC<ITDashboardProps> = ({ user }) => {
 	// Don't early return - render loading state inline to maintain consistent hook calls
 	const _isLoading = dashboardLoading || metricsLoading || userLoading;
 
-	const systemHealth = dashboard?.systemHealth || {
-		status: "healthy" as const,
-		uptime: 99.9,
-		services: [],
-	};
+	const systemHealth = dashboard?.systemHealth;
+	const healthStatus = systemHealth?.status;
 
 	const quickStats = dashboard?.quickStats || {
 		apiRequests: metrics?.apiRequests?.total || 0,
@@ -112,103 +109,94 @@ const ITDashboard: React.FC<ITDashboardProps> = ({ user }) => {
 
 				{/* System Health Cards */}
 				<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-					<Card className="glass-card">
-						<div className="glass-card-cap" />
-						<CardContent className="p-4 sm:p-6">
-							<div className="flex items-center justify-between">
-								<div>
-									<p className="text-sm font-medium sidebar-gradient-text">
-										System Status
-									</p>
-									<div className="flex items-center text-3xl font-bold text-slate-700 pt-2 capitalize">
-										<span>{systemHealth.status}</span>
-										<StatCardIcon className="ml-2">
-											{systemHealth.status === "healthy" ? (
-												<CheckCircle className="text-green-600" />
-											) : systemHealth.status === "degraded" ? (
-												<AlertTriangle className="text-yellow-600" />
-											) : (
-												<XCircle className="text-red-600" />
-											)}
-										</StatCardIcon>
-									</div>
-									<p className="text-xs text-slate-600 mt-1">
-										Uptime: {systemHealth.uptime}%
-									</p>
-								</div>
-							</div>
-						</CardContent>
-					</Card>
-
-					<Card className="glass-card">
-						<div className="glass-card-cap" />
-						<CardContent className="p-4 sm:p-6">
-							<div className="flex items-center justify-between">
-								<div>
-									<p className="text-sm font-medium sidebar-gradient-text">
-										API Requests
-									</p>
-									<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-										<span>
-											{typeof quickStats.apiRequests === "number"
-												? quickStats.apiRequests.toLocaleString()
-												: "0"}
-										</span>
-										<StatCardIcon className="ml-2" icon={Activity} />
-									</div>
-									<p className="text-xs text-slate-600 mt-1">Total requests</p>
-								</div>
-							</div>
-						</CardContent>
-					</Card>
-
-					<Card className="glass-card">
-						<div className="glass-card-cap" />
-						<CardContent className="p-4 sm:p-6">
-							<div className="flex items-center justify-between">
-								<div>
-									<p className="text-sm font-medium sidebar-gradient-text">
-										Deployments
-									</p>
-									<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-										<span>
-											{typeof quickStats.deployments === "number"
-												? quickStats.deployments.toLocaleString()
-												: "0"}
-										</span>
-										<StatCardIcon className="ml-2" icon={Server} />
-									</div>
-									<p className="text-xs text-slate-600 mt-1">
-										Total deployments
-									</p>
-								</div>
-							</div>
-						</CardContent>
-					</Card>
-
-					<Card className="glass-card">
-						<div className="glass-card-cap" />
-						<CardContent className="p-4 sm:p-6">
-							<div className="flex items-center justify-between">
-								<div>
-									<p className="text-sm font-medium sidebar-gradient-text">
-										Active Incidents
-									</p>
-									<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-										<span>
-											{typeof quickStats.activeIncidents === "number"
-												? quickStats.activeIncidents
-												: "0"}
-										</span>
-										<StatCardIcon className="ml-2" icon={AlertCircle} />
-									</div>
-									<p className="text-xs text-slate-600 mt-1">
-										Requiring attention
-									</p>
-								</div>
-							</div>
-						</CardContent>
-					</Card>
+					<MetricStatCard
+						title="System Status"
+						value={
+							<span className="capitalize">{healthStatus ?? "—"}</span>
+						}
+						description={
+							systemHealth
+								? `Uptime: ${systemHealth.uptime}%`
+								: "Waiting on live status"
+						}
+						icon={Server}
+						iconTone={
+							healthStatus === "healthy"
+								? "success"
+								: healthStatus === "degraded"
+									? "warning"
+									: healthStatus === "down"
+										? "danger"
+										: "default"
+						}
+						dynamicIcon={
+							healthStatus === "healthy"
+								? CheckCircle
+								: healthStatus === "degraded"
+									? AlertTriangle
+									: healthStatus === "down"
+										? XCircle
+										: undefined
+						}
+						dynamicTone={
+							healthStatus === "healthy"
+								? "success"
+								: healthStatus === "degraded"
+									? "warning"
+									: "danger"
+						}
+						valueTone={
+							healthStatus === "healthy"
+								? "success"
+								: healthStatus === "degraded"
+									? "warning"
+									: healthStatus === "down"
+										? "danger"
+										: "default"
+						}
+					/>
+					<MetricStatCard
+						title="API Requests"
+						value={
+							typeof quickStats.apiRequests === "number"
+								? quickStats.apiRequests.toLocaleString()
+								: "0"
+						}
+						description="Total requests"
+						icon={Activity}
+					/>
+					<MetricStatCard
+						title="Deployments"
+						value={
+							typeof quickStats.deployments === "number"
+								? quickStats.deployments.toLocaleString()
+								: "0"
+						}
+						description="Total deployments"
+						icon={Server}
+					/>
+					<MetricStatCard
+						title="Active Incidents"
+						value={
+							typeof quickStats.activeIncidents === "number"
+								? quickStats.activeIncidents
+								: "0"
+						}
+						description="Requiring attention"
+						icon={AlertCircle}
+						iconTone={
+							Number(quickStats.activeIncidents) > 0 ? "danger" : "default"
+						}
+						dynamicIcon={
+							Number(quickStats.activeIncidents) > 0
+								? AlertTriangle
+								: undefined
+						}
+						dynamicTone="danger"
+						valueTone={
+							Number(quickStats.activeIncidents) > 0 ? "danger" : "default"
+						}
+					/>
 				</div>
 
 				{/* System Performance Metrics */}

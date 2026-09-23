@@ -14,6 +14,7 @@ import {
 	type FormEvent,
 	type ReactNode,
 	useCallback,
+	useEffect,
 	useMemo,
 	useRef,
 	useState,
@@ -25,6 +26,7 @@ import {
 import { TicketSubmittedConfirmDialog } from "@/components/tickets/TicketSubmittedConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -41,6 +43,16 @@ import {
 	getEnterpriseInputAccept,
 	validateEnterpriseFile,
 } from "@/lib/files/enterprise-file-formats";
+import {
+	BUG_CONFIRM_IS_BUG,
+	BUG_CONFIRM_SEARCHED,
+	BUG_REPORT_ENVIRONMENTS,
+	BUG_REPORT_OS,
+	type BugReportEnvironment,
+	type BugReportOs,
+	detectBugReportEnvironment,
+	detectBugReportOs,
+} from "@/lib/tickets/bug-report-body";
 import {
 	resolveSubmitterDepartmentLabel,
 	type SubmitterPlacementInput,
@@ -80,7 +92,18 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024;
 type AttachmentEntry = { id: string; file: File };
 type TouchedFields = Partial<
 	Record<
-		"lane" | "title" | "category" | "impact" | "urgency" | "description",
+		| "lane"
+		| "title"
+		| "category"
+		| "impact"
+		| "urgency"
+		| "description"
+		| "steps"
+		| "expected"
+		| "actual"
+		| "os"
+		| "environment"
+		| "confirmations",
 		boolean
 	>
 >;
@@ -264,6 +287,13 @@ export function TicketSubmitForm() {
 	const [urgency, setUrgency] = useState("");
 	const [helpPriority, setHelpPriority] = useState("");
 	const [description, setDescription] = useState("");
+	const [steps, setSteps] = useState("");
+	const [expected, setExpected] = useState("");
+	const [actual, setActual] = useState("");
+	const [os, setOs] = useState<BugReportOs | "">("");
+	const [environment, setEnvironment] = useState<BugReportEnvironment | "">("");
+	const [searchedExisting, setSearchedExisting] = useState(false);
+	const [isBug, setIsBug] = useState(false);
 	const [attachments, setAttachments] = useState<AttachmentEntry[]>([]);
 	const [dragOver, setDragOver] = useState(false);
 	const [touched, setTouched] = useState<TouchedFields>({});
@@ -284,6 +314,16 @@ export function TicketSubmitForm() {
 		division: placement?.division,
 	});
 	const initials = getInitials(user?.name);
+
+	useEffect(() => {
+		setOs(
+			(prev) =>
+				prev || detectBugReportOs(navigator.userAgent, navigator.platform),
+		);
+		setEnvironment(
+			(prev) => prev || detectBugReportEnvironment(window.location.hostname),
+		);
+	}, []);
 
 	const categoryOptions = useMemo(
 		() => (lane ? categoriesForLane(lane) : []),
@@ -330,11 +370,52 @@ export function TicketSubmitForm() {
 						? "Select how urgent this is."
 						: null,
 			description:
-				description.trim().length < 8
-					? "Description must be at least 8 characters."
+				lane === "engineering"
+					? null
+					: description.trim().length < 8
+						? "Description must be at least 8 characters."
+						: null,
+			steps:
+				lane === "engineering" && steps.trim().length < 8
+					? "List at least 8 characters of reproduction steps."
+					: null,
+			expected:
+				lane === "engineering" && expected.trim().length < 8
+					? "Expected behavior must be at least 8 characters."
+					: null,
+			actual:
+				lane === "engineering" && actual.trim().length < 8
+					? "Actual behavior must be at least 8 characters."
+					: null,
+			os:
+				lane === "engineering" && os === ""
+					? "Select an operating system."
+					: null,
+			environment:
+				lane === "engineering" && environment === ""
+					? "Select where you saw this."
+					: null,
+			confirmations:
+				lane === "engineering" && (!searchedExisting || !isBug)
+					? "Confirm you searched existing issues and that this is a bug."
 					: null,
 		}),
-		[lane, title, category, impact, urgency, helpPriority, description],
+		[
+			lane,
+			title,
+			category,
+			impact,
+			urgency,
+			helpPriority,
+			description,
+			steps,
+			expected,
+			actual,
+			os,
+			environment,
+			searchedExisting,
+			isBug,
+		],
 	);
 
 	const isValid = Object.values(errors).every((item) => !item);
@@ -384,6 +465,12 @@ export function TicketSubmitForm() {
 			impact: true,
 			urgency: true,
 			description: true,
+			steps: true,
+			expected: true,
+			actual: true,
+			os: true,
+			environment: true,
+			confirmations: true,
 		});
 		if (!isValid || !derived || !lane) return;
 
@@ -398,12 +485,22 @@ export function TicketSubmitForm() {
 		try {
 			const form = new FormData();
 			form.set("title", title.trim());
-			form.set("description", description.trim());
 			form.set("lane", lane);
 			form.set("category", category);
 			if (affectedModule) form.set("affectedModule", affectedModule);
 			form.set("impact", effectiveImpact);
 			form.set("urgency", effectiveUrgency);
+			if (lane === "engineering") {
+				form.set("steps", steps.trim());
+				form.set("expected", expected.trim());
+				form.set("actual", actual.trim());
+				form.set("os", os);
+				form.set("environment", environment);
+				form.set("searchedExisting", searchedExisting ? "true" : "false");
+				form.set("isBug", isBug ? "true" : "false");
+			} else {
+				form.set("description", description.trim());
+			}
 
 			for (const entry of attachments.slice(0, MAX_FILES)) {
 				form.append("attachments", entry.file);
@@ -630,35 +727,215 @@ export function TicketSubmitForm() {
 							</div>
 						) : null}
 
-						<FormField
-							label="Description"
-							htmlFor="ticket-description"
-							required
-							error={touched.description ? errors.description : null}
-							trailing={
-								<span className="text-xs text-slate-500">
-									{description.length}/{MAX_DESC}
-								</span>
-							}
-						>
-							<Textarea
-								id="ticket-description"
-								value={description}
-								onChange={(event) =>
-									setDescription(event.target.value.slice(0, MAX_DESC))
+						{lane === "engineering" ? (
+							<div className="space-y-6">
+								<FormField
+									label="Reproduction steps"
+									htmlFor="ticket-steps"
+									required
+									error={touched.steps ? errors.steps : null}
+									trailing={
+										<span className="text-xs text-slate-500">
+											{steps.length}/{MAX_DESC}
+										</span>
+									}
+								>
+									<Textarea
+										id="ticket-steps"
+										value={steps}
+										onChange={(event) =>
+											setSteps(event.target.value.slice(0, MAX_DESC))
+										}
+										onBlur={() =>
+											setTouched((prev) => ({ ...prev, steps: true }))
+										}
+										placeholder={"1.\n2.\n3."}
+										rows={5}
+										className={cn(
+											"min-h-32 resize-y",
+											TICKET_FIELD_CLASS,
+											touched.steps && errors.steps && "border-red/60!",
+										)}
+									/>
+								</FormField>
+
+								<FormField
+									label="Expected behavior"
+									htmlFor="ticket-expected"
+									required
+									error={touched.expected ? errors.expected : null}
+									trailing={
+										<span className="text-xs text-slate-500">
+											{expected.length}/{MAX_DESC}
+										</span>
+									}
+								>
+									<Textarea
+										id="ticket-expected"
+										value={expected}
+										onChange={(event) =>
+											setExpected(event.target.value.slice(0, MAX_DESC))
+										}
+										onBlur={() =>
+											setTouched((prev) => ({ ...prev, expected: true }))
+										}
+										placeholder="What should have happened?"
+										rows={3}
+										className={cn(
+											"min-h-24 resize-y",
+											TICKET_FIELD_CLASS,
+											touched.expected && errors.expected && "border-red/60!",
+										)}
+									/>
+								</FormField>
+
+								<FormField
+									label="Actual behavior"
+									htmlFor="ticket-actual"
+									required
+									error={touched.actual ? errors.actual : null}
+									trailing={
+										<span className="text-xs text-slate-500">
+											{actual.length}/{MAX_DESC}
+										</span>
+									}
+								>
+									<Textarea
+										id="ticket-actual"
+										value={actual}
+										onChange={(event) =>
+											setActual(event.target.value.slice(0, MAX_DESC))
+										}
+										onBlur={() =>
+											setTouched((prev) => ({ ...prev, actual: true }))
+										}
+										placeholder="What happened instead?"
+										rows={3}
+										className={cn(
+											"min-h-24 resize-y",
+											TICKET_FIELD_CLASS,
+											touched.actual && errors.actual && "border-red/60!",
+										)}
+									/>
+								</FormField>
+
+								<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+									<FormField
+										label="OS"
+										htmlFor="ticket-os"
+										required
+										error={touched.os ? errors.os : null}
+									>
+										<SelectField
+											id="ticket-os"
+											value={os}
+											onChange={(value) => setOs(value as BugReportOs)}
+											onBlur={() =>
+												setTouched((prev) => ({ ...prev, os: true }))
+											}
+											options={BUG_REPORT_OS}
+											placeholder="Choose an operating system"
+											error={Boolean(touched.os && errors.os)}
+										/>
+									</FormField>
+									<FormField
+										label="Environment"
+										htmlFor="ticket-environment"
+										required
+										error={touched.environment ? errors.environment : null}
+									>
+										<SelectField
+											id="ticket-environment"
+											value={environment}
+											onChange={(value) =>
+												setEnvironment(value as BugReportEnvironment)
+											}
+											onBlur={() =>
+												setTouched((prev) => ({ ...prev, environment: true }))
+											}
+											options={BUG_REPORT_ENVIRONMENTS}
+											placeholder="Where did you see this?"
+											error={Boolean(touched.environment && errors.environment)}
+										/>
+									</FormField>
+								</div>
+
+								<div>
+									<p className="mb-2 text-sm font-medium text-slate-700">
+										Confirmations <RequiredMark />
+									</p>
+									<div className="space-y-2">
+										<label className="flex cursor-pointer items-start gap-2 text-sm text-slate-700">
+											<Checkbox
+												className="mt-0.5"
+												checked={searchedExisting}
+												onCheckedChange={(checked) => {
+													setSearchedExisting(checked === true);
+													setTouched((prev) => ({
+														...prev,
+														confirmations: true,
+													}));
+												}}
+												aria-label={BUG_CONFIRM_SEARCHED}
+											/>
+											<span>{BUG_CONFIRM_SEARCHED}</span>
+										</label>
+										<label className="flex cursor-pointer items-start gap-2 text-sm text-slate-700">
+											<Checkbox
+												className="mt-0.5"
+												checked={isBug}
+												onCheckedChange={(checked) => {
+													setIsBug(checked === true);
+													setTouched((prev) => ({
+														...prev,
+														confirmations: true,
+													}));
+												}}
+												aria-label={BUG_CONFIRM_IS_BUG}
+											/>
+											<span>{BUG_CONFIRM_IS_BUG}</span>
+										</label>
+									</div>
+									{touched.confirmations && errors.confirmations ? (
+										<p className="mt-1 text-xs text-red">
+											{errors.confirmations}
+										</p>
+									) : null}
+								</div>
+							</div>
+						) : (
+							<FormField
+								label="Description"
+								htmlFor="ticket-description"
+								required
+								error={touched.description ? errors.description : null}
+								trailing={
+									<span className="text-xs text-slate-500">
+										{description.length}/{MAX_DESC}
+									</span>
 								}
-								onBlur={() =>
-									setTouched((prev) => ({ ...prev, description: true }))
-								}
-								placeholder="What happened? What did you expect instead? Steps to reproduce, if any."
-								rows={5}
-								className={cn(
-									"min-h-32 resize-y",
-									TICKET_FIELD_CLASS,
-									touched.description && errors.description && "border-red/60!",
-								)}
-							/>
-						</FormField>
+							>
+								<Textarea
+									id="ticket-description"
+									value={description}
+									onChange={(event) =>
+										setDescription(event.target.value.slice(0, MAX_DESC))
+									}
+									onBlur={() =>
+										setTouched((prev) => ({ ...prev, description: true }))
+									}
+									placeholder="What happened? What did you expect instead? Steps to reproduce, if any."
+									rows={5}
+									className={cn(
+										"min-h-32 resize-y",
+										TICKET_FIELD_CLASS,
+										touched.description &&
+											errors.description &&
+											"border-red/60!",
+									)}
+								/>
+							</FormField>
+						)}
 
 						<FormField label="Attachments" hint="optional">
 							<div

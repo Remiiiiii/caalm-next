@@ -110,19 +110,9 @@ export default function AdjustPlanDialog({
 									setBillingInterval(value as "monthly" | "yearly")
 								}
 							>
-								<TabsList className="h-auto rounded-full border border-slate-200 bg-slate-100 p-1">
-									<TabsTrigger
-										value="monthly"
-										className="cursor-pointer rounded-full px-4 py-1.5 text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm"
-									>
-										Monthly
-									</TabsTrigger>
-									<TabsTrigger
-										value="yearly"
-										className="cursor-pointer rounded-full px-4 py-1.5 text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm"
-									>
-										Annual
-									</TabsTrigger>
+								<TabsList>
+									<TabsTrigger value="monthly">Monthly</TabsTrigger>
+									<TabsTrigger value="yearly">Annual</TabsTrigger>
 								</TabsList>
 							</Tabs>
 							<p className="text-sm font-medium text-green">

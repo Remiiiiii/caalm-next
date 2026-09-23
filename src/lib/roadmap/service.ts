@@ -5,15 +5,24 @@
  */
 
 import {
-	catalogDisplayTitleForPr,
 	catalogPullRequestUrl,
-	getCatalogLinkedPrNumber,
-	getCatalogLinkedPrNumbers,
 	getSectionNumberForPr,
 	ROADMAP_TRACKING_STUB_PRS,
-	sectionCompletesOnMergedCatalogPr,
-	sectionUsesPerTaskPrCompletion,
 } from "./catalog";
+import type { RoadmapCatalogKey } from "./catalog-key";
+import {
+	catalogKeyFromEntityId,
+	DEFAULT_ROADMAP_CATALOG_KEY,
+} from "./catalog-key";
+import {
+	catalogDisplayTitleForPrIn,
+	catalogUsesSequentialTasks,
+	linkedPrNumbersInCatalog,
+	sectionCompletesOnMergedCatalogPrIn,
+	sectionNumberForPrIn,
+	sectionUsesPerTaskPrCompletionIn,
+} from "./catalog-query";
+import { catalogForKey } from "./catalogs";
 import {
 	fetchPullRequestStatus,
 	fetchRoadmapCompletionGate,
@@ -24,14 +33,19 @@ import {
 	type GitHubPullRequestSummary,
 	matchPullRequestToTask,
 	type ResolvedPullRequest,
+	resolveCatalogFromPrMatch,
 	resolveSectionFromPrMatch,
+	shouldListRoadmapSectionPullRequest,
 } from "./github-pr-match";
 import {
 	buildTaskTree,
 	computeProgressPercent,
 	computeUnlocked,
 	countByStatus,
+	firstIncompleteSequentialTask,
+	reconcileNestedTasksWithParentComplete,
 } from "./locking";
+import { npoCatalogDisplayTitleForPr } from "./nonprofit/npo-pr-batches";
 import {
 	appendStatusLog,
 	createTestRun,
@@ -51,6 +65,7 @@ import {
 } from "./store";
 import type {
 	RoadmapOverview,
+	RoadmapSection,
 	RoadmapSectionOverview,
 	RoadmapTask,
 	RoadmapTaskTreeNode,
@@ -65,6 +80,71 @@ export class RoadmapError extends Error {
 		this.name = "RoadmapError";
 		this.status = status;
 	}
+}
+
+function catalogOf(key: RoadmapCatalogKey = DEFAULT_ROADMAP_CATALOG_KEY) {
+	return catalogForKey(key);
+}
+
+function getCatalogLinkedPrNumbers(
+	sectionNumber: number,
+	key: RoadmapCatalogKey = DEFAULT_ROADMAP_CATALOG_KEY,
+): number[] {
+	return linkedPrNumbersInCatalog(catalogOf(key), sectionNumber);
+}
+
+function getCatalogLinkedPrNumber(
+	sectionNumber: number,
+	key: RoadmapCatalogKey = DEFAULT_ROADMAP_CATALOG_KEY,
+): number | undefined {
+	const numbers = getCatalogLinkedPrNumbers(sectionNumber, key);
+	return numbers[numbers.length - 1];
+}
+
+function catalogDisplayTitleForPr(
+	prNumber: number,
+	key: RoadmapCatalogKey = DEFAULT_ROADMAP_CATALOG_KEY,
+): string {
+	if (key === "npo") {
+		const batchTitle = npoCatalogDisplayTitleForPr(prNumber);
+		if (batchTitle) return batchTitle;
+	}
+	return catalogDisplayTitleForPrIn(catalogOf(key), prNumber);
+}
+
+/** NPO section cards use the batch label so batch PRs sit on the right module. */
+function resolvedCatalogPrTitle(
+	prNumber: number,
+	liveTitle: string | undefined,
+	catalogKey: RoadmapCatalogKey,
+): string {
+	const fallback = catalogDisplayTitleForPr(prNumber, catalogKey);
+	if (catalogKey === "npo") return fallback || liveTitle?.trim() || "";
+	return liveTitle?.trim() || fallback;
+}
+
+function sectionUsesPerTaskPrCompletion(
+	sectionNumber: number,
+	key: RoadmapCatalogKey = DEFAULT_ROADMAP_CATALOG_KEY,
+): boolean {
+	return sectionUsesPerTaskPrCompletionIn(catalogOf(key), sectionNumber);
+}
+
+function sectionCompletesOnMergedCatalogPr(
+	sectionNumber: number,
+	key: RoadmapCatalogKey = DEFAULT_ROADMAP_CATALOG_KEY,
+): boolean {
+	return sectionCompletesOnMergedCatalogPrIn(catalogOf(key), sectionNumber);
+}
+
+function keyFromTasks(tasks: RoadmapTask[]): RoadmapCatalogKey {
+	return catalogKeyFromEntityId(tasks[0]?.$id ?? "sec_00");
+}
+
+function sequentialLockOptions(catalogKey: RoadmapCatalogKey) {
+	return {
+		sequentialTasks: catalogUsesSequentialTasks(catalogOf(catalogKey)),
+	};
 }
 
 /** Prefer an active in-flight PR; otherwise the first linked PR in the section. */
@@ -120,13 +200,14 @@ async function resolveSectionPullRequest(
 		}
 	}
 
-	const catalogPr = getCatalogLinkedPrNumber(sectionNumber);
+	const catalogKey = keyFromTasks(sectionTasks);
+	const catalogPr = getCatalogLinkedPrNumber(sectionNumber, catalogKey);
 	if (catalogPr) {
 		const fromCatalog = await resolveFromPrNumber(catalogPr, "catalog");
 		if (fromCatalog) return fromCatalog;
 	}
 
-	const discovered = findSectionPullRequest(openPrs, sectionNumber);
+	const discovered = findSectionPullRequest(openPrs, sectionNumber, catalogKey);
 	return discovered
 		? toResolvedFromSummary(discovered, "discovered_section")
 		: null;
@@ -148,9 +229,10 @@ export async function resolveTaskPullRequest(
 		}
 	}
 
+	const catalogKey = catalogKeyFromEntityId(task.$id);
 	const prs = openPrs ?? (await listOpenPullRequests());
 	const taskSpecific = prs.find((pr) =>
-		matchPullRequestToTask(pr, sectionNumber, task.taskCode),
+		matchPullRequestToTask(pr, sectionNumber, task.taskCode, catalogKey),
 	);
 	return taskSpecific
 		? toResolvedFromSummary(taskSpecific, "discovered_task")
@@ -177,11 +259,12 @@ function enrichTreeWithPrBranches(
 
 async function firstTaskInSection(
 	sectionNumber: number,
+	catalogKey: RoadmapCatalogKey = DEFAULT_ROADMAP_CATALOG_KEY,
 ): Promise<RoadmapTask | null> {
-	const sections = await listSections();
+	const sections = await listSections(catalogKey);
 	const section = sections.find((s) => s.sectionNumber === sectionNumber);
 	if (!section) return null;
-	const tasks = await listTasks();
+	const tasks = await listTasks(undefined, catalogKey);
 	return (
 		tasks
 			.filter((t) => t.sectionId === section.$id && !t.parentTaskId)
@@ -191,9 +274,13 @@ async function firstTaskInSection(
 
 export async function evaluateSectionMergeBlock(
 	sectionNumber: number,
-	options?: { triggeringPr?: { prNumber: number; mergeCommitSha: string } },
+	options?: {
+		triggeringPr?: { prNumber: number; mergeCommitSha: string };
+		catalogKey?: RoadmapCatalogKey;
+	},
 ): Promise<string | null> {
-	const numbers = getCatalogLinkedPrNumbers(sectionNumber);
+	const catalogKey = options?.catalogKey ?? DEFAULT_ROADMAP_CATALOG_KEY;
+	const numbers = getCatalogLinkedPrNumbers(sectionNumber, catalogKey);
 	// Empty means backlog with no tracking PR yet — not a merge failure.
 	if (!numbers.length) return null;
 
@@ -262,11 +349,12 @@ type CatalogPrLinkMeta = {
 async function resolveCatalogPrLookup(
 	openPrs: GitHubPullRequestSummary[],
 	catalogNumbers: number[],
+	catalogKey: RoadmapCatalogKey = DEFAULT_ROADMAP_CATALOG_KEY,
 ): Promise<Map<number, CatalogPrLinkMeta>> {
 	const lookup = new Map<number, CatalogPrLinkMeta>();
 	for (const pr of openPrs) {
 		lookup.set(pr.number, {
-			title: pr.title?.trim() || catalogDisplayTitleForPr(pr.number),
+			title: resolvedCatalogPrTitle(pr.number, pr.title, catalogKey),
 			state: pr.state,
 		});
 	}
@@ -274,10 +362,10 @@ async function resolveCatalogPrLookup(
 	await Promise.all(
 		missing.map(async (number) => {
 			const live = await fetchPullRequestStatus({ prNumber: number });
-			const fallbackTitle = catalogDisplayTitleForPr(number);
-			if (live.state === "unknown" && !live.title && !fallbackTitle) return;
+			const title = resolvedCatalogPrTitle(number, live.title, catalogKey);
+			if (live.state === "unknown" && !title) return;
 			lookup.set(number, {
-				title: live.title?.trim() || fallbackTitle,
+				title,
 				state: live.state,
 				mergeCommitSha: live.mergeCommitSha,
 			});
@@ -285,7 +373,7 @@ async function resolveCatalogPrLookup(
 	);
 	for (const number of catalogNumbers) {
 		if (lookup.has(number)) continue;
-		const fallbackTitle = catalogDisplayTitleForPr(number);
+		const fallbackTitle = catalogDisplayTitleForPr(number, catalogKey);
 		if (!fallbackTitle) continue;
 		lookup.set(number, { title: fallbackTitle, state: "unknown" });
 	}
@@ -309,6 +397,54 @@ function toPrSummary(
 	};
 }
 
+function taskMatchesMergedCatalogPr(
+	task: RoadmapTask,
+	prNumber: number,
+	prSummary: GitHubPullRequestSummary,
+	sections: RoadmapSection[],
+	catalogKey: RoadmapCatalogKey,
+): boolean {
+	if (task.status === "complete") return false;
+	if (task.prNumber === prNumber) return true;
+	if (task.prNumber != null) return false;
+	const section = sections.find((item) => item.$id === task.sectionId);
+	if (!section) return false;
+	return matchPullRequestToTask(
+		prSummary,
+		section.sectionNumber,
+		task.taskCode,
+		catalogKey,
+	);
+}
+
+async function markTaskCompleteFromMergedPr(
+	task: RoadmapTask,
+	sha: string,
+	completedAt: string,
+	allTasks: RoadmapTask[],
+): Promise<void> {
+	const next: RoadmapTask = {
+		...task,
+		status: "complete",
+		completedAt: task.completedAt ?? completedAt,
+		completedCommitSha: task.completedCommitSha ?? sha,
+	};
+	await saveTask(next);
+	await appendStatusLog({
+		entityType: "task",
+		entityId: task.$id,
+		fromStatus: task.status,
+		toStatus: "complete",
+		actor: "system:merged-catalog-pr",
+		commitSha: sha,
+		testRunId: null,
+	});
+	for (const child of allTasks.filter((t) => t.parentTaskId === task.$id)) {
+		if (child.status === "complete") continue;
+		await markTaskCompleteFromMergedPr(child, sha, completedAt, allTasks);
+	}
+}
+
 /**
  * Mark catalog-linked tasks complete only when the merge commit also has
  * Playwright E2E (push) + Deploy to Vercel (production) green.
@@ -316,6 +452,8 @@ function toPrSummary(
 async function persistTasksCompletedByMergedPrs(
 	tasks: RoadmapTask[],
 	prLookup: Map<number, CatalogPrLinkMeta>,
+	catalogKey: RoadmapCatalogKey = DEFAULT_ROADMAP_CATALOG_KEY,
+	sections: RoadmapSection[] = [],
 ): Promise<boolean> {
 	let changed = false;
 	const completedAt = new Date().toISOString();
@@ -324,12 +462,23 @@ async function persistTasksCompletedByMergedPrs(
 		Awaited<ReturnType<typeof fetchRoadmapCompletionGate>>
 	>();
 
+	const gateForSha = async (sha: string) => {
+		let gate = gateBySha.get(sha);
+		if (!gate) {
+			gate = await fetchRoadmapCompletionGate({ commitSha: sha });
+			gateBySha.set(sha, gate);
+		}
+		return gate;
+	};
+
 	for (const task of tasks) {
 		if (task.status === "complete" || task.prNumber == null) continue;
-		const linkedSection = getSectionNumberForPr(task.prNumber);
+		const linkedSection =
+			sectionNumberForPrIn(catalogOf(catalogKey), task.prNumber) ??
+			getSectionNumberForPr(task.prNumber);
 		if (
 			linkedSection != null &&
-			!sectionCompletesOnMergedCatalogPr(linkedSection)
+			!sectionCompletesOnMergedCatalogPr(linkedSection, catalogKey)
 		) {
 			continue;
 		}
@@ -338,39 +487,93 @@ async function persistTasksCompletedByMergedPrs(
 		const sha = meta.mergeCommitSha?.trim();
 		if (!sha) continue;
 
-		let gate = gateBySha.get(sha);
-		if (!gate) {
-			gate = await fetchRoadmapCompletionGate({ commitSha: sha });
-			gateBySha.set(sha, gate);
-		}
+		const gate = await gateForSha(sha);
 		if (!gate.ok) continue;
 
-		const next: RoadmapTask = {
-			...task,
-			status: "complete",
-			completedAt: task.completedAt ?? completedAt,
-			completedCommitSha: task.completedCommitSha ?? sha,
-		};
-		await saveTask(next);
-		await appendStatusLog({
-			entityType: "task",
-			entityId: task.$id,
-			fromStatus: task.status,
-			toStatus: "complete",
-			actor: "system:merged-catalog-pr",
-			commitSha: sha,
-			testRunId: null,
-		});
+		await markTaskCompleteFromMergedPr(task, sha, completedAt, tasks);
 		changed = true;
 	}
+
+	// NPO batch PRs (e.g. #113 for 1.6–1.10) often have no per-task linkedPrNumber.
+	for (const [prNumber, meta] of prLookup.entries()) {
+		if (meta.state !== "merged") continue;
+		const sha = meta.mergeCommitSha?.trim();
+		if (!sha) continue;
+		const sectionNumber =
+			sectionNumberForPrIn(catalogOf(catalogKey), prNumber) ??
+			getSectionNumberForPr(prNumber);
+		if (
+			sectionNumber != null &&
+			!sectionCompletesOnMergedCatalogPr(sectionNumber, catalogKey)
+		) {
+			continue;
+		}
+		const gate = await gateForSha(sha);
+		if (!gate.ok) continue;
+
+		const prSummary = toPrSummary(prNumber, {
+			state: "merged",
+			number: prNumber,
+			title: meta.title,
+			htmlUrl: "",
+			headRef: "",
+			mergeCommitSha: sha,
+		});
+
+		for (const task of tasks) {
+			if (
+				!taskMatchesMergedCatalogPr(
+					task,
+					prNumber,
+					prSummary,
+					sections,
+					catalogKey,
+				)
+			) {
+				continue;
+			}
+			await markTaskCompleteFromMergedPr(task, sha, completedAt, tasks);
+			changed = true;
+		}
+	}
+
 	return changed;
 }
 
-const OVERVIEW_CACHE_MS = 15_000;
-let overviewCache: { fetchedAt: number; value: RoadmapOverview } | null = null;
+async function persistNestedBatchTaskReconcile(
+	catalogKey: RoadmapCatalogKey,
+	tasks: RoadmapTask[],
+): Promise<RoadmapTask[]> {
+	if (catalogKey !== "npo") return tasks;
+	const { tasks: reconciled, transitions } =
+		reconcileNestedTasksWithParentComplete(tasks);
+	if (transitions.length === 0) return tasks;
+	for (const tr of transitions) {
+		const task = reconciled.find((item) => item.$id === tr.entityId);
+		if (!task) continue;
+		await saveTask(task);
+		await appendStatusLog({
+			entityType: "task",
+			entityId: task.$id,
+			fromStatus: tr.fromStatus,
+			toStatus: "complete",
+			actor: "system:nested-batch-reconcile",
+			commitSha: task.completedCommitSha,
+			testRunId: null,
+		});
+	}
+	return reconciled;
+}
 
-function invalidateOverviewCache() {
-	overviewCache = null;
+const OVERVIEW_CACHE_MS = 15_000;
+const overviewCache = new Map<
+	RoadmapCatalogKey,
+	{ fetchedAt: number; value: RoadmapOverview }
+>();
+
+function invalidateOverviewCache(catalogKey?: RoadmapCatalogKey) {
+	if (catalogKey) overviewCache.delete(catalogKey);
+	else overviewCache.clear();
 }
 
 /** Vitest helper — overview cache must not survive resetRoadmapMemoryForTests. */
@@ -380,31 +583,45 @@ export function clearOverviewCacheForTests(): void {
 
 export async function getOverview(options?: {
 	skipCache?: boolean;
+	catalogKey?: RoadmapCatalogKey;
 }): Promise<RoadmapOverview> {
+	const catalogKey = options?.catalogKey ?? DEFAULT_ROADMAP_CATALOG_KEY;
+	const cached = overviewCache.get(catalogKey);
 	if (
 		!options?.skipCache &&
-		overviewCache &&
-		Date.now() - overviewCache.fetchedAt < OVERVIEW_CACHE_MS
+		cached &&
+		Date.now() - cached.fetchedAt < OVERVIEW_CACHE_MS
 	) {
-		return overviewCache.value;
+		return cached.value;
 	}
 
-	const [sections, tasks, openPrs] = await Promise.all([
-		listSections(),
-		listTasks(),
+	const [sections, tasksRaw, openPrs] = await Promise.all([
+		listSections(catalogKey),
+		listTasks(undefined, catalogKey),
 		listOpenPullRequests().catch(() => []),
 	]);
-	const { snapshot } = computeUnlocked({ sections, tasks });
+	const tasks = await persistNestedBatchTaskReconcile(catalogKey, tasksRaw);
+	const { snapshot } = computeUnlocked({
+		sections,
+		tasks,
+		...sequentialLockOptions(catalogKey),
+	});
 	const unlockedSections = snapshot.sections;
 	const unlockedTasks = snapshot.tasks;
 	const openByNumber = new Map(openPrs.map((pr) => [pr.number, pr]));
 	const allCatalogNumbers = unlockedSections.flatMap((section) =>
-		getCatalogLinkedPrNumbers(section.sectionNumber),
+		getCatalogLinkedPrNumbers(section.sectionNumber, catalogKey),
 	);
-	const prLookup = await resolveCatalogPrLookup(openPrs, allCatalogNumbers);
+	const prLookup = await resolveCatalogPrLookup(
+		openPrs,
+		allCatalogNumbers,
+		catalogKey,
+	);
 	const mergedPrChanged = await persistTasksCompletedByMergedPrs(
 		unlockedTasks,
 		prLookup,
+		catalogKey,
+		unlockedSections,
 	);
 
 	// Same completion gate used to finish sections — used for PR strikethrough UI
@@ -441,14 +658,15 @@ export async function getOverview(options?: {
 	let viewSections = unlockedSections;
 	let viewTasks = unlockedTasks;
 	if (mergedPrChanged) {
-		invalidateOverviewCache();
+		invalidateOverviewCache(catalogKey);
 		const [freshSections, freshTasks] = await Promise.all([
-			listSections(),
-			listTasks(),
+			listSections(catalogKey),
+			listTasks(undefined, catalogKey),
 		]);
 		const refreshed = computeUnlocked({
 			sections: freshSections,
 			tasks: freshTasks,
+			...sequentialLockOptions(catalogKey),
 		});
 		viewSections = refreshed.snapshot.sections;
 		viewTasks = refreshed.snapshot.tasks;
@@ -465,23 +683,39 @@ export async function getOverview(options?: {
 			(task) => task.sectionId === section.$id,
 		);
 		const taskCounts = countByStatus(sectionTasks);
-		const catalogNumbers = getCatalogLinkedPrNumbers(section.sectionNumber);
+		const catalogNumbers = getCatalogLinkedPrNumbers(
+			section.sectionNumber,
+			catalogKey,
+		);
 		const waitingNumber = catalogNumbers.find((number) =>
 			openByNumber.has(number),
 		);
-		const prLinks = catalogNumbers.map((number) => {
-			const meta = prLookup.get(number);
-			return {
-				number,
-				title: meta?.title?.trim() || catalogDisplayTitleForPr(number) || "",
-				state: meta?.state,
-				checksPassed: checksPassedByPr.get(number) === true,
-			};
-		});
+		const prLinks = catalogNumbers
+			.map((number) => {
+				const meta = prLookup.get(number);
+				return {
+					number,
+					title: resolvedCatalogPrTitle(number, meta?.title, catalogKey),
+					state: meta?.state,
+					checksPassed: checksPassedByPr.get(number) === true,
+				};
+			})
+			.filter((pr) =>
+				shouldListRoadmapSectionPullRequest(pr.state, catalogKey),
+			);
 		const waitingChecksNumber = catalogNumbers.find(
 			(number) =>
 				prLookup.get(number)?.state === "merged" &&
 				checksPassedByPr.get(number) !== true,
+		);
+		const sequential = catalogUsesSequentialTasks(catalogOf(catalogKey));
+		const nextTask =
+			section.status === "complete" || !sequential
+				? undefined
+				: firstIncompleteSequentialTask(sectionTasks, section.$id);
+		const perTask = sectionUsesPerTaskPrCompletion(
+			section.sectionNumber,
+			catalogKey,
 		);
 		return {
 			id: section.$id,
@@ -492,19 +726,23 @@ export async function getOverview(options?: {
 			taskCounts,
 			prTitle: prLinks.at(-1)?.title ?? null,
 			prLinks,
+			nextTaskCode: nextTask?.taskCode ?? null,
+			nextTaskTitle: nextTask?.title ?? null,
 			mergeBlockReason:
 				section.status === "complete"
 					? null
-					: sectionUsesPerTaskPrCompletion(section.sectionNumber)
-						? `${taskCounts.complete} of ${taskCounts.total} tasks complete`
-						: waitingNumber
-							? `Waiting for PR #${waitingNumber} to merge`
-							: waitingChecksNumber
-								? `PR #${waitingChecksNumber}: ${
-										gateReasonByPr.get(waitingChecksNumber) ||
-										"Waiting for required checks"
-									}`
-								: null,
+					: nextTask
+						? `Next: ${nextTask.taskCode} ${nextTask.title} — finish this PR before later tasks unlock`
+						: perTask
+							? `${taskCounts.complete} of ${taskCounts.total} tasks complete`
+							: waitingNumber
+								? `Waiting for PR #${waitingNumber} to merge`
+								: waitingChecksNumber
+									? `PR #${waitingChecksNumber}: ${
+											gateReasonByPr.get(waitingChecksNumber) ||
+											"Waiting for required checks"
+										}`
+									: null,
 		};
 	});
 
@@ -512,22 +750,25 @@ export async function getOverview(options?: {
 		overallProgressPercent: computeProgressPercent(viewTasks),
 		sections: sectionViews,
 	};
-	overviewCache = { fetchedAt: Date.now(), value: overview };
+	overviewCache.set(catalogKey, { fetchedAt: Date.now(), value: overview });
 	return overview;
 }
 
 export async function getSectionTaskTree(
 	sectionId: string,
 ): Promise<{ sectionId: string; tasks: RoadmapTaskTreeNode[] }> {
-	const { sections, tasks } = await persistUnlockedSnapshot();
+	const catalogKey = catalogKeyFromEntityId(sectionId);
+	const { sections, tasks } = await persistUnlockedSnapshot(catalogKey);
 	const section = sections.find((item) => item.$id === sectionId);
 	if (!section) throw new RoadmapError("Section not found", 404);
 
 	const mergeBlockReason =
 		section.status === "complete" ||
-		sectionUsesPerTaskPrCompletion(section.sectionNumber)
+		sectionUsesPerTaskPrCompletion(section.sectionNumber, catalogKey)
 			? null
-			: await evaluateSectionMergeBlock(section.sectionNumber);
+			: await evaluateSectionMergeBlock(section.sectionNumber, {
+					catalogKey,
+				});
 
 	const sectionTasks = tasks.filter((t) => t.sectionId === sectionId);
 	const prNumbers = [
@@ -572,8 +813,9 @@ export async function getSectionPullRequests(sectionId: string): Promise<
 > {
 	const section = await getSectionById(sectionId);
 	if (!section) throw new RoadmapError("Section not found", 404);
-	const numbers = getCatalogLinkedPrNumbers(section.sectionNumber);
-	return Promise.all(
+	const catalogKey = catalogKeyFromEntityId(sectionId);
+	const numbers = getCatalogLinkedPrNumbers(section.sectionNumber, catalogKey);
+	const pullRequests = await Promise.all(
 		numbers.map(async (number) => {
 			const live = await fetchPullRequestStatus({ prNumber: number });
 			let checksPassed = false;
@@ -586,8 +828,7 @@ export async function getSectionPullRequests(sectionId: string): Promise<
 			return {
 				number,
 				title:
-					live.title?.trim() ||
-					catalogDisplayTitleForPr(number) ||
+					resolvedCatalogPrTitle(number, live.title, catalogKey) ||
 					`PR #${number}`,
 				state: live.state,
 				htmlUrl: live.htmlUrl || catalogPullRequestUrl(number),
@@ -597,10 +838,13 @@ export async function getSectionPullRequests(sectionId: string): Promise<
 			};
 		}),
 	);
+	return pullRequests.filter((pr) =>
+		shouldListRoadmapSectionPullRequest(pr.state, catalogKey),
+	);
 }
 
 export async function getTaskDetail(taskId: string) {
-	await persistUnlockedSnapshot();
+	await persistUnlockedSnapshot(catalogKeyFromEntityId(taskId));
 	const task = await getTaskById(taskId);
 	if (!task) throw new RoadmapError("Task not found", 404);
 
@@ -617,7 +861,7 @@ export async function startTask(params: {
 	branchName: string;
 	actorUserId: string;
 }): Promise<RoadmapTask> {
-	await persistUnlockedSnapshot();
+	await persistUnlockedSnapshot(catalogKeyFromEntityId(params.taskId));
 	const task = await getTaskById(params.taskId);
 	if (!task) throw new RoadmapError("Task not found", 404);
 
@@ -720,15 +964,21 @@ export async function recordCiTestResult(
 ): Promise<CiTestResultOutcome> {
 	invalidateOverviewCache();
 	const live = await fetchPullRequestStatus({ prNumber: input.prNumber });
+	const prSummary = toPrSummary(input.prNumber, live);
+	const catalogMatch = resolveCatalogFromPrMatch(prSummary);
+	const catalogKey = catalogMatch?.catalogKey ?? DEFAULT_ROADMAP_CATALOG_KEY;
 	const sectionNumber =
+		sectionNumberForPrIn(catalogOf(catalogKey), input.prNumber) ??
 		getSectionNumberForPr(input.prNumber) ??
 		(input.taskCode ? Number(input.taskCode.split(".")[0]) : undefined) ??
-		resolveSectionFromPrMatch(toPrSummary(input.prNumber, live));
+		catalogMatch?.sectionNumber;
 	const task =
-		(input.taskCode ? await getTaskByCode(input.taskCode) : null) ||
+		(input.taskCode ? await getTaskByCode(input.taskCode, catalogKey) : null) ||
 		(await getTaskByPrNumber(input.prNumber)) ||
 		((await getTasksByPrNumber(input.prNumber))[0] ?? null) ||
-		(sectionNumber != null ? await firstTaskInSection(sectionNumber) : null);
+		(sectionNumber != null
+			? await firstTaskInSection(sectionNumber, catalogKey)
+			: null);
 	if (!task) {
 		throw new RoadmapError(
 			`Unknown prNumber/taskCode: ${input.prNumber}/${input.taskCode ?? ""}`,
@@ -820,8 +1070,12 @@ export async function completeSectionFromMerge(
 
 	const live = await fetchPullRequestStatus({ prNumber: input.prNumber });
 	const prSummary = toPrSummary(input.prNumber, live);
+	const catalogMatch = resolveCatalogFromPrMatch(prSummary);
+	const catalogKey = catalogMatch?.catalogKey ?? DEFAULT_ROADMAP_CATALOG_KEY;
 	const sectionNumber =
+		sectionNumberForPrIn(catalogOf(catalogKey), input.prNumber) ??
 		getSectionNumberForPr(input.prNumber) ??
+		catalogMatch?.sectionNumber ??
 		resolveSectionFromPrMatch(prSummary);
 	if (sectionNumber == null) {
 		throw new RoadmapError(
@@ -830,13 +1084,13 @@ export async function completeSectionFromMerge(
 		);
 	}
 
-	const sections = await listSections();
+	const sections = await listSections(catalogKey);
 	const section = sections.find((s) => s.sectionNumber === sectionNumber);
 	if (!section) {
 		throw new RoadmapError(`Section ${sectionNumber} not found`, 404);
 	}
 
-	const allTasks = await listTasks();
+	const allTasks = await listTasks(undefined, catalogKey);
 	const sectionTasks = allTasks.filter((t) => t.sectionId === section.$id);
 	const owner = sectionTasks[0];
 	if (!owner) {
@@ -852,7 +1106,7 @@ export async function completeSectionFromMerge(
 		};
 	}
 
-	if (!sectionCompletesOnMergedCatalogPr(sectionNumber)) {
+	if (!sectionCompletesOnMergedCatalogPr(sectionNumber, catalogKey)) {
 		return {
 			sectionNumber,
 			completed: false,
@@ -917,14 +1171,19 @@ export async function completeSectionFromMerge(
 		};
 	}
 
-	const perTaskPr = sectionUsesPerTaskPrCompletion(sectionNumber);
+	const perTaskPr = sectionUsesPerTaskPrCompletion(sectionNumber, catalogKey);
 	const tasksToComplete = perTaskPr
 		? sectionTasks.filter((t) => {
 				if (t.status === "complete") return false;
 				if (t.prNumber === input.prNumber) return true;
 				// Unlinked tasks complete when the PR title/branch names the task code.
 				if (t.prNumber == null) {
-					return matchPullRequestToTask(prSummary, sectionNumber, t.taskCode);
+					return matchPullRequestToTask(
+						prSummary,
+						sectionNumber,
+						t.taskCode,
+						catalogKey,
+					);
 				}
 				return false;
 			})
@@ -932,6 +1191,7 @@ export async function completeSectionFromMerge(
 
 	if (!perTaskPr) {
 		const block = await evaluateSectionMergeBlock(sectionNumber, {
+			catalogKey,
 			triggeringPr: {
 				prNumber: input.prNumber,
 				mergeCommitSha: input.mergeCommitSha,
@@ -949,8 +1209,8 @@ export async function completeSectionFromMerge(
 	}
 
 	if (tasksToComplete.length === 0) {
-		await persistUnlockedSnapshot();
-		const refreshed = (await listTasks()).filter(
+		await persistUnlockedSnapshot(catalogKey);
+		const refreshed = (await listTasks(undefined, catalogKey)).filter(
 			(t) => t.sectionId === section.$id,
 		);
 		return {
@@ -991,8 +1251,8 @@ export async function completeSectionFromMerge(
 		updated.push(next);
 	}
 
-	await persistUnlockedSnapshot();
-	const refreshed = (await listTasks()).filter(
+	await persistUnlockedSnapshot(catalogKey);
+	const refreshed = (await listTasks(undefined, catalogKey)).filter(
 		(t) => t.sectionId === section.$id,
 	);
 	const sectionComplete = refreshed.every((t) => t.status === "complete");

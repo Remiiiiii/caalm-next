@@ -1,9 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server";
-import {
-	getExpiringContractsCount,
-	getTotalContractsCount,
-} from "@/lib/actions/file.actions";
+import { Query } from "node-appwrite";
 import { getActiveUsersCount } from "@/lib/actions/user.actions";
+import { createApiAdminClient } from "@/lib/appwrite/api-client";
+import { appwriteConfig } from "@/lib/appwrite/config";
+import { computeContractKpis } from "@/lib/dashboard/contract-kpis";
 import { requirePermission } from "@/lib/rbac/middleware";
 import { CACHE_KEYS } from "@/lib/services/cache-keys";
 import CacheManager from "@/lib/services/cache-manager";
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
 		}
 
 		// Cache key for dashboard stats
-		const cacheKey = CACHE_KEYS.dashboard.stats(orgId);
+		const cacheKey = `${CACHE_KEYS.dashboard.stats(orgId)}:v2`;
 
 		// Fetch dashboard stats with caching (5 minutes TTL)
 		const stats = await CacheManager.withCache(
@@ -38,18 +38,26 @@ export async function GET(request: NextRequest) {
 			cacheKey,
 			async () => {
 				// Fetch dashboard stats in parallel
-				const [totalContracts, expiringContracts, activeUsers] =
-					await Promise.all([
-						getTotalContractsCount(),
-						getExpiringContractsCount(),
-						getActiveUsersCount(),
-					]);
+				const { tablesDB } = await createApiAdminClient();
+				const [contractsResult, activeUsers] = await Promise.all([
+					tablesDB.listRows({
+						databaseId: appwriteConfig.databaseId!,
+						tableId: appwriteConfig.contractsCollectionId!,
+						queries: [Query.limit(500)],
+					}),
+					getActiveUsersCount(),
+				]);
+				const rows = contractsResult.rows || contractsResult.documents || [];
+				const kpis = computeContractKpis(
+					rows,
+					contractsResult.total ?? rows.length,
+				);
 
 				return {
-					totalContracts,
-					expiringContracts,
+					totalContracts: kpis.totalContracts,
+					expiringContracts: kpis.expiringContracts,
 					activeUsers,
-					complianceRate: "95%", // This could be calculated based on actual data
+					complianceRate: `${kpis.complianceRate}%`,
 				};
 			},
 		);
