@@ -10,7 +10,7 @@ import DemoBanner from "@/components/DemoBanner";
 import OrbitingBlocks from "@/components/OrbitingBlocks";
 import SplineCanvas from "@/components/SplineCanvas";
 import { useSplineWatermarkRemoval } from "@/hooks/useSplineWatermarkRemoval";
-import { MEDIA_URLS } from "@/lib/media/urls";
+import StaticWaveBackdrop from "@/components/landing/StaticWaveBackdrop";
 
 /**
  * Match SplineCanvas opacity transition (`ease-in-out`).
@@ -52,23 +52,7 @@ const layout = ({ children }: { children: React.ReactNode }) => {
 		<div className="flex min-h-screen flex-col bg-slate-50">
 			<DemoBanner />
 			<div className="relative flex flex-1 min-h-0 overflow-hidden">
-				{/* Video (back) */}
-				<video
-					autoPlay
-					loop
-					muted
-					playsInline
-					className="absolute inset-0 z-0 w-full h-full object-cover"
-				>
-					<source src={MEDIA_URLS.waveVideo} type="video/mp4" />
-				</video>
-
-				{/* Soft gradients above video */}
-				<div aria-hidden className="absolute inset-0 z-[1] pointer-events-none">
-					<div className="absolute -top-16 -left-10 w-[28rem] h-[28rem] rounded-full bg-[#00c1cb]/12 blur-3xl" />
-					<div className="absolute -bottom-16 -right-8 w-[32rem] h-[32rem] rounded-full bg-[#0f5384]/10 blur-3xl" />
-					<div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[36rem] h-[36rem] rounded-full bg-[#00c1cb]/8 blur-3xl" />
-				</div>
+				<StaticWaveBackdrop />
 
 				{/* Landing grid pattern: full page between .mp4 and framed card */}
 				<div

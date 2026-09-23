@@ -9,10 +9,10 @@ document/
 biome-out.json
 biome-diagnostics*.json
 
-# Large media is served from Vercel Blob (src/lib/media/urls.ts)
-public/assets/video/**/*.mp4
-!public/assets/video/doc-upload.mp4
-public/assets/demo/tour/*.webp
+# Large media is served from public/ not Blob (src/lib/media/urls.ts)
+# public/assets/video/**/*.mp4
+# !public/assets/video/doc-upload.mp4
+# public/assets/demo/tour/*.webp
 
 # Test / agent noise
 test-results/
