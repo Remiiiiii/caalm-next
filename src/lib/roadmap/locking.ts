@@ -40,6 +40,43 @@ function childrenOf(tasks: RoadmapTask[], parentId: string): RoadmapTask[] {
 }
 
 /**
+ * NPO batch PRs mark the parent task (e.g. 2.8) complete while nested checklist
+ * rows (2.8.a, 2.8.b) stay locked — sequential unlock skips completed parents.
+ * When the parent is done, treat nested rows as done too (same merge / override).
+ */
+export function reconcileNestedTasksWithParentComplete(
+	tasks: RoadmapTask[],
+): { tasks: RoadmapTask[]; transitions: StatusTransition[] } {
+	const next = tasks.map((t) => ({ ...t }));
+	const transitions: StatusTransition[] = [];
+	const byId = new Map(next.map((t) => [t.$id, t]));
+
+	for (const parent of next) {
+		if (parent.parentTaskId) continue;
+		const kids = childrenOf(next, parent.$id);
+		if (kids.length === 0 || parent.status !== "complete") continue;
+
+		for (const child of kids) {
+			if (child.status === "complete") continue;
+			transitions.push({
+				entityType: "task",
+				entityId: child.$id,
+				fromStatus: child.status,
+				toStatus: "complete",
+			});
+			child.status = "complete";
+			child.completedAt = child.completedAt ?? parent.completedAt;
+			child.completedCommitSha =
+				child.completedCommitSha ?? parent.completedCommitSha;
+			child.$updatedAt = new Date().toISOString();
+			byId.set(child.$id, child);
+		}
+	}
+
+	return { tasks: next, transitions };
+}
+
+/**
  * Next PR on a sequential timeline: first incomplete child under the first
  * incomplete parent, or the parent itself when it has no unfinished children.
  */
@@ -95,8 +132,11 @@ export function computeUnlocked(snapshot: LockSnapshot): {
 	transitions: StatusTransition[];
 } {
 	const sections = sortSections(snapshot.sections).map((s) => ({ ...s }));
-	const tasks = snapshot.tasks.map((t) => ({ ...t }));
-	const transitions: StatusTransition[] = [];
+	const reconciled = reconcileNestedTasksWithParentComplete(
+		snapshot.tasks.map((t) => ({ ...t })),
+	);
+	const tasks = reconciled.tasks;
+	const transitions: StatusTransition[] = [...reconciled.transitions];
 
 	const setTaskStatus = (task: RoadmapTask, to: RoadmapTask["status"]) => {
 		if (task.status === to) return;

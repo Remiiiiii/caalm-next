@@ -43,6 +43,7 @@ import {
 	computeUnlocked,
 	countByStatus,
 	firstIncompleteSequentialTask,
+	reconcileNestedTasksWithParentComplete,
 } from "./locking";
 import { npoCatalogDisplayTitleForPr } from "./nonprofit/npo-pr-batches";
 import {
@@ -420,6 +421,7 @@ async function markTaskCompleteFromMergedPr(
 	task: RoadmapTask,
 	sha: string,
 	completedAt: string,
+	allTasks: RoadmapTask[],
 ): Promise<void> {
 	const next: RoadmapTask = {
 		...task,
@@ -437,6 +439,10 @@ async function markTaskCompleteFromMergedPr(
 		commitSha: sha,
 		testRunId: null,
 	});
+	for (const child of allTasks.filter((t) => t.parentTaskId === task.$id)) {
+		if (child.status === "complete") continue;
+		await markTaskCompleteFromMergedPr(child, sha, completedAt, allTasks);
+	}
 }
 
 /**
@@ -484,7 +490,7 @@ async function persistTasksCompletedByMergedPrs(
 		const gate = await gateForSha(sha);
 		if (!gate.ok) continue;
 
-		await markTaskCompleteFromMergedPr(task, sha, completedAt);
+		await markTaskCompleteFromMergedPr(task, sha, completedAt, tasks);
 		changed = true;
 	}
 
@@ -526,12 +532,37 @@ async function persistTasksCompletedByMergedPrs(
 			) {
 				continue;
 			}
-			await markTaskCompleteFromMergedPr(task, sha, completedAt);
+			await markTaskCompleteFromMergedPr(task, sha, completedAt, tasks);
 			changed = true;
 		}
 	}
 
 	return changed;
+}
+
+async function persistNestedBatchTaskReconcile(
+	catalogKey: RoadmapCatalogKey,
+	tasks: RoadmapTask[],
+): Promise<RoadmapTask[]> {
+	if (catalogKey !== "npo") return tasks;
+	const { tasks: reconciled, transitions } =
+		reconcileNestedTasksWithParentComplete(tasks);
+	if (transitions.length === 0) return tasks;
+	for (const tr of transitions) {
+		const task = reconciled.find((item) => item.$id === tr.entityId);
+		if (!task) continue;
+		await saveTask(task);
+		await appendStatusLog({
+			entityType: "task",
+			entityId: task.$id,
+			fromStatus: tr.fromStatus,
+			toStatus: "complete",
+			actor: "system:nested-batch-reconcile",
+			commitSha: task.completedCommitSha,
+			testRunId: null,
+		});
+	}
+	return reconciled;
 }
 
 const OVERVIEW_CACHE_MS = 15_000;
@@ -564,11 +595,12 @@ export async function getOverview(options?: {
 		return cached.value;
 	}
 
-	const [sections, tasks, openPrs] = await Promise.all([
+	const [sections, tasksRaw, openPrs] = await Promise.all([
 		listSections(catalogKey),
 		listTasks(undefined, catalogKey),
 		listOpenPullRequests().catch(() => []),
 	]);
+	const tasks = await persistNestedBatchTaskReconcile(catalogKey, tasksRaw);
 	const { snapshot } = computeUnlocked({
 		sections,
 		tasks,
