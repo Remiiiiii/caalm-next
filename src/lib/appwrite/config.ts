@@ -530,6 +530,18 @@ export const appwriteConfig = {
 		"69f0b802001f4e8c2b28",
 	),
 
+	/** Public event ticket types (name: event_ticket_types) */
+	eventTicketTypesCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_EVENT_TICKET_TYPES_COLLECTION",
+		"69f2a001001f4e8c2b33",
+	),
+
+	/** Public event registrations (name: event_registrations) */
+	eventRegistrationsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_EVENT_REGISTRATIONS_COLLECTION",
+		"69f2a002001f4e8c2b34",
+	),
+
 	/** Contract obligations for retention (name: contract_obligations) */
 	contractObligationsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_CONTRACT_OBLIGATIONS_COLLECTION",

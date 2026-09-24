@@ -55,6 +55,13 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 				],
 				viewerReadOnly: true,
 			},
+			{
+				name: "Event Check-in",
+				icon: "/assets/icons/calendar.svg",
+				url: "/events/check-in",
+				permissions: [PERMISSIONS.EVENTS.INVITE],
+				viewerReadOnly: true,
+			},
 		],
 	},
 	{

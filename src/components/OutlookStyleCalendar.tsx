@@ -288,6 +288,9 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 	const canCreateEvent = basePermissions.createEvent;
 	const { permissions } = usePermissions();
 	const isApprover = permissions.includes(PERMISSIONS.EVENTS.APPROVE);
+	const canManageEventRegistrations = permissions.includes(
+		PERMISSIONS.EVENTS.INVITE,
+	);
 
 	const {
 		approvals,
@@ -4176,6 +4179,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 					onOpenAiPanel={handleOpenAiPanel}
 					onEditEvent={handleEditSelectedEvent}
 					onDeleteEvent={handleDeleteEvent}
+					canManageEventRegistrations={canManageEventRegistrations}
 				/>
 
 				{/* Share Dialog */}

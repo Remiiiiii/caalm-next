@@ -71,6 +71,11 @@ const SIGNAL_PATTERNS: Array<{
 		re: /\brequireVolunteerOrgContext\s*\(/,
 	},
 	{
+		signal: "requireEventStaffContext",
+		class: "permission",
+		re: /\brequireEventStaffContext\s*\(/,
+	},
+	{
 		signal: "requireITPermission",
 		class: "permission",
 		re: /\brequireITPermission\s*\(/,
