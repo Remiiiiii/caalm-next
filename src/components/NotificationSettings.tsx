@@ -10,6 +10,7 @@ import {
 	ClockArrowDown,
 	FileUp,
 	Globe,
+	HeartHandshake,
 	Info,
 	Mail,
 	MessageSquare,
@@ -154,6 +155,13 @@ const NOTIFICATION_TYPES = {
 		icon: <Info className="w-4 h-4 text-[#0f5384]" />,
 		description: "General information notifications",
 		defaultPriority: "low" as const,
+	},
+	stewardship_digest: {
+		label: "Stewardship queue digest",
+		icon: <HeartHandshake className="w-4 h-4 text-[#0f5384]" />,
+		description:
+			"Opt-in email digest of at-risk donors (uses your daily or weekly digest schedule)",
+		defaultPriority: "medium" as const,
 	},
 } as const;
 

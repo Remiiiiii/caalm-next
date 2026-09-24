@@ -15,7 +15,7 @@ import {
 import { mapGiftRow } from "@/lib/gifts/repository-rows";
 import type { Gift } from "@/lib/gifts/types";
 import { createNote } from "@/lib/constituents/notes";
-import { buildNextBestActionContext } from "./stewardship-context";
+import { buildNextBestActionInput } from "./nba-input";
 
 export type StewardshipQueueRow = {
 	segmentRowId: string;
@@ -75,7 +75,6 @@ export async function listStewardshipQueue(
 ): Promise<StewardshipQueueRow[]> {
 	const segments = (await listSegmentsForOrg(orgId)).filter(isActiveInQueue);
 	const lastGifts = await loadLastGiftsByConstituent(orgId);
-	const nbaContext = await buildNextBestActionContext(orgId);
 
 	const rows: StewardshipQueueRow[] = [];
 	for (const segment of segments) {
@@ -84,18 +83,15 @@ export async function listStewardshipQueue(
 			continue;
 		}
 		const lastGift = lastGifts.get(segment.constituentId);
-		const nextBestAction = pickPrimaryNextBestAction({
+		const nbaInput = await buildNextBestActionInput({
+			orgId,
+			constituentId: segment.constituentId,
 			segment: segment.segment,
 			lapseRiskScore: segment.lapseRiskScore,
-			daysSinceLastGift: nbaContext.daysSinceGift(lastGift?.giftDate),
 			suggestedAskAmount:
 				segment.askOverrideAmount ?? segment.suggestedAskAmount ?? null,
-			hasOpenPledgeInstallment: nbaContext.openPledgeConstituentIds.has(
-				segment.constituentId,
-			),
-			hasUpcomingPublicEvent: nbaContext.orgHasUpcomingPublicEvent,
-			daysSinceLastPostedGift: nbaContext.daysSinceGift(lastGift?.giftDate),
 		});
+		const nextBestAction = pickPrimaryNextBestAction(nbaInput);
 
 		rows.push({
 			segmentRowId: segment.$id,

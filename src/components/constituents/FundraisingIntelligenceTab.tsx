@@ -1,6 +1,6 @@
 "use client";
 
-import { Brain, Check, DollarSign, Sparkles } from "lucide-react";
+import { Brain, Check, DollarSign, Sparkles, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { ConstituentWealthPanel } from "@/components/constituents/ConstituentWealthPanel";
 import { Button } from "@/components/ui/button";
@@ -50,6 +50,8 @@ export function FundraisingIntelligenceTab({
 	const [overrideAmount, setOverrideAmount] = useState("");
 	const [overrideReason, setOverrideReason] = useState("");
 	const [savingOverride, setSavingOverride] = useState(false);
+	const [dismissReason, setDismissReason] = useState("");
+	const [dismissing, setDismissing] = useState(false);
 
 	const load = useCallback(async () => {
 		setLoading(true);
@@ -83,6 +85,30 @@ export function FundraisingIntelligenceTab({
 	useEffect(() => {
 		void load();
 	}, [load]);
+
+	const dismissNba = async () => {
+		if (!data?.nextBestAction) return;
+		setDismissing(true);
+		try {
+			const res = await fetch(
+				`/api/constituents/${encodeURIComponent(constituentId)}/fundraising-intelligence/dismiss`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						actionKind: data.nextBestAction.kind,
+						reason: dismissReason,
+					}),
+				},
+			);
+			if (res.ok) {
+				setDismissReason("");
+				await load();
+			}
+		} finally {
+			setDismissing(false);
+		}
+	};
 
 	const saveOverride = async () => {
 		setSavingOverride(true);
@@ -187,6 +213,28 @@ export function FundraisingIntelligenceTab({
 							{data.nextBestAction.title}
 						</p>
 						<p className="text-xs text-slate-600">{data.nextBestAction.rationale}</p>
+						<div className="pt-3 space-y-2 border-t border-slate-200">
+							<Label htmlFor="dismiss-reason">Dismiss for 14 days</Label>
+							<Input
+								id="dismiss-reason"
+								value={dismissReason}
+								onChange={(e) => setDismissReason(e.target.value)}
+								className="border-[0.25px] border-slate-300"
+								placeholder="Why this action is not appropriate now"
+							/>
+							<div className="flex justify-end">
+								<Button
+									type="button"
+									variant="outline"
+									className="px-3 sm:px-4"
+									disabled={dismissing || dismissReason.trim().length < 3}
+									onClick={() => void dismissNba()}
+								>
+									<X className="h-4 w-4" />
+									Dismiss action
+								</Button>
+							</div>
+						</div>
 					</CardContent>
 				</Card>
 			) : null}

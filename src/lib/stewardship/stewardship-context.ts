@@ -16,6 +16,7 @@ function installmentsTableId(): string {
 
 export type NextBestActionContext = {
 	orgHasUpcomingPublicEvent: boolean;
+	orgHasUpcomingCampaignEvent: boolean;
 	openPledgeConstituentIds: Set<string>;
 	daysSinceGift: (giftDateIso?: string) => number | null;
 };
@@ -64,6 +65,7 @@ export async function buildNextBestActionContext(
 	}
 
 	let orgHasUpcomingPublicEvent = false;
+	let orgHasUpcomingCampaignEvent = false;
 	if (appwriteConfig.calendarEventsCollectionId) {
 		const events = await tablesDB.listRows({
 			databaseId: dbId(),
@@ -71,10 +73,14 @@ export async function buildNextBestActionContext(
 			queries: [
 				Query.equal("orgId", orgId),
 				Query.greaterThan("startDate", asOf.toISOString()),
-				Query.limit(1),
+				Query.limit(50),
 			],
 		});
-		orgHasUpcomingPublicEvent = (events.total ?? events.rows.length) > 0;
+		const rows = events.rows as unknown as Record<string, unknown>[];
+		orgHasUpcomingPublicEvent = (events.total ?? rows.length) > 0;
+		orgHasUpcomingCampaignEvent = rows.some((row) =>
+			Boolean(row.campaignId),
+		);
 	}
 
 	const daysSinceGift = (giftDateIso?: string) => {
@@ -86,6 +92,7 @@ export async function buildNextBestActionContext(
 
 	return {
 		orgHasUpcomingPublicEvent,
+		orgHasUpcomingCampaignEvent,
 		openPledgeConstituentIds,
 		daysSinceGift,
 	};
