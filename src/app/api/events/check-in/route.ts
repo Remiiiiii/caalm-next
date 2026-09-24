@@ -33,9 +33,8 @@ export async function POST(request: NextRequest) {
 		}
 
 		return NextResponse.json({
-			registration: result.registration,
+			firstName: result.firstName,
 			ticketTypeName: result.ticketTypeName,
-			displayName: result.displayName,
 		});
 	} catch (error) {
 		console.error("[events/check-in POST]", error);

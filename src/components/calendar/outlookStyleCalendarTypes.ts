@@ -51,6 +51,7 @@ export interface LocalCalendarEvent {
 	pendingApprovalId?: string | null;
 	overrides?: PermissionOverrideRecord[];
 	source?: CalendarSource;
+	campaignId?: string;
 }
 
 export interface EventReminderConfigData {
@@ -72,6 +73,7 @@ export interface NewEventForm {
 	location: string;
 	attachments?: EventAttachment[];
 	sensitivityLevel: CalendarSensitivity;
+	campaignId?: string;
 	reminders?: EventReminderConfigData[];
 }
 

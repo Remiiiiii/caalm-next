@@ -15,9 +15,8 @@ import { getTicketTypeById } from "./ticket-types.repository";
 export type CheckInRegistrationResult =
 	| {
 			ok: true;
-			registration: Awaited<ReturnType<typeof markRegistrationCheckedIn>>;
+			firstName: string;
 			ticketTypeName: string;
-			displayName: string;
 	  }
 	| {
 			ok: false;
@@ -153,19 +152,22 @@ export async function checkInWithRegistrationToken(input: {
 		checkedInAt,
 	});
 
-	let displayName = guestDisplayName(registration);
+	let firstName =
+		registration.guestFirstName?.trim() ||
+		guestDisplayName(registration).split(/\s+/)[0] ||
+		"Guest";
 	if (constituentId) {
 		const constituent = await getConstituentById(constituentId);
-		if (constituent) {
-			displayName =
-				`${constituent.firstName} ${constituent.lastName}`.trim() || displayName;
+		if (constituent?.firstName?.trim()) {
+			firstName = constituent.firstName.trim();
 		}
 	}
 
+	void updated;
+
 	return {
 		ok: true,
-		registration: updated,
+		firstName,
 		ticketTypeName: ticketType.name,
-		displayName,
 	};
 }

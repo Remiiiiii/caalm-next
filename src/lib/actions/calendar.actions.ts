@@ -63,6 +63,7 @@ export interface CalendarEvent {
 	overrides?: PermissionOverrideRecord[] | string; // Can be array (in-memory) or JSON string (from DB)
 	shiftCapacity?: number;
 	shiftTemplateId?: string;
+	campaignId?: string;
 	$createdAt?: string;
 	$updatedAt?: string;
 }
@@ -105,6 +106,7 @@ export interface CreateCalendarEventData {
 	resourceId?: string; // Priority 2: Resource management
 	shiftCapacity?: number;
 	shiftTemplateId?: string;
+	campaignId?: string | null;
 }
 
 // Get all calendar events
