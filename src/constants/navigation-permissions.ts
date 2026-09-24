@@ -186,6 +186,13 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 				viewerReadOnly: true,
 			},
 			{
+				name: "Development",
+				icon: "/assets/icons/dollar-circle.svg",
+				url: "/dashboard/development",
+				permissions: [PERMISSIONS.CONSTITUENTS.VIEW],
+				viewerReadOnly: true,
+			},
+			{
 				name: "Gifts",
 				icon: "/assets/icons/gift.svg",
 				url: "/gifts",

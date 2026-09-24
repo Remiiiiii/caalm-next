@@ -2,9 +2,12 @@ import Link from "next/link";
 import { PERMISSIONS } from "@/constants/permissions";
 import { requirePagePermission } from "@/lib/rbac/page-guards";
 import { getCampaignById } from "@/lib/campaigns/repository";
+import { computeCampaignRoi } from "@/lib/development";
 import { sumPostedGiftTotalForCampaign } from "@/lib/gifts/repository";
 import { getCurrentUser } from "@/lib/actions/user.actions";
 import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
+import { getUserPermissions } from "@/lib/rbac/permissions";
+import { CampaignDetailClient } from "@/components/campaigns/CampaignDetailClient";
 import { Card, CardContent } from "@/components/ui/card";
 
 type PageProps = { params: Promise<{ id: string }> };
@@ -31,6 +34,9 @@ export default async function CampaignDetailPage({ params }: PageProps) {
 		);
 	}
 	const postedTotal = await sumPostedGiftTotalForCampaign(orgId, id);
+	const roi = computeCampaignRoi(postedTotal, campaign.campaignCost);
+	const permissions = user ? await getUserPermissions(user.$id) : [];
+	const canEditCost = permissions.includes(PERMISSIONS.GIFTS.CREATE);
 
 	return (
 		<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
@@ -39,24 +45,23 @@ export default async function CampaignDetailPage({ params }: PageProps) {
 			</div>
 			<Card className="glass-card">
 				<div className="glass-card-cap" />
-				<CardContent className="p-4 sm:p-6 space-y-2 text-sm text-slate-700">
-					<p>
-						Posted gift total:{" "}
-						<span className="tabular-nums font-medium">
-							{campaign.currency}{" "}
-							{postedTotal.toLocaleString(undefined, {
-								minimumFractionDigits: 2,
-							})}
-						</span>
-					</p>
+				<CardContent className="p-4 sm:p-6 space-y-2">
 					{campaign.goalAmount != null ? (
-						<p>
+						<p className="text-sm text-slate-700">
 							Goal:{" "}
 							<span className="tabular-nums">
 								{campaign.goalAmount.toLocaleString()}
 							</span>
 						</p>
 					) : null}
+					<CampaignDetailClient
+						campaignId={campaign.$id}
+						currency={campaign.currency}
+						postedTotal={postedTotal}
+						campaignCost={campaign.campaignCost}
+						roi={roi}
+						canEditCost={canEditCost}
+					/>
 				</CardContent>
 			</Card>
 		</div>

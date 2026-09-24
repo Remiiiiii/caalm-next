@@ -25,6 +25,8 @@ function mapRow(row: Record<string, unknown>): Campaign {
 		currency: String(row.currency || "USD"),
 		startDate: row.startDate ? String(row.startDate) : undefined,
 		endDate: row.endDate ? String(row.endDate) : undefined,
+		campaignCost:
+			row.campaignCost != null ? Number(row.campaignCost) : undefined,
 	};
 }
 
@@ -93,6 +95,12 @@ export async function updateCampaign(
 	if (patch.currency != null) data.currency = patch.currency.toUpperCase();
 	if (patch.startDate !== undefined) data.startDate = patch.startDate;
 	if (patch.endDate !== undefined) data.endDate = patch.endDate;
+	if (patch.campaignCost !== undefined) {
+		if (patch.campaignCost != null && patch.campaignCost < 0) {
+			throw new Error("Campaign cost cannot be negative");
+		}
+		data.campaignCost = patch.campaignCost ?? null;
+	}
 	const row = await tablesDB.updateRow({
 		databaseId: dbId(),
 		tableId: tableId(),
