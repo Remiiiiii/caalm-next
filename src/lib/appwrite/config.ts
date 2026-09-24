@@ -518,6 +518,18 @@ export const appwriteConfig = {
 		"69d92302001f4e8c2b24",
 	),
 
+	/** Volunteer hour logs (name: volunteer_hours) */
+	volunteerHoursCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_VOLUNTEER_HOURS_COLLECTION",
+		"69f0b801001f4e8c2b27",
+	),
+
+	/** Volunteer waiver records (name: volunteer_waivers) */
+	volunteerWaiversCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_VOLUNTEER_WAIVERS_COLLECTION",
+		"69f0b802001f4e8c2b28",
+	),
+
 	/** Contract obligations for retention (name: contract_obligations) */
 	contractObligationsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_CONTRACT_OBLIGATIONS_COLLECTION",
