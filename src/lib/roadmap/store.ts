@@ -238,6 +238,7 @@ function sectionLayoutData(section: RoadmapSection) {
 }
 
 function taskLayoutData(task: RoadmapTask) {
+	// prNumber is runtime (merge/enrichment), not catalog layout — do not sync it.
 	return {
 		sectionId: task.sectionId,
 		parentTaskId: task.parentTaskId,
@@ -247,7 +248,6 @@ function taskLayoutData(task: RoadmapTask) {
 		acceptanceCriteria: task.acceptanceCriteria,
 		orderIndex: task.orderIndex,
 		testSuiteRef: task.testSuiteRef,
-		prNumber: task.prNumber,
 	};
 }
 
@@ -298,7 +298,9 @@ function catalogLayoutMatchesExisting(
 		if ((existing.testSuiteRef ?? null) !== (task.testSuiteRef ?? null)) {
 			return false;
 		}
-		if ((existing.prNumber ?? null) !== (task.prNumber ?? null)) return false;
+		// Skip prNumber: seedComplete sections seed null while Appwrite keeps linked
+		// PR ids from enrichment. Comparing them forced a full rewrite (~40s+) and
+		// the page fetch aborted at 30s ("Roadmap not found" after refresh).
 	}
 
 	return true;
