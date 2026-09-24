@@ -1,10 +1,18 @@
 "use client";
 
-import { AlertTriangle, CheckCircle, ClipboardList, Clock } from "lucide-react";
+import {
+	AlertTriangle,
+	CheckCircle,
+	ClipboardList,
+	Clock,
+	TrendingDown,
+} from "lucide-react";
 import { useMemo } from "react";
 import { useApprovalsView } from "@/components/approvals/ApprovalsViewContext";
-import { Card, CardContent } from "@/components/ui/card";
-import { StatCardIcon } from "@/components/ui/stat-card-icon";
+import {
+	complianceMetricTone,
+	MetricStatCard,
+} from "@/components/ui/metric-stat-card";
 import {
 	type ApprovalQueueItem,
 	type ApprovalTab,
@@ -12,7 +20,6 @@ import {
 	isSlaBreached,
 	matchesApprovalTab,
 } from "@/lib/approvals/approvalsListUtils";
-import { cn } from "@/lib/utils";
 
 interface ApprovalsMetricsBarProps {
 	items: ApprovalQueueItem[];
@@ -54,13 +61,12 @@ export default function ApprovalsMetricsBar({
 		};
 	}, [items]);
 
-	const interactiveCard =
-		"glass-card interactive-glass-card cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 transition-all duration-200";
-
 	const go = (tab: ApprovalTab) => {
 		setTab(tab);
 		scrollToList();
 	};
+
+	const breachTone = complianceMetricTone(100 - counts.breachRate);
 
 	return (
 		<section className="mb-6 w-full">
@@ -70,19 +76,15 @@ export default function ApprovalsMetricsBar({
 					className="text-left"
 					onClick={() => go("needs-me")}
 				>
-					<Card className={cn(interactiveCard)}>
-						<div className="glass-card-cap" />
-						<CardContent className="p-4 sm:p-6">
-							<p className="text-sm font-medium sidebar-gradient-text">
-								Needs decision
-							</p>
-							<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-								<span>{counts.needsMe}</span>
-								<StatCardIcon className="ml-2" icon={ClipboardList} />
-							</div>
-							<p className="text-xs text-slate-600 mt-1">Click to show queue</p>
-						</CardContent>
-					</Card>
+					<MetricStatCard
+						interactive
+						title="Needs decision"
+						value={counts.needsMe}
+						description="Click to show queue"
+						icon={ClipboardList}
+						dynamicIcon={counts.needsMe > 0 ? Clock : undefined}
+						dynamicTone="warning"
+					/>
 				</button>
 
 				<button
@@ -90,19 +92,13 @@ export default function ApprovalsMetricsBar({
 					className="text-left"
 					onClick={() => go("pending-review")}
 				>
-					<Card className={cn(interactiveCard)}>
-						<div className="glass-card-cap" />
-						<CardContent className="p-4 sm:p-6">
-							<p className="text-sm font-medium sidebar-gradient-text">
-								Pending review
-							</p>
-							<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-								<span>{counts.pendingReview}</span>
-								<StatCardIcon className="ml-2" icon={Clock} />
-							</div>
-							<p className="text-xs text-slate-600 mt-1">Awaiting review</p>
-						</CardContent>
-					</Card>
+					<MetricStatCard
+						interactive
+						title="Pending review"
+						value={counts.pendingReview}
+						description="Awaiting review"
+						icon={Clock}
+					/>
 				</button>
 
 				<button
@@ -110,19 +106,17 @@ export default function ApprovalsMetricsBar({
 					className="text-left"
 					onClick={() => go("action-required")}
 				>
-					<Card className={cn(interactiveCard)}>
-						<div className="glass-card-cap" />
-						<CardContent className="p-4 sm:p-6">
-							<p className="text-sm font-medium sidebar-gradient-text">
-								Action required
-							</p>
-							<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-								<span>{counts.actionRequired}</span>
-								<StatCardIcon className="ml-2" icon={AlertTriangle} />
-							</div>
-							<p className="text-xs text-slate-600 mt-1">Needs follow-up</p>
-						</CardContent>
-					</Card>
+					<MetricStatCard
+						interactive
+						title="Action required"
+						value={counts.actionRequired}
+						description="Needs follow-up"
+						icon={AlertTriangle}
+						iconTone={counts.actionRequired > 0 ? "warning" : "default"}
+						dynamicIcon={counts.actionRequired > 0 ? Clock : undefined}
+						dynamicTone="warning"
+						valueTone={counts.actionRequired > 0 ? "warning" : "default"}
+					/>
 				</button>
 
 				<button
@@ -130,19 +124,14 @@ export default function ApprovalsMetricsBar({
 					className="text-left"
 					onClick={() => go("recently-decided")}
 				>
-					<Card className={cn(interactiveCard)}>
-						<div className="glass-card-cap" />
-						<CardContent className="p-4 sm:p-6">
-							<p className="text-sm font-medium sidebar-gradient-text">
-								Recently decided
-							</p>
-							<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-								<span>{counts.recentlyDecided}</span>
-								<StatCardIcon className="ml-2" icon={CheckCircle} />
-							</div>
-							<p className="text-xs text-slate-600 mt-1">Last 14 days</p>
-						</CardContent>
-					</Card>
+					<MetricStatCard
+						interactive
+						title="Recently decided"
+						value={counts.recentlyDecided}
+						description="Last 14 days"
+						icon={CheckCircle}
+						iconTone="success"
+					/>
 				</button>
 			</div>
 
@@ -156,21 +145,17 @@ export default function ApprovalsMetricsBar({
 						scrollToList();
 					}}
 				>
-					<Card className={cn(interactiveCard)}>
-						<div className="glass-card-cap" />
-						<CardContent className="p-4 sm:p-6">
-							<p className="text-sm font-medium sidebar-gradient-text">
-								At risk
-							</p>
-							<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-								<span>{counts.atRisk}</span>
-								<StatCardIcon className="ml-2" icon={AlertTriangle} />
-							</div>
-							<p className="text-xs text-slate-600 mt-1">
-								Past halfway to the SLA
-							</p>
-						</CardContent>
-					</Card>
+					<MetricStatCard
+						interactive
+						title="At risk"
+						value={counts.atRisk}
+						description="Past halfway to the SLA"
+						icon={AlertTriangle}
+						iconTone={counts.atRisk > 0 ? "warning" : "default"}
+						dynamicIcon={counts.atRisk > 0 ? Clock : undefined}
+						dynamicTone="warning"
+						valueTone={counts.atRisk > 0 ? "warning" : "default"}
+					/>
 				</button>
 
 				<button
@@ -182,52 +167,47 @@ export default function ApprovalsMetricsBar({
 						scrollToList();
 					}}
 				>
-					<Card className={cn(interactiveCard)}>
-						<div className="glass-card-cap" />
-						<CardContent className="p-4 sm:p-6">
-							<p className="text-sm font-medium sidebar-gradient-text">
-								SLA breached
-							</p>
-							<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-								<span>{counts.breached}</span>
-								<StatCardIcon className="ml-2" icon={AlertTriangle} />
-							</div>
-							<p className="text-xs text-slate-600 mt-1">Past the due time</p>
-						</CardContent>
-					</Card>
+					<MetricStatCard
+						interactive
+						title="SLA breached"
+						value={counts.breached}
+						description="Past the due time"
+						icon={AlertTriangle}
+						iconTone={counts.breached > 0 ? "danger" : "default"}
+						dynamicIcon={counts.breached > 0 ? TrendingDown : undefined}
+						dynamicTone="danger"
+						valueTone={counts.breached > 0 ? "danger" : "default"}
+					/>
 				</button>
 
-				<Card className="glass-card">
-					<div className="glass-card-cap" />
-					<CardContent className="p-4 sm:p-6">
-						<p className="text-sm font-medium sidebar-gradient-text">
-							Breach rate
-						</p>
-						<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-							<span>{counts.breachRate}%</span>
-							<StatCardIcon className="ml-2" icon={Clock} />
-						</div>
-						<p className="text-xs text-slate-600 mt-1">
-							Of open approval steps
-						</p>
-					</CardContent>
-				</Card>
+				<MetricStatCard
+					title="Breach rate"
+					value={`${counts.breachRate}%`}
+					description="Of open approval steps"
+					icon={Clock}
+					iconTone={breachTone}
+					dynamicIcon={counts.breachRate > 0 ? TrendingDown : undefined}
+					dynamicTone={breachTone}
+					valueTone={breachTone}
+				/>
 
-				<Card className="glass-card">
-					<div className="glass-card-cap" />
-					<CardContent className="p-4 sm:p-6">
-						<p className="text-sm font-medium sidebar-gradient-text">
-							Avg hours left
-						</p>
-						<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-							<span>{counts.avgHoursLeft ?? "—"}</span>
-							<StatCardIcon className="ml-2" icon={Clock} />
-						</div>
-						<p className="text-xs text-slate-600 mt-1">
-							Until current-step due time
-						</p>
-					</CardContent>
-				</Card>
+				<MetricStatCard
+					title="Avg hours left"
+					value={counts.avgHoursLeft ?? "—"}
+					description="Until current-step due time"
+					icon={Clock}
+					dynamicIcon={
+						counts.avgHoursLeft != null && counts.avgHoursLeft < 8
+							? AlertTriangle
+							: undefined
+					}
+					dynamicTone="warning"
+					valueTone={
+						counts.avgHoursLeft != null && counts.avgHoursLeft < 8
+							? "warning"
+							: "default"
+					}
+				/>
 			</div>
 		</section>
 	);

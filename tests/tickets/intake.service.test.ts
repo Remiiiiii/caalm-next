@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { composeEngineeringBugDescription } from "@/lib/tickets/bug-report-body";
 import {
 	buildCursorAgentPrompt,
 	parsePrNumberFromUrl,
@@ -38,17 +39,31 @@ describe("ticket intake helpers", () => {
 	it("builds create payload with server-derived severity", () => {
 		const payload = buildCreateTicketInput({
 			title: "Login broken",
-			description: "Cannot sign in after password reset flow.",
+			description: "",
 			lane: "engineering",
 			category: "Software / Application",
 			affectedModule: "User Management",
 			impact: "high",
 			urgency: "high",
+			steps: "1. Open sign-in\n2. Enter password",
+			expected: "The user should land on the dashboard.",
+			actual: "The form stays on a spinner.",
+			os: "Windows",
+			environment: "Local",
+			searchedExisting: true,
+			isBug: true,
 		});
 		expect(payload.severity).toBe("high");
 		expect(payload.lane).toBe("engineering");
 		expect(payload.category).toBe("Software / Application");
 		expect(payload.affectedModule).toBe("User Management");
+		expect(payload.description).toContain("### Reproduction steps");
+		expect(payload.description).toContain("### Expected behavior");
+		expect(payload.description).toContain("### Actual behavior");
+		expect(payload.description).toContain("### OS");
+		expect(payload.description).toContain("Windows");
+		expect(payload.description).toContain("### Environment");
+		expect(payload.description).toContain("Local");
 	});
 
 	it("rejects help category on engineering lane", () => {
@@ -62,6 +77,20 @@ describe("ticket intake helpers", () => {
 				urgency: "medium",
 			}),
 		).toThrow(/category/i);
+	});
+
+	it("rejects engineering tickets missing reproduction steps", () => {
+		expect(() =>
+			buildCreateTicketInput({
+				title: "Login broken",
+				description: "",
+				lane: "engineering",
+				category: "Software / Application",
+				affectedModule: "User Management",
+				impact: "high",
+				urgency: "high",
+			}),
+		).toThrow(/reproduction steps/i);
 	});
 
 	it("builds help lane payload without engineering-only category", () => {
@@ -114,6 +143,41 @@ describe("ticket intake helpers", () => {
 			ticketNumber: "TKT-2026-0042",
 		});
 		expect(body).toContain("TKT-2026-0042");
+	});
+
+	it("keeps CAALM metadata and GitHub bug headings in the issue body", () => {
+		const description = composeEngineeringBugDescription({
+			steps: "1. Open contracts\n2. Click save",
+			expected: "The contract should save.",
+			actual: "Nothing happens.",
+			os: "Windows",
+			environment: "Production",
+			searchedExisting: true,
+			isBug: true,
+		});
+		const body = buildGitHubIssueBody({
+			name: "Ada Lovelace",
+			userId: "user_1",
+			department: "Legal",
+			submittedAt: "2026-08-12T12:00:00.000Z",
+			severity: "high",
+			category: "Software / Application",
+			affectedModule: "User Management",
+			impact: "high",
+			urgency: "high",
+			description,
+			ticketId: "ticket_1",
+			ticketNumber: "TKT-2026-0042",
+		});
+		expect(body).toContain("Ada Lovelace");
+		expect(body).toContain("TKT-2026-0042");
+		expect(body).toContain("### Reproduction steps");
+		expect(body).toContain("### Expected behavior");
+		expect(body).toContain("### Actual behavior");
+		expect(body).toContain("### OS");
+		expect(body).toContain("Windows");
+		expect(body).toContain("### Environment");
+		expect(body).toContain("Production");
 	});
 
 	it("slugs department labels for GitHub", () => {

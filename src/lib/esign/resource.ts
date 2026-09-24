@@ -97,11 +97,37 @@ export async function loadEsignResource(
 	resourceId: string,
 ): Promise<EsignResource | null> {
 	const { tablesDB } = await createAdminClient();
+	if (!appwriteConfig.databaseId) return null;
+
+	if (resourceType === "constituent") {
+		const tableId = appwriteConfig.constituentsCollectionId;
+		if (!tableId) return null;
+		try {
+			const row = (await tablesDB.getRow({
+				databaseId: appwriteConfig.databaseId,
+				tableId,
+				rowId: resourceId,
+			})) as Record<string, unknown> & { $id: string };
+			const name = `${String(row.firstName || "").trim()} ${String(row.lastName || "").trim()}`.trim();
+			return {
+				id: row.$id,
+				orgId: String(row.orgId || ""),
+				title: name || "Volunteer waiver",
+				status: "pending-signature",
+				documentFileId: "",
+				digitalSignatureRequired: true,
+				ownerEmail: row.email ? String(row.email) : undefined,
+			};
+		} catch {
+			return null;
+		}
+	}
+
 	const tableId =
 		resourceType === "license"
 			? appwriteConfig.licensesCollectionId
 			: appwriteConfig.contractsCollectionId;
-	if (!tableId || !appwriteConfig.databaseId) return null;
+	if (!tableId) return null;
 
 	try {
 		const row = (await tablesDB.getRow({
@@ -149,6 +175,9 @@ export async function updateResourceSignatureState(input: {
 	digitalSignaturePlatform?: string;
 }): Promise<void> {
 	const { tablesDB } = await createAdminClient();
+	if (input.resourceType === "constituent") {
+		return;
+	}
 	const tableId =
 		input.resourceType === "license"
 			? appwriteConfig.licensesCollectionId

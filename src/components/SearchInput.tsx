@@ -1,15 +1,13 @@
 "use client";
 
-import { Search } from "lucide-react";
 import type React from "react";
 import { useEffect, useState } from "react";
-import { Input } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/search-field";
 import SearchModal from "./SearchModal";
 
 const SearchInput: React.FC = () => {
 	const [isModalOpen, setIsModalOpen] = useState(false);
 
-	// Handle keyboard shortcut (Ctrl+K)
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
 			if ((e.ctrlKey || e.metaKey) && e.key === "k") {
@@ -24,17 +22,16 @@ const SearchInput: React.FC = () => {
 
 	return (
 		<>
-			<div className="relative">
-				<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-				<Input
-					type="text"
+			<div className="relative shrink-0">
+				<SearchField
 					placeholder="Search contracts..."
 					onClick={() => setIsModalOpen(true)}
 					readOnly
-					className="pl-10 pr-4 py-2 w-48 text-sm border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
+					containerClassName="w-96 min-w-80 max-w-full shrink-0"
+					className="cursor-pointer pr-16!"
 				/>
-				<div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-					<span className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">
+				<div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
+					<span className="text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
 						Ctrl+K
 					</span>
 				</div>
