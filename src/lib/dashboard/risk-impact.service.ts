@@ -5,11 +5,30 @@ import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import type {
 	ComputeRiskImpactOptions,
+	RiskImpactEvent,
 	RiskImpactPeriod,
 	RiskImpactSnapshot,
 	RiskImpactSparkPoint,
 	RiskImpactWin,
 } from "@/lib/dashboard/risk-impact.types";
+import {
+	buildRiskImpactEvent,
+	classifyImpactLog,
+	HEALTHY_VALUES,
+	resolveEventSource,
+	resolveRecordName,
+} from "@/lib/dashboard/risk-impact-events";
+import {
+	buildRiskTrackingSeries,
+	mergeTrackingEventDates,
+} from "@/lib/dashboard/risk-impact-sparkline";
+import {
+	buildTrend,
+	earliestDate,
+	inRange,
+	previousQuarterRange,
+	priorYearWindow,
+} from "@/lib/dashboard/risk-impact-trends";
 import {
 	buildContractQueries,
 	getContractListScope,
@@ -27,23 +46,6 @@ const OTHER_CONTRACT_WEIGHT = 0.85;
  * Tuned conservatively vs industry 2–9% leakage framing.
  */
 const PORTFOLIO_PROTECTION_FACTOR = 0.15;
-
-const AT_RISK_VALUES = new Set([
-	"action-required",
-	"at-risk",
-	"at_risk",
-	"non-compliant",
-	"non_compliant",
-]);
-
-const HEALTHY_VALUES = new Set([
-	"compliant",
-	"up-to-date",
-	"active",
-	"renewed",
-]);
-
-const AUDIT_MODULES = new Set(["contracts", "licenses", "regulatory"]);
 
 interface ContractRow {
 	$id: string;
@@ -158,6 +160,14 @@ function isExpiringWithin90(dateStr?: string): boolean {
 	return days !== null && days >= 0 && days <= 90;
 }
 
+function isExpiredContract(contract: ContractRow): boolean {
+	if (contract.isExpired) return true;
+	const days = daysUntil(contract.contractExpiryDate);
+	return days !== null && days < 0;
+}
+
+type ImpactKind = "flag" | "gap" | "renewal";
+
 function matchesDivision(
 	row: { division?: string; department?: string },
 	division?: string,
@@ -171,78 +181,6 @@ function matchesDivision(
 	return (
 		rowDiv === targetDiv ||
 		(!!targetDept && (rowDept === targetDept || rowDiv === targetDept))
-	);
-}
-
-function changeField(
-	log: AuditLogEntry,
-	field: string,
-): { before?: string; after?: string } | null {
-	const changes = log.changes || [];
-	const hit = changes.find(
-		(c) => c.field.toLowerCase() === field.toLowerCase(),
-	);
-	if (!hit) return null;
-	return {
-		before: hit.before != null ? String(hit.before).toLowerCase() : undefined,
-		after: hit.after != null ? String(hit.after).toLowerCase() : undefined,
-	};
-}
-
-function isFlagCaught(log: AuditLogEntry): boolean {
-	if (!log.module || !AUDIT_MODULES.has(log.module)) return false;
-	for (const field of ["compliance", "status"]) {
-		const ch = changeField(log, field);
-		if (ch?.after && AT_RISK_VALUES.has(ch.after)) return true;
-	}
-	const title = (log.event_title || "").toLowerCase();
-	if (
-		title.includes("action-required") ||
-		title.includes("at-risk") ||
-		title.includes("non-compliant") ||
-		title.includes("compliance flag")
-	) {
-		return true;
-	}
-	return false;
-}
-
-function isGapClosed(log: AuditLogEntry): boolean {
-	if (!log.module || !AUDIT_MODULES.has(log.module)) return false;
-	for (const field of ["compliance", "status"]) {
-		const ch = changeField(log, field);
-		if (
-			ch?.before &&
-			AT_RISK_VALUES.has(ch.before) &&
-			ch.after &&
-			HEALTHY_VALUES.has(ch.after)
-		) {
-			return true;
-		}
-	}
-	if (
-		log.module === "regulatory" &&
-		log.status === "success" &&
-		log.action === "update"
-	) {
-		return true;
-	}
-	const title = (log.event_title || "").toLowerCase();
-	return (
-		title.includes("gap closed") ||
-		title.includes("compliance restored") ||
-		(title.includes("compliant") && title.includes("updated"))
-	);
-}
-
-function isLicenseRenewal(log: AuditLogEntry): boolean {
-	if (log.module !== "licenses") return false;
-	const title = (log.event_title || "").toLowerCase();
-	const id = (log.event_id || "").toLowerCase();
-	return (
-		id.startsWith("license_renew_") ||
-		title.includes("license renewed") ||
-		title.includes("renewed license")
 	);
 }
 
@@ -260,55 +198,7 @@ function buildSparkline(
 	start: Date,
 	eventDates: string[],
 ): RiskImpactSparkPoint[] {
-	const now = new Date();
-	const buckets: { key: string; label: string; count: number }[] = [];
-
-	if (period === "ytd") {
-		const year = start.getFullYear();
-		const endMonth = now.getFullYear() === year ? now.getMonth() : 11;
-		for (let m = 0; m <= endMonth; m++) {
-			const d = new Date(year, m, 1);
-			buckets.push({
-				key: `${year}-${String(m + 1).padStart(2, "0")}`,
-				label: d.toLocaleString("en-US", { month: "short" }).toUpperCase(),
-				count: 0,
-			});
-		}
-		for (const iso of eventDates) {
-			const t = new Date(iso);
-			if (Number.isNaN(t.getTime())) continue;
-			const key = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}`;
-			const bucket = buckets.find((b) => b.key === key);
-			if (bucket) bucket.count += 1;
-		}
-	} else {
-		const days = period === "last30" ? 30 : 90;
-		const step = period === "last30" ? 1 : 3;
-		for (let i = days; i >= 0; i -= step) {
-			const d = new Date(now);
-			d.setHours(0, 0, 0, 0);
-			d.setDate(d.getDate() - i);
-			const key = d.toISOString().slice(0, 10);
-			buckets.push({
-				key,
-				label: d.toLocaleString("en-US", { month: "short", day: "numeric" }),
-				count: 0,
-			});
-		}
-		for (const iso of eventDates) {
-			const t = new Date(iso);
-			if (Number.isNaN(t.getTime())) continue;
-			const key = t.toISOString().slice(0, 10);
-			const bucket = buckets.find((b) => b.key === key);
-			if (bucket) bucket.count += 1;
-		}
-	}
-
-	let cumulative = 0;
-	return buckets.map((b) => {
-		cumulative += b.count;
-		return { label: b.label, value: cumulative };
-	});
+	return buildRiskTrackingSeries(period, start, eventDates);
 }
 
 function monitoredStatusClause(
@@ -542,7 +432,11 @@ export async function computeRiskImpact(
 	const canViewAudit = permissions.includes(PERMISSIONS.AUDIT.VIEW);
 
 	const start = periodStart(period);
-	const startIso = start.toISOString();
+	const now = new Date();
+	const yearAgo = priorYearWindow(period, start, now);
+	const quarters = previousQuarterRange(now);
+	const compareStart = earliestDate(yearAgo.start, quarters.priorStart, start);
+	const startIso = compareStart.toISOString();
 
 	let contracts: ContractRow[] = [];
 	let licenses: LicenseRow[] = [];
@@ -603,91 +497,100 @@ export async function computeRiskImpact(
 	let auditGapsClosed = 0;
 	let licensesRenewedOnTime = 0;
 	let primaryAmount = 0;
+	let priorYearAmount = 0;
+	const quarterNow = { flag: 0, gap: 0, renewal: 0 };
+	const quarterPrior = { flag: 0, gap: 0, renewal: 0 };
 	const recentWins: RiskImpactWin[] = [];
+	const events: RiskImpactEvent[] = [];
 	const seenTargets = new Set<string>();
+	const priorYearSeen = new Set<string>();
 	const impactEventDates: string[] = [];
+
+	const dollarsForKind = (kind: ImpactKind, log: AuditLogEntry): number => {
+		if (kind === "renewal") {
+			const license = log.target_id ? licenseById.get(log.target_id) : undefined;
+			return parseAmount(license?.cost);
+		}
+		const contract = log.target_id ? contractById.get(log.target_id) : undefined;
+		const license = log.target_id ? licenseById.get(log.target_id) : undefined;
+		if (kind === "flag") {
+			return weightedContractAmount(contract) || parseAmount(license?.cost);
+		}
+		return weightedContractAmount(contract);
+	};
+
+	const winLabel = (kind: ImpactKind, log: AuditLogEntry): string => {
+		if (log.summary || log.event_title) {
+			return log.summary || log.event_title || "";
+		}
+		if (kind === "renewal") return "License renewed on time";
+		if (kind === "flag") return "Compliance flag caught";
+		return "Audit gap closed";
+	};
 
 	if (canViewAudit) {
 		for (const log of scopedLogs) {
 			const at = log.created_at || "";
-			const renewal = isLicenseRenewal(log);
+			const kind = classifyImpactLog(log, canViewLicenses);
+			if (!kind) continue;
 
-			if (canViewLicenses && renewal) {
-				licensesRenewedOnTime += 1;
-				impactEventDates.push(at);
-				const license = log.target_id
-					? licenseById.get(log.target_id)
-					: undefined;
-				const dollars = parseAmount(license?.cost);
-				if (
-					dollars > 0 &&
-					log.target_id &&
-					!seenTargets.has(`renew:${log.target_id}`)
-				) {
-					primaryAmount += dollars;
-					seenTargets.add(`renew:${log.target_id}`);
+			const when = at ? new Date(at) : null;
+			if (!when || Number.isNaN(when.getTime())) continue;
+
+			const dollars = dollarsForKind(kind, log);
+			const targetKey = log.target_id ? `${kind}:${log.target_id}` : "";
+
+			if (inRange(when, yearAgo.start, yearAgo.end)) {
+				if (dollars > 0 && targetKey && !priorYearSeen.has(targetKey)) {
+					priorYearAmount += dollars;
+					priorYearSeen.add(targetKey);
 				}
-				if (recentWins.length < 5) {
-					recentWins.push({
-						label: log.summary || log.event_title || "License renewed on time",
-						amount: dollars > 0 ? dollars : undefined,
-						at,
-					});
-				}
-				continue;
 			}
 
-			if (isFlagCaught(log)) {
-				complianceFlagsCaught += 1;
-				impactEventDates.push(at);
-				const contract = log.target_id
-					? contractById.get(log.target_id)
-					: undefined;
-				const license = log.target_id
-					? licenseById.get(log.target_id)
-					: undefined;
-				const dollars =
-					weightedContractAmount(contract) || parseAmount(license?.cost);
-				if (
-					dollars > 0 &&
-					log.target_id &&
-					!seenTargets.has(`flag:${log.target_id}`)
-				) {
-					primaryAmount += dollars;
-					seenTargets.add(`flag:${log.target_id}`);
-				}
-				if (recentWins.length < 5) {
-					recentWins.push({
-						label: log.summary || log.event_title || "Compliance flag caught",
-						amount: dollars > 0 ? dollars : undefined,
-						at,
-					});
-				}
-				continue;
+			if (when >= quarters.currentStart) {
+				quarterNow[kind] += 1;
+			} else if (inRange(when, quarters.priorStart, quarters.priorEnd)) {
+				quarterPrior[kind] += 1;
 			}
 
-			if (isGapClosed(log)) {
-				auditGapsClosed += 1;
-				impactEventDates.push(at);
-				const contract = log.target_id
-					? contractById.get(log.target_id)
-					: undefined;
-				const dollars = weightedContractAmount(contract);
-				if (
-					dollars > 0 &&
-					log.target_id &&
-					!seenTargets.has(`gap:${log.target_id}`)
-				) {
-					primaryAmount += dollars;
-					seenTargets.add(`gap:${log.target_id}`);
-				}
-				if (recentWins.length < 5) {
-					recentWins.push({
-						label: log.summary || log.event_title || "Audit gap closed",
-						amount: dollars > 0 ? dollars : undefined,
-						at,
-					});
-				}
+			if (when < start) continue;
+
+			if (kind === "renewal") licensesRenewedOnTime += 1;
+			else if (kind === "flag") complianceFlagsCaught += 1;
+			else auditGapsClosed += 1;
+
+			impactEventDates.push(at);
+			const countedTowardTotal = Boolean(
+				dollars > 0 && targetKey && !seenTargets.has(targetKey),
+			);
+			if (countedTowardTotal) {
+				primaryAmount += dollars;
+				seenTargets.add(targetKey);
+			}
+			const contract = log.target_id
+				? contractById.get(log.target_id)
+				: undefined;
+			const license = log.target_id
+				? licenseById.get(log.target_id)
+				: undefined;
+			events.push(
+				buildRiskImpactEvent({
+					id: `${log.event_id || "evt"}:${log.target_id || "none"}:${at}`,
+					date: at,
+					kind,
+					recordName: resolveRecordName(kind, log, contract, license),
+					recordId: log.target_id,
+					dollars,
+					source: resolveEventSource(kind, log),
+					countedTowardTotal,
+				}),
+			);
+			if (recentWins.length < 5) {
+				recentWins.push({
+					label: winLabel(kind, log),
+					amount: dollars > 0 ? dollars : undefined,
+					at,
+				});
 			}
 		}
 	}
@@ -701,11 +604,44 @@ export async function computeRiskImpact(
 		: 0;
 	const contractsMonitored = canViewContracts ? contracts.length : 0;
 
+	const openRisk = canViewContracts
+		? {
+				highRisk: contracts.filter(
+					(c) => isHighRisk(c) && !isExpiredContract(c),
+				).length,
+				expiring90: contracts.filter((c) => isExpiringWithin90(c.contractExpiryDate))
+					.length,
+				expired: contracts.filter((c) => isExpiredContract(c)).length,
+			}
+		: { highRisk: 0, expiring90: 0, expired: 0 };
+
 	const counts = {
 		complianceFlagsCaught: canViewAudit ? complianceFlagsCaught : 0,
 		auditGapsClosed: canViewAudit ? auditGapsClosed : 0,
 		licensesRenewedOnTime: canViewLicenses ? licensesRenewedOnTime : 0,
 	};
+
+	const countTrends = {
+		complianceFlagsCaught: buildTrend(
+			quarterNow.flag,
+			quarterPrior.flag,
+			quarters.vsLabel,
+		),
+		auditGapsClosed: buildTrend(
+			quarterNow.gap,
+			quarterPrior.gap,
+			quarters.vsLabel,
+		),
+		licensesRenewedOnTime: buildTrend(
+			quarterNow.renewal,
+			quarterPrior.renewal,
+			quarters.vsLabel,
+		),
+	};
+
+	const yoyTrend = canViewAudit
+		? buildTrend(primaryAmount, priorYearAmount, yearAgo.vsLabel)
+		: null;
 
 	const monitoring = {
 		contractsMonitored,
@@ -713,7 +649,12 @@ export async function computeRiskImpact(
 		clausesFlagged: canViewAudit ? complianceFlagsCaught : 0,
 	};
 
-	const sparkline = buildSparkline(period, start, impactEventDates);
+	const sparkline = buildSparkline(
+		period,
+		start,
+		mergeTrackingEventDates(impactEventDates, start),
+	);
+	const liveSparkline = buildSparkline(period, start, impactEventDates);
 	const primaryFormatted = formatUsd(primaryAmount);
 	const secondaryFormatted = formatUsd(secondaryAmount);
 
@@ -732,8 +673,12 @@ export async function computeRiskImpact(
 			amountFormatted: secondaryFormatted,
 		},
 		counts,
+		countTrends,
+		yoyTrend,
+		openRisk,
 		monitoring,
 		sparkline,
+		liveSparkline,
 		trackingNote: buildTrackingNote({
 			period,
 			contractsMonitored,
@@ -750,6 +695,7 @@ export async function computeRiskImpact(
 			hasLicenses: canViewLicenses,
 		}),
 		recentWins: recentWins.slice(0, 5),
+		events,
 		computedAt: new Date().toISOString(),
 		dataSources: {
 			contracts: canViewContracts,

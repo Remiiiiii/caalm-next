@@ -55,6 +55,8 @@ export default function HubSpotIntegrationCard({
 	const [fieldMap, setFieldMap] = useState<CrmFieldMap>({
 		...DEFAULT_CRM_FIELD_MAP,
 	});
+	const [department, setDepartment] = useState("");
+	const [division, setDivision] = useState("");
 
 	const loadStatus = useCallback(async () => {
 		if (locked || !orgId) {
@@ -75,6 +77,8 @@ export default function HubSpotIntegrationCard({
 			setLastError(data.lastError || null);
 			setPipelineId(data.config?.pipelineId || "");
 			setTriggerStageId(data.config?.triggerStageId || "");
+			setDepartment(data.config?.department || "");
+			setDivision(data.config?.division || "");
 			setFieldMap({
 				...DEFAULT_CRM_FIELD_MAP,
 				...(data.config?.fieldMap || {}),
@@ -289,6 +293,8 @@ export default function HubSpotIntegrationCard({
 				pipelineId={pipelineId}
 				triggerStageId={triggerStageId}
 				fieldMap={fieldMap}
+				department={department}
+				division={division}
 				onSaved={(config: CrmIntegrationConfig) => {
 					// Apply save payload locally — skip HubSpot status round-trip
 					setPipelineId(config.pipelineId || "");
@@ -297,6 +303,8 @@ export default function HubSpotIntegrationCard({
 						...DEFAULT_CRM_FIELD_MAP,
 						...(config.fieldMap || {}),
 					});
+					setDepartment(config.department || "");
+					setDivision(config.division || "");
 					setLastError(null);
 				}}
 			/>

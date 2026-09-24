@@ -1,9 +1,8 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { StatCardIcon } from "@/components/ui/stat-card-icon";
-import { cn } from "@/lib/utils";
+import { Minus, TrendingDown, TrendingUp } from "lucide-react";
+import { MetricStatCard, type MetricTone } from "@/components/ui/metric-stat-card";
 
 interface AnalyticsStatCardProps {
 	title: string;
@@ -20,55 +19,47 @@ export function AnalyticsStatCard({
 	title,
 	value,
 	description,
-	icon: Icon,
+	icon,
 	trend,
 	trendDirection,
 	className,
 	onClick,
 }: AnalyticsStatCardProps) {
-	const trendColor =
+	const dynamicTone: MetricTone =
 		trendDirection === "up"
-			? "text-green"
+			? "success"
 			: trendDirection === "down"
-				? "text-red"
-				: "text-slate-600";
+				? "danger"
+				: "default";
+	const DynamicIcon =
+		trendDirection === "up"
+			? TrendingUp
+			: trendDirection === "down"
+				? TrendingDown
+				: trend
+					? Minus
+					: undefined;
 
 	return (
-		<Card
-			className={cn(
-				"glass-card",
-				onClick && "interactive-glass-card cursor-pointer",
-				className,
-			)}
-			onClick={onClick}
-			tabIndex={onClick ? 0 : undefined}
-			role={onClick ? "button" : undefined}
-			onKeyDown={
-				onClick
-					? (e) => {
-							if (e.key === "Enter" || e.key === " ") onClick();
-						}
-					: undefined
+		<MetricStatCard
+			title={title}
+			value={value}
+			description={
+				trend ? (
+					<span>
+						{description ? `${description} · ` : ""}
+						{trend}
+					</span>
+				) : (
+					description
+				)
 			}
-		>
-			<div className="glass-card-cap" />
-			<CardContent className="p-4 sm:p-6">
-				<div className="flex items-center justify-between">
-					<div>
-						<p className="text-sm font-medium sidebar-gradient-text">{title}</p>
-						<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-							<span>{value}</span>
-							<StatCardIcon className="ml-2" icon={Icon} />
-						</div>
-						{description ? (
-							<p className="text-xs text-slate-600 mt-1">{description}</p>
-						) : null}
-						{trend ? (
-							<p className={cn("text-xs mt-1", trendColor)}>{trend}</p>
-						) : null}
-					</div>
-				</div>
-			</CardContent>
-		</Card>
+			icon={icon}
+			dynamicIcon={DynamicIcon}
+			dynamicTone={dynamicTone}
+			className={className}
+			interactive={Boolean(onClick)}
+			onClick={onClick}
+		/>
 	);
 }

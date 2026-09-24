@@ -31,18 +31,7 @@ export const licenseCreateSchema = z.object({
 	compliance: z
 		.enum(["compliant", "non-compliant", "at-risk", "action-required"])
 		.optional(),
-	division: z
-		.enum([
-			"administration",
-			"c-suite",
-			"management",
-			"childwelfare",
-			"behavioralhealth",
-			"clinic",
-			"residential",
-			"cins-fins-snap",
-		])
-		.optional(),
+	division: z.string().min(1, "Division is required"),
 	assignedManagers: z.array(z.string()).optional(),
 	licenseUrl: z.string().url().optional(),
 	fileId: z.string().optional(),
@@ -66,7 +55,7 @@ export const licenseCreateSchema = z.object({
 	licenseOwnerId: z.string().optional(),
 	subDepartment: z.string().optional(),
 	businessUnit: z.string().optional(),
-	department: z.string().optional(), // Alias for division
+	department: z.string().min(1, "Department is required"),
 
 	// Optional - Metadata
 	tags: z.array(z.string()).optional(),

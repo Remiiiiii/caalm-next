@@ -35,8 +35,20 @@ export async function PUT(request: NextRequest) {
 			triggerStageId?: string;
 			enabled?: boolean;
 			fieldMap?: Partial<typeof DEFAULT_CRM_FIELD_MAP>;
+			department?: string;
+			division?: string;
 		};
 		const current = parseCrmConfig(integration.config_json);
+		const department =
+			typeof body.department === "string" ? body.department : current.department;
+		const division =
+			typeof body.division === "string" ? body.division : current.division;
+		if (!department.trim() || !division.trim()) {
+			return NextResponse.json(
+				{ error: "Department and division are required for HubSpot drafts." },
+				{ status: 400 },
+			);
+		}
 		const next = {
 			pipelineId:
 				typeof body.pipelineId === "string"
@@ -51,6 +63,8 @@ export async function PUT(request: NextRequest) {
 				DEFAULT_CRM_FIELD_MAP,
 			),
 			enabled: body.enabled !== false,
+			department: department.trim(),
+			division: division.trim(),
 		};
 
 		await updateCrmIntegration(integration.$id, {

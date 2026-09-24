@@ -103,6 +103,12 @@ export function getOrgExportCatalog(): OrgExportEntry[] {
 		entry("orgUnits", appwriteConfig.orgUnitsCollectionId),
 		entry("costCenters", appwriteConfig.costCentersCollectionId),
 		entry("orgUnitHistory", appwriteConfig.orgUnitHistoryCollectionId),
+		entry("constituents", appwriteConfig.constituentsCollectionId),
+		entry(
+			"constituentRelationships",
+			appwriteConfig.constituentRelationshipsCollectionId,
+		),
+		entry("constituentNotes", appwriteConfig.constituentNotesCollectionId),
 		entry("fundingPursuits", appwriteConfig.fundingPursuitsCollectionId),
 		entry(
 			"contractObligations",

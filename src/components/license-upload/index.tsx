@@ -153,7 +153,8 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 		selectedManagers,
 		setSelectedManagers,
 		fetchDepartmentManagers,
-	} = useManagers(isOpen);
+		assigneeSource,
+	} = useManagers(isOpen, { $id: ownerId, fullName: "You" });
 
 	// Department options derived from the divisions of available managers.
 	const departments = useMemo(
@@ -441,6 +442,9 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 					"licenseType",
 					"licenseExpiryDate",
 					"issuingAuthority",
+					"department",
+					"division",
+					"assignedManagers",
 				];
 			case 3:
 				return [];
@@ -451,6 +455,27 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 
 	// Validate current step before proceeding
 	const validateStep = async (): Promise<boolean> => {
+		if (currentStep === 2) {
+			const nextAssignees =
+				selectedManagers.length > 0
+					? selectedManagers
+					: ownerId
+						? [ownerId]
+						: [];
+			if (nextAssignees.length === 0) {
+				toast({
+					title: "Required Fields Missing",
+					description: "Assigned To is required before continuing.",
+					variant: "destructive",
+				});
+				return false;
+			}
+			if (nextAssignees !== selectedManagers) {
+				setSelectedManagers(nextAssignees);
+			}
+			form.setValue("assignedManagers", nextAssignees);
+		}
+
 		const requiredFields = getRequiredFieldsForStep(currentStep);
 
 		if (requiredFields.length === 0) {
@@ -551,7 +576,8 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 					subDepartment: sanitizeString(values.subDepartment),
 					businessUnit: sanitizeString(values.businessUnit),
 					compliance: values.compliance,
-					assignedManagers: selectedManagers,
+					assignedManagers:
+						selectedManagers.length > 0 ? selectedManagers : [ownerId],
 					autoRenew: values.autoRenew || false,
 					renewalNoticeDays: parseIntegerInput(values.renewalNoticeDays),
 				},
@@ -650,13 +676,20 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 		}
 	}, [isOpen, loadSavedDrafts]);
 
-	// Watch department changes
 	const watchedDepartment = form.watch("department");
+	const watchedDivision = form.watch("division");
 	useEffect(() => {
 		if (watchedDepartment) {
-			fetchDepartmentManagers(watchedDepartment);
+			void fetchDepartmentManagers(watchedDepartment, watchedDivision);
 		}
-	}, [watchedDepartment, fetchDepartmentManagers]);
+	}, [watchedDepartment, watchedDivision, fetchDepartmentManagers]);
+
+	useEffect(() => {
+		form.setValue(
+			"assignedManagers",
+			selectedManagers.length > 0 ? selectedManagers : ownerId ? [ownerId] : [],
+		);
+	}, [form, ownerId, selectedManagers]);
 
 	return (
 		<>
@@ -787,6 +820,7 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 											selectedManagers={selectedManagers}
 											setSelectedManagers={setSelectedManagers}
 											fetchDepartmentManagers={fetchDepartmentManagers}
+											assigneeSource={assigneeSource}
 											aiFilledFields={aiFilledFields}
 											fieldConfidence={fieldConfidence}
 										/>

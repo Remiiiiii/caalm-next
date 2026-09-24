@@ -10,6 +10,8 @@ export type LockSnapshot = {
 	tasks: RoadmapTask[];
 	/** Per-section merge blocker shown on locked tasks */
 	mergeBlockReasons?: Record<string, string>;
+	/** Nonprofit timeline: unlock one task at a time inside an open section. */
+	sequentialTasks?: boolean;
 };
 
 export type StatusTransition = {
@@ -35,6 +37,61 @@ function childrenOf(tasks: RoadmapTask[], parentId: string): RoadmapTask[] {
 	return tasks
 		.filter((t) => t.parentTaskId === parentId)
 		.sort((a, b) => a.orderIndex - b.orderIndex);
+}
+
+/**
+ * NPO batch PRs mark the parent task (e.g. 2.8) complete while nested checklist
+ * rows (2.8.a, 2.8.b) stay locked — sequential unlock skips completed parents.
+ * When the parent is done, treat nested rows as done too (same merge / override).
+ */
+export function reconcileNestedTasksWithParentComplete(
+	tasks: RoadmapTask[],
+): { tasks: RoadmapTask[]; transitions: StatusTransition[] } {
+	const next = tasks.map((t) => ({ ...t }));
+	const transitions: StatusTransition[] = [];
+	const byId = new Map(next.map((t) => [t.$id, t]));
+
+	for (const parent of next) {
+		if (parent.parentTaskId) continue;
+		const kids = childrenOf(next, parent.$id);
+		if (kids.length === 0 || parent.status !== "complete") continue;
+
+		for (const child of kids) {
+			if (child.status === "complete") continue;
+			transitions.push({
+				entityType: "task",
+				entityId: child.$id,
+				fromStatus: child.status,
+				toStatus: "complete",
+			});
+			child.status = "complete";
+			child.completedAt = child.completedAt ?? parent.completedAt;
+			child.completedCommitSha =
+				child.completedCommitSha ?? parent.completedCommitSha;
+			child.$updatedAt = new Date().toISOString();
+			byId.set(child.$id, child);
+		}
+	}
+
+	return { tasks: next, transitions };
+}
+
+/**
+ * Next PR on a sequential timeline: first incomplete child under the first
+ * incomplete parent, or the parent itself when it has no unfinished children.
+ */
+export function firstIncompleteSequentialTask(
+	tasks: RoadmapTask[],
+	sectionId: string,
+): RoadmapTask | undefined {
+	for (const parent of topLevelTasks(tasks, sectionId)) {
+		if (parent.status === "complete") continue;
+		const child = childrenOf(tasks, parent.$id).find(
+			(item) => item.status !== "complete",
+		);
+		return child ?? parent;
+	}
+	return undefined;
 }
 
 function allPriorSectionsComplete(
@@ -75,19 +132,75 @@ export function computeUnlocked(snapshot: LockSnapshot): {
 	transitions: StatusTransition[];
 } {
 	const sections = sortSections(snapshot.sections).map((s) => ({ ...s }));
-	const tasks = snapshot.tasks.map((t) => ({ ...t }));
-	const transitions: StatusTransition[] = [];
+	const reconciled = reconcileNestedTasksWithParentComplete(
+		snapshot.tasks.map((t) => ({ ...t })),
+	);
+	const tasks = reconciled.tasks;
+	const transitions: StatusTransition[] = [...reconciled.transitions];
 
-	const relockAvailable = (task: RoadmapTask) => {
-		if (task.status !== "available") return;
+	const setTaskStatus = (task: RoadmapTask, to: RoadmapTask["status"]) => {
+		if (task.status === to) return;
+		if (task.status === "complete" && to !== "complete") return;
 		transitions.push({
 			entityType: "task",
 			entityId: task.$id,
 			fromStatus: task.status,
-			toStatus: "locked",
+			toStatus: to,
 		});
-		task.status = "locked";
+		task.status = to;
 		task.$updatedAt = new Date().toISOString();
+	};
+
+	const relockAvailable = (task: RoadmapTask) => {
+		if (task.status !== "available") return;
+		setTaskStatus(task, "locked");
+	};
+
+	const unlockIfLocked = (task: RoadmapTask) => {
+		if (task.status === "locked") {
+			setTaskStatus(task, "available");
+		}
+	};
+
+	/** Sequential catalogs: only the next incomplete PR is available. */
+	const applySequentialUnlock = (sectionId: string) => {
+		for (const parent of topLevelTasks(tasks, sectionId)) {
+			const kids = childrenOf(tasks, parent.$id);
+			if (
+				kids.length > 0 &&
+				kids.every((child) => child.status === "complete") &&
+				parent.status !== "complete"
+			) {
+				setTaskStatus(parent, "complete");
+				parent.completedAt = parent.completedAt ?? new Date().toISOString();
+			}
+		}
+
+		let openedParent = false;
+		for (const parent of topLevelTasks(tasks, sectionId)) {
+			if (parent.status === "complete") continue;
+			if (openedParent) {
+				relockAvailable(parent);
+				for (const child of childrenOf(tasks, parent.$id)) {
+					relockAvailable(child);
+				}
+				continue;
+			}
+			openedParent = true;
+			unlockIfLocked(parent);
+			const kids = childrenOf(tasks, parent.$id);
+			if (kids.length === 0) continue;
+			let openedChild = false;
+			for (const child of kids) {
+				if (child.status === "complete") continue;
+				if (openedChild) {
+					relockAvailable(child);
+					continue;
+				}
+				openedChild = true;
+				unlockIfLocked(child);
+			}
+		}
 	};
 
 	const bumpSection = (section: RoadmapSection, to: RoadmapEntityStatus) => {
@@ -133,9 +246,24 @@ export function computeUnlocked(snapshot: LockSnapshot): {
 			bumpSection(section, "available");
 		}
 
-		// Tasks stay locked until the section's catalog PRs all merge.
-		for (const task of sectionTasks) {
-			relockAvailable(task);
+		if (snapshot.sequentialTasks) {
+			applySequentialUnlock(section.$id);
+			const derivedAfter = deriveSectionStatus(
+				section,
+				tasks.filter((t) => t.sectionId === section.$id),
+				priorComplete,
+			);
+			if (section.status !== derivedAfter) {
+				bumpSection(section, derivedAfter);
+			}
+			if (section.status === "complete") {
+				continue;
+			}
+		} else {
+			// CLM: tasks stay locked until the section's catalog PRs all merge.
+			for (const task of sectionTasks) {
+				relockAvailable(task);
+			}
 		}
 
 		openedIncompleteSection = true;
@@ -204,6 +332,20 @@ export function lockReasonForTask(
 		return prior
 			? `Finish section ${prior.sectionNumber} (${prior.title}) first`
 			: "Finish prior sections first";
+	}
+
+	if (snapshot.sequentialTasks) {
+		const current = firstIncompleteSequentialTask(
+			snapshot.tasks,
+			task.sectionId,
+		);
+		if (current && current.$id !== task.$id) {
+			return `Finish task ${current.taskCode} (${current.title}) first`;
+		}
+		if (task.prNumber != null) {
+			return `Waiting for PR #${task.prNumber} to merge with green tests`;
+		}
+		return `Open a PR titled NPO ${task.taskCode} … on branch cursor/nonprofit/${section.sectionNumber}-${task.taskCode}-slug`;
 	}
 
 	return (

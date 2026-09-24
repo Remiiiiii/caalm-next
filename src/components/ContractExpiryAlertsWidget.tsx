@@ -12,7 +12,8 @@ import {
 	type ContractExpiryAlertsWidgetProps,
 	FILTER_VALUES,
 	getDaysUntilExpiry,
-	getFilterRange,
+	isWidgetContractExpired,
+	matchesWidgetExpiryFilter,
 } from "./contract-expiry-alerts/types";
 
 const ContractExpiryAlertsWidget = ({
@@ -42,7 +43,6 @@ const ContractExpiryAlertsWidget = ({
 	const {
 		contracts: hookContracts,
 		isLoading: hookLoading,
-		error: hookError,
 	} = useManagerContracts();
 
 	// Extract contracts from API response (wrapped in { success: true, data: [...] })
@@ -50,10 +50,25 @@ const ContractExpiryAlertsWidget = ({
 		? allContractsData
 		: allContractsData?.data || [];
 
-	// Use props first, then all contracts, then manager contracts
-	const contracts = propsContracts || allContracts || hookContracts;
-	const isLoading = propsContracts ? false : allContractsLoading || hookLoading;
-	const error = propsContracts ? null : allContractsError || hookError;
+	// Empty [] from a parent still-loading fetch is truthy — only trust explicit props.
+	const hasPropContracts = propsContracts !== undefined;
+	const contracts = hasPropContracts
+		? propsContracts
+		: allContractsError
+			? hookContracts
+			: allContracts;
+	const isLoading = hasPropContracts
+		? false
+		: allContractsError
+			? hookLoading
+			: allContractsLoading;
+	const error = hasPropContracts
+		? null
+		: allContractsError &&
+				!hookLoading &&
+				(!hookContracts || hookContracts.length === 0)
+			? allContractsError
+			: null;
 
 	// Trigger update of expired contracts when component mounts
 	useEffect(() => {
@@ -118,174 +133,29 @@ const ContractExpiryAlertsWidget = ({
 		enabled: alarmEnabled,
 	});
 
-	// Filter contracts to show those expiring within the selected filter period
-	// Implement infinite scroll - show all filtered contracts
+	// Same rules as /contracts Expiring / Expired tabs and metrics buckets
 	const filteredContracts = useMemo(() => {
-		if (!contracts || contracts.length === 0) return [];
+		if (!contractsArray.length) return [];
 
-		const filtered = contracts
-			.filter((contract: Contract) => {
-				// Must have either contractExpiryDate or daysUntilExpiry
-				if (
-					!contract.contractExpiryDate &&
-					contract.daysUntilExpiry === undefined
-				) {
-					return false;
-				}
-
-				// Calculate days until expiry once
-				const daysUntilExpiry = getDaysUntilExpiry(contract);
-
-				// Check if contract is expired - ONLY use database flag
-				// Ignore date calculation to avoid inconsistencies with database state
-				const isExpired = contract.isExpired === true;
-
-				// Special filter value EXPIRED means "Expired" filter is selected
-				if (filterDays === FILTER_VALUES.EXPIRED) {
-					// Only show expired contracts
-					return isExpired;
-				}
-
-				// For all other filter values, exclude expired contracts
-				if (isExpired) {
-					return false;
-				}
-
-				// Get filter range for the selected period
-				const range = getFilterRange(filterDays);
-				if (!range) return false;
-
-				return daysUntilExpiry >= range.min && daysUntilExpiry <= range.max;
-			})
+		return contractsArray
+			.filter((contract: Contract) =>
+				matchesWidgetExpiryFilter(contract, filterDays),
+			)
 			.sort((a: Contract, b: Contract) => {
-				const daysA = getDaysUntilExpiry(a);
-				const daysB = getDaysUntilExpiry(b);
-				return daysA - daysB; // Sort by urgency (least days first)
+				return getDaysUntilExpiry(a) - getDaysUntilExpiry(b);
 			});
+	}, [contractsArray, filterDays]);
 
-		// Debug logging in development
-		if (process.env.NODE_ENV === "development") {
-			const expiredInList = filtered.filter((c: Contract) => {
-				const days = getDaysUntilExpiry(c);
-				const isExpiredByDate = days < 0;
-				const isExplicitlyExpired = c.isExpired === true;
-				return isExpiredByDate || isExplicitlyExpired;
-			});
-			const expiringInList = filtered.filter((c: Contract) => {
-				const days = getDaysUntilExpiry(c);
-				const isExpiredByDate = days < 0;
-				const isExplicitlyExpired = c.isExpired === true;
-				const isExpired = isExpiredByDate || isExplicitlyExpired;
-				return !isExpired && days >= 0 && days <= filterDays;
-			});
-			console.log("[ContractExpiryAlertsWidget] Filtered contracts:", {
-				total: contracts.length,
-				filtered: filtered.length,
-				expiredInFiltered: expiredInList.length,
-				expiringInFiltered: expiringInList.length,
-				filterDays,
-				allContracts: contracts.map((c: Contract) => ({
-					id: c.$id,
-					name: c.contractName,
-					days: getDaysUntilExpiry(c),
-					isExpired: c.isExpired,
-					isExpiredByDate: getDaysUntilExpiry(c) < 0,
-					isInFilterRange:
-						getDaysUntilExpiry(c) >= 0 && getDaysUntilExpiry(c) <= filterDays,
-				})),
-				filteredContracts: filtered.map((c: Contract) => ({
-					id: c.$id,
-					name: c.contractName,
-					days: getDaysUntilExpiry(c),
-					isExpired: c.isExpired,
-				})),
-			});
-		}
-
-		return filtered;
-	}, [contracts, filterDays]);
-
-	// Calculate expired count from ALL contracts
-	// ONLY use database isExpired flag as the source of truth
 	const expiredCountFromAll = useMemo(() => {
-		if (!contracts || contracts.length === 0) return 0;
-		return contracts.filter((contract: Contract) => {
-			// Only count contracts explicitly marked as expired in the database
-			return contract.isExpired === true;
-		}).length;
-	}, [contracts]);
+		return contractsArray.filter(isWidgetContractExpired).length;
+	}, [contractsArray]);
 
-	// Calculate expiring count from ALL contracts
-	// This shows contracts expiring within the selected filter period
-	// Excludes contracts that have already expired
 	const expiringCountFromFiltered = useMemo(() => {
-		if (!contracts || contracts.length === 0) return 0;
-
-		const expiringContracts = contracts.filter((contract: Contract) => {
-			// Must have expiry date or daysUntilExpiry
-			if (
-				!contract.contractExpiryDate &&
-				contract.daysUntilExpiry === undefined
-			) {
-				return false;
-			}
-
-			// Calculate days until expiry
-			const daysUntilExpiry = getDaysUntilExpiry(contract);
-
-			// Skip contracts with invalid expiry dates (Infinity means no valid date)
-			if (daysUntilExpiry === Infinity || daysUntilExpiry === -Infinity) {
-				return false;
-			}
-
-			// Check if contract is expired - ONLY use database flag
-			// Ignore date calculation to avoid inconsistencies with database state
-			const isExpired = contract.isExpired === true;
-
-			// Skip expired contracts
-			if (isExpired) {
-				return false;
-			}
-
-			// Get filter range for the selected period
-			const range = getFilterRange(filterDays);
-			if (!range) return false;
-
-			return daysUntilExpiry >= range.min && daysUntilExpiry <= range.max;
-		});
-
-		// Debug logging in development
-		if (process.env.NODE_ENV === "development") {
-			console.log("[ContractExpiryAlertsWidget] Expiring count calculation:", {
-				totalContracts: contracts.length,
-				filterDays,
-				expiringCount: expiringContracts.length,
-				contracts: contracts.map((c: Contract) => {
-					const days = getDaysUntilExpiry(c);
-					const isExpiredByDate = days < 0;
-					const isExpired = c.isExpired === true;
-					const hasValidDate = days !== Infinity && days !== -Infinity;
-					const isInRange = hasValidDate && days >= 0 && days <= filterDays;
-					const willBeIncluded = hasValidDate && !isExpired && isInRange;
-
-					return {
-						id: c.$id,
-						name: c.contractName,
-						contractExpiryDate: c.contractExpiryDate,
-						daysUntilExpiry: days,
-						isExpiredDB: c.isExpired,
-						isExpiredByDate,
-						isExpired,
-						hasValidDate,
-						isInRange,
-						willBeIncluded,
-					};
-				}),
-			});
-		}
-
-		return expiringContracts.length;
-	}, [contracts, filterDays]);
+		if (filterDays === FILTER_VALUES.EXPIRED) return 0;
+		return contractsArray.filter((contract: Contract) =>
+			matchesWidgetExpiryFilter(contract, filterDays),
+		).length;
+	}, [contractsArray, filterDays]);
 
 	// Calculate urgency stats for filtered contracts
 	const getUrgencyStats = useCallback(() => {
@@ -297,20 +167,15 @@ const ContractExpiryAlertsWidget = ({
 		};
 
 		filteredContracts.forEach((contract: Contract) => {
-			// Check if contract is expired - prioritize date calculation
-			// Contracts expiring today (days = 0) should be counted as expiring, not expired
 			const days = getDaysUntilExpiry(contract);
-			const isContractExpired = days < 0; // Only truly expired if days < 0
-			const isExplicitlyExpired = contract.isExpired === true;
-			const isExpired = isContractExpired || isExplicitlyExpired;
-
-			if (isExpired) {
+			if (isWidgetContractExpired(contract)) {
 				stats.expired++;
+			} else if (days <= 7) {
+				stats.critical++;
+			} else if (days <= 30) {
+				stats.warning++;
 			} else {
-				// Include contracts expiring today (days = 0) in the urgency stats
-				if (days <= 7) stats.critical++;
-				else if (days <= 30) stats.warning++;
-				else stats.attention++;
+				stats.attention++;
 			}
 		});
 

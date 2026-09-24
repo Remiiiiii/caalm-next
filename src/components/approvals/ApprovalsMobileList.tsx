@@ -145,7 +145,7 @@ export default function ApprovalsMobileList({
 											item.status === "action-required") && (
 											<Button
 												type="button"
-												className="primary-btn h-10 min-w-[5.5rem] px-4 cursor-pointer"
+												className="primary-btn min-w-[5.5rem] px-4 cursor-pointer"
 												disabled={busyId === item.id}
 												onClick={() => onQuickApprove(item)}
 											>
