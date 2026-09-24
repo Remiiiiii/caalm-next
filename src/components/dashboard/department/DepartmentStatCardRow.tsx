@@ -4,12 +4,15 @@ import {
 	AlertCircle,
 	CheckCircle2,
 	ClipboardList,
+	Clock,
 	FileText,
 } from "lucide-react";
 import Link from "next/link";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+	complianceMetricTone,
+	MetricStatCard,
+} from "@/components/ui/metric-stat-card";
 import { StatCardSkeleton } from "@/components/ui/skeletons";
-import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import type { DepartmentDashboardStats } from "@/lib/dashboard/department-dashboard.types";
 
 interface DepartmentStatCardRowProps {
@@ -33,6 +36,7 @@ export function DepartmentStatCardRow({
 		);
 	}
 
+	const complianceTone = complianceMetricTone(stats.complianceRate);
 	const cards = [
 		{
 			title: "Department contracts",
@@ -47,6 +51,10 @@ export function DepartmentStatCardRow({
 			description: "Within the next 90 days",
 			icon: AlertCircle,
 			href: "/my-contracts",
+			iconTone: stats.expiringSoon > 0 ? ("warning" as const) : undefined,
+			dynamicIcon: stats.expiringSoon > 0 ? Clock : undefined,
+			dynamicTone: "warning" as const,
+			valueTone: stats.expiringSoon > 0 ? ("warning" as const) : undefined,
 		},
 		{
 			title: "Pending approvals",
@@ -54,6 +62,8 @@ export function DepartmentStatCardRow({
 			description: "Calendar and contract reviews",
 			icon: ClipboardList,
 			href: "/contracts/approvals",
+			dynamicIcon: stats.pendingApprovals > 0 ? Clock : undefined,
+			dynamicTone: "warning" as const,
 		},
 		{
 			title: "Compliance health",
@@ -63,6 +73,15 @@ export function DepartmentStatCardRow({
 				: "Requires division assignment",
 			icon: CheckCircle2,
 			href: division ? `/analytics/${division}` : "/analytics",
+			iconTone: complianceTone,
+			dynamicIcon:
+				stats.complianceRate !== null
+					? complianceTone === "danger"
+						? AlertCircle
+						: CheckCircle2
+					: undefined,
+			dynamicTone: complianceTone,
+			valueTone: complianceTone,
 		},
 	];
 
@@ -70,25 +89,17 @@ export function DepartmentStatCardRow({
 		<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
 			{cards.map((card) => (
 				<Link key={card.title} href={card.href} className="block min-w-0">
-					<Card className="glass-card interactive-glass-card h-full cursor-pointer focus-visible:ring-2 focus-visible:ring-[#0f5384]/40">
-						<div className="glass-card-cap" />
-						<CardContent className="p-4 sm:p-6">
-							<div className="flex items-center justify-between">
-								<div className="min-w-0">
-									<p className="text-sm font-medium sidebar-gradient-text">
-										{card.title}
-									</p>
-									<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-										<span>{card.value}</span>
-										<StatCardIcon className="ml-2" icon={card.icon} />
-									</div>
-									<p className="text-xs text-slate-600 mt-1">
-										{card.description}
-									</p>
-								</div>
-							</div>
-						</CardContent>
-					</Card>
+					<MetricStatCard
+						interactive
+						title={card.title}
+						value={card.value}
+						description={card.description}
+						icon={card.icon}
+						iconTone={card.iconTone}
+						dynamicIcon={card.dynamicIcon}
+						dynamicTone={card.dynamicTone}
+						valueTone={card.valueTone}
+					/>
 				</Link>
 			))}
 		</div>

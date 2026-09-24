@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { writeRowWithSchemaDriftRecovery } from "@/lib/appwrite/schemaDriftRecovery";
 import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
+import { logAuditEvent } from "@/lib/services/audit-logger";
 import { excludeSoftDeletedQuery, softDeleteFields } from "@/lib/soft-delete";
 import type { RenewalRecord } from "@/types/licenses";
 
@@ -181,6 +182,22 @@ export class LicenseService {
 
 		// Map legacy field names to database field names
 		const mappedData = LicenseService.mapFieldsToDatabase(formData);
+		if (!mappedData.department || !mappedData.division) {
+			throw new Error(
+				"Department and division are required before creating a license.",
+			);
+		}
+
+		const { resolveAssignedManagerIds } = await import(
+			"@/lib/assignments/resolve-default-assignee"
+		);
+		mappedData.assignedManagers = await resolveAssignedManagerIds({
+			assignedManagerIds: mappedData.assignedManagers,
+			department: mappedData.department,
+			division: mappedData.division,
+			orgId: defaultOrg.orgId,
+			fallbackUserId: ownerId,
+		});
 
 		// Use database field names (licenseExpiryDate, issueDate, etc.)
 		const licenseExpiryDate = mappedData.licenseExpiryDate
@@ -239,7 +256,8 @@ export class LicenseService {
 			renewalDate,
 			daysUntilExpiry,
 			compliance: mappedData.compliance,
-			division: mappedData.division || mappedData.department,
+			division: mappedData.division,
+			department: mappedData.department,
 			assignedManagers: mappedData.assignedManagers || [],
 			licenseUrl: mappedData.licenseUrl,
 			fileId: mappedData.fileId,
@@ -287,6 +305,24 @@ export class LicenseService {
 			data: licenseDocument,
 		});
 
+		const created = license as { $id?: string; licenseName?: string };
+		void logAuditEvent({
+			event_id: `license_create_${created.$id || Date.now()}`,
+			event_title: `License created: ${requiredFields.licenseName}`,
+			action: "create",
+			source: "caalm",
+			user_id: ownerId,
+			user_name: "User",
+			user_email: "",
+			orgId: defaultOrg.orgId,
+			status: "success",
+			module: "licenses",
+			target_type: "license",
+			target_id: created.$id,
+			target_label: requiredFields.licenseName,
+			summary: `License ${requiredFields.licenseName} created`,
+		});
+
 		return license;
 	}
 
@@ -313,7 +349,11 @@ export class LicenseService {
 	/**
 	 * Update license
 	 */
-	static async updateLicense(licenseId: string, formData: any): Promise<any> {
+	static async updateLicense(
+		licenseId: string,
+		formData: any,
+		options?: { skipAudit?: boolean },
+	): Promise<any> {
 		const { tablesDB } = await createAdminClient();
 
 		if (!appwriteConfig.databaseId || !appwriteConfig.licensesCollectionId) {
@@ -451,8 +491,26 @@ export class LicenseService {
 			data: updateData,
 		});
 
-		// Map database field names back to code field names (with aliases)
-		return LicenseService.mapFieldsFromDatabase(license);
+		const mapped = LicenseService.mapFieldsFromDatabase(license);
+		if (!options?.skipAudit) {
+			void logAuditEvent({
+				event_id: `license_update_${licenseId}_${Date.now()}`,
+				event_title: `License updated: ${mapped.licenseName || licenseId}`,
+				action: "update",
+				source: "caalm",
+				user_id: mapped.createdBy || mapped.licenseOwnerId || "system",
+				user_name: "User",
+				user_email: "",
+				orgId: mapped.orgId || "default_organization",
+				status: "success",
+				module: "licenses",
+				target_type: "license",
+				target_id: licenseId,
+				target_label: mapped.licenseName || licenseId,
+				summary: `License ${mapped.licenseName || licenseId} updated`,
+			});
+		}
+		return mapped;
 	}
 
 	/**
@@ -509,6 +567,23 @@ export class LicenseService {
 				notifyError,
 			);
 		}
+
+		void logAuditEvent({
+			event_id: `license_delete_${licenseId}`,
+			event_title: `License deleted: ${mapped.licenseName || existing?.licenseName || licenseId}`,
+			action: "delete",
+			source: "caalm",
+			user_id: deletedBy || "system",
+			user_name: options?.deletedByName || "User",
+			user_email: "",
+			orgId: mapped.orgId || existing?.orgId || "default_organization",
+			status: "success",
+			module: "licenses",
+			target_type: "license",
+			target_id: licenseId,
+			target_label: mapped.licenseName || existing?.licenseName || licenseId,
+			summary: `License ${mapped.licenseName || existing?.licenseName || licenseId} deleted`,
+		});
 
 		return mapped;
 	}
@@ -727,9 +802,30 @@ export class LicenseService {
 			updateData.cost = renewalData.cost;
 		}
 
-		const updated = await LicenseService.updateLicense(licenseId, {
-			...license,
-			...updateData,
+		const updated = await LicenseService.updateLicense(
+			licenseId,
+			{
+				...license,
+				...updateData,
+			},
+			{ skipAudit: true },
+		);
+
+		void logAuditEvent({
+			event_id: `license_renew_${licenseId}_${Date.now()}`,
+			event_title: `License renewed: ${updated.licenseName || license.licenseName || licenseId}`,
+			action: "update",
+			source: "caalm",
+			user_id: renewalData.renewedBy || "system",
+			user_name: "User",
+			user_email: "",
+			orgId: updated.orgId || license.orgId || "default_organization",
+			status: "success",
+			module: "licenses",
+			target_type: "license",
+			target_id: licenseId,
+			target_label: updated.licenseName || license.licenseName || licenseId,
+			summary: `License ${updated.licenseName || license.licenseName || licenseId} renewed`,
 		});
 
 		if (wasExpired) {

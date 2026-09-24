@@ -6,6 +6,7 @@ import {
 	useCallback,
 	useContext,
 	useEffect,
+	useLayoutEffect,
 	useState,
 } from "react";
 import { DEFAULT_ORG_TIMEZONE, resolveOrgTimezone } from "@/lib/timezone";
@@ -39,7 +40,7 @@ const OrganizationProvider = ({ children }: { children: ReactNode }) => {
 		try {
 			const res = await fetch(
 				`/api/organization/default?orgId=${encodeURIComponent(id)}`,
-				{ cache: "no-store" },
+				{ cache: "no-store", signal: AbortSignal.timeout(8000) },
 			);
 			if (res.ok) {
 				const data = await res.json();
@@ -51,6 +52,16 @@ const OrganizationProvider = ({ children }: { children: ReactNode }) => {
 			setTimezone(DEFAULT_ORG_TIMEZONE);
 		} finally {
 			setTimezoneLoading(false);
+		}
+	}, []);
+
+	// Read the saved org before paint. Permissions cache is keyed by orgId, so
+	// a null org on first effect would miss the cache and stall the sidebar.
+	useLayoutEffect(() => {
+		const savedOrgId = localStorage.getItem("caalm_org_id");
+		if (savedOrgId) {
+			setOrgId(savedOrgId);
+			setLoading(false);
 		}
 	}, []);
 
@@ -70,6 +81,7 @@ const OrganizationProvider = ({ children }: { children: ReactNode }) => {
 			try {
 				const res = await fetch("/api/organization/default", {
 					cache: "no-store",
+					signal: AbortSignal.timeout(8000),
 				});
 				if (res.ok) {
 					const data = await res.json();

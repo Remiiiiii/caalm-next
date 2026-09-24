@@ -13,7 +13,7 @@ import { client } from "@/lib/appwrite/client";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { fetcher } from "@/lib/swr-config";
 
-const ROADMAP_OVERVIEW_KEY = "/api/roadmap/overview";
+const DEFAULT_ROADMAP_OVERVIEW_KEY = "/api/roadmap/overview";
 const REFRESH_DEBOUNCE_MS = 250;
 
 function isRoadmapRealtimeAvailable(): boolean {
@@ -37,18 +37,19 @@ function roadmapTableChannel(tableId: string): string {
 		.toString();
 }
 
-export function useRoadmapRealtime() {
+export function useRoadmapRealtime(
+	overviewPath = DEFAULT_ROADMAP_OVERVIEW_KEY,
+) {
 	const { mutate } = useSWRConfig();
 	const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const realtimeEnabled = isRoadmapRealtimeAvailable();
+	const freshUrl = overviewPath.includes("?")
+		? `${overviewPath}&fresh=1`
+		: `${overviewPath}?fresh=1`;
 
 	const refreshRoadmap = useCallback(async () => {
 		// Overview has a short server cache — bypass with ?fresh=1
-		await mutate(
-			ROADMAP_OVERVIEW_KEY,
-			() => fetcher(`${ROADMAP_OVERVIEW_KEY}?fresh=1`),
-			{ revalidate: false },
-		);
+		await mutate(overviewPath, () => fetcher(freshUrl), { revalidate: false });
 
 		// Revalidate expanded section detail keys (tasks / PRs)
 		await mutate(
@@ -57,7 +58,7 @@ export function useRoadmapRealtime() {
 			undefined,
 			{ revalidate: true },
 		);
-	}, [mutate]);
+	}, [mutate, overviewPath, freshUrl]);
 
 	const scheduleRefresh = useCallback(() => {
 		if (debounceRef.current) clearTimeout(debounceRef.current);

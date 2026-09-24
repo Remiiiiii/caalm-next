@@ -121,6 +121,7 @@ export function AuditLogFiltersBar({
 								<SelectItem value="sync_delete">Sync delete</SelectItem>
 								<SelectItem value="restore">Restore</SelectItem>
 								<SelectItem value="approval_decided">Approval</SelectItem>
+								<SelectItem value="view_pii">PII view</SelectItem>
 							</SelectContent>
 						</Select>
 					</FieldBox>

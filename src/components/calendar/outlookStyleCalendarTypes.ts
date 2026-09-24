@@ -23,7 +23,8 @@ export type LocalCalendarEventType =
 	| "deadline discussion"
 	| "meeting"
 	| "internal review"
-	| "audit";
+	| "audit"
+	| "volunteer_shift";
 
 export interface LocalCalendarEvent {
 	$id?: string;
@@ -50,6 +51,7 @@ export interface LocalCalendarEvent {
 	pendingApprovalId?: string | null;
 	overrides?: PermissionOverrideRecord[];
 	source?: CalendarSource;
+	campaignId?: string;
 }
 
 export interface EventReminderConfigData {
@@ -71,6 +73,7 @@ export interface NewEventForm {
 	location: string;
 	attachments?: EventAttachment[];
 	sensitivityLevel: CalendarSensitivity;
+	campaignId?: string;
 	reminders?: EventReminderConfigData[];
 }
 

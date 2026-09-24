@@ -19,7 +19,8 @@ import {
 	Trash2,
 	Users,
 } from "lucide-react";
-import React from "react";
+import React, { useState } from "react";
+import { EventRegistrationsPanel } from "@/components/calendar/EventRegistrationsPanel";
 import {
 	getEventTypeConfig,
 	getEventTypeLabel,
@@ -65,6 +66,7 @@ export interface EventReviewDialogProps {
 	) => void;
 	onEditEvent: () => void;
 	onDeleteEvent: () => void;
+	canManageEventRegistrations?: boolean;
 }
 
 export function EventReviewDialog({
@@ -83,7 +85,13 @@ export function EventReviewDialog({
 	onOpenAiPanel,
 	onEditEvent,
 	onDeleteEvent,
+	canManageEventRegistrations = false,
 }: EventReviewDialogProps) {
+	const [detailTab, setDetailTab] = useState<"details" | "registrations">(
+		"details",
+	);
+	const eventId = selectedEvent?.$id || selectedEvent?.id || "";
+
 	return (
 		<Dialog open={isOpen} onOpenChange={onOpenChange}>
 			<DialogContent className="max-w-[650px] p-0 max-h-[90vh] flex flex-col overflow-hidden">
@@ -127,7 +135,42 @@ export function EventReviewDialog({
 
 				{selectedEvent && (
 					<>
+						{canManageEventRegistrations && !isHolidayEvent && eventId ? (
+							<div className="px-6 pt-4 flex gap-2 border-b border-slate-200 bg-slate-50">
+								<button
+									type="button"
+									className={cn(
+										"px-3 py-2 text-sm font-medium rounded-t-md transition-all duration-200",
+										detailTab === "details"
+											? "bg-white text-[#0f5384] border border-slate-200 border-b-white -mb-px"
+											: "text-slate-600 hover:text-slate-700",
+									)}
+									onClick={() => setDetailTab("details")}
+								>
+									Details
+								</button>
+								<button
+									type="button"
+									className={cn(
+										"px-3 py-2 text-sm font-medium rounded-t-md transition-all duration-200",
+										detailTab === "registrations"
+											? "bg-white text-[#0f5384] border border-slate-200 border-b-white -mb-px"
+											: "text-slate-600 hover:text-slate-700",
+									)}
+									onClick={() => setDetailTab("registrations")}
+								>
+									Registrations
+								</button>
+							</div>
+						) : null}
 						<div className="flex-1 overflow-y-auto">
+							{detailTab === "registrations" &&
+							canManageEventRegistrations &&
+							eventId ? (
+								<div className="p-6 bg-slate-50">
+									<EventRegistrationsPanel eventId={eventId} />
+								</div>
+							) : (
 							<div className="p-6 space-y-6">
 								{/* Event Details Section */}
 								<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
@@ -706,6 +749,7 @@ export function EventReviewDialog({
 									</div>
 								</div>
 							</div>
+							)}
 						</div>
 
 						{/* Static Footer */}
