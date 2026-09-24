@@ -49,11 +49,17 @@ function parseFieldsPayload(
 
 export function rowToEnvelope(row: EnvelopeRow): EsignEnvelope {
 	const payload = parseFieldsPayload(row.fields);
+	const purposeRaw = row.purpose;
+	const purpose =
+		purposeRaw === "acknowledgment" || purposeRaw === "execution"
+			? purposeRaw
+			: undefined;
 	return {
 		$id: row.$id,
 		orgId: String(row.orgId || ""),
 		resourceType: (row.resourceType as EsignResourceType) || "contract",
 		resourceId: String(row.resourceId || ""),
+		purpose,
 		status: (row.status as EsignEnvelopeStatus) || "draft",
 		provider: "caalm",
 		documentFileId: String(row.documentFileId || ""),
@@ -85,6 +91,7 @@ function envelopeToData(
 	if (envelope.resourceType !== undefined)
 		data.resourceType = envelope.resourceType;
 	if (envelope.resourceId !== undefined) data.resourceId = envelope.resourceId;
+	if (envelope.purpose !== undefined) data.purpose = envelope.purpose;
 	if (envelope.status !== undefined) data.status = envelope.status;
 	if (envelope.provider !== undefined) data.provider = envelope.provider;
 	if (envelope.documentFileId !== undefined) {
