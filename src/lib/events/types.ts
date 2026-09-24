@@ -28,6 +28,9 @@ export type EventRegistration = {
 	amountCents: number;
 	checkedInAt?: string;
 	tokenUsedAt?: string;
+	registrationTransactionId?: string;
+	giftId?: string;
+	confirmationEmailSentAt?: string;
 	$createdAt: string;
 	$updatedAt: string;
 };

@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, Plus, Ticket } from "lucide-react";
+import { Download, Loader2, Plus, Ticket } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -63,6 +63,9 @@ export function EventRegistrationsPanel({ eventId }: Props) {
 	const [guestFirstName, setGuestFirstName] = useState("");
 	const [guestLastName, setGuestLastName] = useState("");
 	const [status, setStatus] = useState<EventRegistrationStatus>("draft");
+	const [constituentId, setConstituentId] = useState("");
+	const [donationAmount, setDonationAmount] = useState("");
+	const [paymentSucceeded, setPaymentSucceeded] = useState(false);
 	const [saving, setSaving] = useState(false);
 
 	const load = useCallback(async () => {
@@ -114,9 +117,14 @@ export function EventRegistrationsPanel({ eventId }: Props) {
 					body: JSON.stringify({
 						ticketTypeId,
 						status,
+						constituentId: constituentId.trim() || undefined,
 						guestEmail: guestEmail.trim() || undefined,
 						guestFirstName: guestFirstName.trim() || undefined,
 						guestLastName: guestLastName.trim() || undefined,
+						donationAmount: donationAmount.trim()
+							? Number(donationAmount)
+							: undefined,
+						paymentSucceeded: paymentSucceeded || undefined,
 					}),
 				},
 			);
@@ -198,6 +206,35 @@ export function EventRegistrationsPanel({ eventId }: Props) {
 						/>
 					</div>
 					<div className="space-y-2">
+						<Label>Constituent ID (required for donations)</Label>
+						<Input
+							className="border-[0.25px] border-slate-300"
+							value={constituentId}
+							onChange={(e) => setConstituentId(e.target.value)}
+							placeholder="Constituent record ID"
+						/>
+					</div>
+					<div className="space-y-2">
+						<Label>Donation amount (USD)</Label>
+						<Input
+							className="border-[0.25px] border-slate-300"
+							value={donationAmount}
+							onChange={(e) => setDonationAmount(e.target.value)}
+							placeholder="0"
+							inputMode="decimal"
+						/>
+					</div>
+					<div className="space-y-2">
+						<Label className="flex items-center gap-2">
+							<input
+								type="checkbox"
+								checked={paymentSucceeded}
+								onChange={(e) => setPaymentSucceeded(e.target.checked)}
+							/>
+							Payment succeeded
+						</Label>
+					</div>
+					<div className="space-y-2">
 						<Label>Guest name</Label>
 						<div className="flex gap-2">
 							<Input
@@ -225,6 +262,19 @@ export function EventRegistrationsPanel({ eventId }: Props) {
 						Add registration
 					</Button>
 				</div>
+			</div>
+
+			<div className="flex justify-end mb-3">
+				<Button
+					variant="outline"
+					className="px-3 sm:px-4"
+					onClick={() => {
+						window.location.href = `/api/events/${encodeURIComponent(eventId)}/registrations/export`;
+					}}
+				>
+					<Download className="h-4 w-4" />
+					Export roster CSV
+				</Button>
 			</div>
 
 			<div className="space-y-3">

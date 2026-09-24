@@ -50,6 +50,13 @@ function mapRow(row: Record<string, unknown>): EventRegistration {
 		amountCents: Number(row.amountCents ?? 0),
 		checkedInAt: row.checkedInAt ? String(row.checkedInAt) : undefined,
 		tokenUsedAt: row.tokenUsedAt ? String(row.tokenUsedAt) : undefined,
+		registrationTransactionId: row.registrationTransactionId
+			? String(row.registrationTransactionId)
+			: undefined,
+		giftId: row.giftId ? String(row.giftId) : undefined,
+		confirmationEmailSentAt: row.confirmationEmailSentAt
+			? String(row.confirmationEmailSentAt)
+			: undefined,
 		$createdAt: String(row.$createdAt || ""),
 		$updatedAt: String(row.$updatedAt || ""),
 	};
@@ -132,6 +139,8 @@ export async function createEventRegistration(input: {
 	guestFirstName?: string;
 	guestLastName?: string;
 	amountCents?: number;
+	registrationTransactionId?: string;
+	giftId?: string;
 }): Promise<EventRegistration> {
 	const status: EventRegistrationStatus = input.status ?? "draft";
 	const ticketType = await getTicketTypeById(input.orgId, input.ticketTypeId);
@@ -168,7 +177,40 @@ export async function createEventRegistration(input: {
 			guestFirstName: input.guestFirstName,
 			guestLastName: input.guestLastName,
 			amountCents: input.amountCents ?? ticketType.amountCents,
+			registrationTransactionId: input.registrationTransactionId,
+			giftId: input.giftId,
 		},
+	});
+	return mapRow(row as unknown as Record<string, unknown>);
+}
+
+export async function deleteRegistration(
+	orgId: string,
+	registrationId: string,
+): Promise<void> {
+	const existing = await getRegistrationById(orgId, registrationId);
+	if (!existing) return;
+	const { tablesDB } = await createAdminClient();
+	await tablesDB.deleteRow({
+		databaseId: dbId(),
+		tableId: tableId(),
+		rowId: registrationId,
+	});
+}
+
+export async function patchRegistration(
+	orgId: string,
+	registrationId: string,
+	data: Record<string, unknown>,
+): Promise<EventRegistration> {
+	const existing = await getRegistrationById(orgId, registrationId);
+	if (!existing) throw new Error("Registration not found");
+	const { tablesDB } = await createAdminClient();
+	const row = await tablesDB.updateRow({
+		databaseId: dbId(),
+		tableId: tableId(),
+		rowId: registrationId,
+		data,
 	});
 	return mapRow(row as unknown as Record<string, unknown>);
 }

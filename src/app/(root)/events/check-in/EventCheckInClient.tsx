@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
 type CheckInSuccess = {
-	displayName: string;
+	firstName: string;
 	ticketTypeName: string;
 };
 
@@ -45,7 +45,7 @@ export function EventCheckInClient() {
 				throw new Error(body.error || "Check-in failed");
 			}
 			setLastSuccess({
-				displayName: body.displayName || "Guest",
+				firstName: body.firstName || "Guest",
 				ticketTypeName: body.ticketTypeName || "Ticket",
 			});
 			setToken("");
@@ -99,7 +99,7 @@ export function EventCheckInClient() {
 							<Check className="h-5 w-5 text-green shrink-0 mt-0.5" />
 							<div>
 								<p className="text-sm font-medium text-slate-700">
-									{lastSuccess.displayName}
+									{lastSuccess.firstName}
 								</p>
 								<p className="text-xs text-slate-600">
 									{lastSuccess.ticketTypeName}

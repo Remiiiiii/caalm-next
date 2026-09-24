@@ -2,11 +2,16 @@ import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getConstituentById } from "@/lib/constituents";
 import {
-	createEventRegistration,
+	createRegistrationWithOptionalDonation,
 	EventRegistrationCapacityError,
+	getCalendarEventInOrg,
 	listRegistrationsForEvent,
+	RegistrationDonationPaymentError,
+	RegistrationDonationValidationError,
 	requireEventStaffContext,
+	sendRegistrationConfirmationEmailIfEligible,
 } from "@/lib/events";
+import { createEventRegistration } from "@/lib/events/event-registrations.repository";
 import type { EventRegistrationStatus } from "@/lib/events/types";
 import { getTicketTypeById } from "@/lib/events/ticket-types.repository";
 
@@ -84,7 +89,11 @@ export async function POST(request: NextRequest, context: RouteContext) {
 			}
 		}
 
-		const registration = await createEventRegistration({
+		const donationAmount =
+			body.donationAmount != null ? Number(body.donationAmount) : 0;
+		const paymentSucceeded = body.paymentSucceeded === true;
+
+		const registrationInput = {
 			orgId: ctx.orgId,
 			eventId,
 			ticketTypeId,
@@ -101,10 +110,45 @@ export async function POST(request: NextRequest, context: RouteContext) {
 				: undefined,
 			amountCents:
 				body.amountCents != null ? Number(body.amountCents) : undefined,
-		});
+			donationAmount,
+			paymentSucceeded,
+		};
 
-		return NextResponse.json({ registration }, { status: 201 });
+		const result =
+			donationAmount > 0
+				? await createRegistrationWithOptionalDonation(registrationInput)
+				: {
+						registration: await createEventRegistration(registrationInput),
+					};
+
+		if (status === "confirmed" || status === "posted") {
+			const event = await getCalendarEventInOrg(ctx.orgId, eventId);
+			await sendRegistrationConfirmationEmailIfEligible({
+				orgId: ctx.orgId,
+				registrationId: result.registration.$id,
+				eventTitle: event?.title || "Event",
+			});
+		}
+
+		return NextResponse.json(
+			{
+				registration: result.registration,
+				giftId: result.giftId,
+				registrationTransactionId:
+					result.registration.registrationTransactionId,
+			},
+			{ status: 201 },
+		);
 	} catch (error) {
+		if (error instanceof RegistrationDonationPaymentError) {
+			return NextResponse.json({ error: "Payment failed" }, { status: 402 });
+		}
+		if (error instanceof RegistrationDonationValidationError) {
+			return NextResponse.json(
+				{ error: error.message },
+				{ status: error.status },
+			);
+		}
 		if (error instanceof EventRegistrationCapacityError) {
 			return NextResponse.json(
 				{ error: "Ticket type is at capacity" },
