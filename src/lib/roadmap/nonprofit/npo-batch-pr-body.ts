@@ -121,10 +121,9 @@ export function buildNpoBatchPrBody(
 				"2. Implement in dependency order on **this branch**.",
 				"3. Optionally note completion per task in the PR description as you go.",
 				"4. Use `requirePermission`, org-scoped queries, and MCP for schema — no Super Admin bypasses.",
-				"5. Do **not** merge while **Tests and Vercel deploy / Playwright E2E** is red on this PR. If deploy fails after merge, fix on **this same branch/PR** — no separate deploy-fix PR.",
-				"6.If new collections were added to the database inform the user by listing them as part of your reply.",
-				"7. When a batch is done, I’ll reply with a simple how-to for everyday CAALM users, not a task checklist table.",
-				"8. Everyday user how-to stays in the agent reply only — no new project .md guides",
+				"5. If new collections were added to the database inform the user by listing them as part of your reply.",
+				"6. When a batch is done, I'll reply with a simple how-to for everyday CAALM users, not a task checklist table.",
+				"7. Everyday user how-to stays in the agent reply only — no new project .md guides",
 			];
 
 	const taskSections: string[] = [];
