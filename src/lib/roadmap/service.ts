@@ -624,33 +624,34 @@ export async function getOverview(options?: {
 		unlockedSections,
 	);
 
-	// Same completion gate used to finish sections — used for PR strikethrough UI
+	// Same completion gate used to finish sections — used for PR strikethrough UI.
+	// Deduplicate by merge SHA first so NPO's many batch PRs don't stampede GitHub.
 	const checksPassedByPr = new Map<number, boolean>();
 	const gateReasonByPr = new Map<number, string>();
-	const gateBySha = new Map<
-		string,
-		Awaited<ReturnType<typeof fetchRoadmapCompletionGate>>
-	>();
+	const mergedBySha = new Map<string, number[]>();
+	for (const [number, meta] of prLookup.entries()) {
+		if (meta.state !== "merged") {
+			checksPassedByPr.set(number, false);
+			continue;
+		}
+		const sha = meta.mergeCommitSha?.trim();
+		if (!sha) {
+			checksPassedByPr.set(number, false);
+			gateReasonByPr.set(number, "missing merge commit");
+			continue;
+		}
+		const list = mergedBySha.get(sha);
+		if (list) list.push(number);
+		else mergedBySha.set(sha, [number]);
+	}
 	await Promise.all(
-		[...prLookup.entries()].map(async ([number, meta]) => {
-			if (meta.state !== "merged") {
-				checksPassedByPr.set(number, false);
-				return;
-			}
-			const sha = meta.mergeCommitSha?.trim();
-			if (!sha) {
-				checksPassedByPr.set(number, false);
-				gateReasonByPr.set(number, "missing merge commit");
-				return;
-			}
-			let gate = gateBySha.get(sha);
-			if (!gate) {
-				gate = await fetchRoadmapCompletionGate({ commitSha: sha });
-				gateBySha.set(sha, gate);
-			}
-			checksPassedByPr.set(number, gate.ok);
-			if (!gate.ok && gate.reason) {
-				gateReasonByPr.set(number, gate.reason);
+		[...mergedBySha.entries()].map(async ([sha, numbers]) => {
+			const gate = await fetchRoadmapCompletionGate({ commitSha: sha });
+			for (const number of numbers) {
+				checksPassedByPr.set(number, gate.ok);
+				if (!gate.ok && gate.reason) {
+					gateReasonByPr.set(number, gate.reason);
+				}
 			}
 		}),
 	);
