@@ -16,14 +16,22 @@ describe("NPO 7.5 next-best-action rules", () => {
 		expect(task?.title).toMatch(/Next-best-action/i);
 	});
 
+	const baseInput = {
+		hasOpenPledgeInstallment: false,
+		hasUpcomingPublicEvent: false,
+		lastPostedGiftAmount: 100,
+		thankYouThreshold: 0,
+		hasThankInteractionWithin7Days: false,
+		inviteEligibleCampaignEvent: false,
+	};
+
 	it("hides ask when suggested ask is null", () => {
 		const actions = computeNextBestActions({
+			...baseInput,
 			segment: "Champion",
 			lapseRiskScore: 10,
 			daysSinceLastGift: 120,
 			suggestedAskAmount: null,
-			hasOpenPledgeInstallment: false,
-			hasUpcomingPublicEvent: true,
 			daysSinceLastPostedGift: 120,
 		});
 		expect(actions.some((a) => a.kind === "ask")).toBe(false);
@@ -31,12 +39,11 @@ describe("NPO 7.5 next-best-action rules", () => {
 
 	it("prioritizes thank-you after a recent gift", () => {
 		const primary = pickPrimaryNextBestAction({
+			...baseInput,
 			segment: "Loyal",
 			lapseRiskScore: 20,
 			daysSinceLastGift: 3,
 			suggestedAskAmount: 500,
-			hasOpenPledgeInstallment: false,
-			hasUpcomingPublicEvent: false,
 			daysSinceLastPostedGift: 3,
 		});
 		expect(primary?.kind).toBe("thank");

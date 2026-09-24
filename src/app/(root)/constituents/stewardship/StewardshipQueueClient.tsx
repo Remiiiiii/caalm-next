@@ -1,10 +1,12 @@
 "use client";
 
-import { Check, HeartHandshake, Loader2 } from "lucide-react";
+import { Check, HeartHandshake, Loader2, Mail, Users } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { StatCardIcon } from "@/components/ui/stat-card-icon";
+import type { StewardshipMetrics } from "@/lib/stewardship";
 import {
 	normalizeSegmentLabel,
 	segmentBadgeClass,
@@ -22,6 +24,7 @@ function formatCurrency(value: number | null): string {
 
 export function StewardshipQueueClient() {
 	const [items, setItems] = useState<StewardshipQueueRow[]>([]);
+	const [metrics, setMetrics] = useState<StewardshipMetrics | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [contactingId, setContactingId] = useState<string | null>(null);
 
@@ -30,7 +33,10 @@ export function StewardshipQueueClient() {
 		try {
 			const res = await fetch("/api/constituents/stewardship");
 			const json = await res.json();
-			if (res.ok) setItems(json.items ?? []);
+			if (res.ok) {
+				setItems(json.items ?? []);
+				setMetrics(json.metrics ?? null);
+			}
 		} finally {
 			setLoading(false);
 		}
@@ -65,8 +71,70 @@ export function StewardshipQueueClient() {
 		);
 	}
 
+	const metricsStrip = metrics ? (
+		<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+			<Card className="glass-card">
+				<div className="glass-card-cap" />
+				<CardContent className="p-4 sm:p-6">
+					<div className="flex items-center justify-between">
+						<div>
+							<p className="text-sm font-medium sidebar-gradient-text">
+								Contacted this week
+							</p>
+							<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
+								<span className="tabular-nums">{metrics.contactedThisWeek}</span>
+								<StatCardIcon className="ml-2" icon={Check} />
+							</div>
+							<p className="text-xs text-slate-600 mt-1">
+								Stewardship outreach logged since Monday
+							</p>
+						</div>
+					</div>
+				</CardContent>
+			</Card>
+			<Card className="glass-card">
+				<div className="glass-card-cap" />
+				<CardContent className="p-4 sm:p-6">
+					<div className="flex items-center justify-between">
+						<div>
+							<p className="text-sm font-medium sidebar-gradient-text">
+								Still at-risk
+							</p>
+							<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
+								<span className="tabular-nums">{metrics.stillAtRisk}</span>
+								<StatCardIcon className="ml-2" icon={Users} />
+							</div>
+							<p className="text-xs text-slate-600 mt-1">Rows in this queue</p>
+						</div>
+					</div>
+				</CardContent>
+			</Card>
+			<Card className="glass-card">
+				<div className="glass-card-cap" />
+				<CardContent className="p-4 sm:p-6">
+					<div className="flex items-center justify-between">
+						<div>
+							<p className="text-sm font-medium sidebar-gradient-text">
+								Receipts sent
+							</p>
+							<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
+								<span className="tabular-nums">{metrics.receiptsSent}</span>
+								<StatCardIcon className="ml-2" icon={Mail} />
+							</div>
+							<p className="text-xs text-slate-600 mt-1">
+								Posted gifts with receipt email logged
+							</p>
+						</div>
+					</div>
+				</CardContent>
+			</Card>
+		</div>
+	) : null;
+
 	if (items.length === 0) {
 		return (
+			<>
+				{metricsStrip}
 			<Card className="glass-card">
 				<div className="glass-card-cap" />
 				<CardContent className="p-4 sm:p-6 flex flex-col items-center py-12 text-center">
@@ -80,11 +148,13 @@ export function StewardshipQueueClient() {
 					</p>
 				</CardContent>
 			</Card>
+			</>
 		);
 	}
 
 	return (
 		<div className="space-y-4">
+			{metricsStrip}
 			{items.map((row) => (
 				<Card key={row.segmentRowId} className="glass-card">
 					<div className="glass-card-cap" />

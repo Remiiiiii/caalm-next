@@ -10,6 +10,10 @@ export type NextBestActionInput = {
 	hasOpenPledgeInstallment: boolean;
 	hasUpcomingPublicEvent: boolean;
 	daysSinceLastPostedGift: number | null;
+	lastPostedGiftAmount: number | null;
+	thankYouThreshold: number;
+	hasThankInteractionWithin7Days: boolean;
+	inviteEligibleCampaignEvent: boolean;
 };
 
 export type NextBestAction = {
@@ -17,13 +21,6 @@ export type NextBestAction = {
 	title: string;
 	rationale: string;
 };
-
-const INVITE_SEGMENTS: LifecycleSegment[] = [
-	"At-risk",
-	"Lapsed",
-	"Loyal",
-	"Champion",
-];
 
 const ASK_SEGMENTS: LifecycleSegment[] = ["Champion", "Loyal", "New"];
 
@@ -33,14 +30,17 @@ export function computeNextBestActions(
 ): NextBestAction[] {
 	const actions: NextBestAction[] = [];
 
+	const giftAmount = input.lastPostedGiftAmount ?? 0;
 	if (
-		input.daysSinceLastPostedGift != null &&
-		input.daysSinceLastPostedGift <= 14
+		giftAmount >= input.thankYouThreshold &&
+		!input.hasThankInteractionWithin7Days &&
+		input.daysSinceLastPostedGift != null
 	) {
 		actions.push({
 			kind: "thank",
 			title: "Send thank-you",
-			rationale: "They gave within the last two weeks.",
+			rationale:
+				"Posted gift meets your thank threshold with no thank-you logged in seven days.",
 		});
 	}
 
@@ -63,14 +63,12 @@ export function computeNextBestActions(
 		});
 	}
 
-	if (
-		input.hasUpcomingPublicEvent &&
-		INVITE_SEGMENTS.includes(input.segment)
-	) {
+	if (input.inviteEligibleCampaignEvent) {
 		actions.push({
 			kind: "invite",
-			title: "Invite to upcoming event",
-			rationale: "A public event is coming up that fits re-engagement.",
+			title: "Invite to campaign event",
+			rationale:
+				"An upcoming campaign event has no registration on file for this donor.",
 		});
 	}
 
@@ -92,9 +90,20 @@ export function computeNextBestActions(
 	);
 }
 
+export function applyDismissedKinds(
+	actions: NextBestAction[],
+	dismissedKinds: ReadonlySet<NextBestActionKind>,
+): NextBestAction[] {
+	return actions.filter((action) => !dismissedKinds.has(action.kind));
+}
+
 export function pickPrimaryNextBestAction(
 	input: NextBestActionInput,
+	dismissedKinds: ReadonlySet<NextBestActionKind> = new Set(),
 ): NextBestAction | null {
-	const actions = computeNextBestActions(input);
+	const actions = applyDismissedKinds(
+		computeNextBestActions(input),
+		dismissedKinds,
+	);
 	return actions[0] ?? null;
 }

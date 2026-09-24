@@ -6,17 +6,17 @@ import {
 	requireConstituentOrgContext,
 } from "@/lib/constituents";
 import { getConstituentById } from "@/lib/constituents/repository";
-import { pickPrimaryNextBestAction } from "@/lib/fundraising/next-best-action";
+import {
+	type NextBestActionKind,
+	pickPrimaryNextBestAction,
+} from "@/lib/fundraising/next-best-action";
 import {
 	getSegmentForConstituent,
 	updateAskOverride,
 } from "@/lib/fundraising/segments-repository";
 import { getLatestWealthScreen } from "@/lib/fundraising/wealth-repository";
-import { buildNextBestActionContext } from "@/lib/stewardship/stewardship-context";
-import { Query } from "node-appwrite";
-import { createAdminClient } from "@/lib/appwrite";
-import { appwriteConfig } from "@/lib/appwrite/config";
-import { mapGiftRow } from "@/lib/gifts/repository-rows";
+import { listActiveDismissalsForConstituent } from "@/lib/stewardship/nba-dismissals.repository";
+import { buildNextBestActionInput } from "@/lib/stewardship/nba-input";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -45,29 +45,10 @@ function mergeTopFeatures(
 	return [...combined].sort((a, b) => b.weight - a.weight).slice(0, limit);
 }
 
-async function loadLatestPostedGift(orgId: string, constituentId: string) {
-	const { tablesDB } = await createAdminClient();
-	const result = await tablesDB.listRows({
-		databaseId: appwriteConfig.databaseId || "",
-		tableId: appwriteConfig.giftsCollectionId || "69d91201001f4e8c2b01",
-		queries: [
-			Query.equal("orgId", orgId),
-			Query.equal("constituentId", constituentId),
-			Query.equal("status", "posted"),
-			Query.orderDesc("giftDate"),
-			Query.limit(20),
-		],
-	});
-	for (const row of result.rows as unknown as Record<string, unknown>[]) {
-		const gift = mapGiftRow(row);
-		if (!gift.voidOfId && gift.amount > 0) return gift;
-	}
-	return null;
-}
-
 async function buildPayload(
 	id: string,
 	orgId: string,
+	userId: string,
 	row: NonNullable<Awaited<ReturnType<typeof getSegmentForConstituent>>>,
 	wealth: Awaited<ReturnType<typeof getLatestWealthScreen>>,
 ) {
@@ -88,17 +69,22 @@ async function buildPayload(
 			? row.askOverrideAmount
 			: suggestedAsk;
 
-	const nbaContext = await buildNextBestActionContext(orgId);
-	const lastGift = await loadLatestPostedGift(orgId, id);
-	const nextBestAction = pickPrimaryNextBestAction({
+	const dismissals = await listActiveDismissalsForConstituent({
+		orgId,
+		constituentId: id,
+		userId,
+	});
+	const dismissedKinds = new Set<NextBestActionKind>(
+		dismissals.map((row) => row.actionKind),
+	);
+	const nbaInput = await buildNextBestActionInput({
+		orgId,
+		constituentId: id,
 		segment: row.segment,
 		lapseRiskScore: row.lapseRiskScore,
-		daysSinceLastGift: nbaContext.daysSinceGift(lastGift?.giftDate),
 		suggestedAskAmount: effectiveAsk,
-		hasOpenPledgeInstallment: nbaContext.openPledgeConstituentIds.has(id),
-		hasUpcomingPublicEvent: nbaContext.orgHasUpcomingPublicEvent,
-		daysSinceLastPostedGift: nbaContext.daysSinceGift(lastGift?.giftDate),
 	});
+	const nextBestAction = pickPrimaryNextBestAction(nbaInput, dismissedKinds);
 
 	return {
 		constituentId: id,
@@ -152,7 +138,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
 			);
 		}
 		const wealth = await getLatestWealthScreen(ctx.orgId, id);
-		return NextResponse.json(await buildPayload(id, ctx.orgId, row, wealth));
+		return NextResponse.json(
+			await buildPayload(id, ctx.orgId, ctx.user.$id, row, wealth),
+		);
 	} catch (error) {
 		console.error("[SERVER] fundraising-intelligence GET:", error);
 		return NextResponse.json(
@@ -227,5 +215,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 	});
 
 	const wealth = await getLatestWealthScreen(ctx.orgId, id);
-	return NextResponse.json(await buildPayload(id, ctx.orgId, updated, wealth));
+	return NextResponse.json(
+		await buildPayload(id, ctx.orgId, ctx.user.$id, updated, wealth),
+	);
 }

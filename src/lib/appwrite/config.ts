@@ -470,6 +470,12 @@ export const appwriteConfig = {
 		"69d91501001f4e8c2b09",
 	),
 
+	/** NBA dismissals with cooldown (name: stewardship_nba_dismissals) */
+	stewardshipNbaDismissalsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_STEWARDSHIP_NBA_DISMISSALS_COLLECTION",
+		"69f7b301001f4e8c2b50",
+	),
+
 	/** Imported wealth-screen rows (name: constituent_wealth_screens) */
 	constituentWealthScreensCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_CONSTITUENT_WEALTH_SCREENS_COLLECTION",
