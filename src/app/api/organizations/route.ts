@@ -188,6 +188,12 @@ export async function PUT(request: NextRequest) {
 										: validated.settings.email,
 							}
 						: {}),
+					...(validated.settings.managerUserId_source !== undefined
+						? {
+								managerUserId_source:
+									validated.settings.managerUserId_source,
+							}
+						: {}),
 				}
 			: {
 					...existing.settings,

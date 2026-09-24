@@ -4,6 +4,10 @@ import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { assertEnterpriseFileAllowed } from "@/lib/files/enterprise-file-formats";
 import {
+	composeEngineeringBugDescription,
+	parseEngineeringBugFields,
+} from "./bug-report-body";
+import {
 	buildGitHubIssueBody,
 	createGitHubIssue,
 } from "./github-tickets.service";
@@ -251,6 +255,14 @@ export function buildCreateTicketInput(input: {
 	impact: unknown;
 	urgency: unknown;
 	attachmentIds?: string[];
+	steps?: unknown;
+	expected?: unknown;
+	actual?: unknown;
+	os?: unknown;
+	environment?: unknown;
+	searchedExisting?: unknown;
+	isBug?: unknown;
+	extra?: unknown;
 }): CreateTicketInput {
 	const lane = parseLane(input.lane);
 	const category = parseCategory(input.category);
@@ -261,9 +273,20 @@ export function buildCreateTicketInput(input: {
 	const urgency = parseImpactUrgency(input.urgency, "urgency");
 	const { severity } = deriveSeverityFromMatrix(impact, urgency);
 
+	// Engineering tickets must use the GitHub-style bug fields so GitHub
+	// issues and CAALM tickets share the same body. Help stays free text.
+	let description = input.description.trim();
+	if (lane === "engineering") {
+		description = composeEngineeringBugDescription(
+			parseEngineeringBugFields(input),
+		);
+	} else if (description.length < 8) {
+		throw new Error("Invalid description");
+	}
+
 	return {
 		title: input.title.trim(),
-		description: input.description.trim(),
+		description,
 		lane,
 		category,
 		affectedModule: parseAffectedModule(input.affectedModule),

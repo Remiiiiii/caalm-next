@@ -353,12 +353,14 @@ export default function LicensesView({
 						onLicenseRemoved={onLicenseRemoved}
 					/>
 					<PageIndex
-						className="mt-6 justify-center"
+						className="mt-6"
 						page={validCurrentPage}
 						totalItems={totalItems}
 						pageSize={itemsPerPage}
 						onPageChange={setCurrentPage}
 						hideWhenSinglePage
+						showRange
+						itemLabel="licenses"
 						scrollToTop
 						aria-label="Licenses pagination"
 					/>
@@ -378,12 +380,14 @@ export default function LicensesView({
 						))}
 					</EqualHeightGrid>
 					<PageIndex
-						className="mt-6 justify-center"
+						className="mt-6"
 						page={validCurrentPage}
 						totalItems={totalItems}
 						pageSize={itemsPerPage}
 						onPageChange={setCurrentPage}
 						hideWhenSinglePage
+						showRange
+						itemLabel="licenses"
 						scrollToTop
 						aria-label="Licenses pagination"
 					/>

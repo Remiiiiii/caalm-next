@@ -1,0 +1,51 @@
+---
+description: Keep .env.example and .env.demo.example as placeholders; never copy real secrets or Appwrite IDs
+globs: .env.example,.env.demo.example
+alwaysApply: true
+---
+
+# Example env files — placeholders only
+
+`.env.example` and `.env.demo.example` are committed checklists. They show **key names** and **shape**, not live values.
+
+Real values belong only in gitignored `.env.local` / `.env.demo.local` (or Vercel). Never copy from those files into an example file.
+
+## When adding or editing a key
+
+1. Keep the existing file shape: `# ====` section banners, `# ---` subsections, `# name:` Console labels, and nearby key order.
+2. Put the new key in the matching section. Do not dump keys at the bottom.
+3. Use a descriptive snake_case placeholder, an empty value, or a truncated vendor prefix. Never a live secret or Appwrite `$id`.
+
+```dotenv
+# ✅ GOOD
+NEXT_PUBLIC_APPWRITE_TICKETS_COLLECTION=tickets_collection_id
+NEXT_APPWRITE_API_KEY=next_appwrite_api_key
+ESIGN_TOKEN_SECRET=
+STRIPE_SECRET_KEY=sk_test_...
+CRON_SECRET=cron_secret
+
+# ❌ BAD — real IDs, tokens, or values copied from .env.local
+NEXT_PUBLIC_APPWRITE_TICKETS_COLLECTION=69b8a201001f4e8c2a01
+NEXT_APPWRITE_API_KEY=standard_...
+STRIPE_SECRET_KEY=sk_live_51Abc...
+CRON_SECRET=7f3a9c2e1b...
+```
+
+## Allowed non-secret defaults
+
+These are OK because they are public, local, or flags — not credentials:
+
+- Localhost URLs (`http://localhost:3000`)
+- Public Appwrite endpoint (`https://fra.cloud.appwrite.io/v1`)
+- Booleans / numbers (`true`, `false`, `30`, `90`)
+- Documented public demo names (`caalm-demo`, `APP_MODE=demo`)
+- Example domains already in the file (`caalmsolutions.com`)
+
+## Never write
+
+- Appwrite alphanumeric `$id` values (collection, bucket, project, database)
+- API keys, tokens, private keys, webhook / cron / HMAC secrets
+- Live Stripe keys (`sk_live_`, `pk_live_`)
+- Anything read from `.env.local`, `.env.demo.local`, Vercel, or the Appwrite Console
+
+Demo: add a key to `.env.demo.example` only if caalm-demo needs it, still as a placeholder.

@@ -3,6 +3,7 @@
 import {
 	Activity,
 	AlertTriangle,
+	CheckCircle2,
 	HardDrive,
 	Server,
 	Users,
@@ -11,9 +12,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ITGlassPanel, ITPageShell } from "@/components/it/ITPageShell";
 import { Button } from "@/components/ui/button";
-import { CardContent, Card as GlassCard } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading";
-import { StatCardIcon } from "@/components/ui/stat-card-icon";
+import { MetricStatCard } from "@/components/ui/metric-stat-card";
 
 interface OverviewMetrics {
 	storageTotal?: string;
@@ -104,18 +104,30 @@ export default function SystemOverviewPage() {
 							href={card.href}
 							className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 rounded-lg"
 						>
-							<GlassCard className="glass-card interactive-glass-card h-full transition-all duration-200 hover:border-blue-300">
-								<div className="glass-card-cap" />
-								<CardContent className="p-4 sm:p-6">
-									<p className="text-sm font-medium sidebar-gradient-text">
-										{card.title}
-									</p>
-									<div className="flex items-center text-2xl font-bold text-slate-700 pt-2">
-										<span>{card.value}</span>
-										<StatCardIcon className="ml-2" icon={card.icon} />
-									</div>
-								</CardContent>
-							</GlassCard>
+							<MetricStatCard
+								interactive
+								title={card.title}
+								value={card.value}
+								icon={card.icon}
+								iconTone={
+									card.title === "API health"
+										? metrics?.apiHealthy
+											? "success"
+											: "danger"
+										: card.title === "Errors"
+											? "warning"
+											: "default"
+								}
+								dynamicIcon={
+									card.title === "API health"
+										? metrics?.apiHealthy
+											? CheckCircle2
+											: AlertTriangle
+										: undefined
+								}
+								dynamicTone={metrics?.apiHealthy ? "success" : "danger"}
+								valueClassName="text-2xl"
+							/>
 						</Link>
 					))}
 				</div>

@@ -368,10 +368,178 @@ export const appwriteConfig = {
 		"test-roadmap-status-log",
 	),
 
+	/** Nonprofit roadmap — same schema as CLM roadmap_* tables */
+	npoRoadmapSectionsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_NPO_ROADMAP_SECTIONS_COLLECTION",
+		"69d91a01001f4e8c2b19",
+	),
+	npoRoadmapTasksCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_NPO_ROADMAP_TASKS_COLLECTION",
+		"69d91a02001f4e8c2b20",
+	),
+	npoRoadmapTestRunsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_NPO_ROADMAP_TEST_RUNS_COLLECTION",
+		"69d91a03001f4e8c2b21",
+	),
+	npoRoadmapStatusLogCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_NPO_ROADMAP_STATUS_LOG_COLLECTION",
+		"69d91a04001f4e8c2b22",
+	),
+
+	/** Legacy manual completions — merged into npo_roadmap_tasks on seed when present */
+	npoRoadmapTaskOverridesCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_NPO_ROADMAP_TASK_OVERRIDES_COLLECTION",
+		"69d91903001f4e8c2b18",
+	),
+
 	/** Funding pursuits pipeline (name: funding_pursuits) */
 	fundingPursuitsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_FUNDING_PURSUITS_COLLECTION",
 		"test-funding-pursuits",
+	),
+
+	/** Constituent CRM people file (name: constituents) */
+	constituentsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CONSTITUENTS_COLLECTION",
+		"69c8d4f100a8c4d1e2f0",
+	),
+
+	/** Household / relationship edges (name: constituent_relationships) */
+	constituentRelationshipsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CONSTITUENT_RELATIONSHIPS_COLLECTION",
+		"69c8e8a1001f4e8c2a10",
+	),
+
+	/** Timeline notes on a constituent (name: constituent_notes) */
+	constituentNotesCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CONSTITUENT_NOTES_COLLECTION",
+		"69c8e8a2001f4e8c2a11",
+	),
+
+	/** Posted and draft gifts (name: gifts) */
+	giftsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_GIFTS_COLLECTION",
+		"69d91201001f4e8c2b01",
+	),
+
+	/** Fundraising campaigns (name: campaigns) */
+	campaignsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CAMPAIGNS_COLLECTION",
+		"69d91202001f4e8c2b02",
+	),
+
+	/** Per-org receipt sequence (name: gift_receipt_counters) */
+	giftReceiptCountersCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_GIFT_RECEIPT_COUNTERS_COLLECTION",
+		"69d91203001f4e8c2b03",
+	),
+
+	/** Gift designations → fundCode (name: gift_designations) */
+	giftDesignationsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_GIFT_DESIGNATIONS_COLLECTION",
+		"69d91401001f4e8c2b04",
+	),
+
+	/** Recurring sustainer schedules (name: recurring_gift_schedules) */
+	recurringGiftSchedulesCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_RECURRING_GIFT_SCHEDULES_COLLECTION",
+		"69d91402001f4e8c2b05",
+	),
+
+	/** Pledges (name: pledges) */
+	pledgesCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_PLEDGES_COLLECTION",
+		"69d91403001f4e8c2b06",
+	),
+
+	/** Pledge installment rows (name: pledge_installments) */
+	pledgeInstallmentsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_PLEDGE_INSTALLMENTS_COLLECTION",
+		"69d91404001f4e8c2b07",
+	),
+
+	/** Soft-credit recognition rows (name: gift_soft_credits) */
+	giftSoftCreditsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_GIFT_SOFT_CREDITS_COLLECTION",
+		"69d91405001f4e8c2b08",
+	),
+
+	/** Stored RFM lifecycle segment per constituent (name: constituent_segments) */
+	constituentSegmentsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CONSTITUENT_SEGMENTS_COLLECTION",
+		"69d91501001f4e8c2b09",
+	),
+
+	/** Imported wealth-screen rows (name: constituent_wealth_screens) */
+	constituentWealthScreensCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CONSTITUENT_WEALTH_SCREENS_COLLECTION",
+		"69d91601001f4e8c2b10",
+	),
+
+	/** Org fund records (name: org_funds) */
+	orgFundsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_ORG_FUNDS_COLLECTION",
+		"69d91701001f4e8c2b11",
+	),
+
+	/** Grant budget lines (name: grant_budget_lines) */
+	grantBudgetLinesCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_GRANT_BUDGET_LINES_COLLECTION",
+		"69d91702001f4e8c2b12",
+	),
+
+	/** Grant contract → fundId (name: contract_grant_funds; Contracts table is at column cap) */
+	contractGrantFundsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CONTRACT_GRANT_FUNDS_COLLECTION",
+		"69d91703001f4e8c2b13",
+	),
+
+	/** 990 Part IX category mappings (name: form_990_expense_mappings) */
+	form990ExpenseMappingsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_FORM_990_EXPENSE_MAPPINGS_COLLECTION",
+		"69d91801001f4e8c2b14",
+	),
+
+	/** ASC 958 restriction release events (name: restriction_releases) */
+	restrictionReleasesCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_RESTRICTION_RELEASES_COLLECTION",
+		"69d91802001f4e8c2b15",
+	),
+
+	/** Volunteer shift templates (name: volunteer_shift_templates) */
+	volunteerShiftTemplatesCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_VOLUNTEER_SHIFT_TEMPLATES_COLLECTION",
+		"69d92301001f4e8c2b23",
+	),
+
+	/** Volunteer shift registrations (name: volunteer_shift_bookings) */
+	volunteerShiftBookingsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_VOLUNTEER_SHIFT_BOOKINGS_COLLECTION",
+		"69d92302001f4e8c2b24",
+	),
+
+	/** Volunteer hour logs (name: volunteer_hours) */
+	volunteerHoursCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_VOLUNTEER_HOURS_COLLECTION",
+		"69f0b801001f4e8c2b27",
+	),
+
+	/** Volunteer waiver records (name: volunteer_waivers) */
+	volunteerWaiversCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_VOLUNTEER_WAIVERS_COLLECTION",
+		"69f0b802001f4e8c2b28",
+	),
+
+	/** Public event ticket types (name: event_ticket_types) */
+	eventTicketTypesCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_EVENT_TICKET_TYPES_COLLECTION",
+		"69f2a001001f4e8c2b33",
+	),
+
+	/** Public event registrations (name: event_registrations) */
+	eventRegistrationsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_EVENT_REGISTRATIONS_COLLECTION",
+		"69f2a002001f4e8c2b34",
 	),
 
 	/** Contract obligations for retention (name: contract_obligations) */

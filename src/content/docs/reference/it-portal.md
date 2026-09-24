@@ -12,7 +12,7 @@ The IT portal is a full second navigation world for platform operations.
 - System overview & storage
 - Monitoring (API analytics, health, performance, errors, infrastructure, network, application)
 - CI/CD (pipelines, builds, deployments, releases, quality)
-- Development (repositories, issues, code analysis)
+- Development (repositories, issues, code analysis, CLM Roadmap, Nonprofit Roadmap, PR log)
 - API management & documentation
 - Security (dashboard, audit logs, compliance, access control, incident response)
 - Database (performance, health, schema, queries)

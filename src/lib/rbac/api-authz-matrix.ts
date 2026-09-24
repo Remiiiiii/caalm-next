@@ -56,6 +56,26 @@ const SIGNAL_PATTERNS: Array<{
 		re: /\brequireFundingOrgContext\s*\(/,
 	},
 	{
+		signal: "requireConstituentOrgContext",
+		class: "permission",
+		re: /\brequireConstituentOrgContext\s*\(/,
+	},
+	{
+		signal: "requireGiftOrgContext",
+		class: "permission",
+		re: /\brequireGiftOrgContext\s*\(/,
+	},
+	{
+		signal: "requireVolunteerOrgContext",
+		class: "permission",
+		re: /\brequireVolunteerOrgContext\s*\(/,
+	},
+	{
+		signal: "requireEventStaffContext",
+		class: "permission",
+		re: /\brequireEventStaffContext\s*\(/,
+	},
+	{
 		signal: "requireITPermission",
 		class: "permission",
 		re: /\brequireITPermission\s*\(/,
