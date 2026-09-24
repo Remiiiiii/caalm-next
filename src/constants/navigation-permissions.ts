@@ -55,6 +55,13 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 				],
 				viewerReadOnly: true,
 			},
+			{
+				name: "Event Check-in",
+				icon: "/assets/icons/calendar.svg",
+				url: "/events/check-in",
+				permissions: [PERMISSIONS.EVENTS.INVITE],
+				viewerReadOnly: true,
+			},
 		],
 	},
 	{
@@ -157,6 +164,51 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 					PERMISSIONS.LICENSES.APPROVE,
 				],
 				requiresElevated: true,
+				viewerReadOnly: true,
+			},
+		],
+	},
+	{
+		header: "Constituents",
+		items: [
+			{
+				name: "All Constituents",
+				icon: "/assets/icons/constituents.svg",
+				url: "/constituents",
+				permissions: [PERMISSIONS.CONSTITUENTS.VIEW],
+				viewerReadOnly: true,
+			},
+			{
+				name: "Stewardship Queue",
+				icon: "/assets/icons/constituents.svg",
+				url: "/constituents/stewardship",
+				permissions: [PERMISSIONS.CONSTITUENTS.VIEW],
+				viewerReadOnly: true,
+			},
+			{
+				name: "Gifts",
+				icon: "/assets/icons/gift.svg",
+				url: "/gifts",
+				permissions: [PERMISSIONS.GIFTS.VIEW],
+				viewerReadOnly: true,
+			},
+			{
+				name: "Campaigns",
+				icon: "/assets/icons/dollar-circle.svg",
+				url: "/campaigns",
+				permissions: [PERMISSIONS.GIFTS.VIEW],
+				viewerReadOnly: true,
+			},
+		],
+	},
+	{
+		header: "Volunteers",
+		items: [
+			{
+				name: "Volunteer Shifts",
+				icon: "/assets/icons/calendar.svg",
+				url: "/volunteers/shifts",
+				permissions: [PERMISSIONS.VOLUNTEERS.VIEW],
 				viewerReadOnly: true,
 			},
 		],
@@ -318,6 +370,18 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 				url: "/settings/organization",
 				permissions: [PERMISSIONS.SETTINGS.VIEW, PERMISSIONS.SETTINGS.EDIT],
 				viewerReadOnly: true,
+			},
+			{
+				name: "Funds",
+				icon: "/assets/icons/dollar-circle.svg",
+				url: "/settings/funds",
+				permissions: [PERMISSIONS.FUNDING.MANAGE],
+			},
+			{
+				name: "990 worksheet mapping",
+				icon: "/assets/icons/dollar-circle.svg",
+				url: "/settings/form-990",
+				permissions: [PERMISSIONS.FUNDING.MANAGE],
 			},
 			{
 				name: "Billing & Integrations",

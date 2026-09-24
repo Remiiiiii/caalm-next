@@ -6,7 +6,7 @@ import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { PERMISSIONS } from "@/constants/permissions";
 import { usePermissions } from "@/hooks/usePermissions";
-import { matchesStatusTab } from "@/lib/contracts/contractsListUtils";
+import { applyContractListFilters } from "@/lib/contracts/contractsListUtils";
 import type { UIFileDoc } from "@/types/files";
 import ContractsExpiryModalTestButton from "./ContractsExpiryModalTestButton";
 import { useContractsView } from "./ContractsViewContext";
@@ -24,64 +24,7 @@ export default function ContractsHeaderActions({
 	const canCreate = permissions.includes(PERMISSIONS.CONTRACTS.CREATE);
 
 	const exportFiles = useMemo(() => {
-		const base = files.filter((file) => {
-			if (!matchesStatusTab(file, statusTab)) return false;
-			if (filters.status && file.status !== filters.status) return false;
-			if (filters.contractType && file.contractType !== filters.contractType)
-				return false;
-			if (filters.uploadedOnFrom || filters.uploadedOnTo) {
-				const uploadedDate = file.$createdAt ? new Date(file.$createdAt) : null;
-				if (!uploadedDate) return false;
-				if (filters.uploadedOnFrom) {
-					const fromDate = new Date(filters.uploadedOnFrom);
-					fromDate.setHours(0, 0, 0, 0);
-					if (uploadedDate < fromDate) return false;
-				}
-				if (filters.uploadedOnTo) {
-					const toDate = new Date(filters.uploadedOnTo);
-					toDate.setHours(23, 59, 59, 999);
-					if (uploadedDate > toDate) return false;
-				}
-			}
-			if (filters.expiresOnFrom || filters.expiresOnTo) {
-				const expiryDate = file.contractExpiryDate
-					? new Date(file.contractExpiryDate)
-					: null;
-				if (!expiryDate) return false;
-				if (filters.expiresOnFrom) {
-					const fromDate = new Date(filters.expiresOnFrom);
-					fromDate.setHours(0, 0, 0, 0);
-					if (expiryDate < fromDate) return false;
-				}
-				if (filters.expiresOnTo) {
-					const toDate = new Date(filters.expiresOnTo);
-					toDate.setHours(23, 59, 59, 999);
-					if (expiryDate > toDate) return false;
-				}
-			}
-			if (filters.department && file.department !== filters.department)
-				return false;
-			if (filters.assignedTo) {
-				const managers = file.assignedManagers || [];
-				const searchTerm = filters.assignedTo.toLowerCase();
-				const hasMatch = managers.some((m: string) =>
-					m.toLowerCase().includes(searchTerm),
-				);
-				if (!hasMatch) return false;
-			}
-			if (filters.searchQuery) {
-				const query = filters.searchQuery.toLowerCase();
-				const matchesName = (file.contractName || file.name || "")
-					.toLowerCase()
-					.includes(query);
-				const matchesNumber = (file.contractNumber || "")
-					.toLowerCase()
-					.includes(query);
-				const matchesVendor = (file.vendor || "").toLowerCase().includes(query);
-				if (!matchesName && !matchesNumber && !matchesVendor) return false;
-			}
-			return true;
-		});
+		const base = applyContractListFilters(files, filters, statusTab);
 
 		if (selectedIds.length > 0) {
 			return base.filter((f) => selectedIds.includes(f.$id));

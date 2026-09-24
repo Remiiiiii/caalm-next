@@ -181,7 +181,7 @@ public/assets/demo/ae-mcp-setup/after-effects-mcp/
 brew-bros/
 caalm-demo-video/
 
-# Large media hosted on Vercel Blob (see src/lib/media/urls.ts)
+# Large marketing media (gitignored size; copy into public/ for deploy — see src/lib/media/urls.ts)
 public/assets/video/*.mp4
 !public/assets/video/doc-upload.mp4
 public/assets/video/wave.original.mp4

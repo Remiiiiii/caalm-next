@@ -288,6 +288,9 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 	const canCreateEvent = basePermissions.createEvent;
 	const { permissions } = usePermissions();
 	const isApprover = permissions.includes(PERMISSIONS.EVENTS.APPROVE);
+	const canManageEventRegistrations = permissions.includes(
+		PERMISSIONS.EVENTS.INVITE,
+	);
 
 	const {
 		approvals,
@@ -1096,6 +1099,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 		location: "",
 		attachments: [],
 		sensitivityLevel: "standard",
+		campaignId: "",
 	});
 
 	// State for file uploads
@@ -2037,6 +2041,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 				attachments: attachmentFileIds, // Store array of file IDs (references to files collection)
 				sensitivityLevel: newEvent.sensitivityLevel,
 				requiresApproval: newEvent.sensitivityLevel !== "standard",
+				campaignId: newEvent.campaignId?.trim() || null,
 			};
 
 			console.log("Creating event with data:", {
@@ -2300,6 +2305,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 				attachments: (newEvent.attachments || []).map((att) => att.$id), // Store only file IDs
 				sensitivityLevel: newEvent.sensitivityLevel,
 				requiresApproval: newEvent.sensitivityLevel !== "standard",
+				campaignId: newEvent.campaignId?.trim() || null,
 			};
 
 			// Use API route instead of direct function call to ensure proper handling
@@ -2538,6 +2544,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 			participants: selectedEvent.participants || "",
 			location: selectedEvent.location || "",
 			sensitivityLevel: selectedEvent.sensitivityLevel || "standard",
+			campaignId: selectedEvent.campaignId || "",
 		});
 		setLocationSearch(selectedEvent.location || "");
 
@@ -3011,7 +3018,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 										setViewMode(value as CalendarViewMode)
 									}
 								>
-									<TabsList className="grid w-full grid-cols-4">
+									<TabsList>
 										<TabsTrigger
 											value="day"
 											className="flex items-center space-x-1 cursor-pointer"
@@ -3570,6 +3577,29 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 													</p>
 												)}
 											</div>
+
+											{canManageEventRegistrations ? (
+												<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+													<Label
+														htmlFor="event-campaign-id"
+														className="text-sm font-semibold text-slate-700 mb-3 block"
+													>
+														Fundraising campaign (optional)
+													</Label>
+													<Input
+														id="event-campaign-id"
+														className="border-[0.25px] border-slate-300 bg-white"
+														value={newEvent.campaignId || ""}
+														onChange={(e) =>
+															setNewEvent({
+																...newEvent,
+																campaignId: e.target.value,
+															})
+														}
+														placeholder="Campaign ID for event gifts"
+													/>
+												</div>
+											) : null}
 
 											{/* Contract Selection (conditional) */}
 											{["contract", "contract review"].includes(
@@ -4176,6 +4206,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 					onOpenAiPanel={handleOpenAiPanel}
 					onEditEvent={handleEditSelectedEvent}
 					onDeleteEvent={handleDeleteEvent}
+					canManageEventRegistrations={canManageEventRegistrations}
 				/>
 
 				{/* Share Dialog */}

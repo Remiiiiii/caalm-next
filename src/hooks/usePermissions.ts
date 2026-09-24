@@ -3,7 +3,7 @@
  * React hook for permission checking in components
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import type { PermissionKey } from "@/constants/permissions";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -11,7 +11,10 @@ import {
 	useImpersonation,
 } from "@/contexts/ImpersonationContext";
 import { useOrganization } from "@/contexts/OrganizationContext";
-import { getCachedData, setCachedData } from "@/lib/utils/client-cache";
+import {
+	readCachedPermissions,
+	writeCachedPermissions,
+} from "@/lib/navigation/nav-rbac-cache";
 
 interface UsePermissionsResult {
 	permissions: PermissionKey[];
@@ -31,16 +34,36 @@ export function usePermissions(): UsePermissionsResult {
 	const viewAsHint = getViewAsClientHint();
 	const effectiveUserId =
 		(isImpersonating && status.target?.$id) || viewAsHint || user?.$id;
-	const [permissions, setPermissions] = useState<PermissionKey[]>([]);
-	const [loading, setLoading] = useState(true);
+	const [permissions, setPermissions] = useState<PermissionKey[]>(
+		() => readCachedPermissions(effectiveUserId, orgId) ?? [],
+	);
+	const [loading, setLoading] = useState(
+		() => !readCachedPermissions(effectiveUserId, orgId),
+	);
 	const [settled, setSettled] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
+	useLayoutEffect(() => {
+		const cached = readCachedPermissions(effectiveUserId, orgId);
+		if (cached) {
+			setPermissions(cached);
+			setLoading(false);
+		}
+	}, [effectiveUserId, orgId]);
+
 	useEffect(() => {
-		// Stay in loading until auth finishes. An empty list + loading false
-		// would look like "no billing access" and bounce to /settings.
+		const cachedPermissions = readCachedPermissions(effectiveUserId, orgId);
+		const usableCache = cachedPermissions;
+
+		// Stay in loading until auth finishes only when we have nothing to show.
+		// Cached rows keep the sidebar painted while the session revalidates.
 		if (authLoading) {
-			setLoading(true);
+			if (usableCache) {
+				setPermissions(usableCache);
+				setLoading(false);
+			} else {
+				setLoading(true);
+			}
 			setSettled(false);
 			return;
 		}
@@ -53,14 +76,6 @@ export function usePermissions(): UsePermissionsResult {
 		}
 
 		setSettled(false);
-
-		// Check client-side cache first (stale-while-revalidate pattern)
-		const cacheKey = `permissions:${effectiveUserId}:${orgId || "default"}`;
-		const cachedPermissions = getCachedData<PermissionKey[]>(cacheKey);
-		const usableCache =
-			Array.isArray(cachedPermissions) && cachedPermissions.length > 0
-				? cachedPermissions
-				: null;
 
 		if (usableCache) {
 			setPermissions(usableCache);
@@ -96,8 +111,8 @@ export function usePermissions(): UsePermissionsResult {
 					const fetchedPermissions = data.permissions || [];
 
 					// Cache for 5 minutes — skip empty so a transient miss does not blank the nav
-					if (fetchedPermissions.length > 0) {
-						setCachedData(cacheKey, fetchedPermissions, 300000);
+					if (fetchedPermissions.length > 0 && effectiveUserId) {
+						writeCachedPermissions(effectiveUserId, orgId, fetchedPermissions);
 					}
 
 					setPermissions(fetchedPermissions);

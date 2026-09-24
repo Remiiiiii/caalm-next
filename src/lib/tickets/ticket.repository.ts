@@ -1,6 +1,7 @@
 import { ID, Query } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { logAuditEvent } from "@/lib/services/audit-logger";
 import {
 	ACTIVE_TICKET_STATUSES,
 	type Ticket,
@@ -25,7 +26,24 @@ export async function createTicketRow(
 		rowId: ID.unique(),
 		data,
 	});
-	return row as unknown as Ticket;
+	const ticket = row as unknown as Ticket;
+	void logAuditEvent({
+		event_id: `ticket_create_${ticket.$id}`,
+		event_title: `Ticket created: ${ticket.ticketNumber || ticket.title}`,
+		action: "create",
+		source: "caalm",
+		user_id: ticket.submittedByUserId || "system",
+		user_name: ticket.submittedByName || "User",
+		user_email: "",
+		orgId: ticket.orgId || "default_organization",
+		status: "success",
+		module: "system",
+		target_type: "ticket",
+		target_id: ticket.$id,
+		target_label: ticket.title,
+		summary: `${ticket.submittedByName || "User"} opened ${ticket.ticketNumber || ticket.title}`,
+	});
+	return ticket;
 }
 
 export async function getTicketById(ticketId: string): Promise<Ticket | null> {
@@ -77,13 +95,40 @@ export async function updateTicket(
 ): Promise<Ticket> {
 	const { tablesDB } = await createAdminClient();
 	const { $id: _id, $createdAt: _c, $updatedAt: _u, ...patch } = data;
+	const previous =
+		patch.status !== undefined ? await getTicketById(ticketId) : null;
 	const row = await tablesDB.updateRow({
 		databaseId: dbId(),
 		tableId: ticketsTable(),
 		rowId: ticketId,
 		data: patch,
 	});
-	return row as unknown as Ticket;
+	const ticket = row as unknown as Ticket;
+	if (patch.status && previous && previous.status !== patch.status) {
+		void logAuditEvent({
+			event_id: `ticket_status_${ticketId}_${Date.now()}`,
+			event_title: `Ticket ${ticket.ticketNumber || ticket.title}: ${previous.status} → ${patch.status}`,
+			action: "update",
+			source: "caalm",
+			user_id:
+				ticket.assigneeCaalmUserId ||
+				ticket.submittedByUserId ||
+				"system",
+			user_name: ticket.submittedByName || "User",
+			user_email: "",
+			orgId: ticket.orgId || "default_organization",
+			status: "success",
+			module: "system",
+			target_type: "ticket",
+			target_id: ticketId,
+			target_label: ticket.title,
+			summary: `Ticket ${ticket.ticketNumber || ticket.title} moved from ${previous.status} to ${patch.status}`,
+			changes: [
+				{ field: "status", before: previous.status, after: patch.status },
+			],
+		});
+	}
+	return ticket;
 }
 
 export async function getTicketByNumber(input: {

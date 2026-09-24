@@ -31,6 +31,7 @@ export interface UIFileDoc extends Models.Document {
 	priority?: string;
 	compliance?: string;
 	department?: string;
+	division?: string;
 	assignedManagers?: string[];
 	riskLevel?: string;
 

@@ -30,7 +30,7 @@ export function SearchField({
 				aria-hidden
 			/>
 			<Input
-				type="search"
+				type="text"
 				data-with-leading-icon="true"
 				className={cn(
 					// glass-form-control sets a resting border in CSS; force it off so
