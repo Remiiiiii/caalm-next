@@ -126,16 +126,17 @@ function RoadmapPullRequestItem({ pr }: { pr: SectionPullRequest }) {
 const SECTIONS_PAGE_SIZE = 5;
 
 function RoadmapUnavailableState({ detail }: { detail?: string }) {
+	const title = detail ? "Couldn't load roadmap" : "Roadmap not found";
 	return (
 		<div className="flex flex-col items-center justify-center text-center py-12 px-4">
 			<Image
 				src="/assets/icons/no-data.svg"
-				alt="Roadmap not found"
+				alt={title}
 				width={250}
 				height={250}
 				className="mx-auto mb-4"
 			/>
-			<p className="body-1 text-slate-700">Roadmap not found</p>
+			<p className="body-1 text-slate-700">{title}</p>
 			{detail ? (
 				<p className="text-sm text-slate-500 mt-2 max-w-md">{detail}</p>
 			) : null}
