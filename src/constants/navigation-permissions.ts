@@ -179,6 +179,13 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 				viewerReadOnly: true,
 			},
 			{
+				name: "Stewardship Queue",
+				icon: "/assets/icons/constituents.svg",
+				url: "/constituents/stewardship",
+				permissions: [PERMISSIONS.CONSTITUENTS.VIEW],
+				viewerReadOnly: true,
+			},
+			{
 				name: "Gifts",
 				icon: "/assets/icons/gift.svg",
 				url: "/gifts",

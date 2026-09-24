@@ -1,6 +1,6 @@
 "use client";
 
-import { Brain, Check, DollarSign } from "lucide-react";
+import { Brain, Check, DollarSign, Sparkles } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { ConstituentWealthPanel } from "@/components/constituents/ConstituentWealthPanel";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,11 @@ type IntelligencePayload = {
 	capacityBand: number | null;
 	topFeatures: Array<{ label: string; weight: number; direction: string }>;
 	computedAt: string;
+	nextBestAction?: {
+		kind: string;
+		title: string;
+		rationale: string;
+	} | null;
 };
 
 function formatCurrency(value: number | null): string {
@@ -166,6 +171,25 @@ export function FundraisingIntelligenceTab({
 					</p>
 				) : null}
 			</div>
+
+			{data.nextBestAction &&
+			(data.nextBestAction.kind !== "ask" || data.suggestedAsk != null) ? (
+				<Card className="glass-card">
+					<div className="glass-card-cap" />
+					<CardContent className="p-4 sm:p-6 space-y-2">
+						<div className="flex items-center gap-3">
+							<Sparkles className="w-5 h-5 text-[#0f5384]" />
+							<p className="text-sm font-medium sidebar-gradient-text">
+								Next best action
+							</p>
+						</div>
+						<p className="text-sm font-semibold text-slate-700">
+							{data.nextBestAction.title}
+						</p>
+						<p className="text-xs text-slate-600">{data.nextBestAction.rationale}</p>
+					</CardContent>
+				</Card>
+			) : null}
 
 			<Card className="glass-card">
 				<div className="glass-card-cap" />

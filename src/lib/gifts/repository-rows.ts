@@ -23,5 +23,6 @@ export function mapGiftRow(row: Record<string, unknown>): Gift {
 			row.receiptNumber != null ? Number(row.receiptNumber) : undefined,
 		anonymous: Boolean(row.anonymous),
 		voidOfId: row.voidOfId ? String(row.voidOfId) : undefined,
+		receiptSentAt: row.receiptSentAt ? String(row.receiptSentAt) : undefined,
 	};
 }

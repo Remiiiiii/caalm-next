@@ -6,11 +6,17 @@ import {
 	requireConstituentOrgContext,
 } from "@/lib/constituents";
 import { getConstituentById } from "@/lib/constituents/repository";
+import { pickPrimaryNextBestAction } from "@/lib/fundraising/next-best-action";
 import {
 	getSegmentForConstituent,
 	updateAskOverride,
 } from "@/lib/fundraising/segments-repository";
 import { getLatestWealthScreen } from "@/lib/fundraising/wealth-repository";
+import { buildNextBestActionContext } from "@/lib/stewardship/stewardship-context";
+import { Query } from "node-appwrite";
+import { createAdminClient } from "@/lib/appwrite";
+import { appwriteConfig } from "@/lib/appwrite/config";
+import { mapGiftRow } from "@/lib/gifts/repository-rows";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -39,8 +45,29 @@ function mergeTopFeatures(
 	return [...combined].sort((a, b) => b.weight - a.weight).slice(0, limit);
 }
 
-function buildPayload(
+async function loadLatestPostedGift(orgId: string, constituentId: string) {
+	const { tablesDB } = await createAdminClient();
+	const result = await tablesDB.listRows({
+		databaseId: appwriteConfig.databaseId || "",
+		tableId: appwriteConfig.giftsCollectionId || "69d91201001f4e8c2b01",
+		queries: [
+			Query.equal("orgId", orgId),
+			Query.equal("constituentId", constituentId),
+			Query.equal("status", "posted"),
+			Query.orderDesc("giftDate"),
+			Query.limit(20),
+		],
+	});
+	for (const row of result.rows as unknown as Record<string, unknown>[]) {
+		const gift = mapGiftRow(row);
+		if (!gift.voidOfId && gift.amount > 0) return gift;
+	}
+	return null;
+}
+
+async function buildPayload(
 	id: string,
+	orgId: string,
 	row: NonNullable<Awaited<ReturnType<typeof getSegmentForConstituent>>>,
 	wealth: Awaited<ReturnType<typeof getLatestWealthScreen>>,
 ) {
@@ -61,6 +88,18 @@ function buildPayload(
 			? row.askOverrideAmount
 			: suggestedAsk;
 
+	const nbaContext = await buildNextBestActionContext(orgId);
+	const lastGift = await loadLatestPostedGift(orgId, id);
+	const nextBestAction = pickPrimaryNextBestAction({
+		segment: row.segment,
+		lapseRiskScore: row.lapseRiskScore,
+		daysSinceLastGift: nbaContext.daysSinceGift(lastGift?.giftDate),
+		suggestedAskAmount: effectiveAsk,
+		hasOpenPledgeInstallment: nbaContext.openPledgeConstituentIds.has(id),
+		hasUpcomingPublicEvent: nbaContext.orgHasUpcomingPublicEvent,
+		daysSinceLastPostedGift: nbaContext.daysSinceGift(lastGift?.giftDate),
+	});
+
 	return {
 		constituentId: id,
 		segment: row.segment,
@@ -78,6 +117,7 @@ function buildPayload(
 		lapseTopFeatures: lapseTop,
 		upgradeTopFeatures: upgradeTop,
 		featureWeights: topFeaturesFromJson(row.featureWeightsJson),
+		nextBestAction,
 	};
 }
 
@@ -112,7 +152,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 			);
 		}
 		const wealth = await getLatestWealthScreen(ctx.orgId, id);
-		return NextResponse.json(buildPayload(id, row, wealth));
+		return NextResponse.json(await buildPayload(id, ctx.orgId, row, wealth));
 	} catch (error) {
 		console.error("[SERVER] fundraising-intelligence GET:", error);
 		return NextResponse.json(
@@ -187,5 +227,5 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 	});
 
 	const wealth = await getLatestWealthScreen(ctx.orgId, id);
-	return NextResponse.json(buildPayload(id, updated, wealth));
+	return NextResponse.json(await buildPayload(id, ctx.orgId, updated, wealth));
 }
