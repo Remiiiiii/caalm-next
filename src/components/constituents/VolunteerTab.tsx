@@ -1,6 +1,6 @@
 "use client";
 
-import { Save } from "lucide-react";
+import { Download, FileText, Save } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +28,7 @@ export function VolunteerTab({
 	const { permissions } = usePermissions();
 	const { toast } = useToast();
 	const canManage = permissions.includes(PERMISSIONS.VOLUNTEERS.MANAGE);
+	const canView = permissions.includes(PERMISSIONS.VOLUNTEERS.VIEW);
 	const showTab =
 		constituentType === "volunteer" || constituentType === "member";
 
@@ -186,6 +187,44 @@ export function VolunteerTab({
 						<Save className="h-4 w-4" />
 						Save volunteer profile
 					</Button>
+				</div>
+			) : null}
+
+			{canView ? (
+				<div className="rounded-lg border border-slate-200 bg-white p-4 space-y-3">
+					<p className="text-sm font-medium sidebar-gradient-text">
+						Community-service letter (approved hours only)
+					</p>
+					<div className="flex flex-wrap justify-end gap-3">
+						<Button variant="outline" className="px-3" asChild>
+							<a
+								href={`/api/constituents/${constituentId}/volunteer/hours/export?format=csv`}
+							>
+								<Download className="h-4 w-4" />
+								Export CSV
+							</a>
+						</Button>
+						<Button variant="outline" className="px-3" asChild>
+							<a
+								href={`/api/constituents/${constituentId}/volunteer/hours/export?format=pdf`}
+							>
+								<FileText className="h-4 w-4" />
+								Export PDF
+							</a>
+						</Button>
+					</div>
+				</div>
+			) : null}
+
+			{canManage ? (
+				<div className="rounded-lg border border-slate-200 bg-white p-4 space-y-2">
+					<p className="text-sm font-medium sidebar-gradient-text">
+						Volunteer waiver / acknowledgment
+					</p>
+					<p className="text-xs text-slate-600">
+						CAALM Execute acknowledgment — not contract execution. Use the API
+						with a waiver PDF file id after upload.
+					</p>
 				</div>
 			) : null}
 		</div>
