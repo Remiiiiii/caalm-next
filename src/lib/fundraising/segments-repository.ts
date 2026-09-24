@@ -24,6 +24,7 @@ export type ConstituentSegmentRow = {
 	suggestedAskAmount?: number | null;
 	askOverrideAmount?: number | null;
 	askOverrideReason?: string | null;
+	stewardshipContactedAt?: string | null;
 };
 
 function tableId(): string {
@@ -70,6 +71,9 @@ function mapRow(row: Record<string, unknown>): ConstituentSegmentRow {
 				: undefined,
 		askOverrideReason: row.askOverrideReason
 			? String(row.askOverrideReason)
+			: undefined,
+		stewardshipContactedAt: row.stewardshipContactedAt
+			? String(row.stewardshipContactedAt)
 			: undefined,
 	};
 }
@@ -166,6 +170,7 @@ export async function upsertConstituentSegment(input: {
 	suggestedAskAmount: number | null;
 	askOverrideAmount?: number | null;
 	askOverrideReason?: string | null;
+	stewardshipContactedAt?: string | null;
 }): Promise<void> {
 	const { tablesDB } = await createAdminClient();
 	const existing = await findSegmentRow(input.orgId, input.constituentId);
@@ -181,6 +186,8 @@ export async function upsertConstituentSegment(input: {
 		suggestedAskAmount: input.suggestedAskAmount,
 		askOverrideAmount: input.askOverrideAmount ?? null,
 		askOverrideReason: input.askOverrideReason ?? null,
+		stewardshipContactedAt:
+			input.stewardshipContactedAt ?? existing?.stewardshipContactedAt ?? null,
 	};
 	if (existing) {
 		await tablesDB.updateRow({
@@ -254,6 +261,7 @@ export async function recomputeOrgSegments(
 			suggestedAskAmount: ask.suggestedAsk,
 			askOverrideAmount: existing?.askOverrideAmount ?? null,
 			askOverrideReason: existing?.askOverrideReason ?? null,
+			stewardshipContactedAt: existing?.stewardshipContactedAt ?? null,
 		});
 		constituentsUpdated += 1;
 	}
@@ -299,6 +307,22 @@ export async function getSegmentForConstituent(
 	constituentId: string,
 ): Promise<ConstituentSegmentRow | null> {
 	return findSegmentRow(orgId, constituentId);
+}
+
+export async function markStewardshipContactedAt(input: {
+	orgId: string;
+	constituentId: string;
+	contactedAt: string;
+}): Promise<void> {
+	const existing = await findSegmentRow(input.orgId, input.constituentId);
+	if (!existing) return;
+	const { tablesDB } = await createAdminClient();
+	await tablesDB.updateRow({
+		databaseId: dbId(),
+		tableId: tableId(),
+		rowId: existing.$id,
+		data: { stewardshipContactedAt: input.contactedAt },
+	});
 }
 
 export async function listConstituentIdsForSegment(

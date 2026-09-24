@@ -29,6 +29,7 @@ export type Gift = {
 	receiptNumber?: number;
 	anonymous: boolean;
 	voidOfId?: string;
+	receiptSentAt?: string;
 };
 
 export type GiftListFilters = {

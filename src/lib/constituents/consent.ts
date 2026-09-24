@@ -6,10 +6,10 @@ import type { ContactChannel } from "./types";
  */
 export const CAN_CONTACT_REQUIRED_SENDER_PATHS = [
 	"src/lib/constituents/consent.ts",
+	"src/lib/stewardship/gift-receipts.ts",
 ] as const;
 
 export const CAN_CONTACT_FUTURE_SENDER_PATHS = [
-	"src/lib/stewardship/gift-receipts.ts",
 	"src/lib/appeals/send.ts",
 	"src/lib/events/registration-confirmation-email.ts",
 ] as const;

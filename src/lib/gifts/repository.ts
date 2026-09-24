@@ -8,6 +8,7 @@ import {
 	resolveFundForGift,
 	UNRESTRICTED_FUND_CODE,
 } from "@/lib/designations";
+import { sendPostedGiftReceiptIfEligible } from "@/lib/stewardship/gift-receipts";
 import { allocateReceiptNumber } from "./receipt";
 import { assertGrantContractForOrg } from "./grant-contract";
 import { mapGiftRow } from "./repository-rows";
@@ -242,6 +243,11 @@ export async function postGift(id: string, orgId: string): Promise<Gift> {
 	});
 	const posted = mapRow(row as unknown as Record<string, unknown>);
 	await createSoftCreditsForPostedGift(posted);
+	try {
+		await sendPostedGiftReceiptIfEligible(posted);
+	} catch {
+		// Posted gifts stay posted even when receipt email fails.
+	}
 	return posted;
 }
 
