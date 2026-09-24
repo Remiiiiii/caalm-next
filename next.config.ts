@@ -179,10 +179,6 @@ const nextConfig: NextConfig = {
 				protocol: "https",
 				hostname: "api.qrserver.com",
 			},
-			{
-				protocol: "https",
-				hostname: "pbzguikxxqv1zlwl.public.blob.vercel-storage.com",
-			},
 		],
 	},
 	async headers() {

@@ -976,7 +976,7 @@ export default function LandingHero() {
 										src={demoSrc}
 										muted
 										playsInline
-										preload={isNarrow ? "metadata" : "auto"}
+										preload="metadata"
 										autoPlay={demoInView}
 										poster={DEMO_POSTER_SRC}
 										onLoadedData={() => {
@@ -998,7 +998,7 @@ export default function LandingHero() {
 											src={demoSrc}
 											muted
 											playsInline
-											preload="auto"
+											preload="metadata"
 											className={`absolute inset-0 z-[2] h-full w-full object-contain object-center brightness-[1.09] contrast-[1.04] transition-opacity ease-in-out ${
 												demoLoaded && demoActiveLayer === 1
 													? "opacity-100"
