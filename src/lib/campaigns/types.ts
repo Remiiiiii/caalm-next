@@ -8,6 +8,7 @@ export type Campaign = {
 	currency: string;
 	startDate?: string;
 	endDate?: string;
+	campaignCost?: number;
 };
 
 export type CreateCampaignInput = {
@@ -20,5 +21,5 @@ export type CreateCampaignInput = {
 };
 
 export type UpdateCampaignInput = Partial<
-	Omit<CreateCampaignInput, "orgId">
+	Omit<CreateCampaignInput, "orgId"> & { campaignCost?: number | null }
 >;
