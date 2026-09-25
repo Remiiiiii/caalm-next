@@ -2,7 +2,7 @@ import "./globals.css";
 
 import { Poppins } from "next/font/google";
 import type { ReactNode } from "react";
-import { RB2BLoader } from "@/components/analytics/RB2BLoader";
+import { RB2BScript } from "@/components/analytics/RB2BScript";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import SWRProvider from "@/components/providers/SWRProvider";
 
@@ -40,12 +40,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           type="image/svg+xml"
           sizes="96x96"
         /> */}
+				<RB2BScript />
 			</head>
 			<body
 				suppressHydrationWarning
 				className={`${poppins.variable} font-poppins antialiased`}
 			>
-				<RB2BLoader />
 				<ErrorBoundary>
 					<SWRProvider>{children}</SWRProvider>
 				</ErrorBoundary>
