@@ -16,7 +16,10 @@ function deliveriesTable(): string {
  * On crash after claim but before finish, Stripe retries — handlers must
  * also be safe to re-run (upsert org billing from subscription snapshot).
  */
-export async function claimStripeEvent(eventId: string): Promise<boolean> {
+export async function claimStripeEvent(
+	eventId: string,
+	source: "stripe" | "stripe-donation" = "stripe",
+): Promise<boolean> {
 	const { tablesDB } = await createAdminClient();
 	try {
 		await tablesDB.createRow({
@@ -25,7 +28,7 @@ export async function claimStripeEvent(eventId: string): Promise<boolean> {
 			rowId: ID.unique(),
 			data: {
 				deliveryId: eventId,
-				source: "stripe",
+				source,
 				processedAt: new Date().toISOString(),
 			},
 		});
@@ -36,7 +39,7 @@ export async function claimStripeEvent(eventId: string): Promise<boolean> {
 			tableId: deliveriesTable(),
 			queries: [
 				Query.equal("deliveryId", eventId),
-				Query.equal("source", "stripe"),
+				Query.equal("source", source),
 				Query.limit(1),
 			],
 		});

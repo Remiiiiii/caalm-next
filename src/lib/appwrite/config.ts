@@ -422,6 +422,12 @@ export const appwriteConfig = {
 		"69d91201001f4e8c2b01",
 	),
 
+	/** Staged constituent CSV import batches (name: constituent_import_batches) */
+	constituentImportBatchesCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_CONSTITUENT_IMPORT_BATCHES_COLLECTION",
+		"69f9a301001f4e8c2b61",
+	),
+
 	/** Fundraising campaigns (name: campaigns) */
 	campaignsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_CAMPAIGNS_COLLECTION",

@@ -187,6 +187,24 @@ export const API_AUTHZ_ALLOWLIST: readonly ApiAuthzAllowEntry[] = [
 		class: "token",
 		reason: "Public approval decision via hashed email action token",
 	},
+	{
+		path: "give/checkout",
+		class: "public",
+		reason:
+			"Public donation checkout (Stripe payment mode), not CAALM SaaS entitlements",
+	},
+	{
+		path: "give/org/[orgSlug]",
+		class: "public",
+		reason:
+			"Public org lookup for donation page branding; no authenticated session",
+	},
+	{
+		path: "webhooks/stripe-donations",
+		class: "webhook",
+		reason:
+			"Stripe donation webhook (separate secret); posts gifts only, not billing subscriptions",
+	},
 ] as const;
 
 export const API_AUTHZ_ALLOWLIST_PATHS = new Set(
