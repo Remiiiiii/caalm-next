@@ -46,6 +46,7 @@ import {
 import { parseAllowedHttpUrl } from "@/lib/funding/safe-link-url";
 import { cn } from "@/lib/utils";
 import { FundingLinkedGifts } from "@/components/funding/FundingLinkedGifts";
+import { FunderSnapshotPanel } from "@/components/funding/FunderSnapshotPanel";
 import { GrantBudgetPanel } from "@/components/funding/GrantBudgetPanel";
 import { GrantFundSelector } from "@/components/funding/GrantFundSelector";
 import { RestrictionReleasePanel } from "@/components/funding/RestrictionReleasePanel";
@@ -213,6 +214,7 @@ export function ObligationsPanel({
 				{showGrantTools ? (
 					<>
 						<GrantFundSelector stream={stream} onUpdated={onChanged} />
+						<FunderSnapshotPanel stream={stream} />
 						<GrantBudgetPanel stream={stream} />
 						<RestrictionReleasePanel stream={stream} />
 					</>

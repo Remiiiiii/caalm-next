@@ -90,4 +90,11 @@ export {
 	updatePursuit,
 } from "./pursuit.repository";
 export { buildRetentionSummary } from "./retention.service";
+export {
+	assembleFunderSnapshot,
+	approvedGrantVolunteerMinutes,
+	funderSnapshotToCsv,
+	loadFunderSnapshot,
+	type FunderSnapshot,
+} from "./funder-snapshot";
 export type * from "./types";
