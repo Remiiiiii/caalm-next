@@ -29,6 +29,10 @@ import {
 	listOpenPullRequests,
 } from "./github";
 import {
+	applyNpoPackagingProgressCap,
+	evaluateNpoPackagingGate,
+} from "./nonprofit/npo-packaging-gate";
+import {
 	findSectionPullRequest,
 	type GitHubPullRequestSummary,
 	matchPullRequestToTask,
@@ -747,8 +751,16 @@ export async function getOverview(options?: {
 		};
 	});
 
+	let overallProgressPercent = computeProgressPercent(viewTasks);
+	if (catalogKey === "npo") {
+		overallProgressPercent = applyNpoPackagingProgressCap(
+			overallProgressPercent,
+			evaluateNpoPackagingGate(),
+		);
+	}
+
 	const overview = {
-		overallProgressPercent: computeProgressPercent(viewTasks),
+		overallProgressPercent,
 		sections: sectionViews,
 	};
 	overviewCache.set(catalogKey, { fetchedAt: Date.now(), value: overview });
