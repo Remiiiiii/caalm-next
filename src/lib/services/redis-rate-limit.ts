@@ -66,6 +66,137 @@ interface RateLimitService {
 	getRawClient(): Redis | null;
 }
 
+/** Local backup sliding window: key → request timestamps (ms) */
+const fallbackSliders = new Map<string, number[]>();
+
+const DEFAULT_SLIDING_WINDOW_SEC = 60;
+const DEFAULT_SLIDING_MAX_REQUESTS = 100;
+
+function slidingWindowResultFromCount(
+	windowSizeSec: number,
+	limit: number,
+	current: number,
+	now = Date.now(),
+): RateLimitResult {
+	const allowed = current <= limit;
+	return {
+		allowed,
+		remaining: Math.max(0, limit - current),
+		resetTime: Math.floor(now / 1000) + windowSizeSec,
+		retryAfter: allowed ? undefined : windowSizeSec,
+	};
+}
+
+function slidingWindowMemoryFallback(
+	key: string,
+	windowMs: number,
+	limit: number,
+): { current: number; result: RateLimitResult } {
+	const now = Date.now();
+	const clearBefore = now - windowMs;
+
+	let timestamps = fallbackSliders.get(key) || [];
+	timestamps = timestamps.filter((timestamp) => timestamp > clearBefore);
+	timestamps.push(now);
+	fallbackSliders.set(key, timestamps);
+
+	const current = timestamps.length;
+	return {
+		current,
+		result: slidingWindowResultFromCount(
+			Math.ceil(windowMs / 1000),
+			limit,
+			current,
+			now,
+		),
+	};
+}
+
+async function slidingWindowRedisZset(
+	key: string,
+	windowMs: number,
+	limit: number,
+): Promise<{ current: number; result: RateLimitResult }> {
+	const now = Date.now();
+	const clearBefore = now - windowMs;
+	const windowSizeSec = Math.ceil(windowMs / 1000);
+
+	const pipeline = redis.pipeline();
+	pipeline.zremrangebyscore(key, 0, clearBefore);
+	pipeline.zadd(key, now, `${now}-${Math.random()}`);
+	pipeline.zcard(key);
+	pipeline.expire(key, windowSizeSec + 5);
+
+	const results = await pipeline.exec();
+	if (!results) {
+		throw new Error("Redis sliding window pipeline returned no results");
+	}
+
+	const zcardEntry = results[2];
+	if (zcardEntry[0]) {
+		throw zcardEntry[0];
+	}
+
+	const current = zcardEntry[1] as number;
+	return {
+		current,
+		result: slidingWindowResultFromCount(windowSizeSec, limit, current, now),
+	};
+}
+
+async function slidingWindowPreciseWithCount(
+	key: string,
+	windowSizeSec: number,
+	limit: number,
+): Promise<{ current: number; result: RateLimitResult }> {
+	const windowMs = windowSizeSec * 1000;
+
+	if (!useStandardRedis) {
+		return slidingWindowMemoryFallback(key, windowMs, limit);
+	}
+
+	try {
+		return await slidingWindowRedisZset(key, windowMs, limit);
+	} catch (error) {
+		console.warn(
+			"[SERVER] Layerbase connection cap hit or Redis error. Executing local sliding window fallback.",
+			error,
+		);
+		return slidingWindowMemoryFallback(key, windowMs, limit);
+	}
+}
+
+/**
+ * Layerbase ZSET sliding window with in-memory fallback when Redis is unavailable.
+ */
+async function slidingWindowPrecise(
+	key: string,
+	windowSizeSec: number,
+	limit: number,
+): Promise<RateLimitResult> {
+	return (await slidingWindowPreciseWithCount(key, windowSizeSec, limit))
+		.result;
+}
+
+/**
+ * Wipe expired sliding-window arrays from serverless instance memory.
+ */
+export function pruneFallbackSlidingWindowMemory(
+	windowMs: number = DEFAULT_SLIDING_WINDOW_SEC * 1000,
+): void {
+	const now = Date.now();
+	const clearBefore = now - windowMs;
+
+	for (const [key, timestamps] of fallbackSliders.entries()) {
+		const validTimestamps = timestamps.filter((t) => t > clearBefore);
+		if (validTimestamps.length === 0) {
+			fallbackSliders.delete(key);
+		} else {
+			fallbackSliders.set(key, validTimestamps);
+		}
+	}
+}
+
 /**
  * In-memory rate limit service for development
  */
@@ -73,6 +204,32 @@ class InMemoryRateLimitService implements RateLimitService {
 	private counters: Map<string, { count: number; expiry: number }> = new Map();
 	private tokenBuckets: Map<string, TokenBucketState> = new Map();
 	private bans: Map<string, number> = new Map();
+
+	private windowMs = DEFAULT_SLIDING_WINDOW_SEC * 1000;
+	private maxRequests = DEFAULT_SLIDING_MAX_REQUESTS;
+
+	/**
+	 * Precise sliding-window check (Redis ZSET when configured, else local timestamps).
+	 */
+	async handleRateLimit(
+		ipOrIdentifier: string,
+	): Promise<{ success: boolean; current: number }> {
+		const key = `ratelimit:sliding:${ipOrIdentifier}`;
+		const { current, result } = await this.executeSlidingWindow(key);
+		return { success: result.allowed, current };
+	}
+
+	private async executeSlidingWindow(
+		key: string,
+		windowSizeSec = DEFAULT_SLIDING_WINDOW_SEC,
+		limit = this.maxRequests,
+	): Promise<{ current: number; result: RateLimitResult }> {
+		return slidingWindowPreciseWithCount(key, windowSizeSec, limit);
+	}
+
+	public pruneFallbackMemory(): void {
+		pruneFallbackSlidingWindowMemory(this.windowMs);
+	}
 
 	async increment(key: string, ttl: number): Promise<number> {
 		const now = Date.now();
@@ -170,41 +327,7 @@ class InMemoryRateLimitService implements RateLimitService {
 		windowSize: number,
 		limit: number,
 	): Promise<RateLimitResult> {
-		const now = Date.now();
-		const _windowStart = now - windowSize * 1000;
-
-		// Clean up expired entries
-		for (const [k, v] of this.counters.entries()) {
-			if (k.startsWith(key) && v.expiry < now) {
-				this.counters.delete(k);
-			}
-		}
-
-		// Increment current window
-		const windowKey = `${key}:${Math.floor(now / 1000)}`;
-		const _count = await this.increment(windowKey, windowSize);
-
-		// Count all windows in the sliding window
-		let totalCount = 0;
-		const currentSecond = Math.floor(now / 1000);
-		for (let i = 0; i < windowSize; i++) {
-			const checkKey = `${key}:${currentSecond - i}`;
-			const entry = this.counters.get(checkKey);
-			if (entry && entry.expiry > now) {
-				totalCount += entry.count;
-			}
-		}
-
-		const allowed = totalCount <= limit;
-		const remaining = Math.max(0, limit - totalCount);
-		const resetTime = Math.floor(now / 1000) + windowSize;
-
-		return {
-			allowed,
-			remaining,
-			resetTime,
-			retryAfter: allowed ? undefined : windowSize,
-		};
+		return (await this.executeSlidingWindow(key, windowSize, limit)).result;
 	}
 
 	async setBan(key: string, duration: number): Promise<void> {
@@ -326,30 +449,7 @@ class VercelKVRateLimitService implements RateLimitService {
 		windowSize: number,
 		limit: number,
 	): Promise<RateLimitResult> {
-		const now = Date.now();
-		const currentSecond = Math.floor(now / 1000);
-		const windowKey = `${key}:${currentSecond}`;
-
-		const count = await this.increment(windowKey, windowSize);
-
-		// Count all windows in the sliding window
-		let totalCount = count;
-		for (let i = 1; i < windowSize; i++) {
-			const checkKey = `${key}:${currentSecond - i}`;
-			const windowCount = (await kv.get<number>(checkKey)) || 0;
-			totalCount += windowCount;
-		}
-
-		const allowed = totalCount <= limit;
-		const remaining = Math.max(0, limit - totalCount);
-		const resetTime = currentSecond + windowSize;
-
-		return {
-			allowed,
-			remaining,
-			resetTime,
-			retryAfter: allowed ? undefined : windowSize,
-		};
+		return slidingWindowPrecise(key, windowSize, limit);
 	}
 
 	async setBan(key: string, duration: number): Promise<void> {
@@ -424,41 +524,6 @@ class StandardRedisRateLimitService implements RateLimitService {
     redis.call('SET', key, newState, 'EX', 3600)
     
     return cjson.encode({allowed=allowed, remaining=remaining, tokens=tokens, lastRefill=lastRefill})
-  `;
-
-	// Lua script for sliding window increment (atomic operation)
-	private readonly SLIDING_WINDOW_SCRIPT = `
-    local key = KEYS[1]
-    local windowSize = tonumber(ARGV[1])
-    local limit = tonumber(ARGV[2])
-    local now = tonumber(ARGV[3])
-    local currentSecond = math.floor(now / 1000)
-    
-    -- Increment current window
-    local windowKey = key .. ':' .. currentSecond
-    local count = redis.call('INCR', windowKey)
-    redis.call('EXPIRE', windowKey, windowSize)
-    
-    -- Count all windows in sliding window
-    local totalCount = count
-    for i = 1, windowSize - 1 do
-      local checkKey = key .. ':' .. (currentSecond - i)
-      local windowCount = redis.call('GET', checkKey)
-      if windowCount then
-        totalCount = totalCount + tonumber(windowCount)
-      end
-    end
-    
-    local allowed = totalCount <= limit
-    local remaining = math.max(0, limit - totalCount)
-    local resetTime = currentSecond + windowSize
-    
-    return cjson.encode({
-      allowed = allowed,
-      remaining = remaining,
-      resetTime = resetTime,
-      totalCount = totalCount
-    })
   `;
 
 	constructor() {
@@ -615,46 +680,7 @@ class StandardRedisRateLimitService implements RateLimitService {
 		windowSize: number,
 		limit: number,
 	): Promise<RateLimitResult> {
-		try {
-			const now = Date.now();
-			const result = await this.client.eval(
-				this.SLIDING_WINDOW_SCRIPT,
-				1,
-				key,
-				windowSize.toString(),
-				limit.toString(),
-				now.toString(),
-			);
-
-			if (typeof result === "string") {
-				const data = JSON.parse(result);
-				return {
-					allowed: data.allowed,
-					remaining: data.remaining,
-					resetTime: data.resetTime,
-					retryAfter: data.allowed ? undefined : windowSize,
-				};
-			}
-
-			// Fallback
-			return {
-				allowed: false,
-				remaining: 0,
-				resetTime: Math.floor(Date.now() / 1000) + windowSize,
-				retryAfter: windowSize,
-			};
-		} catch (error) {
-			console.error("Redis sliding window error:", error);
-			// Fallback to simple increment
-			const count = await this.increment(key, windowSize);
-			const allowed = count <= limit;
-			return {
-				allowed,
-				remaining: Math.max(0, limit - count),
-				resetTime: Math.floor(Date.now() / 1000) + windowSize,
-				retryAfter: allowed ? undefined : windowSize,
-			};
-		}
+		return slidingWindowPrecise(key, windowSize, limit);
 	}
 
 	async setBan(key: string, duration: number): Promise<void> {
@@ -777,6 +803,24 @@ export async function slidingWindowIncrement(
 }
 
 /**
+ * Sliding-window rate limit by identifier (1-minute / 100-request defaults when omitted).
+ */
+export async function handleRateLimit(
+	ipOrIdentifier: string,
+	options?: { windowSec?: number; maxRequests?: number },
+): Promise<{ success: boolean; current: number }> {
+	const windowSec = options?.windowSec ?? DEFAULT_SLIDING_WINDOW_SEC;
+	const maxRequests = options?.maxRequests ?? DEFAULT_SLIDING_MAX_REQUESTS;
+	const key = `ratelimit:sliding:${ipOrIdentifier}`;
+	const { current, result } = await slidingWindowPreciseWithCount(
+		key,
+		windowSec,
+		maxRequests,
+	);
+	return { success: result.allowed, current };
+}
+
+/**
  * Set ban for identifier
  */
 export async function setBan(key: string, duration: number): Promise<void> {
@@ -803,6 +847,8 @@ export default {
 	incrementWithExpiry,
 	tokenBucketRefill,
 	slidingWindowIncrement,
+	handleRateLimit,
+	pruneFallbackSlidingWindowMemory,
 	setBan,
 	isBanned,
 	getRawRedisClient,
