@@ -23,6 +23,8 @@ export type DonorMetricSlice = {
 export type DevelopmentMetrics = {
 	year: number;
 	ytdDollars: number;
+	/** False when the org has no countable posted gifts on record. */
+	hasPostedGifts: boolean;
 } & DonorMetricSlice;
 
 export function giftCalendarYear(giftDate: string): number {
@@ -159,10 +161,12 @@ export async function computeDevelopmentMetrics(
 ): Promise<DevelopmentMetrics> {
 	const year = asOf.getFullYear();
 	const rows = await listAllPostedGiftsForOrg(orgId);
+	const countable = rows.filter(isCountablePostedGift);
 	const donor = computeDonorMetrics(rows, year);
 	return {
 		year,
 		ytdDollars: sumYtdPostedDollars(rows, year),
+		hasPostedGifts: countable.length > 0,
 		...donor,
 	};
 }

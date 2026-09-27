@@ -5,15 +5,17 @@
 
 import { kv } from "@vercel/kv";
 import Redis from "ioredis";
+import redis from "../redis-client";
 
 // Check if Redis is available
 const isRedisAvailable = !!(
 	process.env.KV_REST_API_URL || process.env.REDIS_URL
 );
 
-// Check which Redis implementation to use
-const useVercelKV = !!process.env.KV_REST_API_URL;
-const useStandardRedis = !!process.env.REDIS_URL && !useVercelKV;
+// Prefer Layerbase (REDIS_URL / ioredis) over Vercel KV. When both env vars
+// are set, KV was winning and kept hitting an exhausted Upstash request quota.
+const useStandardRedis = !!process.env.REDIS_URL;
+const useVercelKV = !!process.env.KV_REST_API_URL && !useStandardRedis;
 
 /**
  * Redis cache interface
@@ -122,42 +124,14 @@ class VercelKVCache implements CacheService {
 
 /**
  * Standard Redis implementation using ioredis
+ * Uses shared Layerbase Redis client
  */
 class StandardRedisCache implements CacheService {
 	private client: Redis;
 
 	constructor() {
-		const redisUrl = process.env.REDIS_URL;
-		if (!redisUrl) {
-			throw new Error("REDIS_URL environment variable is required");
-		}
-
-		this.client = new Redis(redisUrl, {
-			maxRetriesPerRequest: 1,
-			connectTimeout: 2000,
-			commandTimeout: 2000,
-			enableOfflineQueue: false,
-			retryStrategy: (times) => {
-				if (times > 2) return null;
-				const delay = Math.min(times * 50, 2000);
-				return delay;
-			},
-			reconnectOnError: (err) => {
-				const targetError = "READONLY";
-				if (err.message.includes(targetError)) {
-					return true;
-				}
-				return false;
-			},
-		});
-
-		this.client.on("error", (err) => {
-			console.error("Redis connection error:", err);
-		});
-
-		this.client.on("connect", () => {
-			console.log("Redis connected successfully");
-		});
+		// Use shared Layerbase Redis client
+		this.client = redis;
 	}
 
 	async get<T>(key: string): Promise<T | null> {
@@ -237,12 +211,13 @@ class StandardRedisCache implements CacheService {
  */
 function createCacheService(): CacheService {
 	if (isRedisAvailable) {
+		if (useStandardRedis) {
+			console.log("Using Layerbase Redis (ioredis) for caching");
+			return new StandardRedisCache();
+		}
 		if (useVercelKV) {
 			console.log("Using Vercel KV for Redis caching");
 			return new VercelKVCache();
-		} else if (useStandardRedis) {
-			console.log("Using standard Redis (ioredis) for caching");
-			return new StandardRedisCache();
 		}
 	}
 
@@ -411,10 +386,10 @@ export async function getStats(): Promise<{
 }> {
 	let provider: string | undefined;
 	if (isRedisAvailable) {
-		if (useVercelKV) {
+		if (useStandardRedis) {
+			provider = "layerbase";
+		} else if (useVercelKV) {
 			provider = "vercel-kv";
-		} else if (useStandardRedis) {
-			provider = "standard-redis";
 		}
 	}
 
