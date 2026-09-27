@@ -12,9 +12,10 @@ const isRedisAvailable = !!(
 	process.env.KV_REST_API_URL || process.env.REDIS_URL
 );
 
-// Check which Redis implementation to use
-const useVercelKV = !!process.env.KV_REST_API_URL;
-const useStandardRedis = !!process.env.REDIS_URL && !useVercelKV;
+// Prefer Layerbase (REDIS_URL / ioredis) over Vercel KV. When both env vars
+// are set, KV was winning and kept hitting an exhausted Upstash request quota.
+const useStandardRedis = !!process.env.REDIS_URL;
+const useVercelKV = !!process.env.KV_REST_API_URL && !useStandardRedis;
 
 /**
  * Redis cache interface
@@ -210,12 +211,13 @@ class StandardRedisCache implements CacheService {
  */
 function createCacheService(): CacheService {
 	if (isRedisAvailable) {
+		if (useStandardRedis) {
+			console.log("Using Layerbase Redis (ioredis) for caching");
+			return new StandardRedisCache();
+		}
 		if (useVercelKV) {
 			console.log("Using Vercel KV for Redis caching");
 			return new VercelKVCache();
-		} else if (useStandardRedis) {
-			console.log("Using standard Redis (ioredis) for caching");
-			return new StandardRedisCache();
 		}
 	}
 
@@ -384,10 +386,10 @@ export async function getStats(): Promise<{
 }> {
 	let provider: string | undefined;
 	if (isRedisAvailable) {
-		if (useVercelKV) {
+		if (useStandardRedis) {
+			provider = "layerbase";
+		} else if (useVercelKV) {
 			provider = "vercel-kv";
-		} else if (useStandardRedis) {
-			provider = "standard-redis";
 		}
 	}
 

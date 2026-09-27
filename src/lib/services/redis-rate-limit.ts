@@ -13,9 +13,9 @@ const isRedisAvailable = !!(
 	process.env.KV_REST_API_URL || process.env.REDIS_URL
 );
 
-// Check which Redis implementation to use
-const useVercelKV = !!process.env.KV_REST_API_URL;
-const useStandardRedis = !!process.env.REDIS_URL && !useVercelKV;
+// Prefer Layerbase (REDIS_URL / ioredis) over Vercel KV when both are set
+const useStandardRedis = !!process.env.REDIS_URL;
+const useVercelKV = !!process.env.KV_REST_API_URL && !useStandardRedis;
 
 /**
  * Rate limit operation result
@@ -711,12 +711,13 @@ class StandardRedisRateLimitService implements RateLimitService {
  */
 function createRateLimitService(): RateLimitService {
 	if (isRedisAvailable) {
+		if (useStandardRedis) {
+			console.log("Using Layerbase Redis (ioredis) for rate limiting");
+			return new StandardRedisRateLimitService();
+		}
 		if (useVercelKV) {
 			console.log("Using Vercel KV for rate limiting");
 			return new VercelKVRateLimitService();
-		} else if (useStandardRedis) {
-			console.log("Using standard Redis (ioredis) for rate limiting");
-			return new StandardRedisRateLimitService();
 		}
 	}
 
