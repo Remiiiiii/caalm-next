@@ -8,7 +8,7 @@ import {
 	logConstituentPiiView,
 	requireConstituentOrgContext,
 	updateConstituent,
-} from "@/lib/constituents";
+} from "@/lib/constituents/server";
 import {
 	consentAuditChanges,
 	logConstituentConsentChange,

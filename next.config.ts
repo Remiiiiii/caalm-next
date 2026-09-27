@@ -26,6 +26,10 @@ const nextConfig: NextConfig = {
 	webpack: (config, { isServer }) => {
 		// Exclude Node.js modules from client bundle
 		if (!isServer) {
+			config.externals = [
+				...(Array.isArray(config.externals) ? config.externals : []),
+				{ ioredis: "commonjs ioredis" },
+			];
 			config.resolve.fallback = {
 				...config.resolve.fallback,
 				dns: false,
@@ -116,7 +120,13 @@ const nextConfig: NextConfig = {
 		},
 	},
 	// Enable Turbopack explicitly
-	turbopack: {},
+	turbopack: {
+		resolveAlias: {
+			ioredis: {
+				browser: "./src/lib/stubs/ioredis-client-stub.ts",
+			},
+		},
+	},
 
 	async redirects() {
 		return [

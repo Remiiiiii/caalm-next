@@ -10,6 +10,8 @@ import {
 } from "@/lib/api/licenses/utils/response.util";
 import { requirePermission } from "@/lib/rbac/middleware";
 import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
+import { CACHE_KEYS } from "@/lib/services/cache-keys";
+import CacheManager from "@/lib/services/cache-manager";
 
 export async function GET(request: NextRequest) {
 	const requestId = generateRequestId();
@@ -34,12 +36,28 @@ export async function GET(request: NextRequest) {
 
 		const { searchParams } = new URL(request.url);
 		const reportType = searchParams.get("type") || "summary";
+		const validReportTypes = new Set([
+			"summary",
+			"utilization",
+			"cost",
+			"expiration",
+		]);
+		if (!validReportTypes.has(reportType)) {
+			return errorResponse("Invalid report type", 400, { requestId });
+		}
+		const cacheKey = CACHE_KEYS.licenses.reports(
+			defaultOrg.orgId,
+			reportType,
+		);
 
-		const allLicenses = await LicenseService.listLicenses(defaultOrg.orgId);
+		const reportData = await CacheManager.withCache(
+			"licenses/reports",
+			cacheKey,
+			async () => {
+				const allLicenses = await LicenseService.listLicenses(defaultOrg.orgId);
+				let data: Record<string, unknown> = {};
 
-		let reportData: any = {};
-
-		switch (reportType) {
+				switch (reportType) {
 			case "summary": {
 				const totalLicenses = allLicenses.licenses.length;
 				const activeLicenses = allLicenses.licenses.filter(
@@ -54,7 +72,7 @@ export async function GET(request: NextRequest) {
 					0,
 				);
 
-				reportData = {
+				data = {
 					totalLicenses,
 					activeLicenses,
 					expiredLicenses,
@@ -75,7 +93,7 @@ export async function GET(request: NextRequest) {
 							: 0,
 				}));
 
-				reportData = { utilization: utilizationData };
+				data = { utilization: utilizationData };
 				break;
 			}
 
@@ -98,7 +116,7 @@ export async function GET(request: NextRequest) {
 					}
 				});
 
-				reportData = {
+				data = {
 					costByVendor,
 					costByType,
 					costByDepartment,
@@ -122,13 +140,17 @@ export async function GET(request: NextRequest) {
 						return a.expirationDate.localeCompare(b.expirationDate);
 					});
 
-				reportData = { expiration: expirationData };
+				data = { expiration: expirationData };
 				break;
 			}
 
 			default:
-				return errorResponse("Invalid report type", 400, { requestId });
-		}
+				throw new Error("Invalid report type");
+				}
+
+				return data;
+			},
+		);
 
 		return successResponse(reportData, { requestId });
 	} catch (error) {

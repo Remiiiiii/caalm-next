@@ -78,10 +78,35 @@ export const CACHE_KEYS = {
 	licenses: {
 		all: () => `licenses:all`,
 		expiring: (days: number) => `licenses:expiring:${days}`,
-		database: (limit: number, offset: number) =>
-			`licenses:database:${limit}:${offset}`,
+		database: (orgId: string, limit: number, offset: number) =>
+			`licenses:database:${orgId}:${limit}:${offset}`,
 		details: (licenseId: string) => `licenses:details:${licenseId}`,
-		reports: (type: string) => `licenses:reports:${type}`,
+		reports: (orgId: string, type: string) =>
+			`licenses:reports:${orgId}:${type}`,
+	},
+
+	// Tasks (team task board)
+	tasks: {
+		list: (orgId: string, queryHash: string) =>
+			`tasks:list:${orgId}:${queryHash}`,
+	},
+
+	// Organization profile & reference data
+	organizations: {
+		profile: (orgId: string) => `organizations:profile:${orgId}`,
+	},
+	costCenters: {
+		list: (orgId: string, includeInactive: boolean) =>
+			`cost-centers:${orgId}:${includeInactive ? "all" : "active"}`,
+	},
+
+	// Dashboard admin helpers
+	dashboardAuthUsers: () => `dashboard:auth-users`,
+
+	// Portfolio analytics
+	analyticsPortfolio: {
+		accountability: (orgId: string, period: string) =>
+			`analytics:portfolio-accountability:${orgId}:${period}`,
 	},
 
 	// Reports
@@ -228,6 +253,14 @@ export const getTTLForRoute = (route: string): number => {
 		"licenses/all": CACHE_TTLS.long,
 		"licenses/metrics": CACHE_TTLS.long, // 10 minutes
 		"licenses/database": CACHE_TTLS.long, // 10 minutes
+		"licenses/reports": CACHE_TTLS.veryLong,
+
+		"tasks/list": CACHE_TTLS.short,
+
+		"organizations/profile": CACHE_TTLS.long,
+		"cost-centers/list": CACHE_TTLS.long,
+		"dashboard/auth-users": CACHE_TTLS.medium,
+		"analytics/portfolio-accountability": CACHE_TTLS.medium,
 		"licenses/details": CACHE_TTLS.medium, // 5 minutes
 		"licenses/expiring": CACHE_TTLS.medium, // 5 minutes
 		"licenses/reports": CACHE_TTLS.veryLong, // 15 minutes

@@ -5,7 +5,7 @@ import {
 	constituentActorFromUser,
 	getConstituentById,
 	logConstituentPiiView,
-} from "@/lib/constituents";
+} from "@/lib/constituents/server";
 import { requirePagePermission } from "@/lib/rbac/page-guards";
 import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 

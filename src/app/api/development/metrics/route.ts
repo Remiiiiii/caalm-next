@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
-import { requireConstituentOrgContext } from "@/lib/constituents";
+import { requireConstituentOrgContext } from "@/lib/constituents/server";
 import { computeDevelopmentMetrics } from "@/lib/development";
 
 export async function GET(request: NextRequest) {

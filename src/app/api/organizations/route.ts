@@ -13,6 +13,8 @@ import {
 import { getOrganization, updateOrganization } from "@/lib/rbac/organizations";
 import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 import { logAuditEvent } from "@/lib/services/audit-logger";
+import { CACHE_KEYS } from "@/lib/services/cache-keys";
+import CacheManager from "@/lib/services/cache-manager";
 import { formatOrgStreetAddress } from "@/lib/templates/org-letterhead";
 
 export async function GET(request: NextRequest) {
@@ -41,7 +43,12 @@ export async function GET(request: NextRequest) {
 			);
 		}
 
-		const org = await getOrganization(orgId);
+		const cacheKey = CACHE_KEYS.organizations.profile(orgId);
+		const org = await CacheManager.withCache(
+			"organizations/profile",
+			cacheKey,
+			async () => getOrganization(orgId),
+		);
 		if (!org) {
 			return NextResponse.json(
 				{ error: "Organization not found" },
@@ -210,6 +217,8 @@ export async function PUT(request: NextRequest) {
 			domain: validated.domain === null ? undefined : validated.domain,
 			settings,
 		});
+
+		await CacheManager.invalidateOrganization(orgId).catch(() => undefined);
 
 		await logAuditEvent({
 			event_id: `org_update_${orgId}`,

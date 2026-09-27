@@ -4,6 +4,8 @@ import { getCurrentUser } from "@/lib/actions/user.actions";
 import { createCostCenter, listCostCenters } from "@/lib/org/org-units.service";
 import { requirePermission } from "@/lib/rbac/middleware";
 import { hasPermission } from "@/lib/rbac/permissions";
+import { CACHE_KEYS } from "@/lib/services/cache-keys";
+import CacheManager from "@/lib/services/cache-manager";
 
 export async function GET(request: NextRequest) {
 	const user = await getCurrentUser();
@@ -32,7 +34,12 @@ export async function GET(request: NextRequest) {
 	try {
 		const includeInactive =
 			request.nextUrl.searchParams.get("includeInactive") === "true";
-		const costCenters = await listCostCenters(orgId, { includeInactive });
+		const cacheKey = CACHE_KEYS.costCenters.list(orgId, includeInactive);
+		const costCenters = await CacheManager.withCache(
+			"cost-centers/list",
+			cacheKey,
+			async () => listCostCenters(orgId, { includeInactive }),
+		);
 		return NextResponse.json({ success: true, data: { costCenters } });
 	} catch (error) {
 		console.error(error);
@@ -66,6 +73,7 @@ export async function POST(request: NextRequest) {
 			code: body.code,
 			name: body.name,
 		});
+		await CacheManager.invalidateOrganization(orgId).catch(() => undefined);
 		return NextResponse.json(
 			{ success: true, data: { costCenter } },
 			{ status: 201 },

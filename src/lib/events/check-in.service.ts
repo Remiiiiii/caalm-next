@@ -1,7 +1,7 @@
 import {
 	createConstituentWithDuplicateGate,
 	getConstituentById,
-} from "@/lib/constituents";
+} from "@/lib/constituents/server";
 import {
 	getRegistrationById,
 	markRegistrationCheckedIn,

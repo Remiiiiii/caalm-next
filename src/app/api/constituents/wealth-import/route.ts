@@ -4,7 +4,7 @@ import {
 	constituentActorFromUser,
 	logConstituentAudit,
 	requireConstituentOrgContext,
-} from "@/lib/constituents";
+} from "@/lib/constituents/server";
 import { getConstituentById } from "@/lib/constituents/repository";
 import { recomputeOrgSegments } from "@/lib/fundraising/segments-repository";
 import { upsertWealthScreen } from "@/lib/fundraising/wealth-repository";

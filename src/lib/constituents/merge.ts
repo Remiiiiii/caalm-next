@@ -7,7 +7,10 @@ import {
 	retargetRelationships,
 } from "./relationships";
 import { getConstituentById, updateConstituent } from "./repository";
+import type { MergeFieldDiff, MergePreview } from "./merge-types";
 import type { Constituent } from "./types";
+
+export type { MergeFieldDiff, MergePreview } from "./merge-types";
 
 const DIFF_FIELDS = [
 	"firstName",
@@ -19,22 +22,6 @@ const DIFF_FIELDS = [
 	"type",
 	"doNotContact",
 ] as const;
-
-export type MergeFieldDiff = {
-	field: (typeof DIFF_FIELDS)[number];
-	winner: string | boolean | undefined;
-	loser: string | boolean | undefined;
-};
-
-export type MergePreview = {
-	winnerId: string;
-	loserId: string;
-	fieldDiffs: MergeFieldDiff[];
-	giftCountLoser: number;
-	giftCountWinner: number;
-	relationshipCountLoser: number;
-	noteCountLoser: number;
-};
 
 export async function loadSameOrgPair(input: {
 	winnerId: string;

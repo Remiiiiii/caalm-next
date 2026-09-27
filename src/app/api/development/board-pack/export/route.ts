@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
-import { requireConstituentOrgContext } from "@/lib/constituents";
+import { requireConstituentOrgContext } from "@/lib/constituents/server";
 import {
 	buildBoardPackCsv,
 	computeDevelopmentMetrics,

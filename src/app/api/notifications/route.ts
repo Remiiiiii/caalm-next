@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { broadcastNotificationToUser } from "@/lib/notifications/broadcastNotification";
+import { CACHE_KEYS, CACHE_TTLS } from "@/lib/services/cache-keys";
 import CacheManager from "@/lib/services/cache-manager";
 import { notificationService } from "@/lib/services/notificationService";
 import type {
@@ -50,34 +51,42 @@ export async function GET(request: NextRequest) {
 			direction: sortDirection as "asc" | "desc",
 		};
 
-		// Always read from DB — Redis list cache caused stale UI for up to 2 minutes
-		const result = await notificationService.getNotifications(
-			userId,
-			Object.keys(filters).length > 0 ? filters : undefined,
-			sort,
-			page,
-			limit,
+		const cacheGeneration =
+			await CacheManager.getNotificationsCacheGeneration(userId);
+		const cacheKey = `${CACHE_KEYS.notifications.user(userId)}:v${cacheGeneration}:${page}:${limit}:${JSON.stringify(
+			{
+				search,
+				type,
+				status,
+				priority,
+				sortField,
+				sortDirection,
+				isRead,
+			},
+		)}`;
+
+		const result = await CacheManager.withCache(
+			"notifications",
+			cacheKey,
+			async () =>
+				notificationService.getNotifications(
+					userId,
+					Object.keys(filters).length > 0 ? filters : undefined,
+					sort,
+					page,
+					limit,
+				),
+			CACHE_TTLS.short,
 		);
 
-		console.log(
-			`[SERVER] /api/notifications GET - userId: ${userId}, total: ${result.total}, data length: ${result.data?.length || 0}`,
-		);
-
-		return NextResponse.json(
-			{
-				success: true,
-				data: result.data,
-				notifications: result.data,
-				total: result.total,
-				page: result.page,
-				limit: result.limit,
-			},
-			{
-				headers: {
-					"Cache-Control": "no-store, max-age=0",
-				},
-			},
-		);
+		return NextResponse.json({
+			success: true,
+			data: result.data,
+			notifications: result.data,
+			total: result.total,
+			page: result.page,
+			limit: result.limit,
+		});
 	} catch (error: any) {
 		console.error("Failed to fetch notifications:", error);
 

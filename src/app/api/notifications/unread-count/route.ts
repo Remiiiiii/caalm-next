@@ -1,4 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { CACHE_KEYS } from "@/lib/services/cache-keys";
+import CacheManager from "@/lib/services/cache-manager";
 import { notificationService } from "@/lib/services/notificationService";
 
 export async function GET(request: NextRequest) {
@@ -16,7 +18,15 @@ export async function GET(request: NextRequest) {
 			);
 		}
 
-		const count = await notificationService.getUnreadCount(userId);
+		const cacheGeneration =
+			await CacheManager.getNotificationsCacheGeneration(userId);
+		const cacheKey = `${CACHE_KEYS.notifications.unreadCount(userId)}:v${cacheGeneration}`;
+
+		const count = await CacheManager.withCache(
+			"notifications",
+			cacheKey,
+			async () => notificationService.getUnreadCount(userId),
+		);
 
 		return NextResponse.json({ success: true, data: { count }, count });
 	} catch (error: unknown) {
