@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
-import { getConstituentById, updateConstituent } from "@/lib/constituents";
+import { getConstituentById, updateConstituent } from "@/lib/constituents/server";
 import { authorize } from "@/lib/rbac/authorize";
 import { requireVolunteerOrgContext } from "@/lib/volunteers";
 

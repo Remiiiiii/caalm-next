@@ -3,6 +3,8 @@
  * Provides convenient wrapper functions for common caching patterns
  */
 
+import "server-only";
+
 import { CACHE_KEYS, getTTLForRoute } from "./cache-keys";
 import * as cache from "./redis-cache";
 import { supportsPatternClear } from "./redis-cache";

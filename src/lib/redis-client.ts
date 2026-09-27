@@ -3,6 +3,8 @@
  * Centralized Redis client with TLS/SNI configuration for Layerbase
  */
 
+import "server-only";
+
 import { Redis } from "ioredis";
 
 interface GlobalRedis {

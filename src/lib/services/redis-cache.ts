@@ -3,6 +3,8 @@
  * Supports both Vercel KV and ioredis for flexibility
  */
 
+import "server-only";
+
 import { kv } from "@vercel/kv";
 import Redis from "ioredis";
 import redis from "../redis-client";

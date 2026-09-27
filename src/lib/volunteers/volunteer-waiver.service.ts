@@ -1,5 +1,5 @@
 import { ID } from "node-appwrite";
-import { getConstituentById } from "@/lib/constituents";
+import { getConstituentById } from "@/lib/constituents/server";
 import { createEnvelopeRow } from "@/lib/esign/envelope-repository";
 import { resolveStorageFileId } from "@/lib/esign/document-bytes";
 import type { EsignRecipient } from "@/lib/esign/types";

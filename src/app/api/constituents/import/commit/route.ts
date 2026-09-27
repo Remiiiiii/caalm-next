@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
-import { requireConstituentOrgContext } from "@/lib/constituents";
+import { requireConstituentOrgContext } from "@/lib/constituents/server";
 import { commitImportBatch } from "@/lib/constituents/import/commit.service";
 import { logAuditEvent } from "@/lib/services/audit-logger";
 

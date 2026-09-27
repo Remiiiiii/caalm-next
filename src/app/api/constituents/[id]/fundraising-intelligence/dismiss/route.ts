@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
-import { getConstituentById, requireConstituentOrgContext } from "@/lib/constituents";
+import { getConstituentById, requireConstituentOrgContext } from "@/lib/constituents/server";
 import { isNextBestActionKind } from "@/lib/fundraising/next-best-action-kinds";
 import { dismissNextBestAction } from "@/lib/stewardship/nba-dismissals.repository";
 

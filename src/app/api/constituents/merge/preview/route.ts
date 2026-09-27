@@ -3,7 +3,7 @@ import { PERMISSIONS } from "@/constants/permissions";
 import {
 	previewConstituentMerge,
 	requireConstituentOrgContext,
-} from "@/lib/constituents";
+} from "@/lib/constituents/server";
 
 export async function POST(request: NextRequest) {
 	const ctx = await requireConstituentOrgContext(

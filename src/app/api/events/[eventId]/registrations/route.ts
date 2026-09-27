@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
-import { getConstituentById } from "@/lib/constituents";
+import { getConstituentById } from "@/lib/constituents/server";
 import {
 	createRegistrationWithOptionalDonation,
 	EventRegistrationCapacityError,
