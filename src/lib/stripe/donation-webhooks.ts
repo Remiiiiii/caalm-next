@@ -77,6 +77,7 @@ export async function handleDonationStripeWebhookEvent(
 	}
 
 	const giftDate = new Date().toISOString().slice(0, 10);
+	const designationId = session.metadata?.designationId?.trim() || undefined;
 	const draft = await createDraftGift({
 		orgId,
 		amount: amountCents / 100,
@@ -85,6 +86,7 @@ export async function handleDonationStripeWebhookEvent(
 		method: "card",
 		constituentId,
 		campaignId: session.metadata?.campaignId || undefined,
+		designationId,
 		anonymous: !email,
 	});
 	await postGift(draft.$id, orgId);

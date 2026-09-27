@@ -18,6 +18,7 @@ export async function POST(request: NextRequest) {
 			orgSlug?: string;
 			amountCents?: number;
 			campaignId?: string;
+			designationId?: string;
 		};
 		const orgSlug = body.orgSlug?.trim();
 		if (!orgSlug) {
@@ -35,6 +36,7 @@ export async function POST(request: NextRequest) {
 			orgName: org.name,
 			amountCents,
 			campaignId: body.campaignId,
+			designationId: body.designationId?.trim() || undefined,
 			successUrl: `${origin}/give/${encodeURIComponent(orgSlug)}?thanks=1`,
 			cancelUrl: `${origin}/give/${encodeURIComponent(orgSlug)}?canceled=1`,
 		});

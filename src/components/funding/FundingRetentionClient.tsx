@@ -10,6 +10,7 @@ import { ObligationsQueueBoard } from "@/components/funding/ObligationsQueueBoar
 import { PursuitsBoard } from "@/components/funding/PursuitsBoard";
 import { FinanceScopeHelp } from "@/components/funding/FinanceScopeHelp";
 import { Form990ExportPanel } from "@/components/funding/Form990ExportPanel";
+import { JournalExportDialog } from "@/components/funding/JournalExportDialog";
 import { RetentionBoard } from "@/components/funding/RetentionBoard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -139,7 +140,14 @@ export function FundingRetentionClient() {
 	return (
 		<div className="space-y-6">
 			<FinanceScopeHelp />
-			{tab === "retention" ? <Form990ExportPanel /> : null}
+			{tab === "retention" ? (
+				<div className="space-y-4">
+					<div className="flex justify-end">
+						<JournalExportDialog />
+					</div>
+					<Form990ExportPanel />
+				</div>
+			) : null}
 			{tab !== "queue" ? (
 				<div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-3">
 					<StatCard

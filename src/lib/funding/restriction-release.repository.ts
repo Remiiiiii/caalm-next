@@ -54,6 +54,41 @@ function mapRow(row: Record<string, unknown>): RestrictionRelease {
 	};
 }
 
+export async function listRestrictionReleasesInRange(input: {
+	orgId: string;
+	startDate: string;
+	endDate: string;
+}): Promise<RestrictionRelease[]> {
+	const startIso = `${input.startDate}T00:00:00.000Z`;
+	const endIso = `${input.endDate}T23:59:59.999Z`;
+	const { tablesDB } = await createAdminClient();
+	const pageSize = 100;
+	const items: RestrictionRelease[] = [];
+	let offset = 0;
+	for (;;) {
+		const result = await tablesDB.listRows({
+			databaseId: dbId(),
+			tableId: tableId(),
+			queries: [
+				Query.equal("orgId", input.orgId),
+				Query.greaterThanEqual("releasedAt", startIso),
+				Query.lessThanEqual("releasedAt", endIso),
+				Query.orderAsc("releasedAt"),
+				Query.limit(pageSize),
+				Query.offset(offset),
+			],
+		});
+		const page = (result.rows as unknown as Record<string, unknown>[]).map(
+			mapRow,
+		);
+		items.push(...page);
+		if (page.length < pageSize) break;
+		offset += pageSize;
+		if (offset > 5_000) break;
+	}
+	return items;
+}
+
 export async function listRestrictionReleases(
 	orgId: string,
 	contractId: string,
