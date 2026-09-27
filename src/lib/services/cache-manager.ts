@@ -227,6 +227,7 @@ export class CacheManager {
 		fullName?: string,
 	): Promise<void> {
 		await cache.del(CACHE_KEYS.users.all());
+		await cache.del(CACHE_KEYS.dashboardAuthUsers());
 		await cache.del(CACHE_KEYS.users.uninvited());
 		await cache.clear("^users:management:");
 		// Clear search cache
@@ -282,9 +283,11 @@ export class CacheManager {
 		if (userId) {
 			// Invalidate all RBAC caches for this user
 			await cache.del(CACHE_KEYS.rbac.defaultOrg(userId));
+			await cache.del(CACHE_KEYS.rbac.check(userId));
 			if (orgId) {
 				await cache.del(CACHE_KEYS.rbac.permissions(userId, orgId));
 				await cache.del(CACHE_KEYS.rbac.userRoles(userId, orgId));
+				await cache.del(CACHE_KEYS.rbac.check(userId, orgId));
 			} else {
 				// Invalidate all orgs for this user (including no-orgId keys)
 				// Pattern matches: rbac:permissions:userId and rbac:permissions:userId:orgId
@@ -292,12 +295,52 @@ export class CacheManager {
 				await cache.clear(`^rbac:permissions:${userId}:`); // Clear all orgId variations
 				await cache.del(CACHE_KEYS.rbac.userRoles(userId)); // Clear no-orgId key
 				await cache.clear(`^rbac:userRoles:${userId}:`); // Clear all orgId variations
+				await cache.clear(`^rbac:check:${userId}:`);
 			}
 			await cache.del(CACHE_KEYS.rbac.userWithRoles(userId));
 		} else {
 			// Invalidate all RBAC caches
 			await cache.clear("^rbac:");
 		}
+	}
+
+	/**
+	 * Invalidate license list, detail, and report caches for an org
+	 */
+	static async invalidateLicenses(
+		orgId?: string,
+		licenseId?: string,
+	): Promise<void> {
+		if (licenseId) {
+			await cache.del(CACHE_KEYS.licenses.details(licenseId));
+		}
+		if (orgId) {
+			await cache.clear(`^licenses:database:${escapeRegex(orgId)}:`);
+			await cache.clear(`^licenses:reports:${escapeRegex(orgId)}:`);
+			await cache.del(`${CACHE_KEYS.licenses.all()}:${orgId}`);
+			await cache.del(`${CACHE_KEYS.licenses.all()}:metrics:${orgId}`);
+		} else {
+			await cache.clear("^licenses:");
+		}
+	}
+
+	/**
+	 * Invalidate task list caches for an organization
+	 */
+	static async invalidateTasks(orgId?: string): Promise<void> {
+		if (orgId) {
+			await cache.clear(`^tasks:list:${escapeRegex(orgId)}:`);
+		} else {
+			await cache.clear("^tasks:list:");
+		}
+	}
+
+	/**
+	 * Invalidate organization profile and related reference caches
+	 */
+	static async invalidateOrganization(orgId: string): Promise<void> {
+		await cache.del(CACHE_KEYS.organizations.profile(orgId));
+		await cache.clear(`^cost-centers:${escapeRegex(orgId)}:`);
 	}
 
 	/**

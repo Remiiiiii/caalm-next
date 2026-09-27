@@ -272,6 +272,10 @@ export async function logAuditEvent(entry: AuditLogEntry): Promise<void> {
 				rowId: ID.unique(),
 				data: auditData,
 			});
+
+			void import("./cache-manager")
+				.then(({ default: CacheManager }) => CacheManager.invalidateAudits())
+				.catch(() => undefined);
 		} catch (createError: unknown) {
 			const err = createError as {
 				message?: string;

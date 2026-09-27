@@ -115,10 +115,18 @@ export async function POST(request: NextRequest) {
 		});
 		if (permissionCheck) return permissionCheck;
 
+		const defaultOrg = await getUserDefaultOrganization(user.$id);
+		if (!defaultOrg) {
+			return errorResponse("Organization not found", 404, { requestId });
+		}
+
 		const body = await request.json();
 		const validatedData = licenseCreateSchema.parse(body);
 
 		const license = await LicenseService.createLicense(user.$id, validatedData);
+		await CacheManager.invalidateLicenses(defaultOrg.orgId).catch(
+			() => undefined,
+		);
 
 		const licenseLabel =
 			(license as { name?: string; title?: string })?.name ||

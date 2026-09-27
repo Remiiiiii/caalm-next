@@ -1,3 +1,4 @@
+import * as crypto from "node:crypto";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
@@ -10,6 +11,8 @@ import { TaskService } from "@/lib/api/tasks/services/TaskService";
 import { requirePermission } from "@/lib/rbac/middleware";
 import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 import { logAuditEvent } from "@/lib/services/audit-logger";
+import { CACHE_KEYS } from "@/lib/services/cache-keys";
+import CacheManager from "@/lib/services/cache-manager";
 
 export async function GET(request: NextRequest) {
 	try {
@@ -48,18 +51,29 @@ export async function GET(request: NextRequest) {
 			dueAfter: q("dueAfter"),
 		});
 
-		const result = await TaskService.listTasks(
-			defaultOrg.orgId,
-			{
-				status: validated.status,
-				assigneeId: validated.assigneeId,
-				department: validated.department,
-				priority: validated.priority,
-				search: validated.search,
-				dueBefore: validated.dueBefore,
-				dueAfter: validated.dueAfter,
-			},
-			{ limit: validated.limit, offset: validated.offset },
+		const queryHash = crypto
+			.createHash("md5")
+			.update(JSON.stringify(validated))
+			.digest("hex");
+		const cacheKey = CACHE_KEYS.tasks.list(defaultOrg.orgId, queryHash);
+
+		const result = await CacheManager.withCache(
+			"tasks/list",
+			cacheKey,
+			async () =>
+				TaskService.listTasks(
+					defaultOrg.orgId,
+					{
+						status: validated.status,
+						assigneeId: validated.assigneeId,
+						department: validated.department,
+						priority: validated.priority,
+						search: validated.search,
+						dueBefore: validated.dueBefore,
+						dueAfter: validated.dueAfter,
+					},
+					{ limit: validated.limit, offset: validated.offset },
+				),
 		);
 
 		return NextResponse.json({
@@ -136,6 +150,8 @@ export async function POST(request: NextRequest) {
 				console.error("Task assignment side effects failed:", error);
 			});
 		}
+
+		await CacheManager.invalidateTasks(defaultOrg.orgId).catch(() => undefined);
 
 		await logAuditEvent({
 			event_id: `task_create_${task.$id}`,

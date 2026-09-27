@@ -3,8 +3,8 @@
 /biome-diagnostics.json
 /biome-diagnostics-full.json
 
-# Logs
-logs
+# Logs (repo root only — do not match API segments named logs)
+/logs
 *.log
 npm-debug.log*
 yarn-debug.log*

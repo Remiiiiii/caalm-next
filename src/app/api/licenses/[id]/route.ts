@@ -14,6 +14,9 @@ import {
 import { requireStepUpForSession } from "@/lib/auth/step-up";
 import { requirePermission } from "@/lib/rbac/middleware";
 import { logAuditEvent } from "@/lib/services/audit-logger";
+import { CACHE_KEYS } from "@/lib/services/cache-keys";
+import CacheManager from "@/lib/services/cache-manager";
+import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 
 export async function GET(
 	request: NextRequest,
@@ -30,8 +33,13 @@ export async function GET(
 		if (permissionCheck) return permissionCheck;
 
 		const { id } = await params;
+		const cacheKey = `${CACHE_KEYS.licenses.details(id)}:v1`;
 
-		const license = await LicenseService.getLicenseById(id);
+		const license = await CacheManager.withCache(
+			"licenses/details",
+			cacheKey,
+			async () => LicenseService.getLicenseById(id),
+		);
 
 		if (!license) {
 			return notFoundResponse("License", requestId);
@@ -70,6 +78,10 @@ export async function PUT(
 		const license = await LicenseService.updateLicense(id, validatedData);
 
 		if (user) {
+			const defaultOrg = await getUserDefaultOrganization(user.$id);
+			await CacheManager.invalidateLicenses(defaultOrg?.orgId, id).catch(
+				() => undefined,
+			);
 			const licenseLabel =
 				(license as { name?: string; title?: string })?.name ||
 				(license as { title?: string })?.title ||
@@ -151,6 +163,10 @@ export async function DELETE(
 		revalidatePath("/licenses");
 
 		if (user) {
+			const defaultOrg = await getUserDefaultOrganization(user.$id);
+			await CacheManager.invalidateLicenses(defaultOrg?.orgId, id).catch(
+				() => undefined,
+			);
 			const userName =
 				(user as { fullName?: string }).fullName || user.email || "unknown";
 			await logAuditEvent({

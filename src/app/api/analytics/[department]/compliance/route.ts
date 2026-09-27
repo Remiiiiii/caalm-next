@@ -2,6 +2,8 @@ import type { NextRequest } from "next/server";
 import { Query } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { CACHE_KEYS } from "@/lib/services/cache-keys";
+import CacheManager from "@/lib/services/cache-manager";
 
 function mapRouteToDbDepartment(routeDept: string): string {
 	const mapping: Record<string, string> = {
@@ -22,31 +24,39 @@ export async function GET(
 	try {
 		const resolvedParams = await params;
 		const dbDept = mapRouteToDbDepartment(resolvedParams.department);
-		const { tablesDB } = await createAdminClient();
+		const cacheKey = CACHE_KEYS.analytics.compliance(dbDept);
 
-		const docs = await tablesDB.listRows({
-			databaseId: appwriteConfig.databaseId,
-			tableId: appwriteConfig.contractsCollectionId,
-			queries: [Query.equal("department", dbDept), Query.limit(200)],
-		});
+		const data = await CacheManager.withCache(
+			"analytics/compliance",
+			cacheKey,
+			async () => {
+				const { tablesDB } = await createAdminClient();
 
-		const buckets: Record<string, number> = {
-			"up-to-date": 0,
-			"action-required": 0,
-			"non-compliant": 0,
-			unknown: 0,
-		};
+				const docs = await tablesDB.listRows({
+					databaseId: appwriteConfig.databaseId,
+					tableId: appwriteConfig.contractsCollectionId,
+					queries: [Query.equal("department", dbDept), Query.limit(200)],
+				});
 
-		for (const d of docs.rows as any[]) {
-			const key = d.compliance ?? "unknown";
-			if (buckets[key] === undefined) buckets.unknown += 1;
-			else buckets[key] += 1;
-		}
+				const buckets: Record<string, number> = {
+					"up-to-date": 0,
+					"action-required": 0,
+					"non-compliant": 0,
+					unknown: 0,
+				};
 
-		const data = Object.entries(buckets).map(([status, count]) => ({
-			status,
-			count,
-		}));
+				for (const d of docs.rows as { compliance?: string }[]) {
+					const key = d.compliance ?? "unknown";
+					if (buckets[key] === undefined) buckets.unknown += 1;
+					else buckets[key] += 1;
+				}
+
+				return Object.entries(buckets).map(([status, count]) => ({
+					status,
+					count,
+				}));
+			},
+		);
 
 		return Response.json({ data });
 	} catch (error: any) {
