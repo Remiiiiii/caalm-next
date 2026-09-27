@@ -8,9 +8,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+	FUNDRAISING_INTELLIGENCE_RETENTION_HREF,
+	FUNDRAISING_INTELLIGENCE_RETENTION_NOTE,
+} from "@/lib/fundraising/intelligence-privacy-copy";
+import {
 	normalizeSegmentLabel,
 	segmentBadgeClass,
 } from "@/lib/fundraising/segment-display";
+import Link from "next/link";
 
 type IntelligencePayload = {
 	segment: string;
@@ -152,6 +157,27 @@ export function FundraisingIntelligenceTab({
 						segments. Uncomputed scores stay blank; we do not show zero placeholders.
 					</p>
 				</div>
+				<Card className="glass-card">
+					<div className="glass-card-cap" />
+					<CardContent className="p-4 sm:p-6 space-y-2">
+						<div className="flex items-center gap-3">
+							<Brain className="w-5 h-5 text-[#0f5384]" />
+							<p className="text-sm font-medium sidebar-gradient-text">
+								Data retention
+							</p>
+						</div>
+						<p className="text-xs text-slate-600">
+							{FUNDRAISING_INTELLIGENCE_RETENTION_NOTE}{" "}
+							<Link
+								href={FUNDRAISING_INTELLIGENCE_RETENTION_HREF}
+								className="text-[#0f5384] hover:underline"
+							>
+								Constituent permissions & export scope
+							</Link>
+							.
+						</p>
+					</CardContent>
+				</Card>
 				<ConstituentWealthPanel constituentId={constituentId} />
 			</div>
 		);
@@ -311,6 +337,28 @@ export function FundraisingIntelligenceTab({
 							Save override
 						</Button>
 					</div>
+				</CardContent>
+			</Card>
+
+			<Card className="glass-card">
+				<div className="glass-card-cap" />
+				<CardContent className="p-4 sm:p-6 space-y-2">
+					<div className="flex items-center gap-3">
+						<Brain className="w-5 h-5 text-[#0f5384]" />
+						<p className="text-sm font-medium sidebar-gradient-text">
+							Data retention
+						</p>
+					</div>
+					<p className="text-xs text-slate-600">
+						{FUNDRAISING_INTELLIGENCE_RETENTION_NOTE}{" "}
+						<Link
+							href={FUNDRAISING_INTELLIGENCE_RETENTION_HREF}
+							className="text-[#0f5384] hover:underline"
+						>
+							Constituent permissions & export scope
+						</Link>
+						.
+					</p>
 				</CardContent>
 			</Card>
 

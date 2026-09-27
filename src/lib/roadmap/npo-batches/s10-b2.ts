@@ -1,6 +1,9 @@
 /**
  * Nonprofit Roadmap batch implementation ticket — implement all tasks on this PR branch.
  * Section 10 batch 2: Consent, Privacy, and Packaging
+ *
+ * Packaging guards: src/lib/roadmap/nonprofit/npo-packaging-gate.ts and finance
+ * out-of-lane copy in src/lib/funding/finance-scope-copy.ts (990 e-file, payroll, GL).
  */
 export const NPO_BATCH_S10_B2 = {
 	sectionNumber: 10,
