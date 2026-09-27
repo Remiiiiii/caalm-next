@@ -1,6 +1,7 @@
 import { getStripe, isStripeConfigured } from "./client";
 
 export const DONATION_CHECKOUT_PURPOSE = "donation";
+export const DONATION_MIN_CENTS = 100;
 
 export function isDonationStripeConfigured(): boolean {
 	return isStripeConfigured();
@@ -11,10 +12,11 @@ export async function createDonationCheckoutSession(input: {
 	orgName: string;
 	amountCents: number;
 	campaignId?: string;
+	designationId?: string;
 	successUrl: string;
 	cancelUrl: string;
 }): Promise<{ url: string | null; sessionId: string }> {
-	if (input.amountCents < 100) {
+	if (input.amountCents < DONATION_MIN_CENTS) {
 		throw new Error("Minimum donation is $1.00");
 	}
 	const stripe = getStripe();
@@ -38,6 +40,7 @@ export async function createDonationCheckoutSession(input: {
 			purpose: DONATION_CHECKOUT_PURPOSE,
 			orgId: input.orgId,
 			campaignId: input.campaignId ?? "",
+			designationId: input.designationId ?? "",
 		},
 	});
 	return { url: session.url, sessionId: session.id };
