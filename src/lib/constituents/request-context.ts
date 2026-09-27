@@ -4,6 +4,7 @@ import type { PermissionKey } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
 import { authorize } from "@/lib/rbac/authorize";
 import { getOrgIdFromRequest } from "@/lib/rbac/middleware";
+import { isActiveOrganization } from "@/lib/rbac/assert-active-organization";
 import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 
 type AppUser = NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>;
@@ -35,6 +36,16 @@ export async function requireConstituentOrgContext(
 		getOrgIdFromRequest(request) ||
 		(await getUserDefaultOrganization(user.$id))?.orgId;
 	if (!orgId) {
+		return {
+			ok: false,
+			response: NextResponse.json(
+				{ error: "Organization not found" },
+				{ status: 404 },
+			),
+		};
+	}
+
+	if (!(await isActiveOrganization(orgId))) {
 		return {
 			ok: false,
 			response: NextResponse.json(
