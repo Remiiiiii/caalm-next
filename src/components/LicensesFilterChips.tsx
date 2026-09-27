@@ -152,14 +152,14 @@ export default function LicensesFilterChips() {
 				<Badge
 					key={chip.key}
 					variant="outline"
-					className="pl-2.5 pr-1 py-1 gap-1 border-slate-200 bg-white text-slate-700 font-medium"
+					className="inline-flex items-center px-2 py-0.5 text-xs rounded-full font-medium border bg-blue/10 text-blue border-blue/20 gap-1"
 				>
 					{chip.label}
 					{chip.onRemove ? (
 						<button
 							type="button"
 							aria-label={`Remove ${chip.label}`}
-							className="rounded-full p-0.5 hover:bg-slate-100 cursor-pointer"
+							className="rounded-full p-0.5 hover:bg-blue/15 cursor-pointer"
 							onClick={chip.onRemove}
 						>
 							<X className="h-3 w-3" />
@@ -169,11 +169,11 @@ export default function LicensesFilterChips() {
 			))}
 			<Button
 				type="button"
-				variant="ghost"
 				size="sm"
-				className="h-7 text-xs text-slate-600 cursor-pointer"
+				className="btn-primary px-3 sm:px-4"
 				onClick={() => clearFilters()}
 			>
+				<X className="h-4 w-4" />
 				Clear all
 			</Button>
 		</div>

@@ -1,0 +1,31 @@
+# Media hosting (landing / demo assets)
+
+## Current: Option A — `public/` on Vercel
+
+- Canonical URL map: `src/lib/media/urls.ts` → `/assets/video/…`, `/assets/demo/tour/…`.
+- Large binaries are **gitignored**; production builds must include those files on disk under `public/` (local copy, CI artifact, or restore from backup — not Vercel Blob while Hobby Blob transfer is exhausted).
+- Meter: **Fast Data Transfer** on the Vercel team (~100 GB / 30-day window on Hobby), not Blob Data Transfer.
+- Optional env: `NEXT_PUBLIC_MEDIA_BASE_URL` — absolute origin prefix with no trailing slash.
+
+## Bandwidth hygiene
+
+- **Video** (`wave.mp4`, hero demos): marketing routes only (`/`, `/coming-soon`, `LandingHero`, `WaveLoopBackground`, `HowItWorks`).
+- **Authenticated / app shells:** use `StaticWaveBackdrop` (CSS gradients) — do not add new `MEDIA_URLS.waveVideo` backgrounds on `(root)` pages.
+- Prefer `preload="metadata"` on autoplay loops unless user gesture starts playback.
+
+## Long-term revisit: Cloudflare R2
+
+When deploy weight or FDT usage is uncomfortable:
+
+1. Create R2 bucket + public custom domain (e.g. `media.caalmsolutions.com`).
+2. Upload same paths as today (`assets/video/…`, `assets/demo/tour/…`).
+3. Set `NEXT_PUBLIC_MEDIA_BASE_URL=https://media.caalmsolutions.com` on Vercel for `caalm-next` / `caalm-demo`.
+4. Add the hostname to `next.config.ts` `images.remotePatterns` if using `next/image` on those URLs.
+5. Remove large files from `public/` again if desired to shrink deploys.
+
+R2 free tier: ~10 GB storage; egress from R2 is $0 — good fit for public MP4/WebP.
+
+## Retired for runtime reads
+
+- Vercel Blob store `pbzguikxxqv1zlwl` — Hobby Blob Data Transfer cap; do not point new code at `*.blob.vercel-storage.com`.
+- `BLOB_READ_WRITE_TOKEN` is optional upload tooling only (`.env.example`); not required at runtime after Option A.

@@ -48,6 +48,11 @@ const EVENT_TYPE_CONFIGS: Record<string, EventTypeVisualConfig> = {
 		icon: FileText,
 		borderColor: "border-purple-500",
 	},
+	volunteer_shift: {
+		color: "bg-blue/10 text-blue border-blue/20",
+		icon: Users,
+		borderColor: "border-blue",
+	},
 };
 
 export function getEventTypeConfig(
@@ -69,6 +74,7 @@ export type EventTypeLabel =
 	| "Meeting"
 	| "Internal Review"
 	| "Audit"
+	| "Volunteer Shift"
 	| "";
 
 /** Display-friendly label for event type (keeps full text like "Deadline Discussion"). */
@@ -80,5 +86,6 @@ export function getEventTypeLabel(t: string | undefined): EventTypeLabel {
 		return "Deadline Discussion";
 	if (v === "internal review" || v === "review") return "Internal Review";
 	if (v === "meeting") return "Meeting";
+	if (v === "volunteer_shift") return "Volunteer Shift";
 	return "Audit";
 }

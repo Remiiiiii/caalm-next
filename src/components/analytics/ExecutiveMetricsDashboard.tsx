@@ -3,7 +3,6 @@
 import {
 	Activity,
 	AlertTriangle,
-	BarChart3,
 	CheckCircle,
 	Clock,
 	DollarSign,
@@ -17,6 +16,7 @@ import type React from "react";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MetricStatCard } from "@/components/ui/metric-stat-card";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -162,28 +162,6 @@ const ExecutiveMetricsDashboard: React.FC<ExecutiveMetricsDashboardProps> = ({
 		}, 1000);
 	}, [selectedDepartment, generateMetrics]);
 
-	const getChangeIcon = (changeType: string) => {
-		switch (changeType) {
-			case "increase":
-				return <TrendingUp className="h-4 w-4" />;
-			case "decrease":
-				return <TrendingDown className="h-4 w-4" />;
-			default:
-				return <BarChart3 className="h-4 w-4" />;
-		}
-	};
-
-	const getChangeColor = (changeType: string) => {
-		switch (changeType) {
-			case "increase":
-				return "text-green-600 bg-green-50";
-			case "decrease":
-				return "text-red-600 bg-red-50";
-			default:
-				return "text-gray-600 bg-gray-50";
-		}
-	};
-
 	if (isLoading) {
 		return (
 			<div className="space-y-6">
@@ -230,69 +208,40 @@ const ExecutiveMetricsDashboard: React.FC<ExecutiveMetricsDashboardProps> = ({
 						setTimeRange(value as "7d" | "30d" | "90d" | "1y")
 					}
 				>
-					<TabsList className="bg-white/20 backdrop-blur border border-white/40">
-						<TabsTrigger value="7d" className="data-[state=active]:bg-white/30">
-							7D
-						</TabsTrigger>
-						<TabsTrigger
-							value="30d"
-							className="data-[state=active]:bg-white/30"
-						>
-							30D
-						</TabsTrigger>
-						<TabsTrigger
-							value="90d"
-							className="data-[state=active]:bg-white/30"
-						>
-							90D
-						</TabsTrigger>
-						<TabsTrigger value="1y" className="data-[state=active]:bg-white/30">
-							1Y
-						</TabsTrigger>
+					<TabsList>
+						<TabsTrigger value="7d">7D</TabsTrigger>
+						<TabsTrigger value="30d">30D</TabsTrigger>
+						<TabsTrigger value="90d">90D</TabsTrigger>
+						<TabsTrigger value="1y">1Y</TabsTrigger>
 					</TabsList>
 				</Tabs>
 			</div>
 
 			{/* Metrics Grid */}
 			<div className="grid grid-cols-4 gap-6">
-				{metrics.map((metric, index) => {
-					const IconComponent = metric.icon;
-					return (
-						<Card
-							key={index}
-							className="bg-white/60 backdrop-blur border border-white/40 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
-						>
-							<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-								<CardTitle className="body-2 text-slate-700">
-									{metric.title}
-								</CardTitle>
-								<IconComponent className={`h-5 w-5 ${metric.color}`} />
-							</CardHeader>
-							<CardContent>
-								<div className="h2 text-navy font-bold mb-2">
-									{metric.value}
-								</div>
-								<div className="flex items-center space-x-2">
-									<Badge
-										variant="secondary"
-										className={`${getChangeColor(metric.changeType)} border-0`}
-									>
-										<div className="flex items-center space-x-1">
-											{getChangeIcon(metric.changeType)}
-											<span className="text-xs font-medium">
-												{metric.change > 0 ? "+" : ""}
-												{metric.change}%
-											</span>
-										</div>
-									</Badge>
-								</div>
-								<p className="text-xs text-slate-600 mt-2">
-									{metric.description}
-								</p>
-							</CardContent>
-						</Card>
-					);
-				})}
+				{metrics.map((metric) => (
+					<MetricStatCard
+						key={metric.title}
+						title={metric.title}
+						value={metric.value}
+						description={`${metric.description} · ${metric.change > 0 ? "+" : ""}${metric.change}%`}
+						icon={metric.icon}
+						dynamicIcon={
+							metric.changeType === "increase"
+								? TrendingUp
+								: metric.changeType === "decrease"
+									? TrendingDown
+									: undefined
+						}
+						dynamicTone={
+							metric.changeType === "increase"
+								? "success"
+								: metric.changeType === "decrease"
+									? "danger"
+									: "default"
+						}
+					/>
+				))}
 			</div>
 
 			{/* Summary Cards */}

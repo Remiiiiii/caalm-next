@@ -18,13 +18,19 @@ const ITLayoutContent = ({ children }: { children: React.ReactNode }) => {
 		}
 	}, [user, loading, router]);
 
+	// Always keep `children` mounted. Omitting the page slot (or only mounting it
+	// after auth) makes Next 16 return a soft 404 for nested IT routes even when
+	// the page file exists (clm-roadmap, nonprofit-roadmap, etc.).
 	return (
 		<ITProvider>
 			<ITDashboardErrorBoundary>
-				{loading ? (
-					<div className="flex h-full min-h-[200px] items-center justify-center">
-						<LoadingSpinner size="lg" label="Loading IT dashboard..." />
-					</div>
+				{loading || !user ? (
+					<>
+						<div className="flex h-full min-h-[200px] items-center justify-center">
+							<LoadingSpinner size="lg" label="Loading IT dashboard..." />
+						</div>
+						<div hidden>{children}</div>
+					</>
 				) : (
 					children
 				)}

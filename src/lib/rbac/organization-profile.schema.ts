@@ -142,6 +142,7 @@ export const updateOrgSchema = z.object({
 			zipcode: orgZipcodeField.optional(),
 			phone: orgPhoneField.optional(),
 			email: orgEmailField.optional(),
+			managerUserId_source: z.enum(["manual", "scim"]).optional(),
 		})
 		.optional(),
 });

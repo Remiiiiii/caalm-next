@@ -20,6 +20,7 @@ import {
 	X,
 } from "lucide-react";
 import React from "react";
+import RoundedUnderlineTabs from "@/components/RoundedUnderlineTabs";
 import { Button as ShadButton } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -1824,35 +1825,20 @@ export const ShareInput = ({
 			</div>
 
 			<div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-4">
-				<nav className="border-b border-slate-200" aria-label="Share sections">
-					<div className="flex flex-wrap gap-1" role="tablist">
-						{shareTabs.map((tab) => {
-							const selected = shareTab === tab.id;
-							return (
-								<button
-									key={tab.id}
-									type="button"
-									role="tab"
-									aria-selected={selected}
-									data-state={selected ? "active" : undefined}
-									onClick={(e) => {
-										e.stopPropagation();
-										setShareTab(tab.id);
-									}}
-									className={cn(
-										"tabs-underline cursor-pointer px-3 py-2.5 text-sm font-medium",
-										"rounded-none border-0 bg-transparent shadow-none",
-										"text-slate-600 transition-colors duration-200 hover:text-slate-700",
-										"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
-										selected && "sidebar-gradient-text",
-									)}
-								>
-									{tab.label}
-								</button>
-							);
-						})}
-					</div>
-				</nav>
+				<div onClick={(e) => e.stopPropagation()}>
+					<RoundedUnderlineTabs
+						aria-label="Share sections"
+						variant="bar"
+						value={shareTab}
+						onValueChange={(next) =>
+							setShareTab(next as "invite" | "shared" | "file-info")
+						}
+						tabs={shareTabs.map((tab) => ({
+							value: tab.id,
+							label: tab.label,
+						}))}
+					/>
+				</div>
 
 				{shareTab === "invite" ? (
 					<div className="space-y-4">
@@ -1964,7 +1950,7 @@ export const ShareInput = ({
 										e.stopPropagation();
 										handleAddEmail();
 									}}
-									className="primary-btn h-9! min-h-9! w-auto! shrink-0 px-3! py-1.5! text-sm sm:w-auto!"
+									className="primary-btn w-auto! shrink-0 px-3! text-sm sm:w-auto!"
 								>
 									<Plus className="h-3.5 w-3.5" />
 									Add

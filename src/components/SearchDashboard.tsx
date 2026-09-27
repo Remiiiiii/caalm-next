@@ -174,7 +174,7 @@ const SearchDashboard: React.FC<SearchDashboardProps> = ({
 			{/* Analytics Dashboard */}
 			{analytics && (
 				<Tabs defaultValue="overview" className="w-full">
-					<TabsList className="responsive-tab-list">
+					<TabsList>
 						<TabsTrigger value="overview">Overview</TabsTrigger>
 						<TabsTrigger value="searches">Popular Searches</TabsTrigger>
 						<TabsTrigger value="filters">Filter Usage</TabsTrigger>

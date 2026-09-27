@@ -61,7 +61,6 @@ export default function ContractsStatusTabs({
 			tabs={tabs}
 			value={statusTab}
 			indicatorId="contracts-status-underline"
-			listClassName="grid-cols-2 sm:grid-cols-5"
 			onValueChange={(v) => {
 				setStatusTab(v as StatusTab);
 				scrollToList();

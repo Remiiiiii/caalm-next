@@ -1,5 +1,6 @@
 import { ID } from "node-appwrite";
 import { logAuditEvent } from "@/lib/services/audit-logger";
+import { markVolunteerWaiverCompleted } from "@/lib/volunteers/volunteer-waiver.service";
 import { updateEnvelopeRow } from "./envelope-repository";
 import { sendEnvelopeCompletedNotice } from "./mail";
 import { sealSignedPdf } from "./pdf";
@@ -20,6 +21,36 @@ export async function activateOnEnvelopeCompleted(
 		completedAt,
 		signedDocumentFileId,
 	});
+
+	const isAcknowledgment =
+		envelope.purpose === "acknowledgment" ||
+		envelope.resourceType === "constituent";
+	if (isAcknowledgment) {
+		await markVolunteerWaiverCompleted(envelope.$id);
+		await logAuditEvent({
+			event_id: ID.unique(),
+			event_title: "Volunteer waiver completed",
+			action: "update",
+			source: "caalm",
+			user_id: envelope.createdBy || "system",
+			user_name: "CAALM Execute",
+			user_email: "",
+			orgId: envelope.orgId,
+			status: "success",
+			module: "system",
+			target_type: "volunteer_waiver",
+			target_id: envelope.resourceId,
+			summary: `Volunteer acknowledgment envelope ${envelope.$id} completed (no contract activation)`,
+		});
+		const resource = await loadEsignResource(
+			envelope.resourceType,
+			envelope.resourceId,
+		);
+		const notify = envelope.recipients.map((r) => r.email).filter(Boolean);
+		if (resource?.ownerEmail) notify.push(resource.ownerEmail);
+		await sendEnvelopeCompletedNotice([...new Set(notify)], next);
+		return next;
+	}
 
 	await updateResourceSignatureState({
 		resourceType: envelope.resourceType,

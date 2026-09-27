@@ -1,52 +1,81 @@
 "use client";
 
-import { TrendingDown, TrendingUp } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import type { LucideIcon } from "lucide-react";
+import {
+	AlertTriangle,
+	CheckCircle2,
+	Clock,
+	FileText,
+	Minus,
+	Scale,
+	Shield,
+	TrendingDown,
+	TrendingUp,
+} from "lucide-react";
+import { MetricStatCard, type MetricTone } from "@/components/ui/metric-stat-card";
 import type { AuditKpi } from "@/lib/audits/types";
 
 interface AuditStatCardRowProps {
 	kpis: AuditKpi[];
 }
 
+const KPI_ICONS: Record<string, LucideIcon> = {
+	filings: Shield,
+	deadlines: Clock,
+	registrations: CheckCircle2,
+	findings: AlertTriangle,
+	rate: Scale,
+	action: FileText,
+	noncompliant: AlertTriangle,
+	expiring: Clock,
+	active: CheckCircle2,
+	atrisk: AlertTriangle,
+};
+
 export function AuditStatCardRow({ kpis }: AuditStatCardRowProps) {
 	return (
 		<div className="grid grid-cols-4 gap-6 mb-6">
-			{kpis.map((kpi) => (
-				<Card key={kpi.id} className="glass-card">
-					<div className="glass-card-cap" />
-					<CardContent className="p-4 sm:p-6">
-						<p className="text-sm font-medium sidebar-gradient-text">
-							{kpi.title}
-						</p>
-						<div className="flex items-end justify-between pt-2">
-							<div>
-								<div className="text-3xl font-bold text-slate-700">
-									{kpi.value}
-								</div>
-								<p className="text-xs text-slate-600 mt-1">{kpi.description}</p>
-							</div>
-							{kpi.trend ? (
-								<span
-									className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full ${
-										kpi.trendDirection === "up"
-											? "bg-green/10 text-green"
-											: kpi.trendDirection === "down"
-												? "bg-red/10 text-red"
-												: "bg-slate-100 text-slate-600"
-									}`}
-								>
-									{kpi.trendDirection === "up" ? (
-										<TrendingUp className="h-3 w-3" />
-									) : kpi.trendDirection === "down" ? (
-										<TrendingDown className="h-3 w-3" />
-									) : null}
-									{kpi.trend}
-								</span>
-							) : null}
-						</div>
-					</CardContent>
-				</Card>
-			))}
+			{kpis.map((kpi) => {
+				const ragTone: MetricTone | undefined =
+					kpi.ragStatus === "red"
+						? "danger"
+						: kpi.ragStatus === "amber"
+							? "warning"
+							: kpi.ragStatus === "green"
+								? "success"
+								: undefined;
+				const DynamicIcon =
+					kpi.trendDirection === "up"
+						? TrendingUp
+						: kpi.trendDirection === "down"
+							? TrendingDown
+							: kpi.trend
+								? Minus
+								: undefined;
+				const dynamicTone: MetricTone =
+					ragTone ??
+					(kpi.trendDirection === "up"
+						? "success"
+						: kpi.trendDirection === "down"
+							? "danger"
+							: "default");
+
+				return (
+					<MetricStatCard
+						key={kpi.id}
+						title={kpi.title}
+						value={kpi.value}
+						description={
+							kpi.trend ? `${kpi.description} · ${kpi.trend}` : kpi.description
+						}
+						icon={KPI_ICONS[kpi.id] ?? FileText}
+						iconTone={ragTone}
+						dynamicIcon={DynamicIcon}
+						dynamicTone={dynamicTone}
+						valueTone={ragTone === "danger" ? "danger" : "default"}
+					/>
+				);
+			})}
 		</div>
 	);
 }

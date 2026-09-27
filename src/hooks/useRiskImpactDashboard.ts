@@ -29,7 +29,7 @@ export function useRiskImpactDashboard(options?: {
 		const params = new URLSearchParams({
 			orgId: orgId || "default_organization",
 			period,
-			v: "2",
+			v: "4",
 		});
 		if (division) params.set("division", division);
 		return `/api/dashboard/risk-impact?${params.toString()}`;

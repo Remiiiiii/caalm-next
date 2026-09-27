@@ -184,7 +184,11 @@ export type UserDivision =
 	| "residential" // Reports to Operations Department
 	| "support" // Reports to IT Department
 	| "help-desk" // Reports to IT Department
-	| "accounting"; // Reports to Finance Department
+	| "accounting" // Reports to Finance Department
+	| "sales"
+	| "legal"
+	| "marketing"
+	| "engineering";
 
 export type ContractDepartment =
 	| "IT"
@@ -209,6 +213,10 @@ export const DIVISION_TO_DEPARTMENT: Record<UserDivision, string> = {
 	support: "IT",
 	"help-desk": "IT",
 	accounting: "Finance",
+	sales: "Sales",
+	legal: "Legal",
+	marketing: "Marketing",
+	engineering: "Engineering",
 };
 
 // Contract Departments for upload form
@@ -236,6 +244,10 @@ export const USER_DIVISIONS: UserDivision[] = [
 	"support",
 	"help-desk",
 	"accounting",
+	"sales",
+	"legal",
+	"marketing",
+	"engineering",
 ];
 
 // Format division name for display

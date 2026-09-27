@@ -206,7 +206,7 @@ jobs:
           vercel-org-id: ${{ secrets.VERCEL_USER_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
           vercel-args: "--prod"
-          vercel-version: latest
+          vercel-version: 48.0.0
           working-directory: ./
 
       - name: Notify CLM roadmap (after production deploy)

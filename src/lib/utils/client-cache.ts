@@ -1,15 +1,44 @@
 /**
- * Client-side cache utility for stale-while-revalidate pattern
- * Uses localStorage/sessionStorage to store cached data
+ * Client-side cache for stale-while-revalidate.
+ * localStorage survives refresh and new tabs (sessionStorage does not across tabs).
+ * Stale rows are still returned so the sidebar can paint immediately.
  */
 
 const CACHE_PREFIX = "caalm_cache_";
-const CACHE_VERSION = "1.1";
+const CACHE_VERSION = "1.2";
+/** Drop rows older than this. Younger stale rows are still used for first paint. */
+const MAX_STALE_MS = 7 * 24 * 60 * 60 * 1000;
 
 interface CachedData<T> {
 	data: T;
 	timestamp: number;
 	version: string;
+}
+
+function cacheStorageKey(key: string): string {
+	return `${CACHE_PREFIX}${key}`;
+}
+
+function readFromStorage<T>(storage: Storage, storageKey: string): T | null {
+	const cached = storage.getItem(storageKey);
+	if (!cached) return null;
+
+	const parsed: CachedData<T> = JSON.parse(cached);
+
+	if (parsed.version !== CACHE_VERSION && parsed.version !== "1.1") {
+		storage.removeItem(storageKey);
+		return null;
+	}
+
+	if (
+		typeof parsed.timestamp === "number" &&
+		Date.now() - parsed.timestamp > MAX_STALE_MS
+	) {
+		storage.removeItem(storageKey);
+		return null;
+	}
+
+	return parsed.data;
 }
 
 /**
@@ -18,19 +47,21 @@ interface CachedData<T> {
 export function getCachedData<T>(key: string): T | null {
 	if (typeof window === "undefined") return null;
 
+	const storageKey = cacheStorageKey(key);
+
 	try {
-		const cached = sessionStorage.getItem(`${CACHE_PREFIX}${key}`);
-		if (!cached) return null;
+		const fromLocal = readFromStorage<T>(localStorage, storageKey);
+		if (fromLocal !== null) return fromLocal;
 
-		const parsed: CachedData<T> = JSON.parse(cached);
-
-		// Check version compatibility
-		if (parsed.version !== CACHE_VERSION) {
-			sessionStorage.removeItem(`${CACHE_PREFIX}${key}`);
-			return null;
+		// Older builds stored cache in the tab only. Reuse it once, then move it.
+		const fromSession = readFromStorage<T>(sessionStorage, storageKey);
+		if (fromSession !== null) {
+			setCachedData(key, fromSession);
+			sessionStorage.removeItem(storageKey);
+			return fromSession;
 		}
 
-		return parsed.data;
+		return null;
 	} catch (error) {
 		if (process.env.NODE_ENV === "development") {
 			console.error("Error reading cache:", error);
@@ -45,7 +76,7 @@ export function getCachedData<T>(key: string): T | null {
 export function setCachedData<T>(
 	key: string,
 	data: T,
-	maxAge: number = 300000,
+	_maxAge: number = 300000,
 ): void {
 	if (typeof window === "undefined") return;
 
@@ -56,20 +87,16 @@ export function setCachedData<T>(
 			version: CACHE_VERSION,
 		};
 
-		sessionStorage.setItem(`${CACHE_PREFIX}${key}`, JSON.stringify(cached));
-
-		// Auto-cleanup after maxAge
-		setTimeout(() => {
-			sessionStorage.removeItem(`${CACHE_PREFIX}${key}`);
-		}, maxAge);
+		localStorage.setItem(cacheStorageKey(key), JSON.stringify(cached));
+		sessionStorage.removeItem(cacheStorageKey(key));
 	} catch (error) {
 		// Handle quota exceeded errors gracefully
 		if (error instanceof DOMException && error.name === "QuotaExceededError") {
 			// Clear old cache entries
 			clearOldCache();
 			try {
-				sessionStorage.setItem(
-					`${CACHE_PREFIX}${key}`,
+				localStorage.setItem(
+					cacheStorageKey(key),
 					JSON.stringify({
 						data,
 						timestamp: Date.now(),
@@ -88,6 +115,17 @@ export function setCachedData<T>(
 	}
 }
 
+function removePrefixedKeys(storage: Storage): string[] {
+	const keysToRemove: string[] = [];
+	for (let i = 0; i < storage.length; i++) {
+		const key = storage.key(i);
+		if (key?.startsWith(CACHE_PREFIX)) {
+			keysToRemove.push(key);
+		}
+	}
+	return keysToRemove;
+}
+
 /**
  * Clear old cache entries (older than 1 hour)
  */
@@ -96,27 +134,26 @@ function clearOldCache(): void {
 
 	try {
 		const oneHourAgo = Date.now() - 3600000;
-		const keysToRemove: string[] = [];
-
-		for (let i = 0; i < sessionStorage.length; i++) {
-			const key = sessionStorage.key(i);
-			if (key?.startsWith(CACHE_PREFIX)) {
-				try {
-					const cached = sessionStorage.getItem(key);
-					if (cached) {
-						const parsed = JSON.parse(cached);
-						if (parsed.timestamp < oneHourAgo) {
-							keysToRemove.push(key);
+		for (const storage of [localStorage, sessionStorage]) {
+			const keysToRemove: string[] = [];
+			for (let i = 0; i < storage.length; i++) {
+				const key = storage.key(i);
+				if (key?.startsWith(CACHE_PREFIX)) {
+					try {
+						const cached = storage.getItem(key);
+						if (cached) {
+							const parsed = JSON.parse(cached);
+							if (parsed.timestamp < oneHourAgo) {
+								keysToRemove.push(key);
+							}
 						}
+					} catch {
+						keysToRemove.push(key);
 					}
-				} catch {
-					// Invalid cache entry, remove it
-					keysToRemove.push(key);
 				}
 			}
+			keysToRemove.forEach((key) => storage.removeItem(key));
 		}
-
-		keysToRemove.forEach((key) => sessionStorage.removeItem(key));
 	} catch (error) {
 		if (process.env.NODE_ENV === "development") {
 			console.error("Error clearing old cache:", error);
@@ -131,14 +168,9 @@ export function clearCache(): void {
 	if (typeof window === "undefined") return;
 
 	try {
-		const keysToRemove: string[] = [];
-		for (let i = 0; i < sessionStorage.length; i++) {
-			const key = sessionStorage.key(i);
-			if (key?.startsWith(CACHE_PREFIX)) {
-				keysToRemove.push(key);
-			}
+		for (const storage of [localStorage, sessionStorage]) {
+			removePrefixedKeys(storage).forEach((key) => storage.removeItem(key));
 		}
-		keysToRemove.forEach((key) => sessionStorage.removeItem(key));
 	} catch (error) {
 		if (process.env.NODE_ENV === "development") {
 			console.error("Error clearing cache:", error);
@@ -153,7 +185,9 @@ export function clearCachedData(key: string): void {
 	if (typeof window === "undefined") return;
 
 	try {
-		sessionStorage.removeItem(`${CACHE_PREFIX}${key}`);
+		const storageKey = cacheStorageKey(key);
+		localStorage.removeItem(storageKey);
+		sessionStorage.removeItem(storageKey);
 	} catch (error) {
 		if (process.env.NODE_ENV === "development") {
 			console.error("Error clearing cached data:", error);

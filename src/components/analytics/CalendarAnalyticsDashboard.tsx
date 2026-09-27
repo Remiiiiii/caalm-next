@@ -442,7 +442,7 @@ export const CalendarAnalyticsDashboard: React.FC = () => {
 
 					{/* Main Content Tabs */}
 					<Tabs defaultValue="meetings" className="w-full">
-						<TabsList className="bg-white/20 backdrop-blur border border-white/40">
+						<TabsList>
 							<TabsTrigger value="meetings">Meeting Load</TabsTrigger>
 							<TabsTrigger value="compliance">Compliance</TabsTrigger>
 							<TabsTrigger value="attachments">Attachments</TabsTrigger>

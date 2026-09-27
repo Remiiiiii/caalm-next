@@ -2,11 +2,12 @@
 
 import { ArrowLeft, Building2, FileText, Users } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import FileCard from "@/components/Card";
 import SearchInput from "@/components/SearchInput";
 import Sort from "@/components/Sort";
 import { Button } from "@/components/ui/button";
+import { PageIndex } from "@/components/ui/page-index";
 import {
 	CardContent,
 	CardHeader,
@@ -14,14 +15,16 @@ import {
 	Card as UICard,
 } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import RoundedUnderlineTabs from "@/components/RoundedUnderlineTabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { PERMISSIONS } from "@/constants/permissions";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useUserRole } from "@/hooks/useUserRole";
 import {
+	getContracts,
 	getContractsByUserDivision,
-	getFiles,
 } from "@/lib/actions/file.actions";
+import { contractRowToFileDoc } from "@/lib/contracts/contract-row-to-file";
 import { convertFileSize } from "@/lib/utils";
 import type { UIFileDoc } from "@/types/files";
 import {
@@ -29,22 +32,26 @@ import {
 	DIVISION_TO_DEPARTMENT,
 } from "../../../../constants";
 
+const CONTRACTS_PAGE_SIZE = 12;
+
 const MyContractsPage = () => {
 	const { division, loading, error } = useUserRole();
 	const { permissions } = usePermissions();
 	const [contracts, setContracts] = useState<UIFileDoc[]>([]);
 	const [filteredContracts, setFilteredContracts] = useState<UIFileDoc[]>([]);
 	const [selectedDepartment, setSelectedDepartment] =
-		useState<ContractDepartment>("Operations");
+		useState<ContractDepartment | "All">("All");
 	const [selectedDivision, setSelectedDivision] = useState<string>("");
-	const [sortBy] = useState<string>("$createdAt-desc");
-
+	const [page, setPage] = useState(1);
 	const contractsList = filteredContracts ?? [];
 
-	// Function to refresh contracts data
+	const rowsToDocs = (rows: unknown[]): UIFileDoc[] =>
+		(rows || []).map((row) =>
+			contractRowToFileDoc((row || {}) as Record<string, unknown>),
+		);
+
 	const refreshContracts = async () => {
 		try {
-			// Department Manager - get contracts filtered by their division
 			if (
 				permissions.includes(PERMISSIONS.CONTRACTS.VIEW) &&
 				!permissions.includes(PERMISSIONS.SETTINGS.VIEW) &&
@@ -52,43 +59,15 @@ const MyContractsPage = () => {
 			) {
 				const divisionContracts =
 					(await getContractsByUserDivision(division)) || [];
-
-				// Get the corresponding file documents for these contracts
-				const contractFiles: UIFileDoc[] = [];
-				for (const contract of divisionContracts) {
-					if (contract.fileId) {
-						try {
-							const fileResponse = await getFiles({
-								types: ["document"],
-								searchText: "",
-								sort: sortBy,
-							});
-							const documents = fileResponse?.documents || [];
-							const file = documents.find(
-								(f: UIFileDoc) => f.$id === contract.fileId,
-							);
-							if (file) {
-								contractFiles.push(file as UIFileDoc);
-							}
-						} catch (error) {
-							console.error("Error fetching file for contract:", error);
-						}
-					}
-				}
-
-				setContracts(contractFiles);
-				setFilteredContracts(contractFiles);
+				const docs = rowsToDocs(divisionContracts);
+				setContracts(docs);
+				setFilteredContracts(docs);
 			} else if (permissions.includes(PERMISSIONS.CONTRACTS.VIEW)) {
-				// Super Admin/Organization Admin - get all contracts
-				const filesResponse = await getFiles({
-					types: ["document"],
-					searchText: "",
-					sort: sortBy,
-				});
-
-				const contractFiles = (filesResponse?.documents || []) as UIFileDoc[];
-				setContracts(contractFiles);
-				setFilteredContracts(contractFiles);
+				const result = await getContracts();
+				const rows = result?.rows || result?.documents || [];
+				const docs = rowsToDocs(rows);
+				setContracts(docs);
+				setFilteredContracts(docs);
 			} else {
 				setContracts([]);
 				setFilteredContracts([]);
@@ -125,20 +104,35 @@ const MyContractsPage = () => {
 		) {
 			filtered = contracts;
 		} else if (permissions.includes(PERMISSIONS.SETTINGS.VIEW)) {
-			// Super Admin/Organization Admin - filter by selected department
-			filtered = contracts.filter(
-				(contract) => contract.department === selectedDepartment,
-			);
+			if (selectedDepartment !== "All") {
+				filtered = contracts.filter(
+					(contract) => contract.department === selectedDepartment,
+				);
+			}
+			if (selectedDivision) {
+				filtered = filtered.filter(
+					(contract) => contract.division === selectedDivision,
+				);
+			}
 		}
 
 		setFilteredContracts(filtered);
-	}, [contracts, permissions, division, selectedDepartment]);
+	}, [contracts, permissions, division, selectedDepartment, selectedDivision]);
+
+	useEffect(() => {
+		setPage(1);
+	}, [selectedDepartment, selectedDivision, contractsList.length]);
+
+	const paginatedContracts = useMemo(() => {
+		const start = (page - 1) * CONTRACTS_PAGE_SIZE;
+		return contractsList.slice(start, start + CONTRACTS_PAGE_SIZE);
+	}, [contractsList, page]);
 
 	// Get accessible departments for the user
-	const getAccessibleDepartments = (): ContractDepartment[] => {
-		// Super Admin/Organization Admin can see all departments
+	const getAccessibleDepartments = (): Array<ContractDepartment | "All"> => {
 		if (permissions.includes(PERMISSIONS.SETTINGS.VIEW)) {
 			return [
+				"All",
 				"IT",
 				"Finance",
 				"Administration",
@@ -150,7 +144,6 @@ const MyContractsPage = () => {
 				"Engineering",
 			];
 		} else if (permissions.includes(PERMISSIONS.CONTRACTS.VIEW) && division) {
-			// Department Manager - only their department
 			const userDepartment =
 				DIVISION_TO_DEPARTMENT[division as keyof typeof DIVISION_TO_DEPARTMENT];
 			return userDepartment ? [userDepartment as ContractDepartment] : [];
@@ -160,7 +153,7 @@ const MyContractsPage = () => {
 
 	// Get divisions for a specific department
 	const getDivisionsForDepartment = (
-		department: ContractDepartment,
+		department: ContractDepartment | "All",
 	): string[] => {
 		if (department === "Operations") {
 			return [
@@ -260,23 +253,27 @@ const MyContractsPage = () => {
 						</CardHeader>
 						<CardContent>
 							<Tabs
-								defaultValue={selectedDepartment}
+								value={selectedDepartment}
 								className="w-full"
-								onValueChange={(value) =>
-									setSelectedDepartment(value as ContractDepartment)
-								}
+								onValueChange={(value) => {
+									setSelectedDepartment(value as ContractDepartment | "All");
+									setSelectedDivision("");
+								}}
 							>
-								<TabsList className="flex w-full bg-white/20 backdrop-blur border border-white/40 mb-6">
-									{getAccessibleDepartments().map((dept) => (
-										<TabsTrigger
-											key={dept}
-											value={dept}
-											className="flex-1 data-[state=active]:bg-white/30 data-[state=active]:text-navy tabs-underline"
-										>
-											{dept}
-										</TabsTrigger>
-									))}
-								</TabsList>
+								<RoundedUnderlineTabs
+									className="mb-6"
+									aria-label="Filter by department"
+									variant="bar"
+									value={selectedDepartment}
+									onValueChange={(next) => {
+										setSelectedDepartment(next as ContractDepartment | "All");
+										setSelectedDivision("");
+									}}
+									tabs={getAccessibleDepartments().map((dept) => ({
+										value: dept,
+										label: dept,
+									}))}
+								/>
 
 								{getAccessibleDepartments().map((dept) => {
 									const divisions = getDivisionsForDepartment(dept);
@@ -285,40 +282,30 @@ const MyContractsPage = () => {
 											{divisions.length > 0 && (
 												<div className="mb-4">
 													<h3 className="h3 text-slate-700 mb-3">Divisions</h3>
-													<div className="flex gap-2 flex-wrap">
-														<Button
-															variant={
-																selectedDivision === "" ? "default" : "outline"
-															}
-															size="sm"
-															onClick={() => setSelectedDivision("")}
-															className="bg-transparent backdrop-blur border border-white/40 tabs-underline hover:bg-transparent focus:bg-transparent text-slate-700 hover:text-slate-700 focus:text-slate-700 active:text-slate-700"
-														>
-															All {dept}
-														</Button>
-														{divisions.map((div) => (
-															<Button
-																key={div}
-																variant={
-																	selectedDivision === div
-																		? "default"
-																		: "outline"
-																}
-																size="sm"
-																onClick={() => setSelectedDivision(div)}
-																className="bg-transparent backdrop-blur border border-white/40 tabs-underline hover:bg-transparent focus:bg-transparent text-slate-700 hover:text-slate-700 focus:text-slate-700 active:text-slate-700"
-															>
-																{div
+													<RoundedUnderlineTabs
+														variant="chips"
+														aria-label={`${dept} divisions`}
+														value={selectedDivision || "__all__"}
+														onValueChange={(next) =>
+															setSelectedDivision(
+																next === "__all__" ? "" : next,
+															)
+														}
+														tabs={[
+															{ value: "__all__", label: `All ${dept}` },
+															...divisions.map((div) => ({
+																value: div,
+																label: div
 																	.split("-")
 																	.map(
 																		(word) =>
 																			word.charAt(0).toUpperCase() +
 																			word.slice(1),
 																	)
-																	.join(" ")}
-															</Button>
-														))}
-													</div>
+																	.join(" "),
+															})),
+														]}
+													/>
 												</div>
 											)}
 
@@ -332,24 +319,38 @@ const MyContractsPage = () => {
 															({contractsList.length} contracts)
 														</span>
 													</p>
-													<div className="flex items-center gap-4 text-slate-700">
+													<div className="flex shrink-0 items-center gap-4 text-slate-700">
 														<SearchInput />
 														<Sort />
 													</div>
 												</div>
 
 												{contractsList.length > 0 ? (
-													<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-														{contractsList.map((contract) => (
-															<FileCard
-																key={contract.$id}
-																file={contract}
-																status={contract.status}
-																expirationDate={contract.contractExpiryDate}
-																onRefresh={refreshContracts}
-															/>
-														))}
-													</div>
+													<>
+														<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+															{paginatedContracts.map((contract) => (
+																<FileCard
+																	key={contract.$id}
+																	file={contract}
+																	status={contract.status}
+																	expirationDate={contract.contractExpiryDate}
+																	onRefresh={refreshContracts}
+																/>
+															))}
+														</div>
+														<PageIndex
+															className="mt-6"
+															page={page}
+															totalItems={contractsList.length}
+															pageSize={CONTRACTS_PAGE_SIZE}
+															onPageChange={setPage}
+															hideWhenSinglePage
+															showRange
+															itemLabel="contracts"
+															scrollToTop
+															aria-label="Contracts pagination"
+														/>
+													</>
 												) : (
 													<div className="text-center py-12">
 														<FileText className="h-12 w-12 text-slate-400 mx-auto mb-4" />
@@ -399,24 +400,38 @@ const MyContractsPage = () => {
 											({contractsList.length} contracts)
 										</span>
 									</p>
-									<div className="flex items-center gap-4">
+									<div className="flex shrink-0 items-center gap-4">
 										<SearchInput />
 										<Sort />
 									</div>
 								</div>
 
 								{contractsList.length > 0 ? (
-									<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-										{contractsList.map((contract) => (
-											<FileCard
-												key={contract.$id}
-												file={contract}
-												status={contract.status}
-												expirationDate={contract.contractExpiryDate}
-												onRefresh={refreshContracts}
-											/>
-										))}
-									</div>
+									<>
+										<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+											{paginatedContracts.map((contract) => (
+												<FileCard
+													key={contract.$id}
+													file={contract}
+													status={contract.status}
+													expirationDate={contract.contractExpiryDate}
+													onRefresh={refreshContracts}
+												/>
+											))}
+										</div>
+										<PageIndex
+											className="mt-6"
+											page={page}
+											totalItems={contractsList.length}
+											pageSize={CONTRACTS_PAGE_SIZE}
+											onPageChange={setPage}
+											hideWhenSinglePage
+											showRange
+											itemLabel="contracts"
+											scrollToTop
+											aria-label="Contracts pagination"
+										/>
+									</>
 								) : (
 									<div className="text-center py-12">
 										<FileText className="h-12 w-12 text-slate-400 mx-auto mb-4" />

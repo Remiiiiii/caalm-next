@@ -23,6 +23,8 @@ import {
 	SESSION_CHANGED_NOTICE_PARAM,
 	SESSION_CHANGED_NOTICE_VALUE,
 } from "@/lib/auth/session-sync";
+import { clearNavSnapshot } from "@/lib/navigation/nav-rbac-cache";
+import { clearCache } from "@/lib/utils/client-cache";
 import {
 	getDashboardUrlForUser,
 	invalidateDashboardUrlCache,
@@ -496,6 +498,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 		// Clear any client-side storage immediately
 		localStorage.removeItem("session");
 		localStorage.removeItem(CACHED_USER_STORAGE_KEY);
+		clearNavSnapshot();
+		clearCache();
 		sessionStorage.clear();
 
 		// Redirect immediately without waiting for API call

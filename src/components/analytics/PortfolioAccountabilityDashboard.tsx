@@ -25,7 +25,7 @@ import {
 import useSWR from "swr";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { StatCardIcon } from "@/components/ui/stat-card-icon";
+import { MetricStatCard } from "@/components/ui/metric-stat-card";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import type { PortfolioAccountabilityMetrics } from "@/lib/analytics/portfolioAccountability.types";
 
@@ -209,19 +209,24 @@ export function PortfolioAccountabilityDashboard() {
 
 			<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
 				{stats.map((stat) => (
-					<Card key={stat.title} className="glass-card">
-						<div className="glass-card-cap" />
-						<CardContent className="p-4 sm:p-6">
-							<p className="text-sm font-medium sidebar-gradient-text">
-								{stat.title}
-							</p>
-							<div className="flex items-center pt-2 text-3xl font-bold text-slate-700">
-								<span>{stat.value}</span>
-								<StatCardIcon className="ml-2" icon={stat.icon} />
-							</div>
-							<p className="mt-1 text-xs text-slate-600">{stat.hint}</p>
-						</CardContent>
-					</Card>
+					<MetricStatCard
+						key={stat.title}
+						title={stat.title}
+						value={stat.value}
+						description={stat.hint}
+						icon={stat.icon}
+						dynamicIcon={
+							stat.title === "Unintentional expirations"
+								? AlertTriangle
+								: undefined
+						}
+						dynamicTone={
+							stat.title === "Unintentional expirations" ? "warning" : "default"
+						}
+						valueTone={
+							stat.title === "Unintentional expirations" ? "warning" : "default"
+						}
+					/>
 				))}
 			</div>
 

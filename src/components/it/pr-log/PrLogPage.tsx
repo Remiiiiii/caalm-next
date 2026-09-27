@@ -38,7 +38,8 @@ function PrLogUnavailableState({ detail }: { detail?: string }) {
 				<p className="text-sm text-slate-500 mt-2 max-w-md">{detail}</p>
 			) : (
 				<p className="text-sm text-slate-500 mt-2 max-w-md">
-					Open Cursor cloud agent PRs on branches named cursor/… show up here.
+					Open Cursor cloud agent PRs on cursor/… branches show up here.
+					Nonprofit Roadmap PRs (cursor/nonprofit/…) stay on that board.
 				</p>
 			)}
 		</div>
@@ -210,7 +211,7 @@ export function PrLogPage() {
 	return (
 		<ITPageShell
 			title="PR log - Cursor Cloud Agent"
-			subtitle="Cloud agent pull requests — cursor/ branches stay listed after merge until every GitHub check on the merge commit succeeds."
+			subtitle="Cursor cloud agent pull requests only. Nonprofit Roadmap PRs use cursor/nonprofit/… and are listed on that board, not here. Agent PRs stay listed after merge until every GitHub check on the merge commit succeeds."
 			icon={GitPullRequest}
 		>
 			{overviewLoading && !overview ? (

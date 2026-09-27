@@ -9,14 +9,16 @@ const TabsList = React.forwardRef<
 	React.ElementRef<typeof TabsPrimitive.List>,
 	React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
 >(({ className, ...props }, ref) => (
-	<TabsPrimitive.List
-		ref={ref}
-		className={cn(
-			"inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground",
-			className,
-		)}
-		{...props}
-	/>
+	<nav className="overflow-visible pb-3">
+		<TabsPrimitive.List
+			ref={ref}
+			className={cn(
+				"flex h-auto min-h-10 w-full flex-wrap items-center justify-center overflow-visible rounded-md border border-white/40 bg-white/20 p-1 text-slate-700 backdrop-blur",
+				className,
+			)}
+			{...props}
+		/>
+	</nav>
 ));
 TabsList.displayName = TabsPrimitive.List.displayName;
 
@@ -27,7 +29,10 @@ const TabsTrigger = React.forwardRef<
 	<TabsPrimitive.Trigger
 		ref={ref}
 		className={cn(
-			"relative inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm",
+			"tabs-underline tabs-underline-outside relative inline-flex flex-1 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-sm px-2 py-1.5 text-sm font-medium text-slate-700 shadow-none transition-colors duration-200",
+			"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
+			"disabled:pointer-events-none disabled:opacity-50",
+			"data-[state=active]:bg-white/30 data-[state=active]:text-navy data-[state=active]:shadow-none",
 			className,
 		)}
 		{...props}

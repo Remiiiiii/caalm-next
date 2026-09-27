@@ -740,7 +740,11 @@ export function getFieldsForStep(
  */
 export function getRequiredFields(typeId: string): string[] {
 	const config = getContractTypeConfig(typeId);
-	return config?.requiredFields || [];
+	const required = [...(config?.requiredFields || [])];
+	if (!required.includes("subDepartment")) {
+		required.push("subDepartment");
+	}
+	return required;
 }
 
 /**

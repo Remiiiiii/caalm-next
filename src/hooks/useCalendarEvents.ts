@@ -13,7 +13,13 @@ interface LocalCalendarEvent {
 	title: string;
 	startDate?: Date;
 	endDate?: Date;
-	type: "contract" | "deadline" | "meeting" | "review" | "audit";
+	type:
+		| "contract"
+		| "deadline"
+		| "meeting"
+		| "review"
+		| "audit"
+		| "volunteer_shift";
 	description?: string;
 	participants?: string[];
 	contractName?: string;
@@ -201,6 +207,7 @@ export const useCalendarEvents = ({
 		mutate,
 	} = useSWR(key, swrConfig.fetcher || null, {
 		...swrConfig,
+		keepPreviousData: true,
 		refreshInterval: enableRealTime ? pollingInterval : 0,
 	});
 

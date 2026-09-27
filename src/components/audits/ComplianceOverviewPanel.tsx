@@ -5,13 +5,21 @@ import {
 	ArrowRight,
 	CheckCircle2,
 	CircleAlert,
+	Calendar,
+	Clock,
 	FileText,
 	ScrollText,
 	Shield,
+	TrendingDown,
+	TrendingUp,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+	complianceMetricTone,
+	MetricStatCard,
+} from "@/components/ui/metric-stat-card";
 import type { ComplianceStatusSnapshot } from "@/lib/audits/types";
 
 const RAG_STYLES = {
@@ -56,7 +64,7 @@ function ActionLinkButton({
 }) {
 	return (
 		<Link href={href} className="shrink-0">
-			<Button className="primary-btn h-9 px-4! gap-2 justify-center text-xs whitespace-nowrap shadow-drop-1 border-0">
+			<Button className="primary-btn px-4! gap-2 justify-center text-xs whitespace-nowrap shadow-drop-1 border-0">
 				<Icon className="h-4 w-4 shrink-0" />
 				{label}
 			</Button>
@@ -169,73 +177,73 @@ export function ComplianceOverviewPanel({
 			</Card>
 
 			<div className="grid grid-cols-4 gap-6">
-				<Card className="glass-card">
-					<div className="glass-card-cap" />
-					<CardContent className="p-4 sm:p-6">
-						<p className="text-sm font-medium sidebar-gradient-text">
-							Areas at risk
-						</p>
-						<div className="text-3xl font-bold text-slate-700 pt-2">
-							{overview.areasAtRisk}
-						</div>
-						<p className="text-xs text-slate-600 mt-1">
-							Contracts, licenses, or filings needing action
-						</p>
-					</CardContent>
-				</Card>
-
-				<Card className="glass-card">
-					<div className="glass-card-cap" />
-					<CardContent className="p-4 sm:p-6">
-						<p className="text-sm font-medium sidebar-gradient-text">
-							Upcoming deadlines
-						</p>
-						<div className="text-3xl font-bold text-slate-700 pt-2">
-							{overview.upcomingDeadlines}
-						</div>
-						<p className="text-xs text-slate-600 mt-1">
-							Next 90 days across CAALM modules
-						</p>
-					</CardContent>
-				</Card>
-
-				<Card className="glass-card">
-					<div className="glass-card-cap" />
-					<CardContent className="p-4 sm:p-6">
-						<p className="text-sm font-medium sidebar-gradient-text">
-							Contract compliance
-						</p>
-						<div className="text-3xl font-bold text-slate-700 pt-2">
-							{overview.contractComplianceRate !== null
-								? `${overview.contractComplianceRate}%`
-								: "—"}
-						</div>
-						<p className="text-xs text-slate-600 mt-1">
-							{snapshot.sources.contracts
-								? "Live from Contracts module"
-								: "Requires contracts.view permission"}
-						</p>
-					</CardContent>
-				</Card>
-
-				<Card className="glass-card">
-					<div className="glass-card-cap" />
-					<CardContent className="p-4 sm:p-6">
-						<p className="text-sm font-medium sidebar-gradient-text">
-							License renewal health
-						</p>
-						<div className="text-3xl font-bold text-slate-700 pt-2">
-							{overview.licenseRenewalHealth !== null
-								? `${overview.licenseRenewalHealth}%`
-								: "—"}
-						</div>
-						<p className="text-xs text-slate-600 mt-1">
-							{snapshot.sources.licenses
-								? "Live from Licenses module"
-								: "Requires licenses.view permission"}
-						</p>
-					</CardContent>
-				</Card>
+				<MetricStatCard
+					title="Areas at risk"
+					value={overview.areasAtRisk}
+					description="Contracts, licenses, or filings needing action"
+					icon={CircleAlert}
+					iconTone={overview.areasAtRisk > 0 ? "warning" : "default"}
+					dynamicIcon={overview.areasAtRisk > 0 ? AlertTriangle : undefined}
+					dynamicTone="warning"
+					valueTone={overview.areasAtRisk > 0 ? "warning" : "default"}
+				/>
+				<MetricStatCard
+					title="Upcoming deadlines"
+					value={overview.upcomingDeadlines}
+					description="Next 90 days across CAALM modules"
+					icon={Calendar}
+					dynamicIcon={overview.upcomingDeadlines > 0 ? Clock : undefined}
+					dynamicTone="warning"
+				/>
+				<MetricStatCard
+					title="Contract compliance"
+					value={
+						overview.contractComplianceRate !== null
+							? `${overview.contractComplianceRate}%`
+							: "—"
+					}
+					description={
+						snapshot.sources.contracts
+							? "Live from Contracts module"
+							: "Requires contracts.view permission"
+					}
+					icon={FileText}
+					iconTone={complianceMetricTone(overview.contractComplianceRate)}
+					dynamicIcon={
+						overview.contractComplianceRate !== null
+							? complianceMetricTone(overview.contractComplianceRate) ===
+								"danger"
+								? TrendingDown
+								: TrendingUp
+							: undefined
+					}
+					dynamicTone={complianceMetricTone(overview.contractComplianceRate)}
+					valueTone={complianceMetricTone(overview.contractComplianceRate)}
+				/>
+				<MetricStatCard
+					title="License renewal health"
+					value={
+						overview.licenseRenewalHealth !== null
+							? `${overview.licenseRenewalHealth}%`
+							: "—"
+					}
+					description={
+						snapshot.sources.licenses
+							? "Live from Licenses module"
+							: "Requires licenses.view permission"
+					}
+					icon={Shield}
+					iconTone={complianceMetricTone(overview.licenseRenewalHealth)}
+					dynamicIcon={
+						overview.licenseRenewalHealth !== null
+							? complianceMetricTone(overview.licenseRenewalHealth) === "danger"
+								? TrendingDown
+								: TrendingUp
+							: undefined
+					}
+					dynamicTone={complianceMetricTone(overview.licenseRenewalHealth)}
+					valueTone={complianceMetricTone(overview.licenseRenewalHealth)}
+				/>
 			</div>
 
 			{(snapshot.sources.contracts || snapshot.sources.licenses) && (

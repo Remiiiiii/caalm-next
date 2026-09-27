@@ -5,15 +5,20 @@ import {
 	ChartColumnIncreasing,
 	CheckCircle,
 	ClipboardList,
+	Clock,
+	DollarSign,
 	FileText,
 	RefreshCw,
 	ShieldAlert,
+	TrendingDown,
 } from "lucide-react";
 import { useMemo } from "react";
 import CountUp from "react-countup";
 import { useLicensesView } from "@/components/LicensesView";
-import { Card, CardContent } from "@/components/ui/card";
-import { StatCardIcon } from "@/components/ui/stat-card-icon";
+import {
+	complianceMetricTone,
+	MetricStatCard,
+} from "@/components/ui/metric-stat-card";
 import {
 	computeLicenseMetrics,
 	getLicenseExpiryRaw,
@@ -21,15 +26,11 @@ import {
 	matchesStatusTab,
 	parseLicenseExpiryDate,
 } from "@/lib/licenses/licensesListUtils";
-import { cn } from "@/lib/utils";
 import type { License } from "@/types/licenses";
 
 interface LicensesMetricsBarProps {
 	licenses: License[];
 }
-
-const interactiveCard =
-	"glass-card interactive-glass-card cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 transition-all duration-200 w-full text-left";
 
 export default function LicensesMetricsBar({
 	licenses,
@@ -73,35 +74,36 @@ export default function LicensesMetricsBar({
 		maximumFractionDigits: 0,
 		useGrouping: true,
 	}).format(metrics.renewalPipelineCost);
+	const utilizationTone = complianceMetricTone(metrics.utilizationRate);
+	const activeShare =
+		metrics.totalLicenses > 0
+			? Math.round((metrics.activeCount / metrics.totalLicenses) * 100)
+			: null;
 
 	return (
 		<section className="mb-6 w-full space-y-6">
-			{/* Tier 1 — contracts parity */}
 			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
 				{metrics.totalCost > 0 && (
-					<Card className="glass-card min-w-0">
-						<div className="glass-card-cap" />
-						<CardContent className="p-4 sm:p-6">
-							<p className="text-sm font-medium sidebar-gradient-text">
-								Total Cost
-							</p>
-							<div className="flex items-center gap-2 pt-2">
-								<span className="text-2xl sm:text-3xl font-bold text-slate-700 tabular-nums">
-									$
-									<CountUp
-										end={totalCostForTab.totalCost}
-										duration={1.2}
-										separator=","
-									/>
-								</span>
-							</div>
-							<p className="text-xs text-slate-600 mt-1">
-								{totalCostForTab.sumActiveOnly
-									? "Sum of active license costs"
-									: "Sum of license costs"}
-							</p>
-						</CardContent>
-					</Card>
+					<MetricStatCard
+						title="Total Cost"
+						value={
+							<>
+								$
+								<CountUp
+									end={totalCostForTab.totalCost}
+									duration={1.2}
+									separator=","
+								/>
+							</>
+						}
+						description={
+							totalCostForTab.sumActiveOnly
+								? "Sum of active license costs"
+								: "Sum of license costs"
+						}
+						icon={DollarSign}
+						valueClassName="text-2xl sm:text-3xl"
+					/>
 				)}
 
 				<button
@@ -112,21 +114,13 @@ export default function LicensesMetricsBar({
 						scrollToList();
 					}}
 				>
-					<Card className={cn(interactiveCard)}>
-						<div className="glass-card-cap" />
-						<CardContent className="p-4 sm:p-6">
-							<p className="text-sm font-medium sidebar-gradient-text">
-								Total Licenses
-							</p>
-							<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-								<span className="tabular-nums">
-									<CountUp end={metrics.totalLicenses} duration={1.2} />
-								</span>
-								<StatCardIcon className="ml-2" icon={FileText} />
-							</div>
-							<p className="text-xs text-slate-600 mt-1">Click to show all</p>
-						</CardContent>
-					</Card>
+					<MetricStatCard
+						interactive
+						title="Total Licenses"
+						value={<CountUp end={metrics.totalLicenses} duration={1.2} />}
+						description="Click to show all"
+						icon={FileText}
+					/>
 				</button>
 
 				<button
@@ -134,31 +128,16 @@ export default function LicensesMetricsBar({
 					className="text-left"
 					onClick={() => goTab("active")}
 				>
-					<Card className={cn(interactiveCard)}>
-						<div className="glass-card-cap" />
-						<CardContent className="p-4 sm:p-6">
-							<p className="text-sm font-medium sidebar-gradient-text">
-								Active
-							</p>
-							<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-								<span className="tabular-nums">
-									<CountUp end={metrics.activeCount} duration={1.2} />
-								</span>
-								<StatCardIcon
-									className="ml-2"
-									icon={CheckCircle}
-									iconClassName="text-green"
-								/>
-							</div>
-							<p className="text-xs text-slate-600 mt-1">
-								{metrics.totalLicenses > 0
-									? `${Math.round(
-											(metrics.activeCount / metrics.totalLicenses) * 100,
-										)}% of total`
-									: "No licenses"}
-							</p>
-						</CardContent>
-					</Card>
+					<MetricStatCard
+						interactive
+						title="Active"
+						value={<CountUp end={metrics.activeCount} duration={1.2} />}
+						description={
+							activeShare != null ? `${activeShare}% of total` : "No licenses"
+						}
+						icon={CheckCircle}
+						iconTone="success"
+					/>
 				</button>
 
 				{hasExpiryDates && (
@@ -167,33 +146,27 @@ export default function LicensesMetricsBar({
 						className="text-left"
 						onClick={() => goTab("expiring")}
 					>
-						<Card className={cn(interactiveCard)}>
-							<div className="glass-card-cap" />
-							<CardContent className="p-4 sm:p-6">
-								<p className="text-sm font-medium sidebar-gradient-text">
-									Expiring Soon
-								</p>
-								<div className="flex items-center text-3xl font-bold text-slate-700 pt-2 gap-2">
-									<span className="tabular-nums">
-										<CountUp end={metrics.totalExpiring} duration={1.2} />
-									</span>
-									<StatCardIcon
-										icon={AlertTriangle}
-										iconClassName="text-orange"
-									/>
-								</div>
-								<div className="flex items-center justify-between gap-2 mt-2 text-xs text-slate-600">
+						<MetricStatCard
+							interactive
+							title="Expiring Soon"
+							value={<CountUp end={metrics.totalExpiring} duration={1.2} />}
+							description={
+								<span className="flex items-center gap-2">
 									<span>30d: {metrics.expiring.in30}</span>
 									<span>60d: {metrics.expiring.in60}</span>
 									<span>90d: {metrics.expiring.in90}</span>
-								</div>
-							</CardContent>
-						</Card>
+								</span>
+							}
+							icon={AlertTriangle}
+							iconTone={metrics.totalExpiring > 0 ? "warning" : "default"}
+							dynamicIcon={metrics.totalExpiring > 0 ? Clock : undefined}
+							dynamicTone="warning"
+							valueTone={metrics.totalExpiring > 0 ? "warning" : "default"}
+						/>
 					</button>
 				)}
 			</div>
 
-			{/* Tier 2 — org intelligence */}
 			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-6">
 				{metrics.totalQuantity > 0 && (
 					<button
@@ -204,24 +177,19 @@ export default function LicensesMetricsBar({
 							scrollToList();
 						}}
 					>
-						<Card className={cn(interactiveCard)}>
-							<div className="glass-card-cap" />
-							<CardContent className="p-4 sm:p-6">
-								<p className="text-sm font-medium sidebar-gradient-text">
-									Seat utilization
-								</p>
-								<div className="flex items-center text-3xl font-bold text-slate-700 pt-2 gap-2">
-									<span className="tabular-nums">
-										{metrics.utilizationRate.toFixed(1)}%
-									</span>
-									<StatCardIcon icon={ChartColumnIncreasing} />
-								</div>
-								<p className="text-xs text-slate-600 mt-1">
-									{metrics.usedQuantity.toLocaleString()} of{" "}
-									{metrics.totalQuantity.toLocaleString()} seats used
-								</p>
-							</CardContent>
-						</Card>
+						<MetricStatCard
+							interactive
+							title="Seat utilization"
+							value={`${metrics.utilizationRate.toFixed(1)}%`}
+							description={`${metrics.usedQuantity.toLocaleString()} of ${metrics.totalQuantity.toLocaleString()} seats used`}
+							icon={ChartColumnIncreasing}
+							iconTone={utilizationTone}
+							dynamicIcon={
+								utilizationTone === "danger" ? TrendingDown : CheckCircle
+							}
+							dynamicTone={utilizationTone}
+							valueTone={utilizationTone}
+						/>
 					</button>
 				)}
 
@@ -231,26 +199,19 @@ export default function LicensesMetricsBar({
 						className="text-left"
 						onClick={() => goTab("compliance-risk")}
 					>
-						<Card className={cn(interactiveCard)}>
-							<div className="glass-card-cap" />
-							<CardContent className="p-4 sm:p-6">
-								<p className="text-sm font-medium sidebar-gradient-text">
-									Compliance at risk
-								</p>
-								<div className="flex items-center text-3xl font-bold text-slate-700 pt-2 gap-2">
-									<span className="tabular-nums">
-										<CountUp
-											end={metrics.complianceAtRiskCount}
-											duration={1.2}
-										/>
-									</span>
-									<StatCardIcon icon={ShieldAlert} iconClassName="text-red" />
-								</div>
-								<p className="text-xs text-slate-600 mt-1">
-									At-risk or non-compliant
-								</p>
-							</CardContent>
-						</Card>
+						<MetricStatCard
+							interactive
+							title="Compliance at risk"
+							value={
+								<CountUp end={metrics.complianceAtRiskCount} duration={1.2} />
+							}
+							description="At-risk or non-compliant"
+							icon={ShieldAlert}
+							iconTone="danger"
+							dynamicIcon={AlertTriangle}
+							dynamicTone="danger"
+							valueTone="danger"
+						/>
 					</button>
 				)}
 
@@ -260,26 +221,19 @@ export default function LicensesMetricsBar({
 						className="text-left"
 						onClick={() => goTab("action-required")}
 					>
-						<Card className={cn(interactiveCard)}>
-							<div className="glass-card-cap" />
-							<CardContent className="p-4 sm:p-6">
-								<p className="text-sm font-medium sidebar-gradient-text">
-									Action required
-								</p>
-								<div className="flex items-center text-3xl font-bold text-slate-700 pt-2 gap-2">
-									<span className="tabular-nums">
-										<CountUp end={metrics.actionRequiredCount} duration={1.2} />
-									</span>
-									<StatCardIcon
-										icon={ClipboardList}
-										iconClassName="text-orange"
-									/>
-								</div>
-								<p className="text-xs text-slate-600 mt-1">
-									Needs owner follow-up
-								</p>
-							</CardContent>
-						</Card>
+						<MetricStatCard
+							interactive
+							title="Action required"
+							value={
+								<CountUp end={metrics.actionRequiredCount} duration={1.2} />
+							}
+							description="Needs owner follow-up"
+							icon={ClipboardList}
+							iconTone="warning"
+							dynamicIcon={Clock}
+							dynamicTone="warning"
+							valueTone="warning"
+						/>
 					</button>
 				)}
 
@@ -289,23 +243,16 @@ export default function LicensesMetricsBar({
 						className="text-left"
 						onClick={() => goTab("pending")}
 					>
-						<Card className={cn(interactiveCard)}>
-							<div className="glass-card-cap" />
-							<CardContent className="p-4 sm:p-6">
-								<p className="text-sm font-medium sidebar-gradient-text">
-									Pending review
-								</p>
-								<div className="flex items-center text-3xl font-bold text-slate-700 pt-2 gap-2">
-									<span className="tabular-nums">
-										<CountUp end={metrics.pendingCount} duration={1.2} />
-									</span>
-									<StatCardIcon icon={FileText} iconClassName="text-orange" />
-								</div>
-								<p className="text-xs text-slate-600 mt-1">
-									Pending or suspended
-								</p>
-							</CardContent>
-						</Card>
+						<MetricStatCard
+							interactive
+							title="Pending review"
+							value={<CountUp end={metrics.pendingCount} duration={1.2} />}
+							description="Pending or suspended"
+							icon={FileText}
+							iconTone="warning"
+							dynamicIcon={Clock}
+							dynamicTone="warning"
+						/>
 					</button>
 				)}
 
@@ -319,26 +266,17 @@ export default function LicensesMetricsBar({
 							scrollToList();
 						}}
 					>
-						<Card className={cn(interactiveCard)}>
-							<div className="glass-card-cap" />
-							<CardContent className="p-4 sm:p-6">
-								<p className="text-sm font-medium sidebar-gradient-text">
-									Auto-renew watch
-								</p>
-								<div className="flex items-center text-3xl font-bold text-slate-700 pt-2 gap-2">
-									<span className="tabular-nums">
-										<CountUp end={metrics.autoRenewWatchCount} duration={1.2} />
-									</span>
-									<StatCardIcon
-										icon={RefreshCw}
-										iconClassName="text-[#03AFBF]"
-									/>
-								</div>
-								<p className="text-xs text-slate-600 mt-1">
-									Auto-renew within 90 days
-								</p>
-							</CardContent>
-						</Card>
+						<MetricStatCard
+							interactive
+							title="Auto-renew watch"
+							value={
+								<CountUp end={metrics.autoRenewWatchCount} duration={1.2} />
+							}
+							description="Auto-renew within 90 days"
+							icon={RefreshCw}
+							dynamicIcon={Clock}
+							dynamicTone="warning"
+						/>
 					</button>
 				)}
 
@@ -348,28 +286,21 @@ export default function LicensesMetricsBar({
 						className="text-left"
 						onClick={() => goTab("expiring")}
 					>
-						<Card className={cn(interactiveCard)}>
-							<div className="glass-card-cap" />
-							<CardContent className="p-4 sm:p-6">
-								<p className="text-sm font-medium sidebar-gradient-text">
-									Renewal pipeline
-								</p>
-								<div className="flex items-center text-3xl font-bold text-slate-700 pt-2 gap-2">
-									<span className="tabular-nums">
-										<CountUp
-											end={metrics.renewalPipelineCount}
-											duration={1.2}
-										/>
-									</span>
-									<StatCardIcon icon={RefreshCw} />
-								</div>
-								<p className="text-xs text-slate-600 mt-1">
-									{metrics.renewalPipelineCost > 0
-										? `$${formattedPipelineCost} at stake (120d)`
-										: "Expiring within 120 days"}
-								</p>
-							</CardContent>
-						</Card>
+						<MetricStatCard
+							interactive
+							title="Renewal pipeline"
+							value={
+								<CountUp end={metrics.renewalPipelineCount} duration={1.2} />
+							}
+							description={
+								metrics.renewalPipelineCost > 0
+									? `$${formattedPipelineCost} at stake (120d)`
+									: "Expiring within 120 days"
+							}
+							icon={RefreshCw}
+							dynamicIcon={Clock}
+							dynamicTone="warning"
+						/>
 					</button>
 				)}
 			</div>

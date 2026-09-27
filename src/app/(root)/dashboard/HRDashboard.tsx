@@ -1,20 +1,33 @@
 "use client";
 
 import {
+	AlertTriangle,
 	Bell,
+	CheckCircle2,
+	Clock,
 	FileCheck,
-	GraduationCap,
 	Upload,
 	UserPlus,
 	Users,
 } from "lucide-react";
 import type { Models } from "node-appwrite";
+import { useMemo } from "react";
 import ContractExpiryAlertsWidget from "@/components/ContractExpiryAlertsWidget";
 import { DashboardGreeting } from "@/components/dashboard/DashboardGreeting";
 import RecentActivity from "@/components/RecentActivity";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { StatCardIcon } from "@/components/ui/stat-card-icon";
+import {
+	complianceMetricTone,
+	complianceNeedReviewCount,
+	MetricStatCard,
+} from "@/components/ui/metric-stat-card";
+import { useOrganization } from "@/contexts/OrganizationContext";
+import { useUnifiedDashboardData } from "@/hooks/useUnifiedDashboardData";
+import { isExpiringWithinDays } from "@/lib/contracts/contractsListUtils";
+import { isLicenseExpiringWithinDays } from "@/lib/licenses/licensesListUtils";
+import type { UIFileDoc } from "@/types/files";
+import type { License } from "@/types/licenses";
 
 interface HRDashboardProps {
 	user?:
@@ -31,142 +44,57 @@ interface HRDashboardProps {
 		| null;
 }
 
+interface PendingInvitation {
+	$id?: string;
+	name?: string;
+	email?: string;
+	role?: string;
+	$createdAt?: string;
+}
+
 const HRDashboard = ({ user }: HRDashboardProps) => {
-	const trainingStats = [
-		{
-			title: "Active Employees",
-			value: "187",
-			icon: Users,
-			color: "text-blue",
-		},
-		{
-			title: "Training Completed",
-			value: "94%",
-			icon: GraduationCap,
-			color: "text-green",
-		},
-		{
-			title: "Certifications Due",
-			value: "23",
-			icon: FileCheck,
-			color: "text-orange",
-		},
-		{
-			title: "Compliance Alerts",
-			value: "5",
-			icon: Bell,
-			color: "text-coral",
-		},
-	];
+	const { orgId } = useOrganization();
+	const {
+		stats,
+		invitations,
+		contracts,
+		dashboardLicenses,
+		isLoading,
+	} = useUnifiedDashboardData(
+		orgId || "default_organization",
+		user?.$id ?? user?.accountId ?? null,
+	);
 
-	const employeeTraining = [
-		{
-			id: 1,
-			employee: "John Smith",
-			department: "IT",
-			certification: "Security Clearance",
-			status: "expired",
-			dueDate: "2024-06-15",
-			contractRequirement: "Federal IT Services Contract",
-		},
-		{
-			id: 2,
-			employee: "Mary Johnson",
-			department: "Operations",
-			certification: "Safety Training",
-			status: "due-soon",
-			dueDate: "2024-08-10",
-			contractRequirement: "Municipal Services Contract",
-		},
-		{
-			id: 3,
-			employee: "Robert Davis",
-			department: "Finance",
-			certification: "Financial Compliance",
-			status: "current",
-			dueDate: "2025-01-15",
-			contractRequirement: "State Audit Requirements",
-		},
-		{
-			id: 4,
-			employee: "John Doe",
-			department: "Administration",
-			certification: "HR Compliance",
-			status: "current",
-			dueDate: "2025-09-15",
-			contractRequirement: "Staff Training Audit Requirements",
-		},
-		{
-			id: 5,
-			employee: "Jane Doe",
-			department: "Legal",
-			certification: "Legal Compliance",
-			status: "current",
-			dueDate: "2025-12-15",
-			contractRequirement: "State Legal Requirements",
-		},
-		{
-			id: 6,
-			employee: "Rhiannon Smith",
-			department: "Sales",
-			certification: "Sales Training",
-			status: "due-soon",
-			dueDate: "2025-09-05",
-			contractRequirement: "Sales Training Requirements",
-		},
-		{
-			id: 7,
-			employee: "Gabriel Torres",
-			department: "Marketing",
-			certification: "Marketing Training",
-			status: "current",
-			dueDate: "2026-09-15",
-			contractRequirement: "Marketing Training Requirements",
-		},
-		{
-			id: 8,
-			employee: "Hannah Cumberbatch",
-			department: "Engineering",
-			certification: "Engineering Training",
-			status: "current",
-			dueDate: "2026-01-17",
-			contractRequirement: "Engineering Training Requirements",
-		},
-	];
+	const files = (contracts || []) as UIFileDoc[];
+	const licenses = dashboardLicenses || [];
+	const pendingInvites = (invitations || []) as PendingInvitation[];
+	const complianceTone = complianceMetricTone(stats.complianceRate);
+	const needReview = complianceNeedReviewCount(
+		stats.totalContracts,
+		stats.complianceRate,
+	);
 
-	const pendingDocuments = [
-		{
-			id: 1,
-			type: "Training Certificate",
-			employee: "Alice Wilson",
-			uploaded: "2 hours ago",
-		},
-		{
-			id: 2,
-			type: "Background Check",
-			employee: "David Brown",
-			uploaded: "1 day ago",
-		},
-		{
-			id: 3,
-			type: "License Renewal",
-			employee: "Sarah Miller",
-			uploaded: "3 days ago",
-		},
-	];
-
-	const getStatusColor = (status: string) => {
-		switch (status) {
-			case "current":
-				return "text-green bg-accent-green";
-			case "due-soon":
-				return "text-orange bg-accent-orange";
-			case "expired":
-				return "text-coral bg-coral/10";
-			default:
-				return "text-slate-dark bg-background";
-		}
-	};
+	const expiringItems = useMemo(() => {
+		const contractItems = files
+			.filter((file) => isExpiringWithinDays(file, 90))
+			.map((file) => ({
+				id: file.$id,
+				title: file.contractName || file.name || "Untitled contract",
+				meta: file.department ? String(file.department) : "Contract",
+				due: file.contractExpiryDate || "",
+				kind: "contract" as const,
+			}));
+		const licenseItems = licenses
+			.filter((license) => isLicenseExpiringWithinDays(license, 90))
+			.map((license: License) => ({
+				id: license.$id,
+				title: license.licenseName || license.licenseNumber,
+				meta: license.department || license.licenseType || "License",
+				due: license.licenseExpiryDate || "",
+				kind: "license" as const,
+			}));
+		return [...contractItems, ...licenseItems];
+	}, [files, licenses]);
 
 	return (
 		<div className="space-y-6">
@@ -186,101 +114,131 @@ const HRDashboard = ({ user }: HRDashboardProps) => {
 				}
 			/>
 
-			{/* Stats Grid */}
 			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-				{trainingStats.map((stat) => (
-					<Card key={stat.title} className="glass-card">
-						<div className="glass-card-cap" />
-						<CardContent className="p-4 sm:p-6">
-							<div className="flex items-center justify-between">
-								<div>
-									<p className="text-sm font-medium sidebar-gradient-text">
-										{stat.title}
-									</p>
-									<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-										<span>{stat.value}</span>
-										<StatCardIcon className="ml-2" icon={stat.icon} />
-									</div>
-								</div>
-							</div>
-						</CardContent>
-					</Card>
-				))}
+				<MetricStatCard
+					title="Active Employees"
+					value={isLoading ? "…" : stats.activeUsers}
+					description="Active accounts in this org"
+					icon={Users}
+				/>
+				<MetricStatCard
+					title="Compliance Rate"
+					value={isLoading ? "…" : stats.complianceRate}
+					description={
+						needReview != null
+							? `${needReview} of ${stats.totalContracts} contracts need review`
+							: "Active contracts vs total"
+					}
+					icon={CheckCircle2}
+					iconTone={complianceTone}
+					dynamicIcon={
+						complianceTone === "danger" ? AlertTriangle : CheckCircle2
+					}
+					dynamicTone={complianceTone}
+					valueTone={complianceTone}
+				/>
+				<MetricStatCard
+					title="Expiring Soon"
+					value={isLoading ? "…" : expiringItems.length}
+					description="Contracts and licenses within 90 days"
+					icon={FileCheck}
+					iconTone={expiringItems.length > 0 ? "warning" : "default"}
+					dynamicIcon={expiringItems.length > 0 ? Clock : undefined}
+					dynamicTone="warning"
+					valueTone={expiringItems.length > 0 ? "warning" : "default"}
+				/>
+				<MetricStatCard
+					title="Pending Invitations"
+					value={isLoading ? "…" : pendingInvites.length}
+					description="People waiting to join"
+					icon={Bell}
+					iconTone={pendingInvites.length > 0 ? "warning" : "default"}
+					dynamicIcon={pendingInvites.length > 0 ? Clock : undefined}
+					dynamicTone="warning"
+					valueTone={pendingInvites.length > 0 ? "warning" : "default"}
+				/>
 			</div>
 
 			<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-				{/* Employee Training Status */}
 				<div className="lg:col-span-2">
 					<Card className="glass-card">
 						<div className="glass-card-cap" />
 						<CardHeader>
 							<CardTitle className="text-lg font-bold sidebar-gradient-text">
-								Employee Training Status
+								Expiring contracts and licenses
 							</CardTitle>
 						</CardHeader>
 						<CardContent>
-							<div className="space-y-4">
-								{employeeTraining.map((training) => (
-									<div
-										key={training.id}
-										className="flex items-center justify-between p-4 border border-slate-200 rounded-lg"
-									>
-										<div>
-											<p className="font-medium text-slate-700">
-												{training.employee}
-											</p>
-											<p className="text-sm text-slate-600">
-												{training.department} · {training.certification}
-											</p>
-											<p className="text-xs text-slate-500 mt-1">
-												{training.contractRequirement}
-											</p>
+							{expiringItems.length === 0 ? (
+								<p className="text-sm text-slate-600 py-4">
+									Nothing expires in the next 90 days.
+								</p>
+							) : (
+								<div className="space-y-4">
+									{expiringItems.slice(0, 8).map((item) => (
+										<div
+											key={`${item.kind}-${item.id}`}
+											className="flex items-center justify-between p-4 border border-slate-200 rounded-lg"
+										>
+											<div>
+												<p className="font-medium text-slate-700">
+													{item.title}
+												</p>
+												<p className="text-sm text-slate-600">{item.meta}</p>
+											</div>
+											<div className="text-right">
+												<span className="inline-block px-2 py-0.5 text-xs rounded-full font-medium border bg-orange/10 text-orange border-orange/20">
+													{item.kind === "license" ? "License" : "Contract"}
+												</span>
+												{item.due ? (
+													<p className="text-xs text-slate-500 mt-1">
+														Expires {new Date(item.due).toLocaleDateString()}
+													</p>
+												) : null}
+											</div>
 										</div>
-										<div className="text-right">
-											<span
-												className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(training.status)}`}
-											>
-												{training.status}
-											</span>
-											<p className="text-xs text-slate-500 mt-1">
-												Due {training.dueDate}
-											</p>
-										</div>
-									</div>
-								))}
-							</div>
+									))}
+								</div>
+							)}
 						</CardContent>
 					</Card>
 				</div>
 
-				{/* Sidebar widgets */}
 				<div className="space-y-6">
 					<Card className="glass-card">
 						<div className="glass-card-cap" />
 						<CardHeader>
 							<CardTitle className="text-lg font-bold sidebar-gradient-text">
-								Pending Documents
+								Pending invitations
 							</CardTitle>
 						</CardHeader>
 						<CardContent>
-							<div className="space-y-3">
-								{pendingDocuments.map((doc) => (
-									<div
-										key={doc.id}
-										className="flex justify-between items-start border-b border-slate-200 pb-2 last:border-0"
-									>
-										<div>
-											<p className="text-sm font-medium text-slate-700">
-												{doc.type}
-											</p>
-											<p className="text-xs text-slate-500">{doc.employee}</p>
+							{pendingInvites.length === 0 ? (
+								<p className="text-sm text-slate-600">No open invitations.</p>
+							) : (
+								<div className="space-y-3">
+									{pendingInvites.slice(0, 6).map((invite, index) => (
+										<div
+											key={invite.$id || invite.email || index}
+											className="flex justify-between items-start border-b border-slate-200 pb-2 last:border-0"
+										>
+											<div>
+												<p className="text-sm font-medium text-slate-700">
+													{invite.name || invite.email || "Invitation"}
+												</p>
+												<p className="text-xs text-slate-500">
+													{invite.role || "Pending"}
+												</p>
+											</div>
+											{invite.$createdAt ? (
+												<span className="text-xs text-slate-500">
+													{new Date(invite.$createdAt).toLocaleDateString()}
+												</span>
+											) : null}
 										</div>
-										<span className="text-xs text-slate-500">
-											{doc.uploaded}
-										</span>
-									</div>
-								))}
-							</div>
+									))}
+								</div>
+							)}
 						</CardContent>
 					</Card>
 					<ContractExpiryAlertsWidget maxVisible={3} compact />

@@ -17,11 +17,14 @@ import {
 	getUserRoles,
 } from "@/lib/rbac/permissions";
 import { ROLE_DASHBOARD_FALLBACK } from "@/lib/rbac/role-dashboard-metadata";
+import { listCostCenters } from "@/lib/org/org-units.service";
 import CacheManager from "@/lib/services/cache-manager";
+import { logAuditEvent } from "@/lib/services/audit-logger";
 import { avatarPlaceholderUrl, type UserDivision } from "../../../constants";
 import { createAdminClient, createSessionClient } from "../appwrite";
 import { appwriteConfig } from "../appwrite/config";
 import { flattenTableRow } from "../appwrite/flatten-row";
+import { listAuthPasswordUpdatesByAccountId } from "../users/auth-password-updates";
 import {
 	normalizeOrgPlacement,
 	OrgUnitValidationError,
@@ -54,6 +57,12 @@ export type AppUser = {
 	departmentLabel?: string;
 	divisionLabel?: string;
 	managerUserId?: string | null;
+	matrixManagerUserId?: string | null;
+	jobTitle?: string | null;
+	workLocation?: string | null;
+	costCenterId?: string | null;
+	costCenterCode?: string | null;
+	costCenterName?: string | null;
 	phone?: string;
 	status?: "active" | "inactive" | "suspended";
 	profileImageId?: string | null;
@@ -1219,6 +1228,23 @@ export const createInvitation = async ({
 		});
 		console.log("createInvitation: Database row created successfully");
 
+		void logAuditEvent({
+			event_id: `invite_create_${row.$id}`,
+			event_title: `Invitation sent: ${email}`,
+			action: "create",
+			source: "caalm",
+			user_id: invitedBy || "system",
+			user_name: invitedBy || "User",
+			user_email: "",
+			orgId: orgId || "default_organization",
+			status: "success",
+			module: "governance",
+			target_type: "invitation",
+			target_id: row.$id,
+			target_label: email,
+			summary: `Invited ${name || email} as ${normalizedRole}`,
+		});
+
 		// Send SMS notification to admins, executives, and managers
 		try {
 			await notifyInvitationSent(
@@ -1463,6 +1489,23 @@ export const acceptInvitation = async ({ token }: AcceptInvitationParams) => {
 		tableId: INVITATIONS_COLLECTION,
 		rowId: invite.$id,
 		data: { status: INVITATION_STATUS.ACCEPTED },
+	});
+
+	void logAuditEvent({
+		event_id: `invite_accept_${invite.$id}`,
+		event_title: `Invitation accepted: ${invite.email}`,
+		action: "update",
+		source: "caalm",
+		user_id: user.$id,
+		user_name: String(invite.name || user.fullName || invite.email),
+		user_email: String(invite.email || ""),
+		orgId: inviteOrgId,
+		status: "success",
+		module: "governance",
+		target_type: "invitation",
+		target_id: String(invite.$id),
+		target_label: String(invite.email || ""),
+		summary: `${invite.name || invite.email} accepted invite as ${normalizedInviteRole}`,
 	});
 
 	// Send SMS notification to admins, executives, and department managers
@@ -1772,6 +1815,9 @@ export const updateUserProfile = async ({
 	department,
 	status,
 	managerUserId,
+	matrixManagerUserId,
+	jobTitle,
+	workLocation,
 	costCenterId,
 	primaryOrgUnitId,
 	departmentId,
@@ -1784,6 +1830,9 @@ export const updateUserProfile = async ({
 	department?: string;
 	status?: "active" | "inactive" | "suspended";
 	managerUserId?: string | null;
+	matrixManagerUserId?: string | null;
+	jobTitle?: string | null;
+	workLocation?: string | null;
 	costCenterId?: string | null;
 	primaryOrgUnitId?: string | null;
 	departmentId?: string | null;
@@ -1830,6 +1879,15 @@ export const updateUserProfile = async ({
 
 		if (managerUserId !== undefined) {
 			updatePayload.managerUserId = managerUserId;
+		}
+		if (matrixManagerUserId !== undefined) {
+			updatePayload.matrixManagerUserId = matrixManagerUserId;
+		}
+		if (jobTitle !== undefined) {
+			updatePayload.jobTitle = jobTitle;
+		}
+		if (workLocation !== undefined) {
+			updatePayload.workLocation = workLocation;
 		}
 		if (costCenterId !== undefined) {
 			updatePayload.costCenterId = costCenterId;
@@ -1965,6 +2023,7 @@ export interface UserManagementRow {
 	accountId: string;
 	role: CalendarRole;
 	roleName: string;
+	assignedById: string;
 	assignedByName: string;
 	assignedDate?: string;
 	lastActiveAt?: string;
@@ -1973,6 +2032,18 @@ export interface UserManagementRow {
 	department?: string;
 	division?: string;
 	status?: string;
+	managerUserId?: string | null;
+	matrixManagerUserId?: string | null;
+	jobTitle?: string | null;
+	workLocation?: string | null;
+	costCenterId?: string | null;
+	costCenterCode?: string | null;
+	costCenterName?: string | null;
+	diagramPositionX?: number | null;
+	diagramPositionY?: number | null;
+	twoFactorEnabled?: boolean;
+	/** ISO from Auth `passwordUpdate`. Null = never. Omitted when Auth list failed. */
+	passwordUpdatedAt?: string | null;
 }
 
 function resolveProfileAvatarUrl(user: {
@@ -2004,6 +2075,7 @@ type RoleMeta = { name: string; priority: number };
 type UserManagementAssignment = {
 	roleName: string;
 	priority: number;
+	assignedById: string;
 	assignedByName: string;
 	assignedDate?: string;
 };
@@ -2017,28 +2089,33 @@ function resolveProfileIdFromRoleUserId(
 	return accountIdToProfileId.get(rawUserId) ?? null;
 }
 
-function resolveAssignedByDisplayName(
+function resolveAssignedByRef(
 	assignedById: string,
 	usersById: Map<string, { fullName: string }>,
 	accountIdToProfileId: Map<string, string>,
-): string {
+): { assignedById: string; assignedByName: string } {
 	if (
 		!assignedById ||
 		assignedById === "system" ||
 		assignedById === "admin_manual"
 	) {
-		return "System";
+		return { assignedById: "system", assignedByName: "System" };
 	}
 
 	const direct = usersById.get(assignedById);
-	if (direct?.fullName) return direct.fullName;
+	if (direct?.fullName) {
+		return { assignedById, assignedByName: direct.fullName };
+	}
 
 	const profileId = accountIdToProfileId.get(assignedById);
 	if (profileId) {
-		return usersById.get(profileId)?.fullName || "System";
+		return {
+			assignedById: profileId,
+			assignedByName: usersById.get(profileId)?.fullName || "System",
+		};
 	}
 
-	return "System";
+	return { assignedById, assignedByName: "System" };
 }
 
 function pickPrimaryUserManagementAssignment(
@@ -2062,29 +2139,37 @@ export const listUsersForManagement = async (
 		const databaseId = appwriteConfig.databaseId || "default-db";
 		const usersTableId = appwriteConfig.usersCollectionId || "users";
 
-		const [usersResult, userRolesResult, rolesResult, userOrgsResult] =
-			await Promise.all([
-				tablesDB.listRows({
-					databaseId,
-					tableId: usersTableId,
-					queries: [Query.limit(500)],
-				}),
-				tablesDB.listRows({
-					databaseId,
-					tableId: "user_roles",
-					queries: [Query.equal("orgId", orgId), Query.limit(500)],
-				}),
-				tablesDB.listRows({
-					databaseId,
-					tableId: "roles",
-					queries: [Query.limit(500)],
-				}),
-				tablesDB.listRows({
-					databaseId,
-					tableId: "user_organizations",
-					queries: [Query.equal("orgId", orgId), Query.limit(500)],
-				}),
-			]);
+		const [
+			usersResult,
+			userRolesResult,
+			rolesResult,
+			userOrgsResult,
+			authPasswords,
+			costCenters,
+		] = await Promise.all([
+			tablesDB.listRows({
+				databaseId,
+				tableId: usersTableId,
+				queries: [Query.limit(500)],
+			}),
+			tablesDB.listRows({
+				databaseId,
+				tableId: "user_roles",
+				queries: [Query.equal("orgId", orgId), Query.limit(500)],
+			}),
+			tablesDB.listRows({
+				databaseId,
+				tableId: "roles",
+				queries: [Query.limit(500)],
+			}),
+			tablesDB.listRows({
+				databaseId,
+				tableId: "user_organizations",
+				queries: [Query.equal("orgId", orgId), Query.limit(500)],
+			}),
+			listAuthPasswordUpdatesByAccountId(),
+			listCostCenters(orgId, { includeInactive: true }).catch(() => []),
+		]);
 
 		const rolesById = new Map<string, RoleMeta>();
 		for (const role of rolesResult.rows) {
@@ -2101,6 +2186,10 @@ export const listUsersForManagement = async (
 						: (fallback?.priority ?? 9999),
 			});
 		}
+
+		const costCenterById = new Map(
+			costCenters.map((cc) => [cc.$id, cc]),
+		);
 
 		const usersById = new Map<
 			string,
@@ -2149,14 +2238,16 @@ export const listUsersForManagement = async (
 				(assignment as { assignedAt?: string }).assignedAt ||
 				(assignment as { $createdAt?: string }).$createdAt;
 
+			const assignedBy = resolveAssignedByRef(
+				assignedById,
+				usersById,
+				accountIdToProfileId,
+			);
 			const entry: UserManagementAssignment = {
 				roleName: roleMeta?.name ?? "N/A",
 				priority: roleMeta?.priority ?? 9999,
-				assignedByName: resolveAssignedByDisplayName(
-					assignedById,
-					usersById,
-					accountIdToProfileId,
-				),
+				assignedById: assignedBy.assignedById,
+				assignedByName: assignedBy.assignedByName,
 				assignedDate,
 			};
 
@@ -2204,7 +2295,7 @@ export const listUsersForManagement = async (
 				const updatedAt = user.$updatedAt as string | undefined;
 				const roleName = assignment?.roleName || "Unassigned";
 				const accountId = String(user.accountId || "");
-				return {
+				const row: UserManagementRow = {
 					$id: userId,
 					fullName: String(user.fullName || "Unknown"),
 					email: String(user.email || ""),
@@ -2215,6 +2306,7 @@ export const listUsersForManagement = async (
 					accountId,
 					role: calendarRoleFromRbacName(roleName),
 					roleName,
+					assignedById: assignment?.assignedById || "system",
 					assignedByName: assignment?.assignedByName || "System",
 					assignedDate: assignment?.assignedDate || createdAt,
 					lastActiveAt: updatedAt || createdAt,
@@ -2223,11 +2315,38 @@ export const listUsersForManagement = async (
 					department: user.department as string | undefined,
 					division: user.division as string | undefined,
 					status: user.status as string | undefined,
+					managerUserId: (user.managerUserId as string | null | undefined) ?? null,
+					matrixManagerUserId:
+						(user.matrixManagerUserId as string | null | undefined) ?? null,
+					jobTitle: (user.jobTitle as string | null | undefined) || null,
+					workLocation: (user.workLocation as string | null | undefined) || null,
+					costCenterId: (user.costCenterId as string | null | undefined) || null,
+					costCenterCode: user.costCenterId
+						? costCenterById.get(String(user.costCenterId))?.code || null
+						: null,
+					costCenterName: user.costCenterId
+						? costCenterById.get(String(user.costCenterId))?.name || null
+						: null,
+					diagramPositionX:
+						typeof user.diagramPositionX === "number"
+							? user.diagramPositionX
+							: null,
+					diagramPositionY:
+						typeof user.diagramPositionY === "number"
+							? user.diagramPositionY
+							: null,
+					twoFactorEnabled: user.twoFactorEnabled === true,
 				};
+				if (authPasswords.ok) {
+					row.passwordUpdatedAt = accountId
+						? (authPasswords.byAccount.get(accountId) ?? null)
+						: null;
+				}
+				return row;
 			});
 	} catch (error) {
-		handleError(error, "Failed to list users for management");
-		return [];
+		console.error("Failed to list users for management", error);
+		throw error;
 	}
 };
 

@@ -23,7 +23,7 @@ import { AuditPageShell } from "@/components/audits/AuditPageShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { StatCardIcon } from "@/components/ui/stat-card-icon";
+import { MetricStatCard } from "@/components/ui/metric-stat-card";
 import { PERMISSIONS } from "@/constants/permissions";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -291,6 +291,10 @@ export default function AuditLogsPage() {
 						value: stats?.failedActions ?? "—",
 						icon: XCircle,
 						description: "Events with failed status",
+						iconTone: "danger" as const,
+						dynamicIcon: AlertTriangle,
+						dynamicTone: "danger" as const,
+						valueTone: "danger" as const,
 					},
 					{
 						title: "Admin changes",
@@ -305,21 +309,17 @@ export default function AuditLogsPage() {
 						description: "Data export events",
 					},
 				].map((item) => (
-					<Card key={item.title} className="glass-card">
-						<div className="glass-card-cap" />
-						<CardContent className="p-4 sm:p-6">
-							<div className="flex items-start justify-between gap-2">
-								<p className="text-sm font-medium sidebar-gradient-text">
-									{item.title}
-								</p>
-								<StatCardIcon icon={item.icon} />
-							</div>
-							<div className="text-3xl font-bold text-slate-700 pt-2">
-								{item.value}
-							</div>
-							<p className="text-xs text-slate-600 mt-1">{item.description}</p>
-						</CardContent>
-					</Card>
+					<MetricStatCard
+						key={item.title}
+						title={item.title}
+						value={item.value}
+						description={item.description}
+						icon={item.icon}
+						iconTone={item.iconTone}
+						dynamicIcon={item.dynamicIcon}
+						dynamicTone={item.dynamicTone}
+						valueTone={item.valueTone}
+					/>
 				))}
 			</div>
 

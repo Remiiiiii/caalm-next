@@ -51,8 +51,12 @@ vi.mock("@/lib/stripe/billing", () => ({
 	syncLatestStripeStateForOrg: vi.fn(),
 }));
 
+const mockGetOrganization = vi.fn();
+const mockLookupOrganization = vi.fn();
+
 vi.mock("@/lib/rbac/organizations", () => ({
-	getOrganization: vi.fn(),
+	getOrganization: (...args: unknown[]) => mockGetOrganization(...args),
+	lookupOrganization: (...args: unknown[]) => mockLookupOrganization(...args),
 }));
 
 describe("POST /api/billing/webhooks", () => {
@@ -283,6 +287,41 @@ describe("GET /api/billing/subscription", () => {
 		);
 		const response = await GET(request);
 		expect(response.status).toBe(403);
+	});
+
+	it("returns 404 when the organization row is missing", async () => {
+		mockRequirePermission.mockResolvedValue(null);
+		mockGetCurrentUser.mockResolvedValue({ $id: "u1" });
+		mockLookupOrganization.mockResolvedValue({
+			reason: "not_found",
+			org: null,
+		});
+
+		const { GET } = await import("@/app/api/billing/subscription/route");
+		const request = new NextRequest(
+			"http://localhost:3000/api/billing/subscription?orgId=default_organization",
+		);
+		const response = await GET(request);
+		expect(response.status).toBe(404);
+		expect(mockLookupOrganization).toHaveBeenCalled();
+	});
+
+	it("returns 503 when Appwrite lookup times out instead of pretending the org is missing", async () => {
+		mockRequirePermission.mockResolvedValue(null);
+		mockGetCurrentUser.mockResolvedValue({ $id: "u1" });
+		mockLookupOrganization.mockResolvedValue({
+			reason: "unavailable",
+			org: null,
+		});
+
+		const { GET } = await import("@/app/api/billing/subscription/route");
+		const request = new NextRequest(
+			"http://localhost:3000/api/billing/subscription?orgId=default_organization",
+		);
+		const response = await GET(request);
+		expect(response.status).toBe(503);
+		const body = await response.json();
+		expect(body.error).toMatch(/unavailable/i);
 	});
 });
 

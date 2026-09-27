@@ -1,0 +1,75 @@
+name: Bug report
+description: File a CAALM product bug
+title: "[Bug]: "
+labels: ["bug", "source:github-form"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a CAALM bug. If you need access, a device, or a change, use **Report issue** in the app (Help lane) instead of this form.
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      description: List the steps that trigger the bug. Include the page URL if you can.
+      placeholder: |
+        1.
+        2.
+        3.
+      render: markdown
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should have happened?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: attachments
+    attributes:
+      label: Attachments
+      description: Screenshots, screen recordings, or HAR files help a lot. Drag them into this box.
+    validations:
+      required: false
+  - type: dropdown
+    id: os
+    attributes:
+      label: OS
+      description: The operating system you were using when this happened.
+      options:
+        - Windows
+        - macOS
+        - Linux
+        - Other
+      default: 0
+    validations:
+      required: true
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment
+      description: Where you saw the bug.
+      options:
+        - Production
+        - Preview
+        - Local
+    validations:
+      required: true
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Confirmations
+      options:
+        - label: I searched existing tickets and GitHub issues
+          required: true
+        - label: This is a product bug, not a Help / support request
+          required: true

@@ -7,6 +7,8 @@ interface Props {
 	url: string;
 	imageClassName?: string;
 	className?: string;
+	/** Use the format icon even when the file is an image. */
+	iconOnly?: boolean;
 }
 
 export const Thumbnail = ({
@@ -15,8 +17,9 @@ export const Thumbnail = ({
 	url = "",
 	imageClassName,
 	className,
+	iconOnly = false,
 }: Props) => {
-	const isImage = type === "image" && extension !== "svg";
+	const isImage = !iconOnly && type === "image" && extension !== "svg";
 	return (
 		<figure className={cn("thumbnail", className)}>
 			<Image

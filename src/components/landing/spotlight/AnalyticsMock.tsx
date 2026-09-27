@@ -466,15 +466,17 @@ export default function AnalyticsMock() {
 						{STAT_CARDS.map((stat) => (
 							<div key={stat.title} className="glass-card relative min-w-0">
 								<div className="glass-card-cap" />
-								<div className="px-2.5 sm:px-3 pb-2.5 sm:pb-3 pt-4 sm:pt-5">
-									<p className="text-[10px] sm:text-xs font-medium sidebar-gradient-text">
-										{stat.title}
-									</p>
-									<div className="flex items-center pt-1 text-lg sm:text-2xl font-bold text-slate-700 tabular-nums">
-										<span>{stat.value}</span>
-										<span className="ml-1.5 inline-block pb-0.5">
-											<stat.icon className="h-4 w-4 sm:h-5 sm:w-5 text-slate-600" />
+								<div className="px-2.5 sm:px-3 pb-2.5 sm:pb-3 pt-4 sm:pt-5 text-left">
+									<div className="flex items-center gap-1.5">
+										<span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-white/50 bg-white/40 shadow-sm">
+											<stat.icon className="h-3.5 w-3.5 text-[#0f5384]" />
 										</span>
+										<p className="text-[10px] sm:text-xs font-semibold sidebar-gradient-text">
+											{stat.title}
+										</p>
+									</div>
+									<div className="pt-1 text-lg sm:text-2xl font-bold text-slate-700 tabular-nums">
+										{stat.value}
 									</div>
 								</div>
 							</div>

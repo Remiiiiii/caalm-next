@@ -9,6 +9,7 @@ import {
 } from "./github-pr-match";
 import {
 	evaluateRoadmapCompletionGate,
+	ROADMAP_WORKFLOW_NAME,
 	type RoadmapCompletionGate,
 } from "./required-checks";
 
@@ -345,10 +346,22 @@ const completionGateCache = new Map<
 	string,
 	{ fetchedAt: number; value: RoadmapCompletionGate }
 >();
+/** In-flight gate fetches — overview hits many PRs that share a merge SHA. */
+const completionGateInflight = new Map<string, Promise<RoadmapCompletionGate>>();
+
+function isRoadmapPipelineRun(run: ActionsRunJson): boolean {
+	return (
+		run.name === ROADMAP_WORKFLOW_NAME ||
+		run.name.toLowerCase().includes("tests and vercel")
+	);
+}
 
 /**
  * Fetch Actions runs + jobs for a commit and decide if CLM completion is allowed.
  * Fail closed when GitHub is unavailable — merge alone must not complete tasks.
+ *
+ * Only loads jobs for the Tests/Vercel pipeline. Fetching every workflow on the
+ * SHA (lint, dependabot, etc.) made cold NPO overview exceed the 30s client timeout.
  */
 export async function fetchRoadmapCompletionGate(params: {
 	commitSha: string;
@@ -368,6 +381,19 @@ export async function fetchRoadmapCompletionGate(params: {
 		return cached.value;
 	}
 
+	const inflight = completionGateInflight.get(sha);
+	if (inflight) return inflight;
+
+	const promise = loadRoadmapCompletionGate(sha).finally(() => {
+		completionGateInflight.delete(sha);
+	});
+	completionGateInflight.set(sha, promise);
+	return promise;
+}
+
+async function loadRoadmapCompletionGate(
+	sha: string,
+): Promise<RoadmapCompletionGate> {
 	const repo = getRepo();
 	if (!repo.includes("/")) {
 		const value: RoadmapCompletionGate = {
@@ -410,7 +436,10 @@ export async function fetchRoadmapCompletionGate(params: {
 	const runsJson = (await runsRes.json()) as {
 		workflow_runs?: ActionsRunJson[];
 	};
-	const workflowRuns = runsJson.workflow_runs ?? [];
+	// Jobs only for the roadmap pipeline — other workflows are ignored by evaluate anyway.
+	const workflowRuns = (runsJson.workflow_runs ?? []).filter(
+		isRoadmapPipelineRun,
+	);
 
 	const runsWithJobs = await Promise.all(
 		workflowRuns.map(async (run) => {
@@ -449,6 +478,7 @@ export async function fetchRoadmapCompletionGate(params: {
 /** Test helper — clears completion-gate cache between vitest cases. */
 export function clearRoadmapCompletionGateCacheForTests(): void {
 	completionGateCache.clear();
+	completionGateInflight.clear();
 }
 
 const CHECK_RUNS_CACHE_MS = 30_000;

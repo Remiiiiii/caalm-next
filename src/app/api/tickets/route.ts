@@ -99,6 +99,13 @@ export async function POST(request: NextRequest) {
 		let affectedModule: unknown = "";
 		let impact: unknown = "";
 		let urgency: unknown = "";
+		let steps: unknown = "";
+		let expected: unknown = "";
+		let actual: unknown = "";
+		let os: unknown = "";
+		let environment: unknown = "";
+		let searchedExisting: unknown = "";
+		let isBug: unknown = "";
 		let files: File[] = [];
 
 		if (contentType.includes("multipart/form-data")) {
@@ -110,6 +117,13 @@ export async function POST(request: NextRequest) {
 			affectedModule = form.get("affectedModule") || "";
 			impact = form.get("impact") || "";
 			urgency = form.get("urgency") || "";
+			steps = form.get("steps") || "";
+			expected = form.get("expected") || "";
+			actual = form.get("actual") || "";
+			os = form.get("os") || "";
+			environment = form.get("environment") || "";
+			searchedExisting = form.get("searchedExisting") || "";
+			isBug = form.get("isBug") || "";
 			files = form
 				.getAll("attachments")
 				.filter((item): item is File => item instanceof File);
@@ -122,11 +136,26 @@ export async function POST(request: NextRequest) {
 			affectedModule = body.affectedModule;
 			impact = body.impact;
 			urgency = body.urgency;
+			steps = body.steps;
+			expected = body.expected;
+			actual = body.actual;
+			os = body.os;
+			environment = body.environment;
+			searchedExisting = body.searchedExisting;
+			isBug = body.isBug;
 		}
 
-		if (title.trim().length < 3 || description.trim().length < 8) {
+		const isEngineering = String(lane || "").trim() === "engineering";
+		if (
+			title.trim().length < 3 ||
+			(!isEngineering && description.trim().length < 8)
+		) {
 			return NextResponse.json(
-				{ error: "Title and description are required" },
+				{
+					error: isEngineering
+						? "Title is required"
+						: "Title and description are required",
+				},
 				{ status: 400 },
 			);
 		}
@@ -141,6 +170,13 @@ export async function POST(request: NextRequest) {
 			impact,
 			urgency,
 			attachmentIds,
+			steps,
+			expected,
+			actual,
+			os,
+			environment,
+			searchedExisting,
+			isBug,
 		});
 		const ticket = await intakeTicket({
 			payload,

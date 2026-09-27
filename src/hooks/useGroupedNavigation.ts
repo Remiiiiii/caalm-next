@@ -1,25 +1,41 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import {
 	hasNavigationPermission,
 	type NavigationItem,
 	PERMISSION_BASED_NAV,
 } from "@/constants/navigation-permissions";
 import { useAuth } from "@/contexts/AuthContext";
-import { useImpersonation } from "@/contexts/ImpersonationContext";
+import {
+	getViewAsClientHint,
+	useImpersonation,
+} from "@/contexts/ImpersonationContext";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import {
 	canAccessITPortal,
 	resolveAccessibleDashboardLinks,
 } from "@/lib/navigation/dashboard-links";
+import {
+	readNavSnapshot,
+	writeNavSnapshot,
+} from "@/lib/navigation/nav-rbac-cache";
 
 export function useGroupedNavigation() {
 	const { user } = useAuth();
+	const { orgId } = useOrganization();
 	const { isImpersonating, status } = useImpersonation();
+	const viewAsHint = getViewAsClientHint();
+	const effectiveUserId =
+		(isImpersonating && status.target?.$id) || viewAsHint || user?.$id;
 	const { permissions, loading: permissionsLoading } = usePermissions();
 	const { roles: userRoles, loading: rolesLoading } = useUserRoles();
+	const navSnapshot = useMemo(
+		() => readNavSnapshot(effectiveUserId),
+		[effectiveUserId],
+	);
 
 	const departmentProfile = useMemo(() => {
 		if (isImpersonating && status.target) {
@@ -36,6 +52,13 @@ export function useGroupedNavigation() {
 	}, [user, isImpersonating, status.target]);
 
 	const { isViewer, primaryRole, isITUser } = useMemo(() => {
+		if (userRoles.length === 0 && navSnapshot) {
+			return {
+				isViewer: navSnapshot.isViewer,
+				primaryRole: navSnapshot.primaryRole,
+				isITUser: navSnapshot.isITUser,
+			};
+		}
 		if (userRoles.length === 0) {
 			return { isViewer: false, primaryRole: null, isITUser: false };
 		}
@@ -46,12 +69,14 @@ export function useGroupedNavigation() {
 			primaryRole: userRoles[0]?.roleName || null,
 			isITUser: !!itRole,
 		};
-	}, [userRoles]);
+	}, [userRoles, navSnapshot]);
 
-	const canUseITPortal = useMemo(
-		() => canAccessITPortal(permissions, departmentProfile),
-		[permissions, departmentProfile],
-	);
+	const canUseITPortal = useMemo(() => {
+		if (permissions.length === 0 && navSnapshot) {
+			return navSnapshot.canUseITPortal;
+		}
+		return canAccessITPortal(permissions, departmentProfile);
+	}, [permissions, departmentProfile, navSnapshot]);
 
 	const shouldShowLock = useMemo(
 		() =>
@@ -67,7 +92,7 @@ export function useGroupedNavigation() {
 		const isInitialLoad = permissionsLoading && rolesLoading && !hasData;
 
 		if (isInitialLoad) {
-			return [];
+			return navSnapshot?.groupedNav ?? [];
 		}
 
 		const nav: typeof PERMISSION_BASED_NAV = [];
@@ -116,6 +141,7 @@ export function useGroupedNavigation() {
 			"Calendar",
 			"Contracts",
 			"Licenses",
+			"Constituents",
 			"Audits",
 			"Files",
 			"Team",
@@ -141,6 +167,32 @@ export function useGroupedNavigation() {
 		userRoles,
 		rolesLoading,
 		departmentProfile,
+		navSnapshot,
+	]);
+
+	useEffect(() => {
+		if (!effectiveUserId || groupedNav.length === 0) return;
+		if (permissionsLoading && rolesLoading) return;
+		writeNavSnapshot({
+			userId: effectiveUserId,
+			orgId: orgId ?? null,
+			groupedNav,
+			isViewer,
+			primaryRole,
+			isITUser,
+			canUseITPortal,
+			timestamp: Date.now(),
+		});
+	}, [
+		effectiveUserId,
+		orgId,
+		groupedNav,
+		isViewer,
+		primaryRole,
+		isITUser,
+		canUseITPortal,
+		permissionsLoading,
+		rolesLoading,
 	]);
 
 	return {

@@ -30,6 +30,11 @@ import { PERMISSIONS } from "@/constants/permissions";
 import { useFullWindowOverlayOpen } from "@/hooks/useFullWindowOverlayOpen";
 import { usePermissions } from "@/hooks/usePermissions";
 import {
+	buildReportIssueFullFormHref,
+	canQuickSubmitReportIssue,
+	shouldCloseReportIssuePanel,
+} from "@/lib/tickets/report-issue-submit";
+import {
 	resolveTicketContextFromPath,
 	shouldHideReportIssueFab,
 } from "@/lib/tickets/route-module-map";
@@ -82,10 +87,7 @@ export default function ReportIssueFab() {
 		if (!open) return;
 
 		function handlePointerDown(event: MouseEvent) {
-			if (
-				panelRef.current &&
-				!panelRef.current.contains(event.target as Node)
-			) {
+			if (shouldCloseReportIssuePanel(event.target, panelRef.current)) {
 				setOpen(false);
 			}
 		}
@@ -94,22 +96,28 @@ export default function ReportIssueFab() {
 		return () => document.removeEventListener("mousedown", handlePointerDown);
 	}, [open]);
 
-	const fullFormHref = (() => {
-		const params = new URLSearchParams();
-		if (lane) params.set("lane", lane);
-		if (title.trim()) params.set("title", title.trim());
-		if (category) params.set("category", category);
-		if (lane === "engineering" && routeContext.affectedModule) {
-			params.set("module", routeContext.affectedModule);
-		}
-		const query = params.toString();
-		return query ? `/tickets/new?${query}` : "/tickets/new";
-	})();
+	const fullFormHref = buildReportIssueFullFormHref({
+		lane,
+		title,
+		category,
+		affectedModule:
+			lane === "engineering" ? routeContext.affectedModule : undefined,
+	});
 
 	const handleQuickSubmit = useCallback(
 		async (event: FormEvent) => {
 			event.preventDefault();
 			if (!lane || !title.trim() || !category || submitting) return;
+
+			// Engineering bugs need reproduction steps, expected/actual, OS, and
+			// environment. Send people to the full form instead of posting a stub.
+			if (lane === "engineering") {
+				setOpen(false);
+				router.push(fullFormHref);
+				return;
+			}
+
+			if (!canQuickSubmitReportIssue(lane)) return;
 
 			setSubmitting(true);
 			setError(null);
@@ -128,9 +136,6 @@ export default function ReportIssueFab() {
 				);
 				form.set("lane", lane);
 				form.set("category", category);
-				if (lane === "engineering") {
-					form.set("affectedModule", routeContext.affectedModule);
-				}
 				form.set("impact", "medium");
 				form.set("urgency", "medium");
 
@@ -161,8 +166,8 @@ export default function ReportIssueFab() {
 		},
 		[
 			category,
+			fullFormHref,
 			lane,
-			routeContext.affectedModule,
 			routeContext.pageLabel,
 			router,
 			submitting,
@@ -220,7 +225,10 @@ export default function ReportIssueFab() {
 												type="button"
 												onClick={() => {
 													setLane(option.value);
-													setCategory("");
+													const options = categoriesForLane(option.value);
+													// Engineering only has one category — pick it so Continue
+													// enables after Title without opening the dropdown.
+													setCategory(options.length === 1 ? options[0] : "");
 												}}
 												className={cn(
 													"cursor-pointer rounded-lg border px-3 py-2 text-left transition-all duration-200",
@@ -266,8 +274,11 @@ export default function ReportIssueFab() {
 										Category
 									</Label>
 									<Select
+										key={lane || "none"}
 										value={category || undefined}
-										onValueChange={setCategory}
+										onValueChange={(value) => {
+											if (value) setCategory(value);
+										}}
 										disabled={!lane}
 									>
 										<SelectTrigger
@@ -327,7 +338,17 @@ export default function ReportIssueFab() {
 									className="primary-btn px-4"
 									disabled={!lane || !title.trim() || !category || submitting}
 								>
-									{submitting ? "Submitting…" : "Submit"}
+									{lane === "engineering" ? (
+										<>
+											<ArrowRight className="h-4 w-4" aria-hidden />
+											Continue
+										</>
+									) : (
+										<>
+											<Send className="h-4 w-4" aria-hidden />
+											{submitting ? "Submitting…" : "Submit"}
+										</>
+									)}
 								</Button>
 							</div>
 						</form>
