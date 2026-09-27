@@ -43,7 +43,7 @@ node scripts/sync-demo-database-schema.mjs
 
 - `push_subscriptions` uses table id `push_subscriptions` on demo and `69b8a208008a1f5d9b08` on prod. The sync script maps by **table name** and mirrors columns/indexes onto the demo id. Do not rename the demo table id.
 - `fileRef` on Contracts/Licenses still points at retired Files collection `685ed9e90020d8f09173` in prod. On demo, the sync script maps that target to current Files `6934a3120033b4a5c4da`.
-- `Audit Logs.changes` may fail on demo when the collection hits Appwrite's attribute cap (demo currently maxes at 20). Log the failure; do not delete demo columns to force it. Track parity gap in the PR if it persists.
+- `Audit Logs.changes` may fail on demo when the collection hits Appwrite's attribute cap (demo currently maxes at 20). Log the failure; do not delete demo columns to force it. Track parity gap in the PR if it persists. Prefer **longtext** (not max-size string) for new large JSON/text columns on prod so demo sync can mirror them without blowing per-collection attribute limits; `sync-demo-database-schema.mjs` supports `mediumtext` and `longtext`.
 
 ## RBAC seed data
 

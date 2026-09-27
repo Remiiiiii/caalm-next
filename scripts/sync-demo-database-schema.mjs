@@ -288,6 +288,18 @@ async function createAttribute(databaseId, tableId, attr) {
 				},
 			});
 			break;
+		case "mediumtext":
+		case "longtext": {
+			const body = {
+				key: attr.key,
+				required: attr.required,
+				array: attr.array || false,
+			};
+			if (attr.default != null) body.default = attr.default;
+			if (attr.encrypt != null) body.encrypt = attr.encrypt;
+			await appwrite(`${base}/${attr.type}`, { method: "POST", body });
+			break;
+		}
 		case "relationship": {
 			const relatedCollectionId =
 				RELATIONSHIP_TARGET_EXCEPTIONS[attr.relatedCollection] ||

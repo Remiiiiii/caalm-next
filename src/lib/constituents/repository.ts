@@ -7,6 +7,7 @@ import {
 	normalizeFirstName,
 	normalizeLastName,
 } from "./duplicates";
+import { isLawfulBasis } from "./consent-fields";
 import type {
 	Constituent,
 	ConstituentListFilters,
@@ -50,6 +51,25 @@ function mapRow(row: Record<string, unknown>): Constituent {
 		postalCode: optionalString(row.postalCode),
 		country: optionalString(row.country),
 		doNotContact: Boolean(row.doNotContact),
+		consentEmail:
+			row.consentEmail === undefined || row.consentEmail === null
+				? undefined
+				: Boolean(row.consentEmail),
+		consentSms:
+			row.consentSms === undefined || row.consentSms === null
+				? undefined
+				: Boolean(row.consentSms),
+		consentMail:
+			row.consentMail === undefined || row.consentMail === null
+				? undefined
+				: Boolean(row.consentMail),
+		consentPhone:
+			row.consentPhone === undefined || row.consentPhone === null
+				? undefined
+				: Boolean(row.consentPhone),
+		lawfulBasis: isLawfulBasis(row.lawfulBasis)
+			? row.lawfulBasis
+			: undefined,
 		piiAccessedAt: optionalString(row.piiAccessedAt),
 		normalizedEmail: optionalString(row.normalizedEmail),
 		normalizedLastName: optionalString(row.normalizedLastName),
@@ -211,6 +231,13 @@ function writePayload(input: CreateConstituentInput): Record<string, unknown> {
 	if (input.region) data.region = input.region.slice(0, 128);
 	if (input.postalCode) data.postalCode = input.postalCode.slice(0, 32);
 	if (input.country) data.country = input.country.slice(0, 128);
+	if (input.consentEmail != null) data.consentEmail = Boolean(input.consentEmail);
+	if (input.consentSms != null) data.consentSms = Boolean(input.consentSms);
+	if (input.consentMail != null) data.consentMail = Boolean(input.consentMail);
+	if (input.consentPhone != null) data.consentPhone = Boolean(input.consentPhone);
+	if (input.lawfulBasis != null && isLawfulBasis(input.lawfulBasis)) {
+		data.lawfulBasis = input.lawfulBasis;
+	}
 	return data;
 }
 
@@ -246,6 +273,16 @@ export async function updateConstituent(
 	if (patch.postalCode != null) data.postalCode = patch.postalCode.slice(0, 32);
 	if (patch.country != null) data.country = patch.country.slice(0, 128);
 	if (patch.doNotContact != null) data.doNotContact = patch.doNotContact;
+	if (patch.consentEmail != null) data.consentEmail = patch.consentEmail;
+	if (patch.consentSms != null) data.consentSms = patch.consentSms;
+	if (patch.consentMail != null) data.consentMail = patch.consentMail;
+	if (patch.consentPhone != null) data.consentPhone = patch.consentPhone;
+	if (patch.lawfulBasis !== undefined) {
+		data.lawfulBasis =
+			patch.lawfulBasis && isLawfulBasis(patch.lawfulBasis)
+				? patch.lawfulBasis
+				: null;
+	}
 	if (patch.mergedIntoId != null) data.mergedIntoId = patch.mergedIntoId;
 	Object.assign(data, stampNormalized(patch));
 	const row = await tablesDB.updateRow({

@@ -24,6 +24,9 @@ describe("NPO 1.9 do-not-contact enforcement", () => {
 		expect(canContact(blocked, "phone")).toBe(false);
 		expect(canContact(blocked, "mail")).toBe(false);
 		expect(canContact({ doNotContact: false }, "email")).toBe(true);
+		expect(
+			canContact({ doNotContact: false, consentEmail: false }, "email"),
+		).toBe(false);
 	});
 
 	it("fails if a known sender module does not import the helper", () => {

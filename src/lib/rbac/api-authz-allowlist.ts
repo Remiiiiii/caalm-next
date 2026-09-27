@@ -194,6 +194,12 @@ export const API_AUTHZ_ALLOWLIST: readonly ApiAuthzAllowEntry[] = [
 			"Public donation checkout (Stripe payment mode), not CAALM SaaS entitlements",
 	},
 	{
+		path: "preferences/[token]",
+		class: "token",
+		reason:
+			"HMAC preference-center token; single constituent consent update only",
+	},
+	{
 		path: "give/org/[orgSlug]",
 		class: "public",
 		reason:

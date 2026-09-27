@@ -9,6 +9,14 @@ import {
 	requireConstituentOrgContext,
 	updateConstituent,
 } from "@/lib/constituents/server";
+import {
+	consentAuditChanges,
+	logConstituentConsentChange,
+} from "@/lib/constituents/consent-audit";
+import {
+	isLawfulBasis,
+	readChannelConsent,
+} from "@/lib/constituents/consent-fields";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -85,9 +93,32 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 		if (body.country != null) patch.country = String(body.country);
 		if (body.doNotContact != null)
 			patch.doNotContact = Boolean(body.doNotContact);
+		if (body.consentEmail != null)
+			patch.consentEmail = Boolean(body.consentEmail);
+		if (body.consentSms != null) patch.consentSms = Boolean(body.consentSms);
+		if (body.consentMail != null) patch.consentMail = Boolean(body.consentMail);
+		if (body.consentPhone != null)
+			patch.consentPhone = Boolean(body.consentPhone);
+		if (body.lawfulBasis !== undefined) {
+			const lb = body.lawfulBasis;
+			patch.lawfulBasis =
+				typeof lb === "string" && isLawfulBasis(lb) ? lb : undefined;
+		}
 		if (isConstituentType(body.type)) patch.type = body.type;
 
+		const before = readChannelConsent(existing);
 		const constituent = await updateConstituent(id, patch);
+		const after = readChannelConsent(constituent);
+		const consentChanges = consentAuditChanges(before, after);
+		if (consentChanges) {
+			await logConstituentConsentChange({
+				actor: constituentActorFromUser(ctx.user),
+				orgId: ctx.orgId,
+				constituentId: id,
+				changes: consentChanges,
+			});
+		}
+
 		return NextResponse.json({ constituent });
 	} catch (error) {
 		console.error("[SERVER] constituents PATCH:", error);

@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { ConstituentConsentPanel } from "@/components/constituents/ConstituentConsentPanel";
 import { FundraisingIntelligenceTab } from "@/components/constituents/FundraisingIntelligenceTab";
 import { VolunteerTab } from "@/components/constituents/VolunteerTab";
 import { HouseholdTab } from "@/components/constituents/HouseholdTab";
@@ -57,10 +58,11 @@ function Field({ label, value }: { label: string; value?: string }) {
 }
 
 export function ConstituentProfile({
-	constituent,
+	constituent: initialConstituent,
 }: {
 	constituent: Constituent;
 }) {
+	const [constituent, setConstituent] = useState(initialConstituent);
 	const { permissions } = usePermissions();
 	const canManage = permissions.includes(PERMISSIONS.CONSTITUENTS.MANAGE);
 	const canFundraising = permissions.includes(PERMISSIONS.AI.FUNDRAISING);
@@ -115,6 +117,13 @@ export function ConstituentProfile({
 					</Button>
 				) : null}
 			</div>
+
+			{canManage ? (
+				<ConstituentConsentPanel
+					constituent={constituent}
+					onUpdated={setConstituent}
+				/>
+			) : null}
 
 			<Card className="glass-card mb-6">
 				<div className="glass-card-cap" />

@@ -13,6 +13,14 @@ export function isConstituentType(value: unknown): value is ConstituentType {
 	);
 }
 
+export type LawfulBasis =
+	| "consent"
+	| "legitimate_interest"
+	| "contract"
+	| "legal_obligation"
+	| "vital_interest"
+	| "public_task";
+
 export type Constituent = {
 	$id: string;
 	$createdAt: string;
@@ -29,6 +37,11 @@ export type Constituent = {
 	postalCode?: string;
 	country?: string;
 	doNotContact: boolean;
+	consentEmail?: boolean;
+	consentSms?: boolean;
+	consentMail?: boolean;
+	consentPhone?: boolean;
+	lawfulBasis?: LawfulBasis;
 	piiAccessedAt?: string;
 	normalizedEmail?: string;
 	normalizedLastName?: string;
@@ -127,10 +140,16 @@ export type CreateConstituentInput = {
 	postalCode?: string;
 	country?: string;
 	doNotContact?: boolean;
+	consentEmail?: boolean;
+	consentSms?: boolean;
+	consentMail?: boolean;
+	consentPhone?: boolean;
+	lawfulBasis?: LawfulBasis;
 };
 
 export type UpdateConstituentInput = Partial<
 	Omit<CreateConstituentInput, "orgId">
 > & {
 	mergedIntoId?: string;
+	lawfulBasis?: LawfulBasis | null;
 };
