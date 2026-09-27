@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import AdminRoleManager from "@/components/AdminRoleManager";
-import { MEDIA_URLS } from "@/lib/media/urls";
+import StaticWaveBackdrop from "@/components/landing/StaticWaveBackdrop";
 
 export const metadata: Metadata = {
 	title: "Debug Role Manager | CAALM",
@@ -11,16 +11,7 @@ export const metadata: Metadata = {
 export default function DebugRolePage() {
 	return (
 		<div className="relative min-h-screen">
-			{/* Background Video */}
-			<video
-				autoPlay
-				loop
-				muted
-				playsInline
-				className="fixed inset-0 w-full h-full object-cover z-[-10] opacity-60 pointer-events-none"
-			>
-				<source src={MEDIA_URLS.waveVideo} type="video/mp4" />
-			</video>
+			<StaticWaveBackdrop fixed muted />
 
 			{/* Main Content */}
 			<div className="relative z-10 p-6">

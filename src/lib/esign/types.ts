@@ -22,7 +22,8 @@ export const ESIGN_RECIPIENT_STATUSES = [
 export type EsignRecipientStatus = (typeof ESIGN_RECIPIENT_STATUSES)[number];
 
 export type EsignRecipientRole = "signer" | "cc";
-export type EsignResourceType = "contract" | "license";
+export type EsignResourceType = "contract" | "license" | "constituent";
+export type EsignEnvelopePurpose = "execution" | "acknowledgment";
 export type EsignFieldType = "signature" | "date" | "text" | "name" | "email";
 export type EsignProviderId = "caalm";
 
@@ -66,6 +67,7 @@ export interface EsignEnvelope {
 	orgId: string;
 	resourceType: EsignResourceType;
 	resourceId: string;
+	purpose?: EsignEnvelopePurpose;
 	status: EsignEnvelopeStatus;
 	provider: EsignProviderId;
 	documentFileId: string;
@@ -86,6 +88,7 @@ export interface CreateEnvelopeInput {
 	orgId: string;
 	resourceType: EsignResourceType;
 	resourceId: string;
+	purpose?: EsignEnvelopePurpose;
 	documentFileId: string;
 	createdBy: string;
 	title?: string;

@@ -38,6 +38,8 @@ describe("mapDealToDraftPayload", () => {
 			deal,
 			orgId: "org_1",
 			ownerId: "user_1",
+			department: "Sales",
+			division: "sales",
 		});
 		expect(payload.contractName).toBe("Acme MSA");
 		expect(payload.orgId).toBe("org_1");
@@ -55,6 +57,7 @@ describe("mapDealToDraftPayload", () => {
 		expect(payload.contractNumber).toBe("HS-12345");
 		expect(payload.contractType).toBe("Other");
 		expect(payload.department).toBe("Sales");
+		expect(payload.division).toBe("sales");
 		expect(payload.amount).toBe(75000);
 	});
 

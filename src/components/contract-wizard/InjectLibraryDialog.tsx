@@ -3,10 +3,10 @@
 import { FileBox, FileText, Info, LayoutGrid } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { clauseCategoryLabel } from "@/components/clauses/ClauseEditorDialog";
+import RoundedUnderlineTabs from "@/components/RoundedUnderlineTabs";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { SearchField } from "@/components/ui/search-field";
-import { cn } from "@/lib/utils";
 import type { Clause } from "@/types/clauses";
 import type { ContractTemplate } from "@/types/contract-templates";
 
@@ -17,14 +17,6 @@ type InjectLibraryDialogProps = {
 	onInjectClause: (clause: Clause) => void;
 	excludeFamilyIds: string[];
 };
-
-const INJECT_TAB_BASE =
-	"flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg border py-2.5 text-xs font-semibold transition-colors duration-200 sm:text-[12.5px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40";
-
-const INJECT_TAB_INACTIVE =
-	"border-slate-200 bg-white text-slate-600 hover:bg-slate-50";
-
-const INJECT_TAB_ACTIVE = "border-blue/30 bg-blue/10 text-[#0f5384]";
 
 export function InjectLibraryDialog({
 	open,
@@ -114,39 +106,19 @@ export function InjectLibraryDialog({
 				</div>
 
 				<div className="flex-1 overflow-y-auto bg-slate-50 p-6">
-					{/* Equal-width tab switch */}
-					<div
-						className="mb-4 flex gap-1.5"
-						role="tablist"
+					<RoundedUnderlineTabs
+						className="mb-4"
 						aria-label="Library source"
-					>
-						<button
-							type="button"
-							role="tab"
-							aria-selected={tab === "clauses"}
-							className={cn(
-								INJECT_TAB_BASE,
-								tab === "clauses" ? INJECT_TAB_ACTIVE : INJECT_TAB_INACTIVE,
-							)}
-							onClick={() => setTab("clauses")}
-						>
-							<FileText className="h-3.5 w-3.5" />
-							Clauses
-						</button>
-						<button
-							type="button"
-							role="tab"
-							aria-selected={tab === "templates"}
-							className={cn(
-								INJECT_TAB_BASE,
-								tab === "templates" ? INJECT_TAB_ACTIVE : INJECT_TAB_INACTIVE,
-							)}
-							onClick={() => setTab("templates")}
-						>
-							<LayoutGrid className="h-3.5 w-3.5" />
-							Templates
-						</button>
-					</div>
+						variant="bar"
+						value={tab}
+						onValueChange={(next) =>
+							setTab(next as "templates" | "clauses")
+						}
+						tabs={[
+							{ value: "clauses", label: "Clauses", icon: FileText },
+							{ value: "templates", label: "Templates", icon: LayoutGrid },
+						]}
+					/>
 
 					<SearchField
 						value={search}

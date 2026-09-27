@@ -1,8 +1,7 @@
 "use client";
 
-import { Search } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Input } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/search-field";
 import type { License } from "@/types/licenses";
 import { useLicensesFilter } from "./LicensesView";
 
@@ -30,17 +29,13 @@ export default function LicensesTopControls(_props: LicensesTopControlsProps) {
 
 	return (
 		<div className="flex items-center gap-3 flex-wrap min-w-0 flex-1">
-			<div className="relative w-full sm:w-72 max-w-full">
-				<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
-				<Input
-					aria-label="Search licenses"
-					placeholder="Search licenses..."
-					value={searchQuery}
-					onChange={(e) => setSearchQuery(e.target.value)}
-					data-with-leading-icon="true"
-					className="w-full bg-white border-slate-200"
-				/>
-			</div>
+			<SearchField
+				aria-label="Search licenses"
+				placeholder="Search licenses..."
+				value={searchQuery}
+				onChange={(e) => setSearchQuery(e.target.value)}
+				containerClassName="w-full min-w-0 max-w-xl"
+			/>
 		</div>
 	);
 }

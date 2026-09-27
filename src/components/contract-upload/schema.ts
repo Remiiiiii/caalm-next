@@ -19,7 +19,7 @@ export const contractSchema = z
 			.string()
 			.min(1, "Business unit / department is required"),
 		businessUnit: z.string().optional(),
-		subDepartment: z.string().optional(),
+		subDepartment: z.string().min(1, "Division is required"),
 		departmentOwner: z.string().optional(),
 		contractOwnerId: z.string().min(1, "Owner is required"),
 		startDate: z.date().optional(),
@@ -96,8 +96,9 @@ export const contractSchema = z
 		serviceCreditTerms: z.string().optional(),
 		escalationProcedures: z.string().optional(),
 		obligationOwners: z.string().optional(),
-		// Empty is allowed when the department has no managers to assign.
-		assignedManagers: z.array(z.string()).default([]),
+		assignedManagers: z
+			.array(z.string())
+			.min(1, "Assigned To is required"),
 		internalApproverIds: z.array(z.string()).optional(),
 		approvalWorkflowTemplate: z.string().optional(),
 		currentApprovalStage: z.string().optional(),

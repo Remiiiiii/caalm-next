@@ -10,6 +10,12 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipProvider,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export default function ContractsSavedViews() {
 	const { savedViews, saveCurrentView, applySavedView, deleteSavedView } =
@@ -19,17 +25,29 @@ export default function ContractsSavedViews() {
 
 	return (
 		<Popover open={open} onOpenChange={setOpen}>
-			<PopoverTrigger asChild>
-				<Button
-					type="button"
-					variant="outline"
-					size="sm"
-					className="px-3 border-slate-200 text-slate-700 hover:bg-blue-50 hover:border-blue-300 cursor-pointer transition-all duration-200"
-				>
-					<Bookmark className="h-4 w-4" />
-					<span className="hidden sm:inline">Views</span>
-				</Button>
-			</PopoverTrigger>
+			<TooltipProvider delayDuration={400}>
+				<Tooltip open={open ? false : undefined}>
+					<TooltipTrigger asChild>
+						<PopoverTrigger asChild>
+							<Button
+								type="button"
+								variant="ghost"
+								size="sm"
+								className="btn-primary h-8 border-0 px-3 shadow-none focus-visible:ring-0 sm:px-4"
+							>
+								<Bookmark className="h-4 w-4" />
+								<span className="hidden sm:inline">Views</span>
+							</Button>
+						</PopoverTrigger>
+					</TooltipTrigger>
+					<TooltipContent
+						side="bottom"
+						className="text-xs font-normal text-slate-700"
+					>
+						Save or restore tabs, filters, and layout
+					</TooltipContent>
+				</Tooltip>
+			</TooltipProvider>
 			<PopoverContent
 				align="end"
 				className="w-72 p-0 border border-slate-200 shadow-xl"

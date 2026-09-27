@@ -1,0 +1,35 @@
+{
+	"lapseChampion": {
+		"features": {
+			"recencyDays": 14,
+			"frequency": 6,
+			"monetary": 1200,
+			"streakMonths": 4,
+			"giftTrend": 80
+		},
+		"expectedLapseScore": 22,
+		"expectedLapseTopLabel": "Gift amount trending up"
+	},
+	"upgradeWithCapacity": {
+		"features": {
+			"recencyDays": 30,
+			"frequency": 4,
+			"monetary": 800,
+			"streakMonths": 2,
+			"giftTrend": 100
+		},
+		"campaignResponseRate": 0.75,
+		"capacityBand": 5000,
+		"expectedUpgradeScore": 100
+	},
+	"askFromGifts": {
+		"gifts": [
+			{ "giftDate": "2026-05-01T00:00:00.000Z", "amount": 200, "status": "posted" },
+			{ "giftDate": "2026-04-01T00:00:00.000Z", "amount": 150, "status": "posted" },
+			{ "giftDate": "2026-03-01T00:00:00.000Z", "amount": 100, "status": "posted" }
+		],
+		"upgradeReadinessScore": 80,
+		"capacityBand": 300,
+		"expectedAsk": 240
+	}
+}

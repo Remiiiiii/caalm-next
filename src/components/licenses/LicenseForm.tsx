@@ -4,7 +4,16 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type React from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import {
+	getAllManagers,
+	getUsersByDepartment,
+} from "@/lib/actions/database.actions";
+import {
+	type AssigneeSource,
+	assigneeFallbackMessage,
+	pickAssigneeIds,
+} from "@/lib/assignments/resolve-default-assignee";
 import {
 	type Control,
 	type Resolver,
@@ -79,6 +88,11 @@ export default function LicenseForm({
 }: LicenseFormProps) {
 	const [open, setOpen] = useState(false);
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [assignees, setAssignees] = useState<
+		Array<{ $id: string; fullName: string; division?: string }>
+	>([]);
+	const [assigneeSource, setAssigneeSource] =
+		useState<AssigneeSource>("selected");
 	const { toast } = useToast();
 	const router = useRouter();
 
@@ -128,10 +142,51 @@ export default function LicenseForm({
 			: {
 					currencyCode: "USD",
 					autoRenew: false,
+					department: "",
+					division: "",
+					assignedManagers: [],
 				},
 	}) as UseFormReturn<LicenseCreateInput>;
 
 	const control = form.control as unknown as Control<LicenseCreateInput>;
+	const watchedDepartment = form.watch("department");
+	const watchedDivision = form.watch("division");
+
+	useEffect(() => {
+		if (!open) return;
+		let cancelled = false;
+		const loadAssignees = async () => {
+			const orgManagers = (await getAllManagers()) || [];
+			const departmentManagers = watchedDepartment
+				? (await getUsersByDepartment(watchedDepartment)) || []
+				: [];
+			if (cancelled) return;
+			const pick = pickAssigneeIds({
+				selectedIds: form.getValues("assignedManagers"),
+				divisionCandidates: departmentManagers,
+				departmentCandidates: departmentManagers,
+				orgCandidates: orgManagers,
+				division: watchedDivision,
+			});
+			const display =
+				departmentManagers.length > 0 ? departmentManagers : pick.managers;
+			setAssignees(
+				display.map((person: { $id: string; fullName?: string; division?: string }) => ({
+					$id: person.$id,
+					fullName: person.fullName || "Unknown",
+					division: person.division,
+				})),
+			);
+			setAssigneeSource(pick.source);
+			if (pick.ids.length > 0) {
+				form.setValue("assignedManagers", pick.ids);
+			}
+		};
+		void loadAssignees();
+		return () => {
+			cancelled = true;
+		};
+	}, [open, watchedDepartment, watchedDivision, form]);
 
 	const onSubmit = async (data: LicenseCreateInput) => {
 		setIsSubmitting(true);
@@ -440,10 +495,46 @@ export default function LicenseForm({
 
 								<FormField
 									control={control}
+									name="department"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Department *</FormLabel>
+											<Select
+												onValueChange={field.onChange}
+												value={field.value}
+											>
+												<FormControl>
+													<SelectTrigger>
+														<SelectValue placeholder="Select department" />
+													</SelectTrigger>
+												</FormControl>
+												<SelectContent>
+													<SelectItem value="IT">IT</SelectItem>
+													<SelectItem value="Finance">Finance</SelectItem>
+													<SelectItem value="Administration">
+														Administration
+													</SelectItem>
+													<SelectItem value="Legal">Legal</SelectItem>
+													<SelectItem value="Operations">Operations</SelectItem>
+													<SelectItem value="Sales">Sales</SelectItem>
+													<SelectItem value="Marketing">Marketing</SelectItem>
+													<SelectItem value="Executive">Executive</SelectItem>
+													<SelectItem value="Engineering">
+														Engineering
+													</SelectItem>
+												</SelectContent>
+											</Select>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+
+								<FormField
+									control={control}
 									name="division"
 									render={({ field }) => (
 										<FormItem>
-											<FormLabel>Division</FormLabel>
+											<FormLabel>Division *</FormLabel>
 											<Select
 												onValueChange={field.onChange}
 												value={field.value}
@@ -474,6 +565,59 @@ export default function LicenseForm({
 													</SelectItem>
 												</SelectContent>
 											</Select>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+
+								<FormField
+									control={control}
+									name="assignedManagers"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Assigned To *</FormLabel>
+											<Select
+												onValueChange={(value) => field.onChange([value])}
+												value={
+													Array.isArray(field.value) ? field.value[0] || "" : ""
+												}
+											>
+												<FormControl>
+													<SelectTrigger className="border-[0.25px] border-slate-300">
+														<SelectValue placeholder="Select assignee" />
+													</SelectTrigger>
+												</FormControl>
+												<SelectContent>
+													{assignees.map((person) => (
+														<SelectItem key={person.$id} value={person.$id}>
+															{person.fullName}
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+											{assigneeFallbackMessage(
+												assigneeSource,
+												assignees.find(
+													(person) =>
+														person.$id ===
+														(Array.isArray(field.value)
+															? field.value[0]
+															: undefined),
+												)?.fullName,
+											) ? (
+												<p className="text-xs text-slate-600">
+													{assigneeFallbackMessage(
+														assigneeSource,
+														assignees.find(
+															(person) =>
+																person.$id ===
+																(Array.isArray(field.value)
+																	? field.value[0]
+																	: undefined),
+														)?.fullName,
+													)}
+												</p>
+											) : null}
 											<FormMessage />
 										</FormItem>
 									)}

@@ -172,22 +172,26 @@ function GlassStat({
 	return (
 		<div className="glass-card relative min-w-0">
 			<div className="glass-card-cap" />
-			<div className="px-2.5 sm:px-3 pb-2.5 sm:pb-3 pt-4 sm:pt-5 text-center">
-				<p className="text-[10px] sm:text-xs font-medium sidebar-gradient-text">
-					{label}
-				</p>
-				<div className="flex items-center justify-center gap-1.5 pt-1">
+			<div className="px-2.5 sm:px-3 pb-2.5 sm:pb-3 pt-4 sm:pt-5 text-left">
+				<div className="flex items-center gap-1.5">
+					{Icon ? (
+						<span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-white/50 bg-white/40 shadow-sm">
+							<Icon
+								className={cn(
+									"h-3.5 w-3.5",
+									iconClassName ?? "text-[#0f5384]",
+								)}
+							/>
+						</span>
+					) : null}
+					<p className="text-[10px] sm:text-xs font-semibold sidebar-gradient-text">
+						{label}
+					</p>
+				</div>
+				<div className="flex items-center gap-1.5 pt-1">
 					<span className="text-base sm:text-xl font-bold text-slate-700 tabular-nums">
 						{value}
 					</span>
-					{Icon ? (
-						<Icon
-							className={cn(
-								"h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0",
-								iconClassName ?? "text-slate-600",
-							)}
-						/>
-					) : null}
 				</div>
 				{typeof hint === "string" ? (
 					<p className="text-[9px] sm:text-[10px] text-slate-600 mt-0.5 truncate">

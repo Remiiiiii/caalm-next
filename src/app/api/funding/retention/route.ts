@@ -11,7 +11,12 @@ export async function GET(request: NextRequest) {
 	if (!ctx.ok) return ctx.response;
 
 	try {
-		const summary = await buildRetentionSummary({ orgId: ctx.orgId });
+		const missingFundOnly =
+			request.nextUrl.searchParams.get("missingFund") === "true";
+		const summary = await buildRetentionSummary({
+			orgId: ctx.orgId,
+			missingFundOnly,
+		});
 		return NextResponse.json(summary);
 	} catch (error) {
 		console.error("[funding/retention GET]", error);

@@ -2,6 +2,7 @@
 
 import {
 	AlertCircle,
+	CheckCircle2,
 	Clock,
 	FileText,
 	MessageSquare,
@@ -16,7 +17,7 @@ import {
 	ContractCardSkeleton,
 	StatCardSkeleton,
 } from "@/components/ui/skeletons";
-import { StatCardIcon } from "@/components/ui/stat-card-icon";
+import { MetricStatCard } from "@/components/ui/metric-stat-card";
 import { useManagerContracts } from "@/hooks/useManagerContracts";
 
 const ManagerDashboard = () => {
@@ -25,6 +26,9 @@ const ManagerDashboard = () => {
 		enableRealTime: true,
 		pollingInterval: 20000, // 20 seconds
 	});
+	const expiredCount = contracts.filter((c) => c.status === "expired").length;
+	const pendingCount = contracts.filter((c) => c.status === "pending").length;
+	const activeCount = contracts.filter((c) => c.status === "active").length;
 
 	const upcomingTasks = [
 		{
@@ -101,88 +105,38 @@ const ManagerDashboard = () => {
 							[1, 2, 3, 4].map((index) => <StatCardSkeleton key={index} />)
 						) : (
 							<>
-								<Card className="glass-card">
-									<div className="glass-card-cap" />
-									<CardContent className="p-4 sm:p-6">
-										<div className="flex items-center justify-between">
-											<div>
-												<p className="text-sm font-medium sidebar-gradient-text">
-													Total Contracts
-												</p>
-												<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-													<span>{contracts.length}</span>
-													<StatCardIcon className="ml-2" icon={FileText} />
-												</div>
-											</div>
-										</div>
-									</CardContent>
-								</Card>
-
-								<Card className="glass-card">
-									<div className="glass-card-cap" />
-									<CardContent className="p-4 sm:p-6">
-										<div className="flex items-center justify-between">
-											<div>
-												<p className="text-sm font-medium sidebar-gradient-text">
-													Expiring Soon
-												</p>
-												<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-													<span>
-														{
-															contracts.filter((c) => c.status === "expired")
-																.length
-														}
-													</span>
-													<StatCardIcon className="ml-2" icon={AlertCircle} />
-												</div>
-											</div>
-										</div>
-									</CardContent>
-								</Card>
-
-								<Card className="glass-card">
-									<div className="glass-card-cap" />
-									<CardContent className="p-4 sm:p-6">
-										<div className="flex items-center justify-between">
-											<div>
-												<p className="text-sm font-medium sidebar-gradient-text">
-													Pending Reviews
-												</p>
-												<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-													<span>
-														{
-															contracts.filter((c) => c.status === "pending")
-																.length
-														}
-													</span>
-													<StatCardIcon className="ml-2" icon={Clock} />
-												</div>
-											</div>
-										</div>
-									</CardContent>
-								</Card>
-
-								<Card className="glass-card">
-									<div className="glass-card-cap" />
-									<CardContent className="p-4 sm:p-6">
-										<div className="flex items-center justify-between">
-											<div>
-												<p className="text-sm font-medium sidebar-gradient-text">
-													Active Contracts
-												</p>
-												<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-													<span>
-														{
-															contracts.filter((c) => c.status === "active")
-																.length
-														}
-													</span>
-													<StatCardIcon className="ml-2" icon={Upload} />
-												</div>
-											</div>
-										</div>
-									</CardContent>
-								</Card>
+								<MetricStatCard
+									title="Total Contracts"
+									value={contracts.length}
+									description="Assigned to your team"
+									icon={FileText}
+								/>
+								<MetricStatCard
+									title="Expiring Soon"
+									value={expiredCount}
+									description="Need renewal attention"
+									icon={AlertCircle}
+									iconTone={expiredCount > 0 ? "warning" : "default"}
+									dynamicIcon={expiredCount > 0 ? Clock : undefined}
+									dynamicTone="warning"
+									valueTone={expiredCount > 0 ? "warning" : "default"}
+								/>
+								<MetricStatCard
+									title="Pending Reviews"
+									value={pendingCount}
+									description="Waiting on a decision"
+									icon={Upload}
+									iconTone={pendingCount > 0 ? "warning" : "default"}
+									dynamicIcon={pendingCount > 0 ? Clock : undefined}
+									dynamicTone="warning"
+								/>
+								<MetricStatCard
+									title="Active Contracts"
+									value={activeCount}
+									description="Currently in force"
+									icon={CheckCircle2}
+									iconTone="success"
+								/>
 							</>
 						)}
 					</div>

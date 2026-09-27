@@ -434,7 +434,7 @@ export default function HowItWorks() {
 				<motion.div variants={fadeUp} className="mt-10 flex justify-center">
 					<a
 						href="#contact"
-						className="group inline-flex items-center gap-2 primary-btn px-4 sm:px-6 py-2.5 rounded-full text-sm font-semibold cursor-pointer transition-all duration-200"
+						className="primary-btn primary-btn-lg group inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold cursor-pointer transition-all duration-200 sm:px-6"
 					>
 						See it in action
 						<ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />

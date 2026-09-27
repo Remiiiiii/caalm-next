@@ -19,7 +19,7 @@ const LicenseUploadForm = dynamic(() => import("@/components/license-upload"), {
 });
 
 const quickActionBtn =
-	"primary-btn h-9 px-3.5 sm:px-4 shadow-drop-1 text-xs sm:text-sm whitespace-nowrap gap-1.5 [&_svg]:size-3.5";
+	"primary-btn px-3.5 sm:px-4 shadow-drop-1 text-xs sm:text-sm whitespace-nowrap gap-1.5 [&_svg]:size-3.5";
 
 interface QuickActionsProps {
 	user?:

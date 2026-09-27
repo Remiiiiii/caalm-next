@@ -196,7 +196,7 @@ export const useDashboardData = (orgId: string) => {
 			totalContracts: 0,
 			expiringContracts: 0,
 			activeUsers: 0,
-			complianceRate: "94%",
+			complianceRate: "0%",
 		},
 		files: files?.data || [],
 		invitations: invitations?.data || [],

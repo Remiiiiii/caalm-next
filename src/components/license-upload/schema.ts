@@ -36,14 +36,16 @@ export const licenseUploadSchema = z.object({
 	quantity: z.string().optional(),
 	cost: z.string().optional(),
 	currencyCode: z.string().default("USD"),
-	division: z.string().optional(),
-	department: z.string().optional(),
+	division: z.string().min(1, "Division is required"),
+	department: z.string().min(1, "Department is required"),
 	subDepartment: z.string().optional(),
 	businessUnit: z.string().optional(),
 	compliance: z
 		.enum(["compliant", "non-compliant", "at-risk", "action-required"])
 		.optional(),
-	assignedManagers: z.array(z.string()).optional(),
+	assignedManagers: z
+		.array(z.string())
+		.min(1, "Assigned To is required"),
 	autoRenew: z.boolean().default(false),
 	renewalNoticeDays: z.string().optional(),
 });

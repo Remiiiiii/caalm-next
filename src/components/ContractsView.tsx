@@ -35,13 +35,13 @@ export default function ContractsView({
 	user,
 	onRefresh,
 }: ContractsViewProps) {
-	const { view, density, previewFile, setPreviewFile } = useContractsView();
+	const { view, previewFile, setPreviewFile } = useContractsView();
 	const [currentPage, setCurrentPage] = useState(1);
-	const itemsPerPage = density === "compact" ? 20 : 12;
+	const itemsPerPage = 12;
 
 	useEffect(() => {
 		setCurrentPage(1);
-	}, [files.length, density]);
+	}, [files.length]);
 
 	const totalPages = Math.max(1, Math.ceil(files.length / itemsPerPage));
 
@@ -88,12 +88,14 @@ export default function ContractsView({
 						onRefresh={onRefresh}
 					/>
 					<PageIndex
-						className="mt-6 justify-center"
+						className="mt-6"
 						page={validCurrentPage}
 						totalItems={files.length}
 						pageSize={itemsPerPage}
 						onPageChange={setCurrentPage}
 						hideWhenSinglePage
+						showRange
+						itemLabel="contracts"
 						scrollToTop
 						aria-label="Contracts pagination"
 					/>
@@ -115,12 +117,14 @@ export default function ContractsView({
 						))}
 					</EqualHeightGrid>
 					<PageIndex
-						className="mt-6 justify-center"
+						className="mt-6"
 						page={validCurrentPage}
 						totalItems={files.length}
 						pageSize={itemsPerPage}
 						onPageChange={setCurrentPage}
 						hideWhenSinglePage
+						showRange
+						itemLabel="contracts"
 						scrollToTop
 						aria-label="Contracts pagination"
 					/>

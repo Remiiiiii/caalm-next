@@ -1,11 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import RoundedUnderlineTabs from "@/components/RoundedUnderlineTabs";
 import { SearchField } from "@/components/ui/search-field";
 import type { Ticket, TicketLane } from "@/lib/tickets/ticket.types";
 import { resolveTicketLane } from "@/lib/tickets/ticket.types";
 import { normalizeTicketNumberQuery } from "@/lib/tickets/ticket-number.utils";
-import { cn } from "@/lib/utils";
 import { TicketQueue } from "./TicketQueue";
 
 type LaneFilter = "all" | TicketLane;
@@ -66,32 +66,16 @@ export function TicketsListWithSearch({
 					placeholder="Search by ticket number, title, or submitter…"
 					aria-label="Search tickets"
 				/>
-				<div
-					className="flex flex-wrap gap-2"
-					role="tablist"
+				<RoundedUnderlineTabs
+					variant="chips"
 					aria-label="Filter by lane"
-				>
-					{LANE_FILTERS.map((filter) => {
-						const selected = laneFilter === filter.value;
-						return (
-							<button
-								key={filter.value}
-								type="button"
-								role="tab"
-								aria-selected={selected}
-								onClick={() => setLaneFilter(filter.value)}
-								className={cn(
-									"cursor-pointer rounded-full border px-3 py-1 text-xs font-medium transition-all duration-200",
-									selected
-										? "border-[#0f5384] bg-blue/10 text-[#0f5384]"
-										: "border-slate-200 bg-white text-slate-600 hover:border-blue-300",
-								)}
-							>
-								{filter.label}
-							</button>
-						);
-					})}
-				</div>
+					value={laneFilter}
+					onValueChange={(next) => setLaneFilter(next as LaneFilter)}
+					tabs={LANE_FILTERS.map((filter) => ({
+						value: filter.value,
+						label: filter.label,
+					}))}
+				/>
 			</div>
 
 			<section>

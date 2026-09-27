@@ -326,28 +326,16 @@ export default function OrganizationSettingsPage() {
 			</div>
 
 			<Tabs defaultValue="profile">
-				<TabsList className="bg-white/60">
-					<TabsTrigger value="profile" className="cursor-pointer">
-						Profile
-					</TabsTrigger>
-					<TabsTrigger value="limits" className="cursor-pointer">
-						Limits
-					</TabsTrigger>
-					<TabsTrigger value="structure" className="cursor-pointer">
-						Org structure
-					</TabsTrigger>
-					<TabsTrigger value="approval-sla" className="cursor-pointer">
-						Approval SLAs
-					</TabsTrigger>
-					<TabsTrigger value="approval-routing" className="cursor-pointer">
+				<TabsList>
+					<TabsTrigger value="profile">Profile</TabsTrigger>
+					<TabsTrigger value="limits">Limits</TabsTrigger>
+					<TabsTrigger value="structure">Org structure</TabsTrigger>
+					<TabsTrigger value="approval-sla">Approval SLAs</TabsTrigger>
+					<TabsTrigger value="approval-routing">
 						Approval routing
 					</TabsTrigger>
-					<TabsTrigger value="approval-delegation" className="cursor-pointer">
-						Delegation
-					</TabsTrigger>
-					<TabsTrigger value="data-portability" className="cursor-pointer">
-						Data portability
-					</TabsTrigger>
+					<TabsTrigger value="approval-delegation">Delegation</TabsTrigger>
+					<TabsTrigger value="data-portability">Data portability</TabsTrigger>
 				</TabsList>
 
 				<TabsContent value="profile" className="mt-4">

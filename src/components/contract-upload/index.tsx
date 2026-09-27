@@ -99,7 +99,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 		selectedApprovers,
 		setSelectedApprovers,
 		fetchDepartmentManagers,
-	} = useManagers(isOpen);
+	} = useManagers(isOpen, { $id: ownerId, fullName: "You" });
 
 	// Reset function
 	const resetForm = useCallback(() => {
@@ -239,10 +239,10 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 			});
 			return;
 		}
-		if (filteredManagers.length > 0 && !selectedManagers?.length) {
+		if (!selectedManagers?.length && !ownerId) {
 			toast({
-				title: "Department manager required",
-				description: "Select at least one department manager before upload.",
+				title: "Assigned To is required",
+				description: "Every contract needs an assignee before upload.",
 				variant: "destructive",
 			});
 			return;
@@ -276,6 +276,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 				department: values.assignToDepartment,
 				businessUnit: sanitizeString(values.businessUnit),
 				subDepartment: sanitizeString(values.subDepartment),
+				division: sanitizeString(values.subDepartment),
 				departmentOwner: sanitizeString(values.departmentOwner),
 				contractOwnerId: values.contractOwnerId || ownerId,
 				contractExpiryDate: values.expiryDate?.toISOString(),
@@ -332,7 +333,8 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 				),
 				currentApprovalStage: sanitizeString(values.currentApprovalStage),
 				reviewerComments: sanitizeString(values.reviewerComments),
-				assignedManagers: selectedManagers,
+				assignedManagers:
+					selectedManagers.length > 0 ? selectedManagers : [ownerId],
 				internalApproverIds: selectedApprovers,
 			};
 

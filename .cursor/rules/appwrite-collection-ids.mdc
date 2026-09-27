@@ -11,7 +11,7 @@ When creating Appwrite database collections (tables) or storage buckets, the res
 
 - Use IDs like `69a3f91200a8c4d1e2f0` or `ID.unique()` output (a-z, A-Z, 0-9 only; max 36 chars).
 - Put the human-readable label in the resource **name** field (e.g. name `tickets`, id `69b8a201001f4e8c2a01`).
-- Store the alphanumeric ID in `.env` / `.env.local` and `appwriteConfig` — never hardcode snake_case names as production IDs.
+- Store the alphanumeric ID in `.env.local` (and `appwriteConfig` fallback) — never hardcode snake_case names as production IDs.
 
 ## Forbidden
 
@@ -30,5 +30,5 @@ When creating Appwrite database collections (tables) or storage buckets, the res
 
 1. Create with an alphanumeric custom ID (or `ID.unique()`).
 2. Set `name` to the readable label.
-3. Update `.env.example` and `.env.local` with the alphanumeric ID.
-4. Update `src/lib/appwrite/config.ts` fallback to that same ID (not the snake_case name).
+3. Put the real alphanumeric ID only in `.env.local` (and demo’s `.env.demo.local` when needed). In `.env.example` / `.env.demo.example`, add a snake_case placeholder only — see `env-example-placeholders.mdc`.
+4. Update `src/lib/appwrite/config.ts` fallback to that same alphanumeric ID (not the snake_case name).

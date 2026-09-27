@@ -1,6 +1,6 @@
 "use client";
 
-import { Calendar, FileText, Plus, TrendingUp } from "lucide-react";
+import { Calendar, FilePen, FileText, Plus, TrendingUp } from "lucide-react";
 import type { Models } from "node-appwrite";
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
@@ -10,7 +10,7 @@ import ArticleList from "@/components/news/ArticleList";
 import NewsAnalytics from "@/components/news/NewsAnalytics";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { StatCardIcon } from "@/components/ui/stat-card-icon";
+import { MetricStatCard } from "@/components/ui/metric-stat-card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 
@@ -124,79 +124,33 @@ const ContentCreatorDashboard: React.FC<ContentCreatorDashboardProps> = ({
 
 			{/* Statistics Cards */}
 			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-				<Card className="glass-card">
-					<div className="glass-card-cap" />
-					<CardContent className="p-4 sm:p-6">
-						<div className="flex items-center justify-between">
-							<div>
-								<p className="text-sm font-medium sidebar-gradient-text">
-									Total Articles
-								</p>
-								<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-									<span>{loading ? "..." : stats.total}</span>
-									<StatCardIcon className="ml-2" icon={FileText} />
-								</div>
-								<p className="text-xs text-slate-600 mt-1">All articles</p>
-							</div>
-						</div>
-					</CardContent>
-				</Card>
-
-				<Card className="glass-card">
-					<div className="glass-card-cap" />
-					<CardContent className="p-4 sm:p-6">
-						<div className="flex items-center justify-between">
-							<div>
-								<p className="text-sm font-medium sidebar-gradient-text">
-									Published
-								</p>
-								<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-									<span>{loading ? "..." : stats.published}</span>
-									<StatCardIcon className="ml-2" icon={TrendingUp} />
-								</div>
-								<p className="text-xs text-slate-600 mt-1">Live articles</p>
-							</div>
-						</div>
-					</CardContent>
-				</Card>
-
-				<Card className="glass-card">
-					<div className="glass-card-cap" />
-					<CardContent className="p-4 sm:p-6">
-						<div className="flex items-center justify-between">
-							<div>
-								<p className="text-sm font-medium sidebar-gradient-text">
-									Drafts
-								</p>
-								<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-									<span>{loading ? "..." : stats.drafts}</span>
-									<StatCardIcon className="ml-2" icon={FileText} />
-								</div>
-								<p className="text-xs text-slate-600 mt-1">Unpublished</p>
-							</div>
-						</div>
-					</CardContent>
-				</Card>
-
-				<Card className="glass-card">
-					<div className="glass-card-cap" />
-					<CardContent className="p-4 sm:p-6">
-						<div className="flex items-center justify-between">
-							<div>
-								<p className="text-sm font-medium sidebar-gradient-text">
-									This Month
-								</p>
-								<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-									<span>{loading ? "..." : stats.thisMonth}</span>
-									<StatCardIcon className="ml-2" icon={Calendar} />
-								</div>
-								<p className="text-xs text-slate-600 mt-1">
-									Published this month
-								</p>
-							</div>
-						</div>
-					</CardContent>
-				</Card>
+				<MetricStatCard
+					title="Total Articles"
+					value={loading ? "..." : stats.total}
+					description="All articles"
+					icon={FileText}
+				/>
+				<MetricStatCard
+					title="Published"
+					value={loading ? "..." : stats.published}
+					description="Live articles"
+					icon={FileText}
+					iconTone="success"
+				/>
+				<MetricStatCard
+					title="Drafts"
+					value={loading ? "..." : stats.drafts}
+					description="Unpublished"
+					icon={FilePen}
+				/>
+				<MetricStatCard
+					title="This Month"
+					value={loading ? "..." : stats.thisMonth}
+					description="Published this month"
+					icon={Calendar}
+					dynamicIcon={stats.thisMonth > 0 ? TrendingUp : undefined}
+					dynamicTone="success"
+				/>
 			</div>
 
 			{/* Articles and Analytics Tabs */}

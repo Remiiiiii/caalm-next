@@ -34,7 +34,8 @@ export interface AuditLog {
 		| "approval_decided"
 		| "export"
 		| "login"
-		| "logout";
+		| "logout"
+		| "view_pii";
 	source: "caalm" | "outlook";
 	user_id: string;
 	user_name: string;
@@ -88,6 +89,13 @@ function getActionBadge(action: string) {
 				<AlertTriangle className="w-3 h-3 mr-1" />
 				{action === "sync_delete" ? "Sync delete" : "Delete"}
 			</Badge>
+		);
+	}
+	if (action === "view_pii") {
+		return (
+			<span className="inline-block px-2 py-0.5 text-xs rounded-full font-medium border bg-blue/10 text-blue border-blue/20">
+				PII view
+			</span>
 		);
 	}
 	return (

@@ -25,8 +25,8 @@ type FileType = "image" | "video" | "audio" | "document" | "other";
 import { Query } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite/admin";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { contractRowToFileDoc } from "@/lib/contracts/contract-row-to-file";
 import { enrichContractFilesForList } from "@/lib/contracts/enrichContractListDisplay";
-import { excludeSoftDeletedQuery } from "@/lib/soft-delete";
 
 interface SearchParamProps {
 	searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -46,7 +46,7 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
 
 	// Special handling for contracts - get ALL contracts from contracts collection
 	if (type.toLowerCase() === "contracts") {
-		const queries = [excludeSoftDeletedQuery()];
+		const queries = [Query.limit(500)];
 
 		if (searchText) {
 			queries.push(Query.contains("contractName", searchText));
@@ -91,7 +91,10 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
 		const fileIds = Array.from(
 			new Set(
 				contractsResult.rows
-					.map((c: any) => c.fileId as string | undefined)
+					.map((c: any) => {
+						const row = c?.data && typeof c.data === "object" ? { ...c, ...c.data } : c;
+						return row.fileId as string | undefined;
+					})
 					.filter((id): id is string => !!id && isValidDocumentId(id)),
 			),
 		);
@@ -132,45 +135,7 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
 					? filesById.get(contract.fileId)
 					: undefined;
 
-			const contractAsFile: UIFileDoc = {
-				$id: contract.$id,
-				$createdAt: contract.$createdAt,
-				$updatedAt: contract.$updatedAt,
-				$permissions: contract.$permissions,
-				$collectionId: contract.$collectionId,
-				$databaseId: contract.$databaseId,
-				$sequence: contract.$sequence || 0,
-				name: contract.contractName || contract.name || "Untitled Contract",
-				type: "document",
-				extension: fileData?.extension || "pdf",
-				url: fileData?.url || "",
-				size: fileData?.size || 0,
-				owner:
-					contract.contractOwnerId || contract.owner || fileData?.owner || "",
-				users: contract.users || fileData?.users || [],
-				contractId: contract.$id,
-				contractName: contract.contractName,
-				contractOwnerId: contract.contractOwnerId,
-				contractExpiryDate: contract.contractExpiryDate,
-				status: contract.status,
-				lifecycleStatus: contract.lifecycleStatus,
-				contractType: contract.contractType,
-				amount: contract.amount,
-				vendor: contract.vendor,
-				contractNumber: contract.contractNumber,
-				priority: contract.priority,
-				compliance: contract.compliance,
-				department: contract.department,
-				assignedManagers: contract.assignedManagers,
-				description: contract.description,
-				riskLevel: contract.riskLevel,
-				bucketFileId: fileData?.bucketFileId || contract.bucketFileId,
-				approvalWorkflowState: contract.approvalWorkflowState,
-				digitalSignatureStatus: contract.digitalSignatureStatus,
-				digitalSignatureEnvelopeId: contract.digitalSignatureEnvelopeId,
-			};
-
-			return contractAsFile;
+			return contractRowToFileDoc(contract, fileData);
 		});
 
 		files = {
@@ -298,7 +263,7 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
 								<FileUploader
 									ownerId={user.$id}
 									accountId={user.$id}
-									className="primary-btn h-10 px-4 shadow-drop-1 text-sm"
+									className="primary-btn px-4 shadow-drop-1 text-sm"
 								/>
 							</div>
 						)}

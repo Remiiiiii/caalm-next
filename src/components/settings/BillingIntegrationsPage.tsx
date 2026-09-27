@@ -619,16 +619,16 @@ export default function BillingIntegrationsPage() {
 				}}
 				className="space-y-6"
 			>
-				<TabsList className="border border-slate-200 bg-white/60">
+				<TabsList>
 					{canBilling && (
-						<TabsTrigger value="billing" className="cursor-pointer gap-2">
+						<TabsTrigger value="billing">
 							<CreditCard className="h-4 w-4" />
 							Billing
 						</TabsTrigger>
 					)}
 
 					{canIntegrations && (
-						<TabsTrigger value="integrations" className="cursor-pointer gap-2">
+						<TabsTrigger value="integrations">
 							<Puzzle className="h-4 w-4" />
 							Integrations
 						</TabsTrigger>

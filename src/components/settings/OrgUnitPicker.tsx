@@ -163,6 +163,11 @@ export function OrgUnitPicker({
 					)}
 				>
 					Division
+					{!divisionOptional && (
+						<span className="font-bold text-red" aria-hidden>
+							*
+						</span>
+					)}
 				</Label>
 				<Select
 					value={divisionCode || undefined}

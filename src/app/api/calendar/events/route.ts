@@ -29,6 +29,10 @@ import {
 } from "@/lib/services/calendar-notifications.service";
 import { syncDeletionToOutlook } from "@/lib/services/deletion-sync";
 import {
+	assertCampaignIdForOrg,
+	EventCampaignValidationError,
+} from "@/lib/events/event-campaign";
+import {
 	detectParticipantConflicts,
 	detectResourceConflicts,
 	suggestAlternateSlots,
@@ -138,6 +142,27 @@ export async function POST(request: NextRequest) {
 				{ success: false, message: "Title and startDate are required" },
 				{ status: 400 },
 			);
+		}
+
+		if (eventData.campaignId !== undefined) {
+			const defaultOrg = await getUserDefaultOrganization(
+				permissionCheck.userId || userId,
+			);
+			try {
+				const validated = await assertCampaignIdForOrg(
+					defaultOrg?.orgId || "",
+					eventData.campaignId as string | null,
+				);
+				eventData.campaignId = validated ?? null;
+			} catch (error) {
+				if (error instanceof EventCampaignValidationError) {
+					return NextResponse.json(
+						{ success: false, message: error.message },
+						{ status: error.status },
+					);
+				}
+				throw error;
+			}
 		}
 
 		// Validate that event is not in the past
@@ -678,6 +703,27 @@ export async function PUT(request: NextRequest) {
 				permissionCheck.reason || "permission_denied",
 				permissionCheck.requiredApproval,
 			);
+		}
+
+		if (eventData.campaignId !== undefined) {
+			const eventOrgId = String(
+				(event as unknown as Record<string, unknown>).orgId || "",
+			);
+			try {
+				const validated = await assertCampaignIdForOrg(
+					eventOrgId,
+					eventData.campaignId as string | null,
+				);
+				eventData.campaignId = validated ?? null;
+			} catch (error) {
+				if (error instanceof EventCampaignValidationError) {
+					return NextResponse.json(
+						{ success: false, message: error.message },
+						{ status: error.status },
+					);
+				}
+				throw error;
+			}
 		}
 
 		// Check for conflicts (blocking - requires user confirmation)

@@ -9,6 +9,7 @@ import {
 	Eye,
 	HandCoins,
 	Lock,
+	Megaphone,
 	Server,
 } from "lucide-react";
 import Image from "next/image";
@@ -326,7 +327,21 @@ const Sidebar = memo(
 																					/>
 																				</span>
 																			)}
+																			{item.name === "Campaigns" && (
+																				<span>
+																					<Megaphone
+																						className="h-5 w-5 shrink-0"
+																						style={{
+																							color: NAV_ICON_FILL_GREY,
+																						}}
+																						aria-hidden
+																					/>
+																				</span>
+																			)}
 																			{(() => {
+																				if (item.name === "Campaigns") {
+																					return null;
+																				}
 																				const iconConfig =
 																					ITEM_ICONS[item.name];
 																				if (

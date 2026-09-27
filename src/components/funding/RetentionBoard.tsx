@@ -41,12 +41,16 @@ export function RetentionBoard({
 	departments,
 	selectedContractId,
 	onSelect,
+	missingFundOnly,
+	onMissingFundOnlyChange,
 }: {
 	loading: boolean;
 	streams: RetentionStream[];
 	departments: string[];
 	selectedContractId: string | null;
 	onSelect: (contractId: string) => void;
+	missingFundOnly?: boolean;
+	onMissingFundOnlyChange?: (value: boolean) => void;
 }) {
 	const [query, setQuery] = useState("");
 	const [department, setDepartment] = useState<string>("all");
@@ -126,6 +130,21 @@ export function RetentionBoard({
 					Highest-value streams first. Click a row to manage obligations that
 					keep the money.
 				</p>
+				<div className="mt-3 flex flex-wrap items-center justify-end gap-3">
+					{onMissingFundOnlyChange ? (
+						<button
+							type="button"
+							className={`cursor-pointer rounded-full border px-3 py-1 text-xs font-medium transition-all duration-200 ${
+								missingFundOnly
+									? "bg-orange/10 text-orange border-orange/20"
+									: "bg-slate-100 text-slate-600 border-slate-200 hover:border-orange/20"
+							}`}
+							onClick={() => onMissingFundOnlyChange(!missingFundOnly)}
+						>
+							Missing fund
+						</button>
+					) : null}
+				</div>
 				<div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
 					<SearchField
 						containerClassName="sm:col-span-1"
@@ -254,14 +273,21 @@ export function RetentionBoard({
 										>
 											{formatUsd(stream.amount, stream.currency)}
 										</p>
-										<span
-											className={cn(
-												"mt-1 inline-block rounded-full border px-2 py-0.5 text-xs font-medium",
-												healthBadgeClass(stream.health),
-											)}
-										>
-											{RETENTION_HEALTH_LABEL[stream.health]}
-										</span>
+										<div className="mt-1 flex flex-col items-end gap-1">
+											<span
+												className={cn(
+													"inline-block rounded-full border px-2 py-0.5 text-xs font-medium",
+													healthBadgeClass(stream.health),
+												)}
+											>
+												{RETENTION_HEALTH_LABEL[stream.health]}
+											</span>
+											{stream.missingFund ? (
+												<span className="inline-block px-2 py-0.5 text-xs rounded-full font-medium border bg-orange/10 text-orange border-orange/20">
+													Missing fund
+												</span>
+											) : null}
+										</div>
 									</div>
 								</button>
 							</li>

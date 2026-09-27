@@ -14,7 +14,7 @@ import {
 import { countActiveDepartments } from "@/lib/billing/usage";
 import { loadPricingFromMarkdown } from "@/lib/pricing";
 import { getOrgIdFromRequest, requirePermission } from "@/lib/rbac/middleware";
-import { getOrganization } from "@/lib/rbac/organizations";
+import { lookupOrganization } from "@/lib/rbac/organizations";
 import { validateUserOrgAccess } from "@/lib/rbac/permissions";
 import { isStripeConfigured } from "@/lib/stripe/client";
 import { PILOT_TRIAL_DAYS } from "@/lib/stripe/prices";
@@ -53,13 +53,20 @@ export async function GET(request: NextRequest) {
 		);
 	}
 
-	const org = await getOrganization(orgId);
-	if (!org) {
+	const lookup = await lookupOrganization(orgId);
+	if (lookup.reason === "unavailable") {
+		return NextResponse.json(
+			{ error: "Organization temporarily unavailable" },
+			{ status: 503 },
+		);
+	}
+	if (!lookup.org) {
 		return NextResponse.json(
 			{ error: "Organization not found" },
 			{ status: 404 },
 		);
 	}
+	const org = lookup.org;
 
 	const { tier, limits } = await getOrgPlanLimits(orgId);
 	const access = resolveBillingAccess(org);

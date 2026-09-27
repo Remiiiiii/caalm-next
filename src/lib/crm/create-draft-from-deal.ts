@@ -8,7 +8,6 @@ import { crmReferenceFor } from "./types";
 
 /** Appwrite Contracts.contractType enum value (capital O). */
 const CRM_DEFAULT_CONTRACT_TYPE = "Other";
-/** Appwrite Contracts.department enum — Sales fits HubSpot-origin deals. */
 const CRM_DEFAULT_DEPARTMENT = "Sales";
 
 export type CrmDraftPayload = {
@@ -22,7 +21,8 @@ export type CrmDraftPayload = {
 	contractOwnerId: string;
 	vendor?: string;
 	contractType: typeof CRM_DEFAULT_CONTRACT_TYPE;
-	department: typeof CRM_DEFAULT_DEPARTMENT;
+	department: string;
+	division: string;
 	priority: "High" | "Medium";
 	crmReference: string;
 	/** Required on Contracts rows — from HubSpot close date when present. */
@@ -69,8 +69,12 @@ export function mapDealToDraftPayload(input: {
 	deal: CrmDealSnapshot;
 	orgId: string;
 	ownerId: string;
+	department?: string;
+	division?: string;
 }): CrmDraftPayload {
 	const { deal, orgId, ownerId } = input;
+	const department = input.department?.trim() || CRM_DEFAULT_DEPARTMENT;
+	const division = input.division?.trim() || "";
 	const crmReference = crmReferenceFor(deal.provider, deal.externalId);
 	const descriptionParts = [
 		`Spawned from ${deal.provider === "hubspot" ? "HubSpot" : "Salesforce"} deal "${deal.name}".`,
@@ -93,7 +97,8 @@ export function mapDealToDraftPayload(input: {
 		contractOwnerId: ownerId,
 		vendor: deal.companyName ? deal.companyName.slice(0, 50) : undefined,
 		contractType: CRM_DEFAULT_CONTRACT_TYPE,
-		department: CRM_DEFAULT_DEPARTMENT,
+		department,
+		division,
 		priority: (deal.amount ?? 0) >= 50000 ? "High" : "Medium",
 		crmReference,
 		contractExpiryDate: resolveContractExpiryDate(deal.closeDate),
@@ -112,6 +117,8 @@ export async function createDraftFromCrmDeal(input: {
 	ownerId: string;
 	deal: CrmDealSnapshot;
 	provider?: CrmProvider;
+	department?: string;
+	division?: string;
 }): Promise<CreateDraftFromDealResult> {
 	const provider = input.provider || input.deal.provider;
 	const existing = await findOriginLink({
@@ -123,6 +130,8 @@ export async function createDraftFromCrmDeal(input: {
 		deal: input.deal,
 		orgId: input.orgId,
 		ownerId: input.ownerId,
+		department: input.department,
+		division: input.division,
 	});
 
 	if (existing?.contract_id) {
@@ -132,8 +141,23 @@ export async function createDraftFromCrmDeal(input: {
 			payload,
 		};
 	}
+	if (!payload.department || !payload.division) {
+		throw new Error(
+			"Department and division are required before creating a contract from this source.",
+		);
+	}
 
 	await assertCanCreateContract(input.orgId);
+
+	const { resolveAssignedManagerIds } = await import(
+		"@/lib/assignments/resolve-default-assignee"
+	);
+	const assignedManagers = await resolveAssignedManagerIds({
+		department: payload.department,
+		division: payload.division,
+		orgId: input.orgId,
+		fallbackUserId: input.ownerId,
+	});
 
 	const { tablesDB } = await createAdminClient();
 	const contractId = ID.unique();
@@ -150,6 +174,8 @@ export async function createDraftFromCrmDeal(input: {
 		vendor: payload.vendor,
 		contractType: payload.contractType,
 		department: payload.department,
+		division: payload.division,
+		assignedManagers,
 		priority: payload.priority,
 		contractExpiryDate: payload.contractExpiryDate,
 	};

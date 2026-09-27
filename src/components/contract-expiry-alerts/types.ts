@@ -2,6 +2,12 @@
  * Shared types, constants, and utilities for contract expiry alert components
  */
 
+import {
+	isContractExpired,
+	isExpiringWithinDays,
+} from "@/lib/contracts/contractsListUtils";
+import type { UIFileDoc } from "@/types/files";
+
 export interface Contract {
 	$id: string;
 	contractName?: string;
@@ -65,6 +71,55 @@ export const getFilterRange = (
 
 	return ranges[filterDays] || { min: 0, max: filterDays };
 };
+
+/** Same fields /contracts uses for Expired tab and Expiring Soon buckets. */
+function asExpiryFile(contract: Contract): UIFileDoc {
+	return contract as unknown as UIFileDoc;
+}
+
+export function isWidgetContractExpired(contract: Contract): boolean {
+	return isContractExpired(asExpiryFile(contract));
+}
+
+/**
+ * Match /contracts metrics: Expired tab, or exclusive 30/60/90-day buckets.
+ * 60 = 31–60, 90 = 61–90 (same as ContractsMetricsBar).
+ */
+export function matchesWidgetExpiryFilter(
+	contract: Contract,
+	filterDays: number,
+): boolean {
+	const file = asExpiryFile(contract);
+	if (filterDays === FILTER_VALUES.EXPIRED) {
+		return isContractExpired(file);
+	}
+	if (isContractExpired(file)) return false;
+
+	if (filterDays === FILTER_VALUES.THIRTY_DAYS) {
+		return isExpiringWithinDays(file, 30);
+	}
+	if (filterDays === FILTER_VALUES.SIXTY_DAYS) {
+		return (
+			isExpiringWithinDays(file, 60) && !isExpiringWithinDays(file, 30)
+		);
+	}
+	if (filterDays === FILTER_VALUES.NINETY_DAYS) {
+		return (
+			isExpiringWithinDays(file, 90) && !isExpiringWithinDays(file, 60)
+		);
+	}
+	if (filterDays === FILTER_VALUES.SIX_MONTHS) {
+		return (
+			isExpiringWithinDays(file, 180) && !isExpiringWithinDays(file, 90)
+		);
+	}
+	if (filterDays === FILTER_VALUES.ONE_YEAR) {
+		return (
+			isExpiringWithinDays(file, 365) && !isExpiringWithinDays(file, 180)
+		);
+	}
+	return isExpiringWithinDays(file, filterDays);
+}
 
 /**
  * Get appropriate empty state message based on filter selection

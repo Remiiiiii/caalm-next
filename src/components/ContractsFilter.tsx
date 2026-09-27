@@ -1,35 +1,22 @@
 "use client";
 
 import { format } from "date-fns";
-import { Filter } from "lucide-react";
+import { CalendarClock, ChevronDown, Filter, FunnelX } from "lucide-react";
 import type React from "react";
 import { useMemo, useState } from "react";
 import { CONTRACT_TYPES } from "@/components/contract-upload/constants";
-import { Badge } from "@/components/ui/badge";
+import RoundedUnderlineTabs from "@/components/RoundedUnderlineTabs";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
-import {
-	Sheet,
-	SheetContent,
-	SheetDescription,
-	SheetHeader,
-	SheetHeaderIcon,
-	SheetTitle,
-	SheetTrigger,
-} from "@/components/ui/sheet";
+	AppDropdownMenuContent,
+	AppDropdownMenuItem,
+	AppDropdownMenuTrigger,
+	DropdownMenu,
+	DropdownMenuLabel,
+	DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { CONTRACT_STATUS_OPTIONS } from "@/constants/status";
 import { countActiveAdvancedFilters } from "@/lib/contracts/contractsListUtils";
 import {
@@ -51,6 +38,20 @@ const COMMON_DEPARTMENTS = [
 	"Procurement",
 ];
 
+type FilterTab = "status" | "type" | "dates" | "dept" | "assigned";
+type DateField = keyof Pick<
+	ContractFilters,
+	"uploadedOnFrom" | "uploadedOnTo" | "expiresOnFrom" | "expiresOnTo"
+>;
+
+const FILTER_TABS: Array<{ id: FilterTab; label: string }> = [
+	{ id: "status", label: "Status" },
+	{ id: "type", label: "Type" },
+	{ id: "dates", label: "Dates" },
+	{ id: "dept", label: "Dept" },
+	{ id: "assigned", label: "Assign" },
+];
+
 interface ContractsFilterProps {
 	departments?: string[];
 	assignedManagers?: string[];
@@ -62,6 +63,8 @@ const ContractsFilter: React.FC<ContractsFilterProps> = ({
 }) => {
 	const { filters, setFilters, clearFilters } = useContractsFilter();
 	const [open, setOpen] = useState(false);
+	const [tab, setTab] = useState<FilterTab>("status");
+	const [picking, setPicking] = useState<DateField | null>(null);
 
 	const allDepartments = useMemo(() => {
 		const uniqueDepts = new Set([...COMMON_DEPARTMENTS, ...departments]);
@@ -82,271 +85,322 @@ const ContractsFilter: React.FC<ContractsFilterProps> = ({
 		}));
 	};
 
+	const toggleMany = (
+		key: "status" | "contractType" | "department" | "assignedTo",
+		value: string,
+		checked: boolean,
+	) => {
+		setFilters((prev) => {
+			const current = prev[key] ?? [];
+			const next = checked
+				? current.includes(value)
+					? current
+					: [...current, value]
+				: current.filter((item) => item !== value);
+			return {
+				...prev,
+				[key]: next.length > 0 ? next : undefined,
+			};
+		});
+	};
+
+	const isPicked = (
+		key: "status" | "contractType" | "department" | "assignedTo",
+		value: string,
+	) => Boolean(filters[key]?.includes(value));
+
 	return (
-		<Sheet open={open} onOpenChange={setOpen}>
-			<SheetTrigger asChild>
-				<Button
-					variant="outline"
-					size="sm"
-					className="primary-btn px-3 sm:px-4 cursor-pointer"
-				>
-					<Filter className="w-4 h-4" />
-					<span className="hidden sm:inline">Filter</span>
-					{activeCount > 0 && (
-						<Badge
-							variant="secondary"
-							className="ml-2 h-5 w-5 rounded-full p-0 text-xs flex items-center justify-center"
-						>
-							{activeCount}
-						</Badge>
-					)}
-				</Button>
-			</SheetTrigger>
-			<SheetContent
-				side="right"
-				className="w-full sm:max-w-md p-0 flex flex-col overflow-hidden border-l border-slate-200"
+		<DropdownMenu open={open} onOpenChange={setOpen}>
+			<AppDropdownMenuTrigger
+				asChild
+				className="border-0 bg-transparent p-0 shadow-none ring-0 hover:bg-transparent data-[state=open]:bg-transparent"
 			>
-				<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70" />
+				<Button
+					variant="ghost"
+					size="sm"
+					className="primary-btn h-8 border-0 px-3 shadow-none focus-visible:ring-0 sm:px-4"
+				>
+					<Filter className="h-4 w-4" />
+					<span className="hidden sm:inline">Filter</span>
+					{activeCount > 0 ? ` (${activeCount})` : ""}
+					<ChevronDown className="h-4 w-4" />
+				</Button>
+			</AppDropdownMenuTrigger>
+			<AppDropdownMenuContent
+				align="end"
+				className="w-80 p-0"
+				onCloseAutoFocus={(event) => event.preventDefault()}
+			>
+				<RoundedUnderlineTabs
+					className="px-2 pt-1"
+					aria-label="Filter categories"
+					variant="bar"
+					value={tab}
+					onValueChange={(next) => {
+						setTab(next as FilterTab);
+						setPicking(null);
+					}}
+					tabs={FILTER_TABS.map((item) => ({
+						value: item.id,
+						label: item.label,
+					}))}
+				/>
 
-				<SheetHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4 px-6 text-left space-y-1">
-					<div className="flex items-center gap-3 pr-10">
-						<SheetHeaderIcon>
-							<Filter className="h-5 w-5 text-[#0f5384]" />
-						</SheetHeaderIcon>
-						<SheetTitle className="text-xl font-semibold sidebar-gradient-text">
-							Filter contracts
-						</SheetTitle>
-					</div>
-					<SheetDescription className="text-sm text-slate-600 ml-14">
-						Refine your contract list
-					</SheetDescription>
-				</SheetHeader>
+				<div
+					className={
+						tab === "dates"
+							? "overflow-y-auto p-1"
+							: "max-h-64 overflow-y-auto p-1"
+					}
+				>
+					{tab === "status" ? (
+						<>
+							<DropdownMenuLabel className="sidebar-gradient-text">
+								Filter by status
+							</DropdownMenuLabel>
+							<FilterCheckRow
+								checked={!filters.status?.length}
+								label="All statuses"
+								onCheckedChange={() => updateFilter("status", undefined)}
+							/>
+							{CONTRACT_STATUS_OPTIONS.map((status) => (
+								<FilterCheckRow
+									key={status.value}
+									checked={isPicked("status", status.value)}
+									label={status.label}
+									onCheckedChange={(checked) =>
+										toggleMany("status", status.value, checked)
+									}
+								/>
+							))}
+						</>
+					) : null}
 
-				<div className="flex-1 overflow-y-auto p-6 bg-slate-50">
-					<div className="space-y-4">
-						<div className="space-y-2">
-							<Label className="text-slate-700 font-medium">Status</Label>
-							<Select
-								value={filters.status || "all"}
-								onValueChange={(value) =>
-									updateFilter("status", value === "all" ? undefined : value)
-								}
-							>
-								<SelectTrigger className="bg-white">
-									<SelectValue placeholder="All statuses" />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="all">All statuses</SelectItem>
-									{CONTRACT_STATUS_OPTIONS.map((status) => (
-										<SelectItem key={status.value} value={status.value}>
-											{status.label}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
+					{tab === "type" ? (
+						<>
+							<DropdownMenuLabel className="sidebar-gradient-text">
+								Filter by type
+							</DropdownMenuLabel>
+							<FilterCheckRow
+								checked={!filters.contractType?.length}
+								label="All types"
+								onCheckedChange={() => updateFilter("contractType", undefined)}
+							/>
+							{CONTRACT_TYPES.map((type) => (
+								<FilterCheckRow
+									key={type}
+									checked={isPicked("contractType", type)}
+									label={type}
+									onCheckedChange={(checked) =>
+										toggleMany("contractType", type, checked)
+									}
+								/>
+							))}
+						</>
+					) : null}
+
+					{tab === "dates" ? (
+						<div className="space-y-3 px-2 py-1">
+							<DateRangeBlock
+								label="Uploaded on"
+								from={filters.uploadedOnFrom}
+								to={filters.uploadedOnTo}
+								fromKey="uploadedOnFrom"
+								toKey="uploadedOnTo"
+								picking={picking}
+								onPick={setPicking}
+								onChange={updateFilter}
+							/>
+							<DateRangeBlock
+								label="Expires on"
+								from={filters.expiresOnFrom}
+								to={filters.expiresOnTo}
+								fromKey="expiresOnFrom"
+								toKey="expiresOnTo"
+								picking={picking}
+								onPick={setPicking}
+								onChange={updateFilter}
+							/>
 						</div>
+					) : null}
 
-						<div className="space-y-2">
-							<Label className="text-slate-700 font-medium">Type</Label>
-							<Select
-								value={filters.contractType || "all"}
-								onValueChange={(value) =>
-									updateFilter(
-										"contractType",
-										value === "all" ? undefined : value,
-									)
-								}
-							>
-								<SelectTrigger className="bg-white">
-									<SelectValue placeholder="All types" />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="all">All types</SelectItem>
-									{CONTRACT_TYPES.map((type) => (
-										<SelectItem key={type} value={type}>
-											{type}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
+					{tab === "dept" ? (
+						<>
+							<DropdownMenuLabel className="sidebar-gradient-text">
+								Filter by department
+							</DropdownMenuLabel>
+							<FilterCheckRow
+								checked={!filters.department?.length}
+								label="All departments"
+								onCheckedChange={() => updateFilter("department", undefined)}
+							/>
+							{allDepartments.map((dept) => (
+								<FilterCheckRow
+									key={dept}
+									checked={isPicked("department", dept)}
+									label={dept}
+									onCheckedChange={(checked) =>
+										toggleMany("department", dept, checked)
+									}
+								/>
+							))}
+						</>
+					) : null}
 
-						<div className="space-y-2">
-							<Label className="text-slate-700 font-medium">Uploaded On</Label>
-							<div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-								<Popover>
-									<PopoverTrigger asChild>
-										<Button
-											variant="outline"
-											className="justify-start text-left font-normal bg-white cursor-pointer"
-											size="sm"
-										>
-											{filters.uploadedOnFrom
-												? format(filters.uploadedOnFrom, "MMM dd, yyyy")
-												: "From"}
-										</Button>
-									</PopoverTrigger>
-									<PopoverContent className="w-auto p-0" align="start">
-										<Calendar
-											mode="single"
-											selected={filters.uploadedOnFrom}
-											onSelect={(date) => updateFilter("uploadedOnFrom", date)}
-											initialFocus
-										/>
-									</PopoverContent>
-								</Popover>
-								<Popover>
-									<PopoverTrigger asChild>
-										<Button
-											variant="outline"
-											className="justify-start text-left font-normal bg-white cursor-pointer"
-											size="sm"
-										>
-											{filters.uploadedOnTo
-												? format(filters.uploadedOnTo, "MMM dd, yyyy")
-												: "To"}
-										</Button>
-									</PopoverTrigger>
-									<PopoverContent className="w-auto p-0" align="start">
-										<Calendar
-											mode="single"
-											selected={filters.uploadedOnTo}
-											onSelect={(date) => updateFilter("uploadedOnTo", date)}
-											initialFocus
-										/>
-									</PopoverContent>
-								</Popover>
-							</div>
-						</div>
-
-						<div className="space-y-2">
-							<Label className="text-slate-700 font-medium">Expires On</Label>
-							<div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-								<Popover>
-									<PopoverTrigger asChild>
-										<Button
-											variant="outline"
-											className="justify-start text-left font-normal bg-white cursor-pointer"
-											size="sm"
-										>
-											{filters.expiresOnFrom
-												? format(filters.expiresOnFrom, "MMM dd, yyyy")
-												: "From"}
-										</Button>
-									</PopoverTrigger>
-									<PopoverContent className="w-auto p-0" align="start">
-										<Calendar
-											mode="single"
-											selected={filters.expiresOnFrom}
-											onSelect={(date) => updateFilter("expiresOnFrom", date)}
-											initialFocus
-										/>
-									</PopoverContent>
-								</Popover>
-								<Popover>
-									<PopoverTrigger asChild>
-										<Button
-											variant="outline"
-											className="justify-start text-left font-normal bg-white cursor-pointer"
-											size="sm"
-										>
-											{filters.expiresOnTo
-												? format(filters.expiresOnTo, "MMM dd, yyyy")
-												: "To"}
-										</Button>
-									</PopoverTrigger>
-									<PopoverContent className="w-auto p-0" align="start">
-										<Calendar
-											mode="single"
-											selected={filters.expiresOnTo}
-											onSelect={(date) => updateFilter("expiresOnTo", date)}
-											initialFocus
-										/>
-									</PopoverContent>
-								</Popover>
-							</div>
-						</div>
-
-						<div className="space-y-2">
-							<Label className="text-slate-700 font-medium">Department</Label>
-							<Select
-								value={filters.department || "all"}
-								onValueChange={(value) =>
-									updateFilter(
-										"department",
-										value === "all" ? undefined : value,
-									)
-								}
-							>
-								<SelectTrigger className="bg-white">
-									<SelectValue placeholder="All departments" />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="all">All departments</SelectItem>
-									{allDepartments.map((dept) => (
-										<SelectItem key={dept} value={dept}>
-											{dept}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
-
-						<div className="space-y-2">
-							<Label className="text-slate-700 font-medium">Assigned To</Label>
-							<Select
-								value={filters.assignedTo || "all"}
-								onValueChange={(value) =>
-									updateFilter(
-										"assignedTo",
-										value === "all" ? undefined : value,
-									)
-								}
-							>
-								<SelectTrigger className="bg-white">
-									<SelectValue placeholder="All managers" />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="all">All managers</SelectItem>
-									{allAssignedManagers.map((manager) => (
-										<SelectItem key={manager} value={manager}>
-											{manager}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
-					</div>
+					{tab === "assigned" ? (
+						<>
+							<DropdownMenuLabel className="sidebar-gradient-text">
+								Filter by assigned to
+							</DropdownMenuLabel>
+							<FilterCheckRow
+								checked={!filters.assignedTo?.length}
+								label="All managers"
+								onCheckedChange={() => updateFilter("assignedTo", undefined)}
+							/>
+							{allAssignedManagers.map((manager) => (
+								<FilterCheckRow
+									key={manager}
+									checked={isPicked("assignedTo", manager)}
+									label={manager}
+									onCheckedChange={(checked) =>
+										toggleMany("assignedTo", manager, checked)
+									}
+								/>
+							))}
+						</>
+					) : null}
 				</div>
 
-				<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-					<div className="text-xs text-slate-500">
-						{activeCount > 0
-							? `${activeCount} filter${activeCount > 1 ? "s" : ""} active`
-							: "No filters applied"}
-					</div>
-					<div className="flex items-center gap-2">
-						<Button
-							variant="outline"
-							size="sm"
-							onClick={() => clearFilters()}
-							className="primary-btn px-3 sm:px-4 cursor-pointer"
-							disabled={activeCount === 0 && !filters.searchQuery}
+				{activeCount > 0 ? (
+					<>
+						<DropdownMenuSeparator />
+						<AppDropdownMenuItem
+							icon={FunnelX}
+							onSelect={(event) => {
+								event.preventDefault();
+								clearFilters();
+								setPicking(null);
+							}}
 						>
-							Clear all
-						</Button>
-						<Button
-							size="sm"
-							className="primary-btn px-3 sm:px-4 cursor-pointer"
-							onClick={() => setOpen(false)}
-						>
-							Done
-						</Button>
-					</div>
-				</div>
-			</SheetContent>
-		</Sheet>
+							Clear filters
+						</AppDropdownMenuItem>
+					</>
+				) : null}
+			</AppDropdownMenuContent>
+		</DropdownMenu>
 	);
 };
+
+function FilterCheckRow({
+	checked,
+	label,
+	onCheckedChange,
+}: {
+	checked: boolean;
+	label: string;
+	onCheckedChange: (checked: boolean) => void;
+}) {
+	return (
+		<div
+			role="menuitemcheckbox"
+			aria-checked={checked}
+			tabIndex={0}
+			className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm text-slate-700 hover:bg-blue-50 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
+			onPointerDown={(event) => {
+				event.preventDefault();
+				event.stopPropagation();
+			}}
+			onClick={() => onCheckedChange(!checked)}
+			onKeyDown={(event) => {
+				if (event.key === "Enter" || event.key === " ") {
+					event.preventDefault();
+					onCheckedChange(!checked);
+				}
+			}}
+		>
+			<Checkbox checked={checked} tabIndex={-1} className="pointer-events-none" />
+			<span>{label}</span>
+		</div>
+	);
+}
+
+function DateRangeBlock({
+	label,
+	from,
+	to,
+	fromKey,
+	toKey,
+	picking,
+	onPick,
+	onChange,
+}: {
+	label: string;
+	from?: Date;
+	to?: Date;
+	fromKey: DateField;
+	toKey: DateField;
+	picking: DateField | null;
+	onPick: (field: DateField | null) => void;
+	onChange: (key: keyof ContractFilters, value: unknown) => void;
+}) {
+	const activeKey = picking === fromKey || picking === toKey ? picking : null;
+	const selected = activeKey === fromKey ? from : activeKey === toKey ? to : undefined;
+
+	return (
+		<div className="space-y-2">
+			<DropdownMenuLabel className="px-0 sidebar-gradient-text">
+				{label}
+			</DropdownMenuLabel>
+			<div className="grid grid-cols-2 gap-2">
+				<DatePickButton
+					label={from ? format(from, "MMM dd, yyyy") : "From"}
+					active={picking === fromKey}
+					onClick={() => onPick(picking === fromKey ? null : fromKey)}
+				/>
+				<DatePickButton
+					label={to ? format(to, "MMM dd, yyyy") : "To"}
+					active={picking === toKey}
+					onClick={() => onPick(picking === toKey ? null : toKey)}
+				/>
+			</div>
+			{activeKey ? (
+				<div
+					className="rounded-md border-[0.25px] border-slate-300 bg-white"
+					onPointerDown={(event) => event.stopPropagation()}
+				>
+					<Calendar
+						mode="single"
+						selected={selected}
+						onSelect={(date) => onChange(activeKey, date)}
+						initialFocus
+					/>
+				</div>
+			) : null}
+		</div>
+	);
+}
+
+function DatePickButton({
+	label,
+	active,
+	onClick,
+}: {
+	label: string;
+	active: boolean;
+	onClick: () => void;
+}) {
+	return (
+		<button
+			type="button"
+			onClick={onClick}
+			className={`inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-md border-[0.25px] border-slate-300 bg-white px-2 text-left text-sm text-slate-700 hover:border-blue-300 focus-visible:border-[#078FAB] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 ${
+				active ? "border-blue-300" : ""
+			}`}
+		>
+			<CalendarClock className="h-3.5 w-3.5 shrink-0 text-[#0f5384]" />
+			<span className="truncate">{label}</span>
+		</button>
+	);
+}
 
 export default ContractsFilter;

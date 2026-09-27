@@ -11,7 +11,10 @@ import { RoadmapProgressBar } from "@/components/it/roadmap/RoadmapProgressBar";
 import { RoadmapTaskTree } from "@/components/it/roadmap/RoadmapTaskTree";
 import { PageIndex } from "@/components/ui/page-index";
 import { useRoadmapRealtime } from "@/hooks/useRoadmapRealtime";
-import { displayPullRequestTitle } from "@/lib/roadmap/github-pr-match";
+import {
+	displayPullRequestTitle,
+	isSettledRoadmapPullRequestState,
+} from "@/lib/roadmap/github-pr-match";
 import type { RoadmapOverview, RoadmapTaskTreeNode } from "@/lib/roadmap/types";
 import { fetcher } from "@/lib/swr-config";
 import { cn } from "@/lib/utils";
@@ -38,8 +41,8 @@ type SectionPullRequestsResponse = {
 
 function RoadmapPullRequestItem({ pr }: { pr: SectionPullRequest }) {
 	const [expanded, setExpanded] = useState(false);
-	// Only strike when roadmap completion checks passed — not merely GitHub "merged"
-	const complete = pr.checksPassed === true;
+	const settled =
+		pr.checksPassed === true || isSettledRoadmapPullRequestState(pr.state);
 
 	return (
 		<div className="space-y-1.5 py-3 first:pt-0 last:pb-0">
@@ -56,7 +59,7 @@ function RoadmapPullRequestItem({ pr }: { pr: SectionPullRequest }) {
 							<span className="font-semibold text-slate-700">#{pr.number}</span>{" "}
 							<span
 								className={cn(
-									complete
+									settled
 										? "line-through text-slate-500 font-normal"
 										: "text-slate-700",
 								)}
@@ -123,16 +126,17 @@ function RoadmapPullRequestItem({ pr }: { pr: SectionPullRequest }) {
 const SECTIONS_PAGE_SIZE = 5;
 
 function RoadmapUnavailableState({ detail }: { detail?: string }) {
+	const title = detail ? "Couldn't load roadmap" : "Roadmap not found";
 	return (
 		<div className="flex flex-col items-center justify-center text-center py-12 px-4">
 			<Image
 				src="/assets/icons/no-data.svg"
-				alt="Roadmap not found"
+				alt={title}
 				width={250}
 				height={250}
 				className="mx-auto mb-4"
 			/>
-			<p className="body-1 text-slate-700">Roadmap not found</p>
+			<p className="body-1 text-slate-700">{title}</p>
 			{detail ? (
 				<p className="text-sm text-slate-500 mt-2 max-w-md">{detail}</p>
 			) : null}
@@ -225,7 +229,9 @@ function RoadmapSectionCard({
 										{title ? (
 											<span
 												className={cn(
-													(pr.checksPassed || section.status === "complete") &&
+													(pr.checksPassed ||
+														isSettledRoadmapPullRequestState(pr.state) ||
+														section.status === "complete") &&
 														"line-through text-slate-500",
 												)}
 											>
@@ -316,13 +322,23 @@ function RoadmapSectionCard({
 	);
 }
 
-export function ClmRoadmapPage() {
-	const { realtimeEnabled } = useRoadmapRealtime();
+export function ClmRoadmapPage({
+	title = "CLM Completion Roadmap",
+	subtitle = "Interactive plan engine — A section completes only when every catalog PR merges to main with green tests.",
+	progressLabel = "Overall CLM buildout",
+	overviewPath = "/api/roadmap/overview",
+}: {
+	title?: string;
+	subtitle?: string;
+	progressLabel?: string;
+	overviewPath?: string;
+} = {}) {
+	const { realtimeEnabled } = useRoadmapRealtime(overviewPath);
 	const {
 		data: overview,
 		error: overviewError,
 		isLoading: overviewLoading,
-	} = useSWR<RoadmapOverview>("/api/roadmap/overview", fetcher, {
+	} = useSWR<RoadmapOverview>(overviewPath, fetcher, {
 		// Appwrite Realtime pushes updates; polling is a fallback only
 		refreshInterval: realtimeEnabled ? 0 : 30_000,
 		revalidateOnFocus: true,
@@ -358,11 +374,7 @@ export function ClmRoadmapPage() {
 	};
 
 	return (
-		<ITPageShell
-			title="CLM Completion Roadmap"
-			subtitle="Interactive plan engine — A section completes only when every catalog PR merges to main with green tests."
-			icon={MapIcon}
-		>
+		<ITPageShell title={title} subtitle={subtitle} icon={MapIcon}>
 			{overviewLoading && !overview ? (
 				<p className="text-sm text-slate-600">Loading roadmap…</p>
 			) : overview?.sections?.length ? (
@@ -370,7 +382,7 @@ export function ClmRoadmapPage() {
 					<ITGlassPanel>
 						<RoadmapProgressBar
 							percent={overview.overallProgressPercent}
-							label="Overall CLM buildout"
+							label={progressLabel}
 							size="md"
 						/>
 						<p className="text-xs text-slate-500 mt-2">

@@ -1,5 +1,6 @@
 "use client";
 
+import { ActivityFeedList } from "@/components/dashboard/ActivityFeedList";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { ActivityItemSkeleton } from "@/components/ui/skeletons";
@@ -9,32 +10,6 @@ interface DepartmentRecentActivityProps {
 	activities: DepartmentRecentActivityItem[];
 	isLoading?: boolean;
 	limit?: number;
-}
-
-function formatTimeAgo(timestamp: string) {
-	if (!timestamp) return "";
-	const now = new Date();
-	const activityTime = new Date(timestamp);
-	const diffInSeconds = Math.floor(
-		(now.getTime() - activityTime.getTime()) / 1000,
-	);
-
-	if (Number.isNaN(diffInSeconds) || diffInSeconds < 0) return "";
-	if (diffInSeconds < 60) return "Just now";
-	if (diffInSeconds < 3600) {
-		const minutes = Math.floor(diffInSeconds / 60);
-		return `${minutes} minute${minutes > 1 ? "s" : ""} ago`;
-	}
-	if (diffInSeconds < 86400) {
-		const hours = Math.floor(diffInSeconds / 3600);
-		return `${hours} hour${hours > 1 ? "s" : ""} ago`;
-	}
-	if (diffInSeconds < 604800) {
-		const days = Math.floor(diffInSeconds / 86400);
-		return `${days} day${days > 1 ? "s" : ""} ago`;
-	}
-	const weeks = Math.floor(diffInSeconds / 604800);
-	return `${weeks} week${weeks > 1 ? "s" : ""} ago`;
 }
 
 function getActivityDisplayText(activity: DepartmentRecentActivityItem) {
@@ -106,24 +81,15 @@ export function DepartmentRecentActivity({
 								<p className="text-sm">No recent activities</p>
 							</div>
 						) : (
-							limitedActivities.map((activity) => (
-								<div
-									key={activity.$id}
-									className="flex justify-between items-start bg-white/20 backdrop-blur-md border border-white/30 rounded-lg p-3 shadow-sm transition-all duration-300"
-								>
-									<div>
-										<p className="font-medium text-slate-700 text-sm">
-											{activity.action}
-										</p>
-										<p className="text-xs text-slate-600 mt-1">
-											{getActivityDisplayText(activity)}
-										</p>
-									</div>
-									<span className="text-xs text-slate-500 ml-4 shrink-0">
-										{formatTimeAgo(activity.timestamp)}
-									</span>
-								</div>
-							))
+							<ActivityFeedList
+								items={limitedActivities.map((activity) => ({
+									$id: activity.$id,
+									action: activity.action,
+									subtitle: getActivityDisplayText(activity),
+									timestamp: activity.timestamp,
+									type: activity.type,
+								}))}
+							/>
 						)}
 					</div>
 				</div>

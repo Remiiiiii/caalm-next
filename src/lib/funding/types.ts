@@ -88,6 +88,7 @@ export type ContractObligation = {
 	linkUrl?: string;
 	renewalLinked: boolean;
 	completedAt?: string;
+	actualAmount?: number;
 	createdByUserId: string;
 };
 
@@ -103,6 +104,9 @@ export type RetentionStream = {
 	daysUntilExpiry: number | null;
 	lifecycleStatus?: string;
 	status?: string;
+	contractType?: string;
+	fundId?: string | null;
+	missingFund: boolean;
 	department?: string;
 	ownerName?: string;
 	health: RetentionHealth;

@@ -6,6 +6,8 @@ import {
 	daysUntil,
 	seedRetentionDepartment,
 } from "./constants";
+import { listGrantFundIdsByContract } from "./grant-fund.repository";
+import { isGrantMissingFund } from "./grant-fund";
 // computeRetentionHealth ranks streams by expiry + obligation pressure
 import { listObligations } from "./obligation.repository";
 import type {
@@ -30,6 +32,8 @@ type ContractRow = {
 	status?: string;
 	department?: string;
 	ownerName?: string;
+	contractType?: string;
+	fundId?: string;
 };
 
 function parseAmount(value: unknown): number {
@@ -48,6 +52,7 @@ function parseAmount(value: unknown): number {
 export async function buildRetentionSummary(input: {
 	orgId: string;
 	limit?: number;
+	missingFundOnly?: boolean;
 }): Promise<RetentionSummary> {
 	const { tablesDB } = await createAdminClient();
 	const contractsTable =
@@ -64,6 +69,7 @@ export async function buildRetentionSummary(input: {
 	});
 
 	const contracts = result.rows as unknown as ContractRow[];
+	const fundByContract = await listGrantFundIdsByContract(input.orgId);
 	const obligations = await listObligations({
 		orgId: input.orgId,
 		limit: 1000,
@@ -101,6 +107,13 @@ export async function buildRetentionSummary(input: {
 				? c.contractNumber.trim()
 				: undefined;
 
+		const contractType =
+			typeof c.contractType === "string" ? c.contractType : undefined;
+		const fundId =
+			fundByContract.get(c.$id) ??
+			(typeof c.fundId === "string" && c.fundId.trim() ? c.fundId : null);
+		const missingFund = isGrantMissingFund({ contractType, fundId });
+
 		return {
 			contractId: c.$id,
 			contractName,
@@ -113,6 +126,9 @@ export async function buildRetentionSummary(input: {
 			daysUntilExpiry: days,
 			lifecycleStatus: c.lifecycleStatus,
 			status: c.status,
+			contractType,
+			fundId,
+			missingFund,
 			department: seedRetentionDepartment(c.$id, c.department),
 			ownerName: c.ownerName,
 			health: computeRetentionHealth({
@@ -127,14 +143,19 @@ export async function buildRetentionSummary(input: {
 		};
 	});
 
-	streams.sort((a, b) => b.amount - a.amount);
+	let filteredStreams = streams;
+	if (input.missingFundOnly) {
+		filteredStreams = streams.filter((s) => s.missingFund);
+	}
+
+	filteredStreams.sort((a, b) => b.amount - a.amount);
 
 	const nameCounts = new Map<string, number>();
-	for (const stream of streams) {
+	for (const stream of filteredStreams) {
 		const key = stream.contractName.trim().toLowerCase();
 		nameCounts.set(key, (nameCounts.get(key) || 0) + 1);
 	}
-	for (const stream of streams) {
+	for (const stream of filteredStreams) {
 		stream.nameIsDuplicate =
 			(nameCounts.get(stream.contractName.trim().toLowerCase()) || 0) > 1;
 	}
@@ -142,7 +163,7 @@ export async function buildRetentionSummary(input: {
 	let totalAtRiskAmount = 0;
 	let totalProtectingAmount = 0;
 	let totalProtectedAmount = 0;
-	for (const s of streams) {
+	for (const s of filteredStreams) {
 		if (s.health === "at_risk" || s.health === "expired") {
 			totalAtRiskAmount += s.amount;
 		} else if (s.health === "protecting") {
@@ -154,7 +175,7 @@ export async function buildRetentionSummary(input: {
 
 	const departments = [
 		...new Set(
-			streams
+			filteredStreams
 				.map((s) => s.department)
 				.filter((d): d is string => Boolean(d?.trim())),
 		),
@@ -164,8 +185,8 @@ export async function buildRetentionSummary(input: {
 		totalAtRiskAmount,
 		totalProtectingAmount,
 		totalProtectedAmount,
-		streamCount: streams.length,
+		streamCount: filteredStreams.length,
 		departments,
-		streams,
+		streams: filteredStreams,
 	};
 }

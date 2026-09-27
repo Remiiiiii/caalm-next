@@ -13,7 +13,8 @@ export type AuditAction =
 	| "approval_reassigned"
 	| "export"
 	| "login"
-	| "logout";
+	| "logout"
+	| "view_pii";
 
 export interface AuditChangeDiff {
 	field: string;
@@ -126,6 +127,7 @@ export function buildSummary(params: {
 		export: "exported",
 		login: "logged in",
 		logout: "logged out",
+		view_pii: "viewed PII for",
 	};
 	const verb = actionVerb[action] || action;
 	if (action === "login" || action === "logout") {

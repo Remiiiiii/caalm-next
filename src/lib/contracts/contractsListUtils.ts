@@ -5,34 +5,54 @@ export type DensityMode = "comfortable" | "compact";
 export type ViewType = "table" | "card";
 
 export interface ContractFilters {
-	status?: string;
+	status?: string[];
 	uploadedOnFrom?: Date;
 	uploadedOnTo?: Date;
 	expiresOnFrom?: Date;
 	expiresOnTo?: Date;
-	department?: string;
-	assignedTo?: string;
-	contractType?: string;
+	department?: string[];
+	assignedTo?: string[];
+	contractType?: string[];
 	searchQuery?: string;
 }
+
+type SavedFilterList = string | string[];
 
 export interface SavedContractView {
 	id: string;
 	name: string;
 	statusTab: StatusTab;
 	filters: {
-		status?: string;
+		status?: SavedFilterList;
 		uploadedOnFrom?: string;
 		uploadedOnTo?: string;
 		expiresOnFrom?: string;
 		expiresOnTo?: string;
-		department?: string;
-		assignedTo?: string;
-		contractType?: string;
+		department?: SavedFilterList;
+		assignedTo?: SavedFilterList;
+		contractType?: SavedFilterList;
 		searchQuery?: string;
 	};
 	view: ViewType;
 	density: DensityMode;
+}
+
+/** Turns a saved string or string[] into a clean list. Old views stored one value. */
+export function asFilterList(value?: SavedFilterList): string[] | undefined {
+	if (Array.isArray(value)) {
+		const list = value.filter(
+			(item): item is string => typeof item === "string" && item.trim().length > 0,
+		);
+		return list.length > 0 ? list : undefined;
+	}
+	if (typeof value === "string" && value.trim()) return [value];
+	return undefined;
+}
+
+function matchesAny(selected: string[] | undefined, value?: string | null): boolean {
+	if (!selected?.length) return true;
+	if (!value) return false;
+	return selected.includes(value);
 }
 
 export const VIEW_STORAGE_KEY = "contracts-view-preference";
@@ -113,27 +133,108 @@ export function deserializeFilters(
 	raw: SavedContractView["filters"],
 ): ContractFilters {
 	return {
-		status: raw.status,
+		status: asFilterList(raw.status),
 		uploadedOnFrom: raw.uploadedOnFrom
 			? new Date(raw.uploadedOnFrom)
 			: undefined,
 		uploadedOnTo: raw.uploadedOnTo ? new Date(raw.uploadedOnTo) : undefined,
 		expiresOnFrom: raw.expiresOnFrom ? new Date(raw.expiresOnFrom) : undefined,
 		expiresOnTo: raw.expiresOnTo ? new Date(raw.expiresOnTo) : undefined,
-		department: raw.department,
-		assignedTo: raw.assignedTo,
-		contractType: raw.contractType,
+		department: asFilterList(raw.department),
+		assignedTo: asFilterList(raw.assignedTo),
+		contractType: asFilterList(raw.contractType),
 		searchQuery: raw.searchQuery,
 	};
 }
 
 export function countActiveAdvancedFilters(filters: ContractFilters): number {
 	let count = 0;
-	if (filters.status) count++;
-	if (filters.contractType) count++;
+	if (filters.status?.length) count += filters.status.length;
+	if (filters.contractType?.length) count += filters.contractType.length;
 	if (filters.uploadedOnFrom || filters.uploadedOnTo) count++;
 	if (filters.expiresOnFrom || filters.expiresOnTo) count++;
-	if (filters.department) count++;
-	if (filters.assignedTo) count++;
+	if (filters.department?.length) count += filters.department.length;
+	if (filters.assignedTo?.length) count += filters.assignedTo.length;
 	return count;
+}
+
+export function matchesContractFilters(
+	file: UIFileDoc,
+	filters: ContractFilters,
+): boolean {
+	if (!matchesAny(filters.status, file.status)) return false;
+	if (!matchesAny(filters.contractType, file.contractType)) return false;
+	if (!matchesAny(filters.department, file.department)) return false;
+
+	if (filters.assignedTo?.length) {
+		const selected = new Set(
+			filters.assignedTo.map((name) => name.toLowerCase()),
+		);
+		const managers = file.assignedManagers || [];
+		const hasMatch = managers.some((manager) =>
+			selected.has(manager.toLowerCase()),
+		);
+		if (!hasMatch) return false;
+	}
+
+	if (filters.uploadedOnFrom || filters.uploadedOnTo) {
+		const uploadedDate = file.$createdAt ? new Date(file.$createdAt) : null;
+		if (!uploadedDate) return false;
+
+		if (filters.uploadedOnFrom) {
+			const fromDate = new Date(filters.uploadedOnFrom);
+			fromDate.setHours(0, 0, 0, 0);
+			if (uploadedDate < fromDate) return false;
+		}
+
+		if (filters.uploadedOnTo) {
+			const toDate = new Date(filters.uploadedOnTo);
+			toDate.setHours(23, 59, 59, 999);
+			if (uploadedDate > toDate) return false;
+		}
+	}
+
+	if (filters.expiresOnFrom || filters.expiresOnTo) {
+		const expiryDate = file.contractExpiryDate
+			? new Date(file.contractExpiryDate)
+			: null;
+		if (!expiryDate) return false;
+
+		if (filters.expiresOnFrom) {
+			const fromDate = new Date(filters.expiresOnFrom);
+			fromDate.setHours(0, 0, 0, 0);
+			if (expiryDate < fromDate) return false;
+		}
+
+		if (filters.expiresOnTo) {
+			const toDate = new Date(filters.expiresOnTo);
+			toDate.setHours(23, 59, 59, 999);
+			if (expiryDate > toDate) return false;
+		}
+	}
+
+	if (filters.searchQuery) {
+		const query = filters.searchQuery.toLowerCase();
+		const matchesName = (file.contractName || file.name || "")
+			.toLowerCase()
+			.includes(query);
+		const matchesNumber = (file.contractNumber || "")
+			.toLowerCase()
+			.includes(query);
+		const matchesVendor = (file.vendor || "").toLowerCase().includes(query);
+		if (!matchesName && !matchesNumber && !matchesVendor) return false;
+	}
+
+	return true;
+}
+
+export function applyContractListFilters(
+	files: UIFileDoc[],
+	filters: ContractFilters,
+	statusTab: StatusTab,
+): UIFileDoc[] {
+	return files.filter(
+		(file) =>
+			matchesStatusTab(file, statusTab) && matchesContractFilters(file, filters),
+	);
 }

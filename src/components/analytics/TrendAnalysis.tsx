@@ -317,31 +317,11 @@ const TrendAnalysis: React.FC<TrendAnalysisProps> = ({ department }) => {
 						value={timeRange}
 						onValueChange={(value) => setTimeRange(value as any)}
 					>
-						<TabsList className="bg-white/20 backdrop-blur border border-white/40">
-							<TabsTrigger
-								value="6m"
-								className="data-[state=active]:bg-white/30"
-							>
-								6M
-							</TabsTrigger>
-							<TabsTrigger
-								value="1y"
-								className="data-[state=active]:bg-white/30"
-							>
-								1Y
-							</TabsTrigger>
-							<TabsTrigger
-								value="2y"
-								className="data-[state=active]:bg-white/30"
-							>
-								2Y
-							</TabsTrigger>
-							<TabsTrigger
-								value="5y"
-								className="data-[state=active]:bg-white/30"
-							>
-								5Y
-							</TabsTrigger>
+						<TabsList>
+							<TabsTrigger value="6m">6M</TabsTrigger>
+							<TabsTrigger value="1y">1Y</TabsTrigger>
+							<TabsTrigger value="2y">2Y</TabsTrigger>
+							<TabsTrigger value="5y">5Y</TabsTrigger>
 						</TabsList>
 					</Tabs>
 					<Button
@@ -408,32 +388,20 @@ const TrendAnalysis: React.FC<TrendAnalysisProps> = ({ department }) => {
 						value={activeTab}
 						onValueChange={(value) => setActiveTab(value as any)}
 					>
-						<TabsList className="responsive-tab-list bg-white/20 backdrop-blur border border-white/40">
-							<TabsTrigger
-								value="contracts"
-								className="data-[state=active]:bg-white/30"
-							>
+						<TabsList>
+							<TabsTrigger value="contracts">
 								<BarChart3 className="h-4 w-4" />
 								Contracts
 							</TabsTrigger>
-							<TabsTrigger
-								value="budget"
-								className="data-[state=active]:bg-white/30"
-							>
+							<TabsTrigger value="budget">
 								<TrendingUp className="h-4 w-4" />
 								Budget
 							</TabsTrigger>
-							<TabsTrigger
-								value="compliance"
-								className="data-[state=active]:bg-white/30"
-							>
+							<TabsTrigger value="compliance">
 								<PieChart className="h-4 w-4" />
 								Compliance
 							</TabsTrigger>
-							<TabsTrigger
-								value="renewals"
-								className="data-[state=active]:bg-white/30"
-							>
+							<TabsTrigger value="renewals">
 								<Calendar className="h-4 w-4" />
 								Renewals
 							</TabsTrigger>

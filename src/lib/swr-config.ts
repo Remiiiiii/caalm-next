@@ -153,7 +153,8 @@ export const swrConfig: SWRConfiguration = {
 		return true;
 	},
 	onError: (error, key) => {
-		const status = (error as FetcherError)?.status;
+		const fetcherError = error as FetcherError;
+		const status = fetcherError?.status;
 		const message =
 			error instanceof Error
 				? error.message
@@ -161,22 +162,32 @@ export const swrConfig: SWRConfiguration = {
 					? error
 					: "Unknown error";
 
-		// Expected auth/permission failures — keep the console clean
+		const keyText =
+			typeof key === "string" ? key : JSON.stringify(key ?? "");
+
+		// Expected failures — do not log. Next.js treats console.error as a
+		// blocking overlay, which makes a 404/timeout look like a crash.
 		if (typeof status === "number" && status >= 400 && status < 500) {
 			return;
 		}
-
-		// Unread badge polls are best-effort; avoid SWR error noise
 		if (
-			typeof key === "string" &&
-			key.includes("/api/notifications/unread-count")
+			status === 0 ||
+			fetcherError?.isAborted ||
+			fetcherError?.isTimeout ||
+			fetcherError?.isNetworkError
 		) {
 			return;
 		}
+		if (keyText.includes("/api/notifications/unread-count")) {
+			return;
+		}
+		if (keyText.includes("/api/billing/subscription")) {
+			return;
+		}
 
-		// Avoid Next overlay mangling by logging primitives only
-		console.error(
-			`[SWR] ${typeof key === "string" ? key : JSON.stringify(key)} → ${message}`,
+		// warn, not error: console.error pops the Next.js overlay in dev
+		console.warn(
+			`[SWR] ${keyText} → ${message}`,
 			typeof status === "number" ? `(${status})` : "",
 		);
 	},
