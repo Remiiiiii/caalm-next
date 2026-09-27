@@ -4,7 +4,7 @@ import {
 	constituentActorFromUser,
 	logConstituentAudit,
 	requireConstituentOrgContext,
-} from "@/lib/constituents";
+} from "@/lib/constituents/server";
 import { getConstituentById } from "@/lib/constituents/repository";
 import {
 	type NextBestActionKind,

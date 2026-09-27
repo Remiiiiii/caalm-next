@@ -3,7 +3,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { Document, Page, Text, View } from "@react-pdf/renderer";
 import React from "react";
 import { PERMISSIONS } from "@/constants/permissions";
-import { getConstituentById } from "@/lib/constituents";
+import { getConstituentById } from "@/lib/constituents/server";
 import {
 	listApprovedHoursForVolunteer,
 	requireVolunteerOrgContext,

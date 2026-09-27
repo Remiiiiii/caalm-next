@@ -1,4 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { CACHE_KEYS } from "@/lib/services/cache-keys";
+import CacheManager from "@/lib/services/cache-manager";
 import { notificationService } from "@/lib/services/notificationService";
 
 export async function GET(request: NextRequest) {
@@ -16,7 +18,15 @@ export async function GET(request: NextRequest) {
 			);
 		}
 
-		const stats = await notificationService.getNotificationStats(userId);
+		const cacheGeneration =
+			await CacheManager.getNotificationsCacheGeneration(userId);
+		const cacheKey = `${CACHE_KEYS.notifications.stats(userId)}:v${cacheGeneration}`;
+
+		const stats = await CacheManager.withCache(
+			"notifications/stats",
+			cacheKey,
+			async () => notificationService.getNotificationStats(userId),
+		);
 
 		return NextResponse.json({ success: true, data: stats, ...stats });
 	} catch (error: any) {

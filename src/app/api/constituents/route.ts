@@ -7,7 +7,7 @@ import {
 	parseDoNotContactParam,
 	parseTypeParam,
 	requireConstituentOrgContext,
-} from "@/lib/constituents";
+} from "@/lib/constituents/server";
 import {
 	listConstituentIdsForSegment,
 	listSegmentsForOrg,

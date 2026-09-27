@@ -7,6 +7,7 @@ import { TaskService } from "@/lib/api/tasks/services/TaskService";
 import { requirePermission } from "@/lib/rbac/middleware";
 import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 import { logAuditEvent } from "@/lib/services/audit-logger";
+import CacheManager from "@/lib/services/cache-manager";
 
 interface RouteContext {
 	params: Promise<{ id: string }>;
@@ -159,6 +160,8 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 			},
 		}).catch(() => undefined);
 
+		await CacheManager.invalidateTasks(defaultOrg.orgId).catch(() => undefined);
+
 		return NextResponse.json({ success: true, data: { task } });
 	} catch (error) {
 		console.error("Task PUT error:", error);
@@ -216,6 +219,8 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
 			target_id: id,
 			summary: `${(user as { fullName?: string }).fullName || user.email} deleted task ${id}`,
 		}).catch(() => undefined);
+
+		await CacheManager.invalidateTasks(defaultOrg.orgId).catch(() => undefined);
 
 		return NextResponse.json({ success: true });
 	} catch (error) {

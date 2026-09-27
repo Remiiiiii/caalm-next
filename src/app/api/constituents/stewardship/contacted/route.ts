@@ -3,7 +3,7 @@ import { PERMISSIONS } from "@/constants/permissions";
 import {
 	getConstituentById,
 	requireConstituentOrgContext,
-} from "@/lib/constituents";
+} from "@/lib/constituents/server";
 import {
 	markStewardshipContacted,
 	StewardshipQueueError,

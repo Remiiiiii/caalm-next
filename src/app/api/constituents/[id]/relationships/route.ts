@@ -6,7 +6,7 @@ import {
 	isRelationshipType,
 	listRelationshipsForConstituent,
 	requireConstituentOrgContext,
-} from "@/lib/constituents";
+} from "@/lib/constituents/server";
 
 type RouteContext = { params: Promise<{ id: string }> };
 

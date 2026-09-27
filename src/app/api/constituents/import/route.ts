@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
-import { requireConstituentOrgContext } from "@/lib/constituents";
+import { requireConstituentOrgContext } from "@/lib/constituents/server";
 import { createImportBatch } from "@/lib/constituents/import/batch.repository";
 import { importErrorsToCsv } from "@/lib/constituents/import/dry-run";
 import { runConstituentImportDryRun } from "@/lib/constituents/import/run-dry-run";

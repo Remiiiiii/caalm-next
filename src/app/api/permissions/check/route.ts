@@ -9,7 +9,6 @@ import {
 import { CACHE_KEYS } from "@/lib/services/cache-keys";
 import CacheManager from "@/lib/services/cache-manager";
 import { parseStringify } from "@/lib/utils";
-import { deduplicateRequest } from "@/lib/utils/request-deduplication";
 
 export async function GET(request: NextRequest) {
 	try {
@@ -37,35 +36,37 @@ export async function GET(request: NextRequest) {
 
 		const cacheKey = CACHE_KEYS.rbac.check(effectiveUserId, orgId);
 
-		// Drop stale empty `rbac:check:*` entries. Do not block the permission
-		// lookup if the cache is slow or unreachable.
-		await Promise.race([
-			CacheManager.invalidate(cacheKey).catch(() => undefined),
-			new Promise((resolve) => setTimeout(resolve, 1500)),
-		]);
+		const payload = await CacheManager.withCache(
+			"rbac/check",
+			cacheKey,
+			async () => {
+				const permissions = await getUserPermissions(effectiveUserId, orgId);
 
-		const permissions = await deduplicateRequest(cacheKey, async () =>
-			getUserPermissions(effectiveUserId, orgId),
+				let roleOrgId = orgId;
+				if (!roleOrgId) {
+					const defaultOrg = await getUserDefaultOrganization(effectiveUserId);
+					roleOrgId = defaultOrg?.orgId;
+				}
+				const roles = roleOrgId
+					? await getUserRoles(effectiveUserId, roleOrgId)
+					: [];
+
+				return {
+					permissions: parseStringify(permissions),
+					roles: parseStringify(
+						roles.map((role) => ({
+							roleId: role.roleId,
+							roleName: role.roleName || null,
+						})),
+					),
+				};
+			},
 		);
-
-		let roleOrgId = orgId;
-		if (!roleOrgId) {
-			const defaultOrg = await getUserDefaultOrganization(effectiveUserId);
-			roleOrgId = defaultOrg?.orgId;
-		}
-		const roles = roleOrgId
-			? await getUserRoles(effectiveUserId, roleOrgId)
-			: [];
 
 		return NextResponse.json({
 			success: true,
-			permissions: parseStringify(permissions),
-			roles: parseStringify(
-				roles.map((role) => ({
-					roleId: role.roleId,
-					roleName: role.roleName || null,
-				})),
-			),
+			permissions: payload.permissions,
+			roles: payload.roles,
 			effectiveUserId,
 			actorUserId: context.actor.$id,
 			impersonating,

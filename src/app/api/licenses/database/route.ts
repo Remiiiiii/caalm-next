@@ -13,7 +13,11 @@ import {
 } from "@/lib/api/licenses/utils/response.util";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { getCurrentUser } from "@/lib/actions/user.actions";
 import { requirePermission } from "@/lib/rbac/middleware";
+import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
+import { CACHE_KEYS } from "@/lib/services/cache-keys";
+import CacheManager from "@/lib/services/cache-manager";
 
 export async function GET(request: NextRequest) {
 	const requestId = generateRequestId();
@@ -27,20 +31,37 @@ export async function GET(request: NextRequest) {
 		if (permissionCheck) return permissionCheck;
 
 		const { limit, offset } = parsePaginationParams(request);
+		const user = await getCurrentUser();
+		const defaultOrg = user
+			? await getUserDefaultOrganization(user.$id)
+			: null;
+		const orgId = defaultOrg?.orgId || "default_organization";
+		const cacheKey = CACHE_KEYS.licenses.database(orgId, limit, offset);
 
-		const { tablesDB } = await createAdminClient();
+		const licenses = await CacheManager.withCache(
+			"licenses/database",
+			cacheKey,
+			async () => {
+				const { tablesDB } = await createAdminClient();
+				return tablesDB.listRows({
+					databaseId: appwriteConfig.databaseId || "default-db",
+					tableId: appwriteConfig.licensesCollectionId || "licenses",
+					queries: [
+						Query.select([
+							"$id",
+							"licenseName",
+							"vendor",
+							"licenseType",
+							"status",
+						]),
+						Query.limit(limit),
+						Query.offset(offset),
+					],
+				});
+			},
+		);
 
-		const licenses = await tablesDB.listRows({
-			databaseId: appwriteConfig.databaseId || "default-db",
-			tableId: appwriteConfig.licensesCollectionId || "licenses",
-			queries: [
-				Query.select(["$id", "licenseName", "vendor", "licenseType", "status"]),
-				Query.limit(limit),
-				Query.offset(offset),
-			],
-		});
-
-		const licenseList = licenses.rows.map((license: any) => ({
+		const licenseList = licenses.rows.map((license: Record<string, unknown>) => ({
 			id: license.$id,
 			name: license.licenseName || "Unnamed License",
 			vendor: license.vendor,

@@ -1,3 +1,5 @@
+import "server-only";
+
 import { ID, Query } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
@@ -272,6 +274,10 @@ export async function logAuditEvent(entry: AuditLogEntry): Promise<void> {
 				rowId: ID.unique(),
 				data: auditData,
 			});
+
+			void import("./cache-manager")
+				.then(({ default: CacheManager }) => CacheManager.invalidateAudits())
+				.catch(() => undefined);
 		} catch (createError: unknown) {
 			const err = createError as {
 				message?: string;
