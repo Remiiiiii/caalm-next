@@ -6,6 +6,7 @@
 
 import { kv } from "@vercel/kv";
 import Redis from "ioredis";
+import redis from "../redis-client";
 
 // Check if Redis is available
 const isRedisAvailable = !!(
@@ -377,6 +378,7 @@ class VercelKVRateLimitService implements RateLimitService {
 /**
  * Standard Redis rate limit service using ioredis
  * Supports atomic operations and Lua scripts
+ * Uses shared Layerbase Redis client
  */
 class StandardRedisRateLimitService implements RateLimitService {
 	private client: Redis;
@@ -460,29 +462,8 @@ class StandardRedisRateLimitService implements RateLimitService {
   `;
 
 	constructor() {
-		const redisUrl = process.env.REDIS_URL;
-		if (!redisUrl) {
-			throw new Error("REDIS_URL environment variable is required");
-		}
-
-		this.client = new Redis(redisUrl, {
-			maxRetriesPerRequest: 3,
-			retryStrategy: (times) => {
-				const delay = Math.min(times * 50, 2000);
-				return delay;
-			},
-			reconnectOnError: (err) => {
-				const targetError = "READONLY";
-				if (err.message.includes(targetError)) {
-					return true;
-				}
-				return false;
-			},
-		});
-
-		this.client.on("error", (err) => {
-			console.error("Redis rate limit connection error:", err);
-		});
+		// Use shared Layerbase Redis client
+		this.client = redis;
 	}
 
 	async increment(key: string, ttl: number): Promise<number> {

@@ -5,6 +5,7 @@
 
 import { kv } from "@vercel/kv";
 import Redis from "ioredis";
+import redis from "../redis-client";
 
 // Check if Redis is available
 const isRedisAvailable = !!(
@@ -122,42 +123,14 @@ class VercelKVCache implements CacheService {
 
 /**
  * Standard Redis implementation using ioredis
+ * Uses shared Layerbase Redis client
  */
 class StandardRedisCache implements CacheService {
 	private client: Redis;
 
 	constructor() {
-		const redisUrl = process.env.REDIS_URL;
-		if (!redisUrl) {
-			throw new Error("REDIS_URL environment variable is required");
-		}
-
-		this.client = new Redis(redisUrl, {
-			maxRetriesPerRequest: 1,
-			connectTimeout: 2000,
-			commandTimeout: 2000,
-			enableOfflineQueue: false,
-			retryStrategy: (times) => {
-				if (times > 2) return null;
-				const delay = Math.min(times * 50, 2000);
-				return delay;
-			},
-			reconnectOnError: (err) => {
-				const targetError = "READONLY";
-				if (err.message.includes(targetError)) {
-					return true;
-				}
-				return false;
-			},
-		});
-
-		this.client.on("error", (err) => {
-			console.error("Redis connection error:", err);
-		});
-
-		this.client.on("connect", () => {
-			console.log("Redis connected successfully");
-		});
+		// Use shared Layerbase Redis client
+		this.client = redis;
 	}
 
 	async get<T>(key: string): Promise<T | null> {
