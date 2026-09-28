@@ -33,6 +33,10 @@ That process feels normal until one miss costs a license, a grant, or a week of 
 - **Analytics** — leadership visibility without spreadsheet archaeology
 - **News** — internal communication that reaches the right audience
 - **Assistant** — AI help for chat, document analysis, and meeting prep (permission-gated)
+- **Constituents** — donor, volunteer, and member CRM with channel consent
+- **Gifts & campaigns** — posted giving, void discipline, and development dashboards
+- **Volunteers** — shifts and hours tied to constituent records
+- **Nonprofit finance settings** — restricted funds and Form 990 **worksheet** mapping (not payroll, GL, or 990 e-file)
 
 ## Who uses it
 

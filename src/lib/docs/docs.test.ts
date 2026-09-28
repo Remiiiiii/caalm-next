@@ -4,7 +4,9 @@ import {
 	parseMarkdown,
 	stripMarkdown,
 } from "@/lib/docs/markdown";
+import { findMissingNpoShippedDocFiles } from "@/lib/docs/npo-shipped-docs";
 import { flattenDocsNav } from "@/lib/docs/navigation";
+import { getDocsPage } from "@/lib/docs/load";
 import { searchDocs } from "@/lib/docs/search";
 
 describe("docs markdown", () => {
@@ -73,5 +75,15 @@ describe("docs navigation", () => {
 		const slugs = flattenDocsNav().map((i) => i.slug);
 		expect(new Set(slugs).size).toBe(slugs.length);
 		expect(slugs.length).toBeGreaterThan(40);
+	});
+
+	it("loads a markdown file for every nav item", () => {
+		for (const item of flattenDocsNav()) {
+			expect(getDocsPage(item.slug)).not.toBeNull();
+		}
+	});
+
+	it("documents every shipped NPO app route", () => {
+		expect(findMissingNpoShippedDocFiles()).toEqual([]);
 	});
 });

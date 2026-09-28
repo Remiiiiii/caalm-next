@@ -81,7 +81,22 @@ This catalog explains permission keys in everyday language. Exact availability c
 | Key | Meaning |
 |---|---|
 | `constituents.view` | Browse the org donor, volunteer, and member file |
-| `constituents.manage` | Create, edit, delete, and force-insert duplicate people |
+| `constituents.manage` | Create, edit, delete, merge, import, and force-insert duplicate people |
+
+## Gifts
+
+| Key | Meaning |
+|---|---|
+| `gifts.view` | Browse gifts, campaigns, and the development dashboard |
+| `gifts.create` | Post new gifts |
+| `gifts.void` | Void a posted gift (requires reason) |
+
+## Volunteers
+
+| Key | Meaning |
+|---|---|
+| `volunteers.view` | Browse volunteer shifts and hour history |
+| `volunteers.manage` | Create shifts and log or edit hours |
 
 ## News
 
@@ -124,6 +139,7 @@ This catalog explains permission keys in everyday language. Exact availability c
 | `ai.document_analysis` | Analyze documents with AI |
 | `ai.meeting_prep` | Meeting prep assistance |
 | `ai.image_generate` | Generate images |
+| `ai.fundraising` | View donor scores and next-best-action on constituent Intelligence |
 
 ## Audit
 

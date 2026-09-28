@@ -306,6 +306,40 @@ export const DOCS_NAV: DocsNavGroup[] = [
 		],
 	},
 	{
+		id: "nonprofit",
+		title: "Nonprofit & fundraising",
+		description:
+			"Donor CRM, gifts, campaigns, volunteers, and fund/990 settings — what shipped with the nonprofit roadmap.",
+		items: [
+			{
+				title: "Constituents (donor CRM)",
+				slug: "reference/constituents",
+				path: "reference/constituents",
+				summary:
+					"People file, import, stewardship, consent, and Intelligence scores.",
+			},
+			{
+				title: "Gifts and campaigns",
+				slug: "reference/gifts-and-campaigns",
+				path: "reference/gifts-and-campaigns",
+				summary: "Gift register, campaigns, and the development dashboard.",
+			},
+			{
+				title: "Volunteers",
+				slug: "reference/volunteers",
+				path: "reference/volunteers",
+				summary: "Shifts and hour logging on constituent profiles.",
+			},
+			{
+				title: "Nonprofit finance settings",
+				slug: "reference/nonprofit-finance-settings",
+				path: "reference/nonprofit-finance-settings",
+				summary:
+					"Restricted funds and 990 worksheet mapping — not payroll or e-file.",
+			},
+		],
+	},
+	{
 		id: "admin",
 		title: "Admin playbooks",
 		description: "Setup and governance tasks for people who run CAALM.",
