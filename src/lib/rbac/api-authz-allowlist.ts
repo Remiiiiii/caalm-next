@@ -29,6 +29,16 @@ export const API_AUTHZ_ALLOWLIST: readonly ApiAuthzAllowEntry[] = [
 		reason: "Marketing waitlist signup; no authenticated session",
 	},
 	{
+		path: "demo-request",
+		class: "public",
+		reason: "Public demo lead form; email OTP is the gate before scheduling",
+	},
+	{
+		path: "demo-request/verify",
+		class: "public",
+		reason: "Public demo email OTP confirm; sets a short-lived verified cookie",
+	},
+	{
 		path: "billing/webhooks",
 		class: "webhook",
 		reason: "Stripe signature verification (constructWebhookEvent)",

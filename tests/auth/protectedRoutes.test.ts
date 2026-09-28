@@ -14,6 +14,7 @@ describe("protected app routes", () => {
 
 	it("keeps marketing and counterparty paths public", () => {
 		expect(isProtectedAppRoute("/")).toBe(false);
+		expect(isProtectedAppRoute("/request-a-demo")).toBe(false);
 		expect(isProtectedAppRoute("/negotiate/abc123")).toBe(false);
 		expect(isProtectedAppRoute("/sign-in")).toBe(false);
 		expect(isProtectedAppRoute("/docs/getting-started")).toBe(false);
