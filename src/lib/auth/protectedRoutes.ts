@@ -7,6 +7,7 @@ const PUBLIC_EXACT_PATHS = new Set([
 	"/try",
 	"/help",
 	"/contact",
+	"/request-a-demo",
 ]);
 
 /** Prefixes for token/counterparty flows and docs — never run app-shell 2FA auth. */

@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -37,7 +38,13 @@ const MOBILE_NAV_RIGHT = [
 	{ href: "/terms", label: "Terms" },
 ] as const;
 
+function landingHref(href: string, pathname: string): string {
+	if (href.startsWith("#") && pathname !== "/") return `/${href}`;
+	return href;
+}
+
 export const Header = () => {
+	const pathname = usePathname() || "/";
 	const [isOpen, setIsOpen] = useState(false);
 	const menuRef = useRef<HTMLDivElement>(null);
 	const headerRef = useRef(null);
@@ -188,7 +195,7 @@ export const Header = () => {
 								"font-medium text-sm text-slate-700 hover:underline decoration-[#03AFBF] underline-offset-4 whitespace-nowrap shrink-0",
 								link.hideBelowXl && "hidden xl:inline",
 							)}
-							href={link.href}
+							href={landingHref(link.href, pathname)}
 						>
 							{link.label}
 						</a>
@@ -196,14 +203,14 @@ export const Header = () => {
 				</nav>
 
 				<div className="hidden md:flex items-center justify-end gap-2 shrink-0">
-					<a href="#contact">
+					<Link href="/request-a-demo">
 						<Button
 							variant="outline"
 							className="rounded-full border-slate-300 text-slate-700 hover:bg-blue-50 hover:border-blue-300 text-sm cursor-pointer transition-all duration-200 whitespace-nowrap"
 						>
-							Contact Sales
+							Book a demo
 						</Button>
-					</a>
+					</Link>
 					<Link href="/sign-in">
 						<Button className="primary-btn px-3 sm:px-4 text-sm cursor-pointer whitespace-nowrap">
 							Sign In
@@ -262,11 +269,11 @@ export const Header = () => {
 								/>
 								<span className="font-bold text-lg text-slate-800">CAALM</span>
 							</Link>
-							<a href="#contact" onClick={() => setIsOpen(false)}>
+							<Link href="/request-a-demo" onClick={() => setIsOpen(false)}>
 								<Button className="primary-btn rounded-full px-4 text-sm cursor-pointer whitespace-nowrap shadow-sm">
-									Book a Call
+									Book a demo
 								</Button>
-							</a>
+							</Link>
 						</div>
 
 						<nav className="grid grid-cols-2 gap-x-6 gap-y-5">
@@ -274,7 +281,7 @@ export const Header = () => {
 								{MOBILE_NAV_LEFT.map((link) => (
 									<li key={link.href}>
 										<a
-											href={link.href}
+											href={landingHref(link.href, pathname)}
 											className="text-[15px] font-medium text-slate-500 hover:text-slate-800 transition-colors duration-200"
 											onClick={() => setIsOpen(false)}
 										>
@@ -286,7 +293,8 @@ export const Header = () => {
 							<ul className="space-y-5">
 								{MOBILE_NAV_RIGHT.map((link) => (
 									<li key={`${link.href}-${link.label}`}>
-										{link.href.startsWith("/") ? (
+										{landingHref(link.href, pathname).startsWith("/") &&
+										!link.href.startsWith("#") ? (
 											<Link
 												href={link.href}
 												className="text-[15px] font-medium text-slate-500 hover:text-slate-800 transition-colors duration-200"
@@ -296,7 +304,7 @@ export const Header = () => {
 											</Link>
 										) : (
 											<a
-												href={link.href}
+												href={landingHref(link.href, pathname)}
 												className="text-[15px] font-medium text-slate-500 hover:text-slate-800 transition-colors duration-200"
 												onClick={() => setIsOpen(false)}
 											>
