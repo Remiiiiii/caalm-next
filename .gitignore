@@ -192,3 +192,4 @@ scripts/.blob-media-urls.json
 .tmp-*.env
 .tmp-vercel*.env
 
+founder/facts.md

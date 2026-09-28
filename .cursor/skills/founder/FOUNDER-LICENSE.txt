@@ -1,0 +1,4 @@
+Founder skills adapted from emotixco/claude-skills-founder (MIT License).
+Upstream: https://github.com/emotixco/claude-skills-founder
+
+MIT License — see upstream repository for full text.
