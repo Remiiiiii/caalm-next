@@ -1,4 +1,11 @@
-import { ArrowRight, BookOpen, Compass, LifeBuoy, Shield } from "lucide-react";
+import {
+	ArrowRight,
+	BookOpen,
+	Compass,
+	HeartHandshake,
+	LifeBuoy,
+	Shield,
+} from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { DocsHeroSpline } from "@/components/docs/DocsHeroSpline";
@@ -30,6 +37,12 @@ const highlights = [
 		icon: Shield,
 	},
 	{
+		title: "Nonprofit & fundraising",
+		body: "Constituents, gifts, campaigns, volunteers, and fund/990 settings.",
+		href: "/docs/reference/constituents",
+		icon: HeartHandshake,
+	},
+	{
 		title: "Unstick a problem",
 		body: "Sign-in, missing records, locks, quiet alerts, and demo vs production.",
 		href: "/docs/troubleshooting/cant-sign-in",
@@ -58,8 +71,8 @@ export default function DocsHomePage() {
 							CAALM with confidence
 						</h1>
 						<p className="mt-4 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg dark:text-slate-300">
-							CAALM Docs is the in-depth guide for every role — from first login
-							to renewals, approvals, analytics, and admin governance. Built
+							CAALM Docs is the in-depth guide for every role — contracts and
+							compliance plus nonprofit donor CRM, gifts, and volunteers. Built
 							like a product manual you can live in, not a brochure.
 						</p>
 						<div className="mt-6 flex flex-wrap gap-3">
@@ -83,7 +96,7 @@ export default function DocsHomePage() {
 				</div>
 			</section>
 
-			<section className="mt-10 grid gap-4 sm:grid-cols-2">
+			<section className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 				{highlights.map((item) => {
 					const Icon = item.icon;
 					return (

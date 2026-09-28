@@ -3,6 +3,7 @@ export type DocsSectionId =
 	| "concepts"
 	| "guides"
 	| "reference"
+	| "nonprofit"
 	| "admin"
 	| "runbooks"
 	| "troubleshooting";

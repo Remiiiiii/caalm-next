@@ -53,6 +53,11 @@ This is the shortest path to value. Follow the track that matches how you arrive
 2. Draft one article.
 3. Publish only when you have `news.publish`.
 
+### If you run fundraising
+1. Open **All Constituents** and confirm you have `constituents.view`.
+2. Post one test gift from **Gifts** (or open the [development dashboard](/dashboard/development) for YTD totals).
+3. Read [Constituents](/docs/reference/constituents) and [Gifts and campaigns](/docs/reference/gifts-and-campaigns) for permissions and out-of-scope finance limits.
+
 ## Success checklist
 
 - [ ] You can sign in twice in a row (session + 2FA stable)
