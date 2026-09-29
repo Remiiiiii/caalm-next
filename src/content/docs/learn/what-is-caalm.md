@@ -7,7 +7,7 @@ audience: "Everyone"
 
 CAALM stands for **Compliance and Agreement Lifecycle Management**.
 
-In everyday words: CAALM is the system of record for the agreements that keep your organization funded, licensed, and audit-ready — and the workflows that stop those agreements from quietly expiring.
+In everyday words: CAALM is the system of record for the agreements that keep your organization funded, licensed, and audit-ready and the workflows that stop those agreements from quietly expiring.
 
 ## The problem CAALM replaces
 
@@ -15,7 +15,7 @@ Without CAALM, teams typically:
 
 - Store contract PDFs on personal drives, email, or shared folders
 - Track renewals in spreadsheets and Outlook reminders
-- Discover expirations late — or after a funder / regulator notices
+- Discover expirations late or after a funder / regulator notices
 - Struggle to answer “who owns this?” and “who approved that?”
 
 That process feels normal until one miss costs a license, a grant, or a week of panic.

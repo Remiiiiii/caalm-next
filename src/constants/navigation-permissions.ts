@@ -370,6 +370,14 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 		header: "Settings",
 		items: [
 			{
+				name: "My Settings",
+				icon: "/assets/icons/settings.svg",
+				url: "/settings",
+				// Platform break-glass only (Super Admin); Org Admin pack excludes PLATFORM keys
+				permissions: [PERMISSIONS.PLATFORM.SYSTEM_SETTINGS],
+				requiresElevated: true,
+			},
+			{
 				name: "System Settings",
 				icon: "/assets/icons/settings.svg",
 				url: "/settings/system",
