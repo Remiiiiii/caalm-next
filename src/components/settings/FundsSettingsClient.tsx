@@ -14,6 +14,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { FinanceScopeHelp } from "@/components/funding/FinanceScopeHelp";
+import { FundsCsvImportCard } from "@/components/settings/FundsCsvImportCard";
 import {
 	NET_ASSET_CLASSES,
 	netAssetClassLabel,
@@ -66,6 +67,7 @@ export function FundsSettingsClient() {
 	return (
 		<div className="space-y-6">
 			<FinanceScopeHelp />
+			<FundsCsvImportCard onImported={() => void load()} />
 			<Card className="glass-card">
 				<div className="glass-card-cap" />
 				<CardContent className="p-4 sm:p-6 space-y-4">
