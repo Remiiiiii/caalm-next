@@ -94,6 +94,23 @@ export const ITEM_ICONS: Record<
 		height: 20,
 		color: SUBITEM_TEXT_GREY,
 	},
+	Import: {
+		width: 20,
+		height: 20,
+		color: SUBITEM_TEXT_GREY,
+	},
+	"Stewardship Queue": {
+		src: "/assets/icons/queue.svg",
+		width: 20,
+		height: 20,
+		color: SUBITEM_TEXT_GREY,
+	},
+	Development: {
+		src: "/assets/icons/development.svg",
+		width: 20,
+		height: 20,
+		color: SUBITEM_TEXT_GREY,
+	},
 	Gifts: {
 		src: "/assets/icons/gift.svg",
 		width: 20,
@@ -168,6 +185,11 @@ export const ITEM_ICONS: Record<
 		src: "/assets/icons/calendar3.svg",
 		width: 20,
 		height: 21,
+		color: SUBITEM_TEXT_GREY,
+	},
+	"Event Check-in": {
+		width: 20,
+		height: 20,
 		color: SUBITEM_TEXT_GREY,
 	},
 	"Training & Certifications": {

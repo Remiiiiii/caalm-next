@@ -7,6 +7,7 @@ import {
 	Mail,
 	MessageCircleQuestionMark,
 	MoreVertical,
+	UserCog,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -93,6 +94,17 @@ export default function SidebarUserCard({
 					{upgradeLabel}
 				</DropdownMenuItem>
 				<DropdownMenuSeparator />
+				<DropdownMenuItem asChild>
+					<Link
+						href="/settings"
+						className="shad-dropdown-item cursor-pointer gap-2"
+					>
+						<span className="inline-flex h-5 w-5 shrink-0 items-center justify-center">
+							<UserCog className="h-4 w-4 text-slate-600" />
+						</span>
+						<span className="text-slate-800">My Settings</span>
+					</Link>
+				</DropdownMenuItem>
 				{settingsItems.length > 0 ? (
 					<DropdownMenuSub>
 						<DropdownMenuSubTrigger className="shad-dropdown-item cursor-pointer gap-2">
