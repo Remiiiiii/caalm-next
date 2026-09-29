@@ -21,7 +21,7 @@ This is the shortest path to value. Follow the track that matches how you arrive
 
 ## Path B — You are trying the demo
 
-1. Go to [`/try`](/try).
+1. Go to [`https://www.caalmsolutions.com/try`](/try).
 2. Create or enter the demo sandbox session.
 3. Explore with sample data. Demo mode skips some production constraints (including 2FA) so you can evaluate workflows quickly.
 4. Use the guided tour tips when they appear — they point at real navigation anchors.
