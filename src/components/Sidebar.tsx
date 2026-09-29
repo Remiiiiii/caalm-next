@@ -1,45 +1,20 @@
 "use client";
 
-import {
-	BookOpenCheck,
-	Building,
-	Building2,
-	Cloud,
-	Crown,
-	Eye,
-	HandCoins,
-	Lock,
-	Megaphone,
-	Server,
-} from "lucide-react";
+import { Cloud } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Fragment, memo, useEffect } from "react";
+import { memo, useEffect } from "react";
 import ITSidebar from "@/components/ITSidebar";
 import StorageUsageBar from "@/components/StorageUsageBar";
-import { NavItemIcon } from "@/components/sidebar/NavItemIcon";
-import { SectionNavIcon } from "@/components/sidebar/SectionNavIcon";
+import { SidebarNavSections } from "@/components/sidebar/SidebarNavSections";
 import SidebarCollapsedRail from "@/components/sidebar/SidebarCollapsedRail";
 import SidebarCollapseToggle from "@/components/sidebar/SidebarCollapseToggle";
 import SidebarUserCard from "@/components/sidebar/SidebarUserCard";
-import {
-	DASHBOARD_ITEM_COLORS,
-	ITEM_ICONS,
-	isNavItemActive,
-	NAV_ICON_FILL_GREY,
-} from "@/components/sidebar/sidebar-icons";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipProvider,
-	TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { isITSidebarPath } from "@/constants/it-navigation";
 import { useSidebarCollapse } from "@/contexts/SidebarContext";
 import { useAnalyticsPrefetch } from "@/hooks/useAnalyticsPrefetch";
 import { useGroupedNavigation } from "@/hooks/useGroupedNavigation";
-import { sectionTourId } from "@/lib/demo/tour/sectionTourId";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -190,258 +165,22 @@ const Sidebar = memo(
 					<>
 						<nav className="sidebar-nav">
 							<ul className="flex flex-1 flex-col">
-								{groupedNav.length === 0 &&
-								permissionsLoading &&
-								rolesLoading ? (
-									<li className="text-center py-8 text-muted-foreground">
-										<div className="flex flex-col items-center gap-2">
-											<div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-500" />
-											<span className="text-sm">Loading navigation...</span>
-										</div>
-									</li>
-								) : groupedNav.length === 0 ? (
-									<li className="text-center py-8 text-muted-foreground">
-										No navigation items available
-									</li>
-								) : (
-									groupedNav.map((section) => {
-										if (section.items.length === 0) return null;
-										if (section.header === "Settings") return null;
-
-										return (
-											<Fragment key={section.header}>
-												<div className="mb-3">
-													<li
-														className="sidebar-section-header mb-0 lg:mb-1"
-														data-tour={sectionTourId(section.header)}
-													>
-														<span className="flex items-center gap-2">
-															{section.header === "Dashboard" ? (
-																<span className="flex items-center gap-2">
-																	<SectionNavIcon header="Dashboard" priority />
-																	{primaryRole && (
-																		<TooltipProvider>
-																			<Tooltip>
-																				<TooltipTrigger asChild>
-																					<span className="sr-only">
-																						{primaryRole}
-																					</span>
-																				</TooltipTrigger>
-																				<TooltipContent>
-																					<p>
-																						You have {permissions.length}{" "}
-																						permissions as {primaryRole}. View
-																						details →
-																					</p>
-																				</TooltipContent>
-																			</Tooltip>
-																		</TooltipProvider>
-																	)}
-																</span>
-															) : (
-																<SectionNavIcon
-																	header={section.header}
-																	priority={section.header === "Calendar"}
-																/>
-															)}
-															<span className="font-semibold text-sm sidebar-gradient-text relative z-10">
-																{section.header}
-															</span>
-														</span>
-													</li>
-													<div className="relative ml-3">
-														<ul className="flex flex-col gap-1 relative z-10">
-															{section.items.map((item, index) => (
-																<Fragment
-																	key={`${section.header}-${item.name}-${
-																		item.url || index
-																	}`}
-																>
-																	<li className="relative flex items-center">
-																		{index < section.items.length + 1 && (
-																			<span
-																				className="absolute left-0 top-0 h-6 w-4 border-l border-[#BFBFBF]"
-																				style={{ zIndex: 0 }}
-																			/>
-																		)}
-																		<span className="absolute left-0 top-0 h-4 w-4 border-l border-b border-[#BFBFBF] rounded-bl-xl" />
-																		<Link
-																			href={item.url || ""}
-																			className={cn(
-																				"ml-4 w-full flex items-center gap-1 rounded-md px-1.5 py-1 cursor-pointer transition-all duration-200",
-																				"hover:bg-blue-50 hover:border-blue-300 border border-transparent",
-																				"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
-																				isNavItemActive(
-																					pathname,
-																					item.url,
-																					"/analytics",
-																				) && "bg-blue/10 border-blue/20",
-																				isViewer &&
-																					item.viewerReadOnly &&
-																					"opacity-75",
-																			)}
-																			onMouseEnter={() => {
-																				if (item.url?.includes("/analytics")) {
-																					router.prefetch(item.url);
-																					const departmentMatch =
-																						item.url.match(
-																							/\/analytics\/([^/]+)/,
-																						);
-																					if (departmentMatch) {
-																						prefetchDepartmentAnalytics(
-																							departmentMatch[1],
-																						);
-																					}
-																				}
-																			}}
-																		>
-																			{section.header === "Dashboard" && (
-																				<span>
-																					{item.name === "Super Admin" && (
-																						<Crown className="h-4 w-4 text-yellow-500" />
-																					)}
-																					{item.name ===
-																						"Organization Admin" && (
-																						<Building2 className="h-4 w-4 text-blue-500" />
-																					)}
-																					{item.name ===
-																						"Department Manager" && (
-																						<Building className="h-4 w-4 text-green-500" />
-																					)}
-																					{item.name === "Viewer" && (
-																						<Eye className="h-4 w-4 text-gray-500" />
-																					)}
-																					{item.name === "IT" && (
-																						<Server className="h-4 w-4 text-[#0f5384]" />
-																					)}
-																				</span>
-																			)}
-																			{item.name === "Audit Readiness" && (
-																				<span>
-																					<BookOpenCheck
-																						className="h-5 w-5 shrink-0"
-																						style={{
-																							color: NAV_ICON_FILL_GREY,
-																						}}
-																						aria-hidden
-																					/>
-																				</span>
-																			)}
-																			{item.name === "Funding & Retention" && (
-																				<span>
-																					<HandCoins
-																						className="h-5 w-5 shrink-0"
-																						style={{
-																							color: NAV_ICON_FILL_GREY,
-																						}}
-																						aria-hidden
-																					/>
-																				</span>
-																			)}
-																			{item.name === "Campaigns" && (
-																				<span>
-																					<Megaphone
-																						className="h-5 w-5 shrink-0"
-																						style={{
-																							color: NAV_ICON_FILL_GREY,
-																						}}
-																						aria-hidden
-																					/>
-																				</span>
-																			)}
-																			{(() => {
-																				if (item.name === "Campaigns") {
-																					return null;
-																				}
-																				const iconConfig =
-																					ITEM_ICONS[item.name];
-																				if (
-																					!iconConfig &&
-																					item.name !== "Documents" &&
-																					item.name !== "Funding & Retention"
-																				) {
-																					return null;
-																				}
-																				return (
-																					<span>
-																						<NavItemIcon
-																							name={item.name}
-																							width={iconConfig?.width ?? 20}
-																							height={iconConfig?.height ?? 20}
-																							priority
-																						/>
-																					</span>
-																				);
-																			})()}
-																			<p
-																				className={cn(
-																					"text-xs text-slate-700 px-2 font-medium flex items-center gap-2",
-																					item.name === "Admin" && "-ml-px",
-																				)}
-																			>
-																				<span
-																					style={{
-																						color:
-																							ITEM_ICONS[item.name]?.color ??
-																							DASHBOARD_ITEM_COLORS[item.name],
-																					}}
-																				>
-																					{item.name}
-																				</span>
-																				{shouldShowLock(item) && (
-																					<TooltipProvider>
-																						<Tooltip>
-																							<TooltipTrigger asChild>
-																								<span className="flex items-center">
-																									<Lock className="h-3 w-3 text-gray-500" />
-																								</span>
-																							</TooltipTrigger>
-																							<TooltipContent>
-																								<p>
-																									This feature requires{" "}
-																									{item.permissions
-																										.map((p) =>
-																											p.split(".").pop(),
-																										)
-																										.join(" or ")}{" "}
-																									permission. Contact your
-																									administrator to request
-																									access.
-																								</p>
-																							</TooltipContent>
-																						</Tooltip>
-																					</TooltipProvider>
-																				)}
-																				{isViewer && item.viewerReadOnly && (
-																					<TooltipProvider>
-																						<Tooltip>
-																							<TooltipTrigger asChild>
-																								<span className="flex items-center text-[10px] text-gray-500">
-																									(read-only)
-																								</span>
-																							</TooltipTrigger>
-																							<TooltipContent>
-																								<p>
-																									You have read-only access as
-																									an External Auditor. You
-																									cannot modify this data.
-																								</p>
-																							</TooltipContent>
-																						</Tooltip>
-																					</TooltipProvider>
-																				)}
-																			</p>
-																		</Link>
-																	</li>
-																</Fragment>
-															))}
-														</ul>
-													</div>
-												</div>
-											</Fragment>
-										);
-									})
-								)}
+								<SidebarNavSections
+									variant="sidebar"
+									groupedNav={groupedNav}
+									pathname={pathname}
+									permissionsLoading={permissionsLoading}
+									rolesLoading={rolesLoading}
+									permissions={permissions}
+									primaryRole={primaryRole}
+									isViewer={isViewer}
+									shouldShowLock={shouldShowLock}
+									onPrefetchAnalytics={(slug) => {
+										const url = `/analytics/${slug}`;
+										router.prefetch(url);
+										prefetchDepartmentAnalytics(slug);
+									}}
+								/>
 							</ul>
 						</nav>
 
