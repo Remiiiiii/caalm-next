@@ -292,7 +292,7 @@
 
 	/* Phase 1 View as user: mute write CTAs; End session uses data-impersonation-allow */
 	body[data-impersonation-readonly="true"]
-		.primary-btn:not([data-impersonation-allow]),
+	.primary-btn:not([data-impersonation-allow]),
 	body[data-impersonation-readonly="true"]
 		.btn-primary:not([data-impersonation-allow]),
 	body[data-impersonation-readonly="true"]
