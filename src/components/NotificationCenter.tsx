@@ -61,6 +61,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "./ui/select";
+import { Separator } from "./ui/separator";
 
 interface Notification {
 	$id: string;
@@ -286,7 +287,9 @@ function resolveNotificationLink(
 				? JSON.parse(notification.metadata)
 				: notification.metadata;
 		if (meta && typeof meta === "object" && "actionUrl" in meta) {
-			const url = String((meta as { actionUrl?: string }).actionUrl || "").trim();
+			const url = String(
+				(meta as { actionUrl?: string }).actionUrl || "",
+			).trim();
 			if (url) {
 				return {
 					url,
@@ -688,13 +691,22 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 										<SelectValue />
 									</SelectTrigger>
 									<SelectContent className="sort-select-content">
-										<SelectItem className="shad-select-item text-gradient-700" value="date">
+										<SelectItem
+											className="shad-select-item text-slate-700"
+											value="date"
+										>
 											Date
 										</SelectItem>
-										<SelectItem className="shad-select-item text-gradient-700" value="priority">
+										<SelectItem
+											className="shad-select-item text-slate-700"
+											value="priority"
+										>
 											Priority
 										</SelectItem>
-										<SelectItem className="shad-select-item text-gradient-700" value="type">
+										<SelectItem
+											className="shad-select-item text-slate-700"
+											value="type"
+										>
 											Type
 										</SelectItem>
 									</SelectContent>
@@ -715,18 +727,21 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 									<SelectValue placeholder="All Types" />
 								</SelectTrigger>
 								<SelectContent className="sort-select-content">
-									<SelectItem className="shad-select-item text-gradient-700" value="all">
+									<SelectItem
+										className="shad-select-item text-slate-700"
+										value="all"
+									>
 										All Types
 									</SelectItem>
 									{Object.entries(NOTIFICATION_TYPES).map(([key, value]) => (
 										<SelectItem
 											key={key}
-											className="shad-select-item text-gradient-700"
+											className="shad-select-item text-slate-700"
 											value={key}
 										>
 											<div className="flex items-center gap-2">
 												{value.icon}
-												<span className="text-gradient-700">{value.label}</span>
+												<span className="text-slate-700">{value.label}</span>
 											</div>
 										</SelectItem>
 									))}
@@ -737,13 +752,22 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 									<SelectValue placeholder="All Status" />
 								</SelectTrigger>
 								<SelectContent className="sort-select-content">
-									<SelectItem className="shad-select-item text-gradient-700" value="all">
+									<SelectItem
+										className="shad-select-item text-slate-700"
+										value="all"
+									>
 										All Status
 									</SelectItem>
-									<SelectItem className="shad-select-item text-gradient-700" value="unread">
+									<SelectItem
+										className="shad-select-item text-slate-700"
+										value="unread"
+									>
 										Unread
 									</SelectItem>
-									<SelectItem className="shad-select-item text-gradient-700" value="read">
+									<SelectItem
+										className="shad-select-item text-slate-700"
+										value="read"
+									>
 										Read
 									</SelectItem>
 								</SelectContent>
@@ -756,19 +780,34 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 									<SelectValue placeholder="All Priorities" />
 								</SelectTrigger>
 								<SelectContent className="sort-select-content">
-									<SelectItem className="shad-select-item text-gradient-700" value="all">
+									<SelectItem
+										className="shad-select-item text-slate-700"
+										value="all"
+									>
 										All Priorities
 									</SelectItem>
-									<SelectItem className="shad-select-item text-gradient-700" value="urgent">
+									<SelectItem
+										className="shad-select-item text-slate-700"
+										value="urgent"
+									>
 										Urgent
 									</SelectItem>
-									<SelectItem className="shad-select-item text-gradient-700" value="high">
+									<SelectItem
+										className="shad-select-item text-slate-700"
+										value="high"
+									>
 										High
 									</SelectItem>
-									<SelectItem className="shad-select-item text-gradient-700" value="medium">
+									<SelectItem
+										className="shad-select-item text-slate-700"
+										value="medium"
+									>
 										Medium
 									</SelectItem>
-									<SelectItem className="shad-select-item text-gradient-700" value="low">
+									<SelectItem
+										className="shad-select-item text-slate-700"
+										value="low"
+									>
 										Low
 									</SelectItem>
 								</SelectContent>
@@ -865,8 +904,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 										paginated.map((notification, index) => {
 											const prevType =
 												index > 0 ? paginated[index - 1]?.type : null;
-											const showGroupHeader =
-												notification.type !== prevType;
+											const showGroupHeader = notification.type !== prevType;
 											const typeConfig = getNotificationTypeConfig(
 												notification.type,
 											);
@@ -884,7 +922,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 																	{typeConfig.icon}
 																</span>
 															</div>
-															<span className="text-sm font-semibold text-gradient-700">
+															<span className="text-sm font-semibold text-slate-700">
 																{typeConfig.label}
 															</span>
 														</div>
@@ -899,9 +937,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 														typeConfig={typeConfig}
 														getPriorityColor={getPriorityColor}
 														timeZone={timeZone}
-														iconShellClass={getTypeIconShell(
-															notification.type,
-														)}
+														iconShellClass={getTypeIconShell(notification.type)}
 													/>
 												</Fragment>
 											);
@@ -910,7 +946,6 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 								</div>
 							</SortableContext>
 						</DndContext>
-
 					</div>
 				</div>
 
@@ -950,21 +985,15 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 							Previous
 						</button>
 						<span className="text-slate-700">
-							Page {page} of{" "}
-							{pageCountFromItems(filtered.length, perPage)}
+							Page {page} of {pageCountFromItems(filtered.length, perPage)}
 						</span>
 						<button
 							type="button"
 							className="inline-flex items-center gap-1 bg-transparent p-0 text-xs font-medium text-slate-700 transition-colors duration-200 hover:text-[#0f5384] disabled:cursor-not-allowed disabled:text-slate-400"
-							disabled={
-								page >= pageCountFromItems(filtered.length, perPage)
-							}
+							disabled={page >= pageCountFromItems(filtered.length, perPage)}
 							onClick={() =>
 								setPage((p) =>
-									Math.min(
-										pageCountFromItems(filtered.length, perPage),
-										p + 1,
-									),
+									Math.min(pageCountFromItems(filtered.length, perPage), p + 1),
 								)
 							}
 						>
@@ -1072,17 +1101,27 @@ const SortableNotificationItem: React.FC<SortableNotificationItemProps> = ({
 						<div className="flex items-start justify-between gap-3">
 							<div className="min-w-0 flex-1">
 								{pageLink ? (
-									<button
-										type="button"
-										onClick={() => onActionNavigate(pageLink.url)}
-										className="text-left text-sm font-semibold text-[#12477d] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 rounded-sm"
-									>
-										{notification.title}
-									</button>
+									<>
+										<button
+											type="button"
+											onClick={() => onActionNavigate(pageLink.url)}
+											className="text-left text-sm font-semibold text-[#12477d] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 rounded-sm"
+										>
+											{notification.title}
+										</button>
+										{!notification.read ? (
+											<span className="inline-block mx-2 h-2 w-2 rounded-full bg-blue-500" />
+										) : null}
+									</>
 								) : (
-									<p className="text-sm font-semibold text-slate-800">
-										{notification.title}
-									</p>
+									<div className="flex items-center gap-2">
+										<p className="text-sm font-semibold text-slate-800">
+											{notification.title}
+										</p>
+										{!notification.read ? (
+											<span className="inline-block mx-2 h-2 w-2 rounded-full bg-blue-500" />
+										) : null}
+									</div>
 								)}
 								<p className="mt-1 text-sm text-slate-600 line-clamp-2">
 									{notification.message}
@@ -1101,40 +1140,10 @@ const SortableNotificationItem: React.FC<SortableNotificationItemProps> = ({
 								) : (
 									<span aria-hidden className="h-5" />
 								)}
-								<div className="flex items-center gap-1">
-									{notification.read !== true ? (
-										<Button
-											variant="ghost"
-											size="sm"
-											onClick={() => onMarkAsRead(notification.$id)}
-											className="h-7 px-2 text-xs font-medium text-[#0f5384] hover:text-[#12477d]"
-										>
-											Mark read
-										</Button>
-									) : (
-										<Button
-											variant="ghost"
-											size="sm"
-											onClick={() => onMarkAsUnread(notification.$id)}
-											className="h-7 px-2 text-xs font-medium text-[#0f5384] hover:text-[#12477d]"
-										>
-											Mark unread
-										</Button>
-									)}
-									<div
-										{...attributes}
-										{...listeners}
-										className="cursor-grab active:cursor-grabbing rounded p-1 transition-colors hover:bg-slate-100"
-										title="Drag to reorder"
-										aria-label="Drag to reorder notification"
-									>
-										<GripVertical className="h-4 w-4 text-slate-400 group-hover:text-[#0f5384] transition-colors" />
-									</div>
-								</div>
 							</div>
 						</div>
 
-						<div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+						<div className="mt-2 flex flex-wrap justify-between items-center gap-2 text-xs text-slate-500">
 							<div className="flex items-center gap-1">
 								<Clock className="h-3 w-3" />
 								<span>{displayDate}</span>
@@ -1150,16 +1159,39 @@ const SortableNotificationItem: React.FC<SortableNotificationItemProps> = ({
 									{typeConfig.label}
 								</span>
 							)}
-							{!notification.read ? (
-								<span
-									className="h-2 w-2 rounded-full bg-blue-500"
-									aria-label="Unread"
-								/>
-							) : null}
+							<div className="flex items-center gap-1">
+								{notification.read !== true ? (
+									<Button
+										variant="ghost"
+										size="sm"
+										onClick={() => onMarkAsRead(notification.$id)}
+										className="h-7 px-2 text-xs font-medium text-[#0f5384] hover:text-[#12477d]"
+									>
+										Mark read
+									</Button>
+								) : (
+									<Button
+										variant="ghost"
+										size="sm"
+										onClick={() => onMarkAsUnread(notification.$id)}
+										className="h-7 px-2 text-xs font-medium text-[#0f5384] hover:text-[#12477d]"
+									>
+										Mark unread
+									</Button>
+								)}
+							</div>
 						</div>
-
+						<Separator className="my-2" />
 						{pageLink ? (
-							<div className="mt-3 flex justify-end">
+							<div className="mt-3 flex justify-between">
+								<div
+									{...attributes}
+									{...listeners}
+									className="cursor-grab active:cursor-grabbing rounded p-1 transition-colors hover:bg-slate-100"
+									title="Drag to reorder"
+								>
+									<GripVertical className="h-6 w-6 text-slate-400 group-hover:text-[#0f5384] transition-colors" />
+								</div>
 								<Button
 									size="sm"
 									onClick={() => onActionNavigate(pageLink.url)}

@@ -292,7 +292,7 @@
 
 	/* Phase 1 View as user: mute write CTAs; End session uses data-impersonation-allow */
 	body[data-impersonation-readonly="true"]
-		.primary-btn:not([data-impersonation-allow]),
+	.primary-btn:not([data-impersonation-allow]),
 	body[data-impersonation-readonly="true"]
 		.btn-primary:not([data-impersonation-allow]),
 	body[data-impersonation-readonly="true"]
@@ -1543,13 +1543,6 @@ iframe[src*="documentcloud.adobe" i] {
 /* Custom gradient text for sidebar */
 .sidebar-gradient-text {
 	background: linear-gradient(135deg, #12477d 0%, #03afbf 100%);
-	-webkit-background-clip: text;
-	-webkit-text-fill-color: transparent;
-	background-clip: text;
-}
-
-.text-gradient-700 {
-	background: linear-gradient(135deg, #12477d 0%, #0f5384 55%, #0369a1 100%);
 	-webkit-background-clip: text;
 	-webkit-text-fill-color: transparent;
 	background-clip: text;
