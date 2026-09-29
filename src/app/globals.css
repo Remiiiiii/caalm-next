@@ -1548,6 +1548,13 @@ iframe[src*="documentcloud.adobe" i] {
 	background-clip: text;
 }
 
+.text-gradient-700 {
+	background: linear-gradient(135deg, #12477d 0%, #0f5384 55%, #0369a1 100%);
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+	background-clip: text;
+}
+
 /* Apply gradient text to active tabs */
 button[data-state="active"] > span {
 	background: linear-gradient(135deg, #12477d 0%, #03afbf 100%);

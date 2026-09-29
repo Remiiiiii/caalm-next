@@ -21,6 +21,8 @@ import {
 	Calendar,
 	Check,
 	CheckCircle,
+	ChevronLeft,
+	ChevronRight,
 	Clock,
 	FileText,
 	GripVertical,
@@ -35,7 +37,7 @@ import {
 	Zap,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { Fragment, useEffect, useMemo, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useOrgTimezone } from "@/hooks/useOrgTimezone";
@@ -51,7 +53,7 @@ import {
 	DialogTitle,
 } from "./ui/dialog";
 import { Input } from "./ui/input";
-import { PageIndex } from "./ui/page-index";
+import { pageCountFromItems, showingRangeText } from "./ui/page-index";
 import {
 	Select,
 	SelectContent,
@@ -193,6 +195,128 @@ const NOTIFICATION_TYPES = {
 
 type NotificationType = keyof typeof NOTIFICATION_TYPES;
 
+type NotificationTypeConfig = {
+	label: string;
+	icon: React.ReactNode;
+	color: string;
+	bgColor: string;
+	priority: "low" | "medium" | "high" | "urgent";
+};
+
+function humanizeNotificationType(type: string): string {
+	return type
+		.split(/[-_]/g)
+		.filter(Boolean)
+		.map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+		.join(" ");
+}
+
+function getNotificationTypeConfig(type: string): NotificationTypeConfig {
+	if (type in NOTIFICATION_TYPES) {
+		const known = NOTIFICATION_TYPES[type as NotificationType];
+		return {
+			label: known.label,
+			icon: known.icon,
+			color: known.color,
+			bgColor: known.bgColor,
+			priority: known.priority,
+		};
+	}
+	return {
+		label: humanizeNotificationType(type),
+		icon: <Info className="w-4 h-4" />,
+		color: "bg-slate-100 text-slate-700 border-slate-200",
+		bgColor: "bg-slate-50/30 border-slate-300",
+		priority: "low",
+	};
+}
+
+function getTypeIconShell(type: string): string {
+	switch (type) {
+		case "compliance-alert":
+		case "contract-deleted":
+		case "license-deleted":
+		case "contract-expiry":
+			return "bg-red/10 text-red";
+		case "contract-renewal":
+		case "deadline-approaching":
+		case "obligation-reminder":
+			return "bg-orange/10 text-orange";
+		case "task-completed":
+			return "bg-orange/10 text-orange";
+		case "audit-due":
+			return "bg-purple/10 text-purple-600";
+		case "user-invited":
+		case "performance-metric":
+			return "bg-green/10 text-green";
+		default:
+			return "bg-blue/10 text-[#0f5384]";
+	}
+}
+
+function resolveNotificationLink(
+	notification: Notification,
+): { url: string; text: string } | null {
+	if (notification.actionUrl?.trim()) {
+		return {
+			url: notification.actionUrl.trim(),
+			text: notification.actionText?.trim() || "View details",
+		};
+	}
+	if (isFileShareNotification(notification)) {
+		try {
+			const meta =
+				typeof notification.metadata === "string"
+					? JSON.parse(notification.metadata)
+					: notification.metadata;
+			const fileId =
+				meta && typeof meta === "object" && "fileId" in meta
+					? String((meta as { fileId?: string }).fileId || "")
+					: "";
+			if (fileId) {
+				return { url: `/shared/files/${fileId}`, text: "View Document" };
+			}
+		} catch {
+			/* ignore */
+		}
+	}
+	try {
+		const meta =
+			typeof notification.metadata === "string"
+				? JSON.parse(notification.metadata)
+				: notification.metadata;
+		if (meta && typeof meta === "object" && "actionUrl" in meta) {
+			const url = String((meta as { actionUrl?: string }).actionUrl || "").trim();
+			if (url) {
+				return {
+					url,
+					text:
+						String((meta as { actionText?: string }).actionText || "").trim() ||
+						"View details",
+				};
+			}
+		}
+	} catch {
+		/* ignore */
+	}
+	return null;
+}
+
+function getPriorityCapClass(priority?: string): string {
+	switch (priority) {
+		case "urgent":
+			return "border-l-red-500";
+		case "high":
+			return "border-l-orange-500";
+		case "medium":
+			return "border-l-amber-400";
+		case "low":
+			return "border-l-blue-400";
+		default:
+			return "border-l-slate-300";
+	}
+}
+
 interface NotificationCenterProps {
 	open: boolean;
 	onClose: () => void;
@@ -317,6 +441,10 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 		setManualOrderIds(null);
 	}, [sortBy, search, typeFilter, statusFilter, priorityFilter]);
 
+	useEffect(() => {
+		setPage(1);
+	}, [search, typeFilter, statusFilter, priorityFilter, sortBy, perPage]);
+
 	// Pagination
 	const paginated = displayList.slice((page - 1) * perPage, page * perPage);
 
@@ -422,21 +550,6 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 		}
 	};
 
-	const formatNotificationTime = (dateString: string) => {
-		const date = new Date(dateString);
-		const now = new Date();
-		const diffInMs = now.getTime() - date.getTime();
-		const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
-		const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
-		const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
-
-		if (diffInMinutes < 1) return "Just now";
-		if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
-		if (diffInHours < 24) return `${diffInHours}h ago`;
-		if (diffInDays < 7) return `${diffInDays}d ago`;
-		return formatInTimezone(date, "MMM d, yyyy", timeZone);
-	};
-
 	const getPriorityColor = (priority?: string) => {
 		switch (priority) {
 			case "urgent":
@@ -507,22 +620,21 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 						</div>
 						<div className="flex items-center gap-2">
 							<Button
-								variant="ghost"
 								size="sm"
 								onClick={handleMarkAllAsRead}
 								disabled={!notifications.some((n: Notification) => !n.read)}
-								className="text-sm"
+								className="btn-primary px-3 sm:px-4 text-sm"
 							>
-								<Check className="w-4 h-4 mr-1" />
+								<Check className="w-4 h-4" />
 								Mark all read
 							</Button>
 							<Button
 								variant="ghost"
 								size="sm"
 								onClick={() => setShowSettings(true)}
-								className="text-sm"
+								className="text-sm text-slate-700 hover:text-slate-800"
 							>
-								<Settings className="w-4 h-4" />
+								<Settings className="w-4 h-4 text-slate-700" />
 							</Button>
 						</div>
 					</div>
@@ -540,9 +652,15 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 				{/* Scrollable Content */}
 				<div className="flex-1 overflow-y-auto p-6 bg-slate-50">
 					<div className="space-y-4">
+						<div
+							aria-hidden
+							className="border-t border-slate-200"
+							role="separator"
+						/>
+
 						{/* Search + Sort */}
 						<div
-							className="flex items-center justify-between gap-4"
+							className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center"
 							data-testid="notification-search-sort"
 						>
 							<div className="relative min-w-0 flex-1">
@@ -559,20 +677,26 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 								/>
 							</div>
 							<div
-								className="flex shrink-0 items-center gap-2"
+								className="flex shrink-0 items-center gap-2 md:justify-end"
 								data-testid="sort-controls"
 							>
 								<span className="text-sm text-slate-600 whitespace-nowrap">
 									Sort by:
 								</span>
 								<Select value={sortBy} onValueChange={setSortBy}>
-									<SelectTrigger className="h-10 w-32 text-xs">
+									<SelectTrigger className="sort-select h-10 w-full min-w-[8rem] md:w-[210px] text-xs">
 										<SelectValue />
 									</SelectTrigger>
-									<SelectContent>
-										<SelectItem value="date">Date</SelectItem>
-										<SelectItem value="priority">Priority</SelectItem>
-										<SelectItem value="type">Type</SelectItem>
+									<SelectContent className="sort-select-content">
+										<SelectItem className="shad-select-item text-gradient-700" value="date">
+											Date
+										</SelectItem>
+										<SelectItem className="shad-select-item text-gradient-700" value="priority">
+											Priority
+										</SelectItem>
+										<SelectItem className="shad-select-item text-gradient-700" value="type">
+											Type
+										</SelectItem>
 									</SelectContent>
 								</Select>
 							</div>
@@ -580,76 +704,82 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 
 						{/* Type / status / priority filters */}
 						<div
-							className="flex flex-wrap justify-center gap-2"
+							className="grid grid-cols-1 gap-3 sm:grid-cols-3"
 							data-testid="notification-filters"
 						>
 							<Select value={typeFilter} onValueChange={setTypeFilter}>
 								<SelectTrigger
-									className="sort-select"
+									className="sort-select h-10 w-full sm:w-full"
 									data-testid="type-filter"
 								>
 									<SelectValue placeholder="All Types" />
 								</SelectTrigger>
 								<SelectContent className="sort-select-content">
-									<SelectItem className="shad-select-item" value="all">
+									<SelectItem className="shad-select-item text-gradient-700" value="all">
 										All Types
 									</SelectItem>
 									{Object.entries(NOTIFICATION_TYPES).map(([key, value]) => (
 										<SelectItem
 											key={key}
-											className="shad-select-item"
+											className="shad-select-item text-gradient-700"
 											value={key}
 										>
 											<div className="flex items-center gap-2">
 												{value.icon}
-												{value.label}
+												<span className="text-gradient-700">{value.label}</span>
 											</div>
 										</SelectItem>
 									))}
 								</SelectContent>
 							</Select>
 							<Select value={statusFilter} onValueChange={setStatusFilter}>
-								<SelectTrigger className="sort-select">
+								<SelectTrigger className="sort-select h-10 w-full sm:w-full">
 									<SelectValue placeholder="All Status" />
 								</SelectTrigger>
 								<SelectContent className="sort-select-content">
-									<SelectItem className="shad-select-item" value="all">
+									<SelectItem className="shad-select-item text-gradient-700" value="all">
 										All Status
 									</SelectItem>
-									<SelectItem className="shad-select-item" value="unread">
+									<SelectItem className="shad-select-item text-gradient-700" value="unread">
 										Unread
 									</SelectItem>
-									<SelectItem className="shad-select-item" value="read">
+									<SelectItem className="shad-select-item text-gradient-700" value="read">
 										Read
 									</SelectItem>
 								</SelectContent>
 							</Select>
 							<Select value={priorityFilter} onValueChange={setPriorityFilter}>
 								<SelectTrigger
-									className="sort-select"
+									className="sort-select h-10 w-full sm:w-full"
 									data-testid="priority-filter"
 								>
 									<SelectValue placeholder="All Priorities" />
 								</SelectTrigger>
 								<SelectContent className="sort-select-content">
-									<SelectItem className="shad-select-item" value="all">
+									<SelectItem className="shad-select-item text-gradient-700" value="all">
 										All Priorities
 									</SelectItem>
-									<SelectItem className="shad-select-item" value="urgent">
+									<SelectItem className="shad-select-item text-gradient-700" value="urgent">
 										Urgent
 									</SelectItem>
-									<SelectItem className="shad-select-item" value="high">
+									<SelectItem className="shad-select-item text-gradient-700" value="high">
 										High
 									</SelectItem>
-									<SelectItem className="shad-select-item" value="medium">
+									<SelectItem className="shad-select-item text-gradient-700" value="medium">
 										Medium
 									</SelectItem>
-									<SelectItem className="shad-select-item" value="low">
+									<SelectItem className="shad-select-item text-gradient-700" value="low">
 										Low
 									</SelectItem>
 								</SelectContent>
 							</Select>
 						</div>
+
+						<div
+							aria-hidden
+							className="border-b border-slate-200 pb-1"
+							role="separator"
+						/>
 
 						{/* Bulk Actions */}
 						{selected.length > 0 && (
@@ -732,24 +862,48 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 											</p>
 										</div>
 									) : (
-										paginated.map((notification) => {
-											const typeConfig =
-												NOTIFICATION_TYPES[
-													notification.type as NotificationType
-												];
+										paginated.map((notification, index) => {
+											const prevType =
+												index > 0 ? paginated[index - 1]?.type : null;
+											const showGroupHeader =
+												notification.type !== prevType;
+											const typeConfig = getNotificationTypeConfig(
+												notification.type,
+											);
 											return (
-												<SortableNotificationItem
-													key={notification.$id}
-													notification={notification}
-													isSelected={selected.includes(notification.$id)}
-													onSelect={handleSelect}
-													onMarkAsRead={(id) => handleMarkAsRead([id])}
-													onMarkAsUnread={(id) => handleMarkAsUnread([id])}
-													onActionNavigate={handleActionNavigate}
-													typeConfig={typeConfig}
-													getPriorityColor={getPriorityColor}
-													formatNotificationTime={formatNotificationTime}
-												/>
+												<Fragment key={notification.$id}>
+													{showGroupHeader ? (
+														<div
+															className="flex items-center gap-2 pt-1 pb-0.5"
+															data-testid="notification-type-group"
+														>
+															<div
+																className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${getTypeIconShell(notification.type)}`}
+															>
+																<span className="[&>svg]:h-4 [&>svg]:w-4">
+																	{typeConfig.icon}
+																</span>
+															</div>
+															<span className="text-sm font-semibold text-gradient-700">
+																{typeConfig.label}
+															</span>
+														</div>
+													) : null}
+													<SortableNotificationItem
+														notification={notification}
+														isSelected={selected.includes(notification.$id)}
+														onSelect={handleSelect}
+														onMarkAsRead={(id) => handleMarkAsRead([id])}
+														onMarkAsUnread={(id) => handleMarkAsUnread([id])}
+														onActionNavigate={handleActionNavigate}
+														typeConfig={typeConfig}
+														getPriorityColor={getPriorityColor}
+														timeZone={timeZone}
+														iconShellClass={getTypeIconShell(
+															notification.type,
+														)}
+													/>
+												</Fragment>
 											);
 										})
 									)}
@@ -757,57 +911,67 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 							</SortableContext>
 						</DndContext>
 
-						{/* Enhanced Pagination */}
-						<div
-							className="flex items-center justify-between mt-4 pt-4 border-t border-slate-200"
-							data-testid="pagination"
-						>
-							<div className="flex w-full items-center gap-4">
-								<label className="text-xs text-slate-700">
-									Items per page:
-									<select
-										className="ml-2 border rounded px-2 py-1"
-										value={perPage}
-										onChange={(e) => setPerPage(Number(e.target.value))}
-									>
-										{[5, 10, 20, 50].map((n) => (
-											<option key={n} value={n}>
-												{n}
-											</option>
-										))}
-									</select>
-								</label>
-								<PageIndex
-									className="ml-auto"
-									page={page}
-									totalItems={filtered.length}
-									pageSize={perPage}
-									onPageChange={setPage}
-									showRange
-									itemLabel="items"
-									aria-label="Notifications pagination"
-								/>
-							</div>
-						</div>
 					</div>
 				</div>
 
-				{/* Professional Footer */}
-				<div className="flex items-center justify-between border-t border-white/40 bg-white/35 px-6 py-4 backdrop-blur-sm">
-					<div className="text-xs text-slate-500">
-						Showing {paginated.length} of {filtered.length} notification
-						{filtered.length !== 1 ? "s" : ""}
-					</div>
-					<div className="flex items-center gap-3">
-						<Button
-							variant="outline"
-							size="sm"
-							onClick={onClose}
-							className="primary-btn px-3 sm:px-4"
+				{/* Footer pagination */}
+				<div
+					className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4"
+					data-testid="pagination"
+				>
+					<label className="text-xs text-slate-700">
+						Items per page:
+						<select
+							className="ml-2 rounded border-[0.25px] border-slate-300 bg-white px-2 py-1"
+							value={perPage}
+							onChange={(e) => setPerPage(Number(e.target.value))}
 						>
-							Close
-						</Button>
-					</div>
+							{[5, 10, 20, 50].map((n) => (
+								<option key={n} value={n}>
+									{n}
+								</option>
+							))}
+						</select>
+					</label>
+					<nav
+						aria-label="Notifications pagination"
+						className="ml-auto flex flex-wrap items-center gap-3 text-xs text-slate-600"
+					>
+						<span>
+							{showingRangeText(page, perPage, filtered.length, "items")}
+						</span>
+						<button
+							type="button"
+							className="inline-flex items-center gap-1 bg-transparent p-0 text-xs font-medium text-slate-700 transition-colors duration-200 hover:text-[#0f5384] disabled:cursor-not-allowed disabled:text-slate-400"
+							disabled={page <= 1}
+							onClick={() => setPage((p) => Math.max(1, p - 1))}
+						>
+							<ChevronLeft className="h-4 w-4" />
+							Previous
+						</button>
+						<span className="text-slate-700">
+							Page {page} of{" "}
+							{pageCountFromItems(filtered.length, perPage)}
+						</span>
+						<button
+							type="button"
+							className="inline-flex items-center gap-1 bg-transparent p-0 text-xs font-medium text-slate-700 transition-colors duration-200 hover:text-[#0f5384] disabled:cursor-not-allowed disabled:text-slate-400"
+							disabled={
+								page >= pageCountFromItems(filtered.length, perPage)
+							}
+							onClick={() =>
+								setPage((p) =>
+									Math.min(
+										pageCountFromItems(filtered.length, perPage),
+										p + 1,
+									),
+								)
+							}
+						>
+							Next
+							<ChevronRight className="h-4 w-4" />
+						</button>
+					</nav>
 				</div>
 			</DialogContent>
 
@@ -827,9 +991,10 @@ interface SortableNotificationItemProps {
 	onMarkAsRead: (id: string) => void;
 	onMarkAsUnread: (id: string) => void;
 	onActionNavigate: (url: string) => void;
-	typeConfig: (typeof NOTIFICATION_TYPES)[keyof typeof NOTIFICATION_TYPES];
+	typeConfig: NotificationTypeConfig;
 	getPriorityColor: (priority?: string) => string;
-	formatNotificationTime: (dateString: string) => string;
+	timeZone: string;
+	iconShellClass: string;
 }
 
 const SortableNotificationItem: React.FC<SortableNotificationItemProps> = ({
@@ -841,7 +1006,8 @@ const SortableNotificationItem: React.FC<SortableNotificationItemProps> = ({
 	onActionNavigate,
 	typeConfig,
 	getPriorityColor,
-	formatNotificationTime,
+	timeZone,
+	iconShellClass,
 }) => {
 	const {
 		attributes,
@@ -857,30 +1023,15 @@ const SortableNotificationItem: React.FC<SortableNotificationItemProps> = ({
 		transition,
 	};
 
-	const resolvedAction = (() => {
-		if (notification.actionUrl && notification.actionText) {
-			return {
-				url: notification.actionUrl,
-				text: notification.actionText,
-			};
-		}
-		const isFileShare = isFileShareNotification(notification);
-		if (!isFileShare) return null;
-		try {
-			const meta =
-				typeof notification.metadata === "string"
-					? JSON.parse(notification.metadata)
-					: notification.metadata;
-			const fileId =
-				meta && typeof meta === "object" && "fileId" in meta
-					? String((meta as { fileId?: string }).fileId || "")
-					: "";
-			if (!fileId) return null;
-			return { url: `/shared/files/${fileId}`, text: "View Document" };
-		} catch {
-			return null;
-		}
-	})();
+	const pageLink = resolveNotificationLink(notification);
+	const displayDate = formatInTimezone(
+		new Date(notification.$createdAt),
+		"MMM d, yyyy",
+		timeZone,
+	);
+	const needsAction =
+		Boolean(pageLink) ||
+		/approval|action required|pending|overdue/i.test(notification.title);
 
 	return (
 		<div
@@ -890,122 +1041,135 @@ const SortableNotificationItem: React.FC<SortableNotificationItemProps> = ({
 			data-read={notification.read.toString()}
 			data-priority={notification.priority || "low"}
 			data-date={notification.$createdAt}
-			className={`p-4 rounded-lg border-2 bg-white transition-all duration-200 group ${
+			className={`rounded-lg border border-slate-200 bg-white pl-0 transition-all duration-200 group overflow-hidden ${
 				notification.read
-					? "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
-					: "border-blue-200 hover:border-blue-300 hover:bg-blue-50"
+					? "hover:border-slate-300 hover:bg-slate-50/80"
+					: "bg-blue-50/40 hover:border-blue-300 hover:bg-blue-50/70"
 			} ${isDragging ? "opacity-50 shadow-lg" : "shadow-sm hover:shadow-md"}`}
 		>
-			<div className="flex items-start gap-4">
-				<div className="flex-shrink-0 mt-1">
-					<Checkbox
-						checked={isSelected}
-						onCheckedChange={() => onSelect(notification.$id)}
-					/>
-				</div>
+			<div
+				className={`flex border-l-4 ${getPriorityCapClass(notification.priority)}`}
+			>
+				<div className="flex flex-1 items-start gap-3 p-4 min-w-0">
+					<div className="shrink-0 pt-0.5">
+						<Checkbox
+							checked={isSelected}
+							onCheckedChange={() => onSelect(notification.$id)}
+						/>
+					</div>
 
-				{/* Icon with gradient background */}
-				<div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:from-blue-200 group-hover:to-indigo-200 transition-colors">
-					{typeConfig?.icon ? (
-						<div className="h-5 w-5 text-blue-600 [&>svg]:h-5 [&>svg]:w-5 [&>svg]:text-blue-600">
-							{typeConfig.icon}
-						</div>
-					) : (
-						<Bell className="h-5 w-5 text-blue-600" />
-					)}
-				</div>
+					<div
+						className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${iconShellClass}`}
+					>
+						{typeConfig?.icon ? (
+							<span className="[&>svg]:h-5 [&>svg]:w-5">{typeConfig.icon}</span>
+						) : (
+							<Bell className="h-5 w-5" />
+						)}
+					</div>
 
-				<div className="flex-1 min-w-0">
-					<div className="flex items-start justify-between gap-2">
-						<div className="flex-1">
-							<div className="flex items-center gap-2 mb-1">
-								<span className="text-sm font-semibold text-slate-700">
-									{notification.title}
-								</span>
-								{notification.priority && (
+					<div className="min-w-0 flex-1">
+						<div className="flex items-start justify-between gap-3">
+							<div className="min-w-0 flex-1">
+								{pageLink ? (
+									<button
+										type="button"
+										onClick={() => onActionNavigate(pageLink.url)}
+										className="text-left text-sm font-semibold text-[#12477d] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 rounded-sm"
+									>
+										{notification.title}
+									</button>
+								) : (
+									<p className="text-sm font-semibold text-slate-800">
+										{notification.title}
+									</p>
+								)}
+								<p className="mt-1 text-sm text-slate-600 line-clamp-2">
+									{notification.message}
+								</p>
+							</div>
+
+							<div className="flex shrink-0 flex-col items-end justify-between gap-3 self-stretch min-h-[4.5rem]">
+								{notification.priority ? (
 									<span
-										className={`px-2 py-0.5 text-xs rounded-full border ${getPriorityColor(
+										className={`inline-block px-2 py-0.5 text-xs rounded-full font-medium border capitalize ${getPriorityColor(
 											notification.priority,
 										)}`}
 									>
 										{notification.priority}
 									</span>
+								) : (
+									<span aria-hidden className="h-5" />
 								)}
-								{!notification.read && (
-									<span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-								)}
-							</div>
-							<p className="text-sm text-slate-600 mb-2 line-clamp-2">
-								{notification.message}
-							</p>
-							<div className="flex items-center gap-4 text-xs text-slate-500">
 								<div className="flex items-center gap-1">
-									<Clock className="h-3 w-3" />
-									<span>{formatNotificationTime(notification.$createdAt)}</span>
-								</div>
-								{typeConfig && (
-									<span
-										className={`px-2 py-0.5 rounded-full text-xs font-medium ${typeConfig.color}`}
+									{notification.read !== true ? (
+										<Button
+											variant="ghost"
+											size="sm"
+											onClick={() => onMarkAsRead(notification.$id)}
+											className="h-7 px-2 text-xs font-medium text-[#0f5384] hover:text-[#12477d]"
+										>
+											Mark read
+										</Button>
+									) : (
+										<Button
+											variant="ghost"
+											size="sm"
+											onClick={() => onMarkAsUnread(notification.$id)}
+											className="h-7 px-2 text-xs font-medium text-[#0f5384] hover:text-[#12477d]"
+										>
+											Mark unread
+										</Button>
+									)}
+									<div
+										{...attributes}
+										{...listeners}
+										className="cursor-grab active:cursor-grabbing rounded p-1 transition-colors hover:bg-slate-100"
+										title="Drag to reorder"
+										aria-label="Drag to reorder notification"
 									>
-										{typeConfig.label}
-									</span>
-								)}
+										<GripVertical className="h-4 w-4 text-slate-400 group-hover:text-[#0f5384] transition-colors" />
+									</div>
+								</div>
 							</div>
 						</div>
 
-						<div className="flex items-center gap-2">
-							{notification.read !== true && (
-								<Button
-									variant="ghost"
-									size="sm"
-									onClick={() => onMarkAsRead(notification.$id)}
-									className="h-7 px-2 text-xs text-slate-600 hover:text-slate-700"
-								>
-									Mark read
-								</Button>
-							)}
-							{notification.read === true && (
-								<Button
-									variant="ghost"
-									size="sm"
-									onClick={() => onMarkAsUnread(notification.$id)}
-									className="h-7 px-2 text-xs text-slate-600 hover:text-slate-700"
-								>
-									Mark unread
-								</Button>
-							)}
-							{/* Drag Handle */}
-							<div
-								{...attributes}
-								{...listeners}
-								className="flex-shrink-0 cursor-grab active:cursor-grabbing p-1 hover:bg-slate-100 rounded transition-colors"
-								title="Drag to reorder"
-							>
-								<GripVertical className="w-4 h-4 text-slate-400 group-hover:text-blue-600 transition-colors" />
+						<div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+							<div className="flex items-center gap-1">
+								<Clock className="h-3 w-3" />
+								<span>{displayDate}</span>
 							</div>
-							{/* <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onDelete(notification.$id)}
-                className="h-6 px-2 text-xs text-red-600 hover:text-red-700"
-              >
-                <Trash className="w-3 h-3" />
-              </Button> */}
+							{needsAction ? (
+								<span className="inline-block px-2 py-0.5 text-xs rounded-full font-medium border bg-orange/10 text-orange border-orange/20">
+									Action needed
+								</span>
+							) : (
+								<span
+									className={`inline-block px-2 py-0.5 text-xs rounded-full font-medium border ${typeConfig.color}`}
+								>
+									{typeConfig.label}
+								</span>
+							)}
+							{!notification.read ? (
+								<span
+									className="h-2 w-2 rounded-full bg-blue-500"
+									aria-label="Unread"
+								/>
+							) : null}
 						</div>
+
+						{pageLink ? (
+							<div className="mt-3 flex justify-end">
+								<Button
+									size="sm"
+									onClick={() => onActionNavigate(pageLink.url)}
+									className="primary-btn px-3 text-xs sm:px-4"
+								>
+									{pageLink.text}
+								</Button>
+							</div>
+						) : null}
 					</div>
-
-					{resolvedAction && (
-						<div className="mt-3 border-t border-slate-200 pt-3">
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={() => onActionNavigate(resolvedAction.url)}
-								className="primary-btn cursor-pointer px-3 text-xs sm:px-4"
-							>
-								{resolvedAction.text}
-							</Button>
-						</div>
-					)}
 				</div>
 			</div>
 		</div>
