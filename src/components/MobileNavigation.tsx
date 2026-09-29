@@ -1,25 +1,27 @@
 "use client";
 
-import { Lock, Menu } from "lucide-react";
+import { Cloud, Menu } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ContractTemplatesNavIcon } from "@/components/sidebar/NavItemIcon";
+import { ITNavMobileSheet } from "@/components/sidebar/ITNavMobileSheet";
+import { SidebarNavSections } from "@/components/sidebar/SidebarNavSections";
 import SidebarUserCard from "@/components/sidebar/SidebarUserCard";
+import StorageUsageBar from "@/components/StorageUsageBar";
 import { Separator } from "@/components/ui/separator";
+import { isITSidebarPath } from "@/constants/it-navigation";
+import { ROLE_LABELS, type UserRole } from "@/constants/rbac";
+import { useAuth } from "@/contexts/AuthContext";
+import { useAnalyticsPrefetch } from "@/hooks/useAnalyticsPrefetch";
+import { useGroupedNavigation } from "@/hooks/useGroupedNavigation";
+import { Button } from "./ui/button";
 import {
 	Sheet,
 	SheetContent,
 	SheetTitle,
 	SheetTrigger,
-} from "@/components/ui/sheet";
-import { ROLE_LABELS, type UserRole } from "@/constants/rbac";
-import { useAuth } from "@/contexts/AuthContext";
-import { useGroupedNavigation } from "@/hooks/useGroupedNavigation";
-import { isCompanionPath } from "@/lib/ui/desktop-first";
-import { cn } from "@/lib/utils";
-import { Button } from "./ui/button";
+} from "./ui/sheet";
 
 interface Props {
 	$id: string;
@@ -34,31 +36,30 @@ const MobileNavigation = ({ fullName, avatar, email, role }: Props) => {
 	const { logout } = useAuth();
 	const [open, setOpen] = useState(false);
 	const pathname = usePathname();
+	const { prefetchDepartmentAnalytics } = useAnalyticsPrefetch();
 	const {
 		groupedNav,
+		permissions,
 		permissionsLoading,
 		rolesLoading,
+		primaryRole,
 		isViewer,
+		isITUser,
+		canUseITPortal,
 		shouldShowLock,
 	} = useGroupedNavigation();
-	const companionNav = groupedNav
-		.map((section) => ({
-			...section,
-			items: section.items.filter(
-				(item) => Boolean(item.url) && isCompanionPath(item.url),
-			),
-		}))
-		.filter((section) => section.items.length > 0);
+
+	const showITSidebar =
+		canUseITPortal && (isITSidebarPath(pathname) || isITUser);
+
 	const settingsItems =
-		companionNav.find((section) => section.header === "Settings")?.items ?? [];
+		groupedNav.find((section) => section.header === "Settings")?.items ?? [];
 
 	useEffect(() => {
 		setOpen(false);
 	}, [pathname]);
 
-	const isActive = (url: string) =>
-		pathname === url ||
-		(pathname?.startsWith(`${url}/`) && url !== "/analytics");
+	const closeSheet = () => setOpen(false);
 
 	return (
 		<header className="mobile-header">
@@ -80,135 +81,79 @@ const MobileNavigation = ({ fullName, avatar, email, role }: Props) => {
 						<Menu className="h-6 w-6 text-slate-700" />
 					</Button>
 				</SheetTrigger>
-				<SheetContent className="shad-sheet flex h-screen flex-col overflow-y-auto px-3">
-					<SheetTitle>
-						<div className="header-user">
-							{avatar && (
+				<SheetContent
+					side="left"
+					className="flex h-full max-h-[100dvh] w-[min(100vw,320px)] flex-col overflow-hidden p-0 sm:max-w-sm"
+				>
+					<div className="shrink-0 px-4 pt-4">
+						<SheetTitle className="sr-only">Navigation menu</SheetTitle>
+						<div className="header-user rounded-2xl px-3 py-2">
+							{avatar ? (
 								<Image
 									src={avatar}
-									alt="avatar"
+									alt=""
 									width={44}
 									height={44}
-									className="header-user-avatar"
+									className="header-user-avatar shrink-0"
 								/>
-							)}
-							<div>
-								<p className="subtitle-2 capitalize">
+							) : null}
+							<div className="min-w-0 flex-1">
+								<p className="subtitle-2 truncate capitalize text-slate-800">
 									{fullName} | {ROLE_LABELS[role]}
 								</p>
-								<p className="caption">{email}</p>
+								<p className="caption truncate text-slate-600">{email}</p>
 							</div>
 						</div>
-						<Separator className="mb-4 bg-light-200/20" />
-					</SheetTitle>
-					<nav className="mobile-nav flex-1 overflow-y-auto">
-						{groupedNav.length === 0 && permissionsLoading && rolesLoading ? (
-							<div className="flex flex-col items-center gap-2 py-8 text-muted-foreground">
-								<div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-500" />
-								<span className="text-sm">Loading navigation...</span>
-							</div>
-						) : companionNav.length === 0 ? (
-							<p className="py-8 text-center text-sm text-muted-foreground">
-								No navigation items available
-							</p>
+					</div>
+
+					<Separator className="mx-4 my-3 bg-slate-200" />
+
+					<nav className="mobile-nav min-h-0 flex-1 overflow-y-auto px-3 pb-4">
+						{showITSidebar ? (
+							<ITNavMobileSheet pathname={pathname} onNavigate={closeSheet} />
 						) : (
-							<ul className="mobile-nav-list">
-								{companionNav.map((section) =>
-									section.header === "Settings" ? null : (
-										<li key={section.header}>
-											<p className="mb-2 px-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
-												{section.header}
-											</p>
-											<ul className="mb-4 flex flex-col gap-1">
-												{section.items.map((item) => {
-													const active = item.url ? isActive(item.url) : false;
-													return (
-														<li
-															key={`${section.header}-${item.name}`}
-															className={cn(
-																"mobile-nav-item",
-																active && "shad-active",
-															)}
-														>
-															<Link
-																href={item.url}
-																className="flex w-full items-center gap-3"
-																onClick={() => setOpen(false)}
-															>
-																{item.name === "Contract Templates" ? (
-																	<ContractTemplatesNavIcon size={24} />
-																) : item.icon.endsWith(".png") ? (
-																	<img
-																		src={item.icon}
-																		alt=""
-																		width={24}
-																		height={24}
-																		className={cn(
-																			"nav-icon shrink-0",
-																			active && "nav-icon-active",
-																		)}
-																	/>
-																) : (
-																	<Image
-																		src={item.icon}
-																		alt=""
-																		width={24}
-																		height={24}
-																		className={cn(
-																			"nav-icon shrink-0",
-																			active && "nav-icon-active",
-																		)}
-																		style={{ width: "24px", height: "24px" }}
-																	/>
-																)}
-																<span className="flex min-w-0 flex-1 items-center gap-2">
-																	<span className="truncate">{item.name}</span>
-																	{shouldShowLock(item) && (
-																		<Lock
-																			className="h-3 w-3 shrink-0 text-gray-500"
-																			aria-hidden
-																		/>
-																	)}
-																	{isViewer && item.viewerReadOnly && (
-																		<span className="shrink-0 text-xs text-gray-500">
-																			(read-only)
-																		</span>
-																	)}
-																</span>
-															</Link>
-														</li>
-													);
-												})}
-											</ul>
-										</li>
-									),
-								)}
-							</ul>
+							<SidebarNavSections
+								variant="mobile"
+								groupedNav={groupedNav}
+								pathname={pathname}
+								permissionsLoading={permissionsLoading}
+								rolesLoading={rolesLoading}
+								permissions={permissions}
+								primaryRole={primaryRole}
+								isViewer={isViewer}
+								shouldShowLock={shouldShowLock}
+								onNavigate={closeSheet}
+								onPrefetchAnalytics={prefetchDepartmentAnalytics}
+							/>
 						)}
 					</nav>
-					<p className="px-4 pb-1 text-xs text-slate-500">
+
+					<p className="shrink-0 px-4 pb-2 text-xs text-slate-500">
 						Full app on laptop.{" "}
 						<Link
 							href="/docs/concepts/desktop-and-mobile"
 							className="text-[#0f5384] underline-offset-2 hover:underline"
-							onClick={() => setOpen(false)}
+							onClick={closeSheet}
 						>
 							See device differences
 						</Link>
 					</p>
-					<Separator className="my-5 bg-light-200/20" />
-					<div className="flex flex-col justify-between gap-5 pb-5">
-						<SidebarUserCard
-							name={fullName}
-							email={email}
-							settingsItems={settingsItems}
-						/>
+
+					<div className="shrink-0 border-t border-slate-200 bg-slate-50/80 px-4 py-4">
+						<div className="mb-3 rounded-lg border border-slate-200 bg-white/80 p-3">
+							<div className="mb-1 flex items-center gap-2">
+								<Cloud className="h-3.5 w-3.5 text-slate-700" />
+								<p className="caption text-slate-700">Storage</p>
+							</div>
+							<StorageUsageBar />
+						</div>
+
+						<SidebarUserCard name={fullName} email={email} settingsItems={settingsItems} />
+
 						<Button
 							type="button"
-							className="mobile-sign-out-button"
-							onClick={() => {
-								logout("manual");
-							}}
+							className="mobile-sign-out-button mt-4"
+							onClick={() => logout("manual")}
 						>
 							<Image
 								src="/assets/icons/logout.svg"
