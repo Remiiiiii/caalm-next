@@ -73,6 +73,11 @@ const Sidebar = memo(
 				"/assets/icons/calendar2.svg",
 				"/assets/icons/contracts.svg",
 				"/assets/icons/settings.svg",
+				"/assets/icons/queue.svg",
+				"/assets/icons/development.svg",
+				"/assets/icons/resources.svg",
+				"/assets/icons/create-contract.png",
+				"/assets/icons/documents.svg",
 			];
 
 			criticalIcons.forEach((icon) => {
@@ -110,9 +115,15 @@ const Sidebar = memo(
 				})),
 			}));
 
+		const isSuperAdminDashboard = pathname?.startsWith("/dashboard/superadmin");
+
 		return (
 			<aside
-				className={cn("sidebar", isCollapsed && "sidebar-collapsed")}
+				className={cn(
+					"sidebar",
+					isCollapsed && "sidebar-collapsed",
+					isSuperAdminDashboard && "sidebar-solid-panel",
+				)}
 				data-collapsed={isCollapsed ? "true" : "false"}
 			>
 				<div
@@ -351,14 +362,13 @@ const Sidebar = memo(
 																				) {
 																					return null;
 																				}
-																				const isPriority = index < 3;
 																				return (
 																					<span>
 																						<NavItemIcon
 																							name={item.name}
 																							width={iconConfig?.width ?? 20}
 																							height={iconConfig?.height ?? 20}
-																							priority={isPriority}
+																							priority
 																						/>
 																					</span>
 																				);

@@ -1124,6 +1124,13 @@
 		position: relative;
 	}
 
+	/* Opaque panel on Super Admin dashboard — blocks main-content overlay bleed */
+	.sidebar.sidebar-solid-panel {
+		background-color: #f5f4f4;
+		position: relative;
+		z-index: 2;
+	}
+
 	.sidebar-footer {
 		@apply sticky bottom-0 z-10 shrink-0 pt-1;
 	}

@@ -1,6 +1,6 @@
 "use client";
 
-import { LayoutTemplate } from "lucide-react";
+import { Import, LayoutTemplate, UserCheck } from "lucide-react";
 import Image from "next/image";
 import {
 	ITEM_ICONS,
@@ -72,6 +72,26 @@ export function NavItemIcon({
 	if (name === "Contract Templates") {
 		return <ContractTemplatesNavIcon size={height} />;
 	}
+	if (name === "Event Check-in") {
+		return (
+			<UserCheck
+				className="shrink-0"
+				size={height}
+				stroke={NAV_ICON_FILL_GREY}
+				aria-hidden
+			/>
+		);
+	}
+	if (name === "Import") {
+		return (
+			<Import
+				className="shrink-0"
+				size={height}
+				stroke={NAV_ICON_FILL_GREY}
+				aria-hidden
+			/>
+		);
+	}
 	const iconConfig = ITEM_ICONS[name];
 	if (!iconConfig?.src) return null;
 
@@ -106,7 +126,7 @@ export function NavItemIcon({
 			height={resolvedHeight}
 			priority={priority}
 			fetchPriority={priority ? "high" : "auto"}
-			loading={priority ? undefined : "lazy"}
+			loading="eager"
 			className="shrink-0 max-w-none object-contain"
 			style={sizeStyle}
 		/>
