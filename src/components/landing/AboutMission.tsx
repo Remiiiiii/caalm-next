@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import { Building2 } from "lucide-react";
+import { Building2, UserRoundKey } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import LandingSection from "./LandingSection";
@@ -20,6 +20,43 @@ const CAALM = {
 	mid: "#0E638F",
 	navy: "#162768",
 } as const;
+
+/** Lucide UserRoundKey with fill (for permission diagram nodes). */
+function UserRoundKeyFilledMark({
+	cx,
+	cy,
+	size,
+	opacity = 1,
+}: {
+	cx: number;
+	cy: number;
+	size: number;
+	opacity?: number;
+}) {
+	return (
+		<foreignObject
+			x={cx - size / 2}
+			y={cy - size / 2}
+			width={size}
+			height={size}
+			opacity={opacity}
+		>
+			<div
+				xmlns="http://www.w3.org/1999/xhtml"
+				className="flex h-full w-full items-center justify-center"
+			>
+				<UserRoundKey
+					width={size}
+					height={size}
+					fill={CAALM.navy}
+					stroke={CAALM.navy}
+					strokeWidth={2}
+					aria-hidden
+				/>
+			</div>
+		</foreignObject>
+	);
+}
 
 function PermissionVisual({ animate }: { animate: boolean }) {
 	return (
@@ -72,17 +109,10 @@ function PermissionVisual({ animate }: { animate: boolean }) {
 						strokeWidth="1.5"
 					/>
 
-					{/* Embedded user icon matching the center graphic */}
-					<circle
+					<UserRoundKeyFilledMark
 						cx={node.x}
-						cy={node.y - 3}
-						r="3.5"
-						fill={CAALM.navy}
-						opacity={node.access ? 1 : 0.4}
-					/>
-					<path
-						d={`M${node.x - 7} ${node.y + 7} C${node.x - 7} ${node.y + 2} ${node.x - 3} ${node.y + 1} ${node.x} ${node.y + 1} C${node.x + 3} ${node.y + 1} ${node.x + 7} ${node.y + 2} ${node.x + 7} ${node.y + 7} Z`}
-						fill={CAALM.navy}
+						cy={node.y}
+						size={14}
 						opacity={node.access ? 1 : 0.4}
 					/>
 
@@ -169,12 +199,7 @@ function PermissionVisual({ animate }: { animate: boolean }) {
 				opacity="0.85"
 			/>
 
-			{/* Inner user icon */}
-			<circle cx="100" cy="73" r="5" fill={CAALM.navy} />
-			<path
-				d="M90 89 C90 83 95 81 100 81 C105 81 110 83 110 89 Z"
-				fill={CAALM.navy}
-			/>
+			<UserRoundKeyFilledMark cx={100} cy={80} size={22} />
 		</svg>
 	);
 }
