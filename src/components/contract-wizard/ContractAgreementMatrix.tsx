@@ -9,10 +9,11 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { PageIndex } from "@/components/ui/page-index";
 import { SearchField } from "@/components/ui/search-field";
 import { SegmentedToggle } from "@/components/ui/segmented-toggle";
+import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { contractTypeAccent } from "@/lib/templates/contract-type-accent";
 import { blueprintAccent } from "@/lib/templates/blueprint-accents";
 import type { BlueprintCatalogEntry } from "@/lib/templates/blueprint-catalog";
+import { contractTypeAccent } from "@/lib/templates/contract-type-accent";
 import { cn } from "@/lib/utils";
 import type { ContractTemplate } from "@/types/contract-templates";
 
@@ -293,9 +294,7 @@ function TemplateTile({
 			) : (
 				<>
 					<div className="flex items-center gap-2">
-						<span
-							className={cn("h-4 w-1 shrink-0 rounded-full", accent.bar)}
-						/>
+						<span className={cn("h-4 w-1 shrink-0 rounded-full", accent.bar)} />
 						<span
 							className={cn(
 								"inline-block rounded-full border px-2 py-0.5 text-xs font-medium",
@@ -381,7 +380,10 @@ function BlueprintPreviewDialog({
 	if (!blueprint) return null;
 
 	return (
-		<Dialog open={Boolean(blueprint)} onOpenChange={(open) => !open && onClose()}>
+		<Dialog
+			open={Boolean(blueprint)}
+			onOpenChange={(open) => !open && onClose()}
+		>
 			<DialogContent className="flex max-h-[90vh] max-w-3xl flex-col overflow-hidden border border-slate-200 p-0 shadow-xl">
 				<div className="absolute top-0 right-0 left-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
 				<div className="mt-4 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-indigo-50 py-4">
@@ -487,7 +489,10 @@ function TemplatePreviewDialog({
 	if (!template) return null;
 
 	return (
-		<Dialog open={Boolean(template)} onOpenChange={(open) => !open && onClose()}>
+		<Dialog
+			open={Boolean(template)}
+			onOpenChange={(open) => !open && onClose()}
+		>
 			<DialogContent className="flex max-h-[90vh] max-w-3xl flex-col overflow-hidden border border-slate-200 p-0 shadow-xl">
 				<div className="absolute top-0 right-0 left-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
 				<div className="mt-4 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-indigo-50 py-4">
@@ -543,7 +548,9 @@ function TemplatePreviewDialog({
 							{useLabel}
 						</Button>
 					) : (
-						<p className="text-sm text-slate-600">Publish this template to use it.</p>
+						<p className="text-sm text-slate-600">
+							Publish this template to use it.
+						</p>
 					)}
 				</div>
 			</DialogContent>
@@ -624,7 +631,12 @@ export function ContractAgreementMatrix({
 			);
 		});
 	}, [templates, query]);
-
+	const agreementIntro =
+		"Select an agreement below, using the category tag and first-page preview to decide.";
+	const viewDescription =
+		view === "builtin"
+			? `${agreementIntro} Switch to Created templates to view your organization's saved agreements`
+			: `${agreementIntro} Switch to Inherent agreements to view CAALM's built-in agreement library.`;
 	const activeList =
 		view === "templates" ? visibleTemplates : visibleBlueprints;
 	const totalPages = Math.max(1, Math.ceil(activeList.length / PAGE_SIZE));
@@ -641,13 +653,6 @@ export function ContractAgreementMatrix({
 		if (page > totalPages) setPage(totalPages);
 	}, [page, totalPages]);
 
-	const agreementIntro =
-		"Choose an agreement directly below. Scan the category tag, then preview the first page if you want a closer look.";
-	const viewDescription =
-		view === "builtin"
-			? `${agreementIntro} You are browsing inherent agreements from CAALM. Use Created templates on the switch to open agreements your organization saved on Contract Templates.`
-			: `${agreementIntro} You are browsing created templates from your organization. Use Inherent agreements on the switch to return to CAALM's built-in agreement library.`;
-
 	return (
 		<div className="space-y-4">
 			{showViewToggle && onViewChange ? (
@@ -656,10 +661,11 @@ export function ContractAgreementMatrix({
 						<h2 className="text-xl font-semibold sidebar-gradient-text">
 							Choose the agreement
 						</h2>
-						<p className="mt-1 max-w-4xl text-sm text-slate-600">
+						<p className="mt-1 max-w-5xl text-sm text-slate-600">
 							{viewDescription}
 						</p>
 					</div>
+					<Separator className="my-4" />
 					<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 						<SearchField
 							value={query}
@@ -670,7 +676,7 @@ export function ContractAgreementMatrix({
 									? "Search created templates..."
 									: "Search inherent agreements...")
 							}
-							containerClassName="w-full min-w-0 sm:flex-1"
+							containerClassName="max-w-xl min-w-0 sm:flex-1"
 						/>
 						<SegmentedToggle<AgreementMatrixView>
 							value={view}
@@ -693,8 +699,6 @@ export function ContractAgreementMatrix({
 					</div>
 				</div>
 			) : null}
-
-			{showViewToggle ? <div className="border-t border-slate-200" /> : null}
 
 			{view === "builtin" ? (
 				<MatrixRows
