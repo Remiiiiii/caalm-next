@@ -20,8 +20,9 @@ export default async function ContractTemplatesPage() {
 				</h1>
 			</div>
 			<p className="mb-6 max-w-4xl text-sm text-slate-600">
-				A template is a recipe, not a live patch. Using one always creates a new
-				contract in Proposals & Approvals.
+				Create organization agreements with your logo, contact details, and
+				signature block. Using a template always starts a new draft; it never
+				changes an existing contract.
 			</p>
 			<TemplateLibraryPage />
 		</div>

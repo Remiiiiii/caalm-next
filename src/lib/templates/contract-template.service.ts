@@ -3,6 +3,8 @@ import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { TEMPLATE_TABLE_IDS } from "@/lib/templates/constants";
 import {
+	BLUEPRINT_IDS,
+	type BlueprintId,
 	type ClauseSlot,
 	CONDITION_OPS,
 	type ContractTemplate,
@@ -14,6 +16,10 @@ import {
 	type TemplateStatus,
 	type UpdateTemplateInput,
 } from "@/types/contract-templates";
+import {
+	persistScratchAgreementDocx,
+	SCRATCH_AGREEMENT_BLUEPRINT_ID,
+} from "@/lib/templates/scratch-agreement";
 
 export function isTemplateStatus(value: unknown): value is TemplateStatus {
 	return (
@@ -86,7 +92,13 @@ export function stringifyClauseSlots(slots: ClauseSlot[]): string {
 	return JSON.stringify(slots);
 }
 
+function isBlueprintId(value: string): value is BlueprintId {
+	return (BLUEPRINT_IDS as readonly string[]).includes(value);
+}
+
 function mapRow(row: Record<string, unknown>): ContractTemplate {
+	const blueprintRaw =
+		typeof row.blueprintId === "string" ? row.blueprintId.trim() : "";
 	return {
 		$id: String(row.$id),
 		$createdAt: String(row.$createdAt || ""),
@@ -97,6 +109,11 @@ function mapRow(row: Record<string, unknown>): ContractTemplate {
 		contractType: String(row.contractType || "other"),
 		status: isTemplateStatus(row.status) ? row.status : "draft",
 		clauseSlots: parseClauseSlots(row.clauseSlots),
+		blueprintId: isBlueprintId(blueprintRaw) ? blueprintRaw : null,
+		docxFileId:
+			typeof row.docxFileId === "string" && row.docxFileId.trim()
+				? row.docxFileId.trim()
+				: null,
 		createdBy: String(row.createdBy || ""),
 		updatedBy: String(row.updatedBy || ""),
 	};
@@ -129,12 +146,13 @@ export function buildCreateTemplateData(
 	if (!isTemplateStatus(status) || status === "archived") {
 		throw new Error("status must be draft or published");
 	}
-	const slots = parseClauseSlots(input.clauseSlots);
-	if (slots.length === 0) {
+	const scratch = Boolean(input.scratchAgreement);
+	const slots = parseClauseSlots(input.clauseSlots ?? []);
+	if (!scratch && slots.length === 0) {
 		throw new Error("Add at least one clause to the template");
 	}
 
-	return {
+	const data: Record<string, unknown> = {
 		orgId: ctx.orgId,
 		name,
 		description: input.description?.trim() || "",
@@ -144,6 +162,10 @@ export function buildCreateTemplateData(
 		createdBy: ctx.userId,
 		updatedBy: ctx.userId,
 	};
+	if (scratch) {
+		data.blueprintId = SCRATCH_AGREEMENT_BLUEPRINT_ID;
+	}
+	return data;
 }
 
 export async function listTemplates(
@@ -190,16 +212,38 @@ export async function createTemplate(input: {
 	data: CreateTemplateInput;
 }): Promise<ContractTemplate> {
 	const { tablesDB } = await createAdminClient();
+	const rowId = ID.unique();
+	const baseData = buildCreateTemplateData(input.data, {
+		orgId: input.orgId,
+		userId: input.userId,
+	});
 	const row = await tablesDB.createRow({
 		databaseId: dbId(),
 		tableId: tableId(),
-		rowId: ID.unique(),
-		data: buildCreateTemplateData(input.data, {
-			orgId: input.orgId,
-			userId: input.userId,
-		}),
+		rowId,
+		data: baseData,
 	});
-	return mapRow(row as unknown as Record<string, unknown>);
+	let template = mapRow(row as unknown as Record<string, unknown>);
+
+	if (input.data.scratchAgreement) {
+		const docxFileId = await persistScratchAgreementDocx({
+			orgId: input.orgId,
+			templateId: template.$id,
+		});
+		const updated = await tablesDB.updateRow({
+			databaseId: dbId(),
+			tableId: tableId(),
+			rowId: template.$id,
+			data: {
+				docxFileId,
+				blueprintId: SCRATCH_AGREEMENT_BLUEPRINT_ID,
+				updatedBy: input.userId,
+			},
+		});
+		template = mapRow(updated as unknown as Record<string, unknown>);
+	}
+
+	return template;
 }
 
 export async function updateTemplate(input: {
@@ -224,7 +268,8 @@ export async function updateTemplate(input: {
 	const slots = parseClauseSlots(
 		input.data.clauseSlots ?? input.template.clauseSlots,
 	);
-	if (slots.length === 0) {
+	const hasAgreementDoc = Boolean(input.template.docxFileId);
+	if (slots.length === 0 && !hasAgreementDoc) {
 		throw new Error("Add at least one clause to the template");
 	}
 

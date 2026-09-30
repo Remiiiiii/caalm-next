@@ -96,6 +96,7 @@ export function ContractCreateWizard() {
 	const [draftsLoading, setDraftsLoading] = useState(false);
 	const [hasSavedDrafts, setHasSavedDrafts] = useState(false);
 	const [blueprints, setBlueprints] = useState<BlueprintCatalogEntry[]>([]);
+	const [orgTemplates, setOrgTemplates] = useState<ContractTemplate[]>([]);
 	const [pdfUrl, setPdfUrl] = useState<string | null>(null);
 	const [pdfFileId, setPdfFileId] = useState<string | null>(null);
 	const [previewing, setPreviewing] = useState(false);
@@ -297,6 +298,10 @@ export function ContractCreateWizard() {
 			.then((r) => r.json())
 			.then((body) => setBlueprints(body.items || []))
 			.catch(() => setBlueprints([]));
+		void fetch("/api/contract-templates?status=published")
+			.then((r) => r.json())
+			.then((body) => setOrgTemplates(body.items || []))
+			.catch(() => setOrgTemplates([]));
 	}, []);
 
 	const save = useCallback(
@@ -477,6 +482,39 @@ export function ContractCreateWizard() {
 	const goBack = async () => {
 		const next = Math.max(0, step - 1);
 		await save(payload, next);
+	};
+
+	const chooseTemplate = (template: ContractTemplate) => {
+		void (async () => {
+			try {
+				const active = await ensureSession({ startPath: "scratch" });
+				const response = await fetch(
+					`/api/contracts/wizard/${active.$id}/from-template`,
+					{
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ templateId: template.$id }),
+					},
+				);
+				if (!response.ok) throw new Error(await readError(response));
+				const body = await response.json();
+				const nextSession = body.session as WizardSession;
+				sessionRef.current = nextSession;
+				setSession(nextSession);
+				setPayload(nextSession.payload);
+				setStep(nextSession.currentStep);
+				payloadRef.current = nextSession.payload;
+				stepRef.current = nextSession.currentStep;
+				lastSavedHash.current = JSON.stringify(nextSession.payload);
+				dirty.current = false;
+			} catch (error) {
+				toast({
+					title: "Could not start from template",
+					description: error instanceof Error ? error.message : "Try again",
+					variant: "destructive",
+				});
+			}
+		})();
 	};
 
 	const chooseBlueprint = (blueprint: BlueprintCatalogEntry) => {
@@ -969,8 +1007,11 @@ export function ContractCreateWizard() {
 					{step === 0 && (
 						<BlueprintPickerGrid
 							blueprints={blueprints}
-							selectedId={payload.blueprintId}
-							onSelect={chooseBlueprint}
+							templates={orgTemplates}
+							selectedBlueprintId={payload.blueprintId}
+							selectedTemplateId={payload.templateId}
+							onSelectBlueprint={chooseBlueprint}
+							onSelectTemplate={chooseTemplate}
 						/>
 					)}
 

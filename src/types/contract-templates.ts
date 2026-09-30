@@ -89,6 +89,10 @@ export type ContractTemplate = {
 	contractType: string;
 	status: TemplateStatus;
 	clauseSlots: ClauseSlot[];
+	/** Agreement blueprint used for this template's document shell. */
+	blueprintId: BlueprintId | null;
+	/** Org-owned .docx with letterhead and signature block pre-filled. */
+	docxFileId: string | null;
 	createdBy: string;
 	updatedBy: string;
 };
@@ -98,7 +102,9 @@ export type CreateTemplateInput = {
 	description?: string;
 	contractType: string;
 	status?: TemplateStatus;
-	clauseSlots: ClauseSlot[];
+	clauseSlots?: ClauseSlot[];
+	/** Create a blank agreement with org letterhead + signature defaults. */
+	scratchAgreement?: boolean;
 };
 
 export type UpdateTemplateInput = Partial<CreateTemplateInput>;

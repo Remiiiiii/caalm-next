@@ -25,6 +25,7 @@ import {
 import { getBlueprint, isBlueprintId } from "@/lib/templates/blueprint-catalog";
 import {
 	deleteWizardDraftArtifacts,
+	downloadBlueprintFile,
 	loadBlueprintSource,
 	uploadWizardDraftArtifact,
 } from "@/lib/templates/blueprint-storage";
@@ -614,6 +615,7 @@ export async function createWizardSession(input: {
 			payload.intake.contractType = blueprint.contractTypeId;
 		}
 	}
+	let templateForSession: Awaited<ReturnType<typeof getTemplateById>> = null;
 	if (input.templateId) {
 		const template = await getTemplateById(input.templateId);
 		if (!template || template.orgId !== input.orgId) {
@@ -622,9 +624,13 @@ export async function createWizardSession(input: {
 		if (template.status !== "published") {
 			throw new Error("Only published templates can start a wizard");
 		}
+		templateForSession = template;
 		payload.templateId = template.$id;
 		payload.startPath = "template";
 		payload.intake.contractType = template.contractType;
+		if (template.blueprintId && isBlueprintId(template.blueprintId)) {
+			payload.blueprintId = template.blueprintId;
+		}
 		payload.sections = template.clauseSlots.map((slot) => ({
 			familyId: slot.familyId,
 			source: "template" as const,
@@ -650,7 +656,36 @@ export async function createWizardSession(input: {
 			contractId: null,
 		},
 	});
-	return mapSession(row as unknown as Record<string, unknown>);
+	let session = mapSession(row as unknown as Record<string, unknown>);
+
+	if (templateForSession?.docxFileId) {
+		const buffer = await downloadBlueprintFile(templateForSession.docxFileId);
+		const draftDocxFileId = await uploadWizardDraftArtifact({
+			sessionId: session.$id,
+			kind: "draft",
+			buffer,
+			fileName: `${templateForSession.name}-draft.docx`,
+		});
+		const nextPayload = {
+			...session.payload,
+			draftDocxFileId,
+			blueprintId:
+				session.payload.blueprintId ||
+				(templateForSession.blueprintId &&
+				isBlueprintId(templateForSession.blueprintId)
+					? templateForSession.blueprintId
+					: "mou"),
+		};
+		session = await saveWizardSession({
+			session,
+			orgId: input.orgId,
+			userId: input.userId,
+			payload: nextPayload,
+			currentStep: nextPayload.blueprintId ? 1 : 0,
+		});
+	}
+
+	return session;
 }
 
 export async function saveWizardSession(input: {
@@ -772,10 +807,12 @@ export async function buildWizardDocx(
 	}
 	const blueprint = getBlueprint(payload.blueprintId);
 	if (!blueprint) throw new Error("Unknown agreement blueprint");
-	const template = await loadBlueprintSource({
-		sourceFileId: blueprint.sourceFileId,
-		fileName: blueprint.fileName,
-	});
+	const template = payload.draftDocxFileId
+		? await downloadBlueprintFile(payload.draftDocxFileId)
+		: await loadBlueprintSource({
+				sourceFileId: blueprint.sourceFileId,
+				fileName: blueprint.fileName,
+			});
 	const org = orgId ? await getOrganization(orgId) : null;
 	const tokenValues = buildMergeTokenValues(
 		payload.blueprintId,

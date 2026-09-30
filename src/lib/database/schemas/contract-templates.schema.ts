@@ -19,6 +19,8 @@ export const CONTRACT_TEMPLATES_SCHEMA = {
 			elements: ["draft", "published", "archived"],
 		},
 		{ key: "clauseSlots", type: "string", size: 16384, required: true },
+		{ key: "blueprintId", type: "string", size: 64, required: false },
+		{ key: "docxFileId", type: "string", size: 64, required: false },
 		{ key: "createdBy", type: "string", size: 64, required: true },
 		{ key: "updatedBy", type: "string", size: 64, required: true },
 	],
