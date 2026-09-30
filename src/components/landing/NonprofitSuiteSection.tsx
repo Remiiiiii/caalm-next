@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
+import { motion, useInView, useReducedMotion } from "framer-motion";
 import {
 	ArrowRight,
 	CalendarClock,
@@ -13,7 +13,8 @@ import {
 	TrendingUp,
 } from "lucide-react";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useId, useRef, useState } from "react";
+import CountUp from "react-countup";
 import { cn } from "@/lib/utils";
 import LandingFrostedCard from "./LandingFrostedCard";
 import LandingSection from "./LandingSection";
@@ -55,9 +56,84 @@ const SHIFT_FILL = [
 	[0, 1, 0],
 ] as const;
 
-const CAMPAIGN_PROGRESS = 0.72;
+const CAMPAIGN_GOAL_PERCENT = 72;
 const RING_RADIUS = 34;
-const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
+const COMPLIANCE_PULSE_LOOP_MS = 4200;
+
+/** Campaign goal ring — pathLength + CountUp, same pattern as Compliance pulse rings. */
+function CampaignGoalRing({ reduceMotion }: { reduceMotion: boolean | null }) {
+	const gradientId = useId().replace(/:/g, "");
+	const ref = useRef<HTMLDivElement>(null);
+	const inView = useInView(ref, viewportOnce);
+	const [animKey, setAnimKey] = useState(0);
+	const target = CAMPAIGN_GOAL_PERCENT / 100;
+
+	useEffect(() => {
+		if (reduceMotion || !inView) return;
+		const id = window.setInterval(() => {
+			setAnimKey((k) => k + 1);
+		}, COMPLIANCE_PULSE_LOOP_MS);
+		return () => window.clearInterval(id);
+	}, [reduceMotion, inView]);
+
+	return (
+		<div ref={ref} className="relative size-24 shrink-0">
+			<svg viewBox="0 0 80 80" className="size-full -rotate-90" aria-hidden>
+				<defs>
+					<linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="1">
+						<stop offset="0%" stopColor="#00C1CB" />
+						<stop offset="100%" stopColor="#162768" />
+					</linearGradient>
+				</defs>
+				<circle
+					cx="40"
+					cy="40"
+					r={RING_RADIUS}
+					fill="none"
+					stroke="#e2e8f0"
+					strokeWidth="8"
+				/>
+				{inView || reduceMotion ? (
+					<motion.circle
+						key={animKey}
+						cx="40"
+						cy="40"
+						r={RING_RADIUS}
+						fill="none"
+						stroke={`url(#${gradientId})`}
+						strokeWidth="8"
+						strokeLinecap="round"
+						initial={reduceMotion ? false : { pathLength: 0 }}
+						animate={{ pathLength: target }}
+						transition={
+							reduceMotion
+								? { duration: 0 }
+								: { duration: 1.4, ease: "easeOut" }
+						}
+					/>
+				) : null}
+			</svg>
+			<div className="absolute inset-0 flex flex-col items-center justify-center">
+				<span className="text-lg font-bold text-slate-700 tabular-nums">
+					{reduceMotion ? (
+						<>{CAMPAIGN_GOAL_PERCENT}%</>
+					) : inView ? (
+						<CountUp
+							key={animKey}
+							end={CAMPAIGN_GOAL_PERCENT}
+							suffix="%"
+							duration={1.5}
+							start={0}
+						/>
+					) : (
+						<>0%</>
+					)}
+				</span>
+				<span className="text-[10px] text-slate-500">of goal</span>
+			</div>
+		</div>
+	);
+}
 
 function TileHeader({
 	icon: Icon,
@@ -213,61 +289,7 @@ export default function NonprofitSuiteSection() {
 									Log gifts and pledges, then watch campaigns fill in real time.
 								</p>
 							</div>
-							<div className="relative size-24 shrink-0">
-								<svg
-									viewBox="0 0 80 80"
-									className="size-full -rotate-90"
-									aria-hidden
-								>
-									<defs>
-										<linearGradient
-											id="npo-ring-grad"
-											x1="0"
-											y1="0"
-											x2="1"
-											y2="1"
-										>
-											<stop offset="0%" stopColor="#00C1CB" />
-											<stop offset="100%" stopColor="#162768" />
-										</linearGradient>
-									</defs>
-									<circle
-										cx="40"
-										cy="40"
-										r={RING_RADIUS}
-										fill="none"
-										stroke="#e2e8f0"
-										strokeWidth="8"
-									/>
-									<motion.circle
-										cx="40"
-										cy="40"
-										r={RING_RADIUS}
-										fill="none"
-										stroke="url(#npo-ring-grad)"
-										strokeWidth="8"
-										strokeLinecap="round"
-										strokeDasharray={RING_CIRCUMFERENCE}
-										initial={{
-											strokeDashoffset: reduceMotion
-												? RING_CIRCUMFERENCE * (1 - CAMPAIGN_PROGRESS)
-												: RING_CIRCUMFERENCE,
-										}}
-										whileInView={{
-											strokeDashoffset:
-												RING_CIRCUMFERENCE * (1 - CAMPAIGN_PROGRESS),
-										}}
-										viewport={viewportOnce}
-										transition={{ duration: 1.4, ease: [0.22, 1, 0.36, 1] }}
-									/>
-								</svg>
-								<div className="absolute inset-0 flex flex-col items-center justify-center">
-									<span className="text-lg font-bold text-slate-700 tabular-nums">
-										72%
-									</span>
-									<span className="text-[10px] text-slate-500">of goal</span>
-								</div>
-							</div>
+							<CampaignGoalRing reduceMotion={reduceMotion} />
 						</div>
 					</BentoTile>
 
