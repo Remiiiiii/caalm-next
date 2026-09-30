@@ -2,6 +2,7 @@
 
 import type { LucideIcon } from "lucide-react";
 import { Lock, Unplug } from "lucide-react";
+import Image from "next/image";
 import type { ComponentType, SVGProps } from "react";
 import { VscDebugConnectedCompact } from "react-icons/vsc";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,10 @@ export type IntegrationStatus =
 interface IntegrationCardProps {
 	title: string;
 	description: string;
-	icon: LucideIcon | ComponentType<SVGProps<SVGSVGElement>>;
+	/** Lucide or inline SVG component (legacy) */
+	icon?: LucideIcon | ComponentType<SVGProps<SVGSVGElement>>;
+	/** Brand mark from /public (e.g. company-icons/*.svg) */
+	iconSrc?: string;
 	status: IntegrationStatus;
 	lastSync?: string | null;
 	meta?: string | null;
@@ -63,6 +67,7 @@ export default function IntegrationCard({
 	title,
 	description,
 	icon: Icon,
+	iconSrc,
 	status,
 	lastSync,
 	meta,
@@ -91,9 +96,17 @@ export default function IntegrationCard({
 						<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue/10">
 							{status === "locked" ? (
 								<Lock className="h-5 w-5 text-slate-500" />
-							) : (
+							) : iconSrc ? (
+								<Image
+									src={iconSrc}
+									alt=""
+									width={24}
+									height={24}
+									className="h-6 w-6 w-auto object-contain"
+								/>
+							) : Icon ? (
 								<Icon className="h-5 w-5 text-[#0f5384]" />
-							)}
+							) : null}
 						</div>
 						<div className="min-w-0">
 							<p className="text-sm font-medium sidebar-gradient-text">

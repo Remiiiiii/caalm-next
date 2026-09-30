@@ -6,18 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import IntegrationCard from "./IntegrationCard";
 
-function SalesforceGlyph({ className }: { className?: string }) {
-	return (
-		<svg
-			viewBox="0 0 24 24"
-			className={className}
-			aria-hidden="true"
-			fill="currentColor"
-		>
-			<path d="M10.1 7.2c.6-1.2 1.8-2 3.2-2 1.5 0 2.8.9 3.4 2.2.5-.3 1.1-.4 1.7-.4 1.9 0 3.4 1.5 3.4 3.4 0 1.9-1.5 3.4-3.4 3.4H5.7C3.6 13.8 2 12.2 2 10.1c0-2 1.5-3.6 3.5-3.7.4-1.3 1.6-2.3 3-2.3 1 0 1.9.5 2.5 1.2.3-.6.7-1.1 1.1-1.5-.4-.3-.8-.5-1.3-.6C9.3 2.6 7.4 3.8 6.7 5.4 6.5 5.4 6.3 5.3 6.1 5.3 3.7 5.3 1.8 7.2 1.8 9.6c0 .4.1.8.2 1.1C.8 11.4 0 12.7 0 14.2 0 16.4 1.8 18.2 4 18.2h13.6c3.5 0 6.4-2.9 6.4-6.4 0-3.2-2.4-5.9-5.5-6.3C17.7 3.4 15.6 2 13.3 2c-2.1 0-3.9 1.1-4.9 2.8-.4-.1-.8-.1-1.2-.1-.2 0-.4 0-.6.1.9-1.2 1.9-2.1 3.5-2.6Z" />
-		</svg>
-	);
-}
+const SALESFORCE_ICON = "/assets/icons/company-icons/salesforce.svg";
 
 interface SalesforceIntegrationCardProps {
 	orgId: string;
@@ -95,7 +84,7 @@ export default function SalesforceIntegrationCard({
 			<IntegrationCard
 				title="Salesforce"
 				description="Opportunity stage → CAALM draft. Sales-led setup only."
-				icon={SalesforceGlyph}
+				iconSrc={SALESFORCE_ICON}
 				status="locked"
 				lockedHint="Available on the Enterprise plan. Setup starts after a discovery call."
 				onConnect={onViewPlans}
@@ -108,7 +97,7 @@ export default function SalesforceIntegrationCard({
 			<IntegrationCard
 				title="Salesforce"
 				description="Opportunity stage → CAALM draft. Sales-led setup only."
-				icon={SalesforceGlyph}
+				iconSrc={SALESFORCE_ICON}
 				status="connecting"
 				actions={
 					<div className="flex items-center gap-2 text-sm text-slate-600">
@@ -124,7 +113,7 @@ export default function SalesforceIntegrationCard({
 		<IntegrationCard
 			title="Salesforce"
 			description="Opportunity stage → CAALM draft. Sales-led setup only."
-			icon={SalesforceGlyph}
+			iconSrc={SALESFORCE_ICON}
 			status={requested ? "connecting" : "disconnected"}
 			actions={
 				<div className="flex flex-col gap-3 w-full">
