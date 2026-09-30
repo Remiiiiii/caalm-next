@@ -4,6 +4,7 @@ import { AlertTriangle, ChevronRight, RefreshCw, Shield } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import { RiskTrackingChart } from "@/components/dashboard/RiskTrackingChart";
 import type {
 	RiskImpactSnapshot,
@@ -258,8 +259,8 @@ export function RiskImpactHeroCard({
 						<div className={`relative ${COL_PAD} ${COL_RULE}`}>
 							<ColumnRule />
 							<ColumnRule atMdOdd />
-							<div className="flex items-center gap-2 min-h-11">
-								<Shield className="h-3.5 w-3.5 text-[#0f5384] shrink-0" />
+							<div className="flex items-center gap-2.5 min-h-11">
+								<StatCardIcon icon={Shield} />
 								<p className="text-[12.5px] font-semibold text-slate-700">
 									Risk averted
 								</p>
@@ -332,16 +333,17 @@ export function RiskImpactHeroCard({
 								label="Clauses flagged"
 								value={snapshot.monitoring.clausesFlagged}
 							/>
-							<Button
-								asChild
-								className="primary-btn w-full max-w-full px-3 gap-1.5 text-[12.5px] font-semibold"
-								style={{ width: "100%", maxWidth: "100%" }}
-							>
-								<Link href={breakdownHref} className="block w-full min-w-0">
-									View breakdown
-									<ChevronRight className="h-3.5 w-3.5" />
-								</Link>
-							</Button>
+							<div className="flex justify-end pt-0.5">
+								<Button
+									asChild
+									className="primary-btn px-3 sm:px-4 gap-1.5 text-[12.5px] font-semibold"
+								>
+									<Link href={breakdownHref}>
+										View breakdown
+										<ChevronRight className="h-3.5 w-3.5" />
+									</Link>
+								</Button>
+							</div>
 						</div>
 					</div>
 

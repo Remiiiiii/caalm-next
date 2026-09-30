@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import { Building2 } from "lucide-react";
+import { Building2, KeyRound } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import LandingSection from "./LandingSection";
@@ -126,19 +126,19 @@ function PermissionVisual({ animate }: { animate: boolean }) {
 						</g>
 					)}
 
-					{/* Flowing token for access=true */}
+					{/* Flowing key token for access=true */}
 					{node.access && (
-						<motion.circle
-							r="3"
-							fill={CAALM.teal}
+						<motion.foreignObject
+							width={12}
+							height={12}
 							animate={
 								animate
 									? {
-											cx: [100, node.x],
-											cy: [80, node.y],
+											x: [100 - 6, node.x - 6],
+											y: [80 - 6, node.y - 6],
 											opacity: [0, 1, 0],
 										}
-									: { cx: 100, cy: 80, opacity: 0 }
+									: { x: 100 - 6, y: 80 - 6, opacity: 0 }
 							}
 							transition={{
 								duration: 2,
@@ -146,7 +146,14 @@ function PermissionVisual({ animate }: { animate: boolean }) {
 								delay: i * 0.5,
 								ease: "easeOut",
 							}}
-						/>
+						>
+							<div
+								xmlns="http://www.w3.org/1999/xhtml"
+								className="flex h-full w-full items-center justify-center text-[#162768]"
+							>
+								<KeyRound width={12} height={12} strokeWidth={2.25} aria-hidden />
+							</div>
+						</motion.foreignObject>
 					)}
 				</motion.g>
 			))}
