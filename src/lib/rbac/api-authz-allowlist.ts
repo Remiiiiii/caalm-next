@@ -221,6 +221,12 @@ export const API_AUTHZ_ALLOWLIST: readonly ApiAuthzAllowEntry[] = [
 		reason:
 			"Stripe donation webhook (separate secret); posts gifts only, not billing subscriptions",
 	},
+	{
+		path: "contract-templates/[id]/file",
+		class: "token",
+		reason:
+			"Protected by resolveOrgContext and restricted to templates belonging to the authenticated organization.",
+	},
 ] as const;
 
 export const API_AUTHZ_ALLOWLIST_PATHS = new Set(
