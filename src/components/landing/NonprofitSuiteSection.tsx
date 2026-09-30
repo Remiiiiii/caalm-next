@@ -12,6 +12,7 @@ import {
 	Sparkles,
 	TrendingUp,
 } from "lucide-react";
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import LandingFrostedCard from "./LandingFrostedCard";
@@ -402,13 +403,13 @@ export default function NonprofitSuiteSection() {
 								Track grant retention risk and map your books to Form 990 before
 								the board asks.
 							</p>
-							<a
-								href="#contact"
+							<Link
+								href="/nonprofits"
 								className="relative mt-5 inline-flex cursor-pointer items-center gap-1.5 text-sm font-semibold text-white transition-colors duration-200 hover:text-[#00C1CB] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 rounded"
 							>
 								See the nonprofit suite
 								<ArrowRight className="h-4 w-4" />
-							</a>
+							</Link>
 						</div>
 					</motion.div>
 				</div>
