@@ -52,15 +52,19 @@ export async function POST(request: NextRequest) {
 		if (!name) {
 			return NextResponse.json({ error: "name is required" }, { status: 400 });
 		}
+		const scratchAgreement = Boolean(body.scratchAgreement);
 		const template = await createTemplate({
 			orgId: auth.orgId,
 			userId: auth.user.$id,
 			data: {
 				name,
 				description: body.description ? String(body.description) : undefined,
-				contractType: String(body.contractType || "").trim(),
+				contractType: String(body.contractType || "vendor").trim(),
 				status: isTemplateStatus(body.status) ? body.status : "draft",
-				clauseSlots: parseClauseSlots(body.clauseSlots),
+				clauseSlots: scratchAgreement
+					? []
+					: parseClauseSlots(body.clauseSlots),
+				scratchAgreement,
 			},
 		});
 		return NextResponse.json({ template }, { status: 201 });
