@@ -2,10 +2,14 @@ import {
 	Bell,
 	Calendar,
 	FileCheck,
+	FilePen,
 	FolderLock,
 	KeyRound,
 	Mail,
+	MessageSquareDiff,
+	Route,
 	ShieldCheck,
+	Signature,
 	Upload,
 	Users,
 } from "lucide-react";
@@ -176,6 +180,44 @@ export const ABOUT_TRUST_BULLETS = [
 		icon: Users,
 	},
 ] as const;
+
+export const CONTRACT_LIFECYCLE_STAGES = [
+	{
+		id: "draft",
+		label: "Draft",
+		title: "Guided drafting from blueprints",
+		description:
+			"Pick an agreement, answer a few intake questions, and CAALM fills the document. Pull in clauses from your library without leaving the flow.",
+		icon: FilePen,
+	},
+	{
+		id: "negotiate",
+		label: "Negotiate",
+		title: "Redlines with the other side",
+		description:
+			"Send the counterparty a secure link. They comment and redline in the browser while you compare every version side by side.",
+		icon: MessageSquareDiff,
+	},
+	{
+		id: "approve",
+		label: "Approve",
+		title: "Approvals that route themselves",
+		description:
+			"Steps follow your department and dollar thresholds. Separation of duties stays enforced, so nobody approves their own deal.",
+		icon: Route,
+	},
+	{
+		id: "sign",
+		label: "Sign",
+		title: "E-signature that activates the contract",
+		description:
+			"Send the approved agreement for signature. Status moves from sent to viewed to signed, then the contract goes live on its own.",
+		icon: Signature,
+	},
+] as const;
+
+export type ContractLifecycleStageId =
+	(typeof CONTRACT_LIFECYCLE_STAGES)[number]["id"];
 
 export const FAQ_ITEMS = [
 	{
