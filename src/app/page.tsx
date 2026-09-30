@@ -4,9 +4,11 @@ import Footer from "../components/Footer";
 import Header from "../components/Header";
 import AboutMission from "../components/landing/AboutMission";
 import BookCallCta from "../components/landing/BookCallCta";
+import ContractLifecycleSection from "../components/landing/ContractLifecycleSection";
 import HowItWorks from "../components/landing/HowItWorks";
 import IntegrationsSection from "../components/landing/IntegrationsSection";
 import LandingHero from "../components/landing/LandingHero";
+import NonprofitSuiteSection from "../components/landing/NonprofitSuiteSection";
 import PerformanceMetrics from "../components/landing/PerformanceMetrics";
 import ProductSpotlight from "../components/landing/ProductSpotlight";
 import SmoothScrollProvider from "../components/landing/SmoothScrollProvider";
@@ -38,6 +40,8 @@ export default async function HomePage() {
 					<PerformanceMetrics />
 					<TextMarquee />
 					<AboutMission />
+					<ContractLifecycleSection />
+					<NonprofitSuiteSection />
 					<TestimonialsCarousel />
 					<Pricing plans={pricing.plans} />
 					<QA />
