@@ -8,7 +8,6 @@ import {
 	RefreshCw,
 	Settings2,
 	Unplug,
-	Waypoints,
 } from "lucide-react";
 import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
@@ -27,6 +26,8 @@ import type { CrmFieldMap, CrmIntegrationConfig } from "@/lib/crm/types";
 import { DEFAULT_CRM_FIELD_MAP } from "@/lib/crm/types";
 import HubSpotConfigDialog from "./HubSpotConfigDialog";
 import IntegrationCard from "./IntegrationCard";
+
+const HUBSPOT_ICON = "/assets/icons/company-icons/hubspot.svg";
 
 interface HubSpotIntegrationCardProps {
 	orgId: string;
@@ -199,7 +200,7 @@ export default function HubSpotIntegrationCard({
 			<IntegrationCard
 				title="HubSpot"
 				description="Create a CAALM draft when a HubSpot deal hits a stage."
-				icon={Waypoints}
+				iconSrc={HUBSPOT_ICON}
 				status="locked"
 				lockedHint={
 					demoLocked
@@ -216,7 +217,7 @@ export default function HubSpotIntegrationCard({
 			<IntegrationCard
 				title="HubSpot"
 				description="Create a CAALM draft when a HubSpot deal hits a stage."
-				icon={Waypoints}
+				iconSrc={HUBSPOT_ICON}
 				status="connecting"
 				actions={
 					<div className="flex items-center gap-2 text-sm text-slate-600">
@@ -233,7 +234,7 @@ export default function HubSpotIntegrationCard({
 			<IntegrationCard
 				title="HubSpot"
 				description="Create a CAALM draft when a HubSpot deal hits a stage."
-				icon={Waypoints}
+				iconSrc={HUBSPOT_ICON}
 				status={connected ? "connected" : "disconnected"}
 				meta={displayName}
 				lastSync={

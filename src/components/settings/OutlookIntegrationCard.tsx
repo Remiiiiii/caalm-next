@@ -3,7 +3,6 @@
 import { format } from "date-fns";
 import {
 	AlertCircle,
-	Calendar,
 	Loader2,
 	RefreshCw,
 	Unplug,
@@ -21,6 +20,8 @@ import {
 	syncMicrosoftCalendar,
 } from "@/lib/actions/calendar.actions";
 import IntegrationCard from "./IntegrationCard";
+
+const MICROSOFT_ICON = "/assets/icons/company-icons/microsoft.svg";
 
 interface OutlookIntegrationCardProps {
 	userId: string;
@@ -161,9 +162,9 @@ export default function OutlookIntegrationCard({
 	if (loading) {
 		return (
 			<IntegrationCard
-				title="Microsoft Outlook"
+				title="Outlook"
 				description="Two-way calendar sync with Microsoft 365"
-				icon={Calendar}
+				iconSrc={MICROSOFT_ICON}
 				status="connecting"
 				actions={
 					<div className="flex items-center gap-2 text-sm text-slate-600">
@@ -177,9 +178,9 @@ export default function OutlookIntegrationCard({
 
 	return (
 		<IntegrationCard
-			title="Microsoft Outlook"
+			title="Outlook"
 			description="Two-way calendar sync with Microsoft 365"
-			icon={Calendar}
+			iconSrc={MICROSOFT_ICON}
 			status={connected ? "connected" : "disconnected"}
 			meta={userEmail || null}
 			lastSync={
