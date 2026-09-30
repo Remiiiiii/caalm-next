@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { PageIndex } from "@/components/ui/page-index";
 import { SearchField } from "@/components/ui/search-field";
+import { SegmentedToggle } from "@/components/ui/segmented-toggle";
 import { Skeleton } from "@/components/ui/skeleton";
 import { contractTypeAccent } from "@/lib/templates/contract-type-accent";
 import { blueprintAccent } from "@/lib/templates/blueprint-accents";
@@ -640,54 +641,54 @@ export function ContractAgreementMatrix({
 		if (page > totalPages) setPage(totalPages);
 	}, [page, totalPages]);
 
+	const agreementIntro =
+		"Choose an agreement directly below. Scan the category tag, then preview the first page if you want a closer look.";
+	const viewDescription =
+		view === "builtin"
+			? `${agreementIntro} You are browsing inherent agreements from CAALM. Use Created templates on the switch to open agreements your organization saved on Contract Templates.`
+			: `${agreementIntro} You are browsing created templates from your organization. Use Inherent agreements on the switch to return to CAALM's built-in agreement library.`;
+
 	return (
 		<div className="space-y-4">
 			{showViewToggle && onViewChange ? (
-				<div className="grid grid-cols-1 items-end gap-4 lg:grid-cols-[minmax(0,1fr)_auto_minmax(12rem,20rem)]">
+				<div className="space-y-4">
 					<div className="min-w-0">
 						<h2 className="text-xl font-semibold sidebar-gradient-text">
 							Choose the agreement
 						</h2>
 						<p className="mt-1 max-w-4xl text-sm text-slate-600">
-							{view === "builtin"
-								? "Choose an agreement below. Scan the category tag, then preview the first page if you want a closer look."
-								: "Choose an agreement below from templates your organization saved on Contract Templates."}
+							{viewDescription}
 						</p>
 					</div>
-					<div className="flex justify-start lg:justify-center">
-						{view === "builtin" ? (
-							<Button
-								type="button"
-								variant="outline"
-								className="primary-btn cursor-pointer px-3 sm:px-4"
-								onClick={() => onViewChange("templates")}
-							>
-								<FileStack className="h-4 w-4" />
-								Choose an agreement from templates
-							</Button>
-						) : (
-							<Button
-								type="button"
-								variant="outline"
-								className="primary-btn cursor-pointer px-3 sm:px-4"
-								onClick={() => onViewChange("builtin")}
-							>
-								<FileText className="h-4 w-4" />
-								Built-in agreements
-							</Button>
-						)}
-					</div>
-					<div className="w-full min-w-0 lg:max-w-md lg:justify-self-end">
+					<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 						<SearchField
 							value={query}
 							onChange={(event) => onQueryChange(event.target.value)}
 							placeholder={
 								searchPlaceholder ||
 								(view === "templates"
-									? "Search templates..."
-									: "Search agreements...")
+									? "Search created templates..."
+									: "Search inherent agreements...")
 							}
-							containerClassName="w-full"
+							containerClassName="w-full min-w-0 sm:flex-1"
+						/>
+						<SegmentedToggle<AgreementMatrixView>
+							value={view}
+							onChange={onViewChange}
+							ariaLabel="Agreement catalog source"
+							className="w-full shrink-0 sm:w-auto sm:min-w-[22rem]"
+							tabs={[
+								{
+									value: "builtin",
+									label: "Inherent agreements",
+									icon: FileText,
+								},
+								{
+									value: "templates",
+									label: "Created templates",
+									icon: FileStack,
+								},
+							]}
 						/>
 					</div>
 				</div>
