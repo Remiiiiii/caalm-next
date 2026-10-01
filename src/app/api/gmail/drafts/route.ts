@@ -6,8 +6,14 @@ export async function GET(request: NextRequest) {
 	const access = await requireGmailAccess(request);
 	if (!access.ok) return access.response;
 
+	const { searchParams } = new URL(request.url);
+	const maxResults = Number(searchParams.get("maxResults") || "100");
+
 	try {
-		const drafts = await listDrafts(access.accessToken);
+		const drafts = await listDrafts(
+			access.accessToken,
+			Number.isFinite(maxResults) ? maxResults : 100,
+		);
 		return NextResponse.json({ drafts, email: access.email });
 	} catch (error) {
 		console.error("[SERVER] Gmail list drafts:", error);

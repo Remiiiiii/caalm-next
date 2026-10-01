@@ -127,8 +127,10 @@ This catalog explains permission keys in everyday language. Exact availability c
 | `settings.edit` | Edit org/system settings |
 | `settings.billing` | Manage billing |
 | `settings.integrations` | Manage integrations |
-| `integrations.outlook.connect` | Connect Outlook |
-| `integrations.outlook.sync` | Sync Outlook |
+| `integrations.outlook.connect` | Connect Microsoft 365 Calendar and/or Mail |
+| `integrations.outlook.sync` | Sync Outlook calendar |
+| `integrations.gmail.connect` | Connect Gmail for the in-app mail panel |
+| `integrations.gmail.manage` | Read, send, and disconnect Gmail in CAALM |
 | `integrations.manage` | Broader integration management |
 
 ## AI

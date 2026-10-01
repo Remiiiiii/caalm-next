@@ -101,7 +101,6 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { PERMISSIONS } from "@/constants/permissions";
 import {
@@ -3012,43 +3011,56 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 							</div>
 
 							<div className="flex items-center gap-2 flex-wrap">
-								<Tabs
-									value={viewMode}
-									onValueChange={(value) =>
-										setViewMode(value as CalendarViewMode)
-									}
+								<div
+									className="flex rounded-xl bg-slate-100 p-1"
+									role="tablist"
+									aria-label="Calendar view"
 								>
-									<TabsList>
-										<TabsTrigger
-											value="day"
-											className="flex items-center space-x-1 cursor-pointer"
-										>
-											<CalendarIcon className="h-4 w-4 text-slate-700 shrink-0" />
-											<span className="sidebar-gradient-text">Day</span>
-										</TabsTrigger>
-										<TabsTrigger
-											value="week"
-											className="flex items-center space-x-1 cursor-pointer"
-										>
-											<CalendarDays className="h-4 w-4 shrink-0" />
-											<span className="sidebar-gradient-text">Week</span>
-										</TabsTrigger>
-										<TabsTrigger
-											value="month"
-											className="flex items-center space-x-1 cursor-pointer"
-										>
-											<Grid3X3 className="h-4 w-4 text-slate-700 shrink-0" />
-											<span className="sidebar-gradient-text">Month</span>
-										</TabsTrigger>
-										<TabsTrigger
-											value="agenda"
-											className="flex items-center space-x-1 cursor-pointer"
-										>
-											<List className="h-4 w-4 shrink-0" />
-											<span className="sidebar-gradient-text">Agenda</span>
-										</TabsTrigger>
-									</TabsList>
-								</Tabs>
+									{(
+										[
+											{
+												id: "day" as const,
+												label: "Day",
+												Icon: CalendarIcon,
+											},
+											{
+												id: "week" as const,
+												label: "Week",
+												Icon: CalendarDays,
+											},
+											{
+												id: "month" as const,
+												label: "Month",
+												Icon: Grid3X3,
+											},
+											{
+												id: "agenda" as const,
+												label: "Agenda",
+												Icon: List,
+											},
+										] as const
+									).map(({ id, label, Icon }) => {
+										const active = viewMode === id;
+										return (
+											<button
+												key={id}
+												type="button"
+												role="tab"
+												aria-selected={active}
+												onClick={() => setViewMode(id)}
+												className={cn(
+													"flex cursor-pointer items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-200 sm:px-3",
+													active
+														? "bg-white text-slate-800 shadow-sm"
+														: "text-slate-500 hover:text-slate-700",
+												)}
+											>
+												<Icon className="h-3.5 w-3.5 shrink-0" />
+												<span>{label}</span>
+											</button>
+										);
+									})}
+								</div>
 
 								{/* New Event Button - PRIMARY ACTION */}
 								<Dialog

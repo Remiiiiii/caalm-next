@@ -2,6 +2,8 @@
 
 import { Cloud, Droplets, MapPin, Wind } from "lucide-react";
 import type React from "react";
+import { useEffect, useState } from "react";
+import { LiveWeatherStatusDot } from "@/components/dashboard-briefing/LiveWeatherStatusDot";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useWeatherData } from "@/hooks/useWeatherData";
 import { cn } from "@/lib/utils";
@@ -19,6 +21,21 @@ interface WeatherWidgetProps {
 	embedded?: boolean;
 }
 
+function formatLocalDate(date: Date) {
+	return date.toLocaleDateString("en-US", {
+		weekday: "short",
+		month: "short",
+		day: "numeric",
+	});
+}
+
+function formatLocalTime(date: Date) {
+	return date.toLocaleTimeString("en-US", {
+		hour: "2-digit",
+		minute: "2-digit",
+	});
+}
+
 const WeatherWidget: React.FC<WeatherWidgetProps> = ({
 	location,
 	latitude,
@@ -27,6 +44,18 @@ const WeatherWidget: React.FC<WeatherWidgetProps> = ({
 }) => {
 	const { weatherData, loading, error, userLocation, isRefreshing } =
 		useWeatherData({ location, latitude, longitude });
+	// Clock text after mount only — avoids SSR/client timezone mismatches.
+	const [nowLabel, setNowLabel] = useState({ date: "", time: "" });
+
+	useEffect(() => {
+		const tick = () => {
+			const now = new Date();
+			setNowLabel({ date: formatLocalDate(now), time: formatLocalTime(now) });
+		};
+		tick();
+		const id = window.setInterval(tick, 60_000);
+		return () => window.clearInterval(id);
+	}, []);
 
 	const heightClass = embedded
 		? "h-auto"
@@ -47,13 +76,7 @@ const WeatherWidget: React.FC<WeatherWidgetProps> = ({
 							<CardTitle className="text-sm font-semibold text-slate-800 mb-1">
 								{userLocation}
 							</CardTitle>
-							<p className="text-xs text-slate-600">
-								{new Date().toLocaleDateString("en-US", {
-									weekday: "short",
-									month: "short",
-									day: "numeric",
-								})}
-							</p>
+							<p className="text-xs text-slate-600">{nowLabel.date || "\u00a0"}</p>
 						</div>
 						<div className="text-right">
 							<p className="text-xs text-slate-500">Loading</p>
@@ -90,13 +113,7 @@ const WeatherWidget: React.FC<WeatherWidgetProps> = ({
 							<CardTitle className="text-sm font-semibold text-slate-800 mb-1">
 								{userLocation}
 							</CardTitle>
-							<p className="text-xs text-slate-600">
-								{new Date().toLocaleDateString("en-US", {
-									weekday: "short",
-									month: "short",
-									day: "numeric",
-								})}
-							</p>
+							<p className="text-xs text-slate-600">{nowLabel.date || "\u00a0"}</p>
 						</div>
 						<div className="text-right">
 							<p className="text-xs text-slate-500">Status</p>
@@ -140,21 +157,12 @@ const WeatherWidget: React.FC<WeatherWidgetProps> = ({
 								{weatherData.name}
 							</CardTitle>
 						</div>
-						<p className="text-xs text-slate-600">
-							{new Date().toLocaleDateString("en-US", {
-								weekday: "short",
-								month: "short",
-								day: "numeric",
-							})}
-						</p>
+						<p className="text-xs text-slate-600">{nowLabel.date || "\u00a0"}</p>
 					</div>
 					<div className="text-right">
 						<p className="text-xs text-slate-500">Updated</p>
 						<p className="text-xs text-slate-600 font-medium">
-							{new Date().toLocaleTimeString("en-US", {
-								hour: "2-digit",
-								minute: "2-digit",
-							})}
+							{nowLabel.time || "\u00a0"}
 						</p>
 					</div>
 				</div>
@@ -226,13 +234,7 @@ const WeatherWidget: React.FC<WeatherWidgetProps> = ({
 				<div className="mt-3 border-t border-white/20 flex-shrink-0 -translate-y-0.5">
 					<div className="flex items-center justify-center">
 						<div className="flex items-center justify-center gap-2 bg-white/20 rounded-full px-4 py-1 backdrop-blur-sm border border-white/20 min-w-[140px]">
-							<div
-								className={`w-2 h-2 rounded-full ${
-									isRefreshing
-										? "bg-blue-400 animate-pulse"
-										: "bg-green animate-pulse"
-								}`}
-							></div>
+							<LiveWeatherStatusDot isRefreshing={isRefreshing} />
 							<span className="text-xs text-slate-600 font-medium">
 								{isRefreshing ? "Updating..." : "Live Weather Data"}
 							</span>

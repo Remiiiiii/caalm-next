@@ -33,7 +33,6 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
-import StaticWaveBackdrop from "@/components/landing/StaticWaveBackdrop";
 
 // Mock data for Administrative Analytics
 const mockData = {
@@ -139,8 +138,6 @@ const AdministrationAnalytics = () => {
 
 	return (
 		<div className="relative space-y-6">
-			<StaticWaveBackdrop fixed muted />
-
 			{/* Header Actions */}
 			<div className="flex justify-between items-end">
 				<div>

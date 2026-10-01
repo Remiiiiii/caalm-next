@@ -5,6 +5,7 @@ import type React from "react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { formatPhoneInput } from "@/lib/demo-request/schema";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -242,7 +243,7 @@ export const SmsFormDialog: React.FC<SmsFormDialogProps> = ({
 								className={`bg-white border-slate-300 ${
 									errors.firstName ? "border-red-500" : ""
 								}`}
-								placeholder="Your answer"
+								placeholder="First Name"
 							/>
 							{errors.firstName && (
 								<p className="text-xs text-red">{errors.firstName}</p>
@@ -264,7 +265,7 @@ export const SmsFormDialog: React.FC<SmsFormDialogProps> = ({
 								className={`bg-white border-slate-300 ${
 									errors.lastName ? "border-red-500" : ""
 								}`}
-								placeholder="Your answer"
+								placeholder="Last Name"
 							/>
 							{errors.lastName && (
 								<p className="text-xs text-red">{errors.lastName}</p>
@@ -304,21 +305,19 @@ export const SmsFormDialog: React.FC<SmsFormDialogProps> = ({
 								inputMode="tel"
 								value={formData.phoneNumber}
 								onChange={(e) => {
-									// Only allow digits, spaces, dashes, parentheses, and + sign
-									const value = e.target.value;
-									const allowedChars = /^[\d\s\-()+]*$/;
-									if (allowedChars.test(value) || value === "") {
-										setFormData({ ...formData, phoneNumber: value });
-										// Clear error when user starts typing
-										if (errors.phoneNumber) {
-											setErrors({ ...errors, phoneNumber: "" });
-										}
+									// Auto-insert (xxx) xxx-xxxx as digits are typed
+									setFormData({
+										...formData,
+										phoneNumber: formatPhoneInput(e.target.value),
+									});
+									if (errors.phoneNumber) {
+										setErrors({ ...errors, phoneNumber: "" });
 									}
 								}}
 								className={`bg-white border-slate-300 ${
 									errors.phoneNumber ? "border-red-500" : ""
 								}`}
-								placeholder="(555) 123-4567 or 5551234567"
+								placeholder="(555) 123-4567"
 							/>
 							<p className="text-xs text-slate-500">Enter your phone number</p>
 							{errors.phoneNumber && (
@@ -367,7 +366,7 @@ export const SmsFormDialog: React.FC<SmsFormDialogProps> = ({
 											Terms & Conditions
 										</a>
 									</p>
-									<p className="text-sm font-medium flex items-center gap-2">
+									<p className="text-sm text-slate-700 font-medium flex items-center gap-2">
 										<Checkbox
 											id="consent"
 											checked={formData.consent}

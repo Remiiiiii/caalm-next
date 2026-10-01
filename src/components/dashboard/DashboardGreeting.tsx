@@ -1,7 +1,7 @@
 "use client";
 
 import type { Models } from "node-appwrite";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import ProfilePicture from "@/components/ProfilePicture";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
@@ -54,6 +54,13 @@ export function DashboardGreeting({
 }: DashboardGreetingProps) {
 	const { user: authUser } = useAuth();
 	const authTyped = authUser as DashboardGreetingUser | null;
+	// Defer clock-based text until after mount so SSR and client match
+	// (server timezone can differ from the browser).
+	const [greeting, setGreeting] = useState("Hello");
+
+	useEffect(() => {
+		setGreeting(getTimeBasedGreeting());
+	}, []);
 
 	// Merge server profile fields with auth prefs so the photo stays connected
 	const profileUser: DashboardGreetingUser | null =
@@ -82,7 +89,6 @@ export function DashboardGreeting({
 				} as DashboardGreetingUser)
 			: null;
 
-	const greeting = getTimeBasedGreeting();
 	const displayName = resolveDisplayName(profileUser);
 	const badgeLabel = resolveBadgeLabel(profileUser);
 

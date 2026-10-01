@@ -1,5 +1,6 @@
 "use client";
 
+import { formatStorageUsedBytes } from "@/lib/storage/formatStorageUsed";
 import type { StorageUsagePayload } from "@/lib/storage/storageUsage.types";
 
 interface StorageProgressBarProps {
@@ -29,25 +30,8 @@ export default function StorageProgressBar({
 	const totalSizeBytes = totalSpace.used || 0;
 	const percentage = Math.min((totalSizeBytes / resolvedLimitBytes) * 100, 100);
 
-	const KB_PER_GB = 1024 * 1024;
-	const totalSizeKB = totalSizeBytes / 1024;
-	let formattedUsed: string;
-	let usedUnit: string;
-
-	if (totalSizeKB >= KB_PER_GB) {
-		const totalSizeGB = totalSizeKB / KB_PER_GB;
-		formattedUsed = totalSizeGB.toLocaleString(undefined, {
-			minimumFractionDigits: 2,
-			maximumFractionDigits: 2,
-		});
-		usedUnit = "GB";
-	} else {
-		formattedUsed = totalSizeKB.toLocaleString(undefined, {
-			minimumFractionDigits: 2,
-			maximumFractionDigits: 2,
-		});
-		usedUnit = "KB";
-	}
+	const { formatted: formattedUsed, unit: usedUnit } =
+		formatStorageUsedBytes(totalSizeBytes);
 
 	let progressColor = "rgb(22, 163, 74)";
 	if (percentage >= 80) {

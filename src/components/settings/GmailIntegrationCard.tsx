@@ -129,7 +129,7 @@ export default function GmailIntegrationCard({
 			meta={userEmail || null}
 			info={
 				connected
-					? "Use the mail icon in the dashboard header to open your inbox without leaving CAALM."
+					? "Use the mail icon in the dashboard header to open your inbox. Archive, trash, and reply work inside the Mail panel. If those actions fail, disconnect and reconnect Gmail to grant update permissions."
 					: "Connect your Google account, approve Gmail permissions, then open mail from the dashboard header."
 			}
 			connectLabel="Connect Gmail"

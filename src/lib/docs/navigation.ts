@@ -212,6 +212,13 @@ export const DOCS_NAV: DocsNavGroup[] = [
 				summary: "Events, shared calendars, and deadline visibility.",
 			},
 			{
+				title: "Mail (Gmail and Outlook)",
+				slug: "reference/mail",
+				path: "reference/mail",
+				summary:
+					"Connect Gmail or Microsoft 365 Mail and use the header envelope panel.",
+			},
+			{
 				title: "Files library",
 				slug: "reference/files",
 				path: "reference/files",
@@ -283,7 +290,7 @@ export const DOCS_NAV: DocsNavGroup[] = [
 				title: "Billing and integrations",
 				slug: "reference/billing-integrations",
 				path: "reference/billing-integrations",
-				summary: "Plans, usage, Outlook, and API keys.",
+				summary: "Plans, usage, Gmail, Microsoft 365, and API keys.",
 			},
 			{
 				title: "SAM.gov advanced resources",
@@ -378,7 +385,7 @@ export const DOCS_NAV: DocsNavGroup[] = [
 				title: "Connect Outlook and integrations",
 				slug: "admin/integrations",
 				path: "admin/integrations",
-				summary: "Calendar sync and org API keys.",
+				summary: "Gmail, Microsoft 365 Mail/Calendar, and org API keys.",
 			},
 			{
 				title: "HubSpot and Salesforce CRM origin",

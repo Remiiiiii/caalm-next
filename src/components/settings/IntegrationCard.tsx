@@ -1,7 +1,7 @@
 "use client";
 
-import { AlertCircle, Lock, Unplug } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { AlertCircle, Lock, Unplug } from "lucide-react";
 import Image from "next/image";
 import type { ComponentType, ReactNode, SVGProps } from "react";
 import { VscDebugConnectedCompact } from "react-icons/vsc";
@@ -156,9 +156,7 @@ export default function IntegrationCard({
 				<div className="flex items-start justify-between gap-3">
 					<div className="flex min-w-0 items-start gap-3">
 						<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue/10">
-							{status === "locked" ? (
-								<Lock className="h-5 w-5 text-slate-500" />
-							) : iconSrc ? (
+							{iconSrc ? (
 								<Image
 									src={iconSrc}
 									alt=""
@@ -168,6 +166,8 @@ export default function IntegrationCard({
 								/>
 							) : Icon ? (
 								<Icon className="h-5 w-5 text-[#0f5384]" />
+							) : status === "locked" ? (
+								<Lock className="h-5 w-5 text-slate-500" />
 							) : null}
 						</div>
 						<div className="min-w-0">

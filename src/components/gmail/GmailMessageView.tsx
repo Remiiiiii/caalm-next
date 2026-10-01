@@ -1,25 +1,44 @@
 "use client";
 
-import { ArrowLeft, Loader2 } from "lucide-react";
+import {
+	Archive,
+	ArrowLeft,
+	Loader2,
+	MailOpen,
+	Mail,
+	Reply,
+	Trash2,
+} from "lucide-react";
 import { DocsMarkdown } from "@/components/docs/DocsMarkdown";
+import { GmailActionTooltip } from "@/components/gmail/GmailActionTooltip";
 import GmailHtmlFrame from "@/components/gmail/GmailHtmlFrame";
 import { Button } from "@/components/ui/button";
 import { cleanEmailBody } from "@/lib/gmail/humanize-body";
 import { cn } from "@/lib/utils";
 
 export interface GmailMessageDetailView {
+	id: string;
+	threadId?: string;
 	subject: string;
 	from: string;
 	to: string;
 	date: string;
 	bodyText: string;
 	bodyHtml: string;
+	unread?: boolean;
+	messageIdHeader?: string;
+	references?: string;
 }
 
 interface GmailMessageViewProps {
 	loading?: boolean;
 	message: GmailMessageDetailView | null;
 	onBack: () => void;
+	busyAction?: string | null;
+	onArchive?: () => void;
+	onTrash?: () => void;
+	onToggleRead?: () => void;
+	onReply?: () => void;
 }
 
 function parseSender(from: string): { name: string; email: string } {
@@ -59,6 +78,11 @@ export default function GmailMessageView({
 	loading,
 	message,
 	onBack,
+	busyAction,
+	onArchive,
+	onTrash,
+	onToggleRead,
+	onReply,
 }: GmailMessageViewProps) {
 	if (loading) {
 		return (
@@ -74,10 +98,10 @@ export default function GmailMessageView({
 	const sender = parseSender(message.from);
 	const html = (message.bodyHtml || "").trim();
 	const showHtml = html.length > 0;
-	// HTML path (incl. LinkedIn): render like Gmail. Markdown cleanup only for plain-text PYMK.
 	const cleaned = showHtml
 		? null
 		: cleanEmailBody(message.bodyText || "", message.bodyHtml || "");
+	const actionBusy = Boolean(busyAction);
 
 	return (
 		<div className="flex min-w-0 flex-col gap-4">
@@ -89,10 +113,91 @@ export default function GmailMessageView({
 						size="sm"
 						className="h-8 cursor-pointer -ml-2 gap-1.5 text-slate-600 hover:bg-slate-100 hover:text-slate-800"
 						onClick={onBack}
+						disabled={actionBusy}
 					>
 						<ArrowLeft className="h-4 w-4" />
 						Inbox
 					</Button>
+					<div className="flex items-center gap-0.5">
+						{onReply ? (
+							<GmailActionTooltip label="Reply">
+								<Button
+									type="button"
+									variant="ghost"
+									size="icon"
+									className="h-8 w-8 cursor-pointer text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+									aria-label="Reply"
+									disabled={actionBusy}
+									onClick={onReply}
+								>
+									<Reply className="h-4 w-4" />
+								</Button>
+							</GmailActionTooltip>
+						) : null}
+						{onArchive ? (
+							<GmailActionTooltip label="Archive">
+								<Button
+									type="button"
+									variant="ghost"
+									size="icon"
+									className="h-8 w-8 cursor-pointer text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+									aria-label="Archive"
+									disabled={actionBusy}
+									onClick={onArchive}
+								>
+									{busyAction === "archive" ? (
+										<Loader2 className="h-4 w-4 animate-spin" />
+									) : (
+										<Archive className="h-4 w-4" />
+									)}
+								</Button>
+							</GmailActionTooltip>
+						) : null}
+						{onToggleRead ? (
+							<GmailActionTooltip
+								label={message.unread ? "Mark as read" : "Mark as unread"}
+							>
+								<Button
+									type="button"
+									variant="ghost"
+									size="icon"
+									className="h-8 w-8 cursor-pointer text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+									aria-label={
+										message.unread ? "Mark as read" : "Mark as unread"
+									}
+									disabled={actionBusy}
+									onClick={onToggleRead}
+								>
+									{busyAction === "markRead" || busyAction === "markUnread" ? (
+										<Loader2 className="h-4 w-4 animate-spin" />
+									) : message.unread ? (
+										<MailOpen className="h-4 w-4" />
+									) : (
+										<Mail className="h-4 w-4" />
+									)}
+								</Button>
+							</GmailActionTooltip>
+						) : null}
+						{onTrash ? (
+							<GmailActionTooltip label="Delete">
+								<Button
+									type="button"
+									variant="ghost"
+									size="icon"
+									className="h-8 w-8 cursor-pointer text-slate-500 hover:bg-red/10 hover:text-red"
+									aria-label="Delete"
+									disabled={actionBusy}
+									onClick={onTrash}
+								>
+									{busyAction === "trash" ? (
+										<Loader2 className="h-4 w-4 animate-spin" />
+									) : (
+										<Trash2 className="h-4 w-4" />
+									)}
+								</Button>
+							</GmailActionTooltip>
+						) : null}
+					</div>
 				</div>
 			</div>
 

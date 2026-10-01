@@ -7,6 +7,7 @@ import DashboardHeader from "@/components/DashboardHeader";
 import { DesktopFirstGate } from "@/components/DesktopFirstGate";
 import DemoTourLayer from "@/components/demo/tour/DemoTourLayer";
 import { ImpersonationBanner } from "@/components/impersonation/ImpersonationBanner";
+import WaveLoopBackground from "@/components/landing/WaveLoopBackground";
 import MobileNavigation from "@/components/MobileNavigation";
 import NotificationSoundListener from "@/components/NotificationSoundListener";
 import Sidebar from "@/components/Sidebar";
@@ -18,6 +19,36 @@ import { ImpersonationProvider } from "@/contexts/ImpersonationContext";
 import { OrganizationProvider } from "@/contexts/OrganizationContext";
 import { SidebarProvider } from "@/contexts/SidebarContext";
 import { StepUpProvider } from "@/contexts/StepUpContext";
+import { resolveAvatarDisplayUrl } from "@/lib/utils";
+
+/** Prefer prefs.profileImage (built URL), then file id → storage URL. Empty = initials. */
+function resolveNavAvatar(user: {
+	avatar?: string | null;
+	profileImageId?: string | null;
+	prefs?: {
+		avatar?: string | null;
+		profileImage?: string | null;
+		profileImageId?: string | null;
+	};
+}): string {
+	const prefUrl = user.prefs?.profileImage?.trim();
+	if (
+		prefUrl &&
+		!prefUrl.includes("avatar-placeholder") &&
+		!prefUrl.includes("3d-illustration-person-with-sunglasses")
+	) {
+		return prefUrl;
+	}
+	return (
+		resolveAvatarDisplayUrl({
+			avatar: user.avatar || user.prefs?.avatar,
+			profileImageId:
+				user.profileImageId?.trim() ||
+				user.prefs?.profileImageId?.trim() ||
+				null,
+		}) || ""
+	);
+}
 
 const LayoutContent = ({ children }: { children: React.ReactNode }) => {
 	const { user, loading } = useAuth();
@@ -29,64 +60,94 @@ const LayoutContent = ({ children }: { children: React.ReactNode }) => {
 		}
 	}, [user, loading, router]);
 
-	// Memoize sidebar props - always return an object to ensure consistent rendering - always return an object to ensure consistent rendering
 	const sidebarProps = useMemo(() => {
 		if (!user) {
 			return {
 				name: "Loading...",
-				avatar: "/assets/images/avatar-placeholder.png",
+				avatar: "",
 				email: "",
 				role: "",
 				division: "",
 			};
 		}
+		const u = user as {
+			name?: string;
+			avatar?: string | null;
+			profileImageId?: string | null;
+			role?: string;
+			division?: string;
+			prefs?: {
+				avatar?: string | null;
+				profileImage?: string | null;
+				profileImageId?: string | null;
+			};
+		};
 		return {
-			name: user.name || "Unknown User",
-			avatar:
-				(user as any).prefs?.avatar || "/assets/images/avatar-placeholder.png",
+			name: u.name || "Unknown User",
+			avatar: resolveNavAvatar(u),
 			email: user.email,
-			role: (user as any).role || "",
-			division: (user as any).division || "",
+			role: u.role || "",
+			division: u.division || "",
 		};
 	}, [
 		user?.$id,
 		user?.email,
-		(user as any)?.name,
-		(user as any)?.prefs?.avatar,
-		(user as any)?.role,
-		(user as any)?.division,
+		(user as { name?: string })?.name,
+		(user as { avatar?: string })?.avatar,
+		(user as { profileImageId?: string })?.profileImageId,
+		(user as { prefs?: { profileImage?: string; profileImageId?: string; avatar?: string } })
+			?.prefs?.profileImage,
+		(user as { prefs?: { profileImageId?: string } })?.prefs?.profileImageId,
+		(user as { prefs?: { avatar?: string } })?.prefs?.avatar,
+		(user as { role?: string })?.role,
+		(user as { division?: string })?.division,
 		user,
 	]);
 
-	// Memoize navigation props - always return an object to ensure consistent rendering
 	const navigationProps = useMemo(() => {
 		if (!user) {
 			return {
 				$id: "",
 				accountId: "",
 				fullName: "Loading...",
-				avatar: "/assets/images/avatar-placeholder.png",
+				avatar: "",
 				email: "",
 				role: "",
 			};
 		}
+		const u = user as {
+			accountId?: string;
+			fullName?: string;
+			name?: string;
+			avatar?: string | null;
+			profileImageId?: string | null;
+			role?: string;
+			prefs?: {
+				avatar?: string | null;
+				profileImage?: string | null;
+				profileImageId?: string | null;
+			};
+		};
 		return {
 			$id: user.$id,
-			accountId: (user as any).accountId || user.$id,
-			fullName: (user as any).fullName || (user as any).name || "Unknown User",
-			avatar:
-				(user as any).prefs?.avatar || "/assets/images/avatar-placeholder.png",
+			accountId: u.accountId || user.$id,
+			fullName: u.fullName || u.name || "Unknown User",
+			avatar: resolveNavAvatar(u),
 			email: user.email,
-			role: (user as any).role || "",
+			role: u.role || "",
 		};
 	}, [
 		user?.$id,
 		user?.email,
-		(user as any)?.accountId,
-		(user as any)?.fullName,
-		(user as any)?.name,
-		(user as any)?.prefs?.avatar,
-		(user as any)?.role,
+		(user as { accountId?: string })?.accountId,
+		(user as { fullName?: string })?.fullName,
+		(user as { name?: string })?.name,
+		(user as { avatar?: string })?.avatar,
+		(user as { profileImageId?: string })?.profileImageId,
+		(user as { prefs?: { profileImage?: string } })?.prefs?.profileImage,
+		(user as { prefs?: { profileImageId?: string } })?.prefs?.profileImageId,
+		(user as { prefs?: { avatar?: string } })?.prefs?.avatar,
+		(user as { role?: string })?.role,
 		user,
 	]);
 
@@ -125,9 +186,10 @@ const LayoutContent = ({ children }: { children: React.ReactNode }) => {
 	return (
 		<SidebarProvider>
 			<NotificationSoundListener />
-			<main className="flex h-screen flex-col overflow-hidden">
+			<main className="relative flex h-screen flex-col overflow-hidden">
+				<WaveLoopBackground className="fixed inset-0 -z-10 h-full w-full object-cover" />
 				<ImpersonationBanner />
-				<div className="flex min-h-0 flex-1 overflow-hidden">
+				<div className="relative z-0 flex min-h-0 flex-1 overflow-hidden">
 					<Sidebar {...sidebarProps} />
 					<section className="flex h-full min-w-0 flex-1 flex-col pt-4 sm:pt-5 md:pt-6 lg:pt-7">
 						<MobileNavigation {...navigationProps} />

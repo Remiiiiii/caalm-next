@@ -16,7 +16,7 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import OrbitingBlocks from "@/components/OrbitingBlocks";
 import SplineCanvas from "@/components/SplineCanvas";
-import { MEDIA_URLS } from "@/lib/media/urls";
+import WaveLoopBackground from "@/components/landing/WaveLoopBackground";
 
 export default function ComingSoonPage() {
 	const [email, setEmail] = useState("");
@@ -169,18 +169,7 @@ export default function ComingSoonPage() {
 			{/* Main Content with Grid and Video Background */}
 			<main className="relative min-h-screen">
 				{/* Video Background */}
-				<div className="absolute inset-0 -z-10">
-					<video
-						autoPlay
-						loop
-						muted
-						playsInline
-						preload="metadata"
-						className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-					>
-						<source src={MEDIA_URLS.waveVideo} type="video/mp4" />
-					</video>
-				</div>
+				<WaveLoopBackground className="absolute inset-0 -z-10" />
 
 				{/* Global subtle grid, above any background videos */}
 				<div

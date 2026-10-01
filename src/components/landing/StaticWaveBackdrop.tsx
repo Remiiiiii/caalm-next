@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 
 type StaticWaveBackdropProps = {
-	/** Pin behind scrolling content (dashboard-style pages). */
+	/** Pin behind scrolling content (auth / marketing shells). */
 	fixed?: boolean;
 	/** Match legacy wave video at 60% opacity. */
 	muted?: boolean;

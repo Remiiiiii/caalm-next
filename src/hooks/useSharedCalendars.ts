@@ -1,8 +1,8 @@
-import { useMemo } from "react";
 import useSWR from "swr";
 import { useAuth } from "@/contexts/AuthContext";
+import { useClientCachedFallback } from "@/hooks/useClientCachedFallback";
 import type { SharedCalendar } from "@/lib/actions/shared-calendar.actions";
-import { getCachedData, setCachedData } from "@/lib/utils/client-cache";
+import { setCachedData } from "@/lib/utils/client-cache";
 
 interface SharedCalendarsResponse {
 	success: boolean;
@@ -29,11 +29,7 @@ export const useSharedCalendars = () => {
 	const { user } = useAuth();
 	const url = user?.$id ? "/api/calendar/shared" : null;
 
-	// Get cached data as fallback for stale-while-revalidate
-	const fallbackData = useMemo(() => {
-		if (!url || typeof window === "undefined") return undefined;
-		return getCachedData<SharedCalendarsResponse>(url) ?? undefined;
-	}, [url]);
+	const fallbackData = useClientCachedFallback<SharedCalendarsResponse>(url);
 
 	const { data, error, isLoading, mutate } = useSWR(url, fetcher, {
 		refreshInterval: 300000, // Refresh every 5 minutes

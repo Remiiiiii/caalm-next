@@ -78,6 +78,7 @@ export const ITEM_ICONS: Record<
 		color: SUBITEM_TEXT_GREY,
 	},
 	"Funding & Retention": {
+		src: "/assets/icons/banknote.svg",
 		width: 20,
 		height: 20,
 		color: SUBITEM_TEXT_GREY,

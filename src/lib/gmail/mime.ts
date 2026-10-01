@@ -4,11 +4,15 @@ export function buildRawEmail(options: {
 	subject: string;
 	body: string;
 	fromEmail?: string;
+	inReplyTo?: string;
+	references?: string;
 }): string {
 	const lines = [
 		`To: ${options.to}`,
 		...(options.fromEmail ? [`From: ${options.fromEmail}`] : []),
 		`Subject: ${options.subject}`,
+		...(options.inReplyTo ? [`In-Reply-To: ${options.inReplyTo}`] : []),
+		...(options.references ? [`References: ${options.references}`] : []),
 		"MIME-Version: 1.0",
 		'Content-Type: text/plain; charset="UTF-8"',
 		"",

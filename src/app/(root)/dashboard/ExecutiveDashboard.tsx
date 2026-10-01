@@ -78,7 +78,6 @@ import { useStepUp } from "@/contexts/StepUpContext";
 import { useToast } from "@/hooks/use-toast";
 import { useCombinedExpiryModal } from "@/hooks/useCombinedExpiryModal";
 import { useUnifiedDashboardData } from "@/hooks/useUnifiedDashboardData";
-import StaticWaveBackdrop from "@/components/landing/StaticWaveBackdrop";
 import { cn } from "@/lib/utils";
 import type { UIFileDoc } from "@/types/files";
 import { resolveInviteDepartment } from "../../../../constants";
@@ -768,7 +767,6 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 				onItemDismissed={markItemDismissed}
 				shouldPlaySpeech={shouldPlaySpeech}
 			/>
-			<StaticWaveBackdrop fixed muted />
 			{/* Main Content Container */}
 			<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
 				<DashboardGreeting

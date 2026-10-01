@@ -4,6 +4,8 @@ import { useState } from "react";
 import { WeatherBriefingButton } from "@/components/dashboard-briefing/WeatherBriefingButton";
 import { WeatherBriefingSheet } from "@/components/dashboard-briefing/WeatherBriefingSheet";
 
+export { LiveWeatherStatusDot } from "@/components/dashboard-briefing/LiveWeatherStatusDot";
+
 type WeatherBriefingLauncherProps = {
 	location?: string;
 	latitude?: number;

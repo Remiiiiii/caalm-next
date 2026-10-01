@@ -1,6 +1,16 @@
 "use client";
 
-import { FileText, Inbox, Loader2, Mail } from "lucide-react";
+import {
+	Archive,
+	FileText,
+	Inbox,
+	Loader2,
+	Mail,
+	MailOpen,
+	Trash2,
+} from "lucide-react";
+import { GmailActionTooltip } from "@/components/gmail/GmailActionTooltip";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 
 export interface GmailListItem {
@@ -19,6 +29,14 @@ interface GmailMessageListProps {
 	onSelect: (id: string) => void;
 	emptyLabel?: string;
 	variant?: "inbox" | "drafts";
+	busyId?: string | null;
+	onArchive?: (id: string) => void;
+	onTrash?: (id: string) => void;
+	onToggleRead?: (id: string, unread: boolean) => void;
+	/** Multi-select (inbox only) */
+	checkedIds?: Set<string>;
+	onToggleChecked?: (id: string) => void;
+	onToggleAllChecked?: (checked: boolean) => void;
 }
 
 function parseSender(from: string): { name: string; email: string } {
@@ -42,9 +60,10 @@ function initials(name: string): string {
 function formatListDate(raw: string): string {
 	if (!raw) return "";
 	const asNum = Number(raw);
-	const date = Number.isFinite(asNum) && asNum > 1e11
-		? new Date(asNum)
-		: new Date(raw);
+	const date =
+		Number.isFinite(asNum) && asNum > 1e11
+			? new Date(asNum)
+			: new Date(raw);
 	if (Number.isNaN(date.getTime())) return raw;
 
 	const now = new Date();
@@ -91,6 +110,13 @@ export default function GmailMessageList({
 	onSelect,
 	emptyLabel = "No messages",
 	variant = "inbox",
+	busyId,
+	onArchive,
+	onTrash,
+	onToggleRead,
+	checkedIds,
+	onToggleChecked,
+	onToggleAllChecked,
 }: GmailMessageListProps) {
 	if (loading) {
 		return (
@@ -118,79 +144,223 @@ export default function GmailMessageList({
 		);
 	}
 
-	return (
-		<ul className="-mx-1 divide-y divide-slate-200">
-			{items.map((item) => {
-				const sender = parseSender(item.from);
-				const selected = selectedId === item.id;
-				return (
-					<li key={item.id}>
-					<button
-						type="button"
-						onClick={() => onSelect(item.id)}
-						className={cn(
-							"group relative z-0 flex w-full min-w-0 gap-3 px-3 py-3 text-left transition-all duration-200 cursor-pointer",
-							"hover:z-10 hover:bg-blue-50 hover:shadow-[0_6px_14px_-4px_rgba(15,83,132,0.18),0_2px_4px_-1px_rgba(15,23,42,0.06)]",
-							"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#0f5384]/30",
-							selected && "bg-blue/10",
-						)}
-					>
-							{/* Unread indicator (Apple Mail / Spark pattern) */}
-							<span
-								className={cn(
-									"absolute left-1 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full",
-									item.unread ? "bg-[#0f5384]" : "bg-transparent",
-								)}
-								aria-hidden
-							/>
+	const showActions =
+		variant === "inbox" && (onArchive || onTrash || onToggleRead);
+	const multiSelect =
+		variant === "inbox" && Boolean(onToggleChecked && checkedIds);
+	const allChecked =
+		multiSelect && items.length > 0 && items.every((i) => checkedIds!.has(i.id));
+	const someChecked =
+		multiSelect && items.some((i) => checkedIds!.has(i.id)) && !allChecked;
 
+	return (
+		<div className="flex min-w-0 flex-col">
+			{multiSelect ? (
+				<div className="mb-1 flex items-center gap-2 px-3 py-1.5">
+					<Checkbox
+						checked={allChecked ? true : someChecked ? "indeterminate" : false}
+						onCheckedChange={(value) =>
+							onToggleAllChecked?.(value === true)
+						}
+						aria-label={allChecked ? "Deselect all" : "Select all"}
+						className="cursor-pointer border-[0.25px] border-slate-300"
+					/>
+					<span className="text-xs text-slate-500">
+						{checkedIds!.size > 0
+							? `${checkedIds!.size} selected`
+							: "Select"}
+					</span>
+				</div>
+			) : null}
+
+			<ul className="-mx-1 divide-y divide-slate-200">
+				{items.map((item) => {
+					const sender = parseSender(item.from);
+					const selected = selectedId === item.id;
+					const rowBusy = busyId === item.id;
+					const isChecked = checkedIds?.has(item.id) ?? false;
+					return (
+						<li key={item.id}>
 							<div
 								className={cn(
-									"mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
-									variant === "drafts"
-										? "bg-slate-100 text-slate-600"
-										: avatarTone(sender.email || sender.name),
+									"group relative z-0 w-full min-w-0 transition-all duration-200",
+									"hover:z-10 hover:bg-blue-50 hover:shadow-[0_6px_14px_-4px_rgba(15,83,132,0.18),0_2px_4px_-1px_rgba(15,23,42,0.06)]",
+									(selected || isChecked) && "bg-blue/10",
 								)}
 							>
-								{variant === "drafts" ? (
-									<Mail className="h-4 w-4" />
-								) : (
-									initials(sender.name)
-								)}
-							</div>
+								<div className="flex w-full min-w-0 items-start gap-1 px-2 py-3">
+									{multiSelect ? (
+										<div
+											className="mt-2 flex shrink-0 items-center pl-1"
+											onClick={(e) => e.stopPropagation()}
+											onKeyDown={(e) => e.stopPropagation()}
+										>
+											<Checkbox
+												checked={isChecked}
+												onCheckedChange={() => onToggleChecked?.(item.id)}
+												aria-label={`Select ${item.subject || "message"}`}
+												className="cursor-pointer border-[0.25px] border-slate-300"
+											/>
+										</div>
+									) : null}
 
-							<div className="min-w-0 flex-1 overflow-hidden">
-								<div className="flex items-baseline justify-between gap-2">
-									<p
+									<button
+										type="button"
+										onClick={() => onSelect(item.id)}
+										disabled={rowBusy}
 										className={cn(
-											"truncate text-sm text-slate-800",
-											item.unread ? "font-semibold" : "font-medium",
+											"relative flex min-w-0 flex-1 gap-3 px-1 text-left cursor-pointer",
+											"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#0f5384]/30",
+											rowBusy && "opacity-60",
 										)}
 									>
-										{variant === "drafts" ? item.subject || "(No subject)" : sender.name}
-									</p>
-									<span className="shrink-0 text-[11px] tabular-nums text-slate-500">
-										{formatListDate(item.date)}
-									</span>
+										{!multiSelect ? (
+											<span
+												className={cn(
+													"absolute left-0 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full",
+													item.unread ? "bg-[#0f5384]" : "bg-transparent",
+												)}
+												aria-hidden
+											/>
+										) : null}
+
+										<div
+											className={cn(
+												"relative mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
+												variant === "drafts"
+													? "bg-slate-100 text-slate-600"
+													: avatarTone(sender.email || sender.name),
+											)}
+										>
+											{multiSelect && item.unread ? (
+												<span
+													className="absolute -left-1 -top-0.5 h-1.5 w-1.5 rounded-full bg-[#0f5384]"
+													aria-hidden
+												/>
+											) : null}
+											{variant === "drafts" ? (
+												<Mail className="h-4 w-4" />
+											) : (
+												initials(sender.name)
+											)}
+										</div>
+
+										<div className="min-w-0 flex-1 overflow-hidden">
+											<div className="flex items-baseline justify-between gap-2">
+												<p
+													className={cn(
+														"min-w-0 truncate text-sm text-slate-800",
+														item.unread ? "font-semibold" : "font-medium",
+													)}
+												>
+													{variant === "drafts"
+														? item.subject || "(No subject)"
+														: sender.name}
+												</p>
+												<span
+													className={cn(
+														"shrink-0 text-[11px] tabular-nums text-slate-500 transition-opacity duration-150",
+														showActions &&
+															"group-hover:opacity-0 group-focus-within:opacity-0",
+													)}
+												>
+													{formatListDate(item.date)}
+												</span>
+											</div>
+											{variant === "inbox" ? (
+												<p
+													className={cn(
+														"mt-0.5 truncate text-sm text-slate-700",
+														item.unread ? "font-medium" : "font-normal",
+													)}
+												>
+													{item.subject || "(No subject)"}
+												</p>
+											) : null}
+											<p className="mt-0.5 truncate text-xs text-slate-500">
+												{item.snippet || "No preview"}
+											</p>
+										</div>
+									</button>
 								</div>
-								{variant === "inbox" ? (
-									<p
+
+								{showActions ? (
+									<div
 										className={cn(
-											"mt-0.5 truncate text-sm text-slate-700",
-											item.unread ? "font-medium" : "font-normal",
+											"pointer-events-none absolute top-2 right-2 z-20 flex items-center gap-0.5 rounded-lg bg-blue-50/95 p-0.5 opacity-0 shadow-sm",
+											"transition-opacity duration-150",
+											"group-hover:pointer-events-auto group-hover:opacity-100",
+											"group-focus-within:pointer-events-auto group-focus-within:opacity-100",
+											(selected || isChecked) && "bg-blue/10",
 										)}
 									>
-										{item.subject || "(No subject)"}
-									</p>
+										{onArchive ? (
+											<GmailActionTooltip label="Archive">
+												<button
+													type="button"
+													className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-slate-500 hover:bg-white hover:text-slate-800"
+													aria-label="Archive"
+													disabled={rowBusy}
+													onClick={(e) => {
+														e.stopPropagation();
+														onArchive(item.id);
+													}}
+												>
+													{rowBusy ? (
+														<Loader2 className="h-3.5 w-3.5 animate-spin" />
+													) : (
+														<Archive className="h-3.5 w-3.5" />
+													)}
+												</button>
+											</GmailActionTooltip>
+										) : null}
+										{onToggleRead ? (
+											<GmailActionTooltip
+												label={item.unread ? "Mark as read" : "Mark as unread"}
+											>
+												<button
+													type="button"
+													className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-slate-500 hover:bg-white hover:text-slate-800"
+													aria-label={
+														item.unread ? "Mark as read" : "Mark as unread"
+													}
+													disabled={rowBusy}
+													onClick={(e) => {
+														e.stopPropagation();
+														onToggleRead(item.id, Boolean(item.unread));
+													}}
+												>
+													{item.unread ? (
+														<MailOpen className="h-3.5 w-3.5" />
+													) : (
+														<Mail className="h-3.5 w-3.5" />
+													)}
+												</button>
+											</GmailActionTooltip>
+										) : null}
+										{onTrash ? (
+											<GmailActionTooltip label="Delete">
+												<button
+													type="button"
+													className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-slate-500 hover:bg-red/10 hover:text-red"
+													aria-label="Delete"
+													disabled={rowBusy}
+													onClick={(e) => {
+														e.stopPropagation();
+														onTrash(item.id);
+													}}
+												>
+													<Trash2 className="h-3.5 w-3.5" />
+												</button>
+											</GmailActionTooltip>
+										) : null}
+									</div>
 								) : null}
-								<p className="mt-0.5 truncate text-xs text-slate-500">
-									{item.snippet || "No preview"}
-								</p>
 							</div>
-						</button>
-					</li>
-				);
-			})}
-		</ul>
+						</li>
+					);
+				})}
+			</ul>
+		</div>
 	);
 }

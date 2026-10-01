@@ -2,7 +2,8 @@ import { appwriteConfig } from "@/lib/appwrite/config";
 import { getAppUrl } from "@/lib/config/environment";
 
 export const GMAIL_SCOPES = [
-	"https://www.googleapis.com/auth/gmail.readonly",
+	// modify includes read + label changes (archive, trash, read/unread)
+	"https://www.googleapis.com/auth/gmail.modify",
 	"https://www.googleapis.com/auth/gmail.compose",
 	"https://www.googleapis.com/auth/gmail.send",
 	"openid",

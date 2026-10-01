@@ -26,9 +26,11 @@ Calendar and event permissions are separate on purpose, for example:
 
 Shared calendars can be limited to members or made visible more broadly inside the org. Choose visibility deliberately — “public inside org” is still sensitive when dates reveal strategy.
 
-## Outlook integration
+## Outlook / Microsoft 365 calendar
 
-Outlook connect/sync lives under Billing → Integrations and requires integration permissions. Demo environments may disable live sync.
+Outlook calendar connect/sync lives under Billing → Integrations on the **Microsoft 365** card (**Calendar** tab) and requires `integrations.outlook.connect`. Demo environments may disable live sync.
+
+In-app **Mail** (inbox panel from the header envelope) is a separate connect on the same card’s **Mail** tab. See [Mail (Gmail and Outlook)](/docs/reference/mail).
 
 ## Operating tip
 

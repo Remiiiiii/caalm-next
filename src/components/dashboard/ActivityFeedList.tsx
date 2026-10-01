@@ -1,6 +1,7 @@
 "use client";
 
 import { Bell, CalendarDays, FileText, User, type LucideIcon } from "lucide-react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
 export type ActivityFeedItem = {
@@ -118,6 +119,11 @@ export function ActivityFeedList({
 	emptyLabel = "No recent activities",
 }: ActivityFeedListProps) {
 	const rows = collapseConsecutiveActivities(items);
+	// Relative "Xm ago" labels use Date.now() — wait for mount so SSR matches.
+	const [mounted, setMounted] = useState(false);
+	useEffect(() => {
+		setMounted(true);
+	}, []);
 
 	if (rows.length === 0) {
 		return (
@@ -130,7 +136,7 @@ export function ActivityFeedList({
 	return (
 		<div className="py-1 pr-2">
 			{rows.map((row, index) => {
-				const ageWeeks = weeksAgo(row.timestamp);
+				const ageWeeks = mounted ? weeksAgo(row.timestamp) : 0;
 				const faded = ageWeeks >= FADE_STRONG_WEEKS;
 				const muted = !faded && ageWeeks >= FADE_START_WEEKS;
 				const { icon: Icon, iconClass, tileClass } = typeVisual(row.type);
@@ -196,7 +202,7 @@ export function ActivityFeedList({
 								faded || muted ? "text-slate-400" : "text-slate-500",
 							)}
 						>
-							{formatCompactTimeAgo(row.timestamp)}
+							{mounted ? formatCompactTimeAgo(row.timestamp) : ""}
 						</span>
 					</div>
 				);
