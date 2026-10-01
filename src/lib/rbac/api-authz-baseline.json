@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-21T19:55:49.752Z",
+  "generatedAt": "2026-10-01T01:08:57.846Z",
   "description": "Grandfathered API routes lacking detectable authz. Ratchet: may shrink, must not grow. Prefer requirePermission.",
   "unguarded": [
     "2fa/setup",

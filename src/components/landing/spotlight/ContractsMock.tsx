@@ -8,6 +8,7 @@ import {
 	FileText,
 	Filter,
 	LayoutGrid,
+	LayoutTemplate,
 	Search,
 	SquareArrowRightExit,
 	Table,
@@ -62,8 +63,33 @@ const SIDEBAR_SECTIONS = [
 				active: false,
 			},
 			{
-				name: "Approvals",
+				name: "Proposals &Approvals",
 				icon: "/assets/icons/proposal-approval.svg",
+				active: false,
+			},
+			{
+				name: "Advanced Resources",
+				icon: "/assets/icons/resources.svg",
+				active: false,
+			},
+			{
+				name: "Create Contract",
+				icon: "/assets/icons/create-contract.png",
+				active: false,
+			},
+			{
+				name: "Clause Library",
+				icon: "/assets/icons/documents.svg",
+				active: false,
+			},
+			{
+				name: "Contract Templates",
+				icon: "assets/icons/layout-template.svg",
+				active: false,
+			},
+			{
+				name: "Funding & Retention",
+				icon: "assets/icons/banknote.svg",
 				active: false,
 			},
 		],
@@ -163,10 +189,7 @@ function GlassStat({
 					{Icon ? (
 						<span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-white/50 bg-white/40 shadow-sm">
 							<Icon
-								className={cn(
-									"h-3.5 w-3.5",
-									iconClassName ?? "text-[#0f5384]",
-								)}
+								className={cn("h-3.5 w-3.5", iconClassName ?? "text-[#0f5384]")}
 							/>
 						</span>
 					) : null}

@@ -28,6 +28,8 @@ const PERMISSION_ID_MAP: Record<string, string> = {
 	"contracts.sign": "perm_contracts_sign",
 	"integrations.outlook.connect": "perm_integrations_outlook_connect",
 	"integrations.outlook.sync": "perm_integrations_outlook_sync",
+	"integrations.gmail.connect": "perm_integrations_gmail_connect",
+	"integrations.gmail.manage": "perm_integrations_gmail_manage",
 	"integrations.manage": "perm_integrations_manage",
 	"users.view": "perm_users_view",
 	"users.invite": "perm_users_invite",

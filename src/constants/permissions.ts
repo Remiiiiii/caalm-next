@@ -43,6 +43,8 @@ export const PERMISSIONS = {
 	INTEGRATIONS: {
 		OUTLOOK_CONNECT: "integrations.outlook.connect",
 		OUTLOOK_SYNC: "integrations.outlook.sync",
+		GMAIL_CONNECT: "integrations.gmail.connect",
+		GMAIL_MANAGE: "integrations.gmail.manage",
 		MANAGE: "integrations.manage",
 	},
 
@@ -382,6 +384,18 @@ export const PERMISSION_DEFINITIONS = [
 		name: "Sync Outlook",
 		category: "integrations",
 		description: "Sync with Outlook",
+	},
+	{
+		key: PERMISSIONS.INTEGRATIONS.GMAIL_CONNECT,
+		name: "Connect Gmail",
+		category: "integrations",
+		description: "Connect Gmail account for in-app mail",
+	},
+	{
+		key: PERMISSIONS.INTEGRATIONS.GMAIL_MANAGE,
+		name: "Manage Gmail",
+		category: "integrations",
+		description: "Read, send, and disconnect Gmail in CAALM",
 	},
 	{
 		key: PERMISSIONS.INTEGRATIONS.MANAGE,

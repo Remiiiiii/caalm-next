@@ -3,6 +3,7 @@
 import { KeyRound, Shield, Webhook } from "lucide-react";
 import { type ReactNode, useMemo, useState } from "react";
 import { PageIndex } from "@/components/ui/page-index";
+import GmailIntegrationCard from "./GmailIntegrationCard";
 import HubSpotIntegrationCard from "./HubSpotIntegrationCard";
 import IntegrationCard from "./IntegrationCard";
 import OutlookIntegrationCard from "./OutlookIntegrationCard";
@@ -36,6 +37,7 @@ export default function IntegrationsPanel({
 
 		if (!isDemo) {
 			items.push(<OutlookIntegrationCard key="outlook" userId={userId} />);
+			items.push(<GmailIntegrationCard key="gmail" userId={userId} />);
 		}
 
 		items.push(
@@ -58,16 +60,13 @@ export default function IntegrationsPanel({
 				description="Programmatic access and outbound event webhooks for your workspace."
 				icon={Webhook}
 				status={hasApiAccess ? "disconnected" : "locked"}
+				info={
+					hasApiAccess
+						? "Webhook endpoints and API keys will appear here when enabled for your organization."
+						: undefined
+				}
 				lockedHint="Available on Growth and Enterprise plans."
 				onConnect={hasApiAccess ? undefined : onViewPlans}
-				actions={
-					hasApiAccess ? (
-						<p className="text-xs text-slate-500">
-							Webhook endpoints and API keys will appear here when enabled for
-							your organization.
-						</p>
-					) : undefined
-				}
 			/>,
 			<IntegrationCard
 				key="sso"
@@ -75,16 +74,13 @@ export default function IntegrationsPanel({
 				description="Enterprise identity with SAML and SCIM provisioning."
 				icon={Shield}
 				status={hasSso ? "disconnected" : "locked"}
+				info={
+					hasSso
+						? "Configure your identity provider once SSO is provisioned for your organization."
+						: undefined
+				}
 				lockedHint="Available on the Enterprise plan."
 				onConnect={hasSso ? undefined : onViewPlans}
-				actions={
-					hasSso ? (
-						<p className="text-xs text-slate-500">
-							Configure your identity provider once SSO is provisioned for your
-							organization.
-						</p>
-					) : undefined
-				}
 			/>,
 			<IntegrationCard
 				key="api-keys"
@@ -92,6 +88,11 @@ export default function IntegrationsPanel({
 				description="Manage organization API keys for trusted integrations."
 				icon={KeyRound}
 				status={hasApiAccess ? "disconnected" : "locked"}
+				info={
+					hasApiAccess
+						? "Create and rotate organization API keys for trusted integrations from this panel when keys are enabled."
+						: undefined
+				}
 				lockedHint="Available on Growth and Enterprise plans."
 				onConnect={hasApiAccess ? undefined : onViewPlans}
 			/>,

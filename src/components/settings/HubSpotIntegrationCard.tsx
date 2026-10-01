@@ -3,7 +3,6 @@
 import { format } from "date-fns";
 import {
 	AlertCircle,
-	Info,
 	Loader2,
 	RefreshCw,
 	Settings2,
@@ -11,8 +10,6 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
-import { VscDebugConnectedCompact } from "react-icons/vsc";
-import { Button } from "@/components/ui/button";
 import {
 	AppDropdownMenuContent,
 	AppDropdownMenuItem,
@@ -219,8 +216,9 @@ export default function HubSpotIntegrationCard({
 				description="Create a CAALM draft when a HubSpot deal hits a stage."
 				iconSrc={HUBSPOT_ICON}
 				status="connecting"
+				info="Checking your HubSpot connection…"
 				actions={
-					<div className="flex items-center gap-2 text-sm text-slate-600">
+					<div className="flex w-full items-center justify-center gap-2 py-2 text-sm text-slate-600">
 						<Loader2 className="h-4 w-4 animate-spin" />
 						Loading…
 					</div>
@@ -241,52 +239,23 @@ export default function HubSpotIntegrationCard({
 					lastSync ? format(new Date(lastSync), "MMM d, yyyy h:mm a") : null
 				}
 				menu={overflowMenu}
-				onConnect={handleConnect}
-				actions={
-					connected ? (
-						<div className="flex flex-col gap-3 w-full">
-							{lastError ? (
-								<div className="flex items-start gap-2 p-3 rounded-lg bg-red/10 border border-red/20">
-									<AlertCircle className="h-4 w-4 text-red mt-0.5 shrink-0" />
-									<p className="text-xs text-slate-700">{lastError}</p>
-								</div>
-							) : (
-								<div
-									className={`flex items-start gap-2 p-3 rounded-lg border ${
-										triggerStageId
-											? "bg-green/10 border-green/20"
-											: "bg-blue/10 border-blue/20"
-									}`}
-								>
-									<Info className="h-4 w-4 text-[#0f5384] mt-0.5 shrink-0" />
-									<p className="text-xs text-slate-700">
-										{triggerStageId
-											? "Trigger stage is set. Move a deal there, or sync now to pull it in immediately."
-											: "Configure a pipeline and trigger stage next."}
-									</p>
-								</div>
-							)}
-						</div>
-					) : (
-						<div className="flex flex-col gap-3 w-full">
-							<div className="flex items-start gap-2 p-3 rounded-lg bg-blue/10 border border-blue/20">
-								<AlertCircle className="h-4 w-4 text-[#0f5384] mt-0.5 shrink-0" />
-								<p className="text-xs text-slate-700">
-									Connect HubSpot, pick a deal stage, and CAALM opens a draft
-									when that stage is reached. HubSpot Free CRM is enough.
-								</p>
-							</div>
-							<Button
-								className="btn-primary px-3 sm:px-4 cursor-pointer w-fit"
-								onClick={handleConnect}
-							>
-								<VscDebugConnectedCompact className="h-4 w-4" aria-hidden />
-								Connect HubSpot
-							</Button>
-						</div>
-					)
+				info={
+					connected
+						? triggerStageId
+							? "Trigger stage is set. Move a deal there, or sync now to pull it in immediately."
+							: "Configure a pipeline and trigger stage next."
+						: "Connect HubSpot, pick a deal stage, and CAALM opens a draft when that stage is reached. HubSpot Free CRM is enough."
 				}
-			/>
+				connectLabel="Connect HubSpot"
+				onConnect={handleConnect}
+			>
+				{connected && lastError ? (
+					<div className="flex w-full items-start gap-2 rounded-lg border border-red/20 bg-red/10 p-3">
+						<AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red" />
+						<p className="text-xs text-slate-700">{lastError}</p>
+					</div>
+				) : null}
+			</IntegrationCard>
 			<HubSpotConfigDialog
 				open={configOpen}
 				onOpenChange={setConfigOpen}

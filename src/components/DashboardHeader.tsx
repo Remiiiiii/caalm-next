@@ -5,6 +5,7 @@ import { Bell, LogOut, Mail } from "lucide-react";
 import { useCallback, useState } from "react";
 import { mutate } from "swr";
 import CaalmAssistantLauncher from "@/components/assistant/CaalmAssistantLauncher";
+import GmailSheet from "@/components/gmail/GmailSheet";
 import NotificationBadge from "@/components/NotificationBadge";
 import NotificationCenter from "@/components/NotificationCenter";
 import ProfilePicture from "@/components/ProfilePicture";
@@ -26,6 +27,7 @@ interface DashboardHeaderProps {
 const DashboardHeader = ({ user: userProp }: DashboardHeaderProps) => {
 	const { logout, user: userFromContext } = useAuth();
 	const [notifOpen, setNotifOpen] = useState(false);
+	const [mailOpen, setMailOpen] = useState(false);
 
 	// Use user from context if prop is not provided (avoids serialization issues)
 	const user = userProp || userFromContext;
@@ -92,8 +94,9 @@ const DashboardHeader = ({ user: userProp }: DashboardHeaderProps) => {
 								<Button
 									variant="ghost"
 									size="icon"
-									className="h-8 w-8 shrink-0 text-slate-700 hover:bg-white/40"
-									aria-label="Messages"
+									onClick={() => setMailOpen(true)}
+									className="h-8 w-8 shrink-0 text-slate-700 hover:bg-white/40 cursor-pointer"
+									aria-label="Open mail"
 								>
 									<Mail className="h-6 w-6" />
 								</Button>
@@ -115,6 +118,7 @@ const DashboardHeader = ({ user: userProp }: DashboardHeaderProps) => {
 						onRefresh={fetchUnread}
 						userId={user?.$id}
 					/>
+					<GmailSheet open={mailOpen} onOpenChange={setMailOpen} />
 				</header>
 			</div>
 		</div>

@@ -1,13 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
-import {
-	AlertCircle,
-	Loader2,
-	RefreshCw,
-	Unplug,
-	XCircle,
-} from "lucide-react";
+import { Loader2, RefreshCw, Unplug, XCircle } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { VscDebugConnectedCompact } from "react-icons/vsc";
 import { Button } from "@/components/ui/button";
@@ -166,8 +160,9 @@ export default function OutlookIntegrationCard({
 				description="Two-way calendar sync with Microsoft 365"
 				iconSrc={MICROSOFT_ICON}
 				status="connecting"
+				info="Checking your Microsoft calendar connection…"
 				actions={
-					<div className="flex items-center gap-2 text-sm text-slate-600">
+					<div className="flex w-full items-center justify-center gap-2 py-2 text-sm text-slate-600">
 						<Loader2 className="h-4 w-4 animate-spin" />
 						Loading…
 					</div>
@@ -186,11 +181,15 @@ export default function OutlookIntegrationCard({
 			lastSync={
 				lastSync ? format(new Date(lastSync), "MMM d, yyyy h:mm a") : null
 			}
+			info={
+				connected
+					? "Contract and license events sync with your Outlook calendar. Use Sync now to pull changes immediately."
+					: "Connect Outlook to sync contract and license events with your calendar."
+			}
 			onConnect={handleConnect}
-			onDisconnect={handleDisconnect}
 			actions={
 				connected ? (
-					<div className="flex flex-col gap-3 w-full">
+					<div className="flex w-full flex-col gap-3">
 						<div className="flex items-center justify-between">
 							<Label htmlFor="outlook-sync-enabled" className="text-sm">
 								Automatic sync
@@ -207,52 +206,41 @@ export default function OutlookIntegrationCard({
 								}}
 							/>
 						</div>
-						<div className="flex flex-wrap gap-2">
-							<Button
-								className="btn-primary px-3 sm:px-4 cursor-pointer"
-								onClick={handleSync}
-								disabled={syncing}
-							>
-								{syncing ? (
-									<Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-								) : (
-									<RefreshCw className="h-4 w-4" aria-hidden />
-								)}
-								Sync now
-							</Button>
-							<Button
-								className="btn-delete px-3 sm:px-4 cursor-pointer"
-								onClick={handleEmergencyStop}
-							>
-								<XCircle className="h-4 w-4" aria-hidden />
-								Emergency stop
-							</Button>
-							<Button
-								className="btn-primary px-3 sm:px-4 cursor-pointer"
-								onClick={handleDisconnect}
-							>
-								<Unplug className="h-4 w-4" aria-hidden />
-								Disconnect
-							</Button>
-						</div>
-					</div>
-				) : (
-					<div className="flex flex-col gap-3 w-full">
-						<div className="flex items-start gap-2 p-3 rounded-lg bg-blue/10 border border-blue/20">
-							<AlertCircle className="h-4 w-4 text-[#0f5384] mt-0.5 shrink-0" />
-							<p className="text-xs text-slate-700">
-								Connect Outlook to sync contract and license events with your
-								calendar.
-							</p>
-						</div>
 						<Button
-							className="btn-primary px-3 sm:px-4 cursor-pointer w-fit"
-							onClick={handleConnect}
+							className="btn-primary w-full cursor-pointer px-3 sm:px-4"
+							onClick={handleSync}
+							disabled={syncing}
 						>
-							<VscDebugConnectedCompact className="h-4 w-4" aria-hidden />
-							Connect Outlook
+							{syncing ? (
+								<Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+							) : (
+								<RefreshCw className="h-4 w-4" aria-hidden />
+							)}
+							Sync now
+						</Button>
+						<Button
+							className="btn-delete w-full cursor-pointer px-3 sm:px-4"
+							onClick={handleEmergencyStop}
+						>
+							<XCircle className="h-4 w-4" aria-hidden />
+							Emergency stop
+						</Button>
+						<Button
+							className="btn-primary w-full cursor-pointer px-3 sm:px-4"
+							onClick={handleDisconnect}
+						>
+							<Unplug className="h-4 w-4" aria-hidden />
+							Disconnect
 						</Button>
 					</div>
+				) : (
+					<Button
+						className="btn-primary w-full cursor-pointer px-3 sm:px-4"
+						onClick={handleConnect}
+					>
+						<VscDebugConnectedCompact className="h-4 w-4" aria-hidden />
+						Connect Outlook
+					</Button>
 				)
 			}
 		/>

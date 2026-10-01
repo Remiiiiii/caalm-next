@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -99,8 +99,9 @@ export default function SalesforceIntegrationCard({
 				description="Opportunity stage → CAALM draft. Sales-led setup only."
 				iconSrc={SALESFORCE_ICON}
 				status="connecting"
+				info="Checking Salesforce setup status…"
 				actions={
-					<div className="flex items-center gap-2 text-sm text-slate-600">
+					<div className="flex w-full items-center justify-center gap-2 py-2 text-sm text-slate-600">
 						<Loader2 className="h-4 w-4 animate-spin" />
 						Loading…
 					</div>
@@ -115,32 +116,24 @@ export default function SalesforceIntegrationCard({
 			description="Opportunity stage → CAALM draft. Sales-led setup only."
 			iconSrc={SALESFORCE_ICON}
 			status={requested ? "connecting" : "disconnected"}
+			info={
+				requested
+					? "Setup requested. CAALM will follow up for sandbox access."
+					: "Salesforce is not self-serve. Request setup and we wire your sandbox after a paid Enterprise engagement."
+			}
 			actions={
-				<div className="flex flex-col gap-3 w-full">
-					<div className="flex items-start gap-2 p-3 rounded-lg bg-blue/10 border border-blue/20">
-						<AlertCircle className="h-4 w-4 text-[#0f5384] mt-0.5" />
-						<p className="text-xs text-slate-700">
-							Salesforce is not self-serve. Request setup and we wire your
-							sandbox after a paid Enterprise engagement.
-						</p>
-					</div>
-					{requested ? (
-						<p className="text-xs text-slate-600">
-							Setup requested. CAALM will follow up for sandbox access.
-						</p>
-					) : (
-						<Button
-							className="btn-primary px-3 sm:px-4 cursor-pointer w-fit"
-							onClick={handleRequest}
-							disabled={requesting}
-						>
-							{requesting ? (
-								<Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-							) : null}
-							Request setup
-						</Button>
-					)}
-				</div>
+				requested ? undefined : (
+					<Button
+						className="btn-primary w-full cursor-pointer px-3 sm:px-4"
+						onClick={handleRequest}
+						disabled={requesting}
+					>
+						{requesting ? (
+							<Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+						) : null}
+						Request setup
+					</Button>
+				)
 			}
 		/>
 	);

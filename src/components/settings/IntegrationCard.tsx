@@ -1,9 +1,9 @@
 "use client";
 
+import { AlertCircle, Lock, Unplug } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { Lock, Unplug } from "lucide-react";
 import Image from "next/image";
-import type { ComponentType, SVGProps } from "react";
+import type { ComponentType, ReactNode, SVGProps } from "react";
 import { VscDebugConnectedCompact } from "react-icons/vsc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,14 +25,17 @@ interface IntegrationCardProps {
 	status: IntegrationStatus;
 	lastSync?: string | null;
 	meta?: string | null;
+	/** Blue info banner under title + description */
+	info?: ReactNode;
 	lockedHint?: string;
 	onConnect?: () => void;
 	onDisconnect?: () => void;
 	onConfigure?: () => void;
+	connectLabel?: string;
 	/** Overflow menu (3-dot) rendered next to the status pill */
-	menu?: React.ReactNode;
-	actions?: React.ReactNode;
-	children?: React.ReactNode;
+	menu?: ReactNode;
+	actions?: ReactNode;
+	children?: ReactNode;
 }
 
 const PILL_BASE =
@@ -63,6 +66,15 @@ function statusBadge(status: IntegrationStatus) {
 	}
 }
 
+function InfoBanner({ children }: { children: ReactNode }) {
+	return (
+		<div className="flex items-start gap-2 rounded-lg border border-blue/20 bg-blue/10 p-3">
+			<AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#0f5384]" />
+			<div className="min-w-0 text-xs text-slate-700">{children}</div>
+		</div>
+	);
+}
+
 export default function IntegrationCard({
 	title,
 	description,
@@ -71,10 +83,12 @@ export default function IntegrationCard({
 	status,
 	lastSync,
 	meta,
+	info,
 	lockedHint,
 	onConnect,
 	onDisconnect,
 	onConfigure,
+	connectLabel = "Connect",
 	menu,
 	actions,
 	children,
@@ -87,12 +101,60 @@ export default function IntegrationCard({
 				: `Connected as ${meta}`
 			: meta;
 
+	const bannerText =
+		info ?? (status === "locked" && lockedHint ? lockedHint : null);
+
+	const defaultActions = !actions ? (
+		<>
+			{status === "disconnected" && onConnect ? (
+				<Button
+					className="btn-primary w-full cursor-pointer px-3 sm:px-4"
+					onClick={onConnect}
+				>
+					<VscDebugConnectedCompact className="h-4 w-4" aria-hidden />
+					{connectLabel}
+				</Button>
+			) : null}
+			{status === "connected" ? (
+				<>
+					{onConfigure ? (
+						<Button
+							className="btn-primary w-full cursor-pointer px-3 sm:px-4"
+							onClick={onConfigure}
+						>
+							Configure
+						</Button>
+					) : null}
+					{onDisconnect ? (
+						<Button
+							className="btn-primary w-full cursor-pointer px-3 sm:px-4"
+							onClick={onDisconnect}
+						>
+							<Unplug className="h-4 w-4" aria-hidden />
+							Disconnect
+						</Button>
+					) : null}
+				</>
+			) : null}
+			{status === "locked" && onConnect ? (
+				<Button
+					className="btn-primary w-full cursor-pointer px-3 sm:px-4"
+					onClick={onConnect}
+				>
+					View plans
+				</Button>
+			) : null}
+		</>
+	) : null;
+
+	const hasFooterActions = Boolean(actions || defaultActions);
+
 	return (
 		<Card className="glass-card h-full">
 			<div className="glass-card-cap" />
-			<CardContent className="p-4 sm:p-6 flex flex-col h-full gap-4">
+			<CardContent className="flex h-full flex-col gap-4 p-4 pb-6 sm:p-6 sm:pb-8">
 				<div className="flex items-start justify-between gap-3">
-					<div className="flex items-start gap-3 min-w-0">
+					<div className="flex min-w-0 items-start gap-3">
 						<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue/10">
 							{status === "locked" ? (
 								<Lock className="h-5 w-5 text-slate-500" />
@@ -102,7 +164,7 @@ export default function IntegrationCard({
 									alt=""
 									width={24}
 									height={24}
-									className="h-6 w-6 w-auto object-contain"
+									className="h-8 w-8 object-contain"
 								/>
 							) : Icon ? (
 								<Icon className="h-5 w-5 text-[#0f5384]" />
@@ -112,10 +174,10 @@ export default function IntegrationCard({
 							<p className="text-sm font-medium sidebar-gradient-text">
 								{title}
 							</p>
-							<p className="text-xs text-slate-600 mt-1">{description}</p>
+							<p className="mt-1 text-xs text-slate-600">{description}</p>
 						</div>
 					</div>
-					<div className="flex items-center gap-1 shrink-0">
+					<div className="flex shrink-0 items-center gap-1">
 						<span className={cn(PILL_BASE, badge.className)}>
 							{badge.label}
 						</span>
@@ -123,60 +185,25 @@ export default function IntegrationCard({
 					</div>
 				</div>
 
-				{(connectedAs || lastSync) && (
-					<div className="text-xs text-slate-600 space-y-1">
-						{connectedAs && <p>{connectedAs}</p>}
-						{lastSync && <p>Last sync {lastSync}</p>}
-					</div>
-				)}
+				{bannerText ? <InfoBanner>{bannerText}</InfoBanner> : null}
 
-				{status === "locked" && lockedHint && (
-					<p className="text-xs text-slate-500">{lockedHint}</p>
+				{(connectedAs || lastSync) && (
+					<div className="space-y-1 text-xs text-slate-600">
+						{connectedAs ? <p>{connectedAs}</p> : null}
+						{lastSync ? <p>Last sync {lastSync}</p> : null}
+					</div>
 				)}
 
 				{children}
 
-				<div className="mt-auto flex flex-wrap gap-2 pt-2">
-					{actions}
-					{!actions && status === "disconnected" && onConnect && (
-						<Button
-							className="btn-primary px-3 sm:px-4 cursor-pointer"
-							onClick={onConnect}
-						>
-							<VscDebugConnectedCompact className="h-4 w-4" aria-hidden />
-							Connect
-						</Button>
-					)}
-					{!actions && status === "connected" && (
-						<>
-							{onConfigure && (
-								<Button
-									className="btn-primary px-3 sm:px-4 cursor-pointer"
-									onClick={onConfigure}
-								>
-									Configure
-								</Button>
-							)}
-							{onDisconnect && (
-								<Button
-									className="btn-primary px-3 sm:px-4 cursor-pointer"
-									onClick={onDisconnect}
-								>
-									<Unplug className="h-4 w-4" aria-hidden />
-									Disconnect
-								</Button>
-							)}
-						</>
-					)}
-					{!actions && status === "locked" && onConnect && (
-						<Button
-							className="btn-primary px-3 sm:px-4 cursor-pointer"
-							onClick={onConnect}
-						>
-							View plans
-						</Button>
-					)}
-				</div>
+				{hasFooterActions ? (
+					<div className="mt-auto flex w-full flex-col gap-2">
+						{actions}
+						{defaultActions}
+					</div>
+				) : (
+					<div className="mt-auto" />
+				)}
 			</CardContent>
 		</Card>
 	);
