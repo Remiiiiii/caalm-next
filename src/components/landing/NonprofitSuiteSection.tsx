@@ -4,21 +4,29 @@ import { motion, useInView, useReducedMotion } from "framer-motion";
 import {
 	ArrowRight,
 	CalendarClock,
+	Gift,
 	HandHeart,
 	HeartHandshake,
 	Landmark,
-	PiggyBank,
 	QrCode,
 	Sparkles,
 	TrendingUp,
 } from "lucide-react";
+
 import Link from "next/link";
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import CountUp from "react-countup";
 import { cn } from "@/lib/utils";
 import LandingFrostedCard from "./LandingFrostedCard";
 import LandingSection from "./LandingSection";
-import { fadeUp, scaleIn, staggerContainer, viewportOnce } from "./motion";
+import {
+	blurIn,
+	fadeUp,
+	scaleIn,
+	softRise,
+	staggerContainer,
+	viewportOnce,
+} from "./motion";
 
 const DONORS = [
 	{
@@ -35,7 +43,7 @@ const DONORS = [
 	},
 	{
 		initials: "LC",
-		name: "Lin Chen",
+		name: "Tamika Harris",
 		note: "Lapsed 11 months",
 		action: "Renewal ask",
 	},
@@ -64,7 +72,7 @@ const COMPLIANCE_PULSE_LOOP_MS = 4200;
 function CampaignGoalRing({ reduceMotion }: { reduceMotion: boolean | null }) {
 	const gradientId = useId().replace(/:/g, "");
 	const ref = useRef<HTMLDivElement>(null);
-	const inView = useInView(ref, viewportOnce);
+	const inView = useInView(ref, { amount: 0.35 });
 	const [animKey, setAnimKey] = useState(0);
 	const target = CAMPAIGN_GOAL_PERCENT / 100;
 
@@ -205,38 +213,37 @@ export default function NonprofitSuiteSection() {
 	return (
 		<LandingSection id="nonprofits" ariaLabelledBy="nonprofits-heading">
 			<motion.div
-				className="max-w-7xl mx-auto"
+				className="max-w-6xl mx-auto"
 				variants={staggerContainer}
 				initial="hidden"
 				whileInView="visible"
 				viewport={viewportOnce}
 			>
-				<motion.div
-					variants={fadeUp}
-					className="mb-10 sm:mb-12 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6"
-				>
-					<div>
-						<div className="mb-4 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-[#F1F9FF] px-3 py-1 shadow-sm">
-							<span className="inline-flex items-center justify-center size-6 rounded-full bg-slate-700/10 ring-1 ring-slate-200">
-								<HeartHandshake className="h-3.5 w-3.5 text-slate-700" />
-							</span>
-							<span className="text-slate-700 text-sm">For nonprofits</span>
-						</div>
-						<h2
-							id="nonprofits-heading"
-							className="text-2xl sm:text-3xl md:text-[2.75em] sidebar-gradient-text landing-section-title leading-tight"
-						>
-							Donors, funds, and volunteers next to your contracts
-						</h2>
+				<motion.div variants={fadeUp} className="mb-6 flex justify-center">
+					<div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-[#F1F9FF] px-3 py-1 shadow-sm">
+						<span className="inline-flex items-center justify-center size-6 rounded-full bg-slate-700/10 ring-1 ring-slate-200">
+							<HeartHandshake className="h-3.5 w-3.5 text-slate-700" />
+						</span>
+						<span className="text-slate-700 text-sm">For nonprofits</span>
 					</div>
-					<p className="text-slate-600 text-sm sm:text-base max-w-md">
-						Run fundraising and grant compliance in the same workspace your
-						finance and legal teams already trust. No second system to
-						reconcile.
-					</p>
 				</motion.div>
+				<motion.h2
+					id="feedback-heading"
+					variants={blurIn}
+					className="text-center text-2xl sm:text-3xl md:text-[2.75em] sidebar-gradient-text landing-section-title leading-tight"
+				>
+					Donors, funds, and volunteers next to your contracts
+				</motion.h2>
 
-				<div className="grid grid-cols-1 md:grid-cols-6 gap-5 sm:gap-6">
+				<motion.p
+					variants={softRise}
+					className="mt-3 text-center text-slate-600 text-sm sm:text-base max-w-2xl mx-auto"
+				>
+					Run fundraising and grant compliance in the same workspace your
+					finance and legal teams already trust. No second system to reconcile.
+				</motion.p>
+
+				<div className="grid grid-cols-1 md:grid-cols-6 gap-5 mt-10 sm:gap-6">
 					<BentoTile className="md:col-span-3 md:row-span-2">
 						<TileHeader
 							icon={HandHeart}
@@ -281,7 +288,7 @@ export default function NonprofitSuiteSection() {
 						<div className="flex items-center justify-between gap-4">
 							<div>
 								<TileHeader
-									icon={PiggyBank}
+									icon={Gift}
 									eyebrow="Gifts & campaigns"
 									title="Every gift, tied to a goal"
 								/>

@@ -86,6 +86,16 @@ export const API_AUTHZ_ALLOWLIST: readonly ApiAuthzAllowEntry[] = [
 		reason: "HubSpot OAuth redirect callback",
 	},
 	{
+		path: "gmail/auth",
+		class: "oauth",
+		reason: "Starts Gmail OAuth authorize redirect (requirePermission in handler)",
+	},
+	{
+		path: "auth/callback/gmail",
+		class: "oauth",
+		reason: "Gmail OAuth redirect callback",
+	},
+	{
 		path: "webhooks/hubspot",
 		class: "webhook",
 		reason: "HubSpot HMAC signature verification (X-HubSpot-Signature-v3)",

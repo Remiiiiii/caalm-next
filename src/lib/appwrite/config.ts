@@ -264,6 +264,15 @@ export const appwriteConfig = {
 		"test-calendar-integrations",
 	),
 
+	gmailIntegrationsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_GMAIL_INTEGRATIONS_COLLECTION",
+		"69f3c901001f4e8c2a02",
+	),
+
+	googleClientId: process.env.GOOGLE_CLIENT_ID,
+	googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
+	googleGmailRedirectUri: process.env.GOOGLE_GMAIL_REDIRECT_URI,
+
 	// Shared Calendars
 	sharedCalendarsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_SHARED_CALENDARS_COLLECTION",
