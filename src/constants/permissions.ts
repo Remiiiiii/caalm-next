@@ -166,6 +166,12 @@ export const PERMISSIONS = {
 		VOID: "gifts.void",
 	},
 
+	/** Public donation page structured config (amounts, designations, legal copy) */
+	DONATIONS: {
+		CONFIG_VIEW: "donations.config.view",
+		CONFIG_EDIT: "donations.config.edit",
+	},
+
 	/** Volunteer programs — separate from constituents.view */
 	VOLUNTEERS: {
 		VIEW: "volunteers.view",
@@ -800,6 +806,21 @@ export const PERMISSION_DEFINITIONS = [
 		name: "Void Posted Gifts",
 		category: "gifts",
 		description: "Void posted gifts with a reversing ledger row",
+	},
+
+	{
+		key: PERMISSIONS.DONATIONS.CONFIG_VIEW,
+		name: "View Donation Page Settings",
+		category: "donations",
+		description:
+			"View draft and published donation page config and version history",
+	},
+	{
+		key: PERMISSIONS.DONATIONS.CONFIG_EDIT,
+		name: "Edit Donation Page Settings",
+		category: "donations",
+		description:
+			"Edit draft donation page config, publish, revert, and preview drafts",
 	},
 
 	{

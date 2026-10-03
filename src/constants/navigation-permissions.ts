@@ -405,6 +405,16 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 				permissions: [PERMISSIONS.FUNDING.MANAGE],
 			},
 			{
+				name: "Donation page",
+				icon: "/assets/icons/dollar-circle.svg",
+				url: "/settings/donation-page",
+				permissions: [
+					PERMISSIONS.DONATIONS.CONFIG_VIEW,
+					PERMISSIONS.DONATIONS.CONFIG_EDIT,
+				],
+				viewerReadOnly: true,
+			},
+			{
 				name: "Billing & Integrations",
 				icon: "/assets/icons/settings.svg",
 				url: "/settings/billing",
