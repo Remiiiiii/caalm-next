@@ -460,6 +460,30 @@ export const appwriteConfig = {
 		"69d91401001f4e8c2b04",
 	),
 
+	/** Donation page config drafts (name: donation_page_config_drafts) */
+	donationPageConfigDraftsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_DONATION_PAGE_CONFIG_DRAFTS_COLLECTION",
+		"69fb1a01001f4e8c2b80",
+	),
+
+	/** Donation page published config (name: donation_page_config_published) */
+	donationPageConfigPublishedCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_DONATION_PAGE_CONFIG_PUBLISHED_COLLECTION",
+		"69fb1a02001f4e8c2b81",
+	),
+
+	/** Donation page config version history (name: donation_page_config_versions) */
+	donationPageConfigVersionsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_DONATION_PAGE_CONFIG_VERSIONS_COLLECTION",
+		"69fb1a03001f4e8c2b82",
+	),
+
+	/** Stripe price replacements when amounts change (name: donation_page_config_price_replacements) */
+	donationPageConfigPriceReplacementsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_DONATION_PAGE_CONFIG_PRICE_REPLACEMENTS_COLLECTION",
+		"69fb1a04001f4e8c2b83",
+	),
+
 	/** Recurring sustainer schedules (name: recurring_gift_schedules) */
 	recurringGiftSchedulesCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_RECURRING_GIFT_SCHEDULES_COLLECTION",
