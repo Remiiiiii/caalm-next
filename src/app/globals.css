@@ -238,10 +238,13 @@
 	.btn-primary,
 	.shad-active,
 	.shad-submit-btn {
-		@apply flex h-8 min-h-8 items-center justify-center px-4 py-0 font-semibold text-white shadow-md transition-all duration-200 rounded-full w-full sm:w-auto sm:px-6;
-		/* Filter / toolbar source of truth: 32px, same as Button size="sm" */
+		@apply flex items-center justify-center gap-1.5 px-3 py-1.5 font-semibold text-white shadow-md transition-all duration-200 rounded-full w-full sm:w-auto sm:px-4;
+		/* Compact CTA chrome — do not override label font-size */
 		height: 2rem !important;
 		min-height: 2rem !important;
+		max-height: 2rem !important;
+		padding-left: 0.75rem !important;
+		padding-right: 0.75rem !important;
 		/* Prevent text wrapping within buttons */
 		white-space: nowrap;
 		background-image: linear-gradient(
@@ -333,18 +336,15 @@
 	/* Destructive confirm — red outline, not the teal primary gradient */
 	.delete-btn,
 	.btn-delete {
-		@apply flex h-8 min-h-8 w-full items-center justify-center rounded-full border border-red/30! bg-red/10! px-4 py-0 font-semibold text-red! shadow-none transition-all duration-200 sm:w-auto sm:px-6;
-		height: 2rem !important;
-		min-height: 2rem !important;
+		@apply flex w-full items-center justify-center rounded-full border border-red/30! bg-red/10! px-4 py-2 font-semibold text-red! shadow-none transition-all duration-200 sm:w-auto sm:px-6;
 		white-space: nowrap;
 		background-image: none !important;
 	}
 
-	/* Marketing / mock chips may opt out of the 32px toolbar height */
 	.primary-btn-lg,
 	.btn-primary-lg {
 		height: auto !important;
-		min-height: 2.5rem !important;
+		min-height: 2.75rem !important;
 		padding-top: 0.625rem;
 		padding-bottom: 0.625rem;
 	}
@@ -1332,6 +1332,18 @@
 	body {
 		@apply bg-background text-foreground;
 	}
+}
+
+/* Unlayered — wins over Button size utilities (h-9 / px-4) for .primary-btn chrome */
+.primary-btn,
+.btn-primary,
+.shad-active,
+.shad-submit-btn {
+	height: 2rem !important;
+	min-height: 2rem !important;
+	max-height: 2rem !important;
+	padding-left: 0.75rem !important;
+	padding-right: 0.75rem !important;
 }
 
 /* Adobe Acrobat Chrome/Edge extension overlays (not CAALM UI) */

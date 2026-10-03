@@ -117,8 +117,7 @@ const ContractsFilter: React.FC<ContractsFilterProps> = ({
 			>
 				<Button
 					variant="ghost"
-					size="sm"
-					className="primary-btn h-8 border-0 px-3 shadow-none focus-visible:ring-0 sm:px-4"
+					className="primary-btn border-0 shadow-none focus-visible:ring-0"
 				>
 					<Filter className="h-4 w-4" />
 					<span className="hidden sm:inline">Filter</span>

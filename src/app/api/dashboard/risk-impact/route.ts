@@ -8,7 +8,13 @@ import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 import { CACHE_KEYS, CACHE_TTLS } from "@/lib/services/cache-keys";
 import CacheManager from "@/lib/services/cache-manager";
 
-const VALID_PERIODS = new Set<RiskImpactPeriod>(["ytd", "last30", "last90"]);
+const VALID_PERIODS = new Set<RiskImpactPeriod>([
+	"ytd",
+	"month",
+	"quarter",
+	"last30",
+	"last90",
+]);
 
 export async function GET(request: NextRequest) {
 	try {

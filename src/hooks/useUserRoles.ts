@@ -71,10 +71,10 @@ export function useUserRoles(): UseUserRolesResult {
 			const hasCachedData = !!cachedRoles;
 
 			try {
-				const impersonating = Boolean(isImpersonating) || Boolean(viewAsHint);
-				const url = impersonating
-					? `/api/permissions/check${orgId ? `?orgId=${orgId}` : ""}`
-					: `/api/users/${effectiveUserId}/roles${orgId ? `?orgId=${orgId}` : ""}`;
+				// Always use permissions/check: returns the effective user's roles
+				// (including view-as) and does not require USERS.VIEW like
+				// /api/users/[userId]/roles does.
+				const url = `/api/permissions/check${orgId ? `?orgId=${orgId}` : ""}`;
 
 				// Use request deduplication to prevent concurrent requests
 				const { deduplicateRequest } = await import(
@@ -90,13 +90,9 @@ export function useUserRoles(): UseUserRolesResult {
 					return response.json();
 				});
 
-				const roleRows = impersonating
-					? data.roles
-					: data.success && data.data?.roles
-						? data.data.roles
-						: null;
+				const roleRows = Array.isArray(data.roles) ? data.roles : null;
 
-				if (data.success && Array.isArray(roleRows)) {
+				if (data.success && roleRows) {
 					const userRoles = roleRows.map(
 						(role: {
 							$id?: string;

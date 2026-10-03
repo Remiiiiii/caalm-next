@@ -27,7 +27,7 @@ import {
 import type { AuditEvidenceRow, AuditEvidenceStatus } from "@/lib/audits/types";
 
 const STATUS_BADGE_BASE =
-	"h-auto py-1 whitespace-nowrap shrink-0 pointer-events-none shadow-none transition-none";
+	"h-auto rounded-full py-0.5 whitespace-nowrap shrink-0 pointer-events-none shadow-none transition-none";
 
 function statusBadge(status: AuditEvidenceStatus) {
 	switch (status) {

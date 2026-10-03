@@ -51,6 +51,11 @@ const SIGNAL_PATTERNS: Array<{
 		re: /\brequireGmailAccess\s*\(/,
 	},
 	{
+		signal: "requireOutlookMailAccess",
+		class: "permission",
+		re: /\brequireOutlookMailAccess\s*\(/,
+	},
+	{
 		signal: "requireContractCreateContext",
 		class: "permission",
 		re: /\brequireContractCreateContext\s*\(/,

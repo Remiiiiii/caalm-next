@@ -17,7 +17,7 @@ export function ContractLifecycleStatusBadge({
 }: ContractLifecycleStatusBadgeProps) {
 	const display = getContractLifecycleDisplay(file);
 	const pillClass = cn(
-		"inline-block px-2 py-0.5 text-xs rounded-full font-medium border",
+		"inline-flex items-center px-2.5 py-0.5 text-xs rounded-full font-medium border whitespace-nowrap",
 		display.className,
 		clickable &&
 			"cursor-pointer transition-all duration-200 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
@@ -44,7 +44,7 @@ export function ContractLifecycleStatusBadge({
 			<div className="flex items-center gap-1.5 flex-wrap">
 				{pill}
 				{display.stuck ? (
-					<span className="inline-block px-2 py-0.5 text-xs rounded-full font-medium border bg-red/10 text-red border-red/20">
+					<span className="inline-flex items-center px-2.5 py-0.5 text-xs rounded-full font-medium border whitespace-nowrap bg-red/10 text-red border-red/20">
 						Stuck &gt;3 days
 					</span>
 				) : null}

@@ -54,7 +54,7 @@ const statusBadge = (license: License) => {
 	return (
 		<span
 			className={cn(
-				"inline-block px-2 py-0.5 text-xs rounded-full font-medium border",
+				"inline-flex items-center px-2.5 py-0.5 text-xs rounded-full font-medium border whitespace-nowrap",
 				classMap[status] || "bg-slate-100 text-slate-700 border-slate-200",
 			)}
 		>

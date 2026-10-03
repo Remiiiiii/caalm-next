@@ -1,4 +1,10 @@
-export type RiskImpactPeriod = "ytd" | "last30" | "last90";
+/** Reporting windows for risk-averted dollars and board/audit snapshots. */
+export type RiskImpactPeriod =
+	| "ytd"
+	| "month"
+	| "quarter"
+	| "last30"
+	| "last90";
 
 export type RiskTrendDirection = "up" | "down" | "flat" | "new";
 

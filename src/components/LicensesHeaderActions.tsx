@@ -89,15 +89,14 @@ export default function LicensesHeaderActions({
 	};
 
 	return (
-		<div className="flex items-center gap-2 justify-end flex-wrap">
+		<div className="platform-overview-actions flex items-center gap-2 justify-end flex-wrap">
 			{canView && (
 				<Button
 					variant="outline"
-					size="sm"
 					onClick={handleExport}
-					className="primary-btn px-3 sm:px-4 cursor-pointer"
+					className="primary-btn cursor-pointer"
 				>
-					<SquareArrowRightExit className="w-4 h-4" />
+					<SquareArrowRightExit className="h-4 w-4" />
 					<span className="hidden sm:inline">
 						{selectedIds.length > 0
 							? `Export (${selectedIds.length})`

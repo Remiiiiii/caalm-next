@@ -46,7 +46,14 @@ export function priorYearWindow(
 	return {
 		start: shiftYears(periodStart, -1),
 		end: shiftYears(now, -1),
-		vsLabel: period === "ytd" ? `${year - 1} YTD` : "prior year",
+		vsLabel:
+			period === "ytd"
+				? `${year - 1} YTD`
+				: period === "month"
+					? "same month last year"
+					: period === "quarter"
+						? "same quarter last year"
+						: "prior year",
 	};
 }
 

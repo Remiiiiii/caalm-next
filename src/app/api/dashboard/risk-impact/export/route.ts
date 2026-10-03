@@ -13,7 +13,9 @@ import { getOrganization } from "@/lib/rbac/organizations";
 import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 
 const exportSchema = z.object({
-	period: z.enum(["ytd", "last30", "last90"]).optional(),
+	period: z
+		.enum(["ytd", "month", "quarter", "last30", "last90"])
+		.optional(),
 	division: z.string().optional(),
 });
 

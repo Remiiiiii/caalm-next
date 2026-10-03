@@ -2,10 +2,10 @@
 
 import { AlertTriangle, ChevronRight, RefreshCw, Shield } from "lucide-react";
 import Link from "next/link";
+import { RiskTrackingChart } from "@/components/dashboard/RiskTrackingChart";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { StatCardIcon } from "@/components/ui/stat-card-icon";
-import { RiskTrackingChart } from "@/components/dashboard/RiskTrackingChart";
 import type {
 	RiskImpactSnapshot,
 	RiskImpactTrend,
@@ -145,9 +145,13 @@ function buildTrackingNoteFromSnapshot(snapshot: RiskImpactSnapshot): string {
 	const yearPhrase =
 		snapshot.period === "ytd"
 			? `in ${year}`
-			: snapshot.period === "last30"
-				? "in the last 30 days"
-				: "in the last 90 days";
+			: snapshot.period === "month"
+				? "this month"
+				: snapshot.period === "quarter"
+					? "this quarter"
+					: snapshot.period === "last30"
+						? "in the last 30 days"
+						: "in the last 90 days";
 
 	const status = monitoredStatusClause(
 		snapshot.monitoring?.contractsMonitored ?? 0,
@@ -352,7 +356,7 @@ export function RiskImpactHeroCard({
 							points={snapshot.sparkline}
 							period={snapshot.period}
 						>
-							<p className="mt-3 text-[12.5px] text-slate-600 leading-relaxed max-w-4xl">
+							<p className="mt-3 text-center text-[12.5px] text-slate-600 leading-relaxed mx-auto max-w-4xl">
 								{trackingNote.split(/(\d+)/).map((part, i) =>
 									/^\d+$/.test(part) ? (
 										<span key={i} className="font-semibold text-slate-700">

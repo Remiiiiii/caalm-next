@@ -28,7 +28,7 @@ export default function LicensesControlBar({
 			<LicensesStatusTabs licenses={licenses} />
 			<div className="flex pt-4 pb-3 px-4 sm:px-6 gap-3 justify-between flex-wrap">
 				<LicensesTopControls licenses={licenses} />
-				<div className="flex items-center gap-2 justify-end flex-wrap">
+				<div className="platform-overview-actions flex items-center gap-2 justify-end flex-wrap">
 					<LicensesFilter
 						departments={departments}
 						assignedManagers={assignedManagers}

@@ -92,38 +92,41 @@ export function RiskAvertedDetailPage() {
 		? snapshot.liveSparkline
 		: [];
 
-	const downloadPdf = useCallback(async () => {
-		setExporting(true);
-		try {
-			const res = await fetch("/api/dashboard/risk-impact/export", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ period }),
-			});
-			if (!res.ok) {
-				const body = await res.json().catch(() => ({}));
-				throw new Error(body.error || "Export failed");
+	const downloadPdf = useCallback(
+		async (snapshotPeriod: RiskImpactPeriod = period) => {
+			setExporting(true);
+			try {
+				const res = await fetch("/api/dashboard/risk-impact/export", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ period: snapshotPeriod }),
+				});
+				if (!res.ok) {
+					const body = await res.json().catch(() => ({}));
+					throw new Error(body.error || "Export failed");
+				}
+				const blob = await res.blob();
+				const url = URL.createObjectURL(blob);
+				const link = document.createElement("a");
+				link.href = url;
+				link.download = `caalm-risk-averted-${snapshotPeriod}.pdf`;
+				link.click();
+				URL.revokeObjectURL(url);
+			} catch (downloadError) {
+				toast({
+					title: "Export failed",
+					description:
+						downloadError instanceof Error
+							? downloadError.message
+							: "Try again",
+					variant: "destructive",
+				});
+			} finally {
+				setExporting(false);
 			}
-			const blob = await res.blob();
-			const url = URL.createObjectURL(blob);
-			const link = document.createElement("a");
-			link.href = url;
-			link.download = `caalm-risk-averted-${period}.pdf`;
-			link.click();
-			URL.revokeObjectURL(url);
-		} catch (downloadError) {
-			toast({
-				title: "Export failed",
-				description:
-					downloadError instanceof Error
-						? downloadError.message
-						: "Try again",
-				variant: "destructive",
-			});
-		} finally {
-			setExporting(false);
-		}
-	}, [period, toast]);
+		},
+		[period, toast],
+	);
 
 	if (error && !snapshot) {
 		return (
@@ -159,18 +162,18 @@ export function RiskAvertedDetailPage() {
 							setPeriod(next);
 							setPage(1);
 						}}
-						ariaLabel="Reporting window"
+						ariaLabel="Board snapshot window"
 						tabs={[
-							{ value: "ytd", label: "YTD" },
-							{ value: "last90", label: "90 days" },
-							{ value: "last30", label: "30 days" },
+							{ value: "month", label: "Month" },
+							{ value: "quarter", label: "Quarter" },
+							{ value: "ytd", label: "Year" },
 						]}
 					/>
 					<Button
 						type="button"
 						className="primary-btn px-3 sm:px-4"
 						disabled={exporting || isLoading}
-						onClick={downloadPdf}
+						onClick={() => downloadPdf()}
 					>
 						<Download className="h-4 w-4" />
 						{exporting ? "Preparing PDF…" : "Download PDF"}
@@ -191,6 +194,74 @@ export function RiskAvertedDetailPage() {
 				</div>
 			) : snapshot ? (
 				<>
+					<div className="grid grid-cols-3 gap-6">
+						{(
+							[
+								{
+									period: "month" as const,
+									title: "Monthly snapshot",
+									blurb: "Current calendar month for ops reviews.",
+								},
+								{
+									period: "quarter" as const,
+									title: "Quarterly snapshot",
+									blurb: "Current quarter for board packets.",
+								},
+								{
+									period: "ytd" as const,
+									title: "Yearly snapshot",
+									blurb: "Year to date for audits and annual review.",
+								},
+							] as const
+						).map((item) => {
+							const selected = period === item.period;
+							return (
+								<Card
+									key={item.period}
+									className={`glass-card interactive-glass-card cursor-pointer transition-all duration-200 ${
+										selected ? "border-blue-300 ring-1 ring-[#0f5384]/30" : ""
+									}`}
+									tabIndex={0}
+									role="button"
+									aria-pressed={selected}
+									onClick={() => {
+										setPeriod(item.period);
+										setPage(1);
+									}}
+									onKeyDown={(event) => {
+										if (event.key === "Enter" || event.key === " ") {
+											event.preventDefault();
+											setPeriod(item.period);
+											setPage(1);
+										}
+									}}
+								>
+									<div className="glass-card-cap" />
+									<CardContent className="p-4 sm:p-6">
+										<p className="text-sm font-medium sidebar-gradient-text">
+											{item.title}
+										</p>
+										<p className="mt-1 text-xs text-slate-600">{item.blurb}</p>
+										<div className="mt-4 flex items-center justify-end">
+											<Button
+												type="button"
+												className="primary-btn px-3 sm:px-4"
+												disabled={exporting || isLoading}
+												onClick={(event) => {
+													event.stopPropagation();
+													void downloadPdf(item.period);
+												}}
+											>
+												<Download className="h-4 w-4" />
+												Download PDF
+											</Button>
+										</div>
+									</CardContent>
+								</Card>
+							);
+						})}
+					</div>
+
 					<div className="grid grid-cols-4 gap-6">
 						<AnalyticsStatCard
 							title="Risk averted"
@@ -326,7 +397,7 @@ export function RiskAvertedDetailPage() {
 								points={livePoints}
 								period={snapshot.period}
 							>
-								<p className="mt-3 text-[12.5px] text-slate-600 leading-relaxed max-w-4xl">
+								<p className="mt-3 text-center text-[12.5px] text-slate-600 leading-relaxed mx-auto max-w-4xl">
 									This chart is live events only. Empty weeks stay empty. Demo
 									dates used on the dashboard sparkline are not included here
 									and do not change the dollar figure.
