@@ -203,6 +203,9 @@ export default function PublicGivePage() {
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [amountError, setAmountError] = useState<string | null>(null);
+	const [configSource, setConfigSource] = useState<"draft" | "published" | null>(
+		null,
+	);
 
 	const presetAmounts = useMemo(() => {
 		if (donationPageConfig?.amountsCents?.length) {
@@ -261,12 +264,14 @@ export default function PublicGivePage() {
 				taxEin?: string | null;
 				designations?: GiveDesignation[];
 				donationPageConfig?: PublicDonationPageConfig | null;
+				configSource?: "draft" | "published" | null;
 			};
 			setOrgName(json.name ?? "Organization");
 			setLogoUrl(json.logoUrl ?? null);
 			setTaxEin(json.taxEin ?? null);
 			setDesignations(json.designations ?? []);
 			setDonationPageConfig(json.donationPageConfig ?? null);
+			setConfigSource(json.configSource ?? null);
 			if (json.donationPageConfig?.amountsCents?.[0]) {
 				setAmount(String(json.donationPageConfig.amountsCents[0] / 100));
 			}
@@ -410,6 +415,12 @@ export default function PublicGivePage() {
 
 	return (
 		<GiveShell orgName={orgName} logoUrl={logoUrl}>
+			{configSource === "draft" ? (
+				<div className="mx-auto mb-4 max-w-6xl rounded-lg border border-orange/20 bg-orange/10 px-4 py-2 text-center text-sm text-slate-700">
+					Preview mode — visitors still see the published page until you publish
+					changes.
+				</div>
+			) : null}
 			<motion.div
 				className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 lg:grid-cols-2 lg:gap-16"
 				variants={staggerContainer}
