@@ -162,6 +162,41 @@ export function GiftDetailClient({ giftId }: { giftId: string }) {
 								<dd className="text-slate-700 tabular-nums">{gift.contractId}</dd>
 							</div>
 						) : null}
+						{gift.shareSource || gift.shareMedium || gift.shareCampaign ? (
+							<div className="md:col-span-2">
+								<dt className="text-slate-500">Share attribution</dt>
+								<dd className="mt-1 flex flex-wrap gap-2">
+									{gift.shareSource ? (
+										<span className="inline-block px-2 py-0.5 text-xs rounded-full font-medium border bg-blue/10 text-blue border-blue/20">
+											Source: {gift.shareSource}
+										</span>
+									) : null}
+									{gift.shareMedium ? (
+										<span className="inline-block px-2 py-0.5 text-xs rounded-full font-medium border bg-slate-100 text-slate-600 border-slate-200">
+											Medium: {gift.shareMedium}
+										</span>
+									) : null}
+									{gift.shareCampaign ? (
+										<span className="inline-block px-2 py-0.5 text-xs rounded-full font-medium border bg-green/10 text-green border-green/20">
+											Tag: {gift.shareCampaign}
+										</span>
+									) : null}
+								</dd>
+							</div>
+						) : null}
+						{gift.campaignId ? (
+							<div>
+								<dt className="text-slate-500">Fundraising campaign</dt>
+								<dd className="text-slate-700">
+									<Link
+										href={`/campaigns/${gift.campaignId}`}
+										className="text-[#0f5384] hover:underline"
+									>
+										View campaign
+									</Link>
+								</dd>
+							</div>
+						) : null}
 					</dl>
 				</CardContent>
 			</Card>

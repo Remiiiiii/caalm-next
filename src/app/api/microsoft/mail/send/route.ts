@@ -11,6 +11,8 @@ export async function POST(request: NextRequest) {
 		const to = String(body.to || "").trim();
 		const subject = String(body.subject || "").trim();
 		const text = String(body.body || body.text || "").trim();
+		const contentType =
+			body.contentType === "html" || body.isHtml === true ? "html" : "text";
 		const replyToMessageId = body.replyToMessageId
 			? String(body.replyToMessageId)
 			: undefined;
@@ -26,6 +28,7 @@ export async function POST(request: NextRequest) {
 			to,
 			subject,
 			body: text,
+			contentType,
 			replyToMessageId,
 		});
 

@@ -214,6 +214,11 @@ export const API_AUTHZ_ALLOWLIST: readonly ApiAuthzAllowEntry[] = [
 			"Public donation checkout (Stripe payment mode), not CAALM SaaS entitlements",
 	},
 	{
+		path: "give/attribution/visit",
+		class: "public",
+		reason: "Public give-page visit beacon for share UTM analytics",
+	},
+	{
 		path: "preferences/[token]",
 		class: "token",
 		reason:

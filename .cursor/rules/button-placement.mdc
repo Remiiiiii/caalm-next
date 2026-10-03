@@ -1,9 +1,23 @@
 ---
-description: Action buttons align right; primary/btn-primary always include Lucide icons
+description: Default btn-primary for new buttons; right-align; Lucide icons required
 alwaysApply: true
 ---
 
 # Button placement and icons
+
+## Default class (hard rule)
+
+- Whenever the user asks to create a button, use `className="btn-primary px-3 sm:px-4"` unless they explicitly request a different style (`outline`, `delete-btn`, ghost, text link, etc.).
+- `.btn-primary` and `.primary-btn` are aliases (same styles). Prefer `btn-primary` for new buttons.
+- Do **not** default to `variant="outline"`, plain `Button`, or unstyled links when the user just says “add a button.”
+
+```tsx
+{/* Default when the user says "add a button" */}
+<Button className="btn-primary px-3 sm:px-4">
+  <Plus className="h-4 w-4" />
+  Add
+</Button>
+```
 
 ## Placement (hard rule)
 
@@ -15,7 +29,7 @@ alwaysApply: true
 ```tsx
 {/* Page / section actions */}
 <div className="mb-6 flex items-center justify-end gap-3">
-  <Button className="primary-btn px-3 sm:px-4">
+  <Button className="btn-primary px-3 sm:px-4">
     <Plus className="h-4 w-4" />
     Add
   </Button>
@@ -23,7 +37,7 @@ alwaysApply: true
 
 {/* Form submit under fields */}
 <div className="flex justify-end">
-  <Button className="primary-btn px-3 sm:px-4">
+  <Button className="btn-primary px-3 sm:px-4">
     <Plus className="h-4 w-4" />
     Save
   </Button>
@@ -32,11 +46,12 @@ alwaysApply: true
 
 ## Icons (hard rule)
 
-- Every `primary-btn` / `btn-primary` button must include a Lucide icon (`h-4 w-4`) plus a label — never text-only.
+- Every `btn-primary` / `primary-btn` button must include a Lucide icon (`h-4 w-4`) plus a label — never text-only.
 - Prefer the same for outline action buttons in funding/forms toolbars (Refresh, Convert, etc.).
 - Icon before label; match existing CAALM patterns (`Plus`, `Check`, `Trash2`, `RefreshCw`, etc.).
 
 ## Exceptions
 
-- Only deviate when the user explicitly requests a different position or an icon-only control.
+- Only deviate from `btn-primary` when the user explicitly requests a different style, position, or an icon-only control.
+- Destructive confirms use `.delete-btn` (see dialog rules).
 - Row overflow menus stay as documented in `global-style-guide.mdc` (dots.svg), not this rule.

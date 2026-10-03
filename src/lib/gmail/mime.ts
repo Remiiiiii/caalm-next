@@ -6,7 +6,12 @@ export function buildRawEmail(options: {
 	fromEmail?: string;
 	inReplyTo?: string;
 	references?: string;
+	contentType?: "text" | "html";
 }): string {
+	const mimeType =
+		options.contentType === "html"
+			? 'text/html; charset="UTF-8"'
+			: 'text/plain; charset="UTF-8"';
 	const lines = [
 		`To: ${options.to}`,
 		...(options.fromEmail ? [`From: ${options.fromEmail}`] : []),
@@ -14,7 +19,7 @@ export function buildRawEmail(options: {
 		...(options.inReplyTo ? [`In-Reply-To: ${options.inReplyTo}`] : []),
 		...(options.references ? [`References: ${options.references}`] : []),
 		"MIME-Version: 1.0",
-		'Content-Type: text/plain; charset="UTF-8"',
+		`Content-Type: ${mimeType}`,
 		"",
 		options.body,
 	];

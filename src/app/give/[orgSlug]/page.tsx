@@ -24,10 +24,21 @@ import {
 	useState,
 } from "react";
 import {
+	giveAttrPersistKey,
+	giveVisitDedupeKey,
+	hasShareAttribution,
+	parseGiveShareAttribution,
+} from "@/lib/give/attribution";
+import {
+	buildConfigDesignationOptions,
+	resolvePublicImpactStatement,
+	type PublicDonationPageConfig,
+} from "@/lib/give/public-donation-config";
+import {
 	buildGiveProgramOptions,
-	giveImpactStatement,
 	isPersistedDesignationId,
 	resolveGiveProgramLabel,
+	type GiveProgramOption,
 } from "@/lib/give/public-programs";
 import LandingFrostedCard from "@/components/landing/LandingFrostedCard";
 import LandingSection from "@/components/landing/LandingSection";
@@ -57,7 +68,7 @@ type GiveDesignation = { id: string; label: string };
 type DonationFrequency = "one_time" | "monthly";
 type TributeType = "honor" | "memory";
 
-const PRESET_AMOUNTS = ["25", "50", "100", "250"] as const;
+const DEFAULT_PRESET_AMOUNTS = ["25", "50", "100", "250"] as const;
 
 const TRUST_POINTS = [
 	{
@@ -184,8 +195,9 @@ export default function PublicGivePage() {
 	const orgSlug = params.orgSlug;
 	const [orgName, setOrgName] = useState<string | null>(null);
 	const [logoUrl, setLogoUrl] = useState<string | null>(null);
-	const [taxEin, setTaxEin] = useState<string | null>(null);
 	const [designations, setDesignations] = useState<GiveDesignation[]>([]);
+	const [donationPageConfig, setDonationPageConfig] =
+		useState<PublicDonationPageConfig | null>(null);
 	const [amount, setAmount] = useState("25");
 	const [frequency, setFrequency] = useState<DonationFrequency>("monthly");
 	const [programValue, setProgramValue] = useState("__general__");
@@ -196,20 +208,62 @@ export default function PublicGivePage() {
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [amountError, setAmountError] = useState<string | null>(null);
-
-	const programOptions = useMemo(
-		() => buildGiveProgramOptions(designations),
-		[designations],
+	const [configSource, setConfigSource] = useState<"draft" | "published" | null>(
+		null,
 	);
+
+	const urlAttribution = useMemo(
+		() => parseGiveShareAttribution(search),
+		[search],
+	);
+
+	const presetAmounts = useMemo(() => {
+		if (donationPageConfig?.amountsCents?.length) {
+			return donationPageConfig.amountsCents.map((c) => String(c / 100));
+		}
+		return [...DEFAULT_PRESET_AMOUNTS];
+	}, [donationPageConfig]);
+
+	const programOptions = useMemo((): GiveProgramOption[] => {
+		if (donationPageConfig?.designations?.length) {
+			return buildConfigDesignationOptions(donationPageConfig.designations).map(
+				(o) => ({ ...o, fromOrg: false }),
+			);
+		}
+		return buildGiveProgramOptions(designations);
+	}, [donationPageConfig, designations]);
+
+	const showMonthly =
+		!donationPageConfig ||
+		donationPageConfig.frequencyOptions.includes("monthly");
+	const showOneTime =
+		!donationPageConfig ||
+		donationPageConfig.frequencyOptions.includes("one_time");
 
 	const amountNumber = Number(amount);
 	const displayAmount =
 		Number.isFinite(amountNumber) && amountNumber > 0 ? amountNumber : 0;
 
+	const impactLine = useMemo(() => {
+		if (donationPageConfig) {
+			return resolvePublicImpactStatement(
+				donationPageConfig,
+				displayAmount || Number(presetAmounts[0] ?? 25),
+			);
+		}
+		return "supports programs that serve families in our community.";
+	}, [donationPageConfig, displayAmount, presetAmounts]);
+
 	const load = useCallback(async () => {
 		setLoading(true);
 		try {
-			const res = await fetch(`/api/give/org/${encodeURIComponent(orgSlug)}`);
+			const preview = search.get("donationPreview");
+			const qs = preview
+				? `?donationPreview=${encodeURIComponent(preview)}`
+				: "";
+			const res = await fetch(
+				`/api/give/org/${encodeURIComponent(orgSlug)}${qs}`,
+			);
 			if (!res.ok) {
 				setOrgName(null);
 				return;
@@ -217,21 +271,71 @@ export default function PublicGivePage() {
 			const json = (await res.json()) as {
 				name?: string;
 				logoUrl?: string | null;
-				taxEin?: string | null;
 				designations?: GiveDesignation[];
+				donationPageConfig?: PublicDonationPageConfig | null;
+				configSource?: "draft" | "published" | null;
 			};
 			setOrgName(json.name ?? "Organization");
 			setLogoUrl(json.logoUrl ?? null);
-			setTaxEin(json.taxEin ?? null);
 			setDesignations(json.designations ?? []);
+			setDonationPageConfig(json.donationPageConfig ?? null);
+			setConfigSource(json.configSource ?? null);
+			if (json.donationPageConfig?.amountsCents?.[0]) {
+				setAmount(String(json.donationPageConfig.amountsCents[0] / 100));
+			}
+			if (json.donationPageConfig?.designations?.[0]) {
+				setProgramValue("donation-config:0");
+			}
 		} finally {
 			setLoading(false);
 		}
-	}, [orgSlug]);
+	}, [orgSlug, search]);
 
 	useEffect(() => {
 		void load();
 	}, [load]);
+
+	useEffect(() => {
+		if (!hasShareAttribution(urlAttribution)) return;
+		try {
+			sessionStorage.setItem(
+				giveAttrPersistKey(orgSlug),
+				JSON.stringify(urlAttribution),
+			);
+		} catch {
+			// sessionStorage may be blocked; checkout still uses current URL params.
+		}
+	}, [orgSlug, urlAttribution]);
+
+	useEffect(() => {
+		if (!orgName || search.get("donationPreview")) return;
+		if (!hasShareAttribution(urlAttribution)) return;
+		const key = giveVisitDedupeKey(orgSlug, urlAttribution);
+		try {
+			if (sessionStorage.getItem(key)) return;
+			sessionStorage.setItem(key, "1");
+		} catch {
+			// Still try to log once this mount if storage is unavailable.
+		}
+		void fetch("/api/give/attribution/visit", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ orgSlug, ...urlAttribution }),
+		}).catch(() => {
+			// Donor-facing page never surfaces visit logging failures.
+		});
+	}, [orgName, orgSlug, search, urlAttribution]);
+
+	const resolveCheckoutAttribution = () => {
+		if (hasShareAttribution(urlAttribution)) return urlAttribution;
+		try {
+			const raw = sessionStorage.getItem(giveAttrPersistKey(orgSlug));
+			if (!raw) return {};
+			return parseGiveShareAttribution(JSON.parse(raw) as Record<string, unknown>);
+		} catch {
+			return {};
+		}
+	};
 
 	const validateAmount = (): number | null => {
 		const dollars = Number(amount);
@@ -274,6 +378,7 @@ export default function PublicGivePage() {
 					programLabel: resolveGiveProgramLabel(programOptions, programValue),
 					tributeType: tributeEnabled ? tributeType : undefined,
 					tributeName: tributeEnabled ? tributeName.trim() : undefined,
+					...resolveCheckoutAttribution(),
 				}),
 			});
 			const json = await res.json();
@@ -361,6 +466,12 @@ export default function PublicGivePage() {
 
 	return (
 		<GiveShell orgName={orgName} logoUrl={logoUrl}>
+			{configSource === "draft" ? (
+				<div className="mx-auto mb-4 max-w-6xl rounded-lg border border-orange/20 bg-orange/10 px-4 py-2 text-center text-sm text-slate-700">
+					Preview mode — visitors still see the published page until you publish
+					changes.
+				</div>
+			) : null}
 			<motion.div
 				className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 lg:grid-cols-2 lg:gap-16"
 				variants={staggerContainer}
@@ -403,13 +514,9 @@ export default function PublicGivePage() {
 						</span>
 						<p className="text-sm text-slate-600">
 							<span className="font-semibold text-slate-700">{orgName}</span>{" "}
-							is a 501(c)(3) nonprofit
-							{taxEin ? (
-								<>
-									, <span className="font-medium text-slate-700">EIN {taxEin}</span>
-								</>
-							) : null}
-							. Gifts are tax-deductible to the extent allowed by law.
+							is a 501(c)(3) nonprofit.{" "}
+							{donationPageConfig?.legalText?.trim() ||
+								"Gifts are tax-deductible to the extent allowed by law."}
 						</p>
 					</motion.div>
 
@@ -430,7 +537,7 @@ export default function PublicGivePage() {
 							<span className="text-2xl font-bold tabular-nums sm:text-3xl">
 								${displayAmount > 0 ? displayAmount.toLocaleString("en-US") : "25"}
 							</span>{" "}
-							{giveImpactStatement(displayAmount || 25)}
+							{impactLine}
 						</p>
 					</motion.div>
 
@@ -480,6 +587,7 @@ export default function PublicGivePage() {
 							</span>
 						</div>
 
+						{showOneTime && showMonthly ? (
 						<div
 							className="relative mt-5 grid grid-cols-2 items-center rounded-full border border-slate-200 bg-slate-100 p-1"
 							role="tablist"
@@ -528,6 +636,7 @@ export default function PublicGivePage() {
 								</span>
 							</button>
 						</div>
+						) : null}
 
 						<form
 							className="mt-6 space-y-5"
@@ -540,8 +649,15 @@ export default function PublicGivePage() {
 								<legend className="mb-2 text-sm font-medium text-slate-700">
 									Choose an amount
 								</legend>
-								<div className="grid grid-cols-4 gap-2">
-									{PRESET_AMOUNTS.map((preset) => {
+								<div
+									className={cn(
+										"grid gap-2",
+										presetAmounts.length <= 4
+											? "grid-cols-4"
+											: "grid-cols-3 sm:grid-cols-6",
+									)}
+								>
+									{presetAmounts.map((preset) => {
 										const selected = Number(amount) === Number(preset);
 										return (
 											<button

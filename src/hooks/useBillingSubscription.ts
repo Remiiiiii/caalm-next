@@ -10,8 +10,10 @@ import { DEFAULT_PRICING_PLANS } from "@/lib/pricing-defaults";
 export type BillingSubscriptionPayload = {
 	subscriptionTier: "starter" | "growth" | "enterprise";
 	billingInterval: string | null;
+	billingStatus?: string;
 	stripeConfigured: boolean;
 	access?: { canCheckout?: boolean };
+	pilot?: { eligible?: boolean; trialDays?: number; tier?: string };
 	plans: PricingPlan[];
 };
 

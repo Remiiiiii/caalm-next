@@ -598,6 +598,7 @@ export default function GmailSheet({ open, onOpenChange }: GmailSheetProps) {
 							<GmailComposeForm
 								fromEmail={email}
 								initialDraft={composeDraft}
+								signatureUrl="/api/gmail/signature"
 								onSent={() => {
 									setComposeDraft(null);
 									setTab("inbox");
