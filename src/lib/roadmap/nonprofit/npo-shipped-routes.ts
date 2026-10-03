@@ -56,6 +56,11 @@ export const NPO_CLAIMED_SHIPPED_ROUTES = [
 		pathname: "/settings/form-990",
 		pageModule: "src/app/(root)/settings/form-990/page.tsx",
 	},
+	{
+		label: "Donation page settings",
+		pathname: "/settings/donation-page",
+		pageModule: "src/app/(root)/settings/donation-page/page.tsx",
+	},
 ] as const;
 
 export type NpoShippedRouteViolation = {
