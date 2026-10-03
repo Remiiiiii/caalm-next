@@ -105,7 +105,7 @@ export const Header = () => {
 			boxShadow: isMobile
 				? "0 1px 0 0 rgba(15, 23, 42, 0.06)"
 				: "0 4px 32px 0 rgba(16,30,54,0.10), 0 1.5px 4px 0 rgba(16,30,54,0.03)",
-			background: "rgba(255,255,255,0.94)",
+			background: "rgba(255,255,255,0.82)",
 			border: isMobile
 				? "1px solid rgba(226, 232, 240, 0.9)"
 				: "1px solid rgba(200,200,200,0.18)",

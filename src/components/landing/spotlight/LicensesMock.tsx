@@ -207,7 +207,7 @@ function GlassStat({
 
 export default function LicensesMock() {
 	return (
-		<div className="rounded-xl border border-slate-200/80 bg-white/80 overflow-hidden shadow-md">
+		<div className="landing-spotlight-mock rounded-xl border border-slate-200/80 bg-white/80 overflow-hidden shadow-md">
 			<div className="relative flex min-h-[360px] items-stretch">
 				{/* Sidebar — height locked to main; excess nav soft-fades */}
 				<div className="relative hidden w-[10.5rem] shrink-0 border-r border-slate-200/80 bg-white/90 sm:block md:w-48">
@@ -316,11 +316,11 @@ export default function LicensesMock() {
 							Licenses
 						</h3>
 						<div className="flex items-center gap-2 shrink-0">
-							<span className="inline-flex items-center gap-1.5 rounded-full primary-btn px-2.5 py-1 text-[10px] sm:text-xs">
+							<span className="landing-cta inline-flex items-center gap-1.5 rounded-full primary-btn text-[10px] sm:text-xs">
 								<Upload className="h-3 w-3" />
 								Upload
 							</span>
-							<span className="inline-flex items-center gap-1.5 rounded-full primary-btn px-2.5 py-1 text-[10px] sm:text-xs">
+							<span className="landing-cta inline-flex items-center gap-1.5 rounded-full primary-btn text-[10px] sm:text-xs">
 								<SquareArrowRightExit className="h-3 w-3" />
 								Export
 							</span>
@@ -438,9 +438,11 @@ export default function LicensesMock() {
 								</span>
 							</div>
 							<div className="flex flex-wrap items-center justify-end gap-1.5">
-								<span className="inline-flex h-7 items-center gap-1 rounded-full primary-btn px-2.5 text-[10px]">
-									<Filter className="h-3 w-3" />
-									Filter
+								<span
+									className="landing-filter-icon"
+									aria-label="Filter"
+								>
+									<Filter className="h-3.5 w-3.5" />
 								</span>
 								<span className="inline-flex h-7 items-center gap-1 rounded-md border border-slate-200 bg-white px-2 text-[10px] text-slate-700">
 									<Bookmark className="h-3 w-3" />

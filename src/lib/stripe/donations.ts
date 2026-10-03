@@ -7,12 +7,18 @@ export function isDonationStripeConfigured(): boolean {
 	return isStripeConfigured();
 }
 
+export type DonationCheckoutInterval = "one_time" | "monthly";
+
 export async function createDonationCheckoutSession(input: {
 	orgId: string;
 	orgName: string;
 	amountCents: number;
 	campaignId?: string;
 	designationId?: string;
+	programLabel?: string;
+	tributeType?: "honor" | "memory";
+	tributeName?: string;
+	interval?: DonationCheckoutInterval;
 	successUrl: string;
 	cancelUrl: string;
 }): Promise<{ url: string | null; sessionId: string }> {
@@ -20,8 +26,11 @@ export async function createDonationCheckoutSession(input: {
 		throw new Error("Minimum donation is $1.00");
 	}
 	const stripe = getStripe();
+	const interval = input.interval ?? "one_time";
+	const isMonthly = interval === "monthly";
+
 	const session = await stripe.checkout.sessions.create({
-		mode: "payment",
+		mode: isMonthly ? "subscription" : "payment",
 		success_url: input.successUrl,
 		cancel_url: input.cancelUrl,
 		line_items: [
@@ -30,8 +39,13 @@ export async function createDonationCheckoutSession(input: {
 				price_data: {
 					currency: "usd",
 					unit_amount: input.amountCents,
+					...(isMonthly
+						? { recurring: { interval: "month" as const } }
+						: {}),
 					product_data: {
-						name: `Donation to ${input.orgName}`,
+						name: isMonthly
+							? `Monthly donation to ${input.orgName}`
+							: `Donation to ${input.orgName}`,
 					},
 				},
 			},
@@ -41,6 +55,10 @@ export async function createDonationCheckoutSession(input: {
 			orgId: input.orgId,
 			campaignId: input.campaignId ?? "",
 			designationId: input.designationId ?? "",
+			programLabel: input.programLabel ?? "",
+			donationInterval: interval,
+			tributeType: input.tributeType ?? "",
+			tributeName: input.tributeName ?? "",
 		},
 	});
 	return { url: session.url, sessionId: session.id };

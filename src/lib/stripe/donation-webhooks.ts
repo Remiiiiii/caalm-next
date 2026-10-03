@@ -33,7 +33,9 @@ export async function handleDonationStripeWebhookEvent(
 	}
 
 	const session = event.data.object as Stripe.Checkout.Session;
-	if (session.mode !== "payment") return { processed: true };
+	if (session.mode !== "payment" && session.mode !== "subscription") {
+		return { processed: true };
+	}
 	if (session.metadata?.purpose !== DONATION_CHECKOUT_PURPOSE) {
 		return { processed: true };
 	}
