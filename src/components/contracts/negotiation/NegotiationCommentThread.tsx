@@ -167,7 +167,7 @@ export function NegotiationCommentThread({
 				<div className="mt-2 flex gap-4">
 					<button
 						type="button"
-						className="tabs-underline cursor-pointer pb-2 text-xs font-medium text-slate-600"
+						className="cursor-pointer pb-2 text-xs font-medium text-slate-600"
 						data-state={tab === "open" ? "active" : "inactive"}
 						onClick={() => setTab("open")}
 					>
@@ -176,7 +176,7 @@ export function NegotiationCommentThread({
 					</button>
 					<button
 						type="button"
-						className="tabs-underline cursor-pointer pb-2 text-xs font-medium text-slate-600"
+						className="cursor-pointer pb-2 text-xs font-medium text-slate-600"
 						data-state={tab === "resolved" ? "active" : "inactive"}
 						onClick={() => setTab("resolved")}
 					>

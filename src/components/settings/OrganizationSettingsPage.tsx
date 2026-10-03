@@ -7,6 +7,7 @@ import { PermissionGate } from "@/components/PermissionGate";
 import { ApprovalDelegationsManager } from "@/components/settings/ApprovalDelegationsManager";
 import { ApprovalSlaPoliciesManager } from "@/components/settings/ApprovalSlaPoliciesManager";
 import { ApprovalWorkflowTemplatesManager } from "@/components/settings/ApprovalWorkflowTemplatesManager";
+import { DonationPageSettingsClient } from "@/components/settings/DonationPageSettingsClient";
 import { OrganizationLogoUploader } from "@/components/settings/OrganizationLogoUploader";
 import { OrgStructureManager } from "@/components/settings/OrgStructureManager";
 import { SecurityEvidencePackCard } from "@/components/settings/SecurityEvidencePackCard";
@@ -24,7 +25,9 @@ import { useOrganization } from "@/contexts/OrganizationContext";
 import { useStepUp } from "@/contexts/StepUpContext";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
+import { getOrganizationGiveSlug } from "@/lib/give/slug";
 import { resolveOrgLogoFileId } from "@/lib/organizations/org-logo";
+import { permissionSatisfied } from "@/lib/rbac/permission-implications";
 import {
 	firstOrgProfileErrors,
 	type OrganizationProfileForm,
@@ -99,6 +102,11 @@ export default function OrganizationSettingsPage() {
 	const { toast } = useToast();
 	const { ensureStepUp } = useStepUp();
 	const canEdit = permissions.includes(PERMISSIONS.SETTINGS.EDIT);
+	// Show Donation Settings tab when the user can view (or edit implies view)
+	const canViewDonationSettings = permissionSatisfied(
+		permissions,
+		PERMISSIONS.DONATIONS.CONFIG_VIEW,
+	);
 
 	const url = orgId
 		? `/api/organizations?orgId=${encodeURIComponent(orgId)}`
@@ -336,6 +344,11 @@ export default function OrganizationSettingsPage() {
 					</TabsTrigger>
 					<TabsTrigger value="approval-delegation">Delegation</TabsTrigger>
 					<TabsTrigger value="data-portability">Data portability</TabsTrigger>
+					{canViewDonationSettings ? (
+						<TabsTrigger value="donation-settings">
+							Donation Settings
+						</TabsTrigger>
+					) : null}
 				</TabsList>
 
 				<TabsContent value="profile" className="mt-4">
@@ -722,6 +735,15 @@ export default function OrganizationSettingsPage() {
 					<TenantDeletionCard orgId={org.$id} canEdit={canEdit} />
 					<SecurityEvidencePackCard orgId={org.$id} canEdit={canEdit} />
 				</TabsContent>
+
+				{canViewDonationSettings ? (
+					<TabsContent value="donation-settings" className="mt-4">
+						<DonationPageSettingsClient
+							orgName={org.name}
+							giveSlug={getOrganizationGiveSlug(org)}
+						/>
+					</TabsContent>
+				) : null}
 			</Tabs>
 		</div>
 	);

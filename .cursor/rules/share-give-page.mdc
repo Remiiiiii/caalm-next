@@ -1,0 +1,41 @@
+---
+description: Share give page card layout and Share page switch behavior
+globs: src/components/settings/DonationPageShareCard.tsx,src/components/settings/DonationPageSettingsClient.tsx
+alwaysApply: false
+---
+
+# Share give page (hard rule)
+
+Follow the design spec in `.cursor/rules/share-give-page-design.txt` when changing the donation-page share UI.
+
+## Entry (switch)
+
+- Add/keep a **Share page** option on the donation page action switch (sliding white thumb; see `segmented-switch.mdc`).
+- Render `DonationPageShareCard` **only** when Share page is the active selection.
+- Do not leave the share card always mounted on the settings form.
+
+## Card structure
+
+Match `share-give-page-design.txt`:
+
+1. Header (Share2 + title + subtitle)
+2. Campaign tag (UTM) field + helper
+3. Live URL + **icon-only** copy control (Copied + green check after click)
+4. Sliding switch: **Email link** | **Open live page**
+5. Nested QR / embed panels; QR uses sliding switch **Download PNG** | **Copy image**; embed uses icon-only copy
+
+## Copy controls
+
+- Copy link and Copy embed: icon-only at rest (no `btn-primary`, no label)
+- After success: temporary green `Check` + “Copied”, then revert
+
+## Email dialog
+
+- Compose actions use a sliding switch: **Save draft** | **Send** | **Open in device mail instead**
+- Load mailbox signature into compose; append HTML (with images) on send/draft
+
+## Publish gate
+
+- Copy / email / QR / embed require a published give page
+- Unpublished: show a clear publish-first notice; disable share actions
+

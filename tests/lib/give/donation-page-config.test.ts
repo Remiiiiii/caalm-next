@@ -73,10 +73,16 @@ describe("donation page config validation", () => {
 		).toThrow(DonationPageConfigError);
 	});
 
-	it("rejects malformed EIN", () => {
+	it("rejects malformed EIN when provided", () => {
 		expect(() =>
 			validateDonationPageConfigPayload(validPayload({ ein: "473829102" })),
 		).toThrow(/EIN/);
+	});
+
+	it("allows an empty EIN", () => {
+		expect(() =>
+			validateDonationPageConfigPayload(validPayload({ ein: "" })),
+		).not.toThrow();
 	});
 
 	it("rejects duplicate designations", () => {

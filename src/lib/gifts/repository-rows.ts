@@ -24,5 +24,11 @@ export function mapGiftRow(row: Record<string, unknown>): Gift {
 		anonymous: Boolean(row.anonymous),
 		voidOfId: row.voidOfId ? String(row.voidOfId) : undefined,
 		receiptSentAt: row.receiptSentAt ? String(row.receiptSentAt) : undefined,
+		shareSource: row.shareSource ? String(row.shareSource) : undefined,
+		shareMedium: row.shareMedium ? String(row.shareMedium) : undefined,
+		shareCampaign: row.shareCampaign ? String(row.shareCampaign) : undefined,
+		stripeInvoiceId: row.stripeInvoiceId
+			? String(row.stripeInvoiceId)
+			: undefined,
 	};
 }

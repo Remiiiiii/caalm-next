@@ -71,7 +71,7 @@ export const DEFAULT_DONATION_PAGE_CONFIG = (): DonationPageConfigPayload => ({
 		"2500":
 			"provides a full week of after-school tutoring materials for one student.",
 	},
-	ein: "47-3829102",
+	ein: "",
 	legalText:
 		"Your gift may be tax-deductible to the extent allowed by law. No goods or services were provided in exchange for this contribution.",
 	frequencyOptions: ["one_time", "monthly"],

@@ -35,6 +35,8 @@ export async function POST(request: NextRequest) {
 		const to = String(body.to || "").trim();
 		const subject = String(body.subject || "").trim();
 		const text = String(body.body || body.text || "").trim();
+		const contentType =
+			body.contentType === "html" || body.isHtml === true ? "html" : "text";
 
 		if (!to || !subject) {
 			return NextResponse.json(
@@ -47,6 +49,7 @@ export async function POST(request: NextRequest) {
 			to,
 			subject,
 			body: text,
+			contentType,
 		});
 
 		return NextResponse.json({ success: true, draftId: result.draftId });

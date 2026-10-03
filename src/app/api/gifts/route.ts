@@ -28,6 +28,7 @@ export async function GET(request: NextRequest) {
 					: undefined,
 			search: params.get("search") || undefined,
 			campaignId: params.get("campaignId") || undefined,
+			shareCampaign: params.get("shareCampaign") || undefined,
 			limit: pageSize,
 			offset: (page - 1) * pageSize,
 		});

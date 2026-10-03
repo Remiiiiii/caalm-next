@@ -484,6 +484,12 @@ export const appwriteConfig = {
 		"69fb1a04001f4e8c2b83",
 	),
 
+	/** Public give-page share visit events (name: give_share_events) */
+	giveShareEventsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_GIVE_SHARE_EVENTS_COLLECTION",
+		"69fc2a01001f4e8c2c01",
+	),
+
 	/** Recurring sustainer schedules (name: recurring_gift_schedules) */
 	recurringGiftSchedulesCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_RECURRING_GIFT_SCHEDULES_COLLECTION",

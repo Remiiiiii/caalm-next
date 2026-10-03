@@ -1,3 +1,5 @@
+import { extractOutlookSignatureFromHtml } from "@/lib/email/signature";
+
 const GRAPH_BASE = "https://graph.microsoft.com/v1.0";
 
 export interface OutlookMailSummary {
@@ -209,9 +211,21 @@ export async function listDrafts(
 	return (data.value || []).map(toSummary);
 }
 
+function bodyPayload(body: string, contentType: "text" | "html" = "text") {
+	return {
+		contentType: contentType === "html" ? "HTML" : "Text",
+		content: body,
+	};
+}
+
 export async function createDraft(
 	accessToken: string,
-	options: { to: string; subject: string; body: string },
+	options: {
+		to: string;
+		subject: string;
+		body: string;
+		contentType?: "text" | "html";
+	},
 ): Promise<{ draftId: string }> {
 	const result = await graphFetch<{ id: string }>(
 		accessToken,
@@ -220,7 +234,7 @@ export async function createDraft(
 			method: "POST",
 			body: JSON.stringify({
 				subject: options.subject,
-				body: { contentType: "Text", content: options.body },
+				body: bodyPayload(options.body, options.contentType),
 				toRecipients: toRecipientsPayload(options.to),
 			}),
 		},
@@ -234,10 +248,12 @@ export async function sendMessage(
 		to: string;
 		subject: string;
 		body: string;
+		contentType?: "text" | "html";
 		/** When set, create a reply draft from this message then send. */
 		replyToMessageId?: string;
 	},
 ): Promise<{ id: string }> {
+	const contentType = options.contentType ?? "text";
 	if (options.replyToMessageId) {
 		const draft = await graphFetch<{ id: string }>(
 			accessToken,
@@ -248,7 +264,7 @@ export async function sendMessage(
 			method: "PATCH",
 			body: JSON.stringify({
 				subject: options.subject,
-				body: { contentType: "Text", content: options.body },
+				body: bodyPayload(options.body, contentType),
 				toRecipients: toRecipientsPayload(options.to),
 			}),
 		});
@@ -265,11 +281,68 @@ export async function sendMessage(
 		body: JSON.stringify({
 			message: {
 				subject: options.subject,
-				body: { contentType: "Text", content: options.body },
+				body: bodyPayload(options.body, contentType),
 				toRecipients: toRecipientsPayload(options.to),
 			},
 			saveToSentItems: true,
 		}),
 	});
 	return { id: "sent" };
+}
+
+/**
+ * Graph has no signature endpoint. Infer the user's Outlook signature from
+ * recent Sent Items (HTML + inline attachments), matching what Outlook appends.
+ */
+export async function fetchOutlookSignatureHtml(
+	accessToken: string,
+): Promise<string | null> {
+	const list = await fetch(
+		`${GRAPH_BASE}/me/mailFolders/sentitems/messages?$top=8&$orderby=sentDateTime desc&$select=id,body,subject`,
+		{
+			headers: {
+				Authorization: `Bearer ${accessToken}`,
+				Prefer: 'outlook.body-content-type="html", outlook.allow-unsafe-html',
+			},
+		},
+	);
+	if (!list.ok) {
+		const error = await list.text();
+		throw new Error(`Microsoft Graph mail error: ${error}`);
+	}
+	const data = (await list.json()) as {
+		value?: { id?: string; body?: { content?: string } }[];
+	};
+
+	for (const msg of data.value || []) {
+		const id = msg.id;
+		const html = msg.body?.content || "";
+		if (!id || !html) continue;
+
+		let attachments: {
+			contentId?: string;
+			contentBytes?: string;
+			contentType?: string;
+		}[] = [];
+		try {
+			const attRes = await graphFetch<{
+				value?: {
+					contentId?: string;
+					contentBytes?: string;
+					contentType?: string;
+				}[];
+			}>(
+				accessToken,
+				`/me/messages/${encodeURIComponent(id)}/attachments?$select=contentId,contentBytes,contentType,name`,
+			);
+			attachments = attRes.value || [];
+		} catch {
+			attachments = [];
+		}
+
+		const signature = extractOutlookSignatureFromHtml(html, attachments);
+		if (signature?.trim()) return signature;
+	}
+
+	return null;
 }

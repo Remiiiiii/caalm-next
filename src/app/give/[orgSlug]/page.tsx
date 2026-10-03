@@ -24,6 +24,12 @@ import {
 	useState,
 } from "react";
 import {
+	giveAttrPersistKey,
+	giveVisitDedupeKey,
+	hasShareAttribution,
+	parseGiveShareAttribution,
+} from "@/lib/give/attribution";
+import {
 	buildConfigDesignationOptions,
 	resolvePublicImpactStatement,
 	type PublicDonationPageConfig,
@@ -189,7 +195,6 @@ export default function PublicGivePage() {
 	const orgSlug = params.orgSlug;
 	const [orgName, setOrgName] = useState<string | null>(null);
 	const [logoUrl, setLogoUrl] = useState<string | null>(null);
-	const [taxEin, setTaxEin] = useState<string | null>(null);
 	const [designations, setDesignations] = useState<GiveDesignation[]>([]);
 	const [donationPageConfig, setDonationPageConfig] =
 		useState<PublicDonationPageConfig | null>(null);
@@ -205,6 +210,11 @@ export default function PublicGivePage() {
 	const [amountError, setAmountError] = useState<string | null>(null);
 	const [configSource, setConfigSource] = useState<"draft" | "published" | null>(
 		null,
+	);
+
+	const urlAttribution = useMemo(
+		() => parseGiveShareAttribution(search),
+		[search],
 	);
 
 	const presetAmounts = useMemo(() => {
@@ -261,14 +271,12 @@ export default function PublicGivePage() {
 			const json = (await res.json()) as {
 				name?: string;
 				logoUrl?: string | null;
-				taxEin?: string | null;
 				designations?: GiveDesignation[];
 				donationPageConfig?: PublicDonationPageConfig | null;
 				configSource?: "draft" | "published" | null;
 			};
 			setOrgName(json.name ?? "Organization");
 			setLogoUrl(json.logoUrl ?? null);
-			setTaxEin(json.taxEin ?? null);
 			setDesignations(json.designations ?? []);
 			setDonationPageConfig(json.donationPageConfig ?? null);
 			setConfigSource(json.configSource ?? null);
@@ -286,6 +294,48 @@ export default function PublicGivePage() {
 	useEffect(() => {
 		void load();
 	}, [load]);
+
+	useEffect(() => {
+		if (!hasShareAttribution(urlAttribution)) return;
+		try {
+			sessionStorage.setItem(
+				giveAttrPersistKey(orgSlug),
+				JSON.stringify(urlAttribution),
+			);
+		} catch {
+			// sessionStorage may be blocked; checkout still uses current URL params.
+		}
+	}, [orgSlug, urlAttribution]);
+
+	useEffect(() => {
+		if (!orgName || search.get("donationPreview")) return;
+		if (!hasShareAttribution(urlAttribution)) return;
+		const key = giveVisitDedupeKey(orgSlug, urlAttribution);
+		try {
+			if (sessionStorage.getItem(key)) return;
+			sessionStorage.setItem(key, "1");
+		} catch {
+			// Still try to log once this mount if storage is unavailable.
+		}
+		void fetch("/api/give/attribution/visit", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ orgSlug, ...urlAttribution }),
+		}).catch(() => {
+			// Donor-facing page never surfaces visit logging failures.
+		});
+	}, [orgName, orgSlug, search, urlAttribution]);
+
+	const resolveCheckoutAttribution = () => {
+		if (hasShareAttribution(urlAttribution)) return urlAttribution;
+		try {
+			const raw = sessionStorage.getItem(giveAttrPersistKey(orgSlug));
+			if (!raw) return {};
+			return parseGiveShareAttribution(JSON.parse(raw) as Record<string, unknown>);
+		} catch {
+			return {};
+		}
+	};
 
 	const validateAmount = (): number | null => {
 		const dollars = Number(amount);
@@ -328,6 +378,7 @@ export default function PublicGivePage() {
 					programLabel: resolveGiveProgramLabel(programOptions, programValue),
 					tributeType: tributeEnabled ? tributeType : undefined,
 					tributeName: tributeEnabled ? tributeName.trim() : undefined,
+					...resolveCheckoutAttribution(),
 				}),
 			});
 			const json = await res.json();
@@ -463,13 +514,7 @@ export default function PublicGivePage() {
 						</span>
 						<p className="text-sm text-slate-600">
 							<span className="font-semibold text-slate-700">{orgName}</span>{" "}
-							is a 501(c)(3) nonprofit
-							{taxEin ? (
-								<>
-									, <span className="font-medium text-slate-700">EIN {taxEin}</span>
-								</>
-							) : null}
-							.{" "}
+							is a 501(c)(3) nonprofit.{" "}
 							{donationPageConfig?.legalText?.trim() ||
 								"Gifts are tax-deductible to the extent allowed by law."}
 						</p>

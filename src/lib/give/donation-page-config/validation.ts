@@ -89,7 +89,9 @@ export function validateDonationPageConfigPayload(
 		seen.add(key);
 	}
 
-	if (!isValidEin(payload.ein)) {
+	// EIN is optional; if present it must match NN-NNNNNNN
+	const ein = payload.ein?.trim() ?? "";
+	if (ein && !isValidEin(ein)) {
 		throw new DonationPageConfigError(
 			"EIN must match format NN-NNNNNNN",
 			"VALIDATION",

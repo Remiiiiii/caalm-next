@@ -11,14 +11,13 @@ interface StatusUnderlineTabsProps {
 	tabs: UnderlineTab[];
 	value: string;
 	onValueChange: (value: string) => void;
-	/** Kept for call-site compatibility; unused (CSS handles the underline). */
+	/** Kept for call-site compatibility; unused. */
 	indicatorId?: string;
 	listClassName?: string;
 }
 
 /**
- * Status filter tabs. Visual source of truth is RoundedUnderlineTabs
- * (rounded bar + teal underline outside the box).
+ * Status filter tabs. Visual source of truth is RoundedUnderlineTabs.
  */
 export default function StatusUnderlineTabs({
 	tabs,

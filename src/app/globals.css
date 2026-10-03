@@ -185,55 +185,6 @@
 		@apply mx-auto max-w-7xl px-5;
 	}
 
-	/* Tabs underline indicator for hover/active/focus */
-	.tabs-underline {
-		position: relative;
-	}
-	.tabs-underline::after {
-		content: "";
-		position: absolute;
-		left: 50%;
-		transform: translateX(-50%);
-		bottom: 0;
-		height: 2px;
-		width: 0;
-		background-color: #03afbf;
-		border-radius: 1px;
-		transition: width 180ms ease-in-out;
-	}
-	.tabs-underline:hover::after,
-	.tabs-underline[data-state="active"]::after,
-	.tabs-underline:focus-visible::after {
-		width: 80%;
-	}
-
-	/* Ensure only direct hover target shows underline */
-	.tabs-underline::after {
-		pointer-events: none;
-	}
-
-	/* Navigation specific hover isolation and persistent active state */
-	nav .tabs-underline:not(:hover):not([data-state="active"])::after {
-		width: 0;
-		transition: width 150ms ease-out;
-	}
-
-	nav .tabs-underline:hover::after,
-	nav .tabs-underline[data-state="active"]::after {
-		width: 80%;
-		transition: width 150ms ease-in;
-	}
-
-	/* Ensure active state takes precedence over hover */
-	nav .tabs-underline[data-state="active"]:not(:hover)::after {
-		width: 80%;
-		transition: width 150ms ease-in;
-	}
-
-	/* Sit the bar under a rounded tab box, not on its inner edge */
-	.tabs-underline-outside::after {
-		bottom: -0.75rem;
-	}
 	.primary-btn,
 	.btn-primary,
 	.shad-active,

@@ -1,0 +1,35 @@
+Share give page UI (donation settings)
+
+Entry
+- Donation page action switch includes a "Share page" option (Share2 icon).
+- The share card renders only when "Share page" is the active switch selection.
+- Gate live URL / QR / embed / email behind isPublished; show a publish-first notice when unpublished.
+
+Layout (top → bottom)
+1. Header: Share2 icon + title "Share give page" + one-line subtitle about copy / email / QR / embed.
+2. Campaign tag (UTM): labeled text input; helper mentions utm_campaign={slug} on copy and email links.
+3. Live page URL: read-only input + icon-only Copy control (no btn-primary / no "Copy link" label).
+   - After a successful copy: temporarily show green Check + "Copied" text, then revert to the Copy icon.
+4. Sliding switch (Email link | Open live page) — SegmentedToggle / sliding white thumb.
+5. Two-column grid of nested light panels:
+   - Left — QR code: title + short help, bordered QR preview, sliding switch (Download PNG | Copy image).
+   - Right — Website embed: title + short help + icon-only Copy control (same Copied feedback as URL), read-only iframe snippet textarea.
+
+Copy controls
+- Copy link and Copy embed are icon-only (Copy icon). No button chrome / no text label at rest.
+- On success: temporary "Copied" + green checkmark (Check, text-green), then clear.
+
+Switches
+- Email link / Open live page: sliding white thumb switch (see segmented-switch.mdc).
+- Download PNG / Copy image: same switch design; actions fire on tab click.
+- Email dialog compose actions: Save draft | Send | Open on device (same switch).
+
+Mailbox signatures
+- Fetch provider signature into CAALM compose and append on send/draft (HTML, including images).
+- Gmail: sendAs signature API. Outlook: inferred from Sent Items (#Signature + cid→data URLs).
+
+Visual notes
+- Outer container: glass-card with glass-card-cap.
+- Nested QR / embed panels: rounded-xl, border-slate-200, light fill (bg-slate-50), padding.
+- Inputs: border-[0.25px] border-slate-300.
+- Inline code in helpers: rounded bg-slate-100 px-1.

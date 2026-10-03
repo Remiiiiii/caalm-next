@@ -11,6 +11,8 @@ export async function POST(request: NextRequest) {
 		const to = String(body.to || "").trim();
 		const subject = String(body.subject || "").trim();
 		const text = String(body.body || body.text || "").trim();
+		const contentType =
+			body.contentType === "html" || body.isHtml === true ? "html" : "text";
 		const threadId = body.threadId ? String(body.threadId) : undefined;
 		const inReplyTo = body.inReplyTo ? String(body.inReplyTo) : undefined;
 		const references = body.references ? String(body.references) : undefined;
@@ -30,6 +32,7 @@ export async function POST(request: NextRequest) {
 			threadId,
 			inReplyTo,
 			references,
+			contentType,
 		});
 
 		return NextResponse.json({ success: true, messageId: result.id });

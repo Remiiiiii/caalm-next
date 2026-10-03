@@ -18,16 +18,11 @@ export default async function DonationPageSettingsPage() {
 					</Button>
 				</Link>
 			</div>
-			<div className="mb-4 flex items-center justify-between gap-4">
-				<div className="flex items-center gap-3">
-					<HeartHandshake className="h-5 w-5 text-[#0f5384]" />
-					<h1 className="h1 capitalize sidebar-gradient-text">
-						Donation page settings
-					</h1>
-				</div>
-				<span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white/60 px-2.5 py-1 text-xs text-slate-600">
-					<span className="font-medium text-slate-700">donations.config.edit</span>
-				</span>
+			<div className="mb-4 flex items-center gap-3">
+				<HeartHandshake className="h-5 w-5 text-[#0f5384]" />
+				<h1 className="h1 capitalize sidebar-gradient-text">
+					Donation page settings
+				</h1>
 			</div>
 			<DonationPageSettingsClient />
 		</div>

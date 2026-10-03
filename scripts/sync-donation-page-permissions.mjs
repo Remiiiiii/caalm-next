@@ -121,21 +121,52 @@ async function upsertPermission(databaseId, perm) {
 	}
 }
 
-async function ensureRolePermission(databaseId, roleId, permissionKey) {
-	const rowId = `${roleId}_${permissionKey.replace(/\./g, "_")}`;
-	const existing = await getRow(databaseId, ROLE_PERMISSIONS_TABLE, rowId);
-	if (existing) return;
+async function rolePermissionAlreadyAssigned(databaseId, roleId, permissionId) {
+	const result = await appwrite(
+		`/tablesdb/${databaseId}/tables/${ROLE_PERMISSIONS_TABLE}/rows?` +
+			new URLSearchParams([
+				[
+					"queries[]",
+					JSON.stringify({
+						method: "equal",
+						attribute: "roleId",
+						values: [roleId],
+					}),
+				],
+				[
+					"queries[]",
+					JSON.stringify({
+						method: "equal",
+						attribute: "permissionId",
+						values: [permissionId],
+					}),
+				],
+				["queries[]", JSON.stringify({ method: "limit", values: [1] })],
+			]),
+	);
+	return (result.total ?? result.rows?.length ?? 0) > 0;
+}
+
+async function ensureRolePermission(databaseId, roleId, permissionId, permKey) {
+	if (await rolePermissionAlreadyAssigned(databaseId, roleId, permissionId)) {
+		console.log(`  already assigned ${permKey} → ${roleId}`);
+		return;
+	}
+	// Appwrite row IDs max 36 chars; keep role+perm abbreviations short
+	const roleShort = roleId.replace("role_", "");
+	const permShort = permissionId.replace("perm_", "");
+	let rowId = `rp_${roleShort}_${permShort}`.slice(0, 36);
 	await appwrite(
 		`/tablesdb/${databaseId}/tables/${ROLE_PERMISSIONS_TABLE}/rows`,
 		{
 			method: "POST",
 			body: {
 				rowId,
-				data: { roleId, permissionKey },
+				data: { roleId, permissionId },
 			},
 		},
 	);
-	console.log(`  assigned ${permissionKey} → ${roleId}`);
+	console.log(`  assigned ${permKey} → ${roleId}`);
 }
 
 async function syncDatabase(databaseId, label) {
@@ -145,7 +176,7 @@ async function syncDatabase(databaseId, label) {
 	}
 	for (const roleId of ROLE_IDS) {
 		for (const perm of DONATION_PAGE_PERMISSIONS) {
-			await ensureRolePermission(databaseId, roleId, perm.key);
+			await ensureRolePermission(databaseId, roleId, perm.$id, perm.key);
 		}
 	}
 }

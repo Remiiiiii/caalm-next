@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageIndex } from "@/components/ui/page-index";
+import { Input } from "@/components/ui/input";
 import { SearchField } from "@/components/ui/search-field";
 import {
 	Select,
@@ -30,6 +31,7 @@ export function GiftsPageClient() {
 	const [search, setSearch] = useState("");
 	const [debouncedSearch, setDebouncedSearch] = useState("");
 	const [status, setStatus] = useState<string>("all");
+	const [shareCampaign, setShareCampaign] = useState("");
 	const [loading, setLoading] = useState(true);
 
 	useEffect(() => {
@@ -45,6 +47,7 @@ export function GiftsPageClient() {
 		});
 		if (debouncedSearch.trim()) params.set("search", debouncedSearch.trim());
 		if (status !== "all") params.set("status", status);
+		if (shareCampaign.trim()) params.set("shareCampaign", shareCampaign.trim());
 		try {
 			const response = await fetch(`/api/gifts?${params.toString()}`);
 			const data = await response.json();
@@ -58,7 +61,7 @@ export function GiftsPageClient() {
 		} finally {
 			setLoading(false);
 		}
-	}, [page, debouncedSearch, status]);
+	}, [page, debouncedSearch, status, shareCampaign]);
 
 	useEffect(() => {
 		void load();
@@ -66,7 +69,7 @@ export function GiftsPageClient() {
 
 	useEffect(() => {
 		setPage(1);
-	}, [debouncedSearch, status]);
+	}, [debouncedSearch, status, shareCampaign]);
 
 	return (
 		<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
@@ -102,6 +105,13 @@ export function GiftsPageClient() {
 						<SelectItem value="voided">Voided</SelectItem>
 					</SelectContent>
 				</Select>
+				<Input
+					value={shareCampaign}
+					onChange={(e) => setShareCampaign(e.target.value)}
+					placeholder="Campaign tag"
+					className="h-10 w-[180px] border-[0.25px] border-slate-300"
+					aria-label="Filter by campaign tag"
+				/>
 			</div>
 
 			<Card className="glass-card">
@@ -128,6 +138,7 @@ export function GiftsPageClient() {
 										<th className="py-2 pr-4">Date</th>
 										<th className="py-2 pr-4">Amount</th>
 										<th className="py-2 pr-4">Status</th>
+										<th className="py-2 pr-4">Campaign tag</th>
 										<th className="py-2"> </th>
 									</tr>
 								</thead>
@@ -155,6 +166,15 @@ export function GiftsPageClient() {
 												>
 													{gift.status}
 												</span>
+											</td>
+											<td className="py-3 pr-4">
+												{gift.shareCampaign ? (
+													<span className="inline-block px-2 py-0.5 text-xs rounded-full font-medium border bg-blue/10 text-blue border-blue/20">
+														{gift.shareCampaign}
+													</span>
+												) : (
+													<span className="text-slate-400">—</span>
+												)}
 											</td>
 											<td className="py-3 text-right">
 												<Link
