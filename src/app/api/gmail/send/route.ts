@@ -11,6 +11,9 @@ export async function POST(request: NextRequest) {
 		const to = String(body.to || "").trim();
 		const subject = String(body.subject || "").trim();
 		const text = String(body.body || body.text || "").trim();
+		const threadId = body.threadId ? String(body.threadId) : undefined;
+		const inReplyTo = body.inReplyTo ? String(body.inReplyTo) : undefined;
+		const references = body.references ? String(body.references) : undefined;
 
 		if (!to || !subject) {
 			return NextResponse.json(
@@ -24,6 +27,9 @@ export async function POST(request: NextRequest) {
 			subject,
 			body: text,
 			fromEmail: access.email,
+			threadId,
+			inReplyTo,
+			references,
 		});
 
 		return NextResponse.json({ success: true, messageId: result.id });

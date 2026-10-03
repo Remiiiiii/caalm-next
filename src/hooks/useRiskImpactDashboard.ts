@@ -2,12 +2,13 @@ import { useMemo } from "react";
 import useSWR from "swr";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { useClientCachedFallback } from "@/hooks/useClientCachedFallback";
 import type {
 	RiskImpactPeriod,
 	RiskImpactSnapshot,
 } from "@/lib/dashboard/risk-impact.types";
 import { fetcher } from "@/lib/swr-config";
-import { getCachedData, setCachedData } from "@/lib/utils/client-cache";
+import { setCachedData } from "@/lib/utils/client-cache";
 
 interface RiskImpactResponse {
 	success: boolean;
@@ -29,16 +30,13 @@ export function useRiskImpactDashboard(options?: {
 		const params = new URLSearchParams({
 			orgId: orgId || "default_organization",
 			period,
-			v: "4",
+			v: "5",
 		});
 		if (division) params.set("division", division);
 		return `/api/dashboard/risk-impact?${params.toString()}`;
 	}, [user?.$id, orgId, period, division]);
 
-	const fallbackData = useMemo(() => {
-		if (!url || typeof window === "undefined") return undefined;
-		return getCachedData<RiskImpactResponse>(url) ?? undefined;
-	}, [url]);
+	const fallbackData = useClientCachedFallback<RiskImpactResponse>(url);
 
 	const { data, error, isLoading, mutate } = useSWR<RiskImpactResponse>(
 		url,

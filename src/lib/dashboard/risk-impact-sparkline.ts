@@ -41,7 +41,8 @@ function parseEventDate(iso: string): Date | null {
 
 /**
  * Build a cumulative tracking series.
- * Year-to-date and 90-day windows use weeks so the graph is not just one point per month.
+ * Year-to-date uses weeks through Dec 31 so JAN–DEC stays on the chart.
+ * Month and quarter use the same week buckets within their window.
  */
 export function buildRiskTrackingSeries(
 	period: RiskImpactPeriod,
@@ -77,8 +78,13 @@ export function buildRiskTrackingSeries(
 			if (bucket) bucket.count += 1;
 		}
 	} else {
+		// Year view runs through Dec 31 so later months stay visible without scrolling.
+		const seriesEnd =
+			period === "ytd"
+				? new Date(today.getFullYear(), 11, 31)
+				: today;
 		const cursor = startOfWeek(start);
-		while (cursor <= today) {
+		while (cursor <= seriesEnd) {
 			const date = new Date(cursor);
 			buckets.push({
 				key: toDateKey(date),
@@ -189,4 +195,94 @@ export function rollupTrackingMonths(
 	}
 
 	return [...months.values()];
+}
+
+/**
+ * Ensure JAN–DEC of `year` appear on the month chart, even when later months
+ * have no events yet (empty buckets keep the last cumulative total).
+ */
+export function padYearMonths(
+	points: RiskImpactSparkPoint[],
+	year: number,
+): RiskImpactSparkPoint[] {
+	const byKey = new Map(
+		rollupTrackingMonths(points).map((point) => [
+			(point.date || "").slice(0, 7),
+			point,
+		]),
+	);
+	const padded: RiskImpactSparkPoint[] = [];
+	let lastValue = 0;
+
+	for (let month = 0; month < 12; month++) {
+		const key = `${year}-${String(month + 1).padStart(2, "0")}`;
+		const existing = byKey.get(key);
+		if (existing) {
+			lastValue = existing.value;
+			padded.push(existing);
+			continue;
+		}
+		const date = new Date(year, month, 1);
+		padded.push({
+			label: monthLabel(date),
+			value: lastValue,
+			date: toDateKey(date),
+			increment: 0,
+			month: monthLabel(date),
+		});
+	}
+
+	return padded;
+}
+
+/**
+ * Ensure every week from Jan through Dec of `year` appears on the week chart.
+ * Missing future weeks keep the last cumulative total with 0 new events.
+ */
+export function padYearWeeks(
+	points: RiskImpactSparkPoint[],
+	year: number,
+): RiskImpactSparkPoint[] {
+	const yearStart = new Date(year, 0, 1);
+	const yearEnd = new Date(year, 11, 31);
+	const byKey = new Map<string, RiskImpactSparkPoint>();
+
+	for (const point of points) {
+		if (!point.date) continue;
+		const [y, m, d] = point.date.split("-").map(Number);
+		if (!y || !m) continue;
+		const weekKey = toDateKey(startOfWeek(new Date(y, m - 1, d || 1)));
+		byKey.set(weekKey, point);
+	}
+
+	const padded: RiskImpactSparkPoint[] = [];
+	let lastValue = 0;
+	const cursor = startOfWeek(yearStart);
+
+	while (cursor <= yearEnd) {
+		const key = toDateKey(cursor);
+		const existing = byKey.get(key);
+		const displayDate = cursor < yearStart ? yearStart : new Date(cursor);
+
+		if (existing) {
+			lastValue = existing.value;
+			padded.push({
+				...existing,
+				date: toDateKey(displayDate),
+				month: monthLabel(displayDate),
+			});
+		} else {
+			padded.push({
+				label: weekLabel(displayDate),
+				value: lastValue,
+				date: toDateKey(displayDate),
+				increment: 0,
+				month: monthLabel(displayDate),
+			});
+		}
+
+		cursor.setDate(cursor.getDate() + 7);
+	}
+
+	return padded;
 }

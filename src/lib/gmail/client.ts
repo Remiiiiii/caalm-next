@@ -16,7 +16,19 @@ export interface GmailMessageDetail extends GmailMessageSummary {
 	bodyText: string;
 	bodyHtml: string;
 	to: string;
+	messageIdHeader?: string;
+	references?: string;
 }
+
+export type GmailMessageAction =
+	| "archive"
+	| "unarchive"
+	| "trash"
+	| "untrash"
+	| "markRead"
+	| "markUnread"
+	| "star"
+	| "unstar";
 
 async function gmailFetch<T>(
 	accessToken: string,
@@ -109,7 +121,7 @@ export async function listMessages(
 	options: { labelIds?: string; maxResults?: number } = {},
 ): Promise<GmailMessageSummary[]> {
 	const params = new URLSearchParams({
-		maxResults: String(options.maxResults ?? 25),
+		maxResults: String(options.maxResults ?? 100),
 	});
 	if (options.labelIds) {
 		params.set("labelIds", options.labelIds);
@@ -153,6 +165,8 @@ export async function getMessage(
 	);
 	const headers = msg.payload?.headers;
 	const bodies = extractBodies(msg.payload);
+	const messageIdHeader = getHeader(headers, "Message-ID") || getHeader(headers, "Message-Id");
+	const references = getHeader(headers, "References");
 
 	return {
 		id: msg.id,
@@ -165,12 +179,96 @@ export async function getMessage(
 		unread: (msg.labelIds || []).includes("UNREAD"),
 		bodyText: bodies.text,
 		bodyHtml: bodies.html,
+		messageIdHeader: messageIdHeader || undefined,
+		references: references || undefined,
 	};
+}
+
+/** Apply label add/remove — powers archive, read/unread, star. */
+export async function modifyMessageLabels(
+	accessToken: string,
+	messageId: string,
+	options: { addLabelIds?: string[]; removeLabelIds?: string[] },
+): Promise<void> {
+	await gmailFetch(accessToken, `/messages/${encodeURIComponent(messageId)}/modify`, {
+		method: "POST",
+		body: JSON.stringify({
+			addLabelIds: options.addLabelIds || [],
+			removeLabelIds: options.removeLabelIds || [],
+		}),
+	});
+}
+
+export async function trashMessage(
+	accessToken: string,
+	messageId: string,
+): Promise<void> {
+	await gmailFetch(accessToken, `/messages/${encodeURIComponent(messageId)}/trash`, {
+		method: "POST",
+	});
+}
+
+export async function untrashMessage(
+	accessToken: string,
+	messageId: string,
+): Promise<void> {
+	await gmailFetch(accessToken, `/messages/${encodeURIComponent(messageId)}/untrash`, {
+		method: "POST",
+	});
+}
+
+export async function applyMessageAction(
+	accessToken: string,
+	messageId: string,
+	action: GmailMessageAction,
+): Promise<void> {
+	switch (action) {
+		case "archive":
+			await modifyMessageLabels(accessToken, messageId, {
+				removeLabelIds: ["INBOX"],
+			});
+			return;
+		case "unarchive":
+			await modifyMessageLabels(accessToken, messageId, {
+				addLabelIds: ["INBOX"],
+			});
+			return;
+		case "trash":
+			await trashMessage(accessToken, messageId);
+			return;
+		case "untrash":
+			await untrashMessage(accessToken, messageId);
+			return;
+		case "markRead":
+			await modifyMessageLabels(accessToken, messageId, {
+				removeLabelIds: ["UNREAD"],
+			});
+			return;
+		case "markUnread":
+			await modifyMessageLabels(accessToken, messageId, {
+				addLabelIds: ["UNREAD"],
+			});
+			return;
+		case "star":
+			await modifyMessageLabels(accessToken, messageId, {
+				addLabelIds: ["STARRED"],
+			});
+			return;
+		case "unstar":
+			await modifyMessageLabels(accessToken, messageId, {
+				removeLabelIds: ["STARRED"],
+			});
+			return;
+		default: {
+			const _exhaustive: never = action;
+			throw new Error(`Unknown action: ${_exhaustive}`);
+		}
+	}
 }
 
 export async function listDrafts(
 	accessToken: string,
-	maxResults = 25,
+	maxResults = 100,
 ): Promise<GmailMessageSummary[]> {
 	const list = await gmailFetch<{ drafts?: { id: string; message: { id: string; threadId: string } }[] }>(
 		accessToken,
@@ -211,11 +309,22 @@ export async function createDraft(
 
 export async function sendMessage(
 	accessToken: string,
-	options: { to: string; subject: string; body: string; fromEmail?: string },
+	options: {
+		to: string;
+		subject: string;
+		body: string;
+		fromEmail?: string;
+		threadId?: string;
+		inReplyTo?: string;
+		references?: string;
+	},
 ): Promise<{ id: string }> {
 	const raw = buildRawEmail(options);
 	return gmailFetch<{ id: string }>(accessToken, "/messages/send", {
 		method: "POST",
-		body: JSON.stringify({ raw }),
+		body: JSON.stringify({
+			raw,
+			...(options.threadId ? { threadId: options.threadId } : {}),
+		}),
 	});
 }

@@ -22,9 +22,8 @@ export default function LicensesSavedViews() {
 			<PopoverTrigger asChild>
 				<Button
 					type="button"
-					variant="outline"
-					size="sm"
-					className="px-3 border-slate-200 text-slate-700 hover:bg-blue-50 hover:border-blue-300 cursor-pointer transition-all duration-200"
+					variant="ghost"
+					className="btn-primary border-0 shadow-none focus-visible:ring-0"
 				>
 					<Bookmark className="h-4 w-4" />
 					<span className="hidden sm:inline">Views</span>

@@ -104,29 +104,16 @@ export function NavItemIcon({
 		height: `${resolvedHeight}px`,
 	} as const;
 
-	// Static PNGs from /public bypass next/image so the exact file is shown (no optimizer cache).
-	if (iconConfig.src.endsWith(".png")) {
-		return (
-			<img
-				src={iconConfig.src}
-				alt=""
-				width={resolvedWidth}
-				height={resolvedHeight}
-				className="shrink-0 max-w-none object-contain"
-				style={sizeStyle}
-			/>
-		);
-	}
-
 	return (
 		<Image
 			src={iconConfig.src}
 			alt=""
 			width={resolvedWidth}
 			height={resolvedHeight}
-			priority={priority}
-			fetchPriority={priority ? "high" : "auto"}
+			priority={priority || iconConfig.src.endsWith(".png")}
+			fetchPriority={priority || iconConfig.src.endsWith(".png") ? "high" : "auto"}
 			loading="eager"
+			unoptimized={iconConfig.src.endsWith(".png")}
 			className="shrink-0 max-w-none object-contain"
 			style={sizeStyle}
 		/>

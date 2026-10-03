@@ -75,7 +75,6 @@ export default function ApprovalsFilter({
 			<SheetTrigger asChild>
 				<Button
 					variant="outline"
-					size="sm"
 					className="primary-btn px-3 sm:px-4 cursor-pointer"
 				>
 					<Filter className="w-4 h-4" />
@@ -262,7 +261,6 @@ export default function ApprovalsFilter({
 							Clear all
 						</Button>
 						<Button
-							size="sm"
 							className="primary-btn px-3 sm:px-4 cursor-pointer"
 							onClick={() => setOpen(false)}
 						>

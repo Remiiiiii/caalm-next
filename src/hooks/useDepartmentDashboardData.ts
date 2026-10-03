@@ -1,10 +1,10 @@
-import { useMemo } from "react";
 import useSWR from "swr";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { useClientCachedFallback } from "@/hooks/useClientCachedFallback";
 import type { DepartmentDashboardData } from "@/lib/dashboard/department-dashboard.types";
 import { fetcher } from "@/lib/swr-config";
-import { getCachedData, setCachedData } from "@/lib/utils/client-cache";
+import { setCachedData } from "@/lib/utils/client-cache";
 
 interface DepartmentDashboardResponse {
 	success: boolean;
@@ -24,10 +24,8 @@ export function useDepartmentDashboardData(division?: string) {
 			? `/api/dashboard/department?orgId=${orgId || "default_organization"}&division=${encodeURIComponent(resolvedDivision)}`
 			: null;
 
-	const fallbackData = useMemo(() => {
-		if (!url || typeof window === "undefined") return undefined;
-		return getCachedData<DepartmentDashboardResponse>(url) ?? undefined;
-	}, [url]);
+	const fallbackData =
+		useClientCachedFallback<DepartmentDashboardResponse>(url);
 
 	const { data, error, isLoading, mutate } =
 		useSWR<DepartmentDashboardResponse>(url, fetcher, {

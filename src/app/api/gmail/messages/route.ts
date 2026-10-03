@@ -7,13 +7,13 @@ export async function GET(request: NextRequest) {
 	if (!access.ok) return access.response;
 
 	const { searchParams } = new URL(request.url);
-	const maxResults = Number(searchParams.get("maxResults") || "25");
+	const maxResults = Number(searchParams.get("maxResults") || "100");
 	const labelIds = searchParams.get("labelIds") || "INBOX";
 
 	try {
 		const messages = await listMessages(access.accessToken, {
 			labelIds,
-			maxResults: Number.isFinite(maxResults) ? maxResults : 25,
+			maxResults: Number.isFinite(maxResults) ? maxResults : 100,
 		});
 		return NextResponse.json({ messages, email: access.email });
 	} catch (error) {

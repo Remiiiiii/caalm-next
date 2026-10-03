@@ -104,6 +104,13 @@ function periodStart(period: RiskImpactPeriod): Date {
 	if (period === "ytd") {
 		return new Date(now.getFullYear(), 0, 1);
 	}
+	if (period === "month") {
+		return new Date(now.getFullYear(), now.getMonth(), 1);
+	}
+	if (period === "quarter") {
+		const quarter = Math.floor(now.getMonth() / 3);
+		return new Date(now.getFullYear(), quarter * 3, 1);
+	}
 	const days = period === "last30" ? 30 : 90;
 	const start = new Date(now);
 	start.setDate(start.getDate() - days);
@@ -112,8 +119,16 @@ function periodStart(period: RiskImpactPeriod): Date {
 }
 
 function periodLabel(period: RiskImpactPeriod): string {
-	const year = new Date().getFullYear();
+	const now = new Date();
+	const year = now.getFullYear();
 	if (period === "ytd") return `${year} year to date`;
+	if (period === "month") {
+		return now.toLocaleString("en-US", { month: "long", year: "numeric" });
+	}
+	if (period === "quarter") {
+		const quarter = Math.floor(now.getMonth() / 3) + 1;
+		return `Q${quarter} ${year}`;
+	}
 	if (period === "last30") return "Last 30 days";
 	return "Last 90 days";
 }
@@ -239,9 +254,13 @@ function buildTrackingNote(input: {
 	const yearPhrase =
 		input.period === "ytd"
 			? `in ${year}`
-			: input.period === "last30"
-				? "in the last 30 days"
-				: "in the last 90 days";
+			: input.period === "month"
+				? "this month"
+				: input.period === "quarter"
+					? "this quarter"
+					: input.period === "last30"
+						? "in the last 30 days"
+						: "in the last 90 days";
 
 	if (!input.hasContracts) {
 		return "Contract monitoring is unavailable for your account. Ask an admin to grant contracts.view so CAALM can track risk averted.";
@@ -270,9 +289,13 @@ function buildNarrative(input: {
 	const yearPhrase =
 		input.period === "ytd"
 			? "this year"
-			: input.period === "last30"
-				? "in the last 30 days"
-				: "in the last 90 days";
+			: input.period === "month"
+				? "this month"
+				: input.period === "quarter"
+					? "this quarter"
+					: input.period === "last30"
+						? "in the last 30 days"
+						: "in the last 90 days";
 
 	const parts: string[] = [
 		`Contract and grant risk averted ${yearPhrase}: ${input.primaryFormatted}.`,

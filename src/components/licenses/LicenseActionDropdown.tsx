@@ -60,13 +60,13 @@ const getStatusBadgeClasses = (status: string): string => {
 	const normalized = status?.toLowerCase?.() ?? "";
 	switch (normalized) {
 		case "active":
-			return "bg-[#ccf3e9] text-[#3dd9b3] border border-[#3dd9b3]/20 text-xs rounded-xl font-medium px-2 py-1";
+			return "bg-[#ccf3e9] text-[#3dd9b3] border border-[#3dd9b3]/20 text-xs rounded-full font-medium px-2.5 py-0.5";
 		case "inactive":
-			return "bg-[#fff1f1] text-[#fe8787] border border-[#fe8787]/20 text-xs rounded-xl font-medium px-2 py-1";
+			return "bg-[#fff1f1] text-[#fe8787] border border-[#fe8787]/20 text-xs rounded-full font-medium px-2.5 py-0.5";
 		case "pending":
-			return "bg-[#fef6f0] text-[#ebc620] border border-[#ebc620]/20 text-xs rounded-xl font-medium px-2 py-1";
+			return "bg-[#fef6f0] text-[#ebc620] border border-[#ebc620]/20 text-xs rounded-full font-medium px-2.5 py-0.5";
 		default:
-			return "bg-gray-100 text-gray-600 border border-gray-200 text-xs rounded-xl font-medium px-2 py-1";
+			return "bg-gray-100 text-gray-600 border border-gray-200 text-xs rounded-full font-medium px-2.5 py-0.5";
 	}
 };
 

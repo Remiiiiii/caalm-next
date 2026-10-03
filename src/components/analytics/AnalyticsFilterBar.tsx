@@ -46,7 +46,7 @@ export function AnalyticsFilterBar({
 						score on this page.
 					</p>
 				</div>
-				<div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+				<div className="platform-overview-actions flex flex-wrap items-center gap-x-4 gap-y-2">
 					<Select
 						value={period}
 						onValueChange={(v) => onPeriodChange(v as AuditPeriod)}
@@ -75,7 +75,7 @@ export function AnalyticsFilterBar({
 					{canExport && onExport ? (
 						<Button
 							variant="outline"
-							className="primary-btn px-3 sm:px-4 w-full sm:w-auto sm:ml-0"
+							className="primary-btn w-full sm:w-auto sm:ml-0"
 							onClick={onExport}
 						>
 							<SquareArrowRightExit className="h-4 w-4" />

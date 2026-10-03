@@ -43,6 +43,8 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { useOrgTimezone } from "@/hooks/useOrgTimezone";
 import { isFileShareNotification } from "@/lib/files/fileShareNotification";
 import { formatInTimezone } from "@/lib/timezone";
+import { GmailActionTooltip } from "@/components/gmail/GmailActionTooltip";
+import { SegmentedToggle } from "@/components/ui/segmented-toggle";
 import NotificationSettings from "./NotificationSettings";
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
@@ -344,6 +346,9 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 	const [sortBy, setSortBy] = useState<string>("date");
 	const [manualOrderIds, setManualOrderIds] = useState<string[] | null>(null);
 	const [showSettings, setShowSettings] = useState(false);
+	const [bulkMarkAction, setBulkMarkAction] = useState<"read" | "unread">(
+		"read",
+	);
 	const [error, setError] = useState<string | null>(null);
 	const { toast } = useToast();
 	const router = useRouter();
@@ -622,23 +627,15 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 							</DialogTitle>
 						</div>
 						<div className="flex items-center gap-2">
-							<Button
-								size="sm"
-								onClick={handleMarkAllAsRead}
-								disabled={!notifications.some((n: Notification) => !n.read)}
-								className="btn-primary px-3 sm:px-4 text-sm"
-							>
-								<Check className="w-4 h-4" />
-								Mark all read
-							</Button>
-							<Button
-								variant="ghost"
-								size="sm"
+							{/* Button forces [&_svg]:size-4 — override so the gear bump is visible */}
+							<button
+								type="button"
 								onClick={() => setShowSettings(true)}
-								className="text-sm text-slate-700 hover:text-slate-800"
+								aria-label="Notification settings"
+								className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-md text-slate-700 transition-colors duration-200 hover:bg-white/70 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
 							>
-								<Settings className="w-4 h-4 text-slate-700" />
-							</Button>
+								<Settings className="h-6 w-6 shrink-0" aria-hidden />
+							</button>
 						</div>
 					</div>
 					<p
@@ -822,33 +819,41 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 
 						{/* Bulk Actions */}
 						{selected.length > 0 && (
-							<div className="flex flex-wrap items-center justify-center gap-2 p-3 rounded-lg border-2 border-blue-300 bg-white">
-								<Button
-									size="sm"
-									onClick={() => handleMarkAsRead(selected)}
-									disabled={loading}
-									className="primary-btn px-3 sm:px-4 flex items-center gap-2"
-								>
-									<Check className="w-4 h-4" />
-									Mark as Read ({selected.length})
-								</Button>
-								<Button
-									size="sm"
-									onClick={() => handleMarkAsUnread(selected)}
-									disabled={loading}
-									variant="outline"
-									className="primary-btn px-3 sm:px-4 flex items-center gap-2"
-								>
-									<Check className="w-4 h-4" />
-									Mark as Unread ({selected.length})
-								</Button>
+							<div className="flex flex-wrap items-center justify-end gap-3">
+								<SegmentedToggle
+									value={bulkMarkAction}
+									onChange={(value) => {
+										setBulkMarkAction(value);
+										if (value === "read") {
+											handleMarkAsRead(selected);
+										} else {
+											handleMarkAsUnread(selected);
+										}
+									}}
+									ariaLabel="Mark selected notifications"
+									className="rounded-xl border-0 bg-slate-100 p-1"
+									tabs={[
+										{
+											value: "read",
+											label: "Mark as read",
+											icon: Check,
+											count: selected.length,
+										},
+										{
+											value: "unread",
+											label: "Mark as unread",
+											icon: Check,
+											count: selected.length,
+										},
+									]}
+								/>
 								<Button
 									onClick={() => handleDeleteNotifications(selected)}
 									disabled={loading}
 									variant="outline"
 									className="delete-btn px-3 sm:px-4"
 								>
-									<Trash2 className="w-4 h-4" />
+									<Trash2 className="h-4 w-4" />
 									Delete ({selected.length})
 								</Button>
 							</div>
@@ -912,19 +917,37 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 												<Fragment key={notification.$id}>
 													{showGroupHeader ? (
 														<div
-															className="flex items-center gap-2 pt-1 pb-0.5"
+															className="flex items-center justify-between gap-3 pt-1 pb-0.5"
 															data-testid="notification-type-group"
 														>
-															<div
-																className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${getTypeIconShell(notification.type)}`}
-															>
-																<span className="[&>svg]:h-4 [&>svg]:w-4">
-																	{typeConfig.icon}
+															<div className="flex min-w-0 items-center gap-2">
+																<div
+																	className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${getTypeIconShell(notification.type)}`}
+																>
+																	<span className="[&>svg]:h-4 [&>svg]:w-4">
+																		{typeConfig.icon}
+																	</span>
+																</div>
+																<span className="text-sm font-semibold text-slate-700">
+																	{typeConfig.label}
 																</span>
 															</div>
-															<span className="text-sm font-semibold text-slate-700">
-																{typeConfig.label}
-															</span>
+															{/* Mark all only on the first type group; hide during bulk select */}
+															{index === 0 && selected.length === 0 ? (
+																<Button
+																	size="sm"
+																	onClick={handleMarkAllAsRead}
+																	disabled={
+																		!notifications.some(
+																			(n: Notification) => !n.read,
+																		)
+																	}
+																	className="btn-primary shrink-0 px-3 sm:px-4 text-sm"
+																>
+																	<Check className="w-4 h-4" />
+																	Mark all read
+																</Button>
+															) : null}
 														</div>
 													) : null}
 													<SortableNotificationItem
@@ -954,20 +977,24 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 					className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4"
 					data-testid="pagination"
 				>
-					<label className="text-xs text-slate-700">
-						Items per page:
-						<select
-							className="ml-2 rounded border-[0.25px] border-slate-300 bg-white px-2 py-1"
-							value={perPage}
-							onChange={(e) => setPerPage(Number(e.target.value))}
+					<div className="flex items-center gap-2 text-xs text-slate-700">
+						<span>Items per page:</span>
+						<Select
+							value={String(perPage)}
+							onValueChange={(value) => setPerPage(Number(value))}
 						>
-							{[5, 10, 20, 50].map((n) => (
-								<option key={n} value={n}>
-									{n}
-								</option>
-							))}
-						</select>
-					</label>
+							<SelectTrigger className="h-9 w-[4.5rem] border-[0.25px] border-slate-300 bg-white text-xs">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								{[5, 10, 20, 50].map((n) => (
+									<SelectItem key={n} value={String(n)} className="text-xs">
+										{n}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					</div>
 					<nav
 						aria-label="Notifications pagination"
 						className="ml-auto flex flex-wrap items-center gap-3 text-xs text-slate-600"
@@ -1184,14 +1211,15 @@ const SortableNotificationItem: React.FC<SortableNotificationItemProps> = ({
 						<Separator className="my-2" />
 						{pageLink ? (
 							<div className="mt-3 flex justify-between">
-								<div
-									{...attributes}
-									{...listeners}
-									className="cursor-grab active:cursor-grabbing rounded p-1 transition-colors hover:bg-slate-100"
-									title="Drag to reorder"
-								>
-									<GripVertical className="h-6 w-6 text-slate-400 group-hover:text-[#0f5384] transition-colors" />
-								</div>
+								<GmailActionTooltip label="Drag to reorder" side="top">
+									<div
+										{...attributes}
+										{...listeners}
+										className="cursor-grab active:cursor-grabbing rounded-md p-1 transition-colors hover:bg-slate-100"
+									>
+										<GripVertical className="h-6 w-6 text-slate-400 transition-colors group-hover:text-[#0f5384]" />
+									</div>
+								</GmailActionTooltip>
 								<Button
 									size="sm"
 									onClick={() => onActionNavigate(pageLink.url)}

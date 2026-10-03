@@ -121,13 +121,12 @@ const LicensesFilter: React.FC<LicensesFilterProps> = ({
 			<SheetTrigger asChild>
 				<Button
 					variant="outline"
-					size="sm"
-					className="primary-btn px-3 sm:px-4 cursor-pointer"
+					className="primary-btn cursor-pointer"
 					aria-label={
 						activeCount > 0 ? `Filter, ${activeCount} active` : "Filter"
 					}
 				>
-					<Filter className="w-4 h-4" />
+					<Filter className="h-4 w-4" />
 					<span className="hidden sm:inline">Filter</span>
 					{activeCount > 0 && (
 						<Badge
@@ -476,7 +475,6 @@ const LicensesFilter: React.FC<LicensesFilterProps> = ({
 							Clear all
 						</Button>
 						<Button
-							size="sm"
 							className="primary-btn px-3 sm:px-4 cursor-pointer"
 							onClick={() => setOpen(false)}
 						>

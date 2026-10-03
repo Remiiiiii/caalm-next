@@ -6,13 +6,13 @@ import {
 	Building2,
 	Crown,
 	Eye,
-	HandCoins,
 	Lock,
 	Megaphone,
 	Server,
 } from "lucide-react";
 import Link from "next/link";
 import { Fragment } from "react";
+import { MobileDashboardRoleSwitcher } from "@/components/mobile/MobileDashboardRoleSwitcher";
 import { NavItemIcon } from "@/components/sidebar/NavItemIcon";
 import { SectionNavIcon } from "@/components/sidebar/SectionNavIcon";
 import {
@@ -29,7 +29,12 @@ import {
 } from "@/components/ui/tooltip";
 import type { NavigationItem } from "@/constants/navigation-permissions";
 import { sectionTourId } from "@/lib/demo/tour/sectionTourId";
+import { DASHBOARD_SWITCH_LINKS } from "@/lib/navigation/dashboard-links";
 import { cn } from "@/lib/utils";
+
+const DASHBOARD_SWITCHER_NAMES = new Set(
+	DASHBOARD_SWITCH_LINKS.map((link) => link.name),
+);
 
 export type NavSection = {
 	header: string;
@@ -68,14 +73,14 @@ function NavItemLabels({
 			className={cn(
 				"flex min-w-0 flex-1 items-center gap-2 font-medium",
 				mobile
-					? cn("truncate text-[15px]", active && "text-white")
+					? cn("truncate text-[15px]", active ? "text-white" : "text-slate-700")
 					: "text-xs text-slate-700 px-2",
 				item.name === "Admin" && !mobile && "-ml-px",
 			)}
 		>
 			<span
 				style={
-					mobile && active
+					mobile
 						? { color: "inherit" }
 						: {
 								color:
@@ -177,15 +182,7 @@ function NavItemIcons({
 					aria-hidden
 				/>
 			)}
-			{item.name === "Funding & Retention" && (
-				<HandCoins
-					className="h-5 w-5 shrink-0"
-					style={{
-						color: mobile && active ? "white" : NAV_ICON_FILL_GREY,
-					}}
-					aria-hidden
-				/>
-			)}
+
 			{item.name === "Campaigns" && (
 				<Megaphone
 					className="h-5 w-5 shrink-0"
@@ -198,11 +195,7 @@ function NavItemIcons({
 			{item.name !== "Campaigns" &&
 				(() => {
 					const iconConfig = ITEM_ICONS[item.name];
-					if (
-						!iconConfig &&
-						item.name !== "Documents" &&
-						item.name !== "Funding & Retention"
-					) {
+					if (!iconConfig && item.name !== "Documents") {
 						return null;
 					}
 					return (
@@ -257,204 +250,226 @@ export function SidebarNavSections({
 		);
 	}
 
-	const sections = groupedNav.map((section) => {
-				if (section.items.length === 0) return null;
-				if (section.header === "Settings") return null;
+	const mobileDashboardSwitcherItems = mobile
+		? (groupedNav.find((s) => s.header === "Dashboard")?.items ?? []).filter(
+				(item) => DASHBOARD_SWITCHER_NAMES.has(item.name),
+			)
+		: [];
 
-				if (mobile) {
-					return (
-						<li key={section.header}>
-							<p className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+	const sections = groupedNav.map((section) => {
+		if (section.items.length === 0) return null;
+		if (section.header === "Settings") return null;
+
+		const sectionItems =
+			mobile && section.header === "Dashboard"
+				? section.items.filter(
+						(item) => !DASHBOARD_SWITCHER_NAMES.has(item.name),
+					)
+				: section.items;
+
+		if (mobile && sectionItems.length === 0) return null;
+
+		if (mobile) {
+			return (
+				<li key={section.header}>
+					<p className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+						{section.header}
+					</p>
+					<ul className="mb-4 flex flex-col gap-1 px-1">
+						{sectionItems.map((item, index) => {
+							const active = item.url
+								? isNavItemActive(pathname, item.url, "/analytics")
+								: false;
+							return (
+								<li
+									key={`${section.header}-${item.name}-${item.url || index}`}
+									className={cn("mobile-nav-item", active && "shad-active")}
+								>
+									<Link
+										href={item.url || ""}
+										className="flex w-full items-center gap-3"
+										onClick={() => onNavigate?.()}
+									>
+										<NavItemIcons
+											sectionHeader={section.header}
+											item={item}
+											mobile
+											active={active}
+										/>
+										<NavItemLabels
+											item={item}
+											isViewer={isViewer}
+											shouldShowLock={shouldShowLock}
+											active={active}
+											mobile
+										/>
+									</Link>
+								</li>
+							);
+						})}
+					</ul>
+				</li>
+			);
+		}
+
+		return (
+			<Fragment key={section.header}>
+				<div className="mb-3">
+					<li
+						className="sidebar-section-header mb-0 lg:mb-1 list-none"
+						data-tour={sectionTourId(section.header)}
+					>
+						<span className="flex items-center gap-2">
+							{section.header === "Dashboard" ? (
+								<span className="flex items-center gap-2">
+									<SectionNavIcon header="Dashboard" priority />
+									{primaryRole ? (
+										<TooltipProvider>
+											<Tooltip>
+												<TooltipTrigger asChild>
+													<span className="sr-only">{primaryRole}</span>
+												</TooltipTrigger>
+												<TooltipContent>
+													<p>
+														You have {permissions.length} permissions as{" "}
+														{primaryRole}. View details →
+													</p>
+												</TooltipContent>
+											</Tooltip>
+										</TooltipProvider>
+									) : null}
+								</span>
+							) : (
+								<SectionNavIcon
+									header={section.header}
+									priority={section.header === "Calendar"}
+								/>
+							)}
+							<span className="relative z-10 text-sm font-semibold sidebar-gradient-text">
 								{section.header}
-							</p>
-							<ul className="mb-4 flex flex-col gap-1 px-1">
-								{section.items.map((item, index) => {
-									const active = item.url
-										? isNavItemActive(pathname, item.url, "/analytics")
-										: false;
-									return (
-										<li
-											key={`${section.header}-${item.name}-${item.url || index}`}
-											className={cn("mobile-nav-item", active && "shad-active")}
-										>
+							</span>
+						</span>
+					</li>
+					<div className="relative ml-3">
+						<ul className="relative z-10 flex flex-col gap-1">
+							{section.items.map((item, index) => {
+								const active = item.url
+									? isNavItemActive(pathname, item.url, "/analytics")
+									: false;
+
+								return (
+									<Fragment
+										key={`${section.header}-${item.name}-${item.url || index}`}
+									>
+										<li className="relative flex items-center">
+											{index < section.items.length + 1 && (
+												<span
+													className="absolute left-0 top-0 h-6 w-4 border-l border-[#BFBFBF]"
+													style={{ zIndex: 0 }}
+												/>
+											)}
+											<span className="absolute left-0 top-0 h-4 w-4 border-l border-b border-[#BFBFBF] rounded-bl-xl" />
 											<Link
 												href={item.url || ""}
-												className="flex w-full items-center gap-3"
-												onClick={() => onNavigate?.()}
+												className={cn(
+													"ml-4 flex w-full cursor-pointer items-center gap-1 rounded-md border border-transparent px-1.5 py-1 transition-all duration-200",
+													"hover:border-blue-300 hover:bg-blue-50",
+													"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
+													active && "border-blue/20 bg-blue/10",
+													isViewer && item.viewerReadOnly && "opacity-75",
+												)}
+												onMouseEnter={() => {
+													if (item.url?.includes("/analytics")) {
+														const departmentMatch =
+															item.url.match(/\/analytics\/([^/]+)/);
+														if (departmentMatch && onPrefetchAnalytics) {
+															onPrefetchAnalytics(departmentMatch[1]);
+														}
+													}
+												}}
 											>
 												<NavItemIcons
 													sectionHeader={section.header}
 													item={item}
-													mobile
+													mobile={false}
 													active={active}
 												/>
-												<NavItemLabels
-													item={item}
-													isViewer={isViewer}
-													shouldShowLock={shouldShowLock}
-													active={active}
-													mobile
-												/>
+												<p
+													className={cn(
+														"flex items-center gap-2 px-2 text-xs font-medium text-slate-700",
+														item.name === "Admin" && "-ml-px",
+													)}
+												>
+													<span
+														style={{
+															color:
+																ITEM_ICONS[item.name]?.color ??
+																DASHBOARD_ITEM_COLORS[item.name],
+														}}
+													>
+														{item.name}
+													</span>
+													{shouldShowLock(item) && (
+														<TooltipProvider>
+															<Tooltip>
+																<TooltipTrigger asChild>
+																	<span className="flex items-center">
+																		<Lock className="h-3 w-3 text-gray-500" />
+																	</span>
+																</TooltipTrigger>
+																<TooltipContent>
+																	<p>
+																		This feature requires{" "}
+																		{item.permissions
+																			.map((p) => p.split(".").pop())
+																			.join(" or ")}{" "}
+																		permission. Contact your administrator to
+																		request access.
+																	</p>
+																</TooltipContent>
+															</Tooltip>
+														</TooltipProvider>
+													)}
+													{isViewer && item.viewerReadOnly && (
+														<TooltipProvider>
+															<Tooltip>
+																<TooltipTrigger asChild>
+																	<span className="flex items-center text-[10px] text-gray-500">
+																		(read-only)
+																	</span>
+																</TooltipTrigger>
+																<TooltipContent>
+																	<p>
+																		You have read-only access as an External
+																		Auditor. You cannot modify this data.
+																	</p>
+																</TooltipContent>
+															</Tooltip>
+														</TooltipProvider>
+													)}
+												</p>
 											</Link>
 										</li>
-									);
-								})}
-							</ul>
-						</li>
-					);
-				}
-
-				return (
-					<Fragment key={section.header}>
-						<div className="mb-3">
-							<li
-								className="sidebar-section-header mb-0 lg:mb-1 list-none"
-								data-tour={sectionTourId(section.header)}
-							>
-								<span className="flex items-center gap-2">
-									{section.header === "Dashboard" ? (
-										<span className="flex items-center gap-2">
-											<SectionNavIcon header="Dashboard" priority />
-											{primaryRole ? (
-												<TooltipProvider>
-													<Tooltip>
-														<TooltipTrigger asChild>
-															<span className="sr-only">{primaryRole}</span>
-														</TooltipTrigger>
-														<TooltipContent>
-															<p>
-																You have {permissions.length} permissions as{" "}
-																{primaryRole}. View details →
-															</p>
-														</TooltipContent>
-													</Tooltip>
-												</TooltipProvider>
-											) : null}
-										</span>
-									) : (
-										<SectionNavIcon
-											header={section.header}
-											priority={section.header === "Calendar"}
-										/>
-									)}
-									<span className="relative z-10 text-sm font-semibold sidebar-gradient-text">
-										{section.header}
-									</span>
-								</span>
-							</li>
-							<div className="relative ml-3">
-								<ul className="relative z-10 flex flex-col gap-1">
-								{section.items.map((item, index) => {
-									const active = item.url
-										? isNavItemActive(pathname, item.url, "/analytics")
-										: false;
-
-									return (
-										<Fragment
-											key={`${section.header}-${item.name}-${item.url || index}`}
-										>
-											<li className="relative flex items-center">
-												{index < section.items.length + 1 && (
-													<span
-														className="absolute left-0 top-0 h-6 w-4 border-l border-[#BFBFBF]"
-														style={{ zIndex: 0 }}
-													/>
-												)}
-												<span className="absolute left-0 top-0 h-4 w-4 border-l border-b border-[#BFBFBF] rounded-bl-xl" />
-												<Link
-													href={item.url || ""}
-													className={cn(
-														"ml-4 flex w-full cursor-pointer items-center gap-1 rounded-md border border-transparent px-1.5 py-1 transition-all duration-200",
-														"hover:border-blue-300 hover:bg-blue-50",
-														"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
-														active && "border-blue/20 bg-blue/10",
-														isViewer && item.viewerReadOnly && "opacity-75",
-													)}
-													onMouseEnter={() => {
-														if (item.url?.includes("/analytics")) {
-															const departmentMatch = item.url.match(
-																/\/analytics\/([^/]+)/,
-															);
-															if (departmentMatch && onPrefetchAnalytics) {
-																onPrefetchAnalytics(departmentMatch[1]);
-															}
-														}
-													}}
-												>
-													<NavItemIcons
-														sectionHeader={section.header}
-														item={item}
-														mobile={false}
-														active={active}
-													/>
-													<p
-														className={cn(
-															"flex items-center gap-2 px-2 text-xs font-medium text-slate-700",
-															item.name === "Admin" && "-ml-px",
-														)}
-													>
-														<span
-															style={{
-																color:
-																	ITEM_ICONS[item.name]?.color ??
-																	DASHBOARD_ITEM_COLORS[item.name],
-															}}
-														>
-															{item.name}
-														</span>
-														{shouldShowLock(item) && (
-															<TooltipProvider>
-																<Tooltip>
-																	<TooltipTrigger asChild>
-																		<span className="flex items-center">
-																			<Lock className="h-3 w-3 text-gray-500" />
-																		</span>
-																	</TooltipTrigger>
-																	<TooltipContent>
-																		<p>
-																			This feature requires{" "}
-																			{item.permissions
-																				.map((p) => p.split(".").pop())
-																				.join(" or ")}{" "}
-																			permission. Contact your administrator to
-																			request access.
-																		</p>
-																	</TooltipContent>
-																</Tooltip>
-															</TooltipProvider>
-														)}
-														{isViewer && item.viewerReadOnly && (
-															<TooltipProvider>
-																<Tooltip>
-																	<TooltipTrigger asChild>
-																		<span className="flex items-center text-[10px] text-gray-500">
-																			(read-only)
-																		</span>
-																	</TooltipTrigger>
-																	<TooltipContent>
-																		<p>
-																			You have read-only access as an External
-																			Auditor. You cannot modify this data.
-																		</p>
-																	</TooltipContent>
-																</Tooltip>
-															</TooltipProvider>
-														)}
-													</p>
-												</Link>
-											</li>
-										</Fragment>
-									);
-								})}
-								</ul>
-							</div>
-						</div>
-					</Fragment>
-				);
-			});
+									</Fragment>
+								);
+							})}
+						</ul>
+					</div>
+				</div>
+			</Fragment>
+		);
+	});
 
 	if (mobile) {
-		return <ul className="mobile-nav-list">{sections}</ul>;
+		return (
+			<>
+				<MobileDashboardRoleSwitcher
+					items={mobileDashboardSwitcherItems}
+					onNavigate={onNavigate}
+				/>
+				<ul className="mobile-nav-list">{sections}</ul>
+			</>
+		);
 	}
 
 	return <div className="flex w-full flex-col">{sections}</div>;

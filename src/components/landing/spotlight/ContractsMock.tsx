@@ -473,7 +473,7 @@ export default function ContractsMock() {
 											<td className="px-2 py-2">
 												<span
 													className={cn(
-														"inline-block whitespace-nowrap rounded-md border px-1.5 py-0.5 text-[9px] sm:text-[10px] font-medium",
+														"inline-flex items-center whitespace-nowrap rounded-full border px-1.5 py-0.5 text-[9px] sm:text-[10px] font-medium",
 														STATUS_STYLES[row.statusTone],
 													)}
 												>

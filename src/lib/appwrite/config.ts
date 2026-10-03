@@ -269,6 +269,11 @@ export const appwriteConfig = {
 		"69f3c901001f4e8c2a02",
 	),
 
+	outlookMailIntegrationsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_OUTLOOK_MAIL_INTEGRATIONS_COLLECTION",
+		"69f4a101001f4e8c2a03",
+	),
+
 	googleClientId: process.env.GOOGLE_CLIENT_ID,
 	googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
 	googleGmailRedirectUri: process.env.GOOGLE_GMAIL_REDIRECT_URI,

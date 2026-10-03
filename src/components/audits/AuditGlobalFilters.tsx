@@ -36,7 +36,7 @@ export function AuditGlobalFilters({
 	return (
 		<Card className="glass-card mb-6">
 			<div className="glass-card-cap" />
-			<div className="flex flex-col gap-4 p-4 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
+			<div className="platform-overview-actions flex flex-col gap-4 p-4 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
 				<div className="flex flex-row items-center flex-1 gap-3 min-w-0">
 					<Select
 						value={period}
@@ -65,7 +65,7 @@ export function AuditGlobalFilters({
 				{canExport && onExport ? (
 					<Button
 						variant="outline"
-						className="primary-btn px-3 sm:px-4 w-full sm:w-auto shrink-0"
+						className="primary-btn w-full sm:w-auto shrink-0"
 						onClick={onExport}
 					>
 						<SquareArrowRightExit className="h-4 w-4" />

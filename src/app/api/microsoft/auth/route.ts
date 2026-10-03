@@ -38,9 +38,15 @@ export async function GET(_request: NextRequest) {
 			sameSite: "lax",
 			maxAge: 600, // 10 minutes
 		});
+		cookieStore.set("microsoft-oauth-purpose", "calendar", {
+			httpOnly: true,
+			secure: process.env.NODE_ENV === "production",
+			sameSite: "lax",
+			maxAge: 600,
+		});
 
 		// Generate authorization URL
-		const authUrl = generateAuthUrl(state);
+		const authUrl = generateAuthUrl(state, "calendar");
 
 		// Redirect to Microsoft OAuth
 		return NextResponse.redirect(authUrl);

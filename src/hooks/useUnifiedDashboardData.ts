@@ -1,10 +1,10 @@
-import { useCallback, useMemo } from "react";
+import { useCallback } from "react";
 import useSWR from "swr";
 import { useAuth } from "@/contexts/AuthContext";
+import { useClientCachedFallback } from "@/hooks/useClientCachedFallback";
 import type { RiskImpactSnapshot } from "@/lib/dashboard/risk-impact.types";
 import {
 	clearCachedData,
-	getCachedData,
 	setCachedData,
 } from "@/lib/utils/client-cache";
 import type { License } from "@/types/licenses";
@@ -62,11 +62,10 @@ export const useUnifiedDashboardData = (
 		? `/api/dashboard/unified?orgId=${orgId}&userId=${effectiveUserId}&v=13`
 		: null;
 
-	// Get cached data as fallback for stale-while-revalidate
-	const fallbackData = useMemo(() => {
-		if (!url || typeof window === "undefined") return undefined;
-		return getCachedData<UnifiedDashboardDataResponse>(url) ?? undefined;
-	}, [url]);
+	// After mount only — reading localStorage during the first client paint
+	// would disagree with SSR (no cache on the server) and break hydration.
+	const fallbackData =
+		useClientCachedFallback<UnifiedDashboardDataResponse>(url);
 
 	const { data, error, isLoading, mutate } = useSWR(url, fetcher, {
 		refreshInterval: 120000, // Refresh every 2 minutes

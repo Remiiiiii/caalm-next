@@ -7,7 +7,6 @@ import {
 	Mail,
 	MessageCircleQuestionMark,
 	MoreVertical,
-	UserCog,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -49,7 +48,8 @@ export default function SidebarUserCard({
 	settingsItems,
 	compact = false,
 }: SidebarUserCardProps) {
-	const { label, isLoading, tier } = useOrgPlanSummary();
+	const { planName, isTrial, daysRemaining, isLoading, tier } =
+		useOrgPlanSummary();
 	useBillingSubscription();
 	const [planOpen, setPlanOpen] = useState(false);
 	const displayName = name?.trim() || "Account";
@@ -168,10 +168,28 @@ export default function SidebarUserCard({
 						<p className="truncate text-xs font-semibold leading-tight text-slate-700">
 							{displayName}
 						</p>
-						<div className="flex items-center gap-1">
-							<p className="min-w-0 flex-1 truncate text-xs leading-tight text-slate-600">
-								{isLoading ? "Loading plan…" : label}
-							</p>
+						<div className="flex items-start gap-1">
+							<div className="min-w-0 flex-1">
+								{isLoading ? (
+									<p className="truncate text-xs leading-tight text-slate-600">
+										Loading plan…
+									</p>
+								) : isTrial && daysRemaining != null ? (
+									<>
+										<p className="truncate text-xs font-bold leading-tight text-slate-800">
+											{planName}
+										</p>
+										<p className="truncate text-xs leading-tight text-slate-600">
+											{daysRemaining}{" "}
+											{daysRemaining === 1 ? "day" : "days"} left in trial
+										</p>
+									</>
+								) : (
+									<p className="truncate text-xs font-bold leading-tight text-slate-800">
+										{planName}
+									</p>
+								)}
+							</div>
 							{menu}
 						</div>
 					</div>

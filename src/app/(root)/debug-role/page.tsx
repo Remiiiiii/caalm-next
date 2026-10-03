@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import AdminRoleManager from "@/components/AdminRoleManager";
-import StaticWaveBackdrop from "@/components/landing/StaticWaveBackdrop";
 
 export const metadata: Metadata = {
 	title: "Debug Role Manager | CAALM",
@@ -11,8 +10,6 @@ export const metadata: Metadata = {
 export default function DebugRolePage() {
 	return (
 		<div className="relative min-h-screen">
-			<StaticWaveBackdrop fixed muted />
-
 			{/* Main Content */}
 			<div className="relative z-10 p-6">
 				<div className="max-w-4xl mx-auto">

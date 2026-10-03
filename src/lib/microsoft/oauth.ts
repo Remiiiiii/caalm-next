@@ -16,18 +16,33 @@ export interface MicrosoftUser {
 	userPrincipalName: string;
 }
 
+export type MicrosoftOAuthPurpose = "calendar" | "mail";
+
+/** Calendar only — kept separate so Mail consent does not widen calendar tokens. */
+export const MICROSOFT_CALENDAR_SCOPES =
+	"Calendars.Read Calendars.ReadWrite offline_access User.Read";
+
+/** Mail.ReadWrite covers inbox read + archive/trash; Mail.Send for compose later. */
+export const MICROSOFT_MAIL_SCOPES =
+	"Mail.ReadWrite Mail.Send offline_access User.Read";
+
 /**
- * Generate Microsoft OAuth authorization URL
+ * Generate Microsoft OAuth authorization URL.
+ * `purpose` picks calendar vs mail scopes (like two different door keys for the same Microsoft login).
  */
-export function generateAuthUrl(state?: string): string {
-	// Use smart detection for redirect URI
+export function generateAuthUrl(
+	state?: string,
+	purpose: MicrosoftOAuthPurpose = "calendar",
+): string {
 	const redirectUri = getRedirectUri();
+	const scope =
+		purpose === "mail" ? MICROSOFT_MAIL_SCOPES : MICROSOFT_CALENDAR_SCOPES;
 
 	const params = new URLSearchParams({
 		client_id: appwriteConfig.microsoftClientId!,
 		response_type: "code",
 		redirect_uri: redirectUri,
-		scope: "Calendars.Read Calendars.ReadWrite offline_access User.Read",
+		scope,
 		response_mode: "query",
 		state: state || "default",
 	});

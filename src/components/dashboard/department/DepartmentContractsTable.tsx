@@ -17,7 +17,7 @@ import {
 import type { DepartmentContractAtRisk } from "@/lib/dashboard/department-dashboard.types";
 
 const STATUS_BADGE_BASE =
-	"h-auto py-1 whitespace-nowrap shrink-0 pointer-events-none shadow-none transition-none";
+	"h-auto rounded-full py-0.5 whitespace-nowrap shrink-0 pointer-events-none shadow-none transition-none";
 
 function StatusBadge({ status }: { status: string }) {
 	const normalized = status.toLowerCase();

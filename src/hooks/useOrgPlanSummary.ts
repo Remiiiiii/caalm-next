@@ -2,7 +2,10 @@
 
 import useSWR from "swr";
 import { useOrganization } from "@/contexts/OrganizationContext";
-import { formatSubscriptionLabel } from "@/lib/billing/entitlements";
+import {
+	formatSubscriptionLabel,
+	getSubscriptionLabelParts,
+} from "@/lib/billing/entitlements";
 
 type OrgPlanPayload = {
 	orgId: string | null;
@@ -40,17 +43,22 @@ export function useOrgPlanSummary() {
 	});
 
 	const tier = data?.subscriptionTier || "starter";
-	const label = formatSubscriptionLabel({
+	const labelInput = {
 		tier,
 		billingStatus: data?.billingStatus,
 		orgStatus: data?.orgStatus,
 		currentPeriodEnd: data?.currentPeriodEnd,
 		pilotMonths: data?.pilotMonths,
-	});
+	};
+	const label = formatSubscriptionLabel(labelInput);
+	const parts = getSubscriptionLabelParts(labelInput);
 
 	return {
 		tier,
 		label,
+		planName: parts.planName,
+		isTrial: parts.isTrial,
+		daysRemaining: parts.daysRemaining,
 		isLoading,
 		orgId: data?.orgId ?? orgId,
 	};

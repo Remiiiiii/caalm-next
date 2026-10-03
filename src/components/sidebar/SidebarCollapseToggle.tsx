@@ -18,7 +18,7 @@ type SidebarCollapseToggleProps = {
 
 export default function SidebarCollapseToggle({
 	className,
-	compact = false,
+	compact: _compact = false,
 }: SidebarCollapseToggleProps) {
 	const { isCollapsed, toggleSidebar } = useSidebarCollapse();
 	const label = isCollapsed ? "Expand sidebar" : "Collapse sidebar";
@@ -35,15 +35,14 @@ export default function SidebarCollapseToggle({
 						aria-label={label}
 						title={`${label} (Ctrl+B)`}
 						className={cn(
-							"flex items-center justify-center rounded-lg cursor-pointer",
+							"flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg",
 							"text-slate-600 hover:text-[#0f5384] hover:bg-blue/10",
 							"transition-all duration-200 border border-transparent hover:border-blue/20",
 							"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
-							compact ? "h-9 w-9" : "h-8 w-8",
 							className,
 						)}
 					>
-						<Icon className="h-4 w-4" />
+						<Icon className="h-4 w-4 shrink-0" aria-hidden />
 					</button>
 				</TooltipTrigger>
 				<TooltipContent side="right">

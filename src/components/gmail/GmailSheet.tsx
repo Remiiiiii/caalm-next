@@ -1,17 +1,24 @@
 "use client";
 
 import {
+	Archive,
 	FileText,
 	Inbox,
 	Loader2,
 	Mail,
+	MailOpen,
 	PanelRightClose,
 	PenLine,
 	RefreshCw,
+	Trash2,
+	X,
 } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import GmailComposeForm from "@/components/gmail/GmailComposeForm";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { GmailActionTooltip } from "@/components/gmail/GmailActionTooltip";
+import GmailComposeForm, {
+	type GmailComposeDraft,
+} from "@/components/gmail/GmailComposeForm";
 import GmailMessageList, {
 	type GmailListItem,
 } from "@/components/gmail/GmailMessageList";
@@ -19,6 +26,7 @@ import GmailMessageView, {
 	type GmailMessageDetailView,
 } from "@/components/gmail/GmailMessageView";
 import { Button } from "@/components/ui/button";
+import { PageIndex } from "@/components/ui/page-index";
 import { SearchField } from "@/components/ui/search-field";
 import {
 	Sheet,
@@ -26,14 +34,27 @@ import {
 	SheetHeaderIcon,
 	SheetTitle,
 } from "@/components/ui/sheet";
+import { ToastAction } from "@/components/ui/toast";
+import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
 type GmailTab = "inbox" | "drafts" | "compose";
+type MessageAction =
+	| "archive"
+	| "unarchive"
+	| "trash"
+	| "untrash"
+	| "markRead"
+	| "markUnread";
 
 interface GmailSheetProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 }
+
+const PAGE_SIZE = 20;
+/** How many messages to pull from Gmail for client-side paging. */
+const FETCH_LIMIT = 100;
 
 const TABS: { id: GmailTab; label: string; icon: typeof Inbox }[] = [
 	{ id: "inbox", label: "Inbox", icon: Inbox },
@@ -41,7 +62,19 @@ const TABS: { id: GmailTab; label: string; icon: typeof Inbox }[] = [
 	{ id: "compose", label: "Compose", icon: PenLine },
 ];
 
+function replyAddress(from: string): string {
+	const match = from.match(/<([^>]+)>/);
+	return (match?.[1] || from).trim();
+}
+
+function replySubject(subject: string): string {
+	const trimmed = subject.trim();
+	if (/^re:\s*/i.test(trimmed)) return trimmed;
+	return `Re: ${trimmed || "(No subject)"}`;
+}
+
 export default function GmailSheet({ open, onOpenChange }: GmailSheetProps) {
+	const { toast } = useToast();
 	const [tab, setTab] = useState<GmailTab>("inbox");
 	const [statusLoading, setStatusLoading] = useState(true);
 	const [connected, setConnected] = useState(false);
@@ -53,6 +86,15 @@ export default function GmailSheet({ open, onOpenChange }: GmailSheetProps) {
 	const [detail, setDetail] = useState<GmailMessageDetailView | null>(null);
 	const [statusError, setStatusError] = useState<string | null>(null);
 	const [searchQuery, setSearchQuery] = useState("");
+	const [busyId, setBusyId] = useState<string | null>(null);
+	const [busyAction, setBusyAction] = useState<string | null>(null);
+	const [composeDraft, setComposeDraft] = useState<GmailComposeDraft | null>(
+		null,
+	);
+	const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
+	const [bulkBusy, setBulkBusy] = useState(false);
+	const [page, setPage] = useState(1);
+	const listScrollRef = useRef<HTMLDivElement>(null);
 
 	const loadStatus = useCallback(async () => {
 		setStatusLoading(true);
@@ -81,9 +123,11 @@ export default function GmailSheet({ open, onOpenChange }: GmailSheetProps) {
 		setListLoading(true);
 		setSelectedId(null);
 		setDetail(null);
+		setCheckedIds(new Set());
 		try {
-			const url =
+			const base =
 				tab === "drafts" ? "/api/gmail/drafts" : "/api/gmail/messages";
+			const url = `${base}?maxResults=${FETCH_LIMIT}`;
 			const res = await fetch(url);
 			const data = await res.json();
 			if (!res.ok) throw new Error(data.error || "Failed to load mail");
@@ -112,6 +156,8 @@ export default function GmailSheet({ open, onOpenChange }: GmailSheetProps) {
 
 	useEffect(() => {
 		setSearchQuery("");
+		setCheckedIds(new Set());
+		setPage(1);
 	}, [tab]);
 
 	const filteredItems = useMemo(() => {
@@ -125,6 +171,224 @@ export default function GmailSheet({ open, onOpenChange }: GmailSheetProps) {
 		});
 	}, [items, searchQuery]);
 
+	const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
+	const safePage = Math.min(page, totalPages);
+
+	useEffect(() => {
+		setPage(1);
+	}, [searchQuery]);
+
+	useEffect(() => {
+		if (page > totalPages) setPage(totalPages);
+	}, [page, totalPages]);
+
+	const pageItems = useMemo(() => {
+		const start = (safePage - 1) * PAGE_SIZE;
+		return filteredItems.slice(start, start + PAGE_SIZE);
+	}, [filteredItems, safePage]);
+
+	const handlePageChange = useCallback((next: number) => {
+		setPage(next);
+		setCheckedIds(new Set());
+		listScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+	}, []);
+
+	const runMessageAction = useCallback(
+		async (
+			id: string,
+			action: MessageAction,
+			options?: { silent?: boolean },
+		): Promise<boolean> => {
+			setBusyId(id);
+			setBusyAction(action);
+			try {
+				const res = await fetch(
+					`/api/gmail/messages/${encodeURIComponent(id)}`,
+					{
+						method: "PATCH",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ action }),
+					},
+				);
+				const data = await res.json();
+				if (!res.ok) {
+					throw new Error(data.error || "Action failed");
+				}
+				return true;
+			} catch (err) {
+				if (!options?.silent) {
+					toast({
+						title: "Could not update message",
+						description:
+							err instanceof Error
+								? err.message
+								: "Try again, or reconnect Gmail in Settings.",
+						variant: "destructive",
+					});
+				}
+				return false;
+			} finally {
+				setBusyId(null);
+				setBusyAction(null);
+			}
+		},
+		[toast],
+	);
+
+	const removeFromList = useCallback((id: string) => {
+		setItems((prev) => prev.filter((item) => item.id !== id));
+		setSelectedId((current) => (current === id ? null : current));
+		setDetail((current) => (current?.id === id ? null : current));
+		setCheckedIds((prev) => {
+			if (!prev.has(id)) return prev;
+			const next = new Set(prev);
+			next.delete(id);
+			return next;
+		});
+	}, []);
+
+	const removeManyFromList = useCallback((ids: string[]) => {
+		const remove = new Set(ids);
+		setItems((prev) => prev.filter((item) => !remove.has(item.id)));
+		setSelectedId((current) =>
+			current && remove.has(current) ? null : current,
+		);
+		setDetail((current) =>
+			current && remove.has(current.id) ? null : current,
+		);
+		setCheckedIds(new Set());
+	}, []);
+
+	const showUndoToast = useCallback(
+		(title: string, undoAction: MessageAction, id: string) => {
+			toast({
+				title,
+				action: (
+					<ToastAction
+						altText="Undo"
+						onClick={() => {
+							void (async () => {
+								const ok = await runMessageAction(id, undoAction, {
+									silent: true,
+								});
+								if (ok) void loadList();
+							})();
+						}}
+					>
+						Undo
+					</ToastAction>
+				),
+			});
+		},
+		[loadList, runMessageAction, toast],
+	);
+
+	const handleArchive = useCallback(
+		async (id: string) => {
+			const ok = await runMessageAction(id, "archive");
+			if (!ok) return;
+			removeFromList(id);
+			showUndoToast("Archived", "unarchive", id);
+		},
+		[removeFromList, runMessageAction, showUndoToast],
+	);
+
+	const handleTrash = useCallback(
+		async (id: string) => {
+			const ok = await runMessageAction(id, "trash");
+			if (!ok) return;
+			removeFromList(id);
+			showUndoToast("Moved to trash", "untrash", id);
+		},
+		[removeFromList, runMessageAction, showUndoToast],
+	);
+
+	const handleToggleRead = useCallback(
+		async (id: string, currentlyUnread: boolean) => {
+			const action: MessageAction = currentlyUnread ? "markRead" : "markUnread";
+			const ok = await runMessageAction(id, action);
+			if (!ok) return;
+			setItems((prev) =>
+				prev.map((item) =>
+					item.id === id ? { ...item, unread: !currentlyUnread } : item,
+				),
+			);
+			setDetail((current) =>
+				current?.id === id
+					? { ...current, unread: !currentlyUnread }
+					: current,
+			);
+		},
+		[runMessageAction],
+	);
+
+	const toggleChecked = useCallback((id: string) => {
+		setCheckedIds((prev) => {
+			const next = new Set(prev);
+			if (next.has(id)) next.delete(id);
+			else next.add(id);
+			return next;
+		});
+	}, []);
+
+	const toggleAllChecked = useCallback(
+		(checked: boolean) => {
+			if (!checked) {
+				setCheckedIds(new Set());
+				return;
+			}
+			setCheckedIds(new Set(pageItems.map((item) => item.id)));
+		},
+		[pageItems],
+	);
+
+	const handleBulkAction = useCallback(
+		async (action: "archive" | "trash" | "markRead" | "markUnread") => {
+			const ids = [...checkedIds];
+			if (ids.length === 0) return;
+			setBulkBusy(true);
+			try {
+				const results = await Promise.all(
+					ids.map((id) => runMessageAction(id, action, { silent: true })),
+				);
+				const okCount = results.filter(Boolean).length;
+				if (okCount === 0) {
+					toast({
+						title: "Could not update messages",
+						description: "Try again, or reconnect Gmail in Settings.",
+						variant: "destructive",
+					});
+					return;
+				}
+				if (action === "archive" || action === "trash") {
+					removeManyFromList(ids.filter((_, i) => results[i]));
+					toast({
+						title:
+							action === "archive"
+								? `Archived ${okCount} message${okCount === 1 ? "" : "s"}`
+								: `Moved ${okCount} to trash`,
+					});
+				} else {
+					const unread = action === "markUnread";
+					setItems((prev) =>
+						prev.map((item) =>
+							checkedIds.has(item.id) ? { ...item, unread } : item,
+						),
+					);
+					setCheckedIds(new Set());
+					toast({
+						title: unread
+							? `Marked ${okCount} as unread`
+							: `Marked ${okCount} as read`,
+					});
+				}
+			} finally {
+				setBulkBusy(false);
+			}
+		},
+		[checkedIds, removeManyFromList, runMessageAction, toast],
+	);
+
 	const openMessage = async (id: string) => {
 		if (tab === "drafts") {
 			setTab("compose");
@@ -136,13 +400,50 @@ export default function GmailSheet({ open, onOpenChange }: GmailSheetProps) {
 			const res = await fetch(`/api/gmail/messages/${encodeURIComponent(id)}`);
 			const data = await res.json();
 			if (!res.ok) throw new Error(data.error);
-			setDetail(data.message as GmailMessageDetailView);
+			const message = data.message as GmailMessageDetailView;
+			setDetail(message);
+			if (message.unread) {
+				void runMessageAction(id, "markRead", { silent: true }).then((ok) => {
+					if (!ok) return;
+					setItems((prev) =>
+						prev.map((item) =>
+							item.id === id ? { ...item, unread: false } : item,
+						),
+					);
+					setDetail((current) =>
+						current?.id === id ? { ...current, unread: false } : current,
+					);
+				});
+			}
 		} catch {
 			setDetail(null);
 		} finally {
 			setDetailLoading(false);
 		}
 	};
+
+	const startReply = useCallback(() => {
+		if (!detail) return;
+		const quoted = (detail.bodyText || "")
+			.split("\n")
+			.map((line) => `> ${line}`)
+			.join("\n");
+		const refs = [detail.references, detail.messageIdHeader]
+			.filter(Boolean)
+			.join(" ")
+			.trim();
+		setComposeDraft({
+			to: replyAddress(detail.from),
+			subject: replySubject(detail.subject),
+			body: quoted ? `\n\n${quoted}` : "",
+			threadId: detail.threadId,
+			inReplyTo: detail.messageIdHeader,
+			references: refs || detail.messageIdHeader,
+		});
+		setSelectedId(null);
+		setDetail(null);
+		setTab("compose");
+	}, [detail]);
 
 	const showingDetail = Boolean(detail || selectedId) && tab === "inbox";
 
@@ -170,7 +471,6 @@ export default function GmailSheet({ open, onOpenChange }: GmailSheetProps) {
 					<div className="glass-card-cap rounded-t-2xl!" />
 					<SheetTitle className="sr-only">Mail</SheetTitle>
 
-					{/* Header */}
 					<div className="mt-4 flex shrink-0 items-center justify-between gap-2 px-4 pb-3 pt-1">
 						<div className="flex min-w-0 items-center gap-3">
 							<SheetHeaderIcon>
@@ -216,7 +516,6 @@ export default function GmailSheet({ open, onOpenChange }: GmailSheetProps) {
 						</div>
 					</div>
 
-					{/* Segmented tabs — Apple Mail / Threads pattern */}
 					{connected && !showingDetail ? (
 						<div className="shrink-0 px-4 pb-3">
 							<div
@@ -237,6 +536,7 @@ export default function GmailSheet({ open, onOpenChange }: GmailSheetProps) {
 												setTab(t.id);
 												setSelectedId(null);
 												setDetail(null);
+												if (t.id !== "compose") setComposeDraft(null);
 											}}
 											className={cn(
 												"flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-xs font-medium transition-all duration-200 cursor-pointer",
@@ -255,6 +555,7 @@ export default function GmailSheet({ open, onOpenChange }: GmailSheetProps) {
 					) : null}
 
 					<div
+						ref={listScrollRef}
 						className={cn(
 							"min-h-0 flex-1 overflow-y-auto px-4",
 							tab === "compose" ? "pb-4" : "pb-3",
@@ -296,11 +597,14 @@ export default function GmailSheet({ open, onOpenChange }: GmailSheetProps) {
 						) : tab === "compose" ? (
 							<GmailComposeForm
 								fromEmail={email}
+								initialDraft={composeDraft}
 								onSent={() => {
+									setComposeDraft(null);
 									setTab("inbox");
 									void loadList();
 								}}
 								onDraftSaved={() => {
+									setComposeDraft(null);
 									setTab("drafts");
 								}}
 							/>
@@ -308,10 +612,29 @@ export default function GmailSheet({ open, onOpenChange }: GmailSheetProps) {
 							<GmailMessageView
 								loading={detailLoading}
 								message={detail}
+								busyAction={
+									detail && busyId === detail.id ? busyAction : null
+								}
 								onBack={() => {
 									setSelectedId(null);
 									setDetail(null);
 								}}
+								onArchive={
+									detail ? () => void handleArchive(detail.id) : undefined
+								}
+								onTrash={
+									detail ? () => void handleTrash(detail.id) : undefined
+								}
+								onToggleRead={
+									detail
+										? () =>
+												void handleToggleRead(
+													detail.id,
+													Boolean(detail.unread),
+												)
+										: undefined
+								}
+								onReply={detail ? startReply : undefined}
 							/>
 						) : (
 							<div className="flex min-w-0 flex-col gap-3">
@@ -319,21 +642,118 @@ export default function GmailSheet({ open, onOpenChange }: GmailSheetProps) {
 									value={searchQuery}
 									onChange={(e) => setSearchQuery(e.target.value)}
 									placeholder={
-										tab === "drafts"
-											? "Search drafts…"
-											: "Search inbox…"
+										tab === "drafts" ? "Search drafts…" : "Search inbox…"
 									}
 									aria-label={
 										tab === "drafts" ? "Search drafts" : "Search inbox"
 									}
 									containerClassName="w-full bg-white/80"
 								/>
+								{tab === "inbox" && checkedIds.size > 0 ? (
+									<div className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+										<p className="text-xs font-medium text-slate-700">
+											{checkedIds.size} selected
+										</p>
+										<div className="flex items-center gap-0.5">
+											<GmailActionTooltip label="Archive selected">
+												<Button
+													type="button"
+													variant="ghost"
+													size="icon"
+													className="h-8 w-8 cursor-pointer text-slate-500 hover:bg-white hover:text-slate-800"
+													aria-label="Archive selected"
+													disabled={bulkBusy}
+													onClick={() => void handleBulkAction("archive")}
+												>
+													{bulkBusy ? (
+														<Loader2 className="h-4 w-4 animate-spin" />
+													) : (
+														<Archive className="h-4 w-4" />
+													)}
+												</Button>
+											</GmailActionTooltip>
+											<GmailActionTooltip label="Mark selected as read">
+												<Button
+													type="button"
+													variant="ghost"
+													size="icon"
+													className="h-8 w-8 cursor-pointer text-slate-500 hover:bg-white hover:text-slate-800"
+													aria-label="Mark selected as read"
+													disabled={bulkBusy}
+													onClick={() => void handleBulkAction("markRead")}
+												>
+													<MailOpen className="h-4 w-4" />
+												</Button>
+											</GmailActionTooltip>
+											<GmailActionTooltip label="Mark selected as unread">
+												<Button
+													type="button"
+													variant="ghost"
+													size="icon"
+													className="h-8 w-8 cursor-pointer text-slate-500 hover:bg-white hover:text-slate-800"
+													aria-label="Mark selected as unread"
+													disabled={bulkBusy}
+													onClick={() => void handleBulkAction("markUnread")}
+												>
+													<Mail className="h-4 w-4" />
+												</Button>
+											</GmailActionTooltip>
+											<GmailActionTooltip label="Delete selected">
+												<Button
+													type="button"
+													variant="ghost"
+													size="icon"
+													className="h-8 w-8 cursor-pointer text-slate-500 hover:bg-red/10 hover:text-red"
+													aria-label="Delete selected"
+													disabled={bulkBusy}
+													onClick={() => void handleBulkAction("trash")}
+												>
+													<Trash2 className="h-4 w-4" />
+												</Button>
+											</GmailActionTooltip>
+											<GmailActionTooltip label="Clear selection">
+												<Button
+													type="button"
+													variant="ghost"
+													size="icon"
+													className="h-8 w-8 cursor-pointer text-slate-500 hover:bg-white hover:text-slate-800"
+													aria-label="Clear selection"
+													disabled={bulkBusy}
+													onClick={() => setCheckedIds(new Set())}
+												>
+													<X className="h-4 w-4" />
+												</Button>
+											</GmailActionTooltip>
+										</div>
+									</div>
+								) : null}
 								<GmailMessageList
-									items={filteredItems}
+									items={pageItems}
 									loading={listLoading}
 									selectedId={selectedId}
 									onSelect={(id) => void openMessage(id)}
 									variant={tab === "drafts" ? "drafts" : "inbox"}
+									busyId={busyId}
+									onArchive={
+										tab === "inbox"
+											? (id) => void handleArchive(id)
+											: undefined
+									}
+									onTrash={
+										tab === "inbox" ? (id) => void handleTrash(id) : undefined
+									}
+									onToggleRead={
+										tab === "inbox"
+											? (id, unread) => void handleToggleRead(id, unread)
+											: undefined
+									}
+									checkedIds={tab === "inbox" ? checkedIds : undefined}
+									onToggleChecked={
+										tab === "inbox" ? toggleChecked : undefined
+									}
+									onToggleAllChecked={
+										tab === "inbox" ? toggleAllChecked : undefined
+									}
 									emptyLabel={
 										searchQuery.trim()
 											? "No messages match your search"
@@ -345,6 +765,25 @@ export default function GmailSheet({ open, onOpenChange }: GmailSheetProps) {
 							</div>
 						)}
 					</div>
+
+					{connected &&
+					!showingDetail &&
+					tab !== "compose" &&
+					!listLoading &&
+					filteredItems.length > 0 ? (
+						<div className="shrink-0 border-t border-slate-200/80 bg-white/90 px-4 py-2 backdrop-blur-md">
+							<PageIndex
+								page={safePage}
+								totalItems={filteredItems.length}
+								pageSize={PAGE_SIZE}
+								onPageChange={handlePageChange}
+								showRange
+								itemLabel={tab === "drafts" ? "drafts" : "messages"}
+								hideWhenSinglePage
+								aria-label="Mail pagination"
+							/>
+						</div>
+					) : null}
 				</div>
 			</SheetContent>
 		</Sheet>

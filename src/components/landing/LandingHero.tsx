@@ -14,8 +14,8 @@ import { TRUSTED_BRAND_LOGOS } from "./landingContent";
 import { fadeUp, staggerContainer } from "./motion";
 import PillSwing3D from "./PillSwing3D";
 import ShimmerBadge from "./ShimmerBadge";
+import WaveLoopBackground from "./WaveLoopBackground";
 
-const VIDEO_SRC = MEDIA_URLS.waveVideo;
 /** Full-quality desktop demo — dual soft-loop only above lg (Blob-hosted) */
 const DEMO_VIDEO_DESKTOP_SRC = MEDIA_URLS.demoLandingVideo;
 /** Mobile-friendly encode — single player below lg (Blob-hosted) */
@@ -663,7 +663,6 @@ function LogoMarquee() {
 export default function LandingHero() {
 	const reduceMotion = useReducedMotion();
 	const isNarrow = useIsNarrow();
-	const videoRef = useRef<HTMLVideoElement | null>(null);
 	const demoVideoPrimaryRef = useRef<HTMLVideoElement | null>(null);
 	const demoVideoSecondaryRef = useRef<HTMLVideoElement | null>(null);
 	const demoFrameRef = useRef<HTMLDivElement | null>(null);
@@ -723,7 +722,6 @@ export default function LandingHero() {
 		setDemoActiveLayer(0);
 	}, [demoSrc]);
 
-	useAutoplayLoopVideo(videoRef, reduceMotion);
 	useAutoplayLoopVideo(
 		demoVideoPrimaryRef,
 		reduceMotion,
@@ -764,24 +762,7 @@ export default function LandingHero() {
 
 	return (
 		<section className="relative flex flex-col items-center justify-center pt-24 pb-16 overflow-hidden">
-			{!reduceMotion ? (
-				<video
-					ref={videoRef}
-					src={VIDEO_SRC}
-					autoPlay
-					muted
-					loop
-					playsInline
-					preload="metadata"
-					onEnded={(e) => {
-						const video = e.currentTarget;
-						video.currentTime = 0;
-						safePlay(video);
-					}}
-					className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none"
-					aria-hidden
-				/>
-			) : null}
+			<WaveLoopBackground className="absolute inset-0 z-0 h-full w-full" />
 
 			<div
 				className="absolute inset-0 z-10 pointer-events-none landing-grid-bg-soft"

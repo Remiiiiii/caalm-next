@@ -199,21 +199,30 @@ const TIER_DISPLAY_NAME: Record<PricingTier, string> = {
 	enterprise: "Enterprise",
 };
 
-/** Sidebar / account label, e.g. "Growth" or "Growth 90 day trial". */
-export function formatSubscriptionLabel(input: {
+export type SubscriptionLabelParts = {
+	planName: string;
+	isTrial: boolean;
+	/** Days left in trial when on a trial/pilot; null when not. */
+	daysRemaining: number | null;
+};
+
+/** Plan name + optional trial remainder for sidebar / mobile account cards. */
+export function getSubscriptionLabelParts(input: {
 	tier?: string | null;
 	billingStatus?: string | null;
 	orgStatus?: string | null;
 	currentPeriodEnd?: string | null;
 	pilotMonths?: number | null;
-}): string {
+}): SubscriptionLabelParts {
 	const tierKey = normalizePricingTier(input.tier);
-	const name = TIER_DISPLAY_NAME[tierKey];
+	const planName = TIER_DISPLAY_NAME[tierKey];
 	const isTrial =
 		input.billingStatus === "trialing" ||
 		input.billingStatus === "pilot" ||
 		input.orgStatus === "trial";
-	if (!isTrial) return name;
+	if (!isTrial) {
+		return { planName, isTrial: false, daysRemaining: null };
+	}
 
 	let days = 90;
 	if (typeof input.pilotMonths === "number" && input.pilotMonths > 0) {
@@ -227,7 +236,20 @@ export function formatSubscriptionLabel(input: {
 			days = remaining;
 		}
 	}
-	return `${name} ${days} day trial`;
+	return { planName, isTrial: true, daysRemaining: days };
+}
+
+/** Single-line label for places that still need one string. */
+export function formatSubscriptionLabel(input: {
+	tier?: string | null;
+	billingStatus?: string | null;
+	orgStatus?: string | null;
+	currentPeriodEnd?: string | null;
+	pilotMonths?: number | null;
+}): string {
+	const parts = getSubscriptionLabelParts(input);
+	if (!parts.isTrial || parts.daysRemaining == null) return parts.planName;
+	return `${parts.planName} ${parts.daysRemaining} day trial`;
 }
 
 export class BillingLimitError extends Error {

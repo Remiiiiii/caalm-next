@@ -56,8 +56,7 @@ const Sort = () => {
 			>
 				<Button
 					variant="ghost"
-					size="sm"
-					className="btn-primary h-8 border-0 px-3 shadow-none focus-visible:ring-0 sm:px-4"
+					className="btn-primary border-0 shadow-none focus-visible:ring-0"
 				>
 					<ArrowUpDown className="h-4 w-4" />
 					<span className="hidden sm:inline">Sort by</span>

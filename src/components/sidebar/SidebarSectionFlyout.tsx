@@ -6,7 +6,6 @@ import {
 	Building2,
 	Crown,
 	Eye,
-	HandCoins,
 	Lock,
 	Megaphone,
 	Server,
@@ -93,11 +92,7 @@ function ItemIcon({
 
 	if (item.name === "Funding & Retention") {
 		return (
-			<HandCoins
-				className="h-4 w-4 shrink-0"
-				style={{ color: NAV_ICON_FILL_GREY }}
-				aria-hidden
-			/>
+			<NavItemIcon name={item.name} width={18} height={18} />
 		);
 	}
 
