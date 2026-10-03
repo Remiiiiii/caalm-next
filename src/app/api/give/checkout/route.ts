@@ -19,6 +19,10 @@ export async function POST(request: NextRequest) {
 			amountCents?: number;
 			campaignId?: string;
 			designationId?: string;
+			programLabel?: string;
+			interval?: "one_time" | "monthly";
+			tributeType?: "honor" | "memory";
+			tributeName?: string;
 		};
 		const orgSlug = body.orgSlug?.trim();
 		if (!orgSlug) {
@@ -37,6 +41,10 @@ export async function POST(request: NextRequest) {
 			amountCents,
 			campaignId: body.campaignId,
 			designationId: body.designationId?.trim() || undefined,
+			programLabel: body.programLabel?.trim() || undefined,
+			interval: body.interval === "monthly" ? "monthly" : "one_time",
+			tributeType: body.tributeType,
+			tributeName: body.tributeName?.trim() || undefined,
 			successUrl: `${origin}/give/${encodeURIComponent(orgSlug)}?thanks=1`,
 			cancelUrl: `${origin}/give/${encodeURIComponent(orgSlug)}?canceled=1`,
 		});

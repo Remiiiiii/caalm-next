@@ -1346,6 +1346,29 @@
 	padding-right: 0.75rem !important;
 }
 
+/* Landing spotlight mocks — compact CTAs (does not affect gated app routes) */
+.landing-spotlight-mock .landing-cta {
+	height: 1.75rem !important;
+	min-height: 1.75rem !important;
+	max-height: 1.75rem !important;
+	padding-left: 0.625rem !important;
+	padding-right: 0.625rem !important;
+	gap: 0.25rem !important;
+}
+
+.landing-spotlight-mock .landing-filter-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.75rem;
+	height: 1.75rem;
+	padding: 0;
+	border: none;
+	background: transparent;
+	box-shadow: none;
+	color: #334155;
+}
+
 /* Adobe Acrobat Chrome/Edge extension overlays (not CAALM UI) */
 [id*="adobe-acrobat" i],
 [id*="AdobeAcrobat" i],
@@ -2388,6 +2411,13 @@ iframe[src*="splinecode"] {
 		linear-gradient(90deg, rgba(0, 0, 0, 0.02) 1px, transparent 1px),
 		linear-gradient(180deg, rgba(0, 0, 0, 0.02) 1px, transparent 1px);
 	background-size: 40px 40px;
+}
+
+/* Public give page — transparent number spinners (WebKit) */
+.give-amount-input[type="number"]::-webkit-inner-spin-button,
+.give-amount-input[type="number"]::-webkit-outer-spin-button {
+	-webkit-appearance: inner-spin-button;
+	background: transparent;
 }
 
 /* Hard on/off caret — classic terminal blink (~1Hz) */

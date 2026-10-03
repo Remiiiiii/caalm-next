@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 
 import Link from "next/link";
-import { type ReactNode, useEffect, useId, useRef, useState } from "react";
+import { type ReactNode, useId, useRef } from "react";
 import CountUp from "react-countup";
 import { cn } from "@/lib/utils";
 import LandingFrostedCard from "./LandingFrostedCard";
@@ -66,23 +66,14 @@ const SHIFT_FILL = [
 
 const CAMPAIGN_GOAL_PERCENT = 72;
 const RING_RADIUS = 34;
-const COMPLIANCE_PULSE_LOOP_MS = 4200;
 
-/** Campaign goal ring — pathLength + CountUp, same pattern as Compliance pulse rings. */
+/** Campaign goal ring — fills once when the card enters the viewport. */
 function CampaignGoalRing({ reduceMotion }: { reduceMotion: boolean | null }) {
 	const gradientId = useId().replace(/:/g, "");
 	const ref = useRef<HTMLDivElement>(null);
-	const inView = useInView(ref, { amount: 0.35 });
-	const [animKey, setAnimKey] = useState(0);
+	// once: true → play on first view (and again only after a full page refresh)
+	const inView = useInView(ref, { amount: 0.35, once: true });
 	const target = CAMPAIGN_GOAL_PERCENT / 100;
-
-	useEffect(() => {
-		if (reduceMotion || !inView) return;
-		const id = window.setInterval(() => {
-			setAnimKey((k) => k + 1);
-		}, COMPLIANCE_PULSE_LOOP_MS);
-		return () => window.clearInterval(id);
-	}, [reduceMotion, inView]);
 
 	return (
 		<div ref={ref} className="relative size-24 shrink-0">
@@ -103,7 +94,6 @@ function CampaignGoalRing({ reduceMotion }: { reduceMotion: boolean | null }) {
 				/>
 				{inView || reduceMotion ? (
 					<motion.circle
-						key={animKey}
 						cx="40"
 						cy="40"
 						r={RING_RADIUS}
@@ -116,7 +106,7 @@ function CampaignGoalRing({ reduceMotion }: { reduceMotion: boolean | null }) {
 						transition={
 							reduceMotion
 								? { duration: 0 }
-								: { duration: 1.4, ease: "easeOut" }
+								: { duration: 2.4, ease: "easeOut" }
 						}
 					/>
 				) : null}
@@ -127,10 +117,9 @@ function CampaignGoalRing({ reduceMotion }: { reduceMotion: boolean | null }) {
 						<>{CAMPAIGN_GOAL_PERCENT}%</>
 					) : inView ? (
 						<CountUp
-							key={animKey}
 							end={CAMPAIGN_GOAL_PERCENT}
 							suffix="%"
-							duration={1.5}
+							duration={2.5}
 							start={0}
 						/>
 					) : (

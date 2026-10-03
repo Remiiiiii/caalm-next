@@ -140,7 +140,7 @@ const QUICK_ACTIONS = [
 
 export default function AuditsMock() {
 	return (
-		<div className="rounded-xl border border-slate-200/80 bg-white/80 overflow-hidden shadow-md">
+		<div className="landing-spotlight-mock rounded-xl border border-slate-200/80 bg-white/80 overflow-hidden shadow-md">
 			<div className="relative flex min-h-[360px] items-stretch">
 				{/* Sidebar — height locked to main; excess nav soft-fades */}
 				<div className="relative hidden w-[10.5rem] shrink-0 border-r border-slate-200/80 bg-white/90 sm:block md:w-48">
@@ -287,7 +287,7 @@ export default function AuditsMock() {
 										{QUICK_ACTIONS.map((action) => (
 											<span
 												key={action.label}
-												className="inline-flex items-center gap-1 rounded-full primary-btn px-2 py-1 text-[9px] sm:text-[10px]"
+												className="landing-cta inline-flex items-center gap-1 rounded-full primary-btn text-[9px] sm:text-[10px]"
 											>
 												<action.icon className="h-2.5 w-2.5" />
 												{action.label}

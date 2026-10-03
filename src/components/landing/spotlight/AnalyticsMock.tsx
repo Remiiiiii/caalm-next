@@ -266,7 +266,7 @@ export default function AnalyticsMock() {
 	const reduceMotion = useReducedMotion();
 
 	return (
-		<div className="rounded-xl border border-slate-200/80 bg-white/80 overflow-hidden shadow-md">
+		<div className="landing-spotlight-mock rounded-xl border border-slate-200/80 bg-white/80 overflow-hidden shadow-md">
 			<div className="relative flex min-h-[360px] items-stretch">
 				{/* Sidebar */}
 				<div className="relative hidden w-[10.5rem] shrink-0 border-r border-slate-200/80 bg-white/90 sm:block md:w-48">
@@ -397,7 +397,7 @@ export default function AnalyticsMock() {
 								<span className="text-[9px] text-slate-500 sm:ml-auto">
 									Last updated Jul 21, 2026
 								</span>
-								<span className="inline-flex items-center gap-1 rounded-full primary-btn px-2 py-1 text-[9px]">
+								<span className="landing-cta inline-flex items-center gap-1 rounded-full primary-btn text-[9px]">
 									<SquareArrowRightExit className="h-2.5 w-2.5" />
 									Export
 								</span>
