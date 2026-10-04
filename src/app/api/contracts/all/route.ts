@@ -60,8 +60,8 @@ export async function GET(request: NextRequest) {
 		const scopeQueries = buildContractQueries(scope);
 		const cacheKey =
 			scope.mode === "all_org"
-				? `${CACHE_KEYS.contracts.all()}:limit:${rowLimit}`
-				: `contracts:all:scoped:${user.$id}:${scope.mode}:${
+				? `${CACHE_KEYS.contracts.all()}:org:${defaultOrg.orgId}:limit:${rowLimit}`
+				: `contracts:all:scoped:${user.$id}:${defaultOrg.orgId}:${scope.mode}:${
 						scope.mode === "department"
 							? scope.department
 							: scope.mode === "own"

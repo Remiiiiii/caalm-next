@@ -91,6 +91,13 @@ This catalog explains permission keys in everyday language. Exact availability c
 | `gifts.create` | Post new gifts |
 | `gifts.void` | Void a posted gift (requires reason) |
 
+## Donations
+
+| Key | Meaning |
+|---|---|
+| `donations.config.view` | View donation page draft, published config, version history, and share analytics |
+| `donations.config.edit` | Edit draft, preview, publish, and revert the public `/give` page |
+
 ## Volunteers
 
 | Key | Meaning |

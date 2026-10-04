@@ -45,7 +45,7 @@ export function AuditsSectionNav() {
 						data-state={isActive ? "active" : undefined}
 						aria-current={isActive ? "page" : undefined}
 						className={cn(
-							"tabs-underline inline-flex items-center gap-2 px-3 py-2.5 text-sm font-medium text-slate-600 cursor-pointer transition-colors duration-200",
+							"inline-flex items-center gap-2 px-3 py-2.5 text-sm font-medium text-slate-600 cursor-pointer transition-colors duration-200",
 							"hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
 							isActive && "text-slate-700",
 						)}

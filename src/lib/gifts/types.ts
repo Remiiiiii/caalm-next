@@ -30,6 +30,10 @@ export type Gift = {
 	anonymous: boolean;
 	voidOfId?: string;
 	receiptSentAt?: string;
+	shareSource?: string;
+	shareMedium?: string;
+	shareCampaign?: string;
+	stripeInvoiceId?: string;
 };
 
 export type GiftListFilters = {
@@ -37,6 +41,7 @@ export type GiftListFilters = {
 	status?: GiftStatus;
 	search?: string;
 	campaignId?: string;
+	shareCampaign?: string;
 	limit?: number;
 	offset?: number;
 };
@@ -52,6 +57,10 @@ export type CreateGiftInput = {
 	designationId?: string;
 	contractId?: string;
 	anonymous?: boolean;
+	shareSource?: string;
+	shareMedium?: string;
+	shareCampaign?: string;
+	stripeInvoiceId?: string;
 };
 
 export type UpdateDraftGiftInput = {

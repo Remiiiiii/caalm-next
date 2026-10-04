@@ -592,6 +592,7 @@ export default function OutlookMailSheet({
 								initialDraft={composeDraft}
 								sendUrl="/api/microsoft/mail/send"
 								draftsUrl="/api/microsoft/mail/drafts"
+								signatureUrl="/api/microsoft/mail/signature"
 								onSent={() => {
 									setComposeDraft(null);
 									setTab("inbox");

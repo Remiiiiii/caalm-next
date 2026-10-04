@@ -88,6 +88,9 @@ export async function listGifts(
 	if (filters.campaignId) {
 		queries.push(Query.equal("campaignId", filters.campaignId));
 	}
+	if (filters.shareCampaign) {
+		queries.push(Query.equal("shareCampaign", filters.shareCampaign));
+	}
 	const result = await tablesDB.listRows({
 		databaseId: dbId(),
 		tableId: giftsTableId(),
@@ -161,6 +164,10 @@ export async function createDraftGift(input: CreateGiftInput): Promise<Gift> {
 			receiptNumber: null,
 			anonymous: input.anonymous ?? false,
 			voidOfId: null,
+			shareSource: input.shareSource || null,
+			shareMedium: input.shareMedium || null,
+			shareCampaign: input.shareCampaign || null,
+			stripeInvoiceId: input.stripeInvoiceId || null,
 		},
 	});
 	return mapRow(row as unknown as Record<string, unknown>);
@@ -291,6 +298,56 @@ export async function voidPostedGift(id: string, orgId: string): Promise<Gift> {
 		data: { status: "voided" },
 	});
 	return mapRow(row as unknown as Record<string, unknown>);
+}
+
+export async function findGiftByStripeInvoiceId(
+	orgId: string,
+	stripeInvoiceId: string,
+): Promise<Gift | null> {
+	if (!stripeInvoiceId.trim()) return null;
+	const { tablesDB } = await createAdminClient();
+	const result = await tablesDB.listRows({
+		databaseId: dbId(),
+		tableId: giftsTableId(),
+		queries: [
+			Query.equal("orgId", orgId),
+			Query.equal("stripeInvoiceId", stripeInvoiceId),
+			Query.limit(1),
+		],
+	});
+	const row = (result.rows as unknown as Record<string, unknown>[])[0];
+	return row ? mapRow(row) : null;
+}
+
+export async function listPostedGiftsSince(
+	orgId: string,
+	sinceIso: string,
+	maxRows = 2000,
+): Promise<Gift[]> {
+	const { tablesDB } = await createAdminClient();
+	const items: Gift[] = [];
+	let offset = 0;
+	while (items.length < maxRows) {
+		const result = await tablesDB.listRows({
+			databaseId: dbId(),
+			tableId: giftsTableId(),
+			queries: [
+				Query.equal("orgId", orgId),
+				Query.equal("status", "posted"),
+				Query.greaterThanEqual("giftDate", sinceIso),
+				Query.orderDesc("giftDate"),
+				Query.limit(PAGE_SIZE_MAX),
+				Query.offset(offset),
+			],
+		});
+		const rows = (result.rows as unknown as Record<string, unknown>[]).map(
+			mapRow,
+		);
+		items.push(...rows);
+		if (rows.length < PAGE_SIZE_MAX) break;
+		offset += PAGE_SIZE_MAX;
+	}
+	return items.slice(0, maxRows);
 }
 
 /** Sum posted, non-voided, non-reversing gift amounts for a campaign. */

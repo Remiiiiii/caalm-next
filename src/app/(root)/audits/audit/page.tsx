@@ -332,7 +332,7 @@ export default function AuditLogsPage() {
 				<button
 					type="button"
 					data-state={filters.module === "all" ? "active" : undefined}
-					className="tabs-underline relative cursor-pointer inline-flex items-center px-3 py-2.5 text-sm font-medium text-slate-600 bg-transparent border-0 shadow-none hover:text-slate-700 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 data-[state=active]:text-slate-700"
+					className="relative cursor-pointer inline-flex items-center px-3 py-2.5 text-sm font-medium text-slate-600 bg-transparent border-0 shadow-none hover:text-slate-700 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 data-[state=active]:text-slate-700"
 					onClick={() => setDomainTab("all")}
 				>
 					All
@@ -344,7 +344,7 @@ export default function AuditLogsPage() {
 							key={tab.id}
 							type="button"
 							data-state={isActive ? "active" : undefined}
-							className="tabs-underline relative cursor-pointer inline-flex items-center px-3 py-2.5 text-sm font-medium text-slate-600 bg-transparent border-0 shadow-none hover:text-slate-700 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 data-[state=active]:text-slate-700"
+							className="relative cursor-pointer inline-flex items-center px-3 py-2.5 text-sm font-medium text-slate-600 bg-transparent border-0 shadow-none hover:text-slate-700 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 data-[state=active]:text-slate-700"
 							onClick={() => setDomainTab(tab.id)}
 						>
 							{tab.label}

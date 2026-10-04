@@ -22,14 +22,13 @@ export interface RoundedUnderlineTabsProps {
 }
 
 const tabButtonClassName = {
-	bar: "tabs-underline tabs-underline-outside flex-1 rounded-sm data-[state=active]:bg-white/30 data-[state=active]:text-navy data-[state=active]:shadow-none",
+	bar: "flex-1 rounded-sm data-[state=active]:bg-white/30 data-[state=active]:text-navy data-[state=active]:shadow-none",
 	chips:
-		"tabs-underline tabs-underline-outside rounded-md border border-white/40 bg-white/20 px-3 py-1.5 backdrop-blur hover:bg-white/30 data-[state=active]:bg-white/30",
+		"rounded-md border border-white/40 bg-white/20 px-3 py-1.5 backdrop-blur hover:bg-white/30 data-[state=active]:bg-white/30",
 } as const;
 
 /**
- * Rounded tab row with the teal underline drawn under the rounded box,
- * not on its inner edge. Used on /my-contracts and /contracts.
+ * Rounded tab row. Used on /my-contracts, /contracts, and settings tabs.
  */
 export default function RoundedUnderlineTabs({
 	tabs,
@@ -41,12 +40,12 @@ export default function RoundedUnderlineTabs({
 	listClassName,
 }: RoundedUnderlineTabsProps) {
 	return (
-		<nav className={cn("overflow-visible pb-3", className)} aria-label={ariaLabel}>
+		<nav className={cn(className)} aria-label={ariaLabel}>
 			<div
 				role="tablist"
 				className={cn(
 					variant === "bar"
-						? "flex h-auto min-h-10 w-full overflow-visible rounded-md border border-white/40 bg-white/20 p-1 backdrop-blur"
+						? "flex h-auto min-h-10 w-full rounded-md border border-white/40 bg-white/20 p-1 backdrop-blur"
 						: "flex flex-wrap gap-2",
 					listClassName,
 				)}

@@ -1,9 +1,8 @@
 "use client";
 
 import { Check } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import type { PricingPlan } from "@/lib/pricing";
+import { cn } from "@/lib/utils";
 
 interface PlanUpgradeSectionProps {
 	plans: PricingPlan[];
@@ -25,7 +24,16 @@ function stripMarkdown(value: string): string {
 	return value
 		.replace(/\*\*(.*?)\*\*/g, "$1")
 		.replace(/\*(.*?)\*/g, "$1")
-		.replace(/`([^`]+)`/g, "$1");
+		.replace(/__([^_]+)__/g, "$1")
+		.replace(/_([^_]+)_/g, "$1")
+		.replace(/`([^`]+)`/g, "$1")
+		.replace(/\*/g, "");
+}
+
+function featureListHeading(index: number): string {
+	if (index === 0) return "Includes";
+	if (index === 1) return "Everything in Starter, plus";
+	return "Everything in Growth, plus";
 }
 
 export default function PlanUpgradeSection({
@@ -47,91 +55,100 @@ export default function PlanUpgradeSection({
 		currentTier !== "enterprise";
 
 	return (
-		<div className="space-y-4">
-			{showPilotCta && (
-				<Card className="glass-card">
-					<div className="glass-card-cap" />
-					<CardContent className="p-4 sm:p-6 flex flex-row items-center justify-between gap-4">
-						<div>
-							<p className="text-sm font-medium sidebar-gradient-text">
-								90-day Growth pilot
-							</p>
-							<p className="text-xs text-slate-600 mt-1">
-								Try Growth for {pilotTrialDays} days. No charge until the trial
-								ends unless you cancel. AI extractions capped at 100 / month
-								during the pilot.
-							</p>
-						</div>
-						<Button
-							className="primary-btn px-3 sm:px-4 cursor-pointer shrink-0"
-							disabled={!stripeConfigured || loadingTier === "growth"}
-							onClick={() => onCheckout("growth", billingInterval)}
-						>
-							{loadingTier === "growth"
-								? "Redirecting…"
-								: "Start 90-day Growth pilot"}
-						</Button>
-					</CardContent>
-				</Card>
-			)}
+		<div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:items-stretch md:gap-6">
+			{plans.map((plan, idx) => {
+				const isCurrent = plan.key === currentTier;
+				const isEnterprise = plan.key === "enterprise";
+				const isGrowth = plan.key === "growth";
+				const price =
+					billingInterval === "monthly" ? plan.monthly : plan.yearly;
+				const busy = loadingTier === plan.key;
+				const periodLabel =
+					billingInterval === "monthly"
+						? "/ workspace / month"
+						: "/ workspace / year";
 
-			<div className="grid grid-cols-3 gap-6">
-				{plans.map((plan) => {
-					const isCurrent = plan.key === currentTier;
-					const isEnterprise = plan.key === "enterprise";
-					const price =
-						billingInterval === "monthly" ? plan.monthly : plan.yearly;
-					const busy = loadingTier === plan.key;
+				let ctaLabel: string;
+				if (isEnterprise) {
+					ctaLabel = "Contact sales";
+				} else if (isCurrent) {
+					ctaLabel = "Current plan";
+				} else if (busy) {
+					ctaLabel = "Redirecting…";
+				} else if (isGrowth && showPilotCta) {
+					ctaLabel = `Start ${pilotTrialDays}-day Growth pilot`;
+				} else if (isGrowth) {
+					ctaLabel = "Choose Growth";
+				} else {
+					ctaLabel = "Get started";
+				}
 
-					return (
-						<Card key={plan.key} className="glass-card">
+				const ctaClassName = cn(
+					"inline-flex w-full items-center justify-center rounded-full py-3 text-center font-semibold shadow-sm transition-all duration-200",
+					isCurrent
+						? "cursor-default bg-[linear-gradient(135deg,#12477d_0%,#03afbf_100%)] text-white disabled:opacity-100"
+						: cn(
+								"cursor-pointer text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60",
+								isGrowth
+									? "bg-linear-to-r from-[#00C1CB] via-[#078FAB] to-[#162768]"
+									: "bg-linear-to-r from-slate-500 to-slate-700",
+							),
+				);
+
+				return (
+					<div
+						key={plan.key}
+						className={cn(
+							"h-full rounded-xl",
+							isGrowth &&
+								"relative z-10 ring-2 ring-[#05A1B7]/70 shadow-[0_12px_40px_rgba(5,161,183,0.22)]",
+						)}
+					>
+						<div className="glass-card flex h-full flex-col rounded-xl">
 							<div className="glass-card-cap" />
-							<CardContent className="p-4 sm:p-6 flex flex-col h-full">
-								<div className="flex items-center justify-between gap-2">
-									<p className="text-sm font-medium sidebar-gradient-text">
-										{plan.name}
-									</p>
-									{isCurrent && (
-										<span className="inline-block px-2 py-0.5 text-xs rounded-full font-medium border bg-blue/10 text-blue border-blue/20">
+							<div className="relative z-[1] flex h-full flex-col p-6">
+								<h3 className="mb-2 mt-1 flex flex-wrap items-center gap-2 text-lg font-semibold text-slate-700">
+									{plan.name}
+									{isGrowth ? (
+										<span className="inline-flex items-center rounded-full border border-[#05A1B7]/30 bg-[#E8F8FA] px-2.5 py-0.5 text-xs font-medium text-[#057A8A]">
+											Most Popular
+										</span>
+									) : null}
+									{isCurrent ? (
+										<span className="inline-block rounded-full border border-blue/20 bg-blue/10 px-2 py-0.5 text-xs font-medium text-blue">
 											Current
 										</span>
+									) : null}
+								</h3>
+
+								<div className="mb-4 flex items-baseline gap-1">
+									{isEnterprise || price === 0 ? (
+										<span className="text-4xl font-bold text-slate-700">
+											Custom
+										</span>
+									) : (
+										<>
+											<span className="text-4xl font-bold text-slate-700">
+												${price.toLocaleString()}
+											</span>
+											<span className="text-sm text-slate-600">
+												{periodLabel}
+											</span>
+										</>
 									)}
 								</div>
-								{isEnterprise || price === 0 ? (
-									<p className="text-3xl font-bold text-slate-700 pt-2">
-										Custom
-									</p>
-								) : (
-									<p className="text-3xl font-bold text-slate-700 pt-2">
-										${price.toLocaleString()}
-										<span className="text-sm font-medium text-slate-600 ml-1">
-											/{billingInterval === "monthly" ? "mo" : "yr"}
-										</span>
-									</p>
-								)}
-								<ul className="mt-4 space-y-2 flex-1">
-									{plan.features.slice(0, 5).map((feature) => (
-										<li
-											key={feature}
-											className="flex items-start gap-2 text-xs text-slate-600"
-										>
-											<Check className="h-3.5 w-3.5 text-[#0f5384] mt-0.5 shrink-0" />
-											<span>{stripMarkdown(feature)}</span>
-										</li>
-									))}
-								</ul>
+
 								{isEnterprise ? (
-									<Button
-										asChild
-										className="primary-btn px-3 sm:px-4 mt-6 w-full cursor-pointer"
+									<a
+										href={`mailto:${salesEmail}?subject=CAALM%20Enterprise`}
+										className={ctaClassName}
 									>
-										<a href={`mailto:${salesEmail}?subject=CAALM%20Enterprise`}>
-											Contact sales
-										</a>
-									</Button>
+										{ctaLabel}
+									</a>
 								) : (
-									<Button
-										className="primary-btn px-3 sm:px-4 mt-6 w-full cursor-pointer"
+									<button
+										type="button"
+										className={ctaClassName}
 										disabled={!stripeConfigured || isCurrent || busy}
 										onClick={() =>
 											onCheckout(
@@ -140,18 +157,32 @@ export default function PlanUpgradeSection({
 											)
 										}
 									>
-										{isCurrent
-											? "Current plan"
-											: busy
-												? "Redirecting…"
-												: `Choose ${plan.name}`}
-									</Button>
+										{ctaLabel}
+									</button>
 								)}
-							</CardContent>
-						</Card>
-					);
-				})}
-			</div>
+
+								<hr className="my-6 border-slate-200" />
+
+								<h4 className="mb-3 text-sm font-semibold text-slate-800">
+									{featureListHeading(idx)}
+								</h4>
+								<ul className="space-y-2 text-sm text-slate-600">
+									{plan.features.slice(0, 10).map((feature) => (
+										<li key={feature} className="flex items-start gap-2">
+											<Check
+												className="mt-0.5 h-5 w-5 shrink-0"
+												aria-hidden
+												style={{ color: "#05A1B7" }}
+											/>
+											<span>{stripMarkdown(feature)}</span>
+										</li>
+									))}
+								</ul>
+							</div>
+						</div>
+					</div>
+				);
+			})}
 		</div>
 	);
 }

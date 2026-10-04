@@ -1,0 +1,27 @@
+---
+description: Segmented switches use a sliding white active thumb on a slate track
+alwaysApply: true
+---
+
+# Segmented switch design (hard rule)
+
+Whenever the user asks for a **switch**, **view switch**, **segmented control**, or multi-option pill toggle (not a boolean on/off `Switch` from shadcn), use the **sliding white active thumb** design.
+
+## Required look
+
+- Track: `rounded-full border border-slate-200 bg-slate-100 p-1`
+- Active thumb: absolute white pill (`bg-white shadow-sm`) that **slides** under the selected option (`transition-transform duration-200`)
+- Selected label/icon: `text-[#0f5384]`
+- Unselected: `text-slate-500`
+- Do **not** use hover fills, hover shadows, or hover background pills on the options — selection is shown only by the sliding thumb + brand text color
+
+## Implementation
+
+- Prefer the shared `SegmentedToggle` from `@/components/ui/segmented-toggle` for mutually exclusive options.
+- If you need disabled options or action triggers, match that same track + sliding thumb markup (see donation page action switch in `DonationPageSettingsClient`, including **Share page**).
+- Do not invent alternate switch chrome (outlined button groups, underline tabs, or hover-only active states) unless the user explicitly asks for a different design.
+
+## Not covered by this rule
+
+- Boolean on/off toggles (`Switch` from `@/components/ui/switch`) stay as true/false switches.
+- Underline status tabs (`StatusUnderlineTabs` / `RoundedUnderlineTabs`) are tabs, not switches.

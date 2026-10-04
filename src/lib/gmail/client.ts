@@ -297,7 +297,13 @@ export async function listDrafts(
 
 export async function createDraft(
 	accessToken: string,
-	options: { to: string; subject: string; body: string; fromEmail?: string },
+	options: {
+		to: string;
+		subject: string;
+		body: string;
+		fromEmail?: string;
+		contentType?: "text" | "html";
+	},
 ): Promise<{ draftId: string }> {
 	const raw = buildRawEmail(options);
 	const result = await gmailFetch<{ id: string }>(accessToken, "/drafts", {
@@ -317,6 +323,7 @@ export async function sendMessage(
 		threadId?: string;
 		inReplyTo?: string;
 		references?: string;
+		contentType?: "text" | "html";
 	},
 ): Promise<{ id: string }> {
 	const raw = buildRawEmail(options);

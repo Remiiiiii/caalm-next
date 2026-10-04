@@ -400,6 +400,24 @@ export const appwriteConfig = {
 		"69d91a04001f4e8c2b22",
 	),
 
+	/** Platform Readiness roadmap — same schema as CLM / NPO roadmap_* tables */
+	prdRoadmapSectionsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_PRD_ROADMAP_SECTIONS_COLLECTION",
+		"69e2b101001f4e8c2d01",
+	),
+	prdRoadmapTasksCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_PRD_ROADMAP_TASKS_COLLECTION",
+		"69e2b102001f4e8c2d02",
+	),
+	prdRoadmapTestRunsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_PRD_ROADMAP_TEST_RUNS_COLLECTION",
+		"69e2b103001f4e8c2d03",
+	),
+	prdRoadmapStatusLogCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_PRD_ROADMAP_STATUS_LOG_COLLECTION",
+		"69e2b104001f4e8c2d04",
+	),
+
 	/** Legacy manual completions — merged into npo_roadmap_tasks on seed when present */
 	npoRoadmapTaskOverridesCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_NPO_ROADMAP_TASK_OVERRIDES_COLLECTION",
@@ -458,6 +476,36 @@ export const appwriteConfig = {
 	giftDesignationsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_GIFT_DESIGNATIONS_COLLECTION",
 		"69d91401001f4e8c2b04",
+	),
+
+	/** Donation page config drafts (name: donation_page_config_drafts) */
+	donationPageConfigDraftsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_DONATION_PAGE_CONFIG_DRAFTS_COLLECTION",
+		"69fb1a01001f4e8c2b80",
+	),
+
+	/** Donation page published config (name: donation_page_config_published) */
+	donationPageConfigPublishedCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_DONATION_PAGE_CONFIG_PUBLISHED_COLLECTION",
+		"69fb1a02001f4e8c2b81",
+	),
+
+	/** Donation page config version history (name: donation_page_config_versions) */
+	donationPageConfigVersionsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_DONATION_PAGE_CONFIG_VERSIONS_COLLECTION",
+		"69fb1a03001f4e8c2b82",
+	),
+
+	/** Stripe price replacements when amounts change (name: donation_page_config_price_replacements) */
+	donationPageConfigPriceReplacementsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_DONATION_PAGE_CONFIG_PRICE_REPLACEMENTS_COLLECTION",
+		"69fb1a04001f4e8c2b83",
+	),
+
+	/** Public give-page share visit events (name: give_share_events) */
+	giveShareEventsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_GIVE_SHARE_EVENTS_COLLECTION",
+		"69fc2a01001f4e8c2c01",
 	),
 
 	/** Recurring sustainer schedules (name: recurring_gift_schedules) */

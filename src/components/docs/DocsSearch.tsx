@@ -3,6 +3,7 @@
 import { Search } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { DocsSearchHit } from "@/lib/docs/types";
 import { cn } from "@/lib/utils";
 
@@ -18,6 +19,7 @@ const SECTION_LABEL: Record<string, string> = {
 
 export function DocsSearch() {
 	const [open, setOpen] = useState(false);
+	const [mounted, setMounted] = useState(false);
 	const [query, setQuery] = useState("");
 	const [hits, setHits] = useState<DocsSearchHit[]>([]);
 	const [loading, setLoading] = useState(false);
@@ -30,6 +32,10 @@ export function DocsSearch() {
 		setQuery("");
 		setHits([]);
 		setActive(0);
+	}, []);
+
+	useEffect(() => {
+		setMounted(true);
 	}, []);
 
 	useEffect(() => {
@@ -90,6 +96,101 @@ export function DocsSearch() {
 		};
 	}, [open]);
 
+	const overlay =
+		open && mounted
+			? createPortal(
+					<div className="fixed inset-0 z-50">
+						{/* Full-page layer between docs UI and the search dialog */}
+						<button
+							type="button"
+							aria-label="Close search"
+							className="absolute inset-0 cursor-default border-0 bg-slate-900/45 backdrop-blur-md dark:bg-black/55"
+							onClick={close}
+						/>
+						<div className="pointer-events-none absolute inset-0 flex items-start justify-center px-4 pt-[12vh]">
+							<div
+								role="dialog"
+								aria-modal="true"
+								aria-label="Search documentation"
+								className="pointer-events-auto w-full max-w-xl overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-950"
+							>
+								<div className="flex items-center gap-2 border-b border-slate-200 px-3 dark:border-slate-800">
+									<Search className="h-4 w-4 text-slate-400" />
+									<input
+										ref={inputRef}
+										value={query}
+										onChange={(e) => setQuery(e.target.value)}
+										placeholder="Search CAALM documentation"
+										aria-controls={listId}
+										aria-autocomplete="list"
+										className="h-12 w-full bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500"
+										onKeyDown={(e) => {
+											if (e.key === "ArrowDown") {
+												e.preventDefault();
+												setActive((a) => Math.min(a + 1, hits.length - 1));
+											} else if (e.key === "ArrowUp") {
+												e.preventDefault();
+												setActive((a) => Math.max(a - 1, 0));
+											} else if (e.key === "Enter" && hits[active]) {
+												e.preventDefault();
+												window.location.href = `/docs/${hits[active].slug}`;
+											}
+										}}
+									/>
+								</div>
+								<div id={listId} className="max-h-[50vh] overflow-y-auto p-2">
+									{loading ? (
+										<p className="px-3 py-6 text-sm text-slate-500 dark:text-slate-400">
+											Searching…
+										</p>
+									) : null}
+									{!loading && query && hits.length === 0 ? (
+										<p className="px-3 py-6 text-sm text-slate-500 dark:text-slate-400">
+											No results for “{query}”.
+										</p>
+									) : null}
+									{!query ? (
+										<p className="px-3 py-6 text-sm text-slate-500 dark:text-slate-400">
+											Try “contracts”, “2FA”, “permissions”, or “department
+											manager”.
+										</p>
+									) : null}
+									<ul className="divide-y divide-slate-200 dark:divide-slate-800">
+										{hits.map((hit, i) => (
+											<li key={hit.slug}>
+												<Link
+													href={`/docs/${hit.slug}`}
+													onClick={close}
+													className={cn(
+														"block px-3 py-2.5 transition-colors duration-150",
+														i === active
+															? "bg-blue-50 dark:bg-slate-800"
+															: "hover:bg-slate-50 dark:hover:bg-slate-900",
+													)}
+												>
+													<div className="flex items-center justify-between gap-3">
+														<p className="text-sm font-medium text-slate-700 dark:text-slate-100">
+															{hit.title}
+														</p>
+														<span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+															{SECTION_LABEL[hit.section] || hit.section}
+														</span>
+													</div>
+													<p className="mt-0.5 line-clamp-2 text-xs text-slate-500 dark:text-slate-400">
+														{hit.snippet}
+													</p>
+												</Link>
+											</li>
+										))}
+									</ul>
+								</div>
+							</div>
+						</div>
+					</div>,
+					document.body,
+				)
+			: null;
+
 	return (
 		<>
 			<button
@@ -104,93 +205,7 @@ export function DocsSearch() {
 				</kbd>
 			</button>
 
-			{open ? (
-				<div
-					className="fixed inset-0 z-50 flex items-start justify-center bg-slate-900/40 px-4 pt-[12vh] dark:bg-black/60"
-					onMouseDown={(e) => {
-						if (e.target === e.currentTarget) close();
-					}}
-				>
-					<div
-						role="dialog"
-						aria-modal="true"
-						aria-label="Search documentation"
-						className="w-full max-w-xl overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-950"
-						onMouseDown={(e) => e.stopPropagation()}
-					>
-						<div className="flex items-center gap-2 border-b border-slate-200 px-3 dark:border-slate-800">
-							<Search className="h-4 w-4 text-slate-400" />
-							<input
-								ref={inputRef}
-								value={query}
-								onChange={(e) => setQuery(e.target.value)}
-								placeholder="Search CAALM documentation"
-								aria-controls={listId}
-								aria-autocomplete="list"
-								className="h-12 w-full bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500"
-								onKeyDown={(e) => {
-									if (e.key === "ArrowDown") {
-										e.preventDefault();
-										setActive((a) => Math.min(a + 1, hits.length - 1));
-									} else if (e.key === "ArrowUp") {
-										e.preventDefault();
-										setActive((a) => Math.max(a - 1, 0));
-									} else if (e.key === "Enter" && hits[active]) {
-										e.preventDefault();
-										window.location.href = `/docs/${hits[active].slug}`;
-									}
-								}}
-							/>
-						</div>
-						<div id={listId} className="max-h-[50vh] overflow-y-auto p-2">
-							{loading ? (
-								<p className="px-3 py-6 text-sm text-slate-500 dark:text-slate-400">
-									Searching…
-								</p>
-							) : null}
-							{!loading && query && hits.length === 0 ? (
-								<p className="px-3 py-6 text-sm text-slate-500 dark:text-slate-400">
-									No results for “{query}”.
-								</p>
-							) : null}
-							{!query ? (
-								<p className="px-3 py-6 text-sm text-slate-500 dark:text-slate-400">
-									Try “contracts”, “2FA”, “permissions”, or “department
-									manager”.
-								</p>
-							) : null}
-							<ul className="divide-y divide-slate-200 dark:divide-slate-800">
-								{hits.map((hit, i) => (
-									<li key={hit.slug}>
-										<Link
-											href={`/docs/${hit.slug}`}
-											onClick={close}
-											className={cn(
-												"block px-3 py-2.5 transition-colors duration-150",
-												i === active
-													? "bg-blue-50 dark:bg-slate-800"
-													: "hover:bg-slate-50 dark:hover:bg-slate-900",
-											)}
-										>
-											<div className="flex items-center justify-between gap-3">
-												<p className="text-sm font-medium text-slate-700 dark:text-slate-100">
-													{hit.title}
-												</p>
-												<span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-													{SECTION_LABEL[hit.section] || hit.section}
-												</span>
-											</div>
-											<p className="mt-0.5 line-clamp-2 text-xs text-slate-500 dark:text-slate-400">
-												{hit.snippet}
-											</p>
-										</Link>
-									</li>
-								))}
-							</ul>
-						</div>
-					</div>
-				</div>
-			) : null}
+			{overlay}
 		</>
 	);
 }

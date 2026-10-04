@@ -165,10 +165,14 @@ async function listOrgRows(
 	table: "contracts" | "licenses",
 	orgId?: string,
 ): Promise<Array<Record<string, unknown>>> {
-	if (!appwriteConfig.databaseId || !tableId) return [];
+	// Refuse unscoped reads — empty orgId would return every tenant's rows
+	if (!appwriteConfig.databaseId || !tableId || !orgId) return [];
 	const { tablesDB } = await createAdminClient();
-	const queries = [Query.limit(500), excludeSoftDeletedQuery(table)];
-	if (orgId) queries.unshift(Query.equal("orgId", orgId));
+	const queries = [
+		Query.equal("orgId", orgId),
+		Query.limit(500),
+		excludeSoftDeletedQuery(table),
+	];
 	const result = await tablesDB.listRows({
 		databaseId: appwriteConfig.databaseId,
 		tableId,

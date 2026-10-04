@@ -2,14 +2,12 @@ import { Query } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import type { Organization } from "@/lib/rbac/organizations";
+import {
+	getOrganizationGiveSlug,
+	slugifyGiveSlug,
+} from "@/lib/give/slug";
 
-function slugify(value: string): string {
-	return value
-		.trim()
-		.toLowerCase()
-		.replace(/[^a-z0-9]+/g, "-")
-		.replace(/^-+|-+$/g, "");
-}
+export { getOrganizationGiveSlug, slugifyGiveSlug };
 
 function parseOrg(row: Record<string, unknown>): Organization {
 	return {
@@ -25,7 +23,7 @@ function parseOrg(row: Record<string, unknown>): Organization {
 export async function resolveOrganizationByGiveSlug(
 	orgSlug: string,
 ): Promise<Organization | null> {
-	const slug = slugify(orgSlug);
+	const slug = slugifyGiveSlug(orgSlug);
 	if (!slug) return null;
 
 	const { tablesDB } = await createAdminClient();
@@ -37,11 +35,7 @@ export async function resolveOrganizationByGiveSlug(
 
 	for (const row of result.rows as unknown as Record<string, unknown>[]) {
 		const org = parseOrg(row);
-		const settingsSlug =
-			typeof org.settings?.giveSlug === "string"
-				? slugify(org.settings.giveSlug)
-				: "";
-		if (settingsSlug === slug || slugify(org.name) === slug) {
+		if (getOrganizationGiveSlug(org) === slug) {
 			return org;
 		}
 	}

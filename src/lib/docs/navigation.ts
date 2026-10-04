@@ -316,7 +316,7 @@ export const DOCS_NAV: DocsNavGroup[] = [
 		id: "nonprofit",
 		title: "Nonprofit & fundraising",
 		description:
-			"Donor CRM, gifts, campaigns, volunteers, and fund/990 settings — what shipped with the nonprofit roadmap.",
+			"Donor CRM, gifts, public donation page, volunteers, and fund/990 settings — what shipped with the nonprofit roadmap.",
 		items: [
 			{
 				title: "Constituents (donor CRM)",
@@ -330,6 +330,13 @@ export const DOCS_NAV: DocsNavGroup[] = [
 				slug: "reference/gifts-and-campaigns",
 				path: "reference/gifts-and-campaigns",
 				summary: "Gift register, campaigns, and the development dashboard.",
+			},
+			{
+				title: "Public donation page",
+				slug: "reference/donation-page",
+				path: "reference/donation-page",
+				summary:
+					"Configure /give, publish amounts, share with attribution, Stripe → gifts.",
 			},
 			{
 				title: "Volunteers",
