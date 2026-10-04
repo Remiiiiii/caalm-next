@@ -347,6 +347,26 @@ export class LicenseService {
 	}
 
 	/**
+	 * Load a license only when it belongs to the caller's workspace.
+	 * Returns null on cross-org access (treat as not found).
+	 */
+	static async getLicenseByIdForOrg(
+		licenseId: string,
+		orgId: string,
+	): Promise<any | null> {
+		try {
+			const license = await LicenseService.getLicenseById(licenseId);
+			const rowOrg = String(license?.orgId || "");
+			if (rowOrg && rowOrg !== orgId) {
+				return null;
+			}
+			return license;
+		} catch {
+			return null;
+		}
+	}
+
+	/**
 	 * Update license
 	 */
 	static async updateLicense(

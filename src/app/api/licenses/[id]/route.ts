@@ -33,12 +33,26 @@ export async function GET(
 		if (permissionCheck) return permissionCheck;
 
 		const { id } = await params;
-		const cacheKey = `${CACHE_KEYS.licenses.details(id)}:v1`;
+		const user = await getCurrentUser();
+		if (!user) {
+			return errorResponse(new Error("Authentication required"), 401, {
+				requestId,
+			});
+		}
+		const defaultOrg = await getUserDefaultOrganization(user.$id);
+		if (!defaultOrg?.orgId) {
+			return errorResponse(new Error("Organization required"), 403, {
+				requestId,
+			});
+		}
+
+		const cacheKey = `${CACHE_KEYS.licenses.details(id)}:org:${defaultOrg.orgId}:v2`;
 
 		const license = await CacheManager.withCache(
 			"licenses/details",
 			cacheKey,
-			async () => LicenseService.getLicenseById(id),
+			async () =>
+				LicenseService.getLicenseByIdForOrg(id, defaultOrg.orgId),
 		);
 
 		if (!license) {
