@@ -30,6 +30,7 @@ export const PRD_PR_BATCHES: PrdPrBatch[] = [
 		sectionNumber: 1,
 		sectionTitle: "Workspace data isolation",
 		batch: 1,
+		linkedPrNumber: 180,
 		taskCodes: ["1.1", "1.2", "1.3", "1.4"],
 		taskTitles: [
 			"Org filter on view-all contract lists",
@@ -42,6 +43,7 @@ export const PRD_PR_BATCHES: PrdPrBatch[] = [
 		sectionNumber: 2,
 		sectionTitle: "API permission coverage",
 		batch: 1,
+		linkedPrNumber: 182,
 		taskCodes: ["2.1", "2.2", "2.3", "2.4", "2.5"],
 		taskTitles: [
 			"Protect file upload and download",
@@ -55,6 +57,7 @@ export const PRD_PR_BATCHES: PrdPrBatch[] = [
 		sectionNumber: 3,
 		sectionTitle: "Trustworthy sign-in and two-factor",
 		batch: 1,
+		linkedPrNumber: 185,
 		taskCodes: ["3.1", "3.2", "3.3", "3.4"],
 		taskTitles: [
 			"Session-bound two-factor setup",
@@ -67,6 +70,7 @@ export const PRD_PR_BATCHES: PrdPrBatch[] = [
 		sectionNumber: 4,
 		sectionTitle: "Honest dashboards and compliance views",
 		batch: 1,
+		linkedPrNumber: 181,
 		taskCodes: ["4.1", "4.2", "4.3", "4.4"],
 		taskTitles: [
 			"Real audit data by default in production",
@@ -79,6 +83,7 @@ export const PRD_PR_BATCHES: PrdPrBatch[] = [
 		sectionNumber: 5,
 		sectionTitle: "IT portal credibility",
 		batch: 1,
+		linkedPrNumber: 184,
 		taskCodes: ["5.1", "5.2", "5.3"],
 		taskTitles: [
 			"Replace or label the IT dashboard API",
@@ -90,6 +95,7 @@ export const PRD_PR_BATCHES: PrdPrBatch[] = [
 		sectionNumber: 6,
 		sectionTitle: "Enterprise buyer honesty",
 		batch: 1,
+		linkedPrNumber: 183,
 		taskCodes: ["6.1", "6.2", "6.3", "6.4"],
 		taskTitles: [
 			"Integrations panel matches reality",
@@ -103,6 +109,12 @@ export const PRD_PR_BATCHES: PrdPrBatch[] = [
 export function prdBatchBranchName(batch: PrdPrBatch): string {
 	const section = String(batch.sectionNumber).padStart(2, "0");
 	return `cursor/platform-readiness/s${section}-b${batch.batch}-5329`;
+}
+
+/** File id under src/lib/roadmap/prd-batches/ (e.g. s01-b1). */
+export function prdBatchFileId(batch: PrdPrBatch): string {
+	const section = String(batch.sectionNumber).padStart(2, "0");
+	return `s${section}-b${batch.batch}`;
 }
 
 export function linkedPrNumbersForPrdSection(sectionNumber: number): number[] {
