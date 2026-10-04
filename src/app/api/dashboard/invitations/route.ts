@@ -1,12 +1,36 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { listPendingInvitations } from "@/lib/actions/user.actions";
+import { PERMISSIONS } from "@/constants/permissions";
+import {
+	getCurrentUser,
+	listPendingInvitations,
+} from "@/lib/actions/user.actions";
+import { requirePermission } from "@/lib/rbac/middleware";
+import {
+	getUserDefaultOrganization,
+	validateUserOrgAccess,
+} from "@/lib/rbac/permissions";
 import { CACHE_KEYS } from "@/lib/services/cache-keys";
 import CacheManager from "@/lib/services/cache-manager";
 
 export async function GET(request: NextRequest) {
+	const denied = await requirePermission(request, {
+		permission: PERMISSIONS.USERS.VIEW,
+	});
+	if (denied) return denied;
+
 	try {
+		const user = await getCurrentUser();
+		if (!user) {
+			return NextResponse.json(
+				{ error: "Authentication required" },
+				{ status: 401 },
+			);
+		}
+
 		const { searchParams } = new URL(request.url);
-		const orgId = searchParams.get("orgId");
+		const requestedOrgId = searchParams.get("orgId");
+		const defaultOrg = await getUserDefaultOrganization(user.$id);
+		const orgId = requestedOrgId || defaultOrg?.orgId;
 
 		if (!orgId) {
 			return NextResponse.json(
@@ -18,10 +42,16 @@ export async function GET(request: NextRequest) {
 			);
 		}
 
-		// Cache key for invitations
+		const hasOrgAccess = await validateUserOrgAccess(user.$id, orgId);
+		if (!hasOrgAccess) {
+			return NextResponse.json(
+				{ error: "Access denied to this organization" },
+				{ status: 403 },
+			);
+		}
+
 		const cacheKey = CACHE_KEYS.dashboard.invitations(orgId);
 
-		// Fetch pending invitations with caching (5 minutes TTL)
 		const invitations = await CacheManager.withCache(
 			"dashboard/invitations",
 			cacheKey,
@@ -30,9 +60,8 @@ export async function GET(request: NextRequest) {
 
 		return NextResponse.json({ data: invitations });
 	} catch (error: any) {
-		console.error("Failed to fetch dashboard invitations:", error);
+		console.error("[SERVER] dashboard/invitations:", error);
 
-		// Return empty array in test/CI environments when Appwrite fails
 		if (
 			process.env.CI ||
 			process.env.NODE_ENV === "test" ||

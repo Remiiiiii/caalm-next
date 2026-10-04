@@ -56,7 +56,8 @@ This is the shortest path to value. Follow the track that matches how you arrive
 ### If you run fundraising
 1. Open **All Constituents** and confirm you have `constituents.view`.
 2. Post one test gift from **Gifts** (or open the [development dashboard](/dashboard/development) for YTD totals).
-3. Read [Constituents](/docs/reference/constituents) and [Gifts and campaigns](/docs/reference/gifts-and-campaigns) for permissions and out-of-scope finance limits.
+3. If you own the online ask, open [Donation page settings](/settings/donation-page), publish a draft, and preview `/give/{slug}`.
+4. Read [Constituents](/docs/reference/constituents), [Gifts and campaigns](/docs/reference/gifts-and-campaigns), and [Public donation page](/docs/reference/donation-page) for permissions and out-of-scope finance limits.
 
 ## Success checklist
 

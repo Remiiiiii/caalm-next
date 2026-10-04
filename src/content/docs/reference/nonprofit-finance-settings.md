@@ -31,4 +31,4 @@ Map obligation and gift categories to program, management, and fundraising bucke
 - General ledger posting or live Intacct / QuickBooks two-way sync (journal export is a download for your existing ledger)
 - 990 e-file
 
-Related: [Funding and retention](/docs/reference/funding-retention), [Gifts and campaigns](/docs/reference/gifts-and-campaigns).
+Related: [Funding and retention](/docs/reference/funding-retention), [Gifts and campaigns](/docs/reference/gifts-and-campaigns), [Public donation page](/docs/reference/donation-page).

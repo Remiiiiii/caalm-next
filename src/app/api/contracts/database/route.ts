@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
 
 		const nameQuery = request.nextUrl.searchParams.get("name")?.trim();
 		if (nameQuery) {
-			const cacheKey = `contracts:lookup:${user.$id}:${nameQuery.toLowerCase()}`;
+			const cacheKey = `contracts:lookup:${defaultOrg.orgId}:${user.$id}:${nameQuery.toLowerCase()}`;
 			const lookup = await CacheManager.withCache(
 				"contracts/database",
 				cacheKey,
@@ -108,8 +108,8 @@ export async function GET(request: NextRequest) {
 
 		const cacheKey =
 			scope.mode === "all_org"
-				? CACHE_KEYS.contracts.database(limit, offset)
-				: `contracts:database:scoped:${user.$id}:${scope.mode}:${limit}:${offset}:${
+				? `${CACHE_KEYS.contracts.database(limit, offset)}:org:${defaultOrg.orgId}`
+				: `contracts:database:scoped:${user.$id}:${defaultOrg.orgId}:${scope.mode}:${limit}:${offset}:${
 						scope.mode === "department"
 							? scope.department
 							: scope.mode === "own"

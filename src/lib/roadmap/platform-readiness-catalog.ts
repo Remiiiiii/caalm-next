@@ -127,7 +127,7 @@ const PLATFORM_READINESS_ROADMAP_SECTIONS: RoadmapCatalogSection[] = [
 		sectionNumber: 1,
 		title: "Workspace data isolation",
 		sourceRef:
-			"Assessment: users with view-all permissions can list contracts without an org filter — unsafe for true multi-tenant SaaS",
+			"Assessment: users with view-all permissions can list contracts without an org filter — unsafe for true multi-tenant SaaS. Sales note: docs/internal/workspace-isolation-note.md",
 		...SEQUENTIAL,
 		tasks: [
 			t(

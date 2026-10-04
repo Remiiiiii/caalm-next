@@ -5,7 +5,7 @@ section: nonprofit
 audience: "Development staff, Finance partners"
 ---
 
-Gifts are cash and in-kind donations tied to constituents. Campaigns group appeals; the development dashboard summarizes year-to-date posted giving for leadership.
+Gifts are cash and in-kind donations tied to constituents. Campaigns group appeals; the development dashboard summarizes year-to-date posted giving for leadership. Card gifts from the [public donation page](/docs/reference/donation-page) post here automatically after Stripe confirms payment.
 
 ## Where to work
 
@@ -13,9 +13,10 @@ Gifts are cash and in-kind donations tied to constituents. Campaigns group appea
 |---|---|---|
 | Gift register | `/gifts` | Search posted and voided gifts |
 | New gift | `/gifts/new` | Record a gift with fund/designation when required |
-| Gift detail | `/gifts/[id]` | Receipt status, soft credits, audit trail |
+| Gift detail | `/gifts/[id]` | Receipt status, soft credits, share attribution, audit trail |
 | Campaigns | `/campaigns` | Campaign list and detail with response totals |
 | Development dashboard | `/dashboard/development` | YTD posted gifts (voids excluded) |
+| Public donation page | `/give/{slug}` | Online ask; configure under Donation page settings |
 
 ## Post a gift
 
@@ -39,4 +40,4 @@ Use `/dashboard/development` for board-ready YTD totals. Counts use **posted** g
 | `gifts.create` | Post new gifts |
 | `gifts.void` | Void a posted gift with reason |
 
-Related: [Constituents](/docs/reference/constituents), [Nonprofit finance settings](/docs/reference/nonprofit-finance-settings).
+Related: [Public donation page](/docs/reference/donation-page), [Constituents](/docs/reference/constituents), [Nonprofit finance settings](/docs/reference/nonprofit-finance-settings).

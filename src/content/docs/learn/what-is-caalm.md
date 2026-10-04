@@ -35,6 +35,7 @@ That process feels normal until one miss costs a license, a grant, or a week of 
 - **Assistant** — AI help for chat, document analysis, and meeting prep (permission-gated)
 - **Constituents** — donor, volunteer, and member CRM with channel consent
 - **Gifts & campaigns** — posted giving, void discipline, and development dashboards
+- **Public donation page** — configurable `/give` ask with Stripe checkout and share attribution
 - **Volunteers** — shifts and hours tied to constituent records
 - **Nonprofit finance settings** — restricted funds and Form 990 **worksheet** mapping (not payroll, GL, or 990 e-file)
 
