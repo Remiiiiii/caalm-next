@@ -1,6 +1,6 @@
 /**
  * IT Dashboard Component
- * Main dashboard with overview widgets, system health, and real-time metrics
+ * Connectivity + process signals only — no invented host CPU graphs.
  */
 
 "use client";
@@ -10,7 +10,6 @@ import {
 	AlertTriangle,
 	CheckCircle,
 	Server,
-	TrendingUp,
 	Wifi,
 	XCircle,
 } from "lucide-react";
@@ -19,25 +18,27 @@ import {
 	DashboardGreeting,
 	type DashboardGreetingUser,
 } from "@/components/dashboard/DashboardGreeting";
-import { Badge } from "@/components/ui/badge";
+import { SampleDataBadge } from "@/components/ui/sample-data-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MetricStatCard } from "@/components/ui/metric-stat-card";
 import { useITDashboard } from "@/hooks/useITDashboard";
 import { useITMetrics } from "@/hooks/useITMetrics";
 import { useITUser } from "@/hooks/useITUser";
-import { useOrgTimezone } from "@/hooks/useOrgTimezone";
 import {
 	type ConnectionStatus,
 	realtimeService,
 } from "@/lib/services/realtime-service";
-import { formatInTimezone } from "@/lib/timezone";
 
 type ITDashboardProps = {
 	user?: DashboardGreetingUser | null;
 };
 
+function formatNullableStat(value: number | null | undefined): string {
+	if (value == null || Number.isNaN(value)) return "—";
+	return value.toLocaleString();
+}
+
 const ITDashboard: React.FC<ITDashboardProps> = ({ user }) => {
-	const timeZone = useOrgTimezone();
 	const {
 		dashboard,
 		isLoading: dashboardLoading,
@@ -47,11 +48,8 @@ const ITDashboard: React.FC<ITDashboardProps> = ({ user }) => {
 		pollingInterval: 30000,
 	});
 
-	const {
-		metrics,
-		loading: metricsLoading,
-		connectionStatus,
-	} = useITMetrics({
+	// SSE stays subscribed so we know when host telemetry is absent (configured: false).
+	const { metrics, loading: metricsLoading } = useITMetrics({
 		enabled: true,
 	});
 
@@ -61,7 +59,6 @@ const ITDashboard: React.FC<ITDashboardProps> = ({ user }) => {
 		realtimeService.getConnectionStatus(),
 	);
 
-	// Subscribe to real-time connection status
 	React.useEffect(() => {
 		const unsubscribe = realtimeService.onStatusChange((status) => {
 			setRealtimeStatus(status);
@@ -70,20 +67,16 @@ const ITDashboard: React.FC<ITDashboardProps> = ({ user }) => {
 		return unsubscribe;
 	}, []);
 
-	// Don't early return - render loading state inline to maintain consistent hook calls
 	const _isLoading = dashboardLoading || metricsLoading || userLoading;
 
 	const systemHealth = dashboard?.systemHealth;
 	const healthStatus = systemHealth?.status;
-
-	const quickStats = dashboard?.quickStats || {
-		apiRequests: metrics?.apiRequests?.total || 0,
-		deployments: metrics?.deployments?.total || 0,
-		activeIncidents: metrics?.incidents?.active || 0,
-		systemLoad: 0,
-	};
-
-	const recentAlerts = dashboard?.recentAlerts || [];
+	const quickStats = dashboard?.quickStats;
+	const notice =
+		dashboard?.notice ||
+		(!dashboardLoading && !dashboard?.telemetryConfigured
+			? "Host telemetry is not configured."
+			: null);
 
 	return (
 		<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
@@ -107,7 +100,19 @@ const ITDashboard: React.FC<ITDashboardProps> = ({ user }) => {
 					}
 				/>
 
-				{/* System Health Cards */}
+				{notice ? (
+					<div className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+						<p className="text-sm text-slate-600 max-w-3xl">{notice}</p>
+						<SampleDataBadge label="Not configured" />
+					</div>
+				) : null}
+
+				{dashboardError ? (
+					<div className="rounded-lg border border-red/20 bg-red/10 px-4 py-3 text-sm text-red">
+						{dashboardError}
+					</div>
+				) : null}
+
 				<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
 					<MetricStatCard
 						title="System Status"
@@ -115,9 +120,9 @@ const ITDashboard: React.FC<ITDashboardProps> = ({ user }) => {
 							<span className="capitalize">{healthStatus ?? "—"}</span>
 						}
 						description={
-							systemHealth
+							systemHealth?.uptime != null
 								? `Uptime: ${systemHealth.uptime}%`
-								: "Waiting on live status"
+								: "Connectivity checks only"
 						}
 						icon={Server}
 						iconTone={
@@ -157,164 +162,105 @@ const ITDashboard: React.FC<ITDashboardProps> = ({ user }) => {
 					/>
 					<MetricStatCard
 						title="API Requests"
-						value={
-							typeof quickStats.apiRequests === "number"
-								? quickStats.apiRequests.toLocaleString()
-								: "0"
-						}
-						description="Total requests"
+						value={formatNullableStat(quickStats?.apiRequests)}
+						description="Requires request telemetry"
 						icon={Activity}
 					/>
 					<MetricStatCard
-						title="Deployments"
+						title="Process heap"
 						value={
-							typeof quickStats.deployments === "number"
-								? quickStats.deployments.toLocaleString()
-								: "0"
+							quickStats?.processHeapUsedMb != null
+								? `${quickStats.processHeapUsedMb} MB`
+								: "—"
 						}
-						description="Total deployments"
+						description={
+							quickStats?.processUptimeLabel
+								? `Uptime ${quickStats.processUptimeLabel}`
+								: "This Next.js process (not host RAM)"
+						}
 						icon={Server}
 					/>
 					<MetricStatCard
 						title="Active Incidents"
-						value={
-							typeof quickStats.activeIncidents === "number"
-								? quickStats.activeIncidents
-								: "0"
-						}
-						description="Requiring attention"
+						value={formatNullableStat(quickStats?.activeIncidents)}
+						description="Requires incident tooling"
 						icon={AlertCircle}
-						iconTone={
-							Number(quickStats.activeIncidents) > 0 ? "danger" : "default"
-						}
-						dynamicIcon={
-							Number(quickStats.activeIncidents) > 0
-								? AlertTriangle
-								: undefined
-						}
-						dynamicTone="danger"
-						valueTone={
-							Number(quickStats.activeIncidents) > 0 ? "danger" : "default"
-						}
 					/>
 				</div>
 
-				{/* System Performance Metrics */}
-				{metrics?.systemPerformance && (
+				{systemHealth?.services?.length ? (
 					<Card className="glass-card">
 						<div className="glass-card-cap" />
 						<CardHeader className="glass-dialog-wizard-header mt-4">
 							<div className="flex items-center gap-3">
-								<TrendingUp className="w-5 h-5 text-[#0f5384]" />
+								<Server className="w-5 h-5 text-[#0f5384]" />
+								<CardTitle className="text-xl font-semibold sidebar-gradient-text">
+									Service checks
+								</CardTitle>
+							</div>
+						</CardHeader>
+						<CardContent className="bg-slate-50 p-6">
+							<ul className="space-y-3">
+								{systemHealth.services.map((service) => (
+									<li
+										key={service.name}
+										className="flex items-center justify-between rounded-md border border-slate-200 bg-white px-4 py-3"
+									>
+										<div>
+											<p className="text-sm font-medium text-slate-700">
+												{service.name}
+											</p>
+											<p className="text-xs text-slate-500">
+												{service.detail ||
+													(service.responseTime != null
+														? `${service.responseTime} ms`
+														: "—")}
+											</p>
+										</div>
+										{service.status === "up" ? (
+											<CheckCircle className="h-5 w-5 text-green" />
+										) : (
+											<XCircle className="h-5 w-5 text-red" />
+										)}
+									</li>
+								))}
+							</ul>
+						</CardContent>
+					</Card>
+				) : null}
+
+				{/* Host performance graphs only when a real SSE payload is configured */}
+				{metrics?.systemPerformance && metrics.configured !== false ? (
+					<Card className="glass-card">
+						<div className="glass-card-cap" />
+						<CardHeader className="glass-dialog-wizard-header mt-4">
+							<div className="flex items-center justify-between gap-3">
 								<CardTitle className="text-xl font-semibold sidebar-gradient-text">
 									System Performance
 								</CardTitle>
+								<SampleDataBadge />
 							</div>
 						</CardHeader>
 						<CardContent className="bg-slate-50 p-6">
-							<div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-								<div className="p-4 bg-white rounded-lg border border-slate-200">
-									<p className="text-sm text-slate-600 mb-1">CPU Usage</p>
-									<p className="text-2xl font-bold text-slate-700">
-										{metrics.systemPerformance.cpuUsage.toFixed(1)}%
-									</p>
-								</div>
-								<div className="p-4 bg-white rounded-lg border border-slate-200">
-									<p className="text-sm text-slate-600 mb-1">Memory Usage</p>
-									<p className="text-2xl font-bold text-slate-700">
-										{metrics.systemPerformance.memoryUsage.toFixed(1)}%
-									</p>
-								</div>
-								<div className="p-4 bg-white rounded-lg border border-slate-200">
-									<p className="text-sm text-slate-600 mb-1">Disk I/O</p>
-									<p className="text-2xl font-bold text-slate-700">
-										{metrics.systemPerformance.diskIO.toFixed(1)}%
-									</p>
-								</div>
-								<div className="p-4 bg-white rounded-lg border border-slate-200">
-									<p className="text-sm text-slate-600 mb-1">Network Traffic</p>
-									<p className="text-2xl font-bold text-slate-700">
-										{metrics.systemPerformance.networkTraffic.toFixed(1)} MB/s
-									</p>
-								</div>
-							</div>
+							<p className="text-sm text-slate-600">
+								Live host graphs appear here when an observability backend is
+								wired.
+							</p>
 						</CardContent>
 					</Card>
-				)}
+				) : null}
 
-				{/* Recent Alerts */}
-				{recentAlerts.length > 0 && (
-					<Card className="glass-card">
-						<div className="glass-card-cap" />
-						<CardHeader className="glass-dialog-wizard-header mt-4">
-							<div className="flex items-center gap-3">
-								<AlertTriangle className="w-5 h-5 text-[#0f5384]" />
-								<CardTitle className="text-xl font-semibold sidebar-gradient-text">
-									Recent Alerts
-								</CardTitle>
-							</div>
-						</CardHeader>
-						<CardContent className="bg-slate-50 p-6">
-							<div className="space-y-2">
-								{recentAlerts.slice(0, 5).map((alert) => (
-									<div
-										key={alert.id}
-										className="p-3 bg-white rounded-lg border border-slate-200 flex items-center justify-between"
-									>
-										<div className="flex items-center gap-3">
-											{alert.severity === "critical" && (
-												<XCircle className="h-5 w-5 text-red-600" />
-											)}
-											{alert.severity === "warning" && (
-												<AlertTriangle className="h-5 w-5 text-yellow-600" />
-											)}
-											{alert.severity === "info" && (
-												<AlertCircle className="h-5 w-5 text-blue-600" />
-											)}
-											<div>
-												<p className="text-sm font-medium text-slate-700">
-													{alert.message}
-												</p>
-												<p className="text-xs text-slate-600">
-													{formatInTimezone(
-														new Date(alert.timestamp),
-														"MMM d, yyyy h:mm a",
-														timeZone,
-													)}
-												</p>
-											</div>
-										</div>
-										<Badge
-											variant={
-												alert.severity === "critical"
-													? "destructive"
-													: alert.severity === "warning"
-														? "default"
-														: "secondary"
-											}
-										>
-											{alert.severity}
-										</Badge>
-									</div>
-								))}
-							</div>
-						</CardContent>
-					</Card>
-				)}
-
-				{/* Empty State */}
-				{!dashboardLoading && !dashboard && !metrics && (
+				{!dashboardLoading && !dashboard && (
 					<Card className="glass-card">
 						<div className="glass-card-cap" />
 						<CardContent className="pt-6 bg-slate-50">
 							<div className="text-center py-8">
 								<Server className="h-12 w-12 mx-auto text-slate-400 mb-4" />
 								<h3 className="text-lg font-semibold mb-2 text-slate-700">
-									No Dashboard Data
+									No dashboard data
 								</h3>
 								<p className="text-slate-600 mb-4">
-									Dashboard metrics will appear here once system data is
-									available.
+									Unable to load connectivity checks. Retry or verify IT access.
 								</p>
 							</div>
 						</CardContent>

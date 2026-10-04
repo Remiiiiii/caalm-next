@@ -36,10 +36,14 @@ export default function SystemOverviewPage() {
 				]);
 				const storage = storageRes.ok ? await storageRes.json() : null;
 				const usageOk = healthRes.ok;
+				const storageConfigured =
+					storage?.configured !== false && storage?.total?.size != null;
 				if (!cancelled) {
 					setMetrics({
-						storageTotal: storage?.total?.size?.toString(),
-						storageUnit: storage?.total?.unit,
+						storageTotal: storageConfigured
+							? storage.total.size.toString()
+							: undefined,
+						storageUnit: storageConfigured ? storage.total.unit : undefined,
 						apiHealthy: usageOk,
 						usersOnline: null,
 					});
@@ -62,7 +66,7 @@ export default function SystemOverviewPage() {
 			title: "Storage footprint",
 			value: metrics?.storageTotal
 				? `${metrics.storageTotal} ${metrics.storageUnit || ""}`
-				: "—",
+				: "Not configured",
 			icon: HardDrive,
 			href: "/dashboard/it/storage",
 		},

@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { type NextRequest, NextResponse } from "next/server";
+import { requireITRole } from "@/lib/auth/it-guards";
 import { CACHE_KEYS } from "@/lib/services/cache-keys";
 import CacheManager from "@/lib/services/cache-manager";
 
@@ -25,7 +26,6 @@ async function getDirectorySize(dirPath: string): Promise<number> {
 		for (const entry of entries) {
 			const fullPath = join(dirPath, entry.name);
 
-			// Skip common ignored directories
 			if (entry.name.startsWith(".") && entry.name !== ".next") {
 				continue;
 			}
@@ -37,18 +37,17 @@ async function getDirectorySize(dirPath: string): Promise<number> {
 					const fileStats = await stat(fullPath);
 					totalSize += fileStats.size;
 				}
-			} catch (_error) {}
+			} catch {
+				/* skip unreadable entries */
+			}
 		}
 
 		return totalSize;
-	} catch (_error) {
+	} catch {
 		return 0;
 	}
 }
 
-/**
- * Format bytes to human-readable format
- */
 function formatBytes(bytes: number): { size: number; unit: string } {
 	if (bytes === 0) return { size: 0, unit: "B" };
 
@@ -62,19 +61,19 @@ function formatBytes(bytes: number): { size: number; unit: string } {
 	};
 }
 
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
+	const roleCheck = await requireITRole(request);
+	if (roleCheck) return roleCheck;
+
 	try {
-		// Cache key for IT storage metrics
 		const cacheKey = CACHE_KEYS.it.storageMetrics();
 
-		// Fetch storage metrics with caching (5 minutes TTL)
 		const metrics = await CacheManager.withCache(
 			"it/storage-metrics",
 			cacheKey,
 			async () => {
 				const projectRoot = process.cwd();
 
-				// Calculate sizes for different components
 				const sourceCodeSize = await getDirectorySize(join(projectRoot, "src"));
 				const testsSize = await getDirectorySize(join(projectRoot, "tests"));
 				const publicAssetsSize = await getDirectorySize(
@@ -87,59 +86,42 @@ export async function GET(_request: NextRequest) {
 					join(projectRoot, ".next"),
 				);
 
-				// Get lock file size
 				let lockFileSize = 0;
 				try {
 					const lockFileStats = await stat(join(projectRoot, "pnpm-lock.yaml"));
 					lockFileSize = lockFileStats.size;
 				} catch {
-					// Lock file might not exist
+					/* lock optional */
 				}
 
-				// Calculate total (excluding node_modules and .next for source code total)
 				const sourceCodeTotal =
 					sourceCodeSize + testsSize + publicAssetsSize + lockFileSize;
 				const totalWithDeps = sourceCodeTotal + nodeModulesSize;
 				const totalComplete = totalWithDeps + buildArtifactsSize;
 
-				// Format sizes
-				const sourceCode = formatBytes(sourceCodeTotal);
-				const dependencies = formatBytes(nodeModulesSize);
-				const buildArtifacts = formatBytes(buildArtifactsSize);
-				const publicAssets = formatBytes(publicAssetsSize);
-				const lockFile = formatBytes(lockFileSize);
-				const total = formatBytes(totalComplete);
+				// Serverless hosts often have no local node_modules/.next — report honestly.
+				const configured = totalComplete > 0;
 
-				// Platform breakdown (estimated differences)
-				// Windows typically has larger node_modules due to .exe files
-				// Linux is usually smaller
-				// macOS is in between
-				const platformBreakdown = [
-					{
-						platform: "Windows",
-						nodeModules: Math.round((nodeModulesSize / 1024 / 1024) * 1.1), // ~10% larger
-						buildArtifacts: Math.round(
-							(buildArtifactsSize / 1024 / 1024) * 1.08,
-						),
-						total: Math.round((totalComplete / 1024 / 1024) * 1.09),
-					},
-					{
-						platform: "Linux",
-						nodeModules: Math.round((nodeModulesSize / 1024 / 1024) * 0.91), // ~9% smaller
-						buildArtifacts: Math.round(
-							(buildArtifactsSize / 1024 / 1024) * 0.92,
-						),
-						total: Math.round((totalComplete / 1024 / 1024) * 0.91),
-					},
-					{
-						platform: "macOS",
-						nodeModules: Math.round(nodeModulesSize / 1024 / 1024), // Baseline
-						buildArtifacts: Math.round(buildArtifactsSize / 1024 / 1024),
-						total: Math.round(totalComplete / 1024 / 1024),
-					},
-				];
+				if (!configured) {
+					return {
+						configured: false,
+						source: "local-disk-scan" as const,
+						notice:
+							"Local disk scan found no measurable project directories on this host (common on serverless). Appwrite file storage is separate — see Storage API usage.",
+						sourceCode: formatBytes(0),
+						dependencies: formatBytes(0),
+						buildArtifacts: formatBytes(0),
+						publicAssets: formatBytes(0),
+						lockFile: formatBytes(0),
+						total: formatBytes(0),
+						componentBreakdown: [] as Array<{
+							name: string;
+							size: number;
+							percentage: number;
+						}>,
+					};
+				}
 
-				// Component breakdown
 				const componentBreakdown = [
 					{
 						name: "node_modules",
@@ -168,41 +150,19 @@ export async function GET(_request: NextRequest) {
 						size: Math.round((testsSize / 1024 / 1024) * 10) / 10,
 						percentage: Math.round((testsSize / totalComplete) * 100 * 10) / 10,
 					},
-					{
-						name: "Other",
-						size:
-							Math.round(
-								((lockFileSize +
-									(totalComplete -
-										sourceCodeTotal -
-										nodeModulesSize -
-										buildArtifactsSize)) /
-									1024 /
-									1024) *
-									10,
-							) / 10,
-						percentage:
-							Math.round(
-								((lockFileSize +
-									(totalComplete -
-										sourceCodeTotal -
-										nodeModulesSize -
-										buildArtifactsSize)) /
-									totalComplete) *
-									100 *
-									10,
-							) / 10,
-					},
 				].filter((item) => item.size > 0);
 
 				return {
-					sourceCode,
-					dependencies,
-					buildArtifacts,
-					publicAssets,
-					lockFile,
-					total,
-					platformBreakdown,
+					configured: true,
+					source: "local-disk-scan" as const,
+					notice:
+						"Sizes are from a local disk scan of this app host — not estimated multi-OS projections.",
+					sourceCode: formatBytes(sourceCodeTotal),
+					dependencies: formatBytes(nodeModulesSize),
+					buildArtifacts: formatBytes(buildArtifactsSize),
+					publicAssets: formatBytes(publicAssetsSize),
+					lockFile: formatBytes(lockFileSize),
+					total: formatBytes(totalComplete),
 					componentBreakdown,
 				};
 			},
@@ -212,7 +172,11 @@ export async function GET(_request: NextRequest) {
 	} catch (error) {
 		console.error("Error calculating storage metrics:", error);
 		return NextResponse.json(
-			{ error: "Failed to calculate storage metrics" },
+			{
+				configured: false,
+				error: "Failed to calculate storage metrics",
+				notice: "Not configured — storage scan failed on this host.",
+			},
 			{ status: 500 },
 		);
 	}

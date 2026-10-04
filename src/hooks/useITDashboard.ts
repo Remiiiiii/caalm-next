@@ -6,13 +6,16 @@ import useSWR from "swr";
 import { swrConfig } from "@/lib/swr-config";
 
 export interface ITDashboardData {
+	telemetryConfigured: boolean;
+	notice?: string;
 	systemHealth: {
 		status: "healthy" | "degraded" | "down";
-		uptime: number;
+		uptime: number | null;
 		services: Array<{
 			name: string;
 			status: "up" | "down" | "degraded";
-			responseTime: number;
+			responseTime: number | null;
+			detail?: string;
 		}>;
 	};
 	recentAlerts: Array<{
@@ -22,10 +25,13 @@ export interface ITDashboardData {
 		timestamp: string;
 	}>;
 	quickStats: {
-		apiRequests: number;
-		deployments: number;
-		activeIncidents: number;
-		systemLoad: number;
+		apiRequests: number | null;
+		deployments: number | null;
+		activeIncidents: number | null;
+		systemLoad: number | null;
+		processHeapUsedMb?: number | null;
+		processUptimeSeconds?: number | null;
+		processUptimeLabel?: string | null;
 	};
 	timestamp: string;
 }
@@ -50,7 +56,7 @@ export interface UseITDashboardOptions {
 
 export const useITDashboard = ({
 	enableRealTime = true,
-	pollingInterval = 30000, // 30 seconds for dashboard data
+	pollingInterval = 30000,
 }: UseITDashboardOptions = {}) => {
 	const { data, error, isLoading, mutate } = useSWR(
 		"/api/it/dashboard",

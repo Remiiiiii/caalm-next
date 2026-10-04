@@ -3,6 +3,7 @@
  * Icons use Lucide keys resolved in ITSidebar (many /assets/icons/*.svg paths do not exist).
  */
 
+import { isITPlaceholderNavUrl } from "@/lib/it/placeholder-routes";
 import type { PermissionKey } from "./permissions";
 import { PERMISSIONS } from "./permissions";
 
@@ -503,18 +504,32 @@ export const WORKSPACE_ICON_BY_NAME: Record<string, ITNavIconKey> = {
 	"Content Creator": "newspaper",
 };
 
+export type FilterITNavigationOptions = {
+	/**
+	 * When false (default), placeholder / Coming-online routes leave the primary IT nav.
+	 * Deep links still work for internal QA.
+	 */
+	includePreview?: boolean;
+};
+
 /**
- * Filter navigation items based on user permissions
+ * Filter navigation items based on user permissions (and hide unfinished shells).
  */
 export function filterITNavigationByPermissions(
 	navigation: ITSidebarSection[],
 	userPermissions: PermissionKey[],
+	options: FilterITNavigationOptions = {},
 ): ITSidebarSection[] {
+	const includePreview = options.includePreview === true;
+
 	return navigation
 		.map((section) => ({
 			...section,
 			items: section.items
 				.filter((item) => {
+					if (!includePreview && isITPlaceholderNavUrl(item.url)) {
+						return false;
+					}
 					if (!item.permission) return true;
 					return userPermissions.includes(item.permission);
 				})
@@ -523,6 +538,12 @@ export function filterITNavigationByPermissions(
 					return {
 						...item,
 						subItems: item.subItems.filter((subItem) => {
+							if (
+								!includePreview &&
+								isITPlaceholderNavUrl(subItem.url)
+							) {
+								return false;
+							}
 							if (!subItem.permission) return true;
 							return userPermissions.includes(subItem.permission);
 						}),
