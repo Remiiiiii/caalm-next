@@ -1,63 +1,45 @@
 /**
- * IT Metrics SSE Endpoint
- * Server-Sent Events stream for real-time IT metrics
+ * IT Metrics SSE — honest empty stream.
+ * Does not emit random CPU / request totals.
  */
 
 import type { NextRequest } from "next/server";
 import { requireITRole } from "@/lib/auth/it-guards";
 
 export async function GET(request: NextRequest) {
-	// Verify IT role
 	const roleCheck = await requireITRole(request);
 	if (roleCheck) return roleCheck;
 
-	// Create SSE response
 	const encoder = new TextEncoder();
 	const stream = new ReadableStream({
 		start(controller) {
-			// Send initial data
-			const sendMetrics = () => {
-				const metrics = {
-					apiRequests: {
-						total: Math.floor(Math.random() * 100000) + 100000,
-						perSecond: Math.floor(Math.random() * 100) + 50,
-						errors: Math.floor(Math.random() * 10),
-					},
-					systemPerformance: {
-						cpuUsage: Math.random() * 50 + 20,
-						memoryUsage: Math.random() * 40 + 40,
-						diskIO: Math.random() * 30 + 10,
-						networkTraffic: Math.random() * 100 + 50,
-					},
-					deployments: {
-						total: 12,
-						successful: 11,
-						failed: 1,
-						inProgress: 0,
-					},
-					incidents: {
-						active: 0,
-						resolved: 5,
-						critical: 0,
-					},
-					timestamp: new Date().toISOString(),
-				};
-
-				controller.enqueue(
-					encoder.encode(`data: ${JSON.stringify(metrics)}\n\n`),
-				);
+			const payload = {
+				configured: false,
+				notice:
+					"Real-time host metrics are not configured. Connect an observability backend before enabling live CPU and request graphs.",
+				timestamp: new Date().toISOString(),
 			};
 
-			// Send initial metrics
-			sendMetrics();
+			controller.enqueue(
+				encoder.encode(`data: ${JSON.stringify(payload)}\n\n`),
+			);
 
-			// Send updates every 30 seconds
-			const interval = setInterval(sendMetrics, 30000);
+			// Keep the SSE channel open with comment heartbeats (no fake metrics).
+			const heartbeat = setInterval(() => {
+				try {
+					controller.enqueue(encoder.encode(": heartbeat\n\n"));
+				} catch {
+					clearInterval(heartbeat);
+				}
+			}, 30000);
 
-			// Cleanup on close
 			request.signal.addEventListener("abort", () => {
-				clearInterval(interval);
-				controller.close();
+				clearInterval(heartbeat);
+				try {
+					controller.close();
+				} catch {
+					/* already closed */
+				}
 			});
 		},
 	});

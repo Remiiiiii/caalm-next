@@ -212,7 +212,7 @@ export default function ReportIssueFab() {
 								</button>
 							</div>
 							<p className="px-4 pb-3 text-[11px] text-slate-500">
-								Logged from: {routeContext.pageLabel}
+								Logged from: {routeContext.pageLabel.toUpperCase()}
 							</p>
 
 							<div className="space-y-3 px-4 pb-3">

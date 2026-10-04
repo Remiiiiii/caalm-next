@@ -11,24 +11,27 @@ import {
 } from "@/lib/services/sse-service";
 
 export interface ITMetrics {
-	apiRequests: {
+	/** False when the stream only reports that host telemetry is not wired. */
+	configured?: boolean;
+	notice?: string;
+	apiRequests?: {
 		total: number;
 		perSecond: number;
 		errors: number;
 	};
-	systemPerformance: {
+	systemPerformance?: {
 		cpuUsage: number;
 		memoryUsage: number;
 		diskIO: number;
 		networkTraffic: number;
 	};
-	deployments: {
+	deployments?: {
 		total: number;
 		successful: number;
 		failed: number;
 		inProgress: number;
 	};
-	incidents: {
+	incidents?: {
 		active: number;
 		resolved: number;
 		critical: number;
@@ -95,7 +98,15 @@ export function useITMetrics(
 		const subscription = subscribeToSSE(endpoint, {
 			onMessage: (data) => {
 				try {
-					setMetrics(data as ITMetrics);
+					const payload = data as ITMetrics;
+					// Honest empty stream: do not treat "not configured" as live graphs
+					if (payload?.configured === false) {
+						setMetrics(null);
+						setError(null);
+						setLoading(false);
+						return;
+					}
+					setMetrics(payload);
 					setError(null);
 					setLoading(false);
 				} catch (err) {

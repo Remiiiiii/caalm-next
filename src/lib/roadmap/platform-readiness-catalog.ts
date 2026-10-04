@@ -435,7 +435,7 @@ const PLATFORM_READINESS_ROADMAP_SECTIONS: RoadmapCatalogSection[] = [
 		sectionNumber: 5,
 		title: "IT portal credibility",
 		sourceRef:
-			"Assessment: 30 IT placeholder pages; IT dashboard API returns mock metrics",
+			"Assessment: 30 IT placeholder pages; IT dashboard API returned mock metrics. Section 5 hides placeholders from primary nav and uses live connectivity checks. Note: docs/internal/it-portal-credibility-note.md",
 		...SEQUENTIAL,
 		tasks: [
 			t(
