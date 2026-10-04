@@ -1,7 +1,9 @@
 import type { NextRequest } from "next/server";
 import { Query } from "node-appwrite";
+import { PERMISSIONS } from "@/constants/permissions";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { requirePermission } from "@/lib/rbac/middleware";
 import { CACHE_KEYS } from "@/lib/services/cache-keys";
 import CacheManager from "@/lib/services/cache-manager";
 
@@ -18,10 +20,19 @@ function mapRouteToDbDepartment(routeDept: string): string {
 }
 
 export async function GET(
-	_req: NextRequest,
+	request: NextRequest,
 	{ params }: { params: Promise<{ department: string }> },
 ) {
 	try {
+		const denied = await requirePermission(request, {
+			permission: [
+				PERMISSIONS.CONTRACTS.VIEW,
+				PERMISSIONS.SETTINGS.VIEW,
+				PERMISSIONS.AUDIT.VIEW,
+			],
+		});
+		if (denied) return denied;
+
 		const resolvedParams = await params;
 		const dbDept = mapRouteToDbDepartment(resolvedParams.department);
 

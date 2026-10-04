@@ -1,4 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { PERMISSIONS } from "@/constants/permissions";
+import { requirePermission } from "@/lib/rbac/middleware";
 
 export type PdfPageText = { page: number; text: string };
 
@@ -78,6 +80,16 @@ async function parsePdfBuffer(buffer: Buffer, fileName?: string) {
 
 export async function POST(req: NextRequest) {
 	try {
+		const denied = await requirePermission(req, {
+			permission: [
+				PERMISSIONS.AI.DOCUMENT_ANALYSIS,
+				PERMISSIONS.CONTRACTS.VIEW,
+				PERMISSIONS.LICENSES.VIEW,
+				PERMISSIONS.CALENDAR.VIEW_OWN,
+			],
+		});
+		if (denied) return denied;
+
 		const { fileUrl, fileName, pdfBase64 } = await req.json();
 
 		let buffer: Buffer | null = null;
@@ -112,6 +124,16 @@ export async function POST(req: NextRequest) {
 	}
 }
 
-export function GET() {
+export async function GET(request: NextRequest) {
+	const denied = await requirePermission(request, {
+		permission: [
+			PERMISSIONS.AI.DOCUMENT_ANALYSIS,
+			PERMISSIONS.CONTRACTS.VIEW,
+			PERMISSIONS.LICENSES.VIEW,
+			PERMISSIONS.CALENDAR.VIEW_OWN,
+		],
+	});
+	if (denied) return denied;
+
 	return NextResponse.json({ message: "PDF extraction endpoint" });
 }

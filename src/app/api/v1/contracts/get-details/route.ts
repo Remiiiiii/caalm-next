@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { PERMISSIONS } from "@/constants/permissions";
 import {
 	errorResponse,
 	generateRequestId,
@@ -8,11 +9,17 @@ import {
 } from "@/lib/api/contracts/utils/response.util";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { requirePermission } from "@/lib/rbac/middleware";
 import { constructFileUrl } from "@/lib/utils";
 
 export async function GET(request: NextRequest) {
 	const requestId = generateRequestId();
 	try {
+		const denied = await requirePermission(request, {
+			permission: PERMISSIONS.CONTRACTS.VIEW,
+		});
+		if (denied) return denied;
+
 		const { searchParams } = new URL(request.url);
 		const contractId = searchParams.get("contractId");
 

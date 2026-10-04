@@ -1,7 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { Query } from "node-appwrite";
+import { PERMISSIONS } from "@/constants/permissions";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { requirePermission } from "@/lib/rbac/middleware";
 
 // Helper function to validate Appwrite storage file ID format
 const isValidBucketFileId = (id: string | null | undefined): boolean => {
@@ -177,6 +179,11 @@ async function convertToBuffer(fileContent: any): Promise<Buffer> {
 
 export async function GET(request: NextRequest) {
 	try {
+		const denied = await requirePermission(request, {
+			permission: [PERMISSIONS.CONTRACTS.VIEW, PERMISSIONS.LICENSES.VIEW],
+		});
+		if (denied) return denied;
+
 		const searchParams = request.nextUrl.searchParams;
 		const bucketFileId = searchParams.get("bucketFileId");
 		const fileId = searchParams.get("fileId");

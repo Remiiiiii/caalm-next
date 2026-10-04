@@ -75,10 +75,22 @@ describe("API authz matrix", () => {
 		expect(diff.remaining.length).toBe(
 			baseline.unguarded.length - diff.resolved.length,
 		);
+		// Shrink is allowed and expected; growth is blocked by the ratchet test above.
+		expect(diff.resolved.length).toBeGreaterThanOrEqual(0);
 
 		// Keep baseline JSON sorted for stable diffs when regenerating.
 		const sorted = [...baseline.unguarded].sort();
 		expect(baseline.unguarded).toEqual(sorted);
+	});
+
+	it("detects assistant and draft owner gates (not only requirePermission)", () => {
+		const assistant = routes.find((r) => r.path === "assistant/chat");
+		expect(assistant?.detected).toBe("permission");
+		expect(assistant?.signals).toContain("requireAssistantAccess");
+
+		const drafts = routes.find((r) => r.path === "contracts/drafts");
+		expect(drafts?.detected).toBe("permission");
+		expect(drafts?.signals).toContain("requireAuthAndOwner");
 	});
 
 	it("baseline file is valid JSON on disk", () => {
