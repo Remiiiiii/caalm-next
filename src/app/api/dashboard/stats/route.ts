@@ -9,20 +9,22 @@ import { CACHE_KEYS } from "@/lib/services/cache-keys";
 import CacheManager from "@/lib/services/cache-manager";
 
 export async function GET(request: NextRequest) {
+	const { searchParams } = new URL(request.url);
+	const orgId = searchParams.get("orgId");
+
+	// Validate outside try/catch so CI/test fallbacks never turn a missing
+	// orgId into a 200 with empty stats.
+	if (!orgId) {
+		return NextResponse.json(
+			{
+				error: "Organization ID is required",
+				message: "orgId is required for dashboard stats",
+			},
+			{ status: 400 },
+		);
+	}
+
 	try {
-		const { searchParams } = new URL(request.url);
-		const orgId = searchParams.get("orgId");
-
-		if (!orgId) {
-			return NextResponse.json(
-				{
-					error: "Organization ID is required",
-					message: "orgId is required for dashboard stats",
-				},
-				{ status: 400 },
-			);
-		}
-
 		// Auth + org membership (orgId from query is validated by requirePermission)
 		const permissionCheck = await requirePermission(request, {});
 		if (permissionCheck) {

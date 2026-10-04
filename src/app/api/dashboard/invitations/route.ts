@@ -5,14 +5,26 @@ import {
 	listPendingInvitations,
 } from "@/lib/actions/user.actions";
 import { requirePermission } from "@/lib/rbac/middleware";
-import {
-	getUserDefaultOrganization,
-	validateUserOrgAccess,
-} from "@/lib/rbac/permissions";
+import { validateUserOrgAccess } from "@/lib/rbac/permissions";
 import { CACHE_KEYS } from "@/lib/services/cache-keys";
 import CacheManager from "@/lib/services/cache-manager";
 
 export async function GET(request: NextRequest) {
+	const { searchParams } = new URL(request.url);
+	const orgId = searchParams.get("orgId");
+
+	// Require orgId before auth work so missing-param clients always get 400
+	// (same contract as /api/dashboard/stats and notification user_id checks).
+	if (!orgId) {
+		return NextResponse.json(
+			{
+				error: "Organization ID is required",
+				message: "orgId is required for dashboard invitations",
+			},
+			{ status: 400 },
+		);
+	}
+
 	const denied = await requirePermission(request, {
 		permission: PERMISSIONS.USERS.VIEW,
 	});
@@ -24,21 +36,6 @@ export async function GET(request: NextRequest) {
 			return NextResponse.json(
 				{ error: "Authentication required" },
 				{ status: 401 },
-			);
-		}
-
-		const { searchParams } = new URL(request.url);
-		const requestedOrgId = searchParams.get("orgId");
-		const defaultOrg = await getUserDefaultOrganization(user.$id);
-		const orgId = requestedOrgId || defaultOrg?.orgId;
-
-		if (!orgId) {
-			return NextResponse.json(
-				{
-					error: "Organization ID is required",
-					message: "orgId is required for dashboard invitations",
-				},
-				{ status: 400 },
 			);
 		}
 
