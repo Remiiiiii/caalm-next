@@ -31,10 +31,10 @@ describe("platform readiness roadmap catalog", () => {
 		for (const section of PLATFORM_READINESS_ROADMAP_CATALOG) {
 			for (const task of section.tasks) {
 				expect(task.description).toMatch(/Who:/);
-			expect(task.description).toMatch(/What:/);
-			expect(task.description).toMatch(/Where:/);
-			expect(task.description).toMatch(/Why:/);
-			expect(task.description).toMatch(/When:/);
+				expect(task.description).toMatch(/What:/);
+				expect(task.description).toMatch(/Where:/);
+				expect(task.description).toMatch(/Why:/);
+				expect(task.description).toMatch(/When:/);
 				expect(task.description).toMatch(/How:/);
 			}
 		}
