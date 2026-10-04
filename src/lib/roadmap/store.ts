@@ -78,6 +78,7 @@ export function resetRoadmapMemoryForTests(): void {
 	globalThis.__caalmRoadmapMemoryByCatalog = {
 		clm: emptyMemory(),
 		npo: emptyMemory(),
+		prd: emptyMemory(),
 	};
 	globalThis.__caalmRoadmapMemory =
 		globalThis.__caalmRoadmapMemoryByCatalog.clm;

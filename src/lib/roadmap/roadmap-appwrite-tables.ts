@@ -20,6 +20,14 @@ export function roadmapAppwriteTableIds(
 			statusLogTableId: appwriteConfig.npoRoadmapStatusLogCollectionId,
 		};
 	}
+	if (catalogKey === "prd") {
+		return {
+			sectionsTableId: undefined,
+			tasksTableId: undefined,
+			testRunsTableId: undefined,
+			statusLogTableId: undefined,
+		};
+	}
 	return {
 		sectionsTableId: appwriteConfig.roadmapSectionsCollectionId,
 		tasksTableId: appwriteConfig.roadmapTasksCollectionId,
