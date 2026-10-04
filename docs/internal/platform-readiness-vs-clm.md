@@ -13,9 +13,13 @@ CLM **§1 Trust & Security** and **§2 Audit / mock removal** touch the same cod
 
 That overlap is intentional in the assessment, not a mistake in the catalog.
 
-## Options (pick one policy and stick to it)
+## Decision (2026-10-04)
 
-### A — PRD owns execution; CLM §1–2 become pointers (recommended)
+**Option A is in effect.** CLM §1–2 are catalog pointers (`executionTrackedOn: prd`); implement on the Platform Readiness board only.
+
+## Options (reference)
+
+### A — PRD owns execution; CLM §1–2 become pointers (chosen)
 
 - Do the work on **Platform Readiness** batch PRs (`PRD S{n} B{n}`).
 - On the CLM board, mark or annotate §1–2 tasks as **tracked on PRD** (sourceRef or `linkedPrNumbers` empty + note in task description).

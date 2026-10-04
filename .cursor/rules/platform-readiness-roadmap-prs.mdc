@@ -18,9 +18,9 @@ Each **batch PR** (up to five top-level task codes) is the **implementation tick
 - Body: Who / What / Where / Why / When / How and **Done when** from `platform-readiness-catalog.ts` for **every task in the batch**.
 - Merge with green CI to mark those task codes complete on the Platform Readiness board (`?catalog=prd`).
 
-## CLM overlap
+## CLM overlap (Option A — locked in)
 
-Read `docs/internal/platform-readiness-vs-clm.md` before duplicating CLM §1–2 work on the CLM board. Default: execute on PRD, pointer on CLM.
+Do **not** implement CLM §1–2 tasks. They are pointers only; execution is **PRD only**. See `docs/internal/platform-readiness-vs-clm.md`.
 
 ## Internal docs (section 6)
 

@@ -17,6 +17,7 @@ import {
 	catalogTasksHaveLinkedPr,
 	catalogUsesSequentialTasks,
 	displayedPrNumberForTaskIn,
+	lockSnapshotExtras,
 } from "./catalog-query";
 import { catalogForKey } from "./catalogs";
 import { computeUnlocked, type LockSnapshot } from "./locking";
@@ -198,7 +199,7 @@ export async function seedRoadmapToAppwriteIfEmpty(
 		const unlocked = computeUnlocked({
 			sections,
 			tasks,
-			sequentialTasks: catalogUsesSequentialTasks(catalogForKey("npo")),
+			...lockSnapshotExtras("npo"),
 		});
 		sections = unlocked.snapshot.sections;
 		tasks = unlocked.snapshot.tasks;
@@ -390,9 +391,7 @@ async function syncCatalogLayoutToAppwrite(
 	const unlocked = computeUnlocked({
 		sections: mergedSections,
 		tasks: mergedTasks,
-		sequentialTasks: catalogUsesSequentialTasks(
-			catalogForKey(ids.catalogKey),
-		),
+		...lockSnapshotExtras(ids.catalogKey),
 	});
 
 	for (const section of unlocked.snapshot.sections) {
@@ -537,7 +536,7 @@ export function buildSeedSnapshot(
 	const unlocked = computeUnlocked({
 		sections,
 		tasks,
-		sequentialTasks: catalogUsesSequentialTasks(catalog),
+		...lockSnapshotExtras(catalogKey),
 	});
 	return unlocked.snapshot;
 }
@@ -965,7 +964,7 @@ export async function persistUnlockedSnapshot(
 	const { snapshot, transitions } = computeUnlocked({
 		sections,
 		tasks,
-		sequentialTasks: catalogUsesSequentialTasks(catalogForKey(catalogKey)),
+		...lockSnapshotExtras(catalogKey),
 	});
 
 	for (const s of snapshot.sections) {

@@ -16,7 +16,7 @@ import {
 } from "./catalog-key";
 import {
 	catalogDisplayTitleForPrIn,
-	catalogUsesSequentialTasks,
+	lockSnapshotExtras,
 	linkedPrNumbersInCatalog,
 	sectionCompletesOnMergedCatalogPrIn,
 	sectionNumberForPrIn,
@@ -146,9 +146,7 @@ function keyFromTasks(tasks: RoadmapTask[]): RoadmapCatalogKey {
 }
 
 function sequentialLockOptions(catalogKey: RoadmapCatalogKey) {
-	return {
-		sequentialTasks: catalogUsesSequentialTasks(catalogOf(catalogKey)),
-	};
+	return lockSnapshotExtras(catalogKey);
 }
 
 /** Prefer an active in-flight PR; otherwise the first linked PR in the section. */
@@ -802,6 +800,7 @@ export async function getSectionTaskTree(
 	const tree = buildTaskTree(tasks, sectionId, {
 		sections,
 		tasks,
+		...lockSnapshotExtras(catalogKey),
 		mergeBlockReasons: mergeBlockReason
 			? { [section.$id]: mergeBlockReason }
 			: undefined,
