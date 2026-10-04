@@ -50,6 +50,7 @@ import {
 	reconcileNestedTasksWithParentComplete,
 } from "./locking";
 import { npoCatalogDisplayTitleForPr } from "./nonprofit/npo-pr-batches";
+import { prdCatalogDisplayTitleForPr } from "./platform-readiness/prd-pr-batches";
 import {
 	appendStatusLog,
 	createTestRun,
@@ -113,6 +114,10 @@ function catalogDisplayTitleForPr(
 		const batchTitle = npoCatalogDisplayTitleForPr(prNumber);
 		if (batchTitle) return batchTitle;
 	}
+	if (key === "prd") {
+		const batchTitle = prdCatalogDisplayTitleForPr(prNumber);
+		if (batchTitle) return batchTitle;
+	}
 	return catalogDisplayTitleForPrIn(catalogOf(key), prNumber);
 }
 
@@ -123,7 +128,9 @@ function resolvedCatalogPrTitle(
 	catalogKey: RoadmapCatalogKey,
 ): string {
 	const fallback = catalogDisplayTitleForPr(prNumber, catalogKey);
-	if (catalogKey === "npo") return fallback || liveTitle?.trim() || "";
+	if (catalogKey === "npo" || catalogKey === "prd") {
+		return fallback || liveTitle?.trim() || "";
+	}
 	return liveTitle?.trim() || fallback;
 }
 

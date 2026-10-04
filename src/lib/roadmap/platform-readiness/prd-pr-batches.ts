@@ -105,6 +105,12 @@ export function prdBatchBranchName(batch: PrdPrBatch): string {
 	return `cursor/platform-readiness/s${section}-b${batch.batch}-5329`;
 }
 
+/** File id under src/lib/roadmap/prd-batches/ (e.g. s01-b1). */
+export function prdBatchFileId(batch: PrdPrBatch): string {
+	const section = String(batch.sectionNumber).padStart(2, "0");
+	return `s${section}-b${batch.batch}`;
+}
+
 export function linkedPrNumbersForPrdSection(sectionNumber: number): number[] {
 	const numbers: number[] = [];
 	for (const batch of PRD_PR_BATCHES) {
