@@ -146,6 +146,8 @@ playwright-report/
 
 # Internal engineering notes at repo root (product docs live under src/content/docs + src/app/docs)
 /docs/
+!/docs/internal/
+!/docs/internal/**
 .vercel
 
 # Google credentials
