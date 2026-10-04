@@ -43,11 +43,22 @@ export type CatalogSectionMatch = {
 	sectionNumber: number;
 };
 
-/** Closed or merged PRs stay on the board with strikethrough + status. */
+/** Closed or merged PRs stay listed on the board. */
 export function isSettledRoadmapPullRequestState(
 	state: string | undefined,
 ): boolean {
 	return state === "closed" || state === "merged";
+}
+
+/**
+ * Strike the PR title only when required checks passed or the section is done.
+ * Merge alone must not look "complete" while tasks stay available/locked.
+ */
+export function shouldStrikeRoadmapPullRequestTitle(input: {
+	checksPassed?: boolean;
+	sectionComplete?: boolean;
+}): boolean {
+	return input.checksPassed === true || input.sectionComplete === true;
 }
 
 /** Catalog PRs stay listed after close/merge on every board. */

@@ -5,6 +5,7 @@ import {
 	matchPullRequestToTask,
 	resolveCatalogFromPrMatch,
 	shouldListRoadmapSectionPullRequest,
+	shouldStrikeRoadmapPullRequestTitle,
 } from "./github-pr-match";
 
 describe("nonprofit PR matching", () => {
@@ -114,7 +115,28 @@ describe("nonprofit PR matching", () => {
 		expect(matchPullRequestToTask(product131, 1, "1.6", "npo")).toBe(false);
 	});
 
-	it("treats closed and merged as settled for strikethrough", () => {
+	it("strikes PR titles only when checks passed or the section is complete", () => {
+		expect(
+			shouldStrikeRoadmapPullRequestTitle({
+				checksPassed: false,
+				sectionComplete: false,
+			}),
+		).toBe(false);
+		expect(
+			shouldStrikeRoadmapPullRequestTitle({
+				checksPassed: true,
+				sectionComplete: false,
+			}),
+		).toBe(true);
+		expect(
+			shouldStrikeRoadmapPullRequestTitle({
+				checksPassed: false,
+				sectionComplete: true,
+			}),
+		).toBe(true);
+	});
+
+	it("treats closed and merged as settled for listing", () => {
 		expect(isSettledRoadmapPullRequestState("closed")).toBe(true);
 		expect(isSettledRoadmapPullRequestState("merged")).toBe(true);
 		expect(isSettledRoadmapPullRequestState("open")).toBe(false);

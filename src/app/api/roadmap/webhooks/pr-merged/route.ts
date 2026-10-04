@@ -1,5 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { getSectionNumberForPr } from "@/lib/roadmap/catalog";
+import { ROADMAP_CATALOG_KEYS } from "@/lib/roadmap/catalog-key";
+import { sectionNumberForPrIn } from "@/lib/roadmap/catalog-query";
+import { catalogForKey } from "@/lib/roadmap/catalogs";
 import {
 	completeSectionFromMerge,
 	RoadmapError,
@@ -111,16 +113,23 @@ export async function POST(request: NextRequest) {
 	}
 }
 
+/** First top-level task for a catalog-linked PR (CLM, NPO, or PRD). */
 async function firstTaskForPr(prNumber: number) {
-	const sectionNumber = getSectionNumberForPr(prNumber);
-	if (sectionNumber == null) return null;
-	const sections = await listSections();
-	const section = sections.find((s) => s.sectionNumber === sectionNumber);
-	if (!section) return null;
-	const tasks = await listTasks();
-	return (
-		tasks
-			.filter((t) => t.sectionId === section.$id && !t.parentTaskId)
-			.sort((a, b) => a.orderIndex - b.orderIndex)[0] ?? null
-	);
+	for (const catalogKey of ROADMAP_CATALOG_KEYS) {
+		const sectionNumber = sectionNumberForPrIn(
+			catalogForKey(catalogKey),
+			prNumber,
+		);
+		if (sectionNumber == null) continue;
+		const sections = await listSections(catalogKey);
+		const section = sections.find((s) => s.sectionNumber === sectionNumber);
+		if (!section) continue;
+		const tasks = await listTasks(undefined, catalogKey);
+		const first =
+			tasks
+				.filter((t) => t.sectionId === section.$id && !t.parentTaskId)
+				.sort((a, b) => a.orderIndex - b.orderIndex)[0] ?? null;
+		if (first) return first;
+	}
+	return null;
 }
