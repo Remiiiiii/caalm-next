@@ -4,13 +4,14 @@ import {
 	generateRequestId,
 	successResponse,
 } from "@/lib/api/contracts/utils/response.util";
+import { isAuthorizedCron } from "@/lib/cron/is-authorized-cron";
 import { contractExpiryService } from "@/lib/services/contractExpiryService";
 
-export async function POST(_request: NextRequest) {
+export async function POST(request: NextRequest) {
+	if (!isAuthorizedCron(request)) {
+		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+	}
 	try {
-		console.log("🔍 Manual contract expiry check triggered");
-
-		// Run the contract expiry check
 		await contractExpiryService.checkContractExpiry();
 
 		return NextResponse.json({
@@ -31,7 +32,10 @@ export async function POST(_request: NextRequest) {
 	}
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+	if (!isAuthorizedCron(request)) {
+		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+	}
 	const requestId = generateRequestId();
 	try {
 		return successResponse(

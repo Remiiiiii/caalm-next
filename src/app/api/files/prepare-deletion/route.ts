@@ -1,9 +1,16 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { PERMISSIONS } from "@/constants/permissions";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { requirePermission } from "@/lib/rbac/middleware";
 
 export async function POST(request: NextRequest) {
 	try {
+		const denied = await requirePermission(request, {
+			permission: PERMISSIONS.PLATFORM.FORCE_DELETE,
+		});
+		if (denied) return denied;
+
 		const { searchParams } = new URL(request.url);
 		const fileId = searchParams.get("fileId");
 

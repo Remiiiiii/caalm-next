@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { ID, Query } from "node-appwrite";
 import { InputFile } from "node-appwrite/file";
+import { PERMISSIONS } from "@/constants/permissions";
 import {
 	createApiAdminClient,
 	createApiSessionClient,
@@ -10,12 +11,23 @@ import {
 	assertEnterpriseFileAllowed,
 	EnterpriseFileFormatError,
 } from "@/lib/files/enterprise-file-formats";
+import { requirePermission } from "@/lib/rbac/middleware";
 import { logAuditEvent } from "@/lib/services/audit-logger";
 import CacheManager from "@/lib/services/cache-manager";
 import { constructFileUrl, getFileType } from "@/lib/utils";
 
 export async function POST(request: NextRequest) {
 	try {
+		// Upload is used by contracts, licenses, and calendar — any create permission is enough
+		const denied = await requirePermission(request, {
+			permission: [
+				PERMISSIONS.CONTRACTS.CREATE,
+				PERMISSIONS.LICENSES.CREATE,
+				PERMISSIONS.CALENDAR.CREATE,
+			],
+		});
+		if (denied) return denied;
+
 		const formData = await request.formData();
 		const file = formData.get("file") as File;
 		const userId = formData.get("userId") as string;

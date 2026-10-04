@@ -200,7 +200,7 @@ const PLATFORM_READINESS_ROADMAP_SECTIONS: RoadmapCatalogSection[] = [
 		sectionNumber: 2,
 		title: "API permission coverage",
 		sourceRef:
-			"Assessment: 119 grandfathered API routes without detected permission gates — baseline must shrink, not grow",
+			"Assessment: was 119 grandfathered API routes; section 2 ratcheted baseline to 65 — must shrink, not grow. Note: docs/internal/api-permission-coverage-note.md",
 		...SEQUENTIAL,
 		tasks: [
 			t(

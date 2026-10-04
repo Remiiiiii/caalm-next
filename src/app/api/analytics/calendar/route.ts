@@ -1,8 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { Query } from "node-appwrite";
+import { PERMISSIONS } from "@/constants/permissions";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { getCurrentUserId } from "@/lib/microsoft/auth-utils";
+import { requirePermission } from "@/lib/rbac/middleware";
 import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 import { CACHE_TTLS } from "@/lib/services/cache-keys";
 import CacheManager from "@/lib/services/cache-manager";
@@ -69,6 +71,16 @@ interface CalendarAnalyticsData {
 
 export async function GET(request: NextRequest) {
 	try {
+		const denied = await requirePermission(request, {
+			permission: [
+				PERMISSIONS.CALENDAR.VIEW_ALL,
+				PERMISSIONS.CALENDAR.VIEW_TEAM,
+				PERMISSIONS.CONTRACTS.VIEW,
+				PERMISSIONS.SETTINGS.VIEW,
+			],
+		});
+		if (denied) return denied;
+
 		const userId = await getCurrentUserId();
 		if (!userId) {
 			return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

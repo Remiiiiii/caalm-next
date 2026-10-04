@@ -1,10 +1,17 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { Query } from "node-appwrite";
+import { PERMISSIONS } from "@/constants/permissions";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { requirePermission } from "@/lib/rbac/middleware";
 
 export async function POST(request: NextRequest) {
 	try {
+		const denied = await requirePermission(request, {
+			permission: [PERMISSIONS.CONTRACTS.VIEW, PERMISSIONS.LICENSES.VIEW],
+		});
+		if (denied) return denied;
+
 		const { fileIds } = await request.json();
 
 		if (!Array.isArray(fileIds) || fileIds.length === 0) {
