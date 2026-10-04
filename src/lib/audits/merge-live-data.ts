@@ -1,5 +1,9 @@
 import { dedupeEvidenceRows } from "@/lib/audits/evidence-utils";
-import { getAuditDomainData } from "@/lib/audits/mock-data";
+import {
+	domainUsesIllustrativeData,
+	getAuditDomainData,
+	isAuditMockDataEnabled,
+} from "@/lib/audits/mock-data";
 import type {
 	AuditDomainData,
 	AuditKpi,
@@ -196,4 +200,52 @@ export function mergeDomainWithLiveData(
 	}
 
 	return base;
+}
+
+/** Plain-English honesty copy for compliance domain tabs. */
+export function getDomainHonestyNotice(
+	domain: AuditDomainData["domain"],
+	snapshot: ComplianceStatusSnapshot | null,
+): { show: boolean; message: string; showSampleBadge: boolean } {
+	const hasLiveContracts = Boolean(snapshot?.contracts);
+	const hasLiveLicenses = Boolean(snapshot?.licenses);
+	const illustrative = domainUsesIllustrativeData(
+		domain,
+		hasLiveContracts,
+		hasLiveLicenses,
+	);
+	const mockOn = isAuditMockDataEnabled();
+
+	if (domain === "contracts" && hasLiveContracts) {
+		return {
+			show: mockOn,
+			showSampleBadge: mockOn,
+			message:
+				"Contract KPIs and the compliance breakdown are live from your organization. Trend charts are illustrative sample data until historical series are wired.",
+		};
+	}
+	if (domain === "licenses" && hasLiveLicenses) {
+		return {
+			show: mockOn,
+			showSampleBadge: mockOn,
+			message:
+				"License KPIs and the compliance breakdown are live from your organization. Trend charts are illustrative sample data until historical series are wired.",
+		};
+	}
+
+	if (!mockOn) {
+		return {
+			show: true,
+			showSampleBadge: false,
+			message:
+				"This domain is not fully connected yet. CAALM shows an empty state instead of fake numbers. Contracts and licenses tabs use live data when available.",
+		};
+	}
+
+	return {
+		show: illustrative,
+		showSampleBadge: true,
+		message:
+			"These metrics are illustrative sample data for nonprofit KRIs until this workflow is fully connected in CAALM. Contracts and licenses use live org data when available.",
+	};
 }

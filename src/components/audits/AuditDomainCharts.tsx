@@ -30,6 +30,7 @@ import {
 	ChartTooltip,
 	ChartTooltipContent,
 } from "@/components/ui/chart";
+import { SampleDataBadge } from "@/components/ui/sample-data-badge";
 import type {
 	AuditBreakdownPoint,
 	AuditTimeSeriesPoint,
@@ -43,6 +44,8 @@ interface AuditDomainChartsProps {
 	timeSeriesTitle: string;
 	breakdownTitle: string;
 	donutTitle: string;
+	/** When true, trend charts are illustrative sample data */
+	illustrative?: boolean;
 }
 
 export function AuditDomainCharts({
@@ -52,6 +55,7 @@ export function AuditDomainCharts({
 	timeSeriesTitle,
 	breakdownTitle,
 	donutTitle,
+	illustrative = false,
 }: AuditDomainChartsProps) {
 	const [tone, setTone] = useState<ChartTone>("dark");
 	const isLight = tone === "light";
@@ -105,9 +109,18 @@ export function AuditDomainCharts({
 		<div className="mb-6 space-y-6">
 			<CaalmAnalyticsChartShell
 				title={timeSeriesTitle}
-				subtitle="Hover data points for detailed CAALM audit values"
+				subtitle={
+					illustrative
+						? "Sample data — illustrative trend until historical series are wired"
+						: "Hover data points for detailed CAALM audit values"
+				}
 				panelTone={tone}
-				headerAction={<ChartToneSwitch tone={tone} onChange={setTone} />}
+				headerAction={
+					<div className="flex items-center gap-2">
+						{illustrative ? <SampleDataBadge /> : null}
+						<ChartToneSwitch tone={tone} onChange={setTone} />
+					</div>
+				}
 			>
 				<ChartContainer
 					config={timeChartConfig}

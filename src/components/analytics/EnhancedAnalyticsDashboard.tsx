@@ -15,6 +15,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading";
+import { SampleDataBadge } from "@/components/ui/sample-data-badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AnalyticsErrorBoundary from "./AnalyticsErrorBoundary";
 
@@ -31,7 +32,7 @@ const EnhancedAnalyticsDashboard: React.FC<EnhancedAnalyticsDashboardProps> = ({
 	>("overview");
 	const [isRealTime, setIsRealTime] = useState(false);
 
-	// Mock data to avoid webpack issues
+	// Unused customer surface — hard-coded sample figures only (see widget inventory)
 	const data = {
 		executiveMetrics: {
 			totalContracts: 1247,
@@ -225,7 +226,7 @@ const EnhancedAnalyticsDashboard: React.FC<EnhancedAnalyticsDashboardProps> = ({
 			<div className="space-y-6">
 				{/* Header */}
 				<div className="flex items-center justify-between">
-					<div>
+					<div className="flex items-center gap-3">
 						<p className="body-1 text-light-200 mt-1">
 							{department
 								? `${
@@ -234,6 +235,7 @@ const EnhancedAnalyticsDashboard: React.FC<EnhancedAnalyticsDashboardProps> = ({
 								: "Organization-wide"}{" "}
 							Analytics
 						</p>
+						<SampleDataBadge />
 					</div>
 					<div className="flex items-center space-x-3">
 						<Button
