@@ -20,6 +20,7 @@ export const NPO_SHIPPED_ROUTE_DOC_SLUGS: Record<
 	"/volunteers/shifts": "reference/volunteers",
 	"/settings/funds": "reference/nonprofit-finance-settings",
 	"/settings/form-990": "reference/nonprofit-finance-settings",
+	"/settings/donation-page": "reference/donation-page",
 };
 
 export function findMissingNpoShippedDocFiles(cwd = process.cwd()): Array<{

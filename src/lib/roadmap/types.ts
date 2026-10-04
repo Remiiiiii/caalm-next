@@ -4,6 +4,8 @@
  * catalog-linked GitHub PR is already merged (overview reconcile).
  */
 
+import type { RoadmapCatalogKey } from "./catalog-key";
+
 export type RoadmapEntityStatus =
 	| "locked"
 	| "available"
@@ -155,6 +157,13 @@ export type RoadmapCatalogSection = {
 	 * already lives in-tree so the board is a project, not one tracking PR.
 	 */
 	seedComplete?: boolean;
+	/**
+	 * Option A (CLM §1–2): execution lives on another catalog; this section is a
+	 * pointer. Prior-section gates skip it; tasks stay locked with a PRD message.
+	 */
+	executionTrackedOn?: RoadmapCatalogKey;
+	/** PRD section numbers that supersede this CLM section (for lock tooltips). */
+	executionTrackedOnSections?: number[];
 	tasks: RoadmapCatalogTask[];
 };
 

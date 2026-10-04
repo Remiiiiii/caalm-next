@@ -12,6 +12,11 @@
 
 import type { RoadmapCatalogSection } from "./types";
 
+/** Option A: CLM §1–2 tasks are pointers; work ships on PRD batch PRs. */
+function prdTracked(description: string, prdRef: string): string {
+	return `[Platform Readiness — Option A] Superseded by ${prdRef}. Do not open CLM PRs for this task. ${description}`;
+}
+
 function t(
 	taskCode: string,
 	title: string,
@@ -110,104 +115,132 @@ export const ROADMAP_CATALOG: RoadmapCatalogSection[] = [
 	{
 		sectionNumber: 1,
 		title: "Trust & Security Foundations",
-		sourceRef: "Gap & Flaw → Security; Quick wins #2–4",
-		linkedPrNumbers: [52, 54, 56, 59],
+		sourceRef:
+			"Pointer only (Option A) — execute on Platform Readiness §1–3. docs/internal/platform-readiness-vs-clm.md",
+		executionTrackedOn: "prd",
+		executionTrackedOnSections: [1, 2, 3],
 		tasks: [
 			t(
 				"1.1",
 				"Eliminate 2FA cookie-as-session",
-				"Require real Appwrite session verification as the sole trusted identity path.",
+				prdTracked(
+					"Require real Appwrite session verification as the sole trusted identity path.",
+					"PRD 3.1",
+				),
 				[
 					"Auth integration tests confirm session cannot be forged via cookie manipulation",
 				],
-				undefined,
-				52,
 			),
 			t(
 				"1.2",
 				"Remove 2FA test-mode bypass",
-				"Delete or hard-gate unknown-user bypass behind a non-prod-only flag.",
+				prdTracked(
+					"Delete or hard-gate unknown-user bypass behind a non-prod-only flag.",
+					"PRD 3.2",
+				),
 				["Bypass path unreachable when NODE_ENV=production"],
-				undefined,
-				54,
 			),
 			t(
 				"1.3",
 				"Authz on /api/contracts/dismiss",
-				"Require authenticated permission-checked caller; dismiss must update contract status.",
+				prdTracked(
+					"Require authenticated permission-checked caller; dismiss must update contract status.",
+					"PRD 2.1–2.5 (API permission coverage batch)",
+				),
 				[
 					"Unauthenticated/unauthorized calls return 401/403",
 					"Authorized dismiss transitions contract status",
 				],
-				undefined,
-				56,
 			),
 			t(
 				"1.4",
 				"Close authz gaps on AI routes",
-				"Gate extract-data, contract-analysis, ai-analyze (and license equivalents).",
+				prdTracked(
+					"Gate extract-data, contract-analysis, ai-analyze (and license equivalents).",
+					"PRD 2.3",
+				),
 				["Every listed route has positive + negative authz tests"],
-				undefined,
-				59,
 			),
 			t(
 				"1.5",
 				"Fix multi-tenant data bleed",
-				"Add orgId filtering to all_org list scope so VIEW_ALL cannot cross tenants.",
+				prdTracked(
+					"Add orgId filtering to all_org list scope so VIEW_ALL cannot cross tenants.",
+					"PRD 1.1",
+				),
 				["VIEW_ALL for Org A never returns Org B rows"],
-				undefined,
-				56,
 			),
 			t(
 				"1.6",
 				"Session-audit on revoke/reset",
-				"Capture session revoke and password/2FA reset in the audit log.",
+				prdTracked(
+					"Capture session revoke and password/2FA reset in the audit log.",
+					"PRD 3.3–3.4",
+				),
 				["Revoke/reset actions produce verifiable audit events"],
-				undefined,
-				59,
 			),
 		],
 	},
 	{
 		sectionNumber: 2,
 		title: "Audit, Compliance Evidence & Theater Removal",
-		sourceRef: "Incomplete/fragile #1, #8–10; Quick wins #1, #5, #6",
-		linkedPrNumbers: [53],
+		sourceRef:
+			"Pointer only (Option A) — execute on Platform Readiness §4–5. docs/internal/platform-readiness-vs-clm.md",
+		executionTrackedOn: "prd",
+		executionTrackedOnSections: [4, 5],
 		tasks: [
 			t(
 				"2.1",
 				"Wire /api/audits/logs",
-				"Connect Audit Logs UI filters/export to real getAuditLogs data.",
+				prdTracked(
+					"Connect Audit Logs UI filters/export to real getAuditLogs data.",
+					"PRD 4.1 (live audit data); wire-up may follow in CLM §3+ if still open",
+				),
 				["E2E filter returns real rows; export matches row count"],
 			),
 			t(
 				"2.2",
 				"Default USE_AUDIT_MOCK_DATA=false outside development",
-				"Fail build if mock defaults true outside development; show DEMO badge if ever true.",
+				prdTracked(
+					"Fail build if mock defaults true outside development; show DEMO badge if ever true.",
+					"PRD 4.1",
+				),
 				["Config test fails build if flag defaults true outside development"],
 			),
 			t(
 				"2.3",
 				"Eliminate remaining mock analytics",
-				"Replace or badge mockData in org charts and dashboards.",
+				prdTracked(
+					"Replace or badge mockData in org charts and dashboards.",
+					"PRD 4.2",
+				),
 				["Inventory test asserts each widget is live or sample-data badged"],
 			),
 			t(
 				"2.4",
 				"Fix HR dashboard",
-				"Replace hardcoded metrics with real aggregation or remove from nav.",
+				prdTracked(
+					"Replace hardcoded metrics with real aggregation or remove from nav.",
+					"PRD 4.2",
+				),
 				["HR metrics match seeded source-of-truth data"],
 			),
 			t(
 				"2.5",
 				"Fix Profile settings save",
-				"Persist real profile edits; remove John Doe/TODO placeholder.",
+				prdTracked(
+					"Persist real profile edits; remove John Doe/TODO placeholder.",
+					"After PRD §4 — CLM-only polish if still open",
+				),
 				["Edit profile, reload, confirm persistence"],
 			),
 			t(
 				"2.6",
 				"Gate ITPlaceholderPage routes",
-				"Hide Coming online stubs from primary nav until built.",
+				prdTracked(
+					"Hide Coming online stubs from primary nav until built.",
+					"PRD 5.2",
+				),
 				[
 					"Nav inventory confirms no placeholder linked while feature incomplete",
 				],
@@ -215,7 +248,10 @@ export const ROADMAP_CATALOG: RoadmapCatalogSection[] = [
 			t(
 				"2.7",
 				"Remove/gate debug routes and dead Quick Actions",
-				"No dead/debug routes reachable in production build.",
+				prdTracked(
+					"No dead/debug routes reachable in production build.",
+					"PRD 2.4–2.5",
+				),
 				[
 					"Route inventory test confirms production build has no dead/debug surfaces",
 				],

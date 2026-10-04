@@ -12,6 +12,8 @@ export type LockSnapshot = {
 	mergeBlockReasons?: Record<string, string>;
 	/** Nonprofit timeline: unlock one task at a time inside an open section. */
 	sequentialTasks?: boolean;
+	/** CLM pointer sections (Option A): satisfy prior-section gate without completing tasks */
+	executionTrackedSectionNumbers?: number[];
 };
 
 export type StatusTransition = {
@@ -97,10 +99,12 @@ export function firstIncompleteSequentialTask(
 function allPriorSectionsComplete(
 	sections: RoadmapSection[],
 	section: RoadmapSection,
+	executionTrackedSectionNumbers?: number[],
 ): boolean {
+	const tracked = new Set(executionTrackedSectionNumbers ?? []);
 	return sections
 		.filter((s) => s.sectionNumber < section.sectionNumber)
-		.every((s) => s.status === "complete");
+		.every((s) => s.status === "complete" || tracked.has(s.sectionNumber));
 }
 
 function deriveSectionStatus(
@@ -217,9 +221,27 @@ export function computeUnlocked(snapshot: LockSnapshot): {
 
 	let openedIncompleteSection = false;
 
+	const trackedSections = new Set(snapshot.executionTrackedSectionNumbers ?? []);
+
 	for (const section of sections) {
 		const sectionTasks = tasks.filter((t) => t.sectionId === section.$id);
-		const priorComplete = allPriorSectionsComplete(sections, section);
+		const priorComplete = allPriorSectionsComplete(
+			sections,
+			section,
+			snapshot.executionTrackedSectionNumbers,
+		);
+
+		if (trackedSections.has(section.sectionNumber)) {
+			for (const row of sectionTasks) {
+				if (row.status === "available" || row.status === "in_progress") {
+					setTaskStatus(row, "locked");
+				}
+			}
+			if (priorComplete && section.status === "locked") {
+				bumpSection(section, "available");
+			}
+			continue;
+		}
 
 		// Derive section completeness from tasks first
 		const derived = deriveSectionStatus(section, sectionTasks, priorComplete);
@@ -272,7 +294,11 @@ export function computeUnlocked(snapshot: LockSnapshot): {
 	// Later unfinished sections stay locked. Sections whose tasks are already
 	// all complete stay complete even if an earlier section is still open.
 	if (openedIncompleteSection) {
-		const firstOpen = sections.find((s) => s.status !== "complete");
+		const firstOpen = sections.find(
+			(s) =>
+				s.status !== "complete" &&
+				!trackedSections.has(s.sectionNumber),
+		);
 		if (firstOpen) {
 			for (const later of sections) {
 				if (later.sectionNumber <= firstOpen.sectionNumber) continue;
@@ -312,7 +338,15 @@ export function computeUnlocked(snapshot: LockSnapshot): {
 		}
 	}
 
-	return { snapshot: { sections, tasks }, transitions };
+	return {
+		snapshot: {
+			sections,
+			tasks,
+			executionTrackedSectionNumbers:
+				snapshot.executionTrackedSectionNumbers,
+		},
+		transitions,
+	};
 }
 
 export function lockReasonForTask(
@@ -325,7 +359,18 @@ export function lockReasonForTask(
 	if (!section) return "Unknown section";
 
 	const sections = sortSections(snapshot.sections);
-	if (!allPriorSectionsComplete(sections, section)) {
+	if (
+		snapshot.executionTrackedSectionNumbers?.includes(section.sectionNumber)
+	) {
+		return "Tracked on Platform Readiness Roadmap (?catalog=prd) — Option A; do not implement on CLM";
+	}
+	if (
+		!allPriorSectionsComplete(
+			sections,
+			section,
+			snapshot.executionTrackedSectionNumbers,
+		)
+	) {
 		const prior = sections
 			.filter((s) => s.sectionNumber < section.sectionNumber)
 			.find((s) => s.status !== "complete");

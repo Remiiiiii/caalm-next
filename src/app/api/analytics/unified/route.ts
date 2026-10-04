@@ -1,7 +1,11 @@
 import type { NextRequest } from "next/server";
 import { Query } from "node-appwrite";
+import { PERMISSIONS } from "@/constants/permissions";
+import { getCurrentUser } from "@/lib/actions/user.actions";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { getOrgIdFromRequest, requirePermission } from "@/lib/rbac/middleware";
+import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 import { CACHE_KEYS, CACHE_TTLS } from "@/lib/services/cache-keys";
 import CacheManager from "@/lib/services/cache-manager";
 import {
@@ -11,6 +15,15 @@ import {
 
 export async function GET(request: NextRequest) {
 	try {
+		const denied = await requirePermission(request, {
+			permission: [
+				PERMISSIONS.CONTRACTS.VIEW,
+				PERMISSIONS.SETTINGS.VIEW,
+				PERMISSIONS.AUDIT.VIEW,
+			],
+		});
+		if (denied) return denied;
+
 		const { searchParams } = new URL(request.url);
 		const userId = searchParams.get("userId");
 
@@ -21,8 +34,19 @@ export async function GET(request: NextRequest) {
 			});
 		}
 
-		// Check cache first
-		const cacheKey = CACHE_KEYS.analytics.unified(userId);
+		const user = await getCurrentUser();
+		const orgId =
+			getOrgIdFromRequest(request) ||
+			(user ? (await getUserDefaultOrganization(user.$id))?.orgId : undefined);
+		if (!orgId) {
+			return new Response(
+				JSON.stringify({ error: "Organization context required" }),
+				{ status: 403, headers: { "content-type": "application/json" } },
+			);
+		}
+
+		// Cache per user + org so aggregates never mix workspaces
+		const cacheKey = `${CACHE_KEYS.analytics.unified(userId)}:${orgId}`;
 		const cachedData = await CacheManager.withCache(
 			"analytics/unified",
 			cacheKey,
@@ -37,11 +61,11 @@ export async function GET(request: NextRequest) {
 					departmentsResult,
 					reportTemplatesResult,
 				] = await Promise.all([
-					// Contracts data
+					// Contracts data — scoped to the caller's workspace
 					tablesDB.listRows(
 						appwriteConfig.databaseId,
 						appwriteConfig.contractsCollectionId,
-						[Query.limit(1000)],
+						[Query.equal("orgId", orgId), Query.limit(1000)],
 					),
 
 					// Users data

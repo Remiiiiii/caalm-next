@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { Query } from "node-appwrite";
+import { PERMISSIONS } from "@/constants/permissions";
 import {
 	buildPaginationMeta,
 	parsePaginationParams,
@@ -11,10 +12,16 @@ import {
 } from "@/lib/api/contracts/utils/response.util";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { requirePermission } from "@/lib/rbac/middleware";
 
 export async function GET(request: NextRequest) {
 	const requestId = generateRequestId();
 	try {
+		const denied = await requirePermission(request, {
+			permission: PERMISSIONS.CONTRACTS.VIEW,
+		});
+		if (denied) return denied;
+
 		// Parse pagination parameters
 		const { limit, offset } = parsePaginationParams(request);
 

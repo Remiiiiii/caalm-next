@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ClipboardCheck } from "lucide-react";
 import Link from "next/link";
 import { useMemo } from "react";
 import { AuditDomainCharts } from "@/components/audits/AuditDomainCharts";
@@ -8,9 +8,13 @@ import { AuditEvidenceTable } from "@/components/audits/AuditEvidenceTable";
 import { AuditStatCardRow } from "@/components/audits/AuditStatCardRow";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { SampleDataBadge } from "@/components/ui/sample-data-badge";
 import { useComplianceStatus } from "@/hooks/useComplianceStatus";
 import { dedupeEvidenceRows } from "@/lib/audits/evidence-utils";
-import { mergeDomainWithLiveData } from "@/lib/audits/merge-live-data";
+import {
+	getDomainHonestyNotice,
+	mergeDomainWithLiveData,
+} from "@/lib/audits/merge-live-data";
 import { getTimeSeriesForPeriod } from "@/lib/audits/mock-data";
 import type { AuditControlDomain, AuditPeriod } from "@/lib/audits/types";
 
@@ -61,6 +65,10 @@ export function AuditDomainTabContent({
 		() => mergeDomainWithLiveData(domain, snapshot),
 		[domain, snapshot],
 	);
+	const honesty = useMemo(
+		() => getDomainHonestyNotice(domain, snapshot),
+		[domain, snapshot],
+	);
 	const timeSeries = getTimeSeriesForPeriod(domain, period);
 	const titles = CHART_TITLES[domain];
 
@@ -79,6 +87,16 @@ export function AuditDomainTabContent({
 
 	return (
 		<div className="space-y-6">
+			{honesty.show ? (
+				<div className="flex items-start gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+					<ClipboardCheck className="h-4 w-4 text-[#0f5384] shrink-0 mt-0.5" />
+					<span className="min-w-0 flex-1">{honesty.message}</span>
+					{honesty.showSampleBadge ? (
+						<SampleDataBadge className="shrink-0" />
+					) : null}
+				</div>
+			) : null}
+
 			<Card className="glass-card">
 				<div className="glass-card-cap" />
 				<CardContent className="p-4 sm:p-6 flex flex-row items-center justify-between gap-3">
@@ -109,6 +127,7 @@ export function AuditDomainTabContent({
 				timeSeriesTitle={titles.time}
 				breakdownTitle={titles.breakdown}
 				donutTitle={titles.donut}
+				illustrative={honesty.showSampleBadge}
 			/>
 			<AuditEvidenceTable
 				rows={filteredEvidence}

@@ -1,10 +1,17 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { Query } from "node-appwrite";
+import { PERMISSIONS } from "@/constants/permissions";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { requirePermission } from "@/lib/rbac/middleware";
 
-export async function POST(_request: NextRequest) {
+export async function POST(request: NextRequest) {
 	try {
+		const denied = await requirePermission(request, {
+			permission: PERMISSIONS.PLATFORM.FORCE_DELETE,
+		});
+		if (denied) return denied;
+
 		const { tablesDB } = await createAdminClient();
 
 		if (!appwriteConfig.databaseId || !appwriteConfig.contractsCollectionId) {
@@ -86,8 +93,13 @@ export async function POST(_request: NextRequest) {
 }
 
 // GET endpoint to check how many contracts have fileRef
-export async function GET() {
+export async function GET(request: NextRequest) {
 	try {
+		const denied = await requirePermission(request, {
+			permission: PERMISSIONS.PLATFORM.FORCE_DELETE,
+		});
+		if (denied) return denied;
+
 		const { tablesDB } = await createAdminClient();
 
 		if (!appwriteConfig.databaseId || !appwriteConfig.contractsCollectionId) {

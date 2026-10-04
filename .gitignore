@@ -145,7 +145,10 @@ test-results/
 playwright-report/
 
 # Internal engineering notes at repo root (product docs live under src/content/docs + src/app/docs)
-/docs/
+# Ignore docs/* (not docs/) so !exceptions under docs/internal/ are visible to git
+/docs/*
+!/docs/internal/
+!/docs/internal/**
 .vercel
 
 # Google credentials

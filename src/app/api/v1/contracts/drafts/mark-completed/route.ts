@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { requireAuthAndOwner } from "@/lib/api/contracts/middleware/auth.middleware";
 import { DraftService } from "@/lib/api/contracts/services/DraftService";
 import {
 	errorResponse,
@@ -32,6 +33,9 @@ export async function POST(request: NextRequest) {
 				{ status: 400 },
 			);
 		}
+
+		const authError = await requireAuthAndOwner(request, ownerId);
+		if (authError) return authError;
 
 		if (!fileName && !draftId) {
 			return NextResponse.json(

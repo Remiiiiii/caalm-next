@@ -1,37 +1,22 @@
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { Account, Client, Query } from "node-appwrite";
+import { Query } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import {
+	isSessionUserError,
+	requireSessionUser,
+} from "@/lib/auth/require-session-user";
 
 export async function GET() {
 	try {
-		const cookieStore = await cookies();
-		const session = cookieStore.get("appwrite-session");
+		const session = await requireSessionUser();
+		if (isSessionUserError(session)) return session;
 
-		if (!session?.value) {
-			return NextResponse.json({ error: "No session found" }, { status: 401 });
-		}
-
-		// Get current user from session
-		const client = new Client()
-			.setEndpoint(appwriteConfig.endpointUrl)
-			.setProject(appwriteConfig.projectId)
-			.setSession(session.value);
-
-		const account = new Account(client);
-		const user = await account.get();
-
-		if (!user) {
-			return NextResponse.json({ error: "User not found" }, { status: 404 });
-		}
-
-		// Check if user has 2FA enabled in the database
 		const adminClient = await createAdminClient();
 		const userResponse = await adminClient.tablesDB.listRows({
 			databaseId: appwriteConfig.databaseId,
 			tableId: appwriteConfig.usersCollectionId,
-			queries: [Query.equal("accountId", user.$id)],
+			queries: [Query.equal("accountId", session.accountId)],
 		});
 
 		if (userResponse.rows.length === 0) {
@@ -57,13 +42,12 @@ export async function GET() {
 			},
 		});
 
-		// If user has 2FA already set up, set the completed cookie
 		if (has2FA) {
 			response.cookies.set("2fa_completed", "true", {
 				httpOnly: true,
 				secure: process.env.NODE_ENV === "production",
 				sameSite: "lax",
-				maxAge: 60 * 60 * 24 * 30, // 30 days
+				maxAge: 60 * 60 * 24 * 30,
 			});
 		}
 

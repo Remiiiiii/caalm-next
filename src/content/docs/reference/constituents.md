@@ -50,4 +50,4 @@ Permission: `ai.fundraising` to view scores; constituent edits still use `consti
 | `constituents.manage` | Create, edit, merge, import, and delete people |
 | `ai.fundraising` | View donor scores and next-best-action on the Intelligence tab |
 
-Related: [Gifts and campaigns](/docs/reference/gifts-and-campaigns), [Permissions catalog](/docs/reference/permissions-catalog#constituents).
+Related: [Gifts and campaigns](/docs/reference/gifts-and-campaigns), [Public donation page](/docs/reference/donation-page), [Permissions catalog](/docs/reference/permissions-catalog#constituents).

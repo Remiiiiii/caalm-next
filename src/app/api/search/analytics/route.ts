@@ -1,10 +1,17 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { ID, Query } from "node-appwrite";
+import { PERMISSIONS } from "@/constants/permissions";
 import { createAdminClient } from "@/lib/appwrite/admin";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { requirePermission } from "@/lib/rbac/middleware";
 
 export async function POST(request: NextRequest) {
 	try {
+		const denied = await requirePermission(request, {
+			permission: [PERMISSIONS.CONTRACTS.VIEW, PERMISSIONS.SETTINGS.VIEW],
+		});
+		if (denied) return denied;
+
 		const body = await request.json();
 		const { userId, query, filters, resultCount, searchTime } = body;
 
@@ -49,6 +56,11 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
 	try {
+		const denied = await requirePermission(request, {
+			permission: [PERMISSIONS.CONTRACTS.VIEW, PERMISSIONS.SETTINGS.VIEW],
+		});
+		if (denied) return denied;
+
 		const { searchParams } = new URL(request.url);
 		const userId = searchParams.get("userId");
 		const days = parseInt(searchParams.get("days") || "30", 10);

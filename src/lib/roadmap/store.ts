@@ -12,11 +12,13 @@ import {
 	catalogIdPrefix,
 	catalogKeyFromEntityId,
 	DEFAULT_ROADMAP_CATALOG_KEY,
+	ROADMAP_CATALOG_KEYS,
 } from "./catalog-key";
 import {
 	catalogTasksHaveLinkedPr,
 	catalogUsesSequentialTasks,
 	displayedPrNumberForTaskIn,
+	lockSnapshotExtras,
 } from "./catalog-query";
 import { catalogForKey } from "./catalogs";
 import { computeUnlocked, type LockSnapshot } from "./locking";
@@ -78,6 +80,7 @@ export function resetRoadmapMemoryForTests(): void {
 	globalThis.__caalmRoadmapMemoryByCatalog = {
 		clm: emptyMemory(),
 		npo: emptyMemory(),
+		prd: emptyMemory(),
 	};
 	globalThis.__caalmRoadmapMemory =
 		globalThis.__caalmRoadmapMemoryByCatalog.clm;
@@ -197,7 +200,7 @@ export async function seedRoadmapToAppwriteIfEmpty(
 		const unlocked = computeUnlocked({
 			sections,
 			tasks,
-			sequentialTasks: catalogUsesSequentialTasks(catalogForKey("npo")),
+			...lockSnapshotExtras("npo"),
 		});
 		sections = unlocked.snapshot.sections;
 		tasks = unlocked.snapshot.tasks;
@@ -389,9 +392,7 @@ async function syncCatalogLayoutToAppwrite(
 	const unlocked = computeUnlocked({
 		sections: mergedSections,
 		tasks: mergedTasks,
-		sequentialTasks: catalogUsesSequentialTasks(
-			catalogForKey(ids.catalogKey),
-		),
+		...lockSnapshotExtras(ids.catalogKey),
 	});
 
 	for (const section of unlocked.snapshot.sections) {
@@ -536,7 +537,7 @@ export function buildSeedSnapshot(
 	const unlocked = computeUnlocked({
 		sections,
 		tasks,
-		sequentialTasks: catalogUsesSequentialTasks(catalog),
+		...lockSnapshotExtras(catalogKey),
 	});
 	return unlocked.snapshot;
 }
@@ -672,11 +673,10 @@ export async function getTaskByPrNumber(
 export async function getTasksByPrNumber(
 	prNumber: number,
 ): Promise<RoadmapTask[]> {
-	const [clm, npo] = await Promise.all([
-		listTasks(undefined, "clm"),
-		listTasks(undefined, "npo"),
-	]);
-	return [...clm, ...npo].filter((t) => t.prNumber === prNumber);
+	const catalogs = await Promise.all(
+		ROADMAP_CATALOG_KEYS.map((key) => listTasks(undefined, key)),
+	);
+	return catalogs.flat().filter((t) => t.prNumber === prNumber);
 }
 
 export async function getSectionById(
@@ -911,39 +911,41 @@ export async function findTestRunForPrCommit(params: {
 	commitSha: string;
 	result?: string;
 }): Promise<RoadmapTestRun | null> {
-	ensureSeeded("clm");
-	ensureSeeded("npo");
-	const memoryRuns = [
-		...memory("clm").testRuns.values(),
-		...memory("npo").testRuns.values(),
-	];
-	const runs =
-		!isAppwriteBackend("clm") && !isAppwriteBackend("npo")
-			? memoryRuns
-			: await (async () => {
-					const { tablesDB } = await createAdminClient();
-					const databaseId = appwriteConfig.databaseId!;
-					const collected: RoadmapTestRun[] = [...memoryRuns];
-					for (const catalogKey of ["clm", "npo"] as const) {
-						if (!isAppwriteBackend(catalogKey)) continue;
-						const tableId =
-							roadmapAppwriteTableIds(catalogKey).testRunsTableId;
-						if (!tableId) continue;
-						const result = await tablesDB.listRows({
-							databaseId,
-							tableId,
-							queries: [
-								Query.equal("prNumber", params.prNumber),
-								Query.equal("commitSha", params.commitSha),
-								Query.limit(20),
-							],
-						});
-						collected.push(
-							...result.rows.map((r) => r as unknown as RoadmapTestRun),
-						);
-					}
-					return collected;
-				})();
+	for (const key of ROADMAP_CATALOG_KEYS) {
+		ensureSeeded(key);
+	}
+	const memoryRuns = ROADMAP_CATALOG_KEYS.flatMap((key) => [
+		...memory(key).testRuns.values(),
+	]);
+	const anyAppwrite = ROADMAP_CATALOG_KEYS.some((key) =>
+		isAppwriteBackend(key),
+	);
+	const runs = !anyAppwrite
+		? memoryRuns
+		: await (async () => {
+				const { tablesDB } = await createAdminClient();
+				const databaseId = appwriteConfig.databaseId!;
+				const collected: RoadmapTestRun[] = [...memoryRuns];
+				for (const catalogKey of ROADMAP_CATALOG_KEYS) {
+					if (!isAppwriteBackend(catalogKey)) continue;
+					const tableId =
+						roadmapAppwriteTableIds(catalogKey).testRunsTableId;
+					if (!tableId) continue;
+					const result = await tablesDB.listRows({
+						databaseId,
+						tableId,
+						queries: [
+							Query.equal("prNumber", params.prNumber),
+							Query.equal("commitSha", params.commitSha),
+							Query.limit(20),
+						],
+					});
+					collected.push(
+						...result.rows.map((r) => r as unknown as RoadmapTestRun),
+					);
+				}
+				return collected;
+			})();
 
 	const filtered = runs.filter((r) => {
 		if (r.prNumber !== params.prNumber) return false;
@@ -964,7 +966,7 @@ export async function persistUnlockedSnapshot(
 	const { snapshot, transitions } = computeUnlocked({
 		sections,
 		tasks,
-		sequentialTasks: catalogUsesSequentialTasks(catalogForKey(catalogKey)),
+		...lockSnapshotExtras(catalogKey),
 	});
 
 	for (const s of snapshot.sections) {

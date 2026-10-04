@@ -21,6 +21,12 @@ import {
 	npoBatchOwnsTaskCode,
 	npoTaskCodesCompletedByPr,
 } from "./nonprofit/npo-pr-batches";
+import {
+	prdBatchForPr,
+	prdBatchFromHeadRef,
+	prdBatchOwnsTaskCode,
+	prdTaskCodesCompletedByPr,
+} from "./platform-readiness/prd-pr-batches";
 
 export type GitHubPullRequestSummary = {
 	number: number;
@@ -43,11 +49,22 @@ export type CatalogSectionMatch = {
 	sectionNumber: number;
 };
 
-/** Closed or merged PRs stay on the board with strikethrough + status. */
+/** Closed or merged PRs stay listed on the board. */
 export function isSettledRoadmapPullRequestState(
 	state: string | undefined,
 ): boolean {
 	return state === "closed" || state === "merged";
+}
+
+/**
+ * Strike the PR title only when required checks passed or the section is done.
+ * Merge alone must not look "complete" while tasks stay available/locked.
+ */
+export function shouldStrikeRoadmapPullRequestTitle(input: {
+	checksPassed?: boolean;
+	sectionComplete?: boolean;
+}): boolean {
+	return input.checksPassed === true || input.sectionComplete === true;
 }
 
 /** Catalog PRs stay listed after close/merge on every board. */
@@ -84,6 +101,36 @@ export function matchPullRequestToTask(
 	taskCode: string,
 	catalogKey: RoadmapCatalogKey = DEFAULT_ROADMAP_CATALOG_KEY,
 ): boolean {
+	if (catalogKey === "prd") {
+		const completing = prdTaskCodesCompletedByPr(pr.number);
+		const byNumber = prdBatchForPr(pr.number);
+		if (
+			completing.length > 0 &&
+			byNumber?.sectionNumber === sectionNumber &&
+			prdBatchOwnsTaskCode(byNumber, taskCode)
+		) {
+			return true;
+		}
+		const byBranch = prdBatchFromHeadRef(pr.headRef);
+		if (
+			byBranch &&
+			byBranch.sectionNumber === sectionNumber &&
+			prdBatchOwnsTaskCode(byBranch, taskCode)
+		) {
+			return true;
+		}
+		const escaped = taskCode.replace(/\./g, "\\.");
+		const branchMatch = catalogBranchPrefixes("prd").some((prefix) =>
+			new RegExp(`${prefix}/${sectionNumber}-${escaped}(?:-|$)`, "i").test(
+				pr.headRef,
+			),
+		);
+		const titleMatch = new RegExp(`\\bPRD\\s+${escaped}\\b`, "i").test(
+			pr.title,
+		);
+		if (branchMatch || titleMatch) return true;
+	}
+
 	if (catalogKey === "npo") {
 		const completing = npoTaskCodesCompletedByPr(pr.number);
 		const byNumber = npoBatchForPr(pr.number);
@@ -118,8 +165,11 @@ export function matchPullRequestToTask(
 	const titleMatch =
 		catalogKey === "npo"
 			? new RegExp(`\\bNPO\\s+${escapedCode}\\b`, "i").test(pr.title)
-			: !/\bNPO\b/i.test(pr.title) &&
-				new RegExp(`\\b${escapedCode}\\b`).test(pr.title);
+			: catalogKey === "prd"
+				? new RegExp(`\\bPRD\\s+${escapedCode}\\b`, "i").test(pr.title)
+				: !/\bNPO\b/i.test(pr.title) &&
+					!/\bPRD\b/i.test(pr.title) &&
+					new RegExp(`\\b${escapedCode}\\b`).test(pr.title);
 	return branchMatch || titleMatch;
 }
 
@@ -154,7 +204,7 @@ export function findTaskPullRequest(
 export function resolveCatalogFromPrMatch(
 	pr: GitHubPullRequestSummary,
 ): CatalogSectionMatch | undefined {
-	for (const catalogKey of ["clm", "npo"] as const) {
+	for (const catalogKey of ["clm", "npo", "prd"] as const) {
 		const fromCatalog = sectionNumberForPrIn(
 			catalogForKey(catalogKey),
 			pr.number,
@@ -164,7 +214,7 @@ export function resolveCatalogFromPrMatch(
 		}
 	}
 
-	for (const catalogKey of ["clm", "npo"] as const) {
+	for (const catalogKey of ["clm", "npo", "prd"] as const) {
 		for (const section of catalogForKey(catalogKey)) {
 			if (matchPullRequestToSection(pr, section.sectionNumber, catalogKey)) {
 				return { catalogKey, sectionNumber: section.sectionNumber };
@@ -204,7 +254,7 @@ export function resolveSectionFromPrMatch(
  * matches the catalog task name.
  */
 export function displayPullRequestTitle(title: string): string {
-	return title.replace(/^(?:NPO\s+)?\d+\.\d+\s+/i, "").trim();
+	return title.replace(/^(?:(?:NPO|PRD)\s+)?\d+\.\d+\s+/i, "").trim();
 }
 
 /**

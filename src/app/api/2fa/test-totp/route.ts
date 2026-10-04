@@ -1,14 +1,27 @@
 import { NextResponse } from "next/server";
 import {
+	isSessionUserError,
+	requireSessionUser,
+} from "@/lib/auth/require-session-user";
+import {
 	generateTOTPCode,
 	generateTOTPQRUrl,
 	generateTOTPSecret,
 	verifyTOTPCode,
 } from "@/lib/totp";
 
+/**
+ * Dev-only TOTP self-test. Blocked outside development.
+ */
 export async function GET() {
+	if (process.env.NODE_ENV !== "development") {
+		return NextResponse.json({ error: "Not found" }, { status: 404 });
+	}
+
+	const session = await requireSessionUser();
+	if (isSessionUserError(session)) return session;
+
 	try {
-		// Test TOTP functionality
 		const secret = generateTOTPSecret();
 		const code = generateTOTPCode(secret);
 		const isValid = verifyTOTPCode({ secret, code });
@@ -21,10 +34,10 @@ export async function GET() {
 		return NextResponse.json({
 			success: true,
 			test: {
-				secret: secret,
+				secret,
 				generatedCode: code,
-				isValid: isValid,
-				qrUrl: qrUrl,
+				isValid,
+				qrUrl,
 				timestamp: new Date().toISOString(),
 			},
 			message: "TOTP functionality test completed",

@@ -1,7 +1,9 @@
 import type { NextRequest } from "next/server";
 import { Query } from "node-appwrite";
+import { PERMISSIONS } from "@/constants/permissions";
 import { createAdminClient } from "@/lib/appwrite/admin";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { requirePermission } from "@/lib/rbac/middleware";
 import { CACHE_KEYS, CACHE_TTLS } from "@/lib/services/cache-keys";
 import CacheManager from "@/lib/services/cache-manager";
 
@@ -26,8 +28,13 @@ interface DepartmentAnalytics {
 	totalStats: ContractStats;
 }
 
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
 	try {
+		const denied = await requirePermission(request, {
+			permission: [PERMISSIONS.SETTINGS.VIEW, PERMISSIONS.AUDIT.VIEW],
+		});
+		if (denied) return denied;
+
 		// Check cache first for lightning-fast response
 		const cacheKey = CACHE_KEYS.analytics.admin();
 		const cachedData = await CacheManager.withCache(

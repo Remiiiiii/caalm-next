@@ -46,6 +46,21 @@ const SIGNAL_PATTERNS: Array<{
 		re: /\brequirePermission\s*\(/,
 	},
 	{
+		signal: "requireAssistantAccess",
+		class: "permission",
+		re: /\brequireAssistantAccess\s*\(/,
+	},
+	{
+		signal: "requireAuthAndOwner",
+		class: "permission",
+		re: /\brequireAuthAndOwner\s*\(/,
+	},
+	{
+		signal: "requireSessionUser",
+		class: "session",
+		re: /\brequireSessionUser\s*\(/,
+	},
+	{
 		signal: "requireGmailAccess",
 		class: "permission",
 		re: /\brequireGmailAccess\s*\(/,
@@ -129,6 +144,11 @@ const SIGNAL_PATTERNS: Array<{
 		signal: "getCurrentUser",
 		class: "session",
 		re: /\bgetCurrentUser\s*\(/,
+	},
+	{
+		signal: "getCurrentUserId",
+		class: "session",
+		re: /\bgetCurrentUserId\s*\(/,
 	},
 	{
 		signal: "getLoggedInUser",
