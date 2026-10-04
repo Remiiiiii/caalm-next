@@ -21,6 +21,12 @@ import {
 	npoBatchOwnsTaskCode,
 	npoTaskCodesCompletedByPr,
 } from "./nonprofit/npo-pr-batches";
+import {
+	prdBatchForPr,
+	prdBatchFromHeadRef,
+	prdBatchOwnsTaskCode,
+	prdTaskCodesCompletedByPr,
+} from "./platform-readiness/prd-pr-batches";
 
 export type GitHubPullRequestSummary = {
 	number: number;
@@ -85,6 +91,23 @@ export function matchPullRequestToTask(
 	catalogKey: RoadmapCatalogKey = DEFAULT_ROADMAP_CATALOG_KEY,
 ): boolean {
 	if (catalogKey === "prd") {
+		const completing = prdTaskCodesCompletedByPr(pr.number);
+		const byNumber = prdBatchForPr(pr.number);
+		if (
+			completing.length > 0 &&
+			byNumber?.sectionNumber === sectionNumber &&
+			prdBatchOwnsTaskCode(byNumber, taskCode)
+		) {
+			return true;
+		}
+		const byBranch = prdBatchFromHeadRef(pr.headRef);
+		if (
+			byBranch &&
+			byBranch.sectionNumber === sectionNumber &&
+			prdBatchOwnsTaskCode(byBranch, taskCode)
+		) {
+			return true;
+		}
 		const escaped = taskCode.replace(/\./g, "\\.");
 		const branchMatch = catalogBranchPrefixes("prd").some((prefix) =>
 			new RegExp(`${prefix}/${sectionNumber}-${escaped}(?:-|$)`, "i").test(

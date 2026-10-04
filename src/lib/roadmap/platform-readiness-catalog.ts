@@ -5,15 +5,18 @@
  * API permission coverage, sign-in trust, honest dashboards, credible IT portal,
  * and enterprise buyer honesty — without duplicating the CLM product buildout board.
  *
- * PR convention: title `PRD {task codes} {short name}`, branch
- * `cursor/platform-readiness/{section}-{code}-*`. PR body repeats Who / What /
+ * PR convention: one batch PR per up to five tasks (see prd-pr-batches.ts). Title
+ * `PRD S1 B1 Workspace data isolation (1.1–1.4)`. Branch
+ * `cursor/platform-readiness/s01-b1-5329`. Legacy single-task branches
+ * `cursor/platform-readiness/1-1.1-slug` still match. PR body repeats Who / What /
  * Where / Why / When / How from each task (plain English for reviewers and sales).
  */
 
 import type { RoadmapCatalogSection } from "./types";
+import { linkedPrNumbersForPrdSection } from "./platform-readiness/prd-pr-batches";
 
 const PR_CONVENTION =
-	"One PR per section batch when possible. Title: `PRD 1.1–1.4 Workspace data isolation`. Branch: `cursor/platform-readiness/1-1.1-org-scope`. Body: for each task, paste Who, What, Where, Why, When, How, and Done when from the board. Do not mark tasks complete until merge + green Playwright + production deploy.";
+	"One PR per batch (max five task codes). Title: `PRD S1 B1 Workspace data isolation (1.1–1.4)`. Branch: `cursor/platform-readiness/s01-b1-5329`. Body: for each task in the batch, paste Who, What, Where, Why, When, How, and Done when from the board. Do not mark tasks complete until merge + green Playwright + production deploy.";
 
 function spec(
 	who: string,
@@ -46,7 +49,7 @@ const SEQUENTIAL = {
 	perTaskPrCompletion: true,
 } as const;
 
-export const PLATFORM_READINESS_ROADMAP_CATALOG: RoadmapCatalogSection[] = [
+const PLATFORM_READINESS_ROADMAP_SECTIONS: RoadmapCatalogSection[] = [
 	{
 		sectionNumber: 0,
 		title: "Platform Readiness Roadmap Engine",
@@ -181,7 +184,7 @@ export const PLATFORM_READINESS_ROADMAP_CATALOG: RoadmapCatalogSection[] = [
 				spec(
 					"Sales and customer success",
 					"A short internal note on single-tenant vs multi-tenant deployment and what this section guarantees",
-					"founder/ or docs/internal if present; link from IT board section card",
+					"docs/internal/workspace-isolation-note.md; link from IT board section card",
 					"Buyers ask about data separation in security questionnaires",
 					"Same PR as 1.3 or immediately after",
 					"Plain English: what is fixed in code vs what still depends on one-org-per-database hosting",
@@ -514,7 +517,7 @@ export const PLATFORM_READINESS_ROADMAP_CATALOG: RoadmapCatalogSection[] = [
 				spec(
 					"Sales and IT responding to vendor reviews",
 					"A one-page plain English summary of auth, hosting, backups, and known gaps with dates",
-					"founder/ or docs; link from Enterprise pricing FAQ",
+					"docs/internal/security-questionnaire-starter.md; link from Enterprise pricing FAQ",
 					"Procurement stalls without a honest security doc",
 					"Parallel with 6.1",
 					"List what is done (RBAC, billing limits, audit log) vs in progress (PRD board sections)",
@@ -530,7 +533,7 @@ export const PLATFORM_READINESS_ROADMAP_CATALOG: RoadmapCatalogSection[] = [
 				spec(
 					"Product and engineering leads",
 					"When PRD sections 1–5 are complete, open CLM roadmap sections 11–12 for customer API, webhooks, and SSO implementation",
-					"CLM catalog §11–12, IT CLM roadmap page",
+					"CLM catalog §11–12, IT CLM roadmap page, docs/internal/platform-readiness-vs-clm.md",
 					"Product features stay on CLM board; readiness board clears blockers first",
 					"After 6.2",
 					"Add linkedPrNumbers or comments in CLM catalog pointing from PRD 6.3; no duplicate SSO build here",
@@ -546,7 +549,7 @@ export const PLATFORM_READINESS_ROADMAP_CATALOG: RoadmapCatalogSection[] = [
 				spec(
 					"Sales and solutions",
 					"Demo script says what to show vs what to verbally disclaim (IT portal, analytics, enterprise integrations)",
-					"sales or founder assets if present",
+					"docs/internal/buyer-demo-script.md",
 					"Prevents overselling during pilots",
 					"End of PRD catalog",
 					"Short bullet list aligned with public PRICING.md honesty",
@@ -559,3 +562,9 @@ export const PLATFORM_READINESS_ROADMAP_CATALOG: RoadmapCatalogSection[] = [
 		],
 	},
 ];
+
+export const PLATFORM_READINESS_ROADMAP_CATALOG: RoadmapCatalogSection[] =
+	PLATFORM_READINESS_ROADMAP_SECTIONS.map((section) => ({
+		...section,
+		linkedPrNumbers: linkedPrNumbersForPrdSection(section.sectionNumber),
+	}));

@@ -22,10 +22,10 @@ export function roadmapAppwriteTableIds(
 	}
 	if (catalogKey === "prd") {
 		return {
-			sectionsTableId: undefined,
-			tasksTableId: undefined,
-			testRunsTableId: undefined,
-			statusLogTableId: undefined,
+			sectionsTableId: appwriteConfig.prdRoadmapSectionsCollectionId,
+			tasksTableId: appwriteConfig.prdRoadmapTasksCollectionId,
+			testRunsTableId: appwriteConfig.prdRoadmapTestRunsCollectionId,
+			statusLogTableId: appwriteConfig.prdRoadmapStatusLogCollectionId,
 		};
 	}
 	return {

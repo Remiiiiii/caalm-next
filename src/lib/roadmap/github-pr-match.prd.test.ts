@@ -24,4 +24,15 @@ describe("PRD github pr match", () => {
 			sectionNumber: 1,
 		});
 	});
+
+	it("maps batch branch s01-b1 to section 1 tasks in batch", () => {
+		const batchPr = {
+			...pr,
+			number: 9002,
+			title: "PRD S1 B1 Workspace data isolation (1.1–1.4)",
+			headRef: "cursor/platform-readiness/s01-b1-5329",
+		};
+		expect(matchPullRequestToTask(batchPr, 1, "1.4", "prd")).toBe(true);
+		expect(matchPullRequestToTask(batchPr, 1, "1.1", "clm")).toBe(false);
+	});
 });

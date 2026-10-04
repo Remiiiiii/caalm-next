@@ -400,6 +400,24 @@ export const appwriteConfig = {
 		"69d91a04001f4e8c2b22",
 	),
 
+	/** Platform Readiness roadmap — same schema as CLM / NPO roadmap_* tables */
+	prdRoadmapSectionsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_PRD_ROADMAP_SECTIONS_COLLECTION",
+		"69e2b101001f4e8c2d01",
+	),
+	prdRoadmapTasksCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_PRD_ROADMAP_TASKS_COLLECTION",
+		"69e2b102001f4e8c2d02",
+	),
+	prdRoadmapTestRunsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_PRD_ROADMAP_TEST_RUNS_COLLECTION",
+		"69e2b103001f4e8c2d03",
+	),
+	prdRoadmapStatusLogCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_PRD_ROADMAP_STATUS_LOG_COLLECTION",
+		"69e2b104001f4e8c2d04",
+	),
+
 	/** Legacy manual completions — merged into npo_roadmap_tasks on seed when present */
 	npoRoadmapTaskOverridesCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_NPO_ROADMAP_TASK_OVERRIDES_COLLECTION",

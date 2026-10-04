@@ -1,0 +1,34 @@
+---
+description: Platform Readiness Roadmap batch PRs — one PR per up to five tasks
+globs:
+  - src/lib/roadmap/platform-readiness/**
+  - src/lib/roadmap/platform-readiness-catalog.ts
+  - cursor/platform-readiness/**
+alwaysApply: false
+---
+
+# Platform Readiness Roadmap batch pull requests
+
+Each **batch PR** (up to five top-level task codes) is the **implementation ticket**. Do not open one PR per task unless the user explicitly asks.
+
+## Do
+
+- Branch: `cursor/platform-readiness/s{nn}-b{n}-5329` (see `prd-pr-batches.ts`).
+- Title: `PRD S{n} B{n} {section title} ({task range})`.
+- Body: Who / What / Where / Why / When / How and **Done when** from `platform-readiness-catalog.ts` for **every task in the batch**.
+- Merge with green CI to mark those task codes complete on the Platform Readiness board (`?catalog=prd`).
+
+## CLM overlap
+
+Read `docs/internal/platform-readiness-vs-clm.md` before duplicating CLM §1–2 work on the CLM board. Default: execute on PRD, pointer on CLM.
+
+## Internal docs (section 6)
+
+- `docs/internal/security-questionnaire-starter.md` — task 6.2
+- `docs/internal/buyer-demo-script.md` — task 6.4
+- `docs/internal/workspace-isolation-note.md` — task 1.4
+
+## Reference
+
+- Batch table: `src/lib/roadmap/platform-readiness/prd-pr-batches.ts`
+- Catalog: `src/lib/roadmap/platform-readiness-catalog.ts`
