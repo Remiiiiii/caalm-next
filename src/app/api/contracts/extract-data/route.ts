@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { PERMISSIONS } from "@/constants/permissions";
 import { extractContractFromDocument } from "@/lib/ai/extractContractFromDocument";
 import {
 	errorResponse,
@@ -8,8 +9,14 @@ import {
 } from "@/lib/api/contracts/utils/response.util";
 import { consumeAiExtractionForRequest } from "@/lib/billing/consumeAiExtractionForRequest";
 import { isPlanLimitError } from "@/lib/billing/planLimits";
+import { requirePermission } from "@/lib/rbac/middleware";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+	const permissionCheck = await requirePermission(request, {
+		permission: PERMISSIONS.CONTRACTS.VIEW,
+	});
+	if (permissionCheck) return permissionCheck;
+
 	return NextResponse.json({
 		message: "Contract extraction API is working",
 		status: "ok",
@@ -35,6 +42,11 @@ function planLimitResponse(error: unknown) {
 export async function POST(request: NextRequest) {
 	const requestId = generateRequestId();
 	try {
+		const permissionCheck = await requirePermission(request, {
+			permission: PERMISSIONS.CONTRACTS.CREATE,
+		});
+		if (permissionCheck) return permissionCheck;
+
 		// Count against monthly AI quota before spending model tokens
 		await consumeAiExtractionForRequest(request);
 

@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { PERMISSIONS } from "@/constants/permissions";
 import {
 	analyzeContractDocument,
 	answerContractQuestion,
@@ -9,6 +10,7 @@ import {
 	answerQuestion,
 	extractDocumentContent,
 } from "@/lib/ai/gemini";
+import { requirePermission } from "@/lib/rbac/middleware";
 
 function normalizePageTexts(raw: unknown): PdfPageText[] | undefined {
 	if (!Array.isArray(raw)) return undefined;
@@ -27,6 +29,15 @@ function normalizePageTexts(raw: unknown): PdfPageText[] | undefined {
 
 export async function POST(request: NextRequest) {
 	try {
+		const denied = await requirePermission(request, {
+			permission: [
+				PERMISSIONS.AI.DOCUMENT_ANALYSIS,
+				PERMISSIONS.AI.CHAT,
+				PERMISSIONS.CONTRACTS.VIEW,
+			],
+		});
+		if (denied) return denied;
+
 		const body = await request.json();
 		const {
 			action,

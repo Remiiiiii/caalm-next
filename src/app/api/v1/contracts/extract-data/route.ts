@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { PERMISSIONS } from "@/constants/permissions";
 import { extractContractFromDocument } from "@/lib/ai/extractContractFromDocument";
 import {
 	errorResponse,
@@ -6,8 +7,14 @@ import {
 	successResponse,
 	validationErrorResponse,
 } from "@/lib/api/contracts/utils/response.util";
+import { requirePermission } from "@/lib/rbac/middleware";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+	const denied = await requirePermission(request, {
+		permission: PERMISSIONS.CONTRACTS.VIEW,
+	});
+	if (denied) return denied;
+
 	return NextResponse.json({
 		message: "Contract extraction API is working",
 		status: "ok",
@@ -18,6 +25,11 @@ export async function GET() {
 export async function POST(request: NextRequest) {
 	const requestId = generateRequestId();
 	try {
+		const denied = await requirePermission(request, {
+			permission: PERMISSIONS.CONTRACTS.CREATE,
+		});
+		if (denied) return denied;
+
 		const contentType = request.headers.get("content-type");
 
 		if (contentType?.includes("application/json")) {

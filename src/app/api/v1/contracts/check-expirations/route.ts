@@ -1,14 +1,18 @@
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { checkContractExpirations } from "@/lib/actions/notification.actions";
 import {
 	errorResponse,
 	generateRequestId,
 	successResponse,
 } from "@/lib/api/contracts/utils/response.util";
+import { isAuthorizedCron } from "@/lib/cron/is-authorized-cron";
 
-export async function POST() {
+export async function POST(request: NextRequest) {
 	const requestId = generateRequestId();
-	// Note: This is typically called by a cron job, auth handled by cron secret
-	// For manual calls, we could add auth here if needed
+	if (!isAuthorizedCron(request)) {
+		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+	}
 	try {
 		const result = await checkContractExpirations();
 		return successResponse(

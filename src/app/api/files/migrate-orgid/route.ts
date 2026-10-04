@@ -1,11 +1,18 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { Query } from "node-appwrite";
+import { PERMISSIONS } from "@/constants/permissions";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { requirePermission } from "@/lib/rbac/middleware";
 import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 
-export async function POST(_request: NextRequest) {
+export async function POST(request: NextRequest) {
 	try {
+		const denied = await requirePermission(request, {
+			permission: PERMISSIONS.PLATFORM.MANAGE_SCHEMA,
+		});
+		if (denied) return denied;
+
 		const { tablesDB } = await createAdminClient();
 
 		if (!appwriteConfig.databaseId || !appwriteConfig.filesCollectionId) {
@@ -136,8 +143,13 @@ export async function POST(_request: NextRequest) {
 }
 
 // GET endpoint to check how many files need migration
-export async function GET() {
+export async function GET(request: NextRequest) {
 	try {
+		const denied = await requirePermission(request, {
+			permission: PERMISSIONS.PLATFORM.MANAGE_SCHEMA,
+		});
+		if (denied) return denied;
+
 		const { tablesDB } = await createAdminClient();
 
 		if (!appwriteConfig.databaseId || !appwriteConfig.filesCollectionId) {

@@ -1,6 +1,8 @@
 /**
  * Row-level style contract list scoping from permissions + user attributes.
  * Uses contracts.view_* scopes (not calendar proxies).
+ *
+ * Every mode includes orgId so "view all" never means "all tenants".
  */
 
 import { Query } from "node-appwrite";
@@ -10,12 +12,12 @@ import { hasPermission } from "@/lib/rbac/permissions";
 import { excludeSoftDeletedQuery } from "@/lib/soft-delete";
 
 export type ContractListScope =
-	| { mode: "all_org" }
-	| { mode: "department"; department: string }
-	| { mode: "own"; userId: string };
+	| { mode: "all_org"; orgId: string }
+	| { mode: "department"; department: string; orgId: string }
+	| { mode: "own"; userId: string; orgId: string };
 
 /**
- * Decide how broadly the user may list contracts.
+ * Decide how broadly the user may list contracts within their workspace.
  */
 export async function getContractListScope(
 	userId: string,
@@ -28,7 +30,7 @@ export async function getContractListScope(
 		(await hasPermission(userId, PERMISSIONS.APPROVALS.OVERRIDE, orgId));
 
 	if (viewAll) {
-		return { mode: "all_org" };
+		return { mode: "all_org", orgId };
 	}
 
 	const team = await hasPermission(
@@ -42,24 +44,27 @@ export async function getContractListScope(
 		const department =
 			(user as { department?: string } | null)?.department?.trim() || "";
 		if (department) {
-			return { mode: "department", department };
+			return { mode: "department", department, orgId };
 		}
 	}
 
-	return { mode: "own", userId };
+	return { mode: "own", userId, orgId };
 }
 
 /**
  * Appwrite query fragments for contract listRows (AND).
+ * Always includes orgId — including all_org (view-all inside one workspace).
  */
 export function buildContractQueries(scope: ContractListScope) {
 	const hidden = excludeSoftDeletedQuery();
+	const orgFilter = Query.equal("orgId", scope.orgId);
 	switch (scope.mode) {
 		case "all_org":
-			return [hidden];
+			return [hidden, orgFilter];
 		case "department":
 			return [
 				hidden,
+				orgFilter,
 				Query.or([
 					Query.equal("department", scope.department),
 					Query.equal("assignToDepartment", scope.department),
@@ -68,12 +73,13 @@ export function buildContractQueries(scope: ContractListScope) {
 		case "own":
 			return [
 				hidden,
+				orgFilter,
 				Query.or([
 					Query.equal("contractOwnerId", scope.userId),
 					Query.equal("ownerId", scope.userId),
 				]),
 			];
 		default:
-			return [hidden];
+			return [hidden, orgFilter];
 	}
 }

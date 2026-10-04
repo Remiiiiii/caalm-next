@@ -1,7 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { Query } from "node-appwrite";
+import { PERMISSIONS } from "@/constants/permissions";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { requirePermission } from "@/lib/rbac/middleware";
 
 async function runDiagnostics(fileId: string) {
 	const { tablesDB } = await createAdminClient();
@@ -195,6 +197,11 @@ async function runDiagnostics(fileId: string) {
 
 export async function GET(request: NextRequest) {
 	try {
+		const denied = await requirePermission(request, {
+			permission: PERMISSIONS.PLATFORM.DIAGNOSE,
+		});
+		if (denied) return denied;
+
 		const { searchParams } = new URL(request.url);
 		const fileId = searchParams.get("fileId");
 
@@ -225,6 +232,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
 	try {
+		const denied = await requirePermission(request, {
+			permission: PERMISSIONS.PLATFORM.DIAGNOSE,
+		});
+		if (denied) return denied;
+
 		const { searchParams } = new URL(request.url);
 		const fileId = searchParams.get("fileId");
 

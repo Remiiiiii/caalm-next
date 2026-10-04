@@ -34,6 +34,12 @@ describe("isAgentPullRequestBranch", () => {
 		expect(isAgentPullRequestBranch("cursor/nonprofit-roadmap-340a")).toBe(
 			false,
 		);
+		expect(
+			isAgentPullRequestBranch("cursor/platform-readiness/1-1.1-org"),
+		).toBe(false);
+		expect(isAgentPullRequestBranch("cursor/platform-readiness-engine-5329")).toBe(
+			false,
+		);
 	});
 });
 

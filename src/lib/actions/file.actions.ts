@@ -1283,9 +1283,15 @@ const createQueries = (
 	searchText: string,
 	sort: string,
 	limit?: number,
+	orgId?: string,
 ) => {
 	// 'owner' is a relationship attribute - query with the ID directly (not in an array)
 	const queries = [Query.equal("owner", currentUser.$id)];
+
+	// Workspace boundary — never list another org's files even for the same owner id
+	if (orgId) {
+		queries.push(Query.equal("orgId", orgId));
+	}
 
 	if (types.length > 0) queries.push(Query.equal("type", types));
 	if (searchText) queries.push(Query.contains("name", searchText));
@@ -1317,7 +1323,22 @@ export const getFiles = async ({
 			return { documents: [] };
 		}
 
-		const queries = createQueries(currentUser, types, searchText, sort, limit);
+		const { getUserDefaultOrganization } = await import(
+			"@/lib/rbac/permissions"
+		);
+		const defaultOrg = await getUserDefaultOrganization(currentUser.$id);
+		const orgId =
+			defaultOrg?.orgId ||
+			String((currentUser as { orgId?: string }).orgId || "");
+
+		const queries = createQueries(
+			currentUser,
+			types,
+			searchText,
+			sort,
+			limit,
+			orgId || undefined,
+		);
 
 		const files = await tablesDB.listRows({
 			databaseId: appwriteConfig.databaseId!,
