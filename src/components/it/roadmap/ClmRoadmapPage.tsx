@@ -13,7 +13,7 @@ import { PageIndex } from "@/components/ui/page-index";
 import { useRoadmapRealtime } from "@/hooks/useRoadmapRealtime";
 import {
 	displayPullRequestTitle,
-	isSettledRoadmapPullRequestState,
+	shouldStrikeRoadmapPullRequestTitle,
 } from "@/lib/roadmap/github-pr-match";
 import type { RoadmapOverview, RoadmapTaskTreeNode } from "@/lib/roadmap/types";
 import { fetcher } from "@/lib/swr-config";
@@ -39,10 +39,18 @@ type SectionPullRequestsResponse = {
 	pullRequests: SectionPullRequest[];
 };
 
-function RoadmapPullRequestItem({ pr }: { pr: SectionPullRequest }) {
+function RoadmapPullRequestItem({
+	pr,
+	sectionComplete,
+}: {
+	pr: SectionPullRequest;
+	sectionComplete?: boolean;
+}) {
 	const [expanded, setExpanded] = useState(false);
-	const settled =
-		pr.checksPassed === true || isSettledRoadmapPullRequestState(pr.state);
+	const settled = shouldStrikeRoadmapPullRequestTitle({
+		checksPassed: pr.checksPassed,
+		sectionComplete,
+	});
 
 	return (
 		<div className="space-y-1.5 py-3 first:pt-0 last:pb-0">
@@ -70,6 +78,9 @@ function RoadmapPullRequestItem({ pr }: { pr: SectionPullRequest }) {
 						{pr.state && pr.state !== "unknown" ? (
 							<span className="shrink-0 text-xs font-normal text-slate-500 capitalize">
 								{pr.state}
+								{pr.state === "merged" && pr.checksPassed !== true
+									? " · waiting on CI"
+									: ""}
 							</span>
 						) : pr.state === "unknown" ? (
 							<span className="shrink-0 text-xs font-normal text-slate-500">
@@ -229,10 +240,10 @@ function RoadmapSectionCard({
 										{title ? (
 											<span
 												className={cn(
-													(pr.checksPassed ||
-														isSettledRoadmapPullRequestState(pr.state) ||
-														section.status === "complete") &&
-														"line-through text-slate-500",
+													shouldStrikeRoadmapPullRequestTitle({
+														checksPassed: pr.checksPassed,
+														sectionComplete: section.status === "complete",
+													}) && "line-through text-slate-500",
 												)}
 											>
 												{" "}
@@ -240,7 +251,13 @@ function RoadmapSectionCard({
 											</span>
 										) : null}
 										{pr.state && pr.state !== "unknown" ? (
-											<span className="text-slate-500"> · {pr.state}</span>
+											<span className="text-slate-500">
+												{" "}
+												· {pr.state}
+												{pr.state === "merged" && pr.checksPassed !== true
+													? " · waiting on CI"
+													: ""}
+											</span>
 										) : pr.state === "unknown" ? (
 											<span className="text-slate-500"> · unavailable</span>
 										) : null}
@@ -311,7 +328,11 @@ function RoadmapSectionCard({
 						) : (
 							<div className="divide-y divide-slate-200">
 								{prs.pullRequests.map((pr) => (
-									<RoadmapPullRequestItem key={pr.number} pr={pr} />
+									<RoadmapPullRequestItem
+										key={pr.number}
+										pr={pr}
+										sectionComplete={section.status === "complete"}
+									/>
 								))}
 							</div>
 						)

@@ -742,17 +742,17 @@ export async function getOverview(options?: {
 			mergeBlockReason:
 				section.status === "complete"
 					? null
-					: nextTask
-						? `Next: ${nextTask.taskCode} ${nextTask.title} — finish this PR before later tasks unlock`
-						: perTask
-							? `${taskCounts.complete} of ${taskCounts.total} tasks complete`
-							: waitingNumber
-								? `Waiting for PR #${waitingNumber} to merge`
-								: waitingChecksNumber
-									? `PR #${waitingChecksNumber}: ${
-											gateReasonByPr.get(waitingChecksNumber) ||
-											"Waiting for required checks"
-										}`
+					: waitingChecksNumber
+						? `PR #${waitingChecksNumber}: ${
+								gateReasonByPr.get(waitingChecksNumber) ||
+								"Waiting for required checks"
+							}`
+						: nextTask
+							? `Next: ${nextTask.taskCode} ${nextTask.title} — finish this PR before later tasks unlock`
+							: perTask
+								? `${taskCounts.complete} of ${taskCounts.total} tasks complete`
+								: waitingNumber
+									? `Waiting for PR #${waitingNumber} to merge`
 									: null,
 		};
 	});

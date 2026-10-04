@@ -215,14 +215,28 @@ async function notifyPrMerged({ prNumber, mergeCommitSha }) {
 	});
 }
 
-/** PR numbers listed in src/lib/roadmap/catalog.ts linkedPrNumbers arrays. */
+/** PR numbers from CLM, Nonprofit, and Platform Readiness catalogs. */
 function loadCatalogLinkedPrs() {
-	const catalogPath = path.join(__dirname, "../src/lib/roadmap/catalog.ts");
-	const text = readFileSync(catalogPath, "utf8");
+	const files = [
+		"../src/lib/roadmap/catalog.ts",
+		"../src/lib/roadmap/nonprofit/npo-pr-batches.ts",
+		"../src/lib/roadmap/platform-readiness/prd-pr-batches.ts",
+	];
 	const prs = new Set();
-	for (const match of text.matchAll(/linkedPrNumbers:\s*\[([^\]]+)\]/g)) {
-		for (const n of match[1].match(/\d+/g) || []) {
-			prs.add(Number(n));
+	for (const relative of files) {
+		const filePath = path.join(__dirname, relative);
+		if (!existsSync(filePath)) continue;
+		const text = readFileSync(filePath, "utf8");
+		for (const match of text.matchAll(/linkedPrNumbers:\s*\[([^\]]+)\]/g)) {
+			for (const n of match[1].match(/\d+/g) || []) {
+				prs.add(Number(n));
+			}
+		}
+		for (const match of text.matchAll(
+			/linkedPrNumber:\s*(\d+)|productPrNumber:\s*(\d+)/g,
+		)) {
+			const n = match[1] || match[2];
+			if (n) prs.add(Number(n));
 		}
 	}
 	return [...prs];
