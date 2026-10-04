@@ -1,4 +1,10 @@
+import {
+	isAuditMockDataEnabled,
+	resolveUseAuditMockData,
+} from "@/lib/audits/audit-mock-flag";
 import type { AuditDomainData, AuditPeriod } from "./types";
+
+export { isAuditMockDataEnabled, resolveUseAuditMockData };
 
 function series(
 	labels: string[],
@@ -18,8 +24,8 @@ function series(
 	};
 }
 
-export const USE_AUDIT_MOCK_DATA =
-	process.env.NEXT_PUBLIC_AUDIT_MOCK_DATA !== "false";
+/** True when illustrative audit KPIs/charts may render (never default-on in production). */
+export const USE_AUDIT_MOCK_DATA = isAuditMockDataEnabled();
 
 export const auditDomainMockData: Record<
 	AuditDomainData["domain"],
@@ -487,9 +493,38 @@ export const auditDomainMockData: Record<
 	},
 };
 
+function emptyDomainShell(
+	domain: AuditDomainData["domain"],
+): AuditDomainData {
+	const base = auditDomainMockData[domain];
+	return {
+		...base,
+		kpis: base.kpis.map((kpi) => ({
+			...kpi,
+			value: "—",
+			description: "Connect this workflow to see live metrics",
+			trend: "Not connected",
+			trendDirection: "neutral" as const,
+			ragStatus: undefined,
+		})),
+		timeSeries: {
+			"7d": [],
+			"30d": [],
+			"90d": [],
+			ytd: [],
+		},
+		breakdown: [],
+		donut: [],
+		evidence: [],
+	};
+}
+
 export function getAuditDomainData(
 	domain: AuditDomainData["domain"],
 ): AuditDomainData {
+	if (!isAuditMockDataEnabled()) {
+		return emptyDomainShell(domain);
+	}
 	return auditDomainMockData[domain];
 }
 
@@ -497,5 +532,24 @@ export function getTimeSeriesForPeriod(
 	domain: AuditDomainData["domain"],
 	period: AuditPeriod,
 ) {
+	if (!isAuditMockDataEnabled()) {
+		return [];
+	}
 	return auditDomainMockData[domain].timeSeries[period];
+}
+
+/** Domains that still rely on illustrative series/KPIs when mock merge is active. */
+export function domainUsesIllustrativeData(
+	domain: AuditDomainData["domain"],
+	hasLiveContracts: boolean,
+	hasLiveLicenses: boolean,
+): boolean {
+	if (domain === "contracts" && hasLiveContracts) {
+		// Live KPIs/donut, but trend charts stay illustrative when mock flag is on
+		return isAuditMockDataEnabled();
+	}
+	if (domain === "licenses" && hasLiveLicenses) {
+		return isAuditMockDataEnabled();
+	}
+	return true;
 }

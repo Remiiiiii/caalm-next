@@ -362,7 +362,7 @@ const PLATFORM_READINESS_ROADMAP_SECTIONS: RoadmapCatalogSection[] = [
 		sectionNumber: 4,
 		title: "Honest dashboards and compliance views",
 		sourceRef:
-			"Assessment: audit mock data defaults on; analytics mix live and placeholder widgets",
+			"Assessment: audit mock data defaulted on; section 4 defaults production mock off and labels sample charts. Note: docs/internal/honest-dashboards-note.md",
 		...SEQUENTIAL,
 		tasks: [
 			t(
