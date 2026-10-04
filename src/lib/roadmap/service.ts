@@ -16,6 +16,7 @@ import {
 } from "./catalog-key";
 import {
 	catalogDisplayTitleForPrIn,
+	catalogUsesSequentialTasks,
 	lockSnapshotExtras,
 	linkedPrNumbersInCatalog,
 	sectionCompletesOnMergedCatalogPrIn,
