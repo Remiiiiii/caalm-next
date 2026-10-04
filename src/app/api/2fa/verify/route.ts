@@ -8,6 +8,11 @@ import {
 	LOCKOUT_USER_MESSAGE,
 	recordAuthFailure,
 } from "@/lib/auth/attempt-lockout";
+import {
+	isSessionUserError,
+	rejectUserIdMismatch,
+	requireSessionUser,
+} from "@/lib/auth/require-session-user";
 import { runLockoutSideEffects } from "@/lib/auth/security-lockout-actions";
 import { verifyTOTPCode } from "@/lib/totp";
 
@@ -30,13 +35,19 @@ function lockoutResponse(retryAfterSeconds: number) {
 
 export async function POST(request: NextRequest) {
 	try {
+		const session = await requireSessionUser();
+		if (isSessionUserError(session)) return session;
+
 		const body = await request.json();
-		const userId = body.userId as string | undefined;
+		const bodyUserId = body.userId as string | undefined;
 		const code = (body.code || body.verificationCode) as string | undefined;
 
-		if (!userId || !code) {
+		const mismatch = rejectUserIdMismatch(session, bodyUserId);
+		if (mismatch) return mismatch;
+
+		if (!code) {
 			return NextResponse.json(
-				{ error: "User ID and verification code are required" },
+				{ error: "Verification code is required" },
 				{ status: 400 },
 			);
 		}
@@ -49,6 +60,7 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
+		const userId = session.accountId;
 		const lockStatus = await getAuthLockoutStatus("2fa", userId);
 		if (lockStatus.locked) {
 			return lockoutResponse(lockStatus.retryAfterSeconds);
@@ -56,7 +68,6 @@ export async function POST(request: NextRequest) {
 
 		try {
 			const client = await createAdminClient();
-
 			const userResponse = await client.tablesDB.listRows({
 				databaseId: appwriteConfig.databaseId!,
 				tableId: appwriteConfig.usersCollectionId!,
@@ -64,29 +75,6 @@ export async function POST(request: NextRequest) {
 			});
 
 			if (userResponse.rows.length === 0) {
-				if (code.length === 6 && /^\d{6}$/.test(code)) {
-					const response = NextResponse.json({
-						success: true,
-						message: "2FA verification successful (test mode)",
-					});
-
-					response.cookies.set("2fa_completed", "true", {
-						httpOnly: true,
-						secure: process.env.NODE_ENV === "production",
-						sameSite: "lax",
-						maxAge: 60 * 60 * 24 * 30,
-					});
-					response.cookies.set("2fa_user_id", "68682eba0038a0e0b7fd", {
-						httpOnly: true,
-						secure: process.env.NODE_ENV === "production",
-						sameSite: "lax",
-						maxAge: 60 * 60 * 24 * 30,
-					});
-
-					await clearAuthFailures("2fa", userId);
-					return response;
-				}
-
 				const failure = await recordAuthFailure("2fa", userId);
 				if (failure.justLocked || failure.locked) {
 					await runLockoutSideEffects({
@@ -95,7 +83,6 @@ export async function POST(request: NextRequest) {
 					});
 					return lockoutResponse(failure.retryAfterSeconds);
 				}
-
 				return NextResponse.json(
 					{ error: "Invalid verification code" },
 					{ status: 400 },

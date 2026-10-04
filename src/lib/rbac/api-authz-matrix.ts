@@ -56,6 +56,11 @@ const SIGNAL_PATTERNS: Array<{
 		re: /\brequireAuthAndOwner\s*\(/,
 	},
 	{
+		signal: "requireSessionUser",
+		class: "session",
+		re: /\brequireSessionUser\s*\(/,
+	},
+	{
 		signal: "requireGmailAccess",
 		class: "permission",
 		re: /\brequireGmailAccess\s*\(/,

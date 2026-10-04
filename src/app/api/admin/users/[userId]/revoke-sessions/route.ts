@@ -1,10 +1,13 @@
 import { type NextRequest, NextResponse } from "next/server";
 import * as sdk from "node-appwrite";
 import { PERMISSIONS } from "@/constants/permissions";
+import { getCurrentUser } from "@/lib/actions/user.actions";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { logSecurityAudit } from "@/lib/auth/security-audit";
 import { requireStepUpForSession } from "@/lib/auth/step-up";
 import { requirePermission } from "@/lib/rbac/middleware";
+import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 
 /**
  * POST /api/admin/users/[userId]/revoke-sessions
@@ -22,6 +25,14 @@ export async function POST(
 
 		const stepUpCheck = await requireStepUpForSession(request);
 		if (stepUpCheck) return stepUpCheck;
+
+		const actor = await getCurrentUser();
+		if (!actor) {
+			return NextResponse.json(
+				{ error: "Authentication required" },
+				{ status: 401 },
+			);
+		}
 
 		const { userId } = await params;
 		if (!userId) {
@@ -52,6 +63,29 @@ export async function POST(
 		const users = new sdk.Users(client);
 
 		await users.deleteSessions(accountId);
+
+		const defaultOrg = await getUserDefaultOrganization(actor.$id);
+		const target = userDoc as {
+			fullName?: string;
+			email?: string;
+			orgId?: string;
+		};
+		await logSecurityAudit({
+			kind: "session_revoke",
+			actor: {
+				$id: actor.$id,
+				fullName: actor.fullName,
+				email: actor.email,
+			},
+			target: {
+				$id: userId,
+				fullName: target.fullName,
+				email: target.email,
+				orgId: target.orgId,
+			},
+			orgId: defaultOrg?.orgId || target.orgId,
+			request,
+		});
 
 		return NextResponse.json({
 			success: true,

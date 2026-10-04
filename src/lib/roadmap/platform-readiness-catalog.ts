@@ -289,7 +289,7 @@ const PLATFORM_READINESS_ROADMAP_SECTIONS: RoadmapCatalogSection[] = [
 		sectionNumber: 3,
 		title: "Trustworthy sign-in and two-factor",
 		sourceRef:
-			"Assessment: 2FA setup routes on unguarded baseline; production session hardening still open on CLM board §1",
+			"Assessment: 2FA setup routes were unguarded; section 3 session-binds 2FA and audits revoke/reset. Note: docs/internal/sign-in-trust-note.md",
 		...SEQUENTIAL,
 		tasks: [
 			t(
