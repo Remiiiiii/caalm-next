@@ -1,4 +1,7 @@
-import { isNonprofitRoadmapBranch } from "@/lib/roadmap/catalog-key";
+import {
+	isNonprofitRoadmapBranch,
+	isPlatformReadinessRoadmapBranch,
+} from "@/lib/roadmap/catalog-key";
 import type { GitHubPullRequestSummary } from "@/lib/roadmap/github-pr-match";
 import type { PrLogOverview, PrLogSection } from "./types";
 
@@ -16,6 +19,7 @@ export type PrLogSourcePr = GitHubPullRequestSummary & {
 export function isAgentPullRequestBranch(headRef: string): boolean {
 	const ref = headRef.trim();
 	if (isNonprofitRoadmapBranch(ref)) return false;
+	if (isPlatformReadinessRoadmapBranch(ref)) return false;
 	return /(?:^|\/)cursor\//i.test(ref);
 }
 
