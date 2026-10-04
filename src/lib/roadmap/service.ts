@@ -17,6 +17,7 @@ import {
 import {
 	catalogDisplayTitleForPrIn,
 	catalogUsesSequentialTasks,
+	lockSnapshotExtras,
 	linkedPrNumbersInCatalog,
 	sectionCompletesOnMergedCatalogPrIn,
 	sectionNumberForPrIn,
@@ -50,6 +51,7 @@ import {
 	reconcileNestedTasksWithParentComplete,
 } from "./locking";
 import { npoCatalogDisplayTitleForPr } from "./nonprofit/npo-pr-batches";
+import { prdCatalogDisplayTitleForPr } from "./platform-readiness/prd-pr-batches";
 import {
 	appendStatusLog,
 	createTestRun,
@@ -113,6 +115,10 @@ function catalogDisplayTitleForPr(
 		const batchTitle = npoCatalogDisplayTitleForPr(prNumber);
 		if (batchTitle) return batchTitle;
 	}
+	if (key === "prd") {
+		const batchTitle = prdCatalogDisplayTitleForPr(prNumber);
+		if (batchTitle) return batchTitle;
+	}
 	return catalogDisplayTitleForPrIn(catalogOf(key), prNumber);
 }
 
@@ -123,7 +129,9 @@ function resolvedCatalogPrTitle(
 	catalogKey: RoadmapCatalogKey,
 ): string {
 	const fallback = catalogDisplayTitleForPr(prNumber, catalogKey);
-	if (catalogKey === "npo") return fallback || liveTitle?.trim() || "";
+	if (catalogKey === "npo" || catalogKey === "prd") {
+		return fallback || liveTitle?.trim() || "";
+	}
 	return liveTitle?.trim() || fallback;
 }
 
@@ -146,9 +154,7 @@ function keyFromTasks(tasks: RoadmapTask[]): RoadmapCatalogKey {
 }
 
 function sequentialLockOptions(catalogKey: RoadmapCatalogKey) {
-	return {
-		sequentialTasks: catalogUsesSequentialTasks(catalogOf(catalogKey)),
-	};
+	return lockSnapshotExtras(catalogKey);
 }
 
 /** Prefer an active in-flight PR; otherwise the first linked PR in the section. */
@@ -802,6 +808,7 @@ export async function getSectionTaskTree(
 	const tree = buildTaskTree(tasks, sectionId, {
 		sections,
 		tasks,
+		...lockSnapshotExtras(catalogKey),
 		mergeBlockReasons: mergeBlockReason
 			? { [section.$id]: mergeBlockReason }
 			: undefined,

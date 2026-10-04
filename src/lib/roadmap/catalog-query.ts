@@ -3,6 +3,8 @@
  * CLM wrappers in catalog.ts stay unchanged for existing tests.
  */
 
+import type { RoadmapCatalogKey } from "./catalog-key";
+import { catalogForKey } from "./catalogs";
 import type { RoadmapCatalogSection } from "./types";
 
 /** Same stub set as catalog.ts — keep in sync (PR #63). */
@@ -67,6 +69,26 @@ export function catalogUsesSequentialTasks(
 	catalog: RoadmapCatalogSection[],
 ): boolean {
 	return catalog.some((section) => section.sequentialTasks === true);
+}
+
+/** CLM §1–2 pointer sections — execution on Platform Readiness (Option A). */
+export function executionTrackedSectionNumbers(
+	catalog: RoadmapCatalogSection[],
+): number[] {
+	return catalog
+		.filter((section) => section.executionTrackedOn != null)
+		.map((section) => section.sectionNumber);
+}
+
+export function lockSnapshotExtras(catalogKey: RoadmapCatalogKey) {
+	const catalog = catalogForKey(catalogKey);
+	return {
+		sequentialTasks: catalogUsesSequentialTasks(catalog),
+		executionTrackedSectionNumbers:
+			catalogKey === "clm"
+				? executionTrackedSectionNumbers(catalog)
+				: undefined,
+	};
 }
 
 export function catalogTaskLinkedPrNumberIn(
