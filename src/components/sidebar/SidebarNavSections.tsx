@@ -1,15 +1,6 @@
 "use client";
 
-import {
-	BookOpenCheck,
-	Building,
-	Building2,
-	Crown,
-	Eye,
-	Lock,
-	Megaphone,
-	Server,
-} from "lucide-react";
+import { Building, Building2, Crown, Eye, Lock, Server } from "lucide-react";
 import Link from "next/link";
 import { Fragment } from "react";
 import { MobileDashboardRoleSwitcher } from "@/components/mobile/MobileDashboardRoleSwitcher";
@@ -19,7 +10,6 @@ import {
 	DASHBOARD_ITEM_COLORS,
 	ITEM_ICONS,
 	isNavItemActive,
-	NAV_ICON_FILL_GREY,
 } from "@/components/sidebar/sidebar-icons";
 import {
 	Tooltip,
@@ -173,47 +163,27 @@ function NavItemIcons({
 					)}
 				</span>
 			)}
-			{item.name === "Audit Readiness" && (
-				<BookOpenCheck
-					className="h-5 w-5 shrink-0"
-					style={{
-						color: mobile && active ? "white" : NAV_ICON_FILL_GREY,
-					}}
-					aria-hidden
-				/>
-			)}
-
-			{item.name === "Campaigns" && (
-				<Megaphone
-					className="h-5 w-5 shrink-0"
-					style={{
-						color: mobile && active ? "white" : NAV_ICON_FILL_GREY,
-					}}
-					aria-hidden
-				/>
-			)}
-			{item.name !== "Campaigns" &&
-				(() => {
-					const iconConfig = ITEM_ICONS[item.name];
-					if (!iconConfig && item.name !== "Documents") {
-						return null;
-					}
-					return (
-						<span
-							className={cn(
-								"shrink-0",
-								mobile && active && "[&_img]:brightness-0 [&_img]:invert",
-							)}
-						>
-							<NavItemIcon
-								name={item.name}
-								width={iconConfig?.width ?? iconSize}
-								height={iconConfig?.height ?? iconSize}
-								priority
-							/>
-						</span>
-					);
-				})()}
+			{(() => {
+				const iconConfig = ITEM_ICONS[item.name];
+				if (!iconConfig && item.name !== "Documents") {
+					return null;
+				}
+				return (
+					<span
+						className={cn(
+							"shrink-0",
+							mobile && active && "[&_img]:brightness-0 [&_img]:invert",
+						)}
+					>
+						<NavItemIcon
+							name={item.name}
+							width={iconConfig?.width ?? iconSize}
+							height={iconConfig?.height ?? iconSize}
+							priority
+						/>
+					</span>
+				);
+			})()}
 		</>
 	);
 }
