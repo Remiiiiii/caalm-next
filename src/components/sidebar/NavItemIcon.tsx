@@ -1,6 +1,6 @@
 "use client";
 
-import { Import, LayoutTemplate, UserCheck } from "lucide-react";
+import { LayoutTemplate } from "lucide-react";
 import Image from "next/image";
 import {
 	ITEM_ICONS,
@@ -72,26 +72,9 @@ export function NavItemIcon({
 	if (name === "Contract Templates") {
 		return <ContractTemplatesNavIcon size={height} />;
 	}
-	if (name === "Event Check-in") {
-		return (
-			<UserCheck
-				className="shrink-0"
-				size={height}
-				stroke={NAV_ICON_FILL_GREY}
-				aria-hidden
-			/>
-		);
-	}
-	if (name === "Import") {
-		return (
-			<Import
-				className="shrink-0"
-				size={height}
-				stroke={NAV_ICON_FILL_GREY}
-				aria-hidden
-			/>
-		);
-	}
+
+	// All SVG/PNG nav icons go through ITEM_ICONS so they share the same
+	// eager/priority loading path and paint together on first paint.
 	const iconConfig = ITEM_ICONS[name];
 	if (!iconConfig?.src) return null;
 
@@ -111,7 +94,9 @@ export function NavItemIcon({
 			width={resolvedWidth}
 			height={resolvedHeight}
 			priority={priority || iconConfig.src.endsWith(".png")}
-			fetchPriority={priority || iconConfig.src.endsWith(".png") ? "high" : "auto"}
+			fetchPriority={
+				priority || iconConfig.src.endsWith(".png") ? "high" : "auto"
+			}
 			loading="eager"
 			unoptimized={iconConfig.src.endsWith(".png")}
 			className="shrink-0 max-w-none object-contain"

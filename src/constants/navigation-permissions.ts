@@ -57,7 +57,7 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 			},
 			{
 				name: "Event Check-in",
-				icon: "/assets/icons/calendar.svg",
+				icon: "/assets/icons/user-check-in.svg",
 				url: "/events/check-in",
 				permissions: [PERMISSIONS.EVENTS.INVITE],
 				viewerReadOnly: true,
@@ -180,7 +180,7 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 			},
 			{
 				name: "Import",
-				icon: "/assets/icons/constituents.svg",
+				icon: "/assets/icons/import.svg",
 				url: "/constituents/import",
 				permissions: [PERMISSIONS.CONSTITUENTS.MANAGE],
 			},
@@ -207,7 +207,7 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 			},
 			{
 				name: "Campaigns",
-				icon: "/assets/icons/dollar-circle.svg",
+				icon: "/assets/icons/megaphone.svg",
 				url: "/campaigns",
 				permissions: [PERMISSIONS.GIFTS.VIEW],
 				viewerReadOnly: true,
@@ -231,7 +231,7 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 		items: [
 			{
 				name: "Audit Readiness",
-				icon: "/assets/icons/compliance-status.svg",
+				icon: "/assets/icons/open-book-check.svg",
 				url: "/audits/readiness",
 				permissions: [PERMISSIONS.AUDIT.VIEW],
 				viewerReadOnly: true,

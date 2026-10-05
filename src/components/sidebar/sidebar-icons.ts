@@ -96,6 +96,7 @@ export const ITEM_ICONS: Record<
 		color: SUBITEM_TEXT_GREY,
 	},
 	Import: {
+		src: "/assets/icons/import.svg",
 		width: 20,
 		height: 20,
 		color: SUBITEM_TEXT_GREY,
@@ -119,6 +120,7 @@ export const ITEM_ICONS: Record<
 		color: SUBITEM_TEXT_GREY,
 	},
 	Campaigns: {
+		src: "/assets/icons/megaphone.svg",
 		width: 20,
 		height: 20,
 		color: SUBITEM_TEXT_GREY,
@@ -159,6 +161,7 @@ export const ITEM_ICONS: Record<
 		color: SUBITEM_TEXT_GREY,
 	},
 	"Audit Readiness": {
+		src: "/assets/icons/open-book-check.svg",
 		width: 20,
 		height: 20,
 		color: SUBITEM_TEXT_GREY,
@@ -194,6 +197,7 @@ export const ITEM_ICONS: Record<
 		color: SUBITEM_TEXT_GREY,
 	},
 	"Event Check-in": {
+		src: "/assets/icons/user-check-in.svg",
 		width: 20,
 		height: 20,
 		color: SUBITEM_TEXT_GREY,
