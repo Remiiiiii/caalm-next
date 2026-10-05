@@ -571,19 +571,20 @@ export const ROADMAP_CATALOG: RoadmapCatalogSection[] = [
 	{
 		sectionNumber: 11,
 		title: "Growth-Tier API, Webhooks & IT/HR Surface",
-		sourceRef: "Integrations row; Incomplete #7",
+		sourceRef:
+			"Integrations row; Incomplete #7. Prerequisites: complete Platform Readiness PRD §1–5 before customer API/webhooks ship (PRD 6.3 handoff — docs/internal/platform-readiness-vs-clm.md).",
 		linkedPrNumbers: [43],
 		tasks: [
 			t(
 				"11.1",
 				"Customer REST API",
-				"Contracts/licenses read + scoped write; Growth/Enterprise gated.",
+				"Contracts/licenses read + scoped write; Growth/Enterprise gated. Blocked until PRD §1–5 (isolation, API authz, honest dashboards, IT portal) are complete.",
 				["Starter tier rejected; Growth authorized paths pass"],
 			),
 			t(
 				"11.2",
 				"Outbound webhooks",
-				"Activated, approval, renewal, obligation overdue + retries.",
+				"Activated, approval, renewal, obligation overdue + retries. Same PRD §1–5 readiness gate as 11.1.",
 				["Mock receiver gets events; retry-on-failure works"],
 			),
 			t(
@@ -605,10 +606,15 @@ export const ROADMAP_CATALOG: RoadmapCatalogSection[] = [
 	{
 		sectionNumber: 12,
 		title: "Enterprise Identity: SSO / SAML / SCIM",
-		sourceRef: "Business readiness; Strategic #1",
+		sourceRef:
+			"Business readiness; Strategic #1. Prerequisites: Platform Readiness PRD §1–5 and PRD 6.3 handoff before SAML/SCIM implementation (docs/internal/platform-readiness-vs-clm.md).",
 		linkedPrNumbers: [41],
 		tasks: [
-			t("12.1", "SAML SSO", "At least Okta and/or Azure AD.", [
+			t(
+				"12.1",
+				"SAML SSO",
+				"At least Okta and/or Azure AD. Do not start until PRD §1–5 complete — Settings integrations stay Coming soon until real IdP state exists.",
+				[
 				"Test IdP login succeeds through hardened auth path",
 			]),
 			t("12.2", "SCIM provisioning", "Automated user lifecycle from IdP.", [

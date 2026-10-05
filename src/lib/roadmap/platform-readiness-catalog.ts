@@ -492,7 +492,7 @@ const PLATFORM_READINESS_ROADMAP_SECTIONS: RoadmapCatalogSection[] = [
 		sectionNumber: 6,
 		title: "Enterprise buyer honesty",
 		sourceRef:
-			"Assessment: Integrations UI implies SSO/API; enterprise features belong on CLM board §11–12 but buyers need clear today vs roadmap language",
+			"Assessment: Integrations UI implies SSO/API; enterprise features belong on CLM board §11–12 but buyers need clear today vs roadmap language. Notes: docs/internal/security-questionnaire-starter.md, docs/internal/buyer-demo-script.md, docs/internal/platform-readiness-vs-clm.md",
 		...SEQUENTIAL,
 		tasks: [
 			t(

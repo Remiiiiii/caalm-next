@@ -42,6 +42,16 @@ That overlap is intentional in the assessment, not a mistake in the catalog.
 - Branches: `cursor/platform-readiness/s01-b1-5329` (batch) or legacy `cursor/platform-readiness/1-1.1-slug` (single-task match still works).
 - Product features (customer API, webhooks, SSO **implementation**) stay on CLM **§11–12**; PRD **6.3** is handoff only after readiness sections 1–5 are done.
 
+## PRD 6.3 handoff checklist (engineering)
+
+When **Platform Readiness §1–5** are merged and green on production:
+
+1. Unblock CLM **§11** (customer REST API, outbound webhooks) — catalog `sourceRef` and tasks **11.1–11.2** cite the PRD gate.
+2. Unblock CLM **§12** (SAML, SCIM, integrations UI tied to real IdP state) — task **12.4** must read from live connection state, not tier unlock alone.
+3. Keep SSO/API **implementation** off the PRD board; PRD **§6** only fixes buyer-facing honesty (Settings integrations, security questionnaire starter, demo script).
+
+Until then, Settings → Integrations shows **Coming soon** + **Contact sales** for enterprise API/SSO cards — never **Connected** without a configured IdP.
+
 ## Related internal docs
 
 - `docs/internal/security-questionnaire-starter.md` — PRD task 6.2

@@ -1,7 +1,7 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
-import { AlertCircle, Lock, Unplug } from "lucide-react";
+import { AlertCircle, Lock, Mail, Unplug } from "lucide-react";
 import Image from "next/image";
 import type { ComponentType, ReactNode, SVGProps } from "react";
 import { VscDebugConnectedCompact } from "react-icons/vsc";
@@ -13,7 +13,8 @@ export type IntegrationStatus =
 	| "connected"
 	| "disconnected"
 	| "connecting"
-	| "locked";
+	| "locked"
+	| "coming_soon";
 
 interface IntegrationCardProps {
 	title: string;
@@ -31,6 +32,9 @@ interface IntegrationCardProps {
 	onConnect?: () => void;
 	onDisconnect?: () => void;
 	onConfigure?: () => void;
+	/** Sales-led enterprise features (SSO, customer API) — not a fake OAuth connect. */
+	onContactSales?: () => void;
+	contactSalesLabel?: string;
 	connectLabel?: string;
 	/** Overflow menu (3-dot) rendered next to the status pill */
 	menu?: ReactNode;
@@ -57,6 +61,11 @@ function statusBadge(status: IntegrationStatus) {
 			return {
 				label: "Upgrade required",
 				className: "bg-slate-100 text-slate-600 border-slate-200",
+			};
+		case "coming_soon":
+			return {
+				label: "Coming soon",
+				className: "bg-orange/10 text-orange border-orange/20",
 			};
 		default:
 			return {
@@ -88,6 +97,8 @@ export default function IntegrationCard({
 	onConnect,
 	onDisconnect,
 	onConfigure,
+	onContactSales,
+	contactSalesLabel = "Contact sales",
 	connectLabel = "Connect",
 	menu,
 	actions,
@@ -142,6 +153,15 @@ export default function IntegrationCard({
 					onClick={onConnect}
 				>
 					View plans
+				</Button>
+			) : null}
+			{status === "coming_soon" && onContactSales ? (
+				<Button
+					className="btn-primary w-full cursor-pointer px-3 sm:px-4"
+					onClick={onContactSales}
+				>
+					<Mail className="h-4 w-4" aria-hidden />
+					{contactSalesLabel}
 				</Button>
 			) : null}
 		</>
