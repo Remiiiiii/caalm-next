@@ -4,9 +4,11 @@ import { useRouter } from "next/navigation";
 import type React from "react";
 import { useEffect } from "react";
 import { ITDashboardErrorBoundary } from "@/components/errors/ITDashboardErrorBoundary";
+import { ITHubChrome } from "@/components/it/ITHubChrome";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { useAuth } from "@/contexts/AuthContext";
 import { ITProvider } from "@/contexts/ITContext";
+import { ITOrgScopeProvider } from "@/contexts/ITOrgScopeContext";
 
 const ITLayoutContent = ({ children }: { children: React.ReactNode }) => {
 	const { user, loading } = useAuth();
@@ -23,18 +25,23 @@ const ITLayoutContent = ({ children }: { children: React.ReactNode }) => {
 	// the page file exists (clm-roadmap, nonprofit-roadmap, etc.).
 	return (
 		<ITProvider>
-			<ITDashboardErrorBoundary>
-				{loading || !user ? (
-					<>
-						<div className="flex h-full min-h-[200px] items-center justify-center">
-							<LoadingSpinner size="lg" label="Loading IT dashboard..." />
-						</div>
-						<div hidden>{children}</div>
-					</>
-				) : (
-					children
-				)}
-			</ITDashboardErrorBoundary>
+			<ITOrgScopeProvider>
+				<ITDashboardErrorBoundary>
+					{loading || !user ? (
+						<>
+							<div className="flex h-full min-h-[200px] items-center justify-center">
+								<LoadingSpinner size="lg" label="Loading IT dashboard..." />
+							</div>
+							<div hidden>{children}</div>
+						</>
+					) : (
+						<>
+							<ITHubChrome />
+							{children}
+						</>
+					)}
+				</ITDashboardErrorBoundary>
+			</ITOrgScopeProvider>
 		</ITProvider>
 	);
 };

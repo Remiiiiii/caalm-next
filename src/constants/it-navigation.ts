@@ -102,6 +102,12 @@ export const IT_NAVIGATION: ITSidebarSection[] = [
 				url: "/dashboard/it/storage",
 				permission: PERMISSIONS.IT.VIEW_MONITORING,
 			},
+			{
+				name: "Tenants",
+				icon: "building2",
+				url: "/dashboard/it/tenants",
+				permission: PERMISSIONS.PLATFORM.VIEW_ALL_ORGS,
+			},
 		],
 	},
 	{
