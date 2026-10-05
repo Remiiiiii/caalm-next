@@ -182,6 +182,9 @@ export const CACHE_KEYS = {
 	// IT Metrics
 	it: {
 		storageMetrics: () => `it:storage-metrics`,
+		hubSnapshot: (orgId: string) => `it:hub-snapshot:${orgId}`,
+		hubFleet: (page: number, query: string) =>
+			`it:hub-fleet:${page}:${query.toLowerCase()}`,
 	},
 
 	// Weather
@@ -295,6 +298,8 @@ export const getTTLForRoute = (route: string): number => {
 
 		// IT
 		"it/storage-metrics": CACHE_TTLS.medium, // 5 minutes
+		"it/hub-snapshot": 60,
+		"it/hub-fleet": 60,
 
 		// Weather
 		weather: CACHE_TTLS.long, // 10 minutes

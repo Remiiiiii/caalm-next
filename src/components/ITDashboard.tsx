@@ -8,19 +8,24 @@ import {
 	Activity,
 	AlertCircle,
 	AlertTriangle,
+	Building2,
 	CheckCircle,
 	Server,
 	Wifi,
 	XCircle,
 } from "lucide-react";
+import Link from "next/link";
 import React from "react";
 import {
 	DashboardGreeting,
 	type DashboardGreetingUser,
 } from "@/components/dashboard/DashboardGreeting";
-import { SampleDataBadge } from "@/components/ui/sample-data-badge";
+import { ITHubOverviewCards } from "@/components/it/ITHubOverviewCards";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MetricStatCard } from "@/components/ui/metric-stat-card";
+import { SampleDataBadge } from "@/components/ui/sample-data-badge";
+import { useITOrgScope } from "@/contexts/ITOrgScopeContext";
 import { useITDashboard } from "@/hooks/useITDashboard";
 import { useITMetrics } from "@/hooks/useITMetrics";
 import { useITUser } from "@/hooks/useITUser";
@@ -54,6 +59,9 @@ const ITDashboard: React.FC<ITDashboardProps> = ({ user }) => {
 	});
 
 	const { user: itUser, loading: userLoading } = useITUser();
+	const { hubOrgId, canViewFleet } = useITOrgScope();
+	// Platform home only: Appwrite/process checks are not tenant data.
+	const showPlatformProbes = canViewFleet && !hubOrgId;
 	const greetingUser = (user ?? itUser ?? null) as DashboardGreetingUser | null;
 	const [realtimeStatus, setRealtimeStatus] = React.useState<ConnectionStatus>(
 		realtimeService.getConnectionStatus(),
@@ -100,95 +108,112 @@ const ITDashboard: React.FC<ITDashboardProps> = ({ user }) => {
 					}
 				/>
 
-				{notice ? (
+				{canViewFleet && !hubOrgId ? (
+					<div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+						<p className="text-sm text-slate-600 max-w-3xl">
+							Select a tenant to inspect org-scoped seats, storage, tickets, and
+							audit activity. Platform connectivity stays below.
+						</p>
+						<Button className="btn-primary px-3 sm:px-4" asChild>
+							<Link href="/dashboard/it/tenants">
+								<Building2 className="h-4 w-4" />
+								Open tenant fleet
+							</Link>
+						</Button>
+					</div>
+				) : null}
+
+				{hubOrgId ? <ITHubOverviewCards orgId={hubOrgId} /> : null}
+
+				{showPlatformProbes && notice ? (
 					<div className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
 						<p className="text-sm text-slate-600 max-w-3xl">{notice}</p>
 						<SampleDataBadge label="Not configured" />
 					</div>
 				) : null}
 
-				{dashboardError ? (
+				{showPlatformProbes && dashboardError ? (
 					<div className="rounded-lg border border-red/20 bg-red/10 px-4 py-3 text-sm text-red">
 						{dashboardError}
 					</div>
 				) : null}
 
-				<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-					<MetricStatCard
-						title="System Status"
-						value={
-							<span className="capitalize">{healthStatus ?? "—"}</span>
-						}
-						description={
-							systemHealth?.uptime != null
-								? `Uptime: ${systemHealth.uptime}%`
-								: "Connectivity checks only"
-						}
-						icon={Server}
-						iconTone={
-							healthStatus === "healthy"
-								? "success"
-								: healthStatus === "degraded"
-									? "warning"
-									: healthStatus === "down"
-										? "danger"
-										: "default"
-						}
-						dynamicIcon={
-							healthStatus === "healthy"
-								? CheckCircle
-								: healthStatus === "degraded"
-									? AlertTriangle
-									: healthStatus === "down"
-										? XCircle
-										: undefined
-						}
-						dynamicTone={
-							healthStatus === "healthy"
-								? "success"
-								: healthStatus === "degraded"
-									? "warning"
-									: "danger"
-						}
-						valueTone={
-							healthStatus === "healthy"
-								? "success"
-								: healthStatus === "degraded"
-									? "warning"
-									: healthStatus === "down"
-										? "danger"
-										: "default"
-						}
-					/>
-					<MetricStatCard
-						title="API Requests"
-						value={formatNullableStat(quickStats?.apiRequests)}
-						description="Requires request telemetry"
-						icon={Activity}
-					/>
-					<MetricStatCard
-						title="Process heap"
-						value={
-							quickStats?.processHeapUsedMb != null
-								? `${quickStats.processHeapUsedMb} MB`
-								: "—"
-						}
-						description={
-							quickStats?.processUptimeLabel
-								? `Uptime ${quickStats.processUptimeLabel}`
-								: "This Next.js process (not host RAM)"
-						}
-						icon={Server}
-					/>
-					<MetricStatCard
-						title="Active Incidents"
-						value={formatNullableStat(quickStats?.activeIncidents)}
-						description="Requires incident tooling"
-						icon={AlertCircle}
-					/>
-				</div>
+				{showPlatformProbes ? (
+					<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+						<MetricStatCard
+							title="System Status"
+							value={<span className="capitalize">{healthStatus ?? "—"}</span>}
+							description={
+								systemHealth?.uptime != null
+									? `Uptime: ${systemHealth.uptime}%`
+									: "Connectivity checks only"
+							}
+							icon={Server}
+							iconTone={
+								healthStatus === "healthy"
+									? "success"
+									: healthStatus === "degraded"
+										? "warning"
+										: healthStatus === "down"
+											? "danger"
+											: "default"
+							}
+							dynamicIcon={
+								healthStatus === "healthy"
+									? CheckCircle
+									: healthStatus === "degraded"
+										? AlertTriangle
+										: healthStatus === "down"
+											? XCircle
+											: undefined
+							}
+							dynamicTone={
+								healthStatus === "healthy"
+									? "success"
+									: healthStatus === "degraded"
+										? "warning"
+										: "danger"
+							}
+							valueTone={
+								healthStatus === "healthy"
+									? "success"
+									: healthStatus === "degraded"
+										? "warning"
+										: healthStatus === "down"
+											? "danger"
+											: "default"
+							}
+						/>
+						<MetricStatCard
+							title="API Requests"
+							value={formatNullableStat(quickStats?.apiRequests)}
+							description="Requires request telemetry"
+							icon={Activity}
+						/>
+						<MetricStatCard
+							title="Process heap"
+							value={
+								quickStats?.processHeapUsedMb != null
+									? `${quickStats.processHeapUsedMb} MB`
+									: "—"
+							}
+							description={
+								quickStats?.processUptimeLabel
+									? `Uptime ${quickStats.processUptimeLabel}`
+									: "This Next.js process (not host RAM)"
+							}
+							icon={Server}
+						/>
+						<MetricStatCard
+							title="Active Incidents"
+							value={formatNullableStat(quickStats?.activeIncidents)}
+							description="Requires incident tooling"
+							icon={AlertCircle}
+						/>
+					</div>
+				) : null}
 
-				{systemHealth?.services?.length ? (
+				{showPlatformProbes && systemHealth?.services?.length ? (
 					<Card className="glass-card">
 						<div className="glass-card-cap" />
 						<CardHeader className="glass-dialog-wizard-header mt-4">
@@ -230,7 +255,9 @@ const ITDashboard: React.FC<ITDashboardProps> = ({ user }) => {
 				) : null}
 
 				{/* Host performance graphs only when a real SSE payload is configured */}
-				{metrics?.systemPerformance && metrics.configured !== false ? (
+				{showPlatformProbes &&
+				metrics?.systemPerformance &&
+				metrics.configured !== false ? (
 					<Card className="glass-card">
 						<div className="glass-card-cap" />
 						<CardHeader className="glass-dialog-wizard-header mt-4">
@@ -250,7 +277,7 @@ const ITDashboard: React.FC<ITDashboardProps> = ({ user }) => {
 					</Card>
 				) : null}
 
-				{!dashboardLoading && !dashboard && (
+				{showPlatformProbes && !dashboardLoading && !dashboard && (
 					<Card className="glass-card">
 						<div className="glass-card-cap" />
 						<CardContent className="pt-6 bg-slate-50">

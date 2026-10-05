@@ -1,6 +1,11 @@
 import type { AuditControlDomain } from "@/lib/audits/types";
 
-export type AuditModule = AuditControlDomain | "auth" | "system" | "billing";
+export type AuditModule =
+	| AuditControlDomain
+	| "auth"
+	| "system"
+	| "billing"
+	| "it";
 
 export type AuditAction =
 	| "create"
