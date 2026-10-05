@@ -1,6 +1,6 @@
 # Buyer demo script (internal)
 
-Aligns with `public/PRICING.md` honesty. Update when PRD §6 merges.
+Aligns with `public/PRICING.md` honesty (PRD §6.4, PR #183 batch).
 
 ## Lead with strength (10–15 minutes)
 
@@ -17,17 +17,23 @@ Aligns with `public/PRICING.md` honesty. Update when PRD §6 merges.
 - **Enterprise integrations:** “SSO, customer API, and webhooks are roadmap/sales-assisted — not self-serve Connected today.”
 - **Multi-tenant SaaS:** “We scope data by organization; ask us for the current isolation test summary before multi-tenant production.”
 
+
+
 ## Do not show as finished
 
 - Mock CPU/memory on IT dashboard  
 - “Connected” SSO without a configured IdP  
-- Unified analytics if still permission-gated or internal-only  
+- Unified analytics if still permission-gated or internal-only
+
+
 
 ## Pilot / Growth trial talking points
 
 - 90-day Growth pilot with AI cap (see pricing doc).  
 - Unlimited licenses on Growth+ where pricing states it.  
 - Enterprise: contact sales — no self-serve checkout.
+
+
 
 ## After the demo
 

@@ -102,3 +102,4 @@ Plan limits are enforced at invite, contract create, license create (Starter), f
 - **What happens at overage?** Invites, new contracts, uploads, and AI extractions that would exceed the plan are blocked until you upgrade or free capacity.
 - **Is pricing per user?** No — listed prices are per workspace.
 - **Enterprise self-serve?** No — contact sales.
+- **Vendor security review?** Enterprise includes sales-assisted security questionnaire support (auth, hosting, backups, known gaps). We do **not** claim SOC 2 until an audit is complete — ask sales for the current pack.

@@ -1,7 +1,8 @@
 "use client";
 
 import { KeyRound, Shield, Webhook } from "lucide-react";
-import { type ReactNode, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { type ReactNode, useCallback, useMemo, useState } from "react";
 import { PageIndex } from "@/components/ui/page-index";
 import GmailIntegrationCard from "./GmailIntegrationCard";
 import HubSpotIntegrationCard from "./HubSpotIntegrationCard";
@@ -10,6 +11,11 @@ import OutlookIntegrationCard from "./OutlookIntegrationCard";
 import SalesforceIntegrationCard from "./SalesforceIntegrationCard";
 
 const PAGE_SIZE = 12;
+
+const CONTACT_SALES_PATH = "/request-a-demo";
+const PLATFORM_READINESS_ROADMAP =
+	"/dashboard/it/development/platform-readiness-roadmap";
+const CLM_ROADMAP = "/dashboard/it/development/clm-roadmap";
 
 interface IntegrationsPanelProps {
 	userId: string;
@@ -24,6 +30,7 @@ export default function IntegrationsPanel({
 	subscriptionTier,
 	onViewPlans,
 }: IntegrationsPanelProps) {
+	const router = useRouter();
 	const isDemo = process.env.NEXT_PUBLIC_APP_MODE === "demo";
 	const hasApiAccess =
 		subscriptionTier === "growth" || subscriptionTier === "enterprise";
@@ -31,6 +38,11 @@ export default function IntegrationsPanel({
 	const hasHubSpot = hasApiAccess;
 	const hasSalesforce = subscriptionTier === "enterprise";
 	const [page, setPage] = useState(1);
+
+	const goContactSales = useCallback(
+		() => router.push(CONTACT_SALES_PATH),
+		[router],
+	);
 
 	const cards = useMemo(() => {
 		const items: ReactNode[] = [];
@@ -59,47 +71,54 @@ export default function IntegrationsPanel({
 				title="API & Webhooks"
 				description="Programmatic access and outbound event webhooks for your workspace."
 				icon={Webhook}
-				status={hasApiAccess ? "disconnected" : "locked"}
+				status={hasApiAccess ? "coming_soon" : "locked"}
 				info={
-					hasApiAccess
-						? "Webhook endpoints and API keys will appear here when enabled for your organization."
-						: undefined
+					hasApiAccess ? (
+						<>Not self-serve yet — contact sales for timeline. </>
+					) : undefined
 				}
 				lockedHint="Available on Growth and Enterprise plans."
 				onConnect={hasApiAccess ? undefined : onViewPlans}
+				onContactSales={hasApiAccess ? goContactSales : undefined}
 			/>,
 			<IntegrationCard
 				key="sso"
 				title="SSO / SAML"
 				description="Enterprise identity with SAML and SCIM provisioning."
 				icon={Shield}
-				status={hasSso ? "disconnected" : "locked"}
+				status={hasSso ? "coming_soon" : "locked"}
 				info={
-					hasSso
-						? "Configure your identity provider once SSO is provisioned for your organization."
-						: undefined
+					hasSso ? (
+						<>
+							Identity provider setup is sales-assisted — never shown as
+							Connected until SAML is wired.
+						</>
+					) : undefined
 				}
 				lockedHint="Available on the Enterprise plan."
 				onConnect={hasSso ? undefined : onViewPlans}
+				onContactSales={hasSso ? goContactSales : undefined}
 			/>,
 			<IntegrationCard
 				key="api-keys"
 				title="API keys"
 				description="Manage organization API keys for trusted integrations."
 				icon={KeyRound}
-				status={hasApiAccess ? "disconnected" : "locked"}
+				status={hasApiAccess ? "coming_soon" : "locked"}
 				info={
-					hasApiAccess
-						? "Create and rotate organization API keys for trusted integrations from this panel when keys are enabled."
-						: undefined
+					hasApiAccess ? (
+						<>Organization API keys appear here when customer API ships. </>
+					) : undefined
 				}
 				lockedHint="Available on Growth and Enterprise plans."
 				onConnect={hasApiAccess ? undefined : onViewPlans}
+				onContactSales={hasApiAccess ? goContactSales : undefined}
 			/>,
 		);
 
 		return items;
 	}, [
+		goContactSales,
 		hasApiAccess,
 		hasHubSpot,
 		hasSalesforce,
@@ -124,7 +143,7 @@ export default function IntegrationsPanel({
 				<p className="text-sm text-slate-600 mb-4">
 					{isDemo
 						? "External integrations are disabled in the demo sandbox."
-						: "Connect third-party tools to extend CAALM. Connected apps appear with status badges; upgrade unlocks API and SSO options."}
+						: "Connect third-party tools to extend CAALM. Mail and CRM cards reflect real OAuth state. SSO, customer API, and webhooks stay Coming soon until wired — use Contact sales on Enterprise, not a fake Connect button."}
 				</p>
 			</div>
 
