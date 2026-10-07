@@ -96,6 +96,16 @@ export const API_AUTHZ_ALLOWLIST: readonly ApiAuthzAllowEntry[] = [
 		reason: "Gmail OAuth redirect callback",
 	},
 	{
+		path: "news/social/linkedin/callback",
+		class: "oauth",
+		reason: "LinkedIn company-news OAuth redirect callback",
+	},
+	{
+		path: "news/social/x/callback",
+		class: "oauth",
+		reason: "X (Twitter) company-news OAuth redirect callback",
+	},
+	{
 		path: "webhooks/hubspot",
 		class: "webhook",
 		reason: "HubSpot HMAC signature verification (X-HubSpot-Signature-v3)",

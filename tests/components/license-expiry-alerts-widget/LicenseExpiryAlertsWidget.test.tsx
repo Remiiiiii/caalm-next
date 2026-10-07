@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import LicenseExpiryAlertsWidget from "@/components/LicenseExpiryAlertsWidget";
 
 const mockUseContractAlarm = vi.fn();
@@ -72,6 +72,14 @@ describe("LicenseExpiryAlertsWidget", () => {
 		HTMLElement.prototype.releasePointerCapture = () => {};
 		HTMLElement.prototype.scrollIntoView = () => {};
 
+		vi.stubGlobal(
+			"fetch",
+			vi.fn().mockResolvedValue({
+				ok: true,
+				json: async () => ({ success: true }),
+			}),
+		);
+
 		mockUseContractAlarm.mockReturnValue({
 			isPlaying: false,
 			silenceAlarm: vi.fn(),
@@ -84,7 +92,12 @@ describe("LicenseExpiryAlertsWidget", () => {
 			data: undefined,
 			error: undefined,
 			isLoading: false,
+			mutate: vi.fn(),
 		});
+	});
+
+	afterEach(() => {
+		vi.unstubAllGlobals();
 	});
 
 	it("should render widget with licenses from props", () => {

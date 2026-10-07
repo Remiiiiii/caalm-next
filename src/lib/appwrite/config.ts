@@ -316,6 +316,30 @@ export const appwriteConfig = {
 		"NEXT_PUBLIC_APPWRITE_NEWS_VERSIONS_COLLECTION",
 		"test-news-versions",
 	),
+	newsFeedsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_NEWS_FEEDS_COLLECTION",
+		"69d8f10100a1b2c3d4e1",
+	),
+	newsFeedDismissalsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_NEWS_FEED_DISMISSALS_COLLECTION",
+		"69d8f10200a1b2c3d4e2",
+	),
+	newsSocialConnectionsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_NEWS_SOCIAL_CONNECTIONS_COLLECTION",
+		"69d8f10300a1b2c3d4e3",
+	),
+	newsAcknowledgmentsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_NEWS_ACKNOWLEDGMENTS_COLLECTION",
+		"69d8f10400a1b2c3d4e4",
+	),
+	newsReadReceiptsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_NEWS_READ_RECEIPTS_COLLECTION",
+		"69d8f10500a1b2c3d4e5",
+	),
+	newsSystemSettingsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_NEWS_SYSTEM_SETTINGS_COLLECTION",
+		"69d8f10600a1b2c3d4e6",
+	),
 
 	// IT Runbooks
 	runbooksCollectionId: getTestFallback(

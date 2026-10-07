@@ -22,10 +22,16 @@ const prefersReducedMotion = () =>
 	typeof window !== "undefined" &&
 	window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
+const INTERACTIVE_SELECTOR =
+	"button, a, input, select, textarea, label, [role='button'], [role='combobox'], [role='option'], [contenteditable='true']";
+
+const MOMENTUM_FRICTION = 0.95;
+const MOMENTUM_MIN_VELOCITY = 0.15;
+
 /**
- * Horizontal, scroll-snapping carousel with auto-hiding chevron controls
- * and edge-fade affordances. Every card matches the height of the
- * `heightSourceIndex` item, so the source widget dictates the row height.
+ * Free horizontal carousel with grab-to-drag + light momentum, wheel→horizontal
+ * scroll, auto-hiding chevrons, and edge-fade affordances. No snap points —
+ * drag and wheel leave the track wherever you stop.
  */
 export function WidgetCarousel({
 	children,
@@ -36,9 +42,29 @@ export function WidgetCarousel({
 }: WidgetCarouselProps) {
 	const scrollRef = React.useRef<HTMLDivElement>(null);
 	const sourceRef = React.useRef<HTMLDivElement>(null);
+	const dragRef = React.useRef<{
+		pointerId: number;
+		startX: number;
+		scrollLeft: number;
+		moved: boolean;
+		lastX: number;
+		lastT: number;
+		velocity: number;
+	} | null>(null);
+	/** Survives pointer-up so the following click can be suppressed after a drag. */
+	const suppressClickRef = React.useRef(false);
+	const momentumRafRef = React.useRef<number | null>(null);
 	const [canScrollLeft, setCanScrollLeft] = React.useState(false);
 	const [canScrollRight, setCanScrollRight] = React.useState(false);
 	const [sourceHeight, setSourceHeight] = React.useState<number>();
+	const [isGrabbing, setIsGrabbing] = React.useState(false);
+
+	const stopMomentum = React.useCallback(() => {
+		if (momentumRafRef.current != null) {
+			cancelAnimationFrame(momentumRafRef.current);
+			momentumRafRef.current = null;
+		}
+	}, []);
 
 	const updateEdges = React.useCallback(() => {
 		const el = scrollRef.current;
@@ -48,12 +74,76 @@ export function WidgetCarousel({
 		setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 1);
 	}, []);
 
+	const clampScroll = (el: HTMLDivElement, next: number) => {
+		const max = Math.max(0, el.scrollWidth - el.clientWidth);
+		return Math.min(max, Math.max(0, next));
+	};
+
+	const startMomentum = React.useCallback(
+		(initialVelocity: number) => {
+			const el = scrollRef.current;
+			if (!el || prefersReducedMotion()) return;
+			if (Math.abs(initialVelocity) < MOMENTUM_MIN_VELOCITY) return;
+
+			stopMomentum();
+			let velocity = initialVelocity;
+
+			const tick = () => {
+				const track = scrollRef.current;
+				if (!track) {
+					momentumRafRef.current = null;
+					return;
+				}
+
+				track.scrollLeft = clampScroll(track, track.scrollLeft + velocity);
+				velocity *= MOMENTUM_FRICTION;
+
+				const atEdge =
+					(velocity < 0 && track.scrollLeft <= 0) ||
+					(velocity > 0 &&
+						track.scrollLeft + track.clientWidth >= track.scrollWidth - 1);
+
+				if (atEdge || Math.abs(velocity) < MOMENTUM_MIN_VELOCITY) {
+					momentumRafRef.current = null;
+					updateEdges();
+					return;
+				}
+
+				momentumRafRef.current = requestAnimationFrame(tick);
+			};
+
+			momentumRafRef.current = requestAnimationFrame(tick);
+		},
+		[stopMomentum, updateEdges],
+	);
+
 	React.useEffect(() => {
 		const el = scrollRef.current;
 		if (!el) return;
 
 		updateEdges();
 		el.addEventListener("scroll", updateEdges, { passive: true });
+
+		const onWheel = (event: WheelEvent) => {
+			if (el.scrollWidth <= el.clientWidth) return;
+
+			const mostlyVertical =
+				Math.abs(event.deltaY) >= Math.abs(event.deltaX);
+			if (!mostlyVertical && event.deltaX === 0) return;
+
+			const delta = mostlyVertical ? event.deltaY : event.deltaX;
+			if (delta === 0) return;
+
+			const atStart = el.scrollLeft <= 0;
+			const atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 1;
+			if ((delta < 0 && atStart) || (delta > 0 && atEnd)) return;
+
+			stopMomentum();
+			event.preventDefault();
+			el.scrollLeft = clampScroll(el, el.scrollLeft + delta);
+		};
+
+		el.addEventListener("wheel", onWheel, { passive: false });
 
 		const resizeObserver = new ResizeObserver(updateEdges);
 		resizeObserver.observe(el);
@@ -63,9 +153,11 @@ export function WidgetCarousel({
 
 		return () => {
 			el.removeEventListener("scroll", updateEdges);
+			el.removeEventListener("wheel", onWheel);
 			resizeObserver.disconnect();
+			stopMomentum();
 		};
-	}, [updateEdges]);
+	}, [stopMomentum, updateEdges]);
 
 	// Measure the source widget's natural height and share it with siblings.
 	React.useEffect(() => {
@@ -83,11 +175,77 @@ export function WidgetCarousel({
 	const scrollByPage = (direction: "left" | "right") => {
 		const el = scrollRef.current;
 		if (!el) return;
+		stopMomentum();
 		const amount = Math.round(el.clientWidth * 0.85);
 		el.scrollBy({
 			left: direction === "left" ? -amount : amount,
 			behavior: prefersReducedMotion() ? "auto" : "smooth",
 		});
+	};
+
+	const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+		if (event.button !== 0) return;
+		const target = event.target as HTMLElement | null;
+		if (target?.closest(INTERACTIVE_SELECTOR)) return;
+
+		const el = scrollRef.current;
+		if (!el) return;
+
+		stopMomentum();
+		const now = performance.now();
+		dragRef.current = {
+			pointerId: event.pointerId,
+			startX: event.clientX,
+			scrollLeft: el.scrollLeft,
+			moved: false,
+			lastX: event.clientX,
+			lastT: now,
+			velocity: 0,
+		};
+		setIsGrabbing(true);
+		el.setPointerCapture(event.pointerId);
+	};
+
+	const onPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+		const drag = dragRef.current;
+		const el = scrollRef.current;
+		if (!drag || !el || drag.pointerId !== event.pointerId) return;
+
+		const now = performance.now();
+		const dt = Math.max(1, now - drag.lastT);
+		const dxFrame = event.clientX - drag.lastX;
+		// px per frame-ish velocity (negative = scroll right when dragging left)
+		drag.velocity = (-dxFrame / dt) * 16;
+		drag.lastX = event.clientX;
+		drag.lastT = now;
+
+		const dx = event.clientX - drag.startX;
+		if (Math.abs(dx) > 3) drag.moved = true;
+		el.scrollLeft = clampScroll(el, drag.scrollLeft - dx);
+	};
+
+	const endDrag = (event: React.PointerEvent<HTMLDivElement>) => {
+		const drag = dragRef.current;
+		const el = scrollRef.current;
+		if (!drag || drag.pointerId !== event.pointerId) return;
+
+		if (drag.moved) {
+			suppressClickRef.current = true;
+			startMomentum(drag.velocity);
+		}
+		dragRef.current = null;
+		setIsGrabbing(false);
+		if (el?.hasPointerCapture(event.pointerId)) {
+			el.releasePointerCapture(event.pointerId);
+		}
+	};
+
+	/** After a drag, block the synthetic click so cards don't get accidental taps. */
+	const onClickCapture = (event: React.MouseEvent<HTMLDivElement>) => {
+		if (!suppressClickRef.current) return;
+		suppressClickRef.current = false;
+		event.preventDefault();
+		event.stopPropagation();
 	};
 
 	const items = React.Children.toArray(children).filter(Boolean);
@@ -138,7 +296,17 @@ export function WidgetCarousel({
 				<section
 					ref={scrollRef}
 					aria-label={ariaLabel}
-					className="flex snap-x snap-mandatory items-start gap-2 overflow-x-auto scroll-smooth py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+					onPointerDown={onPointerDown}
+					onPointerMove={onPointerMove}
+					onPointerUp={endDrag}
+					onPointerCancel={endDrag}
+					onClickCapture={onClickCapture}
+					className={cn(
+						"flex items-start gap-2 overflow-x-auto overflow-y-hidden py-2 scroll-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden touch-pan-y",
+						isGrabbing
+							? "cursor-grabbing select-none touch-none"
+							: "cursor-grab",
+					)}
 				>
 					{items.map((child, index) => {
 						const isSource = index === heightSourceIndex;
@@ -148,7 +316,7 @@ export function WidgetCarousel({
 								ref={isSource ? sourceRef : undefined}
 								style={isSource ? undefined : { height: sourceHeight }}
 								className={cn(
-									"min-w-0 shrink-0 snap-start overflow-hidden",
+									"min-w-0 shrink-0 overflow-hidden",
 									"w-[85%] sm:w-[340px] xl:w-[360px]",
 									"*:h-full",
 									itemClassName,

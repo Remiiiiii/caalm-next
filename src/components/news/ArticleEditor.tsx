@@ -15,6 +15,7 @@ import {
 	ListOrdered,
 	Loader2,
 	Save,
+	Sparkles,
 	Strikethrough,
 	Trash2,
 	Underline,
@@ -163,9 +164,17 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({
 	const [type, setType] = useState<
 		"announcement" | "update" | "alert" | "info"
 	>("info");
-	const [priority, setPriority] = useState<"high" | "medium" | "low">("medium");
+	const [priority, setPriority] = useState<"high" | "medium" | "low" | "normal">(
+		"medium",
+	);
 	const [department, setDepartment] = useState("");
-	const [status, setStatus] = useState<"draft" | "published">("draft");
+	const [pinned, setPinned] = useState(false);
+	const [requiresAcknowledgment, setRequiresAcknowledgment] = useState(false);
+	const [ackDueAt, setAckDueAt] = useState("");
+	const [aiLabel, setAiLabel] = useState(false);
+	const [status, setStatus] = useState<"draft" | "published" | "scheduled">(
+		"draft",
+	);
 	const [tags, setTags] = useState<string[]>([]);
 	const [tagInput, setTagInput] = useState("");
 	const [thumbnailUrl, setThumbnailUrl] = useState("");
@@ -225,9 +234,19 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({
 			setTitle(article.title || "");
 			setContent(article.content || "");
 			setType(article.type || "info");
-			setPriority(article.priority || "medium");
-			setDepartment(article.department || "");
-			setStatus(article.status === "published" ? "published" : "draft");
+			setPriority(article.priority || article.storedPriority || "medium");
+			setDepartment(
+				(article.departments || []).join(", ") || article.department || "",
+			);
+			setPinned(Boolean(article.pinned));
+			setRequiresAcknowledgment(Boolean(article.requiresAcknowledgment));
+			setAckDueAt(article.ackDueAt || "");
+			setAiLabel(Boolean(article.aiGenerated));
+			setStatus(
+				article.status === "published" || article.status === "scheduled"
+					? article.status
+					: "draft",
+			);
 			setTags(article.tags || []);
 			setThumbnailUrl(article.image || "");
 			setThumbnailPrompt(article.thumbnailPrompt || "");
@@ -250,6 +269,10 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({
 		setType("info");
 		setPriority("medium");
 		setDepartment("");
+		setPinned(false);
+		setRequiresAcknowledgment(false);
+		setAckDueAt("");
+		setAiLabel(false);
 		setStatus("draft");
 		setTags([]);
 		setTagInput("");
@@ -300,17 +323,31 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({
 		try {
 			setLoading(true);
 
+			const departments = department
+				.split(",")
+				.map((value) => value.trim())
+				.filter(Boolean);
 			const articleData = {
 				title: title.trim(),
 				content: editor?.getHTML() || content,
 				type,
 				priority,
-				department: department || undefined,
-				status: publish ? "published" : status,
+				department: departments[0] || undefined,
+				departments,
+				status: publish
+					? "published"
+					: scheduledAt
+						? "scheduled"
+						: status,
 				thumbnailUrl: thumbnailUrl || undefined,
 				thumbnailPrompt: thumbnailPrompt || undefined,
 				tags: tags.filter(Boolean),
 				scheduledAt: scheduledAt || undefined,
+				publishAt: scheduledAt || undefined,
+				pinned,
+				requiresAcknowledgment,
+				ackDueAt: ackDueAt || undefined,
+				aiGenerated: aiLabel,
 			};
 
 			let response;
@@ -556,6 +593,7 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({
 											</SelectTrigger>
 											<SelectContent>
 												<SelectItem value="high">High</SelectItem>
+												<SelectItem value="normal">Normal</SelectItem>
 												<SelectItem value="medium">Medium</SelectItem>
 												<SelectItem value="low">Low</SelectItem>
 											</SelectContent>
@@ -563,7 +601,7 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({
 									</div>
 
 									<div>
-										<Label htmlFor="department">Department</Label>
+										<Label htmlFor="department">Departments</Label>
 										<Input
 											id="department"
 											value={department}
@@ -571,7 +609,7 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({
 												setDepartment(e.target.value);
 												setHasUnsavedChanges(true);
 											}}
-											placeholder="Department"
+											placeholder="All, or comma-separated"
 											className="mt-1"
 										/>
 									</div>
@@ -591,6 +629,96 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({
 											</Label>
 										</div>
 									</div>
+								</div>
+
+								<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+									<div className="flex items-center gap-2">
+										<Switch
+											id="pinned"
+											checked={pinned}
+											onCheckedChange={(checked) => {
+												setPinned(checked);
+												setHasUnsavedChanges(true);
+											}}
+										/>
+										<Label htmlFor="pinned" className="cursor-pointer">
+											Pin to top
+										</Label>
+									</div>
+									<div className="flex items-center gap-2">
+										<Switch
+											id="requires-ack"
+											checked={requiresAcknowledgment}
+											onCheckedChange={(checked) => {
+												setRequiresAcknowledgment(checked);
+												setHasUnsavedChanges(true);
+											}}
+										/>
+										<Label htmlFor="requires-ack" className="cursor-pointer">
+											Require acknowledgment
+										</Label>
+									</div>
+									<div>
+										<Label htmlFor="publish-at">Publish at</Label>
+										<Input
+											id="publish-at"
+											type="datetime-local"
+											value={scheduledAt}
+											onChange={(e) => {
+												setScheduledAt(e.target.value);
+												setHasUnsavedChanges(true);
+											}}
+											className="mt-1"
+										/>
+									</div>
+								</div>
+								{requiresAcknowledgment && (
+									<div>
+										<Label htmlFor="ack-due">Acknowledgment due</Label>
+										<Input
+											id="ack-due"
+											type="datetime-local"
+											value={ackDueAt}
+											onChange={(e) => {
+												setAckDueAt(e.target.value);
+												setHasUnsavedChanges(true);
+											}}
+											className="mt-1"
+										/>
+									</div>
+								)}
+								{aiLabel && (
+									<p className="text-xs text-slate-500">AI-generated draft</p>
+								)}
+								<div className="flex justify-end">
+									<Button
+										type="button"
+										variant="outline"
+										className="px-3 sm:px-4"
+										onClick={async () => {
+											const text = editor?.getText() || title;
+											const response = await fetch("/api/news/ai/assist", {
+												method: "POST",
+												headers: { "Content-Type": "application/json" },
+												body: JSON.stringify({
+													mode: "draft_from_text",
+													text,
+												}),
+											});
+											if (!response.ok) return;
+											const data = await response.json();
+											if (data.draft?.title) setTitle(data.draft.title);
+											if (data.draft?.excerpt) {
+												setContent(`<p>${data.draft.excerpt}</p>`);
+												editor?.commands.setContent(`<p>${data.draft.excerpt}</p>`);
+											}
+											setAiLabel(true);
+											setHasUnsavedChanges(true);
+										}}
+									>
+										<Sparkles className="h-4 w-4" />
+										AI assist
+									</Button>
 								</div>
 
 								{/* Tags */}

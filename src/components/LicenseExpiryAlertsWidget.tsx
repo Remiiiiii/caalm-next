@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
 import { CompactLicenseExpiryWidget } from "@/components/license-expiry-alerts/CompactLicenseExpiryWidget";
 import { FullLicenseExpiryWidget } from "@/components/license-expiry-alerts/FullLicenseExpiryWidget";
@@ -23,8 +23,8 @@ async function fetchLicenses(url: string): Promise<License[]> {
 	if (!response.ok) throw new Error("Failed to load license data");
 	const json = await response.json();
 	const payload = json?.data ?? json;
-	if (Array.isArray(payload?.licenses)) return payload.licenses;
-	if (Array.isArray(payload)) return payload;
+	if (Array.isArray(payload?.licenses)) return payload.licenses as License[];
+	if (Array.isArray(payload)) return payload as License[];
 	return [];
 }
 
@@ -36,34 +36,57 @@ const LicenseExpiryAlertsWidget = ({
 	licenses: propsLicenses,
 	alarmEnabled = true,
 }: LicenseExpiryAlertsWidgetProps) => {
-	const hasPropLicenses = propsLicenses !== undefined;
+	// Empty [] from a parent still-loading/failed fetch is truthy — only trust
+	// an explicit non-empty prop list as the sole source; otherwise hit the DB.
+	const hasTrustedPropLicenses =
+		propsLicenses !== undefined &&
+		Array.isArray(propsLicenses) &&
+		propsLicenses.length > 0;
+
 	const {
 		data: fetchedLicenses,
 		error: fetchError,
 		isLoading: fetchLoading,
-	} = useSWR(
-		hasPropLicenses ? null : ALL_LICENSES_KEY,
-		fetchLicenses,
-		{
-			...swrConfig,
-			refreshInterval: 30000,
-			revalidateOnFocus: false,
-		},
-	);
+		mutate,
+	} = useSWR(hasTrustedPropLicenses ? null : ALL_LICENSES_KEY, fetchLicenses, {
+		...swrConfig,
+		refreshInterval: 30000,
+		revalidateOnFocus: false,
+	});
 
-	const licenses = hasPropLicenses
-		? Array.isArray(propsLicenses)
-			? propsLicenses
-			: []
+	const licenses = hasTrustedPropLicenses
+		? propsLicenses
 		: fetchedLicenses || [];
-	const isLoading = hasPropLicenses ? false : fetchLoading;
-	const error = hasPropLicenses
+	const isLoading = hasTrustedPropLicenses ? false : fetchLoading;
+	const error = hasTrustedPropLicenses
 		? null
 		: fetchError
 			? fetchError instanceof Error
 				? fetchError
 				: new Error("Failed to load license data")
 			: null;
+
+	// Keep license expiry flags / daysUntilExpiry in sync with DB (same job as contracts).
+	useEffect(() => {
+		let cancelled = false;
+		const syncExpiredLicenses = async () => {
+			try {
+				const response = await fetch("/api/contracts/update-expired", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+				});
+				if (response.ok && !cancelled) {
+					void mutate();
+				}
+			} catch {
+				// Background sync — date-based filters still work offline.
+			}
+		};
+		void syncExpiredLicenses();
+		return () => {
+			cancelled = true;
+		};
+	}, [mutate]);
 
 	const [filterDays, setFilterDays] = useState<number>(
 		FILTER_VALUES.THIRTY_DAYS,

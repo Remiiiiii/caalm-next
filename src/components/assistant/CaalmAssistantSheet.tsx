@@ -4,6 +4,7 @@ import {
 	Download,
 	HelpCircle,
 	Loader2,
+	PanelRightClose,
 	Send,
 	SquarePen,
 	X,
@@ -240,10 +241,9 @@ export default function CaalmAssistantSheet({
 								variant="ghost"
 								size="icon"
 								className="h-8 w-8 cursor-pointer text-slate-600 hover:bg-white/50 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
-								aria-label="Close"
 								onClick={() => onOpenChange(false)}
 							>
-								<X className="h-4 w-4" />
+								<PanelRightClose className="h-4 w-4" />
 							</Button>
 						</TooltipTrigger>
 						<TooltipContent side="bottom">Close</TooltipContent>

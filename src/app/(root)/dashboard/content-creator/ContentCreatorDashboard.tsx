@@ -7,7 +7,9 @@ import { useCallback, useEffect, useState } from "react";
 import { DashboardGreeting } from "@/components/dashboard/DashboardGreeting";
 import ArticleEditor from "@/components/news/ArticleEditor";
 import ArticleList from "@/components/news/ArticleList";
+import { ConnectedSourcesPanel } from "@/components/news/ConnectedSourcesPanel";
 import NewsAnalytics from "@/components/news/NewsAnalytics";
+import { NewsReviewQueue } from "@/components/news/NewsReviewQueue";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { MetricStatCard } from "@/components/ui/metric-stat-card";
@@ -135,7 +137,6 @@ const ContentCreatorDashboard: React.FC<ContentCreatorDashboardProps> = ({
 					value={loading ? "..." : stats.published}
 					description="Live articles"
 					icon={FileText}
-					iconTone="success"
 				/>
 				<MetricStatCard
 					title="Drafts"
@@ -154,9 +155,19 @@ const ContentCreatorDashboard: React.FC<ContentCreatorDashboardProps> = ({
 			</div>
 
 			{/* Articles and Analytics Tabs */}
-			<Tabs defaultValue="articles" className="space-y-4">
+			<Tabs
+				defaultValue={
+					typeof window !== "undefined"
+						? new URLSearchParams(window.location.search).get("tab") ||
+							"articles"
+						: "articles"
+				}
+				className="space-y-4"
+			>
 				<TabsList>
 					<TabsTrigger value="articles">Articles</TabsTrigger>
+					<TabsTrigger value="queue">Review queue</TabsTrigger>
+					<TabsTrigger value="sources">Connected sources</TabsTrigger>
 					<TabsTrigger value="analytics">Analytics</TabsTrigger>
 				</TabsList>
 
@@ -167,6 +178,14 @@ const ContentCreatorDashboard: React.FC<ContentCreatorDashboardProps> = ({
 							<ArticleList onEdit={handleEditArticle} onRefresh={fetchStats} />
 						</CardContent>
 					</Card>
+				</TabsContent>
+
+				<TabsContent value="queue">
+					<NewsReviewQueue />
+				</TabsContent>
+
+				<TabsContent value="sources">
+					<ConnectedSourcesPanel />
 				</TabsContent>
 
 				<TabsContent value="analytics">

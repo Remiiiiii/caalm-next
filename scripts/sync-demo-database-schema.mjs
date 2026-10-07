@@ -218,6 +218,7 @@ async function createAttribute(databaseId, tableId, attr) {
 	const base = `/databases/${databaseId}/collections/${tableId}/attributes`;
 
 	switch (attr.type) {
+		case "varchar":
 		case "string": {
 			const body = {
 				key: attr.key,
@@ -230,6 +231,11 @@ async function createAttribute(databaseId, tableId, attr) {
 
 			if (attr.format === "email") {
 				await appwrite(`${base}/email`, {
+					method: "POST",
+					body: { ...body, size: undefined },
+				});
+			} else if (attr.format === "url") {
+				await appwrite(`${base}/url`, {
 					method: "POST",
 					body: { ...body, size: undefined },
 				});

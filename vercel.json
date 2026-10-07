@@ -40,6 +40,14 @@
 		{
 			"path": "/api/cron/tenant-deletion",
 			"schedule": "0 5 * * *"
+		},
+		{
+			"path": "/api/cron/publish-scheduled",
+			"schedule": "*/15 * * * *"
+		},
+		{
+			"path": "/api/cron/poll-news-feeds",
+			"schedule": "0 * * * *"
 		}
 	]
 }

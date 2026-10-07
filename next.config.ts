@@ -150,6 +150,18 @@ const nextConfig: NextConfig = {
 				destination: "/dashboard/it/development/nonprofit-roadmap",
 				permanent: false,
 			},
+			// Bare /content-creator was never a real page — [type] caught it.
+			// Canonical creator workspace lives under /dashboard.
+			{
+				source: "/content-creator",
+				destination: "/dashboard/content-creator",
+				permanent: true,
+			},
+			{
+				source: "/content-creator/:path*",
+				destination: "/dashboard/content-creator",
+				permanent: true,
+			},
 		];
 	},
 	// Improve development caching for faster reloads

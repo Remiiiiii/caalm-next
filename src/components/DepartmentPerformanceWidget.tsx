@@ -186,19 +186,25 @@ const DepartmentPerformanceWidget: React.FC<
 	}
 
 	return (
-		<Card className="w-full h-[200px] sm:h-[250px] lg:h-[300px] glass-card overflow-hidden">
+		<Card className="w-full h-[200px] sm:h-[250px] lg:h-[300px] glass-card hover:shadow-2xl transition-all duration-300 overflow-hidden flex flex-col">
 			<div className="glass-card-cap" />
-			<CardHeader className="pb-3 pt-6 px-4">
+			{/* Subtitle line matches License/Contract Status header height so live footers align */}
+			<CardHeader className="pb-3 pt-6 px-4 flex-shrink-0">
 				<div className="flex items-center gap-2">
 					<TrendingUp className="h-4 w-4 text-slate-600" />
 					<CardTitle className="text-sm font-semibold sidebar-gradient-text">
 						Department Performance
 					</CardTitle>
 				</div>
+				<div className="text-xs text-slate-500">
+					Org-wide{" "}
+					<span className="font-semibold text-slate-700">compliance</span>{" "}
+					metrics
+				</div>
 			</CardHeader>
 
-			<CardContent className="px-4 pb-2">
-				<div className="space-y-4">
+			<CardContent className="px-4 pb-2 flex-1 flex flex-col min-h-0">
+				<div className="space-y-4 flex-1">
 					<div className="flex items-center justify-between">
 						<div className="flex items-center gap-4">
 							<div>
@@ -211,7 +217,7 @@ const DepartmentPerformanceWidget: React.FC<
 							</div>
 						</div>
 
-						<div className="text-right bg-white/20 rounded-lg px-3 py-1 backdrop-blur-sm border border-white/20">
+						<div className="text-right bg-white/30 rounded-lg px-3 py-1 backdrop-blur-sm">
 							<div className="text-xs text-slate-500 font-medium">Trend</div>
 							<div className="flex items-center gap-1">
 								{getTrendIcon(performanceData.trend)}
@@ -231,13 +237,13 @@ const DepartmentPerformanceWidget: React.FC<
 					</div>
 					<div className="h-px bg-slate-300" />
 					<div className="grid grid-cols-2 gap-2">
-						<div className="bg-white/20 rounded-xl p-3 backdrop-blur-sm border border-white/20">
-							<div className="flex items-center gap-3">
-								<div className="w-8 h-8 bg-green/15 rounded-lg flex items-center justify-center">
+						<div className="bg-white/20 rounded-xl p-2.5 sm:p-3 backdrop-blur-sm border border-white/20 min-w-0">
+							<div className="flex items-center gap-2 sm:gap-3 min-w-0">
+								<div className="w-8 h-8 shrink-0 bg-green/15 rounded-lg flex items-center justify-center">
 									<Target className="h-4 w-4 text-green" />
 								</div>
-								<div>
-									<div className="text-xs text-slate-500 font-medium">
+								<div className="min-w-0">
+									<div className="text-xs text-slate-500 font-medium whitespace-nowrap max-[300px]:whitespace-normal">
 										Meeting Target
 									</div>
 									<div className="text-sm font-bold text-slate-700 tabular-nums">
@@ -247,13 +253,13 @@ const DepartmentPerformanceWidget: React.FC<
 							</div>
 						</div>
 
-						<div className="bg-white/20 rounded-xl p-3 backdrop-blur-sm border border-white/20">
-							<div className="flex items-center gap-3">
-								<div className="w-8 h-8 bg-blue/15 rounded-lg flex items-center justify-center">
+						<div className="bg-white/20 rounded-xl p-2.5 sm:p-3 backdrop-blur-sm border border-white/20 min-w-0">
+							<div className="flex items-center gap-2 sm:gap-3 min-w-0">
+								<div className="w-8 h-8 shrink-0 bg-blue/15 rounded-lg flex items-center justify-center">
 									<Users className="h-4 w-4 text-blue" />
 								</div>
-								<div>
-									<div className="text-xs text-slate-500 font-medium">
+								<div className="min-w-0">
+									<div className="text-xs text-slate-500 font-medium whitespace-nowrap">
 										Total Staff
 									</div>
 									<div className="text-sm font-bold text-slate-700 tabular-nums">
@@ -263,20 +269,21 @@ const DepartmentPerformanceWidget: React.FC<
 							</div>
 						</div>
 					</div>
-					<div className="mt-3 border-t border-white/20">
-						<div className="flex items-center justify-center">
-							<div className="flex items-center gap-2 bg-white/20 rounded-full px-4 py-1 backdrop-blur-sm border border-white/20">
-								<div
-									className={`w-2 h-2 rounded-full animate-pulse ${
-										isLive ? "bg-green" : "bg-red"
-									}`}
-								/>
-								<span className="text-xs text-slate-600 font-medium">
-									{isLive
-										? "Live Performance Data"
-										: "Performance Data Unavailable"}
-								</span>
-							</div>
+				</div>
+				{/* Same footer chrome as License Status so the live pill lines up across carousel cards */}
+				<div className="mt-3 border-t border-white/20 flex-shrink-0 -translate-y-0.5">
+					<div className="flex items-center justify-center">
+						<div className="flex items-center justify-center gap-2 bg-white/20 rounded-full px-4 py-1 backdrop-blur-sm border border-white/20 min-w-[140px]">
+							<div
+								className={`w-2 h-2 rounded-full animate-pulse ${
+									isLive ? "bg-green-400" : "bg-red"
+								}`}
+							/>
+							<span className="text-xs text-slate-600 font-medium whitespace-nowrap">
+								{isLive
+									? "Live Performance Data"
+									: "Performance Data Unavailable"}
+							</span>
 						</div>
 					</div>
 				</div>
