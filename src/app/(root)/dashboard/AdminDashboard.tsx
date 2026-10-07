@@ -28,36 +28,33 @@ import useSWR from "swr";
 import CalendarView from "@/components/CalendarView";
 import CompanyNewsFeed from "@/components/CompanyNewsFeed";
 import ContractExpiryAlertsWidget from "@/components/ContractExpiryAlertsWidget";
-import type { Contract } from "@/components/contract-expiry-alerts/types";
 import ContractStatusPieChart from "@/components/ContractStatusPieChart";
+import type { Contract } from "@/components/contract-expiry-alerts/types";
 import DepartmentPerformanceWidget from "@/components/DepartmentPerformanceWidget";
 import { DashboardGreeting } from "@/components/dashboard/DashboardGreeting";
+import {
+	type RecentFileItem,
+	RecentFilesUploadedCard,
+} from "@/components/dashboard/RecentFilesList";
 import { RiskImpactHeroCard } from "@/components/dashboard/RiskImpactHeroCard";
 import { WeatherBriefingLauncher } from "@/components/dashboard-briefing/WeatherBriefingLauncher";
-import {
-	RecentFilesUploadedCard,
-	type RecentFileItem,
-} from "@/components/dashboard/RecentFilesList";
 import QuickNotesWidget from "@/components/QuickNotesWidget";
 import RecentActivity from "@/components/RecentActivity";
 import { OrgUnitPicker } from "@/components/settings/OrgUnitPicker";
 import Avatar from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-	SelectItem,
-	SelectScrollable,
-} from "@/components/ui/select-scrollable";
-import {
-	StatCardSkeleton,
-	TableRowSkeleton,
-} from "@/components/ui/skeletons";
+import { MailClock } from "@/components/ui/mail-clock-icon";
 import {
 	complianceMetricTone,
 	complianceNeedReviewCount,
 	MetricStatCard,
 } from "@/components/ui/metric-stat-card";
-import { MailClock } from "@/components/ui/mail-clock-icon";
+import {
+	SelectItem,
+	SelectScrollable,
+} from "@/components/ui/select-scrollable";
+import { StatCardSkeleton, TableRowSkeleton } from "@/components/ui/skeletons";
 import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import { WidgetCarousel } from "@/components/ui/widget-carousel";
 import { useOrganization } from "@/contexts/OrganizationContext";
@@ -584,7 +581,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 						<MetricStatCard
 							title="Active Users"
 							value={unifiedStats.activeUsers}
-							description="Active accounts in this org"
+							description="Active accounts in this organization"
 							icon={Users}
 						/>
 						<MetricStatCard

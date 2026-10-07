@@ -15,6 +15,19 @@ interface DashboardData {
 		expiringContracts: number;
 		activeUsers: number;
 		complianceRate: string;
+		statusBreakdown?: {
+			active: number;
+			draft: number;
+			expired: number;
+		};
+		userComposition?: {
+			superAdmin: number;
+			orgAdmin: number;
+			deptManager: number;
+			unassigned: number;
+			inactive: number;
+			addedThisMonth: number;
+		};
 	};
 	files: unknown[];
 	invitations: unknown[];
@@ -59,7 +72,7 @@ export const useUnifiedDashboardData = (
 	const { user } = useAuth();
 	const effectiveUserId = serverUserId || user?.$id;
 	const url = effectiveUserId
-		? `/api/dashboard/unified?orgId=${orgId}&userId=${effectiveUserId}&v=13`
+		? `/api/dashboard/unified?orgId=${orgId}&userId=${effectiveUserId}&v=19`
 		: null;
 
 	// After mount only — reading localStorage during the first client paint
@@ -141,6 +154,15 @@ export const useUnifiedDashboardData = (
 			expiringContracts: 0,
 			activeUsers: 0,
 			complianceRate: "0%",
+			statusBreakdown: { active: 0, draft: 0, expired: 0 },
+			userComposition: {
+				superAdmin: 0,
+				orgAdmin: 0,
+				deptManager: 0,
+				unassigned: 0,
+				inactive: 0,
+				addedThisMonth: 0,
+			},
 		},
 		files: data?.data?.files || [],
 		invitations: data?.data?.invitations || [],

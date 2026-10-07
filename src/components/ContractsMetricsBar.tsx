@@ -9,7 +9,12 @@ import {
 } from "lucide-react";
 import { useMemo } from "react";
 import { useContractsView } from "@/components/ContractsViewContext";
-import { MetricStatCard } from "@/components/ui/metric-stat-card";
+import {
+	MetricFlatSparkline,
+	MetricProgressRing,
+	MetricSegmentBar,
+	MetricStatCard,
+} from "@/components/ui/metric-stat-card";
 import {
 	isExpiringWithinDays,
 	matchesStatusTab,
@@ -58,21 +63,46 @@ export default function ContractsMetricsBar({
 	const metrics = useMemo(() => {
 		let totalValue = 0;
 		let activeCount = 0;
+		let activeValue = 0;
+		let pendingValue = 0;
+		let expiredValue = 0;
+		let active = 0;
+		let pending = 0;
+		let expired = 0;
 		const sumActiveOnly = statusTab === "active";
+
 		files.forEach((file) => {
+			const amount = Number(file.amount) || 0;
 			const isActive = matchesStatusTab(file, "active");
-			if (isActive) activeCount++;
+			const isExpired = matchesStatusTab(file, "expired");
+
+			if (isActive) {
+				activeCount += 1;
+				active += 1;
+				activeValue += amount;
+			} else if (isExpired) {
+				expired += 1;
+				expiredValue += amount;
+			} else {
+				// Pending + other non-live statuses (inactive, pending-signature, etc.)
+				pending += 1;
+				pendingValue += amount;
+			}
+
 			if (sumActiveOnly) {
-				if (isActive) totalValue += Number(file.amount) || 0;
+				if (isActive) totalValue += amount;
 			} else if (statusTab === "all" || matchesStatusTab(file, statusTab)) {
-				totalValue += Number(file.amount) || 0;
+				totalValue += amount;
 			}
 		});
+
 		return {
 			totalValue,
 			activeCount,
 			totalContracts: files.length,
 			sumActiveOnly,
+			statusBreakdown: { active, pending, expired },
+			valueBreakdown: { activeValue, pendingValue, expiredValue },
 		};
 	}, [files, statusTab]);
 
@@ -97,6 +127,12 @@ export default function ContractsMetricsBar({
 			? "text-xl sm:text-2xl"
 			: "text-2xl sm:text-3xl";
 
+	const { statusBreakdown, valueBreakdown } = metrics;
+	const valueSegmentTotal =
+		valueBreakdown.activeValue +
+		valueBreakdown.pendingValue +
+		valueBreakdown.expiredValue;
+
 	return (
 		<section className="mb-6 w-full">
 			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -110,6 +146,40 @@ export default function ContractsMetricsBar({
 					}
 					icon={DollarSign}
 					valueClassName={totalValueFontClass}
+					footer={
+						valueSegmentTotal > 0 ? (
+							<MetricSegmentBar
+								formatValue={(n) => `$${formatTotalValue(n)}`}
+								segments={[
+									{
+										key: "active",
+										label: "Active",
+										count: valueBreakdown.activeValue,
+										colorClass: "bg-green",
+										textClass: "text-green",
+									},
+									{
+										key: "pending",
+										label: "Pending",
+										count: valueBreakdown.pendingValue,
+										colorClass: "bg-orange",
+										textClass: "text-orange",
+									},
+									{
+										key: "expired",
+										label: "Expired",
+										count: valueBreakdown.expiredValue,
+										colorClass: "bg-slate-300",
+										textClass: "text-slate-500",
+									},
+								]}
+							/>
+						) : (
+							<p className="text-[11px] leading-snug text-slate-500">
+								No amounts recorded on these contracts
+							</p>
+						)
+					}
 				/>
 
 				<button
@@ -124,8 +194,35 @@ export default function ContractsMetricsBar({
 						interactive
 						title="Total Contracts"
 						value={metrics.totalContracts.toLocaleString()}
-						description="Click to show all"
+						description="Across this list · click to show all"
 						icon={FileText}
+						footer={
+							<MetricSegmentBar
+								segments={[
+									{
+										key: "active",
+										label: "Active",
+										count: statusBreakdown.active,
+										colorClass: "bg-green",
+										textClass: "text-green",
+									},
+									{
+										key: "pending",
+										label: "Pending",
+										count: statusBreakdown.pending,
+										colorClass: "bg-orange",
+										textClass: "text-orange",
+									},
+									{
+										key: "expired",
+										label: "Expired",
+										count: statusBreakdown.expired,
+										colorClass: "bg-slate-300",
+										textClass: "text-slate-500",
+									},
+								]}
+							/>
+						}
 					/>
 				</button>
 
@@ -142,18 +239,50 @@ export default function ContractsMetricsBar({
 							interactive
 							title="Expiring Soon"
 							value={totalExpiring}
-							description={
-								<span className="flex items-center gap-2">
-									<span>30d: {expiringContracts.in30}</span>
-									<span>60d: {expiringContracts.in60}</span>
-									<span>90d: {expiringContracts.in90}</span>
-								</span>
-							}
+							description="Within 90 days · click to filter"
 							icon={AlertTriangle}
 							iconTone={totalExpiring > 0 ? "warning" : "default"}
 							dynamicIcon={totalExpiring > 0 ? Clock : undefined}
 							dynamicTone="warning"
 							valueTone={totalExpiring > 0 ? "warning" : "default"}
+							footer={
+								totalExpiring === 0 ? (
+									<div className="space-y-2">
+										<MetricFlatSparkline tone="success" />
+										<p className="text-[11px] leading-snug text-slate-500">
+											{metrics.totalContracts} contract
+											{metrics.totalContracts === 1 ? "" : "s"} monitored —
+											none approaching expiry
+										</p>
+									</div>
+								) : (
+									<MetricSegmentBar
+										segments={[
+											{
+												key: "30",
+												label: "30d",
+												count: expiringContracts.in30,
+												colorClass: "bg-red",
+												textClass: "text-red",
+											},
+											{
+												key: "60",
+												label: "60d",
+												count: expiringContracts.in60,
+												colorClass: "bg-orange",
+												textClass: "text-orange",
+											},
+											{
+												key: "90",
+												label: "90d",
+												count: expiringContracts.in90,
+												colorClass: "bg-blue",
+												textClass: "text-blue",
+											},
+										]}
+									/>
+								)
+							}
 						/>
 					</button>
 				)}
@@ -171,10 +300,36 @@ export default function ContractsMetricsBar({
 						title="Active"
 						value={metrics.activeCount}
 						description={
-							activeShare != null ? `${activeShare}% of total` : "No contracts"
+							activeShare != null
+								? `${activeShare}% of total · click to filter`
+								: "No contracts"
 						}
 						icon={CheckCircle}
 						iconTone="success"
+						footer={
+							activeShare != null ? (
+								<div className="flex items-center gap-3">
+									<MetricProgressRing
+										percent={activeShare}
+										tone={
+											activeShare >= 80
+												? "success"
+												: activeShare >= 50
+													? "default"
+													: "warning"
+										}
+									/>
+									<p className="text-[11px] leading-snug text-slate-500">
+										{metrics.activeCount} of {metrics.totalContracts} contracts
+										are live
+									</p>
+								</div>
+							) : (
+								<p className="text-[11px] leading-snug text-slate-500">
+									Add contracts to see the active share
+								</p>
+							)
+						}
 					/>
 				</button>
 			</div>

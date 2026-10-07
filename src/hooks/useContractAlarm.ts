@@ -62,8 +62,9 @@ export function useContractAlarm({
 	}, [syncFromSingleton]);
 
 	useEffect(() => {
+		// When disabled, do not stop the shared singleton — another widget
+		// (e.g. contract + license carousel) may still own playback.
 		if (!enabled) {
-			stopContractAlarm();
 			return;
 		}
 
@@ -87,7 +88,12 @@ export function useContractAlarm({
 					// Browser autoplay blocked — retry after a later user gesture
 					playAttemptedRef.current = false;
 				});
-		} else if (!shouldPlay && !isForcedContractAlarm()) {
+		} else if (
+			!shouldPlay &&
+			!isForcedContractAlarm() &&
+			hasPlayedRef.current
+		) {
+			// Only stop if this instance started playback (sibling widgets share audio)
 			stopContractAlarm();
 			hasPlayedRef.current = false;
 			playAttemptedRef.current = false;
@@ -95,13 +101,19 @@ export function useContractAlarm({
 	}, [contractsArray, enabled]);
 
 	useEffect(() => {
+		if (!enabled) return;
+
 		const expiringContracts = getExpiringContracts(contractsArray);
-		if (expiringContracts.length === 0 && !isForcedContractAlarm()) {
+		if (
+			expiringContracts.length === 0 &&
+			!isForcedContractAlarm() &&
+			hasPlayedRef.current
+		) {
 			stopContractAlarm();
 			hasPlayedRef.current = false;
 			playAttemptedRef.current = false;
 		}
-	}, [contractsArray]);
+	}, [contractsArray, enabled]);
 
 	const silenceAlarm = useCallback(
 		(duration: number = ALARM_SILENCE_DURATION) => {

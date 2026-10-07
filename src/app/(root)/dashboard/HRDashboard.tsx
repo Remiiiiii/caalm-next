@@ -54,16 +54,11 @@ interface PendingInvitation {
 
 const HRDashboard = ({ user }: HRDashboardProps) => {
 	const { orgId } = useOrganization();
-	const {
-		stats,
-		invitations,
-		contracts,
-		dashboardLicenses,
-		isLoading,
-	} = useUnifiedDashboardData(
-		orgId || "default_organization",
-		user?.$id ?? user?.accountId ?? null,
-	);
+	const { stats, invitations, contracts, dashboardLicenses, isLoading } =
+		useUnifiedDashboardData(
+			orgId || "default_organization",
+			user?.$id ?? user?.accountId ?? null,
+		);
 
 	const files = (contracts || []) as UIFileDoc[];
 	const licenses = dashboardLicenses || [];
@@ -118,7 +113,7 @@ const HRDashboard = ({ user }: HRDashboardProps) => {
 				<MetricStatCard
 					title="Active Employees"
 					value={isLoading ? "…" : stats.activeUsers}
-					description="Active accounts in this org"
+					description="Active accounts in this organization"
 					icon={Users}
 				/>
 				<MetricStatCard

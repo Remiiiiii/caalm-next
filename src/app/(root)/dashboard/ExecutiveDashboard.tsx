@@ -7,6 +7,7 @@ import {
 	BarChart3,
 	CalendarDays,
 	CheckCircle,
+	ClipboardCheck,
 	ClipboardList,
 	Clock,
 	FileText,
@@ -14,6 +15,7 @@ import {
 	Pencil,
 	RefreshCw,
 	Send,
+	SquareArrowOutUpRight,
 	Trash2,
 	Users,
 } from "lucide-react";
@@ -32,12 +34,12 @@ import ContractStatusPieChart from "@/components/ContractStatusPieChart";
 import ContractExpiryModal from "@/components/contract-expiry-modal/ContractExpiryModal";
 import DepartmentPerformanceWidget from "@/components/DepartmentPerformanceWidget";
 import { DashboardGreeting } from "@/components/dashboard/DashboardGreeting";
+import {
+	type RecentFileItem,
+	RecentFilesUploadedCard,
+} from "@/components/dashboard/RecentFilesList";
 import { RiskImpactHeroCard } from "@/components/dashboard/RiskImpactHeroCard";
 import { WeatherBriefingLauncher } from "@/components/dashboard-briefing/WeatherBriefingLauncher";
-import {
-	RecentFilesUploadedCard,
-	type RecentFileItem,
-} from "@/components/dashboard/RecentFilesList";
 import LicenseExpiryAlertsWidget from "@/components/LicenseExpiryAlertsWidget";
 import LicenseStatusPieChart from "@/components/LicenseStatusPieChart";
 import QuickNotesWidget from "@/components/QuickNotesWidget";
@@ -60,16 +62,18 @@ import { MailClock } from "@/components/ui/mail-clock-icon";
 import {
 	complianceMetricTone,
 	complianceNeedReviewCount,
+	MetricFlatSparkline,
+	MetricProgressRing,
+	MetricReviewLink,
+	MetricSegmentBar,
 	MetricStatCard,
+	parseMetricPercent,
 } from "@/components/ui/metric-stat-card";
 import {
 	SelectItem,
 	SelectScrollable,
 } from "@/components/ui/select-scrollable";
-import {
-	StatCardSkeleton,
-	TableRowSkeleton,
-} from "@/components/ui/skeletons";
+import { StatCardSkeleton, TableRowSkeleton } from "@/components/ui/skeletons";
 import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import { WidgetCarousel } from "@/components/ui/widget-carousel";
 import type { ContractStatus } from "@/constants/status";
@@ -363,47 +367,22 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 		dashboardStats.complianceRate,
 	);
 	const expiringSoonCount = dashboardStats.expiringContracts ?? 0;
-
-	const stats = [
-		{
-			title: "Total Contracts",
-			value: dashboardStats.totalContracts?.toString() || "0",
-			description: "Across all departments",
-			icon: FileText,
-		},
-		{
-			title: "Expiring Soon",
-			value: expiringSoonCount.toString(),
-			description: "Within 30 days",
-			icon: AlertTriangle,
-			iconTone:
-				expiringSoonCount > 0 ? ("warning" as const) : ("default" as const),
-			dynamicIcon: expiringSoonCount > 0 ? Clock : undefined,
-			dynamicTone: "warning" as const,
-			valueTone:
-				expiringSoonCount > 0 ? ("warning" as const) : ("default" as const),
-		},
-		{
-			title: "Active Users",
-			value: dashboardStats.activeUsers?.toString() || "0",
-			description: "Active accounts in this org",
-			icon: Users,
-		},
-		{
-			title: "Compliance Rate",
-			value: dashboardStats.complianceRate || "0%",
-			description:
-				executiveNeedReview != null
-					? `${executiveNeedReview} of ${dashboardStats.totalContracts} contracts need review`
-					: "Active contracts vs total",
-			icon: CheckCircle,
-			iconTone: executiveComplianceTone,
-			dynamicIcon:
-				executiveComplianceTone === "danger" ? AlertCircle : CheckCircle,
-			dynamicTone: executiveComplianceTone,
-			valueTone: executiveComplianceTone,
-		},
-	];
+	const totalContracts = dashboardStats.totalContracts ?? 0;
+	const statusBreakdown = dashboardStats.statusBreakdown ?? {
+		active: 0,
+		draft: 0,
+		expired: 0,
+	};
+	const userComposition = dashboardStats.userComposition ?? {
+		superAdmin: 0,
+		orgAdmin: 0,
+		deptManager: 0,
+		unassigned: 0,
+		inactive: 0,
+		addedThisMonth: 0,
+	};
+	const compliancePct = parseMetricPercent(dashboardStats.complianceRate) ?? 0;
+	const usersAddedThisMonth = userComposition.addedThisMonth;
 
 	const slaStatCards = [
 		{
@@ -817,21 +796,187 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 				/>
 				{/* Stats Grid */}
 				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-					{unifiedLoading
-						? [1, 2, 3, 4].map((index) => <StatCardSkeleton key={index} />)
-						: stats.map((stat) => (
-								<MetricStatCard
-									key={stat.title}
-									title={stat.title}
-									value={stat.value}
-									description={stat.description}
-									icon={stat.icon}
-									iconTone={stat.iconTone}
-									dynamicIcon={stat.dynamicIcon}
-									dynamicTone={stat.dynamicTone}
-									valueTone={stat.valueTone}
-								/>
-							))}
+					{unifiedLoading ? (
+						[1, 2, 3, 4].map((index) => <StatCardSkeleton key={index} />)
+					) : (
+						<>
+							<MetricStatCard
+								title="Total Contracts"
+								value={totalContracts.toString()}
+								description="Across all departments"
+								icon={FileText}
+								footer={
+									<MetricSegmentBar
+										segments={[
+											{
+												key: "active",
+												label: "Active",
+												count: statusBreakdown.active,
+												colorClass: "bg-green",
+												textClass: "text-green",
+											},
+											{
+												key: "draft",
+												label: "Draft",
+												count: statusBreakdown.draft,
+												colorClass: "bg-orange",
+												textClass: "text-orange",
+											},
+											{
+												key: "expired",
+												label: "Expired",
+												count: statusBreakdown.expired,
+												colorClass: "bg-slate-300",
+												textClass: "text-slate-500",
+											},
+										]}
+									/>
+								}
+							/>
+							<MetricStatCard
+								title="Expiring Soon"
+								value={expiringSoonCount.toString()}
+								description="Within 30 days"
+								icon={AlertTriangle}
+								iconTone={expiringSoonCount > 0 ? "warning" : "default"}
+								dynamicIcon={expiringSoonCount > 0 ? Clock : undefined}
+								dynamicTone="warning"
+								valueTone={expiringSoonCount > 0 ? "warning" : "default"}
+								footer={
+									expiringSoonCount === 0 ? (
+										<div className="space-y-2">
+											<MetricFlatSparkline tone="success" />
+											<p className="text-[11px] leading-snug text-slate-500">
+												{totalContracts} contract
+												{totalContracts === 1 ? "" : "s"} monitored — none
+												approaching expiry
+											</p>
+										</div>
+									) : (
+										<p className="text-[11px] leading-snug text-orange">
+											{expiringSoonCount} of {totalContracts} contract
+											{totalContracts === 1 ? "" : "s"} within 30 days
+										</p>
+									)
+								}
+							/>
+							<MetricStatCard
+								title="Active Users"
+								value={dashboardStats.activeUsers?.toString() || "0"}
+								description={
+									usersAddedThisMonth > 0
+										? `Active accounts in this organization · +${usersAddedThisMonth} this month`
+										: "Active accounts in this organization"
+								}
+								icon={Users}
+								headerHref="/dashboard/user-management"
+								headerHrefLabel="Open user management"
+								headerHrefIcon={SquareArrowOutUpRight}
+								footer={
+									<MetricSegmentBar
+										segments={[
+											{
+												key: "super",
+												label: "Super Admin",
+												count: userComposition.superAdmin,
+												colorClass: "bg-[#0f5384]",
+												textClass: "text-[#0f5384]",
+											},
+											{
+												key: "org",
+												label: "Org Admin",
+												count: userComposition.orgAdmin,
+												colorClass: "bg-[#078FAB]",
+												textClass: "text-[#078FAB]",
+											},
+											{
+												key: "dept",
+												label: "Dept Manager",
+												count: userComposition.deptManager,
+												colorClass: "bg-blue",
+												textClass: "text-blue",
+											},
+											{
+												key: "unassigned",
+												label: "Unassigned",
+												count: userComposition.unassigned,
+												colorClass: "bg-light-200",
+												textClass: "text-light-100",
+											},
+											{
+												key: "inactive",
+												label: "Inactive",
+												count: userComposition.inactive,
+												colorClass: "bg-orange",
+												textClass: "text-orange",
+											},
+										]}
+									/>
+								}
+							/>
+							<MetricStatCard
+								title="Compliance Rate"
+								value={dashboardStats.complianceRate || "0%"}
+								description={
+									executiveNeedReview != null
+										? `${executiveNeedReview} of ${totalContracts} contracts need review`
+										: "Active contracts vs total"
+								}
+								icon={
+									executiveComplianceTone === "danger"
+										? ClipboardCheck
+										: CheckCircle
+								}
+								iconTone={executiveComplianceTone}
+								titleTone={
+									executiveComplianceTone === "danger" ? "danger" : "default"
+								}
+								borderTone={
+									executiveComplianceTone === "danger" ? "danger" : "default"
+								}
+								dynamicIcon={
+									executiveComplianceTone === "danger"
+										? AlertCircle
+										: CheckCircle
+								}
+								dynamicTone={executiveComplianceTone}
+								valueTone={executiveComplianceTone}
+								interactive={executiveComplianceTone === "danger"}
+								onClick={
+									executiveComplianceTone === "danger"
+										? () => router.push("/contracts")
+										: undefined
+								}
+								footer={
+									<div className="space-y-2.5">
+										<div className="flex items-center gap-3">
+											<MetricProgressRing
+												percent={compliancePct}
+												tone={executiveComplianceTone}
+											/>
+											<p
+												className={cn(
+													"text-[11px] leading-snug",
+													executiveComplianceTone === "danger"
+														? "text-red"
+														: "text-slate-500",
+												)}
+											>
+												{executiveComplianceTone === "danger"
+													? "Most contracts are past their last compliance check."
+													: "Share of contracts marked up to date."}
+											</p>
+										</div>
+										{executiveComplianceTone === "danger" ? (
+											<MetricReviewLink href="/contracts">
+												Review flagged contracts
+											</MetricReviewLink>
+										) : null}
+									</div>
+								}
+							/>
+						</>
+					)}
 				</div>
 
 				<Card className="glass-card mb-6 overflow-visible">
@@ -847,8 +992,10 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 							/>
 							<LicenseExpiryAlertsWidget
 								maxVisible={2}
+								showSettings={false}
 								compact={true}
-								licenses={dashboardLicenses}
+								licenses={unifiedLoading ? undefined : dashboardLicenses}
+								alarmEnabled={!isModalOpen}
 							/>
 							<ContractStatusPieChart contracts={contractsFromApi} />
 							<LicenseStatusPieChart licenses={dashboardLicenses} />
