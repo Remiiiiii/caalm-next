@@ -2,7 +2,7 @@
 
 import { Calendar, Eye, FileText, Loader2, TrendingUp } from "lucide-react";
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useNewsAnalytics } from "@/hooks/useNewsAnalytics";
 import {
 	Bar,
 	BarChart,
@@ -24,44 +24,6 @@ interface NewsAnalyticsProps {
 	className?: string;
 }
 
-interface AnalyticsData {
-	overview: {
-		total: number;
-		published: number;
-		drafts: number;
-		archived: number;
-		thisMonth: number;
-		thisWeek: number;
-	};
-	byType: {
-		announcement: number;
-		update: number;
-		alert: number;
-		info: number;
-	};
-	byPriority: {
-		high: number;
-		medium: number;
-		low: number;
-	};
-	byDepartment: Record<string, number>;
-	engagement: {
-		totalViews: number;
-		averageViews: number;
-		mostViewed: Array<{
-			id: string;
-			title: string;
-			views: number;
-			type: string;
-			publishedAt: string;
-		}>;
-	};
-	trends: Array<{
-		date: string;
-		count: number;
-	}>;
-}
-
 const COLORS = {
 	type: {
 		announcement: "#3B82F6", // blue
@@ -77,27 +39,7 @@ const COLORS = {
 };
 
 const NewsAnalytics: React.FC<NewsAnalyticsProps> = ({ className }) => {
-	const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
-	const [loading, setLoading] = useState(true);
-
-	const fetchAnalytics = async () => {
-		try {
-			setLoading(true);
-			const response = await fetch("/api/internal-news/analytics");
-			if (!response.ok) throw new Error("Failed to fetch analytics");
-
-			const data = await response.json();
-			setAnalytics(data.analytics);
-		} catch (error) {
-			console.error("Error fetching analytics:", error);
-		} finally {
-			setLoading(false);
-		}
-	};
-
-	useEffect(() => {
-		fetchAnalytics();
-	}, [fetchAnalytics]);
+	const { analytics, isLoading: loading } = useNewsAnalytics();
 
 	if (loading) {
 		return (
@@ -109,7 +51,13 @@ const NewsAnalytics: React.FC<NewsAnalyticsProps> = ({ className }) => {
 		);
 	}
 
-	if (!analytics) {
+	if (
+		!analytics?.overview ||
+		!analytics.byType ||
+		!analytics.byPriority ||
+		!analytics.byDepartment ||
+		!analytics.engagement
+	) {
 		return (
 			<Card className={className}>
 				<CardContent className="py-12 text-center">

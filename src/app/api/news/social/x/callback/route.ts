@@ -1,11 +1,18 @@
 import { cookies } from "next/headers";
 import { type NextRequest, NextResponse } from "next/server";
+import { isDemoMode } from "@/lib/config/demo-mode";
 import { createNewsFeed } from "@/lib/database/news-feeds";
 import { upsertNewsSocialConnection } from "@/lib/database/news-social-connections";
 import { parseNewsOAuthState } from "@/lib/news/social/oauth-state";
 import { exchangeXCode } from "@/lib/news/social/x-adapter";
 
 export async function GET(request: NextRequest) {
+	if (isDemoMode()) {
+		return NextResponse.json(
+			{ error: "Social connect is disabled in demo mode" },
+			{ status: 403 },
+		);
+	}
 	const url = new URL(request.url);
 	const code = url.searchParams.get("code");
 	const state = url.searchParams.get("state");

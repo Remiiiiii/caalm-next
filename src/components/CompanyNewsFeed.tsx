@@ -10,6 +10,7 @@ import {
 	Info,
 	LayoutGrid,
 	Megaphone,
+	MegaphoneOff,
 	MoveRight,
 	Newspaper,
 	RotateCcw,
@@ -63,11 +64,23 @@ interface NewsResponse {
 interface CompanyNewsFeedProps {
 	limit?: number;
 	fullPage?: boolean;
+	/** Parent-supplied list; skip self-fetch in widget mode when defined. */
+	items?: NewsItem[];
+	total?: number;
+	viewer?: {
+		canCreate?: boolean;
+		canManageFeeds?: boolean;
+	};
+	parentLoading?: boolean;
 }
 
 const CompanyNewsFeed: React.FC<CompanyNewsFeedProps> = ({
 	limit = 5,
 	fullPage = false,
+	items: propItems,
+	total: propTotal,
+	viewer: propViewer,
+	parentLoading = false,
 }) => {
 	const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
 	const [loading, setLoading] = useState(true);
@@ -90,12 +103,13 @@ const CompanyNewsFeed: React.FC<CompanyNewsFeedProps> = ({
 	const [previousMonthCount, setPreviousMonthCount] = useState(0);
 	const [lastPublishedAt, setLastPublishedAt] = useState<string | null>(null);
 
+	const skipWidgetFetch = !fullPage && propItems !== undefined;
+
 	const fetchNewsItems = useCallback(async () => {
 		try {
 			setLoading(true);
 
 			if (fullPage) {
-				// Full page mode with pagination and filters
 				const offset = (currentPage - 1) * itemsPerPage;
 				const params = new URLSearchParams({
 					limit: itemsPerPage.toString(),
@@ -108,19 +122,23 @@ const CompanyNewsFeed: React.FC<CompanyNewsFeedProps> = ({
 				if (departmentFilter && departmentFilter !== "all")
 					params.append("department", departmentFilter);
 
-				const response = await fetch(`/api/internal-news?${params}`);
+				const listUrl = `/api/internal-news?${params}`;
+				const [listResponse, analyticsResponse] = await Promise.all([
+					fetch(listUrl),
+					fetch("/api/internal-news/analytics"),
+				]);
 
-				if (!response.ok) {
+				if (!listResponse.ok) {
 					throw new Error("Failed to fetch news items");
 				}
 
-				const data: NewsResponse = await response.json();
+				const data: NewsResponse = await listResponse.json();
 				setNewsItems(data.items);
 				setTotalItems(data.total);
 				setViewer(data.viewer || {});
-				const analytics = await fetch("/api/internal-news/analytics");
-				if (analytics.ok) {
-					const payload = await analytics.json();
+
+				if (analyticsResponse.ok) {
+					const payload = await analyticsResponse.json();
 					const overview = payload.analytics?.overview ?? {};
 					setCategoryCount(overview.categories ?? 0);
 					setCategoryNames(
@@ -162,9 +180,19 @@ const CompanyNewsFeed: React.FC<CompanyNewsFeedProps> = ({
 	]);
 
 	useEffect(() => {
-		fetchNewsItems();
-	}, [fetchNewsItems]);
+		if (skipWidgetFetch) return;
+		void fetchNewsItems();
+	}, [fetchNewsItems, skipWidgetFetch]);
 
+	useEffect(() => {
+		if (propItems === undefined) return;
+		setNewsItems(propItems);
+		setTotalItems(propTotal ?? propItems.length);
+		if (propViewer) setViewer(propViewer);
+		setLoading(false);
+	}, [propItems, propTotal, propViewer]);
+
+	const isFeedLoading = parentLoading || loading;
 	const totalPages = Math.ceil(totalItems / itemsPerPage);
 
 	const handlePageChange = (page: number) => {
@@ -646,11 +674,11 @@ const CompanyNewsFeed: React.FC<CompanyNewsFeedProps> = ({
 	}
 
 	// Widget View
-	if (loading) {
+	if (isFeedLoading) {
 		return (
-			<Card className="w-full h-[200px] sm:h-[250px] lg:h-[290px] glass-card overflow-hidden">
+			<Card className="w-full h-[200px] sm:h-[250px] lg:h-[300px] glass-card overflow-hidden">
 				<div className="glass-card-cap" />
-				<CardHeader className="pb-3 pt-6 px-4">
+				<CardHeader className="pb-3 pt-2 px-4">
 					<CardTitle className="text-sm font-semibold sidebar-gradient-text">
 						Company News
 					</CardTitle>
@@ -669,32 +697,39 @@ const CompanyNewsFeed: React.FC<CompanyNewsFeedProps> = ({
 		);
 	}
 
-	if (!loading && !error && newsItems.length === 0) {
+	if (!isFeedLoading && !error && newsItems.length === 0) {
 		return (
-			<Card className="w-full h-[200px] sm:h-[250px] lg:h-[290px] glass-card overflow-hidden">
+			<Card className="w-full h-[200px] sm:h-[250px] lg:h-[300px] glass-card overflow-hidden">
 				<div className="glass-card-cap" />
-				<CardHeader className="pb-3 pt-6 px-4">
+				<CardHeader className="pb-3 pt-2 px-4">
 					<CardTitle className="text-sm font-semibold sidebar-gradient-text">
 						Company News
 					</CardTitle>
 				</CardHeader>
 				<CardContent className="px-4 pb-4">
 					<div className="flex flex-col items-center justify-center h-32 gap-2 text-center">
-						<p className="text-sm font-medium text-navy">No announcements</p>
-						{viewer.canCreate || viewer.canManageFeeds ? (
-							<Link
-								href="/dashboard/content-creator"
-								className="text-xs text-[#0f5384]"
-							>
-								{viewer.canManageFeeds
-									? "Connect a source"
-									: "Publish your first announcement"}
-							</Link>
-						) : (
-							<p className="text-xs text-slate-500">
-								Nothing has been published yet
-							</p>
-						)}
+						<div className="text-center py-8">
+							<MegaphoneOff className="h-8 w-8 text-slate-300 mx-auto mb-2" />
+							<p className="text-sm font-medium text-navy">No announcements</p>
+							{viewer.canCreate || viewer.canManageFeeds ? (
+								<Link
+									href={
+										viewer.canManageFeeds
+											? "/dashboard/content-creator?tab=sources"
+											: "/dashboard/content-creator"
+									}
+									className="text-xs text-[#0f5384]"
+								>
+									{viewer.canManageFeeds
+										? "Connect a source"
+										: "Publish your first announcement"}
+								</Link>
+							) : (
+								<p className="text-xs text-slate-500">
+									Nothing has been published yet
+								</p>
+							)}
+						</div>
 					</div>
 				</CardContent>
 			</Card>
@@ -703,9 +738,9 @@ const CompanyNewsFeed: React.FC<CompanyNewsFeedProps> = ({
 
 	if (error && newsItems.length === 0) {
 		return (
-			<Card className="w-full h-[200px] sm:h-[250px] lg:h-[290px] glass-card overflow-hidden">
+			<Card className="w-full h-[200px] sm:h-[250px] lg:h-[300px] glass-card overflow-hidden">
 				<div className="glass-card-cap" />
-				<CardHeader className="pb-3 pt-6 px-4">
+				<CardHeader className="pb-3 pt-2 px-4">
 					<CardTitle className="text-sm font-semibold sidebar-gradient-text">
 						Company News
 					</CardTitle>
@@ -726,10 +761,10 @@ const CompanyNewsFeed: React.FC<CompanyNewsFeedProps> = ({
 	}
 
 	return (
-		<Card className="glass-card w-full h-auto min-h-[200px] sm:min-h-[250px] lg:min-h-[300px]">
+		<Card className="glass-card flex h-[200px] w-full flex-col overflow-hidden sm:h-[250px] lg:h-[300px]">
 			<div className="glass-card-cap" />
 			{/* Header */}
-			<CardHeader className="pb-3 pt-6 px-4">
+			<CardHeader className="pb-3 pt-2 px-4">
 				<div className="flex items-center gap-2">
 					<Newspaper className="h-4 w-4 text-slate-600" />
 					<CardTitle className="text-sm font-semibold sidebar-gradient-text">

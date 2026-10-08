@@ -48,7 +48,7 @@ export const CompactLicenseExpiryWidget: React.FC<
 				className={`${COMPACT_HEIGHT} glass-card overflow-hidden ${className}`}
 			>
 				<div className="glass-card-cap" />
-				<CardHeader className="pb-3 pt-4 px-4">
+				<CardHeader className="pb-3 pt-2 px-4">
 					<div className="flex items-center gap-2">
 						<Clock className="h-4 w-4 text-slate-600" />
 						<CardTitle className="text-sm font-semibold sidebar-gradient-text">
@@ -74,7 +74,7 @@ export const CompactLicenseExpiryWidget: React.FC<
 				className={`${COMPACT_HEIGHT} glass-card overflow-hidden ${className}`}
 			>
 				<div className="glass-card-cap" />
-				<CardHeader className="pb-3 pt-6 px-4">
+				<CardHeader className="pb-3 pt-2 px-4">
 					<div className="flex items-center gap-2">
 						<AlertTriangle className="h-4 w-4 text-red" />
 						<CardTitle className="text-sm font-semibold sidebar-gradient-text">
@@ -96,7 +96,7 @@ export const CompactLicenseExpiryWidget: React.FC<
 			className={`glass-card ${COMPACT_HEIGHT} flex flex-col overflow-hidden ${className}`}
 		>
 			<div className="glass-card-cap" />
-			<CardHeader className="pb-2 pt-6 px-4 flex-shrink-0">
+			<CardHeader className="pb-2 pt-2 px-4 flex-shrink-0">
 				<div className="flex items-center gap-2 mb-3">
 					<div className="flex items-center gap-2">
 						<Clock className="h-4 w-4 text-slate-600" />

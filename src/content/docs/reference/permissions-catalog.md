@@ -112,8 +112,11 @@ This catalog explains permission keys in everyday language. Exact availability c
 | `news.read` | Read company news |
 | `news.create` | Draft articles |
 | `news.update` | Edit articles |
-| `news.publish` | Publish articles |
+| `news.publish` | Publish or unpublish articles |
 | `news.delete` | Delete articles |
+| `news.approve` | Approve or reject imported news in the review queue |
+| `news.feeds.manage` | Connect and manage feeds and social sources |
+| `news.ack.manage` | View acknowledgment reports and export CSV |
 
 ## Users
 

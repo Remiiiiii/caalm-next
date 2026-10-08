@@ -2,8 +2,9 @@
 
 import { Calendar, FilePen, FileText, Plus, TrendingUp } from "lucide-react";
 import type { Models } from "node-appwrite";
+import { useSearchParams } from "next/navigation";
 import type React from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { DashboardGreeting } from "@/components/dashboard/DashboardGreeting";
 import ArticleEditor from "@/components/news/ArticleEditor";
 import ArticleList from "@/components/news/ArticleList";
@@ -11,10 +12,9 @@ import { ConnectedSourcesPanel } from "@/components/news/ConnectedSourcesPanel";
 import NewsAnalytics from "@/components/news/NewsAnalytics";
 import { NewsReviewQueue } from "@/components/news/NewsReviewQueue";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { MetricStatCard } from "@/components/ui/metric-stat-card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from "@/hooks/use-toast";
+import { useNewsAnalytics } from "@/hooks/useNewsAnalytics";
 
 interface ContentCreatorDashboardProps {
 	user?:
@@ -30,71 +30,46 @@ interface ContentCreatorDashboardProps {
 		| null;
 }
 
-interface NewsStats {
-	total: number;
-	published: number;
-	drafts: number;
-	thisMonth: number;
+const NEWS_TABS = ["articles", "queue", "sources", "analytics"] as const;
+type NewsTab = (typeof NEWS_TABS)[number];
+
+function isNewsTab(value: string | null): value is NewsTab {
+	return NEWS_TABS.some((tab) => tab === value);
+}
+
+/** Update ?tab= without a Next navigation (avoids proxy.ts on every click). */
+function syncTabInUrl(next: NewsTab) {
+	if (typeof window === "undefined") return;
+	const url = new URL(window.location.href);
+	if (next === "articles") url.searchParams.delete("tab");
+	else url.searchParams.set("tab", next);
+	window.history.replaceState({}, "", url.toString());
 }
 
 const ContentCreatorDashboard: React.FC<ContentCreatorDashboardProps> = ({
 	user,
 }) => {
-	const [stats, setStats] = useState<NewsStats>({
-		total: 0,
-		published: 0,
-		drafts: 0,
-		thisMonth: 0,
-	});
-	const [loading, setLoading] = useState(true);
 	const [isEditorOpen, setIsEditorOpen] = useState(false);
 	const [editingArticle, setEditingArticle] = useState<string | null>(null);
-	const { toast } = useToast();
+	const searchParams = useSearchParams();
+	const [tab, setTabState] = useState<NewsTab>(() => {
+		const tabParam = searchParams.get("tab");
+		return isNewsTab(tabParam) ? tabParam : "articles";
+	});
+	const { analytics, isLoading: statsLoading, refresh: refreshStats } =
+		useNewsAnalytics();
+	const stats = {
+		total: analytics?.overview?.total || 0,
+		published: analytics?.overview?.published || 0,
+		drafts: analytics?.overview?.drafts || 0,
+		thisMonth: analytics?.overview?.thisMonth || 0,
+	};
 
-	const fetchStats = useCallback(async () => {
-		try {
-			setLoading(true);
-			const response = await fetch("/api/internal-news/analytics");
-
-			if (!response.ok) {
-				const errorData = await response.json().catch(() => ({}));
-				throw new Error(
-					errorData.error || `Failed to fetch stats: ${response.statusText}`,
-				);
-			}
-
-			const data = await response.json();
-
-			if (!data.success) {
-				throw new Error(data.error || "Failed to load statistics");
-			}
-
-			const overview = data.analytics?.overview || {};
-
-			setStats({
-				total: overview.total || 0,
-				published: overview.published || 0,
-				drafts: overview.drafts || 0,
-				thisMonth: overview.thisMonth || 0,
-			});
-		} catch (error) {
-			console.error("Error fetching stats:", error);
-			const errorMessage =
-				error instanceof Error ? error.message : "Failed to load statistics";
-
-			toast({
-				title: "Error loading statistics",
-				description: errorMessage,
-				variant: "destructive",
-			});
-		} finally {
-			setLoading(false);
-		}
-	}, [toast]);
-
-	useEffect(() => {
-		void fetchStats();
-	}, [fetchStats]);
+	const setTab = (next: string) => {
+		if (!isNewsTab(next) || next === tab) return;
+		setTabState(next);
+		syncTabInUrl(next);
+	};
 
 	const handleCreateArticle = () => {
 		setEditingArticle(null);
@@ -109,7 +84,7 @@ const ContentCreatorDashboard: React.FC<ContentCreatorDashboardProps> = ({
 	const handleEditorClose = () => {
 		setIsEditorOpen(false);
 		setEditingArticle(null);
-		fetchStats();
+		void refreshStats();
 	};
 
 	return (
@@ -128,25 +103,25 @@ const ContentCreatorDashboard: React.FC<ContentCreatorDashboardProps> = ({
 			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
 				<MetricStatCard
 					title="Total Articles"
-					value={loading ? "..." : stats.total}
+					value={statsLoading ? "..." : stats.total}
 					description="All articles"
 					icon={FileText}
 				/>
 				<MetricStatCard
 					title="Published"
-					value={loading ? "..." : stats.published}
+					value={statsLoading ? "..." : stats.published}
 					description="Live articles"
 					icon={FileText}
 				/>
 				<MetricStatCard
 					title="Drafts"
-					value={loading ? "..." : stats.drafts}
+					value={statsLoading ? "..." : stats.drafts}
 					description="Unpublished"
 					icon={FilePen}
 				/>
 				<MetricStatCard
 					title="This Month"
-					value={loading ? "..." : stats.thisMonth}
+					value={statsLoading ? "..." : stats.thisMonth}
 					description="Published this month"
 					icon={Calendar}
 					dynamicIcon={stats.thisMonth > 0 ? TrendingUp : undefined}
@@ -156,12 +131,8 @@ const ContentCreatorDashboard: React.FC<ContentCreatorDashboardProps> = ({
 
 			{/* Articles and Analytics Tabs */}
 			<Tabs
-				defaultValue={
-					typeof window !== "undefined"
-						? new URLSearchParams(window.location.search).get("tab") ||
-							"articles"
-						: "articles"
-				}
+				value={tab}
+				onValueChange={setTab}
 				className="space-y-4"
 			>
 				<TabsList>
@@ -172,24 +143,22 @@ const ContentCreatorDashboard: React.FC<ContentCreatorDashboardProps> = ({
 				</TabsList>
 
 				<TabsContent value="articles">
-					<Card className="glass-card">
-						<div className="glass-card-cap" />
-						<CardContent className="p-4 sm:p-6">
-							<ArticleList onEdit={handleEditArticle} onRefresh={fetchStats} />
-						</CardContent>
-					</Card>
+					<ArticleList
+						onEdit={handleEditArticle}
+						onRefresh={() => void refreshStats()}
+					/>
 				</TabsContent>
 
 				<TabsContent value="queue">
-					<NewsReviewQueue />
+					{tab === "queue" ? <NewsReviewQueue /> : null}
 				</TabsContent>
 
 				<TabsContent value="sources">
-					<ConnectedSourcesPanel />
+					{tab === "sources" ? <ConnectedSourcesPanel /> : null}
 				</TabsContent>
 
 				<TabsContent value="analytics">
-					<NewsAnalytics />
+					{tab === "analytics" ? <NewsAnalytics /> : null}
 				</TabsContent>
 			</Tabs>
 

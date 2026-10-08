@@ -93,9 +93,9 @@ const LicenseStatusPieChart: React.FC<LicenseStatusPieChartProps> = ({
 
 	if (loading && !skipFetch) {
 		return (
-			<Card className="w-full h-[200px] sm:h-[250px] lg:h-[290px] glass-card overflow-hidden">
+			<Card className="w-full h-[200px] sm:h-[250px] lg:h-[300px] glass-card overflow-hidden">
 				<div className="glass-card-cap" />
-				<CardHeader className="pb-3 pt-6 px-4">
+				<CardHeader className="pb-3 pt-2 px-4">
 					<div className="flex items-center gap-2">
 						<Key className="h-4 w-4 text-slate-600" />
 						<CardTitle className="text-sm font-semibold sidebar-gradient-text">
@@ -115,9 +115,9 @@ const LicenseStatusPieChart: React.FC<LicenseStatusPieChartProps> = ({
 
 	if (error && licenses.length === 0) {
 		return (
-			<Card className="w-full h-[200px] sm:h-[250px] lg:h-[290px] glass-card overflow-hidden">
+			<Card className="w-full h-[200px] sm:h-[250px] lg:h-[300px] glass-card overflow-hidden">
 				<div className="glass-card-cap" />
-				<CardHeader className="pb-3 pt-6 px-4">
+				<CardHeader className="pb-3 pt-2 px-4">
 					<div className="flex items-center gap-2">
 						<Key className="h-4 w-4 text-slate-600" />
 						<CardTitle className="text-sm font-semibold sidebar-gradient-text">
@@ -137,7 +137,7 @@ const LicenseStatusPieChart: React.FC<LicenseStatusPieChartProps> = ({
 	return (
 		<Card className="w-full h-[200px] sm:h-[250px] lg:h-[300px] glass-card hover:shadow-2xl transition-all duration-300 overflow-hidden flex flex-col">
 			<div className="glass-card-cap" />
-			<CardHeader className="pb-3 pt-6 px-4 flex-shrink-0">
+			<CardHeader className="pb-3 pt-2 px-4 flex-shrink-0">
 				<div className="flex items-center gap-2">
 					<Key className="h-4 w-4 text-slate-600" />
 					<CardTitle className="text-sm font-semibold sidebar-gradient-text">

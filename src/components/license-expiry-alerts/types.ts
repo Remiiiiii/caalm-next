@@ -17,6 +17,10 @@ export interface LicenseExpiryAlertsWidgetProps {
 	showSettings?: boolean;
 	compact?: boolean;
 	licenses?: License[];
+	/** Parent is still loading; skip self-fetch and show skeleton (trust empty []). */
+	parentLoading?: boolean;
+	/** When false, skip POST /api/contracts/update-expired (parent already did). */
+	syncExpiredOnMount?: boolean;
 	/** When false, stop and do not autoplay the looping expiry bell. */
 	alarmEnabled?: boolean;
 }

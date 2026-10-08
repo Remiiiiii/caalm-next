@@ -34,31 +34,28 @@ const LicenseExpiryAlertsWidget = ({
 	showSettings = true,
 	compact = false,
 	licenses: propsLicenses,
+	parentLoading = false,
+	syncExpiredOnMount = true,
 	alarmEnabled = true,
 }: LicenseExpiryAlertsWidgetProps) => {
-	// Empty [] from a parent still-loading/failed fetch is truthy — only trust
-	// an explicit non-empty prop list as the sole source; otherwise hit the DB.
-	const hasTrustedPropLicenses =
-		propsLicenses !== undefined &&
-		Array.isArray(propsLicenses) &&
-		propsLicenses.length > 0;
+	// Trust any explicit prop, including [] — parent owns the list.
+	const hasPropLicenses = propsLicenses !== undefined;
+	const skipFetch = hasPropLicenses || parentLoading;
 
 	const {
 		data: fetchedLicenses,
 		error: fetchError,
 		isLoading: fetchLoading,
 		mutate,
-	} = useSWR(hasTrustedPropLicenses ? null : ALL_LICENSES_KEY, fetchLicenses, {
+	} = useSWR(skipFetch ? null : ALL_LICENSES_KEY, fetchLicenses, {
 		...swrConfig,
 		refreshInterval: 30000,
 		revalidateOnFocus: false,
 	});
 
-	const licenses = hasTrustedPropLicenses
-		? propsLicenses
-		: fetchedLicenses || [];
-	const isLoading = hasTrustedPropLicenses ? false : fetchLoading;
-	const error = hasTrustedPropLicenses
+	const licenses = hasPropLicenses ? propsLicenses : fetchedLicenses || [];
+	const isLoading = parentLoading || (!hasPropLicenses && fetchLoading);
+	const error = hasPropLicenses
 		? null
 		: fetchError
 			? fetchError instanceof Error
@@ -66,8 +63,8 @@ const LicenseExpiryAlertsWidget = ({
 				: new Error("Failed to load license data")
 			: null;
 
-	// Keep license expiry flags / daysUntilExpiry in sync with DB (same job as contracts).
 	useEffect(() => {
+		if (!syncExpiredOnMount) return;
 		let cancelled = false;
 		const syncExpiredLicenses = async () => {
 			try {
@@ -86,7 +83,7 @@ const LicenseExpiryAlertsWidget = ({
 		return () => {
 			cancelled = true;
 		};
-	}, [mutate]);
+	}, [mutate, syncExpiredOnMount]);
 
 	const [filterDays, setFilterDays] = useState<number>(
 		FILTER_VALUES.THIRTY_DAYS,

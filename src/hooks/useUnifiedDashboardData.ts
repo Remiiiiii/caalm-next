@@ -68,12 +68,15 @@ const fetcher = async (url: string): Promise<UnifiedDashboardDataResponse> => {
 export const useUnifiedDashboardData = (
 	orgId: string,
 	serverUserId?: string | null,
+	options?: { enabled?: boolean },
 ) => {
 	const { user } = useAuth();
+	const enabled = options?.enabled !== false;
 	const effectiveUserId = serverUserId || user?.$id;
-	const url = effectiveUserId
-		? `/api/dashboard/unified?orgId=${orgId}&userId=${effectiveUserId}&v=19`
-		: null;
+	const url =
+		enabled && effectiveUserId
+			? `/api/dashboard/unified?orgId=${orgId}&userId=${effectiveUserId}&v=19`
+			: null;
 
 	// After mount only — reading localStorage during the first client paint
 	// would disagree with SSR (no cache on the server) and break hydration.

@@ -61,8 +61,11 @@ import { useOrganization } from "@/contexts/OrganizationContext";
 import { useStepUp } from "@/contexts/StepUpContext";
 import { useToast } from "@/hooks/use-toast";
 import { useAdminStats } from "@/hooks/useAdminStats";
+import { useDashboardWidgetBundle } from "@/hooks/useDashboardWidgetBundle";
 import { useUnifiedDashboardData } from "@/hooks/useUnifiedDashboardData";
+import { useUpdateExpiredOnce } from "@/hooks/useUpdateExpiredOnce";
 import { cn } from "@/lib/utils";
+import type { UIFileDoc } from "@/types/files";
 import { resolveInviteDepartment } from "../../../../constants";
 
 const ClientDate = dynamic(() => import("@/components/ClientDate"), {
@@ -130,6 +133,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 		invitations,
 		contracts,
 		riskImpact,
+		recentActivities,
 		isLoading: unifiedLoading,
 		error: unifiedError,
 		refresh: refreshUnified,
@@ -148,6 +152,13 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 		},
 	);
 	const uninvitedUsers = uninvitedRes?.data ?? [];
+	useUpdateExpiredOnce();
+	const { bundle, isLoading: bundleLoading } = useDashboardWidgetBundle({
+		enabled: true,
+		newsLimit: 5,
+		userId: user?.$id ?? user?.accountId ?? null,
+	});
+	const carouselReady = !unifiedLoading && !bundleLoading;
 	const adminComplianceTone = complianceMetricTone(unifiedStats.complianceRate);
 	const adminNeedReview = complianceNeedReviewCount(
 		unifiedStats.totalContracts,
@@ -536,16 +547,38 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 				<div className="glass-card-cap" />
 				<CardContent className="p-3 sm:p-4 lg:p-6">
 					<WidgetCarousel ariaLabel="Admin dashboard widgets">
-						<ContractExpiryAlertsWidget
-							maxVisible={2}
-							showSettings={false}
-							compact={true}
-							contracts={unifiedLoading ? undefined : (contracts as Contract[])}
-						/>
-						<ContractStatusPieChart />
-						<DepartmentPerformanceWidget />
-						<CompanyNewsFeed />
-						{user && <QuickNotesWidget user={user as any} />}
+						{carouselReady ? (
+							<>
+								<ContractExpiryAlertsWidget
+									maxVisible={2}
+									showSettings={false}
+									compact={true}
+									contracts={(contracts as Contract[]) || []}
+									syncExpiredOnMount={false}
+								/>
+								<ContractStatusPieChart
+									contracts={contracts as UIFileDoc[] | undefined}
+								/>
+								<DepartmentPerformanceWidget
+									data={bundle?.performance ?? null}
+								/>
+								<CompanyNewsFeed
+									items={bundle?.newsItems}
+									total={bundle?.newsTotal}
+									viewer={bundle?.newsViewer}
+								/>
+								{user ? (
+									<QuickNotesWidget
+										user={user as any}
+										initialNotes={bundle?.notes}
+									/>
+								) : null}
+							</>
+						) : (
+							Array.from({ length: 5 }, (_, index) => (
+								<StatCardSkeleton key={`widget-skel-${index}`} />
+							))
+						)}
 					</WidgetCarousel>
 				</CardContent>
 			</Card>
@@ -888,7 +921,10 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 					/>
 
 					{/* Recent Activity */}
-					<RecentActivity />
+					<RecentActivity
+						activities={recentActivities as never}
+						parentLoading={unifiedLoading}
+					/>
 				</div>
 			</div>
 

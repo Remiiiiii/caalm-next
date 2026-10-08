@@ -81,7 +81,9 @@ import { useOrganization } from "@/contexts/OrganizationContext";
 import { useStepUp } from "@/contexts/StepUpContext";
 import { useToast } from "@/hooks/use-toast";
 import { useCombinedExpiryModal } from "@/hooks/useCombinedExpiryModal";
+import { useDashboardWidgetBundle } from "@/hooks/useDashboardWidgetBundle";
 import { useUnifiedDashboardData } from "@/hooks/useUnifiedDashboardData";
+import { useUpdateExpiredOnce } from "@/hooks/useUpdateExpiredOnce";
 import { cn } from "@/lib/utils";
 import type { UIFileDoc } from "@/types/files";
 import { resolveInviteDepartment } from "../../../../constants";
@@ -206,6 +208,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 		contracts: unifiedContracts,
 		riskImpact,
 		dashboardLicenses,
+		recentActivities,
 		isLoading: unifiedLoading,
 		lastUpdatedAt,
 		refresh: refreshUnified,
@@ -216,6 +219,13 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 	);
 
 	const contractsFromApi = (unifiedContracts || []) as UIFileDoc[];
+	useUpdateExpiredOnce();
+	const { bundle, isLoading: bundleLoading } = useDashboardWidgetBundle({
+		enabled: true,
+		newsLimit: 5,
+		userId: user?.$id ?? user?.accountId ?? null,
+	});
+	const carouselReady = !unifiedLoading && !bundleLoading;
 
 	// Uninvited users: after unified settles so it does not compete on cold load
 	const { data: uninvitedRes, mutate: refreshUninvited } = useSWR(
@@ -983,25 +993,44 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 					<div className="glass-card-cap" />
 					<CardContent className="relative p-3 sm:p-4 lg:p-6">
 						<WidgetCarousel ariaLabel="Executive dashboard widgets">
-							<ContractExpiryAlertsWidget
-								maxVisible={2}
-								showSettings={false}
-								compact={true}
-								contracts={unifiedLoading ? undefined : contractsFromApi}
-								alarmEnabled={!isModalOpen}
-							/>
-							<LicenseExpiryAlertsWidget
-								maxVisible={2}
-								showSettings={false}
-								compact={true}
-								licenses={unifiedLoading ? undefined : dashboardLicenses}
-								alarmEnabled={!isModalOpen}
-							/>
-							<ContractStatusPieChart contracts={contractsFromApi} />
-							<LicenseStatusPieChart licenses={dashboardLicenses} />
-							<DepartmentPerformanceWidget />
-							<CompanyNewsFeed />
-							<QuickNotesWidget user={user ?? undefined} />
+							{carouselReady ? (
+								<>
+									<ContractExpiryAlertsWidget
+										maxVisible={2}
+										showSettings={false}
+										compact={true}
+										contracts={contractsFromApi}
+										syncExpiredOnMount={false}
+										alarmEnabled={!isModalOpen}
+									/>
+									<LicenseExpiryAlertsWidget
+										maxVisible={2}
+										showSettings={false}
+										compact={true}
+										licenses={dashboardLicenses}
+										syncExpiredOnMount={false}
+										alarmEnabled={!isModalOpen}
+									/>
+									<ContractStatusPieChart contracts={contractsFromApi} />
+									<LicenseStatusPieChart licenses={dashboardLicenses} />
+									<DepartmentPerformanceWidget
+										data={bundle?.performance ?? null}
+									/>
+									<CompanyNewsFeed
+										items={bundle?.newsItems}
+										total={bundle?.newsTotal}
+										viewer={bundle?.newsViewer}
+									/>
+									<QuickNotesWidget
+										user={user ?? undefined}
+										initialNotes={bundle?.notes}
+									/>
+								</>
+							) : (
+								Array.from({ length: 7 }, (_, index) => (
+									<StatCardSkeleton key={`widget-skel-${index}`} />
+								))
+							)}
 						</WidgetCarousel>
 					</CardContent>
 				</Card>
@@ -1011,7 +1040,11 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 					<div className="space-y-6">
 						<div className="grid items-stretch gap-6 lg:grid-cols-6">
 							<div className="lg:col-span-3">
-								<RecentActivity limit={10} />
+								<RecentActivity
+									limit={10}
+									activities={recentActivities as never}
+									parentLoading={unifiedLoading}
+								/>
 							</div>
 
 							<Card className="glass-card flex h-full min-h-0 min-w-0 flex-col overflow-hidden lg:col-span-3">

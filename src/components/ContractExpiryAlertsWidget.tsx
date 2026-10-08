@@ -22,46 +22,49 @@ const ContractExpiryAlertsWidget = ({
 	showSettings = true,
 	compact = false,
 	contracts: propsContracts,
+	parentLoading = false,
+	syncExpiredOnMount = true,
 	alarmEnabled = true,
 }: ContractExpiryAlertsWidgetProps) => {
-	// Use contracts from props if provided, otherwise fetch all contracts from database
+	const hasPropContracts = propsContracts !== undefined;
+	const skipFetch = hasPropContracts || parentLoading;
+
 	const {
 		data: allContractsData,
 		error: allContractsError,
 		isLoading: allContractsLoading,
 	} = useSWR(
-		propsContracts ? null : swrKeys.allContracts(),
+		skipFetch ? null : swrKeys.allContracts(),
 		swrConfig.fetcher || null,
 		{
 			...swrConfig,
-			refreshInterval: 30000, // Refresh every 30 seconds
+			refreshInterval: 30000,
 			revalidateOnFocus: false,
 		},
 	);
 
-	// Fallback to manager contracts hook if all contracts endpoint fails
 	const {
 		contracts: hookContracts,
 		isLoading: hookLoading,
-	} = useManagerContracts();
+	} = useManagerContracts({ enabled: !skipFetch });
 
 	// Extract contracts from API response (wrapped in { success: true, data: [...] })
 	const allContracts = Array.isArray(allContractsData)
 		? allContractsData
 		: allContractsData?.data || [];
 
-	// Empty [] from a parent still-loading fetch is truthy — only trust explicit props.
-	const hasPropContracts = propsContracts !== undefined;
 	const contracts = hasPropContracts
 		? propsContracts
 		: allContractsError
 			? hookContracts
 			: allContracts;
-	const isLoading = hasPropContracts
-		? false
-		: allContractsError
-			? hookLoading
-			: allContractsLoading;
+	const isLoading = parentLoading
+		? true
+		: hasPropContracts
+			? false
+			: allContractsError
+				? hookLoading
+				: allContractsLoading;
 	const error = hasPropContracts
 		? null
 		: allContractsError &&
@@ -70,35 +73,22 @@ const ContractExpiryAlertsWidget = ({
 			? allContractsError
 			: null;
 
-	// Trigger update of expired contracts when component mounts
 	useEffect(() => {
-		// Call the update-expired endpoint to ensure isExpired is up-to-date
+		if (!syncExpiredOnMount) return;
 		const updateExpiredContracts = async () => {
 			try {
-				const response = await fetch("/api/contracts/update-expired", {
+				await fetch("/api/contracts/update-expired", {
 					method: "POST",
 					headers: {
 						"Content-Type": "application/json",
 					},
 				});
-				if (response.ok) {
-					const result = await response.json();
-					if (process.env.NODE_ENV === "development") {
-						console.log(
-							"[ContractExpiryAlertsWidget] Updated expired contracts:",
-							result,
-						);
-					}
-				}
-			} catch (error) {
-				// Silently fail - this is a background update
-				console.warn("Failed to update expired contracts:", error);
+			} catch {
+				// Background sync — date-based filters still work without it.
 			}
 		};
-
-		// Only call once when component mounts, not on every render
-		updateExpiredContracts();
-	}, []); // Empty dependency array - only run once on mount
+		void updateExpiredContracts();
+	}, [syncExpiredOnMount]);
 
 	/**
 	 * Filter value for contract display

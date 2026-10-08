@@ -29,6 +29,10 @@ export interface ContractExpiryAlertsWidgetProps {
 	showSettings?: boolean;
 	compact?: boolean; // For carousel mode
 	contracts?: Contract[]; // Optional: pass contracts directly (from ContractsMetricsBar or page data)
+	/** Parent is still loading; skip self-fetch and show skeleton (trust empty []). */
+	parentLoading?: boolean;
+	/** When false, skip POST /api/contracts/update-expired (parent already did). */
+	syncExpiredOnMount?: boolean;
 	/** When false, stop and do not autoplay the looping expiry bell. */
 	alarmEnabled?: boolean;
 }

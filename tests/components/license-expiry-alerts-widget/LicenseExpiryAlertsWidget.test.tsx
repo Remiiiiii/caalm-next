@@ -185,6 +185,16 @@ describe("LicenseExpiryAlertsWidget", () => {
 		expect(screen.getByText(/no licenses/i)).toBeInTheDocument();
 	});
 
+	it("should skip self-fetch when parent passes an empty licenses array", () => {
+		render(<LicenseExpiryAlertsWidget licenses={[]} />);
+
+		expect(mockUseSWR).toHaveBeenCalledWith(
+			null,
+			expect.anything(),
+			expect.anything(),
+		);
+	});
+
 	it("should display loading state", () => {
 		mockUseSWR.mockReturnValue({
 			data: undefined,

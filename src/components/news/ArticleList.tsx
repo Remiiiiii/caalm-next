@@ -8,6 +8,7 @@ import {
 	Eye,
 	EyeOff,
 	Filter,
+	FunnelX,
 	Info,
 	Loader2,
 	Megaphone,
@@ -428,7 +429,7 @@ const ArticleList: React.FC<ArticleListProps> = ({ onEdit, onRefresh }) => {
 							onClick={clearFilters}
 							className="btn-primary px-3 sm:px-4 w-full sm:w-auto"
 						>
-							<Filter className="h-4 w-4" />
+							<FunnelX className="h-4 w-4" />
 							Clear
 						</Button>
 					</div>

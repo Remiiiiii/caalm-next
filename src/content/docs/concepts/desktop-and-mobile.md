@@ -28,7 +28,7 @@ On a phone you can:
 - Open your **role dashboard** and expiry / approval widgets
 - Work **Proposals & Approvals** for contracts and licenses (card lists with larger Approve/Review taps)
 - Open **tickets** (list and detail) and **team tasks** (card lists + stacked filters)
-- Read **company news** (feed first; stats stay on wider screens)
+- Read **company news** at `/company-news` (feed first; dense stats and filters are for wider screens)
 - Use notifications from the header while you are on a companion page
 
 Expiry attestation and renew still open from the dashboard widgets on a phone. Links that need the contracts library or analytics ask you to finish on a laptop instead of sending you to a dead-end gate.

@@ -1,21 +1,12 @@
 "use client";
 
 import { format, formatDistanceToNowStrict, isPast } from "date-fns";
-import {
-	AlertTriangle,
-	Info,
-	Link2,
-	Plus,
-	RefreshCw,
-	Rss,
-	Unlink,
-	X,
-} from "lucide-react";
-import Image from "next/image";
+import { Info, Plus, RefreshCw, Rss, Unplug, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import IntegrationCard from "@/components/settings/IntegrationCard";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -27,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
+import { isDemoMode } from "@/lib/config/demo-mode";
 import { cn } from "@/lib/utils";
 
 type Feed = {
@@ -77,29 +69,10 @@ const AUTO_ITEMS: Array<{
 	},
 ];
 
-function LinkedInMark({ muted = false }: { muted?: boolean }) {
-	return (
-		<Image
-			src="/assets/icons/company-icons/linkedin.svg"
-			alt="LinkedIn"
-			width={24}
-			height={24}
-			className={cn("h-6 w-6", muted ? "text-slate-400" : "text-slate-900")}
-		/>
-	);
-}
-
-function XMark({ muted = false }: { muted?: boolean }) {
-	return (
-		<Image
-			src="/assets/icons/company-icons/x-twitter.svg"
-			alt="X"
-			width={24}
-			height={24}
-			className={cn("h-6 w-6", muted ? "text-slate-400" : "text-slate-900")}
-		/>
-	);
-}
+const SOCIAL_ICONS = {
+	linkedin: "/assets/icons/company-icons/linkedin.svg",
+	x: "/assets/icons/company-icons/x-twitter.svg",
+} as const;
 
 function expiryWarning(expiresAt: string | null): string | null {
 	if (!expiresAt) return null;
@@ -119,21 +92,6 @@ function expiryWarning(expiresAt: string | null): string | null {
 		return `Access expires ${dateLabel} (${relative}). Reconnect to keep sharing.`;
 	}
 	return null;
-}
-
-function StatusBadge({ connected }: { connected: boolean }) {
-	return (
-		<span
-			className={cn(
-				"inline-block px-2 py-0.5 text-xs rounded-full font-medium border uppercase tracking-wide",
-				connected
-					? "bg-green/10 text-green border-green/20"
-					: "bg-slate-100 text-slate-600 border-slate-200",
-			)}
-		>
-			{connected ? "Connected" : "Not connected"}
-		</span>
-	);
 }
 
 export function ConnectedSourcesPanel() {
@@ -215,6 +173,41 @@ export function ConnectedSourcesPanel() {
 			toast({
 				title: `${provider} is not configured`,
 				description: `Add ${provider === "LinkedIn" ? "LINKEDIN_CLIENT_ID, LINKEDIN_CLIENT_SECRET, and LINKEDIN_REDIRECT_URI" : "X_CLIENT_ID, X_CLIENT_SECRET, and X_REDIRECT_URI"} to .env.local, then restart the server.`,
+				variant: "destructive",
+			});
+		} else if (error === "linkedin_denied") {
+			toast({
+				title: "LinkedIn blocked the request",
+				description:
+					"Check your LinkedIn app Products tab. Company post access needs Community Management API, and Auth scopes must include r_organization_social.",
+				variant: "destructive",
+			});
+		} else if (error === "linkedin_state") {
+			toast({
+				title: "Connection expired",
+				description:
+					"The sign-in link timed out or the browser cookie was lost. Click Connect LinkedIn again.",
+				variant: "destructive",
+			});
+		} else if (error === "linkedin_token") {
+			toast({
+				title: "LinkedIn token exchange failed",
+				description:
+					"Client ID/secret or redirect URI do not match the LinkedIn app. They must match exactly, including http vs https.",
+				variant: "destructive",
+			});
+		} else if (error === "linkedin_crypto") {
+			toast({
+				title: "Encryption key missing",
+				description:
+					"Set NEWS_OAUTH_ENCRYPTION_KEY in .env.local, then restart the server.",
+				variant: "destructive",
+			});
+		} else if (error === "linkedin_save") {
+			toast({
+				title: "Could not save LinkedIn connection",
+				description:
+					"Token was issued, but saving failed. Check news social collections and server logs for [linkedin-oauth].",
 				variant: "destructive",
 			});
 		} else if (error === "linkedin_oauth" || error === "x_oauth") {
@@ -363,108 +356,95 @@ export function ConnectedSourcesPanel() {
 		});
 	};
 
+	const demoSocialLocked = isDemoMode();
+
 	const renderSocialCard = (
 		provider: "linkedin" | "x",
 		connection: SocialConnection | undefined,
 	) => {
-		const connected = Boolean(connection);
+		const connected = Boolean(connection) && !demoSocialLocked;
 		const warning = expiryWarning(connection?.expiresAt || null);
 		const title = provider === "linkedin" ? "LinkedIn" : "X";
 		const connectHref =
 			provider === "linkedin"
 				? "/api/news/social/linkedin/auth"
 				: "/api/news/social/x/auth";
+		const description =
+			provider === "linkedin"
+				? "Pull company page posts into the news review queue."
+				: "Pull organization posts into the news review queue.";
+
+		if (demoSocialLocked) {
+			return (
+				<IntegrationCard
+					title={title}
+					description={description}
+					iconSrc={SOCIAL_ICONS[provider]}
+					status="locked"
+					lockedHint="Disabled in the demo sandbox. Connect on a production pilot — demo workspaces expire in 7 days."
+				/>
+			);
+		}
+
+		if (connected && connection) {
+			return (
+				<IntegrationCard
+					title={title}
+					description={description}
+					iconSrc={SOCIAL_ICONS[provider]}
+					status="connected"
+					meta={connection.accountLabel}
+					info={
+						warning ? (
+							<span className="text-orange">{warning}</span>
+						) : (
+							`Connected by ${connection.connectedByName}${
+								connection.connectedAt
+									? ` on ${format(new Date(connection.connectedAt), "MMM d, yyyy")}`
+									: ""
+							}.`
+						)
+					}
+					actions={
+						<>
+							<Button
+								className="btn-primary w-full cursor-pointer px-3 sm:px-4"
+								onClick={() => {
+									window.location.href = connectHref;
+								}}
+							>
+								<RefreshCw className="h-4 w-4" />
+								Reconnect
+							</Button>
+							<Button
+								className="btn-primary w-full cursor-pointer px-3 sm:px-4"
+								onClick={() => disconnectSocial(provider)}
+							>
+								<Unplug className="h-4 w-4" aria-hidden />
+								Disconnect
+							</Button>
+						</>
+					}
+				/>
+			);
+		}
 
 		return (
-			<Card className="glass-card">
-				<div className="glass-card-cap" />
-				<CardContent className="p-4 sm:p-6">
-					<div className="flex items-start justify-between gap-3">
-						<div className="flex items-center gap-3 min-w-0">
-							<div
-								className={cn(
-									"flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white/70",
-									!connected && "opacity-80",
-								)}
-							>
-								{provider === "linkedin" ? (
-									<LinkedInMark muted={!connected} />
-								) : (
-									<XMark muted={!connected} />
-								)}
-							</div>
-							<div className="min-w-0">
-								<p className="text-sm font-semibold text-slate-800">{title}</p>
-								<p className="text-xs text-slate-500 truncate">
-									{connected ? connection?.accountLabel : "Not connected"}
-								</p>
-							</div>
-						</div>
-						<StatusBadge connected={connected} />
-					</div>
-
-					{connected ? (
-						<div className="mt-4 space-y-3">
-							<div className="space-y-1 text-sm text-slate-600">
-								<p>
-									<span className="text-slate-500">Connected by:</span>{" "}
-									<span className="font-medium text-slate-700">
-										{connection?.connectedByName}
-									</span>
-								</p>
-								<p>
-									<span className="text-slate-500">Connected on:</span>{" "}
-									<span className="font-medium text-slate-700">
-										{connection?.connectedAt
-											? format(new Date(connection.connectedAt), "MMM d, yyyy")
-											: "—"}
-									</span>
-								</p>
-							</div>
-
-							{warning ? (
-								<div className="flex items-start gap-2 rounded-lg border border-orange/20 bg-orange/10 px-3 py-2 text-sm text-orange">
-									<AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-									<span>{warning}</span>
-								</div>
-							) : null}
-
-							<div className="flex items-center justify-end gap-2 pt-1">
-								<Button asChild className="btn-primary px-3 sm:px-4">
-									<a href={connectHref}>
-										<RefreshCw className="h-4 w-4" />
-										Reconnect
-									</a>
-								</Button>
-								<Button
-									variant="outline"
-									className="px-3 sm:px-4 text-red border-red/30 hover:bg-red/5"
-									onClick={() => disconnectSocial(provider)}
-								>
-									<Unlink className="h-4 w-4" />
-									Disconnect
-								</Button>
-							</div>
-						</div>
-					) : (
-						<div className="mt-4 space-y-4">
-							<p className="text-sm text-slate-600">
-								{provider === "linkedin"
-									? "Share published company news to your organization's LinkedIn page. You'll be asked to authorize posting access."
-									: "Share published company news to your organization's X account. You'll be asked to authorize posting access."}
-							</p>
-							<div className="flex justify-end">
-								<Button asChild className="btn-primary px-3 sm:px-4">
-									<a href={connectHref}>
-										<Link2 className="h-4 w-4" />
-										{`Connect ${title}`}
-									</a>
-								</Button>
-							</div>
-						</div>
-					)}
-				</CardContent>
-			</Card>
+			<IntegrationCard
+				title={title}
+				description={description}
+				iconSrc={SOCIAL_ICONS[provider]}
+				status="disconnected"
+				info={
+					provider === "linkedin"
+						? "Authorize LinkedIn so CAALM can import company page posts for review. Community Management API access is required."
+						: "Authorize X so CAALM can import organization posts for review."
+				}
+				connectLabel={`Connect ${title}`}
+				onConnect={() => {
+					window.location.href = connectHref;
+				}}
+			/>
 		);
 	};
 
@@ -476,10 +456,12 @@ export function ConnectedSourcesPanel() {
 						Social accounts
 					</h3>
 					<p className="text-sm text-slate-500 mt-1">
-						Connect your organization&apos;s accounts to share published news.
+						{demoSocialLocked
+							? "Social connect is disabled in the demo sandbox. Use a production pilot to attach LinkedIn or X."
+							: "Connect your organization&apos;s accounts to share published news."}
 					</p>
 				</div>
-				<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+				<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 					{renderSocialCard("linkedin", linkedIn)}
 					{renderSocialCard("x", x)}
 				</div>

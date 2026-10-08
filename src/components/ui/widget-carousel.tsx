@@ -29,6 +29,27 @@ const MOMENTUM_FRICTION = 0.95;
 const MOMENTUM_MIN_VELOCITY = 0.15;
 
 /**
+ * Flatten children into carousel slots. React.Children.toArray does not unwrap
+ * Fragments, so `{ready ? <>a b c</> : skeletons}` would otherwise become one
+ * narrow column with every widget stacked inside a single item wrapper.
+ */
+function flattenCarouselItems(children: React.ReactNode): React.ReactNode[] {
+	const out: React.ReactNode[] = [];
+	for (const child of React.Children.toArray(children)) {
+		if (
+			React.isValidElement<{ children?: React.ReactNode }>(child) &&
+			child.type === React.Fragment
+		) {
+			out.push(...flattenCarouselItems(child.props.children));
+			continue;
+		}
+		// toArray already drops null / undefined / booleans
+		out.push(child);
+	}
+	return out;
+}
+
+/**
  * Free horizontal carousel with grab-to-drag + light momentum, wheel→horizontal
  * scroll, auto-hiding chevrons, and edge-fade affordances. No snap points —
  * drag and wheel leave the track wherever you stop.
@@ -248,7 +269,7 @@ export function WidgetCarousel({
 		event.stopPropagation();
 	};
 
-	const items = React.Children.toArray(children).filter(Boolean);
+	const items = flattenCarouselItems(children);
 
 	const chevronClass =
 		"z-20 flex h-16 w-6 sm:w-7 shrink-0 items-center justify-center rounded-lg border border-white/40 bg-white/30 text-slate-700 shadow-lg backdrop-blur transition-all duration-200 hover:bg-white/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40";
@@ -302,7 +323,9 @@ export function WidgetCarousel({
 					onPointerCancel={endDrag}
 					onClickCapture={onClickCapture}
 					className={cn(
-						"flex items-start gap-2 overflow-x-auto overflow-y-hidden py-2 scroll-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden touch-pan-y",
+						// py-4: bottom shadow. px-5: room for first/last pop-out scale inside the
+						// overflow-x clip edge (padding stays in the scrollport, so sides stay visible).
+						"flex items-start gap-2 overflow-x-auto overflow-y-hidden px-5 py-4 scroll-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden touch-pan-y",
 						isGrabbing
 							? "cursor-grabbing select-none touch-none"
 							: "cursor-grab",
@@ -316,9 +339,14 @@ export function WidgetCarousel({
 								ref={isSource ? sourceRef : undefined}
 								style={isSource ? undefined : { height: sourceHeight }}
 								className={cn(
-									"min-w-0 shrink-0 overflow-hidden",
+									// overflow-visible so each widget's glass-card shadow paints (Company News look)
+									"relative min-w-0 shrink-0 overflow-visible",
 									"w-[85%] sm:w-[340px] xl:w-[360px]",
 									"*:h-full",
+									"[&>*]:transition-[transform,box-shadow] [&>*]:duration-200",
+									// Trial: pop-out on hover (lift + slight scale + deeper shadow)
+									!isGrabbing &&
+										"motion-safe:hover:z-20 motion-safe:[&:hover>*]:-translate-y-2 motion-safe:[&:hover>*]:scale-[1.025] motion-safe:[&:hover>*]:shadow-[0_18px_48px_0_rgba(31,38,135,0.28)]",
 									itemClassName,
 								)}
 							>

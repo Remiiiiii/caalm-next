@@ -12,15 +12,19 @@ interface UseNotesOptions {
 	userId: string;
 	enableRealTime?: boolean;
 	pollingInterval?: number;
+	initialNotes?: Note[];
+	skipInitialFetch?: boolean;
 }
 
 export const useNotes = ({
 	userId,
 	enableRealTime = true,
 	pollingInterval = 30000,
+	initialNotes,
+	skipInitialFetch = false,
 }: UseNotesOptions) => {
-	const [notes, setNotes] = useState<Note[]>([]);
-	const [isLoading, setIsLoading] = useState(true);
+	const [notes, setNotes] = useState<Note[]>(initialNotes ?? []);
+	const [isLoading, setIsLoading] = useState(!skipInitialFetch);
 	const [error, setError] = useState<string | null>(null);
 
 	// Fetch notes from database
@@ -47,12 +51,17 @@ export const useNotes = ({
 		}
 	}, [userId]);
 
-	// Initial fetch
 	useEffect(() => {
-		if (userId) {
-			fetchNotes();
+		if (initialNotes) {
+			setNotes(initialNotes);
+			setIsLoading(false);
 		}
-	}, [userId, fetchNotes]);
+	}, [initialNotes]);
+
+	useEffect(() => {
+		if (skipInitialFetch || !userId) return;
+		void fetchNotes();
+	}, [userId, fetchNotes, skipInitialFetch]);
 
 	// Real-time polling
 	useEffect(() => {

@@ -2,12 +2,19 @@ import { cookies } from "next/headers";
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
+import { isDemoMode } from "@/lib/config/demo-mode";
 import { signNewsOAuthState } from "@/lib/news/social/oauth-state";
 import { linkedinAuthUrl } from "@/lib/news/social/linkedin-adapter";
 import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 import { requirePermission } from "@/lib/rbac/middleware";
 
 export async function GET(request: NextRequest) {
+	if (isDemoMode()) {
+		return NextResponse.json(
+			{ error: "Social connect is disabled in demo mode" },
+			{ status: 403 },
+		);
+	}
 	const denied = await requirePermission(request, {
 		permission: PERMISSIONS.NEWS.FEEDS_MANAGE,
 	});

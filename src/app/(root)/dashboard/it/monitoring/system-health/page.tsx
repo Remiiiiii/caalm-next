@@ -20,81 +20,86 @@ export default function SystemHealthPage() {
 	useEffect(() => {
 		let cancelled = false;
 		(async () => {
+			const [dashboardRes, storageRes, itStorageRes] = await Promise.all([
+				fetch("/api/it/dashboard")
+					.then(async (dashboard) => {
+						if (dashboard.ok) {
+							const json = await dashboard.json();
+							return { ok: true as const, json, status: dashboard.status };
+						}
+						return { ok: false as const, json: null, status: dashboard.status };
+					})
+					.catch(() => ({ ok: false as const, json: null, status: 0 })),
+				fetch("/api/storage/usage")
+					.then((storage) => ({
+						ok: storage.ok,
+						status: storage.status,
+					}))
+					.catch(() => ({ ok: false, status: 0 })),
+				fetch("/api/it/storage-metrics")
+					.then(async (itStorage) => {
+						const body = itStorage.ok
+							? await itStorage.json().catch(() => null)
+							: null;
+						return { ok: itStorage.ok, body, status: itStorage.status };
+					})
+					.catch(() => ({ ok: false, body: null, status: 0 })),
+			]);
+
 			const results: HealthCheck[] = [];
 
-			try {
-				const dashboard = await fetch("/api/it/dashboard");
-				if (dashboard.ok) {
-					const json = await dashboard.json();
-					const data = json?.data;
-					if (typeof data?.notice === "string") {
-						setDashboardNotice(data.notice);
-					}
-					const services = data?.systemHealth?.services ?? [];
-					for (const service of services) {
-						results.push({
-							name: service.name,
-							ok: service.status === "up",
-							detail:
-								service.detail ||
-								(service.responseTime != null
-									? `${service.responseTime} ms`
-									: service.status),
-						});
-					}
-				} else {
+			if (dashboardRes.ok) {
+				const data = dashboardRes.json?.data;
+				if (typeof data?.notice === "string") {
+					setDashboardNotice(data.notice);
+				}
+				const services = data?.systemHealth?.services ?? [];
+				for (const service of services) {
 					results.push({
-						name: "IT dashboard API",
-						ok: false,
-						detail: `HTTP ${dashboard.status}`,
+						name: service.name,
+						ok: service.status === "up",
+						detail:
+							service.detail ||
+							(service.responseTime != null
+								? `${service.responseTime} ms`
+								: service.status),
 					});
 				}
-			} catch {
+			} else {
 				results.push({
 					name: "IT dashboard API",
 					ok: false,
-					detail: "Unreachable",
+					detail:
+						dashboardRes.status === 0
+							? "Unreachable"
+							: `HTTP ${dashboardRes.status}`,
 				});
 			}
 
-			try {
-				const storage = await fetch("/api/storage/usage");
-				results.push({
-					name: "Storage API (org files)",
-					ok: storage.ok,
-					detail: storage.ok ? "Responding" : `HTTP ${storage.status}`,
-				});
-			} catch {
-				results.push({
-					name: "Storage API (org files)",
-					ok: false,
-					detail: "Unreachable",
-				});
-			}
+			results.push({
+				name: "Storage API (org files)",
+				ok: storageRes.ok,
+				detail: storageRes.ok
+					? "Responding"
+					: storageRes.status === 0
+						? "Unreachable"
+						: `HTTP ${storageRes.status}`,
+			});
 
-			try {
-				const itStorage = await fetch("/api/it/storage-metrics");
-				const body = itStorage.ok
-					? await itStorage.json().catch(() => null)
-					: null;
-				const configured = body?.configured !== false && itStorage.ok;
-				results.push({
-					name: "IT storage disk scan",
-					ok: configured,
-					detail: configured
-						? "Local disk scan available"
-						: body?.notice ||
-							(itStorage.ok
-								? "Not configured on this host"
-								: `HTTP ${itStorage.status}`),
-				});
-			} catch {
-				results.push({
-					name: "IT storage disk scan",
-					ok: false,
-					detail: "Unreachable",
-				});
-			}
+			const configured =
+				itStorageRes.body?.configured !== false && itStorageRes.ok;
+			results.push({
+				name: "IT storage disk scan",
+				ok: configured,
+				detail: configured
+					? "Local disk scan available"
+					: itStorageRes.body?.notice ||
+						(itStorageRes.ok
+							? "Not configured on this host"
+							: itStorageRes.status === 0
+								? "Unreachable"
+								: `HTTP ${itStorageRes.status}`),
+			});
 
 			if (!cancelled) {
 				setChecks(results);

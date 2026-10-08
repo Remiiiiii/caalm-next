@@ -44,7 +44,10 @@ export async function exchangeLinkedInCode(code: string): Promise<{
 		body,
 	});
 	if (!response.ok) {
-		throw new Error(`LinkedIn token exchange failed (${response.status})`);
+		const detail = await response.text().catch(() => "");
+		throw new Error(
+			`LinkedIn token exchange failed (${response.status})${detail ? `: ${detail.slice(0, 200)}` : ""}`,
+		);
 	}
 	const json = (await response.json()) as {
 		access_token?: string;

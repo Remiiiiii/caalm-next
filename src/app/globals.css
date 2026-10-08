@@ -810,9 +810,9 @@
 		opacity: 0.7;
 	}
 
-	/* Cap is absolute, so the next sibling needs a gap under the 16px bar */
+	/* Cap is absolute (h-4); clear it tightly so titles sit closer under the bar */
 	.glass-card-cap + * {
-		margin-top: 1.25rem;
+		margin-top: 1rem;
 	}
 
 	.glass-card-inner {
