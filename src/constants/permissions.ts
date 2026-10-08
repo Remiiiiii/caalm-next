@@ -107,6 +107,9 @@ export const PERMISSIONS = {
 		UPDATE: "news.update",
 		DELETE: "news.delete",
 		PUBLISH: "news.publish",
+		APPROVE: "news.approve",
+		FEEDS_MANAGE: "news.feeds.manage",
+		ACK_MANAGE: "news.ack.manage",
 	},
 
 	// License Permissions
@@ -634,6 +637,24 @@ export const PERMISSION_DEFINITIONS = [
 		name: "Publish News Articles",
 		category: "news",
 		description: "Publish or unpublish news articles",
+	},
+	{
+		key: PERMISSIONS.NEWS.APPROVE,
+		name: "Approve News",
+		category: "news",
+		description: "Approve or reject imported news in the review queue",
+	},
+	{
+		key: PERMISSIONS.NEWS.FEEDS_MANAGE,
+		name: "Manage News Feeds",
+		category: "news",
+		description: "Connect and manage company news feeds and social sources",
+	},
+	{
+		key: PERMISSIONS.NEWS.ACK_MANAGE,
+		name: "Manage News Acknowledgments",
+		category: "news",
+		description: "View acknowledgment reports and export CSV for news articles",
 	},
 
 	// AI Image Generation

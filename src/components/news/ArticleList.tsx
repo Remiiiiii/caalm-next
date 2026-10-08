@@ -8,12 +8,12 @@ import {
 	Eye,
 	EyeOff,
 	Filter,
+	FunnelX,
 	Info,
 	Loader2,
 	Megaphone,
 	MoreVertical,
 	Newspaper,
-	Search,
 	Trash2,
 } from "lucide-react";
 import type React from "react";
@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { CardContent, Card as GlassCard } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
 	AppDropdownMenuContent,
@@ -37,8 +38,8 @@ import {
 	DropdownMenu,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
 import { PageIndex } from "@/components/ui/page-index";
+import { SearchField } from "@/components/ui/search-field";
 import {
 	Select,
 	SelectContent,
@@ -56,6 +57,12 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { useNewsArticles } from "@/hooks/useNewsArticles";
+import {
+	DATA_TABLE_BODY_ROW_BASE,
+	DATA_TABLE_HEADER_CELL,
+	DATA_TABLE_HEADER_ROW,
+} from "@/lib/ui/data-table-styles";
+import { cn } from "@/lib/utils";
 
 interface NewsArticle {
 	id: string;
@@ -298,19 +305,19 @@ const ArticleList: React.FC<ArticleListProps> = ({ onEdit, onRefresh }) => {
 		switch (statusValue) {
 			case "published":
 				return (
-					<Badge className="bg-green-100 text-green-800 border-green-200">
+					<Badge className="flex items-center justify-center bg-green-100 text-green-800 border-green-200">
 						Published
 					</Badge>
 				);
 			case "draft":
 				return (
-					<Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
+					<Badge className="flex items-center justify-center bg-yellow-100 text-yellow-800 border-yellow-200">
 						Draft
 					</Badge>
 				);
 			default:
 				return (
-					<Badge className="bg-slate-100 text-slate-800 border-slate-200">
+					<Badge className="flex items-center justify-center bg-slate-100 text-slate-800 border-slate-200">
 						{statusValue}
 					</Badge>
 				);
@@ -346,266 +353,313 @@ const ArticleList: React.FC<ArticleListProps> = ({ onEdit, onRefresh }) => {
 	};
 
 	return (
-		<div className="space-y-4">
-			{/* Filters */}
-			<div className="flex flex-col sm:flex-row gap-4">
-				<div className="flex-1">
-					<div className="relative">
-						<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-						<Input
-							placeholder="Search articles..."
-							value={searchQuery}
-							onChange={(e) => {
-								setSearchQuery(e.target.value);
+		<>
+			<GlassCard className="glass-card mb-6">
+				<div className="glass-card-cap" />
+				<CardContent className="p-0">
+					{/* Filters — same strip layout as contracts/licenses control bars */}
+					<div className="flex flex-col sm:flex-row gap-3 pt-4 pb-3 px-4 sm:px-6">
+						<div className="flex-1">
+							<SearchField
+								placeholder="Search articles..."
+								value={searchQuery}
+								onChange={(e) => {
+									setSearchQuery(e.target.value);
+									setCurrentPage(1);
+								}}
+							/>
+						</div>
+
+						<Select
+							value={typeFilter}
+							onValueChange={(value) => {
+								setTypeFilter(value);
 								setCurrentPage(1);
 							}}
-							className="pl-10"
-						/>
-					</div>
-				</div>
-
-				<Select
-					value={typeFilter}
-					onValueChange={(value) => {
-						setTypeFilter(value);
-						setCurrentPage(1);
-					}}
-				>
-					<SelectTrigger className="w-full sm:w-[180px]">
-						<SelectValue placeholder="Type" />
-					</SelectTrigger>
-					<SelectContent>
-						<SelectItem value="all">All Types</SelectItem>
-						<SelectItem value="announcement">Announcement</SelectItem>
-						<SelectItem value="update">Update</SelectItem>
-						<SelectItem value="alert">Alert</SelectItem>
-						<SelectItem value="info">Info</SelectItem>
-					</SelectContent>
-				</Select>
-
-				<Select
-					value={statusFilter}
-					onValueChange={(value) => {
-						setStatusFilter(value);
-						setCurrentPage(1);
-					}}
-				>
-					<SelectTrigger className="w-full sm:w-[180px]">
-						<SelectValue placeholder="Status" />
-					</SelectTrigger>
-					<SelectContent>
-						<SelectItem value="all">All Status</SelectItem>
-						<SelectItem value="published">Published</SelectItem>
-						<SelectItem value="draft">Draft</SelectItem>
-						<SelectItem value="archived">Archived</SelectItem>
-					</SelectContent>
-				</Select>
-
-				<Select
-					value={priorityFilter}
-					onValueChange={(value) => {
-						setPriorityFilter(value);
-						setCurrentPage(1);
-					}}
-				>
-					<SelectTrigger className="w-full sm:w-[180px]">
-						<SelectValue placeholder="Priority" />
-					</SelectTrigger>
-					<SelectContent>
-						<SelectItem value="all">All Priorities</SelectItem>
-						<SelectItem value="high">High</SelectItem>
-						<SelectItem value="medium">Medium</SelectItem>
-						<SelectItem value="low">Low</SelectItem>
-					</SelectContent>
-				</Select>
-
-				<Button
-					variant="outline"
-					onClick={clearFilters}
-					className="w-full sm:w-auto"
-				>
-					<Filter className="mr-2 h-4 w-4" />
-					Clear
-				</Button>
-			</div>
-
-			{/* Bulk Actions Toolbar */}
-			{selectedArticles.size > 0 && (
-				<div className="flex items-center justify-between p-3 bg-blue/10 border border-blue/20 rounded-lg">
-					<span className="text-sm text-slate-700">
-						{selectedArticles.size} article
-						{selectedArticles.size !== 1 ? "s" : ""} selected
-					</span>
-					<div className="flex gap-2">
-						<Button
-							variant="outline"
-							size="sm"
-							onClick={() => handleBulkPublish(true)}
 						>
-							<Eye className="mr-2 h-4 w-4" />
-							Publish
-						</Button>
-						<Button
-							variant="outline"
-							size="sm"
-							onClick={() => handleBulkPublish(false)}
+							<SelectTrigger className="w-full sm:w-[180px] border-[0.25px] border-slate-300">
+								<SelectValue placeholder="Type" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="all">All Types</SelectItem>
+								<SelectItem value="announcement">Announcement</SelectItem>
+								<SelectItem value="update">Update</SelectItem>
+								<SelectItem value="alert">Alert</SelectItem>
+								<SelectItem value="info">Info</SelectItem>
+							</SelectContent>
+						</Select>
+
+						<Select
+							value={statusFilter}
+							onValueChange={(value) => {
+								setStatusFilter(value);
+								setCurrentPage(1);
+							}}
 						>
-							<EyeOff className="mr-2 h-4 w-4" />
-							Unpublish
-						</Button>
-						<Button variant="outline" size="sm" onClick={handleBulkDelete}>
-							<Trash2 className="mr-2 h-4 w-4" />
-							Delete
+							<SelectTrigger className="w-full sm:w-[180px] border-[0.25px] border-slate-300">
+								<SelectValue placeholder="Status" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="all">All Status</SelectItem>
+								<SelectItem value="published">Published</SelectItem>
+								<SelectItem value="draft">Draft</SelectItem>
+								<SelectItem value="archived">Archived</SelectItem>
+							</SelectContent>
+						</Select>
+
+						<Select
+							value={priorityFilter}
+							onValueChange={(value) => {
+								setPriorityFilter(value);
+								setCurrentPage(1);
+							}}
+						>
+							<SelectTrigger className="w-full sm:w-[180px] border-[0.25px] border-slate-300">
+								<SelectValue placeholder="Priority" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="all">All Priorities</SelectItem>
+								<SelectItem value="high">High</SelectItem>
+								<SelectItem value="medium">Medium</SelectItem>
+								<SelectItem value="low">Low</SelectItem>
+							</SelectContent>
+						</Select>
+
+						<Button
+							onClick={clearFilters}
+							className="btn-primary px-3 sm:px-4 w-full sm:w-auto"
+						>
+							<FunnelX className="h-4 w-4" />
+							Clear
 						</Button>
 					</div>
-				</div>
-			)}
 
-			{/* Table */}
-			{loading ? (
-				<div className="flex items-center justify-center py-12">
-					<Loader2 className="h-8 w-8 animate-spin text-slate-400" />
-				</div>
-			) : articles.length === 0 ? (
-				<div className="text-center py-12">
-					<Newspaper className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-					<p className="text-slate-600">No articles found</p>
-					{searchQuery || typeFilter !== "all" || statusFilter !== "all" ? (
-						<Button variant="outline" onClick={clearFilters} className="mt-4">
-							Clear filters
-						</Button>
-					) : null}
-				</div>
-			) : (
-				<>
-					<div className="rounded-md border border-slate-200">
-						<Table>
-							<TableHeader>
-								<TableRow>
-									<TableHead className="w-12">
-										<Checkbox
-											checked={
-												selectedArticles.size === articles.length &&
-												articles.length > 0
-											}
-											onCheckedChange={handleSelectAll}
-										/>
-									</TableHead>
-									<TableHead>Title</TableHead>
-									<TableHead>Type</TableHead>
-									<TableHead>Status</TableHead>
-									<TableHead>Priority</TableHead>
-									<TableHead>Department</TableHead>
-									<TableHead>Author</TableHead>
-									<TableHead>Date</TableHead>
-									<TableHead>Views</TableHead>
-									<TableHead className="text-right">Actions</TableHead>
-								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{articles.map((article) => (
-									<TableRow key={article.id}>
-										<TableCell>
-											<Checkbox
-												checked={selectedArticles.has(article.id)}
-												onCheckedChange={(checked) =>
-													handleSelectArticle(article.id, checked as boolean)
-												}
-											/>
-										</TableCell>
-										<TableCell className="font-medium max-w-xs truncate">
-											{article.title}
-										</TableCell>
-										<TableCell>
-											<div className="flex items-center gap-2">
-												{getTypeIcon(article.type)}
-												<span className="capitalize">{article.type}</span>
-											</div>
-										</TableCell>
-										<TableCell>
-											<div className="flex flex-col gap-1">
-												{getStatusBadge(article.status)}
-												{article.scheduledAt &&
-													new Date(article.scheduledAt) > new Date() && (
-														<Badge className="bg-blue-100 text-blue-800 border-blue-200 text-xs">
-															Scheduled
-														</Badge>
-													)}
-											</div>
-										</TableCell>
-										<TableCell>{getPriorityBadge(article.priority)}</TableCell>
-										<TableCell>{article.department || "-"}</TableCell>
-										<TableCell>{article.author}</TableCell>
-										<TableCell>
-											{format(new Date(article.date), "MMM dd, yyyy")}
-										</TableCell>
-										<TableCell>{article.viewCount || 0}</TableCell>
-										<TableCell className="text-right">
-											<DropdownMenu>
-												<DropdownMenuTrigger asChild>
-													<Button
-														variant="ghost"
-														size="icon"
-														className="rounded-full transition-colors hover:bg-white/30"
-													>
-														<MoreVertical className="h-4 w-4" />
-													</Button>
-												</DropdownMenuTrigger>
-												<AppDropdownMenuContent align="end">
-													<AppDropdownMenuItem
-														icon={Edit}
-														onClick={() => onEdit?.(article.id)}
-													>
-														Edit
-													</AppDropdownMenuItem>
-													{article.status === "published" ? (
-														<AppDropdownMenuItem
-															icon={EyeOff}
-															onClick={() => handlePublish(article.id, false)}
-														>
-															Unpublish
-														</AppDropdownMenuItem>
-													) : (
-														<AppDropdownMenuItem
-															icon={Eye}
-															onClick={() => handlePublish(article.id, true)}
-														>
-															Publish
-														</AppDropdownMenuItem>
-													)}
-													<AppDropdownMenuItem
-														icon={Trash2}
-														tone="danger"
-														onClick={() => {
-															setArticleToDelete(article.id);
-															setDeleteDialogOpen(true);
-														}}
-													>
-														Delete
-													</AppDropdownMenuItem>
-												</AppDropdownMenuContent>
-											</DropdownMenu>
-										</TableCell>
-									</TableRow>
-								))}
-							</TableBody>
-						</Table>
-					</div>
+					{selectedArticles.size > 0 && (
+						<div className="mx-4 sm:mx-6 mb-3 flex items-center justify-between p-3 bg-blue/10 border border-blue/20 rounded-lg">
+							<span className="text-sm text-slate-700">
+								{selectedArticles.size} article
+								{selectedArticles.size !== 1 ? "s" : ""} selected
+							</span>
+							<div className="flex gap-2">
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={() => handleBulkPublish(true)}
+								>
+									<Eye className="mr-2 h-4 w-4" />
+									Publish
+								</Button>
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={() => handleBulkPublish(false)}
+								>
+									<EyeOff className="mr-2 h-4 w-4" />
+									Unpublish
+								</Button>
+								<Button variant="outline" size="sm" onClick={handleBulkDelete}>
+									<Trash2 className="mr-2 h-4 w-4" />
+									Delete
+								</Button>
+							</div>
+						</div>
+					)}
 
-					<PageIndex
-						page={currentPage}
-						totalItems={totalItems}
-						pageSize={itemsPerPage}
-						onPageChange={setCurrentPage}
-						hideWhenSinglePage
-						showRange
-						itemLabel="articles"
-						aria-label="Article list pagination"
-					/>
-				</>
-			)}
+					{loading ? (
+						<div className="flex items-center justify-center py-12">
+							<Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+						</div>
+					) : articles.length === 0 ? (
+						<div className="flex flex-col items-center justify-center text-center py-12 px-4">
+							<Newspaper className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+							<p className="body-1 text-slate-700">No articles found</p>
+							{searchQuery ||
+							typeFilter !== "all" ||
+							statusFilter !== "all" ||
+							priorityFilter !== "all" ? (
+								<Button
+									onClick={clearFilters}
+									className="btn-primary px-3 sm:px-4 mt-4"
+								>
+									<Filter className="h-4 w-4" />
+									Clear filters
+								</Button>
+							) : null}
+						</div>
+					) : (
+						<>
+							<div className="w-full overflow-x-auto px-2 sm:px-4 pb-4">
+								<Table className="border-separate border-spacing-0">
+									<TableHeader className="[&_tr]:border-b-0">
+										<TableRow className={DATA_TABLE_HEADER_ROW}>
+											<TableHead
+												className={`${DATA_TABLE_HEADER_CELL} pl-4 pr-2 w-10`}
+											>
+												<Checkbox
+													checked={
+														selectedArticles.size === articles.length &&
+														articles.length > 0
+													}
+													onCheckedChange={handleSelectAll}
+												/>
+											</TableHead>
+											<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+												Title
+											</TableHead>
+											<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+												Type
+											</TableHead>
+											<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+												Status
+											</TableHead>
+											<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+												Priority
+											</TableHead>
+											<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+												Department
+											</TableHead>
+											<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+												Author
+											</TableHead>
+											<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+												Date
+											</TableHead>
+											<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+												Views
+											</TableHead>
+											<TableHead
+												className={`${DATA_TABLE_HEADER_CELL} pl-3 pr-4 text-right`}
+											>
+												Actions
+											</TableHead>
+										</TableRow>
+									</TableHeader>
+									<TableBody className="[&_tr:last-child>td]:border-b-0">
+										{articles.map((article) => (
+											<TableRow
+												key={article.id}
+												className={cn(DATA_TABLE_BODY_ROW_BASE)}
+											>
+												<TableCell className="py-4 pl-4 pr-2">
+													<Checkbox
+														checked={selectedArticles.has(article.id)}
+														onCheckedChange={(checked) =>
+															handleSelectArticle(
+																article.id,
+																checked as boolean,
+															)
+														}
+													/>
+												</TableCell>
+												<TableCell className="py-4 font-medium max-w-xs truncate text-slate-700">
+													{article.title}
+												</TableCell>
+												<TableCell className="py-4">
+													<div className="flex items-center gap-2">
+														{getTypeIcon(article.type)}
+														<span className="capitalize text-slate-700">
+															{article.type}
+														</span>
+													</div>
+												</TableCell>
+												<TableCell className="py-4">
+													<div className="flex flex-col gap-1">
+														{getStatusBadge(article.status)}
+														{article.scheduledAt &&
+															new Date(article.scheduledAt) > new Date() && (
+																<span className="inline-block px-2 py-0.5 text-xs rounded-full font-medium border bg-blue/10 text-blue border-blue/20">
+																	Scheduled
+																</span>
+															)}
+													</div>
+												</TableCell>
+												<TableCell className="py-4">
+													{getPriorityBadge(article.priority)}
+												</TableCell>
+												<TableCell className="py-4 text-slate-700">
+													{article.department || "-"}
+												</TableCell>
+												<TableCell className="py-4 text-slate-700">
+													{article.author}
+												</TableCell>
+												<TableCell className="py-4 text-slate-700">
+													{format(new Date(article.date), "MMM dd, yyyy")}
+												</TableCell>
+												<TableCell className="py-4 text-slate-700">
+													{article.viewCount || 0}
+												</TableCell>
+												<TableCell className="py-4 pl-3 pr-4 text-right">
+													<DropdownMenu>
+														<DropdownMenuTrigger asChild>
+															<Button
+																variant="ghost"
+																size="icon"
+																className="rounded-full transition-colors hover:bg-white/30"
+															>
+																<MoreVertical className="h-4 w-4" />
+															</Button>
+														</DropdownMenuTrigger>
+														<AppDropdownMenuContent align="end">
+															<AppDropdownMenuItem
+																icon={Edit}
+																onClick={() => onEdit?.(article.id)}
+															>
+																Edit
+															</AppDropdownMenuItem>
+															{article.status === "published" ? (
+																<AppDropdownMenuItem
+																	icon={EyeOff}
+																	onClick={() =>
+																		handlePublish(article.id, false)
+																	}
+																>
+																	Unpublish
+																</AppDropdownMenuItem>
+															) : (
+																<AppDropdownMenuItem
+																	icon={Eye}
+																	onClick={() =>
+																		handlePublish(article.id, true)
+																	}
+																>
+																	Publish
+																</AppDropdownMenuItem>
+															)}
+															<AppDropdownMenuItem
+																icon={Trash2}
+																tone="danger"
+																onClick={() => {
+																	setArticleToDelete(article.id);
+																	setDeleteDialogOpen(true);
+																}}
+															>
+																Delete
+															</AppDropdownMenuItem>
+														</AppDropdownMenuContent>
+													</DropdownMenu>
+												</TableCell>
+											</TableRow>
+										))}
+									</TableBody>
+								</Table>
+							</div>
 
-			{/* Delete Confirmation Dialog */}
+							<PageIndex
+								className="mt-6"
+								page={currentPage}
+								totalItems={totalItems}
+								pageSize={itemsPerPage}
+								onPageChange={setCurrentPage}
+								hideWhenSinglePage
+								showRange
+								itemLabel="articles"
+								aria-label="Article list pagination"
+							/>
+						</>
+					)}
+				</CardContent>
+			</GlassCard>
+
 			<AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
 				<AlertDialogContent>
 					<AlertDialogHeader>
@@ -651,7 +705,7 @@ const ArticleList: React.FC<ArticleListProps> = ({ onEdit, onRefresh }) => {
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>
-		</div>
+		</>
 	);
 };
 

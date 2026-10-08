@@ -28,11 +28,12 @@ const fetcher = async (url: string): Promise<UnifiedAnalyticsDataResponse> => {
 	return response.json();
 };
 
-export const useUnifiedAnalyticsData = () => {
+export const useUnifiedAnalyticsData = (userId?: string | null) => {
 	const { user } = useAuth();
+	const effectiveUserId = userId || user?.$id;
 
 	const { data, error, isLoading, mutate } = useSWR(
-		user?.$id ? `/api/analytics/unified?userId=${user.$id}` : null,
+		effectiveUserId ? `/api/analytics/unified?userId=${effectiveUserId}` : null,
 		fetcher,
 		{
 			refreshInterval: 60000, // Refresh every minute

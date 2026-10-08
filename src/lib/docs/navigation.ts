@@ -134,7 +134,8 @@ export const DOCS_NAV: DocsNavGroup[] = [
 				title: "Content Creator",
 				slug: "guides/content-creator",
 				path: "guides/content-creator",
-				summary: "Publish company news people actually read.",
+				summary:
+					"Articles, review queue, connected feeds, and news analytics.",
 			},
 			{
 				title: "IT staff",
@@ -247,7 +248,8 @@ export const DOCS_NAV: DocsNavGroup[] = [
 				title: "Company news",
 				slug: "reference/company-news",
 				path: "reference/company-news",
-				summary: "Read the feed; author and publish articles.",
+				summary:
+					"Reader feed, acknowledgments, feeds, and the Content Creator workspace.",
 			},
 			{
 				title: "Notifications",

@@ -28,44 +28,44 @@ import useSWR from "swr";
 import CalendarView from "@/components/CalendarView";
 import CompanyNewsFeed from "@/components/CompanyNewsFeed";
 import ContractExpiryAlertsWidget from "@/components/ContractExpiryAlertsWidget";
-import type { Contract } from "@/components/contract-expiry-alerts/types";
 import ContractStatusPieChart from "@/components/ContractStatusPieChart";
+import type { Contract } from "@/components/contract-expiry-alerts/types";
 import DepartmentPerformanceWidget from "@/components/DepartmentPerformanceWidget";
 import { DashboardGreeting } from "@/components/dashboard/DashboardGreeting";
+import {
+	type RecentFileItem,
+	RecentFilesUploadedCard,
+} from "@/components/dashboard/RecentFilesList";
 import { RiskImpactHeroCard } from "@/components/dashboard/RiskImpactHeroCard";
 import { WeatherBriefingLauncher } from "@/components/dashboard-briefing/WeatherBriefingLauncher";
-import {
-	RecentFilesUploadedCard,
-	type RecentFileItem,
-} from "@/components/dashboard/RecentFilesList";
 import QuickNotesWidget from "@/components/QuickNotesWidget";
 import RecentActivity from "@/components/RecentActivity";
 import { OrgUnitPicker } from "@/components/settings/OrgUnitPicker";
 import Avatar from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-	SelectItem,
-	SelectScrollable,
-} from "@/components/ui/select-scrollable";
-import {
-	StatCardSkeleton,
-	TableRowSkeleton,
-} from "@/components/ui/skeletons";
+import { MailClock } from "@/components/ui/mail-clock-icon";
 import {
 	complianceMetricTone,
 	complianceNeedReviewCount,
 	MetricStatCard,
 } from "@/components/ui/metric-stat-card";
-import { MailClock } from "@/components/ui/mail-clock-icon";
+import {
+	SelectItem,
+	SelectScrollable,
+} from "@/components/ui/select-scrollable";
+import { StatCardSkeleton, TableRowSkeleton } from "@/components/ui/skeletons";
 import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import { WidgetCarousel } from "@/components/ui/widget-carousel";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useStepUp } from "@/contexts/StepUpContext";
 import { useToast } from "@/hooks/use-toast";
 import { useAdminStats } from "@/hooks/useAdminStats";
+import { useDashboardWidgetBundle } from "@/hooks/useDashboardWidgetBundle";
 import { useUnifiedDashboardData } from "@/hooks/useUnifiedDashboardData";
+import { useUpdateExpiredOnce } from "@/hooks/useUpdateExpiredOnce";
 import { cn } from "@/lib/utils";
+import type { UIFileDoc } from "@/types/files";
 import { resolveInviteDepartment } from "../../../../constants";
 
 const ClientDate = dynamic(() => import("@/components/ClientDate"), {
@@ -133,6 +133,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 		invitations,
 		contracts,
 		riskImpact,
+		recentActivities,
 		isLoading: unifiedLoading,
 		error: unifiedError,
 		refresh: refreshUnified,
@@ -151,6 +152,13 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 		},
 	);
 	const uninvitedUsers = uninvitedRes?.data ?? [];
+	useUpdateExpiredOnce();
+	const { bundle, isLoading: bundleLoading } = useDashboardWidgetBundle({
+		enabled: true,
+		newsLimit: 5,
+		userId: user?.$id ?? user?.accountId ?? null,
+	});
+	const carouselReady = !unifiedLoading && !bundleLoading;
 	const adminComplianceTone = complianceMetricTone(unifiedStats.complianceRate);
 	const adminNeedReview = complianceNeedReviewCount(
 		unifiedStats.totalContracts,
@@ -539,16 +547,38 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 				<div className="glass-card-cap" />
 				<CardContent className="p-3 sm:p-4 lg:p-6">
 					<WidgetCarousel ariaLabel="Admin dashboard widgets">
-						<ContractExpiryAlertsWidget
-							maxVisible={2}
-							showSettings={false}
-							compact={true}
-							contracts={unifiedLoading ? undefined : (contracts as Contract[])}
-						/>
-						<ContractStatusPieChart />
-						<DepartmentPerformanceWidget />
-						<CompanyNewsFeed />
-						{user && <QuickNotesWidget user={user as any} />}
+						{carouselReady ? (
+							<>
+								<ContractExpiryAlertsWidget
+									maxVisible={2}
+									showSettings={false}
+									compact={true}
+									contracts={(contracts as Contract[]) || []}
+									syncExpiredOnMount={false}
+								/>
+								<ContractStatusPieChart
+									contracts={contracts as UIFileDoc[] | undefined}
+								/>
+								<DepartmentPerformanceWidget
+									data={bundle?.performance ?? null}
+								/>
+								<CompanyNewsFeed
+									items={bundle?.newsItems}
+									total={bundle?.newsTotal}
+									viewer={bundle?.newsViewer}
+								/>
+								{user ? (
+									<QuickNotesWidget
+										user={user as any}
+										initialNotes={bundle?.notes}
+									/>
+								) : null}
+							</>
+						) : (
+							Array.from({ length: 5 }, (_, index) => (
+								<StatCardSkeleton key={`widget-skel-${index}`} />
+							))
+						)}
 					</WidgetCarousel>
 				</CardContent>
 			</Card>
@@ -584,7 +614,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 						<MetricStatCard
 							title="Active Users"
 							value={unifiedStats.activeUsers}
-							description="Active accounts in this org"
+							description="Active accounts in this organization"
 							icon={Users}
 						/>
 						<MetricStatCard
@@ -891,7 +921,10 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 					/>
 
 					{/* Recent Activity */}
-					<RecentActivity />
+					<RecentActivity
+						activities={recentActivities as never}
+						parentLoading={unifiedLoading}
+					/>
 				</div>
 			</div>
 

@@ -58,6 +58,8 @@ const ACTIVITY_TYPE_OPTIONS: DashboardCardFilterOption<ActivityType>[] = [
 interface RecentActivityProps {
 	limit?: number;
 	className?: string;
+	activities?: RecentActivity[];
+	parentLoading?: boolean;
 }
 
 function getActivityDisplayText(activity: RecentActivity) {
@@ -80,16 +82,22 @@ function getActivityDisplayText(activity: RecentActivity) {
 const RecentActivity: FC<RecentActivityProps> = ({
 	limit = ACTIVITY_PAGE_SIZE,
 	className,
+	activities: propActivities,
+	parentLoading = false,
 }) => {
 	const { orgId } = useOrganization();
-	const { recentActivities, isLoading } = useUnifiedDashboardData(
-		orgId || "default_organization",
-	);
+	const skipUnified = propActivities !== undefined;
+	const { recentActivities, isLoading: unifiedLoading } =
+		useUnifiedDashboardData(orgId || "default_organization", null, {
+			enabled: !skipUnified,
+		});
+	const isLoading = parentLoading || (!skipUnified && unifiedLoading);
 
 	const [typeFilter, setTypeFilter] = useState<ActivityType | "all">("all");
 
-	const activities: RecentActivity[] = (recentActivities ||
-		[]) as RecentActivity[];
+	const activities: RecentActivity[] = (skipUnified
+		? propActivities
+		: recentActivities || []) as RecentActivity[];
 	const feedItems = useMemo(() => {
 		const scoped =
 			typeFilter === "all"

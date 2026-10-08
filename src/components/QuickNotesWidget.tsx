@@ -18,6 +18,7 @@ import {
 	Plus,
 	Save,
 	StickyNote,
+	StickyNotePlus,
 	Strikethrough,
 	Trash2,
 	Underline,
@@ -67,6 +68,7 @@ interface QuickNotesWidgetProps {
 		name?: string;
 		[key: string]: any;
 	} | null;
+	initialNotes?: Note[];
 }
 
 // Tiptap editor configuration
@@ -179,6 +181,7 @@ const EditorToolbar = ({ editor }: { editor: any }) => {
 const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 	userId,
 	user,
+	initialNotes,
 }) => {
 	const { toast } = useToast();
 	const {
@@ -192,6 +195,8 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 		userId: userId || user?.$id || "default",
 		enableRealTime: true,
 		pollingInterval: 30000,
+		initialNotes,
+		skipInitialFetch: initialNotes !== undefined,
 	});
 
 	const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -373,9 +378,9 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 
 	if (loading) {
 		return (
-			<Card className="w-full h-[200px] sm:h-[250px] lg:h-[290px] glass-card overflow-hidden">
+			<Card className="w-full h-[200px] sm:h-[250px] lg:h-[300px] glass-card overflow-hidden">
 				<div className="glass-card-cap" />
-				<CardHeader className="pb-3 pt-6 px-4">
+				<CardHeader className="pb-3 pt-2 px-4">
 					<div className="flex items-center gap-2">
 						<StickyNote className="h-4 w-4 text-slate-600" />
 						<CardTitle className="text-sm font-semibold sidebar-gradient-text">
@@ -395,9 +400,9 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 
 	if (error) {
 		return (
-			<Card className="w-full h-[200px] sm:h-[250px] lg:h-[290px] glass-card overflow-hidden">
+			<Card className="w-full h-[200px] sm:h-[250px] lg:h-[300px] glass-card overflow-hidden">
 				<div className="glass-card-cap" />
-				<CardHeader className="pb-3 pt-6 px-4">
+				<CardHeader className="pb-3 pt-2 px-4">
 					<div className="flex items-center gap-2">
 						<AlertTriangle className="h-4 w-4 text-red" />
 						<CardTitle className="text-sm font-semibold sidebar-gradient-text">
@@ -420,7 +425,7 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 			<Card className="w-full h-[200px] sm:h-[250px] lg:h-[300px] glass-card overflow-hidden">
 				<div className="glass-card-cap" />
 				{/* Header */}
-				<CardHeader className="pb-1 pt-6 px-4">
+				<CardHeader className="pb-1 pt-2 px-4">
 					<div className="flex items-center justify-between">
 						<div className="flex items-center gap-2">
 							<StickyNote className="h-4 w-4 text-slate-600" />
@@ -444,16 +449,9 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 						<div className="text-sm text-red text-center py-4">{error}</div>
 					) : notes.length === 0 ? (
 						<div className="text-center py-8">
-							<StickyNote className="h-8 w-8 text-slate-300 mx-auto mb-2" />
+							<StickyNotePlus className="h-8 w-8 text-slate-300 mx-auto mb-2" />
 							<p className="text-sm text-slate-500 mb-3">No notes yet</p>
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={() => setIsCreateDialogOpen(true)}
-								className="text-xs"
-							>
-								Create your first note
-							</Button>
+							<p className="text-xs text-slate-500">Create your first note</p>
 						</div>
 					) : (
 						<div className="space-y-2 max-h-[220px] overflow-y-auto scrollbar-hide">

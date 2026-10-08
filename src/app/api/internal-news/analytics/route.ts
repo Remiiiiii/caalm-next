@@ -2,31 +2,21 @@ import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
 import { listNewsArticles } from "@/lib/database/news-articles";
-import {
-	getUserDefaultOrganization,
-	getUserPermissions,
-} from "@/lib/rbac/permissions";
+import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
+import { requirePermission } from "@/lib/rbac/middleware";
 
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
+	const denied = await requirePermission(request, {
+		permission: PERMISSIONS.NEWS.READ,
+	});
+	if (denied) return denied;
+
 	try {
-		// Check authentication
 		const user = await getCurrentUser();
 		if (!user) {
 			return NextResponse.json(
 				{ success: false, error: "Unauthorized" },
 				{ status: 401 },
-			);
-		}
-
-		// Check permissions
-		const userPermissions = await getUserPermissions(user.$id);
-		if (!userPermissions.includes(PERMISSIONS.NEWS.READ)) {
-			return NextResponse.json(
-				{
-					success: false,
-					error: "Permission denied. You need news.read permission.",
-				},
-				{ status: 403 },
 			);
 		}
 
@@ -44,22 +34,68 @@ export async function GET(_request: NextRequest) {
 		// Calculate statistics
 		const now = new Date();
 		const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+		const startOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 		const startOfWeek = new Date(now);
 		startOfWeek.setDate(now.getDate() - 7);
 
+		const TYPE_LABELS: Record<string, string> = {
+			announcement: "Announcement",
+			update: "Update",
+			alert: "Alert",
+			info: "Info",
+		};
+
 		// Total counts
 		const total = articles.length;
-		const published = articles.filter((a) => a.status === "published").length;
+		const publishedArticles = articles.filter((a) => a.status === "published");
+		const published = publishedArticles.length;
 		const drafts = articles.filter((a) => a.status === "draft").length;
 		const archived = articles.filter((a) => a.status === "archived").length;
+		const scheduled = articles.filter((a) => a.status === "scheduled").length;
+		const pendingReview = articles.filter(
+			(a) => a.status === "pending_review",
+		).length;
 
-		// Time-based counts
-		const thisMonth = articles.filter((a) => {
+		const categoryNameSet = new Set<string>();
+		for (const article of publishedArticles) {
+			if (article.tags?.length) {
+				for (const tag of article.tags) {
+					const trimmed = tag.trim();
+					if (trimmed) categoryNameSet.add(trimmed);
+				}
+			} else if (article.type) {
+				categoryNameSet.add(
+					TYPE_LABELS[article.type] ||
+						article.type.charAt(0).toUpperCase() + article.type.slice(1),
+				);
+			}
+		}
+		const categoryNames = [...categoryNameSet].sort((a, b) =>
+			a.localeCompare(b),
+		);
+		const categories = categoryNames.length;
+
+		// Time-based counts (published articles only — matches company-news KPIs)
+		const thisMonth = publishedArticles.filter((a) => {
 			const articleDate = new Date(a.publishedAt || a.$createdAt);
 			return articleDate >= startOfMonth;
 		}).length;
 
-		const thisWeek = articles.filter((a) => {
+		const previousMonth = publishedArticles.filter((a) => {
+			const articleDate = new Date(a.publishedAt || a.$createdAt);
+			return articleDate >= startOfPrevMonth && articleDate < startOfMonth;
+		}).length;
+
+		let lastPublishedAt: string | null = null;
+		for (const article of publishedArticles) {
+			const raw = article.publishedAt || article.$createdAt;
+			if (!raw) continue;
+			if (!lastPublishedAt || new Date(raw) > new Date(lastPublishedAt)) {
+				lastPublishedAt = raw;
+			}
+		}
+
+		const thisWeek = publishedArticles.filter((a) => {
 			const articleDate = new Date(a.publishedAt || a.$createdAt);
 			return articleDate >= startOfWeek;
 		}).length;
@@ -129,7 +165,13 @@ export async function GET(_request: NextRequest) {
 					published,
 					drafts,
 					archived,
+					scheduled,
+					pendingReview,
+					categories,
+					categoryNames,
 					thisMonth,
+					previousMonth,
+					lastPublishedAt,
 					thisWeek,
 				},
 				byType,

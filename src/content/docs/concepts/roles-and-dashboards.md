@@ -14,7 +14,7 @@ Your **home dashboard** is CAALM’s answer to “what should I look at first to
 | Super Admin | `/dashboard/superadmin` | Platform oversight + org-wide risk (keep membership tiny) |
 | IT | `/dashboard/it` | Platform operations (separate IT sidebar) |
 | Organization Admin | `/dashboard/organizationadmin` | Company ops: invites, users, settings, operational widgets |
-| Content Creator | `/dashboard/content-creator` | News stats, articles, publishing |
+| Content Creator | `/dashboard/content-creator` | News stats, articles, review queue, connected sources, analytics |
 | Department Manager | `/dashboard/departmentmanager` | Division-scoped action queue + compliance |
 | Viewer | `/dashboard/viewer` | Read-oriented executive-style visibility |
 

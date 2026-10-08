@@ -2,66 +2,111 @@
 
 import { BarChart3, Target, TrendingUp, Users } from "lucide-react";
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useCallback } from "react";
+import useSWR from "swr";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useRealtime } from "@/hooks/useRealtime";
+import { appwriteConfig } from "@/lib/appwrite/config";
+import type {
+	DepartmentPerformanceMetrics,
+	PerformanceTrend,
+} from "@/lib/dashboard/department-performance";
+
+interface PerformanceApiPayload extends DepartmentPerformanceMetrics {
+	available: boolean;
+	generatedAt: string;
+}
+
+interface PerformanceApiResponse {
+	success: boolean;
+	data?: PerformanceApiPayload;
+	error?: string;
+}
 
 interface DepartmentPerformanceWidgetProps {
+	/** Optional override; live fetch is skipped when provided (including null = loaded, unavailable). */
 	data?: {
 		averageProductivity: number;
 		meetingTargetCount: number;
 		totalStaffCount: number;
-		trend: "up" | "down" | "stable";
-	};
+		trend: PerformanceTrend;
+	} | null;
 }
+
+const fetcher = async (url: string): Promise<PerformanceApiPayload> => {
+	const response = await fetch(url);
+	const json = (await response.json()) as PerformanceApiResponse;
+	if (!response.ok || !json.success || !json.data?.available) {
+		throw new Error(json.error || "Department performance unavailable");
+	}
+	return json.data;
+};
 
 const DepartmentPerformanceWidget: React.FC<
 	DepartmentPerformanceWidgetProps
 > = ({ data: propData }) => {
-	const [performanceData, setPerformanceData] = useState({
-		averageProductivity: 89,
-		meetingTargetCount: 4,
-		totalStaffCount: 94,
-		trend: "up" as "up" | "down" | "stable",
+	const useLiveFetch = propData === undefined;
+
+	const { data, error, isLoading, mutate } = useSWR<PerformanceApiPayload>(
+		useLiveFetch ? "/api/analytics/departments/performance" : null,
+		fetcher,
+		{
+			refreshInterval: 30_000,
+			revalidateOnFocus: true,
+			revalidateOnReconnect: true,
+			dedupingInterval: 10_000,
+			errorRetryCount: 2,
+			errorRetryInterval: 5_000,
+			keepPreviousData: true,
+		},
+	);
+
+	const onRealtimeUpdate = useCallback(() => {
+		void mutate();
+	}, [mutate]);
+
+	const contractsRealtime = useRealtime({
+		collectionId: appwriteConfig.contractsCollectionId,
+		enabled: useLiveFetch,
+		onUpdate: onRealtimeUpdate,
 	});
-	const [loading, setLoading] = useState(true);
-	const [error, setError] = useState<string | null>(null);
 
-	useEffect(() => {
-		const fetchPerformanceData = async () => {
-			try {
-				setLoading(true);
+	const usersRealtime = useRealtime({
+		collectionId: appwriteConfig.usersCollectionId,
+		enabled: useLiveFetch,
+		onUpdate: onRealtimeUpdate,
+	});
 
-				// In production, this would fetch from your API
-				// const response = await fetch('/api/departments/performance');
-				// const data = await response.json();
-
-				// For now, use prop data or default values
-				if (propData) {
-					setPerformanceData(propData);
+	const performanceData = propData ??
+		(data
+			? {
+					averageProductivity: data.averageProductivity,
+					meetingTargetCount: data.meetingTargetCount,
+					totalStaffCount: data.totalStaffCount,
+					trend: data.trend,
 				}
-				setError(null);
-			} catch (err) {
-				setError(
-					err instanceof Error
-						? err.message
-						: "Failed to load performance data",
-				);
-			} finally {
-				setLoading(false);
-			}
-		};
+			: null);
 
-		fetchPerformanceData();
-	}, [propData]);
+	const analyticsUnavailable = useLiveFetch && Boolean(error);
+	const realtimeFailed =
+		useLiveFetch &&
+		(contractsRealtime.connectionStatus === "error" ||
+			usersRealtime.connectionStatus === "error" ||
+			Boolean(contractsRealtime.error) ||
+			Boolean(usersRealtime.error));
+
+	const isLive =
+		Boolean(propData) ||
+		(Boolean(performanceData) && !analyticsUnavailable && !realtimeFailed);
 
 	const getTrendIcon = (trend: string) => {
 		switch (trend) {
 			case "up":
-				return <TrendingUp className="h-4 w-4 text-green-600" />;
+				return <TrendingUp className="h-4 w-4 text-green" />;
 			case "down":
-				return <TrendingUp className="h-4 w-4 text-red-600 rotate-180" />;
+				return <TrendingUp className="h-4 w-4 text-red rotate-180" />;
 			case "stable":
-				return <BarChart3 className="h-4 w-4 text-blue-600" />;
+				return <BarChart3 className="h-4 w-4 text-blue" />;
 			default:
 				return <TrendingUp className="h-4 w-4 text-slate-600" />;
 		}
@@ -70,20 +115,21 @@ const DepartmentPerformanceWidget: React.FC<
 	const getTrendColor = (trend: string) => {
 		switch (trend) {
 			case "up":
-				return "text-green-600";
+				return "text-green";
 			case "down":
-				return "text-red-600";
+				return "text-red";
 			case "stable":
-				return "text-blue-600";
+				return "text-blue";
 			default:
 				return "text-slate-600";
 		}
 	};
 
-	if (loading) {
+	if (useLiveFetch && isLoading && !performanceData) {
 		return (
-			<Card className="w-full h-auto min-h-[200px] sm:min-h-[250px] lg:min-h-[290px] bg-gradient-to-br from-white/40 to-white/20 backdrop-blur-md border border-white/30 shadow-xl overflow-hidden">
-				<CardHeader className="pb-3 pt-6 px-4">
+			<Card className="w-full h-[200px] sm:h-[250px] lg:h-[300px] glass-card overflow-hidden">
+				<div className="glass-card-cap" />
+				<CardHeader className="pb-3 pt-2 px-4">
 					<CardTitle className="text-sm font-semibold sidebar-gradient-text">
 						Department Performance
 					</CardTitle>
@@ -91,7 +137,7 @@ const DepartmentPerformanceWidget: React.FC<
 				<CardContent className="px-4 pb-4">
 					<div className="flex items-center justify-center h-32">
 						<div className="flex flex-col items-center gap-3">
-							<div className="animate-spin rounded-full h-6 w-6 border-2 border-slate-300 border-t-slate-600"></div>
+							<div className="animate-spin rounded-full h-6 w-6 border-2 border-slate-300 border-t-slate-600" />
 							<p className="text-xs text-slate-500 font-medium">
 								Loading metrics...
 							</p>
@@ -102,24 +148,36 @@ const DepartmentPerformanceWidget: React.FC<
 		);
 	}
 
-	if (error) {
+	if (!performanceData || analyticsUnavailable) {
 		return (
-			<Card className="w-full h-auto min-h-[200px] sm:min-h-[250px] lg:min-h-[290px] bg-gradient-to-br from-white/40 to-white/20 backdrop-blur-md border border-white/30 shadow-xl overflow-hidden">
-				<CardHeader className="pb-3 pt-6 px-4">
-					<CardTitle className="text-sm font-semibold sidebar-gradient-text">
-						Department Performance
-					</CardTitle>
+			<Card className="w-full h-[200px] sm:h-[250px] lg:h-[300px] glass-card overflow-hidden">
+				<div className="glass-card-cap" />
+				<CardHeader className="pb-3 pt-2 px-4">
+					<div className="flex items-center gap-2">
+						<TrendingUp className="h-4 w-4 text-slate-600" />
+						<CardTitle className="text-sm font-semibold sidebar-gradient-text">
+							Department Performance
+						</CardTitle>
+					</div>
 				</CardHeader>
 				<CardContent className="px-4 pb-4">
 					<div className="flex flex-col items-center justify-center h-32 gap-3">
-						<div className="w-10 h-10 bg-red-50 rounded-full flex items-center justify-center">
-							<TrendingUp className="h-5 w-5 text-red-400" />
+						<div className="w-10 h-10 bg-red/10 rounded-full flex items-center justify-center">
+							<TrendingUp className="h-5 w-5 text-red" />
 						</div>
 						<div className="text-center">
 							<p className="text-sm font-medium text-slate-700">
 								Data Unavailable
 							</p>
-							<p className="text-xs text-slate-500">Check your connection</p>
+							<p className="text-xs text-slate-500">
+								Analytics or database is not available
+							</p>
+						</div>
+						<div className="flex items-center gap-2 bg-white/20 rounded-full px-4 py-1 backdrop-blur-sm border border-white/20">
+							<div className="w-2 h-2 rounded-full bg-red animate-pulse" />
+							<span className="text-xs text-slate-600 font-medium">
+								Performance Data Unavailable
+							</span>
 						</div>
 					</div>
 				</CardContent>
@@ -128,26 +186,29 @@ const DepartmentPerformanceWidget: React.FC<
 	}
 
 	return (
-		<Card className="w-full h-[200px] sm:h-[250px] lg:h-[300px] glass-card overflow-hidden">
+		<Card className="w-full h-[200px] sm:h-[250px] lg:h-[300px] glass-card hover:shadow-2xl transition-all duration-300 overflow-hidden flex flex-col">
 			<div className="glass-card-cap" />
-			{/* Header */}
-			<CardHeader className="pb-3 pt-6 px-4">
+			{/* Subtitle line matches License/Contract Status header height so live footers align */}
+			<CardHeader className="pb-3 pt-2 px-4 flex-shrink-0">
 				<div className="flex items-center gap-2">
 					<TrendingUp className="h-4 w-4 text-slate-600" />
 					<CardTitle className="text-sm font-semibold sidebar-gradient-text">
 						Department Performance
 					</CardTitle>
 				</div>
+				<div className="text-xs text-slate-500">
+					Org-wide{" "}
+					<span className="font-semibold text-slate-700">compliance</span>{" "}
+					metrics
+				</div>
 			</CardHeader>
 
-			<CardContent className="px-4 pb-2">
-				<div className="space-y-4">
-					{/* Main performance display */}
+			<CardContent className="px-4 pb-2 flex-1 flex flex-col min-h-0">
+				<div className="space-y-4 flex-1">
 					<div className="flex items-center justify-between">
 						<div className="flex items-center gap-4">
-							<div className="relative"></div>
 							<div>
-								<div className="text-3xl font-bold sidebar-gradient-text tracking-tight">
+								<div className="text-3xl font-bold sidebar-gradient-text tracking-tight tabular-nums">
 									{performanceData.averageProductivity}%
 								</div>
 								<div className="text-sm text-slate-600 capitalize font-medium">
@@ -156,8 +217,7 @@ const DepartmentPerformanceWidget: React.FC<
 							</div>
 						</div>
 
-						{/* Trend indicator with better styling */}
-						<div className="text-right bg-white/20 rounded-lg px-3 py-1 backdrop-blur-sm border border-white/20">
+						<div className="text-right bg-white/30 rounded-lg px-3 py-1 backdrop-blur-sm">
 							<div className="text-xs text-slate-500 font-medium">Trend</div>
 							<div className="flex items-center gap-1">
 								{getTrendIcon(performanceData.trend)}
@@ -175,50 +235,55 @@ const DepartmentPerformanceWidget: React.FC<
 							</div>
 						</div>
 					</div>
-					<div className="h-px bg-slate-300"></div>
-					{/* Performance metrics with improved design */}
+					<div className="h-px bg-slate-300" />
 					<div className="grid grid-cols-2 gap-2">
-						<div className="bg-white/20 rounded-xl p-3 backdrop-blur-sm border border-white/20">
-							<div className="flex items-center gap-3">
-								<div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-									<Target className="h-4 w-4 text-green-600" />
+						<div className="bg-white/20 rounded-xl p-2.5 sm:p-3 backdrop-blur-sm border border-white/20 min-w-0">
+							<div className="flex items-center gap-2 sm:gap-3 min-w-0">
+								<div className="w-8 h-8 shrink-0 bg-green/15 rounded-lg flex items-center justify-center">
+									<Target className="h-4 w-4 text-green" />
 								</div>
-								<div>
-									<div className="text-xs text-slate-500 font-medium">
+								<div className="min-w-0">
+									<div className="text-xs text-slate-500 font-medium whitespace-nowrap max-[300px]:whitespace-normal">
 										Meeting Target
 									</div>
-									<div className="text-sm font-bold text-slate-700">
+									<div className="text-sm font-bold text-slate-700 tabular-nums">
 										{performanceData.meetingTargetCount}
 									</div>
 								</div>
 							</div>
 						</div>
 
-						<div className="bg-white/20 rounded-xl p-3 backdrop-blur-sm border border-white/20">
-							<div className="flex items-center gap-3">
-								<div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-									<Users className="h-4 w-4 text-blue-600" />
+						<div className="bg-white/20 rounded-xl p-2.5 sm:p-3 backdrop-blur-sm border border-white/20 min-w-0">
+							<div className="flex items-center gap-2 sm:gap-3 min-w-0">
+								<div className="w-8 h-8 shrink-0 bg-blue/15 rounded-lg flex items-center justify-center">
+									<Users className="h-4 w-4 text-blue" />
 								</div>
-								<div>
-									<div className="text-xs text-slate-500 font-medium">
+								<div className="min-w-0">
+									<div className="text-xs text-slate-500 font-medium whitespace-nowrap">
 										Total Staff
 									</div>
-									<div className="text-sm font-bold text-slate-700">
+									<div className="text-sm font-bold text-slate-700 tabular-nums">
 										{performanceData.totalStaffCount}
 									</div>
 								</div>
 							</div>
 						</div>
 					</div>
-					{/* Performance status indicator */}
-					<div className="mt-3 border-t border-white/20">
-						<div className="flex items-center justify-center">
-							<div className="flex items-center gap-2 bg-white/20 rounded-full px-4 py-1 backdrop-blur-sm border border-white/20">
-								<div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
-								<span className="text-xs text-slate-600 font-medium">
-									Live Performance Data
-								</span>
-							</div>
+				</div>
+				{/* Same footer chrome as License Status so the live pill lines up across carousel cards */}
+				<div className="mt-3 border-t border-white/20 flex-shrink-0 -translate-y-0.5">
+					<div className="flex items-center justify-center">
+						<div className="flex items-center justify-center gap-2 bg-white/20 rounded-full px-4 py-1 backdrop-blur-sm border border-white/20 min-w-[140px]">
+							<div
+								className={`w-2 h-2 rounded-full animate-pulse ${
+									isLive ? "bg-green-400" : "bg-red"
+								}`}
+							/>
+							<span className="text-xs text-slate-600 font-medium whitespace-nowrap">
+								{isLive
+									? "Live Performance Data"
+									: "Performance Data Unavailable"}
+							</span>
 						</div>
 					</div>
 				</div>

@@ -7,6 +7,7 @@ import { createApiAdminClient } from "@/lib/appwrite/api-client";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { computeContractKpis } from "@/lib/dashboard/contract-kpis";
 import { computeRiskImpact } from "@/lib/dashboard/risk-impact.service";
+import { getDashboardUserComposition } from "@/lib/dashboard/user-composition";
 import { CACHE_KEYS, CACHE_TTLS } from "@/lib/services/cache-keys";
 import CacheManager from "@/lib/services/cache-manager";
 
@@ -43,8 +44,8 @@ export async function GET(request: NextRequest) {
 		}
 
 		// Check cache first (include pagination in cache key)
-		// v16: risk-averted events after classifier extract
-		const cacheKey = `${CACHE_KEYS.dashboard.unified(orgId, userId)}:v16:page:${page}:limit:${limit}`;
+		// v19: metric card breakdowns (status / roles / month trend)
+		const cacheKey = `${CACHE_KEYS.dashboard.unified(orgId, userId)}:v19:page:${page}:limit:${limit}`;
 
 		// Try to get cached data first to check ETag
 		const existingCache = (await import("@/lib/services/redis-cache").then(
@@ -209,20 +210,23 @@ export async function GET(request: NextRequest) {
 				const recentActivities = getResult(recentActivitiesResult);
 				const calendarEvents = getResult(calendarEventsResult);
 
-				const [kpiContractsResult, activeUsers] = await Promise.all([
-					tablesDB.listRows({
-						databaseId: appwriteConfig.databaseId || "default-db",
-						tableId: appwriteConfig.contractsCollectionId || "contracts",
-						queries: [Query.limit(500)],
-					}),
-					getActiveUsersCount(),
-				]);
+				const [kpiContractsResult, activeUsers, userComposition] =
+					await Promise.all([
+						tablesDB.listRows({
+							databaseId: appwriteConfig.databaseId || "default-db",
+							tableId: appwriteConfig.contractsCollectionId || "contracts",
+							queries: [Query.limit(500)],
+						}),
+						getActiveUsersCount(),
+						getDashboardUserComposition(orgId),
+					]);
 				const kpiRows =
 					kpiContractsResult.rows || kpiContractsResult.documents || [];
 				const {
 					totalContracts,
 					expiringContracts,
 					complianceRate,
+					statusBreakdown,
 				} = computeContractKpis(
 					kpiRows,
 					kpiContractsResult.total ?? kpiRows.length,
@@ -233,10 +237,8 @@ export async function GET(request: NextRequest) {
 				now.setHours(0, 0, 0, 0);
 				const mappedDashboardContracts = kpiRows.map(
 					(contract: Record<string, unknown>) => {
-						let daysUntilExpiry: number | undefined =
-							typeof contract.daysUntilExpiry === "number"
-								? contract.daysUntilExpiry
-								: undefined;
+						// Always recompute from expiry date — stored daysUntilExpiry goes stale.
+						let daysUntilExpiry: number | undefined;
 						let contractStatus =
 							typeof contract.status === "string" ? contract.status : undefined;
 						let expiredByDate = false;
@@ -246,12 +248,10 @@ export async function GET(request: NextRequest) {
 							const [year, month, day] = expiryStr.split("-").map(Number);
 							const expiryDate = new Date(year, month - 1, day);
 							expiryDate.setHours(0, 0, 0, 0);
-							if (daysUntilExpiry === undefined) {
-								daysUntilExpiry = Math.floor(
-									(expiryDate.getTime() - now.getTime()) /
-										(1000 * 60 * 60 * 24),
-								);
-							}
+							daysUntilExpiry = Math.floor(
+								(expiryDate.getTime() - now.getTime()) /
+									(1000 * 60 * 60 * 24),
+							);
 							if (expiryDate < now) {
 								expiredByDate = true;
 								contractStatus = "expired";
@@ -338,6 +338,8 @@ export async function GET(request: NextRequest) {
 						expiringContracts,
 						activeUsers,
 						complianceRate: `${complianceRate}%`,
+						statusBreakdown,
+						userComposition,
 					},
 					files: files.documents,
 					invitations: invitations.documents.filter(

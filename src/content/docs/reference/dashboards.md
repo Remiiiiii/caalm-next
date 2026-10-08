@@ -15,6 +15,10 @@ Dashboards are CAALM’s morning briefing. They are not decorative charts.
 - Show news and operational context
 - Route you into the queue you own
 
+## Widget carousel (executive / admin shells)
+
+Many home dashboards show expiry, status charts, department performance, company news, and quick notes in a horizontal carousel. Those widgets load from a shared first-paint bundle so they appear together after a short skeleton, instead of popping in one by one. Open `/company-news` for the full feed; Content Creators publish from `/dashboard/content-creator`.
+
 ## By role
 
 See [Roles and home dashboards](/docs/concepts/roles-and-dashboards) for paths. In practice:
@@ -22,7 +26,7 @@ See [Roles and home dashboards](/docs/concepts/roles-and-dashboards) for paths. 
 - **Executive / Viewer shells** emphasize org risk and overview charts
 - **Org Admin** emphasizes operational administration
 - **Department Manager** emphasizes division action queues
-- **Content Creator** emphasizes publishing metrics
+- **Content Creator** emphasizes publishing metrics, review queue, connected sources, and analytics
 - **IT** emphasizes platform health
 
 ## How to read a widget like an operator

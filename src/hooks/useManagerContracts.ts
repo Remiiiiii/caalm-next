@@ -18,15 +18,16 @@ interface Contract {
 interface UseManagerContractsOptions {
 	enableRealTime?: boolean;
 	pollingInterval?: number;
+	enabled?: boolean;
 }
 
 export const useManagerContracts = ({
 	enableRealTime = true,
 	pollingInterval = 20000, // 20 seconds for contracts (less frequent)
+	enabled = true,
 }: UseManagerContractsOptions = {}) => {
-	// Get current user first
 	const { data: currentUserResponse } = useSWR(
-		swrKeys.currentUser(),
+		enabled ? swrKeys.currentUser() : null,
 		swrConfig.fetcher || null,
 		{
 			...swrConfig,
@@ -42,9 +43,10 @@ export const useManagerContracts = ({
 			: currentUserResponse?.user || currentUserResponse?.data;
 
 	// Use the global SWR key based on current user
-	const key = currentUser?.$id
-		? swrKeys.managerContracts(currentUser.$id)
-		: null;
+	const key =
+		enabled && currentUser?.$id
+			? swrKeys.managerContracts(currentUser.$id)
+			: null;
 
 	const {
 		data: contractsData = [],

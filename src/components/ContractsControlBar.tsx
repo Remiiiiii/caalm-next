@@ -29,13 +29,13 @@ export default function ContractsControlBar({
 			<div className="flex pt-4 pb-3 px-4 sm:px-6 gap-3 justify-between flex-wrap">
 				<ContractsTopControls files={files} />
 				<div className="platform-overview-actions flex items-center gap-2 justify-end flex-wrap">
+					<ContractsViewToggle />
 					<ContractsSavedViews />
 					<ContractsFilter
 						departments={departments}
 						assignedManagers={assignedManagers}
 					/>
 					<Sort />
-					<ContractsViewToggle />
 				</div>
 			</div>
 			<ContractsFilterChips />

@@ -37,6 +37,8 @@ export const CACHE_KEYS = {
 		contracts: (department: string) => `analytics:contracts:${department}`,
 		stats: (department: string) => `analytics:stats:${department}`,
 		performance: (department: string) => `analytics:performance:${department}`,
+		/** Org-level live department performance widget */
+		departmentsPerformance: () => `analytics:departments:performance`,
 		compliance: (department: string) => `analytics:compliance:${department}`,
 	},
 

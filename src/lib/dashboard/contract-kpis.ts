@@ -7,10 +7,19 @@ export interface ContractKpiRow {
 	isExpired?: unknown;
 }
 
+/** Simplified glance buckets for the dashboard status bar. */
+export interface ContractStatusBreakdown {
+	active: number;
+	/** Non-active, non-expired (pending, inactive, action-required, etc.). */
+	draft: number;
+	expired: number;
+}
+
 export interface ContractKpis {
 	totalContracts: number;
 	expiringContracts: number;
 	complianceRate: number;
+	statusBreakdown: ContractStatusBreakdown;
 }
 
 function expiryDay(raw: unknown): Date | null {
@@ -35,6 +44,10 @@ function asRow(raw: ContractKpiRow | Record<string, unknown>): ContractKpiRow {
 	};
 }
 
+function emptyBreakdown(): ContractStatusBreakdown {
+	return { active: 0, draft: 0, expired: 0 };
+}
+
 export function computeContractKpis(
 	rows: Array<ContractKpiRow | Record<string, unknown>>,
 	total: number,
@@ -46,6 +59,7 @@ export function computeContractKpis(
 
 	let expiringContracts = 0;
 	let compliantContracts = 0;
+	const statusBreakdown = emptyBreakdown();
 
 	for (const raw of rows) {
 		const row = asRow(raw);
@@ -54,7 +68,18 @@ export function computeContractKpis(
 		}
 
 		const status = String(row.status || "").toLowerCase();
-		if (status === "expired" || row.isExpired === true) continue;
+		const expired = status === "expired" || row.isExpired === true;
+
+		if (expired) {
+			statusBreakdown.expired += 1;
+		} else if (status === "active") {
+			statusBreakdown.active += 1;
+		} else {
+			// Everything else reads as "not live yet" on the glance bar
+			statusBreakdown.draft += 1;
+		}
+
+		if (expired) continue;
 
 		const day = expiryDay(row.contractExpiryDate);
 		if (!day) continue;
@@ -66,5 +91,6 @@ export function computeContractKpis(
 		expiringContracts,
 		complianceRate:
 			total > 0 ? Math.round((compliantContracts / total) * 100) : 0,
+		statusBreakdown,
 	};
 }

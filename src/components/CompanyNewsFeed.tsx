@@ -8,21 +8,27 @@ import {
 	FileText,
 	Filter,
 	Info,
+	LayoutGrid,
 	Megaphone,
+	MegaphoneOff,
+	MoveRight,
 	Newspaper,
-	Search,
+	RotateCcw,
+	TrendingDown,
 	TrendingUp,
 	User,
+	X,
 } from "lucide-react";
 import Link from "next/link";
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
+import { NewsAckBanner } from "@/components/news/NewsAckBanner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageIndex } from "@/components/ui/page-index";
+import { SearchField } from "@/components/ui/search-field";
 import {
 	Select,
 	SelectContent,
@@ -30,6 +36,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { StatCardIcon } from "@/components/ui/stat-card-icon";
 
 interface NewsItem {
 	id: string;
@@ -48,16 +55,32 @@ interface NewsResponse {
 	total: number;
 	limit: number;
 	offset: number;
+	viewer?: {
+		canCreate?: boolean;
+		canManageFeeds?: boolean;
+	};
 }
 
 interface CompanyNewsFeedProps {
 	limit?: number;
 	fullPage?: boolean;
+	/** Parent-supplied list; skip self-fetch in widget mode when defined. */
+	items?: NewsItem[];
+	total?: number;
+	viewer?: {
+		canCreate?: boolean;
+		canManageFeeds?: boolean;
+	};
+	parentLoading?: boolean;
 }
 
 const CompanyNewsFeed: React.FC<CompanyNewsFeedProps> = ({
 	limit = 5,
 	fullPage = false,
+	items: propItems,
+	total: propTotal,
+	viewer: propViewer,
+	parentLoading = false,
 }) => {
 	const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
 	const [loading, setLoading] = useState(true);
@@ -70,13 +93,23 @@ const CompanyNewsFeed: React.FC<CompanyNewsFeedProps> = ({
 	const [searchQuery, setSearchQuery] = useState("");
 	const [typeFilter, setTypeFilter] = useState("all");
 	const [departmentFilter, setDepartmentFilter] = useState("all");
+	const [viewer, setViewer] = useState<{
+		canCreate?: boolean;
+		canManageFeeds?: boolean;
+	}>({});
+	const [categoryCount, setCategoryCount] = useState(0);
+	const [categoryNames, setCategoryNames] = useState<string[]>([]);
+	const [monthCount, setMonthCount] = useState(0);
+	const [previousMonthCount, setPreviousMonthCount] = useState(0);
+	const [lastPublishedAt, setLastPublishedAt] = useState<string | null>(null);
+
+	const skipWidgetFetch = !fullPage && propItems !== undefined;
 
 	const fetchNewsItems = useCallback(async () => {
 		try {
 			setLoading(true);
 
 			if (fullPage) {
-				// Full page mode with pagination and filters
 				const offset = (currentPage - 1) * itemsPerPage;
 				const params = new URLSearchParams({
 					limit: itemsPerPage.toString(),
@@ -89,18 +122,34 @@ const CompanyNewsFeed: React.FC<CompanyNewsFeedProps> = ({
 				if (departmentFilter && departmentFilter !== "all")
 					params.append("department", departmentFilter);
 
-				const response = await fetch(`/api/internal-news?${params}`);
+				const listUrl = `/api/internal-news?${params}`;
+				const [listResponse, analyticsResponse] = await Promise.all([
+					fetch(listUrl),
+					fetch("/api/internal-news/analytics"),
+				]);
 
-				if (!response.ok) {
+				if (!listResponse.ok) {
 					throw new Error("Failed to fetch news items");
 				}
 
-				const data: NewsResponse = await response.json();
+				const data: NewsResponse = await listResponse.json();
 				setNewsItems(data.items);
 				setTotalItems(data.total);
+				setViewer(data.viewer || {});
+
+				if (analyticsResponse.ok) {
+					const payload = await analyticsResponse.json();
+					const overview = payload.analytics?.overview ?? {};
+					setCategoryCount(overview.categories ?? 0);
+					setCategoryNames(
+						Array.isArray(overview.categoryNames) ? overview.categoryNames : [],
+					);
+					setMonthCount(overview.thisMonth ?? 0);
+					setPreviousMonthCount(overview.previousMonth ?? 0);
+					setLastPublishedAt(overview.lastPublishedAt ?? null);
+				}
 			} else {
-				// Widget mode - simple fetch
-				const response = await fetch("/api/internal-news");
+				const response = await fetch(`/api/internal-news?limit=${limit}`);
 
 				if (!response.ok) {
 					throw new Error("Failed to fetch news items");
@@ -109,7 +158,8 @@ const CompanyNewsFeed: React.FC<CompanyNewsFeedProps> = ({
 				const data = await response.json();
 				const items = data.items || data;
 				setNewsItems(Array.isArray(items) ? items.slice(0, limit) : []);
-				setTotalItems(Array.isArray(items) ? items.length : 0);
+				setTotalItems(data.total ?? (Array.isArray(items) ? items.length : 0));
+				setViewer(data.viewer || {});
 			}
 
 			setError(null);
@@ -130,9 +180,19 @@ const CompanyNewsFeed: React.FC<CompanyNewsFeedProps> = ({
 	]);
 
 	useEffect(() => {
-		fetchNewsItems();
-	}, [fetchNewsItems]);
+		if (skipWidgetFetch) return;
+		void fetchNewsItems();
+	}, [fetchNewsItems, skipWidgetFetch]);
 
+	useEffect(() => {
+		if (propItems === undefined) return;
+		setNewsItems(propItems);
+		setTotalItems(propTotal ?? propItems.length);
+		if (propViewer) setViewer(propViewer);
+		setLoading(false);
+	}, [propItems, propTotal, propViewer]);
+
+	const isFeedLoading = parentLoading || loading;
 	const totalPages = Math.ceil(totalItems / itemsPerPage);
 
 	const handlePageChange = (page: number) => {
@@ -202,122 +262,186 @@ const CompanyNewsFeed: React.FC<CompanyNewsFeedProps> = ({
 		}
 	};
 
+	const monthStartLabel = format(
+		new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+		"MMM d",
+	);
+	const previousMonthLabel = format(
+		new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1),
+		"MMMM",
+	);
+	const lastPublishedLabel = lastPublishedAt
+		? format(new Date(lastPublishedAt), "MMM d, yyyy")
+		: "—";
+	const visibleCategoryNames = categoryNames.slice(0, 3);
+	const hiddenCategoryCount = Math.max(categoryNames.length - 3, 0);
+	const monthTrendDown = monthCount < previousMonthCount;
+	const monthTrendEqual = monthCount === previousMonthCount;
+	const monthTrendUp = monthCount > previousMonthCount;
+	const hasActiveFilters =
+		Boolean(searchQuery) || typeFilter !== "all" || departmentFilter !== "all";
+
 	// Full Page View
 	if (fullPage) {
 		return (
 			<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
-				{/* Professional Header */}
-				<div className="mb-8">
-					<div className="flex items-center gap-4 mb-2">
-						<div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-blue to-blue shadow-lg">
-							<Newspaper className="w-6 h-6 text-white" />
-						</div>
-						<div>
-							<h1 className="h1 sidebar-gradient-text">Company News</h1>
-							<p className="text-light-100">
-								Stay informed with the latest company announcements and updates
-							</p>
-						</div>
+				<NewsAckBanner />
+
+				{/* Page header — icon tile + title (CAALM brand, mock layout) */}
+				<div className="mb-6 flex items-start gap-4">
+					<div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200/80 bg-green/15 shadow-sm">
+						<FileText className="h-5 w-5 text-[#0f5384]" />
+					</div>
+					<div>
+						<h1 className="h1 capitalize sidebar-gradient-text">
+							Company News
+						</h1>
+						<p className="mt-1 text-sm text-slate-600">
+							Stay informed with the latest company announcements and updates
+						</p>
 					</div>
 				</div>
 
-				{/* Stats Cards — laptop glance only; phone goes straight to the feed */}
-				<div className="mb-8 hidden gap-6 md:grid md:grid-cols-3">
-					<Card className="glass-card hover:shadow-drop-3 transition-all duration-300">
+				{/* Stats — real facts in the footers; sparse zeros are honest empty state */}
+				<div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
+					<Card className="glass-card">
 						<div className="glass-card-cap" />
-						<CardContent className="p-6">
-							<div className="flex items-center justify-between">
-								<div>
-									<p className="body-2 text-light-100 mb-1">Total Articles</p>
-									<p className="h2 text-navy">{totalItems}</p>
-								</div>
-								<div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-blue to-blue">
-									<FileText className="w-6 h-6 text-white" />
-								</div>
+						<CardContent className="flex h-full flex-col p-4 sm:p-6">
+							<div className="flex items-center gap-2">
+								<StatCardIcon icon={FileText} />
+								<p className="text-sm font-medium sidebar-gradient-text">
+									Total Articles
+								</p>
+							</div>
+							<p className="pt-2 text-3xl font-bold tabular-nums text-slate-700">
+								{totalItems}
+							</p>
+							<p className="mt-1 text-xs text-slate-600">
+								{totalItems === 0
+									? "None published yet"
+									: `${totalItems} published`}
+							</p>
+							<div className="mt-auto flex items-center justify-between gap-3 border-t border-slate-200 pt-3 text-xs text-slate-500">
+								<span>Last published</span>
+								<span className="tabular-nums text-slate-600">
+									{lastPublishedLabel}
+								</span>
 							</div>
 						</CardContent>
 					</Card>
 
-					<Card className="glass-card hover:shadow-drop-3 transition-all duration-300">
+					<Card className="glass-card">
 						<div className="glass-card-cap" />
-						<CardContent className="p-6">
-							<div className="flex items-center justify-between">
-								<div>
-									<p className="body-2 text-light-100 mb-1">This Month</p>
-									<p className="h2 text-navy">
-										{
-											newsItems.filter((item) => {
-												const itemDate = new Date(item.date);
-												const now = new Date();
-												return (
-													itemDate.getMonth() === now.getMonth() &&
-													itemDate.getFullYear() === now.getFullYear()
-												);
-											}).length
-										}
-									</p>
-								</div>
-								<div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-green to-green">
-									<TrendingUp className="w-6 h-6 text-white" />
-								</div>
+						<CardContent className="flex h-full flex-col p-4 sm:p-6">
+							<div className="flex items-center gap-2">
+								<StatCardIcon
+									icon={
+										monthTrendDown
+											? TrendingDown
+											: monthTrendEqual
+												? MoveRight
+												: TrendingUp
+									}
+									tone={
+										monthTrendDown
+											? "danger"
+											: monthTrendEqual
+												? "warning"
+												: monthTrendUp
+													? "success"
+													: "default"
+									}
+								/>
+								<p className="text-sm font-medium sidebar-gradient-text">
+									This Month
+								</p>
+							</div>
+							<p className="pt-2 text-3xl font-bold tabular-nums text-slate-700">
+								{monthCount}
+							</p>
+							<p className="mt-1 text-xs text-slate-600">
+								New since {monthStartLabel}
+							</p>
+							<div className="mt-auto flex items-center justify-between gap-3 border-t border-slate-200 pt-3 text-xs text-slate-500">
+								<span>vs. {previousMonthLabel}</span>
+								<span className="tabular-nums text-slate-600">
+									{previousMonthCount} article
+									{previousMonthCount === 1 ? "" : "s"}
+								</span>
 							</div>
 						</CardContent>
 					</Card>
 
-					<Card className="glass-card hover:shadow-drop-3 transition-all duration-300">
+					<Card className="glass-card">
 						<div className="glass-card-cap" />
-						<CardContent className="p-6">
-							<div className="flex items-center justify-between">
-								<div>
-									<p className="body-2 text-light-100 mb-1">Categories</p>
-									<p className="h2 text-navy">4</p>
-								</div>
-								<div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-pink to-pink">
-									<Newspaper className="w-6 h-6 text-white" />
-								</div>
+						<CardContent className="flex h-full flex-col p-4 sm:p-6">
+							<div className="flex items-center gap-2">
+								<StatCardIcon icon={LayoutGrid} />
+								<p className="text-sm font-medium sidebar-gradient-text">
+									Categories
+								</p>
 							</div>
+							<p className="pt-2 text-3xl font-bold tabular-nums text-slate-700">
+								{categoryCount}
+							</p>
+							<p className="mt-1 text-xs text-slate-600">
+								{categoryCount === 0 ? "None in use yet" : "Ready to use"}
+							</p>
+							{categoryNames.length > 0 ? (
+								<div className="mt-auto flex flex-wrap items-center gap-2 pt-3">
+									{visibleCategoryNames.map((name) => (
+										<span
+											key={name}
+											className="inline-block rounded-full border border-green/20 bg-green/10 px-2 py-0.5 text-xs font-medium text-[#0f5384]"
+										>
+											{name}
+										</span>
+									))}
+									{hiddenCategoryCount > 0 ? (
+										<span className="text-xs tabular-nums text-slate-500">
+											+{hiddenCategoryCount} more
+										</span>
+									) : null}
+								</div>
+							) : null}
 						</CardContent>
 					</Card>
 				</div>
 
-				{/* Filters */}
-				<Card className="glass-card mb-8">
+				{/* Filters & Search */}
+				<Card className="glass-card mb-6">
 					<div className="glass-card-cap" />
-					<CardHeader className="pb-4">
-						<CardTitle className="flex items-center gap-2 h3 text-navy">
-							<Filter className="w-5 h-5 text-[#0f5384]" />
-							Filters & Search
-						</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+					<CardContent className="space-y-4 p-4 sm:p-6">
+						<div className="flex items-center gap-2">
+							<Filter className="h-4 w-4 text-[#0f5384]" />
+							<h2 className="text-base font-semibold sidebar-gradient-text">
+								Filters & Search
+							</h2>
+						</div>
+
+						<div className="grid grid-cols-1 items-end gap-4 md:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_auto]">
 							<div>
 								<Label
-									htmlFor="search"
-									className="body-2 text-light-100 mb-2 block"
+									htmlFor="company-news-search"
+									className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500"
 								>
 									Search
 								</Label>
-								<div className="relative">
-									<Search className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 transform text-light-200" />
-									<Input
-										id="search"
-										placeholder="Search news..."
-										value={searchQuery}
-										onChange={(e) => {
-											setSearchQuery(e.target.value);
-											setCurrentPage(1);
-										}}
-										className="shad-input pl-10"
-										data-with-leading-icon="true"
-									/>
-								</div>
+								<SearchField
+									id="company-news-search"
+									placeholder="Search news..."
+									value={searchQuery}
+									onChange={(e) => {
+										setSearchQuery(e.target.value);
+										setCurrentPage(1);
+									}}
+								/>
 							</div>
 
 							<div>
 								<Label
-									htmlFor="type"
-									className="body-2 text-slate-600 mb-2 block"
+									htmlFor="company-news-type"
+									className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500"
 								>
 									Type
 								</Label>
@@ -328,7 +452,10 @@ const CompanyNewsFeed: React.FC<CompanyNewsFeedProps> = ({
 										setCurrentPage(1);
 									}}
 								>
-									<SelectTrigger className="shad-input">
+									<SelectTrigger
+										id="company-news-type"
+										className="h-10 border-[0.25px] border-slate-300"
+									>
 										<SelectValue placeholder="All types" />
 									</SelectTrigger>
 									<SelectContent>
@@ -343,8 +470,8 @@ const CompanyNewsFeed: React.FC<CompanyNewsFeedProps> = ({
 
 							<div>
 								<Label
-									htmlFor="department"
-									className="body-2 text-light-100 mb-2 block"
+									htmlFor="company-news-department"
+									className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500"
 								>
 									Department
 								</Label>
@@ -355,7 +482,10 @@ const CompanyNewsFeed: React.FC<CompanyNewsFeedProps> = ({
 										setCurrentPage(1);
 									}}
 								>
-									<SelectTrigger className="shad-input">
+									<SelectTrigger
+										id="company-news-department"
+										className="h-10 border-[0.25px] border-slate-300"
+									>
 										<SelectValue placeholder="All departments" />
 									</SelectTrigger>
 									<SelectContent>
@@ -371,12 +501,13 @@ const CompanyNewsFeed: React.FC<CompanyNewsFeedProps> = ({
 								</Select>
 							</div>
 
-							<div className="flex items-end">
+							<div className="flex justify-end">
 								<Button
+									type="button"
 									onClick={clearFilters}
-									variant="outline"
-									className="primary-btn px-3 sm:px-4 mx-auto"
+									className="btn-primary h-10 px-3 sm:px-4"
 								>
+									<X className="h-4 w-4" />
 									Clear Filters
 								</Button>
 							</div>
@@ -388,8 +519,8 @@ const CompanyNewsFeed: React.FC<CompanyNewsFeedProps> = ({
 				{loading && (
 					<div className="flex items-center justify-center py-12">
 						<div className="flex flex-col items-center gap-3">
-							<div className="animate-spin rounded-full h-8 w-8 border-2 border-light-300 border-t-navy"></div>
-							<p className="text-sm text-light-200 font-medium">
+							<div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-[#0f5384]" />
+							<p className="text-sm font-medium text-slate-600">
 								Loading news...
 							</p>
 						</div>
@@ -401,27 +532,43 @@ const CompanyNewsFeed: React.FC<CompanyNewsFeedProps> = ({
 					<Card className="glass-card">
 						<div className="glass-card-cap" />
 						<CardContent className="p-8 text-center">
-							<AlertCircle className="w-12 h-12 text-red mx-auto mb-4" />
-							<h3 className="h3 text-red mb-2">Error Loading News</h3>
-							<p className="body-1 text-light-100">{error}</p>
-							<Button onClick={fetchNewsItems} className="mt-4 primary-btn">
-								Try Again
-							</Button>
+							<div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-red/10">
+								<AlertCircle className="h-7 w-7 text-red" />
+							</div>
+							<h3 className="mb-2 text-lg font-semibold text-slate-700">
+								Error loading news
+							</h3>
+							<p className="text-sm text-slate-600">{error}</p>
+							<div className="mt-4 flex justify-center">
+								<Button
+									onClick={fetchNewsItems}
+									className="btn-primary px-3 sm:px-4"
+								>
+									<RotateCcw className="h-4 w-4" />
+									Try Again
+								</Button>
+							</div>
 						</CardContent>
 					</Card>
 				)}
 
-				{/* News Grid */}
+				{/* Empty state */}
 				{!loading && !error && newsItems.length === 0 && (
 					<Card className="glass-card">
 						<div className="glass-card-cap" />
-						<CardContent className="p-12 text-center">
-							<div className="flex items-center justify-center w-16 h-16 rounded-full bg-light-300 mx-auto mb-4">
-								<Newspaper className="w-8 h-8 text-light-200" />
+						<CardContent className="px-6 py-16 text-center sm:px-12">
+							<div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green/15">
+								<FileText className="h-8 w-8 text-[#0f5384]" />
 							</div>
-							<h3 className="h3 text-light-100 mb-2">No News Found</h3>
-							<p className="body-1 text-light-200">
-								No news articles match your current filters
+							<h3 className="mb-2 text-lg font-semibold text-slate-700">
+								{hasActiveFilters
+									? "No matching articles"
+									: "No articles published yet"}
+							</h3>
+							<p className="mx-auto max-w-md text-sm text-slate-600">
+								{hasActiveFilters
+									? "No news articles match your current filters. Clear filters to see all published announcements."
+									: "Published announcements will appear here once your organization's content team posts one."}
 							</p>
 						</CardContent>
 					</Card>
@@ -527,11 +674,11 @@ const CompanyNewsFeed: React.FC<CompanyNewsFeedProps> = ({
 	}
 
 	// Widget View
-	if (loading) {
+	if (isFeedLoading) {
 		return (
-			<Card className="w-full h-[200px] sm:h-[250px] lg:h-[290px] glass-card overflow-hidden">
+			<Card className="w-full h-[200px] sm:h-[250px] lg:h-[300px] glass-card overflow-hidden">
 				<div className="glass-card-cap" />
-				<CardHeader className="pb-3 pt-6 px-4">
+				<CardHeader className="pb-3 pt-2 px-4">
 					<CardTitle className="text-sm font-semibold sidebar-gradient-text">
 						Company News
 					</CardTitle>
@@ -550,11 +697,50 @@ const CompanyNewsFeed: React.FC<CompanyNewsFeedProps> = ({
 		);
 	}
 
+	if (!isFeedLoading && !error && newsItems.length === 0) {
+		return (
+			<Card className="w-full h-[200px] sm:h-[250px] lg:h-[300px] glass-card overflow-hidden">
+				<div className="glass-card-cap" />
+				<CardHeader className="pb-3 pt-2 px-4">
+					<CardTitle className="text-sm font-semibold sidebar-gradient-text">
+						Company News
+					</CardTitle>
+				</CardHeader>
+				<CardContent className="px-4 pb-4">
+					<div className="flex flex-col items-center justify-center h-32 gap-2 text-center">
+						<div className="text-center py-8">
+							<MegaphoneOff className="h-8 w-8 text-slate-300 mx-auto mb-2" />
+							<p className="text-sm font-medium text-navy">No announcements</p>
+							{viewer.canCreate || viewer.canManageFeeds ? (
+								<Link
+									href={
+										viewer.canManageFeeds
+											? "/dashboard/content-creator?tab=sources"
+											: "/dashboard/content-creator"
+									}
+									className="text-xs text-[#0f5384]"
+								>
+									{viewer.canManageFeeds
+										? "Connect a source"
+										: "Publish your first announcement"}
+								</Link>
+							) : (
+								<p className="text-xs text-slate-500">
+									Nothing has been published yet
+								</p>
+							)}
+						</div>
+					</div>
+				</CardContent>
+			</Card>
+		);
+	}
+
 	if (error && newsItems.length === 0) {
 		return (
-			<Card className="w-full h-[200px] sm:h-[250px] lg:h-[290px] glass-card overflow-hidden">
+			<Card className="w-full h-[200px] sm:h-[250px] lg:h-[300px] glass-card overflow-hidden">
 				<div className="glass-card-cap" />
-				<CardHeader className="pb-3 pt-6 px-4">
+				<CardHeader className="pb-3 pt-2 px-4">
 					<CardTitle className="text-sm font-semibold sidebar-gradient-text">
 						Company News
 					</CardTitle>
@@ -575,10 +761,10 @@ const CompanyNewsFeed: React.FC<CompanyNewsFeedProps> = ({
 	}
 
 	return (
-		<Card className="glass-card w-full h-auto min-h-[200px] sm:min-h-[250px] lg:min-h-[300px]">
+		<Card className="glass-card flex h-[200px] w-full flex-col overflow-hidden sm:h-[250px] lg:h-[300px]">
 			<div className="glass-card-cap" />
 			{/* Header */}
-			<CardHeader className="pb-3 pt-6 px-4">
+			<CardHeader className="pb-3 pt-2 px-4">
 				<div className="flex items-center gap-2">
 					<Newspaper className="h-4 w-4 text-slate-600" />
 					<CardTitle className="text-sm font-semibold sidebar-gradient-text">

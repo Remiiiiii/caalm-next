@@ -49,9 +49,11 @@ This is the shortest path to value. Follow the track that matches how you arrive
 3. Learn how to escalate (who owns the record) without editing.
 
 ### If you publish news
-1. Open the Content Creator dashboard.
-2. Draft one article.
+1. Open `/dashboard/content-creator`.
+2. Draft one article on the **Articles** tab.
 3. Publish only when you have `news.publish`.
+4. Optional: connect a feed under **Connected sources**, then approve imports in **Review queue**.
+5. Confirm the post appears on `/company-news`.
 
 ### If you run fundraising
 1. Open **All Constituents** and confirm you have `constituents.view`.

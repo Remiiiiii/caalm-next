@@ -60,6 +60,7 @@ export async function GET(request: NextRequest) {
 					expiringContracts: kpis.expiringContracts,
 					activeUsers,
 					complianceRate: `${kpis.complianceRate}%`,
+					statusBreakdown: kpis.statusBreakdown,
 				};
 			},
 		);
@@ -84,6 +85,7 @@ export async function GET(request: NextRequest) {
 				expiringContracts: 0,
 				activeUsers: 0,
 				complianceRate: "0%",
+				statusBreakdown: { active: 0, draft: 0, expired: 0 },
 			};
 			return NextResponse.json(
 				{ data: fallback, ...fallback },

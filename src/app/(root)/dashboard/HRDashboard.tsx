@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/metric-stat-card";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useUnifiedDashboardData } from "@/hooks/useUnifiedDashboardData";
+import { useUpdateExpiredOnce } from "@/hooks/useUpdateExpiredOnce";
 import { isExpiringWithinDays } from "@/lib/contracts/contractsListUtils";
 import { isLicenseExpiringWithinDays } from "@/lib/licenses/licensesListUtils";
 import type { UIFileDoc } from "@/types/files";
@@ -59,11 +60,13 @@ const HRDashboard = ({ user }: HRDashboardProps) => {
 		invitations,
 		contracts,
 		dashboardLicenses,
+		recentActivities,
 		isLoading,
 	} = useUnifiedDashboardData(
 		orgId || "default_organization",
 		user?.$id ?? user?.accountId ?? null,
 	);
+	useUpdateExpiredOnce();
 
 	const files = (contracts || []) as UIFileDoc[];
 	const licenses = dashboardLicenses || [];
@@ -118,7 +121,7 @@ const HRDashboard = ({ user }: HRDashboardProps) => {
 				<MetricStatCard
 					title="Active Employees"
 					value={isLoading ? "…" : stats.activeUsers}
-					description="Active accounts in this org"
+					description="Active accounts in this organization"
 					icon={Users}
 				/>
 				<MetricStatCard
@@ -241,8 +244,17 @@ const HRDashboard = ({ user }: HRDashboardProps) => {
 							)}
 						</CardContent>
 					</Card>
-					<ContractExpiryAlertsWidget maxVisible={3} compact />
-					<RecentActivity />
+					<ContractExpiryAlertsWidget
+						maxVisible={3}
+						compact
+						contracts={files}
+						parentLoading={isLoading}
+						syncExpiredOnMount={false}
+					/>
+					<RecentActivity
+						activities={recentActivities as never}
+						parentLoading={isLoading}
+					/>
 				</div>
 			</div>
 		</div>
