@@ -351,38 +351,23 @@ const AnalyticsPageClient = ({ userId }: AnalyticsPageClientProps) => {
 			>
 				<div className="mb-6 flex justify-center">
 					<TabsList className="inline-flex w-auto max-w-full flex-wrap justify-center">
-						<TabsTrigger
-							value="organization"
-							className="shrink-0"
-						>
+						<TabsTrigger value="organization" className="shrink-0">
 							<Building2 className="h-4 w-4" />
 							<span>Organization</span>
 						</TabsTrigger>
-						<TabsTrigger
-							value="portfolio"
-							className="shrink-0"
-						>
+						<TabsTrigger value="portfolio" className="shrink-0">
 							<Scale className="h-4 w-4" />
 							<span>Portfolio</span>
 						</TabsTrigger>
-						<TabsTrigger
-							value="contracts"
-							className="shrink-0"
-						>
+						<TabsTrigger value="contracts" className="shrink-0">
 							<FileText className="h-4 w-4" />
 							<span>Contracts</span>
 						</TabsTrigger>
-						<TabsTrigger
-							value="compliance"
-							className="shrink-0"
-						>
+						<TabsTrigger value="compliance" className="shrink-0">
 							<Shield className="h-4 w-4" />
 							<span>Compliance & audit</span>
 						</TabsTrigger>
-						<TabsTrigger
-							value="calendar"
-							className="shrink-0"
-						>
+						<TabsTrigger value="calendar" className="shrink-0">
 							<Calendar className="h-4 w-4" />
 							<span>Calendar</span>
 						</TabsTrigger>
@@ -425,16 +410,17 @@ const AnalyticsPageClient = ({ userId }: AnalyticsPageClientProps) => {
 				</TabsContent>
 				<TabsContent value="contracts" className="mt-0">
 					{activeTab !== "contracts" ? null : (
-					<div className="flex justify-center">
-						<div>
-							<h1 className="h1 sidebar-gradient-text text-center">
-								Contracts Performance Dashboard
-							</h1>
-							<p className="body-1 text-light-200 text-center py-2">
-								Performance metrics and insights for all contracts
-							</p>
+						<div className="flex justify-center">
+							<div>
+								<h1 className="h1 sidebar-gradient-text text-center">
+									Contracts Performance Dashboard
+								</h1>
+								<p className="body-1 text-light-200 text-center py-2">
+									Performance metrics and insights for all contracts
+								</p>
+							</div>
 						</div>
-					</div>
+					)}
 					{/* Department Navigation Tabs */}
 					<Card className="glass-card">
 						<div className="glass-card-cap" />
@@ -707,7 +693,6 @@ const AnalyticsPageClient = ({ userId }: AnalyticsPageClientProps) => {
 							)}
 						</CardContent>
 					</Card>
-					)}
 				</TabsContent>
 
 				<TabsContent value="compliance" className="mt-0">
