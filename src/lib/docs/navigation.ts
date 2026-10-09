@@ -318,8 +318,15 @@ export const DOCS_NAV: DocsNavGroup[] = [
 		id: "nonprofit",
 		title: "Nonprofit & fundraising",
 		description:
-			"Donor CRM, gifts, public donation page, volunteers, and fund/990 settings — what shipped with the nonprofit roadmap.",
+			"Donor CRM, gifts, public donation page, volunteers, fund/990 settings, and nonprofit-focused overviews.",
 		items: [
+			{
+				title: "CAALM for nonprofits",
+				slug: "reference/caalm-for-nonprofits",
+				path: "reference/caalm-for-nonprofits",
+				summary:
+					"Brochure-style overview: AI, compliance, contract capture, and fundraising on one platform.",
+			},
 			{
 				title: "Constituents (donor CRM)",
 				slug: "reference/constituents",
