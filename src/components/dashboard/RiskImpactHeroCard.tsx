@@ -265,7 +265,7 @@ export function RiskImpactHeroCard({
 							<ColumnRule atMdOdd />
 							<div className="flex items-center gap-2.5 min-h-11">
 								<StatCardIcon icon={Shield} />
-								<p className="text-[12.5px] font-semibold text-slate-700">
+								<p className="text-[14.5px] font-semibold text-slate-700">
 									Risk averted
 								</p>
 							</div>
