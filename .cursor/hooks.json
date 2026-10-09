@@ -1,6 +1,18 @@
 {
 	"version": 1,
 	"hooks": {
+		"sessionStart": [
+			{
+				"command": "node \"C:/Users/victo/Development/ponytail/hooks/ponytail-activate.js\"",
+				"timeout": 5
+			}
+		],
+		"beforeSubmitPrompt": [
+			{
+				"command": "node \"C:/Users/victo/Development/ponytail/hooks/ponytail-mode-tracker.js\"",
+				"timeout": 5
+			}
+		],
 		"postToolUse": [
 			{
 				"matcher": "Read|Grep|Glob|Search|Shell",
