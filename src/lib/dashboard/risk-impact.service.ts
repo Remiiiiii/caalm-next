@@ -14,7 +14,6 @@ import type {
 import {
 	buildRiskImpactEvent,
 	classifyImpactLog,
-	HEALTHY_VALUES,
 	resolveEventSource,
 	resolveRecordName,
 } from "@/lib/dashboard/risk-impact-events";
@@ -41,17 +40,14 @@ import { DIVISION_TO_DEPARTMENT, type UserDivision } from "../../../constants";
 const GRANT_WEIGHT = 1.0;
 /** Non-grant contracts count at a slight discount (conservative). */
 const OTHER_CONTRACT_WEIGHT = 0.85;
-/**
- * Fraction of currently protected portfolio value treated as "at risk if unmanaged".
- * Tuned conservatively vs industry 2–9% leakage framing.
- */
-const PORTFOLIO_PROTECTION_FACTOR = 0.15;
-
 interface ContractRow {
 	$id: string;
 	contractName?: string;
 	name?: string;
 	amount?: number | string;
+	/** Some list payloads use value / contractValue instead of amount. */
+	value?: number | string;
+	contractValue?: number | string;
 	compliance?: string;
 	status?: string;
 	riskLevel?: string;
@@ -199,9 +195,19 @@ function matchesDivision(
 	);
 }
 
+function contractFaceValue(contract: ContractRow | undefined): number {
+	if (!contract) return 0;
+	// Prefer amount; fall back to alternate value keys some rows still carry.
+	return (
+		parseAmount(contract.amount) ||
+		parseAmount(contract.contractValue) ||
+		parseAmount(contract.value)
+	);
+}
+
 function weightedContractAmount(contract: ContractRow | undefined): number {
 	if (!contract) return 0;
-	const base = parseAmount(contract.amount);
+	const base = contractFaceValue(contract);
 	if (base <= 0) return 0;
 	return (
 		base * (isGrantContract(contract) ? GRANT_WEIGHT : OTHER_CONTRACT_WEIGHT)
@@ -419,26 +425,17 @@ async function fetchScopedLicenses(
 	return rows.filter((r) => matchesDivision(r, division));
 }
 
+/**
+ * Face value under active monitoring — sum of non-expired contract amounts.
+ * (Previously required healthy + grant/high-risk/expiring90 and applied a 15%
+ * factor, which showed $0 while "contracts monitored" was still > 0.)
+ */
 function computePortfolioProtected(contracts: ContractRow[]): number {
 	let total = 0;
 	for (const contract of contracts) {
-		const compliance = String(contract.compliance || "").toLowerCase();
-		const status = String(contract.status || "").toLowerCase();
-		const healthy =
-			HEALTHY_VALUES.has(compliance) || HEALTHY_VALUES.has(status);
-		if (!healthy) continue;
-		if (contract.isExpired) continue;
-
-		const qualifies =
-			isGrantContract(contract) ||
-			isHighRisk(contract) ||
-			isExpiringWithin90(contract.contractExpiryDate);
-		if (!qualifies) continue;
-
-		const amount = parseAmount(contract.amount);
-		if (amount > 0) {
-			total += amount * PORTFOLIO_PROTECTION_FACTOR;
-		}
+		if (contract.isExpired || isExpiredContract(contract)) continue;
+		const amount = contractFaceValue(contract);
+		if (amount > 0) total += amount;
 	}
 	return total;
 }

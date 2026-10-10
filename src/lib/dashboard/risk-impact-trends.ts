@@ -102,11 +102,11 @@ export function formatYoyBadge(trend: RiskImpactTrend): string {
 	return `0% vs ${trend.vsLabel}`;
 }
 
-/** Inline count delta: "↑ vs 1 last Q" */
+/** Inline count delta: "↑ vs 1 last Q" / "= vs 2 last Q" when unchanged */
 export function formatCountDelta(trend: RiskImpactTrend): string {
 	const prior = trend.prior ?? 0;
 	if (trend.direction === "flat") {
-		return "— vs last Q";
+		return `= vs ${prior} last Q`;
 	}
 	if (trend.direction === "down") {
 		return `↓ vs ${prior} last Q`;

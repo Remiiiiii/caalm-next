@@ -146,7 +146,7 @@ const RecentActivity: FC<RecentActivityProps> = ({
 						/>
 					</div>
 					<div className={cn(ACTIVITY_VIEWPORT_CLASS, "overflow-y-auto")}>
-						<div className="py-1 pr-2">
+						<div className="space-y-3 pr-2">
 							{Array.from(
 								{ length: ACTIVITY_VISIBLE_COUNT },
 								(_, i) => i + 1,

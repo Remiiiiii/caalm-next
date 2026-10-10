@@ -76,6 +76,12 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 				viewerReadOnly: true,
 			},
 			{
+				name: "Import",
+				icon: "/assets/icons/import.svg",
+				url: "/contracts/import",
+				permissions: [PERMISSIONS.CONTRACTS.EDIT],
+			},
+			{
 				name: "My Contracts",
 				icon: "/assets/icons/my-contracts.svg",
 				url: "/my-contracts",
@@ -130,6 +136,12 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 				permissions: [PERMISSIONS.FUNDING.VIEW],
 				viewerReadOnly: true,
 			},
+			{
+				name: "Import obligations",
+				icon: "/assets/icons/import.svg",
+				url: "/funding/obligations/import",
+				permissions: [PERMISSIONS.FUNDING.MANAGE],
+			},
 		],
 	},
 	{
@@ -142,6 +154,12 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 				// Org-wide list: VIEW_ALL only
 				permissions: [PERMISSIONS.LICENSES.VIEW_ALL],
 				viewerReadOnly: true,
+			},
+			{
+				name: "Import",
+				icon: "/assets/icons/import.svg",
+				url: "/licenses/import",
+				permissions: [PERMISSIONS.LICENSES.CREATE],
 			},
 			{
 				name: "Department Licenses",
@@ -206,11 +224,23 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 				viewerReadOnly: true,
 			},
 			{
+				name: "Import gifts",
+				icon: "/assets/icons/import.svg",
+				url: "/gifts/import",
+				permissions: [PERMISSIONS.GIFTS.CREATE],
+			},
+			{
 				name: "Campaigns",
 				icon: "/assets/icons/megaphone.svg",
 				url: "/campaigns",
 				permissions: [PERMISSIONS.GIFTS.VIEW],
 				viewerReadOnly: true,
+			},
+			{
+				name: "Import campaigns",
+				icon: "/assets/icons/import.svg",
+				url: "/campaigns/import",
+				permissions: [PERMISSIONS.GIFTS.CREATE],
 			},
 		],
 	},
@@ -223,6 +253,12 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 				url: "/volunteers/shifts",
 				permissions: [PERMISSIONS.VOLUNTEERS.VIEW],
 				viewerReadOnly: true,
+			},
+			{
+				name: "Import shifts",
+				icon: "/assets/icons/import.svg",
+				url: "/volunteers/shifts/import",
+				permissions: [PERMISSIONS.VOLUNTEERS.MANAGE],
 			},
 		],
 	},
@@ -304,6 +340,12 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 				url: "/dashboard/user-management",
 				permissions: [PERMISSIONS.USERS.VIEW],
 				viewerReadOnly: true,
+			},
+			{
+				name: "Import users",
+				icon: "/assets/icons/import.svg",
+				url: "/dashboard/user-management/import",
+				permissions: [PERMISSIONS.USERS.INVITE],
 			},
 			{
 				name: "Role Management",

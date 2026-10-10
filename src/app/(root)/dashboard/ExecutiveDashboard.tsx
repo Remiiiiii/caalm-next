@@ -1,5 +1,6 @@
 "use client";
 
+import { motion, useReducedMotion } from "framer-motion";
 import {
 	AlertCircle,
 	AlertTriangle,
@@ -26,6 +27,7 @@ import type { Models } from "node-appwrite";
 // In your dashboard page (e.g., src/app/(root)/dashboard/page.tsx)
 // import { NotificationDemoButton } from '@/components/NotificationDemoButton';
 import { useEffect, useState } from "react";
+import CountUp from "react-countup";
 import useSWR from "swr";
 import ClientTimestamp from "@/components/ClientTimestamp";
 import CompanyNewsFeed from "@/components/CompanyNewsFeed";
@@ -40,6 +42,15 @@ import {
 } from "@/components/dashboard/RecentFilesList";
 import { RiskImpactHeroCard } from "@/components/dashboard/RiskImpactHeroCard";
 import { WeatherBriefingLauncher } from "@/components/dashboard-briefing/WeatherBriefingLauncher";
+import {
+	fadeLeft,
+	fadeRight,
+	fadeUp,
+	scaleIn,
+	softRise,
+	staggerContainer,
+	viewportOnce,
+} from "@/components/landing/motion";
 import LicenseExpiryAlertsWidget from "@/components/LicenseExpiryAlertsWidget";
 import LicenseStatusPieChart from "@/components/LicenseStatusPieChart";
 import QuickNotesWidget from "@/components/QuickNotesWidget";
@@ -68,6 +79,7 @@ import {
 	MetricSegmentBar,
 	MetricStatCard,
 	parseMetricPercent,
+	useInViewReady,
 } from "@/components/ui/metric-stat-card";
 import {
 	SelectItem,
@@ -197,8 +209,24 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 	const { toast } = useToast();
 	const { ensureStepUp } = useStepUp();
 	const { orgId } = useOrganization();
+	const reduceMotion = useReducedMotion();
 	const effectiveOrgId = orgId || "default_organization";
 	const adminName = "Executive"; // Replace with actual admin name
+	// Landing-page style: each block animates when it scrolls into view.
+	const reveal = reduceMotion
+		? undefined
+		: {
+				initial: "hidden" as const,
+				whileInView: "visible" as const,
+				viewport: viewportOnce,
+			};
+	const revealSolo = (variants: typeof fadeUp) =>
+		reduceMotion ? undefined : { ...reveal, variants };
+	const revealStagger = reduceMotion
+		? undefined
+		: { ...reveal, variants: staggerContainer };
+	const revealItem = (variants: typeof fadeUp) =>
+		reduceMotion ? undefined : { variants };
 
 	// Use unified dashboard data hook (server userId starts fetch without waiting on AuthContext)
 	const {
@@ -225,7 +253,9 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 		newsLimit: 5,
 		userId: user?.$id ?? user?.accountId ?? null,
 	});
-	const carouselReady = !unifiedLoading && !bundleLoading;
+	// Show contract/license widgets as soon as unified data lands; news/notes/perf
+	// fill from the bundle (or their own fetch) without blocking the carousel.
+	const carouselReady = !unifiedLoading;
 
 	// Uninvited users: after unified settles so it does not compete on cold load
 	const { data: uninvitedRes, mutate: refreshUninvited } = useSWR(
@@ -393,6 +423,13 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 	};
 	const compliancePct = parseMetricPercent(dashboardStats.complianceRate) ?? 0;
 	const usersAddedThisMonth = userComposition.addedThisMonth;
+	// Count-ups mount only after the grid is scrolled into the main viewport
+	// (react-countup enableScrollSpy still starts on mount — do not rely on it).
+	const { ref: statsInViewRef, ready: statsInView } = useInViewReady(
+		unifiedLoading
+			? "stats-loading"
+			: `stats-${totalContracts}-${expiringSoonCount}-${dashboardStats.activeUsers ?? 0}-${compliancePct}`,
+	);
 
 	const slaStatCards = [
 		{
@@ -758,61 +795,88 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 			/>
 			{/* Main Content Container */}
 			<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
-				<DashboardGreeting
-					user={user}
-					actions={
-						<div className="flex items-start gap-3">
-							<div className="text-right">
-								<p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
-									Last updated
-								</p>
-								<p className="text-xs text-slate-600">
-									<ClientTimestamp updatedAt={lastUpdatedAt} />
-								</p>
-							</div>
+				<motion.div {...revealSolo(softRise)}>
+					<DashboardGreeting
+						user={user}
+						actions={
+							<div className="flex items-start gap-3">
+								<div className="text-right">
+									<p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
+										Last updated
+									</p>
+									<p className="text-xs text-slate-600">
+										<ClientTimestamp updatedAt={lastUpdatedAt} />
+									</p>
+								</div>
 
-							<div className="flex flex-col items-end gap-2">
-								{process.env.NODE_ENV === "development" && (
-									<Button
-										onClick={triggerTestModal}
-										variant="outline"
-										size="sm"
-										className={cn(
-											"h-9 gap-2 border border-dashed border-orange/40 bg-orange/10",
-											"px-3 text-xs font-medium text-orange hover:bg-orange/15 hover:border-orange/50",
-										)}
-									>
-										<span className="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-orange">
-											Dev
-										</span>
-										<Pencil className="h-3.5 w-3.5" />
-										Test expiry modal
-									</Button>
-								)}
-								<WeatherBriefingLauncher
-									location="Miami"
-									latitude={25.7617}
-									longitude={-80.1918}
-								/>
+								<div className="flex flex-col items-end gap-2">
+									{process.env.NODE_ENV === "development" && (
+										<Button
+											onClick={triggerTestModal}
+											variant="outline"
+											size="sm"
+											className={cn(
+												"h-9 gap-2 border border-dashed border-orange/40 bg-orange/10",
+												"px-3 text-xs font-medium text-orange hover:bg-orange/15 hover:border-orange/50",
+											)}
+										>
+											<span className="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-orange">
+												Dev
+											</span>
+											<Pencil className="h-3.5 w-3.5" />
+											Test expiry modal
+										</Button>
+									)}
+									<WeatherBriefingLauncher
+										location="Miami"
+										latitude={25.7617}
+										longitude={-80.1918}
+									/>
+								</div>
 							</div>
-						</div>
-					}
-				/>
-				<RiskImpactHeroCard
-					snapshot={riskImpact}
-					isLoading={unifiedLoading}
-					error={null}
-					onRetry={() => refreshUnified()}
-				/>
-				{/* Stats Grid */}
-				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+						}
+					/>
+				</motion.div>
+				<motion.div {...revealSolo(fadeUp)}>
+					<RiskImpactHeroCard
+						snapshot={riskImpact}
+						isLoading={unifiedLoading}
+						error={null}
+						onRetry={() => refreshUnified()}
+					/>
+				</motion.div>
+				{/* Stats Grid — count-up + cascade when scrolled into view */}
+				<motion.div
+					{...revealStagger}
+					ref={statsInViewRef}
+					className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6"
+				>
 					{unifiedLoading ? (
-						[1, 2, 3, 4].map((index) => <StatCardSkeleton key={index} />)
+						[1, 2, 3, 4].map((index) => (
+							<motion.div key={index} {...revealItem(scaleIn)}>
+								<StatCardSkeleton />
+							</motion.div>
+						))
 					) : (
 						<>
+							<motion.div {...revealItem(scaleIn)}>
 							<MetricStatCard
 								title="Total Contracts"
-								value={totalContracts.toString()}
+								backdrop="radial"
+								value={
+									reduceMotion ? (
+										totalContracts
+									) : !statsInView ? (
+										0
+									) : (
+										<CountUp
+											key={`contracts-${totalContracts}`}
+											end={totalContracts}
+											duration={1.2}
+											preserveValue
+										/>
+									)
+								}
 								description="Across all departments"
 								icon={FileText}
 								footer={
@@ -843,9 +907,25 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 									/>
 								}
 							/>
+							</motion.div>
+							<motion.div {...revealItem(scaleIn)}>
 							<MetricStatCard
 								title="Expiring Soon"
-								value={expiringSoonCount.toString()}
+								backdrop="wave"
+								value={
+									reduceMotion ? (
+										expiringSoonCount
+									) : !statsInView ? (
+										0
+									) : (
+										<CountUp
+											key={`expiring-${expiringSoonCount}`}
+											end={expiringSoonCount}
+											duration={1.2}
+											preserveValue
+										/>
+									)
+								}
 								description="Within 30 days"
 								icon={AlertTriangle}
 								iconTone={expiringSoonCount > 0 ? "warning" : "default"}
@@ -870,9 +950,26 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 									)
 								}
 							/>
+							</motion.div>
+							<motion.div {...revealItem(scaleIn)}>
 							<MetricStatCard
-								title="Active Users"
-								value={dashboardStats.activeUsers?.toString() || "0"}
+								title="Active users"
+								backdrop="none"
+								watermarkIcon={Users}
+								value={
+									reduceMotion ? (
+										dashboardStats.activeUsers ?? 0
+									) : !statsInView ? (
+										0
+									) : (
+										<CountUp
+											key={`users-${dashboardStats.activeUsers ?? 0}`}
+											end={dashboardStats.activeUsers ?? 0}
+											duration={1.2}
+											preserveValue
+										/>
+									)
+								}
 								description={
 									usersAddedThisMonth > 0
 										? `Active accounts in this organization · +${usersAddedThisMonth} this month`
@@ -884,49 +981,72 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 								headerHrefIcon={SquareArrowOutUpRight}
 								footer={
 									<MetricSegmentBar
+										legendMuted
 										segments={[
 											{
 												key: "super",
 												label: "Super Admin",
 												count: userComposition.superAdmin,
 												colorClass: "bg-[#0f5384]",
-												textClass: "text-[#0f5384]",
+												textClass: "text-slate-500",
 											},
 											{
 												key: "org",
 												label: "Org Admin",
 												count: userComposition.orgAdmin,
 												colorClass: "bg-[#078FAB]",
-												textClass: "text-[#078FAB]",
+												textClass: "text-slate-500",
 											},
 											{
 												key: "dept",
 												label: "Dept Manager",
 												count: userComposition.deptManager,
 												colorClass: "bg-blue",
-												textClass: "text-blue",
+												textClass: "text-slate-500",
 											},
-											{
-												key: "unassigned",
-												label: "Unassigned",
-												count: userComposition.unassigned,
-												colorClass: "bg-light-200",
-												textClass: "text-light-100",
-											},
+											...(userComposition.unassigned > 0
+												? [
+														{
+															key: "unassigned",
+															label: "Unassigned",
+															count: userComposition.unassigned,
+															colorClass: "bg-light-200",
+															textClass: "text-slate-500",
+														},
+													]
+												: []),
 											{
 												key: "inactive",
 												label: "Inactive",
 												count: userComposition.inactive,
 												colorClass: "bg-orange",
-												textClass: "text-orange",
+												textClass: "text-slate-500",
 											},
 										]}
 									/>
 								}
 							/>
+							</motion.div>
+							<motion.div {...revealItem(scaleIn)}>
 							<MetricStatCard
 								title="Compliance Rate"
-								value={dashboardStats.complianceRate || "0%"}
+								value={
+									reduceMotion ? (
+										dashboardStats.complianceRate || "0%"
+									) : !statsInView ? (
+										"0%"
+									) : (
+										<>
+											<CountUp
+												key={`compliance-${compliancePct}`}
+												end={compliancePct}
+												duration={1.2}
+												preserveValue
+											/>
+											%
+										</>
+									)
+								}
 								description={
 									executiveNeedReview != null
 										? `${executiveNeedReview} of ${totalContracts} contracts need review`
@@ -985,69 +1105,87 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 									</div>
 								}
 							/>
+							</motion.div>
 						</>
 					)}
-				</div>
+				</motion.div>
 
-				<Card className="glass-card mb-6 overflow-visible">
-					<div className="glass-card-cap" />
-					<CardContent className="relative p-3 sm:p-4 lg:p-6">
-						<WidgetCarousel ariaLabel="Executive dashboard widgets">
-							{carouselReady ? (
-								<>
-									<ContractExpiryAlertsWidget
-										maxVisible={2}
-										showSettings={false}
-										compact={true}
-										contracts={contractsFromApi}
-										syncExpiredOnMount={false}
-										alarmEnabled={!isModalOpen}
-									/>
-									<LicenseExpiryAlertsWidget
-										maxVisible={2}
-										showSettings={false}
-										compact={true}
-										licenses={dashboardLicenses}
-										syncExpiredOnMount={false}
-										alarmEnabled={!isModalOpen}
-									/>
-									<ContractStatusPieChart contracts={contractsFromApi} />
-									<LicenseStatusPieChart licenses={dashboardLicenses} />
-									<DepartmentPerformanceWidget
-										data={bundle?.performance ?? null}
-									/>
-									<CompanyNewsFeed
-										items={bundle?.newsItems}
-										total={bundle?.newsTotal}
-										viewer={bundle?.newsViewer}
-									/>
-									<QuickNotesWidget
-										user={user ?? undefined}
-										initialNotes={bundle?.notes}
-									/>
-								</>
-							) : (
-								Array.from({ length: 7 }, (_, index) => (
-									<StatCardSkeleton key={`widget-skel-${index}`} />
-								))
-							)}
-						</WidgetCarousel>
-					</CardContent>
-				</Card>
+				<motion.div {...revealSolo(fadeUp)}>
+					<Card className="glass-card mb-6 overflow-visible">
+						<div className="glass-card-cap" />
+						<CardContent className="relative p-3 sm:p-4 lg:p-6">
+							<WidgetCarousel ariaLabel="Executive dashboard widgets">
+								{carouselReady ? (
+									<>
+										<ContractExpiryAlertsWidget
+											maxVisible={2}
+											showSettings={false}
+											compact={true}
+											contracts={contractsFromApi}
+											syncExpiredOnMount={false}
+											alarmEnabled={!isModalOpen}
+										/>
+										<LicenseExpiryAlertsWidget
+											maxVisible={2}
+											showSettings={false}
+											compact={true}
+											licenses={dashboardLicenses}
+											syncExpiredOnMount={false}
+											alarmEnabled={!isModalOpen}
+										/>
+										<ContractStatusPieChart contracts={contractsFromApi} />
+										<LicenseStatusPieChart licenses={dashboardLicenses} />
+										<DepartmentPerformanceWidget
+											data={
+												bundle
+													? (bundle.performance ?? null)
+													: undefined
+											}
+										/>
+										<CompanyNewsFeed
+											items={bundle?.newsItems}
+											total={bundle?.newsTotal}
+											viewer={bundle?.newsViewer}
+											parentLoading={bundleLoading}
+										/>
+										<QuickNotesWidget
+											user={user ?? undefined}
+											initialNotes={bundle?.notes}
+										/>
+									</>
+								) : (
+									Array.from({ length: 7 }, (_, index) => (
+										<StatCardSkeleton key={`widget-skel-${index}`} />
+									))
+								)}
+							</WidgetCarousel>
+						</CardContent>
+					</Card>
+				</motion.div>
 
 				{/* Dashboard Content */}
 				<div className="relative z-10 py-8">
 					<div className="space-y-6">
-						<div className="grid items-stretch gap-6 lg:grid-cols-6">
-							<div className="lg:col-span-3">
+						<motion.div
+							{...revealStagger}
+							className="grid items-stretch gap-6 lg:grid-cols-6"
+						>
+							<motion.div
+								{...revealItem(fadeLeft)}
+								className="lg:col-span-3"
+							>
 								<RecentActivity
 									limit={10}
 									activities={recentActivities as never}
 									parentLoading={unifiedLoading}
 								/>
-							</div>
+							</motion.div>
 
-							<Card className="glass-card flex h-full min-h-0 min-w-0 flex-col overflow-hidden lg:col-span-3">
+							<motion.div
+								{...revealItem(fadeRight)}
+								className="flex h-full min-h-0 min-w-0 lg:col-span-3"
+							>
+							<Card className="glass-card flex h-full min-h-0 min-w-0 flex-col overflow-hidden w-full">
 								<div className="glass-card-cap" />
 								<CardHeader className="mb-1 border-b border-slate-200/80 pb-4">
 									<CardTitle className="flex items-center gap-2.5 text-lg font-bold sidebar-gradient-text">
@@ -1077,18 +1215,25 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 									/>
 								</CardContent>
 							</Card>
-						</div>
+							</motion.div>
+						</motion.div>
 
 						{/* Recent files uploaded and Pending Approvals */}
-						<div className="grid lg:grid-cols-2 gap-6">
+						<motion.div
+							{...revealStagger}
+							className="grid lg:grid-cols-2 gap-6"
+						>
+							<motion.div {...revealItem(fadeLeft)}>
 							<RecentFilesUploadedCard
 								className="glass-card h-full"
 								files={files as RecentFileItem[]}
 								isLoading={unifiedLoading}
 								limit={10}
 							/>
+							</motion.div>
 
 							{/* Approval SLA accountability */}
+							<motion.div {...revealItem(fadeRight)}>
 							<Card className="glass-card flex h-full flex-col">
 								<div className="glass-card-cap" />
 								<CardHeader className="mb-4 border-b border-slate-200/80 pb-4">
@@ -1113,7 +1258,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 															{stat.hint}
 														</p>
 													</div>
-													<p className="text-2xl font-bold text-slate-700 tabular-nums">
+													<p className="text-lg text-slate-700 tabular-nums">
 														{stat.value}
 													</p>
 												</div>
@@ -1142,9 +1287,15 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 									</div>
 								</CardContent>
 							</Card>
-						</div>
+							</motion.div>
+						</motion.div>
 
 						{/* Invitation Management Section */}
+						<motion.div
+							{...revealStagger}
+							className="space-y-6"
+						>
+						<motion.div {...revealItem(fadeUp)}>
 						<Card className="glass-card overflow-hidden">
 							<div className="glass-card-cap" />
 							{/* Header */}
@@ -1316,7 +1467,9 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 								</div>
 							</form>
 						</Card>
+						</motion.div>
 
+						<motion.div {...revealItem(softRise)}>
 						<Card className="glass-card">
 							<div className="glass-card-cap" />
 							<CardHeader className="mb-4 border-b border-slate-200/80 pb-4">
@@ -1453,6 +1606,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 								</div>
 							</CardContent>
 						</Card>
+						</motion.div>
 
 						{/* Enhanced Revoke Confirmation Dialog */}
 						<AlertDialog
@@ -1617,10 +1771,10 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 								</div>
 							</AlertDialogContent>
 						</AlertDialog>
+						</motion.div>
 					</div>
 				</div>
-			</div>{" "}
-			{/* Close Main Content Container */}
+			</div>
 		</div>
 	);
 };

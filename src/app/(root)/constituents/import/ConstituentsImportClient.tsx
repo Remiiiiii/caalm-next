@@ -12,7 +12,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { parseCsvText } from "@/lib/constituents/import/csv";
+import { parseSpreadsheetFile } from "@/lib/import/spreadsheet";
 import {
 	IMPORT_FIELD_KEYS,
 	IMPORT_FIELD_LABELS,
@@ -48,9 +48,9 @@ export function ConstituentsImportClient() {
 		setDryRunResult(null);
 		setMessage(null);
 		if (!file) return;
-		const text = await file.text();
-		const parsed = parseCsvText(text);
-		setHeaders(parsed.headers);
+		try {
+			const parsed = await parseSpreadsheetFile(file);
+			setHeaders(parsed.headers);
 		setRows(parsed.rows);
 		const initial: Record<string, ImportFieldKey | ""> = {};
 		for (const header of parsed.headers) {
@@ -60,6 +60,14 @@ export function ConstituentsImportClient() {
 			initial[header] = guess ?? "";
 		}
 		setMapping(initial);
+		} catch (error) {
+			setHeaders([]);
+			setRows([]);
+			setMapping({});
+			setMessage(
+				error instanceof Error ? error.message : "Could not read that file",
+			);
+		}
 	};
 
 	const runDryRun = async () => {
@@ -112,11 +120,11 @@ export function ConstituentsImportClient() {
 			<Card className="glass-card">
 				<div className="glass-card-cap" />
 				<CardContent className="p-4 sm:p-6 space-y-4">
-					<Label htmlFor="csv-upload">CSV file</Label>
+					<Label htmlFor="csv-upload">Spreadsheet file</Label>
 					<input
 						id="csv-upload"
 						type="file"
-						accept=".csv,text/csv"
+						accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 						className="block text-sm text-slate-700"
 						onChange={(e) => void onFile(e.target.files?.[0] ?? null)}
 					/>

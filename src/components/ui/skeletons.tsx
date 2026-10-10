@@ -54,15 +54,17 @@ export const ContractCardSkeleton = () => (
 	</Card>
 );
 
-// Skeleton for activity items
+// Skeleton for activity items (matches raised frosted list chrome)
 export const ActivityItemSkeleton = () => (
-	<div className="flex items-start gap-3 px-1 py-2.5">
-		<Skeleton className="h-8 w-8 shrink-0 rounded-lg" />
-		<div className="flex-1 space-y-2">
-			<Skeleton className="h-4 w-32" />
-			<Skeleton className="h-3 w-40" />
+	<div className="rounded-lg border border-white/30 bg-white/20 p-3 shadow-sm backdrop-blur-md">
+		<div className="flex items-start gap-3">
+			<Skeleton className="h-8 w-8 shrink-0 rounded-lg" />
+			<div className="flex-1 space-y-2">
+				<Skeleton className="h-4 w-32" />
+				<Skeleton className="h-3 w-40" />
+			</div>
+			<Skeleton className="h-3 w-12" />
 		</div>
-		<Skeleton className="h-3 w-12" />
 	</div>
 );
 

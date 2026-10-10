@@ -1,7 +1,9 @@
 "use client";
 
+import { useReducedMotion } from "framer-motion";
 import { AlertTriangle, ChevronRight, RefreshCw, Shield } from "lucide-react";
 import Link from "next/link";
+import CountUp from "react-countup";
 import { RiskTrackingChart } from "@/components/dashboard/RiskTrackingChart";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,6 +12,7 @@ import type {
 	RiskImpactSnapshot,
 	RiskImpactTrend,
 } from "@/lib/dashboard/risk-impact.types";
+import { formatRiskUsdExact } from "@/lib/dashboard/risk-impact-events";
 
 const COL_PAD = "flex flex-col justify-start gap-3.5 p-5 sm:p-6";
 const COL_RULE =
@@ -35,14 +38,12 @@ function TrendCopy({
 			? "↓"
 			: trend.direction === "flat"
 				? variant === "count"
-					? "—"
+					? "="
 					: null
 				: "↑";
 	const prefix =
 		variant === "count"
-			? trend.direction === "flat"
-				? "vs"
-				: `vs ${trend.prior ?? 0}`
+			? `vs ${trend.prior ?? 0}`
 			: trend.direction === "new"
 				? "vs"
 				: trend.direction === "flat"
@@ -171,6 +172,7 @@ export function RiskImpactHeroCard({
 	error,
 	onRetry,
 }: RiskImpactHeroCardProps) {
+	const reduceMotion = useReducedMotion();
 	const breakdownHref = "/analytics/risk-averted";
 
 	if (isLoading && !snapshot) {
@@ -272,8 +274,21 @@ export function RiskImpactHeroCard({
 							<p className="text-[10.5px] tracking-wide text-slate-500">
 								{periodDisplay}
 							</p>
-							<p className="text-[2.5rem] leading-none font-semibold text-slate-800 tracking-tight">
-								{snapshot.primary.amountFormatted}
+							<p className="text-[2.5rem] leading-none font-semibold text-slate-800 tracking-tight tabular-nums">
+								{reduceMotion ? (
+									formatRiskUsdExact(snapshot.primary.amount)
+								) : (
+									<CountUp
+										key={`risk-averted-${snapshot.primary.amount}-${snapshot.period}`}
+										end={Math.max(0, Math.round(snapshot.primary.amount))}
+										duration={1.2}
+										prefix="$"
+										separator=","
+										preserveValue
+										enableScrollSpy
+										scrollSpyOnce
+									/>
+								)}
 							</p>
 							{snapshot.secondary.amount > 0 ? (
 								<p className="text-xs text-slate-600">

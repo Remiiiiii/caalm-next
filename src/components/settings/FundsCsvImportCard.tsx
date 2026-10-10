@@ -12,7 +12,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { parseCsvText } from "@/lib/constituents/import/csv";
+import { parseSpreadsheetFile } from "@/lib/import/spreadsheet";
 import {
 	FUND_IMPORT_FIELD_KEYS,
 	FUND_IMPORT_FIELD_LABELS,
@@ -72,15 +72,23 @@ export function FundsCsvImportCard({ onImported }: FundsCsvImportCardProps) {
 		setDryRun(null);
 		setMessage(null);
 		if (!file) return;
-		const text = await file.text();
-		const parsed = parseCsvText(text);
-		setHeaders(parsed.headers);
+		try {
+			const parsed = await parseSpreadsheetFile(file);
+			setHeaders(parsed.headers);
 		setRows(parsed.rows);
 		const initial: Record<string, FundImportFieldKey | ""> = {};
 		for (const header of parsed.headers) {
 			initial[header] = guessFundImportField(header);
 		}
 		setMapping(initial);
+		} catch (error) {
+			setHeaders([]);
+			setRows([]);
+			setMapping({});
+			setMessage(
+				error instanceof Error ? error.message : "Could not read that file",
+			);
+		}
 	};
 
 	const downloadSample = () => {
@@ -161,11 +169,11 @@ export function FundsCsvImportCard({ onImported }: FundsCsvImportCardProps) {
 					</div>
 					<div className="flex flex-wrap items-end justify-between gap-3">
 						<div className="space-y-1 min-w-[200px] flex-1">
-							<Label htmlFor="funds-csv-upload">CSV file</Label>
+							<Label htmlFor="funds-csv-upload">Spreadsheet file</Label>
 							<input
 								id="funds-csv-upload"
 								type="file"
-								accept=".csv,text/csv"
+								accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 								className="block w-full text-sm text-slate-700"
 								onChange={(e) => void onFile(e.target.files?.[0] ?? null)}
 							/>

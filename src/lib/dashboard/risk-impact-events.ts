@@ -210,12 +210,12 @@ export function sumCountedEventDollars(events: RiskImpactEvent[]): number {
  * `new` / missing / zero-prior windows stay unlabeled as a percent.
  */
 export function honestYoyLabel(trend: RiskImpactTrend | null): string {
-	if (!trend) return "Prior-year comparison unavailable";
+	if (!trend) return "= No prior-year baseline to compare";
 	if (trend.direction === "new" || trend.prior === 0) {
-		return `No prior-year dollars versus ${trend.vsLabel}`;
+		return "= No prior-year baseline to compare";
 	}
 	if (trend.direction === "flat" && trend.current === 0 && trend.prior === 0) {
-		return "No year-over-year change to report";
+		return "= No prior-year baseline to compare";
 	}
 	return formatYoyBadge(trend);
 }
