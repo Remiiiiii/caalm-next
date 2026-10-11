@@ -78,6 +78,7 @@ import {
 	MetricReviewLink,
 	MetricSegmentBar,
 	MetricStatCard,
+	MetricStatDotsBackdrop,
 	parseMetricPercent,
 	useInViewReady,
 } from "@/components/ui/metric-stat-card";
@@ -954,8 +955,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 							<motion.div {...revealItem(scaleIn)}>
 							<MetricStatCard
 								title="Active users"
-								backdrop="none"
-								watermarkIcon={Users}
+								backdrop="radial"
 								value={
 									reduceMotion ? (
 										dashboardStats.activeUsers ?? 0
@@ -1030,6 +1030,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 							<motion.div {...revealItem(scaleIn)}>
 							<MetricStatCard
 								title="Compliance Rate"
+								backdrop="wave"
 								value={
 									reduceMotion ? (
 										dashboardStats.complianceRate || "0%"
@@ -1185,15 +1186,16 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 								{...revealItem(fadeRight)}
 								className="flex h-full min-h-0 min-w-0 lg:col-span-3"
 							>
-							<Card className="glass-card flex h-full min-h-0 min-w-0 flex-col overflow-hidden w-full">
+							<Card className="glass-card relative flex h-full min-h-0 min-w-0 w-full flex-col overflow-hidden">
 								<div className="glass-card-cap" />
-								<CardHeader className="mb-1 border-b border-slate-200/80 pb-4">
+								<MetricStatDotsBackdrop />
+								<CardHeader className="relative z-10 mb-1 border-b border-slate-200/80 pb-4">
 									<CardTitle className="flex items-center gap-2.5 text-lg font-bold sidebar-gradient-text">
 										<StatCardIcon icon={CalendarDays} />
 										Calendar
 									</CardTitle>
 								</CardHeader>
-								<CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden px-3 pb-3 pt-2 sm:px-4 sm:pb-4 md:px-6 md:pb-6">
+								<CardContent className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden px-3 pb-3 pt-2 sm:px-4 sm:pb-4 md:px-6 md:pb-6">
 									<CalendarView
 										user={user}
 										onEventClick={(event) => {
@@ -1234,15 +1236,16 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 
 							{/* Approval SLA accountability */}
 							<motion.div {...revealItem(fadeRight)}>
-							<Card className="glass-card flex h-full flex-col">
+							<Card className="glass-card relative flex h-full flex-col overflow-hidden">
 								<div className="glass-card-cap" />
-								<CardHeader className="mb-4 border-b border-slate-200/80 pb-4">
+								<MetricStatDotsBackdrop />
+								<CardHeader className="relative z-10 mb-4 border-b border-slate-200/80 pb-4">
 									<CardTitle className="flex items-center gap-2.5 text-lg font-bold sidebar-gradient-text">
 										<StatCardIcon icon={Clock} />
 										Approvals & Expirations
 									</CardTitle>
 								</CardHeader>
-								<CardContent className="flex flex-1 flex-col">
+								<CardContent className="relative z-10 flex flex-1 flex-col">
 									<div className="flex flex-1 flex-col gap-3">
 										{slaStatCards.map((stat) => (
 											<div
@@ -1296,10 +1299,11 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 							className="space-y-6"
 						>
 						<motion.div {...revealItem(fadeUp)}>
-						<Card className="glass-card overflow-hidden">
+						<Card className="glass-card relative overflow-hidden">
 							<div className="glass-card-cap" />
+							<MetricStatDotsBackdrop />
 							{/* Header */}
-							<div className="border-b border-slate-200/80 px-5 py-5 sm:px-6">
+							<div className="relative z-10 border-b border-slate-200/80 px-5 py-5 sm:px-6">
 								<h2 className="flex items-center gap-2.5 text-xl font-bold tracking-tight sidebar-gradient-text">
 									<StatCardIcon icon={LinkIcon} />
 									Send Invite Link
@@ -1310,7 +1314,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 								</p>
 							</div>
 
-							<form onSubmit={handleInviteSubmit}>
+							<form onSubmit={handleInviteSubmit} className="relative z-10">
 								{/* Recipient */}
 								<div className="border-b border-slate-200/80 px-5 py-5 sm:px-6">
 									<p className="mb-4 text-[10.5px] font-bold uppercase tracking-[0.08em] text-slate-500">
@@ -1470,15 +1474,16 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 						</motion.div>
 
 						<motion.div {...revealItem(softRise)}>
-						<Card className="glass-card">
+						<Card className="glass-card relative overflow-hidden">
 							<div className="glass-card-cap" />
-							<CardHeader className="mb-4 border-b border-slate-200/80 pb-4">
+							<MetricStatDotsBackdrop />
+							<CardHeader className="relative z-10 mb-4 border-b border-slate-200/80 pb-4">
 								<CardTitle className="flex items-center gap-2.5 text-lg font-bold sidebar-gradient-text">
 									<StatCardIcon icon={MailClock} />
 									Pending Invitations
 								</CardTitle>
 							</CardHeader>
-							<CardContent>
+							<CardContent className="relative z-10">
 								<div className="glass-card-inner overflow-x-auto">
 									<table className="min-w-full text-xs">
 										<thead className="bg-white/40 backdrop-blur-md border-b border-white/30 text-center">

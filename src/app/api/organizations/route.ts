@@ -201,6 +201,12 @@ export async function PUT(request: NextRequest) {
 									validated.settings.managerUserId_source,
 							}
 						: {}),
+					...(validated.settings.departmentComplianceTarget !== undefined
+						? {
+								departmentComplianceTarget:
+									validated.settings.departmentComplianceTarget,
+							}
+						: {}),
 				}
 			: {
 					...existing.settings,

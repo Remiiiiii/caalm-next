@@ -343,6 +343,8 @@ export class CacheManager {
 	static async invalidateOrganization(orgId: string): Promise<void> {
 		await cache.del(CACHE_KEYS.organizations.profile(orgId));
 		await cache.clear(`^cost-centers:${escapeRegex(orgId)}:`);
+		// Department performance target lives on org settings — drop live widget caches.
+		await cache.clear("^analytics:departments:performance");
 	}
 
 	/**

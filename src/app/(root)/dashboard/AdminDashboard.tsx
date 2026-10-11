@@ -621,14 +621,14 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 						/>
 						<MetricStatCard
 							title="Active users"
-							backdrop="none"
-							watermarkIcon={Users}
+							backdrop="radial"
 							value={unifiedStats.activeUsers}
 							description="Active accounts in this organization"
 							icon={Users}
 						/>
 						<MetricStatCard
 							title="Compliance Rate"
+							backdrop="wave"
 							value={unifiedStats.complianceRate}
 							description={
 								adminNeedReview != null

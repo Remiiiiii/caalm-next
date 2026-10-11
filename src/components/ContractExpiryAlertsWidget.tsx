@@ -186,6 +186,7 @@ const ContractExpiryAlertsWidget = ({
 				onFilterChange={setFilterDays}
 				expiringCount={expiringCountFromFiltered}
 				expiredCount={expiredCountFromAll}
+				contracts={contractsArray}
 				isPlaying={isPlaying}
 				onSilence={silenceAlarm}
 				onDismiss={dismissAlarm}

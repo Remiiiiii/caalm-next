@@ -1,10 +1,17 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { Query } from "node-appwrite";
 import { PERMISSIONS } from "@/constants/permissions";
+import { getCurrentUser } from "@/lib/actions/user.actions";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
-import { computeDepartmentPerformance } from "@/lib/dashboard/department-performance";
+import {
+	clampComplianceTarget,
+	computeDepartmentPerformance,
+	DEPARTMENT_COMPLIANCE_TARGET,
+} from "@/lib/dashboard/department-performance";
 import { requirePermission } from "@/lib/rbac/middleware";
+import { getOrganization } from "@/lib/rbac/organizations";
+import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 import { CACHE_KEYS } from "@/lib/services/cache-keys";
 import CacheManager from "@/lib/services/cache-manager";
 
@@ -41,7 +48,20 @@ function countActivitiesByWeek(
 	return { thisWeek, lastWeek };
 }
 
-async function buildOrgDepartmentPerformance() {
+async function resolveComplianceTarget(userId: string): Promise<number> {
+	try {
+		const defaultOrg = await getUserDefaultOrganization(userId);
+		if (!defaultOrg?.orgId) return DEPARTMENT_COMPLIANCE_TARGET;
+		const org = await getOrganization(defaultOrg.orgId);
+		return clampComplianceTarget(
+			org?.settings?.departmentComplianceTarget ?? DEPARTMENT_COMPLIANCE_TARGET,
+		);
+	} catch {
+		return DEPARTMENT_COMPLIANCE_TARGET;
+	}
+}
+
+async function buildOrgDepartmentPerformance(complianceTarget: number) {
 	const { tablesDB } = await createAdminClient();
 
 	const [contracts, users, activities] = await Promise.all([
@@ -64,7 +84,9 @@ async function buildOrgDepartmentPerformance() {
 				tableId: appwriteConfig.recentActivityCollectionId,
 				queries: [Query.limit(200), Query.orderDesc("$createdAt")],
 			})
-			.catch(() => ({ rows: [] as Array<{ timestamp?: string; $createdAt?: string }> })),
+			.catch(() => ({
+				rows: [] as Array<{ timestamp?: string; $createdAt?: string }>,
+			})),
 	]);
 
 	const { thisWeek, lastWeek } = countActivitiesByWeek(
@@ -76,6 +98,7 @@ async function buildOrgDepartmentPerformance() {
 		users: users.rows as Array<Record<string, unknown>>,
 		activityThisWeek: thisWeek,
 		activityLastWeek: lastWeek,
+		complianceTarget,
 	});
 
 	return {
@@ -96,10 +119,21 @@ export async function GET(request: NextRequest) {
 	if (denied) return denied;
 
 	try {
+		const user = await getCurrentUser();
+		if (!user?.$id) {
+			return NextResponse.json(
+				{ success: false, error: "Authentication required" },
+				{ status: 401 },
+			);
+		}
+
+		const complianceTarget = await resolveComplianceTarget(user.$id);
+		const cacheKey = `${CACHE_KEYS.analytics.departmentsPerformance()}:t${complianceTarget}`;
+
 		const data = await CacheManager.withCache(
 			"analytics/departments-performance",
-			CACHE_KEYS.analytics.departmentsPerformance(),
-			buildOrgDepartmentPerformance,
+			cacheKey,
+			() => buildOrgDepartmentPerformance(complianceTarget),
 			LIVE_PERFORMANCE_TTL_SECONDS,
 		);
 
@@ -120,6 +154,9 @@ export async function GET(request: NextRequest) {
 					trend: "stable" as const,
 					totalContracts: 0,
 					departmentsWithContracts: 0,
+					complianceTarget: DEPARTMENT_COMPLIANCE_TARGET,
+					status: "below_target" as const,
+					trendDeltaPts: 0,
 					available: false,
 					generatedAt: new Date().toISOString(),
 				},

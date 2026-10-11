@@ -308,6 +308,9 @@ importers:
       recharts:
         specifier: ^3.7.0
         version: 3.7.0(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react-is@17.0.2)(react@19.2.4)(redux@5.0.1)
+      scichart:
+        specifier: ^6.0.6
+        version: 6.0.6
       sonner:
         specifier: ^2.0.7
         version: 2.0.7(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -5434,6 +5437,10 @@ packages:
 
   scheduler@0.27.0:
     resolution: {integrity: sha512-eNv+WrVbKu1f3vbYJT/xtiF5syA5HPIMtf9IgY/nKg0sWqzAUEvqY/xm7OcZc/qafLx/iO9FgOmeSAp4v5ti/Q==}
+
+  scichart@6.0.6:
+    resolution: {integrity: sha512-ug7aVjJrDXHwGb7icKYjdHtQ0dat/wg3xgXJ4jJQmvEQNoOPxgkULHbVhhOdMuQlxFbbtGL7gHpiqyFauu2Gkw==}
+    engines: {node: '>=22'}
 
   scmp@2.1.0:
     resolution: {integrity: sha512-o/mRQGk9Rcer/jEEw/yw4mwo3EU/NvYvp577/Btqrym9Qy5/MdWGBqipbALgd2lrdWTJ5/gqDusxfnQBxOxT2Q==}
@@ -11380,6 +11387,8 @@ snapshots:
   scheduler@0.25.0-rc-603e6108-20241029: {}
 
   scheduler@0.27.0: {}
+
+  scichart@6.0.6: {}
 
   scmp@2.1.0: {}
 

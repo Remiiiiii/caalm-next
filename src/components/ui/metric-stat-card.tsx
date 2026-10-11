@@ -7,7 +7,6 @@ import {
 	type KeyboardEvent,
 	type ReactNode,
 	useEffect,
-	useId,
 	useRef,
 	useState,
 } from "react";
@@ -132,15 +131,13 @@ export interface MetricStatCardProps {
 	headerHrefIcon?: LucideIcon;
 	/** Background motif under the content. Defaults to the fading dot grid. */
 	backdrop?: MetricStatBackdrop;
-	/** Large faded icon watermark (bottom-right), e.g. Active users card. */
-	watermarkIcon?: LucideIcon;
 }
 
 /** Soft slate gray for dots / radial / wave (not brand blue). */
 const METRIC_BACKDROP_INK = "148, 163, 184";
 
 /** Dot matrix; strongest bottom-right, fades toward top-left. */
-function MetricBackdropDots() {
+export function MetricStatDotsBackdrop() {
 	return (
 		<div
 			className="pointer-events-none absolute inset-x-0 bottom-0 top-4 z-0"
@@ -227,7 +224,7 @@ function MetricBackdrop({ variant }: { variant: MetricStatBackdrop }) {
 	if (variant === "none") return null;
 	if (variant === "radial") return <MetricBackdropRadial />;
 	if (variant === "wave") return <MetricBackdropWave />;
-	return <MetricBackdropDots />;
+	return <MetricStatDotsBackdrop />;
 }
 
 export function parseMetricPercent(
@@ -483,11 +480,9 @@ export function MetricStatCard({
 	headerHrefLabel,
 	headerHrefIcon: HeaderHrefIcon,
 	backdrop = "dots",
-	watermarkIcon: WatermarkIcon,
 }: MetricStatCardProps) {
 	const descriptionTone =
 		valueTone === "default" ? "text-slate-600" : VALUE_TONE[valueTone];
-	const watermarkGradId = useId().replace(/:/g, "");
 
 	return (
 		<Card
@@ -514,34 +509,6 @@ export function MetricStatCard({
 		>
 			<div className="glass-card-cap" />
 			<MetricBackdrop variant={backdrop} />
-			{WatermarkIcon ? (
-				<div
-					className="pointer-events-none absolute -bottom-6 -right-6 z-0 h-44 w-44 -rotate-45"
-					aria-hidden
-				>
-					<svg width="0" height="0" className="absolute">
-						<defs>
-							<linearGradient
-								id={watermarkGradId}
-								x1="0%"
-								y1="0%"
-								x2="100%"
-								y2="100%"
-							>
-								<stop offset="0%" stopColor="#078FAB" stopOpacity="0.22" />
-								<stop offset="55%" stopColor="#0f5384" stopOpacity="0.1" />
-								<stop offset="100%" stopColor="#078FAB" stopOpacity="0.04" />
-							</linearGradient>
-						</defs>
-					</svg>
-					<WatermarkIcon
-						className="h-full w-full"
-						strokeWidth={1.75}
-						stroke={`url(#${watermarkGradId})`}
-						fill="none"
-					/>
-				</div>
-			) : null}
 			<CardContent className="relative z-10 mt-4 flex h-full flex-col items-start px-4 pb-6 pt-6 text-left">
 				{headerHref && HeaderHrefIcon ? (
 					<Link

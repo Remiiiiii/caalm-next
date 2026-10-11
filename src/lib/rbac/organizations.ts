@@ -53,6 +53,8 @@ export interface Organization {
 		 * "scim" / omitted = leave managerUserId alone.
 		 */
 		managerUserId_source?: "manual" | "scim";
+		/** Department performance widget compliance target (1–100). */
+		departmentComplianceTarget?: number;
 		[key: string]: unknown;
 	};
 	stripeCustomerId?: string;

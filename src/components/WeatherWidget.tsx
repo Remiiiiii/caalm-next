@@ -1,10 +1,15 @@
 "use client";
 
-import { Cloud, Droplets, MapPin, Wind } from "lucide-react";
+import {
+	Cloud,
+	CloudRain,
+	Clock,
+	MapPin,
+	Sunrise,
+	Sunset,
+} from "lucide-react";
 import type React from "react";
-import { useEffect, useState } from "react";
-import { LiveWeatherStatusDot } from "@/components/dashboard-briefing/LiveWeatherStatusDot";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useEffect, useMemo, useState } from "react";
 import { useWeatherData } from "@/hooks/useWeatherData";
 import { cn } from "@/lib/utils";
 import {
@@ -12,6 +17,7 @@ import {
 	formatWindSpeed,
 	getWeatherIcon,
 } from "@/lib/weather/icons";
+import { getWeatherScene } from "@/lib/weather/theme";
 
 interface WeatherWidgetProps {
 	location?: string;
@@ -21,19 +27,45 @@ interface WeatherWidgetProps {
 	embedded?: boolean;
 }
 
-function formatLocalDate(date: Date) {
-	return date.toLocaleDateString("en-US", {
-		weekday: "short",
-		month: "short",
-		day: "numeric",
+function formatClockLabel(date: Date) {
+	const weekday = date.toLocaleDateString("en-US", { weekday: "long" });
+	const time = date.toLocaleTimeString("en-US", {
+		hour: "numeric",
+		minute: "2-digit",
+		hour12: true,
 	});
+	return `${weekday}, ${time.toLowerCase()}`;
 }
 
-function formatLocalTime(date: Date) {
-	return date.toLocaleTimeString("en-US", {
-		hour: "2-digit",
+function formatSunTime(unixSec: number, timezoneSec: number) {
+	if (!unixSec) return "—";
+	const localMs = (unixSec + timezoneSec) * 1000;
+	return new Date(localMs).toLocaleTimeString("en-US", {
+		hour: "numeric",
 		minute: "2-digit",
-	});
+		hour12: true,
+		timeZone: "UTC",
+	}).toLowerCase();
+}
+
+function daylightDuration(sunrise: number, sunset: number) {
+	if (!sunrise || !sunset || sunset <= sunrise) return "—";
+	const mins = Math.round((sunset - sunrise) / 60);
+	const h = Math.floor(mins / 60);
+	const m = mins % 60;
+	return `${h} h ${m} m`;
+}
+
+function regionLabel(countryCode: string | null): string | null {
+	if (!countryCode) return null;
+	try {
+		return (
+			new Intl.DisplayNames(["en"], { type: "region" }).of(countryCode) ||
+			countryCode
+		);
+	} catch {
+		return countryCode;
+	}
 }
 
 const WeatherWidget: React.FC<WeatherWidgetProps> = ({
@@ -42,207 +74,184 @@ const WeatherWidget: React.FC<WeatherWidgetProps> = ({
 	longitude,
 	embedded = false,
 }) => {
-	const { weatherData, loading, error, userLocation, isRefreshing } =
-		useWeatherData({ location, latitude, longitude });
-	// Clock text after mount only — avoids SSR/client timezone mismatches.
-	const [nowLabel, setNowLabel] = useState({ date: "", time: "" });
+	const { weatherData, loading, error, userLocation } = useWeatherData({
+		location,
+		latitude,
+		longitude,
+	});
+	const [now, setNow] = useState(() => new Date());
 
 	useEffect(() => {
-		const tick = () => {
-			const now = new Date();
-			setNowLabel({ date: formatLocalDate(now), time: formatLocalTime(now) });
-		};
-		tick();
-		const id = window.setInterval(tick, 60_000);
+		const id = window.setInterval(() => setNow(new Date()), 60_000);
 		return () => window.clearInterval(id);
 	}, []);
 
-	const heightClass = embedded
-		? "h-auto"
-		: "h-[200px] sm:h-[250px] lg:h-[300px]";
+	const scene = useMemo(() => {
+		if (!weatherData?.weather[0]) return null;
+		const nowSec = Math.floor(now.getTime() / 1000);
+		return getWeatherScene(
+			weatherData.weather[0].main,
+			weatherData.weather[0].icon,
+			nowSec,
+			weatherData.sunrise,
+			weatherData.sunset,
+		);
+	}, [weatherData, now]);
+
+	const shellClass = cn(
+		"relative w-full overflow-hidden rounded-3xl text-white shadow-xl",
+		embedded ? "h-auto" : "min-h-[280px]",
+	);
 
 	if (loading) {
 		return (
-			<Card
-				className={cn(
-					"w-full glass-card overflow-hidden",
-					embedded ? "h-auto" : "h-[200px] sm:h-[250px] lg:h-[290px]",
-				)}
+			<div
+				className={cn(shellClass, "bg-[#0a1f3d]")}
+				aria-busy="true"
+				aria-label="Loading weather"
 			>
-				<div className="glass-card-cap" />
-				<CardHeader className="pb-3 pt-6 px-4">
-					<div className="flex items-center justify-between">
-						<div>
-							<CardTitle className="text-sm font-semibold text-slate-800 mb-1">
-								{userLocation}
-							</CardTitle>
-							<p className="text-xs text-slate-600">{nowLabel.date || "\u00a0"}</p>
-						</div>
-						<div className="text-right">
-							<p className="text-xs text-slate-500">Loading</p>
-							<p className="text-xs text-slate-600 font-medium">...</p>
-						</div>
-					</div>
-				</CardHeader>
-				<CardContent className="px-4 pb-4">
-					<div className="flex items-center justify-center h-24">
-						<div className="flex flex-col items-center gap-3">
-							<div className="animate-spin rounded-full h-8 w-8 border-2 border-slate-300 border-t-slate-600"></div>
-							<p className="text-xs text-slate-500 font-medium">
-								Fetching weather data...
-							</p>
-						</div>
-					</div>
-				</CardContent>
-			</Card>
+				<div className="flex h-48 items-center justify-center">
+					<div className="h-8 w-8 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+				</div>
+			</div>
 		);
 	}
 
-	if (error) {
+	if (error || !weatherData || !scene) {
 		return (
-			<Card
-				className={cn(
-					"w-full glass-card overflow-hidden",
-					embedded ? "h-auto" : "h-[200px] sm:h-[250px] lg:h-[290px]",
-				)}
-			>
-				<div className="glass-card-cap" />
-				<CardHeader className="pb-3 pt-6 px-4">
-					<div className="flex items-center justify-between">
-						<div>
-							<CardTitle className="text-sm font-semibold text-slate-800 mb-1">
-								{userLocation}
-							</CardTitle>
-							<p className="text-xs text-slate-600">{nowLabel.date || "\u00a0"}</p>
-						</div>
-						<div className="text-right">
-							<p className="text-xs text-slate-500">Status</p>
-							<p className="text-xs text-red font-medium">Offline</p>
-						</div>
-					</div>
-				</CardHeader>
-				<CardContent className="px-4 pb-4">
-					<div className="flex flex-col items-center justify-center h-24 gap-3">
-						<div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center">
-							<Cloud className="h-6 w-6 text-red-400" />
-						</div>
-						<div className="text-center">
-							<p className="text-sm font-medium text-slate-700">
-								Weather Unavailable
-							</p>
-							<p className="text-xs text-slate-500">Check your connection</p>
-						</div>
-					</div>
-				</CardContent>
-			</Card>
+			<div className={cn(shellClass, "bg-[#0a1f3d]")}>
+				<div className="flex flex-col items-center justify-center gap-2 px-4 py-12 text-center">
+					<Cloud className="h-8 w-8 text-white/50" />
+					<p className="text-sm font-medium text-white/90">
+						Weather unavailable
+					</p>
+					<p className="text-xs text-white/50">
+						{error || "Check your connection"}
+					</p>
+				</div>
+			</div>
 		);
 	}
 
-	if (!weatherData) return null;
+	const w = weatherData.weather[0];
+	const country = regionLabel(weatherData.country);
+	const place =
+		country && weatherData.name
+			? `${country}, ${weatherData.name}`
+			: weatherData.name || userLocation;
+	const tomorrowPop = weatherData.tomorrowPrecipChance;
 
 	return (
-		<Card
-			className={cn(
-				"glass-card w-full flex flex-col overflow-hidden",
-				heightClass,
-			)}
+		<div
+			className={shellClass}
+			style={{ background: scene.background }}
 		>
-			<div className="glass-card-cap" />
-			<CardHeader className="pb-3 pt-6 px-4 flex-shrink-0">
-				<div className="flex items-center justify-between">
-					<div>
-						<div className="flex items-center gap-1">
-							<MapPin className="h-4 w-4 text-[#0f5384]" />
-							<CardTitle className="text-sm font-semibold sidebar-gradient-text mb-1">
-								{weatherData.name}
-							</CardTitle>
-						</div>
-						<p className="text-xs text-slate-600">{nowLabel.date || "\u00a0"}</p>
+			<div
+				className="pointer-events-none absolute inset-0"
+				style={{ background: scene.glow }}
+				aria-hidden
+			/>
+
+			<div className="relative z-10 space-y-5 px-5 py-5 sm:px-6 sm:py-6">
+				{/* Header */}
+				<div className="flex items-start justify-between gap-3 text-sm text-white/95">
+					<div className="flex min-w-0 items-center gap-1.5">
+						<MapPin className="h-3.5 w-3.5 shrink-0 opacity-90" />
+						<span className="truncate font-medium">{place}</span>
 					</div>
-					<div className="text-right">
-						<p className="text-xs text-slate-500">Updated</p>
-						<p className="text-xs text-slate-600 font-medium">
-							{nowLabel.time || "\u00a0"}
+					<div className="flex shrink-0 items-center gap-1.5 text-white/90">
+						<Clock className="h-3.5 w-3.5 opacity-90" />
+						<span className="whitespace-nowrap">{formatClockLabel(now)}</span>
+					</div>
+				</div>
+
+				{/* Current */}
+				<div className="flex items-center justify-between gap-3">
+					<div className="text-5xl font-semibold tracking-tight tabular-nums sm:text-6xl">
+						{formatTemperature(weatherData.main.temp).replace("F", "")}
+					</div>
+					<div className="flex shrink-0 justify-center">
+						{getWeatherIcon(w.main, w.icon, "xl", "onDark")}
+					</div>
+					<div className="min-w-[7.5rem] space-y-1 text-right text-xs sm:text-sm">
+						<p className="text-white/65">
+							Precipitation:{" "}
+							<span className="font-medium text-white">
+								{weatherData.precipChance != null
+									? `${weatherData.precipChance}%`
+									: "—"}
+							</span>
+						</p>
+						<p className="text-white/65">
+							Humidity:{" "}
+							<span className="font-medium text-white">
+								{weatherData.main.humidity}%
+							</span>
+						</p>
+						<p className="text-white/65">
+							Wind:{" "}
+							<span className="font-medium text-white">
+								{formatWindSpeed(weatherData.wind.speed)}
+							</span>
 						</p>
 					</div>
 				</div>
-			</CardHeader>
 
-			<CardContent className="px-4 pb-2 flex-1 flex flex-col min-h-0">
-				<div className="space-y-4 flex-1">
-					<div className="flex items-center justify-between">
-						<div className="flex items-center gap-4">
-							<div className="relative">
-								{getWeatherIcon(
-									weatherData.weather[0].main,
-									weatherData.weather[0].icon,
-								)}
-							</div>
-							<div>
-								<div className="text-3xl font-bold sidebar-gradient-text tracking-tight">
-									{formatTemperature(weatherData.main.temp)}
-								</div>
-								<div className="text-sm text-slate-600 capitalize font-medium">
-									{weatherData.weather[0].description}
-								</div>
-							</div>
-						</div>
-
-						<div className="text-right bg-white/30 rounded-lg px-3 py-1 backdrop-blur-sm">
-							<div className="text-xs text-slate-500 font-medium">
-								Feels like
-							</div>
-							<div className="text-lg font-semibold text-slate-700">
-								{formatTemperature(weatherData.main.feels_like)}
-							</div>
-						</div>
+				{/* Daylight */}
+				<div className="flex items-center gap-2 text-xs text-white/90 sm:text-sm">
+					<div className="flex items-center gap-1.5">
+						<Sunrise className="h-4 w-4 text-amber-200" />
+						<span>
+							{formatSunTime(weatherData.sunrise, weatherData.timezone)}
+						</span>
 					</div>
-					<div className="h-px bg-slate-300"></div>
-					<div className="grid grid-cols-2 gap-2">
-						<div className="bg-white/20 rounded-xl p-3 backdrop-blur-sm border border-white/20">
-							<div className="flex items-center gap-3">
-								<div className="w-8 h-8 bg-blue/10 rounded-lg flex items-center justify-center">
-									<Droplets className="h-4 w-4 text-[#0f5384]" />
-								</div>
-								<div>
-									<div className="text-xs text-slate-500 font-medium">
-										Humidity
-									</div>
-									<div className="text-sm font-bold text-slate-700">
-										{weatherData.main.humidity}%
-									</div>
-								</div>
-							</div>
-						</div>
-
-						<div className="bg-white/20 rounded-xl p-3 backdrop-blur-sm border border-white/20">
-							<div className="flex items-center gap-3">
-								<div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center">
-									<Wind className="h-4 w-4 text-[#0f5384]" />
-								</div>
-								<div>
-									<div className="text-xs text-slate-500 font-medium">Wind</div>
-									<div className="text-sm font-bold text-slate-700">
-										{formatWindSpeed(weatherData.wind.speed)}
-									</div>
-								</div>
-							</div>
-						</div>
+					<div className="flex min-w-0 flex-1 items-center gap-2">
+						<div className="h-px flex-1 border-t border-dotted border-white/40" />
+						<span className="shrink-0 tabular-nums text-white/80">
+							{daylightDuration(weatherData.sunrise, weatherData.sunset)}
+						</span>
+						<div className="h-px flex-1 border-t border-dotted border-white/40" />
+					</div>
+					<div className="flex items-center gap-1.5">
+						<span>
+							{formatSunTime(weatherData.sunset, weatherData.timezone)}
+						</span>
+						<Sunset className="h-4 w-4 text-amber-200" />
 					</div>
 				</div>
 
-				<div className="mt-3 border-t border-white/20 flex-shrink-0 -translate-y-0.5">
-					<div className="flex items-center justify-center">
-						<div className="flex items-center justify-center gap-2 bg-white/20 rounded-full px-4 py-1 backdrop-blur-sm border border-white/20 min-w-[140px]">
-							<LiveWeatherStatusDot isRefreshing={isRefreshing} />
-							<span className="text-xs text-slate-600 font-medium">
-								{isRefreshing ? "Updating..." : "Live Weather Data"}
-							</span>
-						</div>
+				{/* Tomorrow precip highlight */}
+				{tomorrowPop != null && tomorrowPop >= 40 ? (
+					<div className="flex items-center justify-center gap-2 rounded-full bg-black/25 px-4 py-2 text-sm text-white backdrop-blur-sm">
+						<CloudRain className="h-4 w-4 shrink-0" />
+						<span>{tomorrowPop}% chance of rain tomorrow</span>
 					</div>
-				</div>
-			</CardContent>
-		</Card>
+				) : null}
+
+				{/* Daily forecast */}
+				{weatherData.daily.length > 0 ? (
+					<div className="flex justify-between gap-1 pt-1">
+						{weatherData.daily.map((day) => (
+							<div
+								key={day.date}
+								className="flex min-w-0 flex-1 flex-col items-center gap-1.5 text-center"
+							>
+								<span className="text-[11px] font-medium text-white/90 sm:text-xs">
+									{day.label}
+								</span>
+								{getWeatherIcon(day.main, day.icon, "sm", "onDark")}
+								<span className="text-sm font-semibold tabular-nums text-white">
+									{day.high}°
+								</span>
+								<span className="text-xs tabular-nums text-white/55">
+									{day.low}°
+								</span>
+							</div>
+						))}
+					</div>
+				) : null}
+			</div>
+		</div>
 	);
 };
 

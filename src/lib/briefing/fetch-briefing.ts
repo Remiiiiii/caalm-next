@@ -384,24 +384,48 @@ function parseRssItems(
 	});
 }
 
-function newestHeadlines(
+/**
+ * Newest-first within each feed, then alternate feeds (bbc, google, …)
+ * so one outlet cannot fill every briefing slot.
+ */
+export function roundRobinHeadlines(
 	items: BriefingNewsItem[],
 	count: number,
 ): BriefingNewsItem[] {
 	const seen = new Set<string>();
+	const queues = new Map<BriefingNewsItem["feed"], BriefingNewsItem[]>();
+
 	const sorted = [...items].sort((a, b) => {
 		const at = Date.parse(a.publishedAt) || 0;
 		const bt = Date.parse(b.publishedAt) || 0;
 		return bt - at;
 	});
 
-	const picked: BriefingNewsItem[] = [];
 	for (const item of sorted) {
 		const key = item.title.toLowerCase().replace(/\s+/g, " ").slice(0, 80);
 		if (!key || seen.has(key)) continue;
 		seen.add(key);
-		picked.push(item);
-		if (picked.length >= count) break;
+		const queue = queues.get(item.feed) ?? [];
+		queue.push(item);
+		queues.set(item.feed, queue);
+	}
+
+	const feedOrder: BriefingNewsItem["feed"][] = ["bbc", "google"];
+	for (const feed of queues.keys()) {
+		if (!feedOrder.includes(feed)) feedOrder.push(feed);
+	}
+
+	const picked: BriefingNewsItem[] = [];
+	while (picked.length < count) {
+		let progressed = false;
+		for (const feed of feedOrder) {
+			const next = queues.get(feed)?.shift();
+			if (!next) continue;
+			picked.push(next);
+			progressed = true;
+			if (picked.length >= count) break;
+		}
+		if (!progressed) break;
 	}
 	return picked;
 }
@@ -437,7 +461,7 @@ async function fetchNews(): Promise<BriefingNewsItem[]> {
 			() => [] as BriefingNewsItem[],
 		),
 	]);
-	const headlines = newestHeadlines(feeds.flat(), 2);
+	const headlines = roundRobinHeadlines(feeds.flat(), 2);
 
 	return Promise.all(
 		headlines.map(async (item) => {
