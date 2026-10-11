@@ -33,6 +33,7 @@ import {
 	type OrganizationProfileForm,
 	organizationProfileFormSchema,
 } from "@/lib/rbac/organization-profile.schema";
+import { DEPARTMENT_COMPLIANCE_TARGET } from "@/lib/dashboard/department-performance";
 import type { Organization } from "@/lib/rbac/organizations";
 import { fetcher } from "@/lib/swr-config";
 
@@ -127,6 +128,9 @@ export default function OrganizationSettingsPage() {
 	const [email, setEmail] = useState("");
 	const [maxUsers, setMaxUsers] = useState(10);
 	const [maxDepartments, setMaxDepartments] = useState(3);
+	const [departmentComplianceTarget, setDepartmentComplianceTarget] = useState(
+		DEPARTMENT_COMPLIANCE_TARGET,
+	);
 	const [saving, setSaving] = useState(false);
 	const [fieldErrors, setFieldErrors] = useState<
 		Partial<Record<keyof OrganizationProfileForm, string>>
@@ -171,6 +175,11 @@ export default function OrganizationSettingsPage() {
 		setEmail(typeof org.settings?.email === "string" ? org.settings.email : "");
 		setMaxUsers(org.settings?.maxUsers ?? 10);
 		setMaxDepartments(org.settings?.maxDepartments ?? 3);
+		setDepartmentComplianceTarget(
+			typeof org.settings?.departmentComplianceTarget === "number"
+				? org.settings.departmentComplianceTarget
+				: DEPARTMENT_COMPLIANCE_TARGET,
+		);
 	}, [org]);
 
 	const handleSaveProfile = useCallback(async () => {
@@ -267,6 +276,7 @@ export default function OrganizationSettingsPage() {
 		if (!canEdit) return;
 		setSaving(true);
 		try {
+			// Do not send identity fields (e.g. websiteUrl) — those require step-up.
 			const res = await fetch(
 				orgId
 					? `/api/organizations?orgId=${encodeURIComponent(orgId)}`
@@ -278,9 +288,8 @@ export default function OrganizationSettingsPage() {
 						settings: {
 							maxUsers,
 							maxDepartments,
+							departmentComplianceTarget,
 							features: org?.settings?.features || [],
-							timezone: org?.settings?.timezone,
-							websiteUrl: org?.settings?.websiteUrl,
 						},
 					}),
 				},
@@ -300,7 +309,16 @@ export default function OrganizationSettingsPage() {
 		} finally {
 			setSaving(false);
 		}
-	}, [canEdit, orgId, maxUsers, maxDepartments, org, mutate, toast]);
+	}, [
+		canEdit,
+		orgId,
+		maxUsers,
+		maxDepartments,
+		departmentComplianceTarget,
+		org,
+		mutate,
+		toast,
+	]);
 
 	if (permissionsLoading || isLoading) {
 		return (
@@ -679,7 +697,7 @@ export default function OrganizationSettingsPage() {
 										value={maxUsers}
 										onChange={(e) => setMaxUsers(Number(e.target.value) || 1)}
 										disabled={!canEdit}
-										className="bg-white !border-[0.25px] !border-solid !border-slate-200"
+										className="bg-white border-[0.25px] border-solid border-slate-300"
 									/>
 								</div>
 								<div className="space-y-2">
@@ -693,20 +711,49 @@ export default function OrganizationSettingsPage() {
 											setMaxDepartments(Number(e.target.value) || 1)
 										}
 										disabled={!canEdit}
-										className="bg-white !border-[0.25px] !border-solid !border-slate-200"
+										className="bg-white border-[0.25px] border-solid border-slate-300"
 									/>
 								</div>
 							</div>
+							<div className="space-y-2 rounded-lg border border-slate-200 bg-white p-4">
+								<Label htmlFor="dept-compliance-target">
+									Department compliance target (%)
+								</Label>
+								<p className="text-xs text-slate-600">
+									Used by the dashboard Department performance widget. Scores at
+									or above this % are on target; within 15 pts below is amber;
+									further below is red.
+								</p>
+								<Input
+									id="dept-compliance-target"
+									type="number"
+									min={1}
+									max={100}
+									value={departmentComplianceTarget}
+									onChange={(e) =>
+										setDepartmentComplianceTarget(
+											Math.min(
+												100,
+												Math.max(1, Number(e.target.value) || 1),
+											),
+										)
+									}
+									disabled={!canEdit}
+									className="max-w-[8rem] bg-white border-[0.25px] border-solid border-slate-300"
+								/>
+							</div>
 							<PermissionGate permission={PERMISSIONS.SETTINGS.EDIT}>
-								<Button
-									type="button"
-									className="primary-btn px-3 sm:px-4 cursor-pointer"
-									disabled={saving}
-									onClick={handleSaveLimits}
-								>
-									<Save className="h-4 w-4" />
-									Save limits
-								</Button>
+								<div className="flex justify-end">
+									<Button
+										type="button"
+										className="btn-primary px-3 sm:px-4 cursor-pointer"
+										disabled={saving}
+										onClick={handleSaveLimits}
+									>
+										<Save className="h-4 w-4" />
+										Save limits
+									</Button>
+								</div>
 							</PermissionGate>
 						</CardContent>
 					</GlassCard>

@@ -143,6 +143,13 @@ export const updateOrgSchema = z.object({
 			phone: orgPhoneField.optional(),
 			email: orgEmailField.optional(),
 			managerUserId_source: z.enum(["manual", "scim"]).optional(),
+			/** Org-wide department compliance target % (dashboard widget). */
+			departmentComplianceTarget: z
+				.number()
+				.int()
+				.min(1, "Target must be at least 1%")
+				.max(100, "Target cannot exceed 100%")
+				.optional(),
 		})
 		.optional(),
 });

@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { DashboardCardFilter } from "@/components/dashboard/DashboardCardFilter";
 import Thumbnail from "@/components/Thumbnail";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MetricStatDotsBackdrop } from "@/components/ui/metric-stat-card";
 import { FileItemSkeleton } from "@/components/ui/skeletons";
 import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import { useOrgTimezone } from "@/hooks/useOrgTimezone";
@@ -217,9 +218,10 @@ export function RecentFilesUploadedCard({
 	);
 
 	return (
-		<Card className={cn(className)}>
+		<Card className={cn("relative overflow-hidden", className)}>
 			{showCap ? <div className="glass-card-cap" /> : null}
-			<CardHeader className="mb-4 border-b border-slate-200/80 pb-4">
+			<MetricStatDotsBackdrop />
+			<CardHeader className="relative z-10 mb-4 border-b border-slate-200/80 pb-4">
 				<div className="flex items-center justify-between gap-3">
 					<CardTitle className="flex items-center gap-2.5 text-lg font-bold sidebar-gradient-text">
 						<StatCardIcon icon={FileUp} />
@@ -228,7 +230,7 @@ export function RecentFilesUploadedCard({
 					{filterButton}
 				</div>
 			</CardHeader>
-			<CardContent className="pt-0">
+			<CardContent className="relative z-10 pt-0">
 				{isLoading ? (
 					<div className="space-y-4">
 						{[1, 2, 3].map((i) => (

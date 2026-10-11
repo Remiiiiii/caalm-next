@@ -2,23 +2,9 @@
 
 import { useEffect, useState } from "react";
 import useSWR from "swr";
+import type { WeatherPayload } from "@/lib/weather/build-weather-payload";
 
-export type WeatherData = {
-	name: string;
-	main: {
-		temp: number;
-		feels_like: number;
-		humidity: number;
-	};
-	weather: Array<{
-		main: string;
-		description: string;
-		icon: string;
-	}>;
-	wind: {
-		speed: number;
-	};
-};
+export type WeatherData = WeatherPayload;
 
 type UseWeatherDataOptions = {
 	location?: string;

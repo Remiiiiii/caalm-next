@@ -123,7 +123,7 @@ describe("honestYoyLabel", () => {
 				current: 100,
 				prior: 0,
 			}),
-		).toBe("No prior-year dollars versus 2025 YTD");
+		).toBe("= No prior-year baseline to compare");
 	});
 });
 
@@ -161,7 +161,7 @@ describe("risk averted packet helpers", () => {
 		expect(payload.countedEventCount).toBe(1);
 		expect(payload.eventCount).toBe(2);
 		expect(payload.countedDollarsFormatted).toBe("$100,000");
-		expect(payload.yoyLabel).toBe("No prior-year dollars versus 2025 YTD");
+		expect(payload.yoyLabel).toBe("= No prior-year baseline to compare");
 		expect(payload.primaryFormatted).toBe("$2.1M");
 	});
 });

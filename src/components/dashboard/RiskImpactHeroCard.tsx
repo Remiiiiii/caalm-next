@@ -1,15 +1,19 @@
 "use client";
 
+import { useReducedMotion } from "framer-motion";
 import { AlertTriangle, ChevronRight, RefreshCw, Shield } from "lucide-react";
 import Link from "next/link";
+import CountUp from "react-countup";
 import { RiskTrackingChart } from "@/components/dashboard/RiskTrackingChart";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { MetricStatDotsBackdrop } from "@/components/ui/metric-stat-card";
 import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import type {
 	RiskImpactSnapshot,
 	RiskImpactTrend,
 } from "@/lib/dashboard/risk-impact.types";
+import { formatRiskUsdExact } from "@/lib/dashboard/risk-impact-events";
 
 const COL_PAD = "flex flex-col justify-start gap-3.5 p-5 sm:p-6";
 const COL_RULE =
@@ -35,14 +39,12 @@ function TrendCopy({
 			? "↓"
 			: trend.direction === "flat"
 				? variant === "count"
-					? "—"
+					? "="
 					: null
 				: "↑";
 	const prefix =
 		variant === "count"
-			? trend.direction === "flat"
-				? "vs"
-				: `vs ${trend.prior ?? 0}`
+			? `vs ${trend.prior ?? 0}`
 			: trend.direction === "new"
 				? "vs"
 				: trend.direction === "flat"
@@ -171,13 +173,15 @@ export function RiskImpactHeroCard({
 	error,
 	onRetry,
 }: RiskImpactHeroCardProps) {
+	const reduceMotion = useReducedMotion();
 	const breakdownHref = "/analytics/risk-averted";
 
 	if (isLoading && !snapshot) {
 		return (
-			<Card className="glass-card mb-6 overflow-hidden">
+			<Card className="glass-card relative mb-6 overflow-hidden">
 				<div className="glass-card-cap" />
-				<CardContent className="p-0">
+				<MetricStatDotsBackdrop />
+				<CardContent className="relative z-10 p-0">
 					<div className="animate-pulse">
 						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[minmax(13rem,17rem)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]">
 							<div className="p-5 sm:p-6 space-y-3 border-b lg:border-b-0">
@@ -215,9 +219,10 @@ export function RiskImpactHeroCard({
 
 	if (error && !snapshot) {
 		return (
-			<Card className="glass-card mb-6 border border-orange/20">
+			<Card className="glass-card relative mb-6 overflow-hidden border border-orange/20">
 				<div className="glass-card-cap" />
-				<CardContent className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
+				<MetricStatDotsBackdrop />
+				<CardContent className="relative z-10 p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
 					<div className="flex items-start gap-3">
 						<AlertTriangle className="h-5 w-5 text-orange shrink-0 mt-0.5" />
 						<div>
@@ -255,9 +260,10 @@ export function RiskImpactHeroCard({
 		!(snapshot.primary.amount === 0 && yoyTrend.direction === "flat");
 
 	return (
-		<Card className="glass-card mb-6 overflow-hidden border border-slate-200/80">
+		<Card className="glass-card relative mb-6 overflow-hidden border border-slate-200/80">
 			<div className="glass-card-cap" />
-			<CardContent className="p-0">
+			<MetricStatDotsBackdrop />
+			<CardContent className="relative z-10 p-0">
 				<div>
 					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[minmax(13rem,17rem)_minmax(0,1fr)_minmax(0,1fr)_minmax(12rem,1.15fr)] items-start">
 						<div className={`relative ${COL_PAD} ${COL_RULE}`}>
@@ -272,8 +278,21 @@ export function RiskImpactHeroCard({
 							<p className="text-[10.5px] tracking-wide text-slate-500">
 								{periodDisplay}
 							</p>
-							<p className="text-[2.5rem] leading-none font-semibold text-slate-800 tracking-tight">
-								{snapshot.primary.amountFormatted}
+							<p className="text-[2.5rem] leading-none font-semibold text-slate-800 tracking-tight tabular-nums">
+								{reduceMotion ? (
+									formatRiskUsdExact(snapshot.primary.amount)
+								) : (
+									<CountUp
+										key={`risk-averted-${snapshot.primary.amount}-${snapshot.period}`}
+										end={Math.max(0, Math.round(snapshot.primary.amount))}
+										duration={1.2}
+										prefix="$"
+										separator=","
+										preserveValue
+										enableScrollSpy
+										scrollSpyOnce
+									/>
+								)}
 							</p>
 							{snapshot.secondary.amount > 0 ? (
 								<p className="text-xs text-slate-600">

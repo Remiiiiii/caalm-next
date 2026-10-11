@@ -1,6 +1,7 @@
 "use client";
 
 import { Newspaper } from "lucide-react";
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -8,6 +9,8 @@ import {
 	showGoogleNewsCardLink,
 } from "@/lib/briefing/news-header-links";
 import { type BriefingNewsItem, GOOGLE_NEWS_URL } from "@/types/briefing";
+
+const GOOGLE_NEWS_ICON = "/assets/icons/company-icons/googlenews.svg";
 
 type MsnNewsCardsProps = {
 	news: BriefingNewsItem[];
@@ -137,6 +140,18 @@ function NewsCardBody({ item }: { item: BriefingNewsItem }) {
 					src={item.videoUrl}
 					onFailed={() => setVideoFailed(true)}
 				/>
+			) : item.feed === "google" ? (
+				<div className="flex aspect-video w-full items-center justify-center bg-slate-100">
+					<Image
+						src={GOOGLE_NEWS_ICON}
+						alt=""
+						width={96}
+						height={96}
+						unoptimized
+						className="h-36 w-36 opacity-80 sm:h-36 sm:w-36"
+						aria-hidden
+					/>
+				</div>
 			) : (
 				<div className="flex aspect-video w-full items-center justify-center bg-slate-100">
 					<Newspaper className="h-8 w-8 text-slate-400" />
@@ -148,7 +163,7 @@ function NewsCardBody({ item }: { item: BriefingNewsItem }) {
 					{item.publishedAt ? (
 						<>
 							{" · "}
-							{relativeTime(item.publishedAt)}
+							{`${relativeTime(item.publishedAt)} ago`}
 						</>
 					) : null}
 				</p>

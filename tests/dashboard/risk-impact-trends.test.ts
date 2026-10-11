@@ -37,9 +37,9 @@ describe("buildTrend", () => {
 		expect(formatCountDelta(trend)).toBe("↓ vs 100 last Q");
 	});
 
-	it("formats a flat count as an em dash vs last Q", () => {
-		const trend = buildTrend(1, 1, "Q2");
-		expect(formatCountDelta(trend)).toBe("— vs last Q");
+	it("formats a flat count as equals vs prior last Q", () => {
+		const trend = buildTrend(2, 2, "Q2");
+		expect(formatCountDelta(trend)).toBe("= vs 2 last Q");
 	});
 });
 

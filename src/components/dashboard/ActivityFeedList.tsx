@@ -134,8 +134,9 @@ export function ActivityFeedList({
 	}
 
 	return (
-		<div className="py-1 pr-2">
-			{rows.map((row, index) => {
+		// Same raised frosted chrome as Recent Files list items
+		<div className="space-y-3 pr-2">
+			{rows.map((row) => {
 				const ageWeeks = mounted ? weeksAgo(row.timestamp) : 0;
 				const faded = ageWeeks >= FADE_STRONG_WEEKS;
 				const muted = !faded && ageWeeks >= FADE_START_WEEKS;
@@ -145,65 +146,61 @@ export function ActivityFeedList({
 					<div
 						key={row.$id}
 						className={cn(
-							"relative flex items-start gap-3 px-1 py-2.5",
+							"rounded-lg border border-white/30 bg-white/20 p-3 shadow-sm backdrop-blur-md",
 							faded && "opacity-60",
 						)}
 					>
-						{index > 0 ? (
+						<div className="flex items-start gap-3">
 							<div
-								aria-hidden
-								className="absolute left-11 right-8 top-0 h-px bg-slate-200/80"
-							/>
-						) : null}
-						<div
-							className={cn(
-								"flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
-								tileClass,
-							)}
-						>
-							<Icon className={cn("h-4 w-4", iconClass)} />
-						</div>
-						<div className="min-w-0 flex-1">
-							<div className="flex items-center gap-1.5">
+								className={cn(
+									"flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
+									tileClass,
+								)}
+							>
+								<Icon className={cn("h-4 w-4", iconClass)} />
+							</div>
+							<div className="min-w-0 flex-1">
+								<div className="flex items-center gap-1.5">
+									<p
+										className={cn(
+											"truncate text-sm font-medium",
+											faded
+												? "text-slate-400"
+												: muted
+													? "text-slate-500"
+													: "text-slate-700",
+										)}
+									>
+										{sentenceCase(row.action)}
+									</p>
+									{row.count > 1 ? (
+										<span className="shrink-0 text-xs font-medium text-slate-400">
+											×{row.count}
+										</span>
+									) : null}
+								</div>
 								<p
 									className={cn(
-										"truncate text-sm font-medium",
+										"mt-0.5 truncate text-xs",
 										faded
 											? "text-slate-400"
 											: muted
-												? "text-slate-500"
-												: "text-slate-700",
+												? "text-slate-400"
+												: "text-slate-600",
 									)}
 								>
-									{sentenceCase(row.action)}
+									{row.subtitle}
 								</p>
-								{row.count > 1 ? (
-									<span className="shrink-0 text-xs font-medium text-slate-400">
-										×{row.count}
-									</span>
-								) : null}
 							</div>
-							<p
+							<span
 								className={cn(
-									"mt-0.5 truncate text-xs",
-									faded
-										? "text-slate-400"
-										: muted
-											? "text-slate-400"
-											: "text-slate-600",
+									"shrink-0 pt-0.5 text-xs tabular-nums",
+									faded || muted ? "text-slate-400" : "text-slate-500",
 								)}
 							>
-								{row.subtitle}
-							</p>
+								{mounted ? formatCompactTimeAgo(row.timestamp) : ""}
+							</span>
 						</div>
-						<span
-							className={cn(
-								"shrink-0 pt-0.5 text-xs tabular-nums",
-								faded || muted ? "text-slate-400" : "text-slate-500",
-							)}
-						>
-							{mounted ? formatCompactTimeAgo(row.timestamp) : ""}
-						</span>
 					</div>
 				);
 			})}

@@ -158,7 +158,8 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 		newsLimit: 5,
 		userId: user?.$id ?? user?.accountId ?? null,
 	});
-	const carouselReady = !unifiedLoading && !bundleLoading;
+	// Unified data unblocks contract/license widgets; bundle fills the rest.
+	const carouselReady = !unifiedLoading;
 	const adminComplianceTone = complianceMetricTone(unifiedStats.complianceRate);
 	const adminNeedReview = complianceNeedReviewCount(
 		unifiedStats.totalContracts,
@@ -560,12 +561,17 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 									contracts={contracts as UIFileDoc[] | undefined}
 								/>
 								<DepartmentPerformanceWidget
-									data={bundle?.performance ?? null}
+									data={
+										bundle
+											? (bundle.performance ?? null)
+											: undefined
+									}
 								/>
 								<CompanyNewsFeed
 									items={bundle?.newsItems}
 									total={bundle?.newsTotal}
 									viewer={bundle?.newsViewer}
+									parentLoading={bundleLoading}
 								/>
 								{user ? (
 									<QuickNotesWidget
@@ -591,12 +597,14 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 					<>
 						<MetricStatCard
 							title="Total Contracts"
+							backdrop="radial"
 							value={unifiedStats.totalContracts}
 							description="Across all departments"
 							icon={FileStack}
 						/>
 						<MetricStatCard
 							title="Expiring Soon"
+							backdrop="wave"
 							value={unifiedStats.expiringContracts}
 							description="Within 30 days"
 							icon={AlertTriangle}
@@ -612,13 +620,15 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 							}
 						/>
 						<MetricStatCard
-							title="Active Users"
+							title="Active users"
+							backdrop="radial"
 							value={unifiedStats.activeUsers}
 							description="Active accounts in this organization"
 							icon={Users}
 						/>
 						<MetricStatCard
 							title="Compliance Rate"
+							backdrop="wave"
 							value={unifiedStats.complianceRate}
 							description={
 								adminNeedReview != null

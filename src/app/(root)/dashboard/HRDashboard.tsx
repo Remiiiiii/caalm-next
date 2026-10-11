@@ -126,6 +126,7 @@ const HRDashboard = ({ user }: HRDashboardProps) => {
 				/>
 				<MetricStatCard
 					title="Compliance Rate"
+					backdrop="wave"
 					value={isLoading ? "…" : stats.complianceRate}
 					description={
 						needReview != null
