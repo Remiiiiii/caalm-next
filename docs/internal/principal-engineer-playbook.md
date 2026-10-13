@@ -381,3 +381,7 @@ Research-backed operating system for building CAALM with Cursor agents at princi
 | `cursor/playbook-doc-0e5f` | This document |
 | `cursor/agent-workflow-rules-0e5f` | `.cursor/rules/agent-workflow-principal.mdc` |
 | `cursor/agent-prompt-templates-0e5f` | `.cursor/prompt-templates/*.md` |
+
+## Hooks setup
+
+See `docs/internal/cursor-hooks-setup.md` (PR: portable hooks branch).
