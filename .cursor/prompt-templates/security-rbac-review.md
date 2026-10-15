@@ -1,4 +1,4 @@
-﻿# Template: Security / RBAC review (pre-merge)
+# Template: Security / RBAC review (pre-merge)
 
 Use before merging auth, navigation, or data-access changes.
 

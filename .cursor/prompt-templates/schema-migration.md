@@ -1,4 +1,4 @@
-﻿# Template: Appwrite schema migration
+# Template: Appwrite schema migration
 
 ---
 

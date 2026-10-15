@@ -1,4 +1,4 @@
-﻿# Template: Roadmap batch PR (CLM / NPO / PRD)
+# Template: Roadmap batch PR (CLM / NPO / PRD)
 
 ---
 
