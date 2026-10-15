@@ -43,4 +43,4 @@ Use this on every non-trivial task. Full playbook: `docs/internal/principal-engi
 
 ## Prompt templates
 
-Copy from `.cursor/prompt-templates/` and fill brackets before starting large work.
+On Plan mode or “make a plan”: follow `.cursor/rules/plan-prompt-templates.mdc` (auto-pick A–E/G–K when clear; else ask A–K with F = Other). Fill brackets **in memory only** — never rewrite `.cursor/prompt-templates/*.md`.

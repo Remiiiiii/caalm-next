@@ -1,0 +1,102 @@
+---
+description: Plan mode / make-a-plan — pick or auto-apply prompt templates (A–K); fill brackets in memory only
+alwaysApply: true
+---
+
+# Plan + prompt templates
+
+Templates live in `.cursor/prompt-templates/`. Use them when planning work that matches a template’s purpose.
+
+## When this rule runs
+
+Apply on **either**:
+
+1. **Plan mode** is selected, or
+2. The user asks to **make a plan** / plan the work in Agent mode
+
+Skip this rule for tiny one-line fixes with no feature, page, schema, roadmap, security, bug, CI, permission, audit, or dialog shape.
+
+## Template menu (synced to files)
+
+| Key | File | Purpose (match signals) |
+|-----|------|-------------------------|
+| **A** | `feature-delivery.md` | New/changed API + UI feature, permissions, acceptance |
+| **B** | `roadmap-batch-pr.md` | CLM / NPO / PRD batch PR, roadmap section tasks |
+| **C** | `security-rbac-review.md` | Pre-merge auth, RBAC, tenant isolation, data-access review |
+| **D** | `ui-page.md` | New or redesigned app page / screen layout |
+| **E** | `schema-migration.md` | Appwrite collection/attribute/index + demo DB sync |
+| **F** | Other | No template — plan freeform |
+| **G** | `bug-fix.md` | Bug, regression, wrong behavior, broken path |
+| **H** | `fix-ci.md` | Failing GitHub check, red CI, fix pipeline |
+| **I** | `permission-rbac-seed.md` | New permission key + role_permissions seed (prod + demo) |
+| **J** | `audit-write-path.md` | Audit log / who-what-when-tenant on a write |
+| **K** | `ui-dialog.md` | Dialog, modal, or shared UI component (not a full page) |
+
+## First response behavior
+
+### Clear single match → auto-pick (no question)
+
+If the ask clearly fits **exactly one** of A–E or G–K, **do not ask**. Silently select that letter, load the matching `.md`, and continue.
+
+Examples of clear matches:
+
+- “Add licenses CSV export API + button” → **A**
+- “Implement PRD S1 B1 / NPO batch / roadmap batch PR #…” → **B**
+- “Review this PR for RBAC / before merge check permissions” → **C**
+- “Build a new settings page for …” → **D**
+- “Add Appwrite attribute / sync demo schema” → **E**
+- “Bug: export button 500s on /licenses” → **G**
+- “CI red: test:api-authz failing on this PR” → **H**
+- “Add PERMISSIONS.X.Y and assign Super Admin + Org Admin in prod and demo” → **I**
+- “Write an audit entry when a license is renewed” → **J**
+- “Add a confirm dialog for archive license” → **K**
+
+### Ambiguous or multi-match → ask once
+
+If none fit, more than one could fit, or intent is unclear, the **first** reply must be only:
+
+> Which template do you want to use?
+
+Then list:
+
+- **A** — Feature delivery (API + UI) — `feature-delivery.md`
+- **B** — Roadmap batch PR (CLM / NPO / PRD) — `roadmap-batch-pr.md`
+- **C** — Security / RBAC review — `security-rbac-review.md`
+- **D** — New or redesigned app page — `ui-page.md`
+- **E** — Appwrite schema migration — `schema-migration.md`
+- **G** — Bug fix / regression — `bug-fix.md`
+- **H** — Fix CI / failing checks — `fix-ci.md`
+- **I** — New permission / RBAC seed — `permission-rbac-seed.md`
+- **J** — Audit write path — `audit-write-path.md`
+- **K** — Dialog or shared UI component — `ui-dialog.md`
+- **F** — Other (no template)
+
+Wait for A–K (or the file name). Do not start the full plan until they choose, unless they already named a template in the same message.
+
+### F — Other
+
+Plan without a template. Do not invent a new `.md` for the task.
+
+## Tie-break hints (when two letters both seem to fit)
+
+- Full **page** layout → **D**; **dialog/modal** only → **K**
+- New **feature** that also needs a dialog → prefer **A** (feature owns the work); use **K** only when the ask is dialog/component-scoped
+- Pre-merge **review** of auth → **C**; **adding** a permission + seeding roles → **I**
+- Schema columns/indexes → **E**; audit **behavior** on an existing write → **J** (unless schema must change too — then ask)
+- Failing tests/checks → **H**; product bug with green CI → **G**
+
+## In-memory fill (hard rule)
+
+1. **Never** edit, rewrite, overwrite, or commit changes to files under `.cursor/prompt-templates/` as part of filling brackets.
+2. **Read** the chosen `.md` once.
+3. Build a **temporary in-memory** copy: fill every `[bracket]` from the user’s Plan / “make a plan” prompt (and any follow-ups).
+4. Use that filled brief as the planning + implementation source of truth for this task only.
+5. **Discard** the filled copy when implementation is complete (or the user cancels / switches task). Do not write it to disk, chat history files, or the repo.
+
+If a bracket cannot be inferred, ask a short clarifying question for that field only — still do not edit the `.md` on disk.
+
+## After the template is chosen (or auto-picked)
+
+1. Fill brackets in memory (above).
+2. Continue Plan / Agent planning using the filled brief + `agent-workflow-principal.mdc` (graft, rules, delivery checklist).
+3. Do not paste the entire blank template back to the user; optionally show a short “using template X” line and any still-empty fields you need answered.
