@@ -3,8 +3,11 @@ const path = require('path');
 const fs = require('fs');
 const { pathToFileURL } = require('url');
 const { execFileSync } = require('child_process');
-const dir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
-const BAKED = "C:\\Users\\victo\\AppData\\Local\\npm-cache\\_npx\\b7f45974acf31384\\node_modules\\@nanonets\\graft\\dist\\claude";
+// Cursor and Claude Code set CLAUDE_PROJECT_DIR; cloud agents set CURSOR_PROJECT_DIR.
+const dir =
+	process.env.CURSOR_PROJECT_DIR ||
+	process.env.CLAUDE_PROJECT_DIR ||
+	process.cwd();
 
 // The dist/claude dir of @nanonets/graft resolved from a base whose node_modules is searched.
 function fromPkg(base) {
@@ -55,7 +58,11 @@ function best(dirs, name) {
 
 function entry(name) {
   // Cheap candidates first, and only shell out to npm when every one of them misses.
-  const cheap = [BAKED, fromPkg(dir), fromPkg(path.join(path.dirname(process.execPath), '..', 'lib'))];
+  const cheap = [
+    fromPkg(dir),
+    fromPkg(path.join(dir, '..')),
+    fromPkg(path.join(path.dirname(process.execPath), '..', 'lib')),
+  ];
   const hit = best(cheap, name);
   if (hit) return path.join(hit, name);
   const gr = globalRoot();
