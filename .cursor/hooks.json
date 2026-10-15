@@ -1,33 +1,21 @@
 {
-	"version": 1,
-	"hooks": {
-		"sessionStart": [
-			{
-				"command": "node \"C:/Users/victo/Development/ponytail/hooks/ponytail-activate.js\"",
-				"timeout": 5
-			}
-		],
-		"beforeSubmitPrompt": [
-			{
-				"command": "node \"C:/Users/victo/Development/ponytail/hooks/ponytail-mode-tracker.js\"",
-				"timeout": 5
-			}
-		],
-		"postToolUse": [
-			{
-				"matcher": "Read|Grep|Glob|Search|Shell",
-				"command": "node \"c:\\Users\\victo\\Development\\caalm-next\\.cursor\\hooks\\graft-hooks.cjs\" cursor-post-tool"
-			}
-		],
-		"afterMCPExecution": [
-			{
-				"command": "node \"c:\\Users\\victo\\Development\\caalm-next\\.cursor\\hooks\\graft-hooks.cjs\" cursor-mcp"
-			}
-		],
-		"sessionEnd": [
-			{
-				"command": "node \"c:\\Users\\victo\\Development\\caalm-next\\.cursor\\hooks\\graft-hooks.cjs\" cursor-session-end"
-			}
-		]
-	}
+  "version": 1,
+  "hooks": {
+    "postToolUse": [
+      {
+        "matcher": "Read|Grep|Glob|Search|Shell",
+        "command": "node \"c:\\Users\\victo\\Development\\caalm-next\\.cursor\\hooks\\graft-hooks.cjs\" cursor-post-tool"
+      }
+    ],
+    "afterMCPExecution": [
+      {
+        "command": "node \"c:\\Users\\victo\\Development\\caalm-next\\.cursor\\hooks\\graft-hooks.cjs\" cursor-mcp"
+      }
+    ],
+    "sessionEnd": [
+      {
+        "command": "node \"c:\\Users\\victo\\Development\\caalm-next\\.cursor\\hooks\\graft-hooks.cjs\" cursor-session-end"
+      }
+    ]
+  }
 }
