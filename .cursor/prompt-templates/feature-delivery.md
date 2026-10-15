@@ -1,4 +1,4 @@
-﻿# Template: Feature delivery (API + UI)
+# Template: Feature delivery (API + UI)
 
 Copy into Agent chat and fill `[brackets]`.
 

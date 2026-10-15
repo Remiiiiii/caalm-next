@@ -1,4 +1,4 @@
-﻿# Template: New or redesigned app page
+# Template: New or redesigned app page
 
 ---
 
