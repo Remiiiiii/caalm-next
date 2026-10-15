@@ -9,11 +9,11 @@ On Plan mode or “make a plan”, the agent auto-picks or asks **A–K** (see `
 | **C** | `security-rbac-review.md` | Pre-merge RBAC review |
 | **D** | `ui-page.md` | New app page |
 | **E** | `schema-migration.md` | Appwrite schema + demo sync |
-| **F** | — | Other (no template) |
+| **F** | `ui-dialog.md` | Dialog or shared UI component |
 | **G** | `bug-fix.md` | Bug fix / regression |
 | **H** | `fix-ci.md` | Fix CI / failing checks |
 | **I** | `permission-rbac-seed.md` | New permission + role seed (prod + demo) |
 | **J** | `audit-write-path.md` | Audit who/what/when/tenant on writes |
-| **K** | `ui-dialog.md` | Dialog or shared UI component |
+| **K** | — | Other (no template) |
 
 Playbook: `docs/internal/principal-engineer-playbook.md`
