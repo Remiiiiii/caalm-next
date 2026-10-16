@@ -222,7 +222,7 @@ These are gaps that **do not show up in a demo** until a buyer, auditor, or clou
 | **Too many AI rules** | Dozens of style and security rules can contradict each other; the AI picks inconsistently. | Same feature looks different week to week; security steps skipped. |
 | **Cloud missing database tools** | If Appwrite/GitHub are not connected in Cursor Team settings, cloud agents cannot verify schema or PRs properly. | “Done” PRs that break demo or permissions. |
 | **Audit log as checkbox vs product** | Logging exists but narrative is weak (“who changed this contract clause?”). | Lose compliance-led deals to vendors with clearer audit stories. |
-| **Workflow scope creep** | Building a full second “workflow product” inside CAALM too early. | Years of delay; core CLM features starve. |
+| **Workflow scope creep** | Building a full second “workflow product” inside CAALM too early. Guardrail: `docs/internal/workflow-engine-decision.md`. | Years of delay; core CLM features starve. |
 | **Lint warnings ignored in CI** | Automated style/security lint can fail but pipeline still passes (`continue-on-error`). | Slow quality drift; harder to catch bugs early. |
 | **Mobile vs desktop strategy** | CAALM is desktop-first; phones get companion flows only. | PO asks for phone layouts engineers should not build for admin screens. |
 | **Demo vs production database** | Demo sandbox can lag production schema (known limits on audit log size on demo). | Demo shows wrong behavior; sales loses trust. |

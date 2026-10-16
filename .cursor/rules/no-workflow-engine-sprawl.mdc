@@ -1,0 +1,37 @@
+---
+description: Keep approval workflows in the CAALM app; do not add a second workflow product or engine
+alwaysApply: true
+---
+
+# No workflow-engine sprawl
+
+CAALM already has **approval workflows** for contracts and licenses inside this app (steps, assignees, SLAs, human approve/reject). That is enough for now.
+
+## Hard rule
+
+**Do not** build, propose, or scaffold a second workflow system unless the user explicitly asks for that architecture decision.
+
+Forbidden without an explicit ask:
+
+- New microservice or separate deployable “workflow engine”
+- Temporal / Cadence / Conductor / Camunda / Airflow (or similar) for CLM approvals
+- Kafka / event-bus “orchestration platform” for core contract/license approvals
+- Rewriting approvals as full CQRS + event sourcing
+- A parallel workflow UI product that duplicates Approvals
+
+## Allowed (keep improving the existing path)
+
+- Fix bugs and harden `src/lib/approvals/**` and related API routes
+- Clearer steps, assignees, SLAs, audit of decisions, templates
+- Idempotent transitions (same action twice must not double-apply)
+- Human tasks that already fit the approval model
+
+## If someone asks for “a real workflow engine”
+
+1. Point them to `docs/internal/workflow-engine-decision.md`.
+2. Ask whether the goal is better **contract/license approvals** (extend current code) or a **new product**.
+3. Do not start Temporal/Camunda/etc. scaffolding in the same chat.
+
+## Why
+
+A second workflow product would steal months from core CLM (contracts, licenses, permissions, audit). We stay one app until pain is measured and written down.
