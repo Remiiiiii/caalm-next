@@ -346,7 +346,7 @@ Research-backed operating system for building CAALM with Cursor agents at princi
 2. **Rule overload:** 30+ always-on rules compete; agents miss conflicts. Consolidate meta-rule into one “read order” rule.
 3. **MCP on cloud vs IDE:** Team MCP dashboard must mirror `.cursor/mcp.json` or agents operate blind on Appwrite.
 4. **Audit log as product:** Buyers care as much about immutable audit narrative as feature count.
-5. **Workflow engine scope creep:** CLM workflows need idempotent state transitions + human tasks, not a second microservice on day one.
+5. **Workflow engine scope creep:** CLM workflows need idempotent state transitions + human tasks, not a second microservice on day one. **Decision:** `docs/internal/workflow-engine-decision.md` + rule `no-workflow-engine-sprawl.mdc`.
 6. **ESLint `continue-on-error: true` in CI:** Signals drift; tighten when roadmap pressure eases.
 7. **Desktop-first companion routes:** Mobile scope stays narrow; don’t duplicate admin UI for phones.
 8. **Demo vs prod parity gaps:** `Audit Logs.changes` attribute cap — track explicitly in PRs.
