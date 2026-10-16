@@ -1,0 +1,46 @@
+---
+description: Principal-engineer agent workflow for CAALM — context order, delivery checklist, review loop
+alwaysApply: true
+---
+
+# Agent workflow (principal engineer)
+
+Use this on every non-trivial task. Full playbook: `docs/internal/principal-engineer-playbook.md`.
+
+## Context order (do not skip)
+
+1. `graft ask "<task>" --source` — top hit is the edit target unless the task is exhaustive search (`graft grep`).
+2. Read applicable scoped rules (API → `api-route-authz.mdc`; UI → `global-style-guide.mdc`; security → `security-rbac.mdc`; schema → `caalm-demo-database-sync.mdc`).
+3. `@`-reference canonical files; do not paste large blobs into chat.
+4. MCP: prefer **Appwrite** for DB schema/data, **GitHub** for PR/CI, **Playwright** for browser proof — only when the task needs them.
+
+## Delivery checklist (features touching data or auth)
+
+- [ ] Tenant/org scope on every query and mutation (no cross-tenant reads).
+- [ ] Permission gate: `pnpm new:api-route …` or existing `requirePermission` pattern — **no role bypasses**.
+- [ ] Audit narrative for material writes (who, what, tenant) per product patterns.
+- [ ] Schema change → prod first, then `node scripts/sync-demo-database-schema.mjs --apply`, zero diff on dry run.
+- [ ] `.env.example` placeholders only; never commit live IDs/secrets.
+
+## Review loop before “done”
+
+1. `pnpm run test:api-authz` when API routes or permissions change.
+2. Targeted `pnpm test:unit` for touched modules.
+3. Playwright smoke on changed user journeys when UI/routing changes (`pnpm test:e2e` or Playwright MCP locally).
+4. Fix CI failures with `fix-ci` / team-kit mindset — do not disable gates.
+
+## Scope discipline
+
+- Smallest correct diff; no drive-by refactors.
+- Modular monolith: keep domain logic in `src/lib/<domain>/`; routes stay thin.
+- Desktop-first: no full phone layouts for dense admin unless companion route.
+
+## Cloud agents
+
+- Project `.cursor/hooks.json` only (user hooks may not run).
+- Use Team MCP for Appwrite/GitHub/Vercel when cloud lacks local MCP.
+- Open PR on `cursor/<name>-0e5f`; push before heavy testing.
+
+## Prompt templates
+
+On Plan mode or “make a plan”: follow `.cursor/rules/plan-prompt-templates.mdc` (auto-pick A–J when clear; else ask A–K with K = Other). Fill brackets **in memory only** — never rewrite `.cursor/prompt-templates/*.md`.
