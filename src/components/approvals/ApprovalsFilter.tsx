@@ -1,18 +1,16 @@
 "use client";
 
-import { format } from "date-fns";
 import { Filter, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useApprovalsView } from "@/components/approvals/ApprovalsViewContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { Label } from "@/components/ui/label";
 import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover";
+	CaalmDatePicker,
+	parseIsoDateLocal,
+	toIsoDateLocal,
+} from "@/components/ui/caalm-date-picker";
+import { Label } from "@/components/ui/label";
 import {
 	Select,
 	SelectContent,
@@ -198,48 +196,38 @@ export default function ApprovalsFilter({
 					<div className="space-y-2">
 						<Label className="text-slate-700 font-medium">Submitted</Label>
 						<div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-							<Popover>
-								<PopoverTrigger asChild>
-									<Button
-										variant="outline"
-										size="sm"
-										className="justify-start text-left font-normal bg-white cursor-pointer"
-									>
-										{filters.submittedFrom
-											? format(filters.submittedFrom, "MMM dd, yyyy")
-											: "From"}
-									</Button>
-								</PopoverTrigger>
-								<PopoverContent className="w-auto p-0" align="start">
-									<Calendar
-										mode="single"
-										selected={filters.submittedFrom}
-										onSelect={(date) => updateFilter("submittedFrom", date)}
-										initialFocus
-									/>
-								</PopoverContent>
-							</Popover>
-							<Popover>
-								<PopoverTrigger asChild>
-									<Button
-										variant="outline"
-										size="sm"
-										className="justify-start text-left font-normal bg-white cursor-pointer"
-									>
-										{filters.submittedTo
-											? format(filters.submittedTo, "MMM dd, yyyy")
-											: "To"}
-									</Button>
-								</PopoverTrigger>
-								<PopoverContent className="w-auto p-0" align="start">
-									<Calendar
-										mode="single"
-										selected={filters.submittedTo}
-										onSelect={(date) => updateFilter("submittedTo", date)}
-										initialFocus
-									/>
-								</PopoverContent>
-							</Popover>
+							<CaalmDatePicker
+								size="sm"
+								placeholder="From"
+								value={
+									filters.submittedFrom
+										? toIsoDateLocal(filters.submittedFrom)
+										: ""
+								}
+								onChange={(iso) =>
+									updateFilter(
+										"submittedFrom",
+										iso ? parseIsoDateLocal(iso) : undefined,
+									)
+								}
+								className="cursor-pointer"
+							/>
+							<CaalmDatePicker
+								size="sm"
+								placeholder="To"
+								value={
+									filters.submittedTo
+										? toIsoDateLocal(filters.submittedTo)
+										: ""
+								}
+								onChange={(iso) =>
+									updateFilter(
+										"submittedTo",
+										iso ? parseIsoDateLocal(iso) : undefined,
+									)
+								}
+								className="cursor-pointer"
+							/>
 						</div>
 					</div>
 				</div>

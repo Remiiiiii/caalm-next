@@ -35,6 +35,14 @@ describe("detectDataIntent - scheduling", () => {
 		expect(detectDataIntent("Hello")).toBeNull();
 	});
 
+	it("detects create-task requests without stealing list intents", () => {
+		expect(detectDataIntent("Help me create a new task")).toBe("create_task");
+		expect(detectDataIntent("Create a task called Renew license")).toBe(
+			"create_task",
+		);
+		expect(detectDataIntent("Show my pending tasks")).toBe("list_tasks");
+	});
+
 	it("treats scheduling intents as live data", () => {
 		expect(isLiveDataIntent("schedule_event")).toBe(true);
 		expect(isLiveDataIntent("view_schedule")).toBe(true);

@@ -3,6 +3,7 @@
  * Uses Redis/KV when available; in-memory fallback for local/dev/tests.
  */
 
+import { plainAiExtractionLimitMessage } from "@/lib/billing/aiExtractionUserMessages";
 import { PlanLimitError } from "@/lib/billing/planLimits";
 import {
 	PILOT_AI_EXTRACTIONS_PER_MONTH,
@@ -99,9 +100,12 @@ export async function assertAndConsumeAiExtraction(params: {
 			limit,
 			used,
 			tier: params.tier,
-			message: `AI extraction limit reached: ${used}/${limit} this month on the ${params.tier} plan${
-				params.billingStatus === "trialing" ? " (pilot cap)" : ""
-			}. Upgrade in Settings → Billing or wait until next month.`,
+			message: plainAiExtractionLimitMessage({
+				used,
+				limit,
+				tier: params.tier,
+				billingStatus: params.billingStatus,
+			}),
 		});
 	}
 

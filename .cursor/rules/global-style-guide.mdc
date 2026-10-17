@@ -1,7 +1,7 @@
 ---
 description: Single source of truth for UI/UX styling, page structure, and component patterns
 globs: "**/*.{ts,tsx,js,jsx,css}"
-alwaysApply: true
+alwaysApply: false
 ---
 
 # Global Style Guide
@@ -183,7 +183,7 @@ For content cards (like article lists, tables, etc.):
 
 ## Dialog & Modal Standards
 
-**Hard rule:** Do not deviate from the CAALM dialog template unless the user explicitly asks. Full rules: `.cursor/rules/dialog-best-practices.mdc` (always applied). Prefer corner **X** to dismiss; omit footer Cancel unless requested.
+**Hard rule:** Do not deviate from the CAALM dialog template unless the user explicitly asks. Prefer corner **X** to dismiss; omit footer Cancel unless requested. Do not invent alternate dialog chrome (custom icon tiles, flat white headers, solid filled destructive CTAs instead of `.delete-btn`).
 
 ### Standard Dialog Structure
 
@@ -369,18 +369,32 @@ Use custom colors defined in `tailwind.config.ts` without intermediate suffixes 
 
 ### Buttons
 
-**Primary buttons** (`.primary-btn` and `.btn-primary` are aliases — same styles):
+**Default when the user says “add a button”:** `className="btn-primary px-3 sm:px-4"` (`.primary-btn` is the same). Do **not** default to `variant="outline"`, plain `Button`, or text-only links.
+
 ```tsx
 <Button className="btn-primary px-3 sm:px-4">
- <Icon className="h-4 w-4" />
- Button Text
+  <Plus className="h-4 w-4" />
+  Add
 </Button>
 ```
 
-- **ALWAYS** include a Lucide icon (`h-4 w-4`) on buttons that use `btn-primary` or `primary-btn` — icon + label, never text-only
-- **ALWAYS** place action buttons on the **right** (`justify-end` / `ml-auto`) unless the user asks otherwise — see `button-placement.mdc`
+- **ALWAYS** include a Lucide icon (`h-4 w-4`) on `btn-primary` / `primary-btn` — icon + label, never text-only
+- **ALWAYS** place action buttons on the **right** (`justify-end` / `ml-auto`) unless the user asks otherwise
+- Prefer the same icon+label pattern for outline toolbar actions (Refresh, Convert, etc.)
+- Destructive confirms use `.delete-btn`; row overflow menus use `dots.svg` (see Overflow menus below)
 - Use consistent spacing: `gap-3` between buttons
 - Responsive padding: `px-3 sm:px-4`
+
+### Segmented switches (not boolean Switch)
+
+For a **view switch**, **segmented control**, or multi-option pill toggle (not shadcn on/off `Switch`), use a **sliding white active thumb**:
+
+- Track: `rounded-full border border-slate-200 bg-slate-100 p-1`
+- Active thumb: absolute white pill (`bg-white shadow-sm`) that slides (`transition-transform duration-200`)
+- Selected: `text-[#0f5384]`; unselected: `text-slate-500`
+- No hover fills on options — selection is thumb + brand color only
+- Prefer `SegmentedToggle` from `@/components/ui/segmented-toggle`
+- Boolean `Switch` and underline tabs (`StatusUnderlineTabs`) are not covered here
 
 ### Input fields
 

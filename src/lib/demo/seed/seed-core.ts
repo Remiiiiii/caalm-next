@@ -515,6 +515,8 @@ export async function seedDemoCoreData({
 				suffix: "note3",
 				title: "SecureVault kickoff",
 				content: "Schedule vendor kickoff for SecureVault.",
+				calendarDate: new Date().toISOString().slice(0, 10),
+				calendarTime: "14:30",
 			},
 		];
 		for (const note of notes) {
@@ -527,6 +529,12 @@ export async function seedDemoCoreData({
 					userId: ownerUserId,
 					userName: ownerName,
 					orgId,
+					...("calendarDate" in note && note.calendarDate
+						? {
+								calendarDate: note.calendarDate,
+								calendarTime: note.calendarTime,
+							}
+						: {}),
 				},
 				`note:${note.suffix}`,
 			);

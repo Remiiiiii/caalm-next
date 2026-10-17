@@ -22,6 +22,7 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { formatActionValue } from "@/lib/assistant/formatActionValue";
 import { cn, getProfilePictureUrl } from "@/lib/utils";
 
 type DirectoryUser = {
@@ -576,7 +577,7 @@ function GenericPreview({
 									{key.replace(/([A-Z])/g, " $1").trim()}
 								</dt>
 								<dd className="min-w-0 flex-1 wrap-break-word text-slate-700">
-									{String(value)}
+									{formatActionValue(value)}
 								</dd>
 							</div>
 						))}

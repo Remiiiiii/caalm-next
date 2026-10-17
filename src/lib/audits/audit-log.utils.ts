@@ -161,7 +161,7 @@ export function extractStructuredFields(
 	action: string,
 ): AuditStructuredFields & { publicMetadata: Record<string, unknown> | null } {
 	const meta = metadata || {};
-	const module =
+	const auditModule =
 		(typeof meta.module === "string"
 			? (meta.module as AuditModule)
 			: undefined) || inferModuleFromTitle(eventTitle, meta);
@@ -179,7 +179,7 @@ export function extractStructuredFields(
 					action,
 					eventTitle,
 					targetLabel: target_label,
-					module,
+					module: auditModule,
 				});
 	const changes = Array.isArray(meta.changes)
 		? (meta.changes as AuditChangeDiff[])
@@ -195,7 +195,7 @@ export function extractStructuredFields(
 	}
 
 	return {
-		module,
+		module: auditModule,
 		target_type,
 		target_id,
 		target_label,

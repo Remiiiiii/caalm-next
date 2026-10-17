@@ -1,101 +1,38 @@
 ---
-description: General development guidelines, tech stack, and troubleshooting conventions
+description: Tech stack, cleanup habits, logging, DB MCP, and pointers to spine rules
 alwaysApply: true
 ---
 
-Tech stack: React (Next.js), Tailwind, ShadCN, Appwrite, pnpm, Node. JS
+# General engineering habits
 
-## How to explain things (plain language)
+**Stack:** React (Next.js), Tailwind, ShadCN, Appwrite, pnpm, Node.js
 
-**Follow `.cursor/rules/plain-english-junior-dev.mdc`:** every response in non-technical plain English, as if explaining to a smart 13-year-old.
+**How to talk:** Follow `.cursor/rules/plain-english-junior-dev.mdc`.  
+**How to work:** Follow `.cursor/rules/agent-workflow-principal.mdc`.  
+**UI:** Follow `.cursor/rules/global-style-guide.mdc` when editing UI files.  
+**API auth:** Prefer `pnpm new:api-route` / `api-route-authz.mdc`.  
+**RBAC:** `.cursor/rules/security-rbac.mdc` — no role bypasses.
 
-- Start **high level**: what something does in real life, not how engineers name it.
-- Use **everyday words**; if you must use a tech term, give a **one-line plain definition** right after it.
-- Prefer **short sentences** and **one simple analogy** when it helps (for example: “like a security guard checking tickets before you enter”).
-- Skip deep implementation detail unless the user asks for it; if you include it, put it **after** the simple explanation or label it clearly so they can ignore it.
-- For “yes/no” questions, **answer directly first**, then add a sentence or two of context if needed.
+## Development
 
-## Style Guide
+- Use `pnpm add` for packages; `npx shadcn add` for shadcn components.
+- Do not start the app yourself (it runs elsewhere). To restart localhost:3000, `taskkill` then `pnpm run dev`.
+- Clean up listeners, timers, and subscriptions in effect cleanups.
 
-**IMPORTANT**: All UI/UX styling, page structure, and component patterns must follow the **Global Style Guide**:
+## Logging
 
-- **Primary Reference**: `.cursor/rules/global-style-guide.mdc` - Single source of truth for all styling standards
-- **Dialog Standards**: `.cursor/rules/dialog-best-practices.mdc` - Detailed dialog/modal patterns
-- **Tailwind CSS**: `.cursor/rules/tailwindcss-best-practices.mdc` - Custom color usage and utilities
+- Prefix logs: `[SERVER]` (API/actions/server) or `[CLIENT]` (browser), plus function/component name.
+- Example: `[SERVER] getLatestApprovalRequestByEventId:`, `[CLIENT] OutlookStyleCalendar:`
 
-When creating new pages, components, dialogs, or cards, always reference the Global Style Guide first.
+## After troubleshooting — clean up
 
-**Page width:** New pages use `w-full px-4 sm:px-6 lg:px-8 xl:px-12` only — no page-level `max-w-*` that narrows content vs other routes (see Global Style Guide → Page Container).
+When a fix works, remove debug `console.log` / `console.error` / `console.warn`, temporary comments, and redundant checks. Keep real bug fixes and lasting improvements.
 
-## Development Guidelines
+## Server restart signal
 
-- Use `pnpm add` when installing new packages.
-- Use `npx shadcn add` to add new shadcn components.
-- Prefer `pnpm new:api-route <path> --permission CONTRACTS.VIEW` when creating API routes (see `.cursor/rules/api-route-authz.mdc`). Do not hand-write ungated `route.ts` files.
-- Never try to start the app itself (I have it running in a separate terminal), instead, if you need to restart the server on localhost:3000 first use the `taskkill` command and then the `pnpm run dev` command.
-- Always clean up resources (event listeners, timers, subscriptions) in the cleanup function to prevent memory leaks and ensure your app performs well!
+When you changed code and the user asked for a reply: say whether a **page refresh** is enough or a **server restart** is required.
 
-## Troubleshooting & Cleanup
+## Database
 
-**CRITICAL**: After troubleshooting efforts succeed in resolving an issue, **automatically perform cleanup**:
-
-1. **Remove debug code**:
-
-   - Remove all `console.log()`, `console.error()`, and `console.warn()` statements added for debugging
-   - Remove temporary debug logging in development mode
-   - Remove verbose comments explaining temporary fixes
-
-2. **Clean up temporary fixes**:
-
-   - Remove duplicate code or redundant checks added during troubleshooting
-   - Simplify verbose comments to concise, production-ready notes
-   - Remove TODO/FIXME comments unless they represent actual future work
-
-3. **Keep functional improvements**:
-
-   - Preserve bug fixes, performance optimizations, and architectural improvements
-   - Keep query batching, cache improvements, and error handling enhancements
-   - Maintain diagnostic tools and utilities that provide ongoing value
-
-4. **Verify code quality**:
-
-   - Ensure no debug code remains in production code paths
-   - Confirm all comments are clear and necessary
-   - Verify code follows established patterns and style guidelines
-
-5. **Server restart indicator**
-   - Include one of these indicators in responses when fixing or updating code:
-   - 🟢 No Restart Needed:
-   - "✅ No server restart required - this is a frontend-only change"
-   - "🔄 Page refresh sufficient - only UI components were modified"
-   - 🔴 Server Restart Required:
-   - "⚠️ SERVER RESTART REQUIRED - server-side code was modified"
-   - Use the appropriate indicator based on the scope of changes made
-
----
-
-**When to clean up**: Immediately after confirming the issue is resolved and the solution is working correctly.
-
-## Database Operations
-
-**CRITICAL**: All database operations (reading, writing, schema changes) must use MCP tools. Do NOT create scripts to interact with the database.
-
-- **Always use MCP tools** (`mcp_caalm_databases_*`) for:
-  - Reading collection attributes and schema information
-  - Creating or modifying database attributes
-  - Querying collections and documents
-  - Any database inspection or comparison operations
-- **Do NOT create scripts** (`.ts`, `.js`, `.sh`, etc.) for database operations unless explicitly requested by the user
-- **MCP tools available**: Use `mcp_caalm_databases_list_attributes`, `mcp_caalm_databases_get_collection`, `mcp_caalm_databases_create_*_attribute`, etc.
-- If MCP tools are unavailable, provide clear instructions for manual operations via Appwrite Console UI
-
-## Security & RBAC
-
-**CRITICAL**: All security, authentication, and authorization must follow strict RBAC rules:
-
-- **Primary Reference**: `.cursor/rules/security-rbac.mdc` - Strict RBAC, authentication, and authorization rules
-- **NO BYPASSES**: Never implement role-based or permission-based bypasses in code
-- **Permission-Based Access**: All access control must check actual user permissions from the database
-- **Database-Driven**: Permissions must be assigned in the database, not hardcoded or bypassed
-
-When implementing security features, authentication checks, or authorization logic, always reference the Security & RBAC rules first.
+- Use Appwrite **MCP tools** for schema/data work — do not write one-off DB scripts unless the user asks.
+- Schema changes: prod first, then demo sync (`caalm-demo-database-sync.mdc`).

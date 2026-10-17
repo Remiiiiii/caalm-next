@@ -138,7 +138,7 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 			},
 			{
 				name: "Import obligations",
-				icon: "/assets/icons/import.svg",
+				icon: "/assets/icons/import-obligations.svg",
 				url: "/funding/obligations/import",
 				permissions: [PERMISSIONS.FUNDING.MANAGE],
 			},
@@ -225,7 +225,7 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 			},
 			{
 				name: "Import gifts",
-				icon: "/assets/icons/import.svg",
+				icon: "/assets/icons/import-gifts.svg",
 				url: "/gifts/import",
 				permissions: [PERMISSIONS.GIFTS.CREATE],
 			},
@@ -238,7 +238,7 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 			},
 			{
 				name: "Import campaigns",
-				icon: "/assets/icons/import.svg",
+				icon: "/assets/icons/import-campaign.svg",
 				url: "/campaigns/import",
 				permissions: [PERMISSIONS.GIFTS.CREATE],
 			},
@@ -343,7 +343,7 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 			},
 			{
 				name: "Import users",
-				icon: "/assets/icons/import.svg",
+				icon: "/assets/icons/import-user.svg",
 				url: "/dashboard/user-management/import",
 				permissions: [PERMISSIONS.USERS.INVITE],
 			},

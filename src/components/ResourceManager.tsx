@@ -193,13 +193,13 @@ export const ResourceManager: React.FC<ResourceManagerProps> = ({
 				<Button
 					variant="outline"
 					size="sm"
-					className="primary-btn px-3 sm:px-4"
+					className="primary-btn px-3 sm:px-4 flex justify-center items-center"
 				>
 					<Building2 className="w-4 h-4" />
 					Manage Resources
 				</Button>
 			</DialogTrigger>
-			<DialogContent className="max-w-[700px] p-0 max-h-[90vh] flex flex-col">
+			<DialogContent className="max-w-175 p-0 max-h-[90vh] flex flex-col">
 				<VisuallyHiddenPrimitive.Root>
 					<DialogTitle>Manage Resources</DialogTitle>
 					<DialogDescription>

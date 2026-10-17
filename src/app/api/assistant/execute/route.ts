@@ -4,6 +4,10 @@ import {
 	formatGenericSuccessSummary,
 } from "@/lib/assistant/actionCompleted";
 import {
+	buildCompletedActionLifecycle,
+	buildFailedActionLifecycle,
+} from "@/lib/assistant/actionLifecycle";
+import {
 	isAssistantAuthError,
 	requireAssistantAccess,
 } from "@/lib/assistant/auth";
@@ -15,7 +19,8 @@ import {
 import type { AssistantCalendarMutation } from "@/lib/assistant/executeTypes";
 import { runToolByName } from "@/lib/assistant/tools/registry";
 import {
-	consumePendingAction,
+	deletePendingAction,
+	getPendingAction,
 	patchPendingActionArgs,
 } from "@/lib/assistant/tools/types";
 
@@ -92,7 +97,7 @@ export async function POST(request: NextRequest) {
 			}
 		}
 
-		const pending = await consumePendingAction(pendingId, auth);
+		const pending = await getPendingAction(pendingId, auth);
 		if (!pending) {
 			return NextResponse.json(
 				{ error: "Action expired or not found" },
@@ -170,30 +175,71 @@ export async function POST(request: NextRequest) {
 					})
 				: undefined;
 
+		const actor = {
+			userId: auth.user.$id,
+			name:
+				(auth.user as { fullName?: string }).fullName ||
+				auth.user.name ||
+				auth.user.email ||
+				"You",
+			avatar: (auth.user as { avatar?: string | null }).avatar ?? null,
+			department: (auth.user as { department?: string }).department,
+			departmentLabel: (auth.user as { departmentLabel?: string })
+				.departmentLabel,
+		};
+
+		const resultError =
+			toolResult.error ||
+			(resultObj && resultObj.error ? String(resultObj.error) : null);
+
+		// Only consume on success so Retry can re-run the same pending action.
+		if (!resultError) {
+			await deletePendingAction(pendingId);
+		}
+
+		const actionLifecycle = resultError
+			? buildFailedActionLifecycle({
+					pending,
+					errorMessage: resultError,
+					errorCode: "ERR_ACTION",
+					actor,
+				})
+			: meetingCreated
+				? undefined
+				: buildCompletedActionLifecycle({
+						pending,
+						result: resultObj,
+						actor,
+					});
+
 		const calendarMutation = !toolResult.error
 			? buildCalendarMutation(pending.toolName, resultObj)
 			: undefined;
 
-		const summary = toolResult.error
-			? `Action failed: ${toolResult.error}`
+		const summary = resultError
+			? `I couldn't finish that one.`
 			: meetingCreated
 				? formatMeetingSuccessSummary({
 						...meetingCreated,
 						invitedCount: meetingCreated.invitedCount ?? 0,
 					})
-				: actionCompleted
-					? `${actionCompleted.eyebrow ?? "Action completed"}: ${actionCompleted.headline}`
-					: resultObj
-						? resultObj.error
-							? `Action failed: ${String(resultObj.error)}`
-							: formatGenericSuccessSummary(pending.label, resultObj)
-						: `Action completed: ${pending.label}`;
+				: actionLifecycle
+					? `${actionLifecycle.actionLabel}: ${actionLifecycle.entityTitle}`
+					: actionCompleted
+						? `${actionCompleted.eyebrow ?? "Action completed"}: ${actionCompleted.headline}`
+						: resultObj
+							? formatGenericSuccessSummary(pending.label, resultObj)
+							: `Action completed: ${pending.label}`;
 
 		const metadataJson =
-			meetingCreated || actionCompleted || calendarMutation
+			meetingCreated ||
+			actionCompleted ||
+			actionLifecycle ||
+			calendarMutation
 				? JSON.stringify({
 						...(meetingCreated ? { meetingCreated } : {}),
 						...(actionCompleted ? { actionCompleted } : {}),
+						...(actionLifecycle ? { actionLifecycle } : {}),
 						...(calendarMutation ? { calendarMutation } : {}),
 					})
 				: undefined;
@@ -220,6 +266,7 @@ export async function POST(request: NextRequest) {
 				summary,
 				meetingCreated,
 				actionCompleted,
+				actionLifecycle,
 				calendarMutation,
 			},
 		});

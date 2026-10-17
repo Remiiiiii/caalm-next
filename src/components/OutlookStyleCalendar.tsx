@@ -40,12 +40,15 @@ import {
 	X,
 } from "lucide-react";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import useSWR from "swr";
 import CalendarAIChat from "@/components/CalendarAIChat";
 import { CalendarDelegationManager } from "@/components/CalendarDelegationManager";
 import CalendarSettings from "@/components/CalendarSettings";
 import { CalendarSidebar } from "@/components/CalendarSidebar";
 import { CreateSharedCalendarDialog } from "@/components/CreateSharedCalendarDialog";
 import { AgendaView } from "@/components/calendar/AgendaView";
+import { CalendarPinnedNoteDialog } from "@/components/calendar/CalendarPinnedNoteDialog";
+import { CalendarPinnedNotesListDialog } from "@/components/calendar/CalendarPinnedNotesListDialog";
 import { ApprovalReviewDialog } from "@/components/calendar/ApprovalReviewDialog";
 import { CalendarApprovalsRail } from "@/components/calendar/CalendarApprovalsRail";
 import { CalendarFiltersDrawer } from "@/components/calendar/CalendarFiltersDrawer";
@@ -76,7 +79,11 @@ import { SharePrimaryCalendarDialog } from "@/components/SharePrimaryCalendarDia
 import Avatar from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
+import {
+	CaalmDatePicker,
+	parseIsoDateLocal,
+	toIsoDateLocal,
+} from "@/components/ui/caalm-date-picker";
 import { Card, CardContent } from "@/components/ui/card";
 import {
 	Dialog,
@@ -87,11 +94,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover";
 import { SearchField } from "@/components/ui/search-field";
 import {
 	Select,
@@ -142,6 +144,11 @@ import {
 } from "@/lib/files/enterprise-file-formats";
 import { cn, convertFileSize, getFileType } from "@/lib/utils";
 import { getUSHolidaysForMonth, parseHolidayDate } from "@/lib/utils/holidays";
+import {
+	deleteNote,
+	type Note,
+} from "@/lib/actions/notes.actions";
+import { fetcher } from "@/lib/swr-config";
 
 type CalendarViewMode = "day" | "week" | "month" | "agenda";
 
@@ -188,6 +195,13 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 	const [overflowDate, setOverflowDate] = useState<Date | null>(null);
 	const [overflowEvents, setOverflowEvents] = useState<LocalCalendarEvent[]>(
 		[],
+	);
+	const [isPinnedListOpen, setIsPinnedListOpen] = useState(false);
+	const [isPinnedNoteOpen, setIsPinnedNoteOpen] = useState(false);
+	const [pinnedDialogDate, setPinnedDialogDate] = useState<Date | null>(null);
+	const [pinnedDialogNotes, setPinnedDialogNotes] = useState<Note[]>([]);
+	const [selectedPinnedNote, setSelectedPinnedNote] = useState<Note | null>(
+		null,
 	);
 	const [creatingEvent, setCreatingEvent] = useState(false);
 	const [outlookConnected, setOutlookConnected] = useState(false);
@@ -1541,6 +1555,27 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 		refresh: refreshSharedCalendars,
 	} = useSharedCalendars();
 
+	const pinsYear = currentMonth.getFullYear();
+	const pinsMonth = currentMonth.getMonth() + 1;
+	const { data: pinnedNotesResponse, mutate: mutatePinnedNotes } = useSWR<{
+		success: boolean;
+		pins?: Note[];
+	}>(`/api/notes/calendar-pins?year=${pinsYear}&month=${pinsMonth}`, fetcher, {
+		revalidateOnFocus: false,
+		dedupingInterval: 15_000,
+	});
+
+	const pinnedNotesByDate = useMemo(() => {
+		const map: Record<string, Note[]> = {};
+		for (const note of pinnedNotesResponse?.pins ?? []) {
+			const key = note.calendarDate;
+			if (!key) continue;
+			if (!map[key]) map[key] = [];
+			map[key].push(note);
+		}
+		return map;
+	}, [pinnedNotesResponse]);
+
 	// Update shared calendars state from SWR
 	useEffect(() => {
 		if (swrCalendars.length > 0) {
@@ -2819,6 +2854,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 				currentMonth={currentMonth}
 				selectedDate={selectedDate}
 				events={eventsToRender}
+				pinnedNotesByDate={pinnedNotesByDate}
 				canViewEventSensitiveDetails={canViewEventSensitiveDetails}
 				onSelectDay={(day) => {
 					handleDateSelect(day);
@@ -2829,6 +2865,18 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 					setOverflowDate(day);
 					setOverflowEvents(dayEvents);
 					setIsOverflowOpen(true);
+				}}
+				onPinnedNotesClick={(day, notes) => {
+					setPinnedDialogDate(day);
+					setPinnedDialogNotes(notes);
+					if (notes.length === 1) {
+						setSelectedPinnedNote(notes[0] ?? null);
+						setIsPinnedNoteOpen(true);
+						setIsPinnedListOpen(false);
+					} else {
+						setSelectedPinnedNote(null);
+						setIsPinnedListOpen(true);
+					}
 				}}
 			/>
 		);
@@ -3288,58 +3336,32 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 															>
 																Start Date
 															</Label>
-															<Popover>
-																<PopoverTrigger asChild>
-																	<Button
-																		variant="outline"
-																		className="w-full justify-between font-normal text-sm h-11 bg-white border-slate-300 hover:border-blue-500"
-																	>
-																		{newEvent.date
-																			? newEvent.date.toLocaleDateString(
-																					"en-US",
-																					{
-																						weekday: "short",
-																						month: "short",
-																						day: "numeric",
-																						year: "numeric",
-																					},
-																				)
-																			: "Select start date"}
-																		<CalendarDays className="h-4 w-4 text-slate-500" />
-																	</Button>
-																</PopoverTrigger>
-																<PopoverContent
-																	className="w-auto overflow-hidden p-0 shadow-lg border-slate-200"
-																	align="start"
-																>
-																	<Calendar
-																		mode="single"
-																		selected={newEvent.date}
-																		disabled={(date) => {
-																			const today = new Date();
-																			today.setHours(0, 0, 0, 0);
-																			const checkDate = new Date(date);
-																			checkDate.setHours(0, 0, 0, 0);
-																			return checkDate < today;
-																		}}
-																		onSelect={(date) => {
-																			const selectedDate = date || new Date();
-																			const smartTimes =
-																				getSmartPlaceholderTimes(selectedDate);
-																			setNewEvent({
-																				...newEvent,
-																				date: selectedDate,
-																				startTime:
-																					newEvent.startTime ||
-																					smartTimes.startTime,
-																				endTime:
-																					newEvent.endTime ||
-																					smartTimes.endTime,
-																			});
-																		}}
-																	/>
-																</PopoverContent>
-															</Popover>
+															<CaalmDatePicker
+																id="date"
+																value={
+																	newEvent.date
+																		? toIsoDateLocal(newEvent.date)
+																		: ""
+																}
+																placeholder="Select start date"
+																disablePast
+																className="h-11 border-slate-300 hover:border-blue-500"
+																onChange={(iso) => {
+																	const selectedDate =
+																		parseIsoDateLocal(iso) || new Date();
+																	const smartTimes =
+																		getSmartPlaceholderTimes(selectedDate);
+																	setNewEvent({
+																		...newEvent,
+																		date: selectedDate,
+																		startTime:
+																			newEvent.startTime ||
+																			smartTimes.startTime,
+																		endTime:
+																			newEvent.endTime || smartTimes.endTime,
+																	});
+																}}
+															/>
 														</div>
 
 														<div>
@@ -3349,51 +3371,24 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 															>
 																End Date
 															</Label>
-															<Popover>
-																<PopoverTrigger asChild>
-																	<Button
-																		variant="outline"
-																		className="w-full justify-between font-normal text-sm h-11 bg-white border-slate-300 hover:border-blue-500"
-																	>
-																		{newEvent.endDate
-																			? newEvent.endDate.toLocaleDateString(
-																					"en-US",
-																					{
-																						weekday: "short",
-																						month: "short",
-																						day: "numeric",
-																						year: "numeric",
-																					},
-																				)
-																			: "Select end date"}
-																		<CalendarDays className="h-4 w-4 text-slate-500" />
-																	</Button>
-																</PopoverTrigger>
-																<PopoverContent
-																	className="w-auto overflow-hidden p-0 shadow-lg border-slate-200"
-																	align="start"
-																>
-																	<Calendar
-																		mode="single"
-																		selected={newEvent.endDate}
-																		disabled={(date) => {
-																			const today = new Date();
-																			today.setHours(0, 0, 0, 0);
-																			const checkDate = new Date(date);
-																			checkDate.setHours(0, 0, 0, 0);
-																			return checkDate < today;
-																		}}
-																		onSelect={(date) => {
-																			const selectedEndDate =
-																				date || new Date();
-																			setNewEvent({
-																				...newEvent,
-																				endDate: selectedEndDate,
-																			});
-																		}}
-																	/>
-																</PopoverContent>
-															</Popover>
+															<CaalmDatePicker
+																id="endDate"
+																value={
+																	newEvent.endDate
+																		? toIsoDateLocal(newEvent.endDate)
+																		: ""
+																}
+																placeholder="Select end date"
+																disablePast
+																className="h-11 border-slate-300 hover:border-blue-500"
+																onChange={(iso) => {
+																	setNewEvent({
+																		...newEvent,
+																		endDate:
+																			parseIsoDateLocal(iso) || new Date(),
+																	});
+																}}
+															/>
 														</div>
 													</div>
 
@@ -4322,6 +4317,54 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 				/>
 
 				{/* Share Primary Calendar Dialog */}
+				<CalendarPinnedNotesListDialog
+					open={isPinnedListOpen}
+					onOpenChange={setIsPinnedListOpen}
+					date={pinnedDialogDate}
+					notes={pinnedDialogNotes}
+					onSelectNote={(note) => {
+						setSelectedPinnedNote(note);
+						setIsPinnedListOpen(false);
+						setIsPinnedNoteOpen(true);
+					}}
+				/>
+				<CalendarPinnedNoteDialog
+					open={isPinnedNoteOpen}
+					onOpenChange={setIsPinnedNoteOpen}
+					note={selectedPinnedNote}
+					notes={pinnedDialogNotes}
+					onBackToList={() => {
+						setIsPinnedNoteOpen(false);
+						setSelectedPinnedNote(null);
+						setIsPinnedListOpen(true);
+					}}
+					onSelectNote={setSelectedPinnedNote}
+					onNoteUpdated={(updated) => {
+						setSelectedPinnedNote(updated);
+						setPinnedDialogNotes((prev) =>
+							prev.map((n) => (n.$id === updated.$id ? updated : n)),
+						);
+						void mutatePinnedNotes();
+					}}
+					onDelete={async (note) => {
+						await deleteNote(note.$id);
+						const remaining = pinnedDialogNotes.filter(
+							(n) => n.$id !== note.$id,
+						);
+						setPinnedDialogNotes(remaining);
+						void mutatePinnedNotes();
+						if (remaining.length === 0) {
+							setSelectedPinnedNote(null);
+							setIsPinnedNoteOpen(false);
+							setIsPinnedListOpen(false);
+							return;
+						}
+						setSelectedPinnedNote(remaining[0] ?? null);
+						setIsPinnedNoteOpen(false);
+						setIsPinnedListOpen(true);
+					}}
+				/>
+
 				<SharePrimaryCalendarDialog
 					open={isSharePrimaryCalendarOpen}
 					onOpenChange={setIsSharePrimaryCalendarOpen}

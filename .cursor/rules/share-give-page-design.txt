@@ -20,7 +20,7 @@ Copy controls
 - On success: temporary "Copied" + green checkmark (Check, text-green), then clear.
 
 Switches
-- Email link / Open live page: sliding white thumb switch (see segmented-switch.mdc).
+- Email link / Open live page: sliding white thumb switch (see Segmented switches in global-style-guide.mdc).
 - Download PNG / Copy image: same switch design; actions fire on tab click.
 - Email dialog compose actions: Save draft | Send | Open on device (same switch).
 

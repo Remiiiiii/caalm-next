@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
 		const format = searchParams.get("format") || "csv";
 
 		const moduleParam = searchParams.get("module");
-		const module =
+		const auditModule =
 			moduleParam && moduleParam !== "all"
 				? (moduleParam as AuditModule)
 				: undefined;
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
 			action: searchParams.get("action") || undefined,
 			status: searchParams.get("status") || undefined,
 			search: searchParams.get("search") || undefined,
-			module,
+			module: auditModule,
 			limit: 5000,
 			offset: 0,
 		};

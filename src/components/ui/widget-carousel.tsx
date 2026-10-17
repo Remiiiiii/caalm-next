@@ -25,8 +25,38 @@ const prefersReducedMotion = () =>
 const INTERACTIVE_SELECTOR =
 	"button, a, input, select, textarea, label, [role='button'], [role='combobox'], [role='option'], [contenteditable='true']";
 
+/** Nested lists/panels that own vertical scroll (e.g. Quick Notes). */
+const NESTED_SCROLL_SELECTOR =
+	"[data-widget-scroll], [data-carousel-scroll='y']";
+
 const MOMENTUM_FRICTION = 0.95;
 const MOMENTUM_MIN_VELOCITY = 0.15;
+
+function isOverflowYScrollable(node: HTMLElement): boolean {
+	const { overflowY } = getComputedStyle(node);
+	if (overflowY !== "auto" && overflowY !== "scroll" && overflowY !== "overlay") {
+		return false;
+	}
+	return node.scrollHeight > node.clientHeight + 1;
+}
+
+function isInsideNestedVerticalScroll(
+	start: EventTarget | null,
+	track: HTMLElement | null,
+): boolean {
+	if (!(start instanceof HTMLElement) || !track) return false;
+	const marked = start.closest(NESTED_SCROLL_SELECTOR);
+	if (marked instanceof HTMLElement && track.contains(marked)) {
+		// Only block grab when the list can actually scroll vertically
+		return isOverflowYScrollable(marked);
+	}
+	let node: HTMLElement | null = start;
+	while (node && node !== track) {
+		if (isOverflowYScrollable(node)) return true;
+		node = node.parentElement;
+	}
+	return false;
+}
 
 /**
  * Flatten children into carousel slots. React.Children.toArray does not unwrap
@@ -150,6 +180,16 @@ export function WidgetCarousel({
 
 			const mostlyVertical =
 				Math.abs(event.deltaY) >= Math.abs(event.deltaX);
+
+			// Nested lists own vertical wheel end-to-end — including at top/bottom
+			// edges. Otherwise "scroll up at top" becomes a left carousel nudge.
+			if (
+				mostlyVertical &&
+				isInsideNestedVerticalScroll(event.target, el)
+			) {
+				return;
+			}
+
 			if (!mostlyVertical && event.deltaX === 0) return;
 
 			const delta = mostlyVertical ? event.deltaY : event.deltaX;
@@ -211,6 +251,9 @@ export function WidgetCarousel({
 
 		const el = scrollRef.current;
 		if (!el) return;
+
+		// Nested vertical lists need native pan/scroll; grab would capture the pointer
+		if (isInsideNestedVerticalScroll(target, el)) return;
 
 		stopMomentum();
 		const now = performance.now();

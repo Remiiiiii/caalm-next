@@ -7,6 +7,7 @@
 
 export type AssistantDataIntent =
 	| "list_tasks"
+	| "create_task"
 	| "search_contracts"
 	| "search_licenses"
 	| "list_pending_approvals"
@@ -27,6 +28,15 @@ export function detectDataIntent(message: string): AssistantDataIntent {
 		/\b(task|to-?do)/.test(q)
 	) {
 		return "complete_task";
+	}
+	// Create before list so "create a new task" is not treated as listing.
+	if (
+		(/\b(create|add|make|start|open)\b/.test(q) &&
+			/\b(task|to-?do)\b/.test(q)) ||
+		/\bhelp me create\b.{0,40}\b(task|to-?do)\b/.test(q) ||
+		/\bnew task\b/.test(q)
+	) {
+		return "create_task";
 	}
 	if (
 		/\b(task|tasks|to-?dos?|todo)/.test(q) &&

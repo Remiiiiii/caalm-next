@@ -5,20 +5,28 @@ alwaysApply: true
 
 # Agent workflow (principal engineer)
 
-Use this on every non-trivial task. Full playbook: `docs/internal/principal-engineer-playbook.md`.
+Use this on every non-trivial task. This is the **single spine** for how agents work.  
+Rule map: `docs/internal/cursor-rules-read-order.md`. Full playbook: `docs/internal/principal-engineer-playbook.md`.
 
 ## Context order (do not skip)
 
 1. `graft ask "<task>" --source` — top hit is the edit target unless the task is exhaustive search (`graft grep`).
-2. Read applicable scoped rules (API → `api-route-authz.mdc`; UI → `global-style-guide.mdc`; security → `security-rbac.mdc`; schema → `caalm-demo-database-sync.mdc`).
+2. Follow **this** rule’s checklist. Then open only the **scoped** rules that match the work (API → `api-route-authz.mdc`; UI → `global-style-guide.mdc`; security → `security-rbac.mdc`; schema → `caalm-demo-database-sync.mdc`; Appwrite IDs → `appwrite-collection-ids.mdc`; product copy → `writing.mdc`).
 3. `@`-reference canonical files; do not paste large blobs into chat.
 4. MCP: prefer **Appwrite** for DB schema/data, **GitHub** for PR/CI, **Playwright** for browser proof — only when the task needs them.
+
+## Do not add rule sprawl
+
+- Prefer **file-scoped** rules (`globs`) over new `alwaysApply: true` rules.
+- Do not create a second “workflow / how to agent” always-on rule that duplicates this file.
+- UI details (dialogs, buttons, inputs, segmented switches, Tailwind colors) live only in `global-style-guide.mdc` — do not revive split UI rule files.
+- Chat tone: `plain-english-junior-dev.mdc`. Product/docs marketing copy: `writing.mdc` (scoped).
 
 ## Delivery checklist (features touching data or auth)
 
 - [ ] Tenant/org scope on every query and mutation (no cross-tenant reads).
 - [ ] Permission gate: `pnpm new:api-route …` or existing `requirePermission` pattern — **no role bypasses**.
-- [ ] Audit narrative for material writes (who, what, tenant) per product patterns.
+- [ ] Audit narrative for material writes (who, what, when, tenant) — `audit-narrative.mdc` / `logAuditEvent`.
 - [ ] Schema change → prod first, then `node scripts/sync-demo-database-schema.mjs --apply`, zero diff on dry run.
 - [ ] `.env.example` placeholders only; never commit live IDs/secrets.
 

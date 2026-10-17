@@ -1,0 +1,33 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<!-- Gift fills the square like gift.svg; import badge tucked in the bottom-right (no overflow). -->
+<g clip-path="url(#clip0_import_gifts)">
+<mask id="mask0_import_gifts" style="mask-type:luminance" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="23">
+<path d="M24 0H0V23H24V0Z" fill="white"/>
+</mask>
+<g mask="url(#mask0_import_gifts)">
+<path d="M11 11.5H3V21.0833H11V11.5Z" fill="#BFBFBF"/>
+<path d="M11 6.7085H2V9.5835H11V6.7085Z" fill="#BFBFBF"/>
+<path d="M21 6.7085H13V9.5835H21V6.7085Z" fill="#BFBFBF"/>
+<path d="M10.5 11.5C10.0546 11.8953 11.1299 21.0832 10.5 21.0832H4.375C3.74511 21.0832 3.14102 20.861 2.69562 20.4657C2.25022 20.0703 2 19.534 2 18.9748V10.5415" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke="#BFBFBF"/>
+<path d="M6.03571 5C5.23059 5 4.45845 4.7893 3.88914 4.41426C3.31983 4.03922 3 3.53056 3 3.00017C3 2.46979 3.31983 1.96112 3.88914 1.58608C4.45845 1.21105 5.23059 1.00035 6.03571 1.00035C7.20712 0.986905 8.35503 1.36133 9.32975 2.07478C10.3045 2.78824 11.0608 3.80763 11.5 5C11.9392 3.80763 12.6955 2.78824 13.6702 2.07478C14.645 1.36133 15.7929 0.986905 16.9643 1.00035C17.7694 1.00035 18.5416 1.21105 19.1109 1.58608C19.6802 1.96112 20 2.46979 20 3.00017C20 3.53056 19.6802 4.03922 19.1109 4.41426C18.5416 4.7893 17.7694 5 16.9643 5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke="#BFBFBF"/>
+<path d="M20.8333 5.75H2.16667C1.52233 5.75 1 6.28633 1 6.94792V9.34375C1 10.0053 1.52233 10.5417 2.16667 10.5417H20.8333C21.4777 10.5417 22 10.0053 22 9.34375V6.94792C22 6.28633 21.4777 5.75 20.8333 5.75Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke="#BFBFBF"/>
+<path d="M12 5.75V22.0417" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke="white"/>
+<path d="M0 11H11" stroke="white"/>
+<path d="M0 4.5H23" stroke="white"/>
+<path d="M12 11H23" stroke="white"/>
+</g>
+</g>
+<!-- Badge shifted left/up so strokes stay inside 0…24 -->
+<g transform="translate(-7,-1)">
+<path d="M20.5 13.5H17.5C17.1022 13.5 16.7206 13.658 16.4393 13.9393C16.158 14.2206 16 14.6022 16 15V22.5C16 22.8978 16.158 23.2794 16.4393 23.5607C16.7206 23.842 17.1022 24 17.5 24H29.5C29.8978 24 30.2794 23.842 30.5607 23.5607C30.842 23.2794 31 22.8978 31 22.5V15C31 14.6022 30.842 14.2206 30.5607 13.9393C30.2794 13.658 29.8978 13.5 29.5 13.5H26.5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" stroke="white"/>
+<rect x="13" y="11" width="10" height="12" fill="white"/>
+<path d="M21.5 12V21" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke="#BFBFBF"/>
+<path d="M18.5 18L21.5 21L24.5 18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke="#BFBFBF"/>
+<path d="M18.5 13.5H15.5C15.1022 13.5 14.7206 13.658 14.4393 13.9393C14.158 14.2206 14 14.6022 14 15V22.5C14 22.8978 14.158 23.2794 14.4393 23.5607C14.7206 23.842 15.1022 24 15.5 24H27.5C27.8978 24 28.2794 23.842 28.5607 23.5607C28.842 23.2794 29 22.8978 29 22.5V15C29 14.6022 28.842 14.2206 28.5607 13.9393C28.2794 13.658 27.8978 13.5 27.5 13.5H24.5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke="#BFBFBF"/>
+</g>
+<defs>
+<clipPath id="clip0_import_gifts">
+<rect width="24" height="23" fill="white"/>
+</clipPath>
+</defs>
+</svg>

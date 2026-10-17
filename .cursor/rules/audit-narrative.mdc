@@ -1,0 +1,27 @@
+---
+description: Material writes must leave a who/what/when/tenant audit story
+alwaysApply: true
+---
+
+# Audit narrative (product promise)
+
+When adding or changing a **material write** (create / update / delete / status change / approval decision / sensitive export), leave an audit story.
+
+## Required story
+
+- **Who** — actor id + name/email  
+- **What** — human `summary` or clear `event_title` + `action` (+ `changes` when fields move)  
+- **When** — server-side audit timestamp  
+- **Tenant** — `orgId` always  
+- **Target** — `target_type` / `target_id` / `target_label` when known  
+
+## How
+
+1. Prefer `logAuditEvent` (`src/lib/services/audit-logger.ts`) or an existing domain helper that calls it.  
+2. Plan with `.cursor/prompt-templates/audit-write-path.md` when the ask is a new audited write.  
+3. Do not write a fake success audit for unauthorized or failed attempts.  
+4. Full policy: `docs/internal/audit-narrative-decision.md`.
+
+## Out of scope unless asked
+
+Full SOC 2 paperwork, a second audit microservice, or backfilling every old path in one PR.

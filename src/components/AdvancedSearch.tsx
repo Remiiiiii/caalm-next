@@ -1,12 +1,15 @@
 "use client";
 
-import { format } from "date-fns";
 import { Clock, Filter, Save, Search, Star, X } from "lucide-react";
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
+import {
+	CaalmDatePicker,
+	parseIsoDateLocal,
+	toIsoDateLocal,
+} from "@/components/ui/caalm-date-picker";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -483,44 +486,22 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
 							<div className="space-y-2">
 								<Label>Created Date Range</Label>
 								<div className="grid grid-cols-2 gap-2">
-									<Popover>
-										<PopoverTrigger asChild>
-											<Button
-												variant="outline"
-												className="justify-start text-left font-normal"
-											>
-												{startDate
-													? format(startDate, "MMM dd, yyyy")
-													: "Start date"}
-											</Button>
-										</PopoverTrigger>
-										<PopoverContent className="w-auto p-0">
-											<Calendar
-												mode="single"
-												selected={startDate}
-												onSelect={setStartDate}
-												initialFocus
-											/>
-										</PopoverContent>
-									</Popover>
-									<Popover>
-										<PopoverTrigger asChild>
-											<Button
-												variant="outline"
-												className="justify-start text-left font-normal"
-											>
-												{endDate ? format(endDate, "MMM dd, yyyy") : "End date"}
-											</Button>
-										</PopoverTrigger>
-										<PopoverContent className="w-auto p-0">
-											<Calendar
-												mode="single"
-												selected={endDate}
-												onSelect={setEndDate}
-												initialFocus
-											/>
-										</PopoverContent>
-									</Popover>
+									<CaalmDatePicker
+										value={startDate ? toIsoDateLocal(startDate) : ""}
+										placeholder="Start date"
+										size="sm"
+										onChange={(iso) =>
+											setStartDate(iso ? parseIsoDateLocal(iso) : undefined)
+										}
+									/>
+									<CaalmDatePicker
+										value={endDate ? toIsoDateLocal(endDate) : ""}
+										placeholder="End date"
+										size="sm"
+										onChange={(iso) =>
+											setEndDate(iso ? parseIsoDateLocal(iso) : undefined)
+										}
+									/>
 								</div>
 							</div>
 
@@ -528,46 +509,28 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
 							<div className="space-y-2">
 								<Label>Expiry Date Range</Label>
 								<div className="grid grid-cols-2 gap-2">
-									<Popover>
-										<PopoverTrigger asChild>
-											<Button
-												variant="outline"
-												className="justify-start text-left font-normal"
-											>
-												{expiryStartDate
-													? format(expiryStartDate, "MMM dd, yyyy")
-													: "Start date"}
-											</Button>
-										</PopoverTrigger>
-										<PopoverContent className="w-auto p-0">
-											<Calendar
-												mode="single"
-												selected={expiryStartDate}
-												onSelect={setExpiryStartDate}
-												initialFocus
-											/>
-										</PopoverContent>
-									</Popover>
-									<Popover>
-										<PopoverTrigger asChild>
-											<Button
-												variant="outline"
-												className="justify-start text-left font-normal"
-											>
-												{expiryEndDate
-													? format(expiryEndDate, "MMM dd, yyyy")
-													: "End date"}
-											</Button>
-										</PopoverTrigger>
-										<PopoverContent className="w-auto p-0">
-											<Calendar
-												mode="single"
-												selected={expiryEndDate}
-												onSelect={setExpiryEndDate}
-												initialFocus
-											/>
-										</PopoverContent>
-									</Popover>
+									<CaalmDatePicker
+										value={
+											expiryStartDate ? toIsoDateLocal(expiryStartDate) : ""
+										}
+										placeholder="Start date"
+										size="sm"
+										onChange={(iso) =>
+											setExpiryStartDate(
+												iso ? parseIsoDateLocal(iso) : undefined,
+											)
+										}
+									/>
+									<CaalmDatePicker
+										value={expiryEndDate ? toIsoDateLocal(expiryEndDate) : ""}
+										placeholder="End date"
+										size="sm"
+										onChange={(iso) =>
+											setExpiryEndDate(
+												iso ? parseIsoDateLocal(iso) : undefined,
+											)
+										}
+									/>
 								</div>
 							</div>
 						</div>

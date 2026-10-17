@@ -42,6 +42,10 @@ import {
 	parseLicenseExtractionJson,
 } from "@/lib/ai/licenseExtractionSchema";
 import {
+	AI_EXTRACTION_LIMIT_TITLE,
+	isAiExtractionLimitError,
+} from "@/lib/billing/aiExtractionUserMessages";
+import {
 	generateDocumentNumber,
 	needsDocumentNumber,
 } from "@/lib/contracts/documentNumber";
@@ -385,6 +389,17 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 						}
 					} catch (error) {
 						console.error("Failed to extract license data:", error);
+						toast({
+							title: isAiExtractionLimitError(error)
+								? AI_EXTRACTION_LIMIT_TITLE
+								: "Could not auto-fill from file",
+							description: isAiExtractionLimitError(error)
+								? error.message
+								: error instanceof Error
+									? error.message
+									: "You can still fill the form by hand.",
+							variant: "destructive",
+						});
 					} finally {
 						if (needsDocumentNumber(form.getValues("licenseNumber"))) {
 							form.setValue("licenseNumber", generateDocumentNumber("LIC"), {

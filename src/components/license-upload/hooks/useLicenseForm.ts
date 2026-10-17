@@ -5,6 +5,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useCallback } from "react";
 import { useForm } from "react-hook-form";
+import { throwIfAiExtractionHttpFailed } from "@/lib/billing/aiExtractionUserMessages";
 import { type LicenseUploadFormData, licenseUploadSchema } from "../schema";
 import type { ProcessedFileData } from "../types";
 
@@ -105,9 +106,7 @@ export function useLicenseForm() {
 					}),
 				});
 
-				if (!response.ok) {
-					throw new Error("Extraction failed");
-				}
+				await throwIfAiExtractionHttpFailed(response);
 
 				const result = await response.json();
 				if (result.success && result.data) {
@@ -116,7 +115,7 @@ export function useLicenseForm() {
 				return null;
 			} catch (error) {
 				console.error("License extraction error:", error);
-				return null;
+				throw error;
 			}
 		},
 		[],

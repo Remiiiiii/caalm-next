@@ -18,7 +18,7 @@ function parseFilters(request: NextRequest, orgId: string) {
 	const offset = (page - 1) * limit;
 
 	const moduleParam = searchParams.get("module");
-	const module =
+	const auditModule =
 		moduleParam && moduleParam !== "all"
 			? (moduleParam as AuditModule)
 			: undefined;
@@ -35,7 +35,7 @@ function parseFilters(request: NextRequest, orgId: string) {
 			action: searchParams.get("action") || undefined,
 			status: searchParams.get("status") || undefined,
 			search: searchParams.get("search") || undefined,
-			module,
+			module: auditModule,
 			limit,
 			offset,
 		},

@@ -32,7 +32,8 @@ export default function AssistantPreviewSheetShell({
 				onInteractOutside={(e) => e.preventDefault()}
 				className={cn(
 					"flex w-full flex-col gap-0 overflow-visible border-0 bg-transparent p-0 shadow-none backdrop-blur-none",
-					"sm:max-w-md",
+					/* ~15% wider than max-w-md (28rem → 32rem) */
+					"sm:max-w-lg",
 					"inset-y-auto! top-4! right-4! bottom-4! h-[calc(100vh-2rem)]! max-h-none!",
 					/* Snappy close: drop conflicting CSS transition + shorten slide/duration */
 					"transition-none! duration-200! ease-out!",

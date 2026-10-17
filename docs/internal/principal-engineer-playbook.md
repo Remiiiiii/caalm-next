@@ -204,7 +204,7 @@ Research-backed operating system for building CAALM with Cursor agents at princi
 | https://github.com/goldbergyoni/javascript-testing-best-practices | JS testing practices | Repo conventions |
 | https://eslint.org/docs/latest/use/configure/configuration-files | ESLint flat config | `pnpm lint` |
 | https://typescript-eslint.io/ | typescript-eslint | TS strictness |
-| In-repo: `.cursor/rules/typescript-best-practices.mdc` | TS rules | Agent alignment |
+| In-repo: `.cursor/rules/global-style-guide.mdc` | UI + TSX patterns | Agent alignment |
 | https://www.conventionalcommits.org/ | Commit format | Changelog + audits |
 | https://trunkbaseddevelopment.com/ | Trunk-based dev | main + cursor branches |
 | https://github.com/dependency-check/DependencyCheck | Dependency scanning | Supply chain |
@@ -243,8 +243,7 @@ Research-backed operating system for building CAALM with Cursor agents at princi
 | https://www.w3.org/WAI/ARIA/apg/ | ARIA Authoring Practices | Dialogs, tables, menus |
 | https://ui.shadcn.com/ | shadcn/ui | Component base |
 | https://www.radix-ui.com/primitives/docs/overview/introduction | Radix primitives | Accessibility behavior |
-| In-repo: `.cursor/rules/global-style-guide.mdc` | CAALM UI law | Glass cards, dialogs |
-| In-repo: `.cursor/rules/dialog-best-practices.mdc` | Dialog template | Enterprise modals |
+| In-repo: `.cursor/rules/global-style-guide.mdc` | CAALM UI law (dialogs, buttons, inputs, switches) | Glass cards, modals |
 | In-repo: `design-system/caalm/MASTER.md` | Design system master | Single source |
 | In-repo: `.cursor/skills/ui-ux-pro-max/SKILL.md` | UX skill | Agent UI work |
 
@@ -263,7 +262,6 @@ Research-backed operating system for building CAALM with Cursor agents at princi
 | https://developer.mozilla.org/en-US/docs/Web/Accessibility | MDN a11y | Baseline |
 | https://www.w3.org/TR/wai-aria-1.2/ | WAI-ARIA spec | Compliance depth |
 | In-repo: `.cursor/rules/desktop-first.mdc` | Desktop gate | Product strategy |
-| In-repo: `.cursor/rules/segmented-switch.mdc` | Segmented control | UI consistency |
 
 ### Tier B
 
@@ -343,14 +341,14 @@ Research-backed operating system for building CAALM with Cursor agents at princi
 ## What you are likely overlooking
 
 1. **Cloud agent hook gap:** User-level ponytail hooks do not run in cloud; project `.cursor/hooks.json` must use repo-relative paths and Node on PATH.
-2. **Rule overload:** 30+ always-on rules compete; agents miss conflicts. Consolidate meta-rule into one “read order” rule.
+2. **Rule overload:** 30+ always-on rules compete; agents miss conflicts. Consolidate meta-rule into one “read order” rule. **Map:** `docs/internal/cursor-rules-read-order.md` + spine `agent-workflow-principal.mdc` (UI/copy rules are file-scoped).
 3. **MCP on cloud vs IDE:** Team MCP dashboard must mirror `.cursor/mcp.json` or agents operate blind on Appwrite.
-4. **Audit log as product:** Buyers care as much about immutable audit narrative as feature count.
+4. **Audit log as product:** Buyers care as much about immutable audit narrative as feature count. **Decision:** `docs/internal/audit-narrative-decision.md` + rule `audit-narrative.mdc`.
 5. **Workflow engine scope creep:** CLM workflows need idempotent state transitions + human tasks, not a second microservice on day one. **Decision:** `docs/internal/workflow-engine-decision.md` + rule `no-workflow-engine-sprawl.mdc`.
-6. **ESLint `continue-on-error: true` in CI:** Signals drift; tighten when roadmap pressure eases.
-7. **Desktop-first companion routes:** Mobile scope stays narrow; don’t duplicate admin UI for phones.
+6. **ESLint `continue-on-error: true` in CI:** Signals drift; tighten when roadmap pressure eases. **Decision:** `docs/internal/ci-lint-strictness.md` — Lint job must fail closed (no soft-pass).
+7. **Desktop-first companion routes:** Mobile scope stays narrow; don’t duplicate admin UI for phones. **Decision:** `docs/internal/desktop-first-decision.md` + rule `desktop-first.mdc`.
 8. **Demo vs prod parity gaps:** `Audit Logs.changes` attribute cap — track explicitly in PRs.
-9. **AI document extraction:** NIST AI RMF + customer disclosure for Google Document AI paths.
+9. **AI document extraction:** NIST AI RMF + customer disclosure for Google AI document paths. **Policy:** `docs/internal/ai-document-extraction-policy.md` + rule `ai-document-extraction.mdc`.
 10. **Buyer demo script vs code:** Keep `docs/internal/buyer-demo-script.md` synced when integrations change.
 
 ---

@@ -1,19 +1,17 @@
 "use client";
 
-import { format } from "date-fns";
 import { Filter, X } from "lucide-react";
 import type React from "react";
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
+import {
+	CaalmDatePicker,
+	parseIsoDateLocal,
+	toIsoDateLocal,
+} from "@/components/ui/caalm-date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover";
 import {
 	Select,
 	SelectContent,
@@ -303,96 +301,76 @@ const LicensesFilter: React.FC<LicensesFilterProps> = ({
 						<div className="space-y-2">
 							<Label className="text-slate-700 font-medium">Issue date</Label>
 							<div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-								<Popover>
-									<PopoverTrigger asChild>
-										<Button
-											variant="outline"
-											className="justify-start text-left font-normal bg-white cursor-pointer"
-											size="sm"
-										>
-											{filters.issueDateFrom
-												? format(filters.issueDateFrom, "MMM dd, yyyy")
-												: "From"}
-										</Button>
-									</PopoverTrigger>
-									<PopoverContent className="w-auto p-0" align="start">
-										<Calendar
-											mode="single"
-											selected={filters.issueDateFrom}
-											onSelect={(date) => updateFilter("issueDateFrom", date)}
-											initialFocus
-										/>
-									</PopoverContent>
-								</Popover>
-								<Popover>
-									<PopoverTrigger asChild>
-										<Button
-											variant="outline"
-											className="justify-start text-left font-normal bg-white cursor-pointer"
-											size="sm"
-										>
-											{filters.issueDateTo
-												? format(filters.issueDateTo, "MMM dd, yyyy")
-												: "To"}
-										</Button>
-									</PopoverTrigger>
-									<PopoverContent className="w-auto p-0" align="start">
-										<Calendar
-											mode="single"
-											selected={filters.issueDateTo}
-											onSelect={(date) => updateFilter("issueDateTo", date)}
-											initialFocus
-										/>
-									</PopoverContent>
-								</Popover>
+								<CaalmDatePicker
+									size="sm"
+									placeholder="From"
+									value={
+										filters.issueDateFrom
+											? toIsoDateLocal(filters.issueDateFrom)
+											: ""
+									}
+									onChange={(iso) =>
+										updateFilter(
+											"issueDateFrom",
+											iso ? parseIsoDateLocal(iso) : undefined,
+										)
+									}
+									className="cursor-pointer"
+								/>
+								<CaalmDatePicker
+									size="sm"
+									placeholder="To"
+									value={
+										filters.issueDateTo
+											? toIsoDateLocal(filters.issueDateTo)
+											: ""
+									}
+									onChange={(iso) =>
+										updateFilter(
+											"issueDateTo",
+											iso ? parseIsoDateLocal(iso) : undefined,
+										)
+									}
+									className="cursor-pointer"
+								/>
 							</div>
 						</div>
 
 						<div className="space-y-2">
 							<Label className="text-slate-700 font-medium">Expiry date</Label>
 							<div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-								<Popover>
-									<PopoverTrigger asChild>
-										<Button
-											variant="outline"
-											className="justify-start text-left font-normal bg-white cursor-pointer"
-											size="sm"
-										>
-											{filters.expiryDateFrom
-												? format(filters.expiryDateFrom, "MMM dd, yyyy")
-												: "From"}
-										</Button>
-									</PopoverTrigger>
-									<PopoverContent className="w-auto p-0" align="start">
-										<Calendar
-											mode="single"
-											selected={filters.expiryDateFrom}
-											onSelect={(date) => updateFilter("expiryDateFrom", date)}
-											initialFocus
-										/>
-									</PopoverContent>
-								</Popover>
-								<Popover>
-									<PopoverTrigger asChild>
-										<Button
-											variant="outline"
-											className="justify-start text-left font-normal bg-white cursor-pointer"
-											size="sm"
-										>
-											{filters.expiryDateTo
-												? format(filters.expiryDateTo, "MMM dd, yyyy")
-												: "To"}
-										</Button>
-									</PopoverTrigger>
-									<PopoverContent className="w-auto p-0" align="start">
-										<Calendar
-											mode="single"
-											selected={filters.expiryDateTo}
-											onSelect={(date) => updateFilter("expiryDateTo", date)}
-											initialFocus
-										/>
-									</PopoverContent>
-								</Popover>
+								<CaalmDatePicker
+									size="sm"
+									placeholder="From"
+									value={
+										filters.expiryDateFrom
+											? toIsoDateLocal(filters.expiryDateFrom)
+											: ""
+									}
+									onChange={(iso) =>
+										updateFilter(
+											"expiryDateFrom",
+											iso ? parseIsoDateLocal(iso) : undefined,
+										)
+									}
+									className="cursor-pointer"
+								/>
+								<CaalmDatePicker
+									size="sm"
+									placeholder="To"
+									value={
+										filters.expiryDateTo
+											? toIsoDateLocal(filters.expiryDateTo)
+											: ""
+									}
+									onChange={(iso) =>
+										updateFilter(
+											"expiryDateTo",
+											iso ? parseIsoDateLocal(iso) : undefined,
+										)
+									}
+									className="cursor-pointer"
+								/>
 							</div>
 						</div>
 

@@ -23,7 +23,6 @@ import {
 	CheckCircle,
 	CheckCircle2,
 	ChevronDown,
-	ChevronDownIcon,
 	ChevronLeft,
 	ChevronRight,
 	ChevronUp,
@@ -53,7 +52,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import CalendarSettings from "@/components/CalendarSettings";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
+import {
+	CaalmDatePicker,
+	parseIsoDateLocal,
+	toIsoDateLocal,
+} from "@/components/ui/caalm-date-picker";
 import {
 	Dialog,
 	DialogContent,
@@ -63,11 +66,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover";
 import {
 	Select,
 	SelectContent,
@@ -2188,33 +2186,17 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 							>
 								Date
 							</Label>
-							<Popover>
-								<PopoverTrigger asChild>
-									<Button
-										variant="outline"
-										id="date"
-										className="w-full justify-between font-normal bg-white/30 backdrop-blur border border-white/40 shadow-md"
-									>
-										{newEvent.date
-											? newEvent.date.toLocaleDateString()
-											: "Select date"}
-										<ChevronDownIcon className="h-4 w-4" />
-									</Button>
-								</PopoverTrigger>
-								<PopoverContent
-									className="w-auto overflow-hidden p-0"
-									align="start"
-								>
-									<Calendar
-										mode="single"
-										selected={newEvent.date}
-										captionLayout="dropdown"
-										onSelect={(date) => {
-											setNewEvent({ ...newEvent, date });
-										}}
-									/>
-								</PopoverContent>
-							</Popover>
+							<CaalmDatePicker
+								id="date"
+								value={newEvent.date ? toIsoDateLocal(newEvent.date) : ""}
+								placeholder="Select date"
+								className="bg-white/30 backdrop-blur border-white/40 shadow-md"
+								onChange={(iso) => {
+									const next = parseIsoDateLocal(iso);
+									if (!next) return;
+									setNewEvent({ ...newEvent, date: next });
+								}}
+							/>
 						</div>
 
 						<div>

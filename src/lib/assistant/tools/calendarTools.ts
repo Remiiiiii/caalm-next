@@ -499,6 +499,9 @@ export const CALENDAR_TOOLS: ToolDefinition[] = [
 					date: updated.startDate,
 					startTime: updated.startTime,
 					endTime: updated.endTime,
+					previousDate: target.startDate,
+					previousStartTime: target.startTime,
+					previousEndTime: target.endTime,
 				},
 			};
 		},

@@ -1,0 +1,26 @@
+---
+description: Rules for AI that reads customer contract/license documents
+alwaysApply: true
+---
+
+# AI document extraction
+
+When changing features that **read uploaded contract or license files with AI**, follow `docs/internal/ai-document-extraction-policy.md`.
+
+## Hard rules
+
+1. **Human in the loop** — Do not auto-save or auto-approve from AI output alone. Keep a review step (see `AiExtractionReviewPanel` patterns).
+2. **No new AI vendor** for document files without updating that policy doc and an explicit user/product ask.
+3. **Manual fallback** — Extraction failure or quota must still allow filling the form by hand.
+4. **No extra exfiltration** — Do not log or forward full document bodies to new third parties for “debug” or analytics.
+5. **Honest copy** — Do not add UI or sales claims that AI never sees documents if intake extraction remains enabled.
+
+## Allowed
+
+- Better confidence flags, quotas, org toggles, prompts, and schema parsing in `src/lib/ai/extract*FromDocument.ts`
+- Clearer user messaging when extraction fails or is off
+
+## If asked to “fully automate intake with AI”
+
+1. Point to `docs/internal/ai-document-extraction-policy.md`.
+2. Ask whether they mean **faster review** (allowed) or **no human confirm** (needs a new written decision).

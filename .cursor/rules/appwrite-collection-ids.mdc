@@ -1,6 +1,7 @@
 ---
 description: Appwrite collection/table and bucket IDs must be alphanumeric, not human-readable strings
-alwaysApply: true
+globs: "{src/lib/appwrite,src/lib/database,scripts}/**/*,.env.example,.env.demo.example"
+alwaysApply: false
 ---
 
 # Appwrite collection IDs

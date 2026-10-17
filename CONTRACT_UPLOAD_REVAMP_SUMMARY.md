@@ -172,7 +172,7 @@ Successfully transformed the contract upload feature from a fixed 10-step form i
 
 - Plan File: `.cursor/plans/contract_upload_revamp_c490f4a5.plan.md`
 - Style Guide: `.cursor/rules/global-style-guide.mdc`
-- Dialog Best Practices: `.cursor/rules/dialog-best-practices.mdc`
+- Dialog standards: `.cursor/rules/global-style-guide.mdc` (Dialog section)
 
 ---
 

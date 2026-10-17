@@ -1,5 +1,5 @@
-import { ImportPageShell } from "@/components/import/ImportPageShell";
 import { GiftsImportClient } from "@/components/gifts/GiftsImportClient";
+import { ImportPageShell } from "@/components/import/ImportPageShell";
 import { PERMISSIONS } from "@/constants/permissions";
 import { requirePagePermission } from "@/lib/rbac/page-guards";
 

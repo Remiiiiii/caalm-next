@@ -8,7 +8,9 @@ import type {
 	AssistantPendingAction,
 	UseCaalmAssistantReturn,
 } from "@/components/assistant/assistantTypes";
+import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { buildPendingActionLifecycle } from "@/lib/assistant/actionLifecycle";
 import type { AssistantCalendarMutation } from "@/lib/assistant/executeTypes";
 import { readJsonResponse } from "@/lib/assistant/readJsonResponse";
 import {
@@ -51,6 +53,7 @@ function mapStoredMessages(
 		let suggestions: AssistantChatMessage["suggestions"];
 		let meetingCreated: AssistantChatMessage["meetingCreated"];
 		let actionCompleted: AssistantChatMessage["actionCompleted"];
+		let actionLifecycle: AssistantChatMessage["actionLifecycle"];
 		let activityFeed: AssistantChatMessage["activityFeed"];
 		if (m.metadataJson) {
 			try {
@@ -58,16 +61,19 @@ function mapStoredMessages(
 					suggestions?: AssistantChatMessage["suggestions"];
 					meetingCreated?: AssistantChatMessage["meetingCreated"];
 					actionCompleted?: AssistantChatMessage["actionCompleted"];
+					actionLifecycle?: AssistantChatMessage["actionLifecycle"];
 					activityFeed?: AssistantChatMessage["activityFeed"];
 				};
 				suggestions = meta.suggestions;
 				meetingCreated = meta.meetingCreated;
 				actionCompleted = meta.actionCompleted;
+				actionLifecycle = meta.actionLifecycle;
 				activityFeed = meta.activityFeed;
 			} catch {
 				suggestions = undefined;
 				meetingCreated = undefined;
 				actionCompleted = undefined;
+				actionLifecycle = undefined;
 				activityFeed = undefined;
 			}
 		}
@@ -79,6 +85,7 @@ function mapStoredMessages(
 			suggestions,
 			meetingCreated,
 			actionCompleted,
+			actionLifecycle,
 			activityFeed,
 			createdAt: m.$createdAt,
 		};
@@ -89,6 +96,20 @@ export function useCaalmAssistant(): UseCaalmAssistantReturn {
 	const pathname = usePathname();
 	const router = useRouter();
 	const { toast } = useToast();
+	const { user } = useAuth();
+
+	const actionActor = () => ({
+		userId: user?.$id,
+		name:
+			(user as { fullName?: string } | null)?.fullName ||
+			user?.name ||
+			user?.email ||
+			"You",
+		avatar: (user as { avatar?: string | null } | null)?.avatar ?? null,
+		department: (user as { department?: string } | null)?.department,
+		departmentLabel: (user as { departmentLabel?: string } | null)
+			?.departmentLabel,
+	});
 
 	const [conversationId, setConversationIdState] = useState<string | null>(
 		null,
@@ -282,10 +303,13 @@ export function useCaalmAssistant(): UseCaalmAssistantReturn {
 				const assistantMsg: AssistantChatMessage = {
 					id: `local-a-${Date.now()}`,
 					role: "assistant",
-					content: payload.answer ?? "",
+					content: payload.pendingAction ? "" : (payload.answer ?? ""),
 					sources: payload.sources,
 					suggestions: payload.suggestions,
 					pendingAction: payload.pendingAction,
+					actionLifecycle: payload.pendingAction
+						? buildPendingActionLifecycle(payload.pendingAction, actionActor())
+						: undefined,
 					activityFeed: payload.activityFeed,
 					createdAt: new Date().toISOString(),
 				};
@@ -323,13 +347,14 @@ export function useCaalmAssistant(): UseCaalmAssistantReturn {
 	const confirmAction = useCallback(
 		async (argsPatch?: Record<string, unknown>) => {
 			if (!pendingAction) return;
+			const pendingSnapshot = pendingAction;
 			setIsSending(true);
 			try {
 				const res = await fetch("/api/assistant/execute", {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
-						pendingActionId: pendingAction.id,
+						pendingActionId: pendingSnapshot.id,
 						conversationId: conversationIdRef.current,
 						pathname,
 						...(argsPatch ? { argsPatch } : {}),
@@ -341,6 +366,7 @@ export function useCaalmAssistant(): UseCaalmAssistantReturn {
 						summary?: string;
 						meetingCreated?: AssistantChatMessage["meetingCreated"];
 						actionCompleted?: AssistantChatMessage["actionCompleted"];
+						actionLifecycle?: AssistantChatMessage["actionLifecycle"];
 						calendarMutation?: AssistantCalendarMutation;
 					};
 				}>(res);
@@ -351,19 +377,61 @@ export function useCaalmAssistant(): UseCaalmAssistantReturn {
 				const summary = jsonData.summary ?? "Action completed.";
 				const meetingCreated = jsonData.meetingCreated;
 				const actionCompleted = jsonData.actionCompleted;
+				const actionLifecycle = jsonData.actionLifecycle;
 				const calendarMutation = jsonData.calendarMutation;
-				setMessages((prev) => [
-					...prev,
-					{
-						id: `local-sys-${Date.now()}`,
-						role: "assistant",
-						content: summary,
-						meetingCreated,
-						actionCompleted,
-						createdAt: new Date().toISOString(),
-					},
-				]);
-				setPendingAction(null);
+				const failed = actionLifecycle?.state === "failed";
+
+				// Transition the same message card — do not add a second result bubble.
+				setMessages((prev) => {
+					const idx = [...prev]
+						.map((m, i) => ({ m, i }))
+						.reverse()
+						.find(
+							({ m }) =>
+								m.role === "assistant" &&
+								(m.pendingAction?.id === pendingSnapshot.id ||
+									m.actionLifecycle?.pendingActionId === pendingSnapshot.id),
+						)?.i;
+
+					if (idx === undefined) {
+						return [
+							...prev,
+							{
+								id: `local-sys-${Date.now()}`,
+								role: "assistant" as const,
+								content: summary,
+								meetingCreated,
+								actionCompleted,
+								actionLifecycle,
+								createdAt: new Date().toISOString(),
+							},
+						];
+					}
+
+					return prev.map((m, i) =>
+						i !== idx
+							? m
+							: {
+									...m,
+									content: failed
+										? "I couldn't finish that one."
+										: meetingCreated
+											? "Your meeting is on the calendar."
+											: "",
+									pendingAction: failed ? pendingSnapshot : undefined,
+									meetingCreated: meetingCreated ?? m.meetingCreated,
+									actionCompleted: actionCompleted ?? m.actionCompleted,
+									actionLifecycle:
+										actionLifecycle ??
+										(meetingCreated ? undefined : m.actionLifecycle),
+								},
+					);
+				});
+
+				if (!failed) {
+					setPendingAction(null);
+				}
+
 				if (calendarMutation?.kind === "create" && calendarMutation.date) {
 					void refreshCalendarCache({
 						mode: "insert",
@@ -422,46 +490,124 @@ export function useCaalmAssistant(): UseCaalmAssistantReturn {
 						},
 					});
 				} else if (
-					pendingAction.toolName === "reschedule_calendar_event" ||
-					pendingAction.toolName === "cancel_calendar_event"
+					pendingSnapshot.toolName === "reschedule_calendar_event" ||
+					pendingSnapshot.toolName === "cancel_calendar_event"
 				) {
 					void revalidateCalendarMonth();
 				}
-				void loadHistory();
+				if (!failed) {
+					void loadHistory();
+				}
 			} catch (e) {
+				const message = e instanceof Error ? e.message : "Unknown error";
+				setMessages((prev) =>
+					prev.map((m) =>
+						m.pendingAction?.id === pendingSnapshot.id ||
+						m.actionLifecycle?.pendingActionId === pendingSnapshot.id
+							? {
+									...m,
+									content: "I couldn't finish that one.",
+									actionLifecycle: {
+										...(m.actionLifecycle ??
+											buildPendingActionLifecycle(
+												pendingSnapshot,
+												actionActor(),
+											)),
+										state: "failed",
+										errorMessage: message,
+										errorCode: "ERR_ACTION",
+										retrySafe: true,
+										footerNote: "Safe to retry — no duplicate will be created.",
+									},
+								}
+							: m,
+					),
+				);
 				toast({
 					title: "Action failed",
-					description: e instanceof Error ? e.message : "Unknown error",
+					description: message,
 					variant: "destructive",
 				});
 			} finally {
 				setIsSending(false);
 			}
 		},
-		[loadHistory, pathname, pendingAction, toast],
+		[loadHistory, pathname, pendingAction, toast, user],
 	);
 
-	const patchPendingArgs = useCallback((argsPatch: Record<string, unknown>) => {
+	const cancelPendingAction = useCallback(() => {
 		setPendingAction((prev) => {
 			if (!prev) return prev;
-			const nextArgs = { ...(prev.args ?? {}), ...argsPatch };
-			const next = {
-				...prev,
-				args: nextArgs,
-				preview: JSON.stringify(nextArgs, null, 2).slice(0, 500),
-			};
-			// Keep server-side pending action in sync for confirm after remount
-			void fetch("/api/assistant/pending", {
-				method: "PATCH",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					pendingActionId: prev.id,
-					argsPatch,
-				}),
-			}).catch(() => undefined);
-			return next;
+			setMessages((msgs) =>
+				msgs.map((m) =>
+					m.pendingAction?.id === prev.id ||
+					m.actionLifecycle?.pendingActionId === prev.id
+						? {
+								...m,
+								content: "Cancelled. Nothing was changed.",
+								pendingAction: undefined,
+								actionLifecycle: undefined,
+							}
+						: m,
+				),
+			);
+			return null;
 		});
 	}, []);
+
+	const patchPendingArgs = useCallback(
+		(argsPatch: Record<string, unknown>) => {
+			setPendingAction((prev) => {
+				if (!prev) return prev;
+				const cleanedPatch = { ...argsPatch };
+				// Empty due date means "not set"
+				if (
+					"dueDate" in cleanedPatch &&
+					(cleanedPatch.dueDate === "" || cleanedPatch.dueDate == null)
+				) {
+					cleanedPatch.dueDate = undefined;
+				}
+				const nextArgs = { ...(prev.args ?? {}), ...cleanedPatch };
+				if ("dueDate" in cleanedPatch && cleanedPatch.dueDate === undefined) {
+					delete nextArgs.dueDate;
+				}
+				const title =
+					typeof nextArgs.title === "string" ? nextArgs.title.trim() : "";
+				const next = {
+					...prev,
+					args: nextArgs,
+					label: title ? `Create task “${title}”` : prev.label,
+					preview: JSON.stringify(nextArgs, null, 2).slice(0, 500),
+				};
+				setMessages((msgs) =>
+					msgs.map((m) =>
+						m.pendingAction?.id === prev.id ||
+						m.actionLifecycle?.pendingActionId === prev.id
+							? {
+									...m,
+									pendingAction: next,
+									actionLifecycle: buildPendingActionLifecycle(
+										next,
+										actionActor(),
+									),
+								}
+							: m,
+					),
+				);
+				// Keep server-side pending action in sync for confirm after remount
+				void fetch("/api/assistant/pending", {
+					method: "PATCH",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						pendingActionId: prev.id,
+						argsPatch: cleanedPatch,
+					}),
+				}).catch(() => undefined);
+				return next;
+			});
+		},
+		[user],
+	);
 
 	return {
 		conversationId,
@@ -478,6 +624,7 @@ export function useCaalmAssistant(): UseCaalmAssistantReturn {
 		resumeActiveSession,
 		sendMessage,
 		confirmAction,
+		cancelPendingAction,
 		patchPendingArgs,
 	};
 }
