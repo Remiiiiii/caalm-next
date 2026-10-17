@@ -31,6 +31,10 @@ export const getAvatarColor = (userId: string): string => {
 	return AVATAR_COLORS[colorIndex];
 };
 
+/** Contracts-table photo ring (ManagerAvatars) */
+const PHOTO_RING_GRADIENT =
+	"linear-gradient(135deg, #12477d 0%, #03afbf 100%)";
+
 interface AvatarProps {
 	name?: string;
 	userId: string;
@@ -79,25 +83,33 @@ const Avatar: React.FC<AvatarProps> = ({
 
 	return (
 		<div className={cn("flex items-center gap-2", className)}>
-			<div
-				className={cn(
-					"rounded-full flex items-center justify-center text-white font-medium overflow-hidden",
-					sizeClasses[size],
-				)}
-				style={showImage ? undefined : { backgroundColor: avatarColor }}
-			>
-				{showImage ? (
-					// eslint-disable-next-line @next/next/no-img-element -- remote Appwrite / CDN URLs
+			{showImage ? (
+				<div
+					className={cn("rounded-full overflow-hidden shrink-0", sizeClasses[size])}
+					style={{
+						background: PHOTO_RING_GRADIENT,
+						padding: "2px",
+					}}
+				>
+					{/* eslint-disable-next-line @next/next/no-img-element -- remote Appwrite / CDN URLs */}
 					<img
 						src={imageUrl || ""}
 						alt=""
-						className="h-full w-full object-cover"
+						className="h-full w-full rounded-full object-cover border border-[#FCFEFF]"
 						onError={() => setImageFailed(true)}
 					/>
-				) : (
-					initials
-				)}
-			</div>
+				</div>
+			) : (
+				<div
+					className={cn(
+						"rounded-full flex items-center justify-center text-white font-medium shrink-0",
+						sizeClasses[size],
+					)}
+					style={{ backgroundColor: avatarColor }}
+				>
+					{initials}
+				</div>
+			)}
 			{showName && <span className="text-sm text-slate-700">{name}</span>}
 		</div>
 	);

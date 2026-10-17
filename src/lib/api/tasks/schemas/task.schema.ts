@@ -17,6 +17,18 @@ export const taskLinkedEntityTypeSchema = z.enum([
 	"none",
 ]);
 
+export const taskCreatedSourceSchema = z.enum(["manual", "assistant"]);
+
+export const taskViewSchema = z.enum([
+	"all",
+	"mine",
+	"unassigned",
+	"overdue",
+	"due_this_week",
+]);
+
+export const taskDueBucketSchema = z.enum(["any", "overdue", "next_7", "none"]);
+
 export const taskCreateSchema = z.object({
 	title: z.string().min(1).max(255),
 	description: z.string().max(4000).optional(),
@@ -27,6 +39,8 @@ export const taskCreateSchema = z.object({
 	department: z.string().max(128).optional(),
 	linkedEntityType: taskLinkedEntityTypeSchema.optional(),
 	linkedEntityId: z.string().max(64).optional(),
+	createdSource: taskCreatedSourceSchema.optional(),
+	requestedById: z.string().max(64).optional(),
 });
 
 export const taskUpdateSchema = z.object({
@@ -51,4 +65,14 @@ export const taskListQuerySchema = z.object({
 	search: z.string().optional(),
 	dueBefore: z.string().optional(),
 	dueAfter: z.string().optional(),
+	view: taskViewSchema.optional().default("all"),
+	dueBucket: taskDueBucketSchema.optional().default("any"),
+});
+
+export const taskBulkSchema = z.object({
+	ids: z.array(z.string().min(1)).min(1).max(100),
+	action: z.enum(["assign", "status", "priority", "delete"]),
+	assigneeId: z.string().max(64).optional().nullable(),
+	status: taskStatusSchema.optional(),
+	priority: taskPrioritySchema.optional(),
 });

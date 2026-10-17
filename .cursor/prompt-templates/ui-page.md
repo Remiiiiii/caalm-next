@@ -13,9 +13,11 @@
 **Required structure:**
 - Container: `w-full px-4 sm:px-6 lg:px-8 xl:px-12` — no page-level `max-w-*`
 - Header: `h1 capitalize sidebar-gradient-text`
-- Cards: `glass-card` + `glass-card-cap`
+- Cards / page shells / table panels: **always** `glass-card` + `glass-card-cap` — never a solid white shell (`bg-white` + `border-slate-*` + `shadow-sm`). Mockups that look flat still ship as glass in CAALM.
+- Data tables: `CaalmDataTable` / `DATA_TABLE_*` (same chrome as `/contracts`); sortable cols use `SortableDataTableHead`
 - Fields: `border-[0.25px] border-slate-300`
-- Primary actions: `btn-primary` + Lucide icon, right-aligned
+- Primary actions: `btn-primary` + Lucide icon, right-aligned; delete actions: `delete-btn`
+- Avatars: profile photo when available, else initials (`Avatar` + `imageUrl`)
 
 **Data density:** tables use `PageIndex`; overflow menus use dots.svg pattern.
 

@@ -97,21 +97,35 @@
 
 ### Cards
 
-```css
-.card {
-  background: #F8FAFC;
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: var(--shadow-md);
-  transition: all 200ms ease;
-  cursor: pointer;
-}
+**Hard rule:** Every card, page content shell, table panel, and widget uses CAALM glass — not a solid white or slate fill shell.
 
-.card:hover {
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-2px);
-}
+```tsx
+<Card className="glass-card">
+  <div className="glass-card-cap" />
+  <CardContent>{/* … */}</CardContent>
+</Card>
 ```
+
+- Classes: `glass-card` + `glass-card-cap` (required). Clickable: also `interactive-glass-card`.
+- Forbidden for main shells: `bg-white` + `border-slate-*` + `shadow-sm` as a stand-in for a card.
+- Full rules: `.cursor/rules/global-style-guide.mdc` → Glass Card Design.
+
+### Data tables
+
+Match the contracts table: `CaalmDataTable` + `DATA_TABLE_HEADER_ROW` / `DATA_TABLE_HEADER_CELL` / `DATA_TABLE_BODY_ROW_CLICKABLE` from `@/components/ui/caalm-data-table`. Sortable columns use `SortableDataTableHead`.
+
+### Buttons
+
+- Primary page actions: `btn-primary px-3 sm:px-4` + Lucide icon
+- Delete actions: `delete-btn px-3 sm:px-4` + Lucide icon
+
+### Dropdown menus
+
+Translucent glass (`bg-white/10` + blur) — **never** a card-cap on dropdowns. Nested levels match. Separator above Delete. Overflow: hollow-ring `/assets/icons/dots.svg` + `AppDropdownMenuContent`.
+
+### Avatars
+
+Uploaded profile photo when available; otherwise initials via `@/components/ui/avatar`.
 
 ### Inputs
 

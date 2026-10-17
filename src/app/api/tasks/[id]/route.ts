@@ -203,26 +203,28 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
 			return NextResponse.json({ error: "Task not found" }, { status: 404 });
 		}
 
+		const actorName =
+			(user as { fullName?: string }).fullName || user.email || "unknown";
 		await logAuditEvent({
 			event_id: `task_delete_${id}`,
-			event_title: `Task deleted: ${id}`,
+			event_title: `Task deleted: ${deleted.title}`,
 			action: "delete",
 			source: "caalm",
 			user_id: user.$id,
-			user_name:
-				(user as { fullName?: string }).fullName || user.email || "unknown",
+			user_name: actorName,
 			user_email: user.email || "",
 			status: "success",
 			orgId: defaultOrg.orgId,
 			module: "system",
 			target_type: "task",
 			target_id: id,
-			summary: `${(user as { fullName?: string }).fullName || user.email} deleted task ${id}`,
+			target_label: deleted.title,
+			summary: `${actorName} deleted task ${deleted.title}`,
 		}).catch(() => undefined);
 
 		await CacheManager.invalidateTasks(defaultOrg.orgId).catch(() => undefined);
 
-		return NextResponse.json({ success: true });
+		return NextResponse.json({ success: true, data: { task: deleted } });
 	} catch (error) {
 		console.error("Task DELETE error:", error);
 		return NextResponse.json(
