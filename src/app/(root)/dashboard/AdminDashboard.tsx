@@ -550,6 +550,9 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 					<WidgetCarousel ariaLabel="Admin dashboard widgets">
 						{carouselReady ? (
 							<>
+								<DepartmentPerformanceWidget
+									data={bundle ? (bundle.performance ?? null) : undefined}
+								/>
 								<ContractExpiryAlertsWidget
 									maxVisible={2}
 									showSettings={false}
@@ -559,13 +562,6 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 								/>
 								<ContractStatusPieChart
 									contracts={contracts as UIFileDoc[] | undefined}
-								/>
-								<DepartmentPerformanceWidget
-									data={
-										bundle
-											? (bundle.performance ?? null)
-											: undefined
-									}
 								/>
 								<CompanyNewsFeed
 									items={bundle?.newsItems}

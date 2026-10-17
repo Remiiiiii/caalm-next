@@ -7,7 +7,7 @@ import { useMemo, useState } from "react";
 import { CONTRACT_TYPES } from "@/components/contract-upload/constants";
 import RoundedUnderlineTabs from "@/components/RoundedUnderlineTabs";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
+import { CaalmCalendarPanel } from "@/components/ui/caalm-date-picker";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
 	AppDropdownMenuContent,
@@ -367,11 +367,9 @@ function DateRangeBlock({
 					className="rounded-md border-[0.25px] border-slate-300 bg-white"
 					onPointerDown={(event) => event.stopPropagation()}
 				>
-					<Calendar
-						mode="single"
+					<CaalmCalendarPanel
 						selected={selected}
 						onSelect={(date) => onChange(activeKey, date)}
-						initialFocus
 					/>
 				</div>
 			) : null}

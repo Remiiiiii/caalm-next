@@ -10,7 +10,7 @@ Follow the design spec in `.cursor/rules/share-give-page-design.txt` when changi
 
 ## Entry (switch)
 
-- Add/keep a **Share page** option on the donation page action switch (sliding white thumb; see `segmented-switch.mdc`).
+- Add/keep a **Share page** option on the donation page action switch (sliding white thumb; see Segmented switches in `global-style-guide.mdc`).
 - Render `DonationPageShareCard` **only** when Share page is the active selection.
 - Do not leave the share card always mounted on the settings form.
 

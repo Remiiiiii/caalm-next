@@ -187,9 +187,9 @@ export const CalendarDelegationManager: React.FC<
 				<Button
 					variant="outline"
 					size="sm"
-					className="primary-btn px-3 sm:px-4"
+					className="primary-btn flex items-center justify-center gap-1.5 px-3 sm:px-4"
 				>
-					<UserCog className="w-4 h-4" />
+					<UserCog className="h-4 w-4" />
 					Manage Delegations
 				</Button>
 			</DialogTrigger>

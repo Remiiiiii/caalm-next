@@ -22,13 +22,12 @@ import {
 import React from "react";
 import RoundedUnderlineTabs from "@/components/RoundedUnderlineTabs";
 import { Button as ShadButton } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover";
+	CaalmDatePicker,
+	parseIsoDateLocal,
+	toIsoDateLocal,
+} from "@/components/ui/caalm-date-picker";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useToast } from "@/hooks/use-toast";
 import { updateContractExpiryDate } from "@/lib/actions/file.actions";
@@ -1057,48 +1056,21 @@ export const FileDetails = ({
 														</ShadButton>
 													) : (
 														<div className="flex flex-wrap items-center gap-2">
-															<Popover>
-																<PopoverTrigger asChild>
-																	<ShadButton
-																		variant="outline"
-																		size="sm"
-																		className="w-[180px] justify-start border-[0.25px] border-slate-300 text-left font-normal"
-																	>
-																		{selectedDate
-																			? selectedDate.toLocaleDateString()
-																			: "Pick a date"}
-																	</ShadButton>
-																</PopoverTrigger>
-																<PopoverContent
-																	className="w-auto p-0"
-																	align="start"
-																>
-																	<Calendar
-																		className="text-slate-700"
-																		mode="single"
-																		selected={selectedDate}
-																		onSelect={(date) => {
-																			if (date) {
-																				setSelectedDate(
-																					new Date(
-																						date.getFullYear(),
-																						date.getMonth(),
-																						date.getDate(),
-																					),
-																				);
-																			} else {
-																				setSelectedDate(undefined);
-																			}
-																		}}
-																		disabled={(date) => {
-																			const today = new Date();
-																			today.setHours(0, 0, 0, 0);
-																			return date < today;
-																		}}
-																		initialFocus
-																	/>
-																</PopoverContent>
-															</Popover>
+															<CaalmDatePicker
+																size="sm"
+																disablePast
+																className="w-[180px]"
+																value={
+																	selectedDate
+																		? toIsoDateLocal(selectedDate)
+																		: ""
+																}
+																onChange={(iso) =>
+																	setSelectedDate(
+																		iso ? parseIsoDateLocal(iso) : undefined,
+																	)
+																}
+															/>
 															<ShadButton
 																size="sm"
 																onClick={(e) => {

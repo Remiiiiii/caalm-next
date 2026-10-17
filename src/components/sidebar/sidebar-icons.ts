@@ -73,12 +73,18 @@ export const ITEM_ICONS: Record<
 		color: SUBITEM_TEXT_GREY,
 	},
 	"Contract Templates": {
-		width: 20,
-		height: 20,
+		width: 22,
+		height: 22,
 		color: SUBITEM_TEXT_GREY,
 	},
 	"Funding & Retention": {
 		src: "/assets/icons/banknote.svg",
+		width: 22,
+		height: 22,
+		color: SUBITEM_TEXT_GREY,
+	},
+	"Import obligations": {
+		src: "/assets/icons/import-obligations.svg",
 		width: 20,
 		height: 20,
 		color: SUBITEM_TEXT_GREY,
@@ -103,14 +109,14 @@ export const ITEM_ICONS: Record<
 	},
 	"Stewardship Queue": {
 		src: "/assets/icons/queue.svg",
-		width: 20,
-		height: 20,
+		width: 22,
+		height: 22,
 		color: SUBITEM_TEXT_GREY,
 	},
 	Development: {
 		src: "/assets/icons/development.svg",
-		width: 20,
-		height: 20,
+		width: 22,
+		height: 22,
 		color: SUBITEM_TEXT_GREY,
 	},
 	Gifts: {
@@ -119,8 +125,20 @@ export const ITEM_ICONS: Record<
 		height: 20,
 		color: SUBITEM_TEXT_GREY,
 	},
+	"Import gifts": {
+		src: "/assets/icons/import-gifts.svg",
+		width: 20,
+		height: 20,
+		color: SUBITEM_TEXT_GREY,
+	},
 	Campaigns: {
 		src: "/assets/icons/megaphone.svg",
+		width: 20,
+		height: 20,
+		color: SUBITEM_TEXT_GREY,
+	},
+	"Import campaigns": {
+		src: "/assets/icons/import-campaign.svg",
 		width: 20,
 		height: 20,
 		color: SUBITEM_TEXT_GREY,
@@ -180,6 +198,12 @@ export const ITEM_ICONS: Record<
 	},
 	"User Management": {
 		src: "/assets/icons/user-management.svg",
+		width: 20,
+		height: 20,
+		color: SUBITEM_TEXT_GREY,
+	},
+	"Import users": {
+		src: "/assets/icons/import-user.svg",
 		width: 20,
 		height: 20,
 		color: SUBITEM_TEXT_GREY,

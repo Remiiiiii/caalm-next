@@ -2,7 +2,6 @@
 
 import {
 	Calendar,
-	CalendarDays,
 	DollarSign,
 	FilePlus,
 	FileText,
@@ -22,15 +21,10 @@ import {
 } from "react";
 import { FarClausePicker } from "@/components/contract-wizard/FarClausePicker";
 import { Button } from "@/components/ui/button";
-import { Calendar as DateCalendar } from "@/components/ui/calendar";
+import { CaalmDatePicker } from "@/components/ui/caalm-date-picker";
 import { CurrencySelect } from "@/components/ui/currency-select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover";
 import {
 	Select,
 	SelectContent,
@@ -65,31 +59,6 @@ import type {
 } from "@/types/contract-templates";
 
 const FIELD = "border-[0.25px] border-slate-300";
-
-/** Parse YYYY-MM-DD as a local date so the picker does not shift a day. */
-function parseLocalIsoDate(value: string): Date | undefined {
-	const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
-	if (!match) return undefined;
-	const year = Number(match[1]);
-	const month = Number(match[2]);
-	const day = Number(match[3]);
-	const date = new Date(year, month - 1, day);
-	if (
-		date.getFullYear() !== year ||
-		date.getMonth() !== month - 1 ||
-		date.getDate() !== day
-	) {
-		return undefined;
-	}
-	return date;
-}
-
-function toLocalIsoDate(date: Date): string {
-	const year = date.getFullYear();
-	const month = String(date.getMonth() + 1).padStart(2, "0");
-	const day = String(date.getDate()).padStart(2, "0");
-	return `${year}-${month}-${day}`;
-}
 
 const GROUP_LABEL: Record<TokenGroup, string> = {
 	record: "Record details",
@@ -706,57 +675,21 @@ function FillControl({
 	}
 
 	if (field.dataType === "date") {
-		const selected = parseLocalIsoDate(value);
 		return (
 			<div className={span}>
 				<Label className={labelClass}>{field.label}</Label>
-				<Popover
-					onOpenChange={(open) => {
-						if (open) onFocus();
-					}}
-				>
-					<PopoverTrigger asChild>
-						<Button
-							type="button"
-							variant="outline"
-							className="mt-1 h-11 w-full justify-between bg-white text-sm font-normal border-slate-300 hover:border-blue-500"
-							{...focusProps}
-						>
-							{selected
-								? selected.toLocaleDateString("en-US", {
-										weekday: "short",
-										month: "short",
-										day: "numeric",
-										year: "numeric",
-									})
-								: placeholder}
-							<CalendarDays className="h-4 w-4 text-slate-500" />
-						</Button>
-					</PopoverTrigger>
-					<PopoverContent
-						className="w-auto overflow-hidden border-slate-200 p-0 shadow-lg"
-						align="start"
-					>
-						<DateCalendar
-							mode="single"
-							selected={selected}
-							disabled={(date) => {
-								const today = new Date();
-								today.setHours(0, 0, 0, 0);
-								const check = new Date(date);
-								check.setHours(0, 0, 0, 0);
-								return check < today;
-							}}
-							onSelect={(date) => {
-								if (date) setValue(toLocalIsoDate(date));
-							}}
-						/>
-					</PopoverContent>
-				</Popover>
+				<div className="mt-1" onFocus={onFocus}>
+					<CaalmDatePicker
+						value={value}
+						placeholder={placeholder}
+						disablePast
+						className="h-11 border-slate-300 hover:border-blue-500"
+						onChange={setValue}
+					/>
+				</div>
 			</div>
 		);
 	}
-
 	return (
 		<div className={span}>
 			<Label className={labelClass}>{field.label}</Label>

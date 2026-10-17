@@ -39,6 +39,50 @@ export type AssistantActionCompleted = {
 	fields: Array<{ label: string; value: string }>;
 };
 
+/** One card that moves pending → completed / failed (no second bubble). */
+export type AssistantActionFieldBadgeTone =
+	| "green"
+	| "orange"
+	| "red"
+	| "blue"
+	| "slate";
+
+export type AssistantActionField = {
+	label: string;
+	value: string;
+	/** When set, UI shows previous → value */
+	previousValue?: string;
+	kind?: "text" | "badge" | "priority" | "status" | "assignee";
+	badgeTone?: AssistantActionFieldBadgeTone;
+	assignee?: {
+		name: string;
+		userId?: string;
+		avatar?: string | null;
+	};
+};
+
+export type AssistantActionLifecycleState =
+	| "pending"
+	| "completed"
+	| "failed";
+
+export type AssistantActionLifecycle = {
+	state: AssistantActionLifecycleState;
+	/** Short verb phrase, e.g. "Create task" / "Move event" */
+	actionLabel: string;
+	entityTitle: string;
+	entitySubtitle?: string;
+	entityHref?: string;
+	entityHrefLabel?: string;
+	toolName: string;
+	pendingActionId?: string;
+	fields: AssistantActionField[];
+	footerNote?: string;
+	errorMessage?: string;
+	errorCode?: string;
+	retrySafe?: boolean;
+};
+
 export type AssistantActivityFeedItem = {
 	id: string;
 	kind: "schedule" | "feedback" | "task";
@@ -68,6 +112,8 @@ export type AssistantChatMessage = {
 	meetingCreated?: AssistantMeetingCreated;
 	/** Structured success card after confirming a mutating action (e.g. reschedule) */
 	actionCompleted?: AssistantActionCompleted;
+	/** Pending / completed / failed action card (single card lifecycle) */
+	actionLifecycle?: AssistantActionLifecycle;
 	/** Structured recent-activity list card */
 	activityFeed?: AssistantActivityFeed;
 	createdAt?: string;
@@ -91,6 +137,8 @@ export type UseCaalmAssistantReturn = {
 	resumeActiveSession: () => Promise<void>;
 	sendMessage: (text: string) => Promise<void>;
 	confirmAction: (argsPatch?: Record<string, unknown>) => Promise<void>;
+	/** Dismiss a pending confirmation without running it */
+	cancelPendingAction: () => void;
 	/** Merge confirmation-card edits into the in-memory pending action */
 	patchPendingArgs: (argsPatch: Record<string, unknown>) => void;
 };

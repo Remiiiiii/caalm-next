@@ -44,7 +44,7 @@ const authFadeInText = {
 const SPLINE_ENTRANCE_DELAY_MS = 1100;
 const SPLINE_FADE_DURATION_MS = Math.round(AUTH_FADE_DURATION_S * 1000);
 
-const layout = ({ children }: { children: React.ReactNode }) => {
+function AuthLayout({ children }: { children: React.ReactNode }) {
 	const reduceMotion = useReducedMotion();
 	// Remove Spline watermark badges
 	useSplineWatermarkRemoval();
@@ -150,6 +150,6 @@ const layout = ({ children }: { children: React.ReactNode }) => {
 			</div>
 		</div>
 	);
-};
+}
 
-export default layout;
+export default AuthLayout;

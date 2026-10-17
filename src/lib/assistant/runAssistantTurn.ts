@@ -1,4 +1,5 @@
 import {
+	type Content,
 	FunctionCallingMode,
 	type FunctionDeclaration,
 	GoogleGenerativeAI,
@@ -13,9 +14,11 @@ import {
 	formatTaskStatus,
 } from "@/lib/assistant/formatLabels";
 import { buildGeminiChatHistory } from "@/lib/assistant/geminiHistory";
+import { buildGeminiToolFollowUpContents } from "@/lib/assistant/geminiToolFollowUp";
 import { detectDataIntent, isLiveDataIntent } from "@/lib/assistant/intent";
 import type { RetrievedSource } from "@/lib/assistant/knowledge/retrieve";
 import { retrieveKnowledge } from "@/lib/assistant/knowledge/retrieve";
+import { parseCreateTaskDraft } from "@/lib/assistant/parseCreateTaskDraft";
 import { sanitizeRescheduleArgs } from "@/lib/assistant/rescheduleArgs";
 import {
 	type AssistantSuggestion,
@@ -332,6 +335,42 @@ export async function runAssistantTurn(params: {
 	const allowedTools = getToolsForPermissions(ctx.permissions);
 	const declarations = buildFunctionDeclarations(allowedTools);
 	const canListTasks = allowedTools.some((t) => t.name === "list_tasks");
+	const canCreateTask = allowedTools.some((t) => t.name === "create_task");
+
+	// Deterministic path: open an editable draft card instead of a numbered quiz.
+	if (dataIntent === "create_task" && canCreateTask) {
+		const draft = parseCreateTaskDraft(userMessage);
+		const args: Record<string, unknown> = {
+			title: draft.title,
+			priority: draft.priority,
+			...(draft.dueDate ? { dueDate: draft.dueDate } : {}),
+			...(draft.description ? { description: draft.description } : {}),
+		};
+		const label = draft.title
+			? `Create task “${draft.title}”`
+			: "Create task";
+		const preview = JSON.stringify(args, null, 2).slice(0, 500);
+		const pending = await storePendingAction({
+			userId: ctx.user.$id,
+			orgId: ctx.orgId,
+			toolName: "create_task",
+			args,
+			label,
+			preview,
+		});
+		return {
+			answer: "",
+			sources: [],
+			suggestions: [],
+			pendingAction: {
+				id: pending.id,
+				label,
+				preview,
+				toolName: "create_task",
+				args,
+			},
+		};
+	}
 
 	// Deterministic path: pending tasks → call list_tasks (don't rely on the model).
 	if (dataIntent === "list_tasks" && canListTasks) {
@@ -359,6 +398,7 @@ export async function runAssistantTurn(params: {
 Rules:
 - Write in plain, natural language for end users. Never show raw enums, snake_case, JSON, code paths, or API field names (say "Not started", not "not_started"; say "the Tasks page", not "/team/tasks").
 - For live data (tasks, contracts, licenses, approvals, expirations, calendar events), ALWAYS call the matching tool. Never answer those from Knowledge Context alone.
+- Creating tasks: NEVER ask the user to reply with a numbered list of fields (title, due date, priority, description). Call create_task with whatever you can parse from their message. Missing fields may be empty — the in-app draft card collects them with taps and short edits. Do not quiz in chat.
 - Scheduling: when the user asks to schedule, book, or set up a meeting, collect these fields before calling create_calendar_event if the user has not already stated them: title, start time, end time (or duration), date, and type (meeting, review, audit, deadline, or contract). Meeting agenda (description) and participants are optional — ask for them once if missing, but do not block scheduling if the user skips them. Resolve relative dates ("tomorrow", "next Tuesday") against the current date below. If only a start time is given, default end time to 30 minutes later. Never invent participant emails; only include people the user named or emailed. Prefer endTime over durationMinutes when both can be inferred.
 - Rescheduling: decide what the user wants to change before calling reschedule_calendar_event. If they only change the clock time (e.g. "move the review to 10am", "change it from 14:00 to 10:00", "make it 10 o'clock") and do not name a different day or date, omit newDate so the meeting stays on its existing date — only pass eventTitle and newStartTime. Only include newDate when the user explicitly asks for a different day (e.g. "to Friday", "next week", "the 14th", "August 14"). Never invent a new date for a time-only request. When listing or confirming, keep the original date visible if only the time changed.
 - Knowledge Context is for product how-to only. Do not use Analytics, Reports, or Audit sources as a substitute for listing tasks.
@@ -454,22 +494,29 @@ User permissions include: ${ctx.permissions.slice(0, 40).join(", ")}${ctx.permis
 				label,
 				preview,
 			});
+			const isTaskDraft =
+				tool.name === "create_task" ||
+				tool.name === "create_task_for_contract";
 			return {
 				answer:
 					tool.name === "create_calendar_event"
 						? `I prepared **${label}**. Review the meeting card and tap **Confirm** to schedule it, or ask me to change something first.`
-						: `I prepared **${label}**. Review the details and tap **Confirm** to run it, or ask me to change something first.`,
+						: isTaskDraft
+							? ""
+							: `I prepared **${label}**. Review the details and tap **Confirm** to run it, or ask me to change something first.`,
 				sources: [],
-				suggestions: [
-					{
-						id: "confirm-hint",
-						label: "What happens when I confirm?",
-						action: {
-							type: "prompt",
-							text: "What will happen when I confirm this action?",
-						},
-					},
-				],
+				suggestions: isTaskDraft
+					? []
+					: [
+							{
+								id: "confirm-hint",
+								label: "What happens when I confirm?",
+								action: {
+									type: "prompt",
+									text: "What will happen when I confirm this action?",
+								},
+							},
+						],
 				pendingAction: {
 					id: pending.id,
 					label,
@@ -485,14 +532,30 @@ User permissions include: ${ctx.permissions.slice(0, 40).join(", ")}${ctx.permis
 			call.name,
 			args,
 		);
-		const followUp = await chat.sendMessage([
-			{
-				functionResponse: {
-					name: call.name,
-					response: { output: toolResult.result ?? toolResult },
-				},
+		// Do not use chat.sendMessage for functionResponse — the SDK
+		// still sends role "function", which Gemini 3.x rejects.
+		const modelContent = response.candidates?.[0]?.content;
+		const callWithId = call as typeof call & { id?: string };
+		const followUpContents = buildGeminiToolFollowUpContents({
+			history,
+			userMessage,
+			modelContent: {
+				role: modelContent?.role ?? "model",
+				parts: (modelContent?.parts ?? []) as unknown as Array<
+					Record<string, unknown>
+				>,
 			},
-		]);
+			functionCall: {
+				name: call.name,
+				args: (call.args ?? {}) as object,
+				id: callWithId.id,
+			},
+			toolResult: toolResult.result ?? toolResult,
+		});
+		const followUp = await model.generateContent({
+			// GeminiContent is intentionally looser than SDK Content (id / thoughts).
+			contents: followUpContents as unknown as Content[],
+		});
 		let text = followUp.response.text()?.trim() ?? "";
 		const weakReply = !text || /^done\.?$/i.test(text);
 		if (weakReply || DATA_TOOLS.has(call.name)) {

@@ -5,7 +5,6 @@ import { format } from "date-fns";
 import {
 	AlertTriangle,
 	Ban,
-	Calendar as CalendarIcon,
 	CheckCircle2,
 	ChevronLeft,
 	ChevronRight,
@@ -47,7 +46,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
+import {
+	CaalmDatePicker,
+	parseIsoDateLocal,
+	toIsoDateLocal,
+} from "@/components/ui/caalm-date-picker";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CurrencyAmountInput } from "@/components/ui/currency-amount-input";
 import { CurrencySelect } from "@/components/ui/currency-select";
@@ -58,11 +61,6 @@ import {
 	DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover";
 import {
 	Select,
 	SelectContent,
@@ -107,6 +105,11 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
+import {
+	AI_EXTRACTION_LIMIT_TITLE,
+	isAiExtractionLimitError,
+	throwIfAiExtractionHttpFailed,
+} from "@/lib/billing/aiExtractionUserMessages";
 import {
 	getAllManagers,
 	getUsersByDepartment,
@@ -505,41 +508,15 @@ function WizardDateButton({
 	disablePast?: boolean;
 }) {
 	return (
-		<Popover>
-			<PopoverTrigger asChild>
-				<Button
-					type="button"
-					variant="outline"
-					className="w-full justify-start text-left font-normal bg-white border-[0.25px] border-slate-300"
-				>
-					<CalendarIcon className="mr-2 h-4 w-4" />
-					{value ? (
-						format(value, "PPP")
-					) : (
-						<span className="text-slate-500">{placeholder}</span>
-					)}
-				</Button>
-			</PopoverTrigger>
-			<PopoverContent className="w-auto p-0" align="start">
-				<Calendar
-					mode="single"
-					selected={value}
-					onSelect={(date) => {
-						onChange(date ? normalizeLocalDate(date) : undefined);
-					}}
-					disabled={
-						disablePast
-							? (date) => {
-									const today = new Date();
-									today.setHours(0, 0, 0, 0);
-									return date < today;
-								}
-							: undefined
-					}
-					initialFocus
-				/>
-			</PopoverContent>
-		</Popover>
+		<CaalmDatePicker
+			value={value ? toIsoDateLocal(value) : ""}
+			placeholder={placeholder}
+			disablePast={disablePast}
+			onChange={(iso) => {
+				const next = iso ? parseIsoDateLocal(iso) : undefined;
+				onChange(next ? normalizeLocalDate(next) : undefined);
+			}}
+		/>
 	);
 }
 
@@ -1311,21 +1288,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 					body: JSON.stringify(requestBody),
 				});
 
-				if (!response.ok) {
-					const responseClone = response.clone();
-					let errorData: { error?: string } | null = null;
-					try {
-						errorData = await responseClone.json();
-					} catch {
-						const textContent = await response.text();
-						throw new Error(
-							`HTTP ${response.status}: ${textContent.substring(0, 200)}`,
-						);
-					}
-					throw new Error(
-						errorData?.error || `HTTP ${response.status}: Extraction failed`,
-					);
-				}
+				await throwIfAiExtractionHttpFailed(response);
 
 				const result = await response.json();
 				if (result.success && result.data) {
@@ -1334,7 +1297,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 				return null;
 			} catch (error) {
 				console.error("Contract data extraction error:", error);
-				return null;
+				throw error;
 			}
 		},
 		[selectedContractType],
@@ -1865,7 +1828,17 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 						}
 					} catch (error) {
 						console.error("Failed to extract contract data:", error);
-						// Continue with manual input if extraction fails
+						toast({
+							title: isAiExtractionLimitError(error)
+								? AI_EXTRACTION_LIMIT_TITLE
+								: "Could not auto-fill from file",
+							description: isAiExtractionLimitError(error)
+								? error.message
+								: error instanceof Error
+									? error.message
+									: "You can still fill the form by hand.",
+							variant: "destructive",
+						});
 					} finally {
 						if (needsDocumentNumber(form.getValues("contractNumber"))) {
 							form.setValue("contractNumber", generateDocumentNumber("CTR"), {

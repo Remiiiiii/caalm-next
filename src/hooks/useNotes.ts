@@ -31,9 +31,7 @@ export const useNotes = ({
 	const fetchNotes = useCallback(async () => {
 		try {
 			setError(null);
-			console.log("useNotes: Fetching notes for userId:", userId);
 			const fetchedNotes = await getUserNotes(userId);
-			console.log("useNotes: Fetched notes:", fetchedNotes);
 			setNotes(fetchedNotes);
 		} catch (err) {
 			const errorMessage =
@@ -75,13 +73,16 @@ export const useNotes = ({
 	const handleCreateNote = async (params: {
 		title: string;
 		content: string;
+		userName?: string;
+		calendarDate?: string | null;
+		calendarTime?: string | null;
 	}) => {
 		try {
 			setError(null);
 			const newNote = await createNote({
 				...params,
 				userId,
-				userName: "", // Will be populated by the action
+				userName: params.userName || "",
 			});
 
 			// Optimistically update the local state

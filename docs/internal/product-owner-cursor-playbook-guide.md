@@ -219,14 +219,14 @@ These are gaps that **do not show up in a demo** until a buyer, auditor, or clou
 | Topic | Plain English | Business risk |
 |-------|---------------|---------------|
 | **Cloud vs laptop AI** | Cloud agents do not use a developer’s personal Cursor settings; only shared project settings. | Cloud roadmap PRs ship incomplete or fail silently. |
-| **Too many AI rules** | Dozens of style and security rules can contradict each other; the AI picks inconsistently. | Same feature looks different week to week; security steps skipped. |
+| **Too many AI rules** | Dozens of style and security rules can contradict each other; the AI picks inconsistently. Guardrail: `docs/internal/cursor-rules-read-order.md`. | Same feature looks different week to week; security steps skipped. |
 | **Cloud missing database tools** | If Appwrite/GitHub are not connected in Cursor Team settings, cloud agents cannot verify schema or PRs properly. | “Done” PRs that break demo or permissions. |
-| **Audit log as checkbox vs product** | Logging exists but narrative is weak (“who changed this contract clause?”). | Lose compliance-led deals to vendors with clearer audit stories. |
+| **Audit log as checkbox vs product** | Logging exists but narrative is weak (“who changed this contract clause?”). Guardrail: `docs/internal/audit-narrative-decision.md`. | Lose compliance-led deals to vendors with clearer audit stories. |
 | **Workflow scope creep** | Building a full second “workflow product” inside CAALM too early. Guardrail: `docs/internal/workflow-engine-decision.md`. | Years of delay; core CLM features starve. |
-| **Lint warnings ignored in CI** | Automated style/security lint can fail but pipeline still passes (`continue-on-error`). | Slow quality drift; harder to catch bugs early. |
-| **Mobile vs desktop strategy** | CAALM is desktop-first; phones get companion flows only. | PO asks for phone layouts engineers should not build for admin screens. |
+| **Lint warnings ignored in CI** | Automated style/security lint can fail but pipeline still passes (`continue-on-error`). Guardrail: `docs/internal/ci-lint-strictness.md` (Lint now fails closed). | Slow quality drift; harder to catch bugs early. |
+| **Mobile vs desktop strategy** | CAALM is desktop-first; phones get companion flows only. Guardrail: `docs/internal/desktop-first-decision.md`. | PO asks for phone layouts engineers should not build for admin screens. |
 | **Demo vs production database** | Demo sandbox can lag production schema (known limits on audit log size on demo). | Demo shows wrong behavior; sales loses trust. |
-| **AI document extraction** | Reading PDFs with AI needs governance (what is sent to vendors, disclosures). | Privacy review surprises in enterprise procurement. |
+| **AI document extraction** | Reading PDFs with AI needs governance (what is sent to vendors, disclosures). Policy: `docs/internal/ai-document-extraction-policy.md`. | Privacy review surprises in enterprise procurement. |
 | **Demo script vs reality** | Sales script says what is “live” vs “roadmap.” | Overpromise in calls; churn after purchase. |
 
 **Product owner action:** Keep `buyer-demo-script` (internal) aligned with integrations page; flag any sales claim that is not wired in product.

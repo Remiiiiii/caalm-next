@@ -42,6 +42,8 @@ import {
 } from "@/components/dashboard/RecentFilesList";
 import { RiskImpactHeroCard } from "@/components/dashboard/RiskImpactHeroCard";
 import { WeatherBriefingLauncher } from "@/components/dashboard-briefing/WeatherBriefingLauncher";
+import LicenseExpiryAlertsWidget from "@/components/LicenseExpiryAlertsWidget";
+import LicenseStatusPieChart from "@/components/LicenseStatusPieChart";
 import {
 	fadeLeft,
 	fadeRight,
@@ -51,8 +53,6 @@ import {
 	staggerContainer,
 	viewportOnce,
 } from "@/components/landing/motion";
-import LicenseExpiryAlertsWidget from "@/components/LicenseExpiryAlertsWidget";
-import LicenseStatusPieChart from "@/components/LicenseStatusPieChart";
 import QuickNotesWidget from "@/components/QuickNotesWidget";
 import RecentActivity from "@/components/RecentActivity";
 import { OrgUnitPicker } from "@/components/settings/OrgUnitPicker";
@@ -861,251 +861,251 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 					) : (
 						<>
 							<motion.div {...revealItem(scaleIn)}>
-							<MetricStatCard
-								title="Total Contracts"
-								backdrop="radial"
-								value={
-									reduceMotion ? (
-										totalContracts
-									) : !statsInView ? (
-										0
-									) : (
-										<CountUp
-											key={`contracts-${totalContracts}`}
-											end={totalContracts}
-											duration={1.2}
-											preserveValue
-										/>
-									)
-								}
-								description="Across all departments"
-								icon={FileText}
-								footer={
-									<MetricSegmentBar
-										segments={[
-											{
-												key: "active",
-												label: "Active",
-												count: statusBreakdown.active,
-												colorClass: "bg-green",
-												textClass: "text-green",
-											},
-											{
-												key: "draft",
-												label: "Draft",
-												count: statusBreakdown.draft,
-												colorClass: "bg-orange",
-												textClass: "text-orange",
-											},
-											{
-												key: "expired",
-												label: "Expired",
-												count: statusBreakdown.expired,
-												colorClass: "bg-slate-300",
-												textClass: "text-slate-500",
-											},
-										]}
-									/>
-								}
-							/>
-							</motion.div>
-							<motion.div {...revealItem(scaleIn)}>
-							<MetricStatCard
-								title="Expiring Soon"
-								backdrop="wave"
-								value={
-									reduceMotion ? (
-										expiringSoonCount
-									) : !statsInView ? (
-										0
-									) : (
-										<CountUp
-											key={`expiring-${expiringSoonCount}`}
-											end={expiringSoonCount}
-											duration={1.2}
-											preserveValue
-										/>
-									)
-								}
-								description="Within 30 days"
-								icon={AlertTriangle}
-								iconTone={expiringSoonCount > 0 ? "warning" : "default"}
-								dynamicIcon={expiringSoonCount > 0 ? Clock : undefined}
-								dynamicTone="warning"
-								valueTone={expiringSoonCount > 0 ? "warning" : "default"}
-								footer={
-									expiringSoonCount === 0 ? (
-										<div className="space-y-2">
-											<MetricFlatSparkline tone="success" />
-											<p className="text-[11px] leading-snug text-slate-500">
-												{totalContracts} contract
-												{totalContracts === 1 ? "" : "s"} monitored — none
-												approaching expiry
-											</p>
-										</div>
-									) : (
-										<p className="text-[11px] leading-snug text-orange">
-											{expiringSoonCount} of {totalContracts} contract
-											{totalContracts === 1 ? "" : "s"} within 30 days
-										</p>
-									)
-								}
-							/>
-							</motion.div>
-							<motion.div {...revealItem(scaleIn)}>
-							<MetricStatCard
-								title="Active users"
-								backdrop="radial"
-								value={
-									reduceMotion ? (
-										dashboardStats.activeUsers ?? 0
-									) : !statsInView ? (
-										0
-									) : (
-										<CountUp
-											key={`users-${dashboardStats.activeUsers ?? 0}`}
-											end={dashboardStats.activeUsers ?? 0}
-											duration={1.2}
-											preserveValue
-										/>
-									)
-								}
-								description={
-									usersAddedThisMonth > 0
-										? `Active accounts in this organization · +${usersAddedThisMonth} this month`
-										: "Active accounts in this organization"
-								}
-								icon={Users}
-								headerHref="/dashboard/user-management"
-								headerHrefLabel="Open user management"
-								headerHrefIcon={SquareArrowOutUpRight}
-								footer={
-									<MetricSegmentBar
-										legendMuted
-										segments={[
-											{
-												key: "super",
-												label: "Super Admin",
-												count: userComposition.superAdmin,
-												colorClass: "bg-[#0f5384]",
-												textClass: "text-slate-500",
-											},
-											{
-												key: "org",
-												label: "Org Admin",
-												count: userComposition.orgAdmin,
-												colorClass: "bg-[#078FAB]",
-												textClass: "text-slate-500",
-											},
-											{
-												key: "dept",
-												label: "Dept Manager",
-												count: userComposition.deptManager,
-												colorClass: "bg-blue",
-												textClass: "text-slate-500",
-											},
-											...(userComposition.unassigned > 0
-												? [
-														{
-															key: "unassigned",
-															label: "Unassigned",
-															count: userComposition.unassigned,
-															colorClass: "bg-light-200",
-															textClass: "text-slate-500",
-														},
-													]
-												: []),
-											{
-												key: "inactive",
-												label: "Inactive",
-												count: userComposition.inactive,
-												colorClass: "bg-orange",
-												textClass: "text-slate-500",
-											},
-										]}
-									/>
-								}
-							/>
-							</motion.div>
-							<motion.div {...revealItem(scaleIn)}>
-							<MetricStatCard
-								title="Compliance Rate"
-								backdrop="wave"
-								value={
-									reduceMotion ? (
-										dashboardStats.complianceRate || "0%"
-									) : !statsInView ? (
-										"0%"
-									) : (
-										<>
+								<MetricStatCard
+									title="Total Contracts"
+									backdrop="radial"
+									value={
+										reduceMotion ? (
+											totalContracts
+										) : !statsInView ? (
+											0
+										) : (
 											<CountUp
-												key={`compliance-${compliancePct}`}
-												end={compliancePct}
+												key={`contracts-${totalContracts}`}
+												end={totalContracts}
 												duration={1.2}
 												preserveValue
 											/>
-											%
-										</>
-									)
-								}
-								description={
-									executiveNeedReview != null
-										? `${executiveNeedReview} of ${totalContracts} contracts need review`
-										: "Active contracts vs total"
-								}
-								icon={
-									executiveComplianceTone === "danger"
-										? ClipboardCheck
-										: CheckCircle
-								}
-								iconTone={executiveComplianceTone}
-								titleTone={
-									executiveComplianceTone === "danger" ? "danger" : "default"
-								}
-								borderTone={
-									executiveComplianceTone === "danger" ? "danger" : "default"
-								}
-								dynamicIcon={
-									executiveComplianceTone === "danger"
-										? AlertCircle
-										: CheckCircle
-								}
-								dynamicTone={executiveComplianceTone}
-								valueTone={executiveComplianceTone}
-								interactive={executiveComplianceTone === "danger"}
-								onClick={
-									executiveComplianceTone === "danger"
-										? () => router.push("/contracts")
-										: undefined
-								}
-								footer={
-									<div className="space-y-2.5">
-										<div className="flex items-center gap-3">
-											<MetricProgressRing
-												percent={compliancePct}
-												tone={executiveComplianceTone}
+										)
+									}
+									description="Across all departments"
+									icon={FileText}
+									footer={
+										<MetricSegmentBar
+											segments={[
+												{
+													key: "active",
+													label: "Active",
+													count: statusBreakdown.active,
+													colorClass: "bg-green",
+													textClass: "text-green",
+												},
+												{
+													key: "draft",
+													label: "Draft",
+													count: statusBreakdown.draft,
+													colorClass: "bg-orange",
+													textClass: "text-orange",
+												},
+												{
+													key: "expired",
+													label: "Expired",
+													count: statusBreakdown.expired,
+													colorClass: "bg-slate-300",
+													textClass: "text-slate-500",
+												},
+											]}
+										/>
+									}
+								/>
+							</motion.div>
+							<motion.div {...revealItem(scaleIn)}>
+								<MetricStatCard
+									title="Expiring Soon"
+									backdrop="wave"
+									value={
+										reduceMotion ? (
+											expiringSoonCount
+										) : !statsInView ? (
+											0
+										) : (
+											<CountUp
+												key={`expiring-${expiringSoonCount}`}
+												end={expiringSoonCount}
+												duration={1.2}
+												preserveValue
 											/>
-											<p
-												className={cn(
-													"text-[11px] leading-snug",
-													executiveComplianceTone === "danger"
-														? "text-red"
-														: "text-slate-500",
-												)}
-											>
-												{executiveComplianceTone === "danger"
-													? "Most contracts are past their last compliance check."
-													: "Share of contracts marked up to date."}
+										)
+									}
+									description="Within 30 days"
+									icon={AlertTriangle}
+									iconTone={expiringSoonCount > 0 ? "warning" : "default"}
+									dynamicIcon={expiringSoonCount > 0 ? Clock : undefined}
+									dynamicTone="warning"
+									valueTone={expiringSoonCount > 0 ? "warning" : "default"}
+									footer={
+										expiringSoonCount === 0 ? (
+											<div className="space-y-2">
+												<MetricFlatSparkline tone="success" />
+												<p className="text-[11px] leading-snug text-slate-500">
+													{totalContracts} contract
+													{totalContracts === 1 ? "" : "s"} monitored — none
+													approaching expiry
+												</p>
+											</div>
+										) : (
+											<p className="text-[11px] leading-snug text-orange">
+												{expiringSoonCount} of {totalContracts} contract
+												{totalContracts === 1 ? "" : "s"} within 30 days
 											</p>
+										)
+									}
+								/>
+							</motion.div>
+							<motion.div {...revealItem(scaleIn)}>
+								<MetricStatCard
+									title="Active users"
+									backdrop="radial"
+									value={
+										reduceMotion ? (
+											(dashboardStats.activeUsers ?? 0)
+										) : !statsInView ? (
+											0
+										) : (
+											<CountUp
+												key={`users-${dashboardStats.activeUsers ?? 0}`}
+												end={dashboardStats.activeUsers ?? 0}
+												duration={1.2}
+												preserveValue
+											/>
+										)
+									}
+									description={
+										usersAddedThisMonth > 0
+											? `Active accounts in this organization · +${usersAddedThisMonth} this month`
+											: "Active accounts in this organization"
+									}
+									icon={Users}
+									headerHref="/dashboard/user-management"
+									headerHrefLabel="Open user management"
+									headerHrefIcon={SquareArrowOutUpRight}
+									footer={
+										<MetricSegmentBar
+											legendMuted
+											segments={[
+												{
+													key: "super",
+													label: "Super Admin",
+													count: userComposition.superAdmin,
+													colorClass: "bg-[#0f5384]",
+													textClass: "text-slate-500",
+												},
+												{
+													key: "org",
+													label: "Org Admin",
+													count: userComposition.orgAdmin,
+													colorClass: "bg-[#078FAB]",
+													textClass: "text-slate-500",
+												},
+												{
+													key: "dept",
+													label: "Dept Manager",
+													count: userComposition.deptManager,
+													colorClass: "bg-blue",
+													textClass: "text-slate-500",
+												},
+												...(userComposition.unassigned > 0
+													? [
+															{
+																key: "unassigned",
+																label: "Unassigned",
+																count: userComposition.unassigned,
+																colorClass: "bg-light-200",
+																textClass: "text-slate-500",
+															},
+														]
+													: []),
+												{
+													key: "inactive",
+													label: "Inactive",
+													count: userComposition.inactive,
+													colorClass: "bg-orange",
+													textClass: "text-slate-500",
+												},
+											]}
+										/>
+									}
+								/>
+							</motion.div>
+							<motion.div {...revealItem(scaleIn)}>
+								<MetricStatCard
+									title="Compliance Rate"
+									backdrop="wave"
+									value={
+										reduceMotion ? (
+											dashboardStats.complianceRate || "0%"
+										) : !statsInView ? (
+											"0%"
+										) : (
+											<>
+												<CountUp
+													key={`compliance-${compliancePct}`}
+													end={compliancePct}
+													duration={1.2}
+													preserveValue
+												/>
+												%
+											</>
+										)
+									}
+									description={
+										executiveNeedReview != null
+											? `${executiveNeedReview} of ${totalContracts} contracts need review`
+											: "Active contracts vs total"
+									}
+									icon={
+										executiveComplianceTone === "danger"
+											? ClipboardCheck
+											: CheckCircle
+									}
+									iconTone={executiveComplianceTone}
+									titleTone={
+										executiveComplianceTone === "danger" ? "danger" : "default"
+									}
+									borderTone={
+										executiveComplianceTone === "danger" ? "danger" : "default"
+									}
+									dynamicIcon={
+										executiveComplianceTone === "danger"
+											? AlertCircle
+											: CheckCircle
+									}
+									dynamicTone={executiveComplianceTone}
+									valueTone={executiveComplianceTone}
+									interactive={executiveComplianceTone === "danger"}
+									onClick={
+										executiveComplianceTone === "danger"
+											? () => router.push("/contracts")
+											: undefined
+									}
+									footer={
+										<div className="space-y-2.5">
+											<div className="flex items-center gap-3">
+												<MetricProgressRing
+													percent={compliancePct}
+													tone={executiveComplianceTone}
+												/>
+												<p
+													className={cn(
+														"text-[11px] leading-snug",
+														executiveComplianceTone === "danger"
+															? "text-red"
+															: "text-slate-500",
+													)}
+												>
+													{executiveComplianceTone === "danger"
+														? "Most contracts are past their last compliance check."
+														: "Share of contracts marked up to date."}
+												</p>
+											</div>
+											{executiveComplianceTone === "danger" ? (
+												<MetricReviewLink href="/contracts">
+													Review flagged contracts
+												</MetricReviewLink>
+											) : null}
 										</div>
-										{executiveComplianceTone === "danger" ? (
-											<MetricReviewLink href="/contracts">
-												Review flagged contracts
-											</MetricReviewLink>
-										) : null}
-									</div>
-								}
-							/>
+									}
+								/>
 							</motion.div>
 						</>
 					)}
@@ -1118,6 +1118,9 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 							<WidgetCarousel ariaLabel="Executive dashboard widgets">
 								{carouselReady ? (
 									<>
+										<DepartmentPerformanceWidget
+											data={bundle ? (bundle.performance ?? null) : undefined}
+										/>
 										<ContractExpiryAlertsWidget
 											maxVisible={2}
 											showSettings={false}
@@ -1136,13 +1139,6 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 										/>
 										<ContractStatusPieChart contracts={contractsFromApi} />
 										<LicenseStatusPieChart licenses={dashboardLicenses} />
-										<DepartmentPerformanceWidget
-											data={
-												bundle
-													? (bundle.performance ?? null)
-													: undefined
-											}
-										/>
 										<CompanyNewsFeed
 											items={bundle?.newsItems}
 											total={bundle?.newsTotal}
@@ -1171,10 +1167,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 							{...revealStagger}
 							className="grid items-stretch gap-6 lg:grid-cols-6"
 						>
-							<motion.div
-								{...revealItem(fadeLeft)}
-								className="lg:col-span-3"
-							>
+							<motion.div {...revealItem(fadeLeft)} className="lg:col-span-3">
 								<RecentActivity
 									limit={10}
 									activities={recentActivities as never}
@@ -1186,37 +1179,37 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 								{...revealItem(fadeRight)}
 								className="flex h-full min-h-0 min-w-0 lg:col-span-3"
 							>
-							<Card className="glass-card relative flex h-full min-h-0 min-w-0 w-full flex-col overflow-hidden">
-								<div className="glass-card-cap" />
-								<MetricStatDotsBackdrop />
-								<CardHeader className="relative z-10 mb-1 border-b border-slate-200/80 pb-4">
-									<CardTitle className="flex items-center gap-2.5 text-lg font-bold sidebar-gradient-text">
-										<StatCardIcon icon={CalendarDays} />
-										Calendar
-									</CardTitle>
-								</CardHeader>
-								<CardContent className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden px-3 pb-3 pt-2 sm:px-4 sm:pb-4 md:px-6 md:pb-6">
-									<CalendarView
-										user={user}
-										onEventClick={(event) => {
-											console.log("Event clicked:", event);
-											// TODO: Implement event details modal or navigation
-										}}
-										onDateSelect={(date) => {
-											console.log("Date selected:", date);
-											// TODO: Implement date-specific actions
-										}}
-										onEventCreate={(event) => {
-											console.log("New event created:", event);
-											// Event is now automatically saved to database
-											toast({
-												title: "Success",
-												description: `Event "${event.title}" created successfully!`,
-											});
-										}}
-									/>
-								</CardContent>
-							</Card>
+								<Card className="glass-card relative flex h-full min-h-0 min-w-0 w-full flex-col overflow-hidden">
+									<div className="glass-card-cap" />
+									<MetricStatDotsBackdrop />
+									<CardHeader className="relative z-10 mb-1 border-b border-slate-200/80 pb-4">
+										<CardTitle className="flex items-center gap-2.5 text-lg font-bold sidebar-gradient-text">
+											<StatCardIcon icon={CalendarDays} />
+											Calendar
+										</CardTitle>
+									</CardHeader>
+									<CardContent className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden px-3 pb-3 pt-2 sm:px-4 sm:pb-4 md:px-6 md:pb-6">
+										<CalendarView
+											user={user}
+											onEventClick={(event) => {
+												console.log("Event clicked:", event);
+												// TODO: Implement event details modal or navigation
+											}}
+											onDateSelect={(date) => {
+												console.log("Date selected:", date);
+												// TODO: Implement date-specific actions
+											}}
+											onEventCreate={(event) => {
+												console.log("New event created:", event);
+												// Event is now automatically saved to database
+												toast({
+													title: "Success",
+													description: `Event "${event.title}" created successfully!`,
+												});
+											}}
+										/>
+									</CardContent>
+								</Card>
 							</motion.div>
 						</motion.div>
 
@@ -1226,556 +1219,571 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 							className="grid lg:grid-cols-2 gap-6"
 						>
 							<motion.div {...revealItem(fadeLeft)}>
-							<RecentFilesUploadedCard
-								className="glass-card h-full"
-								files={files as RecentFileItem[]}
-								isLoading={unifiedLoading}
-								limit={10}
-							/>
+								<RecentFilesUploadedCard
+									className="glass-card h-full"
+									files={files as RecentFileItem[]}
+									isLoading={unifiedLoading}
+									limit={10}
+								/>
 							</motion.div>
 
 							{/* Approval SLA accountability */}
 							<motion.div {...revealItem(fadeRight)}>
-							<Card className="glass-card relative flex h-full flex-col overflow-hidden">
-								<div className="glass-card-cap" />
-								<MetricStatDotsBackdrop />
-								<CardHeader className="relative z-10 mb-4 border-b border-slate-200/80 pb-4">
-									<CardTitle className="flex items-center gap-2.5 text-lg font-bold sidebar-gradient-text">
-										<StatCardIcon icon={Clock} />
-										Approvals & Expirations
-									</CardTitle>
-								</CardHeader>
-								<CardContent className="relative z-10 flex flex-1 flex-col">
-									<div className="flex flex-1 flex-col gap-3">
-										{slaStatCards.map((stat) => (
-											<div
-												key={stat.title}
-												className="bg-white/20 backdrop-blur-md border border-white/30 rounded-lg p-3 shadow-sm"
-											>
-												<div className="flex items-center justify-between gap-3">
-													<div>
-														<p className="text-sm font-medium text-slate-700">
-															{stat.title}
-														</p>
-														<p className="text-xs text-slate-500 mt-0.5">
-															{stat.hint}
+								<Card className="glass-card relative flex h-full flex-col overflow-hidden">
+									<div className="glass-card-cap" />
+									<MetricStatDotsBackdrop />
+									<CardHeader className="relative z-10 mb-4 border-b border-slate-200/80 pb-4">
+										<CardTitle className="flex items-center gap-2.5 text-lg font-bold sidebar-gradient-text">
+											<StatCardIcon icon={Clock} />
+											Approvals & Expirations
+										</CardTitle>
+									</CardHeader>
+									<CardContent className="relative z-10 flex flex-1 flex-col">
+										<div className="flex flex-1 flex-col gap-3">
+											{slaStatCards.map((stat) => (
+												<div
+													key={stat.title}
+													className="bg-white/20 backdrop-blur-md border border-white/30 rounded-lg p-3 shadow-sm"
+												>
+													<div className="flex items-center justify-between gap-3">
+														<div>
+															<p className="text-sm font-medium text-slate-700">
+																{stat.title}
+															</p>
+															<p className="text-xs text-slate-500 mt-0.5">
+																{stat.hint}
+															</p>
+														</div>
+														<p className="text-lg text-slate-700 tabular-nums">
+															{stat.value}
 														</p>
 													</div>
-													<p className="text-lg text-slate-700 tabular-nums">
-														{stat.value}
-													</p>
 												</div>
+											))}
+											<div className="mt-auto flex items-center justify-end gap-3">
+												<Button
+													asChild
+													className="primary-btn flex-1 cursor-pointer px-3 sm:px-4"
+												>
+													<Link href="/analytics?tab=portfolio">
+														<BarChart3 className="h-4 w-4" />
+														Open portfolio analytics
+													</Link>
+												</Button>
+												<Button
+													asChild
+													className="primary-btn flex-1 cursor-pointer px-3 sm:px-4"
+												>
+													<Link href="/contracts/approvals">
+														<ClipboardList className="h-4 w-4" />
+														Open approvals
+													</Link>
+												</Button>
 											</div>
-										))}
-										<div className="mt-auto flex items-center justify-end gap-3">
-											<Button
-												asChild
-												className="primary-btn flex-1 cursor-pointer px-3 sm:px-4"
-											>
-												<Link href="/analytics?tab=portfolio">
-													<BarChart3 className="h-4 w-4" />
-													Open portfolio analytics
-												</Link>
-											</Button>
-											<Button
-												asChild
-												className="primary-btn flex-1 cursor-pointer px-3 sm:px-4"
-											>
-												<Link href="/contracts/approvals">
-													<ClipboardList className="h-4 w-4" />
-													Open approvals
-												</Link>
-											</Button>
 										</div>
-									</div>
-								</CardContent>
-							</Card>
+									</CardContent>
+								</Card>
 							</motion.div>
 						</motion.div>
 
 						{/* Invitation Management Section */}
-						<motion.div
-							{...revealStagger}
-							className="space-y-6"
-						>
-						<motion.div {...revealItem(fadeUp)}>
-						<Card className="glass-card relative overflow-hidden">
-							<div className="glass-card-cap" />
-							<MetricStatDotsBackdrop />
-							{/* Header */}
-							<div className="relative z-10 border-b border-slate-200/80 px-5 py-5 sm:px-6">
-								<h2 className="flex items-center gap-2.5 text-xl font-bold tracking-tight sidebar-gradient-text">
-									<StatCardIcon icon={LinkIcon} />
-									Send Invite Link
-								</h2>
-								<p className="mt-1.5 text-[12.5px] leading-relaxed text-slate-600">
-									Grant a new person access to CAALM by selecting their identity
-									and access level below.
-								</p>
-							</div>
+						<motion.div {...revealStagger} className="space-y-6">
+							<motion.div {...revealItem(fadeUp)}>
+								<Card className="glass-card relative overflow-hidden">
+									<div className="glass-card-cap" />
+									<MetricStatDotsBackdrop />
+									{/* Header */}
+									<div className="relative z-10 border-b border-slate-200/80 px-5 py-5 sm:px-6">
+										<h2 className="flex items-center gap-2.5 text-xl font-bold tracking-tight sidebar-gradient-text">
+											<StatCardIcon icon={LinkIcon} />
+											Send Invite Link
+										</h2>
+										<p className="mt-1.5 text-[12.5px] leading-relaxed text-slate-600">
+											Grant a new person access to CAALM by selecting their
+											identity and access level below.
+										</p>
+									</div>
 
-							<form onSubmit={handleInviteSubmit} className="relative z-10">
-								{/* Recipient */}
-								<div className="border-b border-slate-200/80 px-5 py-5 sm:px-6">
-									<p className="mb-4 text-[10.5px] font-bold uppercase tracking-[0.08em] text-slate-500">
-										Recipient
-									</p>
-									<div>
-										<label className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-700">
-											Select a user
-											<span className="font-bold text-red" aria-hidden>
-												*
-											</span>
-										</label>
-										<div className="flex items-end gap-2.5">
-											<div className="min-w-0 flex-1">
-												<SelectScrollable
-													value={inviteForm.selectedUserId}
-													onValueChange={(value) =>
+									<form onSubmit={handleInviteSubmit} className="relative z-10">
+										{/* Recipient */}
+										<div className="border-b border-slate-200/80 px-5 py-5 sm:px-6">
+											<p className="mb-4 text-[10.5px] font-bold uppercase tracking-[0.08em] text-slate-500">
+												Recipient
+											</p>
+											<div>
+												<label className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+													Select a user
+													<span className="font-bold text-red" aria-hidden>
+														*
+													</span>
+												</label>
+												<div className="flex items-end gap-2.5">
+													<div className="min-w-0 flex-1">
+														<SelectScrollable
+															value={inviteForm.selectedUserId}
+															onValueChange={(value) =>
+																setInviteForm((prev) => ({
+																	...prev,
+																	selectedUserId: value,
+																}))
+															}
+															placeholder="Choose from directory…"
+															className="w-full border-[0.25px] border-slate-200 bg-white text-slate-700 shadow-sm"
+														>
+															{(uninvitedUsers as UninvitedUser[]).map(
+																(inviteUser: UninvitedUser) => (
+																	<SelectItem
+																		key={inviteUser.$id}
+																		value={inviteUser.$id}
+																	>
+																		<div className="flex items-center gap-3">
+																			<Avatar
+																				name={inviteUser.fullName}
+																				userId={inviteUser.$id}
+																				size="sm"
+																			/>
+																			<span>
+																				{inviteUser.fullName} (
+																				{inviteUser.email})
+																			</span>
+																		</div>
+																	</SelectItem>
+																),
+															)}
+														</SelectScrollable>
+													</div>
+													<Button
+														type="button"
+														variant="outline"
+														onClick={handleRefreshUsers}
+														disabled={refreshLoading}
+														aria-label="Refresh user list"
+														title="Refresh user list"
+														className="h-10 w-10 shrink-0 border-slate-200 bg-white p-0 text-slate-600 hover:border-[#0f5384]/30 hover:bg-blue/10 hover:text-[#0f5384]"
+													>
+														<RefreshCw
+															className={cn(
+																"h-4 w-4",
+																refreshLoading && "animate-spin",
+															)}
+														/>
+													</Button>
+												</div>
+												<p className="mt-1.5 text-[11px] text-slate-500">
+													Pulled from your connected directory. Refresh if this
+													person was just added.
+												</p>
+												{(uninvitedUsers as UninvitedUser[]).length === 0 && (
+													<p className="mt-2 text-xs text-slate-500">
+														No Auth users are waiting for an invite. Everyone
+														either has a role or already has a pending
+														invitation.
+													</p>
+												)}
+											</div>
+										</div>
+
+										{/* Access & permissions */}
+										<div className="border-b border-slate-200/80 px-5 py-5 sm:px-6">
+											<p className="mb-4 text-[10.5px] font-bold uppercase tracking-[0.08em] text-slate-500">
+												Access &amp; permissions
+											</p>
+											<div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)_minmax(0,1.5fr)]">
+												<div className="min-w-0 space-y-2 md:col-span-2 lg:col-span-1">
+													<label className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+														Role
+														<span className="font-bold text-red" aria-hidden>
+															*
+														</span>
+													</label>
+													<SelectScrollable
+														value={inviteForm.role}
+														onValueChange={(value) =>
+															setInviteForm((prev) => ({
+																...prev,
+																role: value,
+															}))
+														}
+														placeholder="Select role…"
+														className="w-full border-[0.25px] border-slate-200 bg-white text-slate-700 shadow-sm"
+													>
+														<SelectItem value="Super Admin">
+															Super Admin
+														</SelectItem>
+														<SelectItem value="Organization Admin">
+															Organization Admin
+														</SelectItem>
+														<SelectItem value="Executive">Executive</SelectItem>
+														<SelectItem value="Department Manager">
+															Department Manager
+														</SelectItem>
+														<SelectItem value="Viewer">Viewer</SelectItem>
+													</SelectScrollable>
+												</div>
+
+												<OrgUnitPicker
+													layout="inline"
+													departmentRequired
+													orgId={effectiveOrgId}
+													divisionOptional
+													departmentCode={inviteForm.department}
+													divisionCode={inviteForm.division}
+													onDepartmentChange={(value) =>
 														setInviteForm((prev) => ({
 															...prev,
-															selectedUserId: value,
+															department: value,
+															division: "",
 														}))
 													}
-													placeholder="Choose from directory…"
-													className="w-full border-[0.25px] border-slate-200 bg-white text-slate-700 shadow-sm"
-												>
-													{(uninvitedUsers as UninvitedUser[]).map(
-														(inviteUser: UninvitedUser) => (
-															<SelectItem
-																key={inviteUser.$id}
-																value={inviteUser.$id}
-															>
-																<div className="flex items-center gap-3">
-																	<Avatar
-																		name={inviteUser.fullName}
-																		userId={inviteUser.$id}
-																		size="sm"
-																	/>
-																	<span>
-																		{inviteUser.fullName} ({inviteUser.email})
-																	</span>
-																</div>
-															</SelectItem>
-														),
-													)}
-												</SelectScrollable>
-											</div>
-											<Button
-												type="button"
-												variant="outline"
-												onClick={handleRefreshUsers}
-												disabled={refreshLoading}
-												aria-label="Refresh user list"
-												title="Refresh user list"
-												className="h-10 w-10 shrink-0 border-slate-200 bg-white p-0 text-slate-600 hover:border-[#0f5384]/30 hover:bg-blue/10 hover:text-[#0f5384]"
-											>
-												<RefreshCw
-													className={cn(
-														"h-4 w-4",
-														refreshLoading && "animate-spin",
-													)}
+													onDivisionChange={(value) =>
+														setInviteForm((prev) => ({
+															...prev,
+															division: value,
+														}))
+													}
 												/>
+											</div>
+											{inviteForm.department && (
+												<p className="mt-3 text-[11px] text-slate-500">
+													Division is optional. Selecting{" "}
+													{inviteForm.department.replace(/-/g, " ")} as
+													department is enough to send the invite.
+												</p>
+											)}
+										</div>
+
+										{/* Footer */}
+										<div className="flex flex-col gap-3 bg-slate-50/80 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+											<p className="text-[11.5px] leading-relaxed text-slate-600">
+												The invite link expires in 7 days.
+											</p>
+											<Button
+												type="submit"
+												disabled={
+													loading ||
+													(uninvitedUsers as UninvitedUser[]).length === 0
+												}
+												className="primary-btn shrink-0 gap-2 px-5 text-[13px] font-semibold"
+											>
+												<Send className="h-3.5 w-3.5" />
+												{loading ? "Sending…" : "Send invite"}
 											</Button>
 										</div>
-										<p className="mt-1.5 text-[11px] text-slate-500">
-											Pulled from your connected directory. Refresh if this
-											person was just added.
-										</p>
-										{(uninvitedUsers as UninvitedUser[]).length === 0 && (
-											<p className="mt-2 text-xs text-slate-500">
-												No Auth users are waiting for an invite. Everyone either
-												has a role or already has a pending invitation.
-											</p>
-										)}
-									</div>
-								</div>
+									</form>
+								</Card>
+							</motion.div>
 
-								{/* Access & permissions */}
-								<div className="border-b border-slate-200/80 px-5 py-5 sm:px-6">
-									<p className="mb-4 text-[10.5px] font-bold uppercase tracking-[0.08em] text-slate-500">
-										Access &amp; permissions
-									</p>
-									<div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)_minmax(0,1.5fr)]">
-										<div className="min-w-0 space-y-2 md:col-span-2 lg:col-span-1">
-											<label className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-700">
-												Role
-												<span className="font-bold text-red" aria-hidden>
-													*
-												</span>
-											</label>
-											<SelectScrollable
-												value={inviteForm.role}
-												onValueChange={(value) =>
-													setInviteForm((prev) => ({ ...prev, role: value }))
-												}
-												placeholder="Select role…"
-												className="w-full border-[0.25px] border-slate-200 bg-white text-slate-700 shadow-sm"
-											>
-												<SelectItem value="Super Admin">Super Admin</SelectItem>
-												<SelectItem value="Organization Admin">
-													Organization Admin
-												</SelectItem>
-												<SelectItem value="Executive">Executive</SelectItem>
-												<SelectItem value="Department Manager">
-													Department Manager
-												</SelectItem>
-												<SelectItem value="Viewer">Viewer</SelectItem>
-											</SelectScrollable>
-										</div>
-
-										<OrgUnitPicker
-											layout="inline"
-											departmentRequired
-											orgId={effectiveOrgId}
-											divisionOptional
-											departmentCode={inviteForm.department}
-											divisionCode={inviteForm.division}
-											onDepartmentChange={(value) =>
-												setInviteForm((prev) => ({
-													...prev,
-													department: value,
-													division: "",
-												}))
-											}
-											onDivisionChange={(value) =>
-												setInviteForm((prev) => ({ ...prev, division: value }))
-											}
-										/>
-									</div>
-									{inviteForm.department && (
-										<p className="mt-3 text-[11px] text-slate-500">
-											Division is optional. Selecting{" "}
-											{inviteForm.department.replace(/-/g, " ")} as department
-											is enough to send the invite.
-										</p>
-									)}
-								</div>
-
-								{/* Footer */}
-								<div className="flex flex-col gap-3 bg-slate-50/80 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-									<p className="text-[11.5px] leading-relaxed text-slate-600">
-										The invite link expires in 7 days.
-									</p>
-									<Button
-										type="submit"
-										disabled={
-											loading ||
-											(uninvitedUsers as UninvitedUser[]).length === 0
-										}
-										className="primary-btn shrink-0 gap-2 px-5 text-[13px] font-semibold"
-									>
-										<Send className="h-3.5 w-3.5" />
-										{loading ? "Sending…" : "Send invite"}
-									</Button>
-								</div>
-							</form>
-						</Card>
-						</motion.div>
-
-						<motion.div {...revealItem(softRise)}>
-						<Card className="glass-card relative overflow-hidden">
-							<div className="glass-card-cap" />
-							<MetricStatDotsBackdrop />
-							<CardHeader className="relative z-10 mb-4 border-b border-slate-200/80 pb-4">
-								<CardTitle className="flex items-center gap-2.5 text-lg font-bold sidebar-gradient-text">
-									<StatCardIcon icon={MailClock} />
-									Pending Invitations
-								</CardTitle>
-							</CardHeader>
-							<CardContent className="relative z-10">
-								<div className="glass-card-inner overflow-x-auto">
-									<table className="min-w-full text-xs">
-										<thead className="bg-white/40 backdrop-blur-md border-b border-white/30 text-center">
-											<tr>
-												<th className="text-slate-700 text-center px-4 py-2">
-													Name
-												</th>
-												<th className="text-slate-700 text-center px-4 py-2">
-													Email
-												</th>
-												<th className="text-slate-700 text-center px-4 py-2">
-													Role
-												</th>
-												<th className="text-slate-700 text-center px-4 py-2">
-													Invited
-												</th>
-												<th className="text-slate-700 text-center px-4 py-2">
-													Expires
-												</th>
-												<th className="text-slate-700 text-center px-4 py-2">
-													Status
-												</th>
-												<th className="text-slate-700 text-center px-4 py-2">
-													Actions
-												</th>
-											</tr>
-										</thead>
-										<tbody>
-											{unifiedLoading ? (
-												[1, 2, 3].map((i) => (
-													<TableRowSkeleton key={i} columns={7} />
-												))
-											) : invitations.length === 0 ? (
-												<tr>
-													<td
-														colSpan={7}
-														className="text-center py-8 text-gray-400"
-													>
-														No pending invitations
-													</td>
-												</tr>
-											) : (
-												(invitations as Invitation[]).map((inv: Invitation) => (
-													<tr
-														key={inv.$id}
-														className={`border-b text-center hover:bg-gray-50 transition-all duration-300 ${
-															removingInvitations.has(inv.token)
-																? "invitation-removing"
-																: addingInvitations.has(inv.token)
-																	? "invitation-adding"
-																	: ""
-														}`}
-													>
-														<td className="pl-2">{inv.name}</td>
-														<td>{inv.email}</td>
-														<td>
-															{inv.role
-																? (inv.role as string).charAt(0).toUpperCase() +
-																	(inv.role as string).slice(1).toLowerCase()
-																: ""}
-														</td>
-														<td>
-															<ClientDate dateString={inv.$createdAt} />
-														</td>
-														<td>
-															<ClientDate dateString={inv.expiresAt} />
-														</td>
-														<td>
-															<span
-																className={`inline-block px-2 py-1 rounded text-xs font-medium ${getInvitationStatusBadgeClasses(
-																	inv.status,
-																)}`}
-															>
-																{inv.status}
-															</span>
-														</td>
-														<td className="space-x-2">
-															<Button
-																size="sm"
-																variant="outline"
-																onClick={() =>
-																	handleRevoke(inv.token, inv.email)
-																}
-																disabled={revokingToken === inv.token}
-																className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
-															>
-																{revokingToken === inv.token
-																	? "Revoking..."
-																	: "Revoke"}
-															</Button>
-															<Button
-																size="sm"
-																variant="secondary"
-																onClick={() => handleResend(inv.token)}
-																disabled={resendingToken === inv.token}
-																className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
-															>
-																{resendingToken === inv.token
-																	? "Resending..."
-																	: "Resend"}
-															</Button>
-															<Button
-																size="sm"
-																onClick={() =>
-																	handleDelete(inv.token, inv.email)
-																}
-																disabled={deletingToken === inv.token}
-																style={{
-																	backgroundColor: "#ffffff",
-																	color: "#f87774",
-																}}
-															>
-																{deletingToken === inv.token ? (
-																	"Deleting..."
-																) : (
-																	<Trash2 className="h-4 w-4" />
-																)}
-															</Button>
-														</td>
+							<motion.div {...revealItem(softRise)}>
+								<Card className="glass-card relative overflow-hidden">
+									<div className="glass-card-cap" />
+									<MetricStatDotsBackdrop />
+									<CardHeader className="relative z-10 mb-4 border-b border-slate-200/80 pb-4">
+										<CardTitle className="flex items-center gap-2.5 text-lg font-bold sidebar-gradient-text">
+											<StatCardIcon icon={MailClock} />
+											Pending Invitations
+										</CardTitle>
+									</CardHeader>
+									<CardContent className="relative z-10">
+										<div className="glass-card-inner overflow-x-auto">
+											<table className="min-w-full text-xs">
+												<thead className="bg-white/40 backdrop-blur-md border-b border-white/30 text-center">
+													<tr>
+														<th className="text-slate-700 text-center px-4 py-2">
+															Name
+														</th>
+														<th className="text-slate-700 text-center px-4 py-2">
+															Email
+														</th>
+														<th className="text-slate-700 text-center px-4 py-2">
+															Role
+														</th>
+														<th className="text-slate-700 text-center px-4 py-2">
+															Invited
+														</th>
+														<th className="text-slate-700 text-center px-4 py-2">
+															Expires
+														</th>
+														<th className="text-slate-700 text-center px-4 py-2">
+															Status
+														</th>
+														<th className="text-slate-700 text-center px-4 py-2">
+															Actions
+														</th>
 													</tr>
-												))
-											)}
-										</tbody>
-									</table>
-								</div>
-							</CardContent>
-						</Card>
-						</motion.div>
-
-						{/* Enhanced Revoke Confirmation Dialog */}
-						<AlertDialog
-							open={showRevokeDialog}
-							onOpenChange={setShowRevokeDialog}
-						>
-							<AlertDialogContent className="mx-4 max-w-md rounded-xl shadow-xl">
-								<AlertDialogHeader className="text-center pb-4">
-									<div className="flex justify-center mb-3">
-										<div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center">
-											<AlertTriangle
-												className="h-6 w-6 text-amber-600"
-												aria-hidden
-											/>
+												</thead>
+												<tbody>
+													{unifiedLoading ? (
+														[1, 2, 3].map((i) => (
+															<TableRowSkeleton key={i} columns={7} />
+														))
+													) : invitations.length === 0 ? (
+														<tr>
+															<td
+																colSpan={7}
+																className="text-center py-8 text-gray-400"
+															>
+																No pending invitations
+															</td>
+														</tr>
+													) : (
+														(invitations as Invitation[]).map(
+															(inv: Invitation) => (
+																<tr
+																	key={inv.$id}
+																	className={`border-b text-center hover:bg-gray-50 transition-all duration-300 ${
+																		removingInvitations.has(inv.token)
+																			? "invitation-removing"
+																			: addingInvitations.has(inv.token)
+																				? "invitation-adding"
+																				: ""
+																	}`}
+																>
+																	<td className="pl-2">{inv.name}</td>
+																	<td>{inv.email}</td>
+																	<td>
+																		{inv.role
+																			? (inv.role as string)
+																					.charAt(0)
+																					.toUpperCase() +
+																				(inv.role as string)
+																					.slice(1)
+																					.toLowerCase()
+																			: ""}
+																	</td>
+																	<td>
+																		<ClientDate dateString={inv.$createdAt} />
+																	</td>
+																	<td>
+																		<ClientDate dateString={inv.expiresAt} />
+																	</td>
+																	<td>
+																		<span
+																			className={`inline-block px-2 py-1 rounded text-xs font-medium ${getInvitationStatusBadgeClasses(
+																				inv.status,
+																			)}`}
+																		>
+																			{inv.status}
+																		</span>
+																	</td>
+																	<td className="space-x-2">
+																		<Button
+																			size="sm"
+																			variant="outline"
+																			onClick={() =>
+																				handleRevoke(inv.token, inv.email)
+																			}
+																			disabled={revokingToken === inv.token}
+																			className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
+																		>
+																			{revokingToken === inv.token
+																				? "Revoking..."
+																				: "Revoke"}
+																		</Button>
+																		<Button
+																			size="sm"
+																			variant="secondary"
+																			onClick={() => handleResend(inv.token)}
+																			disabled={resendingToken === inv.token}
+																			className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
+																		>
+																			{resendingToken === inv.token
+																				? "Resending..."
+																				: "Resend"}
+																		</Button>
+																		<Button
+																			size="sm"
+																			onClick={() =>
+																				handleDelete(inv.token, inv.email)
+																			}
+																			disabled={deletingToken === inv.token}
+																			style={{
+																				backgroundColor: "#ffffff",
+																				color: "#f87774",
+																			}}
+																		>
+																			{deletingToken === inv.token ? (
+																				"Deleting..."
+																			) : (
+																				<Trash2 className="h-4 w-4" />
+																			)}
+																		</Button>
+																	</td>
+																</tr>
+															),
+														)
+													)}
+												</tbody>
+											</table>
 										</div>
-									</div>
-									<AlertDialogTitle className="text-xl sidebar-gradient-text">
-										Revoke this invitation?
-									</AlertDialogTitle>
-									<AlertDialogDescription className="text-slate-600 text-sm mt-2">
-										User won&apos;t be able to accept it afterward.
-									</AlertDialogDescription>
-									<div className="border border-b-0 border-slate-300"></div>
-								</AlertDialogHeader>
+									</CardContent>
+								</Card>
+							</motion.div>
 
-								<div className="px-6 pb-4">
-									<div className="bg-slate-50 rounded-lg p-4 space-y-2">
-										{revokeEmail && (
-											<div className="flex items-center justify-between">
-												<span className="text-sm font-medium text-slate-700">
-													Email:
-												</span>
-												<span className="text-sm text-slate-600">
-													{revokeEmail}
-												</span>
+							{/* Enhanced Revoke Confirmation Dialog */}
+							<AlertDialog
+								open={showRevokeDialog}
+								onOpenChange={setShowRevokeDialog}
+							>
+								<AlertDialogContent className="mx-4 max-w-md rounded-xl shadow-xl">
+									<AlertDialogHeader className="text-center pb-4">
+										<div className="flex justify-center mb-3">
+											<div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center">
+												<AlertTriangle
+													className="h-6 w-6 text-amber-600"
+													aria-hidden
+												/>
 											</div>
-										)}
-										<div className="flex items-center justify-between">
-											<span className="text-sm font-medium text-slate-700">
-												Date:
-											</span>
-											<span className="text-sm text-slate-600">
-												{new Date().toLocaleDateString()}
-											</span>
 										</div>
-									</div>
+										<AlertDialogTitle className="text-xl sidebar-gradient-text">
+											Revoke this invitation?
+										</AlertDialogTitle>
+										<AlertDialogDescription className="text-slate-600 text-sm mt-2">
+											User won&apos;t be able to accept it afterward.
+										</AlertDialogDescription>
+										<div className="border border-b-0 border-slate-300"></div>
+									</AlertDialogHeader>
 
-									<div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-										<p className="text-xs text-amber-800 font-medium flex items-center gap-2">
-											<AlertTriangle
-												className="h-3.5 w-3.5 shrink-0"
-												aria-hidden
-											/>
-											This action can&apos;t be undone
-										</p>
-									</div>
-								</div>
-								<AlertDialogFooter className="flex-col sm:flex-row gap-3 px-6 pb-6">
-									<AlertDialogCancel
-										onClick={cancelRevoke}
-										className="primary-btn px-3 sm:px-4 w-full sm:w-auto"
-									>
-										<Ban className="w-4 h-4 mr-2" />
-										Cancel
-									</AlertDialogCancel>
-									<AlertDialogAction
-										onClick={confirmRevoke}
-										className="w-full sm:w-auto bg-red-500/80 backdrop-blur border border-red-400/50 shadow-md text-slate-700 hover:bg-red-600/80 transition-colors rounded-lg px-4 py-2 font-medium"
-									>
-										Revoke
-									</AlertDialogAction>
-								</AlertDialogFooter>
-							</AlertDialogContent>
-						</AlertDialog>
-
-						{/* Professional Delete Confirmation Dialog */}
-						<AlertDialog
-							open={showDeleteDialog}
-							onOpenChange={setShowDeleteDialog}
-						>
-							<AlertDialogContent className="mx-4 max-w-md rounded-lg shadow-2xl">
-								<AlertDialogHeader className="pb-1">
-									<div className="flex items-center gap-4 mb-4">
-										<div className="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center">
-											<Trash2
-												className="h-5 w-5"
-												style={{
-													color: "#0E638F",
-												}}
-											/>
-										</div>
-										<div>
-											<AlertDialogTitle className="text-lg font-semibold sidebar-gradient-text">
-												Delete Invitation?
-											</AlertDialogTitle>
-											<AlertDialogDescription className="text-sm text-slate-600 mt-1">
-												This action cannot be undone
-											</AlertDialogDescription>
-										</div>
-									</div>
-								</AlertDialogHeader>
-
-								<div className="px-6 pb-6">
-									<div className="bg-slate-50 rounded-lg p-4 border border-slate-100">
-										<h4 className="text-sm font-medium text-slate-700 mb-3">
-											Invitation Details
-										</h4>
-										<div className="space-y-2">
-											{deleteEmail && (
-												<div className="flex items-center justify-between py-1">
-													<span className="text-sm text-slate-600">
-														Email Address:
-													</span>
+									<div className="px-6 pb-4">
+										<div className="bg-slate-50 rounded-lg p-4 space-y-2">
+											{revokeEmail && (
+												<div className="flex items-center justify-between">
 													<span className="text-sm font-medium text-slate-700">
-														{deleteEmail}
+														Email:
+													</span>
+													<span className="text-sm text-slate-600">
+														{revokeEmail}
 													</span>
 												</div>
 											)}
-											<div className="flex items-center justify-between py-1">
-												<span className="text-sm text-slate-600">
-													Request Date:
-												</span>
+											<div className="flex items-center justify-between">
 												<span className="text-sm font-medium text-slate-700">
-													{new Date().toLocaleDateString("en-US", {
-														year: "numeric",
-														month: "short",
-														day: "numeric",
-													})}
+													Date:
+												</span>
+												<span className="text-sm text-slate-600">
+													{new Date().toLocaleDateString()}
 												</span>
 											</div>
 										</div>
-									</div>
 
-									<div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-										<div className="flex items-start gap-2">
-											<div className="w-4 h-4 bg-amber-400 rounded-full flex items-center justify-center mt-0.5">
-												<span className="text-xs text-white font-bold">!</span>
-											</div>
-											<p className="text-sm text-amber-800">
-												<strong>Warning:</strong> This will permanently remove
-												the invitation from the system. The recipient will no
-												longer be able to access their invitation link.
+										<div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+											<p className="text-xs text-amber-800 font-medium flex items-center gap-2">
+												<AlertTriangle
+													className="h-3.5 w-3.5 shrink-0"
+													aria-hidden
+												/>
+												This action can&apos;t be undone
 											</p>
 										</div>
 									</div>
-								</div>
+									<AlertDialogFooter className="flex-col sm:flex-row gap-3 px-6 pb-6">
+										<AlertDialogCancel
+											onClick={cancelRevoke}
+											className="primary-btn px-3 sm:px-4 w-full sm:w-auto"
+										>
+											<Ban className="w-4 h-4 mr-2" />
+											Cancel
+										</AlertDialogCancel>
+										<AlertDialogAction
+											onClick={confirmRevoke}
+											className="w-full sm:w-auto bg-red-500/80 backdrop-blur border border-red-400/50 shadow-md text-slate-700 hover:bg-red-600/80 transition-colors rounded-lg px-4 py-2 font-medium"
+										>
+											Revoke
+										</AlertDialogAction>
+									</AlertDialogFooter>
+								</AlertDialogContent>
+							</AlertDialog>
 
-								<div className="flex justify-center items-center gap-3 px-6 pb-6 pt-4">
-									<AlertDialogCancel
-										onClick={cancelDelete}
-										className="primary-btn px-3 sm:px-4"
-									>
-										<Ban className="w-4 h-4 mr-2" />
-										Cancel
-									</AlertDialogCancel>
-									<AlertDialogAction
-										onClick={confirmDelete}
-										className="delete-btn px-3 sm:px-4"
-									>
-										Delete Invitation
-									</AlertDialogAction>
-								</div>
-							</AlertDialogContent>
-						</AlertDialog>
+							{/* Professional Delete Confirmation Dialog */}
+							<AlertDialog
+								open={showDeleteDialog}
+								onOpenChange={setShowDeleteDialog}
+							>
+								<AlertDialogContent className="mx-4 max-w-md rounded-lg shadow-2xl">
+									<AlertDialogHeader className="pb-1">
+										<div className="flex items-center gap-4 mb-4">
+											<div className="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center">
+												<Trash2
+													className="h-5 w-5"
+													style={{
+														color: "#0E638F",
+													}}
+												/>
+											</div>
+											<div>
+												<AlertDialogTitle className="text-lg font-semibold sidebar-gradient-text">
+													Delete Invitation?
+												</AlertDialogTitle>
+												<AlertDialogDescription className="text-sm text-slate-600 mt-1">
+													This action cannot be undone
+												</AlertDialogDescription>
+											</div>
+										</div>
+									</AlertDialogHeader>
+
+									<div className="px-6 pb-6">
+										<div className="bg-slate-50 rounded-lg p-4 border border-slate-100">
+											<h4 className="text-sm font-medium text-slate-700 mb-3">
+												Invitation Details
+											</h4>
+											<div className="space-y-2">
+												{deleteEmail && (
+													<div className="flex items-center justify-between py-1">
+														<span className="text-sm text-slate-600">
+															Email Address:
+														</span>
+														<span className="text-sm font-medium text-slate-700">
+															{deleteEmail}
+														</span>
+													</div>
+												)}
+												<div className="flex items-center justify-between py-1">
+													<span className="text-sm text-slate-600">
+														Request Date:
+													</span>
+													<span className="text-sm font-medium text-slate-700">
+														{new Date().toLocaleDateString("en-US", {
+															year: "numeric",
+															month: "short",
+															day: "numeric",
+														})}
+													</span>
+												</div>
+											</div>
+										</div>
+
+										<div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+											<div className="flex items-start gap-2">
+												<div className="w-4 h-4 bg-amber-400 rounded-full flex items-center justify-center mt-0.5">
+													<span className="text-xs text-white font-bold">
+														!
+													</span>
+												</div>
+												<p className="text-sm text-amber-800">
+													<strong>Warning:</strong> This will permanently remove
+													the invitation from the system. The recipient will no
+													longer be able to access their invitation link.
+												</p>
+											</div>
+										</div>
+									</div>
+
+									<div className="flex justify-center items-center gap-3 px-6 pb-6 pt-4">
+										<AlertDialogCancel
+											onClick={cancelDelete}
+											className="primary-btn px-3 sm:px-4"
+										>
+											<Ban className="w-4 h-4 mr-2" />
+											Cancel
+										</AlertDialogCancel>
+										<AlertDialogAction
+											onClick={confirmDelete}
+											className="delete-btn px-3 sm:px-4"
+										>
+											Delete Invitation
+										</AlertDialogAction>
+									</div>
+								</AlertDialogContent>
+							</AlertDialog>
 						</motion.div>
 					</div>
 				</div>

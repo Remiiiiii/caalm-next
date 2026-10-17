@@ -21,6 +21,10 @@ import {
 import { Form } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { uploadFile } from "@/lib/actions/file.actions";
+import {
+	AI_EXTRACTION_LIMIT_TITLE,
+	isAiExtractionLimitError,
+} from "@/lib/billing/aiExtractionUserMessages";
 import { refreshStorageUsage } from "@/lib/storage/refreshStorageUsage";
 import { TOTAL_STEPS } from "./constants";
 import { useContractForm } from "./hooks/useContractForm";
@@ -206,6 +210,17 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 						}
 					} catch (error) {
 						console.error("Failed to extract contract data:", error);
+						toast({
+							title: isAiExtractionLimitError(error)
+								? AI_EXTRACTION_LIMIT_TITLE
+								: "Could not auto-fill from file",
+							description: isAiExtractionLimitError(error)
+								? error.message
+								: error instanceof Error
+									? error.message
+									: "You can still fill the form by hand.",
+							variant: "destructive",
+						});
 					} finally {
 						setIsExtracting(false);
 					}

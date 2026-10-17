@@ -19,6 +19,14 @@ Dashboards are CAALM’s morning briefing. They are not decorative charts.
 
 Many home dashboards show expiry, status charts, department performance, company news, and quick notes in a horizontal carousel. Those widgets load from a shared first-paint bundle so they appear together after a short skeleton, instead of popping in one by one. Open `/company-news` for the full feed; Content Creators publish from `/dashboard/content-creator`.
 
+### Quick Notes widget
+
+- Create notes with rich text; hover a row to edit or delete that note only
+- Optionally **Pin to calendar** so the note appears on the calendar month for a chosen day and time
+- Use the header go-to control to open an all-notes dialog when the carousel card is too short for the full list
+
+See [Quick Notes](/docs/reference/quick-notes) for pin rules (including “time must be in the future” for today).
+
 ## By role
 
 See [Roles and home dashboards](/docs/concepts/roles-and-dashboards) for paths. In practice:

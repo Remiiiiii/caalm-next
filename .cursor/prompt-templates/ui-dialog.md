@@ -13,7 +13,7 @@ Copy into Agent chat and fill `[brackets]`.
 **Reference:** [e.g. ActionDropdown re-assign dialog, DeleteConfirmationDialog]
 
 **Context first:**
-1. Read `dialog-best-practices.mdc` + `global-style-guide.mdc` (and `button-placement.mdc` if actions).
+1. Read `global-style-guide.mdc` (dialogs, buttons, field borders).
 2. Run `graft ask "[similar dialog or component]" --source`.
 
 **Required (dialogs):**

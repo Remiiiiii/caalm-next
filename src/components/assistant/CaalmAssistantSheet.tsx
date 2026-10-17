@@ -12,6 +12,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import AssistantActionCompletedCard from "@/components/assistant/AssistantActionCompletedCard";
+import AssistantActionLifecycleCard from "@/components/assistant/AssistantActionLifecycleCard";
 import AssistantActivityFeedCard from "@/components/assistant/AssistantActivityFeedCard";
 import AssistantAvatar from "@/components/assistant/AssistantAvatar";
 import AssistantHistoryList from "@/components/assistant/AssistantHistoryList";
@@ -362,7 +363,9 @@ export default function CaalmAssistantSheet({
 						</div>
 					) : (
 						<div className="flex flex-col gap-2">
-							{assistant.pendingAction ? (
+							{/* Meeting create keeps the rich agenda/participants editor in the footer */}
+							{assistant.pendingAction?.toolName ===
+							"create_calendar_event" ? (
 								<AssistantPendingActionCard
 									action={assistant.pendingAction}
 									onConfirm={(argsPatch) =>
@@ -484,7 +487,11 @@ export default function CaalmAssistantSheet({
 					) : null}
 
 					{!assistant.conversationLoading
-						? assistant.messages.map((m) => (
+						? assistant.messages.map((m) => {
+								const hasLifecycleCard =
+									Boolean(m.actionLifecycle) &&
+									m.pendingAction?.toolName !== "create_calendar_event";
+								return (
 								<div
 									key={m.id}
 									className={cn(
@@ -497,42 +504,74 @@ export default function CaalmAssistantSheet({
 									) : null}
 									<div
 										className={cn(
-											"max-w-[85%] rounded-2xl px-3 py-2 text-sm",
+											"max-w-[85%] rounded-2xl text-sm",
 											m.role === "user"
-												? "bg-[#0f5384]/10 text-slate-700"
-												: "bg-white/60 text-slate-700 border border-slate-200/80",
+												? "bg-[#0f5384]/10 px-3 py-2 text-slate-700"
+												: hasLifecycleCard
+													? "overflow-hidden border border-slate-200/80 bg-white text-slate-700"
+													: "border border-slate-200/80 bg-white/60 px-3 py-2 text-slate-700",
 										)}
 									>
-										{m.meetingCreated ? (
-											<>
-												<p className="text-sm text-slate-700">
-													Your meeting is on the calendar.
-												</p>
-												<AssistantMeetingCreatedCard
-													meeting={m.meetingCreated}
-													onOpenCalendar={() =>
-														router.push(
-															m.meetingCreated?.calendarHref || "/calendar",
-														)
-													}
-												/>
-											</>
-										) : m.actionCompleted ? (
-											<AssistantActionCompletedCard
-												action={m.actionCompleted}
-											/>
-										) : m.activityFeed ? (
-											<AssistantActivityFeedCard feed={m.activityFeed} />
-										) : (
+										{m.content.trim() ? (
 											<div
-												className="prose prose-sm max-w-none text-slate-700"
+												className={cn(
+													"prose prose-sm max-w-none text-slate-700",
+													hasLifecycleCard && "px-3 pt-2",
+												)}
 												dangerouslySetInnerHTML={{
 													__html: formatAssistantMarkdown(m.content),
 												}}
 											/>
-										)}
+										) : null}
+										{hasLifecycleCard && m.actionLifecycle ? (
+											<AssistantActionLifecycleCard
+												embedded
+												action={m.actionLifecycle}
+												pendingArgs={
+													assistant.pendingAction?.id ===
+													m.actionLifecycle.pendingActionId
+														? assistant.pendingAction.args
+														: m.pendingAction?.args
+												}
+												disabled={assistant.isSending}
+												onConfirm={() => void assistant.confirmAction()}
+												onCancel={() => assistant.cancelPendingAction()}
+												onRetry={() => void assistant.confirmAction()}
+												onArgsChange={(argsPatch) =>
+													assistant.patchPendingArgs(argsPatch)
+												}
+												onOpenEntity={() => {
+													if (m.actionLifecycle?.entityHref) {
+														router.push(m.actionLifecycle.entityHref);
+													}
+												}}
+											/>
+										) : null}
+										{m.meetingCreated ? (
+											<AssistantMeetingCreatedCard
+												meeting={m.meetingCreated}
+												onOpenCalendar={() =>
+													router.push(
+														m.meetingCreated?.calendarHref || "/calendar",
+													)
+												}
+											/>
+										) : null}
+										{!m.actionLifecycle && m.actionCompleted ? (
+											<AssistantActionCompletedCard
+												action={m.actionCompleted}
+											/>
+										) : null}
+										{m.activityFeed ? (
+											<AssistantActivityFeedCard feed={m.activityFeed} />
+										) : null}
 										{m.sources?.length ? (
-											<ul className="mt-2 space-y-1 border-t border-slate-200/80 pt-2">
+											<ul
+												className={cn(
+													"mt-2 space-y-1 border-t border-slate-200/80 pt-2",
+													hasLifecycleCard && "px-3",
+												)}
+											>
 												{m.sources.map((s) => (
 													<li key={s.id} className="text-xs text-slate-600">
 														Source: {s.title}
@@ -554,40 +593,45 @@ export default function CaalmAssistantSheet({
 										m.suggestions?.length &&
 										!assistant.isSending &&
 										assistant.conversationStatus !== "closed" ? (
-											<AssistantSuggestions
-												suggestions={m.suggestions}
-												disabled={assistant.isSending}
-												onSelect={handleSuggestion}
-											/>
+											<div className={cn(hasLifecycleCard && "px-3")}>
+												<AssistantSuggestions
+													suggestions={m.suggestions}
+													disabled={assistant.isSending}
+													onSelect={handleSuggestion}
+												/>
+											</div>
 										) : null}
 										{m.role === "assistant" ? (
-											<AssistantMessageActions
-												messageId={m.id}
-												content={m.content}
-												showLeaveFeedback={feedbackPromptId === m.id}
-												onThumbsDown={(id) => setFeedbackPromptId(id)}
-												onLeaveFeedback={(id) => {
-													setFeedbackMessageId(id);
-													setFeedbackOpen(true);
-													setFeedbackComment("");
-													setFeedbackTouched(false);
-												}}
-												onThumbsUp={(id) => {
-													void fetch("/api/assistant/feedback", {
-														method: "POST",
-														headers: { "Content-Type": "application/json" },
-														body: JSON.stringify({
-															rating: "up",
-															conversationId: assistant.conversationId,
-															messageId: id,
-														}),
-													});
-												}}
-											/>
+											<div className={cn(hasLifecycleCard && "px-3 pb-2")}>
+												<AssistantMessageActions
+													messageId={m.id}
+													content={m.content}
+													showLeaveFeedback={feedbackPromptId === m.id}
+													onThumbsDown={(id) => setFeedbackPromptId(id)}
+													onLeaveFeedback={(id) => {
+														setFeedbackMessageId(id);
+														setFeedbackOpen(true);
+														setFeedbackComment("");
+														setFeedbackTouched(false);
+													}}
+													onThumbsUp={(id) => {
+														void fetch("/api/assistant/feedback", {
+															method: "POST",
+															headers: { "Content-Type": "application/json" },
+															body: JSON.stringify({
+																rating: "up",
+																conversationId: assistant.conversationId,
+																messageId: id,
+															}),
+														});
+													}}
+												/>
+											</div>
 										) : null}
 									</div>
 								</div>
-							))
+								);
+							})
 						: null}
 
 					{!assistant.conversationLoading && assistant.isSending ? (

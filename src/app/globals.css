@@ -284,12 +284,18 @@
 		}
 	}
 
-	/* Destructive confirm — red outline, not the teal primary gradient */
+	/* Destructive confirm — red outline, not the teal primary gradient.
+	   Size matches .btn-primary (compact pill height + horizontal padding). */
 	.delete-btn,
 	.btn-delete {
-		@apply flex w-full items-center justify-center rounded-full border border-red/30! bg-red/10! px-4 py-2 font-semibold text-red! shadow-none transition-all duration-200 sm:w-auto sm:px-6;
+		@apply flex w-full items-center justify-center gap-1.5 rounded-full border border-red/30! bg-red/10! px-3 py-1.5 font-semibold text-red! shadow-none transition-all duration-200 sm:w-auto sm:px-4;
 		white-space: nowrap;
 		background-image: none !important;
+		height: 1.75rem !important;
+		min-height: 1.75rem !important;
+		max-height: 1.75rem !important;
+		padding-left: 0.75rem !important;
+		padding-right: 0.75rem !important;
 	}
 
 	.primary-btn-lg,
@@ -1285,11 +1291,13 @@
 	}
 }
 
-/* Unlayered — wins over Button size utilities (h-9 / px-4) for .primary-btn chrome */
+/* Unlayered — wins over Button size utilities (h-9 / px-4) for CTA chrome */
 .primary-btn,
 .btn-primary,
 .shad-active,
-.shad-submit-btn {
+.shad-submit-btn,
+.delete-btn,
+.btn-delete {
 	height: 2rem !important;
 	min-height: 2rem !important;
 	max-height: 2rem !important;
@@ -2553,4 +2561,40 @@ iframe[src*="splinecode"] {
 	border-radius: 9999px;
 	border-width: 1px;
 	border-style: solid;
+}
+
+/* TipTap / note HTML — Tailwind preflight strips list markers */
+.note-rich-content ul,
+.ProseMirror.note-rich-content ul,
+.ProseMirror ul {
+	list-style-type: disc;
+	list-style-position: outside;
+	padding-left: 1.25rem;
+	margin: 0.5rem 0;
+}
+
+.note-rich-content ol,
+.ProseMirror.note-rich-content ol,
+.ProseMirror ol {
+	list-style-type: decimal;
+	list-style-position: outside;
+	padding-left: 1.25rem;
+	margin: 0.5rem 0;
+}
+
+.note-rich-content li,
+.ProseMirror.note-rich-content li,
+.ProseMirror li {
+	display: list-item;
+	margin: 0.25rem 0;
+}
+
+.note-rich-content ul ul,
+.ProseMirror ul ul {
+	list-style-type: circle;
+}
+
+.note-rich-content ol ol,
+.ProseMirror ol ol {
+	list-style-type: lower-alpha;
 }

@@ -210,7 +210,15 @@ export const DOCS_NAV: DocsNavGroup[] = [
 				title: "Calendar",
 				slug: "reference/calendar",
 				path: "reference/calendar",
-				summary: "Events, shared calendars, and deadline visibility.",
+				summary:
+					"Events, shared calendars, pinned Quick Notes, and deadline visibility.",
+			},
+			{
+				title: "Quick Notes",
+				slug: "reference/quick-notes",
+				path: "reference/quick-notes",
+				summary:
+					"Dashboard sticky notes and optional pins on the calendar month view.",
 			},
 			{
 				title: "Mail (Gmail and Outlook)",

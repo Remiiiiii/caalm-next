@@ -1,6 +1,7 @@
 ---
 description: Voice, tone, and copywriting standards for product and marketing text
-alwaysApply: true
+globs: "{docs,src/content,public}/**/*.{md,mdx,tsx,ts}"
+alwaysApply: false
 ---
 
 # Writing

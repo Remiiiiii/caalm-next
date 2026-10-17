@@ -63,7 +63,7 @@ export function classifyKind(params: {
 }): ActivityFeedKind {
 	const title = params.title.toLowerCase();
 	const action = (params.action ?? "").toLowerCase();
-	const module = (params.module ?? "").toLowerCase();
+	const moduleName = (params.module ?? "").toLowerCase();
 	const targetType = (params.targetType ?? "").toLowerCase();
 
 	if (
@@ -78,15 +78,15 @@ export function classifyKind(params: {
 	if (
 		targetType === "calendar_event" ||
 		targetType.includes("calendar") ||
-		module === "calendar"
+		moduleName === "calendar"
 	) {
 		return "schedule";
 	}
 
 	if (
 		targetType.includes("task") ||
-		module === "tasks" ||
-		module === "task" ||
+		moduleName === "tasks" ||
+		moduleName === "task" ||
 		action.includes("task")
 	) {
 		return "task";

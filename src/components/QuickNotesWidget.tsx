@@ -10,13 +10,14 @@ import {
 	Bold,
 	Calendar,
 	Edit,
+	Info,
 	Italic,
 	List,
 	ListOrdered,
 	Loader2,
 	MoreVertical,
-	Plus,
 	Save,
+	SquareArrowOutUpRight,
 	StickyNote,
 	StickyNotePlus,
 	Strikethrough,
@@ -24,6 +25,12 @@ import {
 	Underline,
 } from "lucide-react";
 import React, { useState } from "react";
+import {
+	isNotePinDateTimeInPast,
+	NOTE_PIN_PAST_TIME_ERROR,
+	NoteCalendarPinFields,
+	type NotePinMode,
+} from "@/components/notes/NoteCalendarPinFields";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -202,11 +209,20 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 	const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 	const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 	const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+	const [isAllNotesDialogOpen, setIsAllNotesDialogOpen] = useState(false);
 	const [selectedNote, setSelectedNote] = useState<Note | null>(null);
+	/** Only this note shows edit/delete — avoids parent `group-hover` lighting up every row */
+	const [hoveredNoteId, setHoveredNoteId] = useState<string | null>(null);
 
 	// Form state
 	const [newNote, setNewNote] = useState({ title: "", content: "" });
 	const [editNote, setEditNote] = useState({ title: "", content: "" });
+	const [createPinMode, setCreatePinMode] = useState<NotePinMode>("dashboard");
+	const [createPinDate, setCreatePinDate] = useState("");
+	const [createPinTime, setCreatePinTime] = useState("09:00");
+	const [editPinMode, setEditPinMode] = useState<NotePinMode>("dashboard");
+	const [editPinDate, setEditPinDate] = useState("");
+	const [editPinTime, setEditPinTime] = useState("09:00");
 	const [isClient, setIsClient] = useState(false);
 
 	// Set client state on mount
@@ -225,7 +241,8 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 			},
 			editorProps: {
 				attributes: {
-					class: "prose prose-sm max-w-none focus:outline-none",
+					class:
+						"prose prose-sm note-rich-content max-w-none focus:outline-none",
 				},
 			},
 		},
@@ -242,7 +259,8 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 			},
 			editorProps: {
 				attributes: {
-					class: "prose prose-sm max-w-none focus:outline-none",
+					class:
+						"prose prose-sm note-rich-content max-w-none focus:outline-none",
 				},
 			},
 		},
@@ -264,14 +282,39 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 
 	const handleCreateNote = async () => {
 		if (!newNote.title.trim() || !newNote.content.trim()) return;
+		if (createPinMode === "calendar" && (!createPinDate || !createPinTime)) {
+			toast({
+				title: "Date and time required",
+				description: "Pick a day and time to pin this note on the calendar.",
+				variant: "destructive",
+			});
+			return;
+		}
+		if (
+			createPinMode === "calendar" &&
+			isNotePinDateTimeInPast(createPinDate, createPinTime)
+		) {
+			toast({
+				title: "Invalid time",
+				description: NOTE_PIN_PAST_TIME_ERROR,
+				variant: "destructive",
+			});
+			return;
+		}
 
 		try {
 			await createNote({
 				title: newNote.title.trim(),
 				content: newNote.content.trim(),
+				userName: user?.name || "",
+				calendarDate: createPinMode === "calendar" ? createPinDate : null,
+				calendarTime: createPinMode === "calendar" ? createPinTime : null,
 			});
 
 			setNewNote({ title: "", content: "" });
+			setCreatePinMode("dashboard");
+			setCreatePinDate("");
+			setCreatePinTime("09:00");
 			setIsCreateDialogOpen(false);
 
 			toast({
@@ -290,16 +333,40 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 	const handleEditNote = async () => {
 		if (!selectedNote || !editNote.title.trim() || !editNote.content.trim())
 			return;
+		if (editPinMode === "calendar" && (!editPinDate || !editPinTime)) {
+			toast({
+				title: "Date and time required",
+				description: "Pick a day and time to pin this note on the calendar.",
+				variant: "destructive",
+			});
+			return;
+		}
+		if (
+			editPinMode === "calendar" &&
+			isNotePinDateTimeInPast(editPinDate, editPinTime)
+		) {
+			toast({
+				title: "Invalid time",
+				description: NOTE_PIN_PAST_TIME_ERROR,
+				variant: "destructive",
+			});
+			return;
+		}
 
 		try {
 			await updateNote({
 				noteId: selectedNote.$id,
 				title: editNote.title.trim(),
 				content: editNote.content.trim(),
+				calendarDate: editPinMode === "calendar" ? editPinDate : null,
+				calendarTime: editPinMode === "calendar" ? editPinTime : null,
 			});
 
 			setSelectedNote(null);
 			setEditNote({ title: "", content: "" });
+			setEditPinMode("dashboard");
+			setEditPinDate("");
+			setEditPinTime("09:00");
 			setIsEditDialogOpen(false);
 
 			toast({
@@ -339,6 +406,10 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 	const openEditDialog = (note: Note) => {
 		setSelectedNote(note);
 		setEditNote({ title: note.title, content: note.content });
+		const pinned = Boolean(note.calendarDate && note.calendarTime);
+		setEditPinMode(pinned ? "calendar" : "dashboard");
+		setEditPinDate(note.calendarDate || "");
+		setEditPinTime(note.calendarTime || "09:00");
 		setIsEditDialogOpen(true);
 	};
 
@@ -362,10 +433,37 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 		});
 	};
 
-	const truncateContent = (content: string, maxWords: number = 25) => {
-		// Strip HTML tags first, then truncate
-		const plainText = stripHtml(content);
-		const words = plainText.split(" ");
+	const formatNoteTimestamp = (dateString: string) => {
+		const date = new Date(dateString);
+		const now = new Date();
+		const time = date.toLocaleTimeString("en-US", {
+			hour: "numeric",
+			minute: "2-digit",
+		});
+		const startOfToday = new Date(
+			now.getFullYear(),
+			now.getMonth(),
+			now.getDate(),
+		);
+		const startOfNoteDay = new Date(
+			date.getFullYear(),
+			date.getMonth(),
+			date.getDate(),
+		);
+		const dayDiff = Math.round(
+			(startOfToday.getTime() - startOfNoteDay.getTime()) / 86_400_000,
+		);
+		if (dayDiff === 0) return `Today, ${time}`;
+		if (dayDiff === 1) return `Yesterday, ${time}`;
+		return `${date.toLocaleDateString("en-US", {
+			month: "short",
+			day: "numeric",
+		})}, ${time}`;
+	};
+
+	const truncateContent = (content: string, maxWords: number = 10) => {
+		const plainText = stripHtml(content).trim();
+		const words = plainText.split(/\s+/).filter(Boolean);
 		if (words.length <= maxWords) return plainText;
 		return `${words.slice(0, maxWords).join(" ")}...`;
 	};
@@ -433,14 +531,26 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 								Quick Notes
 							</CardTitle>
 						</div>
-						<Button
-							variant="ghost"
-							size="sm"
-							onClick={() => setIsCreateDialogOpen(true)}
-							className="h-6 w-6 p-0 hover:bg-white/40"
-						>
-							<Plus className="h-3 w-3" />
-						</Button>
+						<div className="flex items-center gap-0.5">
+							<Button
+								variant="ghost"
+								size="sm"
+								onClick={() => setIsCreateDialogOpen(true)}
+								className="h-6 w-6 p-0 hover:bg-white/40"
+								aria-label="Create note"
+							>
+								<StickyNotePlus className="h-3.5 w-3.5 text-[#0f5384]" />
+							</Button>
+							<Button
+								variant="ghost"
+								size="sm"
+								onClick={() => setIsAllNotesDialogOpen(true)}
+								className="h-6 w-6 p-0 hover:bg-white/40"
+								aria-label="View all notes"
+							>
+								<SquareArrowOutUpRight className="h-3.5 w-3.5 text-[#0f5384]" />
+							</Button>
+						</div>
 					</div>
 				</CardHeader>
 
@@ -454,63 +564,84 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 							<p className="text-xs text-slate-500">Create your first note</p>
 						</div>
 					) : (
-						<div className="space-y-2 max-h-[220px] overflow-y-auto scrollbar-hide">
-							{sortedNotes.map((note, index) => (
-								<div key={note.$id}>
-									<div
-										className="bg-white/20 rounded-lg p-2 cursor-pointer hover:bg-white/30 transition-colors border border-white/20 backdrop-blur-sm"
-										onClick={() => openEditDialog(note)}
-									>
-										<div className="flex items-start justify-between gap-2">
-											<div className="flex-1 min-w-44">
-												<div className="flex items-center gap-1 mt-1">
+						<div
+							data-widget-scroll
+							className="max-h-[220px] space-y-2 overflow-y-auto overscroll-contain scrollbar-hide"
+						>
+							{sortedNotes.map((note, index) => {
+								const isHovered = hoveredNoteId === note.$id;
+								return (
+									<div key={note.$id}>
+										<div
+											className={`relative cursor-pointer rounded-lg border p-2 transition-all duration-200 ${
+												isHovered
+													? "border-blue-200 bg-blue-50"
+													: "border-transparent bg-transparent"
+											}`}
+											onMouseEnter={() => setHoveredNoteId(note.$id)}
+											onMouseLeave={() => setHoveredNoteId(null)}
+											onClick={() => openEditDialog(note)}
+										>
+											{isHovered ? (
+												<div className="absolute top-2 right-2 z-10 flex items-center gap-1">
+													<Button
+														variant="ghost"
+														size="sm"
+														onClick={(e) => {
+															e.stopPropagation();
+															openEditDialog(note);
+														}}
+														className="h-5 w-5 p-0 text-[#0f5384] hover:bg-[#0f5384]/10 hover:text-[#0f5384]"
+														aria-label={`Edit ${note.title || "note"}`}
+													>
+														<Edit className="h-3 w-3" />
+													</Button>
+													<Button
+														variant="ghost"
+														size="sm"
+														onClick={(e) => {
+															e.stopPropagation();
+															openDeleteDialog(note);
+														}}
+														className="h-5 w-5 p-0 text-[#0f5384] hover:bg-[#0f5384]/10 hover:text-[#0f5384]"
+														aria-label={`Delete ${note.title || "note"}`}
+													>
+														<Trash2 className="h-3 w-3" />
+													</Button>
+												</div>
+											) : null}
+
+											<div className="min-w-0">
+												<div className="mt-1 flex items-center gap-1">
 													<Calendar className="h-3 w-3 text-slate-400" />
 													<span className="text-xs text-slate-400">
 														{formatDate(note.$updatedAt)}
 													</span>
-													<span className="text-xs text-slate-400 ml-2">
+													<span className="ml-2 text-xs text-slate-400">
 														{new Date(note.$updatedAt).toLocaleTimeString()}
 													</span>
+													{note.calendarDate && note.calendarTime ? (
+														<span className="ml-2 inline-flex shrink-0 items-center gap-1 rounded-full border border-blue/20 bg-blue/10 px-2 py-0.5 text-[10px] font-medium text-blue">
+															<Calendar className="h-2.5 w-2.5" />
+															Calendar
+														</span>
+													) : null}
 												</div>
-												<h4 className="py-1 font-medium text-sm sidebar-gradient-text truncate">
+												<h4 className="truncate py-1 pr-12 text-sm font-medium sidebar-gradient-text">
 													{note.title}
 												</h4>
-												<p className="text-xs text-slate-600 mt-1 leading-relaxed">
+												<p className="mt-1 text-xs leading-relaxed text-slate-600">
 													{truncateContent(note.content)}
 												</p>
 											</div>
-											<div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-												<Button
-													variant="ghost"
-													size="sm"
-													onClick={(e) => {
-														e.stopPropagation();
-														openEditDialog(note);
-													}}
-													className="h-5 w-5 p-0 hover:bg-white/60"
-												>
-													<Edit className="h-3 w-3" />
-												</Button>
-												<Button
-													variant="ghost"
-													size="sm"
-													onClick={(e) => {
-														e.stopPropagation();
-														openDeleteDialog(note);
-													}}
-													className="h-5 w-5 p-0 hover:bg-red-100 hover:text-red-600"
-												>
-													<Trash2 className="h-3 w-3" />
-												</Button>
-											</div>
 										</div>
+										{sortedNotes.length > 1 &&
+											index < sortedNotes.length - 1 && (
+												<div className="my-2 h-px bg-slate-300" />
+											)}
 									</div>
-									{/* Separator line between notes (only if multiple notes and not the last one) */}
-									{sortedNotes.length > 1 && index < sortedNotes.length - 1 && (
-										<div className="h-px bg-slate-300 my-2"></div>
-									)}
-								</div>
-							))}
+								);
+							})}
 						</div>
 					)}
 				</CardContent>
@@ -518,7 +649,7 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 
 			{/* Create Note Dialog */}
 			<Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-				<DialogContent className="flex max-h-[90vh] max-w-[600px] flex-col overflow-hidden border border-slate-200 p-0 shadow-xl">
+				<DialogContent className="flex max-h-[90vh] max-w-150 flex-col overflow-hidden border border-slate-200 p-0 shadow-xl">
 					<VisuallyHidden>
 						<DialogTitle>Create New Note</DialogTitle>
 					</VisuallyHidden>
@@ -526,7 +657,7 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 					<div className="glass-dialog-wizard-header mt-4">
 						<div className="flex items-center gap-3 px-6">
 							<div className="flex items-center gap-3">
-								<Plus className="h-5 w-5 text-[#0f5384]" />
+								<StickyNotePlus className="h-5 w-5 text-[#0f5384]" />
 								<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
 									New Note
 								</DialogTitle>
@@ -561,10 +692,19 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 								<EditorToolbar editor={newNoteEditor} />
 							</div>
 						)}
+						<NoteCalendarPinFields
+							mode={createPinMode}
+							onModeChange={setCreatePinMode}
+							date={createPinDate}
+							time={createPinTime}
+							onDateChange={setCreatePinDate}
+							onTimeChange={setCreatePinTime}
+						/>
 					</div>
 					<div className="glass-dialog-footer-wrap">
 						<div className="flex items-center justify-between">
-							<div className="text-xs text-slate-500">
+							<div className="flex items-center gap-1.5 text-xs text-slate-500">
+								<Info className="h-3.5 w-3.5 shrink-0 text-slate-500" />
 								{stripHtml(newNote.content).trim()
 									? "Ready to save"
 									: "Add note content to save"}
@@ -572,7 +712,11 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 							<div className="flex items-center gap-3">
 								<Button
 									onClick={handleCreateNote}
-									disabled={!stripHtml(newNote.content).trim()}
+									disabled={
+										!stripHtml(newNote.content).trim() ||
+										(createPinMode === "calendar" &&
+											isNotePinDateTimeInPast(createPinDate, createPinTime))
+									}
 									className="primary-btn px-3 sm:px-4"
 								>
 									<Save className="mr-1 h-4 w-4" />
@@ -650,10 +794,19 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 								<EditorToolbar editor={editNoteEditor} />
 							</div>
 						)}
+						<NoteCalendarPinFields
+							mode={editPinMode}
+							onModeChange={setEditPinMode}
+							date={editPinDate}
+							time={editPinTime}
+							onDateChange={setEditPinDate}
+							onTimeChange={setEditPinTime}
+						/>
 					</div>
 					<div className="glass-dialog-footer-wrap">
 						<div className="flex items-center justify-between">
-							<div className="text-xs text-slate-500">
+							<div className="flex items-center gap-1.5 text-xs text-slate-500">
+								<Info className="h-3.5 w-3.5 shrink-0 text-slate-500" />
 								{stripHtml(editNote.content).trim()
 									? "Ready to update"
 									: "Add note content to update"}
@@ -661,7 +814,11 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 							<div className="flex items-center gap-3">
 								<Button
 									onClick={handleEditNote}
-									disabled={!stripHtml(editNote.content).trim()}
+									disabled={
+										!stripHtml(editNote.content).trim() ||
+										(editPinMode === "calendar" &&
+											isNotePinDateTimeInPast(editPinDate, editPinTime))
+									}
 									className="primary-btn px-3 sm:px-4"
 								>
 									<Save className="mr-1 h-4 w-4" />
@@ -754,6 +911,126 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 				</AlertDialogContent>
 			</AlertDialog>
 
+			{/* All Notes Dialog */}
+			<Dialog
+				open={isAllNotesDialogOpen}
+				onOpenChange={setIsAllNotesDialogOpen}
+			>
+				<DialogContent className="flex max-h-[90vh] max-w-[600px] flex-col overflow-hidden border border-slate-200 p-0 shadow-xl">
+					<div className="absolute top-0 left-0 right-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
+					<div className="sticky top-0 z-10 mt-4 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-indigo-50 py-4">
+						<div className="flex items-center gap-3 px-6">
+							<div className="flex items-center gap-3">
+								<StickyNote className="h-5 w-5 text-[#0f5384]" />
+								<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
+									All Notes
+								</DialogTitle>
+							</div>
+							<span className="inline-block rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+								{notes.length} {notes.length === 1 ? "note" : "notes"}
+							</span>
+						</div>
+						<p className="ml-14 mt-1 text-sm text-slate-600">
+							Browse and open any note from your dashboard
+						</p>
+					</div>
+					<div className="flex-1 space-y-2 overflow-y-auto bg-slate-50 p-6">
+						{sortedNotes.length === 0 ? (
+							<div className="py-8 text-center">
+								<StickyNotePlus className="mx-auto mb-2 h-8 w-8 text-slate-300" />
+								<p className="text-sm text-slate-500">No notes yet</p>
+							</div>
+						) : (
+							sortedNotes.map((note) => (
+								<div
+									key={note.$id}
+									role="button"
+									tabIndex={0}
+									onClick={() => {
+										setIsAllNotesDialogOpen(false);
+										openEditDialog(note);
+									}}
+									onKeyDown={(e) => {
+										if (e.key === "Enter" || e.key === " ") {
+											e.preventDefault();
+											setIsAllNotesDialogOpen(false);
+											openEditDialog(note);
+										}
+									}}
+									className="group w-full cursor-pointer rounded-lg border border-slate-200 bg-white p-4 text-left shadow-sm transition-all duration-200 hover:border-blue-300 hover:bg-blue-50 hover:shadow-md"
+								>
+									<div className="flex items-start justify-between gap-3">
+										<div className="min-w-0 flex-1">
+											<div className="flex items-center gap-2">
+												<p className="truncate text-sm font-semibold text-slate-800">
+													{note.title || "Untitled note"}
+												</p>
+												{note.calendarDate && note.calendarTime ? (
+													<span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-blue/20 bg-blue/10 px-2 py-0.5 text-[10px] font-medium text-blue">
+														<Calendar className="h-2.5 w-2.5" />
+														Calendar
+													</span>
+												) : null}
+											</div>
+											<p className="mt-0.5 text-xs text-slate-500">
+												{formatNoteTimestamp(note.$updatedAt)}
+											</p>
+											<p className="mt-1 text-xs leading-relaxed text-slate-600">
+												{truncateContent(note.content) || (
+													<span className="italic text-slate-400">
+														No details
+													</span>
+												)}
+											</p>
+										</div>
+										<div className="flex shrink-0 gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+											<Button
+												variant="ghost"
+												size="sm"
+												onClick={(e) => {
+													e.stopPropagation();
+													setIsAllNotesDialogOpen(false);
+													openEditDialog(note);
+												}}
+												className="h-7 w-7 p-0 text-slate-500 hover:bg-white hover:text-slate-700"
+												aria-label={`Edit ${note.title || "note"}`}
+											>
+												<Edit className="h-3.5 w-3.5" />
+											</Button>
+											<Button
+												variant="ghost"
+												size="sm"
+												onClick={(e) => {
+													e.stopPropagation();
+													setIsAllNotesDialogOpen(false);
+													openDeleteDialog(note);
+												}}
+												className="h-7 w-7 p-0 text-slate-500 hover:bg-red/10 hover:text-red"
+												aria-label={`Delete ${note.title || "note"}`}
+											>
+												<Trash2 className="h-3.5 w-3.5" />
+											</Button>
+										</div>
+									</div>
+								</div>
+							))
+						)}
+					</div>
+					<div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
+						<Button
+							className="btn-primary px-3 sm:px-4"
+							onClick={() => {
+								setIsAllNotesDialogOpen(false);
+								setIsCreateDialogOpen(true);
+							}}
+						>
+							<StickyNotePlus className="h-4 w-4" />
+							New note
+						</Button>
+					</div>
+				</DialogContent>
+			</Dialog>
+
 			{/* Custom styles */}
 			<style jsx global>{`
         .scrollbar-hide::-webkit-scrollbar {
@@ -801,13 +1078,22 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
           margin: 0.5rem 0;
         }
 
-        .ProseMirror ul,
+        .ProseMirror ul {
+          list-style-type: disc;
+          list-style-position: outside;
+          padding-left: 1.25rem;
+          margin: 0.5rem 0;
+        }
+
         .ProseMirror ol {
-          padding-left: 1.5rem;
+          list-style-type: decimal;
+          list-style-position: outside;
+          padding-left: 1.25rem;
           margin: 0.5rem 0;
         }
 
         .ProseMirror li {
+          display: list-item;
           margin: 0.25rem 0;
         }
 

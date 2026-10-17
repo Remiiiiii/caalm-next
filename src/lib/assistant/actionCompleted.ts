@@ -2,6 +2,11 @@
  * Build human-readable action-completed payloads for the assistant UI.
  */
 
+import {
+	flattenResultFields,
+	formatActionValue,
+} from "@/lib/assistant/formatActionValue";
+
 export type ActionCompletedPayload = {
 	eyebrow?: string;
 	headline: string;
@@ -112,29 +117,24 @@ export function formatGenericSuccessSummary(
 	result: unknown,
 ): string {
 	if (result && typeof result === "object") {
-		const entries = Object.entries(result as Record<string, unknown>)
-			.filter(([key, value]) => {
-				if (value === undefined || value === null) return false;
-				if (
-					HIDDEN_RESULT_KEYS.has(key) ||
-					HIDDEN_RESULT_KEYS.has(key.toLowerCase())
-				)
-					return false;
-				if (Array.isArray(value) && value.length === 0) return false;
-				return true;
-			})
-			.slice(0, 8)
-			.map(([key, value]) => {
-				const labelText = key
-					.replace(/([A-Z])/g, " $1")
-					.replace(/^./, (c) => c.toUpperCase())
-					.trim();
-				let display = String(value);
-				if (key.toLowerCase().includes("date") && display.includes("T")) {
-					display = formatActionDateLong(display);
-				}
-				return `- **${labelText}:** ${display}`;
-			});
+		const rows = flattenResultFields(
+			result as Record<string, unknown>,
+			HIDDEN_RESULT_KEYS,
+		);
+		const entries = rows.map((row) => {
+			let display = row.value;
+			if (
+				row.label.toLowerCase().includes("date") &&
+				display.includes("T")
+			) {
+				display = formatActionDateLong(display);
+			}
+			// Guard against any leftover object stringification
+			if (display === "[object Object]") {
+				display = formatActionValue(row.raw);
+			}
+			return `- **${row.label}:** ${display}`;
+		});
 		if (entries.length) {
 			return `Action completed: ${label}\n\n${entries.join("\n")}`;
 		}

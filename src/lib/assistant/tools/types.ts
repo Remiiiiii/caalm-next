@@ -40,12 +40,29 @@ export async function consumePendingAction(
 	id: string,
 	ctx: AssistantAuthContext,
 ): Promise<PendingAssistantAction | null> {
-	const record = await cache.get<PendingAssistantAction>(pendingKey(id));
+	const record = await getPendingAction(id, ctx);
 	if (!record) return null;
 	await cache.del(pendingKey(id));
-	if (record.expiresAt < Date.now()) return null;
+	return record;
+}
+
+/** Read a pending action without removing it (supports safe retry after failure). */
+export async function getPendingAction(
+	id: string,
+	ctx: AssistantAuthContext,
+): Promise<PendingAssistantAction | null> {
+	const record = await cache.get<PendingAssistantAction>(pendingKey(id));
+	if (!record) return null;
+	if (record.expiresAt < Date.now()) {
+		await cache.del(pendingKey(id));
+		return null;
+	}
 	if (record.userId !== ctx.user.$id || record.orgId !== ctx.orgId) return null;
 	return record;
+}
+
+export async function deletePendingAction(id: string): Promise<void> {
+	await cache.del(pendingKey(id));
 }
 
 /** Merge client-side confirmation edits into a still-pending action. */
@@ -61,13 +78,17 @@ export async function patchPendingActionArgs(
 		return null;
 	}
 	if (record.userId !== ctx.user.$id || record.orgId !== ctx.orgId) return null;
+	const nextArgs = { ...record.args, ...argsPatch };
+	// null / undefined / "" clears optional fields (e.g. due date = None)
+	for (const [key, value] of Object.entries(argsPatch)) {
+		if (value === null || value === undefined || value === "") {
+			delete nextArgs[key];
+		}
+	}
 	const updated: PendingAssistantAction = {
 		...record,
-		args: { ...record.args, ...argsPatch },
-		preview: JSON.stringify({ ...record.args, ...argsPatch }, null, 2).slice(
-			0,
-			500,
-		),
+		args: nextArgs,
+		preview: JSON.stringify(nextArgs, null, 2).slice(0, 500),
 	};
 	const remainingSec = Math.max(
 		1,

@@ -5,6 +5,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useCallback } from "react";
 import { useForm } from "react-hook-form";
+import { throwIfAiExtractionHttpFailed } from "@/lib/billing/aiExtractionUserMessages";
 import { type ContractFormData, contractSchema } from "../schema";
 import type { ProcessedFileData } from "../types";
 
@@ -179,25 +180,13 @@ export function useContractForm() {
 				body: JSON.stringify(requestBody),
 			});
 
-			if (!response.ok) {
-				const responseClone = response.clone();
-				let errorData: { error?: string } | null = null;
-				try {
-					errorData = await responseClone.json();
-				} catch {
-					const textContent = await response.text();
-					throw new Error(
-						`HTTP ${response.status}: ${textContent.substring(0, 200)}`,
-					);
-				}
-				throw new Error(errorData?.error || "Contract extraction failed");
-			}
+			await throwIfAiExtractionHttpFailed(response);
 
 			const data = await response.json();
 			return data.extractedData || data.data || null;
 		} catch (error) {
 			console.error("Contract extraction error:", error);
-			return null;
+			throw error;
 		}
 	};
 

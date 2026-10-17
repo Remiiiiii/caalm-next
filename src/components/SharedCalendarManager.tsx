@@ -609,13 +609,13 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
 					<Button
 						variant="outline"
 						size="sm"
-						className="primary-btn px-3 sm:px-4"
+						className="primary-btn px-3 sm:px-4 flex justify-center items-center"
 					>
 						<CalendarIcon className="w-4 h-4" />
 						Manage Shared Calendars
 					</Button>
 				</DialogTrigger>
-				<DialogContent className="w-[calc(100%-1.5rem)] sm:w-full max-w-[700px] p-0 max-h-[90vh] flex flex-col">
+				<DialogContent className="w-[calc(100%-1.5rem)] sm:w-full max-w-175 p-0 max-h-[90vh] flex flex-col">
 					<VisuallyHiddenPrimitive.Root>
 						<DialogTitle>Manage Shared Calendars</DialogTitle>
 						<DialogDescription>

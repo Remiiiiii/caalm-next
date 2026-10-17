@@ -283,7 +283,7 @@ export const CalendarSidebar: React.FC<CalendarSidebarProps> = ({
 			</div>
 
 			{children ? (
-				<div className="mt-auto border-t border-slate-200 p-3 space-y-2 bg-slate-50/80 [&_button]:w-full [&_button]:justify-start [&_button]:text-xs [&_button]:px-2">
+				<div className="mt-auto space-y-2 border-t border-slate-200 bg-slate-50/80 p-3 [&_button]:w-full [&_button]:justify-center [&_button]:px-2 [&_button]:text-xs">
 					<p className="text-xs font-medium sidebar-gradient-text px-0.5 mb-1">
 						Manage
 					</p>

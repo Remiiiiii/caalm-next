@@ -4,15 +4,16 @@
 
 "use client";
 
-import { format } from "date-fns";
-import { Calendar as CalendarIcon } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
 import {
 	AiFilledLabelHint,
 	aiFieldItemClassName,
 } from "@/components/contract-upload/AiExtractionReview";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
+import {
+	CaalmDatePicker,
+	parseIsoDateLocal,
+	toIsoDateLocal,
+} from "@/components/ui/caalm-date-picker";
 import { CurrencyAmountInput } from "@/components/ui/currency-amount-input";
 import { CurrencySelect } from "@/components/ui/currency-select";
 import {
@@ -23,11 +24,6 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover";
 import {
 	Select,
 	SelectContent,
@@ -58,22 +54,6 @@ const DIVISIONS = [
 
 function formatLabel(value: string) {
 	return value.replace(/[_-]/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
-}
-
-function formatDateValue(value: unknown): string | null {
-	if (!value) return null;
-	const date =
-		value instanceof Date
-			? value
-			: typeof value === "string" || typeof value === "number"
-				? new Date(value)
-				: null;
-	if (!date || Number.isNaN(date.getTime())) return null;
-	try {
-		return format(date, "PPP");
-	} catch {
-		return null;
-	}
 }
 
 export interface Step2LicenseDetailsProps {
@@ -295,30 +275,19 @@ export default function Step2LicenseDetails({
 									Issue Date
 									<AiHint name="issueDate" />
 								</FormLabel>
-								<Popover>
-									<PopoverTrigger asChild>
-										<FormControl>
-											<Button
-												variant="outline"
-												className="w-full justify-start text-left font-normal bg-white border-slate-300"
-											>
-												<CalendarIcon className="mr-2 h-4 w-4" />
-												{(() => {
-													const label = formatDateValue(field.value);
-													return label ? label : <span>Pick a date</span>;
-												})()}
-											</Button>
-										</FormControl>
-									</PopoverTrigger>
-									<PopoverContent className="w-auto p-0" align="start">
-										<Calendar
-											mode="single"
-											selected={field.value}
-											onSelect={field.onChange}
-											initialFocus
-										/>
-									</PopoverContent>
-								</Popover>
+								<FormControl>
+									<CaalmDatePicker
+										value={
+											field.value instanceof Date
+												? toIsoDateLocal(field.value)
+												: ""
+										}
+										onChange={(iso) =>
+											field.onChange(iso ? parseIsoDateLocal(iso) : undefined)
+										}
+										className="border-slate-300"
+									/>
+								</FormControl>
 								<FormMessage />
 							</FormItem>
 						)}
@@ -333,30 +302,19 @@ export default function Step2LicenseDetails({
 									Expiry Date <span className="text-red">*</span>
 									<AiHint name="licenseExpiryDate" />
 								</FormLabel>
-								<Popover>
-									<PopoverTrigger asChild>
-										<FormControl>
-											<Button
-												variant="outline"
-												className="w-full justify-start text-left font-normal bg-white border-slate-300"
-											>
-												<CalendarIcon className="mr-2 h-4 w-4" />
-												{(() => {
-													const label = formatDateValue(field.value);
-													return label ? label : <span>Pick a date</span>;
-												})()}
-											</Button>
-										</FormControl>
-									</PopoverTrigger>
-									<PopoverContent className="w-auto p-0" align="start">
-										<Calendar
-											mode="single"
-											selected={field.value}
-											onSelect={field.onChange}
-											initialFocus
-										/>
-									</PopoverContent>
-								</Popover>
+								<FormControl>
+									<CaalmDatePicker
+										value={
+											field.value instanceof Date
+												? toIsoDateLocal(field.value)
+												: ""
+										}
+										onChange={(iso) =>
+											field.onChange(iso ? parseIsoDateLocal(iso) : undefined)
+										}
+										className="border-slate-300"
+									/>
+								</FormControl>
 								<FormMessage />
 							</FormItem>
 						)}
@@ -371,30 +329,19 @@ export default function Step2LicenseDetails({
 									Renewal Due Date
 									<AiHint name="renewalDate" />
 								</FormLabel>
-								<Popover>
-									<PopoverTrigger asChild>
-										<FormControl>
-											<Button
-												variant="outline"
-												className="w-full justify-start text-left font-normal bg-white border-slate-300"
-											>
-												<CalendarIcon className="mr-2 h-4 w-4" />
-												{(() => {
-													const label = formatDateValue(field.value);
-													return label ? label : <span>Pick a date</span>;
-												})()}
-											</Button>
-										</FormControl>
-									</PopoverTrigger>
-									<PopoverContent className="w-auto p-0" align="start">
-										<Calendar
-											mode="single"
-											selected={field.value}
-											onSelect={field.onChange}
-											initialFocus
-										/>
-									</PopoverContent>
-								</Popover>
+								<FormControl>
+									<CaalmDatePicker
+										value={
+											field.value instanceof Date
+												? toIsoDateLocal(field.value)
+												: ""
+										}
+										onChange={(iso) =>
+											field.onChange(iso ? parseIsoDateLocal(iso) : undefined)
+										}
+										className="border-slate-300"
+									/>
+								</FormControl>
 								<FormMessage />
 							</FormItem>
 						)}

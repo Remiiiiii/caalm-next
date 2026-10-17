@@ -24,3 +24,9 @@ The authenticated product is **desktop-primary**. Full UI starts at **1024px** (
 
 - Companion path → render normally on phones; keep `MobileNavigation` filter in sync via `isCompanionPath`.
 - Desktop-required path → no extra phone CSS work; the gate handles it. Prefer desktop-end layout classes on gated-only files (`grid-cols-4`, `flex-row`); do not add new `sm:`/`md:` phone-stack ladders there.
+
+## If someone asks for “full phone admin / settings / analytics”
+
+1. Point them to `docs/internal/desktop-first-decision.md` and `/docs/concepts/desktop-and-mobile`.
+2. Ask whether the job is a true **companion interrupt** (approve, attest, renew, notify, glance).
+3. Do **not** scaffold a second phone product or widen the companion allowlist to dodge `DesktopRequiredScreen` unless product explicitly changes that decision.

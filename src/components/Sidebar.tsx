@@ -53,6 +53,7 @@ const Sidebar = memo(
 				"/assets/icons/resources.svg",
 				"/assets/icons/create-contract.png",
 				"/assets/icons/documents.svg",
+				"/assets/icons/import-user.svg",
 			];
 
 			criticalIcons.forEach((icon) => {

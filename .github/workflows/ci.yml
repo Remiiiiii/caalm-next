@@ -41,8 +41,9 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Run ESLint
+        # Fail the job when lint fails (do not soft-pass with continue-on-error).
+        # See docs/internal/ci-lint-strictness.md
         run: pnpm run lint
-        continue-on-error: true
 
   api-authz:
     name: API authz matrix
