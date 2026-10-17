@@ -49,11 +49,16 @@ export async function GET(request: NextRequest) {
 			search: q("search"),
 			dueBefore: q("dueBefore"),
 			dueAfter: q("dueAfter"),
+			view: q("view"),
+			dueBucket: q("dueBucket"),
 		});
+
+		const { getOrganizationTimezone } = await import("@/lib/timezone/org");
+		const timeZone = await getOrganizationTimezone(defaultOrg.orgId);
 
 		const queryHash = crypto
 			.createHash("md5")
-			.update(JSON.stringify(validated))
+			.update(JSON.stringify({ ...validated, userId: user.$id, timeZone }))
 			.digest("hex");
 		const cacheKey = CACHE_KEYS.tasks.list(defaultOrg.orgId, queryHash);
 
@@ -61,16 +66,24 @@ export async function GET(request: NextRequest) {
 			"tasks/list",
 			cacheKey,
 			async () =>
-				TaskService.listTasks(
+				TaskService.listTasksForPage(
 					defaultOrg.orgId,
 					{
 						status: validated.status,
-						assigneeId: validated.assigneeId,
+						assigneeId:
+							validated.assigneeId === "unassigned"
+								? undefined
+								: validated.assigneeId,
+						unassigned: validated.assigneeId === "unassigned",
 						department: validated.department,
 						priority: validated.priority,
 						search: validated.search,
 						dueBefore: validated.dueBefore,
 						dueAfter: validated.dueAfter,
+						view: validated.view,
+						dueBucket: validated.dueBucket,
+						currentUserId: user.$id,
+						timeZone,
 					},
 					{ limit: validated.limit, offset: validated.offset },
 				),
@@ -83,6 +96,7 @@ export async function GET(request: NextRequest) {
 				total: result.total,
 				limit: validated.limit,
 				offset: validated.offset,
+				counts: result.counts,
 			},
 		});
 	} catch (error) {

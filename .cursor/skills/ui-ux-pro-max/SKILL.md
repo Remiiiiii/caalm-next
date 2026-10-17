@@ -10,6 +10,20 @@ description: >-
 
 Comprehensive design guide for web and mobile applications. Contains 67 styles, 96 color palettes, 57 font pairings, 99 UX guidelines, and 25 chart types across 13 technology stacks. Searchable database with priority-based recommendations.
 
+## CAALM hard rules (product UI)
+
+When this skill runs inside **caalm-next** (or any CAALM product UI):
+
+- **Cards:** every card / page shell / table panel uses `glass-card` + `<div className="glass-card-cap" />`. Never solid white shells (`bg-white` + `border-slate-*` + `shadow-sm`). Clickable: also `interactive-glass-card`.
+- **Dropdowns:** translucent glass (`bg-white/10` + blur) **without** card-cap. Nested submenus match. Divider above Delete.
+- **Tables:** use contracts chrome — `@/components/ui/caalm-data-table` (`DATA_TABLE_*`, `SortableDataTableHead`). Reference: `ContractsTableView.tsx`.
+- **Buttons:** primary actions `btn-primary`; delete actions `delete-btn` — both with Lucide icon + label.
+- **Avatars:** uploaded profile photo when available (with outer ring), else initials (`@/components/ui/avatar`).
+- **Badges:** CAALM pill (`rounded-full` + border + tint) — no dots inside; no truncated status labels. Table cell and sheet must share the same component.
+- Source of truth: `.cursor/rules/global-style-guide.mdc` and `design-system/caalm/MASTER.md`.
+
+These override generic skill recommendations that suggest opaque white cards, default shadcn badges, or outline-only primary buttons.
+
 ## Prerequisites
 
 Check if Python is installed:

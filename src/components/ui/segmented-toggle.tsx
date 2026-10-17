@@ -11,6 +11,8 @@ export type SegmentedToggleTab<T extends string = string> = {
 	hideLabel?: boolean;
 	ariaLabel?: string;
 	count?: number;
+	/** Optional color for the count (e.g. amber for unassigned, red for overdue) */
+	countClassName?: string;
 };
 
 export function SegmentedToggle<T extends string>({
@@ -80,7 +82,14 @@ export function SegmentedToggle<T extends string>({
 							<span className="truncate">{tab.label}</span>
 						)}
 						{typeof tab.count === "number" ? (
-							<span className="tabular-nums text-slate-500">{tab.count}</span>
+							<span
+								className={cn(
+									"tabular-nums",
+									tab.countClassName || "text-slate-500",
+								)}
+							>
+								{tab.count}
+							</span>
 						) : null}
 					</button>
 				);

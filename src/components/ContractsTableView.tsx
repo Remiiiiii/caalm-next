@@ -22,7 +22,7 @@ import {
 	DATA_TABLE_BODY_ROW_CLICKABLE,
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
-} from "@/lib/ui/data-table-styles";
+} from "@/components/ui/caalm-data-table";
 import { cn, convertFileSize, getProfilePictureUrl } from "@/lib/utils";
 import type { UIFileDoc } from "@/types/files";
 import ActionDropdown from "./ActionDropdown";

@@ -13,6 +13,8 @@ export type ShareDirectoryUser = {
 	fullName: string;
 	email: string;
 	department: string;
+	/** Optional division under the department (nested assignee menus) */
+	division?: string | null;
 	/** Appwrite profile picture file id, when set */
 	avatar?: string | null;
 };
@@ -88,14 +90,35 @@ export async function GET(request: NextRequest) {
 					!candidate.includes("avatar-placeholder")
 						? candidate
 						: null;
+				const departmentLabel =
+					String(
+						user.departmentLabel || user.department || "",
+					).trim() || "";
+				const divisionLabel =
+					String(user.divisionLabel || user.division || "").trim() ||
+					"";
+				// Department is top level; division nests under it when both exist
+				let department = "Other";
+				let division: string | null = null;
+				if (departmentLabel) {
+					department = departmentLabel;
+					if (
+						divisionLabel &&
+						divisionLabel.toLowerCase() !== departmentLabel.toLowerCase()
+					) {
+						division = divisionLabel;
+					}
+				} else if (divisionLabel) {
+					// Legacy rows with only division — treat as a top-level group
+					department = divisionLabel;
+				}
 				const entry: ShareDirectoryUser = {
 					$id: String(user.$id || ""),
 					accountId: String(user.accountId || "").trim() || null,
 					fullName: String(user.fullName || "Unknown").trim() || "Unknown",
 					email,
-					department:
-						String(user.department || user.division || "Other").trim() ||
-						"Other",
+					department,
+					division,
 					avatar,
 				};
 				return entry;

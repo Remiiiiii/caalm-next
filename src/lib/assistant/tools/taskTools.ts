@@ -114,6 +114,8 @@ export const TASK_TOOLS: ToolDefinition[] = [
 				dueDate: args.dueDate ? String(args.dueDate) : undefined,
 				priority: (args.priority as "low" | "medium" | "high") || "medium",
 				status: "not_started",
+				createdSource: "assistant",
+				requestedById: ctx.user.$id,
 			});
 			const userName =
 				(ctx.user as { fullName?: string }).fullName ||
@@ -274,6 +276,8 @@ export const TASK_TOOLS: ToolDefinition[] = [
 				status: "not_started",
 				linkedEntityType: "contract",
 				linkedEntityId: String(contract.id),
+				createdSource: "assistant",
+				requestedById: ctx.user.$id,
 			});
 			return {
 				result: {

@@ -5,6 +5,7 @@
 
 export type TaskStatus = "not_started" | "in_progress" | "blocked" | "done";
 export type TaskPriority = "low" | "medium" | "high" | "urgent";
+export type TaskCreatedSource = "manual" | "assistant";
 export type TaskLinkedEntityType =
 	| "contract"
 	| "license"
@@ -26,6 +27,9 @@ export interface Task {
 	linkedEntityType?: TaskLinkedEntityType;
 	linkedEntityId?: string;
 	completedAt?: string;
+	deletedAt?: string;
+	createdSource?: TaskCreatedSource;
+	requestedById?: string;
 	$createdAt: string;
 	$updatedAt: string;
 }
@@ -58,4 +62,12 @@ export const TASK_ATTRIBUTES = [
 	},
 	{ key: "linkedEntityId", type: "string" as const, size: 64, required: false },
 	{ key: "completedAt", type: "datetime" as const, required: false },
+	{ key: "deletedAt", type: "datetime" as const, required: false },
+	{
+		key: "createdSource",
+		type: "enum" as const,
+		elements: ["manual", "assistant"],
+		required: false,
+	},
+	{ key: "requestedById", type: "string" as const, size: 64, required: false },
 ] as const;

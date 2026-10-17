@@ -17,6 +17,10 @@ const DropdownMenuSub = DropdownMenuPrimitive.Sub;
 
 const DropdownMenuRadioGroup = DropdownMenuPrimitive.RadioGroup;
 
+/** Translucent glass panel for menus — never add a card-cap bar on dropdowns */
+const GLASS_DROPDOWN_PANEL =
+	"z-50 min-w-[8rem] overflow-hidden rounded-md border border-white/30 bg-white/10 p-1 text-slate-700 shadow-md backdrop-blur data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2";
+
 const DropdownMenuSubTrigger = React.forwardRef<
 	React.ElementRef<typeof DropdownMenuPrimitive.SubTrigger>,
 	React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.SubTrigger> & {
@@ -26,14 +30,14 @@ const DropdownMenuSubTrigger = React.forwardRef<
 	<DropdownMenuPrimitive.SubTrigger
 		ref={ref}
 		className={cn(
-			"flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none focus:bg-accent data-[state=open]:bg-accent",
+			"flex cursor-pointer select-none items-center rounded-md px-2 py-1.5 text-sm outline-none focus:bg-transparent data-[state=open]:bg-transparent data-[highlighted]:bg-transparent",
 			inset && "pl-8",
 			className,
 		)}
 		{...props}
 	>
 		{children}
-		<ChevronRight className="ml-auto h-4 w-4" />
+		<ChevronRight className="ml-auto h-4 w-4 shrink-0 text-slate-500" />
 	</DropdownMenuPrimitive.SubTrigger>
 ));
 DropdownMenuSubTrigger.displayName =
@@ -46,10 +50,7 @@ const DropdownMenuSubContent = React.forwardRef<
 	<DropdownMenuPrimitive.Portal>
 		<DropdownMenuPrimitive.SubContent
 			ref={ref}
-			className={cn(
-				"z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
-				className,
-			)}
+			className={cn(GLASS_DROPDOWN_PANEL, className)}
 			{...props}
 		/>
 	</DropdownMenuPrimitive.Portal>
@@ -65,10 +66,7 @@ const DropdownMenuContent = React.forwardRef<
 		<DropdownMenuPrimitive.Content
 			ref={ref}
 			sideOffset={sideOffset}
-			className={cn(
-				"relative z-50 min-w-[8rem] overflow-visible rounded-md border border-white/30 bg-white/10 p-1 pt-4 text-slate-700 shadow-md backdrop-blur data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 before:absolute before:top-0 before:left-0 before:right-0 before:h-4 before:rounded-t-md before:bg-[#d6d7d8] before:opacity-70",
-				className,
-			)}
+			className={cn(GLASS_DROPDOWN_PANEL, className)}
 			{...props}
 		/>
 	</DropdownMenuPrimitive.Portal>
@@ -84,7 +82,7 @@ const DropdownMenuItem = React.forwardRef<
 	<DropdownMenuPrimitive.Item
 		ref={ref}
 		className={cn(
-			"relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+			"relative flex cursor-pointer select-none items-center rounded-md px-2 py-1.5 text-sm outline-none transition-colors focus:bg-transparent focus:text-slate-700 data-[highlighted]:bg-transparent data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
 			inset && "pl-8",
 			className,
 		)}
@@ -223,14 +221,11 @@ const AppDropdownMenuContent = React.forwardRef<
 >(({ className, contentClassName, children, ...props }, ref) => (
 	<DropdownMenuContent
 		ref={ref}
-		className={cn(
-			"relative min-w-[12rem] overflow-visible border border-white/30 bg-white/10 p-0 text-slate-700 backdrop-blur",
-			className,
-		)}
+		className={cn("min-w-[12rem] p-0", className)}
 		{...props}
 	>
-		<div className="absolute top-0 left-0 right-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
-		<div className={cn("px-1 pb-1 pt-4", contentClassName)}>{children}</div>
+		{/* No card-cap on dropdowns — glass panel only */}
+		<div className={cn("p-1", contentClassName)}>{children}</div>
 	</DropdownMenuContent>
 ));
 AppDropdownMenuContent.displayName = "AppDropdownMenuContent";

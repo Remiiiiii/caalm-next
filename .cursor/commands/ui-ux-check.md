@@ -4,7 +4,9 @@ Run this checklist against the page or components you changed.
 
 ## Glass and brand
 
-- [ ] Cards use `glass-card` with `glass-card-cap` (blur + shadow kept)
+- [ ] Cards / page shells / table panels use `glass-card` with `glass-card-cap` (blur + shadow kept)
+- [ ] No solid white card shells (`bg-white` + `border-slate-*` + `shadow-sm`) as the main surface
+- [ ] Dropdown menus use glass panels with **no card-cap**; Delete items have a separator above them
 - [ ] Clickable cards also use `interactive-glass-card`
 - [ ] Body text is `text-slate-700` / muted `text-slate-600` (readable on glass)
 - [ ] Brand blue `#0f5384` and Poppins unchanged (no indigo/Fira swap)
@@ -27,6 +29,9 @@ Run this checklist against the page or components you changed.
 - [ ] Page container: `w-full px-4 sm:px-6 lg:px-8 xl:px-12`
 - [ ] Stat grids: `gap-6` (not `gap-4`)
 - [ ] Stat cards: content in `CardContent` only (no `CardHeader` on metrics)
+- [ ] Data tables use contracts chrome (`CaalmDataTable` / `DATA_TABLE_*`)
+- [ ] Primary buttons `btn-primary`; delete buttons `delete-btn`
+- [ ] Avatars: uploaded photo else initials
 - [ ] Responsive: check 375px, 768px, 1024px, 1440px — no horizontal scroll
 
 ## Motion and a11y

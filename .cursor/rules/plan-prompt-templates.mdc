@@ -34,30 +34,23 @@ Skip this rule for tiny one-line fixes with no feature, page, schema, roadmap, s
 
 ## First response behavior
 
-### Clear single match → auto-pick (no question)
+### Plan mode — always show A–K (hard rule)
 
-If the ask clearly fits **exactly one** of A–J, **do not ask**. Silently select that letter, load the matching `.md`, and continue.
+When **Plan mode** is selected, the **first** reply in that planning thread **must** include the full A–K menu below. No silent auto-pick, no skipping because the task “obviously” fits one letter, no exceptions.
 
-Examples of clear matches:
+- If the user **already** named one or more templates in the **same** message (e.g. “A and D”, “use ui-page”), acknowledge those letters, still show the menu once for the record, then continue planning with the chosen template(s).
+- Do **not** call `CreatePlan` or write a substantive implementation plan until the user has picked A–K (or confirmed a combination they named in that message).
 
-- “Add licenses CSV export API + button” → **A**
-- “Implement PRD S1 B1 / NPO batch / roadmap batch PR #…” → **B**
-- “Review this PR for RBAC / before merge check permissions” → **C**
-- “Build a new settings page for …” → **D**
-- “Add Appwrite attribute / sync demo schema” → **E**
-- “Add a confirm dialog for archive license” → **F**
-- “Bug: export button 500s on /licenses” → **G**
-- “CI red: test:api-authz failing on this PR” → **H**
-- “Add PERMISSIONS.X.Y and assign Super Admin + Org Admin in prod and demo” → **I**
-- “Write an audit entry when a license is renewed” → **J**
+### Agent mode — “make a plan”
 
-### Ambiguous or multi-match → ask once
+When the user asks to **make a plan** in Agent mode (not Plan mode):
 
-If none fit, more than one could fit, or intent is unclear, the **first** reply must be only:
+- If the ask clearly fits **exactly one** of A–J, you may auto-pick that letter, load the matching `.md`, and continue without showing the menu.
+- Otherwise, the first reply must be only the menu question + A–K list; wait for a choice before planning.
+
+### A–K menu (copy for Plan mode first reply)
 
 > Which template do you want to use?
-
-Then list:
 
 - **A** — Feature delivery (API + UI) — `feature-delivery.md`
 - **B** — Roadmap batch PR (CLM / NPO / PRD) — `roadmap-batch-pr.md`
@@ -71,7 +64,20 @@ Then list:
 - **J** — Audit write path — `audit-write-path.md`
 - **K** — Other (no template)
 
-Wait for A–K (or the file name). Do not start the full plan until they choose, unless they already named a template in the same message.
+**Multi-template:** User may pick several letters (e.g. **A + D**). Read each `.md`, merge bracket fields in memory, and plan against the combined brief.
+
+### Auto-pick examples (Agent mode only)
+
+- “Add licenses CSV export API + button” → **A**
+- “Implement PRD S1 B1 / NPO batch / roadmap batch PR #…” → **B**
+- “Review this PR for RBAC / before merge check permissions” → **C**
+- “Build a new settings page for …” → **D**
+- “Add Appwrite attribute / sync demo schema” → **E**
+- “Add a confirm dialog for archive license” → **F**
+- “Bug: export button 500s on /licenses” → **G**
+- “CI red: test:api-authz failing on this PR” → **H**
+- “Add PERMISSIONS.X.Y and assign Super Admin + Org Admin in prod and demo” → **I**
+- “Write an audit entry when a license is renewed” → **J**
 
 ### K — Other
 
