@@ -3,8 +3,8 @@
 import { Calendar, CircleDot, Flag } from "lucide-react";
 import { SearchField } from "@/components/ui/search-field";
 import type { TaskDueBucket, TaskPriority, TaskStatus } from "@/types/tasks";
+import { CaalmFilterSelect } from "@/components/ui/CaalmFilterSelect";
 import { TaskAssigneeFilter } from "./TaskAssigneeFilter";
-import { TaskPillSelect } from "./TaskPillSelect";
 import type { TaskPerson } from "./task-ui";
 
 export interface TaskListFilters {
@@ -59,14 +59,14 @@ export function TasksFilterBar({
 				onChange={(e) => onChange({ ...filters, search: e.target.value })}
 				containerClassName="h-9 w-full md:max-w-xs"
 			/>
-			<TaskPillSelect
+			<CaalmFilterSelect
 				value={filters.status}
 				options={STATUS_OPTIONS}
 				ariaLabel="Filter by status"
 				icon={CircleDot}
 				onChange={(status) => onChange({ ...filters, status })}
 			/>
-			<TaskPillSelect
+			<CaalmFilterSelect
 				value={filters.priority}
 				options={PRIORITY_OPTIONS}
 				ariaLabel="Filter by priority"
@@ -78,7 +78,7 @@ export function TasksFilterBar({
 				people={people}
 				onChange={(assigneeId) => onChange({ ...filters, assigneeId })}
 			/>
-			<TaskPillSelect
+			<CaalmFilterSelect
 				value={filters.dueBucket}
 				options={DUE_OPTIONS}
 				ariaLabel="Filter by due date"

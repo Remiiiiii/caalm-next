@@ -13,7 +13,12 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import {
-	Table,
+	CaalmDataTable,
+	DATA_TABLE_BODY_ROW_BASE,
+	DATA_TABLE_HEADER_CELL,
+	DATA_TABLE_HEADER_ROW,
+} from "@/components/ui/caalm-data-table";
+import {
 	TableBody,
 	TableCell,
 	TableHead,
@@ -21,6 +26,9 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import type { Task, TaskStatus } from "@/types/tasks";
+import { cn } from "@/lib/utils";
+
+const rowPad = "px-3 py-3 align-middle";
 
 const STATUS_LABELS: Record<TaskStatus, string> = {
 	not_started: "Not started",
@@ -173,20 +181,37 @@ export function TasksTable({
 				})}
 			</div>
 
-			<div className="hidden md:block overflow-x-auto">
-				<Table>
-					<TableHeader>
-						<TableRow>
-							<TableHead>Name</TableHead>
-							<TableHead>Status</TableHead>
-							<TableHead>Priority</TableHead>
-							<TableHead>Assignee</TableHead>
-							<TableHead>Due date</TableHead>
-							<TableHead>Linked</TableHead>
-							<TableHead className="w-[80px]">Actions</TableHead>
+			<CaalmDataTable className="hidden md:block">
+					<TableHeader className="[&_tr]:border-b-0">
+						<TableRow className={DATA_TABLE_HEADER_ROW}>
+							<TableHead
+								className={cn(DATA_TABLE_HEADER_CELL, "pl-4 pr-3")}
+							>
+								Name
+							</TableHead>
+							<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+								Status
+							</TableHead>
+							<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+								Priority
+							</TableHead>
+							<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+								Assignee
+							</TableHead>
+							<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+								Due date
+							</TableHead>
+							<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+								Linked
+							</TableHead>
+							<TableHead
+								className={cn(DATA_TABLE_HEADER_CELL, "w-[80px] pl-3 pr-4")}
+							>
+								Actions
+							</TableHead>
 						</TableRow>
 					</TableHeader>
-					<TableBody>
+					<TableBody className="[&_tr:last-child>td]:border-b-0">
 						{tasks.map((task) => {
 							const overdue =
 								task.dueDate &&
@@ -195,9 +220,9 @@ export function TasksTable({
 							return (
 								<TableRow
 									key={task.$id}
-									className="hover:bg-blue-50 transition-all duration-200"
+									className={DATA_TABLE_BODY_ROW_BASE}
 								>
-									<TableCell>
+									<TableCell className={cn(rowPad, "pl-4 pr-3")}>
 										<div className="font-medium text-slate-700">
 											{task.title}
 										</div>
@@ -207,7 +232,7 @@ export function TasksTable({
 											</p>
 										) : null}
 									</TableCell>
-									<TableCell>
+									<TableCell className={rowPad}>
 										{canEdit ? (
 											<Select
 												value={task.status}
@@ -215,7 +240,7 @@ export function TasksTable({
 													onStatusChange(task.$id, value as TaskStatus)
 												}
 											>
-												<SelectTrigger className="w-[140px] h-8 bg-white">
+												<SelectTrigger className="w-[140px] h-8 border-[0.25px] border-slate-300 bg-white">
 													<SelectValue />
 												</SelectTrigger>
 												<SelectContent>
@@ -237,19 +262,19 @@ export function TasksTable({
 											</Badge>
 										)}
 									</TableCell>
-									<TableCell>
+									<TableCell className={rowPad}>
 										<span
 											className={`text-sm font-medium capitalize ${PRIORITY_CLASS[task.priority] || ""}`}
 										>
 											{task.priority}
 										</span>
 									</TableCell>
-									<TableCell className="text-sm text-slate-700">
+									<TableCell className={cn(rowPad, "text-sm text-slate-700")}>
 										{task.assigneeId
 											? assigneeNames[task.assigneeId] || "Assigned"
 											: "Unassigned"}
 									</TableCell>
-									<TableCell>
+									<TableCell className={rowPad}>
 										{task.dueDate ? (
 											<span
 												className={`inline-flex items-center gap-1 text-sm ${
@@ -263,7 +288,7 @@ export function TasksTable({
 											<span className="text-sm text-slate-400">None</span>
 										)}
 									</TableCell>
-									<TableCell>
+									<TableCell className={rowPad}>
 										{task.linkedEntityType &&
 										task.linkedEntityType !== "none" ? (
 											<span className="inline-flex items-center gap-1 text-xs text-slate-600 capitalize">
@@ -274,7 +299,7 @@ export function TasksTable({
 											<span className="text-sm text-slate-400">—</span>
 										)}
 									</TableCell>
-									<TableCell>
+									<TableCell className={cn(rowPad, "pl-3 pr-4")}>
 										{canEdit ? (
 											<Button
 												type="button"
@@ -292,8 +317,7 @@ export function TasksTable({
 							);
 						})}
 					</TableBody>
-				</Table>
-			</div>
+			</CaalmDataTable>
 		</>
 	);
 }

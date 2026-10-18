@@ -15,6 +15,7 @@ import {
 } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import { DropdownScrollArea } from "@/components/ui/DropdownScrollArea";
 import {
 	Popover,
 	PopoverContent,
@@ -70,9 +71,11 @@ function CaptionMenu({
 			<PopoverContent
 				align="start"
 				sideOffset={4}
-				className="w-auto max-h-56 overflow-y-auto rounded-xl border border-slate-200 bg-white p-2 shadow-lg"
+				className="w-auto overflow-hidden rounded-xl border border-slate-200 bg-white p-2 shadow-lg"
 			>
-				{children}
+				<DropdownScrollArea maxHeightClassName="max-h-56">
+					{children}
+				</DropdownScrollArea>
 			</PopoverContent>
 		</Popover>
 	);

@@ -9,6 +9,7 @@ import RoundedUnderlineTabs from "@/components/RoundedUnderlineTabs";
 import { Button } from "@/components/ui/button";
 import { CaalmCalendarPanel } from "@/components/ui/caalm-date-picker";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DropdownScrollArea } from "@/components/ui/DropdownScrollArea";
 import {
 	AppDropdownMenuContent,
 	AppDropdownMenuItem,
@@ -145,12 +146,9 @@ const ContractsFilter: React.FC<ContractsFilterProps> = ({
 					}))}
 				/>
 
-				<div
-					className={
-						tab === "dates"
-							? "overflow-y-auto p-1"
-							: "max-h-64 overflow-y-auto p-1"
-					}
+				<DropdownScrollArea
+					maxHeightClassName={tab === "dates" ? "max-h-80" : "max-h-64"}
+					className="p-1"
 				>
 					{tab === "status" ? (
 						<>
@@ -268,7 +266,7 @@ const ContractsFilter: React.FC<ContractsFilterProps> = ({
 							))}
 						</>
 					) : null}
-				</div>
+				</DropdownScrollArea>
 
 				{activeCount > 0 ? (
 					<>

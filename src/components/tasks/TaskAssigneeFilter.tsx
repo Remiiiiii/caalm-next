@@ -4,7 +4,9 @@ import { Check, ChevronDown, Search, Users } from "lucide-react";
 import Image from "next/image";
 import { useMemo, useState } from "react";
 import Avatar from "@/components/ui/avatar";
+import { DropdownScrollArea } from "@/components/ui/DropdownScrollArea";
 import {
+	DROPDOWN_ITEM_LABEL_CLASS,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
@@ -85,7 +87,9 @@ function PersonRow({
 				size="sm"
 				imageUrl={person.imageUrl}
 			/>
-			<span className="min-w-0 flex-1 truncate font-medium text-slate-700">
+			<span
+				className={cn("min-w-0 flex-1 truncate", DROPDOWN_ITEM_LABEL_CLASS)}
+			>
 				{person.name}
 			</span>
 			{selected ? (
@@ -209,7 +213,10 @@ export function TaskAssigneeFilter({
 					/>
 				</button>
 			</DropdownMenuTrigger>
-			<DropdownMenuContent align="start" className="w-72 p-0">
+			<DropdownMenuContent
+				align="start"
+				className="w-72 overflow-x-hidden p-0"
+			>
 				<div className="border-b border-slate-200/80 p-2">
 					<label className="flex h-9 items-center gap-2 rounded-md border-[0.25px] border-slate-300 bg-white px-2.5">
 						<Search className="h-4 w-4 shrink-0 text-slate-500" aria-hidden />
@@ -223,7 +230,7 @@ export function TaskAssigneeFilter({
 						/>
 					</label>
 				</div>
-				<div className="max-h-72 overflow-y-auto py-1">
+				<DropdownScrollArea className="px-1 py-1">
 					{searchHits ? (
 						searchHits.length === 0 ? (
 							<p className="px-3 py-4 text-center text-xs text-slate-500">
@@ -253,7 +260,7 @@ export function TaskAssigneeFilter({
 										<span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-slate-700">
 											<Users className="h-3.5 w-3.5" aria-hidden />
 										</span>
-										<span className="flex-1 font-medium text-slate-700">
+										<span className={cn("flex-1", DROPDOWN_ITEM_LABEL_CLASS)}>
 											All assignees
 										</span>
 										{isAll ? (
@@ -268,7 +275,7 @@ export function TaskAssigneeFilter({
 										}}
 									>
 										<span className="flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-slate-300" />
-										<span className="flex-1 font-medium text-slate-700">
+										<span className={cn("flex-1", DROPDOWN_ITEM_LABEL_CLASS)}>
 											Unassigned
 										</span>
 										{value === "unassigned" ? (
@@ -287,7 +294,7 @@ export function TaskAssigneeFilter({
 										}}
 									>
 										<span className="flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-slate-300" />
-										<span className="flex-1 font-medium text-slate-700">
+										<span className={cn("flex-1", DROPDOWN_ITEM_LABEL_CLASS)}>
 											Unassigned
 										</span>
 									</DropdownMenuItem>
@@ -302,22 +309,29 @@ export function TaskAssigneeFilter({
 										<DropdownMenuSub key={dept.name}>
 											<DropdownMenuSubTrigger className="cursor-pointer gap-2">
 												<DepartmentIcon />
-												<span className="truncate font-medium text-slate-700">
+												<span
+													className={cn(
+														"min-w-0 flex-1 truncate",
+														DROPDOWN_ITEM_LABEL_CLASS,
+													)}
+												>
 													{dept.name}
 												</span>
-												<span className="ml-auto mr-1 text-xs tabular-nums text-slate-500">
+												<span className="shrink-0 text-xs tabular-nums text-slate-500">
 													{dept.direct.length}
 												</span>
 											</DropdownMenuSubTrigger>
-											<DropdownMenuSubContent className="max-h-64 w-56 overflow-y-auto">
-												{dept.direct.map((p) => (
-													<PersonRow
-														key={p.id}
-														person={p}
-														selected={value === p.id}
-														onSelect={() => select(p.id)}
-													/>
-												))}
+											<DropdownMenuSubContent className="w-56 overflow-hidden p-1">
+												<DropdownScrollArea maxHeightClassName="max-h-64">
+													{dept.direct.map((p) => (
+														<PersonRow
+															key={p.id}
+															person={p}
+															selected={value === p.id}
+															onSelect={() => select(p.id)}
+														/>
+													))}
+												</DropdownScrollArea>
 											</DropdownMenuSubContent>
 										</DropdownMenuSub>
 									);
@@ -328,45 +342,62 @@ export function TaskAssigneeFilter({
 										<DropdownMenuSub key={dept.name}>
 											<DropdownMenuSubTrigger className="cursor-pointer gap-2">
 												<DepartmentIcon />
-												<span className="truncate font-medium text-slate-700">
+												<span
+													className={cn(
+														"min-w-0 flex-1 truncate",
+														DROPDOWN_ITEM_LABEL_CLASS,
+													)}
+												>
 													{dept.name}
 												</span>
 											</DropdownMenuSubTrigger>
-											<DropdownMenuSubContent className="max-h-72 w-56 overflow-y-auto">
-												{dept.direct.map((p) => (
-													<PersonRow
-														key={p.id}
-														person={p}
-														selected={value === p.id}
-														onSelect={() => select(p.id)}
-													/>
-												))}
-												{dept.direct.length > 0 && dept.divisions.length > 0 ? (
-													<DropdownMenuSeparator />
-												) : null}
-												{dept.divisions.map((div) => (
-													<DropdownMenuSub key={`${dept.name}:${div.name}`}>
-														<DropdownMenuSubTrigger className="cursor-pointer gap-2">
-															<DepartmentIcon />
-															<span className="truncate text-slate-700">
-																{div.name}
-															</span>
-															<span className="ml-auto mr-1 text-xs tabular-nums text-slate-500">
-																{div.people.length}
-															</span>
-														</DropdownMenuSubTrigger>
-														<DropdownMenuSubContent className="max-h-64 w-56 overflow-y-auto">
-															{div.people.map((p) => (
-																<PersonRow
-																	key={p.id}
-																	person={p}
-																	selected={value === p.id}
-																	onSelect={() => select(p.id)}
-																/>
-															))}
-														</DropdownMenuSubContent>
-													</DropdownMenuSub>
-												))}
+											<DropdownMenuSubContent className="w-56 overflow-hidden p-1">
+												<DropdownScrollArea maxHeightClassName="max-h-72">
+													{dept.direct.map((p) => (
+														<PersonRow
+															key={p.id}
+															person={p}
+															selected={value === p.id}
+															onSelect={() => select(p.id)}
+														/>
+													))}
+													{dept.direct.length > 0 &&
+													dept.divisions.length > 0 ? (
+														<DropdownMenuSeparator />
+													) : null}
+													{dept.divisions.map((div) => (
+														<DropdownMenuSub
+															key={`${dept.name}:${div.name}`}
+														>
+															<DropdownMenuSubTrigger className="cursor-pointer gap-2">
+																<DepartmentIcon />
+																<span
+																	className={cn(
+																		"min-w-0 flex-1 truncate",
+																		DROPDOWN_ITEM_LABEL_CLASS,
+																	)}
+																>
+																	{div.name}
+																</span>
+																<span className="shrink-0 text-xs tabular-nums text-slate-500">
+																	{div.people.length}
+																</span>
+															</DropdownMenuSubTrigger>
+															<DropdownMenuSubContent className="w-56 overflow-hidden p-1">
+																<DropdownScrollArea maxHeightClassName="max-h-64">
+																	{div.people.map((p) => (
+																		<PersonRow
+																			key={p.id}
+																			person={p}
+																			selected={value === p.id}
+																			onSelect={() => select(p.id)}
+																		/>
+																	))}
+																</DropdownScrollArea>
+															</DropdownMenuSubContent>
+														</DropdownMenuSub>
+													))}
+												</DropdownScrollArea>
 											</DropdownMenuSubContent>
 										</DropdownMenuSub>
 									);
@@ -381,7 +412,7 @@ export function TaskAssigneeFilter({
 							) : null}
 						</>
 					)}
-				</div>
+				</DropdownScrollArea>
 			</DropdownMenuContent>
 		</DropdownMenu>
 	);

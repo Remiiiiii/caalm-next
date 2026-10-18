@@ -30,7 +30,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { LoadingSpinner } from "@/components/ui/loading";
 import {
-	Table,
+	CaalmDataTable,
+	DATA_TABLE_BODY_ROW_BASE,
+	DATA_TABLE_HEADER_CELL,
+	DATA_TABLE_HEADER_ROW,
+} from "@/components/ui/caalm-data-table";
+import {
 	TableBody,
 	TableCell,
 	TableHead,
@@ -45,11 +50,6 @@ import {
 } from "@/components/ui/tooltip";
 import { useStepUp } from "@/contexts/StepUpContext";
 import { useToast } from "@/hooks/use-toast";
-import {
-	DATA_TABLE_BODY_ROW_BASE,
-	DATA_TABLE_HEADER_CELL,
-	DATA_TABLE_HEADER_ROW,
-} from "@/lib/ui/data-table-styles";
 import { cn } from "@/lib/utils";
 
 export interface PaymentMethodRow {
@@ -309,27 +309,32 @@ export default function PaymentMethodsSection({
 							) : null}
 
 							{!loading && !error && paymentMethods.length > 0 ? (
-								<div className="overflow-x-auto rounded-lg border border-slate-200">
-									<Table>
-										<TableHeader>
+								<CaalmDataTable className="px-0 sm:px-0 pb-0">
+										<TableHeader className="[&_tr]:border-b-0">
 											<TableRow className={DATA_TABLE_HEADER_ROW}>
-												<TableHead className={DATA_TABLE_HEADER_CELL}>
+												<TableHead
+													className={cn(DATA_TABLE_HEADER_CELL, "px-3")}
+												>
 													Credit card
 												</TableHead>
-												<TableHead className={DATA_TABLE_HEADER_CELL}>
+												<TableHead
+													className={cn(DATA_TABLE_HEADER_CELL, "px-3")}
+												>
 													Name
 												</TableHead>
-												<TableHead className={DATA_TABLE_HEADER_CELL}>
+												<TableHead
+													className={cn(DATA_TABLE_HEADER_CELL, "px-3")}
+												>
 													Expiration
 												</TableHead>
 												<TableHead
-													className={cn(DATA_TABLE_HEADER_CELL, "w-12")}
+													className={cn(DATA_TABLE_HEADER_CELL, "w-12 px-3")}
 												>
 													<span className="sr-only">Actions</span>
 												</TableHead>
 											</TableRow>
 										</TableHeader>
-										<TableBody>
+										<TableBody className="[&_tr:last-child>td]:border-b-0">
 											{paymentMethods.map((method) => (
 												<TableRow
 													key={method.id}
@@ -414,8 +419,7 @@ export default function PaymentMethodsSection({
 												</TableRow>
 											))}
 										</TableBody>
-									</Table>
-								</div>
+								</CaalmDataTable>
 							) : null}
 
 							{displayError ? (

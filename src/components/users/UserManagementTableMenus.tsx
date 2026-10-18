@@ -16,6 +16,7 @@ import {
 import { useState } from "react";
 import RoundedUnderlineTabs from "@/components/RoundedUnderlineTabs";
 import { Button } from "@/components/ui/button";
+import { DropdownScrollArea } from "@/components/ui/DropdownScrollArea";
 import {
 	AppDropdownMenuCheckboxItem,
 	AppDropdownMenuContent,
@@ -99,7 +100,7 @@ export function UserManagementFilterMenu({
 				}))}
 			/>
 
-			<div className="max-h-64 overflow-y-auto p-1">
+			<DropdownScrollArea maxHeightClassName="max-h-64" className="p-1">
 				{tab === "role" ? (
 					<>
 						<DropdownMenuLabel className="sidebar-gradient-text">
@@ -195,7 +196,7 @@ export function UserManagementFilterMenu({
 						</AppDropdownMenuCheckboxItem>
 					</>
 				) : null}
-			</div>
+			</DropdownScrollArea>
 
 			{activeFilterCount > 0 ? (
 				<>

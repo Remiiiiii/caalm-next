@@ -5,10 +5,15 @@ import { useState } from "react";
 import { AuditLogDetailDrawer } from "@/components/audits/AuditLogDetailDrawer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+	CaalmDataTable,
+	DATA_TABLE_BODY_ROW_CLICKABLE,
+	DATA_TABLE_HEADER_CELL,
+	DATA_TABLE_HEADER_ROW,
+} from "@/components/ui/caalm-data-table";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageIndex } from "@/components/ui/page-index";
 import {
-	Table,
 	TableBody,
 	TableCell,
 	TableHead,
@@ -21,6 +26,9 @@ import type {
 	AuditModule,
 } from "@/lib/audits/audit-log.utils";
 import { formatInTimezone } from "@/lib/timezone";
+import { cn } from "@/lib/utils";
+
+const rowPad = "px-3 py-3 align-middle";
 
 export interface AuditLog {
 	event_id: string;
@@ -160,26 +168,43 @@ export function AuditLogTable({
 
 	const tableBody = (
 		<>
-			<div className="overflow-x-auto">
-				<Table>
-					<TableHeader>
-						<TableRow className="border-slate-200 bg-slate-50">
-							<TableHead>Date</TableHead>
-							<TableHead>Source</TableHead>
-							<TableHead>Action</TableHead>
-							<TableHead>Module</TableHead>
-							<TableHead>Target</TableHead>
-							<TableHead>Details</TableHead>
-							<TableHead>Status</TableHead>
-							<TableHead className="w-[80px]" />
+			<CaalmDataTable className="px-0 sm:px-0 pb-0">
+					<TableHeader className="[&_tr]:border-b-0">
+						<TableRow className={DATA_TABLE_HEADER_ROW}>
+							<TableHead
+								className={cn(DATA_TABLE_HEADER_CELL, "pl-4 pr-3")}
+							>
+								Date
+							</TableHead>
+							<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+								Source
+							</TableHead>
+							<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+								Action
+							</TableHead>
+							<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+								Module
+							</TableHead>
+							<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+								Target
+							</TableHead>
+							<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+								Details
+							</TableHead>
+							<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+								Status
+							</TableHead>
+							<TableHead
+								className={cn(DATA_TABLE_HEADER_CELL, "w-[80px] pl-3 pr-4")}
+							/>
 						</TableRow>
 					</TableHeader>
-					<TableBody>
+					<TableBody className="[&_tr:last-child>td]:border-b-0">
 						{isLoading ? (
 							Array.from({ length: 5 }).map((_, index) => (
 								<TableRow key={`skeleton-${index}`}>
 									{Array.from({ length: 8 }).map((__, cell) => (
-										<TableCell key={`cell-${cell}`}>
+										<TableCell key={`cell-${cell}`} className={rowPad}>
 											<div className="h-4 w-full max-w-[120px] bg-slate-200 rounded animate-pulse" />
 										</TableCell>
 									))}
@@ -198,10 +223,15 @@ export function AuditLogTable({
 							logs.map((log) => (
 								<TableRow
 									key={`${log.event_id}-${log.created_at}`}
-									className="hover:bg-slate-50 transition-colors duration-200 cursor-pointer"
+									className={DATA_TABLE_BODY_ROW_CLICKABLE}
 									onClick={() => openDetails(log)}
 								>
-									<TableCell className="text-sm text-slate-700 whitespace-nowrap">
+									<TableCell
+										className={cn(
+											rowPad,
+											"pl-4 pr-3 text-sm text-slate-700 whitespace-nowrap",
+										)}
+									>
 										{log.created_at
 											? formatInTimezone(
 													new Date(log.created_at),
@@ -210,7 +240,7 @@ export function AuditLogTable({
 												)
 											: "—"}
 									</TableCell>
-									<TableCell>
+									<TableCell className={rowPad}>
 										<div className="text-sm font-medium text-slate-700">
 											{log.user_name}
 										</div>
@@ -218,11 +248,13 @@ export function AuditLogTable({
 											{log.user_email}
 										</div>
 									</TableCell>
-									<TableCell>{getActionBadge(log.action)}</TableCell>
-									<TableCell>
+									<TableCell className={rowPad}>
+										{getActionBadge(log.action)}
+									</TableCell>
+									<TableCell className={rowPad}>
 										<ModuleBadge module={log.module} />
 									</TableCell>
-									<TableCell className="max-w-[160px]">
+									<TableCell className={cn(rowPad, "max-w-[160px]")}>
 										<div className="text-sm text-slate-700 truncate">
 											{log.target_label || log.event_title}
 										</div>
@@ -232,13 +264,15 @@ export function AuditLogTable({
 											</div>
 										) : null}
 									</TableCell>
-									<TableCell className="max-w-[240px]">
+									<TableCell className={cn(rowPad, "max-w-[240px]")}>
 										<p className="text-sm text-slate-700 truncate">
 											{log.summary || log.event_title}
 										</p>
 									</TableCell>
-									<TableCell>{getStatusBadge(log.status)}</TableCell>
-									<TableCell>
+									<TableCell className={rowPad}>
+										{getStatusBadge(log.status)}
+									</TableCell>
+									<TableCell className={cn(rowPad, "pl-3 pr-4")}>
 										<Button
 											variant="ghost"
 											size="sm"
@@ -255,8 +289,7 @@ export function AuditLogTable({
 							))
 						)}
 					</TableBody>
-				</Table>
-			</div>
+			</CaalmDataTable>
 
 			{onPageChange ? (
 				<PageIndex

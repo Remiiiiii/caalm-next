@@ -11,7 +11,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-	Table,
+	CaalmDataTable,
+	DATA_TABLE_BODY_ROW_CLICKABLE,
+	DATA_TABLE_HEADER_CELL,
+	DATA_TABLE_HEADER_ROW,
+} from "@/components/ui/caalm-data-table";
+import {
 	TableBody,
 	TableCell,
 	TableHead,
@@ -31,11 +36,6 @@ import {
 	statusLabel,
 } from "@/lib/approvals/approvalsListUtils";
 import { toUserFacingErrorMessage } from "@/lib/errors/user-facing";
-import {
-	DATA_TABLE_BODY_ROW_CLICKABLE,
-	DATA_TABLE_HEADER_CELL,
-	DATA_TABLE_HEADER_ROW,
-} from "@/lib/ui/data-table-styles";
 import { cn } from "@/lib/utils";
 
 interface ApprovalsTableProps {
@@ -173,8 +173,7 @@ export default function ApprovalsTable({
 				onPreview={setPreviewItem}
 				onQuickApprove={quickApprove}
 			/>
-			<div className="hidden md:block w-full overflow-x-auto px-2 sm:px-4 pb-4">
-				<Table className="border-separate border-spacing-0">
+			<CaalmDataTable className="hidden md:block">
 					<TableHeader className="[&_tr]:border-b-0">
 						<TableRow className={DATA_TABLE_HEADER_ROW}>
 							<TableHead className={`${DATA_TABLE_HEADER_CELL} pl-4 pr-2 w-10`}>
@@ -338,8 +337,7 @@ export default function ApprovalsTable({
 							</TableRow>
 						))}
 					</TableBody>
-				</Table>
-			</div>
+			</CaalmDataTable>
 		</>
 	);
 }

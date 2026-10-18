@@ -7,7 +7,12 @@ import { useContractsView } from "@/components/ContractsViewContext";
 import { ContractApprovalStatusCell } from "@/components/contracts/ContractApprovalStatusCell";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-	Table,
+	CaalmDataTable,
+	DATA_TABLE_BODY_ROW_CLICKABLE,
+	DATA_TABLE_HEADER_CELL,
+	DATA_TABLE_HEADER_ROW,
+} from "@/components/ui/caalm-data-table";
+import {
 	TableBody,
 	TableCell,
 	TableHead,
@@ -18,11 +23,6 @@ import { useToast } from "@/hooks/use-toast";
 import type { AppUser } from "@/lib/actions/user.actions";
 import { fetchUserNamesByIds } from "@/lib/actions/user.actions";
 import { getExpiryUrgency } from "@/lib/contracts/contractsListUtils";
-import {
-	DATA_TABLE_BODY_ROW_CLICKABLE,
-	DATA_TABLE_HEADER_CELL,
-	DATA_TABLE_HEADER_ROW,
-} from "@/components/ui/caalm-data-table";
 import { cn, convertFileSize, getProfilePictureUrl } from "@/lib/utils";
 import type { UIFileDoc } from "@/types/files";
 import ActionDropdown from "./ActionDropdown";
@@ -559,8 +559,7 @@ export default function ContractsTableView({
 	}
 
 	return (
-		<div className="w-full overflow-x-auto px-2 sm:px-4 pb-4">
-			<Table className="border-separate border-spacing-0">
+		<CaalmDataTable>
 				<TableHeader className="[&_tr]:border-b-0">
 					<TableRow className={DATA_TABLE_HEADER_ROW}>
 						<TableHead className={`${DATA_TABLE_HEADER_CELL} pl-4 pr-2 w-10`}>
@@ -716,7 +715,6 @@ export default function ContractsTableView({
 						</TableRow>
 					))}
 				</TableBody>
-			</Table>
-		</div>
+		</CaalmDataTable>
 	);
 }

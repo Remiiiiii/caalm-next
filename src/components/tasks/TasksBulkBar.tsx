@@ -4,8 +4,8 @@ import { CircleDot, Flag } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import type { TaskPriority, TaskStatus } from "@/types/tasks";
+import { CaalmFilterSelect } from "@/components/ui/CaalmFilterSelect";
 import { TaskAssigneeFilter } from "./TaskAssigneeFilter";
-import { TaskPillSelect } from "./TaskPillSelect";
 import {
 	TASK_PRIORITY_LABELS,
 	TASK_STATUS_LABELS,
@@ -139,7 +139,7 @@ export function TasksBulkBar({
 				) : null}
 
 				{canEdit ? (
-					<TaskPillSelect
+					<CaalmFilterSelect
 						value={STATUS_OPTIONS[0]?.value ?? "not_started"}
 						options={STATUS_OPTIONS}
 						triggerLabel="Set status"
@@ -153,7 +153,7 @@ export function TasksBulkBar({
 				) : null}
 
 				{canEdit ? (
-					<TaskPillSelect
+					<CaalmFilterSelect
 						value={PRIORITY_OPTIONS[0]?.value ?? "medium"}
 						options={PRIORITY_OPTIONS}
 						triggerLabel="Priority"

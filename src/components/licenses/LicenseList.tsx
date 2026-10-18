@@ -23,7 +23,12 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-	Table,
+	CaalmDataTable,
+	DATA_TABLE_BODY_ROW_BASE,
+	DATA_TABLE_HEADER_CELL,
+	DATA_TABLE_HEADER_ROW,
+} from "@/components/ui/caalm-data-table";
+import {
 	TableBody,
 	TableCell,
 	TableHead,
@@ -32,7 +37,10 @@ import {
 } from "@/components/ui/table";
 import { usePermissions } from "@/hooks/usePermissions";
 import { canLicenseAction } from "@/lib/licenses/licenseUiPermissions";
+import { cn } from "@/lib/utils";
 import type { License } from "@/types/licenses";
+
+const rowPad = "px-3 py-3 align-middle";
 import LicenseAllocationDialog from "./LicenseAllocationDialog";
 import LicenseDetailView from "./LicenseDetailView";
 import LicenseForm from "./LicenseForm";
@@ -109,46 +117,52 @@ export default function LicenseList({ licenses, onRefresh }: LicenseListProps) {
 		<Card className="glass-card">
 			<div className="glass-card-cap" />
 			<CardContent className="p-4 sm:p-6">
-				<div className="w-full overflow-x-auto">
-					<Table>
-						<TableHeader>
-							<TableRow className="border-slate-200 bg-slate-50">
-								<TableHead className="font-semibold text-slate-700 py-4 whitespace-nowrap">
+				<CaalmDataTable className="px-0 sm:px-0 pb-0">
+						<TableHeader className="[&_tr]:border-b-0">
+							<TableRow className={DATA_TABLE_HEADER_ROW}>
+								<TableHead
+									className={cn(DATA_TABLE_HEADER_CELL, "pl-4 pr-3")}
+								>
 									License Name
 								</TableHead>
-								<TableHead className="font-semibold text-slate-700 py-4 whitespace-nowrap">
+								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
 									Vendor
 								</TableHead>
-								<TableHead className="font-semibold text-slate-700 py-4 whitespace-nowrap">
+								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
 									Type
 								</TableHead>
-								<TableHead className="font-semibold text-slate-700 py-4 whitespace-nowrap">
+								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
 									Status
 								</TableHead>
-								<TableHead className="font-semibold text-slate-700 py-4 whitespace-nowrap">
+								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
 									Quantity
 								</TableHead>
-								<TableHead className="font-semibold text-slate-700 py-4 whitespace-nowrap">
+								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
 									Cost
 								</TableHead>
-								<TableHead className="font-semibold text-slate-700 py-4 whitespace-nowrap">
+								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
 									Expires
 								</TableHead>
-								<TableHead className="font-semibold text-slate-700 py-4 whitespace-nowrap">
+								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
 									Department
 								</TableHead>
-								<TableHead className="font-semibold text-slate-700 py-4 text-right whitespace-nowrap">
+								<TableHead
+									className={cn(
+										DATA_TABLE_HEADER_CELL,
+										"pl-3 pr-4 text-right",
+									)}
+								>
 									Actions
 								</TableHead>
 							</TableRow>
 						</TableHeader>
-						<TableBody>
+						<TableBody className="[&_tr:last-child>td]:border-b-0">
 							{licenses.map((license) => (
 								<TableRow
 									key={license.$id}
-									className="border-slate-200 hover:bg-slate-50/50"
+									className={DATA_TABLE_BODY_ROW_BASE}
 								>
-									<TableCell className="py-4">
+									<TableCell className={cn(rowPad, "pl-4 pr-3")}>
 										<div className="flex items-center gap-2">
 											<Key className="h-4 w-4 text-slate-600" />
 											<span className="font-medium text-slate-700">
@@ -161,18 +175,18 @@ export default function LicenseList({ licenses, onRefresh }: LicenseListProps) {
 											</p>
 										)}
 									</TableCell>
-									<TableCell className="py-4 text-slate-700">
+									<TableCell className={cn(rowPad, "text-slate-700")}>
 										{license.vendor || "N/A"}
 									</TableCell>
-									<TableCell className="py-4">
+									<TableCell className={rowPad}>
 										<Badge variant="outline" className="text-slate-700">
 											{license.licenseType || "N/A"}
 										</Badge>
 									</TableCell>
-									<TableCell className="py-4">
+									<TableCell className={rowPad}>
 										{getStatusBadge(license.status)}
 									</TableCell>
-									<TableCell className="py-4 text-slate-700">
+									<TableCell className={cn(rowPad, "text-slate-700")}>
 										{license.quantity !== undefined ? (
 											<div>
 												<span>
@@ -189,10 +203,10 @@ export default function LicenseList({ licenses, onRefresh }: LicenseListProps) {
 											"N/A"
 										)}
 									</TableCell>
-									<TableCell className="py-4 text-slate-700">
+									<TableCell className={cn(rowPad, "text-slate-700")}>
 										{formatCurrency(license.cost, license.currencyCode)}
 									</TableCell>
-									<TableCell className="py-4">
+									<TableCell className={rowPad}>
 										<div className="flex items-center gap-1.5">
 											<Calendar className="h-3 w-3 text-slate-500" />
 											<span className="text-slate-700">
@@ -202,10 +216,10 @@ export default function LicenseList({ licenses, onRefresh }: LicenseListProps) {
 											</span>
 										</div>
 									</TableCell>
-									<TableCell className="py-4 text-slate-700">
+									<TableCell className={cn(rowPad, "text-slate-700")}>
 										{license.division || license.department || "N/A"}
 									</TableCell>
-									<TableCell className="py-4 text-right">
+									<TableCell className={cn(rowPad, "pl-3 pr-4 text-right")}>
 										<DropdownMenu>
 											<DropdownMenuTrigger asChild>
 												<Button
@@ -272,8 +286,7 @@ export default function LicenseList({ licenses, onRefresh }: LicenseListProps) {
 								</TableRow>
 							))}
 						</TableBody>
-					</Table>
-				</div>
+				</CaalmDataTable>
 			</CardContent>
 
 			{selectedLicense && (

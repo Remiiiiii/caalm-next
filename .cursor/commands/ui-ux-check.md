@@ -29,7 +29,7 @@ Run this checklist against the page or components you changed.
 - [ ] Page container: `w-full px-4 sm:px-6 lg:px-8 xl:px-12`
 - [ ] Stat grids: `gap-6` (not `gap-4`)
 - [ ] Stat cards: content in `CardContent` only (no `CardHeader` on metrics)
-- [ ] Data tables use contracts chrome (`CaalmDataTable` / `DATA_TABLE_*`)
+- [ ] Data tables use Assign Tasks chrome (`CaalmDataTable` / `DATA_TABLE_*`, reference `TasksDataTable`)
 - [ ] Primary buttons `btn-primary`; delete buttons `delete-btn`
 - [ ] Avatars: uploaded photo else initials
 - [ ] Responsive: check 375px, 768px, 1024px, 1440px — no horizontal scroll

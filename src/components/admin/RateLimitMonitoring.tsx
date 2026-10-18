@@ -23,7 +23,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { StatCardSkeleton } from "@/components/ui/skeletons";
 import {
-	Table,
+	CaalmDataTable,
+	DATA_TABLE_BODY_ROW_BASE,
+	DATA_TABLE_HEADER_CELL,
+	DATA_TABLE_HEADER_ROW,
+} from "@/components/ui/caalm-data-table";
+import {
 	TableBody,
 	TableCell,
 	TableHead,
@@ -32,6 +37,7 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { useRateLimitMetrics } from "@/hooks/useRateLimitMetrics";
+import { cn } from "@/lib/utils";
 
 export default function RateLimitMonitoring() {
 	const { metrics, isLoading, error, refresh, resetMetrics } =
@@ -297,45 +303,49 @@ export default function RateLimitMonitoring() {
 							</div>
 						</CardHeader>
 						<CardContent className="bg-slate-50 p-6">
-							<div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
-								<Table>
-									<TableHeader>
-										<TableRow className="bg-slate-50">
-											<TableHead className="text-slate-700 font-semibold">
+							<CaalmDataTable className="px-0 sm:px-0 pb-0">
+									<TableHeader className="[&_tr]:border-b-0">
+										<TableRow className={DATA_TABLE_HEADER_ROW}>
+											<TableHead
+												className={cn(DATA_TABLE_HEADER_CELL, "pl-4 pr-3")}
+											>
 												Identifier
 											</TableHead>
-											<TableHead className="text-slate-700 font-semibold">
+											<TableHead
+												className={cn(DATA_TABLE_HEADER_CELL, "px-3")}
+											>
 												Violations
 											</TableHead>
-											<TableHead className="text-slate-700 font-semibold">
+											<TableHead
+												className={cn(DATA_TABLE_HEADER_CELL, "pl-3 pr-4")}
+											>
 												Status
 											</TableHead>
 										</TableRow>
 									</TableHeader>
-									<TableBody>
+									<TableBody className="[&_tr:last-child>td]:border-b-0">
 										{topViolators.map((violator, index) => (
 											<TableRow
 												key={index}
-												className="hover:bg-blue-50 transition-colors"
+												className={DATA_TABLE_BODY_ROW_BASE}
 											>
-												<TableCell className="text-sm text-slate-700">
+												<TableCell className="px-3 py-3 pl-4 pr-3 text-sm text-slate-700">
 													{violator.identifier.length > 50
 														? `${violator.identifier.substring(0, 50)}...`
 														: violator.identifier}
 												</TableCell>
-												<TableCell>
+												<TableCell className="px-3 py-3">
 													<Badge variant="destructive">{violator.count}</Badge>
 												</TableCell>
-												<TableCell>
-													<Badge variant="outline" className="border-slate-300">
+												<TableCell className="px-3 py-3 pl-3 pr-4">
+													<span className="inline-block rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
 														Active
-													</Badge>
+													</span>
 												</TableCell>
 											</TableRow>
 										))}
 									</TableBody>
-								</Table>
-							</div>
+							</CaalmDataTable>
 						</CardContent>
 					</Card>
 				)}

@@ -15,8 +15,9 @@ Comprehensive design guide for web and mobile applications. Contains 67 styles, 
 When this skill runs inside **caalm-next** (or any CAALM product UI):
 
 - **Cards:** every card / page shell / table panel uses `glass-card` + `<div className="glass-card-cap" />`. Never solid white shells (`bg-white` + `border-slate-*` + `shadow-sm`). Clickable: also `interactive-glass-card`.
-- **Dropdowns:** translucent glass (`bg-white/10` + blur) **without** card-cap. Nested submenus match. Divider above Delete.
-- **Tables:** use contracts chrome — `@/components/ui/caalm-data-table` (`DATA_TABLE_*`, `SortableDataTableHead`). Reference: `ContractsTableView.tsx`.
+- **Dropdowns:** translucent glass (`bg-white/10` + blur) **without** card-cap. Nested submenus match. Divider above Delete. Scrollable lists use `DropdownScrollArea` (no native Windows scrollbar arrows).
+- **Spinners:** branded page-load spinner (`LoadingSpinner` `md` / `lg` / `fullScreen`) only for route / auth / full page loads. Cards and glass panels use `size="sm"` or skeletons.
+- **Tables:** use Assign Tasks chrome — `@/components/ui/caalm-data-table` (`CaalmDataTable`, `DATA_TABLE_*`, `SortableDataTableHead`). Reference: `TasksDataTable.tsx` (`/team/tasks`).
 - **Buttons:** primary actions `btn-primary`; delete actions `delete-btn` — both with Lucide icon + label.
 - **Avatars:** uploaded profile photo when available (with outer ring), else initials (`@/components/ui/avatar`).
 - **Badges:** CAALM pill (`rounded-full` + border + tint) — no dots inside; no truncated status labels. Table cell and sheet must share the same component.

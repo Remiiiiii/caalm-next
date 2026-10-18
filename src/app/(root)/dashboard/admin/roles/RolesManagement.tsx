@@ -30,7 +30,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { LoadingSpinner } from "@/components/ui/loading";
 import {
-	Table,
+	CaalmDataTable,
+	DATA_TABLE_BODY_ROW_BASE,
+	DATA_TABLE_HEADER_CELL,
+	DATA_TABLE_HEADER_ROW,
+} from "@/components/ui/caalm-data-table";
+import {
 	TableBody,
 	TableCell,
 	TableHead,
@@ -42,11 +47,6 @@ import { useOrganization } from "@/contexts/OrganizationContext";
 import { useStepUp } from "@/contexts/StepUpContext";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
-import {
-	DATA_TABLE_BODY_ROW_BASE,
-	DATA_TABLE_HEADER_CELL,
-	DATA_TABLE_HEADER_ROW,
-} from "@/lib/ui/data-table-styles";
 import { cn } from "@/lib/utils";
 
 interface RoleRow {
@@ -298,8 +298,7 @@ const RolesManagement = () => {
 		}
 
 		return (
-			<div className="w-full overflow-x-auto">
-				<Table className="border-separate border-spacing-0">
+			<CaalmDataTable className="px-0 sm:px-0 pb-0">
 					<TableHeader className="[&_tr]:border-b-0">
 						<TableRow className={DATA_TABLE_HEADER_ROW}>
 							<TableHead className={`${DATA_TABLE_HEADER_CELL} pl-4 pr-3`}>
@@ -371,8 +370,7 @@ const RolesManagement = () => {
 							);
 						})}
 					</TableBody>
-				</Table>
-			</div>
+			</CaalmDataTable>
 		);
 	};
 

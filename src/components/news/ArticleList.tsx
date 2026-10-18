@@ -48,7 +48,12 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import {
-	Table,
+	CaalmDataTable,
+	DATA_TABLE_BODY_ROW_BASE,
+	DATA_TABLE_HEADER_CELL,
+	DATA_TABLE_HEADER_ROW,
+} from "@/components/ui/caalm-data-table";
+import {
 	TableBody,
 	TableCell,
 	TableHead,
@@ -57,11 +62,6 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { useNewsArticles } from "@/hooks/useNewsArticles";
-import {
-	DATA_TABLE_BODY_ROW_BASE,
-	DATA_TABLE_HEADER_CELL,
-	DATA_TABLE_HEADER_ROW,
-} from "@/lib/ui/data-table-styles";
 import { cn } from "@/lib/utils";
 
 interface NewsArticle {
@@ -488,8 +488,7 @@ const ArticleList: React.FC<ArticleListProps> = ({ onEdit, onRefresh }) => {
 						</div>
 					) : (
 						<>
-							<div className="w-full overflow-x-auto px-2 sm:px-4 pb-4">
-								<Table className="border-separate border-spacing-0">
+							<CaalmDataTable>
 									<TableHeader className="[&_tr]:border-b-0">
 										<TableRow className={DATA_TABLE_HEADER_ROW}>
 											<TableHead
@@ -641,8 +640,7 @@ const ArticleList: React.FC<ArticleListProps> = ({ onEdit, onRefresh }) => {
 											</TableRow>
 										))}
 									</TableBody>
-								</Table>
-							</div>
+							</CaalmDataTable>
 
 							<PageIndex
 								className="mt-6"

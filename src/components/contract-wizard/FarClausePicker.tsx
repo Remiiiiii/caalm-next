@@ -3,6 +3,7 @@
 import { Loader2, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DropdownScrollArea } from "@/components/ui/DropdownScrollArea";
 import { Label } from "@/components/ui/label";
 import { SearchField } from "@/components/ui/search-field";
 import {
@@ -150,55 +151,59 @@ export function FarClausePicker({
 
 				{!loading && !error && (
 					<div
-						className="max-h-64 space-y-1 overflow-y-auto pr-1"
 						role="listbox"
 						aria-multiselectable="true"
 						aria-label="FAR Part 52 clauses"
 					>
-						{visible.length === 0 ? (
-							<p className="py-4 text-sm text-slate-600">
-								No clauses match that search.
-							</p>
-						) : (
-							visible.map((clause) => {
-								const checked = selectedSet.has(clause.number);
-								const id = `far-clause-${clause.number}`;
-								return (
-									<label
-										key={clause.number}
-										htmlFor={id}
-										className={cn(
-											"flex cursor-pointer items-start gap-3 rounded-md px-2 py-2 transition-colors duration-200 hover:bg-blue-50",
-											checked && "bg-blue/10",
-										)}
-									>
-										<Checkbox
-											id={id}
-											checked={checked}
-											className="mt-0.5"
-											onCheckedChange={(next) => {
-												onFocus?.();
-												toggle(clause.number, next === true);
-											}}
-										/>
-										<span className="min-w-0">
-											<span className="block text-sm font-medium text-slate-700">
-												{clause.number}
+						<DropdownScrollArea
+							maxHeightClassName="max-h-64"
+							className="space-y-1 pr-1"
+						>
+							{visible.length === 0 ? (
+								<p className="py-4 text-sm text-slate-600">
+									No clauses match that search.
+								</p>
+							) : (
+								visible.map((clause) => {
+									const checked = selectedSet.has(clause.number);
+									const id = `far-clause-${clause.number}`;
+									return (
+										<label
+											key={clause.number}
+											htmlFor={id}
+											className={cn(
+												"flex cursor-pointer items-start gap-3 rounded-md px-2 py-2 transition-colors duration-200 hover:bg-blue-50",
+												checked && "bg-blue/10",
+											)}
+										>
+											<Checkbox
+												id={id}
+												checked={checked}
+												className="mt-0.5"
+												onCheckedChange={(next) => {
+													onFocus?.();
+													toggle(clause.number, next === true);
+												}}
+											/>
+											<span className="min-w-0">
+												<span className="block text-sm font-medium text-slate-700">
+													{clause.number}
+												</span>
+												<span className="block text-xs text-slate-500">
+													{clause.title}
+												</span>
 											</span>
-											<span className="block text-xs text-slate-500">
-												{clause.title}
-											</span>
-										</span>
-									</label>
-								);
-							})
-						)}
-						{!query.trim() && clauses.length > visible.length && (
-							<p className="px-2 py-2 text-xs text-slate-500">
-								Showing first {visible.length} of {clauses.length}. Search to
-								narrow the list.
-							</p>
-						)}
+										</label>
+									);
+								})
+							)}
+							{!query.trim() && clauses.length > visible.length && (
+								<p className="px-2 py-2 text-xs text-slate-500">
+									Showing first {visible.length} of {clauses.length}. Search to
+									narrow the list.
+								</p>
+							)}
+						</DropdownScrollArea>
 					</div>
 				)}
 			</div>

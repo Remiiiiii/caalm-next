@@ -343,7 +343,7 @@ export function RiskAvertedDetailPage() {
 								</div>
 								<AnimatedUsd
 									amount={snapshot.secondary.amount}
-									className={`block pt-3 text-3xl font-bold tabular-nums tracking-tight ${mutedZeroClass(snapshot.secondary.amount)}`}
+									className={`block pt-3 text-3xl font-bold tabular-nums tracking-tight ${mutedZeroClass(snapshot.secondary.amount)}2`}
 								/>
 								<p className="mt-2 text-xs text-slate-600">
 									Face value under active monitoring.

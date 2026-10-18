@@ -1,5 +1,8 @@
 /**
- * Loading components for use with dynamic imports
+ * Loading spinners — see global-style-guide “Loading spinners”.
+ *
+ * - Page load / route transition / auth gate: `LoadingSpinner` at `md`/`lg`/`fullScreen`
+ * - Cards / glass panels / tables waiting on data: skeletons — never this branded spinner
  */
 
 import { cn } from "@/lib/utils";
@@ -12,7 +15,10 @@ const LOGO_SPINNER_WIDTH = {
 
 type LogoSpinnerSize = keyof typeof LOGO_SPINNER_WIDTH;
 
-/** Arc rotates clockwise; center mark stays fixed (same viewBox as assets). */
+/**
+ * Branded CAALM spinner (segmented arc + center mark).
+ * Page loads only — never render inside `.glass-card` / table shells.
+ */
 function BrandLogoSpinner({ size }: { size: LogoSpinnerSize }) {
 	const widthClass = LOGO_SPINNER_WIDTH[size];
 	return (

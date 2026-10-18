@@ -444,7 +444,7 @@ export default function CaalmAssistantSheet({
 				<div className="space-y-4">
 					{assistant.conversationLoading ? (
 						<LoadingSpinner
-							size="md"
+							size="sm"
 							label="Loading conversation…"
 							className="py-16"
 						/>

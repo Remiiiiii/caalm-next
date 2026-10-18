@@ -3,9 +3,14 @@
 import { Database } from "lucide-react";
 import useSWR from "swr";
 import { ITGlassPanel, ITPageShell } from "@/components/it/ITPageShell";
+import {
+	CaalmDataTable,
+	DATA_TABLE_BODY_ROW_BASE,
+	DATA_TABLE_HEADER_CELL,
+	DATA_TABLE_HEADER_ROW,
+} from "@/components/ui/caalm-data-table";
 import { LoadingSpinner } from "@/components/ui/loading";
 import {
-	Table,
 	TableBody,
 	TableCell,
 	TableHead,
@@ -13,6 +18,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { fetcher } from "@/lib/swr-config";
+import { cn } from "@/lib/utils";
 
 interface SchemaResponse {
 	success: boolean;
@@ -55,34 +61,44 @@ export default function DatabaseSchemaPage() {
 					<p className="text-sm text-slate-600 mb-4">
 						{data.data.total} tables in the active database
 					</p>
-					<div className="overflow-x-auto rounded-md border border-slate-200 bg-white">
-						<Table>
-							<TableHeader>
-								<TableRow>
-									<TableHead>Name</TableHead>
-									<TableHead>ID</TableHead>
-									<TableHead>Columns</TableHead>
-									<TableHead>Status</TableHead>
+					<CaalmDataTable className="px-0 sm:px-0 pb-0">
+						<TableHeader className="[&_tr]:border-b-0">
+							<TableRow className={DATA_TABLE_HEADER_ROW}>
+								<TableHead
+									className={cn(DATA_TABLE_HEADER_CELL, "pl-4 pr-3")}
+								>
+									Name
+								</TableHead>
+								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+									ID
+								</TableHead>
+								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+									Columns
+								</TableHead>
+								<TableHead
+									className={cn(DATA_TABLE_HEADER_CELL, "pl-3 pr-4")}
+								>
+									Status
+								</TableHead>
+							</TableRow>
+						</TableHeader>
+						<TableBody className="[&_tr:last-child>td]:border-b-0">
+							{data.data.tables.map((table) => (
+								<TableRow key={table.id} className={DATA_TABLE_BODY_ROW_BASE}>
+									<TableCell className="px-3 py-3 pl-4 pr-3 font-medium text-slate-700">
+										{table.name}
+									</TableCell>
+									<TableCell className="px-3 py-3 text-xs text-slate-600">
+										{table.id}
+									</TableCell>
+									<TableCell className="px-3 py-3">{table.columns}</TableCell>
+									<TableCell className="px-3 py-3 pl-3 pr-4">
+										{table.enabled ? "Enabled" : "Disabled"}
+									</TableCell>
 								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{data.data.tables.map((table) => (
-									<TableRow key={table.id}>
-										<TableCell className="font-medium text-slate-700">
-											{table.name}
-										</TableCell>
-										<TableCell className="text-xs text-slate-600">
-											{table.id}
-										</TableCell>
-										<TableCell>{table.columns}</TableCell>
-										<TableCell>
-											{table.enabled ? "Enabled" : "Disabled"}
-										</TableCell>
-									</TableRow>
-								))}
-							</TableBody>
-						</Table>
-					</div>
+							))}
+						</TableBody>
+					</CaalmDataTable>
 				</ITGlassPanel>
 			)}
 		</ITPageShell>

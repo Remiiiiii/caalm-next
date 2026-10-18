@@ -112,7 +112,7 @@
 
 ### Data tables
 
-Match the contracts table: `CaalmDataTable` + `DATA_TABLE_HEADER_ROW` / `DATA_TABLE_HEADER_CELL` / `DATA_TABLE_BODY_ROW_CLICKABLE` from `@/components/ui/caalm-data-table`. Sortable columns use `SortableDataTableHead`.
+Match the **Assign Tasks** table (`/team/tasks`, `TasksDataTable.tsx`): `CaalmDataTable` + `DATA_TABLE_HEADER_ROW` / `DATA_TABLE_HEADER_CELL` / `DATA_TABLE_BODY_ROW_CLICKABLE` from `@/components/ui/caalm-data-table`. Sortable columns use `SortableDataTableHead`.
 
 ### Buttons
 
@@ -200,6 +200,8 @@ Reference: `src/components/ContractsTableView.tsx` (`statusBadge`)
 **Best For:** Business intelligence dashboards, financial analytics, enterprise reporting, operational dashboards, data warehousing
 
 **Key Effects:** Hover tooltips, chart zoom on click, row highlighting on hover, smooth filter animations, data loading spinners
+
+**Loading spinners (hard rule):** The branded CAALM page-load spinner (`LoadingSpinner` `md` / `lg` / `fullScreen` — segmented arc + center mark) is **only** for route transitions, auth gates, and initial/full page loads. Glass cards and card-like panels must use `LoadingSpinner size="sm"` or skeletons — never the large page-load spinner. See `.cursor/rules/global-style-guide.mdc` → Loading spinners.
 
 ### Page Pattern
 

@@ -13,18 +13,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading";
 import {
-	Table,
+	CaalmDataTable,
+	DATA_TABLE_BODY_ROW_BASE,
+	DATA_TABLE_HEADER_CELL,
+	DATA_TABLE_HEADER_ROW,
+} from "@/components/ui/caalm-data-table";
+import {
 	TableBody,
 	TableCell,
 	TableHead,
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import {
-	DATA_TABLE_BODY_ROW_BASE,
-	DATA_TABLE_HEADER_CELL,
-	DATA_TABLE_HEADER_ROW,
-} from "@/lib/ui/data-table-styles";
 import { cn } from "@/lib/utils";
 
 export interface InvoiceRow {
@@ -192,31 +192,43 @@ export default function InvoiceHistoryTable({
 								</p>
 							</div>
 						) : (
-							<div className="overflow-x-auto rounded-lg border border-slate-200">
-								<Table>
-									<TableHeader>
+							<>
+								<CaalmDataTable className="px-0 sm:px-0 pb-0">
+									<TableHeader className="[&_tr]:border-b-0">
 										<TableRow className={DATA_TABLE_HEADER_ROW}>
-											<TableHead className={DATA_TABLE_HEADER_CELL}>
+											<TableHead
+												className={`${DATA_TABLE_HEADER_CELL} px-3`}
+											>
 												Date
 											</TableHead>
-											<TableHead className={DATA_TABLE_HEADER_CELL}>
+											<TableHead
+												className={`${DATA_TABLE_HEADER_CELL} px-3`}
+											>
 												Invoice
 											</TableHead>
-											<TableHead className={DATA_TABLE_HEADER_CELL}>
+											<TableHead
+												className={`${DATA_TABLE_HEADER_CELL} px-3`}
+											>
 												Amount
 											</TableHead>
-											<TableHead className={DATA_TABLE_HEADER_CELL}>
+											<TableHead
+												className={`${DATA_TABLE_HEADER_CELL} px-3`}
+											>
 												Status
 											</TableHead>
-											<TableHead className={DATA_TABLE_HEADER_CELL}>
+											<TableHead
+												className={`${DATA_TABLE_HEADER_CELL} px-3`}
+											>
 												View
 											</TableHead>
-											<TableHead className={DATA_TABLE_HEADER_CELL}>
+											<TableHead
+												className={`${DATA_TABLE_HEADER_CELL} px-3`}
+											>
 												Download
 											</TableHead>
 										</TableRow>
 									</TableHeader>
-									<TableBody>
+									<TableBody className="[&_tr:last-child>td]:border-b-0">
 										{pagedInvoices.map((invoice) => {
 											const statusBadge = invoiceStatusBadge(invoice.status);
 											const viewPdfUrl = invoiceViewPdfUrl(invoice, orgId);
@@ -303,8 +315,8 @@ export default function InvoiceHistoryTable({
 											);
 										})}
 									</TableBody>
-								</Table>
-								<div className="flex items-center justify-between border-t border-slate-200 px-3 py-2 text-xs text-slate-600">
+								</CaalmDataTable>
+								<div className="flex items-center justify-between px-1 py-2 text-xs text-slate-600">
 									<span>Total results: {invoices.length}</span>
 									<div className="flex items-center gap-4">
 										<button
@@ -331,7 +343,7 @@ export default function InvoiceHistoryTable({
 										</button>
 									</div>
 								</div>
-							</div>
+							</>
 						)}
 					</>
 				) : null}
