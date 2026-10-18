@@ -69,7 +69,7 @@ export default function SidebarUserCard({
 					aria-label="Account menu"
 					className={cn(
 						"inline-flex shrink-0 cursor-pointer items-center justify-center rounded-md text-slate-600 transition-colors duration-200",
-						"hover:bg-white/70 hover:text-slate-800",
+						"hover:bg-white/70 hover:text-slate-700",
 						"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
 						compact ? "h-10 w-10" : "h-7 w-7",
 					)}
@@ -87,7 +87,7 @@ export default function SidebarUserCard({
 					{email || "No email on file"}
 				</DropdownMenuLabel>
 				<DropdownMenuItem
-					className="mx-1 mb-1 mt-0.5 cursor-pointer justify-center gap-2 rounded-lg border border-slate-300 bg-white/80 px-3 py-2 text-sm font-medium text-slate-800 focus:bg-blue-50"
+					className="mx-1 mb-1 mt-0.5 cursor-pointer justify-center gap-2 rounded-lg border border-slate-300 bg-white/80 px-3 py-2 text-sm font-medium text-slate-700 focus:bg-blue-50"
 					onSelect={() => setPlanOpen(true)}
 				>
 					<Columns3Cog className="h-4 w-4 text-[#0f5384]" />
@@ -106,7 +106,7 @@ export default function SidebarUserCard({
 									className="h-3.5 w-3.5 object-contain grayscale"
 								/>
 							</span>
-							<span className="text-slate-800">Settings</span>
+							<span className="text-slate-700">Settings</span>
 						</DropdownMenuSubTrigger>
 						<DropdownMenuSubContent
 							sideOffset={2}
@@ -117,7 +117,7 @@ export default function SidebarUserCard({
 									<DropdownMenuItem key={item.url} asChild>
 										<Link
 											href={item.url}
-											className="cursor-pointer px-2 py-1.5 text-sm text-slate-800"
+											className="cursor-pointer px-2 py-1.5 text-sm text-slate-700"
 										>
 											{item.name}
 										</Link>
@@ -132,7 +132,7 @@ export default function SidebarUserCard({
 						<span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-200/70 text-slate-700">
 							<CircleHelp className="h-3.5 w-3.5" />
 						</span>
-						<span className="text-slate-800">Help</span>
+						<span className="text-slate-700">Help</span>
 					</DropdownMenuSubTrigger>
 					<DropdownMenuSubContent
 						sideOffset={2}
@@ -144,7 +144,7 @@ export default function SidebarUserCard({
 								<DropdownMenuItem key={item.href} asChild>
 									<Link
 										href={item.href}
-										className="cursor-pointer gap-2 px-2 py-1.5 text-sm text-slate-800"
+										className="cursor-pointer gap-2 px-2 py-1.5 text-sm text-slate-700"
 									>
 										<Icon className="h-4 w-4 text-slate-600" />
 										{item.label}
@@ -176,16 +176,16 @@ export default function SidebarUserCard({
 									</p>
 								) : isTrial && daysRemaining != null ? (
 									<>
-										<p className="truncate text-xs font-bold leading-tight text-slate-800">
+										<p className="truncate text-xs font-bold leading-tight text-slate-700">
 											{planName}
 										</p>
 										<p className="truncate text-xs leading-tight text-slate-600">
-											{daysRemaining}{" "}
-											{daysRemaining === 1 ? "day" : "days"} left in trial
+											{daysRemaining} {daysRemaining === 1 ? "day" : "days"}{" "}
+											left in trial
 										</p>
 									</>
 								) : (
-									<p className="truncate text-xs font-bold leading-tight text-slate-800">
+									<p className="truncate text-xs font-bold leading-tight text-slate-700">
 										{planName}
 									</p>
 								)}

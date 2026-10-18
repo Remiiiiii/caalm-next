@@ -93,7 +93,7 @@ export function ApprovalReviewDialog({
 								</div>
 								<Badge
 									variant="outline"
-									className="text-xs font-medium px-3 py-1 uppercase tracking-wide border-amber-300 text-amber-700 bg-amber-50"
+									className="text-xs px-3 py-1 uppercase tracking-wide border-amber-300 text-amber-700 bg-amber-50"
 								>
 									Pending Review
 								</Badge>

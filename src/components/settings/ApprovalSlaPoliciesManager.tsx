@@ -191,7 +191,7 @@ export function ApprovalSlaPoliciesManager({ canEdit }: { canEdit: boolean }) {
 								<div className="min-w-0">
 									<p className="text-sm font-medium text-slate-700">
 										{STEP_LABELS[policy.stepKind] || policy.stepKind}
-										<span className="ml-2 inline-block rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+										<span className="ml-2 inline-block rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
 											{policy.entityType}
 										</span>
 									</p>

@@ -105,7 +105,7 @@ export function TimelineTab({
 							<FileText className="mt-0.5 h-4 w-4 text-[#0f5384]" />
 							<div>
 								<p className="text-sm font-medium text-slate-700">{row.name}</p>
-								<span className="inline-block mt-2 px-2 py-0.5 text-xs rounded-full font-medium border bg-blue/10 text-blue border-blue/20">
+								<span className="inline-block mt-2 px-2 py-0.5 text-xs rounded-full border bg-blue/10 text-blue border-blue/20">
 									{row.kind === "grant" ? "Grant" : "Contract"}
 								</span>
 							</div>

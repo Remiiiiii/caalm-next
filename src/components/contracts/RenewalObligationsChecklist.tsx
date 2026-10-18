@@ -106,13 +106,13 @@ export function RenewalObligationsChecklist({
 									</span>
 									<span
 										className={cn(
-											"inline-block px-2 py-0.5 text-xs rounded-full font-medium border",
+											"inline-block px-2 py-0.5 text-xs rounded-full border",
 											obligationStatusBadgeClass(item.status),
 										)}
 									>
 										{OBLIGATION_STATUS_LABEL[item.status]}
 									</span>
-									<span className="inline-block px-2 py-0.5 text-xs rounded-full font-medium border bg-blue/10 text-blue border-blue/20">
+									<span className="inline-block px-2 py-0.5 text-xs rounded-full border bg-blue/10 text-blue border-blue/20">
 										{OBLIGATION_KIND_LABEL[item.kind]}
 									</span>
 								</div>

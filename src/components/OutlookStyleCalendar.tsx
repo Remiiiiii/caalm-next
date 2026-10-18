@@ -47,11 +47,11 @@ import CalendarSettings from "@/components/CalendarSettings";
 import { CalendarSidebar } from "@/components/CalendarSidebar";
 import { CreateSharedCalendarDialog } from "@/components/CreateSharedCalendarDialog";
 import { AgendaView } from "@/components/calendar/AgendaView";
-import { CalendarPinnedNoteDialog } from "@/components/calendar/CalendarPinnedNoteDialog";
-import { CalendarPinnedNotesListDialog } from "@/components/calendar/CalendarPinnedNotesListDialog";
 import { ApprovalReviewDialog } from "@/components/calendar/ApprovalReviewDialog";
 import { CalendarApprovalsRail } from "@/components/calendar/CalendarApprovalsRail";
 import { CalendarFiltersDrawer } from "@/components/calendar/CalendarFiltersDrawer";
+import { CalendarPinnedNoteDialog } from "@/components/calendar/CalendarPinnedNoteDialog";
+import { CalendarPinnedNotesListDialog } from "@/components/calendar/CalendarPinnedNotesListDialog";
 import { ConflictDialog } from "@/components/calendar/ConflictDialog";
 import { DayView } from "@/components/calendar/DayView";
 import { DeleteEventDialog } from "@/components/calendar/DeleteEventDialog";
@@ -128,6 +128,7 @@ import {
 	getCalendarApprovalById,
 	getLatestApprovalRequestByEventId,
 } from "@/lib/actions/calendar-approval.actions";
+import { deleteNote, type Note } from "@/lib/actions/notes.actions";
 import type { SharedCalendar } from "@/lib/actions/shared-calendar.actions";
 import { fetchUserNamesByIds } from "@/lib/actions/user.actions";
 import {
@@ -142,13 +143,9 @@ import {
 	getEnterpriseInputAccept,
 	validateEnterpriseFile,
 } from "@/lib/files/enterprise-file-formats";
+import { fetcher } from "@/lib/swr-config";
 import { cn, convertFileSize, getFileType } from "@/lib/utils";
 import { getUSHolidaysForMonth, parseHolidayDate } from "@/lib/utils/holidays";
-import {
-	deleteNote,
-	type Note,
-} from "@/lib/actions/notes.actions";
-import { fetcher } from "@/lib/swr-config";
 
 type CalendarViewMode = "day" | "week" | "month" | "agenda";
 
@@ -3099,7 +3096,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 												className={cn(
 													"flex cursor-pointer items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-200 sm:px-3",
 													active
-														? "bg-white text-slate-800 shadow-sm"
+														? "bg-white text-slate-700 shadow-sm"
 														: "text-slate-500 hover:text-slate-700",
 												)}
 											>

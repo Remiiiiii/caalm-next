@@ -50,10 +50,10 @@ export function NegotiationHeader({
 		<div className="mb-4 flex w-full flex-wrap items-center justify-between gap-3">
 			<div className="flex flex-wrap items-center gap-3">
 				<h1 className="h1 capitalize sidebar-gradient-text">Negotiate</h1>
-				<span className="inline-block rounded-full border border-orange/20 bg-orange/10 px-2 py-0.5 text-xs font-medium text-orange">
+				<span className="inline-block rounded-full border border-orange/20 bg-orange/10 px-2 py-0.5 text-xs text-orange">
 					{lifecycleLabel(lifecycle)}
 				</span>
-				<span className="inline-flex items-center gap-1.5 rounded-full border border-blue/20 bg-blue/10 px-2.5 py-0.5 text-xs font-medium text-blue">
+				<span className="inline-flex items-center gap-1.5 rounded-full border border-blue/20 bg-blue/10 px-2.5 py-0.5 text-xs text-blue">
 					<Eye className="h-3.5 w-3.5" />
 					Viewing as {roleLabel}
 				</span>

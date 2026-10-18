@@ -428,7 +428,7 @@ function ObligationRow({
 				{isDone ? (
 					<span
 						className={cn(
-							"inline-block shrink-0 rounded-full border px-2 py-0.5 text-xs font-medium",
+							"inline-block shrink-0 rounded-full border px-2 py-0.5 text-xs",
 							obligationStatusBadgeClass("done"),
 						)}
 					>
@@ -443,7 +443,7 @@ function ObligationRow({
 						<SelectTrigger
 							aria-label={`Status for ${obligation.title}`}
 							className={cn(
-								"h-auto w-auto shrink-0 gap-1 rounded-md border px-2 py-0.5 text-xs font-medium shadow-none",
+								"h-auto w-auto shrink-0 gap-1 rounded-md border px-2 py-0.5 text-xs shadow-none",
 								"hover:opacity-90 focus:ring-0 focus:ring-offset-0 focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
 								"[&_svg]:h-3 [&_svg]:w-3 [&_svg]:text-slate-500 [&_svg]:opacity-100",
 								obligationStatusBadgeClass(obligation.status),
@@ -469,7 +469,7 @@ function ObligationRow({
 			<div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 border-y border-slate-200 py-3 text-xs text-slate-600">
 				<div className="flex min-w-0 items-center gap-2">
 					<Tag className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden />
-					<span className="inline-block rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+					<span className="inline-block rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
 						{OBLIGATION_KIND_LABEL[obligation.kind]}
 					</span>
 				</div>

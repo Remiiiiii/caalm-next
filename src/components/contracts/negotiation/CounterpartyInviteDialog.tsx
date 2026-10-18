@@ -186,7 +186,7 @@ export function CounterpartyInviteDialog({
 										className="flex items-center justify-between gap-2 rounded-lg border border-blue/20 bg-blue/10 px-3 py-2"
 									>
 										<div className="min-w-0">
-											<p className="truncate text-sm font-medium text-slate-800">
+											<p className="truncate text-sm font-medium text-slate-700">
 												{item.name}
 											</p>
 											<p className="truncate text-xs text-slate-600">
@@ -195,7 +195,7 @@ export function CounterpartyInviteDialog({
 										</div>
 										<button
 											type="button"
-											className="cursor-pointer rounded-full p-1 text-slate-500 transition-colors hover:bg-blue/10 hover:text-slate-800 focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
+											className="cursor-pointer rounded-full p-1 text-slate-500 transition-colors hover:bg-blue/10 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
 											aria-label={`Remove ${item.name}`}
 											onClick={() => {
 												setInvitees((current) =>

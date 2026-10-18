@@ -299,7 +299,7 @@ export function EventRegistrationsPanel({ eventId }: Props) {
 							</div>
 							<span
 								className={cn(
-									"inline-block px-2 py-0.5 text-xs rounded-full font-medium border capitalize",
+									"inline-block px-2 py-0.5 text-xs rounded-full border capitalize",
 									registrationStatusBadge(row.status, row.checkedInAt),
 								)}
 							>

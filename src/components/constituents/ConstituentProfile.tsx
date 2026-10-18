@@ -95,13 +95,13 @@ export function ConstituentProfile({
 				<div className="flex flex-wrap items-center gap-3">
 					<h1 className="h1 capitalize sidebar-gradient-text">{name}</h1>
 					<span
-						className={`inline-block px-2 py-0.5 text-xs rounded-full font-medium border ${constituentTypeBadgeClass(constituent.type)}`}
+						className={`inline-block px-2 py-0.5 text-xs rounded-full border ${constituentTypeBadgeClass(constituent.type)}`}
 					>
 						{constituentTypeLabel(constituent.type)}
 					</span>
 					{constituent.doNotContact ? (
 						<span
-							className={`inline-block px-2 py-0.5 text-xs rounded-full font-medium border ${CONSTITUENT_DNC_BADGE_CLASS}`}
+							className={`inline-block px-2 py-0.5 text-xs rounded-full border ${CONSTITUENT_DNC_BADGE_CLASS}`}
 						>
 							Do not contact
 						</span>

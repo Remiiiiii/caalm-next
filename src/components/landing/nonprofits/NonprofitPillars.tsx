@@ -23,19 +23,19 @@ function SupporterVisual({ reduceMotion }: { reduceMotion: boolean | null }) {
 					AP
 				</span>
 				<div className="min-w-0 flex-1">
-					<p className="font-semibold text-slate-800">Angela &amp; Ray Patel</p>
+					<p className="font-semibold text-slate-700">Angela &amp; Ray Patel</p>
 					<p className="text-xs text-slate-500">
 						Household · 2 members · Donor since 2019
 					</p>
 				</div>
-				<span className="inline-block rounded-full border border-blue/20 bg-blue/10 px-2 py-0.5 text-xs font-medium text-blue">
+				<span className="inline-block rounded-full border border-blue/20 bg-blue/10 px-2 py-0.5 text-xs text-blue">
 					Upgrade ready
 				</span>
 			</div>
 			<div className="rounded-xl border border-slate-200 bg-white/70 p-3">
 				<div className="flex items-center justify-between text-xs">
 					<span className="font-medium text-slate-700">Lapse risk</span>
-					<span className="inline-block rounded-full border border-orange/20 bg-orange/10 px-2 py-0.5 font-medium text-orange">
+					<span className="inline-block rounded-full border border-orange/20 bg-orange/10 px-2 py-0.5 text-orange">
 						Medium
 					</span>
 				</div>
@@ -85,7 +85,7 @@ function GivingVisual() {
 					<span className="rounded-full px-3 py-1 text-slate-500">
 						One time
 					</span>
-					<span className="rounded-full bg-white px-3 py-1 font-medium text-slate-700 shadow-sm">
+										<span className="rounded-full bg-white px-3 py-1 text-slate-700 shadow-sm">
 						Monthly
 					</span>
 				</div>
@@ -130,7 +130,7 @@ function GivingVisual() {
 						<p className="text-[10px] text-slate-500">General admission</p>
 					</div>
 				</div>
-				<span className="mt-2 inline-flex items-center gap-1 rounded-full border border-green/20 bg-green/10 px-2 py-0.5 text-[10px] font-medium text-green">
+				<span className="mt-2 inline-flex items-center gap-1 rounded-full border border-green/20 bg-green/10 px-2 py-0.5 text-[10px] text-green">
 					<Check className="h-3 w-3" />
 					Checked in
 				</span>
@@ -149,12 +149,12 @@ function FundsVisual({ reduceMotion }: { reduceMotion: boolean | null }) {
 		<div className="space-y-4">
 			<div className="flex items-center justify-between gap-2">
 				<div>
-					<p className="text-sm font-semibold text-slate-800">
+					<p className="text-sm font-semibold text-slate-700">
 						Literacy grant · FY26
 					</p>
 					<p className="text-xs text-slate-500">With donor restrictions</p>
 				</div>
-				<span className="inline-block rounded-full border border-blue/20 bg-blue/10 px-2 py-0.5 text-xs font-medium text-blue">
+				<span className="inline-block rounded-full border border-blue/20 bg-blue/10 px-2 py-0.5 text-xs text-blue">
 					Fund 4100
 				</span>
 			</div>
@@ -188,7 +188,7 @@ function FundsVisual({ reduceMotion }: { reduceMotion: boolean | null }) {
 				{["990-worksheet.csv", "journal-export.iif"].map((file) => (
 					<span
 						key={file}
-						className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700"
+						className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700"
 					>
 						<Download className="h-3.5 w-3.5 text-[#0f5384]" />
 						{file}
@@ -210,14 +210,14 @@ function VolunteersVisual() {
 			<div className="rounded-xl border border-slate-200 bg-white/80 p-4">
 				<div className="flex items-start justify-between gap-3">
 					<div>
-						<p className="text-sm font-semibold text-slate-800">
+						<p className="text-sm font-semibold text-slate-700">
 							Saturday food pantry
 						</p>
 						<p className="text-xs text-slate-500">
 							9:00 AM to 12:00 PM · Tagged to Food Security grant
 						</p>
 					</div>
-					<span className="inline-block shrink-0 rounded-full border border-orange/20 bg-orange/10 px-2 py-0.5 text-xs font-medium text-orange">
+					<span className="inline-block shrink-0 rounded-full border border-orange/20 bg-orange/10 px-2 py-0.5 text-xs text-orange">
 						3 waitlisted
 					</span>
 				</div>

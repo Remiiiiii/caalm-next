@@ -665,7 +665,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 										<div className="flex items-center justify-between">
 											{getSystemHealthIcon(stats.systemHealth)}
 											<span
-												className={`px-2 py-1 rounded-full text-xs font-medium ${getSystemHealthColor(
+												className={`px-2 py-1 rounded-full text-xs ${getSystemHealthColor(
 													stats.systemHealth,
 												)}`}
 											>
@@ -1160,7 +1160,7 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 											</td>
 											<td>
 												<span
-													className={`inline-block px-2 py-1 rounded text-xs font-medium ${
+													className={`inline-block px-2 py-1 rounded text-xs ${
 														(inv.status || "").toLowerCase() === "pending"
 															? "bg-[#fef6f0] text-[#ebc620]"
 															: (inv.status || "").toLowerCase() === "revoked"

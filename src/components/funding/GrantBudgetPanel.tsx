@@ -114,11 +114,11 @@ export function GrantBudgetPanel({
 								{formatUsd(actual?.actualAmount ?? 0)}
 							</span>
 							{over ? (
-								<span className="inline-block px-2 py-0.5 text-xs rounded-full font-medium border bg-red/10 text-red border-red/20">
+								<span className="inline-block px-2 py-0.5 text-xs rounded-full border bg-red/10 text-red border-red/20">
 									Over budget
 								</span>
 							) : (
-								<span className="inline-block px-2 py-0.5 text-xs rounded-full font-medium border bg-green/10 text-green border-green/20">
+								<span className="inline-block px-2 py-0.5 text-xs rounded-full border bg-green/10 text-green border-green/20">
 									On track
 								</span>
 							)}

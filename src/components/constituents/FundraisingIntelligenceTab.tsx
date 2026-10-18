@@ -187,7 +187,7 @@ export function FundraisingIntelligenceTab({
 		<div className="space-y-6 pt-4">
 			<div className="flex flex-wrap items-center gap-3">
 				<span
-					className={`inline-block px-2 py-0.5 text-xs rounded-full font-medium border ${segmentBadgeClass(data.segment)}`}
+					className={`inline-block px-2 py-0.5 text-xs rounded-full border ${segmentBadgeClass(data.segment)}`}
 				>
 					{normalizeSegmentLabel(data.segment)}
 				</span>

@@ -267,7 +267,7 @@ export const Header = () => {
 									className="h-auto w-8 shrink-0"
 									style={{ height: "auto" }}
 								/>
-								<span className="font-bold text-lg text-slate-800">CAALM</span>
+								<span className="font-bold text-lg text-slate-700">CAALM</span>
 							</Link>
 							<Link href="/request-a-demo" onClick={() => setIsOpen(false)}>
 								<Button className="primary-btn rounded-full px-4 text-sm cursor-pointer whitespace-nowrap shadow-sm">
@@ -282,7 +282,7 @@ export const Header = () => {
 									<li key={link.href}>
 										<a
 											href={landingHref(link.href, pathname)}
-											className="text-[15px] font-medium text-slate-500 hover:text-slate-800 transition-colors duration-200"
+											className="text-[15px] font-medium text-slate-500 hover:text-slate-700 transition-colors duration-200"
 											onClick={() => setIsOpen(false)}
 										>
 											{link.label}
@@ -297,7 +297,7 @@ export const Header = () => {
 										!link.href.startsWith("#") ? (
 											<Link
 												href={link.href}
-												className="text-[15px] font-medium text-slate-500 hover:text-slate-800 transition-colors duration-200"
+												className="text-[15px] font-medium text-slate-500 hover:text-slate-700 transition-colors duration-200"
 												onClick={() => setIsOpen(false)}
 											>
 												{link.label}
@@ -305,7 +305,7 @@ export const Header = () => {
 										) : (
 											<a
 												href={landingHref(link.href, pathname)}
-												className="text-[15px] font-medium text-slate-500 hover:text-slate-800 transition-colors duration-200"
+												className="text-[15px] font-medium text-slate-500 hover:text-slate-700 transition-colors duration-200"
 												onClick={() => setIsOpen(false)}
 											>
 												{link.label}
@@ -319,7 +319,7 @@ export const Header = () => {
 						<div className="mt-10 flex items-center justify-end">
 							<Link
 								href="/sign-in"
-								className="text-[15px] font-medium text-slate-500 hover:text-slate-800 transition-colors duration-200"
+								className="text-[15px] font-medium text-slate-500 hover:text-slate-700 transition-colors duration-200"
 								onClick={() => setIsOpen(false)}
 							>
 								Sign In

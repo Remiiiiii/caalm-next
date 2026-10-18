@@ -83,7 +83,7 @@ export function DocsSidebar({ onNavigate }: { onNavigate?: () => void }) {
 													"block rounded-md px-2 py-1.5 text-sm transition-colors duration-200",
 													active
 														? "bg-blue-50 font-medium text-[#0f5384] dark:bg-slate-800 dark:text-sky-300"
-														: "font-normal text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-800/70 dark:hover:text-slate-200",
+														: "font-normal text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800/70 dark:hover:text-slate-200",
 												)}
 											>
 												{item.title}

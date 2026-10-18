@@ -38,13 +38,13 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { Fragment, useEffect, useMemo, useState } from "react";
+import { GmailActionTooltip } from "@/components/gmail/GmailActionTooltip";
+import { SegmentedToggle } from "@/components/ui/segmented-toggle";
 import { useToast } from "@/hooks/use-toast";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useOrgTimezone } from "@/hooks/useOrgTimezone";
 import { isFileShareNotification } from "@/lib/files/fileShareNotification";
 import { formatInTimezone } from "@/lib/timezone";
-import { GmailActionTooltip } from "@/components/gmail/GmailActionTooltip";
-import { SegmentedToggle } from "@/components/ui/segmented-toggle";
 import NotificationSettings from "./NotificationSettings";
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
@@ -1142,7 +1142,7 @@ const SortableNotificationItem: React.FC<SortableNotificationItemProps> = ({
 									</>
 								) : (
 									<div className="flex items-center gap-2">
-										<p className="text-sm font-semibold text-slate-800">
+										<p className="text-sm font-semibold text-slate-700">
 											{notification.title}
 										</p>
 										{!notification.read ? (
@@ -1158,7 +1158,7 @@ const SortableNotificationItem: React.FC<SortableNotificationItemProps> = ({
 							<div className="flex shrink-0 flex-col items-end justify-between gap-3 self-stretch min-h-[4.5rem]">
 								{notification.priority ? (
 									<span
-										className={`inline-block px-2 py-0.5 text-xs rounded-full font-medium border capitalize ${getPriorityColor(
+										className={`inline-block px-2 py-0.5 text-xs rounded-full border capitalize ${getPriorityColor(
 											notification.priority,
 										)}`}
 									>
@@ -1176,12 +1176,12 @@ const SortableNotificationItem: React.FC<SortableNotificationItemProps> = ({
 								<span>{displayDate}</span>
 							</div>
 							{needsAction ? (
-								<span className="inline-block px-2 py-0.5 text-xs rounded-full font-medium border bg-orange/10 text-orange border-orange/20">
+								<span className="inline-block px-2 py-0.5 text-xs rounded-full border bg-orange/10 text-orange border-orange/20">
 									Action needed
 								</span>
 							) : (
 								<span
-									className={`inline-block px-2 py-0.5 text-xs rounded-full font-medium border ${typeConfig.color}`}
+									className={`inline-block px-2 py-0.5 text-xs rounded-full border ${typeConfig.color}`}
 								>
 									{typeConfig.label}
 								</span>

@@ -83,7 +83,7 @@ const FIELD_INPUT_CLASS =
 const FIELD_ACTIVE_CLASS = "bg-green/10 border-green/30";
 
 const CAALM_BADGE_BASE =
-	"inline-flex items-center gap-1.5 px-2 py-0.5 text-xs rounded-full font-medium border";
+	"inline-flex items-center gap-1.5 px-2 py-0.5 text-xs rounded-full border";
 
 const SAM_SORT_OPTIONS = [
 	{ value: "due-asc", label: "Due date ↑" },
@@ -800,7 +800,7 @@ export default function ContractsDisplay() {
 								Search Contracts
 							</CardTitle>
 							{activeFilterChips.length > 0 && (
-								<span className="inline-block shrink-0 px-2 py-0.5 text-xs rounded-full font-medium border bg-green/10 text-green border-green/20">
+																<span className="inline-block shrink-0 px-2 py-0.5 text-xs rounded-full border bg-green/10 text-green border-green/20">
 									{activeFilterChips.length} filter
 									{activeFilterChips.length === 1 ? "" : "s"} active
 								</span>
@@ -1082,7 +1082,7 @@ export default function ContractsDisplay() {
 										key={chip.key}
 										type="button"
 										onClick={() => clearSearchFilter(chip.key)}
-										className="inline-flex items-center gap-1.5 rounded-md border border-green/20 bg-green/10 px-2.5 py-1 text-xs font-medium text-green transition-colors hover:bg-green/20 cursor-pointer"
+										className="inline-flex items-center gap-1.5 rounded-md border border-green/20 bg-green/10 px-2.5 py-1 text-xs text-green transition-colors hover:bg-green/20 cursor-pointer"
 										aria-label={`Remove ${chip.label} filter`}
 									>
 										<span className="text-slate-700">

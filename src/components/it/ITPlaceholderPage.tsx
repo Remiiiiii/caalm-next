@@ -39,20 +39,20 @@ export function ITPlaceholderPage({
 					<ul className="text-sm text-slate-600 space-y-1 list-disc pl-5">
 						<li>
 							Required integration:{" "}
-							<span className="font-medium text-slate-800">
+							<span className="font-medium text-slate-700">
 								{requiredIntegration}
 							</span>
 						</li>
 						{permission ? (
 							<li>
 								Permission:{" "}
-								<span className="text-xs text-slate-800">{permission}</span>
+								<span className="text-xs text-slate-700">{permission}</span>
 							</li>
 						) : null}
 					</ul>
 					<p className="text-xs text-slate-500 mt-2">
-						This route stays available for internal QA via deep link. It is hidden
-						from the primary IT nav until a real data source is wired.
+						This route stays available for internal QA via deep link. It is
+						hidden from the primary IT nav until a real data source is wired.
 					</p>
 				</div>
 			</ITGlassPanel>

@@ -621,7 +621,7 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 														{new Date(note.$updatedAt).toLocaleTimeString()}
 													</span>
 													{note.calendarDate && note.calendarTime ? (
-														<span className="ml-2 inline-flex shrink-0 items-center gap-1 rounded-full border border-blue/20 bg-blue/10 px-2 py-0.5 text-[10px] font-medium text-blue">
+														<span className="ml-2 inline-flex shrink-0 items-center gap-1 rounded-full border border-blue/20 bg-blue/10 px-2 py-0.5 text-[10px] text-blue">
 															<Calendar className="h-2.5 w-2.5" />
 															Calendar
 														</span>
@@ -926,7 +926,7 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 									All Notes
 								</DialogTitle>
 							</div>
-							<span className="inline-block rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+							<span className="inline-block rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
 								{notes.length} {notes.length === 1 ? "note" : "notes"}
 							</span>
 						</div>
@@ -962,11 +962,11 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 									<div className="flex items-start justify-between gap-3">
 										<div className="min-w-0 flex-1">
 											<div className="flex items-center gap-2">
-												<p className="truncate text-sm font-semibold text-slate-800">
+												<p className="truncate text-sm font-semibold text-slate-700">
 													{note.title || "Untitled note"}
 												</p>
 												{note.calendarDate && note.calendarTime ? (
-													<span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-blue/20 bg-blue/10 px-2 py-0.5 text-[10px] font-medium text-blue">
+													<span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-blue/20 bg-blue/10 px-2 py-0.5 text-[10px] text-blue">
 														<Calendar className="h-2.5 w-2.5" />
 														Calendar
 													</span>

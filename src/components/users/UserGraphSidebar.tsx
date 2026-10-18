@@ -183,7 +183,7 @@ function SidebarSection({
 					) : null}
 				</span>
 				{tint !== "warn" && badge != null ? (
-					<span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red/10 px-1.5 text-[10px] font-medium tabular-nums text-red">
+					<span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red/10 px-1.5 text-[10px] tabular-nums text-red">
 						{badge}
 					</span>
 				) : null}
@@ -703,7 +703,7 @@ export function UserGraphSidebar({
 													? onAssignUser(user)
 													: onFocusUser(user.$id)
 											}
-											className="shrink-0 cursor-pointer rounded-md px-1.5 py-1 text-xs font-medium text-[#0f5384] transition-colors duration-200 hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
+											className="shrink-0 cursor-pointer rounded-md px-1.5 py-1 text-xs text-[#0f5384] transition-colors duration-200 hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
 										>
 											+ Assign
 										</button>

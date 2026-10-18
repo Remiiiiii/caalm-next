@@ -42,27 +42,27 @@ const _getDivisionBadgeClasses = (division: string): string => {
 	const normalized = division?.toLowerCase?.() ?? "";
 	switch (normalized) {
 		case "c-suite":
-			return "bg-purple-100 text-purple-800 border border-purple-200 text-xs rounded-xl font-medium px-2 py-1";
+			return "bg-purple-100 text-purple-800 border border-purple-200 text-xs rounded-xl px-2 py-1";
 		case "behavioral-health":
-			return "bg-blue-100 text-blue-800 border border-blue-200 text-xs rounded-xl font-medium px-2 py-1";
+			return "bg-blue-100 text-blue-800 border border-blue-200 text-xs rounded-xl px-2 py-1";
 		case "child-welfare":
-			return "bg-teal-100 text-teal-800 border border-teal-200 text-xs rounded-xl font-medium px-2 py-1";
+			return "bg-teal-100 text-teal-800 border border-teal-200 text-xs rounded-xl px-2 py-1";
 		case "clinic":
-			return "bg-cyan-100 text-cyan-800 border border-cyan-200 text-xs rounded-xl font-medium px-2 py-1";
+			return "bg-cyan-100 text-cyan-800 border border-cyan-200 text-xs rounded-xl px-2 py-1";
 		case "cfs":
-			return "bg-indigo-100 text-indigo-800 border border-indigo-200 text-xs rounded-xl font-medium px-2 py-1";
+			return "bg-indigo-100 text-indigo-800 border border-indigo-200 text-xs rounded-xl px-2 py-1";
 		case "hr":
-			return "bg-pink-100 text-pink-800 border border-pink-200 text-xs rounded-xl font-medium px-2 py-1";
+			return "bg-pink-100 text-pink-800 border border-pink-200 text-xs rounded-xl px-2 py-1";
 		case "residential":
-			return "bg-green-100 text-green-800 border border-green-200 text-xs rounded-xl font-medium px-2 py-1";
+			return "bg-green-100 text-green-800 border border-green-200 text-xs rounded-xl px-2 py-1";
 		case "support":
-			return "bg-orange-100 text-orange-800 border border-orange-200 text-xs rounded-xl font-medium px-2 py-1";
+			return "bg-orange-100 text-orange-800 border border-orange-200 text-xs rounded-xl px-2 py-1";
 		case "help-desk":
-			return "bg-yellow-100 text-yellow-800 border border-yellow-200 text-xs rounded-xl font-medium px-2 py-1";
+			return "bg-yellow-100 text-yellow-800 border border-yellow-200 text-xs rounded-xl px-2 py-1";
 		case "accounting":
-			return "bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs rounded-xl font-medium px-2 py-1";
+			return "bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs rounded-xl px-2 py-1";
 		default:
-			return "bg-slate-100 text-slate-800 border border-slate-200 text-xs rounded-xl font-medium px-2 py-1";
+			return "bg-slate-100 text-slate-700 border border-slate-200 text-xs rounded-xl px-2 py-1";
 	}
 };
 
@@ -71,13 +71,13 @@ const getStatusBadgeClasses = (status: string): string => {
 	const normalized = status?.toLowerCase?.() ?? "";
 	switch (normalized) {
 		case "active":
-			return "bg-[#ccf3e9] text-[#3dd9b3] border border-[#3dd9b3]/20 text-xs rounded-xl font-medium px-2 py-1";
+			return "bg-[#ccf3e9] text-[#3dd9b3] border border-[#3dd9b3]/20 text-xs rounded-xl px-2 py-1";
 		case "inactive":
-			return "bg-[#fff1f1] text-[#fe8787] border border-[#fe8787]/20 text-xs rounded-xl font-medium px-2 py-1";
+			return "bg-[#fff1f1] text-[#fe8787] border border-[#fe8787]/20 text-xs rounded-xl px-2 py-1";
 		case "pending":
-			return "bg-[#fef6f0] text-[#ebc620] border border-[#ebc620]/20 text-xs rounded-xl font-medium px-2 py-1";
+			return "bg-[#fef6f0] text-[#ebc620] border border-[#ebc620]/20 text-xs rounded-xl px-2 py-1";
 		default:
-			return "bg-gray-100 text-gray-600 border border-gray-200 text-xs rounded-xl font-medium px-2 py-1";
+			return "bg-gray-100 text-gray-600 border border-gray-200 text-xs rounded-xl px-2 py-1";
 	}
 };
 

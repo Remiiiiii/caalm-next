@@ -119,7 +119,7 @@ export default function Pricing({ plans }: Props) {
 							Annual
 						</button>
 						{period === "yearly" ? (
-							<span className="ml-2 mr-2 text-xs font-medium text-green-700 bg-green-50 px-2 py-0.5 rounded-full">
+							<span className="ml-2 mr-2 text-xs text-green-700 bg-green-50 px-2 py-0.5 rounded-full">
 								Save 20%
 							</span>
 						) : (
@@ -151,7 +151,7 @@ export default function Pricing({ plans }: Props) {
 								<h3 className="mb-2 mt-2 flex flex-wrap items-center gap-2 text-lg font-semibold text-slate-700">
 									{plan.name}
 									{idx === 1 ? (
-										<span className="inline-flex items-center rounded-full border border-[#05A1B7]/30 bg-[#E8F8FA] px-2.5 py-0.5 text-xs font-medium text-[#057A8A]">
+										<span className="inline-flex items-center rounded-full border border-[#05A1B7]/30 bg-[#E8F8FA] px-2.5 py-0.5 text-xs text-[#057A8A]">
 											Most Popular
 										</span>
 									) : null}
@@ -199,7 +199,7 @@ export default function Pricing({ plans }: Props) {
 									</Link>
 								)}
 								<hr className="my-6 border-slate-200" />
-								<h4 className="text-sm font-semibold text-slate-800 mb-3">
+								<h4 className="text-sm font-semibold text-slate-700 mb-3">
 									{idx === 0
 										? "Includes"
 										: idx === 1

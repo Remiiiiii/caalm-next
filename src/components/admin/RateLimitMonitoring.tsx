@@ -338,7 +338,7 @@ export default function RateLimitMonitoring() {
 													<Badge variant="destructive">{violator.count}</Badge>
 												</TableCell>
 												<TableCell className="px-3 py-3 pl-3 pr-4">
-													<span className="inline-block rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+													<span className="inline-block rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
 														Active
 													</span>
 												</TableCell>

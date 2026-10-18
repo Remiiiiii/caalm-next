@@ -397,7 +397,7 @@ export function VolunteerShiftsClient() {
 												{h.source}
 											</p>
 											<span
-												className={`inline-block px-2 py-0.5 text-xs rounded-full font-medium border ${
+												className={`inline-block px-2 py-0.5 text-xs rounded-full border ${
 													h.approvalStatus === "approved"
 														? "bg-green/10 text-green border-green/20"
 														: "bg-orange/10 text-orange border-orange/20"
@@ -432,7 +432,7 @@ export function VolunteerShiftsClient() {
 												{b.constituentId}
 											</p>
 											<span
-												className={`inline-block px-2 py-0.5 text-xs rounded-full font-medium border ${
+												className={`inline-block px-2 py-0.5 text-xs rounded-full border ${
 													b.status === "confirmed"
 														? "bg-green/10 text-green border-green/20"
 														: "bg-orange/10 text-orange border-orange/20"

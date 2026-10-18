@@ -177,7 +177,7 @@ export default function EditPaymentMethodDialog({
 									<div className="absolute inset-y-0 right-0 flex w-10 flex-col border-l border-slate-200">
 										<button
 											type="button"
-											className="flex flex-1 cursor-pointer items-center justify-center text-slate-600 transition-colors duration-200 hover:bg-slate-50 hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+											className="flex flex-1 cursor-pointer items-center justify-center text-slate-600 transition-colors duration-200 hover:bg-slate-50 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
 											onClick={() => {
 												const base = Number.isFinite(parsedYear)
 													? parsedYear
@@ -192,7 +192,7 @@ export default function EditPaymentMethodDialog({
 										<div className="h-px bg-slate-200" />
 										<button
 											type="button"
-											className="flex flex-1 cursor-pointer items-center justify-center text-slate-600 transition-colors duration-200 hover:bg-slate-50 hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+											className="flex flex-1 cursor-pointer items-center justify-center text-slate-600 transition-colors duration-200 hover:bg-slate-50 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
 											onClick={() => {
 												const base = Number.isFinite(parsedYear)
 													? parsedYear

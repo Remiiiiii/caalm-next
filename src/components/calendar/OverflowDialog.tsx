@@ -155,7 +155,7 @@ export function OverflowDialog({
 												</div>
 												{event.type && (
 													<div className="mt-2">
-														<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
+														<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs bg-slate-100 text-slate-700">
 															{getEventTypeLabel(
 																event.type as unknown as string,
 															)}

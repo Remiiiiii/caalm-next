@@ -173,7 +173,7 @@ export function NegotiationDocumentPane({
 														)
 													}
 													className={cn(
-														"w-full cursor-pointer rounded-r-md border-l-2 border-transparent px-2 py-1.5 text-left text-[15px] leading-7 text-slate-800 transition-colors duration-200 whitespace-pre-wrap",
+														"w-full cursor-pointer rounded-r-md border-l-2 border-transparent px-2 py-1.5 text-left text-[15px] leading-7 text-slate-700 transition-colors duration-200 whitespace-pre-wrap",
 														paragraph.isBullet ? "pl-5" : "",
 														selected
 															? "border-orange bg-orange/10"
@@ -185,7 +185,7 @@ export function NegotiationDocumentPane({
 													{editAuthor ? (
 														<span
 															className={cn(
-																"mb-1.5 inline-flex items-center gap-1.5 rounded-full border bg-white px-2 py-0.5 text-[11px] font-medium",
+																"mb-1.5 inline-flex items-center gap-1.5 rounded-full border bg-white px-2 py-0.5 text-[11px]",
 																editAuthor === "counterparty"
 																	? "border-slate-300 text-slate-700"
 																	: "border-[#0f5384]/25 text-[#0f5384]",
@@ -268,7 +268,7 @@ export function NegotiationDocumentPane({
 									const key = `${entry.title}-${entry.familyId}`;
 									const label = `${entry.title}${entry.version ? ` · v${entry.version}` : ""}`;
 									const chipClass =
-										"inline-block rounded-full border border-blue/20 bg-blue/10 px-2 py-0.5 text-xs font-medium text-blue";
+										"inline-block rounded-full border border-blue/20 bg-blue/10 px-2 py-0.5 text-xs text-blue";
 									if (showLineageLinks) {
 										return (
 											<Link

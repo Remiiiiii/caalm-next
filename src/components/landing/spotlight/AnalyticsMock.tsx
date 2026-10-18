@@ -288,7 +288,7 @@ export default function AnalyticsMock() {
 						<nav className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-hidden">
 							{SIDEBAR_SECTIONS.map((section) => (
 								<div key={section.header} className="shrink-0">
-									<p className="mb-1 flex items-center gap-1.5 px-1 text-[10px] font-bold text-slate-800">
+									<p className="mb-1 flex items-center gap-1.5 px-1 text-[10px] font-bold text-slate-700">
 										{section.header === "Dashboard" ? (
 											<span className="text-[#03AFBF] shrink-0">
 												<svg
@@ -419,7 +419,7 @@ export default function AnalyticsMock() {
 											<p className="text-xs sm:text-sm font-semibold sidebar-gradient-text">
 												Audit readiness
 											</p>
-											<span className="rounded-full border border-green/20 bg-green/10 px-1.5 py-0.5 text-[9px] font-medium text-green">
+											<span className="rounded-full border border-green/20 bg-green/10 px-1.5 py-0.5 text-[9px] text-green">
 												On track
 											</span>
 										</div>
@@ -489,7 +489,7 @@ export default function AnalyticsMock() {
 							<span
 								key={tab.id}
 								className={cn(
-									"inline-flex flex-1 min-w-0 items-center justify-center gap-1 rounded-md px-1.5 py-1.5 text-[9px] sm:text-[10px] font-medium",
+									"inline-flex flex-1 min-w-0 items-center justify-center gap-1 rounded-md px-1.5 py-1.5 text-[9px] sm:text-[10px]",
 									tab.active
 										? "bg-white text-[#0f5384] shadow-sm"
 										: "text-slate-600",

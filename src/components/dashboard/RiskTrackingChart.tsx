@@ -308,13 +308,13 @@ export function RiskTrackingChart({
 													{formatTooltipDate(point, grain, period)}
 												</p>
 												<p className="mt-1 text-xs tabular-nums text-slate-600">
-													<span className="font-semibold text-slate-800">
+													<span className="font-semibold text-slate-700">
 														{increment}
 													</span>{" "}
 													new event{increment === 1 ? "" : "s"}
 												</p>
 												<p className="text-xs tabular-nums text-slate-600">
-													<span className="font-semibold text-slate-800">
+													<span className="font-semibold text-slate-700">
 														{point.value}
 													</span>{" "}
 													cumulative

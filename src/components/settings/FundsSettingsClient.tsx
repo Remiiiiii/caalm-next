@@ -83,7 +83,7 @@ export function FundsSettingsClient() {
 								>
 									<span className="font-medium">{fund.name}</span>
 									<span className="tabular-nums text-slate-600">{fund.code}</span>
-									<span className="inline-block px-2 py-0.5 text-xs rounded-full font-medium border bg-blue/10 text-blue border-blue/20">
+									<span className="inline-block px-2 py-0.5 text-xs rounded-full border bg-blue/10 text-blue border-blue/20">
 										{netAssetClassLabel(fund.netAssetClass)}
 									</span>
 								</li>

@@ -191,7 +191,7 @@ const HRDashboard = ({ user }: HRDashboardProps) => {
 												<p className="text-sm text-slate-600">{item.meta}</p>
 											</div>
 											<div className="text-right">
-												<span className="inline-block px-2 py-0.5 text-xs rounded-full font-medium border bg-orange/10 text-orange border-orange/20">
+												<span className="inline-block px-2 py-0.5 text-xs rounded-full border bg-orange/10 text-orange border-orange/20">
 													{item.kind === "license" ? "License" : "Contract"}
 												</span>
 												{item.due ? (

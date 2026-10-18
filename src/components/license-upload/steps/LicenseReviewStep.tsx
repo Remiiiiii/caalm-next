@@ -133,7 +133,7 @@ export default function LicenseReviewStep({
 	return (
 		<div className="space-y-4">
 			<div className="rounded-lg border border-blue-200 bg-blue-50/80 px-4 py-3">
-				<p className="text-sm font-medium text-slate-800">
+				<p className="text-sm font-medium text-slate-700">
 					Review before submitting
 				</p>
 				<p className="text-xs text-slate-600 mt-1">

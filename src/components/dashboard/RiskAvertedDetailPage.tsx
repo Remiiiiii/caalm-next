@@ -343,7 +343,7 @@ export function RiskAvertedDetailPage() {
 								</div>
 								<AnimatedUsd
 									amount={snapshot.secondary.amount}
-									className={`block pt-3 text-3xl font-bold tabular-nums tracking-tight ${mutedZeroClass(snapshot.secondary.amount)}2`}
+									className={`text-slate-700 block pt-3 text-3xl font-bold tabular-nums tracking-tight ${mutedZeroClass(snapshot.secondary.amount)}`}
 								/>
 								<p className="mt-2 text-xs text-slate-600">
 									Face value under active monitoring.
@@ -504,7 +504,7 @@ export function RiskAvertedDetailPage() {
 														</td>
 														<td className="py-3 pr-3">
 															<span
-																className={`inline-block px-2 py-0.5 text-xs rounded-full font-medium border ${KIND_BADGE[event.kind]}`}
+																className={`inline-block px-2 py-0.5 text-xs rounded-full border ${KIND_BADGE[event.kind]}`}
 															>
 																{KIND_LABELS[event.kind]}
 															</span>
@@ -529,7 +529,7 @@ export function RiskAvertedDetailPage() {
 														<td
 															className={`py-3 pr-3 text-right tabular-nums ${
 																dollars > 0
-																	? "font-semibold text-slate-800"
+																	? "font-semibold text-slate-700"
 																	: "text-slate-400"
 															}`}
 														>
@@ -537,7 +537,7 @@ export function RiskAvertedDetailPage() {
 														</td>
 														<td className="py-3">
 															<span
-																className={`inline-block px-2 py-0.5 text-xs rounded-full font-medium border ${
+																className={`inline-block px-2 py-0.5 text-xs rounded-full border ${
 																	event.countedTowardTotal
 																		? "bg-green/10 text-green border-green/20"
 																		: "bg-slate-100 text-slate-600 border-slate-200"
@@ -560,7 +560,7 @@ export function RiskAvertedDetailPage() {
 												>
 													Counted total (matches headline)
 												</td>
-												<td className="py-3 pr-3 text-right tabular-nums font-semibold text-slate-800">
+												<td className="py-3 pr-3 text-right tabular-nums font-semibold text-slate-700">
 													<AnimatedUsd amount={countedDollars} />
 												</td>
 												<td />
@@ -605,7 +605,7 @@ function RecapRow({
 	const isWarning = tone === "warning";
 	const isMuted = Boolean(muteZero && value === 0);
 	// Warning rows: slate ink on amber fill (readable). Orange stays on the status badge only.
-	const activeValue = "text-[13px] font-semibold text-slate-800";
+	const activeValue = "text-[13px] font-semibold text-slate-700";
 	const valueClass = isMuted
 		? "text-[13px] font-medium text-slate-500"
 		: isWarning

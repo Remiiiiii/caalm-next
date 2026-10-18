@@ -25,7 +25,7 @@ const HIGHLIGHT_CLASS = "ring-2";
 const HIGHLIGHT_RING = "ring-[#0f5384]/40";
 
 const chevronClassName =
-	"inline-flex items-center justify-center rounded-md p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-800 cursor-pointer transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 disabled:opacity-0 disabled:pointer-events-none";
+	"inline-flex items-center justify-center rounded-md p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-700 cursor-pointer transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 disabled:opacity-0 disabled:pointer-events-none";
 
 export function DemoTipCard({
 	tip,
@@ -90,7 +90,7 @@ export function DemoTipCard({
 					type="button"
 					onClick={onDismiss}
 					aria-label="Dismiss tip"
-					className="shrink-0 rounded-md p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-800 cursor-pointer transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
+					className="shrink-0 rounded-md p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-700 cursor-pointer transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
 				>
 					<X className="h-4 w-4" />
 				</button>

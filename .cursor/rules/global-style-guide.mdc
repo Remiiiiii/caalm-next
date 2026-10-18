@@ -585,12 +585,11 @@ className="shadow-sm hover:shadow-md transition-all duration-200"
 **ALWAYS** use the CAALM badge pattern from the Contracts table. Do **not** use unstyled shadcn `Badge` variants (`default`, `secondary`, `outline`, `destructive`) as the final look.
 
 ```tsx
-<span className="inline-block px-2 py-0.5 text-xs rounded-full font-medium border bg-green/10 text-green border-green/20">
-  Active
-</span>
-```
+<span className="inline-block px-2 py-0.5 text-xs rounded-full border bg-green/10 text-green border-green/20">
+ Active
+</span>```
 
-**Shape (required):** `inline-block px-2 py-0.5 text-xs rounded-full font-medium border`
+**Shape (required):** `inline-block px-2 py-0.5 text-xs rounded-full border`
 
 **Status / meaning colors (required):**
 
@@ -777,7 +776,7 @@ When creating a new page or component, verify:
 - [ ] Scrollable dropdown / submenu lists use `DropdownScrollArea` (not native `overflow-y-auto` scrollbars)
 - [ ] Cards / glass panels / tables waiting on data use skeletons (`CaalmDataTableSkeleton` / `StatCardSkeleton` / `Skeleton`) — never branded `LoadingSpinner` or spin icons- [ ] 3-dot overflow menus use `/assets/icons/dots.svg` (34×34) with `shad-no-focus rounded-full hover:bg-white/30` — not Lucide `MoreVertical`
 - [ ] Delete / Archive menu items have `<DropdownMenuSeparator />` immediately above them and `tone="danger"`
-- [ ] Badges use `inline-block` / `inline-flex` + `px-2 py-0.5 text-xs rounded-full font-medium border` plus CAALM status colors — no dots inside; no truncated labels
+- [ ] Badges use `inline-block` / `inline-flex` + `px-2 py-0.5 text-xs rounded-full border` plus CAALM status colors — no dots inside; no truncated labels
 - [ ] Toolbar / filter-row selects use `CaalmFilterSelect` (Assign Tasks pill standard)
 - [ ] Data tables use `CaalmDataTable` / `DATA_TABLE_*` / `CaalmDataTableEmpty` + `SortableDataTableHead` where sorting applies
 - [ ] User faces use profile photo when available, else initials via `@/components/ui/avatar`

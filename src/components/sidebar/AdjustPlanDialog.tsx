@@ -142,7 +142,7 @@ export default function AdjustPlanDialog({
 									Annual
 								</button>
 								{billingInterval === "yearly" ? (
-									<span className="ml-2 mr-2 rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
+									<span className="ml-2 mr-2 rounded-full bg-green-50 px-2 py-0.5 text-xs text-green-700">
 										Save 20%
 									</span>
 								) : (

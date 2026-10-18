@@ -43,7 +43,7 @@ export function ContractAnalysisCards({
 							{analysis.keyTerms.map((term) => (
 								<span
 									key={term}
-									className="inline-block rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600"
+									className="inline-block rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs text-slate-600"
 								>
 									{term}
 								</span>

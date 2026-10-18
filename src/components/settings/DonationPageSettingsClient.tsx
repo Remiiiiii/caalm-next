@@ -1087,11 +1087,11 @@ export function DonationPageSettingsClient({
 													</TableCell>
 													<TableCell className="px-3 py-4 whitespace-nowrap">
 														{v.isLive ? (
-															<span className="inline-block rounded-full border border-green/20 bg-green/10 px-2 py-0.5 text-xs font-medium text-green">
+															<span className="inline-block rounded-full border border-green/20 bg-green/10 px-2 py-0.5 text-xs text-green">
 																Live
 															</span>
 														) : (
-															<span className="inline-block rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+															<span className="inline-block rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
 																Previous
 															</span>
 														)}

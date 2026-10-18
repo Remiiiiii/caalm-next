@@ -7,7 +7,10 @@ import { formatTimeForDisplay } from "@/lib/calendar/eventDisplayFormat";
 
 function stripHtml(html: string): string {
 	if (typeof document === "undefined") {
-		return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+		return html
+			.replace(/<[^>]*>/g, " ")
+			.replace(/\s+/g, " ")
+			.trim();
 	}
 	const tmp = document.createElement("div");
 	tmp.innerHTML = html;
@@ -59,7 +62,7 @@ export function CalendarPinnedNotesListDialog({
 							<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
 								{heading}
 							</DialogTitle>
-							<span className="inline-block rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+							<span className="inline-block rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
 								{noteCountLabel}
 							</span>
 						</div>
@@ -92,7 +95,7 @@ export function CalendarPinnedNotesListDialog({
 										: "—"}
 								</span>
 								<div className="min-w-0 flex-1">
-									<p className="truncate text-sm font-semibold text-slate-800">
+									<p className="truncate text-sm font-semibold text-slate-700">
 										{note.title || "Untitled note"}
 									</p>
 									{body ? (

@@ -146,7 +146,7 @@ export default function NonprofitHero() {
 									Fiscal year to date
 								</p>
 							</div>
-							<span className="inline-flex items-center gap-1 rounded-full border border-green/20 bg-green/10 px-2 py-0.5 text-xs font-medium text-green">
+							<span className="inline-flex items-center gap-1 rounded-full border border-green/20 bg-green/10 px-2 py-0.5 text-xs text-green">
 								<TrendingUp className="h-3 w-3" />
 								On pace
 							</span>

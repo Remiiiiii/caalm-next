@@ -381,7 +381,7 @@ export function OrgStructureManager({
 												{hasChildren ? (
 													<button
 														type="button"
-														className="shrink-0 rounded p-0.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800 cursor-pointer transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
+														className="shrink-0 rounded p-0.5 text-slate-500 hover:bg-slate-100 hover:text-slate-700 cursor-pointer transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
 														aria-expanded={isOpen}
 														aria-label={
 															isOpen

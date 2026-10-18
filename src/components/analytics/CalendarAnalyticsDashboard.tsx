@@ -338,7 +338,7 @@ export const CalendarAnalyticsDashboard: React.FC = () => {
 										</SelectContent>
 									</Select>
 								</div>
-								<span className="inline-flex items-center gap-1.5 rounded-full bg-white/30 px-2.5 py-1 text-xs font-medium text-slate-600 backdrop-blur-sm border border-white/20">
+																<span className="inline-flex items-center gap-1.5 rounded-full bg-white/30 px-2.5 py-1 text-xs text-slate-600 backdrop-blur-sm border border-white/20">
 									<span
 										className={`h-2 w-2 rounded-full ${
 											isValidating

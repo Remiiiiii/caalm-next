@@ -43,7 +43,7 @@ interface IntegrationCardProps {
 }
 
 const PILL_BASE =
-	"inline-block px-2 py-0.5 text-xs rounded-full font-medium border";
+	"inline-block px-2 py-0.5 text-xs rounded-full border";
 
 function statusBadge(status: IntegrationStatus) {
 	switch (status) {

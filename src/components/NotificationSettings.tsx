@@ -644,9 +644,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
 			const result = await res.json();
 
 			if (!res.ok && !result.alreadyDisabled) {
-				throw new Error(
-					result.error || "Failed to disable SMS notifications",
-				);
+				throw new Error(result.error || "Failed to disable SMS notifications");
 			}
 
 			handleGlobalSettingChange("smsNotifications", false);
@@ -763,7 +761,10 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
 													<Select
 														value={globalSettings.quietHoursStart}
 														onValueChange={(value) =>
-															handleGlobalSettingChange("quietHoursStart", value)
+															handleGlobalSettingChange(
+																"quietHoursStart",
+																value,
+															)
 														}
 													>
 														<SelectTrigger
@@ -831,8 +832,8 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
 											/>
 										</div>
 										<p className="pl-6 text-xs text-slate-500">
-											Master switch — required before any per-type SMS alert
-											can be enabled below.
+											Master switch — required before any per-type SMS alert can
+											be enabled below.
 										</p>
 										{globalSettings.smsNotifications && (
 											<div className="mt-3 space-y-1 pl-6">
@@ -1024,7 +1025,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
 															{typeConfig?.icon}
 														</span>
 														<div className="min-w-0">
-															<p className="font-medium text-slate-800">
+															<p className="font-medium text-slate-700">
 																{typeConfig?.label}
 															</p>
 															<p className="text-xs text-slate-500 line-clamp-2">

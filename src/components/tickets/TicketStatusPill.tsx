@@ -28,7 +28,7 @@ export function TicketStatusPill({ status }: { status: TicketStatus }) {
 	return (
 		<span
 			className={cn(
-				"inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium",
+				"inline-flex items-center rounded-full border px-2 py-0.5 text-xs",
 				STATUS_CLASS[status],
 			)}
 		>
@@ -41,7 +41,7 @@ export function TicketSeverityPill({ severity }: { severity: TicketSeverity }) {
 	return (
 		<span
 			className={cn(
-				"inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium capitalize",
+				"inline-flex items-center rounded-full border px-2 py-0.5 text-xs capitalize",
 				SEVERITY_CLASS[severity],
 			)}
 		>
@@ -60,7 +60,7 @@ export function TicketLanePill({ lane }: { lane?: TicketLane | null }) {
 	return (
 		<span
 			className={cn(
-				"inline-block px-2 py-0.5 text-xs rounded-full font-medium border capitalize",
+				"inline-block px-2 py-0.5 text-xs rounded-full border capitalize",
 				LANE_CLASS[resolved],
 			)}
 		>

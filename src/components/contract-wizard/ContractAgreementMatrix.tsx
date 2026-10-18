@@ -118,7 +118,7 @@ function DocxPreviewTile({
 				<span className={cn("h-4 w-1 shrink-0 rounded-full", tagAccent.bar)} />
 				<span
 					className={cn(
-						"inline-block rounded-full border px-2 py-0.5 text-xs font-medium",
+						"inline-block rounded-full border px-2 py-0.5 text-xs",
 						tagAccent.badge,
 					)}
 				>
@@ -190,7 +190,7 @@ function BlueprintTile({
 				<span className={cn("h-4 w-1 shrink-0 rounded-full", accent.bar)} />
 				<span
 					className={cn(
-						"inline-block rounded-full border px-2 py-0.5 text-xs font-medium",
+						"inline-block rounded-full border px-2 py-0.5 text-xs",
 						accent.badge,
 					)}
 				>
@@ -297,7 +297,7 @@ function TemplateTile({
 						<span className={cn("h-4 w-1 shrink-0 rounded-full", accent.bar)} />
 						<span
 							className={cn(
-								"inline-block rounded-full border px-2 py-0.5 text-xs font-medium",
+								"inline-block rounded-full border px-2 py-0.5 text-xs",
 								accent.badge,
 							)}
 						>

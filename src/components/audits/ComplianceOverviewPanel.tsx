@@ -123,7 +123,7 @@ export function ComplianceOverviewPanel({
 									{overview.overallScore}%
 								</span>
 								<span
-									className={`inline-flex shrink-0 items-center whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-medium ${rag.badge}`}
+									className={`inline-flex shrink-0 items-center whitespace-nowrap rounded-full border px-2.5 py-1 text-xs ${rag.badge}`}
 								>
 									{rag.label}
 								</span>

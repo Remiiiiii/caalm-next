@@ -187,7 +187,7 @@ export function EventReviewDialog({
 														<Badge
 															variant="outline"
 															className={cn(
-																"h-5! min-h-0 w-fit min-w-0 rounded-full! px-1.5! py-0! text-[10px]! font-medium leading-none",
+																"h-5! min-h-0 w-fit min-w-0 rounded-full! px-1.5! py-0! text-[10px]! leading-none",
 																getSensitivityBadgeClasses(
 																	selectedEvent.sensitivityLevel || "standard",
 																),

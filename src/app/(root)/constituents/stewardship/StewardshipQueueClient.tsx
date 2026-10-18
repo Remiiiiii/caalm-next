@@ -169,7 +169,7 @@ export function StewardshipQueueClient() {
 										{row.displayName}
 									</Link>
 									<span
-										className={`inline-block px-2 py-0.5 text-xs rounded-full font-medium border ${segmentBadgeClass(row.segment)}`}
+										className={`inline-block px-2 py-0.5 text-xs rounded-full border ${segmentBadgeClass(row.segment)}`}
 									>
 										{normalizeSegmentLabel(row.segment)}
 									</span>

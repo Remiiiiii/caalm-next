@@ -162,7 +162,7 @@ export default function AuditsMock() {
 						<nav className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-hidden">
 							{SIDEBAR_SECTIONS.map((section) => (
 								<div key={section.header} className="shrink-0">
-									<p className="mb-1 flex items-center gap-1.5 px-1 text-[10px] font-bold text-slate-800">
+									<p className="mb-1 flex items-center gap-1.5 px-1 text-[10px] font-bold text-slate-700">
 										{section.header === "Dashboard" ? (
 											<span className="text-[#03AFBF] shrink-0">
 												<svg
@@ -270,7 +270,7 @@ export default function AuditsMock() {
 										<span className="text-2xl font-bold text-slate-700">
 											87%
 										</span>
-										<span className="inline-flex items-center rounded-full border border-green/20 bg-green/10 px-2 py-0.5 text-[10px] font-medium text-green">
+										<span className="inline-flex items-center rounded-full border border-green/20 bg-green/10 px-2 py-0.5 text-[10px] text-green">
 											On track
 										</span>
 									</div>
@@ -356,7 +356,7 @@ export default function AuditsMock() {
 										</p>
 										<span
 											className={cn(
-												"mt-1.5 inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[9px] font-medium",
+												"mt-1.5 inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[9px]",
 												badge,
 											)}
 										>

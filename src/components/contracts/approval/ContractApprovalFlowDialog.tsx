@@ -210,7 +210,7 @@ export default function ContractApprovalFlowDialog({
 									<div className="flex flex-wrap items-center gap-2">
 										<WorkflowStatusBadge status={workflow.contractStatus} />
 										{workflow.department ? (
-											<span className="inline-block rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+											<span className="inline-block rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
 												{workflow.department}
 												{workflow.subDepartment
 													? ` · ${workflow.subDepartment}`
@@ -231,7 +231,7 @@ export default function ContractApprovalFlowDialog({
 											}
 										>
 											<FileText className="h-4 w-4 shrink-0 text-[#0f5384]" />
-											<span className="min-w-0 flex-1 truncate font-medium text-slate-800">
+											<span className="min-w-0 flex-1 truncate font-medium text-slate-700">
 												{documentLabel}
 											</span>
 											<span className="inline-flex shrink-0 items-center gap-1 text-[11px] text-[#0f5384]">

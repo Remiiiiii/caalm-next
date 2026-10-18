@@ -34,7 +34,7 @@ export function ImpersonationBanner() {
 	return (
 		<div
 			role="status"
-			className="flex w-full items-center justify-between gap-3 border-b border-orange/20 bg-orange/15 px-4 py-2 text-slate-800 sm:px-6"
+			className="flex w-full items-center justify-between gap-3 border-b border-orange/20 bg-orange/15 px-4 py-2 text-slate-700 sm:px-6"
 			data-testid="impersonation-banner"
 		>
 			<p className="min-w-0 text-sm font-medium">

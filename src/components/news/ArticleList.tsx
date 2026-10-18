@@ -30,6 +30,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+	CaalmDataTable,
+	DATA_TABLE_BODY_ROW_BASE,
+	DATA_TABLE_HEADER_CELL,
+	DATA_TABLE_HEADER_ROW,
+} from "@/components/ui/caalm-data-table";
 import { CardContent, Card as GlassCard } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -47,12 +53,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import {
-	CaalmDataTable,
-	DATA_TABLE_BODY_ROW_BASE,
-	DATA_TABLE_HEADER_CELL,
-	DATA_TABLE_HEADER_ROW,
-} from "@/components/ui/caalm-data-table";
 import {
 	TableBody,
 	TableCell,
@@ -317,7 +317,7 @@ const ArticleList: React.FC<ArticleListProps> = ({ onEdit, onRefresh }) => {
 				);
 			default:
 				return (
-					<Badge className="flex items-center justify-center bg-slate-100 text-slate-800 border-slate-200">
+					<Badge className="flex items-center justify-center bg-slate-100 text-slate-700 border-slate-200">
 						{statusValue}
 					</Badge>
 				);
@@ -489,157 +489,150 @@ const ArticleList: React.FC<ArticleListProps> = ({ onEdit, onRefresh }) => {
 					) : (
 						<>
 							<CaalmDataTable>
-									<TableHeader className="[&_tr]:border-b-0">
-										<TableRow className={DATA_TABLE_HEADER_ROW}>
-											<TableHead
-												className={`${DATA_TABLE_HEADER_CELL} pl-4 pr-2 w-10`}
-											>
+								<TableHeader className="[&_tr]:border-b-0">
+									<TableRow className={DATA_TABLE_HEADER_ROW}>
+										<TableHead
+											className={`${DATA_TABLE_HEADER_CELL} pl-4 pr-2 w-10`}
+										>
+											<Checkbox
+												checked={
+													selectedArticles.size === articles.length &&
+													articles.length > 0
+												}
+												onCheckedChange={handleSelectAll}
+											/>
+										</TableHead>
+										<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+											Title
+										</TableHead>
+										<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+											Type
+										</TableHead>
+										<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+											Status
+										</TableHead>
+										<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+											Priority
+										</TableHead>
+										<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+											Department
+										</TableHead>
+										<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+											Author
+										</TableHead>
+										<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+											Date
+										</TableHead>
+										<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+											Views
+										</TableHead>
+										<TableHead
+											className={`${DATA_TABLE_HEADER_CELL} pl-3 pr-4 text-right`}
+										>
+											Actions
+										</TableHead>
+									</TableRow>
+								</TableHeader>
+								<TableBody className="[&_tr:last-child>td]:border-b-0">
+									{articles.map((article) => (
+										<TableRow
+											key={article.id}
+											className={cn(DATA_TABLE_BODY_ROW_BASE)}
+										>
+											<TableCell className="py-4 pl-4 pr-2">
 												<Checkbox
-													checked={
-														selectedArticles.size === articles.length &&
-														articles.length > 0
+													checked={selectedArticles.has(article.id)}
+													onCheckedChange={(checked) =>
+														handleSelectArticle(article.id, checked as boolean)
 													}
-													onCheckedChange={handleSelectAll}
 												/>
-											</TableHead>
-											<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-												Title
-											</TableHead>
-											<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-												Type
-											</TableHead>
-											<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-												Status
-											</TableHead>
-											<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-												Priority
-											</TableHead>
-											<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-												Department
-											</TableHead>
-											<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-												Author
-											</TableHead>
-											<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-												Date
-											</TableHead>
-											<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-												Views
-											</TableHead>
-											<TableHead
-												className={`${DATA_TABLE_HEADER_CELL} pl-3 pr-4 text-right`}
-											>
-												Actions
-											</TableHead>
+											</TableCell>
+											<TableCell className="py-4 font-medium max-w-xs truncate text-slate-700">
+												{article.title}
+											</TableCell>
+											<TableCell className="py-4">
+												<div className="flex items-center gap-2">
+													{getTypeIcon(article.type)}
+													<span className="capitalize text-slate-700">
+														{article.type}
+													</span>
+												</div>
+											</TableCell>
+											<TableCell className="py-4">
+												<div className="flex flex-col gap-1">
+													{getStatusBadge(article.status)}
+													{article.scheduledAt &&
+														new Date(article.scheduledAt) > new Date() && (
+															<span className="inline-block px-2 py-0.5 text-xs rounded-full border bg-blue/10 text-blue border-blue/20">
+																Scheduled
+															</span>
+														)}
+												</div>
+											</TableCell>
+											<TableCell className="py-4">
+												{getPriorityBadge(article.priority)}
+											</TableCell>
+											<TableCell className="py-4 text-slate-700">
+												{article.department || "-"}
+											</TableCell>
+											<TableCell className="py-4 text-slate-700">
+												{article.author}
+											</TableCell>
+											<TableCell className="py-4 text-slate-700">
+												{format(new Date(article.date), "MMM dd, yyyy")}
+											</TableCell>
+											<TableCell className="py-4 text-slate-700">
+												{article.viewCount || 0}
+											</TableCell>
+											<TableCell className="py-4 pl-3 pr-4 text-right">
+												<DropdownMenu>
+													<DropdownMenuTrigger asChild>
+														<Button
+															variant="ghost"
+															size="icon"
+															className="rounded-full transition-colors hover:bg-white/30"
+														>
+															<MoreVertical className="h-4 w-4" />
+														</Button>
+													</DropdownMenuTrigger>
+													<AppDropdownMenuContent align="end">
+														<AppDropdownMenuItem
+															icon={Edit}
+															onClick={() => onEdit?.(article.id)}
+														>
+															Edit
+														</AppDropdownMenuItem>
+														{article.status === "published" ? (
+															<AppDropdownMenuItem
+																icon={EyeOff}
+																onClick={() => handlePublish(article.id, false)}
+															>
+																Unpublish
+															</AppDropdownMenuItem>
+														) : (
+															<AppDropdownMenuItem
+																icon={Eye}
+																onClick={() => handlePublish(article.id, true)}
+															>
+																Publish
+															</AppDropdownMenuItem>
+														)}
+														<AppDropdownMenuItem
+															icon={Trash2}
+															tone="danger"
+															onClick={() => {
+																setArticleToDelete(article.id);
+																setDeleteDialogOpen(true);
+															}}
+														>
+															Delete
+														</AppDropdownMenuItem>
+													</AppDropdownMenuContent>
+												</DropdownMenu>
+											</TableCell>
 										</TableRow>
-									</TableHeader>
-									<TableBody className="[&_tr:last-child>td]:border-b-0">
-										{articles.map((article) => (
-											<TableRow
-												key={article.id}
-												className={cn(DATA_TABLE_BODY_ROW_BASE)}
-											>
-												<TableCell className="py-4 pl-4 pr-2">
-													<Checkbox
-														checked={selectedArticles.has(article.id)}
-														onCheckedChange={(checked) =>
-															handleSelectArticle(
-																article.id,
-																checked as boolean,
-															)
-														}
-													/>
-												</TableCell>
-												<TableCell className="py-4 font-medium max-w-xs truncate text-slate-700">
-													{article.title}
-												</TableCell>
-												<TableCell className="py-4">
-													<div className="flex items-center gap-2">
-														{getTypeIcon(article.type)}
-														<span className="capitalize text-slate-700">
-															{article.type}
-														</span>
-													</div>
-												</TableCell>
-												<TableCell className="py-4">
-													<div className="flex flex-col gap-1">
-														{getStatusBadge(article.status)}
-														{article.scheduledAt &&
-															new Date(article.scheduledAt) > new Date() && (
-																<span className="inline-block px-2 py-0.5 text-xs rounded-full font-medium border bg-blue/10 text-blue border-blue/20">
-																	Scheduled
-																</span>
-															)}
-													</div>
-												</TableCell>
-												<TableCell className="py-4">
-													{getPriorityBadge(article.priority)}
-												</TableCell>
-												<TableCell className="py-4 text-slate-700">
-													{article.department || "-"}
-												</TableCell>
-												<TableCell className="py-4 text-slate-700">
-													{article.author}
-												</TableCell>
-												<TableCell className="py-4 text-slate-700">
-													{format(new Date(article.date), "MMM dd, yyyy")}
-												</TableCell>
-												<TableCell className="py-4 text-slate-700">
-													{article.viewCount || 0}
-												</TableCell>
-												<TableCell className="py-4 pl-3 pr-4 text-right">
-													<DropdownMenu>
-														<DropdownMenuTrigger asChild>
-															<Button
-																variant="ghost"
-																size="icon"
-																className="rounded-full transition-colors hover:bg-white/30"
-															>
-																<MoreVertical className="h-4 w-4" />
-															</Button>
-														</DropdownMenuTrigger>
-														<AppDropdownMenuContent align="end">
-															<AppDropdownMenuItem
-																icon={Edit}
-																onClick={() => onEdit?.(article.id)}
-															>
-																Edit
-															</AppDropdownMenuItem>
-															{article.status === "published" ? (
-																<AppDropdownMenuItem
-																	icon={EyeOff}
-																	onClick={() =>
-																		handlePublish(article.id, false)
-																	}
-																>
-																	Unpublish
-																</AppDropdownMenuItem>
-															) : (
-																<AppDropdownMenuItem
-																	icon={Eye}
-																	onClick={() =>
-																		handlePublish(article.id, true)
-																	}
-																>
-																	Publish
-																</AppDropdownMenuItem>
-															)}
-															<AppDropdownMenuItem
-																icon={Trash2}
-																tone="danger"
-																onClick={() => {
-																	setArticleToDelete(article.id);
-																	setDeleteDialogOpen(true);
-																}}
-															>
-																Delete
-															</AppDropdownMenuItem>
-														</AppDropdownMenuContent>
-													</DropdownMenu>
-												</TableCell>
-											</TableRow>
-										))}
-									</TableBody>
+									))}
+								</TableBody>
 							</CaalmDataTable>
 
 							<PageIndex

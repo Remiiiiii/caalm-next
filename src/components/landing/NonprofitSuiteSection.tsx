@@ -264,7 +264,7 @@ export default function NonprofitSuiteSection() {
 											{donor.note}
 										</p>
 									</div>
-									<span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-blue/20 bg-blue/10 px-2 py-0.5 text-xs font-medium text-blue">
+									<span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-blue/20 bg-blue/10 px-2 py-0.5 text-xs text-blue">
 										<Sparkles className="h-3 w-3" />
 										{donor.action}
 									</span>
@@ -373,7 +373,7 @@ export default function NonprofitSuiteSection() {
 									of 150 guests checked in
 								</p>
 							</div>
-							<span className="inline-block rounded-full border border-green/20 bg-green/10 px-2 py-0.5 text-xs font-medium text-green">
+							<span className="inline-block rounded-full border border-green/20 bg-green/10 px-2 py-0.5 text-xs text-green">
 								Donation page live
 							</span>
 						</div>

@@ -95,7 +95,7 @@ export default function AnimatedContractInfo({
 		>
 			{/* Contract Name - appears first (0-200ms) */}
 			<motion.div variants={scaleVariants}>
-				<h2 className="text-4xl md:text-5xl font-bold text-slate-800 mb-2 drop-shadow-lg">
+				<h2 className="text-4xl md:text-5xl font-bold text-slate-700 mb-2 drop-shadow-lg">
 					{contract.contractName || contract.name || "Untitled Contract"}
 				</h2>
 			</motion.div>
@@ -130,7 +130,7 @@ export default function AnimatedContractInfo({
 				{contract.status && (
 					<motion.div variants={itemVariants} className="glass-card p-4">
 						<div className="text-sm text-slate-600 mb-1">Status</div>
-						<div className="text-lg font-semibold text-slate-800">
+						<div className="text-lg font-semibold text-slate-700">
 							{contract.status.charAt(0).toUpperCase() +
 								contract.status.slice(1).replace(/-/g, " ")}
 						</div>
@@ -140,7 +140,7 @@ export default function AnimatedContractInfo({
 				{contract.amount !== undefined && contract.amount !== null && (
 					<motion.div variants={itemVariants} className="glass-card p-4">
 						<div className="text-sm text-slate-600 mb-1">Amount</div>
-						<div className="text-lg font-semibold text-slate-800">
+						<div className="text-lg font-semibold text-slate-700">
 							${contract.amount.toLocaleString()}
 						</div>
 					</motion.div>
@@ -149,7 +149,7 @@ export default function AnimatedContractInfo({
 				{contract.contractType && (
 					<motion.div variants={itemVariants} className="glass-card p-4">
 						<div className="text-sm text-slate-600 mb-1">Contract Type</div>
-						<div className="text-lg font-semibold text-slate-800">
+						<div className="text-lg font-semibold text-slate-700">
 							{contract.contractType}
 						</div>
 					</motion.div>
@@ -158,7 +158,7 @@ export default function AnimatedContractInfo({
 				{contract.vendor && (
 					<motion.div variants={itemVariants} className="glass-card p-4">
 						<div className="text-sm text-slate-600 mb-1">Vendor</div>
-						<div className="text-lg font-semibold text-slate-800">
+						<div className="text-lg font-semibold text-slate-700">
 							{contract.vendor}
 						</div>
 					</motion.div>

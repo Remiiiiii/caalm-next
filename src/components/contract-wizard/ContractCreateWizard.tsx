@@ -1271,10 +1271,10 @@ function SortableInjectSectionItem({
 						REF {section.familyId}
 					</p>
 					<div className="mt-2 flex flex-wrap gap-1.5">
-						<span className="inline-block rounded border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-medium tracking-wide text-slate-500 uppercase">
+						<span className="inline-block rounded border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] tracking-wide text-slate-500 uppercase">
 							{sourceLabel}
 						</span>
-						<span className="inline-block rounded border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-medium tracking-wide text-slate-500 uppercase">
+						<span className="inline-block rounded border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] tracking-wide text-slate-500 uppercase">
 							{optionLabel}
 						</span>
 					</div>

@@ -39,7 +39,7 @@ export function clauseCategoryLabel(category: ClauseCategory): string {
 
 /** Match Contracts / Licenses table badges (`ContractsTableView` statusBadge). */
 export const CAALM_BADGE_BASE =
-	"inline-flex w-fit items-center justify-center px-2 py-0.5 text-center text-xs rounded-full font-medium border";
+	"inline-flex w-fit items-center justify-center px-2 py-0.5 text-center text-xs rounded-full border";
 
 export function clauseStatusBadgeClass(status: ClauseStatus): string {
 	if (status === "active") return "bg-green/10 text-green border-green/20";

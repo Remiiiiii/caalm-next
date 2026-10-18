@@ -273,7 +273,7 @@ export default function ApprovalsTable({
 									{item.slaStatus || item.dueAt ? (
 										<span
 											className={cn(
-												"inline-block px-2 py-0.5 text-xs rounded-full font-medium border",
+												"inline-block px-2 py-0.5 text-xs rounded-full border",
 												slaBadgeClasses(item.slaStatus),
 											)}
 										>

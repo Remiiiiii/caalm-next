@@ -3926,7 +3926,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																				<span className="text-red">*</span>
 																			</FormLabel>
 																			<FormControl>
-																				<span className="inline-block px-2 py-0.5 text-xs rounded-full font-medium border bg-orange/10 text-orange border-orange/20">
+																				<span className="inline-block px-2 py-0.5 text-xs rounded-full border bg-orange/10 text-orange border-orange/20">
 																					Draft
 																				</span>
 																			</FormControl>

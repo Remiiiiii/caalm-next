@@ -297,8 +297,8 @@ export default function CounterpartyNegotiatePage() {
 			<div className="flex h-screen flex-col overflow-hidden bg-slate-100 px-4 py-6 sm:px-6">
 				<div className="mx-auto flex w-full max-w-md flex-col">
 					<div className="mb-4 flex flex-wrap items-center gap-3">
-						<h1 className="text-2xl font-semibold text-slate-800">{title}</h1>
-						<span className="inline-flex items-center gap-1.5 rounded-full border border-blue/20 bg-blue/10 px-2.5 py-0.5 text-xs font-medium text-blue">
+						<h1 className="text-2xl font-semibold text-slate-700">{title}</h1>
+						<span className="inline-flex items-center gap-1.5 rounded-full border border-blue/20 bg-blue/10 px-2.5 py-0.5 text-xs text-blue">
 							<Eye className="h-3.5 w-3.5" />
 							Counterparty
 						</span>
@@ -435,8 +435,8 @@ export default function CounterpartyNegotiatePage() {
 				<div className="mb-3 flex shrink-0 flex-wrap items-start justify-between gap-3">
 					<div className="min-w-0 flex-1">
 						<div className="flex flex-wrap items-center gap-3">
-							<h1 className="text-2xl font-semibold text-slate-800">{title}</h1>
-							<span className="inline-flex items-center gap-1.5 rounded-full border border-blue/20 bg-blue/10 px-2.5 py-0.5 text-xs font-medium text-blue">
+							<h1 className="text-2xl font-semibold text-slate-700">{title}</h1>
+							<span className="inline-flex items-center gap-1.5 rounded-full border border-blue/20 bg-blue/10 px-2.5 py-0.5 text-xs text-blue">
 								<Eye className="h-3.5 w-3.5" />
 								Viewing as counterparty
 							</span>

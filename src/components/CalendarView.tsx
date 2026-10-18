@@ -288,7 +288,7 @@ function CalendarCalHead({
 			<button
 				type="button"
 				onClick={onToday}
-				className="rounded-md text-[10px] font-medium uppercase tracking-wide text-[#0f5384] bg-blue/10 border border-blue/20 px-2.5 py-1 transition-colors hover:bg-blue/15"
+				className="rounded-md text-[10px] uppercase tracking-wide text-[#0f5384] bg-blue/10 border border-blue/20 px-2.5 py-1 transition-colors hover:bg-blue/15"
 			>
 				Today
 			</button>
@@ -791,7 +791,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 									)}
 								>
 									<div className="flex items-center justify-between p-3 bg-slate-50 border-b border-slate-200">
-										<h3 className="font-semibold text-slate-800 text-sm">
+										<h3 className="font-semibold text-slate-700 text-sm">
 											{format(day, "EEEE, MMMM d, yyyy")}
 										</h3>
 										{dayEvents.length > 0 && (
@@ -831,7 +831,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 																	</div>
 																)}
 															</div>
-															<div className="font-semibold text-slate-800 text-sm mb-1">
+															<div className="font-semibold text-slate-700 text-sm mb-1">
 																{event.title}
 															</div>
 															{event.contractName && (

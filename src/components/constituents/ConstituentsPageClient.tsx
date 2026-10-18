@@ -208,20 +208,20 @@ export function ConstituentsPageClient() {
 													{name}
 												</p>
 												<span
-													className={`inline-block px-2 py-0.5 text-xs rounded-full font-medium border ${constituentTypeBadgeClass(constituent.type)}`}
+													className={`inline-block px-2 py-0.5 text-xs rounded-full border ${constituentTypeBadgeClass(constituent.type)}`}
 												>
 													{constituentTypeLabel(constituent.type)}
 												</span>
 												{constituent.lifecycleSegment ? (
 													<span
-														className={`inline-block px-2 py-0.5 text-xs rounded-full font-medium border ${segmentBadgeClass(constituent.lifecycleSegment)}`}
+														className={`inline-block px-2 py-0.5 text-xs rounded-full border ${segmentBadgeClass(constituent.lifecycleSegment)}`}
 													>
 														{normalizeSegmentLabel(constituent.lifecycleSegment)}
 													</span>
 												) : null}
 												{constituent.doNotContact ? (
 													<span
-														className={`inline-block px-2 py-0.5 text-xs rounded-full font-medium border ${CONSTITUENT_DNC_BADGE_CLASS}`}
+														className={`inline-block px-2 py-0.5 text-xs rounded-full border ${CONSTITUENT_DNC_BADGE_CLASS}`}
 													>
 														Do not contact
 													</span>

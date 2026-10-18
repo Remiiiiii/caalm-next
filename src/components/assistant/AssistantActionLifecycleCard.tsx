@@ -103,7 +103,7 @@ function FieldValue({ field }: { field: AssistantActionField }) {
 		return (
 			<span
 				className={cn(
-					"inline-block rounded-full border px-2 py-0.5 text-xs font-medium",
+					"inline-block rounded-full border px-2 py-0.5 text-xs",
 					BADGE_TONES[tone],
 				)}
 			>
@@ -263,7 +263,7 @@ function CreateTaskDraftEditor({
 									patch({ dueDate: chip.value });
 								}}
 								className={cn(
-									"cursor-pointer rounded-full border px-2.5 py-1 text-xs font-medium transition-colors duration-200",
+									"cursor-pointer rounded-full border px-2.5 py-1 text-xs transition-colors duration-200",
 									"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
 									"disabled:cursor-not-allowed disabled:opacity-50",
 									selected
@@ -283,7 +283,7 @@ function CreateTaskDraftEditor({
 							patch({ dueDate: "" });
 						}}
 						className={cn(
-							"cursor-pointer rounded-full border px-2.5 py-1 text-xs font-medium transition-colors duration-200",
+							"cursor-pointer rounded-full border px-2.5 py-1 text-xs transition-colors duration-200",
 							"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
 							!dueDate
 								? "border-slate-300 bg-slate-100 text-slate-700"
@@ -334,7 +334,7 @@ function CreateTaskDraftEditor({
 									patch({ priority: opt.value });
 								}}
 								className={cn(
-									"cursor-pointer rounded-full border px-2 py-0.5 text-[11px] font-medium transition-colors duration-200",
+									"cursor-pointer rounded-full border px-2 py-0.5 text-[11px] transition-colors duration-200",
 									"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
 									"disabled:cursor-not-allowed disabled:opacity-50",
 									selected
@@ -352,7 +352,7 @@ function CreateTaskDraftEditor({
 			{/* Status badge (fixed) */}
 			<div className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-2.5">
 				<span className="shrink-0 text-xs text-slate-500">Status</span>
-				<span className="inline-block rounded-full border border-green/20 bg-green/10 px-2 py-0.5 text-xs font-medium text-green">
+				<span className="inline-block rounded-full border border-green/20 bg-green/10 px-2 py-0.5 text-xs text-green">
 					Open
 				</span>
 			</div>

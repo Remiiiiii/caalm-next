@@ -14,6 +14,12 @@ import { useState } from "react";
 import CardBrandIcon from "@/components/billing/CardBrandIcon";
 import EditPaymentMethodDialog from "@/components/settings/EditPaymentMethodDialog";
 import { Button } from "@/components/ui/button";
+import {
+	CaalmDataTable,
+	DATA_TABLE_BODY_ROW_BASE,
+	DATA_TABLE_HEADER_CELL,
+	DATA_TABLE_HEADER_ROW,
+} from "@/components/ui/caalm-data-table";
 import { Card, CardContent } from "@/components/ui/card";
 import {
 	Dialog,
@@ -29,12 +35,6 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { LoadingSpinner } from "@/components/ui/loading";
-import {
-	CaalmDataTable,
-	DATA_TABLE_BODY_ROW_BASE,
-	DATA_TABLE_HEADER_CELL,
-	DATA_TABLE_HEADER_ROW,
-} from "@/components/ui/caalm-data-table";
 import {
 	TableBody,
 	TableCell,
@@ -91,7 +91,7 @@ function formatExpiration(expMonth: number, expYear: number): string {
 }
 
 const defaultPaymentMethodBadgeClassName =
-	"inline-flex items-center rounded-xl border border-blue/20 bg-blue/10 px-2 py-1 text-xs font-medium text-blue";
+	"inline-flex items-center rounded-xl border border-blue/20 bg-blue/10 px-2 py-1 text-xs text-blue";
 
 export default function PaymentMethodsSection({
 	orgId,
@@ -310,115 +310,107 @@ export default function PaymentMethodsSection({
 
 							{!loading && !error && paymentMethods.length > 0 ? (
 								<CaalmDataTable className="px-0 sm:px-0 pb-0">
-										<TableHeader className="[&_tr]:border-b-0">
-											<TableRow className={DATA_TABLE_HEADER_ROW}>
-												<TableHead
-													className={cn(DATA_TABLE_HEADER_CELL, "px-3")}
-												>
-													Credit card
-												</TableHead>
-												<TableHead
-													className={cn(DATA_TABLE_HEADER_CELL, "px-3")}
-												>
-													Name
-												</TableHead>
-												<TableHead
-													className={cn(DATA_TABLE_HEADER_CELL, "px-3")}
-												>
-													Expiration
-												</TableHead>
-												<TableHead
-													className={cn(DATA_TABLE_HEADER_CELL, "w-12 px-3")}
-												>
-													<span className="sr-only">Actions</span>
-												</TableHead>
-											</TableRow>
-										</TableHeader>
-										<TableBody className="[&_tr:last-child>td]:border-b-0">
-											{paymentMethods.map((method) => (
-												<TableRow
-													key={method.id}
-													className={cn(DATA_TABLE_BODY_ROW_BASE)}
-												>
-													<TableCell className="text-sm text-slate-700">
-														<div className="flex items-center gap-2">
-															<CardBrandIcon brand={method.brand} />
-															<span>
-																{formatBrand(method.brand)} ending in{" "}
-																{method.last4}
+									<TableHeader className="[&_tr]:border-b-0">
+										<TableRow className={DATA_TABLE_HEADER_ROW}>
+											<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+												Credit card
+											</TableHead>
+											<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+												Name
+											</TableHead>
+											<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+												Expiration
+											</TableHead>
+											<TableHead
+												className={cn(DATA_TABLE_HEADER_CELL, "w-12 px-3")}
+											>
+												<span className="sr-only">Actions</span>
+											</TableHead>
+										</TableRow>
+									</TableHeader>
+									<TableBody className="[&_tr:last-child>td]:border-b-0">
+										{paymentMethods.map((method) => (
+											<TableRow
+												key={method.id}
+												className={cn(DATA_TABLE_BODY_ROW_BASE)}
+											>
+												<TableCell className="text-sm text-slate-700">
+													<div className="flex items-center gap-2">
+														<CardBrandIcon brand={method.brand} />
+														<span>
+															{formatBrand(method.brand)} ending in{" "}
+															{method.last4}
+														</span>
+														{method.isDefault ? (
+															<span
+																className={defaultPaymentMethodBadgeClassName}
+															>
+																Default
 															</span>
-															{method.isDefault ? (
-																<span
-																	className={defaultPaymentMethodBadgeClassName}
+														) : null}
+													</div>
+												</TableCell>
+												<TableCell className="text-sm text-slate-700">
+													{method.name || "—"}
+												</TableCell>
+												<TableCell className="text-sm text-slate-700">
+													{formatExpiration(method.expMonth, method.expYear)}
+												</TableCell>
+												<TableCell className="text-right">
+													<DropdownMenu modal={false}>
+														<DropdownMenuTrigger asChild>
+															<button
+																type="button"
+																aria-label={`Actions for card ending in ${method.last4}`}
+																disabled={loading}
+																className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-slate-600 transition-colors duration-200 hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 disabled:cursor-not-allowed disabled:opacity-50"
+															>
+																<MoreHorizontal className="h-4 w-4" />
+															</button>
+														</DropdownMenuTrigger>
+														<DropdownMenuContent align="end" className="w-44">
+															<DropdownMenuItem
+																className="cursor-pointer gap-2"
+																onSelect={() => openEdit(method)}
+															>
+																<Pencil className="h-4 w-4 text-slate-600" />
+																Edit
+															</DropdownMenuItem>
+															{paymentMethods.length > 1 &&
+															!method.isDefault ? (
+																<DropdownMenuItem
+																	className="cursor-pointer gap-2"
+																	onSelect={() => void handleSetDefault(method)}
+																	disabled={settingDefaultId === method.id}
 																>
-																	Default
-																</span>
+																	<Star className="h-4 w-4 text-slate-600" />
+																	Set as default
+																</DropdownMenuItem>
 															) : null}
-														</div>
-													</TableCell>
-													<TableCell className="text-sm text-slate-700">
-														{method.name || "—"}
-													</TableCell>
-													<TableCell className="text-sm text-slate-700">
-														{formatExpiration(method.expMonth, method.expYear)}
-													</TableCell>
-													<TableCell className="text-right">
-														<DropdownMenu modal={false}>
-															<DropdownMenuTrigger asChild>
-																<button
-																	type="button"
-																	aria-label={`Actions for card ending in ${method.last4}`}
-																	disabled={loading}
-																	className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-slate-600 transition-colors duration-200 hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 disabled:cursor-not-allowed disabled:opacity-50"
-																>
-																	<MoreHorizontal className="h-4 w-4" />
-																</button>
-															</DropdownMenuTrigger>
-															<DropdownMenuContent align="end" className="w-44">
-																<DropdownMenuItem
-																	className="cursor-pointer gap-2"
-																	onSelect={() => openEdit(method)}
-																>
-																	<Pencil className="h-4 w-4 text-slate-600" />
-																	Edit
-																</DropdownMenuItem>
-																{paymentMethods.length > 1 &&
-																!method.isDefault ? (
-																	<DropdownMenuItem
-																		className="cursor-pointer gap-2"
-																		onSelect={() =>
-																			void handleSetDefault(method)
-																		}
-																		disabled={settingDefaultId === method.id}
-																	>
-																		<Star className="h-4 w-4 text-slate-600" />
-																		Set as default
-																	</DropdownMenuItem>
-																) : null}
-																<DropdownMenuItem
-																	className="cursor-pointer gap-2"
-																	onSelect={() =>
-																		onReplacePaymentMethod(method.id)
-																	}
-																	disabled={replacingId === method.id}
-																>
-																	<ArrowLeftRight className="h-4 w-4 text-slate-600" />
-																	Replace
-																</DropdownMenuItem>
-																<DropdownMenuSeparator />
-																<DropdownMenuItem
-																	className="cursor-pointer gap-2 text-red focus:text-red"
-																	onSelect={() => openRemove(method)}
-																>
-																	<Trash2 className="h-4 w-4" />
-																	Remove
-																</DropdownMenuItem>
-															</DropdownMenuContent>
-														</DropdownMenu>
-													</TableCell>
-												</TableRow>
-											))}
-										</TableBody>
+															<DropdownMenuItem
+																className="cursor-pointer gap-2"
+																onSelect={() =>
+																	onReplacePaymentMethod(method.id)
+																}
+																disabled={replacingId === method.id}
+															>
+																<ArrowLeftRight className="h-4 w-4 text-slate-600" />
+																Replace
+															</DropdownMenuItem>
+															<DropdownMenuSeparator />
+															<DropdownMenuItem
+																className="cursor-pointer gap-2 text-red focus:text-red"
+																onSelect={() => openRemove(method)}
+															>
+																<Trash2 className="h-4 w-4" />
+																Remove
+															</DropdownMenuItem>
+														</DropdownMenuContent>
+													</DropdownMenu>
+												</TableCell>
+											</TableRow>
+										))}
+									</TableBody>
 								</CaalmDataTable>
 							) : null}
 
@@ -443,7 +435,7 @@ export default function PaymentMethodsSection({
 											<button
 												type="button"
 												aria-label="Backup payment method info"
-												className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md text-slate-600 transition-colors duration-200 hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
+												className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md text-slate-600 transition-colors duration-200 hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
 											>
 												<Info className="h-4 w-4" />
 											</button>

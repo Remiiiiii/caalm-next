@@ -301,9 +301,11 @@ export function UserManagementActionDialogs({
 	}
 
 	if (action === "edit") {
-		const orgUsers = (
-			Array.isArray(orgUsersRaw) ? orgUsersRaw : []
-		) as Array<{ $id: string; fullName?: string; email?: string }>;
+		const orgUsers = (Array.isArray(orgUsersRaw) ? orgUsersRaw : []) as Array<{
+			$id: string;
+			fullName?: string;
+			email?: string;
+		}>;
 		const costCenters = costCentersPayload?.data?.costCenters ?? [];
 		const matrixConflictsWithManager = Boolean(
 			managerUserId &&
@@ -320,9 +322,7 @@ export function UserManagementActionDialogs({
 				footer={
 					<div className="flex items-center justify-end gap-3">
 						<Button
-							disabled={
-								busy || !fullName.trim() || matrixConflictsWithManager
-							}
+							disabled={busy || !fullName.trim() || matrixConflictsWithManager}
 							onClick={() =>
 								onSaveEdit({
 									fullName: fullName.trim(),
@@ -460,7 +460,7 @@ export function UserManagementActionDialogs({
 					</div>
 					{historyData?.data?.history?.length ? (
 						<div>
-							<p className="text-sm font-medium text-slate-800 mb-2">
+							<p className="text-sm font-medium text-slate-700 mb-2">
 								Org placement history
 							</p>
 							<ul className="space-y-1 text-xs text-slate-600 max-h-32 overflow-y-auto">
@@ -601,13 +601,15 @@ export function UserManagementActionDialogs({
 									<p className="truncate text-sm font-semibold text-slate-700">
 										{user.fullName}
 									</p>
-									<p className="truncate text-xs text-slate-600">{user.email}</p>
+									<p className="truncate text-xs text-slate-600">
+										{user.email}
+									</p>
 									<div className="mt-1.5 flex flex-wrap gap-4">
 										<div>
 											<p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
 												Role
 											</p>
-											<p className="text-xs font-semibold text-slate-800">
+											<p className="text-xs font-semibold text-slate-700">
 												{user.roleName || "Unassigned"}
 											</p>
 										</div>
@@ -615,7 +617,7 @@ export function UserManagementActionDialogs({
 											<p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
 												Last active
 											</p>
-											<p className="text-xs font-semibold text-slate-800">
+											<p className="text-xs font-semibold text-slate-700">
 												{formatUserLastActiveLabel(
 													user.lastActiveAt || user.$updatedAt,
 												)}
@@ -631,7 +633,7 @@ export function UserManagementActionDialogs({
 								className="mt-0.5 h-4 w-4 shrink-0 text-red"
 								aria-hidden
 							/>
-							<p className="text-xs leading-relaxed text-slate-800">
+							<p className="text-xs leading-relaxed text-slate-700">
 								{isBulk ? (
 									<>
 										Removing these users revokes their CAALM access immediately

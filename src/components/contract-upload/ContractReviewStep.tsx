@@ -179,7 +179,7 @@ export default function ContractReviewStep({
 			aria-label={`Preview ${fileName}`}
 		>
 			<FileText className="h-4 w-4 shrink-0 text-[#0f5384]" />
-			<span className="min-w-0 flex-1 truncate font-medium text-slate-800">
+			<span className="min-w-0 flex-1 truncate font-medium text-slate-700">
 				{fileName}
 			</span>
 			<span className="inline-flex shrink-0 items-center gap-1 text-[11px] text-[#0f5384]">

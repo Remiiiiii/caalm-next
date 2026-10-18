@@ -216,14 +216,14 @@ export function UserGraphUserNode({ data }: NodeProps<UserGraphUserNodeType>) {
 					<span
 						className={
 							isSuspended
-								? "inline-block rounded-full border border-orange/20 bg-orange/10 px-2 py-0.5 font-medium text-orange"
-								: "inline-block rounded-full border border-green/20 bg-green/10 px-2 py-0.5 font-medium text-green"
+								? "inline-block rounded-full border border-orange/20 bg-orange/10 px-2 py-0.5 text-orange"
+								: "inline-block rounded-full border border-green/20 bg-green/10 px-2 py-0.5 text-green"
 						}
 					>
 						{isSuspended ? "Inactive" : "Active"}
 					</span>
 					{showRoleBadge ? (
-						<span className="inline-block rounded-full border border-blue/20 bg-blue/10 px-2 py-0.5 font-medium text-blue">
+						<span className="inline-block rounded-full border border-blue/20 bg-blue/10 px-2 py-0.5 text-blue">
 							{user.roleName}
 						</span>
 					) : null}

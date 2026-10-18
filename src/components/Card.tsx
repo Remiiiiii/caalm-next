@@ -30,12 +30,12 @@ const riskLevelBadge = (risk: string) => {
 			color = "border border-green/20 bg-green/10 text-green";
 			break;
 		default:
-			color = "border border-slate-200 bg-slate-100 text-slate-800";
+			color = "border border-slate-200 bg-slate-100 text-slate-700";
 	}
 	const label = risk.charAt(0).toUpperCase() + risk.slice(1).toLowerCase();
 	return (
 		<span
-			className={`inline-block px-1.5 py-0.5 text-xs rounded-full font-medium ${color}`}
+			className={`inline-block px-1.5 py-0.5 text-xs rounded-full ${color}`}
 		>
 			{label} Risk
 		</span>
@@ -609,7 +609,7 @@ const Card = ({
 					)}
 					{riskLevel && riskLevelBadge(riskLevel)}
 					{departmentLabel && (
-						<span className="inline-block px-1.5 py-0.5 border border-slate-200 bg-white/50 text-slate-600 text-xs rounded-full font-medium capitalize">
+						<span className="inline-block px-1.5 py-0.5 border border-slate-200 bg-white/50 text-slate-600 text-xs rounded-full capitalize">
 							{departmentLabel}
 						</span>
 					)}

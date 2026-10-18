@@ -188,7 +188,7 @@ const ManagerDashboard = () => {
 													</div>
 													<div className="flex items-center space-x-2">
 														<span
-															className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
+															className={`px-2 py-1 rounded-full text-xs ${getStatusColor(
 																contract.status || "pending",
 															)}`}
 														>
@@ -244,7 +244,7 @@ const ManagerDashboard = () => {
 													</p>
 												</div>
 												<span
-													className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(
+													className={`px-2 py-1 rounded-full text-xs ${getPriorityColor(
 														task.priority,
 													)}`}
 												>

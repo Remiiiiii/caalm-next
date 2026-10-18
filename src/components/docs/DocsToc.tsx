@@ -46,7 +46,7 @@ export function DocsToc({ headings }: { headings: DocsHeading[] }) {
 								heading.level === 3 ? "pl-5" : "pl-3",
 								activeId === heading.id
 									? "-ml-px border-[#0f5384] font-medium text-[#0f5384] dark:border-sky-400 dark:text-sky-300"
-									: "border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200",
+									: "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200",
 							)}
 						>
 							{heading.text}

@@ -12,8 +12,8 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { NoteRichContent } from "@/components/notes/NoteRichContent";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import type { Note } from "@/lib/actions/notes.actions";
 import { updateNote } from "@/lib/actions/notes.actions";
@@ -71,8 +71,7 @@ export function CalendarPinnedNoteDialog({
 		return notes.findIndex((n) => n.$id === note.$id);
 	}, [note, notes]);
 
-	const currentNote =
-		noteIndex >= 0 ? (notes[noteIndex] ?? note) : note;
+	const currentNote = noteIndex >= 0 ? (notes[noteIndex] ?? note) : note;
 
 	useEffect(() => {
 		if (!open) {
@@ -213,7 +212,7 @@ export function CalendarPinnedNoteDialog({
 							</div>
 						) : (
 							<>
-								<DialogTitle className="text-2xl font-semibold text-slate-800">
+								<DialogTitle className="text-2xl font-semibold text-slate-700">
 									{currentNote.title || "Untitled note"}
 								</DialogTitle>
 								<div className="mt-2 flex flex-wrap items-center gap-2">
@@ -223,7 +222,7 @@ export function CalendarPinnedNoteDialog({
 										{timeLabel ? ` · ${timeLabel}` : ""}
 									</p>
 									{pinBadgeDate ? (
-										<span className="inline-flex items-center gap-1 rounded-full border border-blue/20 bg-blue/10 px-2 py-0.5 text-xs font-medium text-[#0f5384]">
+										<span className="inline-flex items-center gap-1 rounded-full border border-blue/20 bg-blue/10 px-2 py-0.5 text-xs text-[#0f5384]">
 											<Calendar className="h-3 w-3" />
 											Pinned to {pinBadgeDate}
 										</span>

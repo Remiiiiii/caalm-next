@@ -35,11 +35,11 @@ export default function IntegrationsSection() {
 
 						<div className="mt-6 flex flex-wrap gap-3">
 							<div className="rounded-xl border border-slate-200 bg-[#F1F9FF] px-4 py-3">
-								<p className="text-2xl font-bold text-slate-800">2x</p>
+								<p className="text-2xl font-bold text-slate-700">2x</p>
 								<p className="text-xs text-slate-600">Faster renewals*</p>
 							</div>
 							<div className="rounded-xl border border-slate-200 bg-[#F1F9FF] px-4 py-3">
-								<p className="text-2xl font-bold text-slate-800">4x</p>
+								<p className="text-2xl font-bold text-slate-700">4x</p>
 								<p className="text-xs text-slate-600">
 									Fewer missed deadlines*
 								</p>

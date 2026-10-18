@@ -130,7 +130,7 @@ export function TimeGridWeekView({
 									{format(day, "d")}
 								</div>
 							) : (
-								<div className="mt-0.5 text-lg font-bold text-slate-800">
+								<div className="mt-0.5 text-lg font-bold text-slate-700">
 									{format(day, "d")}
 								</div>
 							)}

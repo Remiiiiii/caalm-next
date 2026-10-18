@@ -101,7 +101,7 @@ function getActionBadge(action: string) {
 	}
 	if (action === "view_pii") {
 		return (
-			<span className="inline-block px-2 py-0.5 text-xs rounded-full font-medium border bg-blue/10 text-blue border-blue/20">
+			<span className="inline-block px-2 py-0.5 text-xs rounded-full border bg-blue/10 text-blue border-blue/20">
 				PII view
 			</span>
 		);

@@ -124,11 +124,11 @@ export function HouseholdTab({
 										{label}
 									</Link>
 									<div className="mt-2 flex flex-wrap gap-2">
-										<span className="inline-block px-2 py-0.5 text-xs rounded-full font-medium border bg-blue/10 text-blue border-blue/20">
+										<span className="inline-block px-2 py-0.5 text-xs rounded-full border bg-blue/10 text-blue border-blue/20">
 											{row.type.charAt(0).toUpperCase() + row.type.slice(1)}
 										</span>
 										{row.softCredit ? (
-											<span className="inline-block px-2 py-0.5 text-xs rounded-full font-medium border bg-green/10 text-green border-green/20">
+											<span className="inline-block px-2 py-0.5 text-xs rounded-full border bg-green/10 text-green border-green/20">
 												Soft credit
 											</span>
 										) : null}

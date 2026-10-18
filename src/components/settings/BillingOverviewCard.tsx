@@ -84,7 +84,7 @@ function BillingBreakdownRow({
 			)}
 		>
 			<span>{label}</span>
-			<span className={cn("tabular-nums", emphasis && "text-slate-800")}>
+			<span className={cn("tabular-nums", emphasis && "text-slate-700")}>
 				{amount}
 			</span>
 		</div>

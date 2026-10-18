@@ -1442,14 +1442,14 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 																	<div className="flex items-center gap-2 flex-shrink-0">
 																		<Badge
 																			variant="outline"
-																			className="text-[10px] font-medium px-2 py-0.5 uppercase tracking-wide border-slate-300 text-slate-700"
+																			className="text-[10px] px-2 py-0.5 uppercase tracking-wide border-slate-300 text-slate-700"
 																		>
 																			{approval.changeType}
 																		</Badge>
 																		{sensitivityLevel !== "standard" && (
 																			<Badge
 																				className={cn(
-																					"text-[10px] font-medium px-2 py-0.5 border hover:opacity-100",
+																					"text-[10px] px-2 py-0.5 border hover:opacity-100",
 																					getSensitivityBadgeClasses(
 																						sensitivityLevel,
 																					),
@@ -1559,7 +1559,7 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 									</div>
 									<Badge
 										variant="outline"
-										className="text-xs font-medium px-3 py-1 uppercase tracking-wide border-amber-300 text-amber-700 bg-amber-50"
+										className="text-xs px-3 py-1 uppercase tracking-wide border-amber-300 text-amber-700 bg-amber-50"
 									>
 										Pending Review
 									</Badge>
@@ -1611,7 +1611,7 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 															"standard" && (
 															<Badge
 																className={cn(
-																	"text-xs font-medium px-2 py-0.5 border",
+																	"text-xs px-2 py-0.5 border",
 																	getSensitivityBadgeClasses(
 																		selectedApproval.sensitivityLevel,
 																	),
@@ -2069,7 +2069,7 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 												<span className="text-slate-600">Request Type:</span>
 												<Badge
 													variant="outline"
-													className="text-xs font-medium px-2 py-0.5 uppercase"
+													className="text-xs px-2 py-0.5 uppercase"
 												>
 													{selectedApproval.changeType}
 												</Badge>

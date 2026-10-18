@@ -132,7 +132,7 @@ function GiveShell({ children, orgName, logoUrl }: GiveShellProps) {
 							{brandLabel}
 						</span>
 					</div>
-					<span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-green/20 bg-green/10 px-2.5 py-1 text-xs font-medium text-green">
+					<span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-green/20 bg-green/10 px-2.5 py-1 text-xs text-green">
 						<Lock className="h-3 w-3" />
 						Secure giving
 					</span>
@@ -581,7 +581,7 @@ export default function PublicGivePage() {
 								</p>
 								<p className="mt-0.5 text-sm text-slate-600">USD</p>
 							</div>
-							<span className="inline-flex items-center gap-1 rounded-full border border-green/20 bg-green/10 px-2 py-0.5 text-xs font-medium text-green">
+							<span className="inline-flex items-center gap-1 rounded-full border border-green/20 bg-green/10 px-2 py-0.5 text-xs text-green">
 								<Lock className="h-3 w-3" />
 								Secure
 							</span>

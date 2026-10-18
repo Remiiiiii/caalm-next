@@ -37,14 +37,14 @@ export default function ContactDetails({ contract }: ContactDetailsProps) {
 		>
 			<div className="flex items-center gap-2 mb-4">
 				<Building2 className="w-5 h-5 text-slate-700" />
-				<h3 className="text-xl font-semibold text-slate-800">
+				<h3 className="text-xl font-semibold text-slate-700">
 					Vendor Contact Information
 				</h3>
 			</div>
 
 			<div className="space-y-3">
 				{counterparty.counterpartyLegalName && (
-					<div className="text-slate-800">
+					<div className="text-slate-700">
 						<div className="font-semibold text-lg mb-1">
 							{counterparty.counterpartyLegalName}
 						</div>
