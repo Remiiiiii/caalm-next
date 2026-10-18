@@ -38,7 +38,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageIndex } from "@/components/ui/page-index";
 import {
-	Table,
+	CaalmDataTable,
+	DATA_TABLE_BODY_ROW_BASE,
+	DATA_TABLE_HEADER_CELL,
+	DATA_TABLE_HEADER_ROW,
+} from "@/components/ui/caalm-data-table";
+import {
 	TableBody,
 	TableCell,
 	TableHead,
@@ -64,11 +69,6 @@ import {
 	toPublicDonationPageConfig,
 } from "@/lib/give/public-donation-config";
 import { slugifyGiveSlug } from "@/lib/give/slug";
-import {
-	DATA_TABLE_BODY_ROW_BASE,
-	DATA_TABLE_HEADER_CELL,
-	DATA_TABLE_HEADER_ROW,
-} from "@/lib/ui/data-table-styles";
 import { cn } from "@/lib/utils";
 
 /** Form column was 420px; +20% ≈ 504px */
@@ -1040,8 +1040,7 @@ export function DonationPageSettingsClient({
 							</p>
 						) : (
 							<>
-								<div className="w-full overflow-x-auto px-2 sm:px-4 pb-2">
-									<Table className="border-separate border-spacing-0">
+								<CaalmDataTable className="pb-2">
 										<TableHeader className="[&_tr]:border-b-0">
 											<TableRow className={DATA_TABLE_HEADER_ROW}>
 												<TableHead
@@ -1123,8 +1122,7 @@ export function DonationPageSettingsClient({
 												</TableRow>
 											))}
 										</TableBody>
-									</Table>
-								</div>
+								</CaalmDataTable>
 								<PageIndex
 									page={Math.min(versionPage, versionTotalPages)}
 									totalItems={versions.length}

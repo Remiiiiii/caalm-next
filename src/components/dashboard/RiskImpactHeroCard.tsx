@@ -271,14 +271,14 @@ export function RiskImpactHeroCard({
 							<ColumnRule atMdOdd />
 							<div className="flex items-center gap-2.5 min-h-11">
 								<StatCardIcon icon={Shield} />
-								<p className="text-[14.5px] font-semibold text-slate-700">
-									Risk averted
+								<p className="text-xl font-semibold text-slate-700">
+									Risk Averted
 								</p>
 							</div>
 							<p className="text-[10.5px] tracking-wide text-slate-500">
 								{periodDisplay}
 							</p>
-							<p className="text-[2.5rem] leading-none font-semibold text-slate-800 tracking-tight tabular-nums">
+							<p className="text-[2.5rem] leading-none font-semibold text-slate-700 tracking-tight tabular-nums">
 								{reduceMotion ? (
 									formatRiskUsdExact(snapshot.primary.amount)
 								) : (
@@ -297,7 +297,7 @@ export function RiskImpactHeroCard({
 							{snapshot.secondary.amount > 0 ? (
 								<p className="text-xs text-slate-600">
 									{snapshot.secondary.label}:{" "}
-									<span className="font-semibold text-slate-800">
+									<span className="font-semibold text-slate-700">
 										{snapshot.secondary.amountFormatted}
 									</span>
 								</p>

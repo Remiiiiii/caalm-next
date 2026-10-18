@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DropdownScrollArea } from "@/components/ui/DropdownScrollArea";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -298,28 +299,30 @@ const EnhancedSearch: React.FC<EnhancedSearchProps> = ({
 
 			{/* Search Suggestions */}
 			{showSuggestions && suggestions.length > 0 && (
-				<Card className="absolute top-full left-0 right-0 mt-2 z-50 max-h-80 overflow-y-auto">
+				<Card className="absolute top-full left-0 right-0 z-50 mt-2 overflow-hidden">
 					<CardContent className="p-0">
-						{suggestions.map((suggestion, index) => (
-							<div
-								key={index}
-								className="flex items-center gap-3 p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
-								onClick={() => handleSuggestionClick(suggestion)}
-							>
-								{getSuggestionIcon(suggestion.type)}
-								<span className="flex-1">{suggestion.text}</span>
-								{suggestion.type === "trending" && suggestion.count && (
-									<Badge variant="secondary" className="text-xs">
-										{suggestion.count} searches
-									</Badge>
-								)}
-								{suggestion.type === "recent" && (
-									<Badge variant="outline" className="text-xs">
-										Recent
-									</Badge>
-								)}
-							</div>
-						))}
+						<DropdownScrollArea maxHeightClassName="max-h-80">
+							{suggestions.map((suggestion, index) => (
+								<div
+									key={index}
+									className="flex cursor-pointer items-center gap-3 border-b p-3 last:border-b-0 hover:bg-gray-50"
+									onClick={() => handleSuggestionClick(suggestion)}
+								>
+									{getSuggestionIcon(suggestion.type)}
+									<span className="flex-1">{suggestion.text}</span>
+									{suggestion.type === "trending" && suggestion.count && (
+										<Badge variant="secondary" className="text-xs">
+											{suggestion.count} searches
+										</Badge>
+									)}
+									{suggestion.type === "recent" && (
+										<Badge variant="outline" className="text-xs">
+											Recent
+										</Badge>
+									)}
+								</div>
+							))}
+						</DropdownScrollArea>
 					</CardContent>
 				</Card>
 			)}

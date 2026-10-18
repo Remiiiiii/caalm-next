@@ -6,7 +6,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLicensesView } from "@/components/LicensesView";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-	Table,
+	CaalmDataTable,
+	DATA_TABLE_BODY_ROW_CLICKABLE,
+	DATA_TABLE_HEADER_CELL,
+	DATA_TABLE_HEADER_ROW,
+} from "@/components/ui/caalm-data-table";
+import {
 	TableBody,
 	TableCell,
 	TableHead,
@@ -20,11 +25,6 @@ import {
 	getLicenseExpiryUrgency,
 	isLicenseExpired,
 } from "@/lib/licenses/licensesListUtils";
-import {
-	DATA_TABLE_BODY_ROW_CLICKABLE,
-	DATA_TABLE_HEADER_CELL,
-	DATA_TABLE_HEADER_ROW,
-} from "@/lib/ui/data-table-styles";
 import { cn, convertFileSize } from "@/lib/utils";
 import type { License } from "@/types/licenses";
 import FormattedDateTime, { FormattedDate } from "./FormattedDateTime";
@@ -421,8 +421,7 @@ export default function LicensesTableView({
 	}
 
 	return (
-		<div className="w-full overflow-x-auto px-2 sm:px-4 pb-4">
-			<Table className="border-separate border-spacing-0">
+		<CaalmDataTable>
 				<TableHeader className="[&_tr]:border-b-0">
 					<TableRow className={DATA_TABLE_HEADER_ROW}>
 						<TableHead className={`${DATA_TABLE_HEADER_CELL} pl-4 pr-2 w-10`}>
@@ -567,7 +566,6 @@ export default function LicensesTableView({
 						</TableRow>
 					))}
 				</TableBody>
-			</Table>
-		</div>
+		</CaalmDataTable>
 	);
 }

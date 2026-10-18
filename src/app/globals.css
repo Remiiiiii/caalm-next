@@ -2598,3 +2598,23 @@ iframe[src*="splinecode"] {
 .ProseMirror ol ol {
 	list-style-type: lower-alpha;
 }
+
+/*
+ * Tasks dropdown lists use OverlayScrollbars (see DropdownScrollArea.tsx).
+ * Native Windows/Chromium scrollbars keep triangle buttons — do not restyle
+ * ::-webkit-scrollbar-button here; the library paints a button-free bar.
+ */
+.os-theme-dark {
+	--os-size: 11px !important;
+	/* Keep track flush; SubTrigger chevron uses mr-[4px] for gap to the bar */
+	--os-padding-perpendicular: 0px;
+	--os-padding-axis: 4px !important;
+	--os-track-bg: transparent;
+	--os-track-bg-hover: transparent;
+	--os-track-bg-active: transparent;
+	--os-handle-bg: rgb(203 213 225 / 0.75);
+	--os-handle-bg-hover: rgb(148 163 184 / 0.85);
+	--os-handle-bg-active: rgb(148 163 184 / 0.95);
+	--os-handle-border-radius: 9999px;
+	--os-handle-min-size: 24px;
+}

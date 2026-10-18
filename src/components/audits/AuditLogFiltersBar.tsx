@@ -1,17 +1,11 @@
 "use client";
 
-import { FunnelX } from "lucide-react";
+import { CircleDot, FunnelX, Layers, Zap } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import { CaalmFilterSelect } from "@/components/ui/CaalmFilterSelect";
 import { Input } from "@/components/ui/input";
 import { SearchField } from "@/components/ui/search-field";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
 import { AUDIT_CONTROL_TABS } from "@/lib/audits/types";
 
 export interface AuditLogFilters {
@@ -37,6 +31,31 @@ function FieldBox({ children }: { children: ReactNode }) {
 		</div>
 	);
 }
+
+const MODULE_OPTIONS = [
+	{ value: "all", label: "All modules" },
+	...AUDIT_CONTROL_TABS.map((tab) => ({ value: tab.id, label: tab.label })),
+	{ value: "auth", label: "Auth" },
+	{ value: "system", label: "System" },
+];
+
+const ACTION_OPTIONS = [
+	{ value: "all", label: "All actions" },
+	{ value: "create", label: "Create" },
+	{ value: "update", label: "Update" },
+	{ value: "delete", label: "Delete" },
+	{ value: "sync_delete", label: "Sync delete" },
+	{ value: "restore", label: "Restore" },
+	{ value: "approval_decided", label: "Approval" },
+	{ value: "view_pii", label: "PII view" },
+];
+
+const STATUS_OPTIONS = [
+	{ value: "all", label: "All statuses" },
+	{ value: "success", label: "Success" },
+	{ value: "failed", label: "Failed" },
+	{ value: "pending", label: "Pending" },
+];
 
 export function AuditLogFiltersBar({
 	filters,
@@ -82,68 +101,39 @@ export function AuditLogFiltersBar({
 				</div>
 				<div>
 					<span className="text-xs font-medium text-slate-600">Module</span>
-					<FieldBox>
-						<Select
-							value={filters.module}
-							onValueChange={(v) => onChange("module", v)}
-						>
-							<SelectTrigger className="shad-input">
-								<SelectValue placeholder="All modules" />
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value="all">All modules</SelectItem>
-								{AUDIT_CONTROL_TABS.map((tab) => (
-									<SelectItem key={tab.id} value={tab.id}>
-										{tab.label}
-									</SelectItem>
-								))}
-								<SelectItem value="auth">Auth</SelectItem>
-								<SelectItem value="system">System</SelectItem>
-							</SelectContent>
-						</Select>
-					</FieldBox>
+					<div className="mt-1">
+						<CaalmFilterSelect
+							value={filters.module || "all"}
+							options={MODULE_OPTIONS}
+							ariaLabel="Filter by module"
+							icon={Layers}
+							onChange={(v) => onChange("module", v)}
+						/>
+					</div>
 				</div>
 				<div>
 					<span className="text-xs font-medium text-slate-600">Action</span>
-					<FieldBox>
-						<Select
-							value={filters.action}
-							onValueChange={(v) => onChange("action", v)}
-						>
-							<SelectTrigger className="shad-input">
-								<SelectValue />
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value="all">All actions</SelectItem>
-								<SelectItem value="create">Create</SelectItem>
-								<SelectItem value="update">Update</SelectItem>
-								<SelectItem value="delete">Delete</SelectItem>
-								<SelectItem value="sync_delete">Sync delete</SelectItem>
-								<SelectItem value="restore">Restore</SelectItem>
-								<SelectItem value="approval_decided">Approval</SelectItem>
-								<SelectItem value="view_pii">PII view</SelectItem>
-							</SelectContent>
-						</Select>
-					</FieldBox>
+					<div className="mt-1">
+						<CaalmFilterSelect
+							value={filters.action || "all"}
+							options={ACTION_OPTIONS}
+							ariaLabel="Filter by action"
+							icon={Zap}
+							onChange={(v) => onChange("action", v)}
+						/>
+					</div>
 				</div>
 				<div>
 					<span className="text-xs font-medium text-slate-600">Status</span>
-					<FieldBox>
-						<Select
-							value={filters.status}
-							onValueChange={(v) => onChange("status", v)}
-						>
-							<SelectTrigger className="shad-input">
-								<SelectValue />
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value="all">All statuses</SelectItem>
-								<SelectItem value="success">Success</SelectItem>
-								<SelectItem value="failed">Failed</SelectItem>
-								<SelectItem value="pending">Pending</SelectItem>
-							</SelectContent>
-						</Select>
-					</FieldBox>
+					<div className="mt-1">
+						<CaalmFilterSelect
+							value={filters.status || "all"}
+							options={STATUS_OPTIONS}
+							ariaLabel="Filter by status"
+							icon={CircleDot}
+							onChange={(v) => onChange("status", v)}
+						/>
+					</div>
 				</div>
 				<div className="flex items-end">
 					<Button

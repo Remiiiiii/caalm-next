@@ -5,9 +5,15 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+	CaalmDataTable,
+	DATA_TABLE_BODY_ROW_BASE,
+	DATA_TABLE_HEADER_CELL,
+	DATA_TABLE_HEADER_ROW,
+} from "@/components/ui/caalm-data-table";
 import { Card, CardContent } from "@/components/ui/card";
-import { PageIndex } from "@/components/ui/page-index";
 import { Input } from "@/components/ui/input";
+import { PageIndex } from "@/components/ui/page-index";
 import { SearchField } from "@/components/ui/search-field";
 import {
 	Select,
@@ -16,9 +22,19 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import {
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@/components/ui/table";
 import { PERMISSIONS } from "@/constants/permissions";
 import { usePermissions } from "@/hooks/usePermissions";
 import { type Gift as GiftRow, giftStatusBadgeClass } from "@/lib/gifts";
+import { cn } from "@/lib/utils";
+
+const rowPad = "px-3 py-3 align-middle";
 
 const PAGE_SIZE = 20;
 
@@ -130,65 +146,81 @@ export function GiftsPageClient() {
 							<p className="text-slate-600 mt-4">No gifts yet.</p>
 						</div>
 					) : (
-						<div className="overflow-x-auto">
-							<table className="w-full text-sm text-slate-700">
-								<thead>
-									<tr className="border-b border-slate-200 text-left">
-										<th className="py-2 pr-4">Receipt</th>
-										<th className="py-2 pr-4">Date</th>
-										<th className="py-2 pr-4">Amount</th>
-										<th className="py-2 pr-4">Status</th>
-										<th className="py-2 pr-4">Campaign tag</th>
-										<th className="py-2"> </th>
-									</tr>
-								</thead>
-								<tbody>
-									{items.map((gift) => (
-										<tr
-											key={gift.$id}
-											className="border-b border-slate-100 hover:bg-blue-50 transition-all duration-200"
+						<CaalmDataTable className="px-0 sm:px-0 pb-0">
+							<TableHeader className="[&_tr]:border-b-0">
+								<TableRow className={DATA_TABLE_HEADER_ROW}>
+									<TableHead
+										className={cn(DATA_TABLE_HEADER_CELL, "pl-4 pr-3")}
+									>
+										Receipt
+									</TableHead>
+									<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+										Date
+									</TableHead>
+									<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+										Amount
+									</TableHead>
+									<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+										Status
+									</TableHead>
+									<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+										Campaign tag
+									</TableHead>
+									<TableHead
+										className={cn(DATA_TABLE_HEADER_CELL, "pl-3 pr-4")}
+									/>
+								</TableRow>
+							</TableHeader>
+							<TableBody className="[&_tr:last-child>td]:border-b-0">
+								{items.map((gift) => (
+									<TableRow
+										key={gift.$id}
+										className={DATA_TABLE_BODY_ROW_BASE}
+									>
+										<TableCell
+											className={cn(rowPad, "pl-4 pr-3 tabular-nums text-slate-700")}
 										>
-											<td className="py-3 pr-4 tabular-nums">
-												{gift.receiptNumber ?? "—"}
-											</td>
-											<td className="py-3 pr-4">
-												{gift.giftDate.slice(0, 10)}
-											</td>
-											<td className="py-3 pr-4 tabular-nums">
-												{gift.currency}{" "}
-												{gift.amount.toLocaleString(undefined, {
-													minimumFractionDigits: 2,
-												})}
-											</td>
-											<td className="py-3 pr-4">
-												<span
-													className={`inline-block px-2 py-0.5 text-xs rounded-full font-medium border capitalize ${giftStatusBadgeClass(gift.status)}`}
-												>
-													{gift.status}
+											{gift.receiptNumber ?? "—"}
+										</TableCell>
+										<TableCell className={cn(rowPad, "text-slate-700")}>
+											{gift.giftDate.slice(0, 10)}
+										</TableCell>
+										<TableCell
+											className={cn(rowPad, "tabular-nums text-slate-700")}
+										>
+											{gift.currency}{" "}
+											{gift.amount.toLocaleString(undefined, {
+												minimumFractionDigits: 2,
+											})}
+										</TableCell>
+										<TableCell className={rowPad}>
+											<span
+												className={`inline-block px-2 py-0.5 text-xs rounded-full font-medium border capitalize ${giftStatusBadgeClass(gift.status)}`}
+											>
+												{gift.status}
+											</span>
+										</TableCell>
+										<TableCell className={rowPad}>
+											{gift.shareCampaign ? (
+												<span className="inline-block px-2 py-0.5 text-xs rounded-full font-medium border bg-blue/10 text-blue border-blue/20">
+													{gift.shareCampaign}
 												</span>
-											</td>
-											<td className="py-3 pr-4">
-												{gift.shareCampaign ? (
-													<span className="inline-block px-2 py-0.5 text-xs rounded-full font-medium border bg-blue/10 text-blue border-blue/20">
-														{gift.shareCampaign}
-													</span>
-												) : (
-													<span className="text-slate-400">—</span>
-												)}
-											</td>
-											<td className="py-3 text-right">
-												<Link
-													href={`/gifts/${gift.$id}`}
-													className="text-[#0f5384] hover:underline"
-												>
-													View
-												</Link>
-											</td>
-										</tr>
-									))}
-								</tbody>
-							</table>
-						</div>
+											) : (
+												<span className="text-slate-400">—</span>
+											)}
+										</TableCell>
+										<TableCell className={cn(rowPad, "pl-3 pr-4 text-right")}>
+											<Link
+												href={`/gifts/${gift.$id}`}
+												className="text-[#0f5384] hover:underline"
+											>
+												View
+											</Link>
+										</TableCell>
+									</TableRow>
+								))}
+							</TableBody>
+						</CaalmDataTable>
 					)}
 					<PageIndex
 						className="mt-6"

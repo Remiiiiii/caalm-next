@@ -4,6 +4,7 @@ import { Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
 	CaalmDataTable,
+	CaalmDataTableEmpty,
 	DATA_TABLE_BODY_ROW_CLICKABLE,
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
@@ -111,12 +112,10 @@ export function TasksDataTable({
 
 	if (tasks.length === 0) {
 		return (
-			<div className="px-4 py-12 text-center">
-				<p className="font-medium text-slate-700">No tasks found</p>
-				<p className="mt-1 text-sm text-slate-500">
-					Update filters or create a new task.
-				</p>
-			</div>
+			<CaalmDataTableEmpty
+				title="No tasks found"
+				description="Update filters or create a new task."
+			/>
 		);
 	}
 

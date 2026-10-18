@@ -2,18 +2,18 @@
 
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-	Table,
+	CaalmDataTable,
+	DATA_TABLE_BODY_ROW_BASE,
+	DATA_TABLE_HEADER_CELL,
+	DATA_TABLE_HEADER_ROW,
+} from "@/components/ui/caalm-data-table";
+import {
 	TableBody,
 	TableCell,
 	TableHead,
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import {
-	DATA_TABLE_BODY_ROW_BASE,
-	DATA_TABLE_HEADER_CELL,
-	DATA_TABLE_HEADER_ROW,
-} from "@/lib/ui/data-table-styles";
 import { cn, convertFileSize } from "@/lib/utils";
 import type { UIFileDoc } from "@/types/files";
 import ActionDropdown from "./ActionDropdown";
@@ -45,9 +45,8 @@ export default function FilesTableView({
 	const rowPad = "px-3 py-3";
 
 	return (
-		<div className="w-full overflow-x-auto px-0 sm:px-0">
-			<Table>
-				<TableHeader>
+		<CaalmDataTable className="px-0 sm:px-0">
+				<TableHeader className="[&_tr]:border-b-0">
 					<TableRow className={DATA_TABLE_HEADER_ROW}>
 						<TableHead className={cn(DATA_TABLE_HEADER_CELL, "w-12 pl-4 pr-2")}>
 							<Checkbox
@@ -148,7 +147,6 @@ export default function FilesTableView({
 						</TableRow>
 					))}
 				</TableBody>
-			</Table>
-		</div>
+		</CaalmDataTable>
 	);
 }

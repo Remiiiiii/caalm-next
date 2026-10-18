@@ -5,6 +5,7 @@ import type React from "react";
 import { useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DropdownScrollArea } from "@/components/ui/DropdownScrollArea";
 import {
 	CaalmDatePicker,
 	parseIsoDateLocal,
@@ -286,19 +287,21 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
 
 					{/* Suggestions Dropdown */}
 					{showSuggestions && suggestions.length > 0 && (
-						<div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
-							{suggestions.map((suggestion, index) => (
-								<div
-									key={index}
-									className="px-4 py-2 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
-									onClick={() => {
-										setQuery(suggestion);
-										setShowSuggestions(false);
-									}}
-								>
-									{suggestion}
-								</div>
-							))}
+						<div className="absolute top-full left-0 right-0 z-50 overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg">
+							<DropdownScrollArea maxHeightClassName="max-h-60">
+								{suggestions.map((suggestion, index) => (
+									<div
+										key={index}
+										className="cursor-pointer border-b px-4 py-2 last:border-b-0 hover:bg-gray-50"
+										onClick={() => {
+											setQuery(suggestion);
+											setShowSuggestions(false);
+										}}
+									>
+										{suggestion}
+									</div>
+								))}
+							</DropdownScrollArea>
 						</div>
 					)}
 				</div>

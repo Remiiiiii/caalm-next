@@ -1,15 +1,9 @@
 "use client";
 
-import { SquareArrowRightExit } from "lucide-react";
+import { Calendar, SquareArrowRightExit } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CaalmFilterSelect } from "@/components/ui/CaalmFilterSelect";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
 import { PERMISSIONS } from "@/constants/permissions";
 import { useOrgTimezone } from "@/hooks/useOrgTimezone";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -47,21 +41,16 @@ export function AnalyticsFilterBar({
 					</p>
 				</div>
 				<div className="platform-overview-actions flex flex-wrap items-center gap-x-4 gap-y-2">
-					<Select
+					<CaalmFilterSelect
 						value={period}
-						onValueChange={(v) => onPeriodChange(v as AuditPeriod)}
-					>
-						<SelectTrigger className="h-9 w-[10.5rem] shrink-0 shad-input">
-							<SelectValue placeholder="Period" />
-						</SelectTrigger>
-						<SelectContent>
-							{AUDIT_PERIOD_OPTIONS.map((opt) => (
-								<SelectItem key={opt.value} value={opt.value}>
-									{opt.label}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
+						options={AUDIT_PERIOD_OPTIONS.map((opt) => ({
+							value: opt.value,
+							label: opt.label,
+						}))}
+						ariaLabel="Reporting period"
+						icon={Calendar}
+						onChange={(v) => onPeriodChange(v as AuditPeriod)}
+					/>
 					{lastUpdated ? (
 						<p className="text-xs text-slate-500 sm:ml-auto">
 							Last updated{" "}

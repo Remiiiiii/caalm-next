@@ -11,9 +11,14 @@ import {
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+	CaalmDataTable,
+	DATA_TABLE_BODY_ROW_BASE,
+	DATA_TABLE_HEADER_CELL,
+	DATA_TABLE_HEADER_ROW,
+} from "@/components/ui/caalm-data-table";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-	Table,
 	TableBody,
 	TableCell,
 	TableHead,
@@ -25,6 +30,9 @@ import {
 	formatEvidenceDisplayId,
 } from "@/lib/audits/evidence-utils";
 import type { AuditEvidenceRow, AuditEvidenceStatus } from "@/lib/audits/types";
+import { cn } from "@/lib/utils";
+
+const rowPad = "px-3 py-3 align-middle";
 
 const STATUS_BADGE_BASE =
 	"h-auto rounded-full py-0.5 whitespace-nowrap shrink-0 pointer-events-none shadow-none transition-none";
@@ -112,34 +120,37 @@ export function AuditEvidenceTable({
 						</Link>
 					</Button>
 				</div>
-				<div className="overflow-x-auto">
-					<Table>
-						<TableHeader>
-							<TableRow className="border-slate-200 bg-slate-50">
-								<TableHead className="font-semibold text-slate-700">
+				<CaalmDataTable className="px-0 sm:px-0 pb-0">
+						<TableHeader className="[&_tr]:border-b-0">
+							<TableRow className={DATA_TABLE_HEADER_ROW}>
+								<TableHead
+									className={cn(DATA_TABLE_HEADER_CELL, "pl-4 pr-3")}
+								>
 									ID
 								</TableHead>
-								<TableHead className="font-semibold text-slate-700">
+								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
 									Obligation
 								</TableHead>
-								<TableHead className="font-semibold text-slate-700">
+								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
 									Owner
 								</TableHead>
-								<TableHead className="font-semibold text-slate-700">
+								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
 									Status
 								</TableHead>
-								<TableHead className="font-semibold text-slate-700">
+								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
 									Due
 								</TableHead>
-								<TableHead className="font-semibold text-slate-700">
+								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
 									Last reviewed
 								</TableHead>
-								<TableHead className="font-semibold text-slate-700">
+								<TableHead
+									className={cn(DATA_TABLE_HEADER_CELL, "pl-3 pr-4")}
+								>
 									CAALM module
 								</TableHead>
 							</TableRow>
 						</TableHeader>
-						<TableBody>
+						<TableBody className="[&_tr:last-child>td]:border-b-0">
 							{rows.length === 0 ? (
 								<TableRow>
 									<TableCell
@@ -153,12 +164,16 @@ export function AuditEvidenceTable({
 								rows.map((row, index) => (
 									<TableRow
 										key={evidenceRowKey(row, index)}
-										className="hover:bg-slate-50 transition-colors duration-200"
+										className={DATA_TABLE_BODY_ROW_BASE}
 									>
-										<TableCell className="text-sm text-slate-700">
+										<TableCell
+											className={cn(rowPad, "pl-4 pr-3 text-sm text-slate-700")}
+										>
 											{formatEvidenceDisplayId(row.id)}
 										</TableCell>
-										<TableCell className="font-medium text-slate-700">
+										<TableCell
+											className={cn(rowPad, "font-medium text-slate-700")}
+										>
 											{row.title}
 											{row.category ? (
 												<p className="text-xs text-slate-500 mt-0.5">
@@ -166,19 +181,21 @@ export function AuditEvidenceTable({
 												</p>
 											) : null}
 										</TableCell>
-										<TableCell className="text-slate-700">
+										<TableCell className={cn(rowPad, "text-slate-700")}>
 											{row.owner}
 										</TableCell>
-										<TableCell>{statusBadge(row.status)}</TableCell>
-										<TableCell className="text-slate-700">
+										<TableCell className={rowPad}>
+											{statusBadge(row.status)}
+										</TableCell>
+										<TableCell className={cn(rowPad, "text-slate-700")}>
 											{format(new Date(row.dueDate), "MMM d, yyyy")}
 										</TableCell>
-										<TableCell className="text-slate-600">
+										<TableCell className={cn(rowPad, "text-slate-600")}>
 											{row.lastTested
 												? format(new Date(row.lastTested), "MMM d, yyyy")
 												: "—"}
 										</TableCell>
-										<TableCell>
+										<TableCell className={cn(rowPad, "pl-3 pr-4")}>
 											{row.moduleLink ? (
 												<Link
 													href={row.moduleLink}
@@ -195,8 +212,7 @@ export function AuditEvidenceTable({
 								))
 							)}
 						</TableBody>
-					</Table>
-				</div>
+				</CaalmDataTable>
 			</CardContent>
 		</Card>
 	);

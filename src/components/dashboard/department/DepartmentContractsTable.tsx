@@ -5,9 +5,14 @@ import { ArrowRight, CheckCircle, Clock, XCircle } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+	CaalmDataTable,
+	DATA_TABLE_BODY_ROW_BASE,
+	DATA_TABLE_HEADER_CELL,
+	DATA_TABLE_HEADER_ROW,
+} from "@/components/ui/caalm-data-table";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-	Table,
 	TableBody,
 	TableCell,
 	TableHead,
@@ -15,9 +20,12 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import type { DepartmentContractAtRisk } from "@/lib/dashboard/department-dashboard.types";
+import { cn } from "@/lib/utils";
 
 const STATUS_BADGE_BASE =
 	"h-auto rounded-full py-0.5 whitespace-nowrap shrink-0 pointer-events-none shadow-none transition-none";
+
+const rowPad = "px-3 py-3 align-middle";
 
 function StatusBadge({ status }: { status: string }) {
 	const normalized = status.toLowerCase();
@@ -90,27 +98,31 @@ export function DepartmentContractsTable({
 				</div>
 
 				<div className="overflow-auto flex-1 min-h-0">
-					<Table>
-						<TableHeader>
-							<TableRow className="border-slate-200 bg-slate-50">
-								<TableHead className="font-semibold text-slate-700">
+					<CaalmDataTable className="px-0 sm:px-0 pb-0">
+						<TableHeader className="[&_tr]:border-b-0">
+							<TableRow className={DATA_TABLE_HEADER_ROW}>
+								<TableHead
+									className={cn(DATA_TABLE_HEADER_CELL, "pl-4 pr-3")}
+								>
 									Contract
 								</TableHead>
-								<TableHead className="font-semibold text-slate-700">
+								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
 									Owner
 								</TableHead>
-								<TableHead className="font-semibold text-slate-700">
+								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
 									Status
 								</TableHead>
-								<TableHead className="font-semibold text-slate-700">
+								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
 									Due
 								</TableHead>
-								<TableHead className="font-semibold text-slate-700">
+								<TableHead
+									className={cn(DATA_TABLE_HEADER_CELL, "pl-3 pr-4")}
+								>
 									Action
 								</TableHead>
 							</TableRow>
 						</TableHeader>
-						<TableBody>
+						<TableBody className="[&_tr:last-child>td]:border-b-0">
 							{isLoading ? (
 								<TableRow>
 									<TableCell
@@ -133,9 +145,11 @@ export function DepartmentContractsTable({
 								contracts.map((contract) => (
 									<TableRow
 										key={contract.$id}
-										className="hover:bg-slate-50 transition-colors duration-200"
+										className={DATA_TABLE_BODY_ROW_BASE}
 									>
-										<TableCell className="font-medium text-slate-700">
+										<TableCell
+											className={cn(rowPad, "pl-4 pr-3 font-medium text-slate-700")}
+										>
 											{contract.contractName}
 											{typeof contract.daysUntilExpiry === "number" ? (
 												<p className="text-xs text-slate-500 mt-0.5">
@@ -145,13 +159,15 @@ export function DepartmentContractsTable({
 												</p>
 											) : null}
 										</TableCell>
-										<TableCell className="text-slate-700">
+										<TableCell className={cn(rowPad, "text-slate-700")}>
 											{contract.owner || "—"}
 										</TableCell>
-										<TableCell>
+										<TableCell className={rowPad}>
 											<StatusBadge status={contract.status} />
 										</TableCell>
-										<TableCell className="text-slate-700 whitespace-nowrap">
+										<TableCell
+											className={cn(rowPad, "text-slate-700 whitespace-nowrap")}
+										>
 											{contract.contractExpiryDate
 												? format(
 														new Date(contract.contractExpiryDate),
@@ -159,7 +175,7 @@ export function DepartmentContractsTable({
 													)
 												: "—"}
 										</TableCell>
-										<TableCell>
+										<TableCell className={cn(rowPad, "pl-3 pr-4")}>
 											<Button
 												variant="outline"
 												size="sm"
@@ -173,7 +189,7 @@ export function DepartmentContractsTable({
 								))
 							)}
 						</TableBody>
-					</Table>
+					</CaalmDataTable>
 				</div>
 			</CardContent>
 		</Card>

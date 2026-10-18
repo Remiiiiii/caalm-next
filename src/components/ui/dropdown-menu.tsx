@@ -30,14 +30,15 @@ const DropdownMenuSubTrigger = React.forwardRef<
 	<DropdownMenuPrimitive.SubTrigger
 		ref={ref}
 		className={cn(
-			"flex cursor-pointer select-none items-center rounded-md px-2 py-1.5 text-sm outline-none focus:bg-transparent data-[state=open]:bg-transparent data-[highlighted]:bg-transparent",
+			"group flex cursor-pointer select-none items-center rounded-md px-3 py-1.5 text-sm font-normal outline-none transition-colors focus:bg-[#F2F5F9] focus:font-semibold focus:text-[#24446d] data-[state=open]:bg-[#F2F5F9] data-[state=open]:font-semibold data-[state=open]:text-[#24446d] data-[highlighted]:bg-[#F2F5F9] data-[highlighted]:font-semibold data-[highlighted]:text-[#24446d]",
 			inset && "pl-8",
 			className,
 		)}
 		{...props}
 	>
 		{children}
-		<ChevronRight className="ml-auto h-4 w-4 shrink-0 text-slate-500" />
+		{/* Pack to the right; 4px gap before the OverlayScrollbars track */}
+		<ChevronRight className="ml-1 mr-[4px] h-4 w-4 shrink-0 text-slate-500" />
 	</DropdownMenuPrimitive.SubTrigger>
 ));
 DropdownMenuSubTrigger.displayName =
@@ -82,7 +83,7 @@ const DropdownMenuItem = React.forwardRef<
 	<DropdownMenuPrimitive.Item
 		ref={ref}
 		className={cn(
-			"relative flex cursor-pointer select-none items-center rounded-md px-2 py-1.5 text-sm outline-none transition-colors focus:bg-transparent focus:text-slate-700 data-[highlighted]:bg-transparent data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+			"group relative flex cursor-pointer select-none items-center rounded-md px-3 py-1.5 text-sm font-normal outline-none transition-colors focus:bg-[#F2F5F9] focus:font-semibold focus:text-[#24446d] data-[highlighted]:bg-[#F2F5F9] data-[highlighted]:font-semibold data-[highlighted]:text-[#24446d] data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
 			inset && "pl-8",
 			className,
 		)}
@@ -98,7 +99,7 @@ const DropdownMenuCheckboxItem = React.forwardRef<
 	<DropdownMenuPrimitive.CheckboxItem
 		ref={ref}
 		className={cn(
-			"relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+			"relative flex cursor-pointer select-none items-center rounded-md py-1.5 pl-8 pr-3 text-sm font-normal outline-none transition-colors focus:bg-[#F2F5F9] focus:font-semibold focus:text-[#24446d] data-[highlighted]:bg-[#F2F5F9] data-[highlighted]:font-semibold data-[highlighted]:text-[#24446d] data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
 			className,
 		)}
 		checked={checked}
@@ -122,7 +123,7 @@ const DropdownMenuRadioItem = React.forwardRef<
 	<DropdownMenuPrimitive.RadioItem
 		ref={ref}
 		className={cn(
-			"relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+			"relative flex cursor-pointer select-none items-center rounded-md py-1.5 pl-8 pr-3 text-sm font-normal outline-none transition-colors focus:bg-[#F2F5F9] focus:font-semibold focus:text-[#24446d] data-[highlighted]:bg-[#F2F5F9] data-[highlighted]:font-semibold data-[highlighted]:text-[#24446d] data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
 			className,
 		)}
 		{...props}
@@ -187,29 +188,35 @@ type AppDropdownMenuTone =
 	| "success"
 	| "warning";
 
+/** Label text inside a menu row — thin by default, bold + navy on highlight */
+export const DROPDOWN_ITEM_LABEL_CLASS =
+	"font-normal text-slate-700 group-data-[highlighted]:font-semibold group-data-[highlighted]:text-[#24446d] group-data-[state=open]:font-semibold group-data-[state=open]:text-[#24446d] group-focus:font-semibold group-focus:text-[#24446d]";
+
 const APP_DROPDOWN_TONE_CLASSES: Record<
 	AppDropdownMenuTone,
 	{ iconWrap: string; label: string }
 > = {
 	default: {
 		iconWrap: "bg-slate-200/70 text-slate-700",
-		label: "text-slate-800",
+		label: DROPDOWN_ITEM_LABEL_CLASS,
 	},
 	danger: {
 		iconWrap: "bg-red/15 text-red",
-		label: "text-red",
+		// Keep danger red; still bold on hover like other rows
+		label:
+			"font-normal text-red group-data-[highlighted]:font-semibold group-focus:font-semibold",
 	},
 	info: {
 		iconWrap: "bg-blue/15 text-[#0f5384]",
-		label: "text-slate-800",
+		label: DROPDOWN_ITEM_LABEL_CLASS,
 	},
 	success: {
 		iconWrap: "bg-green/15 text-green",
-		label: "text-slate-800",
+		label: DROPDOWN_ITEM_LABEL_CLASS,
 	},
 	warning: {
 		iconWrap: "bg-yellow/20 text-yellow",
-		label: "text-slate-800",
+		label: DROPDOWN_ITEM_LABEL_CLASS,
 	},
 };
 

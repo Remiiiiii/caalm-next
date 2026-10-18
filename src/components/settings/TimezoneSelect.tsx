@@ -3,6 +3,7 @@
 import { Check, ChevronsUpDown } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { DropdownScrollArea } from "@/components/ui/DropdownScrollArea";
 import {
 	Popover,
 	PopoverContent,
@@ -73,7 +74,7 @@ export function TimezoneSelect({
 			</PopoverTrigger>
 			<PopoverContent
 				align="start"
-				className="w-[var(--radix-popover-trigger-width)] p-2 bg-white"
+				className="w-[var(--radix-popover-trigger-width)] overflow-hidden p-2 bg-white"
 			>
 				<SearchField
 					value={query}
@@ -81,7 +82,7 @@ export function TimezoneSelect({
 					placeholder="Search timezones..."
 					className="h-10"
 				/>
-				<div className="mt-2 max-h-64 overflow-y-auto">
+				<DropdownScrollArea maxHeightClassName="max-h-64" className="mt-2">
 					{grouped.length === 0 && (
 						<p className="px-2 py-3 text-sm text-slate-500">No matches.</p>
 					)}
@@ -118,7 +119,7 @@ export function TimezoneSelect({
 							})}
 						</div>
 					))}
-				</div>
+				</DropdownScrollArea>
 			</PopoverContent>
 		</Popover>
 	);

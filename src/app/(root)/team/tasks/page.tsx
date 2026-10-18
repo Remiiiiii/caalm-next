@@ -14,6 +14,7 @@ import { TasksPageShell } from "@/components/tasks/TasksPageShell";
 import { TasksViewTabs } from "@/components/tasks/TasksViewTabs";
 import type { TaskPerson } from "@/components/tasks/task-ui";
 import { Card as GlassCard, CardContent } from "@/components/ui/card";
+import { CaalmDataTableSkeleton } from "@/components/ui/caalm-data-table";
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { ToastAction } from "@/components/ui/toast";
@@ -388,9 +389,7 @@ export default function TeamTasksPage() {
 						/>
 					) : null}
 					{isLoading ? (
-						<div className="flex justify-center py-12">
-							<LoadingSpinner size="sm" label="Loading…" />
-						</div>
+						<CaalmDataTableSkeleton columns={8} rows={6} />
 					) : error ? (
 						<div className="py-12 text-center text-sm text-slate-600">
 							Could not load tasks. Refresh and try again.

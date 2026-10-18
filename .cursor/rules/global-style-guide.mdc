@@ -529,9 +529,19 @@ className="shadow-sm hover:shadow-md transition-all duration-200"
 
 **Hard rule:** Every dropdown / overflow / filter menu uses the **translucent glass panel** (`bg-white/10` + `backdrop-blur` + `border-white/30`). **Never** add a card-cap bar (`glass-card-cap`, `before:h-4` grey strip, or `AppDropdownMenuContent` cap div) to a dropdown.
 
+**Canonical filter / toolbar dropdowns:** Assign Tasks at `/team/tasks` (`TasksFilterBar`). Use the design components below — do not invent one-off Select triggers in filter rows.
+
+| Piece | Use |
+|---|---|
+| Filter pill select | `CaalmFilterSelect` from `@/components/ui/CaalmFilterSelect` |
+| Trigger tokens | `FILTER_PILL_TRIGGER` / `FILTER_DOCK_TRIGGER` from `@/components/ui/filter-pill` |
+| Nested people picker | Same glass `DropdownMenu` pattern as `TaskAssigneeFilter` |
+| Form fields in dialogs | Radix `Select` is OK; `SelectContent` already uses the shared glass panel |
+
 - Content: `DropdownMenuContent` / `AppDropdownMenuContent` / `DropdownMenuSubContent` from `@/components/ui/dropdown-menu` (shared glass styles, no cap).
 - Nested levels (department → division → people) must use the same glass panel — no solid white popovers, no caps.
-- Do **not** invent hover fills on menu rows (`focus:bg-accent` / grey row highlight). Keep rows transparent.
+- Menu row hover / highlight (list items only, not the trigger button): bg `#F2F5F9`, text `#3d5677`, `font-semibold`; default row is `font-normal` with `px-3` horizontal padding. Nested labels use `DROPDOWN_ITEM_LABEL_CLASS`. Do not use `focus:bg-accent`. Hover fill must not go edge-to-edge: keep panel `p-1`, or when the shell is `p-0` (search header), wrap the list in `DropdownScrollArea` with `px-1 py-1`.
+- **Scrolling lists:** Wrap scrollable menu / submenu / suggestion list content in `DropdownScrollArea` from `@/components/ui/DropdownScrollArea` (OverlayScrollbars — no native Windows scrollbar arrows). Put `overflow-hidden` on the menu shell; keep horizontal overflow hidden. Submenu chevrons use `mr-[4px]` on shared `DropdownMenuSubTrigger`.
 
 ## Overflow menus (3-dot)
 
@@ -605,20 +615,22 @@ className="shadow-sm hover:shadow-md transition-all duration-200"
 
 ## Data tables
 
-**Hard rule:** New and redesigned list tables must match the **contracts table** chrome. Do not invent solid white header rows or plain `hover:bg-slate-*` body rows.
+**Hard rule:** Every list / data table in the app must use the **Assign Tasks** chrome as the base template. Domain columns and cells layer on top — do not invent solid white header rows, `bg-slate-50` header bands, or plain `hover:bg-slate-*` body rows.
 
+**Canonical reference:** `/team/tasks` → `src/components/tasks/TasksDataTable.tsx`  
 **Design component:** `@/components/ui/caalm-data-table` (styles from `src/lib/ui/data-table-styles.ts`).
 
 | Piece | Use |
 |---|---|
-| Shell | `CaalmDataTable` or `Table` with `border-separate border-spacing-0` inside `overflow-x-auto px-2 sm:px-4 pb-4` |
-| Header row | `DATA_TABLE_HEADER_ROW` |
-| Header cell | `DATA_TABLE_HEADER_CELL` (+ `px-3`) |
+| Shell | `CaalmDataTable` (wraps `border-separate border-spacing-0` + `overflow-x-auto px-2 sm:px-4 pb-4`) |
+| Header row | `DATA_TABLE_HEADER_ROW` (light grey band) |
+| Header cell | `DATA_TABLE_HEADER_CELL` (+ `px-3`; first/last cells use `pl-4` / `pr-4`) |
 | Sortable header | `SortableDataTableHead` (`ChevronsUpDown`) — only on columns that sort |
 | Body row | `DATA_TABLE_BODY_ROW_CLICKABLE` (or `DATA_TABLE_BODY_ROW_BASE`) |
-
-**Reference implementation:** `src/components/ContractsTableView.tsx`  
-**Also used by:** licenses table, approvals table, files table, tasks table.
+| Cell padding | `DATA_TABLE_CELL` / `DATA_TABLE_CELL_FIRST` / `DATA_TABLE_CELL_LAST` |
+| Empty state | `CaalmDataTableEmpty` |
+| Loading | `CaalmDataTableSkeleton` (not a spinner) |
+**Also used by:** contracts, licenses, approvals, files, users, roles, audits, settings billing tables.
 
 When a cell component is shared (status badge, avatar, linked chip), the detail sheet must render the **same** component so table and sheet stay in sync.
 
@@ -689,7 +701,41 @@ Never use `bg-white/10` for primary readable content. Ensure 4.5:1 contrast on l
 - Stat card grids: `gap-6` (not `gap-4`)
 - Limit equal-weight card rows to 4 per row on desktop
 - Empty/error states: icon + short message (Lucide, not emoji)
-- Loading: use skeleton components, not spinner-only walls
+- Loading: prefer skeleton components for dense cards; when a spinner is needed, follow **Loading spinners** below
+
+---
+
+## Loading spinners
+
+**Reserved (page loads only):** The branded CAALM spinner — segmented circular arc + teal center mark + optional “Loading…” label — from `LoadingSpinner` in `@/components/ui/loading` at **`size="md"`**, **`size="lg"`**, or **`fullScreen`**. Use only for:
+
+- Initial app / auth gate loads
+- Route transitions (`loading.tsx`, Suspense page fallbacks)
+- Full-page refresh / first fetch shells when the whole page is waiting
+
+If a **page** load takes time, keep the larger page spinner (`md` / `lg` / `fullScreen`). Do not shrink it to card size on page shells.
+
+**Cards / glass panels (hard rule):** When a `.glass-card`, metric card, widget, or table shell is waiting on data, use a **skeleton** — never a branded `LoadingSpinner` and never a spinning icon.
+
+```tsx
+// ✅ Page route loading (branded)
+<LoadingSpinner size="md" label="Loading..." />
+<LoadingSpinner fullScreen label="Loading..." />
+
+// ✅ List / data table inside a card
+<CaalmDataTableSkeleton columns={8} rows={6} />
+
+// ✅ Other cards / widgets
+<StatCardSkeleton />
+// or Skeleton from @/components/ui/skeleton / LoadingSkeleton
+
+// ❌ Never in a card
+<Card className="glass-card">
+  <LoadingSpinner size="sm" label="Loading..." />
+</Card>
+```
+
+**Reference:** `CaalmDataTableSkeleton` in `@/components/ui/caalm-data-table`, `@/components/ui/skeletons`, `src/components/ui/loading.tsx` (page loads only).
 
 ---
 
@@ -728,10 +774,12 @@ When creating a new page or component, verify:
 - [ ] All interactive elements have transition effects
 - [ ] Text inputs, selects, textareas, and search fields use `border-[0.25px] border-slate-300` (never 1px `border`, white, transparent, or `slate-200` on light fills)
 - [ ] Dropdown panels use glass (`DropdownMenuContent` / `AppDropdownMenuContent`) with **no card-cap**
-- [ ] 3-dot overflow menus use `/assets/icons/dots.svg` (34×34) with `shad-no-focus rounded-full hover:bg-white/30` — not Lucide `MoreVertical`
+- [ ] Scrollable dropdown / submenu lists use `DropdownScrollArea` (not native `overflow-y-auto` scrollbars)
+- [ ] Cards / glass panels / tables waiting on data use skeletons (`CaalmDataTableSkeleton` / `StatCardSkeleton` / `Skeleton`) — never branded `LoadingSpinner` or spin icons- [ ] 3-dot overflow menus use `/assets/icons/dots.svg` (34×34) with `shad-no-focus rounded-full hover:bg-white/30` — not Lucide `MoreVertical`
 - [ ] Delete / Archive menu items have `<DropdownMenuSeparator />` immediately above them and `tone="danger"`
 - [ ] Badges use `inline-block` / `inline-flex` + `px-2 py-0.5 text-xs rounded-full font-medium border` plus CAALM status colors — no dots inside; no truncated labels
-- [ ] Data tables use `CaalmDataTable` / `DATA_TABLE_*` (contracts table chrome) + `SortableDataTableHead` where sorting applies
+- [ ] Toolbar / filter-row selects use `CaalmFilterSelect` (Assign Tasks pill standard)
+- [ ] Data tables use `CaalmDataTable` / `DATA_TABLE_*` / `CaalmDataTableEmpty` + `SortableDataTableHead` where sorting applies
 - [ ] User faces use profile photo when available, else initials via `@/components/ui/avatar`
 - [ ] Sheet/detail cells reuse the same badge/avatar/chip components as the table
 

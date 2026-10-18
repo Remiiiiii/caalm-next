@@ -2,7 +2,9 @@
 
 import { Check, Plus } from "lucide-react";
 import Avatar from "@/components/ui/avatar";
+import { DropdownScrollArea } from "@/components/ui/DropdownScrollArea";
 import {
+	DROPDOWN_ITEM_LABEL_CLASS,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
@@ -73,42 +75,50 @@ export function TaskAssigneePicker({
 			</DropdownMenuTrigger>
 			<DropdownMenuContent
 				align="end"
-				className="w-56"
+				className="w-56 overflow-hidden p-1"
 				onClick={(e) => e.stopPropagation()}
 			>
-				<DropdownMenuItem
-					className="cursor-pointer gap-2"
-					onSelect={() => onChange(null)}
-				>
-					<span className="flex h-8 w-8 items-center justify-center rounded-full border border-dashed border-slate-300">
-						<Plus className="h-4 w-4" />
-					</span>
-					<span className="flex-1">Unassigned</span>
-					{!assigneeId ? <Check className="h-3.5 w-3.5" /> : null}
-				</DropdownMenuItem>
-				{people.map((p) => (
+				<DropdownScrollArea>
 					<DropdownMenuItem
-						key={p.id}
 						className="cursor-pointer gap-2"
-						onSelect={() => onChange(p.id)}
+						onSelect={() => onChange(null)}
 					>
-						<Avatar
-							name={p.name}
-							userId={p.id}
-							size={ASSIGN_SIZE}
-							imageUrl={p.imageUrl}
-						/>
-						<span className="min-w-0 flex-1">
-							<span className="block truncate text-slate-700">{p.name}</span>
-							{p.subtitle ? (
-								<span className="block truncate text-[11px] text-slate-500">
-									{p.subtitle}
-								</span>
-							) : null}
+						<span className="flex h-8 w-8 items-center justify-center rounded-full border border-dashed border-slate-300">
+							<Plus className="h-4 w-4" />
 						</span>
-						{p.id === assigneeId ? <Check className="h-3.5 w-3.5" /> : null}
+						<span className={cn("flex-1", DROPDOWN_ITEM_LABEL_CLASS)}>
+							Unassigned
+						</span>
+						{!assigneeId ? <Check className="h-3.5 w-3.5" /> : null}
 					</DropdownMenuItem>
-				))}
+					{people.map((p) => (
+						<DropdownMenuItem
+							key={p.id}
+							className="cursor-pointer gap-2"
+							onSelect={() => onChange(p.id)}
+						>
+							<Avatar
+								name={p.name}
+								userId={p.id}
+								size={ASSIGN_SIZE}
+								imageUrl={p.imageUrl}
+							/>
+							<span className="min-w-0 flex-1">
+								<span
+									className={cn("block truncate", DROPDOWN_ITEM_LABEL_CLASS)}
+								>
+									{p.name}
+								</span>
+								{p.subtitle ? (
+									<span className="block truncate text-[11px] text-slate-500">
+										{p.subtitle}
+									</span>
+								) : null}
+							</span>
+							{p.id === assigneeId ? <Check className="h-3.5 w-3.5" /> : null}
+						</DropdownMenuItem>
+					))}
+				</DropdownScrollArea>
 			</DropdownMenuContent>
 		</DropdownMenu>
 	);

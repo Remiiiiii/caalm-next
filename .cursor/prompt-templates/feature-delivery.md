@@ -17,7 +17,7 @@ Copy into Agent chat and fill `[brackets]`.
 **Constraints:**
 - Multi-tenant: org/tenant id on all reads/writes.
 - API: `pnpm new:api-route [path] --permission [PERMISSION] --methods [GET,POST,…]` unless extending an existing gated route.
-- UI: every new/edited card or page content shell uses `glass-card` + `glass-card-cap` (never solid white `bg-white` card shells); data tables use contracts chrome (`CaalmDataTable` / `DATA_TABLE_*`); primary buttons `btn-primary`, deletes `delete-btn`; avatars photo-or-initials; dialog standards; `SearchField`, `PageIndex`, CAALM badges.
+- UI: every new/edited card or page content shell uses `glass-card` + `glass-card-cap` (never solid white `bg-white` card shells); data tables use Assign Tasks chrome (`CaalmDataTable` / `DATA_TABLE_*`, reference `TasksDataTable`); primary buttons `btn-primary`, deletes `delete-btn`; avatars photo-or-initials; dialog standards; `SearchField`, `PageIndex`, CAALM badges.
 - Schema: if Appwrite attributes/collections change → sync demo DB in same PR.
 
 **Acceptance:**

@@ -22,7 +22,14 @@ import {
 	type FilesViewType,
 } from "@/components/FilesViewToggle";
 import { Button } from "@/components/ui/button";
+import {
+	CaalmDataTable,
+	DATA_TABLE_BODY_ROW_BASE,
+	DATA_TABLE_HEADER_CELL,
+	DATA_TABLE_HEADER_ROW,
+} from "@/components/ui/caalm-data-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DropdownScrollArea } from "@/components/ui/DropdownScrollArea";
 import {
 	AppDropdownMenuContent,
 	AppDropdownMenuItem,
@@ -40,6 +47,14 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { ContractCardSkeleton } from "@/components/ui/skeletons";
+import {
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 import { useGroupedNavigation } from "@/hooks/useGroupedNavigation";
 import {
 	type UseSAMOpportunitiesFilters,
@@ -61,7 +76,6 @@ import {
 	getUsStateLabel,
 	US_STATES,
 } from "@/lib/sam-search-options";
-import { cn } from "@/lib/utils";
 
 const FIELD_LABEL_CLASS = "text-sm font-medium text-slate-700";
 const FIELD_INPUT_CLASS =
@@ -431,6 +445,8 @@ const ContractCard = React.memo(
 
 ContractCard.displayName = "ContractCard";
 
+const samRowPad = "px-3 py-3 align-middle";
+
 function SamContractsTable({
 	contracts,
 	onViewDocument,
@@ -439,105 +455,125 @@ function SamContractsTable({
 	onViewDocument: (contract: SAMContract) => void;
 }) {
 	return (
-		<div className="overflow-x-auto rounded-lg border border-slate-200 bg-white/80">
-			<table className="w-full text-left text-sm">
-				<thead>
-					<tr className="border-b border-slate-200 bg-slate-50 text-slate-700">
-						<th className="px-4 py-3 font-medium">Title</th>
-						<th className="px-4 py-3 font-medium hidden md:table-cell">
-							Location
-						</th>
-						<th className="px-4 py-3 font-medium hidden lg:table-cell">
-							Posted
-						</th>
-						<th className="px-4 py-3 font-medium">Due</th>
-						<th className="px-4 py-3 font-medium text-right">Actions</th>
-					</tr>
-				</thead>
-				<tbody>
-					{contracts.map((contract, index) => {
-						const placeLabel = getPlaceLabel(contract);
-						return (
-							<tr
-								key={
-									contract.noticeId ||
-									contract.solicitationNumber ||
-									`${contract.title?.slice(0, 20)}-${index}`
-								}
-								className="border-t border-slate-200/60 hover:bg-blue-50/40 transition-colors"
-							>
-								<td className="px-4 py-3 min-w-0">
-									<p className="font-medium text-slate-700 line-clamp-2">
-										{contract.title}
+		<CaalmDataTable className="px-0 sm:px-0 pb-0">
+			<TableHeader className="[&_tr]:border-b-0">
+				<TableRow className={DATA_TABLE_HEADER_ROW}>
+					<TableHead className={cn(DATA_TABLE_HEADER_CELL, "pl-4 pr-3")}>
+						Title
+					</TableHead>
+					<TableHead
+						className={cn(DATA_TABLE_HEADER_CELL, "px-3 hidden md:table-cell")}
+					>
+						Location
+					</TableHead>
+					<TableHead
+						className={cn(DATA_TABLE_HEADER_CELL, "px-3 hidden lg:table-cell")}
+					>
+						Posted
+					</TableHead>
+					<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+						Due
+					</TableHead>
+					<TableHead
+						className={cn(DATA_TABLE_HEADER_CELL, "pl-3 pr-4 text-right")}
+					>
+						Actions
+					</TableHead>
+				</TableRow>
+			</TableHeader>
+			<TableBody className="[&_tr:last-child>td]:border-b-0">
+				{contracts.map((contract, index) => {
+					const placeLabel = getPlaceLabel(contract);
+					return (
+						<TableRow
+							key={
+								contract.noticeId ||
+								contract.solicitationNumber ||
+								`${contract.title?.slice(0, 20)}-${index}`
+							}
+							className={DATA_TABLE_BODY_ROW_BASE}
+						>
+							<TableCell className={cn(samRowPad, "pl-4 pr-3 min-w-0")}>
+								<p className="font-medium text-slate-700 line-clamp-2">
+									{contract.title}
+								</p>
+								{contract.solicitationNumber && (
+									<p className="text-xs text-slate-500 mt-0.5">
+										{contract.solicitationNumber}
 									</p>
-									{contract.solicitationNumber && (
-										<p className="text-xs text-slate-500 mt-0.5">
-											{contract.solicitationNumber}
-										</p>
-									)}
-								</td>
-								<td className="px-4 py-3 text-slate-700 hidden md:table-cell">
-									{placeLabel || "—"}
-								</td>
-								<td className="px-4 py-3 text-slate-700 hidden lg:table-cell">
-									{formatContractDate(contract.postedDate)}
-								</td>
-								<td className="px-4 py-3 text-slate-700">
-									{contract.responseDeadLine
-										? formatContractDate(contract.responseDeadLine)
-										: "—"}
-								</td>
-								<td className="px-4 py-3">
-									<div className="flex items-center justify-end">
-										<DropdownMenu>
-											<DropdownMenuTrigger
-												className="shad-no-focus rounded-full transition-colors hover:bg-white/30 cursor-pointer"
-												aria-label={`Actions for ${contract.title || "contract"}`}
+								)}
+							</TableCell>
+							<TableCell
+								className={cn(
+									samRowPad,
+									"text-slate-700 hidden md:table-cell",
+								)}
+							>
+								{placeLabel || "—"}
+							</TableCell>
+							<TableCell
+								className={cn(
+									samRowPad,
+									"text-slate-700 hidden lg:table-cell",
+								)}
+							>
+								{formatContractDate(contract.postedDate)}
+							</TableCell>
+							<TableCell className={cn(samRowPad, "text-slate-700")}>
+								{contract.responseDeadLine
+									? formatContractDate(contract.responseDeadLine)
+									: "—"}
+							</TableCell>
+							<TableCell className={cn(samRowPad, "pl-3 pr-4")}>
+								<div className="flex items-center justify-end">
+									<DropdownMenu>
+										<DropdownMenuTrigger
+											className="shad-no-focus rounded-full transition-colors hover:bg-white/30 cursor-pointer"
+											aria-label={`Actions for ${contract.title || "contract"}`}
+										>
+											<Image
+												src="/assets/icons/dots.svg"
+												alt=""
+												width={34}
+												height={34}
+											/>
+										</DropdownMenuTrigger>
+										<AppDropdownMenuContent align="end">
+											<AppDropdownMenuItem
+												icon={Eye}
+												onClick={() => onViewDocument(contract)}
 											>
-												<Image
-													src="/assets/icons/dots.svg"
-													alt=""
-													width={34}
-													height={34}
-												/>
-											</DropdownMenuTrigger>
-											<AppDropdownMenuContent align="end">
-												<AppDropdownMenuItem
-													icon={Eye}
-													onClick={() => onViewDocument(contract)}
-												>
-													View
-												</AppDropdownMenuItem>
-												<AppDropdownMenuItem
-													icon={Save}
-													onClick={async () => {
-														try {
-															await saveAsPursuit(contract);
-														} catch (err) {
-															console.error(
-																"[ContractsDisplay] save pursuit",
-																err,
-															);
-															window.alert(
-																err instanceof Error
-																	? err.message
-																	: "Could not save as pursuit",
-															);
-														}
-													}}
-												>
-													Save
-												</AppDropdownMenuItem>
-											</AppDropdownMenuContent>
-										</DropdownMenu>
-									</div>
-								</td>
-							</tr>
-						);
-					})}
-				</tbody>
-			</table>
-		</div>
+												View
+											</AppDropdownMenuItem>
+											<AppDropdownMenuItem
+												icon={Save}
+												onClick={async () => {
+													try {
+														await saveAsPursuit(contract);
+													} catch (err) {
+														console.error(
+															"[ContractsDisplay] save pursuit",
+															err,
+														);
+														window.alert(
+															err instanceof Error
+																? err.message
+																: "Could not save as pursuit",
+														);
+													}
+												}}
+											>
+												Save
+											</AppDropdownMenuItem>
+										</AppDropdownMenuContent>
+									</DropdownMenu>
+								</div>
+							</TableCell>
+						</TableRow>
+					);
+				})}
+			</TableBody>
+		</CaalmDataTable>
 	);
 }
 
@@ -816,24 +852,26 @@ export default function ContractsDisplay() {
 								{keywordSuggestionsOpen &&
 									keywordSuggestions.length > 0 &&
 									(searchFilters.keyword?.trim().length ?? 0) > 0 && (
-										<div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-60 overflow-y-auto rounded-md border border-slate-200 bg-white shadow-lg">
-											{keywordSuggestions.map((term) => (
-												<button
-													key={term}
-													type="button"
-													className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-blue-50 cursor-pointer transition-colors border-b border-slate-200/60 last:border-b-0"
-													onMouseDown={(e) => e.preventDefault()}
-													onClick={() => {
-														setSearchFilters((prev) => ({
-															...prev,
-															keyword: term,
-														}));
-														setKeywordSuggestionsOpen(false);
-													}}
-												>
-													{term}
-												</button>
-											))}
+										<div className="absolute z-50 top-full left-0 right-0 mt-1 overflow-hidden rounded-md border border-slate-200 bg-white shadow-lg">
+											<DropdownScrollArea maxHeightClassName="max-h-60">
+												{keywordSuggestions.map((term) => (
+													<button
+														key={term}
+														type="button"
+														className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-blue-50 cursor-pointer transition-colors border-b border-slate-200/60 last:border-b-0"
+														onMouseDown={(e) => e.preventDefault()}
+														onClick={() => {
+															setSearchFilters((prev) => ({
+																...prev,
+																keyword: term,
+															}));
+															setKeywordSuggestionsOpen(false);
+														}}
+													>
+														{term}
+													</button>
+												))}
+											</DropdownScrollArea>
 										</div>
 									)}
 							</div>
@@ -972,29 +1010,31 @@ export default function ContractsDisplay() {
 								{orgSuggestionsOpen &&
 									organizationSuggestions.length > 0 &&
 									(searchFilters.organizationName?.trim().length ?? 0) > 0 && (
-										<div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-60 overflow-y-auto rounded-md border border-slate-200 bg-white shadow-lg">
-											{organizationSuggestions.map((org) => (
-												<button
-													key={org.name}
-													type="button"
-													className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-blue-50 cursor-pointer transition-colors border-b border-slate-200/60 last:border-b-0"
-													onMouseDown={(e) => e.preventDefault()}
-													onClick={() => {
-														setSearchFilters((prev) => ({
-															...prev,
-															organizationName: org.name,
-														}));
-														setOrgSuggestionsOpen(false);
-													}}
-												>
-													<span className="font-medium">{org.name}</span>
-													{org.aliases[0] ? (
-														<span className="ml-2 text-xs text-slate-500">
-															{org.aliases[0].toUpperCase()}
-														</span>
-													) : null}
-												</button>
-											))}
+										<div className="absolute z-50 top-full left-0 right-0 mt-1 overflow-hidden rounded-md border border-slate-200 bg-white shadow-lg">
+											<DropdownScrollArea maxHeightClassName="max-h-60">
+												{organizationSuggestions.map((org) => (
+													<button
+														key={org.name}
+														type="button"
+														className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-blue-50 cursor-pointer transition-colors border-b border-slate-200/60 last:border-b-0"
+														onMouseDown={(e) => e.preventDefault()}
+														onClick={() => {
+															setSearchFilters((prev) => ({
+																...prev,
+																organizationName: org.name,
+															}));
+															setOrgSuggestionsOpen(false);
+														}}
+													>
+														<span className="font-medium">{org.name}</span>
+														{org.aliases[0] ? (
+															<span className="ml-2 text-xs text-slate-500">
+																{org.aliases[0].toUpperCase()}
+															</span>
+														) : null}
+													</button>
+												))}
+											</DropdownScrollArea>
 										</div>
 									)}
 							</div>

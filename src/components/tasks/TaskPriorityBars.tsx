@@ -2,6 +2,7 @@
 
 import { Check } from "lucide-react";
 import {
+	DROPDOWN_ITEM_LABEL_CLASS,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
@@ -76,7 +77,9 @@ export function TaskPriorityBars({
 						onSelect={() => onChange(priority)}
 					>
 						<Bars priority={priority} />
-						<span className="flex-1">{TASK_PRIORITY_LABELS[priority]}</span>
+						<span className={cn("flex-1", DROPDOWN_ITEM_LABEL_CLASS)}>
+							{TASK_PRIORITY_LABELS[priority]}
+						</span>
 						{priority === value ? <Check className="h-3.5 w-3.5" /> : null}
 					</DropdownMenuItem>
 				))}
