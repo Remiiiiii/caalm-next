@@ -70,6 +70,18 @@ export const RAG_STATUS_COPY: Record<string, string> = {
 	unavailable: "Unavailable",
 };
 
+export { isReadinessDomainScored } from "@/lib/audits/readiness/score";
+
+/** Live readiness scores are percents (0–100). Leave blanks as N/A. */
+export function formatReadinessPercent(
+	value: number | null | undefined,
+): string {
+	if (value === null || value === undefined || Number.isNaN(value)) {
+		return "N/A";
+	}
+	return `${value}%`;
+}
+
 export function ragFor(
 	score: number | null | undefined,
 	thresholds: { green: number; amber: number },

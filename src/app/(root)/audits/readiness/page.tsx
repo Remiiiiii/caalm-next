@@ -7,13 +7,12 @@ import {
 	FileText,
 	Info,
 	Loader2,
-	Play,
 	RefreshCw,
 	ShieldAlert,
 } from "lucide-react";
-import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
-import useSWR from "swr";
+import useSWR, { mutate as globalMutate } from "swr";
+import { AuditsSectionNav } from "@/components/audits/AuditsSectionNav";
 import { ReadinessAiPanel } from "@/components/audits/ReadinessAiPanel";
 import { ReadinessCharts } from "@/components/audits/ReadinessCharts";
 import { ReadinessEvidenceMap } from "@/components/audits/readiness/ReadinessEvidenceMap";
@@ -21,6 +20,7 @@ import { ReadinessExplainSheet } from "@/components/audits/readiness/ReadinessEx
 import { ReadinessFixNextTable } from "@/components/audits/readiness/ReadinessFixNextTable";
 import { ReadinessPublicSiteCard } from "@/components/audits/readiness/ReadinessPublicSiteCard";
 import { ReadinessScoreCard } from "@/components/audits/readiness/ReadinessScoreCard";
+import { ReadinessSkeleton } from "@/components/audits/readiness/ReadinessSkeleton";
 import { ReadinessSnapshotHistory } from "@/components/audits/readiness/ReadinessSnapshotHistory";
 import { ReadinessStatRows } from "@/components/audits/readiness/ReadinessStatRows";
 import {
@@ -30,7 +30,10 @@ import {
 	RECT_BADGE,
 	ragFor,
 } from "@/components/audits/readiness/readiness-ui";
-import type { ReadinessResponse } from "@/components/audits/readiness/types";
+import type {
+	ReadinessInsight,
+	ReadinessResponse,
+} from "@/components/audits/readiness/types";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -45,7 +48,6 @@ import { AnimatedBar } from "@/components/ui/animated-bar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { MetricStatCard } from "@/components/ui/metric-stat-card";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
 	Tooltip,
 	TooltipContent,
@@ -56,33 +58,15 @@ import { PERMISSIONS } from "@/constants/permissions";
 import { useToast } from "@/hooks/use-toast";
 import { useOrgTimezone } from "@/hooks/useOrgTimezone";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useTaskPeople } from "@/hooks/useTaskPeople";
+import { useUsersByIds } from "@/hooks/useUsersByIds";
+import { assignContract } from "@/lib/actions/file.actions";
+import { READINESS_DISCLAIMER } from "@/lib/audits/readiness/types";
 import { fetcher } from "@/lib/swr-config";
 import { formatInTimezone } from "@/lib/timezone";
 import { cn } from "@/lib/utils";
 
 const STALE_AFTER_MS = 24 * 60 * 60 * 1000;
-
-function LoadingState() {
-	return (
-		<div
-			role="status"
-			aria-busy="true"
-			aria-label="Loading readiness"
-			className="space-y-6"
-		>
-			<div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.7fr_1fr_1fr_1fr]">
-				{[0, 1, 2, 3].map((key) => (
-					<Skeleton key={key} className="h-72 rounded-lg" />
-				))}
-			</div>
-			<div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-				<Skeleton className="h-80 rounded-lg xl:col-span-2" />
-				<Skeleton className="h-80 rounded-lg" />
-			</div>
-			<Skeleton className="h-64 rounded-lg" />
-		</div>
-	);
-}
 
 export default function AuditReadinessPage() {
 	const timeZone = useOrgTimezone();
@@ -121,7 +105,7 @@ export default function AuditReadinessPage() {
 			toast({
 				title: "Readiness snapshot saved",
 				description: body.data?.snapshot
-					? `Score: ${body.data.snapshot.score ?? "N/A"}`
+					? `Score: ${body.data.snapshot.score == null ? "N/A" : `${body.data.snapshot.score}%`}`
 					: body.data?.skipped || "Done",
 			});
 			const newId: string | undefined = body.data?.snapshot?.$id;
@@ -141,6 +125,80 @@ export default function AuditReadinessPage() {
 			setConfirmOpen(false);
 		}
 	}, [mutate, toast]);
+
+	const canAssignAny = Boolean(
+		payload?.canAssignOwners?.contract || payload?.canAssignOwners?.license,
+	);
+	// Contract / license managers are stored by account id.
+	const people = useTaskPeople(canAssignAny, "accountId");
+	const users = useUsersByIds(
+		useMemo(
+			() =>
+				(payload?.summary.insights ?? []).flatMap((insight) => [
+					...(insight.assignedManagers ?? []),
+					...(insight.assignedBy ? [insight.assignedBy] : []),
+				]),
+			[payload?.summary.insights],
+		),
+	);
+
+	/**
+	 * Owner = the record's assigned manager, the same field /contracts and
+	 * /licenses edit, so every screen reading it shows the new owner.
+	 */
+	const assignOwner = useCallback(
+		async (row: ReadinessInsight, accountId: string | null) => {
+			if (!accountId) {
+				toast({
+					title: "Pick a manager",
+					description:
+						"A record needs an owner. Choose someone to reassign it.",
+				});
+				return;
+			}
+			try {
+				if (row.itemKind === "license") {
+					const res = await fetch(`/api/licenses/${row.id}`, {
+						method: "PUT",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ assignedManagers: [accountId] }),
+					});
+					if (!res.ok) {
+						const body = await res.json().catch(() => ({}));
+						throw new Error(body?.error || body?.message || "Could not assign");
+					}
+				} else {
+					await assignContract({
+						fileId: row.id,
+						managerAccountIds: [accountId],
+						path: "/contracts",
+					});
+				}
+				toast({
+					title: "Owner updated",
+					description: `${row.itemTitle ?? row.title} now has a new manager.`,
+				});
+				await mutate();
+				// Refresh every cached list that shows managers.
+				await globalMutate(
+					(key) =>
+						typeof key === "string" &&
+						(key.startsWith("/api/contracts") ||
+							key.startsWith("/api/licenses") ||
+							key.startsWith("/api/dashboard") ||
+							key.startsWith("/api/audits")),
+				);
+			} catch (assignError) {
+				toast({
+					title: "Could not assign owner",
+					description:
+						assignError instanceof Error ? assignError.message : "Try again",
+					variant: "destructive",
+				});
+			}
+		},
+		[mutate, toast],
+	);
 
 	const exportPdf = useCallback(
 		async (snapshotId?: string) => {
@@ -216,7 +274,7 @@ export default function AuditReadinessPage() {
 	if (permissionsLoading) {
 		return (
 			<div className="w-full px-4 pb-10 sm:px-6 lg:px-8 xl:px-12">
-				<LoadingState />
+				<ReadinessSkeleton />
 			</div>
 		);
 	}
@@ -278,20 +336,6 @@ export default function AuditReadinessPage() {
 								{stale ? " · Data may be out of date." : ""}
 							</span>
 						) : null}
-						<Button
-							type="button"
-							variant="outline"
-							size="sm"
-							className="cursor-pointer"
-							aria-label="Refresh live data"
-							onClick={() => mutate()}
-							disabled={isValidating}
-						>
-							<RefreshCw
-								className={cn("h-4 w-4", isValidating && "animate-spin")}
-							/>
-							Refresh
-						</Button>
 					</div>
 				</div>
 				<div className="flex flex-wrap items-center justify-between gap-4">
@@ -301,26 +345,6 @@ export default function AuditReadinessPage() {
 						arrives.
 					</p>
 					<div className="flex flex-wrap items-center gap-3">
-						<Button
-							type="button"
-							variant="outline"
-							className="cursor-pointer"
-							onClick={() => setConfirmOpen(true)}
-							disabled={running}
-						>
-							{running ? (
-								<Loader2 className="h-4 w-4 animate-spin" />
-							) : (
-								<Play className="h-4 w-4" />
-							)}
-							Run weekly snapshot
-						</Button>
-						<Button asChild variant="outline" className="cursor-pointer">
-							<Link href="/audits/readiness/preview">
-								<FileText className="h-4 w-4" />
-								Packet preview
-							</Link>
-						</Button>
 						<TooltipProvider delayDuration={150}>
 							<Tooltip>
 								<TooltipTrigger asChild>
@@ -357,13 +381,16 @@ export default function AuditReadinessPage() {
 				className="flex items-center gap-2.5 rounded-lg border border-orange/20 bg-orange/10 px-4 py-2 text-xs text-slate-600"
 			>
 				<Info className="h-4 w-4 shrink-0 text-orange" aria-hidden />
-				<span>{payload?.disclaimer}</span>
+				<span>{payload?.disclaimer ?? READINESS_DISCLAIMER}</span>
 			</div>
 
 			{isLoading || !summary || !payload ? (
-				<LoadingState />
+				<ReadinessSkeleton />
 			) : (
 				<>
+					{/* Section switch, directly above the score card */}
+					<AuditsSectionNav className="" />
+
 					{/* Hero row */}
 					<div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-[1.7fr_1fr_1fr_1fr]">
 						<ReadinessScoreCard
@@ -525,16 +552,13 @@ export default function AuditReadinessPage() {
 											),
 										},
 										{
-											label: "Expiring within 90 days",
+											label: "Expiring within 30 days",
 											value: licensesSnapshot?.expiringSoon ?? 0,
 											href: "/licenses",
 										},
 										{
-											label: "Non-compliant",
-											value:
-												licensesSnapshot?.complianceBuckets?.[
-													"non-compliant"
-												] ?? 0,
+											label: "Expired",
+											value: licensesSnapshot?.expired ?? 0,
 											href: "/licenses",
 										},
 									]}
@@ -544,9 +568,17 @@ export default function AuditReadinessPage() {
 					</div>
 
 					{/* Fix next + AI assistant */}
-					<div className="grid grid-cols-1 items-stretch gap-6 xl:grid-cols-3">
-						<div className="xl:col-span-2">
-							<ReadinessFixNextTable insights={summary.insights} />
+					<div className="grid grid-cols-1 items-stretch gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+						<div>
+							<ReadinessFixNextTable
+								insights={summary.insights}
+								users={users}
+								canAssign={payload.canAssignOwners}
+								people={people}
+								onAssign={(row, assigneeId) =>
+									void assignOwner(row, assigneeId)
+								}
+							/>
 						</div>
 						<ReadinessAiPanel
 							snapshotId={payload.latestSnapshot?.id}
@@ -577,8 +609,18 @@ export default function AuditReadinessPage() {
 
 					<ReadinessSnapshotHistory
 						rows={history}
-						latestId={payload.latestSnapshot?.id}
+						running={running}
+						onRun={() => setConfirmOpen(true)}
 						timeZone={timeZone}
+						nextRunLabel={
+							payload.nextRun
+								? formatInTimezone(
+										new Date(payload.nextRun.at),
+										"EEE, MMM d, yyyy",
+										timeZone,
+									)
+								: null
+						}
 						canExport={canExport}
 						downloadingId={exportingId}
 						highlightId={highlightId}

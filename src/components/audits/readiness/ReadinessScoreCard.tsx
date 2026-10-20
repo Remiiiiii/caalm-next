@@ -6,7 +6,15 @@ import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import { cn } from "@/lib/utils";
 import { GlossaryTerm } from "./GlossaryTerm";
 import { ReadinessGauge } from "./ReadinessGauge";
-import { PILL, RAG_BG, RAG_LABEL, RAG_PILL } from "./readiness-ui";
+import {
+	formatReadinessPercent,
+	isReadinessDomainScored,
+	NEUTRAL_PILL,
+	PILL,
+	RAG_BG,
+	RAG_LABEL,
+	RAG_PILL,
+} from "./readiness-ui";
 import type { Rag, RagThresholds, ReadinessDomain } from "./types";
 
 export function ReadinessScoreCard({
@@ -34,7 +42,7 @@ export function ReadinessScoreCard({
 			? "First snapshot · nothing to compare yet"
 			: deltaVsLast === 0
 				? "— No change vs last snapshot"
-				: `${deltaVsLast > 0 ? "▲" : "▼"} ${Math.abs(deltaVsLast)} vs last snapshot`;
+				: `${deltaVsLast > 0 ? "▲" : "▼"} ${formatReadinessPercent(Math.abs(deltaVsLast))} vs last snapshot`;
 
 	return (
 		<Card className="glass-card relative h-full overflow-hidden">
@@ -87,10 +95,11 @@ export function ReadinessScoreCard({
 							<span className="caption text-slate-600">{compare}</span>
 						</div>
 						{domains.map((domain) => {
+							const scored = isReadinessDomainScored(domain, sourcesUsed);
 							const domainRag =
-								(domain.ragStatus as Rag) in RAG_BG
+								scored && (domain.ragStatus as Rag) in RAG_BG
 									? (domain.ragStatus as Rag)
-									: "red";
+									: null;
 							return (
 								<button
 									type="button"
@@ -102,15 +111,19 @@ export function ReadinessScoreCard({
 										<span
 											className={cn(
 												"h-1.5 w-1.5 rounded-full",
-												RAG_BG[domainRag],
+												domainRag ? RAG_BG[domainRag] : "bg-slate-300",
 											)}
 											aria-hidden
 										/>
 										{domain.label}
 									</span>
-									<span className="font-semibold tabular-nums text-slate-700">
-										{domain.readinessPercent}
-									</span>
+									{scored ? (
+										<span className="font-semibold tabular-nums text-slate-700">
+											{formatReadinessPercent(domain.readinessPercent)}
+										</span>
+									) : (
+										<span className={cn(PILL, NEUTRAL_PILL)}>Not scored</span>
+									)}
 								</button>
 							);
 						})}
@@ -119,8 +132,10 @@ export function ReadinessScoreCard({
 
 				<p className="caption mt-auto text-slate-600">
 					Sources: {sourcesUsed.length ? sourcesUsed.join(", ") : "None yet"} ·
-					Bands: red below {thresholds.amber}, amber {thresholds.amber}–
-					{thresholds.green - 1}, green {thresholds.green}+
+					Bands: red below {formatReadinessPercent(thresholds.amber)}, amber{" "}
+					{formatReadinessPercent(thresholds.amber)}–
+					{formatReadinessPercent(thresholds.green - 1)}, green{" "}
+					{formatReadinessPercent(thresholds.green)}+
 				</p>
 			</CardContent>
 		</Card>

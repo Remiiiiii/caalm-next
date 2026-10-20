@@ -37,7 +37,7 @@ export function ReadinessPublicSiteCard({
 			<div className="glass-card-cap" />
 			<CardContent className="flex h-full flex-col gap-3 p-4 text-slate-700 sm:p-6">
 				<div className="flex items-center justify-between gap-2">
-					<p className="h5">Public site</p>
+					<p className="h5 sidebar-gradient-text">Public site</p>
 					<span className={cn(PILL, NEUTRAL_PILL)}>
 						Informational · not scored
 					</span>

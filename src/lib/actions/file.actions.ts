@@ -2558,6 +2558,46 @@ export const assignContract = async ({
 				);
 			}
 		}
+		// Audit story for the owner change (who / what / when / tenant).
+		try {
+			const actor = await getCurrentUser();
+			const previous = (contractDoc as { assignedManagers?: string[] })
+				.assignedManagers;
+			const contractLabel =
+				(contractDoc as { contractName?: string }).contractName ||
+				contractDoc.$id;
+			const actorName = actor?.fullName || actor?.email || "unknown";
+			await logAuditEvent({
+				event_id: `contract_assign_${contractDoc.$id}_${Date.now()}`,
+				event_title: `Contract managers changed: ${contractLabel}`,
+				action: "update",
+				source: "caalm",
+				user_id: actor?.$id || "unknown",
+				user_name: actorName,
+				user_email: actor?.email || "",
+				orgId:
+					(contractDoc as { orgId?: string }).orgId ||
+					(actor
+						? (await getUserDefaultOrganization(actor.$id))?.orgId
+						: undefined),
+				status: "success",
+				module: "contracts",
+				target_type: "contract",
+				target_id: contractDoc.$id,
+				target_label: contractLabel,
+				summary: `${actorName} changed the managers on ${contractLabel}`,
+				changes: [
+					{
+						field: "assignedManagers",
+						before: (previous ?? []).join(", ") || null,
+						after: managerAccountIds.join(", ") || null,
+					},
+				],
+			});
+		} catch (auditError) {
+			console.error("[SERVER] assignContract: audit log failed:", auditError);
+		}
+
 		revalidatePath(path);
 		return parseStringify({
 			contract: updatedContract,

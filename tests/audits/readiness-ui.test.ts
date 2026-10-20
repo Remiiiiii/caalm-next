@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
 	FALLBACK_RAG_THRESHOLDS,
 	formatDay,
+	formatReadinessPercent,
+	isReadinessDomainScored,
 	plural,
 	REQUIREMENT_LABELS,
 	ragFor,
@@ -45,5 +47,21 @@ describe("readiness display helpers", () => {
 	it("pluralises counts", () => {
 		expect(plural(1, "item")).toBe("1 item");
 		expect(plural(0, "item")).toBe("0 items");
+	});
+
+	it("formats scored values with a percent sign", () => {
+		expect(formatReadinessPercent(0)).toBe("0%");
+		expect(formatReadinessPercent(50)).toBe("50%");
+		expect(formatReadinessPercent(null)).toBe("N/A");
+	});
+
+	it("treats an empty domain as not scored, not as 0%", () => {
+		const contracts = { label: "Contracts & grants" };
+		const licenses = { label: "Licenses" };
+		expect(isReadinessDomainScored(contracts, ["Licenses"])).toBe(false);
+		expect(isReadinessDomainScored(licenses, ["Licenses"])).toBe(true);
+		expect(
+			isReadinessDomainScored(contracts, ["Contracts", "Licenses"]),
+		).toBe(true);
 	});
 });

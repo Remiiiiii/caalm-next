@@ -333,6 +333,7 @@ Focus: the components named in the request. Many more shadcn primitives live und
 - **Props:** `value`, `onChange`, `tabs: SegmentedToggleTab[]`, `ariaLabel`, `className?`
 - **Tab shape:** `{ value, label, icon?, iconClassName?, hideLabel?, ariaLabel?, count?, countClassName? }`
 - **Variants:** sliding white thumb; selected `text-[#0f5384]`
+- **Size:** global CSS variables in `src/app/globals.css`: `--segmented-toggle-height` (1.75rem, matches `btn-primary`) and `--segmented-toggle-pad`
 - **Usage:**
 
 ```tsx
@@ -478,7 +479,9 @@ Re-exports all `DATA_TABLE_*` constants from `data-table-styles.ts`.
 
 | Constant | Purpose |
 |----------|---------|
-| `DATA_TABLE_HEADER_CELL` | Header cell typography (`sidebar-gradient-text`) |
+| `DATA_TABLE_HEADER_CELL` | Header cell typography (`text-slate-700`, semibold) |
+| `DATA_TABLE_INSET` | Horizontal inset of table data in its card (`px-2 sm:px-4`), applied by `CaalmDataTable` itself |
+| `DATA_TABLE_TOOLBAR_INSET` | Same inset for the search/filter toolbar above a table (`px-4`) |
 | `DATA_TABLE_HEADER_ROW` | Light grey frosted header band |
 | `DATA_TABLE_CELL` / `_FIRST` / `_LAST` | Body cell padding |
 | `DATA_TABLE_BODY_ROW_BASE` | Hover glass row |
@@ -599,6 +602,8 @@ Some charts import Recharts primitives directly without `ChartContainer`; both p
 ---
 
 ## 7. Other shared UI files (index only)
+
+Also present: `glass-skeletons` (`GlassCardSkeleton`, `MetricCardSkeleton`, `BarRowsSkeleton`, `TableCardSkeleton`: page-load placeholders that mirror the real card layout), `animated-bar` (animated progress / share bars) and `bulk-action-dock` (floating bulk-selection dock).
 
 Present under `src/components/ui/` (complete set as of inspection): accordion, alert, alert-dialog, aspect-ratio, avatar, breadcrumb, button, calendar, card, carousel, caalm-data-table, caalm-date-picker, CaalmFilterSelect, chart, checkbox, collapsible, command, context-menu, currency-amount-input, currency-select, DesktopRequiredScreen, dialog, drawer, dropdown-menu, DropdownScrollArea, filter-pill, form, hover-card, input, input-otp, label, loading, mail-clock-icon, menubar, metric-stat-card, navigation-menu, NotificationIcon, page-index, pagination, popover, progress, radio-group, resizable, sample-data-badge, scroll-area, search-field, select, select-scrollable, segmented-toggle, separator, sheet, sidebar, skeleton, skeletons, slider, sonner, stat-card-icon, switch, table, tabs, textarea, toast, toaster, toggle, toggle-group, tooltip, usd-conversion-hint, use-toast, widget-carousel, delete-confirmation-dialog, badge.
 

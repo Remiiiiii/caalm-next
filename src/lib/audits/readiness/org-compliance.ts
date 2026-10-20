@@ -11,6 +11,12 @@ import type {
 	LiveLicenseCompliance,
 } from "@/lib/audits/types";
 import { excludeSoftDeletedQuery } from "@/lib/soft-delete";
+import {
+	contractCandidate,
+	licenseCandidate,
+	type EvidenceCandidate,
+} from "./evidence-coverage";
+import { groupRequirementIdsByRecord, listTagsForOrg } from "./record-tags";
 import { computeLiveReadinessScore, computeRag } from "./score";
 
 const COMPLIANT_CONTRACT_STATUSES = new Set(["up-to-date", "compliant"]);
@@ -50,9 +56,10 @@ function mapLicenseComplianceToStatus(
 	return "pending";
 }
 
-async function fetchContractsForOrg(
-	orgId: string,
-): Promise<LiveContractCompliance> {
+async function fetchContractsForOrg(orgId: string): Promise<{
+	compliance: LiveContractCompliance;
+	candidates: EvidenceCandidate[];
+}> {
 	const { tablesDB } = await createAdminClient();
 	const result = await tablesDB.listRows({
 		databaseId: appwriteConfig.databaseId!,
@@ -71,7 +78,13 @@ async function fetchContractsForOrg(
 		compliance?: string;
 		contractExpiryDate?: string;
 		assignedManager?: string;
+		assignedManagers?: string[];
+		contractOwnerId?: string;
 		department?: string;
+		vendor?: string;
+		contractType?: string;
+		division?: string;
+		description?: string;
 	}>;
 
 	const buckets: Record<string, number> = {
@@ -87,8 +100,10 @@ async function fetchContractsForOrg(
 
 	let expiringSoon = 0;
 	const evidence: AuditEvidenceRow[] = [];
+	const candidates: EvidenceCandidate[] = [];
 
 	for (const contract of contracts) {
+		candidates.push(contractCandidate(contract));
 		const key = contract.compliance ?? "unknown";
 		if (buckets[key] === undefined) buckets.unknown += 1;
 		else buckets[key] += 1;
@@ -106,6 +121,8 @@ async function fetchContractsForOrg(
 				id: contract.$id,
 				title: contract.contractName || contract.name || "Unnamed contract",
 				owner: contract.assignedManager || contract.department || "Unassigned",
+				assignedManagers: contract.assignedManagers ?? [],
+				assignedBy: contract.contractOwnerId,
 				status: mapContractComplianceToStatus(contract.compliance),
 				dueDate: contract.contractExpiryDate || now.toISOString().split("T")[0],
 				category: contract.compliance,
@@ -123,17 +140,21 @@ async function fetchContractsForOrg(
 		total > 0 ? Math.round((compliantCount / total) * 100) : 0;
 
 	return {
-		total,
-		complianceRate,
-		buckets,
-		expiringSoon,
-		evidence: dedupeEvidenceRows(evidence).slice(0, 10),
+		compliance: {
+			total,
+			complianceRate,
+			buckets,
+			expiringSoon,
+			evidence: dedupeEvidenceRows(evidence).slice(0, 10),
+		},
+		candidates,
 	};
 }
 
-async function fetchLicensesForOrg(
-	orgId: string,
-): Promise<LiveLicenseCompliance> {
+async function fetchLicensesForOrg(orgId: string): Promise<{
+	compliance: LiveLicenseCompliance;
+	candidates: EvidenceCandidate[];
+}> {
 	const { licenses } = await LicenseService.listLicenses(orgId, undefined, {
 		limit: 500,
 		offset: 0,
@@ -150,10 +171,20 @@ async function fetchLicensesForOrg(
 
 	let active = 0;
 	let atRisk = 0;
+	let expired = 0;
 	const evidence: AuditEvidenceRow[] = [];
+	const candidates: EvidenceCandidate[] = [];
+	const today = new Date().toISOString().split("T")[0];
 
 	for (const license of licenses) {
+		candidates.push(licenseCandidate(license));
 		if (license.status === "active") active += 1;
+		if (
+			license.status === "expired" ||
+			(license.licenseExpiryDate && license.licenseExpiryDate.slice(0, 10) < today)
+		) {
+			expired += 1;
+		}
 		const bucket = license.compliance ?? "unknown";
 		if (complianceBuckets[bucket] === undefined) complianceBuckets.unknown += 1;
 		else complianceBuckets[bucket] += 1;
@@ -170,6 +201,8 @@ async function fetchLicensesForOrg(
 				id: license.$id,
 				title: license.licenseName,
 				owner: license.issuingAuthority || license.division || "Unassigned",
+				assignedManagers: license.assignedManagers ?? [],
+				assignedBy: (license as { licenseOwnerId?: string }).licenseOwnerId,
 				status: mapLicenseComplianceToStatus(
 					license.compliance,
 					license.status,
@@ -189,6 +222,8 @@ async function fetchLicensesForOrg(
 			id: license.$id,
 			title: license.licenseName,
 			owner: license.issuingAuthority || license.division || "Unassigned",
+			assignedManagers: license.assignedManagers ?? [],
+			assignedBy: (license as { licenseOwnerId?: string }).licenseOwnerId,
 			status: "at_risk",
 			dueDate:
 				license.licenseExpiryDate || new Date().toISOString().split("T")[0],
@@ -199,12 +234,16 @@ async function fetchLicensesForOrg(
 	}
 
 	return {
-		total: licenses.length,
-		active,
-		expiringSoon: expiring.length,
-		atRisk,
-		complianceBuckets,
-		evidence: dedupeEvidenceRows(evidence).slice(0, 10),
+		compliance: {
+			total: licenses.length,
+			active,
+			expiringSoon: expiring.length,
+			atRisk,
+			expired,
+			complianceBuckets,
+			evidence: dedupeEvidenceRows(evidence).slice(0, 10),
+		},
+		candidates,
 	};
 }
 
@@ -212,10 +251,24 @@ async function fetchLicensesForOrg(
 export async function getOrgComplianceSnapshot(
 	orgId: string,
 ): Promise<
-	ComplianceStatusSnapshot & { sourcesUsed: string[]; liveScore: number | null }
+	ComplianceStatusSnapshot & {
+		sourcesUsed: string[];
+		liveScore: number | null;
+		evidenceCandidates: EvidenceCandidate[];
+	}
 > {
-	const contracts = await fetchContractsForOrg(orgId);
-	const licenses = await fetchLicensesForOrg(orgId);
+	const { compliance: contracts, candidates: contractCandidates } =
+		await fetchContractsForOrg(orgId);
+	const { compliance: licenses, candidates: licenseCandidates } =
+		await fetchLicensesForOrg(orgId);
+	const tagsByRecord = groupRequirementIdsByRecord(
+		await listTagsForOrg(orgId).catch(() => []),
+	);
+	const attachTags = (candidate: EvidenceCandidate): EvidenceCandidate => ({
+		...candidate,
+		requirementIds:
+			tagsByRecord.get(`${candidate.kind}:${candidate.id}`) ?? [],
+	});
 
 	const contractComplianceRate =
 		contracts.total > 0 ? contracts.complianceRate : null;
@@ -256,5 +309,9 @@ export async function getOrgComplianceSnapshot(
 		},
 		sourcesUsed,
 		liveScore: score,
+		evidenceCandidates: [
+			...contractCandidates.map(attachTags),
+			...licenseCandidates.map(attachTags),
+		],
 	};
 }

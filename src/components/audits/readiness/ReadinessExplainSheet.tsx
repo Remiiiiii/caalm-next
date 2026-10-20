@@ -7,6 +7,10 @@ import {
 	SheetHeader,
 	SheetTitle,
 } from "@/components/ui/sheet";
+import {
+	formatReadinessPercent,
+	isReadinessDomainScored,
+} from "./readiness-ui";
 import type { RagThresholds, ReadinessDomain } from "./types";
 
 /** Plain-language explanation of how the readiness score is built. */
@@ -43,7 +47,10 @@ export function ReadinessExplainSheet({
 							counted as zero.
 						</p>
 						<p className="mt-1">
-							Your score today: <b>{score ?? "not available"}</b>
+							Your score today:{" "}
+							<b>
+								{score === null ? "not available" : formatReadinessPercent(score)}
+							</b>
 							{sourcesUsed.length ? ` (from ${sourcesUsed.join(" and ")})` : ""}
 							.
 						</p>
@@ -55,7 +62,9 @@ export function ReadinessExplainSheet({
 								<li key={domain.label} className="flex justify-between gap-3">
 									<span>{domain.label}</span>
 									<b className="tabular-nums">
-										{domain.readinessPercent} / 100
+										{isReadinessDomainScored(domain, sourcesUsed)
+											? formatReadinessPercent(domain.readinessPercent)
+											: "Not scored"}
 									</b>
 								</li>
 							))}
@@ -68,11 +77,14 @@ export function ReadinessExplainSheet({
 					<section>
 						<p className="font-semibold">Status bands</p>
 						<ul className="mt-1 space-y-1">
-							<li>Red: below {thresholds.amber}</li>
+							<li>Red: below {formatReadinessPercent(thresholds.amber)}</li>
 							<li>
-								Amber: {thresholds.amber} to {thresholds.green - 1}
+								Amber: {formatReadinessPercent(thresholds.amber)} to{" "}
+								{formatReadinessPercent(thresholds.green - 1)}
 							</li>
-							<li>Green: {thresholds.green} and above</li>
+							<li>
+								Green: {formatReadinessPercent(thresholds.green)} and above
+							</li>
 						</ul>
 					</section>
 					<section>

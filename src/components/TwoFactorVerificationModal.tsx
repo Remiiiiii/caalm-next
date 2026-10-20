@@ -1,27 +1,34 @@
 "use client";
 
-import { RefreshCw, Shield } from "lucide-react";
-import Image from "next/image";
+import {
+	AlertCircle,
+	ArrowLeft,
+	Clock,
+	Key,
+	RefreshCw,
+	ShieldCheck,
+} from "lucide-react";
 import { useState } from "react";
 import {
 	AlertDialog,
-	AlertDialogAction,
 	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
 	InputOTP,
 	InputOTPGroup,
 	InputOTPSlot,
 } from "@/components/ui/input-otp";
-import { useToast } from "@/hooks/use-toast";
 import { forceAuthResetAfterLockout } from "@/lib/actions/user.actions";
-import { Button } from "./ui/button";
 
-const LOCKOUT_MESSAGE = "Too many attempts. Sign in again.";
+const MAX_ATTEMPTS = 5;
+const LOCKOUT_MESSAGE =
+	"Too many incorrect attempts. Please sign in again or contact your administrator.";
+
+function maskEmail(email: string): string {
+	const [local, domain] = email.split("@");
+	if (!local || !domain) return email;
+	return `${local[0]}${"•".repeat(Math.min(local.length - 1, 8))}@${domain}`;
+}
 
 interface TwoFactorVerificationModalProps {
 	userId: string;
@@ -32,25 +39,22 @@ interface TwoFactorVerificationModalProps {
 
 const TwoFactorVerificationModal = ({
 	userId,
+	email,
 	onSuccess,
 	onClose,
 }: TwoFactorVerificationModalProps) => {
 	const [isOpen, setIsOpen] = useState(true);
 	const [otp, setOtp] = useState("");
+	const [recoveryCode, setRecoveryCode] = useState("");
+	const [recoveryMode, setRecoveryMode] = useState(false);
 	const [error, setError] = useState("");
 	const [isLoading, setIsLoading] = useState(false);
 	const [attempts, setAttempts] = useState(0);
 	const [isLockedOut, setIsLockedOut] = useState(false);
-	const { toast } = useToast();
 
 	const enforceLockout = async () => {
 		setIsLockedOut(true);
 		setError(LOCKOUT_MESSAGE);
-		toast({
-			title: "Too many attempts",
-			description: LOCKOUT_MESSAGE,
-			variant: "destructive",
-		});
 		try {
 			await forceAuthResetAfterLockout();
 		} catch {
@@ -62,11 +66,9 @@ const TwoFactorVerificationModal = ({
 	};
 
 	const handleVerify = async () => {
-		if (isLockedOut) return;
-		if (!otp || otp.length !== 6) {
-			setError("Please enter a 6-digit verification code");
-			return;
-		}
+		if (isLockedOut || isLoading) return;
+		const code = recoveryMode ? recoveryCode : otp;
+		if (code.length < 6) return;
 
 		setIsLoading(true);
 		setError("");
@@ -74,22 +76,12 @@ const TwoFactorVerificationModal = ({
 		try {
 			const response = await fetch("/api/2fa/verify", {
 				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({
-					userId,
-					code: otp,
-				}),
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ userId, code }),
 			});
-
 			const data = await response.json();
 
 			if (data.success) {
-				toast({
-					title: "2FA Verification Successful",
-					description: "Welcome back!",
-				});
 				onSuccess();
 				return;
 			}
@@ -99,107 +91,181 @@ const TwoFactorVerificationModal = ({
 				return;
 			}
 
-			setAttempts((prev) => prev + 1);
-			setError(data.error || "Invalid verification code. Please try again.");
-		} catch (error) {
-			console.error("Failed to verify 2FA", error);
-			setError("Failed to verify 2FA. Please try again later.");
+			const next = attempts + 1;
+			setAttempts(next);
+			setOtp("");
+			setRecoveryCode("");
+
+			if (next >= MAX_ATTEMPTS) {
+				await enforceLockout();
+				return;
+			}
+
+			const attemptsLeft = MAX_ATTEMPTS - next;
+			setError(
+				`Incorrect code. ${attemptsLeft} attempt${attemptsLeft !== 1 ? "s" : ""} left. Wait for a new code in your app and try again.`,
+			);
+		} catch {
+			setError("Couldn't verify. Check your connection and try again.");
 		} finally {
 			setIsLoading(false);
 		}
 	};
 
-	const handleResendCode = async () => {
-		toast({
-			title: "2FA Code",
-			description: "Please check your authenticator app for the current code.",
-		});
+	const handleClose = () => {
+		setIsOpen(false);
+		onClose();
 	};
 
-	return (
-		<AlertDialog open={isOpen} onOpenChange={setIsOpen}>
-			<AlertDialogContent className="shad-alert-dialog !max-h-none overflow-hidden">
-				<AlertDialogHeader className="relative flex justify-center max-w-full">
-					<AlertDialogTitle className="h2 text-center flex items-center gap-2 text-slate-700">
-						<Shield className="h-5 w-5 text-blue-500" />
-						Two-Factor Authentication
-						<Image
-							src="/assets/icons/close-dark.svg"
-							alt="close"
-							width={20}
-							height={20}
-							className="otp-close-button"
-							onClick={() => {
-								setIsOpen(false);
-								onClose();
-							}}
-						/>
-					</AlertDialogTitle>
-					<AlertDialogDescription className="subtitle-2 font-light! text-center">
-						Enter the 6-digit code from your authenticator app
-					</AlertDialogDescription>
-				</AlertDialogHeader>
+	const canSubmit = recoveryMode ? recoveryCode.length >= 6 : otp.length === 6;
 
-				<div className="w-full max-w-full overflow-hidden flex justify-center">
-					<InputOTP
-						maxLength={6}
-						value={otp}
-						onChange={setOtp}
-						disabled={isLockedOut}
-						containerClassName="w-full max-w-full justify-center"
-					>
-						<InputOTPGroup className="shad-otp">
-							<InputOTPSlot index={0} className="shad-otp-slot" />
-							<InputOTPSlot index={1} className="shad-otp-slot" />
-							<InputOTPSlot index={2} className="shad-otp-slot" />
-							<InputOTPSlot index={3} className="shad-otp-slot" />
-							<InputOTPSlot index={4} className="shad-otp-slot" />
-							<InputOTPSlot index={5} className="shad-otp-slot" />
-						</InputOTPGroup>
-					</InputOTP>
+	return (
+		<AlertDialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
+			<AlertDialogContent className="shad-alert-dialog max-h-none!">
+				{/* Icon */}
+				<div className="flex justify-center">
+					<div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#078FAB]/10 ring-2 ring-[#078FAB]/20">
+						<ShieldCheck className="h-6 w-6 text-[#0f5384]" />
+					</div>
 				</div>
 
-				{error && <div className="text-red text-center text-sm">{error}</div>}
+				{/* Title hierarchy */}
+				<div className="text-center space-y-1">
+					<h2 className="text-2xl font-bold text-slate-900">
+						Two-factor authentication
+					</h2>
+					<p className="text-sm text-slate-500">
+						{recoveryMode
+							? "Enter one of your recovery codes"
+							: "Enter the 6-digit code from your authenticator app"}
+					</p>
+					{email && (
+						<p className="text-sm font-semibold text-slate-700">
+							{maskEmail(email)}
+						</p>
+					)}
+				</div>
 
-				{attempts > 0 && !isLockedOut && (
-					<div className="text-orange-600 text-center text-sm">
-						Failed attempts: {attempts}/3
+				{/* Status slot */}
+				<div className="min-h-11">
+					{isLockedOut || error ? (
+						<div
+							role="alert"
+							className="flex gap-2 rounded-lg border border-red-200 bg-red-50 p-3"
+						>
+							<AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
+							<p className="text-sm text-red-700">{error || LOCKOUT_MESSAGE}</p>
+						</div>
+					) : !recoveryMode ? (
+						<div className="flex items-center gap-1.5 text-sm text-slate-500">
+							<Clock className="h-3.5 w-3.5 shrink-0" />
+							<span>The code in your app changes every 30 seconds</span>
+						</div>
+					) : null}
+				</div>
+
+				{/* Input */}
+				{recoveryMode ? (
+					<input
+						type="text"
+						value={recoveryCode}
+						onChange={(e) => {
+							setRecoveryCode(e.target.value);
+							if (error) setError("");
+						}}
+						placeholder="Enter recovery code"
+						className="w-full rounded-xl border-2 border-slate-300 px-4 py-3 text-center text-sm font-mono tracking-widest text-slate-900 focus:border-[#078FAB] focus:outline-none"
+					/>
+				) : (
+					<div className="flex justify-center">
+						<InputOTP
+							maxLength={6}
+							value={otp}
+							disabled={isLockedOut || isLoading}
+							containerClassName="w-full max-w-full justify-center"
+							onChange={(value) => {
+								setOtp(value);
+								if (error) setError("");
+							}}
+							onComplete={() => {
+								if (!isLockedOut) void handleVerify();
+							}}
+						>
+							<InputOTPGroup className="shad-otp">
+								<InputOTPSlot index={0} className="shad-otp-slot" />
+								<InputOTPSlot index={1} className="shad-otp-slot" />
+								<InputOTPSlot index={2} className="shad-otp-slot" />
+								<InputOTPSlot index={3} className="shad-otp-slot" />
+								<InputOTPSlot index={4} className="shad-otp-slot" />
+								<InputOTPSlot index={5} className="shad-otp-slot" />
+							</InputOTPGroup>
+						</InputOTP>
 					</div>
 				)}
 
-				<AlertDialogFooter>
-					<div className="flex w-full flex-col gap-4 items-center">
-						<AlertDialogAction
-							onClick={(e) => {
-								e.preventDefault();
-								void handleVerify();
-							}}
-							className="shad-submit-btn h-12 w-auto px-8 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-							type="button"
-							disabled={otp.length !== 6 || isLoading || isLockedOut}
-						>
-							{isLoading ? (
-								<>
-									<RefreshCw className="h-4 w-4 animate-spin" />
-									Verifying...
-								</>
-							) : (
-								"Verify & Continue"
-							)}
-						</AlertDialogAction>
-						<div className="subtitle-2 mt-2 text-center text-slate-600">
-							Need help?
-							<Button
+				{/* Primary action */}
+				<button
+					type="button"
+					onClick={() => void handleVerify()}
+					disabled={!canSubmit || isLoading || isLockedOut}
+					className="btn-primary h-11 disabled:opacity-50"
+				>
+					{isLoading ? (
+						<>
+							<RefreshCw className="h-4 w-4 animate-spin" />
+							Verifying...
+						</>
+					) : (
+						<>
+							<ShieldCheck className="h-4 w-4" />
+							Verify and continue
+						</>
+					)}
+				</button>
+
+				{/* Footer */}
+				<div className="flex flex-col items-center gap-2 text-sm text-slate-500">
+					<span>
+						{recoveryMode ? (
+							<button
 								type="button"
-								variant="link"
-								className="pl-1 text-brand cursor-pointer"
-								onClick={handleResendCode}
+								onClick={() => {
+									setRecoveryMode(false);
+									setRecoveryCode("");
+									setError("");
+								}}
+								className="flex items-center gap-1 text-[#078FAB] hover:underline"
 							>
-								Check Authenticator App
-							</Button>
-						</div>
-					</div>
-				</AlertDialogFooter>
+								<ShieldCheck className="h-3.5 w-3.5" />
+								Use authenticator code instead
+							</button>
+						) : (
+							<span>
+								Lost access to your app?{" "}
+								<button
+									type="button"
+									onClick={() => {
+										setRecoveryMode(true);
+										setOtp("");
+										setError("");
+									}}
+									className="font-medium text-[#078FAB] hover:underline"
+								>
+									<Key className="inline h-3 w-3 mr-0.5 -mt-0.5" />
+									Use a recovery code
+								</button>
+							</span>
+						)}
+					</span>
+					<button
+						type="button"
+						onClick={handleClose}
+						className="flex items-center gap-1 text-[#078FAB] hover:underline"
+					>
+						<ArrowLeft className="h-3.5 w-3.5" />
+						Back to sign in
+					</button>
+				</div>
 			</AlertDialogContent>
 		</AlertDialog>
 	);

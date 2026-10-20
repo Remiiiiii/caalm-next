@@ -42,6 +42,10 @@ export interface AuditEvidenceRow {
 	id: string;
 	title: string;
 	owner: string;
+	/** Account ids of the record's assigned managers (the same field /contracts edits). */
+	assignedManagers?: string[];
+	/** Who set the owner: the record's uploader / owner, the "By" column on /contracts. */
+	assignedBy?: string;
 	status: AuditEvidenceStatus;
 	dueDate: string;
 	lastTested?: string;
@@ -86,6 +90,8 @@ export interface LiveLicenseCompliance {
 	active: number;
 	expiringSoon: number;
 	atRisk: number;
+	/** Licenses past their expiry date (or marked expired). */
+	expired?: number;
 	complianceBuckets: Record<string, number>;
 	evidence: AuditEvidenceRow[];
 }

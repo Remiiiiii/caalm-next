@@ -102,6 +102,10 @@ export function getOrgExportCatalog(): OrgExportEntry[] {
 			appwriteConfig.auditReadinessSnapshotsCollectionId,
 		),
 		entry("auditEvidenceMap", appwriteConfig.auditEvidenceMapCollectionId),
+		entry(
+			"auditEvidenceRecordTags",
+			appwriteConfig.auditEvidenceRecordTagsCollectionId,
+		),
 		entry("tasks", appwriteConfig.tasksCollectionId),
 		entry("tickets", appwriteConfig.ticketsCollectionId),
 		entry("ticketEvents", appwriteConfig.ticketEventsCollectionId),

@@ -21,6 +21,14 @@
  * - inV1 (boolean, required, indexed)
  * - notes (string, optional)
  *
+ * Collection $id: 69f8e3a2001d4e8c2b10  name: audit_evidence_record_tags
+ * - orgId (string, required, indexed)
+ * - requirementId (string, required, indexed)
+ * - recordId (string, required, indexed)
+ * - recordKind (enum: contract|license, required, indexed)
+ * Indexes: org_record (orgId+recordId+recordKind), org_requirement (orgId+requirementId),
+ * unique_link (orgId+requirementId+recordId+recordKind)
+ *
  * Org settings JSON keys (no new org attributes required):
  * - timezone (IANA string, default America/New_York)
  * - websiteUrl (public site URL for bounded crawl)

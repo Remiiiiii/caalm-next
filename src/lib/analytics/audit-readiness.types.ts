@@ -26,6 +26,10 @@ export interface AuditReadinessInsight {
 	/** Evidence category, e.g. "Action required". */
 	category?: string;
 	owner?: string;
+	/** Account ids of the record's assigned managers; the same field /contracts edits. */
+	assignedManagers?: string[];
+	/** Uploader / owner who set the managers (the "By" column on /contracts). */
+	assignedBy?: string;
 	/** ISO date or date-time string. */
 	dueDate?: string;
 	/** Audit types this item counts toward: hrsa_osv, cw_monitoring, financial_pbc. */

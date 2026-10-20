@@ -1,9 +1,9 @@
 "use client";
 
 import { ClipboardCheck, Gauge, ScrollText } from "lucide-react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { SegmentedToggle } from "@/components/ui/segmented-toggle";
 
 const SECTION_TABS = [
 	{
@@ -27,34 +27,43 @@ const SECTION_TABS = [
 	},
 ] as const;
 
-export function AuditsSectionNav() {
+type SectionHref = (typeof SECTION_TABS)[number]["href"];
+
+/** Audit sections as a switch; each tab is a route. */
+export function AuditsSectionNav({
+	hideOnReadiness = false,
+	className = "mb-4",
+}: {
+	/** Layout copy: the Readiness page renders its own switch above the score card. */
+	hideOnReadiness?: boolean;
+	className?: string;
+}) {
 	const pathname = usePathname() || "";
+	const router = useRouter();
+	const active =
+		SECTION_TABS.find((tab) => tab.match(pathname))?.href ??
+		SECTION_TABS[0].href;
+
+	const hidden = hideOnReadiness && active === "/audits/readiness";
+
+	useEffect(() => {
+		for (const tab of SECTION_TABS) router.prefetch(tab.href);
+	}, [router]);
+
+	if (hidden) return null;
 
 	return (
-		<nav
-			className="flex flex-wrap gap-1 mb-4 border-b border-slate-200"
-			aria-label="Audit sections"
-		>
-			{SECTION_TABS.map((tab) => {
-				const Icon = tab.icon;
-				const isActive = tab.match(pathname);
-				return (
-					<Link
-						key={tab.href}
-						href={tab.href}
-						data-state={isActive ? "active" : undefined}
-						aria-current={isActive ? "page" : undefined}
-						className={cn(
-							"inline-flex items-center gap-2 px-3 py-2.5 text-sm font-medium text-slate-600 cursor-pointer transition-colors duration-200",
-							"hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
-							isActive && "text-slate-700",
-						)}
-					>
-						<Icon className="h-4 w-4 text-[#0f5384] shrink-0" />
-						{tab.label}
-					</Link>
-				);
-			})}
-		</nav>
+		<SegmentedToggle<SectionHref>
+			value={active}
+			onChange={(href) => router.push(href)}
+			ariaLabel="Audit sections"
+			className={className}
+			tabs={SECTION_TABS.map((tab) => ({
+				value: tab.href,
+				label: tab.label,
+				icon: tab.icon,
+				iconClassName: "text-[#0f5384]",
+			}))}
+		/>
 	);
 }

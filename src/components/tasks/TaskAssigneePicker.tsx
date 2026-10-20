@@ -13,7 +13,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { TaskPerson } from "./task-ui";
 
-const ASSIGN_SIZE = "md" as const; // 32px — matches enlarged add button
+export const ASSIGN_SIZE = "md" as const; // 32px — matches enlarged add button
 
 export function TaskAssigneePicker({
 	assigneeId,

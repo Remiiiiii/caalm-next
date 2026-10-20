@@ -15,6 +15,8 @@ import { AnimatedBar } from "@/components/ui/animated-bar";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import {
+	formatReadinessPercent,
+	isReadinessDomainScored,
 	NEUTRAL_PILL,
 	PILL,
 	RAG_BG,
@@ -99,12 +101,10 @@ export function ReadinessCharts({
 
 	return (
 		<div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-			<ChartCard title="Domain readiness" subtitle="Score by domain, 0–100">
+			<ChartCard title="Domain readiness" subtitle="Score by domain, 0%–100%">
 				<div className="flex flex-col gap-4">
 					{domains.map((domain) => {
-						const scored = sourcesUsed.some((source) =>
-							domain.label.toLowerCase().startsWith(source.toLowerCase()),
-						);
+						const scored = isReadinessDomainScored(domain, sourcesUsed);
 						const rag: Rag =
 							(domain.ragStatus as Rag) in RAG_BG
 								? (domain.ragStatus as Rag)
@@ -114,7 +114,9 @@ export function ReadinessCharts({
 								<div className="flex items-center justify-between text-sm">
 									<span>{domain.label}</span>
 									{scored ? (
-										<b className="tabular-nums">{domain.readinessPercent}</b>
+										<b className="tabular-nums">
+											{formatReadinessPercent(domain.readinessPercent)}
+										</b>
 									) : (
 										<span className={cn(PILL, NEUTRAL_PILL)}>Not scored</span>
 									)}
@@ -123,7 +125,7 @@ export function ReadinessCharts({
 									className="h-3"
 									label={
 										scored
-											? `${domain.label}: ${domain.readinessPercent} out of 100`
+											? `${domain.label}: ${formatReadinessPercent(domain.readinessPercent)}`
 											: `${domain.label}: not scored`
 									}
 									segments={[
@@ -139,14 +141,14 @@ export function ReadinessCharts({
 					})}
 					<div className="flex justify-between text-[11px] text-slate-600">
 						{[0, 25, 50, 75, 100].map((tick) => (
-							<span key={tick}>{tick}</span>
+							<span key={tick}>{formatReadinessPercent(tick)}</span>
 						))}
 					</div>
 				</div>
 				<p className="caption mt-auto text-slate-600">
 					{score === null
 						? "Add contracts or licenses to generate an overall score."
-						: `Contributes to the overall score of ${score}.`}
+						: `Contributes to the overall score of ${formatReadinessPercent(score)}.`}
 				</p>
 			</ChartCard>
 
@@ -196,7 +198,7 @@ export function ReadinessCharts({
 					<div
 						className="h-44 w-full"
 						role="img"
-						aria-label={`Score trend: ${points.length} snapshot${points.length === 1 ? "" : "s"}, latest ${points[points.length - 1]?.score}`}
+						aria-label={`Score trend: ${points.length} snapshot${points.length === 1 ? "" : "s"}, latest ${formatReadinessPercent(points[points.length - 1]?.score)}`}
 					>
 						<ResponsiveContainer width="100%" height="100%">
 							<LineChart
@@ -235,7 +237,10 @@ export function ReadinessCharts({
 								<YAxis
 									domain={[0, 100]}
 									ticks={[0, 25, 50, 75, 100]}
-									width={32}
+									tickFormatter={(value: number) =>
+										formatReadinessPercent(value)
+									}
+									width={40}
 									tick={{ fill: "#64748b", fontSize: 11 }}
 									tickLine={false}
 									axisLine={false}
@@ -252,7 +257,7 @@ export function ReadinessCharts({
 												</p>
 												<p className="mt-1 text-xs tabular-nums text-slate-600">
 													<span className="font-semibold text-slate-700">
-														{point.score}
+														{formatReadinessPercent(point.score)}
 													</span>{" "}
 													{point.rag ? (
 														<span className={cn(PILL, RAG_PILL[point.rag])}>

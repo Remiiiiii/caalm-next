@@ -1,15 +1,17 @@
 "use client";
 
-import Image from "next/image";
+import {
+	AlertCircle,
+	ArrowLeft,
+	Clock,
+	Mail,
+	RefreshCw,
+	ShieldCheck,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
 	AlertDialog,
-	AlertDialogAction,
 	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
 	InputOTP,
@@ -21,22 +23,28 @@ import {
 	sendEmailOTP,
 	verifyOTP,
 } from "@/lib/actions/user.actions";
-import { Button } from "./ui/button";
 
-const OTP_TTL_MS = 5 * 60 * 1000;
+const OTP_TTL_SECS = 5 * 60;
+const RESEND_COOLDOWN_SECS = 30;
 const LOCKOUT_MESSAGE = "Too many attempts. Sign in again.";
 
-function formatCountdown(totalSeconds: number): string {
+function formatTime(totalSeconds: number): string {
 	const mins = Math.floor(totalSeconds / 60);
 	const secs = totalSeconds % 60;
 	return `${mins}:${secs.toString().padStart(2, "0")}`;
+}
+
+function maskEmail(email: string): string {
+	const [local, domain] = email.split("@");
+	if (!local || !domain) return email;
+	return `${local[0]}${"•".repeat(Math.min(local.length - 1, 8))}@${domain}`;
 }
 
 async function handleLockoutAndRedirect() {
 	try {
 		await forceAuthResetAfterLockout();
 	} catch {
-		// continue to sign-in even if cookie clear fails
+		// continue redirect
 	}
 	window.location.href = "/sign-in";
 }
@@ -56,209 +64,233 @@ const OTPModal = ({
 	onError?: (error: string) => void;
 	isOpen?: boolean;
 }) => {
-	const [internalIsOpen, setInternalIsOpen] = useState(true);
 	const [otp, setOtp] = useState("");
 	const [error, setError] = useState("");
 	const [isLoading, setIsLoading] = useState(false);
 	const [attempts, setAttempts] = useState(0);
-	const [lastError, setLastError] = useState("");
 	const [isLockedOut, setIsLockedOut] = useState(false);
 	const [isResending, setIsResending] = useState(false);
-	const [hasAutoSent, setHasAutoSent] = useState(false);
-	const [secondsLeft, setSecondsLeft] = useState(5 * 60);
-	const hasAutoSentRef = useRef(false);
+	const [hasStarted, setHasStarted] = useState(false);
+	const [secondsLeft, setSecondsLeft] = useState(OTP_TTL_SECS);
+	const [resendCooldown, setResendCooldown] = useState(0);
 	const expiresAtRef = useRef<number | null>(null);
-
-	// Use parent-controlled isOpen prop
-	const modalIsOpen = isOpen !== undefined ? isOpen : internalIsOpen;
+	const hasStartedRef = useRef(false);
+	const resendIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
 	const startCountdown = () => {
-		expiresAtRef.current = Date.now() + OTP_TTL_MS;
-		setSecondsLeft(Math.ceil(OTP_TTL_MS / 1000));
+		expiresAtRef.current = Date.now() + OTP_TTL_SECS * 1000;
+		setSecondsLeft(OTP_TTL_SECS);
 	};
 
-	// Start countdown when modal opens (OTP already sent by signInUser)
+	const startResendCooldown = () => {
+		setResendCooldown(RESEND_COOLDOWN_SECS);
+		if (resendIntervalRef.current) clearInterval(resendIntervalRef.current);
+		resendIntervalRef.current = setInterval(() => {
+			setResendCooldown((prev) => {
+				if (prev <= 1) {
+					clearInterval(resendIntervalRef.current!);
+					return 0;
+				}
+				return prev - 1;
+			});
+		}, 1000);
+	};
+
 	useEffect(() => {
-		if (modalIsOpen && email && !hasAutoSentRef.current) {
-			setHasAutoSent(true);
-			hasAutoSentRef.current = true;
+		if (isOpen && email && !hasStartedRef.current) {
+			hasStartedRef.current = true;
+			setHasStarted(true);
 			startCountdown();
+			startResendCooldown();
 		}
-	}, [modalIsOpen, email]);
+	}, [isOpen, email]);
 
-	// Tick every second while the modal is open (pause while verifying)
 	useEffect(() => {
-		if (!modalIsOpen || !expiresAtRef.current || isLoading) return;
-
+		if (!isOpen || !expiresAtRef.current || isLoading) return;
 		const tick = () => {
 			const expiresAt = expiresAtRef.current;
 			if (!expiresAt) return;
-			const remaining = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
-			setSecondsLeft(remaining);
+			setSecondsLeft(Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000)));
 		};
-
 		tick();
 		const id = window.setInterval(tick, 1000);
 		return () => window.clearInterval(id);
-	}, [modalIsOpen, hasAutoSent, isLoading]);
+	}, [isOpen, hasStarted, isLoading]);
+
+	useEffect(() => {
+		return () => {
+			if (resendIntervalRef.current) clearInterval(resendIntervalRef.current);
+		};
+	}, []);
+
+	const isExpired = !isLoading && hasStarted && secondsLeft <= 0;
+	const isWarning = secondsLeft <= 60 && secondsLeft > 0;
+	const progressPct = Math.max(0, (secondsLeft / OTP_TTL_SECS) * 100);
 
 	const handleVerify = async () => {
-		if (isLockedOut || isExpired || isLoading) return;
+		if (isLockedOut || isExpired || isLoading || otp.length !== 6) return;
 		setIsLoading(true);
 		setError("");
-		setLastError("");
-
 		try {
 			const res = await verifyOTP({ email, otp, accountId });
 			if (res?.success) {
-				// Freeze client countdown so "expired" cannot flash while redirecting
 				expiresAtRef.current = null;
 				await onSuccess();
 				return;
 			}
-
 			setAttempts((prev) => prev + 1);
-			setError("Invalid OTP. Try again.");
-			setLastError("Invalid OTP. Try again.");
-		} catch (error) {
+			setOtp("");
+			setError("Incorrect code. Please try again.");
+		} catch (err) {
 			const message =
-				error instanceof Error
-					? error.message
-					: "Failed to verify OTP. Please try again later.";
-
+				err instanceof Error ? err.message : "Failed to verify. Please try again.";
 			if (message.includes("Too many attempts")) {
 				setIsLockedOut(true);
 				setError(LOCKOUT_MESSAGE);
-				setLastError(LOCKOUT_MESSAGE);
-				if (onError) onError(LOCKOUT_MESSAGE);
+				onError?.(LOCKOUT_MESSAGE);
 				await handleLockoutAndRedirect();
 				return;
 			}
-
+			setOtp("");
 			setError(message);
-			setLastError(message);
-			if (onError) {
-				onError(message);
-			}
 			setAttempts((prev) => prev + 1);
+			onError?.(message);
 		} finally {
 			setIsLoading(false);
 		}
 	};
 
-	const handleResendOtp = async () => {
-		if (isLockedOut) return;
+	const handleResend = async () => {
+		if (isLockedOut || resendCooldown > 0 || isResending) return;
 		setIsResending(true);
+		setError("");
 		try {
-			setError("");
-			setLastError("");
 			await sendEmailOTP({ email });
 			startCountdown();
+			startResendCooldown();
 			setAttempts(0);
 			setOtp("");
-		} catch (error) {
+		} catch (err) {
 			const message =
-				error instanceof Error
-					? error.message
-					: "Failed to resend verification code. Please try again.";
+				err instanceof Error ? err.message : "Failed to resend code.";
 			if (message.includes("Too many attempts")) {
 				setIsLockedOut(true);
 				setError(LOCKOUT_MESSAGE);
-				setLastError(LOCKOUT_MESSAGE);
 				await handleLockoutAndRedirect();
 				return;
 			}
 			setError(message);
-			setLastError(message);
 		} finally {
 			setIsResending(false);
 		}
 	};
 
-	const handleModalClose = (open: boolean) => {
-		if (!open) {
-			setError("");
-			setLastError("");
-			setOtp("");
-			setAttempts(0);
-			setHasAutoSent(false);
-			hasAutoSentRef.current = false;
-			expiresAtRef.current = null;
-			setSecondsLeft(5 * 60);
-
-			if (onClose) {
-				onClose();
-			} else {
-				setInternalIsOpen(false);
-			}
-		}
+	const handleClose = () => {
+		if (resendIntervalRef.current) clearInterval(resendIntervalRef.current);
+		onClose?.();
 	};
 
-	const isExpired = !isLoading && hasAutoSent && secondsLeft <= 0;
-
 	return (
-		<AlertDialog open={modalIsOpen} onOpenChange={handleModalClose}>
-			<AlertDialogContent className="shad-alert-dialog !max-h-none overflow-hidden">
-				<AlertDialogHeader className="relative flex justify-center max-w-full">
-					<AlertDialogTitle className="h2 text-center text-slate-700">
-						Enter Your OTP
-						<Image
-							src="/assets/icons/close-dark.svg"
-							alt="close"
-							width={20}
-							height={20}
-							className="otp-close-button"
-							onClick={() => {
-								if (onClose) {
-									onClose();
-								} else {
-									setInternalIsOpen(false);
-								}
-							}}
-						/>
-					</AlertDialogTitle>
-					<AlertDialogDescription className="subtitle-2 text-center break-all px-1 max-w-full">
-						<span className="text-lg text-slate-700">
-							{hasAutoSent
-								? `Enter the verification code sent to`
-								: `Sending verification code to`}
-						</span>
-						<span className="block font-light text-slate-700">{email}</span>
-					</AlertDialogDescription>
-					{hasAutoSent ? (
-						<p
-							className={`mt-2 text-center text-sm font-medium tabular-nums transition-colors duration-200 ${
-								isLoading
-									? "text-slate-600"
-									: isExpired
-										? "text-brand"
-										: secondsLeft <= 60
-											? "text-brand"
-											: "text-slate-600"
-							}`}
-							aria-live="polite"
+		<AlertDialog
+			open={isOpen}
+			onOpenChange={(open) => {
+				if (!open) handleClose();
+			}}
+		>
+			<AlertDialogContent className="shad-alert-dialog max-h-none!">
+				{/* Icon */}
+				<div className="flex justify-center">
+					<div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#078FAB]/10 ring-2 ring-[#078FAB]/20">
+						<Mail className="h-6 w-6 text-[#0f5384]" />
+					</div>
+				</div>
+
+				{/* Title hierarchy */}
+				<div className="text-center space-y-1">
+					<h2 className="text-2xl font-bold text-slate-900">
+						Enter verification code
+					</h2>
+					<p className="text-sm text-slate-500">
+						Enter the 6-digit code we sent to
+					</p>
+					<p className="text-sm font-semibold text-slate-700">
+						{maskEmail(email)}
+					</p>
+				</div>
+
+				{/* Status slot — fixed min-height prevents layout shift */}
+				<div className="min-h-11">
+					{isExpired ? (
+						<div
+							role="alert"
+							className="flex gap-2 rounded-lg border border-red-200 bg-red-50 p-3"
 						>
-							{isLoading
-								? "Verifying code…"
-								: isExpired
-									? "Code expired. Request a new one."
-									: `Code expires in ${formatCountdown(secondsLeft)}`}
-						</p>
+							<AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
+							<div>
+								<p className="text-sm font-semibold text-red-700">
+									This code has expired
+								</p>
+								<p className="mt-0.5 text-xs text-slate-500">
+									Request a new one to continue. The old code no longer works.
+								</p>
+							</div>
+						</div>
+					) : error ? (
+						<div
+							role="alert"
+							className="flex gap-2 rounded-lg border border-red-200 bg-red-50 p-3"
+						>
+							<AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
+							<p className="text-sm text-red-700">
+								{error}
+								{attempts > 0 && attempts < 3 && (
+									<span className="ml-1 font-medium">
+										{3 - attempts} attempt{3 - attempts !== 1 ? "s" : ""} left.
+									</span>
+								)}
+							</p>
+						</div>
+					) : hasStarted ? (
+						<div className="space-y-1.5">
+							<div
+								className="flex items-center gap-1.5 text-sm text-slate-500"
+								aria-live="polite"
+								role="timer"
+							>
+								<Clock className="h-3.5 w-3.5" />
+								<span>
+									Code expires in{" "}
+									<strong className="tabular-nums text-slate-700">
+										{formatTime(secondsLeft)}
+									</strong>
+								</span>
+							</div>
+							<div className="h-1 w-full overflow-hidden rounded-full bg-slate-200">
+								<div
+									className="h-full rounded-full transition-[width] duration-1000"
+									style={{
+										width: `${progressPct}%`,
+										backgroundColor: isWarning ? "#f59e0b" : "#078FAB",
+									}}
+								/>
+							</div>
+						</div>
 					) : null}
-				</AlertDialogHeader>
-				<div className="w-full max-w-full overflow-hidden flex justify-center">
+				</div>
+
+				{/* OTP Boxes */}
+				<div className="flex justify-center">
 					<InputOTP
 						maxLength={6}
 						value={otp}
-						disabled={isExpired || isLockedOut}
+						disabled={isExpired || isLockedOut || isLoading}
 						containerClassName="w-full max-w-full justify-center"
 						onChange={(value) => {
 							setOtp(value);
-							// Clear errors when user starts typing
-							if (value.length > 0 && (error || lastError)) {
-								setError("");
-								setLastError("");
-							}
+							if (value.length > 0 && error) setError("");
+						}}
+						onComplete={() => {
+							if (!isExpired && !isLockedOut) void handleVerify();
 						}}
 					>
 						<InputOTPGroup className="shad-otp">
@@ -272,94 +304,77 @@ const OTPModal = ({
 					</InputOTP>
 				</div>
 
-				{(error || lastError) && (
-					<div
-						className={`text-center p-3 rounded-lg mb-4 ${
-							(error || lastError).includes("sent!")
-								? "text-green-500 bg-green-50 border border-green-200"
-								: "text-red bg-red-50 border border-red-200"
-						}`}
+				{/* Primary action */}
+				{isExpired ? (
+					<button
+						type="button"
+						onClick={handleResend}
+						disabled={isResending}
+						className="btn-primary h-11 disabled:opacity-50"
 					>
-						<p
-							className={`text-sm font-medium ${
-								(error || lastError).includes("sent!")
-									? "text-green-800"
-									: "text-red-800"
-							}`}
-						>
-							{error || lastError}
-						</p>
-						{!(error || lastError).includes("sent!") && (
-							<div className="mt-2 flex flex-col gap-2">
-								{(error || lastError).includes("expired") && (
-									<button
-										onClick={handleResendOtp}
-										disabled={isResending}
-										className="text-xs text-blue-600 hover:text-blue-800 underline disabled:opacity-50 disabled:cursor-not-allowed"
-									>
-										{isResending
-											? "Sending..."
-											: "Request new verification code"}
-									</button>
-								)}
-								<button
-									onClick={() => {
-										setError("");
-										setLastError("");
-										setOtp(""); // Clear the OTP input
-									}}
-									className="text-xs text-red-600 hover:text-red-800 underline"
-								>
-									Clear error and try again
-								</button>
-							</div>
+						{isResending ? (
+							<>
+								<RefreshCw className="h-4 w-4 animate-spin" />
+								Sending...
+							</>
+						) : (
+							<>
+								<RefreshCw className="h-4 w-4" />
+								Send new code
+							</>
 						)}
-					</div>
+					</button>
+				) : (
+					<button
+						type="button"
+						onClick={() => void handleVerify()}
+						disabled={otp.length !== 6 || isLoading || isLockedOut}
+						className="btn-primary h-11 disabled:opacity-50"
+					>
+						{isLoading ? (
+							<>
+								<RefreshCw className="h-4 w-4 animate-spin" />
+								Verifying...
+							</>
+						) : (
+							<>
+								<ShieldCheck className="h-4 w-4" />
+								Verify
+							</>
+						)}
+					</button>
 				)}
 
-				{attempts > 0 && (
-					<div className="text-orange-600 text-center text-sm">
-						Failed attempts: {attempts}/3
-					</div>
-				)}
-
-				<AlertDialogFooter>
-					<div className="flex w-full flex-col gap-4">
-						<AlertDialogAction
-							onClick={(e) => {
-								e.preventDefault();
-								if (isExpired) return;
-								void handleVerify();
-							}}
-							className="shad-submit-btn h-12 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-							type="button"
-							disabled={isExpired || isLoading || isLockedOut}
-						>
-							Submit
-							{isLoading && (
-								<Image
-									src="/assets/icons/loader.svg"
-									alt="loader"
-									width={24}
-									height={24}
-									className="ml-2 animate-spin"
-								/>
+				{/* Footer */}
+				<div className="flex flex-col items-center gap-2 text-sm text-slate-500">
+					{!isExpired && (
+						<span>
+							Didn't get a code?{" "}
+							{resendCooldown > 0 ? (
+								<span className="text-slate-400">
+									Resend in {formatTime(resendCooldown)}
+								</span>
+							) : (
+								<button
+									type="button"
+									onClick={handleResend}
+									disabled={isResending}
+									className="font-medium text-[#078FAB] hover:underline disabled:opacity-50"
+								>
+									{isResending ? "Sending..." : "Resend code"}
+								</button>
 							)}
-						</AlertDialogAction>
-						<div className="subtitle-2 mt-2 text-center text-slate-600">
-							{isExpired ? "Need a new code?" : "Didn't get a code?"}
-							<Button
-								type="button"
-								variant="link"
-								className="pl-1 text-brand cursor-pointer transition-colors duration-200"
-								onClick={handleResendOtp}
-								disabled={isResending}
-							>
-								{isResending ? "Sending..." : "Resend Code"}
-							</Button>
-						</div>
-					</div>
-				</AlertDialogFooter>
+						</span>
+					)}
+					<button
+						type="button"
+						onClick={handleClose}
+						className="flex items-center gap-1 text-[#078FAB] hover:underline"
+					>
+						<ArrowLeft className="h-3.5 w-3.5" />
+						Back to sign in
+					</button>
+				</div>
 			</AlertDialogContent>
 		</AlertDialog>
 	);

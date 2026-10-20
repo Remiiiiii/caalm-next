@@ -40,6 +40,25 @@ const MODULE_ROUTE: Record<string, string> = {
 	site: "/settings/organization",
 };
 
+function coveringRecord(row: ReadinessEvidenceHit) {
+	const records = row.matchedRecords ?? [];
+	return records.find((record) => record.status === "compliant") ?? records[0];
+}
+
+function coveringCaption(row: ReadinessEvidenceHit): string | null {
+	if (row.caalmModule === "site") return null;
+	const covering = coveringRecord(row);
+	if (covering) return covering.title;
+	if (!row.matchedRecords) return null;
+	if (row.caalmModule === "licenses") return "No matching license";
+	if (row.caalmModule === "contracts") return "No matching contract";
+	return null;
+}
+
+function hitHref(row: ReadinessEvidenceHit): string | undefined {
+	return coveringRecord(row)?.href ?? MODULE_ROUTE[row.caalmModule];
+}
+
 export function ReadinessEvidenceMap({
 	hits,
 }: {
@@ -62,13 +81,13 @@ export function ReadinessEvidenceMap({
 			<CardContent className="p-4 text-slate-700 sm:p-6">
 				<div className="flex flex-wrap items-center justify-between gap-3">
 					<div>
-						<p className="h5">
+						<p className="h5 sidebar-gradient-text">
 							Evidence map (<GlossaryTerm term="CFCE">CFCE</GlossaryTerm>{" "}
 							segment)
 						</p>
 						<p className="caption text-slate-500">
-							Requirements tagged for HRSA OSV, child-welfare monitoring and
-							financial PBC
+							Covered or Gap is based on the matching contract or license for
+							each requirement, not the whole module
 						</p>
 					</div>
 					<SegmentedToggle
@@ -118,7 +137,9 @@ export function ReadinessEvidenceMap({
 								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
 									Description
 								</TableHead>
-								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+								<TableHead
+									className={cn(DATA_TABLE_HEADER_CELL, "whitespace-nowrap px-3")}
+								>
 									Segment
 								</TableHead>
 								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
@@ -131,8 +152,9 @@ export function ReadinessEvidenceMap({
 						</TableHeader>
 						<TableBody className="[&_tr:last-child>td]:border-b-0">
 							{pageRows.map((row) => {
-								const route = MODULE_ROUTE[row.caalmModule];
+								const route = hitHref(row);
 								const isGap = row.status === "gap";
+								const matchLabel = coveringCaption(row);
 								return (
 									<TableRow
 										key={row.requirementId}
@@ -152,10 +174,19 @@ export function ReadinessEvidenceMap({
 											{row.requirementId}
 										</TableCell>
 										<TableCell className={DATA_TABLE_CELL}>
-											{row.label}
+											<div>
+												<p>{row.label}</p>
+												{matchLabel ? (
+													<p className="mt-0.5 text-xs text-slate-500">
+														{matchLabel}
+													</p>
+												) : null}
+											</div>
 										</TableCell>
-										<TableCell className={DATA_TABLE_CELL}>
-											<span className="rounded-md border border-slate-200 bg-slate-50 px-2 py-px text-xs text-slate-600">
+										<TableCell
+											className={cn(DATA_TABLE_CELL, "whitespace-nowrap")}
+										>
+											<span className="whitespace-nowrap rounded-md border border-slate-200 bg-slate-50 px-2 py-px text-xs text-slate-600">
 												{REQUIREMENT_LABELS[row.auditType] ?? row.auditType}
 											</span>
 										</TableCell>

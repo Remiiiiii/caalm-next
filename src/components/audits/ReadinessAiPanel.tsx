@@ -1,6 +1,7 @@
 "use client";
 
 import { Bot, Loader2, Play, Send } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useState } from "react";
 import { PILL } from "@/components/audits/readiness/readiness-ui";
 import { Button } from "@/components/ui/button";
@@ -9,9 +10,18 @@ import { Input } from "@/components/ui/input";
 import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import { cn } from "@/lib/utils";
 
+interface Citation {
+	id: string;
+	title: string;
+	href: string;
+	label: string;
+}
+
 interface Message {
 	role: "assistant" | "user";
 	content: string;
+	/** Records the answer was based on. */
+	citations?: Citation[];
 }
 
 const DEFAULT_SUGGESTIONS = [
@@ -53,7 +63,13 @@ export function ReadinessAiPanel({
 			});
 			const body = await res.json();
 			if (!res.ok) throw new Error(body.error || "Analyze failed");
-			setMessages([{ role: "assistant", content: body.data.summary }]);
+			setMessages([
+				{
+					role: "assistant",
+					content: body.data.summary,
+					citations: body.data.citations,
+				},
+			]);
 			setSummaryAt(new Date().toISOString());
 			if (body.data.suggestedQuestions?.length) {
 				setSuggestions(body.data.suggestedQuestions);
@@ -97,7 +113,11 @@ export function ReadinessAiPanel({
 				if (!res.ok) throw new Error(body.error || "Question failed");
 				setMessages((prev) => [
 					...prev,
-					{ role: "assistant", content: body.data.answer },
+					{
+						role: "assistant",
+						content: body.data.answer,
+						citations: body.data.citations,
+					},
 				]);
 				if (body.data.suggestedQuestions?.length) {
 					setSuggestions(body.data.suggestedQuestions);
@@ -127,7 +147,7 @@ export function ReadinessAiPanel({
 				<div className="flex items-center justify-between gap-3">
 					<div className="flex items-center gap-2.5">
 						<StatCardIcon icon={Bot} />
-						<p className="h5">Readiness AI assistant</p>
+						<p className="h5 sidebar-gradient-text">Readiness AI assistant</p>
 					</div>
 					<span className={cn(PILL, "bg-blue/10 text-blue border-blue/20")}>
 						Auto-summary
@@ -172,6 +192,24 @@ export function ReadinessAiPanel({
 									}
 								>
 									{message.content}
+									{message.citations?.length ? (
+										<div className="mt-2 border-t border-blue-100 pt-2">
+											<p className="caption text-slate-500">
+												Based on these records
+											</p>
+											<div className="mt-1 flex flex-wrap gap-1">
+												{message.citations.map((citation) => (
+													<Link
+														key={citation.id}
+														href={citation.href}
+														className="rounded-md border border-slate-200 bg-white px-2 py-px text-xs text-[#0f5384] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#078FAB]"
+													>
+														{citation.title}
+													</Link>
+												))}
+											</div>
+										</div>
+									) : null}
 								</div>
 							))}
 							<div className="flex items-center justify-between gap-2">

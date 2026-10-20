@@ -16,6 +16,8 @@ export interface ReadinessInsight {
 	itemKind?: string;
 	category?: string;
 	owner?: string;
+	assignedManagers?: string[];
+	assignedBy?: string;
 	dueDate?: string;
 	requirementTags?: string[];
 	isEvidenceGap?: boolean;
@@ -46,6 +48,12 @@ export interface ReadinessEvidenceHit {
 	auditType: string;
 	caalmModule: string;
 	status?: "covered" | "gap";
+	matchedRecords?: Array<{
+		id: string;
+		title: string;
+		href: string;
+		status: string;
+	}>;
 }
 
 export interface ReadinessResponse {
@@ -70,6 +78,7 @@ export interface ReadinessResponse {
 					total: number;
 					expiringSoon: number;
 					atRisk: number;
+					expired?: number;
 					complianceBuckets: Record<string, number>;
 				} | null;
 			};
@@ -77,6 +86,16 @@ export interface ReadinessResponse {
 		sourcesUsed: string[];
 		disclaimer: string;
 		ragThresholds?: RagThresholds;
+		/** Set when the page is showing a saved snapshot instead of live data. */
+		viewing?: {
+			snapshotId: string;
+			createdAt: string;
+			aiSummary: string;
+			cadence: string;
+		} | null;
+		nextRun?: { at: string; cadences: string[] } | null;
+		/** Whether the viewer may reassign a contract / license (same gate as /contracts). */
+		canAssignOwners?: { contract: boolean; license: boolean };
 		evidenceMapHits: ReadinessEvidenceHit[];
 		siteCrawl: {
 			websiteUrl: string;

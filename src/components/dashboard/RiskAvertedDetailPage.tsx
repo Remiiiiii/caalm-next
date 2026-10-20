@@ -60,6 +60,11 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+	GlassCardSkeleton,
+	MetricCardSkeleton,
+	TableCardSkeleton,
+} from "@/components/ui/glass-skeletons";
 import { MetricStatCard } from "@/components/ui/metric-stat-card";
 import { PageIndex } from "@/components/ui/page-index";
 import { SearchField } from "@/components/ui/search-field";
@@ -71,6 +76,7 @@ import {
 	SheetHeader,
 	SheetTitle,
 } from "@/components/ui/sheet";
+import { Skeleton } from "@/components/ui/skeleton";
 import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import {
 	TableBody,
@@ -503,15 +509,32 @@ export function RiskAvertedDetailPage() {
 			</motion.div>
 
 			{isLoading && !snapshot ? (
-				<div className="space-y-6">
-					{[1, 2, 3].map((key) => (
-						<Card key={key} className="glass-card">
-							<div className="glass-card-cap" />
-							<CardContent className="text-slate-700 p-4 sm:p-6">
-								<div className="h-24 rounded-md bg-slate-200/60 animate-pulse" />
-							</CardContent>
-						</Card>
-					))}
+				<div
+					role="status"
+					aria-busy="true"
+					aria-label="Loading risk averted"
+					className="space-y-6"
+				>
+					<div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+						<div className="lg:col-span-2">
+							<GlassCardSkeleton>
+								<Skeleton className="h-52 w-full rounded-lg" />
+							</GlassCardSkeleton>
+						</div>
+						<div className="lg:col-span-3">
+							<GlassCardSkeleton>
+								<Skeleton className="h-44 w-full rounded-lg" />
+							</GlassCardSkeleton>
+						</div>
+					</div>
+					<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+						<MetricCardSkeleton rows={2} bar />
+						<MetricCardSkeleton rows={3} bar />
+						<MetricCardSkeleton rows={4} />
+						<MetricCardSkeleton rows={4} bar />
+					</div>
+					<TableCardSkeleton columns={5} rows={3} />
+					<TableCardSkeleton columns={7} rows={4} toolbar />
 				</div>
 			) : snapshot ? (
 				<>

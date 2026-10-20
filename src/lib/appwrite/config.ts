@@ -243,6 +243,12 @@ export const appwriteConfig = {
 		"NEXT_PUBLIC_APPWRITE_AUDIT_EVIDENCE_MAP_COLLECTION",
 	),
 
+	/** Which contract/license satisfies which evidence-map requirement (name: audit_evidence_record_tags) */
+	auditEvidenceRecordTagsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_AUDIT_EVIDENCE_RECORD_TAGS_COLLECTION",
+		"69f8e3a2001d4e8c2b10",
+	),
+
 	secretKey: getTestFallback("NEXT_APPWRITE_API_KEY", "test-api-key-for-ci"),
 
 	govApiKey: process.env.GOV_API_KEY,

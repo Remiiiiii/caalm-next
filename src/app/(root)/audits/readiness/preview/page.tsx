@@ -2,6 +2,7 @@
 
 import { Loader2, Printer, SquareArrowRightExit } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useState } from "react";
 import useSWR from "swr";
 import { ReadinessCharts } from "@/components/audits/ReadinessCharts";
@@ -51,6 +52,8 @@ interface PreviewResponse {
 			label: string;
 			auditType: string;
 			caalmModule: string;
+			status?: "covered" | "gap";
+			matchedRecords?: Array<{ title: string; status: string }>;
 		}>;
 		siteCrawl: {
 			websiteUrl: string;
@@ -62,6 +65,12 @@ interface PreviewResponse {
 		} | null;
 		org: { name: string; timezone: string };
 		latestSnapshot: { id: string; aiSummary?: string; cadence: string } | null;
+		viewing?: {
+			snapshotId: string;
+			createdAt: string;
+			aiSummary: string;
+			cadence: string;
+		} | null;
 	};
 }
 
@@ -72,14 +81,20 @@ export default function AuditReadinessPreviewPage() {
 	const { toast } = useToast();
 	const [exporting, setExporting] = useState(false);
 
+	// ?snapshotId= previews a saved snapshot; without it the packet shows live data.
+	const snapshotIdParam = useSearchParams()?.get("snapshotId") ?? null;
 	const { data, isLoading } = useSWR<PreviewResponse>(
 		permissions.includes(PERMISSIONS.AUDIT.VIEW)
-			? "/api/audits/readiness"
+			? snapshotIdParam
+				? `/api/audits/readiness?snapshotId=${encodeURIComponent(snapshotIdParam)}`
+				: "/api/audits/readiness"
 			: null,
 		fetcher,
 	);
 
 	const payload = data?.data;
+	const packetSnapshotId =
+		payload?.viewing?.snapshotId ?? payload?.latestSnapshot?.id;
 
 	const exportPdf = useCallback(async () => {
 		setExporting(true);
@@ -87,7 +102,7 @@ export default function AuditReadinessPreviewPage() {
 			const res = await fetch("/api/audits/readiness/export", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ snapshotId: payload?.latestSnapshot?.id }),
+				body: JSON.stringify({ snapshotId: packetSnapshotId }),
 			});
 			if (!res.ok) {
 				const body = await res.json().catch(() => ({}));
@@ -109,7 +124,7 @@ export default function AuditReadinessPreviewPage() {
 		} finally {
 			setExporting(false);
 		}
-	}, [payload?.latestSnapshot?.id, toast]);
+	}, [packetSnapshotId, toast]);
 
 	if (permissionsLoading || isLoading) {
 		return (
@@ -181,8 +196,19 @@ export default function AuditReadinessPreviewPage() {
 					</h2>
 					<p className="text-sm text-blue-100 mt-2">
 						{payload.org.name} ·{" "}
-						{(payload.latestSnapshot?.cadence || "live").toUpperCase()} ·{" "}
-						{formatInTimezone(new Date(), "MMM d, yyyy h:mm a", timeZone)}
+						{(
+							payload.viewing?.cadence ||
+							payload.latestSnapshot?.cadence ||
+							"live"
+						).toUpperCase()}{" "}
+						·{" "}
+						{formatInTimezone(
+							payload.viewing
+								? new Date(payload.viewing.createdAt)
+								: new Date(),
+							"MMM d, yyyy h:mm a",
+							timeZone,
+						)}
 					</p>
 				</header>
 
@@ -198,7 +224,7 @@ export default function AuditReadinessPreviewPage() {
 								value:
 									payload.summary.readinessScore === null
 										? "N/A"
-										: String(payload.summary.readinessScore),
+										: `${payload.summary.readinessScore}%`,
 							},
 							{
 								label: "RAG",
@@ -232,7 +258,9 @@ export default function AuditReadinessPreviewPage() {
 							1. Executive summary
 						</h3>
 						<p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
-							{payload.latestSnapshot?.aiSummary ||
+							{(payload.viewing
+								? payload.viewing.aiSummary
+								: payload.latestSnapshot?.aiSummary) ||
 								"Run a weekly snapshot to generate an AI auto-summary for this packet."}
 						</p>
 					</section>
@@ -283,7 +311,8 @@ export default function AuditReadinessPreviewPage() {
 										<th className="text-left p-2">Requirement</th>
 										<th className="text-left p-2">Label</th>
 										<th className="text-left p-2">Type</th>
-										<th className="text-left p-2">Module</th>
+										<th className="text-left p-2">Status</th>
+										<th className="text-left p-2">Covering record</th>
 									</tr>
 								</thead>
 								<tbody>
@@ -295,7 +324,12 @@ export default function AuditReadinessPreviewPage() {
 											<td className="p-2">{row.requirementId}</td>
 											<td className="p-2">{row.label}</td>
 											<td className="p-2">{row.auditType}</td>
-											<td className="p-2">{row.caalmModule}</td>
+											<td className="p-2">
+												{row.status === "gap" ? "Gap" : "Covered"}
+											</td>
+											<td className="p-2">
+												{row.matchedRecords?.[0]?.title ?? "—"}
+											</td>
 										</tr>
 									))}
 								</tbody>

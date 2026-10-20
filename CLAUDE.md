@@ -55,6 +55,8 @@ Project rules live in `.cursor/rules/` and are the single source of truth. Edit 
 | `~/.cursor/mcp.json` + Cursor plugin MCPs (figma, notion, playwright, slack) | User-scope servers in `~/.claude.json` (`claude mcp list`) |
 | `~/.cursor/hooks.json` (ponytail) | `ponytail@ponytail` plugin from the local `~/Development/ponytail` clone |
 | `~/.cursor/skills/*` | Junctions in `~/.claude/skills/` (project copies of `ui-ux-pro-max` and `thermo-nuclear-code-quality-review` win) |
+| `.cursor/rules/global-style-guide.mdc` (design rules) | `design-system-inventory.md` documents the same tokens/components; update both when shared UI changes (card titles, tables, switches, bulk dock, bars) |
+| Cursor review loop (`agent-workflow-principal.mdc`: api-authz, targeted unit tests, Playwright smoke) | Same loop in Claude Code, recorded in the auto-memory feedback "run tests after changes"; use `graft` first (`graft.mdc`) |
 | Cursor built-in skills (`review`, `review-security`, `loop`, `create-skill`, `statusline`, …) | Claude Code built-ins: `/code-review`, `/security-review`, `/loop`, `skill-creator`, `/statusline` |
 
 Not mirrored: the `github` MCP server (disabled in Cursor; needs a fresh token), and skills bundled inside Cursor marketplace plugins (Claude Code has official plugins for figma, github, notion, playwright, slack via `/plugin`).

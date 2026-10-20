@@ -5,7 +5,7 @@
 /* Global segmented-toggle sizing. Edit here to resize every switch in the app.
    Height matches .btn-primary (1.75rem). */
 :root {
-	--segmented-toggle-height: 1.95rem;
+	--segmented-toggle-height: 2.15rem;
 	--segmented-toggle-pad: 0.1875rem;
 }
 

@@ -1,8 +1,9 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
+import { Loader2, Play } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
 	CaalmDataTable,
 	CaalmDataTableEmpty,
@@ -31,7 +32,12 @@ import {
 } from "@/components/ui/table";
 import { formatInTimezone } from "@/lib/timezone";
 import { cn } from "@/lib/utils";
-import { PILL, RAG_LABEL, RAG_PILL } from "./readiness-ui";
+import {
+	formatReadinessPercent,
+	PILL,
+	RAG_LABEL,
+	RAG_PILL,
+} from "./readiness-ui";
 import type { ReadinessHistoryRow } from "./types";
 
 const PAGE_SIZE = 12;
@@ -42,21 +48,28 @@ const SOURCE_LABEL = { manual: "Manual", scheduled: "Scheduled" } as const;
 function changeLabel(row: ReadinessHistoryRow): string {
 	if (row.scoreDelta === null) return "— First snapshot";
 	if (row.scoreDelta === 0) return "— No change";
-	return `${row.scoreDelta > 0 ? "▲" : "▼"} ${Math.abs(row.scoreDelta)}`;
+	return `${row.scoreDelta > 0 ? "▲" : "▼"} ${formatReadinessPercent(Math.abs(row.scoreDelta))}`;
 }
 
 export function ReadinessSnapshotHistory({
 	rows,
-	latestId,
+	running = false,
+	onRun,
 	timeZone,
+	nextRunLabel,
 	canExport,
 	downloadingId,
 	highlightId,
 	onDownload,
 }: {
 	rows: ReadinessHistoryRow[];
-	latestId?: string | null;
+	/** Saving a snapshot is in progress. */
+	running?: boolean;
+	/** Opens the "save a snapshot?" confirmation. */
+	onRun?: () => void;
 	timeZone: string;
+	/** Formatted next scheduled run, e.g. "Mon, Oct 26, 2026". */
+	nextRunLabel?: string | null;
 	canExport: boolean;
 	downloadingId: string | null;
 	highlightId: string | null;
@@ -101,26 +114,43 @@ export function ReadinessSnapshotHistory({
 			<CardContent className="p-4 text-slate-700 sm:p-6">
 				<div className="flex flex-wrap items-center justify-between gap-3">
 					<div>
-						<p className="h5">Snapshot history</p>
+						<p className="h5 sidebar-gradient-text">Snapshot history</p>
 						<p className="caption text-slate-500">
 							Point-in-time scores. Scheduled runs use the org timezone (
-							{timeZone})
+							{timeZone}){nextRunLabel ? ` · Next run ${nextRunLabel}` : ""}
 						</p>
 					</div>
-					<SegmentedToggle
-						value={cadence}
-						onChange={(next) => {
-							setCadence(next);
-							setPage(1);
-						}}
-						ariaLabel="Cadence filter"
-						tabs={[
-							{ value: "all", label: "All" },
-							{ value: "weekly", label: "Weekly" },
-							{ value: "monthly", label: "Monthly" },
-							{ value: "quarterly", label: "Quarterly" },
-						]}
-					/>
+					<div className="flex flex-wrap items-center gap-3">
+						<SegmentedToggle
+							value={cadence}
+							onChange={(next) => {
+								setCadence(next);
+								setPage(1);
+							}}
+							ariaLabel="Cadence filter"
+							tabs={[
+								{ value: "all", label: "All" },
+								{ value: "weekly", label: "Weekly" },
+								{ value: "monthly", label: "Monthly" },
+								{ value: "quarterly", label: "Quarterly" },
+							]}
+						/>
+						{onRun ? (
+							<Button
+								type="button"
+								className="btn-primary px-3 sm:px-4"
+								onClick={onRun}
+								disabled={running}
+							>
+								{running ? (
+									<Loader2 className="h-4 w-4 animate-spin" />
+								) : (
+									<Play className="h-4 w-4" />
+								)}
+								Run weekly snapshot
+							</Button>
+						) : null}
+					</div>
 				</div>
 
 				{filtered.length === 0 ? (
@@ -190,7 +220,7 @@ export function ReadinessSnapshotHistory({
 											"text-right font-semibold tabular-nums",
 										)}
 									>
-										{row.score ?? "N/A"}
+										{formatReadinessPercent(row.score)}
 									</TableCell>
 									<TableCell className={cn(DATA_TABLE_CELL, "text-slate-600")}>
 										{changeLabel(row)}
@@ -212,14 +242,12 @@ export function ReadinessSnapshotHistory({
 										onClick={(event) => event.stopPropagation()}
 									>
 										<span className="inline-flex items-center gap-2">
-											{row.id === latestId ? (
-												<Link
-													href="/audits/readiness/preview"
-													className="rounded-sm text-sm font-medium text-[#078FAB] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#078FAB]"
-												>
-													Preview
-												</Link>
-											) : null}
+											<Link
+												href={`/audits/readiness/preview?snapshotId=${row.id}`}
+												className="rounded-sm text-sm font-medium text-[#078FAB] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#078FAB]"
+											>
+												Preview
+											</Link>
 											{pdfControl(row)}
 										</span>
 									</TableCell>
@@ -262,7 +290,7 @@ export function ReadinessSnapshotHistory({
 									<div className="flex justify-between gap-4">
 										<dt className="text-slate-500">Score</dt>
 										<dd className="font-semibold tabular-nums">
-											{selected.score ?? "N/A"} / 100
+											{formatReadinessPercent(selected.score)}
 										</dd>
 									</div>
 									<div className="flex justify-between gap-4">
@@ -285,14 +313,12 @@ export function ReadinessSnapshotHistory({
 									</div>
 								</dl>
 								<div className="mt-4 flex items-center gap-4 text-sm">
-									{selected.id === latestId ? (
-										<Link
-											href="/audits/readiness/preview"
-											className="font-medium text-[#078FAB]"
-										>
-											Packet preview
-										</Link>
-									) : null}
+									<Link
+										href={`/audits/readiness/preview?snapshotId=${selected.id}`}
+										className="font-medium text-[#078FAB]"
+									>
+										Packet preview
+									</Link>
 									{pdfControl(selected)}
 								</div>
 							</>

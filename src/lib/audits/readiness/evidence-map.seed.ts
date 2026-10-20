@@ -1,6 +1,9 @@
 import type { AuditEvidenceMapRow } from "./types";
 
-/** CFCE-like FQHC + child welfare + nonprofit financial PBC (non-finance slice) */
+/**
+ * CFCE-like FQHC + child welfare + nonprofit financial PBC (non-finance slice).
+ * Covered vs Gap is scored from stored record tags (see record-tags.ts).
+ */
 export const CFCE_EVIDENCE_MAP_SEED: Omit<AuditEvidenceMapRow, "$id">[] = [
 	{
 		segment: "cfce_fqhc_cw",
@@ -119,3 +122,31 @@ export const CFCE_EVIDENCE_MAP_SEED: Omit<AuditEvidenceMapRow, "$id">[] = [
 		notes: "Optional crawl; not included in readiness score",
 	},
 ];
+
+export type EvidenceRecordKind = "contract" | "license";
+
+/** In-V1 catalog rows a contract or license is allowed to satisfy. */
+export function catalogForRecordKind(
+	kind: EvidenceRecordKind,
+): Omit<AuditEvidenceMapRow, "$id">[] {
+	const module = kind === "contract" ? "contracts" : "licenses";
+	return CFCE_EVIDENCE_MAP_SEED.filter(
+		(row) => row.inV1 && row.caalmModule === module,
+	);
+}
+
+export function allowedRequirementIds(kind: EvidenceRecordKind): Set<string> {
+	return new Set(catalogForRecordKind(kind).map((row) => row.requirementId));
+}
+
+export function sanitizeRequirementIds(
+	kind: EvidenceRecordKind,
+	requirementIds: string[],
+): string[] {
+	const allowed = allowedRequirementIds(kind);
+	const unique = new Set<string>();
+	for (const id of requirementIds) {
+		if (allowed.has(id)) unique.add(id);
+	}
+	return [...unique];
+}

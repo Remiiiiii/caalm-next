@@ -71,8 +71,14 @@ export interface AuditReadinessSnapshotPayload {
 		label: string;
 		auditType: AuditEvidenceAuditType;
 		caalmModule: string;
-		/** Derived per module; per-requirement coverage needs the readiness engine. */
+		/** Covered when a matching live record satisfies this requirement. */
 		status?: "covered" | "gap";
+		matchedRecords?: Array<{
+			id: string;
+			title: string;
+			href: string;
+			status: string;
+		}>;
 	}>;
 	sourcesUsed: string[];
 	previousScore: number | null;

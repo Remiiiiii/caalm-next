@@ -1,9 +1,13 @@
 "use client";
 
-import { ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
+import {
+	ASSIGN_SIZE,
+	TaskAssigneePicker,
+} from "@/components/tasks/TaskAssigneePicker";
+import type { TaskPerson } from "@/components/tasks/task-ui";
+import Avatar from "@/components/ui/avatar";
 import {
 	CaalmDataTable,
 	CaalmDataTableEmpty,
@@ -21,6 +25,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import type { LookedUpUser } from "@/hooks/useUsersByIds";
 import { cn } from "@/lib/utils";
 import { GlossaryTerm } from "./GlossaryTerm";
 import {
@@ -60,10 +65,96 @@ function sortInsights(rows: ReadinessInsight[]): ReadinessInsight[] {
 	});
 }
 
+/** Same photo size and name style as the Assigned to picker, which is the source of truth. */
+function PersonName({ user }: { user: LookedUpUser }) {
+	return (
+		<span className="inline-flex items-center gap-2 text-xs font-medium text-slate-700">
+			<Avatar
+				name={user.fullName}
+				userId={user.$id}
+				size={ASSIGN_SIZE}
+				imageUrl={user.imageUrl}
+			/>
+			{user.fullName}
+		</span>
+	);
+}
+
+/** Assigned to = the record's managers, the same field /contracts shows and edits. */
+function AssigneeCell({
+	row,
+	users,
+	people,
+	editable,
+	onAssign,
+}: {
+	row: ReadinessInsight;
+	users: Map<string, LookedUpUser>;
+	people: TaskPerson[];
+	editable: boolean;
+	onAssign?: (row: ReadinessInsight, accountId: string | null) => void;
+}) {
+	const managers = row.assignedManagers ?? [];
+	const first = managers[0];
+	const person = first ? users.get(first) : undefined;
+	const extra = managers.length > 1 ? ` +${managers.length - 1}` : "";
+
+	if (editable && onAssign) {
+		const currentId = person?.accountId ?? first;
+		// The picker reads photos from `people`; make sure the current assignee has theirs.
+		const pickerPeople = person
+			? people.some((entry) => entry.id === currentId)
+				? people.map((entry) =>
+						entry.id === currentId && !entry.imageUrl
+							? { ...entry, imageUrl: person.imageUrl }
+							: entry,
+					)
+				: [
+						{
+							id: currentId,
+							name: person.fullName,
+							imageUrl: person.imageUrl,
+						},
+						...people,
+					]
+			: people;
+		return (
+			<span className="inline-flex items-center gap-1">
+				<TaskAssigneePicker
+					assigneeId={currentId}
+					assigneeName={person?.fullName}
+					people={pickerPeople}
+					showName
+					onChange={(accountId) => onAssign(row, accountId)}
+				/>
+				{extra ? <span className="caption text-slate-500">{extra}</span> : null}
+			</span>
+		);
+	}
+	if (!first) return <span className="text-slate-500">Unassigned</span>;
+	return (
+		<span className="inline-flex items-center gap-1">
+			{person ? <PersonName user={person} /> : <span>Assigned</span>}
+			{extra ? <span className="caption text-slate-500">{extra}</span> : null}
+		</span>
+	);
+}
+
 export function ReadinessFixNextTable({
 	insights,
+	users = new Map(),
+	canAssign,
+	people = [],
+	onAssign,
 }: {
 	insights: ReadinessInsight[];
+	/** People for the ids stored on records, keyed by account id and document id. */
+	users?: Map<string, LookedUpUser>;
+	/** Whether the viewer may reassign each kind of record (same gate as /contracts). */
+	canAssign?: { contract: boolean; license: boolean };
+	/** Directory keyed by account id, the id contracts and licenses store managers by. */
+	people?: TaskPerson[];
+	onAssign?: (row: ReadinessInsight, accountId: string | null) => void;
 }) {
 	const [page, setPage] = useState(1);
 	const rows = useMemo(() => sortInsights(insights), [insights]);
@@ -75,7 +166,7 @@ export function ReadinessFixNextTable({
 			<CardContent className="p-4 text-slate-700 sm:p-6">
 				<div className="flex flex-wrap items-baseline justify-between gap-2">
 					<div>
-						<p className="h5">Fix next</p>
+						<p className="h5 sidebar-gradient-text">Fix next</p>
 						<p className="caption text-slate-500">
 							Ranked by severity, then due date
 						</p>
@@ -98,10 +189,10 @@ export function ReadinessFixNextTable({
 						<TableHeader className="[&_tr]:border-b-0">
 							<TableRow className={DATA_TABLE_HEADER_ROW}>
 								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3 pl-4")}>
-									Severity
+									Item
 								</TableHead>
 								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
-									Item
+									Severity
 								</TableHead>
 								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
 									Requirements
@@ -110,32 +201,19 @@ export function ReadinessFixNextTable({
 									Due
 								</TableHead>
 								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
-									Owner
+									Assigned to
 								</TableHead>
 								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3 pr-4")}>
-									<span className="sr-only">Open</span>
+									Assigned by
 								</TableHead>
 							</TableRow>
 						</TableHeader>
 						<TableBody className="[&_tr:last-child>td]:border-b-0">
 							{pageRows.map((row) => (
 								<TableRow key={row.id} className={DATA_TABLE_BODY_ROW_BASE}>
-									<TableCell className={cn(DATA_TABLE_CELL, "pl-4")}>
-										<span
-											className={cn(
-												PILL,
-												"whitespace-nowrap",
-												row.isEvidenceGap
-													? RAG_PILL.amber
-													: (SEVERITY_PILL[row.severity] ?? NEUTRAL_PILL),
-											)}
-										>
-											{row.isEvidenceGap
-												? "Evidence gap"
-												: (SEVERITY_LABEL[row.severity] ?? row.severity)}
-										</span>
-									</TableCell>
-									<TableCell className={cn(DATA_TABLE_CELL, "max-w-[22rem]")}>
+									<TableCell
+										className={cn(DATA_TABLE_CELL, "max-w-[22rem] pl-4")}
+									>
 										<div className="flex flex-col">
 											<Link
 												href={row.moduleLink}
@@ -153,6 +231,21 @@ export function ReadinessFixNextTable({
 													.join(" · ")}
 											</span>
 										</div>
+									</TableCell>
+									<TableCell className={DATA_TABLE_CELL}>
+										<span
+											className={cn(
+												PILL,
+												"whitespace-nowrap",
+												row.isEvidenceGap
+													? RAG_PILL.amber
+													: (SEVERITY_PILL[row.severity] ?? NEUTRAL_PILL),
+											)}
+										>
+											{row.isEvidenceGap
+												? "Evidence gap"
+												: (SEVERITY_LABEL[row.severity] ?? row.severity)}
+										</span>
 									</TableCell>
 									<TableCell className={DATA_TABLE_CELL}>
 										<div className="flex flex-wrap gap-1">
@@ -174,21 +267,30 @@ export function ReadinessFixNextTable({
 									>
 										{formatDay(row.dueDate)}
 									</TableCell>
-									<TableCell className={cn(DATA_TABLE_CELL, "text-slate-500")}>
-										Unassigned
+									<TableCell className={cn(DATA_TABLE_CELL, "text-slate-600")}>
+										<AssigneeCell
+											row={row}
+											users={users}
+											people={people}
+											editable={Boolean(
+												onAssign &&
+													((row.itemKind === "contract" &&
+														canAssign?.contract) ||
+														(row.itemKind === "license" && canAssign?.license)),
+											)}
+											onAssign={onAssign}
+										/>
 									</TableCell>
-									<TableCell className={cn(DATA_TABLE_CELL, "pr-4")}>
-										<Button
-											asChild
-											variant="outline"
-											size="sm"
-											className="cursor-pointer"
-										>
-											<Link href={row.moduleLink}>
-												Open
-												<ExternalLink className="h-3 w-3" aria-hidden />
-											</Link>
-										</Button>
+									<TableCell
+										className={cn(DATA_TABLE_CELL, "pr-4 text-slate-600")}
+									>
+										{row.assignedBy && users.get(row.assignedBy) ? (
+											<PersonName
+												user={users.get(row.assignedBy) as LookedUpUser}
+											/>
+										) : (
+											<span className="text-slate-500">—</span>
+										)}
 									</TableCell>
 								</TableRow>
 							))}

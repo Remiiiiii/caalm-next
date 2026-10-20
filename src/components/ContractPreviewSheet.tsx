@@ -11,7 +11,11 @@ import {
 	Save,
 	Users,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+	EvidenceRequirementTagger,
+	type EvidenceTaggerHandle,
+} from "@/components/audits/readiness/EvidenceRequirementTagger";
 import ContractApprovalFlowDialog from "@/components/contracts/approval/ContractApprovalFlowDialog";
 import FormattedDateTime, {
 	FormattedDate,
@@ -25,6 +29,7 @@ import {
 } from "@/components/preview/previewSheetParts";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { useUsersByIds } from "@/hooks/useUsersByIds";
 import { updateContractPreviewFields } from "@/lib/actions/file.actions";
 import { getContractLifecycleDisplay } from "@/lib/contracts/contractLifecycleDisplay";
 import {
@@ -105,6 +110,8 @@ export default function ContractPreviewSheet({
 	});
 	const [saving, setSaving] = useState(false);
 	const [workflowOpen, setWorkflowOpen] = useState(false);
+	const [tagsDirty, setTagsDirty] = useState(false);
+	const taggerRef = useRef<EvidenceTaggerHandle>(null);
 
 	useEffect(() => {
 		if (!file) return;
@@ -129,6 +136,10 @@ export default function ContractPreviewSheet({
 		[file?.status],
 	);
 
+	const managerUsers = useUsersByIds(
+		Array.isArray(file?.assignedManagers) ? file.assignedManagers : [],
+	);
+
 	if (!file) return null;
 
 	const urgency = getExpiryUrgency(file);
@@ -140,16 +151,19 @@ export default function ContractPreviewSheet({
 			: null;
 	const assignees =
 		Array.isArray(file.assignedManagers) && file.assignedManagers.length > 0
-			? file.assignedManagers.join(", ")
+			? file.assignedManagers
+					.map((id) => managerUsers.get(id)?.fullName ?? id)
+					.join(", ")
 			: null;
 
 	const canEditStatus =
 		file.status !== "pending-review" && file.status !== "action-required";
 
-	const isDirty =
+	const fieldsDirty =
 		draft.department !== (file.department || "") ||
 		draft.contractType !== (file.contractType || "") ||
 		(canEditStatus && draft.status !== (file.status || ""));
+	const isDirty = fieldsDirty || tagsDirty;
 
 	const handleSave = async () => {
 		const documentId = file.contractId || file.$id;
@@ -174,7 +188,12 @@ export default function ContractPreviewSheet({
 				payload.status = draft.status;
 			}
 
-			await updateContractPreviewFields(documentId, payload);
+			if (Object.keys(payload).length > 0) {
+				await updateContractPreviewFields(documentId, payload);
+			}
+			if (taggerRef.current?.isDirty) {
+				await taggerRef.current.save();
+			}
 			toast({
 				title: "Contract updated",
 				description: "Ownership fields saved.",
@@ -408,6 +427,14 @@ export default function ContractPreviewSheet({
 						) : null}
 					</div>
 				</section>
+
+				<EvidenceRequirementTagger
+					ref={taggerRef}
+					kind="contract"
+					recordId={String(file.contractId || file.$id)}
+					enabled={open}
+					onDirtyChange={setTagsDirty}
+				/>
 			</EntityPreviewSheetShell>
 			{lifecycle.clickable ? (
 				<ContractApprovalFlowDialog

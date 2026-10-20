@@ -1,4 +1,5 @@
 import { Document, Text, View } from "@react-pdf/renderer";
+import { isReadinessDomainScored } from "@/lib/audits/readiness/score";
 import type { AuditReadinessSnapshotPayload } from "@/lib/audits/readiness/types";
 import { READINESS_DISCLAIMER } from "@/lib/audits/readiness/types";
 import {
@@ -46,7 +47,9 @@ function HistoryBars({
 		>
 			{points.map((point) => (
 				<View key={point.label} style={{ flex: 1, alignItems: "center" }}>
-					<Text style={{ fontSize: 7, marginBottom: 2 }}>{point.value}</Text>
+					<Text style={{ fontSize: 7, marginBottom: 2 }}>
+						{point.value}%
+					</Text>
 					<View
 						style={{
 							width: "100%",
@@ -105,7 +108,9 @@ export function AuditReadinessPdfDocument({
 					stats={[
 						{
 							label: "Readiness score",
-							value: hasSources ? `${summary.readinessScore}` : "N/A",
+							value: hasSources
+								? `${summary.readinessScore}%`
+								: "N/A",
 						},
 						{
 							label: "RAG status",
@@ -121,7 +126,7 @@ export function AuditReadinessPdfDocument({
 							value:
 								payload.scoreDelta === null
 									? "—"
-									: `${payload.scoreDelta >= 0 ? "+" : ""}${payload.scoreDelta}`,
+									: `${payload.scoreDelta >= 0 ? "+" : ""}${payload.scoreDelta}%`,
 						},
 					]}
 				/>
@@ -138,14 +143,17 @@ export function AuditReadinessPdfDocument({
 					<Heading>Charts</Heading>
 					<View style={packet.card} wrap={false}>
 						<Text style={packet.cardTitle}>Domain readiness (%)</Text>
-						{summary.domains.map((d) => (
-							<BarRow
-								key={d.label}
-								label={d.label}
-								value={`${d.readinessPercent}%`}
-								pct={d.readinessPercent}
-							/>
-						))}
+						{summary.domains.map((d) => {
+							const scored = isReadinessDomainScored(d, payload.sourcesUsed);
+							return (
+								<BarRow
+									key={d.label}
+									label={d.label}
+									value={scored ? `${d.readinessPercent}%` : "Not scored"}
+									pct={scored ? d.readinessPercent : 0}
+								/>
+							);
+						})}
 					</View>
 					<View style={packet.card} wrap={false}>
 						<Text style={packet.cardTitle}>Severity breakdown (counts)</Text>
@@ -198,16 +206,16 @@ export function AuditReadinessPdfDocument({
 				</Text>
 				<PacketTable
 					columns={[
-						{ header: "Requirement", width: "26%" },
-						{ header: "Label", width: "42%" },
-						{ header: "Audit type", width: "16%" },
-						{ header: "Module", width: "16%" },
+						{ header: "Requirement", width: "22%" },
+						{ header: "Label", width: "34%" },
+						{ header: "Status", width: "14%" },
+						{ header: "Covering record", width: "30%" },
 					]}
 					rows={payload.evidenceMapHits.map((r) => [
 						r.requirementId,
 						r.label,
-						r.auditType,
-						r.caalmModule,
+						r.status === "gap" ? "Gap" : "Covered",
+						r.matchedRecords?.[0]?.title ?? "—",
 					])}
 				/>
 

@@ -1,3 +1,4 @@
+import { formatReadinessPercent } from "./readiness-ui";
 import type { Rag, RagThresholds } from "./types";
 
 const CX = 90;
@@ -28,7 +29,7 @@ export function ReadinessGauge({
 			aria-label={
 				score === null
 					? "Readiness score not available yet"
-					: `Readiness score ${score} out of 100, status ${rag ?? "unknown"}`
+					: `Readiness score ${formatReadinessPercent(score)} out of 100, status ${rag ?? "unknown"}`
 			}
 			className="block flex-none"
 		>
@@ -74,7 +75,7 @@ export function ReadinessGauge({
 				textAnchor="middle"
 				className="fill-slate-700"
 			>
-				{score ?? "N/A"}
+				{formatReadinessPercent(score)}
 			</text>
 			<text
 				x={CX}
@@ -92,7 +93,7 @@ export function ReadinessGauge({
 				textAnchor="middle"
 				className="fill-slate-600"
 			>
-				0
+				0%
 			</text>
 			<text
 				x={160}
@@ -101,7 +102,7 @@ export function ReadinessGauge({
 				textAnchor="middle"
 				className="fill-slate-600"
 			>
-				100
+				100%
 			</text>
 		</svg>
 	);
