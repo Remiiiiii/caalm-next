@@ -9,10 +9,7 @@ import {
 import { requireFundingOrgContext } from "@/lib/funding/request-context";
 
 export async function GET(request: NextRequest) {
-	const ctx = await requireFundingOrgContext(
-		request,
-		PERMISSIONS.FUNDING.VIEW,
-	);
+	const ctx = await requireFundingOrgContext(request, PERMISSIONS.FUNDING.VIEW);
 	if (!ctx.ok) return ctx.response;
 
 	const stageParam = request.nextUrl.searchParams.get("stage");

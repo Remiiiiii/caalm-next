@@ -61,11 +61,11 @@ function CustomNavbar(props: NavProps) {
 }
 
 function EmptyNav(_props: NavProps) {
-	return null;
+	return <></>;
 }
 
 function EmptyMonthCaption(_props: MonthCaptionProps) {
-	return null;
+	return <></>;
 }
 
 /** True when the calendar day is before local midnight today. */

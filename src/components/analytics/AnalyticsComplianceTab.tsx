@@ -29,9 +29,7 @@ export function AnalyticsComplianceTab({
 						? "Contracts and licenses pull live data from your organization. Regulatory, document, and governance metrics may include illustrative sample data until those workflows are fully connected."
 						: "Contracts and licenses pull live data from your organization. Domains that are not connected yet stay empty — CAALM does not invent fake compliance numbers."}
 				</span>
-				{USE_AUDIT_MOCK_DATA ? (
-					<SampleDataBadge className="shrink-0" />
-				) : null}
+				{USE_AUDIT_MOCK_DATA ? <SampleDataBadge className="shrink-0" /> : null}
 			</div>
 
 			<ComplianceOverviewPanel

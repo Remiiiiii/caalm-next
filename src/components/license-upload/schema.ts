@@ -43,9 +43,7 @@ export const licenseUploadSchema = z.object({
 	compliance: z
 		.enum(["compliant", "non-compliant", "at-risk", "action-required"])
 		.optional(),
-	assignedManagers: z
-		.array(z.string())
-		.min(1, "Assigned To is required"),
+	assignedManagers: z.array(z.string()).min(1, "Assigned To is required"),
 	autoRenew: z.boolean().default(false),
 	renewalNoticeDays: z.string().optional(),
 });

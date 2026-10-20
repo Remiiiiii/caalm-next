@@ -35,6 +35,7 @@ import {
 	DATA_TABLE_BODY_ROW_BASE,
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
+	DATA_TABLE_TOOLBAR_INSET,
 } from "@/components/ui/caalm-data-table";
 import { CardContent, Card as GlassCard } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -358,7 +359,9 @@ const ArticleList: React.FC<ArticleListProps> = ({ onEdit, onRefresh }) => {
 				<div className="glass-card-cap" />
 				<CardContent className="p-0">
 					{/* Filters — same strip layout as contracts/licenses control bars */}
-					<div className="flex flex-col sm:flex-row gap-3 pt-4 pb-3 px-4 sm:px-6">
+					<div
+						className={`flex flex-col sm:flex-row gap-3 pt-4 pb-3 ${DATA_TABLE_TOOLBAR_INSET}`}
+					>
 						<div className="flex-1">
 							<SearchField
 								placeholder="Search articles..."

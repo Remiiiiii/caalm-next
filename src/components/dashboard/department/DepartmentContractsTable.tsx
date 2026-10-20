@@ -98,12 +98,10 @@ export function DepartmentContractsTable({
 				</div>
 
 				<div className="overflow-auto flex-1 min-h-0">
-					<CaalmDataTable className="px-0 sm:px-0 pb-0">
+					<CaalmDataTable className="pb-0">
 						<TableHeader className="[&_tr]:border-b-0">
 							<TableRow className={DATA_TABLE_HEADER_ROW}>
-								<TableHead
-									className={cn(DATA_TABLE_HEADER_CELL, "pl-4 pr-3")}
-								>
+								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "pl-4 pr-3")}>
 									Contract
 								</TableHead>
 								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
@@ -115,9 +113,7 @@ export function DepartmentContractsTable({
 								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
 									Due
 								</TableHead>
-								<TableHead
-									className={cn(DATA_TABLE_HEADER_CELL, "pl-3 pr-4")}
-								>
+								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "pl-3 pr-4")}>
 									Action
 								</TableHead>
 							</TableRow>
@@ -148,7 +144,10 @@ export function DepartmentContractsTable({
 										className={DATA_TABLE_BODY_ROW_BASE}
 									>
 										<TableCell
-											className={cn(rowPad, "pl-4 pr-3 font-medium text-slate-700")}
+											className={cn(
+												rowPad,
+												"pl-4 pr-3 font-medium text-slate-700",
+											)}
 										>
 											{contract.contractName}
 											{typeof contract.daysUntilExpiry === "number" ? (

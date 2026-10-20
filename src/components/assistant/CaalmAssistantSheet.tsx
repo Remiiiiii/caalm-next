@@ -29,6 +29,7 @@ import type {
 	AssistantSuggestion,
 	UseCaalmAssistantReturn,
 } from "@/components/assistant/assistantTypes";
+import { BusyIcon } from "@/components/ui/busy-icon";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { Textarea } from "@/components/ui/textarea";
@@ -40,6 +41,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useBusyAction } from "@/hooks/useBusyAction";
 import { downloadAssistantChatTxt } from "@/lib/assistant/exportAssistantChatTxt";
 import { formatAssistantMarkdown } from "@/lib/assistant/formatMarkdown";
 import { cn } from "@/lib/utils";
@@ -83,6 +85,9 @@ export default function CaalmAssistantSheet({
 		user as { name?: string; fullName?: string } | null,
 	);
 	const [tab, setTab] = useState<Tab>("chat");
+	const [downloadChat, downloadingChat] = useBusyAction(() =>
+		downloadAssistantChatTxt(assistant.messages, assistant.conversationId),
+	);
 	const [input, setInput] = useState("");
 	const [newChatOpen, setNewChatOpen] = useState(false);
 	const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -207,15 +212,10 @@ export default function CaalmAssistantSheet({
 								size="icon"
 								className="h-8 w-8 cursor-pointer text-slate-600 hover:bg-white/50 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
 								aria-label="Download chat"
-								disabled={assistant.messages.length === 0}
-								onClick={() =>
-									downloadAssistantChatTxt(
-										assistant.messages,
-										assistant.conversationId,
-									)
-								}
+								disabled={assistant.messages.length === 0 || downloadingChat}
+								onClick={() => void downloadChat()}
 							>
-								<Download className="h-4 w-4" />
+								<BusyIcon busy={downloadingChat} icon={Download} />
 							</Button>
 						</TooltipTrigger>
 						<TooltipContent side="bottom">Download chat</TooltipContent>
@@ -529,7 +529,7 @@ export default function CaalmAssistantSheet({
 													pendingArgs={
 														assistant.pendingAction?.id ===
 														m.actionLifecycle.pendingActionId
-															? assistant.pendingAction.args
+															? assistant.pendingAction?.args
 															: m.pendingAction?.args
 													}
 													disabled={assistant.isSending}

@@ -5,9 +5,9 @@ import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { RestrictionRelease } from "@/lib/funding/restriction-release.repository";
 import { formatUsd } from "@/lib/funding/constants";
 import { contractRequiresFundId } from "@/lib/funding/grant-fund";
+import type { RestrictionRelease } from "@/lib/funding/restriction-release.repository";
 import type { RetentionStream } from "@/lib/funding/types";
 
 type Props = {
@@ -91,8 +91,9 @@ export function RestrictionReleasePanel({ stream }: Props) {
 				Restriction release
 			</p>
 			<p className="text-xs text-slate-600">
-				Record when donor restrictions are met and dollars reclass to unrestricted
-				(fund legs export later for your accountant — no GL posting here).
+				Record when donor restrictions are met and dollars reclass to
+				unrestricted (fund legs export later for your accountant — no GL posting
+				here).
 			</p>
 			{loading ? (
 				<p className="text-sm text-slate-600 flex items-center gap-2">

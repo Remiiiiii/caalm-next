@@ -1,8 +1,14 @@
 import { canContact } from "@/lib/constituents/consent";
 import { getConstituentById } from "@/lib/constituents/server";
 import { mailgunService } from "@/lib/services/mailgun";
-import { getRegistrationById, patchRegistration } from "./event-registrations.repository";
-import { createRegistrationToken, registrationQrPayload } from "./registration-token";
+import {
+	getRegistrationById,
+	patchRegistration,
+} from "./event-registrations.repository";
+import {
+	createRegistrationToken,
+	registrationQrPayload,
+} from "./registration-token";
 
 export async function sendRegistrationConfirmationEmailIfEligible(input: {
 	orgId: string;

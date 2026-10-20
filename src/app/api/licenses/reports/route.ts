@@ -45,10 +45,7 @@ export async function GET(request: NextRequest) {
 		if (!validReportTypes.has(reportType)) {
 			return errorResponse("Invalid report type", 400, { requestId });
 		}
-		const cacheKey = CACHE_KEYS.licenses.reports(
-			defaultOrg.orgId,
-			reportType,
-		);
+		const cacheKey = CACHE_KEYS.licenses.reports(defaultOrg.orgId, reportType);
 
 		const reportData = await CacheManager.withCache(
 			"licenses/reports",
@@ -58,94 +55,96 @@ export async function GET(request: NextRequest) {
 				let data: Record<string, unknown> = {};
 
 				switch (reportType) {
-			case "summary": {
-				const totalLicenses = allLicenses.licenses.length;
-				const activeLicenses = allLicenses.licenses.filter(
-					(l: any) => l.status === "active",
-				).length;
-				const expiredLicenses = allLicenses.licenses.filter(
-					(l: any) => l.status === "expired",
-				).length;
+					case "summary": {
+						const totalLicenses = allLicenses.licenses.length;
+						const activeLicenses = allLicenses.licenses.filter(
+							(l: any) => l.status === "active",
+						).length;
+						const expiredLicenses = allLicenses.licenses.filter(
+							(l: any) => l.status === "expired",
+						).length;
 
-				const totalCost = allLicenses.licenses.reduce(
-					(sum: number, l: any) => sum + (l.cost || 0),
-					0,
-				);
+						const totalCost = allLicenses.licenses.reduce(
+							(sum: number, l: any) => sum + (l.cost || 0),
+							0,
+						);
 
-				data = {
-					totalLicenses,
-					activeLicenses,
-					expiredLicenses,
-					totalCost,
-				};
-				break;
-			}
-
-			case "utilization": {
-				const utilizationData = allLicenses.licenses.map((l: any) => ({
-					licenseId: l.$id,
-					licenseName: l.licenseName,
-					quantity: l.quantity || 0,
-					availableQuantity: l.availableQuantity || 0,
-					utilizationRate:
-						l.quantity && l.quantity > 0
-							? ((l.quantity - (l.availableQuantity || 0)) / l.quantity) * 100
-							: 0,
-				}));
-
-				data = { utilization: utilizationData };
-				break;
-			}
-
-			case "cost": {
-				const costByVendor: Record<string, number> = {};
-				const costByType: Record<string, number> = {};
-				const costByDepartment: Record<string, number> = {};
-
-				allLicenses.licenses.forEach((l: any) => {
-					const cost = l.cost || 0;
-					if (l.vendor) {
-						costByVendor[l.vendor] = (costByVendor[l.vendor] || 0) + cost;
+						data = {
+							totalLicenses,
+							activeLicenses,
+							expiredLicenses,
+							totalCost,
+						};
+						break;
 					}
-					if (l.licenseType) {
-						costByType[l.licenseType] = (costByType[l.licenseType] || 0) + cost;
+
+					case "utilization": {
+						const utilizationData = allLicenses.licenses.map((l: any) => ({
+							licenseId: l.$id,
+							licenseName: l.licenseName,
+							quantity: l.quantity || 0,
+							availableQuantity: l.availableQuantity || 0,
+							utilizationRate:
+								l.quantity && l.quantity > 0
+									? ((l.quantity - (l.availableQuantity || 0)) / l.quantity) *
+										100
+									: 0,
+						}));
+
+						data = { utilization: utilizationData };
+						break;
 					}
-					if (l.department) {
-						costByDepartment[l.department] =
-							(costByDepartment[l.department] || 0) + cost;
+
+					case "cost": {
+						const costByVendor: Record<string, number> = {};
+						const costByType: Record<string, number> = {};
+						const costByDepartment: Record<string, number> = {};
+
+						allLicenses.licenses.forEach((l: any) => {
+							const cost = l.cost || 0;
+							if (l.vendor) {
+								costByVendor[l.vendor] = (costByVendor[l.vendor] || 0) + cost;
+							}
+							if (l.licenseType) {
+								costByType[l.licenseType] =
+									(costByType[l.licenseType] || 0) + cost;
+							}
+							if (l.department) {
+								costByDepartment[l.department] =
+									(costByDepartment[l.department] || 0) + cost;
+							}
+						});
+
+						data = {
+							costByVendor,
+							costByType,
+							costByDepartment,
+						};
+						break;
 					}
-				});
 
-				data = {
-					costByVendor,
-					costByType,
-					costByDepartment,
-				};
-				break;
-			}
+					case "expiration": {
+						const expirationData = allLicenses.licenses
+							.filter((l: any) => l.expirationDate)
+							.map((l: any) => ({
+								licenseId: l.$id,
+								licenseName: l.licenseName,
+								expirationDate: l.expirationDate,
+								daysUntilExpiry: l.daysUntilExpiry,
+								status: l.status,
+							}))
+							.sort((a: any, b: any) => {
+								if (!a.expirationDate) return 1;
+								if (!b.expirationDate) return -1;
+								return a.expirationDate.localeCompare(b.expirationDate);
+							});
 
-			case "expiration": {
-				const expirationData = allLicenses.licenses
-					.filter((l: any) => l.expirationDate)
-					.map((l: any) => ({
-						licenseId: l.$id,
-						licenseName: l.licenseName,
-						expirationDate: l.expirationDate,
-						daysUntilExpiry: l.daysUntilExpiry,
-						status: l.status,
-					}))
-					.sort((a: any, b: any) => {
-						if (!a.expirationDate) return 1;
-						if (!b.expirationDate) return -1;
-						return a.expirationDate.localeCompare(b.expirationDate);
-					});
+						data = { expiration: expirationData };
+						break;
+					}
 
-				data = { expiration: expirationData };
-				break;
-			}
-
-			default:
-				throw new Error("Invalid report type");
+					default:
+						throw new Error("Invalid report type");
 				}
 
 				return data;

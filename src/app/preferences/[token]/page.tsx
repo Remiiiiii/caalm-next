@@ -6,7 +6,6 @@ import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import {
 	Select,
 	SelectContent,
@@ -14,6 +13,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { LAWFUL_BASES } from "@/lib/constituents/consent-fields";
 
 type PreferenceState = {
@@ -28,7 +28,7 @@ type PreferenceState = {
 
 export default function PreferenceCenterPage() {
 	const params = useParams<{ token: string }>();
-	const token = params.token;
+	const token = params?.token ?? "";
 	const [loading, setLoading] = useState(true);
 	const [saving, setSaving] = useState(false);
 	const [notFound, setNotFound] = useState(false);
@@ -87,7 +87,9 @@ export default function PreferenceCenterPage() {
 	if (notFound || !state) {
 		return (
 			<div className="min-h-screen flex items-center justify-center p-6">
-				<p className="text-slate-600">This preference link is invalid or expired.</p>
+				<p className="text-slate-600">
+					This preference link is invalid or expired.
+				</p>
 			</div>
 		);
 	}
@@ -136,9 +138,7 @@ export default function PreferenceCenterPage() {
 								id="dnc"
 								checked={state.doNotContact}
 								onCheckedChange={(checked) =>
-									setState((s) =>
-										s ? { ...s, doNotContact: checked } : s,
-									)
+									setState((s) => (s ? { ...s, doNotContact: checked } : s))
 								}
 							/>
 						</div>
@@ -152,8 +152,7 @@ export default function PreferenceCenterPage() {
 									s
 										? {
 												...s,
-												lawfulBasis:
-													value === "__none__" ? undefined : value,
+												lawfulBasis: value === "__none__" ? undefined : value,
 											}
 										: s,
 								)

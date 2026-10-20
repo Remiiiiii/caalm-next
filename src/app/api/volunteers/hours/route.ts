@@ -1,6 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
-import { listHoursForGrant, requireVolunteerOrgContext } from "@/lib/volunteers";
+import {
+	listHoursForGrant,
+	requireVolunteerOrgContext,
+} from "@/lib/volunteers";
 
 export async function GET(request: NextRequest) {
 	const ctx = await requireVolunteerOrgContext(

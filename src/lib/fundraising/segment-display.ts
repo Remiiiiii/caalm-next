@@ -1,9 +1,6 @@
 import type { LifecycleSegment } from "./constants";
 
-const SEGMENT_BADGE: Record<
-	LifecycleSegment,
-	string
-> = {
+const SEGMENT_BADGE: Record<LifecycleSegment, string> = {
 	Champion: "bg-green/10 text-green border-green/20",
 	Loyal: "bg-blue/10 text-blue border-blue/20",
 	New: "bg-blue/10 text-blue border-blue/20",
@@ -22,7 +19,9 @@ export function segmentBadgeClass(segment: string | undefined | null): string {
 	);
 }
 
-export function normalizeSegmentLabel(segment: string | undefined | null): string {
+export function normalizeSegmentLabel(
+	segment: string | undefined | null,
+): string {
 	if (!segment) return "Unknown";
 	return segment;
 }

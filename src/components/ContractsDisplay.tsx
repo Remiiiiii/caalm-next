@@ -54,7 +54,6 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { cn } from "@/lib/utils";
 import { useGroupedNavigation } from "@/hooks/useGroupedNavigation";
 import {
 	type UseSAMOpportunitiesFilters,
@@ -76,6 +75,7 @@ import {
 	getUsStateLabel,
 	US_STATES,
 } from "@/lib/sam-search-options";
+import { cn } from "@/lib/utils";
 
 const FIELD_LABEL_CLASS = "text-sm font-medium text-slate-700";
 const FIELD_INPUT_CLASS =
@@ -455,7 +455,7 @@ function SamContractsTable({
 	onViewDocument: (contract: SAMContract) => void;
 }) {
 	return (
-		<CaalmDataTable className="px-0 sm:px-0 pb-0">
+		<CaalmDataTable className="pb-0">
 			<TableHeader className="[&_tr]:border-b-0">
 				<TableRow className={DATA_TABLE_HEADER_ROW}>
 					<TableHead className={cn(DATA_TABLE_HEADER_CELL, "pl-4 pr-3")}>
@@ -504,18 +504,12 @@ function SamContractsTable({
 								)}
 							</TableCell>
 							<TableCell
-								className={cn(
-									samRowPad,
-									"text-slate-700 hidden md:table-cell",
-								)}
+								className={cn(samRowPad, "text-slate-700 hidden md:table-cell")}
 							>
 								{placeLabel || "—"}
 							</TableCell>
 							<TableCell
-								className={cn(
-									samRowPad,
-									"text-slate-700 hidden lg:table-cell",
-								)}
+								className={cn(samRowPad, "text-slate-700 hidden lg:table-cell")}
 							>
 								{formatContractDate(contract.postedDate)}
 							</TableCell>
@@ -800,7 +794,7 @@ export default function ContractsDisplay() {
 								Search Contracts
 							</CardTitle>
 							{activeFilterChips.length > 0 && (
-																<span className="inline-block shrink-0 px-2 py-0.5 text-xs rounded-full border bg-green/10 text-green border-green/20">
+								<span className="inline-block shrink-0 px-2 py-0.5 text-xs rounded-full border bg-green/10 text-green border-green/20">
 									{activeFilterChips.length} filter
 									{activeFilterChips.length === 1 ? "" : "s"} active
 								</span>

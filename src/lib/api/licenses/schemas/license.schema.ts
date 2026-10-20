@@ -18,6 +18,7 @@ export const licenseCreateSchema = z.object({
 			"inactive",
 			"expired",
 			"pending-review",
+			"pending-signature",
 			"suspended",
 			"action-required",
 		])

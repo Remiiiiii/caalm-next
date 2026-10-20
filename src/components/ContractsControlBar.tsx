@@ -1,5 +1,6 @@
 "use client";
 
+import { DATA_TABLE_TOOLBAR_INSET } from "@/lib/ui/data-table-styles";
 import type { UIFileDoc } from "@/types/files";
 import ContractsFilter from "./ContractsFilter";
 import ContractsFilterChips from "./ContractsFilterChips";
@@ -26,7 +27,9 @@ export default function ContractsControlBar({
 	return (
 		<div ref={listAnchorRef} className="w-full scroll-mt-4">
 			<ContractsStatusTabs files={files} />
-			<div className="flex pt-4 pb-3 px-4 sm:px-6 gap-3 justify-between flex-wrap">
+			<div
+				className={`flex pt-4 pb-3 ${DATA_TABLE_TOOLBAR_INSET} gap-3 justify-between flex-wrap`}
+			>
 				<ContractsTopControls files={files} />
 				<div className="platform-overview-actions flex items-center gap-2 justify-end flex-wrap">
 					<ContractsViewToggle />

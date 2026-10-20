@@ -197,3 +197,7 @@ scripts/.blob-media-urls.json
 .tmp-vercel*.env
 
 founder/facts.md
+
+# Claude Code: skill junctions into .cursor/skills and .agents/skills (source of truth lives there)
+/.claude/skills/*
+!/.claude/skills/graft/

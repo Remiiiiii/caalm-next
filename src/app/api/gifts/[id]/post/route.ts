@@ -14,7 +14,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
 		return NextResponse.json(gift);
 	} catch (error) {
 		if (error instanceof GiftDomainError) {
-			return NextResponse.json({ error: error.message }, { status: error.status });
+			return NextResponse.json(
+				{ error: error.message },
+				{ status: error.status },
+			);
 		}
 		console.error("[SERVER] gifts post:", error);
 		return NextResponse.json({ error: "Failed to post gift" }, { status: 500 });

@@ -77,7 +77,10 @@ export default function RoundedUnderlineTabs({
 								/>
 							) : null}
 							<span
-								className={cn("font-medium", selected && "sidebar-gradient-text")}
+								className={cn(
+									"font-medium",
+									selected && "sidebar-gradient-text",
+								)}
 							>
 								{tab.label}
 							</span>

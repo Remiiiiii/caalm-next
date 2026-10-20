@@ -92,7 +92,8 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
 			new Set(
 				contractsResult.rows
 					.map((c: any) => {
-						const row = c?.data && typeof c.data === "object" ? { ...c, ...c.data } : c;
+						const row =
+							c?.data && typeof c.data === "object" ? { ...c, ...c.data } : c;
 						return row.fileId as string | undefined;
 					})
 					.filter((id): id is string => !!id && isValidDocumentId(id)),

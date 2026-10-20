@@ -43,10 +43,8 @@ const ContractExpiryAlertsWidget = ({
 		},
 	);
 
-	const {
-		contracts: hookContracts,
-		isLoading: hookLoading,
-	} = useManagerContracts({ enabled: !skipFetch });
+	const { contracts: hookContracts, isLoading: hookLoading } =
+		useManagerContracts({ enabled: !skipFetch });
 
 	// Extract contracts from API response (wrapped in { success: true, data: [...] })
 	const allContracts = Array.isArray(allContractsData)
@@ -186,7 +184,6 @@ const ContractExpiryAlertsWidget = ({
 				onFilterChange={setFilterDays}
 				expiringCount={expiringCountFromFiltered}
 				expiredCount={expiredCountFromAll}
-				contracts={contractsArray}
 				isPlaying={isPlaying}
 				onSilence={silenceAlarm}
 				onDismiss={dismissAlarm}

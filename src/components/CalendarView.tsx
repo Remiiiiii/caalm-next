@@ -602,6 +602,12 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 				borderColor: "#03afbf",
 				icon: FileText,
 			},
+			volunteer_shift: {
+				label: "Volunteer shift",
+				color: "bg-green",
+				borderColor: "#3dd9b3",
+				icon: FileText,
+			},
 		};
 		return configs[type];
 	};

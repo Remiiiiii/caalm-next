@@ -2,13 +2,10 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
-import {
-	createNewsFeed,
-	listNewsFeeds,
-} from "@/lib/database/news-feeds";
+import { createNewsFeed, listNewsFeeds } from "@/lib/database/news-feeds";
 import { logNewsAudit } from "@/lib/news/audit";
-import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 import { requirePermission } from "@/lib/rbac/middleware";
+import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 
 const createSchema = z.object({
 	name: z.string().trim().min(1).max(255),
@@ -26,10 +23,14 @@ export async function GET(request: NextRequest) {
 	});
 	if (denied) return denied;
 	const user = await getCurrentUser();
-	if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+	if (!user)
+		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	const org = await getUserDefaultOrganization(user.$id);
 	if (!org?.orgId) {
-		return NextResponse.json({ error: "Organization not found" }, { status: 400 });
+		return NextResponse.json(
+			{ error: "Organization not found" },
+			{ status: 400 },
+		);
 	}
 	const feeds = await listNewsFeeds(org.orgId);
 	return NextResponse.json({ feeds });
@@ -41,14 +42,21 @@ export async function POST(request: NextRequest) {
 	});
 	if (denied) return denied;
 	const user = await getCurrentUser();
-	if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+	if (!user)
+		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	const org = await getUserDefaultOrganization(user.$id);
 	if (!org?.orgId) {
-		return NextResponse.json({ error: "Organization not found" }, { status: 400 });
+		return NextResponse.json(
+			{ error: "Organization not found" },
+			{ status: 400 },
+		);
 	}
 	const parsed = createSchema.safeParse(await request.json());
 	if (!parsed.success) {
-		return NextResponse.json({ error: "Invalid feed payload" }, { status: 400 });
+		return NextResponse.json(
+			{ error: "Invalid feed payload" },
+			{ status: 400 },
+		);
 	}
 	if (
 		["rss", "atom", "wordpress_api"].includes(parsed.data.type) &&

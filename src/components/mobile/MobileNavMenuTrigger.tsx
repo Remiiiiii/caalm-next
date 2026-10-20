@@ -14,7 +14,9 @@ export function MobileNavMenuTriggerIcon({
 	className,
 }: MobileNavMenuTriggerProps) {
 	if (open) {
-		return <X className={cn("h-5 w-5 text-slate-700", className)} strokeWidth={2} />;
+		return (
+			<X className={cn("h-5 w-5 text-slate-700", className)} strokeWidth={2} />
+		);
 	}
 
 	return (

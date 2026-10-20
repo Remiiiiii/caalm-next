@@ -9,8 +9,7 @@ import type {
 
 function tableId(): string {
 	return (
-		appwriteConfig.volunteerShiftTemplatesCollectionId ||
-		"69d92301001f4e8c2b23"
+		appwriteConfig.volunteerShiftTemplatesCollectionId || "69d92301001f4e8c2b23"
 	);
 }
 

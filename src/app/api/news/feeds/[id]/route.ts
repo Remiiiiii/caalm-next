@@ -7,14 +7,15 @@ import {
 	updateNewsFeed,
 } from "@/lib/database/news-feeds";
 import { logNewsAudit } from "@/lib/news/audit";
-import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 import { requirePermission } from "@/lib/rbac/middleware";
+import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 
 async function orgOwnedFeed(userId: string, id: string) {
 	const org = await getUserDefaultOrganization(userId);
 	if (!org?.orgId) return { error: "Organization not found" as const };
 	const feed = await getNewsFeed(id);
-	if (!feed || feed.orgId !== org.orgId) return { error: "Feed not found" as const };
+	if (!feed || feed.orgId !== org.orgId)
+		return { error: "Feed not found" as const };
 	return { org, feed };
 }
 
@@ -27,7 +28,8 @@ export async function PATCH(
 	});
 	if (denied) return denied;
 	const user = await getCurrentUser();
-	if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+	if (!user)
+		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	const { id } = await params;
 	const owned = await orgOwnedFeed(user.$id, id);
 	if ("error" in owned && !("feed" in owned)) {
@@ -65,7 +67,8 @@ export async function DELETE(
 	});
 	if (denied) return denied;
 	const user = await getCurrentUser();
-	if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+	if (!user)
+		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	const { id } = await params;
 	const owned = await orgOwnedFeed(user.$id, id);
 	if ("error" in owned && !("feed" in owned)) {

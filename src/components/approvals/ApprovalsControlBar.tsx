@@ -8,6 +8,7 @@ import ApprovalsStatusTabs from "@/components/approvals/ApprovalsStatusTabs";
 import { useApprovalsView } from "@/components/approvals/ApprovalsViewContext";
 import { SearchField } from "@/components/ui/search-field";
 import type { ApprovalQueueItem } from "@/lib/approvals/approvalsListUtils";
+import { DATA_TABLE_TOOLBAR_INSET } from "@/lib/ui/data-table-styles";
 
 interface ApprovalsControlBarProps {
 	items: ApprovalQueueItem[];
@@ -42,7 +43,9 @@ export default function ApprovalsControlBar({
 	return (
 		<div ref={listAnchorRef} className="w-full scroll-mt-4">
 			<ApprovalsStatusTabs items={items} />
-			<div className="flex pt-4 pb-3 px-4 sm:px-6 gap-3 justify-between flex-wrap">
+			<div
+				className={`flex pt-4 pb-3 ${DATA_TABLE_TOOLBAR_INSET} gap-3 justify-between flex-wrap`}
+			>
 				<SearchField
 					placeholder="Search approvals..."
 					value={searchQuery}

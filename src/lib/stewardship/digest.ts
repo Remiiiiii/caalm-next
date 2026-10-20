@@ -8,8 +8,7 @@ import { listStewardshipQueue } from "./stewardship-queue";
 
 function settingsTableId(): string {
 	return (
-		appwriteConfig.notificationSettingsCollectionId ||
-		"notification-settings"
+		appwriteConfig.notificationSettingsCollectionId || "notification-settings"
 	);
 }
 
@@ -63,10 +62,12 @@ export async function sendStewardshipDigestsForFrequency(
 		const lines =
 			queue.length === 0
 				? ["No at-risk constituents in your queue right now."]
-				: queue.slice(0, 10).map(
-						(item, index) =>
-							`${index + 1}. ${item.displayName} — ${item.segment}, lapse ${item.lapseRiskScore}/100`,
-					);
+				: queue
+						.slice(0, 10)
+						.map(
+							(item, index) =>
+								`${index + 1}. ${item.displayName} — ${item.segment}, lapse ${item.lapseRiskScore}/100`,
+						);
 
 		await notificationService.createNotification({
 			type: STEWARDSHIP_DIGEST_NOTIFICATION_TYPE,

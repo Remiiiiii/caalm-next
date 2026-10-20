@@ -84,7 +84,10 @@ export function getOrgExportCatalog(): OrgExportEntry[] {
 			"newsSocialConnections",
 			appwriteConfig.newsSocialConnectionsCollectionId,
 		),
-		entry("newsAcknowledgments", appwriteConfig.newsAcknowledgmentsCollectionId),
+		entry(
+			"newsAcknowledgments",
+			appwriteConfig.newsAcknowledgmentsCollectionId,
+		),
 		entry("newsReadReceipts", appwriteConfig.newsReadReceiptsCollectionId),
 		entry("newsSystemSettings", appwriteConfig.newsSystemSettingsCollectionId),
 		entry("notes", appwriteConfig.notesCollectionId),
@@ -148,10 +151,16 @@ export function getOrgExportCatalog(): OrgExportEntry[] {
 		entry("signatureEnvelopes", appwriteConfig.signatureEnvelopesCollectionId),
 		entry("webhookDeliveries", appwriteConfig.webhookDeliveriesCollectionId),
 		entry("constituents", appwriteConfig.constituentsCollectionId),
-		entry("constituentRelationships", appwriteConfig.constituentRelationshipsCollectionId),
+		entry(
+			"constituentRelationships",
+			appwriteConfig.constituentRelationshipsCollectionId,
+		),
 		entry("gifts", appwriteConfig.giftsCollectionId),
 		entry("volunteerHours", appwriteConfig.volunteerHoursCollectionId),
-		entry("constituentSegments", appwriteConfig.constituentSegmentsCollectionId),
+		entry(
+			"constituentSegments",
+			appwriteConfig.constituentSegmentsCollectionId,
+		),
 		entry(
 			"constituentWealthScreens",
 			appwriteConfig.constituentWealthScreensCollectionId,

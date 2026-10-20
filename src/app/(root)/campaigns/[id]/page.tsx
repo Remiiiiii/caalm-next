@@ -1,14 +1,16 @@
 import Link from "next/link";
+import { CampaignDetailClient } from "@/components/campaigns/CampaignDetailClient";
+import { Card, CardContent } from "@/components/ui/card";
 import { PERMISSIONS } from "@/constants/permissions";
-import { requirePagePermission } from "@/lib/rbac/page-guards";
+import { getCurrentUser } from "@/lib/actions/user.actions";
 import { getCampaignById } from "@/lib/campaigns/repository";
 import { computeCampaignRoi } from "@/lib/development";
 import { sumPostedGiftTotalForCampaign } from "@/lib/gifts/repository";
-import { getCurrentUser } from "@/lib/actions/user.actions";
-import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
-import { getUserPermissions } from "@/lib/rbac/permissions";
-import { CampaignDetailClient } from "@/components/campaigns/CampaignDetailClient";
-import { Card, CardContent } from "@/components/ui/card";
+import { requirePagePermission } from "@/lib/rbac/page-guards";
+import {
+	getUserDefaultOrganization,
+	getUserPermissions,
+} from "@/lib/rbac/permissions";
 
 type PageProps = { params: Promise<{ id: string }> };
 

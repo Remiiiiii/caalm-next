@@ -36,11 +36,17 @@ export async function POST(request: NextRequest) {
 		};
 		const orgSlug = body.orgSlug?.trim();
 		if (!orgSlug) {
-			return NextResponse.json({ error: "orgSlug is required" }, { status: 404 });
+			return NextResponse.json(
+				{ error: "orgSlug is required" },
+				{ status: 404 },
+			);
 		}
 		const org = await resolveOrganizationByGiveSlug(orgSlug);
 		if (!org) {
-			return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+			return NextResponse.json(
+				{ error: "Organization not found" },
+				{ status: 404 },
+			);
 		}
 
 		const attribution = parseGiveShareAttribution(body);

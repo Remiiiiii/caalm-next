@@ -1,13 +1,13 @@
 import { ID, Query } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { isLawfulBasis } from "./consent-fields";
 import {
 	matchesDuplicateSignals,
 	normalizeEmail,
 	normalizeFirstName,
 	normalizeLastName,
 } from "./duplicates";
-import { isLawfulBasis } from "./consent-fields";
 import type {
 	Constituent,
 	ConstituentListFilters,
@@ -67,9 +67,7 @@ function mapRow(row: Record<string, unknown>): Constituent {
 			row.consentPhone === undefined || row.consentPhone === null
 				? undefined
 				: Boolean(row.consentPhone),
-		lawfulBasis: isLawfulBasis(row.lawfulBasis)
-			? row.lawfulBasis
-			: undefined,
+		lawfulBasis: isLawfulBasis(row.lawfulBasis) ? row.lawfulBasis : undefined,
 		piiAccessedAt: optionalString(row.piiAccessedAt),
 		normalizedEmail: optionalString(row.normalizedEmail),
 		normalizedLastName: optionalString(row.normalizedLastName),
@@ -231,10 +229,12 @@ function writePayload(input: CreateConstituentInput): Record<string, unknown> {
 	if (input.region) data.region = input.region.slice(0, 128);
 	if (input.postalCode) data.postalCode = input.postalCode.slice(0, 32);
 	if (input.country) data.country = input.country.slice(0, 128);
-	if (input.consentEmail != null) data.consentEmail = Boolean(input.consentEmail);
+	if (input.consentEmail != null)
+		data.consentEmail = Boolean(input.consentEmail);
 	if (input.consentSms != null) data.consentSms = Boolean(input.consentSms);
 	if (input.consentMail != null) data.consentMail = Boolean(input.consentMail);
-	if (input.consentPhone != null) data.consentPhone = Boolean(input.consentPhone);
+	if (input.consentPhone != null)
+		data.consentPhone = Boolean(input.consentPhone);
 	if (input.lawfulBasis != null && isLawfulBasis(input.lawfulBasis)) {
 		data.lawfulBasis = input.lawfulBasis;
 	}

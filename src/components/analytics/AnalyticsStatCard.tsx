@@ -2,7 +2,10 @@
 
 import type { LucideIcon } from "lucide-react";
 import { Minus, TrendingDown, TrendingUp } from "lucide-react";
-import { MetricStatCard, type MetricTone } from "@/components/ui/metric-stat-card";
+import {
+	MetricStatCard,
+	type MetricTone,
+} from "@/components/ui/metric-stat-card";
 
 interface AnalyticsStatCardProps {
 	title: string;

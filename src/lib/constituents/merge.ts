@@ -1,13 +1,17 @@
-import { logConstituentAudit, type ConstituentActor } from "./audit";
-import { countGiftsForConstituent } from "./timeline";
-import { listNotesForConstituent, restoreNoteTargets, retargetNotes } from "./notes";
+import { type ConstituentActor, logConstituentAudit } from "./audit";
+import type { MergeFieldDiff, MergePreview } from "./merge-types";
+import {
+	listNotesForConstituent,
+	restoreNoteTargets,
+	retargetNotes,
+} from "./notes";
 import {
 	listRelationshipsForConstituent,
 	restoreRelationshipTargets,
 	retargetRelationships,
 } from "./relationships";
 import { getConstituentById, updateConstituent } from "./repository";
-import type { MergeFieldDiff, MergePreview } from "./merge-types";
+import { countGiftsForConstituent } from "./timeline";
 import type { Constituent } from "./types";
 
 export type { MergeFieldDiff, MergePreview } from "./merge-types";
@@ -113,7 +117,10 @@ export async function commitConstituentMerge(input: {
 		pair.loser.$id,
 		input.orgId,
 	);
-	const noteSnapshot = await listNotesForConstituent(pair.loser.$id, input.orgId);
+	const noteSnapshot = await listNotesForConstituent(
+		pair.loser.$id,
+		input.orgId,
+	);
 
 	try {
 		await retargetRelationships({

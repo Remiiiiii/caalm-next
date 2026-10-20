@@ -371,9 +371,8 @@ export const uploadFile = async ({
 			});
 
 			const mappedContractType = ContractTypeMapper.map(metadata?.contractType);
-			const { assertGrantFundIdOnSave, GrantFundValidationError } = await import(
-				"@/lib/funding/grant-fund"
-			);
+			const { assertGrantFundIdOnSave, GrantFundValidationError } =
+				await import("@/lib/funding/grant-fund");
 			try {
 				assertGrantFundIdOnSave({
 					contractType: mappedContractType,

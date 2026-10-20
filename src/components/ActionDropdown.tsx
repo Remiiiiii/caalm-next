@@ -95,8 +95,7 @@ import {
 	Share2,
 	Trash2,
 	UserRoundCheck,
-	X,
-} from "lucide-react";
+	X, Loader2 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { ShareInput } from "@/components/ActionsModalContent";
 import { SendForSignatureDialog } from "@/components/esign/SendForSignatureDialog";
@@ -1156,7 +1155,8 @@ const ActionDropdown = ({
 								return (
 									<AppDropdownMenuItem
 										key={actionItem.value}
-										icon={Icon}
+										icon={downloading ? Loader2 : Icon}
+										iconClassName={downloading ? "animate-spin" : undefined}
 										tone={tone}
 										onSelect={(e) => {
 											e.preventDefault();

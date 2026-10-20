@@ -2,10 +2,11 @@ import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import { requireConstituentOrgContext } from "@/lib/constituents/server";
 import {
-	buildBoardPackCsv,
+	buildBoardPackXlsxInput,
 	computeDevelopmentMetrics,
 	loadBoardPackCampaigns,
 } from "@/lib/development";
+import { xlsxResponse } from "@/lib/export/xlsx-response";
 
 export async function GET(request: NextRequest) {
 	const ctx = await requireConstituentOrgContext(
@@ -19,13 +20,10 @@ export async function GET(request: NextRequest) {
 			computeDevelopmentMetrics(ctx.orgId),
 			loadBoardPackCampaigns(ctx.orgId),
 		]);
-		const csv = buildBoardPackCsv(metrics, campaigns);
-		return new NextResponse(csv, {
-			headers: {
-				"Content-Type": "text/csv; charset=utf-8",
-				"Content-Disposition": `attachment; filename="development-board-pack-${metrics.year}.csv"`,
-			},
-		});
+		return xlsxResponse(
+			`development-board-pack-${metrics.year}.xlsx`,
+			buildBoardPackXlsxInput(metrics, campaigns),
+		);
 	} catch (error) {
 		console.error("[development/board-pack/export GET]", error);
 		return NextResponse.json(

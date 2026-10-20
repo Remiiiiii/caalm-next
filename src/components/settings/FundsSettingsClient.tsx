@@ -2,6 +2,8 @@
 
 import { Plus } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { FinanceScopeHelp } from "@/components/funding/FinanceScopeHelp";
+import { FundsCsvImportCard } from "@/components/settings/FundsCsvImportCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,12 +15,10 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { FinanceScopeHelp } from "@/components/funding/FinanceScopeHelp";
-import { FundsCsvImportCard } from "@/components/settings/FundsCsvImportCard";
 import {
 	NET_ASSET_CLASSES,
-	netAssetClassLabel,
 	type NetAssetClass,
+	netAssetClassLabel,
 	type OrgFund,
 } from "@/lib/funds";
 
@@ -82,7 +82,9 @@ export function FundsSettingsClient() {
 									className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2"
 								>
 									<span className="font-medium">{fund.name}</span>
-									<span className="tabular-nums text-slate-600">{fund.code}</span>
+									<span className="tabular-nums text-slate-600">
+										{fund.code}
+									</span>
 									<span className="inline-block px-2 py-0.5 text-xs rounded-full border bg-blue/10 text-blue border-blue/20">
 										{netAssetClassLabel(fund.netAssetClass)}
 									</span>

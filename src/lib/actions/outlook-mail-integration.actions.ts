@@ -62,9 +62,7 @@ export async function getOutlookMailIntegration(
 		});
 
 		if (response.rows.length === 0) return null;
-		return parseTokens(
-			response.rows[0] as unknown as OutlookMailIntegration,
-		);
+		return parseTokens(response.rows[0] as unknown as OutlookMailIntegration);
 	} catch (error) {
 		console.error("[SERVER] getOutlookMailIntegration:", error);
 		return null;
@@ -160,8 +158,7 @@ export async function getValidOutlookMailAccessToken(
 
 	try {
 		const refreshed = await refreshAccessToken(integration.refresh_token);
-		const refreshToken =
-			refreshed.refresh_token || integration.refresh_token;
+		const refreshToken = refreshed.refresh_token || integration.refresh_token;
 		await persistTokens(
 			integration.$id,
 			refreshed.access_token,
@@ -200,9 +197,7 @@ export async function deleteOutlookMailIntegration(
 	});
 }
 
-export async function getOutlookMailIntegrationStatus(
-	userId: string,
-): Promise<{
+export async function getOutlookMailIntegrationStatus(userId: string): Promise<{
 	connected: boolean;
 	email?: string;
 	status?: string;

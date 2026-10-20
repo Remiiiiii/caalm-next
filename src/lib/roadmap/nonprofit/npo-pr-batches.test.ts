@@ -3,10 +3,10 @@ import { NONPROFIT_ROADMAP_CATALOG } from "../nonprofit-catalog";
 import {
 	linkedPrNumbersForSection,
 	NPO_PR_BATCHES,
+	npoBatchBranchName,
 	npoBatchFromHeadRef,
 	npoBatchOwnsTaskCode,
 	npoCatalogDisplayTitleForPr,
-	npoBatchBranchName,
 	npoTaskCodesCompletedByPr,
 	productNpoPrBatches,
 } from "./npo-pr-batches";
@@ -73,9 +73,9 @@ describe("nonprofit section catalogs", () => {
 		const batch113 = NPO_PR_BATCHES.find((row) => row.linkedPrNumber === 113);
 		expect(batch113 && npoBatchOwnsTaskCode(batch113, "1.7.a")).toBe(true);
 		expect(batch113 && npoBatchOwnsTaskCode(batch113, "1.1")).toBe(false);
-		expect(npoBatchFromHeadRef("cursor/nonprofit/s01-b2-340a")?.linkedPrNumber).toBe(
-			113,
-		);
+		expect(
+			npoBatchFromHeadRef("cursor/nonprofit/s01-b2-340a")?.linkedPrNumber,
+		).toBe(113);
 	});
 
 	it("labels a catalog PR with its section batch, not a bare number", () => {

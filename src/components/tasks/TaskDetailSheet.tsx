@@ -13,16 +13,12 @@ import { TaskPriorityBars } from "./TaskPriorityBars";
 import { TaskStatusMenu } from "./TaskStatusMenu";
 import type { TaskPerson } from "./task-ui";
 
-function SheetRow({
-	label,
-	children,
-}: {
-	label: string;
-	children: ReactNode;
-}) {
+function SheetRow({ label, children }: { label: string; children: ReactNode }) {
 	return (
 		<div className="flex items-center justify-between gap-3 border-b border-slate-200/70 py-3 last:border-b-0">
-			<span className="shrink-0 text-xs font-medium text-slate-500">{label}</span>
+			<span className="shrink-0 text-xs font-medium text-slate-500">
+				{label}
+			</span>
 			<div className="min-w-0">{children}</div>
 		</div>
 	);
@@ -131,9 +127,7 @@ export function TaskDetailSheet({
 						disabled={!canAssign}
 						showName
 						onChange={
-							canAssign
-								? (id) => onAssigneeChange(task.$id, id)
-								: undefined
+							canAssign ? (id) => onAssigneeChange(task.$id, id) : undefined
 						}
 					/>
 				</SheetRow>
@@ -159,9 +153,7 @@ export function TaskDetailSheet({
 					Activity
 				</p>
 				<ul className="space-y-2 text-xs text-slate-600">
-					<li>
-						Created {format(new Date(task.$createdAt), "MMM d · h:mm a")}
-					</li>
+					<li>Created {format(new Date(task.$createdAt), "MMM d · h:mm a")}</li>
 					{task.assigneeName ? (
 						<li>Assigned to {task.assigneeName}</li>
 					) : (

@@ -292,9 +292,7 @@ export default function SystemSettingsPage() {
 										<SelectValue placeholder="Not set — leave manager unchanged" />
 									</SelectTrigger>
 									<SelectContent>
-										<SelectItem value="manual">
-											CAALM (manual)
-										</SelectItem>
+										<SelectItem value="manual">CAALM (manual)</SelectItem>
 										<SelectItem value="scim">SCIM / IdP</SelectItem>
 									</SelectContent>
 								</Select>

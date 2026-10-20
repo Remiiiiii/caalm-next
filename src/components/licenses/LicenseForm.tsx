@@ -6,15 +6,6 @@ import { useRouter } from "next/navigation";
 import type React from "react";
 import { useEffect, useState } from "react";
 import {
-	getAllManagers,
-	getUsersByDepartment,
-} from "@/lib/actions/database.actions";
-import {
-	type AssigneeSource,
-	assigneeFallbackMessage,
-	pickAssigneeIds,
-} from "@/lib/assignments/resolve-default-assignee";
-import {
 	type Control,
 	type Resolver,
 	type UseFormReturn,
@@ -42,8 +33,17 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import {
+	getAllManagers,
+	getUsersByDepartment,
+} from "@/lib/actions/database.actions";
 import type { LicenseCreateInput } from "@/lib/api/licenses/schemas/license.schema";
 import { licenseCreateSchema } from "@/lib/api/licenses/schemas/license.schema";
+import {
+	type AssigneeSource,
+	assigneeFallbackMessage,
+	pickAssigneeIds,
+} from "@/lib/assignments/resolve-default-assignee";
 import type { License } from "@/types/licenses";
 
 interface LicenseFormProps {
@@ -171,11 +171,13 @@ export default function LicenseForm({
 			const display =
 				departmentManagers.length > 0 ? departmentManagers : pick.managers;
 			setAssignees(
-				display.map((person: { $id: string; fullName?: string; division?: string }) => ({
-					$id: person.$id,
-					fullName: person.fullName || "Unknown",
-					division: person.division,
-				})),
+				display.map(
+					(person: { $id: string; fullName?: string; division?: string }) => ({
+						$id: person.$id,
+						fullName: person.fullName || "Unknown",
+						division: person.division,
+					}),
+				),
 			);
 			setAssigneeSource(pick.source);
 			if (pick.ids.length > 0) {

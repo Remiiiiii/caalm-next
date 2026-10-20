@@ -134,10 +134,7 @@ export async function computeRemainingRestrictedBalance(input: {
 	orgId: string;
 	contractId: string;
 }): Promise<number> {
-	const fundId = await getGrantFundIdForContract(
-		input.orgId,
-		input.contractId,
-	);
+	const fundId = await getGrantFundIdForContract(input.orgId, input.contractId);
 	if (!fundId) return 0;
 	const fund = await getFundById(input.orgId, fundId);
 	if (!fund) return 0;
@@ -173,7 +170,9 @@ export async function createRestrictionRelease(input: {
 	note?: string;
 }): Promise<RestrictionRelease> {
 	if (!Number.isFinite(input.amount) || input.amount <= 0) {
-		throw new RestrictionReleaseError("Release amount must be greater than zero");
+		throw new RestrictionReleaseError(
+			"Release amount must be greater than zero",
+		);
 	}
 
 	const fundFrom = await getGrantFundIdForContract(

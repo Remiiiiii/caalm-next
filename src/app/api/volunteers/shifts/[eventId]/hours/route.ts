@@ -86,9 +86,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
 		return NextResponse.json({ hour }, { status: 201 });
 	} catch (error) {
 		console.error("[volunteers/shifts hours POST]", error);
-		return NextResponse.json(
-			{ error: "Failed to log hours" },
-			{ status: 500 },
-		);
+		return NextResponse.json({ error: "Failed to log hours" }, { status: 500 });
 	}
 }

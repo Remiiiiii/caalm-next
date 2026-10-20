@@ -31,7 +31,8 @@ export async function GET(request: NextRequest) {
 		const errorDescription = searchParams.get("error_description");
 
 		const cookieStore = await cookies();
-		const purposeRaw = cookieStore.get("microsoft-oauth-purpose")?.value || null;
+		const purposeRaw =
+			cookieStore.get("microsoft-oauth-purpose")?.value || null;
 		purpose = purposeRaw === "mail" ? "mail" : "calendar";
 
 		if (error) {
@@ -136,7 +137,10 @@ export async function GET(request: NextRequest) {
 		let errorMessage = "unknown_error";
 		const errText = error instanceof Error ? error.message : "";
 
-		if (errText.includes("invalid_client") || errText.includes("AADSTS7000215")) {
+		if (
+			errText.includes("invalid_client") ||
+			errText.includes("AADSTS7000215")
+		) {
 			// Azure: secret value wrong (often Secret ID pasted instead of Secret Value).
 			errorMessage = "invalid_client_secret";
 		} else if (errText.includes("Token exchange failed")) {

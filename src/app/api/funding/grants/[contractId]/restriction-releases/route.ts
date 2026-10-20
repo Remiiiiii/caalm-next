@@ -1,22 +1,19 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import { loadContractForOrg } from "@/lib/contracts/negotiation/contract-scope";
+import { requireFundingOrgContext } from "@/lib/funding/request-context";
 import {
 	computeRemainingRestrictedBalance,
 	createRestrictionRelease,
 	listRestrictionReleases,
 	RestrictionReleaseError,
 } from "@/lib/funding/restriction-release.repository";
-import { requireFundingOrgContext } from "@/lib/funding/request-context";
 import { logAuditEvent } from "@/lib/services/audit-logger";
 
 type RouteContext = { params: Promise<{ contractId: string }> };
 
 export async function GET(request: NextRequest, context: RouteContext) {
-	const ctx = await requireFundingOrgContext(
-		request,
-		PERMISSIONS.FUNDING.VIEW,
-	);
+	const ctx = await requireFundingOrgContext(request, PERMISSIONS.FUNDING.VIEW);
 	if (!ctx.ok) return ctx.response;
 	const { contractId } = await context.params;
 	try {
@@ -67,8 +64,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
 		});
 
 		const grantLabel =
-			String(contract.contractName || contract.name || "").trim() ||
-			contractId;
+			String(contract.contractName || contract.name || "").trim() || contractId;
 
 		await logAuditEvent({
 			event_id: `restriction_release_${release.$id}`,
@@ -99,7 +95,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
 		return NextResponse.json(release, { status: 201 });
 	} catch (error) {
 		if (error instanceof RestrictionReleaseError) {
-			return NextResponse.json({ error: error.message }, { status: error.status });
+			return NextResponse.json(
+				{ error: error.message },
+				{ status: error.status },
+			);
 		}
 		console.error("[restriction-releases POST]", error);
 		return NextResponse.json(

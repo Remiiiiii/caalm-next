@@ -14,6 +14,12 @@ import {
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+	CaalmDataTable,
+	DATA_TABLE_BODY_ROW_BASE,
+	DATA_TABLE_HEADER_CELL,
+	DATA_TABLE_HEADER_ROW,
+} from "@/components/ui/caalm-data-table";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -22,12 +28,6 @@ import {
 	DropdownMenu,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-	CaalmDataTable,
-	DATA_TABLE_BODY_ROW_BASE,
-	DATA_TABLE_HEADER_CELL,
-	DATA_TABLE_HEADER_ROW,
-} from "@/components/ui/caalm-data-table";
 import {
 	TableBody,
 	TableCell,
@@ -41,6 +41,7 @@ import { cn } from "@/lib/utils";
 import type { License } from "@/types/licenses";
 
 const rowPad = "px-3 py-3 align-middle";
+
 import LicenseAllocationDialog from "./LicenseAllocationDialog";
 import LicenseDetailView from "./LicenseDetailView";
 import LicenseForm from "./LicenseForm";
@@ -117,175 +118,167 @@ export default function LicenseList({ licenses, onRefresh }: LicenseListProps) {
 		<Card className="glass-card">
 			<div className="glass-card-cap" />
 			<CardContent className="p-4 sm:p-6">
-				<CaalmDataTable className="px-0 sm:px-0 pb-0">
-						<TableHeader className="[&_tr]:border-b-0">
-							<TableRow className={DATA_TABLE_HEADER_ROW}>
-								<TableHead
-									className={cn(DATA_TABLE_HEADER_CELL, "pl-4 pr-3")}
-								>
-									License Name
-								</TableHead>
-								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
-									Vendor
-								</TableHead>
-								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
-									Type
-								</TableHead>
-								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
-									Status
-								</TableHead>
-								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
-									Quantity
-								</TableHead>
-								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
-									Cost
-								</TableHead>
-								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
-									Expires
-								</TableHead>
-								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
-									Department
-								</TableHead>
-								<TableHead
-									className={cn(
-										DATA_TABLE_HEADER_CELL,
-										"pl-3 pr-4 text-right",
+				<CaalmDataTable className="pb-0">
+					<TableHeader className="[&_tr]:border-b-0">
+						<TableRow className={DATA_TABLE_HEADER_ROW}>
+							<TableHead className={cn(DATA_TABLE_HEADER_CELL, "pl-4 pr-3")}>
+								License Name
+							</TableHead>
+							<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+								Vendor
+							</TableHead>
+							<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+								Type
+							</TableHead>
+							<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+								Status
+							</TableHead>
+							<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+								Quantity
+							</TableHead>
+							<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+								Cost
+							</TableHead>
+							<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+								Expires
+							</TableHead>
+							<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+								Department
+							</TableHead>
+							<TableHead
+								className={cn(DATA_TABLE_HEADER_CELL, "pl-3 pr-4 text-right")}
+							>
+								Actions
+							</TableHead>
+						</TableRow>
+					</TableHeader>
+					<TableBody className="[&_tr:last-child>td]:border-b-0">
+						{licenses.map((license) => (
+							<TableRow key={license.$id} className={DATA_TABLE_BODY_ROW_BASE}>
+								<TableCell className={cn(rowPad, "pl-4 pr-3")}>
+									<div className="flex items-center gap-2">
+										<Key className="h-4 w-4 text-slate-600" />
+										<span className="font-medium text-slate-700">
+											{license.licenseName}
+										</span>
+									</div>
+									{license.licenseNumber && (
+										<p className="text-xs text-slate-500 mt-1">
+											#{license.licenseNumber}
+										</p>
 									)}
-								>
-									Actions
-								</TableHead>
-							</TableRow>
-						</TableHeader>
-						<TableBody className="[&_tr:last-child>td]:border-b-0">
-							{licenses.map((license) => (
-								<TableRow
-									key={license.$id}
-									className={DATA_TABLE_BODY_ROW_BASE}
-								>
-									<TableCell className={cn(rowPad, "pl-4 pr-3")}>
-										<div className="flex items-center gap-2">
-											<Key className="h-4 w-4 text-slate-600" />
-											<span className="font-medium text-slate-700">
-												{license.licenseName}
+								</TableCell>
+								<TableCell className={cn(rowPad, "text-slate-700")}>
+									{license.vendor || "N/A"}
+								</TableCell>
+								<TableCell className={rowPad}>
+									<Badge variant="outline" className="text-slate-700">
+										{license.licenseType || "N/A"}
+									</Badge>
+								</TableCell>
+								<TableCell className={rowPad}>
+									{getStatusBadge(license.status)}
+								</TableCell>
+								<TableCell className={cn(rowPad, "text-slate-700")}>
+									{license.quantity !== undefined ? (
+										<div>
+											<span>
+												{license.availableQuantity ?? license.quantity}
 											</span>
-										</div>
-										{license.licenseNumber && (
-											<p className="text-xs text-slate-500 mt-1">
-												#{license.licenseNumber}
-											</p>
-										)}
-									</TableCell>
-									<TableCell className={cn(rowPad, "text-slate-700")}>
-										{license.vendor || "N/A"}
-									</TableCell>
-									<TableCell className={rowPad}>
-										<Badge variant="outline" className="text-slate-700">
-											{license.licenseType || "N/A"}
-										</Badge>
-									</TableCell>
-									<TableCell className={rowPad}>
-										{getStatusBadge(license.status)}
-									</TableCell>
-									<TableCell className={cn(rowPad, "text-slate-700")}>
-										{license.quantity !== undefined ? (
-											<div>
-												<span>
-													{license.availableQuantity ?? license.quantity}
+											{license.quantity > 0 && (
+												<span className="text-slate-500">
+													{" "}
+													/ {license.quantity}
 												</span>
-												{license.quantity > 0 && (
-													<span className="text-slate-500">
-														{" "}
-														/ {license.quantity}
-													</span>
-												)}
-											</div>
-										) : (
-											"N/A"
-										)}
-									</TableCell>
-									<TableCell className={cn(rowPad, "text-slate-700")}>
-										{formatCurrency(license.cost, license.currencyCode)}
-									</TableCell>
-									<TableCell className={rowPad}>
-										<div className="flex items-center gap-1.5">
-											<Calendar className="h-3 w-3 text-slate-500" />
-											<span className="text-slate-700">
-												{formatDate(
-													license.licenseExpiryDate || license.expirationDate,
-												)}
-											</span>
+											)}
 										</div>
-									</TableCell>
-									<TableCell className={cn(rowPad, "text-slate-700")}>
-										{license.division || license.department || "N/A"}
-									</TableCell>
-									<TableCell className={cn(rowPad, "pl-3 pr-4 text-right")}>
-										<DropdownMenu>
-											<DropdownMenuTrigger asChild>
-												<Button
-													variant="ghost"
-													size="sm"
-													className="h-8 w-8 rounded-full p-0 transition-colors hover:bg-white/30"
+									) : (
+										"N/A"
+									)}
+								</TableCell>
+								<TableCell className={cn(rowPad, "text-slate-700")}>
+									{formatCurrency(license.cost, license.currencyCode)}
+								</TableCell>
+								<TableCell className={rowPad}>
+									<div className="flex items-center gap-1.5">
+										<Calendar className="h-3 w-3 text-slate-500" />
+										<span className="text-slate-700">
+											{formatDate(
+												license.licenseExpiryDate || license.expirationDate,
+											)}
+										</span>
+									</div>
+								</TableCell>
+								<TableCell className={cn(rowPad, "text-slate-700")}>
+									{license.division || license.department || "N/A"}
+								</TableCell>
+								<TableCell className={cn(rowPad, "pl-3 pr-4 text-right")}>
+									<DropdownMenu>
+										<DropdownMenuTrigger asChild>
+											<Button
+												variant="ghost"
+												size="sm"
+												className="h-8 w-8 rounded-full p-0 transition-colors hover:bg-white/30"
+											>
+												<MoreVertical className="h-4 w-4" />
+											</Button>
+										</DropdownMenuTrigger>
+										<AppDropdownMenuContent align="end">
+											{canView && (
+												<AppDropdownMenuItem
+													icon={Info}
+													onClick={() => {
+														setSelectedLicense(license);
+														setShowDetail(true);
+													}}
 												>
-													<MoreVertical className="h-4 w-4" />
-												</Button>
-											</DropdownMenuTrigger>
-											<AppDropdownMenuContent align="end">
-												{canView && (
-													<AppDropdownMenuItem
-														icon={Info}
-														onClick={() => {
-															setSelectedLicense(license);
-															setShowDetail(true);
-														}}
-													>
-														View Details
-													</AppDropdownMenuItem>
-												)}
-												{canEdit && (
-													<AppDropdownMenuItem
-														icon={Pencil}
-														onClick={() => {
-															setSelectedLicense(license);
-															setShowEdit(true);
-														}}
-													>
-														Edit
-													</AppDropdownMenuItem>
-												)}
-												{canAllocate && (
-													<AppDropdownMenuItem
-														icon={Key}
-														onClick={() => {
-															setSelectedLicense(license);
-															setShowAllocate(true);
-														}}
-													>
-														Allocate
-													</AppDropdownMenuItem>
-												)}
-												{canRenew && (
-													<AppDropdownMenuItem
-														icon={RefreshCw}
-														onClick={() => {
-															setSelectedLicense(license);
-															setShowRenew(true);
-														}}
-													>
-														Renew
-													</AppDropdownMenuItem>
-												)}
-												{canDelete && (
-													<AppDropdownMenuItem icon={Trash2} tone="danger">
-														Delete
-													</AppDropdownMenuItem>
-												)}
-											</AppDropdownMenuContent>
-										</DropdownMenu>
-									</TableCell>
-								</TableRow>
-							))}
-						</TableBody>
+													View Details
+												</AppDropdownMenuItem>
+											)}
+											{canEdit && (
+												<AppDropdownMenuItem
+													icon={Pencil}
+													onClick={() => {
+														setSelectedLicense(license);
+														setShowEdit(true);
+													}}
+												>
+													Edit
+												</AppDropdownMenuItem>
+											)}
+											{canAllocate && (
+												<AppDropdownMenuItem
+													icon={Key}
+													onClick={() => {
+														setSelectedLicense(license);
+														setShowAllocate(true);
+													}}
+												>
+													Allocate
+												</AppDropdownMenuItem>
+											)}
+											{canRenew && (
+												<AppDropdownMenuItem
+													icon={RefreshCw}
+													onClick={() => {
+														setSelectedLicense(license);
+														setShowRenew(true);
+													}}
+												>
+													Renew
+												</AppDropdownMenuItem>
+											)}
+											{canDelete && (
+												<AppDropdownMenuItem icon={Trash2} tone="danger">
+													Delete
+												</AppDropdownMenuItem>
+											)}
+										</AppDropdownMenuContent>
+									</DropdownMenu>
+								</TableCell>
+							</TableRow>
+						))}
+					</TableBody>
 				</CaalmDataTable>
 			</CardContent>
 

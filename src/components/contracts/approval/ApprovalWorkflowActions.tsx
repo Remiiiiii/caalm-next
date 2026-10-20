@@ -293,9 +293,7 @@ export default function ApprovalWorkflowActions({
 						onClick={() => setAdminPanelOpen((open) => !open)}
 					>
 						<span className="min-w-0">
-							<span className="block text-sm text-slate-700">
-								{panelTitle}
-							</span>
+							<span className="block text-sm text-slate-700">{panelTitle}</span>
 							<span className="mt-1 block text-xs text-slate-500">
 								{firstAssignmentNeeded
 									? "Pick who should own this step before the workflow can continue."

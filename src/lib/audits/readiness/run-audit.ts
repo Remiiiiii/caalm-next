@@ -21,6 +21,7 @@ export async function runReadinessAuditForOrg(options: {
 	includeCrawl?: boolean;
 	includeAiSummary?: boolean;
 	sendAlerts?: boolean;
+	source?: "manual" | "scheduled";
 }): Promise<{
 	snapshot: AuditReadinessSnapshotRecord | null;
 	skipped?: string;
@@ -95,6 +96,7 @@ export async function runReadinessAuditForOrg(options: {
 		},
 		previousScore,
 		scoreDelta,
+		source: options.source ?? ("scheduled" as const),
 	};
 
 	let aiSummary = "";

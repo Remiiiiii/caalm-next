@@ -5,8 +5,12 @@ import { getCurrentUser } from "@/lib/actions/user.actions";
 import { buildOrgReadinessSummary } from "@/lib/audits/readiness/build-summary";
 import { getOrgAuditSettings } from "@/lib/audits/readiness/org-settings";
 import { runReadinessAuditForOrg } from "@/lib/audits/readiness/run-audit";
+import { RAG_THRESHOLDS } from "@/lib/audits/readiness/score";
 import { crawlPublicSite } from "@/lib/audits/readiness/site-crawl";
-import { listReadinessSnapshots } from "@/lib/audits/readiness/snapshot.service";
+import {
+	listReadinessSnapshots,
+	parseSnapshotPayload,
+} from "@/lib/audits/readiness/snapshot.service";
 import { requirePermission } from "@/lib/rbac/middleware";
 import { getOrganization } from "@/lib/rbac/organizations";
 import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
@@ -77,6 +81,7 @@ export async function GET(request: NextRequest) {
 			},
 			sourcesUsed: payloadBase.sourcesUsed,
 			disclaimer: payloadBase.disclaimer,
+			ragThresholds: RAG_THRESHOLDS,
 			evidenceMapHits: payloadBase.evidenceMapHits,
 			siteCrawl,
 			org: {
@@ -95,13 +100,18 @@ export async function GET(request: NextRequest) {
 						aiSummary: latest.aiSummary || "",
 					}
 				: null,
-			history: history.map((row) => ({
-				id: row.$id,
-				cadence: row.cadence,
-				score: row.score,
-				ragStatus: row.ragStatus,
-				createdAt: row.createdAt,
-			})),
+			history: history.map((row) => {
+				const parsed = parseSnapshotPayload(row.payload);
+				return {
+					id: row.$id,
+					cadence: row.cadence,
+					score: row.score,
+					ragStatus: row.ragStatus,
+					createdAt: row.createdAt,
+					scoreDelta: parsed?.scoreDelta ?? null,
+					source: parsed?.source ?? null,
+				};
+			}),
 		},
 	});
 }
@@ -141,6 +151,7 @@ export async function POST(request: NextRequest) {
 		cadence: validated.cadence,
 		force: validated.force ?? true,
 		sendAlerts: false,
+		source: "manual",
 	});
 
 	return NextResponse.json({

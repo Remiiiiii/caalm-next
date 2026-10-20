@@ -164,9 +164,9 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({
 	const [type, setType] = useState<
 		"announcement" | "update" | "alert" | "info"
 	>("info");
-	const [priority, setPriority] = useState<"high" | "medium" | "low" | "normal">(
-		"medium",
-	);
+	const [priority, setPriority] = useState<
+		"high" | "medium" | "low" | "normal"
+	>("medium");
 	const [department, setDepartment] = useState("");
 	const [pinned, setPinned] = useState(false);
 	const [requiresAcknowledgment, setRequiresAcknowledgment] = useState(false);
@@ -334,11 +334,7 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({
 				priority,
 				department: departments[0] || undefined,
 				departments,
-				status: publish
-					? "published"
-					: scheduledAt
-						? "scheduled"
-						: status,
+				status: publish ? "published" : scheduledAt ? "scheduled" : status,
 				thumbnailUrl: thumbnailUrl || undefined,
 				thumbnailPrompt: thumbnailPrompt || undefined,
 				tags: tags.filter(Boolean),
@@ -710,7 +706,9 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({
 											if (data.draft?.title) setTitle(data.draft.title);
 											if (data.draft?.excerpt) {
 												setContent(`<p>${data.draft.excerpt}</p>`);
-												editor?.commands.setContent(`<p>${data.draft.excerpt}</p>`);
+												editor?.commands.setContent(
+													`<p>${data.draft.excerpt}</p>`,
+												);
 											}
 											setAiLabel(true);
 											setHasUnsavedChanges(true);
@@ -852,7 +850,7 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({
 												"Article content preview..."
 											}
 											type={type}
-											priority={priority}
+											priority={priority === "normal" ? "medium" : priority}
 											department={department}
 											author="You"
 											date={new Date().toISOString()}

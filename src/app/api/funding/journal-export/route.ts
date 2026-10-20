@@ -9,10 +9,7 @@ import { requireFundingOrgContext } from "@/lib/funding/request-context";
 import { logAuditEvent } from "@/lib/services/audit-logger";
 
 export async function GET(request: NextRequest) {
-	const ctx = await requireFundingOrgContext(
-		request,
-		PERMISSIONS.FUNDING.VIEW,
-	);
+	const ctx = await requireFundingOrgContext(request, PERMISSIONS.FUNDING.VIEW);
 	if (!ctx.ok) return ctx.response;
 
 	const startDate = request.nextUrl.searchParams.get("startDate")?.trim();

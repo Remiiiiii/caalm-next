@@ -1,8 +1,8 @@
-import { DonationPageConfigError } from "./errors";
 import type { DonationPageConfigAuditSink } from "./audit";
 import { defaultDonationPageConfigAuditSink } from "./audit";
 import type { DonationPageConfigCacheInvalidator } from "./cache-invalidation";
 import { invalidatePublicDonationPageConfigCache } from "./cache-invalidation";
+import { DonationPageConfigError } from "./errors";
 import { createDonationPagePreviewToken } from "./preview-token";
 import type { DonationPageConfigStore } from "./store";
 import type { DonationStripePricePort } from "./stripe-prices";
@@ -58,7 +58,9 @@ export class DonationPageConfigService {
 		return draft;
 	}
 
-	async getPublished(orgId: string): Promise<DonationPageConfigPublished | null> {
+	async getPublished(
+		orgId: string,
+	): Promise<DonationPageConfigPublished | null> {
 		return this.store.getPublished(orgId);
 	}
 
@@ -83,14 +85,17 @@ export class DonationPageConfigService {
 		const normalized = normalizePayload(input.payload);
 		validateDonationPageConfigPayload(normalized);
 
-		const activePriceIds = await this.getActiveSubscriptionPriceIds(input.orgId);
-		const { payload: withPrices, replacements } = await syncStripePricesForPayload({
-			orgId: input.orgId,
-			previous: draft.payload,
-			next: normalized,
-			stripe: this.stripe,
-			activeSubscriptionPriceIds: activePriceIds,
-		});
+		const activePriceIds = await this.getActiveSubscriptionPriceIds(
+			input.orgId,
+		);
+		const { payload: withPrices, replacements } =
+			await syncStripePricesForPayload({
+				orgId: input.orgId,
+				previous: draft.payload,
+				next: normalized,
+				stripe: this.stripe,
+				activeSubscriptionPriceIds: activePriceIds,
+			});
 
 		if (replacements.length > 0) {
 			await this.store.appendPriceReplacements(
@@ -201,14 +206,17 @@ export class DonationPageConfigService {
 		const draft = await this.getOrCreateDraft(input.orgId);
 		const revertedPayload = clonePayload(target.snapshot);
 
-		const activePriceIds = await this.getActiveSubscriptionPriceIds(input.orgId);
-		const { payload: withPrices, replacements } = await syncStripePricesForPayload({
-			orgId: input.orgId,
-			previous: draft.payload,
-			next: revertedPayload,
-			stripe: this.stripe,
-			activeSubscriptionPriceIds: activePriceIds,
-		});
+		const activePriceIds = await this.getActiveSubscriptionPriceIds(
+			input.orgId,
+		);
+		const { payload: withPrices, replacements } =
+			await syncStripePricesForPayload({
+				orgId: input.orgId,
+				previous: draft.payload,
+				next: revertedPayload,
+				stripe: this.stripe,
+				activeSubscriptionPriceIds: activePriceIds,
+			});
 		if (replacements.length > 0) {
 			await this.store.appendPriceReplacements(
 				replacements.map((r) => ({ orgId: input.orgId, ...r })),
@@ -253,7 +261,9 @@ function normalizePayload(
 	};
 }
 
-function clonePayload(payload: DonationPageConfigPayload): DonationPageConfigPayload {
+function clonePayload(
+	payload: DonationPageConfigPayload,
+): DonationPageConfigPayload {
 	return JSON.parse(JSON.stringify(payload)) as DonationPageConfigPayload;
 }
 
@@ -269,14 +279,18 @@ function diffPayloads(
 		before?: string | null;
 		after?: string | null;
 	}> = [];
-	if (JSON.stringify(before.amountsCents) !== JSON.stringify(after.amountsCents)) {
+	if (
+		JSON.stringify(before.amountsCents) !== JSON.stringify(after.amountsCents)
+	) {
 		changes.push({
 			field: "amountsCents",
 			before: JSON.stringify(before.amountsCents),
 			after: JSON.stringify(after.amountsCents),
 		});
 	}
-	if (JSON.stringify(before.designations) !== JSON.stringify(after.designations)) {
+	if (
+		JSON.stringify(before.designations) !== JSON.stringify(after.designations)
+	) {
 		changes.push({
 			field: "designations",
 			before: JSON.stringify(before.designations),

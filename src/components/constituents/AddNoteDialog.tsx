@@ -11,7 +11,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { NOTE_KINDS, type ConstituentNoteKind } from "@/lib/constituents";
+import { type ConstituentNoteKind, NOTE_KINDS } from "@/lib/constituents";
 
 export function AddNoteDialog({
 	open,

@@ -1,4 +1,7 @@
-import type { GrantBudgetCategory, GrantBudgetLine } from "./grant-budget.types";
+import type {
+	GrantBudgetCategory,
+	GrantBudgetLine,
+} from "./grant-budget.types";
 
 export type BudgetVsActualGiftRow = {
 	amount: number;
@@ -48,10 +51,7 @@ function obligationCategory(
 
 /** Pure budget vs actual — no clock reads, no I/O. */
 export function budgetVsActual(input: {
-	budgetLines: Pick<
-		GrantBudgetLine,
-		"$id" | "category" | "amount"
-	>[];
+	budgetLines: Pick<GrantBudgetLine, "$id" | "category" | "amount">[];
 	obligations: BudgetVsActualObligationRow[];
 	gifts: BudgetVsActualGiftRow[];
 }): BudgetVsActualResult {
@@ -91,9 +91,7 @@ export function budgetVsActual(input: {
 		const categoryBudget = budgetTotalByCategory.get(line.category) ?? 0;
 		const categoryActual = actualByCategory.get(line.category) ?? 0;
 		const actualAmount =
-			categoryBudget > 0
-				? (categoryActual * budgetAmount) / categoryBudget
-				: 0;
+			categoryBudget > 0 ? (categoryActual * budgetAmount) / categoryBudget : 0;
 		return {
 			lineId: line.$id,
 			category: line.category,

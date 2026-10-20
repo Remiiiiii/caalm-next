@@ -14,7 +14,10 @@ export const DEFAULT_GIVE_PROGRAMS: GiveProgramOption[] = [
 	{ value: "prog:behavioral-health", label: "Behavioral health" },
 	{ value: "prog:pediatrics-medical", label: "Pediatrics & medical care" },
 	{ value: "prog:youth-foster", label: "Youth intervention & foster care" },
-	{ value: "prog:nutrition-community", label: "Nutrition & community programs" },
+	{
+		value: "prog:nutrition-community",
+		label: "Nutrition & community programs",
+	},
 ];
 
 export function buildGiveProgramOptions(
@@ -56,7 +59,8 @@ export function resolveGiveProgramLabel(
 
 /** Maps gift amount to a concrete impact line for the left column. */
 export function giveImpactStatement(amountDollars: number): string {
-	const amount = Number.isFinite(amountDollars) && amountDollars > 0 ? amountDollars : 25;
+	const amount =
+		Number.isFinite(amountDollars) && amountDollars > 0 ? amountDollars : 25;
 	if (amount < 50) {
 		return "provides a full week of after-school tutoring materials for one student in our literacy program.";
 	}

@@ -1,6 +1,6 @@
 "use client";
 
-import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
+import { Handle, type Node, type NodeProps, Position } from "@xyflow/react";
 import { ChevronDown, ChevronUp, Cpu } from "lucide-react";
 import { useState } from "react";
 import Avatar from "@/components/ui/avatar";
@@ -10,15 +10,15 @@ import type { UserManagementUser } from "@/hooks/useUsers";
 import { isSameUserIdentity } from "@/lib/impersonation/policy";
 import {
 	ADMIN_ASSIGN_COLOR,
+	type AssignmentEdgeKind,
 	FLOW_CARD_WIDTH,
 	SYSTEM_ASSIGN_COLOR,
-	type AssignmentEdgeKind,
 } from "@/lib/users/assignment-graph";
 import {
-	isTopDownOrientation,
 	type GraphOrientation,
+	isTopDownOrientation,
 } from "@/lib/users/graph-orientation";
-import { resolveAvatarDisplayUrl, cn } from "@/lib/utils";
+import { cn, resolveAvatarDisplayUrl } from "@/lib/utils";
 
 export type GraphNodeEmphasis = "normal" | "match" | "dim";
 
@@ -150,8 +150,7 @@ export function UserGraphUserNode({ data }: NodeProps<UserGraphUserNodeType>) {
 	const { user, assignerKind, canEditGraph, skipLevelName } = data;
 	const [detailsCollapsed, setDetailsCollapsed] = useState(true);
 	const isSelf = isCurrentGraphUser(data.actor, user);
-	const isSuspended =
-		user.status === "suspended" || user.status === "inactive";
+	const isSuspended = user.status === "suspended" || user.status === "inactive";
 	const border = kindColor(assignerKind);
 	const jobLabel = graphUserJobLabel(user);
 	const showRoleBadge = Boolean(user.jobTitle?.trim() && user.roleName?.trim());

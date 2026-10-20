@@ -43,7 +43,9 @@ interface ReportGeneratorProps {
 	onReportGenerated?: () => void;
 }
 
+import { BusyIcon } from "@/components/ui/busy-icon";
 import { PERMISSIONS } from "@/constants/permissions";
+import { useBusyAction } from "@/hooks/useBusyAction";
 import { usePermissions } from "@/hooks/usePermissions";
 import { CONTRACT_DEPARTMENTS } from "../../constants";
 
@@ -126,6 +128,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
 			console.error("Download error:", err);
 		}
 	};
+	const [runDownloading, downloading] = useBusyAction(handleDownloadReport);
 
 	const handleUploadReport = async () => {
 		if (!report) return;
@@ -585,11 +588,16 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
 									{/* Primary Actions */}
 									<div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
 										<Button
-											onClick={handleDownloadReport}
+											disabled={downloading}
+											onClick={() => void runDownloading()}
 											variant="outline"
 											className="h-[52px] border-light-300 text-light-100 hover:bg-light-300/50 shadow-drop-1 justify-start"
 										>
-											<Download className="mr-3 h-4 w-4" />
+											<BusyIcon
+												busy={downloading}
+												icon={Download}
+												className="mr-3 h-4 w-4"
+											/>
 											<div className="text-left">
 												<div className="font-medium">Download PDF</div>
 												<div className="text-xs text-light-200">

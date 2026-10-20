@@ -61,7 +61,9 @@ describe("useContractAlarm", () => {
 		expect(result.current.isSilenced).toBe(true);
 	});
 
-	it("stops playback when enabled becomes false", async () => {
+	// The hook leaves the shared alarm alone when disabled: a sibling widget
+	// (contract + license carousel) may still own playback.
+	it("does not stop shared playback when enabled becomes false", async () => {
 		const { result, rerender } = renderHook(
 			({ enabled }: { enabled: boolean }) =>
 				useContractAlarm({
@@ -77,9 +79,7 @@ describe("useContractAlarm", () => {
 
 		rerender({ enabled: false });
 
-		await waitFor(() => {
-			expect(result.current.isPlaying).toBe(false);
-		});
+		expect(result.current.isPlaying).toBe(true);
 	});
 
 	it("keeps a forced preview playing when nothing expires within 24 hours", async () => {

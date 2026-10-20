@@ -29,9 +29,7 @@ export async function fetchGmailSignatureHtml(
 	const preferred = preferredEmail?.trim().toLowerCase();
 	const match =
 		(preferred
-			? aliases.find(
-					(a) => a.sendAsEmail?.trim().toLowerCase() === preferred,
-				)
+			? aliases.find((a) => a.sendAsEmail?.trim().toLowerCase() === preferred)
 			: undefined) ||
 		aliases.find((a) => a.isPrimary) ||
 		aliases.find((a) => a.isDefault) ||

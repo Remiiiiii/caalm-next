@@ -33,11 +33,7 @@ type VsActualLine = {
 	overBudget: boolean;
 };
 
-export function GrantBudgetPanel({
-	stream,
-}: {
-	stream: RetentionStream;
-}) {
+export function GrantBudgetPanel({ stream }: { stream: RetentionStream }) {
 	const [lines, setLines] = useState<BudgetLine[]>([]);
 	const [vsActual, setVsActual] = useState<VsActualLine[]>([]);
 	const [category, setCategory] = useState<string>("program");

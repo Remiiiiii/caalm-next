@@ -1,9 +1,10 @@
 "use client";
 
-import { AlertTriangle, Trash2, X } from "lucide-react";
+import { AlertTriangle, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { BulkActionDock } from "@/components/ui/bulk-action-dock";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -92,32 +93,21 @@ export default function FilesBulkBar({
 
 	return (
 		<>
-			<div className="mb-4 mt-4 flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white/95 px-4 py-3 shadow-lg backdrop-blur">
-				<p className="text-sm font-medium text-slate-700">
-					{selectedIds.length} selected
-				</p>
-				<div className="flex items-center gap-2">
-					<Button
-						type="button"
-						variant="ghost"
-						size="sm"
-						className="cursor-pointer"
-						onClick={onClearSelection}
-					>
-						<X className="h-4 w-4" />
-						Clear
-					</Button>
-					<Button
-						type="button"
-						size="sm"
-						className="delete-btn cursor-pointer px-3 sm:px-4"
-						onClick={() => setConfirmOpen(true)}
-					>
-						<Trash2 className="h-4 w-4" />
-						Delete selected
-					</Button>
-				</div>
-			</div>
+			<BulkActionDock
+				count={selectedIds.length}
+				noun="file"
+				onClear={onClearSelection}
+			>
+				<Button
+					type="button"
+					size="sm"
+					className="delete-btn cursor-pointer px-3 sm:px-4"
+					onClick={() => setConfirmOpen(true)}
+				>
+					<Trash2 className="h-4 w-4" />
+					Delete selected
+				</Button>
+			</BulkActionDock>
 
 			<Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
 				<DialogContent

@@ -3,13 +3,13 @@ import {
 	createConstituent,
 	findDuplicateConstituents,
 } from "@/lib/constituents/repository";
-import { parseGiveShareAttribution } from "@/lib/give/attribution";
-import { resolveCampaignIdFromShareTag } from "@/lib/give/resolve-campaign";
 import {
 	createDraftGift,
 	findGiftByStripeInvoiceId,
 	postGift,
 } from "@/lib/gifts/repository";
+import { parseGiveShareAttribution } from "@/lib/give/attribution";
+import { resolveCampaignIdFromShareTag } from "@/lib/give/resolve-campaign";
 import { getStripe } from "./client";
 import { DONATION_CHECKOUT_PURPOSE } from "./donations";
 import { subscriptionIdFromInvoice } from "./invoice-utils";
@@ -162,7 +162,9 @@ async function handleCheckoutSessionCompleted(
 	});
 }
 
-async function handleDonationInvoicePaid(invoice: Stripe.Invoice): Promise<void> {
+async function handleDonationInvoicePaid(
+	invoice: Stripe.Invoice,
+): Promise<void> {
 	if (shouldSkipDonationCreateInvoice(invoice.billing_reason)) return;
 
 	const stripe = getStripe();

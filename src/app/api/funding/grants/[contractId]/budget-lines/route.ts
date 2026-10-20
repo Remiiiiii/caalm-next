@@ -11,10 +11,7 @@ import { requireFundingOrgContext } from "@/lib/funding/request-context";
 type RouteContext = { params: Promise<{ contractId: string }> };
 
 export async function GET(request: NextRequest, context: RouteContext) {
-	const ctx = await requireFundingOrgContext(
-		request,
-		PERMISSIONS.FUNDING.VIEW,
-	);
+	const ctx = await requireFundingOrgContext(request, PERMISSIONS.FUNDING.VIEW);
 	if (!ctx.ok) return ctx.response;
 	const { contractId } = await context.params;
 
@@ -53,7 +50,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
 		typeof category !== "string" ||
 		!(GRANT_BUDGET_CATEGORIES as readonly string[]).includes(category)
 	) {
-		return NextResponse.json({ error: "Valid category is required" }, { status: 400 });
+		return NextResponse.json(
+			{ error: "Valid category is required" },
+			{ status: 400 },
+		);
 	}
 
 	try {

@@ -6,7 +6,7 @@
 import "server-only";
 
 import { kv } from "@vercel/kv";
-import Redis from "ioredis";
+import type Redis from "ioredis";
 import redis from "../redis-client";
 
 // Check if Redis is available

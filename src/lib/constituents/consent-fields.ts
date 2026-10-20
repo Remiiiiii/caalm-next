@@ -17,9 +17,7 @@ export function isLawfulBasis(value: unknown): value is LawfulBasis {
 }
 
 /** Undefined/null means opted-in (legacy rows before channel consent). */
-export function channelConsentAllowed(
-	value: boolean | undefined,
-): boolean {
+export function channelConsentAllowed(value: boolean | undefined): boolean {
 	return value !== false;
 }
 

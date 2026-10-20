@@ -122,7 +122,11 @@ export async function createRelationship(input: {
 	| { ok: false; status: 400 | 404; error: string }
 > {
 	if (isSelfLink(input.fromId, input.toId)) {
-		return { ok: false, status: 400, error: "Self-relationship is not allowed" };
+		return {
+			ok: false,
+			status: 400,
+			error: "Self-relationship is not allowed",
+		};
 	}
 
 	const [from, to] = await Promise.all([
@@ -142,7 +146,11 @@ export async function createRelationship(input: {
 
 	const existing = await listRelationshipsForOrg(input.orgId);
 	if (wouldCreateCycle(input.fromId, input.toId, existing)) {
-		return { ok: false, status: 400, error: "Circular relationship is not allowed" };
+		return {
+			ok: false,
+			status: 400,
+			error: "Circular relationship is not allowed",
+		};
 	}
 	const duplicate = existing.some(
 		(edge) =>
@@ -187,7 +195,10 @@ export async function retargetRelationships(input: {
 	winnerId: string;
 	orgId: string;
 }): Promise<ConstituentRelationship[]> {
-	const edges = await listRelationshipsForConstituent(input.loserId, input.orgId);
+	const edges = await listRelationshipsForConstituent(
+		input.loserId,
+		input.orgId,
+	);
 	const { tablesDB } = await createAdminClient();
 	const moved: ConstituentRelationship[] = [];
 	for (const edge of edges) {

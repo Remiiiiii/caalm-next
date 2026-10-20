@@ -1,5 +1,6 @@
 "use client";
 
+import { DATA_TABLE_TOOLBAR_INSET } from "@/lib/ui/data-table-styles";
 import type { License } from "@/types/licenses";
 import LicensesFilter from "./LicensesFilter";
 import LicensesFilterChips from "./LicensesFilterChips";
@@ -26,7 +27,9 @@ export default function LicensesControlBar({
 	return (
 		<div ref={listAnchorRef} className="w-full scroll-mt-4">
 			<LicensesStatusTabs licenses={licenses} />
-			<div className="flex pt-4 pb-3 px-4 sm:px-6 gap-3 justify-between flex-wrap">
+			<div
+				className={`flex pt-4 pb-3 ${DATA_TABLE_TOOLBAR_INSET} gap-3 justify-between flex-wrap`}
+			>
 				<LicensesTopControls licenses={licenses} />
 				<div className="platform-overview-actions flex items-center gap-2 justify-end flex-wrap">
 					<LicensesFilter

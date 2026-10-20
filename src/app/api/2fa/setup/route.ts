@@ -45,8 +45,7 @@ export async function POST(request: NextRequest) {
 		let bodyUserId: string | undefined;
 		try {
 			const body = await request.json();
-			bodyUserId =
-				typeof body?.userId === "string" ? body.userId : undefined;
+			bodyUserId = typeof body?.userId === "string" ? body.userId : undefined;
 		} catch {
 			// Body optional — session identity is the source of truth
 		}
@@ -175,11 +174,7 @@ export async function PUT(request: NextRequest) {
 			try {
 				const user = userResponse.rows[0];
 				if (user.email && user.fullName && user.department) {
-					await notify2FACompleted(
-						user.email,
-						user.fullName,
-						user.department,
-					);
+					await notify2FACompleted(user.email, user.fullName, user.department);
 				}
 			} catch (smsError) {
 				console.error("Failed to send 2FA completion SMS:", smsError);
@@ -252,8 +247,7 @@ export async function DELETE(request: NextRequest) {
 		let bodyUserId: string | undefined;
 		try {
 			const body = await request.json();
-			bodyUserId =
-				typeof body?.userId === "string" ? body.userId : undefined;
+			bodyUserId = typeof body?.userId === "string" ? body.userId : undefined;
 		} catch {
 			// optional
 		}

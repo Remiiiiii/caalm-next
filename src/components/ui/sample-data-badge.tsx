@@ -15,8 +15,7 @@ export function SampleDataBadge({
 	tone = "sample",
 	label,
 }: SampleDataBadgeProps) {
-	const text =
-		label ?? (tone === "demo" ? "DEMO" : "Sample data");
+	const text = label ?? (tone === "demo" ? "DEMO" : "Sample data");
 	return (
 		<span
 			className={cn(

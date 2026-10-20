@@ -135,7 +135,9 @@ export function AddRelationshipDialog({
 								<p className="text-sm font-medium text-slate-700">
 									{constituentDisplayName(row)}
 								</p>
-								<p className="text-xs text-slate-500">{row.email || "No email"}</p>
+								<p className="text-xs text-slate-500">
+									{row.email || "No email"}
+								</p>
 							</button>
 						))}
 					</div>

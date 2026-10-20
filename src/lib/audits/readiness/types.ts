@@ -71,10 +71,14 @@ export interface AuditReadinessSnapshotPayload {
 		label: string;
 		auditType: AuditEvidenceAuditType;
 		caalmModule: string;
+		/** Derived per module; per-requirement coverage needs the readiness engine. */
+		status?: "covered" | "gap";
 	}>;
 	sourcesUsed: string[];
 	previousScore: number | null;
 	scoreDelta: number | null;
+	/** How the snapshot was created. Absent on snapshots saved before this field existed. */
+	source?: "manual" | "scheduled";
 	disclaimer: string;
 }
 

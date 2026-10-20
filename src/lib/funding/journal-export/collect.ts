@@ -1,13 +1,13 @@
 import { Query } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
-import { mapGiftRow } from "@/lib/gifts/repository-rows";
-import type { Gift } from "@/lib/gifts/types";
-import { listFundsForOrg } from "@/lib/funds/repository";
 import {
 	listRestrictionReleasesInRange,
 	type RestrictionRelease,
 } from "@/lib/funding/restriction-release.repository";
+import { listFundsForOrg } from "@/lib/funds/repository";
+import { mapGiftRow } from "@/lib/gifts/repository-rows";
+import type { Gift } from "@/lib/gifts/types";
 import { restrictionClassFromNetAsset } from "./restriction-class";
 import type { JournalExportResult, JournalExportRow } from "./types";
 
@@ -53,7 +53,10 @@ async function listPostedGiftsInRange(input: {
 	return items;
 }
 
-function giftRow(gift: Gift, restrictionClass: JournalExportRow["restrictionClass"]): JournalExportRow {
+function giftRow(
+	gift: Gift,
+	restrictionClass: JournalExportRow["restrictionClass"],
+): JournalExportRow {
 	return {
 		rowKind: "gift",
 		sourceId: gift.$id,
@@ -81,8 +84,7 @@ function reclassRows(
 			transactionDate: date,
 			fundCode: fromCode,
 			amount: -release.amount,
-			restrictionClass:
-				restrictionByFundCode.get(fromCode) ?? "restricted",
+			restrictionClass: restrictionByFundCode.get(fromCode) ?? "restricted",
 			reclassLeg: "from",
 			memo,
 		},
@@ -92,8 +94,7 @@ function reclassRows(
 			transactionDate: date,
 			fundCode: toCode,
 			amount: release.amount,
-			restrictionClass:
-				restrictionByFundCode.get(toCode) ?? "unrestricted",
+			restrictionClass: restrictionByFundCode.get(toCode) ?? "unrestricted",
 			reclassLeg: "to",
 			memo,
 		},
@@ -117,10 +118,7 @@ export async function buildJournalExport(input: {
 
 	const fundCodeById = new Map(funds.map((f) => [f.$id, f.code]));
 	const restrictionByFundCode = new Map(
-		funds.map((f) => [
-			f.code,
-			restrictionClassFromNetAsset(f.netAssetClass),
-		]),
+		funds.map((f) => [f.code, restrictionClassFromNetAsset(f.netAssetClass)]),
 	);
 
 	const giftRows = gifts.map((gift) => {
@@ -141,9 +139,8 @@ export async function buildJournalExport(input: {
 		return a.sourceId.localeCompare(b.sourceId);
 	});
 
-	const giftCashTotal = Math.round(
-		giftRows.reduce((sum, row) => sum + row.amount, 0) * 100,
-	) / 100;
+	const giftCashTotal =
+		Math.round(giftRows.reduce((sum, row) => sum + row.amount, 0) * 100) / 100;
 
 	return {
 		rows,

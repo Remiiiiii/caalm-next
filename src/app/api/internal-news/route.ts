@@ -10,12 +10,12 @@ import { createNewsVersion } from "@/lib/database/news-versions";
 import { logNewsAudit } from "@/lib/news/audit";
 import { toStoredPriority } from "@/lib/news/priority";
 import { serializeNewsArticle } from "@/lib/news/serialize";
+import { requirePermission } from "@/lib/rbac/middleware";
 import {
 	getUserDefaultOrganization,
 	getUserPermissions,
 	getUserRoles,
 } from "@/lib/rbac/permissions";
-import { requirePermission } from "@/lib/rbac/middleware";
 import { sanitizeNewsHtml } from "@/lib/sanitize-news-html";
 
 const createSchema = z.object({
@@ -167,8 +167,10 @@ export async function POST(request: NextRequest) {
 			content: sanitizedContent,
 			authorId: user.$id,
 			author: user.fullName || user.email || "Unknown",
-			department: body.department || body.departments?.[0] || user.department || "",
-			departments: body.departments || (body.department ? [body.department] : []),
+			department:
+				body.department || body.departments?.[0] || user.department || "",
+			departments:
+				body.departments || (body.department ? [body.department] : []),
 			roles: body.roles || [],
 			type: body.type || "info",
 			priority: toStoredPriority(body.priority),
@@ -222,7 +224,9 @@ export async function POST(request: NextRequest) {
 			{
 				success: false,
 				error:
-					error instanceof Error ? error.message : "Failed to create news article",
+					error instanceof Error
+						? error.message
+						: "Failed to create news article",
 			},
 			{ status: 500 },
 		);

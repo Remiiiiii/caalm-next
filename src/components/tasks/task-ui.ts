@@ -53,8 +53,7 @@ export type TaskPerson = {
 	division?: string | null;
 };
 
-export const TASK_LINKED_BADGE =
-	"bg-blue/10 text-blue border-blue/20";
+export const TASK_LINKED_BADGE = "bg-blue/10 text-blue border-blue/20";
 
 export function linkedEntityIconHint(
 	type?: TaskLinkedEntityType | null,

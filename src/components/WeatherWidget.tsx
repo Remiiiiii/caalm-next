@@ -1,13 +1,6 @@
 "use client";
 
-import {
-	Cloud,
-	CloudRain,
-	Clock,
-	MapPin,
-	Sunrise,
-	Sunset,
-} from "lucide-react";
+import { Clock, Cloud, CloudRain, MapPin, Sunrise, Sunset } from "lucide-react";
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useWeatherData } from "@/hooks/useWeatherData";
@@ -40,12 +33,14 @@ function formatClockLabel(date: Date) {
 function formatSunTime(unixSec: number, timezoneSec: number) {
 	if (!unixSec) return "—";
 	const localMs = (unixSec + timezoneSec) * 1000;
-	return new Date(localMs).toLocaleTimeString("en-US", {
-		hour: "numeric",
-		minute: "2-digit",
-		hour12: true,
-		timeZone: "UTC",
-	}).toLowerCase();
+	return new Date(localMs)
+		.toLocaleTimeString("en-US", {
+			hour: "numeric",
+			minute: "2-digit",
+			hour12: true,
+			timeZone: "UTC",
+		})
+		.toLowerCase();
 }
 
 function daylightDuration(sunrise: number, sunset: number) {
@@ -142,10 +137,7 @@ const WeatherWidget: React.FC<WeatherWidgetProps> = ({
 	const tomorrowPop = weatherData.tomorrowPrecipChance;
 
 	return (
-		<div
-			className={shellClass}
-			style={{ background: scene.background }}
-		>
+		<div className={shellClass} style={{ background: scene.background }}>
 			<div
 				className="pointer-events-none absolute inset-0"
 				style={{ background: scene.glow }}

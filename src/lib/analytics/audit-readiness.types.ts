@@ -19,6 +19,19 @@ export interface AuditReadinessInsight {
 	severity: "critical" | "moderate" | "low";
 	moduleLink: string;
 	moduleLabel: string;
+	/** Structured fields so the UI never has to parse `description`. */
+	itemTitle?: string;
+	/** "contract" | "license" | "other" */
+	itemKind?: string;
+	/** Evidence category, e.g. "Action required". */
+	category?: string;
+	owner?: string;
+	/** ISO date or date-time string. */
+	dueDate?: string;
+	/** Audit types this item counts toward: hrsa_osv, cw_monitoring, financial_pbc. */
+	requirementTags?: string[];
+	/** True for a missing-evidence gap (vs. a record that needs action). */
+	isEvidenceGap?: boolean;
 }
 
 export interface AuditReadinessDomain {

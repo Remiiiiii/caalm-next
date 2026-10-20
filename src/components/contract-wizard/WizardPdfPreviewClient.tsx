@@ -12,14 +12,16 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Document, Page, pdfjs } from "react-pdf";
+import type { WizardPdfPreviewProps } from "@/components/contract-wizard/WizardPdfPreview.types";
 import DocumentViewer from "@/components/DocumentViewer";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { WizardPdfPreviewProps } from "@/components/contract-wizard/WizardPdfPreview.types";
 import { cn } from "@/lib/utils";
 import "@/lib/templates/docx-preview.css";
 import "react-pdf/dist/Page/TextLayer.css";
+import { BusyIcon } from "@/components/ui/busy-icon";
+import { useBusyAction } from "@/hooks/useBusyAction";
 
 // pdf.js only — avoid Adobe / browser PDF chrome in the wizard preview.
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -297,7 +299,7 @@ export function WizardPdfPreviewClient({
 				canvas.height = viewport.height;
 				const context = canvas.getContext("2d");
 				if (!context) continue;
-				await page.render({ canvasContext: context, viewport }).promise;
+				await page.render({ canvasContext: context, viewport, canvas }).promise;
 				images.push(canvas.toDataURL("image/png"));
 			}
 			if (images.length === 0) return false;
@@ -370,6 +372,7 @@ export function WizardPdfPreviewClient({
 			// no-op: download is best-effort
 		}
 	}, [fileName, objectUrl, pdfUrl, viewerFile]);
+	const [runDownloading, downloading] = useBusyAction(downloadPdf);
 
 	const showLoading =
 		loading ||
@@ -384,10 +387,11 @@ export function WizardPdfPreviewClient({
 					variant="outline"
 					size="icon"
 					className="h-8 w-8 cursor-pointer text-slate-700"
-					onClick={() => void downloadPdf()}
+					disabled={downloading}
+					onClick={() => void runDownloading()}
 					aria-label="Download PDF"
 				>
-					<Download className="h-4 w-4" />
+					<BusyIcon busy={downloading} icon={Download} />
 				</Button>
 			)}
 			<Button

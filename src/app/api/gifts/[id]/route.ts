@@ -64,16 +64,21 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 					: body.contractId != null
 						? String(body.contractId)
 						: undefined,
-			anonymous:
-				body.anonymous != null ? Boolean(body.anonymous) : undefined,
+			anonymous: body.anonymous != null ? Boolean(body.anonymous) : undefined,
 		};
 		const gift = await updateDraftGift(id, ctx.orgId, patch);
 		return NextResponse.json(gift);
 	} catch (error) {
 		if (error instanceof GiftDomainError) {
-			return NextResponse.json({ error: error.message }, { status: error.status });
+			return NextResponse.json(
+				{ error: error.message },
+				{ status: error.status },
+			);
 		}
 		console.error("[SERVER] gifts PATCH:", error);
-		return NextResponse.json({ error: "Failed to update gift" }, { status: 500 });
+		return NextResponse.json(
+			{ error: "Failed to update gift" },
+			{ status: 500 },
+		);
 	}
 }

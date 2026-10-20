@@ -45,6 +45,7 @@ function tagInsights(
 		const tags = moduleToTypes.get(moduleKey) ?? [];
 		return {
 			...insight,
+			requirementTags: tags,
 			description: tags.length
 				? `${insight.description} · [${tags.join(", ")}]`
 				: insight.description,
@@ -90,6 +91,16 @@ export async function buildOrgReadinessSummary(options: {
 		.map((row) => ({
 			id: row.id,
 			title: row.title,
+			itemTitle: row.title,
+			itemKind: row.moduleLink?.includes("license")
+				? "license"
+				: row.moduleLink?.includes("contract")
+					? "contract"
+					: "other",
+			category: row.category,
+			owner: row.owner,
+			dueDate: row.dueDate,
+			isEvidenceGap: row.status === "pending",
 			description: `${row.category ?? "Evidence"} · ${row.owner} · due ${row.dueDate}`,
 			severity:
 				row.status === "non_compliant"
@@ -190,6 +201,28 @@ export async function buildOrgReadinessSummary(options: {
 		},
 	};
 
+	const moduleHasGap = (module: string): boolean => {
+		if (module === "contracts") {
+			const total = snapshot.contracts?.total ?? 0;
+			return (
+				total === 0 ||
+				(snapshot.contracts?.evidence ?? []).some(
+					(row) => row.status === "pending" || row.status === "non_compliant",
+				)
+			);
+		}
+		if (module === "licenses") {
+			const total = snapshot.licenses?.total ?? 0;
+			return (
+				total === 0 ||
+				(snapshot.licenses?.evidence ?? []).some(
+					(row) => row.status === "pending" || row.status === "non_compliant",
+				)
+			);
+		}
+		return options.siteCrawl?.healthHint !== "ok";
+	};
+
 	const evidenceMapHits = mapRows
 		.filter(
 			(row) =>
@@ -202,6 +235,9 @@ export async function buildOrgReadinessSummary(options: {
 			label: row.label,
 			auditType: row.auditType,
 			caalmModule: row.caalmModule,
+			status: moduleHasGap(row.caalmModule)
+				? ("gap" as const)
+				: ("covered" as const),
 		}));
 
 	return {

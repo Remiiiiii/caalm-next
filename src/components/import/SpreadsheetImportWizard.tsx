@@ -2,6 +2,7 @@
 
 import { Check, Download, FileUp, Loader2 } from "lucide-react";
 import { type ReactNode, useMemo, useState } from "react";
+import { BusyIcon } from "@/components/ui/busy-icon";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -12,8 +13,9 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { parseSpreadsheetFile } from "@/lib/import/spreadsheet";
+import { useBusyAction } from "@/hooks/useBusyAction";
 import { listUnmappedHeaders } from "@/lib/import/mapping";
+import { parseSpreadsheetFile } from "@/lib/import/spreadsheet";
 
 export type SpreadsheetDryRunState = {
 	counts: Record<string, number>;
@@ -111,6 +113,7 @@ export function SpreadsheetImportWizard<K extends string>({
 		anchor.click();
 		URL.revokeObjectURL(url);
 	};
+	const [runDownloading, downloading] = useBusyAction(downloadSample);
 
 	const runDryRun = async () => {
 		setBusy(true);
@@ -202,9 +205,10 @@ export function SpreadsheetImportWizard<K extends string>({
 							type="button"
 							variant="outline"
 							className="px-3 sm:px-4 shrink-0"
-							onClick={downloadSample}
+							disabled={downloading}
+							onClick={() => void runDownloading()}
 						>
-							<Download className="h-4 w-4" />
+							<BusyIcon busy={downloading} icon={Download} />
 							Sample template
 						</Button>
 					</div>

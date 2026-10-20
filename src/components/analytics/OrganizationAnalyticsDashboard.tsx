@@ -33,6 +33,7 @@ import {
 } from "recharts";
 import useSWR from "swr";
 import { Badge } from "@/components/ui/badge";
+import { BusyIcon } from "@/components/ui/busy-icon";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -43,6 +44,8 @@ import {
 } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useBusyAction } from "@/hooks/useBusyAction";
+import { downloadXlsx } from "@/lib/export/download-xlsx";
 import { DepartmentComplianceCard } from "./AnalyticsReadinessOverview";
 
 interface ContractStats {
@@ -179,47 +182,34 @@ const OrganizationAnalyticsDashboard = () => {
 
 	const handleExport = () => {
 		if (!analyticsData?.departments?.length) return;
-
-		const escapeCsv = (value: string | number) => {
-			const str = String(value);
-			if (str.includes(",") || str.includes('"') || str.includes("\n")) {
-				return `"${str.replace(/"/g, '""')}"`;
-			}
-			return str;
-		};
-
-		const headers = [
-			"Department",
-			"Contracts",
-			"Licenses",
-			"Expired licenses",
-			"Staff",
-			"Budget",
-			"Compliance %",
-			"Divisions",
-		];
-		const rows = analyticsData.departments.map((dept) => [
-			dept.name,
-			dept.totalStats.totalContracts,
-			dept.totalStats.totalLicenses ?? 0,
-			dept.totalStats.expiredLicenses ?? 0,
-			dept.totalStats.staffCount,
-			dept.totalStats.totalBudget,
-			dept.totalStats.complianceRate,
-			dept.divisions.map((d) => d.name).join("; "),
-		]);
-
-		const csv = [headers, ...rows]
-			.map((row) => row.map(escapeCsv).join(","))
-			.join("\n");
-		const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-		const url = URL.createObjectURL(blob);
-		const link = document.createElement("a");
-		link.href = url;
-		link.download = `department-performance-${new Date().toISOString().slice(0, 10)}.csv`;
-		link.click();
-		URL.revokeObjectURL(url);
+		const stamp = new Date().toISOString().slice(0, 10);
+		downloadXlsx(`department-performance-${stamp}.xlsx`, {
+			sheetName: "Departments",
+			title: "Departmental Performance",
+			subtitle: `CAALM · ${analyticsData.departments.length} departments · Generated ${stamp}`,
+			columns: [
+				{ header: "Department", width: 30 },
+				{ header: "Contracts", type: "number", width: 14 },
+				{ header: "Licenses", type: "number", width: 14 },
+				{ header: "Expired licenses", type: "number", width: 18 },
+				{ header: "Staff", type: "number", width: 12 },
+				{ header: "Budget", type: "currency", width: 18 },
+				{ header: "Compliance %", type: "number", width: 16 },
+				{ header: "Divisions", width: 44 },
+			],
+			rows: analyticsData.departments.map((dept) => [
+				dept.name,
+				dept.totalStats.totalContracts,
+				dept.totalStats.totalLicenses ?? 0,
+				dept.totalStats.expiredLicenses ?? 0,
+				dept.totalStats.staffCount,
+				dept.totalStats.totalBudget,
+				dept.totalStats.complianceRate,
+				dept.divisions.map((d) => d.name).join("; "),
+			]),
+		});
 	};
+	const [runExporting, exporting] = useBusyAction(handleExport);
 
 	const handleView = () => {
 		detailRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -493,10 +483,11 @@ const OrganizationAnalyticsDashboard = () => {
 						</CardTitle>
 						<div className="flex flex-wrap items-center gap-3">
 							<Button
-								onClick={handleExport}
+								disabled={exporting}
+								onClick={() => void runExporting()}
 								className="primary-btn px-3 sm:px-4"
 							>
-								<SquareArrowRightExit className="h-4 w-4" />
+								<BusyIcon busy={exporting} icon={SquareArrowRightExit} />
 								Export
 							</Button>
 							<Button

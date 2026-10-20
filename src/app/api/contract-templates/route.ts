@@ -61,9 +61,7 @@ export async function POST(request: NextRequest) {
 				description: body.description ? String(body.description) : undefined,
 				contractType: String(body.contractType || "vendor").trim(),
 				status: isTemplateStatus(body.status) ? body.status : "draft",
-				clauseSlots: scratchAgreement
-					? []
-					: parseClauseSlots(body.clauseSlots),
+				clauseSlots: scratchAgreement ? [] : parseClauseSlots(body.clauseSlots),
 				scratchAgreement,
 			},
 		});

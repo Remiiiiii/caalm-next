@@ -14,7 +14,10 @@ export async function GET(request: NextRequest) {
 
 	const params = request.nextUrl.searchParams;
 	const page = Math.max(Number(params.get("page") || "1"), 1);
-	const pageSize = Math.min(Math.max(Number(params.get("pageSize") || "20"), 1), 100);
+	const pageSize = Math.min(
+		Math.max(Number(params.get("pageSize") || "20"), 1),
+		100,
+	);
 	const statusParam = params.get("status");
 
 	try {
@@ -40,7 +43,10 @@ export async function GET(request: NextRequest) {
 		});
 	} catch (error) {
 		console.error("[SERVER] gifts GET:", error);
-		return NextResponse.json({ error: "Failed to list gifts" }, { status: 500 });
+		return NextResponse.json(
+			{ error: "Failed to list gifts" },
+			{ status: 500 },
+		);
 	}
 }
 
@@ -55,7 +61,10 @@ export async function POST(request: NextRequest) {
 		const constituentId = String(body.constituentId || "").trim();
 		const giftDate = String(body.giftDate || "").trim();
 		if (!Number.isFinite(amount) || amount <= 0) {
-			return NextResponse.json({ error: "Amount must be positive" }, { status: 400 });
+			return NextResponse.json(
+				{ error: "Amount must be positive" },
+				{ status: 400 },
+			);
 		}
 		if (!constituentId || !giftDate) {
 			return NextResponse.json(
@@ -64,7 +73,10 @@ export async function POST(request: NextRequest) {
 			);
 		}
 		if (!isGiftMethod(method)) {
-			return NextResponse.json({ error: "Invalid payment method" }, { status: 400 });
+			return NextResponse.json(
+				{ error: "Invalid payment method" },
+				{ status: 400 },
+			);
 		}
 
 		const gift = await createDraftGift({
@@ -75,16 +87,24 @@ export async function POST(request: NextRequest) {
 			method,
 			constituentId,
 			campaignId: body.campaignId ? String(body.campaignId) : undefined,
-			designationId: body.designationId ? String(body.designationId) : undefined,
+			designationId: body.designationId
+				? String(body.designationId)
+				: undefined,
 			contractId: body.contractId ? String(body.contractId) : undefined,
 			anonymous: Boolean(body.anonymous),
 		});
 		return NextResponse.json(gift, { status: 201 });
 	} catch (error) {
 		if (error instanceof GiftDomainError) {
-			return NextResponse.json({ error: error.message }, { status: error.status });
+			return NextResponse.json(
+				{ error: error.message },
+				{ status: error.status },
+			);
 		}
 		console.error("[SERVER] gifts POST:", error);
-		return NextResponse.json({ error: "Failed to create gift" }, { status: 500 });
+		return NextResponse.json(
+			{ error: "Failed to create gift" },
+			{ status: 500 },
+		);
 	}
 }

@@ -9,8 +9,8 @@ import {
 import { createNewsVersion } from "@/lib/database/news-versions";
 import { logNewsAudit } from "@/lib/news/audit";
 import { serializeNewsArticle } from "@/lib/news/serialize";
-import { getUserPermissions } from "@/lib/rbac/permissions";
 import { requirePermission } from "@/lib/rbac/middleware";
+import { getUserPermissions } from "@/lib/rbac/permissions";
 import { sanitizeNewsHtml } from "@/lib/sanitize-news-html";
 
 export async function GET(
@@ -45,7 +45,8 @@ export async function GET(
 		return NextResponse.json(
 			{
 				success: false,
-				error: error instanceof Error ? error.message : "Failed to fetch article",
+				error:
+					error instanceof Error ? error.message : "Failed to fetch article",
 			},
 			{ status: 500 },
 		);
@@ -108,7 +109,10 @@ export async function PUT(
 				: undefined,
 		});
 
-		if (body.content !== undefined && body.content !== existingArticle.content) {
+		if (
+			body.content !== undefined &&
+			body.content !== existingArticle.content
+		) {
 			try {
 				await createNewsVersion({
 					newsId: id,
@@ -153,7 +157,8 @@ export async function PUT(
 		return NextResponse.json(
 			{
 				success: false,
-				error: error instanceof Error ? error.message : "Failed to update article",
+				error:
+					error instanceof Error ? error.message : "Failed to update article",
 			},
 			{ status: 500 },
 		);
@@ -178,7 +183,8 @@ export async function DELETE(
 				{ status: 404 },
 			);
 		}
-		const hardDelete = new URL(request.url).searchParams.get("hardDelete") === "true";
+		const hardDelete =
+			new URL(request.url).searchParams.get("hardDelete") === "true";
 		await deleteNewsArticle(id, hardDelete);
 		if (user) {
 			await logNewsAudit({
@@ -199,7 +205,8 @@ export async function DELETE(
 		return NextResponse.json(
 			{
 				success: false,
-				error: error instanceof Error ? error.message : "Failed to delete article",
+				error:
+					error instanceof Error ? error.message : "Failed to delete article",
 			},
 			{ status: 500 },
 		);

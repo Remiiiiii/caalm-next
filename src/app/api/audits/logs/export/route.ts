@@ -1,8 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server";
-import type { AuditModule } from "@/lib/audits/audit-log.utils";
 import { PERMISSIONS } from "@/constants/permissions";
 import { exportAuditLogsAction } from "@/lib/actions/audit.actions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
+import type { AuditModule } from "@/lib/audits/audit-log.utils";
+import { xlsxResponse } from "@/lib/export/xlsx-response";
 import { requirePermission } from "@/lib/rbac/middleware";
 import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 import { getAuditLogs } from "@/lib/services/audit-logger";
@@ -27,7 +28,7 @@ export async function GET(request: NextRequest) {
 		const defaultOrg = await getUserDefaultOrganization(user.$id);
 		const orgId = defaultOrg?.orgId || "default_organization";
 		const { searchParams } = new URL(request.url);
-		const format = searchParams.get("format") || "csv";
+		const format = searchParams.get("format") || "xlsx";
 
 		const moduleParam = searchParams.get("module");
 		const auditModule =
@@ -53,21 +54,19 @@ export async function GET(request: NextRequest) {
 			return NextResponse.json({ success: true, logs });
 		}
 
-		const csv = await exportAuditLogsAction(filters);
-		return new NextResponse(csv, {
-			status: 200,
-			headers: {
-				"Content-Type": "text/csv; charset=utf-8",
-				"Content-Disposition": `attachment; filename="audit-logs-${new Date().toISOString().slice(0, 10)}.csv"`,
-			},
-		});
+		return xlsxResponse(
+			`audit-logs-${new Date().toISOString().slice(0, 10)}.xlsx`,
+			await exportAuditLogsAction(filters),
+		);
 	} catch (error) {
 		console.error("[SERVER] Error exporting audit logs:", error);
 		return NextResponse.json(
 			{
 				success: false,
 				message:
-					error instanceof Error ? error.message : "Failed to export audit logs",
+					error instanceof Error
+						? error.message
+						: "Failed to export audit logs",
 			},
 			{ status: 500 },
 		);

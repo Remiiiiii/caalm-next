@@ -1,12 +1,12 @@
 import { ID, Query } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { getTicketTypeById } from "./ticket-types.repository";
 import {
 	type EventRegistration,
 	type EventRegistrationStatus,
 	registrationStatusConsumesCapacity,
 } from "./types";
-import { getTicketTypeById } from "./ticket-types.repository";
 
 function tableId(): string {
 	return (
@@ -37,16 +37,10 @@ function mapRow(row: Record<string, unknown>): EventRegistration {
 		eventId: String(row.eventId || ""),
 		ticketTypeId: String(row.ticketTypeId || ""),
 		status: mapStatus(row.status),
-		constituentId: row.constituentId
-			? String(row.constituentId)
-			: undefined,
+		constituentId: row.constituentId ? String(row.constituentId) : undefined,
 		guestEmail: row.guestEmail ? String(row.guestEmail) : undefined,
-		guestFirstName: row.guestFirstName
-			? String(row.guestFirstName)
-			: undefined,
-		guestLastName: row.guestLastName
-			? String(row.guestLastName)
-			: undefined,
+		guestFirstName: row.guestFirstName ? String(row.guestFirstName) : undefined,
+		guestLastName: row.guestLastName ? String(row.guestLastName) : undefined,
 		amountCents: Number(row.amountCents ?? 0),
 		checkedInAt: row.checkedInAt ? String(row.checkedInAt) : undefined,
 		tokenUsedAt: row.tokenUsedAt ? String(row.tokenUsedAt) : undefined,

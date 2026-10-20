@@ -515,7 +515,10 @@ const ContractStatusPieChart: React.FC<ContractStatusPieChartProps> = ({
 							const count = segmentCount(tab.status);
 							const pct = segmentPct(tab.status);
 							return (
-								<div key={tab.status} className="flex min-w-0 flex-1 items-stretch">
+								<div
+									key={tab.status}
+									className="flex min-w-0 flex-1 items-stretch"
+								>
 									{index > 0 ? (
 										<div
 											className="w-px shrink-0 self-stretch bg-slate-200"

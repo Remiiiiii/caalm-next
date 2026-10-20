@@ -33,8 +33,8 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { assigneeFallbackMessage } from "@/lib/assignments/resolve-default-assignee";
 import type { AssigneeSource } from "@/lib/assignments/resolve-default-assignee";
+import { assigneeFallbackMessage } from "@/lib/assignments/resolve-default-assignee";
 import { currencySymbol } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 import { CATEGORIES, COMPLIANCE_STATUSES, LICENSE_TYPES } from "../constants";
@@ -62,7 +62,10 @@ export interface Step2LicenseDetailsProps {
 	filteredManagers: Manager[];
 	selectedManagers: string[];
 	setSelectedManagers: (ids: string[]) => void;
-	fetchDepartmentManagers: (department: string, division?: string) => Promise<void>;
+	fetchDepartmentManagers: (
+		department: string,
+		division?: string,
+	) => Promise<void>;
 	assigneeSource?: AssigneeSource;
 	aiFilledFields?: string[];
 	fieldConfidence?: Record<string, number>;
@@ -492,10 +495,7 @@ export default function Step2LicenseDetails({
 									onValueChange={(value) => {
 										field.onChange(value);
 										if (selectedDepartment) {
-											void fetchDepartmentManagers(
-												selectedDepartment,
-												value,
-											);
+											void fetchDepartmentManagers(selectedDepartment, value);
 										}
 									}}
 									value={field.value || ""}
@@ -633,9 +633,8 @@ export default function Step2LicenseDetails({
 								<p className="text-xs text-slate-600 mt-2">
 									{assigneeFallbackMessage(
 										assigneeSource,
-										filteredManagers.find(
-											(m) => m.$id === selectedManagers[0],
-										)?.fullName,
+										filteredManagers.find((m) => m.$id === selectedManagers[0])
+											?.fullName,
 									)}
 								</p>
 							) : null}

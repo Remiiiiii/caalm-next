@@ -22,7 +22,10 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
 	const { id, relationshipId } = await context.params;
 	const existing = await getConstituentById(id);
 	if (!existing || existing.orgId !== ctx.orgId) {
-		return NextResponse.json({ error: "Constituent not found" }, { status: 404 });
+		return NextResponse.json(
+			{ error: "Constituent not found" },
+			{ status: 404 },
+		);
 	}
 
 	const relationship = await getRelationshipById(relationshipId);

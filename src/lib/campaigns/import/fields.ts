@@ -8,7 +8,8 @@ export const CAMPAIGN_IMPORT_FIELD_KEYS = [
 	"endDate",
 ] as const;
 
-export type CampaignImportFieldKey = (typeof CAMPAIGN_IMPORT_FIELD_KEYS)[number];
+export type CampaignImportFieldKey =
+	(typeof CAMPAIGN_IMPORT_FIELD_KEYS)[number];
 
 export const CAMPAIGN_IMPORT_FIELD_LABELS: Record<
 	CampaignImportFieldKey,

@@ -59,6 +59,37 @@ const TwoFactorModal = ({
 
 			const data = await response.json();
 
+			// #region agent log
+			fetch("http://127.0.0.1:7246/ingest/851d37c7-2223-45c1-89c0-a79ca1139a1d", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					"X-Debug-Session-Id": "da7416",
+				},
+				body: JSON.stringify({
+					sessionId: "da7416",
+					runId: "post-fix",
+					hypothesisId: "H3",
+					location: "TwoFactorModal.tsx:setupTwoFactor",
+					message: "2FA setup API response",
+					data: {
+						status: response.status,
+						success: Boolean(data?.success),
+						error:
+							typeof data?.error === "string"
+								? data.error.slice(0, 80)
+								: null,
+						hasUserId: Boolean(userId),
+						userIdKind:
+							userId?.startsWith?.("chart") || userId?.length === 20
+								? "looks-like-id"
+								: "other",
+					},
+					timestamp: Date.now(),
+				}),
+			}).catch(() => {});
+			// #endregion
+
 			if (data.success) {
 				setQrCode(data.data.uri);
 				setSecret(data.data.secret);

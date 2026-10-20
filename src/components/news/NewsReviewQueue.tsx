@@ -31,7 +31,10 @@ export function NewsReviewQueue() {
 		void load();
 	}, [load]);
 
-	const act = async (action: "approve" | "draft" | "dismiss", ids: string[]) => {
+	const act = async (
+		action: "approve" | "draft" | "dismiss",
+		ids: string[],
+	) => {
 		const response = await fetch("/api/news/review-queue", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
@@ -90,7 +93,9 @@ export function NewsReviewQueue() {
 									}}
 								/>
 								<div className="min-w-0">
-									<p className="text-sm font-medium text-slate-700">{item.title}</p>
+									<p className="text-sm font-medium text-slate-700">
+										{item.title}
+									</p>
 									<p className="text-xs text-slate-500 mt-1">
 										{item.source} · {new Date(item.date).toLocaleString()}
 									</p>

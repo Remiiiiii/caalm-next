@@ -110,6 +110,10 @@ export interface MetricStatCardProps {
 	description?: ReactNode;
 	/** Extra content under the description (breakdown bar, sparkline, CTA). */
 	footer?: ReactNode;
+	/** Push the footer to the bottom of the card (equal-height card rows). */
+	pinFooter?: boolean;
+	/** Extra classes for the title (e.g. `whitespace-nowrap`). */
+	titleClassName?: string;
 	icon:
 		| LucideIcon
 		| ComponentType<{ className?: string; strokeWidth?: number }>;
@@ -465,6 +469,8 @@ export function MetricStatCard({
 	value,
 	description,
 	footer,
+	pinFooter = false,
+	titleClassName,
 	icon,
 	iconTone = "default",
 	titleTone = "default",
@@ -526,6 +532,7 @@ export function MetricStatCard({
 						className={cn(
 							"text-base font-semibold leading-snug",
 							TITLE_TONE[titleTone],
+							titleClassName,
 						)}
 					>
 						{title}
@@ -553,7 +560,11 @@ export function MetricStatCard({
 					</div>
 				) : null}
 				{/* Keep footer under the value — do not mt-auto (that pinned it to the card bottom). */}
-				{footer ? <div className="w-full pt-3">{footer}</div> : null}
+				{footer ? (
+					<div className={cn("w-full pt-3", pinFooter && "mt-auto")}>
+						{footer}
+					</div>
+				) : null}
 			</CardContent>
 		</Card>
 	);

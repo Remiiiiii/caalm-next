@@ -1,16 +1,16 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { getTemplateById } from "@/lib/templates/contract-template.service";
 import { injectTemplateSlots } from "@/lib/templates/assemble-contract";
+import { isBlueprintId } from "@/lib/templates/blueprint-catalog";
 import {
 	downloadBlueprintFile,
 	uploadWizardDraftArtifact,
 } from "@/lib/templates/blueprint-storage";
+import { getTemplateById } from "@/lib/templates/contract-template.service";
 import { requireContractCreateContext } from "@/lib/templates/require-org-permission";
 import {
 	getWizardSession,
 	saveWizardSession,
 } from "@/lib/templates/wizard.service";
-import { isBlueprintId } from "@/lib/templates/blueprint-catalog";
 import type { BlueprintId } from "@/types/contract-templates";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -31,7 +31,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
 	const body = await request.json().catch(() => ({}));
 	const templateId = String(body.templateId || "").trim();
 	if (!templateId) {
-		return NextResponse.json({ error: "templateId is required" }, { status: 400 });
+		return NextResponse.json(
+			{ error: "templateId is required" },
+			{ status: 400 },
+		);
 	}
 
 	const template = await getTemplateById(templateId);
@@ -73,11 +76,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
 			...session.payload.intake,
 			contractType: template.contractType,
 		},
-		sections: injectTemplateSlots(
-			[],
-			template.clauseSlots,
-			template.$id,
-		),
+		sections: injectTemplateSlots([], template.clauseSlots, template.$id),
 	};
 
 	const updated = await saveWizardSession({

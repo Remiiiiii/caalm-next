@@ -111,9 +111,7 @@ export function InjectLibraryDialog({
 						aria-label="Library source"
 						variant="bar"
 						value={tab}
-						onValueChange={(next) =>
-							setTab(next as "templates" | "clauses")
-						}
+						onValueChange={(next) => setTab(next as "templates" | "clauses")}
 						tabs={[
 							{ value: "clauses", label: "Clauses", icon: FileText },
 							{ value: "templates", label: "Templates", icon: LayoutGrid },

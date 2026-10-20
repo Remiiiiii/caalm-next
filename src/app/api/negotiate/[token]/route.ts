@@ -56,25 +56,26 @@ export async function GET(request: NextRequest, context: RouteContext) {
 		null;
 	if (ownerId) {
 		try {
-			let user: {
+			type OwnerRow = {
 				fullName?: string;
 				email?: string;
 				avatar?: string | null;
 				profileImageId?: string | null;
-			} | null = null;
+			};
+			let user: OwnerRow | null = null;
 			try {
 				user = (await tablesDB.getRow({
 					databaseId: appwriteConfig.databaseId!,
 					tableId: appwriteConfig.usersCollectionId!,
 					rowId: ownerId,
-				})) as typeof user;
+				})) as unknown as OwnerRow;
 			} catch {
 				const byAccount = await tablesDB.listRows({
 					databaseId: appwriteConfig.databaseId!,
 					tableId: appwriteConfig.usersCollectionId!,
 					queries: [Query.equal("accountId", ownerId), Query.limit(1)],
 				});
-				user = (byAccount.rows?.[0] as typeof user) || null;
+				user = (byAccount.rows?.[0] as unknown as OwnerRow) || null;
 			}
 			if (user?.email) {
 				owner = {

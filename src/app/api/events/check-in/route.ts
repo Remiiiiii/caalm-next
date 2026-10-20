@@ -1,6 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
-import { checkInWithRegistrationToken, requireEventStaffContext } from "@/lib/events";
+import {
+	checkInWithRegistrationToken,
+	requireEventStaffContext,
+} from "@/lib/events";
 
 export async function POST(request: NextRequest) {
 	const ctx = await requireEventStaffContext(

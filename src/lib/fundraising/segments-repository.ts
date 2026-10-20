@@ -66,9 +66,7 @@ function mapRow(row: Record<string, unknown>): ConstituentSegmentRow {
 				? Number(row.suggestedAskAmount)
 				: undefined,
 		askOverrideAmount:
-			row.askOverrideAmount != null
-				? Number(row.askOverrideAmount)
-				: undefined,
+			row.askOverrideAmount != null ? Number(row.askOverrideAmount) : undefined,
 		askOverrideReason: row.askOverrideReason
 			? String(row.askOverrideReason)
 			: undefined,

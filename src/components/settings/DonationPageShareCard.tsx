@@ -24,6 +24,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SearchField } from "@/components/ui/search-field";
+import { SegmentedToggle } from "@/components/ui/segmented-toggle";
 import {
 	Select,
 	SelectContent,
@@ -31,13 +32,15 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { SegmentedToggle } from "@/components/ui/segmented-toggle";
-import type { ShareAttributionTotals, ShareCampaignBucket } from "@/lib/give/attribution";
 import { PERMISSIONS } from "@/constants/permissions";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { canContact } from "@/lib/constituents/consent";
 import type { Constituent } from "@/lib/constituents/types";
+import type {
+	ShareAttributionTotals,
+	ShareCampaignBucket,
+} from "@/lib/give/attribution";
 import {
 	buildGivePageEmbedSnippet,
 	buildGivePageShareUrl,
@@ -551,8 +554,8 @@ export function DonationPageShareCard({
 							<code className="rounded bg-slate-100 px-1">
 								utm_campaign={campaignSlug}
 							</code>{" "}
-							on copy, email, QR, and embed links so you can see which ask
-							drove gifts.
+							on copy, email, QR, and embed links so you can see which ask drove
+							gifts.
 						</p>
 					</div>
 
@@ -642,8 +645,8 @@ export function DonationPageShareCard({
 							]}
 						/>
 						<p className="text-xs text-slate-500">
-							Open live page uses the clean URL so admin preview does not
-							count as a share visit.
+							Open live page uses the clean URL so admin preview does not count
+							as a share visit.
 						</p>
 					</div>
 
@@ -663,7 +666,7 @@ export function DonationPageShareCard({
 								Loading analytics…
 							</p>
 						) : !analytics ||
-						  (analytics.totals.visitCount === 0 &&
+							(analytics.totals.visitCount === 0 &&
 								analytics.totals.giftCount === 0) ? (
 							<p className="text-sm text-slate-600">
 								No share visits or gifts yet. Copy or email a tagged link to
@@ -766,8 +769,12 @@ export function DonationPageShareCard({
 									QR code
 								</p>
 								<p className="mt-1 text-xs text-slate-500">
-									Print on event programs or posters. Scans open the tracked
-									QR link (<code className="rounded bg-slate-100 px-1">utm_source=qr</code>).
+									Print on event programs or posters. Scans open the tracked QR
+									link (
+									<code className="rounded bg-slate-100 px-1">
+										utm_source=qr
+									</code>
+									).
 								</p>
 							</div>
 							{!isPublished ? (

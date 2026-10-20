@@ -22,7 +22,10 @@ export async function GET(request: NextRequest) {
 
 	const params = request.nextUrl.searchParams;
 	const page = Math.max(Number(params.get("page") || "1"), 1);
-	const pageSize = Math.min(Math.max(Number(params.get("pageSize") || "20"), 1), 100);
+	const pageSize = Math.min(
+		Math.max(Number(params.get("pageSize") || "20"), 1),
+		100,
+	);
 
 	try {
 		const segment = params.get("segment")?.trim() || undefined;
@@ -114,9 +117,7 @@ export async function POST(request: NextRequest) {
 				lastName,
 				email: body.email ? String(body.email) : undefined,
 				phone: body.phone ? String(body.phone) : undefined,
-				addressLine1: body.addressLine1
-					? String(body.addressLine1)
-					: undefined,
+				addressLine1: body.addressLine1 ? String(body.addressLine1) : undefined,
 				city: body.city ? String(body.city) : undefined,
 				region: body.region ? String(body.region) : undefined,
 				postalCode: body.postalCode ? String(body.postalCode) : undefined,
@@ -141,7 +142,10 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		return NextResponse.json({ constituent: result.constituent }, { status: 201 });
+		return NextResponse.json(
+			{ constituent: result.constituent },
+			{ status: 201 },
+		);
 	} catch (error) {
 		console.error("[SERVER] constituents POST:", error);
 		return NextResponse.json(

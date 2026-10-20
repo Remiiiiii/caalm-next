@@ -3,8 +3,8 @@ import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
 import { getNewsFeed } from "@/lib/database/news-feeds";
 import { previewNewsFeed } from "@/lib/news/ingest/run-feed";
-import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 import { requirePermission } from "@/lib/rbac/middleware";
+import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 
 export async function POST(
 	request: NextRequest,
@@ -15,7 +15,8 @@ export async function POST(
 	});
 	if (denied) return denied;
 	const user = await getCurrentUser();
-	if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+	if (!user)
+		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	const org = await getUserDefaultOrganization(user.$id);
 	const { id } = await params;
 	const feed = await getNewsFeed(id);

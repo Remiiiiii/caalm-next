@@ -15,8 +15,7 @@ import {
 	RefreshCw,
 	Share2,
 	Trash2,
-	UserRoundCheck,
-} from "lucide-react";
+	UserRoundCheck, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import type React from "react";
@@ -410,7 +409,8 @@ const LicenseActionDropdown = ({
 						const menuItem =
 							actionItem.value === "download" ? (
 								<AppDropdownMenuItem
-									icon={Icon}
+									icon={downloading ? Loader2 : Icon}
+									iconClassName={downloading ? "animate-spin" : undefined}
 									tone={tone}
 									onSelect={(e) => {
 										e.preventDefault();

@@ -5,6 +5,12 @@ import Link from "next/link";
 import { useCallback, useState } from "react";
 import useSWR from "swr";
 import { ReadinessCharts } from "@/components/audits/ReadinessCharts";
+import { FALLBACK_RAG_THRESHOLDS } from "@/components/audits/readiness/readiness-ui";
+import type {
+	RagThresholds,
+	ReadinessDomain,
+	ReadinessHistoryRow,
+} from "@/components/audits/readiness/types";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { PERMISSIONS } from "@/constants/permissions";
@@ -21,7 +27,7 @@ interface PreviewResponse {
 			readinessScore: number | null;
 			ragStatus: string;
 			severity: { critical: number; moderate: number; low: number };
-			domains: Array<{ label: string; readinessPercent: number }>;
+			domains: ReadinessDomain[];
 			insights: Array<{
 				id: string;
 				title: string;
@@ -38,6 +44,8 @@ interface PreviewResponse {
 		};
 		sourcesUsed: string[];
 		disclaimer: string;
+		ragThresholds?: RagThresholds;
+		history: ReadinessHistoryRow[];
 		evidenceMapHits: Array<{
 			requirementId: string;
 			label: string;
@@ -235,8 +243,11 @@ export default function AuditReadinessPreviewPage() {
 						</h3>
 						<ReadinessCharts
 							domains={payload.summary.domains}
+							sourcesUsed={payload.sourcesUsed}
 							severity={payload.summary.severity}
-							history={payload.summary.trends.compliance}
+							history={payload.history}
+							score={payload.summary.readinessScore}
+							thresholds={payload.ragThresholds ?? FALLBACK_RAG_THRESHOLDS}
 						/>
 					</section>
 

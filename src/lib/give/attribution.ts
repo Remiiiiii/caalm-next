@@ -145,10 +145,7 @@ export function aggregateShareAttributionMetrics(input: {
 		return bucket;
 	};
 
-	const ensureSource = (
-		bucket: ReturnType<typeof ensure>,
-		source: string,
-	) => {
+	const ensureSource = (bucket: ReturnType<typeof ensure>, source: string) => {
 		let row = bucket.sources.get(source);
 		if (!row) {
 			row = { visitCount: 0, giftCount: 0, giftTotal: 0 };
@@ -195,7 +192,9 @@ export function aggregateShareAttributionMetrics(input: {
 					giftTotal: row.giftTotal,
 					conversionRate: conversionRate(row.giftCount, row.visitCount),
 				}))
-				.sort((a, b) => b.giftTotal - a.giftTotal || b.visitCount - a.visitCount),
+				.sort(
+					(a, b) => b.giftTotal - a.giftTotal || b.visitCount - a.visitCount,
+				),
 		}))
 		.sort((a, b) => b.giftTotal - a.giftTotal || b.visitCount - a.visitCount);
 

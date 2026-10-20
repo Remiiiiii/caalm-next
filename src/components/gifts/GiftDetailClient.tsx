@@ -159,7 +159,9 @@ export function GiftDetailClient({ giftId }: { giftId: string }) {
 						{gift.contractId ? (
 							<div>
 								<dt className="text-slate-500">Grant contract</dt>
-								<dd className="text-slate-700 tabular-nums">{gift.contractId}</dd>
+								<dd className="text-slate-700 tabular-nums">
+									{gift.contractId}
+								</dd>
 							</div>
 						) : null}
 						{gift.shareSource || gift.shareMedium || gift.shareCampaign ? (

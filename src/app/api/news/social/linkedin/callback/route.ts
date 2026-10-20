@@ -30,9 +30,7 @@ export async function GET(request: NextRequest) {
 			linkedInError,
 			url.searchParams.get("error_description"),
 		);
-		return NextResponse.redirect(
-			`${redirectBase}&error=linkedin_denied`,
-		);
+		return NextResponse.redirect(`${redirectBase}&error=linkedin_denied`);
 	}
 
 	if (!code || !parsed || parsed.provider !== "linkedin") {

@@ -111,9 +111,7 @@ export async function updateTicket(
 			action: "update",
 			source: "caalm",
 			user_id:
-				ticket.assigneeCaalmUserId ||
-				ticket.submittedByUserId ||
-				"system",
+				ticket.assigneeCaalmUserId || ticket.submittedByUserId || "system",
 			user_name: ticket.submittedByName || "User",
 			user_email: "",
 			orgId: ticket.orgId || "default_organization",

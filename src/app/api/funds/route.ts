@@ -1,18 +1,15 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
+import { requireFundingOrgContext } from "@/lib/funding/request-context";
 import {
 	createFund,
 	ensureDefaultUnrestrictedFund,
 	isNetAssetClass,
 	listFundsForOrg,
 } from "@/lib/funds";
-import { requireFundingOrgContext } from "@/lib/funding/request-context";
 
 export async function GET(request: NextRequest) {
-	const ctx = await requireFundingOrgContext(
-		request,
-		PERMISSIONS.FUNDING.VIEW,
-	);
+	const ctx = await requireFundingOrgContext(request, PERMISSIONS.FUNDING.VIEW);
 	if (!ctx.ok) return ctx.response;
 
 	try {
@@ -21,7 +18,10 @@ export async function GET(request: NextRequest) {
 		return NextResponse.json({ items });
 	} catch (error) {
 		console.error("[funds GET]", error);
-		return NextResponse.json({ error: "Failed to load funds" }, { status: 500 });
+		return NextResponse.json(
+			{ error: "Failed to load funds" },
+			{ status: 500 },
+		);
 	}
 }
 
@@ -52,6 +52,9 @@ export async function POST(request: NextRequest) {
 		return NextResponse.json(fund, { status: 201 });
 	} catch (error) {
 		console.error("[funds POST]", error);
-		return NextResponse.json({ error: "Failed to create fund" }, { status: 500 });
+		return NextResponse.json(
+			{ error: "Failed to create fund" },
+			{ status: 500 },
+		);
 	}
 }

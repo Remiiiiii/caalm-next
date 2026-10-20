@@ -16,6 +16,8 @@ import { Button } from "@/components/ui/button";
 import "@/lib/templates/docx-preview.css";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
+import { BusyIcon } from "@/components/ui/busy-icon";
+import { useBusyAction } from "@/hooks/useBusyAction";
 
 // Use pdf.js (not Chrome’s PDF viewer) so Gemini Summarize never appears.
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -47,6 +49,7 @@ export default function LocalPdfPreviewDialog({
 	onDownload,
 }: LocalPdfPreviewDialogProps) {
 	const [numPages, setNumPages] = useState(0);
+	const [runDownload, downloading] = useBusyAction(() => onDownload?.());
 	const [pageNumber, setPageNumber] = useState(1);
 	const [scale, setScale] = useState(1);
 	const [loadError, setLoadError] = useState<string | null>(null);
@@ -199,9 +202,10 @@ export default function LocalPdfPreviewDialog({
 								<Button
 									type="button"
 									className="btn-primary px-3 sm:px-4"
-									onClick={onDownload}
+									disabled={downloading}
+									onClick={() => void runDownload()}
 								>
-									<Download className="h-4 w-4" />
+									<BusyIcon busy={downloading} icon={Download} />
 									Download
 								</Button>
 							) : null}

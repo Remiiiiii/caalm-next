@@ -162,8 +162,7 @@ export const swrConfig: SWRConfiguration = {
 					? error
 					: "Unknown error";
 
-		const keyText =
-			typeof key === "string" ? key : JSON.stringify(key ?? "");
+		const keyText = typeof key === "string" ? key : JSON.stringify(key ?? "");
 
 		// Expected failures — do not log. Next.js treats console.error as a
 		// blocking overlay, which makes a 404/timeout look like a crash.

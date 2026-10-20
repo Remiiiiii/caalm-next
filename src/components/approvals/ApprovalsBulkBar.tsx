@@ -1,15 +1,17 @@
 "use client";
 
-import { CheckCircle2, SquareArrowRightExit, X } from "lucide-react";
+import { CheckCircle2, SquareArrowRightExit } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useApprovalsView } from "@/components/approvals/ApprovalsViewContext";
+import { BulkActionDock } from "@/components/ui/bulk-action-dock";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import type { ApprovalQueueItem } from "@/lib/approvals/approvalsListUtils";
 import { toUserFacingErrorMessage } from "@/lib/errors/user-facing";
+import { downloadXlsx } from "@/lib/export/download-xlsx";
 
 interface ApprovalsBulkBarProps {
 	items: ApprovalQueueItem[];
@@ -36,35 +38,30 @@ export default function ApprovalsBulkBar({
 	if (selectedIds.length === 0) return null;
 
 	const exportSelected = () => {
-		const headers = [
-			"Title",
-			"Type",
-			"Status",
-			"Department",
-			"Assigned",
-			"Submitted",
-			"Entity",
-		];
-		const rows = selectedItems.map((item) => [
-			item.title,
-			item.itemType || "",
-			item.status,
-			item.department || "",
-			item.assignees.join("; "),
-			item.submittedAt,
-			item.entity,
-		]);
-		const csv = [
-			headers.join(","),
-			...rows.map((row) =>
-				row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","),
-			),
-		].join("\n");
-		const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-		const link = document.createElement("a");
-		link.href = URL.createObjectURL(blob);
-		link.download = `approvals-selected-${new Date().toISOString().split("T")[0]}.csv`;
-		link.click();
+		const stamp = new Date().toISOString().slice(0, 10);
+		downloadXlsx(`approvals-selected-${stamp}.xlsx`, {
+			sheetName: "Approvals",
+			title: "Approvals — Selected",
+			subtitle: `CAALM · ${selectedItems.length} item${selectedItems.length === 1 ? "" : "s"} · Generated ${stamp}`,
+			columns: [
+				{ header: "Title", width: 40 },
+				{ header: "Type", width: 16 },
+				{ header: "Status", width: 16 },
+				{ header: "Department", width: 20 },
+				{ header: "Assigned", width: 28 },
+				{ header: "Submitted", type: "date", width: 16 },
+				{ header: "Entity", width: 28 },
+			],
+			rows: selectedItems.map((item) => [
+				item.title,
+				item.itemType,
+				item.status,
+				item.department,
+				item.assignees.join("; "),
+				item.submittedAt,
+				item.entity,
+			]),
+		});
 	};
 
 	const decideLicense = async (
@@ -163,57 +160,46 @@ export default function ApprovalsBulkBar({
 
 	return (
 		<>
-			<div className="sticky bottom-4 z-20 mx-4 sm:mx-6 mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg border border-slate-200 bg-white/95 px-4 py-3 shadow-lg backdrop-blur">
-				<p className="text-sm font-medium text-slate-700">
-					{selectedIds.length} selected
-				</p>
-				<div className="flex items-center gap-2 flex-wrap">
-					<Button
-						type="button"
-						variant="ghost"
-						size="sm"
-						className="cursor-pointer"
-						onClick={clearSelection}
-					>
-						<X className="h-4 w-4" />
-						Clear
-					</Button>
-					<Button
-						type="button"
-						size="sm"
-						variant="outline"
-						className="cursor-pointer"
-						onClick={exportSelected}
-					>
-						<SquareArrowRightExit className="h-4 w-4" />
-						Export
-					</Button>
-					{canDecide && (
-						<>
-							<Button
-								type="button"
-								size="sm"
-								variant="outline"
-								className="cursor-pointer text-red border-red/20"
-								disabled={busy}
-								onClick={() => setDenyOpen(true)}
-							>
-								Deny
-							</Button>
-							<Button
-								type="button"
-								size="sm"
-								className="primary-btn px-3 sm:px-4 cursor-pointer"
-								disabled={busy}
-								onClick={() => bulkSetStatus("active")}
-							>
-								<CheckCircle2 className="h-4 w-4" />
-								Approve selected
-							</Button>
-						</>
-					)}
-				</div>
-			</div>
+			<BulkActionDock
+				count={selectedIds.length}
+				noun="approval"
+				onClear={clearSelection}
+			>
+				<Button
+					type="button"
+					size="sm"
+					variant="outline"
+					className="cursor-pointer"
+					onClick={exportSelected}
+				>
+					<SquareArrowRightExit className="h-4 w-4" />
+					Export
+				</Button>
+				{canDecide && (
+					<>
+						<Button
+							type="button"
+							size="sm"
+							variant="outline"
+							className="cursor-pointer text-red border-red/20"
+							disabled={busy}
+							onClick={() => setDenyOpen(true)}
+						>
+							Deny
+						</Button>
+						<Button
+							type="button"
+							size="sm"
+							className="primary-btn px-3 sm:px-4 cursor-pointer"
+							disabled={busy}
+							onClick={() => bulkSetStatus("active")}
+						>
+							<CheckCircle2 className="h-4 w-4" />
+							Approve selected
+						</Button>
+					</>
+				)}
+			</BulkActionDock>
 
 			<Dialog open={denyOpen} onOpenChange={setDenyOpen}>
 				<DialogContent className="w-[calc(100%-1.5rem)] sm:w-full max-w-[480px] p-0 overflow-hidden border border-slate-200 shadow-xl">

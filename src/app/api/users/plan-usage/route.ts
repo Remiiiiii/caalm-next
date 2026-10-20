@@ -1,10 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
-import {
-	countBillableUsers,
-	getOrgPlanLimits,
-} from "@/lib/billing/planLimits";
+import { countBillableUsers, getOrgPlanLimits } from "@/lib/billing/planLimits";
 import { getOrgIdFromRequest, requirePermission } from "@/lib/rbac/middleware";
 import { validateUserOrgAccess } from "@/lib/rbac/permissions";
 

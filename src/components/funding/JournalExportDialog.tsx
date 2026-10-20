@@ -2,6 +2,7 @@
 
 import { Download, FileSpreadsheet } from "lucide-react";
 import { useState } from "react";
+import { BusyIcon } from "@/components/ui/busy-icon";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -28,9 +29,11 @@ export function JournalExportDialog() {
 	const [error, setError] = useState<string | null>(null);
 	const [meta, setMeta] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
+	const [busyFormat, setBusyFormat] = useState<"csv" | "iif" | null>(null);
 
 	const download = async (format: "csv" | "iif") => {
 		setBusy(true);
+		setBusyFormat(format);
 		setError(null);
 		try {
 			const params = new URLSearchParams({
@@ -55,6 +58,7 @@ export function JournalExportDialog() {
 			URL.revokeObjectURL(url);
 		} finally {
 			setBusy(false);
+			setBusyFormat(null);
 		}
 	};
 
@@ -159,7 +163,7 @@ export function JournalExportDialog() {
 						disabled={busy}
 						onClick={() => void download("iif")}
 					>
-						<Download className="h-4 w-4" />
+						<BusyIcon busy={busyFormat === "iif"} icon={Download} />
 						IIF download
 					</Button>
 					<Button
@@ -168,7 +172,7 @@ export function JournalExportDialog() {
 						disabled={busy}
 						onClick={() => void download("csv")}
 					>
-						<Download className="h-4 w-4" />
+						<BusyIcon busy={busyFormat === "csv"} icon={Download} />
 						CSV download
 					</Button>
 				</div>

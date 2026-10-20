@@ -19,5 +19,7 @@ export type DonationPageConfigStore = {
 	appendPriceReplacements(
 		rows: DonationStripePriceReplacement[],
 	): Promise<void>;
-	listPriceReplacements(orgId: string): Promise<DonationStripePriceReplacement[]>;
+	listPriceReplacements(
+		orgId: string,
+	): Promise<DonationStripePriceReplacement[]>;
 };

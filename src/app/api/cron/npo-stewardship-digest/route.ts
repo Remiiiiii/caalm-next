@@ -8,8 +8,7 @@ export async function GET(request: NextRequest) {
 	}
 
 	const frequencyParam = request.nextUrl.searchParams.get("frequency");
-	const frequency =
-		frequencyParam === "weekly" ? "weekly" : ("daily" as const);
+	const frequency = frequencyParam === "weekly" ? "weekly" : ("daily" as const);
 
 	try {
 		const result = await sendStewardshipDigestsForFrequency(frequency);

@@ -1,8 +1,8 @@
 "use client";
 
 import { Calendar, FilePen, FileText, Plus, TrendingUp } from "lucide-react";
-import type { Models } from "node-appwrite";
 import { useSearchParams } from "next/navigation";
+import type { Models } from "node-appwrite";
 import type React from "react";
 import { useState } from "react";
 import { DashboardGreeting } from "@/components/dashboard/DashboardGreeting";
@@ -53,11 +53,14 @@ const ContentCreatorDashboard: React.FC<ContentCreatorDashboardProps> = ({
 	const [editingArticle, setEditingArticle] = useState<string | null>(null);
 	const searchParams = useSearchParams();
 	const [tab, setTabState] = useState<NewsTab>(() => {
-		const tabParam = searchParams.get("tab");
+		const tabParam = searchParams?.get("tab") ?? null;
 		return isNewsTab(tabParam) ? tabParam : "articles";
 	});
-	const { analytics, isLoading: statsLoading, refresh: refreshStats } =
-		useNewsAnalytics();
+	const {
+		analytics,
+		isLoading: statsLoading,
+		refresh: refreshStats,
+	} = useNewsAnalytics();
 	const stats = {
 		total: analytics?.overview?.total || 0,
 		published: analytics?.overview?.published || 0,
@@ -130,11 +133,7 @@ const ContentCreatorDashboard: React.FC<ContentCreatorDashboardProps> = ({
 			</div>
 
 			{/* Articles and Analytics Tabs */}
-			<Tabs
-				value={tab}
-				onValueChange={setTab}
-				className="space-y-4"
-			>
+			<Tabs value={tab} onValueChange={setTab} className="space-y-4">
 				<TabsList>
 					<TabsTrigger value="articles">Articles</TabsTrigger>
 					<TabsTrigger value="queue">Review queue</TabsTrigger>

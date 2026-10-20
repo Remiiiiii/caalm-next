@@ -12,7 +12,10 @@ export async function getCalendarEventInOrg(
 	orgId: string,
 	eventId: string,
 ): Promise<CalendarEventOrgRow | null> {
-	if (!appwriteConfig.databaseId || !appwriteConfig.calendarEventsCollectionId) {
+	if (
+		!appwriteConfig.databaseId ||
+		!appwriteConfig.calendarEventsCollectionId
+	) {
 		return null;
 	}
 	const { tablesDB } = await createAdminClient();

@@ -1,10 +1,7 @@
 import { ID, Query } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
-import {
-	isTaskDueThisWeek,
-	isTaskOverdue,
-} from "@/lib/tasks/dueDateDisplay";
+import { isTaskDueThisWeek, isTaskOverdue } from "@/lib/tasks/dueDateDisplay";
 import { formatTaskDisplayId } from "@/lib/tasks/formatTaskDisplayId";
 import { resolveOrgTimezone } from "@/lib/timezone";
 import type {
@@ -271,7 +268,10 @@ export class TaskService {
 		});
 	}
 
-	static async restoreTask(orgId: string, taskId: string): Promise<Task | null> {
+	static async restoreTask(
+		orgId: string,
+		taskId: string,
+	): Promise<Task | null> {
 		const existing = await TaskService.getTask(orgId, taskId);
 		if (!existing?.deletedAt) return null;
 		return TaskService.updateTask(orgId, taskId, { deletedAt: null });
@@ -295,9 +295,7 @@ export class TaskService {
 			const requestedId = task.requestedById || task.createdById;
 			return {
 				...task,
-				assigneeName: task.assigneeId
-					? names.get(task.assigneeId)
-					: undefined,
+				assigneeName: task.assigneeId ? names.get(task.assigneeId) : undefined,
 				linkedEntityTitle: task.linkedEntityId
 					? titles.get(`${task.linkedEntityType}:${task.linkedEntityId}`)
 					: undefined,

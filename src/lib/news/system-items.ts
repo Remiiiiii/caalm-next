@@ -1,4 +1,7 @@
-import { createNewsArticle, listNewsArticles } from "@/lib/database/news-articles";
+import {
+	createNewsArticle,
+	listNewsArticles,
+} from "@/lib/database/news-articles";
 import { getNewsSystemSettings } from "@/lib/database/news-system-settings";
 
 export type SystemNewsKind =
@@ -21,10 +24,7 @@ export async function maybeCreateSystemNewsItem(params: {
 	if (params.kind === "policy_update" && !settings.enablePolicyUpdates) {
 		return false;
 	}
-	if (
-		params.kind === "regulation_alert" &&
-		!settings.enableRegulationAlerts
-	) {
+	if (params.kind === "regulation_alert" && !settings.enableRegulationAlerts) {
 		return false;
 	}
 

@@ -1,16 +1,16 @@
 import { ID, Query } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
-import { getConstituentById } from "@/lib/constituents/repository";
 import { getCampaignById } from "@/lib/campaigns/repository";
+import { getConstituentById } from "@/lib/constituents/repository";
 import {
 	DesignationDomainError,
 	resolveFundForGift,
 	UNRESTRICTED_FUND_CODE,
 } from "@/lib/designations";
 import { sendPostedGiftReceiptIfEligible } from "@/lib/stewardship/gift-receipts";
-import { allocateReceiptNumber } from "./receipt";
 import { assertGrantContractForOrg } from "./grant-contract";
+import { allocateReceiptNumber } from "./receipt";
 import { mapGiftRow } from "./repository-rows";
 import { createSoftCreditsForPostedGift } from "./soft-credits";
 import type {
@@ -133,10 +133,7 @@ export async function createDraftGift(input: CreateGiftInput): Promise<Gift> {
 	await assertContractForGift(input.contractId, input.orgId);
 	let fundCode = UNRESTRICTED_FUND_CODE;
 	try {
-		const resolved = await resolveFundForGift(
-			input.orgId,
-			input.designationId,
-		);
+		const resolved = await resolveFundForGift(input.orgId, input.designationId);
 		fundCode = resolved.fundCode;
 	} catch (error) {
 		if (error instanceof DesignationDomainError) {
@@ -187,16 +184,20 @@ export async function updateDraftGift(
 		await assertConstituentInOrg(patch.constituentId, orgId);
 	}
 	const nextCampaign =
-		patch.campaignId === null ? undefined : patch.campaignId ?? existing.campaignId;
+		patch.campaignId === null
+			? undefined
+			: (patch.campaignId ?? existing.campaignId);
 	await assertCampaignInOrg(nextCampaign, orgId);
 	const nextContract =
-		patch.contractId === null ? undefined : patch.contractId ?? existing.contractId;
+		patch.contractId === null
+			? undefined
+			: (patch.contractId ?? existing.contractId);
 	await assertContractForGift(nextContract, orgId);
 
 	const nextDesignation =
 		patch.designationId === null
 			? undefined
-			: patch.designationId ?? existing.designationId;
+			: (patch.designationId ?? existing.designationId);
 	let fundCode = existing.fundCode;
 	if (patch.designationId !== undefined) {
 		try {
@@ -366,13 +367,17 @@ export async function sumPostedGiftTotalForCampaign(
 			Query.limit(PAGE_SIZE_MAX),
 		],
 	});
-	const rows = (result.rows as unknown as Record<string, unknown>[]).map(mapRow);
+	const rows = (result.rows as unknown as Record<string, unknown>[]).map(
+		mapRow,
+	);
 	return rows
 		.filter((g) => !g.voidOfId && g.amount > 0)
 		.reduce((sum, g) => sum + g.amount, 0);
 }
 
-export function parseGiftMethodParam(value: string | null): GiftMethod | undefined {
+export function parseGiftMethodParam(
+	value: string | null,
+): GiftMethod | undefined {
 	if (!value) return undefined;
 	return isGiftMethod(value) ? value : undefined;
 }

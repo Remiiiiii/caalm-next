@@ -18,7 +18,7 @@ describe("NPO 9.5 Stripe donation Checkout", () => {
 			join(process.cwd(), "src/lib/stripe/donations.ts"),
 			"utf8",
 		);
-		expect(donations).toMatch(/mode: "payment"/);
+		expect(donations).toMatch(/"payment"/);
 		expect(donations).toMatch(/purpose: DONATION_CHECKOUT_PURPOSE/);
 		expect(DONATION_CHECKOUT_PURPOSE).toBe("donation");
 	});

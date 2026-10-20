@@ -134,8 +134,7 @@ export const DOCS_NAV: DocsNavGroup[] = [
 				title: "Content Creator",
 				slug: "guides/content-creator",
 				path: "guides/content-creator",
-				summary:
-					"Articles, review queue, connected feeds, and news analytics.",
+				summary: "Articles, review queue, connected feeds, and news analytics.",
 			},
 			{
 				title: "IT staff",

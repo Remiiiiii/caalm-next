@@ -1,9 +1,12 @@
 import type { ComplianceRagStatus } from "@/lib/audits/types";
 
+/** Minimum score for each RAG band. The UI reads these from the API, never hard-codes them. */
+export const RAG_THRESHOLDS = { green: 85, amber: 70 } as const;
+
 export function computeRag(score: number | null): ComplianceRagStatus | null {
 	if (score === null || Number.isNaN(score)) return null;
-	if (score >= 85) return "green";
-	if (score >= 70) return "amber";
+	if (score >= RAG_THRESHOLDS.green) return "green";
+	if (score >= RAG_THRESHOLDS.amber) return "amber";
 	return "red";
 }
 

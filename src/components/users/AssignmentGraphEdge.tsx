@@ -2,18 +2,18 @@
 
 import {
 	BaseEdge,
+	type Edge,
 	EdgeLabelRenderer,
+	type EdgeProps,
 	getBezierPath,
 	useReactFlow,
-	type Edge,
-	type EdgeProps,
 } from "@xyflow/react";
 import { Scissors } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
 	ADMIN_ASSIGN_COLOR,
-	SYSTEM_ASSIGN_COLOR,
 	type AssignmentEdgeKind,
+	SYSTEM_ASSIGN_COLOR,
 } from "@/lib/users/assignment-graph";
 import { cutPositionAlongEdge } from "@/lib/users/edge-cut-position";
 
@@ -24,9 +24,15 @@ export type AssignmentGraphEdgeData = {
 	dashed?: boolean;
 };
 
-export type AssignmentGraphEdgeType = Edge<AssignmentGraphEdgeData, "assignment">;
+export type AssignmentGraphEdgeType = Edge<
+	AssignmentGraphEdgeData,
+	"assignment"
+>;
 
-function stopFlowEvent(event: { preventDefault: () => void; stopPropagation: () => void }) {
+function stopFlowEvent(event: {
+	preventDefault: () => void;
+	stopPropagation: () => void;
+}) {
 	event.preventDefault();
 	event.stopPropagation();
 }
@@ -87,9 +93,10 @@ export function AssignmentGraphEdge({
 		leaveTimer.current = setTimeout(() => setHovered(false), 280);
 	};
 
-	const cutConnection = (
-		event: { preventDefault: () => void; stopPropagation: () => void },
-	) => {
+	const cutConnection = (event: {
+		preventDefault: () => void;
+		stopPropagation: () => void;
+	}) => {
 		stopFlowEvent(event);
 		if (!canEdit) return;
 		setHovered(false);
@@ -121,7 +128,10 @@ export function AssignmentGraphEdge({
 					stroke="transparent"
 					strokeWidth={24}
 					className="cursor-pointer"
-					style={{ pointerEvents: "stroke", vectorEffect: "non-scaling-stroke" }}
+					style={{
+						pointerEvents: "stroke",
+						vectorEffect: "non-scaling-stroke",
+					}}
 					onMouseEnter={(event) => {
 						setHover(true);
 						placeCutAtPointer(event.clientX, event.clientY);

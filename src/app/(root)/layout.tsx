@@ -14,6 +14,7 @@ import Sidebar from "@/components/Sidebar";
 import ReportIssueFab from "@/components/tickets/ReportIssueFab";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { Toaster } from "@/components/ui/toaster";
+import type { UserRole } from "@/constants/rbac";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ImpersonationProvider } from "@/contexts/ImpersonationContext";
 import { OrganizationProvider } from "@/contexts/OrganizationContext";
@@ -95,8 +96,15 @@ const LayoutContent = ({ children }: { children: React.ReactNode }) => {
 		(user as { name?: string })?.name,
 		(user as { avatar?: string })?.avatar,
 		(user as { profileImageId?: string })?.profileImageId,
-		(user as { prefs?: { profileImage?: string; profileImageId?: string; avatar?: string } })
-			?.prefs?.profileImage,
+		(
+			user as {
+				prefs?: {
+					profileImage?: string;
+					profileImageId?: string;
+					avatar?: string;
+				};
+			}
+		)?.prefs?.profileImage,
 		(user as { prefs?: { profileImageId?: string } })?.prefs?.profileImageId,
 		(user as { prefs?: { avatar?: string } })?.prefs?.avatar,
 		(user as { role?: string })?.role,
@@ -112,7 +120,7 @@ const LayoutContent = ({ children }: { children: React.ReactNode }) => {
 				fullName: "Loading...",
 				avatar: "",
 				email: "",
-				role: "",
+				role: "" as UserRole,
 			};
 		}
 		const u = user as {
@@ -134,7 +142,7 @@ const LayoutContent = ({ children }: { children: React.ReactNode }) => {
 			fullName: u.fullName || u.name || "Unknown User",
 			avatar: resolveNavAvatar(u),
 			email: user.email,
-			role: u.role || "",
+			role: (u.role || "") as UserRole,
 		};
 	}, [
 		user?.$id,

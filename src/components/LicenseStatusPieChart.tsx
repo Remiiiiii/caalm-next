@@ -1,11 +1,6 @@
 "use client";
 
-import {
-	AlertTriangle,
-	Check,
-	Key,
-	SquareArrowOutUpRight,
-} from "lucide-react";
+import { AlertTriangle, Check, Key, SquareArrowOutUpRight } from "lucide-react";
 import Link from "next/link";
 import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -15,12 +10,12 @@ import { LiveWeatherStatusDot } from "@/components/dashboard-briefing/LiveWeathe
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import {
-	type LicenseStatusPieBucket,
-	type LicenseStatusPieSegment,
 	classifyLicenseStatusPieBucket,
 	computeLicenseStatusPie,
 	daysUntilLicensePieExpiry,
 	getLicensePieExpiryRaw,
+	type LicenseStatusPieBucket,
+	type LicenseStatusPieSegment,
 } from "@/lib/dashboard/license-status-pie";
 import { swrConfig } from "@/lib/swr-config";
 import { cn } from "@/lib/utils";
@@ -450,8 +445,7 @@ const LicenseStatusPieChart: React.FC<LicenseStatusPieChartProps> = ({
 	const segmentPct = (status: LicenseStatusPieBucket) =>
 		licenseData.find((item) => item.status === status)?.percentage ?? 0;
 
-	const needAttention =
-		segmentCount("expiring") + segmentCount("expired");
+	const needAttention = segmentCount("expiring") + segmentCount("expired");
 	const isHealthy = needAttention === 0;
 
 	return (
@@ -500,7 +494,10 @@ const LicenseStatusPieChart: React.FC<LicenseStatusPieChartProps> = ({
 							const count = segmentCount(tab.status);
 							const pct = segmentPct(tab.status);
 							return (
-								<div key={tab.status} className="flex min-w-0 flex-1 items-stretch">
+								<div
+									key={tab.status}
+									className="flex min-w-0 flex-1 items-stretch"
+								>
 									{index > 0 ? (
 										<div
 											className="w-px shrink-0 self-stretch bg-slate-200"

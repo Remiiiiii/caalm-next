@@ -17,7 +17,9 @@ function pledgesTableId(): string {
 }
 
 function installmentsTableId(): string {
-	return appwriteConfig.pledgeInstallmentsCollectionId || "69d91404001f4e8c2b07";
+	return (
+		appwriteConfig.pledgeInstallmentsCollectionId || "69d91404001f4e8c2b07"
+	);
 }
 
 function dbId(): string {
@@ -124,7 +126,9 @@ export async function createPledgeWithInstallments(input: {
 				skipReason: null,
 			},
 		});
-		installments.push(mapInstallment(row as unknown as Record<string, unknown>));
+		installments.push(
+			mapInstallment(row as unknown as Record<string, unknown>),
+		);
 	}
 	return { pledge, installments };
 }
@@ -143,7 +147,9 @@ export async function listDueInstallments(
 			Query.limit(200),
 		],
 	});
-	return (result.rows as unknown as Record<string, unknown>[]).map(mapInstallment);
+	return (result.rows as unknown as Record<string, unknown>[]).map(
+		mapInstallment,
+	);
 }
 
 export type PledgeCronResult = {

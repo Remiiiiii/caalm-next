@@ -30,7 +30,7 @@ describe("PRD 4.3 unified analytics API honesty", () => {
 
 	it("customer analytics UI calls unified only through the shared hook", () => {
 		const page = readFileSync(
-			join(process.cwd(), "src/app/(root)/analytics/page.tsx"),
+			join(process.cwd(), "src/app/(root)/analytics/AnalyticsPageClient.tsx"),
 			"utf8",
 		);
 		const hook = readFileSync(

@@ -1,8 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import { createCampaign, listCampaigns } from "@/lib/campaigns";
-import { requireGiftOrgContext } from "@/lib/gifts/request-context";
 import { sumPostedGiftTotalForCampaign } from "@/lib/gifts/repository";
+import { requireGiftOrgContext } from "@/lib/gifts/request-context";
 
 export async function GET(request: NextRequest) {
 	const ctx = await requireGiftOrgContext(request, PERMISSIONS.GIFTS.VIEW);
@@ -13,7 +13,10 @@ export async function GET(request: NextRequest) {
 		const withTotals = await Promise.all(
 			campaigns.map(async (campaign) => ({
 				...campaign,
-				postedTotal: await sumPostedGiftTotalForCampaign(ctx.orgId, campaign.$id),
+				postedTotal: await sumPostedGiftTotalForCampaign(
+					ctx.orgId,
+					campaign.$id,
+				),
 			})),
 		);
 		return NextResponse.json({ items: withTotals });
@@ -39,8 +42,7 @@ export async function POST(request: NextRequest) {
 		const campaign = await createCampaign({
 			orgId: ctx.orgId,
 			name,
-			goalAmount:
-				body.goalAmount != null ? Number(body.goalAmount) : undefined,
+			goalAmount: body.goalAmount != null ? Number(body.goalAmount) : undefined,
 			currency: String(body.currency || "USD"),
 			startDate: body.startDate ? String(body.startDate) : undefined,
 			endDate: body.endDate ? String(body.endDate) : undefined,

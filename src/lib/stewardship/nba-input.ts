@@ -2,8 +2,8 @@ import { Query } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { listNotesForConstituent } from "@/lib/constituents/notes";
-import type { NextBestActionInput } from "@/lib/fundraising/next-best-action";
 import type { LifecycleSegment } from "@/lib/fundraising/constants";
+import type { NextBestActionInput } from "@/lib/fundraising/next-best-action";
 import { mapGiftRow } from "@/lib/gifts/repository-rows";
 import type { Gift } from "@/lib/gifts/types";
 import {
@@ -23,7 +23,9 @@ function giftsTableId(): string {
 }
 
 function registrationsTableId(): string {
-	return appwriteConfig.eventRegistrationsCollectionId || "69f2a002001f4e8c2b34";
+	return (
+		appwriteConfig.eventRegistrationsCollectionId || "69f2a002001f4e8c2b34"
+	);
 }
 
 export async function loadLatestPostedGift(

@@ -41,7 +41,8 @@ export interface SavedContractView {
 export function asFilterList(value?: SavedFilterList): string[] | undefined {
 	if (Array.isArray(value)) {
 		const list = value.filter(
-			(item): item is string => typeof item === "string" && item.trim().length > 0,
+			(item): item is string =>
+				typeof item === "string" && item.trim().length > 0,
 		);
 		return list.length > 0 ? list : undefined;
 	}
@@ -49,7 +50,10 @@ export function asFilterList(value?: SavedFilterList): string[] | undefined {
 	return undefined;
 }
 
-function matchesAny(selected: string[] | undefined, value?: string | null): boolean {
+function matchesAny(
+	selected: string[] | undefined,
+	value?: string | null,
+): boolean {
 	if (!selected?.length) return true;
 	if (!value) return false;
 	return selected.includes(value);
@@ -235,6 +239,7 @@ export function applyContractListFilters(
 ): UIFileDoc[] {
 	return files.filter(
 		(file) =>
-			matchesStatusTab(file, statusTab) && matchesContractFilters(file, filters),
+			matchesStatusTab(file, statusTab) &&
+			matchesContractFilters(file, filters),
 	);
 }

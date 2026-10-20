@@ -61,12 +61,10 @@ export default function DatabaseSchemaPage() {
 					<p className="text-sm text-slate-600 mb-4">
 						{data.data.total} tables in the active database
 					</p>
-					<CaalmDataTable className="px-0 sm:px-0 pb-0">
+					<CaalmDataTable className="pb-0">
 						<TableHeader className="[&_tr]:border-b-0">
 							<TableRow className={DATA_TABLE_HEADER_ROW}>
-								<TableHead
-									className={cn(DATA_TABLE_HEADER_CELL, "pl-4 pr-3")}
-								>
+								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "pl-4 pr-3")}>
 									Name
 								</TableHead>
 								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
@@ -75,9 +73,7 @@ export default function DatabaseSchemaPage() {
 								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
 									Columns
 								</TableHead>
-								<TableHead
-									className={cn(DATA_TABLE_HEADER_CELL, "pl-3 pr-4")}
-								>
+								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "pl-3 pr-4")}>
 									Status
 								</TableHead>
 							</TableRow>

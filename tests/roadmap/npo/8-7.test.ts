@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
 	assembleFunderSnapshot,
-	funderSnapshotToCsv,
+	funderSnapshotToXlsxInput,
 } from "@/lib/funding/funder-snapshot";
 import { NONPROFIT_ROADMAP_CATALOG } from "@/lib/roadmap/nonprofit-catalog";
 
@@ -35,10 +35,9 @@ describe("NPO 8.7 funder snapshot PDF/CSV", () => {
 			gifts: [],
 			volunteerHours: [],
 		});
-		const csv = funderSnapshotToCsv(snapshot);
-		expect(csv).toMatch(/section,field,value/);
-		expect(csv).toMatch(/fund,code,ART/);
-		expect(csv).toMatch(/restriction,release/);
+		const sheet = funderSnapshotToXlsxInput(snapshot);
+		expect(sheet.rows).toContainEqual(["Fund", "Code", "ART"]);
+		expect(sheet.rows.some((row) => row[0] === "Restriction")).toBe(true);
 	});
 
 	it("gates export with funding.view", () => {

@@ -19,7 +19,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
 	const { id } = await context.params;
 	const existing = await getConstituentById(id);
 	if (!existing || existing.orgId !== ctx.orgId || existing.mergedIntoId) {
-		return NextResponse.json({ error: "Constituent not found" }, { status: 404 });
+		return NextResponse.json(
+			{ error: "Constituent not found" },
+			{ status: 404 },
+		);
 	}
 
 	try {

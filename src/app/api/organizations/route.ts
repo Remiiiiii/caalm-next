@@ -197,8 +197,7 @@ export async function PUT(request: NextRequest) {
 						: {}),
 					...(validated.settings.managerUserId_source !== undefined
 						? {
-								managerUserId_source:
-									validated.settings.managerUserId_source,
+								managerUserId_source: validated.settings.managerUserId_source,
 							}
 						: {}),
 					...(validated.settings.departmentComplianceTarget !== undefined

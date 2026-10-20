@@ -84,9 +84,7 @@ export async function createDonationCheckoutSession(input: {
 				price_data: {
 					currency: "usd",
 					unit_amount: input.amountCents,
-					...(isMonthly
-						? { recurring: { interval: "month" as const } }
-						: {}),
+					...(isMonthly ? { recurring: { interval: "month" as const } } : {}),
 					product_data: {
 						name: isMonthly
 							? `Monthly donation to ${input.orgName}`

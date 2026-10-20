@@ -1,6 +1,7 @@
 "use client";
 
 import { Brain, Check, DollarSign, Sparkles, X } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { ConstituentWealthPanel } from "@/components/constituents/ConstituentWealthPanel";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,6 @@ import {
 	normalizeSegmentLabel,
 	segmentBadgeClass,
 } from "@/lib/fundraising/segment-display";
-import Link from "next/link";
 
 type IntelligencePayload = {
 	segment: string;
@@ -151,10 +151,13 @@ export function FundraisingIntelligenceTab({
 			<div className="space-y-6 pt-4">
 				<div className="flex flex-col items-center justify-center py-12 text-center">
 					<Brain className="h-8 w-8 text-[#0f5384]" />
-					<p className="mt-3 text-sm font-medium text-slate-700">No scores yet</p>
+					<p className="mt-3 text-sm font-medium text-slate-700">
+						No scores yet
+					</p>
 					<p className="mt-1 max-w-md text-xs text-slate-600">
 						Run the nightly RFM job or wait for the platform cron to compute
-						segments. Uncomputed scores stay blank; we do not show zero placeholders.
+						segments. Uncomputed scores stay blank; we do not show zero
+						placeholders.
 					</p>
 				</div>
 				<Card className="glass-card">
@@ -211,7 +214,9 @@ export function FundraisingIntelligenceTab({
 						{formatCurrency(data.effectiveAsk)}
 					</span>
 					{data.askOverrideAmount != null ? (
-						<span className="text-xs text-slate-500 ml-1">(staff override)</span>
+						<span className="text-xs text-slate-500 ml-1">
+							(staff override)
+						</span>
 					) : null}
 				</p>
 				{data.capacityBand != null ? (
@@ -238,7 +243,9 @@ export function FundraisingIntelligenceTab({
 						<p className="text-sm font-semibold text-slate-700">
 							{data.nextBestAction.title}
 						</p>
-						<p className="text-xs text-slate-600">{data.nextBestAction.rationale}</p>
+						<p className="text-xs text-slate-600">
+							{data.nextBestAction.rationale}
+						</p>
 						<div className="pt-3 space-y-2 border-t border-slate-200">
 							<Label htmlFor="dismiss-reason">Dismiss for 14 days</Label>
 							<Input

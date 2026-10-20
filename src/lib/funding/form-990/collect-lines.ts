@@ -1,9 +1,9 @@
 import { Query } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
-import type { Gift } from "@/lib/gifts/types";
 import { listObligations } from "@/lib/funding/obligation.repository";
 import type { ContractObligation } from "@/lib/funding/types";
+import type { Gift } from "@/lib/gifts/types";
 import type { Form990ExpenseLine } from "./types";
 import { dateInRange, parseIsoDateRange } from "./worksheet";
 
@@ -75,7 +75,10 @@ export async function collectForm990ExpenseLines(input: {
 		throw new Error("Invalid date range");
 	}
 
-	const obligations = await listObligations({ orgId: input.orgId, limit: 2000 });
+	const obligations = await listObligations({
+		orgId: input.orgId,
+		limit: 2000,
+	});
 	const obligationLines = obligations
 		.map(obligationToLine)
 		.filter((line): line is Form990ExpenseLine => line != null)

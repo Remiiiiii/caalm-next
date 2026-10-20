@@ -19,7 +19,10 @@ export async function GET(request: NextRequest) {
 	try {
 		const user = await getCurrentUser();
 		if (!user) {
-			return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+			return NextResponse.json(
+				{ error: "Authentication required" },
+				{ status: 401 },
+			);
 		}
 
 		const defaultOrg = await getUserDefaultOrganization(user.$id);

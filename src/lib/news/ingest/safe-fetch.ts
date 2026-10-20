@@ -109,7 +109,8 @@ export async function safeFetchText(
 		try {
 			const headers: Record<string, string> = {
 				"User-Agent": USER_AGENT,
-				Accept: "application/rss+xml, application/atom+xml, application/json, text/xml, */*",
+				Accept:
+					"application/rss+xml, application/atom+xml, application/json, text/xml, */*",
 			};
 			if (init?.etag) headers["If-None-Match"] = init.etag;
 			if (init?.lastModified) headers["If-Modified-Since"] = init.lastModified;

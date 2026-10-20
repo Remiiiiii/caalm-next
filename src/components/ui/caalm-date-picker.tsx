@@ -7,12 +7,7 @@
 
 import { format, parse } from "date-fns";
 import { CalendarIcon, ChevronDown, ChevronUp } from "lucide-react";
-import {
-	useEffect,
-	useMemo,
-	useState,
-	type ReactNode,
-} from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { DropdownScrollArea } from "@/components/ui/DropdownScrollArea";
@@ -109,11 +104,10 @@ export function CaalmCalendarPanel({
 	const startMonth = useMemo(() => new Date(yearStart, 0), [yearStart]);
 	const endMonth = useMemo(() => new Date(yearEnd, 11), [yearEnd]);
 
-	const [displayMonth, setDisplayMonth] = useState(
-		() =>
-			selected
-				? new Date(selected.getFullYear(), selected.getMonth(), 1)
-				: new Date(),
+	const [displayMonth, setDisplayMonth] = useState(() =>
+		selected
+			? new Date(selected.getFullYear(), selected.getMonth(), 1)
+			: new Date(),
 	);
 	const [monthOpen, setMonthOpen] = useState(false);
 	const [yearOpen, setYearOpen] = useState(false);
@@ -187,9 +181,7 @@ export function CaalmCalendarPanel({
 									key={year}
 									type="button"
 									onClick={() => {
-										setDisplayMonth(
-											new Date(year, displayMonth.getMonth(), 1),
-										);
+										setDisplayMonth(new Date(year, displayMonth.getMonth(), 1));
 										setYearOpen(false);
 									}}
 									className={cn(
@@ -218,7 +210,10 @@ export function CaalmCalendarPanel({
 				disabled={(date) => {
 					const check = new Date(date);
 					check.setHours(0, 0, 0, 0);
-					if (check.getFullYear() < yearStart || check.getFullYear() > yearEnd) {
+					if (
+						check.getFullYear() < yearStart ||
+						check.getFullYear() > yearEnd
+					) {
 						return true;
 					}
 					if (!disablePast) return false;

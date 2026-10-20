@@ -49,7 +49,10 @@ export function HouseholdTab({
 						edge.fromId === constituentId ? edge.toId : edge.fromId;
 					const otherRes = await fetch(`/api/constituents/${otherId}`);
 					const otherData = otherRes.ok ? await otherRes.json() : {};
-					return { ...edge, other: otherData.constituent as Constituent | undefined };
+					return {
+						...edge,
+						other: otherData.constituent as Constituent | undefined,
+					};
 				}),
 			);
 			setRows(others);
@@ -107,7 +110,8 @@ export function HouseholdTab({
 			) : (
 				<div className="space-y-3">
 					{rows.map((row) => {
-						const otherId = row.fromId === constituentId ? row.toId : row.fromId;
+						const otherId =
+							row.fromId === constituentId ? row.toId : row.fromId;
 						const label = row.other
 							? constituentDisplayName(row.other)
 							: otherId;

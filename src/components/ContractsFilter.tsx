@@ -315,7 +315,11 @@ function FilterCheckRow({
 				}
 			}}
 		>
-			<Checkbox checked={checked} tabIndex={-1} className="pointer-events-none" />
+			<Checkbox
+				checked={checked}
+				tabIndex={-1}
+				className="pointer-events-none"
+			/>
 			<span>{label}</span>
 		</div>
 	);
@@ -341,7 +345,8 @@ function DateRangeBlock({
 	onChange: (key: keyof ContractFilters, value: unknown) => void;
 }) {
 	const activeKey = picking === fromKey || picking === toKey ? picking : null;
-	const selected = activeKey === fromKey ? from : activeKey === toKey ? to : undefined;
+	const selected =
+		activeKey === fromKey ? from : activeKey === toKey ? to : undefined;
 
 	return (
 		<div className="space-y-2">

@@ -85,9 +85,7 @@ export function useManagers(
 				});
 				// Show the widest pool the user can still pick from; auto-select the fallback.
 				const display =
-					typedDept.length > 0
-						? typedDept
-						: (pick.managers as Manager[]);
+					typedDept.length > 0 ? typedDept : (pick.managers as Manager[]);
 				setFilteredManagers(display);
 				setAssigneeSource(pick.source);
 				setSelectedManagers(pick.ids);

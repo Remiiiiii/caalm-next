@@ -1,24 +1,15 @@
 "use client";
 
-import {
-	Calendar,
-	ClipboardList,
-	FileText,
-	Shield,
-} from "lucide-react";
-import type { TaskLinkedEntityType } from "@/types/tasks";
+import { Calendar, ClipboardList, FileText, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { TaskLinkedEntityType } from "@/types/tasks";
 import {
 	CAALM_BADGE_BASE,
-	TASK_LINKED_BADGE,
 	linkedEntityIconHint,
+	TASK_LINKED_BADGE,
 } from "./task-ui";
 
-function LinkedIcon({
-	type,
-}: {
-	type?: TaskLinkedEntityType | null;
-}) {
+function LinkedIcon({ type }: { type?: TaskLinkedEntityType | null }) {
 	const hint = linkedEntityIconHint(type);
 	const className = "h-3 w-3 shrink-0";
 	switch (hint) {
@@ -47,10 +38,7 @@ export function TaskLinkedChip({
 	}
 
 	return (
-		<span
-			className={cn(CAALM_BADGE_BASE, TASK_LINKED_BADGE)}
-			title={title}
-		>
+		<span className={cn(CAALM_BADGE_BASE, TASK_LINKED_BADGE)} title={title}>
 			<LinkedIcon type={linkedEntityType} />
 			<span>{title}</span>
 		</span>

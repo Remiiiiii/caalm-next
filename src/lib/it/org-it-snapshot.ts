@@ -14,6 +14,7 @@ import {
 	sumOrgStorageBytes,
 } from "@/lib/billing/planLimits";
 import { getCrmIntegration } from "@/lib/crm/integrations.repository";
+import type { OrgITSnapshot } from "@/lib/it/org-it-snapshot.types";
 import {
 	parseOrgSettings,
 	readTenantDeletionSettings,
@@ -21,7 +22,6 @@ import {
 import { getOrganization } from "@/lib/rbac/organizations";
 import { getAuditLogs } from "@/lib/services/audit-logger";
 import { listTickets } from "@/lib/tickets/ticket.repository";
-import type { OrgITSnapshot } from "@/lib/it/org-it-snapshot.types";
 
 export type {
 	OrgITFleetRow,
@@ -68,7 +68,9 @@ async function countTwoFactorForOrg(
 	}
 }
 
-export async function buildOrgITSnapshot(orgId: string): Promise<OrgITSnapshot> {
+export async function buildOrgITSnapshot(
+	orgId: string,
+): Promise<OrgITSnapshot> {
 	const [plan, org, tickets, audit, twoFactor, hubspot] = await Promise.all([
 		getOrgPlanLimits(orgId),
 		getOrganization(orgId),

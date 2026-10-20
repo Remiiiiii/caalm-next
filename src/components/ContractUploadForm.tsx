@@ -106,19 +106,9 @@ import {
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import {
-	AI_EXTRACTION_LIMIT_TITLE,
-	isAiExtractionLimitError,
-	throwIfAiExtractionHttpFailed,
-} from "@/lib/billing/aiExtractionUserMessages";
-import {
 	getAllManagers,
 	getUsersByDepartment,
 } from "@/lib/actions/database.actions";
-import {
-	type AssigneeSource,
-	assigneeFallbackMessage,
-	pickAssigneeIds,
-} from "@/lib/assignments/resolve-default-assignee";
 import { uploadFile } from "@/lib/actions/file.actions";
 import {
 	buildFormPatchFromExtraction,
@@ -130,6 +120,16 @@ import {
 	type ContractTypeSuggestionResult,
 } from "@/lib/ai/contractTypeSuggestionSchema";
 import { scrubTemplateTokenValue } from "@/lib/ai/scrubTemplateTokens";
+import {
+	type AssigneeSource,
+	assigneeFallbackMessage,
+	pickAssigneeIds,
+} from "@/lib/assignments/resolve-default-assignee";
+import {
+	AI_EXTRACTION_LIMIT_TITLE,
+	isAiExtractionLimitError,
+	throwIfAiExtractionHttpFailed,
+} from "@/lib/billing/aiExtractionUserMessages";
 import { isDemoMode } from "@/lib/config/demo-mode";
 import {
 	CONTRACT_TYPE_CONFIGS,
@@ -644,9 +644,7 @@ const contractSchema = z
 		serviceCreditTerms: z.string().optional(),
 		escalationProcedures: z.string().optional(),
 		obligationOwners: z.string().optional(),
-		assignedManagers: z
-			.array(z.string())
-			.min(1, "Assigned To is required"),
+		assignedManagers: z.array(z.string()).min(1, "Assigned To is required"),
 		internalApproverIds: z.array(z.string()).optional(),
 		approvalWorkflowTemplate: z.string().optional(),
 		currentApprovalStage: z.string().optional(),
@@ -1141,9 +1139,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 					divisionCandidates: typedManagers,
 					departmentCandidates: typedManagers,
 					orgCandidates: availableManagers,
-					fallbackUser: ownerId
-						? { $id: ownerId, fullName: "You" }
-						: undefined,
+					fallbackUser: ownerId ? { $id: ownerId, fullName: "You" } : undefined,
 					division: watchedSubDepartment,
 				});
 				const display =
@@ -1185,9 +1181,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 			} catch (error) {
 				console.error("Failed to fetch department managers:", error);
 				if (ownerId) {
-					setFilteredManagers([
-						{ $id: ownerId, fullName: "You", email: "" },
-					]);
+					setFilteredManagers([{ $id: ownerId, fullName: "You", email: "" }]);
 					setSelectedManagers([ownerId]);
 					setAssigneeSource("uploader");
 					form.setValue("assignedManagers", [ownerId]);
@@ -2759,7 +2753,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 				workflowNotes: sanitizeString(values.workflowNotes),
 				digitalSignatureRequired: values.digitalSignatureRequired,
 				digitalSignatureStatus: values.digitalSignatureRequired
-					? "pending"
+					? ("pending" as const)
 					: undefined,
 				searchKeywords: sanitizeString(values.searchKeywords),
 				accessScope: sanitizeString(values.accessScope),
@@ -5509,8 +5503,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																			{assigneeFallbackMessage(
 																				assigneeSource,
 																				filteredManagers.find(
-																					(m) =>
-																						m.$id === selectedManagers[0],
+																					(m) => m.$id === selectedManagers[0],
 																				)?.fullName,
 																			) ? (
 																				<p className="text-xs text-slate-600">
@@ -5518,8 +5511,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																						assigneeSource,
 																						filteredManagers.find(
 																							(m) =>
-																								m.$id ===
-																								selectedManagers[0],
+																								m.$id === selectedManagers[0],
 																						)?.fullName,
 																					)}
 																				</p>

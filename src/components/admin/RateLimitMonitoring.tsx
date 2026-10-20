@@ -19,15 +19,15 @@ import {
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LoadingSpinner } from "@/components/ui/loading";
-import { StatCardSkeleton } from "@/components/ui/skeletons";
 import {
 	CaalmDataTable,
 	DATA_TABLE_BODY_ROW_BASE,
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
 } from "@/components/ui/caalm-data-table";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { LoadingSpinner } from "@/components/ui/loading";
+import { StatCardSkeleton } from "@/components/ui/skeletons";
 import {
 	TableBody,
 	TableCell,
@@ -303,48 +303,43 @@ export default function RateLimitMonitoring() {
 							</div>
 						</CardHeader>
 						<CardContent className="bg-slate-50 p-6">
-							<CaalmDataTable className="px-0 sm:px-0 pb-0">
-									<TableHeader className="[&_tr]:border-b-0">
-										<TableRow className={DATA_TABLE_HEADER_ROW}>
-											<TableHead
-												className={cn(DATA_TABLE_HEADER_CELL, "pl-4 pr-3")}
-											>
-												Identifier
-											</TableHead>
-											<TableHead
-												className={cn(DATA_TABLE_HEADER_CELL, "px-3")}
-											>
-												Violations
-											</TableHead>
-											<TableHead
-												className={cn(DATA_TABLE_HEADER_CELL, "pl-3 pr-4")}
-											>
-												Status
-											</TableHead>
+							<CaalmDataTable className="pb-0">
+								<TableHeader className="[&_tr]:border-b-0">
+									<TableRow className={DATA_TABLE_HEADER_ROW}>
+										<TableHead
+											className={cn(DATA_TABLE_HEADER_CELL, "pl-4 pr-3")}
+										>
+											Identifier
+										</TableHead>
+										<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+											Violations
+										</TableHead>
+										<TableHead
+											className={cn(DATA_TABLE_HEADER_CELL, "pl-3 pr-4")}
+										>
+											Status
+										</TableHead>
+									</TableRow>
+								</TableHeader>
+								<TableBody className="[&_tr:last-child>td]:border-b-0">
+									{topViolators.map((violator, index) => (
+										<TableRow key={index} className={DATA_TABLE_BODY_ROW_BASE}>
+											<TableCell className="px-3 py-3 pl-4 pr-3 text-sm text-slate-700">
+												{violator.identifier.length > 50
+													? `${violator.identifier.substring(0, 50)}...`
+													: violator.identifier}
+											</TableCell>
+											<TableCell className="px-3 py-3">
+												<Badge variant="destructive">{violator.count}</Badge>
+											</TableCell>
+											<TableCell className="px-3 py-3 pl-3 pr-4">
+												<span className="inline-block rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
+													Active
+												</span>
+											</TableCell>
 										</TableRow>
-									</TableHeader>
-									<TableBody className="[&_tr:last-child>td]:border-b-0">
-										{topViolators.map((violator, index) => (
-											<TableRow
-												key={index}
-												className={DATA_TABLE_BODY_ROW_BASE}
-											>
-												<TableCell className="px-3 py-3 pl-4 pr-3 text-sm text-slate-700">
-													{violator.identifier.length > 50
-														? `${violator.identifier.substring(0, 50)}...`
-														: violator.identifier}
-												</TableCell>
-												<TableCell className="px-3 py-3">
-													<Badge variant="destructive">{violator.count}</Badge>
-												</TableCell>
-												<TableCell className="px-3 py-3 pl-3 pr-4">
-													<span className="inline-block rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
-														Active
-													</span>
-												</TableCell>
-											</TableRow>
-										))}
-									</TableBody>
+									))}
+								</TableBody>
 							</CaalmDataTable>
 						</CardContent>
 					</Card>

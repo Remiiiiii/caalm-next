@@ -1,20 +1,20 @@
 import { Query } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
-import { getConstituentById } from "@/lib/constituents/repository";
 import { constituentDisplayName } from "@/lib/constituents/display";
+import { createNote } from "@/lib/constituents/notes";
+import { getConstituentById } from "@/lib/constituents/repository";
 import {
-	pickPrimaryNextBestAction,
 	type NextBestAction,
+	pickPrimaryNextBestAction,
 } from "@/lib/fundraising/next-best-action";
 import {
-	listSegmentsForOrg,
 	type ConstituentSegmentRow,
+	listSegmentsForOrg,
 	markStewardshipContactedAt,
 } from "@/lib/fundraising/segments-repository";
 import { mapGiftRow } from "@/lib/gifts/repository-rows";
 import type { Gift } from "@/lib/gifts/types";
-import { createNote } from "@/lib/constituents/notes";
 import { buildNextBestActionInput } from "./nba-input";
 
 export type StewardshipQueueRow = {
@@ -79,7 +79,11 @@ export async function listStewardshipQueue(
 	const rows: StewardshipQueueRow[] = [];
 	for (const segment of segments) {
 		const constituent = await getConstituentById(segment.constituentId);
-		if (!constituent || constituent.orgId !== orgId || constituent.mergedIntoId) {
+		if (
+			!constituent ||
+			constituent.orgId !== orgId ||
+			constituent.mergedIntoId
+		) {
 			continue;
 		}
 		const lastGift = lastGifts.get(segment.constituentId);

@@ -49,8 +49,18 @@ export async function GET(
 					queries: [Query.limit(200)],
 				});
 
-				const departmentActivities = activities.rows.filter(
-					(activity: { department?: string; type?: string; contractName?: string }) =>
+				const departmentActivities = (
+					activities.rows as unknown as Array<{
+						department?: string;
+						type?: string;
+						contractName?: string;
+					}>
+				).filter(
+					(activity: {
+						department?: string;
+						type?: string;
+						contractName?: string;
+					}) =>
 						activity.department === dbDept ||
 						activity.department === resolvedParams.department ||
 						(activity.type === "contract" && activity.contractName),

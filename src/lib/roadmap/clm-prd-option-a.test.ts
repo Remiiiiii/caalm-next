@@ -10,11 +10,13 @@ describe("CLM Option A — execution tracked on PRD", () => {
 		const sec1 = ROADMAP_CATALOG.find((s) => s.sectionNumber === 1);
 		expect(sec1?.executionTrackedOn).toBe("prd");
 		expect(sec1?.linkedPrNumbers ?? []).toEqual([]);
-		expect(sec1?.tasks[0]?.description).toMatch(/Platform Readiness — Option A/);
+		expect(sec1?.tasks[0]?.description).toMatch(
+			/Platform Readiness — Option A/,
+		);
 	});
 
 	it("prior-section gate skips execution-tracked §1–2 once section 0 is complete", () => {
-		let { sections, tasks } = buildSeedSnapshot("clm");
+		const { sections, tasks } = buildSeedSnapshot("clm");
 		const sec0 = sections.find((s) => s.sectionNumber === 0)!;
 		for (const row of tasks.filter((t) => t.sectionId === sec0.$id)) {
 			row.status = "complete";

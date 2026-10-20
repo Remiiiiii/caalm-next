@@ -1,10 +1,22 @@
 "use client";
 
-import { ArrowUpDown, ChevronDown, ChevronsUpDown, Filter, TriangleAlert } from "lucide-react";
+import {
+	ArrowUpDown,
+	ChevronDown,
+	ChevronsUpDown,
+	Filter,
+	TriangleAlert,
+} from "lucide-react";
 import Image from "next/image";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import Avatar from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import {
+	CaalmDataTable,
+	DATA_TABLE_BODY_ROW_BASE,
+	DATA_TABLE_HEADER_CELL,
+	DATA_TABLE_HEADER_ROW,
+} from "@/components/ui/caalm-data-table";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
 	AppDropdownMenuTrigger,
@@ -12,12 +24,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { PageIndex } from "@/components/ui/page-index";
 import { SearchField } from "@/components/ui/search-field";
-import {
-	CaalmDataTable,
-	DATA_TABLE_BODY_ROW_BASE,
-	DATA_TABLE_HEADER_CELL,
-	DATA_TABLE_HEADER_ROW,
-} from "@/components/ui/caalm-data-table";
 import {
 	TableBody,
 	TableCell,
@@ -37,10 +43,10 @@ import {
 	UserManagementSortMenu,
 } from "@/components/users/UserManagementTableMenus";
 import {
+	type GraphLineage,
 	USER_MANAGEMENT_VIEW_STORAGE_KEY,
 	UserManagementLineageToggle,
 	UserManagementViewToggle,
-	type GraphLineage,
 	type UserManagementViewType,
 } from "@/components/users/UserManagementViewToggle";
 import { PERMISSIONS } from "@/constants/permissions";
@@ -58,11 +64,11 @@ import { type UserManagementUser, useUsers } from "@/hooks/useUsers";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { isSameUserIdentity } from "@/lib/impersonation/policy";
 import {
-	USER_MANAGEMENT_PAGE_SIZE,
 	formatUserDateTimeLabel,
-	USER_ROLE_BADGE_SHAPE,
 	hasAssignedRole,
 	pageSlice,
+	USER_MANAGEMENT_PAGE_SIZE,
+	USER_ROLE_BADGE_SHAPE,
 	userRoleBadgeClass,
 } from "@/lib/users/user-management-display";
 import { cn, resolveAvatarDisplayUrl } from "@/lib/utils";
@@ -422,9 +428,14 @@ const UserManagement = () => {
 		});
 	};
 
-	const openBulkAction = (kind: Extract<UserActionKind, "role" | "revoke" | "delete">) => {
+	const openBulkAction = (
+		kind: Extract<UserActionKind, "role" | "revoke" | "delete">,
+	) => {
 		if (selectedUsers.length === 0) return;
-		if ((kind === "revoke" || kind === "delete") && selectedUsers.every(isActorUser)) {
+		if (
+			(kind === "revoke" || kind === "delete") &&
+			selectedUsers.every(isActorUser)
+		) {
 			toast({
 				title: "Cannot update your own account this way",
 				description: "Select at least one other user.",
@@ -560,327 +571,323 @@ const UserManagement = () => {
 					onChange={(e) => setSearchTerm(e.target.value)}
 				/>
 				<div className="flex items-center justify-end gap-2">
-				{view === "diagram" ? (
-					<UserManagementLineageToggle
-						lineage={lineage}
-						onLineageChange={setLineage}
+					{view === "diagram" ? (
+						<UserManagementLineageToggle
+							lineage={lineage}
+							onLineageChange={setLineage}
+						/>
+					) : null}
+					<UserManagementViewToggle
+						view={view}
+						onViewChange={handleViewChange}
 					/>
-				) : null}
-				<UserManagementViewToggle view={view} onViewChange={handleViewChange} />
-				<DropdownMenu>
-					<AppDropdownMenuTrigger
-						asChild
-						className="border-0 bg-transparent p-0 shadow-none ring-0 hover:bg-transparent data-[state=open]:bg-transparent"
-					>
-						<Button
-							variant="ghost"
-							size="sm"
-							className="primary-btn h-8 border-0 px-3 shadow-none focus-visible:ring-0 sm:px-4"
+					<DropdownMenu>
+						<AppDropdownMenuTrigger
+							asChild
+							className="border-0 bg-transparent p-0 shadow-none ring-0 hover:bg-transparent data-[state=open]:bg-transparent"
 						>
-							<Filter className="h-4 w-4" />
-							<span className="hidden sm:inline">Filter</span>
-							{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
-							<ChevronDown className="h-4 w-4" />
-						</Button>
-					</AppDropdownMenuTrigger>
-					<UserManagementFilterMenu
-						roles={allRoles}
-						departments={allDepartments}
-						assigners={allAssigners}
-						selectedRoles={selectedRoles}
-						selectedDepartments={selectedDepartments}
-						selectedAssignedBy={selectedAssignedBy}
-						dateRange={dateRangeFilter}
-						activeFilterCount={activeFilterCount}
-						onToggleRole={(role, checked) =>
-							setSelectedRoles((prev) =>
-								checked ? [...prev, role] : prev.filter((item) => item !== role),
-							)
-						}
-						onToggleDepartment={(department, checked) =>
-							setSelectedDepartments((prev) =>
-								checked
-									? [...prev, department]
-									: prev.filter((item) => item !== department),
-							)
-						}
-						onToggleAssigner={(assigner, checked) =>
-							setSelectedAssignedBy((prev) =>
-								checked
-									? [...prev, assigner]
-									: prev.filter((item) => item !== assigner),
-							)
-						}
-						onDateRangeChange={setDateRangeFilter}
-						onClear={clearAllFilters}
-					/>
-				</DropdownMenu>
+							<Button
+								variant="ghost"
+								size="sm"
+								className="primary-btn h-8 border-0 px-3 shadow-none focus-visible:ring-0 sm:px-4"
+							>
+								<Filter className="h-4 w-4" />
+								<span className="hidden sm:inline">Filter</span>
+								{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
+								<ChevronDown className="h-4 w-4" />
+							</Button>
+						</AppDropdownMenuTrigger>
+						<UserManagementFilterMenu
+							roles={allRoles}
+							departments={allDepartments}
+							assigners={allAssigners}
+							selectedRoles={selectedRoles}
+							selectedDepartments={selectedDepartments}
+							selectedAssignedBy={selectedAssignedBy}
+							dateRange={dateRangeFilter}
+							activeFilterCount={activeFilterCount}
+							onToggleRole={(role, checked) =>
+								setSelectedRoles((prev) =>
+									checked
+										? [...prev, role]
+										: prev.filter((item) => item !== role),
+								)
+							}
+							onToggleDepartment={(department, checked) =>
+								setSelectedDepartments((prev) =>
+									checked
+										? [...prev, department]
+										: prev.filter((item) => item !== department),
+								)
+							}
+							onToggleAssigner={(assigner, checked) =>
+								setSelectedAssignedBy((prev) =>
+									checked
+										? [...prev, assigner]
+										: prev.filter((item) => item !== assigner),
+								)
+							}
+							onDateRangeChange={setDateRangeFilter}
+							onClear={clearAllFilters}
+						/>
+					</DropdownMenu>
 
-				{view === "table" ? (
-				<DropdownMenu>
-					<AppDropdownMenuTrigger
-						asChild
-						className="border-0 bg-transparent p-0 shadow-none ring-0 hover:bg-transparent data-[state=open]:bg-transparent"
-					>
-						<Button
-							variant="ghost"
-							size="sm"
-							className="primary-btn h-8 border-0 px-3 shadow-none focus-visible:ring-0 sm:px-4"
-						>
-							<ArrowUpDown className="h-4 w-4" />
-							<span className="hidden sm:inline">Sort by</span>
-							<ChevronDown className="h-4 w-4" />
-						</Button>
-					</AppDropdownMenuTrigger>
-					<UserManagementSortMenu
-						sortKey={sortConfig.key}
-						direction={sortConfig.direction}
-						onSort={applySortPreset}
-					/>
-				</DropdownMenu>
-				) : null}
+					{view === "table" ? (
+						<DropdownMenu>
+							<AppDropdownMenuTrigger
+								asChild
+								className="border-0 bg-transparent p-0 shadow-none ring-0 hover:bg-transparent data-[state=open]:bg-transparent"
+							>
+								<Button
+									variant="ghost"
+									size="sm"
+									className="primary-btn h-8 border-0 px-3 shadow-none focus-visible:ring-0 sm:px-4"
+								>
+									<ArrowUpDown className="h-4 w-4" />
+									<span className="hidden sm:inline">Sort by</span>
+									<ChevronDown className="h-4 w-4" />
+								</Button>
+							</AppDropdownMenuTrigger>
+							<UserManagementSortMenu
+								sortKey={sortConfig.key}
+								direction={sortConfig.direction}
+								onSort={applySortPreset}
+							/>
+						</DropdownMenu>
+					) : null}
 				</div>
 			</div>
 
-					{listLoading ? (
-						<div className="flex items-center justify-center py-8">
-							<div className="text-center">
-								<div className="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600" />
-								<p className="mt-2 text-sm text-slate-600">Loading users...</p>
-							</div>
-						</div>
-					) : view === "diagram" ? (
-						filteredAndSortedUsers.length === 0 ? (
-							<UsersNotFoundState
-								message="No users found"
-								action={
-									activeFilterCount > 0 ? (
-										<Button
-											variant="outline"
-											size="sm"
-											onClick={clearAllFilters}
-											className="mt-3"
-										>
-											Clear filters
-										</Button>
-									) : undefined
-								}
-							/>
-						) : (
-							<UserAssignmentGraph
-								users={filteredAndSortedUsers}
-								allUsers={users}
-								lineage={lineage}
-								canEditGraph={canManageUsers}
-								canView={canViewUsers}
-								canEdit={canManageUsers}
-								canDeactivate={canDeactivateUsers}
+			{listLoading ? (
+				<div className="flex items-center justify-center py-8">
+					<div className="text-center">
+						<div className="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600" />
+						<p className="mt-2 text-sm text-slate-600">Loading users...</p>
+					</div>
+				</div>
+			) : view === "diagram" ? (
+				filteredAndSortedUsers.length === 0 ? (
+					<UsersNotFoundState
+						message="No users found"
+						action={
+							activeFilterCount > 0 ? (
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={clearAllFilters}
+									className="mt-3"
+								>
+									Clear filters
+								</Button>
+							) : undefined
+						}
+					/>
+				) : (
+					<UserAssignmentGraph
+						users={filteredAndSortedUsers}
+						allUsers={users}
+						lineage={lineage}
+						canEditGraph={canManageUsers}
+						canView={canViewUsers}
+						canEdit={canManageUsers}
+						canDeactivate={canDeactivateUsers}
+						canAssignRoles={canAssignRoles}
+						canImpersonate={canImpersonate}
+						actor={actor}
+						onAction={openAction}
+						onRefresh={refresh}
+					/>
+				)
+			) : (
+				<div className="w-full">
+					{canSelectUsers ? (
+						<div className="mb-3">
+							<UserManagementBulkBar
+								count={selectedUsers.length}
 								canAssignRoles={canAssignRoles}
-								canImpersonate={canImpersonate}
-								actor={actor}
-								onAction={openAction}
-								onRefresh={refresh}
+								canManageUsers={canManageUsers}
+								onChangeRole={() => openBulkAction("role")}
+								onRevokeSessions={() => openBulkAction("revoke")}
+								onDelete={() => openBulkAction("delete")}
+								onClear={() => setSelectedIds(new Set())}
 							/>
-						)
-					) : (
-						<div className="w-full">
-							{canSelectUsers ? (
-								<div className="mb-3">
-									<UserManagementBulkBar
-										count={selectedUsers.length}
-										canAssignRoles={canAssignRoles}
-										canManageUsers={canManageUsers}
-										onChangeRole={() => openBulkAction("role")}
-										onRevokeSessions={() => openBulkAction("revoke")}
-										onDelete={() => openBulkAction("delete")}
-									/>
-								</div>
-							) : null}
-							<CaalmDataTable className="px-0 sm:px-0 pb-0">
-								<TableHeader className="[&_tr]:border-b-0">
-									<TableRow className={DATA_TABLE_HEADER_ROW}>
+						</div>
+					) : null}
+					<CaalmDataTable className="pb-0">
+						<TableHeader className="[&_tr]:border-b-0">
+							<TableRow className={DATA_TABLE_HEADER_ROW}>
+								{canSelectUsers ? (
+									<TableHead
+										className={cn(DATA_TABLE_HEADER_CELL, "w-10 pl-4 pr-2")}
+									>
+										<Checkbox
+											checked={
+												allPageSelected
+													? true
+													: somePageSelected
+														? "indeterminate"
+														: false
+											}
+											onCheckedChange={(checked) =>
+												toggleSelectPage(checked === true)
+											}
+											aria-label="Select all users on this page"
+											className="cursor-pointer"
+										/>
+									</TableHead>
+								) : null}
+								{renderSortableHead("Full name", "fullName", "pl-4 pr-3")}
+								{renderSortableHead(
+									"Role / Dept · Division",
+									"roleName",
+									"px-3",
+								)}
+								{renderSortableHead("Assigned by", "assignedByName", "px-3")}
+								{renderSortableHead("Assigned date", "assignedDate", "px-3")}
+								{renderSortableHead("Last active", "lastActiveAt", "px-3")}
+								<TableHead
+									className={cn(DATA_TABLE_HEADER_CELL, "pl-3 pr-4 text-right")}
+								>
+									<span className="sr-only">Action</span>
+								</TableHead>
+							</TableRow>
+						</TableHeader>
+						<TableBody className="[&_tr:last-child>td]:border-b-0">
+							{pagedUsers.map((user) => {
+								const department = user.department?.trim() || "—";
+								const division = user.division?.trim() || "—";
+								const assigned = hasAssignedRole(user.roleName);
+								return (
+									<TableRow
+										key={user.$id}
+										className={cn(
+											DATA_TABLE_BODY_ROW_BASE,
+											selectedIds.has(user.$id) &&
+												"bg-blue/10 [&>td:first-child]:relative [&>td:first-child]:before:absolute [&>td:first-child]:before:inset-y-0 [&>td:first-child]:before:left-0 [&>td:first-child]:before:w-0.5 [&>td:first-child]:before:bg-[#0f5384]",
+										)}
+									>
 										{canSelectUsers ? (
-											<TableHead
-												className={cn(DATA_TABLE_HEADER_CELL, "w-10 pl-4 pr-2")}
-											>
+											<TableCell className="py-3 pl-4 pr-2">
 												<Checkbox
-													checked={
-														allPageSelected
-															? true
-															: somePageSelected
-																? "indeterminate"
-																: false
-													}
+													checked={selectedIds.has(user.$id)}
 													onCheckedChange={(checked) =>
-														toggleSelectPage(checked === true)
+														toggleSelected(user.$id, checked === true)
 													}
-													aria-label="Select all users on this page"
+													aria-label={`Select ${user.fullName}`}
 													className="cursor-pointer"
 												/>
-											</TableHead>
+											</TableCell>
 										) : null}
-										{renderSortableHead("Full name", "fullName", "pl-4 pr-3")}
-										{renderSortableHead(
-											"Role / Dept · Division",
-											"roleName",
-											"px-3",
-										)}
-										{renderSortableHead(
-											"Assigned by",
-											"assignedByName",
-											"px-3",
-										)}
-										{renderSortableHead(
-											"Assigned date",
-											"assignedDate",
-											"px-3",
-										)}
-										{renderSortableHead("Last active", "lastActiveAt", "px-3")}
-										<TableHead
-											className={cn(
-												DATA_TABLE_HEADER_CELL,
-												"pl-3 pr-4 text-right",
-											)}
-										>
-											<span className="sr-only">Action</span>
-										</TableHead>
-									</TableRow>
-								</TableHeader>
-								<TableBody className="[&_tr:last-child>td]:border-b-0">
-									{pagedUsers.map((user) => {
-										const department = user.department?.trim() || "—";
-										const division = user.division?.trim() || "—";
-										const assigned = hasAssignedRole(user.roleName);
-										return (
-											<TableRow
-												key={user.$id}
-												className={cn(
-													DATA_TABLE_BODY_ROW_BASE,
-													selectedIds.has(user.$id) && "bg-blue-50/50",
+										<TableCell className="py-3 pl-4 pr-3">
+											<div className="flex min-w-55 items-center gap-2.5">
+												<Avatar
+													name={user.fullName}
+													userId={user.$id}
+													size="sm"
+													className="shrink-0 gap-0"
+													imageUrl={resolveAvatarDisplayUrl(user)}
+												/>
+												<div className="min-w-0">
+													<p className="truncate text-sm font-semibold text-slate-700">
+														{user.fullName}
+													</p>
+													<p className="truncate text-sm text-slate-600">
+														{user.email}
+													</p>
+												</div>
+											</div>
+										</TableCell>
+										<TableCell className="px-3 py-3">
+											<div className="min-w-0">
+												{assigned ? (
+													<span
+														className={cn(
+															USER_ROLE_BADGE_SHAPE,
+															userRoleBadgeClass(user.roleName),
+														)}
+													>
+														{user.roleName}
+													</span>
+												) : (
+													<span
+														className={cn(
+															USER_ROLE_BADGE_SHAPE,
+															userRoleBadgeClass(user.roleName),
+														)}
+													>
+														<TriangleAlert className="h-3 w-3" />
+														Unassigned
+													</span>
 												)}
-											>
-												{canSelectUsers ? (
-													<TableCell className="py-3 pl-4 pr-2">
-														<Checkbox
-															checked={selectedIds.has(user.$id)}
-															onCheckedChange={(checked) =>
-																toggleSelected(user.$id, checked === true)
-															}
-															aria-label={`Select ${user.fullName}`}
-															className="cursor-pointer"
-														/>
-													</TableCell>
-												) : null}
-												<TableCell className="py-3 pl-4 pr-3">
-													<div className="flex min-w-55 items-center gap-2.5">
-														<Avatar
-															name={user.fullName}
-															userId={user.$id}
-															size="sm"
-															className="shrink-0 gap-0"
-															imageUrl={resolveAvatarDisplayUrl(user)}
-														/>
-														<div className="min-w-0">
-															<p className="truncate text-sm font-semibold text-slate-700">
-																{user.fullName}
-															</p>
-															<p className="truncate text-sm text-slate-600">
-																{user.email}
-															</p>
-														</div>
-													</div>
-												</TableCell>
-												<TableCell className="px-3 py-3">
-													<div className="min-w-0">
-														{assigned ? (
-															<span
-																className={cn(
-																	USER_ROLE_BADGE_SHAPE,
-																	userRoleBadgeClass(user.roleName),
-																)}
-															>
-																{user.roleName}
-															</span>
-														) : (
-															<span
-																className={cn(
-																	USER_ROLE_BADGE_SHAPE,
-																	userRoleBadgeClass(user.roleName),
-																)}
-															>
-																<TriangleAlert className="h-3 w-3" />
-																Unassigned
-															</span>
-														)}
-														<p className="mt-0.5 truncate text-xs text-slate-500">
-															{department} · {division}
-														</p>
-													</div>
-												</TableCell>
-												<TableCell className="px-3 py-3">
-													<span className="text-sm text-slate-600">
-														{user.assignedByName || "System"}
-													</span>
-												</TableCell>
-												<TableCell className="whitespace-nowrap px-3 py-3">
-													<span className="text-sm tabular-nums text-slate-600">
-														{formatUserDateTimeLabel(
-															user.assignedDate || user.$createdAt,
-														)}
-													</span>
-												</TableCell>
-												<TableCell className="whitespace-nowrap px-3 py-3">
-													<span className="text-sm tabular-nums text-slate-600">
-														{formatUserDateTimeLabel(
-															user.lastActiveAt || user.$updatedAt,
-														)}
-													</span>
-												</TableCell>
-												<TableCell className="py-3 pr-4 pl-3 text-right">
-													<UserManagementRowActions
-														user={user}
-														actor={actor}
-														canManageUsers={canManageUsers}
-														canAssignRoles={canAssignRoles}
-														canImpersonate={canImpersonate}
-														onAction={openAction}
-													/>
-												</TableCell>
-											</TableRow>
-										);
-									})}
-								</TableBody>
-							</CaalmDataTable>
+												<p className="mt-0.5 truncate text-xs text-slate-500">
+													{department} · {division}
+												</p>
+											</div>
+										</TableCell>
+										<TableCell className="px-3 py-3">
+											<span className="text-sm text-slate-600">
+												{user.assignedByName || "System"}
+											</span>
+										</TableCell>
+										<TableCell className="whitespace-nowrap px-3 py-3">
+											<span className="text-sm tabular-nums text-slate-600">
+												{formatUserDateTimeLabel(
+													user.assignedDate || user.$createdAt,
+												)}
+											</span>
+										</TableCell>
+										<TableCell className="whitespace-nowrap px-3 py-3">
+											<span className="text-sm tabular-nums text-slate-600">
+												{formatUserDateTimeLabel(
+													user.lastActiveAt || user.$updatedAt,
+												)}
+											</span>
+										</TableCell>
+										<TableCell className="py-3 pr-4 pl-3 text-right">
+											<UserManagementRowActions
+												user={user}
+												actor={actor}
+												canManageUsers={canManageUsers}
+												canAssignRoles={canAssignRoles}
+												canImpersonate={canImpersonate}
+												onAction={openAction}
+											/>
+										</TableCell>
+									</TableRow>
+								);
+							})}
+						</TableBody>
+					</CaalmDataTable>
 
-							{filteredAndSortedUsers.length === 0 && (
-								<UsersNotFoundState
-									message="No users found"
-									action={
-										activeFilterCount > 0 ? (
-											<Button
-												variant="outline"
-												size="sm"
-												onClick={clearAllFilters}
-												className="mt-3"
-											>
-												Clear filters
-											</Button>
-										) : undefined
-									}
-								/>
-							)}
-							<PageIndex
-								page={page}
-								totalItems={filteredAndSortedUsers.length}
-								pageSize={USER_MANAGEMENT_PAGE_SIZE}
-								onPageChange={setPage}
-								hideWhenSinglePage
-								showRange
-								itemLabel="users"
-								scrollToTop
-							/>
-						</div>
+					{filteredAndSortedUsers.length === 0 && (
+						<UsersNotFoundState
+							message="No users found"
+							action={
+								activeFilterCount > 0 ? (
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={clearAllFilters}
+										className="mt-3"
+									>
+										Clear filters
+									</Button>
+								) : undefined
+							}
+						/>
 					)}
+					<PageIndex
+						page={page}
+						totalItems={filteredAndSortedUsers.length}
+						pageSize={USER_MANAGEMENT_PAGE_SIZE}
+						onPageChange={setPage}
+						hideWhenSinglePage
+						showRange
+						itemLabel="users"
+						scrollToTop
+					/>
+				</div>
+			)}
 
 			<UserManagementActionDialogs
 				user={actionUser}

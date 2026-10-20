@@ -46,9 +46,10 @@ function childrenOf(tasks: RoadmapTask[], parentId: string): RoadmapTask[] {
  * rows (2.8.a, 2.8.b) stay locked — sequential unlock skips completed parents.
  * When the parent is done, treat nested rows as done too (same merge / override).
  */
-export function reconcileNestedTasksWithParentComplete(
-	tasks: RoadmapTask[],
-): { tasks: RoadmapTask[]; transitions: StatusTransition[] } {
+export function reconcileNestedTasksWithParentComplete(tasks: RoadmapTask[]): {
+	tasks: RoadmapTask[];
+	transitions: StatusTransition[];
+} {
 	const next = tasks.map((t) => ({ ...t }));
 	const transitions: StatusTransition[] = [];
 	const byId = new Map(next.map((t) => [t.$id, t]));
@@ -221,7 +222,9 @@ export function computeUnlocked(snapshot: LockSnapshot): {
 
 	let openedIncompleteSection = false;
 
-	const trackedSections = new Set(snapshot.executionTrackedSectionNumbers ?? []);
+	const trackedSections = new Set(
+		snapshot.executionTrackedSectionNumbers ?? [],
+	);
 
 	for (const section of sections) {
 		const sectionTasks = tasks.filter((t) => t.sectionId === section.$id);
@@ -278,7 +281,8 @@ export function computeUnlocked(snapshot: LockSnapshot): {
 			if (section.status !== derivedAfter) {
 				bumpSection(section, derivedAfter);
 			}
-			if (section.status === "complete") {
+			// bumpSection mutates status, which TS cannot see through narrowing
+			if ((section.status as string) === "complete") {
 				continue;
 			}
 		} else {
@@ -295,9 +299,7 @@ export function computeUnlocked(snapshot: LockSnapshot): {
 	// all complete stay complete even if an earlier section is still open.
 	if (openedIncompleteSection) {
 		const firstOpen = sections.find(
-			(s) =>
-				s.status !== "complete" &&
-				!trackedSections.has(s.sectionNumber),
+			(s) => s.status !== "complete" && !trackedSections.has(s.sectionNumber),
 		);
 		if (firstOpen) {
 			for (const later of sections) {
@@ -342,8 +344,7 @@ export function computeUnlocked(snapshot: LockSnapshot): {
 		snapshot: {
 			sections,
 			tasks,
-			executionTrackedSectionNumbers:
-				snapshot.executionTrackedSectionNumbers,
+			executionTrackedSectionNumbers: snapshot.executionTrackedSectionNumbers,
 		},
 		transitions,
 	};

@@ -165,7 +165,8 @@ export async function getMessage(
 	);
 	const headers = msg.payload?.headers;
 	const bodies = extractBodies(msg.payload);
-	const messageIdHeader = getHeader(headers, "Message-ID") || getHeader(headers, "Message-Id");
+	const messageIdHeader =
+		getHeader(headers, "Message-ID") || getHeader(headers, "Message-Id");
 	const references = getHeader(headers, "References");
 
 	return {
@@ -190,31 +191,43 @@ export async function modifyMessageLabels(
 	messageId: string,
 	options: { addLabelIds?: string[]; removeLabelIds?: string[] },
 ): Promise<void> {
-	await gmailFetch(accessToken, `/messages/${encodeURIComponent(messageId)}/modify`, {
-		method: "POST",
-		body: JSON.stringify({
-			addLabelIds: options.addLabelIds || [],
-			removeLabelIds: options.removeLabelIds || [],
-		}),
-	});
+	await gmailFetch(
+		accessToken,
+		`/messages/${encodeURIComponent(messageId)}/modify`,
+		{
+			method: "POST",
+			body: JSON.stringify({
+				addLabelIds: options.addLabelIds || [],
+				removeLabelIds: options.removeLabelIds || [],
+			}),
+		},
+	);
 }
 
 export async function trashMessage(
 	accessToken: string,
 	messageId: string,
 ): Promise<void> {
-	await gmailFetch(accessToken, `/messages/${encodeURIComponent(messageId)}/trash`, {
-		method: "POST",
-	});
+	await gmailFetch(
+		accessToken,
+		`/messages/${encodeURIComponent(messageId)}/trash`,
+		{
+			method: "POST",
+		},
+	);
 }
 
 export async function untrashMessage(
 	accessToken: string,
 	messageId: string,
 ): Promise<void> {
-	await gmailFetch(accessToken, `/messages/${encodeURIComponent(messageId)}/untrash`, {
-		method: "POST",
-	});
+	await gmailFetch(
+		accessToken,
+		`/messages/${encodeURIComponent(messageId)}/untrash`,
+		{
+			method: "POST",
+		},
+	);
 }
 
 export async function applyMessageAction(
@@ -270,10 +283,9 @@ export async function listDrafts(
 	accessToken: string,
 	maxResults = 100,
 ): Promise<GmailMessageSummary[]> {
-	const list = await gmailFetch<{ drafts?: { id: string; message: { id: string; threadId: string } }[] }>(
-		accessToken,
-		`/drafts?maxResults=${maxResults}`,
-	);
+	const list = await gmailFetch<{
+		drafts?: { id: string; message: { id: string; threadId: string } }[];
+	}>(accessToken, `/drafts?maxResults=${maxResults}`);
 
 	const summaries: GmailMessageSummary[] = [];
 	for (const draft of list.drafts || []) {

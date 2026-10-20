@@ -5,6 +5,8 @@ import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import type {
 	ComputeRiskImpactOptions,
+	OpenRiskCounts,
+	PortfolioTypeSlice,
 	RiskImpactEvent,
 	RiskImpactPeriod,
 	RiskImpactSnapshot,
@@ -12,6 +14,7 @@ import type {
 	RiskImpactWin,
 } from "@/lib/dashboard/risk-impact.types";
 import {
+	AT_RISK_VALUES,
 	buildRiskImpactEvent,
 	classifyImpactLog,
 	resolveEventSource,
@@ -169,6 +172,18 @@ function daysUntil(dateStr?: string): number | null {
 function isExpiringWithin90(dateStr?: string): boolean {
 	const days = daysUntil(dateStr);
 	return days !== null && days >= 0 && days <= 90;
+}
+
+export function isExpiredLicense(license: LicenseRow): boolean {
+	const days = daysUntil(license.licenseExpiryDate);
+	return days !== null && days < 0;
+}
+
+export function isHighRiskLicense(license: LicenseRow): boolean {
+	const compliance = String(license.compliance || "")
+		.toLowerCase()
+		.replace(/\s+/g, "-");
+	return AT_RISK_VALUES.has(compliance);
 }
 
 function isExpiredContract(contract: ContractRow): boolean {
@@ -430,14 +445,33 @@ async function fetchScopedLicenses(
  * (Previously required healthy + grant/high-risk/expiring90 and applied a 15%
  * factor, which showed $0 while "contracts monitored" was still > 0.)
  */
-function computePortfolioProtected(contracts: ContractRow[]): number {
-	let total = 0;
+export function computePortfolioProtected(
+	contracts: ContractRow[],
+	licenses: LicenseRow[],
+): {
+	contracts: PortfolioTypeSlice;
+	licenses: PortfolioTypeSlice;
+	grants: PortfolioTypeSlice;
+} {
+	const slices = {
+		contracts: { count: 0, amount: 0 },
+		licenses: { count: 0, amount: 0 },
+		grants: { count: 0, amount: 0 },
+	};
 	for (const contract of contracts) {
+		const slice = isGrantContract(contract) ? slices.grants : slices.contracts;
+		slice.count += 1;
 		if (contract.isExpired || isExpiredContract(contract)) continue;
 		const amount = contractFaceValue(contract);
-		if (amount > 0) total += amount;
+		if (amount > 0) slice.amount += amount;
 	}
-	return total;
+	for (const license of licenses) {
+		slices.licenses.count += 1;
+		if (isExpiredLicense(license)) continue;
+		const amount = parseAmount(license.cost);
+		if (amount > 0) slices.licenses.amount += amount;
+	}
+	return slices;
 }
 
 export async function computeRiskImpact(
@@ -528,10 +562,14 @@ export async function computeRiskImpact(
 
 	const dollarsForKind = (kind: ImpactKind, log: AuditLogEntry): number => {
 		if (kind === "renewal") {
-			const license = log.target_id ? licenseById.get(log.target_id) : undefined;
+			const license = log.target_id
+				? licenseById.get(log.target_id)
+				: undefined;
 			return parseAmount(license?.cost);
 		}
-		const contract = log.target_id ? contractById.get(log.target_id) : undefined;
+		const contract = log.target_id
+			? contractById.get(log.target_id)
+			: undefined;
 		const license = log.target_id ? licenseById.get(log.target_id) : undefined;
 		if (kind === "flag") {
 			return weightedContractAmount(contract) || parseAmount(license?.cost);
@@ -615,25 +653,48 @@ export async function computeRiskImpact(
 		}
 	}
 
-	const secondaryAmount = canViewContracts
-		? computePortfolioProtected(contracts)
-		: 0;
+	const portfolioByType = computePortfolioProtected(
+		canViewContracts ? contracts : [],
+		canViewLicenses ? licenses : [],
+	);
+	const secondaryAmount =
+		portfolioByType.contracts.amount +
+		portfolioByType.grants.amount +
+		portfolioByType.licenses.amount;
 
 	const grantsMonitored = canViewContracts
 		? contracts.filter((c) => isGrantContract(c)).length
 		: 0;
 	const contractsMonitored = canViewContracts ? contracts.length : 0;
 
-	const openRisk = canViewContracts
+	const contractOpenRisk: OpenRiskCounts = canViewContracts
 		? {
 				highRisk: contracts.filter(
 					(c) => isHighRisk(c) && !isExpiredContract(c),
 				).length,
-				expiring90: contracts.filter((c) => isExpiringWithin90(c.contractExpiryDate))
-					.length,
+				expiring90: contracts.filter((c) =>
+					isExpiringWithin90(c.contractExpiryDate),
+				).length,
 				expired: contracts.filter((c) => isExpiredContract(c)).length,
 			}
 		: { highRisk: 0, expiring90: 0, expired: 0 };
+	const licenseOpenRisk: OpenRiskCounts = canViewLicenses
+		? {
+				highRisk: licenses.filter(
+					(l) => isHighRiskLicense(l) && !isExpiredLicense(l),
+				).length,
+				expiring90: licenses.filter((l) =>
+					isExpiringWithin90(l.licenseExpiryDate),
+				).length,
+				expired: licenses.filter((l) => isExpiredLicense(l)).length,
+			}
+		: { highRisk: 0, expiring90: 0, expired: 0 };
+	const openRisk = {
+		highRisk: contractOpenRisk.highRisk + licenseOpenRisk.highRisk,
+		expiring90: contractOpenRisk.expiring90 + licenseOpenRisk.expiring90,
+		expired: contractOpenRisk.expired + licenseOpenRisk.expired,
+		byType: { contracts: contractOpenRisk, licenses: licenseOpenRisk },
+	};
 
 	const counts = {
 		complianceFlagsCaught: canViewAudit ? complianceFlagsCaught : 0,
@@ -665,6 +726,7 @@ export async function computeRiskImpact(
 
 	const monitoring = {
 		contractsMonitored,
+		licensesMonitored: canViewLicenses ? licenses.length : 0,
 		grantsMonitored,
 		clausesFlagged: canViewAudit ? complianceFlagsCaught : 0,
 	};
@@ -691,6 +753,7 @@ export async function computeRiskImpact(
 			label: "Portfolio protected",
 			amount: Math.round(secondaryAmount),
 			amountFormatted: secondaryFormatted,
+			byType: portfolioByType,
 		},
 		counts,
 		countTrends,

@@ -1,22 +1,22 @@
-import { renderToStream } from "@react-pdf/renderer";
+import { Document, renderToStream } from "@react-pdf/renderer";
 import { type NextRequest, NextResponse } from "next/server";
-import { Document, Page, Text, View } from "@react-pdf/renderer";
 import React from "react";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getConstituentById } from "@/lib/constituents/server";
+import { xlsxResponse } from "@/lib/export/xlsx-response";
+import {
+	Heading,
+	PacketHeader,
+	PacketPage,
+	PacketTable,
+	StatBand,
+} from "@/lib/pdf/packet";
 import {
 	listApprovedHoursForVolunteer,
 	requireVolunteerOrgContext,
 } from "@/lib/volunteers";
 
 type RouteContext = { params: Promise<{ id: string }> };
-
-function csvEscape(value: string): string {
-	if (value.includes(",") || value.includes('"') || value.includes("\n")) {
-		return `"${value.replace(/"/g, '""')}"`;
-	}
-	return value;
-}
 
 export async function GET(request: NextRequest, context: RouteContext) {
 	const ctx = await requireVolunteerOrgContext(
@@ -37,31 +37,49 @@ export async function GET(request: NextRequest, context: RouteContext) {
 	const from = request.nextUrl.searchParams.get("from")?.trim() || undefined;
 	const to = request.nextUrl.searchParams.get("to")?.trim() || undefined;
 	const format =
-		request.nextUrl.searchParams.get("format")?.trim().toLowerCase() || "csv";
+		request.nextUrl.searchParams.get("format")?.trim().toLowerCase() || "xlsx";
 
 	const hours = await listApprovedHoursForVolunteer(ctx.orgId, id, from, to);
 	const volunteerName =
 		`${constituent.firstName} ${constituent.lastName}`.trim();
 
 	if (format === "pdf") {
-		const lines = hours.map(
-			(h) =>
-				`${h.workedAt.slice(0, 10)} · ${h.roleLabel || "Shift"} · ${(h.minutesWorked / 60).toFixed(2)} h`,
-		);
+		const totalHours = hours.reduce((sum, h) => sum + h.minutesWorked, 0) / 60;
 		const doc = React.createElement(
 			Document,
-			null,
+			{ title: `Volunteer service letter — ${volunteerName}`, author: "CAALM" },
 			React.createElement(
-				Page,
-				{ size: "LETTER", style: { padding: 40, fontSize: 11 } },
-				React.createElement(
-					View,
-					null,
-					React.createElement(Text, null, "Volunteer service letter"),
-					React.createElement(Text, null, volunteerName),
-					React.createElement(Text, null, "Approved hours only"),
-					...lines.map((line) => React.createElement(Text, { key: line }, line)),
-				),
+				PacketPage,
+				{
+					org: "CAALM",
+					title: "Volunteer service letter",
+				},
+				React.createElement(PacketHeader, {
+					eyebrow: "CAALM · Confidential",
+					title: "Volunteer service letter",
+					left: `${volunteerName} · approved hours only`,
+					right: `Generated ${new Date().toISOString().slice(0, 10)}`,
+				}),
+				React.createElement(StatBand, {
+					stats: [
+						{ label: "Volunteer", value: volunteerName },
+						{ label: "Approved entries", value: String(hours.length) },
+						{ label: "Total hours", value: totalHours.toFixed(2) },
+					],
+				}),
+				React.createElement(Heading, null, "Approved hours"),
+				React.createElement(PacketTable, {
+					columns: [
+						{ header: "Date", width: "20%" },
+						{ header: "Role", width: "50%" },
+						{ header: "Hours", width: "30%", align: "right" },
+					],
+					rows: hours.map((h) => [
+						h.workedAt.slice(0, 10),
+						h.roleLabel || "Shift",
+						(h.minutesWorked / 60).toFixed(2),
+					]),
+				}),
 			),
 		);
 		const pdfStream = await renderToStream(doc as never);
@@ -78,21 +96,23 @@ export async function GET(request: NextRequest, context: RouteContext) {
 		});
 	}
 
-	const header = "workedAt,roleLabel,minutesWorked,hours,grantContractId";
-	const rows = hours.map((h) =>
-		[
-			csvEscape(h.workedAt),
-			csvEscape(h.roleLabel || ""),
-			String(h.minutesWorked),
-			String((h.minutesWorked / 60).toFixed(2)),
-			csvEscape(h.grantContractId || ""),
-		].join(","),
-	);
-	const csv = [header, ...rows].join("\n");
-	return new NextResponse(csv, {
-		headers: {
-			"Content-Type": "text/csv; charset=utf-8",
-			"Content-Disposition": `attachment; filename="volunteer-hours-${id}.csv"`,
-		},
+	return xlsxResponse(`volunteer-hours-${id}.xlsx`, {
+		sheetName: "Volunteer Hours",
+		title: `Approved Volunteer Hours — ${volunteerName}`,
+		subtitle: `CAALM · ${hours.length} approved entr${hours.length === 1 ? "y" : "ies"} · Generated ${new Date().toISOString().slice(0, 10)}`,
+		columns: [
+			{ header: "Date", type: "date", width: 16 },
+			{ header: "Role", width: 30 },
+			{ header: "Minutes", type: "number", width: 12 },
+			{ header: "Hours", type: "number", width: 12 },
+			{ header: "Grant contract", width: 30 },
+		],
+		rows: hours.map((h) => [
+			h.workedAt,
+			h.roleLabel,
+			h.minutesWorked,
+			Number((h.minutesWorked / 60).toFixed(2)),
+			h.grantContractId,
+		]),
 	});
 }

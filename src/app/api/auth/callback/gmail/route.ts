@@ -2,10 +2,7 @@ import { cookies } from "next/headers";
 import { type NextRequest, NextResponse } from "next/server";
 import { upsertGmailIntegration } from "@/lib/actions/gmail-integration.actions";
 import { getAppUrl } from "@/lib/config/environment";
-import {
-	exchangeCodeForTokens,
-	getUserInfo,
-} from "@/lib/gmail/oauth";
+import { exchangeCodeForTokens, getUserInfo } from "@/lib/gmail/oauth";
 import { getCurrentUserId } from "@/lib/microsoft/auth-utils";
 
 function redirectToIntegrations(query: string): NextResponse {

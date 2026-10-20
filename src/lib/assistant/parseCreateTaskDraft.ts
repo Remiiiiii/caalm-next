@@ -103,13 +103,19 @@ export function parsePriorityFromText(
 	message: string,
 ): "low" | "medium" | "high" | undefined {
 	const q = message.toLowerCase();
-	if (/\b(high|urgent|critical)\s*priority\b/.test(q) || /\bpriority\s*:\s*high\b/.test(q)) {
+	if (
+		/\b(high|urgent|critical)\s*priority\b/.test(q) ||
+		/\bpriority\s*:\s*high\b/.test(q)
+	) {
 		return "high";
 	}
 	if (/\b(low)\s*priority\b/.test(q) || /\bpriority\s*:\s*low\b/.test(q)) {
 		return "low";
 	}
-	if (/\b(medium|normal)\s*priority\b/.test(q) || /\bpriority\s*:\s*medium\b/.test(q)) {
+	if (
+		/\b(medium|normal)\s*priority\b/.test(q) ||
+		/\bpriority\s*:\s*medium\b/.test(q)
+	) {
 		return "medium";
 	}
 	if (/\bhigh\b/.test(q) && /\b(priority|prio)\b/.test(q)) return "high";
@@ -167,6 +173,9 @@ export function parseCreateTaskDraft(
 	};
 }
 
-export function dueDateIsoOffset(daysFromToday: number, now = new Date()): string {
+export function dueDateIsoOffset(
+	daysFromToday: number,
+	now = new Date(),
+): string {
 	return ymd(addDays(now, daysFromToday));
 }

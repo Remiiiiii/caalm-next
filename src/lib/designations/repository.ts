@@ -8,9 +8,7 @@ import {
 import type { GiftDesignation } from "./types";
 
 function tableId(): string {
-	return (
-		appwriteConfig.giftDesignationsCollectionId || "69d91401001f4e8c2b04"
-	);
+	return appwriteConfig.giftDesignationsCollectionId || "69d91401001f4e8c2b04";
 }
 
 function dbId(): string {

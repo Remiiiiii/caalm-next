@@ -1,9 +1,4 @@
-export type NewsFeedType =
-	| "rss"
-	| "atom"
-	| "wordpress_api"
-	| "linkedin"
-	| "x";
+export type NewsFeedType = "rss" | "atom" | "wordpress_api" | "linkedin" | "x";
 
 export type NewsArticleSource =
 	| "native"

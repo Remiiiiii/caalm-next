@@ -807,7 +807,8 @@ export const PERMISSION_DEFINITIONS = [
 		key: PERMISSIONS.CONSTITUENTS.MANAGE,
 		name: "Manage Constituents",
 		category: "constituents",
-		description: "Create, edit, delete, and force-insert duplicate constituents",
+		description:
+			"Create, edit, delete, and force-insert duplicate constituents",
 	},
 
 	{

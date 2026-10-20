@@ -12,7 +12,9 @@ import type { BlueprintId } from "@/types/contract-templates";
 /** Base blueprint for org agreements created from scratch (letterhead + signatures). */
 export const SCRATCH_AGREEMENT_BLUEPRINT_ID: BlueprintId = "mou";
 
-export async function buildScratchAgreementDocx(orgId: string): Promise<Buffer> {
+export async function buildScratchAgreementDocx(
+	orgId: string,
+): Promise<Buffer> {
 	const blueprint = getBlueprint(SCRATCH_AGREEMENT_BLUEPRINT_ID);
 	if (!blueprint) {
 		throw new Error("Scratch agreement blueprint is not configured");

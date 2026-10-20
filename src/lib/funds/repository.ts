@@ -86,9 +86,7 @@ export async function ensureDefaultUnrestrictedFund(
 	orgId: string,
 ): Promise<OrgFund> {
 	const existing = await listFundsForOrg(orgId);
-	const found = existing.find(
-		(f) => f.code === DEFAULT_UNRESTRICTED_FUND_CODE,
-	);
+	const found = existing.find((f) => f.code === DEFAULT_UNRESTRICTED_FUND_CODE);
 	if (found) return found;
 	return createFund({
 		orgId,
@@ -118,6 +116,6 @@ export function netAssetClassLabel(value: NetAssetClass): string {
 		case "permanently_restricted":
 			return "Permanently restricted";
 		default:
-		 return value;
+			return value;
 	}
 }

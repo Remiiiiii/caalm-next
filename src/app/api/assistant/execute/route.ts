@@ -232,10 +232,7 @@ export async function POST(request: NextRequest) {
 							: `Action completed: ${pending.label}`;
 
 		const metadataJson =
-			meetingCreated ||
-			actionCompleted ||
-			actionLifecycle ||
-			calendarMutation
+			meetingCreated || actionCompleted || actionLifecycle || calendarMutation
 				? JSON.stringify({
 						...(meetingCreated ? { meetingCreated } : {}),
 						...(actionCompleted ? { actionCompleted } : {}),

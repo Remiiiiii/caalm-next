@@ -115,7 +115,14 @@ interface LocalCalendarEvent {
 	id: string;
 	title: string;
 	date?: Date;
-	type: "contract" | "deadline" | "meeting" | "review" | "audit" | "license";
+	type:
+		| "contract"
+		| "deadline"
+		| "meeting"
+		| "review"
+		| "audit"
+		| "license"
+		| "volunteer_shift";
 	description?: string;
 	participants?: string[];
 	contractName?: string;
@@ -607,6 +614,10 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 			license: {
 				color: "bg-teal-100 text-teal-800 border-teal-200",
 				icon: FileText,
+			},
+			volunteer_shift: {
+				color: "bg-green-100 text-green-800 border-green-200",
+				icon: Users,
 			},
 		};
 		return configs[type] ?? configs.meeting;
@@ -2211,7 +2222,7 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 								onValueChange={(value: string) =>
 									setNewEvent({
 										...newEvent,
-										type: value as LocalCalendarEvent["type"],
+										type: value as NewEventForm["type"],
 									})
 								}
 							>

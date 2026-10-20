@@ -1,11 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
+import { getConstituentById } from "@/lib/constituents/repository";
 import {
 	constituentActorFromUser,
 	logConstituentAudit,
 	requireConstituentOrgContext,
 } from "@/lib/constituents/server";
-import { getConstituentById } from "@/lib/constituents/repository";
 import {
 	type NextBestActionKind,
 	pickPrimaryNextBestAction,
@@ -33,11 +33,7 @@ function topFeaturesFromJson(json: string | undefined) {
 	}
 }
 
-function mergeTopFeatures(
-	lapseJson: string,
-	upgradeJson?: string,
-	limit = 3,
-) {
+function mergeTopFeatures(lapseJson: string, upgradeJson?: string, limit = 3) {
 	const combined = [
 		...topFeaturesFromJson(lapseJson),
 		...topFeaturesFromJson(upgradeJson),
@@ -65,9 +61,7 @@ async function buildPayload(
 	const suggestedAsk =
 		row.suggestedAskAmount != null ? row.suggestedAskAmount : null;
 	const effectiveAsk =
-		row.askOverrideAmount != null
-			? row.askOverrideAmount
-			: suggestedAsk;
+		row.askOverrideAmount != null ? row.askOverrideAmount : suggestedAsk;
 
 	const dismissals = await listActiveDismissalsForConstituent({
 		orgId,

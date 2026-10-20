@@ -103,24 +103,16 @@ export function matchesWidgetExpiryFilter(
 		return isExpiringWithinDays(file, 30);
 	}
 	if (filterDays === FILTER_VALUES.SIXTY_DAYS) {
-		return (
-			isExpiringWithinDays(file, 60) && !isExpiringWithinDays(file, 30)
-		);
+		return isExpiringWithinDays(file, 60) && !isExpiringWithinDays(file, 30);
 	}
 	if (filterDays === FILTER_VALUES.NINETY_DAYS) {
-		return (
-			isExpiringWithinDays(file, 90) && !isExpiringWithinDays(file, 60)
-		);
+		return isExpiringWithinDays(file, 90) && !isExpiringWithinDays(file, 60);
 	}
 	if (filterDays === FILTER_VALUES.SIX_MONTHS) {
-		return (
-			isExpiringWithinDays(file, 180) && !isExpiringWithinDays(file, 90)
-		);
+		return isExpiringWithinDays(file, 180) && !isExpiringWithinDays(file, 90);
 	}
 	if (filterDays === FILTER_VALUES.ONE_YEAR) {
-		return (
-			isExpiringWithinDays(file, 365) && !isExpiringWithinDays(file, 180)
-		);
+		return isExpiringWithinDays(file, 365) && !isExpiringWithinDays(file, 180);
 	}
 	return isExpiringWithinDays(file, filterDays);
 }

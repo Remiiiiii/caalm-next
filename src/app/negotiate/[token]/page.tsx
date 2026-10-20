@@ -12,6 +12,7 @@ import {
 	buildNegotiationParticipants,
 	NegotiationInviteeAvatars,
 } from "@/components/contracts/negotiation/NegotiationInviteeAvatars";
+import { BusyIcon } from "@/components/ui/busy-icon";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -22,6 +23,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { useBusyAction } from "@/hooks/useBusyAction";
 import { useNegotiationPoll } from "@/hooks/useNegotiationPoll";
 import type { NegotiationInvitee } from "@/lib/contracts/negotiation/access.logic";
 import type { NegotiationComment } from "@/lib/contracts/negotiation/comments.service";
@@ -184,6 +186,7 @@ export default function CounterpartyNegotiatePage() {
 		anchor.click();
 		URL.revokeObjectURL(href);
 	}, [text, title]);
+	const [runDownloading, downloading] = useBusyAction(downloadDraft);
 
 	const printDraft = useCallback(() => {
 		if (!text.trim()) return;
@@ -465,11 +468,11 @@ export default function CounterpartyNegotiatePage() {
 							variant="outline"
 							size="icon"
 							className="h-9 w-9 cursor-pointer border-slate-200 text-slate-700"
-							onClick={downloadDraft}
-							disabled={!text.trim()}
+							onClick={() => void runDownloading()}
+							disabled={!text.trim() || downloading}
 							aria-label="Download draft"
 						>
-							<Download className="h-4 w-4" />
+							<BusyIcon busy={downloading} icon={Download} />
 						</Button>
 						<Button
 							type="button"

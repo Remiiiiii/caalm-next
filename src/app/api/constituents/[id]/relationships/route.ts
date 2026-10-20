@@ -28,7 +28,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
 	const { id } = await context.params;
 	const existing = await loadOwned(id, ctx.orgId);
 	if (!existing) {
-		return NextResponse.json({ error: "Constituent not found" }, { status: 404 });
+		return NextResponse.json(
+			{ error: "Constituent not found" },
+			{ status: 404 },
+		);
 	}
 
 	try {
@@ -53,7 +56,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
 	const { id } = await context.params;
 	const existing = await loadOwned(id, ctx.orgId);
 	if (!existing) {
-		return NextResponse.json({ error: "Constituent not found" }, { status: 404 });
+		return NextResponse.json(
+			{ error: "Constituent not found" },
+			{ status: 404 },
+		);
 	}
 
 	try {
@@ -77,7 +83,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
 			softCredit: Boolean(body.softCredit),
 		});
 		if (!result.ok) {
-			return NextResponse.json({ error: result.error }, { status: result.status });
+			return NextResponse.json(
+				{ error: result.error },
+				{ status: result.status },
+			);
 		}
 		return NextResponse.json(
 			{ relationship: result.relationship },

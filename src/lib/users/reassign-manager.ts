@@ -132,10 +132,7 @@ export async function reassignManager(input: {
 		if (managerId) parentOf.set(childId, managerId);
 	}
 
-	if (
-		nextManagerId &&
-		reportingWouldCycle(nextManagerId, targetId, parentOf)
-	) {
+	if (nextManagerId && reportingWouldCycle(nextManagerId, targetId, parentOf)) {
 		throw new ReassignManagerError(
 			"That connection would create a circular reporting chain",
 		);

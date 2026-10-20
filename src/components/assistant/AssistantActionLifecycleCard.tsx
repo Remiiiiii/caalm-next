@@ -140,9 +140,7 @@ function EntityIcon({ toolName }: { toolName: string }) {
 }
 
 function isCreateTaskTool(toolName: string): boolean {
-	return (
-		toolName === "create_task" || toolName === "create_task_for_contract"
-	);
+	return toolName === "create_task" || toolName === "create_task_for_contract";
 }
 
 function CreateTaskDraftEditor({
@@ -170,9 +168,7 @@ function CreateTaskDraftEditor({
 			: "medium",
 	);
 	const [description, setDescription] = useState(
-		typeof pendingArgs?.description === "string"
-			? pendingArgs.description
-			: "",
+		typeof pendingArgs?.description === "string" ? pendingArgs.description : "",
 	);
 	const [showNotes, setShowNotes] = useState(Boolean(description.trim()));
 
@@ -193,7 +189,12 @@ function CreateTaskDraftEditor({
 				? pendingArgs.description
 				: "",
 		);
-	}, [pendingArgs?.title, pendingArgs?.dueDate, pendingArgs?.priority, pendingArgs?.description]);
+	}, [
+		pendingArgs?.title,
+		pendingArgs?.dueDate,
+		pendingArgs?.priority,
+		pendingArgs?.description,
+	]);
 
 	const patch = (next: Record<string, unknown>) => {
 		onPatch?.(next);
@@ -538,9 +539,7 @@ export default function AssistantActionLifecycleCard({
 								{action.entitySubtitle ? (
 									<span className="tabular-nums">{action.entitySubtitle}</span>
 								) : null}
-								{action.entityHref &&
-								action.entityHrefLabel &&
-								isCompleted ? (
+								{action.entityHref && action.entityHrefLabel && isCompleted ? (
 									<button
 										type="button"
 										onClick={onOpenEntity}
@@ -592,9 +591,7 @@ export default function AssistantActionLifecycleCard({
 			{/* Footer */}
 			<div className="flex items-center justify-between gap-3 border-t border-slate-100 px-4 py-3">
 				<p className="min-w-0 text-xs text-slate-500">
-					{draftMode
-						? "Edit the draft, then confirm."
-						: action.footerNote}
+					{draftMode ? "Edit the draft, then confirm." : action.footerNote}
 					{!draftMode && action.footerNote && isCompleted ? (
 						<button
 							type="button"

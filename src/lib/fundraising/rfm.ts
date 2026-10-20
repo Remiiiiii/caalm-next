@@ -52,16 +52,11 @@ export function computeFrequency(gifts: RfmGiftRow[]): number {
 }
 
 export function computeMonetary(gifts: RfmGiftRow[]): number {
-	return gifts
-		.filter(isCountableGift)
-		.reduce((sum, g) => sum + g.amount, 0);
+	return gifts.filter(isCountableGift).reduce((sum, g) => sum + g.amount, 0);
 }
 
 /** Consecutive calendar months (UTC) with at least one countable gift, ending at asOf month. */
-export function computeStreakMonths(
-	gifts: RfmGiftRow[],
-	asOf: Date,
-): number {
+export function computeStreakMonths(gifts: RfmGiftRow[], asOf: Date): number {
 	const months = new Set<string>();
 	for (const gift of gifts.filter(isCountableGift)) {
 		const d = parseDate(gift.giftDate);

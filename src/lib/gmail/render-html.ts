@@ -6,7 +6,7 @@
 export function wrapEmailHtmlDocument(html: string): string {
 	const trimmed = (html || "").trim();
 	if (!trimmed) {
-		return "<!DOCTYPE html><html><head><meta charset=\"utf-8\"></head><body></body></html>";
+		return '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body></body></html>';
 	}
 
 	const headExtras = `

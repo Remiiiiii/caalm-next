@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
 import Link from "next/link";
-import { useSearchParams, useRouter } from "next/navigation";
-import RoundedUnderlineTabs from "@/components/RoundedUnderlineTabs";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect } from "react";
 import { ITHubOverviewCards } from "@/components/it/ITHubOverviewCards";
+import RoundedUnderlineTabs from "@/components/RoundedUnderlineTabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { useITOrgScope } from "@/contexts/ITOrgScopeContext";
 
@@ -28,7 +28,7 @@ export function ITTenantHubClient({ orgId }: { orgId: string }) {
 	const { setHubOrgId } = useITOrgScope();
 	const searchParams = useSearchParams();
 	const router = useRouter();
-	const tabParam = searchParams.get("tab");
+	const tabParam = searchParams?.get("tab") ?? null;
 	const tab: TabValue = isTab(tabParam) ? tabParam : "overview";
 
 	useEffect(() => {
@@ -36,7 +36,7 @@ export function ITTenantHubClient({ orgId }: { orgId: string }) {
 	}, [orgId, setHubOrgId]);
 
 	const setTab = (next: string) => {
-		const params = new URLSearchParams(searchParams.toString());
+		const params = new URLSearchParams(searchParams?.toString() ?? "");
 		if (next === "overview") params.delete("tab");
 		else params.set("tab", next);
 		const qs = params.toString();

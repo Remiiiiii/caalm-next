@@ -84,7 +84,9 @@ export function CreateConstituentDialog({
 			const data = await response.json();
 			if (response.status === 409) {
 				setCandidates(data.candidates || []);
-				setError("A likely duplicate already exists. Review the matches below.");
+				setError(
+					"A likely duplicate already exists. Review the matches below.",
+				);
 				return;
 			}
 			if (!response.ok) {
@@ -134,7 +136,10 @@ export function CreateConstituentDialog({
 								className="border-[0.25px] border-slate-300 bg-white"
 								value={form.firstName}
 								onChange={(event) =>
-									setForm((prev) => ({ ...prev, firstName: event.target.value }))
+									setForm((prev) => ({
+										...prev,
+										firstName: event.target.value,
+									}))
 								}
 							/>
 						</div>
@@ -244,7 +249,9 @@ export function CreateConstituentDialog({
 					{candidates.length > 0 ? (
 						<Button
 							className="primary-btn px-3 sm:px-4"
-							disabled={saving || !form.firstName.trim() || !form.lastName.trim()}
+							disabled={
+								saving || !form.firstName.trim() || !form.lastName.trim()
+							}
 							onClick={() => void submit(true)}
 						>
 							<AlertTriangle className="h-4 w-4" />
@@ -253,7 +260,9 @@ export function CreateConstituentDialog({
 					) : (
 						<Button
 							className="primary-btn px-3 sm:px-4"
-							disabled={saving || !form.firstName.trim() || !form.lastName.trim()}
+							disabled={
+								saving || !form.firstName.trim() || !form.lastName.trim()
+							}
 							onClick={() => void submit(false)}
 						>
 							<Plus className="h-4 w-4" />

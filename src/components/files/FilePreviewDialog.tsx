@@ -15,12 +15,9 @@ type FilePreviewDialogProps = {
 	file: FilePreviewDialogFile | null;
 };
 
-const FilePreviewDialogImpl = dynamic(
-	() => import("./FilePreviewDialogImpl"),
-	{
-		ssr: false,
-	},
-);
+const FilePreviewDialogImpl = dynamic(() => import("./FilePreviewDialogImpl"), {
+	ssr: false,
+});
 
 export default function FilePreviewDialog(props: FilePreviewDialogProps) {
 	return <FilePreviewDialogImpl {...props} />;

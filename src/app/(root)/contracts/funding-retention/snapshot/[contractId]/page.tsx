@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { PERMISSIONS } from "@/constants/permissions";
-import { requirePagePermission } from "@/lib/rbac/page-guards";
 import { getCurrentUser } from "@/lib/actions/user.actions";
-import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
-import { loadFunderSnapshot } from "@/lib/funding/funder-snapshot";
 import { formatUsd } from "@/lib/funding/constants";
+import { loadFunderSnapshot } from "@/lib/funding/funder-snapshot";
+import { requirePagePermission } from "@/lib/rbac/page-guards";
+import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 import { FunderSnapshotPrintActions } from "./FunderSnapshotPrintActions";
 
 type PageProps = { params: Promise<{ contractId: string }> };
@@ -84,7 +84,8 @@ export default async function FunderSnapshotPrintPage({ params }: PageProps) {
 								<li key={line.lineId} className="flex justify-between gap-4">
 									<span className="capitalize">{line.category}</span>
 									<span className="tabular-nums">
-										{formatUsd(line.budgetAmount)} / {formatUsd(line.actualAmount)}
+										{formatUsd(line.budgetAmount)} /{" "}
+										{formatUsd(line.actualAmount)}
 									</span>
 								</li>
 							))}
@@ -121,7 +122,7 @@ export default async function FunderSnapshotPrintPage({ params }: PageProps) {
 							Volunteer hours (approved, grant-tagged)
 						</h2>
 						<p className="tabular-nums">
-							{Math.round(snapshot.volunteerHoursTotalMinutes / 60 * 10) / 10}{" "}
+							{Math.round((snapshot.volunteerHoursTotalMinutes / 60) * 10) / 10}{" "}
 							hours · {snapshot.volunteerHours.length} log(s)
 						</p>
 					</section>

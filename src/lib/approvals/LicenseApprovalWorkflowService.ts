@@ -397,8 +397,6 @@ export async function getLicenseWorkflowForViewer(
 			currentStepIndex: 0,
 			steps: [],
 			notifications: [],
-			canDecide: false,
-			canOverride: false,
 			...emptyViewerFlags(),
 			needsExecutiveAssignment: false,
 			canAssignExecutive: false,

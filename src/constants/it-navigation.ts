@@ -544,10 +544,7 @@ export function filterITNavigationByPermissions(
 					return {
 						...item,
 						subItems: item.subItems.filter((subItem) => {
-							if (
-								!includePreview &&
-								isITPlaceholderNavUrl(subItem.url)
-							) {
+							if (!includePreview && isITPlaceholderNavUrl(subItem.url)) {
 								return false;
 							}
 							if (!subItem.permission) return true;

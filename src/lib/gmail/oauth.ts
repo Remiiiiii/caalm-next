@@ -49,7 +49,9 @@ export function generateAuthUrl(state: string): string {
 	return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 }
 
-export async function exchangeCodeForTokens(code: string): Promise<GoogleTokens> {
+export async function exchangeCodeForTokens(
+	code: string,
+): Promise<GoogleTokens> {
 	const body = new URLSearchParams({
 		client_id: appwriteConfig.googleClientId!,
 		client_secret: appwriteConfig.googleClientSecret!,
@@ -96,7 +98,9 @@ export async function refreshAccessToken(
 	return response.json();
 }
 
-export async function getUserInfo(accessToken: string): Promise<GoogleUserInfo> {
+export async function getUserInfo(
+	accessToken: string,
+): Promise<GoogleUserInfo> {
 	const response = await fetch(
 		"https://www.googleapis.com/oauth2/v2/userinfo",
 		{
@@ -115,7 +119,10 @@ export async function getUserInfo(accessToken: string): Promise<GoogleUserInfo> 
 export async function revokeToken(token: string): Promise<void> {
 	await fetch(
 		`https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(token)}`,
-		{ method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" } },
+		{
+			method: "POST",
+			headers: { "Content-Type": "application/x-www-form-urlencoded" },
+		},
 	);
 }
 

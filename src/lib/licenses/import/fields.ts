@@ -17,21 +17,23 @@ export const LICENSE_IMPORT_FIELD_KEYS = [
 
 export type LicenseImportFieldKey = (typeof LICENSE_IMPORT_FIELD_KEYS)[number];
 
-export const LICENSE_IMPORT_FIELD_LABELS: Record<LicenseImportFieldKey, string> =
-	{
-		licenseName: "License name",
-		licenseNumber: "License number",
-		licenseType: "License type",
-		licenseExpiryDate: "Expiry date",
-		issueDate: "Issue date",
-		issuingAuthority: "Issuing authority",
-		department: "Department",
-		division: "Division",
-		vendor: "Vendor",
-		product: "Product",
-		status: "Status",
-		cost: "Cost",
-	};
+export const LICENSE_IMPORT_FIELD_LABELS: Record<
+	LicenseImportFieldKey,
+	string
+> = {
+	licenseName: "License name",
+	licenseNumber: "License number",
+	licenseType: "License type",
+	licenseExpiryDate: "Expiry date",
+	issueDate: "Issue date",
+	issuingAuthority: "Issuing authority",
+	department: "Department",
+	division: "Division",
+	vendor: "Vendor",
+	product: "Product",
+	status: "Status",
+	cost: "Cost",
+};
 
 const ALIASES: Record<string, LicenseImportFieldKey> = {
 	name: "licenseName",

@@ -16,9 +16,7 @@ export async function withAppwriteLookupTimeout<T>(
 			promise,
 			new Promise<T>((_, reject) => {
 				timer = setTimeout(() => {
-					const error = new Error(
-						`Operation timed out after ${timeoutMs}ms`,
-					);
+					const error = new Error(`Operation timed out after ${timeoutMs}ms`);
 					error.name = "TimeoutError";
 					reject(error);
 				}, timeoutMs);
@@ -35,9 +33,7 @@ export function isAppwriteNotFoundError(error: unknown): boolean {
 	const code = Number(err.code);
 	const type = String(err.type ?? "");
 	return (
-		code === 404 ||
-		type === "document_not_found" ||
-		type === "row_not_found"
+		code === 404 || type === "document_not_found" || type === "row_not_found"
 	);
 }
 

@@ -1,12 +1,14 @@
 import { ID, Query } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
-import type { VolunteerShiftBooking, VolunteerShiftBookingStatus } from "./types";
+import type {
+	VolunteerShiftBooking,
+	VolunteerShiftBookingStatus,
+} from "./types";
 
 function tableId(): string {
 	return (
-		appwriteConfig.volunteerShiftBookingsCollectionId ||
-		"69d92302001f4e8c2b24"
+		appwriteConfig.volunteerShiftBookingsCollectionId || "69d92302001f4e8c2b24"
 	);
 }
 

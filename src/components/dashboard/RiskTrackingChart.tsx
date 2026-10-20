@@ -6,6 +6,7 @@ import {
 	Area,
 	AreaChart,
 	CartesianGrid,
+	ReferenceDot,
 	ReferenceLine,
 	ResponsiveContainer,
 	Tooltip,
@@ -23,12 +24,15 @@ import {
 	rollupTrackingMonths,
 	type TrackingGrain,
 } from "@/lib/dashboard/risk-impact-sparkline";
+import { cn } from "@/lib/utils";
 
 interface RiskTrackingChartProps {
 	points: RiskImpactSparkPoint[];
 	period?: RiskImpactPeriod;
 	title?: string;
 	children?: ReactNode;
+	/** Register-page scale: Y runs 0–100 in steps of 10, peak pill, one-line caption. */
+	fixedScale?: boolean;
 }
 
 /** X labels where the series crosses into a new calendar quarter (Q1–Q4). */
@@ -127,6 +131,7 @@ export function RiskTrackingChart({
 	period = "ytd",
 	title = "Tracking status",
 	children,
+	fixedScale = false,
 }: RiskTrackingChartProps) {
 	const showGrainToggle =
 		period === "ytd" || period === "quarter" || period === "last90";
@@ -162,6 +167,10 @@ export function RiskTrackingChart({
 		1,
 		...series.map((point) => point.increment ?? 0),
 	);
+	const peakPoint = series.find(
+		(point) => (point.increment ?? 0) === peakActivity,
+	);
+	const scaleMax = Math.max(100, Math.ceil(peakActivity / 10) * 10);
 	const yUnit =
 		grain === "month"
 			? "month"
@@ -180,29 +189,43 @@ export function RiskTrackingChart({
 
 	return (
 		<div className="w-full min-w-0">
-			<div className="mb-2 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-				<button
-					type="button"
-					aria-expanded={expanded}
-					aria-controls="risk-tracking-panel"
-					onClick={() => setExpanded((open) => !open)}
-					className="flex cursor-pointer items-center gap-2 justify-self-start rounded-md text-left outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
-				>
-					<p className="text-[11px] font-bold tracking-[0.08em] uppercase text-slate-700">
-						{title}
-					</p>
-					<ChevronDown
-						className={`h-4 w-4 shrink-0 text-[#0f5384] transition-transform duration-200 ${
-							expanded ? "" : "-rotate-90"
-						}`}
-						aria-hidden
-					/>
-				</button>
-				{expanded ? (
+			<div
+				className={cn(
+					"mb-2 grid items-center gap-3",
+					fixedScale ? "grid-cols-[1fr_auto]" : "grid-cols-[1fr_auto_1fr]",
+				)}
+			>
+				{fixedScale ? (
+					<div className="justify-self-start">
+						<p className="h5 sidebar-gradient-text">
+							{title} · {year}
+						</p>
+						<p className="caption text-slate-500">{yAxisTitle}</p>
+					</div>
+				) : (
+					<button
+						type="button"
+						aria-expanded={expanded}
+						aria-controls="risk-tracking-panel"
+						onClick={() => setExpanded((open) => !open)}
+						className="flex cursor-pointer items-center gap-2 justify-self-start rounded-md text-left outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
+					>
+						<p className="text-[11px] font-bold tracking-[0.08em] uppercase text-slate-700">
+							{title}
+						</p>
+						<ChevronDown
+							className={`h-4 w-4 shrink-0 text-[#0f5384] transition-transform duration-200 ${
+								expanded ? "" : "-rotate-90"
+							}`}
+							aria-hidden
+						/>
+					</button>
+				)}
+				{expanded && !fixedScale ? (
 					<p className="justify-self-center text-lg font-bold tabular-nums text-[#105888]">
 						{year}
 					</p>
-				) : (
+				) : fixedScale ? null : (
 					<span />
 				)}
 				<div className="justify-self-end">
@@ -226,9 +249,11 @@ export function RiskTrackingChart({
 
 			{expanded ? (
 				<div id="risk-tracking-panel">
-					<p className="mb-1 text-[10px] font-medium text-slate-500">
-						{yAxisTitle}
-					</p>
+					{fixedScale ? null : (
+						<p className="mb-1 text-[10px] font-medium text-slate-500">
+							{yAxisTitle}
+						</p>
+					)}
 					<div className="relative h-44 w-full min-w-0 overflow-hidden outline-none **:outline-none">
 						<ResponsiveContainer width="100%" height={176}>
 							<AreaChart
@@ -291,7 +316,15 @@ export function RiskTrackingChart({
 									tick={{ fill: "#64748b", fontSize: 10 }}
 									tickLine={false}
 									axisLine={false}
-									domain={[0, peakActivity]}
+									domain={[0, fixedScale ? scaleMax : peakActivity]}
+									ticks={
+										fixedScale
+											? Array.from(
+													{ length: scaleMax / 10 + 1 },
+													(_, i) => i * 10,
+												)
+											: undefined
+									}
 								/>
 								<Tooltip
 									cursor={{
@@ -338,13 +371,37 @@ export function RiskTrackingChart({
 									}}
 									isAnimationActive={false}
 								/>
+								{fixedScale && peakPoint && totalEvents > 0 ? (
+									<ReferenceDot
+										x={peakPoint.label}
+										y={peakPoint.increment ?? 0}
+										r={4}
+										fill="#fff"
+										stroke="#0f5384"
+										strokeWidth={2}
+										label={{
+											value: `${peakPoint.increment} event${peakPoint.increment === 1 ? "" : "s"}`,
+											position: "top",
+											fill: "#0f5384",
+											fontSize: 10,
+											fontWeight: 600,
+										}}
+									/>
+								) : null}
 							</AreaChart>
 						</ResponsiveContainer>
 					</div>
 
-					<p className="mt-1 text-[11px] text-slate-500 tabular-nums">
-						Y-axis is new events per {yUnit}, not dollars. {totalEvents} event
-						{totalEvents === 1 ? "" : "s"} plotted.
+					<p
+						className={
+							fixedScale
+								? "caption mt-2 text-slate-600 tabular-nums"
+								: "mt-1 text-[11px] text-slate-500 tabular-nums"
+						}
+					>
+						{fixedScale
+							? `New events per ${yUnit}, not dollars · ${totalEvents} event${totalEvents === 1 ? "" : "s"} plotted`
+							: `Y-axis is new events per ${yUnit}, not dollars. ${totalEvents} event${totalEvents === 1 ? "" : "s"} plotted.`}
 					</p>
 					{children}
 				</div>

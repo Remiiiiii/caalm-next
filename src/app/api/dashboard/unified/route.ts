@@ -221,7 +221,10 @@ export async function GET(request: NextRequest) {
 						getDashboardUserComposition(orgId),
 					]);
 				const kpiRows =
-					kpiContractsResult.rows || kpiContractsResult.documents || [];
+					kpiContractsResult.rows ||
+					(kpiContractsResult as { documents?: typeof kpiContractsResult.rows })
+						.documents ||
+					[];
 				const {
 					totalContracts,
 					expiringContracts,
@@ -249,8 +252,7 @@ export async function GET(request: NextRequest) {
 							const expiryDate = new Date(year, month - 1, day);
 							expiryDate.setHours(0, 0, 0, 0);
 							daysUntilExpiry = Math.floor(
-								(expiryDate.getTime() - now.getTime()) /
-									(1000 * 60 * 60 * 24),
+								(expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
 							);
 							if (expiryDate < now) {
 								expiredByDate = true;

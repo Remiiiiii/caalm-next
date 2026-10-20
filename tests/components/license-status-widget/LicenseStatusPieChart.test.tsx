@@ -63,7 +63,9 @@ function license(
 	overrides: Partial<License> & { licenseExpiryDate: string; status: string },
 ): License {
 	return {
+		...overrides,
 		$id: overrides.$id || "lic-1",
+		orgId: "org-1",
 		licenseName: overrides.licenseName || "Test License",
 		licenseNumber: "LIC-1",
 		licenseType: "business",
@@ -73,7 +75,6 @@ function license(
 		status: overrides.status as License["status"],
 		$createdAt: "",
 		$updatedAt: "",
-		...overrides,
 	};
 }
 

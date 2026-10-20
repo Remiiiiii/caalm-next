@@ -38,6 +38,10 @@ vi.mock("next/navigation", () => ({
 	usePathname: () => "/licenses",
 }));
 
+vi.mock("@/contexts/StepUpContext", () => ({
+	useStepUp: () => ({ ensureStepUp: vi.fn().mockResolvedValue(true) }),
+}));
+
 vi.mock("react-countup", () => ({
 	default: ({ end }: { end: number }) => <span>{end}</span>,
 }));

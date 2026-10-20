@@ -88,7 +88,8 @@ export const API_AUTHZ_ALLOWLIST: readonly ApiAuthzAllowEntry[] = [
 	{
 		path: "gmail/auth",
 		class: "oauth",
-		reason: "Starts Gmail OAuth authorize redirect (requirePermission in handler)",
+		reason:
+			"Starts Gmail OAuth authorize redirect (requirePermission in handler)",
 	},
 	{
 		path: "auth/callback/gmail",

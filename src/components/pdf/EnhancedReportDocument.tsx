@@ -1,5 +1,6 @@
 import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import type React from "react";
+import { PacketFooter } from "@/lib/pdf/packet";
 
 // Professional styling based on analyzed PDF reports
 const styles = StyleSheet.create({
@@ -22,8 +23,8 @@ const styles = StyleSheet.create({
 
 	mainTitle: {
 		fontSize: 28,
-		fontWeight: "bold",
-		color: "#1e293b",
+		fontFamily: "Times-Bold",
+		color: "#1b2230",
 		marginBottom: 40,
 		textAlign: "center",
 		textTransform: "uppercase",
@@ -32,7 +33,7 @@ const styles = StyleSheet.create({
 
 	subtitle: {
 		fontSize: 18,
-		color: "#475569",
+		color: "#5f6877",
 		marginBottom: 60,
 		textAlign: "center",
 	},
@@ -45,7 +46,7 @@ const styles = StyleSheet.create({
 		marginBottom: 40,
 		paddingBottom: 15,
 		borderBottomWidth: 2,
-		borderBottomColor: "#1e40af",
+		borderBottomColor: "#0f5384",
 	},
 
 	headerLeft: {
@@ -55,14 +56,14 @@ const styles = StyleSheet.create({
 
 	companyName: {
 		fontSize: 20,
-		fontWeight: "bold",
-		color: "#1e40af",
+		fontFamily: "Times-Bold",
+		color: "#0f5384",
 		marginBottom: 3,
 	},
 
 	companyTagline: {
 		fontSize: 10,
-		color: "#64748b",
+		color: "#5f6877",
 		fontStyle: "italic",
 	},
 
@@ -74,21 +75,21 @@ const styles = StyleSheet.create({
 
 	reportNumber: {
 		fontSize: 12,
-		fontWeight: "bold",
-		color: "#1e293b",
+		fontFamily: "Helvetica-Bold",
+		color: "#1b2230",
 		marginBottom: 3,
 	},
 
 	reportDate: {
 		fontSize: 10,
-		color: "#64748b",
+		color: "#5f6877",
 	},
 
 	// Table of Contents (inspired by Government Report)
 	tocTitle: {
 		fontSize: 16,
-		fontWeight: "bold",
-		color: "#1e293b",
+		fontFamily: "Times-Bold",
+		color: "#1b2230",
 		marginBottom: 20,
 		textAlign: "center",
 	},
@@ -102,33 +103,32 @@ const styles = StyleSheet.create({
 
 	tocText: {
 		fontSize: 11,
-		color: "#374151",
+		color: "#1b2230",
 	},
 
 	tocPage: {
 		fontSize: 11,
-		color: "#6b7280",
+		color: "#5f6877",
 	},
 
 	// Executive Summary Box (inspired by Academic Report)
 	executiveSummary: {
-		backgroundColor: "#f8fafc",
+		backgroundColor: "#f6f8fb",
 		padding: 25,
 		marginBottom: 30,
-		borderRadius: 8,
 		borderLeftWidth: 6,
-		borderLeftColor: "#1e40af",
+		borderLeftColor: "#0f5384",
 	},
 
 	summaryTitle: {
 		fontSize: 14,
-		fontWeight: "bold",
-		color: "#1e293b",
+		fontFamily: "Times-Bold",
+		color: "#1b2230",
 		marginBottom: 15,
 	},
 
 	summaryText: {
-		color: "#374151",
+		color: "#1b2230",
 		lineHeight: 1.6,
 		textAlign: "justify",
 	},
@@ -140,18 +140,18 @@ const styles = StyleSheet.create({
 
 	sectionTitle: {
 		fontSize: 16,
-		fontWeight: "bold",
-		color: "#1e293b",
+		fontFamily: "Times-Bold",
+		color: "#1b2230",
 		marginBottom: 15,
 		paddingBottom: 5,
 		borderBottomWidth: 1,
-		borderBottomColor: "#d1d5db",
+		borderBottomColor: "#d8dde4",
 	},
 
 	subsectionTitle: {
 		fontSize: 13,
-		fontWeight: "bold",
-		color: "#374151",
+		fontFamily: "Helvetica-Bold",
+		color: "#1b2230",
 		marginBottom: 10,
 		marginTop: 15,
 	},
@@ -161,7 +161,6 @@ const styles = StyleSheet.create({
 		backgroundColor: "#f1f5f9",
 		padding: 20,
 		marginBottom: 25,
-		borderRadius: 6,
 		borderWidth: 1,
 		borderColor: "#cbd5e1",
 	},
@@ -172,14 +171,14 @@ const styles = StyleSheet.create({
 	},
 
 	metadataLabel: {
-		fontWeight: "bold",
+		fontFamily: "Helvetica-Bold",
 		width: 120,
-		color: "#475569",
+		color: "#5f6877",
 		fontSize: 10,
 	},
 
 	metadataValue: {
-		color: "#64748b",
+		color: "#5f6877",
 		flex: 1,
 		fontSize: 10,
 	},
@@ -193,9 +192,8 @@ const styles = StyleSheet.create({
 	},
 
 	kpiCard: {
-		backgroundColor: "#1e40af",
+		backgroundColor: "#0f5384",
 		padding: 15,
-		borderRadius: 8,
 		width: "23%",
 		alignItems: "center",
 		shadowColor: "#000",
@@ -206,14 +204,14 @@ const styles = StyleSheet.create({
 
 	kpiValue: {
 		fontSize: 24,
-		fontWeight: "bold",
+		fontFamily: "Times-Bold",
 		color: "#ffffff",
 		marginBottom: 5,
 	},
 
 	kpiLabel: {
 		fontSize: 9,
-		color: "#dbeafe",
+		color: "#d8e6ef",
 		textAlign: "center",
 		textTransform: "uppercase",
 		letterSpacing: 0.5,
@@ -223,7 +221,6 @@ const styles = StyleSheet.create({
 	analysisBox: {
 		backgroundColor: "#fefce8",
 		padding: 20,
-		borderRadius: 8,
 		borderWidth: 1,
 		borderColor: "#fbbf24",
 		marginBottom: 15,
@@ -231,8 +228,8 @@ const styles = StyleSheet.create({
 
 	analysisTitle: {
 		fontSize: 12,
-		fontWeight: "bold",
-		color: "#92400e",
+		fontFamily: "Helvetica-Bold",
+		color: "#1b2230",
 		marginBottom: 10,
 	},
 
@@ -254,12 +251,11 @@ const styles = StyleSheet.create({
 	},
 
 	recommendationNumber: {
-		backgroundColor: "#059669",
+		backgroundColor: "#15803d",
 		color: "#ffffff",
 		fontSize: 10,
-		fontWeight: "bold",
+		fontFamily: "Helvetica-Bold",
 		padding: 6,
-		borderRadius: 10,
 		marginRight: 12,
 		marginTop: 2,
 		minWidth: 20,
@@ -267,7 +263,7 @@ const styles = StyleSheet.create({
 	},
 
 	recommendationText: {
-		color: "#374151",
+		color: "#1b2230",
 		flex: 1,
 		lineHeight: 1.5,
 	},
@@ -276,7 +272,6 @@ const styles = StyleSheet.create({
 	disclaimer: {
 		backgroundColor: "#fef2f2",
 		padding: 15,
-		borderRadius: 6,
 		borderWidth: 1,
 		borderColor: "#fca5a5",
 		marginTop: 20,
@@ -284,8 +279,8 @@ const styles = StyleSheet.create({
 
 	disclaimerTitle: {
 		fontSize: 11,
-		fontWeight: "bold",
-		color: "#dc2626",
+		fontFamily: "Helvetica-Bold",
+		color: "#b4471c",
 		marginBottom: 8,
 	},
 
@@ -297,48 +292,13 @@ const styles = StyleSheet.create({
 	},
 
 	// Footer (inspired by Government Report format)
-	footer: {
-		position: "absolute",
-		bottom: 30,
-		left: 50,
-		right: 50,
-		flexDirection: "row",
-		justifyContent: "space-between",
-		alignItems: "center",
-		paddingTop: 15,
-		borderTopWidth: 1,
-		borderTopColor: "#e5e7eb",
-	},
-
-	footerLeft: {
-		fontSize: 8,
-		color: "#9ca3af",
-	},
-
-	footerCenter: {
-		fontSize: 8,
-		color: "#6b7280",
-		fontWeight: "bold",
-	},
-
-	footerRight: {
-		fontSize: 8,
-		color: "#9ca3af",
-	},
 
 	// Page Numbers
-	pageNumber: {
-		position: "absolute",
-		bottom: 15,
-		right: 50,
-		fontSize: 9,
-		color: "#9ca3af",
-	},
 
 	// Table Styles (inspired by Academic Report tables)
 	table: {
 		borderWidth: 1,
-		borderColor: "#d1d5db",
+		borderColor: "#d8dde4",
 		marginBottom: 20,
 	},
 
@@ -346,22 +306,22 @@ const styles = StyleSheet.create({
 		backgroundColor: "#f3f4f6",
 		flexDirection: "row",
 		borderBottomWidth: 1,
-		borderBottomColor: "#d1d5db",
+		borderBottomColor: "#d8dde4",
 		padding: 8,
 	},
 
 	tableHeaderCell: {
 		flex: 1,
 		fontSize: 10,
-		fontWeight: "bold",
-		color: "#374151",
+		fontFamily: "Helvetica-Bold",
+		color: "#1b2230",
 		textAlign: "center",
 	},
 
 	tableRow: {
 		flexDirection: "row",
 		borderBottomWidth: 1,
-		borderBottomColor: "#e5e7eb",
+		borderBottomColor: "#d8dde4",
 		padding: 8,
 	},
 
@@ -384,14 +344,14 @@ const styles = StyleSheet.create({
 	},
 
 	bullet: {
-		color: "#1e40af",
-		fontWeight: "bold",
+		color: "#0f5384",
+		fontFamily: "Helvetica-Bold",
 		marginRight: 8,
 		marginTop: 2,
 	},
 
 	bulletText: {
-		color: "#374151",
+		color: "#1b2230",
 		flex: 1,
 		lineHeight: 1.4,
 	},
@@ -460,13 +420,13 @@ export const EnhancedReportDocument: React.FC<EnhancedReportDocumentProps> = ({
 					</Text>
 
 					<View style={{ marginTop: 80, alignItems: "center" }}>
-						<Text style={{ fontSize: 14, color: "#475569", marginBottom: 10 }}>
+						<Text style={{ fontSize: 14, color: "#5f6877", marginBottom: 10 }}>
 							by: {userName}
 						</Text>
-						<Text style={{ fontSize: 12, color: "#64748b", marginBottom: 5 }}>
+						<Text style={{ fontSize: 12, color: "#5f6877", marginBottom: 5 }}>
 							Role: {userRole}
 						</Text>
-						<Text style={{ fontSize: 12, color: "#64748b", marginBottom: 30 }}>
+						<Text style={{ fontSize: 12, color: "#5f6877", marginBottom: 30 }}>
 							Generated:{" "}
 							{new Date(generatedAt).toLocaleDateString("en-US", {
 								year: "numeric",
@@ -478,14 +438,13 @@ export const EnhancedReportDocument: React.FC<EnhancedReportDocumentProps> = ({
 						<View
 							style={{
 								borderWidth: 1,
-								borderColor: "#d1d5db",
+								borderColor: "#d8dde4",
 								padding: 15,
-								borderRadius: 8,
-								backgroundColor: "#f9fafb",
+								backgroundColor: "#f6f8fb",
 							}}
 						>
 							<Text
-								style={{ fontSize: 10, color: "#6b7280", textAlign: "center" }}
+								style={{ fontSize: 10, color: "#5f6877", textAlign: "center" }}
 							>
 								Report ID: {reportId}
 							</Text>
@@ -607,7 +566,7 @@ export const EnhancedReportDocument: React.FC<EnhancedReportDocumentProps> = ({
 							<Text style={styles.kpiValue}>{metrics.contracts}</Text>
 							<Text style={styles.kpiLabel}>Total Contracts</Text>
 						</View>
-						<View style={[styles.kpiCard, { backgroundColor: "#059669" }]}>
+						<View style={[styles.kpiCard, { backgroundColor: "#15803d" }]}>
 							<Text style={styles.kpiValue}>{metrics.users}</Text>
 							<Text style={styles.kpiLabel}>Active Users</Text>
 						</View>
@@ -615,7 +574,7 @@ export const EnhancedReportDocument: React.FC<EnhancedReportDocumentProps> = ({
 							<Text style={styles.kpiValue}>{metrics.events}</Text>
 							<Text style={styles.kpiLabel}>Audit Events</Text>
 						</View>
-						<View style={[styles.kpiCard, { backgroundColor: "#dc2626" }]}>
+						<View style={[styles.kpiCard, { backgroundColor: "#b4471c" }]}>
 							<Text style={styles.kpiValue}>{metrics.files}</Text>
 							<Text style={styles.kpiLabel}>Documents</Text>
 						</View>
@@ -636,7 +595,7 @@ export const EnhancedReportDocument: React.FC<EnhancedReportDocumentProps> = ({
 							<Text
 								style={[
 									styles.tableCell,
-									{ color: metrics.contracts >= 15 ? "#059669" : "#dc2626" },
+									{ color: metrics.contracts >= 15 ? "#15803d" : "#b4471c" },
 								]}
 							>
 								{metrics.contracts >= 15 ? "On Target" : "Below Target"}
@@ -649,7 +608,7 @@ export const EnhancedReportDocument: React.FC<EnhancedReportDocumentProps> = ({
 							<Text
 								style={[
 									styles.tableCell,
-									{ color: metrics.users >= 10 ? "#059669" : "#dc2626" },
+									{ color: metrics.users >= 10 ? "#15803d" : "#b4471c" },
 								]}
 							>
 								{metrics.users >= 10 ? "On Target" : "Below Target"}
@@ -662,7 +621,7 @@ export const EnhancedReportDocument: React.FC<EnhancedReportDocumentProps> = ({
 							<Text
 								style={[
 									styles.tableCell,
-									{ color: metrics.events >= 25 ? "#059669" : "#dc2626" },
+									{ color: metrics.events >= 25 ? "#15803d" : "#b4471c" },
 								]}
 							>
 								{metrics.events >= 25 ? "On Target" : "Below Target"}
@@ -693,21 +652,10 @@ export const EnhancedReportDocument: React.FC<EnhancedReportDocumentProps> = ({
 				</View>
 
 				{/* Footer */}
-				<View style={styles.footer}>
-					<Text style={styles.footerLeft}>
-						CAALM Solutions - Compliance Report
-					</Text>
-					<Text style={styles.footerCenter}>CONFIDENTIAL</Text>
-					<Text style={styles.footerRight}>{new Date().getFullYear()}</Text>
-				</View>
-
-				{/* Page Number */}
-				<Text
-					style={styles.pageNumber}
-					render={({ pageNumber, totalPages }) =>
-						`${pageNumber} of ${totalPages}`
-					}
-					fixed
+				<PacketFooter
+					org="CAALM Solutions"
+					title="Compliance Report"
+					pageHeight={842}
 				/>
 			</Page>
 
@@ -843,20 +791,10 @@ export const EnhancedReportDocument: React.FC<EnhancedReportDocumentProps> = ({
 					</Text>
 				</View>
 
-				<View style={styles.footer}>
-					<Text style={styles.footerLeft}>
-						CAALM Solutions - Risk Assessment
-					</Text>
-					<Text style={styles.footerCenter}>CONFIDENTIAL</Text>
-					<Text style={styles.footerRight}>{new Date().getFullYear()}</Text>
-				</View>
-
-				<Text
-					style={styles.pageNumber}
-					render={({ pageNumber, totalPages }) =>
-						`${pageNumber} of ${totalPages}`
-					}
-					fixed
+				<PacketFooter
+					org="CAALM Solutions"
+					title="Risk Assessment"
+					pageHeight={842}
 				/>
 			</Page>
 
@@ -880,9 +818,8 @@ export const EnhancedReportDocument: React.FC<EnhancedReportDocumentProps> = ({
 
 					<View
 						style={{
-							backgroundColor: "#f0f9ff",
+							backgroundColor: "#eef7fb",
 							padding: 20,
-							borderRadius: 8,
 							borderLeftWidth: 4,
 							borderLeftColor: "#0284c7",
 						}}
@@ -891,7 +828,7 @@ export const EnhancedReportDocument: React.FC<EnhancedReportDocumentProps> = ({
 							style={{
 								fontSize: 12,
 								fontWeight: "bold",
-								color: "#0c4a6e",
+								color: "#1b2230",
 								marginBottom: 15,
 							}}
 						>
@@ -911,18 +848,10 @@ export const EnhancedReportDocument: React.FC<EnhancedReportDocumentProps> = ({
 					</View>
 				</View>
 
-				<View style={styles.footer}>
-					<Text style={styles.footerLeft}>CAALM Solutions - AI Analysis</Text>
-					<Text style={styles.footerCenter}>CONFIDENTIAL</Text>
-					<Text style={styles.footerRight}>{new Date().getFullYear()}</Text>
-				</View>
-
-				<Text
-					style={styles.pageNumber}
-					render={({ pageNumber, totalPages }) =>
-						`${pageNumber} of ${totalPages}`
-					}
-					fixed
+				<PacketFooter
+					org="CAALM Solutions"
+					title="AI Analysis"
+					pageHeight={842}
 				/>
 			</Page>
 		</Document>

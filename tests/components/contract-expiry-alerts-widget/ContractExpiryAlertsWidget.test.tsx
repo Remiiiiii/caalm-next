@@ -113,7 +113,7 @@ describe("ContractExpiryAlertsWidget", () => {
 		);
 
 		expect(
-			screen.getByRole("combobox", {
+			screen.getByRole("button", {
 				name: /filter contracts by time period/i,
 			}),
 		).toBeInTheDocument();
@@ -129,11 +129,11 @@ describe("ContractExpiryAlertsWidget", () => {
 		);
 
 		await user.click(
-			screen.getByRole("combobox", {
+			screen.getByRole("button", {
 				name: /filter contracts by time period/i,
 			}),
 		);
-		await user.click(await screen.findByRole("option", { name: "30 days" }));
+		await user.click(await screen.findByRole("menuitem", { name: "30 days" }));
 
 		// Contract 1 (5 days) and Contract 2 (15 days) should be visible
 		expect(screen.getByText("Test Contract 1")).toBeInTheDocument();
@@ -150,11 +150,11 @@ describe("ContractExpiryAlertsWidget", () => {
 		);
 
 		await user.click(
-			screen.getByRole("combobox", {
+			screen.getByRole("button", {
 				name: /filter contracts by time period/i,
 			}),
 		);
-		await user.click(await screen.findByRole("option", { name: "Expired" }));
+		await user.click(await screen.findByRole("menuitem", { name: "Expired" }));
 
 		expect(screen.getByText("Expired Contract")).toBeInTheDocument();
 	});
@@ -169,11 +169,11 @@ describe("ContractExpiryAlertsWidget", () => {
 		);
 
 		await user.click(
-			screen.getByRole("combobox", {
+			screen.getByRole("button", {
 				name: /filter contracts by time period/i,
 			}),
 		);
-		await user.click(await screen.findByRole("option", { name: "90 days" }));
+		await user.click(await screen.findByRole("menuitem", { name: "90 days" }));
 
 		// Should show empty state message
 		expect(screen.getByText(/no contracts/i)).toBeInTheDocument();

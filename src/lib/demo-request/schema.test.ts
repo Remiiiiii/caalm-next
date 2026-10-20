@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-	demoRequestSchema,
-	formatPhoneInput,
-} from "@/lib/demo-request/schema";
+import { demoRequestSchema, formatPhoneInput } from "@/lib/demo-request/schema";
 
 describe("demo request schema", () => {
 	const valid = {

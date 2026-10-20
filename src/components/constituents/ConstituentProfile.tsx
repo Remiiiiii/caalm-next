@@ -2,7 +2,7 @@
 
 import {
 	ArrowLeft,
-	Brain,
+	type Brain,
 	GitMerge,
 	Mail,
 	MapPin,
@@ -13,10 +13,10 @@ import Link from "next/link";
 import { useState } from "react";
 import { ConstituentConsentPanel } from "@/components/constituents/ConstituentConsentPanel";
 import { FundraisingIntelligenceTab } from "@/components/constituents/FundraisingIntelligenceTab";
-import { VolunteerTab } from "@/components/constituents/VolunteerTab";
 import { HouseholdTab } from "@/components/constituents/HouseholdTab";
 import { MergeConstituentsDialog } from "@/components/constituents/MergeConstituentsDialog";
 import { TimelineTab } from "@/components/constituents/TimelineTab";
+import { VolunteerTab } from "@/components/constituents/VolunteerTab";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -146,7 +146,10 @@ export function ConstituentProfile({
 						</div>
 						<div className="flex items-start gap-3">
 							<User className="mt-0.5 h-4 w-4 shrink-0 text-[#0f5384]" />
-							<Field label="Type" value={constituentTypeLabel(constituent.type)} />
+							<Field
+								label="Type"
+								value={constituentTypeLabel(constituent.type)}
+							/>
 						</div>
 					</div>
 				</CardContent>

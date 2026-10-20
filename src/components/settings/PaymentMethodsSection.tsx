@@ -309,7 +309,7 @@ export default function PaymentMethodsSection({
 							) : null}
 
 							{!loading && !error && paymentMethods.length > 0 ? (
-								<CaalmDataTable className="px-0 sm:px-0 pb-0">
+								<CaalmDataTable className="pb-0">
 									<TableHeader className="[&_tr]:border-b-0">
 										<TableRow className={DATA_TABLE_HEADER_ROW}>
 											<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>

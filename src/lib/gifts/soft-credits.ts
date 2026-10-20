@@ -33,7 +33,9 @@ function mapRow(row: Record<string, unknown>): GiftSoftCredit {
 }
 
 /** Create soft-credit recognition rows when a gift posts (does not change receipt totals). */
-export async function createSoftCreditsForPostedGift(gift: Gift): Promise<void> {
+export async function createSoftCreditsForPostedGift(
+	gift: Gift,
+): Promise<void> {
 	if (gift.status !== "posted" || gift.amount <= 0) return;
 
 	const edges = await listRelationshipsForConstituent(

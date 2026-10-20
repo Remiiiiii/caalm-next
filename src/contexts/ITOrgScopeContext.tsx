@@ -40,18 +40,15 @@ export function ITOrgScopeProvider({ children }: { children: ReactNode }) {
 		setStoredHubOrgId(saved && saved.length > 0 ? saved : null);
 	}, []);
 
-	const setHubOrgId = useCallback(
-		(orgId: string | null) => {
-			setStoredHubOrgId(orgId);
-			if (typeof window === "undefined") return;
-			if (orgId) {
-				sessionStorage.setItem(IT_HUB_ORG_STORAGE_KEY, orgId);
-			} else {
-				sessionStorage.removeItem(IT_HUB_ORG_STORAGE_KEY);
-			}
-		},
-		[],
-	);
+	const setHubOrgId = useCallback((orgId: string | null) => {
+		setStoredHubOrgId(orgId);
+		if (typeof window === "undefined") return;
+		if (orgId) {
+			sessionStorage.setItem(IT_HUB_ORG_STORAGE_KEY, orgId);
+		} else {
+			sessionStorage.removeItem(IT_HUB_ORG_STORAGE_KEY);
+		}
+	}, []);
 
 	const hubOrgId = canViewFleet ? storedHubOrgId : membershipOrgId;
 
