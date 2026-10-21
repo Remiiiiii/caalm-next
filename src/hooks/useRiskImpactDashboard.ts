@@ -19,6 +19,7 @@ interface RiskImpactResponse {
 export function useRiskImpactDashboard(options?: {
 	period?: RiskImpactPeriod;
 	division?: string;
+	initialData?: RiskImpactSnapshot | null;
 }) {
 	const { user } = useAuth();
 	const { orgId } = useOrganization();
@@ -36,7 +37,14 @@ export function useRiskImpactDashboard(options?: {
 		return `/api/dashboard/risk-impact?${params.toString()}`;
 	}, [user?.$id, orgId, period, division]);
 
-	const fallbackData = useClientCachedFallback<RiskImpactResponse>(url);
+	const localFallback = useClientCachedFallback<RiskImpactResponse>(url);
+
+	// Server-prefetched data for the initial ytd period — eliminates the skeleton
+	// flash. When the user switches periods the key changes and SWR fetches fresh.
+	const serverFallback = useMemo((): RiskImpactResponse | undefined => {
+		if (!options?.initialData || period !== "ytd") return undefined;
+		return { success: true, data: options.initialData, timestamp: Date.now() };
+	}, [options?.initialData, period]);
 
 	const { data, error, isLoading, mutate } = useSWR<RiskImpactResponse>(
 		url,
@@ -47,7 +55,7 @@ export function useRiskImpactDashboard(options?: {
 			revalidateOnReconnect: true,
 			dedupingInterval: 60000,
 			keepPreviousData: true,
-			fallbackData,
+			fallbackData: serverFallback ?? localFallback,
 			onSuccess: (payload) => {
 				if (url && typeof window !== "undefined") {
 					setCachedData(url, payload, 120000);

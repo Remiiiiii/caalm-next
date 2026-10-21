@@ -14,7 +14,10 @@ import {
 import { normalizeUserRole } from "@/constants/rbac";
 import { useToast } from "@/hooks/use-toast";
 import { getSessionUser } from "@/lib/actions/auth.actions";
-import { getCurrentUserFrom2FA } from "@/lib/actions/user.actions";
+import {
+	getCurrentUser,
+	getCurrentUserFrom2FA,
+} from "@/lib/actions/user.actions";
 import { isAuthRoute, isProtectedAppRoute } from "@/lib/auth/protectedRoutes";
 import {
 	CACHED_USER_STORAGE_KEY,
@@ -24,6 +27,10 @@ import {
 	SESSION_CHANGED_NOTICE_VALUE,
 } from "@/lib/auth/session-sync";
 import { clearNavSnapshot } from "@/lib/navigation/nav-rbac-cache";
+import {
+	resolveAvatarDisplayUrl,
+	resolveStoredAvatarFileId,
+} from "@/lib/utils";
 import { clearCache } from "@/lib/utils/client-cache";
 import {
 	getDashboardUrlForUser,
@@ -38,6 +45,7 @@ type AuthenticatedUser = Models.User<Models.Preferences> & {
 	divisionLabel?: string;
 	accountId?: string;
 	avatar?: string;
+	profileImageId?: string | null;
 	prefs?: Models.Preferences & {
 		profileImage?: string | null;
 		profileImageId?: string | null;
@@ -45,6 +53,36 @@ type AuthenticatedUser = Models.User<Models.Preferences> & {
 };
 
 const CACHE_USER_TTL_MS = 300000;
+
+type ProfilePhotoSource = {
+	avatar?: string | null;
+	profileImageId?: string | null;
+};
+
+/** Auth account has the name; the users table has the uploaded photo file id. */
+function withProfilePhoto(
+	base: AuthenticatedUser,
+	profile: ProfilePhotoSource | null | undefined,
+): AuthenticatedUser {
+	const imageId = resolveStoredAvatarFileId({
+		avatar: profile?.avatar ?? base.avatar,
+		profileImageId: profile?.profileImageId ?? base.profileImageId,
+	});
+	const profileImageUrl = resolveAvatarDisplayUrl({
+		avatar: profile?.avatar ?? base.avatar,
+		profileImageId: imageId,
+	});
+	return {
+		...base,
+		avatar: profile?.avatar ?? base.avatar,
+		profileImageId: imageId,
+		prefs: {
+			...(base.prefs || {}),
+			profileImage: profileImageUrl,
+			profileImageId: imageId,
+		},
+	};
+}
 
 function readCachedAuthUser(): Models.User<Models.Preferences> | null {
 	if (typeof window === "undefined") return null;
@@ -157,9 +195,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 					if (typeof typedSessionUser.role === "string") {
 						typedSessionUser.role = normalizeUserRole(typedSessionUser.role);
 					}
-					// Ensure complete serialization by parsing and stringifying
+					const dbUser = await getCurrentUser();
 					const serializedUser = JSON.parse(
-						JSON.stringify(typedSessionUser),
+						JSON.stringify(withProfilePhoto(typedSessionUser, dbUser)),
 					) as AuthenticatedUser;
 					setUser(serializedUser);
 					setIsSessionValid(true);
@@ -224,25 +262,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 								console.log("AuthContext: Using 2FA-based user for dashboard");
 							}
 
-							// Generate profile image URL from file id (avatar field or legacy profileImageId)
-							let profileImageUrl = null;
-							const imageId =
-								twoFAUser.profileImageId ||
-								(twoFAUser.avatar &&
-								!String(twoFAUser.avatar).startsWith("http") &&
-								!String(twoFAUser.avatar).startsWith("/")
-									? twoFAUser.avatar
-									: null);
-							if (imageId) {
-								const bucketId =
-									process.env.NEXT_PUBLIC_APPWRITE_PROFILE_PICTURES_BUCKET;
-								const endpoint = process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT;
-								const projectId = process.env.NEXT_PUBLIC_APPWRITE_PROJECT;
-
-								if (bucketId && endpoint && projectId) {
-									profileImageUrl = `${endpoint}/storage/buckets/${bucketId}/files/${imageId}/view?project=${projectId}`;
-								}
-							}
+							const imageId = resolveStoredAvatarFileId(twoFAUser);
+							const profileImageUrl = resolveAvatarDisplayUrl({
+								avatar: twoFAUser.avatar,
+								profileImageId: imageId,
+							});
 
 							// Convert the custom user object to match the expected format
 							const convertedUser = {
@@ -256,11 +280,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 								departmentLabel: twoFAUser.departmentLabel,
 								divisionLabel: twoFAUser.divisionLabel,
 								avatar: twoFAUser.avatar,
+								profileImageId: imageId,
 								emailVerification: true,
 								phoneVerification: false,
 								prefs: {
 									profileImage: profileImageUrl,
-									profileImageId: twoFAUser.profileImageId || null,
+									profileImageId: imageId,
 								},
 								registration: new Date().toISOString(),
 								status: true,
@@ -424,25 +449,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 			if (isDashboardRoute) {
 				const twoFAUser = await getCurrentUserFrom2FA();
 				if (twoFAUser) {
-					// Generate profile image URL from file id (avatar field or legacy profileImageId)
-					let profileImageUrl = null;
-					const imageId =
-						twoFAUser.profileImageId ||
-						(twoFAUser.avatar &&
-						!String(twoFAUser.avatar).startsWith("http") &&
-						!String(twoFAUser.avatar).startsWith("/")
-							? twoFAUser.avatar
-							: null);
-					if (imageId) {
-						const bucketId =
-							process.env.NEXT_PUBLIC_APPWRITE_PROFILE_PICTURES_BUCKET;
-						const endpoint = process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT;
-						const projectId = process.env.NEXT_PUBLIC_APPWRITE_PROJECT;
-
-						if (bucketId && endpoint && projectId) {
-							profileImageUrl = `${endpoint}/storage/buckets/${bucketId}/files/${imageId}/view?project=${projectId}`;
-						}
-					}
+					const imageId = resolveStoredAvatarFileId(twoFAUser);
+					const profileImageUrl = resolveAvatarDisplayUrl({
+						avatar: twoFAUser.avatar,
+						profileImageId: imageId,
+					});
 
 					const convertedUser = {
 						$id: twoFAUser.$id,
@@ -455,11 +466,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 						departmentLabel: twoFAUser.departmentLabel,
 						divisionLabel: twoFAUser.divisionLabel,
 						avatar: twoFAUser.avatar,
+						profileImageId: imageId,
 						emailVerification: true,
 						phoneVerification: false,
 						prefs: {
 							profileImage: profileImageUrl,
-							profileImageId: twoFAUser.profileImageId || null,
+							profileImageId: imageId,
 						},
 						registration: new Date().toISOString(),
 						status: true,
@@ -479,10 +491,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 					setUser(serializedUser);
 				}
 			} else {
-				// For session-based user
 				const sessionUser = await getSessionUser();
 				if (sessionUser) {
-					setUser(sessionUser);
+					const dbUser = await getCurrentUser();
+					setUser(
+						withProfilePhoto(sessionUser as AuthenticatedUser, dbUser),
+					);
 				}
 			}
 		} catch (error) {

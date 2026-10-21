@@ -53,6 +53,7 @@ Project rules live in `.cursor/rules/` and are the single source of truth. Edit 
 | `.cursor/hooks.json` (Graft) | `.claude/settings.json` hooks + statusline, from `graft init --no-agents` |
 | `.cursor/mcp.json` (graft) | `.mcp.json` (gitignored by `*.mcp.json`) |
 | `~/.cursor/mcp.json` + Cursor plugin MCPs (figma, notion, playwright, slack) | User-scope servers in `~/.claude.json` (`claude mcp list`) |
+| Cursor in-IDE Browser Tab (`cursor-ide-browser`) | Claude Chrome on `:9222` (`scripts/start-chrome-debug.ps1` + playwright `--cdp-endpoint`) — separate cookie jars |
 | `~/.cursor/hooks.json` (ponytail) | `ponytail@ponytail` plugin from the local `~/Development/ponytail` clone |
 | `~/.cursor/skills/*` | Junctions in `~/.claude/skills/` (project copies of `ui-ux-pro-max` and `thermo-nuclear-code-quality-review` win) |
 | `.cursor/rules/global-style-guide.mdc` (design rules) | `design-system-inventory.md` documents the same tokens/components; update both when shared UI changes (card titles, tables, switches, bulk dock, bars) |

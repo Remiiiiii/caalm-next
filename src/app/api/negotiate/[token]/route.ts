@@ -6,7 +6,7 @@ import { resolveAccessByToken } from "@/lib/contracts/negotiation/access.service
 import { listComments } from "@/lib/contracts/negotiation/comments.service";
 import { resolveNegotiateSession } from "@/lib/contracts/negotiation/session.service";
 import { listVersions } from "@/lib/contracts/negotiation/versions.service";
-import { getProfilePictureUrl } from "@/lib/utils";
+import { getProfilePictureStorageUrl } from "@/lib/utils";
 
 type RouteContext = { params: Promise<{ token: string }> };
 
@@ -26,7 +26,7 @@ function ownerImageUrl(user: {
 			: null) ||
 		String(user.profileImageId || "").trim() ||
 		null;
-	return getProfilePictureUrl(fileId);
+	return getProfilePictureStorageUrl(fileId);
 }
 
 export async function GET(request: NextRequest, context: RouteContext) {

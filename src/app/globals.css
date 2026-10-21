@@ -2497,6 +2497,13 @@ iframe[src*="splinecode"] {
 }
 
 /* Badge: radial-glow sweeps from left mid → right mid, then pause */
+/* Chip hover matches sidebar links: light blue fill + teal label */
+.caalm-chip-hover:hover {
+	background-color: #eff6ff;
+	border-color: #93c5fd !important;
+	color: #078fab !important;
+}
+
 .badge-border-light {
 	--badge-emerald: #00c1cb;
 	--badge-ring: 1px;

@@ -1129,7 +1129,7 @@ Contract: ${contractTitle}`;
 									<div className="flex-shrink-0">
 										<AssistantAvatar size="md" alt="AI Assistant" />
 									</div>
-									<div className="bg-white rounded-2xl px-4 py-3 shadow-drop-1 border border-light-300">
+									<div className="border border-slate-200 bg-white text-sm text-slate-700" style={{ padding: "12px 14px", borderRadius: "16px 16px 16px 4px", lineHeight: "20px" }}>
 										<div className="text-sm text-gray-700 space-y-2">
 											{event ? (
 												<>
@@ -1196,7 +1196,7 @@ Contract: ${contractTitle}`;
 										<AssistantAvatar size="lg" alt="AI Assistant" />
 									</div>
 									<div className="flex-1">
-										<div className="bg-white rounded-2xl px-4 py-3 shadow-drop-1 border border-light-300">
+										<div className="border border-slate-200 bg-white text-sm text-slate-700" style={{ padding: "12px 14px", borderRadius: "16px 16px 16px 4px", lineHeight: "20px" }}>
 											<div
 												className="text-sm text-gray-700 prose prose-sm max-w-none prose-headings:mt-2 prose-headings:mb-1 prose-p:my-1"
 												dangerouslySetInnerHTML={{
@@ -1237,9 +1237,17 @@ Contract: ${contractTitle}`;
 								</div>
 							)}
 							{message.sender === "user" && (
-								<div className="bg-gradient-to-r from-[#00C1CB] via-[#0E638F] to-[#162768] text-white rounded-2xl px-4 py-3 max-w-[85%] shadow-drop-1">
-									<p className="text-sm whitespace-pre-line">{message.text}</p>
-									<p className="text-xs text-blue-100 mt-2">
+								<div
+									className="max-w-[85%] text-sm text-white"
+									style={{
+										padding: "10px 14px",
+										borderRadius: "16px 4px 16px 16px",
+										background: "linear-gradient(90deg, #078fab, #11487d)",
+										lineHeight: "20px",
+									}}
+								>
+									<p className="whitespace-pre-line">{message.text}</p>
+									<p className="mt-1.5 text-xs text-blue-100">
 										{message.timestamp.toLocaleTimeString([], {
 											hour: "2-digit",
 											minute: "2-digit",
@@ -1257,7 +1265,7 @@ Contract: ${contractTitle}`;
 								<div className="flex-shrink-0">
 									<AssistantAvatar size="lg" alt="AI Assistant" />
 								</div>
-								<div className="bg-white rounded-2xl px-4 py-3 shadow-drop-1 border border-light-300">
+								<div className="border border-slate-200 bg-white text-sm text-slate-700" style={{ padding: "12px 14px", borderRadius: "16px 16px 16px 4px", lineHeight: "20px" }}>
 									<div className="flex space-x-1">
 										<div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
 										<div

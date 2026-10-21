@@ -7,6 +7,16 @@ import { config as loadEnv } from "dotenv";
 loadEnv({ path: path.join(process.cwd(), ".env") });
 loadEnv({ path: path.join(process.cwd(), ".env.local") });
 
+// Cursor agent shells may point PLAYWRIGHT_BROWSERS_PATH at a sandbox cache
+// that does not contain the installed Chromium. Use the real local install.
+if (
+	!process.env.CI &&
+	process.env.PLAYWRIGHT_BROWSERS_PATH &&
+	/cursor-sandbox-cache/i.test(process.env.PLAYWRIGHT_BROWSERS_PATH)
+) {
+	delete process.env.PLAYWRIGHT_BROWSERS_PATH;
+}
+
 export default defineConfig({
 	testDir: "./tests",
 	testMatch: /.*\.spec\.(js|ts)/, // Only run Playwright spec files, exclude vitest test files

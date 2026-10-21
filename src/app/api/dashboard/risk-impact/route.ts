@@ -66,11 +66,10 @@ export async function GET(request: NextRequest) {
 			CACHE_TTLS.medium,
 		);
 
-		return NextResponse.json({
-			success: true,
-			data,
-			timestamp: Date.now(),
-		});
+		return NextResponse.json(
+			{ success: true, data, timestamp: Date.now() },
+			{ headers: { "Cache-Control": "private, max-age=300, stale-while-revalidate=60" } },
+		);
 	} catch (error) {
 		console.error("Error fetching risk impact:", error);
 		return NextResponse.json(

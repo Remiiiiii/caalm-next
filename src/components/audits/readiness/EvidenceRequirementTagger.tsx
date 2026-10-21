@@ -27,9 +27,49 @@ function catalogRows(kind: "contract" | "license"): CatalogRow[] {
 }
 
 const lastSelectionByRecord = new Map<string, string[]>();
+const STORAGE_PREFIX = "caalm.evidence-tags.";
 
 function selectionKey(kind: "contract" | "license", recordId: string) {
 	return `${kind}:${recordId}`;
+}
+
+function readCachedIds(
+	kind: "contract" | "license",
+	recordId: string,
+): string[] | null {
+	const mem = lastSelectionByRecord.get(selectionKey(kind, recordId));
+	if (mem) return mem;
+	if (typeof window === "undefined") return null;
+	try {
+		const raw = sessionStorage.getItem(
+			STORAGE_PREFIX + selectionKey(kind, recordId),
+		);
+		if (raw == null) return null;
+		const parsed = JSON.parse(raw) as unknown;
+		if (!Array.isArray(parsed)) return null;
+		const ids = parsed.filter((item): item is string => typeof item === "string");
+		lastSelectionByRecord.set(selectionKey(kind, recordId), ids);
+		return ids;
+	} catch {
+		return null;
+	}
+}
+
+function writeCachedIds(
+	kind: "contract" | "license",
+	recordId: string,
+	ids: string[],
+) {
+	lastSelectionByRecord.set(selectionKey(kind, recordId), ids);
+	if (typeof window === "undefined") return;
+	try {
+		sessionStorage.setItem(
+			STORAGE_PREFIX + selectionKey(kind, recordId),
+			JSON.stringify(ids),
+		);
+	} catch {
+		/* private mode / quota */
+	}
 }
 
 export type EvidenceTaggerHandle = {
@@ -61,18 +101,17 @@ export const EvidenceRequirementTagger = forwardRef<
 ) {
 	const [catalog, setCatalog] = useState<CatalogRow[]>(() => catalogRows(kind));
 	const [savedIds, setSavedIds] = useState<string[]>(
-		() => lastSelectionByRecord.get(selectionKey(kind, recordId)) ?? [],
+		() => readCachedIds(kind, recordId) ?? [],
 	);
 	const [selectedIds, setSelectedIds] = useState<string[]>(
-		() => lastSelectionByRecord.get(selectionKey(kind, recordId)) ?? [],
+		() => readCachedIds(kind, recordId) ?? [],
 	);
 	const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
 	const [dismissed, setDismissed] = useState<string[]>([]);
-	const [suggesting, setSuggesting] = useState(
-		() =>
-			(lastSelectionByRecord.get(selectionKey(kind, recordId)) ?? [])
-				.length === 0,
-	);
+	const [suggesting, setSuggesting] = useState(() => {
+		const cached = readCachedIds(kind, recordId);
+		return cached !== null && cached.length === 0;
+	});
 
 	const dirty =
 		[...selectedIds].sort().join("|") !== [...savedIds].sort().join("|");
@@ -83,18 +122,27 @@ export const EvidenceRequirementTagger = forwardRef<
 
 	const load = useCallback(async () => {
 		if (!enabled || !recordId) return;
+		const cached = readCachedIds(kind, recordId);
+		if (cached && cached.length > 0) setSuggesting(false);
+
 		const base = `/api/${kind === "license" ? "licenses" : "contracts"}/${recordId}/evidence-tags`;
 		const tagsRes = await fetch(base);
+		let ids = cached ?? [];
 		if (tagsRes.ok) {
 			const json = await tagsRes.json();
-			const ids = (json.data?.requirementIds ?? []) as string[];
-			lastSelectionByRecord.set(selectionKey(kind, recordId), ids);
+			ids = (json.data?.requirementIds ?? []) as string[];
+			writeCachedIds(kind, recordId, ids);
 			setSavedIds(ids);
 			setSelectedIds(ids);
 			const nextCatalog = (json.data?.catalog ?? []) as CatalogRow[];
 			if (nextCatalog.length > 0) setCatalog(nextCatalog);
-			setSuggesting(ids.length === 0);
 		}
+		if (ids.length > 0) {
+			setSuggesting(false);
+			return;
+		}
+
+		setSuggesting(true);
 		const recRes = await fetch(`${base}/recommend`, { method: "POST" });
 		if (recRes.ok) {
 			const json = await recRes.json();
@@ -105,16 +153,18 @@ export const EvidenceRequirementTagger = forwardRef<
 	}, [enabled, kind, recordId]);
 
 	useEffect(() => {
-		const cached =
-			lastSelectionByRecord.get(selectionKey(kind, recordId)) ?? [];
+		const cached = readCachedIds(kind, recordId);
 		setCatalog(catalogRows(kind));
-		setSavedIds(cached);
-		setSelectedIds(cached);
+		setSavedIds(cached ?? []);
+		setSelectedIds(cached ?? []);
 		setSuggestions([]);
 		setDismissed([]);
-		setSuggesting(cached.length === 0);
+		setSuggesting(cached !== null && cached.length === 0);
+	}, [kind, recordId]);
+
+	useEffect(() => {
 		void load();
-	}, [kind, recordId, load]);
+	}, [load]);
 
 	const save = useCallback(async () => {
 		const response = await fetch(
@@ -129,7 +179,7 @@ export const EvidenceRequirementTagger = forwardRef<
 			const error = await response.json().catch(() => ({}));
 			throw new Error(error.error || "Failed to save evidence tags");
 		}
-		lastSelectionByRecord.set(selectionKey(kind, recordId), selectedIds);
+		writeCachedIds(kind, recordId, selectedIds);
 		setSavedIds(selectedIds);
 	}, [kind, recordId, selectedIds]);
 

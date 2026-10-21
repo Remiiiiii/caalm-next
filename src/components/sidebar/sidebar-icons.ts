@@ -77,6 +77,12 @@ export const ITEM_ICONS: Record<
 		height: 22,
 		color: SUBITEM_TEXT_GREY,
 	},
+	"RFP Proposals": {
+		src: "/assets/icons/proposal-approval.svg",
+		width: 20,
+		height: 20,
+		color: SUBITEM_TEXT_GREY,
+	},
 	"Funding & Retention": {
 		src: "/assets/icons/banknote.svg",
 		width: 22,

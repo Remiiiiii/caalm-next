@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
 	Download,
@@ -503,13 +503,19 @@ export default function CaalmAssistantSheet({
 										) : null}
 										<div
 											className={cn(
-												"max-w-[85%] rounded-2xl text-sm",
+												"max-w-[85%] text-sm",
 												m.role === "user"
-													? "bg-[#0f5384]/10 px-3 py-2 text-slate-700"
+													? "text-white"
 													: hasLifecycleCard
-														? "overflow-hidden border border-slate-200/80 bg-white text-slate-700"
-														: "border border-slate-200/80 bg-white/60 px-3 py-2 text-slate-700",
+														? "overflow-hidden rounded-2xl border border-slate-200/80 bg-white text-slate-700"
+														: "rounded-2xl border border-slate-200/80 bg-white/60 px-3 py-2 text-slate-700",
 											)}
+											style={m.role === "user" ? {
+												padding: "10px 14px",
+												borderRadius: "16px 4px 16px 16px",
+												background: "linear-gradient(90deg, #078fab, #11487d)",
+												lineHeight: "20px",
+											} : undefined}
 										>
 											{m.content.trim() ? (
 												<div

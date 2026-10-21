@@ -7,7 +7,6 @@ import { getOrgAuditSettings } from "@/lib/audits/readiness/org-settings";
 import { runReadinessAuditForOrg } from "@/lib/audits/readiness/run-audit";
 import { nextScheduledReadinessRun } from "@/lib/audits/readiness/schedule";
 import { RAG_THRESHOLDS } from "@/lib/audits/readiness/score";
-import { crawlPublicSite } from "@/lib/audits/readiness/site-crawl";
 import {
 	listReadinessSnapshots,
 	parseSnapshotPayload,
@@ -41,24 +40,100 @@ export async function GET(request: NextRequest) {
 		);
 	}
 
-	const org = await getOrganization(defaultOrg.orgId);
+	const snapshotId = new URL(request.url).searchParams.get("snapshotId");
+
+	const [org, history] = await Promise.all([
+		getOrganization(defaultOrg.orgId),
+		listReadinessSnapshots({
+			orgId: defaultOrg.orgId,
+			limit: snapshotId ? 100 : 12,
+		}),
+	]);
 	const auditSettings = org
 		? getOrgAuditSettings(org)
 		: { timezone: "America/New_York", websiteUrl: null };
 
-	let siteCrawl = null;
-	if (auditSettings.websiteUrl) {
-		try {
-			siteCrawl = await crawlPublicSite(auditSettings.websiteUrl);
-		} catch {
-			siteCrawl = null;
+	let viewing: {
+		snapshotId: string;
+		createdAt: string;
+		aiSummary: string;
+		cadence: string;
+	} | null = null;
+
+	if (snapshotId) {
+		const row = history.find((item) => item.$id === snapshotId);
+		const stored = row ? parseSnapshotPayload(row.payload) : null;
+		if (!row || !stored) {
+			return NextResponse.json(
+				{ error: "Snapshot not found" },
+				{ status: 404 },
+			);
 		}
+		viewing = {
+			snapshotId: row.$id,
+			createdAt: row.createdAt,
+			aiSummary: row.aiSummary || "",
+			cadence: row.cadence,
+		};
+		const permissions = await getUserPermissions(user.$id, defaultOrg.orgId);
+		const canAssignOwners = {
+			contract: permissions.includes(PERMISSIONS.CONTRACTS.EDIT),
+			license: permissions.includes(PERMISSIONS.LICENSES.EDIT),
+		};
+		const nextRun = nextScheduledReadinessRun(
+			new Date(),
+			auditSettings.timezone,
+		);
+		const latest = history[0] ?? null;
+		return NextResponse.json({
+			success: true,
+			data: {
+				summary: stored.summary,
+				sourcesUsed: stored.sourcesUsed,
+				disclaimer: stored.disclaimer,
+				ragThresholds: RAG_THRESHOLDS,
+				evidenceMapHits: stored.evidenceMapHits,
+				siteCrawl: stored.siteCrawl,
+				viewing,
+				nextRun,
+				canAssignOwners,
+				org: {
+					id: defaultOrg.orgId,
+					name: org?.name ?? "Organization",
+					timezone: auditSettings.timezone,
+					websiteUrl: auditSettings.websiteUrl,
+				},
+				latestSnapshot: latest
+					? {
+							id: latest.$id,
+							cadence: latest.cadence,
+							score: latest.score,
+							ragStatus: latest.ragStatus,
+							createdAt: latest.createdAt,
+							aiSummary: latest.aiSummary || "",
+						}
+					: null,
+				history: history.slice(0, 12).map((item) => {
+					const parsed = parseSnapshotPayload(item.payload);
+					return {
+						id: item.$id,
+						cadence: item.cadence,
+						score: item.score,
+						ragStatus: item.ragStatus,
+						createdAt: item.createdAt,
+						scoreDelta: parsed?.scoreDelta ?? null,
+						source: parsed?.source ?? null,
+					};
+				}),
+			},
+		});
 	}
 
-	const history = await listReadinessSnapshots({
-		orgId: defaultOrg.orgId,
-		limit: 12,
-	});
+	// Reuse the last saved crawl. A live crawl of 10+ pages is what made this
+	// GET miss the browser's 30s timeout and show "Unable to load".
+	const siteCrawl = history[0]
+		? (parseSnapshotPayload(history[0].payload)?.siteCrawl ?? null)
+		: null;
 	const historyScores = [...history]
 		.reverse()
 		.filter((row) => row.score !== null)
@@ -67,15 +142,16 @@ export async function GET(request: NextRequest) {
 			value: row.score as number,
 		}));
 
-	const { summary, payloadBase } = await buildOrgReadinessSummary({
-		orgId: defaultOrg.orgId,
-		siteCrawl,
-		historyScores,
-	});
+	const [{ summary, payloadBase }, permissions] = await Promise.all([
+		buildOrgReadinessSummary({
+			orgId: defaultOrg.orgId,
+			siteCrawl,
+			historyScores,
+		}),
+		getUserPermissions(user.$id, defaultOrg.orgId),
+	]);
 
-	// ?snapshotId= shows a saved snapshot (packet preview) instead of live data.
-	const snapshotId = new URL(request.url).searchParams.get("snapshotId");
-	let view = {
+	const view = {
 		summary: {
 			...summary,
 			readinessScore:
@@ -86,41 +162,6 @@ export async function GET(request: NextRequest) {
 		evidenceMapHits: payloadBase.evidenceMapHits,
 		siteCrawl,
 	};
-	let viewing: {
-		snapshotId: string;
-		createdAt: string;
-		aiSummary: string;
-		cadence: string;
-	} | null = null;
-	if (snapshotId) {
-		const row =
-			history.find((item) => item.$id === snapshotId) ??
-			(
-				await listReadinessSnapshots({ orgId: defaultOrg.orgId, limit: 100 })
-			).find((item) => item.$id === snapshotId);
-		const stored = row ? parseSnapshotPayload(row.payload) : null;
-		if (!row || !stored) {
-			return NextResponse.json(
-				{ error: "Snapshot not found" },
-				{ status: 404 },
-			);
-		}
-		view = {
-			summary: stored.summary as unknown as typeof view.summary,
-			sourcesUsed: stored.sourcesUsed,
-			disclaimer: stored.disclaimer,
-			evidenceMapHits: stored.evidenceMapHits,
-			siteCrawl: stored.siteCrawl,
-		};
-		viewing = {
-			snapshotId: row.$id,
-			createdAt: row.createdAt,
-			aiSummary: row.aiSummary || "",
-			cadence: row.cadence,
-		};
-	}
-
-	const permissions = await getUserPermissions(user.$id, defaultOrg.orgId);
 	// Same gates as the Assign action on /contracts and /licenses.
 	const canAssignOwners = {
 		contract: permissions.includes(PERMISSIONS.CONTRACTS.EDIT),

@@ -249,6 +249,30 @@ export const appwriteConfig = {
 		"69f8e3a2001d4e8c2b10",
 	),
 
+	/** Government RFP proposal workspace (name: proposals) */
+	proposalsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_PROPOSALS_COLLECTION",
+		"69f8f1a0001d4e8c2b20",
+	),
+
+	/** Compliance-matrix rows for a proposal (name: proposal_requirements) */
+	proposalRequirementsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_PROPOSAL_REQUIREMENTS_COLLECTION",
+		"69f8f1a0001d4e8c2b21",
+	),
+
+	/** Draft sections for a proposal (name: proposal_sections) */
+	proposalSectionsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_PROPOSAL_SECTIONS_COLLECTION",
+		"69f8f1a0001d4e8c2b22",
+	),
+
+	/** Reusable proposal content library (name: proposal_content_library) */
+	proposalContentLibraryCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_PROPOSAL_CONTENT_LIBRARY_COLLECTION",
+		"69f8f1a0001d4e8c2b23",
+	),
+
 	secretKey: getTestFallback("NEXT_APPWRITE_API_KEY", "test-api-key-for-ci"),
 
 	govApiKey: process.env.GOV_API_KEY,

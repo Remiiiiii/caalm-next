@@ -311,14 +311,16 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 		enabled: isApprover,
 	});
 
-	// Auto-expand approvals section when there are pending approvals
+	// Auto-expand when pending items exist; depend on primitives so a new
+	// `approvals` array identity cannot retrigger setState every render.
+	const pendingApprovalCount = approvals.length;
 	useEffect(() => {
-		if (!approvalsLoading && approvals.length > 0) {
-			setIsApprovalsExpanded(true);
-		} else if (!approvalsLoading && approvals.length === 0) {
-			setIsApprovalsExpanded(false);
-		}
-	}, [approvals, approvalsLoading]);
+		if (approvalsLoading) return;
+		const shouldExpand = pendingApprovalCount > 0;
+		setIsApprovalsExpanded((expanded) =>
+			expanded === shouldExpand ? expanded : shouldExpand,
+		);
+	}, [pendingApprovalCount, approvalsLoading]);
 
 	// Approval dialog state
 	const [selectedApproval, setSelectedApproval] =
@@ -1573,34 +1575,59 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 		return map;
 	}, [pinnedNotesResponse]);
 
-	// Update shared calendars state from SWR
+	// Copy SWR calendars into local state. Guard setState so a new empty-array
+	// identity cannot retrigger this effect forever.
+	const sharedCalendarCount = swrCalendars.length;
 	useEffect(() => {
-		if (swrCalendars.length > 0) {
-			setSharedCalendars(swrCalendars);
-			setLoadingSharedCalendars(swrLoading);
-
-			// Fetch owner names (cached by SWR hook)
-			const ownerIds = swrCalendars
-				.map((cal: SharedCalendar) => cal.ownerId)
-				.filter((id: string) => id);
-			if (ownerIds.length > 0) {
-				fetchUserNamesByIds(ownerIds).then((ownerNames) => {
-					const namesMap: Record<string, string> = {};
-					ownerNames.forEach((user) => {
-						swrCalendars.forEach((cal: SharedCalendar) => {
-							if (cal.ownerId === user.$id) {
-								namesMap[cal.$id] = user.fullName || "Unknown";
-							}
-						});
-					});
-					setSharedCalendarOwnerNames(namesMap);
-				});
-			}
-		} else if (!swrLoading) {
-			setSharedCalendars([]);
-			setLoadingSharedCalendars(false);
+		if (swrLoading) {
+			setLoadingSharedCalendars((prev) => (prev ? prev : true));
+			return;
 		}
-	}, [swrCalendars, swrLoading]);
+
+		setLoadingSharedCalendars((prev) => (prev ? false : prev));
+
+		if (sharedCalendarCount === 0) {
+			setSharedCalendars((prev) => (prev.length === 0 ? prev : []));
+			return;
+		}
+
+		setSharedCalendars((prev) => {
+			if (prev === swrCalendars) return prev;
+			if (
+				prev.length === swrCalendars.length &&
+				prev.every((cal, i) => cal.$id === swrCalendars[i]?.$id)
+			) {
+				return prev;
+			}
+			return swrCalendars;
+		});
+
+		const ownerIds = swrCalendars
+			.map((cal: SharedCalendar) => cal.ownerId)
+			.filter((id: string) => id);
+		if (ownerIds.length === 0) return;
+
+		void fetchUserNamesByIds(ownerIds).then((ownerNames) => {
+			const namesMap: Record<string, string> = {};
+			ownerNames.forEach((user) => {
+				swrCalendars.forEach((cal: SharedCalendar) => {
+					if (cal.ownerId === user.$id) {
+						namesMap[cal.$id] = user.fullName || "Unknown";
+					}
+				});
+			});
+			setSharedCalendarOwnerNames((prev) => {
+				const keys = Object.keys(namesMap);
+				if (
+					keys.length === Object.keys(prev).length &&
+					keys.every((key) => prev[key] === namesMap[key])
+				) {
+					return prev;
+				}
+				return namesMap;
+			});
+		});
+	}, [sharedCalendarCount, swrCalendars, swrLoading]);
 
 	// Calculate calendar width based on container and number of calendars
 	useEffect(() => {

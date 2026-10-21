@@ -13,7 +13,10 @@ import {
 import { useCallback, useMemo, useState } from "react";
 import useSWR, { mutate as globalMutate } from "swr";
 import { AuditsSectionNav } from "@/components/audits/AuditsSectionNav";
-import { ReadinessAiPanel } from "@/components/audits/ReadinessAiPanel";
+import {
+	ReadinessAiLauncher,
+	ReadinessAiPanel,
+} from "@/components/audits/ReadinessAiPanel";
 import { ReadinessCharts } from "@/components/audits/ReadinessCharts";
 import { ReadinessEvidenceMap } from "@/components/audits/readiness/ReadinessEvidenceMap";
 import { ReadinessExplainSheet } from "@/components/audits/readiness/ReadinessExplainSheet";
@@ -79,6 +82,7 @@ export default function AuditReadinessPage() {
 	const [exportingId, setExportingId] = useState<string | null>(null);
 	const [highlightId, setHighlightId] = useState<string | null>(null);
 	const [explainOpen, setExplainOpen] = useState(false);
+	const [aiOpen, setAiOpen] = useState(false);
 
 	const { data, error, isLoading, isValidating, mutate } =
 		useSWR<ReadinessResponse>(
@@ -271,7 +275,7 @@ export default function AuditReadinessPage() {
 			? score - payload.latestSnapshot.score
 			: null;
 
-	if (permissionsLoading) {
+	if (permissionsLoading || (canView && !payload && (isLoading || isValidating))) {
 		return (
 			<div className="w-full px-4 pb-10 sm:px-6 lg:px-8 xl:px-12">
 				<ReadinessSkeleton />
@@ -345,6 +349,7 @@ export default function AuditReadinessPage() {
 						arrives.
 					</p>
 					<div className="flex flex-wrap items-center gap-3">
+						<ReadinessAiLauncher onClick={() => setAiOpen(true)} />
 						<TooltipProvider delayDuration={150}>
 							<Tooltip>
 								<TooltipTrigger asChild>
@@ -567,25 +572,20 @@ export default function AuditReadinessPage() {
 						/>
 					</div>
 
-					{/* Fix next + AI assistant */}
-					<div className="grid grid-cols-1 items-stretch gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-						<div>
-							<ReadinessFixNextTable
-								insights={summary.insights}
-								users={users}
-								canAssign={payload.canAssignOwners}
-								people={people}
-								onAssign={(row, assigneeId) =>
-									void assignOwner(row, assigneeId)
-								}
-							/>
-						</div>
-						<ReadinessAiPanel
-							snapshotId={payload.latestSnapshot?.id}
-							initialSummary={payload.latestSnapshot?.aiSummary}
-							initialSummaryAt={payload.latestSnapshot?.createdAt}
-						/>
-					</div>
+					<ReadinessFixNextTable
+						insights={summary.insights}
+						users={users}
+						canAssign={payload.canAssignOwners}
+						people={people}
+						onAssign={(row, assigneeId) => void assignOwner(row, assigneeId)}
+					/>
+					<ReadinessAiPanel
+						snapshotId={payload.latestSnapshot?.id}
+						initialSummary={payload.latestSnapshot?.aiSummary}
+						initialSummaryAt={payload.latestSnapshot?.createdAt}
+						open={aiOpen}
+						onOpenChange={setAiOpen}
+					/>
 
 					<ReadinessCharts
 						domains={summary.domains}

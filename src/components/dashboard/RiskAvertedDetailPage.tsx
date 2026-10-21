@@ -230,7 +230,11 @@ function StatRows({
 	);
 }
 
-export function RiskAvertedDetailPage() {
+export function RiskAvertedDetailPage({
+	initialSnapshot,
+}: {
+	initialSnapshot?: import("@/lib/dashboard/risk-impact.types").RiskImpactSnapshot | null;
+}) {
 	const [period, setPeriod] = useState<RiskImpactPeriod>("ytd");
 	const [kindFilter, setKindFilter] = useState<"all" | RiskImpactEventKind>(
 		"all",
@@ -263,6 +267,7 @@ export function RiskAvertedDetailPage() {
 	const { toast } = useToast();
 	const { snapshot, error, isLoading, refresh } = useRiskImpactDashboard({
 		period,
+		initialData: initialSnapshot,
 	});
 
 	const events = snapshot?.events ?? [];

@@ -106,6 +106,16 @@ export function getOrgExportCatalog(): OrgExportEntry[] {
 			"auditEvidenceRecordTags",
 			appwriteConfig.auditEvidenceRecordTagsCollectionId,
 		),
+		entry("proposals", appwriteConfig.proposalsCollectionId),
+		entry(
+			"proposalRequirements",
+			appwriteConfig.proposalRequirementsCollectionId,
+		),
+		entry("proposalSections", appwriteConfig.proposalSectionsCollectionId),
+		entry(
+			"proposalContentLibrary",
+			appwriteConfig.proposalContentLibraryCollectionId,
+		),
 		entry("tasks", appwriteConfig.tasksCollectionId),
 		entry("tickets", appwriteConfig.ticketsCollectionId),
 		entry("ticketEvents", appwriteConfig.ticketEventsCollectionId),

@@ -13,6 +13,17 @@ import {
 	listReadinessSnapshots,
 	parseSnapshotPayload,
 } from "@/lib/audits/readiness/snapshot.service";
+import {
+	domainTileBadge,
+	formatModuleBlurb,
+	formatModuleHeadingName,
+	formatPriorityAffects,
+	formatPriorityDueLabel,
+	formatPriorityInstruction,
+	formatReadinessScopeLine,
+	formatSourceLine,
+	overallTileBadge,
+} from "@/lib/audits/readiness/summary-tiles";
 import { requirePermission } from "@/lib/rbac/middleware";
 import { getOrganization } from "@/lib/rbac/organizations";
 import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
@@ -103,10 +114,99 @@ export async function POST(request: NextRequest) {
 		const suggestedQuestions = payload.summary.insights
 			.slice(0, 4)
 			.map((insight) => `What should we do about: ${insight.title}?`);
+
+		// Pre-computed structured data from payload (no AI needed for stats)
+		const domains = payload.summary.domains;
+		const contractsDomain = domains.find((d) => d.domain === "contracts");
+		const licensesDomain = domains.find((d) => d.domain === "licenses");
+		const priorityInsight =
+			payload.summary.insights.find(
+				(i) =>
+					(i.severity === "critical" || i.severity === "moderate") && i.dueDate,
+			) ??
+			payload.summary.insights.find((i) => i.severity === "critical") ??
+			payload.summary.insights[0];
+
+		const overallBadge = overallTileBadge(payload.summary.ragStatus);
+		const contractsBadge = domainTileBadge(
+			contractsDomain,
+			payload.summary.insights,
+		);
+		const licensesBadge = domainTileBadge(
+			licensesDomain,
+			payload.summary.insights,
+		);
+
+		const structured = {
+			overallScore: Math.round(payload.summary.readinessScore),
+			overallRag: payload.summary.ragStatus,
+			overallBadgeLabel: overallBadge.label,
+			contractsGrantsScore: contractsDomain
+				? Math.round(contractsDomain.readinessPercent)
+				: null,
+			contractsGrantsRag: contractsDomain?.ragStatus ?? null,
+			contractsBadgeLabel: contractsBadge.label,
+			licensesScore: licensesDomain
+				? Math.round(licensesDomain.readinessPercent)
+				: null,
+			licensesRag: licensesDomain?.ragStatus ?? null,
+			licensesBadgeLabel: licensesBadge.label,
+			scopeLine: formatReadinessScopeLine({
+				sourcesUsed: payload.sourcesUsed,
+				expiringSoon: payload.summary.kpis.expiringSoon ?? 0,
+				upcomingDeadlines: payload.summary.kpis.upcomingDeadlines ?? 0,
+			}),
+			priorityAction: priorityInsight
+				? {
+						title: priorityInsight.itemTitle ?? priorityInsight.title,
+						dueDateLabel: formatPriorityDueLabel(
+							priorityInsight.dueDate,
+							priorityInsight.description,
+						),
+						instruction: formatPriorityInstruction({
+							category: priorityInsight.category,
+							itemKind: priorityInsight.itemKind,
+							description: priorityInsight.description,
+						}),
+						affectsModules: formatPriorityAffects(
+							priorityInsight.requirementTags,
+							priorityInsight.itemKind,
+						),
+						moduleHref: priorityInsight.moduleLink,
+					}
+				: null,
+			byModule: domains.map((d) => ({
+				name: formatModuleHeadingName(d.label),
+				score: Math.round(d.readinessPercent),
+				ragStatus: d.ragStatus,
+				atRiskCount: d.atRiskCount,
+				evidenceCount: d.evidenceCount,
+				modulePath: d.modulePath,
+				blurb: formatModuleBlurb({
+					domain: d.domain,
+					atRiskCount: d.atRiskCount,
+					upcomingDeadlines:
+						d.domain === "contracts"
+							? (payload.summary.kpis.upcomingDeadlines ?? 0)
+							: 0,
+				}),
+			})),
+			sourceLine: formatSourceLine(payload.sourcesUsed),
+			publicSiteCrawl: payload.siteCrawl
+				? {
+						websiteUrl: payload.siteCrawl.websiteUrl,
+						sitemapFound: payload.siteCrawl.sitemapFound,
+						pagesCrawled: payload.siteCrawl.pages.length,
+						healthHint: payload.siteCrawl.healthHint,
+					}
+				: null,
+		};
+
 		return NextResponse.json({
 			success: true,
 			data: {
 				summary,
+				structured,
 				keyPoints: payload.summary.insights.slice(0, 5).map((i) => i.title),
 				suggestedQuestions,
 				documentType: "audit_readiness",

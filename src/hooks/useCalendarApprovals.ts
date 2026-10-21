@@ -3,6 +3,8 @@ import type { CalendarApprovalStatus } from "@/constants/rbac";
 import type { CalendarApprovalRequest } from "@/lib/actions/calendar-approval.actions";
 import { swrConfig } from "@/lib/swr-config";
 
+const EMPTY_APPROVALS: CalendarApprovalRequest[] = [];
+
 interface UseCalendarApprovalsOptions {
 	status?: CalendarApprovalStatus;
 	enabled?: boolean;
@@ -66,7 +68,8 @@ export const useCalendarApprovals = ({
 	);
 
 	return {
-		approvals: data?.data ?? [],
+		// Stable empty array — `?? []` would be a new identity every render.
+		approvals: data?.data ?? EMPTY_APPROVALS,
 		total: data?.total ?? 0,
 		isLoading: enabled ? isLoading : false,
 		error: enabled ? error : null,

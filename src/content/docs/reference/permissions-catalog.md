@@ -64,6 +64,17 @@ This catalog explains permission keys in everyday language. Exact availability c
 | `funding.view` | See dollar-ranked retention streams and the pursuit pipeline |
 | `funding.manage` | Create/edit pursuits and obligations, mark wins, spawn proposals |
 
+## RFP proposals
+
+| Key | Meaning |
+|---|---|
+| `proposals.view` | Open RFP proposal workspaces and the compliance matrix |
+| `proposals.create` | Start a proposal from a SAM.gov opportunity |
+| `proposals.edit` | Edit matrix rows, section drafts, and proposal status |
+| `proposals.generate` | Run AI shred and section drafting on a certified matrix |
+| `proposals.export` | Download a proposal as PDF or Word |
+| `proposals.library_manage` | Add and edit reusable past-performance and capability content |
+
 ## Licenses
 
 | Key | Meaning |

@@ -16,11 +16,11 @@ export function ContractAssistantStarters({
 }) {
 	if (loading) {
 		return (
-			<div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+			<div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
 				{[1, 2, 3, 4].map((item) => (
 					<div
 						key={item}
-						className="h-20 animate-pulse rounded-xl border border-slate-200 bg-slate-50"
+						className="h-7 w-28 shrink-0 animate-pulse rounded-full border border-slate-200 bg-slate-50"
 					/>
 				))}
 			</div>
@@ -31,20 +31,18 @@ export function ContractAssistantStarters({
 
 	return (
 		<div>
-			<p className="mb-3 text-sm font-semibold sidebar-gradient-text">
+			<p className="mb-2 text-xs font-semibold text-slate-500">
 				Explore what’s in this contract
 			</p>
-			<div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+			<div className="flex flex-wrap gap-2">
 				{prompts.map((item) => (
 					<button
 						key={item.label}
 						type="button"
-						className="cursor-pointer rounded-xl border border-slate-200 bg-white p-3 text-left text-sm text-slate-700 shadow-sm transition-all duration-200 hover:border-blue-300 hover:bg-blue-50"
+						className="caalm-chip-hover cursor-pointer rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-700 transition-all duration-200"
 						onClick={() => onSelect(item.prompt)}
 					>
-						<span className="font-semibold sidebar-gradient-text">
-							{item.label}
-						</span>
+						{item.label}
 					</button>
 				))}
 			</div>

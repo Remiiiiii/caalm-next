@@ -314,14 +314,32 @@ export const constructDownloadUrl = (bucketFileId: string) => {
 	return `${process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT}/storage/buckets/${process.env.NEXT_PUBLIC_APPWRITE_BUCKET}/files/${bucketFileId}/download?project=${process.env.NEXT_PUBLIC_APPWRITE_PROJECT}`;
 };
 
-/**
- * Construct profile picture URL from profileImageId
- * Returns null if profileImageId is not provided
- */
-export const getProfilePictureUrl = (
+const AVATAR_FILE_ID_RE = /^[A-Za-z0-9._-]{1,36}$/;
+
+/** File id stored on the users table (`avatar`), ignoring placeholder/http URLs. */
+export function resolveStoredAvatarFileId(user: {
+	avatar?: string | null;
+	profileImageId?: string | null;
+} | null | undefined): string | null {
+	if (!user) return null;
+	const avatarValue = user.avatar?.trim() || "";
+	if (
+		avatarValue &&
+		!avatarValue.startsWith("/") &&
+		!/^https?:\/\//i.test(avatarValue) &&
+		AVATAR_FILE_ID_RE.test(avatarValue)
+	) {
+		return avatarValue;
+	}
+	const profileImageId = user.profileImageId?.trim() || "";
+	return AVATAR_FILE_ID_RE.test(profileImageId) ? profileImageId : null;
+}
+
+/** Direct Appwrite view URL. Public pages (negotiate) that have no CAALM session. */
+export const getProfilePictureStorageUrl = (
 	profileImageId: string | null | undefined,
 ): string | null => {
-	if (!profileImageId) {
+	if (!profileImageId?.trim()) {
 		return null;
 	}
 
@@ -334,7 +352,23 @@ export const getProfilePictureUrl = (
 		return null;
 	}
 
-	return `${endpoint}/storage/buckets/${bucketId}/files/${profileImageId}/view?project=${projectId}`;
+	return `${endpoint}/storage/buckets/${bucketId}/files/${profileImageId.trim()}/view?project=${projectId}`;
+};
+
+/**
+ * Same-origin photo URL from a storage file id.
+ * The header <img> loads this instead of Appwrite so cookies and CSP stay on CAALM.
+ */
+export const getProfilePictureUrl = (
+	profileImageId: string | null | undefined,
+): string | null => {
+	const fileId = profileImageId?.trim() || "";
+	if (!fileId) return null;
+	if (/^https?:\/\//i.test(fileId) || fileId.startsWith("/")) {
+		return fileId;
+	}
+	if (!AVATAR_FILE_ID_RE.test(fileId)) return null;
+	return `/api/user/profile-picture?fileId=${encodeURIComponent(fileId)}`;
 };
 
 /**
@@ -353,23 +387,23 @@ export const resolveAvatarDisplayUrl = (
 ): string | null => {
 	if (!user) return null;
 
-	const avatarValue = user.avatar?.trim() || "";
-	const profileImageId = user.profileImageId?.trim() || "";
+	const fileId = resolveStoredAvatarFileId(user);
+	if (fileId) return getProfilePictureUrl(fileId);
 
+	const avatarValue = user.avatar?.trim() || "";
 	if (
 		!avatarValue ||
 		avatarValue.includes("avatar-placeholder") ||
 		avatarValue.includes("3d-illustration-person-with-sunglasses")
 	) {
-		return getProfilePictureUrl(profileImageId || null);
+		return null;
 	}
 
 	if (/^https?:\/\//i.test(avatarValue) || avatarValue.startsWith("/")) {
 		return avatarValue;
 	}
 
-	// File ID in avatar (current upload path) or legacy profileImageId
-	return getProfilePictureUrl(avatarValue || profileImageId || null);
+	return null;
 };
 
 // DASHBOARD UTILS

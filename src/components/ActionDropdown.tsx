@@ -37,6 +37,22 @@ const isValidBucketFileId = (id: string | null | undefined): boolean => {
 	return /^[a-zA-Z0-9_]+$/.test(id);
 };
 
+function resolveReviewFileUrl(file: UIFileDoc): string | null {
+	if (isValidBucketFileId(file.bucketFileId)) {
+		return constructFileUrl(file.bucketFileId!);
+	}
+	if (typeof file.url === "string" && /^https?:\/\//i.test(file.url)) {
+		return file.url;
+	}
+	if (file.contractId) {
+		return `/api/files/download?contractId=${encodeURIComponent(file.contractId)}`;
+	}
+	if (file.$id) {
+		return `/api/files/download?fileId=${encodeURIComponent(file.$id)}`;
+	}
+	return null;
+}
+
 // Map division to badge color for Re-assign dialog
 const _getDivisionBadgeClasses = (division: string): string => {
 	const normalized = division?.toLowerCase?.() ?? "";
@@ -112,14 +128,9 @@ import {
 } from "@/lib/actions/file.actions";
 import { assignContractToDepartment } from "@/lib/actions/notification.actions";
 import type { AppUser } from "@/lib/actions/user.actions";
-import {
-	getFilePreviewKind,
-	usesMediaPreview,
-} from "@/lib/files/filePreviewKind";
 import { refreshStorageUsage } from "@/lib/storage/refreshStorageUsage";
 import { FileDetails } from "./ActionsModalContent";
 import DocumentViewer from "./DocumentViewer";
-import FilePreviewDialog from "./files/FilePreviewDialog";
 import { Button } from "./ui/button";
 import { CardHeader, CardTitle } from "./ui/card";
 import { DeleteConfirmBody } from "./ui/delete-confirmation-dialog";
@@ -188,17 +199,7 @@ const ActionDropdown = ({
 	const [isViewerOpen, setIsViewerOpen] = useState(false);
 	const { permissions } = usePermissions();
 	const { ensureStepUp } = useStepUp();
-
-	const filePreviewKind = React.useMemo(
-		() =>
-			getFilePreviewKind({
-				name: file.name || file.contractName || "",
-				type: file.type,
-				extension: file.extension,
-			}),
-		[file.name, file.contractName, file.type, file.extension],
-	);
-	const useSimpleFilePreview = usesMediaPreview(filePreviewKind);
+	const reviewFileUrl = resolveReviewFileUrl(file);
 
 	// SWR automatically fetches data when hook is used, no need for manual fetch
 
@@ -1168,6 +1169,22 @@ const ActionDropdown = ({
 								);
 							}
 
+							if (actionItem.value === "review") {
+								return (
+									<AppDropdownMenuItem
+										key={actionItem.value}
+										icon={Icon}
+										tone={tone}
+										onSelect={() => {
+											setAction(actionItem);
+											setIsViewerOpen(true);
+										}}
+									>
+										{actionItem.label}
+									</AppDropdownMenuItem>
+								);
+							}
+
 							const menuItem = (
 								<AppDropdownMenuItem
 									icon={Icon}
@@ -1188,9 +1205,7 @@ const ActionDropdown = ({
 											if (id) router.push(`/esign/prepare/contract/${id}`);
 											return;
 										}
-										if (actionItem.value === "review") {
-											setIsViewerOpen(true);
-										} else if (
+										if (
 											[
 												"assign",
 												"rename",
@@ -1221,39 +1236,28 @@ const ActionDropdown = ({
 					</AppDropdownMenuContent>
 				</DropdownMenu>
 				{renderDialogContent()}
-				{file?.$id && file.bucketFileId && useSimpleFilePreview ? (
-					<FilePreviewDialog
-						open={isViewerOpen}
-						onOpenChange={setIsViewerOpen}
-						file={{
-							name: file.name || file.contractName || "",
-							url: constructFileUrl(file.bucketFileId),
-							type: file.type,
-							extension: file.extension,
-						}}
-					/>
-				) : null}
-				{file?.$id && file.bucketFileId && !useSimpleFilePreview ? (
-					<DocumentViewer
-						isOpen={isViewerOpen}
-						onClose={() => setIsViewerOpen(false)}
-						file={{
-							id: file.$id,
-							name: file.name || file.contractName || "",
-							type: file.extension || "pdf",
-							size: String(file.size ?? "Unknown"),
-							url: constructFileUrl(file.bucketFileId),
-							createdAt: file.$createdAt,
-							expiresAt: file.contractExpiryDate,
-							createdBy:
-								typeof file.owner === "string"
-									? file.owner
-									: file.owner?.fullName || "Unknown",
-							description: file.description || "",
-						}}
-					/>
-				) : null}
 			</Dialog>
+			{isViewerOpen && reviewFileUrl ? (
+				<DocumentViewer
+					isOpen={isViewerOpen}
+					onClose={() => setIsViewerOpen(false)}
+					assistantMode={file.contractId ? "contract" : "document"}
+					file={{
+						id: file.$id,
+						name: file.name || file.contractName || "",
+						type: file.extension || "pdf",
+						size: String(file.size ?? "Unknown"),
+						url: reviewFileUrl,
+						createdAt: file.$createdAt,
+						expiresAt: file.contractExpiryDate,
+						createdBy:
+							typeof file.owner === "string"
+								? file.owner
+								: file.owner?.fullName || "Unknown",
+						description: file.description || "",
+					}}
+				/>
+			) : null}
 			<SendForSignatureDialog
 				open={showSign}
 				onOpenChange={setShowSign}
