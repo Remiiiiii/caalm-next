@@ -4,10 +4,7 @@ import { revalidatePath } from "next/cache";
 import { ID, Query } from "node-appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { createAdminClient } from "@/lib/appwrite/index";
-import {
-	monthDateRange,
-	validateCalendarPin,
-} from "@/lib/notes/calendar-pin";
+import { monthDateRange, validateCalendarPin } from "@/lib/notes/calendar-pin";
 import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 
 export interface Note {

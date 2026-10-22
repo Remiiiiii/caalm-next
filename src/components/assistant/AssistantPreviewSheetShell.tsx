@@ -13,6 +13,8 @@ interface AssistantPreviewSheetShellProps {
 	children: ReactNode;
 	footer?: ReactNode;
 	overlay?: ReactNode;
+	/** Extra SheetContent classes (e.g. a wider max-width). Merges with the default `sm:max-w-lg`. */
+	className?: string;
 }
 
 export default function AssistantPreviewSheetShell({
@@ -23,6 +25,7 @@ export default function AssistantPreviewSheetShell({
 	children,
 	footer,
 	overlay,
+	className,
 }: AssistantPreviewSheetShellProps) {
 	return (
 		<Sheet open={open} onOpenChange={onOpenChange} modal={false}>
@@ -34,6 +37,7 @@ export default function AssistantPreviewSheetShell({
 					"flex w-full flex-col gap-0 overflow-visible border-0 bg-transparent p-0 shadow-none backdrop-blur-none",
 					/* ~15% wider than max-w-md (28rem → 32rem) */
 					"sm:max-w-lg",
+					className,
 					"inset-y-auto! top-4! right-4! bottom-4! h-[calc(100vh-2rem)]! max-h-none!",
 					/* Snappy close: drop conflicting CSS transition + shorten slide/duration */
 					"transition-none! duration-200! ease-out!",
@@ -43,6 +47,7 @@ export default function AssistantPreviewSheetShell({
 					"pointer-events-auto",
 				)}
 				showCloseButton={false}
+				aria-describedby={undefined}
 			>
 				<div
 					className="glass-card-frosted relative flex h-full w-full flex-col overflow-hidden rounded-2xl"

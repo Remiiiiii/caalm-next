@@ -20,10 +20,11 @@ import GmailComposeForm, {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { AppDialog } from "@/components/ui/app-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SearchField } from "@/components/ui/search-field";
+import { SegmentedToggle } from "@/components/ui/segmented-toggle";
 import {
 	Select,
 	SelectContent,
@@ -31,13 +32,15 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { SegmentedToggle } from "@/components/ui/segmented-toggle";
-import type { ShareAttributionTotals, ShareCampaignBucket } from "@/lib/give/attribution";
 import { PERMISSIONS } from "@/constants/permissions";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { canContact } from "@/lib/constituents/consent";
 import type { Constituent } from "@/lib/constituents/types";
+import type {
+	ShareAttributionTotals,
+	ShareCampaignBucket,
+} from "@/lib/give/attribution";
 import {
 	buildGivePageEmbedSnippet,
 	buildGivePageShareUrl,
@@ -551,8 +554,8 @@ export function DonationPageShareCard({
 							<code className="rounded bg-slate-100 px-1">
 								utm_campaign={campaignSlug}
 							</code>{" "}
-							on copy, email, QR, and embed links so you can see which ask
-							drove gifts.
+							on copy, email, QR, and embed links so you can see which ask drove
+							gifts.
 						</p>
 					</div>
 
@@ -642,8 +645,8 @@ export function DonationPageShareCard({
 							]}
 						/>
 						<p className="text-xs text-slate-500">
-							Open live page uses the clean URL so admin preview does not
-							count as a share visit.
+							Open live page uses the clean URL so admin preview does not count
+							as a share visit.
 						</p>
 					</div>
 
@@ -663,7 +666,7 @@ export function DonationPageShareCard({
 								Loading analytics…
 							</p>
 						) : !analytics ||
-						  (analytics.totals.visitCount === 0 &&
+							(analytics.totals.visitCount === 0 &&
 								analytics.totals.giftCount === 0) ? (
 							<p className="text-sm text-slate-600">
 								No share visits or gifts yet. Copy or email a tagged link to
@@ -766,8 +769,12 @@ export function DonationPageShareCard({
 									QR code
 								</p>
 								<p className="mt-1 text-xs text-slate-500">
-									Print on event programs or posters. Scans open the tracked
-									QR link (<code className="rounded bg-slate-100 px-1">utm_source=qr</code>).
+									Print on event programs or posters. Scans open the tracked QR
+									link (
+									<code className="rounded bg-slate-100 px-1">
+										utm_source=qr
+									</code>
+									).
 								</p>
 							</div>
 							{!isPublished ? (
@@ -850,25 +857,16 @@ export function DonationPageShareCard({
 				</CardContent>
 			</Card>
 
-			<Dialog open={emailOpen} onOpenChange={setEmailOpen}>
-				<DialogContent className="flex max-h-[90vh] max-w-[720px] flex-col overflow-hidden border border-slate-200 p-0 shadow-xl">
-					<div className="absolute top-0 right-0 left-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
-					<div className="sticky top-0 z-10 mt-4 border-b border-slate-200 bg-linear-to-r from-blue-50 to-indigo-50 py-4">
-						<div className="flex items-center gap-3 px-6">
-							<div className="flex items-center gap-3">
-								<Mail className="h-5 w-5 text-[#0f5384]" />
-								<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-									Email give page link
-								</DialogTitle>
-							</div>
-						</div>
-						<p className="mt-1 ml-14 text-sm text-slate-600">
-							Prefills a short ask with your tracked live URL. Edit before
-							sending.
-						</p>
-					</div>
-
-					<div className="flex-1 space-y-4 overflow-y-auto bg-slate-50 p-6">
+			<AppDialog
+				open={emailOpen}
+				onOpenChange={setEmailOpen}
+				size="form"
+				className="max-h-[90vh] max-w-[720px]"
+				icon={<Mail className="h-5 w-5" />}
+				title="Email give page link"
+				description="Prefills a short ask with your tracked live URL. Edit before sending."
+			>
+				<div className="flex flex-col gap-4 pb-1">
 						{providerStatusLoading ? (
 							<p className="flex items-center gap-2 text-sm text-slate-600">
 								<Loader2 className="h-4 w-4 animate-spin" />
@@ -1061,9 +1059,8 @@ export function DonationPageShareCard({
 								/>
 							</div>
 						) : null}
-					</div>
-				</DialogContent>
-			</Dialog>
+				</div>
+			</AppDialog>
 		</>
 	);
 }

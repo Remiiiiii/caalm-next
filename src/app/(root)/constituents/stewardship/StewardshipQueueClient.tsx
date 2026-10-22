@@ -6,12 +6,14 @@ import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { StatCardIcon } from "@/components/ui/stat-card-icon";
-import type { StewardshipMetrics } from "@/lib/stewardship";
 import {
 	normalizeSegmentLabel,
 	segmentBadgeClass,
 } from "@/lib/fundraising/segment-display";
-import type { StewardshipQueueRow } from "@/lib/stewardship";
+import type {
+	StewardshipMetrics,
+	StewardshipQueueRow,
+} from "@/lib/stewardship";
 
 function formatCurrency(value: number | null): string {
 	if (value == null) return "—";
@@ -55,7 +57,9 @@ export function StewardshipQueueClient() {
 				body: JSON.stringify({ constituentId }),
 			});
 			if (res.ok) {
-				setItems((prev) => prev.filter((row) => row.constituentId !== constituentId));
+				setItems((prev) =>
+					prev.filter((row) => row.constituentId !== constituentId),
+				);
 			}
 		} finally {
 			setContactingId(null);
@@ -82,7 +86,9 @@ export function StewardshipQueueClient() {
 								Contacted this week
 							</p>
 							<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-								<span className="tabular-nums">{metrics.contactedThisWeek}</span>
+								<span className="tabular-nums">
+									{metrics.contactedThisWeek}
+								</span>
 								<StatCardIcon className="ml-2" icon={Check} />
 							</div>
 							<p className="text-xs text-slate-600 mt-1">
@@ -135,19 +141,20 @@ export function StewardshipQueueClient() {
 		return (
 			<>
 				{metricsStrip}
-			<Card className="glass-card">
-				<div className="glass-card-cap" />
-				<CardContent className="p-4 sm:p-6 flex flex-col items-center py-12 text-center">
-					<HeartHandshake className="h-8 w-8 text-[#0f5384]" />
-					<p className="mt-3 text-sm font-medium text-slate-700">
-						No at-risk constituents in the queue
-					</p>
-					<p className="mt-1 max-w-md text-xs text-slate-600">
-						When RFM scores flag At-risk or Lapsed donors, they appear here until
-						you mark them contacted or the nightly job recomputes segments.
-					</p>
-				</CardContent>
-			</Card>
+				<Card className="glass-card">
+					<div className="glass-card-cap" />
+					<CardContent className="p-4 sm:p-6 flex flex-col items-center py-12 text-center">
+						<HeartHandshake className="h-8 w-8 text-[#0f5384]" />
+						<p className="mt-3 text-sm font-medium text-slate-700">
+							No at-risk constituents in the queue
+						</p>
+						<p className="mt-1 max-w-md text-xs text-slate-600">
+							When RFM scores flag At-risk or Lapsed donors, they appear here
+							until you mark them contacted or the nightly job recomputes
+							segments.
+						</p>
+					</CardContent>
+				</Card>
 			</>
 		);
 	}
@@ -169,7 +176,7 @@ export function StewardshipQueueClient() {
 										{row.displayName}
 									</Link>
 									<span
-										className={`inline-block px-2 py-0.5 text-xs rounded-full font-medium border ${segmentBadgeClass(row.segment)}`}
+										className={`inline-block px-2 py-0.5 text-xs rounded-full border ${segmentBadgeClass(row.segment)}`}
 									>
 										{normalizeSegmentLabel(row.segment)}
 									</span>

@@ -1,5 +1,6 @@
 import { listCampaigns } from "@/lib/campaigns/repository";
 import { computeCampaignRoi } from "@/lib/development/metrics";
+import type { StyledXlsxInput } from "@/lib/export/styled-xlsx";
 import { sumPostedGiftTotalForCampaign } from "@/lib/gifts/repository";
 import type { DevelopmentMetrics } from "./metrics";
 import { formatRetentionPercent } from "./metrics";
@@ -12,38 +13,48 @@ export type CampaignRoiRow = {
 	roi: number | null;
 };
 
-export function rankCampaignsByRoi(rows: CampaignRoiRow[], limit = 5): CampaignRoiRow[] {
+export function rankCampaignsByRoi(
+	rows: CampaignRoiRow[],
+	limit = 5,
+): CampaignRoiRow[] {
 	return [...rows]
 		.filter((row) => row.roi != null)
 		.sort((a, b) => (b.roi ?? 0) - (a.roi ?? 0))
 		.slice(0, limit);
 }
 
-export function buildBoardPackCsv(
+export function buildBoardPackXlsxInput(
 	metrics: DevelopmentMetrics,
 	campaigns: CampaignRoiRow[],
-): string {
-	const escape = (value: string | number) => {
-		const raw = String(value);
-		if (/[",\n]/.test(raw)) return `"${raw.replace(/"/g, '""')}"`;
-		return raw;
+): StyledXlsxInput {
+	return {
+		sheetName: "Board Pack",
+		title: `Development Board Pack — ${metrics.year}`,
+		subtitle: "CAALM · Live giving metrics and top campaigns by ROI",
+		columns: [
+			{ header: "Section", width: 16 },
+			{ header: "Metric", width: 38 },
+			{ header: "Value", width: 26 },
+			{ header: "Posted total", type: "currency", width: 18 },
+			{ header: "Campaign cost", type: "currency", width: 18 },
+			{ header: "ROI", width: 12 },
+		],
+		rows: [
+			["KPI", "Year", String(metrics.year)],
+			["KPI", "Dollars raised year to date", "", metrics.ytdDollars],
+			["KPI", "Unique donors year to date", String(metrics.uniqueDonorsYtd)],
+			["KPI", "Retention", formatRetentionPercent(metrics.retentionRate)],
+			["KPI", "New donors year to date", String(metrics.newDonorsYtd)],
+			...campaigns.map((row) => [
+				"Campaign",
+				row.name,
+				row.campaignId,
+				row.postedTotal,
+				row.campaignCost ?? null,
+				row.roi == null ? "—" : `${Math.round(row.roi * 1000) / 10}%`,
+			]),
+		],
 	};
-	const lines = [
-		"section,metric,value",
-		`kpis,year,${metrics.year}`,
-		`kpis,ytd_dollars,${metrics.ytdDollars}`,
-		`kpis,unique_donors_ytd,${metrics.uniqueDonorsYtd}`,
-		`kpis,retention_pct,${escape(formatRetentionPercent(metrics.retentionRate))}`,
-		`kpis,new_donors_ytd,${metrics.newDonorsYtd}`,
-	];
-	for (const row of campaigns) {
-		const roiLabel =
-			row.roi == null ? "—" : `${Math.round(row.roi * 1000) / 10}%`;
-		lines.push(
-			`campaign,${escape(row.campaignId)},${escape(row.name)},${row.postedTotal},${row.campaignCost ?? ""},${escape(roiLabel)}`,
-		);
-	}
-	return `${lines.join("\n")}\n`;
 }
 
 /** Live board pack rows — no mock flags. */

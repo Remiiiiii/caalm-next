@@ -78,7 +78,8 @@ export class FileService {
 	static async downloadFileBufferFromStorage(
 		bucketFileId: string,
 	): Promise<Buffer> {
-		const downloaded = await FileService.downloadFileFromStorage(bucketFileId);
+		const downloaded: unknown =
+			await FileService.downloadFileFromStorage(bucketFileId);
 		if (Buffer.isBuffer(downloaded)) return downloaded;
 		if (downloaded instanceof ArrayBuffer) {
 			return Buffer.from(downloaded);

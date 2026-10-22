@@ -999,7 +999,7 @@ export default function LandingHero() {
 									className="absolute inset-0 z-[3] flex items-center justify-center bg-slate-900/25 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
 									aria-label="Play product demo"
 								>
-									<span className="rounded-full bg-white/95 px-4 py-2 text-sm font-semibold text-slate-800 shadow-md">
+									<span className="rounded-full bg-white/95 px-4 py-2 text-sm font-semibold text-slate-700 shadow-md">
 										Tap to play demo
 									</span>
 								</button>
@@ -1037,7 +1037,7 @@ export default function LandingHero() {
 						animate="visible"
 						className="order-3 mt-0 max-w-md mx-auto lg:mx-0 rounded-xl bg-white/80 p-4 shadow-[0_1px_2px_0_rgba(15,23,42,0.06)] w-full"
 					>
-						<p className="text-slate-800 text-base italic">
+						<p className="text-slate-700 text-base italic">
 							&ldquo;I use CAALM every day to keep all our contracts and
 							compliance documents organized. It&rsquo;s so helpful, our team
 							never misses a deadline or audit anymore!&rdquo;
@@ -1053,7 +1053,7 @@ export default function LandingHero() {
 								sizes="32px"
 							/>
 							<div>
-								<p className="text-sm font-semibold text-slate-800">
+								<p className="text-sm font-semibold text-slate-700">
 									Priya Sharma
 								</p>
 								<p className="text-xs text-slate-500">

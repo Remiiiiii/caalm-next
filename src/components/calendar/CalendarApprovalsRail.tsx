@@ -202,14 +202,14 @@ export function CalendarApprovalsRail({
 										<div className="flex flex-wrap items-center gap-1.5 mb-1.5">
 											<Badge
 												variant="outline"
-												className="text-[10px] font-medium px-1.5 py-0 uppercase tracking-wide border-slate-300 text-slate-700"
+												className="text-[10px] px-1.5 py-0 uppercase tracking-wide border-slate-300 text-slate-700"
 											>
 												{approval.changeType}
 											</Badge>
 											{sensitivityLevel !== "standard" && (
 												<Badge
 													className={cn(
-														"text-[10px] font-medium px-1.5 py-0 border pointer-events-none",
+														"text-[10px] px-1.5 py-0 border pointer-events-none",
 														getSensitivityBadgeClasses(sensitivityLevel),
 													)}
 												>

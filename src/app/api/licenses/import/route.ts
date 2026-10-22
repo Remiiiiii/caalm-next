@@ -23,16 +23,24 @@ export async function POST(request: NextRequest) {
 
 	const user = await getCurrentUser();
 	if (!user) {
-		return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+		return NextResponse.json(
+			{ error: "Authentication required" },
+			{ status: 401 },
+		);
 	}
 	const org = await getUserDefaultOrganization(user.$id);
 	if (!org) {
-		return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+		return NextResponse.json(
+			{ error: "Organization not found" },
+			{ status: 404 },
+		);
 	}
 
 	const dryRun = request.nextUrl.searchParams.get("dryRun") === "1";
 	try {
-		const parsed = readImportPayload<LicenseImportFieldKey>(await request.json());
+		const parsed = readImportPayload<LicenseImportFieldKey>(
+			await request.json(),
+		);
 		if (!parsed.ok) {
 			return NextResponse.json(
 				{ error: parsed.error },

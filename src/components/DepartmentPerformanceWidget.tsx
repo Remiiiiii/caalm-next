@@ -397,7 +397,7 @@ const DepartmentPerformanceWidget: React.FC<
 					<div className="flex min-w-0 items-start gap-2.5">
 						<StatCardIcon icon={tone.icon} tone={tone.iconTone} />
 						<div className="min-w-0">
-							<p className="text-sm font-semibold text-slate-800">
+							<p className="text-sm font-semibold text-slate-700">
 								Department performance
 							</p>
 							<p className="text-xs text-slate-600">
@@ -467,7 +467,7 @@ const DepartmentPerformanceWidget: React.FC<
 				>
 					<div className="flex items-center justify-between gap-3">
 						<p className="text-[11px] text-slate-500">Departments at target</p>
-						<p className="text-sm font-bold tabular-nums text-slate-800">
+						<p className="text-sm font-bold tabular-nums text-slate-700">
 							{performanceData.meetingTargetCount}
 							<span className="font-medium text-slate-600">
 								{" "}

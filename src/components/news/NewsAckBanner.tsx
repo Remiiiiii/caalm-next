@@ -47,11 +47,12 @@ export function NewsAckBanner() {
 							headers: { "Content-Type": "application/json" },
 							body: JSON.stringify({ articleId: item.id }),
 						});
-						setPending((current) => current.filter((row) => row.id !== item.id));
+						setPending((current) =>
+							current.filter((row) => row.id !== item.id),
+						);
 					}}
 				>
-					<BookOpenCheck className="h-4 w-4" />
-					I have read and understood
+					<BookOpenCheck className="h-4 w-4" />I have read and understood
 				</Button>
 			</CardContent>
 		</Card>

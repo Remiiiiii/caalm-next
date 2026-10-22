@@ -22,6 +22,7 @@ function isPartIxBucket(value: unknown): value is Form990PartIxBucket {
 		(FORM_990_PART_IX_BUCKETS as readonly string[]).includes(value)
 	);
 }
+
 import {
 	listForm990Mappings,
 	upsertForm990Mapping,
@@ -39,7 +40,10 @@ export async function GET(request: NextRequest) {
 		return NextResponse.json({ items });
 	} catch (error) {
 		console.error("[form-990-mappings GET]", error);
-		return NextResponse.json({ error: "Failed to load mappings" }, { status: 500 });
+		return NextResponse.json(
+			{ error: "Failed to load mappings" },
+			{ status: 500 },
+		);
 	}
 }
 
@@ -54,7 +58,11 @@ export async function POST(request: NextRequest) {
 		const sourceType = body.sourceType;
 		const sourceKey = String(body.sourceKey || "").trim();
 		const partIxBucket = body.partIxBucket;
-		if (!isSourceType(sourceType) || !sourceKey || !isPartIxBucket(partIxBucket)) {
+		if (
+			!isSourceType(sourceType) ||
+			!sourceKey ||
+			!isPartIxBucket(partIxBucket)
+		) {
 			return NextResponse.json(
 				{ error: "sourceType, sourceKey, and partIxBucket are required" },
 				{ status: 400 },
@@ -69,6 +77,9 @@ export async function POST(request: NextRequest) {
 		return NextResponse.json(row, { status: 201 });
 	} catch (error) {
 		console.error("[form-990-mappings POST]", error);
-		return NextResponse.json({ error: "Failed to save mapping" }, { status: 500 });
+		return NextResponse.json(
+			{ error: "Failed to save mapping" },
+			{ status: 500 },
+		);
 	}
 }

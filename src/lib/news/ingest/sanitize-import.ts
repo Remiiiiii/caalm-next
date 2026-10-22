@@ -1,8 +1,8 @@
 import {
 	EXCERPT_MAX_LENGTH,
 	IMPORT_CONTENT_MAX_LENGTH,
-	TITLE_MAX_LENGTH,
 	type IngestItem,
+	TITLE_MAX_LENGTH,
 } from "@/lib/news/ingest/types";
 
 const SCRIPT_RE = /<script[\s\S]*?>[\s\S]*?<\/script>/gi;
@@ -37,7 +37,10 @@ export function isHttpUrl(value: string | null | undefined): boolean {
 }
 
 export function sanitizeIngestItem(item: IngestItem): IngestItem | null {
-	const title = clampText(stripImportedHtml(item.title || ""), TITLE_MAX_LENGTH);
+	const title = clampText(
+		stripImportedHtml(item.title || ""),
+		TITLE_MAX_LENGTH,
+	);
 	if (!title) return null;
 
 	const excerpt = clampText(

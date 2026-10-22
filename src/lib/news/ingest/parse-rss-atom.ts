@@ -1,5 +1,5 @@
-import type { IngestItem } from "@/lib/news/ingest/types";
 import { sanitizeIngestItem } from "@/lib/news/ingest/sanitize-import";
+import type { IngestItem } from "@/lib/news/ingest/types";
 
 function firstTag(block: string, tag: string): string {
 	const match = block.match(
@@ -16,7 +16,8 @@ function attr(block: string, tag: string, name: string): string {
 }
 
 function rssLink(block: string): string {
-	const guidIsLink = /<guid[^>]*isPermaLink=["']true["'][^>]*>([\s\S]*?)<\/guid>/i;
+	const guidIsLink =
+		/<guid[^>]*isPermaLink=["']true["'][^>]*>([\s\S]*?)<\/guid>/i;
 	const guidMatch = block.match(guidIsLink);
 	return (
 		firstTag(block, "link") ||

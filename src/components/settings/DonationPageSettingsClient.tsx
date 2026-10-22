@@ -33,16 +33,16 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DonationPageShareCard } from "@/components/settings/DonationPageShareCard";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { PageIndex } from "@/components/ui/page-index";
 import {
 	CaalmDataTable,
 	DATA_TABLE_BODY_ROW_BASE,
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
 } from "@/components/ui/caalm-data-table";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { PageIndex } from "@/components/ui/page-index";
 import {
 	TableBody,
 	TableCell,
@@ -1041,87 +1041,78 @@ export function DonationPageSettingsClient({
 						) : (
 							<>
 								<CaalmDataTable className="pb-2">
-										<TableHeader className="[&_tr]:border-b-0">
-											<TableRow className={DATA_TABLE_HEADER_ROW}>
-												<TableHead
-													className={`${DATA_TABLE_HEADER_CELL} pl-4 pr-3`}
-												>
-													Version
-												</TableHead>
-												<TableHead
-													className={`${DATA_TABLE_HEADER_CELL} px-3`}
-												>
-													Status
-												</TableHead>
-												<TableHead
-													className={`${DATA_TABLE_HEADER_CELL} px-3`}
-												>
-													Published by
-												</TableHead>
-												<TableHead
-													className={`${DATA_TABLE_HEADER_CELL} px-3`}
-												>
-													Published
-												</TableHead>
-												<TableHead
-													className={`${DATA_TABLE_HEADER_CELL} pl-3 pr-4 text-right`}
-												>
-													Actions
-												</TableHead>
+									<TableHeader className="[&_tr]:border-b-0">
+										<TableRow className={DATA_TABLE_HEADER_ROW}>
+											<TableHead
+												className={`${DATA_TABLE_HEADER_CELL} pl-4 pr-3`}
+											>
+												Version
+											</TableHead>
+											<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+												Status
+											</TableHead>
+											<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+												Published by
+											</TableHead>
+											<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+												Published
+											</TableHead>
+											<TableHead
+												className={`${DATA_TABLE_HEADER_CELL} pl-3 pr-4 text-right`}
+											>
+												Actions
+											</TableHead>
+										</TableRow>
+									</TableHeader>
+									<TableBody className="[&_tr:last-child>td]:border-b-0">
+										{pagedVersions.map((v) => (
+											<TableRow
+												key={v.versionNumber}
+												className={DATA_TABLE_BODY_ROW_BASE}
+											>
+												<TableCell className="py-4 pl-4 pr-3">
+													<p className="font-medium text-slate-700">
+														{v.changeSummary || `Version ${v.versionNumber}`}
+													</p>
+													<p className="mt-0.5 text-xs text-slate-500 tabular-nums">
+														v{v.versionNumber}
+													</p>
+												</TableCell>
+												<TableCell className="px-3 py-4 whitespace-nowrap">
+													{v.isLive ? (
+														<span className="inline-block rounded-full border border-green/20 bg-green/10 px-2 py-0.5 text-xs text-green">
+															Live
+														</span>
+													) : (
+														<span className="inline-block rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
+															Previous
+														</span>
+													)}
+												</TableCell>
+												<TableCell className="px-3 py-4 text-slate-700">
+													{v.publishedByName || "Unknown"}
+												</TableCell>
+												<TableCell className="px-3 py-4 whitespace-nowrap text-slate-600">
+													{formatDistanceToNow(new Date(v.publishedAt), {
+														addSuffix: true,
+													})}
+												</TableCell>
+												<TableCell className="py-4 pl-3 pr-4 text-right">
+													{canEdit && !v.isLive ? (
+														<button
+															type="button"
+															className="cursor-pointer text-sm font-medium text-[#0f5384] hover:underline"
+															onClick={() => void handleRevert(v.versionNumber)}
+														>
+															Revert
+														</button>
+													) : (
+														<span className="text-slate-400">—</span>
+													)}
+												</TableCell>
 											</TableRow>
-										</TableHeader>
-										<TableBody className="[&_tr:last-child>td]:border-b-0">
-											{pagedVersions.map((v) => (
-												<TableRow
-													key={v.versionNumber}
-													className={DATA_TABLE_BODY_ROW_BASE}
-												>
-													<TableCell className="py-4 pl-4 pr-3">
-														<p className="font-medium text-slate-700">
-															{v.changeSummary ||
-																`Version ${v.versionNumber}`}
-														</p>
-														<p className="mt-0.5 text-xs text-slate-500 tabular-nums">
-															v{v.versionNumber}
-														</p>
-													</TableCell>
-													<TableCell className="px-3 py-4 whitespace-nowrap">
-														{v.isLive ? (
-															<span className="inline-block rounded-full border border-green/20 bg-green/10 px-2 py-0.5 text-xs font-medium text-green">
-																Live
-															</span>
-														) : (
-															<span className="inline-block rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
-																Previous
-															</span>
-														)}
-													</TableCell>
-													<TableCell className="px-3 py-4 text-slate-700">
-														{v.publishedByName || "Unknown"}
-													</TableCell>
-													<TableCell className="px-3 py-4 whitespace-nowrap text-slate-600">
-														{formatDistanceToNow(new Date(v.publishedAt), {
-															addSuffix: true,
-														})}
-													</TableCell>
-													<TableCell className="py-4 pl-3 pr-4 text-right">
-														{canEdit && !v.isLive ? (
-															<button
-																type="button"
-																className="cursor-pointer text-sm font-medium text-[#0f5384] hover:underline"
-																onClick={() =>
-																	void handleRevert(v.versionNumber)
-																}
-															>
-																Revert
-															</button>
-														) : (
-															<span className="text-slate-400">—</span>
-														)}
-													</TableCell>
-												</TableRow>
-											))}
-										</TableBody>
+										))}
+									</TableBody>
 								</CaalmDataTable>
 								<PageIndex
 									page={Math.min(versionPage, versionTotalPages)}

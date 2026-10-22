@@ -270,7 +270,7 @@ export default function SignDocumentClient({ token }: { token: string }) {
 					<p className="truncate text-sm font-medium text-slate-700">
 						{view.title}
 					</p>
-					<span className="inline-block px-2 py-0.5 text-xs rounded-full font-medium border bg-green/10 text-green border-green/20">
+					<span className="inline-block px-2 py-0.5 text-xs rounded-full border bg-green/10 text-green border-green/20">
 						Signer
 					</span>
 				</div>

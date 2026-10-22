@@ -1,0 +1,714 @@
+- generic [active] [ref=f5e1]:
+  - button "Open Next.js Dev Tools" [ref=f5e1437] [cursor=pointer]:
+    - generic [ref=f5e1440]:
+      - text: Compiling
+      - generic [ref=f5e1441]:
+        - generic [ref=f5e1442]: .
+        - generic [ref=f5e1443]: .
+        - generic [ref=f5e1444]: .
+  - alert [ref=f5e15]
+  - main [ref=f5e16]:
+    - generic [ref=f5e17]:
+      - complementary [ref=f5e18]:
+        - generic [ref=f5e19]:
+          - link "CAALM CAALM" [ref=f5e20] [cursor=pointer]:
+            - /url: /
+            - img "CAALM" [ref=f5e22]
+            - generic [ref=f5e23]: CAALM
+          - button "Collapse sidebar" [expanded] [ref=f5e24] [cursor=pointer]
+        - navigation [ref=f5e27]:
+          - list [ref=f5e28]:
+            - generic [ref=f5e29]:
+              - generic [ref=f5e128]:
+                - listitem [ref=f5e129]:
+                  - generic [ref=f5e130]:
+                    - generic [ref=f5e131]: Super Admin
+                    - generic [ref=f5e136]: Dashboard
+                - list [ref=f5e138]:
+                  - listitem [ref=f5e139]:
+                    - link "Super Admin" [ref=f5e142] [cursor=pointer]:
+                      - /url: /dashboard/superadmin
+                      - paragraph [ref=f5e146]:
+                        - generic [ref=f5e147]: Super Admin
+                  - listitem [ref=f5e148]:
+                    - link "Department Manager" [ref=f5e151] [cursor=pointer]:
+                      - /url: /dashboard/departmentmanager
+                      - paragraph [ref=f5e156]:
+                        - generic [ref=f5e157]: Department Manager
+              - generic [ref=f5e158]:
+                - listitem [ref=f5e159]:
+                  - generic [ref=f5e160]: Calendar
+                - list [ref=f5e164]:
+                  - listitem [ref=f5e165]:
+                    - link "Calendar View" [ref=f5e168] [cursor=pointer]:
+                      - /url: /calendar
+                      - paragraph [ref=f5e170]:
+                        - generic [ref=f5e171]: Calendar View
+                  - listitem [ref=f5e172]:
+                    - link "Event Check-in" [ref=f5e175] [cursor=pointer]:
+                      - /url: /events/check-in
+                      - paragraph [ref=f5e177]:
+                        - generic [ref=f5e178]: Event Check-in
+              - generic [ref=f5e179]:
+                - listitem [ref=f5e180]:
+                  - generic [ref=f5e181]: Contracts
+                - list [ref=f5e185]:
+                  - listitem [ref=f5e186]:
+                    - link "All Contracts" [ref=f5e189] [cursor=pointer]:
+                      - /url: /contracts
+                      - paragraph [ref=f5e191]:
+                        - generic [ref=f5e192]: All Contracts
+                  - listitem [ref=f5e193]:
+                    - link "Import" [ref=f5e196] [cursor=pointer]:
+                      - /url: /contracts/import
+                      - paragraph [ref=f5e198]:
+                        - generic [ref=f5e199]: Import
+                  - listitem [ref=f5e200]:
+                    - link "My Contracts" [ref=f5e203] [cursor=pointer]:
+                      - /url: /my-contracts
+                      - paragraph [ref=f5e205]:
+                        - generic [ref=f5e206]: My Contracts
+                  - listitem [ref=f5e207]:
+                    - link "Proposals & Approvals" [ref=f5e210] [cursor=pointer]:
+                      - /url: /contracts/approvals
+                      - paragraph [ref=f5e212]:
+                        - generic [ref=f5e213]: Proposals & Approvals
+                  - listitem [ref=f5e214]:
+                    - link "Advanced Resources" [ref=f5e217] [cursor=pointer]:
+                      - /url: /contracts/advanced-resources
+                      - paragraph [ref=f5e219]:
+                        - generic [ref=f5e220]: Advanced Resources
+                  - listitem [ref=f5e221]:
+                    - link "Create Contract" [ref=f5e224] [cursor=pointer]:
+                      - /url: /contracts/create
+                      - paragraph [ref=f5e226]:
+                        - generic [ref=f5e227]: Create Contract
+                  - listitem [ref=f5e228]:
+                    - link "Clause Library" [ref=f5e231] [cursor=pointer]:
+                      - /url: /contracts/library
+                      - paragraph [ref=f5e233]:
+                        - generic [ref=f5e234]: Clause Library
+                  - listitem [ref=f5e235]:
+                    - link "Contract Templates" [ref=f5e238] [cursor=pointer]:
+                      - /url: /contracts/templates
+                      - paragraph [ref=f5e244]:
+                        - generic [ref=f5e245]: Contract Templates
+                  - listitem [ref=f5e246]:
+                    - link "Funding & Retention" [ref=f5e249] [cursor=pointer]:
+                      - /url: /contracts/funding-retention
+                      - paragraph [ref=f5e251]:
+                        - generic [ref=f5e252]: Funding & Retention
+                  - listitem [ref=f5e253]:
+                    - link "Import obligations" [ref=f5e256] [cursor=pointer]:
+                      - /url: /funding/obligations/import
+                      - paragraph [ref=f5e258]:
+                        - generic [ref=f5e259]: Import obligations
+              - generic [ref=f5e260]:
+                - listitem [ref=f5e261]:
+                  - generic [ref=f5e262]: Licenses
+                - list [ref=f5e266]:
+                  - listitem [ref=f5e267]:
+                    - link "All Licenses" [ref=f5e270] [cursor=pointer]:
+                      - /url: /licenses
+                      - paragraph [ref=f5e272]:
+                        - generic [ref=f5e273]: All Licenses
+                  - listitem [ref=f5e274]:
+                    - link "Import" [ref=f5e277] [cursor=pointer]:
+                      - /url: /licenses/import
+                      - paragraph [ref=f5e279]:
+                        - generic [ref=f5e280]: Import
+                  - listitem [ref=f5e281]:
+                    - link "Department Licenses" [ref=f5e284] [cursor=pointer]:
+                      - /url: /licenses/department
+                      - paragraph [ref=f5e286]:
+                        - generic [ref=f5e287]: Department Licenses
+                  - listitem [ref=f5e288]:
+                    - link "Proposals & Approvals" [ref=f5e291] [cursor=pointer]:
+                      - /url: /licenses/approvals
+                      - paragraph [ref=f5e293]:
+                        - generic [ref=f5e294]: Proposals & Approvals
+              - generic [ref=f5e295]:
+                - listitem [ref=f5e296]:
+                  - generic [ref=f5e297]: Constituents
+                - list [ref=f5e301]:
+                  - listitem [ref=f5e302]:
+                    - link "All Constituents" [ref=f5e305] [cursor=pointer]:
+                      - /url: /constituents
+                      - paragraph [ref=f5e307]:
+                        - generic [ref=f5e308]: All Constituents
+                  - listitem [ref=f5e309]:
+                    - link "Import" [ref=f5e312] [cursor=pointer]:
+                      - /url: /constituents/import
+                      - paragraph [ref=f5e314]:
+                        - generic [ref=f5e315]: Import
+                  - listitem [ref=f5e316]:
+                    - link "Stewardship Queue" [ref=f5e319] [cursor=pointer]:
+                      - /url: /constituents/stewardship
+                      - paragraph [ref=f5e321]:
+                        - generic [ref=f5e322]: Stewardship Queue
+                  - listitem [ref=f5e323]:
+                    - link "Development" [ref=f5e326] [cursor=pointer]:
+                      - /url: /dashboard/development
+                      - paragraph [ref=f5e328]:
+                        - generic [ref=f5e329]: Development
+                  - listitem [ref=f5e330]:
+                    - link "Gifts" [ref=f5e333] [cursor=pointer]:
+                      - /url: /gifts
+                      - paragraph [ref=f5e335]:
+                        - generic [ref=f5e336]: Gifts
+                  - listitem [ref=f5e337]:
+                    - link "Import gifts" [ref=f5e340] [cursor=pointer]:
+                      - /url: /gifts/import
+                      - paragraph [ref=f5e342]:
+                        - generic [ref=f5e343]: Import gifts
+                  - listitem [ref=f5e344]:
+                    - link "Campaigns" [ref=f5e347] [cursor=pointer]:
+                      - /url: /campaigns
+                      - paragraph [ref=f5e349]:
+                        - generic [ref=f5e350]: Campaigns
+                  - listitem [ref=f5e351]:
+                    - link "Import campaigns" [ref=f5e354] [cursor=pointer]:
+                      - /url: /campaigns/import
+                      - paragraph [ref=f5e356]:
+                        - generic [ref=f5e357]: Import campaigns
+              - generic [ref=f5e358]:
+                - listitem [ref=f5e359]:
+                  - generic [ref=f5e360]: Audits
+                - list [ref=f5e364]:
+                  - listitem [ref=f5e365]:
+                    - link "Audit Readiness" [ref=f5e368] [cursor=pointer]:
+                      - /url: /audits/readiness
+                      - paragraph [ref=f5e370]:
+                        - generic [ref=f5e371]: Audit Readiness
+                  - listitem [ref=f5e372]:
+                    - link "Compliance Status" [ref=f5e375] [cursor=pointer]:
+                      - /url: /audits/status
+                      - paragraph [ref=f5e377]:
+                        - generic [ref=f5e378]: Compliance Status
+                  - listitem [ref=f5e379]:
+                    - link "Audit Logs" [ref=f5e382] [cursor=pointer]:
+                      - /url: /audits/audit
+                      - paragraph [ref=f5e384]:
+                        - generic [ref=f5e385]: Audit Logs
+              - generic [ref=f5e386]:
+                - listitem [ref=f5e387]:
+                  - generic [ref=f5e388]: Files
+                - list [ref=f5e392]:
+                  - listitem [ref=f5e393]:
+                    - link "Uploads" [ref=f5e396] [cursor=pointer]:
+                      - /url: /uploads
+                      - paragraph [ref=f5e398]:
+                        - generic [ref=f5e399]: Uploads
+                  - listitem [ref=f5e400]:
+                    - link "Documents" [ref=f5e403] [cursor=pointer]:
+                      - /url: /documents
+                      - paragraph [ref=f5e408]:
+                        - generic [ref=f5e409]: Documents
+                  - listitem [ref=f5e410]:
+                    - link "Images" [ref=f5e413] [cursor=pointer]:
+                      - /url: /images
+                      - paragraph [ref=f5e415]:
+                        - generic [ref=f5e416]: Images
+                  - listitem [ref=f5e417]:
+                    - link "Media" [ref=f5e420] [cursor=pointer]:
+                      - /url: /media
+                      - paragraph [ref=f5e422]:
+                        - generic [ref=f5e423]: Media
+                  - listitem [ref=f5e424]:
+                    - link "Others" [ref=f5e427] [cursor=pointer]:
+                      - /url: /others
+                      - paragraph [ref=f5e429]:
+                        - generic [ref=f5e430]: Others
+              - generic [ref=f5e431]:
+                - listitem [ref=f5e432]:
+                  - generic [ref=f5e433]: Team
+                - list [ref=f5e437]:
+                  - listitem [ref=f5e438]:
+                    - link "User Management" [ref=f5e441] [cursor=pointer]:
+                      - /url: /dashboard/user-management
+                      - paragraph [ref=f5e443]:
+                        - generic [ref=f5e444]: User Management
+                  - listitem [ref=f5e445]:
+                    - link "Import users" [ref=f5e448] [cursor=pointer]:
+                      - /url: /dashboard/user-management/import
+                      - paragraph [ref=f5e450]:
+                        - generic [ref=f5e451]: Import users
+                  - listitem [ref=f5e452]:
+                    - link "Role Management" [ref=f5e455] [cursor=pointer]:
+                      - /url: /dashboard/admin/roles
+                      - paragraph [ref=f5e457]:
+                        - generic [ref=f5e458]: Role Management
+                  - listitem [ref=f5e459]:
+                    - link "Assign Tasks" [ref=f5e462] [cursor=pointer]:
+                      - /url: /team/tasks
+                      - paragraph [ref=f5e464]:
+                        - generic [ref=f5e465]: Assign Tasks
+              - generic [ref=f5e466]:
+                - listitem [ref=f5e467]:
+                  - generic [ref=f5e468]: Reports & Analytics
+                - list [ref=f5e472]:
+                  - listitem [ref=f5e473]:
+                    - link "Overview" [ref=f5e476] [cursor=pointer]:
+                      - /url: /analytics
+                      - paragraph [ref=f5e478]:
+                        - generic [ref=f5e479]: Overview
+                  - listitem [ref=f5e480]:
+                    - link "Quick View" [ref=f5e483] [cursor=pointer]:
+                      - /url: /analytics/quick-view
+                      - paragraph [ref=f5e485]:
+                        - generic [ref=f5e486]: Quick View
+                  - listitem [ref=f5e487]:
+                    - link "C Suite" [ref=f5e490] [cursor=pointer]:
+                      - /url: /analytics/c-suite
+                      - paragraph [ref=f5e492]:
+                        - generic [ref=f5e493]: C Suite
+              - generic [ref=f5e494]:
+                - listitem [ref=f5e495]:
+                  - generic [ref=f5e496]: My Roles & Permissions
+                - list [ref=f5e500]:
+                  - listitem [ref=f5e501]:
+                    - link "View My Access" [ref=f5e504] [cursor=pointer]:
+                      - /url: /settings/permissions
+                      - paragraph [ref=f5e506]:
+                        - generic [ref=f5e507]: View My Access
+        - generic [ref=f5e32]:
+          - separator [aria-hidden] [ref=f5e33]
+          - generic [ref=f5e35]:
+            - paragraph [ref=f5e39]: Storage
+            - paragraph [ref=f5e122]: 3.6 MB of 100 GB used
+          - separator [aria-hidden] [ref=f5e43]
+          - generic [ref=f5e45]:
+            - paragraph [ref=f5e46]: Victor Ramirez
+            - generic [ref=f5e47]:
+              - generic [ref=f5e48]:
+                - paragraph [ref=f5e49]: Growth
+                - paragraph [ref=f5e123]: 42 days left in trial
+              - button "Account menu" [ref=f5e50] [cursor=pointer]
+      - generic [ref=f5e55]:
+        - generic [ref=f5e57]:
+          - generic [ref=f5e59]:
+            - button "Upload Contract" [ref=f5e508] [cursor=pointer]
+            - button "Upload License" [ref=f5e509] [cursor=pointer]
+            - button "Audit" [ref=f5e60] [cursor=pointer]
+            - button "Schedule" [ref=f5e61] [cursor=pointer]
+            - button "Report" [ref=f5e62] [cursor=pointer]
+          - generic [ref=f5e63]:
+            - button "Ask CAALM" [ref=f5e510] [cursor=pointer]
+            - generic [ref=f5e66]:
+              - button "VR" [ref=f5e69] [cursor=pointer]
+              - button "Open notifications" [ref=f5e73] [cursor=pointer]:
+                - generic "53 notifications" [ref=f5e74]: "53"
+              - button "Open mail — choose provider" [ref=f5e512] [cursor=pointer]
+              - button "Log out" [ref=f5e76] [cursor=pointer]
+        - generic [ref=f5e80]:
+          - generic [ref=f5e82]:
+            - heading "Advanced Resources" [level=1] [ref=f5e83]
+            - paragraph [ref=f5e84]: Search and explore government contract opportunities from SAM.gov
+          - generic [ref=f5e86]:
+            - generic [ref=f5e88]: Search Contracts
+            - generic [ref=f5e94]:
+              - generic [ref=f5e95]:
+                - generic [ref=f5e96]:
+                  - text: Keyword
+                  - textbox "Keyword" [ref=f5e97]:
+                    - /placeholder: Enter search terms
+                - generic [ref=f5e98]:
+                  - text: Procurement Type
+                  - combobox "Procurement Type" [ref=f5e99]:
+                    - generic: All Types
+                - generic [ref=f5e102]:
+                  - text: Set-Aside Type
+                  - combobox "Set-Aside Type" [ref=f5e103]:
+                    - generic: All Set-Asides
+                - generic [ref=f5e106]:
+                  - text: State
+                  - combobox "State" [ref=f5e107]:
+                    - generic: All states
+                - generic [ref=f5e110]:
+                  - text: Organization
+                  - textbox "Organization" [ref=f5e111]:
+                    - /placeholder: e.g., GSA, Defense, Agriculture
+                - generic [ref=f5e112]:
+                  - text: Response Due
+                  - combobox "Response Due" [ref=f5e113]:
+                    - generic: Anytime
+              - generic [ref=f5e116]:
+                - button "Search Contracts" [ref=f5e117] [cursor=pointer]
+                - button "Reset" [ref=f5e118] [cursor=pointer]
+          - generic [ref=f5e518]:
+            - generic [ref=f5e519]:
+              - generic [ref=f5e520]:
+                - paragraph [ref=f5e521]: 27,373 contracts found
+                - generic [ref=f5e522]: Live SAM.gov data
+              - generic [ref=f5e525]:
+                - combobox [ref=f5e526]:
+                  - generic: "Sort: Due date ↓"
+                - tablist "File views" [ref=f5e529]:
+                  - tab "Card view" [selected] [ref=f5e530] [cursor=pointer]
+                  - tab "Table view" [ref=f5e536] [cursor=pointer]
+            - generic [ref=f5e539]:
+              - generic [ref=f5e540]:
+                - generic [ref=f5e543] [cursor=pointer]:
+                  - generic [ref=f5e544]:
+                    - generic [ref=f5e545]: Presolicitation
+                    - paragraph [ref=f5e549]: Due Jan 4, 2027
+                  - generic [ref=f5e550]:
+                    - heading "15--RADOME, IN REPAIR/MODIFICATION OF" [level=3] [ref=f5e551]
+                    - paragraph [ref=f5e552]: "Notice ID: N0038327RQA05"
+                  - generic [ref=f5e553]: Posted Oct 20, 2026
+                  - generic [ref=f5e558]:
+                    - generic [ref=f5e559]:
+                      - button "View details" [ref=f5e560]
+                      - button "SAM.gov" [ref=f5e565]
+                    - button "Save as pursuit" [ref=f5e570]
+                - generic [ref=f5e573] [cursor=pointer]:
+                  - generic [ref=f5e574]:
+                    - generic [ref=f5e575]: Presolicitation
+                    - paragraph [ref=f5e579]: Due Dec 6, 2026
+                  - generic [ref=f5e580]:
+                    - heading "59--KEYBOARD,DATA ENTRY, IN REPAIR/MODIFICATION OF" [level=3] [ref=f5e581]
+                    - paragraph [ref=f5e582]: "Notice ID: N0038327QNA05"
+                  - generic [ref=f5e583]: Posted Oct 20, 2026
+                  - generic [ref=f5e588]:
+                    - generic [ref=f5e589]:
+                      - button "View details" [ref=f5e590]
+                      - button "SAM.gov" [ref=f5e595]
+                    - button "Save as pursuit" [ref=f5e600]
+                - generic [ref=f5e603] [cursor=pointer]:
+                  - generic [ref=f5e604]:
+                    - generic [ref=f5e605]: NONE
+                    - paragraph [ref=f5e609]: Due Nov 23, 2026
+                  - generic [ref=f5e610]:
+                    - heading "Norfolk Harbor Inner Channel to Newport News Maintenance Dredging located in Hampton Roads, Virginia" [level=3] [ref=f5e611]
+                    - paragraph [ref=f5e612]: "Notice ID: W9123627BA003"
+                  - generic [ref=f5e613]:
+                    - generic [ref=f5e614]: Virginia
+                    - generic [ref=f5e620]: Posted Oct 20, 2026
+                    - generic [ref=f5e625]: NAICS 237990
+                  - generic [ref=f5e630]:
+                    - generic [ref=f5e631]:
+                      - button "View details" [ref=f5e632]
+                      - button "SAM.gov" [ref=f5e637]
+                    - button "Save as pursuit" [ref=f5e642]
+                - generic [ref=f5e645] [cursor=pointer]:
+                  - generic [ref=f5e646]:
+                    - generic [ref=f5e647]: Presolicitation
+                    - paragraph [ref=f5e651]: Due Nov 22, 2026
+                  - generic [ref=f5e652]:
+                    - heading "15--DOOR,ACCESS,AIRCRAF, IN REPAIR/MODIFICATION OF" [level=3] [ref=f5e653]
+                    - paragraph [ref=f5e654]: "Notice ID: N0038327QMA05"
+                  - generic [ref=f5e655]: Posted Oct 20, 2026
+                  - generic [ref=f5e660]:
+                    - generic [ref=f5e661]:
+                      - button "View details" [ref=f5e662]
+                      - button "SAM.gov" [ref=f5e667]
+                    - button "Save as pursuit" [ref=f5e672]
+                - generic [ref=f5e675] [cursor=pointer]:
+                  - generic [ref=f5e676]:
+                    - generic [ref=f5e677]: Solicitation
+                    - paragraph [ref=f5e681]: Due Nov 20, 2026
+                  - generic [ref=f5e682]:
+                    - heading "PARTS KIT,BALL VALV" [level=3] [ref=f5e683]
+                    - paragraph [ref=f5e684]: "Notice ID: N0010426QNE97"
+                  - generic [ref=f5e685]:
+                    - generic [ref=f5e686]: Posted Oct 20, 2026
+                    - generic [ref=f5e691]: NAICS 332919
+                  - generic [ref=f5e696]:
+                    - generic [ref=f5e697]:
+                      - button "View details" [ref=f5e698]
+                      - button "SAM.gov" [ref=f5e703]
+                    - button "Save as pursuit" [ref=f5e708]
+                - generic [ref=f5e711] [cursor=pointer]:
+                  - generic [ref=f5e712]:
+                    - generic [ref=f5e713]: Solicitation
+                    - paragraph [ref=f5e717]: Due Nov 20, 2026
+                  - generic [ref=f5e718]:
+                    - heading "61--POWER SUPPLY" [level=3] [ref=f5e719]
+                    - paragraph [ref=f5e720]: "Notice ID: SPRMM126QKH48"
+                  - generic [ref=f5e721]:
+                    - generic [ref=f5e722]: Posted Oct 20, 2026
+                    - generic [ref=f5e727]: NAICS 335311
+                  - generic [ref=f5e732]:
+                    - generic [ref=f5e733]:
+                      - button "View details" [ref=f5e734]
+                      - button "SAM.gov" [ref=f5e739]
+                    - button "Save as pursuit" [ref=f5e744]
+                - generic [ref=f5e747] [cursor=pointer]:
+                  - generic [ref=f5e748]:
+                    - generic [ref=f5e749]: Solicitation
+                    - paragraph [ref=f5e753]: Due Nov 20, 2026
+                  - generic [ref=f5e754]:
+                    - heading "BLADE,TURBINE ENGIN" [level=3] [ref=f5e755]
+                    - paragraph [ref=f5e756]: "Notice ID: SPRMM126QHE15"
+                  - generic [ref=f5e757]:
+                    - generic [ref=f5e758]: Posted Oct 20, 2026
+                    - generic [ref=f5e763]: NAICS 333611
+                  - generic [ref=f5e768]:
+                    - generic [ref=f5e769]:
+                      - button "View details" [ref=f5e770]
+                      - button "SAM.gov" [ref=f5e775]
+                    - button "Save as pursuit" [ref=f5e780]
+                - generic [ref=f5e783] [cursor=pointer]:
+                  - generic [ref=f5e784]:
+                    - generic [ref=f5e785]: Solicitation
+                    - paragraph [ref=f5e789]: Due Nov 20, 2026
+                  - generic [ref=f5e790]:
+                    - heading "POWER SUPPLY" [level=3] [ref=f5e791]
+                    - paragraph [ref=f5e792]: "Notice ID: SPRMM127QMA02"
+                  - generic [ref=f5e793]:
+                    - generic [ref=f5e794]: Posted Oct 20, 2026
+                    - generic [ref=f5e799]: NAICS 335311
+                  - generic [ref=f5e804]:
+                    - generic [ref=f5e805]:
+                      - button "View details" [ref=f5e806]
+                      - button "SAM.gov" [ref=f5e811]
+                    - button "Save as pursuit" [ref=f5e816]
+                - generic [ref=f5e819] [cursor=pointer]:
+                  - generic [ref=f5e820]:
+                    - generic [ref=f5e821]: Small Business Set-Aside
+                    - paragraph [ref=f5e825]: Due Nov 5, 2026
+                  - generic [ref=f5e826]:
+                    - heading "TSV4 NARR MESSING AND MODERNIZATION" [level=3] [ref=f5e827]
+                    - paragraph [ref=f5e828]: "Notice ID: N0018927QL008"
+                  - generic [ref=f5e829]:
+                    - generic [ref=f5e830]: Norfolk, Virginia
+                    - generic [ref=f5e836]: Posted Oct 20, 2026
+                    - generic [ref=f5e841]: NAICS 336611
+                  - generic [ref=f5e846]:
+                    - generic [ref=f5e847]:
+                      - button "View details" [ref=f5e848]
+                      - button "SAM.gov" [ref=f5e853]
+                    - button "Save as pursuit" [ref=f5e858]
+                - generic [ref=f5e861] [cursor=pointer]:
+                  - generic [ref=f5e862]:
+                    - generic [ref=f5e863]: Small Business Set-Aside
+                    - paragraph [ref=f5e867]: Due Nov 4, 2026
+                  - generic [ref=f5e868]:
+                    - heading "A27-022 Videoscope" [level=3] [ref=f5e869]
+                    - paragraph [ref=f5e870]: "Notice ID: FA812527Q0004"
+                  - generic [ref=f5e871]:
+                    - generic [ref=f5e872]: 0, Oklahoma
+                    - generic [ref=f5e878]: Posted Oct 20, 2026
+                    - generic [ref=f5e883]: NAICS 334519
+                  - generic [ref=f5e888]:
+                    - generic [ref=f5e889]:
+                      - button "View details" [ref=f5e890]
+                      - button "SAM.gov" [ref=f5e895]
+                    - button "Save as pursuit" [ref=f5e900]
+                - generic [ref=f5e903] [cursor=pointer]:
+                  - generic [ref=f5e904]:
+                    - generic [ref=f5e905]: Solicitation
+                    - paragraph [ref=f5e909]: Due Nov 2, 2026
+                  - generic [ref=f5e910]:
+                    - heading "SERVOMECHANISM,HYDR" [level=3] [ref=f5e911]
+                    - paragraph [ref=f5e912]: "Notice ID: SPRPA127QRA23"
+                  - generic [ref=f5e913]:
+                    - generic [ref=f5e914]: Posted Oct 20, 2026
+                    - generic [ref=f5e919]: NAICS 336413
+                  - generic [ref=f5e924]:
+                    - generic [ref=f5e925]:
+                      - button "View details" [ref=f5e926]
+                      - button "SAM.gov" [ref=f5e931]
+                    - button "Save as pursuit" [ref=f5e936]
+                - generic [ref=f5e939] [cursor=pointer]:
+                  - generic [ref=f5e940]:
+                    - generic [ref=f5e941]: Combined Synopsis/Solicitation
+                    - paragraph [ref=f5e945]: Due Nov 1, 2026
+                  - generic [ref=f5e946]:
+                    - heading "41--FAN,TUBEAXIAL" [level=3] [ref=f5e947]
+                    - paragraph [ref=f5e948]: "Notice ID: SPE8E727T0235"
+                  - generic [ref=f5e949]:
+                    - generic [ref=f5e950]: Posted Oct 20, 2026
+                    - generic [ref=f5e955]: NAICS 333413
+                  - generic [ref=f5e960]:
+                    - generic [ref=f5e961]:
+                      - button "View details" [ref=f5e962]
+                      - button "SAM.gov" [ref=f5e967]
+                    - button "Save as pursuit" [ref=f5e972]
+                - generic [ref=f5e975] [cursor=pointer]:
+                  - generic [ref=f5e976]:
+                    - generic [ref=f5e977]: Sources Sought
+                    - paragraph [ref=f5e981]: Due Oct 30, 2026
+                  - generic [ref=f5e982]:
+                    - heading "P7777 ACC SARP Replacement NAS Jacksonville, Florida - Accurate Lock & Hardware" [level=3] [ref=f5e983]
+                    - paragraph [ref=f5e984]: "Notice ID: N6945027SP7777-Accurate"
+                  - generic [ref=f5e985]:
+                    - generic [ref=f5e986]: Jacksonville, Florida
+                    - generic [ref=f5e992]: Posted Oct 20, 2026
+                  - generic [ref=f5e996]:
+                    - generic [ref=f5e997]:
+                      - button "View details" [ref=f5e998]
+                      - button "SAM.gov" [ref=f5e1003]
+                    - button "Save as pursuit" [ref=f5e1008]
+                - generic [ref=f5e1011] [cursor=pointer]:
+                  - generic [ref=f5e1012]:
+                    - generic [ref=f5e1013]: 8(a) Business Development
+                    - paragraph [ref=f5e1017]: Due Oct 30, 2026
+                  - generic [ref=f5e1018]:
+                    - heading "Sources Sought-ePMO Support Services" [level=3] [ref=f5e1019]
+                    - paragraph [ref=f5e1020]: "Notice ID: W9128Z27A012"
+                  - generic [ref=f5e1021]:
+                    - generic [ref=f5e1022]: Fort Lee, Virginia
+                    - generic [ref=f5e1028]: Posted Oct 20, 2026
+                    - generic [ref=f5e1033]: NAICS 541611
+                  - generic [ref=f5e1038]:
+                    - generic [ref=f5e1039]:
+                      - button "View details" [ref=f5e1040]
+                      - button "SAM.gov" [ref=f5e1045]
+                    - button "Save as pursuit" [ref=f5e1050]
+                - generic [ref=f5e1053] [cursor=pointer]:
+                  - generic [ref=f5e1054]:
+                    - generic [ref=f5e1055]: Presolicitation
+                    - paragraph [ref=f5e1059]: Due Oct 30, 2026
+                  - generic [ref=f5e1060]:
+                    - heading "BD FACSymphony A-5 Flow Cytometer Maintenance Agreement" [level=3] [ref=f5e1061]
+                    - paragraph [ref=f5e1062]: "Notice ID: 75N98027Q00020"
+                  - generic [ref=f5e1063]:
+                    - generic [ref=f5e1064]: Bethesda, Maryland
+                    - generic [ref=f5e1070]: Posted Oct 20, 2026
+                    - generic [ref=f5e1075]: NAICS 811210
+                  - generic [ref=f5e1080]:
+                    - generic [ref=f5e1081]:
+                      - button "View details" [ref=f5e1082]
+                      - button "SAM.gov" [ref=f5e1087]
+                    - button "Save as pursuit" [ref=f5e1092]
+                - generic [ref=f5e1095] [cursor=pointer]:
+                  - generic [ref=f5e1096]:
+                    - generic [ref=f5e1097]: Special Notice
+                    - paragraph [ref=f5e1101]: Due Oct 28, 2026
+                  - generic [ref=f5e1102]:
+                    - heading "Engineering Support for the Asymmetric Systems" [level=3] [ref=f5e1103]
+                    - paragraph [ref=f5e1104]: "Notice ID: N0017827R3106"
+                  - generic [ref=f5e1105]: Posted Oct 20, 2026
+                  - generic [ref=f5e1110]:
+                    - generic [ref=f5e1111]:
+                      - button "View details" [ref=f5e1112]
+                      - button "SAM.gov" [ref=f5e1117]
+                    - button "Save as pursuit" [ref=f5e1122]
+                - generic [ref=f5e1125] [cursor=pointer]:
+                  - generic [ref=f5e1126]:
+                    - generic [ref=f5e1127]: Small Business Set-Aside
+                    - paragraph [ref=f5e1131]: Due Oct 27, 2026
+                  - generic [ref=f5e1132]:
+                    - heading "73--FUEL ADAPTER,MBU" [level=3] [ref=f5e1133]
+                    - paragraph [ref=f5e1134]: "Notice ID: SPE3SE27Q0048"
+                  - generic [ref=f5e1135]:
+                    - generic [ref=f5e1136]: Posted Oct 20, 2026
+                    - generic [ref=f5e1141]: NAICS 333241
+                  - generic [ref=f5e1146]:
+                    - generic [ref=f5e1147]:
+                      - button "View details" [ref=f5e1148]
+                      - button "SAM.gov" [ref=f5e1153]
+                    - button "Save as pursuit" [ref=f5e1158]
+                - generic [ref=f5e1161] [cursor=pointer]:
+                  - generic [ref=f5e1162]:
+                    - generic [ref=f5e1163]: Solicitation
+                    - paragraph [ref=f5e1167]: Due Oct 27, 2026
+                  - generic [ref=f5e1168]:
+                    - heading "CCA, ENGINE CONTROL" [level=3] [ref=f5e1169]
+                    - paragraph [ref=f5e1170]: "Notice ID: N0010427QLA05"
+                  - generic [ref=f5e1171]:
+                    - generic [ref=f5e1172]: Posted Oct 20, 2026
+                    - generic [ref=f5e1177]: NAICS 334290
+                  - generic [ref=f5e1182]:
+                    - generic [ref=f5e1183]:
+                      - button "View details" [ref=f5e1184]
+                      - button "SAM.gov" [ref=f5e1189]
+                    - button "Save as pursuit" [ref=f5e1194]
+                - generic [ref=f5e1197] [cursor=pointer]:
+                  - generic [ref=f5e1198]:
+                    - generic [ref=f5e1199]: Solicitation
+                    - paragraph [ref=f5e1203]: Due Oct 27, 2026
+                  - generic [ref=f5e1204]:
+                    - heading "TERMINAL BOX" [level=3] [ref=f5e1205]
+                    - paragraph [ref=f5e1206]: "Notice ID: N0010426QEH35"
+                  - generic [ref=f5e1207]:
+                    - generic [ref=f5e1208]: Posted Oct 20, 2026
+                    - generic [ref=f5e1213]: NAICS 335931
+                  - generic [ref=f5e1218]:
+                    - generic [ref=f5e1219]:
+                      - button "View details" [ref=f5e1220]
+                      - button "SAM.gov" [ref=f5e1225]
+                    - button "Save as pursuit" [ref=f5e1230]
+                - generic [ref=f5e1233] [cursor=pointer]:
+                  - generic [ref=f5e1234]:
+                    - generic [ref=f5e1235]: Special Notice
+                    - paragraph [ref=f5e1239]: Due Oct 23, 2026
+                  - generic [ref=f5e1240]:
+                    - heading "J065--FY27 Service - Medrad Provis Contract (BASE+3)" [level=3] [ref=f5e1241]
+                    - paragraph [ref=f5e1242]: "Notice ID: 36C24227Q0074"
+                  - generic [ref=f5e1243]:
+                    - generic [ref=f5e1244]: Posted Oct 20, 2026
+                    - generic [ref=f5e1249]: NAICS 811210
+                  - generic [ref=f5e1254]: Award information available
+                  - generic [ref=f5e1259]:
+                    - generic [ref=f5e1260]:
+                      - button "View details" [ref=f5e1261]
+                      - button "SAM.gov" [ref=f5e1266]
+                    - button "Save as pursuit" [ref=f5e1271]
+                - generic [ref=f5e1274] [cursor=pointer]:
+                  - generic [ref=f5e1275]:
+                    - generic [ref=f5e1276]: Solicitation
+                    - paragraph [ref=f5e1280]: Due Aug 30, 2026
+                  - generic [ref=f5e1281]:
+                    - heading "STEM,FLUID VALVE" [level=3] [ref=f5e1282]
+                    - paragraph [ref=f5e1283]: "Notice ID: N0010426QFB59"
+                  - generic [ref=f5e1284]:
+                    - generic [ref=f5e1285]: Posted Oct 20, 2026
+                    - generic [ref=f5e1290]: NAICS 332919
+                  - generic [ref=f5e1295]:
+                    - generic [ref=f5e1296]:
+                      - button "View details" [ref=f5e1297]
+                      - button "SAM.gov" [ref=f5e1302]
+                    - button "Save as pursuit" [ref=f5e1307]
+                - generic [ref=f5e1310] [cursor=pointer]:
+                  - generic [ref=f5e1311]: Award Notice
+                  - generic [ref=f5e1316]:
+                    - heading "28--HINGE,STATIONARY" [level=3] [ref=f5e1317]
+                    - paragraph [ref=f5e1318]: "Notice ID: SPE4A726RX939"
+                  - generic [ref=f5e1319]:
+                    - generic [ref=f5e1320]: Posted Oct 20, 2026
+                    - generic [ref=f5e1325]: NAICS 336412
+                  - generic [ref=f5e1330]: Award information available · $350,000
+                  - generic [ref=f5e1335]:
+                    - generic [ref=f5e1336]:
+                      - button "View details" [ref=f5e1337]
+                      - button "SAM.gov" [ref=f5e1342]
+                    - button "Save as pursuit" [ref=f5e1347]
+                - generic [ref=f5e1350] [cursor=pointer]:
+                  - generic [ref=f5e1351]: Award Notice
+                  - generic [ref=f5e1356]:
+                    - heading "43--FILTER ELEMENT,FLUID" [level=3] [ref=f5e1357]
+                    - paragraph [ref=f5e1358]: "Notice ID: SPE7M126T379N"
+                  - generic [ref=f5e1359]:
+                    - generic [ref=f5e1360]: Posted Oct 20, 2026
+                    - generic [ref=f5e1365]: NAICS 333998
+                  - generic [ref=f5e1370]: Award information available · $49,140
+                  - generic [ref=f5e1375]:
+                    - generic [ref=f5e1376]:
+                      - button "View details" [ref=f5e1377]
+                      - button "SAM.gov" [ref=f5e1382]
+                    - button "Save as pursuit" [ref=f5e1387]
+                - generic [ref=f5e1390] [cursor=pointer]:
+                  - generic [ref=f5e1391]: Award Notice
+                  - generic [ref=f5e1396]:
+                    - heading "61--DISCHARGER,BATTERY" [level=3] [ref=f5e1397]
+                    - paragraph [ref=f5e1398]: "Notice ID: SPE7L726T5014"
+                  - generic [ref=f5e1399]:
+                    - generic [ref=f5e1400]: Posted Oct 20, 2026
+                    - generic [ref=f5e1405]: NAICS 335999
+                  - generic [ref=f5e1410]: Award information available · $103,146
+                  - generic [ref=f5e1415]:
+                    - generic [ref=f5e1416]:
+                      - button "View details" [ref=f5e1417]
+                      - button "SAM.gov" [ref=f5e1422]
+                    - button "Save as pursuit" [ref=f5e1427]
+              - navigation "SAM contracts pagination" [ref=f5e1428]:
+                - generic [ref=f5e1429]: Showing 1–24 of 27373 contracts
+                - button "Previous" [disabled] [ref=f5e1430]
+                - generic [ref=f5e1433]: Page 1 of 1141
+                - button "Next" [ref=f5e1434] [cursor=pointer]
+      - region "Notifications (F8)":
+        - list
+      - button "Report an issue" [ref=f5e513] [cursor=pointer]:
+        - generic [ref=f5e514]: Report issue

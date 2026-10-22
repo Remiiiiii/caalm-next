@@ -43,9 +43,7 @@ export function combineBodyWithSignature(
 	}
 	const bodyHtml = plainTextToHtml(plainBody);
 	const safeSig = sanitizeSignatureHtml(sig);
-	const combined = bodyHtml
-		? `${bodyHtml}<br><br>${safeSig}`
-		: safeSig;
+	const combined = bodyHtml ? `${bodyHtml}<br><br>${safeSig}` : safeSig;
 	return { body: combined, contentType: "html" };
 }
 
@@ -79,7 +77,9 @@ export function extractOutlookSignatureFromHtml(
 
 	if (!signatureHtml) {
 		// Fallback: content after a classic signature delimiter
-		const delim = source.split(/<div[^>]*>--\s*<\/div>|<p>--\s*<\/p>|^--\s*$/im);
+		const delim = source.split(
+			/<div[^>]*>--\s*<\/div>|<p>--\s*<\/p>|^--\s*$/im,
+		);
 		if (delim.length > 1) {
 			signatureHtml = delim.slice(1).join("").trim();
 		}

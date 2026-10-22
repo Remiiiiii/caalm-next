@@ -1,8 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getDonationPageConfigService } from "@/lib/give/donation-page-config/runtime";
-import { getOrganizationGiveSlug } from "@/lib/give/slug";
 import { requireGiveOrgContext } from "@/lib/give/request-context";
+import { getOrganizationGiveSlug } from "@/lib/give/slug";
 import { getOrganization } from "@/lib/rbac/organizations";
 
 export async function POST(request: NextRequest) {
@@ -38,9 +38,7 @@ export async function POST(request: NextRequest) {
 		}
 
 		const origin =
-			process.env.NEXT_PUBLIC_APP_URL ||
-			process.env.NEXT_PUBLIC_SITE_URL ||
-			"";
+			process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || "";
 		const previewPath = `/give/${encodeURIComponent(giveSlug)}?donationPreview=${encodeURIComponent(token)}`;
 		const previewUrl = origin
 			? `${origin.replace(/\/$/, "")}${previewPath}`

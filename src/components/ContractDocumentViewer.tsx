@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 // import { Separator } from '@/components/ui/separator';
 import {
@@ -17,12 +17,15 @@ import {
 	Mail,
 	MapPin,
 	Phone,
+	RefreshCw,
 	Shield,
 	Sparkles,
 	Star,
 	User,
 	X,
+	type LucideIcon,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import type React from "react";
 import {
 	// useMemo,
@@ -35,10 +38,17 @@ import useSWR from "swr";
 import AssistantAvatar from "@/components/assistant/AssistantAvatar";
 import { ContractAnalysisCards } from "@/components/contract-assistant/ContractAnalysisCards";
 import type { ContractChatMessage } from "@/components/contract-assistant/ContractAssistantChat";
-import { ContractAssistantChat } from "@/components/contract-assistant/ContractAssistantChat";
+import {
+	AskCaalmComposer,
+	ContractAssistantChat,
+} from "@/components/contract-assistant/ContractAssistantChat";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { PERMISSIONS } from "@/constants/permissions";
+import { useOrganization } from "@/contexts/OrganizationContext";
+import { useToast } from "@/hooks/use-toast";
+import { usePermissions } from "@/hooks/usePermissions";
 import type { ContractStarterPrompt } from "@/lib/ai/contract-assistant.types";
 import { splitProseParagraphs } from "@/lib/ai/split-prose";
 import type { ContractAnalysis } from "@/lib/ai-contract-analyzer";
@@ -52,6 +62,57 @@ interface ContractDocumentViewerProps {
 	contractContent?: string;
 }
 
+function FactRow({
+	icon: Icon,
+	label,
+	children,
+}: {
+	icon: LucideIcon;
+	label: string;
+	children: React.ReactNode;
+}) {
+	return (
+		<div className="grid grid-cols-[1rem_1fr] items-start gap-x-2">
+			<Icon size={16} className="mt-0.5 shrink-0 text-cyan-600" />
+			<div>
+				<span className="text-sm font-medium text-gray-900">{label}</span>
+				<div className="mt-0.5">{children}</div>
+			</div>
+		</div>
+	);
+}
+
+function DueDateBadge({ dueDate }: { dueDate?: string | null }) {
+	const pill =
+		"inline-block px-2 py-0.5 text-xs rounded-full border whitespace-nowrap";
+	if (!dueDate) {
+		return (
+			<span className={`${pill} bg-slate-100 text-slate-600 border-slate-200`}>
+				N/A
+			</span>
+		);
+	}
+	const diffInDays = Math.floor(
+		(new Date(dueDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+	);
+	let tone = "bg-green/10 text-green border-green/20";
+	let text = "Upcoming";
+	if (diffInDays < 0) {
+		tone = "bg-red/10 text-red border-red/20";
+		text = "Overdue";
+	} else if (diffInDays <= 1) {
+		tone = "bg-red/10 text-red border-red/20";
+		text = "Due today";
+	} else if (diffInDays <= 3) {
+		tone = "bg-orange/10 text-orange border-orange/20";
+		text = "Due soon";
+	} else if (diffInDays <= 7) {
+		tone = "bg-blue/10 text-blue border-blue/20";
+		text = "Due this week";
+	}
+	return <span className={`${pill} ${tone}`}>{text}</span>;
+}
+
 // Using the ContractAnalysis interface from the AI analyzer
 type AIAnalysis = ContractAnalysis;
 
@@ -61,6 +122,12 @@ const ContractDocumentViewer: React.FC<ContractDocumentViewerProps> = ({
 	contract,
 	contractContent,
 }) => {
+	const router = useRouter();
+	const { orgId } = useOrganization();
+	const { permissions } = usePermissions();
+	const { toast } = useToast();
+	const canCreateProposal = permissions.includes(PERMISSIONS.PROPOSALS.CREATE);
+	const [isCreatingProposal, setIsCreatingProposal] = useState(false);
 	// Document state
 	const [content, setContent] = useState<string>("");
 	// const [zoom, setZoom] = useState<number>(100);
@@ -86,6 +153,8 @@ const ContractDocumentViewer: React.FC<ContractDocumentViewerProps> = ({
 	const [showMainDescription, setShowMainDescription] =
 		useState<boolean>(false);
 	const [showContractFacts, setShowContractFacts] = useState<boolean>(true);
+	const [activeTab, setActiveTab] = useState<"analysis" | "ask">("analysis");
+	const [analysisTime, setAnalysisTime] = useState<string | null>(null);
 
 	// SWR fetcher function
 	const fetcher = useCallback(async (url: string) => {
@@ -242,6 +311,43 @@ ${contractDetails.attachments
 		}
 	}, [contract, contractContent, generateDocumentContent]);
 
+	const handleGenerateProposal = useCallback(async () => {
+		if (!contract || !canCreateProposal) return;
+		setIsCreatingProposal(true);
+		try {
+			const res = await fetch("/api/proposals", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					...(orgId ? { "x-org-id": orgId } : {}),
+				},
+				body: JSON.stringify({
+					title: contract.title,
+					solicitationRef: contract.noticeId,
+					corpus: content || undefined,
+					linkedContractId: contract.noticeId,
+				}),
+			});
+			const data = (await res.json().catch(() => ({}))) as {
+				proposal?: { $id: string };
+				error?: string;
+			};
+			if (!res.ok || !data.proposal) {
+				throw new Error(data.error || "Could not create proposal");
+			}
+			onClose();
+			router.push(`/contracts/proposals/${data.proposal.$id}`);
+		} catch (error) {
+			toast({
+				title: "Could not start proposal",
+				description: error instanceof Error ? error.message : undefined,
+				variant: "destructive",
+			});
+		} finally {
+			setIsCreatingProposal(false);
+		}
+	}, [canCreateProposal, content, contract, onClose, orgId, router, toast]);
+
 	// Helper function to get time ago
 	const getTimeAgo = (dateString: string) => {
 		const date = new Date(dateString);
@@ -254,21 +360,6 @@ ${contractDetails.attachments
 		if (diffInDays > 1) return `${diffInDays} days ago`;
 		if (diffInDays < 0) return `in ${Math.abs(diffInDays)} days`;
 		return "Unknown";
-	};
-
-	// Helper function to get urgency indicator
-	const getUrgencyIndicator = (dueDate: string) => {
-		const due = new Date(dueDate);
-		const now = new Date();
-		const diffInMs = due.getTime() - now.getTime();
-		const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
-
-		if (diffInDays < 0) return { color: "text-red", text: "Overdue" };
-		if (diffInDays <= 1) return { color: "text-red", text: "Due today" };
-		if (diffInDays <= 3) return { color: "text-yellow-500", text: "Due soon" };
-		if (diffInDays <= 7)
-			return { color: "text-blue-500", text: "Due this week" };
-		return { color: "text-green-500", text: "Upcoming" };
 	};
 
 	// Helper function to get file icon
@@ -312,6 +403,7 @@ ${contractDetails.attachments
 	const performAIAnalysis = async () => {
 		if (!content) return;
 
+		setActiveTab("analysis");
 		setIsAnalyzing(true);
 		try {
 			console.log("Starting AI contract analysis...");
@@ -352,6 +444,9 @@ ${contractDetails.attachments
 			});
 
 			setAiAnalysis(result.analysis);
+			setAnalysisTime(
+				new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+			);
 			setStarterPrompts(result.starterPrompts || []);
 			setSuggestedQuestions(result.suggestedQuestions || []);
 			if (result.analysis?.summary) {
@@ -410,6 +505,9 @@ ${contractDetails.attachments
 			};
 
 			setAiAnalysis(fallbackAnalysis);
+			setAnalysisTime(
+				new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+			);
 		} finally {
 			setIsAnalyzing(false);
 		}
@@ -484,6 +582,11 @@ ${contractDetails.attachments
 		} finally {
 			setIsAiLoading(false);
 		}
+	};
+
+	const handleSendMessage = (question: string) => {
+		setActiveTab("ask");
+		void sendContractMessage(question);
 	};
 
 	if (!contract) return null;
@@ -632,76 +735,48 @@ ${contractDetails.attachments
 							<div className="flex flex-col lg:flex-row lg:space-x-6">
 								{/* Left Column */}
 								<div className="flex-1 space-y-4">
-									{/* Office */}
-									<div className="flex items-center gap-3">
-										<Building className="h-10 w-10 text-cyan-600" />
-										<div>
-											<div className="text-sm font-medium text-gray-900">
-												Office
-											</div>
-											<div className="text-sm text-gray-600">
-												{contract.fullParentPathName || "N/A"}
-											</div>
-											{contract.officeAddress && (
-												<div className="text-sm text-gray-600">
-													{contract.officeAddress.city},{" "}
-													{contract.officeAddress.state}{" "}
-													{contract.officeAddress.zipcode}
-												</div>
-											)}
+									<FactRow icon={Building} label="Office">
+										<div className="text-sm text-gray-600">
+											{contract.fullParentPathName || "N/A"}
 										</div>
-									</div>
+										{contract.officeAddress && (
+											<div className="text-sm text-gray-600">
+												{contract.officeAddress.city},{" "}
+												{contract.officeAddress.state}{" "}
+												{contract.officeAddress.zipcode}
+											</div>
+										)}
+									</FactRow>
 
-									{/* Notice Type */}
-									<div className="flex items-center gap-3">
-										<File className="h-4 w-4 text-cyan-600" />
-										<div>
-											<div className="text-sm font-medium text-gray-900">
-												Notice Type
-											</div>
-											<div className="text-sm text-gray-600">
-												{contract.type || "N/A"}
-											</div>
+									<FactRow icon={File} label="Notice Type">
+										<div className="text-sm text-gray-600">
+											{contract.type || "N/A"}
 										</div>
-									</div>
+									</FactRow>
 
-									{/* NAICS Code */}
-									<div className="flex items-center gap-3">
-										<File className="h-4 w-4 text-cyan-600" />
-										<div>
-											<div className="text-sm font-medium text-gray-900">
-												NAICS Code
-											</div>
-											<div className="text-sm text-gray-600">
-												{contract.naicsCode || "N/A"}
-											</div>
+									<FactRow icon={File} label="NAICS Code">
+										<div className="text-sm text-gray-600">
+											{contract.naicsCode || "N/A"}
 										</div>
-									</div>
+									</FactRow>
 
-									{/* Primary Contact */}
-									<div className="flex items-center gap-3">
-										<User className="h-4 w-4 text-cyan-600" />
-										<div>
-											<div className="text-sm font-medium text-gray-900">
-												Primary Contact
-											</div>
-											<div className="text-sm text-gray-600">
-												{contract.pointOfContact?.[0]?.fullName || "N/A"}
-											</div>
-											{contract.pointOfContact?.[0]?.email && (
-												<div className="text-xs text-gray-500 flex items-center gap-1 mt-1">
-													<Mail className="h-3 w-3" />
-													{contract.pointOfContact[0].email}
-												</div>
-											)}
-											{contract.pointOfContact?.[0]?.phone && (
-												<div className="text-xs text-gray-500 flex items-center gap-1 mt-1">
-													<Phone className="h-3 w-3" />
-													{contract.pointOfContact[0].phone}
-												</div>
-											)}
+									<FactRow icon={User} label="Primary Contact">
+										<div className="text-sm text-gray-600">
+											{contract.pointOfContact?.[0]?.fullName || "N/A"}
 										</div>
-									</div>
+										{contract.pointOfContact?.[0]?.email && (
+											<div className="mt-1 flex items-center gap-1 text-xs text-gray-500">
+												<Mail size={16} className="shrink-0" />
+												{contract.pointOfContact[0].email}
+											</div>
+										)}
+										{contract.pointOfContact?.[0]?.phone && (
+											<div className="mt-1 flex items-center gap-1 text-xs text-gray-500">
+												<Phone size={16} className="shrink-0" />
+												{contract.pointOfContact[0].phone}
+											</div>
+										)}
+									</FactRow>
 								</div>
 
 								{/* Vertical Divider */}
@@ -709,69 +784,41 @@ ${contractDetails.attachments
 
 								{/* Middle Column */}
 								<div className="flex-1 space-y-4">
-									{/* Buyer */}
-									<div className="flex items-center gap-3">
-										<Building className="h-10 w-10 text-cyan-600" />
-										<div>
-											<div className="text-sm font-medium text-gray-900">
-												Buyer
-											</div>
-											<div className="text-sm text-gray-600">
-												{contract.fullParentPathName || "N/A"}
-											</div>
+									<FactRow icon={Building} label="Buyer">
+										<div className="text-sm text-gray-600">
+											{contract.fullParentPathName || "N/A"}
 										</div>
-									</div>
+									</FactRow>
 
-									{/* Location */}
-									<div className="flex items-center gap-3">
-										<MapPin className="h-4 w-4 text-cyan-600" />
-										<div>
-											<div className="text-sm font-medium text-gray-900">
-												Location
-											</div>
-											<div className="text-sm text-gray-600">
-												{contract.placeOfPerformance?.city?.name ||
-													contract.officeAddress?.city ||
-													"N/A"}
-											</div>
-											<div className="text-sm text-gray-600">
-												{contract.placeOfPerformance?.state?.name ||
-													contract.officeAddress?.state ||
-													"N/A"}
-											</div>
-											<div className="text-sm text-gray-600">
-												{contract.placeOfPerformance?.zip ||
-													contract.officeAddress?.zipcode ||
-													"N/A"}
-											</div>
+									<FactRow icon={MapPin} label="Location">
+										<div className="text-sm text-gray-600">
+											{contract.placeOfPerformance?.city?.name ||
+												contract.officeAddress?.city ||
+												"N/A"}
 										</div>
-									</div>
+										<div className="text-sm text-gray-600">
+											{contract.placeOfPerformance?.state?.name ||
+												contract.officeAddress?.state ||
+												"N/A"}
+										</div>
+										<div className="text-sm text-gray-600">
+											{contract.placeOfPerformance?.zip ||
+												contract.officeAddress?.zipcode ||
+												"N/A"}
+										</div>
+									</FactRow>
 
-									{/* FPDS Code */}
-									<div className="flex items-center gap-3">
-										<File className="h-4 w-4 text-cyan-600" />
-										<div>
-											<div className="text-sm font-medium text-gray-900">
-												FPDS Code
-											</div>
-											<div className="text-sm text-gray-600">
-												{contract.classificationCode || "N/A"}
-											</div>
+									<FactRow icon={File} label="FPDS Code">
+										<div className="text-sm text-gray-600">
+											{contract.classificationCode || "N/A"}
 										</div>
-									</div>
+									</FactRow>
 
-									{/* Set Aside */}
-									<div className="flex items-center gap-3">
-										<Shield className="h-4 w-4 text-cyan-600" />
-										<div>
-											<div className="text-sm font-medium text-gray-900">
-												Set Aside
-											</div>
-											<div className="text-sm text-gray-600">
-												{contract.typeOfSetAsideDescription || "None"}
-											</div>
+									<FactRow icon={Shield} label="Set Aside">
+										<div className="text-sm text-gray-600">
+											{contract.typeOfSetAsideDescription || "None"}
 										</div>
-									</div>
+									</FactRow>
 								</div>
 
 								{/* Vertical Divider */}
@@ -821,19 +868,7 @@ ${contractDetails.attachments
 																).toLocaleDateString()
 															: "N/A"}
 													</div>
-													<div
-														className={`text-sm ${
-															contract.responseDeadLine
-																? getUrgencyIndicator(contract.responseDeadLine)
-																		.color
-																: "text-gray-500"
-														}`}
-													>
-														{contract.responseDeadLine
-															? getUrgencyIndicator(contract.responseDeadLine)
-																	.text
-															: "N/A"}
-													</div>
+													<DueDateBadge dueDate={contract.responseDeadLine} />
 												</div>
 											</div>
 										</div>
@@ -919,24 +954,125 @@ ${contractDetails.attachments
 					>
 						{/* Fixed inner width so content does not reflow while the rail opens */}
 						<div className="flex h-full w-full max-w-xl flex-col sm:w-lg lg:w-xl">
-							{/* Header pinned — matches Sheet Hide pattern */}
-							<div className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-200 bg-white/80 px-4 py-3 backdrop-blur">
-								<h3 className="flex min-w-0 items-center gap-2 font-bold sidebar-gradient-text">
-									<AssistantAvatar size="sm" alt="" />
-									<span className="truncate">CAALM Contract Assistant</span>
-								</h3>
-								<Button
-									type="button"
-									variant="ghost"
-									size="icon"
-									className="h-8 w-8 shrink-0 cursor-pointer text-slate-600 hover:bg-white/50 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
-									aria-label="Close assistant"
-									onClick={() => setShowAiPanel(false)}
-								>
-									<X className="h-4 w-4" />
-								</Button>
+							{/* ── Header (always visible) ── */}
+							<div className="shrink-0 border-b border-slate-200 bg-white/80 backdrop-blur">
+								<div className="flex items-center justify-between gap-2 px-4 py-3">
+									<h3 className="flex min-w-0 items-center gap-2 font-bold sidebar-gradient-text">
+										<AssistantAvatar size="sm" alt="" />
+										<span className="truncate">CAALM Contract Assistant</span>
+									</h3>
+									<Button
+										type="button"
+										variant="ghost"
+										size="icon"
+										className="h-8 w-8 shrink-0 cursor-pointer text-slate-600 hover:bg-white/50 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
+										aria-label="Close assistant"
+										onClick={() => setShowAiPanel(false)}
+									>
+										<X className="h-4 w-4" />
+									</Button>
+								</div>
+								{aiAnalysis && (
+									<>
+										<div className="flex items-start justify-between gap-2 px-4 pb-2">
+											<div className="min-w-0">
+												<p className="truncate text-sm font-semibold text-slate-800">
+													{contract.title}
+												</p>
+												<p className="text-xs text-slate-500">
+													{contract.fullParentPathName
+														?.split(".")
+														.slice(0, 3)
+														.map((s) =>
+															s
+																.trim()
+																.toLowerCase()
+																.replace(/\b(\w)/g, (c) => c.toUpperCase()),
+														)
+														.join(" › ")}
+													{analysisTime
+														? ` · Analyzed ${analysisTime}`
+														: ""}
+												</p>
+											</div>
+											{contract.uiLink && (
+												<a
+													href={contract.uiLink}
+													target="_blank"
+													rel="noopener noreferrer"
+													className="shrink-0 text-xs font-medium text-[#078FAB] hover:underline"
+												>
+													View on SAM.gov ↗
+												</a>
+											)}
+										</div>
+										<div className="flex items-center justify-between gap-2 px-4 pb-3">
+											<div className="flex gap-0.5 rounded-full border border-slate-200 bg-slate-100 p-0.5">
+												<button
+													type="button"
+													onClick={() => setActiveTab("analysis")}
+													className={cn(
+														"rounded-full px-4 py-1 text-xs font-semibold transition-colors",
+														activeTab === "analysis"
+															? "bg-white shadow-sm text-[#0f5384]"
+															: "text-slate-500 hover:text-slate-700",
+													)}
+												>
+													Analysis
+												</button>
+												<button
+													type="button"
+													onClick={() => setActiveTab("ask")}
+													className={cn(
+														"rounded-full px-4 py-1 text-xs font-semibold transition-colors",
+														activeTab === "ask"
+															? "bg-white shadow-sm text-[#0f5384]"
+															: "text-slate-500 hover:text-slate-700",
+													)}
+												>
+													Ask CAALM
+												</button>
+											</div>
+											<div className="flex items-center gap-1.5">
+												<Button
+													type="button"
+													variant="ghost"
+													size="icon"
+													className="h-7 w-7 text-slate-500 hover:text-slate-700"
+													onClick={() => void performAIAnalysis()}
+													disabled={isAnalyzing}
+													title="Re-run analysis"
+												>
+													{isAnalyzing ? (
+														<Loader2 className="h-3.5 w-3.5 animate-spin" />
+													) : (
+														<RefreshCw className="h-3.5 w-3.5" />
+													)}
+												</Button>
+												<Button
+													size="sm"
+													disabled={!canCreateProposal || isCreatingProposal || !contract}
+													className="btn-primary h-7 rounded-full gap-1 px-3 text-xs"
+													title={
+														canCreateProposal
+															? "Start a proposal from this solicitation"
+															: "You need permission to create proposals"
+													}
+													data-testid="generate-proposal-button"
+													onClick={() => void handleGenerateProposal()}
+												>
+													{isCreatingProposal ? (
+														<Loader2 className="h-3.5 w-3.5 animate-spin" />
+													) : null}
+													Generate proposal
+												</Button>
+											</div>
+										</div>
+									</>
+								)}
 							</div>
 
+							{/* ── Body ── */}
 							{!aiAnalysis ? (
 								<div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
 									{isAnalyzing ? (
@@ -962,43 +1098,51 @@ ${contractDetails.attachments
 										</>
 									)}
 								</div>
-							) : (
-								<div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-									<div className="min-h-0 shrink-0 overflow-y-auto p-4">
+							) : activeTab === "analysis" ? (
+								<>
+									<div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4">
 										<ContractAnalysisCards analysis={aiAnalysis} />
 									</div>
-									{/* Chat + pinned Ask CAALM input fill the rest of the panel */}
-									<div className="mx-4 mb-3 flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white">
-										<ContractAssistantChat
-											messages={contractMessages}
-											starterPrompts={starterPrompts}
-											suggestedQuestions={suggestedQuestions}
-											loading={isAiLoading}
-											analyzing={isAnalyzing}
-											onSend={sendContractMessage}
-											footer={
-												<div>
-													<div className="mb-1.5 flex items-center gap-2 text-sm font-semibold sidebar-gradient-text">
-														<FileText className="h-4 w-4 text-[#0f5384]" />
-														Proposal Generation
-													</div>
-													<Button
-														size="sm"
-														className="w-full! shadow-drop-1 primary-btn"
-														onClick={() => {
-															console.log(
-																"Generate proposal for contract:",
-																contract?.noticeId,
-															);
-														}}
+									{/* ── Footer: starter prompts + composer ── */}
+									<div className="shrink-0 space-y-3 border-t border-slate-200 bg-white p-4">
+										{starterPrompts.length > 0 && (
+											<div
+												className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+												onWheel={(e) => {
+													e.preventDefault();
+													(e.currentTarget as HTMLElement).scrollLeft += e.deltaY;
+												}}
+											>
+												{starterPrompts.map((p) => (
+													<button
+														key={p.label}
+														type="button"
+														className="caalm-chip-hover shrink-0 cursor-pointer rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium whitespace-nowrap text-slate-700 transition-all duration-200"
+														onClick={() => handleSendMessage(p.prompt)}
 													>
-														Generate Proposal
-													</Button>
-												</div>
-											}
+														{p.label}
+													</button>
+												))}
+											</div>
+										)}
+										<AskCaalmComposer
+											loading={isAiLoading || isAnalyzing}
+											onSend={handleSendMessage}
 										/>
+										<p className="text-center text-xs text-slate-500">
+											AI can make mistakes. Check answers against the notice.
+										</p>
 									</div>
-								</div>
+								</>
+							) : (
+								<ContractAssistantChat
+									messages={contractMessages}
+									starterPrompts={starterPrompts}
+									suggestedQuestions={suggestedQuestions}
+									loading={isAiLoading}
+									analyzing={isAnalyzing}
+									onSend={sendContractMessage}
+								/>
 							)}
 						</div>
 					</aside>

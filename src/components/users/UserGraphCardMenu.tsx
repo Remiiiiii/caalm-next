@@ -40,8 +40,7 @@ export function UserGraphCardMenu({
 		kind: Exclude<UserActionKind, null>,
 	) => void;
 }) {
-	const isSuspended =
-		user.status === "suspended" || user.status === "inactive";
+	const isSuspended = user.status === "suspended" || user.status === "inactive";
 	const viewingSelf = isSameUserIdentity(
 		{
 			$id: actor?.$id,

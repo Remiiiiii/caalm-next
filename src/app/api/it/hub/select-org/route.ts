@@ -1,4 +1,4 @@
-import { type NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import { requireITHubOrgContext } from "@/lib/it/require-it-hub-org";
 import { getOrganization } from "@/lib/rbac/organizations";

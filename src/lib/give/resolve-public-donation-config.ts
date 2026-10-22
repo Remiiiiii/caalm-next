@@ -2,14 +2,17 @@ import { verifyDonationPagePreviewToken } from "@/lib/give/donation-page-config/
 import { getDonationPageConfigService } from "@/lib/give/donation-page-config/runtime";
 import { DEFAULT_DONATION_PAGE_CONFIG } from "@/lib/give/donation-page-config/types";
 import {
-	toPublicDonationPageConfig,
 	type PublicDonationPageConfig,
+	toPublicDonationPageConfig,
 } from "@/lib/give/public-donation-config";
 
 export async function resolvePublicDonationConfigForOrg(
 	orgId: string,
 	options?: { previewToken?: string | null; fallbackEin?: string | null },
-): Promise<{ config: PublicDonationPageConfig; source: "draft" | "published" }> {
+): Promise<{
+	config: PublicDonationPageConfig;
+	source: "draft" | "published";
+}> {
 	const service = getDonationPageConfigService();
 	const previewToken = options?.previewToken?.trim();
 	if (previewToken) {

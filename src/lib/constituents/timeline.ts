@@ -29,7 +29,8 @@ function mentionsConstituent(
 
 function toAgreement(row: Record<string, unknown>): DerivedAgreement {
 	const type = String(row.contractType || row.type || "").toLowerCase();
-	const kind = type === "grant" || type.includes("grant") ? "grant" : "contract";
+	const kind =
+		type === "grant" || type.includes("grant") ? "grant" : "contract";
 	const name = String(row.name || row.title || "Agreement");
 	return {
 		$id: String(row.$id),
@@ -55,10 +56,7 @@ export async function listDerivedAgreements(
 		const result = await tablesDB.listRows({
 			databaseId: appwriteConfig.databaseId,
 			tableId,
-			queries: [
-				Query.equal("orgId", constituent.orgId),
-				Query.limit(100),
-			],
+			queries: [Query.equal("orgId", constituent.orgId), Query.limit(100)],
 		});
 		return (result.rows as unknown as Record<string, unknown>[])
 			.filter((row) => mentionsConstituent(row, constituent))

@@ -3,8 +3,7 @@ import { sanitizeNoteHtml } from "@/lib/sanitize-note-html";
 
 describe("sanitizeNoteHtml", () => {
 	it("keeps bullet and numbered lists", () => {
-		const html =
-			"<ul><li>First</li><li>Second</li></ul><ol><li>One</li></ol>";
+		const html = "<ul><li>First</li><li>Second</li></ul><ol><li>One</li></ol>";
 		const clean = sanitizeNoteHtml(html);
 		expect(clean).toContain("<ul>");
 		expect(clean).toContain("<li>First</li>");

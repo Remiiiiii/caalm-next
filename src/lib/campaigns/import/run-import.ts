@@ -39,7 +39,11 @@ export async function dryRunCampaignImport(
 export async function commitCampaignImport(
 	orgId: string,
 	rows: MappedCampaignImportRow[],
-): Promise<{ createdCount: number; skippedCount: number; failedCount: number }> {
+): Promise<{
+	createdCount: number;
+	skippedCount: number;
+	failedCount: number;
+}> {
 	const dry = await dryRunCampaignImport(orgId, rows);
 	const toCreate = new Set(
 		dry.rows.filter((r) => r.action === "create").map((r) => r.rowNumber),

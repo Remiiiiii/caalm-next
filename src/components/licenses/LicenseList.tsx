@@ -1,6 +1,5 @@
 "use client";
 
-import * as VisuallyHiddenPrimitive from "@radix-ui/react-visually-hidden";
 import {
 	Calendar,
 	Info,
@@ -12,22 +11,22 @@ import {
 	Trash2,
 } from "lucide-react";
 import { useState } from "react";
+import { AppDialog } from "@/components/ui/app-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import {
-	AppDropdownMenuContent,
-	AppDropdownMenuItem,
-	DropdownMenu,
-	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
 	CaalmDataTable,
 	DATA_TABLE_BODY_ROW_BASE,
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
 } from "@/components/ui/caalm-data-table";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+	AppDropdownMenuContent,
+	AppDropdownMenuItem,
+	DropdownMenu,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
 	TableBody,
 	TableCell,
@@ -41,6 +40,7 @@ import { cn } from "@/lib/utils";
 import type { License } from "@/types/licenses";
 
 const rowPad = "px-3 py-3 align-middle";
+
 import LicenseAllocationDialog from "./LicenseAllocationDialog";
 import LicenseDetailView from "./LicenseDetailView";
 import LicenseForm from "./LicenseForm";
@@ -117,226 +117,210 @@ export default function LicenseList({ licenses, onRefresh }: LicenseListProps) {
 		<Card className="glass-card">
 			<div className="glass-card-cap" />
 			<CardContent className="p-4 sm:p-6">
-				<CaalmDataTable className="px-0 sm:px-0 pb-0">
-						<TableHeader className="[&_tr]:border-b-0">
-							<TableRow className={DATA_TABLE_HEADER_ROW}>
-								<TableHead
-									className={cn(DATA_TABLE_HEADER_CELL, "pl-4 pr-3")}
-								>
-									License Name
-								</TableHead>
-								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
-									Vendor
-								</TableHead>
-								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
-									Type
-								</TableHead>
-								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
-									Status
-								</TableHead>
-								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
-									Quantity
-								</TableHead>
-								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
-									Cost
-								</TableHead>
-								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
-									Expires
-								</TableHead>
-								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
-									Department
-								</TableHead>
-								<TableHead
-									className={cn(
-										DATA_TABLE_HEADER_CELL,
-										"pl-3 pr-4 text-right",
+				<CaalmDataTable className="pb-0">
+					<TableHeader className="[&_tr]:border-b-0">
+						<TableRow className={DATA_TABLE_HEADER_ROW}>
+							<TableHead className={cn(DATA_TABLE_HEADER_CELL, "pl-4 pr-3")}>
+								License Name
+							</TableHead>
+							<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+								Vendor
+							</TableHead>
+							<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+								Type
+							</TableHead>
+							<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+								Status
+							</TableHead>
+							<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+								Quantity
+							</TableHead>
+							<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+								Cost
+							</TableHead>
+							<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+								Expires
+							</TableHead>
+							<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+								Department
+							</TableHead>
+							<TableHead
+								className={cn(DATA_TABLE_HEADER_CELL, "pl-3 pr-4 text-right")}
+							>
+								Actions
+							</TableHead>
+						</TableRow>
+					</TableHeader>
+					<TableBody className="[&_tr:last-child>td]:border-b-0">
+						{licenses.map((license) => (
+							<TableRow key={license.$id} className={DATA_TABLE_BODY_ROW_BASE}>
+								<TableCell className={cn(rowPad, "pl-4 pr-3")}>
+									<div className="flex items-center gap-2">
+										<Key className="h-4 w-4 text-slate-600" />
+										<span className="font-medium text-slate-700">
+											{license.licenseName}
+										</span>
+									</div>
+									{license.licenseNumber && (
+										<p className="text-xs text-slate-500 mt-1">
+											#{license.licenseNumber}
+										</p>
 									)}
-								>
-									Actions
-								</TableHead>
-							</TableRow>
-						</TableHeader>
-						<TableBody className="[&_tr:last-child>td]:border-b-0">
-							{licenses.map((license) => (
-								<TableRow
-									key={license.$id}
-									className={DATA_TABLE_BODY_ROW_BASE}
-								>
-									<TableCell className={cn(rowPad, "pl-4 pr-3")}>
-										<div className="flex items-center gap-2">
-											<Key className="h-4 w-4 text-slate-600" />
-											<span className="font-medium text-slate-700">
-												{license.licenseName}
+								</TableCell>
+								<TableCell className={cn(rowPad, "text-slate-700")}>
+									{license.vendor || "N/A"}
+								</TableCell>
+								<TableCell className={rowPad}>
+									<Badge variant="outline" className="text-slate-700">
+										{license.licenseType || "N/A"}
+									</Badge>
+								</TableCell>
+								<TableCell className={rowPad}>
+									{getStatusBadge(license.status)}
+								</TableCell>
+								<TableCell className={cn(rowPad, "text-slate-700")}>
+									{license.quantity !== undefined ? (
+										<div>
+											<span>
+												{license.availableQuantity ?? license.quantity}
 											</span>
-										</div>
-										{license.licenseNumber && (
-											<p className="text-xs text-slate-500 mt-1">
-												#{license.licenseNumber}
-											</p>
-										)}
-									</TableCell>
-									<TableCell className={cn(rowPad, "text-slate-700")}>
-										{license.vendor || "N/A"}
-									</TableCell>
-									<TableCell className={rowPad}>
-										<Badge variant="outline" className="text-slate-700">
-											{license.licenseType || "N/A"}
-										</Badge>
-									</TableCell>
-									<TableCell className={rowPad}>
-										{getStatusBadge(license.status)}
-									</TableCell>
-									<TableCell className={cn(rowPad, "text-slate-700")}>
-										{license.quantity !== undefined ? (
-											<div>
-												<span>
-													{license.availableQuantity ?? license.quantity}
+											{license.quantity > 0 && (
+												<span className="text-slate-500">
+													{" "}
+													/ {license.quantity}
 												</span>
-												{license.quantity > 0 && (
-													<span className="text-slate-500">
-														{" "}
-														/ {license.quantity}
-													</span>
-												)}
-											</div>
-										) : (
-											"N/A"
-										)}
-									</TableCell>
-									<TableCell className={cn(rowPad, "text-slate-700")}>
-										{formatCurrency(license.cost, license.currencyCode)}
-									</TableCell>
-									<TableCell className={rowPad}>
-										<div className="flex items-center gap-1.5">
-											<Calendar className="h-3 w-3 text-slate-500" />
-											<span className="text-slate-700">
-												{formatDate(
-													license.licenseExpiryDate || license.expirationDate,
-												)}
-											</span>
+											)}
 										</div>
-									</TableCell>
-									<TableCell className={cn(rowPad, "text-slate-700")}>
-										{license.division || license.department || "N/A"}
-									</TableCell>
-									<TableCell className={cn(rowPad, "pl-3 pr-4 text-right")}>
-										<DropdownMenu>
-											<DropdownMenuTrigger asChild>
-												<Button
-													variant="ghost"
-													size="sm"
-													className="h-8 w-8 rounded-full p-0 transition-colors hover:bg-white/30"
+									) : (
+										"N/A"
+									)}
+								</TableCell>
+								<TableCell className={cn(rowPad, "text-slate-700")}>
+									{formatCurrency(license.cost, license.currencyCode)}
+								</TableCell>
+								<TableCell className={rowPad}>
+									<div className="flex items-center gap-1.5">
+										<Calendar className="h-3 w-3 text-slate-500" />
+										<span className="text-slate-700">
+											{formatDate(
+												license.licenseExpiryDate || license.expirationDate,
+											)}
+										</span>
+									</div>
+								</TableCell>
+								<TableCell className={cn(rowPad, "text-slate-700")}>
+									{license.division || license.department || "N/A"}
+								</TableCell>
+								<TableCell className={cn(rowPad, "pl-3 pr-4 text-right")}>
+									<DropdownMenu>
+										<DropdownMenuTrigger asChild>
+											<Button
+												variant="ghost"
+												size="sm"
+												className="h-8 w-8 rounded-full p-0 transition-colors hover:bg-white/30"
+											>
+												<MoreVertical className="h-4 w-4" />
+											</Button>
+										</DropdownMenuTrigger>
+										<AppDropdownMenuContent align="end">
+											{canView && (
+												<AppDropdownMenuItem
+													icon={Info}
+													onClick={() => {
+														setSelectedLicense(license);
+														setShowDetail(true);
+													}}
 												>
-													<MoreVertical className="h-4 w-4" />
-												</Button>
-											</DropdownMenuTrigger>
-											<AppDropdownMenuContent align="end">
-												{canView && (
-													<AppDropdownMenuItem
-														icon={Info}
-														onClick={() => {
-															setSelectedLicense(license);
-															setShowDetail(true);
-														}}
-													>
-														View Details
-													</AppDropdownMenuItem>
-												)}
-												{canEdit && (
-													<AppDropdownMenuItem
-														icon={Pencil}
-														onClick={() => {
-															setSelectedLicense(license);
-															setShowEdit(true);
-														}}
-													>
-														Edit
-													</AppDropdownMenuItem>
-												)}
-												{canAllocate && (
-													<AppDropdownMenuItem
-														icon={Key}
-														onClick={() => {
-															setSelectedLicense(license);
-															setShowAllocate(true);
-														}}
-													>
-														Allocate
-													</AppDropdownMenuItem>
-												)}
-												{canRenew && (
-													<AppDropdownMenuItem
-														icon={RefreshCw}
-														onClick={() => {
-															setSelectedLicense(license);
-															setShowRenew(true);
-														}}
-													>
-														Renew
-													</AppDropdownMenuItem>
-												)}
-												{canDelete && (
-													<AppDropdownMenuItem icon={Trash2} tone="danger">
-														Delete
-													</AppDropdownMenuItem>
-												)}
-											</AppDropdownMenuContent>
-										</DropdownMenu>
-									</TableCell>
-								</TableRow>
-							))}
-						</TableBody>
+													View Details
+												</AppDropdownMenuItem>
+											)}
+											{canEdit && (
+												<AppDropdownMenuItem
+													icon={Pencil}
+													onClick={() => {
+														setSelectedLicense(license);
+														setShowEdit(true);
+													}}
+												>
+													Edit
+												</AppDropdownMenuItem>
+											)}
+											{canAllocate && (
+												<AppDropdownMenuItem
+													icon={Key}
+													onClick={() => {
+														setSelectedLicense(license);
+														setShowAllocate(true);
+													}}
+												>
+													Allocate
+												</AppDropdownMenuItem>
+											)}
+											{canRenew && (
+												<AppDropdownMenuItem
+													icon={RefreshCw}
+													onClick={() => {
+														setSelectedLicense(license);
+														setShowRenew(true);
+													}}
+												>
+													Renew
+												</AppDropdownMenuItem>
+											)}
+											{canDelete && (
+												<AppDropdownMenuItem icon={Trash2} tone="danger">
+													Delete
+												</AppDropdownMenuItem>
+											)}
+										</AppDropdownMenuContent>
+									</DropdownMenu>
+								</TableCell>
+							</TableRow>
+						))}
+					</TableBody>
 				</CaalmDataTable>
 			</CardContent>
 
 			{selectedLicense && (
 				<>
 					{showDetail && (
-						<Dialog open={showDetail} onOpenChange={setShowDetail}>
-							<DialogContent className="flex max-h-[90vh] max-w-[800px] flex-col overflow-hidden p-0 shadow-xl">
-								<VisuallyHiddenPrimitive.Root>
-									<DialogTitle>License Details</DialogTitle>
-								</VisuallyHiddenPrimitive.Root>
-								<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-								<div className="glass-dialog-wizard-header mt-4">
-									<div className="flex items-center gap-2 px-6">
-										<Info className="h-5 w-5 text-[#0f5384]" />
-										<h2 className="text-xl font-semibold sidebar-gradient-text">
-											License Details
-										</h2>
-									</div>
-									<p className="text-sm text-slate-600 mt-1 ml-14">
-										View license information
-									</p>
-								</div>
-								<div className="flex-1 overflow-y-auto px-6 py-4 space-y-6 bg-slate-50">
-									<LicenseDetailView
-										license={selectedLicense}
-										onEdit={
-											canEdit
-												? () => {
-														setShowDetail(false);
-														setShowEdit(true);
-													}
-												: undefined
-										}
-									/>
-								</div>
-								<div className="glass-dialog-alert-footer">
-									<div className="text-xs text-slate-500">
+						<AppDialog
+							open={showDetail}
+							onOpenChange={setShowDetail}
+							size="form"
+							className="max-h-[90vh] max-w-[800px] shadow-xl"
+							icon={<Info className="h-5 w-5" />}
+							title="License Details"
+							description="View license information"
+							footer={
+								<>
+									<span className="mr-auto text-xs text-slate-500">
 										License details and metadata
-									</div>
+									</span>
 									<Button
+										type="button"
 										variant="outline"
+										className="rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
 										onClick={() => setShowDetail(false)}
-										className="primary-btn px-3 sm:px-4"
 									>
-										<Minimize2 className="w-4 h-4" />
+										<Minimize2 className="h-4 w-4" />
 										Close
 									</Button>
-								</div>
-							</DialogContent>
-						</Dialog>
+								</>
+							}
+						>
+							<LicenseDetailView
+								license={selectedLicense}
+								onEdit={
+									canEdit
+										? () => {
+												setShowDetail(false);
+												setShowEdit(true);
+											}
+										: undefined
+								}
+							/>
+						</AppDialog>
 					)}
 
 					{showEdit && (

@@ -12,7 +12,7 @@ describe("NPO 6.10 event roster export", () => {
 		expect(task?.title).toMatch(/roster export/i);
 	});
 
-	it("exports CSV without gift amount column", () => {
+	it("exports Excel without gift amount column", () => {
 		const route = readFileSync(
 			join(
 				process.cwd(),
@@ -20,7 +20,7 @@ describe("NPO 6.10 event roster export", () => {
 			),
 			"utf8",
 		);
-		expect(route).toMatch(/name,ticket_type,checked_in/);
+		expect(route).toMatch(/Ticket type/);
 		expect(route).not.toMatch(/amount/);
 		expect(route).toMatch(/getCalendarEventInOrg/);
 	});

@@ -44,7 +44,12 @@ export async function GET(request: NextRequest) {
 			10,
 		);
 
-		if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
+		if (
+			!Number.isInteger(year) ||
+			!Number.isInteger(month) ||
+			month < 1 ||
+			month > 12
+		) {
 			return NextResponse.json(
 				{ success: false, error: "year and month are required (month 1–12)" },
 				{ status: 400 },
@@ -65,7 +70,9 @@ export async function GET(request: NextRequest) {
 			{
 				success: false,
 				error:
-					error instanceof Error ? error.message : "Failed to load calendar notes",
+					error instanceof Error
+						? error.message
+						: "Failed to load calendar notes",
 			},
 			{ status: 500 },
 		);

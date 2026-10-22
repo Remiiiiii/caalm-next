@@ -69,7 +69,7 @@ export function UserManagementProfileSummary({
 						{user.email}
 					</p>
 					<span
-						className={`mt-2 inline-block rounded-full border px-2 py-0.5 text-xs font-medium ${statusBadgeClass}`}
+						className={`mt-2 inline-block rounded-full border px-2 py-0.5 text-xs ${statusBadgeClass}`}
 					>
 						{statusLabel}
 					</span>

@@ -15,6 +15,9 @@ export async function GET(request: NextRequest) {
 		const status = await getGmailIntegrationStatus(userId);
 		return NextResponse.json(status);
 	} catch {
-		return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+		return NextResponse.json(
+			{ error: "Authentication required" },
+			{ status: 401 },
+		);
 	}
 }

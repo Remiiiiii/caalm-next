@@ -134,7 +134,7 @@ export function RetentionBoard({
 					{onMissingFundOnlyChange ? (
 						<button
 							type="button"
-							className={`cursor-pointer rounded-full border px-3 py-1 text-xs font-medium transition-all duration-200 ${
+							className={`cursor-pointer rounded-full border px-3 py-1 text-xs transition-all duration-200 ${
 								missingFundOnly
 									? "bg-orange/10 text-orange border-orange/20"
 									: "bg-slate-100 text-slate-600 border-slate-200 hover:border-orange/20"
@@ -276,14 +276,14 @@ export function RetentionBoard({
 										<div className="mt-1 flex flex-col items-end gap-1">
 											<span
 												className={cn(
-													"inline-block rounded-full border px-2 py-0.5 text-xs font-medium",
+													"inline-block rounded-full border px-2 py-0.5 text-xs",
 													healthBadgeClass(stream.health),
 												)}
 											>
 												{RETENTION_HEALTH_LABEL[stream.health]}
 											</span>
 											{stream.missingFund ? (
-												<span className="inline-block px-2 py-0.5 text-xs rounded-full font-medium border bg-orange/10 text-orange border-orange/20">
+												<span className="inline-block px-2 py-0.5 text-xs rounded-full border bg-orange/10 text-orange border-orange/20">
 													Missing fund
 												</span>
 											) : null}

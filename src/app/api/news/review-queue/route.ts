@@ -10,8 +10,8 @@ import {
 import { dismissFeedItem } from "@/lib/database/news-feed-dismissals";
 import { logNewsAudit } from "@/lib/news/audit";
 import { serializeNewsArticle } from "@/lib/news/serialize";
-import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 import { requirePermission } from "@/lib/rbac/middleware";
+import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 
 export async function GET(request: NextRequest) {
 	const denied = await requirePermission(request, {
@@ -19,14 +19,18 @@ export async function GET(request: NextRequest) {
 	});
 	if (denied) return denied;
 	const user = await getCurrentUser();
-	if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+	if (!user)
+		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	const org = await getUserDefaultOrganization(user.$id);
 	const { articles, total } = await listNewsArticles({
 		orgId: org?.orgId,
 		status: "pending_review",
 		limit: 50,
 	});
-	return NextResponse.json({ items: articles.map(serializeNewsArticle), total });
+	return NextResponse.json({
+		items: articles.map(serializeNewsArticle),
+		total,
+	});
 }
 
 export async function POST(request: NextRequest) {
@@ -35,13 +39,17 @@ export async function POST(request: NextRequest) {
 	});
 	if (denied) return denied;
 	const user = await getCurrentUser();
-	if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+	if (!user)
+		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	const org = await getUserDefaultOrganization(user.$id);
 	const body = await request.json();
 	const ids: string[] = Array.isArray(body.ids) ? body.ids : [body.id];
 	const action: "approve" | "draft" | "dismiss" = body.action;
 	if (!ids.length || !action) {
-		return NextResponse.json({ error: "id and action are required" }, { status: 400 });
+		return NextResponse.json(
+			{ error: "id and action are required" },
+			{ status: 400 },
+		);
 	}
 
 	const results: string[] = [];
@@ -51,7 +59,7 @@ export async function POST(request: NextRequest) {
 		if (action === "dismiss") {
 			if (article.sourceFeedId && article.externalId) {
 				await dismissFeedItem({
-					orgId: article.orgId || org.orgId,
+					orgId: article.orgId || org?.orgId || "",
 					sourceFeedId: article.sourceFeedId,
 					externalId: article.externalId,
 					dismissedBy: user.$id,

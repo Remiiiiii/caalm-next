@@ -13,6 +13,7 @@ import {
 	listReadinessSnapshots,
 	parseSnapshotPayload,
 } from "@/lib/audits/readiness/snapshot.service";
+import { buildReadinessAssistantStructured } from "@/lib/audits/readiness/summary-tiles";
 import { requirePermission } from "@/lib/rbac/middleware";
 import { getOrganization } from "@/lib/rbac/organizations";
 import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
@@ -87,19 +88,34 @@ export async function POST(request: NextRequest) {
 		validated.snapshotId,
 	);
 
+	// The model is given the first 8 insights; cite those records so answers can be checked.
+	const citations = payload.summary.insights
+		.slice(0, 8)
+		.filter((insight) => insight.id !== "no-score")
+		.map((insight) => ({
+			id: insight.id,
+			title: insight.itemTitle ?? insight.title,
+			href: insight.moduleLink,
+			label: insight.moduleLabel,
+		}));
+
 	if (validated.action === "summary" || validated.action === "analyze") {
 		const summary = aiSummary || (await generateReadinessAutoSummary(payload));
 		const suggestedQuestions = payload.summary.insights
 			.slice(0, 4)
 			.map((insight) => `What should we do about: ${insight.title}?`);
+		const structured = buildReadinessAssistantStructured(payload);
+
 		return NextResponse.json({
 			success: true,
 			data: {
 				summary,
+				structured,
 				keyPoints: payload.summary.insights.slice(0, 5).map((i) => i.title),
 				suggestedQuestions,
 				documentType: "audit_readiness",
 				topics: payload.sourcesUsed,
+				citations,
 			},
 		});
 	}
@@ -119,6 +135,6 @@ export async function POST(request: NextRequest) {
 
 	return NextResponse.json({
 		success: true,
-		data: answer,
+		data: { ...answer, citations },
 	});
 }

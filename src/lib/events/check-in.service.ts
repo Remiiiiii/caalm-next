@@ -22,9 +22,7 @@ export type CheckInRegistrationResult =
 			ok: false;
 			status: 400 | 404 | 409;
 			error: string;
-			reason?: VerifyRegistrationTokenResult extends { ok: false }
-				? VerifyRegistrationTokenResult["reason"]
-				: never;
+			reason?: Extract<VerifyRegistrationTokenResult, { ok: false }>["reason"];
 	  };
 
 function guestDisplayName(reg: {
@@ -47,13 +45,23 @@ export async function checkInWithRegistrationToken(input: {
 }): Promise<CheckInRegistrationResult> {
 	const registrationIdGuess = input.token.split(".")[0];
 	if (!registrationIdGuess) {
-		return { ok: false, status: 400, error: "Invalid token", reason: "invalid" };
+		return {
+			ok: false,
+			status: 400,
+			error: "Invalid token",
+			reason: "invalid",
+		};
 	}
 
 	// Load registration first so we can pass tokenUsedAt into verify.
 	const orgIdFromToken = input.token.split(".")[1];
 	if (!orgIdFromToken) {
-		return { ok: false, status: 400, error: "Invalid token", reason: "invalid" };
+		return {
+			ok: false,
+			status: 400,
+			error: "Invalid token",
+			reason: "invalid",
+		};
 	}
 
 	const registration = await getRegistrationById(
@@ -85,7 +93,12 @@ export async function checkInWithRegistrationToken(input: {
 	}
 
 	if (verified.parsed.orgId !== registration.orgId) {
-		return { ok: false, status: 400, error: "Invalid token", reason: "invalid" };
+		return {
+			ok: false,
+			status: 400,
+			error: "Invalid token",
+			reason: "invalid",
+		};
 	}
 
 	if (registration.checkedInAt) {

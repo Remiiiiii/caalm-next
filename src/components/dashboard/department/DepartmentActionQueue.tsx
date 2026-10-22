@@ -118,7 +118,7 @@ export function DepartmentActionQueue({
 										</span>
 									</span>
 									<span
-										className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide ${PRIORITY_STYLES[item.priority]}`}
+										className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide ${PRIORITY_STYLES[item.priority]}`}
 									>
 										{item.priority}
 									</span>

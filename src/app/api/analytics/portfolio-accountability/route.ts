@@ -29,8 +29,7 @@ export async function GET(request: NextRequest) {
 	const metrics = await CacheManager.withCache(
 		"analytics/portfolio-accountability",
 		cacheKey,
-		async () =>
-			computePortfolioAccountability(orgId || undefined, period),
+		async () => computePortfolioAccountability(orgId || undefined, period),
 	);
 
 	return NextResponse.json({ success: true, metrics });

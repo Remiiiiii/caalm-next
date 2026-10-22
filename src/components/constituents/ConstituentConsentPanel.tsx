@@ -38,9 +38,7 @@ export function ConstituentConsentPanel({
 	const [consentPhone, setConsentPhone] = useState(
 		channelConsentAllowed(constituent.consentPhone),
 	);
-	const [lawfulBasis, setLawfulBasis] = useState(
-		constituent.lawfulBasis ?? "",
-	);
+	const [lawfulBasis, setLawfulBasis] = useState(constituent.lawfulBasis ?? "");
 	const [saving, setSaving] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [prefUrl, setPrefUrl] = useState<string | null>(null);
@@ -91,8 +89,8 @@ export function ConstituentConsentPanel({
 					Channel consent
 				</p>
 				<p className="text-xs text-slate-600">
-					Per-channel opt-out is checked before receipts and appeals. Do-not-contact
-					still blocks every channel.
+					Per-channel opt-out is checked before receipts and appeals.
+					Do-not-contact still blocks every channel.
 				</p>
 				<div className="grid gap-3 sm:grid-cols-2">
 					{(
@@ -103,7 +101,10 @@ export function ConstituentConsentPanel({
 							["Mail", consentMail, setConsentMail],
 						] as const
 					).map(([label, value, setter]) => (
-						<div key={label} className="flex items-center justify-between gap-2">
+						<div
+							key={label}
+							className="flex items-center justify-between gap-2"
+						>
 							<Label>{label}</Label>
 							<Switch checked={value} onCheckedChange={setter} />
 						</div>
@@ -135,7 +136,11 @@ export function ConstituentConsentPanel({
 					</p>
 				) : null}
 				<div className="flex flex-wrap justify-end gap-3">
-					<Button type="button" variant="outline" onClick={() => void copyPreferenceLink()}>
+					<Button
+						type="button"
+						variant="outline"
+						onClick={() => void copyPreferenceLink()}
+					>
 						Copy preference link
 					</Button>
 					<Button

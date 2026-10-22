@@ -452,7 +452,7 @@ export function ConnectedSourcesPanel() {
 		<div className="space-y-8">
 			<section className="space-y-4">
 				<div>
-					<h3 className="text-base font-semibold text-slate-800">
+					<h3 className="text-base font-semibold text-slate-700">
 						Social accounts
 					</h3>
 					<p className="text-sm text-slate-500 mt-1">
@@ -469,7 +469,7 @@ export function ConnectedSourcesPanel() {
 
 			<section className="space-y-4">
 				<div>
-					<h3 className="text-base font-semibold text-slate-800">Feeds</h3>
+					<h3 className="text-base font-semibold text-slate-700">Feeds</h3>
 					<p className="text-sm text-slate-500 mt-1">
 						Pull articles in from RSS, Atom, or WordPress. Imported items land
 						in the Review queue.
@@ -483,7 +483,7 @@ export function ConnectedSourcesPanel() {
 							<p className="text-sm font-semibold sidebar-gradient-text">
 								Connected feeds
 							</p>
-							<span className="inline-block px-2 py-0.5 text-xs rounded-full font-medium border bg-slate-100 text-slate-600 border-slate-200">
+							<span className="inline-block px-2 py-0.5 text-xs rounded-full border bg-slate-100 text-slate-600 border-slate-200">
 								{contentFeeds.length}
 							</span>
 						</div>
@@ -589,7 +589,7 @@ export function ConnectedSourcesPanel() {
 							<div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-white/70 border border-slate-200">
 								<Rss className="h-7 w-7 text-slate-400" />
 							</div>
-							<p className="text-sm font-semibold text-slate-800">
+							<p className="text-sm font-semibold text-slate-700">
 								No feeds connected yet
 							</p>
 							<p className="mt-1 max-w-sm text-sm text-slate-500">
@@ -604,7 +604,7 @@ export function ConnectedSourcesPanel() {
 									className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6"
 								>
 									<div className="min-w-0">
-										<p className="text-sm font-medium text-slate-800">
+										<p className="text-sm font-medium text-slate-700">
 											{feed.name}
 										</p>
 										<p className="text-xs text-slate-500 truncate">
@@ -643,7 +643,7 @@ export function ConnectedSourcesPanel() {
 
 			<section className="space-y-4">
 				<div>
-					<h3 className="text-base font-semibold text-slate-800">
+					<h3 className="text-base font-semibold text-slate-700">
 						Auto-generated items
 					</h3>
 					<p className="text-sm text-slate-500 mt-1">
@@ -661,7 +661,7 @@ export function ConnectedSourcesPanel() {
 								className="flex items-start justify-between gap-4 px-4 py-4 sm:px-6"
 							>
 								<div className="min-w-0 pr-4">
-									<p className="text-sm font-medium text-slate-800">
+									<p className="text-sm font-medium text-slate-700">
 										{item.title}
 									</p>
 									<p className="mt-0.5 text-sm text-slate-500">

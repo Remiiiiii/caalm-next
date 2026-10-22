@@ -9,9 +9,7 @@ import {
 } from "./grant-budget.types";
 
 function tableId(): string {
-	return (
-		appwriteConfig.grantBudgetLinesCollectionId || "69d91702001f4e8c2b12"
-	);
+	return appwriteConfig.grantBudgetLinesCollectionId || "69d91702001f4e8c2b12";
 }
 
 function dbId(): string {

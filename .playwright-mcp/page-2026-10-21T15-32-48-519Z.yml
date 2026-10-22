@@ -1,0 +1,81 @@
+- generic [ref=f5e1]:
+  - button "Open Next.js Dev Tools" [ref=f5e7] [cursor=pointer]:
+    - generic [ref=f5e10]:
+      - text: Compiling
+      - generic [ref=f5e11]:
+        - generic [ref=f5e12]: .
+        - generic [ref=f5e13]: .
+        - generic [ref=f5e14]: .
+  - alert [ref=f5e15]
+  - main [ref=f5e16]:
+    - generic [ref=f5e17]:
+      - complementary [ref=f5e18]:
+        - generic [ref=f5e19]:
+          - link "CAALM CAALM" [ref=f5e20] [cursor=pointer]:
+            - /url: /
+            - img "CAALM" [ref=f5e22]
+            - generic [ref=f5e23]: CAALM
+          - button "Collapse sidebar" [expanded] [ref=f5e24] [cursor=pointer]
+        - navigation [ref=f5e27]:
+          - list [ref=f5e28]:
+            - generic [ref=f5e29]: Loading navigation...
+        - generic [ref=f5e32]:
+          - separator [aria-hidden] [ref=f5e33]
+          - generic [ref=f5e35]:
+            - paragraph [ref=f5e39]: Storage
+            - generic [ref=f5e40]: Loading storage…
+          - separator [aria-hidden] [ref=f5e43]
+          - generic [ref=f5e45]:
+            - paragraph [ref=f5e46]: Victor Ramirez
+            - generic [ref=f5e47]:
+              - paragraph [ref=f5e49]: Loading plan…
+              - button "Account menu" [ref=f5e50] [cursor=pointer]
+      - generic [ref=f5e55]:
+        - generic [ref=f5e57]:
+          - generic [ref=f5e59]:
+            - button "Audit" [ref=f5e60] [cursor=pointer]
+            - button "Schedule" [ref=f5e61] [cursor=pointer]
+            - button "Report" [ref=f5e62] [cursor=pointer]
+          - generic [ref=f5e66]:
+            - button "VR" [ref=f5e69] [cursor=pointer]
+            - button "Open notifications" [ref=f5e73] [cursor=pointer]:
+              - generic "53 notifications" [ref=f5e74]: "53"
+            - button "Open mail" [ref=f5e75] [cursor=pointer]
+            - button "Log out" [ref=f5e76] [cursor=pointer]
+        - generic [ref=f5e80]:
+          - generic [ref=f5e82]:
+            - heading "Advanced Resources" [level=1] [ref=f5e83]
+            - paragraph [ref=f5e84]: Search and explore government contract opportunities from SAM.gov
+          - generic [ref=f5e86]:
+            - generic [ref=f5e88]: Search Contracts
+            - generic [ref=f5e94]:
+              - generic [ref=f5e95]:
+                - generic [ref=f5e96]:
+                  - text: Keyword
+                  - textbox "Keyword" [ref=f5e97]:
+                    - /placeholder: Enter search terms
+                - generic [ref=f5e98]:
+                  - text: Procurement Type
+                  - combobox "Procurement Type" [ref=f5e99]:
+                    - generic: All Types
+                - generic [ref=f5e102]:
+                  - text: Set-Aside Type
+                  - combobox "Set-Aside Type" [ref=f5e103]:
+                    - generic: All Set-Asides
+                - generic [ref=f5e106]:
+                  - text: State
+                  - combobox "State" [ref=f5e107]:
+                    - generic: All states
+                - generic [ref=f5e110]:
+                  - text: Organization
+                  - textbox "Organization" [ref=f5e111]:
+                    - /placeholder: e.g., GSA, Defense, Agriculture
+                - generic [ref=f5e112]:
+                  - text: Response Due
+                  - combobox "Response Due" [ref=f5e113]:
+                    - generic: Anytime
+              - generic [ref=f5e116]:
+                - button "Search Contracts" [ref=f5e117] [cursor=pointer]
+                - button "Reset" [ref=f5e118] [cursor=pointer]
+      - region "Notifications (F8)":
+        - list

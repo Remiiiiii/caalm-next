@@ -12,8 +12,8 @@
  * Where / Why / When / How from each task (plain English for reviewers and sales).
  */
 
-import type { RoadmapCatalogSection } from "./types";
 import { linkedPrNumbersForPrdSection } from "./platform-readiness/prd-pr-batches";
+import type { RoadmapCatalogSection } from "./types";
 
 const PR_CONVENTION =
 	"One PR per batch (max five task codes). Title: `PRD S1 B1 Workspace data isolation (1.1–1.4)`. Branch: `cursor/platform-readiness/s01-b1-5329`. Body: for each task in the batch, paste Who, What, Where, Why, When, How, and Done when from the board. Do not mark tasks complete until merge + green Playwright + production deploy.";
@@ -173,10 +173,7 @@ const PLATFORM_READINESS_ROADMAP_SECTIONS: RoadmapCatalogSection[] = [
 					"Before marking section 1 complete",
 					"Fixture org A/B users; assert list totals and forbidden cross-reads",
 				),
-				[
-					"CI fails if all_org query drops orgId",
-					"Documented in PR Done when",
-				],
+				["CI fails if all_org query drops orgId", "Documented in PR Done when"],
 			),
 			t(
 				"1.4",
@@ -351,10 +348,7 @@ const PLATFORM_READINESS_ROADMAP_SECTIONS: RoadmapCatalogSection[] = [
 					"Same section PR or follow-up",
 					"Same pattern as 3.3",
 				),
-				[
-					"Reset events show in audit filters",
-					"No silent security changes",
-				],
+				["Reset events show in audit filters", "No silent security changes"],
 			),
 		],
 	},

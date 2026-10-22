@@ -11,24 +11,24 @@ import {
 	isPendingInvitationStatus,
 } from "@/constants/status";
 import { calendarRoleFromRbacName } from "@/lib/calendar/legacyCalendarRole";
+import { listCostCenters } from "@/lib/org/org-units.service";
 import { addUserToOrganization } from "@/lib/rbac/organizations";
 import {
 	getUserDefaultOrganization,
 	getUserRoles,
 } from "@/lib/rbac/permissions";
 import { ROLE_DASHBOARD_FALLBACK } from "@/lib/rbac/role-dashboard-metadata";
-import { listCostCenters } from "@/lib/org/org-units.service";
-import CacheManager from "@/lib/services/cache-manager";
 import { logAuditEvent } from "@/lib/services/audit-logger";
+import CacheManager from "@/lib/services/cache-manager";
 import { avatarPlaceholderUrl, type UserDivision } from "../../../constants";
 import { createAdminClient, createSessionClient } from "../appwrite";
 import { appwriteConfig } from "../appwrite/config";
 import { flattenTableRow } from "../appwrite/flatten-row";
-import { listAuthPasswordUpdatesByAccountId } from "../users/auth-password-updates";
 import {
 	normalizeOrgPlacement,
 	OrgUnitValidationError,
 } from "../org/org-unit-validation";
+import { listAuthPasswordUpdatesByAccountId } from "../users/auth-password-updates";
 import { parseStringify, resolveAvatarDisplayUrl } from "../utils";
 import { triggerUserInvitationNotification } from "../utils/notificationTriggers";
 import {
@@ -170,7 +170,7 @@ export const getUserByAccountId = async (
 			// Display/compat only — calendar authz uses permission keys.
 			role: calendarRoleFromRbacName(roleName),
 			division: user.division as string | undefined,
-			status: user.status as string | undefined,
+			status: user.status as "active" | "inactive" | "suspended" | undefined,
 		};
 	} catch (error) {
 		console.error("Failed to get user by accountId:", error);
@@ -493,6 +493,42 @@ export const finalizeAccountAfterEmailVerification = async ({
 	return { accountId, userId: usersCollectionId };
 };
 
+/**
+ * After custom email OTP succeeds, mint a real Appwrite session so
+ * requireSessionUser() works for 2FA setup/verify and other gated APIs.
+ */
+async function establishAppwriteSessionForAccount(
+	accountId: string,
+): Promise<boolean> {
+	try {
+		const client = new sdk.Client()
+			.setEndpoint(appwriteConfig.endpointUrl!)
+			.setProject(appwriteConfig.projectId!)
+			.setKey(appwriteConfig.secretKey!);
+		const users = new sdk.Users(client);
+		const session = await users.createSession({ userId: accountId });
+		if (!session?.secret) {
+			throw new Error("Appwrite session missing secret");
+		}
+		const cookieStore = await cookies();
+		cookieStore.set("appwrite-session", session.secret, {
+			path: "/",
+			httpOnly: true,
+			sameSite: "lax",
+			secure: process.env.NODE_ENV === "production",
+		});
+		return true;
+	} catch (error) {
+		console.error(
+			"[SERVER] establishAppwriteSessionForAccount:",
+			error instanceof Error ? error.message : error,
+		);
+		throw new Error(
+			"Could not start your signed-in session. Please try again.",
+		);
+	}
+}
+
 export const verifyOTP = async ({
 	email,
 	otp,
@@ -525,6 +561,39 @@ export const verifyOTP = async ({
 		// Demo mode: accept fixed OTP even if DB token is missing/stale
 		if (isDemoMode() && otp === getDemoOtpCode()) {
 			await clearAuthFailures("email-otp", email);
+			let sessionEstablished = false;
+			if (accountId) {
+				sessionEstablished =
+					await establishAppwriteSessionForAccount(accountId);
+			}
+			// #region agent log
+			{
+				const jar = await cookies();
+				fetch(
+					"http://127.0.0.1:7246/ingest/851d37c7-2223-45c1-89c0-a79ca1139a1d",
+					{
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+							"X-Debug-Session-Id": "da7416",
+						},
+						body: JSON.stringify({
+							sessionId: "da7416",
+							runId: "post-fix",
+							hypothesisId: "H5",
+							location: "user.actions.ts:verifyOTP:demo",
+							message: "Demo OTP accepted; session establish attempted",
+							data: {
+								hasAccountId: Boolean(accountId),
+								sessionEstablished,
+								hasSessionCookie: Boolean(jar.get("appwrite-session")?.value),
+							},
+							timestamp: Date.now(),
+						}),
+					},
+				).catch(() => {});
+			}
+			// #endregion
 			if (accountId) {
 				return { success: true, accountId };
 			}
@@ -618,7 +687,38 @@ export const verifyOTP = async ({
 		await updatePromise;
 		await clearAuthFailures("email-otp", email);
 
-		// If accountId is provided (sign-in flow), return it for client-side session creation
+		let sessionEstablished = false;
+		if (accountId) {
+			sessionEstablished = await establishAppwriteSessionForAccount(accountId);
+		}
+
+		// #region agent log
+		{
+			const jar = await cookies();
+			fetch("http://127.0.0.1:7246/ingest/851d37c7-2223-45c1-89c0-a79ca1139a1d", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					"X-Debug-Session-Id": "da7416",
+				},
+				body: JSON.stringify({
+					sessionId: "da7416",
+					runId: "post-fix",
+					hypothesisId: "H5",
+					location: "user.actions.ts:verifyOTP:success",
+					message: "OTP verified; session cookie state before return",
+					data: {
+						hasAccountId: Boolean(accountId),
+						sessionEstablished,
+						hasSessionCookie: Boolean(jar.get("appwrite-session")?.value),
+						createsAppwriteSession: true,
+					},
+					timestamp: Date.now(),
+				}),
+			}).catch(() => {});
+		}
+		// #endregion
+
 		if (accountId) {
 			return {
 				success: true,
@@ -2187,9 +2287,7 @@ export const listUsersForManagement = async (
 			});
 		}
 
-		const costCenterById = new Map(
-			costCenters.map((cc) => [cc.$id, cc]),
-		);
+		const costCenterById = new Map(costCenters.map((cc) => [cc.$id, cc]));
 
 		const usersById = new Map<
 			string,
@@ -2315,12 +2413,15 @@ export const listUsersForManagement = async (
 					department: user.department as string | undefined,
 					division: user.division as string | undefined,
 					status: user.status as string | undefined,
-					managerUserId: (user.managerUserId as string | null | undefined) ?? null,
+					managerUserId:
+						(user.managerUserId as string | null | undefined) ?? null,
 					matrixManagerUserId:
 						(user.matrixManagerUserId as string | null | undefined) ?? null,
 					jobTitle: (user.jobTitle as string | null | undefined) || null,
-					workLocation: (user.workLocation as string | null | undefined) || null,
-					costCenterId: (user.costCenterId as string | null | undefined) || null,
+					workLocation:
+						(user.workLocation as string | null | undefined) || null,
+					costCenterId:
+						(user.costCenterId as string | null | undefined) || null,
 					costCenterCode: user.costCenterId
 						? costCenterById.get(String(user.costCenterId))?.code || null
 						: null,

@@ -6,14 +6,7 @@
 
 import { FileText, HardDrive, Package, Server } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import {
-	Cell,
-	Pie,
-	PieChart,
-	ResponsiveContainer,
-	Tooltip,
-} from "recharts";
-import { SampleDataBadge } from "@/components/ui/sample-data-badge";
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { Badge } from "@/components/ui/badge";
 import {
 	Card,
@@ -23,6 +16,7 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading";
+import { SampleDataBadge } from "@/components/ui/sample-data-badge";
 
 interface StorageMetrics {
 	configured?: boolean;
@@ -139,7 +133,9 @@ export default function StorageMetricsPage() {
 						</div>
 					</div>
 					{metrics.notice ? (
-						<p className="text-sm text-slate-600 mt-1 px-6 pb-3">{metrics.notice}</p>
+						<p className="text-sm text-slate-600 mt-1 px-6 pb-3">
+							{metrics.notice}
+						</p>
 					) : null}
 				</div>
 				<div className="flex-1 overflow-y-auto p-6 bg-slate-50 space-y-6">
@@ -243,7 +239,9 @@ export default function StorageMetricsPage() {
 						<CardContent>
 							<div className="space-y-3">
 								<div className="flex items-center justify-between">
-									<span className="text-sm">Source Code (src/ + tests + public)</span>
+									<span className="text-sm">
+										Source Code (src/ + tests + public)
+									</span>
 									<Badge variant="outline">
 										{metrics.sourceCode.size} {metrics.sourceCode.unit}
 									</Badge>

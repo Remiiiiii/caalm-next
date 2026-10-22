@@ -1,3 +1,4 @@
+import type { StyledXlsxInput } from "@/lib/export/styled-xlsx";
 import {
 	type AuditFilters,
 	getAuditLogs,
@@ -29,60 +30,51 @@ export async function getAuditStatsAction() {
 }
 
 /**
- * Export audit logs to CSV format
+ * Export audit logs as a styled workbook definition.
  */
 export async function exportAuditLogsAction(
 	filters: AuditFilters,
-): Promise<string> {
+): Promise<StyledXlsxInput> {
 	try {
 		const logs = await getAuditLogs(filters);
-
-		// Create CSV header
-		const headers = [
-			"Timestamp",
-			"Event ID",
-			"Event Title",
-			"Action",
-			"Source",
-			"User ID",
-			"User Name",
-			"User Email",
-			"IP Address",
-			"User Agent",
-			"Reason",
-			"Status",
-			"Error Message",
-			"Metadata",
-		];
-
-		// Create CSV rows
-		const rows = logs.map((log) => [
-			log.created_at || "",
-			log.event_id,
-			log.event_title,
-			log.action,
-			log.source,
-			log.user_id,
-			log.user_name,
-			log.user_email,
-			log.ip_address || "",
-			log.user_agent || "",
-			log.reason || "",
-			log.status,
-			log.error_message || "",
-			log.metadata ? JSON.stringify(log.metadata) : "",
-		]);
-
-		// Combine headers and rows
-		const csvContent = [headers, ...rows]
-			.map((row) =>
-				row
-					.map((field) => `"${field.toString().replace(/"/g, '""')}"`)
-					.join(","),
-			)
-			.join("\n");
-
-		return csvContent;
+		return {
+			sheetName: "Audit Logs",
+			title: "Audit Log Export",
+			subtitle: `CAALM · ${logs.length} event${logs.length === 1 ? "" : "s"} · Generated ${new Date().toISOString().slice(0, 10)}`,
+			columns: [
+				{ header: "Timestamp", width: 20 },
+				{ header: "Event ID", width: 28 },
+				{ header: "Event Title", width: 40 },
+				{ header: "Action", width: 16 },
+				{ header: "Source", width: 16 },
+				{ header: "User ID", width: 26 },
+				{ header: "User Name", width: 24 },
+				{ header: "User Email", width: 30 },
+				{ header: "IP Address", width: 16 },
+				{ header: "User Agent", width: 36 },
+				{ header: "Reason", width: 30 },
+				{ header: "Status", type: "status", width: 14 },
+				{ header: "Error Message", width: 36 },
+				{ header: "Metadata", width: 40 },
+			],
+			rows: logs.map((log) => [
+				(log.created_at || "").replace("T", " ").slice(0, 19),
+				log.event_id,
+				log.event_title,
+				log.action,
+				log.source,
+				log.user_id,
+				log.user_name,
+				log.user_email,
+				log.ip_address,
+				log.user_agent,
+				log.reason,
+				log.status,
+				log.error_message,
+				log.metadata ? JSON.stringify(log.metadata) : "",
+			]),
+			isPositiveStatus: (v) => v === "success",
+		};
 	} catch (error) {
 		console.error("Error in exportAuditLogsAction:", error);
 		throw error;

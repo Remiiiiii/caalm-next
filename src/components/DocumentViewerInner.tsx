@@ -377,21 +377,21 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 		// Markdown ## / # headings (Gemini-style structured summary)
 		formatted = formatted.replace(
 			/^###\s+(.+)$/gm,
-			'<strong class="mb-1 mt-3 block text-sm font-semibold text-slate-800">$1</strong>',
+			'<strong class="mb-1 mt-3 block text-sm font-semibold text-slate-700">$1</strong>',
 		);
 		formatted = formatted.replace(
 			/^##\s+(.+)$/gm,
-			'<strong class="mb-2 mt-4 block text-base font-semibold text-slate-800">$1</strong>',
+			'<strong class="mb-2 mt-4 block text-base font-semibold text-slate-700">$1</strong>',
 		);
 		formatted = formatted.replace(
 			/^#\s+(.+)$/gm,
-			'<strong class="mb-2 mt-4 block text-lg font-semibold text-slate-800">$1</strong>',
+			'<strong class="mb-2 mt-4 block text-lg font-semibold text-slate-700">$1</strong>',
 		);
 
 		// First, handle section headers like "**Key Sections to Review:**" before processing other content
 		formatted = formatted.replace(
 			/^\*\*([^*]+?)\*\*:?\s*$/gm,
-			'<strong class="mb-0 mt-3 block text-base font-semibold text-slate-800">$1</strong>',
+			'<strong class="mb-0 mt-3 block text-base font-semibold text-slate-700">$1</strong>',
 		);
 
 		// Split by double line breaks first to handle sections
@@ -411,11 +411,11 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 					let processedContent = content
 						.replace(
 							/\*\*([^*]+?)\*\*/g,
-							'<strong class="font-semibold text-slate-800">$1</strong>',
+							'<strong class="font-semibold text-slate-700">$1</strong>',
 						)
 						.replace(
 							/__([^_]+?)__/g,
-							'<strong class="font-semibold text-slate-800">$1</strong>',
+							'<strong class="font-semibold text-slate-700">$1</strong>',
 						);
 
 					// Process italic text
@@ -438,11 +438,11 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 					let processedContent = content
 						.replace(
 							/\*\*([^*]+?)\*\*/g,
-							'<strong class="font-semibold text-slate-800">$1</strong>',
+							'<strong class="font-semibold text-slate-700">$1</strong>',
 						)
 						.replace(
 							/__([^_]+?)__/g,
-							'<strong class="font-semibold text-slate-800">$1</strong>',
+							'<strong class="font-semibold text-slate-700">$1</strong>',
 						);
 
 					processedContent = processedContent
@@ -456,11 +456,11 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 			// Process any remaining bold text in regular paragraphs
 			sectionText = sectionText.replace(
 				/\*\*([^*]+?)\*\*/g,
-				'<strong class="font-semibold text-slate-800">$1</strong>',
+				'<strong class="font-semibold text-slate-700">$1</strong>',
 			);
 			sectionText = sectionText.replace(
 				/__([^_]+?)__/g,
-				'<strong class="font-semibold text-slate-800">$1</strong>',
+				'<strong class="font-semibold text-slate-700">$1</strong>',
 			);
 
 			// Process italic text
@@ -505,7 +505,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 		// Process any remaining bold text
 		formatted = formatted.replace(
 			/\*\*([^*]+?)\*\*/g,
-			'<strong class="font-semibold text-slate-800">$1</strong>',
+			'<strong class="font-semibold text-slate-700">$1</strong>',
 		);
 
 		// Process any remaining italic text
@@ -1338,7 +1338,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 													</div>
 												) : (
 													<div
-														className="text-left text-sm leading-relaxed text-slate-700 [&_strong]:text-slate-800"
+														className="text-left text-sm leading-relaxed text-slate-700 [&_strong]:text-slate-700"
 														dir="ltr"
 														dangerouslySetInnerHTML={{
 															__html: formatAIResponseHTML(

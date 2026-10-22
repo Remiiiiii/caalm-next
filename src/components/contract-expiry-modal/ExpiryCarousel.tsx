@@ -203,7 +203,7 @@ export default function ExpiryCarousel({
 						onClick={handleToggleAudio}
 						variant="outline"
 						size="icon"
-						className="glass-card text-slate-800 shadow-lg cursor-pointer"
+						className="glass-card text-slate-700 shadow-lg cursor-pointer"
 						aria-label={speechMuted ? "Unmute audio" : "Mute audio"}
 					>
 						{speechMuted ? (
@@ -217,7 +217,7 @@ export default function ExpiryCarousel({
 				</div>
 				{items.length > 1 && (
 					<div className="pointer-events-none glass-card px-4 py-2">
-						<span className="text-slate-800 text-sm font-medium">
+						<span className="text-slate-700 text-sm font-medium">
 							{currentIndex + 1} of {items.length}
 						</span>
 					</div>
@@ -231,7 +231,7 @@ export default function ExpiryCarousel({
 						onClick={handlePrevious}
 						variant="outline"
 						size="icon"
-						className="pointer-events-auto relative z-[10070] h-11 w-11 shrink-0 glass-card text-slate-800 shadow-lg cursor-pointer"
+						className="pointer-events-auto relative z-[10070] h-11 w-11 shrink-0 glass-card text-slate-700 shadow-lg cursor-pointer"
 						aria-label="Previous alert"
 					>
 						<ChevronLeft className="!h-6 !w-6" />
@@ -241,7 +241,7 @@ export default function ExpiryCarousel({
 						onClick={handleNext}
 						variant="outline"
 						size="icon"
-						className="pointer-events-auto relative z-[10070] h-11 w-11 shrink-0 glass-card text-slate-800 shadow-lg cursor-pointer"
+						className="pointer-events-auto relative z-[10070] h-11 w-11 shrink-0 glass-card text-slate-700 shadow-lg cursor-pointer"
 						aria-label="Next alert"
 					>
 						<ChevronRight className="!h-6 !w-6" />

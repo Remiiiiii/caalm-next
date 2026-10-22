@@ -614,9 +614,8 @@ export const ROADMAP_CATALOG: RoadmapCatalogSection[] = [
 				"12.1",
 				"SAML SSO",
 				"At least Okta and/or Azure AD. Do not start until PRD §1–5 complete — Settings integrations stay Coming soon until real IdP state exists.",
-				[
-				"Test IdP login succeeds through hardened auth path",
-			]),
+				["Test IdP login succeeds through hardened auth path"],
+			),
 			t("12.2", "SCIM provisioning", "Automated user lifecycle from IdP.", [
 				"SCIM create/deactivate provisions/deprovisions CAALM accounts",
 			]),

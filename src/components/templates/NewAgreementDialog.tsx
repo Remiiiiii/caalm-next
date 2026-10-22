@@ -2,8 +2,8 @@
 
 import { FilePlus } from "lucide-react";
 import { useState } from "react";
+import { AppDialog } from "@/components/ui/app-dialog";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -48,66 +48,32 @@ export function NewAgreementDialog({
 	};
 
 	return (
-		<Dialog
+		<AppDialog
 			open={open}
 			onOpenChange={(next) => {
 				if (!next) reset();
 				onOpenChange(next);
 			}}
-		>
-			<DialogContent className="flex max-h-[90vh] max-w-[600px] flex-col overflow-hidden border border-slate-200 p-0 shadow-xl">
-				<div className="absolute top-0 right-0 left-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
-				<div className="sticky top-0 z-10 mt-4 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-indigo-50 py-4">
-					<div className="flex items-center gap-3 px-6">
-						<FilePlus className="h-5 w-5 text-[#0f5384]" />
-						<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-							New agreement
-						</DialogTitle>
-					</div>
-					<p className="mt-1 ml-14 text-sm text-slate-600">
-						Starts with your organization logo, contact details, and a signature
-						block. Publish when you are ready to use it on Create contract.
-					</p>
-				</div>
-				<div className="flex-1 space-y-4 overflow-y-auto bg-slate-50 p-6">
-					<div>
-						<Label className="text-slate-700">Title</Label>
-						<Input
-							className={cn("mt-1", FIELD)}
-							value={name}
-							onChange={(event) => setName(event.target.value)}
-							placeholder="Community partner agreement"
-						/>
-					</div>
-					<div>
-						<Label className="text-slate-700">Category</Label>
-						<Select value={contractType} onValueChange={setContractType}>
-							<SelectTrigger className={cn("mt-1", FIELD)}>
-								<SelectValue />
-							</SelectTrigger>
-							<SelectContent>
-								{CONTRACT_TYPE_CONFIGS.map((row) => (
-									<SelectItem key={row.id} value={row.id}>
-										{row.label}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-					</div>
-					<div>
-						<Label className="text-slate-700">Short description</Label>
-						<Textarea
-							className={cn("mt-1 min-h-[88px]", FIELD)}
-							value={description}
-							onChange={(event) => setDescription(event.target.value)}
-							placeholder="When to use this agreement"
-						/>
-					</div>
-				</div>
-				<div className="flex items-center justify-end border-t border-slate-200 bg-slate-50 px-6 py-4">
+			size="form"
+			className="max-h-[90vh]"
+			pending={saving}
+			icon={<FilePlus className="h-5 w-5" />}
+			title="New agreement"
+			description="Starts with your organization logo, contact details, and a signature block. Publish when you are ready to use it on Create contract."
+			footer={
+				<>
 					<Button
 						type="button"
-						className="primary-btn cursor-pointer px-3 sm:px-4"
+						variant="outline"
+						className="rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+						disabled={saving}
+						onClick={() => onOpenChange(false)}
+					>
+						Cancel
+					</Button>
+					<Button
+						type="button"
+						className="btn-primary cursor-pointer px-3 sm:px-4"
 						disabled={saving || !name.trim()}
 						onClick={() =>
 							void onCreate({
@@ -120,8 +86,44 @@ export function NewAgreementDialog({
 						<FilePlus className="h-4 w-4" />
 						Create agreement
 					</Button>
+				</>
+			}
+		>
+			<div className="flex flex-col gap-4 pb-1">
+				<div>
+					<Label className="text-slate-700">Title</Label>
+					<Input
+						className={cn("mt-1", FIELD)}
+						value={name}
+						onChange={(event) => setName(event.target.value)}
+						placeholder="Community partner agreement"
+					/>
 				</div>
-			</DialogContent>
-		</Dialog>
+				<div>
+					<Label className="text-slate-700">Category</Label>
+					<Select value={contractType} onValueChange={setContractType}>
+						<SelectTrigger className={cn("mt-1", FIELD)}>
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							{CONTRACT_TYPE_CONFIGS.map((row) => (
+								<SelectItem key={row.id} value={row.id}>
+									{row.label}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				</div>
+				<div>
+					<Label className="text-slate-700">Short description</Label>
+					<Textarea
+						className={cn("mt-1 min-h-[88px]", FIELD)}
+						value={description}
+						onChange={(event) => setDescription(event.target.value)}
+						placeholder="When to use this agreement"
+					/>
+				</div>
+			</div>
+		</AppDialog>
 	);
 }

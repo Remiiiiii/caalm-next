@@ -23,11 +23,14 @@ import {
 	YAxis,
 } from "recharts";
 import useSWR from "swr";
+import { BusyIcon } from "@/components/ui/busy-icon";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { MetricStatCard } from "@/components/ui/metric-stat-card";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { useBusyAction } from "@/hooks/useBusyAction";
 import type { PortfolioAccountabilityMetrics } from "@/lib/analytics/portfolioAccountability.types";
+import { downloadXlsx } from "@/lib/export/download-xlsx";
 
 type Period = "30d" | "90d" | "1y";
 
@@ -62,66 +65,38 @@ export function PortfolioAccountabilityDashboard() {
 
 	const exportCsv = () => {
 		if (!metrics) return;
-		const escapeCsv = (value: string | number) => {
-			const str = String(value ?? "");
-			return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
-		};
-		const sections = [
-			["Portfolio accountability", metrics.periodStart, metrics.periodEnd].join(
-				",",
-			),
-			["Portfolio", "Contracts", "Licenses", "Value"].join(","),
-			[
-				"Active",
-				metrics.portfolio.contracts.active,
-				metrics.portfolio.licenses.active,
-				metrics.portfolio.totalValue,
-			]
-				.map(escapeCsv)
-				.join(","),
-			[
-				"Expired",
-				metrics.portfolio.contracts.expired,
-				metrics.portfolio.licenses.expired,
-				"",
-			]
-				.map(escapeCsv)
-				.join(","),
-			"",
-			["Root cause", "Count"].join(","),
-			...metrics.rootCause.map((row) =>
-				[row.label, row.count].map(escapeCsv).join(","),
-			),
-			"",
-			[
-				"Department",
-				"Documents",
-				"Expired",
-				"Pending attestations",
-				"Value",
-			].join(","),
-			...metrics.departments.map((row) =>
-				[
+		const { portfolio } = metrics;
+		downloadXlsx(`portfolio-accountability-${period}.xlsx`, {
+			sheetName: "Portfolio",
+			title: "Portfolio Accountability",
+			subtitle: `CAALM · ${metrics.periodStart} to ${metrics.periodEnd}`,
+			columns: [
+				{ header: "Section", width: 22 },
+				{ header: "Item", width: 34 },
+				{ header: "Count", type: "number", width: 12 },
+				{ header: "Expired", type: "number", width: 12 },
+				{ header: "Pending attestations", type: "number", width: 22 },
+				{ header: "Value", type: "currency", width: 18 },
+			],
+			rows: [
+				["Portfolio", "Active contracts", portfolio.contracts.active],
+				["Portfolio", "Active licenses", portfolio.licenses.active],
+				["Portfolio", "Expired contracts", portfolio.contracts.expired],
+				["Portfolio", "Expired licenses", portfolio.licenses.expired],
+				["Portfolio", "Total value", null, null, null, portfolio.totalValue],
+				...metrics.rootCause.map((row) => ["Root cause", row.label, row.count]),
+				...metrics.departments.map((row) => [
+					"Department",
 					row.department,
 					row.documents,
 					row.expired,
 					row.pendingAttestations,
 					row.value,
-				]
-					.map(escapeCsv)
-					.join(","),
-			),
-		];
-		const blob = new Blob([sections.join("\n")], {
-			type: "text/csv;charset=utf-8;",
+				]),
+			],
 		});
-		const href = URL.createObjectURL(blob);
-		const link = document.createElement("a");
-		link.href = href;
-		link.download = `portfolio-accountability-${period}.csv`;
-		link.click();
-		URL.revokeObjectURL(href);
 	};
+	const [runExporting, exporting] = useBusyAction(exportCsv);
 
 	if (isLoading) {
 		return (
@@ -200,9 +175,13 @@ export function PortfolioAccountabilityDashboard() {
 						<option value="90d">Last 90 days</option>
 						<option value="1y">Last year</option>
 					</select>
-					<Button className="primary-btn px-3 sm:px-4" onClick={exportCsv}>
-						<Download className="h-4 w-4" />
-						Export CSV
+					<Button
+						className="primary-btn px-3 sm:px-4"
+						disabled={exporting}
+						onClick={() => void runExporting()}
+					>
+						<BusyIcon busy={exporting} icon={Download} />
+						Export Excel
 					</Button>
 				</div>
 			</div>

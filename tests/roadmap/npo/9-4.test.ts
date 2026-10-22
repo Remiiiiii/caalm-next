@@ -24,7 +24,7 @@ describe("NPO 9.4 public give page allowlist", () => {
 			join(process.cwd(), "src/app/give/[orgSlug]/page.tsx"),
 			"utf8",
 		);
-		expect(page).toMatch(/does not sign you into CAALM/);
+		expect(page).toMatch(/(does not|doesn't) sign you into CAALM/);
 		expect(page).not.toMatch(/entitlement/i);
 	});
 });

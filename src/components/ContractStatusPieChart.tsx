@@ -486,12 +486,12 @@ const ContractStatusPieChart: React.FC<ContractStatusPieChartProps> = ({
 							<div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-1.5">
 								<span className="text-xs text-slate-500">total contracts</span>
 								{isHealthy ? (
-									<span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-green/20 bg-green/10 px-1.5 py-0.5 text-[10px] font-medium leading-none text-green">
+									<span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-green/20 bg-green/10 px-1.5 py-0.5 text-[10px] leading-none text-green">
 										<Check className="h-2.5 w-2.5" aria-hidden />
 										All contracts healthy
 									</span>
 								) : (
-									<span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-orange/20 bg-orange/10 px-1.5 py-0.5 text-[11px] font-medium leading-none text-orange">
+									<span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-orange/20 bg-orange/10 px-1.5 py-0.5 text-[11px] leading-none text-orange">
 										<AlertTriangle className="h-2.5 w-2.5" aria-hidden />
 										{needAttention} of {totalContracts} need attention
 									</span>
@@ -515,7 +515,10 @@ const ContractStatusPieChart: React.FC<ContractStatusPieChartProps> = ({
 							const count = segmentCount(tab.status);
 							const pct = segmentPct(tab.status);
 							return (
-								<div key={tab.status} className="flex min-w-0 flex-1 items-stretch">
+								<div
+									key={tab.status}
+									className="flex min-w-0 flex-1 items-stretch"
+								>
 									{index > 0 ? (
 										<div
 											className="w-px shrink-0 self-stretch bg-slate-200"

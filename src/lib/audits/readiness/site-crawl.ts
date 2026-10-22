@@ -1,3 +1,5 @@
+import { cacheSiteCrawl } from "./org-settings";
+import { captureSiteScreenshot } from "./screenshot";
 import type { SiteCrawlResult } from "./types";
 
 const USER_AGENT = "CAALM-ReadinessBot/1.0 (+https://www.caalmsolutions.com)";
@@ -125,8 +127,13 @@ export async function crawlPublicSite(
 
 	const origin = new URL(normalized).origin;
 	const robots = await fetchText(`${origin}/robots.txt`);
+	// A redirect (e.g. a "coming soon" gate) still resolves with a 2xx body
+	// here since fetch follows redirects — checking status/length alone
+	// false-positives on that HTML. Require an actual robots.txt directive.
 	const robotsTxtFound = Boolean(
-		robots.status && robots.status < 400 && robots.body.length > 0,
+		robots.status &&
+			robots.status < 400 &&
+			/^\s*user-agent\s*:/im.test(robots.body),
 	);
 	const sitemap = await fetchText(`${origin}/sitemap.xml`);
 	const sitemapFound = Boolean(
@@ -177,4 +184,19 @@ export async function crawlPublicSite(
 		issues: issues.slice(0, 20),
 		healthHint,
 	};
+}
+
+/**
+ * Crawls, captures a screenshot, and caches the result on the org document.
+ * Shared by the full readiness run and the dedicated re-crawl endpoint so
+ * the two never diverge on what the "latest crawl" is.
+ */
+export async function crawlAndCacheSite(
+	orgId: string,
+	websiteUrl: string,
+): Promise<SiteCrawlResult> {
+	const crawl = await crawlPublicSite(websiteUrl);
+	crawl.screenshot = await captureSiteScreenshot(crawl.websiteUrl);
+	await cacheSiteCrawl(orgId, crawl);
+	return crawl;
 }

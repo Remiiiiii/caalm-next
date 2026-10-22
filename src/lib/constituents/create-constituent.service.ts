@@ -46,7 +46,8 @@ export async function createConstituentWithDuplicateGate(input: {
 	if (candidates.length > 0 && input.force) {
 		await logAuditEvent({
 			event_id: constituent.$id,
-			event_title: `${input.payload.firstName} ${input.payload.lastName}`.trim(),
+			event_title:
+				`${input.payload.firstName} ${input.payload.lastName}`.trim(),
 			action: "create",
 			source: "caalm",
 			user_id: input.actor.userId,
@@ -57,7 +58,8 @@ export async function createConstituentWithDuplicateGate(input: {
 			module: "governance",
 			target_type: "constituent",
 			target_id: constituent.$id,
-			target_label: `${input.payload.firstName} ${input.payload.lastName}`.trim(),
+			target_label:
+				`${input.payload.firstName} ${input.payload.lastName}`.trim(),
 			summary: `Force-created constituent despite ${candidates.length} duplicate candidate(s)`,
 			metadata: {
 				skippedCandidateIds: candidates.map((row) => row.$id),

@@ -10,6 +10,8 @@ interface SharedCalendarsResponse {
 	total: number;
 }
 
+const EMPTY_CALENDARS: SharedCalendar[] = [];
+
 const fetcher = async (url: string): Promise<SharedCalendarsResponse> => {
 	const response = await fetch(url);
 	if (!response.ok) {
@@ -56,7 +58,7 @@ export const useSharedCalendars = () => {
 	});
 
 	return {
-		calendars: data?.calendars || [],
+		calendars: data?.calendars ?? EMPTY_CALENDARS,
 		total: data?.total || 0,
 		isLoading,
 		error,

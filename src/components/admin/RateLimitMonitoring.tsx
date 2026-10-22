@@ -19,15 +19,15 @@ import {
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LoadingSpinner } from "@/components/ui/loading";
-import { StatCardSkeleton } from "@/components/ui/skeletons";
 import {
 	CaalmDataTable,
 	DATA_TABLE_BODY_ROW_BASE,
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
 } from "@/components/ui/caalm-data-table";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { LoadingSpinner } from "@/components/ui/loading";
+import { StatCardSkeleton } from "@/components/ui/skeletons";
 import {
 	TableBody,
 	TableCell,
@@ -35,6 +35,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useRateLimitMetrics } from "@/hooks/useRateLimitMetrics";
 import { cn } from "@/lib/utils";
@@ -48,16 +49,9 @@ export default function RateLimitMonitoring() {
 
 	const { toast } = useToast();
 	const [resetting, setResetting] = useState(false);
+	const [resetOpen, setResetOpen] = useState(false);
 
 	const handleReset = async () => {
-		if (
-			!confirm(
-				"Are you sure you want to reset all rate limit metrics? This action cannot be undone.",
-			)
-		) {
-			return;
-		}
-
 		setResetting(true);
 		try {
 			await resetMetrics();
@@ -66,11 +60,7 @@ export default function RateLimitMonitoring() {
 				description: "Rate limit metrics reset successfully",
 			});
 		} catch (_error) {
-			toast({
-				title: "Error",
-				description: "Failed to reset metrics",
-				variant: "destructive",
-			});
+			throw new Error("Failed to reset metrics");
 		} finally {
 			setResetting(false);
 		}
@@ -183,7 +173,7 @@ export default function RateLimitMonitoring() {
 						Refresh
 					</Button>
 					<Button
-						onClick={handleReset}
+						onClick={() => setResetOpen(true)}
 						variant="destructive"
 						size="sm"
 						disabled={resetting}
@@ -303,48 +293,43 @@ export default function RateLimitMonitoring() {
 							</div>
 						</CardHeader>
 						<CardContent className="bg-slate-50 p-6">
-							<CaalmDataTable className="px-0 sm:px-0 pb-0">
-									<TableHeader className="[&_tr]:border-b-0">
-										<TableRow className={DATA_TABLE_HEADER_ROW}>
-											<TableHead
-												className={cn(DATA_TABLE_HEADER_CELL, "pl-4 pr-3")}
-											>
-												Identifier
-											</TableHead>
-											<TableHead
-												className={cn(DATA_TABLE_HEADER_CELL, "px-3")}
-											>
-												Violations
-											</TableHead>
-											<TableHead
-												className={cn(DATA_TABLE_HEADER_CELL, "pl-3 pr-4")}
-											>
-												Status
-											</TableHead>
+							<CaalmDataTable className="pb-0">
+								<TableHeader className="[&_tr]:border-b-0">
+									<TableRow className={DATA_TABLE_HEADER_ROW}>
+										<TableHead
+											className={cn(DATA_TABLE_HEADER_CELL, "pl-4 pr-3")}
+										>
+											Identifier
+										</TableHead>
+										<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+											Violations
+										</TableHead>
+										<TableHead
+											className={cn(DATA_TABLE_HEADER_CELL, "pl-3 pr-4")}
+										>
+											Status
+										</TableHead>
+									</TableRow>
+								</TableHeader>
+								<TableBody className="[&_tr:last-child>td]:border-b-0">
+									{topViolators.map((violator, index) => (
+										<TableRow key={index} className={DATA_TABLE_BODY_ROW_BASE}>
+											<TableCell className="px-3 py-3 pl-4 pr-3 text-sm text-slate-700">
+												{violator.identifier.length > 50
+													? `${violator.identifier.substring(0, 50)}...`
+													: violator.identifier}
+											</TableCell>
+											<TableCell className="px-3 py-3">
+												<Badge variant="destructive">{violator.count}</Badge>
+											</TableCell>
+											<TableCell className="px-3 py-3 pl-3 pr-4">
+												<span className="inline-block rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
+													Active
+												</span>
+											</TableCell>
 										</TableRow>
-									</TableHeader>
-									<TableBody className="[&_tr:last-child>td]:border-b-0">
-										{topViolators.map((violator, index) => (
-											<TableRow
-												key={index}
-												className={DATA_TABLE_BODY_ROW_BASE}
-											>
-												<TableCell className="px-3 py-3 pl-4 pr-3 text-sm text-slate-700">
-													{violator.identifier.length > 50
-														? `${violator.identifier.substring(0, 50)}...`
-														: violator.identifier}
-												</TableCell>
-												<TableCell className="px-3 py-3">
-													<Badge variant="destructive">{violator.count}</Badge>
-												</TableCell>
-												<TableCell className="px-3 py-3 pl-3 pr-4">
-													<span className="inline-block rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
-														Active
-													</span>
-												</TableCell>
-											</TableRow>
-										))}
-									</TableBody>
+									))}
+								</TableBody>
 							</CaalmDataTable>
 						</CardContent>
 					</Card>
@@ -457,6 +442,16 @@ export default function RateLimitMonitoring() {
 					</Button>
 				</div>
 			</div>
+			<ConfirmDialog
+				open={resetOpen}
+				onOpenChange={setResetOpen}
+				variant="destructive"
+				icon={<Trash2 className="h-5 w-5" />}
+				title="Reset rate limit metrics?"
+				description="This action cannot be undone."
+				confirmLabel="Reset metrics"
+				onConfirm={handleReset}
+			/>
 		</div>
 	);
 }

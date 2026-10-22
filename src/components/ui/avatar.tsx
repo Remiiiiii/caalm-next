@@ -32,8 +32,7 @@ export const getAvatarColor = (userId: string): string => {
 };
 
 /** Contracts-table photo ring (ManagerAvatars) */
-const PHOTO_RING_GRADIENT =
-	"linear-gradient(135deg, #12477d 0%, #03afbf 100%)";
+const PHOTO_RING_GRADIENT = "linear-gradient(135deg, #12477d 0%, #03afbf 100%)";
 
 interface AvatarProps {
 	name?: string;
@@ -85,7 +84,10 @@ const Avatar: React.FC<AvatarProps> = ({
 		<div className={cn("flex items-center gap-2", className)}>
 			{showImage ? (
 				<div
-					className={cn("rounded-full overflow-hidden shrink-0", sizeClasses[size])}
+					className={cn(
+						"rounded-full overflow-hidden shrink-0",
+						sizeClasses[size],
+					)}
 					style={{
 						background: PHOTO_RING_GRADIENT,
 						padding: "2px",

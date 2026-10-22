@@ -1,0 +1,345 @@
+- generic [ref=f4e1]:
+  - button "Open Next.js Dev Tools" [ref=f4e10] [cursor=pointer]:
+    - generic [ref=f4e20]:
+      - text: Compiling
+      - generic [ref=f4e21]:
+        - generic [ref=f4e22]: .
+        - generic [ref=f4e23]: .
+        - generic [ref=f4e24]: .
+  - alert [ref=f4e18]
+  - main [ref=f4e25]:
+    - generic [ref=f4e26]:
+      - complementary [ref=f4e27]:
+        - generic [ref=f4e28]:
+          - link "CAALM CAALM" [ref=f4e29] [cursor=pointer]:
+            - /url: /
+            - img "CAALM" [ref=f4e31]
+            - generic [ref=f4e32]: CAALM
+          - button "Collapse sidebar" [expanded] [ref=f4e33] [cursor=pointer]
+        - navigation [ref=f4e36]:
+          - list [ref=f4e37]:
+            - generic [ref=f4e38]:
+              - generic [ref=f4e39]:
+                - listitem [ref=f4e40]:
+                  - generic [ref=f4e41]:
+                    - generic [ref=f4e42]: Super Admin
+                    - generic [ref=f4e47]: Dashboard
+                - list [ref=f4e49]:
+                  - listitem [ref=f4e50]:
+                    - link "Super Admin" [ref=f4e53] [cursor=pointer]:
+                      - /url: /dashboard/superadmin
+                      - paragraph [ref=f4e57]:
+                        - generic [ref=f4e58]: Super Admin
+                  - listitem [ref=f4e59]:
+                    - link "Department Manager" [ref=f4e62] [cursor=pointer]:
+                      - /url: /dashboard/departmentmanager
+                      - paragraph [ref=f4e67]:
+                        - generic [ref=f4e68]: Department Manager
+                  - listitem [ref=f4e69]:
+                    - link "IT" [ref=f4e72] [cursor=pointer]:
+                      - /url: /dashboard/it
+                      - paragraph [ref=f4e77]:
+                        - generic [ref=f4e78]: IT
+              - generic [ref=f4e79]:
+                - listitem [ref=f4e80]:
+                  - generic [ref=f4e81]: Calendar
+                - list [ref=f4e85]:
+                  - listitem [ref=f4e86]:
+                    - link "Calendar View" [ref=f4e89] [cursor=pointer]:
+                      - /url: /calendar
+                      - paragraph [ref=f4e91]:
+                        - generic [ref=f4e92]: Calendar View
+                  - listitem [ref=f4e93]:
+                    - link "Event Check-in" [ref=f4e96] [cursor=pointer]:
+                      - /url: /events/check-in
+                      - paragraph [ref=f4e98]:
+                        - generic [ref=f4e99]: Event Check-in
+              - generic [ref=f4e100]:
+                - listitem [ref=f4e101]:
+                  - generic [ref=f4e102]: Contracts
+                - list [ref=f4e106]:
+                  - listitem [ref=f4e107]:
+                    - link "All Contracts" [ref=f4e110] [cursor=pointer]:
+                      - /url: /contracts
+                      - paragraph [ref=f4e112]:
+                        - generic [ref=f4e113]: All Contracts
+                  - listitem [ref=f4e114]:
+                    - link "Import" [ref=f4e117] [cursor=pointer]:
+                      - /url: /contracts/import
+                      - paragraph [ref=f4e119]:
+                        - generic [ref=f4e120]: Import
+                  - listitem [ref=f4e121]:
+                    - link "My Contracts" [ref=f4e124] [cursor=pointer]:
+                      - /url: /my-contracts
+                      - paragraph [ref=f4e126]:
+                        - generic [ref=f4e127]: My Contracts
+                  - listitem [ref=f4e128]:
+                    - link "Proposals & Approvals" [ref=f4e131] [cursor=pointer]:
+                      - /url: /contracts/approvals
+                      - paragraph [ref=f4e133]:
+                        - generic [ref=f4e134]: Proposals & Approvals
+                  - listitem [ref=f4e135]:
+                    - link "Advanced Resources" [ref=f4e138] [cursor=pointer]:
+                      - /url: /contracts/advanced-resources
+                      - paragraph [ref=f4e140]:
+                        - generic [ref=f4e141]: Advanced Resources
+                  - listitem [ref=f4e142]:
+                    - link "Create Contract" [ref=f4e145] [cursor=pointer]:
+                      - /url: /contracts/create
+                      - paragraph [ref=f4e147]:
+                        - generic [ref=f4e148]: Create Contract
+                  - listitem [ref=f4e149]:
+                    - link "Clause Library" [ref=f4e152] [cursor=pointer]:
+                      - /url: /contracts/library
+                      - paragraph [ref=f4e154]:
+                        - generic [ref=f4e155]: Clause Library
+                  - listitem [ref=f4e156]:
+                    - link "Contract Templates" [ref=f4e159] [cursor=pointer]:
+                      - /url: /contracts/templates
+                      - paragraph [ref=f4e165]:
+                        - generic [ref=f4e166]: Contract Templates
+                  - listitem [ref=f4e167]:
+                    - link "Funding & Retention" [ref=f4e170] [cursor=pointer]:
+                      - /url: /contracts/funding-retention
+                      - paragraph [ref=f4e172]:
+                        - generic [ref=f4e173]: Funding & Retention
+                  - listitem [ref=f4e174]:
+                    - link "Import obligations" [ref=f4e177] [cursor=pointer]:
+                      - /url: /funding/obligations/import
+                      - paragraph [ref=f4e179]:
+                        - generic [ref=f4e180]: Import obligations
+              - generic [ref=f4e181]:
+                - listitem [ref=f4e182]:
+                  - generic [ref=f4e183]: Licenses
+                - list [ref=f4e187]:
+                  - listitem [ref=f4e188]:
+                    - link "All Licenses" [ref=f4e191] [cursor=pointer]:
+                      - /url: /licenses
+                      - paragraph [ref=f4e193]:
+                        - generic [ref=f4e194]: All Licenses
+                  - listitem [ref=f4e195]:
+                    - link "Import" [ref=f4e198] [cursor=pointer]:
+                      - /url: /licenses/import
+                      - paragraph [ref=f4e200]:
+                        - generic [ref=f4e201]: Import
+                  - listitem [ref=f4e202]:
+                    - link "Department Licenses" [ref=f4e205] [cursor=pointer]:
+                      - /url: /licenses/department
+                      - paragraph [ref=f4e207]:
+                        - generic [ref=f4e208]: Department Licenses
+                  - listitem [ref=f4e209]:
+                    - link "Proposals & Approvals" [ref=f4e212] [cursor=pointer]:
+                      - /url: /licenses/approvals
+                      - paragraph [ref=f4e214]:
+                        - generic [ref=f4e215]: Proposals & Approvals
+              - generic [ref=f4e216]:
+                - listitem [ref=f4e217]:
+                  - generic [ref=f4e218]: Constituents
+                - list [ref=f4e222]:
+                  - listitem [ref=f4e223]:
+                    - link "All Constituents" [ref=f4e226] [cursor=pointer]:
+                      - /url: /constituents
+                      - paragraph [ref=f4e228]:
+                        - generic [ref=f4e229]: All Constituents
+                  - listitem [ref=f4e230]:
+                    - link "Import" [ref=f4e233] [cursor=pointer]:
+                      - /url: /constituents/import
+                      - paragraph [ref=f4e235]:
+                        - generic [ref=f4e236]: Import
+                  - listitem [ref=f4e237]:
+                    - link "Stewardship Queue" [ref=f4e240] [cursor=pointer]:
+                      - /url: /constituents/stewardship
+                      - paragraph [ref=f4e242]:
+                        - generic [ref=f4e243]: Stewardship Queue
+                  - listitem [ref=f4e244]:
+                    - link "Development" [ref=f4e247] [cursor=pointer]:
+                      - /url: /dashboard/development
+                      - paragraph [ref=f4e249]:
+                        - generic [ref=f4e250]: Development
+                  - listitem [ref=f4e251]:
+                    - link "Gifts" [ref=f4e254] [cursor=pointer]:
+                      - /url: /gifts
+                      - paragraph [ref=f4e256]:
+                        - generic [ref=f4e257]: Gifts
+                  - listitem [ref=f4e258]:
+                    - link "Import gifts" [ref=f4e261] [cursor=pointer]:
+                      - /url: /gifts/import
+                      - paragraph [ref=f4e263]:
+                        - generic [ref=f4e264]: Import gifts
+                  - listitem [ref=f4e265]:
+                    - link "Campaigns" [ref=f4e268] [cursor=pointer]:
+                      - /url: /campaigns
+                      - paragraph [ref=f4e270]:
+                        - generic [ref=f4e271]: Campaigns
+                  - listitem [ref=f4e272]:
+                    - link "Import campaigns" [ref=f4e275] [cursor=pointer]:
+                      - /url: /campaigns/import
+                      - paragraph [ref=f4e277]:
+                        - generic [ref=f4e278]: Import campaigns
+              - generic [ref=f4e279]:
+                - listitem [ref=f4e280]:
+                  - generic [ref=f4e281]: Audits
+                - list [ref=f4e285]:
+                  - listitem [ref=f4e286]:
+                    - link "Audit Readiness" [ref=f4e289] [cursor=pointer]:
+                      - /url: /audits/readiness
+                      - paragraph [ref=f4e291]:
+                        - generic [ref=f4e292]: Audit Readiness
+                  - listitem [ref=f4e293]:
+                    - link "Compliance Status" [ref=f4e296] [cursor=pointer]:
+                      - /url: /audits/status
+                      - paragraph [ref=f4e298]:
+                        - generic [ref=f4e299]: Compliance Status
+                  - listitem [ref=f4e300]:
+                    - link "Audit Logs" [ref=f4e303] [cursor=pointer]:
+                      - /url: /audits/audit
+                      - paragraph [ref=f4e305]:
+                        - generic [ref=f4e306]: Audit Logs
+              - generic [ref=f4e307]:
+                - listitem [ref=f4e308]:
+                  - generic [ref=f4e309]: Files
+                - list [ref=f4e313]:
+                  - listitem [ref=f4e314]:
+                    - link "Uploads" [ref=f4e317] [cursor=pointer]:
+                      - /url: /uploads
+                      - paragraph [ref=f4e319]:
+                        - generic [ref=f4e320]: Uploads
+                  - listitem [ref=f4e321]:
+                    - link "Documents" [ref=f4e324] [cursor=pointer]:
+                      - /url: /documents
+                      - paragraph [ref=f4e329]:
+                        - generic [ref=f4e330]: Documents
+                  - listitem [ref=f4e331]:
+                    - link "Images" [ref=f4e334] [cursor=pointer]:
+                      - /url: /images
+                      - paragraph [ref=f4e336]:
+                        - generic [ref=f4e337]: Images
+                  - listitem [ref=f4e338]:
+                    - link "Media" [ref=f4e341] [cursor=pointer]:
+                      - /url: /media
+                      - paragraph [ref=f4e343]:
+                        - generic [ref=f4e344]: Media
+                  - listitem [ref=f4e345]:
+                    - link "Others" [ref=f4e348] [cursor=pointer]:
+                      - /url: /others
+                      - paragraph [ref=f4e350]:
+                        - generic [ref=f4e351]: Others
+              - generic [ref=f4e352]:
+                - listitem [ref=f4e353]:
+                  - generic [ref=f4e354]: Team
+                - list [ref=f4e358]:
+                  - listitem [ref=f4e359]:
+                    - link "User Management" [ref=f4e362] [cursor=pointer]:
+                      - /url: /dashboard/user-management
+                      - paragraph [ref=f4e364]:
+                        - generic [ref=f4e365]: User Management
+                  - listitem [ref=f4e366]:
+                    - link "Import users" [ref=f4e369] [cursor=pointer]:
+                      - /url: /dashboard/user-management/import
+                      - paragraph [ref=f4e371]:
+                        - generic [ref=f4e372]: Import users
+                  - listitem [ref=f4e373]:
+                    - link "Role Management" [ref=f4e376] [cursor=pointer]:
+                      - /url: /dashboard/admin/roles
+                      - paragraph [ref=f4e378]:
+                        - generic [ref=f4e379]: Role Management
+                  - listitem [ref=f4e380]:
+                    - link "Assign Tasks" [ref=f4e383] [cursor=pointer]:
+                      - /url: /team/tasks
+                      - paragraph [ref=f4e385]:
+                        - generic [ref=f4e386]: Assign Tasks
+              - generic [ref=f4e387]:
+                - listitem [ref=f4e388]:
+                  - generic [ref=f4e389]: Reports & Analytics
+                - list [ref=f4e393]:
+                  - listitem [ref=f4e394]:
+                    - link "Overview" [ref=f4e397] [cursor=pointer]:
+                      - /url: /analytics
+                      - paragraph [ref=f4e399]:
+                        - generic [ref=f4e400]: Overview
+                  - listitem [ref=f4e401]:
+                    - link "Quick View" [ref=f4e404] [cursor=pointer]:
+                      - /url: /analytics/quick-view
+                      - paragraph [ref=f4e406]:
+                        - generic [ref=f4e407]: Quick View
+                  - listitem [ref=f4e408]:
+                    - link "C Suite" [ref=f4e411] [cursor=pointer]:
+                      - /url: /analytics/c-suite
+                      - paragraph [ref=f4e413]:
+                        - generic [ref=f4e414]: C Suite
+              - generic [ref=f4e415]:
+                - listitem [ref=f4e416]:
+                  - generic [ref=f4e417]: My Roles & Permissions
+                - list [ref=f4e421]:
+                  - listitem [ref=f4e422]:
+                    - link "View My Access" [ref=f4e425] [cursor=pointer]:
+                      - /url: /settings/permissions
+                      - paragraph [ref=f4e427]:
+                        - generic [ref=f4e428]: View My Access
+        - generic [ref=f4e429]:
+          - separator [aria-hidden] [ref=f4e430]
+          - generic [ref=f4e432]:
+            - paragraph [ref=f4e436]: Storage
+            - paragraph [ref=f4e441]: 0.00 KB of 100 GB used
+          - separator [aria-hidden] [ref=f4e442]
+          - generic [ref=f4e444]:
+            - paragraph [ref=f4e445]: Victor Ramirez
+            - generic [ref=f4e446]:
+              - generic [ref=f4e447]:
+                - paragraph [ref=f4e448]: Growth
+                - paragraph [ref=f4e449]: 42 days left in trial
+              - button "Account menu" [ref=f4e450] [cursor=pointer]
+      - generic [ref=f4e455]:
+        - generic [ref=f4e457]:
+          - generic [ref=f4e459]:
+            - button "Audit" [ref=f4e460] [cursor=pointer]
+            - button "Schedule" [ref=f4e461] [cursor=pointer]
+            - button "Report" [ref=f4e462] [cursor=pointer]
+          - generic [ref=f4e463]:
+            - button "Ask CAALM" [ref=f4e464] [cursor=pointer]
+            - generic [ref=f4e468]:
+              - button [ref=f4e471] [cursor=pointer]:
+                - img "Victor Ramirez" [ref=f4e473]
+              - button "Open notifications" [ref=f4e475] [cursor=pointer]:
+                - generic "53 notifications" [ref=f4e476]: "53"
+              - button "Open mail" [ref=f4e477] [cursor=pointer]
+              - button "Log out" [ref=f4e478] [cursor=pointer]
+        - generic [ref=f4e482]:
+          - generic [ref=f4e484]:
+            - heading "Advanced Resources" [level=1] [ref=f4e485]
+            - paragraph [ref=f4e486]: Search and explore government contract opportunities from SAM.gov
+          - generic [ref=f4e488]:
+            - generic [ref=f4e490]: Search Contracts
+            - generic [ref=f4e496]:
+              - generic [ref=f4e497]:
+                - generic [ref=f4e498]:
+                  - text: Keyword
+                  - textbox "Keyword" [ref=f4e499]:
+                    - /placeholder: Enter search terms
+                - generic [ref=f4e500]:
+                  - text: Procurement Type
+                  - combobox "Procurement Type" [ref=f4e501]:
+                    - generic: All Types
+                - generic [ref=f4e504]:
+                  - text: Set-Aside Type
+                  - combobox "Set-Aside Type" [ref=f4e505]:
+                    - generic: All Set-Asides
+                - generic [ref=f4e508]:
+                  - text: State
+                  - combobox "State" [ref=f4e509]:
+                    - generic: All states
+                - generic [ref=f4e512]:
+                  - text: Organization
+                  - textbox "Organization" [ref=f4e513]:
+                    - /placeholder: e.g., GSA, Defense, Agriculture
+                - generic [ref=f4e514]:
+                  - text: Response Due
+                  - combobox "Response Due" [ref=f4e515]:
+                    - generic: Anytime
+              - generic [ref=f4e518]:
+                - button "Search Contracts" [ref=f4e519] [cursor=pointer]
+                - button "Reset" [ref=f4e520] [cursor=pointer]
+      - region "Notifications (F8)":
+        - list
+      - button "Report an issue" [ref=f4e521] [cursor=pointer]:
+        - generic [ref=f4e522]: Report issue

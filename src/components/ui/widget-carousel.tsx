@@ -34,7 +34,11 @@ const MOMENTUM_MIN_VELOCITY = 0.15;
 
 function isOverflowYScrollable(node: HTMLElement): boolean {
 	const { overflowY } = getComputedStyle(node);
-	if (overflowY !== "auto" && overflowY !== "scroll" && overflowY !== "overlay") {
+	if (
+		overflowY !== "auto" &&
+		overflowY !== "scroll" &&
+		overflowY !== "overlay"
+	) {
 		return false;
 	}
 	return node.scrollHeight > node.clientHeight + 1;
@@ -178,15 +182,11 @@ export function WidgetCarousel({
 		const onWheel = (event: WheelEvent) => {
 			if (el.scrollWidth <= el.clientWidth) return;
 
-			const mostlyVertical =
-				Math.abs(event.deltaY) >= Math.abs(event.deltaX);
+			const mostlyVertical = Math.abs(event.deltaY) >= Math.abs(event.deltaX);
 
 			// Nested lists own vertical wheel end-to-end — including at top/bottom
 			// edges. Otherwise "scroll up at top" becomes a left carousel nudge.
-			if (
-				mostlyVertical &&
-				isInsideNestedVerticalScroll(event.target, el)
-			) {
+			if (mostlyVertical && isInsideNestedVerticalScroll(event.target, el)) {
 				return;
 			}
 

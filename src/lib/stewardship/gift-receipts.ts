@@ -1,8 +1,8 @@
+import { createAdminClient } from "@/lib/appwrite";
+import { appwriteConfig } from "@/lib/appwrite/config";
 import { canContact } from "@/lib/constituents/consent";
 import { getConstituentById } from "@/lib/constituents/repository";
 import type { Gift } from "@/lib/gifts/types";
-import { createAdminClient } from "@/lib/appwrite";
-import { appwriteConfig } from "@/lib/appwrite/config";
 import { mailgunService } from "@/lib/services/mailgun";
 import {
 	applyGiftReceiptTemplate,
@@ -21,7 +21,16 @@ function dbId(): string {
 
 export type SendGiftReceiptResult =
 	| { sent: true }
-	| { sent: false; reason: "anonymous" | "no_email" | "do_not_contact" | "draft" | "already_sent" | "not_posted" };
+	| {
+			sent: false;
+			reason:
+				| "anonymous"
+				| "no_email"
+				| "do_not_contact"
+				| "draft"
+				| "already_sent"
+				| "not_posted";
+	  };
 
 export async function markGiftReceiptSent(
 	giftId: string,
@@ -65,7 +74,8 @@ export async function sendPostedGiftReceiptIfEligible(
 
 	const receiptNumber = String(gift.receiptNumber ?? gift.$id);
 	const vars = {
-		donorName: `${constituent.firstName} ${constituent.lastName}`.trim() || "Friend",
+		donorName:
+			`${constituent.firstName} ${constituent.lastName}`.trim() || "Friend",
 		amount: formatGiftAmount(gift.amount, gift.currency),
 		giftDate: new Date(gift.giftDate).toLocaleDateString(),
 		receiptNumber,

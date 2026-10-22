@@ -4,9 +4,7 @@ import { appwriteConfig } from "@/lib/appwrite/config";
 import type { EventTicketType } from "./types";
 
 function tableId(): string {
-	return (
-		appwriteConfig.eventTicketTypesCollectionId || "69f2a001001f4e8c2b33"
-	);
+	return appwriteConfig.eventTicketTypesCollectionId || "69f2a001001f4e8c2b33";
 }
 
 function dbId(): string {

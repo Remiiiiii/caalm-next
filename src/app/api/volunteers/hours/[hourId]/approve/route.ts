@@ -39,7 +39,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
 			grantContractId,
 		});
 		if (!hour) {
-			return NextResponse.json({ error: "Hour log not found" }, { status: 404 });
+			return NextResponse.json(
+				{ error: "Hour log not found" },
+				{ status: 404 },
+			);
 		}
 		return NextResponse.json({ hour });
 	} catch (error) {

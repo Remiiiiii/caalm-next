@@ -380,7 +380,7 @@ function DepartmentOwnershipTemplates({
 					/>
 				</div>
 				<div className="min-w-0 flex-1">
-					<p className="truncate text-[11px] font-semibold text-slate-800">
+					<p className="truncate text-[11px] font-semibold text-slate-700">
 						{activeDept.name}
 					</p>
 					<p className="flex items-center gap-1 truncate text-[10px] text-slate-500">
@@ -646,7 +646,7 @@ function RenewalAlertsStack({
 											<Bell className="h-3.5 w-3.5 text-[#0f5384]" />
 										</div>
 										<div className="min-w-0 flex-1">
-											<p className="truncate text-[9px] font-semibold leading-tight text-slate-800">
+											<p className="truncate text-[9px] font-semibold leading-tight text-slate-700">
 												{active.title}
 											</p>
 											<p className="mt-0.5 truncate text-[8px] leading-tight text-slate-500">
@@ -655,7 +655,7 @@ function RenewalAlertsStack({
 											<div className="mt-1 flex items-center gap-1">
 												<span
 													className={cn(
-														"rounded-full border px-1.5 py-px text-[7px] font-medium capitalize",
+														"rounded-full border px-1.5 py-px text-[7px] capitalize",
 														active.priorityClass,
 													)}
 												>
@@ -901,7 +901,7 @@ function ComplianceRing({
 						}
 					/>
 				</svg>
-				<span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-slate-800">
+				<span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-slate-700">
 					{reduceMotion ? (
 						<>{value}%</>
 					) : (

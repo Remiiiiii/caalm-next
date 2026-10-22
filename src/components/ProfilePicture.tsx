@@ -9,12 +9,17 @@ import { Button } from "@/components/ui/button";
 import {
 	AppDropdownMenuContent,
 	AppDropdownMenuItem,
-	AppDropdownMenuTrigger,
 	DropdownMenu,
+	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { cn, resolveAvatarDisplayUrl } from "@/lib/utils";
+import {
+	cn,
+	getProfilePictureUrl,
+	resolveAvatarDisplayUrl,
+	resolveStoredAvatarFileId,
+} from "@/lib/utils";
 
 interface ProfilePictureProps {
 	user: Models.User<Models.Preferences> | null;
@@ -42,21 +47,25 @@ function resolveProfileImageUrl(
 		  })
 		| undefined;
 
+	const fromFile = resolveAvatarDisplayUrl({
+		avatar: user.avatar,
+		profileImageId:
+			user.profileImageId?.trim() ||
+			prefs?.profileImageId?.trim() ||
+			resolveStoredAvatarFileId(user),
+	});
+	if (fromFile) return fromFile;
+
 	const prefUrl = prefs?.profileImage?.trim();
-	// Ignore stock placeholder URLs stored in prefs from older clients
 	if (
 		prefUrl &&
-		!prefUrl.includes("avatar-placeholder") &&
-		!prefUrl.includes("3d-illustration-person-with-sunglasses")
+		prefUrl.startsWith("/api/user/profile-picture") &&
+		!prefUrl.includes("avatar-placeholder")
 	) {
 		return prefUrl;
 	}
 
-	return resolveAvatarDisplayUrl({
-		avatar: user.avatar,
-		profileImageId:
-			user.profileImageId?.trim() || prefs?.profileImageId?.trim() || null,
-	});
+	return getProfilePictureUrl(resolveStoredAvatarFileId(user));
 }
 
 const ProfilePicture: React.FC<ProfilePictureProps> = ({
@@ -279,6 +288,7 @@ const ProfilePicture: React.FC<ProfilePictureProps> = ({
 				src={profileImageUrl}
 				alt={(user as ProfileImageUser).fullName || user.name || "Profile"}
 				className="h-full w-full rounded-full border-2 border-[#FCFEFF] object-cover"
+				referrerPolicy="no-referrer"
 				onError={(e: any) => {
 					console.error("ProfilePicture: Image failed to load:", {
 						src: profileImageUrl,
@@ -310,18 +320,23 @@ const ProfilePicture: React.FC<ProfilePictureProps> = ({
 	return (
 		<div className="relative">
 			<DropdownMenu>
-				<AppDropdownMenuTrigger asChild>
+				<DropdownMenuTrigger asChild>
 					<Button
 						variant="ghost"
-						className="relative p-0 rounded-full hover:opacity-80 transition-opacity"
+						size="icon"
+						className={cn(
+							"relative overflow-visible rounded-full p-0 hover:opacity-80 transition-opacity",
+							config.container,
+						)}
 						disabled={isUploading}
+						aria-label="Profile picture"
 					>
 						{avatarContent}
 						<div className="absolute inset-0 rounded-full bg-black/20 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
 							<Camera className={cn("text-white", config.icon)} />
 						</div>
 					</Button>
-				</AppDropdownMenuTrigger>
+				</DropdownMenuTrigger>
 				<AppDropdownMenuContent align="end" className="w-48">
 					<AppDropdownMenuItem
 						icon={Upload}

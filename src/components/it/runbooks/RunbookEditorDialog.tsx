@@ -1,9 +1,9 @@
 "use client";
 
-import { BookOpen, Plus, Trash2 } from "lucide-react";
+import { BookOpen, Plus, Save, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { AppDialog } from "@/components/ui/app-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -111,23 +111,44 @@ export function RunbookEditorDialog({
 	}
 
 	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="max-w-[720px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl">
-				<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-
-				<div className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
-					<div className="flex items-center gap-3 px-6">
-						<BookOpen className="w-5 h-5 text-[#0f5384]" />
-						<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-							{initial ? "Edit runbook" : "New runbook"}
-						</DialogTitle>
+		<AppDialog
+			open={open}
+			onOpenChange={onOpenChange}
+			size="form"
+			className="max-h-[90vh] max-w-[720px]"
+			pending={saving}
+			icon={<BookOpen className="h-5 w-5" aria-hidden />}
+			title={initial ? "Edit runbook" : "New runbook"}
+			description="Write steps an unfamiliar on-call engineer can follow."
+			footer={
+				<div className="flex w-full items-center justify-between gap-3">
+					<div className="text-xs text-slate-500">
+						Publish only after a second person can follow it.
 					</div>
-					<p className="text-sm text-slate-600 mt-1 ml-14">
-						Write steps an unfamiliar on-call engineer can follow.
-					</p>
+					<div className="flex items-center gap-2.5">
+						<Button
+							type="button"
+							variant="outline"
+							className="rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+							disabled={saving}
+							onClick={() => onOpenChange(false)}
+						>
+							Cancel
+						</Button>
+						<Button
+							type="button"
+							className="btn-primary px-3 sm:px-4"
+							disabled={saving}
+							onClick={() => void handleSave()}
+						>
+							<Save className="h-4 w-4" />
+							{saving ? "Saving…" : "Save runbook"}
+						</Button>
+					</div>
 				</div>
-
-				<div className="flex-1 overflow-y-auto p-6 bg-slate-50 space-y-4">
+			}
+		>
+			<div className="space-y-4 pb-1">
 					<div className="grid gap-4 sm:grid-cols-2">
 						<div className="space-y-2 sm:col-span-2">
 							<Label htmlFor="rb-title">Title</Label>
@@ -305,23 +326,7 @@ export function RunbookEditorDialog({
 					</div>
 
 					{error ? <p className="text-sm text-red">{error}</p> : null}
-				</div>
-
-				<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-					<div className="text-xs text-slate-500">
-						Publish only after a second person can follow it.
-					</div>
-					<div className="flex items-center gap-3">
-						<Button
-							className="primary-btn px-3 sm:px-4"
-							disabled={saving}
-							onClick={() => void handleSave()}
-						>
-							{saving ? "Saving…" : "Save runbook"}
-						</Button>
-					</div>
-				</div>
-			</DialogContent>
-		</Dialog>
+			</div>
+		</AppDialog>
 	);
 }

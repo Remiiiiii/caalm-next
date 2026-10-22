@@ -7,6 +7,7 @@ import {
 	Clock,
 	DollarSign,
 	FileText,
+	type LucideIcon,
 	PieChart,
 	Target,
 	TrendingDown,
@@ -16,8 +17,8 @@ import type React from "react";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MetricStatCard } from "@/components/ui/metric-stat-card";
 import { LoadingSpinner } from "@/components/ui/loading";
+import { MetricStatCard } from "@/components/ui/metric-stat-card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface ExecutiveMetricsDashboardProps {
@@ -29,7 +30,7 @@ interface MetricCard {
 	value: string | number;
 	change: number;
 	changeType: "increase" | "decrease" | "neutral";
-	icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+	icon: LucideIcon;
 	color: string;
 	description: string;
 }

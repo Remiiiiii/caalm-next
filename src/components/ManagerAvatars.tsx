@@ -128,7 +128,7 @@ const ManagerAvatars: React.FC<ManagerAvatarsProps> = ({
 										</div>
 									) : (
 										<div
-											className="rounded-full w-6 h-6 flex items-center justify-center text-white font-medium text-xs border-2 border-white shadow-sm"
+											className="rounded-full w-6 h-6 flex items-center justify-center text-white text-xs border-2 border-white shadow-sm"
 											style={{ backgroundColor: avatarColor }}
 										>
 											{initials}
@@ -149,7 +149,7 @@ const ManagerAvatars: React.FC<ManagerAvatarsProps> = ({
 						<TooltipTrigger asChild>
 							<button
 								type="button"
-								className="rounded-full w-6 h-6 flex items-center justify-center text-white font-medium text-xs bg-purple-400 border-2 border-white -ml-2 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 shadow-sm"
+								className="rounded-full w-6 h-6 flex items-center justify-center text-white text-xs bg-purple-400 border-2 border-white -ml-2 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 shadow-sm"
 								aria-label={`${remainingCount} additional assigned managers`}
 								tabIndex={0}
 								onKeyDown={(e) => {

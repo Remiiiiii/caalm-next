@@ -5,7 +5,7 @@ import Image from "next/image";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import "@/lib/templates/docx-preview.css";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { AppDialog } from "@/components/ui/app-dialog";
 import { PageIndex } from "@/components/ui/page-index";
 import { SearchField } from "@/components/ui/search-field";
 import { SegmentedToggle } from "@/components/ui/segmented-toggle";
@@ -118,7 +118,7 @@ function DocxPreviewTile({
 				<span className={cn("h-4 w-1 shrink-0 rounded-full", tagAccent.bar)} />
 				<span
 					className={cn(
-						"inline-block rounded-full border px-2 py-0.5 text-xs font-medium",
+						"inline-block rounded-full border px-2 py-0.5 text-xs",
 						tagAccent.badge,
 					)}
 				>
@@ -190,7 +190,7 @@ function BlueprintTile({
 				<span className={cn("h-4 w-1 shrink-0 rounded-full", accent.bar)} />
 				<span
 					className={cn(
-						"inline-block rounded-full border px-2 py-0.5 text-xs font-medium",
+						"inline-block rounded-full border px-2 py-0.5 text-xs",
 						accent.badge,
 					)}
 				>
@@ -297,7 +297,7 @@ function TemplateTile({
 						<span className={cn("h-4 w-1 shrink-0 rounded-full", accent.bar)} />
 						<span
 							className={cn(
-								"inline-block rounded-full border px-2 py-0.5 text-xs font-medium",
+								"inline-block rounded-full border px-2 py-0.5 text-xs",
 								accent.badge,
 							)}
 						>
@@ -380,54 +380,44 @@ function BlueprintPreviewDialog({
 	if (!blueprint) return null;
 
 	return (
-		<Dialog
+		<AppDialog
 			open={Boolean(blueprint)}
 			onOpenChange={(open) => !open && onClose()}
+			size="form"
+			className="max-h-[90vh] max-w-3xl"
+			icon={<FileText className="h-5 w-5" />}
+			title={blueprint.label}
+			description="Full blueprint from the source file. Placeholders stay empty until you fill them on the next step."
+			footer={
+				<Button
+					type="button"
+					className="primary-btn cursor-pointer px-3 sm:px-4"
+					onClick={() => onUse(blueprint)}
+				>
+					<FileCheck className="h-4 w-4" />
+					Use this agreement
+				</Button>
+			}
 		>
-			<DialogContent className="flex max-h-[90vh] max-w-3xl flex-col overflow-hidden border border-slate-200 p-0 shadow-xl">
-				<div className="absolute top-0 right-0 left-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
-				<div className="mt-4 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-indigo-50 py-4">
-					<div className="flex items-center gap-3 px-6">
-						<FileText className="h-5 w-5 text-[#0f5384]" />
-						<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-							{blueprint.label}
-						</DialogTitle>
-					</div>
-					<p className="mt-1 ml-14 text-sm text-slate-600">
-						Full blueprint from the source file. Placeholders stay empty until
-						you fill them on the next step.
-					</p>
+			<div className="-mx-6 bg-slate-50 px-6 pb-1">
+				<div className="mx-auto max-w-[640px] rounded-md border border-slate-200 bg-white p-8">
+					{loading && (
+						<div className="space-y-3">
+							<Skeleton className="h-6 w-1/2 bg-slate-200" />
+							<Skeleton className="h-4 w-full bg-slate-200" />
+							<Skeleton className="h-4 w-5/6 bg-slate-200" />
+						</div>
+					)}
+					{error && <p className="text-sm text-red">{error}</p>}
+					{!loading && !error && (
+						<div
+							className="docx-preview"
+							dangerouslySetInnerHTML={{ __html: html }}
+						/>
+					)}
 				</div>
-				<div className="flex-1 overflow-y-auto bg-slate-50 p-6">
-					<div className="mx-auto max-w-[640px] rounded-md border border-slate-200 bg-white p-8">
-						{loading && (
-							<div className="space-y-3">
-								<Skeleton className="h-6 w-1/2 bg-slate-200" />
-								<Skeleton className="h-4 w-full bg-slate-200" />
-								<Skeleton className="h-4 w-5/6 bg-slate-200" />
-							</div>
-						)}
-						{error && <p className="text-sm text-red">{error}</p>}
-						{!loading && !error && (
-							<div
-								className="docx-preview"
-								dangerouslySetInnerHTML={{ __html: html }}
-							/>
-						)}
-					</div>
-				</div>
-				<div className="flex items-center justify-end border-t border-slate-200 bg-slate-50 px-6 py-4">
-					<Button
-						type="button"
-						className="primary-btn cursor-pointer px-3 sm:px-4"
-						onClick={() => onUse(blueprint)}
-					>
-						<FileCheck className="h-4 w-4" />
-						Use this agreement
-					</Button>
-				</div>
-			</DialogContent>
-		</Dialog>
+			</div>
+		</AppDialog>
 	);
 }
 
@@ -489,46 +479,21 @@ function TemplatePreviewDialog({
 	if (!template) return null;
 
 	return (
-		<Dialog
+		<AppDialog
 			open={Boolean(template)}
 			onOpenChange={(open) => !open && onClose()}
-		>
-			<DialogContent className="flex max-h-[90vh] max-w-3xl flex-col overflow-hidden border border-slate-200 p-0 shadow-xl">
-				<div className="absolute top-0 right-0 left-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
-				<div className="mt-4 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-indigo-50 py-4">
-					<div className="flex items-center gap-3 px-6">
-						<FileStack className="h-5 w-5 text-[#0f5384]" />
-						<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-							{template.name}
-						</DialogTitle>
-					</div>
-					<p className="mt-1 ml-14 text-sm text-slate-600">
-						{template.description || "Organization agreement template"}
-					</p>
-				</div>
-				<div className="flex-1 overflow-y-auto bg-slate-50 p-6">
-					<div className="mx-auto max-w-[640px] rounded-md border border-slate-200 bg-white p-8">
-						{loading && (
-							<div className="space-y-3">
-								<Skeleton className="h-6 w-1/2 bg-slate-200" />
-								<Skeleton className="h-4 w-full bg-slate-200" />
-							</div>
-						)}
-						{error && <p className="text-sm text-red">{error}</p>}
-						{!loading && !error && html && (
-							<div
-								className="docx-preview"
-								dangerouslySetInnerHTML={{ __html: html }}
-							/>
-						)}
-					</div>
-				</div>
-				<div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
+			size="form"
+			className="max-h-[90vh] max-w-3xl"
+			icon={<FileStack className="h-5 w-5" />}
+			title={template.name}
+			description={template.description || "Organization agreement template"}
+			footer={
+				<>
 					{manageTemplates && onEditTemplate ? (
 						<Button
 							type="button"
 							variant="outline"
-							className="primary-btn cursor-pointer px-3 sm:px-4"
+							className="rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
 							onClick={() => {
 								onEditTemplate(template);
 								onClose();
@@ -552,9 +517,27 @@ function TemplatePreviewDialog({
 							Publish this template to use it.
 						</p>
 					)}
+				</>
+			}
+		>
+			<div className="-mx-6 bg-slate-50 px-6 pb-1">
+				<div className="mx-auto max-w-[640px] rounded-md border border-slate-200 bg-white p-8">
+					{loading && (
+						<div className="space-y-3">
+							<Skeleton className="h-6 w-1/2 bg-slate-200" />
+							<Skeleton className="h-4 w-full bg-slate-200" />
+						</div>
+					)}
+					{error && <p className="text-sm text-red">{error}</p>}
+					{!loading && !error && html && (
+						<div
+							className="docx-preview"
+							dangerouslySetInnerHTML={{ __html: html }}
+						/>
+					)}
 				</div>
-			</DialogContent>
-		</Dialog>
+			</div>
+		</AppDialog>
 	);
 }
 

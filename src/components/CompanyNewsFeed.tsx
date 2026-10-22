@@ -392,7 +392,7 @@ const CompanyNewsFeed: React.FC<CompanyNewsFeedProps> = ({
 									{visibleCategoryNames.map((name) => (
 										<span
 											key={name}
-											className="inline-block rounded-full border border-green/20 bg-green/10 px-2 py-0.5 text-xs font-medium text-[#0f5384]"
+											className="inline-block rounded-full border border-green/20 bg-green/10 px-2 py-0.5 text-xs text-[#0f5384]"
 										>
 											{name}
 										</span>

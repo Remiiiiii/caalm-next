@@ -1,0 +1,5 @@
+- generic [ref=f3e1]:
+  - status "Loading..." [ref=f3e2]:
+    - paragraph [ref=f3e4]: Loading...
+  - button "Open Next.js Dev Tools" [ref=f3e10] [cursor=pointer]
+  - alert [ref=f3e14]

@@ -73,7 +73,7 @@ const FileUsageOverview = () => {
 										alt={summary.title}
 										className="rounded-full"
 									/>
-									<h4 className="text-lg font-semibold text-slate-800">
+									<h4 className="text-lg font-semibold text-slate-700">
 										{convertFileSize({ sizeInBytes: summary.size }) || 0}
 									</h4>
 								</div>

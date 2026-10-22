@@ -5,9 +5,7 @@ const TTL_MS = 30 * 60 * 1000;
 
 function secret(): string {
 	const value =
-		process.env.DEMO_REQUEST_COOKIE_SECRET ||
-		process.env.CRON_SECRET ||
-		"";
+		process.env.DEMO_REQUEST_COOKIE_SECRET || process.env.CRON_SECRET || "";
 	if (!value && process.env.NODE_ENV === "production") {
 		throw new Error("DEMO_REQUEST_COOKIE_SECRET is not configured");
 	}
@@ -23,11 +21,15 @@ export function signDemoVerifiedCookie(email: string): string {
 	const payload = Buffer.from(`${email.toLowerCase()}|${exp}`).toString(
 		"base64url",
 	);
-	const sig = createHmac("sha256", secret()).update(payload).digest("base64url");
+	const sig = createHmac("sha256", secret())
+		.update(payload)
+		.digest("base64url");
 	return `${payload}.${sig}`;
 }
 
-export function readDemoVerifiedEmail(token: string | undefined): string | null {
+export function readDemoVerifiedEmail(
+	token: string | undefined,
+): string | null {
 	if (!token) return null;
 	const [payload, sig] = token.split(".");
 	if (!payload || !sig) return null;

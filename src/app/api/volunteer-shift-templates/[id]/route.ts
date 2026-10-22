@@ -22,19 +22,18 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 			name: body.name != null ? String(body.name) : undefined,
 			roleLabel: body.roleLabel != null ? String(body.roleLabel) : undefined,
 			durationMinutes:
-				body.durationMinutes != null
-					? Number(body.durationMinutes)
-					: undefined,
+				body.durationMinutes != null ? Number(body.durationMinutes) : undefined,
 			defaultCapacity:
-				body.defaultCapacity != null
-					? Number(body.defaultCapacity)
-					: undefined,
+				body.defaultCapacity != null ? Number(body.defaultCapacity) : undefined,
 			skillsRequired: Array.isArray(body.skillsRequired)
 				? body.skillsRequired.map(String)
 				: undefined,
 		});
 		if (!item) {
-			return NextResponse.json({ error: "Template not found" }, { status: 404 });
+			return NextResponse.json(
+				{ error: "Template not found" },
+				{ status: 404 },
+			);
 		}
 		return NextResponse.json({ item });
 	} catch (error) {
@@ -57,7 +56,10 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
 	try {
 		const ok = await deleteShiftTemplate(ctx.orgId, id);
 		if (!ok) {
-			return NextResponse.json({ error: "Template not found" }, { status: 404 });
+			return NextResponse.json(
+				{ error: "Template not found" },
+				{ status: 404 },
+			);
 		}
 		return NextResponse.json({ success: true });
 	} catch (error) {

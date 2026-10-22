@@ -4,10 +4,10 @@ import { ArrowLeft, Building2, FileText, Users } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import FileCard from "@/components/Card";
+import RoundedUnderlineTabs from "@/components/RoundedUnderlineTabs";
 import SearchInput from "@/components/SearchInput";
 import Sort from "@/components/Sort";
 import { Button } from "@/components/ui/button";
-import { PageIndex } from "@/components/ui/page-index";
 import {
 	CardContent,
 	CardHeader,
@@ -15,7 +15,7 @@ import {
 	Card as UICard,
 } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading";
-import RoundedUnderlineTabs from "@/components/RoundedUnderlineTabs";
+import { PageIndex } from "@/components/ui/page-index";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { PERMISSIONS } from "@/constants/permissions";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -39,8 +39,9 @@ const MyContractsPage = () => {
 	const { permissions } = usePermissions();
 	const [contracts, setContracts] = useState<UIFileDoc[]>([]);
 	const [filteredContracts, setFilteredContracts] = useState<UIFileDoc[]>([]);
-	const [selectedDepartment, setSelectedDepartment] =
-		useState<ContractDepartment | "All">("All");
+	const [selectedDepartment, setSelectedDepartment] = useState<
+		ContractDepartment | "All"
+	>("All");
 	const [selectedDivision, setSelectedDivision] = useState<string>("");
 	const [page, setPage] = useState(1);
 	const contractsList = filteredContracts ?? [];

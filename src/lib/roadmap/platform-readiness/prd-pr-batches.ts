@@ -130,7 +130,10 @@ export function prdBatchForPr(prNumber: number): PrdPrBatch | undefined {
 	return PRD_PR_BATCHES.find((item) => item.linkedPrNumber === prNumber);
 }
 
-export function prdBatchOwnsTaskCode(batch: PrdPrBatch, taskCode: string): boolean {
+export function prdBatchOwnsTaskCode(
+	batch: PrdPrBatch,
+	taskCode: string,
+): boolean {
 	return batch.taskCodes.some(
 		(code) => taskCode === code || taskCode.startsWith(`${code}.`),
 	);

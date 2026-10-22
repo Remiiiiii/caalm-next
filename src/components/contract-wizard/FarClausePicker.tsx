@@ -115,7 +115,7 @@ export function FarClausePicker({
 						<button
 							key={clause.number}
 							type="button"
-							className="inline-flex max-w-full cursor-pointer items-center gap-1 rounded-full border border-blue/20 bg-blue/10 px-2 py-0.5 text-left text-xs font-medium text-blue transition-colors duration-200 hover:border-blue/40"
+							className="inline-flex max-w-full cursor-pointer items-center gap-1 rounded-full border border-blue/20 bg-blue/10 px-2 py-0.5 text-left text-xs text-blue transition-colors duration-200 hover:border-blue/40"
 							onClick={() => {
 								onFocus?.();
 								toggle(clause.number, false);

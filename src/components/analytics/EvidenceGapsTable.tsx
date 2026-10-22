@@ -78,7 +78,7 @@ export function EvidenceGapsTable({
 						No open evidence gaps. Your audit packet is current.
 					</p>
 				) : (
-					<CaalmDataTable className="px-0 sm:px-0 pb-0">
+					<CaalmDataTable className="pb-0">
 						<TableHeader className="[&_tr]:border-b-0">
 							<TableRow className={DATA_TABLE_HEADER_ROW}>
 								{!compact ? (

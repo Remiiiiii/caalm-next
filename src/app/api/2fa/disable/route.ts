@@ -19,8 +19,7 @@ export async function PUT(request: NextRequest) {
 		let bodyUserId: string | undefined;
 		try {
 			const body = await request.json();
-			bodyUserId =
-				typeof body?.userId === "string" ? body.userId : undefined;
+			bodyUserId = typeof body?.userId === "string" ? body.userId : undefined;
 		} catch {
 			// optional
 		}

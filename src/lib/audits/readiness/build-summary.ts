@@ -4,6 +4,7 @@ import type {
 } from "@/lib/analytics/audit-readiness.types";
 import type { AuditEvidenceRow, AuditPeriod } from "@/lib/audits/types";
 import { AUDIT_CONTROL_TABS } from "@/lib/audits/types";
+import { scoreEvidenceMap } from "./evidence-coverage";
 import { listEvidenceMap } from "./evidence-map.service";
 import { getOrgComplianceSnapshot } from "./org-compliance";
 import { computeRag } from "./score";
@@ -45,6 +46,7 @@ function tagInsights(
 		const tags = moduleToTypes.get(moduleKey) ?? [];
 		return {
 			...insight,
+			requirementTags: tags,
 			description: tags.length
 				? `${insight.description} · [${tags.join(", ")}]`
 				: insight.description,
@@ -90,6 +92,18 @@ export async function buildOrgReadinessSummary(options: {
 		.map((row) => ({
 			id: row.id,
 			title: row.title,
+			itemTitle: row.title,
+			itemKind: row.moduleLink?.includes("license")
+				? "license"
+				: row.moduleLink?.includes("contract")
+					? "contract"
+					: "other",
+			category: row.category,
+			owner: row.owner,
+			assignedManagers: row.assignedManagers ?? [],
+			assignedBy: row.assignedBy,
+			dueDate: row.dueDate,
+			isEvidenceGap: row.status === "pending",
 			description: `${row.category ?? "Evidence"} · ${row.owner} · due ${row.dueDate}`,
 			severity:
 				row.status === "non_compliant"
@@ -190,19 +204,16 @@ export async function buildOrgReadinessSummary(options: {
 		},
 	};
 
-	const evidenceMapHits = mapRows
-		.filter(
+	const evidenceMapHits = scoreEvidenceMap({
+		rows: mapRows.filter(
 			(row) =>
 				row.caalmModule === "contracts" ||
 				row.caalmModule === "licenses" ||
 				row.caalmModule === "site",
-		)
-		.map((row) => ({
-			requirementId: row.requirementId,
-			label: row.label,
-			auditType: row.auditType,
-			caalmModule: row.caalmModule,
-		}));
+		),
+		candidates: snapshot.evidenceCandidates,
+		siteHealth: options.siteCrawl?.healthHint,
+	});
 
 	return {
 		summary,

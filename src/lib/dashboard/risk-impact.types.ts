@@ -51,6 +51,17 @@ export interface RiskImpactSparkPoint {
 	month?: string;
 }
 
+export interface OpenRiskCounts {
+	highRisk: number;
+	expiring90: number;
+	expired: number;
+}
+
+export interface PortfolioTypeSlice {
+	count: number;
+	amount: number;
+}
+
 export interface RiskImpactSnapshot {
 	period: RiskImpactPeriod;
 	periodLabel: string;
@@ -64,6 +75,12 @@ export interface RiskImpactSnapshot {
 		label: "Portfolio protected";
 		amount: number;
 		amountFormatted: string;
+		/** Face value by record type; the three amounts sum to `amount`. */
+		byType: {
+			contracts: PortfolioTypeSlice;
+			licenses: PortfolioTypeSlice;
+			grants: PortfolioTypeSlice;
+		};
 	};
 	counts: {
 		complianceFlagsCaught: number;
@@ -79,13 +96,13 @@ export interface RiskImpactSnapshot {
 	/** Year-over-year change in risk-averted dollars for the same window. */
 	yoyTrend: RiskImpactTrend | null;
 	/** Still-open exposure — not the events that already built the dollar figure. */
-	openRisk: {
-		highRisk: number;
-		expiring90: number;
-		expired: number;
+	openRisk: OpenRiskCounts & {
+		/** Combined totals above split by record type. */
+		byType: { contracts: OpenRiskCounts; licenses: OpenRiskCounts };
 	};
 	monitoring: {
 		contractsMonitored: number;
+		licensesMonitored: number;
 		grantsMonitored: number;
 		clausesFlagged: number;
 	};

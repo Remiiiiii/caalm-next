@@ -23,23 +23,6 @@ import {
 	useMemo,
 	useState,
 } from "react";
-import {
-	giveAttrPersistKey,
-	giveVisitDedupeKey,
-	hasShareAttribution,
-	parseGiveShareAttribution,
-} from "@/lib/give/attribution";
-import {
-	buildConfigDesignationOptions,
-	resolvePublicImpactStatement,
-	type PublicDonationPageConfig,
-} from "@/lib/give/public-donation-config";
-import {
-	buildGiveProgramOptions,
-	isPersistedDesignationId,
-	resolveGiveProgramLabel,
-	type GiveProgramOption,
-} from "@/lib/give/public-programs";
 import LandingFrostedCard from "@/components/landing/LandingFrostedCard";
 import LandingSection from "@/components/landing/LandingSection";
 import {
@@ -61,8 +44,25 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
+import {
+	giveAttrPersistKey,
+	giveVisitDedupeKey,
+	hasShareAttribution,
+	parseGiveShareAttribution,
+} from "@/lib/give/attribution";
+import {
+	buildConfigDesignationOptions,
+	type PublicDonationPageConfig,
+	resolvePublicImpactStatement,
+} from "@/lib/give/public-donation-config";
+import {
+	buildGiveProgramOptions,
+	type GiveProgramOption,
+	isPersistedDesignationId,
+	resolveGiveProgramLabel,
+} from "@/lib/give/public-programs";
 import { DONATION_MIN_CENTS } from "@/lib/stripe/donations";
+import { cn } from "@/lib/utils";
 
 type GiveDesignation = { id: string; label: string };
 type DonationFrequency = "one_time" | "monthly";
@@ -132,7 +132,7 @@ function GiveShell({ children, orgName, logoUrl }: GiveShellProps) {
 							{brandLabel}
 						</span>
 					</div>
-					<span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-green/20 bg-green/10 px-2.5 py-1 text-xs font-medium text-green">
+					<span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-green/20 bg-green/10 px-2.5 py-1 text-xs text-green">
 						<Lock className="h-3 w-3" />
 						Secure giving
 					</span>
@@ -192,7 +192,7 @@ function GiveShell({ children, orgName, logoUrl }: GiveShellProps) {
 export default function PublicGivePage() {
 	const params = useParams<{ orgSlug: string }>();
 	const search = useSearchParams();
-	const orgSlug = params.orgSlug;
+	const orgSlug = params?.orgSlug ?? "";
 	const [orgName, setOrgName] = useState<string | null>(null);
 	const [logoUrl, setLogoUrl] = useState<string | null>(null);
 	const [designations, setDesignations] = useState<GiveDesignation[]>([]);
@@ -208,9 +208,9 @@ export default function PublicGivePage() {
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [amountError, setAmountError] = useState<string | null>(null);
-	const [configSource, setConfigSource] = useState<"draft" | "published" | null>(
-		null,
-	);
+	const [configSource, setConfigSource] = useState<
+		"draft" | "published" | null
+	>(null);
 
 	const urlAttribution = useMemo(
 		() => parseGiveShareAttribution(search),
@@ -257,7 +257,7 @@ export default function PublicGivePage() {
 	const load = useCallback(async () => {
 		setLoading(true);
 		try {
-			const preview = search.get("donationPreview");
+			const preview = search?.get("donationPreview");
 			const qs = preview
 				? `?donationPreview=${encodeURIComponent(preview)}`
 				: "";
@@ -308,7 +308,7 @@ export default function PublicGivePage() {
 	}, [orgSlug, urlAttribution]);
 
 	useEffect(() => {
-		if (!orgName || search.get("donationPreview")) return;
+		if (!orgName || search?.get("donationPreview")) return;
 		if (!hasShareAttribution(urlAttribution)) return;
 		const key = giveVisitDedupeKey(orgSlug, urlAttribution);
 		try {
@@ -331,7 +331,9 @@ export default function PublicGivePage() {
 		try {
 			const raw = sessionStorage.getItem(giveAttrPersistKey(orgSlug));
 			if (!raw) return {};
-			return parseGiveShareAttribution(JSON.parse(raw) as Record<string, unknown>);
+			return parseGiveShareAttribution(
+				JSON.parse(raw) as Record<string, unknown>,
+			);
 		} catch {
 			return {};
 		}
@@ -371,10 +373,7 @@ export default function PublicGivePage() {
 					orgSlug,
 					amountCents,
 					interval: frequency,
-					designationId: isPersistedDesignationId(
-						programValue,
-						programOptions,
-					),
+					designationId: isPersistedDesignationId(programValue, programOptions),
 					programLabel: resolveGiveProgramLabel(programOptions, programValue),
 					tributeType: tributeEnabled ? tributeType : undefined,
 					tributeName: tributeEnabled ? tributeName.trim() : undefined,
@@ -438,7 +437,7 @@ export default function PublicGivePage() {
 		);
 	}
 
-	if (search.get("thanks") === "1") {
+	if (search?.get("thanks") === "1") {
 		return (
 			<GiveShell orgName={orgName} logoUrl={logoUrl}>
 				<motion.div
@@ -513,8 +512,8 @@ export default function PublicGivePage() {
 							<FileText className="h-4 w-4 text-[#0f5384]" />
 						</span>
 						<p className="text-sm text-slate-600">
-							<span className="font-semibold text-slate-700">{orgName}</span>{" "}
-							is a 501(c)(3) nonprofit.{" "}
+							<span className="font-semibold text-slate-700">{orgName}</span> is
+							a 501(c)(3) nonprofit.{" "}
 							{donationPageConfig?.legalText?.trim() ||
 								"Gifts are tax-deductible to the extent allowed by law."}
 						</p>
@@ -529,13 +528,34 @@ export default function PublicGivePage() {
 							viewBox="0 0 100 100"
 							aria-hidden
 						>
-							<circle cx="50" cy="50" r="48" fill="none" stroke="currentColor" />
-							<circle cx="50" cy="50" r="36" fill="none" stroke="currentColor" />
-							<circle cx="50" cy="50" r="24" fill="none" stroke="currentColor" />
+							<circle
+								cx="50"
+								cy="50"
+								r="48"
+								fill="none"
+								stroke="currentColor"
+							/>
+							<circle
+								cx="50"
+								cy="50"
+								r="36"
+								fill="none"
+								stroke="currentColor"
+							/>
+							<circle
+								cx="50"
+								cy="50"
+								r="24"
+								fill="none"
+								stroke="currentColor"
+							/>
 						</svg>
 						<p className="relative text-sm leading-relaxed sm:text-base">
 							<span className="text-2xl font-bold tabular-nums sm:text-3xl">
-								${displayAmount > 0 ? displayAmount.toLocaleString("en-US") : "25"}
+								$
+								{displayAmount > 0
+									? displayAmount.toLocaleString("en-US")
+									: "25"}
 							</span>{" "}
 							{impactLine}
 						</p>
@@ -581,61 +601,61 @@ export default function PublicGivePage() {
 								</p>
 								<p className="mt-0.5 text-sm text-slate-600">USD</p>
 							</div>
-							<span className="inline-flex items-center gap-1 rounded-full border border-green/20 bg-green/10 px-2 py-0.5 text-xs font-medium text-green">
+							<span className="inline-flex items-center gap-1 rounded-full border border-green/20 bg-green/10 px-2 py-0.5 text-xs text-green">
 								<Lock className="h-3 w-3" />
 								Secure
 							</span>
 						</div>
 
 						{showOneTime && showMonthly ? (
-						<div
-							className="relative mt-5 grid grid-cols-2 items-center rounded-full border border-slate-200 bg-slate-100 p-1"
-							role="tablist"
-							aria-label="Donation frequency"
-						>
-							<span
-								aria-hidden
-								className="pointer-events-none absolute top-1 bottom-1 left-1 rounded-full bg-white shadow-sm transition-transform duration-200 ease-out"
-								style={{
-									width: "calc(50% - 0.25rem)",
-									transform:
+							<div
+								className="relative mt-5 grid grid-cols-2 items-center rounded-full border border-slate-200 bg-slate-100 p-1"
+								role="tablist"
+								aria-label="Donation frequency"
+							>
+								<span
+									aria-hidden
+									className="pointer-events-none absolute top-1 bottom-1 left-1 rounded-full bg-white shadow-sm transition-transform duration-200 ease-out"
+									style={{
+										width: "calc(50% - 0.25rem)",
+										transform:
+											frequency === "one_time"
+												? "translateX(0)"
+												: "translateX(100%)",
+									}}
+								/>
+								<button
+									type="button"
+									role="tab"
+									aria-selected={frequency === "one_time"}
+									onClick={() => setFrequency("one_time")}
+									className={cn(
+										"relative z-10 cursor-pointer rounded-full py-2 text-sm font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
 										frequency === "one_time"
-											? "translateX(0)"
-											: "translateX(100%)",
-								}}
-							/>
-							<button
-								type="button"
-								role="tab"
-								aria-selected={frequency === "one_time"}
-								onClick={() => setFrequency("one_time")}
-								className={cn(
-									"relative z-10 cursor-pointer rounded-full py-2 text-sm font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
-									frequency === "one_time"
-										? "text-[#0f5384]"
-										: "text-slate-500 hover:text-slate-700",
-								)}
-							>
-								One-time
-							</button>
-							<button
-								type="button"
-								role="tab"
-								aria-selected={frequency === "monthly"}
-								onClick={() => setFrequency("monthly")}
-								className={cn(
-									"relative z-10 flex cursor-pointer items-center justify-center gap-1.5 rounded-full py-2 text-sm font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
-									frequency === "monthly"
-										? "text-[#0f5384]"
-										: "text-slate-500 hover:text-slate-700",
-								)}
-							>
-								Monthly
-								<span className="rounded-full border border-green/20 bg-green/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-green">
-									Most impact
-								</span>
-							</button>
-						</div>
+											? "text-[#0f5384]"
+											: "text-slate-500 hover:text-slate-700",
+									)}
+								>
+									One-time
+								</button>
+								<button
+									type="button"
+									role="tab"
+									aria-selected={frequency === "monthly"}
+									onClick={() => setFrequency("monthly")}
+									className={cn(
+										"relative z-10 flex cursor-pointer items-center justify-center gap-1.5 rounded-full py-2 text-sm font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
+										frequency === "monthly"
+											? "text-[#0f5384]"
+											: "text-slate-500 hover:text-slate-700",
+									)}
+								>
+									Monthly
+									<span className="rounded-full border border-green/20 bg-green/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-green">
+										Most impact
+									</span>
+								</button>
+							</div>
 						) : null}
 
 						<form
@@ -758,9 +778,7 @@ export default function PublicGivePage() {
 									<div className="grid gap-3 sm:grid-cols-2 pl-7">
 										<Select
 											value={tributeType}
-											onValueChange={(v) =>
-												setTributeType(v as TributeType)
-											}
+											onValueChange={(v) => setTributeType(v as TributeType)}
 										>
 											<SelectTrigger className="h-10 border-[0.25px] border-slate-300 bg-white hover:border-blue-300">
 												<SelectValue />

@@ -188,7 +188,7 @@ export function ObligationsQueueBoard({
 											<div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-600">
 												<span
 													className={cn(
-														"inline-block rounded-full border px-2 py-0.5 text-xs font-medium",
+														"inline-block rounded-full border px-2 py-0.5 text-xs",
 														obligationStatusBadgeClass(status),
 													)}
 												>
@@ -196,7 +196,7 @@ export function ObligationsQueueBoard({
 														? "Overdue"
 														: OBLIGATION_STATUS_LABEL[item.status]}
 												</span>
-												<span className="inline-block rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+												<span className="inline-block rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
 													{OBLIGATION_KIND_LABEL[item.kind]}
 												</span>
 												<span className="inline-flex items-center gap-1">

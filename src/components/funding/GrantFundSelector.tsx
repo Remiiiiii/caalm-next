@@ -64,7 +64,7 @@ export function GrantFundSelector({
 			<div className="flex flex-wrap items-center gap-2">
 				<Label className="text-sm font-medium text-slate-700">Grant fund</Label>
 				{stream.missingFund ? (
-					<span className="inline-block px-2 py-0.5 text-xs rounded-full font-medium border bg-orange/10 text-orange border-orange/20">
+					<span className="inline-block px-2 py-0.5 text-xs rounded-full border bg-orange/10 text-orange border-orange/20">
 						Missing fund
 					</span>
 				) : null}

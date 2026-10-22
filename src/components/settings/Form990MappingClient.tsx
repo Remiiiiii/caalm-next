@@ -12,13 +12,13 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { FORM_990_SETTINGS_INTRO } from "@/lib/funding/finance-scope-copy";
 import { FORM_990_KNOWN_SOURCES } from "@/lib/funding/form-990/mapping-sources";
 import {
 	FORM_990_PART_IX_BUCKETS,
 	type Form990ExpenseMapping,
 	type Form990PartIxBucket,
 } from "@/lib/funding/form-990/types";
-import { FORM_990_SETTINGS_INTRO } from "@/lib/funding/finance-scope-copy";
 
 function bucketLabel(bucket: Form990PartIxBucket): string {
 	switch (bucket) {
@@ -92,7 +92,9 @@ export function Form990MappingClient() {
 	return (
 		<div className="space-y-6">
 			<FinanceScopeHelp />
-			<p className="text-sm text-slate-600 max-w-4xl">{FORM_990_SETTINGS_INTRO}</p>
+			<p className="text-sm text-slate-600 max-w-4xl">
+				{FORM_990_SETTINGS_INTRO}
+			</p>
 			{error ? <p className="text-sm text-red">{error}</p> : null}
 			<Card className="glass-card">
 				<div className="glass-card-cap" />
@@ -112,7 +114,9 @@ export function Form990MappingClient() {
 										key={rowKey}
 										className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between rounded-lg border border-slate-200 bg-white p-3"
 									>
-										<span className="text-sm text-slate-700">{source.label}</span>
+										<span className="text-sm text-slate-700">
+											{source.label}
+										</span>
 										<div className="flex items-center gap-2">
 											<Select
 												value={current ?? ""}

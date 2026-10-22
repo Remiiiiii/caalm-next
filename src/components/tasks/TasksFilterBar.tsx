@@ -1,9 +1,9 @@
 "use client";
 
 import { Calendar, CircleDot, Flag } from "lucide-react";
+import { CaalmFilterSelect } from "@/components/ui/CaalmFilterSelect";
 import { SearchField } from "@/components/ui/search-field";
 import type { TaskDueBucket, TaskPriority, TaskStatus } from "@/types/tasks";
-import { CaalmFilterSelect } from "@/components/ui/CaalmFilterSelect";
 import { TaskAssigneeFilter } from "./TaskAssigneeFilter";
 import type { TaskPerson } from "./task-ui";
 
@@ -15,14 +15,16 @@ export interface TaskListFilters {
 	dueBucket: TaskDueBucket;
 }
 
-const STATUS_OPTIONS: Array<{ value: TaskListFilters["status"]; label: string }> =
-	[
-		{ value: "all", label: "All statuses" },
-		{ value: "not_started", label: "Not started" },
-		{ value: "in_progress", label: "In progress" },
-		{ value: "blocked", label: "Blocked" },
-		{ value: "done", label: "Done" },
-	];
+const STATUS_OPTIONS: Array<{
+	value: TaskListFilters["status"];
+	label: string;
+}> = [
+	{ value: "all", label: "All statuses" },
+	{ value: "not_started", label: "Not started" },
+	{ value: "in_progress", label: "In progress" },
+	{ value: "blocked", label: "Blocked" },
+	{ value: "done", label: "Done" },
+];
 
 const PRIORITY_OPTIONS: Array<{
 	value: TaskListFilters["priority"];

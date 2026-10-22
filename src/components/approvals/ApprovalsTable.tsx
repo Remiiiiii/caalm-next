@@ -9,13 +9,13 @@ import { useApprovalsView } from "@/components/approvals/ApprovalsViewContext";
 import FormattedDateTime from "@/components/FormattedDateTime";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
 	CaalmDataTable,
 	DATA_TABLE_BODY_ROW_CLICKABLE,
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
 } from "@/components/ui/caalm-data-table";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
 	TableBody,
 	TableCell,
@@ -174,169 +174,166 @@ export default function ApprovalsTable({
 				onQuickApprove={quickApprove}
 			/>
 			<CaalmDataTable className="hidden md:block">
-					<TableHeader className="[&_tr]:border-b-0">
-						<TableRow className={DATA_TABLE_HEADER_ROW}>
-							<TableHead className={`${DATA_TABLE_HEADER_CELL} pl-4 pr-2 w-10`}>
+				<TableHeader className="[&_tr]:border-b-0">
+					<TableRow className={DATA_TABLE_HEADER_ROW}>
+						<TableHead className={`${DATA_TABLE_HEADER_CELL} pl-4 pr-2 w-10`}>
+							<Checkbox
+								checked={allSelected}
+								onCheckedChange={(checked) => {
+									if (checked) selectAll(items.map((i) => i.id));
+									else clearSelection();
+								}}
+								aria-label="Select all"
+								className="cursor-pointer"
+							/>
+						</TableHead>
+						<TableHead
+							className={`${DATA_TABLE_HEADER_CELL} px-3 sticky left-10 z-10 backdrop-blur-md bg-transparent`}
+						>
+							Item
+						</TableHead>
+						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+							Type
+						</TableHead>
+						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+							Department
+						</TableHead>
+						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+							Assigned
+						</TableHead>
+						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+							Submitted
+						</TableHead>
+						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+							SLA
+						</TableHead>
+						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+							Status
+						</TableHead>
+						<TableHead
+							className={`${DATA_TABLE_HEADER_CELL} pl-3 pr-4 text-right`}
+						>
+							Actions
+						</TableHead>
+					</TableRow>
+				</TableHeader>
+				<TableBody className="[&_tr:last-child>td]:border-b-0">
+					{items.map((item) => (
+						<TableRow
+							key={item.id}
+							className={cn(
+								DATA_TABLE_BODY_ROW_CLICKABLE,
+								"group",
+								selectedIds.includes(item.id) && "bg-blue-50/50",
+							)}
+							onClick={() => canReview && setPreviewItem(item)}
+						>
+							<TableCell
+								className="py-3 pl-4 pr-2"
+								onClick={(e) => e.stopPropagation()}
+							>
 								<Checkbox
-									checked={allSelected}
-									onCheckedChange={(checked) => {
-										if (checked) selectAll(items.map((i) => i.id));
-										else clearSelection();
-									}}
-									aria-label="Select all"
+									checked={selectedIds.includes(item.id)}
+									onCheckedChange={() => toggleSelected(item.id)}
+									aria-label={`Select ${item.title}`}
 									className="cursor-pointer"
 								/>
-							</TableHead>
-							<TableHead
-								className={`${DATA_TABLE_HEADER_CELL} px-3 sticky left-10 z-10 backdrop-blur-md bg-transparent`}
-							>
-								Item
-							</TableHead>
-							<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-								Type
-							</TableHead>
-							<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-								Department
-							</TableHead>
-							<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-								Assigned
-							</TableHead>
-							<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-								Submitted
-							</TableHead>
-							<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-								SLA
-							</TableHead>
-							<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-								Status
-							</TableHead>
-							<TableHead
-								className={`${DATA_TABLE_HEADER_CELL} pl-3 pr-4 text-right`}
-							>
-								Actions
-							</TableHead>
-						</TableRow>
-					</TableHeader>
-					<TableBody className="[&_tr:last-child>td]:border-b-0">
-						{items.map((item) => (
-							<TableRow
-								key={item.id}
-								className={cn(
-									DATA_TABLE_BODY_ROW_CLICKABLE,
-									"group",
-									selectedIds.includes(item.id) && "bg-blue-50/50",
-								)}
-								onClick={() => canReview && setPreviewItem(item)}
-							>
-								<TableCell
-									className="py-3 pl-4 pr-2"
-									onClick={(e) => e.stopPropagation()}
-								>
-									<Checkbox
-										checked={selectedIds.includes(item.id)}
-										onCheckedChange={() => toggleSelected(item.id)}
-										aria-label={`Select ${item.title}`}
-										className="cursor-pointer"
-									/>
-								</TableCell>
-								<TableCell className="py-3 sticky left-10 z-10 backdrop-blur-md bg-white/10 group-hover:bg-white/25 border-r border-white/30">
-									<div className="min-w-0 max-w-[220px]">
-										<p
-											className="subtitle-2 text-slate-700 truncate"
-											title={item.title}
-										>
-											{item.title}
+							</TableCell>
+							<TableCell className="py-3 sticky left-10 z-10 backdrop-blur-md bg-white/10 group-hover:bg-white/25 border-r border-white/30">
+								<div className="min-w-0 max-w-[220px]">
+									<p
+										className="subtitle-2 text-slate-700 truncate"
+										title={item.title}
+									>
+										{item.title}
+									</p>
+									{item.subtitle && (
+										<p className="text-xs text-slate-500 truncate">
+											{item.subtitle}
 										</p>
-										{item.subtitle && (
-											<p className="text-xs text-slate-500 truncate">
-												{item.subtitle}
-											</p>
-										)}
-									</div>
-								</TableCell>
-								<TableCell className="py-3 text-slate-700 whitespace-nowrap text-sm">
-									{item.itemType || "—"}
-								</TableCell>
-								<TableCell className="py-3 text-slate-700 whitespace-nowrap text-sm">
-									{item.department || "—"}
-								</TableCell>
-								<TableCell className="py-3 text-slate-700 whitespace-nowrap text-sm max-w-[140px] truncate">
-									{item.assignees.length > 0 ? item.assignees.join(", ") : "—"}
-								</TableCell>
-								<TableCell className="py-3 text-slate-700 whitespace-nowrap">
-									<FormattedDateTime
-										date={item.submittedAt}
-										className="body-2"
-									/>
-								</TableCell>
-								<TableCell className="py-3 whitespace-nowrap">
-									{item.slaStatus || item.dueAt ? (
-										<span
-											className={cn(
-												"inline-block px-2 py-0.5 text-xs rounded-full font-medium border",
-												slaBadgeClasses(item.slaStatus),
-											)}
-										>
-											{slaBadgeLabel(item) || agingLabel(item)}
-										</span>
-									) : (
-										<span
-											className={cn(
-												"text-sm",
-												isSlaAtRisk(item) || isSlaBreached(item)
-													? "text-orange font-medium"
-													: "text-slate-600",
-											)}
-										>
-											{agingLabel(item)}
-										</span>
 									)}
-								</TableCell>
-								<TableCell className="py-3 whitespace-nowrap">
-									<Badge
-										variant="outline"
+								</div>
+							</TableCell>
+							<TableCell className="py-3 text-slate-700 whitespace-nowrap text-sm">
+								{item.itemType || "—"}
+							</TableCell>
+							<TableCell className="py-3 text-slate-700 whitespace-nowrap text-sm">
+								{item.department || "—"}
+							</TableCell>
+							<TableCell className="py-3 text-slate-700 whitespace-nowrap text-sm max-w-[140px] truncate">
+								{item.assignees.length > 0 ? item.assignees.join(", ") : "—"}
+							</TableCell>
+							<TableCell className="py-3 text-slate-700 whitespace-nowrap">
+								<FormattedDateTime date={item.submittedAt} className="body-2" />
+							</TableCell>
+							<TableCell className="py-3 whitespace-nowrap">
+								{item.slaStatus || item.dueAt ? (
+									<span
 										className={cn(
-											"border capitalize",
-											statusBadgeClasses(item.status),
+											"inline-block px-2 py-0.5 text-xs rounded-full border",
+											slaBadgeClasses(item.slaStatus),
 										)}
 									>
-										{statusLabel(item.status)}
-									</Badge>
-								</TableCell>
-								<TableCell
-									className="py-3 text-right"
-									onClick={(e) => e.stopPropagation()}
+										{slaBadgeLabel(item) || agingLabel(item)}
+									</span>
+								) : (
+									<span
+										className={cn(
+											"text-sm",
+											isSlaAtRisk(item) || isSlaBreached(item)
+												? "text-orange font-medium"
+												: "text-slate-600",
+										)}
+									>
+										{agingLabel(item)}
+									</span>
+								)}
+							</TableCell>
+							<TableCell className="py-3 whitespace-nowrap">
+								<Badge
+									variant="outline"
+									className={cn(
+										"border capitalize",
+										statusBadgeClasses(item.status),
+									)}
 								>
-									<div className="flex items-center justify-end gap-2">
-										{canReview && (
+									{statusLabel(item.status)}
+								</Badge>
+							</TableCell>
+							<TableCell
+								className="py-3 text-right"
+								onClick={(e) => e.stopPropagation()}
+							>
+								<div className="flex items-center justify-end gap-2">
+									{canReview && (
+										<Button
+											type="button"
+											size="sm"
+											variant="outline"
+											className="cursor-pointer h-8"
+											onClick={() => setPreviewItem(item)}
+										>
+											Review
+										</Button>
+									)}
+									{canDecide &&
+										(item.status === "pending-review" ||
+											item.status === "action-required") && (
 											<Button
 												type="button"
 												size="sm"
-												variant="outline"
-												className="cursor-pointer h-8"
-												onClick={() => setPreviewItem(item)}
+												className="primary-btn px-3 h-8 cursor-pointer"
+												disabled={busyId === item.id}
+												onClick={() => quickApprove(item)}
 											>
-												Review
+												Approve
 											</Button>
 										)}
-										{canDecide &&
-											(item.status === "pending-review" ||
-												item.status === "action-required") && (
-												<Button
-													type="button"
-													size="sm"
-													className="primary-btn px-3 h-8 cursor-pointer"
-													disabled={busyId === item.id}
-													onClick={() => quickApprove(item)}
-												>
-													Approve
-												</Button>
-											)}
-									</div>
-								</TableCell>
-							</TableRow>
-						))}
-					</TableBody>
+								</div>
+							</TableCell>
+						</TableRow>
+					))}
+				</TableBody>
 			</CaalmDataTable>
 		</>
 	);

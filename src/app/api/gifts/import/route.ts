@@ -23,7 +23,10 @@ export async function POST(request: NextRequest) {
 				{ status: parsed.status },
 			);
 		}
-		const { valid, errors } = applyGiftColumnMapping(parsed.rows, parsed.mapping);
+		const { valid, errors } = applyGiftColumnMapping(
+			parsed.rows,
+			parsed.mapping,
+		);
 		if (valid.length === 0) {
 			return NextResponse.json(
 				{ error: "No valid rows after mapping", rowErrors: errors },

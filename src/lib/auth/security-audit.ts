@@ -57,10 +57,7 @@ export async function logSecurityAudit(input: {
 }): Promise<void> {
 	const actorName = input.actor.fullName || input.actor.email || "Unknown";
 	const targetLabel =
-		input.target.fullName ||
-		input.target.email ||
-		input.target.$id ||
-		"user";
+		input.target.fullName || input.target.email || input.target.$id || "user";
 	const title = TITLES[input.kind];
 	const summary = `${actorName}: ${title.toLowerCase()} for ${targetLabel}`;
 

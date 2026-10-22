@@ -258,7 +258,7 @@ export default function GmailComposeForm({
 						onChange={(e) => setTo(e.target.value)}
 						placeholder="name@example.com"
 						className={cn(
-							"h-9 w-full bg-transparent text-sm text-slate-800 outline-none",
+							"h-9 w-full bg-transparent text-sm text-slate-700 outline-none",
 							"placeholder:text-slate-400",
 						)}
 					/>
@@ -277,7 +277,7 @@ export default function GmailComposeForm({
 						onChange={(e) => setSubject(e.target.value)}
 						placeholder="What’s this about?"
 						className={cn(
-							"h-9 w-full bg-transparent text-sm text-slate-800 outline-none",
+							"h-9 w-full bg-transparent text-sm text-slate-700 outline-none",
 							"placeholder:text-slate-400",
 						)}
 					/>
@@ -290,7 +290,7 @@ export default function GmailComposeForm({
 					placeholder="Write your message…"
 					rows={10}
 					className={cn(
-						"min-h-[180px] w-full resize-none bg-transparent px-3 py-3 text-sm leading-relaxed text-slate-800 outline-none",
+						"min-h-[180px] w-full resize-none bg-transparent px-3 py-3 text-sm leading-relaxed text-slate-700 outline-none",
 						"placeholder:text-slate-400",
 					)}
 				/>

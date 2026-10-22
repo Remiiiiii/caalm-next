@@ -1,10 +1,10 @@
 "use client";
 
-import { GitBranch, Pencil, Plus, Trash2 } from "lucide-react";
+import { GitBranch, Pencil, Plus, Save, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CardContent, Card as GlassCard } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { AppDialog } from "@/components/ui/app-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useOrganization } from "@/contexts/OrganizationContext";
@@ -403,22 +403,43 @@ export function ApprovalWorkflowTemplatesManager({
 					</ul>
 				)}
 			</CardContent>
-			<Dialog open={open} onOpenChange={setOpen}>
-				<DialogContent className="max-w-[720px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl">
-					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-					<div className="sticky top-0 z-10 bg-linear-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
-						<div className="flex items-center gap-3 px-6">
-							<GitBranch className="w-5 h-5 text-[#0f5384]" />
-							<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-								{draft.$id ? "Edit routing template" : "Routing template"}
-							</DialogTitle>
-						</div>
-						<p className="text-sm text-slate-600 mt-1 ml-14">
-							Rules decide when this path applies. Matching steps run in order;
-							shared parallel group IDs run together.
-						</p>
-					</div>
-					<div className="flex-1 overflow-y-auto p-6 bg-slate-50 space-y-5">
+			<AppDialog
+				open={open}
+				onOpenChange={setOpen}
+				size="form"
+				className="max-h-[90vh] max-w-[720px]"
+				pending={saving}
+				icon={<GitBranch className="h-5 w-5" aria-hidden />}
+				title={draft.$id ? "Edit routing template" : "Routing template"}
+				description="Rules decide when this path applies. Matching steps run in order; shared parallel group IDs run together."
+				footer={
+					<>
+						<Button
+							type="button"
+							variant="outline"
+							className="rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+							disabled={saving}
+							onClick={() => setOpen(false)}
+						>
+							Cancel
+						</Button>
+						<Button
+							type="button"
+							className="btn-primary px-3 sm:px-4"
+							disabled={saving}
+							onClick={() => void save()}
+						>
+							{draft.$id ? (
+								<Save className="h-4 w-4" />
+							) : (
+								<Plus className="h-4 w-4" />
+							)}
+							{draft.$id ? "Update template" : "Save template"}
+						</Button>
+					</>
+				}
+			>
+				<div className="space-y-5 pb-1">
 						<div className="grid gap-3 md:grid-cols-2">
 							<div>
 								<Label>Name</Label>
@@ -749,20 +770,8 @@ export function ApprovalWorkflowTemplatesManager({
 								))}
 							</ul>
 						</section>
-					</div>
-					<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-end">
-						<Button
-							type="button"
-							className="primary-btn px-3 sm:px-4"
-							disabled={saving}
-							onClick={() => void save()}
-						>
-							<Plus className="h-4 w-4" />
-							{draft.$id ? "Update template" : "Save template"}
-						</Button>
-					</div>
-				</DialogContent>
-			</Dialog>
+				</div>
+			</AppDialog>
 		</GlassCard>
 	);
 }

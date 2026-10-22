@@ -24,13 +24,13 @@ export default function Page() {
 						<ul className="text-sm text-slate-600 space-y-1 list-disc pl-5">
 							<li>
 								Required integration:{" "}
-								<span className="font-medium text-slate-800">
+								<span className="font-medium text-slate-700">
 									Incident response platform
 								</span>
 							</li>
 							<li>
 								Permission:{" "}
-								<span className="text-xs text-slate-800">
+								<span className="text-xs text-slate-700">
 									it.view_incidents
 								</span>
 							</li>

@@ -94,7 +94,7 @@ export default function TestimonialsCarousel() {
 												className="rounded-full ring-1 ring-slate-200"
 											/>
 											<div>
-												<p className="text-sm font-semibold text-slate-800">
+												<p className="text-sm font-semibold text-slate-700">
 													{t.name}
 												</p>
 												<p className="text-xs text-slate-500">{t.role}</p>
@@ -163,7 +163,7 @@ export default function TestimonialsCarousel() {
 
 				<motion.div variants={softRise} className="mt-10">
 					<LandingFrostedCard contentClassName="p-6 sm:p-8">
-						<p className="text-lg sm:text-xl text-slate-800 leading-relaxed">
+						<p className="text-lg sm:text-xl text-slate-700 leading-relaxed">
 							<span className="sidebar-gradient-text text-2xl mr-1" aria-hidden>
 								&ldquo;
 							</span>
@@ -181,7 +181,7 @@ export default function TestimonialsCarousel() {
 								className="rounded-full ring-1 ring-slate-200"
 							/>
 							<div>
-								<p className="text-sm font-semibold text-slate-800">
+								<p className="text-sm font-semibold text-slate-700">
 									{featured.name}
 								</p>
 								<p className="text-xs text-slate-500">{featured.role}</p>

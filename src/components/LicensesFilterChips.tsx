@@ -152,7 +152,7 @@ export default function LicensesFilterChips() {
 				<Badge
 					key={chip.key}
 					variant="outline"
-					className="inline-flex items-center px-2 py-0.5 text-xs rounded-full font-medium border bg-blue/10 text-blue border-blue/20 gap-1"
+					className="inline-flex items-center px-2 py-0.5 text-xs rounded-full border bg-blue/10 text-blue border-blue/20 gap-1"
 				>
 					{chip.label}
 					{chip.onRemove ? (

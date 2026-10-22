@@ -18,6 +18,13 @@ export {
 	seedRetentionDepartment,
 } from "./constants";
 export { convertWonPursuitToProposal } from "./convert-pursuit.service";
+export {
+	approvedGrantVolunteerMinutes,
+	assembleFunderSnapshot,
+	type FunderSnapshot,
+	funderSnapshotToXlsxInput,
+	loadFunderSnapshot,
+} from "./funder-snapshot";
 export type {
 	KeyObligationMigrationStats,
 	PlannedLegacyObligation,
@@ -90,11 +97,4 @@ export {
 	updatePursuit,
 } from "./pursuit.repository";
 export { buildRetentionSummary } from "./retention.service";
-export {
-	assembleFunderSnapshot,
-	approvedGrantVolunteerMinutes,
-	funderSnapshotToCsv,
-	loadFunderSnapshot,
-	type FunderSnapshot,
-} from "./funder-snapshot";
 export type * from "./types";

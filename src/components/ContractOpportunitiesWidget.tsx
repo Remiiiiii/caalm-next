@@ -144,7 +144,7 @@ export default function ContractOpportunitiesWidget({
 							>
 								<div className="flex justify-between items-start gap-3">
 									<div className="flex-1 min-w-0">
-										<h4 className="font-medium text-slate-800 text-sm line-clamp-2 mb-1">
+										<h4 className="font-medium text-slate-700 text-sm line-clamp-2 mb-1">
 											{contract.title}
 										</h4>
 

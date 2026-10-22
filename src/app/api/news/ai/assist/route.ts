@@ -2,13 +2,10 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
+import { isNewsAiAssistEnabled, runNewsAiAssist } from "@/lib/news/ai/assist";
 import { logNewsAudit } from "@/lib/news/audit";
-import {
-	isNewsAiAssistEnabled,
-	runNewsAiAssist,
-} from "@/lib/news/ai/assist";
-import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 import { requirePermission } from "@/lib/rbac/middleware";
+import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 
 const schema = z.object({
 	mode: z.enum(["draft_from_text", "summarize", "suggest"]),
@@ -27,7 +24,8 @@ export async function POST(request: NextRequest) {
 		);
 	}
 	const user = await getCurrentUser();
-	if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+	if (!user)
+		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	const parsed = schema.safeParse(await request.json());
 	if (!parsed.success) {
 		return NextResponse.json({ error: "Invalid payload" }, { status: 400 });

@@ -6,8 +6,7 @@ import {
 } from "@/lib/roadmap/store";
 
 const fetchPullRequestStatus = vi.fn(
-	async ({ prNumber }: { prNumber: number }) =>
-		defaultMergedPrLookup(prNumber),
+	async ({ prNumber }: { prNumber: number }) => defaultMergedPrLookup(prNumber),
 );
 
 vi.mock("@/lib/roadmap/github", () => ({
@@ -30,7 +29,8 @@ function defaultMergedPrLookup(prNumber: number) {
 		return {
 			state: "merged" as const,
 			number: 131,
-			title: "NPO 1.1 NPO 1.2 NPO 1.3 NPO 1.4 NPO 1.5 Constituent CRM Foundation",
+			title:
+				"NPO 1.1 NPO 1.2 NPO 1.3 NPO 1.4 NPO 1.5 Constituent CRM Foundation",
 			mergeCommitSha: "cd630987f7c4acbbcccb2bc597d4acedf81f295d",
 			htmlUrl: "https://github.com/Remiiiiii/caalm-next/pull/131",
 		};

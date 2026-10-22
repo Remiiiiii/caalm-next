@@ -1,6 +1,14 @@
-import type { Organization } from "@/lib/rbac/organizations";
+import {
+	getOrganization,
+	type Organization,
+	updateOrganization,
+} from "@/lib/rbac/organizations";
 import { resolveOrgTimezone } from "./timezone";
-import { DEFAULT_ORG_TIMEZONE, type OrgAuditSettings } from "./types";
+import {
+	DEFAULT_ORG_TIMEZONE,
+	type OrgAuditSettings,
+	type SiteCrawlResult,
+} from "./types";
 
 export function getOrgAuditSettings(org: Organization): OrgAuditSettings {
 	const settings = org.settings || {
@@ -35,6 +43,24 @@ export function mergeOrgAuditSettings(
 			? { websiteUrl: updates.websiteUrl?.trim() || "" }
 			: {}),
 	};
+}
+
+/** Reads the cached crawl from org.settings, if any has been stored. */
+export function getCachedSiteCrawl(org: Organization): SiteCrawlResult | null {
+	const cached = org.settings?.siteCrawlCache;
+	return cached ? (cached as SiteCrawlResult) : null;
+}
+
+/** Persists a fresh crawl result on the org document (no new snapshot needed). */
+export async function cacheSiteCrawl(
+	orgId: string,
+	crawl: SiteCrawlResult,
+): Promise<void> {
+	const org = await getOrganization(orgId);
+	if (!org) return;
+	await updateOrganization(orgId, {
+		settings: { ...org.settings, siteCrawlCache: crawl },
+	});
 }
 
 export { DEFAULT_ORG_TIMEZONE };

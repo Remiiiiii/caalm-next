@@ -120,98 +120,94 @@ export function AuditEvidenceTable({
 						</Link>
 					</Button>
 				</div>
-				<CaalmDataTable className="px-0 sm:px-0 pb-0">
-						<TableHeader className="[&_tr]:border-b-0">
-							<TableRow className={DATA_TABLE_HEADER_ROW}>
-								<TableHead
-									className={cn(DATA_TABLE_HEADER_CELL, "pl-4 pr-3")}
+				<CaalmDataTable className="pb-0">
+					<TableHeader className="[&_tr]:border-b-0">
+						<TableRow className={DATA_TABLE_HEADER_ROW}>
+							<TableHead className={cn(DATA_TABLE_HEADER_CELL, "pl-4 pr-3")}>
+								ID
+							</TableHead>
+							<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+								Obligation
+							</TableHead>
+							<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+								Owner
+							</TableHead>
+							<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+								Status
+							</TableHead>
+							<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+								Due
+							</TableHead>
+							<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+								Last reviewed
+							</TableHead>
+							<TableHead className={cn(DATA_TABLE_HEADER_CELL, "pl-3 pr-4")}>
+								CAALM module
+							</TableHead>
+						</TableRow>
+					</TableHeader>
+					<TableBody className="[&_tr:last-child>td]:border-b-0">
+						{rows.length === 0 ? (
+							<TableRow>
+								<TableCell
+									colSpan={7}
+									className="text-center py-8 text-slate-500"
 								>
-									ID
-								</TableHead>
-								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
-									Obligation
-								</TableHead>
-								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
-									Owner
-								</TableHead>
-								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
-									Status
-								</TableHead>
-								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
-									Due
-								</TableHead>
-								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
-									Last reviewed
-								</TableHead>
-								<TableHead
-									className={cn(DATA_TABLE_HEADER_CELL, "pl-3 pr-4")}
-								>
-									CAALM module
-								</TableHead>
+									No obligations match your search.
+								</TableCell>
 							</TableRow>
-						</TableHeader>
-						<TableBody className="[&_tr:last-child>td]:border-b-0">
-							{rows.length === 0 ? (
-								<TableRow>
+						) : (
+							rows.map((row, index) => (
+								<TableRow
+									key={evidenceRowKey(row, index)}
+									className={DATA_TABLE_BODY_ROW_BASE}
+								>
 									<TableCell
-										colSpan={7}
-										className="text-center py-8 text-slate-500"
+										className={cn(rowPad, "pl-4 pr-3 text-sm text-slate-700")}
 									>
-										No obligations match your search.
+										{formatEvidenceDisplayId(row.id)}
+									</TableCell>
+									<TableCell
+										className={cn(rowPad, "font-medium text-slate-700")}
+									>
+										{row.title}
+										{row.category ? (
+											<p className="text-xs text-slate-500 mt-0.5">
+												{row.category}
+											</p>
+										) : null}
+									</TableCell>
+									<TableCell className={cn(rowPad, "text-slate-700")}>
+										{row.owner}
+									</TableCell>
+									<TableCell className={rowPad}>
+										{statusBadge(row.status)}
+									</TableCell>
+									<TableCell className={cn(rowPad, "text-slate-700")}>
+										{format(new Date(row.dueDate), "MMM d, yyyy")}
+									</TableCell>
+									<TableCell className={cn(rowPad, "text-slate-600")}>
+										{row.lastTested
+											? format(new Date(row.lastTested), "MMM d, yyyy")
+											: "—"}
+									</TableCell>
+									<TableCell className={cn(rowPad, "pl-3 pr-4")}>
+										{row.moduleLink ? (
+											<Link
+												href={row.moduleLink}
+												className="inline-flex items-center gap-1 text-sm text-[#0f5384] hover:underline cursor-pointer"
+											>
+												{row.moduleLabel || "Open"}
+												<ExternalLink className="h-3 w-3" />
+											</Link>
+										) : (
+											<span className="text-slate-400">—</span>
+										)}
 									</TableCell>
 								</TableRow>
-							) : (
-								rows.map((row, index) => (
-									<TableRow
-										key={evidenceRowKey(row, index)}
-										className={DATA_TABLE_BODY_ROW_BASE}
-									>
-										<TableCell
-											className={cn(rowPad, "pl-4 pr-3 text-sm text-slate-700")}
-										>
-											{formatEvidenceDisplayId(row.id)}
-										</TableCell>
-										<TableCell
-											className={cn(rowPad, "font-medium text-slate-700")}
-										>
-											{row.title}
-											{row.category ? (
-												<p className="text-xs text-slate-500 mt-0.5">
-													{row.category}
-												</p>
-											) : null}
-										</TableCell>
-										<TableCell className={cn(rowPad, "text-slate-700")}>
-											{row.owner}
-										</TableCell>
-										<TableCell className={rowPad}>
-											{statusBadge(row.status)}
-										</TableCell>
-										<TableCell className={cn(rowPad, "text-slate-700")}>
-											{format(new Date(row.dueDate), "MMM d, yyyy")}
-										</TableCell>
-										<TableCell className={cn(rowPad, "text-slate-600")}>
-											{row.lastTested
-												? format(new Date(row.lastTested), "MMM d, yyyy")
-												: "—"}
-										</TableCell>
-										<TableCell className={cn(rowPad, "pl-3 pr-4")}>
-											{row.moduleLink ? (
-												<Link
-													href={row.moduleLink}
-													className="inline-flex items-center gap-1 text-sm text-[#0f5384] hover:underline cursor-pointer"
-												>
-													{row.moduleLabel || "Open"}
-													<ExternalLink className="h-3 w-3" />
-												</Link>
-											) : (
-												<span className="text-slate-400">—</span>
-											)}
-										</TableCell>
-									</TableRow>
-								))
-							)}
-						</TableBody>
+							))
+						)}
+					</TableBody>
 				</CaalmDataTable>
 			</CardContent>
 		</Card>

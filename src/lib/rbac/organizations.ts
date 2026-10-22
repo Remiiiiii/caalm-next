@@ -38,6 +38,8 @@ export interface Organization {
 		timezone?: string;
 		/** Public website URL for optional bounded crawl */
 		websiteUrl?: string;
+		/** Cached result of the last public-site crawl (see org-settings.ts). */
+		siteCrawlCache?: unknown;
 		street?: string;
 		city?: string;
 		state?: string;

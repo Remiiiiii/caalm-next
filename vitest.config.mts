@@ -11,6 +11,8 @@ export default defineConfig({
 		environment: "jsdom",
 		globals: true,
 		setupFiles: ["./tests/setup.ts"],
+		// jsdom component tests exceed the 5s default when the whole suite runs in parallel
+		testTimeout: 15000,
 		include: ["**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
 		exclude: [
 			"**/node_modules/**",
@@ -22,6 +24,7 @@ export default defineConfig({
 	resolve: {
 		alias: {
 			"@": path.resolve(__dirname, "./src"),
+			"server-only": path.resolve(__dirname, "./tests/helpers/server-only-stub.ts"),
 		},
 	},
 });

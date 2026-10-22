@@ -2,12 +2,14 @@
 
 import { Download, FileText, Save } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { BusyIcon } from "@/components/ui/busy-icon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PERMISSIONS } from "@/constants/permissions";
 import { useToast } from "@/hooks/use-toast";
+import { useBusyAction } from "@/hooks/useBusyAction";
 import { usePermissions } from "@/hooks/usePermissions";
 import type { ConstituentType } from "@/lib/constituents/types";
 
@@ -33,6 +35,7 @@ export function VolunteerTab({
 		constituentType === "volunteer" || constituentType === "member";
 
 	const [profile, setProfile] = useState<VolunteerProfile | null>(null);
+	const [startCsvExport, exportingCsv] = useBusyAction(() => undefined);
 	const [loading, setLoading] = useState(true);
 	const [saving, setSaving] = useState(false);
 
@@ -45,7 +48,8 @@ export function VolunteerTab({
 		try {
 			const res = await fetch(`/api/constituents/${constituentId}/volunteer`);
 			const body = await res.json().catch(() => ({}));
-			if (!res.ok) throw new Error(body.error || "Could not load volunteer profile");
+			if (!res.ok)
+				throw new Error(body.error || "Could not load volunteer profile");
 			setProfile(
 				body.profile ?? {
 					skills: "",
@@ -198,10 +202,11 @@ export function VolunteerTab({
 					<div className="flex flex-wrap justify-end gap-3">
 						<Button variant="outline" className="px-3" asChild>
 							<a
-								href={`/api/constituents/${constituentId}/volunteer/hours/export?format=csv`}
+								href={`/api/constituents/${constituentId}/volunteer/hours/export?format=xlsx`}
+								onClick={() => void startCsvExport()}
 							>
-								<Download className="h-4 w-4" />
-								Export CSV
+								<BusyIcon busy={exportingCsv} icon={Download} />
+								Export Excel
 							</a>
 						</Button>
 						<Button variant="outline" className="px-3" asChild>

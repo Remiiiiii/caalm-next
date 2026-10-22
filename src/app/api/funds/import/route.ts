@@ -1,12 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
+import { requireFundingOrgContext } from "@/lib/funding/request-context";
 import type { FundImportFieldKey } from "@/lib/funds/import/fields";
 import { applyFundColumnMapping } from "@/lib/funds/import/parse";
 import {
 	commitFundImport,
 	dryRunFundImport,
 } from "@/lib/funds/import/run-import";
-import { requireFundingOrgContext } from "@/lib/funding/request-context";
 
 type ImportBody = {
 	rows?: Record<string, string>[];
@@ -28,7 +28,10 @@ export async function POST(request: NextRequest) {
 			body.mapping && typeof body.mapping === "object" ? body.mapping : {};
 
 		if (rows.length === 0) {
-			return NextResponse.json({ error: "No CSV rows provided" }, { status: 400 });
+			return NextResponse.json(
+				{ error: "No CSV rows provided" },
+				{ status: 400 },
+			);
 		}
 		if (rows.length > 500) {
 			return NextResponse.json(

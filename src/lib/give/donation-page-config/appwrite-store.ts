@@ -16,7 +16,8 @@ function dbId(): string {
 
 function draftsTableId(): string {
 	return (
-		appwriteConfig.donationPageConfigDraftsCollectionId || "69fb1a01001f4e8c2b80"
+		appwriteConfig.donationPageConfigDraftsCollectionId ||
+		"69fb1a01001f4e8c2b80"
 	);
 }
 

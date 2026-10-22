@@ -32,7 +32,7 @@ export function AuditPageShell({
 							{tags.map((tag) => (
 								<span
 									key={tag}
-									className="text-[10px] font-medium tracking-wide uppercase text-slate-500 border border-slate-200 bg-white/70 px-2 py-0.5"
+									className="text-[10px] tracking-wide uppercase text-slate-500 border border-slate-200 bg-white/70 px-2 py-0.5"
 								>
 									{tag}
 								</span>

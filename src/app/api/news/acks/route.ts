@@ -7,20 +7,24 @@ import {
 	listAcknowledgmentsForArticle,
 } from "@/lib/database/news-acknowledgments";
 import { getNewsArticle, listNewsArticles } from "@/lib/database/news-articles";
-import { logNewsAudit } from "@/lib/news/audit";
 import { isArticleVisibleToAudience } from "@/lib/news/audience";
+import { logNewsAudit } from "@/lib/news/audit";
+import { requirePermission } from "@/lib/rbac/middleware";
 import {
 	getUserDefaultOrganization,
 	getUserRoles,
 } from "@/lib/rbac/permissions";
-import { requirePermission } from "@/lib/rbac/middleware";
 
 export async function GET(request: NextRequest) {
 	const user = await getCurrentUser();
-	if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+	if (!user)
+		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	const org = await getUserDefaultOrganization(user.$id);
 	if (!org?.orgId) {
-		return NextResponse.json({ error: "Organization not found" }, { status: 400 });
+		return NextResponse.json(
+			{ error: "Organization not found" },
+			{ status: 400 },
+		);
 	}
 	const articleId = request.nextUrl.searchParams.get("articleId");
 	if (articleId) {
@@ -56,7 +60,10 @@ export async function GET(request: NextRequest) {
 			userId: user.$id,
 			articleId: article.$id,
 		});
-		if (!existing || (existing.articleVersion || 1) < (article.articleVersion || 1)) {
+		if (
+			!existing ||
+			(existing.articleVersion || 1) < (article.articleVersion || 1)
+		) {
 			pending.push({
 				id: article.$id,
 				title: article.title,
@@ -70,10 +77,14 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
 	const user = await getCurrentUser();
-	if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+	if (!user)
+		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	const org = await getUserDefaultOrganization(user.$id);
 	if (!org?.orgId) {
-		return NextResponse.json({ error: "Organization not found" }, { status: 400 });
+		return NextResponse.json(
+			{ error: "Organization not found" },
+			{ status: 400 },
+		);
 	}
 	const { articleId } = await request.json();
 	const article = await getNewsArticle(articleId);

@@ -346,9 +346,7 @@ export async function runAssistantTurn(params: {
 			...(draft.dueDate ? { dueDate: draft.dueDate } : {}),
 			...(draft.description ? { description: draft.description } : {}),
 		};
-		const label = draft.title
-			? `Create task “${draft.title}”`
-			: "Create task";
+		const label = draft.title ? `Create task “${draft.title}”` : "Create task";
 		const preview = JSON.stringify(args, null, 2).slice(0, 500);
 		const pending = await storePendingAction({
 			userId: ctx.user.$id,
@@ -495,8 +493,7 @@ User permissions include: ${ctx.permissions.slice(0, 40).join(", ")}${ctx.permis
 				preview,
 			});
 			const isTaskDraft =
-				tool.name === "create_task" ||
-				tool.name === "create_task_for_contract";
+				tool.name === "create_task" || tool.name === "create_task_for_contract";
 			return {
 				answer:
 					tool.name === "create_calendar_event"

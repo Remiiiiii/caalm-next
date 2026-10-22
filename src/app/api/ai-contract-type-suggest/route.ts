@@ -6,7 +6,10 @@ import { requirePermission } from "@/lib/rbac/middleware";
 export async function POST(request: NextRequest) {
 	try {
 		const denied = await requirePermission(request, {
-			permission: [PERMISSIONS.CONTRACTS.CREATE, PERMISSIONS.AI.DOCUMENT_ANALYSIS],
+			permission: [
+				PERMISSIONS.CONTRACTS.CREATE,
+				PERMISSIONS.AI.DOCUMENT_ANALYSIS,
+			],
 		});
 		if (denied) return denied;
 

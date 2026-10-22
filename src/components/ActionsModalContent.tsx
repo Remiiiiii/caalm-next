@@ -69,7 +69,7 @@ const ImageThumbnail = ({
 				{status && (
 					<span
 						className={cn(
-							"inline-block px-2 py-0.5 text-xs rounded-full font-medium border shrink-0",
+							"inline-block px-2 py-0.5 text-xs rounded-full border shrink-0",
 							getStatusBadgeClasses(status),
 						)}
 					>
@@ -407,14 +407,14 @@ export const FileDetails = ({
 			}
 			if (Array.isArray(assignedManagers) && assignedManagers.length > 0) {
 				return (
-					<span className="text-slate-800 font-semibold break-words overflow-wrap-anywhere">
+					<span className="text-slate-700 font-semibold break-words overflow-wrap-anywhere">
 						{assignedManagers.join(", ")}
 					</span>
 				);
 			}
 			if (typeof assignedManagers === "string") {
 				return (
-					<span className="text-slate-800 font-semibold break-words overflow-wrap-anywhere">
+					<span className="text-slate-700 font-semibold break-words overflow-wrap-anywhere">
 						{assignedManagers}
 					</span>
 				);
@@ -594,7 +594,7 @@ export const FileDetails = ({
 											: "bg-green",
 							)}
 						/>
-						<span className="text-sm font-semibold text-slate-800 break-words">
+						<span className="text-sm font-semibold text-slate-700 break-words">
 							{formatted}
 						</span>
 					</div>
@@ -604,7 +604,7 @@ export const FileDetails = ({
 							"text-sm break-words overflow-wrap-anywhere",
 							empty
 								? "font-normal text-slate-400"
-								: "font-semibold text-slate-800",
+								: "font-semibold text-slate-700",
 						)}
 					>
 						{formatted}
@@ -625,7 +625,7 @@ export const FileDetails = ({
 			className="scroll-mt-4 space-y-4"
 		>
 			<div className="border-b border-slate-200 pb-2">
-				<h3 className="text-base font-semibold text-slate-800">{title}</h3>
+				<h3 className="text-base font-semibold text-slate-700">{title}</h3>
 			</div>
 			{children}
 		</section>
@@ -870,7 +870,7 @@ export const FileDetails = ({
 					<div className="min-w-0 flex-1">
 						<div className="flex items-start justify-between gap-3">
 							<div className="min-w-0">
-								<h2 className="truncate text-lg font-semibold text-slate-800 sm:text-xl">
+								<h2 className="truncate text-lg font-semibold text-slate-700 sm:text-xl">
 									{displayTitle}
 								</h2>
 								<p className="mt-0.5 text-xs text-slate-500 sm:text-sm">
@@ -881,7 +881,7 @@ export const FileDetails = ({
 								{status ? (
 									<span
 										className={cn(
-											"inline-block px-2 py-0.5 text-xs rounded-full font-medium border",
+											"inline-block px-2 py-0.5 text-xs rounded-full border",
 											getStatusBadgeClasses(status),
 										)}
 									>
@@ -913,7 +913,7 @@ export const FileDetails = ({
 									"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
 									active
 										? "bg-blue/10 font-medium text-[#0f5384]"
-										: "text-slate-600 hover:bg-white/80 hover:text-slate-800",
+										: "text-slate-600 hover:bg-white/80 hover:text-slate-700",
 								)}
 							>
 								<Icon
@@ -1038,7 +1038,7 @@ export const FileDetails = ({
 														"text-sm",
 														formatDateForDisplay(displayExpiry) === EMPTY_VALUE
 															? "font-normal text-slate-400"
-															: "font-semibold text-slate-800",
+															: "font-semibold text-slate-700",
 													)}
 												>
 													{formatDateForDisplay(displayExpiry)}
@@ -1092,7 +1092,7 @@ export const FileDetails = ({
 																	setSelectedDate(undefined);
 																	setEditing(false);
 																}}
-																className="primary-btn px-3 sm:px-4 text-slate-600 hover:text-slate-800"
+																className="primary-btn px-3 sm:px-4 text-slate-600 hover:text-slate-700"
 															>
 																<Ban className="h-4 w-4" />
 																Cancel
@@ -1784,7 +1784,7 @@ export const ShareInput = ({
 						url={file.url}
 					/>
 					<div className="min-w-0 flex-1">
-						<p className="subtitle-2 truncate text-slate-800">
+						<p className="subtitle-2 truncate text-slate-700">
 							{file.contractName || file.name}
 						</p>
 						<p className="caption text-slate-500">
@@ -1869,14 +1869,14 @@ export const ShareInput = ({
 																	avatarFileId={user.avatar}
 																/>
 																<span className="min-w-0 flex-1">
-																	<span className="block truncate text-sm font-medium text-slate-800">
+																	<span className="block truncate text-sm font-medium text-slate-700">
 																		{user.fullName}
 																	</span>
 																	<span className="block truncate text-xs text-slate-500">
 																		{user.email}
 																	</span>
 																</span>
-																<span className="inline-block shrink-0 rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+																<span className="inline-block shrink-0 rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
 																	Can view
 																</span>
 																<Checkbox
@@ -1967,7 +1967,7 @@ export const ShareInput = ({
 														: trimmed
 												}
 											>
-												<span className="block font-medium text-slate-800">
+												<span className="block font-medium text-slate-700">
 													{displayName}
 												</span>
 												{displayName !== trimmed ? (
@@ -1978,7 +1978,7 @@ export const ShareInput = ({
 											</span>
 										</div>
 										<div className="flex shrink-0 items-center gap-2">
-											<span className="inline-block rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+											<span className="inline-block rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
 												Can view
 											</span>
 											<Button
@@ -2026,7 +2026,7 @@ export const ShareInput = ({
 								<span className="text-sm font-medium text-slate-600">
 									{row.label}
 								</span>
-								<span className="min-w-0 truncate text-sm font-semibold text-slate-800">
+								<span className="min-w-0 truncate text-sm font-semibold text-slate-700">
 									{row.value}
 								</span>
 							</div>

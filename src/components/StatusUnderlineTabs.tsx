@@ -38,4 +38,8 @@ export default function StatusUnderlineTabs({
 	);
 }
 
-export type { StatusUnderlineTabsProps, UnderlineTab, RoundedUnderlineTabsProps };
+export type {
+	RoundedUnderlineTabsProps,
+	StatusUnderlineTabsProps,
+	UnderlineTab,
+};

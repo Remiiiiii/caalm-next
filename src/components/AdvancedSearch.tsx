@@ -5,13 +5,13 @@ import type React from "react";
 import { useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DropdownScrollArea } from "@/components/ui/DropdownScrollArea";
 import {
 	CaalmDatePicker,
 	parseIsoDateLocal,
 	toIsoDateLocal,
 } from "@/components/ui/caalm-date-picker";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DropdownScrollArea } from "@/components/ui/DropdownScrollArea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -529,9 +529,7 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
 										placeholder="End date"
 										size="sm"
 										onChange={(iso) =>
-											setExpiryEndDate(
-												iso ? parseIsoDateLocal(iso) : undefined,
-											)
+											setExpiryEndDate(iso ? parseIsoDateLocal(iso) : undefined)
 										}
 									/>
 								</div>

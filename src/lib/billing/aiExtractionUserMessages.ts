@@ -22,9 +22,7 @@ export function plainAiExtractionLimitMessage(params: {
 		Number.isFinite(used) &&
 		Number.isFinite(limit)
 	) {
-		const planBit = pilot
-			? `on your ${tier} pilot`
-			: `on your ${tier} plan`;
+		const planBit = pilot ? `on your ${tier} pilot` : `on your ${tier} plan`;
 		return `You've used all ${limit} AI document reads for this month ${planBit} (${used} used). You can still fill the form by hand. Upgrade in Settings → Billing, or wait until next month.`;
 	}
 

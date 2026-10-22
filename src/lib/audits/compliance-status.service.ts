@@ -86,6 +86,8 @@ async function fetchContractCompliance(
 		compliance?: string;
 		contractExpiryDate?: string;
 		assignedManager?: string;
+		assignedManagers?: string[];
+		contractOwnerId?: string;
 		department?: string;
 	}>;
 
@@ -121,6 +123,8 @@ async function fetchContractCompliance(
 				id: contract.$id,
 				title: contract.contractName || contract.name || "Unnamed contract",
 				owner: contract.assignedManager || contract.department || "Unassigned",
+				assignedManagers: contract.assignedManagers ?? [],
+				assignedBy: contract.contractOwnerId,
 				status: mapContractComplianceToStatus(contract.compliance),
 				dueDate: contract.contractExpiryDate || now.toISOString().split("T")[0],
 				category: contract.compliance,
@@ -165,10 +169,18 @@ async function fetchLicenseCompliance(
 
 	let active = 0;
 	let atRisk = 0;
+	let expired = 0;
 	const evidence: AuditEvidenceRow[] = [];
+	const today = new Date().toISOString().split("T")[0];
 
 	for (const license of licenses) {
 		if (license.status === "active") active += 1;
+		if (
+			license.status === "expired" ||
+			(license.licenseExpiryDate && license.licenseExpiryDate.slice(0, 10) < today)
+		) {
+			expired += 1;
+		}
 
 		const bucket = license.compliance ?? "unknown";
 		if (complianceBuckets[bucket] === undefined) complianceBuckets.unknown += 1;
@@ -186,6 +198,8 @@ async function fetchLicenseCompliance(
 				id: license.$id,
 				title: license.licenseName,
 				owner: license.issuingAuthority || license.division || "Unassigned",
+				assignedManagers: license.assignedManagers ?? [],
+				assignedBy: (license as { licenseOwnerId?: string }).licenseOwnerId,
 				status: mapLicenseComplianceToStatus(
 					license.compliance,
 					license.status,
@@ -207,6 +221,8 @@ async function fetchLicenseCompliance(
 			id: license.$id,
 			title: license.licenseName,
 			owner: license.issuingAuthority || license.division || "Unassigned",
+			assignedManagers: license.assignedManagers ?? [],
+			assignedBy: (license as { licenseOwnerId?: string }).licenseOwnerId,
 			status: "at_risk",
 			dueDate:
 				license.licenseExpiryDate || new Date().toISOString().split("T")[0],
@@ -223,6 +239,7 @@ async function fetchLicenseCompliance(
 		active,
 		expiringSoon: expiring.length,
 		atRisk,
+		expired,
 		complianceBuckets,
 		evidence: dedupeEvidenceRows(evidence).slice(0, 10),
 	};

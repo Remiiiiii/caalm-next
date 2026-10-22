@@ -1,3 +1,4 @@
+import type { StyledXlsxInput } from "@/lib/export/styled-xlsx";
 import { mappingLookupKey } from "./mapping-sources";
 import type {
 	Form990ExpenseLine,
@@ -23,10 +24,7 @@ export function buildForm990Worksheet(input: {
 }): Form990WorksheetResult {
 	const mapByKey = new Map<string, Form990PartIxBucket>();
 	for (const m of input.mappings) {
-		mapByKey.set(
-			mappingLookupKey(m.sourceType, m.sourceKey),
-			m.partIxBucket,
-		);
+		mapByKey.set(mappingLookupKey(m.sourceType, m.sourceKey), m.partIxBucket);
 	}
 
 	const buckets: Record<Form990PartIxBucket, number> = {
@@ -69,57 +67,69 @@ export function buildForm990Worksheet(input: {
 	};
 }
 
-function csvEscape(value: string): string {
-	if (/[",\n]/.test(value)) {
-		return `"${value.replace(/"/g, '""')}"`;
-	}
-	return value;
-}
-
-export function worksheetToCsv(result: Form990WorksheetResult): string {
-	const header =
-		"part_ix_bucket,amount,source_type,source_key,reference_id,reference_label,event_date,contract_id";
-	const rows = result.worksheetRows.map((r) =>
-		[
+export function worksheetToXlsxInput(
+	result: Form990WorksheetResult,
+): StyledXlsxInput {
+	const money = (n: number) => Number(n.toFixed(2));
+	return {
+		sheetName: "Part IX Worksheet",
+		title: "Form 990 Part IX Functional Expense Worksheet",
+		subtitle: `Not an IRS e-file · Program ${money(result.buckets.program)} · Management ${money(result.buckets.management)} · Fundraising ${money(result.buckets.fundraising)}`,
+		columns: [
+			{ header: "Part IX bucket", width: 18 },
+			{ header: "Amount", type: "currency", width: 16 },
+			{ header: "Source type", width: 18 },
+			{ header: "Source key", width: 24 },
+			{ header: "Reference ID", width: 26 },
+			{ header: "Reference", width: 40 },
+			{ header: "Event date", type: "date", width: 16 },
+			{ header: "Contract ID", width: 26 },
+		],
+		rows: result.worksheetRows.map((r) => [
 			r.partIxBucket,
-			r.amount.toFixed(2),
+			money(r.amount),
 			r.sourceType,
 			r.sourceKey,
 			r.referenceId,
-			csvEscape(r.referenceLabel),
+			r.referenceLabel,
 			r.eventDate,
-			r.contractId ?? "",
-		].join(","),
-	);
-	const summary = [
-		"# Form 990 Part IX functional expense worksheet (not an IRS e-file)",
-		`# program,${result.buckets.program.toFixed(2)}`,
-		`# management,${result.buckets.management.toFixed(2)}`,
-		`# fundraising,${result.buckets.fundraising.toFixed(2)}`,
-		header,
-		...rows,
-	];
-	return `${summary.join("\n")}\n`;
+			r.contractId,
+		]),
+	};
 }
 
-export function exceptionsToCsv(result: Form990WorksheetResult): string {
-	const header =
-		"source_type,source_key,amount,reference_id,reference_label,event_date,contract_id";
-	const rows = result.exceptions.map((r) =>
-		[
+export function exceptionsToXlsxInput(
+	result: Form990WorksheetResult,
+): StyledXlsxInput {
+	return {
+		sheetName: "Exceptions",
+		title: "Form 990 Unmapped Categories",
+		subtitle: "These lines have no Part IX mapping and must not be hidden",
+		columns: [
+			{ header: "Source type", width: 18 },
+			{ header: "Source key", width: 24 },
+			{ header: "Amount", type: "currency", width: 16 },
+			{ header: "Reference ID", width: 26 },
+			{ header: "Reference", width: 40 },
+			{ header: "Event date", type: "date", width: 16 },
+			{ header: "Contract ID", width: 26 },
+		],
+		rows: result.exceptions.map((r) => [
 			r.sourceType,
 			r.sourceKey,
-			r.amount.toFixed(2),
+			Number(r.amount.toFixed(2)),
 			r.referenceId,
-			csvEscape(r.referenceLabel),
+			r.referenceLabel,
 			r.eventDate,
-			r.contractId ?? "",
-		].join(","),
-	);
-	return `${["# Unmapped categories (must not be hidden)", header, ...rows].join("\n")}\n`;
+			r.contractId,
+		]),
+	};
 }
 
-export function parseIsoDateRange(start: string, end: string): {
+export function parseIsoDateRange(
+	start: string,
+	end: string,
+): {
 	startMs: number;
 	endMs: number;
 } | null {

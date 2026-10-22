@@ -12,11 +12,13 @@ import {
 } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
+import { BusyIcon } from "@/components/ui/busy-icon";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { SampleDataBadge } from "@/components/ui/sample-data-badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useBusyAction } from "@/hooks/useBusyAction";
 import AnalyticsErrorBoundary from "./AnalyticsErrorBoundary";
 
 interface EnhancedAnalyticsDashboardProps {
@@ -123,6 +125,7 @@ const EnhancedAnalyticsDashboard: React.FC<EnhancedAnalyticsDashboardProps> = ({
 		// In a real implementation, this would export the current analytics data
 		console.log("Exporting analytics data...", data);
 	};
+	const [runExporting, exporting] = useBusyAction(handleExport);
 
 	const getTabIcon = (tab: string) => {
 		switch (tab) {
@@ -241,10 +244,11 @@ const EnhancedAnalyticsDashboard: React.FC<EnhancedAnalyticsDashboardProps> = ({
 						<Button
 							variant="outline"
 							size="sm"
-							onClick={handleExport}
+							disabled={exporting}
+							onClick={() => void runExporting()}
 							className="bg-white/60 backdrop-blur border border-white/40 hover:bg-white/30 transition-all duration-300"
 						>
-							<SquareArrowRightExit className="h-4 w-4" />
+							<BusyIcon busy={exporting} icon={SquareArrowRightExit} />
 							Export
 						</Button>
 						<Button

@@ -14,11 +14,11 @@ import {
 	GRAPH_PAD_Y,
 	wouldCreateCycle,
 } from "@/lib/users/assignment-graph";
-import { isSuperAdminProfile } from "@/lib/users/graph-visibility";
 import {
-	isTopDownOrientation,
 	type GraphOrientation,
+	isTopDownOrientation,
 } from "@/lib/users/graph-orientation";
+import { isSuperAdminProfile } from "@/lib/users/graph-visibility";
 
 /** Horizontal gap between manager (left) and reports (right). */
 export const REPORTING_RANK_GAP = FLOW_RANK_GAP;
@@ -250,7 +250,11 @@ export function seedReportingNodePositions<T extends ReportingGraphUser>(
 		const centered =
 			kids.length === 0
 				? start
-				: start + Math.max(0, (span - (topDown ? FLOW_CARD_WIDTH : FLOW_CARD_HEIGHT)) / 2);
+				: start +
+					Math.max(
+						0,
+						(span - (topDown ? FLOW_CARD_WIDTH : FLOW_CARD_HEIGHT)) / 2,
+					);
 		if (topDown) {
 			positions.set(id, {
 				x: centered,

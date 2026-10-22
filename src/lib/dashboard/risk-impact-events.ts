@@ -27,7 +27,7 @@ export interface NamedRecord {
 	title?: string;
 }
 
-const AT_RISK_VALUES = new Set([
+export const AT_RISK_VALUES = new Set([
 	"action-required",
 	"at-risk",
 	"at_risk",
@@ -232,6 +232,7 @@ export interface RiskAvertedPdfPayload {
 	counts: RiskImpactSnapshot["counts"];
 	countTrends: RiskImpactSnapshot["countTrends"];
 	openRisk: RiskImpactSnapshot["openRisk"];
+	portfolio: RiskImpactSnapshot["secondary"];
 	monitoring: RiskImpactSnapshot["monitoring"];
 	events: RiskImpactEvent[];
 	eventCount: number;
@@ -260,13 +261,12 @@ export function buildRiskAvertedPdfPayload(input: {
 		counts: snapshot.counts,
 		countTrends: snapshot.countTrends,
 		openRisk: snapshot.openRisk,
+		portfolio: snapshot.secondary,
 		monitoring: snapshot.monitoring,
 		events,
 		eventCount: events.length,
 		countedEventCount: counted.length,
-		countedDollarsFormatted: formatRiskUsdExact(
-			sumCountedEventDollars(events),
-		),
+		countedDollarsFormatted: formatRiskUsdExact(sumCountedEventDollars(events)),
 		dataSources: snapshot.dataSources,
 	};
 }

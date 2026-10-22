@@ -61,10 +61,7 @@ export type AssistantActionField = {
 	};
 };
 
-export type AssistantActionLifecycleState =
-	| "pending"
-	| "completed"
-	| "failed";
+export type AssistantActionLifecycleState = "pending" | "completed" | "failed";
 
 export type AssistantActionLifecycle = {
 	state: AssistantActionLifecycleState;

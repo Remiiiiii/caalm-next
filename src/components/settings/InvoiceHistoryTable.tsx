@@ -9,15 +9,16 @@ import {
 	Inbox,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { BusyIcon } from "@/components/ui/busy-icon";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { LoadingSpinner } from "@/components/ui/loading";
 import {
 	CaalmDataTable,
 	DATA_TABLE_BODY_ROW_BASE,
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
 } from "@/components/ui/caalm-data-table";
+import { Card, CardContent } from "@/components/ui/card";
+import { LoadingSpinner } from "@/components/ui/loading";
 import {
 	TableBody,
 	TableCell,
@@ -193,37 +194,25 @@ export default function InvoiceHistoryTable({
 							</div>
 						) : (
 							<>
-								<CaalmDataTable className="px-0 sm:px-0 pb-0">
+								<CaalmDataTable className="pb-0">
 									<TableHeader className="[&_tr]:border-b-0">
 										<TableRow className={DATA_TABLE_HEADER_ROW}>
-											<TableHead
-												className={`${DATA_TABLE_HEADER_CELL} px-3`}
-											>
+											<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
 												Date
 											</TableHead>
-											<TableHead
-												className={`${DATA_TABLE_HEADER_CELL} px-3`}
-											>
+											<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
 												Invoice
 											</TableHead>
-											<TableHead
-												className={`${DATA_TABLE_HEADER_CELL} px-3`}
-											>
+											<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
 												Amount
 											</TableHead>
-											<TableHead
-												className={`${DATA_TABLE_HEADER_CELL} px-3`}
-											>
+											<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
 												Status
 											</TableHead>
-											<TableHead
-												className={`${DATA_TABLE_HEADER_CELL} px-3`}
-											>
+											<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
 												View
 											</TableHead>
-											<TableHead
-												className={`${DATA_TABLE_HEADER_CELL} px-3`}
-											>
+											<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
 												Download
 											</TableHead>
 										</TableRow>
@@ -256,7 +245,7 @@ export default function InvoiceHistoryTable({
 													<TableCell>
 														<span
 															className={cn(
-																"inline-flex items-center rounded-xl border px-2 py-0.5 text-xs font-medium",
+																"inline-flex items-center rounded-xl border px-2 py-0.5 text-xs",
 																statusBadge.className,
 															)}
 														>
@@ -302,7 +291,10 @@ export default function InvoiceHistoryTable({
 																	}
 																}}
 															>
-																<Download className="h-4 w-4" />
+																<BusyIcon
+																	busy={downloadingId === invoice.id}
+																	icon={Download}
+																/>
 																<span className="sr-only">
 																	Download invoice
 																</span>

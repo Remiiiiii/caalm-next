@@ -6,8 +6,8 @@ import {
 	upsertNewsSystemSettings,
 } from "@/lib/database/news-system-settings";
 import { logNewsAudit } from "@/lib/news/audit";
-import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 import { requirePermission } from "@/lib/rbac/middleware";
+import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 
 export async function GET(request: NextRequest) {
 	const denied = await requirePermission(request, {
@@ -15,10 +15,14 @@ export async function GET(request: NextRequest) {
 	});
 	if (denied) return denied;
 	const user = await getCurrentUser();
-	if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+	if (!user)
+		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	const org = await getUserDefaultOrganization(user.$id);
 	if (!org?.orgId) {
-		return NextResponse.json({ error: "Organization not found" }, { status: 400 });
+		return NextResponse.json(
+			{ error: "Organization not found" },
+			{ status: 400 },
+		);
 	}
 	const settings = await getNewsSystemSettings(org.orgId);
 	return NextResponse.json({
@@ -37,10 +41,14 @@ export async function PUT(request: NextRequest) {
 	});
 	if (denied) return denied;
 	const user = await getCurrentUser();
-	if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+	if (!user)
+		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	const org = await getUserDefaultOrganization(user.$id);
 	if (!org?.orgId) {
-		return NextResponse.json({ error: "Organization not found" }, { status: 400 });
+		return NextResponse.json(
+			{ error: "Organization not found" },
+			{ status: 400 },
+		);
 	}
 	const body = await request.json();
 	const settings = await upsertNewsSystemSettings({

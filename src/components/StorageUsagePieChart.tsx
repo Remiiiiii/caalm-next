@@ -154,7 +154,7 @@ export function StorageUsagePieChart({
 					<p className="text-xs font-medium text-slate-500">
 						Available storage
 					</p>
-					<p className="text-sm font-semibold text-slate-800">
+					<p className="text-sm font-semibold text-slate-700">
 						{usedLabel} / {limitLabel}
 					</p>
 				</div>
@@ -177,12 +177,12 @@ export function StorageUsagePieChart({
 										className="h-2.5 w-2.5 shrink-0 rounded-full"
 										style={{ backgroundColor: color }}
 									/>
-									<span className="truncate text-sm font-medium text-slate-800">
+									<span className="truncate text-sm font-medium text-slate-700">
 										{category.title}
 									</span>
 								</div>
 								<div className="shrink-0 text-right">
-									<p className="text-sm font-semibold text-slate-800">
+									<p className="text-sm font-semibold text-slate-700">
 										{convertFileSize({ sizeInBytes: category.size || 0 })}
 									</p>
 									<p className="text-xs text-slate-500">{pct}%</p>

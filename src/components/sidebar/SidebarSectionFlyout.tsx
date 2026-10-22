@@ -91,9 +91,7 @@ function ItemIcon({
 	}
 
 	if (item.name === "Funding & Retention") {
-		return (
-			<NavItemIcon name={item.name} width={20} height={20} />
-		);
+		return <NavItemIcon name={item.name} width={20} height={20} />;
 	}
 
 	if (item.name === "Campaigns") {

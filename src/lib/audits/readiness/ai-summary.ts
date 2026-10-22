@@ -59,6 +59,7 @@ Hard rules:
 - Prioritize critical and moderate gaps with concrete next actions in CAALM (Contracts / Licenses).
 - If public site crawl data exists, mention it as informational only and not part of the score.
 - Do not invent regulatory findings.
+- Write in plain professional prose. Do not use markdown (no **, __, # headings, backticks, or markdown bullet markers). Use short paragraphs. For lists, write numbered steps as "1. " lines.
 
 JSON:
 ${payloadContext(payload)}`;
@@ -86,6 +87,7 @@ export async function answerReadinessQuestion(options: {
 Answer the user's question using only the readiness JSON. Be practical and specific.
 Always remind once that CAALM readiness is not a regulator/CPA determination.
 Also return 3 short follow-up questions.
+Write the answer in plain professional prose with no markdown syntax.
 
 Respond as JSON:
 {"answer":"...","suggestedQuestions":["...","...","..."]}

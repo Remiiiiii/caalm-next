@@ -76,10 +76,15 @@ function htmlToPlain(html: string): string {
 			.replace(/<script[\s\S]*?<\/script>/gi, "")
 			.replace(/<br\s*\/?>/gi, "\n")
 			.replace(/<\/(p|div|tr|li|h[1-6]|table|section|article)>/gi, "\n")
-			.replace(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi, (_, href, label) => {
-				const inner = String(label).replace(/<[^>]+>/g, "").trim();
-				return `${inner}\n${href}\n`;
-			})
+			.replace(
+				/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi,
+				(_, href, label) => {
+					const inner = String(label)
+						.replace(/<[^>]+>/g, "")
+						.trim();
+					return `${inner}\n${href}\n`;
+				},
+			)
 			.replace(/<[^>]+>/g, " ")
 			.replace(/[ \t]+\n/g, "\n")
 			.replace(/\n{3,}/g, "\n\n"),
@@ -92,7 +97,7 @@ export function rejoinBrokenUrls(text: string): string {
 		/(https?:\/\/[^\s]*)\n([^\s]+)/gi,
 		(full, start: string, cont: string) => {
 			// Continue joining while the next piece looks like a URL continuation
-			if (/^[a-z0-9\-._~:/?#\[\]@!$&'()*+,;=%]+$/i.test(cont)) {
+			if (/^[a-z0-9\-._~:/?#[\]@!$&'()*+,;=%]+$/i.test(cont)) {
 				return `${start}${cont}`;
 			}
 			return full;
@@ -169,7 +174,7 @@ export function formatLinkedInPeopleYouMayKnow(
 	);
 	if (featuredMatch) {
 		const name = featuredMatch[1].trim();
-		let url = featuredMatch[2];
+		let url: string | undefined = featuredMatch[2];
 		if (!url) {
 			// URL may be on the next line(s) after "Yes, connect:"
 			const after = text.slice(featuredMatch.index! + featuredMatch[0].length);
@@ -188,14 +193,18 @@ export function formatLinkedInPeopleYouMayKnow(
 	const more: Person[] = [];
 	const moreIdx = text.search(/More people you may know/i);
 	if (moreIdx >= 0) {
-		const section = text.slice(moreIdx).replace(/^More people you may know\s*/i, "");
+		const section = text
+			.slice(moreIdx)
+			.replace(/^More people you may know\s*/i, "");
 		// Split around invite URLs; each chunk before a URL is name + optional headline
 		const parts = section.split(/(https?:\/\/[^\s<>"')\]]+)/i);
 		for (let i = 0; i < parts.length - 1; i += 2) {
 			const block = parts[i].trim();
 			const urlRaw = parts[i + 1];
 			if (!urlRaw || !/^https?:\/\//i.test(urlRaw)) continue;
-			if (!/linkedin\.com\/comm\/mynetwork\/send-invite|lnkd\.in/i.test(urlRaw)) {
+			if (
+				!/linkedin\.com\/comm\/mynetwork\/send-invite|lnkd\.in/i.test(urlRaw)
+			) {
 				// Skip the featured URL if it appears again in this section
 				continue;
 			}

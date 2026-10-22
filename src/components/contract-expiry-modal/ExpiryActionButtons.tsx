@@ -253,7 +253,7 @@ export default function ExpiryActionButtons({
 					<Button
 						onClick={() => setShowAttestDialog(true)}
 						variant="outline"
-						className="glass-card text-slate-800 shadow-lg hover:shadow-xl transition-all"
+						className="glass-card text-slate-700 shadow-lg hover:shadow-xl transition-all"
 						size="lg"
 					>
 						<X className="w-4 h-4 mr-2" />
@@ -265,7 +265,7 @@ export default function ExpiryActionButtons({
 					<Button
 						onClick={handleViewDetails}
 						variant="outline"
-						className="glass-card text-slate-800 shadow-lg hover:shadow-xl transition-all"
+						className="glass-card text-slate-700 shadow-lg hover:shadow-xl transition-all"
 						size="lg"
 					>
 						<Eye className="w-4 h-4 mr-2" />
@@ -277,7 +277,7 @@ export default function ExpiryActionButtons({
 					<Button
 						onClick={handleContactProvider}
 						variant="outline"
-						className="glass-card text-slate-800 shadow-lg hover:shadow-xl transition-all"
+						className="glass-card text-slate-700 shadow-lg hover:shadow-xl transition-all"
 						size="lg"
 					>
 						<Mail className="w-4 h-4 mr-2" />
@@ -296,7 +296,7 @@ export default function ExpiryActionButtons({
 							<Button
 								onClick={() => handleSnooze()}
 								variant="outline"
-								className="glass-card text-slate-800 shadow-lg hover:shadow-xl transition-all"
+								className="glass-card text-slate-700 shadow-lg hover:shadow-xl transition-all"
 								size="lg"
 								disabled={isSnoozing}
 							>
@@ -308,7 +308,7 @@ export default function ExpiryActionButtons({
 								onValueChange={(value) => handleSnooze(parseInt(value, 10))}
 								disabled={isSnoozing}
 							>
-								<SelectTrigger className="glass-card text-slate-800 shadow-lg hover:shadow-xl transition-all h-12 min-w-[140px]">
+								<SelectTrigger className="glass-card text-slate-700 shadow-lg hover:shadow-xl transition-all h-12 min-w-[140px]">
 									<Clock className="w-4 h-4 mr-2" />
 									<SelectValue placeholder="Snooze" />
 								</SelectTrigger>
@@ -328,7 +328,7 @@ export default function ExpiryActionButtons({
 					<Button
 						onClick={handleDismissClick}
 						variant="outline"
-						className="glass-card text-slate-800 shadow-lg hover:shadow-xl transition-all"
+						className="glass-card text-slate-700 shadow-lg hover:shadow-xl transition-all"
 						size="lg"
 					>
 						Dismiss

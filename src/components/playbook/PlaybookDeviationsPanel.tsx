@@ -129,7 +129,7 @@ export function PlaybookDeviationsPanel({
 											</p>
 											<span
 												className={cn(
-													"inline-block rounded-full border px-2 py-0.5 text-xs font-medium",
+													"inline-block rounded-full border px-2 py-0.5 text-xs",
 													verdictBadgeClass(row.verdict),
 												)}
 											>
@@ -137,7 +137,7 @@ export function PlaybookDeviationsPanel({
 											</span>
 											<span
 												className={cn(
-													"inline-block rounded-full border px-2 py-0.5 text-xs font-medium",
+													"inline-block rounded-full border px-2 py-0.5 text-xs",
 													severityBadgeClass(row.severity),
 												)}
 												data-testid={`severity-badge-${row.severity}`}

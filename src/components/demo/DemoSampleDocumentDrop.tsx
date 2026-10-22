@@ -123,7 +123,7 @@ export function DemoSampleDocumentDrop({
 				className,
 			)}
 		>
-			<p className="text-sm font-medium text-slate-800">
+			<p className="text-sm font-medium text-slate-700">
 				Demo test file — drag into the drop zone above
 			</p>
 			<ol className="mt-2 list-decimal space-y-1 pl-5 text-xs text-slate-600">

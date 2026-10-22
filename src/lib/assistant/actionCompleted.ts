@@ -123,10 +123,7 @@ export function formatGenericSuccessSummary(
 		);
 		const entries = rows.map((row) => {
 			let display = row.value;
-			if (
-				row.label.toLowerCase().includes("date") &&
-				display.includes("T")
-			) {
+			if (row.label.toLowerCase().includes("date") && display.includes("T")) {
 				display = formatActionDateLong(display);
 			}
 			// Guard against any leftover object stringification

@@ -3,8 +3,8 @@
 import { ID, Query } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
-import { calculateTokenExpiry, isTokenExpired } from "@/lib/microsoft/oauth";
 import { refreshAccessToken as refreshGoogleToken } from "@/lib/gmail/oauth";
+import { calculateTokenExpiry, isTokenExpired } from "@/lib/microsoft/oauth";
 
 export interface GmailIntegration {
 	$id?: string;
@@ -57,9 +57,7 @@ export async function getGmailIntegration(
 		});
 
 		if (response.rows.length === 0) return null;
-		return parseTokens(
-			response.rows[0] as unknown as GmailIntegration,
-		);
+		return parseTokens(response.rows[0] as unknown as GmailIntegration);
 	} catch (error) {
 		console.error("[SERVER] getGmailIntegration:", error);
 		return null;
@@ -155,8 +153,7 @@ export async function getValidGmailAccessToken(
 
 	try {
 		const refreshed = await refreshGoogleToken(integration.refresh_token);
-		const refreshToken =
-			refreshed.refresh_token || integration.refresh_token;
+		const refreshToken = refreshed.refresh_token || integration.refresh_token;
 		await persistTokens(
 			integration.$id,
 			refreshed.access_token,

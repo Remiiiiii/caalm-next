@@ -196,7 +196,7 @@ export function NegotiationCommentThread({
 							type="button"
 							onClick={() => setScope(value)}
 							className={cn(
-								"cursor-pointer rounded-full border px-2 py-0.5 text-[10px] font-medium transition-colors duration-200",
+								"cursor-pointer rounded-full border px-2 py-0.5 text-[10px] transition-colors duration-200",
 								scope === value
 									? "border-blue/20 bg-blue/10 text-blue"
 									: "border-slate-200 bg-white text-slate-600 hover:border-blue-300",
@@ -270,18 +270,18 @@ export function NegotiationCommentThread({
 								</span>
 								<div className="min-w-0 flex-1">
 									<div className="flex items-start gap-2">
-										<p className="min-w-0 flex-1 truncate text-xs font-semibold text-slate-800">
+										<p className="min-w-0 flex-1 truncate text-xs font-semibold text-slate-700">
 											{displayName}
 										</p>
 										{comment.visibility === "internal" ? (
-											<span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-medium text-slate-600">
+											<span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] text-slate-600">
 												<EyeOff className="h-3 w-3" />
 												Internal
 											</span>
 										) : null}
 										<span
 											className={cn(
-												"inline-block shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium",
+												"inline-block shrink-0 rounded-full border px-2 py-0.5 text-[10px]",
 												comment.status === "open"
 													? "border-orange/20 bg-orange/10 text-orange"
 													: "border-green/20 bg-green/10 text-green",
@@ -433,7 +433,7 @@ export function NegotiationCommentThread({
 					{allowInternalToggle ? (
 						<label
 							className={cn(
-								"inline-flex w-full cursor-pointer items-center gap-2 rounded-md border border-blue/20 bg-blue/10 px-2.5 py-1.5 text-xs font-medium text-[#0f5384] transition-colors duration-200",
+								"inline-flex w-full cursor-pointer items-center gap-2 rounded-md border border-blue/20 bg-blue/10 px-2.5 py-1.5 text-xs text-[#0f5384] transition-colors duration-200",
 								!hasParagraph && "pointer-events-none opacity-50",
 								internal && "border-blue/30 bg-blue/15",
 							)}

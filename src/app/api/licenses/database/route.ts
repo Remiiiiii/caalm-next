@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { Query } from "node-appwrite";
 import { PERMISSIONS } from "@/constants/permissions";
+import { getCurrentUser } from "@/lib/actions/user.actions";
 import { requireAuth } from "@/lib/api/licenses/middleware/auth.middleware";
 import {
 	buildPaginationMeta,
@@ -13,7 +14,6 @@ import {
 } from "@/lib/api/licenses/utils/response.util";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
-import { getCurrentUser } from "@/lib/actions/user.actions";
 import { requirePermission } from "@/lib/rbac/middleware";
 import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 import { CACHE_KEYS } from "@/lib/services/cache-keys";
@@ -32,9 +32,7 @@ export async function GET(request: NextRequest) {
 
 		const { limit, offset } = parsePaginationParams(request);
 		const user = await getCurrentUser();
-		const defaultOrg = user
-			? await getUserDefaultOrganization(user.$id)
-			: null;
+		const defaultOrg = user ? await getUserDefaultOrganization(user.$id) : null;
 		const orgId = defaultOrg?.orgId || "default_organization";
 		const cacheKey = CACHE_KEYS.licenses.database(orgId, limit, offset);
 
@@ -61,13 +59,15 @@ export async function GET(request: NextRequest) {
 			},
 		);
 
-		const licenseList = licenses.rows.map((license: Record<string, unknown>) => ({
-			id: license.$id,
-			name: license.licenseName || "Unnamed License",
-			vendor: license.vendor,
-			type: license.licenseType,
-			status: license.status,
-		}));
+		const licenseList = licenses.rows.map(
+			(license: Record<string, unknown>) => ({
+				id: license.$id,
+				name: license.licenseName || "Unnamed License",
+				vendor: license.vendor,
+				type: license.licenseType,
+				status: license.status,
+			}),
+		);
 
 		const paginationMeta = buildPaginationMeta(limit, offset, licenses.total);
 

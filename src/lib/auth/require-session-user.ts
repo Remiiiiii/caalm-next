@@ -20,9 +20,55 @@ export async function requireSessionUser(): Promise<
 	SessionUser | NextResponse
 > {
 	try {
+		// #region agent log
+		{
+			const { cookies } = await import("next/headers");
+			const jar = await cookies();
+			const hasSession = Boolean(jar.get("appwrite-session")?.value);
+			const has2fa = jar.get("2fa_completed")?.value === "true";
+			fetch("http://127.0.0.1:7246/ingest/851d37c7-2223-45c1-89c0-a79ca1139a1d", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					"X-Debug-Session-Id": "da7416",
+				},
+				body: JSON.stringify({
+					sessionId: "da7416",
+					runId: "post-fix",
+					hypothesisId: "H1",
+					location: "require-session-user.ts:entry",
+					message: "requireSessionUser cookie state",
+					data: {
+						hasSessionCookie: hasSession,
+						has2faCompletedCookie: has2fa,
+						nodeEnv: process.env.NODE_ENV,
+					},
+					timestamp: Date.now(),
+				}),
+			}).catch(() => {});
+		}
+		// #endregion
 		const { tablesDB, account } = await createSessionClient();
 		const authUser = await account.get();
 		if (!authUser?.$id) {
+			// #region agent log
+			fetch("http://127.0.0.1:7246/ingest/851d37c7-2223-45c1-89c0-a79ca1139a1d", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					"X-Debug-Session-Id": "da7416",
+				},
+				body: JSON.stringify({
+					sessionId: "da7416",
+					runId: "pre-fix",
+					hypothesisId: "H2",
+					location: "require-session-user.ts:no-auth-user",
+					message: "account.get returned empty user",
+					data: {},
+					timestamp: Date.now(),
+				}),
+			}).catch(() => {});
+			// #endregion
 			return NextResponse.json(
 				{ error: "Authentication required" },
 				{ status: 401 },
@@ -49,7 +95,29 @@ export async function requireSessionUser(): Promise<
 			email: String(profile.email || authUser.email || ""),
 			fullName: String(profile.fullName || authUser.name || ""),
 		};
-	} catch {
+	} catch (error) {
+		// #region agent log
+		fetch("http://127.0.0.1:7246/ingest/851d37c7-2223-45c1-89c0-a79ca1139a1d", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				"X-Debug-Session-Id": "da7416",
+			},
+			body: JSON.stringify({
+				sessionId: "da7416",
+				runId: "pre-fix",
+				hypothesisId: "H1",
+				location: "require-session-user.ts:catch",
+				message: "requireSessionUser failed",
+				data: {
+					errorName: error instanceof Error ? error.name : "unknown",
+					errorMessage:
+						error instanceof Error ? error.message.slice(0, 120) : "unknown",
+				},
+				timestamp: Date.now(),
+			}),
+		}).catch(() => {});
+		// #endregion
 		return NextResponse.json(
 			{ error: "Authentication required" },
 			{ status: 401 },

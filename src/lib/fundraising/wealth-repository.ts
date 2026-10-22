@@ -32,9 +32,7 @@ function mapRow(row: Record<string, unknown>): ConstituentWealthScreenRow {
 		constituentId: String(row.constituentId || ""),
 		capacityBand:
 			row.capacityBand != null ? Number(row.capacityBand) : undefined,
-		externalScore: row.externalScore
-			? String(row.externalScore)
-			: undefined,
+		externalScore: row.externalScore ? String(row.externalScore) : undefined,
 		screenDate: row.screenDate ? String(row.screenDate) : undefined,
 		source: row.source ? String(row.source) : undefined,
 		importedByUserId: String(row.importedByUserId || ""),

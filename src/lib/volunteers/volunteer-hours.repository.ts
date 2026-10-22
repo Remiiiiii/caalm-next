@@ -8,9 +8,7 @@ import type {
 } from "./types";
 
 function tableId(): string {
-	return (
-		appwriteConfig.volunteerHoursCollectionId || "69f0b801001f4e8c2b27"
-	);
+	return appwriteConfig.volunteerHoursCollectionId || "69f0b801001f4e8c2b27";
 }
 
 function dbId(): string {

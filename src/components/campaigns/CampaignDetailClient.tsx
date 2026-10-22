@@ -72,7 +72,9 @@ export function CampaignDetailClient({
 			</p>
 			<p>
 				Campaign ROI:{" "}
-				<span className="tabular-nums font-medium">{formatCampaignRoi(roi)}</span>
+				<span className="tabular-nums font-medium">
+					{formatCampaignRoi(roi)}
+				</span>
 				<span className="text-xs text-slate-600 ml-2">
 					(posted − cost) ÷ cost
 				</span>

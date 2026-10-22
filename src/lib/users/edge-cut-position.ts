@@ -51,8 +51,7 @@ export function closestPointOnCubicBezier(
 	for (let i = 0; i <= samples; i += 1) {
 		const t = i / samples;
 		const candidate = cubicBezierPoint(t, curve);
-		const dist =
-			(candidate.x - point.x) ** 2 + (candidate.y - point.y) ** 2;
+		const dist = (candidate.x - point.x) ** 2 + (candidate.y - point.y) ** 2;
 		if (dist < bestDist) {
 			bestDist = dist;
 			bestT = t;
@@ -66,8 +65,7 @@ export function closestPointOnCubicBezier(
 	for (let i = 0; i <= refineSteps; i += 1) {
 		const t = start + ((end - start) * i) / refineSteps;
 		const candidate = cubicBezierPoint(t, curve);
-		const dist =
-			(candidate.x - point.x) ** 2 + (candidate.y - point.y) ** 2;
+		const dist = (candidate.x - point.x) ** 2 + (candidate.y - point.y) ** 2;
 		if (dist < bestDist) {
 			bestDist = dist;
 			bestT = t;

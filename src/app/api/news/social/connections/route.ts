@@ -4,20 +4,19 @@ import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
-import {
-	deleteNewsFeed,
-	listNewsFeeds,
-} from "@/lib/database/news-feeds";
+import { deleteNewsFeed, listNewsFeeds } from "@/lib/database/news-feeds";
 import {
 	deleteNewsSocialConnection,
 	listNewsSocialConnections,
 } from "@/lib/database/news-social-connections";
 import { logNewsAudit } from "@/lib/news/audit";
+import { requirePermission } from "@/lib/rbac/middleware";
 import { getOrganization } from "@/lib/rbac/organizations";
 import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
-import { requirePermission } from "@/lib/rbac/middleware";
 
-async function resolveUserName(userId: string | null | undefined): Promise<string> {
+async function resolveUserName(
+	userId: string | null | undefined,
+): Promise<string> {
 	if (!userId) return "Unknown";
 	try {
 		const { tablesDB } = await createAdminClient();
@@ -55,10 +54,14 @@ export async function GET(request: NextRequest) {
 	});
 	if (denied) return denied;
 	const user = await getCurrentUser();
-	if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+	if (!user)
+		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	const org = await getUserDefaultOrganization(user.$id);
 	if (!org?.orgId) {
-		return NextResponse.json({ error: "Organization not found" }, { status: 400 });
+		return NextResponse.json(
+			{ error: "Organization not found" },
+			{ status: 400 },
+		);
 	}
 
 	const [connections, organization] = await Promise.all([
@@ -100,10 +103,14 @@ export async function DELETE(request: NextRequest) {
 	});
 	if (denied) return denied;
 	const user = await getCurrentUser();
-	if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+	if (!user)
+		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	const org = await getUserDefaultOrganization(user.$id);
 	if (!org?.orgId) {
-		return NextResponse.json({ error: "Organization not found" }, { status: 400 });
+		return NextResponse.json(
+			{ error: "Organization not found" },
+			{ status: 400 },
+		);
 	}
 
 	const provider = request.nextUrl.searchParams.get("provider");
@@ -113,7 +120,10 @@ export async function DELETE(request: NextRequest) {
 		(row) => row.$id === id || (provider && row.provider === provider),
 	);
 	if (!target) {
-		return NextResponse.json({ error: "Connection not found" }, { status: 404 });
+		return NextResponse.json(
+			{ error: "Connection not found" },
+			{ status: 404 },
+		);
 	}
 
 	const feeds = await listNewsFeeds(org.orgId);

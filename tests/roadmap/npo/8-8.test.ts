@@ -1,8 +1,12 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { buildBoardPackCsv, rankCampaignsByRoi } from "@/lib/development";
-import { computeDonorMetrics, sumYtdPostedDollars } from "@/lib/development";
+import {
+	buildBoardPackXlsxInput,
+	computeDonorMetrics,
+	rankCampaignsByRoi,
+	sumYtdPostedDollars,
+} from "@/lib/development";
 import { NONPROFIT_ROADMAP_CATALOG } from "@/lib/roadmap/nonprofit-catalog";
 
 describe("NPO 8.8 board pack export of KPIs", () => {
@@ -14,7 +18,7 @@ describe("NPO 8.8 board pack export of KPIs", () => {
 		expect(task?.title).toMatch(/Board pack export/i);
 	});
 
-	it("CSV KPI rows match metric helpers", () => {
+	it("workbook KPI rows match metric helpers", () => {
 		const rows = [
 			{
 				constituentId: "a",
@@ -30,9 +34,18 @@ describe("NPO 8.8 board pack export of KPIs", () => {
 			hasPostedGifts: true,
 			...donor,
 		};
-		const csv = buildBoardPackCsv(metrics, []);
-		expect(csv).toMatch(/ytd_dollars,200/);
-		expect(csv).toMatch(/unique_donors_ytd,1/);
+		const sheet = buildBoardPackXlsxInput(metrics, []);
+		expect(sheet.rows).toContainEqual([
+			"KPI",
+			"Dollars raised year to date",
+			"",
+			200,
+		]);
+		expect(sheet.rows).toContainEqual([
+			"KPI",
+			"Unique donors year to date",
+			"1",
+		]);
 	});
 
 	it("ranks campaigns by ROI for the export", () => {

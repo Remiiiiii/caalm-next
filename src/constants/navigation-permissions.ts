@@ -130,6 +130,13 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 				permissions: [PERMISSIONS.CONTRACT_TEMPLATES.VIEW],
 			},
 			{
+				name: "RFP Proposals",
+				icon: "/assets/icons/proposal-approval.svg",
+				url: "/contracts/proposals",
+				permissions: [PERMISSIONS.PROPOSALS.VIEW],
+				viewerReadOnly: true,
+			},
+			{
 				name: "Funding & Retention",
 				icon: "/assets/icons/dollar-circle.svg",
 				url: "/contracts/funding-retention",

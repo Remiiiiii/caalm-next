@@ -1,7 +1,7 @@
 import { getUserByEmail } from "@/lib/actions/user.actions";
+import { ContractService } from "@/lib/api/contracts/services/ContractService";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
-import { ContractService } from "@/lib/api/contracts/services/ContractService";
 import {
 	indexOrgContracts,
 	listOrgContractsLite,
@@ -68,8 +68,7 @@ async function buildPatch(
 	orgId: string,
 	row: MappedContractImportRow,
 ): Promise<
-	| { ok: true; patch: Record<string, unknown> }
-	| { ok: false; reason: string }
+	{ ok: true; patch: Record<string, unknown> } | { ok: false; reason: string }
 > {
 	const patch: Record<string, unknown> = {};
 	if (row.vendor) patch.vendor = row.vendor;
@@ -158,7 +157,11 @@ export async function dryRunContractImport(
 export async function commitContractImport(
 	orgId: string,
 	rows: MappedContractImportRow[],
-): Promise<{ updatedCount: number; skippedCount: number; failedCount: number }> {
+): Promise<{
+	updatedCount: number;
+	skippedCount: number;
+	failedCount: number;
+}> {
 	const dry = await dryRunContractImport(orgId, rows);
 	const { tablesDB } = await createAdminClient();
 	let updatedCount = 0;

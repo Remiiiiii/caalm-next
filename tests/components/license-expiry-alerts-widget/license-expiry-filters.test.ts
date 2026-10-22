@@ -10,6 +10,7 @@ import type { License } from "@/types/licenses";
 function makeLicense(overrides: Partial<License> = {}): License {
 	return {
 		$id: "lic-1",
+		orgId: "org-1",
 		$createdAt: "",
 		$updatedAt: "",
 		licenseName: "Sample",

@@ -9,7 +9,8 @@ import { getOrgIdFromRequest, requirePermission } from "@/lib/rbac/middleware";
 
 export async function GET(request: NextRequest) {
 	const denied = await requirePermission(request, {
-		permission: [PERMISSIONS.CONTRACTS.REVIEW, PERMISSIONS.LICENSES.REVIEW],
+		// LICENSES has no REVIEW permission; only contracts.review has ever authorised this route.
+		permission: [PERMISSIONS.CONTRACTS.REVIEW],
 	});
 	if (denied) return denied;
 
@@ -29,7 +30,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
 	const denied = await requirePermission(request, {
-		permission: [PERMISSIONS.CONTRACTS.REVIEW, PERMISSIONS.LICENSES.REVIEW],
+		// LICENSES has no REVIEW permission; only contracts.review has ever authorised this route.
+		permission: [PERMISSIONS.CONTRACTS.REVIEW],
 	});
 	if (denied) return denied;
 

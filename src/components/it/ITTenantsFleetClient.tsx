@@ -77,7 +77,7 @@ export function ITTenantsFleetClient() {
 				<Card className="glass-card">
 					<div className="glass-card-cap" />
 					<CardContent className="p-4 sm:p-6">
-						<CaalmDataTable className="px-0 sm:px-0 pb-0">
+						<CaalmDataTable className="pb-0">
 							<TableHeader className="[&_tr]:border-b-0">
 								<TableRow className={DATA_TABLE_HEADER_ROW}>
 									<TableHead

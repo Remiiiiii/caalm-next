@@ -2,6 +2,7 @@
 
 import { Download, Loader2, Plus, Ticket } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { BusyIcon } from "@/components/ui/busy-icon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,6 +14,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useBusyAction } from "@/hooks/useBusyAction";
 import type {
 	EventRegistration,
 	EventRegistrationStatus,
@@ -20,7 +22,10 @@ import type {
 } from "@/lib/events/types";
 import { cn } from "@/lib/utils";
 
-function registrationStatusBadge(status: EventRegistrationStatus, checkedInAt?: string) {
+function registrationStatusBadge(
+	status: EventRegistrationStatus,
+	checkedInAt?: string,
+) {
 	if (checkedInAt) {
 		return "bg-green/10 text-green border-green/20";
 	}
@@ -56,6 +61,9 @@ type Props = {
 export function EventRegistrationsPanel({ eventId }: Props) {
 	const { toast } = useToast();
 	const [loading, setLoading] = useState(true);
+	const [exportRoster, exportingRoster] = useBusyAction(() => {
+		window.location.href = `/api/events/${encodeURIComponent(eventId)}/registrations/export`;
+	});
 	const [ticketTypes, setTicketTypes] = useState<EventTicketType[]>([]);
 	const [registrations, setRegistrations] = useState<EventRegistration[]>([]);
 	const [ticketTypeId, setTicketTypeId] = useState("");
@@ -77,8 +85,10 @@ export function EventRegistrationsPanel({ eventId }: Props) {
 			]);
 			const typesBody = await typesRes.json().catch(() => ({}));
 			const regsBody = await regsRes.json().catch(() => ({}));
-			if (!typesRes.ok) throw new Error(typesBody.error || "Ticket types failed");
-			if (!regsRes.ok) throw new Error(regsBody.error || "Registrations failed");
+			if (!typesRes.ok)
+				throw new Error(typesBody.error || "Ticket types failed");
+			if (!regsRes.ok)
+				throw new Error(regsBody.error || "Registrations failed");
 			setTicketTypes(typesBody.items || []);
 			setRegistrations(regsBody.items || []);
 			if (!ticketTypeId && typesBody.items?.[0]?.$id) {
@@ -268,12 +278,11 @@ export function EventRegistrationsPanel({ eventId }: Props) {
 				<Button
 					variant="outline"
 					className="px-3 sm:px-4"
-					onClick={() => {
-						window.location.href = `/api/events/${encodeURIComponent(eventId)}/registrations/export`;
-					}}
+					disabled={exportingRoster}
+					onClick={() => void exportRoster()}
 				>
-					<Download className="h-4 w-4" />
-					Export roster CSV
+					<BusyIcon busy={exportingRoster} icon={Download} />
+					Export roster Excel
 				</Button>
 			</div>
 
@@ -294,12 +303,14 @@ export function EventRegistrationsPanel({ eventId }: Props) {
 								</p>
 								<p className="text-xs text-slate-500">
 									{row.guestEmail || "No email"}
-									{row.constituentId ? ` · constituent ${row.constituentId}` : ""}
+									{row.constituentId
+										? ` · constituent ${row.constituentId}`
+										: ""}
 								</p>
 							</div>
 							<span
 								className={cn(
-									"inline-block px-2 py-0.5 text-xs rounded-full font-medium border capitalize",
+									"inline-block px-2 py-0.5 text-xs rounded-full border capitalize",
 									registrationStatusBadge(row.status, row.checkedInAt),
 								)}
 							>

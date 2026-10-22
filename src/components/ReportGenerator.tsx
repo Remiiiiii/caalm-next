@@ -3,6 +3,7 @@
 import type { Models } from "appwrite";
 import {
 	Download,
+	FileBarChart,
 	Plus,
 	RefreshCw,
 	Share2,
@@ -15,12 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
-import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { AppDialog } from "@/components/ui/app-dialog";
 import {
 	downloadReport,
 	generateReport,
@@ -43,7 +39,9 @@ interface ReportGeneratorProps {
 	onReportGenerated?: () => void;
 }
 
+import { BusyIcon } from "@/components/ui/busy-icon";
 import { PERMISSIONS } from "@/constants/permissions";
+import { useBusyAction } from "@/hooks/useBusyAction";
 import { usePermissions } from "@/hooks/usePermissions";
 import { CONTRACT_DEPARTMENTS } from "../../constants";
 
@@ -126,6 +124,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
 			console.error("Download error:", err);
 		}
 	};
+	const [runDownloading, downloading] = useBusyAction(handleDownloadReport);
 
 	const handleUploadReport = async () => {
 		if (!report) return;
@@ -193,34 +192,19 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
 	};
 
 	return (
-		<Dialog open={open} onOpenChange={onClose}>
-			<DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto rounded-[26px] px-8 py-10 shadow-drop-3">
-				<DialogHeader className="text-center border-b border-light-300 pb-6 mb-8">
-					<div className="flex items-center justify-center gap-3 mb-2">
-						<div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg">
-							<svg
-								className="w-5 h-5 text-white"
-								fill="currentColor"
-								viewBox="0 0 20 20"
-							>
-								<path
-									fillRule="evenodd"
-									d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z"
-									clipRule="evenodd"
-								/>
-							</svg>
-						</div>
-						<DialogTitle className="h2 sidebar-gradient-text">
-							Report Generator
-						</DialogTitle>
-					</div>
-					<p className="body-1 text-light-200 max-w-2xl mx-auto">
-						Generate comprehensive contract, audit, license, compliance, and
-						other reports with AI-powered insights
-					</p>
-				</DialogHeader>
-
-				<div className="space-y-8">
+		<>
+			<AppDialog
+				open={open}
+				onOpenChange={(isOpen) => {
+					if (!isOpen) onClose();
+				}}
+				size="form"
+				className="max-h-[90vh] max-w-4xl"
+				icon={<FileBarChart className="h-5 w-5" aria-hidden />}
+				title="Report Generator"
+				description="Generate comprehensive contract, audit, license, compliance, and other reports with AI-powered insights"
+			>
+				<div className="space-y-8 pb-1">
 					{/* Report Generation Section */}
 					<Card className="border border-light-300 shadow-drop-1 rounded-xl bg-white/80 backdrop-blur overflow-hidden">
 						<CardHeader className="bg-gradient-to-r from-light-300 to-light-400 border-b border-light-300">
@@ -585,11 +569,16 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
 									{/* Primary Actions */}
 									<div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
 										<Button
-											onClick={handleDownloadReport}
+											disabled={downloading}
+											onClick={() => void runDownloading()}
 											variant="outline"
 											className="h-[52px] border-light-300 text-light-100 hover:bg-light-300/50 shadow-drop-1 justify-start"
 										>
-											<Download className="mr-3 h-4 w-4" />
+											<BusyIcon
+												busy={downloading}
+												icon={Download}
+												className="mr-3 h-4 w-4"
+											/>
 											<div className="text-left">
 												<div className="font-medium">Download PDF</div>
 												<div className="text-xs text-light-200">
@@ -653,9 +642,8 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
 						</Card>
 					)}
 				</div>
-			</DialogContent>
+			</AppDialog>
 
-			{/* Delete Confirmation Dialog */}
 			<DeleteConfirmationDialog
 				open={deleteDialogOpen}
 				onOpenChange={setDeleteDialogOpen}
@@ -665,7 +653,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
 				onConfirm={confirmDeleteReport}
 				isLoading={isDeleting}
 			/>
-		</Dialog>
+		</>
 	);
 };
 

@@ -39,11 +39,15 @@ export function getWeatherIcon(
 	const iconClass = SIZE[size];
 	const isNight = iconCode?.endsWith("n") ?? false;
 	const onDark = tone === "onDark";
-	const white = onDark ? "text-white drop-shadow-md" : "text-slate-500 drop-shadow-sm";
+	const white = onDark
+		? "text-white drop-shadow-md"
+		: "text-slate-500 drop-shadow-sm";
 	const amber = onDark
 		? "text-amber-300 drop-shadow-md"
 		: "text-amber-400 drop-shadow-sm";
-	const soft = onDark ? "text-white/90 drop-shadow-md" : "text-slate-400 drop-shadow-sm";
+	const soft = onDark
+		? "text-white/90 drop-shadow-md"
+		: "text-slate-400 drop-shadow-sm";
 
 	switch (weatherMain.toLowerCase()) {
 		case "clear":
@@ -86,7 +90,9 @@ export function getWeatherIcon(
 					<CloudRain
 						className={cn(
 							iconClass,
-							onDark ? "text-white drop-shadow-md" : "text-blue-500 drop-shadow-sm",
+							onDark
+								? "text-white drop-shadow-md"
+								: "text-blue-500 drop-shadow-sm",
 						)}
 					/>
 				</div>
@@ -110,7 +116,9 @@ export function getWeatherIcon(
 					<CloudSnow
 						className={cn(
 							iconClass,
-							onDark ? "text-white drop-shadow-md" : "text-blue-200 drop-shadow-sm",
+							onDark
+								? "text-white drop-shadow-md"
+								: "text-blue-200 drop-shadow-sm",
 						)}
 					/>
 				</div>

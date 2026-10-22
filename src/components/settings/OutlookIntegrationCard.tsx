@@ -10,7 +10,7 @@ import {
 	XCircle,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { VscDebugConnectedCompact } from "react-icons/vsc";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -261,10 +261,10 @@ export default function OutlookIntegrationCard({
 				role="tab"
 				aria-selected={feature === "calendar"}
 				className={cn(
-					"flex cursor-pointer items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-all duration-200",
+					"flex cursor-pointer items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs transition-all duration-200",
 					feature === "calendar"
 						? "bg-white text-[#0f5384] shadow-sm"
-						: "text-slate-600 hover:text-slate-800",
+						: "text-slate-600 hover:text-slate-700",
 				)}
 				onClick={() => setFeature("calendar")}
 			>
@@ -276,10 +276,10 @@ export default function OutlookIntegrationCard({
 				role="tab"
 				aria-selected={feature === "mail"}
 				className={cn(
-					"flex cursor-pointer items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-all duration-200",
+					"flex cursor-pointer items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs transition-all duration-200",
 					feature === "mail"
 						? "bg-white text-[#0f5384] shadow-sm"
-						: "text-slate-600 hover:text-slate-800",
+						: "text-slate-600 hover:text-slate-700",
 				)}
 				onClick={() => setFeature("mail")}
 			>

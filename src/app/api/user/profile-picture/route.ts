@@ -1,7 +1,13 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { Client, Databases, ID, Storage } from "node-appwrite";
+import { InputFile } from "node-appwrite/file";
+import { getCurrentUser } from "@/lib/actions/user.actions";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import CacheManager from "@/lib/services/cache-manager";
+import {
+	getProfilePictureUrl,
+	resolveStoredAvatarFileId,
+} from "@/lib/utils";
 
 const client = new Client()
 	.setEndpoint(appwriteConfig.endpointUrl!)
@@ -11,25 +17,69 @@ const client = new Client()
 const storage = new Storage(client);
 const databases = new Databases(client);
 
-function getStoredAvatarFileId(user: {
-	avatar?: string | null;
-	profileImageId?: string | null;
-}): string | null {
-	const avatarValue = user.avatar?.trim();
-	const profileImageId = user.profileImageId?.trim();
+const AVATAR_FILE_ID_RE = /^[A-Za-z0-9._-]{1,36}$/;
 
-	if (
-		avatarValue &&
-		!avatarValue.startsWith("/") &&
-		!/^https?:\/\//i.test(avatarValue)
-	) {
-		return avatarValue;
+function toBuffer(fileContent: unknown): Buffer {
+	if (Buffer.isBuffer(fileContent)) return fileContent;
+	if (fileContent instanceof ArrayBuffer) return Buffer.from(fileContent);
+	if (fileContent instanceof Uint8Array) return Buffer.from(fileContent);
+	return Buffer.from(fileContent as ArrayBuffer);
+}
+
+export async function GET(request: NextRequest) {
+	const currentUser = await getCurrentUser();
+	if (!currentUser) {
+		return NextResponse.json(
+			{ error: "Authentication required" },
+			{ status: 401 },
+		);
 	}
 
-	return profileImageId || null;
+	const fileId = request.nextUrl.searchParams.get("fileId")?.trim() || "";
+	if (!AVATAR_FILE_ID_RE.test(fileId)) {
+		return NextResponse.json({ error: "fileId is required" }, { status: 400 });
+	}
+
+	const bucketId = appwriteConfig.profilePicturesBucketId;
+	if (!bucketId) {
+		return NextResponse.json(
+			{ error: "Storage configuration is missing" },
+			{ status: 500 },
+		);
+	}
+
+	try {
+		const meta = await storage.getFile(bucketId, fileId);
+		const fileContent = await storage.getFileDownload(bucketId, fileId);
+		const buffer = toBuffer(fileContent);
+		const contentType = meta.mimeType || "image/jpeg";
+
+		return new NextResponse(new Uint8Array(buffer), {
+			status: 200,
+			headers: {
+				"Content-Type": contentType,
+				"Content-Length": String(buffer.length),
+				"Cache-Control": "private, max-age=300",
+			},
+		});
+	} catch (error) {
+		console.error("[SERVER] profile-picture GET:", error);
+		return NextResponse.json(
+			{ error: "Profile picture not found" },
+			{ status: 404 },
+		);
+	}
 }
 
 export async function POST(request: NextRequest) {
+	const currentUser = await getCurrentUser();
+	if (!currentUser) {
+		return NextResponse.json(
+			{ error: "Authentication required" },
+			{ status: 401 },
+		);
+	}
+
 	try {
 		// Check if required Appwrite config is available
 		if (
@@ -57,6 +107,10 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
+		if (userId !== currentUser.$id) {
+			return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+		}
+
 		// Validate file type
 		if (!file.type.startsWith("image/")) {
 			return NextResponse.json(
@@ -81,7 +135,7 @@ export async function POST(request: NextRequest) {
 				userId,
 			);
 
-			const existingImageId = getStoredAvatarFileId(
+			const existingImageId = resolveStoredAvatarFileId(
 				user as unknown as {
 					avatar?: string | null;
 					profileImageId?: string | null;
@@ -97,11 +151,15 @@ export async function POST(request: NextRequest) {
 			// User might not exist or no existing profile picture - continue with upload
 		}
 
-		// Upload new file
+		const arrayBuffer = await file.arrayBuffer();
+		const inputFile = InputFile.fromBuffer(
+			Buffer.from(arrayBuffer),
+			file.name || "profile-picture",
+		);
 		const uploadedFile = await storage.createFile(
 			appwriteConfig.profilePicturesBucketId!,
 			ID.unique(),
-			file,
+			inputFile,
 		);
 
 		// Get user data for cache invalidation
@@ -129,15 +187,9 @@ export async function POST(request: NextRequest) {
 			userDoc.fullName,
 		);
 
-		// Generate file URL for response - construct manually like elsewhere in codebase
-		const endpoint = appwriteConfig.endpointUrl!;
-		const bucketId = appwriteConfig.profilePicturesBucketId!;
-		const projectId = appwriteConfig.projectId!;
-		const imageUrl = `${endpoint}/storage/buckets/${bucketId}/files/${uploadedFile.$id}/view?project=${projectId}`;
-
 		return NextResponse.json({
 			success: true,
-			imageUrl,
+			imageUrl: getProfilePictureUrl(uploadedFile.$id),
 			fileId: uploadedFile.$id,
 		});
 	} catch (error) {
@@ -153,6 +205,14 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+	const currentUser = await getCurrentUser();
+	if (!currentUser) {
+		return NextResponse.json(
+			{ error: "Authentication required" },
+			{ status: 401 },
+		);
+	}
+
 	try {
 		const { userId } = await request.json();
 
@@ -163,6 +223,10 @@ export async function DELETE(request: NextRequest) {
 			);
 		}
 
+		if (userId !== currentUser.$id) {
+			return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+		}
+
 		// Get user document to find current profile image ID
 		const user = await databases.getDocument(
 			appwriteConfig.databaseId!,
@@ -170,7 +234,7 @@ export async function DELETE(request: NextRequest) {
 			userId,
 		);
 
-		const existingImageId = getStoredAvatarFileId(
+		const existingImageId = resolveStoredAvatarFileId(
 			user as unknown as {
 				avatar?: string | null;
 				profileImageId?: string | null;

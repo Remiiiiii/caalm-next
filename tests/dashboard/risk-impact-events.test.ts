@@ -36,6 +36,11 @@ function snapshotFixture(
 			label: "Portfolio protected",
 			amount: 0,
 			amountFormatted: "$0",
+			byType: {
+				contracts: { count: 0, amount: 0 },
+				licenses: { count: 0, amount: 0 },
+				grants: { count: 0, amount: 0 },
+			},
 		},
 		counts: {
 			complianceFlagsCaught: 2,
@@ -54,9 +59,18 @@ function snapshotFixture(
 			current: 2100000,
 			prior: 0,
 		},
-		openRisk: { highRisk: 1, expiring90: 2, expired: 0 },
+		openRisk: {
+			highRisk: 1,
+			expiring90: 2,
+			expired: 0,
+			byType: {
+				contracts: { highRisk: 1, expiring90: 2, expired: 0 },
+				licenses: { highRisk: 0, expiring90: 0, expired: 0 },
+			},
+		},
 		monitoring: {
 			contractsMonitored: 4,
+			licensesMonitored: 0,
 			grantsMonitored: 1,
 			clausesFlagged: 2,
 		},

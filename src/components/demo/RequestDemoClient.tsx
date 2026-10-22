@@ -2,27 +2,27 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowRight, CalendarDays, ShieldCheck } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { Button } from "@/components/ui/button";
-import {
-	InputOTP,
-	InputOTPGroup,
-	InputOTPSlot,
-} from "@/components/ui/input-otp";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import LandingFrostedCard from "@/components/landing/LandingFrostedCard";
 import LandingSection from "@/components/landing/LandingSection";
 import {
 	PERFORMANCE_METRICS,
 	TESTIMONIALS,
 } from "@/components/landing/landingContent";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+	InputOTP,
+	InputOTPGroup,
+	InputOTPSlot,
+} from "@/components/ui/input-otp";
+import { Label } from "@/components/ui/label";
 import {
 	COMPANY_SIZE_OPTIONS,
+	type DemoRequestInput,
 	demoRequestSchema,
 	formatPhoneInput,
-	type DemoRequestInput,
 } from "@/lib/demo-request/schema";
 
 type Step = "form" | "otp" | "schedule";
@@ -183,7 +183,10 @@ export default function RequestDemoClient() {
 			<LandingSection className="landing-soft-brand-wash">
 				<div className="mx-auto grid max-w-4xl grid-cols-1 gap-4 sm:grid-cols-3">
 					{metrics.map((metric) => (
-						<LandingFrostedCard key={metric.label} contentClassName="p-5 text-center">
+						<LandingFrostedCard
+							key={metric.label}
+							contentClassName="p-5 text-center"
+						>
 							<p className="text-3xl font-bold text-slate-700 tabular-nums">
 								{metric.value}
 								{metric.suffix}
@@ -216,7 +219,10 @@ export default function RequestDemoClient() {
 										Book a demo
 									</h2>
 								</div>
-								<Field label="Work email" error={form.formState.errors.email?.message}>
+								<Field
+									label="Work email"
+									error={form.formState.errors.email?.message}
+								>
 									<Input
 										type="email"
 										autoComplete="email"
@@ -228,20 +234,29 @@ export default function RequestDemoClient() {
 										label="First name"
 										error={form.formState.errors.firstName?.message}
 									>
-										<Input autoComplete="given-name" {...form.register("firstName")} />
+										<Input
+											autoComplete="given-name"
+											{...form.register("firstName")}
+										/>
 									</Field>
 									<Field
 										label="Last name"
 										error={form.formState.errors.lastName?.message}
 									>
-										<Input autoComplete="family-name" {...form.register("lastName")} />
+										<Input
+											autoComplete="family-name"
+											{...form.register("lastName")}
+										/>
 									</Field>
 								</div>
 								<Field
 									label="Company name"
 									error={form.formState.errors.companyName?.message}
 								>
-									<Input autoComplete="organization" {...form.register("companyName")} />
+									<Input
+										autoComplete="organization"
+										{...form.register("companyName")}
+									/>
 								</Field>
 								<Field
 									label="Company size"
@@ -258,7 +273,10 @@ export default function RequestDemoClient() {
 										))}
 									</select>
 								</Field>
-								<Field label="Phone number" error={form.formState.errors.phone?.message}>
+								<Field
+									label="Phone number"
+									error={form.formState.errors.phone?.message}
+								>
 									<Input
 										type="tel"
 										inputMode="tel"
@@ -266,13 +284,20 @@ export default function RequestDemoClient() {
 										placeholder="(555) 555-0100"
 										value={form.watch("phone")}
 										onChange={(event) =>
-											form.setValue("phone", formatPhoneInput(event.target.value), {
-												shouldValidate: true,
-											})
+											form.setValue(
+												"phone",
+												formatPhoneInput(event.target.value),
+												{
+													shouldValidate: true,
+												},
+											)
 										}
 									/>
 								</Field>
-								<Field label="Leave a message" error={form.formState.errors.message?.message}>
+								<Field
+									label="Leave a message"
+									error={form.formState.errors.message?.message}
+								>
 									<textarea
 										rows={4}
 										className="glass-form-control w-full rounded-md border-[0.25px] border-slate-300 px-3 py-2 text-sm text-slate-700"
@@ -302,7 +327,8 @@ export default function RequestDemoClient() {
 									</h2>
 								</div>
 								<p className="text-sm text-slate-600">
-									Enter the 6-digit code sent to {email}. It expires in 5 minutes.
+									Enter the 6-digit code sent to {email}. It expires in 5
+									minutes.
 								</p>
 								<InputOTP maxLength={6} value={otp} onChange={setOtp}>
 									<InputOTPGroup>

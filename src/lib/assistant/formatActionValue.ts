@@ -81,7 +81,8 @@ export function flattenResultFields(
 			const nestedEntries = Object.entries(nested).filter(([nk, nv]) => {
 				if (nv === undefined || nv === null) return false;
 				if (nk.startsWith("$")) return false;
-				if (hiddenKeys.has(nk) || hiddenKeys.has(nk.toLowerCase())) return false;
+				if (hiddenKeys.has(nk) || hiddenKeys.has(nk.toLowerCase()))
+					return false;
 				return true;
 			});
 			if (nestedEntries.length > 0) {

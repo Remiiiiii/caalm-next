@@ -82,7 +82,11 @@ export async function commitObligationImport(
 	createdByUserId: string,
 	ownerName: string,
 	rows: MappedObligationImportRow[],
-): Promise<{ createdCount: number; skippedCount: number; failedCount: number }> {
+): Promise<{
+	createdCount: number;
+	skippedCount: number;
+	failedCount: number;
+}> {
 	const dry = await dryRunObligationImport(orgId, rows);
 	let createdCount = 0;
 	let failedCount = 0;

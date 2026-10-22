@@ -31,7 +31,9 @@ export function applyCampaignColumnMapping(
 			return;
 		}
 		const goalRaw = pick("goalAmount");
-		const goalAmount = goalRaw ? Number(goalRaw.replace(/[$,]/g, "")) : undefined;
+		const goalAmount = goalRaw
+			? Number(goalRaw.replace(/[$,]/g, ""))
+			: undefined;
 		if (goalRaw && (!Number.isFinite(goalAmount) || (goalAmount ?? 0) < 0)) {
 			errors.push({ rowNumber, message: "Goal amount must be a number." });
 			return;

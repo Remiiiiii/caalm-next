@@ -1,9 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getCampaignById, updateCampaign } from "@/lib/campaigns";
-import { requireGiftOrgContext } from "@/lib/gifts/request-context";
 import { computeCampaignRoi } from "@/lib/development";
 import { sumPostedGiftTotalForCampaign } from "@/lib/gifts/repository";
+import { requireGiftOrgContext } from "@/lib/gifts/request-context";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -36,8 +36,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 		}
 		const campaign = await updateCampaign(id, ctx.orgId, {
 			name: body.name != null ? String(body.name) : undefined,
-			goalAmount:
-				body.goalAmount != null ? Number(body.goalAmount) : undefined,
+			goalAmount: body.goalAmount != null ? Number(body.goalAmount) : undefined,
 			currency: body.currency != null ? String(body.currency) : undefined,
 			startDate:
 				body.startDate === null
@@ -59,7 +58,10 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 						: undefined,
 		});
 		if (!campaign) {
-			return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
+			return NextResponse.json(
+				{ error: "Campaign not found" },
+				{ status: 404 },
+			);
 		}
 		const postedTotal = await sumPostedGiftTotalForCampaign(ctx.orgId, id);
 		const roi = computeCampaignRoi(postedTotal, campaign.campaignCost);

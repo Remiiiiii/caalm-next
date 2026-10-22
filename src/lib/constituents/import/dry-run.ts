@@ -109,7 +109,12 @@ export function classifyImportRow(input: {
 }): ImportRowPlan {
 	const errors = validateRow(input.row);
 	if (errors.length > 0) {
-		return { rowIndex: input.row.rowIndex, action: "error", row: input.row, errors };
+		return {
+			rowIndex: input.row.rowIndex,
+			action: "error",
+			row: input.row,
+			errors,
+		};
 	}
 
 	const normalizedEmail = normalizeEmail(input.row.email);
@@ -159,7 +164,9 @@ export function classifyImportRow(input: {
 	return { rowIndex: input.row.rowIndex, action: "create", row: input.row };
 }
 
-export function summarizeImportPlans(plans: ImportRowPlan[]): ImportDryRunCounts {
+export function summarizeImportPlans(
+	plans: ImportRowPlan[],
+): ImportDryRunCounts {
 	return plans.reduce(
 		(acc, plan) => {
 			acc[plan.action] += 1;

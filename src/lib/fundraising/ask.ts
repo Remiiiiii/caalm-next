@@ -17,7 +17,9 @@ function median(values: number[]): number {
 }
 
 /** Upgrade factor from 0–100 readiness: 1.0 at 0, up to 1.25 at 100. */
-export function upgradeFactorFromReadiness(upgradeReadinessScore: number): number {
+export function upgradeFactorFromReadiness(
+	upgradeReadinessScore: number,
+): number {
 	const clamped = Math.min(100, Math.max(0, upgradeReadinessScore));
 	return 1 + (clamped / 100) * 0.25;
 }
@@ -41,8 +43,7 @@ export function computeSuggestedAsk(input: {
 	const countable = input.gifts
 		.filter(isCountableGift)
 		.sort(
-			(a, b) =>
-				new Date(b.giftDate).getTime() - new Date(a.giftDate).getTime(),
+			(a, b) => new Date(b.giftDate).getTime() - new Date(a.giftDate).getTime(),
 		);
 	if (countable.length === 0) {
 		return {

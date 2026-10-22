@@ -5,17 +5,15 @@ import { z } from "zod";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
 import { RiskAvertedPdfDocument } from "@/lib/dashboard/risk-averted-pdf";
-import { buildRiskAvertedPdfPayload } from "@/lib/dashboard/risk-impact-events";
 import { computeRiskImpact } from "@/lib/dashboard/risk-impact.service";
 import type { RiskImpactPeriod } from "@/lib/dashboard/risk-impact.types";
+import { buildRiskAvertedPdfPayload } from "@/lib/dashboard/risk-impact-events";
 import { getOrgIdFromRequest, requirePermission } from "@/lib/rbac/middleware";
 import { getOrganization } from "@/lib/rbac/organizations";
 import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 
 const exportSchema = z.object({
-	period: z
-		.enum(["ytd", "month", "quarter", "last30", "last90"])
-		.optional(),
+	period: z.enum(["ytd", "month", "quarter", "last30", "last90"]).optional(),
 	division: z.string().optional(),
 });
 

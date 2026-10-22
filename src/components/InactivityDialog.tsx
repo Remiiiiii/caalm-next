@@ -2,16 +2,8 @@
 
 import { AlertTriangle, Clock, LogOut, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { AppDialog } from "@/components/ui/app-dialog";
+import { Button } from "@/components/ui/button";
 import { formatTime, getTimerValues } from "@/lib/inactivity-config";
 
 interface InactivityDialogProps {
@@ -38,7 +30,6 @@ export default function InactivityDialog({
 			await onLogout();
 		} catch (error) {
 			console.error("Logout error:", error);
-			// Force close dialog even if logout fails
 			onClose();
 		}
 	}, [onLogout, onClose]);
@@ -48,7 +39,6 @@ export default function InactivityDialog({
 		onClose();
 	};
 
-	// Reset countdown when dialog opens
 	useEffect(() => {
 		if (isOpen) {
 			setSecondsLeft(initialSeconds);
@@ -56,7 +46,6 @@ export default function InactivityDialog({
 		}
 	}, [isOpen, initialSeconds]);
 
-	// Countdown timer
 	useEffect(() => {
 		if (!isOpen) return;
 
@@ -73,60 +62,53 @@ export default function InactivityDialog({
 		return () => clearInterval(countdownTimer);
 	}, [isOpen]);
 
-	// Handle logout when countdown reaches 0
 	useEffect(() => {
 		if (isOpen && secondsLeft <= 0 && !isLoggingOut) {
-			handleLogout();
+			void handleLogout();
 		}
 	}, [isOpen, secondsLeft, isLoggingOut, handleLogout]);
 
 	return (
-		<AlertDialog open={isOpen} onOpenChange={onClose}>
-			<AlertDialogContent className="max-w-md">
-				<AlertDialogHeader>
-					<AlertDialogTitle className="flex items-center gap-2">
-						<Clock className="h-5 w-5 text-orange-500" />
-						Session Expiring
-					</AlertDialogTitle>
-					<AlertDialogDescription asChild>
-						<div className="space-y-2">
-							<p>
-								Due to inactivity, you&apos;ll be signed out in{" "}
-								<span className="font-bold text-red-600">
-									{formatTime(secondsLeft)}
-								</span>{" "}
-								seconds.
-							</p>
-							<div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-								<AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
-								<p className="text-sm text-amber-800">
-									For security reasons, your session will be completely
-									terminated and you&apos;ll need to sign in again.
-								</p>
-							</div>
-						</div>
-					</AlertDialogDescription>
-				</AlertDialogHeader>
-
-				<AlertDialogFooter className="flex gap-2">
-					<AlertDialogCancel
-						onClick={handleLogout}
+		<AppDialog
+			open={isOpen}
+			onOpenChange={(next) => {
+				if (!next && !isLoggingOut) handleContinue();
+			}}
+			pending={isLoggingOut}
+			icon={<Clock className="h-5 w-5" />}
+			title="Session expiring"
+			description={`Due to inactivity, you'll be signed out in ${formatTime(secondsLeft)}.`}
+			footer={
+				<>
+					<Button
+						type="button"
+						variant="outline"
+						className="rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
 						disabled={isLoggingOut}
-						className="primary-btn px-3 sm:px-4 flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white disabled:opacity-50"
+						onClick={() => void handleLogout()}
 					>
 						<LogOut className="h-4 w-4" />
-						{isLoggingOut ? "Signing Out..." : "Sign Out Now"}
-					</AlertDialogCancel>
-					<AlertDialogAction
-						onClick={handleContinue}
+						{isLoggingOut ? "Signing out…" : "Sign out now"}
+					</Button>
+					<Button
+						type="button"
+						className="btn-primary"
 						disabled={isLoggingOut}
-						className="text-slate-700flex items-center gap-2 bg-blue-500 hover:bg-blue-600 disabled:opacity-50"
+						onClick={handleContinue}
 					>
 						<RefreshCw className="h-4 w-4" />
-						Continue Session
-					</AlertDialogAction>
-				</AlertDialogFooter>
-			</AlertDialogContent>
-		</AlertDialog>
+						Continue session
+					</Button>
+				</>
+			}
+		>
+			<div className="flex items-start gap-2 rounded-lg border border-orange/20 bg-orange/5 px-4 py-2.5 text-sm text-orange">
+				<AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+				<span>
+					For security reasons, your session will be completely terminated and
+					you'll need to sign in again.
+				</span>
+			</div>
+		</AppDialog>
 	);
 }

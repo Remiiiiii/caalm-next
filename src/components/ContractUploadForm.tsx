@@ -36,14 +36,6 @@ import {
 	handleDemoSampleDropCapture,
 } from "@/components/demo/demoSampleDrag";
 import { SaveProgressCard } from "@/components/SaveProgressCard";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -52,6 +44,7 @@ import {
 	toIsoDateLocal,
 } from "@/components/ui/caalm-date-picker";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { CurrencyAmountInput } from "@/components/ui/currency-amount-input";
 import { CurrencySelect } from "@/components/ui/currency-select";
 import {
@@ -106,19 +99,9 @@ import {
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import {
-	AI_EXTRACTION_LIMIT_TITLE,
-	isAiExtractionLimitError,
-	throwIfAiExtractionHttpFailed,
-} from "@/lib/billing/aiExtractionUserMessages";
-import {
 	getAllManagers,
 	getUsersByDepartment,
 } from "@/lib/actions/database.actions";
-import {
-	type AssigneeSource,
-	assigneeFallbackMessage,
-	pickAssigneeIds,
-} from "@/lib/assignments/resolve-default-assignee";
 import { uploadFile } from "@/lib/actions/file.actions";
 import {
 	buildFormPatchFromExtraction,
@@ -130,6 +113,16 @@ import {
 	type ContractTypeSuggestionResult,
 } from "@/lib/ai/contractTypeSuggestionSchema";
 import { scrubTemplateTokenValue } from "@/lib/ai/scrubTemplateTokens";
+import {
+	type AssigneeSource,
+	assigneeFallbackMessage,
+	pickAssigneeIds,
+} from "@/lib/assignments/resolve-default-assignee";
+import {
+	AI_EXTRACTION_LIMIT_TITLE,
+	isAiExtractionLimitError,
+	throwIfAiExtractionHttpFailed,
+} from "@/lib/billing/aiExtractionUserMessages";
 import { isDemoMode } from "@/lib/config/demo-mode";
 import {
 	CONTRACT_TYPE_CONFIGS,
@@ -644,9 +637,7 @@ const contractSchema = z
 		serviceCreditTerms: z.string().optional(),
 		escalationProcedures: z.string().optional(),
 		obligationOwners: z.string().optional(),
-		assignedManagers: z
-			.array(z.string())
-			.min(1, "Assigned To is required"),
+		assignedManagers: z.array(z.string()).min(1, "Assigned To is required"),
 		internalApproverIds: z.array(z.string()).optional(),
 		approvalWorkflowTemplate: z.string().optional(),
 		currentApprovalStage: z.string().optional(),
@@ -1141,9 +1132,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 					divisionCandidates: typedManagers,
 					departmentCandidates: typedManagers,
 					orgCandidates: availableManagers,
-					fallbackUser: ownerId
-						? { $id: ownerId, fullName: "You" }
-						: undefined,
+					fallbackUser: ownerId ? { $id: ownerId, fullName: "You" } : undefined,
 					division: watchedSubDepartment,
 				});
 				const display =
@@ -1185,9 +1174,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 			} catch (error) {
 				console.error("Failed to fetch department managers:", error);
 				if (ownerId) {
-					setFilteredManagers([
-						{ $id: ownerId, fullName: "You", email: "" },
-					]);
+					setFilteredManagers([{ $id: ownerId, fullName: "You", email: "" }]);
 					setSelectedManagers([ownerId]);
 					setAssigneeSource("uploader");
 					form.setValue("assignedManagers", [ownerId]);
@@ -2759,7 +2746,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 				workflowNotes: sanitizeString(values.workflowNotes),
 				digitalSignatureRequired: values.digitalSignatureRequired,
 				digitalSignatureStatus: values.digitalSignatureRequired
-					? "pending"
+					? ("pending" as const)
 					: undefined,
 				searchKeywords: sanitizeString(values.searchKeywords),
 				accessScope: sanitizeString(values.accessScope),
@@ -2927,9 +2914,6 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 					<VisuallyHiddenPrimitive.Root>
 						<DialogTitle>Upload Contract</DialogTitle>
 					</VisuallyHiddenPrimitive.Root>
-
-					{/* Professional Cap */}
-					<div className="h-4 w-full shrink-0 rounded-t-[26px] bg-[#d6d7d8]/75" />
 
 					{/* Contract Type Selection Screen */}
 					{showTypeSelection &&
@@ -3926,7 +3910,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																				<span className="text-red">*</span>
 																			</FormLabel>
 																			<FormControl>
-																				<span className="inline-block px-2 py-0.5 text-xs rounded-full font-medium border bg-orange/10 text-orange border-orange/20">
+																				<span className="inline-block px-2 py-0.5 text-xs rounded-full border bg-orange/10 text-orange border-orange/20">
 																					Draft
 																				</span>
 																			</FormControl>
@@ -5509,8 +5493,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																			{assigneeFallbackMessage(
 																				assigneeSource,
 																				filteredManagers.find(
-																					(m) =>
-																						m.$id === selectedManagers[0],
+																					(m) => m.$id === selectedManagers[0],
 																				)?.fullName,
 																			) ? (
 																				<p className="text-xs text-slate-600">
@@ -5518,8 +5501,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																						assigneeSource,
 																						filteredManagers.find(
 																							(m) =>
-																								m.$id ===
-																								selectedManagers[0],
+																								m.$id === selectedManagers[0],
 																						)?.fullName,
 																					)}
 																				</p>
@@ -6581,123 +6563,56 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 						</>
 					)}
 				</DialogContent>
-
-				{/* Delete Confirmation Dialog */}
-				<AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-					<AlertDialogContent className="sm:max-w-md p-0 overflow-hidden border border-slate-200 shadow-xl">
-						<AlertDialogTitle className="sr-only">
-							Delete Draft
-						</AlertDialogTitle>
-						{/* Professional Cap */}
-						<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-
-						{/* Header */}
-						<div className="px-6 py-4 mt-4 bg-white border-b border-slate-200">
-							<div className="flex gap-2">
-								<AlertTriangle className="w-5 h-5 text-[#f7d333]" />
-								<h2 className="text-base font-semibold sidebar-gradient-text">
-									Delete Draft
-								</h2>
-							</div>
-							<div>
-								<AlertDialogDescription className="text-sm text-slate-600 mt-1 ml-7">
-									Are you sure you want to delete this draft? This action cannot
-									be undone.
-								</AlertDialogDescription>
-							</div>
-						</div>
-
-						{/* Body */}
-						<div className="px-6 py-5 space-y-3 bg-white">
-							<p className="text-sm text-slate-600">
-								Your decision to delete is irreversible, so please make sure you
-								want to continue.
-							</p>
-							<p className="text-xs font-medium text-slate-500">
-								This action is permanent.
-							</p>
-						</div>
-
-						{/* Footer — centered actions */}
-						<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-center gap-3">
-							<AlertDialogCancel
-								onClick={() => {
-									setDeleteDialogOpen(false);
-									setDraftToDelete(null);
-								}}
-								className="primary-btn px-3 sm:px-4"
-							>
-								<Ban className="h-4 w-4" />
-								Cancel
-							</AlertDialogCancel>
-							<AlertDialogAction
-								onClick={() => {
-									if (draftToDelete) {
-										deleteDraft(draftToDelete);
-										setDraftToDelete(null);
-									}
-								}}
-								className="delete-btn px-3 sm:px-4"
-							>
-								<Trash2 className="h-4 w-4" />
-								Delete Draft
-							</AlertDialogAction>
-						</div>
-					</AlertDialogContent>
-				</AlertDialog>
-
-				{/* Cancel Confirmation Dialog */}
-				<AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-					<AlertDialogContent className="max-w-[500px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl">
-						{/* Professional Cap */}
-						<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-
-						{/* Header with gradient background */}
-						<div className="sticky top-0 z-10 bg-linear-to-r from-orange-50 to-amber-50 py-4 border-b border-slate-200">
-							<div className="flex items-center gap-3 px-6">
-								{/* Title */}
-								<div>
-									<AlertDialogTitle className="flex items-center gap-2 text-xl font-semibold sidebar-gradient-text py-2">
-										{/* Icon with circular background */}
-										<Ban className="w-5 h-5 text-[#0f5384]" />
-										Cancel Form?
-									</AlertDialogTitle>
-									<AlertDialogDescription className="text-sm ml-7 text-slate-600">
-										Your progress will not be saved
-									</AlertDialogDescription>
-								</div>
-							</div>
-						</div>
-
-						{/* Scrollable Content */}
-						<div className="flex-1 overflow-y-auto py-2 px-6 bg-white">
-							<p className="text-sm text-slate-700 leading-relaxed">
-								Are you sure you want to cancel? If you cancel, the form will
-								not be saved and all progress will be lost. You can save your
-								progress using the "Save Progress" button before canceling.
-							</p>
-						</div>
-
-						{/* Professional Footer */}
-						<div className="py-4 bg-slate-50 border-t border-slate-200 flex justify-center items-center gap-3">
-							<AlertDialogCancel
-								onClick={() => setCancelDialogOpen(false)}
-								className="primary-btn px-4 sm:px-4 shimmer-hover"
-							>
-								<StepForward className="h-4 w-4" />
-								Continue Editing
-							</AlertDialogCancel>
-							<AlertDialogAction
-								onClick={handleCancelConfirm}
-								className="primary-btn px-4 sm:px-4 shimmer-hover"
-							>
-								<Ban className="h-4 w-4" />
-								Cancel & Discard
-							</AlertDialogAction>
-						</div>
-					</AlertDialogContent>
-				</AlertDialog>
 			</Dialog>
+
+			<ConfirmDialog
+				open={deleteDialogOpen}
+				onOpenChange={(open) => {
+					setDeleteDialogOpen(open);
+					if (!open) setDraftToDelete(null);
+				}}
+				variant="destructive"
+				icon={<AlertTriangle className="h-5 w-5" />}
+				title="Delete Draft"
+				description="Are you sure you want to delete this draft? This action cannot be undone."
+				helperText={
+					<>
+						Your decision to delete is irreversible, so please make sure you
+						want to continue.
+						<span className="mt-2 block text-xs font-medium text-slate-500">
+							This action is permanent.
+						</span>
+					</>
+				}
+				cancelLabel="Cancel"
+				confirmLabel="Delete Draft"
+				confirmIcon={<Trash2 className="h-4 w-4" />}
+				onConfirm={async () => {
+					if (!draftToDelete) return;
+					const id = draftToDelete;
+					setDraftToDelete(null);
+					await deleteDraft(id);
+				}}
+			/>
+
+			<ConfirmDialog
+				open={cancelDialogOpen}
+				onOpenChange={setCancelDialogOpen}
+				icon={<Ban className="h-5 w-5" />}
+				title="Cancel Form?"
+				description="Your progress will not be saved"
+				helperText={
+					<p className="text-sm text-slate-700 leading-relaxed">
+						Are you sure you want to cancel? If you cancel, the form will not be
+						saved and all progress will be lost. You can save your progress
+						using the &quot;Save Progress&quot; button before canceling.
+					</p>
+				}
+				cancelLabel="Continue Editing"
+				confirmLabel="Cancel & Discard"
+				confirmIcon={<Ban className="h-4 w-4" />}
+				onConfirm={handleCancelConfirm}
+			/>
 
 			<LocalPdfPreviewDialog
 				open={pdfPreviewOpen}

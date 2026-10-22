@@ -17,5 +17,4 @@ export function constituentTypeBadgeClass(type: ConstituentType): string {
 	return "bg-slate-100 text-slate-600 border-slate-200";
 }
 
-export const CONSTITUENT_DNC_BADGE_CLASS =
-	"bg-red/10 text-red border-red/20";
+export const CONSTITUENT_DNC_BADGE_CLASS = "bg-red/10 text-red border-red/20";

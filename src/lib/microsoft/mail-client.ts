@@ -57,7 +57,10 @@ function formatRecipients(
 	recipients?: { emailAddress?: { name?: string; address?: string } }[],
 ): string {
 	if (!recipients?.length) return "";
-	return recipients.map((r) => formatFrom(r)).filter(Boolean).join(", ");
+	return recipients
+		.map((r) => formatFrom(r))
+		.filter(Boolean)
+		.join(", ");
 }
 
 interface GraphMessage {
@@ -260,14 +263,18 @@ export async function sendMessage(
 			`/me/messages/${encodeURIComponent(options.replyToMessageId)}/createReply`,
 			{ method: "POST" },
 		);
-		await graphFetch(accessToken, `/me/messages/${encodeURIComponent(draft.id)}`, {
-			method: "PATCH",
-			body: JSON.stringify({
-				subject: options.subject,
-				body: bodyPayload(options.body, contentType),
-				toRecipients: toRecipientsPayload(options.to),
-			}),
-		});
+		await graphFetch(
+			accessToken,
+			`/me/messages/${encodeURIComponent(draft.id)}`,
+			{
+				method: "PATCH",
+				body: JSON.stringify({
+					subject: options.subject,
+					body: bodyPayload(options.body, contentType),
+					toRecipients: toRecipientsPayload(options.to),
+				}),
+			},
+		);
 		await graphFetch(
 			accessToken,
 			`/me/messages/${encodeURIComponent(draft.id)}/send`,

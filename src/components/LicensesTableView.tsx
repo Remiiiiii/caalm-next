@@ -4,13 +4,13 @@ import { Loader2 } from "lucide-react";
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLicensesView } from "@/components/LicensesView";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
 	CaalmDataTable,
 	DATA_TABLE_BODY_ROW_CLICKABLE,
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
 } from "@/components/ui/caalm-data-table";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
 	TableBody,
 	TableCell,
@@ -54,7 +54,7 @@ const statusBadge = (license: License) => {
 	return (
 		<span
 			className={cn(
-				"inline-flex items-center px-2.5 py-0.5 text-xs rounded-full font-medium border whitespace-nowrap",
+				"inline-flex items-center px-2.5 py-0.5 text-xs rounded-full border whitespace-nowrap",
 				classMap[status] || "bg-slate-100 text-slate-700 border-slate-200",
 			)}
 		>
@@ -422,150 +422,145 @@ export default function LicensesTableView({
 
 	return (
 		<CaalmDataTable>
-				<TableHeader className="[&_tr]:border-b-0">
-					<TableRow className={DATA_TABLE_HEADER_ROW}>
-						<TableHead className={`${DATA_TABLE_HEADER_CELL} pl-4 pr-2 w-10`}>
+			<TableHeader className="[&_tr]:border-b-0">
+				<TableRow className={DATA_TABLE_HEADER_ROW}>
+					<TableHead className={`${DATA_TABLE_HEADER_CELL} pl-4 pr-2 w-10`}>
+						<Checkbox
+							checked={allSelected}
+							onCheckedChange={(checked) => {
+								if (checked) selectAll(visibleIds);
+								else clearSelection();
+							}}
+							aria-label="Select all visible licenses"
+							className="cursor-pointer"
+						/>
+					</TableHead>
+					<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+						License
+					</TableHead>
+					<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+						Status
+					</TableHead>
+					<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+						Size
+					</TableHead>
+					<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+						Uploaded On
+					</TableHead>
+					<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+						Expires On
+					</TableHead>
+					<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+						Department
+					</TableHead>
+					<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+						Assigned To
+					</TableHead>
+					<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>By</TableHead>
+					<TableHead
+						className={`${DATA_TABLE_HEADER_CELL} pl-3 pr-4 text-right`}
+					>
+						Actions
+					</TableHead>
+				</TableRow>
+			</TableHeader>
+			<TableBody className="[&_tr:last-child>td]:border-b-0">
+				{licenses.map((license: License) => (
+					<TableRow
+						key={license.$id}
+						className={cn(
+							DATA_TABLE_BODY_ROW_CLICKABLE,
+							"group",
+							selectedIds.includes(license.$id) && "bg-blue-50/50",
+						)}
+						onClick={() => setPreviewLicense(license)}
+					>
+						<TableCell
+							className="py-4 pl-4 pr-2"
+							onClick={(e) => e.stopPropagation()}
+						>
 							<Checkbox
-								checked={allSelected}
-								onCheckedChange={(checked) => {
-									if (checked) selectAll(visibleIds);
-									else clearSelection();
-								}}
-								aria-label="Select all visible licenses"
+								checked={selectedIds.includes(license.$id)}
+								onCheckedChange={() => toggleSelected(license.$id)}
+								aria-label={`Select ${license.licenseName || "license"}`}
 								className="cursor-pointer"
 							/>
-						</TableHead>
-						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-							License
-						</TableHead>
-						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-							Status
-						</TableHead>
-						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-							Size
-						</TableHead>
-						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-							Uploaded On
-						</TableHead>
-						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-							Expires On
-						</TableHead>
-						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-							Department
-						</TableHead>
-						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-							Assigned To
-						</TableHead>
-						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-							By
-						</TableHead>
-						<TableHead
-							className={`${DATA_TABLE_HEADER_CELL} pl-3 pr-4 text-right`}
-						>
-							Actions
-						</TableHead>
-					</TableRow>
-				</TableHeader>
-				<TableBody className="[&_tr:last-child>td]:border-b-0">
-					{licenses.map((license: License) => (
-						<TableRow
-							key={license.$id}
-							className={cn(
-								DATA_TABLE_BODY_ROW_CLICKABLE,
-								"group",
-								selectedIds.includes(license.$id) && "bg-blue-50/50",
-							)}
-							onClick={() => setPreviewLicense(license)}
-						>
-							<TableCell
-								className="py-4 pl-4 pr-2"
-								onClick={(e) => e.stopPropagation()}
-							>
-								<Checkbox
-									checked={selectedIds.includes(license.$id)}
-									onCheckedChange={() => toggleSelected(license.$id)}
-									aria-label={`Select ${license.licenseName || "license"}`}
-									className="cursor-pointer"
+						</TableCell>
+						<TableCell className="py-4">
+							<div className="flex items-center gap-3 min-w-0">
+								<Thumbnail
+									type="application/pdf"
+									extension="pdf"
+									url=""
+									className="size-10! shrink-0"
+									imageClassName="!size-8"
 								/>
-							</TableCell>
-							<TableCell className="py-4">
-								<div className="flex items-center gap-3 min-w-0">
-									<Thumbnail
-										type="application/pdf"
-										extension="pdf"
-										url=""
-										className="size-10! shrink-0"
-										imageClassName="!size-8"
-									/>
-									<div className="min-w-0">
-										<p
-											className="subtitle-2 text-slate-700 whitespace-nowrap truncate max-w-[180px]"
-											title={license.licenseName}
-										>
-											{truncateLicenseName(license.licenseName)}
-										</p>
-										{license.licenseNumber && (
-											<p className="text-xs text-slate-500 mt-0.5">
-												#{license.licenseNumber}
-											</p>
-										)}
-									</div>
-								</div>
-							</TableCell>
-							<TableCell className="py-4 whitespace-nowrap">
-								{statusBadge(license)}
-							</TableCell>
-							<TableCell className="py-4 text-slate-700 whitespace-nowrap">
-								{convertFileSize({
-									sizeInBytes: license.fileSize ?? 0,
-								})}
-							</TableCell>
-							<TableCell className="py-4 text-slate-700 whitespace-nowrap">
-								<FormattedDateTime
-									date={license.$createdAt}
-									className="body-2"
-								/>
-							</TableCell>
-							<TableCell className="py-4 text-slate-700 whitespace-nowrap">
-								{expiryCell(license)}
-							</TableCell>
-							<TableCell className="py-4 text-slate-700 whitespace-nowrap">
-								{license.division || license.department || (
-									<span className="body-2 text-slate-400">-</span>
-								)}
-							</TableCell>
-							<TableCell className="py-4 text-slate-700 whitespace-nowrap">
-								{renderAssignedManagers(license)}
-							</TableCell>
-							<TableCell className="py-4 text-slate-700 whitespace-nowrap">
-								{loadingOwners[license.$id] ? (
-									<span className="body-2 text-slate-400 inline-flex items-center gap-1.5">
-										<Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
-										Loading...
-									</span>
-								) : (
-									<span
-										className="body-2 truncate block"
-										title={getOwnerName(license)}
+								<div className="min-w-0">
+									<p
+										className="subtitle-2 text-slate-700 whitespace-nowrap truncate max-w-[180px]"
+										title={license.licenseName}
 									>
-										{getOwnerName(license)}
-									</span>
-								)}
-							</TableCell>
-							<TableCell
-								className="py-4 text-right"
-								onClick={(e) => e.stopPropagation()}
-							>
-								<LicenseActionDropdown
-									license={license}
-									onRefresh={onRefresh}
-									onLicenseRemoved={onLicenseRemoved}
-									userRole={user?.role as "executive" | "admin" | "manager"}
-								/>
-							</TableCell>
-						</TableRow>
-					))}
-				</TableBody>
+										{truncateLicenseName(license.licenseName)}
+									</p>
+									{license.licenseNumber && (
+										<p className="text-xs text-slate-500 mt-0.5">
+											#{license.licenseNumber}
+										</p>
+									)}
+								</div>
+							</div>
+						</TableCell>
+						<TableCell className="py-4 whitespace-nowrap">
+							{statusBadge(license)}
+						</TableCell>
+						<TableCell className="py-4 text-slate-700 whitespace-nowrap">
+							{convertFileSize({
+								sizeInBytes: license.fileSize ?? 0,
+							})}
+						</TableCell>
+						<TableCell className="py-4 text-slate-700 whitespace-nowrap">
+							<FormattedDateTime date={license.$createdAt} className="body-2" />
+						</TableCell>
+						<TableCell className="py-4 text-slate-700 whitespace-nowrap">
+							{expiryCell(license)}
+						</TableCell>
+						<TableCell className="py-4 text-slate-700 whitespace-nowrap">
+							{license.division || license.department || (
+								<span className="body-2 text-slate-400">-</span>
+							)}
+						</TableCell>
+						<TableCell className="py-4 text-slate-700 whitespace-nowrap">
+							{renderAssignedManagers(license)}
+						</TableCell>
+						<TableCell className="py-4 text-slate-700 whitespace-nowrap">
+							{loadingOwners[license.$id] ? (
+								<span className="body-2 text-slate-400 inline-flex items-center gap-1.5">
+									<Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+									Loading...
+								</span>
+							) : (
+								<span
+									className="body-2 truncate block"
+									title={getOwnerName(license)}
+								>
+									{getOwnerName(license)}
+								</span>
+							)}
+						</TableCell>
+						<TableCell
+							className="py-4 text-right"
+							onClick={(e) => e.stopPropagation()}
+						>
+							<LicenseActionDropdown
+								license={license}
+								onRefresh={onRefresh}
+								onLicenseRemoved={onLicenseRemoved}
+								userRole={user?.role as "executive" | "admin" | "manager"}
+							/>
+						</TableCell>
+					</TableRow>
+				))}
+			</TableBody>
 		</CaalmDataTable>
 	);
 }

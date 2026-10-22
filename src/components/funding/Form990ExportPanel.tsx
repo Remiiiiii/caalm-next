@@ -2,6 +2,7 @@
 
 import { Download } from "lucide-react";
 import { useState } from "react";
+import { BusyIcon } from "@/components/ui/busy-icon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,14 +22,29 @@ export function Form990ExportPanel() {
 	const [error, setError] = useState<string | null>(null);
 	const [meta, setMeta] = useState<string | null>(null);
 
+	const [busyPart, setBusyPart] = useState<"worksheet" | "exceptions" | null>(
+		null,
+	);
+
 	const download = async (part: "worksheet" | "exceptions") => {
+		setBusyPart(part);
 		setError(null);
+		try {
+			await downloadPart(part);
+		} finally {
+			setBusyPart(null);
+		}
+	};
+
+	const downloadPart = async (part: "worksheet" | "exceptions") => {
 		const params = new URLSearchParams({
 			startDate: range.start,
 			endDate: range.end,
 			part,
 		});
-		const res = await fetch(`/api/funding/form-990-export?${params.toString()}`);
+		const res = await fetch(
+			`/api/funding/form-990-export?${params.toString()}`,
+		);
 		if (!res.ok) {
 			const body = await res.json().catch(() => ({}));
 			setError(body.error || "Export failed");
@@ -40,8 +56,8 @@ export function Form990ExportPanel() {
 		a.href = url;
 		a.download =
 			part === "exceptions"
-				? "990-worksheet-exceptions.csv"
-				: "990-part-ix-worksheet.csv";
+				? "990-worksheet-exceptions.xlsx"
+				: "990-part-ix-worksheet.xlsx";
 		a.click();
 		URL.revokeObjectURL(url);
 	};
@@ -53,7 +69,9 @@ export function Form990ExportPanel() {
 			endDate: range.end,
 			part: "meta",
 		});
-		const res = await fetch(`/api/funding/form-990-export?${params.toString()}`);
+		const res = await fetch(
+			`/api/funding/form-990-export?${params.toString()}`,
+		);
 		if (!res.ok) {
 			const body = await res.json().catch(() => ({}));
 			setError(body.error || "Could not summarize export");
@@ -75,8 +93,8 @@ export function Form990ExportPanel() {
 				990 Part IX worksheet export
 			</p>
 			<p className="text-xs text-slate-600">
-				CSV for your tax preparer — not an IRS e-file. Unmapped categories export
-				on the exceptions file.
+				CSV for your tax preparer — not an IRS e-file. Unmapped categories
+				export on the exceptions file.
 			</p>
 			<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 				<div>
@@ -84,9 +102,7 @@ export function Form990ExportPanel() {
 					<Input
 						type="date"
 						value={range.start}
-						onChange={(e) =>
-							setRange((r) => ({ ...r, start: e.target.value }))
-						}
+						onChange={(e) => setRange((r) => ({ ...r, start: e.target.value }))}
 						className="border-[0.25px] border-slate-300"
 					/>
 				</div>
@@ -103,24 +119,30 @@ export function Form990ExportPanel() {
 			{error ? <p className="text-sm text-red">{error}</p> : null}
 			{meta ? <p className="text-xs text-slate-600">{meta}</p> : null}
 			<div className="flex flex-wrap justify-end gap-3">
-				<Button type="button" variant="outline" onClick={() => void refreshMeta()}>
+				<Button
+					type="button"
+					variant="outline"
+					onClick={() => void refreshMeta()}
+				>
 					Preview counts
 				</Button>
 				<Button
 					type="button"
 					variant="outline"
+					disabled={busyPart !== null}
 					onClick={() => void download("exceptions")}
 				>
-					<Download className="h-4 w-4" />
-					Exceptions CSV
+					<BusyIcon busy={busyPart === "exceptions"} icon={Download} />
+					Exceptions Excel
 				</Button>
 				<Button
 					type="button"
 					className="primary-btn px-3 sm:px-4"
+					disabled={busyPart !== null}
 					onClick={() => void download("worksheet")}
 				>
-					<Download className="h-4 w-4" />
-					Worksheet CSV
+					<BusyIcon busy={busyPart === "worksheet"} icon={Download} />
+					Worksheet Excel
 				</Button>
 			</div>
 		</div>

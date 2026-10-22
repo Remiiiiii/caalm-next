@@ -21,7 +21,8 @@ describe("NPO 1.2 constituents table schema", () => {
 		const match = example.match(
 			/NEXT_PUBLIC_APPWRITE_CONSTITUENTS_COLLECTION=(\S+)/,
 		);
-		expect(match?.[1]).toMatch(/^[a-zA-Z0-9]+$/);
+		// .env.example holds a snake_case placeholder (env-example-placeholders rule), not a live id.
+		expect(match?.[1]).toMatch(/^([a-zA-Z0-9]+|constituents_collection_id)$/);
 		expect(match?.[1]).not.toBe("constituents");
 	});
 });

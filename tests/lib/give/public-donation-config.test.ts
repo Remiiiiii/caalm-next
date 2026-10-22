@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { PublicDonationPageConfig } from "@/lib/give/public-donation-config";
 import {
 	buildConfigDesignationOptions,
 	resolvePublicImpactStatement,
@@ -21,7 +22,7 @@ describe("public donation config helpers", () => {
 			impactStatements: { "2500": "week of tutoring materials." },
 			ein: "47-3829102",
 			legalText: "Tax deductible.",
-			frequencyOptions: ["one_time", "monthly"] as const,
+			frequencyOptions: ["one_time", "monthly"] as PublicDonationPageConfig["frequencyOptions"],
 		};
 		expect(resolvePublicImpactStatement(config, 25)).toContain("tutoring");
 		expect(resolvePublicImpactStatement(config, 999)).toContain("tutoring");

@@ -54,15 +54,12 @@ export function applyObligationColumnMapping(
 		if (statusRaw && !isObligationStatus(statusRaw.toLowerCase())) {
 			errors.push({
 				rowNumber,
-				message:
-					"Status must be open, in_progress, done, waived, or overdue.",
+				message: "Status must be open, in_progress, done, waived, or overdue.",
 			});
 			return;
 		}
 		const reminderRaw = pick("reminderDaysBefore");
-		const reminderDaysBefore = reminderRaw
-			? Number(reminderRaw)
-			: undefined;
+		const reminderDaysBefore = reminderRaw ? Number(reminderRaw) : undefined;
 		if (
 			reminderRaw &&
 			(!Number.isFinite(reminderDaysBefore) || (reminderDaysBefore ?? 0) < 0)
@@ -79,9 +76,7 @@ export function applyObligationColumnMapping(
 			contractId,
 			title,
 			dueDate: pick("dueDate") || undefined,
-			kind: kindRaw
-				? (kindRaw.toLowerCase() as ObligationKind)
-				: "other",
+			kind: kindRaw ? (kindRaw.toLowerCase() as ObligationKind) : "other",
 			status: statusRaw
 				? (statusRaw.toLowerCase() as ObligationStatus)
 				: "open",

@@ -36,8 +36,7 @@ export async function computeStewardshipMetrics(
 	const segments = await listSegmentsForOrg(orgId);
 	const contactedThisWeek = segments.filter(
 		(row) =>
-			row.stewardshipContactedAt &&
-			row.stewardshipContactedAt >= weekStart,
+			row.stewardshipContactedAt && row.stewardshipContactedAt >= weekStart,
 	).length;
 
 	const queue = await listStewardshipQueue(orgId);

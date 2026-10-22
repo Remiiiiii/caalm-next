@@ -1,11 +1,20 @@
 "use client";
 
-import { DollarSign, Download, Gift, Loader2, UserPlus, Users } from "lucide-react";
+import {
+	DollarSign,
+	Download,
+	Gift,
+	Loader2,
+	UserPlus,
+	Users,
+} from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { BusyIcon } from "@/components/ui/busy-icon";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { StatCardIcon } from "@/components/ui/stat-card-icon";
+import { useBusyAction } from "@/hooks/useBusyAction";
 import type { DevelopmentMetrics } from "@/lib/development";
 import { formatRetentionPercent } from "@/lib/development";
 
@@ -20,6 +29,9 @@ function formatDollars(value: number): string {
 export function DevelopmentDashboardClient() {
 	const [metrics, setMetrics] = useState<DevelopmentMetrics | null>(null);
 	const [loading, setLoading] = useState(true);
+	const [exportBoardPack, exportingBoardPack] = useBusyAction(() =>
+		window.open("/api/development/board-pack/export", "_blank"),
+	);
 
 	const load = useCallback(async () => {
 		setLoading(true);
@@ -47,7 +59,9 @@ export function DevelopmentDashboardClient() {
 
 	if (!metrics) {
 		return (
-			<p className="text-sm text-slate-600">Unable to load development metrics.</p>
+			<p className="text-sm text-slate-600">
+				Unable to load development metrics.
+			</p>
 		);
 	}
 
@@ -90,12 +104,11 @@ export function DevelopmentDashboardClient() {
 				<Button
 					type="button"
 					className="primary-btn px-3 sm:px-4"
-					onClick={() => {
-						window.open("/api/development/board-pack/export", "_blank");
-					}}
+					disabled={exportingBoardPack}
+					onClick={() => void exportBoardPack()}
 				>
-					<Download className="h-4 w-4" />
-					Export board pack (CSV)
+					<BusyIcon busy={exportingBoardPack} icon={Download} />
+					Export board pack (Excel)
 				</Button>
 			</div>
 			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
@@ -129,7 +142,9 @@ export function DevelopmentDashboardClient() {
 									Unique donors YTD
 								</p>
 								<div className="flex items-center text-3xl font-bold text-slate-700 pt-2">
-									<span className="tabular-nums">{metrics.uniqueDonorsYtd}</span>
+									<span className="tabular-nums">
+										{metrics.uniqueDonorsYtd}
+									</span>
 									<StatCardIcon className="ml-2" icon={Users} />
 								</div>
 								<p className="text-xs text-slate-600 mt-1">

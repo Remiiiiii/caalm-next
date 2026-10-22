@@ -45,7 +45,8 @@ export async function GET(_request: NextRequest, context: RouteContext) {
 
 	const consent = readChannelConsent(loaded.constituent);
 	return NextResponse.json({
-		displayName: `${loaded.constituent.firstName} ${loaded.constituent.lastName}`.trim(),
+		displayName:
+			`${loaded.constituent.firstName} ${loaded.constituent.lastName}`.trim(),
 		doNotContact: loaded.constituent.doNotContact,
 		...consent,
 	});
@@ -60,11 +61,14 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 		const body = (await request.json()) as Record<string, unknown>;
 		const before = readChannelConsent(loaded.constituent);
 		const patch: Record<string, unknown> = {};
-		if (body.consentEmail != null) patch.consentEmail = Boolean(body.consentEmail);
+		if (body.consentEmail != null)
+			patch.consentEmail = Boolean(body.consentEmail);
 		if (body.consentSms != null) patch.consentSms = Boolean(body.consentSms);
 		if (body.consentMail != null) patch.consentMail = Boolean(body.consentMail);
-		if (body.consentPhone != null) patch.consentPhone = Boolean(body.consentPhone);
-		if (body.doNotContact != null) patch.doNotContact = Boolean(body.doNotContact);
+		if (body.consentPhone != null)
+			patch.consentPhone = Boolean(body.consentPhone);
+		if (body.doNotContact != null)
+			patch.doNotContact = Boolean(body.doNotContact);
 		if (body.lawfulBasis !== undefined) {
 			const value = body.lawfulBasis;
 			patch.lawfulBasis =

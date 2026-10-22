@@ -1,51 +1,482 @@
 "use client";
 
-import { Bot, Loader2, Send } from "lucide-react";
-import { useCallback, useState } from "react";
+import {
+	Bot,
+	Check,
+	Copy,
+	Loader2,
+	PanelRightClose,
+	Play,
+	RefreshCw,
+	Send,
+	SquareArrowOutUpRight,
+} from "lucide-react";
+import Link from "next/link";
+import { useCallback, useEffect, useRef, useState } from "react";
+import AssistantAvatar from "@/components/assistant/AssistantAvatar";
+import AssistantPreviewSheetShell from "@/components/assistant/AssistantPreviewSheetShell";
+import AssistantThinkingIndicator from "@/components/assistant/AssistantThinkingIndicator";
+import {
+	NEUTRAL_PILL,
+	PILL,
+	RAG_PILL,
+} from "@/components/audits/readiness/readiness-ui";
+import ShimmerBadge from "@/components/landing/ShimmerBadge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+	type ReadinessProseBlock,
+	splitReadinessProse,
+} from "@/lib/audits/readiness/format-assistant-text";
+import {
+	formatSiteHost,
+	type ReadinessAssistantStructured,
+} from "@/lib/audits/readiness/summary-tiles";
+import { cn } from "@/lib/utils";
+
+interface Citation {
+	id: string;
+	title: string;
+	href: string;
+	label: string;
+}
 
 interface Message {
 	role: "assistant" | "user";
 	content: string;
+	/** Records the answer was based on. */
+	citations?: Citation[];
+	structured?: ReadinessAssistantStructured;
+}
+
+function messagesFromSnapshot(
+	summary?: string,
+	structured?: ReadinessAssistantStructured,
+): Message[] {
+	if (!summary && !structured) return [];
+	return [
+		{
+			role: "assistant",
+			content: summary ?? "",
+			structured,
+		},
+	];
+}
+
+const DEFAULT_SUGGESTIONS = [
+	"Which gaps matter most for HRSA OSV prep?",
+	"What should we fix before child-welfare monitoring?",
+	"Which items belong on a financial PBC list?",
+];
+
+const RAG_DOT: Record<"green" | "amber" | "red", string> = {
+	green: "bg-green-500",
+	amber: "bg-amber-400",
+	red: "bg-red-500",
+};
+
+function ScoreTile({
+	label,
+	score,
+	badgeLabel,
+	rag,
+}: {
+	label: string;
+	score: number | null;
+	badgeLabel: string;
+	rag: "green" | "amber" | "red" | null;
+}) {
+	return (
+		<div className="flex flex-1 flex-col rounded-[12px] border border-slate-200 bg-white px-3 py-[10px]">
+			<span className="whitespace-nowrap text-xs leading-4 text-slate-500">
+				{label}
+			</span>
+			<span className="mt-1 text-[26px] font-bold leading-8 tracking-tight text-slate-700 tabular-nums">
+				{score !== null ? `${score}%` : "—"}
+			</span>
+			{badgeLabel ? (
+				<span
+					className={cn(
+						PILL,
+						"mt-2 w-fit whitespace-nowrap",
+						rag ? RAG_PILL[rag] : NEUTRAL_PILL,
+					)}
+				>
+					{badgeLabel}
+				</span>
+			) : null}
+		</div>
+	);
+}
+
+function StructuredSummaryMessage({
+	data,
+	content,
+	onRegenerate,
+}: {
+	data: ReadinessAssistantStructured;
+	content: string;
+	onRegenerate?: () => void;
+}) {
+	const [copied, setCopied] = useState(false);
+
+	return (
+		<div className="space-y-3 text-sm">
+			{/* Disclaimer */}
+			<div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
+				CAALM readiness is based on records in your CAALM organization. This is
+				not a state, federal, funder, HRSA, DCF, or accreditation audit
+				determination.
+			</div>
+			<div className="space-y-1.5 border-b border-slate-200 pb-3">
+				{/* Prose fallback (hidden by default but available for copy) */}
+				<details className="text-xs text-slate-500">
+					<summary className="cursor-pointer select-none hover:text-slate-600">
+						Show full narrative
+					</summary>
+					<ReadinessAssistantMessage content={content} />
+				</details>
+			</div>
+			<div className="space-y-1.5">
+				<div className="space-y-1.5">
+					<p className="text-[11px] font-bold uppercase tracking-wide text-slate-600">
+						Readiness by category
+					</p>
+				</div>
+				<div className="flex gap-2 space-y-1.5">
+					<ScoreTile
+						label="Overall readiness"
+						score={data.overallScore}
+						badgeLabel={data.overallBadgeLabel ?? data.overallRag}
+						rag={data.overallRag}
+					/>
+					<ScoreTile
+						label="Contracts & grants"
+						score={data.contractsGrantsScore}
+						badgeLabel={data.contractsBadgeLabel ?? ""}
+						rag={data.contractsGrantsRag}
+					/>
+					<ScoreTile
+						label="Licenses"
+						score={data.licensesScore}
+						badgeLabel={data.licensesBadgeLabel ?? ""}
+						rag={data.licensesRag}
+					/>
+				</div>
+			</div>
+			{data.scopeLine ? (
+				<p className="whitespace-nowrap border-b border-slate-200 pb-3 text-xs leading-5 text-slate-500">
+					{data.scopeLine}
+				</p>
+			) : null}
+
+			{/* Priority action */}
+			{data.priorityAction && (
+				<div className="space-y-1.5 border-b border-slate-200 pb-3">
+					<p className="text-[11px] font-bold uppercase tracking-wide text-slate-600">
+						Priority Action
+					</p>
+					<div className="relative space-y-2 rounded-2xl border border-orange-200 bg-[#FFF6F0] p-3 pb-8">
+						<div className="flex items-start justify-between gap-3">
+							<p className="text-xs font-semibold leading-snug text-slate-700">
+								{data.priorityAction.title}
+							</p>
+							{data.priorityAction.dueDateLabel ? (
+								<span
+									className={cn(
+										PILL,
+										RAG_PILL.amber,
+										"shrink-0 whitespace-nowrap",
+									)}
+								>
+									{data.priorityAction.dueDateLabel}
+								</span>
+							) : null}
+						</div>
+						<p className="text-xs leading-snug text-slate-700">
+							{data.priorityAction.instruction}
+						</p>
+						{data.priorityAction.affectsModules.length > 0 ? (
+							<div className="space-y-1.5">
+								<p className="text-[11px] text-slate-500">Affects</p>
+								<div className="flex flex-col items-start gap-1.5">
+									{data.priorityAction.affectsModules.map((label) => (
+										<span
+											key={label}
+											className={cn(
+												PILL,
+												"border-[#078FAB]/30 bg-white text-[#0f5384]",
+											)}
+										>
+											{label}
+										</span>
+									))}
+								</div>
+							</div>
+						) : null}
+						{data.priorityAction.moduleHref ? (
+							<Link
+								href={data.priorityAction.moduleHref}
+								aria-label={
+									data.priorityAction.moduleHref.includes("license")
+										? "Open licenses"
+										: "Open contracts"
+								}
+								className="absolute right-3 bottom-2.5 text-[#0f5384] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#078FAB]"
+							>
+								<SquareArrowOutUpRight className="h-4 w-4" aria-hidden />
+							</Link>
+						) : null}
+					</div>
+				</div>
+			)}
+
+			{/* By module */}
+			{data.byModule.length > 0 && (
+				<div className="space-y-2 border-b border-slate-200 pb-3">
+					<p className="text-[11px] font-bold uppercase tracking-wide text-slate-600">
+						By Module
+					</p>
+					<div className="space-y-3">
+						{data.byModule.map((m) => (
+							<div key={m.name} className="flex gap-2">
+								<div
+									className={cn(
+										"mt-1.5 h-2 w-2 shrink-0 rounded-full",
+										RAG_DOT[m.ragStatus],
+									)}
+								/>
+								<div className="min-w-0">
+									<p className="text-xs leading-snug text-slate-700">
+										<span className="font-semibold">{m.name}</span>
+										<span className="text-slate-400"> · </span>
+										<span className="font-semibold text-slate-600">
+											{m.score}% ready
+										</span>
+									</p>
+									<p className="mt-0.5 text-xs leading-snug text-slate-500">
+										{m.blurb}
+									</p>
+								</div>
+							</div>
+						))}
+					</div>
+				</div>
+			)}
+
+			{/* Public site crawl */}
+			{data.publicSiteCrawl ? (
+				<div className="space-y-1.5 border-b border-slate-200 pb-3">
+					<div className="flex flex-wrap items-center gap-2">
+						<p className="text-[11px] font-bold uppercase tracking-wide text-slate-600">
+							Public Site Crawl
+						</p>
+						<span className={cn(PILL, NEUTRAL_PILL)}>
+							Informational · not scored
+						</span>
+					</div>
+					<div className="grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-1.5 text-xs">
+						<span className="text-slate-500">Site</span>
+						<span className="text-right text-[#0f5384]">
+							{formatSiteHost(data.publicSiteCrawl.websiteUrl)}
+						</span>
+						<span className="text-slate-500">sitemap.xml</span>
+						<span className="text-right text-slate-700">
+							{data.publicSiteCrawl.sitemapFound ? "Found" : "Not found"}
+						</span>
+						<span className="text-slate-500">Pages crawled</span>
+						<span className="text-right tabular-nums text-slate-700">
+							{data.publicSiteCrawl.pagesCrawled}
+						</span>
+						<span className="text-slate-500">Health hint</span>
+						<span
+							className={cn(
+								PILL,
+								"justify-self-end whitespace-nowrap",
+								data.publicSiteCrawl.healthHint === "ok"
+									? RAG_PILL.green
+									: data.publicSiteCrawl.healthHint === "unavailable"
+										? RAG_PILL.red
+										: RAG_PILL.amber,
+							)}
+						>
+							{data.publicSiteCrawl.healthHint}
+						</span>
+					</div>
+				</div>
+			) : null}
+
+			{/* Actions */}
+			<div className="flex items-center justify-between gap-2">
+				<div className="flex items-center gap-2.5">
+					<button
+						type="button"
+						onClick={() => {
+							void navigator.clipboard.writeText(content);
+							setCopied(true);
+							setTimeout(() => setCopied(false), 2000);
+						}}
+						className="cursor-pointer text-slate-400 hover:text-slate-700"
+						title="Copy summary"
+					>
+						{copied ? (
+							<Check className="h-3.5 w-3.5 text-green-500" />
+						) : (
+							<Copy className="h-3.5 w-3.5" />
+						)}
+					</button>
+					{onRegenerate ? (
+						<button
+							type="button"
+							onClick={onRegenerate}
+							className="cursor-pointer text-slate-400 hover:text-slate-700"
+							title="Regenerate"
+						>
+							<RefreshCw className="h-3.5 w-3.5" />
+						</button>
+					) : null}
+				</div>
+				<span className="text-[11px] text-slate-500">
+					{data.sourceLine ?? "Source: Contracts and Licenses records"}
+				</span>
+			</div>
+		</div>
+	);
+}
+
+function ReadinessAssistantMessage({ content }: { content: string }) {
+	const blocks = splitReadinessProse(content);
+
+	return (
+		<div className="space-y-3 text-sm leading-relaxed text-slate-700">
+			{blocks.map((block, index) => (
+				<ReadinessProseBlockView key={index} block={block} />
+			))}
+		</div>
+	);
+}
+
+function ReadinessProseBlockView({ block }: { block: ReadinessProseBlock }) {
+	switch (block.type) {
+		case "list": {
+			const ListTag = block.ordered ? "ol" : "ul";
+			return (
+				<ListTag
+					className={cn(
+						"space-y-1 pl-5",
+						block.ordered ? "list-decimal" : "list-disc",
+					)}
+				>
+					{block.items.map((item) => (
+						<li key={item}>{item}</li>
+					))}
+				</ListTag>
+			);
+		}
+		case "paragraph":
+			return <p>{block.text}</p>;
+		default: {
+			const _exhaustive: never = block;
+			return _exhaustive;
+		}
+	}
+}
+
+export function ReadinessAiLauncher({
+	onClick,
+	disabled,
+}: {
+	onClick: () => void;
+	disabled?: boolean;
+}) {
+	return (
+		<ShimmerBadge
+			as="button"
+			type="button"
+			animateOn="hover"
+			onClick={onClick}
+			disabled={disabled}
+			aria-label="Readiness assistant"
+			className="h-8 shrink-0"
+			innerClassName="h-full bg-white px-3 text-sm font-medium text-[#0f5384]"
+		>
+			<Bot className="h-5 w-5 text-[#0f5384]" aria-hidden />
+			Readiness assistant
+		</ShimmerBadge>
+	);
 }
 
 export function ReadinessAiPanel({
 	snapshotId,
 	initialSummary,
+	initialSummaryAt,
+	initialStructured,
+	onSnapshotSaved,
+	open,
+	onOpenChange,
 }: {
 	snapshotId?: string | null;
 	initialSummary?: string;
+	/** ISO time the saved summary was generated. */
+	initialSummaryAt?: string | null;
+	initialStructured?: ReadinessAssistantStructured;
+	onSnapshotSaved?: () => void;
+	open: boolean;
+	onOpenChange: (open: boolean) => void;
 }) {
-	const [messages, setMessages] = useState<Message[]>(
-		initialSummary ? [{ role: "assistant", content: initialSummary }] : [],
+	const [messages, setMessages] = useState<Message[]>(() =>
+		messagesFromSnapshot(initialSummary, initialStructured),
 	);
+	const [summaryAt, setSummaryAt] = useState<string | null>(
+		initialStructured || initialSummary ? (initialSummaryAt ?? null) : null,
+	);
+	const [activeSnapshotId, setActiveSnapshotId] = useState(snapshotId);
 	const [question, setQuestion] = useState("");
 	const [loading, setLoading] = useState(false);
-	const [suggestions, setSuggestions] = useState<string[]>([
-		"Which gaps matter most for HRSA OSV prep?",
-		"What should we fix before child-welfare monitoring?",
-		"Which items belong on a financial PBC list?",
-	]);
+	const endRef = useRef<HTMLDivElement>(null);
+	const wasOpen = useRef(false);
 
-	const runAnalyze = useCallback(async () => {
+	useEffect(() => {
+		if (!open) return;
+		endRef.current?.scrollIntoView?.({ behavior: "smooth" });
+	}, [open, messages, loading]);
+
+	useEffect(() => {
+		setActiveSnapshotId(snapshotId);
+	}, [snapshotId]);
+
+	// On each open, show the last saved snapshot — do not auto-run a new one.
+	useEffect(() => {
+		if (open && !wasOpen.current) {
+			setMessages(messagesFromSnapshot(initialSummary, initialStructured));
+			setSummaryAt(
+				initialStructured || initialSummary ? (initialSummaryAt ?? null) : null,
+			);
+			setActiveSnapshotId(snapshotId);
+		}
+		wasOpen.current = open;
+	}, [open, initialSummary, initialStructured, initialSummaryAt, snapshotId]);
+
+	const saveNewSnapshot = useCallback(async () => {
 		setLoading(true);
 		try {
-			const res = await fetch("/api/audits/readiness/analyze", {
+			const res = await fetch("/api/audits/readiness", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					action: "analyze",
-					snapshotId: snapshotId || undefined,
-				}),
+				body: JSON.stringify({ cadence: "weekly", force: true }),
 			});
 			const body = await res.json();
-			if (!res.ok) throw new Error(body.error || "Analyze failed");
-			setMessages([{ role: "assistant", content: body.data.summary }]);
-			if (body.data.suggestedQuestions?.length) {
-				setSuggestions(body.data.suggestedQuestions);
-			}
+			if (!res.ok) throw new Error(body.error || "Snapshot failed");
+			const nextId: string | undefined = body.data?.snapshot?.id;
+			if (nextId) setActiveSnapshotId(nextId);
+			setMessages(
+				messagesFromSnapshot(
+					body.data?.summary || body.data?.snapshot?.aiSummary,
+					body.data?.structured ?? undefined,
+				),
+			);
+			setSummaryAt(body.data?.snapshot?.createdAt ?? new Date().toISOString());
+			onSnapshotSaved?.();
 		} catch (error) {
 			setMessages([
 				{
@@ -53,13 +484,13 @@ export function ReadinessAiPanel({
 					content:
 						error instanceof Error
 							? error.message
-							: "Unable to generate analysis.",
+							: "Unable to save a new snapshot.",
 				},
 			]);
 		} finally {
 			setLoading(false);
 		}
-	}, [snapshotId]);
+	}, [onSnapshotSaved]);
 
 	const ask = useCallback(
 		async (text: string) => {
@@ -74,7 +505,7 @@ export function ReadinessAiPanel({
 					body: JSON.stringify({
 						action: "question",
 						question: text.trim(),
-						snapshotId: snapshotId || undefined,
+						snapshotId: activeSnapshotId || undefined,
 						previousContext: messages
 							.slice(-4)
 							.map((m) => `${m.role}: ${m.content}`)
@@ -85,11 +516,12 @@ export function ReadinessAiPanel({
 				if (!res.ok) throw new Error(body.error || "Question failed");
 				setMessages((prev) => [
 					...prev,
-					{ role: "assistant", content: body.data.answer },
+					{
+						role: "assistant",
+						content: body.data.answer,
+						citations: body.data.citations,
+					},
 				]);
-				if (body.data.suggestedQuestions?.length) {
-					setSuggestions(body.data.suggestedQuestions);
-				}
 			} catch (error) {
 				setMessages((prev) => [
 					...prev,
@@ -105,94 +537,262 @@ export function ReadinessAiPanel({
 				setLoading(false);
 			}
 		},
-		[messages, snapshotId],
+		[messages, activeSnapshotId],
 	);
 
-	return (
-		<Card className="glass-card">
-			<div className="glass-card-cap" />
-			<CardContent className="p-4 sm:p-6 space-y-4">
-				<div className="flex items-center justify-between gap-3">
-					<div className="flex items-center gap-2">
-						<Bot className="h-5 w-5 text-[#0f5384]" />
-						<p className="text-sm font-medium sidebar-gradient-text">
-							Readiness AI assistant
-						</p>
-					</div>
+	const handleSend = () => {
+		void ask(question);
+	};
+
+	const header = (
+		<div className="flex items-center justify-between gap-2">
+			<div className="flex min-w-0 items-center gap-2">
+				<AssistantAvatar size="xs" />
+				<div className="min-w-0">
+					<p className="truncate text-sm font-semibold sidebar-gradient-text">
+						Readiness assistant
+					</p>
+					<p className="truncate caption text-slate-500">
+						Not an official audit determination
+					</p>
+				</div>
+			</div>
+			<div className="flex items-center gap-0.5">
+				{messages.length > 0 ? (
 					<Button
 						type="button"
-						variant="outline"
-						className="primary-btn px-3 sm:px-4 cursor-pointer"
-						onClick={runAnalyze}
+						variant="ghost"
+						size="icon"
+						className="h-8 w-8 cursor-pointer text-slate-600 hover:bg-white/50 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
+						aria-label="Re-run auto-summary"
+						onClick={() => void saveNewSnapshot()}
 						disabled={loading}
 					>
 						{loading ? (
 							<Loader2 className="h-4 w-4 animate-spin" />
 						) : (
-							"Auto-summary"
+							<Play className="h-4 w-4" />
 						)}
 					</Button>
-				</div>
-				<p className="text-xs text-slate-600">
-					Explains CAALM readiness gaps for HRSA OSV, child-welfare monitoring,
-					and financial PBC prep. Not an official audit determination.
-				</p>
-				<div className="max-h-64 overflow-y-auto space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
-					{messages.length === 0 ? (
-						<p className="text-sm text-slate-600">
-							Run auto-summary or ask a question to get started.
-						</p>
-					) : (
-						messages.map((message, index) => (
-							<div
-								key={`${message.role}-${index}`}
-								className={
-									message.role === "user"
-										? "rounded-md bg-white border border-slate-200 p-3 text-sm text-slate-700"
-										: "rounded-md bg-blue-50 border border-blue-100 p-3 text-sm text-slate-700"
-								}
-							>
-								{message.content}
-							</div>
-						))
+				) : null}
+				<Button
+					type="button"
+					variant="ghost"
+					size="icon"
+					className="h-8 w-8 cursor-pointer text-slate-600 hover:bg-white/50 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
+					aria-label="Close"
+					onClick={() => onOpenChange(false)}
+				>
+					<PanelRightClose className="h-4 w-4" />
+				</Button>
+			</div>
+		</div>
+	);
+
+	const footer = (
+		<div className="flex flex-col gap-2">
+			<div className="relative w-full">
+				<Textarea
+					value={question}
+					onChange={(event) => setQuestion(event.target.value)}
+					placeholder="Ask about gaps, HRSA prep, or PBC evidence…"
+					aria-label="Ask about gaps, HRSA prep, or PBC evidence"
+					rows={3}
+					disabled={loading}
+					className={cn(
+						"min-h-[5.625rem] w-full resize-none rounded-3xl bg-white text-slate-700 shadow-sm",
+						"border-[0.25px] border-slate-300! px-4! pb-14! pt-3.5! pe-14!",
+						"placeholder:text-slate-400 focus-visible:border-[#078FAB]! focus-visible:ring-[#078FAB]",
 					)}
-				</div>
-				<div className="flex flex-wrap gap-2">
-					{suggestions.map((item) => (
-						<button
-							key={item}
-							type="button"
-							className="text-xs px-2 py-1 rounded border border-slate-200 bg-white text-slate-600 hover:bg-blue-50 hover:border-blue-300 cursor-pointer transition-all duration-200"
-							onClick={() => ask(item)}
-							disabled={loading}
-						>
-							{item}
-						</button>
-					))}
-				</div>
-				<form
-					className="flex gap-2"
-					onSubmit={(event) => {
-						event.preventDefault();
-						void ask(question);
+					onKeyDown={(event) => {
+						if (event.key === "Enter" && !event.shiftKey) {
+							event.preventDefault();
+							handleSend();
+						}
+					}}
+				/>
+				<button
+					type="button"
+					onClick={handleSend}
+					disabled={loading || !question.trim()}
+					aria-label="Send"
+					className={cn(
+						"absolute z-10 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-white shadow-md transition-opacity duration-200",
+						"disabled:pointer-events-none disabled:opacity-50",
+						"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
+					)}
+					style={{
+						bottom: 12,
+						right: 12,
+						left: "auto",
+						backgroundImage:
+							"linear-gradient(to right, #00c1cb, #078fab, #0e638f, #11487d, #162768)",
 					}}
 				>
-					<Input
-						value={question}
-						onChange={(event) => setQuestion(event.target.value)}
-						placeholder="Ask about gaps, HRSA prep, or PBC evidence…"
-						className="bg-white"
-						disabled={loading}
-					/>
-					<Button
-						type="submit"
-						className="primary-btn px-3 sm:px-4 cursor-pointer"
-						disabled={loading || !question.trim()}
-					>
+					{loading ? (
+						<Loader2 className="h-4 w-4 animate-spin" />
+					) : (
 						<Send className="h-4 w-4" />
-					</Button>
-				</form>
-			</CardContent>
-		</Card>
+					)}
+				</button>
+			</div>
+			<p className="w-full text-center text-xs text-slate-500">
+				CAALM can make mistakes. Double-check replies.
+			</p>
+		</div>
+	);
+
+	return (
+		<AssistantPreviewSheetShell
+			open={open}
+			onOpenChange={onOpenChange}
+			title="Readiness assistant"
+			header={header}
+			footer={footer}
+			className="sm:max-w-xl"
+		>
+			<div className="space-y-4">
+				{messages.length === 0 && !loading ? (
+					<div className="space-y-6 py-6">
+						<div className="text-center">
+							<div className="mb-4 flex justify-center">
+								<AssistantAvatar size="hero" alt="" />
+							</div>
+							<p className="text-xl font-bold sidebar-gradient-text">
+								Readiness assistant
+							</p>
+							<p className="mt-1 text-sm text-slate-600">
+								Explains readiness gaps for HRSA OSV, child-welfare monitoring,
+								and financial PBC prep.
+							</p>
+						</div>
+						<div className="flex justify-center">
+							<Button
+								type="button"
+								variant="outline"
+								size="sm"
+								className="cursor-pointer"
+								onClick={() => void saveNewSnapshot()}
+								disabled={loading}
+							>
+								<Play className="h-4 w-4" />
+								Run auto-summary
+							</Button>
+						</div>
+					</div>
+				) : null}
+
+				{messages.map((message, index) => (
+					<div
+						key={`${message.role}-${index}`}
+						className={cn(
+							"flex gap-2",
+							message.role === "user" ? "justify-end" : "justify-start",
+						)}
+					>
+						{message.role === "assistant" ? (
+							<AssistantAvatar size="md" />
+						) : null}
+						<div
+							className={cn(
+								"text-sm",
+								message.role === "user"
+									? "max-w-[85%] text-white"
+									: message.structured
+										? "w-full text-slate-700"
+										: "max-w-[85%] rounded-2xl border border-slate-200/80 bg-white/60 px-3 py-2 text-slate-700",
+							)}
+							style={
+								message.role === "user"
+									? {
+											padding: "10px 14px",
+											borderRadius: "16px 4px 16px 16px",
+											background: "linear-gradient(90deg, #078fab, #11487d)",
+											lineHeight: "20px",
+										}
+									: undefined
+							}
+						>
+							{message.role === "assistant" ? (
+								message.structured ? (
+									<StructuredSummaryMessage
+										data={message.structured}
+										content={message.content}
+										onRegenerate={
+											index === 0 ? () => void saveNewSnapshot() : undefined
+										}
+									/>
+								) : (
+									<ReadinessAssistantMessage content={message.content} />
+								)
+							) : (
+								message.content
+							)}
+							{message.citations?.length && !message.structured ? (
+								<div className="mt-2 border-t border-blue-100 pt-2">
+									<p className="caption text-slate-500">
+										Based on these records
+									</p>
+									<div className="mt-1 flex flex-wrap gap-1">
+										{message.citations.map((citation) => (
+											<Link
+												key={citation.id}
+												href={citation.href}
+												className="rounded-md border border-slate-200 bg-white px-2 py-px text-xs text-[#0f5384] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#078FAB]"
+											>
+												{citation.title}
+											</Link>
+										))}
+									</div>
+								</div>
+							) : null}
+						</div>
+					</div>
+				))}
+
+				{loading ? <AssistantThinkingIndicator /> : null}
+
+				{messages.length > 0 ? (
+					<div className="flex items-center justify-center border-b border-slate-200 pb-3">
+						<span className="caption text-center text-slate-500">
+							{summaryAt
+								? `Summary generated ${new Date(summaryAt).toLocaleString(
+										"en-US",
+										{
+											month: "short",
+											day: "numeric",
+											hour: "numeric",
+											minute: "2-digit",
+										},
+									)}`
+								: ""}
+						</span>
+					</div>
+				) : null}
+
+				{DEFAULT_SUGGESTIONS.length ? (
+					<div className="space-y-2">
+						<p className="text-[11px] font-bold uppercase tracking-wide text-slate-600">
+							Ask Next
+						</p>
+						<div className="flex flex-col gap-2">
+							{DEFAULT_SUGGESTIONS.map((item) => (
+								<button
+									key={item}
+									type="button"
+									className="cursor-pointer rounded-full border border-slate-200 bg-white/50 px-3 py-1.5 text-left text-xs text-slate-700 transition-all duration-200 hover:border-blue-300 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 disabled:cursor-not-allowed disabled:opacity-50"
+									onClick={() => void ask(item)}
+									disabled={loading}
+								>
+									{item}
+								</button>
+							))}
+						</div>
+					</div>
+				) : null}
+
+				<div ref={endRef} />
+			</div>
+		</AssistantPreviewSheetShell>
 	);
 }

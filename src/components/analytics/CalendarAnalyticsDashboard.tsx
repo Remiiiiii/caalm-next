@@ -14,6 +14,7 @@ import type React from "react";
 import { useState } from "react";
 import useSWR from "swr";
 import { Badge } from "@/components/ui/badge";
+import { BusyIcon } from "@/components/ui/busy-icon";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -30,7 +31,9 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useBusyAction } from "@/hooks/useBusyAction";
 import { AUDIT_PERIOD_OPTIONS, type AuditPeriod } from "@/lib/audits/types";
+import { downloadXlsx } from "@/lib/export/download-xlsx";
 import { AttachmentEngagementStats } from "./AttachmentEngagementStats";
 import { ComplianceDeadlineTracker } from "./ComplianceDeadlineTracker";
 import { MeetingLoadChart } from "./MeetingLoadChart";
@@ -140,6 +143,8 @@ export const CalendarAnalyticsDashboard: React.FC = () => {
 			},
 		);
 
+	const [runExporting, exporting] = useBusyAction(() => handleExport());
+
 	if (isLoading) {
 		return (
 			<div className="space-y-6">
@@ -155,86 +160,48 @@ export const CalendarAnalyticsDashboard: React.FC = () => {
 
 	const handleExport = () => {
 		if (!data?.meetingLoad) return;
-
-		const escapeCsv = (value: string | number) => {
-			const str = String(value ?? "");
-			return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
-		};
-		const toRows = (rows: Array<Array<string | number>>) =>
-			rows.map((row) => row.map(escapeCsv).join(",")).join("\n");
-
-		const sections: string[] = [];
-
-		sections.push(
-			`Calendar analytics,${data.dateRange.start} to ${data.dateRange.end}`,
-		);
-
-		sections.push(
-			toRows([
-				["Meeting load"],
-				["Total meetings", data.meetingLoad.totalMeetings],
-				["Total hours", data.meetingLoad.totalHours],
-				["Average duration (min)", data.meetingLoad.averageDuration],
-			]),
-		);
-
-		sections.push(
-			toRows([
-				["Meetings by department", "Meetings", "Hours"],
-				...data.meetingLoad.byDepartment.map((d) => [
+		const stamp = new Date().toISOString().slice(0, 10);
+		const { meetingLoad, compliance, attachments } = data;
+		downloadXlsx(`calendar-analytics-${stamp}.xlsx`, {
+			sheetName: "Calendar",
+			title: "Calendar Analytics",
+			subtitle: `CAALM · ${data.dateRange.start} to ${data.dateRange.end} · Generated ${stamp}`,
+			columns: [
+				{ header: "Section", width: 26 },
+				{ header: "Item", width: 40 },
+				{ header: "Value", type: "number", width: 16 },
+				{ header: "Detail", width: 44 },
+			],
+			rows: [
+				["Meeting load", "Total meetings", meetingLoad.totalMeetings, ""],
+				["Meeting load", "Total hours", meetingLoad.totalHours, ""],
+				[
+					"Meeting load",
+					"Average duration (min)",
+					meetingLoad.averageDuration,
+					"",
+				],
+				...meetingLoad.byDepartment.map((d) => [
+					"Meetings by department",
 					d.department,
 					d.meetings,
-					d.hours,
+					`${d.hours} hours`,
 				]),
-			]),
-		);
-
-		sections.push(
-			toRows([
-				["Compliance"],
-				["Compliance rate (%)", data.compliance.complianceRate],
-				["At risk", data.compliance.atRisk],
-				["Overdue", data.compliance.overdue],
-			]),
-		);
-
-		sections.push(
-			toRows([
-				[
+				["Compliance", "Compliance rate (%)", compliance.complianceRate, ""],
+				["Compliance", "At risk", compliance.atRisk, ""],
+				["Compliance", "Overdue", compliance.overdue, ""],
+				...compliance.upcoming.map((c) => [
 					"Upcoming deadlines",
-					"Deadline",
-					"Days until",
-					"Status",
-					"Assigned to",
-				],
-				...data.compliance.upcoming.map((c) => [
 					c.title,
-					c.deadlineDate,
 					c.daysUntil,
-					c.status,
-					c.assignedTo,
+					`${c.deadlineDate} · ${c.status} · ${c.assignedTo}`,
 				]),
-			]),
-		);
-
-		sections.push(
-			toRows([
-				["Attachments"],
-				["Total", data.attachments.total],
-				["Total views", data.attachments.totalViews],
-				["Total downloads", data.attachments.totalDownloads],
-				["Engagement rate (%)", data.attachments.engagementRate],
-			]),
-		);
-
-		const csv = sections.join("\n\n");
-		const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-		const url = URL.createObjectURL(blob);
-		const link = document.createElement("a");
-		link.href = url;
-		link.download = `calendar-analytics-${new Date().toISOString().slice(0, 10)}.csv`;
-		link.click();
-		URL.revokeObjectURL(url);
+				["Attachments", "Total", attachments.total, ""],
+				["Attachments", "Total views", attachments.totalViews, ""],
+				["Attachments", "Total downloads", attachments.totalDownloads, ""],
+				["Attachments", "Engagement rate (%)", attachments.engagementRate, ""],
+			],
+		});
 	};
 
 	// Check if we have valid data
@@ -338,7 +305,7 @@ export const CalendarAnalyticsDashboard: React.FC = () => {
 										</SelectContent>
 									</Select>
 								</div>
-								<span className="inline-flex items-center gap-1.5 rounded-full bg-white/30 px-2.5 py-1 text-xs font-medium text-slate-600 backdrop-blur-sm border border-white/20">
+								<span className="inline-flex items-center gap-1.5 rounded-full bg-white/30 px-2.5 py-1 text-xs text-slate-600 backdrop-blur-sm border border-white/20">
 									<span
 										className={`h-2 w-2 rounded-full ${
 											isValidating
@@ -353,11 +320,11 @@ export const CalendarAnalyticsDashboard: React.FC = () => {
 								<Button
 									size="sm"
 									variant="outline"
-									onClick={handleExport}
-									disabled={!data?.meetingLoad}
+									onClick={() => void runExporting()}
+									disabled={!data?.meetingLoad || exporting}
 									className="primary-btn px-3 sm:px-4"
 								>
-									<SquareArrowRightExit className="h-4 w-4" />
+									<BusyIcon busy={exporting} icon={SquareArrowRightExit} />
 									Export
 								</Button>
 							</div>

@@ -108,7 +108,8 @@ export async function loadEsignResource(
 				tableId,
 				rowId: resourceId,
 			})) as Record<string, unknown> & { $id: string };
-			const name = `${String(row.firstName || "").trim()} ${String(row.lastName || "").trim()}`.trim();
+			const name =
+				`${String(row.firstName || "").trim()} ${String(row.lastName || "").trim()}`.trim();
 			return {
 				id: row.$id,
 				orgId: String(row.orgId || ""),

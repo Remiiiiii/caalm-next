@@ -39,10 +39,9 @@ describe("MonthView pinned note icons", () => {
 			/>,
 		);
 
-		expect(screen.getByLabelText(/Open sticky note for Oct 5/i)).toHaveAttribute(
-			"aria-label",
-			expect.stringContaining("Oct 5"),
-		);
+		expect(
+			screen.getByLabelText(/Open sticky note for Oct 5/i),
+		).toHaveAttribute("aria-label", expect.stringContaining("Oct 5"));
 		const single = screen.getByLabelText(/Open sticky note for Oct 5/i);
 		expect(single.querySelector("img")?.getAttribute("src")).toBe(
 			"/assets/icons/sticky-notes.svg",

@@ -96,9 +96,7 @@ export const contractSchema = z
 		serviceCreditTerms: z.string().optional(),
 		escalationProcedures: z.string().optional(),
 		obligationOwners: z.string().optional(),
-		assignedManagers: z
-			.array(z.string())
-			.min(1, "Assigned To is required"),
+		assignedManagers: z.array(z.string()).min(1, "Assigned To is required"),
 		internalApproverIds: z.array(z.string()).optional(),
 		approvalWorkflowTemplate: z.string().optional(),
 		currentApprovalStage: z.string().optional(),

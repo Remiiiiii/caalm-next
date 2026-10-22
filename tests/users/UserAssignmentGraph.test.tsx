@@ -27,7 +27,7 @@ function toManagementUser(
 		email: `${user.$id}@caalm.test`,
 		avatar: "",
 		accountId: `${user.$id}-account`,
-		role: "user",
+		role: "viewer",
 		roleName: user.roleName,
 		assignedById: user.assignedById,
 		assignedByName: user.assignedByName,
@@ -90,7 +90,7 @@ describe("UserAssignmentGraph", () => {
 		expect(screen.getByTestId("rf__wrapper")).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Zoom In" })).toBeInTheDocument();
 		expect(
-			screen.getByText("Jimmy Hendricks", { hidden: true }),
+			screen.getByText("Jimmy Hendricks"),
 		).toBeInTheDocument();
 
 		await userEvent.click(screen.getByRole("tab", { name: "Access grant" }));
@@ -99,7 +99,7 @@ describe("UserAssignmentGraph", () => {
 		).toBeInTheDocument();
 		expect(screen.getAllByText("System assigned").length).toBeGreaterThan(0);
 		expect(screen.getAllByText("Admin assigned").length).toBeGreaterThan(0);
-		expect(screen.getByText("System", { hidden: true })).toBeInTheDocument();
+		expect(screen.getByText("System")).toBeInTheDocument();
 	});
 
 	it("defaults to side layout and can switch to top-down", async () => {

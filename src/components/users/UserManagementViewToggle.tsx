@@ -1,20 +1,14 @@
 "use client";
 
-import {
-	GitBranch,
-	KeyRound,
-	Network,
-	Share2,
-	Table,
-} from "lucide-react";
-import {
-	GRAPH_ORIENTATION_STORAGE_KEY,
-	type GraphOrientation,
-} from "@/lib/users/graph-orientation";
+import { GitBranch, KeyRound, Network, Share2, Table } from "lucide-react";
 import {
 	SegmentedToggle,
 	type SegmentedToggleTab,
 } from "@/components/ui/segmented-toggle";
+import {
+	GRAPH_ORIENTATION_STORAGE_KEY,
+	type GraphOrientation,
+} from "@/lib/users/graph-orientation";
 
 export type UserManagementViewType = "table" | "diagram";
 export type GraphLineage = "reporting" | "assignment";

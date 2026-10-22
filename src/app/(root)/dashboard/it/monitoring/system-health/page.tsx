@@ -3,8 +3,8 @@
 import { CheckCircle2, HeartPulse, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ITGlassPanel, ITPageShell } from "@/components/it/ITPageShell";
-import { SampleDataBadge } from "@/components/ui/sample-data-badge";
 import { LoadingSpinner } from "@/components/ui/loading";
+import { SampleDataBadge } from "@/components/ui/sample-data-badge";
 
 interface HealthCheck {
 	name: string;
@@ -119,7 +119,9 @@ export default function SystemHealthPage() {
 			actions={<SampleDataBadge label="Connectivity only" />}
 		>
 			{dashboardNotice ? (
-				<p className="text-sm text-slate-600 mb-4 max-w-3xl">{dashboardNotice}</p>
+				<p className="text-sm text-slate-600 mb-4 max-w-3xl">
+					{dashboardNotice}
+				</p>
 			) : null}
 			{loading ? (
 				<div className="py-12 flex justify-center">

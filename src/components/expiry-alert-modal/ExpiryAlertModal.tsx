@@ -219,7 +219,7 @@ export default function ExpiryAlertModal({
 					variant="outline"
 					size="icon"
 					onClick={onClose}
-					className="pointer-events-auto glass-card text-slate-800 shadow-lg cursor-pointer"
+					className="pointer-events-auto glass-card text-slate-700 shadow-lg cursor-pointer"
 					aria-label="Dismiss for this session"
 				>
 					<X className="h-5 w-5" />
@@ -245,7 +245,7 @@ export default function ExpiryAlertModal({
 							<div className="space-y-3 w-full">
 								<h2
 									id={titleId}
-									className="text-3xl md:text-4xl font-bold text-slate-800 drop-shadow-lg wrap-break-word"
+									className="text-3xl md:text-4xl font-bold text-slate-700 drop-shadow-lg wrap-break-word"
 								>
 									{title}
 								</h2>
@@ -364,7 +364,7 @@ export default function ExpiryAlertModal({
 											<button
 												type="button"
 												disabled={isBusy}
-												className="relative z-50 inline-flex h-10 items-center gap-1.5 px-1 text-sm font-medium text-slate-500 hover:text-slate-800 cursor-pointer disabled:opacity-50 bg-transparent border-0 shrink-0"
+												className="relative z-50 inline-flex h-10 items-center gap-1.5 px-1 text-sm font-medium text-slate-500 hover:text-slate-700 cursor-pointer disabled:opacity-50 bg-transparent border-0 shrink-0"
 											>
 												<Clock className="h-4 w-4" />
 												Snooze

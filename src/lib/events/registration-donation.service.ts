@@ -1,8 +1,11 @@
 import { ID } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
-import { createDraftGift, postGift } from "@/lib/gifts/repository";
-import { GiftDomainError } from "@/lib/gifts/repository";
+import {
+	createDraftGift,
+	GiftDomainError,
+	postGift,
+} from "@/lib/gifts/repository";
 import { getCalendarEventInOrg } from "./calendar-event-access";
 import {
 	createEventRegistration,
@@ -107,7 +110,10 @@ export async function createRegistrationWithOptionalDonation(input: {
 		}
 		if (error instanceof EventRegistrationCapacityError) throw error;
 		if (error instanceof GiftDomainError) {
-			throw new RegistrationDonationValidationError(error.message, error.status);
+			throw new RegistrationDonationValidationError(
+				error.message,
+				error.status,
+			);
 		}
 		throw error;
 	}

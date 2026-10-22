@@ -146,7 +146,7 @@ export function GiftsPageClient() {
 							<p className="text-slate-600 mt-4">No gifts yet.</p>
 						</div>
 					) : (
-						<CaalmDataTable className="px-0 sm:px-0 pb-0">
+						<CaalmDataTable className="pb-0">
 							<TableHeader className="[&_tr]:border-b-0">
 								<TableRow className={DATA_TABLE_HEADER_ROW}>
 									<TableHead
@@ -173,12 +173,12 @@ export function GiftsPageClient() {
 							</TableHeader>
 							<TableBody className="[&_tr:last-child>td]:border-b-0">
 								{items.map((gift) => (
-									<TableRow
-										key={gift.$id}
-										className={DATA_TABLE_BODY_ROW_BASE}
-									>
+									<TableRow key={gift.$id} className={DATA_TABLE_BODY_ROW_BASE}>
 										<TableCell
-											className={cn(rowPad, "pl-4 pr-3 tabular-nums text-slate-700")}
+											className={cn(
+												rowPad,
+												"pl-4 pr-3 tabular-nums text-slate-700",
+											)}
 										>
 											{gift.receiptNumber ?? "—"}
 										</TableCell>
@@ -195,14 +195,14 @@ export function GiftsPageClient() {
 										</TableCell>
 										<TableCell className={rowPad}>
 											<span
-												className={`inline-block px-2 py-0.5 text-xs rounded-full font-medium border capitalize ${giftStatusBadgeClass(gift.status)}`}
+												className={`inline-block px-2 py-0.5 text-xs rounded-full border capitalize ${giftStatusBadgeClass(gift.status)}`}
 											>
 												{gift.status}
 											</span>
 										</TableCell>
 										<TableCell className={rowPad}>
 											{gift.shareCampaign ? (
-												<span className="inline-block px-2 py-0.5 text-xs rounded-full font-medium border bg-blue/10 text-blue border-blue/20">
+												<span className="inline-block px-2 py-0.5 text-xs rounded-full border bg-blue/10 text-blue border-blue/20">
 													{gift.shareCampaign}
 												</span>
 											) : (

@@ -20,7 +20,10 @@ export async function POST(request: NextRequest) {
 		const body = (await request.json()) as Record<string, unknown>;
 		const orgSlug = String(body.orgSlug || "").trim();
 		if (!orgSlug) {
-			return NextResponse.json({ error: "orgSlug is required" }, { status: 400 });
+			return NextResponse.json(
+				{ error: "orgSlug is required" },
+				{ status: 400 },
+			);
 		}
 
 		const attribution = parseGiveShareAttribution(body);
@@ -28,17 +31,23 @@ export async function POST(request: NextRequest) {
 			return NextResponse.json({ skipped: true });
 		}
 
-		const rate = await handleRateLimit(`give-visit:${clientIp(request)}:${orgSlug}`, {
-			windowSec: 60,
-			maxRequests: 30,
-		});
+		const rate = await handleRateLimit(
+			`give-visit:${clientIp(request)}:${orgSlug}`,
+			{
+				windowSec: 60,
+				maxRequests: 30,
+			},
+		);
 		if (!rate.success) {
 			return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 		}
 
 		const org = await resolveOrganizationByGiveSlug(orgSlug);
 		if (!org) {
-			return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+			return NextResponse.json(
+				{ error: "Organization not found" },
+				{ status: 404 },
+			);
 		}
 
 		await createGiveShareVisit({

@@ -51,7 +51,9 @@ function actionLabelForTool(toolName: string, fallbackLabel: string): string {
 		cancel_calendar_event: "Cancel event",
 		generate_report: "Generate report",
 	};
-	return map[toolName] ?? (fallbackLabel.replace(/^Confirm\s+/i, "") || "Action");
+	return (
+		map[toolName] ?? (fallbackLabel.replace(/^Confirm\s+/i, "") || "Action")
+	);
 }
 
 function humanizeStatus(raw: unknown): string {
@@ -88,10 +90,7 @@ function entityTitleFromArgs(
 		return String(args.title ?? args.eventTitle ?? "Untitled");
 	}
 	const title = String(args.title ?? args.eventTitle ?? "").trim();
-	if (
-		toolName === "create_task" ||
-		toolName === "create_task_for_contract"
-	) {
+	if (toolName === "create_task" || toolName === "create_task_for_contract") {
 		return title; // empty title = blank draft field in the UI
 	}
 	return title || "Untitled";
@@ -245,9 +244,7 @@ export function buildCompletedActionLifecycle(params: {
 			typeof result.endTime === "string" ? result.endTime : undefined,
 		);
 		const invited =
-			typeof result.invitedCount === "number"
-				? result.invitedCount
-				: undefined;
+			typeof result.invitedCount === "number" ? result.invitedCount : undefined;
 
 		const fields: AssistantActionField[] = [];
 		if (nextDate || prevDate) {
@@ -348,9 +345,7 @@ export function buildCompletedActionLifecycle(params: {
 		};
 	}
 
-	const flat = result
-		? flattenResultFields(result, HIDDEN_RESULT_KEYS)
-		: [];
+	const flat = result ? flattenResultFields(result, HIDDEN_RESULT_KEYS) : [];
 	const fields: AssistantActionField[] =
 		flat.length > 0
 			? flat.map((row) => ({

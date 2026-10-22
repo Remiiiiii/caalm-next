@@ -32,7 +32,7 @@ export function renderNegotiationInlineText(text: string): ReactNode {
 			if (bold) {
 				return createElement(
 					"strong",
-					{ key: index, className: "font-semibold text-slate-800" },
+					{ key: index, className: "font-semibold text-slate-700" },
 					bold[1],
 				);
 			}

@@ -8,4 +8,5 @@ export const NPO_TENANT_DATA_EXPORT_KEYS = [
 	"constituentRelationships",
 ] as const;
 
-export type NpoTenantDataExportKey = (typeof NPO_TENANT_DATA_EXPORT_KEYS)[number];
+export type NpoTenantDataExportKey =
+	(typeof NPO_TENANT_DATA_EXPORT_KEYS)[number];

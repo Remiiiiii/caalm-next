@@ -251,8 +251,8 @@ export default function ContractsMetricsBar({
 										<MetricFlatSparkline tone="success" />
 										<p className="text-[11px] leading-snug text-slate-500">
 											{metrics.totalContracts} contract
-											{metrics.totalContracts === 1 ? "" : "s"} monitored —
-											none approaching expiry
+											{metrics.totalContracts === 1 ? "" : "s"} monitored — none
+											approaching expiry
 										</p>
 									</div>
 								) : (

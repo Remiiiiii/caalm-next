@@ -123,7 +123,7 @@ export function AiFilledLabelHint({
 	return (
 		<span
 			className={cn(
-				"ml-2 inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium",
+				"ml-2 inline-flex items-center rounded px-1.5 py-0.5 text-[10px]",
 				low ? "bg-amber-100 text-amber-800" : "bg-blue-50 text-[#0f5384]",
 			)}
 		>

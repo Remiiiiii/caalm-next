@@ -93,7 +93,7 @@ describe("computeContractStatusPie", () => {
 				).toISOString(),
 				daysUntilExpiry: 21,
 				isExpired: false,
-			}),
+			} as Parameters<typeof createMockContract>[0]),
 		];
 
 		const result = computeContractStatusPie(contracts);

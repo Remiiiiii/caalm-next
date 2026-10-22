@@ -709,7 +709,7 @@ export function TicketSubmitForm() {
 									<div className="mt-4 flex flex-wrap items-center gap-3">
 										<span
 											className={cn(
-												"rounded-full border px-2.5 py-1 text-xs font-medium",
+												"rounded-full border px-2.5 py-1 text-xs",
 												SEVERITY_BADGE[derived.level],
 											)}
 										>

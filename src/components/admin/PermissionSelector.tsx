@@ -194,7 +194,7 @@ const PermissionSelector: React.FC<PermissionSelectorProps> = ({
 								>
 									<div className="flex min-w-0 flex-1 items-center justify-between gap-3 pr-2">
 										<div className="flex min-w-0 items-center gap-2 sm:gap-3">
-											<span className="truncate text-sm font-semibold text-slate-800">
+											<span className="truncate text-sm font-semibold text-slate-700">
 												{formatCategoryLabel(category)}
 											</span>
 											<Badge
@@ -263,7 +263,7 @@ const PermissionSelector: React.FC<PermissionSelectorProps> = ({
 														<div className="flex flex-wrap items-center gap-2">
 															<Label
 																htmlFor={rowId}
-																className="cursor-pointer text-sm font-medium text-slate-800"
+																className="cursor-pointer text-sm font-medium text-slate-700"
 															>
 																{perm.name}
 															</Label>

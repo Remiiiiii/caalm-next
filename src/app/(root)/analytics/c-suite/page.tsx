@@ -31,12 +31,15 @@ import { AuditReadinessHero } from "@/components/analytics/AuditReadinessHero";
 import { CalendarAnalyticsDashboard } from "@/components/analytics/CalendarAnalyticsDashboard";
 import { DomainReadinessGrid } from "@/components/analytics/DomainReadinessGrid";
 import { Badge } from "@/components/ui/badge";
+import { BusyIcon } from "@/components/ui/busy-icon";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useAuditReadiness } from "@/hooks/useAuditReadiness";
+import { useBusyAction } from "@/hooks/useBusyAction";
 import type { AuditReadinessSummary } from "@/lib/analytics/audit-readiness.types";
 import type { AuditPeriod } from "@/lib/audits/types";
+import { downloadXlsx } from "@/lib/export/download-xlsx";
 import { fetcher } from "@/lib/swr-config";
 
 const formatCurrency = (amount: number): string => {
@@ -46,31 +49,39 @@ const formatCurrency = (amount: number): string => {
 };
 
 function exportAuditPacket(summary: AuditReadinessSummary) {
-	const rows = [
-		["Audit Readiness Report", summary.lastUpdated],
-		["Readiness Score", `${summary.readinessScore}%`],
-		["Compliance Rate", `${summary.kpis.overallComplianceRate}%`],
-		["Total Contracts", String(summary.kpis.totalContracts)],
-		["Evidence Gaps", String(summary.kpis.evidenceGaps)],
-		["Expiring Soon", String(summary.kpis.expiringSoon)],
-		[],
-		["Department", "Contracts", "Budget", "Compliance %"],
-		...summary.departments.map((d) => [
-			d.name,
-			String(d.totalContracts),
-			String(d.totalBudget),
-			String(d.complianceRate),
-		]),
-	];
-
-	const csv = rows.map((row) => row.join(",")).join("\n");
-	const blob = new Blob([csv], { type: "text/csv" });
-	const url = URL.createObjectURL(blob);
-	const link = document.createElement("a");
-	link.href = url;
-	link.download = `audit-readiness-${new Date().toISOString().split("T")[0]}.csv`;
-	link.click();
-	URL.revokeObjectURL(url);
+	const stamp = new Date().toISOString().slice(0, 10);
+	downloadXlsx(`audit-readiness-${stamp}.xlsx`, {
+		sheetName: "Audit Readiness",
+		title: "Audit Readiness Report",
+		subtitle: `CAALM · Last updated ${summary.lastUpdated}`,
+		columns: [
+			{ header: "Section", width: 20 },
+			{ header: "Item", width: 34 },
+			{ header: "Contracts", type: "number", width: 14 },
+			{ header: "Budget", type: "currency", width: 18 },
+			{ header: "Value", type: "number", width: 16 },
+		],
+		rows: [
+			["Summary", "Readiness score (%)", null, null, summary.readinessScore],
+			[
+				"Summary",
+				"Compliance rate (%)",
+				null,
+				null,
+				summary.kpis.overallComplianceRate,
+			],
+			["Summary", "Total contracts", null, null, summary.kpis.totalContracts],
+			["Summary", "Evidence gaps", null, null, summary.kpis.evidenceGaps],
+			["Summary", "Expiring soon", null, null, summary.kpis.expiringSoon],
+			...summary.departments.map((d) => [
+				"Department",
+				d.name,
+				d.totalContracts,
+				d.totalBudget,
+				d.complianceRate,
+			]),
+		],
+	});
 }
 
 const CSuitePage = () => {
@@ -111,6 +122,7 @@ const CSuitePage = () => {
 			description: "Your audit readiness report is downloading.",
 		});
 	};
+	const [runExporting, exporting] = useBusyAction(handleExport);
 
 	return (
 		<AnalyticsPageShell
@@ -118,12 +130,11 @@ const CSuitePage = () => {
 			subtitle="Executive-level insights and strategic metrics for audit readiness"
 			actions={
 				<Button
-					variant="outline"
 					className="primary-btn px-3 sm:px-4"
-					onClick={handleExport}
-					disabled={isLoading || !summary}
+					onClick={() => void runExporting()}
+					disabled={isLoading || !summary || exporting}
 				>
-					<SquareArrowRightExit className="h-4 w-4" />
+					<BusyIcon busy={exporting} icon={SquareArrowRightExit} />
 					Export audit packet
 				</Button>
 			}

@@ -16,17 +16,27 @@ import type {
 	ApprovalAuditStage,
 	ApprovalAuditTimelineEvent,
 } from "@/lib/approvals/approvalAuditReportPayload";
+import {
+	AMBER,
+	BLUE,
+	GREEN,
+	HAIRLINE,
+	INK,
+	MUTED,
+	PacketFooter,
+	packet,
+	RUST,
+	TEAL,
+} from "@/lib/pdf/packet";
 
-const NAVY = "#152A4A";
-const TEAL = "#0E7C86";
-const GREEN = "#1F9D55";
+// Shared board-packet palette (see src/lib/pdf/packet.tsx).
+const NAVY = BLUE;
+const SLATE = INK;
+const LINE = HAIRLINE;
 const GREEN_SOFT = "#E8F7EE";
-const ORANGE = "#E8871E";
-const RED = "#D64545";
+const ORANGE = AMBER;
+const RED = RUST;
 const ZEBRA = "#F3F4F6";
-const SLATE = "#374151";
-const MUTED = "#6B7280";
-const LINE = "#D1D5DB";
 const ARROW_GRAY = "#9CA3AF";
 
 const styles = StyleSheet.create({
@@ -34,68 +44,13 @@ const styles = StyleSheet.create({
 		fontFamily: "Helvetica",
 		fontSize: 9,
 		color: SLATE,
-		paddingTop: 52,
-		paddingBottom: 58,
-		paddingHorizontal: 47,
-	},
-	header: {
-		position: "absolute",
-		top: 0,
-		left: 0,
-		right: 0,
-		height: 36,
-		backgroundColor: NAVY,
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "space-between",
-		paddingHorizontal: 47,
-	},
-	headerText: {
-		color: "#ffffff",
-		fontSize: 9,
-		fontFamily: "Helvetica-Bold",
-	},
-	headerMuted: {
-		color: "#ffffff",
-		fontSize: 8,
-	},
-	/* Light meta row sits above the navy footer bar (mirrors header chrome). */
-	footer: {
-		position: "absolute",
-		bottom: 10,
-		left: 47,
-		right: 47,
-		height: 32,
-		paddingTop: 8,
-		borderTopWidth: 0.6,
-		borderTopColor: LINE,
-	},
-	footerLine: {
-		paddingRight: 56,
-		color: MUTED,
-		fontSize: 7.5,
-		lineHeight: 1.3,
-	},
-	footerPage: {
-		position: "absolute",
-		bottom: 26,
-		right: 47,
-		width: 56,
-		color: MUTED,
-		fontSize: 7.5,
-		textAlign: "right",
-	},
-	footerBar: {
-		position: "absolute",
-		bottom: 0,
-		left: 0,
-		right: 0,
-		height: 10,
-		backgroundColor: NAVY,
+		paddingTop: 44,
+		paddingBottom: 60,
+		paddingHorizontal: 52,
 	},
 	title: {
-		fontSize: 18,
-		fontFamily: "Helvetica-Bold",
+		fontSize: 24,
+		fontFamily: "Times-Bold",
 		color: NAVY,
 		marginBottom: 4,
 	},
@@ -105,13 +60,13 @@ const styles = StyleSheet.create({
 		marginBottom: 10,
 	},
 	heading: {
-		fontSize: 12,
-		fontFamily: "Helvetica-Bold",
+		fontSize: 13,
+		fontFamily: "Times-Bold",
 		color: NAVY,
 		paddingBottom: 4,
 		marginBottom: 6,
-		borderBottomWidth: 1.5,
-		borderBottomColor: TEAL,
+		borderBottomWidth: 1,
+		borderBottomColor: LINE,
 	},
 	/* Space between flowed sections (no hard page break). */
 	sectionBlock: {
@@ -449,26 +404,7 @@ function pickTimeline(
 }
 
 function Chrome({ payload }: { payload: ApprovalAuditReportPayload }) {
-	return (
-		<>
-			<View style={styles.header} fixed>
-				<Text style={styles.headerText}>{payload.companyName}</Text>
-				<Text style={styles.headerMuted}>INTERNAL USE</Text>
-			</View>
-			{/* fixed chrome repeats on every page; bar is the navy strip at the page edge */}
-			<View style={styles.footer} fixed>
-				<Text style={styles.footerLine}>{payload.footerLine}</Text>
-			</View>
-			<Text
-				style={styles.footerPage}
-				fixed
-				render={({ pageNumber }) => `Page ${pageNumber}`}
-			>
-				{" "}
-			</Text>
-			<View style={styles.footerBar} fixed />
-		</>
-	);
+	return <PacketFooter org={payload.companyName} title={payload.reportTitle} />;
 }
 
 /** Keep stage-card lines short so fixed card height stays even across the row. */
@@ -794,6 +730,7 @@ export function ApprovalAuditReportDocument({
 				<Chrome payload={payload} />
 
 				{/* Cover */}
+				<Text style={packet.eyebrow}>{payload.companyName} · Internal use</Text>
 				<Text style={styles.title}>{payload.cover.title}</Text>
 				<Text style={styles.subtitle}>{payload.cover.subtitle}</Text>
 				<View style={styles.pills}>

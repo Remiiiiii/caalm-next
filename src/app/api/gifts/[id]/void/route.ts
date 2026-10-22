@@ -1,6 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
-import { GiftDomainError, requireGiftOrgContext, voidPostedGift } from "@/lib/gifts";
+import {
+	GiftDomainError,
+	requireGiftOrgContext,
+	voidPostedGift,
+} from "@/lib/gifts";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -14,7 +18,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
 		return NextResponse.json(gift);
 	} catch (error) {
 		if (error instanceof GiftDomainError) {
-			return NextResponse.json({ error: error.message }, { status: error.status });
+			return NextResponse.json(
+				{ error: error.message },
+				{ status: error.status },
+			);
 		}
 		console.error("[SERVER] gifts void:", error);
 		return NextResponse.json({ error: "Failed to void gift" }, { status: 500 });

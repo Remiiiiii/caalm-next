@@ -3,14 +3,16 @@
 import { Building2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { SearchField } from "@/components/ui/search-field";
+import useSWR from "swr";
 import { Button } from "@/components/ui/button";
+import { SearchField } from "@/components/ui/search-field";
 import { useITOrgScope } from "@/contexts/ITOrgScopeContext";
 import { useITHubOverview } from "@/hooks/useITHubOverview";
 import type { OrgITFleetRow } from "@/lib/it/org-it-snapshot";
-import useSWR from "swr";
 
-const fleetFetcher = async (url: string): Promise<{ rows: OrgITFleetRow[] }> => {
+const fleetFetcher = async (
+	url: string,
+): Promise<{ rows: OrgITFleetRow[] }> => {
 	const response = await fetch(url);
 	if (!response.ok) {
 		throw new Error("Failed to load tenants");
@@ -61,7 +63,7 @@ export function ITHubChrome() {
 			{viewingOther || hubOrgId ? (
 				<div
 					role="status"
-					className="flex w-full items-center justify-between gap-3 rounded-lg border border-orange/20 bg-orange/15 px-4 py-2 text-slate-800"
+					className="flex w-full items-center justify-between gap-3 rounded-lg border border-orange/20 bg-orange/15 px-4 py-2 text-slate-700"
 				>
 					<p className="min-w-0 text-sm font-medium">
 						Viewing tenant: {tenantName}

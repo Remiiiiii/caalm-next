@@ -57,7 +57,12 @@ export function monthDateRange(
 	year: number,
 	month: number,
 ): { start: string; end: string } {
-	if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
+	if (
+		!Number.isInteger(year) ||
+		!Number.isInteger(month) ||
+		month < 1 ||
+		month > 12
+	) {
 		throw new Error("Month must be 1–12");
 	}
 	const lastDay = new Date(year, month, 0).getDate();

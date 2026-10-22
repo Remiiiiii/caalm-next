@@ -15,7 +15,9 @@ export type FundImportRowError = {
 };
 
 /** Turn finance-friendly labels into catalog net asset class values. */
-export function parseNetAssetClassFromImport(raw: string): NetAssetClass | null {
+export function parseNetAssetClassFromImport(
+	raw: string,
+): NetAssetClass | null {
 	const value = raw.trim().toLowerCase();
 	if (!value) return null;
 	if (isNetAssetClass(value)) return value;
@@ -29,7 +31,11 @@ export function parseNetAssetClassFromImport(raw: string): NetAssetClass | null 
 	if (compact.includes("temp")) {
 		return "temporarily_restricted";
 	}
-	if (compact.includes("unrestrict") || compact === "general" || compact === "operating") {
+	if (
+		compact.includes("unrestrict") ||
+		compact === "general" ||
+		compact === "operating"
+	) {
 		return "unrestricted";
 	}
 

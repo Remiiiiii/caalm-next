@@ -12,6 +12,7 @@ import {
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { BusyIcon } from "@/components/ui/busy-icon";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
@@ -115,7 +116,20 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ department }) => {
 		}
 	};
 
+	const [downloadingReportId, setDownloadingReportId] = useState<string | null>(
+		null,
+	);
+
 	const handleDownloadReport = async (report: ReportCard) => {
+		setDownloadingReportId(report.id);
+		try {
+			await downloadReportFile(report);
+		} finally {
+			setDownloadingReportId(null);
+		}
+	};
+
+	const downloadReportFile = async (report: ReportCard) => {
 		try {
 			// Fetch the PDF content from the API
 			const response = await fetch(`/api/reports/${report.id}/pdf`);
@@ -528,8 +542,12 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ department }) => {
 												})
 											}
 											className="primary-btn"
+											disabled={downloadingReportId === reportId}
 										>
-											<Download className="h-4 w-4" />
+											<BusyIcon
+												busy={downloadingReportId === reportId}
+												icon={Download}
+											/>
 											Download
 										</Button>
 										<Button

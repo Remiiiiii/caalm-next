@@ -345,6 +345,54 @@ export async function seedDemoCoreData({
 		);
 	}
 
+	const tagsTable =
+		appwriteConfig.auditEvidenceRecordTagsCollectionId ||
+		"69f8e3a2001d4e8c2b10";
+	const demoTags: Array<{
+		suffix: string;
+		recordSuffix: string;
+		recordKind: "contract" | "license";
+		requirementId: string;
+	}> = [
+		{
+			suffix: "tagbhfhome",
+			recordSuffix: "licbhf",
+			recordKind: "license",
+			requirementId: "CW-HOME-LICENSE",
+		},
+		{
+			suffix: "tagfacsvc",
+			recordSuffix: "ctrfac",
+			recordKind: "contract",
+			requirementId: "HRSA-SVC-CONTRACT",
+		},
+		{
+			suffix: "tagcliven",
+			recordSuffix: "ctrclinic",
+			recordKind: "contract",
+			requirementId: "PBC-VENDOR-CONTRACTS",
+		},
+		{
+			suffix: "tagmailcap",
+			recordSuffix: "ctrmail",
+			recordKind: "contract",
+			requirementId: "CW-CAP",
+		},
+	];
+	for (const tag of demoTags) {
+		await createRowIfMissing(
+			tagsTable,
+			demoRowId(orgId, tag.suffix),
+			{
+				orgId,
+				requirementId: tag.requirementId,
+				recordId: demoRowId(orgId, tag.recordSuffix),
+				recordKind: tag.recordKind,
+			},
+			`evidence-tag:${tag.suffix}`,
+		);
+	}
+
 	const events = [
 		{
 			suffix: "evcomp",

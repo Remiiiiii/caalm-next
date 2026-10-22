@@ -35,12 +35,7 @@ import {
 	parseIsoDateLocal,
 	toIsoDateLocal,
 } from "@/components/ui/caalm-date-picker";
-import {
-	Dialog,
-	DialogContent,
-	DialogTitle,
-	DialogTrigger,
-} from "@/components/ui/dialog";
+import { AppDialog } from "@/components/ui/app-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -288,7 +283,7 @@ function CalendarCalHead({
 			<button
 				type="button"
 				onClick={onToday}
-				className="rounded-md text-[10px] font-medium uppercase tracking-wide text-[#0f5384] bg-blue/10 border border-blue/20 px-2.5 py-1 transition-colors hover:bg-blue/15"
+				className="rounded-md text-[10px] uppercase tracking-wide text-[#0f5384] bg-blue/10 border border-blue/20 px-2.5 py-1 transition-colors hover:bg-blue/15"
 			>
 				Today
 			</button>
@@ -602,6 +597,12 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 				borderColor: "#03afbf",
 				icon: FileText,
 			},
+			volunteer_shift: {
+				label: "Volunteer shift",
+				color: "bg-green",
+				borderColor: "#3dd9b3",
+				icon: FileText,
+			},
 		};
 		return configs[type];
 	};
@@ -791,7 +792,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 									)}
 								>
 									<div className="flex items-center justify-between p-3 bg-slate-50 border-b border-slate-200">
-										<h3 className="font-semibold text-slate-800 text-sm">
+										<h3 className="font-semibold text-slate-700 text-sm">
 											{format(day, "EEEE, MMMM d, yyyy")}
 										</h3>
 										{dayEvents.length > 0 && (
@@ -831,7 +832,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 																	</div>
 																)}
 															</div>
-															<div className="font-semibold text-slate-800 text-sm mb-1">
+															<div className="font-semibold text-slate-700 text-sm mb-1">
 																{event.title}
 															</div>
 															{event.contractName && (
@@ -986,32 +987,51 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 				{viewMode === "month" && <CalendarLegend />}
 
 				<div className="border-t border-slate-200 p-3.5">
-					<Dialog open={isAddEventOpen} onOpenChange={setIsAddEventOpen}>
-						<DialogTrigger asChild>
-							<Button
-								type="button"
-								className="primary-btn h-11 w-full gap-2 rounded-lg sm:!w-full"
-							>
-								<Plus className="h-4 w-4" />
-								Add Event
-							</Button>
-						</DialogTrigger>
-						<DialogContent className="flex max-h-[90vh] max-w-[600px] flex-col overflow-hidden border border-slate-200 p-0 shadow-xl">
-							<div className="absolute top-0 right-0 left-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
-							<div className="glass-dialog-wizard-header mt-4">
-								<div className="flex items-center gap-3 px-6">
-									<div className="flex items-center gap-3">
-										<CalendarDays className="h-5 w-5 text-[#0f5384]" />
-										<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-											Add New Event
-										</DialogTitle>
-									</div>
-								</div>
-								<p className="ml-14 mt-1 text-sm text-slate-600">
-									Schedule a meeting, deadline, or review
+					<Button
+						type="button"
+						className="primary-btn h-11 w-full gap-2 rounded-lg sm:!w-full"
+						onClick={() => setIsAddEventOpen(true)}
+					>
+						<Plus className="h-4 w-4" />
+						Add Event
+					</Button>
+					<AppDialog
+						open={isAddEventOpen}
+						onOpenChange={setIsAddEventOpen}
+						size="form"
+						className="max-w-[600px] max-h-[90vh]"
+						icon={<CalendarDays className="h-5 w-5" />}
+						title="Add New Event"
+						description="Schedule a meeting, deadline, or review"
+						pending={creatingEvent}
+						footer={
+							<>
+								<Button
+									type="button"
+									variant="outline"
+									className="rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+									onClick={() => setIsAddEventOpen(false)}
+								>
+									Cancel
+								</Button>
+								<Button
+									type="button"
+									className="btn-primary"
+									onClick={handleAddEvent}
+									disabled={!newEvent.title.trim() || creatingEvent}
+								>
+									<Plus className="h-4 w-4" />
+									{creatingEvent ? "Creating..." : "Create Event"}
+								</Button>
+							</>
+						}
+					>
+							<div className="space-y-4 pb-1">
+								<p className="text-xs text-slate-500">
+									{newEvent.title.trim()
+										? "Ready to create"
+										: "Enter a title to continue"}
 								</p>
-							</div>
-							<div className="glass-dialog-body-padded flex-1 space-y-4 overflow-y-auto">
 								<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 									<div>
 										<Label
@@ -1185,26 +1205,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 									/>
 								</div>
 							</div>
-							<div className="glass-dialog-footer-wrap">
-								<div className="flex items-center justify-between">
-									<div className="text-xs text-slate-500">
-										{newEvent.title.trim()
-											? "Ready to create"
-											: "Enter a title to continue"}
-									</div>
-									<div className="flex items-center gap-3">
-										<Button
-											onClick={handleAddEvent}
-											disabled={!newEvent.title.trim() || creatingEvent}
-											className="primary-btn px-3 sm:px-4"
-										>
-											{creatingEvent ? "Creating..." : "Create Event"}
-										</Button>
-									</div>
-								</div>
-							</div>
-						</DialogContent>
-					</Dialog>
+					</AppDialog>
 				</div>
 			</div>
 		</div>

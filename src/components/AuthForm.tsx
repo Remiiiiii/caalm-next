@@ -315,6 +315,34 @@ const AuthForm = ({ type }: { type: FormType }) => {
 
 			const data = await response.json();
 
+			// #region agent log
+			fetch("http://127.0.0.1:7246/ingest/851d37c7-2223-45c1-89c0-a79ca1139a1d", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					"X-Debug-Session-Id": "da7416",
+				},
+				body: JSON.stringify({
+					sessionId: "da7416",
+					runId: "post-fix",
+					hypothesisId: "H3",
+					location: "AuthForm.tsx:checkTwoFactorStatus",
+					message: "2FA status after OTP",
+					data: {
+						status: response.status,
+						success: Boolean(data?.success),
+						has2FA: Boolean(data?.has2FA),
+						error:
+							typeof data?.error === "string"
+								? data.error.slice(0, 80)
+								: null,
+						willOpenSetup: !data?.success || !data?.has2FA,
+					},
+					timestamp: Date.now(),
+				}),
+			}).catch(() => {});
+			// #endregion
+
 			if (data.success) {
 				if (data.has2FA) {
 					// User has 2FA enabled - show TOTP verification only

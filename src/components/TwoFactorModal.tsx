@@ -1,26 +1,20 @@
 "use client";
 
 import {
-	CheckCircle,
-	Eye,
-	EyeOff,
+	ArrowLeft,
+	ClipboardCopy,
 	RefreshCw,
-	Shield,
+	ShieldCheck,
 	Smartphone,
 } from "lucide-react";
-import Image from "next/image";
 import { useState } from "react";
-import {
-	AlertDialog,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { AppDialog } from "@/components/ui/app-dialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import {
+	InputOTP,
+	InputOTPGroup,
+	InputOTPSlot,
+} from "@/components/ui/input-otp";
 import { useToast } from "@/hooks/use-toast";
 
 interface TwoFactorModalProps {
@@ -31,319 +25,348 @@ interface TwoFactorModalProps {
 	onSuccess: () => void;
 }
 
+const SETUP_STEPS = [
+	{
+		title: "Get an authenticator app",
+		desc: "Use an app like Google Authenticator or Authy on your phone.",
+	},
+	{
+		title: "Scan the QR code",
+		desc: "This links your CAALM account to the app.",
+	},
+	{
+		title: "Confirm with a 6-digit code",
+		desc: "Then save your recovery codes in case you lose your phone.",
+	},
+];
+
 const TwoFactorModal = ({
 	userId,
 	isOpen,
 	onClose,
 	onSuccess,
 }: TwoFactorModalProps) => {
-	const [step, setStep] = useState<"setup" | "verify" | "success">("setup");
+	const [step, setStep] = useState<"intro" | "scan" | "success">("intro");
 	const [isLoading, setIsLoading] = useState(false);
 	const [qrCode, setQrCode] = useState("");
 	const [secret, setSecret] = useState("");
 	const [verificationCode, setVerificationCode] = useState("");
-	const [showSecret, setShowSecret] = useState(false);
 	const [factorId, setFactorId] = useState("");
+	const [setupError, setSetupError] = useState("");
+	const [scanError, setScanError] = useState("");
 	const { toast } = useToast();
 
 	const setupTwoFactor = async () => {
+		setIsLoading(true);
+		setSetupError("");
 		try {
-			setIsLoading(true);
-			console.log("TwoFactorModal: Setting up 2FA for userId:", userId);
-
 			const response = await fetch("/api/2fa/setup", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ userId }),
 			});
-
 			const data = await response.json();
 
 			if (data.success) {
 				setQrCode(data.data.uri);
 				setSecret(data.data.secret);
 				setFactorId(data.data.factorId);
-				setStep("verify");
-
-				toast({
-					title: "2FA Setup Started",
-					description: "Scan the QR code with your authenticator app",
-				});
+				setStep("scan");
 			} else {
 				throw new Error(data.error);
 			}
-		} catch (error) {
-			console.error("Error setting up 2FA:", error);
-
-			// Show specific error message based on the error
-			let errorMessage = "Failed to setup 2FA. Please try again.";
-			if (error instanceof Error) {
-				if (error.message.includes("Server configuration error")) {
-					errorMessage = "Server configuration issue. Please contact support.";
-				} else if (error.message.includes("User ID is required")) {
-					errorMessage =
-						"User information is missing. Please refresh and try again.";
-				}
-			}
-
-			toast({
-				title: "Setup Failed",
-				description: errorMessage,
-				variant: "destructive",
-			});
-
-			// 2FA setup is mandatory - show retry option
-			toast({
-				title: "Setup Required",
-				description: "Two-factor authentication setup is required to continue.",
-				variant: "destructive",
-			});
+		} catch (err) {
+			const msg =
+				err instanceof Error
+					? err.message.includes("Server configuration")
+						? "Server configuration issue. Please contact support."
+						: err.message.includes("User ID")
+							? "User information missing. Please refresh and try again."
+							: "Failed to start setup. Please try again."
+					: "Failed to start setup. Please try again.";
+			setSetupError(msg);
 		} finally {
 			setIsLoading(false);
 		}
 	};
 
 	const verifyTwoFactor = async () => {
-		if (!verificationCode || verificationCode.length !== 6) {
-			toast({
-				title: "Invalid Code",
-				description: "Please enter a 6-digit verification code",
-				variant: "destructive",
-			});
-			return;
-		}
-
+		if (verificationCode.length !== 6) return;
+		setIsLoading(true);
+		setScanError("");
 		try {
-			setIsLoading(true);
-
 			const response = await fetch("/api/2fa/setup", {
 				method: "PUT",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					factorId,
-					code: verificationCode,
-				}),
+				body: JSON.stringify({ factorId, code: verificationCode }),
 			});
-
 			const data = await response.json();
 
 			if (data.success) {
 				setStep("success");
-				toast({
-					title: "2FA Setup Complete",
-					description:
-						"Your account is now protected with two-factor authentication",
-				});
-
-				// Wait a moment then proceed
 				setTimeout(() => {
-					console.log("TwoFactorModal: Closing modal and calling onSuccess");
-					onClose(); // Close the modal first
-					// Add a small delay to ensure modal is closed before calling onSuccess
-					setTimeout(() => {
-						onSuccess(); // Then call the success callback
-					}, 100);
+					onClose();
+					setTimeout(onSuccess, 100);
 				}, 1500);
 			} else {
 				throw new Error(data.error);
 			}
-		} catch (error) {
-			console.error("Error verifying 2FA:", error);
-
-			// Show specific error message based on the error
-			let errorMessage = "Invalid verification code. Please try again.";
-			if (error instanceof Error) {
-				if (error.message.includes("Invalid or expired setup session")) {
-					errorMessage =
-						"Setup session expired. Please restart the 2FA setup process.";
-				} else if (error.message.includes("Setup session expired")) {
-					errorMessage =
-						"Setup session expired. Please restart the 2FA setup process.";
-				} else if (error.message.includes("Invalid verification code")) {
-					errorMessage =
-						"Invalid verification code. Please check your authenticator app and try again.";
-				}
-			}
-
-			toast({
-				title: "Verification Failed",
-				description: errorMessage,
-				variant: "destructive",
-			});
+		} catch (err) {
+			const msg =
+				err instanceof Error && err.message.includes("expired")
+					? "Setup session expired. Please restart the setup process."
+					: "Invalid code. Please check your authenticator app and try again.";
+			setScanError(msg);
+			setVerificationCode("");
 		} finally {
 			setIsLoading(false);
 		}
 	};
 
-	// const handleRetry = () => {
-	//   setStep('setup');
-	//   setQrCode('');
-	//   setSecret('');
-	//   setVerificationCode('');
-	//   setFactorId('');
-	// };
+	const copySecret = async () => {
+		try {
+			await navigator.clipboard.writeText(secret);
+			toast({ description: "Setup key copied to clipboard" });
+		} catch {
+			// silently ignore — clipboard may not be available
+		}
+	};
+
+	const handleSignOut = () => {
+		window.location.href = "/sign-out";
+	};
+
+	const title =
+		step === "scan"
+			? "Scan this QR code"
+			: step === "success"
+				? "Two-factor authentication is on"
+				: "Set up two-factor authentication";
+	const description =
+		step === "scan"
+			? "Open your authenticator app, add an account and scan the code below."
+			: step === "success"
+				? "Your account is now protected. Redirecting…"
+				: "Your organization requires it to keep your account secure. It only takes a few minutes.";
 
 	return (
-		<AlertDialog open={isOpen} onOpenChange={onClose}>
-			<AlertDialogContent className="shad-alert-dialog max-w-md">
-				<AlertDialogHeader className="relative flex justify-center">
-					<AlertDialogTitle className="h2 text-center flex items-center gap-2 sidebar-gradient-text">
-						<Shield className="h-5 w-5 text-navy" />
-						Two-Factor Authentication Setup
-						<Image
-							src="/assets/icons/close-dark.svg"
-							alt="close"
-							width={20}
-							height={20}
-							className="otp-close-button"
-							onClick={onClose}
-						/>
-					</AlertDialogTitle>
-					<AlertDialogDescription className="subtitle-2 text-light-100 text-center">
-						{step === "setup" &&
-							"Two-factor authentication is required for account security"}
-						{step === "verify" &&
-							"Scan the QR code and enter the verification code"}
-						{step === "success" && "2FA setup successful!"}
-					</AlertDialogDescription>
-				</AlertDialogHeader>
+		<AppDialog
+			open={isOpen}
+			onOpenChange={(open) => {
+				if (!open && step !== "intro") onClose();
+			}}
+			size="form"
+			pending={isLoading}
+			icon={<ShieldCheck className="h-5 w-5" />}
+			title={title}
+			description={description}
+			footer={
+				step === "success" ? undefined : step === "scan" ? (
+					<>
+						<Button
+							type="button"
+							variant="outline"
+							className="rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+							disabled={isLoading}
+							onClick={() => {
+								setStep("intro");
+								setVerificationCode("");
+								setScanError("");
+							}}
+						>
+							<ArrowLeft className="h-4 w-4" />
+							Back
+						</Button>
+						<Button
+							type="button"
+							className="btn-primary"
+							disabled={verificationCode.length !== 6 || isLoading}
+							onClick={() => void verifyTwoFactor()}
+						>
+							{isLoading ? (
+								<RefreshCw className="h-4 w-4 animate-spin" />
+							) : (
+								<ShieldCheck className="h-4 w-4" />
+							)}
+							{isLoading ? "Verifying…" : "Verify and continue"}
+						</Button>
+					</>
+				) : (
+					<>
+						<Button
+							type="button"
+							variant="outline"
+							className="rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+							onClick={handleSignOut}
+						>
+							Sign out
+						</Button>
+						<Button
+							type="button"
+							className="btn-primary"
+							disabled={isLoading}
+							onClick={() => void setupTwoFactor()}
+						>
+							{isLoading ? (
+								<RefreshCw className="h-4 w-4 animate-spin" />
+							) : (
+								<ShieldCheck className="h-4 w-4" />
+							)}
+							{isLoading ? "Starting…" : "Start setup"}
+						</Button>
+					</>
+				)
+			}
+		>
+				{/* ── Intro ── */}
+				{step === "intro" && (
+					<>
 
-				{step === "setup" && (
-					<div className="space-y-4">
-						<div className="text-center">
-							<p className="text-sm text-light-100 mb-4">
-								Two-factor authentication is mandatory for all users to ensure
-								account security.
+						{/* Steps overview */}
+						<div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-4">
+							{SETUP_STEPS.map((s, i) => (
+								<div key={s.title} className="flex gap-3">
+									<div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#078FAB]/10 text-xs font-semibold text-[#078FAB]">
+										{i + 1}
+									</div>
+									<div>
+										<p className="text-sm font-semibold text-slate-700">
+											{s.title}
+										</p>
+										<p className="text-xs text-slate-500">{s.desc}</p>
+									</div>
+								</div>
+							))}
+						</div>
+
+						{setupError ? (
+							<p className="text-sm text-red" role="alert">
+								{setupError}
 							</p>
-							<div className="flex items-center justify-center gap-2 mb-4">
-								<Smartphone className="h-4 w-4 text-navy" />
-								<span className="text-sm text-light-100">
-									Use an authenticator app like Google Authenticator or Authy
-								</span>
+						) : null}
+
+						<button
+							type="button"
+							className="text-sm text-[#078FAB] hover:underline"
+							onClick={() =>
+								toast({
+									description:
+										"Two-factor authentication protects your account even if your password is stolen.",
+								})
+							}
+						>
+							Why is this required?
+						</button>
+					</>
+				)}
+
+				{/* ── Scan & Verify ── */}
+				{step === "scan" && (
+					<>
+						{/* Progress */}
+						<div>
+							<p className="mb-1.5 text-xs font-semibold text-[#078FAB]">
+								Step 2 of 3
+							</p>
+							<div
+								className="flex gap-1"
+								role="progressbar"
+								aria-valuenow={2}
+								aria-valuemin={1}
+								aria-valuemax={3}
+							>
+								{[0, 1, 2].map((i) => (
+									<div
+										key={i}
+										className="h-1 flex-1 rounded-full"
+										style={{
+											backgroundColor: i < 2 ? "#078FAB" : "#e2e8f0",
+										}}
+									/>
+								))}
 							</div>
 						</div>
 
-						<div className="flex gap-3 justify-center">
-							<Button
-								onClick={setupTwoFactor}
-								className="primary-btn px-3 sm:px-4"
-								disabled={isLoading}
-							>
-								<Shield className="h-4 w-4 text-white" />
-								{isLoading ? "Setting up..." : "Setup 2FA"}
-							</Button>
+						{/* QR Code */}
+						<div className="flex justify-center">
+							{qrCode ? (
+								<div className="rounded-xl border border-slate-200 bg-white p-3">
+									{/* eslint-disable-next-line @next/next/no-img-element */}
+									<img
+										src={`https://api.qrserver.com/v1/create-qr-code/?size=168x168&data=${encodeURIComponent(qrCode)}`}
+										alt="Authenticator QR code"
+										className="h-40 w-40"
+									/>
+								</div>
+							) : (
+								<div className="flex h-40 w-40 items-center justify-center rounded-xl border-2 border-dashed border-slate-200">
+									<Smartphone className="h-8 w-8 text-slate-300" />
+								</div>
+							)}
 						</div>
-					</div>
-				)}
 
-				{step === "verify" && (
-					<div className="space-y-4">
-						{qrCode && (
-							<Card className="bg-white/20 backdrop-blur border border-white/40">
-								<CardContent className="p-4">
-									<div className="flex flex-col items-center space-y-4">
-										<div className="bg-white p-4 rounded-lg">
-											<img
-												src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(
-													qrCode,
-												)}`}
-												alt="QR Code"
-												className="w-36 h-36"
-											/>
-										</div>
-
-										<div className="text-center space-y-2">
-											<p className="text-sm text-light-100">
-												Scan this QR code with your authenticator app:
-											</p>
-											<div className="flex items-center gap-2 justify-center">
-												<span className="text-xs text-light-100">
-													Secret Key:
-												</span>
-												<div className="flex items-center gap-1">
-													<code className="text-xs bg-white/20 px-2 py-1 rounded">
-														{showSecret ? secret : "••••••••••••••••"}
-													</code>
-													<Button
-														variant="ghost"
-														size="sm"
-														onClick={() => setShowSecret(!showSecret)}
-														className="h-6 w-6 p-0"
-													>
-														{showSecret ? (
-															<EyeOff className="h-3 w-3" />
-														) : (
-															<Eye className="h-3 w-3" />
-														)}
-													</Button>
-												</div>
-											</div>
-										</div>
-									</div>
-								</CardContent>
-							</Card>
+						{/* Manual key */}
+						{secret && (
+							<div className="flex items-center justify-center gap-2 text-sm text-slate-500">
+								<span>Can't scan? Enter this key instead:</span>
+								<code className="rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-mono text-slate-700">
+									{secret}
+								</code>
+								<button
+									type="button"
+									onClick={() => void copySecret()}
+									className="flex items-center gap-0.5 rounded border border-slate-200 bg-white px-2 py-0.5 text-xs text-slate-600 hover:bg-slate-50"
+								>
+									<ClipboardCopy className="h-3 w-3" />
+									Copy
+								</button>
+							</div>
 						)}
 
-						<div className="space-y-3">
-							<p className="text-sm text-light-100 text-center">
-								After scanning the QR code, enter the 6-digit verification code:
+						<div className="border-t border-slate-100" />
+
+						<div className="space-y-2">
+							<p className="text-center text-sm font-medium text-slate-700">
+								Enter the 6-digit code from the app
 							</p>
-							<Input
-								type="text"
-								placeholder="Enter 6-digit code"
-								value={verificationCode}
-								onChange={(e) =>
-									setVerificationCode(
-										e.target.value.replace(/\D/g, "").slice(0, 6),
-									)
-								}
-								className="text-center text-lg tracking-widest border border-[#03AFBF]"
-								maxLength={6}
-							/>
+
 							<div className="flex justify-center">
-								<Button
-									onClick={verifyTwoFactor}
-									className="primary-btn px-3 sm:px-4"
-									disabled={verificationCode.length !== 6 || isLoading}
+								<InputOTP
+									maxLength={6}
+									value={verificationCode}
+									disabled={isLoading}
+									containerClassName="w-full max-w-full justify-center"
+									onChange={(value) => {
+										setVerificationCode(value);
+										if (scanError) setScanError("");
+									}}
+									onComplete={() => void verifyTwoFactor()}
 								>
-									{isLoading ? (
-										<>
-											<RefreshCw className="h-4 w-4 animate-spin" />
-											Verifying...
-										</>
-									) : (
-										<>
-											<CheckCircle className="h-4 w-4 text-green-600" />
-											Verify & Continue
-										</>
-									)}
-								</Button>
+									<InputOTPGroup className="shad-otp">
+										<InputOTPSlot index={0} className="shad-otp-slot" />
+										<InputOTPSlot index={1} className="shad-otp-slot" />
+										<InputOTPSlot index={2} className="shad-otp-slot" />
+										<InputOTPSlot index={3} className="shad-otp-slot" />
+										<InputOTPSlot index={4} className="shad-otp-slot" />
+										<InputOTPSlot index={5} className="shad-otp-slot" />
+									</InputOTPGroup>
+								</InputOTP>
 							</div>
-						</div>
-					</div>
-				)}
 
-				{step === "success" && (
-					<div className="space-y-4 text-center">
-						<CheckCircle className="h-12 w-12 text-green-500 mx-auto" />
-						<p className="text-sm text-light-100">
-							Two-factor authentication has been successfully set up.
-							Redirecting...
-						</p>
-					</div>
-				)}
-
-				<AlertDialogFooter>
-					{step === "verify" && (
-						<div className="w-full text-center">
-							<p className="text-xs text-light-200">
-								Two-factor authentication is required for account security
+							<p className="text-center text-xs text-slate-400">
+								Codes change every 30 seconds. If a code is rejected, check that
+								your phone's clock is set automatically.
 							</p>
+
+							{scanError ? (
+								<p className="text-sm text-red" role="alert">
+									{scanError}
+								</p>
+							) : null}
 						</div>
-					)}
-				</AlertDialogFooter>
-			</AlertDialogContent>
-		</AlertDialog>
+					</>
+				)}
+		</AppDialog>
 	);
 };
 

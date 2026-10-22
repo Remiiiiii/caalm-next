@@ -1,19 +1,17 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
+import { xlsxResponse } from "@/lib/export/xlsx-response";
 import { collectForm990ExpenseLines } from "@/lib/funding/form-990/collect-lines";
 import { listForm990Mappings } from "@/lib/funding/form-990/mapping.repository";
 import {
 	buildForm990Worksheet,
-	exceptionsToCsv,
-	worksheetToCsv,
+	exceptionsToXlsxInput,
+	worksheetToXlsxInput,
 } from "@/lib/funding/form-990/worksheet";
 import { requireFundingOrgContext } from "@/lib/funding/request-context";
 
 export async function GET(request: NextRequest) {
-	const ctx = await requireFundingOrgContext(
-		request,
-		PERMISSIONS.FUNDING.VIEW,
-	);
+	const ctx = await requireFundingOrgContext(request, PERMISSIONS.FUNDING.VIEW);
 	if (!ctx.ok) return ctx.response;
 
 	const startDate = request.nextUrl.searchParams.get("startDate")?.trim();
@@ -39,12 +37,10 @@ export async function GET(request: NextRequest) {
 		const result = buildForm990Worksheet({ lines, mappings });
 
 		if (part === "exceptions") {
-			return new NextResponse(exceptionsToCsv(result), {
-				headers: {
-					"Content-Type": "text/csv; charset=utf-8",
-					"Content-Disposition": `attachment; filename="990-worksheet-exceptions.csv"`,
-				},
-			});
+			return xlsxResponse(
+				"990-worksheet-exceptions.xlsx",
+				exceptionsToXlsxInput(result),
+			);
 		}
 
 		if (part === "meta") {
@@ -56,12 +52,10 @@ export async function GET(request: NextRequest) {
 			});
 		}
 
-		return new NextResponse(worksheetToCsv(result), {
-			headers: {
-				"Content-Type": "text/csv; charset=utf-8",
-				"Content-Disposition": `attachment; filename="990-part-ix-worksheet.csv"`,
-			},
-		});
+		return xlsxResponse(
+			"990-part-ix-worksheet.xlsx",
+			worksheetToXlsxInput(result),
+		);
 	} catch (error) {
 		console.error("[form-990-export GET]", error);
 		return NextResponse.json(

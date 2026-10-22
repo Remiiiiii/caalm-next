@@ -179,7 +179,7 @@ Reference: `src/components/ActionDropdown.tsx`
 
 Use the Contracts table badge, not default shadcn Badge variants.
 
-- Shape: `inline-block px-2 py-0.5 text-xs rounded-full font-medium border`
+- Shape: `inline-block px-2 py-0.5 text-xs rounded-full border`
 - Active / current: `bg-green/10 text-green border-green/20`
 - Pending / draft: `bg-orange/10 text-orange border-orange/20`
 - Danger / expired: `bg-red/10 text-red border-red/20`

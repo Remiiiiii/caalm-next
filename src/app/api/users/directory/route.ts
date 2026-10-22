@@ -91,12 +91,9 @@ export async function GET(request: NextRequest) {
 						? candidate
 						: null;
 				const departmentLabel =
-					String(
-						user.departmentLabel || user.department || "",
-					).trim() || "";
+					String(user.departmentLabel || user.department || "").trim() || "";
 				const divisionLabel =
-					String(user.divisionLabel || user.division || "").trim() ||
-					"";
+					String(user.divisionLabel || user.division || "").trim() || "";
 				// Department is top level; division nests under it when both exist
 				let department = "Other";
 				let division: string | null = null;

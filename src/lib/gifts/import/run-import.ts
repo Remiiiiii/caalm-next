@@ -64,7 +64,11 @@ async function listContractsLite(
 		tableId,
 		queries: [Query.equal("orgId", orgId), Query.limit(500)],
 	});
-	return (result.rows as { $id: string; contractNumber?: string; contractName?: string }[]);
+	return result.rows as {
+		$id: string;
+		contractNumber?: string;
+		contractName?: string;
+	}[];
 }
 
 export async function dryRunGiftImport(
@@ -93,7 +97,7 @@ export async function dryRunGiftImport(
 
 	const plans: GiftImportPlanRow[] = [];
 	let create = 0;
-	let skip = 0;
+	const skip = 0;
 	let error = 0;
 
 	for (const row of rows) {
@@ -159,7 +163,11 @@ export async function dryRunGiftImport(
 export async function commitGiftImport(
 	orgId: string,
 	rows: MappedGiftImportRow[],
-): Promise<{ createdCount: number; skippedCount: number; failedCount: number }> {
+): Promise<{
+	createdCount: number;
+	skippedCount: number;
+	failedCount: number;
+}> {
 	const dry = await dryRunGiftImport(orgId, rows);
 	let createdCount = 0;
 	let failedCount = 0;

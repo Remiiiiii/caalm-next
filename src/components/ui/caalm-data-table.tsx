@@ -44,6 +44,8 @@ import {
 	DATA_TABLE_CELL_LAST,
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
+	DATA_TABLE_INSET,
+	DATA_TABLE_TOOLBAR_INSET,
 } from "@/lib/ui/data-table-styles";
 import { cn } from "@/lib/utils";
 
@@ -55,6 +57,8 @@ export {
 	DATA_TABLE_CELL_LAST,
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
+	DATA_TABLE_INSET,
+	DATA_TABLE_TOOLBAR_INSET,
 };
 
 /** Scrollable shell matching Assign Tasks */
@@ -66,8 +70,10 @@ export function CaalmDataTable({
 	className?: string;
 }) {
 	return (
-		<div className={cn("w-full overflow-x-auto px-2 sm:px-4 pb-4", className)}>
-			<Table className="border-separate border-spacing-0">{children}</Table>
+		<div className={cn("w-full overflow-x-auto pb-4", className)}>
+			<div className={DATA_TABLE_INSET}>
+				<Table className="border-separate border-spacing-0">{children}</Table>
+			</div>
 		</div>
 	);
 }
@@ -104,48 +110,48 @@ export function CaalmDataTableSkeleton({
 }) {
 	return (
 		<div role="status" aria-label="Loading table" aria-busy="true">
-		<CaalmDataTable className={cn("pt-2", className)}>
-			<TableHeader className="[&_tr]:border-b-0">
-				<TableRow className={DATA_TABLE_HEADER_ROW}>
-					{Array.from({ length: columns }).map((_, i) => (
-						<TableHead
-							key={`sk-h-${i}`}
-							className={cn(
-								DATA_TABLE_HEADER_CELL,
-								"px-3",
-								i === 0 && "pl-4 pr-2",
-								i === columns - 1 && "pl-3 pr-4",
-							)}
-						>
-							<Skeleton className="h-3.5 w-16" />
-						</TableHead>
-					))}
-				</TableRow>
-			</TableHeader>
-			<TableBody className="[&_tr:last-child>td]:border-b-0">
-				{Array.from({ length: rows }).map((_, row) => (
-					<TableRow key={`sk-r-${row}`} className={DATA_TABLE_BODY_ROW_BASE}>
-						{Array.from({ length: columns }).map((_, col) => (
-							<TableCell
-								key={`sk-c-${row}-${col}`}
+			<CaalmDataTable className={cn("pt-2", className)}>
+				<TableHeader className="[&_tr]:border-b-0">
+					<TableRow className={DATA_TABLE_HEADER_ROW}>
+						{Array.from({ length: columns }).map((_, i) => (
+							<TableHead
+								key={`sk-h-${i}`}
 								className={cn(
-									DATA_TABLE_CELL,
-									col === 0 && DATA_TABLE_CELL_FIRST,
-									col === columns - 1 && DATA_TABLE_CELL_LAST,
+									DATA_TABLE_HEADER_CELL,
+									"px-3",
+									i === 0 && "pl-4 pr-2",
+									i === columns - 1 && "pl-3 pr-4",
 								)}
 							>
-								<Skeleton
-									className={cn(
-										"h-4",
-										col === 1 ? "w-40 max-w-full" : "w-16",
-									)}
-								/>
-							</TableCell>
+								<Skeleton className="h-3.5 w-16" />
+							</TableHead>
 						))}
 					</TableRow>
-				))}
-			</TableBody>
-		</CaalmDataTable>
+				</TableHeader>
+				<TableBody className="[&_tr:last-child>td]:border-b-0">
+					{Array.from({ length: rows }).map((_, row) => (
+						<TableRow key={`sk-r-${row}`} className={DATA_TABLE_BODY_ROW_BASE}>
+							{Array.from({ length: columns }).map((_, col) => (
+								<TableCell
+									key={`sk-c-${row}-${col}`}
+									className={cn(
+										DATA_TABLE_CELL,
+										col === 0 && DATA_TABLE_CELL_FIRST,
+										col === columns - 1 && DATA_TABLE_CELL_LAST,
+									)}
+								>
+									<Skeleton
+										className={cn(
+											"h-4",
+											col === 1 ? "w-40 max-w-full" : "w-16",
+										)}
+									/>
+								</TableCell>
+							))}
+						</TableRow>
+					))}
+				</TableBody>
+			</CaalmDataTable>
 		</div>
 	);
 }
@@ -167,13 +173,13 @@ export function SortableDataTableHead({
 				type="button"
 				variant="ghost"
 				onClick={onClick}
-				className="h-auto cursor-pointer px-0 py-0 font-semibold sidebar-gradient-text hover:bg-transparent hover:opacity-80"
+				className="h-auto cursor-pointer px-0 py-0 font-semibold text-slate-700 hover:bg-transparent hover:text-slate-700 hover:opacity-80"
 			>
 				{label}
 				<ChevronsUpDown
 					className={cn(
-						"ml-1.5 h-3.5 w-3.5",
-						active ? "text-[#0f5384] opacity-100" : "opacity-40",
+						"ml-1.5 h-3.5 w-3.5 text-slate-600",
+						active ? "opacity-100" : "opacity-40",
 					)}
 				/>
 			</Button>

@@ -15,7 +15,7 @@ function Inline({ nodes }: { nodes: InlineNode[] }): ReactNode {
 				return (
 					<code
 						key={i}
-						className="rounded bg-slate-100 px-1.5 py-0.5 text-[0.9em] font-medium text-slate-800 dark:bg-slate-800 dark:text-slate-200"
+						className="rounded bg-slate-100 px-1.5 py-0.5 text-[0.9em] font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200"
 					>
 						{node.value}
 					</code>
@@ -65,12 +65,12 @@ function Inline({ nodes }: { nodes: InlineNode[] }): ReactNode {
 }
 
 const calloutStyles = {
-	note: "border-blue-200 bg-blue-50/80 text-slate-800 dark:border-blue-800 dark:bg-blue-950/50 dark:text-slate-200",
-	tip: "border-emerald-200 bg-emerald-50/80 text-slate-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-slate-200",
+	note: "border-blue-200 bg-blue-50/80 text-slate-700 dark:border-blue-800 dark:bg-blue-950/50 dark:text-slate-200",
+	tip: "border-emerald-200 bg-emerald-50/80 text-slate-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-slate-200",
 	warning:
-		"border-amber-200 bg-amber-50/80 text-slate-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-slate-200",
+		"border-amber-200 bg-amber-50/80 text-slate-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-slate-200",
 	important:
-		"border-rose-200 bg-rose-50/80 text-slate-800 dark:border-rose-800 dark:bg-rose-950/40 dark:text-slate-200",
+		"border-rose-200 bg-rose-50/80 text-slate-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-slate-200",
 } as const;
 
 function Block({ block }: { block: MdBlock }) {
@@ -162,7 +162,7 @@ function Block({ block }: { block: MdBlock }) {
 								{block.headers.map((h) => (
 									<th
 										key={h}
-										className="px-3 py-2.5 font-semibold text-slate-800 dark:text-slate-200"
+										className="px-3 py-2.5 font-semibold text-slate-700 dark:text-slate-200"
 									>
 										{h}
 									</th>

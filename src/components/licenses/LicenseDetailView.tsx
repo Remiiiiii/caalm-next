@@ -53,7 +53,7 @@ function renderField(
 			<p className="text-sm text-slate-500 font-medium mb-1 break-words">
 				{label}
 			</p>
-			<p className="text-slate-800 font-semibold break-words overflow-wrap-anywhere">
+			<p className="text-slate-700 font-semibold break-words overflow-wrap-anywhere">
 				{display}
 			</p>
 		</div>

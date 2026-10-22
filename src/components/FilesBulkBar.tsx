@@ -1,16 +1,11 @@
 "use client";
 
-import { AlertTriangle, Trash2, X } from "lucide-react";
-import Image from "next/image";
+import { AlertTriangle, Trash2 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { BulkActionDock } from "@/components/ui/bulk-action-dock";
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useStepUp } from "@/contexts/StepUpContext";
 import { useToast } from "@/hooks/use-toast";
 import { deleteFile } from "@/lib/actions/file.actions";
@@ -92,85 +87,36 @@ export default function FilesBulkBar({
 
 	return (
 		<>
-			<div className="mb-4 mt-4 flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white/95 px-4 py-3 shadow-lg backdrop-blur">
-				<p className="text-sm font-medium text-slate-700">
-					{selectedIds.length} selected
-				</p>
-				<div className="flex items-center gap-2">
-					<Button
-						type="button"
-						variant="ghost"
-						size="sm"
-						className="cursor-pointer"
-						onClick={onClearSelection}
-					>
-						<X className="h-4 w-4" />
-						Clear
-					</Button>
-					<Button
-						type="button"
-						size="sm"
-						className="delete-btn cursor-pointer px-3 sm:px-4"
-						onClick={() => setConfirmOpen(true)}
-					>
-						<Trash2 className="h-4 w-4" />
-						Delete selected
-					</Button>
-				</div>
-			</div>
-
-			<Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-				<DialogContent
-					className="gap-0 overflow-hidden border border-slate-200 p-0 shadow-xl sm:max-w-md"
-					variant="destructive"
+			<BulkActionDock
+				count={selectedIds.length}
+				noun="file"
+				onClear={onClearSelection}
+			>
+				<Button
+					type="button"
+					size="sm"
+					className="delete-btn cursor-pointer px-3 sm:px-4"
+					onClick={() => setConfirmOpen(true)}
 				>
-					<DialogTitle className="sr-only">Delete Files</DialogTitle>
-					<div className="absolute top-0 right-0 left-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
-					<div className="mt-4 border-b border-slate-200 bg-white px-6 py-4">
-						<div className="flex items-center gap-2">
-							<AlertTriangle className="h-5 w-5 shrink-0 text-[#f7d333]" />
-							<h2 className="text-base font-semibold sidebar-gradient-text">
-								Delete Files
-							</h2>
-						</div>
-						<DialogDescription className="mt-1 ml-7 text-sm text-slate-600">
-							Are you sure you want to delete {selectedIds.length} selected file
-							{selectedIds.length === 1 ? "" : "s"}? This action cannot be
-							undone.
-						</DialogDescription>
-					</div>
+					<Trash2 className="h-4 w-4" />
+					Delete selected
+				</Button>
+			</BulkActionDock>
 
-					<div className="space-y-3 bg-white px-6 py-5">
-						<p className="text-sm text-slate-600">
-							This will permanently remove the selected files from the system.
-						</p>
-						<p className="text-xs font-medium text-slate-500">
-							This action is permanent.
-						</p>
-					</div>
-
-					<div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
-						<Button
-							type="button"
-							onClick={handleBulkDelete}
-							disabled={isDeleting}
-							className="delete-btn gap-2 px-3 sm:px-4"
-						>
-							<Trash2 className="h-4 w-4 shrink-0" />
-							{isDeleting ? "Deleting..." : "Delete Files"}
-							{isDeleting && (
-								<Image
-									src="/assets/icons/loader.svg"
-									alt="loader"
-									width={16}
-									height={16}
-									className="ml-2 animate-spin"
-								/>
-							)}
-						</Button>
-					</div>
-				</DialogContent>
-			</Dialog>
+			<ConfirmDialog
+				open={confirmOpen}
+				onOpenChange={setConfirmOpen}
+				variant="destructive"
+				icon={<AlertTriangle className="h-5 w-5" />}
+				title="Delete Files"
+				description={`Are you sure you want to delete ${selectedIds.length} selected file${selectedIds.length === 1 ? "" : "s"}? This action cannot be undone.`}
+				helperText="This will permanently remove the selected files from the system."
+				note="This action is permanent."
+				confirmLabel="Delete Files"
+				confirmIcon={<Trash2 className="h-4 w-4" />}
+				pendingLabel="Deleting…"
+				onConfirm={handleBulkDelete}
+			/>
 		</>
 	);
 }

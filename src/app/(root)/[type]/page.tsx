@@ -25,7 +25,10 @@ type FileType = "image" | "video" | "audio" | "document" | "other";
 import { Query } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite/admin";
 import { appwriteConfig } from "@/lib/appwrite/config";
-import { contractRowToFileDoc } from "@/lib/contracts/contract-row-to-file";
+import {
+	contractRowToFileDoc,
+	flattenTableRow,
+} from "@/lib/contracts/contract-row-to-file";
 import { enrichContractFilesForList } from "@/lib/contracts/enrichContractListDisplay";
 
 interface SearchParamProps {
@@ -92,7 +95,8 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
 			new Set(
 				contractsResult.rows
 					.map((c: any) => {
-						const row = c?.data && typeof c.data === "object" ? { ...c, ...c.data } : c;
+						const row =
+							c?.data && typeof c.data === "object" ? { ...c, ...c.data } : c;
 						return row.fileId as string | undefined;
 					})
 					.filter((id): id is string => !!id && isValidDocumentId(id)),
@@ -124,18 +128,22 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
 			);
 			for (const result of batchResults) {
 				for (const file of result.rows) {
-					filesById.set(file.$id, file);
+					const flat = flattenTableRow(file);
+					filesById.set(String(flat.$id), flat);
 				}
 			}
 		}
 
 		contractDocuments = contractsResult.rows.map((contract: any) => {
+			const row = flattenTableRow(contract);
+			const fileId =
+				typeof row.fileId === "string" ? row.fileId : undefined;
 			const fileData =
-				contract.fileId && isValidDocumentId(contract.fileId)
-					? filesById.get(contract.fileId)
+				fileId && isValidDocumentId(fileId)
+					? filesById.get(fileId)
 					: undefined;
 
-			return contractRowToFileDoc(contract, fileData);
+			return contractRowToFileDoc(row, fileData);
 		});
 
 		files = {

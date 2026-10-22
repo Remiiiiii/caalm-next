@@ -2,6 +2,7 @@
 
 import { Download } from "lucide-react";
 import { useState } from "react";
+import { BusyIcon } from "@/components/ui/busy-icon";
 import { Button } from "@/components/ui/button";
 import { CardContent, Card as GlassCard } from "@/components/ui/card";
 import { useStepUp } from "@/contexts/StepUpContext";
@@ -93,7 +94,7 @@ export function TenantDataExportCard({
 							disabled={exporting}
 							onClick={handleExport}
 						>
-							<Download className="h-4 w-4" />
+							<BusyIcon busy={exporting} icon={Download} />
 							{exporting ? "Exporting…" : "Download export"}
 						</Button>
 					</div>

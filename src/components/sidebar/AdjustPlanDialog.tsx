@@ -4,12 +4,7 @@ import { Columns3Cog } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import PlanUpgradeSection from "@/components/settings/PlanUpgradeSection";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { AppDialog } from "@/components/ui/app-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useBillingSubscription } from "@/hooks/useBillingSubscription";
 import { useOrgPlanSummary } from "@/hooks/useOrgPlanSummary";
@@ -89,23 +84,29 @@ export default function AdjustPlanDialog({
 	};
 
 	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="flex max-h-[90vh] max-w-7xl flex-col overflow-hidden border border-slate-200 p-0 shadow-xl">
-				<div className="absolute top-0 right-0 left-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
-
-				<div className="sticky top-0 z-10 mt-4 border-b border-slate-200 bg-linear-to-r from-blue-50 to-indigo-50 py-4">
-					<div className="flex items-center gap-3 px-6 pr-12">
-						<Columns3Cog className="h-5 w-5 text-[#0f5384]" />
-						<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-							Adjust your plan
-						</DialogTitle>
-					</div>
-					<DialogDescription className="mt-1 ml-14 text-sm text-slate-600">
-						Compare Starter, Growth, and Enterprise. Annual billing saves 20%.
-					</DialogDescription>
-				</div>
-
-				<div className="flex-1 overflow-y-auto bg-slate-50 p-6">
+		<AppDialog
+			open={open}
+			onOpenChange={onOpenChange}
+			size="form"
+			className="max-h-[90vh] max-w-7xl"
+			pending={checkoutTier !== null}
+			icon={<Columns3Cog className="h-5 w-5" />}
+			title="Adjust your plan"
+			description="Compare Starter, Growth, and Enterprise. Annual billing saves 20%."
+			footer={
+				<p className="text-center text-xs text-slate-500">
+					Need more for your business?{" "}
+					<Link
+						href="/contact"
+						className="cursor-pointer font-medium text-[#0f5384] underline underline-offset-2"
+					>
+						Learn more about our Enterprise plans
+					</Link>
+					.
+				</p>
+			}
+		>
+			<div className="pb-1">
 					<div className="space-y-6">
 						<div className="flex items-center justify-center">
 							<div
@@ -142,7 +143,7 @@ export default function AdjustPlanDialog({
 									Annual
 								</button>
 								{billingInterval === "yearly" ? (
-									<span className="ml-2 mr-2 rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
+									<span className="ml-2 mr-2 rounded-full bg-green-50 px-2 py-0.5 text-xs text-green-700">
 										Save 20%
 									</span>
 								) : (
@@ -181,21 +182,7 @@ export default function AdjustPlanDialog({
 							</p>
 						) : null}
 					</div>
-				</div>
-
-				<div className="border-t border-slate-200 bg-slate-50 px-6 py-4">
-					<p className="text-center text-xs text-slate-500">
-						Need more for your business?{" "}
-						<Link
-							href="/contact"
-							className="cursor-pointer font-medium text-[#0f5384] underline underline-offset-2"
-						>
-							Learn more about our Enterprise plans
-						</Link>
-						.
-					</p>
-				</div>
-			</DialogContent>
-		</Dialog>
+			</div>
+		</AppDialog>
 	);
 }

@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { findMissingNpoShippedRouteModules } from "./npo-shipped-routes";
 
@@ -31,9 +31,25 @@ function lineIsAllowedException(line: string): boolean {
 	return ALLOWED_PHRASES.some((re) => re.test(line));
 }
 
+const NEGATION = /\b(not|no|without|never|isn't|doesn't|does not)\b/i;
+
+/** True when a negation appears earlier in the same sentence as the term ("not payroll, GL, or 990 e-file"). */
+function termIsNegated(line: string, term: RegExp): boolean {
+	const plain = line.replace(/\*\*/g, "");
+	const match = term.exec(plain);
+	if (!match) return false;
+	const sentenceStart = plain.lastIndexOf(". ", match.index) + 1;
+	return NEGATION.test(plain.slice(sentenceStart, match.index));
+}
+
+/** Headings like "What CAALM does not ship" list disclaimers, not claims. */
+const NEGATIVE_HEADING =
+	/^#+\s.*\b(does not|do not|doesn't|not ship|not offer|not included|out of scope|out-of-lane)\b/i;
+
 function lineClaims990Efile(line: string): boolean {
 	if (!/\b990 e-file\b/i.test(line)) return false;
 	if (lineIsAllowedException(line)) return false;
+	if (termIsNegated(line, /\b990 e-file\b/i)) return false;
 	if (
 		/not (a |an )?990 e-file|does not offer 990 e-file|no 990 e-file|without 990 e-file/i.test(
 			line,
@@ -45,6 +61,7 @@ function lineClaims990Efile(line: string): boolean {
 }
 
 function lineClaimsPayrollProduct(line: string): boolean {
+	if (termIsNegated(line, /\bpayroll system\b/i)) return false;
 	if (
 		/not payroll|no payroll|without payroll|is not payroll|not a payroll|outside payroll/i.test(
 			line,
@@ -121,10 +138,14 @@ function walkMarketingDocs(cwd: string): NpoPackagingViolation[] {
 					const relFile = full.slice(cwd.length + 1);
 					const text = readFileSync(full, "utf8");
 					const lines = text.split("\n");
+					let inNegativeSection = false;
 					for (let i = 0; i < lines.length; i++) {
-						violations.push(
-							...scanLine(relFile, i + 1, lines[i] ?? ""),
-						);
+						const line = lines[i] ?? "";
+						if (/^#+\s/.test(line)) {
+							inNegativeSection = NEGATIVE_HEADING.test(line);
+						}
+						if (inNegativeSection) continue;
+						violations.push(...scanLine(relFile, i + 1, line));
 					}
 				}
 			}
@@ -134,7 +155,9 @@ function walkMarketingDocs(cwd: string): NpoPackagingViolation[] {
 }
 
 /** Synchronous packaging gate used by roadmap overview (10.6 + 10.7). */
-export function evaluateNpoPackagingGate(cwd = process.cwd()): NpoPackagingGateResult {
+export function evaluateNpoPackagingGate(
+	cwd = process.cwd(),
+): NpoPackagingGateResult {
 	const bannedViolations = walkMarketingDocs(cwd);
 	const missingRoutes = findMissingNpoShippedRouteModules(cwd);
 	const ok = bannedViolations.length === 0 && missingRoutes.length === 0;

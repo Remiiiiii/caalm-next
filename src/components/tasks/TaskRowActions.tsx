@@ -38,10 +38,7 @@ export function TaskRowActions({
 					unoptimized
 				/>
 			</DropdownMenuTrigger>
-			<AppDropdownMenuContent
-				align="end"
-				onClick={(e) => e.stopPropagation()}
-			>
+			<AppDropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
 				<AppDropdownMenuItem icon={Eye} onSelect={onOpen}>
 					Open details
 				</AppDropdownMenuItem>

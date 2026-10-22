@@ -152,7 +152,7 @@ export default function AuditLogsPage() {
 		handleFilterChange("module", domain);
 	};
 
-	const exportLogs = async (format: "csv" | "json" = "csv") => {
+	const exportLogs = async (format: "xlsx" | "json" = "xlsx") => {
 		if (!canExport) {
 			toast({
 				title: "Permission required",
@@ -202,7 +202,7 @@ export default function AuditLogsPage() {
 				const url = window.URL.createObjectURL(blob);
 				const a = document.createElement("a");
 				a.href = url;
-				a.download = `audit-logs-${new Date().toISOString().slice(0, 10)}.csv`;
+				a.download = `audit-logs-${new Date().toISOString().slice(0, 10)}.xlsx`;
 				document.body.appendChild(a);
 				a.click();
 				document.body.removeChild(a);
@@ -258,12 +258,12 @@ export default function AuditLogsPage() {
 				canExport ? (
 					<>
 						<Button
-							onClick={() => exportLogs("csv")}
+							onClick={() => exportLogs("xlsx")}
 							className="primary-btn px-3 sm:px-4"
 							disabled={isExporting}
 						>
 							<SquareArrowRightExit className="h-4 w-4" />
-							Export CSV
+							Export Excel
 						</Button>
 						<Button
 							variant="outline"

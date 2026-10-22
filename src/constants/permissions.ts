@@ -153,6 +153,20 @@ export const PERMISSIONS = {
 	},
 
 	/**
+	 * Government RFP proposals — shred, certify, draft, export.
+	 * Separate from CONTRACTS so capture writers can draft without
+	 * full contract approve/sign powers.
+	 */
+	PROPOSALS: {
+		VIEW: "proposals.view",
+		CREATE: "proposals.create",
+		EDIT: "proposals.edit",
+		GENERATE: "proposals.generate",
+		EXPORT: "proposals.export",
+		LIBRARY_MANAGE: "proposals.library_manage",
+	},
+
+	/**
 	 * Constituent CRM — donor / volunteer / member file.
 	 * Separate from CONTRACTS so gift processors can work people
 	 * without contract edit/approve powers.
@@ -795,6 +809,42 @@ export const PERMISSION_DEFINITIONS = [
 		description:
 			"Create/edit pursuits and obligations, mark wins, and spawn proposals from won bids",
 	},
+	{
+		key: PERMISSIONS.PROPOSALS.VIEW,
+		name: "View Proposals",
+		category: "proposals",
+		description: "Open RFP proposal workspaces and the compliance matrix",
+	},
+	{
+		key: PERMISSIONS.PROPOSALS.CREATE,
+		name: "Create Proposals",
+		category: "proposals",
+		description: "Start a proposal from a SAM.gov opportunity or pursuit",
+	},
+	{
+		key: PERMISSIONS.PROPOSALS.EDIT,
+		name: "Edit Proposals",
+		category: "proposals",
+		description: "Edit matrix rows, section drafts, and proposal status",
+	},
+	{
+		key: PERMISSIONS.PROPOSALS.GENERATE,
+		name: "Generate Proposal Drafts",
+		category: "proposals",
+		description: "Run AI shred and section drafting on a certified matrix",
+	},
+	{
+		key: PERMISSIONS.PROPOSALS.EXPORT,
+		name: "Export Proposals",
+		category: "proposals",
+		description: "Download a proposal as PDF or Word",
+	},
+	{
+		key: PERMISSIONS.PROPOSALS.LIBRARY_MANAGE,
+		name: "Manage Proposal Library",
+		category: "proposals",
+		description: "Add and edit reusable past-performance and capability content",
+	},
 
 	// Constituent CRM
 	{
@@ -807,7 +857,8 @@ export const PERMISSION_DEFINITIONS = [
 		key: PERMISSIONS.CONSTITUENTS.MANAGE,
 		name: "Manage Constituents",
 		category: "constituents",
-		description: "Create, edit, delete, and force-insert duplicate constituents",
+		description:
+			"Create, edit, delete, and force-insert duplicate constituents",
 	},
 
 	{

@@ -310,9 +310,7 @@ export default function OutlookMailSheet({
 				),
 			);
 			setDetail((current) =>
-				current?.id === id
-					? { ...current, unread: !currentlyUnread }
-					: current,
+				current?.id === id ? { ...current, unread: !currentlyUnread } : current,
 			);
 		},
 		[runMessageAction],
@@ -475,7 +473,9 @@ export default function OutlookMailSheet({
 								{email ? (
 									<p className="truncate text-xs text-slate-500">{email}</p>
 								) : (
-									<p className="text-xs text-slate-500">Microsoft 365 in CAALM</p>
+									<p className="text-xs text-slate-500">
+										Microsoft 365 in CAALM
+									</p>
 								)}
 							</div>
 						</div>
@@ -533,7 +533,7 @@ export default function OutlookMailSheet({
 											className={cn(
 												"flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-xs font-medium transition-all duration-200 cursor-pointer",
 												active
-													? "bg-white text-slate-800 shadow-sm"
+													? "bg-white text-slate-700 shadow-sm"
 													: "text-slate-500 hover:text-slate-700",
 											)}
 										>
@@ -568,7 +568,7 @@ export default function OutlookMailSheet({
 									<Mail className="h-5 w-5 text-[#0f5384]" />
 								</div>
 								<div className="space-y-1">
-									<p className="text-sm font-medium text-slate-800">
+									<p className="text-sm font-medium text-slate-700">
 										Connect Outlook Mail
 									</p>
 									<p className="text-xs text-slate-500 max-w-[240px]">
@@ -607,9 +607,7 @@ export default function OutlookMailSheet({
 							<GmailMessageView
 								loading={detailLoading}
 								message={detail}
-								busyAction={
-									detail && busyId === detail.id ? busyAction : null
-								}
+								busyAction={detail && busyId === detail.id ? busyAction : null}
 								onBack={() => {
 									setSelectedId(null);
 									setDetail(null);
@@ -617,16 +615,11 @@ export default function OutlookMailSheet({
 								onArchive={
 									detail ? () => void handleArchive(detail.id) : undefined
 								}
-								onTrash={
-									detail ? () => void handleTrash(detail.id) : undefined
-								}
+								onTrash={detail ? () => void handleTrash(detail.id) : undefined}
 								onToggleRead={
 									detail
 										? () =>
-												void handleToggleRead(
-													detail.id,
-													Boolean(detail.unread),
-												)
+												void handleToggleRead(detail.id, Boolean(detail.unread))
 										: undefined
 								}
 								onReply={detail ? startReply : undefined}
@@ -655,7 +648,7 @@ export default function OutlookMailSheet({
 													type="button"
 													variant="ghost"
 													size="icon"
-													className="h-8 w-8 cursor-pointer text-slate-500 hover:bg-white hover:text-slate-800"
+													className="h-8 w-8 cursor-pointer text-slate-500 hover:bg-white hover:text-slate-700"
 													aria-label="Archive selected"
 													disabled={bulkBusy}
 													onClick={() => void handleBulkAction("archive")}
@@ -672,7 +665,7 @@ export default function OutlookMailSheet({
 													type="button"
 													variant="ghost"
 													size="icon"
-													className="h-8 w-8 cursor-pointer text-slate-500 hover:bg-white hover:text-slate-800"
+													className="h-8 w-8 cursor-pointer text-slate-500 hover:bg-white hover:text-slate-700"
 													aria-label="Mark selected as read"
 													disabled={bulkBusy}
 													onClick={() => void handleBulkAction("markRead")}
@@ -685,7 +678,7 @@ export default function OutlookMailSheet({
 													type="button"
 													variant="ghost"
 													size="icon"
-													className="h-8 w-8 cursor-pointer text-slate-500 hover:bg-white hover:text-slate-800"
+													className="h-8 w-8 cursor-pointer text-slate-500 hover:bg-white hover:text-slate-700"
 													aria-label="Mark selected as unread"
 													disabled={bulkBusy}
 													onClick={() => void handleBulkAction("markUnread")}
@@ -711,7 +704,7 @@ export default function OutlookMailSheet({
 													type="button"
 													variant="ghost"
 													size="icon"
-													className="h-8 w-8 cursor-pointer text-slate-500 hover:bg-white hover:text-slate-800"
+													className="h-8 w-8 cursor-pointer text-slate-500 hover:bg-white hover:text-slate-700"
 													aria-label="Clear selection"
 													disabled={bulkBusy}
 													onClick={() => setCheckedIds(new Set())}
@@ -730,9 +723,7 @@ export default function OutlookMailSheet({
 									variant={tab === "drafts" ? "drafts" : "inbox"}
 									busyId={busyId}
 									onArchive={
-										tab === "inbox"
-											? (id) => void handleArchive(id)
-											: undefined
+										tab === "inbox" ? (id) => void handleArchive(id) : undefined
 									}
 									onTrash={
 										tab === "inbox" ? (id) => void handleTrash(id) : undefined
@@ -743,9 +734,7 @@ export default function OutlookMailSheet({
 											: undefined
 									}
 									checkedIds={tab === "inbox" ? checkedIds : undefined}
-									onToggleChecked={
-										tab === "inbox" ? toggleChecked : undefined
-									}
+									onToggleChecked={tab === "inbox" ? toggleChecked : undefined}
 									onToggleAllChecked={
 										tab === "inbox" ? toggleAllChecked : undefined
 									}

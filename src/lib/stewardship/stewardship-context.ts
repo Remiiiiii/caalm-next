@@ -11,7 +11,9 @@ function pledgesTableId(): string {
 }
 
 function installmentsTableId(): string {
-	return appwriteConfig.pledgeInstallmentsCollectionId || "69d91404001f4e8c2b07";
+	return (
+		appwriteConfig.pledgeInstallmentsCollectionId || "69d91404001f4e8c2b07"
+	);
 }
 
 export type NextBestActionContext = {
@@ -57,7 +59,10 @@ export async function buildNextBestActionContext(
 				Query.limit(200),
 			],
 		});
-		for (const row of installments.rows as unknown as Record<string, unknown>[]) {
+		for (const row of installments.rows as unknown as Record<
+			string,
+			unknown
+		>[]) {
 			const pledgeId = String(row.pledgeId || "");
 			const constituentId = pledgeConstituent.get(pledgeId);
 			if (constituentId) openPledgeConstituentIds.add(constituentId);
@@ -78,9 +83,7 @@ export async function buildNextBestActionContext(
 		});
 		const rows = events.rows as unknown as Record<string, unknown>[];
 		orgHasUpcomingPublicEvent = (events.total ?? rows.length) > 0;
-		orgHasUpcomingCampaignEvent = rows.some((row) =>
-			Boolean(row.campaignId),
-		);
+		orgHasUpcomingCampaignEvent = rows.some((row) => Boolean(row.campaignId));
 	}
 
 	const daysSinceGift = (giftDateIso?: string) => {

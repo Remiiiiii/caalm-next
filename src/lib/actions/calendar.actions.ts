@@ -63,7 +63,7 @@ export interface CalendarEvent {
 	overrides?: PermissionOverrideRecord[] | string; // Can be array (in-memory) or JSON string (from DB)
 	shiftCapacity?: number;
 	shiftTemplateId?: string;
-	campaignId?: string;
+	campaignId?: string | null;
 	$createdAt?: string;
 	$updatedAt?: string;
 }

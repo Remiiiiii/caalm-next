@@ -5,19 +5,13 @@
 
 "use client";
 
-import * as VisuallyHiddenPrimitive from "@radix-ui/react-visually-hidden";
 import { Ban, ChevronLeft, ChevronRight, Loader2, Upload } from "lucide-react";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
+import { AppDialog } from "@/components/ui/app-dialog";
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogTitle,
-	DialogTrigger,
-} from "@/components/ui/dialog";
 import { Form } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { uploadFile } from "@/lib/actions/file.actions";
@@ -557,76 +551,26 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
 	return (
 		<>
-			<Dialog open={isOpen} onOpenChange={setIsOpen}>
-				<DialogTrigger asChild>
-					<Button className={className}>
-						<Upload className="h-4 w-4" />
-						Upload Contract
-					</Button>
-				</DialogTrigger>
+			<Button
+				type="button"
+				className={className}
+				onClick={() => setIsOpen(true)}
+			>
+				<Upload className="h-4 w-4" />
+				Upload Contract
+			</Button>
 
-				<DialogContent className="glass-dialog">
-					<VisuallyHiddenPrimitive.Root>
-						<DialogTitle>Upload Contract</DialogTitle>
-					</VisuallyHiddenPrimitive.Root>
-
-					{/* Professional Cap */}
-					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-
-					{/* Sticky Header */}
-					<div className="glass-dialog-wizard-header">
-						<div className="px-6">
-							<h2 className="text-2xl font-bold sidebar-gradient-text mb-3">
-								Upload New Contract
-							</h2>
-							<StepIndicator currentStep={currentStep} onGoToStep={goToStep} />
-						</div>
-					</div>
-
-					{/* Scrollable Content */}
-					<div className="glass-dialog-scroll-area">
-						<Form {...form}>
-							<form
-								id="contract-upload-form"
-								onSubmit={form.handleSubmit(handleSubmit)}
-								className="space-y-6"
-							>
-								{/* Step 1: File Upload */}
-								{currentStep === 1 && (
-									<Step1FileUpload
-										processedFileData={processedFileData}
-										isExtracting={isExtracting}
-										savedDrafts={savedDrafts}
-										onDrop={onDrop}
-										onResumeDraft={resumeDraft}
-										onDeleteDraft={handleDeleteClick}
-									/>
-								)}
-
-								{/* Steps 2-10: TODO - Implement form steps */}
-								{currentStep >= 2 && currentStep <= 10 && (
-									<div className="p-8 text-center text-slate-500">
-										<p>Form steps 2-10 are being implemented.</p>
-										<p className="text-sm mt-2">
-											Please use the original ContractUploadForm component for
-											now.
-										</p>
-									</div>
-								)}
-
-								{/* Save Progress Card */}
-								{currentStep > 1 && processedFileData && (
-									<SaveProgressCard
-										onSave={handleManualSave}
-										isSaving={isSaving}
-									/>
-								)}
-							</form>
-						</Form>
-					</div>
-
-					{/* Footer */}
-					<div className="glass-dialog-footer-actions">
+			<AppDialog
+				open={isOpen}
+				onOpenChange={setIsOpen}
+				size="form"
+				className="glass-dialog max-h-[90vh] sm:max-w-4xl"
+				icon={<Upload className="h-5 w-5" />}
+				title="Upload New Contract"
+				description={`Step ${currentStep} of ${TOTAL_STEPS}`}
+				pending={isUploading}
+				footer={
+					<div className="flex w-full items-center justify-between gap-2">
 						<Button
 							type="button"
 							variant="outline"
@@ -684,8 +628,52 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 							)}
 						</div>
 					</div>
-				</DialogContent>
-			</Dialog>
+				}
+			>
+				<div className="space-y-4 pb-1">
+					<StepIndicator currentStep={currentStep} onGoToStep={goToStep} />
+					<div className="-mx-6 min-h-0 flex-1 overflow-y-auto px-4">
+						<Form {...form}>
+							<form
+								id="contract-upload-form"
+								onSubmit={form.handleSubmit(handleSubmit)}
+								className="space-y-6"
+							>
+								{/* Step 1: File Upload */}
+								{currentStep === 1 && (
+									<Step1FileUpload
+										processedFileData={processedFileData}
+										isExtracting={isExtracting}
+										savedDrafts={savedDrafts}
+										onDrop={onDrop}
+										onResumeDraft={resumeDraft}
+										onDeleteDraft={handleDeleteClick}
+									/>
+								)}
+
+								{/* Steps 2-10: TODO - Implement form steps */}
+								{currentStep >= 2 && currentStep <= 10 && (
+									<div className="p-8 text-center text-slate-500">
+										<p>Form steps 2-10 are being implemented.</p>
+										<p className="text-sm mt-2">
+											Please use the original ContractUploadForm component for
+											now.
+										</p>
+									</div>
+								)}
+
+								{/* Save Progress Card */}
+								{currentStep > 1 && processedFileData && (
+									<SaveProgressCard
+										onSave={handleManualSave}
+										isSaving={isSaving}
+									/>
+								)}
+							</form>
+						</Form>
+					</div>
+				</div>
+			</AppDialog>
 
 			{/* Cancel Dialog */}
 			<CancelDialog

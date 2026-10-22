@@ -289,7 +289,7 @@ export default function ProductSpotlight() {
 														<p className="text-sm text-slate-600">
 															{kpi.label}
 														</p>
-														<p className="mt-1 text-2xl sm:text-3xl font-bold text-slate-800">
+														<p className="mt-1 text-2xl sm:text-3xl font-bold text-slate-700">
 															<CountUp
 																key={`${active.id}-${kpi.label}-count`}
 																end={kpi.value}
@@ -312,7 +312,7 @@ export default function ProductSpotlight() {
 														<p className="text-xs sm:text-sm text-slate-600">
 															{stat.label}
 														</p>
-														<p className="mt-1 text-xl sm:text-2xl font-bold text-slate-800">
+														<p className="mt-1 text-xl sm:text-2xl font-bold text-slate-700">
 															{stat.value}
 														</p>
 													</div>

@@ -19,7 +19,9 @@ export async function listDismissedExternalIds(
 		],
 	});
 	return new Set(
-		response.rows.map((row) => String((row as { externalId?: string }).externalId)),
+		response.rows.map((row) =>
+			String((row as { externalId?: string }).externalId),
+		),
 	);
 }
 

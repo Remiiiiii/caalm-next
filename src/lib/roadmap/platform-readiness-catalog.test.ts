@@ -46,7 +46,9 @@ describe("platform readiness roadmap catalog", () => {
 				(t) => t.taskCode,
 			),
 		);
-		const clmCodes = flattenCatalogTasks(ROADMAP_CATALOG).map((t) => t.taskCode);
+		const clmCodes = flattenCatalogTasks(ROADMAP_CATALOG).map(
+			(t) => t.taskCode,
+		);
 		const npoCodes = flattenCatalogTasks(NONPROFIT_ROADMAP_CATALOG).map(
 			(t) => t.taskCode,
 		);

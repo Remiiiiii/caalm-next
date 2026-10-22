@@ -7,9 +7,9 @@ import {
 	isArticleVisibleToAudience,
 	type NewsReaderAudience,
 } from "@/lib/news/audience";
+import type { NewsArticleSource } from "@/lib/news/ingest/types";
 import { toStoredPriority } from "@/lib/news/priority";
 import { sortNewsForFeed } from "@/lib/news/sort";
-import type { NewsArticleSource } from "@/lib/news/ingest/types";
 
 export type NewsArticleStatus =
 	| "draft"
@@ -339,8 +339,7 @@ export async function listNewsArticles(
 			queries.push(Query.equal("type", params.type));
 		}
 		if (params.priority && params.priority !== "all") {
-			const stored =
-				params.priority === "normal" ? "medium" : params.priority;
+			const stored = params.priority === "normal" ? "medium" : params.priority;
 			queries.push(Query.equal("priority", stored));
 		}
 		if (params.department && params.department !== "all") {
