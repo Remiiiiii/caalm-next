@@ -129,9 +129,9 @@ export type EvidenceRecordKind = "contract" | "license";
 export function catalogForRecordKind(
 	kind: EvidenceRecordKind,
 ): Omit<AuditEvidenceMapRow, "$id">[] {
-	const module = kind === "contract" ? "contracts" : "licenses";
+	const caalmModule = kind === "contract" ? "contracts" : "licenses";
 	return CFCE_EVIDENCE_MAP_SEED.filter(
-		(row) => row.inV1 && row.caalmModule === module,
+		(row) => row.inV1 && row.caalmModule === caalmModule,
 	);
 }
 
