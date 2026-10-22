@@ -245,7 +245,9 @@ export async function reassignAssigner(input: {
 
 	for (const row of roleRows.rows) {
 		const userId = String((row as { userId?: string }).userId || "");
-		const assignedBy = String((row as { assignedBy?: string }).assignedBy || "");
+		const assignedBy = String(
+			(row as { assignedBy?: string }).assignedBy || "",
+		);
 		const roleId = String((row as { roleId?: string }).roleId || "");
 		if (targetCandidateIds.has(userId)) {
 			targetRoleRows.push({

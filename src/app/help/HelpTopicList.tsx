@@ -25,7 +25,7 @@ export default function HelpTopicList() {
 					>
 						<AccordionTrigger className="cursor-pointer py-5 text-left hover:no-underline [&>svg]:h-5 [&>svg]:w-5 [&>svg]:text-slate-400">
 							<span className="pr-4">
-								<span className="block text-base font-semibold text-slate-800">
+								<span className="block text-base font-semibold text-slate-700">
 									{group.title}
 								</span>
 								<span className="mt-1 block text-sm font-normal text-slate-500">

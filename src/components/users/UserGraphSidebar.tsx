@@ -9,7 +9,7 @@ import {
 	TrendingDown,
 	TrendingUp,
 } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import {
 	Tooltip,
 	TooltipContent,
@@ -18,15 +18,15 @@ import {
 } from "@/components/ui/tooltip";
 import type { UserManagementUser } from "@/hooks/useUsers";
 import {
-	EMPTY_ORG_LABEL,
 	countNeedsAttention,
-	graphCreatedTrend,
-	graphHighlightsEqual,
+	EMPTY_ORG_LABEL,
 	type GraphHighlight,
 	type GraphSidebarStats,
+	graphCreatedTrend,
+	graphHighlightsEqual,
 } from "@/lib/users/graph-sidebar-stats";
-import { formatUserLastActiveLabel } from "@/lib/users/user-management-display";
 import { skipLevelManagerId } from "@/lib/users/reporting-graph";
+import { formatUserLastActiveLabel } from "@/lib/users/user-management-display";
 import { cn } from "@/lib/utils";
 
 const GRAPH_SIDEBAR_COLLAPSED_KEY = "user-graph-sidebar:collapsed";
@@ -85,13 +85,7 @@ function GraphSidebarCollapseButton({
 	);
 }
 
-const ROLE_DOT_COLORS = [
-	"#0f5384",
-	"#03afbf",
-	"#16a34a",
-	"#E0724A",
-	"#64748b",
-];
+const ROLE_DOT_COLORS = ["#0f5384", "#03afbf", "#16a34a", "#E0724A", "#64748b"];
 
 export type GraphPlanUsage = {
 	tier: string;
@@ -105,7 +99,9 @@ export type GraphPendingInvite = {
 	role: string;
 };
 
-function sectionForHighlight(highlight: GraphHighlight | null): SectionId | null {
+function sectionForHighlight(
+	highlight: GraphHighlight | null,
+): SectionId | null {
 	if (!highlight) return null;
 	switch (highlight.kind) {
 		case "security":
@@ -183,7 +179,7 @@ function SidebarSection({
 					) : null}
 				</span>
 				{tint !== "warn" && badge != null ? (
-					<span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red/10 px-1.5 text-[10px] font-medium tabular-nums text-red">
+					<span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red/10 px-1.5 text-[10px] tabular-nums text-red">
 						{badge}
 					</span>
 				) : null}
@@ -226,10 +222,15 @@ function MetricRow({
 			)}
 		>
 			{dotClass ? (
-				<span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", dotClass)} aria-hidden />
+				<span
+					className={cn("h-1.5 w-1.5 shrink-0 rounded-full", dotClass)}
+					aria-hidden
+				/>
 			) : null}
 			<span className="min-w-0 flex-1 truncate">{label}</span>
-			<span className={cn("tabular-nums text-slate-700", countClass)}>{count}</span>
+			<span className={cn("tabular-nums text-slate-700", countClass)}>
+				{count}
+			</span>
 		</button>
 	);
 }
@@ -255,7 +256,9 @@ function StatusBar({
 		<button
 			type="button"
 			aria-pressed={selected}
-			aria-label={selected ? `Clear ${label} highlight` : `Highlight ${label} users`}
+			aria-label={
+				selected ? `Clear ${label} highlight` : `Highlight ${label} users`
+			}
 			onClick={onClick}
 			className={cn(
 				"flex w-full cursor-pointer items-center gap-2 rounded-md px-0.5 py-0.5 text-xs text-slate-600 transition-colors duration-200",
@@ -263,12 +266,20 @@ function StatusBar({
 				selected && "bg-blue-50 ring-1 ring-[#0f5384]/25",
 			)}
 		>
-			<span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", dotClass)} aria-hidden />
+			<span
+				className={cn("h-1.5 w-1.5 shrink-0 rounded-full", dotClass)}
+				aria-hidden
+			/>
 			<span className="sr-only">{label}</span>
 			<div className="h-1 flex-1 overflow-hidden rounded-full bg-slate-200">
-				<div className={cn("h-full rounded-full", barClass)} style={{ width: `${pct}%` }} />
+				<div
+					className={cn("h-full rounded-full", barClass)}
+					style={{ width: `${pct}%` }}
+				/>
 			</div>
-			<span className="w-5 text-right tabular-nums text-slate-700">{count}</span>
+			<span className="w-5 text-right tabular-nums text-slate-700">
+				{count}
+			</span>
 		</button>
 	);
 }
@@ -348,7 +359,10 @@ function IssueList({
 			</p>
 			{people.length === 0 ? (
 				<div className="mt-2 flex items-start gap-2 px-1.5">
-					<Lock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden />
+					<Lock
+						className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400"
+						aria-hidden
+					/>
 					<p className="text-xs text-slate-600">{empty}</p>
 				</div>
 			) : (
@@ -459,9 +473,7 @@ export function UserGraphSidebar({
 	const selectedReports = selected
 		? (stats.directReportsByUserId.get(selected.$id) ?? 0)
 		: 0;
-	const skipLevelId = selected
-		? skipLevelManagerId(selected.$id, users)
-		: null;
+	const skipLevelId = selected ? skipLevelManagerId(selected.$id, users) : null;
 	const skipLevelName = skipLevelId
 		? users.find((user) => user.$id === skipLevelId)?.fullName
 		: null;
@@ -469,7 +481,9 @@ export function UserGraphSidebar({
 	const seatsUsed = planUsage?.users.used;
 	const seatsLimit = planUsage?.users.limit;
 	const showSeats =
-		planUsage != null && typeof seatsUsed === "number" && typeof seatsLimit === "number";
+		planUsage != null &&
+		typeof seatsUsed === "number" &&
+		typeof seatsLimit === "number";
 	const seatsPct =
 		showSeats && seatsLimit > 0
 			? Math.min(100, Math.round((seatsUsed / seatsLimit) * 100))
@@ -499,566 +513,584 @@ export function UserGraphSidebar({
 		<aside className="relative flex h-full w-65 shrink-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white/90 shadow-md">
 			<div className="glass-card-cap" />
 			<div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-3 pt-5">
-			<div className="mb-1 flex items-center justify-end">
-				<GraphSidebarCollapseButton
-					collapsed={false}
-					onToggle={toggleCollapsed}
-				/>
-			</div>
+				<div className="mb-1 flex items-center justify-end">
+					<GraphSidebarCollapseButton
+						collapsed={false}
+						onToggle={toggleCollapsed}
+					/>
+				</div>
 
-			<button
-				type="button"
-				onClick={() => {
-					onSelectHighlight(null);
-					onFocusUser(null);
-				}}
-				aria-label={highlightActive ? "Show all users" : "All users"}
-				aria-pressed={!highlightActive}
-				className={cn(
-					"w-full rounded-md px-1 py-1.5 text-left transition-colors duration-200",
-					"cursor-pointer hover:bg-blue-50",
-					"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
-				)}
-			>
-				<p className="text-[10.5px] font-medium uppercase tracking-wide text-slate-500">
-					All users
-				</p>
-				<p className="pt-1 text-2xl font-bold tabular-nums text-slate-700">
-					{total}
-				</p>
-				{highlightActive ? (
-					<p className="mt-0.5 text-xs font-medium text-[#0f5384]">Show all</p>
-				) : (
-					<>
-						<p
-							className={cn(
-								"mt-0.5 flex items-center gap-1 text-xs",
-								createdTrend === "up" && "font-medium text-green",
-								createdTrend === "down" && "font-medium text-red",
-								createdTrend === "flat" && "text-slate-500",
-							)}
-						>
-							{createdTrend === "up" ? (
-								<TrendingUp
-									className="h-3.5 w-3.5"
-									aria-label="Users added up this week"
-								/>
-							) : null}
-							{createdTrend === "down" ? (
-								<TrendingDown
-									className="h-3.5 w-3.5"
-									aria-label="Users added down this week"
-								/>
-							) : null}
-							+{stats.createdThisWeek} this week
-						</p>
-						<p
-							className={cn(
-								"flex items-center gap-1 text-xs",
-								createdMonthTrend === "up" && "font-medium text-green",
-								createdMonthTrend === "down" && "font-medium text-red",
-								createdMonthTrend === "flat" && "text-slate-500",
-							)}
-						>
-							{createdMonthTrend === "up" ? (
-								<TrendingUp
-									className="h-3.5 w-3.5"
-									aria-label="Users added up this month"
-								/>
-							) : null}
-							{createdMonthTrend === "down" ? (
-								<TrendingDown
-									className="h-3.5 w-3.5"
-									aria-label="Users added down this month"
-								/>
-							) : null}
-							+{stats.createdThisMonth} this month
-						</p>
-					</>
-				)}
-			</button>
-
-			<div className="mt-2 space-y-2">
-				<SidebarSection
-					id="needs-attention"
-					title="Needs attention"
-					open={openSections["needs-attention"]}
-					onToggle={() => toggleSection("needs-attention")}
-					badge={attentionCount}
+				<button
+					type="button"
+					onClick={() => {
+						onSelectHighlight(null);
+						onFocusUser(null);
+					}}
+					aria-label={highlightActive ? "Show all users" : "All users"}
+					aria-pressed={!highlightActive}
+					className={cn(
+						"w-full rounded-md px-1 py-1.5 text-left transition-colors duration-200",
+						"cursor-pointer hover:bg-blue-50",
+						"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
+					)}
 				>
-					<div className="space-y-0.5">
-						<MetricRow
-							label="No 2FA enabled"
-							count={stats.twoFactorOff}
-							countClass="text-red"
-							selected={graphHighlightsEqual(highlight, {
-								kind: "security",
-								value: "no-2fa",
-							})}
-							onClick={() => toggle({ kind: "security", value: "no-2fa" })}
-						/>
-						{stats.passwordHistoryAvailable ? (
-							<>
-								<MetricRow
-									label="Password never changed"
-									count={stats.passwordNever}
-									countClass="text-orange"
-									selected={graphHighlightsEqual(highlight, {
-										kind: "security",
-										value: "password-never",
-									})}
-									onClick={() =>
-										toggle({ kind: "security", value: "password-never" })
-									}
-								/>
-								<MetricRow
-									label="Password 90+ days old"
-									count={stats.passwordStale}
-									countClass="text-orange"
-									selected={graphHighlightsEqual(highlight, {
-										kind: "security",
-										value: "password-stale",
-									})}
-									onClick={() =>
-										toggle({ kind: "security", value: "password-stale" })
-									}
-								/>
-							</>
-						) : null}
-						<div className="my-1.5 border-t border-slate-200" />
-						<MetricRow
-							label="No division assigned"
-							count={stats.noDivision}
-							selected={graphHighlightsEqual(highlight, {
-								kind: "hygiene",
-								value: "no-division",
-							})}
-							onClick={() => toggle({ kind: "hygiene", value: "no-division" })}
-						/>
-						<MetricRow
-							label="Assigner ≠ manager"
-							count={stats.mismatch}
-							selected={graphHighlightsEqual(highlight, {
-								kind: "hygiene",
-								value: "mismatch",
-							})}
-							onClick={() => toggle({ kind: "hygiene", value: "mismatch" })}
-						/>
-						<MetricRow
-							label="No department"
-							count={stats.noDepartment}
-							selected={graphHighlightsEqual(highlight, {
-								kind: "hygiene",
-								value: "no-department",
-							})}
-							onClick={() => toggle({ kind: "hygiene", value: "no-department" })}
-						/>
-						<MetricRow
-							label="No role"
-							count={stats.noRole}
-							selected={graphHighlightsEqual(highlight, {
-								kind: "hygiene",
-								value: "no-role",
-							})}
-							onClick={() => toggle({ kind: "hygiene", value: "no-role" })}
-						/>
-					</div>
-				</SidebarSection>
-
-				<SidebarSection
-					id="unassigned"
-					title="Unassigned users"
-					open={openSections.unassigned}
-					onToggle={() => toggleSection("unassigned")}
-					badge={stats.unassignedUsers.length}
-					tint="warn"
-				>
-					{stats.unassignedUsers.length === 0 ? (
-						<p className="px-1.5 text-xs text-slate-600">
-							Everyone has a department and division
+					<p className="text-[10.5px] font-medium uppercase tracking-wide text-slate-500">
+						All users
+					</p>
+					<p className="pt-1 text-2xl font-bold tabular-nums text-slate-700">
+						{total}
+					</p>
+					{highlightActive ? (
+						<p className="mt-0.5 text-xs font-medium text-[#0f5384]">
+							Show all
 						</p>
 					) : (
-						<ul className="max-h-40 space-y-0.5 overflow-y-auto overscroll-contain pr-0.5">
-							{stats.unassignedUsers.map((user) => (
-								<li key={user.$id} className="flex items-center gap-1">
-									<button
-										type="button"
-										aria-pressed={focusUserId === user.$id}
+						<>
+							<p
+								className={cn(
+									"mt-0.5 flex items-center gap-1 text-xs",
+									createdTrend === "up" && "font-medium text-green",
+									createdTrend === "down" && "font-medium text-red",
+									createdTrend === "flat" && "text-slate-500",
+								)}
+							>
+								{createdTrend === "up" ? (
+									<TrendingUp
+										className="h-3.5 w-3.5"
+										aria-label="Users added up this week"
+									/>
+								) : null}
+								{createdTrend === "down" ? (
+									<TrendingDown
+										className="h-3.5 w-3.5"
+										aria-label="Users added down this week"
+									/>
+								) : null}
+								+{stats.createdThisWeek} this week
+							</p>
+							<p
+								className={cn(
+									"flex items-center gap-1 text-xs",
+									createdMonthTrend === "up" && "font-medium text-green",
+									createdMonthTrend === "down" && "font-medium text-red",
+									createdMonthTrend === "flat" && "text-slate-500",
+								)}
+							>
+								{createdMonthTrend === "up" ? (
+									<TrendingUp
+										className="h-3.5 w-3.5"
+										aria-label="Users added up this month"
+									/>
+								) : null}
+								{createdMonthTrend === "down" ? (
+									<TrendingDown
+										className="h-3.5 w-3.5"
+										aria-label="Users added down this month"
+									/>
+								) : null}
+								+{stats.createdThisMonth} this month
+							</p>
+						</>
+					)}
+				</button>
+
+				<div className="mt-2 space-y-2">
+					<SidebarSection
+						id="needs-attention"
+						title="Needs attention"
+						open={openSections["needs-attention"]}
+						onToggle={() => toggleSection("needs-attention")}
+						badge={attentionCount}
+					>
+						<div className="space-y-0.5">
+							<MetricRow
+								label="No 2FA enabled"
+								count={stats.twoFactorOff}
+								countClass="text-red"
+								selected={graphHighlightsEqual(highlight, {
+									kind: "security",
+									value: "no-2fa",
+								})}
+								onClick={() => toggle({ kind: "security", value: "no-2fa" })}
+							/>
+							{stats.passwordHistoryAvailable ? (
+								<>
+									<MetricRow
+										label="Password never changed"
+										count={stats.passwordNever}
+										countClass="text-orange"
+										selected={graphHighlightsEqual(highlight, {
+											kind: "security",
+											value: "password-never",
+										})}
 										onClick={() =>
-											onFocusUser(focusUserId === user.$id ? null : user.$id)
+											toggle({ kind: "security", value: "password-never" })
 										}
-										className={cn(
-											"min-w-0 flex-1 cursor-pointer truncate rounded-md px-1.5 py-1 text-left text-xs text-slate-700 transition-colors duration-200 hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
-											focusUserId === user.$id &&
-												"bg-white/80 ring-1 ring-[#0f5384]/25",
-										)}
-									>
-										{user.fullName}
-									</button>
-									{canAssign ? (
+									/>
+									<MetricRow
+										label="Password 90+ days old"
+										count={stats.passwordStale}
+										countClass="text-orange"
+										selected={graphHighlightsEqual(highlight, {
+											kind: "security",
+											value: "password-stale",
+										})}
+										onClick={() =>
+											toggle({ kind: "security", value: "password-stale" })
+										}
+									/>
+								</>
+							) : null}
+							<div className="my-1.5 border-t border-slate-200" />
+							<MetricRow
+								label="No division assigned"
+								count={stats.noDivision}
+								selected={graphHighlightsEqual(highlight, {
+									kind: "hygiene",
+									value: "no-division",
+								})}
+								onClick={() =>
+									toggle({ kind: "hygiene", value: "no-division" })
+								}
+							/>
+							<MetricRow
+								label="Assigner ≠ manager"
+								count={stats.mismatch}
+								selected={graphHighlightsEqual(highlight, {
+									kind: "hygiene",
+									value: "mismatch",
+								})}
+								onClick={() => toggle({ kind: "hygiene", value: "mismatch" })}
+							/>
+							<MetricRow
+								label="No department"
+								count={stats.noDepartment}
+								selected={graphHighlightsEqual(highlight, {
+									kind: "hygiene",
+									value: "no-department",
+								})}
+								onClick={() =>
+									toggle({ kind: "hygiene", value: "no-department" })
+								}
+							/>
+							<MetricRow
+								label="No role"
+								count={stats.noRole}
+								selected={graphHighlightsEqual(highlight, {
+									kind: "hygiene",
+									value: "no-role",
+								})}
+								onClick={() => toggle({ kind: "hygiene", value: "no-role" })}
+							/>
+						</div>
+					</SidebarSection>
+
+					<SidebarSection
+						id="unassigned"
+						title="Unassigned users"
+						open={openSections.unassigned}
+						onToggle={() => toggleSection("unassigned")}
+						badge={stats.unassignedUsers.length}
+						tint="warn"
+					>
+						{stats.unassignedUsers.length === 0 ? (
+							<p className="px-1.5 text-xs text-slate-600">
+								Everyone has a department and division
+							</p>
+						) : (
+							<ul className="max-h-40 space-y-0.5 overflow-y-auto overscroll-contain pr-0.5">
+								{stats.unassignedUsers.map((user) => (
+									<li key={user.$id} className="flex items-center gap-1">
 										<button
 											type="button"
+											aria-pressed={focusUserId === user.$id}
 											onClick={() =>
-												onAssignUser
-													? onAssignUser(user)
-													: onFocusUser(user.$id)
+												onFocusUser(focusUserId === user.$id ? null : user.$id)
 											}
-											className="shrink-0 cursor-pointer rounded-md px-1.5 py-1 text-xs font-medium text-[#0f5384] transition-colors duration-200 hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
+											className={cn(
+												"min-w-0 flex-1 cursor-pointer truncate rounded-md px-1.5 py-1 text-left text-xs text-slate-700 transition-colors duration-200 hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
+												focusUserId === user.$id &&
+													"bg-white/80 ring-1 ring-[#0f5384]/25",
+											)}
 										>
-											+ Assign
+											{user.fullName}
 										</button>
-									) : null}
-								</li>
-							))}
-						</ul>
-					)}
-				</SidebarSection>
+										{canAssign ? (
+											<button
+												type="button"
+												onClick={() =>
+													onAssignUser
+														? onAssignUser(user)
+														: onFocusUser(user.$id)
+												}
+												className="shrink-0 cursor-pointer rounded-md px-1.5 py-1 text-xs text-[#0f5384] transition-colors duration-200 hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
+											>
+												+ Assign
+											</button>
+										) : null}
+									</li>
+								))}
+							</ul>
+						)}
+					</SidebarSection>
 
-				<SidebarSection
-					id="overview"
-					title="Overview"
-					open={openSections.overview}
-					onToggle={() => toggleSection("overview")}
-				>
-					<div className="space-y-2">
-						<StatusBar
-							label="Active"
-							count={stats.active}
-							pct={pct(stats.active)}
-							barClass="bg-green"
-							dotClass="bg-green"
-							selected={graphHighlightsEqual(highlight, {
-								kind: "status",
-								value: "active",
-							})}
-							onClick={() => toggle({ kind: "status", value: "active" })}
-						/>
-						<StatusBar
-							label="Inactive"
-							count={stats.inactive}
-							pct={pct(stats.inactive)}
-							barClass="bg-slate-400"
-							dotClass="bg-slate-400"
-							selected={graphHighlightsEqual(highlight, {
-								kind: "status",
-								value: "inactive",
-							})}
-							onClick={() => toggle({ kind: "status", value: "inactive" })}
-						/>
-						<StatusBar
-							label="Suspended"
-							count={stats.suspended}
-							pct={pct(stats.suspended)}
-							barClass="bg-orange"
-							dotClass="bg-orange"
-							selected={graphHighlightsEqual(highlight, {
-								kind: "status",
-								value: "suspended",
-							})}
-							onClick={() => toggle({ kind: "status", value: "suspended" })}
-						/>
-					</div>
-					<div className="mt-2 space-y-0.5">
-						<MetricRow
-							label="Admin assigned"
-							count={stats.adminAssigned}
-							selected={graphHighlightsEqual(highlight, {
-								kind: "assignment",
-								value: "admin",
-							})}
-							onClick={() => toggle({ kind: "assignment", value: "admin" })}
-						/>
-						<MetricRow
-							label="System assigned"
-							count={stats.systemAssigned}
-							selected={graphHighlightsEqual(highlight, {
-								kind: "assignment",
-								value: "system",
-							})}
-							onClick={() => toggle({ kind: "assignment", value: "system" })}
-						/>
-						<div className="flex items-center justify-between px-1.5 py-1 text-xs text-slate-700">
-							<span>Avg reports / max depth</span>
-							<span className="tabular-nums">
-								{stats.avgReports} / {stats.maxTreeDepth}
-							</span>
+					<SidebarSection
+						id="overview"
+						title="Overview"
+						open={openSections.overview}
+						onToggle={() => toggleSection("overview")}
+					>
+						<div className="space-y-2">
+							<StatusBar
+								label="Active"
+								count={stats.active}
+								pct={pct(stats.active)}
+								barClass="bg-green"
+								dotClass="bg-green"
+								selected={graphHighlightsEqual(highlight, {
+									kind: "status",
+									value: "active",
+								})}
+								onClick={() => toggle({ kind: "status", value: "active" })}
+							/>
+							<StatusBar
+								label="Inactive"
+								count={stats.inactive}
+								pct={pct(stats.inactive)}
+								barClass="bg-slate-400"
+								dotClass="bg-slate-400"
+								selected={graphHighlightsEqual(highlight, {
+									kind: "status",
+									value: "inactive",
+								})}
+								onClick={() => toggle({ kind: "status", value: "inactive" })}
+							/>
+							<StatusBar
+								label="Suspended"
+								count={stats.suspended}
+								pct={pct(stats.suspended)}
+								barClass="bg-orange"
+								dotClass="bg-orange"
+								selected={graphHighlightsEqual(highlight, {
+									kind: "status",
+									value: "suspended",
+								})}
+								onClick={() => toggle({ kind: "status", value: "suspended" })}
+							/>
 						</div>
-					</div>
-				</SidebarSection>
+						<div className="mt-2 space-y-0.5">
+							<MetricRow
+								label="Admin assigned"
+								count={stats.adminAssigned}
+								selected={graphHighlightsEqual(highlight, {
+									kind: "assignment",
+									value: "admin",
+								})}
+								onClick={() => toggle({ kind: "assignment", value: "admin" })}
+							/>
+							<MetricRow
+								label="System assigned"
+								count={stats.systemAssigned}
+								selected={graphHighlightsEqual(highlight, {
+									kind: "assignment",
+									value: "system",
+								})}
+								onClick={() => toggle({ kind: "assignment", value: "system" })}
+							/>
+							<div className="flex items-center justify-between px-1.5 py-1 text-xs text-slate-700">
+								<span>Avg reports / max depth</span>
+								<span className="tabular-nums">
+									{stats.avgReports} / {stats.maxTreeDepth}
+								</span>
+							</div>
+						</div>
+					</SidebarSection>
 
-				<SidebarSection
-					id="activity-plan"
-					title="Activity & Plan"
-					open={openSections["activity-plan"]}
-					onToggle={() => toggleSection("activity-plan")}
-				>
-					<div className="space-y-0.5">
-						<MetricRow
-							label="Active in 7 days"
-							count={stats.active7d}
-							selected={graphHighlightsEqual(highlight, {
-								kind: "activity",
-								value: "active-7d",
-							})}
-							onClick={() => toggle({ kind: "activity", value: "active-7d" })}
-						/>
-						<MetricRow
-							label="Stale 30+ days"
-							count={stats.stale30d}
-							selected={graphHighlightsEqual(highlight, {
-								kind: "activity",
-								value: "stale-30d",
-							})}
-							onClick={() => toggle({ kind: "activity", value: "stale-30d" })}
-						/>
-						<MetricRow
-							label="Never logged in"
-							count={stats.neverLoggedIn}
-							selected={graphHighlightsEqual(highlight, {
-								kind: "activity",
-								value: "never",
-							})}
-							onClick={() => toggle({ kind: "activity", value: "never" })}
-						/>
-						<MetricRow
-							label="Assigned this week"
-							count={stats.assignedThisWeek}
-							selected={graphHighlightsEqual(highlight, {
-								kind: "assignment",
-								value: "assigned-week",
-							})}
-							onClick={() => toggle({ kind: "assignment", value: "assigned-week" })}
-						/>
-						<MetricRow
-							label="Assigned this month"
-							count={stats.assignedThisMonth}
-							selected={graphHighlightsEqual(highlight, {
-								kind: "assignment",
-								value: "assigned-month",
-							})}
-							onClick={() =>
-								toggle({ kind: "assignment", value: "assigned-month" })
-							}
-						/>
-					</div>
-					{showSeats ? (
-						<div className="mt-2 px-1.5">
-							<p className="text-[10.5px] font-medium uppercase tracking-wide text-slate-500">
-								Plan seats
-							</p>
-							<p className="pt-1 text-lg font-bold tabular-nums text-slate-700">
-								{seatsUsed} / {seatsLimit}
-							</p>
-							<p className="text-xs text-slate-500">{seatsPct}% of staff seats</p>
+					<SidebarSection
+						id="activity-plan"
+						title="Activity & Plan"
+						open={openSections["activity-plan"]}
+						onToggle={() => toggleSection("activity-plan")}
+					>
+						<div className="space-y-0.5">
+							<MetricRow
+								label="Active in 7 days"
+								count={stats.active7d}
+								selected={graphHighlightsEqual(highlight, {
+									kind: "activity",
+									value: "active-7d",
+								})}
+								onClick={() => toggle({ kind: "activity", value: "active-7d" })}
+							/>
+							<MetricRow
+								label="Stale 30+ days"
+								count={stats.stale30d}
+								selected={graphHighlightsEqual(highlight, {
+									kind: "activity",
+									value: "stale-30d",
+								})}
+								onClick={() => toggle({ kind: "activity", value: "stale-30d" })}
+							/>
+							<MetricRow
+								label="Never logged in"
+								count={stats.neverLoggedIn}
+								selected={graphHighlightsEqual(highlight, {
+									kind: "activity",
+									value: "never",
+								})}
+								onClick={() => toggle({ kind: "activity", value: "never" })}
+							/>
+							<MetricRow
+								label="Assigned this week"
+								count={stats.assignedThisWeek}
+								selected={graphHighlightsEqual(highlight, {
+									kind: "assignment",
+									value: "assigned-week",
+								})}
+								onClick={() =>
+									toggle({ kind: "assignment", value: "assigned-week" })
+								}
+							/>
+							<MetricRow
+								label="Assigned this month"
+								count={stats.assignedThisMonth}
+								selected={graphHighlightsEqual(highlight, {
+									kind: "assignment",
+									value: "assigned-month",
+								})}
+								onClick={() =>
+									toggle({ kind: "assignment", value: "assigned-month" })
+								}
+							/>
 						</div>
-					) : null}
-					{pendingInvites ? (
-						<div className="mt-2 px-1.5">
-							<p className="text-[10.5px] font-medium uppercase tracking-wide text-slate-500">
-								Pending invites
-							</p>
-							<p className="pt-1 text-lg font-bold tabular-nums text-slate-700">
-								{pendingInvites.length}
-							</p>
-							{pendingInvites.length === 0 ? (
-								<p className="mt-1 text-xs text-slate-500">No open invitations</p>
-							) : (
-								<ul className="mt-2 space-y-1">
-									{pendingInvites.map((invite) => (
-										<li
-											key={invite.$id}
-											className="truncate text-xs text-slate-700"
-										>
-											{invite.name.trim() || invite.email}
-										</li>
-									))}
-								</ul>
-							)}
-						</div>
-					) : null}
-				</SidebarSection>
+						{showSeats ? (
+							<div className="mt-2 px-1.5">
+								<p className="text-[10.5px] font-medium uppercase tracking-wide text-slate-500">
+									Plan seats
+								</p>
+								<p className="pt-1 text-lg font-bold tabular-nums text-slate-700">
+									{seatsUsed} / {seatsLimit}
+								</p>
+								<p className="text-xs text-slate-500">
+									{seatsPct}% of staff seats
+								</p>
+							</div>
+						) : null}
+						{pendingInvites ? (
+							<div className="mt-2 px-1.5">
+								<p className="text-[10.5px] font-medium uppercase tracking-wide text-slate-500">
+									Pending invites
+								</p>
+								<p className="pt-1 text-lg font-bold tabular-nums text-slate-700">
+									{pendingInvites.length}
+								</p>
+								{pendingInvites.length === 0 ? (
+									<p className="mt-1 text-xs text-slate-500">
+										No open invitations
+									</p>
+								) : (
+									<ul className="mt-2 space-y-1">
+										{pendingInvites.map((invite) => (
+											<li
+												key={invite.$id}
+												className="truncate text-xs text-slate-700"
+											>
+												{invite.name.trim() || invite.email}
+											</li>
+										))}
+									</ul>
+								)}
+							</div>
+						) : null}
+					</SidebarSection>
 
-				<SidebarSection
-					id="distribution"
-					title="Distribution"
-					open={openSections.distribution}
-					onToggle={() => toggleSection("distribution")}
-				>
-					<GroupRows
-						title="Users by role"
-						rows={stats.roleRows}
-						highlight={highlight}
-						kind="role"
-						onToggle={toggle}
-					/>
-					<GroupRows
-						title="Users by department"
-						rows={stats.departmentRows}
-						highlight={highlight}
-						kind="department"
-						onToggle={toggle}
-					/>
-					<GroupRows
-						title="Users by division"
-						rows={stats.divisionRows}
-						highlight={highlight}
-						kind="division"
-						onToggle={toggle}
-					/>
-					<GroupRows
-						title="Users by location"
-						rows={stats.locationRows}
-						highlight={highlight}
-						kind="location"
-						onToggle={toggle}
-					/>
-					<GroupRows
-						title="Users by cost center"
-						rows={stats.costCenterRows}
-						highlight={highlight}
-						kind="costCenter"
-						onToggle={toggle}
-					/>
-				</SidebarSection>
+					<SidebarSection
+						id="distribution"
+						title="Distribution"
+						open={openSections.distribution}
+						onToggle={() => toggleSection("distribution")}
+					>
+						<GroupRows
+							title="Users by role"
+							rows={stats.roleRows}
+							highlight={highlight}
+							kind="role"
+							onToggle={toggle}
+						/>
+						<GroupRows
+							title="Users by department"
+							rows={stats.departmentRows}
+							highlight={highlight}
+							kind="department"
+							onToggle={toggle}
+						/>
+						<GroupRows
+							title="Users by division"
+							rows={stats.divisionRows}
+							highlight={highlight}
+							kind="division"
+							onToggle={toggle}
+						/>
+						<GroupRows
+							title="Users by location"
+							rows={stats.locationRows}
+							highlight={highlight}
+							kind="location"
+							onToggle={toggle}
+						/>
+						<GroupRows
+							title="Users by cost center"
+							rows={stats.costCenterRows}
+							highlight={highlight}
+							kind="costCenter"
+							onToggle={toggle}
+						/>
+					</SidebarSection>
 
-				<SidebarSection
-					id="diagnostics"
-					title="Diagnostics"
-					open={openSections.diagnostics}
-					onToggle={() => toggleSection("diagnostics")}
-				>
-					<div className="space-y-0.5">
-						<MetricRow
-							label="Unknown assigner"
-							count={stats.ghostAssigned}
-							selected={graphHighlightsEqual(highlight, {
-								kind: "assignment",
-								value: "ghost",
-							})}
-							onClick={() => toggle({ kind: "assignment", value: "ghost" })}
-						/>
-						<MetricRow
-							label="Extra roots"
-							count={stats.extraRoots}
-							selected={graphHighlightsEqual(highlight, {
-								kind: "assignment",
-								value: "extra-roots",
-							})}
-							onClick={() => toggle({ kind: "assignment", value: "extra-roots" })}
-						/>
-						<MetricRow
-							label="2FA on"
-							count={stats.twoFactorOn}
-							selected={graphHighlightsEqual(highlight, {
-								kind: "security",
-								value: "2fa-on",
-							})}
-							onClick={() => toggle({ kind: "security", value: "2fa-on" })}
-						/>
-					</div>
-					<div className="mt-2">
-						<IssueList
-							title="Unknown assigner"
-							empty="Every assigner is on this diagram"
-							people={stats.ghostUsers}
-							focusUserId={focusUserId}
-							onFocusUser={onFocusUser}
-						/>
-						<IssueList
-							title="Deactivated with reports"
-							empty="No deactivated users have reports"
-							people={stats.deactivatedWithReports}
-							focusUserId={focusUserId}
-							onFocusUser={onFocusUser}
-						/>
-					</div>
-				</SidebarSection>
-			</div>
-
-			{selected ? (
-				<div className="mt-3 rounded-lg border border-[#0f5384]/25 bg-white/80 p-3.5">
-					<p className="text-[10.5px] font-medium uppercase tracking-wide text-slate-500">
-						Selected
-					</p>
-					<p className="pt-1 text-sm font-semibold text-slate-700">
-						{selected.fullName}
-					</p>
-					<dl className="mt-2 space-y-1 text-xs text-slate-600">
-						<div className="flex justify-between gap-2">
-							<dt>Title</dt>
-							<dd className="truncate text-right text-slate-700">
-								{selected.jobTitle?.trim() || "Not assigned"}
-							</dd>
+					<SidebarSection
+						id="diagnostics"
+						title="Diagnostics"
+						open={openSections.diagnostics}
+						onToggle={() => toggleSection("diagnostics")}
+					>
+						<div className="space-y-0.5">
+							<MetricRow
+								label="Unknown assigner"
+								count={stats.ghostAssigned}
+								selected={graphHighlightsEqual(highlight, {
+									kind: "assignment",
+									value: "ghost",
+								})}
+								onClick={() => toggle({ kind: "assignment", value: "ghost" })}
+							/>
+							<MetricRow
+								label="Extra roots"
+								count={stats.extraRoots}
+								selected={graphHighlightsEqual(highlight, {
+									kind: "assignment",
+									value: "extra-roots",
+								})}
+								onClick={() =>
+									toggle({ kind: "assignment", value: "extra-roots" })
+								}
+							/>
+							<MetricRow
+								label="2FA on"
+								count={stats.twoFactorOn}
+								selected={graphHighlightsEqual(highlight, {
+									kind: "security",
+									value: "2fa-on",
+								})}
+								onClick={() => toggle({ kind: "security", value: "2fa-on" })}
+							/>
 						</div>
-						<div className="flex justify-between gap-2">
-							<dt>Role</dt>
-							<dd className="truncate text-right text-slate-700">
-								{selected.roleName?.trim() || "Unassigned"}
-							</dd>
+						<div className="mt-2">
+							<IssueList
+								title="Unknown assigner"
+								empty="Every assigner is on this diagram"
+								people={stats.ghostUsers}
+								focusUserId={focusUserId}
+								onFocusUser={onFocusUser}
+							/>
+							<IssueList
+								title="Deactivated with reports"
+								empty="No deactivated users have reports"
+								people={stats.deactivatedWithReports}
+								focusUserId={focusUserId}
+								onFocusUser={onFocusUser}
+							/>
 						</div>
-						<div className="flex justify-between gap-2">
-							<dt>Department</dt>
-							<dd className="truncate text-right text-slate-700">
-								{selected.department?.trim() || EMPTY_ORG_LABEL}
-							</dd>
-						</div>
-						<div className="flex justify-between gap-2">
-							<dt>Division</dt>
-							<dd className="truncate text-right text-slate-700">
-								{selected.division?.trim() || EMPTY_ORG_LABEL}
-							</dd>
-						</div>
-						<div className="flex justify-between gap-2">
-							<dt>Location</dt>
-							<dd className="truncate text-right text-slate-700">
-								{selected.workLocation?.trim() || EMPTY_ORG_LABEL}
-							</dd>
-						</div>
-						<div className="flex justify-between gap-2">
-							<dt>Cost center</dt>
-							<dd className="truncate text-right text-slate-700">
-								{selected.costCenterName?.trim() ||
-									selected.costCenterCode?.trim() ||
-									EMPTY_ORG_LABEL}
-							</dd>
-						</div>
-						<div className="flex justify-between gap-2">
-							<dt>Skip-level</dt>
-							<dd className="truncate text-right text-slate-700">
-								{skipLevelName || "None"}
-							</dd>
-						</div>
-						<div className="flex justify-between gap-2">
-							<dt>Assigned by</dt>
-							<dd className="truncate text-right text-slate-700">
-								{selected.assignedByName?.trim() || "System"}
-							</dd>
-						</div>
-						<div className="flex justify-between gap-2">
-							<dt>Direct reports</dt>
-							<dd className="tabular-nums text-slate-700">{selectedReports}</dd>
-						</div>
-						<div className="flex justify-between gap-2">
-							<dt>Last active</dt>
-							<dd className="text-right text-slate-700">
-								{formatUserLastActiveLabel(selected.lastActiveAt)}
-							</dd>
-						</div>
-						<div className="flex justify-between gap-2">
-							<dt>2FA</dt>
-							<dd className="text-slate-700">
-								{selected.twoFactorEnabled ? "On" : "Off"}
-							</dd>
-						</div>
-						<div className="flex justify-between gap-2">
-							<dt>Last password change</dt>
-							<dd className="text-right text-slate-700">
-								{formatUserLastActiveLabel(selected.passwordUpdatedAt ?? undefined)}
-							</dd>
-						</div>
-					</dl>
+					</SidebarSection>
 				</div>
-			) : null}
+
+				{selected ? (
+					<div className="mt-3 rounded-lg border border-[#0f5384]/25 bg-white/80 p-3.5">
+						<p className="text-[10.5px] font-medium uppercase tracking-wide text-slate-500">
+							Selected
+						</p>
+						<p className="pt-1 text-sm font-semibold text-slate-700">
+							{selected.fullName}
+						</p>
+						<dl className="mt-2 space-y-1 text-xs text-slate-600">
+							<div className="flex justify-between gap-2">
+								<dt>Title</dt>
+								<dd className="truncate text-right text-slate-700">
+									{selected.jobTitle?.trim() || "Not assigned"}
+								</dd>
+							</div>
+							<div className="flex justify-between gap-2">
+								<dt>Role</dt>
+								<dd className="truncate text-right text-slate-700">
+									{selected.roleName?.trim() || "Unassigned"}
+								</dd>
+							</div>
+							<div className="flex justify-between gap-2">
+								<dt>Department</dt>
+								<dd className="truncate text-right text-slate-700">
+									{selected.department?.trim() || EMPTY_ORG_LABEL}
+								</dd>
+							</div>
+							<div className="flex justify-between gap-2">
+								<dt>Division</dt>
+								<dd className="truncate text-right text-slate-700">
+									{selected.division?.trim() || EMPTY_ORG_LABEL}
+								</dd>
+							</div>
+							<div className="flex justify-between gap-2">
+								<dt>Location</dt>
+								<dd className="truncate text-right text-slate-700">
+									{selected.workLocation?.trim() || EMPTY_ORG_LABEL}
+								</dd>
+							</div>
+							<div className="flex justify-between gap-2">
+								<dt>Cost center</dt>
+								<dd className="truncate text-right text-slate-700">
+									{selected.costCenterName?.trim() ||
+										selected.costCenterCode?.trim() ||
+										EMPTY_ORG_LABEL}
+								</dd>
+							</div>
+							<div className="flex justify-between gap-2">
+								<dt>Skip-level</dt>
+								<dd className="truncate text-right text-slate-700">
+									{skipLevelName || "None"}
+								</dd>
+							</div>
+							<div className="flex justify-between gap-2">
+								<dt>Assigned by</dt>
+								<dd className="truncate text-right text-slate-700">
+									{selected.assignedByName?.trim() || "System"}
+								</dd>
+							</div>
+							<div className="flex justify-between gap-2">
+								<dt>Direct reports</dt>
+								<dd className="tabular-nums text-slate-700">
+									{selectedReports}
+								</dd>
+							</div>
+							<div className="flex justify-between gap-2">
+								<dt>Last active</dt>
+								<dd className="text-right text-slate-700">
+									{formatUserLastActiveLabel(selected.lastActiveAt)}
+								</dd>
+							</div>
+							<div className="flex justify-between gap-2">
+								<dt>2FA</dt>
+								<dd className="text-slate-700">
+									{selected.twoFactorEnabled ? "On" : "Off"}
+								</dd>
+							</div>
+							<div className="flex justify-between gap-2">
+								<dt>Last password change</dt>
+								<dd className="text-right text-slate-700">
+									{formatUserLastActiveLabel(
+										selected.passwordUpdatedAt ?? undefined,
+									)}
+								</dd>
+							</div>
+						</dl>
+					</div>
+				) : null}
 			</div>
 		</aside>
 	);

@@ -451,7 +451,7 @@ const ComplianceTracking: React.FC<ComplianceTrackingProps> = ({
 							>
 								<div className="flex-1">
 									<div className="flex items-center space-x-2 mb-1">
-										<h4 className="font-semibold text-slate-800">
+										<h4 className="font-semibold text-slate-700">
 											{risk.factor}
 										</h4>
 										<Badge className={getImpactColor(risk.impact)}>
@@ -487,7 +487,7 @@ const ComplianceTracking: React.FC<ComplianceTrackingProps> = ({
 							>
 								<div className="flex-1">
 									<div className="flex items-center space-x-2 mb-1">
-										<h4 className="font-semibold text-slate-800">
+										<h4 className="font-semibold text-slate-700">
 											{renewal.name}
 										</h4>
 										<Badge className={getStatusColor(renewal.status)}>
@@ -497,7 +497,7 @@ const ComplianceTracking: React.FC<ComplianceTrackingProps> = ({
 									<p className="text-sm text-slate-600">{renewal.vendor}</p>
 								</div>
 								<div className="text-right">
-									<div className="text-sm font-semibold text-slate-800">
+									<div className="text-sm font-semibold text-slate-700">
 										{renewal.daysUntilExpiry > 0
 											? `${renewal.daysUntilExpiry} days`
 											: "Overdue"}

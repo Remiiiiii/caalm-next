@@ -35,12 +35,7 @@ import {
 import type React from "react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { AppDialog } from "@/components/ui/app-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -56,7 +51,13 @@ interface LocalCalendarEvent {
 	id: string;
 	title: string;
 	date?: Date;
-	type: "contract" | "deadline" | "meeting" | "review" | "audit";
+	type:
+		| "contract"
+		| "deadline"
+		| "meeting"
+		| "review"
+		| "audit"
+		| "volunteer_shift";
 	description?: string;
 	participants?: string[];
 	contractName?: string;
@@ -497,13 +498,40 @@ const OutlookReplicaCalendar: React.FC<OutlookReplicaCalendarProps> = ({
 				</div>
 			</div>
 
-			{/* Event Creation Dialog */}
-			<Dialog open={isAddEventOpen} onOpenChange={setIsAddEventOpen}>
-				<DialogContent className="max-w-md">
-					<DialogHeader>
-						<DialogTitle>Create New Event</DialogTitle>
-					</DialogHeader>
-					<div className="space-y-4">
+			<AppDialog
+				open={isAddEventOpen}
+				onOpenChange={setIsAddEventOpen}
+				size="form"
+				icon={<CalendarIcon className="h-5 w-5" />}
+				title="Create New Event"
+				pending={creatingEvent}
+				footer={
+					<>
+						<Button
+							type="button"
+							variant="outline"
+							className="rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+							onClick={() => setIsAddEventOpen(false)}
+						>
+							Cancel
+						</Button>
+						<Button
+							type="button"
+							className="btn-primary"
+							onClick={handleCreateEvent}
+							disabled={creatingEvent}
+						>
+							{creatingEvent ? (
+								<Loader2 className="h-4 w-4 animate-spin" />
+							) : (
+								<Plus className="h-4 w-4" />
+							)}
+							{creatingEvent ? "Creating..." : "Create"}
+						</Button>
+					</>
+				}
+			>
+					<div className="space-y-4 pb-1">
 						<div>
 							<Label htmlFor="title">Title</Label>
 							<Input
@@ -561,18 +589,8 @@ const OutlookReplicaCalendar: React.FC<OutlookReplicaCalendarProps> = ({
 								placeholder="Event description"
 							/>
 						</div>
-						<div className="flex justify-end gap-2">
-							<Button onClick={handleCreateEvent} disabled={creatingEvent}>
-								{creatingEvent ? (
-									<Loader2 className="h-4 w-4 animate-spin" />
-								) : (
-									"Create"
-								)}
-							</Button>
-						</div>
 					</div>
-				</DialogContent>
-			</Dialog>
+			</AppDialog>
 		</div>
 	);
 };

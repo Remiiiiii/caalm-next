@@ -49,7 +49,11 @@ export async function GET(request: NextRequest) {
 					}),
 					getActiveUsersCount(),
 				]);
-				const rows = contractsResult.rows || contractsResult.documents || [];
+				const rows =
+					contractsResult.rows ||
+					(contractsResult as { documents?: typeof contractsResult.rows })
+						.documents ||
+					[];
 				const kpis = computeContractKpis(
 					rows,
 					contractsResult.total ?? rows.length,

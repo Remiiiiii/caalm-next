@@ -258,7 +258,6 @@ export const getTTLForRoute = (route: string): number => {
 		"licenses/all": CACHE_TTLS.long,
 		"licenses/metrics": CACHE_TTLS.long, // 10 minutes
 		"licenses/database": CACHE_TTLS.long, // 10 minutes
-		"licenses/reports": CACHE_TTLS.veryLong,
 
 		"tasks/list": CACHE_TTLS.short,
 

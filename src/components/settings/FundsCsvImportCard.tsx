@@ -2,6 +2,7 @@
 
 import { Check, Download, FileUp, Loader2 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { BusyIcon } from "@/components/ui/busy-icon";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -12,15 +13,16 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { parseSpreadsheetFile } from "@/lib/import/spreadsheet";
+import { useBusyAction } from "@/hooks/useBusyAction";
 import {
 	FUND_IMPORT_FIELD_KEYS,
 	FUND_IMPORT_FIELD_LABELS,
+	type FundImportFieldKey,
 	guessFundImportField,
 	listUnmappedFundHeaders,
-	type FundImportFieldKey,
 } from "@/lib/funds/import/fields";
 import { applyFundColumnMapping } from "@/lib/funds/import/parse";
+import { parseSpreadsheetFile } from "@/lib/import/spreadsheet";
 
 const SAMPLE_CSV = `fund_code,fund_name,restriction_type
 UNRESTRICTED,General operating,Unrestricted
@@ -75,12 +77,12 @@ export function FundsCsvImportCard({ onImported }: FundsCsvImportCardProps) {
 		try {
 			const parsed = await parseSpreadsheetFile(file);
 			setHeaders(parsed.headers);
-		setRows(parsed.rows);
-		const initial: Record<string, FundImportFieldKey | ""> = {};
-		for (const header of parsed.headers) {
-			initial[header] = guessFundImportField(header);
-		}
-		setMapping(initial);
+			setRows(parsed.rows);
+			const initial: Record<string, FundImportFieldKey | ""> = {};
+			for (const header of parsed.headers) {
+				initial[header] = guessFundImportField(header);
+			}
+			setMapping(initial);
 		} catch (error) {
 			setHeaders([]);
 			setRows([]);
@@ -100,6 +102,7 @@ export function FundsCsvImportCard({ onImported }: FundsCsvImportCardProps) {
 		anchor.click();
 		URL.revokeObjectURL(url);
 	};
+	const [runDownloading, downloading] = useBusyAction(downloadSample);
 
 	const runDryRun = async () => {
 		setBusy(true);
@@ -163,8 +166,8 @@ export function FundsCsvImportCard({ onImported }: FundsCsvImportCardProps) {
 						</p>
 						<p className="text-xs text-slate-600 mt-1">
 							Upload a chart-of-funds export from your finance team. CAALM uses
-							these codes for restricted-fund tracking and 990 worksheet
-							mapping — not as a general ledger.
+							these codes for restricted-fund tracking and 990 worksheet mapping
+							— not as a general ledger.
 						</p>
 					</div>
 					<div className="flex flex-wrap items-end justify-between gap-3">
@@ -186,9 +189,10 @@ export function FundsCsvImportCard({ onImported }: FundsCsvImportCardProps) {
 							type="button"
 							variant="outline"
 							className="px-3 sm:px-4 shrink-0"
-							onClick={downloadSample}
+							disabled={downloading}
+							onClick={() => void runDownloading()}
 						>
-							<Download className="h-4 w-4" />
+							<BusyIcon busy={downloading} icon={Download} />
 							Sample template
 						</Button>
 					</div>
@@ -284,8 +288,8 @@ export function FundsCsvImportCard({ onImported }: FundsCsvImportCardProps) {
 						</p>
 						<p className="text-sm text-slate-600">
 							Will create {dryRun.counts.create} fund
-							{dryRun.counts.create === 1 ? "" : "s"}; skip{" "}
-							{dryRun.counts.skip} duplicate or existing row
+							{dryRun.counts.create === 1 ? "" : "s"}; skip {dryRun.counts.skip}{" "}
+							duplicate or existing row
 							{dryRun.counts.skip === 1 ? "" : "s"}.
 						</p>
 						{dryRun.rowErrors.length > 0 ? (

@@ -1,3 +1,4 @@
+import type { AuditChangeDiff } from "@/lib/audits/audit-log.utils";
 import { logAuditEvent } from "@/lib/services/audit-logger";
 
 type NewsAuditInput = {
@@ -11,7 +12,7 @@ type NewsAuditInput = {
 	targetId: string;
 	targetLabel: string;
 	summary: string;
-	changes?: Array<{ field: string; before?: unknown; after?: unknown }>;
+	changes?: AuditChangeDiff[];
 };
 
 export async function logNewsAudit(input: NewsAuditInput): Promise<void> {

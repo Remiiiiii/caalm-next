@@ -61,9 +61,7 @@ function formatListDate(raw: string): string {
 	if (!raw) return "";
 	const asNum = Number(raw);
 	const date =
-		Number.isFinite(asNum) && asNum > 1e11
-			? new Date(asNum)
-			: new Date(raw);
+		Number.isFinite(asNum) && asNum > 1e11 ? new Date(asNum) : new Date(raw);
 	if (Number.isNaN(date.getTime())) return raw;
 
 	const now = new Date();
@@ -149,7 +147,9 @@ export default function GmailMessageList({
 	const multiSelect =
 		variant === "inbox" && Boolean(onToggleChecked && checkedIds);
 	const allChecked =
-		multiSelect && items.length > 0 && items.every((i) => checkedIds!.has(i.id));
+		multiSelect &&
+		items.length > 0 &&
+		items.every((i) => checkedIds!.has(i.id));
 	const someChecked =
 		multiSelect && items.some((i) => checkedIds!.has(i.id)) && !allChecked;
 
@@ -159,16 +159,12 @@ export default function GmailMessageList({
 				<div className="mb-1 flex items-center gap-2 px-3 py-1.5">
 					<Checkbox
 						checked={allChecked ? true : someChecked ? "indeterminate" : false}
-						onCheckedChange={(value) =>
-							onToggleAllChecked?.(value === true)
-						}
+						onCheckedChange={(value) => onToggleAllChecked?.(value === true)}
 						aria-label={allChecked ? "Deselect all" : "Select all"}
 						className="cursor-pointer border-[0.25px] border-slate-300"
 					/>
 					<span className="text-xs text-slate-500">
-						{checkedIds!.size > 0
-							? `${checkedIds!.size} selected`
-							: "Select"}
+						{checkedIds!.size > 0 ? `${checkedIds!.size} selected` : "Select"}
 					</span>
 				</div>
 			) : null}
@@ -249,7 +245,7 @@ export default function GmailMessageList({
 											<div className="flex items-baseline justify-between gap-2">
 												<p
 													className={cn(
-														"min-w-0 truncate text-sm text-slate-800",
+														"min-w-0 truncate text-sm text-slate-700",
 														item.unread ? "font-semibold" : "font-medium",
 													)}
 												>
@@ -298,7 +294,7 @@ export default function GmailMessageList({
 											<GmailActionTooltip label="Archive">
 												<button
 													type="button"
-													className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-slate-500 hover:bg-white hover:text-slate-800"
+													className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-slate-500 hover:bg-white hover:text-slate-700"
 													aria-label="Archive"
 													disabled={rowBusy}
 													onClick={(e) => {
@@ -320,7 +316,7 @@ export default function GmailMessageList({
 											>
 												<button
 													type="button"
-													className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-slate-500 hover:bg-white hover:text-slate-800"
+													className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-slate-500 hover:bg-white hover:text-slate-700"
 													aria-label={
 														item.unread ? "Mark as read" : "Mark as unread"
 													}

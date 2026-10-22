@@ -77,9 +77,9 @@ export async function syncNegotiatedMetadataToContract(input: {
 	if (fileId) {
 		try {
 			await ContractService.updateFileWithContractMetadata(fileId, {
-				$id: input.contractId,
 				...contract,
 				...data,
+				$id: input.contractId,
 			});
 		} catch (error) {
 			console.error(

@@ -126,7 +126,7 @@ export const AttachmentEngagementStats: React.FC<
 											</span>
 										</div>
 										<div className="flex-1 min-w-0">
-											<h4 className="font-semibold text-slate-800 mb-1">
+											<h4 className="font-semibold text-slate-700 mb-1">
 												{attachment.attachmentName}
 											</h4>
 											<p className="text-sm text-slate-600 mb-2">

@@ -7,6 +7,7 @@ import {
 	SquareArrowRightExit,
 } from "lucide-react";
 import Link from "next/link";
+import { BusyIcon } from "@/components/ui/busy-icon";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -17,6 +18,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { useBusyAction } from "@/hooks/useBusyAction";
 import { useOrgTimezone } from "@/hooks/useOrgTimezone";
 import {
 	AUDIT_PERIOD_OPTIONS,
@@ -74,6 +76,7 @@ export function AuditReadinessHero({
 	canExport = false,
 }: AuditReadinessHeroProps) {
 	const timeZone = useOrgTimezone();
+	const [runExport, exporting] = useBusyAction(() => onExport?.());
 	const styles = RAG_STYLES[ragStatus];
 	const hasPeriodControl = Boolean(onPeriodChange && period);
 	const periodLabel = AUDIT_PERIOD_OPTIONS.find(
@@ -122,7 +125,7 @@ export function AuditReadinessHero({
 									</h2>
 									<span
 										className={cn(
-											"text-xs font-medium px-2 py-0.5 rounded-full border",
+											"text-xs px-2 py-0.5 rounded-full border",
 											styles.badge,
 										)}
 									>
@@ -226,9 +229,10 @@ export function AuditReadinessHero({
 									<Button
 										variant="outline"
 										className="primary-btn w-full px-3 sm:px-4"
-										onClick={onExport}
+										disabled={exporting}
+										onClick={() => void runExport()}
 									>
-										<SquareArrowRightExit className="h-4 w-4" />
+										<BusyIcon busy={exporting} icon={SquareArrowRightExit} />
 										Export
 									</Button>
 								) : null}

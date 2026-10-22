@@ -1,7 +1,7 @@
 export const USER_MANAGEMENT_PAGE_SIZE = 12;
 
 export const USER_ROLE_BADGE_SHAPE =
-	"inline-flex items-center gap-1 whitespace-nowrap px-2 py-0.5 text-xs rounded-full font-medium border";
+	"inline-flex items-center gap-1 whitespace-nowrap px-2 py-0.5 text-xs rounded-full border";
 
 const ROLE_BADGE_BY_NAME: Record<string, string> = {
 	"super admin": "bg-navy/10 text-navy border-navy/20",

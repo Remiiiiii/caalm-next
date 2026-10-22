@@ -25,16 +25,16 @@ import { useOrganization } from "@/contexts/OrganizationContext";
 import { useStepUp } from "@/contexts/StepUpContext";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
+import { DEPARTMENT_COMPLIANCE_TARGET } from "@/lib/dashboard/department-performance";
 import { getOrganizationGiveSlug } from "@/lib/give/slug";
 import { resolveOrgLogoFileId } from "@/lib/organizations/org-logo";
-import { permissionSatisfied } from "@/lib/rbac/permission-implications";
 import {
 	firstOrgProfileErrors,
 	type OrganizationProfileForm,
 	organizationProfileFormSchema,
 } from "@/lib/rbac/organization-profile.schema";
-import { DEPARTMENT_COMPLIANCE_TARGET } from "@/lib/dashboard/department-performance";
 import type { Organization } from "@/lib/rbac/organizations";
+import { permissionSatisfied } from "@/lib/rbac/permission-implications";
 import { fetcher } from "@/lib/swr-config";
 
 const FIELD_INPUT_CLASS =
@@ -357,9 +357,7 @@ export default function OrganizationSettingsPage() {
 					<TabsTrigger value="limits">Limits</TabsTrigger>
 					<TabsTrigger value="structure">Org structure</TabsTrigger>
 					<TabsTrigger value="approval-sla">Approval SLAs</TabsTrigger>
-					<TabsTrigger value="approval-routing">
-						Approval routing
-					</TabsTrigger>
+					<TabsTrigger value="approval-routing">Approval routing</TabsTrigger>
 					<TabsTrigger value="approval-delegation">Delegation</TabsTrigger>
 					<TabsTrigger value="data-portability">Data portability</TabsTrigger>
 					{canViewDonationSettings ? (
@@ -732,10 +730,7 @@ export default function OrganizationSettingsPage() {
 									value={departmentComplianceTarget}
 									onChange={(e) =>
 										setDepartmentComplianceTarget(
-											Math.min(
-												100,
-												Math.max(1, Number(e.target.value) || 1),
-											),
+											Math.min(100, Math.max(1, Number(e.target.value) || 1)),
 										)
 									}
 									disabled={!canEdit}

@@ -1,6 +1,5 @@
 "use client";
 
-import * as VisuallyHiddenPrimitive from "@radix-ui/react-visually-hidden";
 import {
 	AlertTriangle,
 	ArrowRightLeft,
@@ -9,6 +8,7 @@ import {
 	GitBranch,
 	Info,
 	KeyRound,
+	Loader2,
 	Minimize2,
 	Pencil,
 	PenLine,
@@ -23,9 +23,9 @@ import type React from "react";
 import { Fragment, useState } from "react";
 import { SendForSignatureDialog } from "@/components/esign/SendForSignatureDialog";
 import { TransferOwnershipDialog } from "@/components/ownership/TransferOwnershipDialog";
+import { AppDialog } from "@/components/ui/app-dialog";
 import { Button } from "@/components/ui/button";
 import { DeleteConfirmBody } from "@/components/ui/delete-confirmation-dialog";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
 	AppDropdownMenuContent,
 	AppDropdownMenuItem,
@@ -60,13 +60,13 @@ const getStatusBadgeClasses = (status: string): string => {
 	const normalized = status?.toLowerCase?.() ?? "";
 	switch (normalized) {
 		case "active":
-			return "bg-[#ccf3e9] text-[#3dd9b3] border border-[#3dd9b3]/20 text-xs rounded-full font-medium px-2.5 py-0.5";
+			return "bg-[#ccf3e9] text-[#3dd9b3] border border-[#3dd9b3]/20 text-xs rounded-full px-2.5 py-0.5";
 		case "inactive":
-			return "bg-[#fff1f1] text-[#fe8787] border border-[#fe8787]/20 text-xs rounded-full font-medium px-2.5 py-0.5";
+			return "bg-[#fff1f1] text-[#fe8787] border border-[#fe8787]/20 text-xs rounded-full px-2.5 py-0.5";
 		case "pending":
-			return "bg-[#fef6f0] text-[#ebc620] border border-[#ebc620]/20 text-xs rounded-full font-medium px-2.5 py-0.5";
+			return "bg-[#fef6f0] text-[#ebc620] border border-[#ebc620]/20 text-xs rounded-full px-2.5 py-0.5";
 		default:
-			return "bg-gray-100 text-gray-600 border border-gray-200 text-xs rounded-full font-medium px-2.5 py-0.5";
+			return "bg-gray-100 text-gray-600 border border-gray-200 text-xs rounded-full px-2.5 py-0.5";
 	}
 };
 
@@ -201,6 +201,9 @@ const LicenseActionDropdown = ({
 		setShowShare(false);
 		setDeleteConfirmed(false);
 	};
+
+	const outlineCancelClass =
+		"rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50";
 
 	const handleAction = async () => {
 		if (!action) return;
@@ -410,7 +413,8 @@ const LicenseActionDropdown = ({
 						const menuItem =
 							actionItem.value === "download" ? (
 								<AppDropdownMenuItem
-									icon={Icon}
+									icon={downloading ? Loader2 : Icon}
+									iconClassName={downloading ? "animate-spin" : undefined}
 									tone={tone}
 									onSelect={(e) => {
 										e.preventDefault();
@@ -476,57 +480,39 @@ const LicenseActionDropdown = ({
 
 			{/* View Details Dialog - matches ActionDropdown Details */}
 			{showDetail && (
-				<Dialog open={showDetail} onOpenChange={setShowDetail}>
-					<DialogContent className="flex max-h-[90vh] max-w-[800px] flex-col overflow-hidden p-0 shadow-xl">
-						<VisuallyHiddenPrimitive.Root>
-							<DialogTitle>License Details</DialogTitle>
-						</VisuallyHiddenPrimitive.Root>
-						<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-						<div className="glass-dialog-wizard-header mt-4">
-							<div className="flex items-center justify-between ml-6">
-								<div className="flex items-center">
-									<div>
-										<div className="flex items-center gap-2">
-											<Info className="h-5 w-5 text-[#0f5384]" />
-											<h2 className="text-xl font-semibold sidebar-gradient-text">
-												License Details
-											</h2>
-										</div>
-										<p className="text-sm text-slate-600 mt-1 ml-14">
-											View license information
-										</p>
-									</div>
-								</div>
-							</div>
-						</div>
-						<div className="flex-1 overflow-y-auto px-6 py-4 space-y-6 bg-slate-50">
-							<LicenseDetailView
-								license={license}
-								onEdit={() => {
-									setShowDetail(false);
-									setShowEdit(true);
-								}}
-							/>
-						</div>
-						<div className="glass-dialog-footer-wrap">
-							<div className="flex items-center justify-between">
-								<div className="text-sm text-slate-500">
-									License details and metadata
-								</div>
-								<div className="flex items-center gap-3">
-									<Button
-										variant="outline"
-										onClick={(e) => closeAllModals(e)}
-										className="primary-btn px-3 sm:px-4"
-									>
-										<Minimize2 className="w-4 h-4" />
-										Close
-									</Button>
-								</div>
-							</div>
-						</div>
-					</DialogContent>
-				</Dialog>
+				<AppDialog
+					open={showDetail}
+					onOpenChange={setShowDetail}
+					size="form"
+					className="max-h-[90vh] max-w-[800px] shadow-xl"
+					icon={<Info className="h-5 w-5" />}
+					title="License Details"
+					description="View license information"
+					footer={
+						<>
+							<span className="mr-auto text-sm text-slate-500">
+								License details and metadata
+							</span>
+							<Button
+								type="button"
+								variant="outline"
+								className={outlineCancelClass}
+								onClick={(e) => closeAllModals(e)}
+							>
+								<Minimize2 className="h-4 w-4" />
+								Close
+							</Button>
+						</>
+					}
+				>
+					<LicenseDetailView
+						license={license}
+						onEdit={() => {
+							setShowDetail(false);
+							setShowEdit(true);
+						}}
+					/>
+				</AppDialog>
 			)}
 
 			{/* Edit Dialog */}
@@ -588,331 +574,315 @@ const LicenseActionDropdown = ({
 
 			{/* Delete Dialog — matches Delete Draft design */}
 			{showDelete && (
-				<Dialog
+				<AppDialog
 					open={showDelete}
 					onOpenChange={(open) => {
 						setShowDelete(open);
 						if (!open) setDeleteConfirmed(false);
 					}}
-				>
-					<DialogContent
-						className="flex max-h-[90vh] max-w-[600px] flex-col overflow-hidden p-0 shadow-xl"
-						variant="destructive"
-						showCloseButton
-					>
-						<DialogTitle className="sr-only">Delete License</DialogTitle>
-						<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-
-						<div className="glass-dialog-wizard-header mt-4">
-							<div className="flex items-center gap-3 px-6">
-								<div className="flex items-center gap-3">
-									<AlertTriangle className="w-5 h-5 text-[#0f5384]" />
-									<h2 className="text-xl font-semibold sidebar-gradient-text">
-										Delete License
-									</h2>
-								</div>
-							</div>
-						</div>
-
-						<DeleteConfirmBody
-							description="Are you sure you want to delete this license? This action cannot be undone."
-							items={[license.licenseName || "Untitled"]}
-							itemNoun="license"
-							requireConfirmation
-							confirmationLabel="I understand this will permanently delete this license and cannot be undone."
-							confirmed={deleteConfirmed}
-							onConfirmedChange={setDeleteConfirmed}
-						/>
-
-						<div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
+					variant="destructive"
+					pending={isLoading}
+					icon={<AlertTriangle className="h-5 w-5" aria-hidden />}
+					title="Delete License"
+					description="Are you sure you want to delete this license? This action cannot be undone."
+					footer={
+						<>
+							<Button
+								type="button"
+								variant="outline"
+								className={outlineCancelClass}
+								disabled={isLoading}
+								autoFocus
+								onClick={(e) => closeAllModals(e)}
+							>
+								Cancel
+							</Button>
 							<Button
 								type="button"
 								onClick={(e) => {
 									e.stopPropagation();
 									e.preventDefault();
-									handleAction();
+									void handleAction();
 								}}
 								disabled={isLoading || !deleteConfirmed}
 								className="delete-btn gap-2 px-3 sm:px-4"
 							>
-								<Trash2 className="h-4 w-4 shrink-0" />
+								{isLoading ? (
+									<Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+								) : (
+									<Trash2 className="h-4 w-4 shrink-0" />
+								)}
 								{isLoading ? "Deleting..." : "Delete License"}
 							</Button>
-						</div>
-					</DialogContent>
-				</Dialog>
+						</>
+					}
+				>
+					<DeleteConfirmBody
+						items={[license.licenseName || "Untitled"]}
+						itemNoun="license"
+						requireConfirmation
+						confirmationLabel="I understand this will permanently delete this license and cannot be undone."
+						confirmed={deleteConfirmed}
+						onConfirmedChange={setDeleteConfirmed}
+					/>
+				</AppDialog>
 			)}
 
 			{/* Share Dialog - TODO: Implement share functionality */}
 			{showShare && (
-				<Dialog open={showShare} onOpenChange={setShowShare}>
-					<DialogContent className="flex max-h-[90vh] max-w-[600px] flex-col overflow-hidden p-0 shadow-xl">
-						<VisuallyHiddenPrimitive.Root>
-							<DialogTitle>Share License</DialogTitle>
-						</VisuallyHiddenPrimitive.Root>
-						<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-						<div className="glass-dialog-wizard-header mt-4">
-							<div className="flex items-center gap-3 px-6">
-								<div className="flex items-center gap-3">
-									<Share2 className="w-5 h-5 text-[#0f5384]" />
-									<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-										Share License
-									</DialogTitle>
-								</div>
-							</div>
-							<p className="text-sm text-slate-600 mt-1 ml-14">
-								Share this license with other users
-							</p>
-						</div>
-						<div className="flex-1 overflow-y-auto px-6 py-4 space-y-6 bg-slate-50">
-							<div className="bg-white rounded-lg p-4 border border-slate-200">
-								<p className="text-sm text-slate-600">
-									Share functionality coming soon
-								</p>
-							</div>
-						</div>
-						<div className="glass-dialog-footer-wrap">
-							<div className="flex items-center justify-between">
-								<div className="text-sm text-slate-500">
-									Enter email addresses to share
-								</div>
-								<div className="flex items-center gap-3">
-									<Button
-										onClick={(e) => {
-											e.stopPropagation();
-											e.preventDefault();
-										}}
-										disabled
-										className="primary-btn px-3 sm:px-4"
-										title="Share is not available yet"
-									>
-										<Share2 className="w-4 h-4" />
-										Share (unavailable)
-									</Button>
-								</div>
-							</div>
-						</div>
-					</DialogContent>
-				</Dialog>
+				<AppDialog
+					open={showShare}
+					onOpenChange={setShowShare}
+					size="form"
+					className="max-h-[90vh] shadow-xl"
+					icon={<Share2 className="h-5 w-5" />}
+					title="Share License"
+					description="Share this license with other users"
+					footer={
+						<>
+							<span className="mr-auto text-sm text-slate-500">
+								Enter email addresses to share
+							</span>
+							<Button
+								type="button"
+								variant="outline"
+								className={outlineCancelClass}
+								onClick={(e) => closeAllModals(e)}
+							>
+								Cancel
+							</Button>
+							<Button
+								onClick={(e) => {
+									e.stopPropagation();
+									e.preventDefault();
+								}}
+								disabled
+								className="primary-btn px-3 sm:px-4"
+								title="Share is not available yet"
+							>
+								<Share2 className="w-4 h-4" />
+								Share (unavailable)
+							</Button>
+						</>
+					}
+				>
+					<div className="rounded-lg border border-slate-200 bg-white p-4">
+						<p className="text-sm text-slate-600">
+							Share functionality coming soon
+						</p>
+					</div>
+				</AppDialog>
 			)}
 
 			{showAssign && (
-				<Dialog open={showAssign} onOpenChange={setShowAssign}>
-					<DialogContent className="flex max-h-[90vh] max-w-[600px] flex-col overflow-hidden p-0 shadow-xl">
-						<VisuallyHiddenPrimitive.Root>
-							<DialogTitle>Re-assign License</DialogTitle>
-						</VisuallyHiddenPrimitive.Root>
-						<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-						<div className="glass-dialog-wizard-header mt-4">
-							<div className="flex items-center gap-3 px-6">
-								<div className="flex items-center gap-3">
-									<UserRoundCheck className="w-5 h-5 text-[#0f5384]" />
-									<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-										Re-assign License
-									</DialogTitle>
+				<AppDialog
+					open={showAssign}
+					onOpenChange={setShowAssign}
+					size="form"
+					className="max-h-[90vh] shadow-xl"
+					icon={<UserRoundCheck className="h-5 w-5" />}
+					title="Re-assign License"
+					description="Assign this license to different department managers"
+					pending={isLoading}
+					footer={
+						<>
+							<span className="mr-auto text-sm text-slate-500">
+								{selectedManagers.length > 0
+									? `${selectedManagers.length} manager${
+											selectedManagers.length === 1 ? "" : "s"
+										} selected`
+									: "Select at least one manager"}
+							</span>
+							<Button
+								type="button"
+								variant="outline"
+								className={outlineCancelClass}
+								disabled={isLoading}
+								onClick={(e) => closeAllModals(e)}
+							>
+								Cancel
+							</Button>
+							<Button
+								onClick={(e) => {
+									e.stopPropagation();
+									e.preventDefault();
+									void handleAction();
+								}}
+								disabled={
+									isLoading ||
+									selectedManagers.length === 0 ||
+									!selectedDepartment
+								}
+								className="primary-btn px-3 sm:px-4"
+							>
+								{isLoading ? (
+									<Loader2 className="h-4 w-4 animate-spin" />
+								) : (
+									<UserRoundCheck className="h-4 w-4" />
+								)}
+								Assign License
+							</Button>
+						</>
+					}
+				>
+					<div className="space-y-6 pb-1">
+						<div className="bg-white rounded-lg p-6 border border-slate-200 shadow-sm space-y-6">
+							<div>
+								<div className="mb-3 text-sm font-medium text-slate-700">
+									Select department for this license:
 								</div>
-							</div>
-							<p className="text-sm text-slate-600 mt-1 ml-14">
-								Assign this license to different department managers
-							</p>
-						</div>
-						<div className="flex-1 overflow-y-auto px-6 py-4 space-y-6 bg-slate-50">
-							<div className="bg-white rounded-lg p-6 border border-slate-200 shadow-sm space-y-6">
-								<div>
-									<div className="mb-3 text-sm font-medium text-slate-700">
-										Select department for this license:
-									</div>
-									<div className="grid grid-cols-3 gap-2">
-										{departmentEnums.length > 0 ? (
-											departmentEnums.map((dept) => (
-												<label
-													key={dept}
-													className={`flex items-center gap-2 cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 p-2 rounded-lg border-2 ${
-														selectedDepartment === dept
-															? "border-blue-500 bg-blue-50"
-															: "border-slate-200 bg-white"
-													} group shadow-sm hover:shadow-md`}
-													onClick={(e) => {
-														e.preventDefault();
-														e.stopPropagation();
+								<div className="grid grid-cols-3 gap-2">
+									{departmentEnums.length > 0 ? (
+										departmentEnums.map((dept) => (
+											<label
+												key={dept}
+												className={`flex items-center gap-2 cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 p-2 rounded-lg border-2 ${
+													selectedDepartment === dept
+														? "border-blue-500 bg-blue-50"
+														: "border-slate-200 bg-white"
+												} group shadow-sm hover:shadow-md`}
+												onClick={(e) => {
+													e.preventDefault();
+													e.stopPropagation();
+													if (!isLoading) handleDepartmentChange(dept);
+												}}
+											>
+												<input
+													type="radio"
+													name="license-department"
+													value={dept}
+													checked={selectedDepartment === dept}
+													onChange={() => {
 														if (!isLoading) handleDepartmentChange(dept);
 													}}
-												>
-													<input
-														type="radio"
-														name="license-department"
-														value={dept}
-														checked={selectedDepartment === dept}
-														onChange={() => {
-															if (!isLoading) handleDepartmentChange(dept);
-														}}
-														disabled={isLoading}
-														className="cursor-pointer w-4 h-4 text-blue-600"
-													/>
-													<span className="text-sm cursor-pointer text-slate-700 font-medium group-hover:text-blue-600 transition-colors">
-														{formatDepartmentName(dept as ContractDepartment)}
-													</span>
-												</label>
-											))
-										) : (
-											<div className="text-sm text-slate-500 col-span-3">
-												No departments available
-											</div>
-										)}
-									</div>
+													disabled={isLoading}
+													className="cursor-pointer w-4 h-4 text-blue-600"
+												/>
+												<span className="text-sm cursor-pointer text-slate-700 font-medium group-hover:text-blue-600 transition-colors">
+													{formatDepartmentName(dept as ContractDepartment)}
+												</span>
+											</label>
+										))
+									) : (
+										<div className="text-sm text-slate-500 col-span-3">
+											No departments available
+										</div>
+									)}
 								</div>
-								<div>
-									<div className="mb-3 text-sm font-medium text-slate-700">
-										Select manager(s) to assign this license:
-									</div>
-									<div className="overflow-x-auto rounded-lg border border-slate-200">
-										<table className="min-w-full divide-y divide-slate-200">
-											<thead className="bg-slate-50">
-												<tr>
-													<th />
-													<th className="text-center px-2 py-2 text-[14px] font-semibold text-slate-700">
-														Name
-													</th>
-													<th className="text-center px-2 py-2 text-[14px] font-semibold text-slate-700">
-														Department
-													</th>
-													<th className="text-center px-2 py-2 text-[14px] font-semibold text-slate-700">
-														Division
-													</th>
-													<th className="text-center px-2 py-2 text-[14px] font-semibold text-slate-700">
-														Status
-													</th>
-												</tr>
-											</thead>
-											<tbody className="text-slate-700 text-sm bg-white">
-												{filteredManagers.length > 0 ? (
-													filteredManagers.map((manager: AppUser) => (
-														<tr
-															key={manager.accountId}
-															className={`hover:bg-blue-50 cursor-pointer transition-colors ${
-																selectedManagers.includes(manager.accountId)
-																	? "bg-blue-50"
-																	: ""
-															}`}
-															onClick={() =>
-																handleManagerToggle(manager.accountId)
-															}
-														>
-															<td
-																className="p-2"
-																onClick={(e) => e.stopPropagation()}
-															>
-																<input
-																	type="checkbox"
-																	checked={selectedManagers.includes(
-																		manager.accountId,
-																	)}
-																	onChange={() =>
-																		handleManagerToggle(manager.accountId)
-																	}
-																	className="cursor-pointer"
-																/>
-															</td>
-															<td className="text-center px-2 py-2">
-																{manager.fullName}
-															</td>
-															<td className="text-center px-2 py-2">
-																{(manager as AppUser & { department?: string })
-																	.department
-																	? formatDepartmentName(
-																			(
-																				manager as AppUser & {
-																					department?: string;
-																				}
-																			).department as ContractDepartment,
-																		)
-																	: manager.division
-																		? formatDepartmentName(
-																				DIVISION_TO_DEPARTMENT[
-																					manager.division as UserDivision
-																				] as ContractDepartment,
-																			)
-																		: "N/A"}
-															</td>
-															<td className="text-center px-2 py-2">
-																{manager.division
-																	? formatDivisionName(
-																			manager.division as UserDivision,
-																		)
-																	: "-"}
-															</td>
-															<td className="text-center px-2 py-2">
-																<span
-																	className={`inline-block ${getStatusBadgeClasses(
-																		manager.status || "",
-																	)}`}
-																>
-																	{manager.status
-																		? manager.status.charAt(0).toUpperCase() +
-																			manager.status.slice(1).toLowerCase()
-																		: "N/A"}
-																</span>
-															</td>
-														</tr>
-													))
-												) : (
-													<tr>
+							</div>
+							<div>
+								<div className="mb-3 text-sm font-medium text-slate-700">
+									Select manager(s) to assign this license:
+								</div>
+								<div className="overflow-x-auto rounded-lg border border-slate-200">
+									<table className="min-w-full divide-y divide-slate-200">
+										<thead className="bg-slate-50">
+											<tr>
+												<th />
+												<th className="text-center px-2 py-2 text-[14px] font-semibold text-slate-700">
+													Name
+												</th>
+												<th className="text-center px-2 py-2 text-[14px] font-semibold text-slate-700">
+													Department
+												</th>
+												<th className="text-center px-2 py-2 text-[14px] font-semibold text-slate-700">
+													Division
+												</th>
+												<th className="text-center px-2 py-2 text-[14px] font-semibold text-slate-700">
+													Status
+												</th>
+											</tr>
+										</thead>
+										<tbody className="text-slate-700 text-sm bg-white">
+											{filteredManagers.length > 0 ? (
+												filteredManagers.map((manager: AppUser) => (
+													<tr
+														key={manager.accountId}
+														className={`hover:bg-blue-50 cursor-pointer transition-colors ${
+															selectedManagers.includes(manager.accountId)
+																? "bg-blue-50"
+																: ""
+														}`}
+														onClick={() =>
+															handleManagerToggle(manager.accountId)
+														}
+													>
 														<td
-															colSpan={5}
-															className="text-center py-4 text-sm text-slate-500"
+															className="p-2"
+															onClick={(e) => e.stopPropagation()}
 														>
-															{!selectedDepartment
-																? "Please select a department first"
-																: "No managers available"}
+															<input
+																type="checkbox"
+																checked={selectedManagers.includes(
+																	manager.accountId,
+																)}
+																onChange={() =>
+																	handleManagerToggle(manager.accountId)
+																}
+																className="cursor-pointer"
+															/>
+														</td>
+														<td className="text-center px-2 py-2">
+															{manager.fullName}
+														</td>
+														<td className="text-center px-2 py-2">
+															{(manager as AppUser & { department?: string })
+																.department
+																? formatDepartmentName(
+																		(
+																			manager as AppUser & {
+																				department?: string;
+																			}
+																		).department as ContractDepartment,
+																	)
+																: manager.division
+																	? formatDepartmentName(
+																			DIVISION_TO_DEPARTMENT[
+																				manager.division as UserDivision
+																			] as ContractDepartment,
+																		)
+																	: "N/A"}
+														</td>
+														<td className="text-center px-2 py-2">
+															{manager.division
+																? formatDivisionName(
+																		manager.division as UserDivision,
+																	)
+																: "-"}
+														</td>
+														<td className="text-center px-2 py-2">
+															<span
+																className={`inline-block ${getStatusBadgeClasses(
+																	manager.status || "",
+																)}`}
+															>
+																{manager.status
+																	? manager.status.charAt(0).toUpperCase() +
+																		manager.status.slice(1).toLowerCase()
+																	: "N/A"}
+															</span>
 														</td>
 													</tr>
-												)}
-											</tbody>
-										</table>
-									</div>
+												))
+											) : (
+												<tr>
+													<td
+														colSpan={5}
+														className="text-center py-4 text-sm text-slate-500"
+													>
+														{!selectedDepartment
+															? "Please select a department first"
+															: "No managers available"}
+													</td>
+												</tr>
+											)}
+										</tbody>
+									</table>
 								</div>
 							</div>
 						</div>
-						<div className="glass-dialog-footer-wrap">
-							<div className="flex items-center justify-between">
-								<div className="text-sm text-slate-500">
-									{selectedManagers.length > 0
-										? `${selectedManagers.length} manager${
-												selectedManagers.length === 1 ? "" : "s"
-											} selected`
-										: "Select at least one manager"}
-								</div>
-								<div className="flex items-center gap-3">
-									<Button
-										onClick={(e) => {
-											e.stopPropagation();
-											e.preventDefault();
-											void handleAction();
-										}}
-										disabled={
-											isLoading ||
-											selectedManagers.length === 0 ||
-											!selectedDepartment
-										}
-										className="primary-btn px-3 sm:px-4"
-									>
-										{isLoading && (
-											<Image
-												src="/assets/icons/loader.svg"
-												alt="loader"
-												width={16}
-												height={16}
-												className="animate-spin mr-2"
-											/>
-										)}
-										<UserRoundCheck className="w-4 h-4" />
-										Assign License
-									</Button>
-								</div>
-							</div>
-						</div>
-					</DialogContent>
-				</Dialog>
+					</div>
+				</AppDialog>
 			)}
 			<SendForSignatureDialog
 				open={showSign}

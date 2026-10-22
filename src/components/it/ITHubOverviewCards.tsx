@@ -9,10 +9,10 @@ import {
 	Users,
 } from "lucide-react";
 import Link from "next/link";
-import { SampleDataBadge } from "@/components/ui/sample-data-badge";
-import { MetricStatCard } from "@/components/ui/metric-stat-card";
-import { LoadingSpinner } from "@/components/ui/loading";
 import { Card, CardContent } from "@/components/ui/card";
+import { LoadingSpinner } from "@/components/ui/loading";
+import { MetricStatCard } from "@/components/ui/metric-stat-card";
+import { SampleDataBadge } from "@/components/ui/sample-data-badge";
 import { useITHubOverview } from "@/hooks/useITHubOverview";
 import { formatStorageUsedBytes } from "@/lib/storage/formatStorageUsed";
 
@@ -52,7 +52,9 @@ export function ITHubOverviewCards({ orgId }: { orgId: string }) {
 					</p>
 					<p className="text-xs text-slate-500 mt-1">
 						{snapshot.tier} · {snapshot.status}
-						{snapshot.billingStatus ? ` · billing ${snapshot.billingStatus}` : ""}
+						{snapshot.billingStatus
+							? ` · billing ${snapshot.billingStatus}`
+							: ""}
 					</p>
 				</div>
 			</div>
@@ -150,7 +152,8 @@ export function ITHubOverviewCards({ orgId }: { orgId: string }) {
 						<ul className="space-y-2 text-sm text-slate-700">
 							<li className="flex items-center gap-2">
 								<Shield className="h-4 w-4 text-[#0f5384]" />
-								HubSpot: {snapshot.integrations.hubspotStatus || "Not connected"}
+								HubSpot:{" "}
+								{snapshot.integrations.hubspotStatus || "Not connected"}
 							</li>
 							<li className="flex items-center gap-2">
 								<Building2 className="h-4 w-4 text-[#0f5384]" />

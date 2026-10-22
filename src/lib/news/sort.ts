@@ -32,6 +32,8 @@ export function compareNewsForFeed(
 	return articleTime(b) - articleTime(a);
 }
 
-export function sortNewsForFeed<T extends SortableNewsArticle>(items: T[]): T[] {
+export function sortNewsForFeed<T extends SortableNewsArticle>(
+	items: T[],
+): T[] {
 	return [...items].sort(compareNewsForFeed);
 }

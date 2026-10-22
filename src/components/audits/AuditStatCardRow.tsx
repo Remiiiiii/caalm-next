@@ -12,7 +12,10 @@ import {
 	TrendingDown,
 	TrendingUp,
 } from "lucide-react";
-import { MetricStatCard, type MetricTone } from "@/components/ui/metric-stat-card";
+import {
+	MetricStatCard,
+	type MetricTone,
+} from "@/components/ui/metric-stat-card";
 import type { AuditKpi } from "@/lib/audits/types";
 
 interface AuditStatCardRowProps {

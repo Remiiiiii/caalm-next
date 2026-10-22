@@ -4,9 +4,7 @@ import { appwriteConfig } from "@/lib/appwrite/config";
 import type { VolunteerWaiverRecord } from "./types";
 
 function tableId(): string {
-	return (
-		appwriteConfig.volunteerWaiversCollectionId || "69f0b802001f4e8c2b28"
-	);
+	return appwriteConfig.volunteerWaiversCollectionId || "69f0b802001f4e8c2b28";
 }
 
 function dbId(): string {
@@ -15,7 +13,9 @@ function dbId(): string {
 
 function mapRow(row: Record<string, unknown>): VolunteerWaiverRecord {
 	const status =
-		row.status === "sent" || row.status === "completed" || row.status === "draft"
+		row.status === "sent" ||
+		row.status === "completed" ||
+		row.status === "draft"
 			? row.status
 			: "draft";
 	return {

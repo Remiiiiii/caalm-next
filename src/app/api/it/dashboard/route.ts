@@ -4,8 +4,8 @@
  */
 
 import { type NextRequest, NextResponse } from "next/server";
-import { requireITRole } from "@/lib/auth/it-guards";
 import { createAdminClient } from "@/lib/appwrite";
+import { requireITRole } from "@/lib/auth/it-guards";
 import { formatUptime } from "@/lib/it/format-uptime";
 
 type ServiceStatus = "up" | "down" | "degraded";
@@ -86,7 +86,8 @@ export async function GET(request: NextRequest) {
 				activeIncidents: null as number | null,
 				systemLoad: null as number | null,
 				/** Real Node heap for this process (not host RAM). */
-				processHeapUsedMb: Math.round((memory.heapUsed / 1024 / 1024) * 10) / 10,
+				processHeapUsedMb:
+					Math.round((memory.heapUsed / 1024 / 1024) * 10) / 10,
 				processUptimeSeconds: uptimeSeconds,
 				processUptimeLabel: uptimeLabel,
 			},

@@ -8,8 +8,8 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { TaskPriority } from "@/types/tasks";
 import { cn } from "@/lib/utils";
+import type { TaskPriority } from "@/types/tasks";
 import {
 	TASK_PRIORITY_BAR,
 	TASK_PRIORITY_FILLED,
@@ -69,7 +69,11 @@ export function TaskPriorityBars({
 					{body}
 				</button>
 			</DropdownMenuTrigger>
-			<DropdownMenuContent align="start" className="w-36" onClick={(e) => e.stopPropagation()}>
+			<DropdownMenuContent
+				align="start"
+				className="w-36"
+				onClick={(e) => e.stopPropagation()}
+			>
 				{PRIORITIES.map((priority) => (
 					<DropdownMenuItem
 						key={priority}

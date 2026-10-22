@@ -164,7 +164,7 @@ export const ComplianceDeadlineTracker: React.FC<
 									<div className="flex items-start space-x-3 flex-1">
 										<div className="mt-1">{getStatusIcon(deadline.status)}</div>
 										<div className="flex-1 min-w-0">
-											<h4 className="font-semibold text-slate-800 mb-1">
+											<h4 className="font-semibold text-slate-700 mb-1">
 												{deadline.title}
 											</h4>
 											<div className="flex items-center space-x-4 text-sm text-slate-600">
@@ -229,7 +229,7 @@ export const ComplianceDeadlineTracker: React.FC<
 									<div className="flex items-center space-x-3 flex-1">
 										{getStatusIcon(deadline.status)}
 										<div className="flex-1 min-w-0">
-											<p className="text-sm font-medium text-slate-800">
+											<p className="text-sm font-medium text-slate-700">
 												{deadline.title}
 											</p>
 											<p className="text-xs text-slate-600">

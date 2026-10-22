@@ -27,14 +27,14 @@ import {
 	type UserGraphUserNodeData,
 } from "@/components/users/UserGraphNodes";
 import { UserGraphSidebar } from "@/components/users/UserGraphSidebar";
-import type { UserActionKind } from "@/components/users/UserManagementActionDialogs";
-import type { GraphLineage } from "@/components/users/UserManagementViewToggle";
-import { UserManagementOrientationToggle } from "@/components/users/UserManagementViewToggle";
 import {
 	USER_GRAPH_MAX_ZOOM,
 	USER_GRAPH_MIN_ZOOM,
 	UserGraphZoomControls,
 } from "@/components/users/UserGraphZoomControls";
+import type { UserActionKind } from "@/components/users/UserManagementActionDialogs";
+import type { GraphLineage } from "@/components/users/UserManagementViewToggle";
+import { UserManagementOrientationToggle } from "@/components/users/UserManagementViewToggle";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useToast } from "@/hooks/use-toast";
 import type { UserManagementUser } from "@/hooks/useUsers";
@@ -50,6 +50,10 @@ import {
 	seedFlowNodePositions,
 } from "@/lib/users/assignment-graph";
 import {
+	readGraphLayoutPositions,
+	writeGraphLayoutPositions,
+} from "@/lib/users/graph-layout-storage";
+import {
 	clientDragToFlowRect,
 	type GraphRect,
 	isTinyMarquee,
@@ -57,10 +61,6 @@ import {
 	pointInRect,
 	selectionBounds,
 } from "@/lib/users/graph-marquee";
-import {
-	readGraphLayoutPositions,
-	writeGraphLayoutPositions,
-} from "@/lib/users/graph-layout-storage";
 import {
 	GRAPH_ORIENTATION_STORAGE_KEY,
 	type GraphOrientation,
@@ -279,7 +279,9 @@ function UserAssignmentGraphCanvas({
 	const lastCutRef = useRef<LastGraphCut | null>(null);
 	const lastMoveRef = useRef<LastGraphMove | null>(null);
 	const lastUndoKindRef = useRef<"cut" | "move" | null>(null);
-	const dragStartPositionsRef = useRef(new Map<string, { x: number; y: number }>());
+	const dragStartPositionsRef = useRef(
+		new Map<string, { x: number; y: number }>(),
+	);
 	/** Cuts that must stay gone if a stale users list still has the old manager. */
 	const clearedTargetIdsRef = useRef({
 		reporting: new Set<string>(),
@@ -400,7 +402,10 @@ function UserAssignmentGraphCanvas({
 		const sessionPositions =
 			positionsByLineageRef.current[lineage][orientation];
 		if (sessionPositions.size === 0) {
-			for (const [id, point] of readGraphLayoutPositions(lineage, orientation)) {
+			for (const [id, point] of readGraphLayoutPositions(
+				lineage,
+				orientation,
+			)) {
 				sessionPositions.set(id, point);
 			}
 		}
@@ -944,7 +949,10 @@ function UserAssignmentGraphCanvas({
 	const onNodeDragStart: OnNodeDrag = useCallback((_event, node, dragged) => {
 		const items = dragged.length > 0 ? dragged : [node];
 		dragStartPositionsRef.current = new Map(
-			items.map((item) => [item.id, { x: item.position.x, y: item.position.y }]),
+			items.map((item) => [
+				item.id,
+				{ x: item.position.x, y: item.position.y },
+			]),
 		);
 	}, []);
 

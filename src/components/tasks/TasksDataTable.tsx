@@ -18,8 +18,8 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import type { TaskListItem, TaskPriority, TaskStatus } from "@/types/tasks";
 import { cn } from "@/lib/utils";
+import type { TaskListItem, TaskPriority, TaskStatus } from "@/types/tasks";
 import { TaskAssigneePicker } from "./TaskAssigneePicker";
 import { TaskDueCell } from "./TaskDueCell";
 import { TaskLinkedChip } from "./TaskLinkedChip";
@@ -92,8 +92,12 @@ export function TasksDataTable({
 					return (pa - pb) * dir;
 				}
 				case "dueDate": {
-					const da = a.dueDate ? Date.parse(a.dueDate) : Number.POSITIVE_INFINITY;
-					const db = b.dueDate ? Date.parse(b.dueDate) : Number.POSITIVE_INFINITY;
+					const da = a.dueDate
+						? Date.parse(a.dueDate)
+						: Number.POSITIVE_INFINITY;
+					const db = b.dueDate
+						? Date.parse(b.dueDate)
+						: Number.POSITIVE_INFINITY;
 					return (da - db) * dir;
 				}
 				default: {
@@ -227,10 +231,7 @@ export function TasksDataTable({
 								onChange={(status) => onStatusChange(task.$id, status)}
 							/>
 						</TableCell>
-						<TableCell
-							className={rowPad}
-							onClick={(e) => e.stopPropagation()}
-						>
+						<TableCell className={rowPad} onClick={(e) => e.stopPropagation()}>
 							<TaskPriorityBars
 								value={task.priority}
 								disabled={!canEdit}
@@ -241,10 +242,7 @@ export function TasksDataTable({
 								}
 							/>
 						</TableCell>
-						<TableCell
-							className={rowPad}
-							onClick={(e) => e.stopPropagation()}
-						>
+						<TableCell className={rowPad} onClick={(e) => e.stopPropagation()}>
 							<TaskAssigneePicker
 								assigneeId={task.assigneeId}
 								assigneeName={task.assigneeName}
@@ -252,9 +250,7 @@ export function TasksDataTable({
 								disabled={!canAssign}
 								showName={false}
 								onChange={
-									canAssign
-										? (id) => onAssigneeChange(task.$id, id)
-										: undefined
+									canAssign ? (id) => onAssigneeChange(task.$id, id) : undefined
 								}
 							/>
 						</TableCell>

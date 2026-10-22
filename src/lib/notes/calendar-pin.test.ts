@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-	monthDateRange,
-	validateCalendarPin,
-} from "@/lib/notes/calendar-pin";
+import { monthDateRange, validateCalendarPin } from "@/lib/notes/calendar-pin";
 
 describe("validateCalendarPin", () => {
 	it("allows a dashboard-only note with no pin", () => {

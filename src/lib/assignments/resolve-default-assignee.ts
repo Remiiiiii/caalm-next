@@ -47,7 +47,9 @@ export function pickAssigneeIds(input: {
 	const division = input.division?.trim() || "";
 	const inDivision = (input.divisionCandidates || []).filter(
 		(person) =>
-			division && person.division && person.division.toLowerCase() === division.toLowerCase(),
+			division &&
+			person.division &&
+			person.division.toLowerCase() === division.toLowerCase(),
 	);
 	if (inDivision.length > 0) {
 		return {
@@ -118,13 +120,17 @@ export async function resolveAssignedManagerIds(params: {
 	const division = params.division?.trim() || "";
 	const department = params.department?.trim() || "";
 
-	const [divisionManagers, departmentManagers, orgManagers] = await Promise.all([
-		division ? getManagersByDivision(division, params.orgId) : Promise.resolve([]),
-		department
-			? getManagersByDepartment(department, params.orgId)
-			: Promise.resolve([]),
-		getAllManagers(params.orgId),
-	]);
+	const [divisionManagers, departmentManagers, orgManagers] = await Promise.all(
+		[
+			division
+				? getManagersByDivision(division, params.orgId)
+				: Promise.resolve([]),
+			department
+				? getManagersByDepartment(department, params.orgId)
+				: Promise.resolve([]),
+			getAllManagers(params.orgId),
+		],
+	);
 
 	const pick = pickAssigneeIds({
 		divisionCandidates: divisionManagers,

@@ -61,9 +61,6 @@ export async function POST(request: NextRequest) {
 		return NextResponse.json({ ...result, rowErrors: errors });
 	} catch (error) {
 		console.error("[SERVER] users/import POST:", error);
-		return NextResponse.json(
-			{ error: "User import failed" },
-			{ status: 500 },
-		);
+		return NextResponse.json({ error: "User import failed" }, { status: 500 });
 	}
 }

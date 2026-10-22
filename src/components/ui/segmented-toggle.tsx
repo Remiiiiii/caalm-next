@@ -39,16 +39,22 @@ export function SegmentedToggle<T extends string>({
 			role="tablist"
 			aria-label={ariaLabel}
 			className={cn(
-				"relative inline-grid items-center rounded-full border border-slate-200 bg-slate-100 p-1",
+				"relative inline-grid h-[var(--segmented-toggle-height)] items-center rounded-full border border-slate-200 bg-slate-100",
 				className,
 			)}
-			style={{ gridTemplateColumns: `repeat(${tabCount}, minmax(0, 1fr))` }}
+			style={{
+				gridTemplateColumns: `repeat(${tabCount}, minmax(0, 1fr))`,
+				padding: "var(--segmented-toggle-pad)",
+			}}
 		>
 			<span
 				aria-hidden
-				className="pointer-events-none absolute top-1 bottom-1 left-1 rounded-full bg-white shadow-sm transition-transform duration-200 ease-out"
+				className="pointer-events-none absolute rounded-full bg-white shadow-sm transition-transform duration-200 ease-out"
 				style={{
-					width: `calc((100% - 0.5rem) / ${tabCount})`,
+					top: "var(--segmented-toggle-pad)",
+					bottom: "var(--segmented-toggle-pad)",
+					left: "var(--segmented-toggle-pad)",
+					width: `calc((100% - 2 * var(--segmented-toggle-pad)) / ${tabCount})`,
 					transform: `translateX(${selectedIndex * 100}%)`,
 				}}
 			/>
@@ -64,7 +70,8 @@ export function SegmentedToggle<T extends string>({
 						aria-selected={selected}
 						onClick={() => onChange(tab.value)}
 						className={cn(
-							"relative z-10 inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-full py-1.5 text-sm font-medium transition-colors duration-200",
+							"relative z-10 inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-full text-sm font-medium transition-colors duration-200",
+							"h-full py-0",
 							tab.hideLabel ? "px-2.5" : "px-3",
 							"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
 							selected

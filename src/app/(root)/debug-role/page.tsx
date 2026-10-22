@@ -14,7 +14,7 @@ export default function DebugRolePage() {
 			<div className="relative z-10 p-6">
 				<div className="max-w-4xl mx-auto">
 					<div className="text-center mb-8">
-						<h1 className="text-3xl font-bold text-slate-800 mb-2">
+						<h1 className="text-3xl font-bold text-slate-700 mb-2">
 							Debug Role Manager
 						</h1>
 						<p className="text-slate-600">

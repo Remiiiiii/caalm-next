@@ -13,13 +13,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { PermissionGate } from "@/components/PermissionGate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogTitle,
-} from "@/components/ui/dialog";
+	CaalmDataTable,
+	DATA_TABLE_BODY_ROW_BASE,
+	DATA_TABLE_HEADER_CELL,
+	DATA_TABLE_HEADER_ROW,
+} from "@/components/ui/caalm-data-table";
+import { Card, CardContent } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
 	AppDropdownMenuContent,
 	AppDropdownMenuItem,
@@ -29,12 +30,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { LoadingSpinner } from "@/components/ui/loading";
-import {
-	CaalmDataTable,
-	DATA_TABLE_BODY_ROW_BASE,
-	DATA_TABLE_HEADER_CELL,
-	DATA_TABLE_HEADER_ROW,
-} from "@/components/ui/caalm-data-table";
 import {
 	TableBody,
 	TableCell,
@@ -118,7 +113,7 @@ function RoleActionsMenu({
 				<Button
 					variant="ghost"
 					size="icon"
-					className="h-9 w-9 rounded-full shad-no-focus text-slate-500 transition-colors hover:bg-white/30 hover:text-slate-800"
+					className="h-9 w-9 rounded-full shad-no-focus text-slate-500 transition-colors hover:bg-white/30 hover:text-slate-700"
 					aria-label={`Actions for ${role.name}`}
 				>
 					<Image src="/assets/icons/dots.svg" alt="" width={34} height={34} />
@@ -213,42 +208,6 @@ const RolesManagement = () => {
 		void fetchRoles();
 	}, [fetchRoles]);
 
-	const handleDelete = async () => {
-		if (!roleToDelete) return;
-		if (!(await ensureStepUp())) return;
-
-		try {
-			const response = await fetch(`/api/admin/roles/${roleToDelete.$id}`, {
-				method: "DELETE",
-			});
-
-			const data = await response.json();
-
-			if (data.success) {
-				toast({
-					title: "Success",
-					description: "Role deleted successfully",
-				});
-				fetchRoles();
-				setDeleteDialogOpen(false);
-				setRoleToDelete(null);
-			} else {
-				toast({
-					title: "Error",
-					description: data.error || "Failed to delete role",
-					variant: "destructive",
-				});
-			}
-		} catch (error) {
-			console.error("Error deleting role:", error);
-			toast({
-				title: "Error",
-				description: "Failed to delete role",
-				variant: "destructive",
-			});
-		}
-	};
-
 	const filteredRoles = useMemo(
 		() =>
 			roles.filter((role) =>
@@ -298,78 +257,78 @@ const RolesManagement = () => {
 		}
 
 		return (
-			<CaalmDataTable className="px-0 sm:px-0 pb-0">
-					<TableHeader className="[&_tr]:border-b-0">
-						<TableRow className={DATA_TABLE_HEADER_ROW}>
-							<TableHead className={`${DATA_TABLE_HEADER_CELL} pl-4 pr-3`}>
-								Name
-							</TableHead>
+			<CaalmDataTable className="pb-0">
+				<TableHeader className="[&_tr]:border-b-0">
+					<TableRow className={DATA_TABLE_HEADER_ROW}>
+						<TableHead className={`${DATA_TABLE_HEADER_CELL} pl-4 pr-3`}>
+							Name
+						</TableHead>
+						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+							Description
+						</TableHead>
+						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+							Members
+						</TableHead>
+						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+							Type
+						</TableHead>
+						{options.showCreated ? (
 							<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-								Description
+								Created
 							</TableHead>
-							<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-								Members
-							</TableHead>
-							<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-								Type
-							</TableHead>
-							{options.showCreated ? (
-								<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-									Created
-								</TableHead>
-							) : null}
-							<TableHead
-								className={`${DATA_TABLE_HEADER_CELL} pl-3 pr-4 text-right`}
-							>
-								Action
-							</TableHead>
-						</TableRow>
-					</TableHeader>
-					<TableBody className="[&_tr:last-child>td]:border-b-0">
-						{sectionRoles.map((role) => {
-							return (
-								<TableRow key={role.$id} className={DATA_TABLE_BODY_ROW_BASE}>
-									<TableCell className="py-4">
-										<p className="subtitle-2 text-slate-800">{role.name}</p>
-									</TableCell>
-									<TableCell className="max-w-md py-4">
-										<span className="body-2 line-clamp-2 text-slate-600">
-											{role.description?.trim() ? role.description : "—"}
-										</span>
-									</TableCell>
+						) : null}
+						<TableHead
+							className={`${DATA_TABLE_HEADER_CELL} pl-3 pr-4 text-right`}
+						>
+							Action
+						</TableHead>
+					</TableRow>
+				</TableHeader>
+				<TableBody className="[&_tr:last-child>td]:border-b-0">
+					{sectionRoles.map((role) => {
+						return (
+							<TableRow key={role.$id} className={DATA_TABLE_BODY_ROW_BASE}>
+								<TableCell className="py-4">
+									<p className="subtitle-2 text-slate-700">{role.name}</p>
+								</TableCell>
+								<TableCell className="max-w-md py-4">
+									<span className="body-2 line-clamp-2 text-slate-600">
+										{role.description?.trim() ? role.description : "—"}
+									</span>
+								</TableCell>
+								<TableCell className="whitespace-nowrap py-4 text-slate-700">
+									<span className="body-2 font-medium tabular-nums">
+										{role.memberCount ?? 0}
+									</span>
+								</TableCell>
+								<TableCell className="py-4 whitespace-nowrap">
+									{typeBadge(options.actionVariant === "default")}
+								</TableCell>
+								{options.showCreated ? (
 									<TableCell className="whitespace-nowrap py-4 text-slate-700">
-										<span className="body-2 font-medium tabular-nums">
-											{role.memberCount ?? 0}
+										<span className="body-2 tabular-nums">
+											{formatRoleCreatedLabel(
+												getRoleCreatedIso(role),
+												pageNowMs,
+											)}
 										</span>
 									</TableCell>
-									<TableCell className="py-4 whitespace-nowrap">
-										{typeBadge(options.actionVariant === "default")}
-									</TableCell>
-									{options.showCreated ? (
-										<TableCell className="whitespace-nowrap py-4 text-slate-700">
-											<span className="body-2 tabular-nums">
-												{formatRoleCreatedLabel(
-													getRoleCreatedIso(role),
-													pageNowMs,
-												)}
-											</span>
-										</TableCell>
-									) : null}
-									<TableCell className="py-4 text-right">
-										<RoleActionsMenu
-											role={role}
-											variant={options.actionVariant}
-											canManage={canAssignRoles}
-											onDeleteRequest={(r) => {
-												setRoleToDelete(r);
-												setDeleteDialogOpen(true);
-											}}
-										/>
-									</TableCell>
-								</TableRow>
-							);
-						})}
-					</TableBody>
+								) : null}
+								<TableCell className="py-4 text-right">
+									<RoleActionsMenu
+										role={role}
+										variant={options.actionVariant}
+										canManage={canAssignRoles}
+										onDeleteRequest={(r) => {
+											setRoleToDelete(r);
+											setDeleteDialogOpen(true);
+										}}
+									/>
+								</TableCell>
+							</TableRow>
+						);
+					})}
+				</TableBody>
 			</CaalmDataTable>
 		);
 	};
@@ -472,68 +431,50 @@ const RolesManagement = () => {
 				</div>
 			)}
 
-			<Dialog
+			<ConfirmDialog
 				open={deleteDialogOpen}
 				onOpenChange={(open) => {
 					setDeleteDialogOpen(open);
 					if (!open) setRoleToDelete(null);
 				}}
-			>
-				<DialogContent
-					className="overflow-hidden p-0 shadow-xl sm:max-w-md"
-					variant="destructive"
-				>
-					<DialogTitle className="sr-only">Delete Role</DialogTitle>
-					<div className="h-4 w-full bg-[#d6d7d8] opacity-70" />
-
-					{/* Header */}
-					<div className="glass-dialog-alert-section">
-						<div className="flex gap-2">
-							<AlertTriangle className="w-5 h-5 text-[#f7d333]" />
-							<h2 className="text-base font-semibold sidebar-gradient-text">
-								Delete Role
-							</h2>
-						</div>
-						<div>
-							<DialogDescription className="text-sm text-slate-600 mt-1 ml-7">
-								Are you sure you want to delete &quot;{roleToDelete?.name}
-								&quot;? This action cannot be undone.
-							</DialogDescription>
-						</div>
-					</div>
-
-					<div className="px-6 py-5 space-y-3 bg-white">
-						<p className="text-sm text-slate-600">
-							This will permanently remove the role from the system.
-						</p>
-					</div>
-					<div className="glass-dialog-alert-footer">
-						<div className="text-xs text-slate-500 w-20">
-							This action is permanent.
-						</div>
-						<div className="flex items-center justify-end gap-3">
-							<Button
-								type="button"
-								variant="ghost"
-								className="delete-btn px-3 sm:px-4"
-								onClick={() => void handleDelete()}
-							>
-								<Trash2 className="h-4 w-4" />
-								{loading ? "Deleting..." : "Delete Role"}
-								{loading && (
-									<Image
-										src="/assets/icons/loader.svg"
-										alt="loader"
-										width={16}
-										height={16}
-										className="animate-spin ml-2"
-									/>
-								)}
-							</Button>
-						</div>
-					</div>
-				</DialogContent>
-			</Dialog>
+				variant="destructive"
+				icon={<AlertTriangle className="h-5 w-5" aria-hidden />}
+				confirmIcon={<Trash2 className="h-4 w-4" aria-hidden />}
+				title="Delete role"
+				description={
+					roleToDelete
+						? `Are you sure you want to delete "${roleToDelete.name}"? This action cannot be undone.`
+						: "Are you sure you want to delete this role? This action cannot be undone."
+				}
+				facts={
+					roleToDelete
+						? [{ label: "Role", value: roleToDelete.name }]
+						: undefined
+				}
+				helperText="This will permanently remove the role from the system."
+				confirmLabel="Delete role"
+				pendingLabel="Deleting…"
+				onConfirm={async () => {
+					if (!roleToDelete) return;
+					if (!(await ensureStepUp())) {
+						throw new Error("Verification required to delete a role.");
+					}
+					const response = await fetch(
+						`/api/admin/roles/${roleToDelete.$id}`,
+						{ method: "DELETE" },
+					);
+					const data = await response.json();
+					if (!data.success) {
+						throw new Error(data.error || "Failed to delete role");
+					}
+					toast({
+						title: "Success",
+						description: "Role deleted successfully",
+					});
+					fetchRoles();
+					setRoleToDelete(null);
+				}}
+			/>
 		</div>
 	);
 };

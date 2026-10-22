@@ -223,6 +223,12 @@ export const appwriteConfig = {
 		"test-organization-logos-bucket",
 	),
 
+	/** Audit readiness public-site crawl screenshots (name: screenshots) */
+	screenshotsBucketId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_SCREENSHOTS_BUCKET",
+		"test-screenshots-bucket",
+	),
+
 	auditLogsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_AUDIT_LOGS_COLLECTION",
 		"test-audit-logs",
@@ -241,6 +247,36 @@ export const appwriteConfig = {
 	/** Evidence map rows for audit prep (name: audit_evidence_map) */
 	auditEvidenceMapCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_AUDIT_EVIDENCE_MAP_COLLECTION",
+	),
+
+	/** Which contract/license satisfies which evidence-map requirement (name: audit_evidence_record_tags) */
+	auditEvidenceRecordTagsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_AUDIT_EVIDENCE_RECORD_TAGS_COLLECTION",
+		"69f8e3a2001d4e8c2b10",
+	),
+
+	/** Government RFP proposal workspace (name: proposals) */
+	proposalsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_PROPOSALS_COLLECTION",
+		"69f8f1a0001d4e8c2b20",
+	),
+
+	/** Compliance-matrix rows for a proposal (name: proposal_requirements) */
+	proposalRequirementsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_PROPOSAL_REQUIREMENTS_COLLECTION",
+		"69f8f1a0001d4e8c2b21",
+	),
+
+	/** Draft sections for a proposal (name: proposal_sections) */
+	proposalSectionsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_PROPOSAL_SECTIONS_COLLECTION",
+		"69f8f1a0001d4e8c2b22",
+	),
+
+	/** Reusable proposal content library (name: proposal_content_library) */
+	proposalContentLibraryCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_PROPOSAL_CONTENT_LIBRARY_COLLECTION",
+		"69f8f1a0001d4e8c2b23",
 	),
 
 	secretKey: getTestFallback("NEXT_APPWRITE_API_KEY", "test-api-key-for-ci"),

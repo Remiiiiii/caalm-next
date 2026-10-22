@@ -122,7 +122,7 @@ export default function ContractsFilterChips() {
 				<Badge
 					key={chip.key}
 					variant="outline"
-					className="inline-flex items-center px-2 py-0.5 text-xs rounded-md font-medium border bg-blue/10 text-blue border-blue/20 gap-1"
+					className="inline-flex items-center px-2 py-0.5 text-xs rounded-md border bg-blue/10 text-blue border-blue/20 gap-1"
 				>
 					{chip.label}
 					<button

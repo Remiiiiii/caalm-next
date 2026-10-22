@@ -32,7 +32,11 @@ export async function POST(request: NextRequest) {
 	}
 
 	const constituent = await getConstituentById(constituentId);
-	if (!constituent || constituent.orgId !== ctx.orgId || constituent.mergedIntoId) {
+	if (
+		!constituent ||
+		constituent.orgId !== ctx.orgId ||
+		constituent.mergedIntoId
+	) {
 		return NextResponse.json(
 			{ error: "Constituent not found" },
 			{ status: 404 },
@@ -50,7 +54,10 @@ export async function POST(request: NextRequest) {
 		return NextResponse.json({ ok: true });
 	} catch (error) {
 		if (error instanceof StewardshipQueueError) {
-			return NextResponse.json({ error: error.message }, { status: error.status });
+			return NextResponse.json(
+				{ error: error.message },
+				{ status: error.status },
+			);
 		}
 		console.error("[SERVER] stewardship contacted POST:", error);
 		return NextResponse.json(

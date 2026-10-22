@@ -10,10 +10,7 @@ import { listPostedGiftsForContract } from "@/lib/gifts/contract-gifts";
 type RouteContext = { params: Promise<{ contractId: string }> };
 
 export async function GET(request: NextRequest, context: RouteContext) {
-	const ctx = await requireFundingOrgContext(
-		request,
-		PERMISSIONS.FUNDING.VIEW,
-	);
+	const ctx = await requireFundingOrgContext(request, PERMISSIONS.FUNDING.VIEW);
 	if (!ctx.ok) return ctx.response;
 	const { contractId } = await context.params;
 

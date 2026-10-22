@@ -2,24 +2,43 @@ import * as ToastPrimitives from "@radix-ui/react-toast";
 import { cva, type VariantProps } from "class-variance-authority";
 import { X } from "lucide-react";
 import * as React from "react";
+import { createPortal } from "react-dom";
 
 import { cn } from "@/lib/utils";
 
 const ToastProvider = ToastPrimitives.Provider;
 
+/**
+ * Portaled to document.body: the layout nests <Toaster /> inside a
+ * `position: relative; z-index: 0` stacking context (see (root)/layout.tsx),
+ * which traps this viewport's z-index locally. Dialog/AlertDialog content
+ * portals to body directly, so without this the toast painted behind their
+ * backdrop blur regardless of its z-index value. @radix-ui/react-toast has
+ * no built-in Portal primitive (Toast.Root portals itself into this
+ * viewport's DOM node internally), so this relocates the viewport with
+ * react-dom's createPortal instead.
+ */
 const ToastViewport = React.forwardRef<
 	React.ElementRef<typeof ToastPrimitives.Viewport>,
 	React.ComponentPropsWithoutRef<typeof ToastPrimitives.Viewport>
->(({ className, ...props }, ref) => (
-	<ToastPrimitives.Viewport
-		ref={ref}
-		className={cn(
-			"fixed top-0 z-10002 flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-0 sm:right-0 sm:top-auto sm:flex-col md:max-w-[420px]",
-			className,
-		)}
-		{...props}
-	/>
-));
+>(({ className, ...props }, ref) => {
+	const [mounted, setMounted] = React.useState(false);
+	React.useEffect(() => setMounted(true), []);
+
+	if (!mounted) return null;
+
+	return createPortal(
+		<ToastPrimitives.Viewport
+			ref={ref}
+			className={cn(
+				"fixed top-0 z-10002 flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-0 sm:right-0 sm:top-auto sm:flex-col md:max-w-[420px]",
+				className,
+			)}
+			{...props}
+		/>,
+		document.body,
+	);
+});
 ToastViewport.displayName = ToastPrimitives.Viewport.displayName;
 
 const toastVariants = cva(

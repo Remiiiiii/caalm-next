@@ -1,6 +1,12 @@
 "use client";
 
-import { Bell, CalendarDays, FileText, User, type LucideIcon } from "lucide-react";
+import {
+	Bell,
+	CalendarDays,
+	FileText,
+	type LucideIcon,
+	User,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 

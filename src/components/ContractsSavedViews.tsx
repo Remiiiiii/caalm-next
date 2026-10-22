@@ -73,7 +73,7 @@ export default function ContractsSavedViews() {
 							>
 								<button
 									type="button"
-									className="flex-1 text-left text-sm text-slate-800 hover:text-[#0f5384] truncate cursor-pointer"
+									className="flex-1 text-left text-sm text-slate-700 hover:text-[#0f5384] truncate cursor-pointer"
 									onClick={() => {
 										applySavedView(view);
 										setOpen(false);

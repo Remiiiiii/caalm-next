@@ -10,14 +10,13 @@ import {
 	Trash2,
 	TriangleAlert,
 	UserRound,
-	X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import useSWR from "swr";
 import { OrgUnitPicker } from "@/components/settings/OrgUnitPicker";
 import Avatar from "@/components/ui/avatar";
+import { AppDialog } from "@/components/ui/app-dialog";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -77,6 +76,9 @@ interface UserManagementActionDialogsProps {
 	onConfirmImpersonate: (reason: string) => void;
 }
 
+const outlineCancelClass =
+	"rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50";
+
 function DialogShell({
 	open,
 	onClose,
@@ -85,6 +87,8 @@ function DialogShell({
 	subtitle,
 	children,
 	footer,
+	pending = false,
+	variant = "default",
 }: {
 	open: boolean;
 	onClose: () => void;
@@ -93,32 +97,24 @@ function DialogShell({
 	subtitle?: string;
 	children: React.ReactNode;
 	footer?: React.ReactNode;
+	pending?: boolean;
+	variant?: "default" | "destructive";
 }) {
 	return (
-		<Dialog open={open} onOpenChange={(next) => !next && onClose()}>
-			<DialogContent className="flex max-h-[90vh] max-w-[560px] flex-col overflow-hidden border border-slate-200 p-0 shadow-xl">
-				<div className="absolute top-0 right-0 left-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
-				<div className="glass-dialog-wizard-header mt-4">
-					<div className="flex items-center gap-3 px-6">
-						<div className="flex items-center gap-3">
-							{icon}
-							<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-								{title}
-							</DialogTitle>
-						</div>
-					</div>
-					{subtitle ? (
-						<p className="ml-14 mt-1 text-sm text-slate-600">{subtitle}</p>
-					) : null}
-				</div>
-				<div className="glass-dialog-body-padded flex-1 overflow-y-auto">
-					{children}
-				</div>
-				{footer ? (
-					<div className="glass-dialog-footer-wrap">{footer}</div>
-				) : null}
-			</DialogContent>
-		</Dialog>
+		<AppDialog
+			open={open}
+			onOpenChange={(next) => !next && onClose()}
+			icon={icon}
+			title={title}
+			description={subtitle}
+			size="form"
+			className="max-h-[90vh] max-w-[560px]"
+			variant={variant}
+			pending={pending}
+			footer={footer}
+		>
+			<div className="flex flex-col gap-3 pb-1">{children}</div>
+		</AppDialog>
 	);
 }
 
@@ -208,7 +204,7 @@ export function UserManagementActionDialogs({
 				open
 				onClose={onClose}
 				title="User profile"
-				icon={<UserRound className="h-5 w-5 text-[#0f5384]" />}
+				icon={<UserRound className="h-5 w-5" />}
 				subtitle={user.email}
 				footer={
 					<div className="flex items-center justify-end gap-3">
@@ -250,7 +246,7 @@ export function UserManagementActionDialogs({
 				open
 				onClose={onClose}
 				title="View as user"
-				icon={<Eye className="h-5 w-5 text-[#0f5384]" />}
+				icon={<Eye className="h-5 w-5" />}
 				subtitle={`You will browse CAALM as ${user.fullName}. Your admin session stays signed in.`}
 				footer={
 					<div className="flex items-center justify-end gap-3">
@@ -301,9 +297,11 @@ export function UserManagementActionDialogs({
 	}
 
 	if (action === "edit") {
-		const orgUsers = (
-			Array.isArray(orgUsersRaw) ? orgUsersRaw : []
-		) as Array<{ $id: string; fullName?: string; email?: string }>;
+		const orgUsers = (Array.isArray(orgUsersRaw) ? orgUsersRaw : []) as Array<{
+			$id: string;
+			fullName?: string;
+			email?: string;
+		}>;
 		const costCenters = costCentersPayload?.data?.costCenters ?? [];
 		const matrixConflictsWithManager = Boolean(
 			managerUserId &&
@@ -315,14 +313,22 @@ export function UserManagementActionDialogs({
 				open
 				onClose={onClose}
 				title="Edit user details"
-				icon={<UserRound className="h-5 w-5 text-[#0f5384]" />}
+				icon={<UserRound className="h-5 w-5" />}
 				subtitle={user.email}
+				pending={busy}
 				footer={
-					<div className="flex items-center justify-end gap-3">
+					<>
 						<Button
-							disabled={
-								busy || !fullName.trim() || matrixConflictsWithManager
-							}
+							type="button"
+							variant="outline"
+							className={outlineCancelClass}
+							disabled={busy}
+							onClick={onClose}
+						>
+							Cancel
+						</Button>
+						<Button
+							disabled={busy || !fullName.trim() || matrixConflictsWithManager}
 							onClick={() =>
 								onSaveEdit({
 									fullName: fullName.trim(),
@@ -335,7 +341,7 @@ export function UserManagementActionDialogs({
 									matrixManagerUserId: matrixManagerUserId || null,
 								})
 							}
-							className="primary-btn px-3 sm:px-4"
+							className="btn-primary px-3 sm:px-4"
 						>
 							{busy ? (
 								<Loader2 className="h-4 w-4 animate-spin" />
@@ -344,7 +350,7 @@ export function UserManagementActionDialogs({
 							)}
 							Save
 						</Button>
-					</div>
+					</>
 				}
 			>
 				<div className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
@@ -460,7 +466,7 @@ export function UserManagementActionDialogs({
 					</div>
 					{historyData?.data?.history?.length ? (
 						<div>
-							<p className="text-sm font-medium text-slate-800 mb-2">
+							<p className="text-sm font-medium text-slate-700 mb-2">
 								Org placement history
 							</p>
 							<ul className="space-y-1 text-xs text-slate-600 max-h-32 overflow-y-auto">
@@ -484,18 +490,28 @@ export function UserManagementActionDialogs({
 				open
 				onClose={onClose}
 				title="Change role"
-				icon={<ShieldCheck className="h-5 w-5 text-[#0f5384]" />}
+				icon={<ShieldCheck className="h-5 w-5" />}
 				subtitle={
 					isBulk
 						? `Assign a role for ${bulkLabel}`
 						: `Assign a role for ${user.fullName}`
 				}
+				pending={busy}
 				footer={
-					<div className="flex items-center justify-end gap-3">
+					<>
+						<Button
+							type="button"
+							variant="outline"
+							className={outlineCancelClass}
+							disabled={busy}
+							onClick={onClose}
+						>
+							Cancel
+						</Button>
 						<Button
 							disabled={busy || !roleName}
 							onClick={() => onSaveRole(roleName)}
-							className="primary-btn px-3 sm:px-4"
+							className="btn-primary px-3 sm:px-4"
 						>
 							{busy ? (
 								<Loader2 className="h-4 w-4 animate-spin" />
@@ -504,7 +520,7 @@ export function UserManagementActionDialogs({
 							)}
 							Update role
 						</Button>
-					</div>
+					</>
 				}
 			>
 				<div className="rounded-lg border border-slate-200 bg-white p-4">
@@ -550,28 +566,43 @@ export function UserManagementActionDialogs({
 
 	if (action === "delete") {
 		return (
-			<Dialog open onOpenChange={(next) => !next && onClose()}>
-				<DialogContent
-					className="flex max-h-[90vh] max-w-[440px] flex-col overflow-hidden border border-slate-200 p-0 shadow-xl"
-					variant="destructive"
-				>
-					<div className="absolute top-0 right-0 left-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
-
-					<div className="mt-4 flex items-start gap-3 border-b border-slate-200/80 bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-5">
-						<div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-red/20 bg-red/10">
-							<Trash2 className="h-4 w-4 text-red" aria-hidden />
-						</div>
-						<div className="min-w-0 pt-0.5">
-							<DialogTitle className="text-lg font-semibold sidebar-gradient-text">
-								{isBulk ? "Delete users" : "Delete user"}
-							</DialogTitle>
-							<p className="mt-0.5 text-xs text-slate-600">
-								This action is permanent and cannot be undone.
-							</p>
-						</div>
-					</div>
-
-					<div className="flex-1 space-y-3 overflow-y-auto bg-slate-50 px-6 py-4">
+			<DialogShell
+				open
+				onClose={onClose}
+				variant="destructive"
+				pending={busy}
+				title={isBulk ? "Delete users" : "Delete user"}
+				icon={<Trash2 className="h-5 w-5" />}
+				subtitle="This action is permanent and cannot be undone."
+				footer={
+					<>
+						<Button
+							type="button"
+							variant="outline"
+							className={outlineCancelClass}
+							disabled={busy}
+							autoFocus
+							onClick={onClose}
+						>
+							Cancel
+						</Button>
+						<Button
+							type="button"
+							disabled={busy}
+							onClick={onConfirmDelete}
+							className="delete-btn gap-2 px-3 sm:px-4"
+						>
+							{busy ? (
+								<Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+							) : (
+								<Trash2 className="h-4 w-4" aria-hidden />
+							)}
+							{isBulk ? "Delete users" : "Delete user"}
+						</Button>
+					</>
+				}
+			>
+				<div className="space-y-3">
 						{isBulk ? (
 							<div className="rounded-lg border border-slate-200 bg-white p-3">
 								<p className="text-sm font-semibold text-slate-700">
@@ -601,13 +632,15 @@ export function UserManagementActionDialogs({
 									<p className="truncate text-sm font-semibold text-slate-700">
 										{user.fullName}
 									</p>
-									<p className="truncate text-xs text-slate-600">{user.email}</p>
+									<p className="truncate text-xs text-slate-600">
+										{user.email}
+									</p>
 									<div className="mt-1.5 flex flex-wrap gap-4">
 										<div>
 											<p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
 												Role
 											</p>
-											<p className="text-xs font-semibold text-slate-800">
+											<p className="text-xs font-semibold text-slate-700">
 												{user.roleName || "Unassigned"}
 											</p>
 										</div>
@@ -615,7 +648,7 @@ export function UserManagementActionDialogs({
 											<p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
 												Last active
 											</p>
-											<p className="text-xs font-semibold text-slate-800">
+											<p className="text-xs font-semibold text-slate-700">
 												{formatUserLastActiveLabel(
 													user.lastActiveAt || user.$updatedAt,
 												)}
@@ -631,7 +664,7 @@ export function UserManagementActionDialogs({
 								className="mt-0.5 h-4 w-4 shrink-0 text-red"
 								aria-hidden
 							/>
-							<p className="text-xs leading-relaxed text-slate-800">
+							<p className="text-xs leading-relaxed text-slate-700">
 								{isBulk ? (
 									<>
 										Removing these users revokes their CAALM access immediately
@@ -649,25 +682,8 @@ export function UserManagementActionDialogs({
 								)}
 							</p>
 						</div>
-					</div>
-
-					<div className="flex items-center justify-end gap-2 border-t border-slate-200 bg-slate-50 px-6 py-4">
-						<Button
-							type="button"
-							disabled={busy}
-							onClick={onConfirmDelete}
-							className="delete-btn gap-2 px-3 sm:px-4"
-						>
-							{busy ? (
-								<Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-							) : (
-								<Trash2 className="h-4 w-4" aria-hidden />
-							)}
-							{isBulk ? "Delete users" : "Delete user"}
-						</Button>
-					</div>
-				</DialogContent>
-			</Dialog>
+				</div>
+			</DialogShell>
 		);
 	}
 
@@ -677,16 +693,17 @@ export function UserManagementActionDialogs({
 				open
 				onClose={onClose}
 				title={isSuspended ? "Reactivate account" : "Deactivate account"}
-				icon={<Power className="h-5 w-5 text-[#0f5384]" />}
+				icon={<Power className="h-5 w-5" />}
+				pending={busy}
 				footer={
-					<div className="flex items-center justify-end gap-3">
+					<>
 						<Button
 							type="button"
+							variant="outline"
+							className={outlineCancelClass}
 							disabled={busy}
 							onClick={() => onOpenAction?.("view")}
-							className="primary-btn cursor-pointer px-3 sm:px-4"
 						>
-							<X className="h-4 w-4" />
 							Cancel
 						</Button>
 						<Button
@@ -706,7 +723,7 @@ export function UserManagementActionDialogs({
 							)}
 							{isSuspended ? "Reactivate" : "Deactivate"}
 						</Button>
-					</div>
+					</>
 				}
 			>
 				<div className="space-y-4">
@@ -750,18 +767,28 @@ export function UserManagementActionDialogs({
 				open
 				onClose={onClose}
 				title={cfg.title}
-				icon={<UserRound className="h-5 w-5 text-[#0f5384]" />}
+				icon={<UserRound className="h-5 w-5" />}
+				pending={busy}
 				footer={
-					<div className="flex items-center justify-end gap-3">
+					<>
+						<Button
+							type="button"
+							variant="outline"
+							className={outlineCancelClass}
+							disabled={busy}
+							onClick={onClose}
+						>
+							Cancel
+						</Button>
 						<Button
 							disabled={busy}
 							onClick={cfg.onConfirm}
-							className="primary-btn cursor-pointer px-3 sm:px-4"
+							className="btn-primary cursor-pointer px-3 sm:px-4"
 						>
 							{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
 							{cfg.confirm}
 						</Button>
-					</div>
+					</>
 				}
 			>
 				<p className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700">

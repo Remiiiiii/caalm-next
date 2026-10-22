@@ -31,7 +31,7 @@ const cardUser: UserManagementUser = {
 	email: "john@caalm.test",
 	avatar: "",
 	accountId: "john-account",
-	role: "user",
+	role: "viewer",
 	roleName: "Executive",
 	jobTitle: "Chief Financial Officer",
 	workLocation: "Austin office",

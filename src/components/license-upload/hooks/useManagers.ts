@@ -82,9 +82,7 @@ export function useManagers(
 					division,
 				});
 				const display =
-					typedDept.length > 0
-						? typedDept
-						: (pick.managers as Manager[]);
+					typedDept.length > 0 ? typedDept : (pick.managers as Manager[]);
 				setFilteredManagers(display);
 				setAssigneeSource(pick.source);
 				setSelectedManagers(pick.ids);

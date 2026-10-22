@@ -10,10 +10,7 @@ import { requireFundingOrgContext } from "@/lib/funding/request-context";
 import { parseAllowedHttpUrl } from "@/lib/funding/safe-link-url";
 
 export async function GET(request: NextRequest) {
-	const ctx = await requireFundingOrgContext(
-		request,
-		PERMISSIONS.FUNDING.VIEW,
-	);
+	const ctx = await requireFundingOrgContext(request, PERMISSIONS.FUNDING.VIEW);
 	if (!ctx.ok) return ctx.response;
 
 	const contractId =

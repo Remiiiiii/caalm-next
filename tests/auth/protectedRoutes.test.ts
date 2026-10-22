@@ -21,6 +21,12 @@ describe("protected app routes", () => {
 		expect(isProtectedAppRoute("/docs/getting-started")).toBe(false);
 	});
 
+	it("keeps crawler-facing metadata routes public", () => {
+		// Without this, search engines and the readiness public-site crawl get
+		// redirected to /sign-in instead of the real sitemap (src/app/sitemap.ts).
+		expect(isProtectedAppRoute("/sitemap.xml")).toBe(false);
+	});
+
 	it("matches proxy and client helpers", () => {
 		expect(isProxyProtectedPath("/gifts")).toBe(isProtectedAppRoute("/gifts"));
 		expect(isProxyProtectedPath("/")).toBe(isProtectedAppRoute("/"));

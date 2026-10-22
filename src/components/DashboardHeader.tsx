@@ -20,6 +20,8 @@ interface DashboardHeaderProps {
 				fullName?: string;
 				role?: string;
 				department?: string;
+				avatar?: string | null;
+				profileImageId?: string | null;
 		  })
 		| null;
 }
@@ -28,8 +30,32 @@ const DashboardHeader = ({ user: userProp }: DashboardHeaderProps) => {
 	const { logout, user: userFromContext } = useAuth();
 	const [notifOpen, setNotifOpen] = useState(false);
 
-	// Use user from context if prop is not provided (avoids serialization issues)
-	const user = userProp || userFromContext;
+	// Merge layout user + auth prefs so the header photo uses the uploaded file.
+	const user =
+		userProp || userFromContext
+			? ({
+					...(userFromContext || {}),
+					...(userProp || {}),
+					avatar:
+						userProp?.avatar ??
+						(userFromContext as { avatar?: string | null } | null)?.avatar ??
+						null,
+					profileImageId:
+						userProp?.profileImageId ??
+						(
+							userFromContext as {
+								profileImageId?: string | null;
+							} | null
+						)?.profileImageId ??
+						null,
+					prefs: {
+						...((userFromContext as { prefs?: Models.Preferences } | null)
+							?.prefs || {}),
+						...((userProp as { prefs?: Models.Preferences } | null)?.prefs ||
+							{}),
+					},
+				} as NonNullable<DashboardHeaderProps["user"]>)
+			: null;
 
 	const { unreadCount } = useUnreadCount(user?.$id);
 	const { mutate: revalidateNotifications } = useNotifications(user?.$id);

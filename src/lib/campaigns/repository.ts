@@ -1,7 +1,11 @@
 import { ID, Query } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
-import type { Campaign, CreateCampaignInput, UpdateCampaignInput } from "./types";
+import type {
+	Campaign,
+	CreateCampaignInput,
+	UpdateCampaignInput,
+} from "./types";
 
 const PAGE_SIZE_MAX = 100;
 
@@ -20,8 +24,7 @@ function mapRow(row: Record<string, unknown>): Campaign {
 		$updatedAt: String(row.$updatedAt || ""),
 		orgId: String(row.orgId || ""),
 		name: String(row.name || ""),
-		goalAmount:
-			row.goalAmount != null ? Number(row.goalAmount) : undefined,
+		goalAmount: row.goalAmount != null ? Number(row.goalAmount) : undefined,
 		currency: String(row.currency || "USD"),
 		startDate: row.startDate ? String(row.startDate) : undefined,
 		endDate: row.endDate ? String(row.endDate) : undefined,
@@ -63,7 +66,9 @@ export async function getCampaignById(
 	}
 }
 
-export async function createCampaign(input: CreateCampaignInput): Promise<Campaign> {
+export async function createCampaign(
+	input: CreateCampaignInput,
+): Promise<Campaign> {
 	const { tablesDB } = await createAdminClient();
 	const row = await tablesDB.createRow({
 		databaseId: dbId(),

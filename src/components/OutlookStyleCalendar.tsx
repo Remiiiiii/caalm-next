@@ -1,6 +1,5 @@
 "use client";
 
-import * as VisuallyHiddenPrimitive from "@radix-ui/react-visually-hidden";
 import {
 	addDays,
 	addMonths,
@@ -32,6 +31,7 @@ import {
 	Paperclip,
 	Pencil,
 	Plus,
+	Settings,
 	SlidersHorizontal,
 	Tag,
 	Trash2,
@@ -47,11 +47,11 @@ import CalendarSettings from "@/components/CalendarSettings";
 import { CalendarSidebar } from "@/components/CalendarSidebar";
 import { CreateSharedCalendarDialog } from "@/components/CreateSharedCalendarDialog";
 import { AgendaView } from "@/components/calendar/AgendaView";
-import { CalendarPinnedNoteDialog } from "@/components/calendar/CalendarPinnedNoteDialog";
-import { CalendarPinnedNotesListDialog } from "@/components/calendar/CalendarPinnedNotesListDialog";
 import { ApprovalReviewDialog } from "@/components/calendar/ApprovalReviewDialog";
 import { CalendarApprovalsRail } from "@/components/calendar/CalendarApprovalsRail";
 import { CalendarFiltersDrawer } from "@/components/calendar/CalendarFiltersDrawer";
+import { CalendarPinnedNoteDialog } from "@/components/calendar/CalendarPinnedNoteDialog";
+import { CalendarPinnedNotesListDialog } from "@/components/calendar/CalendarPinnedNotesListDialog";
 import { ConflictDialog } from "@/components/calendar/ConflictDialog";
 import { DayView } from "@/components/calendar/DayView";
 import { DeleteEventDialog } from "@/components/calendar/DeleteEventDialog";
@@ -85,13 +85,7 @@ import {
 	toIsoDateLocal,
 } from "@/components/ui/caalm-date-picker";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-	DialogTrigger,
-} from "@/components/ui/dialog";
+import { AppDialog } from "@/components/ui/app-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SearchField } from "@/components/ui/search-field";
@@ -128,6 +122,7 @@ import {
 	getCalendarApprovalById,
 	getLatestApprovalRequestByEventId,
 } from "@/lib/actions/calendar-approval.actions";
+import { deleteNote, type Note } from "@/lib/actions/notes.actions";
 import type { SharedCalendar } from "@/lib/actions/shared-calendar.actions";
 import { fetchUserNamesByIds } from "@/lib/actions/user.actions";
 import {
@@ -142,13 +137,9 @@ import {
 	getEnterpriseInputAccept,
 	validateEnterpriseFile,
 } from "@/lib/files/enterprise-file-formats";
+import { fetcher } from "@/lib/swr-config";
 import { cn, convertFileSize, getFileType } from "@/lib/utils";
 import { getUSHolidaysForMonth, parseHolidayDate } from "@/lib/utils/holidays";
-import {
-	deleteNote,
-	type Note,
-} from "@/lib/actions/notes.actions";
-import { fetcher } from "@/lib/swr-config";
 
 type CalendarViewMode = "day" | "week" | "month" | "agenda";
 
@@ -314,14 +305,16 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 		enabled: isApprover,
 	});
 
-	// Auto-expand approvals section when there are pending approvals
+	// Auto-expand when pending items exist; depend on primitives so a new
+	// `approvals` array identity cannot retrigger setState every render.
+	const pendingApprovalCount = approvals.length;
 	useEffect(() => {
-		if (!approvalsLoading && approvals.length > 0) {
-			setIsApprovalsExpanded(true);
-		} else if (!approvalsLoading && approvals.length === 0) {
-			setIsApprovalsExpanded(false);
-		}
-	}, [approvals, approvalsLoading]);
+		if (approvalsLoading) return;
+		const shouldExpand = pendingApprovalCount > 0;
+		setIsApprovalsExpanded((expanded) =>
+			expanded === shouldExpand ? expanded : shouldExpand,
+		);
+	}, [pendingApprovalCount, approvalsLoading]);
 
 	// Approval dialog state
 	const [selectedApproval, setSelectedApproval] =
@@ -1576,34 +1569,59 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 		return map;
 	}, [pinnedNotesResponse]);
 
-	// Update shared calendars state from SWR
+	// Copy SWR calendars into local state. Guard setState so a new empty-array
+	// identity cannot retrigger this effect forever.
+	const sharedCalendarCount = swrCalendars.length;
 	useEffect(() => {
-		if (swrCalendars.length > 0) {
-			setSharedCalendars(swrCalendars);
-			setLoadingSharedCalendars(swrLoading);
-
-			// Fetch owner names (cached by SWR hook)
-			const ownerIds = swrCalendars
-				.map((cal: SharedCalendar) => cal.ownerId)
-				.filter((id: string) => id);
-			if (ownerIds.length > 0) {
-				fetchUserNamesByIds(ownerIds).then((ownerNames) => {
-					const namesMap: Record<string, string> = {};
-					ownerNames.forEach((user) => {
-						swrCalendars.forEach((cal: SharedCalendar) => {
-							if (cal.ownerId === user.$id) {
-								namesMap[cal.$id] = user.fullName || "Unknown";
-							}
-						});
-					});
-					setSharedCalendarOwnerNames(namesMap);
-				});
-			}
-		} else if (!swrLoading) {
-			setSharedCalendars([]);
-			setLoadingSharedCalendars(false);
+		if (swrLoading) {
+			setLoadingSharedCalendars((prev) => (prev ? prev : true));
+			return;
 		}
-	}, [swrCalendars, swrLoading]);
+
+		setLoadingSharedCalendars((prev) => (prev ? false : prev));
+
+		if (sharedCalendarCount === 0) {
+			setSharedCalendars((prev) => (prev.length === 0 ? prev : []));
+			return;
+		}
+
+		setSharedCalendars((prev) => {
+			if (prev === swrCalendars) return prev;
+			if (
+				prev.length === swrCalendars.length &&
+				prev.every((cal, i) => cal.$id === swrCalendars[i]?.$id)
+			) {
+				return prev;
+			}
+			return swrCalendars;
+		});
+
+		const ownerIds = swrCalendars
+			.map((cal: SharedCalendar) => cal.ownerId)
+			.filter((id: string) => id);
+		if (ownerIds.length === 0) return;
+
+		void fetchUserNamesByIds(ownerIds).then((ownerNames) => {
+			const namesMap: Record<string, string> = {};
+			ownerNames.forEach((user) => {
+				swrCalendars.forEach((cal: SharedCalendar) => {
+					if (cal.ownerId === user.$id) {
+						namesMap[cal.$id] = user.fullName || "Unknown";
+					}
+				});
+			});
+			setSharedCalendarOwnerNames((prev) => {
+				const keys = Object.keys(namesMap);
+				if (
+					keys.length === Object.keys(prev).length &&
+					keys.every((key) => prev[key] === namesMap[key])
+				) {
+					return prev;
+				}
+				return namesMap;
+			});
+		});
+	}, [sharedCalendarCount, swrCalendars, swrLoading]);
 
 	// Calculate calendar width based on container and number of calendars
 	useEffect(() => {
@@ -3099,7 +3117,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 												className={cn(
 													"flex cursor-pointer items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-200 sm:px-3",
 													active
-														? "bg-white text-slate-800 shadow-sm"
+														? "bg-white text-slate-700 shadow-sm"
 														: "text-slate-500 hover:text-slate-700",
 												)}
 											>
@@ -3111,7 +3129,43 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 								</div>
 
 								{/* New Event Button - PRIMARY ACTION */}
-								<Dialog
+								<Button
+									size="sm"
+									variant="outline"
+									className="primary-btn px-3 sm:px-4"
+									disabled={!canCreateEvent}
+									onClick={() => {
+										if (!canCreateEvent) {
+											toast({
+												title: "Permission denied",
+												description:
+													"You do not have permission to create events.",
+												variant: "destructive",
+											});
+											return;
+										}
+										setSelectedEvent(null);
+										setNewEvent({
+											title: "",
+											date: new Date(),
+											endDate: new Date(),
+											type: "meeting",
+											description: "",
+											startTime: getSmartPlaceholderTimes(new Date())
+												.startTime,
+											endTime: getSmartPlaceholderTimes(new Date()).endTime,
+											contractName: "",
+											participants: "",
+											location: "",
+											sensitivityLevel: "standard",
+										});
+										setIsAddEventOpen(true);
+									}}
+								>
+									<Plus className="h-4 w-4 text-white" />
+									New Event
+								</Button>
+								<AppDialog
 									open={isAddEventOpen}
 									onOpenChange={(open) => {
 										if (open && !canCreateEvent) {
@@ -3125,72 +3179,73 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 										}
 										setIsAddEventOpen(open);
 									}}
+									size="form"
+									className="max-w-[700px] max-h-[90vh]"
+									icon={
+										selectedEvent ? (
+											<Pencil className="h-5 w-5" />
+										) : (
+											<CalendarIcon className="h-5 w-5" />
+										)
+									}
+									title={
+										selectedEvent ? "Update Event" : "Create New Event"
+									}
+									description={
+										selectedEvent
+											? "Update the details for your event"
+											: "Schedule a professional meeting or event"
+									}
+									pending={creatingEvent}
+									footer={
+										<>
+											<Button
+												type="button"
+												variant="outline"
+												className="rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+												onClick={handleCancelEvent}
+											>
+												<Ban className="h-4 w-4" />
+												Cancel
+											</Button>
+											<Button
+												type="button"
+												className="btn-primary"
+												onClick={
+													selectedEvent
+														? handleUpdateEventFromDialog
+														: handleCreateEvent
+												}
+												disabled={
+													creatingEvent ||
+													!newEvent.title.trim() ||
+													!canCreateEvent
+												}
+											>
+												{creatingEvent ? (
+													<Loader2 className="h-4 w-4 animate-spin" />
+												) : selectedEvent ? (
+													<Pencil className="h-4 w-4" />
+												) : (
+													<Plus className="h-4 w-4" />
+												)}
+												{creatingEvent
+													? selectedEvent
+														? "Updating..."
+														: "Creating..."
+													: selectedEvent
+														? "Update Event"
+														: "Create Event"}
+											</Button>
+										</>
+									}
 								>
-									<DialogTrigger asChild>
-										<Button
-											size="sm"
-											variant="outline"
-											className="primary-btn px-3 sm:px-4"
-											disabled={!canCreateEvent}
-											onClick={() => {
-												// Ensure this dialog opens in create mode
-												setSelectedEvent(null);
-												setNewEvent({
-													title: "",
-													date: new Date(),
-													endDate: new Date(),
-													type: "meeting",
-													description: "",
-													startTime: getSmartPlaceholderTimes(new Date())
-														.startTime,
-													endTime: getSmartPlaceholderTimes(new Date()).endTime,
-													contractName: "",
-													participants: "",
-													location: "",
-													sensitivityLevel: "standard",
-												});
-											}}
-										>
-											<Plus className="h-4 w-4 text-white" />
-											New Event
-										</Button>
-									</DialogTrigger>
-									<DialogContent className="w-[calc(100%-1.5rem)] sm:w-full max-w-[700px] p-0 max-h-[90vh] flex flex-col">
-										<VisuallyHiddenPrimitive.Root>
-											<DialogTitle>
-												{selectedEvent ? "Update Event" : "Create New Event"}
-											</DialogTitle>
-										</VisuallyHiddenPrimitive.Root>
-										<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-										{/* Professional Header */}
-										<div className="glass-dialog-wizard-header mt-4">
-											<div className="flex items-center justify-between ml-6">
-												<div className="flex items-center">
-													<div>
-														<div className="flex items-center gap-2">
-															{selectedEvent ? (
-																<Pencil className="h-5 w-5 text-[#0f5384]" />
-															) : (
-																<CalendarIcon className="h-5 w-5 text-[#0f5384]" />
-															)}
-															<h2 className="text-xl font-semibold sidebar-gradient-text">
-																{selectedEvent
-																	? "Update Event"
-																	: "Create New Event"}
-															</h2>
-														</div>
-														<p className="text-sm text-slate-600 mt-1 ml-7">
-															{selectedEvent
-																? "Update the details for your event"
-																: "Schedule a professional meeting or event"}
-														</p>
-													</div>
-												</div>
-											</div>
-										</div>
-
-										{/* Content section with scroll */}
-										<div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+									<div className="space-y-6 pb-1">
+										<p className="text-sm text-slate-500">
+											{newEvent.description
+												? `${newEvent.description.length} characters`
+												: "Enter event details"}
+										</p>
 											{/* Event Title Section */}
 											<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
 												<Label
@@ -3895,61 +3950,8 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 													</div>
 												</div>
 											)}
-										</div>
-
-										{/* Professional Footer */}
-										<div className="border-t border-white/40 bg-white/35 px-6 py-4 backdrop-blur-sm">
-											<div className="flex items-center justify-between">
-												<div className="text-sm text-slate-500">
-													{newEvent.description
-														? `${newEvent.description.length} characters`
-														: "Enter event details"}
-												</div>
-												<div className="flex items-center gap-3">
-													<Button
-														variant="outline"
-														className="primary-btn px-3 sm:px-4"
-														onClick={handleCancelEvent}
-													>
-														<Ban className="w-4 h-4" />
-														Cancel
-													</Button>
-													<Button
-														className="primary-btn px-3 sm:px-4"
-														onClick={
-															selectedEvent
-																? handleUpdateEventFromDialog
-																: handleCreateEvent
-														}
-														disabled={
-															creatingEvent ||
-															!newEvent.title.trim() ||
-															!canCreateEvent
-														}
-													>
-														{creatingEvent ? (
-															<>
-																<div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-																{selectedEvent ? "Updating..." : "Creating..."}
-															</>
-														) : (
-															<>
-																{selectedEvent ? (
-																	<Pencil className="w-4 h-4" />
-																) : (
-																	<Plus className="w-4 h-4" />
-																)}
-																{selectedEvent
-																	? "Update Event"
-																	: "Create Event"}
-															</>
-														)}
-													</Button>
-												</div>
-											</div>
-										</div>
-									</DialogContent>
-								</Dialog>
+									</div>
+								</AppDialog>
 
 								<Button
 									size="sm"
@@ -3962,21 +3964,21 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 							</div>
 						</div>
 
-						<Dialog open={showSettings} onOpenChange={setShowSettings}>
-							<DialogContent className="sm:max-w-[460px] max-h-[80vh] overflow-y-auto p-4 sm:p-4 gap-2 shadow-xl">
-								<DialogHeader>
-									<DialogTitle className="sidebar-gradient-text">
-										Calendar Settings
-									</DialogTitle>
-								</DialogHeader>
-								{showSettings ? (
-									<CalendarSettings
-										userId={user?.$id || ""}
-										onClose={() => setShowSettings(false)}
-									/>
-								) : null}
-							</DialogContent>
-						</Dialog>
+						<AppDialog
+							open={showSettings}
+							onOpenChange={setShowSettings}
+							size="form"
+							className="max-h-[80vh]"
+							icon={<Settings className="h-5 w-5" />}
+							title="Calendar Settings"
+						>
+							{showSettings ? (
+								<CalendarSettings
+									userId={user?.$id || ""}
+									onClose={() => setShowSettings(false)}
+								/>
+							) : null}
+						</AppDialog>
 
 						{/* Management + Calendar View */}
 						<div className="flex flex-col lg:flex-row gap-0 min-h-[640px]">

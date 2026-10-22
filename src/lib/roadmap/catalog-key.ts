@@ -6,7 +6,11 @@
 export type RoadmapCatalogKey = "clm" | "npo" | "prd";
 
 /** Every board the engine seeds and reconciles (CLM, Nonprofit, Platform Readiness). */
-export const ROADMAP_CATALOG_KEYS = ["clm", "npo", "prd"] as const satisfies readonly RoadmapCatalogKey[];
+export const ROADMAP_CATALOG_KEYS = [
+	"clm",
+	"npo",
+	"prd",
+] as const satisfies readonly RoadmapCatalogKey[];
 
 export const DEFAULT_ROADMAP_CATALOG_KEY: RoadmapCatalogKey = "clm";
 

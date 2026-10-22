@@ -6,10 +6,14 @@ import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 
 export async function POST(request: NextRequest) {
 	const user = await getCurrentUser();
-	if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+	if (!user)
+		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	const org = await getUserDefaultOrganization(user.$id);
 	if (!org?.orgId) {
-		return NextResponse.json({ error: "Organization not found" }, { status: 400 });
+		return NextResponse.json(
+			{ error: "Organization not found" },
+			{ status: 400 },
+		);
 	}
 	const { articleId } = await request.json();
 	const article = await getNewsArticle(articleId);

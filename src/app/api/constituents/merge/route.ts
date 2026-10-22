@@ -34,7 +34,10 @@ export async function POST(request: NextRequest) {
 			},
 		});
 		if (!result.ok) {
-			return NextResponse.json({ error: result.error }, { status: result.status });
+			return NextResponse.json(
+				{ error: result.error },
+				{ status: result.status },
+			);
 		}
 		return NextResponse.json({
 			winnerId: result.winnerId,

@@ -19,9 +19,7 @@ const fetcher = async (url: string): Promise<ITHubOverviewResponse> => {
 
 export function useITHubOverview(orgId: string | null) {
 	const { data, error, isLoading, mutate } = useSWR(
-		orgId
-			? `/api/it/hub/overview?orgId=${encodeURIComponent(orgId)}`
-			: null,
+		orgId ? `/api/it/hub/overview?orgId=${encodeURIComponent(orgId)}` : null,
 		fetcher,
 		{
 			...swrConfig,

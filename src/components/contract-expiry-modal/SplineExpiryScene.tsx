@@ -133,7 +133,7 @@ export default function SplineExpiryScene({
           width={24}
           height={24}
         />
-        <span className="text-slate-800 text-md sidebar-gradient-text">
+        <span className="text-slate-700 text-md sidebar-gradient-text">
           CAALM AI
         </span>
       </div>  */}

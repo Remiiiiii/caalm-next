@@ -221,11 +221,7 @@ export function hasAssignerManagerMismatch(
 			.map((item) => [item.accountId as string, item]),
 	);
 	const assignerNode = resolveAssignerNodeId(user, users);
-	const managerId = profileIdForRaw(
-		user.managerUserId || "",
-		byId,
-		byAccount,
-	);
+	const managerId = profileIdForRaw(user.managerUserId || "", byId, byAccount);
 	const systemAssigned =
 		assignerNode === SYSTEM_NODE_ID ||
 		isSystemAssigner(user.assignedById, user.assignedByName);
@@ -249,7 +245,9 @@ export function hasAssignerManagerMismatch(
 	return true;
 }
 
-function sortedLabelCounts(map: Map<string, Set<string>>): GraphSidebarLabelCount[] {
+function sortedLabelCounts(
+	map: Map<string, Set<string>>,
+): GraphSidebarLabelCount[] {
 	return [...map.entries()]
 		.map(([label, ids]) => ({ label, count: ids.size }))
 		.sort((a, b) => {
@@ -590,7 +588,8 @@ export function highlightUserIds(
 		case "hygiene":
 			if (highlight.value === "no-department")
 				return stats.ids.hygiene.noDepartment;
-			if (highlight.value === "no-division") return stats.ids.hygiene.noDivision;
+			if (highlight.value === "no-division")
+				return stats.ids.hygiene.noDivision;
 			if (highlight.value === "no-role") return stats.ids.hygiene.noRole;
 			return stats.ids.hygiene.mismatch;
 		case "activity":

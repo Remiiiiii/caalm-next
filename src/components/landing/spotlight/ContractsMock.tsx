@@ -238,7 +238,7 @@ export default function ContractsMock() {
 						<nav className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-hidden">
 							{SIDEBAR_SECTIONS.map((section) => (
 								<div key={section.header} className="shrink-0">
-									<p className="mb-1 flex items-center gap-1.5 px-1 text-[10px] font-bold text-slate-800 lg:text-[11px]">
+									<p className="mb-1 flex items-center gap-1.5 px-1 text-[10px] font-bold text-slate-700 lg:text-[11px]">
 										{section.header === "Dashboard" ? (
 											<span className="text-[#03AFBF] shrink-0">
 												<svg
@@ -403,10 +403,7 @@ export default function ContractsMock() {
 								</span>
 							</div>
 							<div className="flex flex-wrap items-center justify-end gap-1.5">
-								<span
-									className="landing-filter-icon"
-									aria-label="Filter"
-								>
+								<span className="landing-filter-icon" aria-label="Filter">
 									<Filter className="h-3.5 w-3.5" />
 								</span>
 								<span className="inline-flex h-7 items-center gap-1 rounded-md border border-slate-200 bg-white px-2 text-[10px] text-slate-700">
@@ -467,7 +464,7 @@ export default function ContractsMock() {
 														className="!size-6 !min-w-6 !min-h-6 shrink-0 aspect-square rounded-full"
 														imageClassName="!size-4"
 													/>
-													<span className="truncate font-medium text-slate-800 max-w-[110px] sm:max-w-[160px]">
+													<span className="truncate font-medium text-slate-700 max-w-[110px] sm:max-w-[160px]">
 														{row.name}
 													</span>
 												</div>
@@ -475,7 +472,7 @@ export default function ContractsMock() {
 											<td className="px-2 py-2">
 												<span
 													className={cn(
-														"inline-flex items-center whitespace-nowrap rounded-full border px-1.5 py-0.5 text-[9px] sm:text-[10px] font-medium",
+														"inline-flex items-center whitespace-nowrap rounded-full border px-1.5 py-0.5 text-[9px] sm:text-[10px]",
 														STATUS_STYLES[row.statusTone],
 													)}
 												>

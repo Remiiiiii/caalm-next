@@ -1,4 +1,7 @@
-import { createNewsArticle, listNewsArticles } from "@/lib/database/news-articles";
+import {
+	createNewsArticle,
+	listNewsArticles,
+} from "@/lib/database/news-articles";
 import { listDismissedExternalIds } from "@/lib/database/news-feed-dismissals";
 import {
 	getNewsFeed,
@@ -9,7 +12,10 @@ import {
 	decryptedAccessToken,
 	getNewsSocialConnection,
 } from "@/lib/database/news-social-connections";
-import { filterNewIngestItems, ingestDedupeKey } from "@/lib/news/ingest/dedupe";
+import {
+	filterNewIngestItems,
+	ingestDedupeKey,
+} from "@/lib/news/ingest/dedupe";
 import { parseRssOrAtom } from "@/lib/news/ingest/parse-rss-atom";
 import {
 	parseWordpressJson,

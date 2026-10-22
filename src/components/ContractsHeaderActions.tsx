@@ -3,10 +3,13 @@
 import { FilePlus, SquareArrowRightExit } from "lucide-react";
 import Link from "next/link";
 import { useMemo } from "react";
+import { BusyIcon } from "@/components/ui/busy-icon";
 import { Button } from "@/components/ui/button";
 import { PERMISSIONS } from "@/constants/permissions";
+import { useBusyAction } from "@/hooks/useBusyAction";
 import { usePermissions } from "@/hooks/usePermissions";
 import { applyContractListFilters } from "@/lib/contracts/contractsListUtils";
+import { downloadXlsx } from "@/lib/export/download-xlsx";
 import type { UIFileDoc } from "@/types/files";
 import ContractsExpiryModalTestButton from "./ContractsExpiryModalTestButton";
 import { useContractsView } from "./ContractsViewContext";
@@ -34,58 +37,45 @@ export default function ContractsHeaderActions({
 
 	const handleExport = () => {
 		if (!canView) return;
-		const headers = [
-			"Contract Name",
-			"Contract Number",
-			"Status",
-			"Type",
-			"Department",
-			"Assigned To",
-			"Expiry Date",
-			"Amount",
-			"Vendor",
-			"Created Date",
-		];
-		const rows = exportFiles.map((file) => [
-			file.contractName || file.name || "Untitled",
-			file.contractNumber || "",
-			file.status || "",
-			file.contractType || "",
-			file.department || "",
-			Array.isArray(file.assignedManagers)
-				? file.assignedManagers.join(", ")
-				: file.assignedManagers || "",
-			file.contractExpiryDate || "",
-			file.amount?.toString() || "",
-			file.vendor || "",
-			file.$createdAt || "",
-		]);
-		const csvContent = [
-			headers.join(","),
-			...rows.map((row) =>
-				row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","),
-			),
-		].join("\n");
-		const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-		const link = document.createElement("a");
-		link.setAttribute("href", URL.createObjectURL(blob));
-		link.setAttribute(
-			"download",
-			`contracts-export-${new Date().toISOString().split("T")[0]}.csv`,
-		);
-		link.style.visibility = "hidden";
-		document.body.appendChild(link);
-		link.click();
-		document.body.removeChild(link);
+		const stamp = new Date().toISOString().slice(0, 10);
+		downloadXlsx(`contracts-export-${stamp}.xlsx`, {
+			sheetName: "Contracts",
+			title: "Contracts — Export",
+			subtitle: `CAALM · ${exportFiles.length} contract${exportFiles.length === 1 ? "" : "s"} · Generated ${stamp}`,
+			columns: [
+				{ header: "Contract Name", width: 40 },
+				{ header: "Contract Number", width: 18 },
+				{ header: "Status", width: 16 },
+				{ header: "Type", width: 18 },
+				{ header: "Department", width: 20 },
+				{ header: "Assigned To", width: 26 },
+				{ header: "Expiry Date", type: "date", width: 16 },
+				{ header: "Amount", type: "currency", width: 16 },
+				{ header: "Vendor", width: 24 },
+				{ header: "Created Date", type: "date", width: 16 },
+			],
+			rows: exportFiles.map((file) => [
+				file.contractName || file.name || "Untitled",
+				file.contractNumber,
+				file.status,
+				file.contractType,
+				file.department,
+				Array.isArray(file.assignedManagers)
+					? file.assignedManagers.join(", ")
+					: file.assignedManagers,
+				file.contractExpiryDate,
+				file.amount == null ? null : Number(file.amount),
+				file.vendor,
+				file.$createdAt,
+			]),
+		});
 	};
+	const [runExporting, exporting] = useBusyAction(handleExport);
 
 	return (
 		<div className="platform-overview-actions flex items-center gap-2 justify-end flex-wrap">
 			{canCreate && (
-				<Button
-					asChild
-					className="primary-btn cursor-pointer"
-				>
+				<Button asChild className="primary-btn cursor-pointer">
 					<Link href="/contracts/create">
 						<FilePlus className="h-4 w-4" />
 						<span className="hidden sm:inline">Create contract</span>
@@ -95,10 +85,11 @@ export default function ContractsHeaderActions({
 			{canView && (
 				<Button
 					variant="outline"
-					onClick={handleExport}
+					disabled={exporting}
+					onClick={() => void runExporting()}
 					className="primary-btn cursor-pointer"
 				>
-					<SquareArrowRightExit className="h-4 w-4" />
+					<BusyIcon busy={exporting} icon={SquareArrowRightExit} />
 					<span className="hidden sm:inline">
 						{selectedIds.length > 0
 							? `Export (${selectedIds.length})`

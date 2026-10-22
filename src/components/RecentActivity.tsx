@@ -8,7 +8,7 @@ import {
 	FileUp,
 	User,
 } from "lucide-react";
-import { useMemo, useState, type FC } from "react";
+import { type FC, useMemo, useState } from "react";
 import {
 	ActivityFeedList,
 	collapseConsecutiveActivities,
@@ -96,9 +96,9 @@ const RecentActivity: FC<RecentActivityProps> = ({
 
 	const [typeFilter, setTypeFilter] = useState<ActivityType | "all">("all");
 
-	const activities: RecentActivity[] = (skipUnified
-		? propActivities
-		: recentActivities || []) as RecentActivity[];
+	const activities: RecentActivity[] = (
+		skipUnified ? propActivities : recentActivities || []
+	) as RecentActivity[];
 	const feedItems = useMemo(() => {
 		const scoped =
 			typeFilter === "all"

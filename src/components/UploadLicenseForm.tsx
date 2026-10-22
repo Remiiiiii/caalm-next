@@ -6,7 +6,6 @@
 
 "use client";
 
-import * as VisuallyHiddenPrimitive from "@radix-ui/react-visually-hidden";
 import { Ban, ChevronLeft, ChevronRight, Loader2, Upload } from "lucide-react";
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
@@ -16,13 +15,8 @@ import {
 	AiExtractionReviewPanel,
 	AiExtractionStatusBadge,
 } from "@/components/contract-upload/AiExtractionReview";
+import { AppDialog } from "@/components/ui/app-dialog";
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogTitle,
-	DialogTrigger,
-} from "@/components/ui/dialog";
 import { Form } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { getContractDepartmentEnums } from "@/lib/actions/database.actions";
@@ -511,38 +505,99 @@ const UploadLicenseForm: React.FC<LicenseUploadFormProps> = ({
 
 	return (
 		<>
-			<Dialog open={isOpen} onOpenChange={setIsOpen}>
-				<DialogTrigger asChild>
-					<Button className={className}>
-						<Upload className="h-4 w-4" />
-						Upload License
-					</Button>
-				</DialogTrigger>
+			<Button
+				type="button"
+				className={className}
+				onClick={() => setIsOpen(true)}
+			>
+				<Upload className="h-4 w-4" />
+				Upload License
+			</Button>
 
-				<DialogContent className="glass-dialog">
-					<VisuallyHiddenPrimitive.Root>
-						<DialogTitle>Upload License</DialogTitle>
-					</VisuallyHiddenPrimitive.Root>
+			<AppDialog
+				open={isOpen}
+				onOpenChange={setIsOpen}
+				size="form"
+				className="glass-dialog max-h-[90vh] sm:max-w-4xl"
+				icon={<Upload className="h-5 w-5" />}
+				title="Upload New License"
+				description={`Step ${currentStep} of ${TOTAL_STEPS}`}
+				pending={isUploading}
+				footer={
+					<div className="flex w-full items-center justify-between gap-2">
+						<Button
+							type="button"
+							variant="outline"
+							onClick={() => {
+								if (currentStep > 1 || processedFileData) {
+									setCancelDialogOpen(true);
+								} else {
+									setIsOpen(false);
+									resetForm();
+								}
+							}}
+							className="flex items-center gap-2"
+							disabled={isUploading}
+						>
+							<Ban className="h-4 w-4" />
+							Cancel
+						</Button>
 
-					{/* Professional Cap */}
-					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
+						<div className="flex items-center gap-2">
+							{currentStep > 1 && (
+								<Button
+									type="button"
+									variant="outline"
+									onClick={prevStep}
+									disabled={isUploading}
+									className="flex items-center gap-2"
+								>
+									<ChevronLeft className="h-4 w-4" />
+									Previous
+								</Button>
+							)}
 
-					{/* Sticky Header */}
-					<div className="glass-dialog-wizard-header">
-						<div className="px-6">
-							<h2 className="text-2xl font-bold sidebar-gradient-text mb-3">
-								Upload New License
-							</h2>
-							<StepIndicator
-								currentStep={currentStep}
-								onGoToStep={goToStep}
-								processedFileData={processedFileData}
-							/>
+							{currentStep < TOTAL_STEPS ? (
+								<Button
+									type="button"
+									onClick={nextStep}
+									disabled={currentStep === 1 && !processedFileData}
+									className="primary-btn flex items-center gap-2"
+								>
+									Next
+									<ChevronRight className="h-4 w-4" />
+								</Button>
+							) : (
+								<Button
+									type="button"
+									onClick={() => void form.handleSubmit(handleSubmit)()}
+									disabled={isUploading || !processedFileData}
+									className="primary-btn min-w-[120px]"
+								>
+									{isUploading ? (
+										<>
+											<Loader2 className="h-4 w-4 animate-spin" />
+											Submitting...
+										</>
+									) : (
+										<>
+											<Upload className="h-4 w-4" />
+											Submit for Review
+										</>
+									)}
+								</Button>
+							)}
 						</div>
 					</div>
-
-					{/* Scrollable Content */}
-					<div className="flex-1 overflow-y-auto p-4 bg-white">
+				}
+			>
+				<div className="space-y-4 pb-1">
+					<StepIndicator
+						currentStep={currentStep}
+						onGoToStep={goToStep}
+						processedFileData={processedFileData}
+					/>
+					<div className="-mx-6 min-h-0 flex-1 overflow-y-auto px-4">
 						<Form {...form}>
 							<form
 								id="license-upload-form"
@@ -632,75 +687,8 @@ const UploadLicenseForm: React.FC<LicenseUploadFormProps> = ({
 							</form>
 						</Form>
 					</div>
-
-					{/* Footer */}
-					<div className="sticky bottom-0 bg-white border-t border-slate-200 p-4 flex items-center justify-between">
-						<Button
-							type="button"
-							variant="outline"
-							onClick={() => {
-								if (currentStep > 1 || processedFileData) {
-									setCancelDialogOpen(true);
-								} else {
-									setIsOpen(false);
-									resetForm();
-								}
-							}}
-							className="primary-btn flex items-center gap-2"
-							disabled={isUploading}
-						>
-							<Ban className="h-4 w-4" />
-							Cancel
-						</Button>
-
-						<div className="flex items-center gap-2">
-							{currentStep > 1 && (
-								<Button
-									type="button"
-									variant="outline"
-									onClick={prevStep}
-									disabled={isUploading}
-									className="flex items-center gap-2"
-								>
-									<ChevronLeft className="h-4 w-4" />
-									Previous
-								</Button>
-							)}
-
-							{currentStep < TOTAL_STEPS ? (
-								<Button
-									type="button"
-									onClick={nextStep}
-									disabled={currentStep === 1 && !processedFileData}
-									className="primary-btn flex items-center gap-2"
-								>
-									Next
-									<ChevronRight className="h-4 w-4" />
-								</Button>
-							) : (
-								<Button
-									type="button"
-									onClick={() => void form.handleSubmit(handleSubmit)()}
-									disabled={isUploading || !processedFileData}
-									className="primary-btn min-w-[120px]"
-								>
-									{isUploading ? (
-										<>
-											<Loader2 className="h-4 w-4 animate-spin" />
-											Submitting...
-										</>
-									) : (
-										<>
-											<Upload className="h-4 w-4" />
-											Submit for Review
-										</>
-									)}
-								</Button>
-							)}
-						</div>
-					</div>
-				</DialogContent>
-			</Dialog>
+				</div>
+			</AppDialog>
 
 			{/* Cancel Dialog */}
 			<CancelDialog

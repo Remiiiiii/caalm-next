@@ -1,6 +1,6 @@
+import { type GiftMethod, isGiftMethod } from "@/lib/gifts/types";
 import { parseBoolCell } from "@/lib/import/http";
 import { pickMappedValue } from "@/lib/import/mapping";
-import { isGiftMethod, type GiftMethod } from "@/lib/gifts/types";
 import type { GiftImportFieldKey } from "./fields";
 
 export type MappedGiftImportRow = {

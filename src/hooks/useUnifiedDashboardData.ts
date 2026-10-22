@@ -3,10 +3,7 @@ import useSWR from "swr";
 import { useAuth } from "@/contexts/AuthContext";
 import { useClientCachedFallback } from "@/hooks/useClientCachedFallback";
 import type { RiskImpactSnapshot } from "@/lib/dashboard/risk-impact.types";
-import {
-	clearCachedData,
-	setCachedData,
-} from "@/lib/utils/client-cache";
+import { clearCachedData, setCachedData } from "@/lib/utils/client-cache";
 import type { License } from "@/types/licenses";
 
 interface DashboardData {

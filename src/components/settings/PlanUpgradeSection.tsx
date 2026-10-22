@@ -110,12 +110,12 @@ export default function PlanUpgradeSection({
 								<h3 className="mb-2 mt-1 flex flex-wrap items-center gap-2 text-lg font-semibold text-slate-700">
 									{plan.name}
 									{isGrowth ? (
-										<span className="inline-flex items-center rounded-full border border-[#05A1B7]/30 bg-[#E8F8FA] px-2.5 py-0.5 text-xs font-medium text-[#057A8A]">
+										<span className="inline-flex items-center rounded-full border border-[#05A1B7]/30 bg-[#E8F8FA] px-2.5 py-0.5 text-xs text-[#057A8A]">
 											Most Popular
 										</span>
 									) : null}
 									{isCurrent ? (
-										<span className="inline-block rounded-full border border-blue/20 bg-blue/10 px-2 py-0.5 text-xs font-medium text-blue">
+										<span className="inline-block rounded-full border border-blue/20 bg-blue/10 px-2 py-0.5 text-xs text-blue">
 											Current
 										</span>
 									) : null}
@@ -163,7 +163,7 @@ export default function PlanUpgradeSection({
 
 								<hr className="my-6 border-slate-200" />
 
-								<h4 className="mb-3 text-sm font-semibold text-slate-800">
+								<h4 className="mb-3 text-sm font-semibold text-slate-700">
 									{featureListHeading(idx)}
 								</h4>
 								<ul className="space-y-2 text-sm text-slate-600">

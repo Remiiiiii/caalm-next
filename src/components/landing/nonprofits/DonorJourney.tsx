@@ -121,7 +121,7 @@ export default function DonorJourney() {
 									<p className="text-xs font-semibold uppercase tracking-wider text-[#0f5384]">
 										Step {i + 1}
 									</p>
-									<h3 className="mt-1 text-sm sm:text-base font-semibold text-slate-800">
+									<h3 className="mt-1 text-sm sm:text-base font-semibold text-slate-700">
 										{step.title}
 									</h3>
 									<p className="mt-1 text-xs sm:text-sm text-slate-600">

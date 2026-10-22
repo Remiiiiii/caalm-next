@@ -3,14 +3,14 @@
 import { RefreshCw } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FinanceScopeHelp } from "@/components/funding/FinanceScopeHelp";
+import { Form990ExportPanel } from "@/components/funding/Form990ExportPanel";
 import type { FundingView } from "@/components/funding/FundingViewSwitch";
 import { FundingViewSwitch } from "@/components/funding/FundingViewSwitch";
+import { JournalExportDialog } from "@/components/funding/JournalExportDialog";
 import { ObligationsPanel } from "@/components/funding/ObligationsPanel";
 import { ObligationsQueueBoard } from "@/components/funding/ObligationsQueueBoard";
 import { PursuitsBoard } from "@/components/funding/PursuitsBoard";
-import { FinanceScopeHelp } from "@/components/funding/FinanceScopeHelp";
-import { Form990ExportPanel } from "@/components/funding/Form990ExportPanel";
-import { JournalExportDialog } from "@/components/funding/JournalExportDialog";
 import { RetentionBoard } from "@/components/funding/RetentionBoard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -53,7 +53,7 @@ export function FundingRetentionClient() {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [selectedContractId, setSelectedContractId] = useState<string | null>(
-		() => searchParams.get("stream"),
+		() => searchParams?.get("stream") ?? null,
 	);
 	const [queueRefresh, setQueueRefresh] = useState(0);
 	const [missingFundOnly, setMissingFundOnly] = useState(false);
@@ -61,7 +61,7 @@ export function FundingRetentionClient() {
 
 	useEffect(() => {
 		const nextTab = tabFromSearch(searchParams);
-		const stream = searchParams.get("stream");
+		const stream = searchParams?.get("stream");
 		setTab(nextTab);
 		if (stream) {
 			setSelectedContractId(stream);

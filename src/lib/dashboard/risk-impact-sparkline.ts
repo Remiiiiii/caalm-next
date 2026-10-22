@@ -80,9 +80,7 @@ export function buildRiskTrackingSeries(
 	} else {
 		// Year view runs through Dec 31 so later months stay visible without scrolling.
 		const seriesEnd =
-			period === "ytd"
-				? new Date(today.getFullYear(), 11, 31)
-				: today;
+			period === "ytd" ? new Date(today.getFullYear(), 11, 31) : today;
 		const cursor = startOfWeek(start);
 		while (cursor <= seriesEnd) {
 			const date = new Date(cursor);

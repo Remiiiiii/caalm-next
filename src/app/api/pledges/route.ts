@@ -38,7 +38,10 @@ export async function POST(request: NextRequest) {
 			};
 		});
 		if (installments.some((i) => !i.dueDate || !Number.isFinite(i.amount))) {
-			return NextResponse.json({ error: "Invalid installment row" }, { status: 400 });
+			return NextResponse.json(
+				{ error: "Invalid installment row" },
+				{ status: 400 },
+			);
 		}
 
 		const result = await createPledgeWithInstallments({
@@ -51,6 +54,9 @@ export async function POST(request: NextRequest) {
 		return NextResponse.json(result, { status: 201 });
 	} catch (error) {
 		console.error("[SERVER] pledges POST:", error);
-		return NextResponse.json({ error: "Failed to create pledge" }, { status: 500 });
+		return NextResponse.json(
+			{ error: "Failed to create pledge" },
+			{ status: 500 },
+		);
 	}
 }

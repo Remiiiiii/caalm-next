@@ -36,7 +36,7 @@ Research-backed operating system for building CAALM with Cursor agents at princi
 - Fix **hooks portability** (relative or env-based paths; document cloud agent limitations).
 - Add **Team MCP** mirrors of project servers for cloud agents.
 - Mandate agent preamble: `graft ask "<task>" --source` + list applicable rules.
-- Enable **Playwright MCP** plugin locally for UI tasks; keep E2E in CI.
+- Cursor live UI: in-IDE Browser Tab (`cursor-ide-browser`). Claude Code live UI: Chrome on port 9222. Keep Playwright E2E in CI (`pnpm test:e2e`).
 - Run **agent-compatibility** plugin once; file top 5 fixes.
 - Publish internal **tenant + RBAC checklist** (see `.cursor/prompt-templates/feature-delivery.md`).
 

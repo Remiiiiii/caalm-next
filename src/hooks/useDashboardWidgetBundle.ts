@@ -46,7 +46,9 @@ async function fetchWidgetBundle([, newsLimit, userId]: [
 			}
 			return json.data as DepartmentPerformanceMetrics;
 		}),
-		userId ? getUserNotes(userId).catch(() => [] as Note[]) : Promise.resolve([]),
+		userId
+			? getUserNotes(userId).catch(() => [] as Note[])
+			: Promise.resolve([]),
 	]);
 
 	const rawItems = Array.isArray(newsRes.items)

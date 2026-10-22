@@ -1,0 +1,817 @@
+- generic:
+  - button "Open Next.js Dev Tools" [ref=f2e1437] [cursor=pointer]
+  - alert
+  - main [aria-hidden]:
+    - generic:
+      - complementary:
+        - generic:
+          - link:
+            - /url: /
+            - generic: CAALM
+          - button [expanded]
+        - navigation:
+          - list:
+            - generic:
+              - generic:
+                - listitem:
+                  - generic:
+                    - generic: Super Admin
+                    - generic: Dashboard
+                - generic:
+                  - list:
+                    - listitem:
+                      - link:
+                        - /url: /dashboard/superadmin
+                        - paragraph:
+                          - generic: Super Admin
+                    - listitem:
+                      - link:
+                        - /url: /dashboard/departmentmanager
+                        - paragraph:
+                          - generic: Department Manager
+                    - listitem:
+                      - link:
+                        - /url: /dashboard/it
+                        - paragraph:
+                          - generic: IT
+              - generic:
+                - listitem:
+                  - generic: Calendar
+                - generic:
+                  - list:
+                    - listitem:
+                      - link:
+                        - /url: /calendar
+                        - paragraph:
+                          - generic: Calendar View
+                    - listitem:
+                      - link:
+                        - /url: /events/check-in
+                        - paragraph:
+                          - generic: Event Check-in
+              - generic:
+                - listitem:
+                  - generic: Contracts
+                - generic:
+                  - list:
+                    - listitem:
+                      - link:
+                        - /url: /contracts
+                        - paragraph:
+                          - generic: All Contracts
+                    - listitem:
+                      - link:
+                        - /url: /contracts/import
+                        - paragraph:
+                          - generic: Import
+                    - listitem:
+                      - link:
+                        - /url: /my-contracts
+                        - paragraph:
+                          - generic: My Contracts
+                    - listitem:
+                      - link:
+                        - /url: /contracts/approvals
+                        - paragraph:
+                          - generic: Proposals & Approvals
+                    - listitem:
+                      - link:
+                        - /url: /contracts/advanced-resources
+                        - paragraph:
+                          - generic: Advanced Resources
+                    - listitem:
+                      - link:
+                        - /url: /contracts/create
+                        - paragraph:
+                          - generic: Create Contract
+                    - listitem:
+                      - link:
+                        - /url: /contracts/library
+                        - paragraph:
+                          - generic: Clause Library
+                    - listitem:
+                      - link:
+                        - /url: /contracts/templates
+                        - paragraph:
+                          - generic: Contract Templates
+                    - listitem:
+                      - link:
+                        - /url: /contracts/funding-retention
+                        - paragraph:
+                          - generic: Funding & Retention
+                    - listitem:
+                      - link:
+                        - /url: /funding/obligations/import
+                        - paragraph:
+                          - generic: Import obligations
+              - generic:
+                - listitem:
+                  - generic: Licenses
+                - generic:
+                  - list:
+                    - listitem:
+                      - link:
+                        - /url: /licenses
+                        - paragraph:
+                          - generic: All Licenses
+                    - listitem:
+                      - link:
+                        - /url: /licenses/import
+                        - paragraph:
+                          - generic: Import
+                    - listitem:
+                      - link:
+                        - /url: /licenses/department
+                        - paragraph:
+                          - generic: Department Licenses
+                    - listitem:
+                      - link:
+                        - /url: /licenses/approvals
+                        - paragraph:
+                          - generic: Proposals & Approvals
+              - generic:
+                - listitem:
+                  - generic: Constituents
+                - generic:
+                  - list:
+                    - listitem:
+                      - link:
+                        - /url: /constituents
+                        - paragraph:
+                          - generic: All Constituents
+                    - listitem:
+                      - link:
+                        - /url: /constituents/import
+                        - paragraph:
+                          - generic: Import
+                    - listitem:
+                      - link:
+                        - /url: /constituents/stewardship
+                        - paragraph:
+                          - generic: Stewardship Queue
+                    - listitem:
+                      - link:
+                        - /url: /dashboard/development
+                        - paragraph:
+                          - generic: Development
+                    - listitem:
+                      - link:
+                        - /url: /gifts
+                        - paragraph:
+                          - generic: Gifts
+                    - listitem:
+                      - link:
+                        - /url: /gifts/import
+                        - paragraph:
+                          - generic: Import gifts
+                    - listitem:
+                      - link:
+                        - /url: /campaigns
+                        - paragraph:
+                          - generic: Campaigns
+                    - listitem:
+                      - link:
+                        - /url: /campaigns/import
+                        - paragraph:
+                          - generic: Import campaigns
+              - generic:
+                - listitem:
+                  - generic: Audits
+                - generic:
+                  - list:
+                    - listitem:
+                      - link:
+                        - /url: /audits/readiness
+                        - paragraph:
+                          - generic: Audit Readiness
+                    - listitem:
+                      - link:
+                        - /url: /audits/status
+                        - paragraph:
+                          - generic: Compliance Status
+                    - listitem:
+                      - link:
+                        - /url: /audits/audit
+                        - paragraph:
+                          - generic: Audit Logs
+              - generic:
+                - listitem:
+                  - generic: Files
+                - generic:
+                  - list:
+                    - listitem:
+                      - link:
+                        - /url: /uploads
+                        - paragraph:
+                          - generic: Uploads
+                    - listitem:
+                      - link:
+                        - /url: /documents
+                        - paragraph:
+                          - generic: Documents
+                    - listitem:
+                      - link:
+                        - /url: /images
+                        - paragraph:
+                          - generic: Images
+                    - listitem:
+                      - link:
+                        - /url: /media
+                        - paragraph:
+                          - generic: Media
+                    - listitem:
+                      - link:
+                        - /url: /others
+                        - paragraph:
+                          - generic: Others
+              - generic:
+                - listitem:
+                  - generic: Team
+                - generic:
+                  - list:
+                    - listitem:
+                      - link:
+                        - /url: /dashboard/user-management
+                        - paragraph:
+                          - generic: User Management
+                    - listitem:
+                      - link:
+                        - /url: /dashboard/user-management/import
+                        - paragraph:
+                          - generic: Import users
+                    - listitem:
+                      - link:
+                        - /url: /dashboard/admin/roles
+                        - paragraph:
+                          - generic: Role Management
+                    - listitem:
+                      - link:
+                        - /url: /team/tasks
+                        - paragraph:
+                          - generic: Assign Tasks
+              - generic:
+                - listitem:
+                  - generic: Reports & Analytics
+                - generic:
+                  - list:
+                    - listitem:
+                      - link:
+                        - /url: /analytics
+                        - paragraph:
+                          - generic: Overview
+                    - listitem:
+                      - link:
+                        - /url: /analytics/quick-view
+                        - paragraph:
+                          - generic: Quick View
+                    - listitem:
+                      - link:
+                        - /url: /analytics/c-suite
+                        - paragraph:
+                          - generic: C Suite
+              - generic:
+                - listitem:
+                  - generic: My Roles & Permissions
+                - generic:
+                  - list:
+                    - listitem:
+                      - link:
+                        - /url: /settings/permissions
+                        - paragraph:
+                          - generic: View My Access
+        - generic:
+          - separator [aria-hidden]
+          - generic:
+            - generic:
+              - generic:
+                - paragraph: Storage
+              - generic:
+                - generic:
+                  - generic:
+                    - paragraph: 3.6 MB of 100 GB used
+          - separator [aria-hidden]
+          - generic:
+            - generic:
+              - paragraph: Victor Ramirez
+              - generic:
+                - generic:
+                  - paragraph: Growth
+                  - paragraph: 42 days left in trial
+                - button
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - button: Upload Contract
+                - button: Upload License
+                - button: Audit
+                - button: Schedule
+                - button: Report
+            - generic:
+              - button:
+                - generic: Ask CAALM
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - button
+                    - button:
+                      - generic: "53"
+                    - button
+                    - button
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - heading [level=1]: Advanced Resources
+                    - paragraph: Search and explore government contract opportunities from SAM.gov
+                - generic:
+                  - generic:
+                    - generic: Search Contracts
+                    - generic:
+                      - generic:
+                        - generic:
+                          - text: Keyword
+                          - textbox:
+                            - /placeholder: Enter search terms
+                        - generic:
+                          - text: Procurement Type
+                          - combobox:
+                            - generic: All Types
+                        - generic:
+                          - text: Set-Aside Type
+                          - combobox:
+                            - generic: All Set-Asides
+                        - generic:
+                          - text: State
+                          - combobox:
+                            - generic: All states
+                        - generic:
+                          - text: Organization
+                          - textbox:
+                            - /placeholder: e.g., GSA, Defense, Agriculture
+                        - generic:
+                          - text: Response Due
+                          - combobox:
+                            - generic: Anytime
+                      - generic:
+                        - button: Search Contracts
+                        - button: Reset
+                - generic:
+                  - generic:
+                    - generic:
+                      - paragraph: 27,463 contracts found
+                      - generic: Live SAM.gov data
+                    - generic:
+                      - combobox:
+                        - generic: "Sort: Due date ↓"
+                      - tablist:
+                        - tab [selected]
+                        - tab
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic: Presolicitation
+                            - paragraph: Due Jan 4, 2027
+                          - generic:
+                            - heading [level=3]: 15--RADOME, IN REPAIR/MODIFICATION OF
+                            - paragraph: "Notice ID: N0038327RQA05"
+                          - generic: Posted Oct 20, 2026
+                          - generic:
+                            - generic:
+                              - button: View details
+                              - button: SAM.gov
+                            - button: Save as pursuit
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic: Presolicitation
+                            - paragraph: Due Dec 6, 2026
+                          - generic:
+                            - heading [level=3]: 59--KEYBOARD,DATA ENTRY, IN REPAIR/MODIFICATION OF
+                            - paragraph: "Notice ID: N0038327QNA05"
+                          - generic: Posted Oct 20, 2026
+                          - generic:
+                            - generic:
+                              - button: View details
+                              - button: SAM.gov
+                            - button: Save as pursuit
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic: NONE
+                            - paragraph: Due Nov 23, 2026
+                          - generic:
+                            - heading [level=3]: Norfolk Harbor Inner Channel to Newport News Maintenance Dredging located in Hampton Roads, Virginia
+                            - paragraph: "Notice ID: W9123627BA003"
+                          - generic:
+                            - generic: Virginia
+                            - generic: Posted Oct 20, 2026
+                            - generic: NAICS 237990
+                          - generic:
+                            - generic:
+                              - button: View details
+                              - button: SAM.gov
+                            - button: Save as pursuit
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic: Presolicitation
+                            - paragraph: Due Nov 22, 2026
+                          - generic:
+                            - heading [level=3]: 15--DOOR,ACCESS,AIRCRAF, IN REPAIR/MODIFICATION OF
+                            - paragraph: "Notice ID: N0038327QMA05"
+                          - generic: Posted Oct 20, 2026
+                          - generic:
+                            - generic:
+                              - button: View details
+                              - button: SAM.gov
+                            - button: Save as pursuit
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic: Solicitation
+                            - paragraph: Due Nov 20, 2026
+                          - generic:
+                            - heading [level=3]: PARTS KIT,BALL VALV
+                            - paragraph: "Notice ID: N0010426QNE97"
+                          - generic:
+                            - generic: Posted Oct 20, 2026
+                            - generic: NAICS 332919
+                          - generic:
+                            - generic:
+                              - button: View details
+                              - button: SAM.gov
+                            - button: Save as pursuit
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic: Solicitation
+                            - paragraph: Due Nov 20, 2026
+                          - generic:
+                            - heading [level=3]: 61--POWER SUPPLY
+                            - paragraph: "Notice ID: SPRMM126QKH48"
+                          - generic:
+                            - generic: Posted Oct 20, 2026
+                            - generic: NAICS 335311
+                          - generic:
+                            - generic:
+                              - button: View details
+                              - button: SAM.gov
+                            - button: Save as pursuit
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic: Solicitation
+                            - paragraph: Due Nov 20, 2026
+                          - generic:
+                            - heading [level=3]: BLADE,TURBINE ENGIN
+                            - paragraph: "Notice ID: SPRMM126QHE15"
+                          - generic:
+                            - generic: Posted Oct 20, 2026
+                            - generic: NAICS 333611
+                          - generic:
+                            - generic:
+                              - button: View details
+                              - button: SAM.gov
+                            - button: Save as pursuit
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic: Small Business Set-Aside
+                            - paragraph: Due Nov 5, 2026
+                          - generic:
+                            - heading [level=3]: TSV4 NARR MESSING AND MODERNIZATION
+                            - paragraph: "Notice ID: N0018927QL008"
+                          - generic:
+                            - generic: Norfolk, Virginia
+                            - generic: Posted Oct 20, 2026
+                            - generic: NAICS 336611
+                          - generic:
+                            - generic:
+                              - button: View details
+                              - button: SAM.gov
+                            - button: Save as pursuit
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic: Small Business Set-Aside
+                            - paragraph: Due Nov 4, 2026
+                          - generic:
+                            - heading [level=3]: A27-022 Videoscope
+                            - paragraph: "Notice ID: FA812527Q0004"
+                          - generic:
+                            - generic: 0, Oklahoma
+                            - generic: Posted Oct 20, 2026
+                            - generic: NAICS 334519
+                          - generic:
+                            - generic:
+                              - button: View details
+                              - button: SAM.gov
+                            - button: Save as pursuit
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic: Solicitation
+                            - paragraph: Due Nov 2, 2026
+                          - generic:
+                            - heading [level=3]: SERVOMECHANISM,HYDR
+                            - paragraph: "Notice ID: SPRPA127QRA23"
+                          - generic:
+                            - generic: Posted Oct 20, 2026
+                            - generic: NAICS 336413
+                          - generic:
+                            - generic:
+                              - button: View details
+                              - button: SAM.gov
+                            - button: Save as pursuit
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic: Combined Synopsis/Solicitation
+                            - paragraph: Due Nov 2, 2026
+                          - generic:
+                            - heading [level=3]: MH65 Hose
+                            - paragraph: "Notice ID: 70Z03827QB0000005"
+                          - generic:
+                            - generic: Posted Oct 20, 2026
+                            - generic: NAICS 336413
+                          - generic:
+                            - generic:
+                              - button: View details
+                              - button: SAM.gov
+                            - button: Save as pursuit
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic: Combined Synopsis/Solicitation
+                            - paragraph: Due Nov 1, 2026
+                          - generic:
+                            - heading [level=3]: 41--FAN,TUBEAXIAL
+                            - paragraph: "Notice ID: SPE8E727T0235"
+                          - generic:
+                            - generic: Posted Oct 20, 2026
+                            - generic: NAICS 333413
+                          - generic:
+                            - generic:
+                              - button: View details
+                              - button: SAM.gov
+                            - button: Save as pursuit
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic: Sources Sought
+                            - paragraph: Due Oct 30, 2026
+                          - generic:
+                            - heading [level=3]: P7777 ACC SARP Replacement NAS Jacksonville, Florida - Accurate Lock & Hardware
+                            - paragraph: "Notice ID: N6945027SP7777-Accurate"
+                          - generic:
+                            - generic: Jacksonville, Florida
+                            - generic: Posted Oct 20, 2026
+                          - generic:
+                            - generic:
+                              - button: View details
+                              - button: SAM.gov
+                            - button: Save as pursuit
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic: Presolicitation
+                            - paragraph: Due Oct 30, 2026
+                          - generic:
+                            - heading [level=3]: BD FACSymphony A-5 Flow Cytometer Maintenance Agreement
+                            - paragraph: "Notice ID: 75N98027Q00020"
+                          - generic:
+                            - generic: Bethesda, Maryland
+                            - generic: Posted Oct 20, 2026
+                            - generic: NAICS 811210
+                          - generic:
+                            - generic:
+                              - button: View details
+                              - button: SAM.gov
+                            - button: Save as pursuit
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic: Sources Sought
+                            - paragraph: Due Oct 29, 2026
+                          - generic:
+                            - heading [level=3]: AN/TRN-41 ANTENNA_End_Item_ATCALS_NSN_5985014612669IM_PN_710001-106
+                            - paragraph: "Notice ID: FD20302700385"
+                          - generic:
+                            - generic: Posted Oct 20, 2026
+                            - generic: NAICS 336413
+                          - generic:
+                            - generic:
+                              - button: View details
+                              - button: SAM.gov
+                            - button: Save as pursuit
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic: Special Notice
+                            - paragraph: Due Oct 28, 2026
+                          - generic:
+                            - heading [level=3]: Engineering Support for the Asymmetric Systems
+                            - paragraph: "Notice ID: N0017827R3106"
+                          - generic: Posted Oct 20, 2026
+                          - generic:
+                            - generic:
+                              - button: View details
+                              - button: SAM.gov
+                            - button: Save as pursuit
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic: Small Business Set-Aside
+                            - paragraph: Due Oct 27, 2026
+                          - generic:
+                            - heading [level=3]: 73--FUEL ADAPTER,MBU
+                            - paragraph: "Notice ID: SPE3SE27Q0048"
+                          - generic:
+                            - generic: Posted Oct 20, 2026
+                            - generic: NAICS 333241
+                          - generic:
+                            - generic:
+                              - button: View details
+                              - button: SAM.gov
+                            - button: Save as pursuit
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic: Solicitation
+                            - paragraph: Due Oct 27, 2026
+                          - generic:
+                            - heading [level=3]: CCA, ENGINE CONTROL
+                            - paragraph: "Notice ID: N0010427QLA05"
+                          - generic:
+                            - generic: Posted Oct 20, 2026
+                            - generic: NAICS 334290
+                          - generic:
+                            - generic:
+                              - button: View details
+                              - button: SAM.gov
+                            - button: Save as pursuit
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic: Solicitation
+                            - paragraph: Due Oct 27, 2026
+                          - generic:
+                            - heading [level=3]: TERMINAL BOX
+                            - paragraph: "Notice ID: N0010426QEH35"
+                          - generic:
+                            - generic: Posted Oct 20, 2026
+                            - generic: NAICS 335931
+                          - generic:
+                            - generic:
+                              - button: View details
+                              - button: SAM.gov
+                            - button: Save as pursuit
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic: Solicitation
+                            - paragraph: Due Aug 30, 2026
+                          - generic:
+                            - heading [level=3]: STEM,FLUID VALVE
+                            - paragraph: "Notice ID: N0010426QFB59"
+                          - generic:
+                            - generic: Posted Oct 20, 2026
+                            - generic: NAICS 332919
+                          - generic:
+                            - generic:
+                              - button: View details
+                              - button: SAM.gov
+                            - button: Save as pursuit
+                      - generic:
+                        - generic:
+                          - generic: Award Notice
+                          - generic:
+                            - heading [level=3]: 28--HINGE,STATIONARY
+                            - paragraph: "Notice ID: SPE4A726RX939"
+                          - generic:
+                            - generic: Posted Oct 20, 2026
+                            - generic: NAICS 336412
+                          - generic: Award information available · $350,000
+                          - generic:
+                            - generic:
+                              - button: View details
+                              - button: SAM.gov
+                            - button: Save as pursuit
+                      - generic:
+                        - generic:
+                          - generic: Award Notice
+                          - generic:
+                            - heading [level=3]: 43--FILTER ELEMENT,FLUID
+                            - paragraph: "Notice ID: SPE7M126T379N"
+                          - generic:
+                            - generic: Posted Oct 20, 2026
+                            - generic: NAICS 333998
+                          - generic: Award information available · $49,140
+                          - generic:
+                            - generic:
+                              - button: View details
+                              - button: SAM.gov
+                            - button: Save as pursuit
+                      - generic:
+                        - generic:
+                          - generic: Award Notice
+                          - generic:
+                            - heading [level=3]: 61--DISCHARGER,BATTERY
+                            - paragraph: "Notice ID: SPE7L726T5014"
+                          - generic:
+                            - generic: Posted Oct 20, 2026
+                            - generic: NAICS 335999
+                          - generic: Award information available · $103,146
+                          - generic:
+                            - generic:
+                              - button: View details
+                              - button: SAM.gov
+                            - button: Save as pursuit
+                      - generic:
+                        - generic:
+                          - generic: Award Notice
+                          - generic:
+                            - heading [level=3]: 48--GEAR OPERATOR,VALVE
+                            - paragraph: "Notice ID: SPE7MC26T154U"
+                          - generic:
+                            - generic: Posted Oct 20, 2026
+                            - generic: NAICS 332911
+                          - generic: Award information available · $25,492
+                          - generic:
+                            - generic:
+                              - button: View details
+                              - button: SAM.gov
+                            - button: Save as pursuit
+                    - navigation:
+                      - generic: Showing 1–24 of 27463 contracts
+                      - button [disabled]: Previous
+                      - generic: Page 1 of 1145
+                      - button: Next
+      - list
+  - dialog [ref=f2e1442]:
+    - generic [ref=f2e1443]:
+      - heading "15--RADOME, IN REPAIR/MODIFICATION OF" [level=2] [ref=f2e1444]
+      - button "Save" [ref=f2e1445] [cursor=pointer]
+      - button "AI Analysis" [ref=f2e1446] [cursor=pointer]
+    - generic [ref=f2e1447]:
+      - generic [ref=f2e1448]:
+        - generic [ref=f2e1449]:
+          - heading "15--RADOME, IN REPAIR/MODIFICATION OF" [level=2] [ref=f2e1450]
+          - paragraph [ref=f2e1451]: "ID: fe294262bc1643719c137164373b199f"
+        - generic [ref=f2e1452]:
+          - generic [ref=f2e1453] [cursor=pointer]: Smart Summary
+          - paragraph [ref=f2e1461]: This is a presolicitation notice issued by NAVSUP Weapon Systems Support Philadelphia for the repair/modification of a Radome (NSN 7R-1560-015415158-QE, Quantity 18 EA). The procurement is restricted because the item is flight critical and requires stringent engineering source approval under FAR 6.302-1. The Government intends to negotiate with previously approved sources, though unapproved vendors may submit qualification data through NAVSUP WSS Source Approval Information Brochures. Responses are due by January 4, 2027.
+        - generic [ref=f2e1462]:
+          - generic [ref=f2e1463] [cursor=pointer]: Full Description
+          - generic [ref=f2e1562]:
+            - paragraph [ref=f2e1563]: "NSN 7R-1560-015415158-QE, IAW REF NR 74A301001-1003, QTY 18 EA, DELIVERY FOB ORIGIN. This part requires engineering source approval by the design control activity in order to maintain the quality of the part. Existing unique design capability, engineering skills, and manufacturing/repair knowledge by the qualified source(s) require acquisition/repair of the part from the approved source(s). The approved source(s) retain data rights,manufacturing/repair knowledge, or technical data that are not economically available to the Government, and the data or knowledge is essential to maintaining the quality of the part. An alternate source must qualify in accordance with the design control activity's procedures, as approved by the cognizant Government engineering activity. The qualification procedures must be approved by the Government engineering activity having jurisdiction over the part in the intended application. The subject item requires Government source approval prior to contract award, as the item is flight critical and/or the technical data available has not been determined adequate to support acquisition via full and open competition. Only the source(s) previously approved by the Government for this item have been solicited. The time required for approval of a new source is normally such that an award cannot be delayed pending approval of a new source. If you are not an approved source you must submit, together with your proposal, the information detailed in one of the NAVSUP Weapon Systems Support (NAVSUP WSS) Source Approval Information Brochures listed below. Spares: https://www.navsup.navy.mil/NAVSUP-Enterprise/NAVSUP-Weapon-Systems-Sup port/Business-Opps/ Repair: https://www.navsup.navy.mil/NAVSUP-Enterprise/NAVSUP -Weapon-Systems-Support/Business-Opps/ technical data required to be submitted based on your company's experience in production of the same or similar item, or if this is an item you have never made. If your request for source approval is currently being evaluated at NAVSUP WSS submit with your offer a copy of the cover letter which forwarded your request for source approval. Offers received which fail to provide all data required by the Source Approval Brochure or document previous submission of all data required by the Source Approval Brochure will not be considered for award under this solicitation. Please note, if evaluation of a source approval request submitted hereunder cannot be processed in time and/or approval requirements preclude the ability to obtain subject items in time to meet Government requirements, award of the subject requirement may continue based on Fleet support needs. The NAVSUP WSS Commercial Item Identification Brochure is now available at: \"https://www.navsup.navy.mil/NAVSUP-Enterprise/NAVSUP-Weapon-Systems-Support/Bus iness-Opps/\""
+            - paragraph [ref=f2e1564]: The proposed contract action is for supplies or services for which
+            - paragraph [ref=f2e1565]: the Government intends to solicit and negotiate with only one source under the authority of FAR 6.302-1. All responsible sources may identify their interest and capability to respond to the requirement or submit proposals, quotationsor capability statements. This notice of intent is not a request forcompetitive proposals. However, all proposals received within 45 days (30days if award is issued under an existing Basic Ordering Agreement (BOA) afterdate of publication of this synopsis will be considered by the Government. A determination by the Government not to compete with this proposed contract based upon responses to this notice is solely within the discretion of the Government. Information received will normally be considered solely for the purpose of determining whether to conduct a competitive procurement. Award will be made only if the offeror, the product/service, or the manufacturer meets the qualification requirement(s) at time of award, in accordance with FAR clause 52.209-1. The solicitation identifies the office where additional information can be obtained concerning qualification requirements and is cited in each individual solicitation. Based upon market research, the Government is not using the policies contained in FAR Part 12, Acquisition of Commercial Items, in its solicitation for the described supplies or services. However,
+            - paragraph [ref=f2e1566]: interested persons may identify tothe contracting officer their interest and capability to satisfy theGovernment's requirement with a commercial item within 15 days of this notice.
+        - button "Contract details" [ref=f2e1568] [cursor=pointer]
+      - complementary [ref=f2e1572]:
+        - generic [ref=f2e1573]:
+          - generic [ref=f2e1574]:
+            - generic [ref=f2e1575]:
+              - heading "CAALM Contract Assistant" [level=3] [ref=f2e1576]
+              - button "Close assistant" [ref=f2e1578] [cursor=pointer]
+            - generic [ref=f2e1579]:
+              - generic [ref=f2e1580]:
+                - paragraph [ref=f2e1581]: 15--RADOME, IN REPAIR/MODIFICATION OF
+                - paragraph [ref=f2e1582]: Dept Of Defense › Dept Of The Navy › Navsup · Analyzed 01:04 PM
+              - link "View on SAM.gov ↗" [ref=f2e1583] [cursor=pointer]:
+                - /url: https://sam.gov/workspace/contract/opp/fe294262bc1643719c137164373b199f/view
+            - generic [ref=f2e1584]:
+              - generic [ref=f2e1585]:
+                - button "Analysis" [ref=f2e1586]
+                - button "Ask CAALM" [active] [ref=f2e1587]
+              - generic [ref=f2e1588]:
+                - button "Re-run analysis" [ref=f2e1589] [cursor=pointer]
+                - button "Generate proposal Soon" [disabled]:
+                  - text: Generate proposal
+                  - generic: Soon
+          - generic [ref=f2e1728]:
+            - generic [ref=f2e1729]:
+              - generic [ref=f2e1730]:
+                - paragraph [ref=f2e1731]: Explore what’s in this contract
+                - generic [ref=f2e1732]:
+                  - button "View Requirements" [ref=f2e1733] [cursor=pointer]
+                  - button "Check Deadlines" [ref=f2e1734] [cursor=pointer]
+                  - button "Identify Contact" [ref=f2e1735] [cursor=pointer]
+                  - button "Review Authority" [ref=f2e1736] [cursor=pointer]
+              - paragraph [ref=f2e1740]: Ask a question or pick a prompt above to get started
+            - generic [ref=f2e1742]:
+              - generic [ref=f2e1743]: Ask CAALM Contract Assistant Agent
+              - generic [ref=f2e1747]:
+                - textbox "Ask CAALM Contract Assistant" [ref=f2e1748]:
+                  - /placeholder: Ask a question about this contract...
+                - button "Send message" [disabled]
+    - button "Close" [ref=f2e1554] [cursor=pointer]

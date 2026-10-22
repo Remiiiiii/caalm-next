@@ -151,9 +151,8 @@ function taskRowData(task: RoadmapTask) {
 	};
 }
 
-const appwriteSeedPromises: Partial<
-	Record<RoadmapCatalogKey, Promise<void>>
-> = {};
+const appwriteSeedPromises: Partial<Record<RoadmapCatalogKey, Promise<void>>> =
+	{};
 
 /** Insert catalog sections/tasks when Appwrite tables are empty. Idempotent. */
 export async function seedRoadmapToAppwriteIfEmpty(
@@ -164,11 +163,7 @@ export async function seedRoadmapToAppwriteIfEmpty(
 	taskCount: number;
 }> {
 	const ids = roadmapAppwriteTableIds(catalogKey);
-	if (
-		!isAppwriteConfigured() ||
-		!ids.sectionsTableId ||
-		!ids.tasksTableId
-	) {
+	if (!isAppwriteConfigured() || !ids.sectionsTableId || !ids.tasksTableId) {
 		throw new Error(
 			`Roadmap Appwrite tables are not configured for catalog ${catalogKey}`,
 		);
@@ -447,9 +442,7 @@ async function ensureAppwriteSeeded(
 ): Promise<void> {
 	if (!isAppwriteBackend(catalogKey)) return;
 	if (!appwriteSeedPromises[catalogKey]) {
-		appwriteSeedPromises[catalogKey] = seedRoadmapToAppwriteIfEmpty(
-			catalogKey,
-		)
+		appwriteSeedPromises[catalogKey] = seedRoadmapToAppwriteIfEmpty(catalogKey)
 			.then((result) => {
 				if (result.seeded) {
 					console.info(
@@ -928,8 +921,7 @@ export async function findTestRunForPrCommit(params: {
 				const collected: RoadmapTestRun[] = [...memoryRuns];
 				for (const catalogKey of ROADMAP_CATALOG_KEYS) {
 					if (!isAppwriteBackend(catalogKey)) continue;
-					const tableId =
-						roadmapAppwriteTableIds(catalogKey).testRunsTableId;
+					const tableId = roadmapAppwriteTableIds(catalogKey).testRunsTableId;
 					if (!tableId) continue;
 					const result = await tablesDB.listRows({
 						databaseId,

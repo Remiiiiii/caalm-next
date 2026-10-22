@@ -13,7 +13,7 @@ export function flattenTableRow<T extends Record<string, unknown>>(
 		const { data: _nested, ...rest } = row as T & {
 			data: Record<string, unknown>;
 		};
-		return { ...rest, ...data } as T & Record<string, unknown>;
+		return { ...rest, ...data } as unknown as T & Record<string, unknown>;
 	}
 	return row as T & Record<string, unknown>;
 }

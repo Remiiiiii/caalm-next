@@ -3,8 +3,11 @@
 import { SquareArrowRightExit } from "lucide-react";
 import { useMemo } from "react";
 import LicenseForm from "@/components/licenses/LicenseForm";
+import { BusyIcon } from "@/components/ui/busy-icon";
 import { Button } from "@/components/ui/button";
+import { useBusyAction } from "@/hooks/useBusyAction";
 import { usePermissions } from "@/hooks/usePermissions";
+import { downloadXlsx } from "@/lib/export/download-xlsx";
 import { applyLicenseFilters } from "@/lib/licenses/applyLicenseFilters";
 import { matchesStatusTab } from "@/lib/licenses/licensesListUtils";
 import { canLicenseAction } from "@/lib/licenses/licenseUiPermissions";
@@ -32,71 +35,61 @@ export default function LicensesHeaderActions({
 	}, [licenses, filters, statusTab, selectedIds]);
 
 	const handleExport = () => {
-		const headers = [
-			"License Name",
-			"License Number",
-			"Status",
-			"Type",
-			"Category",
-			"Compliance",
-			"Vendor",
-			"Product",
-			"Department",
-			"Assigned To",
-			"Issue Date",
-			"Expiry Date",
-			"Cost",
-			"Quantity",
-			"Created Date",
-		];
-
-		const rows = filteredForExport.map((license) => [
-			license.licenseName || "Untitled",
-			license.licenseNumber || "",
-			license.status || "",
-			license.licenseType || "",
-			license.category || "",
-			license.compliance || "",
-			license.vendor || "",
-			license.product || "",
-			license.division || license.department || "",
-			Array.isArray(license.assignedManagers)
-				? license.assignedManagers.join(", ")
-				: license.assignedManagers || "",
-			license.issueDate || "",
-			license.licenseExpiryDate || "",
-			license.cost?.toString() || "",
-			license.quantity?.toString() || "",
-			license.$createdAt || "",
-		]);
-
-		const csvContent = [
-			headers.join(","),
-			...rows.map((row) =>
-				row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","),
-			),
-		].join("\n");
-
-		const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-		const link = document.createElement("a");
-		link.href = URL.createObjectURL(blob);
-		link.download = `licenses-export-${new Date().toISOString().split("T")[0]}.csv`;
-		link.style.visibility = "hidden";
-		document.body.appendChild(link);
-		link.click();
-		document.body.removeChild(link);
-		URL.revokeObjectURL(link.href);
+		const stamp = new Date().toISOString().slice(0, 10);
+		downloadXlsx(`licenses-export-${stamp}.xlsx`, {
+			sheetName: "Licenses",
+			title: "Licenses — Export",
+			subtitle: `CAALM · ${filteredForExport.length} license${filteredForExport.length === 1 ? "" : "s"} · Generated ${stamp}`,
+			columns: [
+				{ header: "License Name", width: 40 },
+				{ header: "License Number", width: 18 },
+				{ header: "Status", width: 16 },
+				{ header: "Type", width: 18 },
+				{ header: "Category", width: 18 },
+				{ header: "Compliance", width: 16 },
+				{ header: "Vendor", width: 22 },
+				{ header: "Product", width: 22 },
+				{ header: "Department", width: 20 },
+				{ header: "Assigned To", width: 26 },
+				{ header: "Issue Date", type: "date", width: 16 },
+				{ header: "Expiry Date", type: "date", width: 16 },
+				{ header: "Cost", type: "currency", width: 14 },
+				{ header: "Quantity", type: "number", width: 12 },
+				{ header: "Created Date", type: "date", width: 16 },
+			],
+			rows: filteredForExport.map((license) => [
+				license.licenseName || "Untitled",
+				license.licenseNumber,
+				license.status,
+				license.licenseType,
+				license.category,
+				license.compliance,
+				license.vendor,
+				license.product,
+				license.division || license.department,
+				Array.isArray(license.assignedManagers)
+					? license.assignedManagers.join(", ")
+					: license.assignedManagers,
+				license.issueDate,
+				license.licenseExpiryDate,
+				license.cost == null ? null : Number(license.cost),
+				license.quantity == null ? null : Number(license.quantity),
+				license.$createdAt,
+			]),
+		});
 	};
+	const [runExporting, exporting] = useBusyAction(handleExport);
 
 	return (
 		<div className="platform-overview-actions flex items-center gap-2 justify-end flex-wrap">
 			{canView && (
 				<Button
 					variant="outline"
-					onClick={handleExport}
+					disabled={exporting}
+					onClick={() => void runExporting()}
 					className="primary-btn cursor-pointer"
 				>
-					<SquareArrowRightExit className="h-4 w-4" />
+					<BusyIcon busy={exporting} icon={SquareArrowRightExit} />
 					<span className="hidden sm:inline">
 						{selectedIds.length > 0
 							? `Export (${selectedIds.length})`

@@ -30,15 +30,15 @@ export function ContractFollowUpSuggestions({
 	return (
 		<div>
 			<p className="mb-2 text-sm font-semibold sidebar-gradient-text">
-				What can I help with next?
+				Follow-up questions
 			</p>
-			<div className="flex flex-col gap-2">
+			<div className="flex flex-wrap gap-2">
 				{labels.map((question) => (
 					<button
 						key={question}
 						type="button"
 						disabled={disabled}
-						className="w-full cursor-pointer rounded-full border border-slate-200 bg-white px-4 py-2.5 text-left text-xs text-slate-600 transition-all duration-200 hover:border-blue-300 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60"
+						className="caalm-chip-hover cursor-pointer rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-700 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60"
 						onClick={() => onSelect(question)}
 					>
 						{question}

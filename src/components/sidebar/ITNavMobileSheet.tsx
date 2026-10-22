@@ -10,10 +10,10 @@ import {
 	type ITSidebarSection,
 	WORKSPACE_ICON_BY_NAME,
 } from "@/constants/it-navigation";
+import { useITUser } from "@/hooks/useITUser";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { resolveAccessibleDashboardLinks } from "@/lib/navigation/dashboard-links";
-import { useITUser } from "@/hooks/useITUser";
 import { cn } from "@/lib/utils";
 
 type ITNavMobileSheetProps = {
@@ -98,9 +98,7 @@ export function ITNavMobileSheet({
 											<ITNavIcon
 												name={item.icon}
 												size={20}
-												className={cn(
-													active ? "text-white" : "text-slate-500",
-												)}
+												className={cn(active ? "text-white" : "text-slate-500")}
 											/>
 											<span
 												className={cn(

@@ -13,8 +13,8 @@ import {
 import { TasksPageShell } from "@/components/tasks/TasksPageShell";
 import { TasksViewTabs } from "@/components/tasks/TasksViewTabs";
 import type { TaskPerson } from "@/components/tasks/task-ui";
-import { Card as GlassCard, CardContent } from "@/components/ui/card";
 import { CaalmDataTableSkeleton } from "@/components/ui/caalm-data-table";
+import { CardContent, Card as GlassCard } from "@/components/ui/card";
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { ToastAction } from "@/components/ui/toast";
@@ -24,18 +24,13 @@ import { useToast } from "@/hooks/use-toast";
 import { useOrgTimezone } from "@/hooks/useOrgTimezone";
 import { usePermissions } from "@/hooks/usePermissions";
 import { fetcher } from "@/lib/swr-config";
-import { cn, getProfilePictureUrl } from "@/lib/utils";
+import { getProfilePictureUrl } from "@/lib/utils";
 import type {
 	TaskListItem,
 	TaskPriority,
-	TaskStatus,
 	TaskView,
 	TaskViewCounts,
 } from "@/types/tasks";
-
-/** Space under the card for the dock when the list is short enough to sit below it */
-const BULK_DOCK_BELOW_GAP_PX = 8;
-const BULK_DOCK_HEIGHT_PX = 52;
 
 interface TasksResponse {
 	success: boolean;
@@ -69,12 +64,9 @@ export default function TeamTasksPage() {
 	const [people, setPeople] = useState<TaskPerson[]>([]);
 	const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 	const [openTaskId, setOpenTaskId] = useState<string | null>(null);
+	const cardRef = useRef<HTMLDivElement>(null);
 	const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 	const [bulkDeleting, setBulkDeleting] = useState(false);
-	const [bulkPlacement, setBulkPlacement] = useState<"below-card" | "sticky">(
-		"below-card",
-	);
-	const cardRef = useRef<HTMLDivElement>(null);
 
 	const canCreate = permissions.includes(PERMISSIONS.EVENTS.CREATE);
 	const canAssign = permissions.includes(PERMISSIONS.EVENTS.INVITE);
@@ -142,33 +134,6 @@ export default function TeamTasksPage() {
 	const counts = data?.meta?.counts || EMPTY_COUNTS;
 	const openTask = tasks.find((t) => t.$id === openTaskId) || null;
 
-	// Short list: dock sits a few px under the card. Tall list: fixed bottom dock + shadow.
-	useEffect(() => {
-		const el = cardRef.current;
-		if (!el) return;
-
-		const updatePlacement = () => {
-			const rect = el.getBoundingClientRect();
-			const roomNeeded =
-				BULK_DOCK_BELOW_GAP_PX + BULK_DOCK_HEIGHT_PX + 16;
-			const fitsBelow =
-				rect.bottom + roomNeeded <= window.innerHeight &&
-				rect.top >= 0;
-			setBulkPlacement(fitsBelow ? "below-card" : "sticky");
-		};
-
-		updatePlacement();
-		const ro = new ResizeObserver(updatePlacement);
-		ro.observe(el);
-		window.addEventListener("resize", updatePlacement);
-		window.addEventListener("scroll", updatePlacement, { passive: true });
-		return () => {
-			ro.disconnect();
-			window.removeEventListener("resize", updatePlacement);
-			window.removeEventListener("scroll", updatePlacement);
-		};
-	}, [tasks.length, isLoading, creating, view, filters]);
-
 	const patchTask = useCallback(
 		async (taskId: string, body: Record<string, unknown>) => {
 			const previous = data;
@@ -210,7 +175,8 @@ export default function TeamTasksPage() {
 	const showUndo = useCallback(
 		(ids: string[]) => {
 			toast({
-				title: ids.length === 1 ? "Task deleted" : `${ids.length} tasks deleted`,
+				title:
+					ids.length === 1 ? "Task deleted" : `${ids.length} tasks deleted`,
 				action: (
 					<ToastAction
 						altText="Undo"
@@ -362,15 +328,7 @@ export default function TeamTasksPage() {
 
 	return (
 		<TasksPageShell>
-			<GlassCard
-				ref={cardRef}
-				className={cn(
-					"glass-card overflow-hidden",
-					bulkPlacement === "below-card" && selectedIds.size > 0
-						? "mb-0"
-						: "mb-6",
-				)}
-			>
+			<GlassCard ref={cardRef} className="glass-card overflow-hidden mb-6">
 				<div className="glass-card-cap" />
 				<CardContent className="p-0">
 					<TasksViewTabs value={view} counts={counts} onChange={setView} />
@@ -432,20 +390,21 @@ export default function TeamTasksPage() {
 					)}
 					<div className="flex items-center justify-between border-t border-slate-100 px-4 py-2.5 text-xs text-slate-500">
 						<span>
-							Showing {tasks.length} of {data?.meta?.total ?? tasks.length} tasks
+							Showing {tasks.length} of {data?.meta?.total ?? tasks.length}{" "}
+							tasks
 						</span>
 						<span>Page 1 of 1</span>
 					</div>
 				</CardContent>
 			</GlassCard>
 
-			{/* Short list: under the card. Tall list: fixed bottom dock + shadow. */}
+			{/* Floating dock, centered on the tasks card */}
 			<TasksBulkBar
 				count={selectedIds.size}
 				canAssign={canAssign}
 				canEdit={canCreate}
 				people={people}
-				placement={bulkPlacement}
+				anchorRef={cardRef}
 				onAssign={(assigneeId) => void handleBulk("assign", { assigneeId })}
 				onStatus={(status) => void handleBulk("status", { status })}
 				onPriority={(priority: TaskPriority) =>

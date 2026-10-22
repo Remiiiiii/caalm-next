@@ -8,7 +8,8 @@ export async function DELETE(
 	context: { params: Promise<{ id: string }> },
 ) {
 	const denied = await requirePermission(request, {
-		permission: [PERMISSIONS.CONTRACTS.REVIEW, PERMISSIONS.LICENSES.REVIEW],
+		// LICENSES has no REVIEW permission; only contracts.review has ever authorised this route.
+		permission: [PERMISSIONS.CONTRACTS.REVIEW],
 	});
 	if (denied) return denied;
 

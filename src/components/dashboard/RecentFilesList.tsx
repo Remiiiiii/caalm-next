@@ -24,12 +24,7 @@ export type RecentFileItem = {
 	versionNumber?: string | number;
 };
 
-export type RecentFileKind =
-	| "document"
-	| "image"
-	| "video"
-	| "audio"
-	| "other";
+export type RecentFileKind = "document" | "image" | "video" | "audio" | "other";
 
 export type RecentFileTypeFilter = RecentFileKind | "all";
 
@@ -72,10 +67,7 @@ function wasFileUpdated(file: RecentFileItem): boolean {
 	);
 }
 
-function versionLabel(
-	file: RecentFileItem,
-	occurrence: number,
-): string | null {
+function versionLabel(file: RecentFileItem, occurrence: number): string | null {
 	const explicit =
 		parseVersionNumber(file.versionNumber) ?? versionFromName(file.name);
 	if (explicit) return `v${explicit}`;
@@ -134,10 +126,7 @@ export function RecentFilesList({
 		<div className="max-h-[400px] space-y-3 overflow-y-auto pr-2">
 			{visible.map((file) => {
 				const { type, extension } = resolveFileKind(file);
-				const version = versionLabel(
-					file,
-					occurrenceById.get(file.$id) || 1,
-				);
+				const version = versionLabel(file, occurrenceById.get(file.$id) || 1);
 				const uploaded = formatInTimezone(
 					file.$createdAt,
 					"d MMM, h:mm aa",
@@ -169,7 +158,7 @@ export function RecentFilesList({
 								</div>
 							</div>
 							{version ? (
-								<span className="inline-block shrink-0 rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+								<span className="inline-block shrink-0 rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
 									{version}
 								</span>
 							) : null}

@@ -23,7 +23,8 @@ export function createDonationPagePreviewToken(
 ): string {
 	const secret = options?.secret ?? previewSecret();
 	const expiresAt =
-		options?.expiresAt ?? Math.floor(Date.now() / 1000) + DEFAULT_PREVIEW_TTL_SECONDS;
+		options?.expiresAt ??
+		Math.floor(Date.now() / 1000) + DEFAULT_PREVIEW_TTL_SECONDS;
 	const mac = hmacPart(orgId, expiresAt, secret);
 	return `${orgId}.${expiresAt}.${mac}`;
 }
@@ -31,9 +32,7 @@ export function createDonationPagePreviewToken(
 export function verifyDonationPagePreviewToken(
 	token: string,
 	options?: { secret?: string; nowSeconds?: number },
-):
-	| { ok: true; orgId: string }
-	| { ok: false; reason: "invalid" | "expired" } {
+): { ok: true; orgId: string } | { ok: false; reason: "invalid" | "expired" } {
 	const parts = token.split(".");
 	if (parts.length !== 3) return { ok: false, reason: "invalid" };
 	const [orgId, expRaw, mac] = parts;

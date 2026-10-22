@@ -28,7 +28,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
 	const { id } = await context.params;
 	const existing = await loadOwned(id, ctx.orgId);
 	if (!existing) {
-		return NextResponse.json({ error: "Constituent not found" }, { status: 404 });
+		return NextResponse.json(
+			{ error: "Constituent not found" },
+			{ status: 404 },
+		);
 	}
 
 	const notes = await listNotesForConstituent(id, ctx.orgId);
@@ -45,7 +48,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
 	const { id } = await context.params;
 	const existing = await loadOwned(id, ctx.orgId);
 	if (!existing) {
-		return NextResponse.json({ error: "Constituent not found" }, { status: 404 });
+		return NextResponse.json(
+			{ error: "Constituent not found" },
+			{ status: 404 },
+		);
 	}
 
 	try {

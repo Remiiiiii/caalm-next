@@ -73,9 +73,7 @@ export async function parseSpreadsheetFile(
 ): Promise<SpreadsheetParseResult> {
 	const name = file.name.toLowerCase();
 	const isCsv =
-		name.endsWith(".csv") ||
-		name.endsWith(".txt") ||
-		file.type.includes("csv");
+		name.endsWith(".csv") || name.endsWith(".txt") || file.type.includes("csv");
 	if (isCsv) {
 		const text = await file.text();
 		return capRows(parseCsvText(text));

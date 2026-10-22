@@ -41,9 +41,7 @@ function mapRow(row: Record<string, unknown>): RecurringGiftSchedule {
 		active: row.active !== false,
 		campaignId: row.campaignId ? String(row.campaignId) : undefined,
 		designationId: row.designationId ? String(row.designationId) : undefined,
-		lastSkipReason: row.lastSkipReason
-			? String(row.lastSkipReason)
-			: undefined,
+		lastSkipReason: row.lastSkipReason ? String(row.lastSkipReason) : undefined,
 	};
 }
 

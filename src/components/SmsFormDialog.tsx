@@ -1,19 +1,13 @@
 "use client";
 
-import { Ban, Loader2, Send, Smartphone } from "lucide-react";
+import { Loader2, Send, Smartphone } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { formatPhoneInput } from "@/lib/demo-request/schema";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogTitle,
-} from "./ui/alert-dialog";
+import { AppDialog } from "./ui/app-dialog";
+import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -201,29 +195,43 @@ export const SmsFormDialog: React.FC<SmsFormDialogProps> = ({
 	};
 
 	return (
-		<AlertDialog open={open} onOpenChange={onOpenChange}>
-			<AlertDialogContent className="flex max-h-[90vh] max-w-[600px] flex-col overflow-hidden p-0 shadow-xl">
-				{/* Professional Cap */}
-				<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-
-				{/* Header with gradient background */}
-				<div className="glass-dialog-wizard-header mt-4">
-					<div className="flex items-center gap-3 px-6">
-						<div>
-							<AlertDialogTitle className="flex items-center gap-2 text-xl font-semibold sidebar-gradient-text py-2">
-								<Smartphone className="w-5 h-5 text-[#0f5384]" />
-								Receive Notifications From CAALM
-							</AlertDialogTitle>
-							<AlertDialogDescription className="text-sm ml-7 text-slate-600">
-								Sign up here to receive SMS notifications from CAALM
-							</AlertDialogDescription>
-						</div>
-					</div>
-				</div>
-
-				{/* Scrollable Content */}
-				<div className="flex-1 overflow-y-auto p-6 bg-slate-50">
-					<div className="space-y-4">
+		<AppDialog
+			open={open}
+			onOpenChange={onOpenChange}
+			size="form"
+			className="max-w-[600px] max-h-[90vh]"
+			icon={<Smartphone className="h-5 w-5" />}
+			title="Receive Notifications From CAALM"
+			description="Sign up here to receive SMS notifications from CAALM"
+			pending={submitting}
+			footer={
+				<>
+					<Button
+						type="button"
+						variant="outline"
+						className="rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+						disabled={submitting}
+						onClick={handleCancel}
+					>
+						Cancel
+					</Button>
+					<Button
+						type="button"
+						className="btn-primary"
+						disabled={submitting || !isFormValid()}
+						onClick={() => void handleSubmit()}
+					>
+						{submitting ? (
+							<Loader2 className="h-4 w-4 animate-spin" />
+						) : (
+							<Send className="h-4 w-4" />
+						)}
+						{submitting ? "Submitting..." : "Submit"}
+					</Button>
+				</>
+			}
+		>
+					<div className="space-y-4 pb-1">
 						<p className="text-xs text-slate-500 mb-4">
 							<span className="text-red">*</span> Indicates required question
 						</p>
@@ -387,37 +395,6 @@ export const SmsFormDialog: React.FC<SmsFormDialogProps> = ({
 							</div>
 						</div>
 					</div>
-				</div>
-
-				{/* Professional Footer */}
-				<div className="glass-dialog-footer-centered px-6">
-					<AlertDialogCancel
-						onClick={handleCancel}
-						disabled={submitting}
-						className="primary-btn px-3 sm:px-4 flex items-center gap-2"
-					>
-						<Ban className="w-4 h-4" />
-						Cancel
-					</AlertDialogCancel>
-					<AlertDialogAction
-						onClick={handleSubmit}
-						disabled={submitting || !isFormValid()}
-						className="primary-btn px-3 sm:px-4 flex items-center gap-2"
-					>
-						{submitting ? (
-							<>
-								<Loader2 className="w-4 h-4 animate-spin" />
-								Submitting...
-							</>
-						) : (
-							<>
-								<Send className="w-4 h-4" />
-								Submit
-							</>
-						)}
-					</AlertDialogAction>
-				</div>
-			</AlertDialogContent>
-		</AlertDialog>
+		</AppDialog>
 	);
 };

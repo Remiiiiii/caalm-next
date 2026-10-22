@@ -28,7 +28,7 @@ export function WorkflowStatusBadge({ status }: { status: string }) {
 	return (
 		<span
 			className={cn(
-				"inline-block rounded-full border px-2 py-0.5 text-xs font-medium",
+				"inline-block rounded-full border px-2 py-0.5 text-xs",
 				color,
 			)}
 		>

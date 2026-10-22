@@ -23,7 +23,9 @@ export function signNewsOAuthState(payload: NewsOAuthState): string {
 	return `${body}.${sig}`;
 }
 
-export function parseNewsOAuthState(token: string | undefined): NewsOAuthState | null {
+export function parseNewsOAuthState(
+	token: string | undefined,
+): NewsOAuthState | null {
 	if (!token) return null;
 	const [body, sig] = token.split(".");
 	if (!body || !sig) return null;

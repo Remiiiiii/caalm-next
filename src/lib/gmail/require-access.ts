@@ -1,8 +1,8 @@
+import type { NextRequest } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getValidGmailAccessToken } from "@/lib/actions/gmail-integration.actions";
 import { getCurrentUserId } from "@/lib/microsoft/auth-utils";
 import { requirePermission } from "@/lib/rbac/middleware";
-import type { NextRequest } from "next/server";
 
 type GmailAccessDenied = { ok: false; response: Response };
 type GmailAccessGranted = {
@@ -26,9 +26,12 @@ export async function requireGmailAccess(
 	} catch {
 		return {
 			ok: false,
-			response: Response.json({ error: "Authentication required" }, {
-				status: 401,
-			}),
+			response: Response.json(
+				{ error: "Authentication required" },
+				{
+					status: 401,
+				},
+			),
 		};
 	}
 

@@ -20,7 +20,7 @@ function statusBadge(
 
 	if (isExpired) {
 		return (
-			<span className="inline-block px-1.5 py-0.5 border border-red/20 bg-red/10 text-red text-xs rounded-full font-medium">
+			<span className="inline-block px-1.5 py-0.5 border border-red/20 bg-red/10 text-red text-xs rounded-full">
 				Expired
 			</span>
 		);
@@ -29,43 +29,43 @@ function statusBadge(
 	switch (status) {
 		case "pending-review":
 			return (
-				<span className="inline-block px-1.5 py-0.5 border border-orange/20 bg-orange/10 text-orange text-xs rounded-full font-medium">
+				<span className="inline-block px-1.5 py-0.5 border border-orange/20 bg-orange/10 text-orange text-xs rounded-full">
 					Pending Review
 				</span>
 			);
 		case "pending-signature":
 			return (
-				<span className="inline-block px-1.5 py-0.5 border border-blue/20 bg-blue/10 text-blue text-xs rounded-full font-medium">
+				<span className="inline-block px-1.5 py-0.5 border border-blue/20 bg-blue/10 text-blue text-xs rounded-full">
 					Pending Signature
 				</span>
 			);
 		case "action-required":
 			return (
-				<span className="inline-block px-1.5 py-0.5 border border-red/20 bg-red/10 text-red text-xs rounded-full font-medium">
+				<span className="inline-block px-1.5 py-0.5 border border-red/20 bg-red/10 text-red text-xs rounded-full">
 					Action Required
 				</span>
 			);
 		case "active":
 			return (
-				<span className="inline-block px-1.5 py-0.5 border border-green/20 bg-green/10 text-green text-xs rounded-full font-medium">
+				<span className="inline-block px-1.5 py-0.5 border border-green/20 bg-green/10 text-green text-xs rounded-full">
 					Active
 				</span>
 			);
 		case "inactive":
 			return (
-				<span className="inline-block px-1.5 py-0.5 border border-slate-200 bg-slate-100 text-slate-600 text-xs rounded-full font-medium">
+				<span className="inline-block px-1.5 py-0.5 border border-slate-200 bg-slate-100 text-slate-600 text-xs rounded-full">
 					Inactive
 				</span>
 			);
 		case "suspended":
 			return (
-				<span className="inline-block px-1.5 py-0.5 border border-slate-200 bg-slate-100 text-slate-700 text-xs rounded-full font-medium">
+				<span className="inline-block px-1.5 py-0.5 border border-slate-200 bg-slate-100 text-slate-700 text-xs rounded-full">
 					Suspended
 				</span>
 			);
 		default:
 			return (
-				<span className="inline-block px-1.5 py-0.5 border border-slate-200 bg-slate-100 text-slate-800 text-xs rounded-full font-medium">
+				<span className="inline-block px-1.5 py-0.5 border border-slate-200 bg-slate-100 text-slate-700 text-xs rounded-full">
 					{status || "Unknown"}
 				</span>
 			);
@@ -241,7 +241,7 @@ export default function LicenseCard({
 				<div className="flex items-center gap-2 flex-wrap">
 					{statusBadge(license.status, expiryDate)}
 					{divisionLabel && (
-						<span className="inline-block px-1.5 py-0.5 border border-slate-200 bg-white/50 text-slate-600 text-xs rounded-full font-medium capitalize">
+						<span className="inline-block px-1.5 py-0.5 border border-slate-200 bg-white/50 text-slate-600 text-xs rounded-full capitalize">
 							{divisionLabel}
 						</span>
 					)}

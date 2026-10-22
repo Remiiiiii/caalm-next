@@ -35,7 +35,11 @@ export async function dryRunUserImport(
 ): Promise<{
 	rows: UserImportPlanRow[];
 	counts: { invite: number; skip: number; error: number };
-	seatPreview: { used: number; maxUsers: number | null; remaining: number | null };
+	seatPreview: {
+		used: number;
+		maxUsers: number | null;
+		remaining: number | null;
+	};
 }> {
 	const [roles, pending, org, used] = await Promise.all([
 		listRoles(orgId),
@@ -47,7 +51,9 @@ export async function dryRunUserImport(
 		roles.map((role) => [role.name.trim().toLowerCase(), role.name]),
 	);
 	const pendingEmails = new Set(
-		pending.map((row) => String((row as { email?: string }).email || "").toLowerCase()),
+		pending.map((row) =>
+			String((row as { email?: string }).email || "").toLowerCase(),
+		),
 	);
 	const limits = org ? getEffectiveLimits(org) : null;
 	let remaining =
@@ -102,9 +108,7 @@ export async function dryRunUserImport(
 			error += 1;
 			continue;
 		}
-		if (
-			!(INVITABLE_ROLE_NAMES as readonly string[]).includes(catalogName)
-		) {
+		if (!(INVITABLE_ROLE_NAMES as readonly string[]).includes(catalogName)) {
 			plans.push({
 				rowNumber: row.rowNumber,
 				action: "error",

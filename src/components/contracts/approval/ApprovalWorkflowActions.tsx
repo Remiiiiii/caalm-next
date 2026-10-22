@@ -34,7 +34,7 @@ const VISIBLE_LIMIT = 4;
 const ALL_ELIGIBLE = "__all_eligible__";
 
 const ROLE_PILL =
-	"inline-block shrink-0 px-2 py-0.5 text-xs rounded-full font-medium border bg-blue/10 text-blue border-blue/20";
+	"inline-block shrink-0 px-2 py-0.5 text-xs rounded-full border bg-blue/10 text-blue border-blue/20";
 
 function initials(name: string): string {
 	const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -227,7 +227,7 @@ export default function ApprovalWorkflowActions({
 								aria-hidden
 								className="pointer-events-none absolute top-3 bottom-3 right-0 w-px bg-slate-200"
 							/>
-							<p className="text-[10px] font-medium uppercase tracking-[0.12em] text-slate-500">
+							<p className="text-[10px] uppercase tracking-[0.12em] text-slate-500">
 								Audit note
 							</p>
 							<p className="mt-1 text-xs leading-relaxed text-slate-600">
@@ -258,7 +258,7 @@ export default function ApprovalWorkflowActions({
 
 			{workflow.needsExecutiveAssignment ? (
 				<div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-					<p className="font-medium">Needs executive assignment</p>
+					<p className="">Needs executive assignment</p>
 					<p className="mt-1 text-amber-900/80">
 						No Executive role holder is assigned to the executive step. An admin
 						must assign someone before the item can go active.
@@ -268,7 +268,7 @@ export default function ApprovalWorkflowActions({
 
 			{workflow.canResubmit ? (
 				<div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-slate-700">
-					<p className="font-medium">Changes were requested</p>
+					<p className="">Changes were requested</p>
 					<p className="mt-1 text-slate-600">
 						After updating the item, resubmit to restart department review.
 					</p>
@@ -293,9 +293,7 @@ export default function ApprovalWorkflowActions({
 						onClick={() => setAdminPanelOpen((open) => !open)}
 					>
 						<span className="min-w-0">
-							<span className="block text-sm font-medium text-slate-700">
-								{panelTitle}
-							</span>
+							<span className="block text-sm text-slate-700">{panelTitle}</span>
 							<span className="mt-1 block text-xs text-slate-500">
 								{firstAssignmentNeeded
 									? "Pick who should own this step before the workflow can continue."
@@ -315,14 +313,14 @@ export default function ApprovalWorkflowActions({
 						<div className="mt-3">
 							{currentlyAssignedPeople.length > 0 && !firstAssignmentNeeded ? (
 								<div className="mb-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
-									<p className="text-[10px] font-medium uppercase tracking-[0.12em] text-slate-500">
+									<p className="text-[10px] uppercase tracking-[0.12em] text-slate-500">
 										Currently assigned
 									</p>
 									<ul className="mt-1.5 space-y-1">
 										{currentlyAssignedPeople.map((person) => (
 											<li
 												key={person.userId}
-												className="text-xs font-medium text-slate-700"
+												className="text-xs text-slate-700"
 											>
 												{person.fullName}
 												{person.userId === workflow.viewerUserId
@@ -336,7 +334,7 @@ export default function ApprovalWorkflowActions({
 
 							{noOtherEligible ? (
 								<div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-950">
-									<p className="flex items-start gap-2 font-medium">
+									<p className="flex items-start gap-2">
 										<Info
 											className="mt-0.5 h-4 w-4 shrink-0 text-amber-800"
 											aria-hidden

@@ -105,8 +105,7 @@ describe("swrConfig.onError", () => {
 			[
 				"/api/billing/subscription?orgId=default_organization",
 				"default_organization",
-			],
-			{} as never,
+			] as never,
 			{} as never,
 		);
 
@@ -119,7 +118,7 @@ describe("swrConfig.onError", () => {
 		const error = new Error("Not found") as Error & { status?: number };
 		error.status = 404;
 
-		swrConfig.onError?.(error, "/api/users", {} as never, {} as never);
+		swrConfig.onError?.(error, "/api/users", {} as never);
 
 		expect(errorSpy).not.toHaveBeenCalled();
 	});
@@ -130,7 +129,7 @@ describe("swrConfig.onError", () => {
 		const error = new Error("Server exploded") as Error & { status?: number };
 		error.status = 500;
 
-		swrConfig.onError?.(error, "/api/something", {} as never, {} as never);
+		swrConfig.onError?.(error, "/api/something", {} as never);
 
 		expect(errorSpy).not.toHaveBeenCalled();
 		expect(warnSpy).toHaveBeenCalled();

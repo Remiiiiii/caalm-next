@@ -5,7 +5,6 @@
 
 "use client";
 
-import * as VisuallyHiddenPrimitive from "@radix-ui/react-visually-hidden";
 import {
 	AlertTriangle,
 	Ban,
@@ -24,15 +23,10 @@ import {
 	AiExtractionReviewPanel,
 	AiExtractionStatusBadge,
 } from "@/components/contract-upload/AiExtractionReview";
+import { AppDialog } from "@/components/ui/app-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogTitle,
-	DialogTrigger,
-} from "@/components/ui/dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Form } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { uploadFile } from "@/lib/actions/file.actions";
@@ -708,85 +702,147 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 
 	return (
 		<>
-			<Dialog open={isOpen} onOpenChange={setIsOpen}>
-				<DialogTrigger asChild>
-					<Button className={className}>
-						<Upload className="h-4 w-4" />
-						{triggerLabel}
-					</Button>
-				</DialogTrigger>
+			<Button
+				type="button"
+				className={className}
+				onClick={() => setIsOpen(true)}
+			>
+				<Upload className="h-4 w-4" />
+				{triggerLabel}
+			</Button>
 
-				<DialogContent className="glass-dialog">
-					<VisuallyHiddenPrimitive.Root>
-						<DialogTitle>Upload License</DialogTitle>
-					</VisuallyHiddenPrimitive.Root>
+			<AppDialog
+				open={isOpen}
+				onOpenChange={setIsOpen}
+				size="form"
+				className="glass-dialog max-h-[90vh] sm:max-w-4xl"
+				icon={<Upload className="h-5 w-5" />}
+				title="Upload New License"
+				description={`Step ${currentStep} of ${TOTAL_STEPS}: ${STEP_TITLES[currentStep - 1]}`}
+				pending={isUploading}
+				footer={
+					<div className="flex w-full items-center justify-between gap-2">
+						<Button
+							type="button"
+							variant="outline"
+							onClick={() => {
+								if (currentStep > 1 || processedFileData) {
+									setCancelDialogOpen(true);
+								} else {
+									setIsOpen(false);
+									resetForm();
+								}
+							}}
+							className="flex items-center gap-2"
+							disabled={isUploading}
+						>
+							<Ban className="h-4 w-4" />
+							Cancel
+						</Button>
 
-					{/* Professional Cap */}
-					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
+						<div className="flex items-center gap-2">
+							{currentStep > 1 && (
+								<Button
+									type="button"
+									variant="outline"
+									onClick={prevStep}
+									disabled={isUploading}
+									className="flex items-center gap-2"
+								>
+									<ChevronLeft className="h-4 w-4" />
+									Previous
+								</Button>
+							)}
 
-					{/* Sticky Header */}
-					<div className="glass-dialog-wizard-header">
-						<div className="px-6 py-6">
-							<div className="flex items-center gap-3 mb-3">
-								<div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-									<Upload className="w-5 h-5 text-[#0f5384]" />
-								</div>
-								<div className="flex-1">
-									<h2 className="text-xl font-semibold sidebar-gradient-text">
-										Upload New License
-									</h2>
-									<div className="flex items-center justify-between">
-										<p className="text-sm text-slate-600 mt-0.5">
-											Step {currentStep} of {TOTAL_STEPS}:{" "}
-											{STEP_TITLES[currentStep - 1]}
-										</p>
-										<div className="flex items-center gap-2">
-											<AiExtractionStatusBadge
-												method={extractionMethod}
-												overallConfidence={overallExtractionConfidence}
-												filledCount={aiFilledFields.length}
-											/>
-											{isSaving && (
-												<Badge
-													variant="outline"
-													className="text-xs sidebar-gradient-text"
-												>
-													<Loader2 className="h-3 w-3 mr-1 animate-spin" />
-													Saving...
-												</Badge>
-											)}
-											{lastSavedAt && !isSaving && (
-												<Badge
-													variant="outline"
-													className="text-xs text-slate-600 border-slate-300"
-												>
-													<FileCheck className="h-3 w-3 mr-1 text-green" />
-													Saved {(() => {
-														const seconds = Math.round(
-															(Date.now() - lastSavedAt.getTime()) / 1000,
-														);
-														if (seconds >= 60) {
-															const minutes = Math.round(seconds / 60);
-															return `${minutes} min ago`;
-														}
-														return `${seconds} s ago`;
-													})()}
-												</Badge>
-											)}
-										</div>
-									</div>
-								</div>
-							</div>
-							<StepIndicator
-								currentStep={currentStep}
-								onGoToStep={goToStep}
-								processedFileData={processedFileData}
-							/>
+							{currentStep < TOTAL_STEPS ? (
+								<Button
+									type="button"
+									onClick={nextStep}
+									disabled={
+										(currentStep === 1 && !processedFileData) || isValidating
+									}
+									className="primary-btn flex items-center gap-2"
+								>
+									{isValidating ? (
+										<>
+											<Loader2 className="h-4 w-4 animate-spin" />
+											Validating...
+										</>
+									) : (
+										<>
+											Next
+											<ChevronRight className="h-4 w-4" />
+										</>
+									)}
+								</Button>
+							) : (
+								<Button
+									type="button"
+									onClick={() => void form.handleSubmit(handleSubmit)()}
+									disabled={isUploading || !processedFileData}
+									className="primary-btn min-w-[120px]"
+								>
+									{isUploading ? (
+										<>
+											<Loader2 className="h-4 w-4 animate-spin" />
+											Submitting...
+										</>
+									) : (
+										<>
+											<Upload className="h-4 w-4" />
+											Submit for Review
+										</>
+									)}
+								</Button>
+							)}
 						</div>
 					</div>
-
-					{/* Scrollable Content */}
-					<div ref={stepScrollRef} className="glass-dialog-scroll-area">
+				}
+			>
+				<div className="space-y-4 pb-1">
+					<div className="flex flex-wrap items-center justify-end gap-2">
+						<AiExtractionStatusBadge
+							method={extractionMethod}
+							overallConfidence={overallExtractionConfidence}
+							filledCount={aiFilledFields.length}
+						/>
+						{isSaving && (
+							<Badge
+								variant="outline"
+								className="text-xs sidebar-gradient-text"
+							>
+								<Loader2 className="h-3 w-3 mr-1 animate-spin" />
+								Saving...
+							</Badge>
+						)}
+						{lastSavedAt && !isSaving && (
+							<Badge
+								variant="outline"
+								className="text-xs text-slate-600 border-slate-300"
+							>
+								<FileCheck className="h-3 w-3 mr-1 text-green" />
+								Saved {(() => {
+									const seconds = Math.round(
+										(Date.now() - lastSavedAt.getTime()) / 1000,
+									);
+									if (seconds >= 60) {
+										const minutes = Math.round(seconds / 60);
+										return `${minutes} min ago`;
+									}
+									return `${seconds} s ago`;
+								})()}
+							</Badge>
+						)}
+					</div>
+					<StepIndicator
+						currentStep={currentStep}
+						onGoToStep={goToStep}
+						processedFileData={processedFileData}
+					/>
+					<div
+						ref={stepScrollRef}
+						className="-mx-6 min-h-0 flex-1 overflow-y-auto px-4"
+					>
 						<Form {...form}>
 							<form
 								id="license-upload-form"
@@ -862,153 +918,43 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 							</form>
 						</Form>
 					</div>
+				</div>
+			</AppDialog>
 
-					{/* Footer */}
-					<div className="glass-dialog-footer-actions">
-						<Button
-							type="button"
-							variant="outline"
-							onClick={() => {
-								if (currentStep > 1 || processedFileData) {
-									setCancelDialogOpen(true);
-								} else {
-									setIsOpen(false);
-									resetForm();
-								}
-							}}
-							className="primary-btn flex items-center gap-2"
-							disabled={isUploading}
-						>
-							<Ban className="h-4 w-4" />
-							Cancel
-						</Button>
-
-						<div className="flex items-center gap-2">
-							{currentStep > 1 && (
-								<Button
-									type="button"
-									variant="outline"
-									onClick={prevStep}
-									disabled={isUploading}
-									className="primary-btn sm:px-4 px-3 shimmer-hover"
-								>
-									<ChevronLeft className="h-4 w-4" />
-									Previous
-								</Button>
-							)}
-
-							{currentStep < TOTAL_STEPS ? (
-								<Button
-									type="button"
-									onClick={nextStep}
-									disabled={
-										(currentStep === 1 && !processedFileData) || isValidating
-									}
-									className="primary-btn flex items-center gap-2"
-								>
-									{isValidating ? (
-										<>
-											<Loader2 className="h-4 w-4 animate-spin" />
-											Validating...
-										</>
-									) : (
-										<>
-											Next
-											<ChevronRight className="h-4 w-4" />
-										</>
-									)}
-								</Button>
-							) : (
-								<Button
-									type="button"
-									onClick={() => void form.handleSubmit(handleSubmit)()}
-									disabled={isUploading || !processedFileData}
-									className="primary-btn min-w-[120px]"
-								>
-									{isUploading ? (
-										<>
-											<Loader2 className="h-4 w-4 animate-spin" />
-											Submitting...
-										</>
-									) : (
-										<>
-											<Upload className="h-4 w-4" />
-											Submit for Review
-										</>
-									)}
-								</Button>
-							)}
-						</div>
-					</div>
-				</DialogContent>
-			</Dialog>
-
-			{/* Cancel Dialog */}
 			<CancelDialog
 				open={cancelDialogOpen}
 				onOpenChange={setCancelDialogOpen}
 				onConfirm={handleCancelConfirm}
 			/>
 
-			{/* Delete Draft Dialog — matches ContractUploadForm Delete Draft */}
-			<Dialog
+			<ConfirmDialog
 				open={deleteDialogOpen}
 				onOpenChange={(open) => {
 					setDeleteDialogOpen(open);
 					if (!open) setDraftToDelete(null);
 				}}
-			>
-				<DialogContent
-					className="overflow-hidden p-0 gap-0 shadow-xl sm:max-w-md border border-slate-200"
-					variant="destructive"
-				>
-					<DialogTitle className="sr-only">Delete Draft</DialogTitle>
-					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-
-					{/* Header */}
-					<div className="px-6 py-4 mt-4 bg-white border-b border-slate-200">
-						<div className="flex items-center gap-2">
-							<AlertTriangle className="w-5 h-5 shrink-0 text-[#f7d333]" />
-							<h2 className="text-base font-semibold sidebar-gradient-text">
-								Delete Draft
-							</h2>
-						</div>
-						<DialogDescription className="text-sm text-slate-600 mt-1 ml-7">
-							Are you sure you want to delete this draft? This action cannot be
-							undone.
-						</DialogDescription>
-					</div>
-
-					{/* Body */}
-					<div className="px-6 py-5 space-y-3 bg-white">
-						<p className="text-sm text-slate-600">
-							Your decision to delete is irreversible, so please make sure you
-							want to continue.
-						</p>
-						<p className="text-xs font-medium text-slate-500">
+				variant="destructive"
+				icon={<AlertTriangle className="h-5 w-5" />}
+				title="Delete Draft"
+				description="Are you sure you want to delete this draft? This action cannot be undone."
+				helperText={
+					<>
+						Your decision to delete is irreversible, so please make sure you
+						want to continue.
+						<span className="mt-2 block text-xs font-medium text-slate-500">
 							This action is permanent.
-						</p>
-					</div>
-
-					{/* Footer — primary action; corner X dismisses */}
-					<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3">
-						<Button
-							type="button"
-							onClick={async () => {
-								if (!draftToDelete) return;
-								const id = draftToDelete;
-								setDeleteDialogOpen(false);
-								setDraftToDelete(null);
-								await deleteDraft(id);
-							}}
-							className="delete-btn gap-2 px-3 sm:px-4"
-						>
-							<Trash2 className="h-4 w-4 shrink-0" />
-							Delete Draft
-						</Button>
-					</div>
-				</DialogContent>
-			</Dialog>
+						</span>
+					</>
+				}
+				confirmLabel="Delete Draft"
+				confirmIcon={<Trash2 className="h-4 w-4" />}
+				onConfirm={async () => {
+					if (!draftToDelete) return;
+					const id = draftToDelete;
+					setDraftToDelete(null);
+					await deleteDraft(id);
+				}}
+			/>
 		</>
 	);
 };

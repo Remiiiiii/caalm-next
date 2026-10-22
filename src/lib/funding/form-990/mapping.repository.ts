@@ -11,8 +11,7 @@ import {
 
 function tableId(): string {
 	return (
-		appwriteConfig.form990ExpenseMappingsCollectionId ||
-		"69d91801001f4e8c2b14"
+		appwriteConfig.form990ExpenseMappingsCollectionId || "69d91801001f4e8c2b14"
 	);
 }
 
@@ -71,8 +70,7 @@ export async function upsertForm990Mapping(input: {
 	const { tablesDB } = await createAdminClient();
 	const existing = await listForm990Mappings(input.orgId);
 	const match = existing.find(
-		(m) =>
-			m.sourceType === input.sourceType && m.sourceKey === input.sourceKey,
+		(m) => m.sourceType === input.sourceType && m.sourceKey === input.sourceKey,
 	);
 
 	if (match) {

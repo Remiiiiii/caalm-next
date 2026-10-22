@@ -1,5 +1,9 @@
 import "@testing-library/jest-dom";
+import { configure } from "@testing-library/react";
 import { vi } from "vitest";
+
+// findBy*/waitFor default to 1s, which is too tight when the whole suite runs in parallel.
+configure({ asyncUtilTimeout: 5000 });
 
 // Mock Next.js router
 vi.mock("next/navigation", () => ({

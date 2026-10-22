@@ -1,14 +1,12 @@
 import { loadContractForOrg } from "@/lib/contracts/negotiation/contract-scope";
+import type { StyledXlsxInput, XlsxCell } from "@/lib/export/styled-xlsx";
 import { getFundById } from "@/lib/funds/repository";
 import { listPostedGiftsForContract } from "@/lib/gifts/contract-gifts";
 import { listHoursForGrant } from "@/lib/volunteers/volunteer-hours.repository";
-import {
-	budgetVsActual,
-	type BudgetVsActualResult,
-} from "./budget-vs-actual";
-import { getGrantFundIdForContract } from "./grant-fund.repository";
-import type { GrantBudgetCategory } from "./grant-budget.types";
+import { type BudgetVsActualResult, budgetVsActual } from "./budget-vs-actual";
 import { listBudgetLinesForGrant } from "./grant-budget.repository";
+import type { GrantBudgetCategory } from "./grant-budget.types";
+import { getGrantFundIdForContract } from "./grant-fund.repository";
 import { listObligations } from "./obligation.repository";
 import { listRestrictionReleases } from "./restriction-release.repository";
 
@@ -139,7 +137,9 @@ export function assembleFunderSnapshot(
 			category: line.category as GrantBudgetCategory,
 			amount: line.amount,
 		})),
-		obligations: orgScoped(orgId, input.obligations),
+		obligations: orgScoped(orgId, input.obligations) as unknown as Parameters<
+			typeof budgetVsActual
+		>[0]["obligations"],
 		gifts: orgScoped(orgId, input.gifts).map((g) => ({
 			amount: g.amount,
 			status: g.status,
@@ -147,13 +147,15 @@ export function assembleFunderSnapshot(
 		})),
 	});
 
-	const budgetLines: FunderSnapshotBudgetLine[] = vsActual.lines.map((line) => ({
-		lineId: line.lineId,
-		category: line.category,
-		budgetAmount: line.budgetAmount,
-		actualAmount: line.actualAmount,
-		overBudget: line.overBudget,
-	}));
+	const budgetLines: FunderSnapshotBudgetLine[] = vsActual.lines.map(
+		(line) => ({
+			lineId: line.lineId,
+			category: line.category,
+			budgetAmount: line.budgetAmount,
+			actualAmount: line.actualAmount,
+			overBudget: line.overBudget,
+		}),
+	);
 
 	const volunteerHours = orgScoped(orgId, input.volunteerHours)
 		.filter(
@@ -191,59 +193,75 @@ export function assembleFunderSnapshot(
 	};
 }
 
-export function funderSnapshotToCsv(snapshot: FunderSnapshot): string {
-	const escape = (value: string | number | undefined) => {
-		const raw = value == null ? "" : String(value);
-		if (/[",\n]/.test(raw)) return `"${raw.replace(/"/g, '""')}"`;
-		return raw;
-	};
-	const lines: string[] = [
-		"section,field,value,amount,date,category,detail",
-		`grant,contract_id,${escape(snapshot.contractId)},,,,`,
-		`grant,contract_name,${escape(snapshot.contractName)},,,,`,
-		`grant,generated_at,${escape(snapshot.generatedAt)},,,,`,
+export function funderSnapshotToXlsxInput(
+	snapshot: FunderSnapshot,
+): StyledXlsxInput {
+	const rows: XlsxCell[][] = [
+		["Grant", "Contract ID", snapshot.contractId],
+		["Grant", "Contract name", snapshot.contractName],
+		["Grant", "Generated at", snapshot.generatedAt],
 	];
-
 	if (snapshot.fund) {
-		lines.push(
-			`fund,code,${escape(snapshot.fund.code)},,,,`,
-			`fund,name,${escape(snapshot.fund.name)},,,,`,
-			`fund,fund_id,${escape(snapshot.fund.fundId)},,,,`,
+		rows.push(
+			["Fund", "Code", snapshot.fund.code],
+			["Fund", "Name", snapshot.fund.name],
+			["Fund", "Fund ID", snapshot.fund.fundId],
 		);
 	}
-
-	lines.push(
-		`summary,total_budget,,${snapshot.budgetVsActual.totalBudget},,,`,
-		`summary,total_actual,,${snapshot.budgetVsActual.totalActual},,,`,
-		`summary,gifts_cash_total,,${snapshot.giftsCashTotal},,,`,
-		`summary,volunteer_minutes,,${snapshot.volunteerHoursTotalMinutes},,,`,
+	rows.push(
+		["Summary", "Total budget", "", snapshot.budgetVsActual.totalBudget],
+		["Summary", "Total actual", "", snapshot.budgetVsActual.totalActual],
+		["Summary", "Gifts cash total", "", snapshot.giftsCashTotal],
+		["Summary", "Volunteer minutes", "", snapshot.volunteerHoursTotalMinutes],
 	);
-
 	for (const row of snapshot.restrictions) {
-		lines.push(
-			`restriction,release,,${row.amount},${escape(row.releasedAt)},,${escape(row.note ?? `${row.fundFrom}→${row.fundTo}`)}`,
-		);
+		rows.push([
+			"Restriction",
+			"Release",
+			row.note ?? `${row.fundFrom}→${row.fundTo}`,
+			row.amount,
+			row.releasedAt,
+		]);
 	}
-
 	for (const row of snapshot.budgetLines) {
-		lines.push(
-			`budget,line,,${row.budgetAmount},,${escape(row.category)},actual=${row.actualAmount};over=${row.overBudget}`,
-		);
+		rows.push([
+			"Budget",
+			row.category,
+			`Actual ${row.actualAmount}${row.overBudget ? " · over budget" : ""}`,
+			row.budgetAmount,
+		]);
 	}
-
 	for (const gift of snapshot.gifts) {
-		lines.push(
-			`gift,${escape(gift.giftId)},${escape(gift.constituentId)},${gift.amount},${escape(gift.giftDate)},,${escape(String(gift.receiptNumber ?? ""))}`,
-		);
+		rows.push([
+			"Gift",
+			gift.giftId,
+			`${gift.constituentId}${gift.receiptNumber ? ` · receipt ${gift.receiptNumber}` : ""}`,
+			gift.amount,
+			gift.giftDate,
+		]);
 	}
-
 	for (const hour of snapshot.volunteerHours) {
-		lines.push(
-			`volunteer,${escape(hour.volunteerConstituentId)},${escape(hour.roleLabel ?? "")},${hour.minutesWorked},${escape(hour.workedAt)},,`,
-		);
+		rows.push([
+			"Volunteer",
+			hour.volunteerConstituentId,
+			hour.roleLabel ?? "",
+			hour.minutesWorked,
+			hour.workedAt,
+		]);
 	}
-
-	return `${lines.join("\n")}\n`;
+	return {
+		sheetName: "Funder Snapshot",
+		title: `Funder Snapshot — ${snapshot.contractName}`,
+		subtitle: `CAALM · Generated ${snapshot.generatedAt.slice(0, 10)}`,
+		columns: [
+			{ header: "Section", width: 16 },
+			{ header: "Item", width: 34 },
+			{ header: "Detail", width: 44 },
+			{ header: "Amount", type: "currency", width: 16 },
+			{ header: "Date", type: "date", width: 16 },
+		],
+		rows,
+	};
 }
 
 /** Load live org-scoped funder snapshot for a grant contract. */
@@ -299,7 +317,7 @@ export async function loadFunderSnapshot(
 			status: o.status,
 			kind: o.kind,
 			actualAmount: o.actualAmount,
-			budgetCategory: o.budgetCategory,
+			budgetCategory: (o as { budgetCategory?: string | null }).budgetCategory,
 		})),
 		gifts: giftsResult.items.map((g) => ({
 			orgId: g.orgId,

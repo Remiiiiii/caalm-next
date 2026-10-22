@@ -15,12 +15,11 @@ export function SampleDataBadge({
 	tone = "sample",
 	label,
 }: SampleDataBadgeProps) {
-	const text =
-		label ?? (tone === "demo" ? "DEMO" : "Sample data");
+	const text = label ?? (tone === "demo" ? "DEMO" : "Sample data");
 	return (
 		<span
 			className={cn(
-				"inline-block px-2 py-0.5 text-xs rounded-full font-medium border",
+				"inline-block px-2 py-0.5 text-xs rounded-full border",
 				tone === "demo"
 					? "bg-orange/10 text-orange border-orange/20"
 					: "bg-slate-100 text-slate-600 border-slate-200",

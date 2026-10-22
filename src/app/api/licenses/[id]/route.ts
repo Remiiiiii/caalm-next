@@ -13,10 +13,10 @@ import {
 } from "@/lib/api/licenses/utils/response.util";
 import { requireStepUpForSession } from "@/lib/auth/step-up";
 import { requirePermission } from "@/lib/rbac/middleware";
+import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 import { logAuditEvent } from "@/lib/services/audit-logger";
 import { CACHE_KEYS } from "@/lib/services/cache-keys";
 import CacheManager from "@/lib/services/cache-manager";
-import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 
 export async function GET(
 	request: NextRequest,
@@ -51,8 +51,7 @@ export async function GET(
 		const license = await CacheManager.withCache(
 			"licenses/details",
 			cacheKey,
-			async () =>
-				LicenseService.getLicenseByIdForOrg(id, defaultOrg.orgId),
+			async () => LicenseService.getLicenseByIdForOrg(id, defaultOrg.orgId),
 		);
 
 		if (!license) {

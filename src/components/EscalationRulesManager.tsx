@@ -1,6 +1,5 @@
 "use client";
 
-import * as VisuallyHiddenPrimitive from "@radix-ui/react-visually-hidden";
 import {
 	AlertTriangle,
 	Bell,
@@ -13,16 +12,11 @@ import {
 } from "lucide-react";
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
+import { AppDialog } from "@/components/ui/app-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogTitle,
-	DialogTrigger,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SearchField } from "@/components/ui/search-field";
@@ -33,7 +27,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import { useToast } from "@/hooks/use-toast";
 import type {
 	EscalationRule,
@@ -351,51 +344,47 @@ export const EscalationRulesManager: React.FC<EscalationRulesManagerProps> = ({
 
 	return (
 		<>
-			<Dialog open={isOpen} onOpenChange={setIsOpen}>
-				<DialogTrigger asChild>
-					<Button
-						size="sm"
-						variant="outline"
-						className="primary-btn px-3 sm:px-4"
-					>
-						<Bell className="h-4 w-4" />
-						Escalation Rules
-					</Button>
-				</DialogTrigger>
-				<DialogContent className="flex max-h-[90vh] max-w-120 flex-col overflow-hidden border border-slate-200 p-0 shadow-xl sm:rounded-2xl">
-					<div className="absolute top-0 right-0 left-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
-
-					<div className="sticky top-0 z-10 mt-4 border-b border-slate-200 bg-linear-to-r from-blue-50 to-indigo-50 py-4">
-						<div className="flex items-start justify-between gap-3 px-6">
-							<div className="flex items-start gap-3">
-								<StatCardIcon
-									icon={Bell}
-									className="h-9 w-9"
-									iconClassName="h-4 w-4"
-								/>
-								<div>
-									<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-										Escalation Rules
-									</DialogTitle>
-									<DialogDescription className="mt-0.5 text-sm text-slate-600">
-										Configure automatic notification escalation rules
-									</DialogDescription>
-								</div>
-							</div>
-							{rules.length > 0 && !loading ? (
-								<Button
-									onClick={handleCreate}
-									className="primary-btn px-3 sm:px-4"
-									size="sm"
-								>
-									<LayersPlus className="h-4 w-4" />
-									New Rule
-								</Button>
-							) : null}
-						</div>
-					</div>
-
-					<div className="flex-1 overflow-y-auto bg-slate-50 px-6 py-8">
+			<Button
+				size="sm"
+				variant="outline"
+				className="primary-btn px-3 sm:px-4"
+				onClick={() => setIsOpen(true)}
+			>
+				<Bell className="h-4 w-4" />
+				Escalation Rules
+			</Button>
+			<AppDialog
+				open={isOpen}
+				onOpenChange={setIsOpen}
+				size="form"
+				className="max-h-[90vh] max-w-120"
+				icon={<Bell className="h-5 w-5" />}
+				title="Escalation Rules"
+				description="Configure automatic notification escalation rules"
+				footer={
+					<>
+						<Button
+							type="button"
+							variant="outline"
+							className="rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+							onClick={() => setIsOpen(false)}
+						>
+							Close
+						</Button>
+						{rules.length > 0 && !loading ? (
+							<Button
+								type="button"
+								onClick={handleCreate}
+								className="btn-primary"
+							>
+								<LayersPlus className="h-4 w-4" />
+								New rule
+							</Button>
+						) : null}
+					</>
+				}
+			>
+					<div className="-mx-6 bg-slate-50 px-6 py-4 pb-1">
 						{loading ? (
 							<div className="flex items-center justify-center py-16">
 								<div className="h-6 w-6 animate-spin rounded-full border-2 border-[#0f5384] border-t-transparent" />
@@ -493,11 +482,9 @@ export const EscalationRulesManager: React.FC<EscalationRulesManagerProps> = ({
 							</div>
 						)}
 					</div>
-				</DialogContent>
-			</Dialog>
+			</AppDialog>
 
-			{/* Create/Edit Dialog */}
-			<Dialog
+			<AppDialog
 				open={isCreateDialogOpen || isEditDialogOpen}
 				onOpenChange={(open) => {
 					if (!open) {
@@ -517,32 +504,55 @@ export const EscalationRulesManager: React.FC<EscalationRulesManagerProps> = ({
 						setUserSearchResults([]);
 					}
 				}}
+				size="form"
+				className="sm:max-w-140"
+				pending={isSaving}
+				icon={
+					ruleToEdit ? (
+						<Edit className="h-5 w-5" />
+					) : (
+						<LayersPlus className="h-5 w-5" />
+					)
+				}
+				title={
+					ruleToEdit ? "Edit escalation rule" : "Create escalation rule"
+				}
+				description={
+					ruleToEdit
+						? "Update when this rule fires and who gets notified."
+						: "Set when a reminder should escalate and who gets notified."
+				}
+				footer={
+					<>
+						<Button
+							type="button"
+							variant="outline"
+							className="rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+							disabled={isSaving}
+							onClick={() => {
+								setIsCreateDialogOpen(false);
+								setIsEditDialogOpen(false);
+							}}
+						>
+							Cancel
+						</Button>
+						<Button
+							type="button"
+							onClick={handleSave}
+							className="btn-primary"
+							disabled={isSaving}
+						>
+							<LayersPlus className="h-4 w-4" />
+							{isSaving
+								? "Saving…"
+								: ruleToEdit
+									? "Update rule"
+									: "Create rule"}
+						</Button>
+					</>
+				}
 			>
-				<DialogContent className="flex max-h-[90vh] flex-col overflow-hidden border border-slate-200 p-0 shadow-xl sm:max-w-140">
-					<div className="absolute top-0 right-0 left-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
-					<div className="sticky top-0 z-10 mt-4 border-b border-slate-200 bg-linear-to-r from-blue-50 to-indigo-50 py-4">
-						<div className="flex items-center gap-3 px-6">
-							<StatCardIcon
-								icon={ruleToEdit ? Edit : LayersPlus}
-								className="h-9 w-9 shrink-0"
-								iconClassName="h-4 w-4"
-							/>
-							<div className="min-w-0">
-								<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-									{ruleToEdit
-										? "Edit Escalation Rule"
-										: "Create Escalation Rule"}
-								</DialogTitle>
-								<DialogDescription className="mt-1 text-sm text-slate-600">
-									{ruleToEdit
-										? "Update when this rule fires and who gets notified."
-										: "Set when a reminder should escalate and who gets notified."}
-								</DialogDescription>
-							</div>
-						</div>
-					</div>
-
-					<div className="flex-1 space-y-5 overflow-y-auto bg-slate-50 p-6">
+					<div className="space-y-5 pb-1">
 						<div>
 							<Label
 								htmlFor="rule-name"
@@ -732,85 +742,23 @@ export const EscalationRulesManager: React.FC<EscalationRulesManagerProps> = ({
 							)}
 						</div>
 					</div>
+			</AppDialog>
 
-					<div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
-						<Button
-							onClick={handleSave}
-							className="primary-btn px-3 sm:px-4"
-							disabled={isSaving}
-						>
-							{isSaving ? (
-								<>
-									<div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-									Saving...
-								</>
-							) : (
-								<>
-									<LayersPlus className="h-4 w-4" />
-									{ruleToEdit ? "Update Rule" : "Create Rule"}
-								</>
-							)}
-						</Button>
-					</div>
-				</DialogContent>
-			</Dialog>
-
-			{/* Delete Confirmation Dialog */}
-			<Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-				<DialogContent
-					className="overflow-hidden p-0 shadow-xl sm:max-w-md"
-					variant="destructive"
-				>
-					<VisuallyHiddenPrimitive.Root>
-						<DialogTitle>Delete Escalation Rule</DialogTitle>
-					</VisuallyHiddenPrimitive.Root>
-					<div className="h-4 w-full bg-[#d6d7d8] opacity-70" />
-					<div className="glass-dialog-alert-section">
-						<div className="flex items-start gap-3">
-							<AlertTriangle className="w-5 h-5 text-[#f0c974]" />
-							<div>
-								<h2 className="text-base font-semibold sidebar-gradient-text">
-									Delete Escalation Rule
-								</h2>
-								<DialogDescription className="text-sm text-slate-600 mt-1">
-									Are you sure you want to delete &quot;{ruleToDelete?.name}
-									&quot;? This action cannot be undone.
-								</DialogDescription>
-							</div>
-						</div>
-					</div>
-					<div className="glass-dialog-alert-body">
-						<p className="text-sm text-slate-700">
-							This will permanently remove the escalation rule and all its
-							configuration.
-						</p>
-					</div>
-					<div className="glass-dialog-alert-footer">
-						<div className="text-xs text-slate-500">
-							This action is permanent.
-						</div>
-						<div className="flex items-center justify-end gap-3">
-							<Button
-								onClick={confirmDelete}
-								className="delete-btn px-3 sm:px-4"
-								disabled={isDeleting}
-							>
-								{isDeleting ? (
-									<>
-										<div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-red border-t-transparent"></div>
-										Deleting...
-									</>
-								) : (
-									<>
-										<Trash2 className="w-4 h-4" />
-										Delete Rule
-									</>
-								)}
-							</Button>
-						</div>
-					</div>
-				</DialogContent>
-			</Dialog>
+			<ConfirmDialog
+				open={isDeleteDialogOpen}
+				onOpenChange={setIsDeleteDialogOpen}
+				variant="destructive"
+				icon={<AlertTriangle className="h-5 w-5" />}
+				title="Delete Escalation Rule"
+				description={`Are you sure you want to delete "${ruleToDelete?.name}"? This action cannot be undone.`}
+				helperText="This will permanently remove the escalation rule and all its configuration."
+				confirmLabel="Delete Rule"
+				confirmIcon={<Trash2 className="h-4 w-4" />}
+				pendingLabel="Deleting…"
+				onConfirm={async () => {
+					await confirmDelete();
+				}}
+			/>
 		</>
 	);
 };

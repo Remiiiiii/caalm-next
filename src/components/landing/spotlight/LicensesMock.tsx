@@ -177,10 +177,7 @@ function GlassStat({
 					{Icon ? (
 						<span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-white/50 bg-white/40 shadow-sm">
 							<Icon
-								className={cn(
-									"h-3.5 w-3.5",
-									iconClassName ?? "text-[#0f5384]",
-								)}
+								className={cn("h-3.5 w-3.5", iconClassName ?? "text-[#0f5384]")}
 							/>
 						</span>
 					) : null}
@@ -341,7 +338,7 @@ export default function LicensesMock() {
 								</p>
 							</div>
 						</div>
-						<span className="hidden sm:inline-flex shrink-0 rounded-md border border-orange/30 bg-white/70 px-2 py-1 text-[9px] font-medium text-slate-700">
+						<span className="hidden sm:inline-flex shrink-0 rounded-md border border-orange/30 bg-white/70 px-2 py-1 text-[9px] text-slate-700">
 							View expiring
 						</span>
 					</div>
@@ -438,10 +435,7 @@ export default function LicensesMock() {
 								</span>
 							</div>
 							<div className="flex flex-wrap items-center justify-end gap-1.5">
-								<span
-									className="landing-filter-icon"
-									aria-label="Filter"
-								>
+								<span className="landing-filter-icon" aria-label="Filter">
 									<Filter className="h-3.5 w-3.5" />
 								</span>
 								<span className="inline-flex h-7 items-center gap-1 rounded-md border border-slate-200 bg-white px-2 text-[10px] text-slate-700">
@@ -499,7 +493,7 @@ export default function LicensesMock() {
 														className="!size-6 !min-w-6 !min-h-6 shrink-0 aspect-square rounded-full"
 														imageClassName="!size-4"
 													/>
-													<span className="truncate font-medium text-slate-800 max-w-[110px] sm:max-w-[160px]">
+													<span className="truncate font-medium text-slate-700 max-w-[110px] sm:max-w-[160px]">
 														{row.name}
 													</span>
 												</div>
@@ -507,7 +501,7 @@ export default function LicensesMock() {
 											<td className="px-2 py-2">
 												<span
 													className={cn(
-														"inline-flex items-center whitespace-nowrap rounded-full border px-1.5 py-0.5 text-[9px] sm:text-[10px] font-medium",
+														"inline-flex items-center whitespace-nowrap rounded-full border px-1.5 py-0.5 text-[9px] sm:text-[10px]",
 														STATUS_STYLES[row.statusTone],
 													)}
 												>

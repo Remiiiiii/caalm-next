@@ -12,8 +12,8 @@ import {
 	sendRegistrationConfirmationEmailIfEligible,
 } from "@/lib/events";
 import { createEventRegistration } from "@/lib/events/event-registrations.repository";
-import type { EventRegistrationStatus } from "@/lib/events/types";
 import { getTicketTypeById } from "@/lib/events/ticket-types.repository";
+import type { EventRegistrationStatus } from "@/lib/events/types";
 
 type RouteContext = { params: Promise<{ eventId: string }> };
 
@@ -99,9 +99,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
 			ticketTypeId,
 			status,
 			constituentId,
-			guestEmail: body.guestEmail
-				? String(body.guestEmail).trim()
-				: undefined,
+			guestEmail: body.guestEmail ? String(body.guestEmail).trim() : undefined,
 			guestFirstName: body.guestFirstName
 				? String(body.guestFirstName).trim()
 				: undefined,

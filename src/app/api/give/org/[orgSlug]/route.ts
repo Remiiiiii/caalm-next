@@ -1,5 +1,5 @@
-import { type NextRequest, NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
+import { type NextRequest, NextResponse } from "next/server";
 import { listDesignationsForOrg } from "@/lib/designations/repository";
 import { publicDonationPageConfigCacheTag } from "@/lib/give/donation-page-config/cache-invalidation";
 import { resolveOrganizationByGiveSlug } from "@/lib/give/org";
@@ -12,7 +12,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
 	const { orgSlug } = await context.params;
 	const org = await resolveOrganizationByGiveSlug(orgSlug);
 	if (!org) {
-		return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+		return NextResponse.json(
+			{ error: "Organization not found" },
+			{ status: 404 },
+		);
 	}
 	const designations = await listDesignationsForOrg(org.$id);
 	const settings = org.settings ?? {};

@@ -8,7 +8,9 @@ export class GrantFundValidationError extends Error {
 	}
 }
 
-export function contractRequiresFundId(contractType: string | undefined): boolean {
+export function contractRequiresFundId(
+	contractType: string | undefined,
+): boolean {
 	if (!contractType) return false;
 	return GRANT_CAPABLE_CONTRACT_TYPES.has(contractType);
 }

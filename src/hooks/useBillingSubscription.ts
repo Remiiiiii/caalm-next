@@ -45,9 +45,9 @@ export async function fetchBillingSubscription([url, orgId]: [
 			const err = (await res.json().catch(() => ({}))) as {
 				error?: string;
 			};
-			const error = new Error(
-				err.error || "Failed to load plans",
-			) as Error & { status: number };
+			const error = new Error(err.error || "Failed to load plans") as Error & {
+				status: number;
+			};
 			error.status = res.status;
 			throw error;
 		}

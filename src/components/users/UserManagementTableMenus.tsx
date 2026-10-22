@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import RoundedUnderlineTabs from "@/components/RoundedUnderlineTabs";
+import { BulkActionDock } from "@/components/ui/bulk-action-dock";
 import { Button } from "@/components/ui/button";
 import { DropdownScrollArea } from "@/components/ui/DropdownScrollArea";
 import {
@@ -299,6 +300,7 @@ export function UserManagementBulkBar({
 	onChangeRole,
 	onRevokeSessions,
 	onDelete,
+	onClear,
 }: {
 	count: number;
 	canAssignRoles: boolean;
@@ -306,47 +308,43 @@ export function UserManagementBulkBar({
 	onChangeRole: () => void;
 	onRevokeSessions: () => void;
 	onDelete: () => void;
+	onClear: () => void;
 }) {
-	if (count <= 0) return null;
-
 	return (
-		<div className="flex items-center justify-between gap-3">
-			<p className="text-sm text-slate-600">{count} selected</p>
-			<div className="flex items-center justify-end gap-3">
-				{canAssignRoles ? (
-					<Button
-						type="button"
-						size="sm"
-						className="primary-btn h-8 border-0 px-3 shadow-none sm:px-4"
-						onClick={onChangeRole}
-					>
-						<ShieldCheck className="h-4 w-4" />
-						Change role
-					</Button>
-				) : null}
-				{canManageUsers ? (
-					<Button
-						type="button"
-						size="sm"
-						className="btn-primary h-8 border-0 px-3 shadow-none sm:px-4"
-						onClick={onRevokeSessions}
-					>
-						<LogOut className="h-4 w-4" />
-						Revoke sessions
-					</Button>
-				) : null}
-				{canManageUsers ? (
-					<Button
-						type="button"
-						size="sm"
-						className="delete-btn h-8 px-3 sm:px-4"
-						onClick={onDelete}
-					>
-						<Trash2 className="h-4 w-4" />
-						Delete
-					</Button>
-				) : null}
-			</div>
-		</div>
+		<BulkActionDock count={count} noun="user" onClear={onClear}>
+			{canAssignRoles ? (
+				<Button
+					type="button"
+					size="sm"
+					className="primary-btn h-8 border-0 px-3 shadow-none sm:px-4"
+					onClick={onChangeRole}
+				>
+					<ShieldCheck className="h-4 w-4" />
+					Change role
+				</Button>
+			) : null}
+			{canManageUsers ? (
+				<Button
+					type="button"
+					size="sm"
+					className="btn-primary h-8 border-0 px-3 shadow-none sm:px-4"
+					onClick={onRevokeSessions}
+				>
+					<LogOut className="h-4 w-4" />
+					Revoke sessions
+				</Button>
+			) : null}
+			{canManageUsers ? (
+				<Button
+					type="button"
+					size="sm"
+					className="delete-btn h-8 px-3 sm:px-4"
+					onClick={onDelete}
+				>
+					<Trash2 className="h-4 w-4" />
+					Delete
+				</Button>
+			) : null}
+		</BulkActionDock>
 	);
 }

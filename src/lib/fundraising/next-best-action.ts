@@ -85,8 +85,7 @@ export function computeNextBestActions(
 	}
 
 	return actions.filter(
-		(action) =>
-			action.kind !== "ask" || input.suggestedAskAmount != null,
+		(action) => action.kind !== "ask" || input.suggestedAskAmount != null,
 	);
 }
 

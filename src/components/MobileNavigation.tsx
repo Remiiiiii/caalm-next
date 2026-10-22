@@ -6,27 +6,19 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { MobileNavMenuTriggerIcon } from "@/components/mobile/MobileNavMenuTrigger";
+import StorageUsageBar from "@/components/StorageUsageBar";
 import { ITNavMobileSheet } from "@/components/sidebar/ITNavMobileSheet";
 import { SidebarNavSections } from "@/components/sidebar/SidebarNavSections";
 import SidebarUserCard from "@/components/sidebar/SidebarUserCard";
-import StorageUsageBar from "@/components/StorageUsageBar";
-import {
-	initialsFromName,
-	isUsableAvatarUrl,
-} from "@/lib/user/displayAvatar";
 import { Separator } from "@/components/ui/separator";
 import { isITSidebarPath } from "@/constants/it-navigation";
 import { ROLE_LABELS, type UserRole } from "@/constants/rbac";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAnalyticsPrefetch } from "@/hooks/useAnalyticsPrefetch";
 import { useGroupedNavigation } from "@/hooks/useGroupedNavigation";
+import { initialsFromName, isUsableAvatarUrl } from "@/lib/user/displayAvatar";
 import { Button } from "./ui/button";
-import {
-	Sheet,
-	SheetContent,
-	SheetTitle,
-	SheetTrigger,
-} from "./ui/sheet";
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "./ui/sheet";
 
 interface Props {
 	$id: string;
@@ -121,7 +113,7 @@ const MobileNavigation = ({ fullName, avatar, email, role }: Props) => {
 								</span>
 							)}
 							<div className="min-w-0 flex-1">
-								<p className="subtitle-2 truncate capitalize text-slate-800">
+								<p className="subtitle-2 truncate capitalize text-slate-700">
 									{fullName}
 								</p>
 								<p className="caption truncate text-slate-600">
@@ -155,7 +147,7 @@ const MobileNavigation = ({ fullName, avatar, email, role }: Props) => {
 					</nav>
 
 					<div className="mx-4 mb-2 shrink-0 rounded-lg border border-blue/20 bg-blue/10 px-3 py-2 text-xs text-slate-700">
-						<span className="font-medium text-slate-800">Companion mode.</span>{" "}
+						<span className="font-medium text-slate-700">Companion mode.</span>{" "}
 						Full CAALM runs on laptop.{" "}
 						<Link
 							href="/docs/concepts/desktop-and-mobile"
@@ -175,7 +167,11 @@ const MobileNavigation = ({ fullName, avatar, email, role }: Props) => {
 							<StorageUsageBar />
 						</div>
 
-						<SidebarUserCard name={fullName} email={email} settingsItems={settingsItems} />
+						<SidebarUserCard
+							name={fullName}
+							email={email}
+							settingsItems={settingsItems}
+						/>
 
 						<Button
 							type="button"

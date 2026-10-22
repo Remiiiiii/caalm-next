@@ -278,21 +278,21 @@ export function EsignPendingMetadataPane({
 function recipientStatus(recipient: EsignRecipient, isNext: boolean) {
 	if (recipient.status === "signed") {
 		return (
-			<span className="inline-block rounded-full border border-green/20 bg-green/10 px-2 py-0.5 text-xs font-medium text-green">
+			<span className="inline-block rounded-full border border-green/20 bg-green/10 px-2 py-0.5 text-xs text-green">
 				Signed
 			</span>
 		);
 	}
 	if (recipient.status === "declined") {
 		return (
-			<span className="inline-block rounded-full border border-red/20 bg-red/10 px-2 py-0.5 text-xs font-medium text-red">
+			<span className="inline-block rounded-full border border-red/20 bg-red/10 px-2 py-0.5 text-xs text-red">
 				Declined
 			</span>
 		);
 	}
 	if (isNext) {
 		return (
-			<span className="inline-block rounded-full border border-blue/20 bg-blue/10 px-2 py-0.5 text-xs font-medium text-blue">
+			<span className="inline-block rounded-full border border-blue/20 bg-blue/10 px-2 py-0.5 text-xs text-blue">
 				Pending
 			</span>
 		);

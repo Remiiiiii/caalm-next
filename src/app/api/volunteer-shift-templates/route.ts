@@ -41,7 +41,12 @@ export async function POST(request: NextRequest) {
 		const skillsRequired = Array.isArray(body.skillsRequired)
 			? body.skillsRequired.map(String)
 			: [];
-		if (!name || !roleLabel || !Number.isFinite(durationMinutes) || durationMinutes <= 0) {
+		if (
+			!name ||
+			!roleLabel ||
+			!Number.isFinite(durationMinutes) ||
+			durationMinutes <= 0
+		) {
 			return NextResponse.json(
 				{ error: "name, roleLabel, and durationMinutes are required" },
 				{ status: 400 },

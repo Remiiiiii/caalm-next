@@ -11,7 +11,11 @@ import {
 	Save,
 	Users,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+	EvidenceRequirementTagger,
+	type EvidenceTaggerHandle,
+} from "@/components/audits/readiness/EvidenceRequirementTagger";
 import EntityPreviewSheetShell from "@/components/preview/EntityPreviewSheetShell";
 import {
 	DetailRow,
@@ -92,6 +96,8 @@ export default function LicensePreviewSheet({
 		status: "",
 	});
 	const [saving, setSaving] = useState(false);
+	const [tagsDirty, setTagsDirty] = useState(false);
+	const taggerRef = useRef<EvidenceTaggerHandle>(null);
 
 	useEffect(() => {
 		if (!license) return;
@@ -146,10 +152,11 @@ export default function LicensePreviewSheet({
 	const canEditStatus =
 		license.status !== "pending-review" && license.status !== "action-required";
 
-	const isDirty =
+	const fieldsDirty =
 		draft.division !== originalDivision ||
 		draft.licenseType !== (license.licenseType || "") ||
 		(canEditStatus && draft.status !== (license.status || ""));
+	const isDirty = fieldsDirty || tagsDirty;
 
 	const handleSave = async () => {
 		setSaving(true);
@@ -170,15 +177,20 @@ export default function LicensePreviewSheet({
 				payload.status = draft.status;
 			}
 
-			const response = await fetch(`/api/licenses/${license.$id}`, {
-				method: "PUT",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(payload),
-			});
+			if (Object.keys(payload).length > 0) {
+				const response = await fetch(`/api/licenses/${license.$id}`, {
+					method: "PUT",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify(payload),
+				});
 
-			if (!response.ok) {
-				const error = await response.json().catch(() => ({}));
-				throw new Error(error.error || "Failed to update license");
+				if (!response.ok) {
+					const error = await response.json().catch(() => ({}));
+					throw new Error(error.error || "Failed to update license");
+				}
+			}
+			if (taggerRef.current?.isDirty) {
+				await taggerRef.current.save();
 			}
 
 			toast({
@@ -390,6 +402,14 @@ export default function LicensePreviewSheet({
 					) : null}
 				</div>
 			</section>
+
+			<EvidenceRequirementTagger
+				ref={taggerRef}
+				kind="license"
+				recordId={license.$id}
+				enabled={open}
+				onDirtyChange={setTagsDirty}
+			/>
 		</EntityPreviewSheetShell>
 	);
 }

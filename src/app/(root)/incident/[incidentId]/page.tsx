@@ -70,7 +70,7 @@ export default async function IncidentDetailPage({
 						<span className="shrink-0 text-sm text-slate-600">
 							Affected services
 						</span>
-						<span className="max-w-full break-words rounded-full border border-slate-200 bg-white/60 px-2.5 py-0.5 text-xs font-medium text-slate-700">
+						<span className="max-w-full break-words rounded-full border border-slate-200 bg-white/60 px-2.5 py-0.5 text-xs text-slate-700">
 							{affectedService(ticket)}
 						</span>
 					</div>

@@ -4,7 +4,13 @@ import type { OrgFund } from "@/lib/funds/types";
 import type { MappedFundImportRow } from "./parse";
 
 export type FundImportDryRunRow =
-	| { rowNumber: number; action: "create"; code: string; name: string; netAssetClass: string }
+	| {
+			rowNumber: number;
+			action: "create";
+			code: string;
+			name: string;
+			netAssetClass: string;
+	  }
 	| { rowNumber: number; action: "skip"; code: string; reason: string };
 
 export type FundImportDryRunResult = {

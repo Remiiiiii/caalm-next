@@ -29,7 +29,10 @@ export async function POST(request: NextRequest) {
 			orgId: ctx.orgId,
 		});
 		if (!result.ok) {
-			return NextResponse.json({ error: result.error }, { status: result.status });
+			return NextResponse.json(
+				{ error: result.error },
+				{ status: result.status },
+			);
 		}
 		return NextResponse.json({ preview: result.preview });
 	} catch (error) {

@@ -1,6 +1,5 @@
 "use client";
 
-import * as VisuallyHiddenPrimitive from "@radix-ui/react-visually-hidden";
 import { format } from "date-fns";
 import {
 	Ban,
@@ -8,7 +7,6 @@ import {
 	Edit,
 	FileCheck,
 	FileText,
-	Glasses,
 	Loader2,
 	MessageSquare,
 	ThumbsUp,
@@ -16,7 +14,7 @@ import {
 import type React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { AppDialog } from "@/components/ui/app-dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { SENSITIVITY_LABELS } from "@/constants/rbac";
@@ -53,56 +51,97 @@ export function ApprovalReviewDialog({
 	loadingAttachmentNames,
 	onDecision,
 }: ApprovalReviewDialogProps): React.ReactElement {
+	const changeTypeLabel =
+		selectedApproval?.changeType === "create"
+			? "New Event Creation"
+			: selectedApproval?.changeType === "update"
+				? "Event Update"
+				: selectedApproval
+					? "Event Cancellation"
+					: undefined;
+
+	const headerIcon =
+		selectedApproval?.changeType === "update" ? (
+			<Edit className="h-5 w-5" />
+		) : (
+			<FileCheck className="h-5 w-5" />
+		);
+
 	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="w-[calc(100%-1.5rem)] sm:w-full max-w-[700px] p-0 max-h-[90vh] flex flex-col overflow-hidden">
-				<VisuallyHiddenPrimitive.Root>
-					<DialogTitle>
-						{selectedApproval ? "Review Approval Request" : "Approval Details"}
-					</DialogTitle>
-				</VisuallyHiddenPrimitive.Root>
-				<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-
-				{selectedApproval && (
+		<AppDialog
+			open={open}
+			onOpenChange={onOpenChange}
+			size="form"
+			className="max-w-[700px] max-h-[90vh]"
+			icon={headerIcon}
+			title="Review Approval Request"
+			description={changeTypeLabel}
+			pending={isProcessingApproval}
+			footer={
+				selectedApproval ? (
 					<>
-						{/* Header */}
-						<div className="glass-dialog-wizard-header px-6">
-							<div className="flex items-center justify-between mt-6">
-								<div className="flex items-center gap-3">
-									<div className="flex items-center justify-center w-10 h-10 rounded-lg bg-blue-100">
-										{selectedApproval.changeType === "create" ? (
-											<Glasses className="h-8 w-8 text-[#0f5384]" />
-										) : selectedApproval.changeType === "update" ? (
-											<Edit className="h-5 w-5 text-[#0f5384]" />
-										) : (
-											<Glasses className="h-8 w-8 text-[#0f5384]" />
-										)}
-									</div>
-									<div>
-										<h2 className="text-xl font-semibold sidebar-gradient-text">
-											Review Approval Request
-										</h2>
-										<p className="text-sm text-slate-600 mt-0.5">
-											{selectedApproval.changeType === "create"
-												? "New Event Creation"
-												: selectedApproval.changeType === "update"
-													? "Event Update"
-													: "Event Cancellation"}
-										</p>
-									</div>
-								</div>
-								<Badge
-									variant="outline"
-									className="text-xs font-medium px-3 py-1 uppercase tracking-wide border-amber-300 text-amber-700 bg-amber-50"
-								>
-									Pending Review
-								</Badge>
-							</div>
-						</div>
+						<Button
+							type="button"
+							variant="outline"
+							className="rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+							disabled={isProcessingApproval}
+							onClick={async () => {
+								await onDecision("changes_requested");
+							}}
+						>
+							{isProcessingApproval ? (
+								<Loader2 className="h-4 w-4 animate-spin" />
+							) : (
+								<MessageSquare className="h-4 w-4" />
+							)}
+							Request Changes
+						</Button>
+						<Button
+							type="button"
+							className="delete-btn flex-1"
+							disabled={isProcessingApproval}
+							onClick={async () => {
+								await onDecision("rejected");
+							}}
+						>
+							{isProcessingApproval ? (
+								<Loader2 className="h-4 w-4 animate-spin" />
+							) : (
+								<Ban className="h-4 w-4" />
+							)}
+							Deny
+						</Button>
+						<Button
+							type="button"
+							className="btn-primary flex-1"
+							disabled={isProcessingApproval}
+							onClick={async () => {
+								await onDecision("approved");
+							}}
+						>
+							{isProcessingApproval ? (
+								<Loader2 className="h-4 w-4 animate-spin" />
+							) : (
+								<ThumbsUp className="h-4 w-4" />
+							)}
+							Approve
+						</Button>
+					</>
+				) : undefined
+			}
+		>
+			{selectedApproval && (
+				<>
+					<div className="mb-4 flex justify-end">
+						<Badge
+							variant="outline"
+							className="border-amber-300 bg-amber-50 px-3 py-1 text-xs uppercase tracking-wide text-amber-700"
+						>
+							Pending Review
+						</Badge>
+					</div>
 
-						{/* Content */}
-						<div className="flex-1 overflow-y-auto">
-							<div className="p-6 space-y-6">
+						<div className="space-y-6 pb-1">
 								{/* Event Summary */}
 								<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
 									<div className="flex items-center gap-2 text-sm font-semibold mb-4 text-slate-700">
@@ -653,61 +692,9 @@ export function ApprovalReviewDialog({
 										included in the audit log.
 									</p>
 								</div>
-							</div>
-						</div>
-
-						{/* Footer Actions */}
-						<div className="sticky bottom-0 flex items-center gap-3 border-t border-white/40 bg-white/35 px-6 py-4 backdrop-blur-sm">
-							<Button
-								onClick={async () => {
-									if (!selectedApproval) return;
-									await onDecision("changes_requested");
-								}}
-								disabled={isProcessingApproval}
-								className="primary-btn px-3 sm:px-4 flex-1"
-							>
-								{isProcessingApproval ? (
-									<Loader2 className="w-4 h-4 animate-spin" />
-								) : (
-									<MessageSquare className="w-4 h-4" />
-								)}
-								Request Changes
-							</Button>
-							<Button
-								onClick={async () => {
-									if (!selectedApproval) return;
-									await onDecision("rejected");
-								}}
-								disabled={isProcessingApproval}
-								className="primary-btn px-3 sm:px-4 flex-1"
-							>
-								{isProcessingApproval ? (
-									<Loader2 className="w-4 h-4 animate-spin" />
-								) : (
-									<Ban className="w-4 h-4" />
-								)}
-								Deny
-							</Button>
-
-							<Button
-								onClick={async () => {
-									if (!selectedApproval) return;
-									await onDecision("approved");
-								}}
-								disabled={isProcessingApproval}
-								className="primary-btn px-3 sm:px-4 flex-1"
-							>
-								{isProcessingApproval ? (
-									<Loader2 className="w-4 h-4 animate-spin" />
-								) : (
-									<ThumbsUp className="w-4 h-4" />
-								)}
-								Approve
-							</Button>
 						</div>
 					</>
 				)}
-			</DialogContent>
-		</Dialog>
+		</AppDialog>
 	);
 }

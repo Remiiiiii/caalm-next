@@ -493,9 +493,7 @@ export const auditDomainMockData: Record<
 	},
 };
 
-function emptyDomainShell(
-	domain: AuditDomainData["domain"],
-): AuditDomainData {
+function emptyDomainShell(domain: AuditDomainData["domain"]): AuditDomainData {
 	const base = auditDomainMockData[domain];
 	return {
 		...base,

@@ -59,7 +59,8 @@ describe("NPO 1.6 constituent profile", () => {
 		expect(profile).toMatch(/Intelligence/);
 		expect(timelineTab).toMatch(/No timeline yet/);
 		expect(householdTab).toMatch(/No household yet/);
-		expect(profile).toMatch(/No volunteer record yet/);
+		// Volunteer is now a real tab component, no longer a placeholder.
+		expect(profile).toMatch(/VolunteerTab/);
 		expect(`${profile}${timelineTab}${householdTab}`).not.toMatch(
 			/Jane Doe|Acme Gala|\$1,000|mock score/i,
 		);

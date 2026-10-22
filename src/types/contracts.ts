@@ -60,6 +60,8 @@ export interface ContractEnterpriseMetadata {
 }
 
 export interface ContractMetadataPayload {
+	/** Fund a grant contract is booked against (required on save for grant contracts). */
+	fundId?: string | null;
 	contractName?: string;
 	contractType?: string;
 	contractCategory?: string;

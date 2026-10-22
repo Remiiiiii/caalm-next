@@ -20,7 +20,7 @@ export const TASK_STATUS_BADGE: Record<TaskStatus, string> = {
 };
 
 export const CAALM_BADGE_BASE =
-	"inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full font-medium border whitespace-nowrap";
+	"inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full border whitespace-nowrap";
 
 export const TASK_PRIORITY_LABELS: Record<TaskPriority, string> = {
 	low: "Low",
@@ -53,8 +53,7 @@ export type TaskPerson = {
 	division?: string | null;
 };
 
-export const TASK_LINKED_BADGE =
-	"bg-blue/10 text-blue border-blue/20";
+export const TASK_LINKED_BADGE = "bg-blue/10 text-blue border-blue/20";
 
 export function linkedEntityIconHint(
 	type?: TaskLinkedEntityType | null,

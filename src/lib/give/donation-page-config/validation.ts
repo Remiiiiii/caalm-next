@@ -10,10 +10,7 @@ export const MAX_DESIGNATIONS = 20;
 
 const EIN_PATTERN = /^\d{2}-\d{7}$/;
 
-const FREQUENCY_SET = new Set<DonationFrequencyOption>([
-	"one_time",
-	"monthly",
-]);
+const FREQUENCY_SET = new Set<DonationFrequencyOption>(["one_time", "monthly"]);
 
 export function isValidEin(ein: string): boolean {
 	return EIN_PATTERN.test(ein.trim());

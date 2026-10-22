@@ -39,7 +39,11 @@ export async function commitVolunteerShiftImport(
 	createdByUserId: string,
 	createdByAccountId: string,
 	rows: MappedVolunteerShiftImportRow[],
-): Promise<{ createdCount: number; skippedCount: number; failedCount: number }> {
+): Promise<{
+	createdCount: number;
+	skippedCount: number;
+	failedCount: number;
+}> {
 	let createdCount = 0;
 	let failedCount = 0;
 	for (const row of rows) {

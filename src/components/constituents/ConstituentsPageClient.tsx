@@ -24,10 +24,10 @@ import { usePermissions } from "@/hooks/usePermissions";
 import {
 	CONSTITUENT_DNC_BADGE_CLASS,
 	CONSTITUENT_TYPES,
+	type Constituent,
 	constituentDisplayName,
 	constituentTypeBadgeClass,
 	constituentTypeLabel,
-	type Constituent,
 } from "@/lib/constituents";
 import { LIFECYCLE_SEGMENTS } from "@/lib/fundraising/constants";
 import {
@@ -45,7 +45,7 @@ export function ConstituentsPageClient() {
 	const canManage = permissions.includes(PERMISSIONS.CONSTITUENTS.MANAGE);
 	const [items, setItems] = useState<ConstituentRow[]>([]);
 	const [segment, setSegment] = useState<string>(
-		() => searchParams.get("segment") || "all",
+		() => searchParams?.get("segment") || "all",
 	);
 	const [total, setTotal] = useState(0);
 	const [page, setPage] = useState(1);
@@ -208,20 +208,22 @@ export function ConstituentsPageClient() {
 													{name}
 												</p>
 												<span
-													className={`inline-block px-2 py-0.5 text-xs rounded-full font-medium border ${constituentTypeBadgeClass(constituent.type)}`}
+													className={`inline-block px-2 py-0.5 text-xs rounded-full border ${constituentTypeBadgeClass(constituent.type)}`}
 												>
 													{constituentTypeLabel(constituent.type)}
 												</span>
 												{constituent.lifecycleSegment ? (
 													<span
-														className={`inline-block px-2 py-0.5 text-xs rounded-full font-medium border ${segmentBadgeClass(constituent.lifecycleSegment)}`}
+														className={`inline-block px-2 py-0.5 text-xs rounded-full border ${segmentBadgeClass(constituent.lifecycleSegment)}`}
 													>
-														{normalizeSegmentLabel(constituent.lifecycleSegment)}
+														{normalizeSegmentLabel(
+															constituent.lifecycleSegment,
+														)}
 													</span>
 												) : null}
 												{constituent.doNotContact ? (
 													<span
-														className={`inline-block px-2 py-0.5 text-xs rounded-full font-medium border ${CONSTITUENT_DNC_BADGE_CLASS}`}
+														className={`inline-block px-2 py-0.5 text-xs rounded-full border ${CONSTITUENT_DNC_BADGE_CLASS}`}
 													>
 														Do not contact
 													</span>
@@ -237,7 +239,9 @@ export function ConstituentsPageClient() {
 											constituent={constituent}
 											canManage={canManage}
 											onDeleted={(id) => {
-												setItems((prev) => prev.filter((row) => row.$id !== id));
+												setItems((prev) =>
+													prev.filter((row) => row.$id !== id),
+												);
 												setTotal((prev) => Math.max(0, prev - 1));
 											}}
 										/>

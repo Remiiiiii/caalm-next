@@ -216,9 +216,7 @@ export default function ApprovalsFilter({
 								size="sm"
 								placeholder="To"
 								value={
-									filters.submittedTo
-										? toIsoDateLocal(filters.submittedTo)
-										: ""
+									filters.submittedTo ? toIsoDateLocal(filters.submittedTo) : ""
 								}
 								onChange={(iso) =>
 									updateFilter(

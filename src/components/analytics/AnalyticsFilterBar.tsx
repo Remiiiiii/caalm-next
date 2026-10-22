@@ -1,10 +1,12 @@
 "use client";
 
 import { Calendar, SquareArrowRightExit } from "lucide-react";
+import { BusyIcon } from "@/components/ui/busy-icon";
 import { Button } from "@/components/ui/button";
 import { CaalmFilterSelect } from "@/components/ui/CaalmFilterSelect";
 import { Card, CardContent } from "@/components/ui/card";
 import { PERMISSIONS } from "@/constants/permissions";
+import { useBusyAction } from "@/hooks/useBusyAction";
 import { useOrgTimezone } from "@/hooks/useOrgTimezone";
 import { usePermissions } from "@/hooks/usePermissions";
 import { AUDIT_PERIOD_OPTIONS, type AuditPeriod } from "@/lib/audits/types";
@@ -24,6 +26,7 @@ export function AnalyticsFilterBar({
 	onExport,
 }: AnalyticsFilterBarProps) {
 	const timeZone = useOrgTimezone();
+	const [runExport, exporting] = useBusyAction(() => onExport?.());
 	const { permissions } = usePermissions();
 	const canExport = permissions.includes(PERMISSIONS.AUDIT.EXPORT);
 
@@ -65,9 +68,10 @@ export function AnalyticsFilterBar({
 						<Button
 							variant="outline"
 							className="primary-btn w-full sm:w-auto sm:ml-0"
-							onClick={onExport}
+							disabled={exporting}
+							onClick={() => void runExport()}
 						>
-							<SquareArrowRightExit className="h-4 w-4" />
+							<BusyIcon busy={exporting} icon={SquareArrowRightExit} />
 							Export
 						</Button>
 					) : null}

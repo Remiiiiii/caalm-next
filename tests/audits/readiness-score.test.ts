@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
 	computeLiveReadinessScore,
 	computeRag,
+	isReadinessDomainScored,
 } from "@/lib/audits/readiness/score";
 import { cadencesDueNow, localDayKey } from "@/lib/audits/readiness/timezone";
 
@@ -23,6 +24,21 @@ describe("audit readiness score", () => {
 		expect(result.score).toBe(90);
 		expect(result.sourcesUsed).toEqual(["Contracts", "Licenses"]);
 		expect(computeRag(result.score)).toBe("green");
+	});
+
+	it("counts a 0% domain as scored when it has live records", () => {
+		const result = computeLiveReadinessScore({
+			contractComplianceRate: 0,
+			licenseRenewalHealth: 100,
+		});
+		expect(result.score).toBe(50);
+		expect(result.sourcesUsed).toEqual(["Contracts", "Licenses"]);
+		expect(
+			isReadinessDomainScored(
+				{ label: "Contracts & grants" },
+				result.sourcesUsed,
+			),
+		).toBe(true);
 	});
 });
 

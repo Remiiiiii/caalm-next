@@ -24,12 +24,12 @@ describe("NPO 5.10 volunteer hour letter export", () => {
 		expect(route).toMatch(/constituent\.orgId !== ctx\.orgId/);
 	});
 
-	it("offers CSV and PDF export from volunteer tab", () => {
+	it("offers Excel and PDF export from volunteer tab", () => {
 		const tab = readFileSync(
 			join(process.cwd(), "src/components/constituents/VolunteerTab.tsx"),
 			"utf8",
 		);
-		expect(tab).toMatch(/format=csv/);
+		expect(tab).toMatch(/format=xlsx/);
 		expect(tab).toMatch(/format=pdf/);
 	});
 });

@@ -1,0 +1,23 @@
+---
+description: Context.dev web-scraping integration — route all calls through the one wrapper module
+globs: src/lib/audits/readiness/**/*,.env.example
+alwaysApply: false
+---
+
+# Context.dev integration
+
+One API key (`CONTEXT_DEV_API_KEY`, in `.env.example`) covers all of Context.dev's web-data endpoints (scraping, crawling, search, extraction, brand intelligence, file parsing). Docs: https://docs.context.dev (append `.md` to any page for plain markdown, e.g. `https://docs.context.dev/api-reference/web-scraping/scrape.md`).
+
+## Current usage
+
+- **Wrapper module:** `src/lib/audits/readiness/screenshot.ts` — `captureSiteScreenshot(websiteUrl)`. Returns `{ src, capturedAt } | null`; never throws. `null` means the key is unset or the capture failed — callers fall back to the UI's "Screenshot not available yet" placeholder.
+- **Endpoint:** `POST /web/scrape` (https://docs.context.dev/api-reference/web-scraping/scrape) with `formats.screenshot: true`, `screenshotParams: { area: "viewport", format: "jpeg" }`, `sharedParams.viewport: { width: 1280, height: 800 }`, `maxAgeMs: 300000` (matches the readiness re-crawl rate limit).
+- **Response handling:** screenshot comes back as a base64 data URL in `screenshot.data` (check `screenshot.success` first). Decoded and re-uploaded into the dedicated `screenshots` Appwrite bucket (`appwriteConfig.screenshotsBucketId`, env `NEXT_PUBLIC_APPWRITE_SCREENSHOTS_BUCKET`) rather than referencing Context.dev's response directly — there is no hosted URL for a screenshot in their response shape, only the data URL.
+- **Called from:** `src/lib/audits/readiness/site-crawl.ts` (`crawlAndCacheSite`), itself called by the full "Run weekly snapshot" flow and the dedicated `POST /api/audits/readiness/crawl` re-crawl endpoint.
+
+## When adding a new Context.dev call elsewhere
+
+1. Read that endpoint's docs page first (`<path>.md`) — don't guess parameters or response shape.
+2. Add it to this same wrapper-module convention: one function per capability, server-side only, returns `null`/throws a typed error rather than leaking the raw Context.dev response shape into callers.
+3. Never call the REST API directly from a client component or route it through a URL that reaches the browser — `CONTEXT_DEV_API_KEY` is server-only.
+4. Use the documented REST request directly (native `fetch`) unless the official `context.dev` SDK is installed and demonstrably supports the endpoint — it isn't installed in this repo yet (only one endpoint is used so far, not worth the dependency).

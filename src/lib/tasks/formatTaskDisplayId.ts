@@ -4,6 +4,9 @@ export function formatTaskDisplayId(taskId: string): string {
 	if (digits.length > 0) {
 		return `TSK-${digits.padStart(4, "0")}`;
 	}
-	const suffix = taskId.replace(/[^a-zA-Z0-9]/g, "").slice(-4).toUpperCase();
+	const suffix = taskId
+		.replace(/[^a-zA-Z0-9]/g, "")
+		.slice(-4)
+		.toUpperCase();
 	return `TSK-${suffix.padStart(4, "0")}`;
 }

@@ -56,7 +56,6 @@
     "search/saved",
     "search/suggestions",
     "upload-pdf",
-    "user/profile-picture",
     "users/[userId]/role",
     "users/[userId]/role-name",
     "users/get-by-ids",

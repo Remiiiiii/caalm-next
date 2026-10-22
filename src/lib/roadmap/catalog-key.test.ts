@@ -36,9 +36,7 @@ describe("isNonprofitRoadmapBranch", () => {
 describe("platform readiness roadmap branches", () => {
 	it("matches engine and task branches", () => {
 		expect(
-			isPlatformReadinessRoadmapBranch(
-				"cursor/platform-readiness-engine-5329",
-			),
+			isPlatformReadinessRoadmapBranch("cursor/platform-readiness-engine-5329"),
 		).toBe(true);
 		expect(
 			isPlatformReadinessRoadmapBranch(

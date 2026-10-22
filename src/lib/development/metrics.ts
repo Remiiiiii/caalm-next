@@ -27,8 +27,9 @@ export type DevelopmentMetrics = {
 	hasPostedGifts: boolean;
 } & DonorMetricSlice;
 
+/** UTC year: date-only gift dates ("2025-01-01") parse as UTC midnight, so a local year would shift them back in US time zones. */
 export function giftCalendarYear(giftDate: string): number {
-	return new Date(giftDate).getFullYear();
+	return new Date(giftDate).getUTCFullYear();
 }
 
 /** Posted gifts that count toward dollars and donor stats (void reversals excluded). */
@@ -76,8 +77,7 @@ export function computeDonorMetrics(
 	}
 
 	const lastYearCount = donorsLastYear.size;
-	const retentionRate =
-		lastYearCount === 0 ? null : retained / lastYearCount;
+	const retentionRate = lastYearCount === 0 ? null : retained / lastYearCount;
 
 	let newDonorsYtd = 0;
 	for (const firstYear of firstGiftYearByDonor.values()) {

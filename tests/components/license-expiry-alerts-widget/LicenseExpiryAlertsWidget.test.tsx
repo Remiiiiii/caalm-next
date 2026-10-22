@@ -18,6 +18,7 @@ vi.mock("swr", () => ({
 const mockLicenses = [
 	{
 		$id: "license-1",
+		orgId: "org-1",
 		licenseName: "Test License 1",
 		licenseNumber: "LIC-1",
 		licenseType: "business",
@@ -33,6 +34,7 @@ const mockLicenses = [
 	},
 	{
 		$id: "license-2",
+		orgId: "org-1",
 		licenseName: "Test License 2",
 		licenseNumber: "LIC-2",
 		licenseType: "business",
@@ -48,6 +50,7 @@ const mockLicenses = [
 	},
 	{
 		$id: "license-3",
+		orgId: "org-1",
 		licenseName: "Expired License",
 		licenseNumber: "LIC-3",
 		licenseType: "business",
@@ -121,7 +124,7 @@ describe("LicenseExpiryAlertsWidget", () => {
 		);
 
 		expect(
-			screen.getByRole("combobox", {
+			screen.getByRole("button", {
 				name: /filter licenses by time period/i,
 			}),
 		).toBeInTheDocument();
@@ -137,11 +140,11 @@ describe("LicenseExpiryAlertsWidget", () => {
 		);
 
 		await user.click(
-			screen.getByRole("combobox", {
+			screen.getByRole("button", {
 				name: /filter licenses by time period/i,
 			}),
 		);
-		await user.click(await screen.findByRole("option", { name: "30 days" }));
+		await user.click(await screen.findByRole("menuitem", { name: "30 days" }));
 
 		expect(screen.getByText("Test License 1")).toBeInTheDocument();
 		expect(screen.getByText("Test License 2")).toBeInTheDocument();
@@ -157,11 +160,11 @@ describe("LicenseExpiryAlertsWidget", () => {
 		);
 
 		await user.click(
-			screen.getByRole("combobox", {
+			screen.getByRole("button", {
 				name: /filter licenses by time period/i,
 			}),
 		);
-		await user.click(await screen.findByRole("option", { name: "Expired" }));
+		await user.click(await screen.findByRole("menuitem", { name: "Expired" }));
 
 		expect(screen.getByText("Expired License")).toBeInTheDocument();
 	});
@@ -176,11 +179,11 @@ describe("LicenseExpiryAlertsWidget", () => {
 		);
 
 		await user.click(
-			screen.getByRole("combobox", {
+			screen.getByRole("button", {
 				name: /filter licenses by time period/i,
 			}),
 		);
-		await user.click(await screen.findByRole("option", { name: "90 days" }));
+		await user.click(await screen.findByRole("menuitem", { name: "90 days" }));
 
 		expect(screen.getByText(/no licenses/i)).toBeInTheDocument();
 	});

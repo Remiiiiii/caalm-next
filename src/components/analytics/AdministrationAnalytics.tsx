@@ -25,6 +25,7 @@ import {
 	YAxis,
 } from "recharts";
 import { Badge } from "@/components/ui/badge";
+import { BusyIcon } from "@/components/ui/busy-icon";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -33,6 +34,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import { useBusyAction } from "@/hooks/useBusyAction";
 
 // Mock data for Administrative Analytics
 const mockData = {
@@ -135,6 +137,7 @@ const AdministrationAnalytics = () => {
 		// Export logic
 		console.log("Exporting analytics data...");
 	};
+	const [runExporting, exporting] = useBusyAction(handleExport);
 
 	return (
 		<div className="relative space-y-6">
@@ -158,10 +161,11 @@ const AdministrationAnalytics = () => {
             Refresh
           </Button> */}
 					<Button
-						onClick={handleExport}
+						disabled={exporting}
+						onClick={() => void runExporting()}
 						className="bg-white/20 text-slate-700 backdrop-blur border border-white/40 hover:bg-white/30 transition-all duration-300"
 					>
-						<SquareArrowRightExit className="h-4 w-4" />
+						<BusyIcon busy={exporting} icon={SquareArrowRightExit} />
 						Export
 					</Button>
 				</div>

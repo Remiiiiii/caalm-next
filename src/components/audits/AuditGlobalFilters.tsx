@@ -1,11 +1,13 @@
 "use client";
 
 import { Calendar, SquareArrowRightExit } from "lucide-react";
+import { BusyIcon } from "@/components/ui/busy-icon";
 import { Button } from "@/components/ui/button";
 import { CaalmFilterSelect } from "@/components/ui/CaalmFilterSelect";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { PERMISSIONS } from "@/constants/permissions";
+import { useBusyAction } from "@/hooks/useBusyAction";
 import { usePermissions } from "@/hooks/usePermissions";
 import { AUDIT_PERIOD_OPTIONS, type AuditPeriod } from "@/lib/audits/types";
 
@@ -25,6 +27,7 @@ export function AuditGlobalFilters({
 	onExport,
 }: AuditGlobalFiltersProps) {
 	const { permissions } = usePermissions();
+	const [runExport, exporting] = useBusyAction(() => onExport?.());
 	const canExport = permissions.includes(PERMISSIONS.AUDIT.EXPORT);
 
 	return (
@@ -55,9 +58,10 @@ export function AuditGlobalFilters({
 					<Button
 						variant="outline"
 						className="primary-btn w-full sm:w-auto shrink-0"
-						onClick={onExport}
+						disabled={exporting}
+						onClick={() => void runExport()}
 					>
-						<SquareArrowRightExit className="h-4 w-4" />
+						<BusyIcon busy={exporting} icon={SquareArrowRightExit} />
 						Export
 					</Button>
 				) : null}

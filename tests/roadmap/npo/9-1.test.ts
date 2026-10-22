@@ -30,7 +30,8 @@ describe("NPO 9.1 CSV mapper UI", () => {
 			),
 			"utf8",
 		);
-		expect(client).toMatch(/parseCsvText/);
+		// The import page now goes through the spreadsheet wrapper (CSV + XLSX), which reuses parseCsvText.
+		expect(client).toMatch(/parseSpreadsheetFile/);
 		expect(client).toMatch(/parsed locally/i);
 		const parsed = parseCsvText("firstName,lastName\nPat,Lee\n");
 		expect(parsed.rows[0]?.firstName).toBe("Pat");

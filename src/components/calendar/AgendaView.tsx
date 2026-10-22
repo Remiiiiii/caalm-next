@@ -105,7 +105,7 @@ export function AgendaView({
 								{format(date, "d")}
 							</div>
 						) : (
-							<div className="mt-1 text-2xl font-bold text-slate-800">
+							<div className="mt-1 text-2xl font-bold text-slate-700">
 								{format(date, "d")}
 							</div>
 						)}

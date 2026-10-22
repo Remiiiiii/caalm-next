@@ -44,7 +44,9 @@ interface NewsAnalyticsResponse {
 
 async function fetchNewsAnalytics(url: string): Promise<NewsAnalyticsPayload> {
 	const response = await fetch(url);
-	const data = (await response.json().catch(() => ({}))) as NewsAnalyticsResponse;
+	const data = (await response
+		.json()
+		.catch(() => ({}))) as NewsAnalyticsResponse;
 	if (!response.ok || data.success === false) {
 		throw new Error(data.error || "Failed to fetch analytics");
 	}

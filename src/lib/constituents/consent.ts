@@ -1,5 +1,5 @@
 import { channelConsentAllowed } from "./consent-fields";
-import type { ContactChannel, Constituent } from "./types";
+import type { Constituent, ContactChannel } from "./types";
 
 /**
  * Modules that send email/SMS to a constituent must import canContact.

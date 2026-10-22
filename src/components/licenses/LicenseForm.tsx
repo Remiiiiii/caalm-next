@@ -1,28 +1,19 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
+import { KeyRound, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type React from "react";
 import { useEffect, useState } from "react";
-import {
-	getAllManagers,
-	getUsersByDepartment,
-} from "@/lib/actions/database.actions";
-import {
-	type AssigneeSource,
-	assigneeFallbackMessage,
-	pickAssigneeIds,
-} from "@/lib/assignments/resolve-default-assignee";
 import {
 	type Control,
 	type Resolver,
 	type UseFormReturn,
 	useForm,
 } from "react-hook-form";
+import { AppDialog } from "@/components/ui/app-dialog";
 import { Button } from "@/components/ui/button";
 import { CurrencySelect } from "@/components/ui/currency-select";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
 	Form,
 	FormControl,
@@ -42,8 +33,17 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import {
+	getAllManagers,
+	getUsersByDepartment,
+} from "@/lib/actions/database.actions";
 import type { LicenseCreateInput } from "@/lib/api/licenses/schemas/license.schema";
 import { licenseCreateSchema } from "@/lib/api/licenses/schemas/license.schema";
+import {
+	type AssigneeSource,
+	assigneeFallbackMessage,
+	pickAssigneeIds,
+} from "@/lib/assignments/resolve-default-assignee";
 import type { License } from "@/types/licenses";
 
 interface LicenseFormProps {
@@ -171,11 +171,13 @@ export default function LicenseForm({
 			const display =
 				departmentManagers.length > 0 ? departmentManagers : pick.managers;
 			setAssignees(
-				display.map((person: { $id: string; fullName?: string; division?: string }) => ({
-					$id: person.$id,
-					fullName: person.fullName || "Unknown",
-					division: person.division,
-				})),
+				display.map(
+					(person: { $id: string; fullName?: string; division?: string }) => ({
+						$id: person.$id,
+						fullName: person.fullName || "Unknown",
+						division: person.division,
+					}),
+				),
 			);
 			setAssigneeSource(pick.source);
 			if (pick.ids.length > 0) {
@@ -231,575 +233,564 @@ export default function LicenseForm({
 		}
 	};
 
+	const outlineCancelClass =
+		"rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50";
+
 	return (
-		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogContent className="flex max-h-[90vh] max-w-[600px] flex-col overflow-hidden p-0 shadow-xl">
-				<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-				<div className="glass-dialog-wizard-header mt-4">
-					<div className="flex items-center gap-3 px-6">
-						<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-							{license ? "Edit License" : "Create License"}
-						</DialogTitle>
-					</div>
-				</div>
-
-				<div className="flex-1 overflow-y-auto p-6 bg-slate-50">
-					<Form {...form}>
-						<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-							<FormField
-								control={control}
-								name="licenseName"
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel>License Name *</FormLabel>
-										<FormControl>
-											<Input placeholder="Enter license name" {...field} />
-										</FormControl>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
-
-							<div className="responsive-form-grid">
-								<FormField
-									control={control}
-									name="licenseNumber"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>License Number *</FormLabel>
-											<FormControl>
-												<Input placeholder="License number" {...field} />
-											</FormControl>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-
-								<FormField
-									control={control}
-									name="vendor"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Vendor</FormLabel>
-											<FormControl>
-												<Input placeholder="Vendor name" {...field} />
-											</FormControl>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-							</div>
-
-							<FormField
-								control={control}
-								name="product"
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel>Product</FormLabel>
-										<FormControl>
-											<Input placeholder="Product name" {...field} />
-										</FormControl>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
-
-							<div className="responsive-form-grid">
-								<FormField
-									control={control}
-									name="licenseType"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>License Type *</FormLabel>
-											<Select
-												onValueChange={field.onChange}
-												value={field.value}
-											>
-												<FormControl>
-													<SelectTrigger>
-														<SelectValue placeholder="Select type" />
-													</SelectTrigger>
-												</FormControl>
-												<SelectContent>
-													{LICENSE_TYPES.map((type) => (
-														<SelectItem key={type} value={type}>
-															{type
-																.replace("_", " ")
-																.replace(/\b\w/g, (l) => l.toUpperCase())}
-														</SelectItem>
-													))}
-												</SelectContent>
-											</Select>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-
-								<FormField
-									control={control}
-									name="category"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Category</FormLabel>
-											<Select
-												onValueChange={field.onChange}
-												value={field.value}
-											>
-												<FormControl>
-													<SelectTrigger>
-														<SelectValue placeholder="Select category" />
-													</SelectTrigger>
-												</FormControl>
-												<SelectContent>
-													{CATEGORIES.map((cat) => (
-														<SelectItem key={cat} value={cat}>
-															{cat
-																.replace("_", " ")
-																.replace(/\b\w/g, (l) => l.toUpperCase())}
-														</SelectItem>
-													))}
-												</SelectContent>
-											</Select>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-							</div>
-
-							<div className="grid grid-cols-3 gap-4">
-								<FormField
-									control={control}
-									name="quantity"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Quantity</FormLabel>
-											<FormControl>
-												<Input
-													type="number"
-													placeholder="0"
-													{...field}
-													onChange={(e) =>
-														field.onChange(
-															e.target.value
-																? parseFloat(e.target.value)
-																: undefined,
-														)
-													}
-												/>
-											</FormControl>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-
-								<FormField
-									control={control}
-									name="cost"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Cost</FormLabel>
-											<FormControl>
-												<Input
-													type="number"
-													placeholder="0.00"
-													{...field}
-													onChange={(e) =>
-														field.onChange(
-															e.target.value
-																? parseFloat(e.target.value)
-																: undefined,
-														)
-													}
-												/>
-											</FormControl>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-
-								<FormField
-									control={control}
-									name="currencyCode"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Currency</FormLabel>
-											<CurrencySelect
-												value={field.value || "USD"}
-												onValueChange={field.onChange}
-												amount={form.watch("cost")}
-											/>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-							</div>
-
-							<div className="grid grid-cols-3 gap-4">
-								<FormField
-									control={control}
-									name="issueDate"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Issue Date *</FormLabel>
-											<FormControl>
-												<Input type="date" {...field} />
-											</FormControl>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-
-								<FormField
-									control={control}
-									name="licenseExpiryDate"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Expiration Date *</FormLabel>
-											<FormControl>
-												<Input type="date" {...field} />
-											</FormControl>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-
-								<FormField
-									control={control}
-									name="renewalDate"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Renewal Date</FormLabel>
-											<FormControl>
-												<Input type="date" {...field} />
-											</FormControl>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-							</div>
-
-							<div className="responsive-form-grid">
-								<FormField
-									control={control}
-									name="issuingAuthority"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Issuing Authority *</FormLabel>
-											<FormControl>
-												<Input placeholder="Issuing authority" {...field} />
-											</FormControl>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-
-								<FormField
-									control={control}
-									name="department"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Department *</FormLabel>
-											<Select
-												onValueChange={field.onChange}
-												value={field.value}
-											>
-												<FormControl>
-													<SelectTrigger>
-														<SelectValue placeholder="Select department" />
-													</SelectTrigger>
-												</FormControl>
-												<SelectContent>
-													<SelectItem value="IT">IT</SelectItem>
-													<SelectItem value="Finance">Finance</SelectItem>
-													<SelectItem value="Administration">
-														Administration
-													</SelectItem>
-													<SelectItem value="Legal">Legal</SelectItem>
-													<SelectItem value="Operations">Operations</SelectItem>
-													<SelectItem value="Sales">Sales</SelectItem>
-													<SelectItem value="Marketing">Marketing</SelectItem>
-													<SelectItem value="Executive">Executive</SelectItem>
-													<SelectItem value="Engineering">
-														Engineering
-													</SelectItem>
-												</SelectContent>
-											</Select>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-
-								<FormField
-									control={control}
-									name="division"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Division *</FormLabel>
-											<Select
-												onValueChange={field.onChange}
-												value={field.value}
-											>
-												<FormControl>
-													<SelectTrigger>
-														<SelectValue placeholder="Select division" />
-													</SelectTrigger>
-												</FormControl>
-												<SelectContent>
-													<SelectItem value="administration">
-														Administration
-													</SelectItem>
-													<SelectItem value="c-suite">C-Suite</SelectItem>
-													<SelectItem value="management">Management</SelectItem>
-													<SelectItem value="childwelfare">
-														Child Welfare
-													</SelectItem>
-													<SelectItem value="behavioralhealth">
-														Behavioral Health
-													</SelectItem>
-													<SelectItem value="clinic">Clinic</SelectItem>
-													<SelectItem value="residential">
-														Residential
-													</SelectItem>
-													<SelectItem value="cins-fins-snap">
-														CINS-FINS-SNAP
-													</SelectItem>
-												</SelectContent>
-											</Select>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-
-								<FormField
-									control={control}
-									name="assignedManagers"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Assigned To *</FormLabel>
-											<Select
-												onValueChange={(value) => field.onChange([value])}
-												value={
-													Array.isArray(field.value) ? field.value[0] || "" : ""
-												}
-											>
-												<FormControl>
-													<SelectTrigger className="border-[0.25px] border-slate-300">
-														<SelectValue placeholder="Select assignee" />
-													</SelectTrigger>
-												</FormControl>
-												<SelectContent>
-													{assignees.map((person) => (
-														<SelectItem key={person.$id} value={person.$id}>
-															{person.fullName}
-														</SelectItem>
-													))}
-												</SelectContent>
-											</Select>
-											{assigneeFallbackMessage(
-												assigneeSource,
-												assignees.find(
-													(person) =>
-														person.$id ===
-														(Array.isArray(field.value)
-															? field.value[0]
-															: undefined),
-												)?.fullName,
-											) ? (
-												<p className="text-xs text-slate-600">
-													{assigneeFallbackMessage(
-														assigneeSource,
-														assignees.find(
-															(person) =>
-																person.$id ===
-																(Array.isArray(field.value)
-																	? field.value[0]
-																	: undefined),
-														)?.fullName,
-													)}
-												</p>
-											) : null}
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-
-								<FormField
-									control={control}
-									name="status"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Status *</FormLabel>
-											<Select
-												onValueChange={field.onChange}
-												value={field.value}
-											>
-												<FormControl>
-													<SelectTrigger>
-														<SelectValue placeholder="Select status" />
-													</SelectTrigger>
-												</FormControl>
-												<SelectContent>
-													{STATUSES.map((status) => (
-														<SelectItem key={status} value={status}>
-															{status
-																.replace("_", " ")
-																.replace("-", " ")
-																.replace(/\b\w/g, (l) => l.toUpperCase())}
-														</SelectItem>
-													))}
-												</SelectContent>
-											</Select>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-
-								<FormField
-									control={control}
-									name="compliance"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Compliance</FormLabel>
-											<Select
-												onValueChange={field.onChange}
-												value={field.value}
-											>
-												<FormControl>
-													<SelectTrigger>
-														<SelectValue placeholder="Select compliance" />
-													</SelectTrigger>
-												</FormControl>
-												<SelectContent>
-													<SelectItem value="compliant">Compliant</SelectItem>
-													<SelectItem value="non-compliant">
-														Non-Compliant
-													</SelectItem>
-													<SelectItem value="at-risk">At Risk</SelectItem>
-													<SelectItem value="action-required">
-														Action Required
-													</SelectItem>
-												</SelectContent>
-											</Select>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-							</div>
-
-							<div className="flex items-center gap-4">
-								<FormField
-									control={control}
-									name="autoRenew"
-									render={({ field }) => (
-										<FormItem className="flex items-center gap-2">
-											<FormControl>
-												<Switch
-													checked={field.value}
-													onCheckedChange={field.onChange}
-												/>
-											</FormControl>
-											<FormLabel>Auto Renew</FormLabel>
-										</FormItem>
-									)}
-								/>
-
-								<FormField
-									control={control}
-									name="renewalNoticeDays"
-									render={({ field }) => (
-										<FormItem className="flex-1">
-											<FormLabel>Renewal Notice (days)</FormLabel>
-											<FormControl>
-												<Input
-													type="number"
-													placeholder="30"
-													{...field}
-													onChange={(e) =>
-														field.onChange(
-															e.target.value
-																? parseInt(e.target.value, 10)
-																: undefined,
-														)
-													}
-												/>
-											</FormControl>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-							</div>
-
-							<FormField
-								control={control}
-								name="licenseUrl"
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel>License URL</FormLabel>
-										<FormControl>
-											<Input type="url" placeholder="https://..." {...field} />
-										</FormControl>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
-
-							<FormField
-								control={control}
-								name="description"
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel>Description</FormLabel>
-										<FormControl>
-											<Textarea
-												placeholder="License description"
-												rows={3}
-												{...field}
-											/>
-										</FormControl>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
-
-							<FormField
-								control={control}
-								name="notes"
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel>Notes</FormLabel>
-										<FormControl>
-											<Textarea
-												placeholder="Additional notes"
-												rows={2}
-												{...field}
-											/>
-										</FormControl>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
-						</form>
-					</Form>
-				</div>
-
-				<div className="glass-dialog-alert-footer">
-					<div className="text-xs text-slate-500">
+		<AppDialog
+			open={open}
+			onOpenChange={setOpen}
+			size="form"
+			className="max-h-[90vh] shadow-xl"
+			icon={<KeyRound className="h-5 w-5" />}
+			title={license ? "Edit License" : "Create License"}
+			description={
+				license
+					? "Update license fields and save changes"
+					: "Add a new license to your organization"
+			}
+			pending={isSubmitting}
+			footer={
+				<>
+					<span className="mr-auto text-xs text-slate-500">
 						Required fields marked with *
-					</div>
-					<div className="flex items-center justify-end gap-3">
-						<Button
-							className="primary-btn px-3 sm:px-4"
-							onClick={form.handleSubmit(onSubmit)}
-							disabled={isSubmitting}
-						>
-							{isSubmitting && (
-								<Loader2 className="h-4 w-4 mr-2 animate-spin" />
+					</span>
+					<Button
+						type="button"
+						variant="outline"
+						className={outlineCancelClass}
+						disabled={isSubmitting}
+						onClick={() => setOpen(false)}
+					>
+						Cancel
+					</Button>
+					<Button
+						className="primary-btn px-3 sm:px-4"
+						onClick={form.handleSubmit(onSubmit)}
+						disabled={isSubmitting}
+					>
+						{isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+						{license ? "Update" : "Create"}
+					</Button>
+				</>
+			}
+		>
+			<div className="pb-1">
+				<Form {...form}>
+					<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+						<FormField
+							control={control}
+							name="licenseName"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel>License Name *</FormLabel>
+									<FormControl>
+										<Input placeholder="Enter license name" {...field} />
+									</FormControl>
+									<FormMessage />
+								</FormItem>
 							)}
-							{license ? "Update" : "Create"}
-						</Button>
-					</div>
-				</div>
-			</DialogContent>
-		</Dialog>
+						/>
+
+						<div className="responsive-form-grid">
+							<FormField
+								control={control}
+								name="licenseNumber"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>License Number *</FormLabel>
+										<FormControl>
+											<Input placeholder="License number" {...field} />
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+
+							<FormField
+								control={control}
+								name="vendor"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Vendor</FormLabel>
+										<FormControl>
+											<Input placeholder="Vendor name" {...field} />
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+						</div>
+
+						<FormField
+							control={control}
+							name="product"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel>Product</FormLabel>
+									<FormControl>
+										<Input placeholder="Product name" {...field} />
+									</FormControl>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
+
+						<div className="responsive-form-grid">
+							<FormField
+								control={control}
+								name="licenseType"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>License Type *</FormLabel>
+										<Select onValueChange={field.onChange} value={field.value}>
+											<FormControl>
+												<SelectTrigger>
+													<SelectValue placeholder="Select type" />
+												</SelectTrigger>
+											</FormControl>
+											<SelectContent>
+												{LICENSE_TYPES.map((type) => (
+													<SelectItem key={type} value={type}>
+														{type
+															.replace("_", " ")
+															.replace(/\b\w/g, (l) => l.toUpperCase())}
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+
+							<FormField
+								control={control}
+								name="category"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Category</FormLabel>
+										<Select onValueChange={field.onChange} value={field.value}>
+											<FormControl>
+												<SelectTrigger>
+													<SelectValue placeholder="Select category" />
+												</SelectTrigger>
+											</FormControl>
+											<SelectContent>
+												{CATEGORIES.map((cat) => (
+													<SelectItem key={cat} value={cat}>
+														{cat
+															.replace("_", " ")
+															.replace(/\b\w/g, (l) => l.toUpperCase())}
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+						</div>
+
+						<div className="grid grid-cols-3 gap-4">
+							<FormField
+								control={control}
+								name="quantity"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Quantity</FormLabel>
+										<FormControl>
+											<Input
+												type="number"
+												placeholder="0"
+												{...field}
+												onChange={(e) =>
+													field.onChange(
+														e.target.value
+															? parseFloat(e.target.value)
+															: undefined,
+													)
+												}
+											/>
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+
+							<FormField
+								control={control}
+								name="cost"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Cost</FormLabel>
+										<FormControl>
+											<Input
+												type="number"
+												placeholder="0.00"
+												{...field}
+												onChange={(e) =>
+													field.onChange(
+														e.target.value
+															? parseFloat(e.target.value)
+															: undefined,
+													)
+												}
+											/>
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+
+							<FormField
+								control={control}
+								name="currencyCode"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Currency</FormLabel>
+										<CurrencySelect
+											value={field.value || "USD"}
+											onValueChange={field.onChange}
+											amount={form.watch("cost")}
+										/>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+						</div>
+
+						<div className="grid grid-cols-3 gap-4">
+							<FormField
+								control={control}
+								name="issueDate"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Issue Date *</FormLabel>
+										<FormControl>
+											<Input type="date" {...field} />
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+
+							<FormField
+								control={control}
+								name="licenseExpiryDate"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Expiration Date *</FormLabel>
+										<FormControl>
+											<Input type="date" {...field} />
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+
+							<FormField
+								control={control}
+								name="renewalDate"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Renewal Date</FormLabel>
+										<FormControl>
+											<Input type="date" {...field} />
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+						</div>
+
+						<div className="responsive-form-grid">
+							<FormField
+								control={control}
+								name="issuingAuthority"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Issuing Authority *</FormLabel>
+										<FormControl>
+											<Input placeholder="Issuing authority" {...field} />
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+
+							<FormField
+								control={control}
+								name="department"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Department *</FormLabel>
+										<Select onValueChange={field.onChange} value={field.value}>
+											<FormControl>
+												<SelectTrigger>
+													<SelectValue placeholder="Select department" />
+												</SelectTrigger>
+											</FormControl>
+											<SelectContent>
+												<SelectItem value="IT">IT</SelectItem>
+												<SelectItem value="Finance">Finance</SelectItem>
+												<SelectItem value="Administration">
+													Administration
+												</SelectItem>
+												<SelectItem value="Legal">Legal</SelectItem>
+												<SelectItem value="Operations">Operations</SelectItem>
+												<SelectItem value="Sales">Sales</SelectItem>
+												<SelectItem value="Marketing">Marketing</SelectItem>
+												<SelectItem value="Executive">Executive</SelectItem>
+												<SelectItem value="Engineering">Engineering</SelectItem>
+											</SelectContent>
+										</Select>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+
+							<FormField
+								control={control}
+								name="division"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Division *</FormLabel>
+										<Select onValueChange={field.onChange} value={field.value}>
+											<FormControl>
+												<SelectTrigger>
+													<SelectValue placeholder="Select division" />
+												</SelectTrigger>
+											</FormControl>
+											<SelectContent>
+												<SelectItem value="administration">
+													Administration
+												</SelectItem>
+												<SelectItem value="c-suite">C-Suite</SelectItem>
+												<SelectItem value="management">Management</SelectItem>
+												<SelectItem value="childwelfare">
+													Child Welfare
+												</SelectItem>
+												<SelectItem value="behavioralhealth">
+													Behavioral Health
+												</SelectItem>
+												<SelectItem value="clinic">Clinic</SelectItem>
+												<SelectItem value="residential">Residential</SelectItem>
+												<SelectItem value="cins-fins-snap">
+													CINS-FINS-SNAP
+												</SelectItem>
+											</SelectContent>
+										</Select>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+
+							<FormField
+								control={control}
+								name="assignedManagers"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Assigned To *</FormLabel>
+										<Select
+											onValueChange={(value) => field.onChange([value])}
+											value={
+												Array.isArray(field.value) ? field.value[0] || "" : ""
+											}
+										>
+											<FormControl>
+												<SelectTrigger className="border-[0.25px] border-slate-300">
+													<SelectValue placeholder="Select assignee" />
+												</SelectTrigger>
+											</FormControl>
+											<SelectContent>
+												{assignees.map((person) => (
+													<SelectItem key={person.$id} value={person.$id}>
+														{person.fullName}
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+										{assigneeFallbackMessage(
+											assigneeSource,
+											assignees.find(
+												(person) =>
+													person.$id ===
+													(Array.isArray(field.value)
+														? field.value[0]
+														: undefined),
+											)?.fullName,
+										) ? (
+											<p className="text-xs text-slate-600">
+												{assigneeFallbackMessage(
+													assigneeSource,
+													assignees.find(
+														(person) =>
+															person.$id ===
+															(Array.isArray(field.value)
+																? field.value[0]
+																: undefined),
+													)?.fullName,
+												)}
+											</p>
+										) : null}
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+
+							<FormField
+								control={control}
+								name="status"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Status *</FormLabel>
+										<Select onValueChange={field.onChange} value={field.value}>
+											<FormControl>
+												<SelectTrigger>
+													<SelectValue placeholder="Select status" />
+												</SelectTrigger>
+											</FormControl>
+											<SelectContent>
+												{STATUSES.map((status) => (
+													<SelectItem key={status} value={status}>
+														{status
+															.replace("_", " ")
+															.replace("-", " ")
+															.replace(/\b\w/g, (l) => l.toUpperCase())}
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+
+							<FormField
+								control={control}
+								name="compliance"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Compliance</FormLabel>
+										<Select onValueChange={field.onChange} value={field.value}>
+											<FormControl>
+												<SelectTrigger>
+													<SelectValue placeholder="Select compliance" />
+												</SelectTrigger>
+											</FormControl>
+											<SelectContent>
+												<SelectItem value="compliant">Compliant</SelectItem>
+												<SelectItem value="non-compliant">
+													Non-Compliant
+												</SelectItem>
+												<SelectItem value="at-risk">At Risk</SelectItem>
+												<SelectItem value="action-required">
+													Action Required
+												</SelectItem>
+											</SelectContent>
+										</Select>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+						</div>
+
+						<div className="flex items-center gap-4">
+							<FormField
+								control={control}
+								name="autoRenew"
+								render={({ field }) => (
+									<FormItem className="flex items-center gap-2">
+										<FormControl>
+											<Switch
+												checked={field.value}
+												onCheckedChange={field.onChange}
+											/>
+										</FormControl>
+										<FormLabel>Auto Renew</FormLabel>
+									</FormItem>
+								)}
+							/>
+
+							<FormField
+								control={control}
+								name="renewalNoticeDays"
+								render={({ field }) => (
+									<FormItem className="flex-1">
+										<FormLabel>Renewal Notice (days)</FormLabel>
+										<FormControl>
+											<Input
+												type="number"
+												placeholder="30"
+												{...field}
+												onChange={(e) =>
+													field.onChange(
+														e.target.value
+															? parseInt(e.target.value, 10)
+															: undefined,
+													)
+												}
+											/>
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+						</div>
+
+						<FormField
+							control={control}
+							name="licenseUrl"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel>License URL</FormLabel>
+									<FormControl>
+										<Input type="url" placeholder="https://..." {...field} />
+									</FormControl>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
+
+						<FormField
+							control={control}
+							name="description"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel>Description</FormLabel>
+									<FormControl>
+										<Textarea
+											placeholder="License description"
+											rows={3}
+											{...field}
+										/>
+									</FormControl>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
+
+						<FormField
+							control={control}
+							name="notes"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel>Notes</FormLabel>
+									<FormControl>
+										<Textarea
+											placeholder="Additional notes"
+											rows={2}
+											{...field}
+										/>
+									</FormControl>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
+					</form>
+				</Form>
+			</div>
+		</AppDialog>
 	);
 }

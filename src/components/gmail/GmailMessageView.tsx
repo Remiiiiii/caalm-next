@@ -4,8 +4,8 @@ import {
 	Archive,
 	ArrowLeft,
 	Loader2,
-	MailOpen,
 	Mail,
+	MailOpen,
 	Reply,
 	Trash2,
 } from "lucide-react";
@@ -111,7 +111,7 @@ export default function GmailMessageView({
 						type="button"
 						variant="ghost"
 						size="sm"
-						className="h-8 cursor-pointer -ml-2 gap-1.5 text-slate-600 hover:bg-slate-100 hover:text-slate-800"
+						className="h-8 cursor-pointer -ml-2 gap-1.5 text-slate-600 hover:bg-slate-100 hover:text-slate-700"
 						onClick={onBack}
 						disabled={actionBusy}
 					>
@@ -125,7 +125,7 @@ export default function GmailMessageView({
 									type="button"
 									variant="ghost"
 									size="icon"
-									className="h-8 w-8 cursor-pointer text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+									className="h-8 w-8 cursor-pointer text-slate-500 hover:bg-slate-100 hover:text-slate-700"
 									aria-label="Reply"
 									disabled={actionBusy}
 									onClick={onReply}
@@ -140,7 +140,7 @@ export default function GmailMessageView({
 									type="button"
 									variant="ghost"
 									size="icon"
-									className="h-8 w-8 cursor-pointer text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+									className="h-8 w-8 cursor-pointer text-slate-500 hover:bg-slate-100 hover:text-slate-700"
 									aria-label="Archive"
 									disabled={actionBusy}
 									onClick={onArchive}
@@ -161,7 +161,7 @@ export default function GmailMessageView({
 									type="button"
 									variant="ghost"
 									size="icon"
-									className="h-8 w-8 cursor-pointer text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+									className="h-8 w-8 cursor-pointer text-slate-500 hover:bg-slate-100 hover:text-slate-700"
 									aria-label={
 										message.unread ? "Mark as read" : "Mark as unread"
 									}
@@ -202,7 +202,7 @@ export default function GmailMessageView({
 			</div>
 
 			<div className="min-w-0">
-				<h3 className="break-words text-lg font-semibold leading-snug text-slate-800">
+				<h3 className="break-words text-lg font-semibold leading-snug text-slate-700">
 					{message.subject || "(No subject)"}
 				</h3>
 			</div>
@@ -219,11 +219,13 @@ export default function GmailMessageView({
 				<div className="min-w-0 flex-1 overflow-hidden">
 					<div className="flex items-start justify-between gap-2">
 						<div className="min-w-0">
-							<p className="truncate text-sm font-semibold text-slate-800">
+							<p className="truncate text-sm font-semibold text-slate-700">
 								{sender.name}
 							</p>
 							{sender.email && sender.email !== sender.name ? (
-								<p className="truncate text-xs text-slate-500">{sender.email}</p>
+								<p className="truncate text-xs text-slate-500">
+									{sender.email}
+								</p>
 							) : null}
 						</div>
 						{message.date ? (
@@ -249,7 +251,7 @@ export default function GmailMessageView({
 				{showHtml ? (
 					<GmailHtmlFrame html={html} />
 				) : cleaned?.isLinkedInPymk ? (
-					<div className="prose-sm max-w-none break-words text-sm leading-relaxed text-slate-700 [&_a]:text-[#0f5384] [&_a]:underline [&_a]:underline-offset-2 [&_hr]:my-4 [&_hr]:border-slate-200 [&_p]:my-1 [&_strong]:text-slate-800">
+					<div className="prose-sm max-w-none break-words text-sm leading-relaxed text-slate-700 [&_a]:text-[#0f5384] [&_a]:underline [&_a]:underline-offset-2 [&_hr]:my-4 [&_hr]:border-slate-200 [&_p]:my-1 [&_strong]:text-slate-700">
 						<DocsMarkdown markdown={cleaned.markdown} />
 					</div>
 				) : (

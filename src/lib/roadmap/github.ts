@@ -347,7 +347,10 @@ const completionGateCache = new Map<
 	{ fetchedAt: number; value: RoadmapCompletionGate }
 >();
 /** In-flight gate fetches — overview hits many PRs that share a merge SHA. */
-const completionGateInflight = new Map<string, Promise<RoadmapCompletionGate>>();
+const completionGateInflight = new Map<
+	string,
+	Promise<RoadmapCompletionGate>
+>();
 
 function isRoadmapPipelineRun(run: ActionsRunJson): boolean {
 	return (

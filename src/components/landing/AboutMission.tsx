@@ -148,10 +148,15 @@ function PermissionVisual({ animate }: { animate: boolean }) {
 							}}
 						>
 							<div
-								xmlns="http://www.w3.org/1999/xhtml"
+								{...{ xmlns: "http://www.w3.org/1999/xhtml" }}
 								className="flex h-full w-full items-center justify-center text-[#162768]"
 							>
-								<KeyRound width={12} height={12} strokeWidth={2.25} aria-hidden />
+								<KeyRound
+									width={12}
+									height={12}
+									strokeWidth={2.25}
+									aria-hidden
+								/>
 							</div>
 						</motion.foreignObject>
 					)}

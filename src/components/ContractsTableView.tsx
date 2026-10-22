@@ -5,13 +5,13 @@ import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useContractsView } from "@/components/ContractsViewContext";
 import { ContractApprovalStatusCell } from "@/components/contracts/ContractApprovalStatusCell";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
 	CaalmDataTable,
 	DATA_TABLE_BODY_ROW_CLICKABLE,
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
 } from "@/components/ui/caalm-data-table";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
 	TableBody,
 	TableCell,
@@ -560,161 +560,157 @@ export default function ContractsTableView({
 
 	return (
 		<CaalmDataTable>
-				<TableHeader className="[&_tr]:border-b-0">
-					<TableRow className={DATA_TABLE_HEADER_ROW}>
-						<TableHead className={`${DATA_TABLE_HEADER_CELL} pl-4 pr-2 w-10`}>
+			<TableHeader className="[&_tr]:border-b-0">
+				<TableRow className={DATA_TABLE_HEADER_ROW}>
+					<TableHead className={`${DATA_TABLE_HEADER_CELL} pl-4 pr-2 w-10`}>
+						<Checkbox
+							checked={allSelected}
+							onCheckedChange={(checked) => {
+								if (checked) selectAll(visibleIds);
+								else clearSelection();
+							}}
+							aria-label="Select all visible contracts"
+							className="cursor-pointer"
+						/>
+					</TableHead>
+					<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+						Contract
+					</TableHead>
+					<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+						Status
+					</TableHead>
+					<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+						Value
+					</TableHead>
+					<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+						Size
+					</TableHead>
+					<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+						Uploaded On
+					</TableHead>
+					<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+						Expires On
+					</TableHead>
+					<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+						Department
+					</TableHead>
+					<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
+						Assigned To
+					</TableHead>
+					<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>By</TableHead>
+					<TableHead
+						className={`${DATA_TABLE_HEADER_CELL} pl-3 pr-4 text-right`}
+					>
+						Actions
+					</TableHead>
+				</TableRow>
+			</TableHeader>
+			<TableBody className="[&_tr:last-child>td]:border-b-0">
+				{files.map((file: UIFileDoc) => (
+					<TableRow
+						key={file.$id}
+						className={cn(
+							DATA_TABLE_BODY_ROW_CLICKABLE,
+							"group",
+							selectedIds.includes(file.$id) && "bg-blue-50/50",
+						)}
+						onClick={() => setPreviewFile(file)}
+					>
+						<TableCell
+							className={cn(rowPad, "pl-4 pr-2")}
+							onClick={(e) => e.stopPropagation()}
+						>
 							<Checkbox
-								checked={allSelected}
-								onCheckedChange={(checked) => {
-									if (checked) selectAll(visibleIds);
-									else clearSelection();
-								}}
-								aria-label="Select all visible contracts"
+								checked={selectedIds.includes(file.$id)}
+								onCheckedChange={() => toggleSelected(file.$id)}
+								aria-label={`Select ${file.contractName || file.name || "contract"}`}
 								className="cursor-pointer"
 							/>
-						</TableHead>
-						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-							Contract
-						</TableHead>
-						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-							Status
-						</TableHead>
-						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-							Value
-						</TableHead>
-						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-							Size
-						</TableHead>
-						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-							Uploaded On
-						</TableHead>
-						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-							Expires On
-						</TableHead>
-						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-							Department
-						</TableHead>
-						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-							Assigned To
-						</TableHead>
-						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
-							By
-						</TableHead>
-						<TableHead
-							className={`${DATA_TABLE_HEADER_CELL} pl-3 pr-4 text-right`}
+						</TableCell>
+						<TableCell className={cn(rowPad)}>
+							<div className="flex items-center gap-3 min-w-0">
+								<Thumbnail
+									type={file.type}
+									extension={file.extension}
+									url={file.url}
+									className="size-10! shrink-0"
+									imageClassName="!size-8"
+								/>
+								<p
+									className="subtitle-2 text-slate-700 whitespace-nowrap truncate max-w-[180px]"
+									title={file.name || file.contractName || "Untitled Contract"}
+								>
+									{truncateContractName(
+										file.name || file.contractName || "Untitled Contract",
+									)}
+								</p>
+							</div>
+						</TableCell>
+						<TableCell
+							className={cn(rowPad, "whitespace-nowrap")}
+							onClick={(e) => e.stopPropagation()}
+							onMouseDown={(e) => e.stopPropagation()}
 						>
-							Actions
-						</TableHead>
-					</TableRow>
-				</TableHeader>
-				<TableBody className="[&_tr:last-child>td]:border-b-0">
-					{files.map((file: UIFileDoc) => (
-						<TableRow
-							key={file.$id}
+							<ContractApprovalStatusCell file={file} onRefresh={onRefresh} />
+						</TableCell>
+						<TableCell
 							className={cn(
-								DATA_TABLE_BODY_ROW_CLICKABLE,
-								"group",
-								selectedIds.includes(file.$id) && "bg-blue-50/50",
+								rowPad,
+								"text-slate-700 whitespace-nowrap tabular-nums",
 							)}
-							onClick={() => setPreviewFile(file)}
 						>
-							<TableCell
-								className={cn(rowPad, "pl-4 pr-2")}
-								onClick={(e) => e.stopPropagation()}
-							>
-								<Checkbox
-									checked={selectedIds.includes(file.$id)}
-									onCheckedChange={() => toggleSelected(file.$id)}
-									aria-label={`Select ${file.contractName || file.name || "contract"}`}
-									className="cursor-pointer"
-								/>
-							</TableCell>
-							<TableCell className={cn(rowPad)}>
-								<div className="flex items-center gap-3 min-w-0">
-									<Thumbnail
-										type={file.type}
-										extension={file.extension}
-										url={file.url}
-										className="size-10! shrink-0"
-										imageClassName="!size-8"
-									/>
-									<p
-										className="subtitle-2 text-slate-700 whitespace-nowrap truncate max-w-[180px]"
-										title={
-											file.name || file.contractName || "Untitled Contract"
-										}
-									>
-										{truncateContractName(
-											file.name || file.contractName || "Untitled Contract",
-										)}
-									</p>
-								</div>
-							</TableCell>
-							<TableCell
-								className={cn(rowPad, "whitespace-nowrap")}
-								onClick={(e) => e.stopPropagation()}
-								onMouseDown={(e) => e.stopPropagation()}
-							>
-								<ContractApprovalStatusCell file={file} onRefresh={onRefresh} />
-							</TableCell>
-							<TableCell
-								className={cn(
-									rowPad,
-									"text-slate-700 whitespace-nowrap tabular-nums",
-								)}
-							>
-								{file.amount != null && Number(file.amount) > 0 ? (
-									formatContractValue(Number(file.amount))
-								) : (
-									<span className="body-2 text-slate-400">-</span>
-								)}
-							</TableCell>
-							<TableCell
-								className={cn(rowPad, "text-slate-700 whitespace-nowrap")}
-							>
-								{convertFileSize({ sizeInBytes: file.size || 0 })}
-							</TableCell>
-							<TableCell
-								className={cn(rowPad, "text-slate-700 whitespace-nowrap")}
-							>
-								<FormattedDateTime date={file.$createdAt} className="body-2" />
-							</TableCell>
-							<TableCell
-								className={cn(rowPad, "text-slate-700 whitespace-nowrap")}
-							>
-								{expiryCell(file)}
-							</TableCell>
-							<TableCell
-								className={cn(rowPad, "text-slate-700 whitespace-nowrap")}
-							>
-								{file.department || (
-									<span className="body-2 text-slate-400">-</span>
-								)}
-							</TableCell>
-							<TableCell
-								className={cn(rowPad, "text-slate-700 whitespace-nowrap")}
-							>
-								{renderAssignedManagers(file)}
-							</TableCell>
-							<TableCell
-								className={cn(rowPad, "text-slate-700 whitespace-nowrap")}
-							>
-								{renderOwner(file)}
-							</TableCell>
-							<TableCell
-								className={cn(rowPad, "text-right")}
-								onClick={(e) => e.stopPropagation()}
-							>
-								<ActionDropdown
-									file={file}
-									onStatusChange={onRefresh}
-									onRefresh={onRefresh}
-									userRole={user?.role as "executive" | "admin" | "manager"}
-								/>
-							</TableCell>
-						</TableRow>
-					))}
-				</TableBody>
+							{file.amount != null && Number(file.amount) > 0 ? (
+								formatContractValue(Number(file.amount))
+							) : (
+								<span className="body-2 text-slate-400">-</span>
+							)}
+						</TableCell>
+						<TableCell
+							className={cn(rowPad, "text-slate-700 whitespace-nowrap")}
+						>
+							{convertFileSize({ sizeInBytes: file.size || 0 })}
+						</TableCell>
+						<TableCell
+							className={cn(rowPad, "text-slate-700 whitespace-nowrap")}
+						>
+							<FormattedDateTime date={file.$createdAt} className="body-2" />
+						</TableCell>
+						<TableCell
+							className={cn(rowPad, "text-slate-700 whitespace-nowrap")}
+						>
+							{expiryCell(file)}
+						</TableCell>
+						<TableCell
+							className={cn(rowPad, "text-slate-700 whitespace-nowrap")}
+						>
+							{file.department || (
+								<span className="body-2 text-slate-400">-</span>
+							)}
+						</TableCell>
+						<TableCell
+							className={cn(rowPad, "text-slate-700 whitespace-nowrap")}
+						>
+							{renderAssignedManagers(file)}
+						</TableCell>
+						<TableCell
+							className={cn(rowPad, "text-slate-700 whitespace-nowrap")}
+						>
+							{renderOwner(file)}
+						</TableCell>
+						<TableCell
+							className={cn(rowPad, "text-right")}
+							onClick={(e) => e.stopPropagation()}
+						>
+							<ActionDropdown
+								file={file}
+								onStatusChange={onRefresh}
+								onRefresh={onRefresh}
+								userRole={user?.role as "executive" | "admin" | "manager"}
+							/>
+						</TableCell>
+					</TableRow>
+				))}
+			</TableBody>
 		</CaalmDataTable>
 	);
 }

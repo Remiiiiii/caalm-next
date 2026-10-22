@@ -14,10 +14,7 @@ export function rectsOverlap(a: GraphRect, b: GraphRect) {
 	);
 }
 
-export function pointInRect(
-	point: { x: number; y: number },
-	rect: GraphRect,
-) {
+export function pointInRect(point: { x: number; y: number }, rect: GraphRect) {
 	return (
 		point.x >= rect.x &&
 		point.x <= rect.x + rect.width &&

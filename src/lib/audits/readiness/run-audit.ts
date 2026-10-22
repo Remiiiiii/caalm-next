@@ -4,7 +4,7 @@ import { notifyAuditViewUsers } from "./alerts";
 import { buildOrgReadinessSummary } from "./build-summary";
 import { getOrgAuditSettings } from "./org-settings";
 import { computeRag } from "./score";
-import { crawlPublicSite } from "./site-crawl";
+import { crawlAndCacheSite } from "./site-crawl";
 import {
 	createReadinessSnapshot,
 	getLatestSnapshot,
@@ -21,6 +21,7 @@ export async function runReadinessAuditForOrg(options: {
 	includeCrawl?: boolean;
 	includeAiSummary?: boolean;
 	sendAlerts?: boolean;
+	source?: "manual" | "scheduled";
 }): Promise<{
 	snapshot: AuditReadinessSnapshotRecord | null;
 	skipped?: string;
@@ -62,7 +63,10 @@ export async function runReadinessAuditForOrg(options: {
 	let siteCrawl = null;
 	if (options.includeCrawl !== false && auditSettings.websiteUrl) {
 		try {
-			siteCrawl = await crawlPublicSite(auditSettings.websiteUrl);
+			siteCrawl = await crawlAndCacheSite(
+				options.orgId,
+				auditSettings.websiteUrl,
+			);
 		} catch (error) {
 			console.warn(
 				"[SERVER] site crawl failed",
@@ -95,6 +99,7 @@ export async function runReadinessAuditForOrg(options: {
 		},
 		previousScore,
 		scoreDelta,
+		source: options.source ?? ("scheduled" as const),
 	};
 
 	let aiSummary = "";

@@ -140,10 +140,7 @@ function firstAvailableTimeInPeriod(
 	preferredMinute?: string,
 ): string | null {
 	const hourOrder = preferredHour12
-		? [
-				preferredHour12,
-				...HOURS.filter((hour) => hour !== preferredHour12),
-			]
+		? [preferredHour12, ...HOURS.filter((hour) => hour !== preferredHour12)]
 		: [...HOURS];
 
 	for (const hour12 of hourOrder) {
@@ -219,9 +216,7 @@ function TimeColumn({
 						className={cn(
 							"flex h-9 w-full items-center justify-center rounded-lg text-sm font-medium transition-colors duration-200",
 							muted && "cursor-not-allowed text-slate-300",
-							!muted &&
-								isSelected &&
-								"bg-[#0f5384] text-white",
+							!muted && isSelected && "bg-[#0f5384] text-white",
 							!muted &&
 								!isSelected &&
 								"text-slate-700 hover:bg-[#0f5384]/10 hover:text-[#0f5384]",

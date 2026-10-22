@@ -13,7 +13,12 @@ export type {
 	TaskStatus,
 } from "@/lib/database/schemas/tasks.schema";
 
-export type TaskView = "all" | "mine" | "unassigned" | "overdue" | "due_this_week";
+export type TaskView =
+	| "all"
+	| "mine"
+	| "unassigned"
+	| "overdue"
+	| "due_this_week";
 export type TaskDueBucket = "any" | "overdue" | "next_7" | "none";
 
 export interface TaskFilters {

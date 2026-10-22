@@ -41,11 +41,9 @@ export async function POST(request: NextRequest) {
 		});
 
 		const actor = await getCurrentUser();
-		const contractLabel =
-			String(
-				(updatedContract as { contractName?: string }).contractName ||
-					contractId,
-			);
+		const contractLabel = String(
+			(updatedContract as { contractName?: string }).contractName || contractId,
+		);
 		void logAuditEvent({
 			event_id: `contract_snooze_${contractId}_${Date.now()}`,
 			event_title: `Expiry reminder snoozed: ${contractLabel}`,
@@ -58,8 +56,7 @@ export async function POST(request: NextRequest) {
 				"User",
 			user_email: actor?.email || "",
 			orgId:
-				(updatedContract as { orgId?: string }).orgId ||
-				"default_organization",
+				(updatedContract as { orgId?: string }).orgId || "default_organization",
 			status: "success",
 			module: "contracts",
 			target_type: "contract",

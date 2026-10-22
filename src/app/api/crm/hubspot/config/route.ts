@@ -40,7 +40,9 @@ export async function PUT(request: NextRequest) {
 		};
 		const current = parseCrmConfig(integration.config_json);
 		const department =
-			typeof body.department === "string" ? body.department : current.department;
+			typeof body.department === "string"
+				? body.department
+				: current.department;
 		const division =
 			typeof body.division === "string" ? body.division : current.division;
 		if (!department.trim() || !division.trim()) {

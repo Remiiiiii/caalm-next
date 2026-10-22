@@ -1,6 +1,14 @@
 "use client";
 
-import { Loader2, MessageSquareText, Send, Sparkles } from "lucide-react";
+import {
+	Calendar,
+	Check,
+	Copy,
+	Loader2,
+	MessageSquareText,
+	Send,
+	Sparkles,
+} from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { ContractAssistantMarkdown } from "@/components/contract-assistant/ContractAssistantMarkdown";
@@ -39,7 +47,7 @@ export function AskCaalmComposer({
 		<div className="rounded-lg border border-slate-200 bg-white p-2.5 shadow-sm">
 			<div className="mb-1.5 flex items-center gap-2 text-sm font-semibold sidebar-gradient-text">
 				<Sparkles className="h-4 w-4 text-[#0f5384]" />
-				Ask CAALM
+				Ask CAALM Contract Assistant Agent
 			</div>
 			<div className="relative w-full">
 				<Textarea
@@ -53,7 +61,7 @@ export function AskCaalmComposer({
 					}}
 					placeholder="Ask a question about this contract..."
 					rows={1}
-					className="min-h-16 max-h-24 w-full resize-none border-[0.25px] border-slate-300! bg-white px-3! py-2.5! pe-14! text-sm focus-visible:border-[#078FAB]!"
+					className="min-h-16 max-h-24 w-full resize-none border-[0.25px] border-slate-300! bg-white px-3! py-2.5! pe-14! text-sm text-slate-700 focus-visible:border-[#078FAB]!"
 					aria-label="Ask CAALM Contract Assistant"
 				/>
 				{/* Plain button: primary-btn's w-full breaks absolute bottom-right placement */}
@@ -75,9 +83,6 @@ export function AskCaalmComposer({
 					)}
 				</button>
 			</div>
-			<p className="mt-1.5 text-xs text-slate-500">
-				Be sure to double-check responses; they may be inaccurate.
-			</p>
 		</div>
 	);
 }
@@ -103,11 +108,12 @@ export function ContractAssistantChat({
 	footer?: ReactNode;
 }) {
 	const endRef = useRef<HTMLDivElement>(null);
+	const [copiedId, setCopiedId] = useState<string | null>(null);
 	const hasUserMessage = messages.some((message) => message.role === "user");
-	// Hide seeded summary chat copy until the user starts Q&A
-	const visibleMessages = hasUserMessage
-		? messages
-		: messages.filter((message) => message.id !== "summary");
+	// Never show the seeded "summary" message in the chat thread
+	const visibleMessages = messages.filter(
+		(message) => message.id !== "summary",
+	);
 
 	useEffect(() => {
 		endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -142,22 +148,61 @@ export function ContractAssistantChat({
 					<div className="space-y-4">
 						{visibleMessages.map((message) =>
 							message.role === "user" ? (
-								<div
-									key={message.id}
-									className="ml-6 rounded-2xl bg-linear-to-r from-[#00C1CB] via-[#0E638F] to-[#162768] p-3 text-sm text-white"
-								>
-									{message.text}
+								<div key={message.id} className="flex justify-end">
+									<div
+										className="max-w-[80%] text-sm text-white"
+										style={{
+											padding: "10px 14px",
+											borderRadius: "16px 4px 16px 16px",
+											background: "linear-gradient(90deg, #078fab, #11487d)",
+											lineHeight: "20px",
+										}}
+									>
+										{message.text}
+									</div>
 								</div>
 							) : (
-								<div
-									key={message.id}
-									className="rounded-xl border border-slate-200 bg-white p-4"
-								>
-									<ContractAssistantMarkdown
-										text={message.text}
-										citations={message.citations || []}
-										onJumpToPage={onJumpToPage}
-									/>
+								<div key={message.id} className="space-y-1.5">
+									<div
+										className="border bg-white text-sm text-slate-700"
+										style={{
+											padding: "12px 14px",
+											borderRadius: "16px 16px 16px 4px",
+											borderColor: "#E2E8F0",
+											lineHeight: "20px",
+										}}
+									>
+										<ContractAssistantMarkdown
+											text={message.text}
+											citations={message.citations || []}
+											onJumpToPage={onJumpToPage}
+										/>
+									</div>
+									<div className="flex items-center gap-2">
+										<div className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-600">
+											<Calendar className="h-3 w-3 text-[#0f5384]" />
+											Source: Contract notice
+										</div>
+										{copiedId === message.id ? (
+											<Check
+												className="h-4 w-4 shrink-0 text-green"
+												aria-label="Copied"
+											/>
+										) : (
+											<button
+												type="button"
+												onClick={() => {
+													void navigator.clipboard.writeText(message.text);
+													setCopiedId(message.id);
+													setTimeout(() => setCopiedId(null), 2000);
+												}}
+												className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-500 hover:bg-white hover:text-slate-700"
+												title="Copy response"
+											>
+												<Copy className="h-3 w-3" />
+											</button>
+										)}
+									</div>
 								</div>
 							),
 						)}
@@ -167,13 +212,12 @@ export function ContractAssistantChat({
 								<Loader2 className="h-4 w-4 animate-spin text-[#0f5384]" />
 								Thinking…
 							</div>
-						) : null}
-
-						<ContractFollowUpSuggestions
-							questions={suggestedQuestions}
-							disabled={loading}
-							onSelect={onSend}
-						/>
+						) : (
+							<ContractFollowUpSuggestions
+								questions={suggestedQuestions}
+								onSelect={onSend}
+							/>
+						)}
 						<div ref={endRef} />
 					</div>
 				) : loading ? (

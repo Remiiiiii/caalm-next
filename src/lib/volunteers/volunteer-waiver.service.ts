@@ -1,7 +1,7 @@
 import { ID } from "node-appwrite";
 import { getConstituentById } from "@/lib/constituents/server";
-import { createEnvelopeRow } from "@/lib/esign/envelope-repository";
 import { resolveStorageFileId } from "@/lib/esign/document-bytes";
+import { createEnvelopeRow } from "@/lib/esign/envelope-repository";
 import type { EsignRecipient } from "@/lib/esign/types";
 import {
 	createVolunteerWaiverRow,
@@ -63,7 +63,9 @@ export async function createVolunteerAcknowledgmentEnvelope(input: {
 	return { envelopeId: envelope.$id, waiverId: waiver.$id };
 }
 
-export async function markVolunteerWaiverCompleted(envelopeId: string): Promise<void> {
+export async function markVolunteerWaiverCompleted(
+	envelopeId: string,
+): Promise<void> {
 	const waiver = await findWaiverByEnvelopeId(envelopeId);
 	if (!waiver) return;
 	await updateVolunteerWaiverStatus(waiver.orgId, waiver.$id, "completed");

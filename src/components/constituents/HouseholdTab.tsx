@@ -49,7 +49,10 @@ export function HouseholdTab({
 						edge.fromId === constituentId ? edge.toId : edge.fromId;
 					const otherRes = await fetch(`/api/constituents/${otherId}`);
 					const otherData = otherRes.ok ? await otherRes.json() : {};
-					return { ...edge, other: otherData.constituent as Constituent | undefined };
+					return {
+						...edge,
+						other: otherData.constituent as Constituent | undefined,
+					};
 				}),
 			);
 			setRows(others);
@@ -107,7 +110,8 @@ export function HouseholdTab({
 			) : (
 				<div className="space-y-3">
 					{rows.map((row) => {
-						const otherId = row.fromId === constituentId ? row.toId : row.fromId;
+						const otherId =
+							row.fromId === constituentId ? row.toId : row.fromId;
 						const label = row.other
 							? constituentDisplayName(row.other)
 							: otherId;
@@ -124,11 +128,11 @@ export function HouseholdTab({
 										{label}
 									</Link>
 									<div className="mt-2 flex flex-wrap gap-2">
-										<span className="inline-block px-2 py-0.5 text-xs rounded-full font-medium border bg-blue/10 text-blue border-blue/20">
+										<span className="inline-block px-2 py-0.5 text-xs rounded-full border bg-blue/10 text-blue border-blue/20">
 											{row.type.charAt(0).toUpperCase() + row.type.slice(1)}
 										</span>
 										{row.softCredit ? (
-											<span className="inline-block px-2 py-0.5 text-xs rounded-full font-medium border bg-green/10 text-green border-green/20">
+											<span className="inline-block px-2 py-0.5 text-xs rounded-full border bg-green/10 text-green border-green/20">
 												Soft credit
 											</span>
 										) : null}

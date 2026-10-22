@@ -1,5 +1,5 @@
-import type { IngestItem } from "@/lib/news/ingest/types";
 import { sanitizeIngestItem } from "@/lib/news/ingest/sanitize-import";
+import type { IngestItem } from "@/lib/news/ingest/types";
 
 const AUTH_URL = "https://www.linkedin.com/oauth/v2/authorization";
 const TOKEN_URL = "https://www.linkedin.com/oauth/v2/accessToken";
@@ -54,7 +54,8 @@ export async function exchangeLinkedInCode(code: string): Promise<{
 		refresh_token?: string;
 		expires_in?: number;
 	};
-	if (!json.access_token) throw new Error("LinkedIn did not return an access token");
+	if (!json.access_token)
+		throw new Error("LinkedIn did not return an access token");
 	return {
 		accessToken: json.access_token,
 		refreshToken: json.refresh_token,

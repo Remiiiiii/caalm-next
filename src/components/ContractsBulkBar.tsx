@@ -4,13 +4,17 @@ import { SquareArrowRightExit, Trash2 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useContractsView } from "@/components/ContractsViewContext";
+import { BulkActionDock } from "@/components/ui/bulk-action-dock";
+import { BusyIcon } from "@/components/ui/busy-icon";
 import { Button } from "@/components/ui/button";
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
 import { PERMISSIONS } from "@/constants/permissions";
 import { useStepUp } from "@/contexts/StepUpContext";
 import { useToast } from "@/hooks/use-toast";
+import { useBusyAction } from "@/hooks/useBusyAction";
 import { usePermissions } from "@/hooks/usePermissions";
 import { deleteFile } from "@/lib/actions/file.actions";
+import { downloadXlsx } from "@/lib/export/download-xlsx";
 import { refreshStorageUsage } from "@/lib/storage/refreshStorageUsage";
 import type { UIFileDoc } from "@/types/files";
 
@@ -38,53 +42,44 @@ export default function ContractsBulkBar({ files }: ContractsBulkBarProps) {
 		[files, selectedIds],
 	);
 
+	const [runExporting, exporting] = useBusyAction(() => handleExport());
+
 	if (selectedIds.length === 0) return null;
 
 	const handleExport = () => {
 		if (!canView) return;
-		const headers = [
-			"Contract Name",
-			"Contract Number",
-			"Status",
-			"Type",
-			"Department",
-			"Assigned To",
-			"Expiry Date",
-			"Amount",
-			"Vendor",
-			"Created Date",
-		];
-		const rows = selectedFiles.map((file) => [
-			file.contractName || file.name || "Untitled",
-			file.contractNumber || "",
-			file.status || "",
-			file.contractType || "",
-			file.department || "",
-			Array.isArray(file.assignedManagers)
-				? file.assignedManagers.join(", ")
-				: file.assignedManagers || "",
-			file.contractExpiryDate || "",
-			file.amount?.toString() || "",
-			file.vendor || "",
-			file.$createdAt || "",
-		]);
-		const csvContent = [
-			headers.join(","),
-			...rows.map((row) =>
-				row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","),
-			),
-		].join("\n");
-		const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-		const link = document.createElement("a");
-		link.setAttribute("href", URL.createObjectURL(blob));
-		link.setAttribute(
-			"download",
-			`contracts-selected-${new Date().toISOString().split("T")[0]}.csv`,
-		);
-		link.style.visibility = "hidden";
-		document.body.appendChild(link);
-		link.click();
-		document.body.removeChild(link);
+		const stamp = new Date().toISOString().slice(0, 10);
+		downloadXlsx(`contracts-selected-${stamp}.xlsx`, {
+			sheetName: "Contracts",
+			title: "Contracts — Selected",
+			subtitle: `CAALM · ${selectedFiles.length} contract${selectedFiles.length === 1 ? "" : "s"} · Generated ${stamp}`,
+			columns: [
+				{ header: "Contract Name", width: 40 },
+				{ header: "Contract Number", width: 18 },
+				{ header: "Status", width: 16 },
+				{ header: "Type", width: 18 },
+				{ header: "Department", width: 20 },
+				{ header: "Assigned To", width: 26 },
+				{ header: "Expiry Date", type: "date", width: 16 },
+				{ header: "Amount", type: "currency", width: 16 },
+				{ header: "Vendor", width: 24 },
+				{ header: "Created Date", type: "date", width: 16 },
+			],
+			rows: selectedFiles.map((file) => [
+				file.contractName || file.name || "Untitled",
+				file.contractNumber,
+				file.status,
+				file.contractType,
+				file.department,
+				Array.isArray(file.assignedManagers)
+					? file.assignedManagers.join(", ")
+					: file.assignedManagers,
+				file.contractExpiryDate,
+				file.amount == null ? null : Number(file.amount),
+				file.vendor,
+				file.$createdAt,
+			]),
+		});
 	};
 
 	const handleBulkDelete = async () => {
@@ -131,35 +126,35 @@ export default function ContractsBulkBar({ files }: ContractsBulkBarProps) {
 
 	return (
 		<>
-			<div className="sticky bottom-4 z-20 mx-4 sm:mx-6 mb-4 flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white/95 px-4 py-3 shadow-lg backdrop-blur">
-				<p className="text-sm font-medium text-slate-700">
-					{selectedIds.length} selected
-				</p>
-				<div className="flex items-center gap-2">
-					{canView && (
-						<Button
-							type="button"
-							size="sm"
-							className="primary-btn px-3 sm:px-4 cursor-pointer"
-							onClick={handleExport}
-						>
-							<SquareArrowRightExit className="h-4 w-4" />
-							Export selected
-						</Button>
-					)}
-					{canDelete && (
-						<Button
-							type="button"
-							size="sm"
-							className="delete-btn cursor-pointer px-3 sm:px-4"
-							onClick={() => setConfirmOpen(true)}
-						>
-							<Trash2 className="h-4 w-4" />
-							Delete selected
-						</Button>
-					)}
-				</div>
-			</div>
+			<BulkActionDock
+				count={selectedIds.length}
+				noun="contract"
+				onClear={clearSelection}
+			>
+				{canView && (
+					<Button
+						type="button"
+						size="sm"
+						className="primary-btn px-3 sm:px-4 cursor-pointer"
+						disabled={exporting}
+						onClick={() => void runExporting()}
+					>
+						<BusyIcon busy={exporting} icon={SquareArrowRightExit} />
+						Export selected
+					</Button>
+				)}
+				{canDelete && (
+					<Button
+						type="button"
+						size="sm"
+						className="delete-btn cursor-pointer px-3 sm:px-4"
+						onClick={() => setConfirmOpen(true)}
+					>
+						<Trash2 className="h-4 w-4" />
+						Delete selected
+					</Button>
+				)}
+			</BulkActionDock>
 
 			<DeleteConfirmationDialog
 				open={confirmOpen}

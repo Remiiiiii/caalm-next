@@ -64,7 +64,10 @@ export async function syncStripePricesForPayload(input: {
 	}> = [];
 
 	if (!offersMonthly) {
-		return { payload: { ...input.next, stripePriceByAmountCents: priceMap }, replacements };
+		return {
+			payload: { ...input.next, stripePriceByAmountCents: priceMap },
+			replacements,
+		};
 	}
 
 	const prevAmounts = input.previous.amountsCents;
@@ -73,7 +76,8 @@ export async function syncStripePricesForPayload(input: {
 	for (const amountCents of nextAmounts) {
 		const key = amountKey(amountCents);
 		const hadSameAmount = prevAmounts.includes(amountCents);
-		const existingPriceId = priceMap[key] ?? input.previous.stripePriceByAmountCents[key];
+		const existingPriceId =
+			priceMap[key] ?? input.previous.stripePriceByAmountCents[key];
 
 		if (hadSameAmount && existingPriceId) {
 			priceMap[key] = existingPriceId;

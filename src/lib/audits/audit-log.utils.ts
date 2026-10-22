@@ -5,6 +5,7 @@ export type AuditModule =
 	| "auth"
 	| "system"
 	| "billing"
+	| "news"
 	| "it";
 
 export type AuditAction =

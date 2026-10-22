@@ -199,10 +199,7 @@ export function TaskAssigneeFilter({
 					aria-label={ariaLabel}
 					className={isDock ? TASK_DOCK_TRIGGER : TASK_FILTER_PILL_TRIGGER}
 				>
-					<Users
-						className="h-4 w-4 shrink-0 text-slate-600"
-						aria-hidden
-					/>
+					<Users className="h-4 w-4 shrink-0 text-slate-600" aria-hidden />
 					<span className="max-w-[9rem] truncate">{selectedLabel}</span>
 					<ChevronDown
 						className={cn(
@@ -213,10 +210,7 @@ export function TaskAssigneeFilter({
 					/>
 				</button>
 			</DropdownMenuTrigger>
-			<DropdownMenuContent
-				align="start"
-				className="w-72 overflow-x-hidden p-0"
-			>
+			<DropdownMenuContent align="start" className="w-72 overflow-x-hidden p-0">
 				<div className="border-b border-slate-200/80 p-2">
 					<label className="flex h-9 items-center gap-2 rounded-md border-[0.25px] border-slate-300 bg-white px-2.5">
 						<Search className="h-4 w-4 shrink-0 text-slate-500" aria-hidden />
@@ -366,9 +360,7 @@ export function TaskAssigneeFilter({
 														<DropdownMenuSeparator />
 													) : null}
 													{dept.divisions.map((div) => (
-														<DropdownMenuSub
-															key={`${dept.name}:${div.name}`}
-														>
+														<DropdownMenuSub key={`${dept.name}:${div.name}`}>
 															<DropdownMenuSubTrigger className="cursor-pointer gap-2">
 																<DepartmentIcon />
 																<span

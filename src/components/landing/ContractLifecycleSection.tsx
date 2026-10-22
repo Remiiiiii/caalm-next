@@ -159,7 +159,7 @@ function ApproveVisual() {
 					</span>
 					<span
 						className={cn(
-							"inline-block rounded-full border px-2 py-0.5 text-[11px] font-medium",
+							"inline-block rounded-full border px-2 py-0.5 text-[11px]",
 							step.state === "done"
 								? "border-green/20 bg-green/10 text-green"
 								: "border-orange/20 bg-orange/10 text-orange",
@@ -188,7 +188,7 @@ function SignVisual({ reduceMotion }: { reduceMotion: boolean | null }) {
 						animate={{ opacity: 1, scale: 1 }}
 						transition={{ delay: i * 0.35, duration: 0.3 }}
 						className={cn(
-							"inline-block rounded-full border px-2 py-0.5 text-xs font-medium",
+							"inline-block rounded-full border px-2 py-0.5 text-xs",
 							i === statuses.length - 1
 								? "border-green/20 bg-green/10 text-green"
 								: "border-blue/20 bg-blue/10 text-blue",
@@ -221,7 +221,7 @@ function SignVisual({ reduceMotion }: { reduceMotion: boolean | null }) {
 				transition={{ delay: 1.6, duration: 0.4 }}
 				className="flex items-center gap-2 text-xs text-slate-600"
 			>
-				<span className="inline-block rounded-full border border-green/20 bg-green/10 px-2 py-0.5 font-medium text-green">
+				<span className="inline-block rounded-full border border-green/20 bg-green/10 px-2 py-0.5 text-green">
 					Active
 				</span>
 				Contract activated when the last signature landed.
@@ -333,7 +333,7 @@ export default function ContractLifecycleSection() {
 											<p className="text-xs font-semibold uppercase tracking-wider text-[#0f5384]">
 												{String(i + 1).padStart(2, "0")} · {stage.label}
 											</p>
-											<h3 className="mt-0.5 text-base font-semibold text-slate-800">
+											<h3 className="mt-0.5 text-base font-semibold text-slate-700">
 												{stage.title}
 											</h3>
 											{isActive ? (
@@ -379,7 +379,7 @@ export default function ContractLifecycleSection() {
 										Services agreement.docx
 									</span>
 								</div>
-								<span className="inline-block rounded-full border border-blue/20 bg-blue/10 px-2 py-0.5 text-xs font-medium text-blue">
+								<span className="inline-block rounded-full border border-blue/20 bg-blue/10 px-2 py-0.5 text-xs text-blue">
 									{activeStage.label}
 								</span>
 							</div>

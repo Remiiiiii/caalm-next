@@ -1,12 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server";
-import type { AuditModule } from "@/lib/audits/audit-log.utils";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
+import type { AuditModule } from "@/lib/audits/audit-log.utils";
 import { requirePermission } from "@/lib/rbac/middleware";
 import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
+import { getAuditLogsPage } from "@/lib/services/audit-logger";
 import { CACHE_KEYS } from "@/lib/services/cache-keys";
 import CacheManager from "@/lib/services/cache-manager";
-import { getAuditLogsPage } from "@/lib/services/audit-logger";
 
 function parseFilters(request: NextRequest, orgId: string) {
 	const { searchParams } = new URL(request.url);
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
 		const { page, limit, offset, filters } = parseFilters(request, orgId);
 
 		const cacheKey = CACHE_KEYS.audits.logs(
-			JSON.stringify({ orgId, ...filters, page }),
+			JSON.stringify({ ...filters, orgId, page }),
 		);
 
 		const pageResult = await CacheManager.withCache(

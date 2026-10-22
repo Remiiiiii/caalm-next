@@ -1,5 +1,6 @@
 import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import type React from "react";
+import { PacketFooter } from "@/lib/pdf/packet";
 
 // Register fonts for better typography (commented out for now to avoid network issues)
 // Font.register({
@@ -33,20 +34,20 @@ const styles = StyleSheet.create({
 		marginBottom: 30,
 		paddingBottom: 20,
 		borderBottomWidth: 3,
-		borderBottomColor: "#1e40af",
+		borderBottomColor: "#0f5384",
 	},
 	headerLeft: {
 		flexDirection: "column",
 	},
 	companyName: {
 		fontSize: 24,
-		fontWeight: "bold",
-		color: "#1e40af",
+		fontFamily: "Times-Bold",
+		color: "#0f5384",
 		marginBottom: 5,
 	},
 	companyTagline: {
 		fontSize: 12,
-		color: "#64748b",
+		color: "#5f6877",
 	},
 	headerRight: {
 		flexDirection: "column",
@@ -54,33 +55,32 @@ const styles = StyleSheet.create({
 	},
 	reportTitle: {
 		fontSize: 18,
-		fontWeight: "bold",
-		color: "#1e293b",
+		fontFamily: "Times-Bold",
+		color: "#1b2230",
 		marginBottom: 5,
 	},
 	reportDate: {
 		fontSize: 10,
-		color: "#64748b",
+		color: "#5f6877",
 	},
 	metadata: {
-		backgroundColor: "#f8fafc",
+		backgroundColor: "#f6f8fb",
 		padding: 20,
 		marginBottom: 30,
-		borderRadius: 8,
 		borderLeftWidth: 4,
-		borderLeftColor: "#1e40af",
+		borderLeftColor: "#0f5384",
 	},
 	metadataRow: {
 		flexDirection: "row",
 		marginBottom: 8,
 	},
 	metadataLabel: {
-		fontWeight: "bold",
+		fontFamily: "Helvetica-Bold",
 		width: 120,
-		color: "#374151",
+		color: "#1b2230",
 	},
 	metadataValue: {
-		color: "#6b7280",
+		color: "#5f6877",
 		flex: 1,
 	},
 	section: {
@@ -88,22 +88,21 @@ const styles = StyleSheet.create({
 	},
 	sectionTitle: {
 		fontSize: 16,
-		fontWeight: "bold",
-		color: "#1e293b",
+		fontFamily: "Times-Bold",
+		color: "#1b2230",
 		marginBottom: 15,
 		paddingBottom: 8,
 		borderBottomWidth: 2,
-		borderBottomColor: "#e5e7eb",
+		borderBottomColor: "#d8dde4",
 	},
 	executiveSummary: {
-		backgroundColor: "#f0f9ff",
+		backgroundColor: "#eef7fb",
 		padding: 20,
-		borderRadius: 8,
 		borderWidth: 1,
-		borderColor: "#bae6fd",
+		borderColor: "#d8dde4",
 	},
 	summaryText: {
-		color: "#0c4a6e",
+		color: "#1b2230",
 		lineHeight: 1.6,
 	},
 	metricsGrid: {
@@ -112,35 +111,33 @@ const styles = StyleSheet.create({
 		marginBottom: 20,
 	},
 	metricCard: {
-		backgroundColor: "#1e40af",
+		backgroundColor: "#0f5384",
 		padding: 15,
-		borderRadius: 8,
 		width: "23%",
 		alignItems: "center",
 	},
 	metricValue: {
 		fontSize: 24,
-		fontWeight: "bold",
+		fontFamily: "Times-Bold",
 		color: "#ffffff",
 		marginBottom: 5,
 	},
 	metricLabel: {
 		fontSize: 10,
-		color: "#dbeafe",
+		color: "#d8e6ef",
 		textAlign: "center",
 	},
 	chartContainer: {
-		backgroundColor: "#f9fafb",
+		backgroundColor: "#f6f8fb",
 		padding: 20,
-		borderRadius: 8,
 		marginBottom: 20,
 		borderWidth: 1,
-		borderColor: "#e5e7eb",
+		borderColor: "#d8dde4",
 	},
 	chartTitle: {
 		fontSize: 14,
-		fontWeight: "bold",
-		color: "#374151",
+		fontFamily: "Times-Bold",
+		color: "#1b2230",
 		marginBottom: 15,
 		textAlign: "center",
 	},
@@ -152,8 +149,7 @@ const styles = StyleSheet.create({
 		marginBottom: 10,
 	},
 	bar: {
-		backgroundColor: "#3b82f6",
-		borderRadius: 4,
+		backgroundColor: "#078FAB",
 		marginHorizontal: 2,
 		minHeight: 20,
 	},
@@ -161,17 +157,16 @@ const styles = StyleSheet.create({
 		fontSize: 8,
 		textAlign: "center",
 		marginTop: 5,
-		color: "#6b7280",
+		color: "#5f6877",
 	},
 	analysisBox: {
-		backgroundColor: "#fef3c7",
+		backgroundColor: "#fbf1ec",
 		padding: 15,
-		borderRadius: 8,
 		borderWidth: 1,
-		borderColor: "#f59e0b",
+		borderColor: "#e7c9bb",
 	},
 	analysisText: {
-		color: "#92400e",
+		color: "#1b2230",
 		lineHeight: 1.5,
 	},
 	riskList: {
@@ -183,13 +178,13 @@ const styles = StyleSheet.create({
 		alignItems: "flex-start",
 	},
 	riskBullet: {
-		color: "#dc2626",
-		fontWeight: "bold",
+		color: "#b4471c",
+		fontFamily: "Helvetica-Bold",
 		marginRight: 8,
 		marginTop: 2,
 	},
 	riskText: {
-		color: "#374151",
+		color: "#1b2230",
 		flex: 1,
 	},
 	recommendationsList: {
@@ -201,52 +196,24 @@ const styles = StyleSheet.create({
 		alignItems: "flex-start",
 	},
 	recNumber: {
-		color: "#059669",
-		fontWeight: "bold",
+		color: "#15803d",
+		fontFamily: "Helvetica-Bold",
 		marginRight: 8,
 		marginTop: 2,
 	},
 	recText: {
-		color: "#374151",
+		color: "#1b2230",
 		flex: 1,
 	},
 	aiAnalysis: {
-		backgroundColor: "#f3e8ff",
+		backgroundColor: "#eef7fb",
 		padding: 15,
-		borderRadius: 8,
 		borderWidth: 1,
-		borderColor: "#a855f7",
+		borderColor: "#078FAB",
 	},
 	aiText: {
-		color: "#6b21a8",
+		color: "#1b2230",
 		lineHeight: 1.5,
-	},
-	footer: {
-		position: "absolute",
-		bottom: 30,
-		left: 40,
-		right: 40,
-		flexDirection: "row",
-		justifyContent: "space-between",
-		alignItems: "center",
-		paddingTop: 20,
-		borderTopWidth: 1,
-		borderTopColor: "#e5e7eb",
-	},
-	footerLeft: {
-		fontSize: 8,
-		color: "#9ca3af",
-	},
-	footerRight: {
-		fontSize: 8,
-		color: "#9ca3af",
-	},
-	pageNumber: {
-		position: "absolute",
-		bottom: 20,
-		right: 40,
-		fontSize: 8,
-		color: "#9ca3af",
 	},
 });
 
@@ -275,9 +242,9 @@ const BarChart: React.FC<{
 	data: { label: string; value: number; max: number }[];
 }> = ({ data }) => {
 	const colors = [
-		"#3b82f6",
+		"#078FAB",
 		"#10b981",
-		"#f59e0b",
+		"#e7c9bb",
 		"#ef4444",
 		"#8b5cf6",
 		"#06b6d4",
@@ -295,7 +262,6 @@ const BarChart: React.FC<{
 								{
 									height: height,
 									backgroundColor: colors[index % colors.length],
-									borderRadius: 4,
 								},
 							]}
 						/>
@@ -348,14 +314,14 @@ const PieChartRepresentation: React.FC<{
 							style={{
 								fontSize: 9,
 								textAlign: "center",
-								color: "#374151",
+								color: "#1b2230",
 								fontWeight: "bold",
 							}}
 						>
 							{item.label}
 						</Text>
 						<Text
-							style={{ fontSize: 8, textAlign: "center", color: "#6b7280" }}
+							style={{ fontSize: 8, textAlign: "center", color: "#5f6877" }}
 						>
 							{item.value} ({percentage.toFixed(1)}%)
 						</Text>
@@ -393,18 +359,17 @@ const TrendLineChart: React.FC<{
 								style={{
 									width: 8,
 									height: height,
-									backgroundColor: "#3b82f6",
-									borderRadius: 4,
+									backgroundColor: "#078FAB",
 									marginBottom: 5,
 								}}
 							/>
 							<Text
-								style={{ fontSize: 7, textAlign: "center", color: "#6b7280" }}
+								style={{ fontSize: 7, textAlign: "center", color: "#5f6877" }}
 							>
 								{item.month}
 							</Text>
 							<Text
-								style={{ fontSize: 6, textAlign: "center", color: "#9ca3af" }}
+								style={{ fontSize: 6, textAlign: "center", color: "#5f6877" }}
 							>
 								{item.value}
 							</Text>
@@ -473,9 +438,9 @@ export const ReportDocument: React.FC<ReportDocumentProps> = ({ data }) => {
 	];
 
 	const pieChartData = [
-		{ label: "Contracts", value: metrics.contracts, color: "#3b82f6" },
+		{ label: "Contracts", value: metrics.contracts, color: "#078FAB" },
 		{ label: "Users", value: metrics.users, color: "#10b981" },
-		{ label: "Events", value: metrics.events, color: "#f59e0b" },
+		{ label: "Events", value: metrics.events, color: "#e7c9bb" },
 		{ label: "Files", value: metrics.files, color: "#ef4444" },
 	];
 
@@ -598,7 +563,7 @@ export const ReportDocument: React.FC<ReportDocumentProps> = ({ data }) => {
 							<Text style={styles.metricValue}>{metrics.contracts}</Text>
 							<Text style={styles.metricLabel}>Total Contracts</Text>
 						</View>
-						<View style={[styles.metricCard, { backgroundColor: "#059669" }]}>
+						<View style={[styles.metricCard, { backgroundColor: "#15803d" }]}>
 							<Text style={styles.metricValue}>{metrics.users}</Text>
 							<Text style={styles.metricLabel}>Active Users</Text>
 						</View>
@@ -606,7 +571,7 @@ export const ReportDocument: React.FC<ReportDocumentProps> = ({ data }) => {
 							<Text style={styles.metricValue}>{metrics.events}</Text>
 							<Text style={styles.metricLabel}>Scheduled Events</Text>
 						</View>
-						<View style={[styles.metricCard, { backgroundColor: "#dc2626" }]}>
+						<View style={[styles.metricCard, { backgroundColor: "#b4471c" }]}>
 							<Text style={styles.metricValue}>{metrics.files}</Text>
 							<Text style={styles.metricLabel}>Stored Files</Text>
 						</View>
@@ -753,22 +718,10 @@ export const ReportDocument: React.FC<ReportDocumentProps> = ({ data }) => {
 				</View>
 
 				{/* Footer */}
-				<View style={styles.footer}>
-					<Text style={styles.footerLeft}>
-						© {new Date().getFullYear()} CAALM Solutions. All rights reserved.
-					</Text>
-					<Text style={styles.footerRight}>
-						Contract, Audit & License Management System
-					</Text>
-				</View>
-
-				{/* Page Number */}
-				<Text
-					style={styles.pageNumber}
-					render={({ pageNumber, totalPages }) =>
-						`Page ${pageNumber} of ${totalPages}`
-					}
-					fixed
+				<PacketFooter
+					org="CAALM Solutions"
+					title="Department report"
+					pageHeight={842}
 				/>
 			</Page>
 		</Document>

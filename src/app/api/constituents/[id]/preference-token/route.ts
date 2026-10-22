@@ -21,7 +21,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
 	const { id } = await context.params;
 	const constituent = await getConstituentById(id);
 	if (!constituent || constituent.orgId !== ctx.orgId) {
-		return NextResponse.json({ error: "Constituent not found" }, { status: 404 });
+		return NextResponse.json(
+			{ error: "Constituent not found" },
+			{ status: 404 },
+		);
 	}
 
 	const token = createPreferenceToken(ctx.orgId, id);

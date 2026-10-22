@@ -24,8 +24,7 @@ export function actorIsSuperAdmin(
 ): boolean {
 	if (!actor) return false;
 	return users.some(
-		(user) =>
-			isSuperAdminProfile(user) && isSameUserIdentity(actor, user),
+		(user) => isSuperAdminProfile(user) && isSameUserIdentity(actor, user),
 	);
 }
 

@@ -68,10 +68,7 @@ async function buildOrgDepartmentPerformance(complianceTarget: number) {
 		tablesDB.listRows({
 			databaseId: appwriteConfig.databaseId,
 			tableId: appwriteConfig.contractsCollectionId,
-			queries: [
-				Query.limit(1000),
-				Query.select(["department", "compliance"]),
-			],
+			queries: [Query.limit(1000), Query.select(["department", "compliance"])],
 		}),
 		tablesDB.listRows({
 			databaseId: appwriteConfig.databaseId,

@@ -43,7 +43,10 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 		return NextResponse.json({ contractId, fundId: saved });
 	} catch (error) {
 		if (error instanceof GrantFundValidationError) {
-			return NextResponse.json({ error: error.message }, { status: error.status });
+			return NextResponse.json(
+				{ error: error.message },
+				{ status: error.status },
+			);
 		}
 		console.error("[funding/contracts/fund PATCH]", error);
 		return NextResponse.json(

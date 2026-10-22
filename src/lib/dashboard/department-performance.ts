@@ -52,7 +52,10 @@ export function resolvePerformanceStatus(
 }
 
 function asRecord(
-	raw: DepartmentPerformanceContractRow | DepartmentPerformanceUserRow | Record<string, unknown>,
+	raw:
+		| DepartmentPerformanceContractRow
+		| DepartmentPerformanceUserRow
+		| Record<string, unknown>,
 ): Record<string, unknown> {
 	const rec = raw as Record<string, unknown>;
 	if (rec.data && typeof rec.data === "object") {
@@ -85,9 +88,7 @@ export function computePerformanceTrend(
  * Pure metrics from Appwrite contract/user rows (same fields analytics uses).
  */
 export function computeDepartmentPerformance(input: {
-	contracts: Array<
-		DepartmentPerformanceContractRow | Record<string, unknown>
-	>;
+	contracts: Array<DepartmentPerformanceContractRow | Record<string, unknown>>;
 	users: Array<DepartmentPerformanceUserRow | Record<string, unknown>>;
 	activityThisWeek?: number;
 	activityLastWeek?: number;

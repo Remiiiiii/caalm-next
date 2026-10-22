@@ -26,7 +26,10 @@ export async function POST(request: NextRequest) {
 		const method = body.method;
 		const frequency = body.frequency;
 		if (!Number.isFinite(amount) || amount <= 0) {
-			return NextResponse.json({ error: "Amount must be positive" }, { status: 400 });
+			return NextResponse.json(
+				{ error: "Amount must be positive" },
+				{ status: 400 },
+			);
 		}
 		if (!constituentId || !nextDueDate) {
 			return NextResponse.json(
@@ -35,7 +38,10 @@ export async function POST(request: NextRequest) {
 			);
 		}
 		if (!isGiftMethod(method)) {
-			return NextResponse.json({ error: "Invalid payment method" }, { status: 400 });
+			return NextResponse.json(
+				{ error: "Invalid payment method" },
+				{ status: 400 },
+			);
 		}
 		if (!isFrequency(frequency)) {
 			return NextResponse.json({ error: "Invalid frequency" }, { status: 400 });
@@ -50,7 +56,9 @@ export async function POST(request: NextRequest) {
 			frequency,
 			nextDueDate,
 			campaignId: body.campaignId ? String(body.campaignId) : undefined,
-			designationId: body.designationId ? String(body.designationId) : undefined,
+			designationId: body.designationId
+				? String(body.designationId)
+				: undefined,
 		});
 		return NextResponse.json(schedule, { status: 201 });
 	} catch (error) {

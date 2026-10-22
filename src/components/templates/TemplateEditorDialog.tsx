@@ -1,10 +1,10 @@
 "use client";
 
-import { FileStack } from "lucide-react";
+import { FileStack, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 import { clauseCategoryLabel } from "@/components/clauses/ClauseEditorDialog";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { AppDialog } from "@/components/ui/app-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -69,22 +69,47 @@ export function TemplateEditorDialog({
 	);
 
 	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="max-w-[640px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl">
-				<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-				<div className="sticky top-0 z-10 mt-4 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-indigo-50 py-4">
-					<div className="flex items-center gap-3 px-6">
-						<FileStack className="h-5 w-5 text-[#0f5384]" />
-						<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-							{template ? "Edit template" : "New template"}
-						</DialogTitle>
-					</div>
-					<p className="ml-14 mt-1 text-sm text-slate-600">
-						A template is a recipe of published clauses. Using it always creates
-						a new contract.
-					</p>
-				</div>
-				<div className="flex-1 space-y-4 overflow-y-auto bg-slate-50 p-6">
+		<AppDialog
+			open={open}
+			onOpenChange={onOpenChange}
+			size="form"
+			className="max-h-[90vh] max-w-[640px]"
+			pending={saving}
+			icon={<FileStack className="h-5 w-5" aria-hidden />}
+			title={template ? "Edit template" : "New template"}
+			description="A template is a recipe of published clauses. Using it always creates a new contract."
+			footer={
+				<>
+					<Button
+						type="button"
+						variant="outline"
+						className="rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+						disabled={saving}
+						onClick={() => onOpenChange(false)}
+					>
+						Cancel
+					</Button>
+					<Button
+						type="button"
+						className="btn-primary px-3 sm:px-4"
+						disabled={saving}
+						onClick={() =>
+							void onSave({
+								name,
+								description,
+								contractType,
+								status,
+								clauseSlots: slots,
+							})
+						}
+					>
+						<Save className="h-4 w-4" />
+						Save
+					</Button>
+				</>
+			}
+		>
+			<div className="space-y-4 pb-1">
 					<div>
 						<Label className="text-slate-700">Name</Label>
 						<Input
@@ -207,26 +232,7 @@ export function TemplateEditorDialog({
 							</Button>
 						</div>
 					</div>
-				</div>
-				<div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
-					<Button
-						type="button"
-						className="primary-btn cursor-pointer px-3 sm:px-4"
-						disabled={saving}
-						onClick={() =>
-							void onSave({
-								name,
-								description,
-								contractType,
-								status,
-								clauseSlots: slots,
-							})
-						}
-					>
-						Save
-					</Button>
-				</div>
-			</DialogContent>
-		</Dialog>
+			</div>
+		</AppDialog>
 	);
 }

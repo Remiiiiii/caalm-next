@@ -76,9 +76,7 @@ export function buildMailtoGiveShareUrl(input: {
 		buildGiveShareEmailBody(input.orgName, input.shareUrl),
 	);
 	const to = (input.to || "").trim();
-	const path = to
-		? `mailto:${encodeURIComponent(to)}`
-		: "mailto:";
+	const path = to ? `mailto:${encodeURIComponent(to)}` : "mailto:";
 	// mailto with empty to still works; some clients prefer mailto:?subject=
 	if (!to) {
 		return `mailto:?subject=${subject}&body=${body}`;
