@@ -65,9 +65,10 @@ export function ReadinessScoreCard({
 				</div>
 
 				<div className="flex flex-wrap items-center gap-5">
-					<ReadinessGauge score={score} rag={rag} thresholds={thresholds} />
-					<div className="flex min-w-0 flex-1 basis-56 flex-col gap-2">
-						<div className="flex flex-wrap items-center gap-2">
+					<div className="flex justify-between border-b pb-6  border-slate-200 items-center gap-2">
+						<ReadinessGauge score={score} rag={rag} thresholds={thresholds} />
+
+						<div className="flex flex-wrap justify-between items-center gap-2">
 							{rag ? (
 								<span
 									className={cn(
@@ -93,40 +94,44 @@ export function ReadinessScoreCard({
 								</span>
 							)}
 							<span className="caption text-slate-600">{compare}</span>
-						</div>
-						{domains.map((domain) => {
-							const scored = isReadinessDomainScored(domain, sourcesUsed);
-							const domainRag =
-								scored && (domain.ragStatus as Rag) in RAG_BG
-									? (domain.ragStatus as Rag)
-									: null;
-							return (
-								<button
-									type="button"
-									key={domain.label}
-									onClick={() => onDomainClick?.(domain)}
-									className="flex cursor-pointer items-center justify-between gap-3 border-t border-slate-200 py-2 text-left text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#078FAB]"
-								>
-									<span className="inline-flex items-center gap-1.5 text-slate-600">
-										<span
-											className={cn(
-												"h-1.5 w-1.5 rounded-full",
-												domainRag ? RAG_BG[domainRag] : "bg-slate-300",
+							<div className="flex min-w-0 flex-1 basis-56 flex-col gap-2">
+								{domains.map((domain) => {
+									const scored = isReadinessDomainScored(domain, sourcesUsed);
+									const domainRag =
+										scored && (domain.ragStatus as Rag) in RAG_BG
+											? (domain.ragStatus as Rag)
+											: null;
+									return (
+										<button
+											type="button"
+											key={domain.label}
+											onClick={() => onDomainClick?.(domain)}
+											className="flex cursor-pointer items-center justify-between gap-3 border-t border-slate-200 py-2 text-left text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#078FAB]"
+										>
+											<span className="inline-flex items-center gap-1.5 text-slate-600">
+												<span
+													className={cn(
+														"h-1.5 w-1.5 rounded-full",
+														domainRag ? RAG_BG[domainRag] : "bg-slate-300",
+													)}
+													aria-hidden
+												/>
+												{domain.label}
+											</span>
+											{scored ? (
+												<span className="font-semibold tabular-nums text-slate-700">
+													{formatReadinessPercent(domain.readinessPercent)}
+												</span>
+											) : (
+												<span className={cn(PILL, NEUTRAL_PILL)}>
+													Not scored
+												</span>
 											)}
-											aria-hidden
-										/>
-										{domain.label}
-									</span>
-									{scored ? (
-										<span className="font-semibold tabular-nums text-slate-700">
-											{formatReadinessPercent(domain.readinessPercent)}
-										</span>
-									) : (
-										<span className={cn(PILL, NEUTRAL_PILL)}>Not scored</span>
-									)}
-								</button>
-							);
-						})}
+										</button>
+									);
+								})}
+							</div>
+						</div>
 					</div>
 				</div>
 

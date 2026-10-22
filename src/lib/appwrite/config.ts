@@ -399,6 +399,18 @@ export const appwriteConfig = {
 		"test-ticket-sequences",
 	),
 
+	/** "Unable to load" incidents — one row per distinct failure (name: ui_load_incidents). */
+	uiLoadIncidentsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_UI_LOAD_INCIDENTS_COLLECTION",
+		"test-ui-load-incidents",
+	),
+
+	/** One row per occurrence of a load incident (name: ui_load_incident_events). */
+	uiLoadIncidentEventsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_UI_LOAD_INCIDENT_EVENTS_COLLECTION",
+		"test-ui-load-incident-events",
+	),
+
 	webhookDeliveriesCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_WEBHOOK_DELIVERIES_COLLECTION",
 		"test-webhook-deliveries",

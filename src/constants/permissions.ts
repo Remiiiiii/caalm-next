@@ -94,6 +94,7 @@ export const PERMISSIONS = {
 		VIEW_SECURITY: "it.view_security",
 		MANAGE_DATABASE: "it.manage_database",
 		VIEW_INCIDENTS: "it.view_incidents",
+		MANAGE_INCIDENTS: "it.manage_incidents",
 		VIEW_RUNBOOKS: "it.view_runbooks",
 		MANAGE_RUNBOOKS: "it.manage_runbooks",
 		VIEW_ROADMAP: "it.view_roadmap",
@@ -593,6 +594,12 @@ export const PERMISSION_DEFINITIONS = [
 		name: "View Incidents",
 		category: "it",
 		description: "View incident management",
+	},
+	{
+		key: PERMISSIONS.IT.MANAGE_INCIDENTS,
+		name: "Manage Incidents",
+		category: "it",
+		description: "Acknowledge, assign, and resolve load-error incidents",
 	},
 	{
 		key: PERMISSIONS.IT.VIEW_RUNBOOKS,

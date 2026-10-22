@@ -1,14 +1,12 @@
 "use client";
 
 import {
-	AlertCircle,
 	AlertTriangle,
 	Camera,
 	Download,
 	FileText,
 	Info,
 	Loader2,
-	RefreshCw,
 	Save,
 	ShieldAlert,
 } from "lucide-react";
@@ -42,9 +40,9 @@ import type {
 	ReadinessInsight,
 	ReadinessResponse,
 } from "@/components/audits/readiness/types";
+import { LoadError } from "@/components/LoadError";
 import { AnimatedBar } from "@/components/ui/animated-bar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { MetricStatCard } from "@/components/ui/metric-stat-card";
 import {
@@ -321,21 +319,18 @@ export default function AuditReadinessPage() {
 	if (error && !payload) {
 		return (
 			<div className="w-full px-4 pb-10 sm:px-6 lg:px-8 xl:px-12">
-				<Card className="glass-card">
-					<div className="glass-card-cap" />
-					<CardContent className="flex flex-col items-center gap-3 p-6 text-center text-slate-700">
-						<AlertCircle className="h-8 w-8 text-red" aria-hidden />
-						<p>Unable to load audit readiness.</p>
-						<Button
-							type="button"
-							className="btn-primary px-3 sm:px-4"
-							onClick={() => mutate()}
-						>
-							<RefreshCw className="h-4 w-4" />
-							Retry
-						</Button>
-					</CardContent>
-				</Card>
+				<LoadError
+					scale="page"
+					title="We couldn't load Audit Readiness"
+					description="Something went wrong on our side. Your data hasn't changed."
+					elementKey="page"
+					error={{
+						status:
+							typeof error?.status === "number" ? error.status : undefined,
+						requestPath: "/api/audits/readiness",
+					}}
+					onRetry={() => mutate()}
+				/>
 			</div>
 		);
 	}
