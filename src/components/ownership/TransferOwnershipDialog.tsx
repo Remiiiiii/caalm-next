@@ -2,8 +2,8 @@
 
 import { ArrowRightLeft } from "lucide-react";
 import { useEffect, useState } from "react";
+import { AppDialog } from "@/components/ui/app-dialog";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
 	Select,
 	SelectContent,
@@ -102,56 +102,55 @@ export function TransferOwnershipDialog({
 	};
 
 	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="flex max-h-[90vh] max-w-[600px] flex-col overflow-hidden border border-slate-200 p-0 shadow-xl">
-				<div className="absolute top-0 right-0 left-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
-				<div className="sticky top-0 z-10 mt-4 border-b border-slate-200 bg-linear-to-r from-blue-50 to-indigo-50 py-4">
-					<div className="flex items-center gap-3 px-6">
-						<div className="flex items-center gap-3">
-							<ArrowRightLeft className="h-5 w-5 text-[#0f5384]" />
-							<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-								Transfer {itemKind}
-							</DialogTitle>
-						</div>
-					</div>
-					<p className="mt-1 ml-14 text-sm text-slate-600">
-						Pass ownership of {itemName} to another person in your org.
-						Approvals and negotiation stay active under the new owner.
-					</p>
-				</div>
-				<div className="flex-1 overflow-y-auto bg-slate-50 p-6">
-					<label className="block text-sm font-medium text-slate-700">
-						New owner
-						<Select value={toUserId} onValueChange={setToUserId}>
-							<SelectTrigger className="mt-1 h-10 border-[0.25px] border-slate-300 bg-white">
-								<SelectValue
-									placeholder={
-										loadingUsers ? "Loading people…" : "Select a user"
-									}
-								/>
-							</SelectTrigger>
-							<SelectContent>
-								{users.map((user) => (
-									<SelectItem key={user.$id} value={user.$id}>
-										{user.fullName} · {user.email}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-					</label>
-				</div>
-				<div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
+		<AppDialog
+			open={open}
+			onOpenChange={onOpenChange}
+			size="form"
+			className="max-h-[90vh]"
+			pending={busy}
+			icon={<ArrowRightLeft className="h-5 w-5" />}
+			title={`Transfer ${itemKind}`}
+			description={`Pass ownership of ${itemName} to another person in your org. Approvals and negotiation stay active under the new owner.`}
+			footer={
+				<>
 					<Button
 						type="button"
-						className="primary-btn px-3 sm:px-4"
+						variant="outline"
+						className="rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+						disabled={busy}
+						onClick={() => onOpenChange(false)}
+					>
+						Cancel
+					</Button>
+					<Button
+						type="button"
+						className="btn-primary px-3 sm:px-4"
 						disabled={busy || !toUserId}
 						onClick={() => void handleTransfer()}
 					>
 						<ArrowRightLeft className="h-4 w-4" />
 						Transfer ownership
 					</Button>
-				</div>
-			</DialogContent>
-		</Dialog>
+				</>
+			}
+		>
+			<label className="block pb-1 text-sm font-medium text-slate-700">
+				New owner
+				<Select value={toUserId} onValueChange={setToUserId}>
+					<SelectTrigger className="mt-1 h-10 border-[0.25px] border-slate-300 bg-white">
+						<SelectValue
+							placeholder={loadingUsers ? "Loading people…" : "Select a user"}
+						/>
+					</SelectTrigger>
+					<SelectContent>
+						{users.map((user) => (
+							<SelectItem key={user.$id} value={user.$id}>
+								{user.fullName} · {user.email}
+							</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
+			</label>
+		</AppDialog>
 	);
 }

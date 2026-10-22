@@ -9,10 +9,8 @@ import {
 	ShieldCheck,
 } from "lucide-react";
 import { useState } from "react";
-import {
-	AlertDialog,
-	AlertDialogContent,
-} from "@/components/ui/alert-dialog";
+import { AppDialog } from "@/components/ui/app-dialog";
+import { Button } from "@/components/ui/button";
 import {
 	InputOTP,
 	InputOTPGroup,
@@ -120,31 +118,49 @@ const TwoFactorVerificationModal = ({
 	const canSubmit = recoveryMode ? recoveryCode.length >= 6 : otp.length === 6;
 
 	return (
-		<AlertDialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
-			<AlertDialogContent className="shad-alert-dialog max-h-none!">
-				{/* Icon */}
-				<div className="flex justify-center">
-					<div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#078FAB]/10 ring-2 ring-[#078FAB]/20">
-						<ShieldCheck className="h-6 w-6 text-[#0f5384]" />
-					</div>
-				</div>
-
-				{/* Title hierarchy */}
-				<div className="text-center space-y-1">
-					<h2 className="text-2xl font-bold text-slate-900">
-						Two-factor authentication
-					</h2>
-					<p className="text-sm text-slate-500">
-						{recoveryMode
-							? "Enter one of your recovery codes"
-							: "Enter the 6-digit code from your authenticator app"}
-					</p>
-					{email && (
-						<p className="text-sm font-semibold text-slate-700">
-							{maskEmail(email)}
-						</p>
-					)}
-				</div>
+		<AppDialog
+			open={isOpen}
+			onOpenChange={(open) => {
+				if (!open) handleClose();
+			}}
+			size="form"
+			pending={isLoading || isLockedOut}
+			icon={<ShieldCheck className="h-5 w-5" />}
+			title="Two-factor authentication"
+			description={
+				recoveryMode
+					? `Enter one of your recovery codes${email ? ` for ${maskEmail(email)}` : ""}.`
+					: `Enter the 6-digit code from your authenticator app${email ? ` for ${maskEmail(email)}` : ""}.`
+			}
+			footer={
+				<>
+					<Button
+						type="button"
+						variant="outline"
+						className="rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+						disabled={isLoading}
+						onClick={handleClose}
+					>
+						<ArrowLeft className="h-4 w-4" />
+						Back to sign in
+					</Button>
+					<Button
+						type="button"
+						className="btn-primary"
+						disabled={!canSubmit || isLoading || isLockedOut}
+						onClick={() => void handleVerify()}
+					>
+						{isLoading ? (
+							<RefreshCw className="h-4 w-4 animate-spin" />
+						) : (
+							<ShieldCheck className="h-4 w-4" />
+						)}
+						{isLoading ? "Verifying…" : "Verify and continue"}
+					</Button>
+				</>
+			}
+		>
+			<div className="flex flex-col gap-3 pb-1">
 
 				{/* Status slot */}
 				<div className="min-h-11">
@@ -174,7 +190,7 @@ const TwoFactorVerificationModal = ({
 							if (error) setError("");
 						}}
 						placeholder="Enter recovery code"
-						className="w-full rounded-xl border-2 border-slate-300 px-4 py-3 text-center text-sm font-mono tracking-widest text-slate-900 focus:border-[#078FAB] focus:outline-none"
+						className="w-full rounded-xl border-2 border-slate-300 px-4 py-3 text-center font-mono text-sm tracking-widest text-slate-700 focus:border-[#078FAB] focus:outline-none"
 					/>
 				) : (
 					<div className="flex justify-center">
@@ -203,71 +219,40 @@ const TwoFactorVerificationModal = ({
 					</div>
 				)}
 
-				{/* Primary action */}
-				<button
-					type="button"
-					onClick={() => void handleVerify()}
-					disabled={!canSubmit || isLoading || isLockedOut}
-					className="btn-primary h-11 disabled:opacity-50"
-				>
-					{isLoading ? (
-						<>
-							<RefreshCw className="h-4 w-4 animate-spin" />
-							Verifying...
-						</>
+				<p className="text-sm text-slate-500">
+					{recoveryMode ? (
+						<button
+							type="button"
+							onClick={() => {
+								setRecoveryMode(false);
+								setRecoveryCode("");
+								setError("");
+							}}
+							className="inline-flex items-center gap-1 text-[#078FAB] hover:underline"
+						>
+							<ShieldCheck className="h-3.5 w-3.5" />
+							Use authenticator code instead
+						</button>
 					) : (
-						<>
-							<ShieldCheck className="h-4 w-4" />
-							Verify and continue
-						</>
-					)}
-				</button>
-
-				{/* Footer */}
-				<div className="flex flex-col items-center gap-2 text-sm text-slate-500">
-					<span>
-						{recoveryMode ? (
+						<span>
+							Lost access to your app?{" "}
 							<button
 								type="button"
 								onClick={() => {
-									setRecoveryMode(false);
-									setRecoveryCode("");
+									setRecoveryMode(true);
+									setOtp("");
 									setError("");
 								}}
-								className="flex items-center gap-1 text-[#078FAB] hover:underline"
+								className="font-medium text-[#078FAB] hover:underline"
 							>
-								<ShieldCheck className="h-3.5 w-3.5" />
-								Use authenticator code instead
+								<Key className="mr-0.5 -mt-0.5 inline h-3 w-3" />
+								Use a recovery code
 							</button>
-						) : (
-							<span>
-								Lost access to your app?{" "}
-								<button
-									type="button"
-									onClick={() => {
-										setRecoveryMode(true);
-										setOtp("");
-										setError("");
-									}}
-									className="font-medium text-[#078FAB] hover:underline"
-								>
-									<Key className="inline h-3 w-3 mr-0.5 -mt-0.5" />
-									Use a recovery code
-								</button>
-							</span>
-						)}
-					</span>
-					<button
-						type="button"
-						onClick={handleClose}
-						className="flex items-center gap-1 text-[#078FAB] hover:underline"
-					>
-						<ArrowLeft className="h-3.5 w-3.5" />
-						Back to sign in
-					</button>
-				</div>
-			</AlertDialogContent>
-		</AlertDialog>
+						</span>
+					)}
+				</p>
+			</div>
+		</AppDialog>
 	);
 };
 

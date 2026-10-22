@@ -1,6 +1,5 @@
 "use client";
 
-import * as VisuallyHiddenPrimitive from "@radix-ui/react-visually-hidden";
 import { format } from "date-fns";
 import {
 	AlertCircle,
@@ -31,7 +30,7 @@ import type {
 } from "@/components/calendar/outlookStyleCalendarTypes";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { AppDialog } from "@/components/ui/app-dialog";
 import {
 	type CalendarPermissionMap,
 	SENSITIVITY_LABELS,
@@ -92,51 +91,64 @@ export function EventReviewDialog({
 	);
 	const eventId = selectedEvent?.$id || selectedEvent?.id || "";
 
-	return (
-		<Dialog open={isOpen} onOpenChange={onOpenChange}>
-			<DialogContent className="max-w-[650px] p-0 max-h-[90vh] flex flex-col overflow-hidden">
-				<VisuallyHiddenPrimitive.Root>
-					<DialogTitle>{selectedEvent?.title || "Event Details"}</DialogTitle>
-				</VisuallyHiddenPrimitive.Root>
-				<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-				{/* Professional Header */}
-				<div className="glass-dialog-wizard-header">
-					<div className="flex items-center justify-between">
-						<div className="flex items-center gap-3">
-							<div>
-								{selectedEvent?.type === "contract review" ? (
-									<FileSliders className="w-5 h-5 text-[#0f5384]" />
-								) : selectedEvent &&
-									getEventTypeConfig(selectedEvent.type).icon ? (
-									React.createElement(
-										getEventTypeConfig(selectedEvent.type).icon,
-										{
-											className: "w-5 h-5 text-white",
-										},
-									)
-								) : (
-									<CalendarIcon className="w-5 h-5 text-white" />
-								)}
-							</div>
-							<div>
-								<div className="flex items-center mt-4 gap-2">
-									<FileSliders className="w-6 h-6 text-[#0f5384]" />
-									<h2 className="text-xl font-semibold sidebar-gradient-text">
-										{selectedEvent?.title || "Event Details"}
-									</h2>
-								</div>
-								<p className="text-sm text-slate-600 mt-1 ml-8">
-									Event Details & Management
-								</p>
-							</div>
-						</div>
-					</div>
-				</div>
+	const headerIcon =
+		selectedEvent?.type === "contract review" ? (
+			<FileSliders className="h-5 w-5" />
+		) : selectedEvent && getEventTypeConfig(selectedEvent.type).icon ? (
+			React.createElement(getEventTypeConfig(selectedEvent.type).icon, {
+				className: "h-5 w-5",
+			})
+		) : (
+			<CalendarIcon className="h-5 w-5" />
+		);
 
-				{selectedEvent && (
+	const showEventActions =
+		selectedEvent &&
+		!isHolidayEvent &&
+		canCreateEvent &&
+		(selectedEventPermissions?.updateEvent ||
+			selectedEventPermissions?.cancelEvent);
+
+	return (
+		<AppDialog
+			open={isOpen}
+			onOpenChange={onOpenChange}
+			size="form"
+			className="max-w-[650px] max-h-[90vh]"
+			icon={headerIcon}
+			title={selectedEvent?.title || "Event Details"}
+			description="Event Details & Management"
+			footer={
+				showEventActions ? (
 					<>
-						{canManageEventRegistrations && !isHolidayEvent && eventId ? (
-							<div className="px-6 pt-4 flex gap-2 border-b border-slate-200 bg-slate-50">
+						{selectedEventPermissions?.updateEvent ? (
+							<Button
+								type="button"
+								className="btn-primary"
+								onClick={onEditEvent}
+							>
+								<Pencil className="h-4 w-4" />
+								Edit Event
+							</Button>
+						) : null}
+						{selectedEventPermissions?.cancelEvent ? (
+							<Button
+								type="button"
+								className="delete-btn"
+								onClick={onDeleteEvent}
+							>
+								<Trash2 className="h-4 w-4" />
+								Delete
+							</Button>
+						) : null}
+					</>
+				) : undefined
+			}
+		>
+			{selectedEvent && (
+				<>
+					{canManageEventRegistrations && !isHolidayEvent && eventId ? (
+						<div className="-mx-6 mb-4 flex gap-2 border-b border-slate-200 bg-slate-50 px-6 pt-2">
 								<button
 									type="button"
 									className={cn(
@@ -163,15 +175,15 @@ export function EventReviewDialog({
 								</button>
 							</div>
 						) : null}
-						<div className="flex-1 overflow-y-auto">
+						<div>
 							{detailTab === "registrations" &&
 							canManageEventRegistrations &&
 							eventId ? (
-								<div className="p-6 bg-slate-50">
+								<div className="bg-slate-50 py-2">
 									<EventRegistrationsPanel eventId={eventId} />
 								</div>
 							) : (
-								<div className="p-6 space-y-6">
+								<div className="space-y-6 pb-1">
 									{/* Event Details Section */}
 									<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
 										<div className="flex items-center gap-2 text-sm font-semibold mb-4 text-slate-700">
@@ -768,49 +780,13 @@ export function EventReviewDialog({
 									</div>
 								</div>
 							)}
-						</div>
-
-						{/* Static Footer */}
-						<div className="sticky bottom-0 z-10 border-t border-white/40 bg-white/35 px-6 py-4 backdrop-blur-sm">
-							<div className="flex items-center justify-between">
-								<div className="text-sm text-slate-500">
-									Event created{" "}
-									{selectedEvent &&
-										format(new Date(selectedEvent.startDate), "MMM d, yyyy")}
-								</div>
-								{/* Edit/Delete only when user can create events (and role allows update/cancel) */}
-								{!isHolidayEvent &&
-									canCreateEvent &&
-									(selectedEventPermissions?.updateEvent ||
-										selectedEventPermissions?.cancelEvent) && (
-										<div className="flex items-center gap-3">
-											{selectedEventPermissions?.updateEvent ? (
-												<Button
-													variant="outline"
-													onClick={onEditEvent}
-													className="primary-btn px-3 sm:px-4"
-												>
-													<Pencil className="w-4 h-4 " />
-													Edit Event
-												</Button>
-											) : null}
-											{selectedEventPermissions?.cancelEvent ? (
-												<Button
-													variant="outline"
-													onClick={onDeleteEvent}
-													className="primary-btn px-3 sm:px-4 text-red-600 hover:text-red-700 hover:bg-red-50"
-												>
-													<Trash2 className="w-4 h-4" />
-													Delete
-												</Button>
-											) : null}
-										</div>
-									)}
-							</div>
+							<p className="mt-4 text-sm text-slate-500">
+								Event created{" "}
+								{format(new Date(selectedEvent.startDate), "MMM d, yyyy")}
+							</p>
 						</div>
 					</>
 				)}
-			</DialogContent>
-		</Dialog>
+		</AppDialog>
 	);
 }

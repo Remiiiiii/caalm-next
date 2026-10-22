@@ -25,7 +25,8 @@ import type React from "react";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { AppDialog } from "@/components/ui/app-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -477,37 +478,81 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({
 
 	return (
 		<>
-			<Dialog
+			<AppDialog
 				open={open}
 				onOpenChange={(isOpen) => {
 					if (!isOpen && !showConfirmDialog) {
 						handleClose();
 					}
 				}}
-			>
-				<DialogContent className="flex max-h-[90vh] w-[calc(100%-1.5rem)] sm:w-full max-w-7xl max-sm:inset-2 max-sm:left-2 max-sm:top-2 max-sm:translate-x-0 max-sm:translate-y-0 max-sm:h-[calc(100vh-1rem)] flex-col overflow-hidden p-0 shadow-xl">
-					{/* Professional Cap */}
-					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-
-					{/* Header with gradient background */}
-					<div className="glass-dialog-wizard-header mt-4">
-						<div className="flex items-center gap-3 px-6">
-							<div className="flex items-center gap-3">
-								<FileText className="w-5 h-5 text-[#0f5384]" />
-								<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-									{articleId ? "Edit Article" : "Create New Article"}
-								</DialogTitle>
-							</div>
+				size="form"
+				className="max-h-[90vh] w-[calc(100%-1.5rem)] max-w-7xl max-sm:inset-2 max-sm:left-2 max-sm:top-2 max-sm:h-[calc(100vh-1rem)] max-sm:translate-x-0 max-sm:translate-y-0 sm:w-full"
+				pending={loading}
+				icon={<FileText className="h-5 w-5" aria-hidden />}
+				title={articleId ? "Edit Article" : "Create New Article"}
+				description={
+					articleId
+						? "Update article content, metadata, and settings"
+						: "Create a new news article for the company feed"
+				}
+				footer={
+					<div className="flex w-full items-center justify-between gap-3">
+						<div className="text-xs text-slate-500">
+							{isSaving && "Saving..."}
+							{lastSaved &&
+								!isSaving &&
+								`Last saved ${lastSaved.toLocaleTimeString()}`}
 						</div>
-						<p className="text-sm text-slate-600 mt-1 ml-14">
-							{articleId
-								? "Update article content, metadata, and settings"
-								: "Create a new news article for the company feed"}
-						</p>
+						<div className="flex items-center gap-2.5">
+							<Button
+								type="button"
+								variant="outline"
+								className="rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+								disabled={loading}
+								onClick={() => handleClose()}
+							>
+								Cancel
+							</Button>
+							<Button
+								onClick={() => handleSave(false)}
+								disabled={loading}
+								variant="outline"
+								className="btn-primary px-3 sm:px-4"
+							>
+								{loading ? (
+									<>
+										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+										Saving...
+									</>
+								) : (
+									<>
+										<Save className="h-4 w-4" />
+										Save Draft
+									</>
+								)}
+							</Button>
+							<Button
+								onClick={() => handleSave(true)}
+								disabled={loading}
+								className="btn-primary px-3 sm:px-4"
+							>
+								{loading ? (
+									<>
+										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+										Publishing...
+									</>
+								) : (
+									<>
+										<BookOpenCheck className="h-4 w-4" />
+										Publish
+									</>
+								)}
+							</Button>
+						</div>
 					</div>
-
-					{/* Scrollable Content */}
-					<div className="flex-1 overflow-y-auto p-6 bg-slate-50">
+				}
+			>
+				<div className="pb-1">
 						<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 							{/* Left Column - Editor */}
 							<div className="lg:col-span-2 space-y-4">
@@ -860,101 +905,24 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({
 								</div>
 							</div>
 						</div>
-					</div>
+				</div>
+			</AppDialog>
 
-					{/* Professional Footer */}
-					<div className="glass-dialog-alert-footer">
-						<div className="text-xs text-slate-500">
-							{isSaving && "Saving..."}
-							{lastSaved &&
-								!isSaving &&
-								`Last saved ${lastSaved.toLocaleTimeString()}`}
-						</div>
-						<div className="flex items-center gap-3">
-							<Button
-								onClick={() => handleSave(false)}
-								disabled={loading}
-								variant="outline"
-								className="primary-btn px-3 sm:px-4"
-							>
-								{loading ? (
-									<>
-										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-										Saving...
-									</>
-								) : (
-									<>
-										<Save className="h-4 w-4" />
-										Save Draft
-									</>
-								)}
-							</Button>
-							<Button
-								onClick={() => handleSave(true)}
-								disabled={loading}
-								className="primary-btn px-3 sm:px-4"
-							>
-								{loading ? (
-									<>
-										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-										Publishing...
-									</>
-								) : (
-									<>
-										<BookOpenCheck className="h-4 w-4" />
-										Publish
-									</>
-								)}
-							</Button>
-						</div>
-					</div>
-				</DialogContent>
-			</Dialog>
-
-			{/* Confirmation Dialog for Unsaved Changes */}
-			<Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-				<DialogContent className="flex max-h-[90vh] max-w-md flex-col overflow-hidden p-0 shadow-xl">
-					{/* Professional Cap */}
-					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-
-					{/* Header with gradient background */}
-					<div className="glass-dialog-wizard-header mt-4">
-						<div className="flex items-center gap-3 px-6">
-							<div className="flex items-center gap-3">
-								<AlertTriangle className="w-5 h-5 text-[#0f5384]" />
-								<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-									Unsaved Changes
-								</DialogTitle>
-							</div>
-						</div>
-						<p className="text-sm text-slate-600 mt-1 ml-14">
-							You have unsaved changes that will be lost if you continue
-						</p>
-					</div>
-
-					{/* Scrollable Content */}
-					<div className="flex-1 overflow-y-auto p-6 bg-slate-50">
-						<p className="text-sm text-slate-600">
-							Are you sure you want to close? All unsaved changes will be lost.
-						</p>
-					</div>
-
-					{/* Professional Footer */}
-					<div className="glass-dialog-alert-footer">
-						<div className="text-xs text-slate-500"></div>
-						<div className="flex items-center justify-end gap-3">
-							<Button
-								onClick={handleConfirmClose}
-								variant="destructive"
-								className="primary-btn px-3 sm:px-4"
-							>
-								<Trash2 className="h-4 w-4" />
-								Discard Changes
-							</Button>
-						</div>
-					</div>
-				</DialogContent>
-			</Dialog>
+			<ConfirmDialog
+				open={showConfirmDialog}
+				onOpenChange={setShowConfirmDialog}
+				variant="destructive"
+				icon={<AlertTriangle className="h-5 w-5" aria-hidden />}
+				confirmIcon={<Trash2 className="h-4 w-4" aria-hidden />}
+				title="Unsaved changes"
+				description="You have unsaved changes that will be lost if you continue."
+				helperText="Are you sure you want to close? All unsaved changes will be lost."
+				cancelLabel="Keep editing"
+				confirmLabel="Discard changes"
+				onConfirm={async () => {
+					handleConfirmClose();
+				}}
+			/>
 		</>
 	);
 };

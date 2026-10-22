@@ -1,9 +1,8 @@
 "use client";
 
-import * as VisuallyHiddenPrimitive from "@radix-ui/react-visually-hidden";
 import Image from "next/image";
 import React, { Fragment, useEffect, useState } from "react";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { AppDialog } from "@/components/ui/app-dialog";
 
 import {
 	AppDropdownMenuContent,
@@ -104,6 +103,7 @@ import {
 	FileText,
 	FolderPen,
 	Info,
+	Loader2,
 	MessageSquareText,
 	Pencil,
 	PenLine,
@@ -111,7 +111,8 @@ import {
 	Share2,
 	Trash2,
 	UserRoundCheck,
-	X, Loader2 } from "lucide-react";
+	X,
+} from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { ShareInput } from "@/components/ActionsModalContent";
 import { SendForSignatureDialog } from "@/components/esign/SendForSignatureDialog";
@@ -132,7 +133,6 @@ import { refreshStorageUsage } from "@/lib/storage/refreshStorageUsage";
 import { FileDetails } from "./ActionsModalContent";
 import DocumentViewer from "./DocumentViewer";
 import { Button } from "./ui/button";
-import { CardHeader, CardTitle } from "./ui/card";
 import { DeleteConfirmBody } from "./ui/delete-confirmation-dialog";
 import { Input } from "./ui/input";
 
@@ -341,44 +341,81 @@ const ActionDropdown = ({
 		}
 	};
 
+	const outlineCancelClass =
+		"rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50";
+
+	const handleModalOpenChange = (open: boolean) => {
+		setIsModalOpen(open);
+		if (!open) {
+			setDeleteConfirmed(false);
+			setAction(null);
+		}
+	};
+
 	const renderDialogContent = () => {
 		if (!action) return null;
 		const { value, label } = action;
-		// All dialogs styled like Assign (NotificationCenter)
-		const _dialogHeader = (
-			<CardHeader className="flex flex-row items-center justify-between">
-				<CardTitle className="sidebar-gradient-text">{label}</CardTitle>
-				<Button variant="ghost" size="icon" onClick={closeAllModals}>
-					<span className="sr-only">Close</span>×
-				</Button>
-			</CardHeader>
-		);
 		if (value === "assign") {
 			return (
-				<DialogContent className="flex max-h-[90vh] w-[calc(100%-1.5rem)] sm:w-full max-w-[720px] flex-col overflow-hidden p-0 shadow-xl">
-					{/* Professional Cap */}
-					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-
-					{/* Header with gradient background */}
-					<div className="glass-dialog-wizard-header mt-4">
-						<div className="flex items-center gap-3 px-6">
-							{/* Icon with circular background */}
-
-							{/* Title */}
-							<div className="flex items-center gap-3">
-								<UserRoundCheck className="w-5 h-5 text-[#0f5384]" />
-								<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-									{label}
-								</DialogTitle>
-							</div>
-						</div>
-						<p className="text-sm text-slate-600 mt-1 ml-14">
-							Select department and managers to assign this contract
-						</p>
-					</div>
-
-					{/* Scrollable Content — content sits on outer panel (no nested white card) */}
-					<div className="flex-1 space-y-6 overflow-y-auto bg-slate-50 p-6">
+				<AppDialog
+					open={isModalOpen}
+					onOpenChange={handleModalOpenChange}
+					size="form"
+					className="max-h-[90vh] w-[calc(100%-1.5rem)] sm:w-full max-w-[720px] shadow-xl"
+					icon={<UserRoundCheck className="h-5 w-5" />}
+					title={label}
+					description="Select department and managers to assign this contract"
+					pending={isLoading}
+					footer={
+						<>
+							{selectedManagers.length === 0 ? (
+								<div className="mr-auto flex shrink-0 items-center gap-1.5 text-xs text-slate-500">
+									<Info
+										className="h-3.5 w-3.5 shrink-0 text-[#0f5384]"
+										aria-hidden
+									/>
+									<span>Select at least one manager to continue</span>
+								</div>
+							) : (
+								<span className="mr-auto shrink-0 text-xs text-slate-500">
+									{selectedManagers.length === 1
+										? "1 manager selected"
+										: `${selectedManagers.length} managers selected`}
+								</span>
+							)}
+							<Button
+								type="button"
+								variant="outline"
+								className={outlineCancelClass}
+								disabled={isLoading}
+								onClick={(e) => closeAllModals(e)}
+							>
+								Cancel
+							</Button>
+							<Button
+								onClick={(e) => {
+									e.stopPropagation();
+									e.preventDefault();
+									void handleAction();
+								}}
+								disabled={
+									isLoading ||
+									selectedManagers.length === 0 ||
+									!selectedDepartment
+								}
+								className="primary-btn !w-auto shrink-0 px-3 sm:px-4"
+							>
+								{isLoading ? (
+									<Loader2 className="h-4 w-4 animate-spin" />
+								) : (
+									<UserRoundCheck className="h-4 w-4" />
+								)}
+								Assign Contract
+							</Button>
+						</>
+					}
+				>
+					<div className="space-y-6 pb-1">
 						{/* Department Selection */}
 						<div>
 							<div className="mb-3 text-sm font-medium text-slate-700">
@@ -558,51 +595,7 @@ const ActionDropdown = ({
 							</div>
 						</div>
 					</div>
-
-					{/* Footer: info + Assign on one row */}
-					<div className="flex shrink-0 flex-nowrap items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
-						{selectedManagers.length === 0 ? (
-							<div className="flex shrink-0 items-center gap-1.5 text-xs text-slate-500">
-								<Info
-									className="h-3.5 w-3.5 shrink-0 text-[#0f5384]"
-									aria-hidden
-								/>
-								<span>Select at least one manager to continue</span>
-							</div>
-						) : (
-							<span className="shrink-0 text-xs text-slate-500">
-								{selectedManagers.length === 1
-									? "1 manager selected"
-									: `${selectedManagers.length} managers selected`}
-							</span>
-						)}
-						<Button
-							onClick={(e) => {
-								e.stopPropagation();
-								e.preventDefault();
-								handleAction();
-							}}
-							disabled={
-								isLoading ||
-								selectedManagers.length === 0 ||
-								!selectedDepartment
-							}
-							className="primary-btn !w-auto shrink-0 px-3 sm:px-4"
-						>
-							{isLoading && (
-								<Image
-									src="/assets/icons/loader.svg"
-									alt="loader"
-									width={16}
-									height={16}
-									className="animate-spin mr-2"
-								/>
-							)}
-							<UserRoundCheck className="w-4 h-4" />
-							Assign Contract
-						</Button>
-					</div>
-				</DialogContent>
+				</AppDialog>
 			);
 		}
 		// Rename dialog
@@ -610,27 +603,55 @@ const ActionDropdown = ({
 			const renameMaxLength = 120;
 			const canRename = Boolean(name.trim());
 			return (
-				<DialogContent className="flex max-h-[90vh] max-w-[600px] flex-col overflow-hidden border border-slate-200 p-0 shadow-xl">
-					{/* Professional Cap */}
-					<div className="absolute top-0 left-0 right-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
-
-					{/* Professional Header */}
-					<div className="glass-dialog-wizard-header mt-4">
-						<div className="flex items-center gap-3 px-6">
-							<div className="flex items-center gap-3">
-								<FolderPen className="h-5 w-5 text-[#0f5384]" />
-								<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-									Rename file
-								</DialogTitle>
+				<AppDialog
+					open={isModalOpen}
+					onOpenChange={handleModalOpenChange}
+					size="form"
+					className="max-h-[90vh] shadow-xl"
+					icon={<FolderPen className="h-5 w-5" />}
+					title="Rename file"
+					description="Enter a new name for this file or contract"
+					pending={isLoading}
+					footer={
+						<>
+							<div className="mr-auto flex items-center gap-2 text-sm text-slate-500">
+								<span
+									className={`h-2 w-2 shrink-0 rounded-full ${
+										canRename ? "bg-green" : "bg-slate-300"
+									}`}
+									aria-hidden
+								/>
+								{canRename ? "Ready to rename" : "Enter a name to continue"}
 							</div>
-						</div>
-						<p className="mt-1 ml-14 text-sm text-slate-600">
-							Enter a new name for this file or contract
-						</p>
-					</div>
-
-					{/* Scrollable Content */}
-					<div className="flex-1 overflow-y-auto bg-slate-50 p-6">
+							<Button
+								type="button"
+								variant="outline"
+								className={outlineCancelClass}
+								disabled={isLoading}
+								onClick={(e) => closeAllModals(e)}
+							>
+								Cancel
+							</Button>
+							<Button
+								onClick={(e) => {
+									e.stopPropagation();
+									e.preventDefault();
+									void handleAction();
+								}}
+								disabled={isLoading || !canRename}
+								className="primary-btn px-3 sm:px-4"
+							>
+								{isLoading ? (
+									<Loader2 className="h-4 w-4 animate-spin" />
+								) : (
+									<FolderPen className="h-4 w-4" />
+								)}
+								Rename
+							</Button>
+						</>
+					}
+				>
+					<div className="pb-1">
 						<div className="space-y-2 rounded-lg border border-slate-200 bg-white p-4">
 							<label
 								htmlFor="rename-file-name"
@@ -672,44 +693,7 @@ const ActionDropdown = ({
 							</p>
 						</div>
 					</div>
-
-					{/* Professional Footer */}
-					<div className="flex items-center justify-between border-t border-slate-200 bg-slate-50 px-6 py-4">
-						<div className="flex items-center gap-2 text-sm text-slate-500">
-							<span
-								className={`h-2 w-2 shrink-0 rounded-full ${
-									canRename ? "bg-green" : "bg-slate-300"
-								}`}
-								aria-hidden
-							/>
-							{canRename ? "Ready to rename" : "Enter a name to continue"}
-						</div>
-						<div className="flex items-center gap-3">
-							<Button
-								onClick={(e) => {
-									e.stopPropagation();
-									e.preventDefault();
-									handleAction();
-								}}
-								disabled={isLoading || !canRename}
-								className="primary-btn px-3 sm:px-4"
-							>
-								{isLoading ? (
-									<Image
-										src="/assets/icons/loader.svg"
-										alt=""
-										width={16}
-										height={16}
-										className="animate-spin"
-									/>
-								) : (
-									<FolderPen className="h-4 w-4" />
-								)}
-								Rename
-							</Button>
-						</div>
-					</div>
-				</DialogContent>
+				</AppDialog>
 			);
 		}
 		// Details dialog
@@ -775,15 +759,15 @@ const ActionDropdown = ({
 			};
 
 			return (
-				<DialogContent className="flex max-h-[90vh] w-[calc(100%-1.5rem)] sm:w-full max-w-5xl flex-col overflow-hidden p-0 shadow-xl border border-slate-200">
-					<VisuallyHiddenPrimitive.Root>
-						<DialogTitle>
-							{file.contractName || file.name || "Details"}
-						</DialogTitle>
-					</VisuallyHiddenPrimitive.Root>
-					{/* Professional Cap */}
-					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md z-10" />
-
+				<AppDialog
+					open={isModalOpen}
+					onOpenChange={handleModalOpenChange}
+					size="form"
+					className="max-h-[90vh] w-[calc(100%-1.5rem)] sm:w-full max-w-5xl shadow-xl"
+					icon={<Info className="h-5 w-5" />}
+					title={file.contractName || file.name || "Details"}
+					description="Contract and file details"
+				>
 					<FileDetails
 						file={file}
 						onRefresh={onRefresh}
@@ -791,34 +775,56 @@ const ActionDropdown = ({
 						onDownload={handleDetailsDownload}
 						downloading={downloading}
 					/>
-				</DialogContent>
+				</AppDialog>
 			);
 		}
 		// Share dialog
 		if (value === "share") {
 			return (
-				<DialogContent className="flex max-h-[72vh] w-[calc(100%-1.5rem)] sm:w-full max-w-[840px] flex-col overflow-hidden border border-slate-200 p-0 shadow-xl">
-					<VisuallyHiddenPrimitive.Root>
-						<DialogTitle>{label}</DialogTitle>
-					</VisuallyHiddenPrimitive.Root>
-					{/* Professional Cap */}
-					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-
-					{/* Professional Header */}
-					<div className="glass-dialog-wizard-header mt-4">
-						<div className="flex items-center gap-3 px-6">
-							<Share2 className="h-5 w-5 text-[#0f5384]" />
-							<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-								{label}
-							</DialogTitle>
-						</div>
-						<p className="mt-1 ml-14 text-sm text-slate-600">
-							Share this file within and/or outside the organization
-						</p>
-					</div>
-
-					{/* Content — ShareInput owns scroll so the file strip can sit flush under the header */}
-					<div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-50">
+				<AppDialog
+					open={isModalOpen}
+					onOpenChange={handleModalOpenChange}
+					size="form"
+					className="max-h-[72vh] w-[calc(100%-1.5rem)] sm:w-full max-w-[840px] shadow-xl"
+					icon={<Share2 className="h-5 w-5" />}
+					title={label}
+					description="Share this file within and/or outside the organization"
+					pending={isLoading}
+					footer={
+						<>
+							<p className="mr-auto text-sm text-slate-500">
+								{emails.length} {emails.length === 1 ? "person" : "people"}{" "}
+								selected
+							</p>
+							<Button
+								type="button"
+								variant="outline"
+								className={outlineCancelClass}
+								disabled={isLoading}
+								onClick={(e) => closeAllModals(e)}
+							>
+								Cancel
+							</Button>
+							<Button
+								onClick={(e) => {
+									e.stopPropagation();
+									e.preventDefault();
+									void handleAction();
+								}}
+								disabled={isLoading || emails.length === 0}
+								className="primary-btn px-3 sm:px-4"
+							>
+								{isLoading ? (
+									<Loader2 className="h-4 w-4 animate-spin" />
+								) : (
+									<Share2 className="h-4 w-4" />
+								)}
+								Share
+							</Button>
+						</>
+					}
+				>
+					<div className="-mx-6 flex min-h-0 flex-col overflow-hidden">
 						<ShareInput
 							file={file}
 							onInputChange={setEmails}
@@ -826,71 +832,63 @@ const ActionDropdown = ({
 							currentUsers={emails}
 						/>
 					</div>
-
-					{/* Footer — corner X dismisses; Share is the only action */}
-					<div className="flex items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
-						<p className="text-sm text-slate-500">
-							{emails.length} {emails.length === 1 ? "person" : "people"}{" "}
-							selected
-						</p>
-						<Button
-							onClick={(e) => {
-								e.stopPropagation();
-								e.preventDefault();
-								handleAction();
-							}}
-							disabled={isLoading || emails.length === 0}
-							className="primary-btn px-3 sm:px-4"
-						>
-							{isLoading && (
-								<Image
-									src="/assets/icons/loader.svg"
-									alt="loader"
-									width={16}
-									height={16}
-									className="animate-spin"
-								/>
-							)}
-							<Share2 className="h-4 w-4" />
-							Share
-						</Button>
-					</div>
-				</DialogContent>
+				</AppDialog>
 			);
 		}
 		// Delete dialog — CAALM destructive confirm (matches bulk delete contracts)
 		if (value === "delete") {
 			const isContractDelete = Boolean(file.contractId);
 			const itemLabel = file.contractName || file.name || "Untitled";
+			const deleteTitle = isContractDelete ? "Delete contract" : "Delete file";
+			const deleteDescription = isContractDelete
+				? "This will permanently remove the contract below and any linked activity. This action cannot be undone."
+				: "This will permanently remove the file from the system. This action cannot be undone.";
 			return (
-				<DialogContent
-					className="flex max-h-[90vh] max-w-[600px] flex-col overflow-hidden border border-slate-200 p-0 shadow-xl"
+				<AppDialog
+					open={isModalOpen}
+					onOpenChange={handleModalOpenChange}
 					variant="destructive"
-					showCloseButton
+					pending={isLoading}
+					icon={<AlertTriangle className="h-5 w-5" aria-hidden />}
+					title={deleteTitle}
+					description={deleteDescription}
+					footer={
+						<>
+							<Button
+								type="button"
+								variant="outline"
+								className={outlineCancelClass}
+								disabled={isLoading}
+								autoFocus
+								onClick={(e) => closeAllModals(e)}
+							>
+								Cancel
+							</Button>
+							<Button
+								type="button"
+								onClick={(e) => {
+									e.stopPropagation();
+									e.preventDefault();
+									void handleAction();
+								}}
+								disabled={isLoading || !deleteConfirmed}
+								className="delete-btn cursor-pointer gap-2 px-3 sm:px-4"
+							>
+								{isLoading ? (
+									<Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+								) : (
+									<Trash2 className="h-4 w-4 shrink-0" />
+								)}
+								{isLoading
+									? "Deleting..."
+									: isContractDelete
+										? "Delete 1 contract"
+										: "Delete file"}
+							</Button>
+						</>
+					}
 				>
-					<DialogTitle className="sr-only">
-						{isContractDelete ? "Delete contract" : "Delete file"}
-					</DialogTitle>
-					<div className="absolute top-0 right-0 left-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
-
-					<div className="glass-dialog-wizard-header mt-4">
-						<div className="flex items-center gap-3 px-6">
-							<AlertTriangle
-								className="h-5 w-5 shrink-0 text-[#0f5384]"
-								aria-hidden
-							/>
-							<h2 className="text-xl font-semibold sidebar-gradient-text">
-								{isContractDelete ? "Delete contract" : "Delete file"}
-							</h2>
-						</div>
-					</div>
-
 					<DeleteConfirmBody
-						description={
-							isContractDelete
-								? "This will permanently remove the contract below and any linked activity. This action cannot be undone."
-								: "This will permanently remove the file from the system. This action cannot be undone."
-						}
 						items={
 							isContractDelete
 								? [
@@ -915,27 +913,7 @@ const ActionDropdown = ({
 						confirmed={deleteConfirmed}
 						onConfirmedChange={setDeleteConfirmed}
 					/>
-
-					<div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
-						<Button
-							type="button"
-							onClick={(e) => {
-								e.stopPropagation();
-								e.preventDefault();
-								handleAction();
-							}}
-							disabled={isLoading || !deleteConfirmed}
-							className="delete-btn cursor-pointer gap-2 px-3 sm:px-4"
-						>
-							<Trash2 className="h-4 w-4 shrink-0" />
-							{isLoading
-								? "Deleting..."
-								: isContractDelete
-									? "Delete 1 contract"
-									: "Delete file"}
-						</Button>
-					</div>
-				</DialogContent>
+				</AppDialog>
 			);
 		}
 		if (value === "review") {
@@ -1036,207 +1014,195 @@ const ActionDropdown = ({
 
 	return (
 		<>
-			<Dialog
-				open={isModalOpen}
-				onOpenChange={(open) => {
-					setIsModalOpen(open);
-					if (!open) setDeleteConfirmed(false);
-				}}
-			>
-				<DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
-					<DropdownMenuTrigger className="shad-no-focus rounded-full transition-colors hover:bg-white/30">
-						<Image
-							src="/assets/icons/dots.svg"
-							alt="dots"
-							width={34}
-							height={34}
-						/>
-					</DropdownMenuTrigger>
-					<AppDropdownMenuContent>
-						<DropdownMenuLabel className="max-w-[200px] truncate">
-							{file.name || file.contractName}
-						</DropdownMenuLabel>
-						<DropdownMenuSeparator />
-						{filteredActions.map((actionItem) => {
-							const actionIconMap = {
-								assign: UserRoundCheck,
-								transfer: ArrowRightLeft,
-								rename: Pencil,
-								share: Share2,
-								delete: Trash2,
-								details: Info,
-								sign: PenLine,
-								download: Download,
-								review: ScanEye,
-								negotiate: MessageSquareText,
-							} as const;
+			<DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
+				<DropdownMenuTrigger className="shad-no-focus rounded-full transition-colors hover:bg-white/30">
+					<Image
+						src="/assets/icons/dots.svg"
+						alt="dots"
+						width={34}
+						height={34}
+					/>
+				</DropdownMenuTrigger>
+				<AppDropdownMenuContent>
+					<DropdownMenuLabel className="max-w-[200px] truncate">
+						{file.name || file.contractName}
+					</DropdownMenuLabel>
+					<DropdownMenuSeparator />
+					{filteredActions.map((actionItem) => {
+						const actionIconMap = {
+							assign: UserRoundCheck,
+							transfer: ArrowRightLeft,
+							rename: Pencil,
+							share: Share2,
+							delete: Trash2,
+							details: Info,
+							sign: PenLine,
+							download: Download,
+							review: ScanEye,
+							negotiate: MessageSquareText,
+						} as const;
 
-							const Icon =
-								actionIconMap[actionItem.value as keyof typeof actionIconMap] ||
-								FileText;
-							const tone = actionItem.value === "delete" ? "danger" : "default";
+						const Icon =
+							actionIconMap[actionItem.value as keyof typeof actionIconMap] ||
+							FileText;
+						const tone = actionItem.value === "delete" ? "danger" : "default";
 
-							// Handle download action separately
-							if (actionItem.value === "download") {
-								const handleDownload = async () => {
-									if (downloading) return;
+						// Handle download action separately
+						if (actionItem.value === "download") {
+							const handleDownload = async () => {
+								if (downloading) return;
 
-									setDownloading(true);
-									setIsDropdownOpen(false);
+								setDownloading(true);
+								setIsDropdownOpen(false);
 
-									try {
-										const params = new URLSearchParams();
+								try {
+									const params = new URLSearchParams();
 
-										if (isValidBucketFileId(file.bucketFileId)) {
-											params.append("bucketFileId", file.bucketFileId!);
-										} else if (file.contractId) {
-											params.append("contractId", file.contractId);
-										} else if (file.$id) {
-											params.append("fileId", file.$id);
-										} else {
-											throw new Error("No file identifier available");
-										}
-
-										const response = await fetch(
-											`/api/files/download?${params.toString()}`,
-										);
-
-										if (!response.ok) {
-											throw new Error("Download failed");
-										}
-
-										const blob = await response.blob();
-
-										const contentDisposition = response.headers.get(
-											"Content-Disposition",
-										);
-										let filename = file.name || file.contractName || "download";
-
-										if (contentDisposition) {
-											const match = contentDisposition.match(
-												/filename\*?=['"]?([^'";\n]+)/,
-											);
-											if (match?.[1]) {
-												filename = decodeURIComponent(
-													match[1].replace(/^UTF-8''/, ""),
-												);
-											}
-										}
-
-										if (
-											file.extension &&
-											!filename
-												.toLowerCase()
-												.endsWith(`.${file.extension.toLowerCase()}`)
-										) {
-											filename = `${filename}.${file.extension}`;
-										}
-
-										const url = URL.createObjectURL(blob);
-										const link = document.createElement("a");
-										link.href = url;
-										link.download = filename;
-										link.style.display = "none";
-										link.setAttribute("download", filename);
-										document.body.appendChild(link);
-										link.click();
-
-										setTimeout(() => {
-											document.body.removeChild(link);
-											URL.revokeObjectURL(url);
-										}, 100);
-									} catch (error) {
-										console.error("Download failed:", error);
-										alert("Failed to download file");
-									} finally {
-										setDownloading(false);
+									if (isValidBucketFileId(file.bucketFileId)) {
+										params.append("bucketFileId", file.bucketFileId!);
+									} else if (file.contractId) {
+										params.append("contractId", file.contractId);
+									} else if (file.$id) {
+										params.append("fileId", file.$id);
+									} else {
+										throw new Error("No file identifier available");
 									}
-								};
 
-								return (
-									<AppDropdownMenuItem
-										key={actionItem.value}
-										icon={downloading ? Loader2 : Icon}
-										iconClassName={downloading ? "animate-spin" : undefined}
-										tone={tone}
-										onSelect={(e) => {
-											e.preventDefault();
-											handleDownload();
-										}}
-									>
-										{downloading ? "Downloading..." : actionItem.label}
-									</AppDropdownMenuItem>
-								);
-							}
+									const response = await fetch(
+										`/api/files/download?${params.toString()}`,
+									);
 
-							if (actionItem.value === "review") {
-								return (
-									<AppDropdownMenuItem
-										key={actionItem.value}
-										icon={Icon}
-										tone={tone}
-										onSelect={() => {
-											setAction(actionItem);
-											setIsViewerOpen(true);
-										}}
-									>
-										{actionItem.label}
-									</AppDropdownMenuItem>
-								);
-							}
+									if (!response.ok) {
+										throw new Error("Download failed");
+									}
 
-							const menuItem = (
+									const blob = await response.blob();
+
+									const contentDisposition = response.headers.get(
+										"Content-Disposition",
+									);
+									let filename = file.name || file.contractName || "download";
+
+									if (contentDisposition) {
+										const match = contentDisposition.match(
+											/filename\*?=['"]?([^'";\n]+)/,
+										);
+										if (match?.[1]) {
+											filename = decodeURIComponent(
+												match[1].replace(/^UTF-8''/, ""),
+											);
+										}
+									}
+
+									if (
+										file.extension &&
+										!filename
+											.toLowerCase()
+											.endsWith(`.${file.extension.toLowerCase()}`)
+									) {
+										filename = `${filename}.${file.extension}`;
+									}
+
+									const url = URL.createObjectURL(blob);
+									const link = document.createElement("a");
+									link.href = url;
+									link.download = filename;
+									link.style.display = "none";
+									link.setAttribute("download", filename);
+									document.body.appendChild(link);
+									link.click();
+
+									setTimeout(() => {
+										document.body.removeChild(link);
+										URL.revokeObjectURL(url);
+									}, 100);
+								} catch (error) {
+									console.error("Download failed:", error);
+									alert("Failed to download file");
+								} finally {
+									setDownloading(false);
+								}
+							};
+
+							return (
 								<AppDropdownMenuItem
+									key={actionItem.value}
+									icon={downloading ? Loader2 : Icon}
+									iconClassName={downloading ? "animate-spin" : undefined}
+									tone={tone}
+									onSelect={(e) => {
+										e.preventDefault();
+										handleDownload();
+									}}
+								>
+									{downloading ? "Downloading..." : actionItem.label}
+								</AppDropdownMenuItem>
+							);
+						}
+
+						if (actionItem.value === "review") {
+							return (
+								<AppDropdownMenuItem
+									key={actionItem.value}
 									icon={Icon}
 									tone={tone}
-									onClick={() => {
+									onSelect={() => {
 										setAction(actionItem);
-										if (actionItem.value === "negotiate") {
-											const id = file.contractId || file.$id;
-											if (id) router.push(`/contracts/${id}/negotiate`);
-											return;
-										}
-										if (actionItem.value === "transfer") {
-											setShowTransfer(true);
-											return;
-										}
-										if (actionItem.value === "sign") {
-											const id = file.contractId || file.$id;
-											if (id) router.push(`/esign/prepare/contract/${id}`);
-											return;
-										}
-										if (
-											[
-												"assign",
-												"rename",
-												"delete",
-												"share",
-												"details",
-											].includes(actionItem.value)
-										) {
-											setIsModalOpen(true);
-										}
+										setIsViewerOpen(true);
 									}}
 								>
 									{actionItem.label}
 								</AppDropdownMenuItem>
 							);
+						}
 
-							if (actionItem.value === "delete") {
-								return (
-									<Fragment key={actionItem.value}>
-										<DropdownMenuSeparator />
-										{menuItem}
-									</Fragment>
-								);
-							}
+						const menuItem = (
+							<AppDropdownMenuItem
+								icon={Icon}
+								tone={tone}
+								onClick={() => {
+									setAction(actionItem);
+									if (actionItem.value === "negotiate") {
+										const id = file.contractId || file.$id;
+										if (id) router.push(`/contracts/${id}/negotiate`);
+										return;
+									}
+									if (actionItem.value === "transfer") {
+										setShowTransfer(true);
+										return;
+									}
+									if (actionItem.value === "sign") {
+										const id = file.contractId || file.$id;
+										if (id) router.push(`/esign/prepare/contract/${id}`);
+										return;
+									}
+									if (
+										["assign", "rename", "delete", "share", "details"].includes(
+											actionItem.value,
+										)
+									) {
+										setIsModalOpen(true);
+									}
+								}}
+							>
+								{actionItem.label}
+							</AppDropdownMenuItem>
+						);
 
-							return <Fragment key={actionItem.value}>{menuItem}</Fragment>;
-						})}
-					</AppDropdownMenuContent>
-				</DropdownMenu>
-				{renderDialogContent()}
-			</Dialog>
+						if (actionItem.value === "delete") {
+							return (
+								<Fragment key={actionItem.value}>
+									<DropdownMenuSeparator />
+									{menuItem}
+								</Fragment>
+							);
+						}
+
+						return <Fragment key={actionItem.value}>{menuItem}</Fragment>;
+					})}
+				</AppDropdownMenuContent>
+			</DropdownMenu>
+			{renderDialogContent()}
 			{isViewerOpen && reviewFileUrl ? (
 				<DocumentViewer
 					isOpen={isViewerOpen}

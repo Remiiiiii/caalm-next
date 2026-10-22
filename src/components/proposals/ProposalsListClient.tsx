@@ -16,13 +16,7 @@ import {
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
 } from "@/components/ui/caalm-data-table";
-import {
-	Dialog,
-	DialogContent,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { AppDialog } from "@/components/ui/app-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -206,51 +200,64 @@ export function ProposalsListClient() {
 				)}
 			</div>
 
-			<Dialog open={open} onOpenChange={setOpen}>
-				<DialogContent className="max-w-[600px]">
-					<DialogHeader>
-						<DialogTitle>Start a proposal</DialogTitle>
-					</DialogHeader>
-					<div className="space-y-4">
-						<div className="space-y-2">
-							<Label htmlFor="proposal-title">Title</Label>
-							<Input
-								id="proposal-title"
-								value={title}
-								onChange={(event) => setTitle(event.target.value)}
-								placeholder="Agency name + solicitation number"
-							/>
-						</div>
-						<div className="space-y-2">
-							<Label htmlFor="proposal-corpus">
-								Solicitation text (optional)
-							</Label>
-							<Textarea
-								id="proposal-corpus"
-								value={corpus}
-								onChange={(event) => setCorpus(event.target.value)}
-								placeholder="Paste shall/must/will language from the RFP. You can shred it after you open the workspace."
-								className="min-h-[140px]"
-							/>
-						</div>
-					</div>
-					<DialogFooter>
-						<Button variant="ghost" onClick={() => setOpen(false)}>
+			<AppDialog
+				open={open}
+				onOpenChange={setOpen}
+				size="form"
+				className="max-h-[90vh]"
+				pending={saving}
+				icon={<FilePlus2 className="h-5 w-5" />}
+				title="Start a proposal"
+				footer={
+					<>
+						<Button
+							type="button"
+							variant="outline"
+							className="rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+							disabled={saving}
+							onClick={() => setOpen(false)}
+						>
 							Cancel
 						</Button>
 						<Button
-							className="primary-btn"
+							className="btn-primary"
 							disabled={!title.trim() || saving}
 							onClick={() => void createProposal()}
 						>
 							{saving ? (
 								<Loader2 className="h-4 w-4 animate-spin" />
-							) : null}
+							) : (
+								<FilePlus2 className="h-4 w-4" />
+							)}
 							Open workspace
 						</Button>
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
+					</>
+				}
+			>
+				<div className="flex flex-col gap-4 pb-1">
+					<div className="space-y-2">
+						<Label htmlFor="proposal-title">Title</Label>
+						<Input
+							id="proposal-title"
+							value={title}
+							onChange={(event) => setTitle(event.target.value)}
+							placeholder="Agency name + solicitation number"
+						/>
+					</div>
+					<div className="space-y-2">
+						<Label htmlFor="proposal-corpus">
+							Solicitation text (optional)
+						</Label>
+						<Textarea
+							id="proposal-corpus"
+							value={corpus}
+							onChange={(event) => setCorpus(event.target.value)}
+							placeholder="Paste shall/must/will language from the RFP. You can shred it after you open the workspace."
+							className="min-h-[140px]"
+						/>
+					</div>
+				</div>
+			</AppDialog>
 		</div>
 	);
 }

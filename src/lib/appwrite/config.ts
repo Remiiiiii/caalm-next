@@ -223,6 +223,12 @@ export const appwriteConfig = {
 		"test-organization-logos-bucket",
 	),
 
+	/** Audit readiness public-site crawl screenshots (name: screenshots) */
+	screenshotsBucketId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_SCREENSHOTS_BUCKET",
+		"test-screenshots-bucket",
+	),
+
 	auditLogsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_AUDIT_LOGS_COLLECTION",
 		"test-audit-logs",

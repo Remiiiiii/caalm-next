@@ -2,8 +2,8 @@
 
 import { ArrowRight, Info, RotateCcw, Save, Settings2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { AppDialog } from "@/components/ui/app-dialog";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -181,23 +181,39 @@ export default function HubSpotConfigDialog({
 	};
 
 	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="max-w-[600px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl">
-				<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-				<div className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
-					<div className="flex items-center gap-3 px-6">
-						<Settings2 className="w-5 h-5 text-[#0f5384]" />
-						<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-							HubSpot trigger & mapping
-						</DialogTitle>
-					</div>
-					<p className="text-sm text-slate-600 mt-1 ml-14">
-						HubSpot deals open CAALM drafts. Choose when that happens, then
-						which HubSpot properties fill each draft field.
-					</p>
-				</div>
-
-				<div className="flex-1 overflow-y-auto p-6 bg-slate-50 space-y-6">
+		<AppDialog
+			open={open}
+			onOpenChange={onOpenChange}
+			size="form"
+			className="max-w-[600px]"
+			pending={saving}
+			icon={<Settings2 className="h-5 w-5" />}
+			title="HubSpot trigger & mapping"
+			description="HubSpot deals open CAALM drafts. Choose when that happens, then which HubSpot properties fill each draft field."
+			footer={
+				<>
+					<Button
+						type="button"
+						variant="outline"
+						className="rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+						disabled={saving}
+						onClick={() => onOpenChange(false)}
+					>
+						Cancel
+					</Button>
+					<Button
+						type="button"
+						className="btn-primary"
+						onClick={handleSave}
+						disabled={saving || !selectedPipeline || !selectedStage}
+					>
+						<Save className="h-4 w-4" />
+						{saving ? "Saving…" : "Save config"}
+					</Button>
+				</>
+			}
+		>
+				<div className="space-y-6 pb-1">
 					<div className="space-y-4">
 						<div>
 							<Label className="text-sm text-slate-700">Pipeline</Label>
@@ -396,7 +412,8 @@ export default function HubSpotConfigDialog({
 							<div className="flex justify-end pt-1">
 								<Button
 									type="button"
-									className="btn-primary px-3 sm:px-4 cursor-pointer"
+									variant="outline"
+									className="rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
 									onClick={() => setMapDraft({ ...DEFAULT_CRM_FIELD_MAP })}
 								>
 									<RotateCcw className="h-4 w-4" />
@@ -406,18 +423,6 @@ export default function HubSpotConfigDialog({
 						</div>
 					</div>
 				</div>
-
-				<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3">
-					<Button
-						className="btn-primary px-3 sm:px-4"
-						onClick={handleSave}
-						disabled={saving || !selectedPipeline || !selectedStage}
-					>
-						<Save className="h-4 w-4" />
-						Save config
-					</Button>
-				</div>
-			</DialogContent>
-		</Dialog>
+		</AppDialog>
 	);
 }

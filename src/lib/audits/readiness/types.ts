@@ -49,6 +49,8 @@ export interface SiteCrawlResult {
 	issues: string[];
 	/** Informational only — not included in readiness score */
 	healthHint: "ok" | "needs_attention" | "unavailable";
+	/** Null when capture is unconfigured or failed; UI falls back to a placeholder. */
+	screenshot?: { src: string; capturedAt: string } | null;
 }
 
 export interface AuditReadinessSnapshotRecord {

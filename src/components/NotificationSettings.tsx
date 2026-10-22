@@ -36,12 +36,7 @@ import {
 import { SmsFormDialog } from "./SmsFormDialog";
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogTitle,
-} from "./ui/dialog";
+import { AppDialog } from "./ui/app-dialog";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import {
@@ -676,29 +671,43 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
 	};
 
 	return (
-		<Dialog open={open} onOpenChange={onClose}>
-			<DialogContent className="flex max-h-[90vh] max-w-5xl flex-col overflow-hidden p-0 shadow-xl">
-				{/* Professional Cap */}
-				<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-
-				{/* Header with gradient background */}
-				<div className="glass-dialog-wizard-header mt-4">
-					<div className="flex items-center gap-3 px-6">
-						<Settings className="w-5 h-5 text-[#0f5384]" />
-						<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-							Notification Settings
-						</DialogTitle>
+		<>
+			<AppDialog
+				open={open}
+				onOpenChange={(isOpen) => {
+					if (!isOpen) onClose();
+				}}
+				size="form"
+				className="max-h-[90vh] max-w-5xl"
+				pending={saving}
+				icon={<Settings className="h-5 w-5" aria-hidden />}
+				title="Notification Settings"
+				description="Configure how and when you receive notifications"
+				footer={
+					<div className="flex w-full items-center justify-between gap-3">
+						<Button
+							type="button"
+							variant="outline"
+							onClick={resetToDefaults}
+							className="rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+							disabled={saving}
+						>
+							<RotateCcw className="h-4 w-4" />
+							Reset to Defaults
+						</Button>
+						<Button
+							type="button"
+							onClick={saveSettings}
+							disabled={saving}
+							className="btn-primary px-3 sm:px-4"
+						>
+							<Save className="h-4 w-4" />
+							{saving ? "Saving..." : "Save Settings"}
+						</Button>
 					</div>
-					<p className="text-sm text-slate-600 mt-1 ml-14">
-						Configure how and when you receive notifications
-					</p>
-					<DialogDescription className="sr-only">
-						Configure how and when you receive notifications
-					</DialogDescription>
-				</div>
-
-				{/* Scrollable Content */}
-				<div className="flex-1 overflow-y-auto p-6 bg-slate-50 space-y-6">
+				}
+			>
+				<div className="space-y-6 pb-1">
 					{/* Global Settings */}
 					<div className="space-y-4">
 						<h3 className="text-lg font-semibold text-slate-700 flex items-center gap-2">
@@ -1115,30 +1124,9 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
 						</div>
 					</div>
 				</div>
+			</AppDialog>
 
-				{/* Footer — Reset quiet outline left; Save primary right */}
-				<div className="flex items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
-					<Button
-						variant="outline"
-						onClick={resetToDefaults}
-						className="border-[0.25px] border-slate-300 bg-white px-3 sm:px-4 text-slate-700 hover:border-blue-300 hover:bg-blue-50"
-					>
-						<RotateCcw className="h-4 w-4" />
-						Reset to Defaults
-					</Button>
-
-					<Button
-						onClick={saveSettings}
-						disabled={saving}
-						className="btn-primary ml-auto px-3 sm:px-4"
-					>
-						<Save className="h-4 w-4" />
-						{saving ? "Saving..." : "Save Settings"}
-					</Button>
-				</div>
-
-				{/* SMS Form Dialog */}
-				<SmsFormDialog
+			<SmsFormDialog
 					open={showSmsSetupModal}
 					onOpenChange={async (open) => {
 						setShowSmsSetupModal(open);
@@ -1221,8 +1209,7 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
 						setShowSmsSetupModal(false);
 					}}
 				/>
-			</DialogContent>
-		</Dialog>
+		</>
 	);
 };
 

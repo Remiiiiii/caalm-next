@@ -130,7 +130,6 @@ const CSuitePage = () => {
 			subtitle="Executive-level insights and strategic metrics for audit readiness"
 			actions={
 				<Button
-					variant="outline"
 					className="primary-btn px-3 sm:px-4"
 					onClick={() => void runExporting()}
 					disabled={isLoading || !summary || exporting}

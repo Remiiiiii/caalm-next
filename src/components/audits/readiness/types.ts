@@ -1,3 +1,5 @@
+import type { ReadinessAssistantStructured } from "@/lib/audits/readiness/summary-tiles";
+
 export type Rag = "green" | "amber" | "red";
 
 export interface RagThresholds {
@@ -99,6 +101,7 @@ export interface ReadinessResponse {
 		evidenceMapHits: ReadinessEvidenceHit[];
 		siteCrawl: {
 			websiteUrl: string;
+			crawledAt: string;
 			healthHint: string;
 			issues: string[];
 			pages: Array<{
@@ -108,6 +111,8 @@ export interface ReadinessResponse {
 			}>;
 			robotsTxtFound: boolean;
 			sitemapFound: boolean;
+			/** Absent until screenshot capture is wired up server-side. */
+			screenshot?: { src: string; capturedAt: string } | null;
 		} | null;
 		org: {
 			id: string;
@@ -122,6 +127,13 @@ export interface ReadinessResponse {
 			ragStatus?: Rag | null;
 			aiSummary?: string;
 			createdAt: string;
+		} | null;
+		/** Last saved snapshot, already laid out for the assistant sheet. */
+		assistant?: {
+			snapshotId: string;
+			createdAt: string;
+			summary: string;
+			structured: ReadinessAssistantStructured;
 		} | null;
 		history: ReadinessHistoryRow[];
 	};

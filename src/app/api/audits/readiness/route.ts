@@ -3,7 +3,10 @@ import { z } from "zod";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
 import { buildOrgReadinessSummary } from "@/lib/audits/readiness/build-summary";
-import { getOrgAuditSettings } from "@/lib/audits/readiness/org-settings";
+import {
+	getCachedSiteCrawl,
+	getOrgAuditSettings,
+} from "@/lib/audits/readiness/org-settings";
 import { runReadinessAuditForOrg } from "@/lib/audits/readiness/run-audit";
 import { nextScheduledReadinessRun } from "@/lib/audits/readiness/schedule";
 import { RAG_THRESHOLDS } from "@/lib/audits/readiness/score";
@@ -11,12 +14,27 @@ import {
 	listReadinessSnapshots,
 	parseSnapshotPayload,
 } from "@/lib/audits/readiness/snapshot.service";
+import { buildReadinessAssistantStructured } from "@/lib/audits/readiness/summary-tiles";
+import type { AuditReadinessSnapshotRecord } from "@/lib/audits/readiness/types";
 import { requirePermission } from "@/lib/rbac/middleware";
 import { getOrganization } from "@/lib/rbac/organizations";
 import {
 	getUserDefaultOrganization,
 	getUserPermissions,
 } from "@/lib/rbac/permissions";
+import { logAuditEvent } from "@/lib/services/audit-logger";
+
+function assistantFromSnapshot(row: AuditReadinessSnapshotRecord | null) {
+	if (!row) return null;
+	const parsed = parseSnapshotPayload(row.payload);
+	if (!parsed) return null;
+	return {
+		snapshotId: row.$id,
+		createdAt: row.createdAt,
+		summary: row.aiSummary || "",
+		structured: buildReadinessAssistantStructured(parsed),
+	};
+}
 
 export async function GET(request: NextRequest) {
 	const denied = await requirePermission(request, {
@@ -113,6 +131,7 @@ export async function GET(request: NextRequest) {
 							aiSummary: latest.aiSummary || "",
 						}
 					: null,
+				assistant: assistantFromSnapshot(row),
 				history: history.slice(0, 12).map((item) => {
 					const parsed = parseSnapshotPayload(item.payload);
 					return {
@@ -129,11 +148,15 @@ export async function GET(request: NextRequest) {
 		});
 	}
 
-	// Reuse the last saved crawl. A live crawl of 10+ pages is what made this
-	// GET miss the browser's 30s timeout and show "Unable to load".
-	const siteCrawl = history[0]
-		? (parseSnapshotPayload(history[0].payload)?.siteCrawl ?? null)
-		: null;
+	// Prefer the org-level crawl cache (kept fresh by both re-crawl and full
+	// runs); fall back to the last snapshot's embedded crawl for orgs that
+	// haven't re-crawled since this cache was introduced. Never crawl live
+	// here — that's what made this GET miss the browser's 30s timeout.
+	const siteCrawl =
+		(org ? getCachedSiteCrawl(org) : null) ??
+		(history[0]
+			? (parseSnapshotPayload(history[0].payload)?.siteCrawl ?? null)
+			: null);
 	const historyScores = [...history]
 		.reverse()
 		.filter((row) => row.score !== null)
@@ -199,6 +222,7 @@ export async function GET(request: NextRequest) {
 						aiSummary: latest.aiSummary || "",
 					}
 				: null,
+			assistant: assistantFromSnapshot(latest),
 			history: history.map((row) => {
 				const parsed = parseSnapshotPayload(row.payload);
 				return {
@@ -253,6 +277,30 @@ export async function POST(request: NextRequest) {
 		source: "manual",
 	});
 
+	const assistant = assistantFromSnapshot(outcome.snapshot);
+	if (outcome.snapshot) {
+		const userName =
+			(user as { fullName?: string }).fullName || user.email || "unknown";
+		const scoreLabel =
+			outcome.snapshot.score == null ? "N/A" : `${outcome.snapshot.score}%`;
+		await logAuditEvent({
+			event_id: `readiness_snapshot_${outcome.snapshot.$id}`,
+			event_title: "Saved a readiness snapshot",
+			action: "create",
+			source: "caalm",
+			user_id: user.$id,
+			user_name: userName,
+			user_email: user.email || "",
+			orgId: defaultOrg.orgId,
+			status: "success",
+			module: "system",
+			target_type: "audit_readiness_snapshot",
+			target_id: outcome.snapshot.$id,
+			target_label: `Readiness snapshot ${scoreLabel}`,
+			summary: `${userName} saved a ${validated.cadence} readiness snapshot (score ${scoreLabel})`,
+		});
+	}
+
 	return NextResponse.json({
 		success: true,
 		data: {
@@ -267,6 +315,8 @@ export async function POST(request: NextRequest) {
 						aiSummary: outcome.snapshot.aiSummary,
 					}
 				: null,
+			summary: assistant?.summary ?? outcome.snapshot?.aiSummary ?? "",
+			structured: assistant?.structured ?? null,
 		},
 	});
 }

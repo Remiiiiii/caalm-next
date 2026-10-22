@@ -21,12 +21,8 @@ import {
 	DATA_TABLE_HEADER_ROW,
 } from "@/components/ui/caalm-data-table";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { AppDialog } from "@/components/ui/app-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -119,7 +115,6 @@ export default function PaymentMethodsSection({
 		null,
 	);
 	const [saving, setSaving] = useState(false);
-	const [removing, setRemoving] = useState(false);
 	const [settingDefaultId, setSettingDefaultId] = useState<string | null>(null);
 	const [localError, setLocalError] = useState<string | null>(null);
 
@@ -182,42 +177,6 @@ export default function PaymentMethodsSection({
 			setLocalError(message);
 		} finally {
 			setSaving(false);
-		}
-	};
-
-	const handleRemove = async () => {
-		if (!selectedMethod) return;
-		if (!(await ensureStepUp())) return;
-		try {
-			setRemoving(true);
-			setLocalError(null);
-			const res = await fetch(
-				`/api/billing/payment-methods/${selectedMethod.id}?orgId=${encodeURIComponent(orgId)}`,
-				{
-					method: "DELETE",
-					headers: { "x-org-id": orgId },
-				},
-			);
-			const data = await res.json();
-			if (!res.ok) {
-				throw new Error(data.error || "Could not remove payment method");
-			}
-			const removedId = selectedMethod.id;
-			onPaymentMethodRemoved?.(removedId);
-			setRemoveOpen(false);
-			toast({
-				title: "Payment method removed",
-				description: `Card ending in ${selectedMethod.last4} was removed.`,
-			});
-			await onRefresh({ silent: true });
-		} catch (caught: unknown) {
-			const message =
-				caught instanceof Error
-					? caught.message
-					: "Could not remove payment method";
-			setLocalError(message);
-		} finally {
-			setRemoving(false);
 		}
 	};
 
@@ -464,106 +423,78 @@ export default function PaymentMethodsSection({
 				onSave={handleSaveEdit}
 			/>
 
-			<Dialog open={removeOpen} onOpenChange={setRemoveOpen}>
-				<DialogContent
-					className="flex max-h-[90vh] w-[calc(100%-1.5rem)] max-w-[480px] flex-col overflow-hidden p-0 shadow-xl sm:w-full"
-					variant="destructive"
-				>
-					<div className="absolute top-0 right-0 left-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
+			<ConfirmDialog
+				open={removeOpen}
+				onOpenChange={(open) => {
+					setRemoveOpen(open);
+					if (!open) setLocalError(null);
+				}}
+				variant="destructive"
+				icon={<Trash2 className="h-5 w-5" aria-hidden />}
+				confirmIcon={<Trash2 className="h-4 w-4" aria-hidden />}
+				title="Remove payment method?"
+				description={
+					selectedMethod
+						? `This removes the ${formatBrand(selectedMethod.brand)} card ending in ${selectedMethod.last4}.`
+						: "This card will be removed from your organization."
+				}
+				facts={
+					selectedMethod
+						? [
+								{
+									label: "Card",
+									value: `${formatBrand(selectedMethod.brand)} ···${selectedMethod.last4}`,
+								},
+								{
+									label: "Expires",
+									value: formatExpiration(
+										selectedMethod.expMonth,
+										selectedMethod.expYear,
+									),
+								},
+							]
+						: undefined
+				}
+				confirmLabel="Remove"
+				pendingLabel="Removing…"
+				onConfirm={async () => {
+					if (!selectedMethod) return;
+					if (!(await ensureStepUp())) {
+						throw new Error("Verification required to remove a payment method.");
+					}
+					setLocalError(null);
+					const res = await fetch(
+						`/api/billing/payment-methods/${selectedMethod.id}?orgId=${encodeURIComponent(orgId)}`,
+						{
+							method: "DELETE",
+							headers: { "x-org-id": orgId },
+						},
+					);
+					const data = await res.json();
+					if (!res.ok) {
+						throw new Error(
+							data.error || "Could not remove payment method",
+						);
+					}
+					const removedId = selectedMethod.id;
+					onPaymentMethodRemoved?.(removedId);
+					toast({
+						title: "Payment method removed",
+						description: `Card ending in ${selectedMethod.last4} was removed.`,
+					});
+					await onRefresh({ silent: true });
+				}}
+			/>
 
-					<div className="glass-dialog-wizard-header mt-4">
-						<div className="flex items-center gap-3 px-6">
-							<Trash2 className="h-5 w-5 text-[#0f5384]" />
-							<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-								Remove payment method?
-							</DialogTitle>
-						</div>
-					</div>
-
-					<div className="glass-dialog-body-padded">
-						<p className="text-sm text-slate-700">
-							{selectedMethod
-								? `This removes the ${formatBrand(selectedMethod.brand)} card ending in ${selectedMethod.last4}.`
-								: "This card will be removed from your organization."}
-						</p>
-						{selectedMethod ? (
-							<Card className="glass-card mt-4">
-								<div className="glass-card-cap" />
-								<CardContent className="flex items-center gap-3 p-4 sm:p-5">
-									<CardBrandIcon brand={selectedMethod.brand} />
-									<div className="min-w-0">
-										<p className="text-sm font-medium text-slate-700">
-											{formatBrand(selectedMethod.brand)} ending in{" "}
-											{selectedMethod.last4}
-										</p>
-										<p className="text-xs text-slate-600">
-											{selectedMethod.name || "No cardholder name"} · Expires{" "}
-											{formatExpiration(
-												selectedMethod.expMonth,
-												selectedMethod.expYear,
-											)}
-										</p>
-									</div>
-									{selectedMethod.isDefault ? (
-										<span
-											className={cn(
-												"ml-auto",
-												defaultPaymentMethodBadgeClassName,
-											)}
-										>
-											Default
-										</span>
-									) : null}
-								</CardContent>
-							</Card>
-						) : null}
-						{localError ? (
-							<p className="mt-3 text-sm text-red">{localError}</p>
-						) : null}
-					</div>
-
-					<div className="glass-dialog-alert-footer">
-						<div className="text-xs text-slate-500" />
-						<div className="flex items-center justify-end gap-3">
-							<Button
-								type="button"
-								variant="outline"
-								className="delete-btn px-3 sm:px-4"
-								disabled={removing}
-								onClick={() => void handleRemove()}
-							>
-								<Trash2 className="h-4 w-4" aria-hidden />
-								{removing ? "Removing…" : "Remove"}
-							</Button>
-						</div>
-					</div>
-				</DialogContent>
-			</Dialog>
-
-			<Dialog open={removeBlockedOpen} onOpenChange={setRemoveBlockedOpen}>
-				<DialogContent
-					className="flex max-h-[90vh] w-[calc(100%-1.5rem)] max-w-[480px] flex-col overflow-hidden p-0 shadow-xl sm:w-full"
-					variant="destructive"
-				>
-					<div className="absolute top-0 right-0 left-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
-					<div className="glass-dialog-wizard-header mt-4">
-						<div className="flex items-center gap-3 px-6">
-							<Info className="h-5 w-5 text-[#0f5384]" />
-							<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-								Unable to delete payment method
-							</DialogTitle>
-						</div>
-					</div>
-					<div className="glass-dialog-body-padded">
-						<DialogDescription className="text-sm leading-relaxed text-slate-600">
-							The default payment method cannot be removed as{" "}
-							<span className="font-semibold text-slate-700">{orgName}</span>{" "}
-							has an upcoming invoice. To proceed, set a backup or add a new
-							default payment method.
-						</DialogDescription>
-					</div>
-				</DialogContent>
-			</Dialog>
+			<AppDialog
+				open={removeBlockedOpen}
+				onOpenChange={setRemoveBlockedOpen}
+				size="form"
+				className="w-[calc(100%-1.5rem)] max-w-[480px] sm:w-full"
+				icon={<Info className="h-5 w-5" aria-hidden />}
+				title="Unable to delete payment method"
+				description={`The default payment method cannot be removed as ${orgName} has an upcoming invoice. To proceed, set a backup or add a new default payment method.`}
+			/>
 		</>
 	);
 }

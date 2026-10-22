@@ -1,6 +1,6 @@
 import { History } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { AppDialog } from "@/components/ui/app-dialog";
 import type { Clause } from "@/types/clauses";
 import {
 	CAALM_BADGE_BASE,
@@ -142,26 +142,18 @@ export function ClauseVersionHistory({
 	}
 
 	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="flex max-h-[90vh] w-[calc(100%-1.5rem)] max-w-[600px] flex-col overflow-hidden border border-slate-200 p-0 shadow-xl sm:w-full">
-				<div className="absolute top-0 right-0 left-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
-				<div className="sticky top-0 z-10 mt-4 border-b border-slate-200 bg-linear-to-r from-blue-50 to-indigo-50 py-4">
-					<div className="flex items-center gap-3 px-6">
-						<div className="flex items-center gap-3">
-							<History className="h-5 w-5 text-[#0f5384]" />
-							<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-								Version history
-							</DialogTitle>
-						</div>
-					</div>
-					<p className="mt-1 ml-14 text-sm text-slate-600">
-						Older rows stay readable after a new version is published.
-					</p>
-				</div>
-				<div className="flex-1 overflow-y-auto bg-slate-50 p-6">
-					<VersionList versions={versions} loading={loading} error={error} />
-				</div>
-			</DialogContent>
-		</Dialog>
+		<AppDialog
+			open={open}
+			onOpenChange={(next) => onOpenChange?.(next)}
+			size="form"
+			className="max-h-[90vh] w-[calc(100%-1.5rem)] max-w-[600px] sm:w-full"
+			icon={<History className="h-5 w-5" aria-hidden />}
+			title="Version history"
+			description="Older rows stay readable after a new version is published."
+		>
+			<div className="pb-1">
+				<VersionList versions={versions} loading={loading} error={error} />
+			</div>
+		</AppDialog>
 	);
 }

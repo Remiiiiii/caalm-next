@@ -2,6 +2,7 @@ import type {
 	AuditReadinessDomain,
 	AuditReadinessInsight,
 } from "@/lib/analytics/audit-readiness.types";
+import type { AuditReadinessSnapshotPayload } from "@/lib/audits/readiness/types";
 import type { ComplianceRagStatus } from "@/lib/audits/types";
 
 const RAG_LABEL: Record<ComplianceRagStatus, string> = {
@@ -230,4 +231,131 @@ export function formatSiteHost(websiteUrl: string): string {
 	} catch {
 		return websiteUrl;
 	}
+}
+
+/** Sheet layout built from a saved snapshot — no extra AI call. */
+export type ReadinessAssistantStructured = {
+	overallScore: number;
+	overallRag: ComplianceRagStatus;
+	overallBadgeLabel?: string;
+	contractsGrantsScore: number | null;
+	contractsGrantsRag: ComplianceRagStatus | null;
+	contractsBadgeLabel?: string;
+	licensesScore: number | null;
+	licensesRag: ComplianceRagStatus | null;
+	licensesBadgeLabel?: string;
+	scopeLine: string;
+	priorityAction: {
+		title: string;
+		dueDateLabel: string | null;
+		instruction: string;
+		affectsModules: string[];
+		moduleHref: string;
+	} | null;
+	byModule: Array<{
+		name: string;
+		score: number;
+		ragStatus: ComplianceRagStatus;
+		atRiskCount: number;
+		evidenceCount: number;
+		modulePath: string;
+		blurb: string;
+	}>;
+	sourceLine?: string;
+	publicSiteCrawl: {
+		websiteUrl: string;
+		sitemapFound: boolean;
+		pagesCrawled: number;
+		healthHint: string;
+	} | null;
+};
+
+export function buildReadinessAssistantStructured(
+	payload: AuditReadinessSnapshotPayload,
+): ReadinessAssistantStructured {
+	const domains = payload.summary.domains;
+	const contractsDomain = domains.find((d) => d.domain === "contracts");
+	const licensesDomain = domains.find((d) => d.domain === "licenses");
+	const priorityInsight =
+		payload.summary.insights.find(
+			(i) =>
+				(i.severity === "critical" || i.severity === "moderate") && i.dueDate,
+		) ??
+		payload.summary.insights.find((i) => i.severity === "critical") ??
+		payload.summary.insights[0];
+
+	const overallBadge = overallTileBadge(payload.summary.ragStatus);
+	const contractsBadge = domainTileBadge(
+		contractsDomain,
+		payload.summary.insights,
+	);
+	const licensesBadge = domainTileBadge(
+		licensesDomain,
+		payload.summary.insights,
+	);
+
+	return {
+		overallScore: Math.round(payload.summary.readinessScore),
+		overallRag: payload.summary.ragStatus,
+		overallBadgeLabel: overallBadge.label,
+		contractsGrantsScore: contractsDomain
+			? Math.round(contractsDomain.readinessPercent)
+			: null,
+		contractsGrantsRag: contractsDomain?.ragStatus ?? null,
+		contractsBadgeLabel: contractsBadge.label,
+		licensesScore: licensesDomain
+			? Math.round(licensesDomain.readinessPercent)
+			: null,
+		licensesRag: licensesDomain?.ragStatus ?? null,
+		licensesBadgeLabel: licensesBadge.label,
+		scopeLine: formatReadinessScopeLine({
+			sourcesUsed: payload.sourcesUsed,
+			expiringSoon: payload.summary.kpis.expiringSoon ?? 0,
+			upcomingDeadlines: payload.summary.kpis.upcomingDeadlines ?? 0,
+		}),
+		priorityAction: priorityInsight
+			? {
+					title: priorityInsight.itemTitle ?? priorityInsight.title,
+					dueDateLabel: formatPriorityDueLabel(
+						priorityInsight.dueDate,
+						priorityInsight.description,
+					),
+					instruction: formatPriorityInstruction({
+						category: priorityInsight.category,
+						itemKind: priorityInsight.itemKind,
+						description: priorityInsight.description,
+					}),
+					affectsModules: formatPriorityAffects(
+						priorityInsight.requirementTags,
+						priorityInsight.itemKind,
+					),
+					moduleHref: priorityInsight.moduleLink,
+				}
+			: null,
+		byModule: domains.map((d) => ({
+			name: formatModuleHeadingName(d.label),
+			score: Math.round(d.readinessPercent),
+			ragStatus: d.ragStatus,
+			atRiskCount: d.atRiskCount,
+			evidenceCount: d.evidenceCount,
+			modulePath: d.modulePath,
+			blurb: formatModuleBlurb({
+				domain: d.domain,
+				atRiskCount: d.atRiskCount,
+				upcomingDeadlines:
+					d.domain === "contracts"
+						? (payload.summary.kpis.upcomingDeadlines ?? 0)
+						: 0,
+			}),
+		})),
+		sourceLine: formatSourceLine(payload.sourcesUsed),
+		publicSiteCrawl: payload.siteCrawl
+			? {
+					websiteUrl: payload.siteCrawl.websiteUrl,
+					sitemapFound: payload.siteCrawl.sitemapFound,
+					pagesCrawled: payload.siteCrawl.pages.length,
+					healthHint: payload.siteCrawl.healthHint,
+				}
+			: null,
+	};
 }

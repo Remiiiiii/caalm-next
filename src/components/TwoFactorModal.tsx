@@ -2,17 +2,14 @@
 
 import {
 	ArrowLeft,
-	CheckCircle,
 	ClipboardCopy,
 	RefreshCw,
 	ShieldCheck,
 	Smartphone,
 } from "lucide-react";
 import { useState } from "react";
-import {
-	AlertDialog,
-	AlertDialogContent,
-} from "@/components/ui/alert-dialog";
+import { AppDialog } from "@/components/ui/app-dialog";
+import { Button } from "@/components/ui/button";
 import {
 	InputOTP,
 	InputOTPGroup,
@@ -139,27 +136,91 @@ const TwoFactorModal = ({
 		window.location.href = "/sign-out";
 	};
 
+	const title =
+		step === "scan"
+			? "Scan this QR code"
+			: step === "success"
+				? "Two-factor authentication is on"
+				: "Set up two-factor authentication";
+	const description =
+		step === "scan"
+			? "Open your authenticator app, add an account and scan the code below."
+			: step === "success"
+				? "Your account is now protected. Redirecting…"
+				: "Your organization requires it to keep your account secure. It only takes a few minutes.";
+
 	return (
-		<AlertDialog open={isOpen} onOpenChange={(open) => { if (!open && step !== "intro") onClose(); }}>
-			<AlertDialogContent className="shad-alert-dialog max-h-none! sm:max-w-[min(95vw,32rem)]">
+		<AppDialog
+			open={isOpen}
+			onOpenChange={(open) => {
+				if (!open && step !== "intro") onClose();
+			}}
+			size="form"
+			pending={isLoading}
+			icon={<ShieldCheck className="h-5 w-5" />}
+			title={title}
+			description={description}
+			footer={
+				step === "success" ? undefined : step === "scan" ? (
+					<>
+						<Button
+							type="button"
+							variant="outline"
+							className="rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+							disabled={isLoading}
+							onClick={() => {
+								setStep("intro");
+								setVerificationCode("");
+								setScanError("");
+							}}
+						>
+							<ArrowLeft className="h-4 w-4" />
+							Back
+						</Button>
+						<Button
+							type="button"
+							className="btn-primary"
+							disabled={verificationCode.length !== 6 || isLoading}
+							onClick={() => void verifyTwoFactor()}
+						>
+							{isLoading ? (
+								<RefreshCw className="h-4 w-4 animate-spin" />
+							) : (
+								<ShieldCheck className="h-4 w-4" />
+							)}
+							{isLoading ? "Verifying…" : "Verify and continue"}
+						</Button>
+					</>
+				) : (
+					<>
+						<Button
+							type="button"
+							variant="outline"
+							className="rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+							onClick={handleSignOut}
+						>
+							Sign out
+						</Button>
+						<Button
+							type="button"
+							className="btn-primary"
+							disabled={isLoading}
+							onClick={() => void setupTwoFactor()}
+						>
+							{isLoading ? (
+								<RefreshCw className="h-4 w-4 animate-spin" />
+							) : (
+								<ShieldCheck className="h-4 w-4" />
+							)}
+							{isLoading ? "Starting…" : "Start setup"}
+						</Button>
+					</>
+				)
+			}
+		>
 				{/* ── Intro ── */}
 				{step === "intro" && (
 					<>
-						<div className="flex justify-center">
-							<div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#078FAB]/10 ring-2 ring-[#078FAB]/20">
-								<ShieldCheck className="h-6 w-6 text-[#0f5384]" />
-							</div>
-						</div>
-
-						<div className="text-center space-y-1">
-							<h2 className="text-2xl font-bold text-slate-900">
-								Set up two-factor authentication
-							</h2>
-							<p className="text-sm text-slate-500">
-								Your organization requires it to keep your account secure. It
-								only takes a few minutes.
-							</p>
-						</div>
 
 						{/* Steps overview */}
 						<div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-4">
@@ -169,7 +230,7 @@ const TwoFactorModal = ({
 										{i + 1}
 									</div>
 									<div>
-										<p className="text-sm font-semibold text-slate-800">
+										<p className="text-sm font-semibold text-slate-700">
 											{s.title}
 										</p>
 										<p className="text-xs text-slate-500">{s.desc}</p>
@@ -178,51 +239,24 @@ const TwoFactorModal = ({
 							))}
 						</div>
 
-						{setupError && (
-							<p className="text-center text-sm text-red-600">{setupError}</p>
-						)}
+						{setupError ? (
+							<p className="text-sm text-red" role="alert">
+								{setupError}
+							</p>
+						) : null}
 
 						<button
 							type="button"
-							onClick={() => void setupTwoFactor()}
-							disabled={isLoading}
-							className="btn-primary h-11 disabled:opacity-50"
+							className="text-sm text-[#078FAB] hover:underline"
+							onClick={() =>
+								toast({
+									description:
+										"Two-factor authentication protects your account even if your password is stolen.",
+								})
+							}
 						>
-							{isLoading ? (
-								<>
-									<RefreshCw className="h-4 w-4 animate-spin" />
-									Starting...
-								</>
-							) : (
-								<>
-									<ShieldCheck className="h-4 w-4" />
-									Start setup
-								</>
-							)}
+							Why is this required?
 						</button>
-
-						<div className="flex items-center justify-center gap-4 text-sm">
-							<button
-								type="button"
-								className="text-[#078FAB] hover:underline"
-								onClick={() =>
-									toast({
-										description:
-											"Two-factor authentication protects your account even if your password is stolen.",
-									})
-								}
-							>
-								Why is this required?
-							</button>
-							<span className="text-slate-300">|</span>
-							<button
-								type="button"
-								className="text-slate-500 hover:underline"
-								onClick={handleSignOut}
-							>
-								Sign out
-							</button>
-						</div>
 					</>
 				)}
 
@@ -251,16 +285,6 @@ const TwoFactorModal = ({
 									/>
 								))}
 							</div>
-						</div>
-
-						<div className="text-center space-y-1">
-							<h2 className="text-xl font-bold text-slate-900">
-								Scan this QR code
-							</h2>
-							<p className="text-sm text-slate-500">
-								Open your authenticator app, add an account and scan the code
-								below.
-							</p>
 						</div>
 
 						{/* QR Code */}
@@ -334,65 +358,15 @@ const TwoFactorModal = ({
 								your phone's clock is set automatically.
 							</p>
 
-							{scanError && (
-								<p className="text-center text-sm text-red-600" role="alert">
+							{scanError ? (
+								<p className="text-sm text-red" role="alert">
 									{scanError}
 								</p>
-							)}
+							) : null}
 						</div>
-
-						<button
-							type="button"
-							onClick={() => void verifyTwoFactor()}
-							disabled={verificationCode.length !== 6 || isLoading}
-							className="btn-primary h-11 disabled:opacity-50"
-						>
-							{isLoading ? (
-								<>
-									<RefreshCw className="h-4 w-4 animate-spin" />
-									Verifying...
-								</>
-							) : (
-								<>
-									<ShieldCheck className="h-4 w-4" />
-									Verify and continue
-								</>
-							)}
-						</button>
-
-						<button
-							type="button"
-							onClick={() => {
-								setStep("intro");
-								setVerificationCode("");
-								setScanError("");
-							}}
-							className="flex w-full items-center justify-center gap-1 text-sm text-[#078FAB] hover:underline"
-						>
-							<ArrowLeft className="h-3.5 w-3.5" />
-							Back
-						</button>
 					</>
 				)}
-
-				{/* ── Success ── */}
-				{step === "success" && (
-					<div className="flex flex-col items-center gap-4 py-4 text-center">
-						<div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-50 ring-2 ring-green-200">
-							<CheckCircle className="h-8 w-8 text-green-500" />
-						</div>
-						<div>
-							<h2 className="text-xl font-bold text-slate-900">
-								Two-factor authentication is on
-							</h2>
-							<p className="mt-1 text-sm text-slate-500">
-								Your account is now protected. Redirecting…
-							</p>
-						</div>
-					</div>
-				)}
-			</AlertDialogContent>
-		</AlertDialog>
+		</AppDialog>
 	);
 };
 

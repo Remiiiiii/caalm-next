@@ -5,14 +5,9 @@ import { Loader2, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { AppDialog } from "@/components/ui/app-dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-	Dialog,
-	DialogContent,
-	DialogTitle,
-	DialogTrigger,
-} from "@/components/ui/dialog";
 import {
 	Form,
 	FormControl,
@@ -98,30 +93,54 @@ export default function LicenseAllocationDialog({
 	};
 
 	return (
-		<Dialog open={open} onOpenChange={setOpen}>
-			{!isControlled && (
-				<DialogTrigger asChild>
-					<Button variant="outline" className="primary-btn">
-						<Users className="h-4 w-4 mr-2" />
-						Allocate
-					</Button>
-				</DialogTrigger>
-			)}
-			<DialogContent className="flex max-h-[90vh] w-[calc(100%-1.5rem)] sm:w-full max-w-[600px] flex-col overflow-hidden p-0 shadow-xl">
-				<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-				<div className="glass-dialog-wizard-header mt-4">
-					<div className="flex items-center gap-3 px-6">
-						<Users className="w-5 h-5 text-[#0f5384]" />
-						<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-							Allocate License
-						</DialogTitle>
-					</div>
-					<p className="text-sm text-slate-600 mt-1 ml-14">
-						{license.licenseName}
+		<>
+			{!isControlled ? (
+				<Button
+					variant="outline"
+					className="btn-primary"
+					onClick={() => setOpen(true)}
+				>
+					<Users className="mr-2 h-4 w-4" />
+					Allocate
+				</Button>
+			) : null}
+			<AppDialog
+				open={open}
+				onOpenChange={setOpen}
+				size="form"
+				className="max-h-[90vh] w-[calc(100%-1.5rem)] sm:w-full"
+				pending={isSubmitting}
+				icon={<Users className="h-5 w-5" />}
+				title="Allocate License"
+				description={license.licenseName}
+				footer={
+					<>
+						<Button
+							type="button"
+							variant="outline"
+							className="rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+							disabled={isSubmitting}
+							onClick={() => setOpen(false)}
+						>
+							Cancel
+						</Button>
+						<Button
+							className="btn-primary px-3 sm:px-4"
+							onClick={form.handleSubmit(onSubmit)}
+							disabled={isSubmitting}
+						>
+							{isSubmitting ? (
+								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+							) : null}
+							Allocate
+						</Button>
+					</>
+				}
+			>
+				<div className="pb-1">
+					<p className="mb-4 text-xs text-slate-500">
+						Allocate licenses to users or departments
 					</p>
-				</div>
-
-				<div className="flex-1 overflow-y-auto p-6 bg-slate-50">
 					<Form {...form}>
 						<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
 							<div className="mb-4 p-4 bg-white rounded-lg border border-slate-200">
@@ -223,25 +242,7 @@ export default function LicenseAllocationDialog({
 						</form>
 					</Form>
 				</div>
-
-				<div className="glass-dialog-alert-footer">
-					<div className="text-xs text-slate-500">
-						Allocate licenses to users or departments
-					</div>
-					<div className="flex items-center justify-end gap-3">
-						<Button
-							className="primary-btn px-3 sm:px-4"
-							onClick={form.handleSubmit(onSubmit)}
-							disabled={isSubmitting}
-						>
-							{isSubmitting && (
-								<Loader2 className="h-4 w-4 mr-2 animate-spin" />
-							)}
-							Allocate
-						</Button>
-					</div>
-				</div>
-			</DialogContent>
-		</Dialog>
+			</AppDialog>
+		</>
 	);
 }

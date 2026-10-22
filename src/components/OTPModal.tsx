@@ -9,10 +9,8 @@ import {
 	ShieldCheck,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import {
-	AlertDialog,
-	AlertDialogContent,
-} from "@/components/ui/alert-dialog";
+import { AppDialog } from "@/components/ui/app-dialog";
+import { Button } from "@/components/ui/button";
 import {
 	InputOTP,
 	InputOTPGroup,
@@ -191,34 +189,60 @@ const OTPModal = ({
 	};
 
 	return (
-		<AlertDialog
+		<AppDialog
 			open={isOpen}
 			onOpenChange={(open) => {
 				if (!open) handleClose();
 			}}
+			size="form"
+			pending={isLoading || isResending || isLockedOut}
+			icon={<Mail className="h-5 w-5" />}
+			title="Enter verification code"
+			description={`Enter the 6-digit code we sent to ${maskEmail(email)}.`}
+			footer={
+				<>
+					<Button
+						type="button"
+						variant="outline"
+						className="rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+						disabled={isLoading || isResending}
+						onClick={handleClose}
+					>
+						<ArrowLeft className="h-4 w-4" />
+						Back to sign in
+					</Button>
+					{isExpired ? (
+						<Button
+							type="button"
+							className="btn-primary"
+							disabled={isResending}
+							onClick={() => void handleResend()}
+						>
+							<RefreshCw
+								className={isResending ? "h-4 w-4 animate-spin" : "h-4 w-4"}
+							/>
+							{isResending ? "Sending…" : "Send new code"}
+						</Button>
+					) : (
+						<Button
+							type="button"
+							className="btn-primary"
+							disabled={otp.length !== 6 || isLoading || isLockedOut}
+							onClick={() => void handleVerify()}
+						>
+							{isLoading ? (
+								<RefreshCw className="h-4 w-4 animate-spin" />
+							) : (
+								<ShieldCheck className="h-4 w-4" />
+							)}
+							{isLoading ? "Verifying…" : "Verify"}
+						</Button>
+					)}
+				</>
+			}
 		>
-			<AlertDialogContent className="shad-alert-dialog max-h-none!">
-				{/* Icon */}
-				<div className="flex justify-center">
-					<div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#078FAB]/10 ring-2 ring-[#078FAB]/20">
-						<Mail className="h-6 w-6 text-[#0f5384]" />
-					</div>
-				</div>
-
-				{/* Title hierarchy */}
-				<div className="text-center space-y-1">
-					<h2 className="text-2xl font-bold text-slate-900">
-						Enter verification code
-					</h2>
-					<p className="text-sm text-slate-500">
-						Enter the 6-digit code we sent to
-					</p>
-					<p className="text-sm font-semibold text-slate-700">
-						{maskEmail(email)}
-					</p>
-				</div>
-
 				{/* Status slot — fixed min-height prevents layout shift */}
+				<div className="flex flex-col gap-3 pb-1">
 				<div className="min-h-11">
 					{isExpired ? (
 						<div
@@ -304,79 +328,27 @@ const OTPModal = ({
 					</InputOTP>
 				</div>
 
-				{/* Primary action */}
-				{isExpired ? (
-					<button
-						type="button"
-						onClick={handleResend}
-						disabled={isResending}
-						className="btn-primary h-11 disabled:opacity-50"
-					>
-						{isResending ? (
-							<>
-								<RefreshCw className="h-4 w-4 animate-spin" />
-								Sending...
-							</>
+				{!isExpired ? (
+					<p className="text-center text-sm text-slate-500">
+						Didn't get a code?{" "}
+						{resendCooldown > 0 ? (
+							<span className="text-slate-400">
+								Resend in {formatTime(resendCooldown)}
+							</span>
 						) : (
-							<>
-								<RefreshCw className="h-4 w-4" />
-								Send new code
-							</>
+							<button
+								type="button"
+								onClick={handleResend}
+								disabled={isResending}
+								className="font-medium text-[#078FAB] hover:underline disabled:opacity-50"
+							>
+								{isResending ? "Sending…" : "Resend code"}
+							</button>
 						)}
-					</button>
-				) : (
-					<button
-						type="button"
-						onClick={() => void handleVerify()}
-						disabled={otp.length !== 6 || isLoading || isLockedOut}
-						className="btn-primary h-11 disabled:opacity-50"
-					>
-						{isLoading ? (
-							<>
-								<RefreshCw className="h-4 w-4 animate-spin" />
-								Verifying...
-							</>
-						) : (
-							<>
-								<ShieldCheck className="h-4 w-4" />
-								Verify
-							</>
-						)}
-					</button>
-				)}
-
-				{/* Footer */}
-				<div className="flex flex-col items-center gap-2 text-sm text-slate-500">
-					{!isExpired && (
-						<span>
-							Didn't get a code?{" "}
-							{resendCooldown > 0 ? (
-								<span className="text-slate-400">
-									Resend in {formatTime(resendCooldown)}
-								</span>
-							) : (
-								<button
-									type="button"
-									onClick={handleResend}
-									disabled={isResending}
-									className="font-medium text-[#078FAB] hover:underline disabled:opacity-50"
-								>
-									{isResending ? "Sending..." : "Resend code"}
-								</button>
-							)}
-						</span>
-					)}
-					<button
-						type="button"
-						onClick={handleClose}
-						className="flex items-center gap-1 text-[#078FAB] hover:underline"
-					>
-						<ArrowLeft className="h-3.5 w-3.5" />
-						Back to sign in
-					</button>
+					</p>
+				) : null}
 				</div>
-			</AlertDialogContent>
-		</AlertDialog>
+		</AppDialog>
 	);
 };
 

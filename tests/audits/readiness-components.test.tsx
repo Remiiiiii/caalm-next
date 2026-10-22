@@ -202,6 +202,7 @@ describe("audit readiness components", () => {
 			<ReadinessPublicSiteCard
 				siteCrawl={{
 					websiteUrl: "https://example.org",
+					crawledAt: "2026-10-20T12:00:00.000Z",
 					healthHint: "needs_attention",
 					issues: [],
 					pages: [{ url: "https://example.org", status: 200, title: null }],
@@ -212,8 +213,12 @@ describe("audit readiness components", () => {
 					id: "o",
 					name: "Org",
 					timezone: "America/New_York",
-					websiteUrl: null,
+					websiteUrl: "https://example.org",
 				}}
+				running={false}
+				canManage={false}
+				onReCrawl={() => {}}
+				onHighlightEvidence={() => {}}
 			/>,
 		);
 		expect(screen.getByText(/informational · not scored/i)).toBeInTheDocument();

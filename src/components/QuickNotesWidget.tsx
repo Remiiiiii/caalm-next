@@ -6,7 +6,6 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import {
 	AlertTriangle,
-	Ban,
 	Bold,
 	Calendar,
 	Edit,
@@ -31,9 +30,10 @@ import {
 	NoteCalendarPinFields,
 	type NotePinMode,
 } from "@/components/notes/NoteCalendarPinFields";
+import { AppDialog } from "@/components/ui/app-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
 	AppDropdownMenuContent,
 	AppDropdownMenuItem,
@@ -45,28 +45,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useNotes } from "@/hooks/useNotes";
 import type { Note } from "@/lib/actions/notes.actions";
 
-// VisuallyHidden component for accessibility
-const VisuallyHidden = ({
-	children,
-	...props
-}: {
-	children: React.ReactNode;
-	asChild?: boolean;
-}) => (
-	<span className="sr-only" {...props}>
-		{children}
-	</span>
-);
-
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+const outlineCancelClass =
+	"rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50";
 
 interface QuickNotesWidgetProps {
 	userId?: string;
@@ -647,294 +627,245 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 				</CardContent>
 			</Card>
 
-			{/* Create Note Dialog */}
-			<Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-				<DialogContent className="flex max-h-[90vh] max-w-150 flex-col overflow-hidden border border-slate-200 p-0 shadow-xl">
-					<VisuallyHidden>
-						<DialogTitle>Create New Note</DialogTitle>
-					</VisuallyHidden>
-					<div className="absolute top-0 left-0 right-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
-					<div className="glass-dialog-wizard-header mt-4">
-						<div className="flex items-center gap-3 px-6">
-							<div className="flex items-center gap-3">
-								<StickyNotePlus className="h-5 w-5 text-[#0f5384]" />
-								<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-									New Note
-								</DialogTitle>
-							</div>
-						</div>
-						<p className="ml-14 mt-1 text-sm text-slate-600">
-							Capture a quick note for your dashboard
-						</p>
-					</div>
-					<div className="glass-dialog-body-padded flex-1 space-y-4 overflow-y-auto">
-						<div className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
-							<Input
-								value={newNote.title}
-								onChange={(e) =>
-									setNewNote((prev) => ({ ...prev, title: e.target.value }))
-								}
-								placeholder="Title"
-								className="border-b border-slate-200 bg-transparent p-0 text-base font-medium shadow-none placeholder:text-slate-400 focus-visible:ring-0"
-							/>
-							<div className="min-h-[120px]">
-								{isClient && <EditorContent editor={newNoteEditor} />}
-								{!isClient && (
-									<div className="flex min-h-[120px] flex-col items-center justify-center gap-2 p-2 text-slate-400">
-										<Loader2 className="h-5 w-5 animate-spin text-slate-400" />
-										Loading editor...
-									</div>
-								)}
-							</div>
-						</div>
-						{isClient && (
-							<div className="rounded-lg border border-slate-200 bg-white p-3">
-								<EditorToolbar editor={newNoteEditor} />
-							</div>
-						)}
-						<NoteCalendarPinFields
-							mode={createPinMode}
-							onModeChange={setCreatePinMode}
-							date={createPinDate}
-							time={createPinTime}
-							onDateChange={setCreatePinDate}
-							onTimeChange={setCreatePinTime}
+			<AppDialog
+				open={isCreateDialogOpen}
+				onOpenChange={setIsCreateDialogOpen}
+				size="form"
+				className="max-w-150"
+				icon={<StickyNotePlus className="h-5 w-5" />}
+				title="New note"
+				description="Capture a quick note for your dashboard"
+				footer={
+					<>
+						<span className="mr-auto inline-flex items-center gap-1.5 text-sm text-slate-500">
+							<Info className="h-3.5 w-3.5 shrink-0" />
+							{stripHtml(newNote.content).trim()
+								? "Ready to save"
+								: "Add note content to save"}
+						</span>
+						<Button
+							type="button"
+							variant="outline"
+							className={outlineCancelClass}
+							onClick={() => setIsCreateDialogOpen(false)}
+						>
+							Cancel
+						</Button>
+						<Button
+							type="button"
+							onClick={() => void handleCreateNote()}
+							disabled={
+								!stripHtml(newNote.content).trim() ||
+								(createPinMode === "calendar" &&
+									isNotePinDateTimeInPast(createPinDate, createPinTime))
+							}
+							className="btn-primary"
+						>
+							<Save className="h-4 w-4" />
+							Save
+						</Button>
+					</>
+				}
+			>
+				<div className="space-y-4 pb-1">
+					<div className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
+						<Input
+							value={newNote.title}
+							onChange={(e) =>
+								setNewNote((prev) => ({ ...prev, title: e.target.value }))
+							}
+							placeholder="Title"
+							className="border-b border-slate-200 bg-transparent p-0 text-base font-medium shadow-none placeholder:text-slate-400 focus-visible:ring-0"
 						/>
-					</div>
-					<div className="glass-dialog-footer-wrap">
-						<div className="flex items-center justify-between">
-							<div className="flex items-center gap-1.5 text-xs text-slate-500">
-								<Info className="h-3.5 w-3.5 shrink-0 text-slate-500" />
-								{stripHtml(newNote.content).trim()
-									? "Ready to save"
-									: "Add note content to save"}
-							</div>
-							<div className="flex items-center gap-3">
-								<Button
-									onClick={handleCreateNote}
-									disabled={
-										!stripHtml(newNote.content).trim() ||
-										(createPinMode === "calendar" &&
-											isNotePinDateTimeInPast(createPinDate, createPinTime))
-									}
-									className="primary-btn px-3 sm:px-4"
-								>
-									<Save className="mr-1 h-4 w-4" />
-									Save
-								</Button>
-							</div>
+						<div className="min-h-[120px]">
+							{isClient && <EditorContent editor={newNoteEditor} />}
+							{!isClient && (
+								<div className="flex min-h-[120px] flex-col items-center justify-center gap-2 p-2 text-slate-400">
+									<Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+									Loading editor...
+								</div>
+							)}
 						</div>
 					</div>
-				</DialogContent>
-			</Dialog>
+					{isClient && (
+						<div className="rounded-lg border border-slate-200 bg-white p-3">
+							<EditorToolbar editor={newNoteEditor} />
+						</div>
+					)}
+					<NoteCalendarPinFields
+						mode={createPinMode}
+						onModeChange={setCreatePinMode}
+						date={createPinDate}
+						time={createPinTime}
+						onDateChange={setCreatePinDate}
+						onTimeChange={setCreatePinTime}
+					/>
+				</div>
+			</AppDialog>
 
-			{/* Edit Note Dialog */}
-			<Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-				<DialogContent className="flex max-h-[90vh] max-w-[600px] flex-col overflow-hidden border border-slate-200 p-0 shadow-xl">
-					<VisuallyHidden>
-						<DialogTitle>Edit Note</DialogTitle>
-					</VisuallyHidden>
-					<div className="absolute top-0 left-0 right-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
-					<div className="glass-dialog-wizard-header mt-4">
-						<div className="flex items-center justify-between px-6">
-							<div className="flex items-center gap-3">
-								<Edit className="h-5 w-5 text-[#0f5384]" />
-								<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-									Edit Note
-								</DialogTitle>
-							</div>
-							<DropdownMenu>
-								<DropdownMenuTrigger asChild>
-									<Button
-										variant="ghost"
-										size="sm"
-										className="h-8 w-8 p-0"
-										title="More Options"
-									>
-										<MoreVertical className="h-4 w-4 text-[#0f5384]" />
-									</Button>
-								</DropdownMenuTrigger>
-								<AppDropdownMenuContent align="end">
-									<AppDropdownMenuItem
-										icon={Trash2}
-										tone="danger"
-										onClick={() => openDeleteDialog(selectedNote!)}
-									>
-										Delete Note
-									</AppDropdownMenuItem>
-								</AppDropdownMenuContent>
-							</DropdownMenu>
-						</div>
-						<p className="ml-14 mt-1 text-sm text-slate-600">
-							Update your note details
-						</p>
+			<AppDialog
+				open={isEditDialogOpen}
+				onOpenChange={setIsEditDialogOpen}
+				size="form"
+				className="max-w-[600px]"
+				icon={<Edit className="h-5 w-5" />}
+				title="Edit note"
+				description="Update your note details"
+				footer={
+					<>
+						<span className="mr-auto inline-flex items-center gap-1.5 text-sm text-slate-500">
+							<Info className="h-3.5 w-3.5 shrink-0" />
+							{stripHtml(editNote.content).trim()
+								? "Ready to update"
+								: "Add note content to update"}
+						</span>
+						<Button
+							type="button"
+							variant="outline"
+							className={outlineCancelClass}
+							onClick={() => setIsEditDialogOpen(false)}
+						>
+							Cancel
+						</Button>
+						<Button
+							type="button"
+							onClick={() => void handleEditNote()}
+							disabled={
+								!stripHtml(editNote.content).trim() ||
+								(editPinMode === "calendar" &&
+									isNotePinDateTimeInPast(editPinDate, editPinTime))
+							}
+							className="btn-primary"
+						>
+							<Save className="h-4 w-4" />
+							Update
+						</Button>
+					</>
+				}
+			>
+				<div className="space-y-4 pb-1">
+					<div className="flex justify-end">
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<Button
+									variant="ghost"
+									size="sm"
+									className="h-8 w-8 p-0"
+									title="More Options"
+								>
+									<MoreVertical className="h-4 w-4 text-[#0f5384]" />
+								</Button>
+							</DropdownMenuTrigger>
+							<AppDropdownMenuContent align="end">
+								<AppDropdownMenuItem
+									icon={Trash2}
+									tone="danger"
+									onClick={() => openDeleteDialog(selectedNote!)}
+								>
+									Delete Note
+								</AppDropdownMenuItem>
+							</AppDropdownMenuContent>
+						</DropdownMenu>
 					</div>
-					<div className="glass-dialog-body-padded flex-1 space-y-4 overflow-y-auto">
-						<div className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
-							<Input
-								value={editNote.title}
-								onChange={(e) =>
-									setEditNote((prev) => ({ ...prev, title: e.target.value }))
-								}
-								placeholder="Title"
-								className="border-b border-slate-200 bg-transparent p-0 text-base font-medium shadow-none placeholder:text-slate-400 focus-visible:ring-0"
-							/>
-							<div className="min-h-[120px]">
-								{isClient && <EditorContent editor={editNoteEditor} />}
-								{!isClient && (
-									<div className="flex min-h-[120px] flex-col items-center justify-center gap-2 p-2 text-slate-400">
-										<Loader2 className="h-5 w-5 animate-spin text-slate-400" />
-										Loading editor...
-									</div>
-								)}
-							</div>
-						</div>
-						{isClient && (
-							<div className="rounded-lg border border-slate-200 bg-white p-3">
-								<EditorToolbar editor={editNoteEditor} />
-							</div>
-						)}
-						<NoteCalendarPinFields
-							mode={editPinMode}
-							onModeChange={setEditPinMode}
-							date={editPinDate}
-							time={editPinTime}
-							onDateChange={setEditPinDate}
-							onTimeChange={setEditPinTime}
+					<div className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
+						<Input
+							value={editNote.title}
+							onChange={(e) =>
+								setEditNote((prev) => ({ ...prev, title: e.target.value }))
+							}
+							placeholder="Title"
+							className="border-b border-slate-200 bg-transparent p-0 text-base font-medium shadow-none placeholder:text-slate-400 focus-visible:ring-0"
 						/>
-					</div>
-					<div className="glass-dialog-footer-wrap">
-						<div className="flex items-center justify-between">
-							<div className="flex items-center gap-1.5 text-xs text-slate-500">
-								<Info className="h-3.5 w-3.5 shrink-0 text-slate-500" />
-								{stripHtml(editNote.content).trim()
-									? "Ready to update"
-									: "Add note content to update"}
-							</div>
-							<div className="flex items-center gap-3">
-								<Button
-									onClick={handleEditNote}
-									disabled={
-										!stripHtml(editNote.content).trim() ||
-										(editPinMode === "calendar" &&
-											isNotePinDateTimeInPast(editPinDate, editPinTime))
-									}
-									className="primary-btn px-3 sm:px-4"
-								>
-									<Save className="mr-1 h-4 w-4" />
-									Update
-								</Button>
-							</div>
+						<div className="min-h-[120px]">
+							{isClient && <EditorContent editor={editNoteEditor} />}
+							{!isClient && (
+								<div className="flex min-h-[120px] flex-col items-center justify-center gap-2 p-2 text-slate-400">
+									<Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+									Loading editor...
+								</div>
+							)}
 						</div>
 					</div>
-				</DialogContent>
-			</Dialog>
+					{isClient && (
+						<div className="rounded-lg border border-slate-200 bg-white p-3">
+							<EditorToolbar editor={editNoteEditor} />
+						</div>
+					)}
+					<NoteCalendarPinFields
+						mode={editPinMode}
+						onModeChange={setEditPinMode}
+						date={editPinDate}
+						time={editPinTime}
+						onDateChange={setEditPinDate}
+						onTimeChange={setEditPinTime}
+					/>
+				</div>
+			</AppDialog>
 
-			{/* Delete Confirmation Dialog */}
-			<AlertDialog
+			<ConfirmDialog
 				open={isDeleteDialogOpen}
 				onOpenChange={setIsDeleteDialogOpen}
-			>
-				<AlertDialogContent className="mx-4 max-w-md rounded-lg shadow-2xl">
-					<AlertDialogHeader className="pb-1">
-						<div className="flex items-center gap-4 mb-4">
-							<div className="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center">
-								<Trash2 className="h-5 w-5 text-red-600" />
-							</div>
-							<div>
-								<AlertDialogTitle className="text-lg font-semibold sidebar-gradient-text">
-									Delete Note?
-								</AlertDialogTitle>
-								<AlertDialogDescription className="text-sm text-slate-600 mt-1">
-									This action cannot be undone
-								</AlertDialogDescription>
-							</div>
-						</div>
-					</AlertDialogHeader>
+				variant="destructive"
+				icon={<Trash2 className="h-5 w-5" />}
+				title="Delete note?"
+				description="This action cannot be undone."
+				facts={
+					selectedNote
+						? [
+								...(selectedNote.title
+									? [{ label: "Title", value: selectedNote.title }]
+									: []),
+								{
+									label: "Created",
+									value: new Date(selectedNote.$createdAt).toLocaleDateString(
+										"en-US",
+										{
+											year: "numeric",
+											month: "short",
+											day: "numeric",
+										},
+									),
+								},
+							]
+						: undefined
+				}
+				note="This will permanently remove the note from your collection."
+				confirmLabel="Delete Note"
+				confirmIcon={<Trash2 className="h-4 w-4" />}
+				onConfirm={async () => {
+					if (!selectedNote) return;
+					await deleteNote(selectedNote.$id);
+					setSelectedNote(null);
+					toast({
+						title: "Success",
+						description: "Note deleted successfully",
+					});
+				}}
+			/>
 
-					<div className="px-6 pb-6">
-						<div className="bg-slate-50 rounded-lg p-4 border border-slate-100">
-							<h4 className="text-sm font-medium text-slate-700 mb-3">
-								Note Details
-							</h4>
-							<div className="space-y-2">
-								{selectedNote?.title && (
-									<div className="flex items-center justify-between py-1">
-										<span className="text-sm text-slate-600">Title:</span>
-										<span className="text-sm font-medium text-slate-700 truncate max-w-[200px]">
-											{selectedNote.title}
-										</span>
-									</div>
-								)}
-								<div className="flex items-center justify-between py-1">
-									<span className="text-sm text-slate-600">Created:</span>
-									<span className="text-sm font-medium text-slate-700">
-										{selectedNote?.$createdAt &&
-											new Date(selectedNote.$createdAt).toLocaleDateString(
-												"en-US",
-												{
-													year: "numeric",
-													month: "short",
-													day: "numeric",
-												},
-											)}
-									</span>
-								</div>
-							</div>
-						</div>
-
-						<div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-							<div className="flex items-start gap-2">
-								<div className="w-4 h-4 bg-amber-400 rounded-full flex items-center justify-center mt-0.5">
-									<span className="text-xs text-white font-bold">!</span>
-								</div>
-								<p className="text-sm text-amber-800">
-									<strong>Warning:</strong> This will permanently remove the
-									note from your collection.
-								</p>
-							</div>
-						</div>
-					</div>
-
-					<div className="flex justify-center items-center gap-3 px-6 pb-6 pt-4">
-						<AlertDialogCancel className="primary-btn px-3 sm:px-4">
-							<Ban className="w-4 h-4" />
-							Cancel
-						</AlertDialogCancel>
-						<AlertDialogAction
-							onClick={handleDeleteNote}
-							className="delete-btn px-3 sm:px-4"
-						>
-							Delete Note
-						</AlertDialogAction>
-					</div>
-				</AlertDialogContent>
-			</AlertDialog>
-
-			{/* All Notes Dialog */}
-			<Dialog
+			<AppDialog
 				open={isAllNotesDialogOpen}
 				onOpenChange={setIsAllNotesDialogOpen}
+				size="form"
+				className="max-h-[90vh] max-w-[600px]"
+				icon={<StickyNote className="h-5 w-5" />}
+				title="All Notes"
+				description={`Browse and open any note from your dashboard (${notes.length} ${notes.length === 1 ? "note" : "notes"})`}
+				footer={
+					<Button
+						type="button"
+						className="btn-primary px-3 sm:px-4"
+						onClick={() => {
+							setIsAllNotesDialogOpen(false);
+							setIsCreateDialogOpen(true);
+						}}
+					>
+						<StickyNotePlus className="h-4 w-4" />
+						New note
+					</Button>
+				}
 			>
-				<DialogContent className="flex max-h-[90vh] max-w-[600px] flex-col overflow-hidden border border-slate-200 p-0 shadow-xl">
-					<div className="absolute top-0 left-0 right-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
-					<div className="sticky top-0 z-10 mt-4 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-indigo-50 py-4">
-						<div className="flex items-center gap-3 px-6">
-							<div className="flex items-center gap-3">
-								<StickyNote className="h-5 w-5 text-[#0f5384]" />
-								<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-									All Notes
-								</DialogTitle>
-							</div>
-							<span className="inline-block rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
-								{notes.length} {notes.length === 1 ? "note" : "notes"}
-							</span>
-						</div>
-						<p className="ml-14 mt-1 text-sm text-slate-600">
-							Browse and open any note from your dashboard
-						</p>
-					</div>
-					<div className="flex-1 space-y-2 overflow-y-auto bg-slate-50 p-6">
+					<div className="-mx-6 space-y-2 bg-slate-50 px-6 pb-1">
 						{sortedNotes.length === 0 ? (
 							<div className="py-8 text-center">
 								<StickyNotePlus className="mx-auto mb-2 h-8 w-8 text-slate-300" />
@@ -1016,20 +947,7 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 							))
 						)}
 					</div>
-					<div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
-						<Button
-							className="btn-primary px-3 sm:px-4"
-							onClick={() => {
-								setIsAllNotesDialogOpen(false);
-								setIsCreateDialogOpen(true);
-							}}
-						>
-							<StickyNotePlus className="h-4 w-4" />
-							New note
-						</Button>
-					</div>
-				</DialogContent>
-			</Dialog>
+			</AppDialog>
 
 			{/* Custom styles */}
 			<style jsx global>{`

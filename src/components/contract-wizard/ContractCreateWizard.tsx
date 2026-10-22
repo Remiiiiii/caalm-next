@@ -40,7 +40,7 @@ import { SaveProgressCard } from "@/components/SaveProgressCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { AppDialog } from "@/components/ui/app-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -1181,23 +1181,16 @@ export function ContractCreateWizard() {
 				</div>
 			</Card>
 
-			<Dialog open={draftsOpen} onOpenChange={setDraftsOpen}>
-				<DialogContent
-					closeButtonClassName="top-6 right-6 z-30"
-					className="flex max-h-[90vh] max-w-3xl flex-col overflow-hidden border border-slate-200 p-0 shadow-xl"
-				>
-					<div className="absolute top-0 right-0 left-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
-					<div className="mt-4 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-indigo-50 py-4">
-						<div className="flex items-center gap-3 px-6">
-							<Inbox className="h-5 w-5 text-[#0f5384]" />
-							<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-								Saved drafts
-							</DialogTitle>
-						</div>
-						<p className="mt-1 ml-14 text-sm text-slate-600">
-							Resuming a draft does not affect a pending or active contract.
-						</p>
-					</div>
+			<AppDialog
+				open={draftsOpen}
+				onOpenChange={setDraftsOpen}
+				size="form"
+				className="max-h-[90vh] max-w-3xl"
+				icon={<Inbox className="h-5 w-5" />}
+				title="Saved drafts"
+				description="Resuming a draft does not affect a pending or active contract."
+			>
+				<div className="-mx-6 min-h-0 flex-1 overflow-hidden pb-1">
 					<WizardDraftsList
 						drafts={openDrafts}
 						loading={draftsLoading}
@@ -1205,8 +1198,8 @@ export function ContractCreateWizard() {
 						onDelete={handleDeleteDrafts}
 						onDeleteAllEmpty={handleDeleteAllEmptyDrafts}
 					/>
-				</DialogContent>
-			</Dialog>
+				</div>
+			</AppDialog>
 
 			<InjectLibraryDialog
 				open={injectOpen}

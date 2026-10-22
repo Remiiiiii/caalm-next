@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AnimatedBar } from "@/components/ui/animated-bar";
 import {
 	CaalmDataTable,
@@ -31,7 +31,7 @@ import {
 } from "./readiness-ui";
 import type { ReadinessEvidenceHit } from "./types";
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 12;
 type SegmentFilter = "all" | "hrsa_osv" | "cw_monitoring" | "financial_pbc";
 
 const MODULE_ROUTE: Record<string, string> = {
@@ -61,12 +61,18 @@ function hitHref(row: ReadinessEvidenceHit): string | undefined {
 
 export function ReadinessEvidenceMap({
 	hits,
+	scrollToRequirementId,
+	onScrolled,
 }: {
 	hits: ReadinessEvidenceHit[];
+	/** Set to scroll to and briefly highlight that row (e.g. from the Public site card). */
+	scrollToRequirementId?: string | null;
+	onScrolled?: () => void;
 }) {
 	const router = useRouter();
 	const [segment, setSegment] = useState<SegmentFilter>("all");
 	const [page, setPage] = useState(1);
+	const [highlightId, setHighlightId] = useState<string | null>(null);
 
 	const rows = useMemo(
 		() => hits.filter((hit) => segment === "all" || hit.auditType === segment),
@@ -74,6 +80,26 @@ export function ReadinessEvidenceMap({
 	);
 	const covered = rows.filter((row) => row.status !== "gap").length;
 	const pageRows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+	useEffect(() => {
+		if (!scrollToRequirementId) return;
+		setSegment("all");
+		setPage(1);
+		setHighlightId(scrollToRequirementId);
+		const raf = requestAnimationFrame(() => {
+			document
+				.getElementById(`evidence-row-${scrollToRequirementId}`)
+				?.scrollIntoView({ behavior: "smooth", block: "center" });
+		});
+		const timeout = setTimeout(() => {
+			setHighlightId(null);
+			onScrolled?.();
+		}, 2500);
+		return () => {
+			cancelAnimationFrame(raf);
+			clearTimeout(timeout);
+		};
+	}, [scrollToRequirementId]);
 
 	return (
 		<Card className="glass-card h-full">
@@ -138,7 +164,10 @@ export function ReadinessEvidenceMap({
 									Description
 								</TableHead>
 								<TableHead
-									className={cn(DATA_TABLE_HEADER_CELL, "whitespace-nowrap px-3")}
+									className={cn(
+										DATA_TABLE_HEADER_CELL,
+										"whitespace-nowrap px-3",
+									)}
 								>
 									Segment
 								</TableHead>
@@ -158,8 +187,12 @@ export function ReadinessEvidenceMap({
 								return (
 									<TableRow
 										key={row.requirementId}
+										id={`evidence-row-${row.requirementId}`}
 										tabIndex={0}
-										className={DATA_TABLE_BODY_ROW_CLICKABLE}
+										className={cn(
+											DATA_TABLE_BODY_ROW_CLICKABLE,
+											highlightId === row.requirementId && "bg-blue/10",
+										)}
 										onClick={() => route && router.push(route)}
 										onKeyDown={(event) => {
 											if (event.key === "Enter" && route) router.push(route);

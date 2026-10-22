@@ -1,5 +1,13 @@
+/**
+ * Metadata routes search engines (and the readiness public-site crawl) fetch
+ * unauthenticated — src/app/sitemap.ts and src/app/robots.ts. Exported so the
+ * proxy's Coming Soon redirect can exempt them too, without a second
+ * hardcoded copy of these two paths drifting from this one.
+ */
+export const CRAWLER_PATHS = ["/sitemap.xml", "/robots.txt"] as const;
+
 /** Exact paths that stay public (marketing / legal / demos). */
-const PUBLIC_EXACT_PATHS = new Set([
+export const PUBLIC_EXACT_PATHS = new Set<string>([
 	"/",
 	"/terms",
 	"/privacy",
@@ -9,10 +17,11 @@ const PUBLIC_EXACT_PATHS = new Set([
 	"/contact",
 	"/request-a-demo",
 	"/nonprofits",
+	...CRAWLER_PATHS,
 ]);
 
 /** Prefixes for token/counterparty flows and docs — never run app-shell 2FA auth. */
-const PUBLIC_ROUTE_PREFIXES = [
+export const PUBLIC_ROUTE_PREFIXES = [
 	"/sign-in",
 	"/sign-up",
 	"/negotiate/",

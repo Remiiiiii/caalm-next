@@ -4,7 +4,7 @@ import { AlertTriangle, FileText, Loader2, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { SearchField } from "@/components/ui/search-field";
 import {
 	draftAgreementLabel,
@@ -327,7 +327,7 @@ export function WizardDraftsList({
 				</div>
 			)}
 
-			<Dialog
+			<ConfirmDialog
 				open={deleteDialogOpen}
 				onOpenChange={(open) => {
 					if (!open && !deleting) {
@@ -335,61 +335,27 @@ export function WizardDraftsList({
 						setPendingDeleteAllEmpty(false);
 					}
 				}}
-			>
-				<DialogContent
-					className="gap-0 overflow-hidden border border-slate-200 p-0 shadow-xl sm:max-w-md"
-					variant="destructive"
-				>
-					<DialogTitle className="sr-only">
-						Delete draft{deleteCount === 1 ? "" : "s"}
-					</DialogTitle>
-					<div className="absolute top-0 right-0 left-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
-
-					<div className="mt-4 border-b border-slate-200 bg-white px-6 py-4">
-						<div className="flex items-center gap-2">
-							<AlertTriangle className="h-5 w-5 shrink-0 text-[#f7d333]" />
-							<h2 className="text-base font-semibold sidebar-gradient-text">
-								Delete draft{deleteCount === 1 ? "" : "s"}
-							</h2>
-						</div>
-						<p className="mt-1 ml-7 text-sm text-slate-600">
-							{deleteCount === 1
-								? "Are you sure you want to delete this draft? This action cannot be undone."
-								: `Are you sure you want to delete ${deleteCount} drafts? This action cannot be undone.`}
-						</p>
-					</div>
-
-					<div className="space-y-3 bg-white px-6 py-5">
-						<p className="text-sm text-slate-600">
-							{deleteCount === 1
-								? "This will permanently remove the draft from your saved work."
-								: "This will permanently remove the selected drafts from your saved work."}
-						</p>
-						<p className="text-xs font-medium text-slate-500">
-							This action is permanent.
-						</p>
-					</div>
-
-					<div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
-						<Button
-							type="button"
-							disabled={deleting}
-							className="delete-btn gap-2 px-3 sm:px-4"
-							onClick={() => void confirmDelete()}
-						>
-							<Trash2 className="h-4 w-4 shrink-0" />
-							{deleting
-								? "Deleting..."
-								: deleteCount === 1
-									? "Delete draft"
-									: "Delete drafts"}
-							{deleting && (
-								<Loader2 className="h-4 w-4 shrink-0 animate-spin" />
-							)}
-						</Button>
-					</div>
-				</DialogContent>
-			</Dialog>
+				variant="destructive"
+				icon={<AlertTriangle className="h-5 w-5" />}
+				title={`Delete draft${deleteCount === 1 ? "" : "s"}`}
+				description={
+					deleteCount === 1
+						? "Are you sure you want to delete this draft? This action cannot be undone."
+						: `Are you sure you want to delete ${deleteCount} drafts? This action cannot be undone.`
+				}
+				helperText={
+					deleteCount === 1
+						? "This will permanently remove the draft from your saved work."
+						: "This will permanently remove the selected drafts from your saved work."
+				}
+				note="This action is permanent."
+				confirmLabel={
+					deleteCount === 1 ? "Delete draft" : "Delete drafts"
+				}
+				confirmIcon={<Trash2 className="h-4 w-4" />}
+				pendingLabel="Deleting…"
+				onConfirm={confirmDelete}
+			/>
 		</div>
 	);
 }

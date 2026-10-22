@@ -3,11 +3,13 @@
 import {
 	AlertCircle,
 	AlertTriangle,
+	Camera,
 	Download,
 	FileText,
 	Info,
 	Loader2,
 	RefreshCw,
+	Save,
 	ShieldAlert,
 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
@@ -29,7 +31,10 @@ import { ReadinessStatRows } from "@/components/audits/readiness/ReadinessStatRo
 import {
 	FALLBACK_RAG_THRESHOLDS,
 	formatDay,
+	PILL,
 	plural,
+	RAG_LABEL,
+	RAG_PILL,
 	RECT_BADGE,
 	ragFor,
 } from "@/components/audits/readiness/readiness-ui";
@@ -37,19 +42,10 @@ import type {
 	ReadinessInsight,
 	ReadinessResponse,
 } from "@/components/audits/readiness/types";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { AnimatedBar } from "@/components/ui/animated-bar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { MetricStatCard } from "@/components/ui/metric-stat-card";
 import {
 	Tooltip,
@@ -77,10 +73,15 @@ export default function AuditReadinessPage() {
 	const { toast } = useToast();
 	const canView = permissions.includes(PERMISSIONS.AUDIT.VIEW);
 	const canExport = permissions.includes(PERMISSIONS.AUDIT.EXPORT);
+	const canManagePublicSite = permissions.includes(PERMISSIONS.SETTINGS.EDIT);
 	const [running, setRunning] = useState(false);
+	const [crawling, setCrawling] = useState(false);
 	const [confirmOpen, setConfirmOpen] = useState(false);
 	const [exportingId, setExportingId] = useState<string | null>(null);
 	const [highlightId, setHighlightId] = useState<string | null>(null);
+	const [highlightRequirementId, setHighlightRequirementId] = useState<
+		string | null
+	>(null);
 	const [explainOpen, setExplainOpen] = useState(false);
 	const [aiOpen, setAiOpen] = useState(false);
 
@@ -118,15 +119,29 @@ export default function AuditReadinessPage() {
 				setHighlightId(newId);
 				window.setTimeout(() => setHighlightId(null), 4000);
 			}
-		} catch (runError) {
+		} finally {
+			setRunning(false);
+		}
+	}, [mutate, toast]);
+
+	const handleReCrawl = useCallback(async () => {
+		setCrawling(true);
+		try {
+			const res = await fetch("/api/audits/readiness/crawl", {
+				method: "POST",
+			});
+			const body = await res.json();
+			if (!res.ok) throw new Error(body.error || "Re-crawl failed");
+			toast({ title: "Public site checked" });
+			await mutate();
+		} catch (err) {
 			toast({
-				title: "Could not run audit",
-				description: runError instanceof Error ? runError.message : "Try again",
+				title: "Couldn't re-crawl. Try again.",
+				description: err instanceof Error ? err.message : undefined,
 				variant: "destructive",
 			});
 		} finally {
-			setRunning(false);
-			setConfirmOpen(false);
+			setCrawling(false);
 		}
 	}, [mutate, toast]);
 
@@ -246,6 +261,13 @@ export default function AuditReadinessPage() {
 	const score = summary?.readinessScore ?? null;
 	const rag =
 		score === null ? null : (summary?.ragStatus ?? ragFor(score, thresholds));
+	const nextRunLabel = payload?.nextRun
+		? formatInTimezone(
+				new Date(payload.nextRun.at),
+				"EEE, MMM d, yyyy",
+				timeZone,
+			)
+		: null;
 	const severity = summary?.severity ?? { critical: 0, moderate: 0, low: 0 };
 	const severityTotal = severity.critical + severity.moderate + severity.low;
 	const contractsSnapshot = summary?.complianceSnapshot?.contracts ?? null;
@@ -275,7 +297,10 @@ export default function AuditReadinessPage() {
 			? score - payload.latestSnapshot.score
 			: null;
 
-	if (permissionsLoading || (canView && !payload && (isLoading || isValidating))) {
+	if (
+		permissionsLoading ||
+		(canView && !payload && (isLoading || isValidating))
+	) {
 		return (
 			<div className="w-full px-4 pb-10 sm:px-6 lg:px-8 xl:px-12">
 				<ReadinessSkeleton />
@@ -314,6 +339,13 @@ export default function AuditReadinessPage() {
 			</div>
 		);
 	}
+
+	const helperText = (
+		<div className="flex items-center justify-center gap-2 text-xs text-slate-500">
+			<Info className="h-4 w-4 shrink-0" aria-hidden />
+			<span>You can export any snapshot as a PDF packet later.</span>
+		</div>
+	);
 
 	return (
 		<div className="w-full space-y-6 px-4 pb-10 text-slate-700 sm:px-6 lg:px-8 xl:px-12">
@@ -580,9 +612,17 @@ export default function AuditReadinessPage() {
 						onAssign={(row, assigneeId) => void assignOwner(row, assigneeId)}
 					/>
 					<ReadinessAiPanel
-						snapshotId={payload.latestSnapshot?.id}
-						initialSummary={payload.latestSnapshot?.aiSummary}
-						initialSummaryAt={payload.latestSnapshot?.createdAt}
+						snapshotId={
+							payload.assistant?.snapshotId ?? payload.latestSnapshot?.id
+						}
+						initialSummary={
+							payload.assistant?.summary ?? payload.latestSnapshot?.aiSummary
+						}
+						initialSummaryAt={
+							payload.assistant?.createdAt ?? payload.latestSnapshot?.createdAt
+						}
+						initialStructured={payload.assistant?.structured}
+						onSnapshotSaved={() => void mutate()}
 						open={aiOpen}
 						onOpenChange={setAiOpen}
 					/>
@@ -596,31 +636,30 @@ export default function AuditReadinessPage() {
 						thresholds={thresholds}
 					/>
 
-					{/* Evidence map + public site */}
-					<div className="grid grid-cols-1 items-stretch gap-6 xl:grid-cols-3">
-						<div className="xl:col-span-2">
-							<ReadinessEvidenceMap hits={payload.evidenceMapHits} />
-						</div>
-						<ReadinessPublicSiteCard
-							siteCrawl={payload.siteCrawl}
-							org={payload.org}
-						/>
-					</div>
+					<ReadinessEvidenceMap
+						hits={payload.evidenceMapHits}
+						scrollToRequirementId={highlightRequirementId}
+						onScrolled={() => setHighlightRequirementId(null)}
+					/>
+
+					<ReadinessPublicSiteCard
+						siteCrawl={payload.siteCrawl}
+						org={payload.org}
+						running={crawling}
+						canManage={canManagePublicSite}
+						nextRunLabel={nextRunLabel}
+						onReCrawl={() => void handleReCrawl()}
+						onHighlightEvidence={() =>
+							setHighlightRequirementId("SITE-PUBLIC-PRESENCE")
+						}
+					/>
 
 					<ReadinessSnapshotHistory
 						rows={history}
 						running={running}
 						onRun={() => setConfirmOpen(true)}
 						timeZone={timeZone}
-						nextRunLabel={
-							payload.nextRun
-								? formatInTimezone(
-										new Date(payload.nextRun.at),
-										"EEE, MMM d, yyyy",
-										timeZone,
-									)
-								: null
-						}
+						nextRunLabel={nextRunLabel}
 						canExport={canExport}
 						downloadingId={exportingId}
 						highlightId={highlightId}
@@ -638,33 +677,41 @@ export default function AuditReadinessPage() {
 				</>
 			)}
 
-			<AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle className="sidebar-gradient-text">
-							Run weekly snapshot?
-						</AlertDialogTitle>
-						<AlertDialogDescription>
-							Save a point-in-time snapshot of the current score? It is added to
-							snapshot history and can be exported as a PDF packet.
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel disabled={running}>Cancel</AlertDialogCancel>
-						<AlertDialogAction
-							className="primary-btn px-3 sm:px-4"
-							disabled={running}
-							onClick={(event) => {
-								event.preventDefault();
-								void runAudit();
-							}}
-						>
-							{running ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-							Save snapshot
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
+			<ConfirmDialog
+				open={confirmOpen}
+				onOpenChange={setConfirmOpen}
+				icon={<Camera className="h-6 w-6 text-[#078fab]" />}
+				confirmIcon={<Save className="h-4 w-4" />}
+				showCancel={false}
+				title="Run weekly snapshot?"
+				description="Save a point-in-time snapshot of the current score."
+				facts={[
+					{
+						label: "Captured",
+						value: `Now (${formatInTimezone(new Date(), "MMM d, h:mm a", timeZone)})`,
+					},
+					{
+						label: "Score at capture",
+						value:
+							score !== null ? (
+								<span className="inline-flex items-center gap-1.5">
+									{score}%
+									{rag ? (
+										<span className={cn(PILL, RAG_PILL[rag])}>
+											{RAG_LABEL[rag]}
+										</span>
+									) : null}
+								</span>
+							) : (
+								"—"
+							),
+					},
+					{ label: "Saved to", value: "Snapshot history" },
+				]}
+				helperText={helperText}
+				confirmLabel="Save snapshot"
+				onConfirm={runAudit}
+			/>
 		</div>
 	);
 }

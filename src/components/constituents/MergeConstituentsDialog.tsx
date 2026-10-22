@@ -2,8 +2,8 @@
 
 import { GitMerge } from "lucide-react";
 import { useEffect, useState } from "react";
+import { AppDialog } from "@/components/ui/app-dialog";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { SearchField } from "@/components/ui/search-field";
 import {
 	type Constituent,
@@ -96,29 +96,41 @@ export function MergeConstituentsDialog({
 	};
 
 	return (
-		<Dialog
+		<AppDialog
 			open={open}
 			onOpenChange={(next) => {
 				if (!next) reset();
 				onOpenChange(next);
 			}}
+			size="form"
+			className="max-h-[90vh]"
+			pending={saving}
+			icon={<GitMerge className="h-5 w-5" />}
+			title="Merge duplicate"
+			description="Preview first. The other record is retired, not deleted."
+			footer={
+				<>
+					<Button
+						type="button"
+						variant="outline"
+						className="rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+						disabled={saving}
+						onClick={() => onOpenChange(false)}
+					>
+						Cancel
+					</Button>
+					<Button
+						className="btn-primary px-3 sm:px-4"
+						disabled={saving || !preview}
+						onClick={() => void commit()}
+					>
+						<GitMerge className="h-4 w-4" />
+						Merge
+					</Button>
+				</>
+			}
 		>
-			<DialogContent className="max-w-[600px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl">
-				<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-				<div className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
-					<div className="flex items-center gap-3 px-6">
-						<div className="flex items-center gap-3">
-							<GitMerge className="w-5 h-5 text-[#0f5384]" />
-							<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-								Merge duplicate
-							</DialogTitle>
-						</div>
-					</div>
-					<p className="text-sm text-slate-600 mt-1 ml-14">
-						Preview first. The other record is retired, not deleted.
-					</p>
-				</div>
-				<div className="flex-1 overflow-y-auto p-6 bg-slate-50 space-y-4">
+			<div className="flex flex-col gap-4 pb-1">
 					<SearchField
 						value={query}
 						onChange={(event) => setQuery(event.target.value)}
@@ -166,18 +178,7 @@ export function MergeConstituentsDialog({
 						</div>
 					) : null}
 					{error ? <p className="text-sm text-red">{error}</p> : null}
-				</div>
-				<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3">
-					<Button
-						className="primary-btn px-3 sm:px-4"
-						disabled={saving || !preview}
-						onClick={() => void commit()}
-					>
-						<GitMerge className="h-4 w-4" />
-						Merge
-					</Button>
-				</div>
-			</DialogContent>
-		</Dialog>
+			</div>
+		</AppDialog>
 	);
 }

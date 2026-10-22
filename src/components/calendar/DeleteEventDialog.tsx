@@ -1,15 +1,9 @@
 "use client";
 
-import * as VisuallyHiddenPrimitive from "@radix-ui/react-visually-hidden";
-import { AlertTriangle, Trash2 } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import type React from "react";
+import { AppDialog } from "@/components/ui/app-dialog";
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogTitle,
-} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -33,37 +27,39 @@ export function DeleteEventDialog({
 	onConfirm,
 }: DeleteEventDialogProps): React.ReactElement {
 	return (
-		<Dialog
+		<AppDialog
 			open={open}
 			onOpenChange={(next) => {
 				if (!next) onCancel();
 				else onOpenChange(true);
 			}}
+			variant="destructive"
+			icon={<AlertTriangle className="h-5 w-5" />}
+			title="Delete event"
+			description={`Are you sure you want to delete “${eventTitle}”? This action cannot be undone.`}
+			footer={
+				<>
+					<Button
+						type="button"
+						variant="outline"
+						className="rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+						autoFocus
+						onClick={onCancel}
+					>
+						Cancel
+					</Button>
+					<Button
+						type="button"
+						className="delete-btn"
+						onClick={onConfirm}
+					>
+						Delete event
+					</Button>
+				</>
+			}
 		>
-			<DialogContent className="overflow-hidden p-0 shadow-xl sm:max-w-md">
-				<VisuallyHiddenPrimitive.Root>
-					<DialogTitle>Delete Event</DialogTitle>
-				</VisuallyHiddenPrimitive.Root>
-				<div className="h-4 w-full bg-[#d6d7d8] opacity-70 " />
-
-				<div className="border-b border-white/40 bg-white/35 px-6 py-4 backdrop-blur-sm">
-					<div className="flex items-start gap-3">
-						<div className="w-9 h-9 rounded-fullflex items-center justify-center">
-							<AlertTriangle className="w-5 h-5 text-[#f0c974]" />
-						</div>
-						<div>
-							<h2 className="text-base font-semibold sidebar-gradient-text">
-								Delete Event
-							</h2>
-							<DialogDescription className="text-sm text-slate-600 mt-1">
-								Are you sure you want to delete &quot;{eventTitle}&quot;? This
-								action cannot be undone.
-							</DialogDescription>
-						</div>
-					</div>
-				</div>
-
-				<div className="px-6 py-5 space-y-3 bg-white">
+			<div className="flex flex-col gap-3 pb-1">
+				<div className="space-y-2">
 					<Label
 						htmlFor="deleteReason"
 						className="text-sm font-medium text-slate-700"
@@ -76,25 +72,13 @@ export function DeleteEventDialog({
 						value={deleteReason}
 						onChange={(e) => onDeleteReasonChange(e.target.value)}
 						rows={4}
-						className="bg-white border-slate-300 focus:border-[#078FAB] focus:ring-1 focus:ring-[#078FAB] focus-visible:ring-1 focus-visible:ring-[#078FAB] focus-visible:ring-offset-0"
+						className="border-slate-300 bg-white focus:border-[#078FAB] focus:ring-1 focus:ring-[#078FAB] focus-visible:ring-1 focus-visible:ring-[#078FAB] focus-visible:ring-offset-0"
 					/>
-					<p className="text-xs text-slate-500">
-						This helps your team understand why the event was removed.
-					</p>
 				</div>
-
-				<div className="flex items-center justify-between border-t border-white/40 bg-white/35 px-6 py-4 backdrop-blur-sm">
-					<div className="text-xs text-slate-500">
-						This action is permanent.
-					</div>
-					<div className="flex items-center gap-3">
-						<Button onClick={onConfirm} className="primary-btn px-3 sm:px-4">
-							<Trash2 className="w-4 h-4" />
-							Delete Event
-						</Button>
-					</div>
-				</div>
-			</DialogContent>
-		</Dialog>
+				<p className="text-sm text-slate-500">
+					This helps your team understand why the event was removed.
+				</p>
+			</div>
+		</AppDialog>
 	);
 }

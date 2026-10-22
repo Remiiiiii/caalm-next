@@ -222,72 +222,74 @@ For content cards (like article lists, tables, etc.):
 
 ## Dialog & Modal Standards
 
-**Hard rule:** Do not deviate from the CAALM dialog template unless the user explicitly asks. Prefer corner **X** to dismiss; omit footer Cancel unless requested. Do not invent alternate dialog chrome (custom icon tiles, flat white headers, solid filled destructive CTAs instead of `.delete-btn`).
+**Hard rule:** Use `ConfirmDialog` (confirms / destructive) or `AppDialog` (forms / multi-step). Do not invent a third chrome. No grey cap bar. Header wash is `bg-[#eefcfe]/60` (default) or `bg-red/5` (destructive) — not indigo `from-blue-50`.
 
-### Standard Dialog Structure
+**Widths:** confirm `max-w-[460px]`; form `max-w-[520px]`. Workspace dialogs (document viewer, article editor, adjust plan, HubSpot config, reports) keep their current width via `className`.
 
-**ALL dialogs** must follow this structure:
+**Leave as overlays** (do not convert to AppDialog): `SearchModal`, `DocsSearch`, `FilePreviewDialogImpl`, `LocalPdfPreviewDialog`, `ExpiryAlertModal`, `ContractExpiryModal`.
+
+**Snapshot confirm:** `showCancel={false}` — no Cancel button.
+
+### Confirm / default
 
 ```tsx
-<Dialog open={isOpen} onOpenChange={setIsOpen}>
-  <DialogContent className="max-w-[600px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl">
-    {/* Professional Cap */}
-    <div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
+<ConfirmDialog
+  open={open}
+  onOpenChange={setOpen}
+  icon={<Camera className="h-5 w-5" />}
+  title="Run weekly snapshot?"
+  description="Save a point-in-time snapshot of the current score."
+  facts={[{ label: "Saved to", value: "Snapshot history" }]}
+  helperText="You can export any snapshot as a PDF packet later."
+  confirmLabel="Save snapshot"
+  onConfirm={save}
+/>
+```
 
-    {/* Header with gradient background */}
-    <div className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
-      <div className="flex items-center gap-3 px-6">
-        <div className="flex items-center gap-3">
-          <IconComponent className="w-5 h-5 text-[#0f5384]" />
-          <DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-            Dialog Title
-          </DialogTitle>
-        </div>
-      </div>
-      <p className="text-sm text-slate-600 mt-1 ml-14">
-        Optional subtitle or description
-      </p>
-    </div>
+### Form / multi-step
 
-    {/* Scrollable Content */}
-    <div className="flex-1 overflow-y-auto p-6 bg-slate-50">
-      {/* Main content here */}
-    </div>
-
-    {/* Professional Footer — corner X dismisses; omit Cancel unless requested */}
-    <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3">
-      <Button className="primary-btn px-3 sm:px-4">
-        <Icon className="h-4 w-4" />
-        Action
+```tsx
+<AppDialog
+  open={open}
+  onOpenChange={setOpen}
+  size="form"
+  icon={<ShieldCheck className="h-5 w-5" />}
+  title="Confirm this change"
+  description="Enter the code we emailed you."
+  footer={
+    <>
+      <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+        Cancel
       </Button>
-    </div>
-  </DialogContent>
-</Dialog>
+      <Button type="button" className="btn-primary" onClick={submit}>
+        Save
+      </Button>
+    </>
+  }
+>
+  {/* fields */}
+</AppDialog>
 ```
 
 ### Dialog Requirements
 
 **ALWAYS:**
-- Include professional cap bar at the top
-- Use gradient header (`bg-gradient-to-r from-blue-50 to-indigo-50`)
-- Add `mt-4` to header div to account for cap bar
-- Use `bg-slate-50` for scrollable content area
-- Place icons directly next to title with `gap-3` and `text-[#0f5384]`
-- Prefer corner X (`showCloseButton`) to dismiss; do not add footer Cancel unless the user asks
-- Do not invent alternate dialog chrome unless the user explicitly requests it
-- Use `ml-14` on subtitle paragraphs to align with title text
-- Include footer with `bg-slate-50` and border-top
+- Header: full-width wash `bg-[#eefcfe]/60` (default) or `bg-red/5` (destructive); 44px round tinted icon well (teal `bg-[#078FAB]/10` default, `bg-red/10` destructive), title 18px semibold (`text-[#0f5384]` default, `text-red` destructive), one-line description on the same left edge, 40×40 close X
+- Body `px-6`; optional facts box (`border-slate-200 bg-slate-50`, label left / value right `text-slate-700`); muted helper; optional orange warning note
+- Footer right-aligned `p-6`: outline Cancel, then one committing action
+- Confirm uses `btn-primary` (only gradient in the dialog). Destructive uses `.delete-btn` (solid error)
+- Pending: spinner + “Saving…” / “Deleting…”, disable buttons and X, block Escape and overlay click
+- Error: keep open, inline `role="alert"` above the footer
+- Tall content: `max-h-dvh` flex column; body `min-h-0 overflow-y-auto`; header and footer stay visible
 
 **NEVER:**
-- Use plain DialogContent without the professional structure
-- Skip the cap bar at the top
-- Use flat backgrounds in headers
-- Use circular icon backgrounds in dialog headers
-- Use `bg-white` for main dialog content areas (use `bg-slate-50`)
+- Grey top cap (`bg-[#d6d7d8]`)
+- Full-width tinted title banner (`from-blue-50 to-indigo-50`, `glass-dialog-wizard-header`)
+- Two gradient buttons in one dialog
+- `window.confirm` / `confirm()`
+- New colors, fonts, radii, shadows, or z-index values
 
-**Reference examples:**
-- `src/components/ActionDropdown.tsx` - Re-assign dialog
-- `src/components/news/ArticleEditor.tsx` - Article editor dialog
+**Reference:** `src/components/ui/app-dialog.tsx`, `src/components/ui/confirm-dialog.tsx`, snapshot confirm on `src/app/(root)/audits/readiness/page.tsx`
 
 ---
 

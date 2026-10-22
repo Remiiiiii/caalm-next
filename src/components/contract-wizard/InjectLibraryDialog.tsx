@@ -4,8 +4,8 @@ import { FileBox, FileText, Info, LayoutGrid } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { clauseCategoryLabel } from "@/components/clauses/ClauseEditorDialog";
 import RoundedUnderlineTabs from "@/components/RoundedUnderlineTabs";
+import { AppDialog } from "@/components/ui/app-dialog";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { SearchField } from "@/components/ui/search-field";
 import type { Clause } from "@/types/clauses";
 import type { ContractTemplate } from "@/types/contract-templates";
@@ -85,27 +85,28 @@ export function InjectLibraryDialog({
 	);
 
 	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent
-				closeButtonClassName="top-6 right-6 z-30"
-				className="flex max-h-[90vh] max-w-[640px] flex-col overflow-hidden border border-slate-200 p-0 shadow-xl"
-			>
-				{/* Cap + mint header (image layout, CAALM green tint) */}
-				<div className="absolute top-0 right-0 left-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
-				<div className="sticky top-0 z-10 mt-4 border-b border-slate-200 bg-[#e8f2ef] py-4">
-					<div className="flex items-center gap-3 px-6">
-						<FileBox className="h-5 w-5 shrink-0 text-[#0f5384]" aria-hidden />
-						<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-							Inject into this draft
-						</DialogTitle>
-					</div>
-					<p className="mt-1 ml-14 pr-6 text-sm text-slate-600">
-						Add a published recipe or a single clause. This only changes the
-						draft you are building.
+		<AppDialog
+			open={open}
+			onOpenChange={onOpenChange}
+			size="form"
+			className="max-h-[90vh] max-w-[640px]"
+			pending={loading}
+			icon={<FileBox className="h-5 w-5" aria-hidden />}
+			title="Inject into this draft"
+			description="Add a published recipe or a single clause. This only changes the draft you are building."
+			footer={
+				<div className="flex items-start gap-2">
+					<Info
+						className="mt-0.5 h-4 w-4 shrink-0 text-slate-500"
+						aria-hidden
+					/>
+					<p className="text-sm text-slate-600">
+						Injected language is snapshotted on submit, not live-linked.
 					</p>
 				</div>
-
-				<div className="flex-1 overflow-y-auto bg-slate-50 p-6">
+			}
+		>
+			<div className="pb-1">
 					<RoundedUnderlineTabs
 						className="mb-4"
 						aria-label="Library source"
@@ -201,18 +202,7 @@ export function InjectLibraryDialog({
 								</div>
 							))}
 					</div>
-				</div>
-
-				<div className="flex items-start gap-2 border-t border-slate-200 bg-slate-50 px-6 py-4">
-					<Info
-						className="mt-0.5 h-4 w-4 shrink-0 text-slate-500"
-						aria-hidden
-					/>
-					<p className="text-sm text-slate-600">
-						Injected language is snapshotted on submit, not live-linked.
-					</p>
-				</div>
-			</DialogContent>
-		</Dialog>
+			</div>
+		</AppDialog>
 	);
 }

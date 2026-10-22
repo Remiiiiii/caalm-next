@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { AuditReadinessDomain } from "@/lib/analytics/audit-readiness.types";
 import {
+	buildReadinessAssistantStructured,
 	domainTileBadge,
 	formatModuleBlurb,
 	formatModuleHeadingName,
@@ -12,6 +13,7 @@ import {
 	formatSourceLine,
 	overallTileBadge,
 } from "@/lib/audits/readiness/summary-tiles";
+import type { AuditReadinessSnapshotPayload } from "@/lib/audits/readiness/types";
 
 const contractsDomain: AuditReadinessDomain = {
 	domain: "contracts",
@@ -129,5 +131,48 @@ describe("readiness assistant tiles", () => {
 			"Source: Contracts and Licenses records",
 		);
 		expect(formatSiteHost("https://www.example.org/about")).toBe("example.org");
+	});
+
+	it("builds the assistant layout from a saved snapshot payload", () => {
+		const payload = {
+			sourcesUsed: ["Contracts", "Licenses"],
+			summary: {
+				readinessScore: 50,
+				ragStatus: "red",
+				kpis: { expiringSoon: 1, upcomingDeadlines: 1 },
+				insights: [
+					{
+						id: "1",
+						title: "Action required",
+						itemTitle: "Solvent Technologies",
+						description: "action-required · due 2027-09-30",
+						severity: "moderate",
+						moduleLink: "/contracts",
+						moduleLabel: "Contracts",
+						itemKind: "contract",
+						dueDate: "2027-09-30",
+						requirementTags: ["hrsa_osv"],
+					},
+				],
+				domains: [contractsDomain, licensesDomain],
+			},
+			siteCrawl: {
+				websiteUrl: "https://www.example.org",
+				sitemapFound: true,
+				pages: [{}, {}, {}, {}],
+				healthHint: "needs_attention",
+			},
+		} as unknown as AuditReadinessSnapshotPayload;
+
+		const structured = buildReadinessAssistantStructured(payload);
+		expect(structured.overallScore).toBe(50);
+		expect(structured.byModule[0]?.name).toBe("Contracts");
+		expect(structured.byModule[0]?.blurb).toBe(
+			"1 action-required item (see above) and 1 upcoming deadline.",
+		);
+		expect(structured.sourceLine).toBe(
+			"Source: Contracts and Licenses records",
+		);
+		expect(structured.publicSiteCrawl?.pagesCrawled).toBe(4);
 	});
 });

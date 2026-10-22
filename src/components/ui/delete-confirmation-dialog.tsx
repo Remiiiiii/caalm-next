@@ -1,11 +1,11 @@
 "use client";
 
-import { AlertTriangle, Trash2 } from "lucide-react";
+import { AlertTriangle, Loader2, Trash2 } from "lucide-react";
 import type React from "react";
 import { useEffect, useState } from "react";
+import { AppDialog } from "@/components/ui/app-dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 export type DeleteListItem = {
@@ -99,7 +99,7 @@ export function DeleteConfirmBody({
 	const nounLabel = `${count} ${itemNoun}${count === 1 ? "" : "s"} selected`;
 
 	return (
-		<div className="flex-1 space-y-4 overflow-y-auto bg-slate-50 p-6">
+		<div className="space-y-3 pb-1">
 			{description ? (
 				<p className="text-sm text-slate-600">{description}</p>
 			) : null}
@@ -208,56 +208,57 @@ export const DeleteConfirmationDialog: React.FC<
 			: `Delete ${noun}s`;
 
 	return (
-		<Dialog
+		<AppDialog
 			open={open}
 			onOpenChange={(next) => {
 				if (!next) onCancel?.();
 				onOpenChange(next);
 			}}
-		>
-			<DialogContent
-				className="flex max-h-[90vh] w-[calc(100%-1.5rem)] max-w-[600px] flex-col overflow-hidden border border-slate-200 p-0 shadow-xl sm:w-full"
-				variant="destructive"
-				showCloseButton
-			>
-				{/* Professional cap + default CAALM dialog header */}
-				<div className="absolute top-0 right-0 left-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
-
-				<div className="glass-dialog-wizard-header mt-4">
-					<div className="flex items-center gap-3 px-6">
-						<AlertTriangle
-							className="h-5 w-5 shrink-0 text-[#0f5384]"
-							aria-hidden
-						/>
-						<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-							{title}
-						</DialogTitle>
-					</div>
-				</div>
-
-				<DeleteConfirmBody
-					description={description}
-					itemName={itemName}
-					items={items}
-					itemNoun={noun}
-					requireConfirmation={requireConfirmation}
-					confirmationLabel={confirmationLabel}
-					confirmed={confirmed}
-					onConfirmedChange={setConfirmed}
-				/>
-
-				<div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
+			variant="destructive"
+			pending={isLoading}
+			icon={<AlertTriangle className="h-5 w-5" aria-hidden />}
+			title={title}
+			description={description}
+			footer={
+				<>
+					<Button
+						type="button"
+						variant="outline"
+						className="rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+						disabled={isLoading}
+						autoFocus
+						onClick={() => {
+							onCancel?.();
+							onOpenChange(false);
+						}}
+					>
+						Cancel
+					</Button>
 					<Button
 						type="button"
 						onClick={handleConfirm}
 						disabled={confirmDisabled}
-						className="delete-btn cursor-pointer gap-2 px-3 sm:px-4"
+						className="delete-btn cursor-pointer gap-2"
 					>
-						<Trash2 className="h-4 w-4 shrink-0" />
-						{isLoading ? "Deleting..." : confirmLabel || defaultConfirmLabel}
+						{isLoading ? (
+							<Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+						) : (
+							<Trash2 className="h-4 w-4 shrink-0" />
+						)}
+						{isLoading ? "Deleting…" : confirmLabel || defaultConfirmLabel}
 					</Button>
-				</div>
-			</DialogContent>
-		</Dialog>
+				</>
+			}
+		>
+			<DeleteConfirmBody
+				itemName={itemName}
+				items={items}
+				itemNoun={noun}
+				requireConfirmation={requireConfirmation}
+				confirmationLabel={confirmationLabel}
+				confirmed={confirmed}
+				onConfirmedChange={setConfirmed}
+			/>
+		</AppDialog>
 	);
 };

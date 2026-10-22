@@ -5,8 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useApprovalsView } from "@/components/approvals/ApprovalsViewContext";
 import { BulkActionDock } from "@/components/ui/bulk-action-dock";
+import { AppDialog } from "@/components/ui/app-dialog";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import type { ApprovalQueueItem } from "@/lib/approvals/approvalsListUtils";
@@ -201,37 +201,43 @@ export default function ApprovalsBulkBar({
 				)}
 			</BulkActionDock>
 
-			<Dialog open={denyOpen} onOpenChange={setDenyOpen}>
-				<DialogContent className="w-[calc(100%-1.5rem)] sm:w-full max-w-[480px] p-0 overflow-hidden border border-slate-200 shadow-xl">
-					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-					<div className="bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4 px-6">
-						<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-							Deny selected
-						</DialogTitle>
-						<p className="text-sm text-slate-600 mt-1">
-							A note is required before denying {selectedIds.length} item
-							{selectedIds.length === 1 ? "" : "s"}.
-						</p>
-					</div>
-					<div className="p-6 bg-slate-50">
-						<Textarea
-							value={denyNotes}
-							onChange={(e) => setDenyNotes(e.target.value)}
-							placeholder="Reason for denial"
-							className="bg-white min-h-[100px]"
-						/>
-					</div>
-					<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+			<AppDialog
+				open={denyOpen}
+				onOpenChange={setDenyOpen}
+				variant="destructive"
+				pending={busy}
+				icon={<SquareArrowRightExit className="h-5 w-5" />}
+				title="Deny selected"
+				description={`A note is required before denying ${selectedIds.length} item${selectedIds.length === 1 ? "" : "s"}.`}
+				footer={
+					<>
 						<Button
-							className="primary-btn px-3 sm:px-4 cursor-pointer"
+							type="button"
+							variant="outline"
+							className="rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+							disabled={busy}
+							autoFocus
+							onClick={() => setDenyOpen(false)}
+						>
+							Cancel
+						</Button>
+						<Button
+							className="delete-btn cursor-pointer px-3 sm:px-4"
 							disabled={busy || !denyNotes.trim()}
 							onClick={() => bulkSetStatus("inactive")}
 						>
 							Confirm deny
 						</Button>
-					</div>
-				</DialogContent>
-			</Dialog>
+					</>
+				}
+			>
+				<Textarea
+					value={denyNotes}
+					onChange={(e) => setDenyNotes(e.target.value)}
+					placeholder="Reason for denial"
+					className="min-h-[100px] bg-white pb-1"
+				/>
+			</AppDialog>
 		</>
 	);
 }

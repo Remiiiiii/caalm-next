@@ -12,7 +12,7 @@ import type { AssistantPendingAction } from "@/components/assistant/assistantTyp
 import { getAvatarColor } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { AppDialog } from "@/components/ui/app-dialog";
 import { Input } from "@/components/ui/input";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { Textarea } from "@/components/ui/textarea";
@@ -271,22 +271,41 @@ function ParticipantsPickerDialog({
 	};
 
 	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="max-w-[520px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl">
-				<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-				<div className="sticky top-0 z-10 bg-linear-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
-					<div className="flex items-center gap-3 px-6">
-						<Users className="w-5 h-5 text-[#0f5384]" />
-						<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-							Add participants
-						</DialogTitle>
-					</div>
-					<p className="text-sm text-slate-600 mt-1 ml-14">
-						Select people by department
-					</p>
-				</div>
-
-				<div className="flex-1 overflow-y-auto p-6 bg-slate-50 space-y-4">
+		<AppDialog
+			open={open}
+			onOpenChange={onOpenChange}
+			size="form"
+			className="max-h-[90vh]"
+			pending={loading}
+			icon={<Users className="h-5 w-5" />}
+			title="Add participants"
+			description="Select people by department"
+			footer={
+				<>
+					<p className="mr-auto text-xs text-slate-500">{draftIds.length} selected</p>
+					<Button
+						type="button"
+						variant="outline"
+						className="rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+						onClick={() => onOpenChange(false)}
+					>
+						Cancel
+					</Button>
+					<Button
+						type="button"
+						className="primary-btn px-3 sm:px-4 cursor-pointer"
+						onClick={() => {
+							const selected = users.filter((u) => draftIds.includes(u.$id));
+							onApply(selected);
+							onOpenChange(false);
+						}}
+					>
+						Apply
+					</Button>
+				</>
+			}
+		>
+				<div className="space-y-4 pb-1">
 					<div className="relative">
 						<Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
 						<Input
@@ -352,25 +371,7 @@ function ParticipantsPickerDialog({
 						))
 					)}
 				</div>
-
-				<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3">
-					<p className="text-xs text-slate-500">{draftIds.length} selected</p>
-					<div className="flex items-center gap-3">
-						<Button
-							type="button"
-							className="primary-btn px-3 sm:px-4 cursor-pointer"
-							onClick={() => {
-								const selected = users.filter((u) => draftIds.includes(u.$id));
-								onApply(selected);
-								onOpenChange(false);
-							}}
-						>
-							Apply
-						</Button>
-					</div>
-				</div>
-			</DialogContent>
-		</Dialog>
+		</AppDialog>
 	);
 }
 

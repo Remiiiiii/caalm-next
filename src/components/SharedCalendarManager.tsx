@@ -1,6 +1,5 @@
 "use client";
 
-import * as VisuallyHiddenPrimitive from "@radix-ui/react-visually-hidden";
 import {
 	AlertTriangle,
 	Calendar as CalendarIcon,
@@ -8,7 +7,6 @@ import {
 	Edit,
 	Globe,
 	Lock,
-	Minimize2,
 	Share2,
 	Trash2,
 	UserPlus,
@@ -20,13 +18,8 @@ import { useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogTitle,
-	DialogTrigger,
-} from "@/components/ui/dialog";
+import { AppDialog } from "@/components/ui/app-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -604,47 +597,36 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
 
 	return (
 		<>
-			<Dialog open={isOpen} onOpenChange={setIsOpen}>
-				<DialogTrigger asChild>
+			<Button
+				type="button"
+				variant="outline"
+				size="sm"
+				className="primary-btn flex items-center justify-center px-3 sm:px-4"
+				onClick={() => setIsOpen(true)}
+			>
+				<CalendarIcon className="h-4 w-4" />
+				Manage Shared Calendars
+			</Button>
+			<AppDialog
+				open={isOpen}
+				onOpenChange={setIsOpen}
+				size="form"
+				className="max-w-175 max-h-[90vh]"
+				icon={<CalendarIcon className="h-5 w-5" />}
+				title="Shared Calendars"
+				description="View and manage your shared calendars"
+				footer={
 					<Button
+						type="button"
 						variant="outline"
-						size="sm"
-						className="primary-btn px-3 sm:px-4 flex justify-center items-center"
+						className="rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+						onClick={() => setIsOpen(false)}
 					>
-						<CalendarIcon className="w-4 h-4" />
-						Manage Shared Calendars
+						Close
 					</Button>
-				</DialogTrigger>
-				<DialogContent className="w-[calc(100%-1.5rem)] sm:w-full max-w-175 p-0 max-h-[90vh] flex flex-col">
-					<VisuallyHiddenPrimitive.Root>
-						<DialogTitle>Manage Shared Calendars</DialogTitle>
-						<DialogDescription>
-							View and manage your shared calendars
-						</DialogDescription>
-					</VisuallyHiddenPrimitive.Root>
-					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-
-					{/* Professional Header */}
-					<div className="glass-dialog-wizard-header mt-4">
-						<div className="flex items-center justify-between ml-6">
-							<div className="flex items-center">
-								<div>
-									<div className="flex items-center gap-2">
-										<CalendarIcon className="h-5 w-5 text-[#0f5384]" />
-										<h2 className="text-xl font-semibold sidebar-gradient-text">
-											Shared Calendars
-										</h2>
-									</div>
-									<p className="text-sm text-slate-600 mt-1 ml-7">
-										View and manage your shared calendars
-									</p>
-								</div>
-							</div>
-						</div>
-					</div>
-
-					{/* Scrollable Content */}
-					<div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+				}
+			>
+					<div className="space-y-6 pb-1">
 						{/* Calendars List */}
 						{loading ? (
 							<div className="text-center py-8 text-slate-500">
@@ -733,47 +715,33 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
 							</div>
 						)}
 					</div>
-
-					{/* Professional Footer */}
-					<div className="glass-dialog-footer-wrap">
-						<div className="flex items-center justify-end gap-3">
-							<Button
-								variant="outline"
-								className="primary-btn px-3 sm:px-4"
-								onClick={() => setIsOpen(false)}
-							>
-								<Minimize2 className="w-4 h-4" />
-								Close
-							</Button>
-						</div>
-					</div>
-				</DialogContent>
-			</Dialog>
+			</AppDialog>
 			{/* Share Calendar Dialog */}
-			<Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
-				<DialogContent className="max-w-[500px] p-0 max-h-[90vh] flex flex-col">
-					<VisuallyHiddenPrimitive.Root>
-						<DialogTitle>Share Calendar with Users</DialogTitle>
-						<DialogDescription>
-							Add or remove users who can access this shared calendar
-						</DialogDescription>
-					</VisuallyHiddenPrimitive.Root>
-					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-
-					{/* Professional Header */}
-					<div className="glass-dialog-wizard-header mt-4">
-						<div className="flex items-center justify-between ml-6">
-							<div className="flex items-center gap-2">
-								<Share2 className="h-5 w-5 text-[#0f5384]" />
-								<h2 className="text-xl font-semibold sidebar-gradient-text">
-									Share: {selectedCalendar?.name}
-								</h2>
-							</div>
-						</div>
-					</div>
-
-					{/* Scrollable Content */}
-					<div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+			<AppDialog
+				open={isShareDialogOpen}
+				onOpenChange={setIsShareDialogOpen}
+				size="form"
+				className="max-w-[500px] max-h-[90vh]"
+				icon={<Share2 className="h-5 w-5" />}
+				title={`Share: ${selectedCalendar?.name ?? "Calendar"}`}
+				description="Add or remove users who can access this shared calendar"
+				footer={
+					<Button
+						type="button"
+						variant="outline"
+						className="rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+						onClick={() => {
+							setIsShareDialogOpen(false);
+							setSelectedCalendar(null);
+							setUserSearch("");
+							setSearchResults([]);
+						}}
+					>
+						Close
+					</Button>
+				}
+			>
+					<div className="space-y-4 pb-1">
 						{/* Add User Section */}
 						<div>
 							<Label className="text-sm font-semibold text-slate-700 mb-2 block">
@@ -904,59 +872,45 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
 							)}
 						</div>
 					</div>
+			</AppDialog>
 
-					{/* Professional Footer */}
-					<div className="glass-dialog-footer-wrap">
-						<div className="flex items-center justify-end gap-3">
-							<Button
-								variant="outline"
-								className="primary-btn px-3 sm:px-4"
-								onClick={() => {
-									setIsShareDialogOpen(false);
-									setSelectedCalendar(null);
-									setUserSearch("");
-									setSearchResults([]);
-								}}
-							>
-								<Minimize2 className="w-4 h-4" />
-								Close
-							</Button>
-						</div>
-					</div>
-				</DialogContent>
-			</Dialog>
-
-			{/* Edit Calendar Dialog */}
-			<Dialog
+			<AppDialog
 				open={isEditDialogOpen}
 				onOpenChange={(open) => {
 					setIsEditDialogOpen(open);
 					if (!open) setCalendarToEdit(null);
 				}}
+				size="form"
+				className="max-w-[600px] max-h-[90vh]"
+				icon={<Edit className="h-5 w-5" />}
+				title={`Edit: ${calendarToEdit?.name ?? "Calendar"}`}
+				description="Update the details of your shared calendar"
+				footer={
+					<>
+						<Button
+							type="button"
+							variant="outline"
+							className="rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+							onClick={() => {
+								setIsEditDialogOpen(false);
+								setCalendarToEdit(null);
+							}}
+						>
+							Cancel
+						</Button>
+						<Button
+							type="button"
+							className="btn-primary"
+							onClick={handleUpdateCalendar}
+							disabled={!editFormData.name.trim()}
+						>
+							<Check className="h-4 w-4" />
+							Update Calendar
+						</Button>
+					</>
+				}
 			>
-				<DialogContent className="w-[calc(100%-1.5rem)] sm:w-full max-w-[600px] p-0 max-h-[90vh] flex flex-col">
-					<VisuallyHiddenPrimitive.Root>
-						<DialogTitle>Edit Shared Calendar</DialogTitle>
-						<DialogDescription>
-							Update the details of your shared calendar
-						</DialogDescription>
-					</VisuallyHiddenPrimitive.Root>
-					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-
-					{/* Professional Header */}
-					<div className="glass-dialog-wizard-header mt-4">
-						<div className="flex items-center justify-between ml-6">
-							<div className="flex items-center gap-2">
-								<Edit className="h-5 w-5 text-[#0f5384]" />
-								<h2 className="text-xl font-semibold sidebar-gradient-text">
-									Edit: {calendarToEdit?.name}
-								</h2>
-							</div>
-						</div>
-					</div>
-
-					{/* Scrollable Content */}
-					<div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+					<div className="space-y-4 pb-1">
 						<div>
 							<Label
 								htmlFor="edit-calendar-name"
@@ -1132,98 +1086,24 @@ export const SharedCalendarManager: React.FC<SharedCalendarManagerProps> = ({
 							</Label>
 						</div>
 					</div>
+			</AppDialog>
 
-					{/* Professional Footer */}
-					<div className="glass-dialog-footer-wrap">
-						<div className="flex items-center justify-end gap-3">
-							<Button
-								className="primary-btn px-3 sm:px-4"
-								onClick={handleUpdateCalendar}
-								disabled={!editFormData.name.trim()}
-							>
-								<Check className="w-4 h-4" />
-								Update Calendar
-							</Button>
-						</div>
-					</div>
-				</DialogContent>
-			</Dialog>
-
-			{/* Delete Calendar Confirmation Dialog */}
-			<Dialog
+			<ConfirmDialog
 				open={isDeleteCalendarDialogOpen}
 				onOpenChange={(open) => {
 					setIsDeleteCalendarDialogOpen(open);
 					if (!open) setCalendarToDelete(null);
 				}}
-			>
-				<DialogContent
-					className="overflow-hidden p-0 shadow-xl sm:max-w-md"
-					variant="destructive"
-				>
-					<VisuallyHiddenPrimitive.Root>
-						<DialogTitle>Delete Shared Calendar</DialogTitle>
-					</VisuallyHiddenPrimitive.Root>
-					{/* Professional Cap */}
-					<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-
-					{/* Header */}
-					<div className="glass-dialog-wizard-header mt-4 px-6">
-						<div className="flex items-start gap-3">
-							<div className="w-9 h-9 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
-								<AlertTriangle className="w-5 h-5 text-red" />
-							</div>
-							<div>
-								<h2 className="text-base font-semibold sidebar-gradient-text">
-									Delete Shared Calendar
-								</h2>
-								<DialogDescription className="text-sm text-slate-600 mt-1">
-									Are you sure you want to delete &quot;{calendarToDelete?.name}
-									&quot;? This action cannot be undone and will remove the
-									calendar for all shared users.
-								</DialogDescription>
-							</div>
-						</div>
-					</div>
-
-					{/* Body */}
-					<div className="px-6 py-5 space-y-3 bg-white">
-						<div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
-							<p className="text-sm text-slate-700">
-								<strong>Warning:</strong> Deleting this calendar will
-								permanently remove it and all associated events. All users who
-								have access to this calendar will lose access immediately.
-							</p>
-						</div>
-					</div>
-
-					{/* Footer */}
-					<div className="glass-dialog-alert-footer">
-						<div className="text-xs text-slate-500">
-							This action is permanent.
-						</div>
-						<div className="flex items-center justify-end gap-3">
-							<Button
-								onClick={confirmDeleteCalendar}
-								className="delete-btn px-3 sm:px-4"
-								disabled={isDeleting}
-							>
-								{isDeleting ? (
-									<>
-										<div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-red border-t-transparent"></div>
-										Deleting...
-									</>
-								) : (
-									<>
-										<Trash2 className="w-4 h-4" />
-										Delete Calendar
-									</>
-								)}
-							</Button>
-						</div>
-					</div>
-				</DialogContent>
-			</Dialog>
+				variant="destructive"
+				icon={<AlertTriangle className="h-5 w-5" />}
+				title="Delete Shared Calendar"
+				description={`Are you sure you want to delete "${calendarToDelete?.name}"? This action cannot be undone and will remove the calendar for all shared users.`}
+				note="Deleting this calendar will permanently remove it and all associated events. All users who have access to this calendar will lose access immediately."
+				confirmLabel="Delete Calendar"
+				confirmIcon={<Trash2 className="h-4 w-4" />}
+				pendingLabel="Deleting…"
+				onConfirm={confirmDeleteCalendar}
+			/>
 		</>
 	);
 };

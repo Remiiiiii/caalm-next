@@ -8,6 +8,7 @@ import {
 	addRateLimitHeaders,
 	createRateLimitResponse,
 } from "@/lib/api/rate-limit/response.util";
+import { CRAWLER_PATHS } from "@/lib/auth/protectedRoutes";
 import {
 	getUserTier,
 	shouldBypassRateLimit as shouldBypassConfig,
@@ -152,7 +153,11 @@ export async function proxy(request: NextRequest) {
 		}
 	}
 
-	// Coming Soon Mode - redirect to coming soon page in production
+	// Coming Soon Mode - redirect to coming soon page in production.
+	// Crawler metadata routes (sitemap.xml, robots.txt) must survive this —
+	// a redirected response was silently passing the readiness crawl's
+	// "robots.txt found" check (any 2xx/3xx-followed body counted), which is
+	// why that check kept returning Found with no real robots.txt behind it.
 	if (
 		process.env.NODE_ENV === "production" &&
 		process.env.SHOW_COMING_SOON === "true" &&
@@ -160,7 +165,8 @@ export async function proxy(request: NextRequest) {
 		!pathname.startsWith("/api") &&
 		!pathname.startsWith("/_next") &&
 		!pathname.startsWith("/assets") &&
-		!pathname.startsWith("/favicon.ico")
+		!pathname.startsWith("/favicon.ico") &&
+		!(CRAWLER_PATHS as readonly string[]).includes(pathname)
 	) {
 		return NextResponse.redirect(new URL("/coming-soon", request.url));
 	}

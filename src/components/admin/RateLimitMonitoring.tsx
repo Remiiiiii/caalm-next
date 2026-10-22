@@ -35,6 +35,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useRateLimitMetrics } from "@/hooks/useRateLimitMetrics";
 import { cn } from "@/lib/utils";
@@ -48,16 +49,9 @@ export default function RateLimitMonitoring() {
 
 	const { toast } = useToast();
 	const [resetting, setResetting] = useState(false);
+	const [resetOpen, setResetOpen] = useState(false);
 
 	const handleReset = async () => {
-		if (
-			!confirm(
-				"Are you sure you want to reset all rate limit metrics? This action cannot be undone.",
-			)
-		) {
-			return;
-		}
-
 		setResetting(true);
 		try {
 			await resetMetrics();
@@ -66,11 +60,7 @@ export default function RateLimitMonitoring() {
 				description: "Rate limit metrics reset successfully",
 			});
 		} catch (_error) {
-			toast({
-				title: "Error",
-				description: "Failed to reset metrics",
-				variant: "destructive",
-			});
+			throw new Error("Failed to reset metrics");
 		} finally {
 			setResetting(false);
 		}
@@ -183,7 +173,7 @@ export default function RateLimitMonitoring() {
 						Refresh
 					</Button>
 					<Button
-						onClick={handleReset}
+						onClick={() => setResetOpen(true)}
 						variant="destructive"
 						size="sm"
 						disabled={resetting}
@@ -452,6 +442,16 @@ export default function RateLimitMonitoring() {
 					</Button>
 				</div>
 			</div>
+			<ConfirmDialog
+				open={resetOpen}
+				onOpenChange={setResetOpen}
+				variant="destructive"
+				icon={<Trash2 className="h-5 w-5" />}
+				title="Reset rate limit metrics?"
+				description="This action cannot be undone."
+				confirmLabel="Reset metrics"
+				onConfirm={handleReset}
+			/>
 		</div>
 	);
 }

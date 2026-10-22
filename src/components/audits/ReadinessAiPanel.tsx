@@ -28,7 +28,10 @@ import {
 	type ReadinessProseBlock,
 	splitReadinessProse,
 } from "@/lib/audits/readiness/format-assistant-text";
-import { formatSiteHost } from "@/lib/audits/readiness/summary-tiles";
+import {
+	formatSiteHost,
+	type ReadinessAssistantStructured,
+} from "@/lib/audits/readiness/summary-tiles";
 import { cn } from "@/lib/utils";
 
 interface Citation {
@@ -38,48 +41,26 @@ interface Citation {
 	label: string;
 }
 
-interface ReadinessSummaryStructured {
-	overallScore: number;
-	overallRag: "green" | "amber" | "red";
-	overallBadgeLabel?: string;
-	contractsGrantsScore: number | null;
-	contractsGrantsRag: "green" | "amber" | "red" | null;
-	contractsBadgeLabel?: string;
-	licensesScore: number | null;
-	licensesRag: "green" | "amber" | "red" | null;
-	licensesBadgeLabel?: string;
-	scopeLine: string;
-	priorityAction: {
-		title: string;
-		dueDateLabel: string | null;
-		instruction: string;
-		affectsModules: string[];
-		moduleHref: string;
-	} | null;
-	byModule: Array<{
-		name: string;
-		score: number;
-		ragStatus: "green" | "amber" | "red";
-		atRiskCount: number;
-		evidenceCount: number;
-		modulePath: string;
-		blurb: string;
-	}>;
-	sourceLine?: string;
-	publicSiteCrawl: {
-		websiteUrl: string;
-		sitemapFound: boolean;
-		pagesCrawled: number;
-		healthHint: string;
-	} | null;
-}
-
 interface Message {
 	role: "assistant" | "user";
 	content: string;
 	/** Records the answer was based on. */
 	citations?: Citation[];
-	structured?: ReadinessSummaryStructured;
+	structured?: ReadinessAssistantStructured;
+}
+
+function messagesFromSnapshot(
+	summary?: string,
+	structured?: ReadinessAssistantStructured,
+): Message[] {
+	if (!summary && !structured) return [];
+	return [
+		{
+			role: "assistant",
+			content: summary ?? "",
+			structured,
+		},
+	];
 }
 
 const DEFAULT_SUGGESTIONS = [
@@ -133,7 +114,7 @@ function StructuredSummaryMessage({
 	content,
 	onRegenerate,
 }: {
-	data: ReadinessSummaryStructured;
+	data: ReadinessAssistantStructured;
 	content: string;
 	onRegenerate?: () => void;
 }) {
@@ -147,26 +128,41 @@ function StructuredSummaryMessage({
 				not a state, federal, funder, HRSA, DCF, or accreditation audit
 				determination.
 			</div>
-
-			<div className="flex gap-2">
-				<ScoreTile
-					label="Overall readiness"
-					score={data.overallScore}
-					badgeLabel={data.overallBadgeLabel ?? data.overallRag}
-					rag={data.overallRag}
-				/>
-				<ScoreTile
-					label="Contracts & grants"
-					score={data.contractsGrantsScore}
-					badgeLabel={data.contractsBadgeLabel ?? ""}
-					rag={data.contractsGrantsRag}
-				/>
-				<ScoreTile
-					label="Licenses"
-					score={data.licensesScore}
-					badgeLabel={data.licensesBadgeLabel ?? ""}
-					rag={data.licensesRag}
-				/>
+			<div className="space-y-1.5 border-b border-slate-200 pb-3">
+				{/* Prose fallback (hidden by default but available for copy) */}
+				<details className="text-xs text-slate-500">
+					<summary className="cursor-pointer select-none hover:text-slate-600">
+						Show full narrative
+					</summary>
+					<ReadinessAssistantMessage content={content} />
+				</details>
+			</div>
+			<div className="space-y-1.5">
+				<div className="space-y-1.5">
+					<p className="text-[11px] font-bold uppercase tracking-wide text-slate-600">
+						Readiness by category
+					</p>
+				</div>
+				<div className="flex gap-2 space-y-1.5">
+					<ScoreTile
+						label="Overall readiness"
+						score={data.overallScore}
+						badgeLabel={data.overallBadgeLabel ?? data.overallRag}
+						rag={data.overallRag}
+					/>
+					<ScoreTile
+						label="Contracts & grants"
+						score={data.contractsGrantsScore}
+						badgeLabel={data.contractsBadgeLabel ?? ""}
+						rag={data.contractsGrantsRag}
+					/>
+					<ScoreTile
+						label="Licenses"
+						score={data.licensesScore}
+						badgeLabel={data.licensesBadgeLabel ?? ""}
+						rag={data.licensesRag}
+					/>
+				</div>
 			</div>
 			{data.scopeLine ? (
 				<p className="whitespace-nowrap border-b border-slate-200 pb-3 text-xs leading-5 text-slate-500">
@@ -237,7 +233,7 @@ function StructuredSummaryMessage({
 
 			{/* By module */}
 			{data.byModule.length > 0 && (
-				<div className="space-y-2">
+				<div className="space-y-2 border-b border-slate-200 pb-3">
 					<p className="text-[11px] font-bold uppercase tracking-wide text-slate-600">
 						By Module
 					</p>
@@ -254,7 +250,7 @@ function StructuredSummaryMessage({
 									<p className="text-xs leading-snug text-slate-700">
 										<span className="font-semibold">{m.name}</span>
 										<span className="text-slate-400"> · </span>
-										<span className="font-semibold sidebar-gradient-text">
+										<span className="font-semibold text-slate-600">
 											{m.score}% ready
 										</span>
 									</p>
@@ -270,7 +266,7 @@ function StructuredSummaryMessage({
 
 			{/* Public site crawl */}
 			{data.publicSiteCrawl ? (
-				<div className="space-y-2">
+				<div className="space-y-1.5 border-b border-slate-200 pb-3">
 					<div className="flex flex-wrap items-center gap-2">
 						<p className="text-[11px] font-bold uppercase tracking-wide text-slate-600">
 							Public Site Crawl
@@ -309,14 +305,6 @@ function StructuredSummaryMessage({
 					</div>
 				</div>
 			) : null}
-
-			{/* Prose fallback (hidden by default but available for copy) */}
-			<details className="text-xs text-slate-400">
-				<summary className="cursor-pointer select-none hover:text-slate-600">
-					Show full narrative
-				</summary>
-				<ReadinessAssistantMessage content={content} />
-			</details>
 
 			{/* Actions */}
 			<div className="flex items-center justify-between gap-2">
@@ -409,10 +397,11 @@ export function ReadinessAiLauncher({
 			onClick={onClick}
 			disabled={disabled}
 			aria-label="Readiness assistant"
-			className="h-10 w-10 shrink-0"
-			innerClassName="h-full w-full justify-center bg-white p-0"
+			className="h-8 shrink-0"
+			innerClassName="h-full bg-white px-3 text-sm font-medium text-[#0f5384]"
 		>
 			<Bot className="h-5 w-5 text-[#0f5384]" aria-hidden />
+			Readiness assistant
 		</ShimmerBadge>
 	);
 }
@@ -421,6 +410,8 @@ export function ReadinessAiPanel({
 	snapshotId,
 	initialSummary,
 	initialSummaryAt,
+	initialStructured,
+	onSnapshotSaved,
 	open,
 	onOpenChange,
 }: {
@@ -428,61 +419,64 @@ export function ReadinessAiPanel({
 	initialSummary?: string;
 	/** ISO time the saved summary was generated. */
 	initialSummaryAt?: string | null;
+	initialStructured?: ReadinessAssistantStructured;
+	onSnapshotSaved?: () => void;
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 }) {
-	const [messages, setMessages] = useState<Message[]>(
-		initialSummary ? [{ role: "assistant", content: initialSummary }] : [],
+	const [messages, setMessages] = useState<Message[]>(() =>
+		messagesFromSnapshot(initialSummary, initialStructured),
 	);
 	const [summaryAt, setSummaryAt] = useState<string | null>(
-		initialSummary ? (initialSummaryAt ?? null) : null,
+		initialStructured || initialSummary ? (initialSummaryAt ?? null) : null,
 	);
+	const [activeSnapshotId, setActiveSnapshotId] = useState(snapshotId);
 	const [question, setQuestion] = useState("");
 	const [loading, setLoading] = useState(false);
 	const endRef = useRef<HTMLDivElement>(null);
+	const wasOpen = useRef(false);
 
 	useEffect(() => {
 		if (!open) return;
 		endRef.current?.scrollIntoView?.({ behavior: "smooth" });
 	}, [open, messages, loading]);
 
-	// Auto-upgrade prose-only initial summary to structured view on first open
-	const hasAutoRun = useRef(false);
 	useEffect(() => {
-		if (!open || hasAutoRun.current || loading) return;
-		const first = messages[0];
-		if (first?.role === "assistant" && !first.structured) {
-			hasAutoRun.current = true;
-			void runAnalyze();
-		}
-		// Only run once when panel opens with an unstructured initial summary
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [open]);
+		setActiveSnapshotId(snapshotId);
+	}, [snapshotId]);
 
-	const runAnalyze = useCallback(async () => {
+	// On each open, show the last saved snapshot — do not auto-run a new one.
+	useEffect(() => {
+		if (open && !wasOpen.current) {
+			setMessages(messagesFromSnapshot(initialSummary, initialStructured));
+			setSummaryAt(
+				initialStructured || initialSummary ? (initialSummaryAt ?? null) : null,
+			);
+			setActiveSnapshotId(snapshotId);
+		}
+		wasOpen.current = open;
+	}, [open, initialSummary, initialStructured, initialSummaryAt, snapshotId]);
+
+	const saveNewSnapshot = useCallback(async () => {
 		setLoading(true);
 		try {
-			const res = await fetch("/api/audits/readiness/analyze", {
+			const res = await fetch("/api/audits/readiness", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					action: "analyze",
-					snapshotId: snapshotId || undefined,
-				}),
+				body: JSON.stringify({ cadence: "weekly", force: true }),
 			});
 			const body = await res.json();
-			if (!res.ok) throw new Error(body.error || "Analyze failed");
-			setMessages([
-				{
-					role: "assistant",
-					content: body.data.summary,
-					citations: body.data.citations,
-					structured: body.data.structured as
-						| ReadinessSummaryStructured
-						| undefined,
-				},
-			]);
-			setSummaryAt(new Date().toISOString());
+			if (!res.ok) throw new Error(body.error || "Snapshot failed");
+			const nextId: string | undefined = body.data?.snapshot?.id;
+			if (nextId) setActiveSnapshotId(nextId);
+			setMessages(
+				messagesFromSnapshot(
+					body.data?.summary || body.data?.snapshot?.aiSummary,
+					body.data?.structured ?? undefined,
+				),
+			);
+			setSummaryAt(body.data?.snapshot?.createdAt ?? new Date().toISOString());
+			onSnapshotSaved?.();
 		} catch (error) {
 			setMessages([
 				{
@@ -490,13 +484,13 @@ export function ReadinessAiPanel({
 					content:
 						error instanceof Error
 							? error.message
-							: "Unable to generate analysis.",
+							: "Unable to save a new snapshot.",
 				},
 			]);
 		} finally {
 			setLoading(false);
 		}
-	}, [snapshotId]);
+	}, [onSnapshotSaved]);
 
 	const ask = useCallback(
 		async (text: string) => {
@@ -511,7 +505,7 @@ export function ReadinessAiPanel({
 					body: JSON.stringify({
 						action: "question",
 						question: text.trim(),
-						snapshotId: snapshotId || undefined,
+						snapshotId: activeSnapshotId || undefined,
 						previousContext: messages
 							.slice(-4)
 							.map((m) => `${m.role}: ${m.content}`)
@@ -543,7 +537,7 @@ export function ReadinessAiPanel({
 				setLoading(false);
 			}
 		},
-		[messages, snapshotId],
+		[messages, activeSnapshotId],
 	);
 
 	const handleSend = () => {
@@ -571,7 +565,7 @@ export function ReadinessAiPanel({
 						size="icon"
 						className="h-8 w-8 cursor-pointer text-slate-600 hover:bg-white/50 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
 						aria-label="Re-run auto-summary"
-						onClick={() => void runAnalyze()}
+						onClick={() => void saveNewSnapshot()}
 						disabled={loading}
 					>
 						{loading ? (
@@ -678,7 +672,7 @@ export function ReadinessAiPanel({
 								variant="outline"
 								size="sm"
 								className="cursor-pointer"
-								onClick={() => void runAnalyze()}
+								onClick={() => void saveNewSnapshot()}
 								disabled={loading}
 							>
 								<Play className="h-4 w-4" />
@@ -725,7 +719,7 @@ export function ReadinessAiPanel({
 										data={message.structured}
 										content={message.content}
 										onRegenerate={
-											index === 0 ? () => void runAnalyze() : undefined
+											index === 0 ? () => void saveNewSnapshot() : undefined
 										}
 									/>
 								) : (

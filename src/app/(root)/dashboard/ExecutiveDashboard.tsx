@@ -4,7 +4,6 @@ import { motion, useReducedMotion } from "framer-motion";
 import {
 	AlertCircle,
 	AlertTriangle,
-	Ban,
 	BarChart3,
 	CalendarDays,
 	CheckCircle,
@@ -56,16 +55,7 @@ import {
 import QuickNotesWidget from "@/components/QuickNotesWidget";
 import RecentActivity from "@/components/RecentActivity";
 import { OrgUnitPicker } from "@/components/settings/OrgUnitPicker";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import Avatar from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -1619,171 +1609,57 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 								</Card>
 							</motion.div>
 
-							{/* Enhanced Revoke Confirmation Dialog */}
-							<AlertDialog
+							<ConfirmDialog
 								open={showRevokeDialog}
-								onOpenChange={setShowRevokeDialog}
-							>
-								<AlertDialogContent className="mx-4 max-w-md rounded-xl shadow-xl">
-									<AlertDialogHeader className="text-center pb-4">
-										<div className="flex justify-center mb-3">
-											<div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center">
-												<AlertTriangle
-													className="h-6 w-6 text-amber-600"
-													aria-hidden
-												/>
-											</div>
-										</div>
-										<AlertDialogTitle className="text-xl sidebar-gradient-text">
-											Revoke this invitation?
-										</AlertDialogTitle>
-										<AlertDialogDescription className="text-slate-600 text-sm mt-2">
-											User won&apos;t be able to accept it afterward.
-										</AlertDialogDescription>
-										<div className="border border-b-0 border-slate-300"></div>
-									</AlertDialogHeader>
+								onOpenChange={(next) => {
+									if (!next) cancelRevoke();
+									else setShowRevokeDialog(true);
+								}}
+								variant="destructive"
+								icon={<AlertTriangle className="h-5 w-5" aria-hidden />}
+								title="Revoke this invitation?"
+								description="User won't be able to accept it afterward."
+								facts={[
+									...(revokeEmail
+										? [{ label: "Email", value: revokeEmail }]
+										: []),
+									{
+										label: "Date",
+										value: new Date().toLocaleDateString(),
+									},
+								]}
+								note="This action can't be undone"
+								confirmLabel="Revoke invitation"
+								onConfirm={confirmRevoke}
+							/>
 
-									<div className="px-6 pb-4">
-										<div className="bg-slate-50 rounded-lg p-4 space-y-2">
-											{revokeEmail && (
-												<div className="flex items-center justify-between">
-													<span className="text-sm font-medium text-slate-700">
-														Email:
-													</span>
-													<span className="text-sm text-slate-600">
-														{revokeEmail}
-													</span>
-												</div>
-											)}
-											<div className="flex items-center justify-between">
-												<span className="text-sm font-medium text-slate-700">
-													Date:
-												</span>
-												<span className="text-sm text-slate-600">
-													{new Date().toLocaleDateString()}
-												</span>
-											</div>
-										</div>
-
-										<div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-											<p className="text-xs text-amber-800 font-medium flex items-center gap-2">
-												<AlertTriangle
-													className="h-3.5 w-3.5 shrink-0"
-													aria-hidden
-												/>
-												This action can&apos;t be undone
-											</p>
-										</div>
-									</div>
-									<AlertDialogFooter className="flex-col sm:flex-row gap-3 px-6 pb-6">
-										<AlertDialogCancel
-											onClick={cancelRevoke}
-											className="primary-btn px-3 sm:px-4 w-full sm:w-auto"
-										>
-											<Ban className="w-4 h-4 mr-2" />
-											Cancel
-										</AlertDialogCancel>
-										<AlertDialogAction
-											onClick={confirmRevoke}
-											className="w-full sm:w-auto bg-red-500/80 backdrop-blur border border-red-400/50 shadow-md text-slate-700 hover:bg-red-600/80 transition-colors rounded-lg px-4 py-2 font-medium"
-										>
-											Revoke
-										</AlertDialogAction>
-									</AlertDialogFooter>
-								</AlertDialogContent>
-							</AlertDialog>
-
-							{/* Professional Delete Confirmation Dialog */}
-							<AlertDialog
+							<ConfirmDialog
 								open={showDeleteDialog}
-								onOpenChange={setShowDeleteDialog}
-							>
-								<AlertDialogContent className="mx-4 max-w-md rounded-lg shadow-2xl">
-									<AlertDialogHeader className="pb-1">
-										<div className="flex items-center gap-4 mb-4">
-											<div className="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center">
-												<Trash2
-													className="h-5 w-5"
-													style={{
-														color: "#0E638F",
-													}}
-												/>
-											</div>
-											<div>
-												<AlertDialogTitle className="text-lg font-semibold sidebar-gradient-text">
-													Delete Invitation?
-												</AlertDialogTitle>
-												<AlertDialogDescription className="text-sm text-slate-600 mt-1">
-													This action cannot be undone
-												</AlertDialogDescription>
-											</div>
-										</div>
-									</AlertDialogHeader>
-
-									<div className="px-6 pb-6">
-										<div className="bg-slate-50 rounded-lg p-4 border border-slate-100">
-											<h4 className="text-sm font-medium text-slate-700 mb-3">
-												Invitation Details
-											</h4>
-											<div className="space-y-2">
-												{deleteEmail && (
-													<div className="flex items-center justify-between py-1">
-														<span className="text-sm text-slate-600">
-															Email Address:
-														</span>
-														<span className="text-sm font-medium text-slate-700">
-															{deleteEmail}
-														</span>
-													</div>
-												)}
-												<div className="flex items-center justify-between py-1">
-													<span className="text-sm text-slate-600">
-														Request Date:
-													</span>
-													<span className="text-sm font-medium text-slate-700">
-														{new Date().toLocaleDateString("en-US", {
-															year: "numeric",
-															month: "short",
-															day: "numeric",
-														})}
-													</span>
-												</div>
-											</div>
-										</div>
-
-										<div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-											<div className="flex items-start gap-2">
-												<div className="w-4 h-4 bg-amber-400 rounded-full flex items-center justify-center mt-0.5">
-													<span className="text-xs text-white font-bold">
-														!
-													</span>
-												</div>
-												<p className="text-sm text-amber-800">
-													<strong>Warning:</strong> This will permanently remove
-													the invitation from the system. The recipient will no
-													longer be able to access their invitation link.
-												</p>
-											</div>
-										</div>
-									</div>
-
-									<div className="flex justify-center items-center gap-3 px-6 pb-6 pt-4">
-										<AlertDialogCancel
-											onClick={cancelDelete}
-											className="primary-btn px-3 sm:px-4"
-										>
-											<Ban className="w-4 h-4 mr-2" />
-											Cancel
-										</AlertDialogCancel>
-										<AlertDialogAction
-											onClick={confirmDelete}
-											className="delete-btn px-3 sm:px-4"
-										>
-											Delete Invitation
-										</AlertDialogAction>
-									</div>
-								</AlertDialogContent>
-							</AlertDialog>
+								onOpenChange={(next) => {
+									if (!next) cancelDelete();
+									else setShowDeleteDialog(true);
+								}}
+								variant="destructive"
+								icon={<Trash2 className="h-5 w-5" aria-hidden />}
+								title="Delete invitation?"
+								description="This action cannot be undone."
+								facts={[
+									...(deleteEmail
+										? [{ label: "Email", value: deleteEmail }]
+										: []),
+									{
+										label: "Request date",
+										value: new Date().toLocaleDateString("en-US", {
+											year: "numeric",
+											month: "short",
+											day: "numeric",
+										}),
+									},
+								]}
+								note="This will permanently remove the invitation from the system. The recipient will no longer be able to access their invitation link."
+								confirmLabel="Delete invitation"
+								onConfirm={confirmDelete}
+							/>
 						</motion.div>
 					</div>
 				</div>

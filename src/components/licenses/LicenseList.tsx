@@ -1,6 +1,5 @@
 "use client";
 
-import * as VisuallyHiddenPrimitive from "@radix-ui/react-visually-hidden";
 import {
 	Calendar,
 	Info,
@@ -12,6 +11,7 @@ import {
 	Trash2,
 } from "lucide-react";
 import { useState } from "react";
+import { AppDialog } from "@/components/ui/app-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,7 +21,6 @@ import {
 	DATA_TABLE_HEADER_ROW,
 } from "@/components/ui/caalm-data-table";
 import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
 	AppDropdownMenuContent,
 	AppDropdownMenuItem,
@@ -285,51 +284,43 @@ export default function LicenseList({ licenses, onRefresh }: LicenseListProps) {
 			{selectedLicense && (
 				<>
 					{showDetail && (
-						<Dialog open={showDetail} onOpenChange={setShowDetail}>
-							<DialogContent className="flex max-h-[90vh] max-w-[800px] flex-col overflow-hidden p-0 shadow-xl">
-								<VisuallyHiddenPrimitive.Root>
-									<DialogTitle>License Details</DialogTitle>
-								</VisuallyHiddenPrimitive.Root>
-								<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-								<div className="glass-dialog-wizard-header mt-4">
-									<div className="flex items-center gap-2 px-6">
-										<Info className="h-5 w-5 text-[#0f5384]" />
-										<h2 className="text-xl font-semibold sidebar-gradient-text">
-											License Details
-										</h2>
-									</div>
-									<p className="text-sm text-slate-600 mt-1 ml-14">
-										View license information
-									</p>
-								</div>
-								<div className="flex-1 overflow-y-auto px-6 py-4 space-y-6 bg-slate-50">
-									<LicenseDetailView
-										license={selectedLicense}
-										onEdit={
-											canEdit
-												? () => {
-														setShowDetail(false);
-														setShowEdit(true);
-													}
-												: undefined
-										}
-									/>
-								</div>
-								<div className="glass-dialog-alert-footer">
-									<div className="text-xs text-slate-500">
+						<AppDialog
+							open={showDetail}
+							onOpenChange={setShowDetail}
+							size="form"
+							className="max-h-[90vh] max-w-[800px] shadow-xl"
+							icon={<Info className="h-5 w-5" />}
+							title="License Details"
+							description="View license information"
+							footer={
+								<>
+									<span className="mr-auto text-xs text-slate-500">
 										License details and metadata
-									</div>
+									</span>
 									<Button
+										type="button"
 										variant="outline"
+										className="rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
 										onClick={() => setShowDetail(false)}
-										className="primary-btn px-3 sm:px-4"
 									>
-										<Minimize2 className="w-4 h-4" />
+										<Minimize2 className="h-4 w-4" />
 										Close
 									</Button>
-								</div>
-							</DialogContent>
-						</Dialog>
+								</>
+							}
+						>
+							<LicenseDetailView
+								license={selectedLicense}
+								onEdit={
+									canEdit
+										? () => {
+												setShowDetail(false);
+												setShowEdit(true);
+											}
+										: undefined
+								}
+							/>
+						</AppDialog>
 					)}
 
 					{showEdit && (

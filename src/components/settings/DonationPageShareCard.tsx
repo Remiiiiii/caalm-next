@@ -20,7 +20,7 @@ import GmailComposeForm, {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { AppDialog } from "@/components/ui/app-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SearchField } from "@/components/ui/search-field";
@@ -857,25 +857,16 @@ export function DonationPageShareCard({
 				</CardContent>
 			</Card>
 
-			<Dialog open={emailOpen} onOpenChange={setEmailOpen}>
-				<DialogContent className="flex max-h-[90vh] max-w-[720px] flex-col overflow-hidden border border-slate-200 p-0 shadow-xl">
-					<div className="absolute top-0 right-0 left-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
-					<div className="sticky top-0 z-10 mt-4 border-b border-slate-200 bg-linear-to-r from-blue-50 to-indigo-50 py-4">
-						<div className="flex items-center gap-3 px-6">
-							<div className="flex items-center gap-3">
-								<Mail className="h-5 w-5 text-[#0f5384]" />
-								<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-									Email give page link
-								</DialogTitle>
-							</div>
-						</div>
-						<p className="mt-1 ml-14 text-sm text-slate-600">
-							Prefills a short ask with your tracked live URL. Edit before
-							sending.
-						</p>
-					</div>
-
-					<div className="flex-1 space-y-4 overflow-y-auto bg-slate-50 p-6">
+			<AppDialog
+				open={emailOpen}
+				onOpenChange={setEmailOpen}
+				size="form"
+				className="max-h-[90vh] max-w-[720px]"
+				icon={<Mail className="h-5 w-5" />}
+				title="Email give page link"
+				description="Prefills a short ask with your tracked live URL. Edit before sending."
+			>
+				<div className="flex flex-col gap-4 pb-1">
 						{providerStatusLoading ? (
 							<p className="flex items-center gap-2 text-sm text-slate-600">
 								<Loader2 className="h-4 w-4 animate-spin" />
@@ -1068,9 +1059,8 @@ export function DonationPageShareCard({
 								/>
 							</div>
 						) : null}
-					</div>
-				</DialogContent>
-			</Dialog>
+				</div>
+			</AppDialog>
 		</>
 	);
 }

@@ -30,6 +30,7 @@ Project rules live in `.cursor/rules/` and are the single source of truth. Edit 
 | `.cursor/rules/appwrite-collection-ids.mdc` | Touching Appwrite collection/table/bucket IDs (`src/lib/appwrite`, `src/lib/database`, `scripts`, `.env*.example`) |
 | `.cursor/rules/writing.mdc` | Writing product or marketing copy (`docs`, `src/content`, `public`) |
 | `.cursor/rules/media-hosting.mdc` | Adding or changing video/image assets, `src/lib/media/urls.ts`, page backgrounds |
+| `.cursor/rules/context-dev.mdc` | Adding or changing a Context.dev web-scraping call (`src/lib/audits/readiness/screenshot.ts` and friends) |
 | `.cursor/rules/nonprofit-roadmap-prs.mdc` | Nonprofit Roadmap batch PRs (`src/lib/roadmap/nonprofit*`, `src/lib/roadmap/npo-batches`) |
 | `.cursor/rules/platform-readiness-roadmap-prs.mdc` | Platform Readiness Roadmap batch PRs (`src/lib/roadmap/platform-readiness*`) |
 | `.cursor/rules/share-give-page.mdc` (+ `share-give-page-design.txt`) | Editing `DonationPageShareCard.tsx` or `DonationPageSettingsClient.tsx` |

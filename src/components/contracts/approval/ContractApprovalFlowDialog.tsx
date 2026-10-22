@@ -22,8 +22,8 @@ import ApprovalWorkflowActivity from "@/components/contracts/approval/ApprovalWo
 import ContractApprovalFlowCanvas from "@/components/contracts/approval/ContractApprovalFlowCanvas";
 import { WorkflowStatusBadge } from "@/components/contracts/approval/WorkflowStatusBadge";
 import { ContractRenewalDialog } from "@/components/contracts/ContractRenewalDialog";
+import { AppDialog } from "@/components/ui/app-dialog";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { PERMISSIONS } from "@/constants/permissions";
 import { useToast } from "@/hooks/use-toast";
 import { useContractApprovalWorkflow } from "@/hooks/useContractApprovalWorkflow";
@@ -136,37 +136,58 @@ export default function ContractApprovalFlowDialog({
 
 	return (
 		<>
-			<Dialog open={open} onOpenChange={onOpenChange}>
-				<DialogContent
-					overlayClassName="z-[60]"
-					className={cn(
-						"z-[60] flex max-h-[90vh] flex-col overflow-hidden border border-slate-200 p-0 shadow-xl",
-						documentSplitOpen
-							? "w-[min(98vw,1700px)] max-w-[1700px]"
-							: "max-w-[960px]",
-					)}
-				>
-					<div className="absolute top-0 right-0 left-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
-
-					<div className="sticky top-0 z-10 mt-4 border-b border-slate-200 bg-linear-to-r from-blue-50 to-indigo-50 py-4">
-						<div className="flex items-center gap-3 px-6">
-							<GitBranch className="h-5 w-5 text-[#0f5384]" />
-							<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-								Approval workflow
-							</DialogTitle>
-						</div>
-						<p className="mt-1 ml-14 text-sm text-slate-600">
-							{contractName || workflow?.contractName || "Contract"} — track
-							review steps through executive activation
-						</p>
-					</div>
-
+			<AppDialog
+				open={open}
+				onOpenChange={onOpenChange}
+				size="form"
+				pending={busy}
+				className={cn(
+					"z-[60] max-h-[90vh]",
+					documentSplitOpen
+						? "w-[min(98vw,1700px)] max-w-[1700px]"
+						: "max-w-[960px]",
+				)}
+				icon={<GitBranch className="h-5 w-5" />}
+				title="Approval workflow"
+				description={`${contractName || workflow?.contractName || "Contract"} — track review steps through executive activation`}
+				footer={
+					<>
+						{!workflow?.canDecideAsAssignee &&
+						!workflow?.canAdminOverrideActiveStep ? (
+							<p className="mr-auto flex min-w-0 flex-1 items-start gap-2 text-xs text-slate-500">
+								<Info
+									className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-500"
+									aria-hidden
+								/>
+								<span>
+									{workflow?.decisionBlockReason ||
+										"Decision buttons appear when you are assigned to the current step."}
+								</span>
+							</p>
+						) : (
+							<span className="mr-auto flex-1" />
+						)}
+						{canStartEsign ? (
+							<Button
+								type="button"
+								className="primary-btn px-3 sm:px-4"
+								onClick={() =>
+									router.push(`/esign/prepare/contract/${contractId}`)
+								}
+							>
+								<PenLine className="h-4 w-4" />
+								Send for signature
+							</Button>
+						) : null}
+					</>
+				}
+			>
 					<div
 						className={cn(
-							"min-h-0 flex-1 bg-slate-50",
+							"-mx-6 min-h-0 flex-1 bg-slate-50",
 							documentSplitOpen
 								? "flex overflow-hidden"
-								: "overflow-y-auto p-6",
+								: "overflow-y-auto px-6 pb-1",
 						)}
 					>
 						<div
@@ -365,38 +386,7 @@ export default function ContractApprovalFlowDialog({
 							</>
 						) : null}
 					</div>
-
-					<div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
-						{!workflow?.canDecideAsAssignee &&
-						!workflow?.canAdminOverrideActiveStep ? (
-							<p className="flex min-w-0 flex-1 items-start gap-2 text-xs text-slate-500">
-								<Info
-									className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-500"
-									aria-hidden
-								/>
-								<span>
-									{workflow?.decisionBlockReason ||
-										"Decision buttons appear when you are assigned to the current step."}
-								</span>
-							</p>
-						) : (
-							<span className="flex-1" />
-						)}
-						{canStartEsign ? (
-							<Button
-								type="button"
-								className="primary-btn px-3 sm:px-4"
-								onClick={() =>
-									router.push(`/esign/prepare/contract/${contractId}`)
-								}
-							>
-								<PenLine className="h-4 w-4" />
-								Send for signature
-							</Button>
-						) : null}
-					</div>
-				</DialogContent>
-			</Dialog>
+			</AppDialog>
 			<ExpirationAttestationDialog
 				open={attestOpen}
 				onOpenChange={setAttestOpen}

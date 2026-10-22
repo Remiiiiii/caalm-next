@@ -2,14 +2,9 @@
 
 import { Download, FileSpreadsheet } from "lucide-react";
 import { useState } from "react";
+import { AppDialog } from "@/components/ui/app-dialog";
 import { BusyIcon } from "@/components/ui/busy-icon";
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogTitle,
-	DialogTrigger,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -87,29 +82,67 @@ export function JournalExportDialog() {
 	};
 
 	return (
-		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogTrigger asChild>
-				<Button type="button" variant="outline" className="px-3 sm:px-4">
-					<FileSpreadsheet className="h-4 w-4" />
-					Journal export
-				</Button>
-			</DialogTrigger>
-			<DialogContent className="max-w-[600px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl">
-				<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-				<div className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
-					<div className="flex items-center gap-3 px-6">
-						<FileSpreadsheet className="w-5 h-5 text-[#0f5384]" />
-						<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-							Journal export
-						</DialogTitle>
-					</div>
-					<p className="text-sm text-slate-600 mt-1 ml-14">
-						Download posted gifts and restriction releases for your accounting
-						system.
-					</p>
-				</div>
-				<div className="flex-1 overflow-y-auto p-6 bg-slate-50 space-y-4">
-					<div className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-600 space-y-2">
+		<>
+			<Button
+				type="button"
+				variant="outline"
+				className="px-3 sm:px-4"
+				onClick={() => setOpen(true)}
+			>
+				<FileSpreadsheet className="h-4 w-4" />
+				Journal export
+			</Button>
+			<AppDialog
+				open={open}
+				onOpenChange={setOpen}
+				size="form"
+				className="max-h-[90vh]"
+				pending={busy}
+				icon={<FileSpreadsheet className="h-5 w-5" />}
+				title="Journal export"
+				description="Download posted gifts and restriction releases for your accounting system."
+				footer={
+					<>
+						<Button
+							type="button"
+							variant="outline"
+							className="rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+							disabled={busy}
+							onClick={() => setOpen(false)}
+						>
+							Cancel
+						</Button>
+						<Button
+							type="button"
+							variant="outline"
+							disabled={busy}
+							onClick={() => void refreshMeta()}
+						>
+							Preview counts
+						</Button>
+						<Button
+							type="button"
+							variant="outline"
+							disabled={busy}
+							onClick={() => void download("iif")}
+						>
+							<BusyIcon busy={busyFormat === "iif"} icon={Download} />
+							IIF download
+						</Button>
+						<Button
+							type="button"
+							className="btn-primary px-3 sm:px-4"
+							disabled={busy}
+							onClick={() => void download("csv")}
+						>
+							<BusyIcon busy={busyFormat === "csv"} icon={Download} />
+							CSV download
+						</Button>
+					</>
+				}
+			>
+				<div className="flex flex-col gap-4 pb-1">
+					<div className="space-y-2 rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-600">
 						<p>
 							This is a <strong className="text-slate-700">journal feed</strong>{" "}
 							(CSV or IIF download only). It is not a live general ledger, not
@@ -121,7 +154,7 @@ export function JournalExportDialog() {
 							does not post directly to those systems from this export.
 						</p>
 					</div>
-					<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+					<div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
 						<div>
 							<Label className="text-xs text-slate-600">Start date</Label>
 							<Input
@@ -148,35 +181,7 @@ export function JournalExportDialog() {
 					{error ? <p className="text-sm text-red">{error}</p> : null}
 					{meta ? <p className="text-xs text-slate-600">{meta}</p> : null}
 				</div>
-				<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-end gap-3">
-					<Button
-						type="button"
-						variant="outline"
-						disabled={busy}
-						onClick={() => void refreshMeta()}
-					>
-						Preview counts
-					</Button>
-					<Button
-						type="button"
-						variant="outline"
-						disabled={busy}
-						onClick={() => void download("iif")}
-					>
-						<BusyIcon busy={busyFormat === "iif"} icon={Download} />
-						IIF download
-					</Button>
-					<Button
-						type="button"
-						className="primary-btn px-3 sm:px-4"
-						disabled={busy}
-						onClick={() => void download("csv")}
-					>
-						<BusyIcon busy={busyFormat === "csv"} icon={Download} />
-						CSV download
-					</Button>
-				</div>
-			</DialogContent>
-		</Dialog>
+			</AppDialog>
+		</>
 	);
 }

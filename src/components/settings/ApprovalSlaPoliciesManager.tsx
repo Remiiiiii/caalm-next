@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CardContent, Card as GlassCard } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { AppDialog } from "@/components/ui/app-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -231,21 +231,39 @@ export function ApprovalSlaPoliciesManager({ canEdit }: { canEdit: boolean }) {
 				)}
 			</CardContent>
 
-			<Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-				<DialogContent className="flex max-h-[90vh] max-w-[600px] flex-col overflow-hidden border border-slate-200 p-0 shadow-xl">
-					<div className="absolute top-0 right-0 left-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
-					<div className="glass-dialog-wizard-header mt-4">
-						<div className="flex items-center gap-3 px-6">
-							<Clock className="h-5 w-5 text-[#0f5384]" />
-							<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-								{editingId ? "Edit SLA policy" : "Add SLA policy"}
-							</DialogTitle>
-						</div>
-						<p className="mt-1 ml-14 text-sm text-slate-600">
-							Time limits apply when a step becomes current.
-						</p>
-					</div>
-					<div className="flex-1 space-y-4 overflow-y-auto bg-slate-50 p-6">
+			<AppDialog
+				open={dialogOpen}
+				onOpenChange={setDialogOpen}
+				size="form"
+				className="max-h-[90vh] max-w-[600px]"
+				pending={saving}
+				icon={<Clock className="h-5 w-5" aria-hidden />}
+				title={editingId ? "Edit SLA policy" : "Add SLA policy"}
+				description="Time limits apply when a step becomes current."
+				footer={
+					<>
+						<Button
+							type="button"
+							variant="outline"
+							className="rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+							disabled={saving}
+							onClick={() => setDialogOpen(false)}
+						>
+							Cancel
+						</Button>
+						<Button
+							type="button"
+							className="btn-primary px-3 sm:px-4"
+							disabled={saving}
+							onClick={() => void save()}
+						>
+							<Save className="h-4 w-4" />
+							Save policy
+						</Button>
+					</>
+				}
+			>
+				<div className="space-y-4 pb-1">
 						<div className="grid grid-cols-2 gap-4">
 							<div className="space-y-2">
 								<Label>Applies to</Label>
@@ -377,20 +395,8 @@ export function ApprovalSlaPoliciesManager({ canEdit }: { canEdit: boolean }) {
 							/>
 							Policy is active
 						</label>
-					</div>
-					<div className="flex justify-end border-t border-slate-200 bg-slate-50 px-6 py-4">
-						<Button
-							type="button"
-							className="primary-btn px-3 sm:px-4"
-							disabled={saving}
-							onClick={() => void save()}
-						>
-							<Save className="h-4 w-4" />
-							Save policy
-						</Button>
-					</div>
-				</DialogContent>
-			</Dialog>
+				</div>
+			</AppDialog>
 		</GlassCard>
 	);
 }

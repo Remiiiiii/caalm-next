@@ -2,8 +2,8 @@
 
 import { Check, Copy, Info, Link2, Send, UserPlus, X } from "lucide-react";
 import { type KeyboardEvent, useEffect, useRef, useState } from "react";
+import { AppDialog } from "@/components/ui/app-dialog";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -125,24 +125,93 @@ export function CounterpartyInviteDialog({
 	const canCreateLink = !busy && chosenInvitees.length > 0 && !link;
 
 	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="flex max-h-[90vh] max-w-[600px] flex-col overflow-hidden border border-slate-200 p-0 shadow-xl">
-				<div className="absolute top-0 right-0 left-0 h-4 rounded-t-md bg-[#d6d7d8] opacity-70" />
-				<div className="sticky top-0 z-10 mt-4 border-b border-slate-200 bg-linear-to-r from-blue-50 to-indigo-50 py-4">
-					<div className="flex items-center gap-3 px-6">
-						<div className="flex items-center gap-3">
-							<UserPlus className="h-5 w-5 text-[#0f5384]" />
-							<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-								Invite counterparty
-							</DialogTitle>
-						</div>
-					</div>
-					<p className="mt-1 ml-14 text-sm text-slate-600">
-						Share one secure link. Only invited emails can open it after
-						verification. Add a full name for every email.
+		<AppDialog
+			open={open}
+			onOpenChange={onOpenChange}
+			size="form"
+			className="max-h-[90vh] w-[calc(100%-1.5rem)] sm:w-full max-w-[600px]"
+			pending={busy}
+			icon={<UserPlus className="h-5 w-5" />}
+			title="Invite counterparty"
+			description="Share one secure link. Only invited emails can open it after verification. Add a full name for every email."
+			footer={
+				<>
+					<p className="mr-auto flex min-w-0 flex-1 items-start gap-2 text-xs text-slate-600">
+						<Info
+							className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#0f5384]"
+							aria-hidden
+						/>
+						<span>
+							Everyone on this list shares one link. Invited emails must verify
+							with a code before they can view the draft.
+						</span>
 					</p>
-				</div>
-				<div className="flex-1 overflow-y-auto bg-slate-50 p-6">
+					{!link ? (
+						<Button
+							type="button"
+							className="primary-btn shrink-0 px-3 sm:px-4"
+							disabled={!canCreateLink}
+							onClick={async () => {
+								let next = [...invitees];
+								const draftEmail = email.trim().toLowerCase();
+								const draftName = fullName.trim();
+								if (draftEmail || draftName) {
+									if (!EMAIL_RE.test(draftEmail)) {
+										setFormError("Enter a valid email address.");
+										return;
+									}
+									if (!draftName) {
+										setFormError(
+											"Enter a full name for this email before creating the link.",
+										);
+										return;
+									}
+									next = [
+										...next.filter((row) => row.email !== draftEmail),
+										{ email: draftEmail, name: draftName },
+									];
+								}
+								if (next.length === 0) {
+									setFormError("Add at least one person with name and email.");
+									return;
+								}
+								setInvitees(next);
+								setEmail("");
+								setFullName("");
+								setFormError(null);
+								const url = await onCreate(next, 14);
+								if (url) setLink(url);
+							}}
+						>
+							<Link2 className="h-4 w-4" />
+							Create link
+						</Button>
+					) : (
+						<Button
+							type="button"
+							className="primary-btn shrink-0 px-3 sm:px-4"
+							disabled={busy || invitees.length === 0 || sent}
+							onClick={async () => {
+								const didSend = await onSend(
+									invitees.map((row) => row.email),
+									message.trim(),
+									link,
+								);
+								if (didSend) setSent(true);
+							}}
+						>
+							{sent ? (
+								<Check className="h-4 w-4" />
+							) : (
+								<Send className="h-4 w-4" />
+							)}
+							{sent ? "Sent" : "Send"}
+						</Button>
+					)}
+				</>
+			}
+		>
+				<div className="pb-1">
 					<div className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
 						<div className="grid gap-3 sm:grid-cols-2">
 							<label className="block text-sm text-slate-700">
@@ -261,81 +330,6 @@ export function CounterpartyInviteDialog({
 						) : null}
 					</div>
 				</div>
-				<div className="flex flex-wrap items-center gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
-					<p className="flex min-w-0 flex-1 items-start gap-2 text-xs text-slate-600">
-						<Info
-							className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#0f5384]"
-							aria-hidden
-						/>
-						<span>
-							Everyone on this list shares one link. Invited emails must verify
-							with a code before they can view the draft.
-						</span>
-					</p>
-					{!link ? (
-						<Button
-							type="button"
-							className="primary-btn shrink-0 px-3 sm:px-4"
-							disabled={!canCreateLink}
-							onClick={async () => {
-								let next = [...invitees];
-								const draftEmail = email.trim().toLowerCase();
-								const draftName = fullName.trim();
-								if (draftEmail || draftName) {
-									if (!EMAIL_RE.test(draftEmail)) {
-										setFormError("Enter a valid email address.");
-										return;
-									}
-									if (!draftName) {
-										setFormError(
-											"Enter a full name for this email before creating the link.",
-										);
-										return;
-									}
-									next = [
-										...next.filter((row) => row.email !== draftEmail),
-										{ email: draftEmail, name: draftName },
-									];
-								}
-								if (next.length === 0) {
-									setFormError("Add at least one person with name and email.");
-									return;
-								}
-								setInvitees(next);
-								setEmail("");
-								setFullName("");
-								setFormError(null);
-								const url = await onCreate(next, 14);
-								if (url) setLink(url);
-							}}
-						>
-							<Link2 className="h-4 w-4" />
-							Create link
-						</Button>
-					) : (
-						<Button
-							type="button"
-							className="primary-btn shrink-0 px-3 sm:px-4"
-							disabled={busy || invitees.length === 0 || sent}
-							onClick={async () => {
-								const didSend = await onSend(
-									invitees.map((row) => row.email),
-									message.trim(),
-									link,
-								);
-								if (didSend) setSent(true);
-							}}
-						>
-							{sent ? (
-								<Check className="h-4 w-4" />
-							) : (
-								<Send className="h-4 w-4" />
-							)}
-							{sent ? "Sent" : "Send"}
-						</Button>
-					)}
-				</div>
-			</DialogContent>
-		</Dialog>
+		</AppDialog>
 	);
 }

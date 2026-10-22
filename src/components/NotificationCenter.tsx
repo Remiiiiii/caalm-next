@@ -48,12 +48,7 @@ import { formatInTimezone } from "@/lib/timezone";
 import NotificationSettings from "./NotificationSettings";
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogTitle,
-} from "./ui/dialog";
+import { AppDialog } from "./ui/app-dialog";
 import { Input } from "./ui/input";
 import { pageCountFromItems, showingRangeText } from "./ui/page-index";
 import {
@@ -609,48 +604,90 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 	).length;
 
 	return (
-		<Dialog open={open} onOpenChange={onClose}>
-			<DialogContent
-				className="flex max-h-[90vh] w-[calc(100%-1.5rem)] sm:w-full max-w-[800px] flex-col overflow-hidden p-0 shadow-xl"
-				data-testid="notification-center"
-			>
-				{/* Professional Cap */}
-				<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-
-				{/* Header with gradient background */}
-				<div className="glass-dialog-wizard-header mt-4">
-					<div className="flex items-center justify-between gap-3 px-6 pr-12">
-						<div className="flex items-center gap-3">
-							<Bell className="w-5 h-5 text-[#0f5384]" />
-							<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-								Notifications
-							</DialogTitle>
+		<>
+			<AppDialog
+				open={open}
+				onOpenChange={(isOpen) => {
+					if (!isOpen) onClose();
+				}}
+				size="form"
+				className="max-h-[90vh] w-[calc(100%-1.5rem)] max-w-[800px] sm:w-full"
+				icon={<Bell className="h-5 w-5" aria-hidden />}
+				title="Notifications"
+				description={`${unreadCount} unread notification${unreadCount !== 1 ? "s" : ""}`}
+				footer={
+					<div
+						className="flex w-full flex-wrap items-center justify-between gap-3"
+						data-testid="pagination"
+					>
+						<div className="flex items-center gap-2 text-xs text-slate-700">
+							<span>Items per page:</span>
+							<Select
+								value={String(perPage)}
+								onValueChange={(value) => setPerPage(Number(value))}
+							>
+								<SelectTrigger className="h-9 w-[4.5rem] border-[0.25px] border-slate-300 bg-white text-xs">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									{[5, 10, 20, 50].map((n) => (
+										<SelectItem key={n} value={String(n)} className="text-xs">
+											{n}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
 						</div>
-						<div className="flex items-center gap-2">
-							{/* Button forces [&_svg]:size-4 — override so the gear bump is visible */}
+						<nav
+							aria-label="Notifications pagination"
+							className="ml-auto flex flex-wrap items-center gap-3 text-xs text-slate-600"
+						>
+							<span>
+								{showingRangeText(page, perPage, filtered.length, "items")}
+							</span>
 							<button
 								type="button"
-								onClick={() => setShowSettings(true)}
-								aria-label="Notification settings"
-								className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-md text-slate-700 transition-colors duration-200 hover:bg-white/70 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
+								className="inline-flex items-center gap-1 bg-transparent p-0 text-xs font-medium text-slate-700 transition-colors duration-200 hover:text-[#0f5384] disabled:cursor-not-allowed disabled:text-slate-400"
+								disabled={page <= 1}
+								onClick={() => setPage((p) => Math.max(1, p - 1))}
 							>
-								<Settings className="h-6 w-6 shrink-0" aria-hidden />
+								<ChevronLeft className="h-4 w-4" />
+								Previous
 							</button>
-						</div>
+							<span className="text-slate-700">
+								Page {page} of {pageCountFromItems(filtered.length, perPage)}
+							</span>
+							<button
+								type="button"
+								className="inline-flex items-center gap-1 bg-transparent p-0 text-xs font-medium text-slate-700 transition-colors duration-200 hover:text-[#0f5384] disabled:cursor-not-allowed disabled:text-slate-400"
+								disabled={page >= pageCountFromItems(filtered.length, perPage)}
+								onClick={() =>
+									setPage((p) =>
+										Math.min(pageCountFromItems(filtered.length, perPage), p + 1),
+									)
+								}
+							>
+								Next
+								<ChevronRight className="h-4 w-4" />
+							</button>
+						</nav>
 					</div>
-					<p
-						className="text-sm text-slate-600 mt-1 ml-14"
-						data-testid="unread-count"
-					>
+				}
+			>
+				<div className="pb-1" data-testid="notification-center">
+					<div className="mb-4 flex justify-end">
+						<button
+							type="button"
+							onClick={() => setShowSettings(true)}
+							aria-label="Notification settings"
+							className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-md text-slate-700 transition-colors duration-200 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
+						>
+							<Settings className="h-6 w-6 shrink-0" aria-hidden />
+						</button>
+					</div>
+					<p className="sr-only" data-testid="unread-count">
 						{unreadCount} unread notification{unreadCount !== 1 ? "s" : ""}
 					</p>
-					<DialogDescription className="sr-only">
-						View and manage your notifications
-					</DialogDescription>
-				</div>
-
-				{/* Scrollable Content */}
-				<div className="flex-1 overflow-y-auto p-6 bg-slate-50">
 					<div className="space-y-4">
 						<div
 							aria-hidden
@@ -971,72 +1008,14 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 						</DndContext>
 					</div>
 				</div>
-
-				{/* Footer pagination */}
-				<div
-					className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4"
-					data-testid="pagination"
-				>
-					<div className="flex items-center gap-2 text-xs text-slate-700">
-						<span>Items per page:</span>
-						<Select
-							value={String(perPage)}
-							onValueChange={(value) => setPerPage(Number(value))}
-						>
-							<SelectTrigger className="h-9 w-[4.5rem] border-[0.25px] border-slate-300 bg-white text-xs">
-								<SelectValue />
-							</SelectTrigger>
-							<SelectContent>
-								{[5, 10, 20, 50].map((n) => (
-									<SelectItem key={n} value={String(n)} className="text-xs">
-										{n}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-					</div>
-					<nav
-						aria-label="Notifications pagination"
-						className="ml-auto flex flex-wrap items-center gap-3 text-xs text-slate-600"
-					>
-						<span>
-							{showingRangeText(page, perPage, filtered.length, "items")}
-						</span>
-						<button
-							type="button"
-							className="inline-flex items-center gap-1 bg-transparent p-0 text-xs font-medium text-slate-700 transition-colors duration-200 hover:text-[#0f5384] disabled:cursor-not-allowed disabled:text-slate-400"
-							disabled={page <= 1}
-							onClick={() => setPage((p) => Math.max(1, p - 1))}
-						>
-							<ChevronLeft className="h-4 w-4" />
-							Previous
-						</button>
-						<span className="text-slate-700">
-							Page {page} of {pageCountFromItems(filtered.length, perPage)}
-						</span>
-						<button
-							type="button"
-							className="inline-flex items-center gap-1 bg-transparent p-0 text-xs font-medium text-slate-700 transition-colors duration-200 hover:text-[#0f5384] disabled:cursor-not-allowed disabled:text-slate-400"
-							disabled={page >= pageCountFromItems(filtered.length, perPage)}
-							onClick={() =>
-								setPage((p) =>
-									Math.min(pageCountFromItems(filtered.length, perPage), p + 1),
-								)
-							}
-						>
-							Next
-							<ChevronRight className="h-4 w-4" />
-						</button>
-					</nav>
-				</div>
-			</DialogContent>
+			</AppDialog>
 
 			<NotificationSettings
 				open={showSettings}
 				onClose={() => setShowSettings(false)}
 				userId={userId}
 			/>
-		</Dialog>
+		</>
 	);
 };
 

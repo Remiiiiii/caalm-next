@@ -1,23 +1,18 @@
 "use client";
 
-import * as VisuallyHiddenPrimitive from "@radix-ui/react-visually-hidden";
 import {
 	Calendar as CalendarIcon,
 	Check,
 	Globe,
 	Lock,
+	Loader2,
 	Plus,
 } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { AppDialog } from "@/components/ui/app-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -140,43 +135,46 @@ export const CreateSharedCalendarDialog: React.FC<
 	};
 
 	return (
-		<Dialog
+		<AppDialog
 			open={open}
 			onOpenChange={(next) => {
 				if (!next) handleCancel();
 				else onOpenChange(true);
 			}}
+			size="form"
+			className="max-w-[600px] max-h-[90vh]"
+			icon={<CalendarIcon className="h-5 w-5" />}
+			title="Create Shared Calendar"
+			description="Create a calendar that your team can access and collaborate on"
+			pending={creating}
+			footer={
+				<>
+					<Button
+						type="button"
+						variant="outline"
+						className="rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+						disabled={creating}
+						onClick={handleCancel}
+					>
+						Cancel
+					</Button>
+					<Button
+						type="button"
+						className="btn-primary"
+						onClick={handleCreate}
+						disabled={creating || !formData.name.trim()}
+					>
+						{creating ? (
+							<Loader2 className="h-4 w-4 animate-spin" />
+						) : (
+							<Plus className="h-4 w-4" />
+						)}
+						{creating ? "Creating..." : "Create Calendar"}
+					</Button>
+				</>
+			}
 		>
-			<DialogContent className="w-[calc(100%-1.5rem)] sm:w-full max-w-[600px] p-0 max-h-[90vh] flex flex-col">
-				<VisuallyHiddenPrimitive.Root>
-					<DialogTitle>Create Shared Calendar</DialogTitle>
-					<DialogDescription>
-						Create a new shared calendar for your team
-					</DialogDescription>
-				</VisuallyHiddenPrimitive.Root>
-				<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-
-				{/* Professional Header */}
-				<div className="glass-dialog-wizard-header mt-4">
-					<div className="flex items-center justify-between ml-6">
-						<div className="flex items-center">
-							<div>
-								<div className="flex items-center gap-2">
-									<CalendarIcon className="h-5 w-5 text-[#0f5384]" />
-									<h2 className="text-xl font-semibold sidebar-gradient-text">
-										Create Shared Calendar
-									</h2>
-								</div>
-								<p className="text-sm text-slate-600 mt-1 ml-7">
-									Create a calendar that your team can access and collaborate on
-								</p>
-							</div>
-						</div>
-					</div>
-				</div>
-
-				{/* Scrollable Content */}
-				<div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+				<div className="space-y-6 pb-1">
 					<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
 						<Label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3">
 							<Plus className="w-4 h-4 text-blue-600" />
@@ -360,30 +358,6 @@ export const CreateSharedCalendarDialog: React.FC<
 						</div>
 					</div>
 				</div>
-
-				{/* Professional Footer */}
-				<div className="glass-dialog-footer-wrap">
-					<div className="flex items-center justify-end gap-3">
-						<Button
-							className="primary-btn px-3 sm:px-4"
-							onClick={handleCreate}
-							disabled={creating || !formData.name.trim()}
-						>
-							{creating ? (
-								<>
-									<div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-									Creating...
-								</>
-							) : (
-								<>
-									<Plus className="w-4 h-4" />
-									Create Calendar
-								</>
-							)}
-						</Button>
-					</div>
-				</div>
-			</DialogContent>
-		</Dialog>
+		</AppDialog>
 	);
 };

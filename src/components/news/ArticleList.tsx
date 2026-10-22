@@ -3,7 +3,6 @@
 import { format } from "date-fns";
 import {
 	AlertCircle,
-	Ban,
 	Edit,
 	Eye,
 	EyeOff,
@@ -18,16 +17,7 @@ import {
 } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -654,51 +644,36 @@ const ArticleList: React.FC<ArticleListProps> = ({ onEdit, onRefresh }) => {
 				</CardContent>
 			</GlassCard>
 
-			<AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>Delete Article</AlertDialogTitle>
-						<AlertDialogDescription>
-							Are you sure you want to delete this article? This action cannot
-							be undone.
-							{selectedArticles.size > 1 &&
-								` This will delete ${selectedArticles.size} articles.`}
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel>
-							<Ban className="w-4 h-4" />
-							Cancel
-						</AlertDialogCancel>
-						<AlertDialogAction
-							onClick={() => {
-								if (articleToDelete) {
-									handleDelete(articleToDelete);
-									// If multiple selected, delete all
-									if (selectedArticles.size > 1) {
-										selectedArticles.forEach((id) => {
-											if (id !== articleToDelete) {
-												handleDelete(id);
-											}
-										});
-									}
-								}
-							}}
-							disabled={deleting}
-							className="delete-btn px-3 sm:px-4"
-						>
-							{deleting ? (
-								<>
-									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-									Deleting...
-								</>
-							) : (
-								"Delete"
-							)}
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
+			<ConfirmDialog
+				open={deleteDialogOpen}
+				onOpenChange={setDeleteDialogOpen}
+				variant="destructive"
+				icon={<Trash2 className="h-5 w-5" />}
+				title={
+					selectedArticles.size > 1 ? "Delete articles?" : "Delete article?"
+				}
+				description={
+					selectedArticles.size > 1
+						? `This will delete ${selectedArticles.size} articles. This action cannot be undone.`
+						: "Are you sure you want to delete this article? This action cannot be undone."
+				}
+				confirmLabel={
+					selectedArticles.size > 1
+						? `Delete ${selectedArticles.size} articles`
+						: "Delete article"
+				}
+				onConfirm={async () => {
+					if (!articleToDelete) return;
+					await handleDelete(articleToDelete);
+					if (selectedArticles.size > 1) {
+						selectedArticles.forEach((id) => {
+							if (id !== articleToDelete) {
+								void handleDelete(id);
+							}
+						});
+					}
+				}}
+			/>
 		</>
 	);
 };

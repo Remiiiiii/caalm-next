@@ -3,7 +3,7 @@
 import { AlertTriangle, Plus, UserPlus } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { AppDialog } from "@/components/ui/app-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -103,31 +103,55 @@ export function CreateConstituentDialog({
 		}
 	};
 
+	const footerPrimary = candidates.length > 0 ? (
+		<Button
+			className="btn-primary px-3 sm:px-4"
+			disabled={saving || !form.firstName.trim() || !form.lastName.trim()}
+			onClick={() => void submit(true)}
+		>
+			<AlertTriangle className="h-4 w-4" />
+			Create anyway
+		</Button>
+	) : (
+		<Button
+			className="btn-primary px-3 sm:px-4"
+			disabled={saving || !form.firstName.trim() || !form.lastName.trim()}
+			onClick={() => void submit(false)}
+		>
+			<Plus className="h-4 w-4" />
+			Add
+		</Button>
+	);
+
 	return (
-		<Dialog
+		<AppDialog
 			open={open}
 			onOpenChange={(next) => {
 				if (!next) reset();
 				onOpenChange(next);
 			}}
+			size="form"
+			className="max-h-[90vh]"
+			pending={saving}
+			icon={<UserPlus className="h-5 w-5" />}
+			title="Add constituent"
+			description="Create a donor, volunteer, or member in this organization"
+			footer={
+				<>
+					<Button
+						type="button"
+						variant="outline"
+						className="rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+						disabled={saving}
+						onClick={() => onOpenChange(false)}
+					>
+						Cancel
+					</Button>
+					{footerPrimary}
+				</>
+			}
 		>
-			<DialogContent className="max-w-[600px] p-0 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 shadow-xl">
-				<div className="absolute top-0 left-0 right-0 h-4 bg-[#d6d7d8] opacity-70 rounded-t-md" />
-				<div className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 to-indigo-50 py-4 border-b border-slate-200 mt-4">
-					<div className="flex items-center gap-3 px-6">
-						<div className="flex items-center gap-3">
-							<UserPlus className="w-5 h-5 text-[#0f5384]" />
-							<DialogTitle className="text-xl font-semibold sidebar-gradient-text">
-								Add constituent
-							</DialogTitle>
-						</div>
-					</div>
-					<p className="text-sm text-slate-600 mt-1 ml-14">
-						Create a donor, volunteer, or member in this organization
-					</p>
-				</div>
-
-				<div className="flex-1 overflow-y-auto p-6 bg-slate-50 space-y-4">
+			<div className="flex flex-col gap-4 pb-1">
 					<div className="grid grid-cols-2 gap-4">
 						<div className="space-y-1.5">
 							<Label htmlFor="constituent-first-name">First name</Label>
@@ -243,34 +267,7 @@ export function CreateConstituentDialog({
 							) : null}
 						</div>
 					) : null}
-				</div>
-
-				<div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3">
-					{candidates.length > 0 ? (
-						<Button
-							className="primary-btn px-3 sm:px-4"
-							disabled={
-								saving || !form.firstName.trim() || !form.lastName.trim()
-							}
-							onClick={() => void submit(true)}
-						>
-							<AlertTriangle className="h-4 w-4" />
-							Create anyway
-						</Button>
-					) : (
-						<Button
-							className="primary-btn px-3 sm:px-4"
-							disabled={
-								saving || !form.firstName.trim() || !form.lastName.trim()
-							}
-							onClick={() => void submit(false)}
-						>
-							<Plus className="h-4 w-4" />
-							Add
-						</Button>
-					)}
-				</div>
-			</DialogContent>
-		</Dialog>
+			</div>
+		</AppDialog>
 	);
 }
