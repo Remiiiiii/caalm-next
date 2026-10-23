@@ -2,6 +2,7 @@
 
 import {
 	AlertCircle,
+	Check,
 	Clock,
 	Copy,
 	RefreshCw,
@@ -31,12 +32,7 @@ import {
 	StatRows,
 } from "@/components/ui/metric-stat-card";
 import { SearchField } from "@/components/ui/search-field";
-import {
-	Sheet,
-	SheetContent,
-	SheetHeader,
-	SheetTitle,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import {
 	TableBody,
 	TableCell,
@@ -176,6 +172,7 @@ export function ActiveIncidentsClient({
 	const [selected, setSelected] = useState<LoadIncident | null>(null);
 	const [resolutionNote, setResolutionNote] = useState("");
 	const [resolvingOpen, setResolvingOpen] = useState(false);
+	const [copied, setCopied] = useState(false);
 	const { toast } = useToast();
 
 	const params = new URLSearchParams();
@@ -466,11 +463,11 @@ export function ActiveIncidentsClient({
 										</TableCell>
 										<TableCell className={DATA_TABLE_CELL}>
 											{row.errorStatus ? (
-												<span className="rounded-md border border-red/20 bg-red/10 px-2 py-0.5 text-xs font-bold text-red">
+												<span className="rounded-full border border-red/20 bg-red/10 px-2.5 py-0.5 text-xs font-bold text-red">
 													{row.errorStatus}
 												</span>
 											) : null}
-											<p className="mt-0.5 truncate text-xs text-slate-500">
+											<p className="mt-1 truncate text-xs text-slate-500">
 												{row.requestPath}
 											</p>
 										</TableCell>
@@ -529,15 +526,24 @@ export function ActiveIncidentsClient({
 					}
 				}}
 			>
-				<SheetContent side="right" className="w-[500px] sm:max-w-[500px]">
+				<SheetContent
+					side="right"
+					className="my-4 mr-4 !h-auto max-h-[calc(100vh-2rem)] w-[500px] overflow-hidden rounded-xl border border-slate-200 p-0 shadow-xl sm:max-w-[500px]"
+				>
 					{selected && (
 						<div className="flex h-full min-h-0 flex-col">
-							<SheetHeader className="shrink-0">
-								<div className="flex items-center justify-between gap-3 pr-8">
-									<SheetTitle>{selected.reference}</SheetTitle>
+							{/* ── card cap ── */}
+							<div className="glass-card-cap" />
+
+							{/* ── header ── */}
+							<div className="shrink-0 px-6 pt-8 pb-4">
+								<div className="flex items-center justify-between gap-3">
+									<SheetTitle className="text-base font-bold text-slate-800">
+										{selected.reference}
+									</SheetTitle>
 									<span
 										className={cn(
-											"inline-block shrink-0 rounded-full border px-2 py-0.5 text-xs font-semibold",
+											"inline-block shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-semibold",
 											selected.status === "new"
 												? "border-red/20 bg-red/10 text-red"
 												: "border-blue/20 bg-blue/10 text-blue",
@@ -546,15 +552,17 @@ export function ActiveIncidentsClient({
 										{selected.status === "new" ? "New" : "Acknowledged"}
 									</span>
 								</div>
-								<p className="text-sm text-slate-500">
-									{selected.route} · {SCALE_LABELS[selected.scale]} failed to
-									load
+								<p className="mt-0.5 text-sm text-slate-500">
+									{humanizeRoute(selected.route)} ·{" "}
+									{SCALE_LABELS[selected.scale]} failed to load
 								</p>
-							</SheetHeader>
+							</div>
 
-							<div className="min-h-0 flex-1 space-y-5 overflow-y-auto py-4">
-								<div>
-									<p className="mb-2 text-xs font-semibold uppercase text-slate-500">
+							{/* ── scrollable body ── */}
+							<div className="min-h-0 flex-1 overflow-y-auto">
+								{/* ── what the user saw ── */}
+								<div className="border-t border-slate-200 px-6 py-4">
+									<p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
 										What the user saw
 									</p>
 									{selected.screenshotPath ? (
@@ -564,7 +572,7 @@ export function ActiveIncidentsClient({
 												<span className="h-2 w-2 rounded-full bg-slate-300" />
 												<span className="h-2 w-2 rounded-full bg-slate-300" />
 												<span className="ml-2 truncate text-xs text-slate-500">
-													{selected.route}
+													…{selected.route}
 												</span>
 											</div>
 											<Image
@@ -582,7 +590,7 @@ export function ActiveIncidentsClient({
 										</div>
 									)}
 									{selected.screenshotCapturedAt && (
-										<div className="mt-1 flex items-center justify-between gap-3">
+										<div className="mt-2 flex items-center justify-between gap-3">
 											<p className="text-xs text-slate-400">
 												Captured {formatDateTime(selected.screenshotCapturedAt)}{" "}
 												(first occurrence)
@@ -601,11 +609,12 @@ export function ActiveIncidentsClient({
 									)}
 								</div>
 
-								<div>
-									<p className="mb-2 text-xs font-semibold uppercase text-slate-500">
+								{/* ── details ── */}
+								<div className="border-t border-slate-200 px-6 py-4">
+									<p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
 										Details
 									</p>
-									<dl className="space-y-2 text-sm">
+									<dl className="divide-y divide-slate-200 text-sm">
 										<Row label="Page / route" value={selected.route} />
 										<Row
 											label="Failed request"
@@ -631,83 +640,138 @@ export function ActiveIncidentsClient({
 									</dl>
 								</div>
 
-								{canManage && (
-									<div>
-										<div className="flex flex-wrap items-center gap-2">
-											<button
-												type="button"
-												className="btn-primary"
-												disabled={selected.status !== "new"}
-												onClick={() =>
-													void act(selected.$id, { action: "acknowledge" })
-												}
-											>
-												Acknowledge
-											</button>
+								{/* ── actions (always visible, disabled when no permission) ── */}
+								<div className="border-t border-slate-200 px-6 py-4">
+									<div className="flex flex-wrap items-center gap-2">
+										<Button
+											type="button"
+											size="sm"
+											className="btn-primary"
+											disabled={!canManage || selected.status !== "new"}
+											onClick={() =>
+												void act(selected.$id, { action: "acknowledge" })
+											}
+										>
+											Acknowledge
+										</Button>
+										<Button
+											size="sm"
+											className="btn-primary"
+											disabled={!canManage}
+											onClick={() =>
+												void act(selected.$id, {
+													action: "assign",
+													assignedTo: currentUserId,
+												})
+											}
+										>
+											Assign…
+										</Button>
+										<Button
+											size="sm"
+											className="btn-primary"
+											disabled={!canManage}
+											onClick={() => setResolvingOpen((open) => !open)}
+										>
+											Mark resolved
+										</Button>
+										<button
+											type="button"
+											aria-label="Copy reference"
+											className="shrink-0"
+											onClick={() => {
+												void navigator.clipboard.writeText(selected.reference);
+												setCopied(true);
+												setTimeout(() => setCopied(false), 1500);
+											}}
+										>
+											{copied ? (
+												<Check className="h-5 w-5 text-green-500" />
+											) : (
+												<Copy className="h-5 w-5 text-slate-500 hover:text-slate-700" />
+											)}
+										</button>
+									</div>
+									{resolvingOpen && canManage && (
+										<div className="mt-3 flex flex-col gap-2">
+											<textarea
+												className="w-full rounded-md border border-slate-300 p-2 text-sm"
+												placeholder="Resolution note (required to resolve)"
+												value={resolutionNote}
+												onChange={(e) => setResolutionNote(e.target.value)}
+												rows={2}
+											/>
 											<Button
 												variant="outline"
 												size="sm"
-												className="rounded-full"
+												className="self-start rounded-full"
+												disabled={!resolutionNote.trim()}
 												onClick={() =>
 													void act(selected.$id, {
-														action: "assign",
-														assignedTo: currentUserId,
+														action: "resolve",
+														resolutionNote,
 													})
 												}
 											>
-												Assign…
-											</Button>
-											<Button
-												variant="outline"
-												size="sm"
-												className="rounded-full"
-												onClick={() => setResolvingOpen((open) => !open)}
-											>
-												Mark resolved
-											</Button>
-											<Button
-												type="button"
-												variant="outline"
-												size="icon"
-												className="h-8 w-8 shrink-0 rounded-full"
-												aria-label="Copy reference"
-												onClick={() => {
-													void navigator.clipboard.writeText(
-														selected.reference,
-													);
-													toast({ title: "Reference copied" });
-												}}
-											>
-												<Copy className="h-4 w-4" />
+												Confirm resolved
 											</Button>
 										</div>
-										{resolvingOpen && (
-											<div className="mt-3 flex flex-col gap-2">
-												<textarea
-													className="w-full rounded-md border border-slate-300 p-2 text-sm"
-													placeholder="Resolution note (required to resolve)"
-													value={resolutionNote}
-													onChange={(e) => setResolutionNote(e.target.value)}
-													rows={2}
-												/>
-												<Button
-													variant="outline"
-													size="sm"
-													className="self-start rounded-full"
-													disabled={!resolutionNote.trim()}
-													onClick={() =>
-														void act(selected.$id, {
-															action: "resolve",
-															resolutionNote,
-														})
-													}
-												>
-													Confirm resolved
-												</Button>
+									)}
+								</div>
+
+								{/* ── activity ── */}
+								<div className="border-t border-slate-200 px-6 py-4">
+									<p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
+										Activity
+									</p>
+									<div className="space-y-2.5 text-sm">
+										<div className="flex justify-between gap-4">
+											<span className="text-slate-600">
+												Created automatically
+											</span>
+											<span className="whitespace-nowrap tabular-nums text-slate-500">
+												{formatTime(selected.$createdAt)}
+											</span>
+										</div>
+										{selected.screenshotCapturedAt && (
+											<div className="flex justify-between gap-4">
+												<span className="text-slate-600">
+													Screenshot captured
+												</span>
+												<span className="whitespace-nowrap tabular-nums text-slate-500">
+													{formatTime(selected.screenshotCapturedAt)}
+												</span>
+											</div>
+										)}
+										{selected.acknowledgedAt && (
+											<div className="flex justify-between gap-4">
+												<span className="text-slate-600">Acknowledged</span>
+												<span className="whitespace-nowrap tabular-nums text-slate-500">
+													{formatTime(selected.acknowledgedAt)}
+												</span>
+											</div>
+										)}
+										{selected.occurrences > 1 && (
+											<div className="flex justify-between gap-4">
+												<span className="text-slate-600">
+													Seen again ({selected.occurrences - 1} more{" "}
+													{selected.occurrences - 1 === 1 ? "time" : "times"})
+												</span>
+												<span className="whitespace-nowrap tabular-nums text-slate-500">
+													{formatTime(selected.lastSeenAt)}
+												</span>
+											</div>
+										)}
+										{selected.resolvedAt && (
+											<div className="flex justify-between gap-4">
+												<span className="text-slate-600">Resolved</span>
+												<span className="whitespace-nowrap tabular-nums text-slate-500">
+													{formatTime(selected.resolvedAt)}
+												</span>
 											</div>
 										)}
 									</div>
-								)}
+								</div>
 							</div>
 						</div>
 					)}
@@ -719,7 +783,7 @@ export function ActiveIncidentsClient({
 
 function Row({ label, value }: { label: string; value: string }) {
 	return (
-		<div className="flex justify-between gap-4">
+		<div className="flex justify-between gap-4 py-2">
 			<dt className="text-slate-500">{label}</dt>
 			<dd className="text-right font-medium text-slate-800">{value}</dd>
 		</div>
