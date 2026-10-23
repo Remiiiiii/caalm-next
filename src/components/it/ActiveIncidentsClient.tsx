@@ -3,13 +3,14 @@
 import {
 	AlertCircle,
 	Clock,
+	Copy,
 	RefreshCw,
 	ShieldAlert,
 	Users,
 } from "lucide-react";
 import Image from "next/image";
 import { useMemo, useState } from "react";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
 import { Button } from "@/components/ui/button";
 import {
 	type CaalmFilterOption,
@@ -24,7 +25,11 @@ import {
 	DATA_TABLE_HEADER_ROW,
 } from "@/components/ui/caalm-data-table";
 import { Card, CardContent } from "@/components/ui/card";
-import { MetricStatCard } from "@/components/ui/metric-stat-card";
+import {
+	MetricSegmentBar,
+	MetricStatCard,
+	StatRows,
+} from "@/components/ui/metric-stat-card";
 import { SearchField } from "@/components/ui/search-field";
 import {
 	Sheet,
@@ -46,16 +51,44 @@ import { SCALE_LABELS } from "@/lib/incidents/incident.utils";
 import { incidentScreenshotUrl } from "@/lib/incidents/incident-screenshot-url";
 import { cn } from "@/lib/utils";
 
+interface IncidentsSummary {
+	active: number;
+	newCount: number;
+	acknowledgedCount: number;
+	reopenedCount: number;
+	openedLastHour: number;
+
+	unassigned: number;
+	oldestUnassignedMs: number | null;
+	pastResponseTarget: number;
+	pageLevelFailures: number;
+	sectionOrTableFailures: number;
+	assignedToYou: number;
+
+	usersAffected24h: number;
+	organizationsAffected24h: number;
+	mostAffectedPage: { route: string; count: number } | null;
+	largestOrganization: { name: string; users: number } | null;
+	repeatHits24h: number;
+	totalErrorViews24h: number;
+
+	oldestOpenMs: number | null;
+	oldestOpenIncident: {
+		reference: string;
+		route: string;
+		errorStatus: number | null;
+	} | null;
+	medianAckMs: number | null;
+	medianAgeMs: number | null;
+	openLongerThan1h: number;
+	resolvedToday: number;
+}
+
 interface IncidentsResponse {
 	success: boolean;
 	data: {
 		incidents: LoadIncident[];
-		summary: {
-			active: number;
-			unassigned: number;
-			usersAffected24h: number;
-			oldestOpenMs: number | null;
-		};
+		summary: IncidentsSummary;
 	};
 }
 
@@ -76,6 +109,24 @@ function formatTime(iso: string): string {
 	});
 }
 
+function formatDateTime(iso: string): string {
+	return new Date(iso).toLocaleString([], {
+		month: "short",
+		day: "numeric",
+		hour: "numeric",
+		minute: "2-digit",
+	});
+}
+
+function humanizeRoute(route: string): string {
+	const last = route.split("/").filter(Boolean).pop() ?? route;
+	return last
+		.split("-")
+		.filter(Boolean)
+		.map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+		.join(" ");
+}
+
 const SCALE_OPTIONS: CaalmFilterOption<string>[] = [
 	{ value: "all", label: "All" },
 	{ value: "page", label: "Page" },
@@ -83,6 +134,35 @@ const SCALE_OPTIONS: CaalmFilterOption<string>[] = [
 	{ value: "table", label: "Table" },
 	{ value: "banner", label: "Banner" },
 ];
+
+/** Lives in the page header, next to the subtitle — revalidates the incidents list regardless of current filters. */
+export function RefreshIncidentsButton() {
+	const { mutate } = useSWRConfig();
+	const [refreshing, setRefreshing] = useState(false);
+
+	const handleRefresh = async () => {
+		setRefreshing(true);
+		try {
+			await mutate(
+				(key) => typeof key === "string" && key.startsWith("/api/it/incidents"),
+			);
+		} finally {
+			setRefreshing(false);
+		}
+	};
+
+	return (
+		<Button
+			type="button"
+			className="btn-primary"
+			disabled={refreshing}
+			onClick={() => void handleRefresh()}
+		>
+			<RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
+			Refresh
+		</Button>
+	);
+}
 
 export function ActiveIncidentsClient({
 	canManage,
@@ -95,6 +175,7 @@ export function ActiveIncidentsClient({
 	const [scale, setScale] = useState("all");
 	const [selected, setSelected] = useState<LoadIncident | null>(null);
 	const [resolutionNote, setResolutionNote] = useState("");
+	const [resolvingOpen, setResolvingOpen] = useState(false);
 	const { toast } = useToast();
 
 	const params = new URLSearchParams();
@@ -158,56 +239,163 @@ export function ActiveIncidentsClient({
 			<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
 				<MetricStatCard
 					title="Active"
-					value={summary?.active ?? "—"}
+					value={summary ? `${summary.active} open incidents` : "—"}
+					description={
+						summary
+							? `${summary.newCount} new · ${summary.acknowledgedCount} acknowledged · ${summary.openedLastHour} opened in the last hour`
+							: undefined
+					}
 					icon={AlertCircle}
 					iconTone="danger"
+					pinFooter
+					footer={
+						<StatRows
+							top={
+								<MetricSegmentBar
+									segments={[
+										{
+											key: "new",
+											label: "New",
+											count: summary?.newCount ?? 0,
+											colorClass: "bg-red",
+											textClass: "text-red",
+										},
+										{
+											key: "acknowledged",
+											label: "Acknowledged",
+											count: summary?.acknowledgedCount ?? 0,
+											colorClass: "bg-blue",
+											textClass: "text-blue",
+										},
+									]}
+								/>
+							}
+							rows={[
+								["New", summary?.newCount ?? "—"],
+								["Acknowledged", summary?.acknowledgedCount ?? "—"],
+								["Regressions (reopened)", summary?.reopenedCount ?? "—"],
+							]}
+						/>
+					}
 				/>
 				<MetricStatCard
 					title="Unassigned"
-					value={summary?.unassigned ?? "—"}
+					value={summary ? `${summary.unassigned} waiting for an owner` : "—"}
+					description={
+						summary
+							? `Oldest unassigned for ${formatDuration(summary.oldestUnassignedMs)}`
+							: undefined
+					}
 					icon={ShieldAlert}
 					iconTone="warning"
+					pinFooter
+					footer={
+						<StatRows
+							rows={[
+								[
+									"Past response target",
+									<span
+										key="past-target"
+										className="inline-flex min-w-7 justify-center rounded-md border border-orange/20 bg-orange/10 px-2 py-0.5 text-xs font-bold text-orange"
+									>
+										{summary?.pastResponseTarget ?? 0}
+									</span>,
+								],
+								["Page-level failures", summary?.pageLevelFailures ?? "—"],
+								[
+									"Section or table failures",
+									summary?.sectionOrTableFailures ?? "—",
+								],
+								["Assigned to you", summary?.assignedToYou ?? "—"],
+							]}
+						/>
+					}
 				/>
 				<MetricStatCard
 					title="Users affected (24h)"
-					value={summary?.usersAffected24h ?? "—"}
+					value={summary ? `${summary.usersAffected24h} users` : "—"}
+					description={
+						summary
+							? `Across ${summary.organizationsAffected24h} organizations`
+							: undefined
+					}
 					icon={Users}
+					pinFooter
+					footer={
+						<StatRows
+							rows={[
+								[
+									"Most affected page",
+									summary?.mostAffectedPage
+										? `${humanizeRoute(summary.mostAffectedPage.route)} · ${summary.mostAffectedPage.count}`
+										: "—",
+								],
+								[
+									"Largest organization",
+									summary?.largestOrganization
+										? `${summary.largestOrganization.name} · ${summary.largestOrganization.users} users`
+										: "—",
+								],
+								["Hit the error more than once", summary?.repeatHits24h ?? "—"],
+								["Total error views", summary?.totalErrorViews24h ?? "—"],
+							]}
+						/>
+					}
 				/>
 				<MetricStatCard
 					title="Oldest open"
 					value={formatDuration(summary?.oldestOpenMs ?? null)}
+					description={
+						summary?.oldestOpenIncident
+							? `${summary.oldestOpenIncident.reference} · ${humanizeRoute(summary.oldestOpenIncident.route)}${
+									summary.oldestOpenIncident.errorStatus
+										? ` · HTTP ${summary.oldestOpenIncident.errorStatus}`
+										: ""
+								}`
+							: undefined
+					}
 					icon={Clock}
+					pinFooter
+					footer={
+						<StatRows
+							rows={[
+								[
+									"Median time to acknowledge",
+									formatDuration(summary?.medianAckMs ?? null),
+								],
+								[
+									"Median age of open incidents",
+									formatDuration(summary?.medianAgeMs ?? null),
+								],
+								["Open longer than 1h", summary?.openLongerThan1h ?? "—"],
+								["Resolved today", summary?.resolvedToday ?? "—"],
+							]}
+						/>
+					}
 				/>
 			</div>
 
 			<Card className="glass-card">
 				<div className="glass-card-cap" />
 				<CardContent className="p-4 text-slate-700 sm:p-6">
-					<div className="flex flex-wrap items-center gap-3">
+					<div className="flex flex-wrap items-center gap-3 mb-5">
 						<SearchField
 							placeholder="Search reference, page or error…"
 							value={search}
 							onChange={(e) => setSearch(e.target.value)}
-							containerClassName="max-w-xs"
+							containerClassName="w-[26rem] max-w-full shrink-0"
 						/>
-						<CaalmFilterSelect
-							value={scale}
-							options={SCALE_OPTIONS}
-							onChange={setScale}
-							ariaLabel="Filter by scale"
-							triggerLabel={`Scale: ${
-								SCALE_OPTIONS.find((o) => o.value === scale)?.label ?? "All"
-							}`}
-						/>
-						<Button
-							variant="outline"
-							size="sm"
-							className="ml-auto rounded-full"
-							onClick={() => void mutate()}
-						>
-							<RefreshCw className="h-4 w-4" />
-							Refresh
-						</Button>
+						<div className="ml-auto flex items-center gap-3">
+							<CaalmFilterSelect
+								value={scale}
+								options={SCALE_OPTIONS}
+								onChange={setScale}
+								ariaLabel="Filter by scale"
+								triggerLabel={`Scale: ${
+									SCALE_OPTIONS.find((o) => o.value === scale)?.label ?? "All"
+								}`}
+							/>
+						</div>
 					</div>
 
 					{incidents.length === 0 && !isLoading ? (
@@ -337,6 +525,7 @@ export function ActiveIncidentsClient({
 					if (!open) {
 						setSelected(null);
 						setResolutionNote("");
+						setResolvingOpen(false);
 					}
 				}}
 			>
@@ -344,7 +533,19 @@ export function ActiveIncidentsClient({
 					{selected && (
 						<div className="flex h-full min-h-0 flex-col">
 							<SheetHeader className="shrink-0">
-								<SheetTitle>{selected.reference}</SheetTitle>
+								<div className="flex items-center justify-between gap-3 pr-8">
+									<SheetTitle>{selected.reference}</SheetTitle>
+									<span
+										className={cn(
+											"inline-block shrink-0 rounded-full border px-2 py-0.5 text-xs font-semibold",
+											selected.status === "new"
+												? "border-red/20 bg-red/10 text-red"
+												: "border-blue/20 bg-blue/10 text-blue",
+										)}
+									>
+										{selected.status === "new" ? "New" : "Acknowledged"}
+									</span>
+								</div>
 								<p className="text-sm text-slate-500">
 									{selected.route} · {SCALE_LABELS[selected.scale]} failed to
 									load
@@ -381,9 +582,22 @@ export function ActiveIncidentsClient({
 										</div>
 									)}
 									{selected.screenshotCapturedAt && (
-										<p className="mt-1 text-xs text-slate-400">
-											Captured {formatTime(selected.screenshotCapturedAt)}
-										</p>
+										<div className="mt-1 flex items-center justify-between gap-3">
+											<p className="text-xs text-slate-400">
+												Captured {formatDateTime(selected.screenshotCapturedAt)}{" "}
+												(first occurrence)
+											</p>
+											{selected.screenshotPath ? (
+												<a
+													href={incidentScreenshotUrl(selected.screenshotPath)}
+													target="_blank"
+													rel="noreferrer"
+													className="shrink-0 text-xs font-medium text-[#0f5384] hover:underline"
+												>
+													Open full size ↗
+												</a>
+											) : null}
+										</div>
 									)}
 								</div>
 
@@ -400,7 +614,7 @@ export function ActiveIncidentsClient({
 										<Row label="Trace ID" value={selected.traceId ?? "—"} />
 										<Row
 											label="Occurrences"
-											value={`${selected.occurrences} · ${selected.affectedUsers} users`}
+											value={`${selected.occurrences} · ${selected.affectedUsers} users · 1 org`}
 										/>
 										<Row
 											label="First / last seen"
@@ -419,9 +633,6 @@ export function ActiveIncidentsClient({
 
 								{canManage && (
 									<div>
-										<p className="mb-2 text-xs font-semibold uppercase text-slate-500">
-											Actions
-										</p>
 										<div className="flex flex-wrap items-center gap-2">
 											<button
 												type="button"
@@ -444,32 +655,57 @@ export function ActiveIncidentsClient({
 													})
 												}
 											>
-												Assign to me
+												Assign…
 											</Button>
-										</div>
-										<div className="mt-3 flex flex-col gap-2">
-											<textarea
-												className="w-full rounded-md border border-slate-300 p-2 text-sm"
-												placeholder="Resolution note (required to resolve)"
-												value={resolutionNote}
-												onChange={(e) => setResolutionNote(e.target.value)}
-												rows={2}
-											/>
 											<Button
 												variant="outline"
 												size="sm"
-												className="self-start rounded-full"
-												disabled={!resolutionNote.trim()}
-												onClick={() =>
-													void act(selected.$id, {
-														action: "resolve",
-														resolutionNote,
-													})
-												}
+												className="rounded-full"
+												onClick={() => setResolvingOpen((open) => !open)}
 											>
 												Mark resolved
 											</Button>
+											<Button
+												type="button"
+												variant="outline"
+												size="icon"
+												className="h-8 w-8 shrink-0 rounded-full"
+												aria-label="Copy reference"
+												onClick={() => {
+													void navigator.clipboard.writeText(
+														selected.reference,
+													);
+													toast({ title: "Reference copied" });
+												}}
+											>
+												<Copy className="h-4 w-4" />
+											</Button>
 										</div>
+										{resolvingOpen && (
+											<div className="mt-3 flex flex-col gap-2">
+												<textarea
+													className="w-full rounded-md border border-slate-300 p-2 text-sm"
+													placeholder="Resolution note (required to resolve)"
+													value={resolutionNote}
+													onChange={(e) => setResolutionNote(e.target.value)}
+													rows={2}
+												/>
+												<Button
+													variant="outline"
+													size="sm"
+													className="self-start rounded-full"
+													disabled={!resolutionNote.trim()}
+													onClick={() =>
+														void act(selected.$id, {
+															action: "resolve",
+															resolutionNote,
+														})
+													}
+												>
+													Confirm resolved
+												</Button>
+											</div>
+										)}
 									</div>
 								)}
 							</div>

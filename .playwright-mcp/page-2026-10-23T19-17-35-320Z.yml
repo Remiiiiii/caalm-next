@@ -1,0 +1,430 @@
+- generic:
+  - button "Open Next.js Dev Tools" [ref=f1e411] [cursor=pointer]
+  - alert
+  - main [aria-hidden]:
+    - generic:
+      - complementary:
+        - generic:
+          - link:
+            - /url: /dashboard/it
+          - button [expanded]
+        - generic:
+          - generic:
+            - generic:
+              - paragraph: Victor Ramirez
+              - paragraph: developer@remyouji.com
+            - generic:
+              - generic:
+                - generic: "Role:"
+                - generic: Super Admin
+              - generic:
+                - generic: "Department:"
+                - generic: IT
+            - generic: Disconnected
+        - navigation:
+          - list:
+            - generic:
+              - listitem:
+                - generic: Workspaces
+              - generic:
+                - list:
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/superadmin
+                      - paragraph: Super Admin
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/departmentmanager
+                      - paragraph: Department Manager
+            - generic:
+              - listitem:
+                - generic: Overview
+              - generic:
+                - list:
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it
+                      - paragraph: Dashboard
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/system-overview
+                      - paragraph: System overview
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/storage
+                      - paragraph: Storage
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/tenants
+                      - paragraph: Tenants
+            - generic:
+              - listitem:
+                - generic: Support
+              - generic:
+                - list:
+                  - listitem:
+                    - link:
+                      - /url: /tickets/new
+                      - paragraph: Report issue
+                  - listitem:
+                    - link:
+                      - /url: /tickets
+                      - paragraph: Tickets
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/issuehistory
+                      - paragraph: Issue History
+            - generic:
+              - listitem:
+                - generic: Monitoring
+              - generic:
+                - list:
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/monitoring/system-health
+                      - paragraph: System health
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/monitoring/api-analytics
+                      - paragraph: API analytics
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/rate-limits
+                      - paragraph: Rate limits
+            - generic:
+              - listitem:
+                - generic: Incidents
+              - generic:
+                - list:
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/incidents/active
+                      - paragraph: Active incidents
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/incidents/runbooks
+                      - paragraph: Runbooks
+            - generic:
+              - listitem:
+                - generic: Development
+              - generic:
+                - list:
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/development/clm-roadmap
+                      - paragraph: CLM Roadmap
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/development/nonprofit-roadmap
+                      - paragraph: Nonprofit Roadmap
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/development/platform-readiness-roadmap
+                      - paragraph: Platform Readiness Roadmap
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/development/pr-log
+                      - paragraph: PR log - (Cursor Cloud Agent)
+            - generic:
+              - listitem:
+                - generic: Data & logs
+              - generic:
+                - list:
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/database/schema
+                      - paragraph: Schema
+            - generic:
+              - listitem:
+                - generic: Security
+              - generic:
+                - list:
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/security/audit-logs
+                      - paragraph: Audit logs
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/security/compliance
+                      - paragraph: Compliance
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/security/access-control
+                      - paragraph: Access control
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/security/incident-response
+                      - paragraph: Incident response
+            - generic:
+              - listitem:
+                - generic: Team
+              - generic:
+                - list:
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/team/directory
+                      - paragraph: IT directory
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/team/roles
+                      - paragraph: Roles
+            - listitem [aria-hidden]:
+              - separator
+            - generic:
+              - listitem:
+                - generic: Settings
+              - generic:
+                - list:
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/settings/system
+                      - paragraph: System
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/settings/integrations
+                      - paragraph: Integrations
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/settings/notifications
+                      - paragraph: Notifications
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - button: Upload Contract
+                - button: Upload License
+                - button: Audit
+                - button: Schedule
+                - button: Report
+            - generic:
+              - button:
+                - generic: Ask CAALM
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - button
+                    - button:
+                      - generic: "53"
+                    - button
+                    - button
+        - generic:
+          - generic:
+            - generic:
+              - button [expanded]:
+                - generic: Switch tenant
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - heading [level=1]: Active incidents
+                - generic:
+                  - paragraph: Pages and sections that failed to load for users. Review the captured screen, then take the steps to resolve.
+                  - button: Refresh
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - paragraph: Active
+                    - generic: 6 open incidents
+                    - generic: 6 new · 0 acknowledged · 0 opened in the last hour
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic: New — 6
+                              - generic: Acknowledged — 0
+                        - generic:
+                          - generic: New
+                          - generic: "6"
+                        - generic:
+                          - generic: Acknowledged
+                          - generic: "0"
+                        - generic:
+                          - generic: Regressions (reopened)
+                          - generic: "0"
+                - generic:
+                  - generic:
+                    - generic:
+                      - paragraph: Unassigned
+                    - generic: 6 waiting for an owner
+                    - generic: Oldest unassigned for 19h 49m
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic: Past response target
+                          - generic: "6"
+                        - generic:
+                          - generic: Page-level failures
+                          - generic: "6"
+                        - generic:
+                          - generic: Section or table failures
+                          - generic: "0"
+                        - generic:
+                          - generic: Assigned to you
+                          - generic: "0"
+                - generic:
+                  - generic:
+                    - generic:
+                      - paragraph: Users affected (24h)
+                    - generic: 6 users
+                    - generic: Across 1 organizations
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic: Most affected page
+                          - generic: Readiness · 12
+                        - generic:
+                          - generic: Largest organization
+                          - generic: Caalm Solutions Inc. · 6 users
+                        - generic:
+                          - generic: Hit the error more than once
+                          - generic: "1"
+                        - generic:
+                          - generic: Total error views
+                          - generic: "13"
+                - generic:
+                  - generic:
+                    - generic:
+                      - paragraph: Oldest open
+                    - generic: 19h 49m
+                    - generic: INC-287A57 · Readiness · HTTP 500
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic: Median time to acknowledge
+                          - generic: —
+                        - generic:
+                          - generic: Median age of open incidents
+                          - generic: 4h 19m
+                        - generic:
+                          - generic: Open longer than 1h
+                          - generic: "6"
+                        - generic:
+                          - generic: Resolved today
+                          - generic: "0"
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - textbox:
+                        - /placeholder: Search reference, page or error…
+                    - generic:
+                      - button:
+                        - generic: "Scale: All"
+                  - generic:
+                    - generic:
+                      - generic:
+                        - table:
+                          - rowgroup:
+                            - row:
+                              - columnheader: Reference
+                              - columnheader: Last seen
+                              - columnheader: Page · element
+                              - columnheader: Error
+                              - columnheader: Hits
+                              - columnheader: Screen
+                              - columnheader: Status
+                              - columnheader: Assigned
+                          - rowgroup:
+                            - row:
+                              - cell: INC-F2EE08
+                              - cell: 11:02 AM
+                              - cell:
+                                - paragraph: Audit Readiness
+                                - paragraph: Page · whole page
+                              - cell:
+                                - text: "598"
+                                - paragraph: /api/audits/readiness
+                              - cell: "1"
+                              - cell:
+                                - generic: No screenshot
+                              - cell:
+                                - generic: New
+                              - cell: Unassigned
+                            - row:
+                              - cell: INC-331367
+                              - cell: 11:01 AM
+                              - cell:
+                                - paragraph: Audit Readiness
+                                - paragraph: Page · whole page
+                              - cell:
+                                - text: "599"
+                                - paragraph: /api/audits/readiness
+                              - cell: "1"
+                              - cell:
+                                - generic: No screenshot
+                              - cell:
+                                - generic: New
+                              - cell: Unassigned
+                            - row:
+                              - cell: INC-76A158
+                              - cell: 10:58 AM
+                              - cell:
+                                - paragraph: Audit Readiness
+                                - paragraph: Page · whole page
+                              - cell:
+                                - text: "504"
+                                - paragraph: /api/audits/readiness
+                              - cell: "1"
+                              - cell:
+                                - generic: No screenshot
+                              - cell:
+                                - generic: New
+                              - cell: Unassigned
+                            - row:
+                              - cell: INC-20515B
+                              - cell: 10:56 AM
+                              - cell:
+                                - paragraph: Audit Readiness
+                                - paragraph: Page · whole page
+                              - cell:
+                                - text: "503"
+                                - paragraph: /api/audits/readiness
+                              - cell: "1"
+                              - cell:
+                                - generic: No screenshot
+                              - cell:
+                                - generic: New
+                              - cell: Unassigned
+                            - row:
+                              - cell: INC-391F9A
+                              - cell: 10:44 AM
+                              - cell:
+                                - paragraph: Audit Readiness
+                                - paragraph: Page · whole page
+                              - cell:
+                                - text: "500"
+                                - paragraph: /api/audits/readiness
+                              - cell: "8"
+                              - cell
+                              - cell:
+                                - generic: New
+                              - cell: Unassigned
+                            - row:
+                              - cell: INC-287A57
+                              - cell: 7:27 PM
+                              - cell:
+                                - paragraph: Readiness
+                                - paragraph: Page · whole page
+                              - cell:
+                                - text: "500"
+                                - paragraph: /api/audits/readiness
+                              - cell: "1"
+                              - cell
+                              - cell:
+                                - generic: New
+                              - cell: Unassigned
+      - button [ref=f1e676] [cursor=pointer]:
+        - generic [ref=f1e407]: Report issue
+  - list
+  - menu "Switch IT hub tenant" [active] [ref=f1e677]:
+    - textbox "Search tenants" [ref=f1e683]:
+      - /placeholder: Search tenants…
+    - button "Caalm Solutions Inc. growth" [ref=f1e686] [cursor=pointer]:
+      - generic [ref=f1e691]: Caalm Solutions Inc.
+      - generic [ref=f1e692]: growth

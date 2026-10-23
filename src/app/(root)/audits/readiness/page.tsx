@@ -317,16 +317,25 @@ export default function AuditReadinessPage() {
 	}
 
 	if (error && !payload) {
+		const status = typeof error?.status === "number" ? error.status : undefined;
+		// Spec 5.4: offline/401/403 get their own copy and never open an IT incident.
+		const variant =
+			error?.isNetworkError || status === 0
+				? "offline"
+				: status === 401 || status === 403
+					? "no-access"
+					: "error";
 		return (
-			<div className="w-full px-4 pb-10 sm:px-6 lg:px-8 xl:px-12">
+			<div className="w-full px-4 pb-10 sm:px-6 lg:px-8 xl:px-12 text-slate-700">
 				<LoadError
 					scale="page"
+					variant={variant}
 					title="We couldn't load Audit Readiness"
 					description="Something went wrong on our side. Your data hasn't changed."
 					elementKey="page"
+					requiredPermission="Audit View"
 					error={{
-						status:
-							typeof error?.status === "number" ? error.status : undefined,
+						status,
 						requestPath: "/api/audits/readiness",
 					}}
 					onRetry={() => mutate()}

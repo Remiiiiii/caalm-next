@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, Map as MapIcon } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import Image from "next/image";
 import { useMemo, useState } from "react";
 import useSWR from "swr";
@@ -395,7 +395,7 @@ export function ClmRoadmapPage({
 	};
 
 	return (
-		<ITPageShell title={title} subtitle={subtitle} icon={MapIcon}>
+		<ITPageShell title={title} subtitle={subtitle}>
 			{overviewLoading && !overview ? (
 				<p className="text-sm text-slate-600">Loading roadmap…</p>
 			) : overview?.sections?.length ? (

@@ -1,6 +1,5 @@
 ﻿"use client";
 
-import { KeyRound } from "lucide-react";
 import Link from "next/link";
 import { ITGlassPanel, ITPageShell } from "@/components/it/ITPageShell";
 import { Button } from "@/components/ui/button";
@@ -10,7 +9,6 @@ export default function Page() {
 		<ITPageShell
 			title="Access Control"
 			subtitle="Roles and permission assignments"
-			icon={KeyRound}
 		>
 			<ITGlassPanel>
 				<p className="text-sm text-slate-600 mb-4">

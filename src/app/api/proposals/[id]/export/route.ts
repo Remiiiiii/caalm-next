@@ -73,7 +73,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 				proposal: workspace.proposal,
 				requirements: workspace.requirements,
 				sections: workspace.sections,
-			}),
+			}) as never,
 		);
 		const buffer = await streamToBuffer(
 			stream as unknown as NodeJS.ReadableStream,

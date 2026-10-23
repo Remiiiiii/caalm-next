@@ -1,6 +1,5 @@
 ﻿"use client";
 
-import { ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { ITGlassPanel, ITPageShell } from "@/components/it/ITPageShell";
 import { Button } from "@/components/ui/button";
@@ -10,7 +9,6 @@ export default function Page() {
 		<ITPageShell
 			title="Security Compliance"
 			subtitle="Compliance posture and control status"
-			icon={ShieldCheck}
 		>
 			<ITGlassPanel>
 				<p className="text-sm text-slate-600 mb-4">

@@ -344,6 +344,40 @@ export function MetricSegmentBar({
 	);
 }
 
+/** Optional lead-in (chip or bar) then label/value rows split by slate-200 lines. */
+export function StatRows({
+	top,
+	rows,
+}: {
+	top?: ReactNode;
+	rows: Array<[string, ReactNode, string?]>;
+}) {
+	return (
+		<div className="w-full">
+			{top ? <div className="mb-3">{top}</div> : null}
+			{rows.map(([label, value, dot]) => (
+				<div
+					key={label}
+					className="flex items-center justify-between gap-3 border-t border-slate-200 py-2 text-xs"
+				>
+					<span className="inline-flex items-center gap-1.5 text-slate-600">
+						{dot ? (
+							<span
+								className={cn("h-1.5 w-1.5 rounded-full", dot)}
+								aria-hidden
+							/>
+						) : null}
+						{label}
+					</span>
+					<span className="font-semibold tabular-nums text-slate-700">
+						{value}
+					</span>
+				</div>
+			))}
+		</div>
+	);
+}
+
 /**
  * Zero-state flat sparkline (same idea as the risk-averted tracking line when
  * nothing moved): a quiet horizontal run with a terminal dot so "0" reads as
@@ -495,8 +529,10 @@ export function MetricStatCard({
 			className={cn(
 				"glass-card relative h-full overflow-hidden",
 				borderTone !== "default" && BORDER_TONE[borderTone],
+				// Metric cards never get the shared `.interactive-glass-card:hover` blue
+				// border — click affordance here is shadow + ring only, never a border.
 				interactive &&
-					"interactive-glass-card cursor-pointer focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
+					"cursor-pointer transition-shadow duration-200 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
 				className,
 			)}
 			onClick={onClick}

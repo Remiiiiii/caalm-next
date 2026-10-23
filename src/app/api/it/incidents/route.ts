@@ -1,9 +1,24 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
-import { listActiveIncidents } from "@/lib/incidents/incident.repository";
+import { getEffectiveUser } from "@/lib/impersonation/effective-user";
+import {
+	countResolvedSince,
+	listActiveIncidents,
+} from "@/lib/incidents/incident.repository";
 import { requirePermission } from "@/lib/rbac/middleware";
+import { getOrganization } from "@/lib/rbac/organizations";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const HOUR_MS = 60 * 60 * 1000;
+// Suggested defaults from the spec; product owner to confirm.
+const RESPONSE_TARGET_MS = HOUR_MS;
+
+function median(values: number[]): number | null {
+	if (values.length === 0) return null;
+	const sorted = [...values].sort((a, b) => a - b);
+	const mid = Math.floor(sorted.length / 2);
+	return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
 
 export async function GET(request: NextRequest) {
 	const denied = await requirePermission(request, {
@@ -16,18 +31,121 @@ export async function GET(request: NextRequest) {
 	const scale = url.searchParams.get("scale") || undefined;
 	const assignedTo = url.searchParams.get("assignedTo") || undefined;
 
-	const incidents = await listActiveIncidents({ search, scale, assignedTo });
+	const [incidents, effectiveUser] = await Promise.all([
+		listActiveIncidents({ search, scale, assignedTo }),
+		getEffectiveUser(request),
+	]);
+	const currentUserId = effectiveUser?.effectiveUser.$id;
 
 	const now = Date.now();
-	const unassigned = incidents.filter((row) => !row.assignedTo).length;
+	const todayStartIso = new Date(new Date().setHours(0, 0, 0, 0)).toISOString();
+
+	// Active breakdown
+	const newCount = incidents.filter((row) => row.status === "new").length;
+	const acknowledgedCount = incidents.filter(
+		(row) => row.status === "acknowledged",
+	).length;
+	const reopenedCount = incidents.filter((row) => row.reopenedFrom).length;
+	const openedLastHour = incidents.filter(
+		(row) => now - new Date(row.firstSeenAt).getTime() <= HOUR_MS,
+	).length;
+
+	// Unassigned breakdown
+	const unassignedRows = incidents.filter((row) => !row.assignedTo);
+	const unassigned = unassignedRows.length;
+	const oldestUnassignedMs = unassignedRows.length
+		? now -
+			Math.min(
+				...unassignedRows.map((row) => new Date(row.firstSeenAt).getTime()),
+			)
+		: null;
+	const pastResponseTarget = unassignedRows.filter(
+		(row) => now - new Date(row.firstSeenAt).getTime() > RESPONSE_TARGET_MS,
+	).length;
+	const pageLevelFailures = incidents.filter(
+		(row) => row.scale === "page",
+	).length;
+	const sectionOrTableFailures = incidents.filter(
+		(row) => row.scale === "section" || row.scale === "table",
+	).length;
+	const assignedToYou = currentUserId
+		? incidents.filter((row) => row.assignedTo === currentUserId).length
+		: 0;
+
+	// Users affected (24h) breakdown
+	const recent = incidents.filter(
+		(row) => now - new Date(row.lastSeenAt).getTime() <= DAY_MS,
+	);
 	// Approximation: sums each incident's own affected-user counter rather
 	// than deduping across incidents (would need an events-table scan).
-	const usersAffected24h = incidents
-		.filter((row) => now - new Date(row.lastSeenAt).getTime() <= DAY_MS)
-		.reduce((sum, row) => sum + row.affectedUsers, 0);
-	const oldestOpenMs = incidents.length
-		? Math.min(...incidents.map((row) => new Date(row.firstSeenAt).getTime()))
+	const usersAffected24h = recent.reduce(
+		(sum, row) => sum + row.affectedUsers,
+		0,
+	);
+	const organizationsAffected24h = new Set(
+		recent.map((row) => row.organizationId),
+	).size;
+	const totalErrorViews24h = recent.reduce(
+		(sum, row) => sum + row.occurrences,
+		0,
+	);
+	const repeatHits24h = recent.filter(
+		(row) => row.occurrences > row.affectedUsers,
+	).length;
+	const pageCounts = new Map<string, number>();
+	for (const row of recent) {
+		pageCounts.set(
+			row.route,
+			(pageCounts.get(row.route) ?? 0) + row.occurrences,
+		);
+	}
+	const mostAffectedPageEntry = [...pageCounts.entries()].sort(
+		(a, b) => b[1] - a[1],
+	)[0];
+	const mostAffectedPage = mostAffectedPageEntry
+		? { route: mostAffectedPageEntry[0], count: mostAffectedPageEntry[1] }
 		: null;
+	const orgUserCounts = new Map<string, number>();
+	for (const row of recent) {
+		orgUserCounts.set(
+			row.organizationId,
+			(orgUserCounts.get(row.organizationId) ?? 0) + row.affectedUsers,
+		);
+	}
+	const largestOrgEntry = [...orgUserCounts.entries()].sort(
+		(a, b) => b[1] - a[1],
+	)[0];
+	const largestOrganization = largestOrgEntry
+		? {
+				name: (await getOrganization(largestOrgEntry[0]))?.name ?? "Unknown",
+				users: largestOrgEntry[1],
+			}
+		: null;
+
+	// Oldest open breakdown
+	const oldestOpenEntry = incidents.length
+		? incidents.reduce((oldest, row) =>
+				new Date(row.firstSeenAt) < new Date(oldest.firstSeenAt) ? row : oldest,
+			)
+		: null;
+	const oldestOpenMs = oldestOpenEntry
+		? now - new Date(oldestOpenEntry.firstSeenAt).getTime()
+		: null;
+	const ackDurations = incidents
+		.filter((row) => row.acknowledgedAt)
+		.map(
+			(row) =>
+				new Date(row.acknowledgedAt as string).getTime() -
+				new Date(row.firstSeenAt).getTime(),
+		);
+	const medianAckMs = median(ackDurations);
+	const medianAgeMs = median(
+		incidents.map((row) => now - new Date(row.firstSeenAt).getTime()),
+	);
+	const openLongerThan1h = incidents.filter(
+		(row) => now - new Date(row.firstSeenAt).getTime() > HOUR_MS,
+	).length;
+	const resolvedToday = await countResolvedSince(todayStartIso);
 
 	return NextResponse.json({
 		success: true,
@@ -35,9 +153,37 @@ export async function GET(request: NextRequest) {
 			incidents,
 			summary: {
 				active: incidents.length,
+				newCount,
+				acknowledgedCount,
+				reopenedCount,
+				openedLastHour,
+
 				unassigned,
+				oldestUnassignedMs,
+				pastResponseTarget,
+				pageLevelFailures,
+				sectionOrTableFailures,
+				assignedToYou,
+
 				usersAffected24h,
-				oldestOpenMs: oldestOpenMs !== null ? now - oldestOpenMs : null,
+				organizationsAffected24h,
+				mostAffectedPage,
+				largestOrganization,
+				repeatHits24h,
+				totalErrorViews24h,
+
+				oldestOpenMs,
+				oldestOpenIncident: oldestOpenEntry
+					? {
+							reference: oldestOpenEntry.reference,
+							route: oldestOpenEntry.route,
+							errorStatus: oldestOpenEntry.errorStatus,
+						}
+					: null,
+				medianAckMs,
+				medianAgeMs,
+				openLongerThan1h,
+				resolvedToday,
 			},
 		},
 	});

@@ -136,12 +136,9 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
 
 		contractDocuments = contractsResult.rows.map((contract: any) => {
 			const row = flattenTableRow(contract);
-			const fileId =
-				typeof row.fileId === "string" ? row.fileId : undefined;
+			const fileId = typeof row.fileId === "string" ? row.fileId : undefined;
 			const fileData =
-				fileId && isValidDocumentId(fileId)
-					? filesById.get(fileId)
-					: undefined;
+				fileId && isValidDocumentId(fileId) ? filesById.get(fileId) : undefined;
 
 			return contractRowToFileDoc(row, fileData);
 		});
@@ -216,8 +213,12 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
 		<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
 			{type.toLowerCase() === "contracts" ? (
 				<ContractsViewProvider>
-					<div className="flex items-center gap-4 mb-4 justify-start self-start w-full">
+					<div className="mb-4 flex w-full flex-col gap-1">
 						<h1 className="h1 capitalize sidebar-gradient-text">{pageTitle}</h1>
+						<p className="text-sm text-slate-600">
+							View and manage your organization's contracts — track status,
+							renewals, and ownership in one place.
+						</p>
 					</div>
 					<div className="mb-6 flex items-center justify-end">
 						<ContractsHeaderActions files={contractDocuments} />

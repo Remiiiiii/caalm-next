@@ -6,7 +6,6 @@ import {
 	CheckCircle2,
 	HardDrive,
 	Server,
-	Users,
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -94,7 +93,6 @@ export default function SystemOverviewPage() {
 		<ITPageShell
 			title="System Overview"
 			subtitle="Operational snapshot across storage, API health, and limits"
-			icon={Users}
 		>
 			{loading ? (
 				<div className="py-12 flex justify-center">

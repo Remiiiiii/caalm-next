@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, Construction, ShieldAlert } from "lucide-react";
+import { BookOpen, Construction } from "lucide-react";
 import Link from "next/link";
 import { ITGlassPanel, ITPageShell } from "@/components/it/ITPageShell";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,6 @@ export default function Page() {
 		<ITPageShell
 			title="Incident Response"
 			subtitle="Playbooks and active security incidents."
-			icon={ShieldAlert}
 		>
 			<div className="grid gap-4 lg:grid-cols-2">
 				<ITGlassPanel>
