@@ -15,7 +15,7 @@ import { PageIndex } from "@/components/ui/page-index";
 import type { UIFileDoc } from "@/types/files";
 
 const VIEW_STORAGE_KEY = "caalm-files-library-view";
-const TABLE_PAGE_SIZE = 10;
+const TABLE_PAGE_SIZE = 12;
 
 interface FilesLibraryClientProps {
 	files: UIFileDoc[];

@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
 		const response = NextResponse.json({
 			items: articles.map(serializeNewsArticle),
 			total,
-			limit: limit ? parseInt(limit, 10) : 9,
+			limit: limit ? parseInt(limit, 10) : 12,
 			offset: offset ? parseInt(offset, 10) : 0,
 			viewer: {
 				canCreate: permissions.includes(PERMISSIONS.NEWS.CREATE),

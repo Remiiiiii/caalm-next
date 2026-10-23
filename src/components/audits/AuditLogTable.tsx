@@ -149,7 +149,7 @@ export function AuditLogTable({
 	logs,
 	total = 0,
 	page = 1,
-	pageSize = 20,
+	pageSize = 12,
 	totalPages = 1,
 	onPageChange,
 	isLoading,

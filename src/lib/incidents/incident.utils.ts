@@ -27,3 +27,28 @@ export const SCALE_LABELS: Record<IncidentScale, string> = {
 	table: "Table",
 	banner: "Banner",
 };
+
+/** "page" reads as redundant next to the "Page" scale label, so spell it out. */
+export function elementKeyLabel(elementKey: string): string {
+	return elementKey === "page" ? "whole page" : elementKey;
+}
+
+const BROWSER_PATTERNS: Array<[RegExp, string]> = [
+	[/Edg\/(\d+)/, "Edge"],
+	[/OPR\/(\d+)/, "Opera"],
+	[/Chrome\/(\d+)/, "Chrome"],
+	[/Firefox\/(\d+)/, "Firefox"],
+	[/Version\/(\d+).*Safari/, "Safari"],
+];
+
+/** Browser name + major version parsed from a UA string, e.g. "Chrome 130". */
+export function browserFromUserAgent(
+	ua: string | null | undefined,
+): string | null {
+	if (!ua) return null;
+	for (const [pattern, name] of BROWSER_PATTERNS) {
+		const match = ua.match(pattern);
+		if (match) return `${name} ${match[1]}`;
+	}
+	return null;
+}

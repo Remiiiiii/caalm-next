@@ -52,7 +52,7 @@ interface OutlookMailSheetProps {
 	onOpenChange: (open: boolean) => void;
 }
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 12;
 const FETCH_LIMIT = 100;
 
 const TABS: { id: OutlookTab; label: string; icon: typeof Inbox }[] = [

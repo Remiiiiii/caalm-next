@@ -87,7 +87,7 @@ const CompanyNewsFeed: React.FC<CompanyNewsFeedProps> = ({
 	const [error, setError] = useState<string | null>(null);
 	const [currentPage, setCurrentPage] = useState(1);
 	const [totalItems, setTotalItems] = useState(0);
-	const itemsPerPage = fullPage ? 9 : limit;
+	const itemsPerPage = fullPage ? 12 : limit;
 
 	// Filters (only for full page)
 	const [searchQuery, setSearchQuery] = useState("");

@@ -7,6 +7,7 @@ import {
 	WifiOff,
 	X as XIcon,
 } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
@@ -39,15 +40,47 @@ interface LoadErrorProps {
 }
 
 const REPORT_THROTTLE_MS = 60_000;
-const reportedFingerprints = new Map<string, number>();
+
+type ReportOutcome = { reference: string | null; failed: boolean };
+/** Shared across remounts so a throttled instance can adopt the in-flight/settled outcome instead of sitting blank. */
+const reportedFingerprints = new Map<
+	string,
+	{ timestamp: number; promise: Promise<ReportOutcome> }
+>();
 
 function throttleKey(elementKey: string, error?: LoadErrorProps["error"]) {
 	return `${elementKey}:${error?.status ?? ""}:${error?.code ?? ""}`;
 }
 
+/**
+ * Resolves after the browser has painted the current frame, so layout (scrollWidth etc.) is
+ * settled. Races a timeout too — rAF can stall indefinitely on a backgrounded/unfocused tab,
+ * and the report must never hang waiting for a screenshot.
+ */
+function waitForPaint(): Promise<void> {
+	return new Promise((resolve) => {
+		let settled = false;
+		const done = () => {
+			if (settled) return;
+			settled = true;
+			resolve();
+		};
+		requestAnimationFrame(() => requestAnimationFrame(done));
+		setTimeout(done, 250);
+	});
+}
+
 /** Swaps data-capture-mask elements for a neutral block, captures, restores. */
 async function captureRegion(node: HTMLElement): Promise<string | null> {
-	const { toJpeg } = await import("html-to-image");
+	// Load the lib and wait for layout to settle in parallel — importing this lazily (only on an
+	// actual error) can take long enough on a cold cache that the node unmounts before a serial
+	// `await import(...)` resolves, since SWR may retry and swap the error UI out from under it.
+	const [{ toJpeg }] = await Promise.all([
+		import("html-to-image"),
+		waitForPaint(),
+	]);
+	if (!node.isConnected || node.scrollWidth === 0 || node.scrollHeight === 0)
+		return null;
 	const masked = Array.from(
 		node.querySelectorAll<HTMLElement>("[data-capture-mask]"),
 	);
@@ -65,8 +98,17 @@ async function captureRegion(node: HTMLElement): Promise<string | null> {
 			quality: 0.85,
 			width: Math.min(node.scrollWidth, 1280),
 			pixelRatio: 1,
+			// JPEG has no alpha channel; without this, html-to-image leaves the canvas
+			// transparent and the export flattens that to black instead of white.
+			backgroundColor: "#ffffff",
+			// html-to-image clones the node's full computed style (cloneCSSStyle), which bakes
+			// in `margin-left`/`margin-right` as the absolute px offset `mx-auto` resolved to
+			// in the page's full-width viewport. It then forces `width` on the clone but never
+			// clears that stale margin, so the content renders shoved off the narrow capture
+			// canvas instead of centered. Reset it explicitly.
+			style: { margin: "0" },
 		});
-		return dataUrl;
+		return /^data:image\//.test(dataUrl) ? dataUrl : null;
 	} catch {
 		return null;
 	} finally {
@@ -79,6 +121,8 @@ async function captureRegion(node: HTMLElement): Promise<string | null> {
 
 function useIncidentReport(
 	active: boolean,
+	scale: LoadErrorScale,
+	route: string,
 	elementKey: string,
 	error: LoadErrorProps["error"],
 	containerRef: React.RefObject<HTMLDivElement | null>,
@@ -89,45 +133,56 @@ function useIncidentReport(
 	useEffect(() => {
 		if (!active) return;
 		const key = throttleKey(elementKey, error);
-		const last = reportedFingerprints.get(key);
-		if (last && Date.now() - last < REPORT_THROTTLE_MS) return;
-		reportedFingerprints.set(key, Date.now());
+		const cached = reportedFingerprints.get(key);
+		const fresh = cached && Date.now() - cached.timestamp < REPORT_THROTTLE_MS;
+
+		const promise = fresh
+			? cached.promise
+			: (() => {
+					const p = (async (): Promise<ReportOutcome> => {
+						const screenshotDataUrl = containerRef.current
+							? ((await captureRegion(containerRef.current)) ?? undefined)
+							: undefined;
+						try {
+							const res = await fetch("/api/incidents/load-error", {
+								method: "POST",
+								headers: { "Content-Type": "application/json" },
+								body: JSON.stringify({
+									scale,
+									route,
+									elementKey,
+									errorStatus: error?.status,
+									errorCode: error?.code,
+									requestPath: error?.requestPath,
+									traceId: error?.traceId,
+									userAgent: navigator.userAgent,
+									viewport: `${window.innerWidth}x${window.innerHeight}`,
+									screenshotDataUrl,
+								}),
+							});
+							const body = await res.json().catch(() => null);
+							return res.ok
+								? { reference: body?.data?.reference ?? null, failed: false }
+								: { reference: null, failed: true };
+						} catch {
+							return { reference: null, failed: true };
+						}
+					})();
+					reportedFingerprints.set(key, { timestamp: Date.now(), promise: p });
+					return p;
+				})();
 
 		let cancelled = false;
-		(async () => {
-			const screenshotDataUrl = containerRef.current
-				? ((await captureRegion(containerRef.current)) ?? undefined)
-				: undefined;
-			try {
-				const res = await fetch("/api/incidents/load-error", {
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({
-						scale: "page",
-						elementKey,
-						errorStatus: error?.status,
-						errorCode: error?.code,
-						requestPath: error?.requestPath,
-						traceId: error?.traceId,
-						userAgent: navigator.userAgent,
-						viewport: `${window.innerWidth}x${window.innerHeight}`,
-						screenshotDataUrl,
-					}),
-				});
-				const body = await res.json();
-				if (!cancelled) {
-					if (res.ok) setReference(body.data?.reference ?? null);
-					else setReportFailed(true);
-				}
-			} catch {
-				if (!cancelled) setReportFailed(true);
-			}
-		})();
+		promise.then((outcome) => {
+			if (cancelled) return;
+			setReference(outcome.reference);
+			setReportFailed(outcome.failed);
+		});
 
 		return () => {
 			cancelled = true;
 		};
-	}, [active, elementKey, error?.status, error?.code]);
+	}, [active, scale, route, elementKey, error?.status, error?.code]);
 
 	return { reference, reportFailed };
 }
@@ -218,8 +273,11 @@ export function LoadError({
 	className,
 }: LoadErrorProps) {
 	const containerRef = useRef<HTMLDivElement>(null);
+	const route = usePathname() || "";
 	const { reference, reportFailed } = useIncidentReport(
 		variant === "error",
+		scale,
+		route,
 		elementKey,
 		error,
 		containerRef,
