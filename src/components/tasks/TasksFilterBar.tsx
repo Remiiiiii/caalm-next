@@ -59,7 +59,7 @@ export function TasksFilterBar({
 				placeholder="Search title, description, or ID…"
 				value={filters.search}
 				onChange={(e) => onChange({ ...filters, search: e.target.value })}
-				containerClassName="h-9"
+				containerClassName="h-9 w-full md:max-w-xs"
 			/>
 			<CaalmFilterSelect
 				value={filters.status}

@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
 	const params = request.nextUrl.searchParams;
 	const page = Math.max(Number(params.get("page") || "1"), 1);
 	const pageSize = Math.min(
-		Math.max(Number(params.get("pageSize") || "12"), 1),
+		Math.max(Number(params.get("pageSize") || "20"), 1),
 		100,
 	);
 	const statusParam = params.get("status");

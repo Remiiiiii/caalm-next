@@ -4,7 +4,6 @@ import { PERMISSIONS } from "@/constants/permissions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
 import {
 	getIncidentById,
-	listIncidentEvents,
 	updateIncident,
 } from "@/lib/incidents/incident.repository";
 import { requirePermission } from "@/lib/rbac/middleware";
@@ -14,20 +13,6 @@ const patchSchema = z.object({
 	assignedTo: z.string().optional(),
 	resolutionNote: z.string().max(1000).optional(),
 });
-
-export async function GET(
-	request: NextRequest,
-	{ params }: { params: Promise<{ incidentId: string }> },
-) {
-	const denied = await requirePermission(request, {
-		permission: PERMISSIONS.IT.VIEW_INCIDENTS,
-	});
-	if (denied) return denied;
-
-	const { incidentId } = await params;
-	const events = await listIncidentEvents(incidentId);
-	return NextResponse.json({ success: true, data: { events } });
-}
 
 export async function PATCH(
 	request: NextRequest,

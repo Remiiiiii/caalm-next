@@ -187,10 +187,9 @@ async function waitForAttribute(
 	{ timeoutMs = 120000 } = {},
 ) {
 	const attempts = Math.ceil(timeoutMs / 1000);
-	const qs = `queries[]=${encodeURIComponent('{"method":"limit","values":[100]}')}`;
 	for (let attempt = 0; attempt < attempts; attempt += 1) {
 		const list = await appwrite(
-			`/databases/${databaseId}/collections/${collectionId}/attributes?${qs}`,
+			`/databases/${databaseId}/collections/${collectionId}/attributes`,
 		);
 		const attr = (list.attributes || []).find((a) => a.key === key);
 		if (attr && attr.status === "available") return;

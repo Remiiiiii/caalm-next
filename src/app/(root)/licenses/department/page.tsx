@@ -176,7 +176,7 @@ const Page = async () => {
 							<LicensesViewClient
 								initialLicenses={licenses}
 								totalCount={licenses.length}
-								pageSize={12}
+								pageSize={licenses.length || 20}
 								user={user}
 							/>
 						) : (

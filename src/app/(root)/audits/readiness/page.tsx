@@ -318,7 +318,7 @@ export default function AuditReadinessPage() {
 
 	if (error && !payload) {
 		return (
-			<div className="w-full px-4 pb-10 sm:px-6 lg:px-8 xl:px-12 text-slate-700">
+			<div className="w-full px-4 pb-10 sm:px-6 lg:px-8 xl:px-12">
 				<LoadError
 					scale="page"
 					title="We couldn't load Audit Readiness"
