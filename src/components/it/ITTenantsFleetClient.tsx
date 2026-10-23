@@ -158,7 +158,7 @@ export function ITTenantsFleetClient() {
 						<PageIndex
 							page={page}
 							totalItems={data?.total ?? 0}
-							pageSize={data?.pageSize ?? 20}
+							pageSize={data?.pageSize ?? 12}
 							onPageChange={setPage}
 							hideWhenSinglePage
 							showRange

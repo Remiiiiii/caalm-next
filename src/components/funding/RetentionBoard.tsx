@@ -147,7 +147,7 @@ export function RetentionBoard({
 				</div>
 				<div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
 					<SearchField
-						containerClassName="sm:col-span-1"
+						containerClassName="sm:col-span-1 w-full max-w-none"
 						value={query}
 						onChange={(e) => setQuery(e.target.value)}
 						placeholder="Search streams…"

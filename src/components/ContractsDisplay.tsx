@@ -582,7 +582,7 @@ export default function ContractsDisplay() {
 			state: "",
 			organizationName: "",
 			responseDeadlineOption: "Anytime",
-			limit: 24,
+			limit: 12,
 			offset: 0,
 		});
 
@@ -711,7 +711,7 @@ export default function ContractsDisplay() {
 			state: "",
 			organizationName: "",
 			responseDeadlineOption: "Anytime",
-			limit: 24,
+			limit: 12,
 			offset: 0,
 		});
 		clearResults();
@@ -1278,7 +1278,7 @@ export default function ContractsDisplay() {
 									className="mt-6 justify-center"
 									page={(searchFilters.offset || 0) + 1}
 									totalItems={totalRecords}
-									pageSize={searchFilters.limit || 24}
+									pageSize={searchFilters.limit || 12}
 									onPageChange={handlePageChange}
 									hideWhenSinglePage
 									showRange

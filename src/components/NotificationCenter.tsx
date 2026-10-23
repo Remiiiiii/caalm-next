@@ -46,9 +46,9 @@ import { useOrgTimezone } from "@/hooks/useOrgTimezone";
 import { isFileShareNotification } from "@/lib/files/fileShareNotification";
 import { formatInTimezone } from "@/lib/timezone";
 import NotificationSettings from "./NotificationSettings";
+import { AppDialog } from "./ui/app-dialog";
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
-import { AppDialog } from "./ui/app-dialog";
 import { Input } from "./ui/input";
 import { pageCountFromItems, showingRangeText } from "./ui/page-index";
 import {
@@ -333,7 +333,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 	const timeZone = useOrgTimezone();
 	const [search, setSearch] = useState("");
 	const [page, setPage] = useState(1);
-	const [perPage, setPerPage] = useState(10);
+	const [perPage, setPerPage] = useState(12);
 	const [selected, setSelected] = useState<string[]>([]);
 	const [typeFilter, setTypeFilter] = useState<string>("all");
 	const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -630,7 +630,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
-									{[5, 10, 20, 50].map((n) => (
+									{[5, 12, 20, 50].map((n) => (
 										<SelectItem key={n} value={String(n)} className="text-xs">
 											{n}
 										</SelectItem>
@@ -663,7 +663,10 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
 								disabled={page >= pageCountFromItems(filtered.length, perPage)}
 								onClick={() =>
 									setPage((p) =>
-										Math.min(pageCountFromItems(filtered.length, perPage), p + 1),
+										Math.min(
+											pageCountFromItems(filtered.length, perPage),
+											p + 1,
+										),
 									)
 								}
 							>

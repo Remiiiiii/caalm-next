@@ -52,7 +52,7 @@ interface GmailSheetProps {
 	onOpenChange: (open: boolean) => void;
 }
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 12;
 /** How many messages to pull from Gmail for client-side paging. */
 const FETCH_LIMIT = 100;
 

@@ -34,7 +34,7 @@ import {
 import { fetcher } from "@/lib/swr-config";
 
 const VALID_DOMAINS = AUDIT_CONTROL_TABS.map((t) => t.id);
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 12;
 
 const EMPTY_FILTERS: AuditLogFilters = {
 	startDate: "",
