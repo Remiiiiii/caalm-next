@@ -4,8 +4,8 @@ import { Eye, FileCheck, FileStack, FileText, Pencil } from "lucide-react";
 import Image from "next/image";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import "@/lib/templates/docx-preview.css";
-import { AppDialog } from "@/components/ui/app-dialog";
 import { Button } from "@/components/ui/button";
+import { AppDialog } from "@/components/ui/app-dialog";
 import { PageIndex } from "@/components/ui/page-index";
 import { SearchField } from "@/components/ui/search-field";
 import { SegmentedToggle } from "@/components/ui/segmented-toggle";
@@ -17,7 +17,7 @@ import { contractTypeAccent } from "@/lib/templates/contract-type-accent";
 import { cn } from "@/lib/utils";
 import type { ContractTemplate } from "@/types/contract-templates";
 
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 10;
 
 export type AgreementMatrixView = "builtin" | "templates";
 

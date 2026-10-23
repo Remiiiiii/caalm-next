@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
 					: undefined,
 			search: params.get("search") || undefined,
 			page: parsePositiveInt(params.get("page"), 1),
-			pageSize: parsePositiveInt(params.get("pageSize"), 12),
+			pageSize: parsePositiveInt(params.get("pageSize"), 20),
 		});
 		return NextResponse.json(result);
 	} catch (error) {

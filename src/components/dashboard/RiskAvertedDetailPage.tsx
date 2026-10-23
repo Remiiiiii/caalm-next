@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { type ReactNode, useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import CountUp from "react-countup";
 import {
 	Area,
@@ -65,7 +65,7 @@ import {
 	MetricCardSkeleton,
 	TableCardSkeleton,
 } from "@/components/ui/glass-skeletons";
-import { MetricStatCard } from "@/components/ui/metric-stat-card";
+import { MetricStatCard, StatRows } from "@/components/ui/metric-stat-card";
 import { PageIndex } from "@/components/ui/page-index";
 import { SearchField } from "@/components/ui/search-field";
 import { SegmentedToggle } from "@/components/ui/segmented-toggle";
@@ -196,44 +196,12 @@ function AnimatedUsd({
 	);
 }
 
-/** Optional lead-in (chip or bar) then label/value rows split by slate-200 lines. */
-function StatRows({
-	top,
-	rows,
-}: {
-	top?: ReactNode;
-	rows: Array<[string, ReactNode, string?]>;
-}) {
-	return (
-		<div className="w-full">
-			{top ? <div className="mb-3">{top}</div> : null}
-			{rows.map(([label, value, dot]) => (
-				<div
-					key={label}
-					className="flex items-center justify-between gap-3 border-t border-slate-200 py-2 text-xs"
-				>
-					<span className="inline-flex items-center gap-1.5 text-slate-600">
-						{dot ? (
-							<span
-								className={cn("h-1.5 w-1.5 rounded-full", dot)}
-								aria-hidden
-							/>
-						) : null}
-						{label}
-					</span>
-					<span className="font-semibold tabular-nums text-slate-700">
-						{value}
-					</span>
-				</div>
-			))}
-		</div>
-	);
-}
-
 export function RiskAvertedDetailPage({
 	initialSnapshot,
 }: {
-	initialSnapshot?: import("@/lib/dashboard/risk-impact.types").RiskImpactSnapshot | null;
+	initialSnapshot?:
+		| import("@/lib/dashboard/risk-impact.types").RiskImpactSnapshot
+		| null;
 }) {
 	const [period, setPeriod] = useState<RiskImpactPeriod>("ytd");
 	const [kindFilter, setKindFilter] = useState<"all" | RiskImpactEventKind>(

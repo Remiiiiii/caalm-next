@@ -17,7 +17,6 @@ import { CaalmDataTableSkeleton } from "@/components/ui/caalm-data-table";
 import { CardContent, Card as GlassCard } from "@/components/ui/card";
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
 import { LoadingSpinner } from "@/components/ui/loading";
-import { PageIndex } from "@/components/ui/page-index";
 import { ToastAction } from "@/components/ui/toast";
 import { PERMISSIONS } from "@/constants/permissions";
 import { useOrganization } from "@/contexts/OrganizationContext";
@@ -47,9 +46,6 @@ const EMPTY_COUNTS: TaskViewCounts = {
 	dueThisWeek: 0,
 };
 
-/** Design rule: 12 rows per page across all data tables. */
-const PAGE_SIZE = 12;
-
 export default function TeamTasksPage() {
 	const { permissions, loading: permissionsLoading } = usePermissions();
 	const { orgId } = useOrganization();
@@ -66,7 +62,6 @@ export default function TeamTasksPage() {
 		dueBucket: "any",
 	});
 	const [people, setPeople] = useState<TaskPerson[]>([]);
-	const [page, setPage] = useState(1);
 	const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 	const [openTaskId, setOpenTaskId] = useState<string | null>(null);
 	const cardRef = useRef<HTMLDivElement>(null);
@@ -138,11 +133,6 @@ export default function TeamTasksPage() {
 	const tasks = data?.data?.tasks || [];
 	const counts = data?.meta?.counts || EMPTY_COUNTS;
 	const openTask = tasks.find((t) => t.$id === openTaskId) || null;
-	const pagedTasks = tasks.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
-	useEffect(() => {
-		setPage(1);
-	}, [filters, view]);
 
 	const patchTask = useCallback(
 		async (taskId: string, body: Record<string, unknown>) => {
@@ -364,7 +354,7 @@ export default function TeamTasksPage() {
 						</div>
 					) : (
 						<TasksDataTable
-							tasks={pagedTasks}
+							tasks={tasks}
 							people={people}
 							selectedIds={selectedIds}
 							timeZone={timeZone}
@@ -380,7 +370,7 @@ export default function TeamTasksPage() {
 							}}
 							onToggleAll={(checked) => {
 								setSelectedIds(
-									checked ? new Set(pagedTasks.map((t) => t.$id)) : new Set(),
+									checked ? new Set(tasks.map((t) => t.$id)) : new Set(),
 								);
 							}}
 							onOpen={(task) => setOpenTaskId(task.$id)}
@@ -398,14 +388,13 @@ export default function TeamTasksPage() {
 							onDelete={(id) => void handleDelete(id)}
 						/>
 					)}
-					<PageIndex
-						page={page}
-						totalItems={tasks.length}
-						pageSize={PAGE_SIZE}
-						onPageChange={setPage}
-						showRange
-						itemLabel="tasks"
-					/>
+					<div className="flex items-center justify-between border-t border-slate-100 px-4 py-2.5 text-xs text-slate-500">
+						<span>
+							Showing {tasks.length} of {data?.meta?.total ?? tasks.length}{" "}
+							tasks
+						</span>
+						<span>Page 1 of 1</span>
+					</div>
 				</CardContent>
 			</GlassCard>
 

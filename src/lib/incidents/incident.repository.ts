@@ -173,6 +173,20 @@ export async function listActiveIncidents(options: {
 	return result.rows as unknown as LoadIncident[];
 }
 
+export async function countResolvedSince(sinceIso: string): Promise<number> {
+	const { tablesDB } = await createAdminClient();
+	const result = await tablesDB.listRows({
+		databaseId: dbId(),
+		tableId: incidentsTable(),
+		queries: [
+			Query.equal("status", "resolved"),
+			Query.greaterThanEqual("resolvedAt", sinceIso),
+			Query.limit(1),
+		],
+	});
+	return result.total;
+}
+
 export async function getIncidentById(
 	incidentId: string,
 ): Promise<LoadIncident | null> {

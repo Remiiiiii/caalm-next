@@ -17,6 +17,7 @@ import {
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
 } from "@/components/ui/caalm-data-table";
+import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
 	AppDropdownMenuTrigger,
@@ -699,194 +700,200 @@ const UserManagement = () => {
 					/>
 				)
 			) : (
-				<div className="w-full">
-					{canSelectUsers ? (
-						<div className="mb-3">
-							<UserManagementBulkBar
-								count={selectedUsers.length}
-								canAssignRoles={canAssignRoles}
-								canManageUsers={canManageUsers}
-								onChangeRole={() => openBulkAction("role")}
-								onRevokeSessions={() => openBulkAction("revoke")}
-								onDelete={() => openBulkAction("delete")}
-								onClear={() => setSelectedIds(new Set())}
-							/>
-						</div>
-					) : null}
-					<CaalmDataTable className="pb-0">
-						<TableHeader className="[&_tr]:border-b-0">
-							<TableRow className={DATA_TABLE_HEADER_ROW}>
-								{canSelectUsers ? (
+				<Card className="glass-card">
+					<div className="glass-card-cap" />
+					<CardContent className="w-full p-4 sm:p-6">
+						{canSelectUsers ? (
+							<div className="mb-3">
+								<UserManagementBulkBar
+									count={selectedUsers.length}
+									canAssignRoles={canAssignRoles}
+									canManageUsers={canManageUsers}
+									onChangeRole={() => openBulkAction("role")}
+									onRevokeSessions={() => openBulkAction("revoke")}
+									onDelete={() => openBulkAction("delete")}
+									onClear={() => setSelectedIds(new Set())}
+								/>
+							</div>
+						) : null}
+						<CaalmDataTable className="pb-0">
+							<TableHeader className="[&_tr]:border-b-0">
+								<TableRow className={DATA_TABLE_HEADER_ROW}>
+									{canSelectUsers ? (
+										<TableHead
+											className={cn(DATA_TABLE_HEADER_CELL, "w-10 pl-4 pr-2")}
+										>
+											<Checkbox
+												checked={
+													allPageSelected
+														? true
+														: somePageSelected
+															? "indeterminate"
+															: false
+												}
+												onCheckedChange={(checked) =>
+													toggleSelectPage(checked === true)
+												}
+												aria-label="Select all users on this page"
+												className="cursor-pointer"
+											/>
+										</TableHead>
+									) : null}
+									{renderSortableHead("Full name", "fullName", "pl-4 pr-3")}
+									{renderSortableHead(
+										"Role / Dept · Division",
+										"roleName",
+										"px-3",
+									)}
+									{renderSortableHead("Assigned by", "assignedByName", "px-3")}
+									{renderSortableHead("Assigned date", "assignedDate", "px-3")}
+									{renderSortableHead("Last active", "lastActiveAt", "px-3")}
 									<TableHead
-										className={cn(DATA_TABLE_HEADER_CELL, "w-10 pl-4 pr-2")}
-									>
-										<Checkbox
-											checked={
-												allPageSelected
-													? true
-													: somePageSelected
-														? "indeterminate"
-														: false
-											}
-											onCheckedChange={(checked) =>
-												toggleSelectPage(checked === true)
-											}
-											aria-label="Select all users on this page"
-											className="cursor-pointer"
-										/>
-									</TableHead>
-								) : null}
-								{renderSortableHead("Full name", "fullName", "pl-4 pr-3")}
-								{renderSortableHead(
-									"Role / Dept · Division",
-									"roleName",
-									"px-3",
-								)}
-								{renderSortableHead("Assigned by", "assignedByName", "px-3")}
-								{renderSortableHead("Assigned date", "assignedDate", "px-3")}
-								{renderSortableHead("Last active", "lastActiveAt", "px-3")}
-								<TableHead
-									className={cn(DATA_TABLE_HEADER_CELL, "pl-3 pr-4 text-right")}
-								>
-									<span className="sr-only">Action</span>
-								</TableHead>
-							</TableRow>
-						</TableHeader>
-						<TableBody className="[&_tr:last-child>td]:border-b-0">
-							{pagedUsers.map((user) => {
-								const department = user.department?.trim() || "—";
-								const division = user.division?.trim() || "—";
-								const assigned = hasAssignedRole(user.roleName);
-								return (
-									<TableRow
-										key={user.$id}
 										className={cn(
-											DATA_TABLE_BODY_ROW_BASE,
-											selectedIds.has(user.$id) &&
-												"bg-blue/10 [&>td:first-child]:relative [&>td:first-child]:before:absolute [&>td:first-child]:before:inset-y-0 [&>td:first-child]:before:left-0 [&>td:first-child]:before:w-0.5 [&>td:first-child]:before:bg-[#0f5384]",
+											DATA_TABLE_HEADER_CELL,
+											"pl-3 pr-4 text-right",
 										)}
 									>
-										{canSelectUsers ? (
-											<TableCell className="py-3 pl-4 pr-2">
-												<Checkbox
-													checked={selectedIds.has(user.$id)}
-													onCheckedChange={(checked) =>
-														toggleSelected(user.$id, checked === true)
-													}
-													aria-label={`Select ${user.fullName}`}
-													className="cursor-pointer"
-												/>
+										<span className="sr-only">Action</span>
+									</TableHead>
+								</TableRow>
+							</TableHeader>
+							<TableBody className="[&_tr:last-child>td]:border-b-0">
+								{pagedUsers.map((user) => {
+									const department = user.department?.trim() || "—";
+									const division = user.division?.trim() || "—";
+									const assigned = hasAssignedRole(user.roleName);
+									return (
+										<TableRow
+											key={user.$id}
+											className={cn(
+												DATA_TABLE_BODY_ROW_BASE,
+												selectedIds.has(user.$id) &&
+													"bg-blue/10 [&>td:first-child]:relative [&>td:first-child]:before:absolute [&>td:first-child]:before:inset-y-0 [&>td:first-child]:before:left-0 [&>td:first-child]:before:w-0.5 [&>td:first-child]:before:bg-[#0f5384]",
+											)}
+										>
+											{canSelectUsers ? (
+												<TableCell className="py-3 pl-4 pr-2">
+													<Checkbox
+														checked={selectedIds.has(user.$id)}
+														onCheckedChange={(checked) =>
+															toggleSelected(user.$id, checked === true)
+														}
+														aria-label={`Select ${user.fullName}`}
+														className="cursor-pointer"
+													/>
+												</TableCell>
+											) : null}
+											<TableCell className="py-3 pl-4 pr-3">
+												<div className="flex min-w-55 items-center gap-2.5">
+													<Avatar
+														name={user.fullName}
+														userId={user.$id}
+														size="sm"
+														className="shrink-0 gap-0"
+														imageUrl={resolveAvatarDisplayUrl(user)}
+													/>
+													<div className="min-w-0">
+														<p className="truncate text-sm font-semibold text-slate-700">
+															{user.fullName}
+														</p>
+														<p className="truncate text-sm text-slate-600">
+															{user.email}
+														</p>
+													</div>
+												</div>
 											</TableCell>
-										) : null}
-										<TableCell className="py-3 pl-4 pr-3">
-											<div className="flex min-w-55 items-center gap-2.5">
-												<Avatar
-													name={user.fullName}
-													userId={user.$id}
-													size="sm"
-													className="shrink-0 gap-0"
-													imageUrl={resolveAvatarDisplayUrl(user)}
-												/>
+											<TableCell className="px-3 py-3">
 												<div className="min-w-0">
-													<p className="truncate text-sm font-semibold text-slate-700">
-														{user.fullName}
-													</p>
-													<p className="truncate text-sm text-slate-600">
-														{user.email}
+													{assigned ? (
+														<span
+															className={cn(
+																USER_ROLE_BADGE_SHAPE,
+																userRoleBadgeClass(user.roleName),
+															)}
+														>
+															{user.roleName}
+														</span>
+													) : (
+														<span
+															className={cn(
+																USER_ROLE_BADGE_SHAPE,
+																userRoleBadgeClass(user.roleName),
+															)}
+														>
+															<TriangleAlert className="h-3 w-3" />
+															Unassigned
+														</span>
+													)}
+													<p className="mt-0.5 truncate text-xs text-slate-500">
+														{department} · {division}
 													</p>
 												</div>
-											</div>
-										</TableCell>
-										<TableCell className="px-3 py-3">
-											<div className="min-w-0">
-												{assigned ? (
-													<span
-														className={cn(
-															USER_ROLE_BADGE_SHAPE,
-															userRoleBadgeClass(user.roleName),
-														)}
-													>
-														{user.roleName}
-													</span>
-												) : (
-													<span
-														className={cn(
-															USER_ROLE_BADGE_SHAPE,
-															userRoleBadgeClass(user.roleName),
-														)}
-													>
-														<TriangleAlert className="h-3 w-3" />
-														Unassigned
-													</span>
-												)}
-												<p className="mt-0.5 truncate text-xs text-slate-500">
-													{department} · {division}
-												</p>
-											</div>
-										</TableCell>
-										<TableCell className="px-3 py-3">
-											<span className="text-sm text-slate-600">
-												{user.assignedByName || "System"}
-											</span>
-										</TableCell>
-										<TableCell className="whitespace-nowrap px-3 py-3">
-											<span className="text-sm tabular-nums text-slate-600">
-												{formatUserDateTimeLabel(
-													user.assignedDate || user.$createdAt,
-												)}
-											</span>
-										</TableCell>
-										<TableCell className="whitespace-nowrap px-3 py-3">
-											<span className="text-sm tabular-nums text-slate-600">
-												{formatUserDateTimeLabel(
-													user.lastActiveAt || user.$updatedAt,
-												)}
-											</span>
-										</TableCell>
-										<TableCell className="py-3 pr-4 pl-3 text-right">
-											<UserManagementRowActions
-												user={user}
-												actor={actor}
-												canManageUsers={canManageUsers}
-												canAssignRoles={canAssignRoles}
-												canImpersonate={canImpersonate}
-												onAction={openAction}
-											/>
-										</TableCell>
-									</TableRow>
-								);
-							})}
-						</TableBody>
-					</CaalmDataTable>
+											</TableCell>
+											<TableCell className="px-3 py-3">
+												<span className="text-sm text-slate-600">
+													{user.assignedByName || "System"}
+												</span>
+											</TableCell>
+											<TableCell className="whitespace-nowrap px-3 py-3">
+												<span className="text-sm tabular-nums text-slate-600">
+													{formatUserDateTimeLabel(
+														user.assignedDate || user.$createdAt,
+													)}
+												</span>
+											</TableCell>
+											<TableCell className="whitespace-nowrap px-3 py-3">
+												<span className="text-sm tabular-nums text-slate-600">
+													{formatUserDateTimeLabel(
+														user.lastActiveAt || user.$updatedAt,
+													)}
+												</span>
+											</TableCell>
+											<TableCell className="py-3 pr-4 pl-3 text-right">
+												<UserManagementRowActions
+													user={user}
+													actor={actor}
+													canManageUsers={canManageUsers}
+													canAssignRoles={canAssignRoles}
+													canImpersonate={canImpersonate}
+													onAction={openAction}
+												/>
+											</TableCell>
+										</TableRow>
+									);
+								})}
+							</TableBody>
+						</CaalmDataTable>
 
-					{filteredAndSortedUsers.length === 0 && (
-						<UsersNotFoundState
-							message="No users found"
-							action={
-								activeFilterCount > 0 ? (
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={clearAllFilters}
-										className="mt-3"
-									>
-										Clear filters
-									</Button>
-								) : undefined
-							}
+						{filteredAndSortedUsers.length === 0 && (
+							<UsersNotFoundState
+								message="No users found"
+								action={
+									activeFilterCount > 0 ? (
+										<Button
+											variant="outline"
+											size="sm"
+											onClick={clearAllFilters}
+											className="mt-3"
+										>
+											Clear filters
+										</Button>
+									) : undefined
+								}
+							/>
+						)}
+						<PageIndex
+							page={page}
+							totalItems={filteredAndSortedUsers.length}
+							pageSize={USER_MANAGEMENT_PAGE_SIZE}
+							onPageChange={setPage}
+							hideWhenSinglePage
+							showRange
+							itemLabel="users"
+							scrollToTop
 						/>
-					)}
-					<PageIndex
-						page={page}
-						totalItems={filteredAndSortedUsers.length}
-						pageSize={USER_MANAGEMENT_PAGE_SIZE}
-						onPageChange={setPage}
-						hideWhenSinglePage
-						showRange
-						itemLabel="users"
-						scrollToTop
-					/>
-				</div>
+					</CardContent>
+				</Card>
 			)}
 
 			<UserManagementActionDialogs

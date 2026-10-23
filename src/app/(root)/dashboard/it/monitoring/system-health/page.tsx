@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, HeartPulse, XCircle } from "lucide-react";
+import { CheckCircle2, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ITGlassPanel, ITPageShell } from "@/components/it/ITPageShell";
 import { LoadingSpinner } from "@/components/ui/loading";
@@ -115,7 +115,6 @@ export default function SystemHealthPage() {
 		<ITPageShell
 			title="System Health"
 			subtitle="Live connectivity checks — not a full observability suite"
-			icon={HeartPulse}
 			actions={<SampleDataBadge label="Connectivity only" />}
 		>
 			{dashboardNotice ? (

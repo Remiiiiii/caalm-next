@@ -1,15 +1,15 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { requireITHubFleetContext } from "@/lib/it/require-it-hub-org";
 import {
 	buildOrgITSnapshot,
-	type OrgITFleetRow,
 	toFleetRow,
+	type OrgITFleetRow,
 } from "@/lib/it/org-it-snapshot";
-import { requireITHubFleetContext } from "@/lib/it/require-it-hub-org";
 import { listOrganizations } from "@/lib/rbac/organizations";
 import { CACHE_KEYS } from "@/lib/services/cache-keys";
 import CacheManager from "@/lib/services/cache-manager";
 
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 20;
 
 export async function GET(request: NextRequest) {
 	const ctx = await requireITHubFleetContext(request);

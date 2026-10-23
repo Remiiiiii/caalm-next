@@ -1,6 +1,5 @@
 "use client";
 
-import { ScrollText } from "lucide-react";
 import Link from "next/link";
 import { ITGlassPanel, ITPageShell } from "@/components/it/ITPageShell";
 import { Button } from "@/components/ui/button";
@@ -10,7 +9,6 @@ export default function ITSecurityAuditLogsPage() {
 		<ITPageShell
 			title="Security Audit Logs"
 			subtitle="Organization audit trail for compliance and incident review"
-			icon={ScrollText}
 		>
 			<ITGlassPanel>
 				<p className="text-sm text-slate-600 mb-4">

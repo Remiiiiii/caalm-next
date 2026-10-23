@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, GitPullRequest } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import Image from "next/image";
 import { useMemo, useState } from "react";
 import useSWR from "swr";
@@ -212,7 +212,6 @@ export function PrLogPage() {
 		<ITPageShell
 			title="PR log - Cursor Cloud Agent"
 			subtitle="Cursor cloud agent pull requests only. Nonprofit Roadmap PRs use cursor/nonprofit/… and are listed on that board, not here. Agent PRs stay listed after merge until every GitHub check on the merge commit succeeds."
-			icon={GitPullRequest}
 		>
 			{overviewLoading && !overview ? (
 				<p className="text-sm text-slate-600">Loading PR log…</p>

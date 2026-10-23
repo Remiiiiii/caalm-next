@@ -2,20 +2,15 @@
 
 import {
 	AlertCircle,
-	AlertTriangle,
 	Clock,
 	Copy,
-	ExternalLink,
 	RefreshCw,
 	ShieldAlert,
 	Users,
 } from "lucide-react";
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
-import useSWR from "swr";
-import EntityPreviewSheetShell from "@/components/preview/EntityPreviewSheetShell";
-import { TaskAssigneeFilter } from "@/components/tasks/TaskAssigneeFilter";
-import type { TaskPerson } from "@/components/tasks/task-ui";
+import { useMemo, useState } from "react";
+import useSWR, { useSWRConfig } from "swr";
 import { Button } from "@/components/ui/button";
 import {
 	type CaalmFilterOption,
@@ -30,9 +25,18 @@ import {
 	DATA_TABLE_HEADER_ROW,
 } from "@/components/ui/caalm-data-table";
 import { Card, CardContent } from "@/components/ui/card";
-import { MetricStatCard } from "@/components/ui/metric-stat-card";
-import { PageIndex } from "@/components/ui/page-index";
+import {
+	MetricSegmentBar,
+	MetricStatCard,
+	StatRows,
+} from "@/components/ui/metric-stat-card";
 import { SearchField } from "@/components/ui/search-field";
+import {
+	Sheet,
+	SheetContent,
+	SheetHeader,
+	SheetTitle,
+} from "@/components/ui/sheet";
 import {
 	TableBody,
 	TableCell,
@@ -40,31 +44,51 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { PERMISSION_BASED_NAV } from "@/constants/navigation-permissions";
 import { useToast } from "@/hooks/use-toast";
 import { useUsersByIds } from "@/hooks/useUsersByIds";
-import type {
-	LoadIncident,
-	LoadIncidentEvent,
-} from "@/lib/incidents/incident.types";
-import {
-	browserFromUserAgent,
-	elementKeyLabel,
-	SCALE_LABELS,
-} from "@/lib/incidents/incident.utils";
+import type { LoadIncident } from "@/lib/incidents/incident.types";
+import { SCALE_LABELS } from "@/lib/incidents/incident.utils";
 import { incidentScreenshotUrl } from "@/lib/incidents/incident-screenshot-url";
-import { cn, getProfilePictureUrl } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+
+interface IncidentsSummary {
+	active: number;
+	newCount: number;
+	acknowledgedCount: number;
+	reopenedCount: number;
+	openedLastHour: number;
+
+	unassigned: number;
+	oldestUnassignedMs: number | null;
+	pastResponseTarget: number;
+	pageLevelFailures: number;
+	sectionOrTableFailures: number;
+	assignedToYou: number;
+
+	usersAffected24h: number;
+	organizationsAffected24h: number;
+	mostAffectedPage: { route: string; count: number } | null;
+	largestOrganization: { name: string; users: number } | null;
+	repeatHits24h: number;
+	totalErrorViews24h: number;
+
+	oldestOpenMs: number | null;
+	oldestOpenIncident: {
+		reference: string;
+		route: string;
+		errorStatus: number | null;
+	} | null;
+	medianAckMs: number | null;
+	medianAgeMs: number | null;
+	openLongerThan1h: number;
+	resolvedToday: number;
+}
 
 interface IncidentsResponse {
 	success: boolean;
 	data: {
 		incidents: LoadIncident[];
-		summary: {
-			active: number;
-			unassigned: number;
-			usersAffected24h: number;
-			oldestOpenMs: number | null;
-		};
+		summary: IncidentsSummary;
 	};
 }
 
@@ -94,36 +118,13 @@ function formatDateTime(iso: string): string {
 	});
 }
 
-/** Last path segment, title-cased — fallback when a route isn't in the nav catalog. */
 function humanizeRoute(route: string): string {
-	const segment = route.split("/").filter(Boolean).pop() || route;
-	return segment
-		.replace(/[-_]+/g, " ")
-		.replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
-function statusBadgeClasses(status: LoadIncident["status"]): string {
-	if (status === "resolved") return "border-green/20 bg-green/10 text-green";
-	if (status === "acknowledged") return "border-blue/20 bg-blue/10 text-blue";
-	return "border-red/20 bg-red/10 text-red";
-}
-
-function statusLabel(status: LoadIncident["status"]): string {
-	if (status === "resolved") return "Resolved";
-	if (status === "acknowledged") return "Acknowledged";
-	return "New";
-}
-
-/** Label/value row — value right-aligned to match the Activity timestamps. */
-function DetailLine({ label, value }: { label: string; value: string }) {
-	return (
-		<div className="flex items-center justify-between gap-4 py-2.5 text-sm">
-			<span className="shrink-0 text-xs font-semibold uppercase text-slate-500">
-				{label}
-			</span>
-			<span className="text-right font-medium text-slate-700">{value}</span>
-		</div>
-	);
+	const last = route.split("/").filter(Boolean).pop() ?? route;
+	return last
+		.split("-")
+		.filter(Boolean)
+		.map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+		.join(" ");
 }
 
 const SCALE_OPTIONS: CaalmFilterOption<string>[] = [
@@ -134,8 +135,34 @@ const SCALE_OPTIONS: CaalmFilterOption<string>[] = [
 	{ value: "banner", label: "Banner" },
 ];
 
-/** Design rule: 12 rows per page across all data tables. */
-const PAGE_SIZE = 12;
+/** Lives in the page header, next to the subtitle — revalidates the incidents list regardless of current filters. */
+export function RefreshIncidentsButton() {
+	const { mutate } = useSWRConfig();
+	const [refreshing, setRefreshing] = useState(false);
+
+	const handleRefresh = async () => {
+		setRefreshing(true);
+		try {
+			await mutate(
+				(key) => typeof key === "string" && key.startsWith("/api/it/incidents"),
+			);
+		} finally {
+			setRefreshing(false);
+		}
+	};
+
+	return (
+		<Button
+			type="button"
+			className="btn-primary"
+			disabled={refreshing}
+			onClick={() => void handleRefresh()}
+		>
+			<RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
+			Refresh
+		</Button>
+	);
+}
 
 export function ActiveIncidentsClient({
 	canManage,
@@ -146,48 +173,22 @@ export function ActiveIncidentsClient({
 }) {
 	const [search, setSearch] = useState("");
 	const [scale, setScale] = useState("all");
-	const [page, setPage] = useState(1);
 	const [selected, setSelected] = useState<LoadIncident | null>(null);
 	const [resolutionNote, setResolutionNote] = useState("");
-	const [resolving, setResolving] = useState(false);
-	const [people, setPeople] = useState<TaskPerson[]>([]);
-	const [events, setEvents] = useState<LoadIncidentEvent[]>([]);
+	const [resolvingOpen, setResolvingOpen] = useState(false);
 	const { toast } = useToast();
 
 	const params = new URLSearchParams();
 	if (search) params.set("search", search);
 	if (scale !== "all") params.set("scale", scale);
 
-	const { data, mutate, isLoading, isValidating } = useSWR<IncidentsResponse>(
+	const { data, mutate, isLoading } = useSWR<IncidentsResponse>(
 		`/api/it/incidents?${params.toString()}`,
 		fetcher,
 	);
 
 	const incidents = data?.data.incidents ?? [];
 	const summary = data?.data.summary;
-	const totalPages = Math.max(1, Math.ceil(incidents.length / PAGE_SIZE));
-	const safePage = Math.min(page, totalPages);
-	const pagedIncidents = incidents.slice(
-		(safePage - 1) * PAGE_SIZE,
-		safePage * PAGE_SIZE,
-	);
-
-	useEffect(() => {
-		setPage(1);
-	}, [search, scale]);
-
-	const pageTitleByRoute = useMemo(() => {
-		const map = new Map<string, string>();
-		for (const section of PERMISSION_BASED_NAV) {
-			for (const item of section.items) {
-				map.set(item.url, item.name);
-			}
-		}
-		return map;
-	}, []);
-
-	const pageTitleFor = (route: string) =>
-		pageTitleByRoute.get(route) ?? humanizeRoute(route);
 
 	const userIds = useMemo(
 		() =>
@@ -208,54 +209,6 @@ export function ActiveIncidentsClient({
 		if (!userId) return "Unassigned";
 		return users.get(userId)?.fullName ?? userId;
 	};
-
-	useEffect(() => {
-		if (!canManage) return;
-		fetch("/api/users/directory")
-			.then((r) => (r.ok ? r.json() : []))
-			.then(
-				(
-					dirUsers: Array<{
-						$id?: string;
-						fullName?: string;
-						email?: string;
-						department?: string;
-						division?: string | null;
-						avatar?: string | null;
-					}>,
-				) => {
-					const list = (Array.isArray(dirUsers) ? dirUsers : []).map((u) => ({
-						id: u.$id || "",
-						name: u.fullName || u.email || "User",
-						imageUrl: getProfilePictureUrl(u.avatar),
-						department: u.department || "Other",
-						division: u.division || null,
-					}));
-					setPeople(list.filter((p) => p.id));
-				},
-			)
-			.catch(() => setPeople([]));
-	}, [canManage]);
-
-	useEffect(() => {
-		if (!selected) {
-			setEvents([]);
-			return;
-		}
-		let cancelled = false;
-		fetch(`/api/it/incidents/${selected.$id}`)
-			.then((r) => (r.ok ? r.json() : null))
-			.then((body) => {
-				if (!cancelled) setEvents(body?.data?.events ?? []);
-			})
-			.catch(() => {
-				if (!cancelled) setEvents([]);
-			});
-		return () => {
-			cancelled = true;
-		};
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [selected?.$id]);
 
 	const act = async (incidentId: string, body: Record<string, unknown>) => {
 		try {
@@ -286,36 +239,151 @@ export function ActiveIncidentsClient({
 			<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
 				<MetricStatCard
 					title="Active"
-					value={summary?.active ?? "—"}
+					value={summary ? `${summary.active} open incidents` : "—"}
+					description={
+						summary
+							? `${summary.newCount} new · ${summary.acknowledgedCount} acknowledged · ${summary.openedLastHour} opened in the last hour`
+							: undefined
+					}
 					icon={AlertCircle}
 					iconTone="danger"
+					pinFooter
+					footer={
+						<StatRows
+							top={
+								<MetricSegmentBar
+									segments={[
+										{
+											key: "new",
+											label: "New",
+											count: summary?.newCount ?? 0,
+											colorClass: "bg-red",
+											textClass: "text-red",
+										},
+										{
+											key: "acknowledged",
+											label: "Acknowledged",
+											count: summary?.acknowledgedCount ?? 0,
+											colorClass: "bg-blue",
+											textClass: "text-blue",
+										},
+									]}
+								/>
+							}
+							rows={[
+								["New", summary?.newCount ?? "—"],
+								["Acknowledged", summary?.acknowledgedCount ?? "—"],
+								["Regressions (reopened)", summary?.reopenedCount ?? "—"],
+							]}
+						/>
+					}
 				/>
 				<MetricStatCard
 					title="Unassigned"
-					value={summary?.unassigned ?? "—"}
+					value={summary ? `${summary.unassigned} waiting for an owner` : "—"}
+					description={
+						summary
+							? `Oldest unassigned for ${formatDuration(summary.oldestUnassignedMs)}`
+							: undefined
+					}
 					icon={ShieldAlert}
 					iconTone="warning"
+					pinFooter
+					footer={
+						<StatRows
+							rows={[
+								[
+									"Past response target",
+									<span
+										key="past-target"
+										className="inline-flex min-w-7 justify-center rounded-md border border-orange/20 bg-orange/10 px-2 py-0.5 text-xs font-bold text-orange"
+									>
+										{summary?.pastResponseTarget ?? 0}
+									</span>,
+								],
+								["Page-level failures", summary?.pageLevelFailures ?? "—"],
+								[
+									"Section or table failures",
+									summary?.sectionOrTableFailures ?? "—",
+								],
+								["Assigned to you", summary?.assignedToYou ?? "—"],
+							]}
+						/>
+					}
 				/>
 				<MetricStatCard
 					title="Users affected (24h)"
-					value={summary?.usersAffected24h ?? "—"}
+					value={summary ? `${summary.usersAffected24h} users` : "—"}
+					description={
+						summary
+							? `Across ${summary.organizationsAffected24h} organizations`
+							: undefined
+					}
 					icon={Users}
+					pinFooter
+					footer={
+						<StatRows
+							rows={[
+								[
+									"Most affected page",
+									summary?.mostAffectedPage
+										? `${humanizeRoute(summary.mostAffectedPage.route)} · ${summary.mostAffectedPage.count}`
+										: "—",
+								],
+								[
+									"Largest organization",
+									summary?.largestOrganization
+										? `${summary.largestOrganization.name} · ${summary.largestOrganization.users} users`
+										: "—",
+								],
+								["Hit the error more than once", summary?.repeatHits24h ?? "—"],
+								["Total error views", summary?.totalErrorViews24h ?? "—"],
+							]}
+						/>
+					}
 				/>
 				<MetricStatCard
 					title="Oldest open"
 					value={formatDuration(summary?.oldestOpenMs ?? null)}
+					description={
+						summary?.oldestOpenIncident
+							? `${summary.oldestOpenIncident.reference} · ${humanizeRoute(summary.oldestOpenIncident.route)}${
+									summary.oldestOpenIncident.errorStatus
+										? ` · HTTP ${summary.oldestOpenIncident.errorStatus}`
+										: ""
+								}`
+							: undefined
+					}
 					icon={Clock}
+					pinFooter
+					footer={
+						<StatRows
+							rows={[
+								[
+									"Median time to acknowledge",
+									formatDuration(summary?.medianAckMs ?? null),
+								],
+								[
+									"Median age of open incidents",
+									formatDuration(summary?.medianAgeMs ?? null),
+								],
+								["Open longer than 1h", summary?.openLongerThan1h ?? "—"],
+								["Resolved today", summary?.resolvedToday ?? "—"],
+							]}
+						/>
+					}
 				/>
 			</div>
 
 			<Card className="glass-card">
 				<div className="glass-card-cap" />
 				<CardContent className="p-4 text-slate-700 sm:p-6">
-					<div className="flex flex-wrap items-center gap-3">
+					<div className="flex flex-wrap items-center gap-3 mb-5">
 						<SearchField
 							placeholder="Search reference, page or error…"
 							value={search}
 							onChange={(e) => setSearch(e.target.value)}
+							containerClassName="w-[26rem] max-w-full shrink-0"
 						/>
 						<div className="ml-auto flex items-center gap-3">
 							<CaalmFilterSelect
@@ -327,17 +395,6 @@ export function ActiveIncidentsClient({
 									SCALE_OPTIONS.find((o) => o.value === scale)?.label ?? "All"
 								}`}
 							/>
-							<Button
-								type="button"
-								className="btn-primary"
-								disabled={isValidating}
-								onClick={() => void mutate()}
-							>
-								<RefreshCw
-									className={cn("h-4 w-4", isValidating && "animate-spin")}
-								/>
-								Refresh
-							</Button>
 						</div>
 					</div>
 
@@ -347,7 +404,7 @@ export function ActiveIncidentsClient({
 							description="Nothing to review right now."
 						/>
 					) : (
-						<CaalmDataTable className="pt-4 pb-0">
+						<CaalmDataTable className="pb-0">
 							<TableHeader className="[&_tr]:border-b-0">
 								<TableRow className={DATA_TABLE_HEADER_ROW}>
 									<TableHead className={cn(DATA_TABLE_HEADER_CELL, "pl-4")}>
@@ -375,7 +432,7 @@ export function ActiveIncidentsClient({
 								</TableRow>
 							</TableHeader>
 							<TableBody className="[&_tr:last-child>td]:border-b-0">
-								{pagedIncidents.map((row) => (
+								{incidents.map((row) => (
 									<TableRow
 										key={row.$id}
 										tabIndex={0}
@@ -402,19 +459,18 @@ export function ActiveIncidentsClient({
 											{formatTime(row.lastSeenAt)}
 										</TableCell>
 										<TableCell className={DATA_TABLE_CELL}>
-											<p className="font-semibold">{pageTitleFor(row.route)}</p>
+											<p className="font-semibold">{row.route}</p>
 											<p className="text-xs text-slate-500">
-												{SCALE_LABELS[row.scale]} ·{" "}
-												{elementKeyLabel(row.elementKey)}
+												{SCALE_LABELS[row.scale]} · {row.elementKey}
 											</p>
 										</TableCell>
 										<TableCell className={DATA_TABLE_CELL}>
 											{row.errorStatus ? (
-												<span className="rounded-full border border-red/20 bg-red/10 px-2 py-0.5 text-xs font-bold text-red">
+												<span className="rounded-md border border-red/20 bg-red/10 px-2 py-0.5 text-xs font-bold text-red">
 													{row.errorStatus}
 												</span>
 											) : null}
-											<p className="mt-1.5 truncate text-xs text-slate-500">
+											<p className="mt-0.5 truncate text-xs text-slate-500">
 												{row.requestPath}
 											</p>
 										</TableCell>
@@ -444,10 +500,12 @@ export function ActiveIncidentsClient({
 											<span
 												className={cn(
 													"inline-block rounded-full border px-2 py-0.5 text-xs",
-													statusBadgeClasses(row.status),
+													row.status === "new"
+														? "border-red/20 bg-red/10 text-red"
+														: "border-blue/20 bg-blue/10 text-blue",
 												)}
 											>
-												{statusLabel(row.status)}
+												{row.status === "new" ? "New" : "Acknowledged"}
 											</span>
 										</TableCell>
 										<TableCell className={cn(DATA_TABLE_CELL, "pr-4")}>
@@ -458,271 +516,212 @@ export function ActiveIncidentsClient({
 							</TableBody>
 						</CaalmDataTable>
 					)}
-					{incidents.length > 0 ? (
-						<PageIndex
-							page={safePage}
-							totalItems={incidents.length}
-							pageSize={PAGE_SIZE}
-							onPageChange={setPage}
-							showRange
-							itemLabel="incidents"
-							hideWhenSinglePage
-						/>
-					) : null}
 				</CardContent>
 			</Card>
 
-			<EntityPreviewSheetShell
+			<Sheet
 				open={selected !== null}
 				onOpenChange={(open) => {
 					if (!open) {
 						setSelected(null);
 						setResolutionNote("");
-						setResolving(false);
+						setResolvingOpen(false);
 					}
 				}}
-				icon={AlertTriangle}
-				title={selected?.reference ?? ""}
-				description={
-					selected
-						? `${pageTitleFor(selected.route)} · ${SCALE_LABELS[
-								selected.scale
-							].toLowerCase()} failed to load`
-						: undefined
-				}
-				statusBanner={
-					selected ? (
-						<div
-							className={cn(
-								"border-b px-5 py-2 text-center text-xs font-semibold uppercase tracking-wide",
-								statusBadgeClasses(selected.status),
-							)}
-						>
-							{statusLabel(selected.status)}
-						</div>
-					) : null
-				}
-				footer={
-					selected && canManage ? (
-						<div className="flex w-full flex-col gap-3">
-							<div className="flex w-full flex-wrap items-center gap-2">
-								<Button
-									type="button"
-									className="btn-primary"
-									disabled={selected.status !== "new"}
-									onClick={() =>
-										void act(selected.$id, { action: "acknowledge" })
-									}
-								>
-									Acknowledge
-								</Button>
-								<TaskAssigneeFilter
-									value={selected.assignedTo || ""}
-									people={people}
-									mode="assign"
-									triggerLabel="Assign…"
-									ariaLabel="Assign incident"
-									onChange={(assigneeId) =>
-										assigneeId &&
-										void act(selected.$id, {
-											action: "assign",
-											assignedTo: assigneeId,
-										})
-									}
-								/>
-								<Button
-									type="button"
-									variant="outline"
-									size="sm"
-									className="rounded-full text-slate-700"
-									disabled={selected.status === "resolved"}
-									onClick={() => setResolving((v) => !v)}
-								>
-									Mark resolved
-								</Button>
-								<Button
-									type="button"
-									variant="outline"
-									size="icon"
-									className="h-8 w-8 rounded-full text-slate-700"
-									aria-label="Copy reference ID"
-									onClick={() => {
-										void navigator.clipboard.writeText(selected.reference);
-										toast({ title: "Reference copied" });
-									}}
-								>
-									<Copy className="h-3.5 w-3.5" />
-								</Button>
-							</div>
-							{resolving ? (
-								<div className="flex flex-col gap-2 border-t border-slate-200 pt-3">
-									<textarea
-										className="w-full rounded-md border border-slate-300 p-2 text-sm text-slate-700"
-										placeholder="Resolution note (required to resolve)"
-										value={resolutionNote}
-										onChange={(e) => setResolutionNote(e.target.value)}
-										rows={2}
-									/>
-									<div className="flex items-center justify-end gap-2">
-										<Button
-											type="button"
-											variant="outline"
-											size="sm"
-											className="rounded-full text-slate-700"
-											onClick={() => {
-												setResolving(false);
-												setResolutionNote("");
-											}}
-										>
-											Cancel
-										</Button>
-										<Button
-											type="button"
-											size="sm"
-											className="btn-primary"
-											disabled={!resolutionNote.trim()}
-											onClick={async () => {
-												const ok = await act(selected.$id, {
-													action: "resolve",
-													resolutionNote,
-												});
-												if (ok) {
-													setResolving(false);
-													setResolutionNote("");
-												}
-											}}
-										>
-											Confirm resolve
-										</Button>
-									</div>
-								</div>
-							) : null}
-						</div>
-					) : undefined
-				}
 			>
-				{selected ? (
-					<>
-						<div>
-							<p className="mb-2 text-xs font-semibold uppercase text-slate-500">
-								What the user saw
-							</p>
-							{selected.screenshotPath ? (
-								<div className="overflow-hidden rounded-lg border border-slate-200">
-									<div className="flex items-center gap-1.5 border-b border-slate-200 bg-slate-100 px-3 py-1.5">
-										<span className="h-2 w-2 rounded-full bg-slate-300" />
-										<span className="h-2 w-2 rounded-full bg-slate-300" />
-										<span className="h-2 w-2 rounded-full bg-slate-300" />
-										<span className="ml-2 truncate text-xs text-slate-500">
-											{selected.route}
-										</span>
-									</div>
-									<Image
-										src={incidentScreenshotUrl(selected.screenshotPath)}
-										alt={`Screenshot of ${selected.reference}`}
-										width={460}
-										height={260}
-										className="w-full object-cover"
-										unoptimized
-									/>
-								</div>
-							) : (
-								<div className="flex h-40 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-400">
-									Screenshot not available
-								</div>
-							)}
-							{selected.screenshotPath ? (
-								<div className="mt-2 flex items-center justify-between gap-3">
-									<p className="text-xs text-slate-400">
-										{selected.screenshotCapturedAt
-											? `Captured ${formatDateTime(selected.screenshotCapturedAt)} (first occurrence)`
-											: null}
-									</p>
-									<a
-										href={incidentScreenshotUrl(selected.screenshotPath)}
-										target="_blank"
-										rel="noreferrer"
-										className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-[#0f5384] hover:underline"
+				<SheetContent side="right" className="w-[500px] sm:max-w-[500px]">
+					{selected && (
+						<div className="flex h-full min-h-0 flex-col">
+							<SheetHeader className="shrink-0">
+								<div className="flex items-center justify-between gap-3 pr-8">
+									<SheetTitle>{selected.reference}</SheetTitle>
+									<span
+										className={cn(
+											"inline-block shrink-0 rounded-full border px-2 py-0.5 text-xs font-semibold",
+											selected.status === "new"
+												? "border-red/20 bg-red/10 text-red"
+												: "border-blue/20 bg-blue/10 text-blue",
+										)}
 									>
-										Open full size
-										<ExternalLink className="h-3 w-3" />
-									</a>
-								</div>
-							) : null}
-						</div>
-
-						<div>
-							<p className="mb-2 text-xs font-semibold uppercase text-slate-500">
-								Details
-							</p>
-							<div className="divide-y divide-slate-200">
-								<DetailLine label="Page / route" value={selected.route} />
-								<DetailLine
-									label="Failed request"
-									value={`${selected.requestPath ?? "—"} · ${selected.errorStatus ?? "—"}`}
-								/>
-								<DetailLine label="Trace ID" value={selected.traceId ?? "—"} />
-								<DetailLine
-									label="Occurrences"
-									value={`${selected.occurrences} · ${selected.affectedUsers} users`}
-								/>
-								<DetailLine
-									label="First / last seen"
-									value={`${formatTime(selected.firstSeenAt)} / ${formatTime(selected.lastSeenAt)}`}
-								/>
-								<DetailLine
-									label="Browser · viewport"
-									value={
-										[
-											browserFromUserAgent(selected.userAgent),
-											selected.viewport?.replace("x", "×"),
-										]
-											.filter(Boolean)
-											.join(" · ") || "—"
-									}
-								/>
-								<DetailLine
-									label="App version"
-									value={selected.appVersion ?? "—"}
-								/>
-							</div>
-						</div>
-
-						<div>
-							<p className="mb-2 text-xs font-semibold uppercase text-slate-500">
-								Activity
-							</p>
-							<div className="divide-y divide-slate-200">
-								<div className="flex items-center justify-between gap-4 py-2.5 text-sm">
-									<span className="text-slate-600">Created automatically</span>
-									<span className="font-medium text-slate-700">
-										{formatTime(selected.firstSeenAt)}
+										{selected.status === "new" ? "New" : "Acknowledged"}
 									</span>
 								</div>
-								{selected.screenshotCapturedAt ? (
-									<div className="flex items-center justify-between gap-4 py-2.5 text-sm">
-										<span className="text-slate-600">Screenshot captured</span>
-										<span className="font-medium text-slate-700">
-											{formatTime(selected.screenshotCapturedAt)}
-										</span>
+								<p className="text-sm text-slate-500">
+									{selected.route} · {SCALE_LABELS[selected.scale]} failed to
+									load
+								</p>
+							</SheetHeader>
+
+							<div className="min-h-0 flex-1 space-y-5 overflow-y-auto py-4">
+								<div>
+									<p className="mb-2 text-xs font-semibold uppercase text-slate-500">
+										What the user saw
+									</p>
+									{selected.screenshotPath ? (
+										<div className="overflow-hidden rounded-lg border border-slate-200">
+											<div className="flex items-center gap-1.5 border-b border-slate-200 bg-slate-100 px-3 py-1.5">
+												<span className="h-2 w-2 rounded-full bg-slate-300" />
+												<span className="h-2 w-2 rounded-full bg-slate-300" />
+												<span className="h-2 w-2 rounded-full bg-slate-300" />
+												<span className="ml-2 truncate text-xs text-slate-500">
+													{selected.route}
+												</span>
+											</div>
+											<Image
+												src={incidentScreenshotUrl(selected.screenshotPath)}
+												alt={`Screenshot of ${selected.reference}`}
+												width={460}
+												height={260}
+												className="w-full object-cover"
+												unoptimized
+											/>
+										</div>
+									) : (
+										<div className="flex h-40 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-400">
+											Screenshot not available
+										</div>
+									)}
+									{selected.screenshotCapturedAt && (
+										<div className="mt-1 flex items-center justify-between gap-3">
+											<p className="text-xs text-slate-400">
+												Captured {formatDateTime(selected.screenshotCapturedAt)}{" "}
+												(first occurrence)
+											</p>
+											{selected.screenshotPath ? (
+												<a
+													href={incidentScreenshotUrl(selected.screenshotPath)}
+													target="_blank"
+													rel="noreferrer"
+													className="shrink-0 text-xs font-medium text-[#0f5384] hover:underline"
+												>
+													Open full size ↗
+												</a>
+											) : null}
+										</div>
+									)}
+								</div>
+
+								<div>
+									<p className="mb-2 text-xs font-semibold uppercase text-slate-500">
+										Details
+									</p>
+									<dl className="space-y-2 text-sm">
+										<Row label="Page / route" value={selected.route} />
+										<Row
+											label="Failed request"
+											value={`${selected.requestPath ?? "—"} · ${selected.errorStatus ?? "—"}`}
+										/>
+										<Row label="Trace ID" value={selected.traceId ?? "—"} />
+										<Row
+											label="Occurrences"
+											value={`${selected.occurrences} · ${selected.affectedUsers} users · 1 org`}
+										/>
+										<Row
+											label="First / last seen"
+											value={`${formatTime(selected.firstSeenAt)} / ${formatTime(selected.lastSeenAt)}`}
+										/>
+										<Row
+											label="Browser · viewport"
+											value={selected.viewport ?? "—"}
+										/>
+										<Row
+											label="App version"
+											value={selected.appVersion ?? "—"}
+										/>
+									</dl>
+								</div>
+
+								{canManage && (
+									<div>
+										<div className="flex flex-wrap items-center gap-2">
+											<button
+												type="button"
+												className="btn-primary"
+												disabled={selected.status !== "new"}
+												onClick={() =>
+													void act(selected.$id, { action: "acknowledge" })
+												}
+											>
+												Acknowledge
+											</button>
+											<Button
+												variant="outline"
+												size="sm"
+												className="rounded-full"
+												onClick={() =>
+													void act(selected.$id, {
+														action: "assign",
+														assignedTo: currentUserId,
+													})
+												}
+											>
+												Assign…
+											</Button>
+											<Button
+												variant="outline"
+												size="sm"
+												className="rounded-full"
+												onClick={() => setResolvingOpen((open) => !open)}
+											>
+												Mark resolved
+											</Button>
+											<Button
+												type="button"
+												variant="outline"
+												size="icon"
+												className="h-8 w-8 shrink-0 rounded-full"
+												aria-label="Copy reference"
+												onClick={() => {
+													void navigator.clipboard.writeText(
+														selected.reference,
+													);
+													toast({ title: "Reference copied" });
+												}}
+											>
+												<Copy className="h-4 w-4" />
+											</Button>
+										</div>
+										{resolvingOpen && (
+											<div className="mt-3 flex flex-col gap-2">
+												<textarea
+													className="w-full rounded-md border border-slate-300 p-2 text-sm"
+													placeholder="Resolution note (required to resolve)"
+													value={resolutionNote}
+													onChange={(e) => setResolutionNote(e.target.value)}
+													rows={2}
+												/>
+												<Button
+													variant="outline"
+													size="sm"
+													className="self-start rounded-full"
+													disabled={!resolutionNote.trim()}
+													onClick={() =>
+														void act(selected.$id, {
+															action: "resolve",
+															resolutionNote,
+														})
+													}
+												>
+													Confirm resolved
+												</Button>
+											</div>
+										)}
 									</div>
-								) : null}
-								{events.length > 1 ? (
-									<div className="flex items-center justify-between gap-4 py-2.5 text-sm">
-										<span className="text-slate-600">
-											Seen again ({events.length - 1} more time
-											{events.length - 1 === 1 ? "" : "s"})
-										</span>
-										<span className="font-medium text-slate-700">
-											{formatTime(selected.lastSeenAt)}
-										</span>
-									</div>
-								) : null}
+								)}
 							</div>
 						</div>
-					</>
-				) : null}
-			</EntityPreviewSheetShell>
+					)}
+				</SheetContent>
+			</Sheet>
+		</div>
+	);
+}
+
+function Row({ label, value }: { label: string; value: string }) {
+	return (
+		<div className="flex justify-between gap-4">
+			<dt className="text-slate-500">{label}</dt>
+			<dd className="text-right font-medium text-slate-800">{value}</dd>
 		</div>
 	);
 }

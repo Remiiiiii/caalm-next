@@ -1,6 +1,5 @@
 export const dynamic = "force-dynamic";
 
-import { History } from "lucide-react";
 import { ITPageShell } from "@/components/it/ITPageShell";
 import { IssueHistoryList } from "@/components/tickets/IssueHistoryList";
 import { PERMISSIONS } from "@/constants/permissions";
@@ -48,7 +47,6 @@ export default async function IssueHistoryPage() {
 		<ITPageShell
 			title="Issue History"
 			subtitle="Resolved issues grouped by month and day."
-			icon={History}
 		>
 			<IssueHistoryList months={months} />
 		</ITPageShell>

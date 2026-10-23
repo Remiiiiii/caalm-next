@@ -1,7 +1,10 @@
 export const dynamic = "force-dynamic";
 
-import { AlertTriangle } from "lucide-react";
-import { ActiveIncidentsClient } from "@/components/it/ActiveIncidentsClient";
+import {
+	ActiveIncidentsClient,
+	RefreshIncidentsButton,
+} from "@/components/it/ActiveIncidentsClient";
+import { TenantSwitcher } from "@/components/it/ITHubChrome";
 import { ITPageShell } from "@/components/it/ITPageShell";
 import { PERMISSIONS } from "@/constants/permissions";
 import { requirePagePermission } from "@/lib/rbac/page-guards";
@@ -16,7 +19,12 @@ export default async function ActiveIncidentsPage() {
 		<ITPageShell
 			title="Active incidents"
 			subtitle="Pages and sections that failed to load for users. Review the captured screen, then take the steps to resolve."
-			icon={AlertTriangle}
+			headerControls={
+				<>
+					<TenantSwitcher />
+					<RefreshIncidentsButton />
+				</>
+			}
 		>
 			<ActiveIncidentsClient canManage={canManage} currentUserId={user.$id} />
 		</ITPageShell>

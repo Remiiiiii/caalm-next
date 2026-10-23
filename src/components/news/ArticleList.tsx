@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,7 +29,6 @@ import {
 } from "@/components/ui/caalm-data-table";
 import { CardContent, Card as GlassCard } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
 	AppDropdownMenuContent,
 	AppDropdownMenuItem,
@@ -77,7 +77,7 @@ interface ArticleListProps {
 
 const ArticleList: React.FC<ArticleListProps> = ({ onEdit, onRefresh }) => {
 	const [currentPage, setCurrentPage] = useState(1);
-	const itemsPerPage = 12;
+	const itemsPerPage = 20;
 
 	// Filters
 	const [searchQuery, setSearchQuery] = useState("");

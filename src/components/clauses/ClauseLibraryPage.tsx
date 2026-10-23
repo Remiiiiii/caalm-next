@@ -49,7 +49,7 @@ import {
 	type UpdateClauseInput,
 } from "@/types/clauses";
 
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 20;
 const LIST_GRID =
 	"grid grid-cols-[1.25rem_minmax(0,1fr)_auto_auto_auto] items-center gap-x-3";
 
