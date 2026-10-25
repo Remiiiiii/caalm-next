@@ -4,6 +4,7 @@ import { AlertTriangle, Clock } from "lucide-react";
 import type React from "react";
 import { AlarmControls } from "@/components/contract-expiry-alerts/AlarmControls";
 import CountdownTimer from "@/components/CountdownTimer";
+import { LoadError } from "@/components/LoadError";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getLicenseExpiryRaw } from "@/lib/licenses/licensesListUtils";
 import { LicenseEmptyState } from "./LicenseEmptyState";
@@ -76,16 +77,19 @@ export const CompactLicenseExpiryWidget: React.FC<
 				<div className="glass-card-cap" />
 				<CardHeader className="pb-3 pt-2 px-4">
 					<div className="flex items-center gap-2">
-						<AlertTriangle className="h-4 w-4 text-red" />
 						<CardTitle className="text-sm font-semibold sidebar-gradient-text">
 							License Expiry Alerts
 						</CardTitle>
 					</div>
 				</CardHeader>
 				<CardContent className="px-4 pb-2 flex items-center justify-center h-full">
-					<div className="text-sm text-red text-center">
-						Failed to load license data
-					</div>
+					<LoadError
+						scale="section"
+						title="We couldn't load license expiry alerts"
+						elementKey="license-expiry-compact"
+						error={{ requestPath: "/api/licenses" }}
+						onRetry={() => window.location.reload()}
+					/>
 				</CardContent>
 			</Card>
 		);

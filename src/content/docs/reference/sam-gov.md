@@ -1,11 +1,11 @@
 ---
-title: "SAM.gov advanced resources"
+title: "SAM.gov government contracts"
 description: "Search federal opportunities from inside CAALM."
 section: reference
 audience: "Executives, Capture teams"
 ---
 
-Advanced Resources (`/contracts/advanced-resources`) connects CAALM users to SAM.gov opportunity search.
+Government Contracts (`/contracts/government-contracts`) connects CAALM users to SAM.gov opportunity search.
 
 ## Who typically gets it
 

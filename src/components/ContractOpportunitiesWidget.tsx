@@ -196,7 +196,7 @@ export default function ContractOpportunitiesWidget({
 
 						{totalRecords > maxItems && (
 							<div className="text-center pt-3 border-t border-slate-200">
-								<Link href="/contracts/advanced-resources">
+								<Link href="/contracts/government-contracts">
 									<Button
 										size="sm"
 										variant="outline"
@@ -215,7 +215,7 @@ export default function ContractOpportunitiesWidget({
 						<p className="text-sm text-slate-500 mb-3">
 							No opportunities found for &quot;{currentKeyword}&quot;
 						</p>
-						<Link href="/contracts/advanced-resources">
+						<Link href="/contracts/government-contracts">
 							<Button
 								size="sm"
 								variant="outline"

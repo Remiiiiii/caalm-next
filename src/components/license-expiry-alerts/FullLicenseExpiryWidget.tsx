@@ -5,6 +5,7 @@ import type React from "react";
 import { AlarmControls } from "@/components/contract-expiry-alerts/AlarmControls";
 import { UrgencyStats } from "@/components/contract-expiry-alerts/UrgencyStats";
 import CountdownTimer from "@/components/CountdownTimer";
+import { LoadError } from "@/components/LoadError";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -97,14 +98,17 @@ export const FullLicenseExpiryWidget: React.FC<
 			>
 				<CardHeader className="pb-3">
 					<CardTitle className="flex items-center text-lg font-bold sidebar-gradient-text">
-						<AlertTriangle className="h-5 w-5 text-red" />
 						License Expiry Alerts
 					</CardTitle>
 				</CardHeader>
 				<CardContent>
-					<div className="text-center text-red py-4">
-						<p>Failed to load license data</p>
-					</div>
+					<LoadError
+						scale="section"
+						title="We couldn't load license expiry alerts"
+						elementKey="license-expiry-full"
+						error={{ requestPath: "/api/licenses" }}
+						onRetry={() => window.location.reload()}
+					/>
 				</CardContent>
 			</Card>
 		);

@@ -105,9 +105,9 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 				viewerReadOnly: true,
 			},
 			{
-				name: "Advanced Resources",
+				name: "Government Contracts",
 				icon: "/assets/icons/search.svg",
-				url: "/contracts/advanced-resources",
+				url: "/contracts/government-contracts",
 				// Create/edit — not on Viewer or Dept Manager packs
 				permissions: [PERMISSIONS.CONTRACTS.CREATE, PERMISSIONS.CONTRACTS.EDIT],
 			},

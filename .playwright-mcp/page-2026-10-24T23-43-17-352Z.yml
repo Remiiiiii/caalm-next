@@ -1,0 +1,194 @@
+- generic [ref=f8e1]:
+  - button "Open Next.js Dev Tools" [ref=f8e7] [cursor=pointer]:
+    - generic [ref=f8e10]:
+      - text: Rendering
+      - generic [ref=f8e11]:
+        - generic [ref=f8e12]: .
+        - generic [ref=f8e13]: .
+        - generic [ref=f8e14]: .
+  - alert [ref=f8e15]
+  - main [ref=f8e16]:
+    - generic [ref=f8e17]:
+      - complementary [ref=f8e18]:
+        - generic [ref=f8e19]:
+          - link [ref=f8e20] [cursor=pointer]:
+            - /url: /dashboard/it
+            - img "logo" [ref=f8e21]
+          - button "Collapse sidebar" [expanded] [ref=f8e22] [cursor=pointer]
+        - navigation [ref=f8e29]:
+          - list [ref=f8e30]:
+            - generic [ref=f8e31]:
+              - listitem [ref=f8e32]:
+                - generic [ref=f8e33]: Workspaces
+              - list [ref=f8e42]:
+                - listitem [ref=f8e43]:
+                  - link [ref=f8e46] [cursor=pointer]:
+                    - /url: /dashboard/superadmin
+                    - paragraph [ref=f8e49]: Super Admin
+                - listitem [ref=f8e50]:
+                  - link [ref=f8e53] [cursor=pointer]:
+                    - /url: /dashboard/departmentmanager
+                    - paragraph [ref=f8e57]: Department Manager
+            - generic [ref=f8e58]:
+              - listitem [ref=f8e59]:
+                - generic [ref=f8e60]: Overview
+              - list [ref=f8e69]:
+                - listitem [ref=f8e70]:
+                  - link [ref=f8e73] [cursor=pointer]:
+                    - /url: /dashboard/it
+                    - paragraph [ref=f8e79]: Dashboard
+                - listitem [ref=f8e80]:
+                  - link [ref=f8e83] [cursor=pointer]:
+                    - /url: /dashboard/it/system-overview
+                    - paragraph [ref=f8e86]: System overview
+                - listitem [ref=f8e87]:
+                  - link [ref=f8e90] [cursor=pointer]:
+                    - /url: /dashboard/it/storage
+                    - paragraph [ref=f8e93]: Storage
+                - listitem [ref=f8e94]:
+                  - link [ref=f8e97] [cursor=pointer]:
+                    - /url: /dashboard/it/tenants
+                    - paragraph [ref=f8e102]: Tenants
+            - generic [ref=f8e103]:
+              - listitem [ref=f8e104]:
+                - generic [ref=f8e105]: Support
+              - list [ref=f8e111]:
+                - listitem [ref=f8e112]:
+                  - link [ref=f8e115] [cursor=pointer]:
+                    - /url: /tickets/new
+                    - paragraph [ref=f8e118]: Report issue
+                - listitem [ref=f8e119]:
+                  - link [ref=f8e122] [cursor=pointer]:
+                    - /url: /tickets
+                    - paragraph [ref=f8e126]: Tickets
+                - listitem [ref=f8e127]:
+                  - link [ref=f8e130] [cursor=pointer]:
+                    - /url: /dashboard/it/issuehistory
+                    - paragraph [ref=f8e135]: Issue History
+            - generic [ref=f8e136]:
+              - listitem [ref=f8e137]:
+                - generic [ref=f8e138]: Monitoring
+              - list [ref=f8e144]:
+                - listitem [ref=f8e145]:
+                  - link [ref=f8e148] [cursor=pointer]:
+                    - /url: /dashboard/it/monitoring/system-health
+                    - paragraph [ref=f8e152]: System health
+                - listitem [ref=f8e153]:
+                  - link [ref=f8e156] [cursor=pointer]:
+                    - /url: /dashboard/it/monitoring/api-analytics
+                    - paragraph [ref=f8e159]: API analytics
+                - listitem [ref=f8e160]:
+                  - link [ref=f8e163] [cursor=pointer]:
+                    - /url: /dashboard/it/rate-limits
+                    - paragraph [ref=f8e166]: Rate limits
+            - generic [ref=f8e167]:
+              - listitem [ref=f8e168]:
+                - generic [ref=f8e169]: Incidents
+              - list [ref=f8e178]:
+                - listitem [ref=f8e179]:
+                  - link [ref=f8e182] [cursor=pointer]:
+                    - /url: /dashboard/it/incidents/active
+                    - paragraph [ref=f8e185]: Active incidents
+                - listitem [ref=f8e186]:
+                  - link [ref=f8e189] [cursor=pointer]:
+                    - /url: /dashboard/it/incidents/runbooks
+                    - paragraph [ref=f8e193]: Runbooks
+            - generic [ref=f8e194]:
+              - listitem [ref=f8e195]:
+                - generic [ref=f8e196]: Development
+              - list [ref=f8e205]:
+                - listitem [ref=f8e206]:
+                  - link [ref=f8e209] [cursor=pointer]:
+                    - /url: /dashboard/it/development/clm-roadmap
+                    - paragraph [ref=f8e212]: CLM Roadmap
+                - listitem [ref=f8e213]:
+                  - link [ref=f8e216] [cursor=pointer]:
+                    - /url: /dashboard/it/development/nonprofit-roadmap
+                    - paragraph [ref=f8e222]: Nonprofit Roadmap
+                - listitem [ref=f8e223]:
+                  - link [ref=f8e226] [cursor=pointer]:
+                    - /url: /dashboard/it/development/platform-readiness-roadmap
+                    - paragraph [ref=f8e229]: Platform Readiness Roadmap
+                - listitem [ref=f8e230]:
+                  - link [ref=f8e233] [cursor=pointer]:
+                    - /url: /dashboard/it/development/pr-log
+                    - paragraph [ref=f8e238]: PR log - (Cursor Cloud Agent)
+            - generic [ref=f8e239]:
+              - listitem [ref=f8e240]:
+                - generic [ref=f8e241]: Data & logs
+              - list [ref=f8e249]:
+                - listitem [ref=f8e250]:
+                  - link [ref=f8e253] [cursor=pointer]:
+                    - /url: /dashboard/it/database/schema
+                    - paragraph [ref=f8e256]: Schema
+            - generic [ref=f8e257]:
+              - listitem [ref=f8e258]:
+                - generic [ref=f8e259]: Security
+              - list [ref=f8e265]:
+                - listitem [ref=f8e266]:
+                  - link [ref=f8e269] [cursor=pointer]:
+                    - /url: /dashboard/it/security/audit-logs
+                    - paragraph [ref=f8e273]: Audit logs
+                - listitem [ref=f8e274]:
+                  - link [ref=f8e277] [cursor=pointer]:
+                    - /url: /dashboard/it/security/compliance
+                    - paragraph [ref=f8e282]: Compliance
+                - listitem [ref=f8e283]:
+                  - link [ref=f8e286] [cursor=pointer]:
+                    - /url: /dashboard/it/security/access-control
+                    - paragraph [ref=f8e290]: Access control
+                - listitem [ref=f8e291]:
+                  - link [ref=f8e294] [cursor=pointer]:
+                    - /url: /dashboard/it/security/incident-response
+                    - paragraph [ref=f8e300]: Incident response
+            - generic [ref=f8e301]:
+              - listitem [ref=f8e302]:
+                - generic [ref=f8e303]: Team
+              - list [ref=f8e312]:
+                - listitem [ref=f8e313]:
+                  - link [ref=f8e316] [cursor=pointer]:
+                    - /url: /dashboard/it/team/directory
+                    - paragraph [ref=f8e322]: IT directory
+                - listitem [ref=f8e323]:
+                  - link [ref=f8e326] [cursor=pointer]:
+                    - /url: /dashboard/it/team/roles
+                    - paragraph [ref=f8e339]: Roles
+            - listitem [aria-hidden] [ref=f8e340]:
+              - separator [ref=f8e341]
+            - generic [ref=f8e342]:
+              - listitem [ref=f8e343]:
+                - generic [ref=f8e344]: Settings
+              - list [ref=f8e351]:
+                - listitem [ref=f8e352]:
+                  - link [ref=f8e355] [cursor=pointer]:
+                    - /url: /dashboard/it/settings/system
+                    - paragraph [ref=f8e359]: System
+                - listitem [ref=f8e360]:
+                  - link [ref=f8e363] [cursor=pointer]:
+                    - /url: /dashboard/it/settings/integrations
+                    - paragraph [ref=f8e366]: Integrations
+                - listitem [ref=f8e367]:
+                  - link [ref=f8e370] [cursor=pointer]:
+                    - /url: /dashboard/it/settings/notifications
+                    - paragraph [ref=f8e374]: Notifications
+      - generic [ref=f8e375]:
+        - generic [ref=f8e377]:
+          - generic [ref=f8e379]:
+            - button "Audit" [ref=f8e380] [cursor=pointer]
+            - button "Schedule" [ref=f8e381] [cursor=pointer]
+            - button "Report" [ref=f8e382] [cursor=pointer]
+          - generic [ref=f8e383]:
+            - button "Ask CAALM" [ref=f8e384] [cursor=pointer]
+            - generic [ref=f8e388]:
+              - button "Profile picture" [ref=f8e391] [cursor=pointer]:
+                - img "Victor Ramirez" [ref=f8e393]
+              - button "Open notifications" [ref=f8e395] [cursor=pointer]:
+                - generic "53 notifications" [ref=f8e396]: "53"
+              - button "Open mail" [ref=f8e397] [cursor=pointer]
+              - button "Log out" [ref=f8e398] [cursor=pointer]
+        - status "Loading" [ref=f8e401]:
+          - generic [ref=f8e403]: Loading...
+      - button "Report an issue" [ref=f8e404] [cursor=pointer]:
+        - generic [ref=f8e405]: Report issue
+  - region "Notifications (F8)":
+    - list

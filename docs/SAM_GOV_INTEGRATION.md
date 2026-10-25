@@ -17,13 +17,13 @@ The SAM.gov integration allows users to search and view government contract oppo
 
 ### 2. User Interface Components
 
-- **Advanced Resources Page** (`src/app/(root)/contracts/advanced-resources/page.tsx`)
+- **Government Contracts Page** (`src/app/(root)/contracts/government-contracts/page.tsx`)
 - **Contracts Display Component** (`src/components/ContractsDisplay.tsx`)
 - **Dashboard Widget** (`src/components/ContractOpportunitiesWidget.tsx`)
 
 ### 3. Navigation Integration
 
-- Added "Advanced Resources" link to Contracts section in sidebar
+- Added "Government Contracts" link to Contracts section in sidebar
 - Available to Executive and Admin roles
 
 ## Setup Instructions
@@ -46,7 +46,7 @@ GOV_API_KEY=your_api_key_here
 ### 3. Verification
 
 1. Restart your development server
-2. Navigate to `/contracts/advanced-resources`
+2. Navigate to `/contracts/government-contracts`
 3. Use the "Test API Connection" button to verify setup
 
 ## API Endpoints Used

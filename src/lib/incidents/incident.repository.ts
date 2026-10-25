@@ -148,11 +148,12 @@ export async function listActiveIncidents(options: {
 	search?: string;
 	scale?: string;
 	assignedTo?: string;
+	includeResolved?: boolean;
 	limit?: number;
 }): Promise<LoadIncident[]> {
 	const { tablesDB } = await createAdminClient();
 	const queries = [
-		Query.notEqual("status", "resolved"),
+		...(options.includeResolved ? [] : [Query.notEqual("status", "resolved")]),
 		Query.orderDesc("lastSeenAt"),
 		Query.limit(options.limit ?? 100),
 	];
@@ -215,6 +216,8 @@ export async function updateIncident(
 			| "resolvedBy"
 			| "resolvedAt"
 			| "resolutionNote"
+			| "unresolvedBy"
+			| "unresolvedAt"
 		>
 	>,
 ): Promise<LoadIncident> {
@@ -242,4 +245,17 @@ export async function listIncidentEvents(
 		],
 	});
 	return result.rows as unknown as LoadIncidentEvent[];
+}
+
+export async function deleteIncidents(ids: string[]): Promise<void> {
+	const { tablesDB } = await createAdminClient();
+	await Promise.all(
+		ids.map((id) =>
+			tablesDB.deleteRow({
+				databaseId: dbId(),
+				tableId: incidentsTable(),
+				rowId: id,
+			}),
+		),
+	);
 }

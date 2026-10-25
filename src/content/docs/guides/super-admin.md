@@ -81,7 +81,7 @@ Aim for **1–2 Super Admins** total. Prefer vendor + one backup.
 - Billing & Integrations (with billing permission)
 - System settings (platform / Super Admin territory)
 - Org-wide contracts/licenses and audit views
-- SAM.gov advanced resources when pursuing opportunities
+- SAM.gov government contracts search when pursuing opportunities
 - RBAC diagnose tools when access looks stuck
 
 ## Escalation questions that matter

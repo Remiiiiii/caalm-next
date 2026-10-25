@@ -1,5 +1,5 @@
 /**
- * Search-field options for SAM.gov Advanced Resources.
+ * Search-field options for SAM.gov Government Contracts.
  *
  * Organization names track Level-1 style federal entities that commonly appear
  * in SAM opportunities (`organizationName` filter). Sources:

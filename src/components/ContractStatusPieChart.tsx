@@ -12,6 +12,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { SciChartPieSurface } from "scichart";
 import useSWR from "swr";
 import { LiveWeatherStatusDot } from "@/components/dashboard-briefing/LiveWeatherStatusDot";
+import { LoadError } from "@/components/LoadError";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import {
@@ -371,6 +372,7 @@ const ContractStatusPieChart: React.FC<ContractStatusPieChartProps> = ({
 		data: fetchedContracts,
 		isLoading,
 		error: contractsError,
+		mutate: mutateContracts,
 	} = useSWR<UIFileDoc[] | { data?: UIFileDoc[] }>(
 		skipFetch ? null : swrKeys.allContracts(),
 		swrConfig.fetcher ?? null,
@@ -449,7 +451,13 @@ const ContractStatusPieChart: React.FC<ContractStatusPieChartProps> = ({
 					<ContractStatusCardHeader />
 				</CardHeader>
 				<CardContent className="px-4 pb-4 flex items-center justify-center">
-					<p className="text-sm text-slate-500">Unable to load contracts</p>
+					<LoadError
+						scale="section"
+						title="We couldn't load contract status"
+						elementKey="contract-status-pie"
+						error={{ requestPath: "/api/contracts/all" }}
+						onRetry={() => mutateContracts()}
+					/>
 				</CardContent>
 			</Card>
 		);

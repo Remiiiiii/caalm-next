@@ -8,6 +8,7 @@ import {
 	TriangleAlert,
 } from "lucide-react";
 import Image from "next/image";
+import { LoadError } from "@/components/LoadError";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import Avatar from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -546,7 +547,14 @@ const UserManagement = () => {
 						account actions in one place.
 					</p>
 				</div>
-				<UsersNotFoundState message="No users found" />
+				<LoadError
+					scale="page"
+					title="We couldn't load user management"
+					description="Something went wrong on our side. Your data hasn't changed."
+					elementKey="user-management"
+					error={{ requestPath: "/api/users" }}
+					onRetry={() => refresh()}
+				/>
 			</div>
 		);
 	}

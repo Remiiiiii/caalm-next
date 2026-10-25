@@ -4,6 +4,7 @@ import { ArrowLeft, Building2, FileText, Users } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import FileCard from "@/components/Card";
+import { LoadError } from "@/components/LoadError";
 import RoundedUnderlineTabs from "@/components/RoundedUnderlineTabs";
 import SearchInput from "@/components/SearchInput";
 import Sort from "@/components/Sort";
@@ -207,18 +208,14 @@ const MyContractsPage = () => {
 
 	if (error) {
 		return (
-			<div className="space-y-6">
-				<UICard className="bg-red-50/60 backdrop-blur border border-red-200/40 shadow-lg">
-					<CardHeader>
-						<CardTitle className="h2 text-red-700">
-							Error Loading Contracts
-						</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<p className="body-1 text-red-600">{error}</p>
-					</CardContent>
-				</UICard>
-			</div>
+			<LoadError
+				scale="page"
+				title="We couldn't load your contracts"
+				description="Something went wrong on our side. Your data hasn't changed."
+				elementKey="my-contracts"
+				error={{ requestPath: "/api/contracts" }}
+				onRetry={() => refreshContracts()}
+			/>
 		);
 	}
 
