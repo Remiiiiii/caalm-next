@@ -17,7 +17,8 @@ Two jobs live on one page:
 | Screen | Path | Purpose |
 |---|---|---|
 | Funding & Retention | `/contracts/funding-retention` | Retention board, obligations, pursuits pipeline |
-| Proposals & Approvals | `/contracts/approvals` | Drafts created from a won pursuit |
+| Proposals & Approvals | `/contracts/approvals` | Internal review of contracts/licenses after a win |
+| RFP Proposals | `/contracts/proposals` | Bid workspace: matrix, draft, export |
 | SAM.gov | `/contracts/government-contracts` | Optional source for new pursuits |
 
 ## Retention
@@ -68,7 +69,7 @@ When a pursuit is **won**, spawn a proposal so capture work becomes a contract d
 1. Switch to **Pursuits**
 2. Create a pursuit (manual or from SAM.gov)
 3. Move the stage as the bid advances
-4. On **won**, create the proposal and finish it under [Approvals](/docs/reference/approvals)
+4. On **won**, link or start an [RFP proposal](/docs/reference/rfp-proposals), then put the executed award into [Contracts](/docs/reference/contracts) and [Approvals](/docs/reference/approvals) when it is time to review internally
 
 ## Permissions
 
@@ -77,4 +78,4 @@ Funding is scoped separately from full contract edit/approve, so finance or capt
 - `funding.view`: see streams, obligations, and the pursuit pipeline
 - `funding.manage`: create/edit pursuits and obligations, mark wins, spawn proposals from won bids
 
-Related: [Contracts](/docs/reference/contracts), [SAM.gov](/docs/reference/sam-gov), [Approvals](/docs/reference/approvals), [Notifications and deadlines](/docs/concepts/notifications-deadlines).
+Related: [Contracts](/docs/reference/contracts), [SAM.gov](/docs/reference/sam-gov), [RFP proposals](/docs/reference/rfp-proposals), [Approvals](/docs/reference/approvals), [Notifications and deadlines](/docs/concepts/notifications-deadlines).

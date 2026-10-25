@@ -724,7 +724,7 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 					<div className="flex w-full items-center justify-between gap-2">
 						<Button
 							type="button"
-							variant="outline"
+							variant="ghost"
 							onClick={() => {
 								if (currentStep > 1 || processedFileData) {
 									setCancelDialogOpen(true);
@@ -733,7 +733,7 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 									resetForm();
 								}
 							}}
-							className="flex items-center gap-2"
+							className="rounded-full px-3 py-1.5 h-[1.65rem] justify-center text-slate-400 hover:text-slate-600 hover:bg-black/[.04]"
 							disabled={isUploading}
 						>
 							<Ban className="h-4 w-4" />

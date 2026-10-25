@@ -26,10 +26,12 @@ You need `it.view_runbooks` to browse and `it.manage_runbooks` to create or edit
 
 ## During an incident
 
-1. Start from **Active Incidents** (or an alert deep link when integrations are live).
+1. Start from **Active Incidents** (`/dashboard/it/incidents/active`). Load failures already have an `INC-` reference, screenshot, and occurrence count.
 2. Open the matching runbook from the suggested list or search.
 3. Execute steps in order.
 4. Record what worked; update the runbook after the incident.
+
+Load incidents are documented on [IT portal](/docs/reference/it-portal). Users see [A page or table won't load](/docs/troubleshooting/page-wont-load).
 
 ## Related product screens
 

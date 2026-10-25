@@ -88,6 +88,12 @@ export const appwriteConfig = {
 		"test-reports",
 	),
 
+	/** User-saved search filters, shared by Advanced Search and contract search (name: Saved Searches) */
+	savedSearchesCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_SAVED_SEARCHES_COLLECTION",
+		"test-saved-searches",
+	),
+
 	licensesCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_LICENSES_COLLECTION",
 		"test-licenses",

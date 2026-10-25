@@ -184,7 +184,10 @@ This catalog explains permission keys in everyday language. Exact availability c
 | `it.manage_ci_cd` | Manage CI/CD |
 | `it.view_security` | View security surfaces |
 | `it.manage_database` | Database administration |
-| `it.view_incidents` | View incidents / on-call / post-mortems |
+| `it.view_incidents` | View load incidents, on-call, and post-mortems |
+| `it.manage_incidents` | Assign, acknowledge, resolve, and delete load-error incidents |
+| `it.view_runbooks` | Browse operational runbooks in the IT portal |
+| `it.manage_runbooks` | Create and edit runbooks |
 | `it.view_roadmap` | View the CLM and Nonprofit completion roadmaps |
 | `it.manage_roadmap` | Start roadmap tasks and bind branches/PRs |
 

@@ -249,7 +249,8 @@ export const DOCS_NAV: DocsNavGroup[] = [
 				title: "Analytics and reports",
 				slug: "reference/analytics",
 				path: "reference/analytics",
-				summary: "Overview, quick view, C-suite, and division views.",
+				summary:
+					"Overview, quick view, C-suite, division views, and Risk averted.",
 			},
 			{
 				title: "Company news",
@@ -280,7 +281,8 @@ export const DOCS_NAV: DocsNavGroup[] = [
 				title: "Team and user management",
 				slug: "reference/team",
 				path: "reference/team",
-				summary: "Invite users, manage roles, assign tasks.",
+				summary:
+					"Invite users, reporting graph, assignment graph, and assign tasks.",
 			},
 			{
 				title: "Settings and profile",
@@ -308,10 +310,18 @@ export const DOCS_NAV: DocsNavGroup[] = [
 				summary: "Search federal opportunities from CAALM.",
 			},
 			{
+				title: "RFP proposals",
+				slug: "reference/rfp-proposals",
+				path: "reference/rfp-proposals",
+				summary:
+					"Shred a solicitation, certify the matrix, draft, and export a bid package.",
+			},
+			{
 				title: "IT portal",
 				slug: "reference/it-portal",
 				path: "reference/it-portal",
-				summary: "Monitoring, security, CI/CD, incidents, and more.",
+				summary:
+					"Monitoring, security, CI/CD, load incidents, and platform operations.",
 			},
 			{
 				title: "Permissions catalog",
@@ -471,6 +481,13 @@ export const DOCS_NAV: DocsNavGroup[] = [
 				path: "troubleshooting/help-vs-engineering-tickets",
 				summary:
 					"Lane choice, CAALM close vs GitHub agent, and when to escalate.",
+			},
+			{
+				title: "A page or table won't load",
+				slug: "troubleshooting/page-wont-load",
+				path: "troubleshooting/page-wont-load",
+				summary:
+					"Retry, copy the INC- reference, and how IT sees the auto-filed incident.",
 			},
 			{
 				title: "I can’t sign in",

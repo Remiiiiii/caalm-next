@@ -87,8 +87,8 @@ export function TaskCreateSheet({
 				<div className="flex w-full items-center justify-between gap-3">
 					<Button
 						type="button"
-						variant="outline"
-						className="primary-btn cursor-pointer px-3 sm:px-4"
+						variant="ghost"
+						className="rounded-full px-3 py-1.5 h-[1.65rem] justify-center text-slate-400 hover:text-slate-600 hover:bg-black/[.04]"
 						onClick={() => onOpenChange(false)}
 					>
 						<Ban className="h-4 w-4" />

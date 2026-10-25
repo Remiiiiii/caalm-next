@@ -573,9 +573,9 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 					<div className="flex w-full items-center justify-between gap-2">
 						<Button
 							type="button"
-							variant="outline"
+							variant="ghost"
 							onClick={() => setCancelDialogOpen(true)}
-							className="flex items-center gap-2"
+							className="rounded-full px-3 py-1.5 h-[1.65rem] justify-center text-slate-400 hover:text-slate-600 hover:bg-black/[.04]"
 						>
 							<Ban className="h-4 w-4" />
 							Cancel

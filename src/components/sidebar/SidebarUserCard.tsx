@@ -108,10 +108,7 @@ export default function SidebarUserCard({
 							</span>
 							<span className="text-slate-700">Settings</span>
 						</DropdownMenuSubTrigger>
-						<DropdownMenuSubContent
-							sideOffset={2}
-							className="z-100 min-w-48 border border-white/30 bg-white/95 p-1 text-slate-700 shadow-md"
-						>
+						<DropdownMenuSubContent sideOffset={2} className="z-100 min-w-48">
 							{settingsItems.map((item) =>
 								item.url ? (
 									<DropdownMenuItem key={item.url} asChild>
@@ -134,10 +131,7 @@ export default function SidebarUserCard({
 						</span>
 						<span className="text-slate-700">Help</span>
 					</DropdownMenuSubTrigger>
-					<DropdownMenuSubContent
-						sideOffset={2}
-						className="z-100 min-w-48 border border-white/30 bg-white/95 p-1 text-slate-700 shadow-md"
-					>
+					<DropdownMenuSubContent sideOffset={2} className="z-100 min-w-48">
 						{HELP_LINKS.map((item) => {
 							const Icon = item.icon;
 							return (

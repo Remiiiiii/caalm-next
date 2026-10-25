@@ -37,6 +37,10 @@ See [Roles and home dashboards](/docs/concepts/roles-and-dashboards) for paths. 
 - **Content Creator** emphasizes publishing metrics, review queue, connected sources, and analytics
 - **IT** emphasizes platform health
 
+## Risk averted
+
+Home dashboards can show a Risk averted snapshot. The full board packet lives at **`/analytics/risk-averted`**: period windows, counted events, PDF, and Excel export. See [Analytics and reports](/docs/reference/analytics).
+
 ## How to read a widget like an operator
 
 1. What decision does this number demand?

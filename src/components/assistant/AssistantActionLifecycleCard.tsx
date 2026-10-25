@@ -607,9 +607,9 @@ export default function AssistantActionLifecycleCard({
 					<div className="flex shrink-0 items-center gap-2">
 						<Button
 							type="button"
-							variant="outline"
+							variant="ghost"
 							size="sm"
-							className="cursor-pointer border-[0.25px] border-slate-300"
+							className="rounded-full px-3 py-1.5 h-[1.65rem] justify-center text-slate-400 hover:text-slate-600 hover:bg-black/[.04]"
 							onClick={onCancel}
 							disabled={disabled}
 						>

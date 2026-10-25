@@ -1,6 +1,6 @@
 ---
 title: "Team and user management"
-description: "Invite users, manage roles, and assign tasks without creating access chaos."
+description: "Invite users, see reporting and assignment graphs, manage roles, and assign tasks."
 section: reference
 audience: "Admins"
 ---
@@ -22,6 +22,19 @@ People administration is where most long-term CAALM pain is created or prevented
 
 Permissions: `users.view`, `invite`, `edit`, `assign_roles`, `deactivate`.
 
+### Table vs diagram
+
+Toggle **table** and **diagram** on User Management. The table is the working list (name, assigned by, assigned date, last active). The diagram is an org map you can search.
+
+Two diagram modes:
+
+| Mode | What the lines mean |
+|---|---|
+| **Reporting** | Who each person reports to at work. Solid = manager. Dashed = matrix manager |
+| **Assignment** | Who granted the CAALM login or role. “System” is automatic setup |
+
+People with edit access can reconnect lines on the graph (move or cut a reporting/assignment edge). Treat that like an HR change: wrong lines create wrong owners later.
+
 ## Role management jobs
 
 - Create/maintain roles
@@ -29,6 +42,8 @@ Permissions: `users.view`, `invite`, `edit`, `assign_roles`, `deactivate`.
 - Keep Super Admin / Org Admin permission sets explicit and complete in the database
 
 ## Tasks
+
+Assign Tasks (`/team/tasks`) is the operational to-do board: search, filter pills, a sortable table, and bulk actions on selected rows.
 
 Task assignment uses event-related permissions (`events.create` / `events.invite` patterns) to coordinate work tied to operational timing.
 

@@ -368,7 +368,7 @@ Focus: the components named in the request. Many more shadcn primitives live und
 - **Path:** `src/components/ui/dropdown-menu.tsx`
 - **Key exports:** Radix menu primitives + `AppDropdownMenuContent`, `AppDropdownMenuItem`, `AppDropdownMenuTrigger`, `AppDropdownMenuCheckboxItem`, `DROPDOWN_ITEM_LABEL_CLASS`
 - **`AppDropdownMenuItem` props:** Radix item props + required `icon: LucideIcon`, optional `tone?: "default" | "danger" | "info" | "success" | "warning"`, `iconClassName?`
-- **Panel:** glass (`bg-white/10` + blur) — **no** card-cap
+- **Panel:** glass (`bg-white/10` + blur) — **no** card-cap. Applies to every dropdown panel: `SelectContent`, `DropdownMenu*`, `ContextMenu*`, `Menubar*` and all sub-contents. Never override the panel background.
 - **Related:** `DropdownScrollArea` (`src/components/ui/DropdownScrollArea.tsx`), filter pills (`filter-pill.ts`, `CaalmFilterSelect.tsx`)
 - **Usage:**
 

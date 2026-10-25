@@ -687,9 +687,9 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
 					<div className="flex w-full items-center justify-between gap-3">
 						<Button
 							type="button"
-							variant="outline"
+							variant="ghost"
 							onClick={resetToDefaults}
-							className="rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+							className="rounded-full px-3 py-1.5 h-[1.65rem] justify-center text-slate-400 hover:text-slate-600 hover:bg-black/[.04]"
 							disabled={saving}
 						>
 							<RotateCcw className="h-4 w-4" />

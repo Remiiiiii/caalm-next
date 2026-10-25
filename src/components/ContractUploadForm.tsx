@@ -6491,10 +6491,10 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 										) : null}
 										<Button
 											type="button"
-											variant="outline"
+											variant="ghost"
 											onClick={handleCancelClick}
 											disabled={isUploading}
-											className="primary-btn px-3 sm:px-4 shimmer-hover"
+											className="rounded-full px-3 py-1.5 h-[1.65rem] justify-center text-slate-400 hover:text-slate-600 hover:bg-black/[.04]"
 										>
 											<Ban className="w-4 h-4" />
 											Cancel

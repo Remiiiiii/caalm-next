@@ -82,6 +82,9 @@ Aim for **1–2 Super Admins** total. Prefer vendor + one backup.
 - System settings (platform / Super Admin territory)
 - Org-wide contracts/licenses and audit views
 - SAM.gov government contracts search when pursuing opportunities
+- RFP proposal workspaces (`/contracts/proposals`) for capture teams
+- Risk averted (`/analytics/risk-averted`) for board packets
+- User Management table **and** reporting/assignment graphs
 - RBAC diagnose tools when access looks stuck
 
 ## Escalation questions that matter

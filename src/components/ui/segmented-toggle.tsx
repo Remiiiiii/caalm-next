@@ -13,6 +13,7 @@ export type SegmentedToggleTab<T extends string = string> = {
 	count?: number;
 	/** Optional color for the count (e.g. amber for unassigned, red for overdue) */
 	countClassName?: string;
+	disabled?: boolean;
 };
 
 export function SegmentedToggle<T extends string>({
@@ -68,12 +69,14 @@ export function SegmentedToggle<T extends string>({
 						role="tab"
 						aria-label={tab.ariaLabel ?? tab.label}
 						aria-selected={selected}
+						disabled={tab.disabled}
 						onClick={() => onChange(tab.value)}
 						className={cn(
 							"relative z-10 inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-full text-sm font-medium transition-colors duration-200",
 							"h-full py-0",
 							tab.hideLabel ? "px-2.5" : "px-3",
 							"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
+							"disabled:cursor-not-allowed disabled:opacity-60",
 							selected
 								? "text-[#0f5384]"
 								: "text-slate-500 hover:text-slate-700",
