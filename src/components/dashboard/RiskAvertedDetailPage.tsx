@@ -29,6 +29,7 @@ import {
 	YAxis,
 } from "recharts";
 import { AnalyticsPageShell } from "@/components/analytics/AnalyticsPageShell";
+import { LoadError } from "@/components/LoadError";
 import { RiskEventsBulkBar } from "@/components/dashboard/RiskEventsBulkBar";
 import { RiskTrackingChart } from "@/components/dashboard/RiskTrackingChart";
 import {
@@ -392,21 +393,14 @@ export function RiskAvertedDetailPage({
 	if (error && !snapshot) {
 		return (
 			<AnalyticsPageShell title="Risk averted">
-				<Card className="glass-card">
-					<div className="glass-card-cap" />
-					<CardContent className="text-slate-700 p-4 sm:p-6 flex flex-col items-center text-center gap-3">
-						<AlertCircle className="h-8 w-8 text-red" />
-						<p className="text-slate-700">Unable to load risk averted.</p>
-						<Button
-							type="button"
-							className="btn-primary px-3 sm:px-4"
-							onClick={() => refresh()}
-						>
-							<RefreshCw className="h-4 w-4" />
-							Retry
-						</Button>
-					</CardContent>
-				</Card>
+				<LoadError
+					scale="page"
+					title="We couldn't load risk averted"
+					description="Something went wrong on our side. Your data hasn't changed."
+					elementKey="risk-averted"
+					error={{ requestPath: "/api/analytics/risk-averted" }}
+					onRetry={() => refresh()}
+				/>
 			</AnalyticsPageShell>
 		);
 	}

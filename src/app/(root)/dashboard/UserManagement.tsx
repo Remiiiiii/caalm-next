@@ -8,6 +8,7 @@ import {
 	TriangleAlert,
 } from "lucide-react";
 import Image from "next/image";
+import { LoadError } from "@/components/LoadError";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import Avatar from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -546,7 +547,14 @@ const UserManagement = () => {
 						account actions in one place.
 					</p>
 				</div>
-				<UsersNotFoundState message="No users found" />
+				<LoadError
+					scale="page"
+					title="We couldn't load user management"
+					description="Something went wrong on our side. Your data hasn't changed."
+					elementKey="user-management"
+					error={{ requestPath: "/api/users" }}
+					onRetry={() => refresh()}
+				/>
 			</div>
 		);
 	}
@@ -564,101 +572,6 @@ const UserManagement = () => {
 				</p>
 			</div>
 
-			<div className="flex items-center justify-between gap-3">
-				<SearchField
-					placeholder="Search users by full name or email..."
-					containerClassName="w-[26rem] max-w-full shrink-0"
-					value={searchTerm}
-					onChange={(e) => setSearchTerm(e.target.value)}
-				/>
-				<div className="flex items-center justify-end gap-2">
-					{view === "diagram" ? (
-						<UserManagementLineageToggle
-							lineage={lineage}
-							onLineageChange={setLineage}
-						/>
-					) : null}
-					<UserManagementViewToggle
-						view={view}
-						onViewChange={handleViewChange}
-					/>
-					<DropdownMenu>
-						<AppDropdownMenuTrigger
-							asChild
-							className="border-0 bg-transparent p-0 shadow-none ring-0 hover:bg-transparent data-[state=open]:bg-transparent"
-						>
-							<Button
-								variant="ghost"
-								size="sm"
-								className="primary-btn h-8 border-0 px-3 shadow-none focus-visible:ring-0 sm:px-4"
-							>
-								<Filter className="h-4 w-4" />
-								<span className="hidden sm:inline">Filter</span>
-								{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
-								<ChevronDown className="h-4 w-4" />
-							</Button>
-						</AppDropdownMenuTrigger>
-						<UserManagementFilterMenu
-							roles={allRoles}
-							departments={allDepartments}
-							assigners={allAssigners}
-							selectedRoles={selectedRoles}
-							selectedDepartments={selectedDepartments}
-							selectedAssignedBy={selectedAssignedBy}
-							dateRange={dateRangeFilter}
-							activeFilterCount={activeFilterCount}
-							onToggleRole={(role, checked) =>
-								setSelectedRoles((prev) =>
-									checked
-										? [...prev, role]
-										: prev.filter((item) => item !== role),
-								)
-							}
-							onToggleDepartment={(department, checked) =>
-								setSelectedDepartments((prev) =>
-									checked
-										? [...prev, department]
-										: prev.filter((item) => item !== department),
-								)
-							}
-							onToggleAssigner={(assigner, checked) =>
-								setSelectedAssignedBy((prev) =>
-									checked
-										? [...prev, assigner]
-										: prev.filter((item) => item !== assigner),
-								)
-							}
-							onDateRangeChange={setDateRangeFilter}
-							onClear={clearAllFilters}
-						/>
-					</DropdownMenu>
-
-					{view === "table" ? (
-						<DropdownMenu>
-							<AppDropdownMenuTrigger
-								asChild
-								className="border-0 bg-transparent p-0 shadow-none ring-0 hover:bg-transparent data-[state=open]:bg-transparent"
-							>
-								<Button
-									variant="ghost"
-									size="sm"
-									className="primary-btn h-8 border-0 px-3 shadow-none focus-visible:ring-0 sm:px-4"
-								>
-									<ArrowUpDown className="h-4 w-4" />
-									<span className="hidden sm:inline">Sort by</span>
-									<ChevronDown className="h-4 w-4" />
-								</Button>
-							</AppDropdownMenuTrigger>
-							<UserManagementSortMenu
-								sortKey={sortConfig.key}
-								direction={sortConfig.direction}
-								onSort={applySortPreset}
-							/>
-						</DropdownMenu>
-					) : null}
-				</div>
-			</div>
-
 			{listLoading ? (
 				<div className="flex items-center justify-center py-8">
 					<div className="text-center">
@@ -667,42 +580,149 @@ const UserManagement = () => {
 					</div>
 				</div>
 			) : view === "diagram" ? (
-				filteredAndSortedUsers.length === 0 ? (
-					<UsersNotFoundState
-						message="No users found"
-						action={
-							activeFilterCount > 0 ? (
-								<Button
-									variant="outline"
-									size="sm"
-									onClick={clearAllFilters}
-									className="mt-3"
-								>
-									Clear filters
-								</Button>
-							) : undefined
-						}
-					/>
-				) : (
-					<UserAssignmentGraph
-						users={filteredAndSortedUsers}
-						allUsers={users}
-						lineage={lineage}
-						canEditGraph={canManageUsers}
-						canView={canViewUsers}
-						canEdit={canManageUsers}
-						canDeactivate={canDeactivateUsers}
-						canAssignRoles={canAssignRoles}
-						canImpersonate={canImpersonate}
-						actor={actor}
-						onAction={openAction}
-						onRefresh={refresh}
-					/>
-				)
+				<>
+					<div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+						<SearchField
+							placeholder="Search users by full name or email..."
+							containerClassName="w-[26rem] max-w-full shrink-0"
+							value={searchTerm}
+							onChange={(e) => setSearchTerm(e.target.value)}
+						/>
+						<div className="flex items-center justify-end gap-2">
+							<UserManagementLineageToggle
+								lineage={lineage}
+								onLineageChange={setLineage}
+							/>
+							<UserManagementViewToggle
+								view={view}
+								onViewChange={handleViewChange}
+							/>
+						</div>
+					</div>
+					{filteredAndSortedUsers.length === 0 ? (
+						<UsersNotFoundState
+							message="No users found"
+							action={
+								activeFilterCount > 0 ? (
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={clearAllFilters}
+										className="mt-3"
+									>
+										Clear filters
+									</Button>
+								) : undefined
+							}
+						/>
+					) : (
+						<UserAssignmentGraph
+							users={filteredAndSortedUsers}
+							allUsers={users}
+							lineage={lineage}
+							canEditGraph={canManageUsers}
+							canView={canViewUsers}
+							canEdit={canManageUsers}
+							canDeactivate={canDeactivateUsers}
+							canAssignRoles={canAssignRoles}
+							canImpersonate={canImpersonate}
+							actor={actor}
+							onAction={openAction}
+							onRefresh={refresh}
+						/>
+					)}
+				</>
 			) : (
 				<Card className="glass-card">
 					<div className="glass-card-cap" />
 					<CardContent className="w-full p-4 sm:p-6">
+						<div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+							<SearchField
+								placeholder="Search users by full name or email..."
+								containerClassName="w-[26rem] max-w-full shrink-0"
+								value={searchTerm}
+								onChange={(e) => setSearchTerm(e.target.value)}
+							/>
+							<div className="flex items-center justify-end gap-2">
+								<UserManagementViewToggle
+									view={view}
+									onViewChange={handleViewChange}
+								/>
+								<DropdownMenu>
+									<AppDropdownMenuTrigger
+										asChild
+										className="border-0 bg-transparent p-0 shadow-none ring-0 hover:bg-transparent data-[state=open]:bg-transparent"
+									>
+										<Button
+											variant="ghost"
+											size="sm"
+											className="primary-btn h-8 border-0 px-3 shadow-none focus-visible:ring-0 sm:px-4"
+										>
+											<Filter className="h-4 w-4" />
+											<span className="hidden sm:inline">Filter</span>
+											{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
+											<ChevronDown className="h-4 w-4" />
+										</Button>
+									</AppDropdownMenuTrigger>
+									<UserManagementFilterMenu
+										roles={allRoles}
+										departments={allDepartments}
+										assigners={allAssigners}
+										selectedRoles={selectedRoles}
+										selectedDepartments={selectedDepartments}
+										selectedAssignedBy={selectedAssignedBy}
+										dateRange={dateRangeFilter}
+										activeFilterCount={activeFilterCount}
+										onToggleRole={(role, checked) =>
+											setSelectedRoles((prev) =>
+												checked
+													? [...prev, role]
+													: prev.filter((item) => item !== role),
+											)
+										}
+										onToggleDepartment={(department, checked) =>
+											setSelectedDepartments((prev) =>
+												checked
+													? [...prev, department]
+													: prev.filter((item) => item !== department),
+											)
+										}
+										onToggleAssigner={(assigner, checked) =>
+											setSelectedAssignedBy((prev) =>
+												checked
+													? [...prev, assigner]
+													: prev.filter((item) => item !== assigner),
+											)
+										}
+										onDateRangeChange={setDateRangeFilter}
+										onClear={clearAllFilters}
+									/>
+								</DropdownMenu>
+								{view === "table" ? (
+									<DropdownMenu>
+										<AppDropdownMenuTrigger
+											asChild
+											className="border-0 bg-transparent p-0 shadow-none ring-0 hover:bg-transparent data-[state=open]:bg-transparent"
+										>
+											<Button
+												variant="ghost"
+												size="sm"
+												className="primary-btn h-8 border-0 px-3 shadow-none focus-visible:ring-0 sm:px-4"
+											>
+												<ArrowUpDown className="h-4 w-4" />
+												<span className="hidden sm:inline">Sort by</span>
+												<ChevronDown className="h-4 w-4" />
+											</Button>
+										</AppDropdownMenuTrigger>
+										<UserManagementSortMenu
+											sortKey={sortConfig.key}
+											direction={sortConfig.direction}
+											onSort={applySortPreset}
+										/>
+									</DropdownMenu>
+								) : null}
+							</div>
+						</div>
 						{canSelectUsers ? (
 							<div className="mb-3">
 								<UserManagementBulkBar

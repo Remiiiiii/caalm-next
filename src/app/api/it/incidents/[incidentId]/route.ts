@@ -9,7 +9,7 @@ import {
 import { requirePermission } from "@/lib/rbac/middleware";
 
 const patchSchema = z.object({
-	action: z.enum(["acknowledge", "assign", "resolve"]),
+	action: z.enum(["acknowledge", "assign", "resolve", "unresolve"]),
 	assignedTo: z.string().optional(),
 	resolutionNote: z.string().max(1000).optional(),
 });
@@ -64,6 +64,18 @@ export async function PATCH(
 		}
 		const incident = await updateIncident(incidentId, {
 			assignedTo: parsed.data.assignedTo,
+		});
+		return NextResponse.json({ success: true, data: { incident } });
+	}
+
+	if (action === "unresolve") {
+		const incident = await updateIncident(incidentId, {
+			status: "acknowledged",
+			resolvedBy: null,
+			resolvedAt: null,
+			resolutionNote: null,
+			unresolvedBy: user.$id,
+			unresolvedAt: now,
 		});
 		return NextResponse.json({ success: true, data: { incident } });
 	}

@@ -30,6 +30,8 @@ export interface LoadIncident {
 	resolvedBy: string | null;
 	resolvedAt: string | null;
 	resolutionNote: string | null;
+	unresolvedBy: string | null;
+	unresolvedAt: string | null;
 	reopenedFrom: string | null;
 	$createdAt: string;
 	$updatedAt: string;

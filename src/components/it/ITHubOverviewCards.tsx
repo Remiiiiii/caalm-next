@@ -9,6 +9,7 @@ import {
 	Users,
 } from "lucide-react";
 import Link from "next/link";
+import { LoadError } from "@/components/LoadError";
 import { Card, CardContent } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { MetricStatCard } from "@/components/ui/metric-stat-card";
@@ -23,7 +24,7 @@ function ratioLabel(used: number | null, limit: number): string {
 }
 
 export function ITHubOverviewCards({ orgId }: { orgId: string }) {
-	const { snapshot, isLoading, error } = useITHubOverview(orgId);
+	const { snapshot, isLoading, error, refresh } = useITHubOverview(orgId);
 
 	if (isLoading) {
 		return (
@@ -35,9 +36,13 @@ export function ITHubOverviewCards({ orgId }: { orgId: string }) {
 
 	if (error || !snapshot) {
 		return (
-			<div className="rounded-lg border border-red/20 bg-red/10 px-4 py-3 text-sm text-red">
-				{error || "Unable to load organization IT data."}
-			</div>
+			<LoadError
+				scale="section"
+				title="We couldn't load organization IT data"
+				elementKey="it-hub-overview"
+				error={{ requestPath: `/api/it/overview?orgId=${orgId}` }}
+				onRetry={() => refresh()}
+			/>
 		);
 	}
 

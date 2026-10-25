@@ -68,7 +68,7 @@ const SIDEBAR_SECTIONS = [
 				active: false,
 			},
 			{
-				name: "Advanced Resources",
+				name: "Government Contracts",
 				icon: "/assets/icons/resources.svg",
 				active: false,
 			},

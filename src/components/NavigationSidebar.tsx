@@ -37,7 +37,7 @@ const groupedNav = [
 				icon: "/assets/icons/proposal-approval.svg",
 			},
 			{
-				name: "Advanced Resources",
+				name: "Government Contracts",
 				icon: "/assets/icons/resources.svg",
 			},
 		],

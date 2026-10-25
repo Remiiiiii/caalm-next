@@ -1,8 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getEffectiveUser } from "@/lib/impersonation/effective-user";
 import {
 	countResolvedSince,
+	deleteIncidents,
 	listActiveIncidents,
 } from "@/lib/incidents/incident.repository";
 import { requirePermission } from "@/lib/rbac/middleware";
@@ -32,7 +34,7 @@ export async function GET(request: NextRequest) {
 	const assignedTo = url.searchParams.get("assignedTo") || undefined;
 
 	const [incidents, effectiveUser] = await Promise.all([
-		listActiveIncidents({ search, scale, assignedTo }),
+		listActiveIncidents({ search, scale, assignedTo, includeResolved: true }),
 		getEffectiveUser(request),
 	]);
 	const currentUserId = effectiveUser?.effectiveUser.$id;
@@ -40,18 +42,22 @@ export async function GET(request: NextRequest) {
 	const now = Date.now();
 	const todayStartIso = new Date(new Date().setHours(0, 0, 0, 0)).toISOString();
 
+	const activeIncidents = incidents.filter((row) => row.status !== "resolved");
+
 	// Active breakdown
-	const newCount = incidents.filter((row) => row.status === "new").length;
-	const acknowledgedCount = incidents.filter(
+	const newCount = activeIncidents.filter((row) => row.status === "new").length;
+	const acknowledgedCount = activeIncidents.filter(
 		(row) => row.status === "acknowledged",
 	).length;
-	const reopenedCount = incidents.filter((row) => row.reopenedFrom).length;
-	const openedLastHour = incidents.filter(
+	const reopenedCount = activeIncidents.filter(
+		(row) => row.reopenedFrom,
+	).length;
+	const openedLastHour = activeIncidents.filter(
 		(row) => now - new Date(row.firstSeenAt).getTime() <= HOUR_MS,
 	).length;
 
 	// Unassigned breakdown
-	const unassignedRows = incidents.filter((row) => !row.assignedTo);
+	const unassignedRows = activeIncidents.filter((row) => !row.assignedTo);
 	const unassigned = unassignedRows.length;
 	const oldestUnassignedMs = unassignedRows.length
 		? now -
@@ -62,14 +68,14 @@ export async function GET(request: NextRequest) {
 	const pastResponseTarget = unassignedRows.filter(
 		(row) => now - new Date(row.firstSeenAt).getTime() > RESPONSE_TARGET_MS,
 	).length;
-	const pageLevelFailures = incidents.filter(
+	const pageLevelFailures = activeIncidents.filter(
 		(row) => row.scale === "page",
 	).length;
-	const sectionOrTableFailures = incidents.filter(
+	const sectionOrTableFailures = activeIncidents.filter(
 		(row) => row.scale === "section" || row.scale === "table",
 	).length;
 	const assignedToYou = currentUserId
-		? incidents.filter((row) => row.assignedTo === currentUserId).length
+		? activeIncidents.filter((row) => row.assignedTo === currentUserId).length
 		: 0;
 
 	// Users affected (24h) breakdown
@@ -123,15 +129,15 @@ export async function GET(request: NextRequest) {
 		: null;
 
 	// Oldest open breakdown
-	const oldestOpenEntry = incidents.length
-		? incidents.reduce((oldest, row) =>
+	const oldestOpenEntry = activeIncidents.length
+		? activeIncidents.reduce((oldest, row) =>
 				new Date(row.firstSeenAt) < new Date(oldest.firstSeenAt) ? row : oldest,
 			)
 		: null;
 	const oldestOpenMs = oldestOpenEntry
 		? now - new Date(oldestOpenEntry.firstSeenAt).getTime()
 		: null;
-	const ackDurations = incidents
+	const ackDurations = activeIncidents
 		.filter((row) => row.acknowledgedAt)
 		.map(
 			(row) =>
@@ -140,9 +146,9 @@ export async function GET(request: NextRequest) {
 		);
 	const medianAckMs = median(ackDurations);
 	const medianAgeMs = median(
-		incidents.map((row) => now - new Date(row.firstSeenAt).getTime()),
+		activeIncidents.map((row) => now - new Date(row.firstSeenAt).getTime()),
 	);
-	const openLongerThan1h = incidents.filter(
+	const openLongerThan1h = activeIncidents.filter(
 		(row) => now - new Date(row.firstSeenAt).getTime() > HOUR_MS,
 	).length;
 	const resolvedToday = await countResolvedSince(todayStartIso);
@@ -152,7 +158,7 @@ export async function GET(request: NextRequest) {
 		data: {
 			incidents,
 			summary: {
-				active: incidents.length,
+				active: activeIncidents.length,
 				newCount,
 				acknowledgedCount,
 				reopenedCount,
@@ -187,4 +193,24 @@ export async function GET(request: NextRequest) {
 			},
 		},
 	});
+}
+
+const deleteSchema = z.object({
+	ids: z.array(z.string()).min(1).max(50),
+});
+
+export async function DELETE(request: NextRequest) {
+	const denied = await requirePermission(request, {
+		permission: PERMISSIONS.IT.MANAGE_INCIDENTS,
+	});
+	if (denied) return denied;
+
+	const body = await request.json().catch(() => null);
+	const parsed = deleteSchema.safeParse(body);
+	if (!parsed.success) {
+		return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+	}
+
+	await deleteIncidents(parsed.data.ids);
+	return NextResponse.json({ success: true, deleted: parsed.data.ids.length });
 }

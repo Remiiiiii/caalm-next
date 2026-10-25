@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { useCallback, useState } from "react";
 import useSWR from "swr";
 import { ReadinessCharts } from "@/components/audits/ReadinessCharts";
+import { LoadError } from "@/components/LoadError";
 import { FALLBACK_RAG_THRESHOLDS } from "@/components/audits/readiness/readiness-ui";
 import type {
 	RagThresholds,
@@ -83,7 +84,7 @@ export default function AuditReadinessPreviewPage() {
 
 	// ?snapshotId= previews a saved snapshot; without it the packet shows live data.
 	const snapshotIdParam = useSearchParams()?.get("snapshotId") ?? null;
-	const { data, isLoading } = useSWR<PreviewResponse>(
+	const { data, isLoading, mutate } = useSWR<PreviewResponse>(
 		permissions.includes(PERMISSIONS.AUDIT.VIEW)
 			? snapshotIdParam
 				? `/api/audits/readiness?snapshotId=${encodeURIComponent(snapshotIdParam)}`
@@ -137,7 +138,14 @@ export default function AuditReadinessPreviewPage() {
 	if (!payload) {
 		return (
 			<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-8">
-				<p className="text-slate-600">Unable to load readiness packet.</p>
+				<LoadError
+					scale="page"
+					title="We couldn't load the readiness packet"
+					description="Something went wrong on our side. Your data hasn't changed."
+					elementKey="readiness-preview"
+					error={{ requestPath: "/api/audits/readiness" }}
+					onRetry={() => mutate()}
+				/>
 			</div>
 		);
 	}

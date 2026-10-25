@@ -48,7 +48,7 @@ export const ITEM_ICONS: Record<
 		height: 18,
 		color: SUBITEM_TEXT_GREY,
 	},
-	"Advanced Resources": {
+	"Government Contracts": {
 		src: "/assets/icons/resources.svg",
 		width: 20,
 		height: 20,

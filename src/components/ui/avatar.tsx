@@ -37,7 +37,7 @@ const PHOTO_RING_GRADIENT = "linear-gradient(135deg, #12477d 0%, #03afbf 100%)";
 interface AvatarProps {
 	name?: string;
 	userId: string;
-	size?: "sm" | "md" | "lg";
+	size?: "xs" | "sm" | "md" | "lg";
 	className?: string;
 	showName?: boolean;
 	/** When set (and loads), show the photo instead of initials. */
@@ -75,10 +75,17 @@ const Avatar: React.FC<AvatarProps> = ({
 
 	// Size classes
 	const sizeClasses = {
-		sm: "w-6 h-6 text-xs",
+		xs: "w-5 h-5 text-[10px]",
+		sm: "w-7 h-7 text-xs",
 		md: "w-8 h-8 text-sm",
 		lg: "w-12 h-12 text-lg",
 	};
+
+	const ringPx = size === "sm" ? "2px" : "2px";
+	const borderClass =
+		size === "sm"
+			? "border-[2px] border-[#FCFEFF]"
+			: "border-[1.5px] border-[#FCFEFF]";
 
 	return (
 		<div className={cn("flex items-center gap-2", className)}>
@@ -90,14 +97,17 @@ const Avatar: React.FC<AvatarProps> = ({
 					)}
 					style={{
 						background: PHOTO_RING_GRADIENT,
-						padding: "2px",
+						padding: ringPx,
 					}}
 				>
 					{/* eslint-disable-next-line @next/next/no-img-element -- remote Appwrite / CDN URLs */}
 					<img
 						src={imageUrl || ""}
 						alt=""
-						className="h-full w-full rounded-full object-cover border border-[#FCFEFF]"
+						className={cn(
+							"h-full w-full rounded-full object-cover",
+							borderClass,
+						)}
 						onError={() => setImageFailed(true)}
 					/>
 				</div>

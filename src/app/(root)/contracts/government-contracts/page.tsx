@@ -2,12 +2,12 @@ import type { Metadata } from "next";
 import ContractsDisplay from "@/components/ContractsDisplay";
 
 export const metadata: Metadata = {
-	title: "Advanced Resources - Government Contracts | CAALM",
+	title: "Government Contracts | CAALM",
 	description:
 		"Search and explore government contract opportunities from SAM.gov",
 };
 
-export default function AdvancedResourcesPage() {
+export default function GovernmentContractsPage() {
 	return (
 		<div className="relative min-h-screen">
 			{/* Main Content */}

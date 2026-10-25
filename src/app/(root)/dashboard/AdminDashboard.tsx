@@ -26,6 +26,7 @@ import type React from "react";
 import { useState } from "react";
 import useSWR from "swr";
 import CalendarView from "@/components/CalendarView";
+import { LoadError } from "@/components/LoadError";
 import CompanyNewsFeed from "@/components/CompanyNewsFeed";
 import ContractExpiryAlertsWidget from "@/components/ContractExpiryAlertsWidget";
 import ContractStatusPieChart from "@/components/ContractStatusPieChart";
@@ -523,13 +524,14 @@ const AdminDashboard = ({ user }: AdminDashboardProps) => {
 	if (error) {
 		return (
 			<div className="space-y-6">
-				<Card>
-					<CardContent className="p-6">
-						<div className="text-center text-red-600">
-							<p>Failed to load admin statistics</p>
-						</div>
-					</CardContent>
-				</Card>
+				<LoadError
+					scale="page"
+					title="We couldn't load the admin dashboard"
+					description="Something went wrong on our side. Your data hasn't changed."
+					elementKey="admin-dashboard"
+					error={{ requestPath: "/api/admin/stats" }}
+					onRetry={() => refresh()}
+				/>
 			</div>
 		);
 	}

@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertTriangle, Clock, Eye, EyeOff } from "lucide-react";
+import { LoadError } from "@/components/LoadError";
 import type React from "react";
 import CountdownTimer from "@/components/CountdownTimer";
 import { Badge } from "@/components/ui/badge";
@@ -96,14 +97,17 @@ export const FullContractExpiryWidget: React.FC<
 			>
 				<CardHeader className="pb-3">
 					<CardTitle className="flex items-center text-lg font-bold sidebar-gradient-text">
-						<AlertTriangle className="h-5 w-5 text-red" />
 						Contract Expiry Alerts
 					</CardTitle>
 				</CardHeader>
 				<CardContent>
-					<div className="text-center text-red py-4">
-						<p>Failed to load contract data</p>
-					</div>
+					<LoadError
+						scale="section"
+						title="We couldn't load contract expiry alerts"
+						elementKey="contract-expiry-full"
+						error={{ requestPath: "/api/contracts" }}
+						onRetry={() => window.location.reload()}
+					/>
 				</CardContent>
 			</Card>
 		);

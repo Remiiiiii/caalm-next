@@ -15,6 +15,7 @@ import { useState } from "react";
 import { BusyIcon } from "@/components/ui/busy-icon";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { LoadError } from "@/components/LoadError";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { SampleDataBadge } from "@/components/ui/sample-data-badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -214,13 +215,14 @@ const EnhancedAnalyticsDashboard: React.FC<EnhancedAnalyticsDashboardProps> = ({
 
 	if (error) {
 		return (
-			<div className="text-center py-12">
-				<div className="flex items-center justify-center gap-2 text-red-600 mb-4">
-					<AlertTriangle className="h-5 w-5" aria-hidden />
-					<span>Error Loading Analytics</span>
-				</div>
-				<p className="text-red-700 mb-4">{error}</p>
-			</div>
+			<LoadError
+				scale="page"
+				title="We couldn't load analytics"
+				description="Something went wrong on our side. Your data hasn't changed."
+				elementKey="analytics-dashboard"
+				error={{ requestPath: `/api/analytics/${department}` }}
+				onRetry={() => window.location.reload()}
+			/>
 		);
 	}
 

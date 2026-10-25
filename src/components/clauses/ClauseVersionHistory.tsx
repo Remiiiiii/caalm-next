@@ -1,4 +1,5 @@
 import { History } from "lucide-react";
+import { LoadError } from "@/components/LoadError";
 import { useEffect, useState } from "react";
 import { AppDialog } from "@/components/ui/app-dialog";
 import type { Clause } from "@/types/clauses";
@@ -30,7 +31,15 @@ function VersionList({
 		return <p className="text-sm text-slate-600">Loading versions…</p>;
 	}
 	if (error) {
-		return <p className="text-sm text-red/80">{error}</p>;
+		return (
+			<LoadError
+				scale="section"
+				title="We couldn't load clause versions"
+				elementKey="clause-version-history"
+				error={{ requestPath: "/api/clauses" }}
+				onRetry={() => window.location.reload()}
+			/>
+		);
 	}
 	if (versions.length === 0) {
 		return <p className="text-sm text-slate-600">No versions found.</p>;

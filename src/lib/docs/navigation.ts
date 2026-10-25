@@ -302,7 +302,7 @@ export const DOCS_NAV: DocsNavGroup[] = [
 				summary: "Plans, usage, Gmail, Microsoft 365, and API keys.",
 			},
 			{
-				title: "SAM.gov advanced resources",
+				title: "SAM.gov government contracts",
 				slug: "reference/sam-gov",
 				path: "reference/sam-gov",
 				summary: "Search federal opportunities from CAALM.",

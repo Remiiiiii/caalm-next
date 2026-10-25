@@ -12,6 +12,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { BusyIcon } from "@/components/ui/busy-icon";
 import { Button } from "@/components/ui/button";
+import { LoadError } from "@/components/LoadError";
 import { Card, CardContent } from "@/components/ui/card";
 import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import { useBusyAction } from "@/hooks/useBusyAction";
@@ -59,9 +60,13 @@ export function DevelopmentDashboardClient() {
 
 	if (!metrics) {
 		return (
-			<p className="text-sm text-slate-600">
-				Unable to load development metrics.
-			</p>
+			<LoadError
+				scale="section"
+				title="We couldn't load development metrics"
+				elementKey="development-dashboard"
+				error={{ requestPath: "/api/development/metrics" }}
+				onRetry={() => load()}
+			/>
 		);
 	}
 

@@ -2,15 +2,22 @@
 
 import {
 	AlertCircle,
+	Check,
+	ChevronDown,
 	Clock,
 	Copy,
 	RefreshCw,
+	RotateCcw,
+	Search,
 	ShieldAlert,
+	Trash2,
 	Users,
 } from "lucide-react";
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import useSWR, { useSWRConfig } from "swr";
+import Avatar from "@/components/ui/avatar";
+import { BulkActionDock } from "@/components/ui/bulk-action-dock";
 import { Button } from "@/components/ui/button";
 import {
 	type CaalmFilterOption,
@@ -25,18 +32,23 @@ import {
 	DATA_TABLE_HEADER_ROW,
 } from "@/components/ui/caalm-data-table";
 import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { FILTER_PILL_TRIGGER } from "@/components/ui/filter-pill";
 import {
 	MetricSegmentBar,
 	MetricStatCard,
 	StatRows,
 } from "@/components/ui/metric-stat-card";
+import { PageIndex } from "@/components/ui/page-index";
 import { SearchField } from "@/components/ui/search-field";
-import {
-	Sheet,
-	SheetContent,
-	SheetHeader,
-	SheetTitle,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Switch } from "@/components/ui/switch";
 import {
 	TableBody,
 	TableCell,
@@ -44,6 +56,12 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipProvider,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { useUsersByIds } from "@/hooks/useUsersByIds";
 import type { LoadIncident } from "@/lib/incidents/incident.types";
@@ -176,7 +194,21 @@ export function ActiveIncidentsClient({
 	const [selected, setSelected] = useState<LoadIncident | null>(null);
 	const [resolutionNote, setResolutionNote] = useState("");
 	const [resolvingOpen, setResolvingOpen] = useState(false);
+	const [assignSearch, setAssignSearch] = useState("");
+	const [copied, setCopied] = useState(false);
+	const [selectedIds, setSelectedIds] = useState<string[]>([]);
+	const [page, setPage] = useState(1);
+	const tableRef = useRef<HTMLDivElement>(null);
 	const { toast } = useToast();
+
+	const { data: itStaff } = useSWR<
+		Array<{
+			$id: string;
+			accountId?: string;
+			fullName: string;
+			imageUrl?: string | null;
+		}>
+	>(canManage ? "/api/it/staff" : null, fetcher);
 
 	const params = new URLSearchParams();
 	if (search) params.set("search", search);
@@ -187,17 +219,32 @@ export function ActiveIncidentsClient({
 		fetcher,
 	);
 
+	const PAGE_SIZE = 12;
 	const incidents = data?.data.incidents ?? [];
 	const summary = data?.data.summary;
+	const totalPages = Math.max(1, Math.ceil(incidents.length / PAGE_SIZE));
+	const safePage = Math.min(page, totalPages);
+	const pagedIncidents = incidents.slice(
+		(safePage - 1) * PAGE_SIZE,
+		safePage * PAGE_SIZE,
+	);
+	const visibleIds = pagedIncidents.map((r) => r.$id);
+	const allSelected =
+		visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
+	const someSelected =
+		!allSelected && visibleIds.some((id) => selectedIds.includes(id));
 
 	const userIds = useMemo(
 		() =>
 			Array.from(
 				new Set(
 					incidents.flatMap((row) =>
-						[row.assignedTo, row.acknowledgedBy, row.resolvedBy].filter(
-							(id): id is string => Boolean(id),
-						),
+						[
+							row.assignedTo,
+							row.acknowledgedBy,
+							row.resolvedBy,
+							row.unresolvedBy,
+						].filter((id): id is string => Boolean(id)),
 					),
 				),
 			),
@@ -219,9 +266,10 @@ export function ActiveIncidentsClient({
 			});
 			const result = await res.json();
 			if (!res.ok) throw new Error(result.error || "Action failed");
+			const updated = result.data.incident as LoadIncident;
 			await mutate();
 			if (selected?.$id === incidentId) {
-				setSelected(result.data.incident as LoadIncident);
+				setSelected(updated);
 			}
 			return true;
 		} catch (err) {
@@ -231,6 +279,26 @@ export function ActiveIncidentsClient({
 				variant: "destructive",
 			});
 			return false;
+		}
+	};
+
+	const bulkDelete = async () => {
+		try {
+			const res = await fetch("/api/it/incidents", {
+				method: "DELETE",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ ids: selectedIds }),
+			});
+			if (!res.ok) throw new Error("Delete failed");
+			const count = selectedIds.length;
+			setSelectedIds([]);
+			await mutate();
+			toast({ title: `${count} incident(s) removed` });
+		} catch {
+			toast({
+				title: "Couldn't delete incidents",
+				variant: "destructive",
+			});
 		}
 	};
 
@@ -375,7 +443,7 @@ export function ActiveIncidentsClient({
 				/>
 			</div>
 
-			<Card className="glass-card">
+			<Card ref={tableRef} className="glass-card">
 				<div className="glass-card-cap" />
 				<CardContent className="p-4 text-slate-700 sm:p-6">
 					<div className="flex flex-wrap items-center gap-3 mb-5">
@@ -407,7 +475,31 @@ export function ActiveIncidentsClient({
 						<CaalmDataTable className="pb-0">
 							<TableHeader className="[&_tr]:border-b-0">
 								<TableRow className={DATA_TABLE_HEADER_ROW}>
-									<TableHead className={cn(DATA_TABLE_HEADER_CELL, "pl-4")}>
+									<TableHead
+										className={cn(DATA_TABLE_HEADER_CELL, "w-10 pl-4")}
+									>
+										<Checkbox
+											checked={
+												allSelected
+													? true
+													: someSelected
+														? "indeterminate"
+														: false
+											}
+											onCheckedChange={(checked) => {
+												if (checked) {
+													setSelectedIds((prev) => [
+														...new Set([...prev, ...visibleIds]),
+													]);
+												} else {
+													setSelectedIds((prev) =>
+														prev.filter((id) => !visibleIds.includes(id)),
+													);
+												}
+											}}
+										/>
+									</TableHead>
+									<TableHead className={cn(DATA_TABLE_HEADER_CELL)}>
 										Reference
 									</TableHead>
 									<TableHead className={DATA_TABLE_HEADER_CELL}>
@@ -432,13 +524,15 @@ export function ActiveIncidentsClient({
 								</TableRow>
 							</TableHeader>
 							<TableBody className="[&_tr:last-child>td]:border-b-0">
-								{incidents.map((row) => (
+								{pagedIncidents.map((row) => (
 									<TableRow
 										key={row.$id}
 										tabIndex={0}
 										className={cn(
 											DATA_TABLE_BODY_ROW_CLICKABLE,
 											selected?.$id === row.$id && "bg-blue/10",
+											selectedIds.includes(row.$id) &&
+												"bg-blue/10 [&>td:first-child]:relative [&>td:first-child]:before:absolute [&>td:first-child]:before:inset-y-0 [&>td:first-child]:before:left-0 [&>td:first-child]:before:w-0.5 [&>td:first-child]:before:bg-[#0f5384]",
 										)}
 										onClick={() => setSelected(row)}
 										onKeyDown={(e) => {
@@ -446,9 +540,24 @@ export function ActiveIncidentsClient({
 										}}
 									>
 										<TableCell
+											className={cn(DATA_TABLE_CELL, "w-10 pl-4")}
+											onClick={(e) => e.stopPropagation()}
+										>
+											<Checkbox
+												checked={selectedIds.includes(row.$id)}
+												onCheckedChange={(checked) => {
+													setSelectedIds((prev) =>
+														checked
+															? [...prev, row.$id]
+															: prev.filter((id) => id !== row.$id),
+													);
+												}}
+											/>
+										</TableCell>
+										<TableCell
 											className={cn(
 												DATA_TABLE_CELL,
-												"whitespace-nowrap pl-4 font-mono text-[#0f5384]",
+												"whitespace-nowrap font-mono text-[#0f5384]",
 											)}
 										>
 											{row.reference}
@@ -466,11 +575,11 @@ export function ActiveIncidentsClient({
 										</TableCell>
 										<TableCell className={DATA_TABLE_CELL}>
 											{row.errorStatus ? (
-												<span className="rounded-md border border-red/20 bg-red/10 px-2 py-0.5 text-xs font-bold text-red">
+												<span className="rounded-full border border-red/20 bg-red/10 px-2.5 py-0.5 text-xs font-bold text-red">
 													{row.errorStatus}
 												</span>
 											) : null}
-											<p className="mt-0.5 truncate text-xs text-slate-500">
+											<p className="mt-1 truncate text-xs text-slate-500">
 												{row.requestPath}
 											</p>
 										</TableCell>
@@ -502,22 +611,80 @@ export function ActiveIncidentsClient({
 													"inline-block rounded-full border px-2 py-0.5 text-xs",
 													row.status === "new"
 														? "border-red/20 bg-red/10 text-red"
-														: "border-blue/20 bg-blue/10 text-blue",
+														: row.status === "resolved"
+															? "border-green/20 bg-green/10 text-green"
+															: "border-blue/20 bg-blue/10 text-blue",
 												)}
 											>
-												{row.status === "new" ? "New" : "Acknowledged"}
+												{row.status === "new"
+													? "New"
+													: row.status === "resolved"
+														? "Resolved"
+														: "Acknowledged"}
 											</span>
 										</TableCell>
 										<TableCell className={cn(DATA_TABLE_CELL, "pr-4")}>
-											{assignedLabel(row.assignedTo)}
+											{row.assignedTo ? (
+												<TooltipProvider delayDuration={200}>
+													<Tooltip>
+														<TooltipTrigger asChild>
+															<span className="inline-block cursor-default">
+																<Avatar
+																	name={
+																		users.get(row.assignedTo)?.fullName ?? "?"
+																	}
+																	userId={row.assignedTo}
+																	size="sm"
+																	imageUrl={users.get(row.assignedTo)?.imageUrl}
+																/>
+															</span>
+														</TooltipTrigger>
+														<TooltipContent glass>
+															{assignedLabel(row.assignedTo)}
+														</TooltipContent>
+													</Tooltip>
+												</TooltipProvider>
+											) : (
+												<span className="text-slate-400">—</span>
+											)}
 										</TableCell>
 									</TableRow>
 								))}
 							</TableBody>
 						</CaalmDataTable>
 					)}
+					{incidents.length > PAGE_SIZE && (
+						<div className="pt-4">
+							<PageIndex
+								page={safePage}
+								totalPages={totalPages}
+								totalItems={incidents.length}
+								pageSize={PAGE_SIZE}
+								onPageChange={setPage}
+							/>
+						</div>
+					)}
 				</CardContent>
 			</Card>
+
+			{selectedIds.length > 0 && (
+				<BulkActionDock
+					count={selectedIds.length}
+					noun="incident"
+					anchorRef={tableRef}
+					onClear={() => setSelectedIds([])}
+				>
+					<Button
+						size="sm"
+						variant="destructive"
+						className="delete-btn"
+						onClick={() => void bulkDelete()}
+					>
+						<Trash2 className="h-3.5 w-3.5" />
+						Remove
+					</Button>
+				</BulkActionDock>
+			)}
 
 			<Sheet
 				open={selected !== null}
@@ -529,32 +696,67 @@ export function ActiveIncidentsClient({
 					}
 				}}
 			>
-				<SheetContent side="right" className="w-[500px] sm:max-w-[500px]">
+				<SheetContent
+					side="right"
+					className="my-4 mr-4 !h-auto max-h-[calc(100vh-2rem)] w-[500px] overflow-hidden rounded-xl border border-slate-200 p-0 shadow-xl sm:max-w-[500px]"
+				>
 					{selected && (
 						<div className="flex h-full min-h-0 flex-col">
-							<SheetHeader className="shrink-0">
-								<div className="flex items-center justify-between gap-3 pr-8">
-									<SheetTitle>{selected.reference}</SheetTitle>
+							{/* ── card cap ── */}
+							<div className="glass-card-cap" />
+
+							{/* ── header ── */}
+							<div className="shrink-0 px-6 pt-8 pb-4">
+								<div className="flex items-center justify-between gap-3">
+									<div className="flex items-center gap-2 min-w-0">
+										<SheetTitle className="text-base font-bold text-slate-800">
+											{selected.reference}
+										</SheetTitle>
+										<button
+											type="button"
+											aria-label="Copy reference"
+											className="shrink-0"
+											onClick={() => {
+												void navigator.clipboard.writeText(selected.reference);
+												setCopied(true);
+												setTimeout(() => setCopied(false), 1500);
+											}}
+										>
+											{copied ? (
+												<Check className="h-4 w-4 text-green-500" />
+											) : (
+												<Copy className="h-4 w-4 text-slate-400 hover:text-slate-600" />
+											)}
+										</button>
+									</div>
 									<span
 										className={cn(
-											"inline-block shrink-0 rounded-full border px-2 py-0.5 text-xs font-semibold",
+											"inline-block shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-semibold",
 											selected.status === "new"
 												? "border-red/20 bg-red/10 text-red"
-												: "border-blue/20 bg-blue/10 text-blue",
+												: selected.status === "resolved"
+													? "border-green/20 bg-green/10 text-green"
+													: "border-blue/20 bg-blue/10 text-blue",
 										)}
 									>
-										{selected.status === "new" ? "New" : "Acknowledged"}
+										{selected.status === "new"
+											? "New"
+											: selected.status === "resolved"
+												? "Resolved"
+												: "Acknowledged"}
 									</span>
 								</div>
-								<p className="text-sm text-slate-500">
-									{selected.route} · {SCALE_LABELS[selected.scale]} failed to
-									load
+								<p className="mt-0.5 text-sm text-slate-500">
+									{humanizeRoute(selected.route)} ·{" "}
+									{SCALE_LABELS[selected.scale]} failed to load
 								</p>
-							</SheetHeader>
+							</div>
 
-							<div className="min-h-0 flex-1 space-y-5 overflow-y-auto py-4">
-								<div>
-									<p className="mb-2 text-xs font-semibold uppercase text-slate-500">
+							{/* ── scrollable body ── */}
+							<div className="min-h-0 flex-1 overflow-y-auto">
+								{/* ── what the user saw ── */}
+								<div className="border-t border-slate-200 px-6 py-4">
+									<p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
 										What the user saw
 									</p>
 									{selected.screenshotPath ? (
@@ -564,7 +766,7 @@ export function ActiveIncidentsClient({
 												<span className="h-2 w-2 rounded-full bg-slate-300" />
 												<span className="h-2 w-2 rounded-full bg-slate-300" />
 												<span className="ml-2 truncate text-xs text-slate-500">
-													{selected.route}
+													…{selected.route}
 												</span>
 											</div>
 											<Image
@@ -582,7 +784,7 @@ export function ActiveIncidentsClient({
 										</div>
 									)}
 									{selected.screenshotCapturedAt && (
-										<div className="mt-1 flex items-center justify-between gap-3">
+										<div className="mt-2 flex items-center justify-between gap-3">
 											<p className="text-xs text-slate-400">
 												Captured {formatDateTime(selected.screenshotCapturedAt)}{" "}
 												(first occurrence)
@@ -601,11 +803,12 @@ export function ActiveIncidentsClient({
 									)}
 								</div>
 
-								<div>
-									<p className="mb-2 text-xs font-semibold uppercase text-slate-500">
+								{/* ── details ── */}
+								<div className="border-t border-slate-200 px-6 py-4">
+									<p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
 										Details
 									</p>
-									<dl className="space-y-2 text-sm">
+									<dl className="divide-y divide-slate-200 text-sm">
 										<Row label="Page / route" value={selected.route} />
 										<Row
 											label="Failed request"
@@ -631,83 +834,281 @@ export function ActiveIncidentsClient({
 									</dl>
 								</div>
 
-								{canManage && (
-									<div>
-										<div className="flex flex-wrap items-center gap-2">
-											<button
-												type="button"
-												className="btn-primary"
-												disabled={selected.status !== "new"}
-												onClick={() =>
+								{/* ── actions ── */}
+								<div className="border-t border-slate-200 px-6 py-4">
+									<p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
+										Actions
+									</p>
+									<div className="flex flex-col gap-3">
+										{/* ── assign dropdown ── */}
+										<div className="flex items-center justify-between">
+											<span className="text-sm text-slate-600">Assign to</span>
+											<DropdownMenu>
+												<DropdownMenuTrigger
+													disabled={!canManage}
+													className={cn(
+														FILTER_PILL_TRIGGER,
+														"disabled:opacity-50",
+													)}
+												>
+													{selected.assignedTo ? (
+														<>
+															<Avatar
+																name={
+																	users.get(selected.assignedTo)?.fullName ??
+																	"?"
+																}
+																userId={selected.assignedTo}
+																size="xs"
+																imageUrl={
+																	users.get(selected.assignedTo)?.imageUrl
+																}
+															/>
+															<span className="max-w-[10rem] truncate">
+																{assignedLabel(selected.assignedTo)}
+															</span>
+														</>
+													) : (
+														<span className="text-slate-400">Unassigned</span>
+													)}
+													<ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+												</DropdownMenuTrigger>
+												<DropdownMenuContent align="end" className="w-64 p-0">
+													<div className="flex items-center gap-2 border-b border-slate-200/80 px-3 py-2">
+														<Search className="h-4 w-4 shrink-0 text-slate-400" />
+														<input
+															type="text"
+															className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
+															placeholder="Search staff…"
+															value={assignSearch}
+															onChange={(e) => setAssignSearch(e.target.value)}
+															onClick={(e) => e.stopPropagation()}
+															onKeyDown={(e) => e.stopPropagation()}
+														/>
+													</div>
+													<div className="max-h-52 overflow-y-auto py-1">
+														{(itStaff ?? [])
+															.filter((u) =>
+																u.fullName
+																	.toLowerCase()
+																	.includes(assignSearch.toLowerCase()),
+															)
+															.map((u) => (
+																<DropdownMenuItem
+																	key={u.$id}
+																	className="flex items-center gap-2.5 px-3 py-2"
+																	onSelect={() => {
+																		void act(selected.$id, {
+																			action: "assign",
+																			assignedTo: u.accountId || u.$id,
+																		});
+																		setAssignSearch("");
+																	}}
+																>
+																	<Avatar
+																		name={u.fullName}
+																		userId={u.accountId || u.$id}
+																		size="xs"
+																		imageUrl={u.imageUrl}
+																	/>
+																	<span className="truncate">{u.fullName}</span>
+																	{(u.accountId || u.$id) ===
+																		selected.assignedTo && (
+																		<Check className="ml-auto h-4 w-4 shrink-0 text-green-600" />
+																	)}
+																</DropdownMenuItem>
+															))}
+														{itStaff &&
+															itStaff.filter((u) =>
+																u.fullName
+																	.toLowerCase()
+																	.includes(assignSearch.toLowerCase()),
+															).length === 0 && (
+																<p className="px-3 py-4 text-center text-sm text-slate-400">
+																	No matching staff
+																</p>
+															)}
+														{!itStaff && (
+															<p className="px-3 py-4 text-center text-sm text-slate-400">
+																Loading…
+															</p>
+														)}
+													</div>
+												</DropdownMenuContent>
+											</DropdownMenu>
+										</div>
+
+										{/* ── acknowledge switch ── */}
+										<div className="flex items-center justify-between">
+											<span className="text-sm text-slate-600">
+												Acknowledged
+											</span>
+											<Switch
+												checked={selected.status !== "new"}
+												disabled={!canManage || selected.status !== "new"}
+												onCheckedChange={() =>
 													void act(selected.$id, { action: "acknowledge" })
 												}
-											>
-												Acknowledge
-											</button>
-											<Button
-												variant="outline"
-												size="sm"
-												className="rounded-full"
-												onClick={() =>
-													void act(selected.$id, {
-														action: "assign",
-														assignedTo: currentUserId,
-													})
-												}
-											>
-												Assign…
-											</Button>
-											<Button
-												variant="outline"
-												size="sm"
-												className="rounded-full"
-												onClick={() => setResolvingOpen((open) => !open)}
-											>
-												Mark resolved
-											</Button>
-											<Button
-												type="button"
-												variant="outline"
-												size="icon"
-												className="h-8 w-8 shrink-0 rounded-full"
-												aria-label="Copy reference"
-												onClick={() => {
-													void navigator.clipboard.writeText(
-														selected.reference,
-													);
-													toast({ title: "Reference copied" });
-												}}
-											>
-												<Copy className="h-4 w-4" />
-											</Button>
+											/>
 										</div>
-										{resolvingOpen && (
-											<div className="mt-3 flex flex-col gap-2">
-												<textarea
-													className="w-full rounded-md border border-slate-300 p-2 text-sm"
-													placeholder="Resolution note (required to resolve)"
-													value={resolutionNote}
-													onChange={(e) => setResolutionNote(e.target.value)}
-													rows={2}
-												/>
-												<Button
-													variant="outline"
-													size="sm"
-													className="self-start rounded-full"
-													disabled={!resolutionNote.trim()}
-													onClick={() =>
-														void act(selected.$id, {
-															action: "resolve",
-															resolutionNote,
-														})
+
+										{/* ── mark resolved switch + textarea ── */}
+										<div className="flex items-center justify-between">
+											<span className="text-sm text-slate-600">Resolved</span>
+											<Switch
+												checked={
+													selected.status === "resolved" || resolvingOpen
+												}
+												disabled={!canManage}
+												onCheckedChange={async (checked) => {
+													if (!checked && selected.status === "resolved") {
+														await act(selected.$id, { action: "unresolve" });
+													} else {
+														setResolvingOpen(checked);
 													}
-												>
-													Confirm resolved
-												</Button>
+												}}
+											/>
+										</div>
+										{resolvingOpen &&
+											canManage &&
+											selected.status !== "resolved" && (
+												<div className="flex flex-col gap-2">
+													<textarea
+														className="w-full rounded-md border border-slate-300 p-2 text-sm"
+														placeholder="Resolution note (required to resolve)"
+														value={resolutionNote}
+														onChange={(e) => setResolutionNote(e.target.value)}
+														rows={2}
+													/>
+													<Button
+														size="sm"
+														className="btn-primary self-end"
+														disabled={!resolutionNote.trim()}
+														onClick={async () => {
+															const ok = await act(selected.$id, {
+																action: "resolve",
+																resolutionNote,
+															});
+															if (ok) {
+																setResolvingOpen(false);
+															}
+														}}
+													>
+														Confirm resolved
+													</Button>
+												</div>
+											)}
+									</div>
+								</div>
+
+								{/* ── activity ── */}
+								<div className="border-t border-slate-200 px-6 py-4">
+									<p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
+										Activity
+									</p>
+									<div className="divide-y divide-slate-100 text-sm">
+										<div className="flex justify-between gap-4 py-2">
+											<span className="text-slate-600">
+												Created automatically
+											</span>
+											<span className="whitespace-nowrap tabular-nums text-slate-500">
+												{formatDateTime(selected.$createdAt)}
+											</span>
+										</div>
+										{selected.screenshotCapturedAt && (
+											<div className="flex justify-between gap-4 py-2">
+												<span className="text-slate-600">
+													Screenshot captured
+												</span>
+												<span className="whitespace-nowrap tabular-nums text-slate-500">
+													{formatDateTime(selected.screenshotCapturedAt)}
+												</span>
+											</div>
+										)}
+										{selected.acknowledgedAt && (
+											<div className="flex justify-between gap-4 py-2">
+												<span className="text-slate-600">
+													Acknowledged
+													{selected.acknowledgedBy &&
+														users.get(selected.acknowledgedBy) &&
+														` by ${users.get(selected.acknowledgedBy)!.fullName}`}
+												</span>
+												<span className="whitespace-nowrap tabular-nums text-slate-500">
+													{formatDateTime(selected.acknowledgedAt)}
+												</span>
+											</div>
+										)}
+										{selected.assignedTo && (
+											<div className="flex justify-between gap-4 py-2">
+												<span className="text-slate-600">
+													Assigned to {assignedLabel(selected.assignedTo)}
+												</span>
+												<span className="whitespace-nowrap tabular-nums text-slate-500">
+													{formatDateTime(selected.$updatedAt)}
+												</span>
+											</div>
+										)}
+										{selected.occurrences > 1 && (
+											<div className="flex justify-between gap-4 py-2">
+												<span className="text-slate-600">
+													Seen again ({selected.occurrences - 1} more{" "}
+													{selected.occurrences - 1 === 1 ? "time" : "times"})
+												</span>
+												<span className="whitespace-nowrap tabular-nums text-slate-500">
+													{formatDateTime(selected.lastSeenAt)}
+												</span>
+											</div>
+										)}
+										{selected.resolvedAt && (
+											<div className="py-2">
+												<div className="flex justify-between gap-4">
+													<span className="text-slate-600">
+														Resolved
+														{selected.resolvedBy &&
+															users.get(selected.resolvedBy) &&
+															` by ${users.get(selected.resolvedBy)!.fullName}`}
+													</span>
+													<span className="whitespace-nowrap tabular-nums text-slate-500">
+														{formatDateTime(selected.resolvedAt)}
+													</span>
+												</div>
+												{selected.resolutionNote && (
+													<p className="mt-1.5 rounded-md bg-slate-50 px-3 py-2 text-sm text-slate-600 italic">
+														{selected.resolutionNote}
+													</p>
+												)}
+												{canManage && (
+													<button
+														type="button"
+														className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-[#0f5384] hover:underline"
+														onClick={() =>
+															void act(selected.$id, {
+																action: "unresolve",
+															})
+														}
+													>
+														<RotateCcw className="h-3 w-3" />
+														Undo resolve
+													</button>
+												)}
+											</div>
+										)}
+										{selected.unresolvedAt && (
+											<div className="flex justify-between gap-4 py-2">
+												<span className="text-slate-600">
+													<RotateCcw className="mr-1 inline h-3 w-3" />
+													Resolve undone
+													{selected.unresolvedBy &&
+														users.get(selected.unresolvedBy) &&
+														` by ${users.get(selected.unresolvedBy)!.fullName}`}
+												</span>
+												<span className="whitespace-nowrap tabular-nums text-slate-500">
+													{formatDateTime(selected.unresolvedAt)}
+												</span>
 											</div>
 										)}
 									</div>
-								)}
+								</div>
 							</div>
 						</div>
 					)}
@@ -719,7 +1120,7 @@ export function ActiveIncidentsClient({
 
 function Row({ label, value }: { label: string; value: string }) {
 	return (
-		<div className="flex justify-between gap-4">
+		<div className="flex justify-between gap-4 py-2">
 			<dt className="text-slate-500">{label}</dt>
 			<dd className="text-right font-medium text-slate-800">{value}</dd>
 		</div>

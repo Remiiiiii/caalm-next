@@ -15,7 +15,7 @@ Contracts are one of CAALM’s primary systems of record.
 | My Contracts | `/my-contracts` | Ownership / scoped working set |
 | Negotiate | `/contracts/[id]/negotiate` | Comment, redline, and invite before formal review |
 | Approvals | `/contracts/approvals` | Review and approve proposals |
-| Advanced Resources | `/contracts/advanced-resources` | SAM.gov opportunity search |
+| Government Contracts | `/contracts/government-contracts` | SAM.gov opportunity search |
 
 ## Core workflow
 
