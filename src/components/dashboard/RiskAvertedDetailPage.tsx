@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { type ReactNode, useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import CountUp from "react-countup";
 import {
 	Area,
@@ -29,6 +29,7 @@ import {
 	YAxis,
 } from "recharts";
 import { AnalyticsPageShell } from "@/components/analytics/AnalyticsPageShell";
+import { LoadError } from "@/components/LoadError";
 import { RiskEventsBulkBar } from "@/components/dashboard/RiskEventsBulkBar";
 import { RiskTrackingChart } from "@/components/dashboard/RiskTrackingChart";
 import {
@@ -65,7 +66,7 @@ import {
 	MetricCardSkeleton,
 	TableCardSkeleton,
 } from "@/components/ui/glass-skeletons";
-import { MetricStatCard } from "@/components/ui/metric-stat-card";
+import { MetricStatCard, StatRows } from "@/components/ui/metric-stat-card";
 import { PageIndex } from "@/components/ui/page-index";
 import { SearchField } from "@/components/ui/search-field";
 import { SegmentedToggle } from "@/components/ui/segmented-toggle";
@@ -196,44 +197,12 @@ function AnimatedUsd({
 	);
 }
 
-/** Optional lead-in (chip or bar) then label/value rows split by slate-200 lines. */
-function StatRows({
-	top,
-	rows,
-}: {
-	top?: ReactNode;
-	rows: Array<[string, ReactNode, string?]>;
-}) {
-	return (
-		<div className="w-full">
-			{top ? <div className="mb-3">{top}</div> : null}
-			{rows.map(([label, value, dot]) => (
-				<div
-					key={label}
-					className="flex items-center justify-between gap-3 border-t border-slate-200 py-2 text-xs"
-				>
-					<span className="inline-flex items-center gap-1.5 text-slate-600">
-						{dot ? (
-							<span
-								className={cn("h-1.5 w-1.5 rounded-full", dot)}
-								aria-hidden
-							/>
-						) : null}
-						{label}
-					</span>
-					<span className="font-semibold tabular-nums text-slate-700">
-						{value}
-					</span>
-				</div>
-			))}
-		</div>
-	);
-}
-
 export function RiskAvertedDetailPage({
 	initialSnapshot,
 }: {
-	initialSnapshot?: import("@/lib/dashboard/risk-impact.types").RiskImpactSnapshot | null;
+	initialSnapshot?:
+		| import("@/lib/dashboard/risk-impact.types").RiskImpactSnapshot
+		| null;
 }) {
 	const [period, setPeriod] = useState<RiskImpactPeriod>("ytd");
 	const [kindFilter, setKindFilter] = useState<"all" | RiskImpactEventKind>(
@@ -424,21 +393,14 @@ export function RiskAvertedDetailPage({
 	if (error && !snapshot) {
 		return (
 			<AnalyticsPageShell title="Risk averted">
-				<Card className="glass-card">
-					<div className="glass-card-cap" />
-					<CardContent className="text-slate-700 p-4 sm:p-6 flex flex-col items-center text-center gap-3">
-						<AlertCircle className="h-8 w-8 text-red" />
-						<p className="text-slate-700">Unable to load risk averted.</p>
-						<Button
-							type="button"
-							className="btn-primary px-3 sm:px-4"
-							onClick={() => refresh()}
-						>
-							<RefreshCw className="h-4 w-4" />
-							Retry
-						</Button>
-					</CardContent>
-				</Card>
+				<LoadError
+					scale="page"
+					title="We couldn't load risk averted"
+					description="Something went wrong on our side. Your data hasn't changed."
+					elementKey="risk-averted"
+					error={{ requestPath: "/api/analytics/risk-averted" }}
+					onRetry={() => refresh()}
+				/>
 			</AnalyticsPageShell>
 		);
 	}

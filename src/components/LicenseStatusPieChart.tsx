@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { SciChartPieSurface } from "scichart";
 import useSWR from "swr";
 import { LiveWeatherStatusDot } from "@/components/dashboard-briefing/LiveWeatherStatusDot";
+import { LoadError } from "@/components/LoadError";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import {
@@ -367,6 +368,7 @@ const LicenseStatusPieChart: React.FC<LicenseStatusPieChartProps> = ({
 		data: fetchedLicenses,
 		isLoading,
 		error: licensesError,
+		mutate: mutateLicenses,
 	} = useSWR<License[]>(skipFetch ? null : ALL_LICENSES_KEY, fetchLicenses, {
 		...swrConfig,
 		refreshInterval: 30000,
@@ -433,7 +435,13 @@ const LicenseStatusPieChart: React.FC<LicenseStatusPieChartProps> = ({
 					<LicenseStatusCardHeader />
 				</CardHeader>
 				<CardContent className="px-4 pb-4 flex items-center justify-center">
-					<p className="text-sm text-slate-500">Unable to load licenses</p>
+					<LoadError
+						scale="section"
+						title="We couldn't load license status"
+						elementKey="license-status-pie"
+						error={{ requestPath: "/api/licenses/all" }}
+						onRetry={() => mutateLicenses()}
+					/>
 				</CardContent>
 			</Card>
 		);

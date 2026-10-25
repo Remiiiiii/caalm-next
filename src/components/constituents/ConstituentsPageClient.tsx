@@ -37,7 +37,7 @@ import {
 
 type ConstituentRow = Constituent & { lifecycleSegment?: string | null };
 
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 20;
 
 export function ConstituentsPageClient() {
 	const searchParams = useSearchParams();

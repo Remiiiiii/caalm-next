@@ -79,7 +79,6 @@ export function RunbooksCmsPage() {
 		<ITPageShell
 			title="Runbooks"
 			subtitle="Operational recovery procedures for on-call and IT."
-			icon={BookOpen}
 			actions={
 				<div className="flex items-center gap-2">
 					<Button

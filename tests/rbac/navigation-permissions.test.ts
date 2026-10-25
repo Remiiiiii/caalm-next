@@ -59,7 +59,7 @@ describe("navigation permissions (issue #36)", () => {
 		expect(names).not.toContain("Uploads");
 		expect(names).not.toContain("Assign Tasks");
 		expect(names).not.toContain("System Settings");
-		expect(names).not.toContain("Advanced Resources");
+		expect(names).not.toContain("Government Contracts");
 		expect(names).not.toContain("Create Contract");
 	});
 
@@ -71,7 +71,7 @@ describe("navigation permissions (issue #36)", () => {
 		expect(names).toContain("My Contracts");
 		expect(names).not.toContain("System Settings");
 		expect(names).not.toContain("C Suite");
-		expect(names).not.toContain("Advanced Resources");
+		expect(names).not.toContain("Government Contracts");
 		expect(names).not.toContain("Create Contract");
 	});
 

@@ -15,6 +15,7 @@ import {
 	XCircle,
 } from "lucide-react";
 import Link from "next/link";
+import { LoadError } from "@/components/LoadError";
 import React from "react";
 import {
 	DashboardGreeting,
@@ -281,15 +282,13 @@ const ITDashboard: React.FC<ITDashboardProps> = ({ user }) => {
 					<Card className="glass-card">
 						<div className="glass-card-cap" />
 						<CardContent className="pt-6 bg-slate-50">
-							<div className="text-center py-8">
-								<Server className="h-12 w-12 mx-auto text-slate-400 mb-4" />
-								<h3 className="text-lg font-semibold mb-2 text-slate-700">
-									No dashboard data
-								</h3>
-								<p className="text-slate-600 mb-4">
-									Unable to load connectivity checks. Retry or verify IT access.
-								</p>
-							</div>
+							<LoadError
+								scale="section"
+								title="We couldn't load connectivity checks"
+								elementKey="it-dashboard-probes"
+								error={{ requestPath: "/api/it/dashboard" }}
+								onRetry={() => window.location.reload()}
+							/>
 						</CardContent>
 					</Card>
 				)}

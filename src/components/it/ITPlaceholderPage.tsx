@@ -25,7 +25,6 @@ export function ITPlaceholderPage({
 		<ITPageShell
 			title={title}
 			subtitle={subtitle}
-			icon={Icon}
 			actions={<SampleDataBadge label="Preview" />}
 		>
 			<ITGlassPanel>

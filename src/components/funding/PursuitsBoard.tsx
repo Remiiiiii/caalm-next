@@ -110,7 +110,7 @@ export function PursuitsBoard({
 						Add pursuit
 					</h2>
 					<p className="mt-1 text-sm text-slate-600">
-						Manual lead, or save from Advanced Resources (SAM.gov). Won pursuits
+						Manual lead, or save from Government Contracts (SAM.gov). Won pursuits
 						spawn a draft in Proposals & Approvals.
 					</p>
 				</div>
@@ -155,7 +155,7 @@ export function PursuitsBoard({
 				) : pursuits.length === 0 ? (
 					<p className="p-4 text-sm text-slate-600 sm:p-6">
 						No pursuits yet. Create one above or save a SAM.gov opportunity from
-						Advanced Resources.
+						Government Contracts.
 					</p>
 				) : (
 					<ul className="divide-y divide-slate-200">

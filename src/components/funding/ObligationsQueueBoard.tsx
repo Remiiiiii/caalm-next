@@ -22,7 +22,7 @@ import {
 import type { ObligationQueueResult } from "@/lib/funding/obligation-queue.service";
 import { cn } from "@/lib/utils";
 
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 20;
 const DUE_WINDOWS = [
 	{ value: "all", label: "Any due date" },
 	{ value: "7", label: "Due in 7 days" },
@@ -108,7 +108,7 @@ export function ObligationsQueueBoard({
 					</p>
 					<div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-4">
 						<SearchField
-							containerClassName="sm:col-span-1 w-full max-w-none"
+							containerClassName="sm:col-span-1"
 							value={search}
 							onChange={(e) => setSearch(e.target.value)}
 							placeholder="Search obligations…"

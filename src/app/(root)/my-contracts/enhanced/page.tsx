@@ -4,6 +4,7 @@ import { ArrowLeft, Building2, FileText, Search, Users } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import FileCard from "@/components/Card";
+import { LoadError } from "@/components/LoadError";
 import SearchDashboard from "@/components/SearchDashboard";
 import SearchResultHighlight from "@/components/SearchResultHighlight";
 import Sort from "@/components/Sort";
@@ -134,10 +135,14 @@ const EnhancedMyContractsPage = () => {
 	if (error) {
 		return (
 			<div className="page-container py-6">
-				<div className="text-center">
-					<h1 className="text-2xl font-bold text-red-600 mb-4">Error</h1>
-					<p className="text-gray-600">{error}</p>
-				</div>
+				<LoadError
+					scale="page"
+					title="We couldn't load your contracts"
+					description="Something went wrong on our side. Your data hasn't changed."
+					elementKey="my-contracts-enhanced"
+					error={{ requestPath: "/api/contracts" }}
+					onRetry={() => refreshContracts()}
+				/>
 			</div>
 		);
 	}

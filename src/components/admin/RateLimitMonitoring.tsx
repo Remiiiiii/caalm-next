@@ -17,6 +17,7 @@ import {
 	Users,
 } from "lucide-react";
 import { useState } from "react";
+import { LoadError } from "@/components/LoadError";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -79,21 +80,13 @@ export default function RateLimitMonitoring() {
 					</div>
 				</div>
 				<div className="flex-1 overflow-y-auto p-6 bg-slate-50">
-					<div className="text-center text-destructive">
-						<AlertTriangle className="h-8 w-8 mx-auto mb-2" />
-						<p>{error}</p>
-						<Button
-							onClick={refresh}
-							variant="outline"
-							className="mt-4 primary-btn px-3 sm:px-4"
-						>
-							<RefreshCw className="h-4 w-4 mr-2" />
-							Retry
-						</Button>
-					</div>
-				</div>
-				<div className="glass-dialog-footer-wrap">
-					<div className="text-xs text-slate-500">Error state</div>
+					<LoadError
+						scale="section"
+						title="We couldn't load rate limit metrics"
+						elementKey="rate-limit-monitoring"
+						error={{ requestPath: "/api/admin/rate-limits/metrics" }}
+						onRetry={() => refresh()}
+					/>
 				</div>
 			</div>
 		);

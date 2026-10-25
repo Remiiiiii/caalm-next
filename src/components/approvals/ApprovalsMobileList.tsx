@@ -46,7 +46,8 @@ export default function ApprovalsMobileList({
 					key={item.id}
 					className={cn(
 						"glass-card interactive-glass-card cursor-pointer transition-all duration-200 hover:border-blue-300 hover:shadow-md",
-						selectedIds.includes(item.id) && "border-blue-300 bg-blue-50/40",
+						selectedIds.includes(item.id) &&
+							"border-l-2 border-l-[#0f5384] bg-blue/10",
 					)}
 					tabIndex={0}
 					role="button"

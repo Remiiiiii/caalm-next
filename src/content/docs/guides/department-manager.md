@@ -24,7 +24,7 @@ You are the frontline owner of operational compliance for your division.
 
 ## What you usually can / cannot see
 
-Managers are often scoped away from org-wide “All Contracts,” some advanced resources, and org billing/system settings. That keeps focus on *your* floor of the building.
+Managers are often scoped away from org-wide “All Contracts,” government contracts search, and org billing/system settings. That keeps focus on *your* floor of the building.
 
 If you need broader visibility for a temporary program, ask an admin for a deliberate permission change with an end date.
 

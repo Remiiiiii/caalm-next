@@ -1,6 +1,5 @@
 "use client";
 
-import { Database } from "lucide-react";
 import useSWR from "swr";
 import { ITGlassPanel, ITPageShell } from "@/components/it/ITPageShell";
 import {
@@ -43,7 +42,6 @@ export default function DatabaseSchemaPage() {
 		<ITPageShell
 			title="Database Schema"
 			subtitle="Read-only Appwrite tables in the CAALM database"
-			icon={Database}
 		>
 			{isLoading ? (
 				<div className="py-12 flex justify-center">

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, BookOpen } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -47,7 +47,6 @@ export default function RunbookDetailPage() {
 		<ITPageShell
 			title={item?.title || "Runbook"}
 			subtitle={item?.summary || "Operational recovery procedure"}
-			icon={BookOpen}
 			actions={
 				<Button asChild variant="outline" className="primary-btn px-3 sm:px-4">
 					<Link href="/dashboard/it/incidents/runbooks">

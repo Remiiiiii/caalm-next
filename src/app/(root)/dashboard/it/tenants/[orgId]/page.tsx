@@ -1,6 +1,5 @@
 export const dynamic = "force-dynamic";
 
-import { Building2 } from "lucide-react";
 import { Suspense } from "react";
 import { ITPageShell } from "@/components/it/ITPageShell";
 import { ITTenantHubClient } from "@/components/it/ITTenantHubClient";
@@ -23,7 +22,6 @@ export default async function ITTenantDetailPage({
 		<ITPageShell
 			title={org?.name || "Tenant"}
 			subtitle="Organization IT hub — live org data metrics"
-			icon={Building2}
 		>
 			<Suspense
 				fallback={

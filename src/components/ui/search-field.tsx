@@ -21,7 +21,7 @@ export function SearchField({
 	return (
 		<div
 			className={cn(
-				// Canonical width (matches the most common per-page override already in use); pass containerClassName to override.
+				// Canonical width (matches /team/tasks); pass containerClassName to override.
 				"relative flex h-10 w-full items-center rounded-md border-[0.25px] border-slate-300 bg-white/70 md:max-w-md",
 				containerClassName,
 			)}

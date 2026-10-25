@@ -32,6 +32,7 @@ import {
 } from "@/components/notes/NoteCalendarPinFields";
 import { AppDialog } from "@/components/ui/app-dialog";
 import { Button } from "@/components/ui/button";
+import { LoadError } from "@/components/LoadError";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
@@ -178,6 +179,7 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 		createNote,
 		updateNote,
 		deleteNote,
+		refresh: refreshNotes,
 	} = useNotes({
 		userId: userId || user?.$id || "default",
 		enableRealTime: true,
@@ -482,17 +484,19 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 				<div className="glass-card-cap" />
 				<CardHeader className="pb-3 pt-2 px-4">
 					<div className="flex items-center gap-2">
-						<AlertTriangle className="h-4 w-4 text-red" />
 						<CardTitle className="text-sm font-semibold sidebar-gradient-text">
 							Quick Notes
 						</CardTitle>
 					</div>
 				</CardHeader>
 				<CardContent className="px-4 pb-2 flex flex-col items-center justify-center h-full">
-					<div className="text-sm text-red text-center mb-2">
-						Failed to load notes
-					</div>
-					<div className="text-xs text-slate-500 text-center">{error}</div>
+					<LoadError
+						scale="section"
+						title="We couldn't load your notes"
+						elementKey="quick-notes"
+						error={{ requestPath: "/api/notes" }}
+						onRetry={() => refreshNotes()}
+					/>
 				</CardContent>
 			</Card>
 		);

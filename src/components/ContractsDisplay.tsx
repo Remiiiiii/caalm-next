@@ -17,6 +17,7 @@ import {
 import Image from "next/image";
 import React, { useCallback, useMemo, useState } from "react";
 import ContractDocumentViewer from "@/components/ContractDocumentViewer";
+import { LoadError } from "@/components/LoadError";
 import {
 	FilesViewToggle,
 	type FilesViewType,
@@ -582,7 +583,7 @@ export default function ContractsDisplay() {
 			state: "",
 			organizationName: "",
 			responseDeadlineOption: "Anytime",
-			limit: 12,
+			limit: 24,
 			offset: 0,
 		});
 
@@ -711,7 +712,7 @@ export default function ContractsDisplay() {
 			state: "",
 			organizationName: "",
 			responseDeadlineOption: "Anytime",
-			limit: 12,
+			limit: 24,
 			offset: 0,
 		});
 		clearResults();
@@ -774,11 +775,15 @@ export default function ContractsDisplay() {
 			{/* Header */}
 			<div className="flex justify-between items-center">
 				<div>
+					<p className="text-xs font-semibold uppercase tracking-wider text-[#078fab] mb-1">
+						Resources
+					</p>
 					<h1 className="text-3xl font-bold sidebar-gradient-text">
-						Advanced Resources
+						Government Contracts
 					</h1>
 					<p className="text-slate-600 mt-1">
-						Search and explore government contract opportunities from SAM.gov
+						Search and explore active opportunities from SAM.gov across all
+						federal agencies.
 					</p>
 				</div>
 			</div>
@@ -1116,83 +1121,14 @@ export default function ContractsDisplay() {
 
 			{/* Enhanced Error Display with Setup Instructions */}
 			{error && (
-				<div className="space-y-4">
-					<Card className="bg-red-50 border border-red-200">
-						<CardContent className="p-4">
-							<div className="flex items-center gap-2 text-red-800 mb-3">
-								<AlertCircle className="h-5 w-5" />
-								<span className="font-medium">Unable to load contracts</span>
-							</div>
-							<p className="text-red-700 mb-3">
-								We're experiencing technical difficulties loading contract
-								information. Please try again in a few moments. If the problem
-								persists, contact support for assistance.
-							</p>
-
-							{/* Developer Details - IT only */}
-							{isITUser && (
-								<details className="mt-4">
-									<summary className="cursor-pointer text-sm text-red-600 hover:text-red-800 font-medium select-none">
-										Technical details (for developers)
-									</summary>
-									<div className="mt-3 bg-white p-4 rounded-lg border border-red-200">
-										<p className="text-sm text-red-700 mb-3">
-											{error || "An unknown error occurred"}
-										</p>
-
-										{/* Show setup instructions if API key is missing */}
-										{error?.includes("API key") && (
-											<div className="space-y-3">
-												<h4 className="font-medium text-red-800">
-													SAM.gov API Key Setup Required
-												</h4>
-												<p className="text-sm text-red-700">
-													To use SAM.gov contract search, you need an API key:
-												</p>
-												<ol className="text-sm text-red-700 space-y-1 list-decimal list-inside">
-													<li>
-														Visit{" "}
-														<a
-															href="https://sam.gov/"
-															target="_blank"
-															rel="noopener noreferrer"
-															className="underline"
-														>
-															sam.gov
-														</a>{" "}
-														and sign in
-													</li>
-													<li>Navigate to Account Details page</li>
-													<li>Request an API Key (40 characters)</li>
-													<li>
-														Set the{" "}
-														<code className="bg-red-100 px-1 rounded">
-															GOV_API_KEY
-														</code>{" "}
-														environment variable
-													</li>
-													<li>Restart the development server</li>
-												</ol>
-												<p className="text-xs text-red-600 mt-3">
-													Note: According to{" "}
-													<a
-														href="https://api.sam.gov/docs/api-key/"
-														target="_blank"
-														rel="noopener noreferrer"
-														className="underline"
-													>
-														SAM.gov API documentation
-													</a>
-													, request limits apply based on your role.
-												</p>
-											</div>
-										)}
-									</div>
-								</details>
-							)}
-						</CardContent>
-					</Card>
-				</div>
+				<LoadError
+					scale="section"
+					title="We couldn't load contracts"
+					description="Please try again in a few moments. If the problem persists, contact support."
+					elementKey="contracts-display"
+					error={{ requestPath: "/api/sam-opportunities" }}
+					onRetry={() => searchOpportunities({})}
+				/>
 			)}
 
 			{hasSearched && !error && (
@@ -1278,7 +1214,7 @@ export default function ContractsDisplay() {
 									className="mt-6 justify-center"
 									page={(searchFilters.offset || 0) + 1}
 									totalItems={totalRecords}
-									pageSize={searchFilters.limit || 12}
+									pageSize={searchFilters.limit || 24}
 									onPageChange={handlePageChange}
 									hideWhenSinglePage
 									showRange

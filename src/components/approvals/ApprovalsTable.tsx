@@ -224,7 +224,8 @@ export default function ApprovalsTable({
 							className={cn(
 								DATA_TABLE_BODY_ROW_CLICKABLE,
 								"group",
-								selectedIds.includes(item.id) && "bg-blue-50/50",
+								selectedIds.includes(item.id) &&
+									"bg-blue/10 [&>td:first-child]:relative [&>td:first-child]:before:absolute [&>td:first-child]:before:inset-y-0 [&>td:first-child]:before:left-0 [&>td:first-child]:before:w-0.5 [&>td:first-child]:before:bg-[#0f5384]",
 							)}
 							onClick={() => canReview && setPreviewItem(item)}
 						>

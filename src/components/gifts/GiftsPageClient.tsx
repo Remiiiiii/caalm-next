@@ -36,7 +36,7 @@ import { cn } from "@/lib/utils";
 
 const rowPad = "px-3 py-3 align-middle";
 
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 20;
 
 export function GiftsPageClient() {
 	const { permissions } = usePermissions();

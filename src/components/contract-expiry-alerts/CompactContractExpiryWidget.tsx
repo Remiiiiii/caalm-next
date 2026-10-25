@@ -3,6 +3,7 @@
 import { AlertTriangle, Clock } from "lucide-react";
 import type React from "react";
 import CountdownTimer from "@/components/CountdownTimer";
+import { LoadError } from "@/components/LoadError";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlarmControls } from "./AlarmControls";
 import { ContractEmptyState } from "./ContractEmptyState";
@@ -75,16 +76,19 @@ export const CompactContractExpiryWidget: React.FC<
 				<div className="glass-card-cap" />
 				<CardHeader className="pb-3 pt-2 px-4">
 					<div className="flex items-center gap-2">
-						<AlertTriangle className="h-4 w-4 text-red" />
 						<CardTitle className="text-sm font-semibold sidebar-gradient-text">
 							Contract Expiry Alerts
 						</CardTitle>
 					</div>
 				</CardHeader>
 				<CardContent className="px-4 pb-2 flex items-center justify-center h-full">
-					<div className="text-sm text-red text-center">
-						Failed to load contract data
-					</div>
+					<LoadError
+						scale="section"
+						title="We couldn't load contract expiry alerts"
+						elementKey="contract-expiry-compact"
+						error={{ requestPath: "/api/contracts" }}
+						onRetry={() => window.location.reload()}
+					/>
 				</CardContent>
 			</Card>
 		);

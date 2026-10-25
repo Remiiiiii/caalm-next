@@ -18,7 +18,7 @@ Two jobs live on one page:
 |---|---|---|
 | Funding & Retention | `/contracts/funding-retention` | Retention board, obligations, pursuits pipeline |
 | Proposals & Approvals | `/contracts/approvals` | Drafts created from a won pursuit |
-| SAM.gov | `/contracts/advanced-resources` | Optional source for new pursuits |
+| SAM.gov | `/contracts/government-contracts` | Optional source for new pursuits |
 
 ## Retention
 
