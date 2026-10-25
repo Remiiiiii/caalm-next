@@ -89,7 +89,14 @@ export function SubmitProgressIndicator({
 						</div>
 					)}
 
-					<div className="h-2 w-full overflow-hidden rounded-full bg-light-300">
+					<div
+						role="progressbar"
+						aria-valuemin={0}
+						aria-valuemax={100}
+						aria-valuenow={clampedProgress}
+						aria-label={isSuccess ? successLabel : label}
+						className="h-2 w-full overflow-hidden rounded-full bg-light-300"
+					>
 						<div
 							className={cn(
 								"h-2 rounded-full transition-all duration-500 ease-out",

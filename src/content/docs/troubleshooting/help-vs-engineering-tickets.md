@@ -26,6 +26,10 @@ Helpers on the submit form:
 3. **Help needs a code fix** — **Escalate to engineering** (creates the GitHub issue, then the agent path works)
 4. **Engineering** — **Start fix agent** after claim (optional instructions and attachments)
 
+## Load failures already file themselves
+
+If a page or table shows **couldn't load** plus an `INC-` reference, CAALM already created an Active Incident for IT. Copy the reference. Do not open a second Engineering ticket unless IT asks. See [A page or table won't load](/docs/troubleshooting/page-wont-load).
+
 ## Rule of thumb
 
 If IT can finish it without changing product code, use Help. If the fix needs a pull request, use Engineering — or escalate from Help.

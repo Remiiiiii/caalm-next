@@ -626,7 +626,7 @@ export const saveSearch = async ({
 		// Check if a saved search with the same name already exists
 		const existingSearches = await tablesDB.listRows({
 			databaseId: appwriteConfig.databaseId!,
-			tableId: "saved_searches",
+			tableId: appwriteConfig.savedSearchesCollectionId,
 			queries: [Query.equal("userId", userId), Query.equal("name", name)],
 		});
 
@@ -634,21 +634,25 @@ export const saveSearch = async ({
 			throw new Error("A saved search with this name already exists");
 		}
 
-		// Create new saved search
+		// Create new saved search — `filters` is a longtext column, so the
+		// object is serialized on write and parsed back out on read.
 		const savedSearch = await tablesDB.createRow({
 			databaseId: appwriteConfig.databaseId!,
-			tableId: "saved_searches",
+			tableId: appwriteConfig.savedSearchesCollectionId,
 			rowId: ID.unique(),
 			data: {
 				userId,
 				name,
 				query,
-				filters: filters || {},
+				filters: JSON.stringify(filters || {}),
 				createdAt: new Date().toISOString(),
 			},
 		});
 
-		return savedSearch as unknown as {
+		return {
+			...savedSearch,
+			filters: JSON.parse((savedSearch as any).filters || "{}"),
+		} as unknown as {
 			$id: string;
 			name: string;
 			query: string;
@@ -661,6 +665,10 @@ export const saveSearch = async ({
 			throw new Error(
 				"Saved searches feature is not available - table not found",
 			);
+		}
+		// The unique (userId, name) index catches a race the pre-check missed
+		if (error?.type === "document_already_exists" || error?.code === 409) {
+			throw new Error("A saved search with this name already exists");
 		}
 		handleError(error, "Failed to save search");
 		throw error;
@@ -683,11 +691,14 @@ export const getSavedSearches = async (
 	try {
 		const savedSearches = await tablesDB.listRows({
 			databaseId: appwriteConfig.databaseId!,
-			tableId: "saved_searches",
+			tableId: appwriteConfig.savedSearchesCollectionId,
 			queries: [Query.equal("userId", userId), Query.orderDesc("$createdAt")],
 		});
 
-		return savedSearches.rows as unknown as {
+		return savedSearches.rows.map((row: any) => ({
+			...row,
+			filters: JSON.parse(row.filters || "{}"),
+		})) as unknown as {
 			$id: string;
 			name: string;
 			query: string;
@@ -715,7 +726,7 @@ export const deleteSavedSearch = async (
 		// Verify the search belongs to the user
 		const search = await tablesDB.getRow({
 			databaseId: appwriteConfig.databaseId!,
-			tableId: "saved_searches",
+			tableId: appwriteConfig.savedSearchesCollectionId,
 			rowId: searchId,
 		});
 
@@ -726,7 +737,7 @@ export const deleteSavedSearch = async (
 		// Delete the saved search
 		await tablesDB.deleteRow({
 			databaseId: appwriteConfig.databaseId!,
-			tableId: "saved_searches",
+			tableId: appwriteConfig.savedSearchesCollectionId,
 			rowId: searchId,
 		});
 	} catch (error: any) {

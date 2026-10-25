@@ -208,8 +208,8 @@ export const SmsFormDialog: React.FC<SmsFormDialogProps> = ({
 				<>
 					<Button
 						type="button"
-						variant="outline"
-						className="rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+						variant="ghost"
+						className="rounded-full px-3 py-1.5 h-[1.65rem] justify-center text-slate-400 hover:text-slate-600 hover:bg-black/[.04]"
 						disabled={submitting}
 						onClick={handleCancel}
 					>

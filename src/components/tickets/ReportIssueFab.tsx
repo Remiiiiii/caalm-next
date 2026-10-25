@@ -294,13 +294,9 @@ export default function ReportIssueFab() {
 												}
 											/>
 										</SelectTrigger>
-										<SelectContent className="border-slate-200 bg-white/95 shadow-xl backdrop-blur-xl">
+										<SelectContent>
 											{categoryOptions.map((item) => (
-												<SelectItem
-													key={item}
-													value={item}
-													className="cursor-pointer text-slate-700 focus:bg-blue/10"
-												>
+												<SelectItem key={item} value={item}>
 													{item}
 												</SelectItem>
 											))}

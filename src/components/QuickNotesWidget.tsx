@@ -46,8 +46,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useNotes } from "@/hooks/useNotes";
 import type { Note } from "@/lib/actions/notes.actions";
 
-const outlineCancelClass =
-	"rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50";
+const ghostCancelClass =
+	"rounded-full px-3 py-1.5 h-[1.65rem] justify-center text-slate-400 hover:text-slate-600 hover:bg-black/[.04]";
 
 interface QuickNotesWidgetProps {
 	userId?: string;
@@ -649,8 +649,8 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 						</span>
 						<Button
 							type="button"
-							variant="outline"
-							className={outlineCancelClass}
+							variant="ghost"
+							className={ghostCancelClass}
 							onClick={() => setIsCreateDialogOpen(false)}
 						>
 							Cancel
@@ -725,8 +725,8 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 						</span>
 						<Button
 							type="button"
-							variant="outline"
-							className={outlineCancelClass}
+							variant="ghost"
+							className={ghostCancelClass}
 							onClick={() => setIsEditDialogOpen(false)}
 						>
 							Cancel

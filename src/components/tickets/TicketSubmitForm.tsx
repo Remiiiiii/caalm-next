@@ -6,10 +6,12 @@ import {
 	FileText,
 	Lock,
 	Send,
+	Toolbox,
+	Unlink,
 	Upload,
 	X,
 } from "lucide-react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
 	type FormEvent,
 	type ReactNode,
@@ -19,6 +21,7 @@ import {
 	useRef,
 	useState,
 } from "react";
+import ProfilePicture from "@/components/ProfilePicture";
 import {
 	createSubmitProgressTicker,
 	SubmitProgressIndicator,
@@ -29,6 +32,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SegmentedToggle } from "@/components/ui/segmented-toggle";
 import {
 	Select,
 	SelectContent,
@@ -36,6 +40,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -65,6 +70,7 @@ import type {
 import {
 	categoriesForLane,
 	deriveSeverityFromMatrix,
+	getSeverityBadgeTitle,
 	TICKET_IMPACT_LEVELS,
 	TICKET_LANE_OPTIONS,
 	TICKET_MODULES,
@@ -73,19 +79,36 @@ import {
 import { displayTicketNumber } from "@/lib/tickets/ticket-number.utils";
 import { cn } from "@/lib/utils";
 
-type MatrixLevel = "Critical" | "High" | "Medium" | "Low";
-
 const TICKET_FIELD_CLASS =
 	"bg-white !border-[0.25px] !border-solid !border-slate-200 focus-visible:!border-[#078FAB] focus-visible:ring-1 focus-visible:ring-[#078FAB]";
 
-const SEVERITY_BADGE: Record<MatrixLevel, string> = {
-	Critical: "bg-red/10 text-red border-red/20",
-	High: "bg-orange/10 text-orange border-orange/20",
-	Medium: "bg-blue/10 text-blue border-blue/20",
-	Low: "bg-slate-100 text-slate-600 border-slate-200",
+const SEVERITY_BANNER: Record<TicketSeverity, string> = {
+	low: "border-[#a7e9d5] bg-[#edfaf6] text-[#0e8a63]",
+	medium: "border-[#bfdbfe] bg-[#eff6ff] text-[#1d6fb8]",
+	high: "border-[#fcd9bd] bg-[#fff8f3] text-[#b45309]",
+	critical: "border-[#fecaca] bg-[#fff0f0] text-[#b80000]",
+};
+
+const CONFIRM_CARD =
+	"flex cursor-pointer items-start gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 transition-colors duration-200";
+const CONFIRM_CARD_CHECKED = "border-[#078FAB] bg-[#078FAB]/5";
+
+const URGENCY_PILL_ACTIVE: Record<string, string> = {
+	low: "border-green/20 bg-green/10 text-green",
+	medium: "border-blue/20 bg-blue/10 text-blue",
+	high: "border-orange/20 bg-orange/10 text-orange",
+	critical: "border-red/20 bg-red/10 text-red",
+};
+
+const HELP_PRIORITY_HINTS: Record<string, string> = {
+	low: "We'll respond within 5 business days.",
+	medium: "We'll respond within 2 business days.",
+	high: "We'll respond within 4 hours during business hours.",
+	critical: "We'll respond within 1 hour. Use this only for urgent outages.",
 };
 
 const MAX_DESC = 2000;
+const MAX_STEPS = 10;
 const MAX_FILES = 5;
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
@@ -108,24 +131,10 @@ type TouchedFields = Partial<
 	>
 >;
 
-function getInitials(name?: string | null): string {
-	if (!name?.trim()) return "?";
-	return name
-		.split(/\s+/)
-		.filter(Boolean)
-		.slice(0, 2)
-		.map((part) => part[0]?.toUpperCase() ?? "")
-		.join("");
-}
-
 function formatFileSize(bytes: number): string {
 	if (bytes < 1024) return `${bytes} B`;
 	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
 	return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function matrixLevelLabel(severity: TicketSeverity): MatrixLevel {
-	return (severity.charAt(0).toUpperCase() + severity.slice(1)) as MatrixLevel;
 }
 
 function RequiredMark() {
@@ -211,13 +220,9 @@ function SelectField({
 			>
 				<SelectValue placeholder={placeholder} />
 			</SelectTrigger>
-			<SelectContent className="border-slate-200 bg-white/95 text-slate-700 shadow-xl backdrop-blur-xl">
+			<SelectContent>
 				{options.map((option) => (
-					<SelectItem
-						key={option}
-						value={option}
-						className="shad-select-item cursor-pointer text-slate-700 focus:bg-blue/10 focus:text-slate-700"
-					>
+					<SelectItem key={option} value={option}>
 						{option}
 					</SelectItem>
 				))}
@@ -232,28 +237,37 @@ function PillGroup({
 	onChange,
 	options,
 	error,
+	activeClasses,
 }: {
 	label: string;
 	value: string;
 	onChange: (value: string) => void;
 	options: readonly { value: string; label: string }[];
 	error?: string | null;
+	activeClasses?: Record<string, string>;
 }) {
 	return (
 		<div>
 			<p className="mb-1.5 text-xs text-slate-600">{label}</p>
-			<div className="flex flex-wrap gap-1.5">
+			<div
+				role="radiogroup"
+				aria-label={label}
+				className="flex flex-wrap gap-1.5"
+			>
 				{options.map((option) => {
 					const active = value === option.value;
 					return (
 						<button
 							key={option.value}
 							type="button"
+							role="radio"
+							aria-checked={active}
 							onClick={() => onChange(option.value)}
 							className={cn(
 								"cursor-pointer rounded-full border px-3 py-1.5 text-xs transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
 								active
-									? "border-blue/20 bg-blue/10 text-[#0f5384]"
+									? (activeClasses?.[option.value] ??
+											"border-blue/20 bg-blue/10 text-[#0f5384]")
 									: "border-slate-200 text-slate-600 hover:border-blue-300 hover:bg-blue/5",
 							)}
 						>
@@ -269,12 +283,14 @@ function PillGroup({
 
 export function TicketSubmitForm() {
 	const searchParams = useSearchParams();
+	const router = useRouter();
 	const { user } = useAuth();
 	const fileInputRef = useRef<HTMLInputElement>(null);
+	const formRef = useRef<HTMLFormElement>(null);
 
 	const [lane, setLane] = useState<TicketLane | "">(() => {
 		const raw = searchParams?.get("lane");
-		return raw === "help" || raw === "engineering" ? raw : "";
+		return raw === "engineering" ? "engineering" : "help";
 	});
 	const [title, setTitle] = useState(() => searchParams?.get("title") ?? "");
 	const [category, setCategory] = useState(
@@ -285,9 +301,9 @@ export function TicketSubmitForm() {
 	);
 	const [impact, setImpact] = useState("");
 	const [urgency, setUrgency] = useState("");
-	const [helpPriority, setHelpPriority] = useState("");
+	const [helpPriority, setHelpPriority] = useState("medium");
 	const [description, setDescription] = useState("");
-	const [steps, setSteps] = useState("");
+	const [reproSteps, setReproSteps] = useState<string[]>(["", ""]);
 	const [expected, setExpected] = useState("");
 	const [actual, setActual] = useState("");
 	const [os, setOs] = useState<BugReportOs | "">("");
@@ -313,7 +329,6 @@ export function TicketSubmitForm() {
 		divisionLabel: placement?.divisionLabel,
 		division: placement?.division,
 	});
-	const initials = getInitials(user?.name);
 
 	useEffect(() => {
 		setOs(
@@ -330,8 +345,16 @@ export function TicketSubmitForm() {
 		[lane],
 	);
 
-	const effectiveImpact = lane === "help" ? helpPriority : impact;
+	// Help requests have no "who's affected" step; treat them as "Just me" so
+	// the priority pill alone decides the tier.
+	const effectiveImpact = lane === "help" ? "low" : impact;
 	const effectiveUrgency = lane === "help" ? helpPriority : urgency;
+	const selectedLane = TICKET_LANE_OPTIONS.find(
+		(option) => option.value === lane,
+	);
+	const helpPriorityLabel = TICKET_URGENCY_LEVELS.find(
+		(item) => item.value === helpPriority,
+	)?.label;
 
 	const derived = useMemo(() => {
 		if (!effectiveImpact || !effectiveUrgency) return null;
@@ -341,8 +364,9 @@ export function TicketSubmitForm() {
 				effectiveUrgency as TicketSeverity,
 			);
 			return {
-				level: matrixLevelLabel(result.severity),
-				hours: result.responseSlaHours,
+				severity: result.severity,
+				badgeTitle: getSeverityBadgeTitle(result.severity),
+				slaLabel: result.responseSlaLabel,
 			};
 		} catch {
 			return null;
@@ -376,8 +400,9 @@ export function TicketSubmitForm() {
 						? "Description must be at least 8 characters."
 						: null,
 			steps:
-				lane === "engineering" && steps.trim().length < 8
-					? "List at least 8 characters of reproduction steps."
+				lane === "engineering" &&
+				reproSteps.filter((step) => step.trim()).length < 2
+					? "Add at least 2 reproduction steps."
 					: null,
 			expected:
 				lane === "engineering" && expected.trim().length < 8
@@ -408,7 +433,7 @@ export function TicketSubmitForm() {
 			urgency,
 			helpPriority,
 			description,
-			steps,
+			reproSteps,
 			expected,
 			actual,
 			os,
@@ -472,7 +497,14 @@ export function TicketSubmitForm() {
 			environment: true,
 			confirmations: true,
 		});
-		if (!isValid || !derived || !lane) return;
+		if (!isValid || !derived || !lane) {
+			setTimeout(() => {
+				formRef.current
+					?.querySelector('[class*="border-red"], [aria-invalid="true"]')
+					?.scrollIntoView({ behavior: "smooth", block: "center" });
+			}, 0);
+			return;
+		}
 
 		setSubmitting(true);
 		setError(null);
@@ -491,7 +523,14 @@ export function TicketSubmitForm() {
 			form.set("impact", effectiveImpact);
 			form.set("urgency", effectiveUrgency);
 			if (lane === "engineering") {
-				form.set("steps", steps.trim());
+				form.set(
+					"steps",
+					reproSteps
+						.map((step) => step.trim())
+						.filter(Boolean)
+						.map((step, index) => `${index + 1}. ${step}`)
+						.join("\n"),
+				);
 				form.set("expected", expected.trim());
 				form.set("actual", actual.trim());
 				form.set("os", os);
@@ -535,9 +574,7 @@ export function TicketSubmitForm() {
 			</div>
 
 			<div className="glass-card-inner flex items-center gap-3 rounded-lg border border-slate-200/60 p-3 sm:p-4">
-				<div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue/10 text-xs font-semibold text-[#0f5384]">
-					{initials}
-				</div>
+				<ProfilePicture user={user} size="md" editable={false} />
 				<div className="min-w-0">
 					<p className="truncate text-sm font-medium text-slate-700">
 						{userName}
@@ -553,7 +590,12 @@ export function TicketSubmitForm() {
 			<Card className="glass-card">
 				<div className="glass-card-cap" />
 				<CardContent className="p-4 sm:p-6">
-					<form onSubmit={onSubmit} noValidate className="space-y-6">
+					<form
+						ref={formRef}
+						onSubmit={onSubmit}
+						noValidate
+						className="space-y-6"
+					>
 						<div>
 							<p className="mb-1 text-sm font-medium text-slate-700">
 								What kind of request is this? <RequiredMark />
@@ -562,61 +604,61 @@ export function TicketSubmitForm() {
 								Pick the closest match — you can escalate Help to Engineering
 								later if needed.
 							</p>
-							<div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-								{TICKET_LANE_OPTIONS.map((option) => {
-									const selected = lane === option.value;
-									return (
-										<button
-											key={option.value}
-											type="button"
-											onClick={() => {
-												setLane(option.value);
-												setCategory("");
-												setTouched((prev) => ({ ...prev, lane: true }));
-											}}
-											className={cn(
-												"cursor-pointer rounded-lg border p-4 text-left transition-all duration-200",
-												selected
-													? "border-[#0f5384] bg-blue/5 shadow-sm"
-													: "border-slate-200 bg-white hover:border-blue-300 hover:bg-blue-50",
-											)}
-										>
-											<p className="text-sm font-semibold sidebar-gradient-text">
-												{option.label}
-											</p>
-											<p className="mt-1 text-xs text-slate-600">
-												{option.helper}
-											</p>
-										</button>
-									);
-								})}
+							<div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+								<SegmentedToggle<TicketLane | "">
+									ariaLabel="Request type"
+									value={lane}
+									onChange={(value) => {
+										if (!value) return;
+										setLane(value);
+										setCategory("");
+										setTouched((prev) => ({ ...prev, lane: true }));
+									}}
+									tabs={TICKET_LANE_OPTIONS.map((option) => ({
+										value: option.value,
+										label: option.label,
+										icon: option.value === "help" ? Toolbox : Unlink,
+									}))}
+									className="min-w-80"
+								/>
+								{selectedLane ? (
+									<p
+										key={selectedLane.value}
+										className="animate-in fade-in slide-in-from-left-1 text-xs text-slate-600 duration-200"
+									>
+										{selectedLane.helper}
+									</p>
+								) : null}
 							</div>
 							{touched.lane && errors.lane ? (
 								<p className="mt-2 text-xs text-red">{errors.lane}</p>
 							) : null}
 						</div>
 
-						<FormField
-							label="Title"
-							htmlFor="ticket-title"
-							required
-							error={touched.title ? errors.title : null}
-						>
-							<Input
-								id="ticket-title"
-								value={title}
-								onChange={(event) => setTitle(event.target.value)}
-								onBlur={() => setTouched((prev) => ({ ...prev, title: true }))}
-								placeholder="Summary of the problem"
-								maxLength={120}
-								className={cn(
-									TICKET_FIELD_CLASS,
-									touched.title && errors.title && "border-red/60!",
-								)}
-							/>
-						</FormField>
+						<Separator className="bg-slate-200/70" />
 
 						<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+							<FormField
+								label="Title"
+								htmlFor="ticket-title"
+								required
+								error={touched.title ? errors.title : null}
+							>
+								<Input
+									id="ticket-title"
+									value={title}
+									onChange={(event) => setTitle(event.target.value)}
+									onBlur={() =>
+										setTouched((prev) => ({ ...prev, title: true }))
+									}
+									placeholder="Summary of the problem"
+									maxLength={120}
+									className={cn(
+										TICKET_FIELD_CLASS,
+										touched.title && errors.title && "border-red/60!",
+									)}
+								/>
+							</FormField>
 							<FormField
 								label="Category"
 								htmlFor="ticket-category"
@@ -631,12 +673,17 @@ export function TicketSubmitForm() {
 										setTouched((prev) => ({ ...prev, category: true }))
 									}
 									options={categoryOptions}
-									placeholder={lane ? "Choose a category" : "Pick a lane first"}
+									placeholder={
+										lane ? "Choose a category" : "Pick a request type first"
+									}
 									error={Boolean(touched.category && errors.category)}
 									disabled={!lane}
 								/>
 							</FormField>
-							{lane === "engineering" ? (
+						</div>
+
+						{lane === "engineering" ? (
+							<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 								<FormField
 									label="Affected service"
 									htmlFor="ticket-module"
@@ -650,10 +697,10 @@ export function TicketSubmitForm() {
 										placeholder="Where does this happen?"
 									/>
 								</FormField>
-							) : (
-								<div />
-							)}
-						</div>
+							</div>
+						) : null}
+
+						<Separator className="bg-slate-200/70" />
 
 						{lane === "help" ? (
 							<div>
@@ -671,8 +718,22 @@ export function TicketSubmitForm() {
 										setTouched((prev) => ({ ...prev, impact: true }));
 									}}
 									options={TICKET_URGENCY_LEVELS}
+									activeClasses={URGENCY_PILL_ACTIVE}
 									error={touched.impact ? errors.impact : null}
 								/>
+								<p
+									className="mt-3 rounded-md bg-slate-50 px-3 py-2 text-xs text-slate-600"
+									aria-live="polite"
+								>
+									{helpPriorityLabel ? (
+										<>
+											<strong className="font-semibold text-[#0f5384]">
+												{helpPriorityLabel}
+											</strong>{" "}
+											— {HELP_PRIORITY_HINTS[helpPriority]}
+										</>
+									) : null}
+								</p>
 							</div>
 						) : lane === "engineering" ? (
 							<div>
@@ -702,30 +763,32 @@ export function TicketSubmitForm() {
 											setTouched((prev) => ({ ...prev, urgency: true }));
 										}}
 										options={TICKET_URGENCY_LEVELS}
+										activeClasses={URGENCY_PILL_ACTIVE}
 										error={touched.urgency ? errors.urgency : null}
 									/>
 								</div>
-								{derived ? (
-									<div className="mt-4 flex flex-wrap items-center gap-3">
-										<span
+								<div aria-live="polite">
+									{derived ? (
+										<p
 											className={cn(
-												"rounded-full border px-2.5 py-1 text-xs",
-												SEVERITY_BADGE[derived.level],
+												"mt-4 flex items-center gap-2 rounded-md border px-3 py-2 text-xs",
+												SEVERITY_BANNER[derived.severity],
 											)}
 										>
-											{derived.level} severity
-										</span>
-										<span className="flex items-center gap-1 text-xs text-slate-600">
-											<Clock
-												className="h-3.5 w-3.5 text-[#0f5384]"
-												aria-hidden
-											/>
-											Expected response within {derived.hours} hours
-										</span>
-									</div>
-								) : null}
+											<Clock className="h-3.5 w-3.5 shrink-0" aria-hidden />
+											<span>
+												<strong className="font-semibold">
+													{derived.badgeTitle}
+												</strong>{" "}
+												— Engineering will respond within {derived.slaLabel}.
+											</span>
+										</p>
+									) : null}
+								</div>
 							</div>
 						) : null}
+
+						<Separator className="bg-slate-200/70" />
 
 						{lane === "engineering" ? (
 							<div className="space-y-6">
@@ -733,30 +796,75 @@ export function TicketSubmitForm() {
 									label="Reproduction steps"
 									htmlFor="ticket-steps"
 									required
+									hint="at least 2"
 									error={touched.steps ? errors.steps : null}
-									trailing={
-										<span className="text-xs text-slate-500">
-											{steps.length}/{MAX_DESC}
-										</span>
-									}
 								>
-									<Textarea
-										id="ticket-steps"
-										value={steps}
-										onChange={(event) =>
-											setSteps(event.target.value.slice(0, MAX_DESC))
-										}
-										onBlur={() =>
-											setTouched((prev) => ({ ...prev, steps: true }))
-										}
-										placeholder={"1.\n2.\n3."}
-										rows={5}
-										className={cn(
-											"min-h-32 resize-y",
-											TICKET_FIELD_CLASS,
-											touched.steps && errors.steps && "border-red/60!",
-										)}
-									/>
+									<div className="space-y-2">
+										{reproSteps.map((step, index) => (
+											<div
+												key={index}
+												className="group flex items-center gap-2"
+											>
+												<span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue/10 text-xs font-semibold text-[#0f5384]">
+													{index + 1}
+												</span>
+												<Input
+													id={index === 0 ? "ticket-steps" : undefined}
+													aria-label={`Step ${index + 1}`}
+													value={step}
+													onChange={(event) =>
+														setReproSteps((prev) =>
+															prev.map((item, i) =>
+																i === index ? event.target.value : item,
+															),
+														)
+													}
+													onBlur={() =>
+														setTouched((prev) => ({ ...prev, steps: true }))
+													}
+													placeholder={
+														index === 0
+															? "First step…"
+															: index === 1
+																? "Second step…"
+																: "Next step (optional)"
+													}
+													maxLength={500}
+													className={cn(
+														TICKET_FIELD_CLASS,
+														touched.steps &&
+															errors.steps &&
+															index < 2 &&
+															!step.trim() &&
+															"border-red/60!",
+													)}
+												/>
+												{reproSteps.length > 2 ? (
+													<button
+														type="button"
+														onClick={() =>
+															setReproSteps((prev) =>
+																prev.filter((_, i) => i !== index),
+															)
+														}
+														className="shrink-0 cursor-pointer rounded p-0.5 text-slate-500 opacity-0 transition-opacity duration-200 hover:text-slate-700 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 group-hover:opacity-100"
+														aria-label={`Remove step ${index + 1}`}
+													>
+														<X className="h-4 w-4" aria-hidden />
+													</button>
+												) : null}
+											</div>
+										))}
+										{reproSteps.length < MAX_STEPS ? (
+											<button
+												type="button"
+												onClick={() => setReproSteps((prev) => [...prev, ""])}
+												className="cursor-pointer text-xs font-medium text-[#078FAB] hover:text-[#0f5384] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
+											>
+												+ Add step
+											</button>
+										) : null}
+									</div>
 								</FormField>
 
 								<FormField
@@ -865,7 +973,12 @@ export function TicketSubmitForm() {
 										Confirmations <RequiredMark />
 									</p>
 									<div className="space-y-2">
-										<label className="flex cursor-pointer items-start gap-2 text-sm text-slate-700">
+										<label
+											className={cn(
+												CONFIRM_CARD,
+												searchedExisting && CONFIRM_CARD_CHECKED,
+											)}
+										>
 											<Checkbox
 												className="mt-0.5"
 												checked={searchedExisting}
@@ -880,7 +993,12 @@ export function TicketSubmitForm() {
 											/>
 											<span>{BUG_CONFIRM_SEARCHED}</span>
 										</label>
-										<label className="flex cursor-pointer items-start gap-2 text-sm text-slate-700">
+										<label
+											className={cn(
+												CONFIRM_CARD,
+												isBug && CONFIRM_CARD_CHECKED,
+											)}
+										>
 											<Checkbox
 												className="mt-0.5"
 												checked={isBug}
@@ -936,6 +1054,8 @@ export function TicketSubmitForm() {
 								/>
 							</FormField>
 						)}
+
+						<Separator className="bg-slate-200/70" />
 
 						<FormField label="Attachments" hint="optional">
 							<div
@@ -1029,8 +1149,13 @@ export function TicketSubmitForm() {
 							) : null}
 						</FormField>
 
+						<Separator className="bg-slate-200/70" />
+
 						{showValidationBanner ? (
-							<div className="flex items-start gap-2 rounded-md border border-red/20 bg-red/10 px-3 py-2 text-sm text-red">
+							<div
+								role="alert"
+								className="flex items-start gap-2 rounded-md border border-red/20 bg-red/10 px-3 py-2 text-sm text-red"
+							>
 								<AlertTriangle
 									className="mt-0.5 h-4 w-4 shrink-0"
 									aria-hidden
@@ -1042,7 +1167,10 @@ export function TicketSubmitForm() {
 						) : null}
 
 						{error ? (
-							<div className="flex items-start gap-2 rounded-md border border-red/20 bg-red/10 px-3 py-2 text-sm text-red">
+							<div
+								role="alert"
+								className="flex items-start gap-2 rounded-md border border-red/20 bg-red/10 px-3 py-2 text-sm text-red"
+							>
 								<AlertTriangle
 									className="mt-0.5 h-4 w-4 shrink-0"
 									aria-hidden
@@ -1059,7 +1187,16 @@ export function TicketSubmitForm() {
 							/>
 						) : null}
 
-						<div className="flex justify-end">
+						<div className="flex justify-end gap-2">
+							<Button
+								type="button"
+								variant="ghost"
+								className="rounded-full px-3 py-1.5 h-[1.65rem] justify-center text-slate-400 hover:text-slate-600 hover:bg-black/[.04]"
+								onClick={() => router.back()}
+								disabled={submitting}
+							>
+								Cancel
+							</Button>
 							<Button
 								type="submit"
 								className="primary-btn w-full px-3 sm:w-auto sm:px-4"

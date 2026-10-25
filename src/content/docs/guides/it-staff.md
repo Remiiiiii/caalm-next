@@ -27,12 +27,16 @@ Translate between:
 ## Suggested ownership
 
 - Watch system health and error surfaces
+- Work **Active Incidents** (`/dashboard/it/incidents/active`) — load failures file themselves with an `INC-` reference
+- Assign unassigned page-level failures first; acknowledge, then resolve with a note
 - Keep incident history honest (active → history → post-mortem)
 - Protect access control and audit log integrity
 - Treat API keys and integrations as production credentials
 
+When a user says “the page won’t load,” ask for the `INC-` reference. See [A page or table won't load](/docs/troubleshooting/page-wont-load).
+
 ## Permissions
 
-IT permissions are explicit (`it.view_monitoring`, `it.view_incidents`, `it.manage_database`, etc.). Do not assume a compliance Super Admin automatically holds IT ops keys — assign them on purpose.
+IT permissions are explicit (`it.view_monitoring`, `it.view_incidents`, `it.manage_incidents`, `it.manage_database`, etc.). Do not assume a compliance Super Admin automatically holds IT ops keys — assign them on purpose.
 
 Ref: [IT portal](/docs/reference/it-portal).

@@ -13,7 +13,7 @@ Simple rule: Organization Admin = **company operator**. Super Admin = **system o
 
 You own day-to-day company operations inside CAALM:
 
-- **Users** — invite, edit, deactivate, assign roles
+- **Users** — invite, edit, deactivate, assign roles; use the reporting/assignment graph when the org chart is the question
 - **Org settings**, billing, and integrations (when you hold those permissions)
 - **Contracts, licenses, clause library, templates, funding & retention, calendar, news, audits, AI** features your role pack includes
 - **Audit readiness** (`/audits/readiness`) for prep scores, snapshots, and packets — see [Audit readiness](/docs/reference/audit-readiness)
@@ -90,6 +90,7 @@ Use Role Management templates (Viewer, Contract reviewer, Department manager, Co
 - [ ] New users completed 2FA
 - [ ] No unexplained role changes
 - [ ] Expiry widgets reviewed with owners
+- [ ] Risk averted packet glanced at before board week (`/analytics/risk-averted`)
 - [ ] Integration health glanced at (Outlook, HubSpot; Salesforce request if Enterprise) — [CRM origin](/docs/admin/crm-integrations)
 - [ ] Super Admin list still tiny (escalate odd grants to platform ops)
 

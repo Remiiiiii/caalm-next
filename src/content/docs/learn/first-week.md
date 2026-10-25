@@ -33,7 +33,7 @@ Day-one access is not adoption. Use this week plan to build the habits CAALM rew
 
 ## Day 5 — Leadership visibility
 
-- Open Analytics (Overview / Quick View / C-Suite as permitted).
+- Open Analytics (Overview / Quick View / C-Suite / Risk averted as permitted).
 - Identify the single risk you would bring to a standup.
 - If you are a manager, confirm your division analytics match reality.
 

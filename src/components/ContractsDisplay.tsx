@@ -2,13 +2,18 @@
 
 import {
 	AlertCircle,
-	Building2,
+	ArrowDown,
+	ArrowDownAZ,
+	ArrowUp,
+	ArrowUpDown,
+	ArrowUpZA,
 	Calendar,
-	DollarSign,
+	ChevronDown,
+	Download,
+	Loader2,
 	ExternalLink,
 	Eye,
 	FileText,
-	MapPin,
 	RefreshCw,
 	Save,
 	Search,
@@ -17,17 +22,19 @@ import {
 import Image from "next/image";
 import React, { useCallback, useMemo, useState } from "react";
 import ContractDocumentViewer from "@/components/ContractDocumentViewer";
-import { LoadError } from "@/components/LoadError";
+import ContractsSavedSearches from "@/components/ContractsSavedSearches";
 import {
 	FilesViewToggle,
 	type FilesViewType,
 } from "@/components/FilesViewToggle";
+import { LoadError } from "@/components/LoadError";
 import { Button } from "@/components/ui/button";
 import {
 	CaalmDataTable,
 	DATA_TABLE_BODY_ROW_BASE,
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
+	SortableDataTableHead,
 } from "@/components/ui/caalm-data-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DropdownScrollArea } from "@/components/ui/DropdownScrollArea";
@@ -37,6 +44,7 @@ import {
 	DropdownMenu,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { FILTER_PILL_TRIGGER } from "@/components/ui/filter-pill";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageIndex } from "@/components/ui/page-index";
@@ -76,9 +84,11 @@ import {
 	getUsStateLabel,
 	US_STATES,
 } from "@/lib/sam-search-options";
+import { downloadXlsx } from "@/lib/export/download-xlsx";
 import { cn } from "@/lib/utils";
 
-const FIELD_LABEL_CLASS = "text-sm font-medium text-slate-700";
+const FIELD_LABEL_CLASS =
+	"text-xs font-semibold uppercase tracking-wider text-slate-600";
 const FIELD_INPUT_CLASS =
 	"h-10 border-[0.25px] border-slate-300 text-slate-700 placeholder:text-slate-500 hover:border-blue-300 focus-visible:border-[#078FAB] focus-visible:ring-1 focus-visible:ring-[#078FAB]";
 const FIELD_ACTIVE_CLASS = "bg-green/10 border-green/30";
@@ -86,15 +96,26 @@ const FIELD_ACTIVE_CLASS = "bg-green/10 border-green/30";
 const CAALM_BADGE_BASE =
 	"inline-flex items-center gap-1.5 px-2 py-0.5 text-xs rounded-full border";
 
-const SAM_SORT_OPTIONS = [
-	{ value: "due-asc", label: "Due date ↑" },
-	{ value: "due-desc", label: "Due date ↓" },
-	{ value: "posted-desc", label: "Posted (newest)" },
-	{ value: "posted-asc", label: "Posted (oldest)" },
-	{ value: "title-asc", label: "Title A–Z" },
+const SAM_SORT_FIELDS = [
+	{ key: "title", label: "Title", kind: "alpha" },
+	{ key: "org", label: "Organization", kind: "alpha" },
+	{ key: "posted", label: "Posted", kind: "time" },
+	{ key: "due", label: "Due date", kind: "time" },
 ] as const;
 
-type SamSortValue = (typeof SAM_SORT_OPTIONS)[number]["value"];
+type SamSortKey = (typeof SAM_SORT_FIELDS)[number]["key"];
+type SamSortValue = `${SamSortKey}-asc` | `${SamSortKey}-desc`;
+
+function parseSamSort(value: SamSortValue): {
+	key: SamSortKey;
+	direction: "asc" | "desc";
+} {
+	const lastDash = value.lastIndexOf("-");
+	return {
+		key: value.slice(0, lastDash) as SamSortKey,
+		direction: value.slice(lastDash + 1) === "asc" ? "asc" : "desc",
+	};
+}
 
 function badgeToneForType(type?: string): string {
 	const t = (type || "").toLowerCase();
@@ -112,7 +133,65 @@ function badgeToneForType(type?: string): string {
 
 function badgeToneForSetAside(code?: string): string {
 	if (!code) return "bg-slate-100 text-slate-600 border-slate-200";
+	const c = (code || "").toLowerCase();
+	if (c.includes("8a") || c.includes("8(a)"))
+		return "bg-[#078fab]/10 text-[#078fab] border-[#078fab]/20";
+	if (c.includes("hubzone")) return "bg-green/10 text-green border-green/20";
+	if (
+		c.includes("sdvosb") ||
+		c.includes("wosb") ||
+		c.includes("edwosb") ||
+		c.includes("vosb")
+	)
+		return "bg-orange/10 text-orange border-orange/20";
 	return "bg-blue/10 text-blue border-blue/20";
+}
+
+function dueDateUrgency(deadline?: string): {
+	className: string;
+	srLabel?: string;
+} {
+	if (!deadline) return { className: "text-slate-600" };
+	const ms = Date.parse(deadline);
+	if (!Number.isFinite(ms)) return { className: "text-slate-600" };
+	const days = Math.ceil((ms - Date.now()) / 86_400_000);
+	if (days < 0)
+		return { className: "text-red line-through", srLabel: "Expired" };
+	if (days <= 14)
+		return { className: "text-[#b45309] font-bold", srLabel: "Urgent" };
+	if (days <= 30) return { className: "text-[#b45309]/80" };
+	return { className: "text-slate-600" };
+}
+
+function exportContractsXlsx(contracts: SAMContract[]) {
+	const stamp = new Date().toISOString().slice(0, 10);
+	downloadXlsx(`caalm-gov-contracts-${stamp}.xlsx`, {
+		sheetName: "Government Contracts",
+		title: "Government Contracts — Export",
+		subtitle: `CAALM · ${contracts.length} opportunit${contracts.length === 1 ? "y" : "ies"} · Generated ${stamp}`,
+		columns: [
+			{ header: "Notice ID", width: 20 },
+			{ header: "Title", width: 40 },
+			{ header: "Agency", width: 30 },
+			{ header: "Posted", type: "date" as const, width: 14 },
+			{ header: "Due Date", type: "date" as const, width: 14 },
+			{ header: "NAICS", width: 10 },
+			{ header: "Set-Aside", width: 24 },
+			{ header: "Estimated Value", type: "currency" as const, width: 18 },
+			{ header: "SAM.gov URL", width: 36 },
+		],
+		rows: contracts.map((c) => [
+			c.noticeId || c.solicitationNumber || "",
+			c.title || "",
+			c.fullParentPathName || c.department || "",
+			c.postedDate || null,
+			c.responseDeadLine || null,
+			c.naicsCode || "",
+			c.typeOfSetAsideDescription || "",
+			c.award?.amount ? Number(c.award.amount) : null,
+			c.uiLink || "",
+		]),
+	});
 }
 
 function getPlaceLabel(contract: SAMContract): string | null {
@@ -134,23 +213,27 @@ function sortSamContracts(
 	list: SAMContract[],
 	sort: SamSortValue,
 ): SAMContract[] {
+	const { key, direction } = parseSamSort(sort);
+	const dir = direction === "asc" ? 1 : -1;
 	const next = [...list];
 	next.sort((a, b) => {
-		switch (sort) {
-			case "due-asc":
+		switch (key) {
+			case "due":
 				return (
-					parseSamDate(a.responseDeadLine) - parseSamDate(b.responseDeadLine)
+					dir *
+					(parseSamDate(a.responseDeadLine) - parseSamDate(b.responseDeadLine))
 				);
-			case "due-desc":
+			case "posted":
+				return dir * (parseSamDate(a.postedDate) - parseSamDate(b.postedDate));
+			case "title":
+				return dir * (a.title || "").localeCompare(b.title || "");
+			case "org":
 				return (
-					parseSamDate(b.responseDeadLine) - parseSamDate(a.responseDeadLine)
+					dir *
+					(a.fullParentPathName || a.department || "").localeCompare(
+						b.fullParentPathName || b.department || "",
+					)
 				);
-			case "posted-asc":
-				return parseSamDate(a.postedDate) - parseSamDate(b.postedDate);
-			case "posted-desc":
-				return parseSamDate(b.postedDate) - parseSamDate(a.postedDate);
-			case "title-asc":
-				return (a.title || "").localeCompare(b.title || "");
 			default:
 				return 0;
 		}
@@ -321,82 +404,58 @@ const ContractCard = React.memo(
 								</span>
 							)}
 						</div>
-						{contract.responseDeadLine && (
-							<p className="shrink-0 text-xs text-slate-700">
-								Due{" "}
-								<span className="font-semibold">
-									{formatContractDate(contract.responseDeadLine)}
-								</span>
-							</p>
-						)}
+						{contract.responseDeadLine &&
+							(() => {
+								const urgency = dueDateUrgency(contract.responseDeadLine);
+								return (
+									<p className={cn("shrink-0 text-xs", urgency.className)}>
+										{urgency.srLabel && (
+											<span className="sr-only">{urgency.srLabel}</span>
+										)}
+										Due{" "}
+										<span
+											className={
+												urgency.className.includes("font-bold")
+													? ""
+													: "font-semibold"
+											}
+										>
+											{formatContractDate(contract.responseDeadLine)}
+										</span>
+									</p>
+								);
+							})()}
 					</div>
 
-					{/* Title + notice ID */}
-					<div className="min-w-0 space-y-1">
-						<h3 className="text-base font-semibold sidebar-gradient-text leading-snug line-clamp-2">
+					{/* Title */}
+					<div className="min-w-0">
+						<h3
+							className="text-sm font-bold text-[#0f5384] leading-snug line-clamp-2"
+							title={contract.title || ""}
+						>
 							{contract.title}
 						</h3>
+					</div>
+
+					{/* Meta rows */}
+					<div className="space-y-1 text-xs text-[#64748b]">
 						{contract.solicitationNumber && (
-							<p className="text-xs text-slate-700">
+							<p className="inline-flex items-center gap-1.5">
+								<FileText
+									className="h-3.5 w-3.5 shrink-0 text-slate-500"
+									aria-hidden
+								/>
 								Notice ID: {contract.solicitationNumber}
 							</p>
 						)}
-					</div>
-
-					{/* Meta — location first; vertical dividers between fields */}
-					<div className="flex flex-wrap items-center text-xs text-slate-700">
-						{placeLabel && (
-							<>
-								<span className="inline-flex items-center gap-1.5 min-w-0">
-									<MapPin
-										className="h-3.5 w-3.5 shrink-0 text-red"
-										aria-hidden
-									/>
-									<span className="truncate">{placeLabel}</span>
-								</span>
-								<span
-									className="mx-2.5 h-3 w-px shrink-0 bg-slate-300"
-									aria-hidden
-								/>
-							</>
-						)}
-						<span className="inline-flex items-center gap-1.5">
+						<p className="inline-flex items-center gap-1.5">
 							<Calendar
-								className="h-3.5 w-3.5 shrink-0 text-[#0f5384]"
+								className="h-3.5 w-3.5 shrink-0 text-slate-500"
 								aria-hidden
 							/>
-							<span>Posted {formatContractDate(contract.postedDate)}</span>
-						</span>
-						{contract.naicsCode && (
-							<>
-								<span
-									className="mx-2.5 h-3 w-px shrink-0 bg-slate-300"
-									aria-hidden
-								/>
-								<span className="inline-flex items-center gap-1.5">
-									<FileText
-										className="h-3.5 w-3.5 shrink-0 text-slate-500"
-										aria-hidden
-									/>
-									<span>NAICS {contract.naicsCode}</span>
-								</span>
-							</>
-						)}
+							Posted {formatContractDate(contract.postedDate)}
+						</p>
 					</div>
-
-					{contract.award && (
-						<div className="rounded-md border border-green/20 bg-green/10 px-3 py-2">
-							<div className="flex items-center gap-2 text-xs font-medium text-green">
-								<DollarSign className="h-3.5 w-3.5 shrink-0" aria-hidden />
-								<span>
-									Award information available
-									{contract.award.amount
-										? ` · ${formatContractAmount(contract.award.amount)}`
-										: ""}
-								</span>
-							</div>
-						</div>
-					)}
 
 					{/* Actions — divider above; View | SAM.gov left, Save right */}
 					<div className="mt-auto flex items-center justify-between gap-2 border-t border-slate-200/60 pt-3">
@@ -404,28 +463,25 @@ const ContractCard = React.memo(
 							<button
 								type="button"
 								onClick={handleViewDetails}
-								className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-700 hover:text-[#0f5384] transition-colors cursor-pointer"
+								className="inline-flex items-center gap-1.5 text-xs font-medium text-[#078fab] hover:text-[#0f5384] transition-colors cursor-pointer"
 							>
-								<Eye className="h-3.5 w-3.5 shrink-0" aria-hidden />
 								View details
 							</button>
 							{contract.uiLink && (
 								<>
-									<span
-										className="mx-2.5 h-3 w-px shrink-0 bg-slate-300"
-										aria-hidden
-									/>
-									<button
-										type="button"
-										onClick={(e) => {
-											e.stopPropagation();
-											window.open(contract.uiLink, "_blank");
-										}}
-										className="inline-flex items-center gap-1 text-xs font-medium text-slate-700 hover:text-[#0f5384] transition-colors cursor-pointer"
+									<span className="mx-2 text-slate-300" aria-hidden>
+										|
+									</span>
+									<a
+										href={contract.uiLink}
+										target="_blank"
+										rel="noopener noreferrer"
+										onClick={(e) => e.stopPropagation()}
+										className="inline-flex items-center gap-1 text-xs font-medium text-[#078fab] hover:text-[#0f5384] transition-colors"
 									>
 										SAM.gov
 										<ExternalLink className="h-3 w-3 shrink-0" aria-hidden />
-									</button>
+									</a>
 								</>
 							)}
 						</div>
@@ -451,30 +507,64 @@ const samRowPad = "px-3 py-3 align-middle";
 function SamContractsTable({
 	contracts,
 	onViewDocument,
+	sort,
+	onSortChange,
 }: {
 	contracts: SAMContract[];
 	onViewDocument: (contract: SAMContract) => void;
+	sort: SamSortValue;
+	onSortChange: (value: SamSortValue) => void;
 }) {
+	const { key: sortKey, direction: sortDirection } = parseSamSort(sort);
+
+	const toggleSort = (field: SamSortKey) => {
+		onSortChange(
+			`${field}-${sortKey === field && sortDirection === "asc" ? "desc" : "asc"}` as SamSortValue,
+		);
+	};
+
 	return (
 		<CaalmDataTable className="pb-0">
 			<TableHeader className="[&_tr]:border-b-0">
 				<TableRow className={DATA_TABLE_HEADER_ROW}>
-					<TableHead className={cn(DATA_TABLE_HEADER_CELL, "pl-4 pr-3")}>
-						Title
-					</TableHead>
+					<SortableDataTableHead
+						label="Title"
+						active={sortKey === "title"}
+						onClick={() => toggleSort("title")}
+						className="pl-4 pr-3"
+					/>
+					<SortableDataTableHead
+						label="Organization"
+						active={sortKey === "org"}
+						onClick={() => toggleSort("org")}
+						className="hidden sm:table-cell"
+					/>
 					<TableHead
 						className={cn(DATA_TABLE_HEADER_CELL, "px-3 hidden md:table-cell")}
 					>
-						Location
+						Procurement Type
 					</TableHead>
 					<TableHead
 						className={cn(DATA_TABLE_HEADER_CELL, "px-3 hidden lg:table-cell")}
 					>
-						Posted
+						Set-Aside
 					</TableHead>
-					<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
-						Due
+					<TableHead
+						className={cn(DATA_TABLE_HEADER_CELL, "px-3 hidden lg:table-cell")}
+					>
+						State
 					</TableHead>
+					<SortableDataTableHead
+						label="Posted"
+						active={sortKey === "posted"}
+						onClick={() => toggleSort("posted")}
+						className="hidden xl:table-cell"
+					/>
+					<SortableDataTableHead
+						label="Due"
+						active={sortKey === "due"}
+						onClick={() => toggleSort("due")}
+					/>
 					<TableHead
 						className={cn(DATA_TABLE_HEADER_CELL, "pl-3 pr-4 text-right")}
 					>
@@ -484,7 +574,16 @@ function SamContractsTable({
 			</TableHeader>
 			<TableBody className="[&_tr:last-child>td]:border-b-0">
 				{contracts.map((contract, index) => {
-					const placeLabel = getPlaceLabel(contract);
+					const organization =
+						contract.fullParentPathName || contract.department;
+					const procurementType = getContractTypeDisplay(contract.type);
+					const setAsideLabel = contract.typeOfSetAside
+						? getSetAsideDisplay(contract.typeOfSetAside)
+						: contract.typeOfSetAsideDescription;
+					const stateLabel =
+						contract.placeOfPerformance?.state?.code ||
+						contract.placeOfPerformance?.state?.name ||
+						contract.officeAddress?.state;
 					return (
 						<TableRow
 							key={
@@ -505,12 +604,43 @@ function SamContractsTable({
 								)}
 							</TableCell>
 							<TableCell
-								className={cn(samRowPad, "text-slate-700 hidden md:table-cell")}
+								className={cn(
+									samRowPad,
+									"text-slate-700 hidden sm:table-cell max-w-56 truncate",
+								)}
 							>
-								{placeLabel || "—"}
+								{organization || "—"}
+							</TableCell>
+							<TableCell className={cn(samRowPad, "hidden md:table-cell")}>
+								{procurementType ? (
+									<span
+										className={cn(
+											CAALM_BADGE_BASE,
+											badgeToneForType(contract.type),
+										)}
+									>
+										<span
+											className="size-1.5 rounded-full bg-current opacity-80"
+											aria-hidden
+										/>
+										<span className="truncate max-w-32">{procurementType}</span>
+									</span>
+								) : (
+									<span className="text-slate-700">—</span>
+								)}
 							</TableCell>
 							<TableCell
 								className={cn(samRowPad, "text-slate-700 hidden lg:table-cell")}
+							>
+								{setAsideLabel || "—"}
+							</TableCell>
+							<TableCell
+								className={cn(samRowPad, "text-slate-700 hidden lg:table-cell")}
+							>
+								{stateLabel || "—"}
+							</TableCell>
+							<TableCell
+								className={cn(samRowPad, "text-slate-700 hidden xl:table-cell")}
 							>
 								{formatContractDate(contract.postedDate)}
 							</TableCell>
@@ -583,7 +713,7 @@ export default function ContractsDisplay() {
 			state: "",
 			organizationName: "",
 			responseDeadlineOption: "Anytime",
-			limit: 24,
+			limit: 12,
 			offset: 0,
 		});
 
@@ -596,6 +726,7 @@ export default function ContractsDisplay() {
 	const [resultsSort, setResultsSort] = useState<SamSortValue>("due-desc");
 	const [orgSuggestionsOpen, setOrgSuggestionsOpen] = useState(false);
 	const [keywordSuggestionsOpen, setKeywordSuggestionsOpen] = useState(false);
+	const [exportingXlsx, setExportingXlsx] = useState(false);
 
 	// Use the new SAM opportunities hook with SWR caching
 	const {
@@ -607,69 +738,6 @@ export default function ContractsDisplay() {
 		clearResults,
 		hasSearched,
 	} = useSAMOpportunities();
-
-	// Remove auto-search - only search when button is clicked
-	// useEffect(() => {
-	//   if (searchFilters.keyword && searchFilters.keyword.length >= 2) {
-	//     const timeoutId = setTimeout(async () => {
-	//       try {
-	//         // Only set loading state if we don't have results yet
-	//         if (contracts.length === 0) {
-	//           // Add a small delay before showing loading to prevent flickering
-	//           const loadingTimeoutId = setTimeout(() => {
-	//             setIsNewSearch(true);
-	//           }, 100);
-	//
-	//           // Execute search with enhanced filters
-	//           const cleanFilters: UseSAMOpportunitiesFilters = Object.fromEntries(
-	//             Object.entries(searchFilters).filter(([key, value]) => {
-	//               if (typeof value === 'string') {
-	//                 return value !== '' && value !== 'all';
-	//               }
-	//               if (typeof value === 'number') {
-	//                 return key === 'limit' || key === 'offset' || value > 0;
-	//               }
-	//               return value !== null && value !== undefined;
-	//             })
-	//           ) as UseSAMOpportunitiesFilters;
-
-	//           await searchOpportunities(cleanFilters);
-	//           clearTimeout(loadingTimeoutId);
-	//           setIsNewSearch(false);
-	//         } else {
-	//           // If we have results, just update without showing loading
-	//           const cleanFilters: UseSAMOpportunitiesFilters = Object.fromEntries(
-	//             Object.entries(searchFilters).filter(([key, value]) => {
-	//               if (typeof value === 'string') {
-	//                 return value !== '' && value !== 'all';
-	//               }
-	//               if (typeof value === 'number') {
-	//                 return key === 'limit' || key === 'offset' || value > 0;
-	//               }
-	//               return value !== null && value !== undefined;
-	//             })
-	//           ) as UseSAMOpportunitiesFilters;
-
-	//           await searchOpportunities(cleanFilters);
-	//         }
-	//       } catch (err) {
-	//         console.error('Enhanced SAM search failed:', err);
-	//         setIsNewSearch(false);
-	//       }
-	//     }, 500); // 500ms debounce for better UX
-
-	//     return () => clearTimeout(timeoutId);
-	//   }
-	// }, [
-	//   searchFilters.keyword,
-	//   searchFilters.procurementType,
-	//   searchFilters.setAsideType,
-	//   searchFilters.state,
-	//   searchFilters.organizationName,
-	//   searchFilters.responseDeadlineOption,
-	//   searchOpportunities,
-	//   contracts.length,
-	// ]);
 
 	const buildCleanFilters = useCallback(
 		(filters: UseSAMOpportunitiesFilters): UseSAMOpportunitiesFilters => {
@@ -687,7 +755,7 @@ export default function ContractsDisplay() {
 			) as UseSAMOpportunitiesFilters;
 
 			// Force offset onto the payload so page 2+ never drops it
-			cleaned.limit = filters.limit || 24;
+			cleaned.limit = filters.limit || 12;
 			cleaned.offset = filters.offset || 0;
 			return cleaned;
 		},
@@ -712,7 +780,7 @@ export default function ContractsDisplay() {
 			state: "",
 			organizationName: "",
 			responseDeadlineOption: "Anytime",
-			limit: 24,
+			limit: 12,
 			offset: 0,
 		});
 		clearResults();
@@ -760,6 +828,8 @@ export default function ContractsDisplay() {
 		[contracts, resultsSort],
 	);
 
+	const { key: sortKey, direction: sortDirection } = parseSamSort(resultsSort);
+
 	const organizationSuggestions = useMemo(
 		() => filterSamOrganizations(searchFilters.organizationName || "", 8),
 		[searchFilters.organizationName],
@@ -775,9 +845,6 @@ export default function ContractsDisplay() {
 			{/* Header */}
 			<div className="flex justify-between items-center">
 				<div>
-					<p className="text-xs font-semibold uppercase tracking-wider text-[#078fab] mb-1">
-						Resources
-					</p>
 					<h1 className="text-3xl font-bold sidebar-gradient-text">
 						Government Contracts
 					</h1>
@@ -796,7 +863,7 @@ export default function ContractsDisplay() {
 						<div className="flex items-center justify-between gap-3">
 							<CardTitle className="flex items-center gap-2 text-xl font-semibold sidebar-gradient-text">
 								<Search className="h-5 w-5 text-[#0f5384]" />
-								Search Contracts
+								Search contracts
 							</CardTitle>
 							{activeFilterChips.length > 0 && (
 								<span className="inline-block shrink-0 px-2 py-0.5 text-xs rounded-full border bg-green/10 text-green border-green/20">
@@ -851,13 +918,13 @@ export default function ContractsDisplay() {
 								{keywordSuggestionsOpen &&
 									keywordSuggestions.length > 0 &&
 									(searchFilters.keyword?.trim().length ?? 0) > 0 && (
-										<div className="absolute z-50 top-full left-0 right-0 mt-1 overflow-hidden rounded-md border border-slate-200 bg-white shadow-lg">
+										<div className="absolute z-50 top-full left-0 right-0 mt-1 overflow-hidden rounded-md border border-white/30 bg-white/10 shadow-md backdrop-blur">
 											<DropdownScrollArea maxHeightClassName="max-h-60">
 												{keywordSuggestions.map((term) => (
 													<button
 														key={term}
 														type="button"
-														className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-blue-50 cursor-pointer transition-colors border-b border-slate-200/60 last:border-b-0"
+														className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-white/30 cursor-pointer transition-colors border-b border-white/10 last:border-b-0"
 														onMouseDown={(e) => e.preventDefault()}
 														onClick={() => {
 															setSearchFilters((prev) => ({
@@ -1009,13 +1076,13 @@ export default function ContractsDisplay() {
 								{orgSuggestionsOpen &&
 									organizationSuggestions.length > 0 &&
 									(searchFilters.organizationName?.trim().length ?? 0) > 0 && (
-										<div className="absolute z-50 top-full left-0 right-0 mt-1 overflow-hidden rounded-md border border-slate-200 bg-white shadow-lg">
+										<div className="absolute z-50 top-full left-0 right-0 mt-1 overflow-hidden rounded-md border border-white/30 bg-white/10 shadow-md backdrop-blur">
 											<DropdownScrollArea maxHeightClassName="max-h-60">
 												{organizationSuggestions.map((org) => (
 													<button
 														key={org.name}
 														type="button"
-														className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-blue-50 cursor-pointer transition-colors border-b border-slate-200/60 last:border-b-0"
+														className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-white/30 cursor-pointer transition-colors border-b border-white/10 last:border-b-0"
 														onMouseDown={(e) => e.preventDefault()}
 														onClick={() => {
 															setSearchFilters((prev) => ({
@@ -1093,26 +1160,24 @@ export default function ContractsDisplay() {
 							</div>
 						)}
 
-						{/* Action Buttons — right-aligned */}
+						{/* Action Buttons */}
 						<div className="flex flex-wrap items-center justify-end gap-3">
 							<Button
-								onClick={handleSearch}
-								disabled={loading}
-								className="flex items-center gap-2 btn-primary px-3 sm:px-4"
-							>
-								{loading ? (
-									<RefreshCw className="h-4 w-4 animate-spin" />
-								) : (
-									<Search className="h-4 w-4" />
-								)}
-								Search Contracts
-							</Button>
-							<Button
+								type="button"
 								onClick={handleReset}
-								className="flex items-center gap-2 btn-primary px-3 sm:px-4"
+								className="btn-primary gap-2 px-3 sm:px-4"
 							>
 								<RefreshCw className="h-4 w-4" />
 								Reset
+							</Button>
+							<Button
+								type="button"
+								onClick={handleSearch}
+								disabled={loading}
+								className="btn-primary gap-2 px-3 sm:px-4"
+							>
+								<Search className="h-4 w-4" />
+								{loading ? "Searching…" : "Search contracts"}
 							</Button>
 						</div>
 					</CardContent>
@@ -1133,46 +1198,146 @@ export default function ContractsDisplay() {
 
 			{hasSearched && !error && (
 				<div className="space-y-4">
-					{/* Control bar — mirrors ContractsControlBar / LicensesControlBar row */}
+					<div className="border-t border-slate-300" aria-hidden />
+					{/* Control bar */}
 					<div className="flex pt-2 pb-1 gap-3 justify-between flex-wrap items-center">
 						<div className="flex items-center gap-3 flex-wrap min-w-0">
-							<p className="font-medium text-slate-700">
+							<p
+								className="text-sm font-semibold text-[#0f5384]"
+								aria-live="polite"
+							>
 								{totalRecords.toLocaleString()} contracts found
 							</p>
-							<div className="flex items-center gap-2 text-green">
-								<span
-									className="size-2 rounded-full bg-green animate-pulse"
-									aria-hidden
-								/>
-								<span className="text-sm text-slate-700">
-									Live SAM.gov data
-								</span>
-							</div>
+							<span className="inline-flex items-center gap-1.5 rounded-full border border-[#a7e9d5] bg-[#edfaf6] px-2.5 py-0.5 text-xs text-green">
+								<span className="size-1.5 rounded-full bg-green" aria-hidden />
+								Live SAM.gov data
+							</span>
 						</div>
 						<div className="flex items-center gap-2 justify-end flex-wrap">
-							<Select
-								value={resultsSort}
-								onValueChange={(value) => setResultsSort(value as SamSortValue)}
-							>
-								<SelectTrigger className="sort-select h-10! w-auto sm:w-45">
-									<SelectValue placeholder="Sort" />
-								</SelectTrigger>
-								<SelectContent className="sort-select-content">
-									{SAM_SORT_OPTIONS.map((opt) => (
-										<SelectItem
-											key={opt.value}
-											value={opt.value}
-											className="shad-select-item text-slate-700"
-										>
-											Sort: {opt.label}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
+							{/* View toggle */}
 							<FilesViewToggle
 								view={resultsView}
 								onViewChange={setResultsView}
 							/>
+							{/* Sort dropdown — field + direction, matching Sort.tsx */}
+							<DropdownMenu>
+								<DropdownMenuTrigger asChild>
+									<button type="button" className={FILTER_PILL_TRIGGER}>
+										<ArrowUpDown className="h-4 w-4 shrink-0 text-slate-600" />
+										<span className="hidden sm:inline">Sort by</span>
+										<ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+									</button>
+								</DropdownMenuTrigger>
+								<AppDropdownMenuContent align="end" className="w-72 p-1">
+									{SAM_SORT_FIELDS.map((field) => {
+										const active = sortKey === field.key;
+										const ascLabel =
+											field.kind === "alpha" ? "A to Z" : "oldest first";
+										const descLabel =
+											field.kind === "alpha" ? "Z to A" : "newest first";
+										return (
+											<div
+												key={field.key}
+												className={cn(
+													"flex items-center justify-between gap-3 rounded-lg px-3 py-2",
+													active && "bg-blue-50",
+												)}
+											>
+												<p
+													className={cn(
+														"text-sm font-medium",
+														active ? "text-[#0f5384]" : "text-slate-700",
+													)}
+												>
+													{field.label}
+												</p>
+												<div className="flex items-center gap-1">
+													<button
+														type="button"
+														aria-label={`${field.label} ${ascLabel}`}
+														aria-pressed={active && sortDirection === "asc"}
+														onClick={() =>
+															setResultsSort(`${field.key}-asc` as SamSortValue)
+														}
+														className={cn(
+															"inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md transition-colors duration-200",
+															"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
+															active && sortDirection === "asc"
+																? "bg-white text-[#0f5384] shadow-sm"
+																: "text-slate-400 hover:text-slate-700",
+														)}
+													>
+														{field.kind === "alpha" ? (
+															<ArrowDownAZ className="h-4 w-4" />
+														) : (
+															<ArrowDown className="h-4 w-4" />
+														)}
+													</button>
+													<button
+														type="button"
+														aria-label={`${field.label} ${descLabel}`}
+														aria-pressed={active && sortDirection === "desc"}
+														onClick={() =>
+															setResultsSort(
+																`${field.key}-desc` as SamSortValue,
+															)
+														}
+														className={cn(
+															"inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md transition-colors duration-200",
+															"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
+															active && sortDirection === "desc"
+																? "bg-white text-[#0f5384] shadow-sm"
+																: "text-slate-400 hover:text-slate-700",
+														)}
+													>
+														{field.kind === "alpha" ? (
+															<ArrowUpZA className="h-4 w-4" />
+														) : (
+															<ArrowUp className="h-4 w-4" />
+														)}
+													</button>
+												</div>
+											</div>
+										);
+									})}
+								</AppDropdownMenuContent>
+							</DropdownMenu>
+							{/* Save / Export */}
+							{sortedContracts.length > 0 && !loading && (
+								<ContractsSavedSearches
+									currentFilters={searchFilters}
+									onApply={(filters) => {
+										const nextFilters = { ...filters, offset: 0 };
+										setSearchFilters(nextFilters);
+										searchOpportunities(buildCleanFilters(nextFilters)).catch(
+											(err) => {
+												console.error(
+													"[CLIENT] ContractsDisplay: saved search replay failed",
+													err,
+												);
+											},
+										);
+									}}
+								/>
+							)}
+							<Button
+								type="button"
+								className="btn-primary gap-1.5 px-2.5 py-1.5 h-8 text-xs"
+								disabled={exportingXlsx}
+								onClick={async () => {
+									setExportingXlsx(true);
+									await new Promise((r) => setTimeout(r, 400));
+									exportContractsXlsx(sortedContracts);
+									setExportingXlsx(false);
+								}}
+							>
+								{exportingXlsx ? (
+									<Loader2 className="h-3.5 w-3.5 animate-spin" />
+								) : (
+									<Download className="h-3.5 w-3.5" aria-hidden />
+								)}
+								{exportingXlsx ? "Preparing Excel…" : "Export Excel"}
+							</Button>
 						</div>
 					</div>
 
@@ -1205,16 +1370,23 @@ export default function ContractsDisplay() {
 										))}
 									</div>
 								) : (
-									<SamContractsTable
-										contracts={sortedContracts}
-										onViewDocument={handleViewDocument}
-									/>
+									<Card className="glass-card">
+										<div className="glass-card-cap" />
+										<CardContent className="p-4 sm:p-6">
+											<SamContractsTable
+												contracts={sortedContracts}
+												onViewDocument={handleViewDocument}
+												sort={resultsSort}
+												onSortChange={setResultsSort}
+											/>
+										</CardContent>
+									</Card>
 								)}
 								<PageIndex
 									className="mt-6 justify-center"
 									page={(searchFilters.offset || 0) + 1}
 									totalItems={totalRecords}
-									pageSize={searchFilters.limit || 24}
+									pageSize={searchFilters.limit || 12}
 									onPageChange={handlePageChange}
 									hideWhenSinglePage
 									showRange
@@ -1263,40 +1435,6 @@ export default function ContractsDisplay() {
 							</Card>
 						)}
 					</div>
-				</div>
-			)}
-
-			{/* Enhanced Initial State - Hidden by default */}
-			{false && !hasSearched && !loading && (
-				<div className="space-y-6">
-					<Card className="bg-white/30 backdrop-blur border border-white/40 shadow-lg">
-						<CardContent className="p-8 text-center">
-							<Search className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-							<h3 className="text-lg font-medium text-slate-700 mb-2">
-								Search Government Contracts
-							</h3>
-							<p className="text-slate-500 mb-4">
-								Enter search criteria above and click &ldquo;Search
-								Contracts&rdquo; to find contract opportunities from SAM.gov
-							</p>
-
-							{/* Feature Highlights */}
-							<div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 text-sm">
-								<div className="flex items-center gap-2 text-slate-600">
-									<Search className="h-4 w-4 text-blue-500" />
-									<span>Manual search with button click</span>
-								</div>
-								<div className="flex items-center gap-2 text-slate-600">
-									<Calendar className="h-4 w-4 text-green-500" />
-									<span>Response deadline filtering</span>
-								</div>
-								<div className="flex items-center gap-2 text-slate-600">
-									<Building2 className="h-4 w-4 text-purple-500" />
-									<span>Enhanced set-aside codes</span>
-								</div>
-							</div>
-						</CardContent>
-					</Card>
 				</div>
 			)}
 

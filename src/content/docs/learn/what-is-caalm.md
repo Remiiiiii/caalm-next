@@ -26,11 +26,13 @@ That process feels normal until one miss costs a license, a grant, or a week of 
 - **Clause Library** — versioned standard wording reused across deals
 - **Contract templates** — recipes that snapshot published clauses into a draft
 - **Funding & Retention** — protect dollars already won; track new bids into proposals
+- **SAM.gov / Government Contracts** — search federal opportunities inside CAALM
+- **RFP proposals** — shred a solicitation, certify the matrix, draft, and export a bid package
 - **Licenses** — credentials and renewals that keep you legal to operate
 - **Files** — supporting documents in a controlled library
 - **Calendar** — deadlines and events next to the work they protect
 - **Audits** — compliance posture and activity history
-- **Analytics** — leadership visibility without spreadsheet archaeology
+- **Analytics** — leadership visibility, including **Risk averted** (caught flags, closed gaps, on-time renewals)
 - **News** — internal communication that reaches the right audience
 - **Assistant** — AI help for chat, document analysis, and meeting prep (permission-gated)
 - **Constituents** — donor, volunteer, and member CRM with channel consent

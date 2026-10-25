@@ -16,6 +16,7 @@ Contracts are one of CAALM’s primary systems of record.
 | Negotiate | `/contracts/[id]/negotiate` | Comment, redline, and invite before formal review |
 | Approvals | `/contracts/approvals` | Review and approve proposals |
 | Government Contracts | `/contracts/government-contracts` | SAM.gov opportunity search |
+| RFP Proposals | `/contracts/proposals` | Shred a solicitation, certify the matrix, draft, export |
 
 ## Core workflow
 
@@ -57,7 +58,7 @@ Contracts pages often surface counts and “needs attention” cues. Use them as
 - [ ] Approval state matches reality
 - [ ] Related tasks/dates on calendar if your team uses that discipline
 
-Related: [Negotiate contracts](/docs/reference/negotiate), [Clause Library](/docs/reference/clause-library), [Contract templates](/docs/reference/contract-templates), [Funding and retention](/docs/reference/funding-retention), [Approvals](/docs/reference/approvals), [SAM.gov](/docs/reference/sam-gov).
+Related: [Negotiate contracts](/docs/reference/negotiate), [Clause Library](/docs/reference/clause-library), [Contract templates](/docs/reference/contract-templates), [Funding and retention](/docs/reference/funding-retention), [Approvals](/docs/reference/approvals), [SAM.gov](/docs/reference/sam-gov), [RFP proposals](/docs/reference/rfp-proposals).
 
 
 ## Intake standards (recommended)

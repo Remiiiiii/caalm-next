@@ -551,6 +551,7 @@ className="shadow-sm hover:shadow-md transition-all duration-200"
 
 - Content: `DropdownMenuContent` / `AppDropdownMenuContent` / `DropdownMenuSubContent` from `@/components/ui/dropdown-menu` (shared glass styles, no cap).
 - Nested levels (department → division → people) must use the same glass panel — no solid white popovers, no caps.
+- **Every** dropdown panel is glass, with no exceptions: Radix `Select` (`SelectContent`), `DropdownMenu*`, `ContextMenu*`, `Menubar*`, and every `SubContent`. Use the shared components as-is. Do **not** pass `bg-*`, `backdrop-blur-*`, `border-slate-*` or `shadow-xl` overrides to a `*Content`, and do not restyle `SelectItem` hover/focus (it already uses `#F2F5F9`). Solid `bg-white/95`, `bg-popover` or `bg-slate-50` dropdown panels are bugs. Only change width, z-index or offsets via `className`.
 - Menu row hover / highlight (list items only, not the trigger button): bg `#F2F5F9`, text `#3d5677`, `font-semibold`; default row is `font-normal` with `px-3` horizontal padding. Nested labels use `DROPDOWN_ITEM_LABEL_CLASS`. Do not use `focus:bg-accent`. Hover fill must not go edge-to-edge: keep panel `p-1`, or when the shell is `p-0` (search header), wrap the list in `DropdownScrollArea` with `px-1 py-1`.
 - **Scrolling lists:** Wrap scrollable menu / submenu / suggestion list content in `DropdownScrollArea` from `@/components/ui/DropdownScrollArea` (OverlayScrollbars — no native Windows scrollbar arrows). Put `overflow-hidden` on the menu shell; keep horizontal overflow hidden. Submenu chevrons use `mr-[4px]` on shared `DropdownMenuSubTrigger`.
 
@@ -800,7 +801,7 @@ When creating a new page or component, verify:
 - [ ] Delete buttons use: `delete-btn px-3 sm:px-4` (or `btn-delete`) **with a Lucide icon**
 - [ ] All interactive elements have transition effects
 - [ ] Text inputs, selects, textareas, and search fields use `border-[0.25px] border-slate-300` (never 1px `border`, white, transparent, or `slate-200` on light fills)
-- [ ] Dropdown panels use glass (`DropdownMenuContent` / `AppDropdownMenuContent`) with **no card-cap**
+- [ ] Dropdown panels use glass (`DropdownMenuContent` / `AppDropdownMenuContent` / `SelectContent`) with **no card-cap** and **no bg/blur overrides**
 - [ ] Scrollable dropdown / submenu lists use `DropdownScrollArea` (not native `overflow-y-auto` scrollbars)
 - [ ] Cards / glass panels / tables waiting on data use skeletons (`CaalmDataTableSkeleton` / `StatCardSkeleton` / `Skeleton`) — never branded `LoadingSpinner` or spin icons- [ ] 3-dot overflow menus use `/assets/icons/dots.svg` (34×34) with `shad-no-focus rounded-full hover:bg-white/30` — not Lucide `MoreVertical`
 - [ ] Delete / Archive menu items have `<DropdownMenuSeparator />` immediately above them and `tone="danger"`

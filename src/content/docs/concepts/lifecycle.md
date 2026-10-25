@@ -35,5 +35,6 @@ Use statuses the way your org agreed to use them. If “in review” means three
 - [Negotiate contracts](/docs/reference/negotiate)
 - [Licenses](/docs/reference/licenses)
 - [Approvals](/docs/reference/approvals)
+- [RFP proposals](/docs/reference/rfp-proposals)
 - [E-signature (CAALM Execute)](/docs/reference/e-signature)
 - [Notifications and deadlines](/docs/concepts/notifications-deadlines)

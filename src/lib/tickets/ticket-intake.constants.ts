@@ -80,37 +80,53 @@ export const TICKET_URGENCY_LEVELS = [
 
 export type TicketImpactUrgency = TicketSeverity;
 
-const SEVERITY_MATRIX: Record<
-	string,
-	{ level: TicketSeverity; hours: number }
+const SEVERITY_ORDER: readonly TicketSeverity[] = [
+	"low",
+	"medium",
+	"high",
+	"critical",
+];
+
+// Business days count as 24h each; the label is what people see.
+const SEVERITY_SLA: Record<
+	TicketSeverity,
+	{ hours: number; label: string; sev: string; title: string }
 > = {
-	"critical-critical": { level: "critical", hours: 1 },
-	"critical-high": { level: "critical", hours: 4 },
-	"high-critical": { level: "critical", hours: 4 },
-	"high-high": { level: "high", hours: 8 },
-	"critical-medium": { level: "high", hours: 8 },
-	"medium-critical": { level: "high", hours: 8 },
-	"high-medium": { level: "medium", hours: 24 },
-	"medium-high": { level: "medium", hours: 24 },
-	"medium-medium": { level: "medium", hours: 24 },
-	"critical-low": { level: "medium", hours: 24 },
-	"low-critical": { level: "medium", hours: 24 },
-	"high-low": { level: "low", hours: 48 },
-	"low-high": { level: "low", hours: 48 },
-	"medium-low": { level: "low", hours: 48 },
-	"low-medium": { level: "low", hours: 48 },
-	"low-low": { level: "low", hours: 48 },
+	low: { hours: 120, label: "5 business days", sev: "SEV-4", title: "Low" },
+	medium: { hours: 24, label: "1 business day", sev: "SEV-3", title: "Medium" },
+	high: { hours: 4, label: "4 hours", sev: "SEV-2", title: "High" },
+	critical: { hours: 1, label: "1 hour", sev: "SEV-1", title: "Critical" },
 };
 
+// Impact sets the base tier; "Today" / "Right now" urgency bumps it one tier.
+// Whole org is always critical.
 export function deriveSeverityFromMatrix(
 	impact: TicketImpactUrgency,
 	urgency: TicketImpactUrgency,
-): { severity: TicketSeverity; responseSlaHours: number } {
-	const derived = SEVERITY_MATRIX[`${impact}-${urgency}`];
-	if (!derived) {
+): {
+	severity: TicketSeverity;
+	responseSlaHours: number;
+	responseSlaLabel: string;
+} {
+	const tier = SEVERITY_ORDER.indexOf(impact);
+	const urgencyTier = SEVERITY_ORDER.indexOf(urgency);
+	if (tier < 0 || urgencyTier < 0) {
 		throw new Error("Invalid impact and urgency combination");
 	}
-	return { severity: derived.level, responseSlaHours: derived.hours };
+	const bump = urgencyTier >= 2 ? 1 : 0;
+	const severity = SEVERITY_ORDER[Math.min(tier + bump, 3)];
+	const sla = SEVERITY_SLA[severity];
+	return {
+		severity,
+		responseSlaHours: sla.hours,
+		responseSlaLabel: sla.label,
+	};
+}
+
+/** Badge text, e.g. "High — SEV-2". */
+export function getSeverityBadgeTitle(severity: TicketSeverity): string {
+	const { title, sev } = SEVERITY_SLA[severity];
+	return `${title} — ${sev}`;
 }
 
 export function getImpactLabel(value: TicketImpactUrgency): string {

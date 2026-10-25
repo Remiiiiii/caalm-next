@@ -33,7 +33,8 @@ Approvals, audit logs, and status history exist so you can answer reviewers with
 | Where is the agreement? | Contracts / Licenses / Files |
 | Who decides? | Approvals queues |
 | When is it due? | Record date + Calendar + Notifications |
-| Are we audit-ready? | Audits + Analytics |
+| Are we audit-ready? | Audits + Analytics (including Risk averted) |
+| Are we chasing a federal bid? | Government Contracts → RFP proposals |
 | Can I even do this? | View My Access + Permissions catalog |
 
 ## A simple analogy

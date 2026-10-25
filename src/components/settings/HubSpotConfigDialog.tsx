@@ -194,8 +194,8 @@ export default function HubSpotConfigDialog({
 				<>
 					<Button
 						type="button"
-						variant="outline"
-						className="rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+						variant="ghost"
+						className="rounded-full px-3 py-1.5 h-[1.65rem] justify-center text-slate-400 hover:text-slate-600 hover:bg-black/[.04]"
 						disabled={saving}
 						onClick={() => onOpenChange(false)}
 					>
@@ -412,8 +412,8 @@ export default function HubSpotConfigDialog({
 							<div className="flex justify-end pt-1">
 								<Button
 									type="button"
-									variant="outline"
-									className="rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+									variant="ghost"
+									className="rounded-full px-3 py-1.5 h-[1.65rem] justify-center text-slate-400 hover:text-slate-600 hover:bg-black/[.04]"
 									onClick={() => setMapDraft({ ...DEFAULT_CRM_FIELD_MAP })}
 								>
 									<RotateCcw className="h-4 w-4" />

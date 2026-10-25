@@ -7,6 +7,8 @@ audience: "Reviewers, Approvers, Admins"
 
 Approvals turn “someone uploaded a thing” into “the organization accepted a thing.”
 
+Do not confuse this queue with **[RFP proposals](/docs/reference/rfp-proposals)** (`/contracts/proposals`). That workspace is the bid you are still writing. This page is internal review of contracts and licenses already in CAALM.
+
 ## Queues
 
 - Contracts: `/contracts/approvals`
@@ -49,5 +51,5 @@ Approval queues work on a phone. Starting a negotiation or opening the contracts
 
 After approvals finish, many records still need parties to sign. That handoff is [E-signature (CAALM Execute)](/docs/reference/e-signature), not another approval click.
 
-Related: [Negotiate contracts](/docs/reference/negotiate), [E-signature](/docs/reference/e-signature), [Contract templates](/docs/reference/contract-templates), [Contracts](/docs/reference/contracts), [Funding and retention](/docs/reference/funding-retention).
+Related: [Negotiate contracts](/docs/reference/negotiate), [E-signature](/docs/reference/e-signature), [Contract templates](/docs/reference/contract-templates), [Contracts](/docs/reference/contracts), [Funding and retention](/docs/reference/funding-retention), [RFP proposals](/docs/reference/rfp-proposals).
 

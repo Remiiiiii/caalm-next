@@ -299,8 +299,8 @@ export default function LicenseList({ licenses, onRefresh }: LicenseListProps) {
 									</span>
 									<Button
 										type="button"
-										variant="outline"
-										className="rounded-full border-slate-300 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+										variant="ghost"
+										className="rounded-full px-3 py-1.5 h-[1.65rem] justify-center text-slate-400 hover:text-slate-600 hover:bg-black/[.04]"
 										onClick={() => setShowDetail(false)}
 									>
 										<Minimize2 className="h-4 w-4" />

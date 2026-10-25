@@ -573,8 +573,8 @@ export function ConnectedSourcesPanel() {
 									</Button>
 								</div>
 								<Button
-									variant="outline"
-									className="px-3 sm:px-4"
+									variant="ghost"
+									className="rounded-full px-3 py-1.5 h-[1.65rem] justify-center text-slate-400 hover:text-slate-600 hover:bg-black/[.04]"
 									onClick={resetFeedForm}
 								>
 									<X className="h-4 w-4" />

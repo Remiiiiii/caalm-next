@@ -26,7 +26,7 @@ CAALM Docs is the complete operating manual for CAALM Solutions — the complian
 | Feature reference | Go deep on one product area |
 | Nonprofit & fundraising | Donor CRM, gifts, public donation page, volunteers, fund/990 settings |
 | Admin playbooks | Stand up and govern an organization |
-| Troubleshooting | Fix a specific failure mode |
+| Troubleshooting | Fix a specific failure mode (including a page that will not load) |
 
 ## How to use these docs like a pro
 
