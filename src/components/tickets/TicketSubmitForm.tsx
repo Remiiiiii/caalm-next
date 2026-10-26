@@ -1,7 +1,7 @@
 "use client";
 
 import {
-	AlertTriangle,
+		AlertTriangle,
 	Clock,
 	FileText,
 	Lock,
@@ -11,7 +11,7 @@ import {
 	Upload,
 	X,
 } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
 	type FormEvent,
 	type ReactNode,
@@ -22,11 +22,13 @@ import {
 	useState,
 } from "react";
 import ProfilePicture from "@/components/ProfilePicture";
+import { ProblemPageUrlField } from "@/components/tickets/ProblemPageUrlField";
 import {
 	createSubmitProgressTicker,
 	SubmitProgressIndicator,
 } from "@/components/tickets/SubmitProgressIndicator";
 import { TicketSubmittedConfirmDialog } from "@/components/tickets/TicketSubmittedConfirmDialog";
+import TicketVideoRecorder from "@/components/tickets/TicketVideoRecorder";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -43,6 +45,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTicketRecording } from "@/contexts/TicketRecordingContext";
 import {
 	getEnterpriseFormatHint,
 	getEnterpriseInputAccept,
@@ -59,6 +62,10 @@ import {
 	detectBugReportOs,
 } from "@/lib/tickets/bug-report-body";
 import {
+	defaultProblemPageUrl,
+	parseProblemPageUrl,
+} from "@/lib/tickets/problem-page-url";
+import {
 	resolveSubmitterDepartmentLabel,
 	type SubmitterPlacementInput,
 } from "@/lib/tickets/submitter-placement";
@@ -67,6 +74,13 @@ import type {
 	TicketLane,
 	TicketSeverity,
 } from "@/lib/tickets/ticket.types";
+import {
+		clearTicketFormDraft,
+	loadTicketFormDraft,
+	saveTicketFormDraft,
+	type TicketFormDraft,
+	ticketFormDraftHasContent,
+} from "@/lib/tickets/ticket-form-draft";
 import {
 	categoriesForLane,
 	deriveSeverityFromMatrix,
@@ -77,6 +91,7 @@ import {
 	TICKET_URGENCY_LEVELS,
 } from "@/lib/tickets/ticket-intake.constants";
 import { displayTicketNumber } from "@/lib/tickets/ticket-number.utils";
+import { ticketRecordingToFile } from "@/lib/tickets/ticket-recording";
 import { cn } from "@/lib/utils";
 
 const TICKET_FIELD_CLASS =
@@ -111,6 +126,7 @@ const MAX_DESC = 2000;
 const MAX_STEPS = 10;
 const MAX_FILES = 5;
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
+const DRAFT_AUTOSAVE_MS = 300;
 
 type AttachmentEntry = { id: string; file: File };
 type TouchedFields = Partial<
@@ -126,7 +142,8 @@ type TouchedFields = Partial<
 		| "actual"
 		| "os"
 		| "environment"
-		| "confirmations",
+		| "confirmations"
+		| "problemPageUrl",
 		boolean
 	>
 >;
@@ -149,6 +166,7 @@ function FormField({
 	error,
 	trailing,
 	children,
+	className,
 }: {
 	label: string;
 	htmlFor?: string;
@@ -157,9 +175,10 @@ function FormField({
 	error?: string | null;
 	trailing?: ReactNode;
 	children: ReactNode;
+	className?: string;
 }) {
 	return (
-		<div>
+		<div className={cn("flex flex-col", className)}>
 			<div className="mb-1.5 flex items-baseline justify-between gap-2">
 				<Label htmlFor={htmlFor} className="text-sm font-medium text-slate-700">
 					{label}
@@ -175,7 +194,7 @@ function FormField({
 				</Label>
 				{trailing}
 			</div>
-			{children}
+			<div className="min-h-0 flex-1">{children}</div>
 			{error ? <p className="mt-1 text-xs text-red">{error}</p> : null}
 		</div>
 	);
@@ -283,8 +302,10 @@ function PillGroup({
 
 export function TicketSubmitForm() {
 	const searchParams = useSearchParams();
+	const pathname = usePathname();
 	const router = useRouter();
 	const { user } = useAuth();
+	const { draftRecording } = useTicketRecording();
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const formRef = useRef<HTMLFormElement>(null);
 
@@ -311,6 +332,18 @@ export function TicketSubmitForm() {
 	const [searchedExisting, setSearchedExisting] = useState(false);
 	const [isBug, setIsBug] = useState(false);
 	const [attachments, setAttachments] = useState<AttachmentEntry[]>([]);
+	const [problemPageUrl, setProblemPageUrl] = useState(
+		() => searchParams?.get("pageUrl")?.trim() ?? "",
+	);
+	// What recording, the saved draft and submit use; typing only changes the box
+	// until "Update page" is pressed.
+	const [confirmedPageUrl, setConfirmedPageUrl] = useState(
+		() => searchParams?.get("pageUrl")?.trim() ?? "",
+	);
+		const [pageJustUpdated, setPageJustUpdated] = useState(false);
+	const [draftRestored, setDraftRestored] = useState(false);
+	// Set when the user submits or cancels, so a pending autosave can't resurrect the draft.
+	const leavingRef = useRef(false);
 	const [dragOver, setDragOver] = useState(false);
 	const [touched, setTouched] = useState<TouchedFields>({});
 	const [submitting, setSubmitting] = useState(false);
@@ -339,6 +372,162 @@ export function TicketSubmitForm() {
 			(prev) => prev || detectBugReportEnvironment(window.location.hostname),
 		);
 	}, []);
+
+	useEffect(() => {
+		if (pathname !== "/tickets/new") return;
+
+		const draft = loadTicketFormDraft();
+		if (!draft) {
+			const fallback = defaultProblemPageUrl(pathname);
+			setProblemPageUrl((prev) => (prev.trim() ? prev : fallback));
+			setConfirmedPageUrl((prev) => (prev.trim() ? prev : fallback));
+			return;
+		}
+
+		// Explicit links (?lane=, ?title=, ...) beat the saved draft, field by field.
+		const fromLink = (key: string) => Boolean(searchParams?.get(key)?.trim());
+		const laneFromLink = fromLink("lane");
+		if (!laneFromLink && (draft.lane === "engineering" || draft.lane === "help")) {
+			setLane(draft.lane);
+		}
+		if (draft.title && !fromLink("title")) setTitle(draft.title);
+		if (draft.category && !fromLink("category") && !laneFromLink) {
+			setCategory(draft.category);
+		}
+		if (draft.affectedModule && !fromLink("module")) {
+			setAffectedModule(draft.affectedModule);
+		}
+		if (draft.description) setDescription(draft.description);
+		if (draft.impact) setImpact(draft.impact);
+		if (draft.urgency) setUrgency(draft.urgency);
+		if (draft.helpPriority) setHelpPriority(draft.helpPriority);
+		if (draft.reproSteps?.some((step) => step.trim())) {
+			setReproSteps(
+				draft.reproSteps.length >= 2
+					? draft.reproSteps
+					: [...draft.reproSteps, ""],
+			);
+		}
+		if (draft.expected) setExpected(draft.expected);
+		if (draft.actual) setActual(draft.actual);
+		if (draft.os) setOs(draft.os as BugReportOs);
+		if (draft.environment) {
+			setEnvironment(draft.environment as BugReportEnvironment);
+		}
+		if (draft.searchedExisting) setSearchedExisting(true);
+		if (draft.isBug) setIsBug(true);
+		// An explicit ?pageUrl= link beats the saved draft's address.
+		const restored =
+			searchParams?.get("pageUrl")?.trim() ||
+			draft.problemPageUrl?.trim() ||
+			defaultProblemPageUrl(pathname);
+		setProblemPageUrl(restored);
+		setConfirmedPageUrl(restored);
+		if (ticketFormDraftHasContent(draft)) setDraftRestored(true);
+	}, [pathname, searchParams]);
+
+	const pageUrlDirty = problemPageUrl.trim() !== confirmedPageUrl.trim();
+
+	const updateProblemPage = useCallback(() => {
+		setTouched((prev) => ({ ...prev, problemPageUrl: true }));
+		const parsed = parseProblemPageUrl(problemPageUrl);
+		if (!parsed.ok) return;
+		setProblemPageUrl(parsed.href);
+		setConfirmedPageUrl(parsed.href);
+		setPageJustUpdated(true);
+	}, [problemPageUrl]);
+
+	useEffect(() => {
+		if (!pageJustUpdated) return;
+		const timer = setTimeout(() => setPageJustUpdated(false), 1800);
+		return () => clearTimeout(timer);
+	}, [pageJustUpdated]);
+
+	const draftSnapshot = useMemo(
+		(): TicketFormDraft => ({
+			lane: lane || undefined,
+			title,
+			category,
+			affectedModule,
+			description,
+			problemPageUrl: confirmedPageUrl,
+			impact,
+			urgency,
+			helpPriority,
+			reproSteps,
+			expected,
+			actual,
+			os,
+			environment,
+			searchedExisting,
+			isBug,
+		}),
+		[
+			actual,
+			affectedModule,
+			category,
+			confirmedPageUrl,
+			description,
+			environment,
+			expected,
+			helpPriority,
+			impact,
+			isBug,
+			lane,
+			os,
+			reproSteps,
+			searchedExisting,
+			title,
+			urgency,
+		],
+	);
+
+	// Recording navigates away right after this call, so it saves immediately.
+	const persistFormDraft = useCallback(() => {
+		saveTicketFormDraft(draftSnapshot);
+	}, [draftSnapshot]);
+
+	// Autosave shortly after the last change so leaving by any route keeps the work.
+	useEffect(() => {
+		if (!ticketFormDraftHasContent(draftSnapshot)) return;
+		const timer = setTimeout(() => {
+			if (leavingRef.current) return;
+			saveTicketFormDraft(draftSnapshot);
+		}, DRAFT_AUTOSAVE_MS);
+		return () => clearTimeout(timer);
+	}, [draftSnapshot]);
+
+	const cancelForm = useCallback(() => {
+		leavingRef.current = true;
+		clearTicketFormDraft();
+		router.back();
+	}, [router]);
+
+	const startFresh = useCallback(() => {
+		leavingRef.current = false;
+		clearTicketFormDraft();
+		const fallback = defaultProblemPageUrl(pathname || "/tickets/new");
+		const raw = searchParams?.get("lane");
+		setLane(raw === "engineering" ? "engineering" : "help");
+		setTitle(searchParams?.get("title") ?? "");
+		setCategory(searchParams?.get("category") ?? "");
+		setAffectedModule(searchParams?.get("module") ?? "");
+		setImpact("");
+		setUrgency("");
+		setHelpPriority("medium");
+		setDescription("");
+		setReproSteps(["", ""]);
+		setExpected("");
+		setActual("");
+		setSearchedExisting(false);
+		setIsBug(false);
+		const fromQuery = searchParams?.get("pageUrl")?.trim() || fallback;
+		setProblemPageUrl(fromQuery);
+		setConfirmedPageUrl(fromQuery);
+		setTouched({});
+		setError(null);
+		setDraftRestored(false);
+	}, [pathname, searchParams]);
 
 	const categoryOptions = useMemo(
 		() => (lane ? categoriesForLane(lane) : []),
@@ -424,6 +613,13 @@ export function TicketSubmitForm() {
 				lane === "engineering" && (!searchedExisting || !isBug)
 					? "Confirm you searched existing issues and that this is a bug."
 					: null,
+			problemPageUrl: (() => {
+				const typed = parseProblemPageUrl(problemPageUrl);
+				if (!typed.ok) return typed.reason;
+				if (pageUrlDirty) return "Press “Update page” to use this address.";
+				const confirmed = parseProblemPageUrl(confirmedPageUrl);
+				return confirmed.ok ? null : confirmed.reason;
+			})(),
 		}),
 		[
 			lane,
@@ -440,6 +636,9 @@ export function TicketSubmitForm() {
 			environment,
 			searchedExisting,
 			isBug,
+			problemPageUrl,
+			confirmedPageUrl,
+			pageUrlDirty,
 		],
 	);
 
@@ -458,7 +657,7 @@ export function TicketSubmitForm() {
 					setFileError(`You can attach up to ${MAX_FILES} files.`);
 					break;
 				}
-				const validation = validateEnterpriseFile(file, "attachment");
+				const validation = validateEnterpriseFile(file, "ticketAttachment");
 				if (!validation.ok) {
 					setFileError(validation.reason);
 					continue;
@@ -496,6 +695,7 @@ export function TicketSubmitForm() {
 			os: true,
 			environment: true,
 			confirmations: true,
+			problemPageUrl: true,
 		});
 		if (!isValid || !derived || !lane) {
 			setTimeout(() => {
@@ -541,8 +741,40 @@ export function TicketSubmitForm() {
 				form.set("description", description.trim());
 			}
 
-			for (const entry of attachments.slice(0, MAX_FILES)) {
-				form.append("attachments", entry.file);
+			const parsedPage = parseProblemPageUrl(confirmedPageUrl);
+			if (!parsedPage.ok) {
+				setError(parsedPage.reason);
+				stopProgress();
+				setShowSubmitProgress(false);
+				setSubmitting(false);
+				return;
+			}
+			form.set("problemPageUrl", parsedPage.href);
+
+			const filesToUpload = attachments.slice(0, MAX_FILES).map((e) => e.file);
+			if (draftRecording) {
+				if (filesToUpload.length >= MAX_FILES) {
+					setFileError(
+						`You can attach up to ${MAX_FILES} files (including a screen recording).`,
+					);
+					stopProgress();
+					setShowSubmitProgress(false);
+					setSubmitting(false);
+					return;
+				}
+				const videoFile = ticketRecordingToFile(draftRecording);
+				if (videoFile.size > MAX_FILE_BYTES) {
+					setFileError("Screen recording exceeds the 10 MB limit.");
+					stopProgress();
+					setShowSubmitProgress(false);
+					setSubmitting(false);
+					return;
+				}
+				filesToUpload.push(videoFile);
+			}
+
+			for (const file of filesToUpload) {
+				form.append("attachments", file);
 			}
 
 			const res = await fetch("/api/tickets", { method: "POST", body: form });
@@ -555,6 +787,8 @@ export function TicketSubmitForm() {
 			await new Promise((resolve) => setTimeout(resolve, 1200));
 			setShowSubmitProgress(false);
 			setSubmitting(false);
+						leavingRef.current = true;
+			clearTicketFormDraft();
 			setSubmittedTicket(data.ticket as Ticket);
 			setConfirmOpen(true);
 		} catch (err) {
@@ -593,9 +827,24 @@ export function TicketSubmitForm() {
 					<form
 						ref={formRef}
 						onSubmit={onSubmit}
-						noValidate
+												noValidate
 						className="space-y-6"
 					>
+						{draftRestored ? (
+							<div
+								role="status"
+								className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[#bfdbfe] bg-[#eff6ff] px-3 py-2 text-xs text-[#1d6fb8]"
+							>
+								<span>We restored your unsent draft from earlier.</span>
+								<button
+									type="button"
+									onClick={startFresh}
+									className="cursor-pointer rounded-sm font-medium underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#078FAB] focus-visible:ring-offset-2"
+								>
+									Start fresh
+								</button>
+							</div>
+						) : null}
 						<div>
 							<p className="mb-1 text-sm font-medium text-slate-700">
 								What kind of request is this? <RequiredMark />
@@ -1054,102 +1303,130 @@ export function TicketSubmitForm() {
 								/>
 							</FormField>
 						)}
+						<div className="space-y-6">
+							<Separator className="bg-slate-200/70" />
+						</div>
+						<ProblemPageUrlField
+							id="ticket-problem-page-url"
+							value={problemPageUrl}
+							onChange={setProblemPageUrl}
+							onBlur={() =>
+								setTouched((prev) => ({ ...prev, problemPageUrl: true }))
+							}
+							error={touched.problemPageUrl ? errors.problemPageUrl : null}
+							currentPathname={pathname || "/tickets/new"}
+							confirm={{
+								dirty: pageUrlDirty,
+								justUpdated: pageJustUpdated,
+								onUpdate: updateProblemPage,
+							}}
+						/>
 
-						<Separator className="bg-slate-200/70" />
-
-						<FormField label="Attachments" hint="optional">
-							<div
-								role="button"
-								tabIndex={0}
-								onKeyDown={(event) => {
-									if (event.key === "Enter" || event.key === " ") {
-										event.preventDefault();
-										fileInputRef.current?.click();
-									}
-								}}
-								onDragOver={(event) => {
-									event.preventDefault();
-									setDragOver(true);
-								}}
-								onDragLeave={() => setDragOver(false)}
-								onDrop={(event) => {
-									event.preventDefault();
-									setDragOver(false);
-									if (event.dataTransfer.files?.length) {
-										addFiles(event.dataTransfer.files);
-									}
-								}}
-								onClick={() => fileInputRef.current?.click()}
-								className={cn(
-									"flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-md border-2 border-dashed px-4 py-7 text-center transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
-									dragOver
-										? "border-[#0f5384] bg-blue/5"
-										: "border-slate-200 hover:border-blue-300 hover:bg-blue/5",
-								)}
+						<div className="grid grid-cols-[minmax(0,3fr)_minmax(0,2fr)] items-stretch gap-4 max-[720px]:grid-cols-1">
+							<FormField
+								label="Show us the problem"
+								hint="optional"
+								className="h-full"
 							>
-								<Upload
-									className="h-5 w-5 text-slate-600"
-									strokeWidth={1.5}
-									aria-hidden
+								<TicketVideoRecorder
+									problemPageUrl={confirmedPageUrl}
+									onBeforeNavigate={persistFormDraft}
+									disabled={submitting}
 								/>
-								<p className="text-sm text-slate-700">
-									Drop files here, or click to browse
-								</p>
-								<p className="text-xs text-slate-500">
-									{getEnterpriseFormatHint("attachment")} — up to 10 MB each
-									(max {MAX_FILES} files)
-								</p>
-								<input
-									ref={fileInputRef}
-									type="file"
-									multiple
-									accept={getEnterpriseInputAccept("attachment")}
-									className="hidden"
-									onChange={(event) => {
-										if (event.target.files?.length) {
-											addFiles(event.target.files);
+							</FormField>
+
+							<FormField label="Attachments" hint="optional" className="h-full">
+								<div
+									role="button"
+									tabIndex={0}
+									onKeyDown={(event) => {
+										if (event.key === "Enter" || event.key === " ") {
+											event.preventDefault();
+											fileInputRef.current?.click();
 										}
-										event.target.value = "";
 									}}
-								/>
-							</div>
+									onDragOver={(event) => {
+										event.preventDefault();
+										setDragOver(true);
+									}}
+									onDragLeave={() => setDragOver(false)}
+									onDrop={(event) => {
+										event.preventDefault();
+										setDragOver(false);
+										if (event.dataTransfer.files?.length) {
+											addFiles(event.dataTransfer.files);
+										}
+									}}
+									onClick={() => fileInputRef.current?.click()}
+									className={cn(
+										"flex h-full min-h-40 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-md border-2 border-dashed px-4 py-7 text-center transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
+										dragOver
+											? "border-[#0f5384] bg-blue/5"
+											: "border-slate-200 hover:border-blue-300 hover:bg-blue/5",
+									)}
+								>
+									<Upload
+										className="h-5 w-5 text-slate-600"
+										strokeWidth={1.5}
+										aria-hidden
+									/>
+									<p className="text-sm text-slate-700">
+										Drop files here, or click to browse
+									</p>
+									<p className="text-xs text-slate-500">
+										{getEnterpriseFormatHint("ticketAttachment")} — up to 10 MB
+										each (max {MAX_FILES} files)
+									</p>
+									<input
+										ref={fileInputRef}
+										type="file"
+										multiple
+										accept={getEnterpriseInputAccept("ticketAttachment")}
+										className="hidden"
+										onChange={(event) => {
+											if (event.target.files?.length) {
+												addFiles(event.target.files);
+											}
+											event.target.value = "";
+										}}
+									/>
+								</div>
 
-							{fileError ? (
-								<p className="mt-2 text-xs text-red">{fileError}</p>
-							) : null}
+								{fileError ? (
+									<p className="mt-2 text-xs text-red">{fileError}</p>
+								) : null}
 
-							{attachments.length > 0 ? (
-								<ul className="mt-3 space-y-1.5">
-									{attachments.map((entry) => (
-										<li
-											key={entry.id}
-											className="flex items-center gap-2 rounded-md border border-slate-200/60 bg-white/65 px-3 py-2 text-sm"
-										>
-											<FileText
-												className="h-4 w-4 shrink-0 text-slate-600"
-												aria-hidden
-											/>
-											<span className="truncate text-slate-700">
-												{entry.file.name}
-											</span>
-											<span className="shrink-0 text-xs text-slate-500">
-												{formatFileSize(entry.file.size)}
-											</span>
-											<button
-												type="button"
-												onClick={() => removeFile(entry.id)}
-												className="ml-auto shrink-0 cursor-pointer rounded p-0.5 text-slate-500 transition-colors duration-200 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
-												aria-label={`Remove ${entry.file.name}`}
+								{attachments.length > 0 ? (
+									<ul className="mt-3 space-y-1.5">
+										{attachments.map((entry) => (
+											<li
+												key={entry.id}
+												className="flex items-center gap-2 rounded-md border border-slate-200/60 bg-white/65 px-3 py-2 text-sm"
 											>
-												<X className="h-4 w-4" aria-hidden />
-											</button>
-										</li>
-									))}
-								</ul>
-							) : null}
-						</FormField>
-
-						<Separator className="bg-slate-200/70" />
+												<FileText
+													className="h-4 w-4 shrink-0 text-slate-600"
+													aria-hidden
+												/>
+												<span className="truncate text-slate-700">
+													{entry.file.name}
+												</span>
+												<span className="shrink-0 text-xs text-slate-500">
+													{formatFileSize(entry.file.size)}
+												</span>
+												<button
+													type="button"
+													onClick={() => removeFile(entry.id)}
+													className="ml-auto shrink-0 cursor-pointer rounded p-0.5 text-slate-500 transition-colors duration-200 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
+													aria-label={`Remove ${entry.file.name}`}
+												>
+													<X className="h-4 w-4" aria-hidden />
+												</button>
+											</li>
+										))}
+									</ul>
+								) : null}
+							</FormField>
+						</div>
 
 						{showValidationBanner ? (
 							<div
@@ -1187,12 +1464,12 @@ export function TicketSubmitForm() {
 							/>
 						) : null}
 
-						<div className="flex justify-end gap-2">
+						<div className="flex justify-end gap-2 pt-6">
 							<Button
 								type="button"
 								variant="ghost"
 								className="rounded-full px-3 py-1.5 h-[1.65rem] justify-center text-slate-400 hover:text-slate-600 hover:bg-black/[.04]"
-								onClick={() => router.back()}
+								onClick={cancelForm}
 								disabled={submitting}
 							>
 								Cancel

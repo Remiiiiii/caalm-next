@@ -2,7 +2,10 @@ import { ID } from "node-appwrite";
 import { InputFile } from "node-appwrite/file";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
-import { assertEnterpriseFileAllowed } from "@/lib/files/enterprise-file-formats";
+import {
+	assertEnterpriseFileAllowed,
+	isTicketScreenRecordingFile,
+} from "@/lib/files/enterprise-file-formats";
 import {
 	composeEngineeringBugDescription,
 	parseEngineeringBugFields,
@@ -11,6 +14,7 @@ import {
 	buildGitHubIssueBody,
 	createGitHubIssue,
 } from "./github-tickets.service";
+import { assertProblemPageUrl } from "./problem-page-url";
 import { resolveSubmitterDepartmentLabel } from "./submitter-placement";
 import { createTicketRow, updateTicket } from "./ticket.repository";
 import type {
@@ -55,7 +59,9 @@ export async function uploadTicketAttachments(
 	const ids: string[] = [];
 
 	for (const file of files.slice(0, 5)) {
-		assertEnterpriseFileAllowed(file, "attachment");
+		if (!isTicketScreenRecordingFile(file)) {
+			assertEnterpriseFileAllowed(file, "ticketAttachment");
+		}
 		const buffer = Buffer.from(await file.arrayBuffer());
 		const uploaded = await storage.createFile({
 			bucketId,
@@ -93,6 +99,7 @@ export async function intakeTicket(input: {
 		lane,
 		category: input.payload.category,
 		affectedModule: input.payload.affectedModule || null,
+		problemPageUrl: input.payload.problemPageUrl,
 		impact: input.payload.impact,
 		urgency: input.payload.urgency,
 		submittedByUserId: input.actor.$id,
@@ -150,6 +157,7 @@ export async function intakeTicket(input: {
 			severity: ticket.severity,
 			category: ticket.category || input.payload.category,
 			affectedModule: ticket.affectedModule,
+			problemPageUrl: ticket.problemPageUrl,
 			impact: ticket.impact || input.payload.impact,
 			urgency: ticket.urgency || input.payload.urgency,
 			description: ticket.description,
@@ -252,6 +260,8 @@ export function buildCreateTicketInput(input: {
 	lane: unknown;
 	category: unknown;
 	affectedModule?: unknown;
+	problemPageUrl: unknown;
+	appOrigin: string;
 	impact: unknown;
 	urgency: unknown;
 	attachmentIds?: string[];
@@ -290,6 +300,7 @@ export function buildCreateTicketInput(input: {
 		lane,
 		category,
 		affectedModule: parseAffectedModule(input.affectedModule),
+		problemPageUrl: assertProblemPageUrl(input.problemPageUrl, input.appOrigin),
 		impact,
 		urgency,
 		severity,

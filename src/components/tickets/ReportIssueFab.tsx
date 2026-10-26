@@ -29,6 +29,12 @@ import {
 import { PERMISSIONS } from "@/constants/permissions";
 import { useFullWindowOverlayOpen } from "@/hooks/useFullWindowOverlayOpen";
 import { usePermissions } from "@/hooks/usePermissions";
+import { ProblemPageUrlField } from "@/components/tickets/ProblemPageUrlField";
+import { useTicketRecording } from "@/contexts/TicketRecordingContext";
+import {
+	defaultProblemPageUrl,
+	parseProblemPageUrl,
+} from "@/lib/tickets/problem-page-url";
 import {
 	buildReportIssueFullFormHref,
 	canQuickSubmitReportIssue,
@@ -62,10 +68,17 @@ export default function ReportIssueFab() {
 	const [showSubmitProgress, setShowSubmitProgress] = useState(false);
 	const [sent, setSent] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [problemPageUrl, setProblemPageUrl] = useState("");
+	const [pageUrlTouched, setPageUrlTouched] = useState(false);
+	const { isRecording } = useTicketRecording();
 
 	const canCreate = permissions.includes(PERMISSIONS.TICKETS.CREATE);
 	const hidden =
-		loading || !canCreate || shouldHideReportIssueFab(pathname) || overlayOpen;
+		loading ||
+		!canCreate ||
+		shouldHideReportIssueFab(pathname) ||
+		overlayOpen ||
+		isRecording;
 
 	const categoryOptions = useMemo(
 		() => (lane ? categoriesForLane(lane) : []),
@@ -73,15 +86,27 @@ export default function ReportIssueFab() {
 	);
 
 	useEffect(() => {
+		if (isRecording) return;
 		setLane("");
 		setTitle("");
 		setCategory("");
+		setProblemPageUrl("");
+		setPageUrlTouched(false);
 		setSent(false);
 		setError(null);
 		setShowSubmitProgress(false);
 		setSubmitProgress(0);
 		setOpen(false);
-	}, [pathname]);
+	}, [isRecording, pathname]);
+
+	useEffect(() => {
+		if (!open) return;
+		setProblemPageUrl((prev) =>
+			prev.trim()
+				? prev
+				: defaultProblemPageUrl(pathname || "/dashboard"),
+		);
+	}, [open, pathname]);
 
 	useEffect(() => {
 		if (!open) return;
@@ -96,10 +121,17 @@ export default function ReportIssueFab() {
 		return () => document.removeEventListener("mousedown", handlePointerDown);
 	}, [open]);
 
+	const pageUrlError = useMemo(() => {
+		if (!pageUrlTouched && !submitting) return null;
+		const parsed = parseProblemPageUrl(problemPageUrl);
+		return parsed.ok ? null : parsed.reason;
+	}, [pageUrlTouched, problemPageUrl, submitting]);
+
 	const fullFormHref = buildReportIssueFullFormHref({
 		lane,
 		title,
 		category,
+		problemPageUrl,
 		affectedModule:
 			lane === "engineering" ? routeContext.affectedModule : undefined,
 	});
@@ -108,6 +140,12 @@ export default function ReportIssueFab() {
 		async (event: FormEvent) => {
 			event.preventDefault();
 			if (!lane || !title.trim() || !category || submitting) return;
+			setPageUrlTouched(true);
+			const parsedPage = parseProblemPageUrl(problemPageUrl);
+			if (!parsedPage.ok) {
+				setError(parsedPage.reason);
+				return;
+			}
 
 			// Engineering bugs need reproduction steps, expected/actual, OS, and
 			// environment. Send people to the full form instead of posting a stub.
@@ -138,6 +176,7 @@ export default function ReportIssueFab() {
 				form.set("category", category);
 				form.set("impact", "medium");
 				form.set("urgency", "medium");
+				form.set("problemPageUrl", parsedPage.href);
 
 				const res = await fetch("/api/tickets", { method: "POST", body: form });
 				const data = await res.json();
@@ -168,6 +207,7 @@ export default function ReportIssueFab() {
 			category,
 			fullFormHref,
 			lane,
+			problemPageUrl,
 			routeContext.pageLabel,
 			router,
 			submitting,
@@ -265,6 +305,16 @@ export default function ReportIssueFab() {
 										className="border-slate-200 bg-white text-sm focus-visible:border-[#078FAB] focus-visible:ring-[#078FAB]"
 									/>
 								</div>
+
+								<ProblemPageUrlField
+									id="report-issue-page-url"
+									value={problemPageUrl}
+									onChange={setProblemPageUrl}
+									onBlur={() => setPageUrlTouched(true)}
+									error={pageUrlError}
+									currentPathname={pathname || "/dashboard"}
+									compact
+								/>
 
 								<div>
 									<Label

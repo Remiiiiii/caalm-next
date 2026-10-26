@@ -57,6 +57,8 @@ export type Ticket = {
 	description: string;
 	category?: string;
 	affectedModule?: string | null;
+	/** Full URL of the in-app page where the issue was seen. */
+	problemPageUrl?: string | null;
 	impact?: TicketSeverity;
 	urgency?: TicketSeverity;
 	submittedByUserId: string;
@@ -96,6 +98,7 @@ export type CreateTicketInput = {
 	lane: TicketLane;
 	category: string;
 	affectedModule?: string | null;
+	problemPageUrl: string;
 	impact: TicketSeverity;
 	urgency: TicketSeverity;
 	severity: TicketSeverity;

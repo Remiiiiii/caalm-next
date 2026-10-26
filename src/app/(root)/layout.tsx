@@ -12,6 +12,8 @@ import MobileNavigation from "@/components/MobileNavigation";
 import NotificationSoundListener from "@/components/NotificationSoundListener";
 import Sidebar from "@/components/Sidebar";
 import ReportIssueFab from "@/components/tickets/ReportIssueFab";
+import TicketRecordingOverlay from "@/components/tickets/TicketRecordingOverlay";
+import { TicketRecordingProvider } from "@/contexts/TicketRecordingContext";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { Toaster } from "@/components/ui/toaster";
 import type { UserRole } from "@/constants/rbac";
@@ -192,6 +194,7 @@ const LayoutContent = ({ children }: { children: React.ReactNode }) => {
 	}
 
 	return (
+		<TicketRecordingProvider>
 		<SidebarProvider>
 			<NotificationSoundListener />
 			<main className="relative flex h-screen flex-col overflow-hidden">
@@ -211,9 +214,11 @@ const LayoutContent = ({ children }: { children: React.ReactNode }) => {
 					<Toaster />
 					<DemoTourLayer />
 					<ReportIssueFab />
+					<TicketRecordingOverlay />
 				</div>
 			</main>
 		</SidebarProvider>
+		</TicketRecordingProvider>
 	);
 };
 

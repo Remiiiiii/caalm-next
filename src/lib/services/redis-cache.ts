@@ -8,6 +8,7 @@ import "server-only";
 import { kv } from "@vercel/kv";
 import type Redis from "ioredis";
 import redis from "../redis-client";
+import { recordCacheHit, recordCacheMiss } from "./cache-metrics";
 
 // Check if Redis is available
 const isRedisAvailable = !!(
@@ -244,6 +245,40 @@ function createCacheService(): CacheService {
 const cacheService = createCacheService();
 
 const CACHE_OP_TIMEOUT_MS = 2500;
+const L1_TTL_MS = 10_000;
+const L1_MAX_KEYS = 1000;
+
+type L1Entry = { value: unknown; expiry: number };
+const l1 = new Map<string, L1Entry>();
+
+function l1Get<T>(key: string): { hit: true; value: T | null } | { hit: false } {
+	const item = l1.get(key);
+	if (!item) return { hit: false };
+	if (Date.now() > item.expiry) {
+		l1.delete(key);
+		return { hit: false };
+	}
+	return { hit: true, value: item.value as T | null };
+}
+
+function l1Set(key: string, value: unknown, ttlMs: number = L1_TTL_MS): void {
+	if (l1.size >= L1_MAX_KEYS) {
+		const oldest = l1.keys().next().value;
+		if (oldest) l1.delete(oldest);
+	}
+	l1.set(key, { value, expiry: Date.now() + ttlMs });
+}
+
+function l1Del(key: string): void {
+	l1.delete(key);
+}
+
+function l1Clear(pattern: string): void {
+	const regex = new RegExp(pattern.replace(/\*/g, ".*"));
+	for (const key of l1.keys()) {
+		if (regex.test(key)) l1.delete(key);
+	}
+}
 
 async function withTimeout<T>(
 	promise: Promise<T>,
@@ -269,13 +304,17 @@ async function withTimeout<T>(
  * Get value from cache
  */
 export async function get<T>(key: string): Promise<T | null> {
+	const local = l1Get<T>(key);
+	if (local.hit) {
+		return local.value;
+	}
+
 	const startTime = Date.now();
 	const value = await withTimeout(cacheService.get<T>(key), null);
 	const duration = Date.now() - startTime;
+	l1Set(key, value);
 
-	// Track metrics
 	if (process.env.NODE_ENV !== "test") {
-		const { recordCacheHit, recordCacheMiss } = await import("./cache-metrics");
 		if (value) {
 			recordCacheHit(key, duration);
 		} else {
@@ -283,7 +322,6 @@ export async function get<T>(key: string): Promise<T | null> {
 		}
 	}
 
-	// Only log in development to reduce production overhead
 	if (process.env.NODE_ENV === "development") {
 		if (value) {
 			console.log(`Cache HIT: ${key} (${duration}ms)`);
@@ -303,7 +341,7 @@ export async function set(
 	value: any,
 	ttl: number = 300,
 ): Promise<void> {
-	// Only log in development to reduce production overhead
+	l1Set(key, value, Math.min(L1_TTL_MS, ttl * 1000));
 	if (process.env.NODE_ENV === "development") {
 		const startTime = Date.now();
 		await withTimeout(cacheService.set(key, value, ttl), undefined);
@@ -318,8 +356,8 @@ export async function set(
  * Delete key from cache
  */
 export async function del(key: string): Promise<void> {
+	l1Del(key);
 	await withTimeout(cacheService.del(key), undefined);
-	// Only log in development
 	if (process.env.NODE_ENV === "development") {
 		console.log(`Cache DEL: ${key}`);
 	}
@@ -336,8 +374,8 @@ export async function exists(key: string): Promise<boolean> {
  * Clear cache entries matching pattern
  */
 export async function clear(pattern: string): Promise<void> {
+	l1Clear(pattern);
 	await cacheService.clear(pattern);
-	// Only log in development
 	if (process.env.NODE_ENV === "development") {
 		console.log(`Cache CLEAR: ${pattern}`);
 	}

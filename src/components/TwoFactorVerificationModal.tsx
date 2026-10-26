@@ -133,7 +133,7 @@ const TwoFactorVerificationModal = ({
 					: `Enter the 6-digit code from your authenticator app${email ? ` for ${maskEmail(email)}` : ""}.`
 			}
 			footer={
-				<>
+				<div className="flex justify-between">
 					<Button
 						type="button"
 						variant="ghost"
@@ -157,11 +157,10 @@ const TwoFactorVerificationModal = ({
 						)}
 						{isLoading ? "Verifying…" : "Verify and continue"}
 					</Button>
-				</>
+				</div>
 			}
 		>
 			<div className="flex flex-col gap-3 pb-1">
-
 				{/* Status slot */}
 				<div className="min-h-11">
 					{isLockedOut || error ? (

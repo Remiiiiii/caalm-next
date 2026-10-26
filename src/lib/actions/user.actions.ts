@@ -848,15 +848,31 @@ function isNextDynamicServerError(error: unknown): boolean {
 	);
 }
 
+const CURRENT_USER_L1_TTL_MS = 15_000;
+const CURRENT_USER_L1_MAX = 200;
+const currentUserL1 = new Map<string, { value: unknown; expiry: number }>();
+
+function currentUserL1Key(sessionSecret: string): string {
+	return crypto
+		.createHash("sha256")
+		.update(sessionSecret)
+		.digest("hex")
+		.slice(0, 24);
+}
+
 const getCurrentUserImpl = async () => {
 	try {
+		const cookieStore = await cookies();
+		const sessionSecret = cookieStore.get("appwrite-session")?.value;
+		if (sessionSecret) {
+			const cached = currentUserL1.get(currentUserL1Key(sessionSecret));
+			if (cached && Date.now() < cached.expiry) {
+				return cached.value;
+			}
+		}
+
 		const { tablesDB, account } = await createSessionClient();
 		const result = await account.get();
-
-		// Only log in development
-		if (process.env.NODE_ENV === "development") {
-			console.log("getCurrentUser - Account ID:", result.$id);
-		}
 
 		const user = await tablesDB.listRows({
 			databaseId: appwriteConfig.databaseId || "default-db",
@@ -864,28 +880,17 @@ const getCurrentUserImpl = async () => {
 			queries: [sdk.Query.equal("accountId", result.$id)],
 		});
 
-		if (process.env.NODE_ENV === "development") {
-			console.log("getCurrentUser - Database query result:", {
-				total: user.total,
-				rows: user.rows,
-				firstRow: user.rows[0] || null,
-			});
-		}
-
 		if (user.total === 0) return null;
 
-		// Return only the user data, not the client objects
 		const userData = user.rows[0];
 
-		// Parallel: Get user's role from database (for calendar permissions compatibility)
-		// Both functions are now cached, so this is fast
 		const defaultOrg = await getUserDefaultOrganization(userData.$id);
 		const userRoles = defaultOrg
 			? await getUserRoles(userData.$id, defaultOrg.orgId)
 			: [];
 		const roleName = userRoles[0]?.roleName || "";
 
-		return parseStringify({
+		const parsed = parseStringify({
 			$id: userData.$id,
 			fullName: userData.fullName,
 			email: userData.email,
@@ -901,6 +906,19 @@ const getCurrentUserImpl = async () => {
 			$createdAt: userData.$createdAt,
 			$updatedAt: userData.$updatedAt,
 		});
+
+		if (sessionSecret) {
+			if (currentUserL1.size >= CURRENT_USER_L1_MAX) {
+				const oldest = currentUserL1.keys().next().value;
+				if (oldest) currentUserL1.delete(oldest);
+			}
+			currentUserL1.set(currentUserL1Key(sessionSecret), {
+				value: parsed,
+				expiry: Date.now() + CURRENT_USER_L1_TTL_MS,
+			});
+		}
+
+		return parsed;
 	} catch (error) {
 		// Let Next mark the route dynamic (cookies() during static gen)
 		if (isNextDynamicServerError(error)) throw error;
