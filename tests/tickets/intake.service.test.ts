@@ -29,10 +29,12 @@ describe("ticket intake helpers", () => {
 		expect(deriveSeverityFromMatrix("critical", "critical")).toEqual({
 			severity: "critical",
 			responseSlaHours: 1,
+			responseSlaLabel: "1 hour",
 		});
 		expect(deriveSeverityFromMatrix("low", "low")).toEqual({
 			severity: "low",
-			responseSlaHours: 48,
+			responseSlaHours: 120,
+			responseSlaLabel: "5 business days",
 		});
 	});
 
@@ -53,7 +55,8 @@ describe("ticket intake helpers", () => {
 			searchedExisting: true,
 			isBug: true,
 		});
-		expect(payload.severity).toBe("high");
+		// high impact + high urgency = critical severity (bumped one tier)
+		expect(payload.severity).toBe("critical");
 		expect(payload.lane).toBe("engineering");
 		expect(payload.category).toBe("Software / Application");
 		expect(payload.affectedModule).toBe("User Management");
