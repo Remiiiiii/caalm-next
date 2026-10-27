@@ -1,7 +1,7 @@
 "use client";
 
 import {
-		AlertTriangle,
+	AlertTriangle,
 	Clock,
 	FileText,
 	Lock,
@@ -75,7 +75,7 @@ import type {
 	TicketSeverity,
 } from "@/lib/tickets/ticket.types";
 import {
-		clearTicketFormDraft,
+	clearTicketFormDraft,
 	loadTicketFormDraft,
 	saveTicketFormDraft,
 	type TicketFormDraft,
@@ -340,7 +340,7 @@ export function TicketSubmitForm() {
 	const [confirmedPageUrl, setConfirmedPageUrl] = useState(
 		() => searchParams?.get("pageUrl")?.trim() ?? "",
 	);
-		const [pageJustUpdated, setPageJustUpdated] = useState(false);
+	const [pageJustUpdated, setPageJustUpdated] = useState(false);
 	const [draftRestored, setDraftRestored] = useState(false);
 	// Set when the user submits or cancels, so a pending autosave can't resurrect the draft.
 	const leavingRef = useRef(false);
@@ -387,7 +387,10 @@ export function TicketSubmitForm() {
 		// Explicit links (?lane=, ?title=, ...) beat the saved draft, field by field.
 		const fromLink = (key: string) => Boolean(searchParams?.get(key)?.trim());
 		const laneFromLink = fromLink("lane");
-		if (!laneFromLink && (draft.lane === "engineering" || draft.lane === "help")) {
+		if (
+			!laneFromLink &&
+			(draft.lane === "engineering" || draft.lane === "help")
+		) {
 			setLane(draft.lane);
 		}
 		if (draft.title && !fromLink("title")) setTitle(draft.title);
@@ -787,7 +790,7 @@ export function TicketSubmitForm() {
 			await new Promise((resolve) => setTimeout(resolve, 1200));
 			setShowSubmitProgress(false);
 			setSubmitting(false);
-						leavingRef.current = true;
+			leavingRef.current = true;
 			clearTicketFormDraft();
 			setSubmittedTicket(data.ticket as Ticket);
 			setConfirmOpen(true);
@@ -827,7 +830,7 @@ export function TicketSubmitForm() {
 					<form
 						ref={formRef}
 						onSubmit={onSubmit}
-												noValidate
+						noValidate
 						className="space-y-6"
 					>
 						{draftRestored ? (

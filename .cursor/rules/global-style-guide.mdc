@@ -663,10 +663,20 @@ When a cell component is shared (status badge, avatar, linked chip), the detail 
 2. If no photo (or load fails), render **initials** on the shared `Avatar` color (`getAvatarColor`).
 3. When a photo is shown, include the **contracts-style outer ring** (teal→navy gradient pad + white inner border) — same as `ManagerAvatars` / `@/components/ui/avatar`.
 4. Use `@/components/ui/avatar` — do not invent a one-off initials circle that ignores photos.
+5. **Never render a bare full-name string as the person.** Wherever a user’s full name would appear on its own (table "Submitted by" / assignee / owner cells, filters, pickers), first look up the uploaded photo, then render the `Avatar` (photo, else initials) **instead of** the name, with a tooltip showing the full name. Keep secondary lines (department, role) beneath the avatar. If the data source has no photo field, fetch it server-side by user id (see `getSubmitterAvatarUrls` in `src/lib/tickets/submitter-avatars.ts`) rather than skipping the lookup. Exception: `showName` on `Avatar` or a name that sits beside the avatar in a profile header, comment or sheet where the name is the primary content.
 
 ```tsx
-<Avatar name={person.name} userId={person.id} size="sm" imageUrl={person.imageUrl} />
+<Tooltip>
+  <TooltipTrigger asChild>
+    <button type="button" aria-label={person.name} className="inline-flex cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40">
+      <Avatar name={person.name} userId={person.id} size="sm" imageUrl={person.imageUrl} />
+    </button>
+  </TooltipTrigger>
+  <TooltipContent>{person.name}</TooltipContent>
+</Tooltip>
 ```
+
+**Reference:** `src/components/tickets/TicketQueue.tsx` (Submitted by column)
 
 ---
 

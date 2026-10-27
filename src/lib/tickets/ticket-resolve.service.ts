@@ -132,10 +132,15 @@ export async function syncCursorAgentTicket(ticket: Ticket): Promise<Ticket> {
 		"ERROR",
 		"FAILED",
 		"EXPIRED",
+		"CANCELLED",
 	].includes(status.status.toUpperCase());
 	if (!finished) return ticket;
 
-	if (["ERROR", "FAILED", "EXPIRED"].includes(status.status.toUpperCase())) {
+	if (
+		["ERROR", "FAILED", "EXPIRED", "CANCELLED"].includes(
+			status.status.toUpperCase(),
+		)
+	) {
 		const failed = await updateTicket(ticket.$id, { status: "NEEDS_HUMAN" });
 		await appendTicketEvent({
 			ticketId: ticket.$id,

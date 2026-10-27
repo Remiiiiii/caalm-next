@@ -23,9 +23,9 @@ describe("problem-page-url", () => {
 	});
 
 	it("rejects other origins", () => {
-		expect(
-			parseProblemPageUrl("https://evil.example.com/p", ORIGIN).ok,
-		).toBe(false);
+		expect(parseProblemPageUrl("https://evil.example.com/p", ORIGIN).ok).toBe(
+			false,
+		);
 	});
 
 	it("defaultProblemPageUrl builds href", () => {

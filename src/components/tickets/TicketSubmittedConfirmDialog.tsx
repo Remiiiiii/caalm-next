@@ -89,9 +89,7 @@ export function TicketSubmittedConfirmDialog({
 						</span>
 					</div>
 				</div>
-				{laneCopy ? (
-					<p className="text-sm text-slate-500">{laneCopy}</p>
-				) : null}
+				{laneCopy ? <p className="text-sm text-slate-500">{laneCopy}</p> : null}
 			</div>
 		</AppDialog>
 	);

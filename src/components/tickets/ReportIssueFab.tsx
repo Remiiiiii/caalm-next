@@ -12,6 +12,7 @@ import {
 	useState,
 } from "react";
 import ShimmerBadge from "@/components/landing/ShimmerBadge";
+import { ProblemPageUrlField } from "@/components/tickets/ProblemPageUrlField";
 import {
 	createSubmitProgressTicker,
 	SubmitProgressIndicator,
@@ -27,10 +28,9 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { PERMISSIONS } from "@/constants/permissions";
+import { useTicketRecording } from "@/contexts/TicketRecordingContext";
 import { useFullWindowOverlayOpen } from "@/hooks/useFullWindowOverlayOpen";
 import { usePermissions } from "@/hooks/usePermissions";
-import { ProblemPageUrlField } from "@/components/tickets/ProblemPageUrlField";
-import { useTicketRecording } from "@/contexts/TicketRecordingContext";
 import {
 	defaultProblemPageUrl,
 	parseProblemPageUrl,
@@ -102,9 +102,7 @@ export default function ReportIssueFab() {
 	useEffect(() => {
 		if (!open) return;
 		setProblemPageUrl((prev) =>
-			prev.trim()
-				? prev
-				: defaultProblemPageUrl(pathname || "/dashboard"),
+			prev.trim() ? prev : defaultProblemPageUrl(pathname || "/dashboard"),
 		);
 	}, [open, pathname]);
 

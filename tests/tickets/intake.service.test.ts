@@ -29,11 +29,19 @@ describe("ticket intake helpers", () => {
 		expect(deriveSeverityFromMatrix("critical", "critical")).toEqual({
 			severity: "critical",
 			responseSlaHours: 1,
+			responseSlaLabel: "1 hour",
 		});
 		expect(deriveSeverityFromMatrix("low", "low")).toEqual({
 			severity: "low",
-			responseSlaHours: 48,
+			responseSlaHours: 120,
+			responseSlaLabel: "5 business days",
 		});
+	});
+
+	it("bumps severity one tier when urgency is Today or Right now", () => {
+		expect(deriveSeverityFromMatrix("high", "medium").severity).toBe("high");
+		expect(deriveSeverityFromMatrix("high", "high").severity).toBe("critical");
+		expect(deriveSeverityFromMatrix("low", "critical").severity).toBe("medium");
 	});
 
 	it("builds create payload with server-derived severity", () => {
@@ -46,7 +54,7 @@ describe("ticket intake helpers", () => {
 			problemPageUrl: "http://localhost:3000/dashboard",
 			appOrigin: "http://localhost:3000",
 			impact: "high",
-			urgency: "high",
+			urgency: "medium",
 			steps: "1. Open sign-in\n2. Enter password",
 			expected: "The user should land on the dashboard.",
 			actual: "The form stays on a spinner.",

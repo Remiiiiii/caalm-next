@@ -1,0 +1,276 @@
+- generic [ref=f18e1]:
+  - button "Open Next.js Dev Tools" [ref=f18e7] [cursor=pointer]:
+    - generic [ref=f18e10]:
+      - text: Rendering
+      - generic [ref=f18e11]:
+        - generic [ref=f18e12]: .
+        - generic [ref=f18e13]: .
+        - generic [ref=f18e14]: .
+  - alert [ref=f18e15]
+  - main [ref=f18e16]:
+    - generic [ref=f18e17]:
+      - complementary [ref=f18e18]:
+        - generic [ref=f18e19]:
+          - link [ref=f18e20] [cursor=pointer]:
+            - /url: /dashboard/it
+            - img "logo" [ref=f18e21]
+          - button "Collapse sidebar" [expanded] [ref=f18e22] [cursor=pointer]
+        - navigation [ref=f18e29]:
+          - list [ref=f18e30]:
+            - generic [ref=f18e31]:
+              - listitem [ref=f18e32]:
+                - generic [ref=f18e33]: Workspaces
+              - list [ref=f18e42]:
+                - listitem [ref=f18e43]:
+                  - link [ref=f18e46] [cursor=pointer]:
+                    - /url: /dashboard/superadmin
+                    - paragraph [ref=f18e49]: Super Admin
+                - listitem [ref=f18e50]:
+                  - link [ref=f18e53] [cursor=pointer]:
+                    - /url: /dashboard/departmentmanager
+                    - paragraph [ref=f18e57]: Department Manager
+            - generic [ref=f18e58]:
+              - listitem [ref=f18e59]:
+                - generic [ref=f18e60]: Overview
+              - list [ref=f18e69]:
+                - listitem [ref=f18e70]:
+                  - link [ref=f18e73] [cursor=pointer]:
+                    - /url: /dashboard/it
+                    - paragraph [ref=f18e79]: Dashboard
+                - listitem [ref=f18e80]:
+                  - link [ref=f18e83] [cursor=pointer]:
+                    - /url: /dashboard/it/system-overview
+                    - paragraph [ref=f18e86]: System overview
+                - listitem [ref=f18e87]:
+                  - link [ref=f18e90] [cursor=pointer]:
+                    - /url: /dashboard/it/storage
+                    - paragraph [ref=f18e93]: Storage
+                - listitem [ref=f18e94]:
+                  - link [ref=f18e97] [cursor=pointer]:
+                    - /url: /dashboard/it/tenants
+                    - paragraph [ref=f18e102]: Tenants
+            - generic [ref=f18e103]:
+              - listitem [ref=f18e104]:
+                - generic [ref=f18e105]: Support
+              - list [ref=f18e111]:
+                - listitem [ref=f18e112]:
+                  - link [ref=f18e115] [cursor=pointer]:
+                    - /url: /tickets/new
+                    - paragraph [ref=f18e118]: Report issue
+                - listitem [ref=f18e119]:
+                  - link [ref=f18e122] [cursor=pointer]:
+                    - /url: /tickets
+                    - paragraph [ref=f18e126]: Tickets
+                - listitem [ref=f18e127]:
+                  - link [ref=f18e130] [cursor=pointer]:
+                    - /url: /dashboard/it/issuehistory
+                    - paragraph [ref=f18e135]: Issue History
+            - generic [ref=f18e136]:
+              - listitem [ref=f18e137]:
+                - generic [ref=f18e138]: Monitoring
+              - list [ref=f18e144]:
+                - listitem [ref=f18e145]:
+                  - link [ref=f18e148] [cursor=pointer]:
+                    - /url: /dashboard/it/monitoring/system-health
+                    - paragraph [ref=f18e152]: System health
+                - listitem [ref=f18e153]:
+                  - link [ref=f18e156] [cursor=pointer]:
+                    - /url: /dashboard/it/monitoring/api-analytics
+                    - paragraph [ref=f18e159]: API analytics
+                - listitem [ref=f18e160]:
+                  - link [ref=f18e163] [cursor=pointer]:
+                    - /url: /dashboard/it/rate-limits
+                    - paragraph [ref=f18e166]: Rate limits
+            - generic [ref=f18e167]:
+              - listitem [ref=f18e168]:
+                - generic [ref=f18e169]: Incidents
+              - list [ref=f18e178]:
+                - listitem [ref=f18e179]:
+                  - link [ref=f18e182] [cursor=pointer]:
+                    - /url: /dashboard/it/incidents/active
+                    - paragraph [ref=f18e185]: Active incidents
+                - listitem [ref=f18e186]:
+                  - link [ref=f18e189] [cursor=pointer]:
+                    - /url: /dashboard/it/incidents/runbooks
+                    - paragraph [ref=f18e193]: Runbooks
+            - generic [ref=f18e194]:
+              - listitem [ref=f18e195]:
+                - generic [ref=f18e196]: Development
+              - list [ref=f18e205]:
+                - listitem [ref=f18e206]:
+                  - link [ref=f18e209] [cursor=pointer]:
+                    - /url: /dashboard/it/development/clm-roadmap
+                    - paragraph [ref=f18e212]: CLM Roadmap
+                - listitem [ref=f18e213]:
+                  - link [ref=f18e216] [cursor=pointer]:
+                    - /url: /dashboard/it/development/nonprofit-roadmap
+                    - paragraph [ref=f18e222]: Nonprofit Roadmap
+                - listitem [ref=f18e223]:
+                  - link [ref=f18e226] [cursor=pointer]:
+                    - /url: /dashboard/it/development/platform-readiness-roadmap
+                    - paragraph [ref=f18e229]: Platform Readiness Roadmap
+                - listitem [ref=f18e230]:
+                  - link [ref=f18e233] [cursor=pointer]:
+                    - /url: /dashboard/it/development/pr-log
+                    - paragraph [ref=f18e238]: PR log - (Cursor Cloud Agent)
+            - generic [ref=f18e239]:
+              - listitem [ref=f18e240]:
+                - generic [ref=f18e241]: Data & logs
+              - list [ref=f18e249]:
+                - listitem [ref=f18e250]:
+                  - link [ref=f18e253] [cursor=pointer]:
+                    - /url: /dashboard/it/database/schema
+                    - paragraph [ref=f18e256]: Schema
+            - generic [ref=f18e257]:
+              - listitem [ref=f18e258]:
+                - generic [ref=f18e259]: Security
+              - list [ref=f18e265]:
+                - listitem [ref=f18e266]:
+                  - link [ref=f18e269] [cursor=pointer]:
+                    - /url: /dashboard/it/security/audit-logs
+                    - paragraph [ref=f18e273]: Audit logs
+                - listitem [ref=f18e274]:
+                  - link [ref=f18e277] [cursor=pointer]:
+                    - /url: /dashboard/it/security/compliance
+                    - paragraph [ref=f18e282]: Compliance
+                - listitem [ref=f18e283]:
+                  - link [ref=f18e286] [cursor=pointer]:
+                    - /url: /dashboard/it/security/access-control
+                    - paragraph [ref=f18e290]: Access control
+                - listitem [ref=f18e291]:
+                  - link [ref=f18e294] [cursor=pointer]:
+                    - /url: /dashboard/it/security/incident-response
+                    - paragraph [ref=f18e300]: Incident response
+            - generic [ref=f18e301]:
+              - listitem [ref=f18e302]:
+                - generic [ref=f18e303]: Team
+              - list [ref=f18e312]:
+                - listitem [ref=f18e313]:
+                  - link [ref=f18e316] [cursor=pointer]:
+                    - /url: /dashboard/it/team/directory
+                    - paragraph [ref=f18e322]: IT directory
+                - listitem [ref=f18e323]:
+                  - link [ref=f18e326] [cursor=pointer]:
+                    - /url: /dashboard/it/team/roles
+                    - paragraph [ref=f18e339]: Roles
+            - listitem [aria-hidden] [ref=f18e340]:
+              - separator [ref=f18e341]
+            - generic [ref=f18e342]:
+              - listitem [ref=f18e343]:
+                - generic [ref=f18e344]: Settings
+              - list [ref=f18e351]:
+                - listitem [ref=f18e352]:
+                  - link [ref=f18e355] [cursor=pointer]:
+                    - /url: /dashboard/it/settings/system
+                    - paragraph [ref=f18e359]: System
+                - listitem [ref=f18e360]:
+                  - link [ref=f18e363] [cursor=pointer]:
+                    - /url: /dashboard/it/settings/integrations
+                    - paragraph [ref=f18e366]: Integrations
+                - listitem [ref=f18e367]:
+                  - link [ref=f18e370] [cursor=pointer]:
+                    - /url: /dashboard/it/settings/notifications
+                    - paragraph [ref=f18e374]: Notifications
+      - generic [ref=f18e375]:
+        - generic [ref=f18e377]:
+          - generic [ref=f18e379]:
+            - button "Audit" [ref=f18e380] [cursor=pointer]
+            - button "Schedule" [ref=f18e381] [cursor=pointer]
+            - button "Report" [ref=f18e382] [cursor=pointer]
+          - generic [ref=f18e383]:
+            - button "Ask CAALM" [ref=f18e384] [cursor=pointer]
+            - generic [ref=f18e388]:
+              - button "Profile picture" [ref=f18e391] [cursor=pointer]:
+                - img "Victor Ramirez" [ref=f18e393]
+              - button "Open notifications" [ref=f18e395] [cursor=pointer]:
+                - generic "54 notifications" [ref=f18e396]: "54"
+              - button "Open mail" [ref=f18e397] [cursor=pointer]
+              - button "Log out" [ref=f18e398] [cursor=pointer]
+        - generic [ref=f18e400]:
+          - navigation "breadcrumb" [ref=f18e401]:
+            - link "Tickets" [ref=f18e402] [cursor=pointer]:
+              - /url: /tickets
+            - generic [ref=f18e405]: TKT-2026-0005
+          - generic [ref=f18e406]:
+            - generic [ref=f18e407]:
+              - heading "Ticket" [level=1] [ref=f18e408]
+              - generic [ref=f18e409]:
+                - generic [ref=f18e410]: TKT-2026-0005
+                - generic [ref=f18e411]: Help
+                - generic [ref=f18e412]: low
+                - generic [ref=f18e413]: OPEN
+            - button "Copy link" [ref=f18e415] [cursor=pointer]
+          - generic [ref=f18e416]:
+            - generic [ref=f18e417]:
+              - generic [ref=f18e418]:
+                - generic [ref=f18e421]:
+                  - generic [ref=f18e422]:
+                    - paragraph [ref=f18e423]: Submitted
+                    - paragraph [ref=f18e424]: Mon, Oct 26, 2026
+                  - generic [ref=f18e425]:
+                    - paragraph [ref=f18e426]: Category
+                    - paragraph [ref=f18e427]: Other
+                  - generic [ref=f18e428]:
+                    - paragraph [ref=f18e429]: Affected service
+                    - paragraph [ref=f18e430]: —
+                  - generic [ref=f18e431]:
+                    - paragraph [ref=f18e432]: Impact
+                    - paragraph [ref=f18e433]: Just me
+                  - generic [ref=f18e434]:
+                    - paragraph [ref=f18e435]: Urgency
+                    - paragraph [ref=f18e436]: Can wait
+                  - generic [ref=f18e437]:
+                    - paragraph [ref=f18e438]: Environment
+                    - paragraph [ref=f18e439]: —
+                - generic [ref=f18e440]:
+                  - generic [ref=f18e444]:
+                    - paragraph [ref=f18e445]: Remy Ouji
+                    - paragraph [ref=f18e446]: Executive · submitted 22h ago
+                  - generic [ref=f18e447]:
+                    - paragraph [ref=f18e448]: Description
+                    - heading "test" [level=2] [ref=f18e449]
+                    - paragraph [ref=f18e450]: testing testing 123
+                    - paragraph [ref=f18e451]:
+                      - text: Seen on
+                      - link "http://localhost:3000/analytics/risk-averted" [ref=f18e452] [cursor=pointer]:
+                        - /url: http://localhost:3000/analytics/risk-averted
+              - generic [ref=f18e455]:
+                - paragraph [ref=f18e456]: Screen recording
+                - generic [ref=f18e457]:
+                  - 'generic "Screen recording: screen-recording.webm" [ref=f18e458]'
+                  - generic [ref=f18e459]:
+                    - generic [ref=f18e460]: screen-recording.webm · 2.9 MB
+                    - link "Download" [ref=f18e461] [cursor=pointer]:
+                      - /url: /api/tickets/6adfe7fc001484846498/attachments/6adfe7f3002462c0409b?download=1
+            - complementary [ref=f18e465]:
+              - generic [ref=f18e468]:
+                - paragraph [ref=f18e469]: Staff actions
+                - generic [ref=f18e470]:
+                  - generic [ref=f18e471]: Assigned to
+                  - generic [ref=f18e472]: Unassigned
+                - generic [ref=f18e473]:
+                  - button "Claim ticket" [ref=f18e474] [cursor=pointer]
+                  - button "Mark resolved" [ref=f18e475] [cursor=pointer]
+                  - button "Escalate to Engineering" [ref=f18e476] [cursor=pointer]
+                - paragraph [ref=f18e477]: Claim the ticket before marking it resolved.
+              - generic [ref=f18e480]:
+                - paragraph [ref=f18e481]: SLA status
+                - generic [ref=f18e482]:
+                  - paragraph [ref=f18e483]: Time remaining
+                  - paragraph [ref=f18e484]: 4d 1h
+                  - paragraph [ref=f18e485]: SLA target was 120h (SEV-4)
+                  - progressbar "Share of SLA time used" [ref=f18e486]
+                - generic [ref=f18e488]:
+                  - generic [ref=f18e489]: Opened Mon, Oct 26, 2026
+                  - generic [ref=f18e490]: 0 days in queue
+              - generic [ref=f18e493]:
+                - paragraph [ref=f18e494]: Audit trail
+                - list [ref=f18e495]:
+                  - listitem [ref=f18e496]:
+                    - generic [ref=f18e500]:
+                      - paragraph [ref=f18e501]: Created
+                      - paragraph [ref=f18e502]: Remy Ouji · Mon, Oct 26, 2026, 7:53:32 PM EDT
+      - button "Report an issue" [ref=f18e503] [cursor=pointer]:
+        - generic [ref=f18e504]: Report issue
+  - region "Notifications (F8)":
+    - list

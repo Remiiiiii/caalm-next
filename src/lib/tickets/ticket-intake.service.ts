@@ -8,6 +8,7 @@ import {
 } from "@/lib/files/enterprise-file-formats";
 import {
 	composeEngineeringBugDescription,
+	type EngineeringBugFields,
 	parseEngineeringBugFields,
 } from "./bug-report-body";
 import {
@@ -74,6 +75,20 @@ export async function uploadTicketAttachments(
 	return ids;
 }
 
+/** Columns mirroring the structured bug fields; empty for Help tickets. */
+function bugColumns(bug?: EngineeringBugFields) {
+	if (!bug) return {};
+	return {
+		stepsToReproduce: bug.steps,
+		expectedBehavior: bug.expected,
+		actualBehavior: bug.actual,
+		os: bug.os,
+		environment: bug.environment,
+		confirmedNoDuplicate: bug.searchedExisting,
+		confirmedProductBug: bug.isBug,
+	};
+}
+
 export async function intakeTicket(input: {
 	payload: CreateTicketInput;
 	actor: IntakeActor;
@@ -109,6 +124,7 @@ export async function intakeTicket(input: {
 		severity,
 		status: "OPEN",
 		attachments: input.payload.attachmentIds || [],
+		...bugColumns(input.payload.bug),
 		orgId: input.orgId,
 		githubRepo: getTicketsRepo(),
 		ticketNumber,
@@ -286,10 +302,10 @@ export function buildCreateTicketInput(input: {
 	// Engineering tickets must use the GitHub-style bug fields so GitHub
 	// issues and CAALM tickets share the same body. Help stays free text.
 	let description = input.description.trim();
+	let bug: EngineeringBugFields | undefined;
 	if (lane === "engineering") {
-		description = composeEngineeringBugDescription(
-			parseEngineeringBugFields(input),
-		);
+		bug = parseEngineeringBugFields(input);
+		description = composeEngineeringBugDescription(bug);
 	} else if (description.length < 8) {
 		throw new Error("Invalid description");
 	}
@@ -305,5 +321,6 @@ export function buildCreateTicketInput(input: {
 		urgency,
 		severity,
 		attachmentIds: input.attachmentIds,
+		bug,
 	};
 }

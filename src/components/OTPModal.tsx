@@ -202,7 +202,7 @@ const OTPModal = ({
 			title="Enter verification code"
 			description={`Enter the 6-digit code we sent to ${maskEmail(email)}.`}
 			footer={
-				<div className="flex justify-between">
+				<div className="flex justify-between w-full">
 					<Button
 						type="button"
 						variant="ghost"

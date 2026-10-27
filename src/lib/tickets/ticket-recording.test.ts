@@ -3,8 +3,8 @@ import {
 	displayMediaConstraints,
 	formatRecordingDuration,
 	pickMime,
-	ticketRecordingToFile,
 	type TicketRecording,
+	ticketRecordingToFile,
 } from "./ticket-recording";
 
 describe("ticket-recording", () => {
@@ -37,7 +37,9 @@ describe("ticket-recording", () => {
 	});
 
 	it("displayMediaConstraints prefers current tab when on problem page", () => {
-		const onPage = displayMediaConstraints(true) as DisplayMediaStreamOptions & {
+		const onPage = displayMediaConstraints(
+			true,
+		) as DisplayMediaStreamOptions & {
 			selfBrowserSurface?: string;
 			preferCurrentTab?: boolean;
 		};
