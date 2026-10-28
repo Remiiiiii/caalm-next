@@ -1,0 +1,308 @@
+- generic:
+  - button "Open Next.js Dev Tools" [ref=f1e472] [cursor=pointer]
+  - alert
+  - main [aria-hidden]:
+    - generic:
+      - complementary:
+        - generic:
+          - link:
+            - /url: /dashboard/it
+          - button [expanded]
+        - generic:
+          - generic:
+            - generic:
+              - paragraph: Victor Ramirez
+              - paragraph: developer@remyouji.com
+            - generic:
+              - generic:
+                - generic: "Role:"
+                - generic: Super Admin
+              - generic:
+                - generic: "Department:"
+                - generic: IT
+            - generic: Disconnected
+        - navigation:
+          - list:
+            - generic:
+              - listitem:
+                - generic: Workspaces
+              - generic:
+                - list:
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/superadmin
+                      - paragraph: Super Admin
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/departmentmanager
+                      - paragraph: Department Manager
+            - generic:
+              - listitem:
+                - generic: Overview
+              - generic:
+                - list:
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it
+                      - paragraph: Dashboard
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/system-overview
+                      - paragraph: System overview
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/storage
+                      - paragraph: Storage
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/tenants
+                      - paragraph: Tenants
+            - generic:
+              - listitem:
+                - generic: Support
+              - generic:
+                - list:
+                  - listitem:
+                    - link:
+                      - /url: /tickets/new
+                      - paragraph: Report issue
+                  - listitem:
+                    - link:
+                      - /url: /tickets
+                      - paragraph: Tickets
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/issuehistory
+                      - paragraph: Issue History
+            - generic:
+              - listitem:
+                - generic: Monitoring
+              - generic:
+                - list:
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/monitoring/system-health
+                      - paragraph: System health
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/monitoring/api-analytics
+                      - paragraph: API analytics
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/rate-limits
+                      - paragraph: Rate limits
+            - generic:
+              - listitem:
+                - generic: Incidents
+              - generic:
+                - list:
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/incidents/active
+                      - paragraph: Active incidents
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/incidents/runbooks
+                      - paragraph: Runbooks
+            - generic:
+              - listitem:
+                - generic: Development
+              - generic:
+                - list:
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/development/clm-roadmap
+                      - paragraph: CLM Roadmap
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/development/nonprofit-roadmap
+                      - paragraph: Nonprofit Roadmap
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/development/platform-readiness-roadmap
+                      - paragraph: Platform Readiness Roadmap
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/development/pr-log
+                      - paragraph: PR log - (Cursor Cloud Agent)
+            - generic:
+              - listitem:
+                - generic: Data & logs
+              - generic:
+                - list:
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/database/schema
+                      - paragraph: Schema
+            - generic:
+              - listitem:
+                - generic: Security
+              - generic:
+                - list:
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/security/audit-logs
+                      - paragraph: Audit logs
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/security/compliance
+                      - paragraph: Compliance
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/security/access-control
+                      - paragraph: Access control
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/security/incident-response
+                      - paragraph: Incident response
+            - generic:
+              - listitem:
+                - generic: Team
+              - generic:
+                - list:
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/team/directory
+                      - paragraph: IT directory
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/team/roles
+                      - paragraph: Roles
+            - listitem [aria-hidden]:
+              - separator
+            - generic:
+              - listitem:
+                - generic: Settings
+              - generic:
+                - list:
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/settings/system
+                      - paragraph: System
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/settings/integrations
+                      - paragraph: Integrations
+                  - listitem:
+                    - link:
+                      - /url: /dashboard/it/settings/notifications
+                      - paragraph: Notifications
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - button: Upload Contract
+                - button: Upload License
+                - button: Audit
+                - button: Schedule
+                - button: Report
+            - generic:
+              - button:
+                - generic: Ask CAALM
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - button
+                    - button:
+                      - generic: "54"
+                    - button
+                    - button
+        - generic:
+          - generic:
+            - navigation:
+              - link:
+                - /url: /tickets
+                - text: Tickets
+              - generic: TKT-2026-0005
+            - generic:
+              - generic:
+                - heading [level=1]: Ticket
+                - generic:
+                  - generic: TKT-2026-0005
+                  - generic: Help
+                  - generic: low
+                  - generic: OPEN
+              - generic:
+                - button: Copy link
+                - button: Show details
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - paragraph: Remy Ouji
+                    - paragraph: Executive · submitted 39h ago
+                  - generic: Mon, Oct 26, 2026
+                  - generic: Other
+              - generic:
+                - table:
+                  - rowgroup:
+                    - row:
+                      - columnheader: Submitted
+                      - columnheader: Category
+                      - columnheader: Affected service
+                      - columnheader: Impact
+                      - columnheader: Urgency
+                      - columnheader: Environment
+                  - rowgroup:
+                    - row:
+                      - cell: Mon, Oct 26, 2026
+                      - cell: Other
+                      - cell: —
+                      - cell: Just me
+                      - cell: Can wait
+                      - cell: —
+              - generic:
+                - heading [level=2]: test
+                - paragraph: testing testing 123
+                - paragraph:
+                  - text: Seen on
+                  - link:
+                    - /url: http://localhost:3000/analytics/risk-averted
+                    - text: http://localhost:3000/analytics/risk-averted
+              - generic:
+                - generic:
+                  - paragraph: Screen recording
+                  - generic:
+                    - generic:
+                      - generic: screen-recording.webm · 2.9 MB
+                      - link:
+                        - /url: /api/tickets/6adfe7fc001484846498/attachments/6adfe7f3002462c0409b?download=1
+                        - text: Download
+  - list
+  - dialog [ref=f1e477]:
+    - generic [ref=f1e478]:
+      - button "Hide" [active] [ref=f1e484] [cursor=pointer]
+      - heading "TKT-2026-0005" [level=2] [ref=f1e485]
+      - paragraph [ref=f1e486]: Help · Low
+    - generic [ref=f1e487]:
+      - generic [ref=f1e488]:
+        - paragraph [ref=f1e489]: Staff actions
+        - generic [ref=f1e490]:
+          - generic [ref=f1e491]: Assigned to
+          - generic [ref=f1e492]: Unassigned
+        - generic [ref=f1e493]:
+          - button "Claim ticket" [ref=f1e494] [cursor=pointer]
+          - button "Mark resolved" [ref=f1e495] [cursor=pointer]
+          - button "Escalate" [ref=f1e496] [cursor=pointer]
+        - paragraph [ref=f1e497]: Claim the ticket before marking it resolved.
+      - generic [ref=f1e501]:
+        - paragraph [ref=f1e502]: SLA status
+        - generic [ref=f1e503]:
+          - paragraph [ref=f1e504]: Time remaining
+          - paragraph [ref=f1e505]: 3d 8h
+          - paragraph [ref=f1e506]: SLA target was 120h (SEV-4)
+          - progressbar "Share of SLA time used" [ref=f1e507]
+        - generic [ref=f1e509]:
+          - generic [ref=f1e510]: Opened Mon, Oct 26, 2026
+          - generic [ref=f1e511]: 1 day in queue
+      - generic [ref=f1e512]:
+        - paragraph [ref=f1e513]: Audit trail
+        - list [ref=f1e514]:
+          - listitem [ref=f1e515]:
+            - generic [ref=f1e519]:
+              - paragraph [ref=f1e520]: Created
+              - paragraph [ref=f1e521]: Remy Ouji · Mon, Oct 26, 2026, 7:53:32 PM EDT
+    - button "Dismiss" [ref=f1e523] [cursor=pointer]

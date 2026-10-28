@@ -48,7 +48,7 @@ export default function RunbookDetailPage() {
 			title={item?.title || "Runbook"}
 			subtitle={item?.summary || "Operational recovery procedure"}
 			actions={
-				<Button asChild variant="outline" className="primary-btn px-3 sm:px-4">
+				<Button asChild variant="outline">
 					<Link href="/dashboard/it/incidents/runbooks">
 						<ArrowLeft className="h-4 w-4" />
 						All runbooks

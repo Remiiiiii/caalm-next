@@ -60,10 +60,10 @@ export function AppDialog({
 		>
 			<div
 				className={cn(
-					"flex h-11 w-11 shrink-0 items-center justify-center rounded-full",
+					"flex h-11 w-11 shrink-0 items-center justify-center rounded-full border bg-white",
 					isDestructive
-						? "bg-red/10 text-red"
-						: "bg-[#078FAB]/10 text-[#0f5384]",
+						? "border-red/20 text-red"
+						: "border-[#0f5384]/15 text-[#0f5384]",
 				)}
 			>
 				{icon}

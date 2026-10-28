@@ -1,0 +1,11 @@
+- generic [active] [ref=f1e1]:
+  - status "Loading..." [ref=f1e2]:
+    - paragraph [ref=f1e4]: Loading...
+  - button "Open Next.js Dev Tools" [ref=f1e10] [cursor=pointer]:
+    - generic [ref=f1e13]:
+      - text: Rendering
+      - generic [ref=f1e14]:
+        - generic [ref=f1e15]: .
+        - generic [ref=f1e16]: .
+        - generic [ref=f1e17]: .
+  - alert [ref=f1e18]

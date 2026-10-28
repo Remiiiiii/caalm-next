@@ -1,0 +1,40 @@
+---
+description: No gradient pill buttons (btn-primary / primary-btn) anywhere in the IT routes; use Button variant="brand" or "outline"
+globs: src/app/(root)/dashboard/it/**,src/components/it/**,src/app/(root)/tickets/**,src/components/tickets/detail/**,src/components/tickets/TicketDetail.tsx,src/components/tickets/TicketQueue.tsx,src/components/tickets/TicketsListWithSearch.tsx
+alwaysApply: false
+---
+
+# IT routes: no gradient pill buttons
+
+The teal-to-navy gradient pill (the Upload Contract / Upload License / Audit / Schedule / Report buttons in the top bar) is **not used inside the IT area**.
+
+## Scope
+
+- Every route under `/dashboard/it/**` (`src/app/(root)/dashboard/it/**`) and its components in `src/components/it/**`.
+- The IT staff ticket surfaces: the `/tickets` queue and the `/tickets/[ticketId]` detail page and sheet (`src/components/tickets/detail/**`, `TicketDetail.tsx`, `TicketQueue.tsx`, `TicketsListWithSearch.tsx`).
+- Not in scope: the company-wide ticket intake flow (`/tickets/new`, the Report issue FAB, the recorder) and the dark agent workspace's own palette.
+
+## Forbidden in scope
+
+- The `btn-primary` class, and its twins `primary-btn`, `shad-active`, `shad-submit-btn` (they all draw the same gradient pill).
+- Hand-written copies of that look (`bg-[linear-gradient(90deg,#00c1cb,...)]`, `from-[#00c1cb] to-[#162768]` on a button).
+
+## Use instead
+
+```tsx
+// Main action: solid brand blue
+<Button variant="brand">Save</Button>
+<Button asChild variant="brand"><Link href="...">Open</Link></Button>
+
+// Secondary action: neutral outline
+<Button variant="outline">Refresh</Button>
+
+// Dismiss / cancel: ghost, never bordered
+<Button variant="ghost">Cancel</Button>
+```
+
+`variant="brand"` lives in `src/components/ui/button.tsx`. Do not pass `px-3 sm:px-4`, a pill radius or a height override just to resize it; use the default size.
+
+## When touching an IT file
+
+Search the file for `btn-primary`, `primary-btn`, `shad-active`, `shad-submit-btn` and `00c1cb`. Swap every hit before finishing.

@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { PageIndex } from "@/components/ui/page-index";
 import { SearchField } from "@/components/ui/search-field";
 import { SegmentedToggle } from "@/components/ui/segmented-toggle";
+import type { UserProfile } from "@/lib/tickets/submitter-avatars";
 import type { Ticket, TicketLane } from "@/lib/tickets/ticket.types";
 import { resolveTicketLane } from "@/lib/tickets/ticket.types";
 import { normalizeTicketNumberQuery } from "@/lib/tickets/ticket-number.utils";
@@ -56,6 +57,8 @@ const LANE_FILTERS: Array<{ value: LaneFilter; label: string }> = [
 export function TicketsListWithSearch({
 	activeTickets,
 	avatarUrls,
+	assigneeProfiles,
+	canAssign,
 	ownOnly,
 	canCreate,
 	capped,
@@ -64,6 +67,10 @@ export function TicketsListWithSearch({
 	activeTickets: Ticket[];
 	/** Submitter photo URLs by user id; missing ids show initials. */
 	avatarUrls: Record<string, string>;
+	/** Names and photos of assignees, by user id. */
+	assigneeProfiles: Record<string, UserProfile>;
+	/** The viewer may add or change an assignee. */
+	canAssign: boolean;
 	/** The viewer only sees tickets they submitted. */
 	ownOnly: boolean;
 	canCreate: boolean;
@@ -132,7 +139,7 @@ export function TicketsListWithSearch({
 						You haven&apos;t submitted any tickets yet.
 					</p>
 					{canCreate ? (
-						<Button asChild className="btn-primary mt-4 px-3 sm:px-4">
+						<Button asChild variant="brand" className="mt-4">
 							<Link href="/tickets/new">
 								<Plus className="h-4 w-4" aria-hidden />
 								New ticket
@@ -202,6 +209,8 @@ export function TicketsListWithSearch({
 					<TicketQueue
 						tickets={pageRows}
 						avatarUrls={avatarUrls}
+						assigneeProfiles={assigneeProfiles}
+						canAssign={canAssign}
 						sortKey={sortKey}
 						onSort={onSort}
 						empty={emptyState}

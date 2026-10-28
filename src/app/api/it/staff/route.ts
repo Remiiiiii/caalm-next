@@ -1,30 +1,14 @@
 import { NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import { requirePermission } from "@/lib/rbac/middleware";
-import { resolveAvatarDisplayUrl } from "@/lib/utils";
-import { getUsersByRoleNames } from "@/lib/utils/get-users-by-role";
+import { listItStaff } from "@/lib/tickets/ticket-staff";
 
 export async function GET(request: Request) {
+	// Incident owners and ticket assigners both pick from this list.
 	const denied = await requirePermission(request as any, {
-		permission: PERMISSIONS.IT.MANAGE_INCIDENTS,
+		permission: [PERMISSIONS.IT.MANAGE_INCIDENTS, PERMISSIONS.TICKETS.ASSIGN],
 	});
 	if (denied) return denied;
 
-	const users = await getUsersByRoleNames(
-		["Super Admin", "IT", "Organization Admin"],
-		undefined,
-		{ status: "active" },
-	);
-
-	const staff = users.map((u: any) => ({
-		$id: u.$id,
-		accountId: u.accountId,
-		fullName: u.fullName || u.email || "User",
-		imageUrl: resolveAvatarDisplayUrl({
-			avatar: u.avatar,
-			profileImageId: u.profileImageId,
-		}),
-	}));
-
-	return NextResponse.json(staff);
+	return NextResponse.json(await listItStaff());
 }

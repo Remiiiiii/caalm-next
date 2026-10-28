@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Drawer as DrawerPrimitive } from "vaul";
-
+import { MODAL_OVERLAY } from "@/lib/ui/modal-styles";
 import { cn } from "@/lib/utils";
 
 const Drawer = ({
@@ -26,7 +26,7 @@ const DrawerOverlay = React.forwardRef<
 >(({ className, ...props }, ref) => (
 	<DrawerPrimitive.Overlay
 		ref={ref}
-		className={cn("fixed inset-0 z-50 bg-white/40 backdrop-blur-sm", className)}
+		className={cn("fixed inset-0 z-50", MODAL_OVERLAY, className)}
 		{...props}
 	/>
 ));

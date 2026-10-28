@@ -10,9 +10,11 @@ import {
 	getUserDefaultOrganization,
 	getUserPermissions,
 } from "@/lib/rbac/permissions";
-import { getSubmitterAvatarUrls } from "@/lib/tickets/submitter-avatars";
+import { getUserProfiles } from "@/lib/tickets/submitter-avatars";
 import { listTickets } from "@/lib/tickets/ticket.repository";
+import type { Ticket } from "@/lib/tickets/ticket.types";
 import {
+	canAssignTicket,
 	canViewAllTickets,
 	filterVisibleTickets,
 } from "@/lib/tickets/ticket-access.policy";
@@ -39,9 +41,18 @@ export default async function TicketsPage() {
 	const visibleTickets = sortTicketsForQueue(
 		filterVisibleTickets(active.items, ctx),
 	);
-	const avatarUrls = await getSubmitterAvatarUrls(
-		visibleTickets.map((ticket) => ticket.submittedByUserId),
+	const profiles = await getUserProfiles(
+		visibleTickets.flatMap((ticket) => [
+			ticket.submittedByUserId,
+			ticket.assigneeCaalmUserId ?? "",
+		]),
 	);
+	const avatarUrls: Record<string, string> = {};
+	for (const [id, profile] of Object.entries(profiles)) {
+		if (profile.avatarUrl) avatarUrls[id] = profile.avatarUrl;
+	}
+	// Assigning is not tied to one ticket here, so check against an open one.
+	const canAssign = canAssignTicket({ status: "OPEN" } as Ticket, ctx);
 
 	return (
 		<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
@@ -52,7 +63,7 @@ export default async function TicketsPage() {
 					gets a number and stays in this queue until it&apos;s resolved.
 				</p>
 				{canCreate ? (
-					<Button asChild className="btn-primary px-3 sm:px-4">
+					<Button asChild variant="brand">
 						<Link href="/tickets/new">
 							<TicketPlus className="h-4 w-4" aria-hidden />
 							New ticket
@@ -63,6 +74,8 @@ export default async function TicketsPage() {
 			<TicketsListWithSearch
 				activeTickets={visibleTickets}
 				avatarUrls={avatarUrls}
+				assigneeProfiles={profiles}
+				canAssign={canAssign}
 				ownOnly={ownOnly}
 				canCreate={canCreate}
 				capped={active.items.length >= QUEUE_LIMIT}

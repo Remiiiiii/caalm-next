@@ -18,6 +18,8 @@ const buttonVariants = cva(
 				secondary:
 					"bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80",
 				ghost: "hover:bg-accent hover:text-accent-foreground",
+				/** Solid brand blue; the IT-route replacement for gradient pill buttons. */
+				brand: "bg-[#0f5384] text-white shadow-sm hover:bg-[#0c4468]",
 				link: "text-primary underline-offset-4 hover:underline",
 			},
 			size: {

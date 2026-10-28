@@ -2,8 +2,8 @@
 
 import { BookOpen, Plus, Save, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
 import { AppDialog } from "@/components/ui/app-dialog";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { Runbook, RunbookStep } from "@/lib/it/runbooks/types";
+import { IT_DROPDOWN_PANEL } from "@/lib/ui/it-routes";
 
 type Props = {
 	open: boolean;
@@ -137,7 +138,7 @@ export function RunbookEditorDialog({
 						</Button>
 						<Button
 							type="button"
-							className="btn-primary px-3 sm:px-4"
+							variant="brand"
 							disabled={saving}
 							onClick={() => void handleSave()}
 						>
@@ -149,183 +150,182 @@ export function RunbookEditorDialog({
 			}
 		>
 			<div className="space-y-4 pb-1">
-					<div className="grid gap-4 sm:grid-cols-2">
-						<div className="space-y-2 sm:col-span-2">
-							<Label htmlFor="rb-title">Title</Label>
-							<Input
-								id="rb-title"
-								value={title}
-								onChange={(e) => setTitle(e.target.value)}
-								className="bg-white"
-							/>
-						</div>
-						<div className="space-y-2 sm:col-span-2">
-							<Label htmlFor="rb-summary">Summary</Label>
-							<Input
-								id="rb-summary"
-								value={summary}
-								onChange={(e) => setSummary(e.target.value)}
-								className="bg-white"
-							/>
-						</div>
-						<div className="space-y-2">
-							<Label>Service</Label>
-							<Select value={service} onValueChange={setService}>
-								<SelectTrigger className="bg-white">
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									{[
-										"auth",
-										"appwrite",
-										"notifications",
-										"payments",
-										"deployments",
-										"storage",
-										"search",
-									].map((s) => (
-										<SelectItem key={s} value={s}>
-											{s}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
-						<div className="space-y-2">
-							<Label>Severity</Label>
-							<Select value={severity} onValueChange={setSeverity}>
-								<SelectTrigger className="bg-white">
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									{["low", "medium", "high", "critical"].map((s) => (
-										<SelectItem key={s} value={s}>
-											{s}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
-						<div className="space-y-2">
-							<Label>Status</Label>
-							<Select value={status} onValueChange={setStatus}>
-								<SelectTrigger className="bg-white">
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									{["draft", "published", "archived"].map((s) => (
-										<SelectItem key={s} value={s}>
-											{s}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
-					</div>
-
-					<div className="space-y-2">
-						<Label htmlFor="rb-symptoms">Symptoms (one per line)</Label>
-						<Textarea
-							id="rb-symptoms"
-							value={symptomsText}
-							onChange={(e) => setSymptomsText(e.target.value)}
-							className="min-h-24 bg-white"
+				<div className="grid gap-4 sm:grid-cols-2">
+					<div className="space-y-2 sm:col-span-2">
+						<Label htmlFor="rb-title">Title</Label>
+						<Input
+							id="rb-title"
+							value={title}
+							onChange={(e) => setTitle(e.target.value)}
+							className="bg-white"
 						/>
 					</div>
+					<div className="space-y-2 sm:col-span-2">
+						<Label htmlFor="rb-summary">Summary</Label>
+						<Input
+							id="rb-summary"
+							value={summary}
+							onChange={(e) => setSummary(e.target.value)}
+							className="bg-white"
+						/>
+					</div>
+					<div className="space-y-2">
+						<Label>Service</Label>
+						<Select value={service} onValueChange={setService}>
+							<SelectTrigger className="bg-white">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent className={IT_DROPDOWN_PANEL}>
+								{[
+									"auth",
+									"appwrite",
+									"notifications",
+									"payments",
+									"deployments",
+									"storage",
+									"search",
+								].map((s) => (
+									<SelectItem key={s} value={s}>
+										{s}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					</div>
+					<div className="space-y-2">
+						<Label>Severity</Label>
+						<Select value={severity} onValueChange={setSeverity}>
+							<SelectTrigger className="bg-white">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent className={IT_DROPDOWN_PANEL}>
+								{["low", "medium", "high", "critical"].map((s) => (
+									<SelectItem key={s} value={s}>
+										{s}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					</div>
+					<div className="space-y-2">
+						<Label>Status</Label>
+						<Select value={status} onValueChange={setStatus}>
+							<SelectTrigger className="bg-white">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent className={IT_DROPDOWN_PANEL}>
+								{["draft", "published", "archived"].map((s) => (
+									<SelectItem key={s} value={s}>
+										{s}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					</div>
+				</div>
 
-					<div className="space-y-3">
-						<div className="flex items-center justify-between">
-							<Label>Steps</Label>
-							<Button
-								type="button"
-								variant="outline"
-								className="primary-btn px-3"
-								onClick={() => setSteps((prev) => [...prev, emptyStep()])}
-							>
-								<Plus className="h-4 w-4" />
-								Add step
-							</Button>
-						</div>
-						{steps.map((step, index) => (
-							<div
-								key={`step-${index}`}
-								className="rounded-lg border border-slate-200 bg-white p-3 space-y-2"
-							>
-								<div className="flex items-center justify-between gap-2">
-									<p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-										Step {index + 1}
-									</p>
-									{steps.length > 1 ? (
-										<button
-											type="button"
-											className="text-slate-400 hover:text-red"
-											onClick={() =>
-												setSteps((prev) => prev.filter((_, i) => i !== index))
-											}
-											aria-label={`Remove step ${index + 1}`}
-										>
-											<Trash2 className="h-4 w-4" />
-										</button>
-									) : null}
-								</div>
-								<Input
-									placeholder="Step title"
-									value={step.title}
-									onChange={(e) =>
-										setSteps((prev) =>
-											prev.map((s, i) =>
-												i === index ? { ...s, title: e.target.value } : s,
-											),
-										)
-									}
-								/>
-								<Textarea
-									placeholder="What to do"
-									value={step.body}
-									onChange={(e) =>
-										setSteps((prev) =>
-											prev.map((s, i) =>
-												i === index ? { ...s, body: e.target.value } : s,
-											),
-										)
-									}
-									className="min-h-20"
-								/>
-								<Input
-									placeholder="Optional command"
-									value={step.command || ""}
-									onChange={(e) =>
-										setSteps((prev) =>
-											prev.map((s, i) =>
-												i === index ? { ...s, command: e.target.value } : s,
-											),
-										)
-									}
-								/>
+				<div className="space-y-2">
+					<Label htmlFor="rb-symptoms">Symptoms (one per line)</Label>
+					<Textarea
+						id="rb-symptoms"
+						value={symptomsText}
+						onChange={(e) => setSymptomsText(e.target.value)}
+						className="min-h-24 bg-white"
+					/>
+				</div>
+
+				<div className="space-y-3">
+					<div className="flex items-center justify-between">
+						<Label>Steps</Label>
+						<Button
+							type="button"
+							variant="outline"
+							onClick={() => setSteps((prev) => [...prev, emptyStep()])}
+						>
+							<Plus className="h-4 w-4" />
+							Add step
+						</Button>
+					</div>
+					{steps.map((step, index) => (
+						<div
+							key={`step-${index}`}
+							className="rounded-lg border border-slate-200 bg-white p-3 space-y-2"
+						>
+							<div className="flex items-center justify-between gap-2">
+								<p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+									Step {index + 1}
+								</p>
+								{steps.length > 1 ? (
+									<button
+										type="button"
+										className="text-slate-400 hover:text-red"
+										onClick={() =>
+											setSteps((prev) => prev.filter((_, i) => i !== index))
+										}
+										aria-label={`Remove step ${index + 1}`}
+									>
+										<Trash2 className="h-4 w-4" />
+									</button>
+								) : null}
 							</div>
-						))}
-					</div>
+							<Input
+								placeholder="Step title"
+								value={step.title}
+								onChange={(e) =>
+									setSteps((prev) =>
+										prev.map((s, i) =>
+											i === index ? { ...s, title: e.target.value } : s,
+										),
+									)
+								}
+							/>
+							<Textarea
+								placeholder="What to do"
+								value={step.body}
+								onChange={(e) =>
+									setSteps((prev) =>
+										prev.map((s, i) =>
+											i === index ? { ...s, body: e.target.value } : s,
+										),
+									)
+								}
+								className="min-h-20"
+							/>
+							<Input
+								placeholder="Optional command"
+								value={step.command || ""}
+								onChange={(e) =>
+									setSteps((prev) =>
+										prev.map((s, i) =>
+											i === index ? { ...s, command: e.target.value } : s,
+										),
+									)
+								}
+							/>
+						</div>
+					))}
+				</div>
 
-					<div className="space-y-2">
-						<Label htmlFor="rb-verify">Verification</Label>
-						<Textarea
-							id="rb-verify"
-							value={verification}
-							onChange={(e) => setVerification(e.target.value)}
-							className="min-h-20 bg-white"
-						/>
-					</div>
-					<div className="space-y-2">
-						<Label htmlFor="rb-esc">Escalation</Label>
-						<Textarea
-							id="rb-esc"
-							value={escalation}
-							onChange={(e) => setEscalation(e.target.value)}
-							className="min-h-20 bg-white"
-						/>
-					</div>
+				<div className="space-y-2">
+					<Label htmlFor="rb-verify">Verification</Label>
+					<Textarea
+						id="rb-verify"
+						value={verification}
+						onChange={(e) => setVerification(e.target.value)}
+						className="min-h-20 bg-white"
+					/>
+				</div>
+				<div className="space-y-2">
+					<Label htmlFor="rb-esc">Escalation</Label>
+					<Textarea
+						id="rb-esc"
+						value={escalation}
+						onChange={(e) => setEscalation(e.target.value)}
+						className="min-h-20 bg-white"
+					/>
+				</div>
 
-					{error ? <p className="text-sm text-red">{error}</p> : null}
+				{error ? <p className="text-sm text-red">{error}</p> : null}
 			</div>
 		</AppDialog>
 	);

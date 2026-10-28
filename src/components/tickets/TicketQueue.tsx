@@ -27,6 +27,7 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
+import type { UserProfile } from "@/lib/tickets/submitter-avatars";
 import type { Ticket, TicketSeverity } from "@/lib/tickets/ticket.types";
 import { resolveTicketLane } from "@/lib/tickets/ticket.types";
 import { displayTicketNumber } from "@/lib/tickets/ticket-number.utils";
@@ -37,6 +38,7 @@ import {
 	statusAge,
 } from "@/lib/tickets/ticket-queue";
 import { cn } from "@/lib/utils";
+import { TicketAssigneePicker } from "./TicketAssigneePicker";
 import {
 	TicketLanePill,
 	TicketSeverityPill,
@@ -73,6 +75,8 @@ const AGE_CLASS: Record<StatusAge, string> = {
 export function TicketQueue({
 	tickets,
 	avatarUrls,
+	assigneeProfiles,
+	canAssign,
 	sortKey,
 	onSort,
 	empty,
@@ -81,6 +85,10 @@ export function TicketQueue({
 	tickets: Ticket[];
 	/** Submitter photo URLs by user id; missing ids show initials. */
 	avatarUrls: Record<string, string>;
+	/** Names and photos of assignees, by user id. */
+	assigneeProfiles: Record<string, UserProfile>;
+	/** The viewer may add or change an assignee. */
+	canAssign: boolean;
 	sortKey: QueueSortKey;
 	onSort: (key: QueueSortKey) => void;
 	/** Shown instead of the table when there is nothing to render. */
@@ -125,6 +133,9 @@ export function TicketQueue({
 						/>
 						<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
 							Status
+						</TableHead>
+						<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
+							Assigned to
 						</TableHead>
 						<SortableDataTableHead
 							label="In status"
@@ -222,6 +233,19 @@ export function TicketQueue({
 								</TableCell>
 								<TableCell className={cn(DATA_TABLE_CELL, "whitespace-nowrap")}>
 									<TicketStatusPill status={ticket.status} />
+								</TableCell>
+								<TableCell className={DATA_TABLE_CELL}>
+									<TicketAssigneePicker
+										ticketId={ticket.$id}
+										assigneeId={ticket.assigneeCaalmUserId}
+										assignee={
+											ticket.assigneeCaalmUserId
+												? assigneeProfiles[ticket.assigneeCaalmUserId]
+												: undefined
+										}
+										canAssign={canAssign}
+										variant="cell"
+									/>
 								</TableCell>
 								<TableCell
 									className={cn(

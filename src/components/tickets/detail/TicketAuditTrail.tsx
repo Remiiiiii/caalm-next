@@ -10,10 +10,10 @@ import {
 	TriangleAlert,
 	Zap,
 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
 import type { TicketEvent, TicketEventType } from "@/lib/tickets/ticket.types";
 import { cn } from "@/lib/utils";
 import { formatTicketDateTime } from "./format";
+import { SheetSection } from "./SheetSection";
 
 const EVENT_STYLE: Partial<
 	Record<TicketEventType, { icon: LucideIcon; className: string }>
@@ -37,9 +37,29 @@ const FALLBACK_STYLE = {
 	className: "bg-slate-100 text-slate-500",
 };
 
-function eventTitle(type: TicketEventType): string {
-	const text = type.replaceAll("_", " ").toLowerCase();
+function eventTitle(
+	event: TicketEvent,
+	actorNames: Record<string, string>,
+): string {
+	if (event.eventType === "ASSIGNED") {
+		const assigneeId = assigneeIdFrom(event.metadata);
+		const name = assigneeId ? actorNames[assigneeId] : undefined;
+		if (name) return `Assigned to ${name}`;
+	}
+	const text = event.eventType.replaceAll("_", " ").toLowerCase();
 	return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+/** The CAALM user an ASSIGNED event handed the ticket to, if recorded. */
+export function assigneeIdFrom(metadata?: string | null): string | null {
+	if (!metadata) return null;
+	try {
+		const id = (JSON.parse(metadata) as { assigneeCaalmUserId?: unknown })
+			.assigneeCaalmUserId;
+		return typeof id === "string" && id ? id : null;
+	} catch {
+		return null;
+	}
 }
 
 export function TicketAuditTrail({
@@ -57,49 +77,40 @@ export function TicketAuditTrail({
 	);
 
 	return (
-		<Card className="glass-card">
-			<div className="glass-card-cap" />
-			<CardContent className="p-4 sm:p-6">
-				<p className="mb-3 text-sm font-medium sidebar-gradient-text">
-					Audit trail
-				</p>
-				<ol>
-					{newestFirst.map((event, index) => {
-						const { icon: Icon, className } =
-							EVENT_STYLE[event.eventType] ?? FALLBACK_STYLE;
-						return (
-							<li
-								key={event.$id}
-								className="relative flex gap-3 pb-4 last:pb-0"
-							>
-								{index < newestFirst.length - 1 ? (
-									<span
-										className="absolute left-[10px] top-6 h-[calc(100%-1.5rem)] w-px bg-slate-200"
-										aria-hidden
-									/>
-								) : null}
+		<SheetSection title="Audit trail">
+			<ol>
+				{newestFirst.map((event, index) => {
+					const { icon: Icon, className } =
+						EVENT_STYLE[event.eventType] ?? FALLBACK_STYLE;
+					return (
+						<li key={event.$id} className="relative flex gap-3 pb-4 last:pb-0">
+							{index < newestFirst.length - 1 ? (
 								<span
-									className={cn(
-										"relative inline-flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full",
-										className,
-									)}
-								>
-									<Icon className="h-3 w-3" aria-hidden />
-								</span>
-								<div className="min-w-0">
-									<p className="text-xs font-semibold text-slate-800">
-										{eventTitle(event.eventType)}
-									</p>
-									<p className="text-[11px] text-slate-500">
-										{actorNames[event.actor] || event.actor} ·{" "}
-										{formatTicketDateTime(event.timestamp, timeZone)}
-									</p>
-								</div>
-							</li>
-						);
-					})}
-				</ol>
-			</CardContent>
-		</Card>
+									className="absolute left-[10px] top-5 h-[calc(100%-1.25rem)] w-px bg-slate-200"
+									aria-hidden
+								/>
+							) : null}
+							<span
+								className={cn(
+									"relative inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full",
+									className,
+								)}
+							>
+								<Icon className="h-2.5 w-2.5" aria-hidden />
+							</span>
+							<div className="min-w-0">
+								<p className="text-[11.5px] font-semibold text-slate-700">
+									{eventTitle(event, actorNames)}
+								</p>
+								<p className="text-[10.5px] text-slate-400">
+									{actorNames[event.actor] || event.actor} ·{" "}
+									{formatTicketDateTime(event.timestamp, timeZone)}
+								</p>
+							</div>
+						</li>
+					);
+				})}
+			</ol>
+		</SheetSection>
 	);
 }

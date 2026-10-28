@@ -22,6 +22,7 @@ import { getFileType } from "@/lib/utils";
 import type { FilePreviewDialogFile } from "./FilePreviewDialog";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
+import { MODAL_OVERLAY, MODAL_PANEL } from "@/lib/ui/modal-styles";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
@@ -115,13 +116,15 @@ export default function FilePreviewDialogImpl({
 			aria-label={file.name || "File preview"}
 		>
 			<div
-				className="absolute inset-0 cursor-pointer bg-slate-900/50 backdrop-blur-sm"
+				className={`absolute inset-0 cursor-pointer ${MODAL_OVERLAY}`}
 				aria-label="Close preview"
 				role="button"
 				tabIndex={-1}
 				onClick={() => onOpenChange(false)}
 			/>
-			<div className="relative z-10 flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+			<div
+				className={`relative z-10 flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden ${MODAL_PANEL}`}
+			>
 				<div className="h-4 w-full shrink-0 bg-[#d6d7d8] opacity-70" />
 				<div className="shrink-0 border-b border-slate-200 bg-linear-to-r from-blue-50 to-indigo-50 py-4">
 					<div className="flex items-center justify-between gap-3 px-6">

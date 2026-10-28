@@ -1,8 +1,15 @@
 "use client";
 
-import { ExternalLink, Paperclip, Send, Square } from "lucide-react";
+import {
+	CheckCircle2,
+	ExternalLink,
+	MoveUp,
+	Paperclip,
+	Send,
+	Square,
+} from "lucide-react";
 import { type CSSProperties, useEffect, useRef, useState } from "react";
-import type { ActivityKind, AgentPhase } from "@/lib/tickets/agent-events";
+import type { ActivityKind } from "@/lib/tickets/agent-events";
 import type { Ticket } from "@/lib/tickets/ticket.types";
 import { cn } from "@/lib/utils";
 import { useAgentStream } from "./useAgentStream";
@@ -20,14 +27,43 @@ const IDE_VARS = {
 	"--ide-err": "#FF7474",
 } as CSSProperties;
 
-const PHASE_STYLE: Record<
-	AgentPhase,
-	{ label: string; dot: string; pulse: boolean }
+/** What the agent is doing right now, in words a person can act on. */
+type AgentView = "starting" | "working" | "finished" | "error" | "stopped";
+
+const VIEW_STYLE: Record<
+	AgentView,
+	{ label: string; hint: string; dot: string; pulse: boolean }
 > = {
-	starting: { label: "STARTING", dot: "bg-[#56B8FF]", pulse: true },
-	working: { label: "WORKING", dot: "bg-[#3DD9B3]", pulse: true },
-	idle: { label: "IDLE", dot: "bg-[#475569]", pulse: false },
-	error: { label: "ERROR", dot: "bg-[#FF7474]", pulse: false },
+	starting: {
+		label: "STARTING",
+		hint: "Getting the agent ready.",
+		dot: "bg-[#56B8FF]",
+		pulse: true,
+	},
+	working: {
+		label: "WORKING",
+		hint: "The agent is making changes. Wait for Finished, or stop it.",
+		dot: "bg-[#3DD9B3]",
+		pulse: true,
+	},
+	finished: {
+		label: "FINISHED",
+		hint: "The agent is done. Review the result, then mark the ticket resolved.",
+		dot: "bg-[#3DD9B3]",
+		pulse: false,
+	},
+	error: {
+		label: "ERROR",
+		hint: "The agent hit a problem. Stop it, then finish the ticket yourself.",
+		dot: "bg-[#FF7474]",
+		pulse: false,
+	},
+	stopped: {
+		label: "STOPPED",
+		hint: "The agent was stopped. A person needs to finish this ticket.",
+		dot: "bg-[#475569]",
+		pulse: false,
+	},
 };
 
 const LINE_CLASS: Record<ActivityKind, string> = {
@@ -47,11 +83,18 @@ export function AgentCanvasWorkspace({
 	canControl,
 	stopping,
 	onStop,
+	canClose,
+	closing,
+	onMarkResolved,
 }: {
 	ticket: Ticket;
 	canControl: boolean;
 	stopping: boolean;
 	onStop: () => void;
+	/** The viewer may mark the ticket resolved. */
+	canClose: boolean;
+	closing: boolean;
+	onMarkResolved: () => void;
 }) {
 	const [restartKey, setRestartKey] = useState(0);
 	const { state, connection, sendMessage } = useAgentStream(
@@ -70,16 +113,21 @@ export function AgentCanvasWorkspace({
 	}, [lineCount]);
 
 	const stopped = ticket.status === "NEEDS_HUMAN" || ticket.status === "FAILED";
-	const phase = PHASE_STYLE[state.phase];
-	const live = !stopped && connection !== "ended";
+	const view: AgentView = stopped
+		? "stopped"
+		: state.phase === "idle"
+			? "finished"
+			: state.phase;
+	const style = VIEW_STYLE[view];
+	const running = view === "starting" || view === "working";
+	const live = running && connection !== "ended";
 
-	const statusDetail = stopped
-		? "Agent stopped"
-		: connection === "reconnecting"
+	const statusHint =
+		connection === "reconnecting" && running
 			? "Reconnecting…"
-			: connection === "connecting"
+			: connection === "connecting" && running
 				? "Connecting…"
-				: state.detail;
+				: style.hint;
 
 	const send = async () => {
 		const text = prompt.trim();
@@ -97,7 +145,7 @@ export function AgentCanvasWorkspace({
 	return (
 		<div
 			style={IDE_VARS}
-			className="overflow-hidden rounded-xl border border-[var(--ide-border)] bg-[var(--ide-bg)] font-mono text-[var(--ide-text)]"
+			className="bg-[var(--ide-bg)] font-mono text-[var(--ide-text)]"
 		>
 			<div
 				role="status"
@@ -106,26 +154,33 @@ export function AgentCanvasWorkspace({
 				style={{ background: "linear-gradient(135deg, #0f1e35, #0d2a3d)" }}
 			>
 				<div className="flex items-center gap-2 text-xs">
+					{view === "finished" ? (
+						<CheckCircle2
+							className="h-4 w-4 shrink-0 text-[var(--ide-ok)]"
+							aria-hidden
+						/>
+					) : (
+						<span
+							className={cn(
+								"h-2 w-2 shrink-0 rounded-full",
+								style.dot,
+								style.pulse && "animate-pulse",
+							)}
+							aria-hidden
+						/>
+					)}
 					<span
 						className={cn(
-							"h-2 w-2 rounded-full",
-							stopped ? "bg-[#475569]" : phase.dot,
-							!stopped && phase.pulse && "animate-pulse",
+							"font-bold tracking-wide text-white",
+							view === "finished" && "text-[var(--ide-ok)]",
 						)}
-						aria-hidden
-					/>
-					<span className="font-bold tracking-wide text-white">
-						{stopped ? "STOPPED" : phase.label}
+					>
+						{style.label}
 					</span>
-					{statusDetail ? <span>— {statusDetail}</span> : null}
+					<span>— {statusHint}</span>
 				</div>
 				<div className="flex items-center gap-2">
-					{ticket.cursorAgentRunId ? (
-						<span className="max-w-[10rem] truncate rounded bg-[#56B8FF]/10 px-2 py-0.5 text-[11px] text-[#56B8FF]">
-							{ticket.cursorAgentRunId}
-						</span>
-					) : null}
-					{canControl && !stopped ? (
+					{canControl && (running || view === "error") ? (
 						<button
 							type="button"
 							onClick={onStop}
@@ -133,11 +188,26 @@ export function AgentCanvasWorkspace({
 							className="inline-flex h-7 cursor-pointer items-center gap-1 rounded border border-[#FF7474] px-2 text-[11px] text-[#FF7474] transition-colors duration-200 hover:bg-[#FF7474]/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#078FAB] disabled:cursor-not-allowed disabled:opacity-50"
 						>
 							<Square className="h-3 w-3" aria-hidden />
-							{stopping ? "Stopping…" : "Stop"}
+							{stopping ? "Stopping…" : "Stop agent"}
 						</button>
 					) : null}
 				</div>
 			</div>
+
+			{canClose && (view === "finished" || view === "stopped") ? (
+				<div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--ide-border)] bg-[var(--ide-surface)] px-4 py-2.5 text-xs">
+					<span>Done with this ticket?</span>
+					<button
+						type="button"
+						onClick={onMarkResolved}
+						disabled={closing}
+						className="inline-flex h-7 cursor-pointer items-center gap-1 rounded border border-[var(--ide-ok)] px-2.5 text-[11px] text-[var(--ide-ok)] transition-colors duration-200 hover:bg-[var(--ide-ok)]/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#078FAB] disabled:cursor-not-allowed disabled:opacity-50"
+					>
+						<CheckCircle2 className="h-3 w-3" aria-hidden />
+						{closing ? "Working…" : "Mark resolved"}
+					</button>
+				</div>
+			) : null}
 
 			<div className="grid h-[340px] grid-cols-1 border-t border-[var(--ide-border)] md:grid-cols-[3fr_2fr]">
 				<section
@@ -253,11 +323,9 @@ export function AgentCanvasWorkspace({
 						type="button"
 						onClick={() => void send()}
 						disabled={!canControl || stopped || !prompt.trim()}
-						className="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-lg px-4 text-[13px] font-medium text-white transition-opacity duration-200 hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#078FAB] disabled:cursor-not-allowed disabled:opacity-50"
-						style={{ background: "linear-gradient(135deg, #078fab, #0f5384)" }}
+						className="inline-flex border border-[var(--ide-border)] bg-[var(--ide-bg)] h-10 cursor-pointer items-center gap-1.5 rounded-lg px-4 text-[13px] font-medium text-white transition-opacity duration-200 hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2  focus-visible:outline-[#078FAB] disabled:cursor-not-allowed disabled:opacity-50"
 					>
-						<Send className="h-4 w-4" aria-hidden />
-						Send
+						<MoveUp className="h-4 w-4" aria-hidden />
 					</button>
 				</div>
 				{sendError ? (

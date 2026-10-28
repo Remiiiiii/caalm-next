@@ -12,12 +12,12 @@ import { cn } from "@/lib/utils";
 import { timeInStatus } from "../TicketStatusPill";
 import { formatTicketDate } from "./format";
 
-/** 4px bar on the card's top edge, fading out to the right. */
-const SEVERITY_BAR: Record<TicketSeverity, string> = {
-	critical: "from-red",
-	high: "from-orange",
-	medium: "from-blue",
-	low: "from-green",
+/** Left-border color of the submitter + meta block, by severity (SEV-1 to SEV-4). */
+const SEVERITY_COLOR: Record<TicketSeverity, string> = {
+	critical: "#FF7474",
+	high: "#F9AB72",
+	medium: "#56B8FF",
+	low: "#94a3b8",
 };
 
 function SectionLabel({ children }: { children: string }) {
@@ -28,29 +28,7 @@ function SectionLabel({ children }: { children: string }) {
 	);
 }
 
-function MetaCell({
-	label,
-	value,
-	valueClassName,
-}: {
-	label: string;
-	value: string;
-	valueClassName?: string;
-}) {
-	return (
-		<div className="min-w-0 space-y-1 border-slate-100 px-4 py-3 [&:not(:nth-child(3n))]:border-r [&:nth-child(n+4)]:border-t">
-			<SectionLabel>{label}</SectionLabel>
-			<p
-				className={cn(
-					"truncate text-[13px] font-semibold text-slate-800",
-					valueClassName,
-				)}
-			>
-				{value || "—"}
-			</p>
-		</div>
-	);
-}
+const META_CELL = "border-r border-slate-100 px-4 py-2.5 last:border-r-0";
 
 export function TicketDetailCard({
 	ticket,
@@ -65,42 +43,36 @@ export function TicketDetailCard({
 }) {
 	const parsed = getStructuredBody(ticket);
 	const wide = ticket.impact === "high" || ticket.impact === "critical";
+	const metaColumns: { label: string; value: string; className?: string }[] = [
+		{
+			label: "Submitted",
+			value: formatTicketDate(ticket.submittedAt, timeZone),
+		},
+		{ label: "Category", value: ticket.category ?? "" },
+		{
+			label: "Affected service",
+			value: ticket.affectedModule ?? "",
+			className: "font-semibold text-[#078FAB]",
+		},
+		{
+			label: "Impact",
+			value: ticket.impact ? getImpactLabel(ticket.impact) : "",
+			className: wide ? "text-orange" : undefined,
+		},
+		{
+			label: "Urgency",
+			value: ticket.urgency ? getUrgencyLabel(ticket.urgency) : "",
+		},
+		{ label: "Environment", value: parsed?.environment ?? "" },
+	];
 
 	return (
-		<Card className="glass-card overflow-hidden p-0">
-			<div className="glass-card-cap" />
+		<>
 			<div
-				className={cn(
-					"h-1 w-full bg-gradient-to-r to-transparent",
-					SEVERITY_BAR[ticket.severity],
-				)}
-				aria-hidden
-			/>
-			<div className="grid grid-cols-1 border-b border-slate-100 sm:grid-cols-3">
-				<MetaCell
-					label="Submitted"
-					value={formatTicketDate(ticket.submittedAt, timeZone)}
-				/>
-				<MetaCell label="Category" value={ticket.category ?? ""} />
-				<MetaCell
-					label="Affected service"
-					value={ticket.affectedModule ?? ""}
-					valueClassName="text-[#078FAB]"
-				/>
-				<MetaCell
-					label="Impact"
-					value={ticket.impact ? getImpactLabel(ticket.impact) : ""}
-					valueClassName={wide ? "text-orange" : undefined}
-				/>
-				<MetaCell
-					label="Urgency"
-					value={ticket.urgency ? getUrgencyLabel(ticket.urgency) : ""}
-				/>
-				<MetaCell label="Environment" value={parsed?.environment ?? ""} />
-			</div>
-
-			<CardContent className="space-y-5 p-4 sm:p-6">
-				<div className="flex items-center gap-3 rounded-lg bg-slate-50 px-4 py-3">
+				className="glass-card-inner overflow-hidden rounded-lg border border-l-4 border-slate-200/60"
+				style={{ borderLeftColor: SEVERITY_COLOR[ticket.severity] }}
+			>
+				<div className="flex items-center gap-3 p-3 sm:p-4">
 					<Avatar
 						name={submitterName}
 						userId={ticket.submittedByUserId}
@@ -108,60 +80,101 @@ export function TicketDetailCard({
 						imageUrl={submitterAvatarUrl}
 					/>
 					<div className="min-w-0">
-						<p className="truncate text-[13px] font-semibold text-slate-800">
+						<p className="truncate text-sm font-medium text-slate-700">
 							{submitterName}
 						</p>
-						<p
-							className="text-[11.5px] text-slate-500"
-							suppressHydrationWarning
-						>
-							{ticket.department} · submitted {timeInStatus(ticket.submittedAt)}{" "}
-							ago
+						<p className="truncate text-xs text-slate-600">
+							{ticket.department}
 						</p>
 					</div>
-					{ticket.githubIssueUrl ? (
-						<a
-							href={ticket.githubIssueUrl}
-							target="_blank"
-							rel="noreferrer"
-							className="ml-auto inline-flex shrink-0 items-center gap-1 text-xs font-medium text-[#078FAB] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
-						>
-							#{ticket.githubIssueNumber} synced
-							<ExternalLink className="h-3 w-3" aria-hidden />
-						</a>
-					) : null}
-				</div>
-
-				<div className="space-y-2">
-					<SectionLabel>Description</SectionLabel>
-					<h2 className="text-lg font-bold text-slate-800">{ticket.title}</h2>
-					{parsed ? (
-						parsed.extra ? (
-							<p className="whitespace-pre-wrap text-[13.5px] leading-relaxed text-slate-600">
-								{parsed.extra}
-							</p>
-						) : null
-					) : (
-						<p className="whitespace-pre-wrap text-[13.5px] leading-relaxed text-slate-600">
-							{ticket.description}
-						</p>
-					)}
-					{ticket.problemPageUrl ? (
-						<p className="text-xs text-slate-500">
-							Seen on{" "}
-							<Link
-								href={ticket.problemPageUrl}
+					<div className="ml-auto flex shrink-0 items-center gap-3 text-xs text-slate-500">
+						<span suppressHydrationWarning>
+							Submitted {timeInStatus(ticket.submittedAt)} ago
+						</span>
+						{ticket.githubIssueUrl ? (
+							<a
+								href={ticket.githubIssueUrl}
 								target="_blank"
-								className="break-all text-[#0f5384] hover:underline"
+								rel="noreferrer"
+								className="inline-flex items-center gap-1 font-medium text-[#078FAB] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
 							>
-								{ticket.problemPageUrl}
-							</Link>
-						</p>
-					) : null}
+								#{ticket.githubIssueNumber} synced
+								<ExternalLink className="h-3 w-3" aria-hidden />
+							</a>
+						) : null}
+					</div>
 				</div>
+				<div className="overflow-x-auto border-t border-slate-200/60">
+					<table className="w-full border-collapse text-left">
+						<thead>
+							<tr className="border-b border-slate-100 bg-slate-50/60">
+								{metaColumns.map((col) => (
+									<th
+										key={col.label}
+										scope="col"
+										className={cn(
+											META_CELL,
+											"py-[9px] text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400",
+										)}
+									>
+										{col.label}
+									</th>
+								))}
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								{metaColumns.map((col) => (
+									<td
+										key={col.label}
+										className={cn(
+											META_CELL,
+											"max-w-[14rem] truncate text-[13px] font-medium text-slate-700",
+											col.className,
+										)}
+									>
+										{col.value || "—"}
+									</td>
+								))}
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
 
+			<div className="px-0.5">
+				<h2 className="mb-[5px] text-[17px] font-bold text-slate-700">
+					{ticket.title}
+				</h2>
 				{parsed ? (
-					<>
+					parsed.extra ? (
+						<p className="whitespace-pre-wrap text-[13.5px] leading-[1.65] text-slate-600">
+							{parsed.extra}
+						</p>
+					) : null
+				) : (
+					<p className="whitespace-pre-wrap text-[13.5px] leading-[1.65] text-slate-600">
+						{ticket.description}
+					</p>
+				)}
+				{ticket.problemPageUrl ? (
+					<p className="mt-2 text-xs text-slate-500">
+						Seen on{" "}
+						<Link
+							href={ticket.problemPageUrl}
+							target="_blank"
+							className="break-all text-[#0f5384] hover:underline"
+						>
+							{ticket.problemPageUrl}
+						</Link>
+					</p>
+				) : null}
+			</div>
+
+			{parsed ? (
+				<Card className="glass-card overflow-hidden p-0">
+					<div className="glass-card-cap" />
+					<CardContent className="space-y-5 p-4 sm:p-6">
 						{parsed.steps.length > 0 ? (
 							<div className="space-y-2 border-t border-slate-100 pt-5">
 								<SectionLabel>Reproduction steps</SectionLabel>
@@ -230,9 +243,9 @@ export function TicketDetailCard({
 								</ul>
 							</div>
 						</div>
-					</>
-				) : null}
-			</CardContent>
-		</Card>
+					</CardContent>
+				</Card>
+			) : null}
+		</>
 	);
 }

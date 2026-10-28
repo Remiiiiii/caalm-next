@@ -144,6 +144,26 @@ function phaseFromStatus(status: string): AgentPhase | null {
 	}
 }
 
+/**
+ * The agent's closing message arrives as assistant text after its last tool
+ * call, then again as the result. It belongs in the result pane only, so this
+ * pulls those trailing lines out of the activity feed.
+ */
+function splitFinalReply(activity: ActivityLine[]): {
+	activity: ActivityLine[];
+	text: string;
+} {
+	let start = activity.length;
+	while (start > 0 && activity[start - 1].kind === "assistant") start -= 1;
+	return {
+		activity: activity.slice(0, start),
+		text: activity
+			.slice(start)
+			.map((line) => line.text)
+			.join("\n\n"),
+	};
+}
+
 function reduceToolCall(state: AgentState, data: unknown): AgentState {
 	const record = asRecord(data);
 	if (!record) return state;
@@ -218,8 +238,14 @@ export function reduceAgentEvent(
 			);
 		}
 		case "result": {
-			const text = eventText(event.data);
-			return { ...state, phase: "idle", result: text || state.result };
+			const reply = splitFinalReply(state.activity);
+			const text = eventText(event.data) || reply.text;
+			return {
+				...state,
+				phase: "idle",
+				activity: reply.activity,
+				result: text || state.result,
+			};
 		}
 		case "error":
 			return append(
@@ -229,12 +255,19 @@ export function reduceAgentEvent(
 					text: eventText(event.data) || "The agent reported an error",
 				},
 			);
-		case "done":
+		case "done": {
+			// No result event arrived: the closing message is the result.
+			const reply = state.result
+				? { activity: state.activity, text: state.result }
+				: splitFinalReply(state.activity);
 			return {
 				...state,
+				activity: reply.activity,
+				result: reply.text,
 				finished: true,
 				phase: state.phase === "error" ? "error" : "idle",
 			};
+		}
 		default:
 			// heartbeat and unknown events carry nothing to show.
 			return state;

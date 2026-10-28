@@ -1,7 +1,7 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import * as React from "react";
-
+import { MODAL_OVERLAY } from "@/lib/ui/modal-styles";
 import { cn } from "@/lib/utils";
 
 const Dialog = DialogPrimitive.Root;
@@ -19,7 +19,8 @@ const DialogOverlay = React.forwardRef<
 	<DialogPrimitive.Overlay
 		ref={ref}
 		className={cn(
-			"fixed inset-0 z-50 bg-white/10 backdrop-blur-xs data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+			MODAL_OVERLAY,
+			"fixed inset-0 z-50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
 			className,
 		)}
 		{...props}
@@ -73,7 +74,7 @@ const DialogContent = React.forwardRef<
 				<DialogPrimitive.Content
 					ref={ref}
 					className={cn(
-						"fixed left-[50%] top-[50%] z-50 grid w-[calc(100%-1.5rem)] max-h-[calc(100vh-2rem)] overflow-y-auto sm:w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 glass-dialog-panel p-4 sm:p-6 duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-2xl",
+						"fixed left-[50%] top-[50%] z-50 grid w-[calc(100%-1.5rem)] max-h-[calc(100vh-2rem)] overflow-y-auto sm:w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 glass-dialog-panel p-4 sm:p-6 duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-[26px]",
 						className,
 					)}
 					aria-describedby="dialog-description"

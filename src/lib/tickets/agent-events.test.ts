@@ -123,6 +123,34 @@ describe("reduceAgentEvent", () => {
 		expect(state.phase).toBe("error");
 	});
 
+	it("keeps the closing message in the result, not the activity feed", () => {
+		let state = reduceAgentEvent(
+			initialAgentState,
+			ev("assistant", { text: "Let me look at the route." }),
+		);
+		state = reduceAgentEvent(
+			state,
+			ev("tool_call", { call_id: "c1", name: "read", args: { path: "a.ts" } }),
+		);
+		state = reduceAgentEvent(state, ev("assistant", { text: "All fixed." }));
+		state = reduceAgentEvent(state, ev("result", { text: "All fixed." }));
+		expect(state.result).toBe("All fixed.");
+		expect(state.activity.map((line) => line.kind)).toEqual([
+			"assistant",
+			"tool",
+		]);
+	});
+
+	it("uses the closing message as the result when no result event comes", () => {
+		let state = reduceAgentEvent(
+			initialAgentState,
+			ev("assistant", { text: "Done: fixed the route." }),
+		);
+		state = reduceAgentEvent(state, ev("done", {}));
+		expect(state.result).toBe("Done: fixed the route.");
+		expect(state.activity).toHaveLength(0);
+	});
+
 	it("ignores heartbeats", () => {
 		expect(reduceAgentEvent(initialAgentState, ev("heartbeat", {}))).toBe(
 			initialAgentState,

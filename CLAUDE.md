@@ -34,6 +34,8 @@ Project rules live in `.cursor/rules/` and are the single source of truth. Edit 
 | `.cursor/rules/nonprofit-roadmap-prs.mdc` | Nonprofit Roadmap batch PRs (`src/lib/roadmap/nonprofit*`, `src/lib/roadmap/npo-batches`) |
 | `.cursor/rules/platform-readiness-roadmap-prs.mdc` | Platform Readiness Roadmap batch PRs (`src/lib/roadmap/platform-readiness*`) |
 | `.cursor/rules/share-give-page.mdc` (+ `share-give-page-design.txt`) | Editing `DonationPageShareCard.tsx` or `DonationPageSettingsClient.tsx` |
+| `.cursor/rules/it-routes-buttons.mdc` | Any UI work in `/dashboard/it/**`, `src/components/it/**`, or the IT ticket queue/detail/sheet: no `btn-primary` / `primary-btn` gradient pills |
+| `.cursor/rules/it-routes-dropdowns-and-header.mdc` | Any UI work in the IT routes (same scope as above): solid white dropdown panels (not glass), never `DashboardHeader` |
 
 ## Not loaded
 

@@ -58,6 +58,15 @@ export function canClaimTicket(
 	return ticket.assigneeCaalmUserId === ctx.userId;
 }
 
+/** Assign or reassign an open ticket: assign permission or elevate. */
+export function canAssignTicket(
+	ticket: Ticket,
+	ctx: TicketAccessContext,
+): boolean {
+	if (ticket.status === "RESOLVED") return false;
+	return hasElevate(ctx) || hasAssign(ctx);
+}
+
 /** Mark resolved / Start fix agent: assignee or elevate. */
 export function canResolveTicket(
 	ticket: Ticket,

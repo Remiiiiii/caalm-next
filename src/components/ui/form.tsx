@@ -70,15 +70,43 @@ const FormItemContext = React.createContext<FormItemContextValue>(
 	{} as FormItemContextValue,
 );
 
+/**
+ * Field names CAALM extraction filled, so every field in the upload wizard can
+ * mark itself (left accent + inline "CAALM filled" tag). Provided by
+ * ContractUploadForm only; elsewhere the context is null and nothing changes.
+ */
+export type CaalmFilledState = {
+	names: string[];
+	confidence?: Record<string, number>;
+	lowThreshold: number;
+};
+
+const CaalmFilledContext = React.createContext<CaalmFilledState | null>(null);
+const CaalmFilledProvider = CaalmFilledContext.Provider;
+
+function useCaalmFilled(name: string): "filled" | "review" | null {
+	const state = React.useContext(CaalmFilledContext);
+	if (!state?.names.includes(name)) return null;
+	const conf = state.confidence?.[name] ?? 1;
+	return conf < state.lowThreshold ? "review" : "filled";
+}
+
 const FormItem = React.forwardRef<
 	HTMLDivElement,
 	React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => {
 	const id = React.useId();
+	const { name } = React.useContext(FormFieldContext);
+	const caalm = useCaalmFilled(name);
 
 	return (
 		<FormItemContext.Provider value={{ id }}>
-			<div ref={ref} className={cn("space-y-2", className)} {...props} />
+			<div
+				ref={ref}
+				className={cn("space-y-2", className)}
+				data-caalm={caalm ?? undefined}
+				{...props}
+			/>
 		</FormItemContext.Provider>
 	);
 });
@@ -86,15 +114,30 @@ FormItem.displayName = "FormItem";
 
 type FormLabelProps = React.ComponentPropsWithoutRef<"label">;
 
-function FormLabel({ className, ...props }: FormLabelProps) {
-	const { error, formItemId } = useFormField();
+function FormLabel({ className, children, ...props }: FormLabelProps) {
+	const { error, formItemId, name } = useFormField();
+	const caalm = useCaalmFilled(name);
 
 	return (
 		<Label
 			className={cn(error && "text-destructive", className)}
 			htmlFor={formItemId}
 			{...props}
-		/>
+		>
+			{children}
+			{caalm ? (
+				<span
+					className={cn(
+						"ml-2 inline-flex items-center rounded px-[5px] py-px align-middle text-[9.5px] font-bold uppercase tracking-[0.05em]",
+						caalm === "review"
+							? "border border-amber-500/30 bg-amber-500/10 text-[#b45309]"
+							: "border border-[#078fab]/20 bg-[#078fab]/[.09] text-[#078fab]",
+					)}
+				>
+					{caalm === "review" ? "CAALM · review" : "CAALM filled"}
+				</span>
+			) : null}
+		</Label>
 	);
 }
 
@@ -163,6 +206,7 @@ const FormMessage = React.forwardRef<
 FormMessage.displayName = "FormMessage";
 
 export {
+	CaalmFilledProvider,
 	Form,
 	FormControl,
 	FormDescription,

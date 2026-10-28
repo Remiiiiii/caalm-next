@@ -111,6 +111,18 @@ export async function getLatestRun(agentId: string): Promise<CursorRun | null> {
 	return (await runRes.json()) as CursorRun;
 }
 
+/** Run statuses that mean the agent is still working (not finished, stopped or failed). */
+const ACTIVE_RUN_STATUSES = new Set([
+	"CREATING",
+	"RUNNING",
+	"ACTIVE",
+	"WAITING_FOR_BACKGROUND_WORK",
+]);
+
+export function isCursorRunActive(status: string): boolean {
+	return ACTIVE_RUN_STATUSES.has(status.toUpperCase());
+}
+
 export async function getCursorAgentStatus(agentId: string): Promise<{
 	id: string;
 	status: string;
@@ -130,7 +142,8 @@ export async function cancelCursorRun(agentId: string): Promise<void> {
 	if (!run) return;
 	const res = await fetch(
 		`${API}/agents/${encodeURIComponent(agentId)}/runs/${encodeURIComponent(run.id)}/cancel`,
-		{ method: "POST", headers: headers() },
+		// Cursor rejects a JSON content type with an empty body.
+		{ method: "POST", headers: headers(), body: "{}" },
 	);
 	// 409 means the run already finished, which is as good as cancelled.
 	if (!res.ok && res.status !== 409) {

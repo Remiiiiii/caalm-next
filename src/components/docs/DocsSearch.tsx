@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { DocsSearchHit } from "@/lib/docs/types";
+import { MODAL_OVERLAY, MODAL_PANEL } from "@/lib/ui/modal-styles";
 import { cn } from "@/lib/utils";
 
 const SECTION_LABEL: Record<string, string> = {
@@ -104,7 +105,7 @@ export function DocsSearch() {
 						<button
 							type="button"
 							aria-label="Close search"
-							className="absolute inset-0 cursor-default border-0 bg-slate-900/45 backdrop-blur-md dark:bg-black/55"
+							className={`absolute inset-0 cursor-default border-0 dark:bg-black/55 ${MODAL_OVERLAY}`}
 							onClick={close}
 						/>
 						<div className="pointer-events-none absolute inset-0 flex items-start justify-center px-4 pt-[12vh]">
@@ -112,7 +113,7 @@ export function DocsSearch() {
 								role="dialog"
 								aria-modal="true"
 								aria-label="Search documentation"
-								className="pointer-events-auto w-full max-w-xl overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-950"
+								className={`pointer-events-auto w-full max-w-xl overflow-hidden dark:border-slate-700 dark:bg-slate-950 ${MODAL_PANEL}`}
 							>
 								<div className="flex items-center gap-2 border-b border-slate-200 px-3 dark:border-slate-800">
 									<Search className="h-4 w-4 text-slate-400" />
