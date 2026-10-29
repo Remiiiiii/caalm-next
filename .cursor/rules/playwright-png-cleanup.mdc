@@ -1,0 +1,23 @@
+---
+description: Delete every .png Playwright creates as soon as you have looked at it, so it never shows under Git changes
+alwaysApply: true
+---
+
+# Playwright screenshots — discard after viewing
+
+Any `.png` created through Playwright (`browser_take_screenshot`, `page.screenshot`, `browser_run_code` that writes an image, in `.playwright-mcp/` or anywhere else in the repo) is scratch output. It must **never** be left in the working tree or the Git "Changes" / "Staged Changes" list.
+
+## Do this every time
+
+1. Take the screenshot and look at it (Read the file).
+2. As soon as you have what you need, delete it in the same turn:
+   - untracked file: `rm -f -- <path>`
+   - already staged: `git rm -q -f --cached -- <path>` then `rm -f -- <path>`
+3. Before you finish the turn, run `git status --porcelain -- .playwright-mcp` and confirm no `.png` you created is listed.
+
+## Rules
+
+- Never `git add` a Playwright screenshot, and never commit one.
+- Only delete files you created this session. A `.png` that was already tracked in Git (`git ls-files --error-unmatch <path>` succeeds) is not scratch; leave it alone.
+- Keep a screenshot only if the user explicitly asks to keep it, and say where it is.
+- Prefer assertions on DOM text/measurements over screenshots when a screenshot is not needed.
