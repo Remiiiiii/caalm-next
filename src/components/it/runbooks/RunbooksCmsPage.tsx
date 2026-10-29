@@ -22,6 +22,7 @@ import type {
 	Runbook,
 	RunbookStorageMode,
 } from "@/lib/it/runbooks/types";
+import { IT_DROPDOWN_PANEL } from "@/lib/ui/it-routes";
 
 const severityClass: Record<string, string> = {
 	low: "bg-slate-100 text-slate-700 border-slate-200",
@@ -81,17 +82,13 @@ export function RunbooksCmsPage() {
 			subtitle="Operational recovery procedures for on-call and IT."
 			actions={
 				<div className="flex items-center gap-2">
-					<Button
-						variant="outline"
-						className="primary-btn px-3 sm:px-4"
-						onClick={() => void load()}
-					>
+					<Button variant="outline" onClick={() => void load()}>
 						<RefreshCw className="h-4 w-4" />
 						Refresh
 					</Button>
 					{canManage ? (
 						<Button
-							className="primary-btn px-3 sm:px-4"
+							variant="brand"
 							onClick={() => {
 								setEditing(null);
 								setEditorOpen(true);
@@ -165,7 +162,7 @@ export function RunbooksCmsPage() {
 							<SelectTrigger className="w-full bg-white sm:w-40">
 								<SelectValue placeholder="Status" />
 							</SelectTrigger>
-							<SelectContent>
+							<SelectContent className={IT_DROPDOWN_PANEL}>
 								<SelectItem value="all">All statuses</SelectItem>
 								<SelectItem value="published">Published</SelectItem>
 								<SelectItem value="draft">Draft</SelectItem>
@@ -176,7 +173,7 @@ export function RunbooksCmsPage() {
 							<SelectTrigger className="w-full bg-white sm:w-40">
 								<SelectValue placeholder="Severity" />
 							</SelectTrigger>
-							<SelectContent>
+							<SelectContent className={IT_DROPDOWN_PANEL}>
 								<SelectItem value="all">All severities</SelectItem>
 								<SelectItem value="critical">Critical</SelectItem>
 								<SelectItem value="high">High</SelectItem>
@@ -264,7 +261,7 @@ export function RunbooksCmsPage() {
 										))}
 									</div>
 									<div className="mt-4 flex items-center gap-2">
-										<Button asChild className="primary-btn px-3 sm:px-4">
+										<Button asChild variant="brand">
 											<Link
 												href={`/dashboard/it/incidents/runbooks/${item.$id}`}
 											>
@@ -275,7 +272,6 @@ export function RunbooksCmsPage() {
 										{canManage ? (
 											<Button
 												variant="outline"
-												className="primary-btn px-3 sm:px-4"
 												onClick={() => {
 													setEditing(item);
 													setEditorOpen(true);

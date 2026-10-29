@@ -159,3 +159,56 @@ export function detectBugReportEnvironment(
 	}
 	return "Production";
 }
+
+export type ParsedBugReport = {
+	steps: string[];
+	expected: string;
+	actual: string;
+	os: string;
+	environment: string;
+	extra: string;
+	confirmations: Array<{ label: string; checked: boolean }>;
+};
+
+/**
+ * Inverse of composeEngineeringBugDescription. Returns null for Help tickets or
+ * bodies without the bug-report headings so callers can show plain text.
+ */
+export function parseEngineeringBugDescription(
+	description: string,
+): ParsedBugReport | null {
+	const sections = new Map<string, string>();
+	for (const block of description.split(/^### /m).slice(1)) {
+		const newline = block.indexOf("\n");
+		const heading = (newline === -1 ? block : block.slice(0, newline)).trim();
+		sections.set(
+			heading,
+			newline === -1 ? "" : block.slice(newline + 1).trim(),
+		);
+	}
+	const steps = sections.get(BUG_REPORT_HEADINGS.steps);
+	const expected = sections.get(BUG_REPORT_HEADINGS.expected);
+	const actual = sections.get(BUG_REPORT_HEADINGS.actual);
+	if (steps === undefined || expected === undefined || actual === undefined) {
+		return null;
+	}
+
+	const confirmations = (sections.get("Confirmations") ?? "")
+		.split("\n")
+		.map((line) => line.match(/^- \[( |x)\] (.+)$/))
+		.filter((match): match is RegExpMatchArray => match !== null)
+		.map((match) => ({ label: match[2], checked: match[1] === "x" }));
+
+	return {
+		steps: steps
+			.split("\n")
+			.map((line) => line.replace(/^\s*(?:\d+[.)]|[-*])\s*/, "").trim())
+			.filter(Boolean),
+		expected,
+		actual,
+		os: sections.get(BUG_REPORT_HEADINGS.os) ?? "",
+		environment: sections.get(BUG_REPORT_HEADINGS.environment) ?? "",
+		extra: sections.get("Additional context") ?? "",
+		confirmations,
+	};
+}

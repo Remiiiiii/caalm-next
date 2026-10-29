@@ -5,11 +5,15 @@ export function buildReportIssueFullFormHref(input: {
 	title: string;
 	category: string;
 	affectedModule?: string;
+	problemPageUrl?: string;
 }): string {
 	const params = new URLSearchParams();
 	if (input.lane) params.set("lane", input.lane);
 	if (input.title.trim()) params.set("title", input.title.trim());
 	if (input.category) params.set("category", input.category);
+	if (input.problemPageUrl?.trim()) {
+		params.set("pageUrl", input.problemPageUrl.trim());
+	}
 	if (input.lane === "engineering" && input.affectedModule) {
 		params.set("module", input.affectedModule);
 	}

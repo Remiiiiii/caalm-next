@@ -2,15 +2,20 @@ import { ID } from "node-appwrite";
 import { InputFile } from "node-appwrite/file";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
-import { assertEnterpriseFileAllowed } from "@/lib/files/enterprise-file-formats";
+import {
+	assertEnterpriseFileAllowed,
+	isTicketScreenRecordingFile,
+} from "@/lib/files/enterprise-file-formats";
 import {
 	composeEngineeringBugDescription,
+	type EngineeringBugFields,
 	parseEngineeringBugFields,
 } from "./bug-report-body";
 import {
 	buildGitHubIssueBody,
 	createGitHubIssue,
 } from "./github-tickets.service";
+import { assertProblemPageUrl } from "./problem-page-url";
 import { resolveSubmitterDepartmentLabel } from "./submitter-placement";
 import { createTicketRow, updateTicket } from "./ticket.repository";
 import type {
@@ -55,7 +60,9 @@ export async function uploadTicketAttachments(
 	const ids: string[] = [];
 
 	for (const file of files.slice(0, 5)) {
-		assertEnterpriseFileAllowed(file, "attachment");
+		if (!isTicketScreenRecordingFile(file)) {
+			assertEnterpriseFileAllowed(file, "ticketAttachment");
+		}
 		const buffer = Buffer.from(await file.arrayBuffer());
 		const uploaded = await storage.createFile({
 			bucketId,
@@ -66,6 +73,20 @@ export async function uploadTicketAttachments(
 	}
 
 	return ids;
+}
+
+/** Columns mirroring the structured bug fields; empty for Help tickets. */
+function bugColumns(bug?: EngineeringBugFields) {
+	if (!bug) return {};
+	return {
+		stepsToReproduce: bug.steps,
+		expectedBehavior: bug.expected,
+		actualBehavior: bug.actual,
+		os: bug.os,
+		environment: bug.environment,
+		confirmedNoDuplicate: bug.searchedExisting,
+		confirmedProductBug: bug.isBug,
+	};
 }
 
 export async function intakeTicket(input: {
@@ -93,6 +114,7 @@ export async function intakeTicket(input: {
 		lane,
 		category: input.payload.category,
 		affectedModule: input.payload.affectedModule || null,
+		problemPageUrl: input.payload.problemPageUrl,
 		impact: input.payload.impact,
 		urgency: input.payload.urgency,
 		submittedByUserId: input.actor.$id,
@@ -102,6 +124,7 @@ export async function intakeTicket(input: {
 		severity,
 		status: "OPEN",
 		attachments: input.payload.attachmentIds || [],
+		...bugColumns(input.payload.bug),
 		orgId: input.orgId,
 		githubRepo: getTicketsRepo(),
 		ticketNumber,
@@ -150,6 +173,7 @@ export async function intakeTicket(input: {
 			severity: ticket.severity,
 			category: ticket.category || input.payload.category,
 			affectedModule: ticket.affectedModule,
+			problemPageUrl: ticket.problemPageUrl,
 			impact: ticket.impact || input.payload.impact,
 			urgency: ticket.urgency || input.payload.urgency,
 			description: ticket.description,
@@ -252,6 +276,8 @@ export function buildCreateTicketInput(input: {
 	lane: unknown;
 	category: unknown;
 	affectedModule?: unknown;
+	problemPageUrl: unknown;
+	appOrigin: string;
 	impact: unknown;
 	urgency: unknown;
 	attachmentIds?: string[];
@@ -276,10 +302,10 @@ export function buildCreateTicketInput(input: {
 	// Engineering tickets must use the GitHub-style bug fields so GitHub
 	// issues and CAALM tickets share the same body. Help stays free text.
 	let description = input.description.trim();
+	let bug: EngineeringBugFields | undefined;
 	if (lane === "engineering") {
-		description = composeEngineeringBugDescription(
-			parseEngineeringBugFields(input),
-		);
+		bug = parseEngineeringBugFields(input);
+		description = composeEngineeringBugDescription(bug);
 	} else if (description.length < 8) {
 		throw new Error("Invalid description");
 	}
@@ -290,9 +316,11 @@ export function buildCreateTicketInput(input: {
 		lane,
 		category,
 		affectedModule: parseAffectedModule(input.affectedModule),
+		problemPageUrl: assertProblemPageUrl(input.problemPageUrl, input.appOrigin),
 		impact,
 		urgency,
 		severity,
 		attachmentIds: input.attachmentIds,
+		bug,
 	};
 }

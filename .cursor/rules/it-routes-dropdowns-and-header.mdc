@@ -1,0 +1,39 @@
+---
+description: IT routes use white, lightly transparent dropdown panels (not glass) and hide the dashboard header quick-action pills
+globs: src/app/(root)/dashboard/it/**,src/components/it/**,src/app/(root)/tickets/**,src/components/tickets/detail/**,src/components/tickets/TicketDetail.tsx,src/components/tickets/TicketQueue.tsx,src/components/tickets/TicketAssigneePicker.tsx,src/components/tickets/TicketsListWithSearch.tsx
+alwaysApply: false
+---
+
+# IT routes: no glass dropdowns, no quick-action pills
+
+Same scope as `.cursor/rules/it-routes-buttons.mdc`: everything under `/dashboard/it/**` (`src/app/(root)/dashboard/it/**`, `src/components/it/**`) plus the IT staff ticket surfaces (`/tickets` queue, `/tickets/[ticketId]` page and sheet). `/tickets/new` is company-wide and is not in scope. `isItRoute()` in `src/lib/ui/it-routes.ts` is the single definition of "an IT page".
+
+**This rule wins over the "Dropdown menus (glass)" section of `global-style-guide.mdc` inside this scope.** Outside the scope, dropdowns stay glass.
+
+## 1. No glass dropdown background
+
+Forbidden on any dropdown panel in scope (`SelectContent`, `DropdownMenuContent`, `DropdownMenuSubContent`, `AppDropdownMenuContent`, `ContextMenuContent`, `MenubarContent`): the shared translucent glass panel as it ships (`bg-white/10`, `backdrop-blur`, `border-white/30`).
+
+Required: white with a little transparency, the same look as the submitter/meta block at the top of a ticket. Import the constant and pass it to the `*Content`; it merges over the glass default:
+
+```tsx
+import { IT_DROPDOWN_PANEL } from "@/lib/ui/it-routes";
+
+<SelectContent className={IT_DROPDOWN_PANEL}>
+<DropdownMenuContent align="end" className={`${IT_DROPDOWN_PANEL} w-64 p-0`}>
+```
+
+`IT_DROPDOWN_PANEL` is `border-slate-200/60 bg-white/90 backdrop-blur-sm`. Do not hand-write another background. Still no card-cap bar on dropdowns.
+
+## 2. No quick-action pills in the dashboard header
+
+On IT pages the top bar rendered by `@/components/DashboardHeader` keeps Ask CAALM, the avatar, the notification bell, mail and logout, but drops the quick-action pills (Upload Contract, Upload License, Audit, Schedule, Report). Both layouts that render it (`src/app/(root)/layout.tsx`, `src/components/AuthenticatedLayout.tsx`) pass `hideQuickActions={isItRoute(pathname)}`. Do not render `DashboardHeader` or `QuickActions` from an IT page or component.
+
+Also never import or copy `src/app/(root)/dashboard/DashboardHeader.tsx` into IT code. IT pages start with the page title (`h1 ... sidebar-gradient-text`) and the content, like `ITPageShell` and the ticket pages.
+
+If a new IT-staff route lives outside `/dashboard/it` (like `/tickets`), add it to `isItRoute()`, which also covers the header pills, and to the globs above.
+
+## When touching an IT file
+
+1. Search it for `SelectContent`, `DropdownMenuContent`, `DropdownMenuSubContent`, `ContextMenuContent`, `MenubarContent` and give each `IT_DROPDOWN_PANEL`.
+2. Search it for `DashboardHeader` and `QuickActions` and remove any hit.

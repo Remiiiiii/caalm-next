@@ -9,6 +9,7 @@ import {
 	DropdownMenu,
 	DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
+import { useCtaButtonClass } from "@/lib/ui/use-cta-button-class";
 
 export type DashboardCardFilterOption<T extends string> = {
 	value: T;
@@ -29,6 +30,7 @@ export function DashboardCardFilter<T extends string>({
 	selected,
 	onChange,
 }: DashboardCardFilterProps<T>) {
+	const cta = useCtaButtonClass();
 	const active = selected !== "all";
 
 	return (
@@ -39,7 +41,7 @@ export function DashboardCardFilter<T extends string>({
 			>
 				<Button
 					variant="ghost"
-					className="primary-btn border-0 px-3 shadow-none focus-visible:ring-0 sm:px-4"
+					className={`${cta} border-0 shadow-none focus-visible:ring-0`}
 					aria-label={label}
 				>
 					<Filter className="h-4 w-4" />

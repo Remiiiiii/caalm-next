@@ -7,6 +7,7 @@ import { useMemo, useState } from "react";
 import ReportGenerator from "@/components/ReportGenerator";
 import { Button } from "@/components/ui/button";
 import { useUserRoles } from "@/hooks/useUserRoles";
+import { useCtaButtonClass } from "@/lib/ui/use-cta-button-class";
 
 const ContractUploadForm = dynamic(
 	() => import("@/components/ContractUploadForm"),
@@ -18,9 +19,6 @@ const LicenseUploadForm = dynamic(() => import("@/components/license-upload"), {
 	loading: () => null,
 });
 
-const quickActionBtn =
-	"primary-btn px-3.5 sm:px-4 shadow-drop-1 text-xs sm:text-sm whitespace-nowrap gap-1.5 [&_svg]:size-3.5";
-
 interface QuickActionsProps {
 	user?:
 		| (Models.User<Models.Preferences> & {
@@ -30,6 +28,8 @@ interface QuickActionsProps {
 }
 
 const QuickActions = ({ user }: QuickActionsProps) => {
+	const cta = useCtaButtonClass();
+	const quickActionBtn = `${cta} px-3.5 sm:px-4 shadow-drop-1 text-xs sm:text-sm whitespace-nowrap gap-1.5 [&_svg]:size-3.5`;
 	const [reportOpen, setReportOpen] = useState(false);
 	const { roles: userRoles } = useUserRoles();
 

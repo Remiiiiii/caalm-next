@@ -603,6 +603,8 @@ Some charts import Recharts primitives directly without `ChartContainer`; both p
 
 ## 7. Other shared UI files (index only)
 
+Avatars: wherever a user’s full name would be rendered alone (table cells, filters, pickers), render `Avatar` (uploaded photo, else initials) with a full-name tooltip instead, department/role underneath; see "User avatars" in `.cursor/rules/global-style-guide.mdc` and `TicketQueue` (Submitted by).
+
 Also present: `glass-skeletons` (`GlassCardSkeleton`, `MetricCardSkeleton`, `BarRowsSkeleton`, `TableCardSkeleton`: page-load placeholders that mirror the real card layout), `animated-bar` (animated progress / share bars) and `bulk-action-dock` (floating bulk-selection dock).
 
 Present under `src/components/ui/` (complete set as of inspection): accordion, alert, alert-dialog, aspect-ratio, avatar, breadcrumb, button, calendar, card, carousel, caalm-data-table, caalm-date-picker, CaalmFilterSelect, chart, checkbox, collapsible, command, context-menu, currency-amount-input, currency-select, DesktopRequiredScreen, dialog, drawer, dropdown-menu, DropdownScrollArea, filter-pill, form, hover-card, input, input-otp, label, loading, mail-clock-icon, menubar, metric-stat-card, navigation-menu, NotificationIcon, page-index, pagination, popover, progress, radio-group, resizable, sample-data-badge, scroll-area, search-field, select, select-scrollable, segmented-toggle, separator, sheet, sidebar, skeleton, skeletons, slider, sonner, stat-card-icon, switch, table, tabs, textarea, toast, toaster, toggle, toggle-group, tooltip, usd-conversion-hint, use-toast, widget-carousel, delete-confirmation-dialog, badge.

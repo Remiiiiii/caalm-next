@@ -1,0 +1,11 @@
+- generic [ref=f16e1]:
+  - status "Loading..." [ref=f16e2]:
+    - paragraph [ref=f16e4]: Loading...
+  - button "Open Next.js Dev Tools" [ref=f16e10] [cursor=pointer]:
+    - generic [ref=f16e13]:
+      - text: Compiling
+      - generic [ref=f16e14]:
+        - generic [ref=f16e15]: .
+        - generic [ref=f16e16]: .
+        - generic [ref=f16e17]: .
+  - alert [ref=f16e18]

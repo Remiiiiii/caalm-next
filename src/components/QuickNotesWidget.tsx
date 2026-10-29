@@ -24,6 +24,7 @@ import {
 	Underline,
 } from "lucide-react";
 import React, { useState } from "react";
+import { LoadError } from "@/components/LoadError";
 import {
 	isNotePinDateTimeInPast,
 	NOTE_PIN_PAST_TIME_ERROR,
@@ -32,7 +33,6 @@ import {
 } from "@/components/notes/NoteCalendarPinFields";
 import { AppDialog } from "@/components/ui/app-dialog";
 import { Button } from "@/components/ui/button";
-import { LoadError } from "@/components/LoadError";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
@@ -45,6 +45,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useNotes } from "@/hooks/useNotes";
 import type { Note } from "@/lib/actions/notes.actions";
+import { useCtaButtonClass } from "@/lib/ui/use-cta-button-class";
 
 const ghostCancelClass =
 	"rounded-full px-3 py-1.5 h-[1.65rem] justify-center text-slate-400 hover:text-slate-600 hover:bg-black/[.04]";
@@ -171,6 +172,7 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 	user,
 	initialNotes,
 }) => {
+	const cta = useCtaButtonClass();
 	const { toast } = useToast();
 	const {
 		notes,
@@ -663,7 +665,7 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 								(createPinMode === "calendar" &&
 									isNotePinDateTimeInPast(createPinDate, createPinTime))
 							}
-							className="btn-primary"
+							className={cta}
 						>
 							<Save className="h-4 w-4" />
 							Save
@@ -739,7 +741,7 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 								(editPinMode === "calendar" &&
 									isNotePinDateTimeInPast(editPinDate, editPinTime))
 							}
-							className="btn-primary"
+							className={cta}
 						>
 							<Save className="h-4 w-4" />
 							Update
@@ -858,7 +860,7 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 				footer={
 					<Button
 						type="button"
-						className="btn-primary px-3 sm:px-4"
+						className={cta}
 						onClick={() => {
 							setIsAllNotesDialogOpen(false);
 							setIsCreateDialogOpen(true);
@@ -869,88 +871,88 @@ const QuickNotesWidget: React.FC<QuickNotesWidgetProps> = ({
 					</Button>
 				}
 			>
-					<div className="-mx-6 space-y-2 bg-slate-50 px-6 pb-1">
-						{sortedNotes.length === 0 ? (
-							<div className="py-8 text-center">
-								<StickyNotePlus className="mx-auto mb-2 h-8 w-8 text-slate-300" />
-								<p className="text-sm text-slate-500">No notes yet</p>
-							</div>
-						) : (
-							sortedNotes.map((note) => (
-								<div
-									key={note.$id}
-									role="button"
-									tabIndex={0}
-									onClick={() => {
+				<div className="-mx-6 space-y-2 bg-slate-50 px-6 pb-1">
+					{sortedNotes.length === 0 ? (
+						<div className="py-8 text-center">
+							<StickyNotePlus className="mx-auto mb-2 h-8 w-8 text-slate-300" />
+							<p className="text-sm text-slate-500">No notes yet</p>
+						</div>
+					) : (
+						sortedNotes.map((note) => (
+							<div
+								key={note.$id}
+								role="button"
+								tabIndex={0}
+								onClick={() => {
+									setIsAllNotesDialogOpen(false);
+									openEditDialog(note);
+								}}
+								onKeyDown={(e) => {
+									if (e.key === "Enter" || e.key === " ") {
+										e.preventDefault();
 										setIsAllNotesDialogOpen(false);
 										openEditDialog(note);
-									}}
-									onKeyDown={(e) => {
-										if (e.key === "Enter" || e.key === " ") {
-											e.preventDefault();
-											setIsAllNotesDialogOpen(false);
-											openEditDialog(note);
-										}
-									}}
-									className="group w-full cursor-pointer rounded-lg border border-slate-200 bg-white p-4 text-left shadow-sm transition-all duration-200 hover:border-blue-300 hover:bg-blue-50 hover:shadow-md"
-								>
-									<div className="flex items-start justify-between gap-3">
-										<div className="min-w-0 flex-1">
-											<div className="flex items-center gap-2">
-												<p className="truncate text-sm font-semibold text-slate-700">
-													{note.title || "Untitled note"}
-												</p>
-												{note.calendarDate && note.calendarTime ? (
-													<span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-blue/20 bg-blue/10 px-2 py-0.5 text-[10px] text-blue">
-														<Calendar className="h-2.5 w-2.5" />
-														Calendar
-													</span>
-												) : null}
-											</div>
-											<p className="mt-0.5 text-xs text-slate-500">
-												{formatNoteTimestamp(note.$updatedAt)}
+									}
+								}}
+								className="group w-full cursor-pointer rounded-lg border border-slate-200 bg-white p-4 text-left shadow-sm transition-all duration-200 hover:border-blue-300 hover:bg-blue-50 hover:shadow-md"
+							>
+								<div className="flex items-start justify-between gap-3">
+									<div className="min-w-0 flex-1">
+										<div className="flex items-center gap-2">
+											<p className="truncate text-sm font-semibold text-slate-700">
+												{note.title || "Untitled note"}
 											</p>
-											<p className="mt-1 text-xs leading-relaxed text-slate-600">
-												{truncateContent(note.content) || (
-													<span className="italic text-slate-400">
-														No details
-													</span>
-												)}
-											</p>
+											{note.calendarDate && note.calendarTime ? (
+												<span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-blue/20 bg-blue/10 px-2 py-0.5 text-[10px] text-blue">
+													<Calendar className="h-2.5 w-2.5" />
+													Calendar
+												</span>
+											) : null}
 										</div>
-										<div className="flex shrink-0 gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-											<Button
-												variant="ghost"
-												size="sm"
-												onClick={(e) => {
-													e.stopPropagation();
-													setIsAllNotesDialogOpen(false);
-													openEditDialog(note);
-												}}
-												className="h-7 w-7 p-0 text-slate-500 hover:bg-white hover:text-slate-700"
-												aria-label={`Edit ${note.title || "note"}`}
-											>
-												<Edit className="h-3.5 w-3.5" />
-											</Button>
-											<Button
-												variant="ghost"
-												size="sm"
-												onClick={(e) => {
-													e.stopPropagation();
-													setIsAllNotesDialogOpen(false);
-													openDeleteDialog(note);
-												}}
-												className="h-7 w-7 p-0 text-slate-500 hover:bg-red/10 hover:text-red"
-												aria-label={`Delete ${note.title || "note"}`}
-											>
-												<Trash2 className="h-3.5 w-3.5" />
-											</Button>
-										</div>
+										<p className="mt-0.5 text-xs text-slate-500">
+											{formatNoteTimestamp(note.$updatedAt)}
+										</p>
+										<p className="mt-1 text-xs leading-relaxed text-slate-600">
+											{truncateContent(note.content) || (
+												<span className="italic text-slate-400">
+													No details
+												</span>
+											)}
+										</p>
+									</div>
+									<div className="flex shrink-0 gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+										<Button
+											variant="ghost"
+											size="sm"
+											onClick={(e) => {
+												e.stopPropagation();
+												setIsAllNotesDialogOpen(false);
+												openEditDialog(note);
+											}}
+											className="h-7 w-7 p-0 text-slate-500 hover:bg-white hover:text-slate-700"
+											aria-label={`Edit ${note.title || "note"}`}
+										>
+											<Edit className="h-3.5 w-3.5" />
+										</Button>
+										<Button
+											variant="ghost"
+											size="sm"
+											onClick={(e) => {
+												e.stopPropagation();
+												setIsAllNotesDialogOpen(false);
+												openDeleteDialog(note);
+											}}
+											className="h-7 w-7 p-0 text-slate-500 hover:bg-red/10 hover:text-red"
+											aria-label={`Delete ${note.title || "note"}`}
+										>
+											<Trash2 className="h-3.5 w-3.5" />
+										</Button>
 									</div>
 								</div>
-							))
-						)}
-					</div>
+							</div>
+						))
+					)}
+				</div>
 			</AppDialog>
 
 			{/* Custom styles */}

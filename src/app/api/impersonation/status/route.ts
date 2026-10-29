@@ -1,5 +1,4 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/actions/user.actions";
 import { getEffectiveUser } from "@/lib/impersonation/effective-user";
 import {
 	clearImpersonationCookie,
@@ -8,12 +7,25 @@ import {
 } from "@/lib/impersonation/session";
 
 export async function GET(request: NextRequest) {
-	const actor = await getCurrentUser();
-	if (!actor) {
+	if (!request.cookies.get("appwrite-session")?.value) {
 		return NextResponse.json(
 			{ error: "Authentication required" },
 			{ status: 401 },
 		);
+	}
+
+	const claim = readImpersonationClaim(request);
+	if (!claim) {
+		return NextResponse.json({ active: false });
+	}
+
+	if (!isImpersonationClaimActive(claim)) {
+		const response = NextResponse.json({
+			active: false,
+			expired: true,
+		});
+		clearImpersonationCookie(response);
+		return response;
 	}
 
 	const context = await getEffectiveUser(request);
@@ -22,16 +34,6 @@ export async function GET(request: NextRequest) {
 			{ error: "Authentication required" },
 			{ status: 401 },
 		);
-	}
-
-	const claim = readImpersonationClaim(request);
-	if (claim && !isImpersonationClaimActive(claim)) {
-		const response = NextResponse.json({
-			active: false,
-			expired: true,
-		});
-		clearImpersonationCookie(response);
-		return response;
 	}
 
 	if (!context.impersonation) {

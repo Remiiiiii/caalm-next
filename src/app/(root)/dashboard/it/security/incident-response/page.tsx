@@ -48,16 +48,12 @@ export default function Page() {
 							steps while incident integrations come online.
 						</p>
 						<div className="flex flex-wrap gap-2">
-							<Button asChild className="primary-btn px-3 sm:px-4">
+							<Button asChild variant="brand">
 								<Link href="/dashboard/it/incidents/runbooks">
 									Open runbooks
 								</Link>
 							</Button>
-							<Button
-								asChild
-								variant="outline"
-								className="primary-btn px-3 sm:px-4"
-							>
+							<Button asChild variant="outline">
 								<Link href="/docs/runbooks/overview">Read docs</Link>
 							</Button>
 						</div>

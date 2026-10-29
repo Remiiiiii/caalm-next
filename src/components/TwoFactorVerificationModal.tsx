@@ -133,11 +133,11 @@ const TwoFactorVerificationModal = ({
 					: `Enter the 6-digit code from your authenticator app${email ? ` for ${maskEmail(email)}` : ""}.`
 			}
 			footer={
-				<>
+				<div className="flex justify-between w-full">
 					<Button
 						type="button"
 						variant="ghost"
-						className="rounded-full px-3 py-1.5 h-[1.65rem] justify-center text-slate-400 hover:text-slate-600 hover:bg-black/[.04]"
+						className="rounded-full px-3 py-1.5 h-[1.65rem] flex justify-between  text-slate-400 hover:text-slate-600 hover:bg-black/[.04]"
 						disabled={isLoading}
 						onClick={handleClose}
 					>
@@ -157,11 +157,10 @@ const TwoFactorVerificationModal = ({
 						)}
 						{isLoading ? "Verifying…" : "Verify and continue"}
 					</Button>
-				</>
+				</div>
 			}
 		>
 			<div className="flex flex-col gap-3 pb-1">
-
 				{/* Status slot */}
 				<div className="min-h-11">
 					{isLockedOut || error ? (
@@ -173,7 +172,7 @@ const TwoFactorVerificationModal = ({
 							<p className="text-sm text-red-700">{error || LOCKOUT_MESSAGE}</p>
 						</div>
 					) : !recoveryMode ? (
-						<div className="flex items-center gap-1.5 text-sm text-slate-500">
+						<div className="flex items-center justify-center gap-1.5 text-sm text-slate-500">
 							<Clock className="h-3.5 w-3.5 shrink-0" />
 							<span>The code in your app changes every 30 seconds</span>
 						</div>
@@ -234,7 +233,7 @@ const TwoFactorVerificationModal = ({
 							Use authenticator code instead
 						</button>
 					) : (
-						<span>
+						<span className="flex items-center justify-center gap-1.5">
 							Lost access to your app?{" "}
 							<button
 								type="button"

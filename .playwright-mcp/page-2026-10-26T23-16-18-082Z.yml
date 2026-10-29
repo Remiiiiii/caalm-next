@@ -1,0 +1,305 @@
+- generic [active] [ref=f1e1]:
+  - button "Open Next.js Dev Tools" [ref=f1e7] [cursor=pointer]:
+    - generic [ref=f1e10]:
+      - text: Rendering
+      - generic [ref=f1e11]:
+        - generic [ref=f1e12]: .
+        - generic [ref=f1e13]: .
+        - generic [ref=f1e14]: .
+  - alert [ref=f1e15]
+  - main [ref=f1e16]:
+    - generic [ref=f1e17]:
+      - complementary [ref=f1e18]:
+        - generic [ref=f1e19]:
+          - link [ref=f1e20] [cursor=pointer]:
+            - /url: /dashboard/it
+            - img "logo" [ref=f1e21]
+          - button "Collapse sidebar" [expanded] [ref=f1e22] [cursor=pointer]
+        - generic [ref=f1e26]:
+          - generic [ref=f1e27]:
+            - paragraph [ref=f1e28]: Victor Ramirez
+            - paragraph [ref=f1e29]: developer@remyouji.com
+          - generic [ref=f1e30]:
+            - generic [ref=f1e31]:
+              - generic [ref=f1e32]: "Role:"
+              - generic [ref=f1e33]: Super Admin
+            - generic [ref=f1e34]:
+              - generic [ref=f1e35]: "Department:"
+              - generic [ref=f1e36]: IT
+          - generic [ref=f1e37]: Disconnected
+        - navigation [ref=f1e47]:
+          - list [ref=f1e48]:
+            - generic [ref=f1e49]:
+              - listitem [ref=f1e50]:
+                - generic [ref=f1e51]: Workspaces
+              - list [ref=f1e60]:
+                - listitem [ref=f1e61]:
+                  - link [ref=f1e64] [cursor=pointer]:
+                    - /url: /dashboard/superadmin
+                    - paragraph [ref=f1e67]: Super Admin
+                - listitem [ref=f1e68]:
+                  - link [ref=f1e71] [cursor=pointer]:
+                    - /url: /dashboard/departmentmanager
+                    - paragraph [ref=f1e75]: Department Manager
+            - generic [ref=f1e76]:
+              - listitem [ref=f1e77]:
+                - generic [ref=f1e78]: Overview
+              - list [ref=f1e87]:
+                - listitem [ref=f1e88]:
+                  - link [ref=f1e91] [cursor=pointer]:
+                    - /url: /dashboard/it
+                    - paragraph [ref=f1e97]: Dashboard
+                - listitem [ref=f1e98]:
+                  - link [ref=f1e101] [cursor=pointer]:
+                    - /url: /dashboard/it/system-overview
+                    - paragraph [ref=f1e104]: System overview
+                - listitem [ref=f1e105]:
+                  - link [ref=f1e108] [cursor=pointer]:
+                    - /url: /dashboard/it/storage
+                    - paragraph [ref=f1e111]: Storage
+                - listitem [ref=f1e112]:
+                  - link [ref=f1e115] [cursor=pointer]:
+                    - /url: /dashboard/it/tenants
+                    - paragraph [ref=f1e120]: Tenants
+            - generic [ref=f1e121]:
+              - listitem [ref=f1e122]:
+                - generic [ref=f1e123]: Support
+              - list [ref=f1e129]:
+                - listitem [ref=f1e130]:
+                  - link [ref=f1e133] [cursor=pointer]:
+                    - /url: /tickets/new
+                    - paragraph [ref=f1e136]: Report issue
+                - listitem [ref=f1e137]:
+                  - link [ref=f1e140] [cursor=pointer]:
+                    - /url: /tickets
+                    - paragraph [ref=f1e144]: Tickets
+                - listitem [ref=f1e145]:
+                  - link [ref=f1e148] [cursor=pointer]:
+                    - /url: /dashboard/it/issuehistory
+                    - paragraph [ref=f1e153]: Issue History
+            - generic [ref=f1e154]:
+              - listitem [ref=f1e155]:
+                - generic [ref=f1e156]: Monitoring
+              - list [ref=f1e162]:
+                - listitem [ref=f1e163]:
+                  - link [ref=f1e166] [cursor=pointer]:
+                    - /url: /dashboard/it/monitoring/system-health
+                    - paragraph [ref=f1e170]: System health
+                - listitem [ref=f1e171]:
+                  - link [ref=f1e174] [cursor=pointer]:
+                    - /url: /dashboard/it/monitoring/api-analytics
+                    - paragraph [ref=f1e177]: API analytics
+                - listitem [ref=f1e178]:
+                  - link [ref=f1e181] [cursor=pointer]:
+                    - /url: /dashboard/it/rate-limits
+                    - paragraph [ref=f1e184]: Rate limits
+            - generic [ref=f1e185]:
+              - listitem [ref=f1e186]:
+                - generic [ref=f1e187]: Incidents
+              - list [ref=f1e196]:
+                - listitem [ref=f1e197]:
+                  - link [ref=f1e200] [cursor=pointer]:
+                    - /url: /dashboard/it/incidents/active
+                    - paragraph [ref=f1e203]: Active incidents
+                - listitem [ref=f1e204]:
+                  - link [ref=f1e207] [cursor=pointer]:
+                    - /url: /dashboard/it/incidents/runbooks
+                    - paragraph [ref=f1e211]: Runbooks
+            - generic [ref=f1e212]:
+              - listitem [ref=f1e213]:
+                - generic [ref=f1e214]: Development
+              - list [ref=f1e223]:
+                - listitem [ref=f1e224]:
+                  - link [ref=f1e227] [cursor=pointer]:
+                    - /url: /dashboard/it/development/clm-roadmap
+                    - paragraph [ref=f1e230]: CLM Roadmap
+                - listitem [ref=f1e231]:
+                  - link [ref=f1e234] [cursor=pointer]:
+                    - /url: /dashboard/it/development/nonprofit-roadmap
+                    - paragraph [ref=f1e240]: Nonprofit Roadmap
+                - listitem [ref=f1e241]:
+                  - link [ref=f1e244] [cursor=pointer]:
+                    - /url: /dashboard/it/development/platform-readiness-roadmap
+                    - paragraph [ref=f1e247]: Platform Readiness Roadmap
+                - listitem [ref=f1e248]:
+                  - link [ref=f1e251] [cursor=pointer]:
+                    - /url: /dashboard/it/development/pr-log
+                    - paragraph [ref=f1e256]: PR log - (Cursor Cloud Agent)
+            - generic [ref=f1e257]:
+              - listitem [ref=f1e258]:
+                - generic [ref=f1e259]: Data & logs
+              - list [ref=f1e267]:
+                - listitem [ref=f1e268]:
+                  - link [ref=f1e271] [cursor=pointer]:
+                    - /url: /dashboard/it/database/schema
+                    - paragraph [ref=f1e274]: Schema
+            - generic [ref=f1e275]:
+              - listitem [ref=f1e276]:
+                - generic [ref=f1e277]: Security
+              - list [ref=f1e283]:
+                - listitem [ref=f1e284]:
+                  - link [ref=f1e287] [cursor=pointer]:
+                    - /url: /dashboard/it/security/audit-logs
+                    - paragraph [ref=f1e291]: Audit logs
+                - listitem [ref=f1e292]:
+                  - link [ref=f1e295] [cursor=pointer]:
+                    - /url: /dashboard/it/security/compliance
+                    - paragraph [ref=f1e300]: Compliance
+                - listitem [ref=f1e301]:
+                  - link [ref=f1e304] [cursor=pointer]:
+                    - /url: /dashboard/it/security/access-control
+                    - paragraph [ref=f1e308]: Access control
+                - listitem [ref=f1e309]:
+                  - link [ref=f1e312] [cursor=pointer]:
+                    - /url: /dashboard/it/security/incident-response
+                    - paragraph [ref=f1e318]: Incident response
+            - generic [ref=f1e319]:
+              - listitem [ref=f1e320]:
+                - generic [ref=f1e321]: Team
+              - list [ref=f1e330]:
+                - listitem [ref=f1e331]:
+                  - link [ref=f1e334] [cursor=pointer]:
+                    - /url: /dashboard/it/team/directory
+                    - paragraph [ref=f1e340]: IT directory
+                - listitem [ref=f1e341]:
+                  - link [ref=f1e344] [cursor=pointer]:
+                    - /url: /dashboard/it/team/roles
+                    - paragraph [ref=f1e357]: Roles
+            - listitem [aria-hidden] [ref=f1e358]:
+              - separator [ref=f1e359]
+            - generic [ref=f1e360]:
+              - listitem [ref=f1e361]:
+                - generic [ref=f1e362]: Settings
+              - list [ref=f1e369]:
+                - listitem [ref=f1e370]:
+                  - link [ref=f1e373] [cursor=pointer]:
+                    - /url: /dashboard/it/settings/system
+                    - paragraph [ref=f1e377]: System
+                - listitem [ref=f1e378]:
+                  - link [ref=f1e381] [cursor=pointer]:
+                    - /url: /dashboard/it/settings/integrations
+                    - paragraph [ref=f1e384]: Integrations
+                - listitem [ref=f1e385]:
+                  - link [ref=f1e388] [cursor=pointer]:
+                    - /url: /dashboard/it/settings/notifications
+                    - paragraph [ref=f1e392]: Notifications
+      - generic [ref=f1e393]:
+        - generic [ref=f1e395]:
+          - generic [ref=f1e397]:
+            - button "Audit" [ref=f1e398] [cursor=pointer]
+            - button "Schedule" [ref=f1e399] [cursor=pointer]
+            - button "Report" [ref=f1e400] [cursor=pointer]
+          - generic [ref=f1e401]:
+            - button "Ask CAALM" [ref=f1e402] [cursor=pointer]
+            - generic [ref=f1e406]:
+              - button "Profile picture" [ref=f1e409] [cursor=pointer]:
+                - img "Victor Ramirez" [ref=f1e411]
+              - button "Open notifications" [ref=f1e413] [cursor=pointer]:
+                - generic "53 notifications" [ref=f1e414]: "53"
+              - button "Open mail" [ref=f1e415] [cursor=pointer]
+              - button "Log out" [ref=f1e416] [cursor=pointer]
+        - generic [ref=f1e418]:
+          - heading "Report an issue" [level=1] [ref=f1e420]
+          - generic [ref=f1e421]:
+            - generic [ref=f1e422]:
+              - paragraph [ref=f1e423]: Your submission is logged and tracked end to end.
+              - paragraph [ref=f1e424]: Fields marked with an asterisk are required.
+            - generic [ref=f1e425]:
+              - img "Victor Ramirez" [ref=f1e427]
+              - generic [ref=f1e428]:
+                - paragraph [ref=f1e429]: Victor Ramirez
+                - paragraph [ref=f1e430]: IT
+              - generic [ref=f1e431]: Locked to your account
+            - generic [ref=f1e438]:
+              - generic [ref=f1e439]:
+                - paragraph [ref=f1e440]: What kind of request is this? *
+                - paragraph [ref=f1e441]: Pick the closest match — you can escalate Help to Engineering later if needed.
+                - generic [ref=f1e442]:
+                  - tablist "Request type" [ref=f1e443]:
+                    - tab "I need help" [selected] [ref=f1e444] [cursor=pointer]
+                    - tab "Something is broken" [ref=f1e449] [cursor=pointer]
+                  - paragraph [ref=f1e454]: I need access, a device, or a change
+              - generic [ref=f1e455]:
+                - generic [ref=f1e456]:
+                  - generic [ref=f1e457]: Title *
+                  - textbox "Title *" [ref=f1e460]:
+                    - /placeholder: Summary of the problem
+                - generic [ref=f1e461]:
+                  - generic [ref=f1e462]: Category *
+                  - generic [ref=f1e464]:
+                    - combobox "Category *" [ref=f1e465] [cursor=pointer]:
+                      - generic: Choose a category
+                    - combobox [aria-hidden] [ref=f1e468]
+              - generic [ref=f1e469]:
+                - paragraph [ref=f1e470]: Priority *
+                - paragraph [ref=f1e471]: How soon do you need this handled?
+                - generic [ref=f1e472]:
+                  - paragraph [ref=f1e473]: Priority
+                  - radiogroup "Priority" [ref=f1e474]:
+                    - radio "Can wait" [ref=f1e475] [cursor=pointer]
+                    - radio "This week" [checked] [ref=f1e476] [cursor=pointer]
+                    - radio "Today" [ref=f1e477] [cursor=pointer]
+                    - radio "Right now" [ref=f1e478] [cursor=pointer]
+                - paragraph [ref=f1e479]:
+                  - strong [ref=f1e480]: This week
+                  - text: — We'll respond within 2 business days.
+              - generic [ref=f1e481]:
+                - generic [ref=f1e482]:
+                  - generic [ref=f1e483]: Description *
+                  - generic [ref=f1e484]: 0/2000
+                - textbox "Description *" [ref=f1e486]:
+                  - /placeholder: What happened? What did you expect instead? Steps to reproduce, if any.
+              - generic [ref=f1e488]:
+                - generic [ref=f1e489]: Page where it happened *
+                - group [ref=f1e490]:
+                  - generic "How to copy the page address" [ref=f1e491] [cursor=pointer]
+                - generic [ref=f1e492]:
+                  - textbox "Page where it happened *" [ref=f1e493]:
+                    - /placeholder: https://… or /contracts
+                    - text: http://localhost:3000/tickets/new
+                  - button "Update page" [disabled] [ref=f1e494] [cursor=pointer]
+                - paragraph [ref=f1e495]: We open this page when you start recording.
+              - generic [ref=f1e496]:
+                - generic [ref=f1e497]:
+                  - generic [ref=f1e499]:
+                    - text: Show us the problem
+                    - generic [ref=f1e500]: (optional)
+                  - region "Show us the problem" [ref=f1e502]:
+                    - generic [ref=f1e503]:
+                      - generic [ref=f1e504]:
+                        - generic [ref=f1e508]: Your clip appears here
+                        - generic [ref=f1e509]: Up to 60 s · 10 MB · 1 of your 5 files
+                      - generic [ref=f1e510]:
+                        - generic [ref=f1e511]:
+                          - paragraph [ref=f1e512]: A short clip of what went wrong, attached to this ticket.
+                          - list [ref=f1e513]:
+                            - listitem [ref=f1e514]:
+                              - generic [ref=f1e515]: "1"
+                              - text: Click Record
+                            - listitem [ref=f1e516]:
+                              - generic [ref=f1e517]: "2"
+                              - text: Choose what Chrome shares
+                            - listitem [ref=f1e518]:
+                              - generic [ref=f1e519]: "3"
+                              - text: Press Stop
+                        - generic [ref=f1e521]:
+                          - button "Record screen" [ref=f1e522] [cursor=pointer]
+                          - generic [ref=f1e523]:
+                            - checkbox "Record my voice" [checked] [ref=f1e524]
+                            - checkbox [checked] [aria-hidden]
+                            - generic [ref=f1e525] [cursor=pointer]: Record my voice
+                        - generic [ref=f1e529]:
+                          - generic [ref=f1e530]: On another page? We save your draft, take you there, then the browser asks what to share.
+                          - button "Upload a video instead" [ref=f1e531] [cursor=pointer]
+                - generic [ref=f1e532]:
+                  - generic [ref=f1e534]:
+                    - text: Attachments
+                    - generic [ref=f1e535]: (optional)
+                  - button [ref=f1e537] [cursor=pointer]:
+                    - paragraph [ref=f1e541]: Drop files here, or click to browse
+                    - paragraph [ref=f1e542]: Supports PDF, DOCX, DOC, TXT, PNG, JPG, JPEG, XLSX, CSV — up to 10 MB each (max 5 files)
+              - generic [ref=f1e543]:
+                - button "Cancel" [ref=f1e544] [cursor=pointer]
+                - button "Submit ticket" [ref=f1e545] [cursor=pointer]
+  - region "Notifications (F8)":
+    - list

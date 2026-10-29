@@ -28,6 +28,7 @@ import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import ExpandedCalendarView, {
 	type CalendarDisplayEvent,
 } from "@/components/ExpandedCalendarView";
+import { AppDialog } from "@/components/ui/app-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,7 +36,6 @@ import {
 	parseIsoDateLocal,
 	toIsoDateLocal,
 } from "@/components/ui/caalm-date-picker";
-import { AppDialog } from "@/components/ui/app-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -55,6 +55,7 @@ import { hasMicrosoftCalendarIntegration } from "@/lib/actions/calendar.actions"
 import { createCalendarEvent } from "@/lib/actions/calendar.client";
 import { getTimezoneAbbreviation } from "@/lib/calendar/eventDisplayFormat";
 import { formatInTimezone } from "@/lib/timezone";
+import { useCtaButtonClass } from "@/lib/ui/use-cta-button-class";
 import { cn } from "@/lib/utils";
 
 const WEEKDAY_LABELS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"] as const;
@@ -423,6 +424,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 	onEventCreate,
 	user,
 }) => {
+	const cta = useCtaButtonClass();
 	const { toast } = useToast();
 	const [selectedDate, setSelectedDate] = useState<Date | undefined>(
 		new Date(),
@@ -989,7 +991,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 				<div className="border-t border-slate-200 p-3.5">
 					<Button
 						type="button"
-						className="primary-btn h-11 w-full gap-2 rounded-lg sm:!w-full"
+						className={`${cta} w-full gap-2 sm:!w-full`}
 						onClick={() => setIsAddEventOpen(true)}
 					>
 						<Plus className="h-4 w-4" />
@@ -1016,7 +1018,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 								</Button>
 								<Button
 									type="button"
-									className="btn-primary"
+									className={cta}
 									onClick={handleAddEvent}
 									disabled={!newEvent.title.trim() || creatingEvent}
 								>
@@ -1026,185 +1028,185 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 							</>
 						}
 					>
-							<div className="space-y-4 pb-1">
-								<p className="text-xs text-slate-500">
-									{newEvent.title.trim()
-										? "Ready to create"
-										: "Enter a title to continue"}
-								</p>
-								<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-									<div>
-										<Label
-											htmlFor="title"
-											className="mb-1 block text-sm font-medium text-slate-700"
-										>
-											Event Title
-										</Label>
-										<Input
-											id="title"
-											value={newEvent.title}
-											onChange={(e) =>
-												setNewEvent({ ...newEvent, title: e.target.value })
-											}
-											placeholder="Enter event title"
-											className="bg-white"
-										/>
-									</div>
-									<div>
-										<Label
-											htmlFor="type"
-											className="mb-1 block text-sm font-medium text-slate-700"
-										>
-											Event Type
-										</Label>
-										<Select
-											value={newEvent.type}
-											onValueChange={(value) => {
-												if (!isCreateEventType(value)) return;
-												setNewEvent({ ...newEvent, type: value });
-											}}
-										>
-											<SelectTrigger className="bg-white">
-												<SelectValue />
-											</SelectTrigger>
-											<SelectContent>
-												<SelectItem value="meeting">Meeting</SelectItem>
-												<SelectItem value="contract">Contract</SelectItem>
-												<SelectItem value="deadline">Deadline</SelectItem>
-												<SelectItem value="review">Review</SelectItem>
-												<SelectItem value="audit">Audit</SelectItem>
-											</SelectContent>
-										</Select>
-									</div>
-								</div>
-
-								<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-									<div>
-										<Label
-											htmlFor="date"
-											className="mb-1 block text-sm font-medium text-slate-700"
-										>
-											Date
-										</Label>
-										<CaalmDatePicker
-											id="date"
-											value={newEvent.date ? toIsoDateLocal(newEvent.date) : ""}
-											placeholder="Select date"
-											onChange={(iso) => {
-												const next = parseIsoDateLocal(iso);
-												if (!next) return;
-												setNewEvent({ ...newEvent, date: next });
-											}}
-										/>
-									</div>
-									<div>
-										<Label
-											htmlFor="amount"
-											className="mb-1 block text-sm font-medium text-slate-700"
-										>
-											Amount (Optional)
-										</Label>
-										<Input
-											id="amount"
-											value={newEvent.amount || ""}
-											onChange={(e) =>
-												setNewEvent({
-													...newEvent,
-													amount: e.target.value,
-												})
-											}
-											placeholder="Enter amount"
-											className="bg-white"
-										/>
-									</div>
-								</div>
-
-								<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-									<div>
-										<Label
-											htmlFor="startTime"
-											className="mb-1 block text-sm font-medium text-slate-700"
-										>
-											Start Time
-										</Label>
-										<Input
-											id="startTime"
-											type="time"
-											value={newEvent.startTime || ""}
-											onChange={(e) =>
-												setNewEvent({
-													...newEvent,
-													startTime: e.target.value,
-												})
-											}
-											className="bg-white"
-										/>
-									</div>
-									<div>
-										<Label
-											htmlFor="endTime"
-											className="mb-1 block text-sm font-medium text-slate-700"
-										>
-											End Time
-										</Label>
-										<Input
-											id="endTime"
-											type="time"
-											value={newEvent.endTime || ""}
-											onChange={(e) =>
-												setNewEvent({
-													...newEvent,
-													endTime: e.target.value,
-												})
-											}
-											className="bg-white"
-										/>
-									</div>
-								</div>
-
+						<div className="space-y-4 pb-1">
+							<p className="text-xs text-slate-500">
+								{newEvent.title.trim()
+									? "Ready to create"
+									: "Enter a title to continue"}
+							</p>
+							<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 								<div>
 									<Label
-										htmlFor="contractName"
+										htmlFor="title"
 										className="mb-1 block text-sm font-medium text-slate-700"
 									>
-										Contract Name (Optional)
+										Event Title
 									</Label>
 									<Input
-										id="contractName"
-										value={newEvent.contractName || ""}
+										id="title"
+										value={newEvent.title}
 										onChange={(e) =>
-											setNewEvent({
-												...newEvent,
-												contractName: e.target.value,
-											})
+											setNewEvent({ ...newEvent, title: e.target.value })
 										}
-										placeholder="Enter contract name"
+										placeholder="Enter event title"
 										className="bg-white"
 									/>
 								</div>
-
 								<div>
 									<Label
-										htmlFor="description"
+										htmlFor="type"
 										className="mb-1 block text-sm font-medium text-slate-700"
 									>
-										Description
+										Event Type
 									</Label>
-									<textarea
-										id="description"
-										value={newEvent.description}
-										onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+									<Select
+										value={newEvent.type}
+										onValueChange={(value) => {
+											if (!isCreateEventType(value)) return;
+											setNewEvent({ ...newEvent, type: value });
+										}}
+									>
+										<SelectTrigger className="bg-white">
+											<SelectValue />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="meeting">Meeting</SelectItem>
+											<SelectItem value="contract">Contract</SelectItem>
+											<SelectItem value="deadline">Deadline</SelectItem>
+											<SelectItem value="review">Review</SelectItem>
+											<SelectItem value="audit">Audit</SelectItem>
+										</SelectContent>
+									</Select>
+								</div>
+							</div>
+
+							<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+								<div>
+									<Label
+										htmlFor="date"
+										className="mb-1 block text-sm font-medium text-slate-700"
+									>
+										Date
+									</Label>
+									<CaalmDatePicker
+										id="date"
+										value={newEvent.date ? toIsoDateLocal(newEvent.date) : ""}
+										placeholder="Select date"
+										onChange={(iso) => {
+											const next = parseIsoDateLocal(iso);
+											if (!next) return;
+											setNewEvent({ ...newEvent, date: next });
+										}}
+									/>
+								</div>
+								<div>
+									<Label
+										htmlFor="amount"
+										className="mb-1 block text-sm font-medium text-slate-700"
+									>
+										Amount (Optional)
+									</Label>
+									<Input
+										id="amount"
+										value={newEvent.amount || ""}
+										onChange={(e) =>
 											setNewEvent({
 												...newEvent,
-												description: e.target.value,
+												amount: e.target.value,
 											})
 										}
-										placeholder="Enter event description"
-										rows={3}
-										className="flex min-h-[80px] w-full rounded-md border-[0.25px] border-slate-200 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#03afbf] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+										placeholder="Enter amount"
+										className="bg-white"
 									/>
 								</div>
 							</div>
+
+							<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+								<div>
+									<Label
+										htmlFor="startTime"
+										className="mb-1 block text-sm font-medium text-slate-700"
+									>
+										Start Time
+									</Label>
+									<Input
+										id="startTime"
+										type="time"
+										value={newEvent.startTime || ""}
+										onChange={(e) =>
+											setNewEvent({
+												...newEvent,
+												startTime: e.target.value,
+											})
+										}
+										className="bg-white"
+									/>
+								</div>
+								<div>
+									<Label
+										htmlFor="endTime"
+										className="mb-1 block text-sm font-medium text-slate-700"
+									>
+										End Time
+									</Label>
+									<Input
+										id="endTime"
+										type="time"
+										value={newEvent.endTime || ""}
+										onChange={(e) =>
+											setNewEvent({
+												...newEvent,
+												endTime: e.target.value,
+											})
+										}
+										className="bg-white"
+									/>
+								</div>
+							</div>
+
+							<div>
+								<Label
+									htmlFor="contractName"
+									className="mb-1 block text-sm font-medium text-slate-700"
+								>
+									Contract Name (Optional)
+								</Label>
+								<Input
+									id="contractName"
+									value={newEvent.contractName || ""}
+									onChange={(e) =>
+										setNewEvent({
+											...newEvent,
+											contractName: e.target.value,
+										})
+									}
+									placeholder="Enter contract name"
+									className="bg-white"
+								/>
+							</div>
+
+							<div>
+								<Label
+									htmlFor="description"
+									className="mb-1 block text-sm font-medium text-slate-700"
+								>
+									Description
+								</Label>
+								<textarea
+									id="description"
+									value={newEvent.description}
+									onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+										setNewEvent({
+											...newEvent,
+											description: e.target.value,
+										})
+									}
+									placeholder="Enter event description"
+									rows={3}
+									className="flex min-h-[80px] w-full rounded-md border-[0.25px] border-slate-200 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#03afbf] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+								/>
+							</div>
+						</div>
 					</AppDialog>
 				</div>
 			</div>

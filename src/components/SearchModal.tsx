@@ -17,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { performAdvancedSearch } from "@/lib/actions/search.actions";
+import { MODAL_OVERLAY, MODAL_PANEL } from "@/lib/ui/modal-styles";
 
 interface SearchResult {
 	id: string;
@@ -164,9 +165,11 @@ const SearchModal: React.FC<SearchModalProps> = ({
 	if (!isOpen || !mounted) return null;
 
 	const modalContent = (
-		<div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/30">
+		<div
+			className={`fixed inset-0 z-[9999] flex items-center justify-center ${MODAL_OVERLAY}`}
+		>
 			{/* Modal */}
-			<Card className="w-[500px] max-w-2xl bg-white/80 backdrop-blur border border-white/40 shadow-lg">
+			<Card className={`w-[500px] max-w-2xl ${MODAL_PANEL}`}>
 				<CardHeader className="flex flex-row items-center justify-between">
 					<CardTitle className="sidebar-gradient-text">Search</CardTitle>
 					<Button variant="ghost" size="icon" onClick={handleClose}>

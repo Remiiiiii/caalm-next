@@ -17,6 +17,7 @@ export type EnterpriseUploadContext =
 	| "contractPrimary"
 	| "licensePrimary"
 	| "attachment"
+	| "ticketAttachment"
 	| "generalDocument";
 
 type FormatDefinition = {
@@ -99,6 +100,24 @@ const ENTERPRISE_FORMATS: FormatDefinition[] = [
 		tier: "sometimes",
 		label: "PPT",
 	},
+	{
+		extension: "webm",
+		mimeTypes: ["video/webm"],
+		tier: "sometimes",
+		label: "WEBM",
+	},
+	{
+		extension: "mp4",
+		mimeTypes: ["video/mp4"],
+		tier: "sometimes",
+		label: "MP4",
+	},
+	{
+		extension: "mov",
+		mimeTypes: ["video/quicktime"],
+		tier: "sometimes",
+		label: "MOV",
+	},
 ];
 
 /** Explicit allowlists per upload surface (PPTX excluded from contract/license primary). */
@@ -117,6 +136,22 @@ const CONTEXT_EXTENSIONS: Record<EnterpriseUploadContext, readonly string[]> = {
 		"csv",
 		"pptx",
 		"ppt",
+		"webm",
+		"mp4",
+		"mov",
+	],
+	// Ticket drop-zone: contracts/licenses, screenshots, and tables. Video
+	// belongs on Record / Upload a video, not here.
+	ticketAttachment: [
+		"pdf",
+		"docx",
+		"doc",
+		"txt",
+		"png",
+		"jpg",
+		"jpeg",
+		"xlsx",
+		"csv",
 	],
 	generalDocument: [
 		"pdf",
@@ -130,6 +165,9 @@ const CONTEXT_EXTENSIONS: Record<EnterpriseUploadContext, readonly string[]> = {
 		"csv",
 		"pptx",
 		"ppt",
+		"webm",
+		"mp4",
+		"mov",
 	],
 };
 
@@ -230,6 +268,18 @@ export class EnterpriseFileFormatError extends Error {
 		super(message);
 		this.name = "EnterpriseFileFormatError";
 	}
+}
+
+const TICKET_RECORDING_EXTENSIONS = ["webm", "mp4", "mov"] as const;
+
+/** Screen clips from Record / Upload a video — not the ticket drop zone. */
+export function isTicketScreenRecordingFile(
+	file: Pick<File, "name">,
+): boolean {
+	const extension = getEnterpriseFileExtension(file.name);
+	return (TICKET_RECORDING_EXTENSIONS as readonly string[]).includes(
+		extension,
+	);
 }
 
 export function assertEnterpriseFileAllowed(

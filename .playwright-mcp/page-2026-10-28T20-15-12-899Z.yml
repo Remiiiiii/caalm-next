@@ -1,0 +1,702 @@
+- generic [active] [ref=f1e1]:
+  - button "Open Next.js Dev Tools" [ref=f1e7] [cursor=pointer]:
+    - generic [ref=f1e10]:
+      - text: Rendering
+      - generic [ref=f1e11]:
+        - generic [ref=f1e12]: .
+        - generic [ref=f1e13]: .
+        - generic [ref=f1e14]: .
+  - alert [ref=f1e15]
+  - main [ref=f1e16]:
+    - generic [ref=f1e17]:
+      - complementary [ref=f1e18]:
+        - generic [ref=f1e19]:
+          - link "CAALM CAALM" [ref=f1e20] [cursor=pointer]:
+            - /url: /
+            - img "CAALM" [ref=f1e22]
+            - generic [ref=f1e23]: CAALM
+          - button "Collapse sidebar" [expanded] [ref=f1e24] [cursor=pointer]
+        - navigation [ref=f1e27]:
+          - list [ref=f1e28]:
+            - generic [ref=f1e29]:
+              - generic [ref=f1e30]:
+                - listitem [ref=f1e31]:
+                  - generic [ref=f1e32]:
+                    - generic [ref=f1e33]: Super Admin
+                    - generic [ref=f1e38]: Dashboard
+                - list [ref=f1e40]:
+                  - listitem [ref=f1e41]:
+                    - link "Super Admin" [ref=f1e44] [cursor=pointer]:
+                      - /url: /dashboard/superadmin
+                      - paragraph [ref=f1e48]:
+                        - generic [ref=f1e49]: Super Admin
+                  - listitem [ref=f1e50]:
+                    - link "Department Manager" [ref=f1e53] [cursor=pointer]:
+                      - /url: /dashboard/departmentmanager
+                      - paragraph [ref=f1e58]:
+                        - generic [ref=f1e59]: Department Manager
+                  - listitem [ref=f1e60]:
+                    - link "IT" [ref=f1e63] [cursor=pointer]:
+                      - /url: /dashboard/it
+                      - paragraph [ref=f1e68]:
+                        - generic [ref=f1e69]: IT
+              - generic [ref=f1e70]:
+                - listitem [ref=f1e71]:
+                  - generic [ref=f1e72]: Calendar
+                - list [ref=f1e76]:
+                  - listitem [ref=f1e77]:
+                    - link "Calendar View" [ref=f1e80] [cursor=pointer]:
+                      - /url: /calendar
+                      - paragraph [ref=f1e82]:
+                        - generic [ref=f1e83]: Calendar View
+                  - listitem [ref=f1e84]:
+                    - link "Event Check-in" [ref=f1e87] [cursor=pointer]:
+                      - /url: /events/check-in
+                      - paragraph [ref=f1e89]:
+                        - generic [ref=f1e90]: Event Check-in
+              - generic [ref=f1e91]:
+                - listitem [ref=f1e92]:
+                  - generic [ref=f1e93]: Contracts
+                - list [ref=f1e97]:
+                  - listitem [ref=f1e98]:
+                    - link "All Contracts" [ref=f1e101] [cursor=pointer]:
+                      - /url: /contracts
+                      - paragraph [ref=f1e103]:
+                        - generic [ref=f1e104]: All Contracts
+                  - listitem [ref=f1e105]:
+                    - link "Import" [ref=f1e108] [cursor=pointer]:
+                      - /url: /contracts/import
+                      - paragraph [ref=f1e110]:
+                        - generic [ref=f1e111]: Import
+                  - listitem [ref=f1e112]:
+                    - link "My Contracts" [ref=f1e115] [cursor=pointer]:
+                      - /url: /my-contracts
+                      - paragraph [ref=f1e117]:
+                        - generic [ref=f1e118]: My Contracts
+                  - listitem [ref=f1e119]:
+                    - link "Proposals & Approvals" [ref=f1e122] [cursor=pointer]:
+                      - /url: /contracts/approvals
+                      - paragraph [ref=f1e124]:
+                        - generic [ref=f1e125]: Proposals & Approvals
+                  - listitem [ref=f1e126]:
+                    - link "Government Contracts" [ref=f1e129] [cursor=pointer]:
+                      - /url: /contracts/government-contracts
+                      - paragraph [ref=f1e131]:
+                        - generic [ref=f1e132]: Government Contracts
+                  - listitem [ref=f1e133]:
+                    - link "Create Contract" [ref=f1e136] [cursor=pointer]:
+                      - /url: /contracts/create
+                      - paragraph [ref=f1e138]:
+                        - generic [ref=f1e139]: Create Contract
+                  - listitem [ref=f1e140]:
+                    - link "Clause Library" [ref=f1e143] [cursor=pointer]:
+                      - /url: /contracts/library
+                      - paragraph [ref=f1e145]:
+                        - generic [ref=f1e146]: Clause Library
+                  - listitem [ref=f1e147]:
+                    - link "Contract Templates" [ref=f1e150] [cursor=pointer]:
+                      - /url: /contracts/templates
+                      - paragraph [ref=f1e156]:
+                        - generic [ref=f1e157]: Contract Templates
+                  - listitem [ref=f1e158]:
+                    - link "RFP Proposals" [ref=f1e161] [cursor=pointer]:
+                      - /url: /contracts/proposals
+                      - paragraph [ref=f1e163]:
+                        - generic [ref=f1e164]: RFP Proposals
+                  - listitem [ref=f1e165]:
+                    - link "Funding & Retention" [ref=f1e168] [cursor=pointer]:
+                      - /url: /contracts/funding-retention
+                      - paragraph [ref=f1e170]:
+                        - generic [ref=f1e171]: Funding & Retention
+                  - listitem [ref=f1e172]:
+                    - link "Import obligations" [ref=f1e175] [cursor=pointer]:
+                      - /url: /funding/obligations/import
+                      - paragraph [ref=f1e177]:
+                        - generic [ref=f1e178]: Import obligations
+              - generic [ref=f1e179]:
+                - listitem [ref=f1e180]:
+                  - generic [ref=f1e181]: Licenses
+                - list [ref=f1e185]:
+                  - listitem [ref=f1e186]:
+                    - link "All Licenses" [ref=f1e189] [cursor=pointer]:
+                      - /url: /licenses
+                      - paragraph [ref=f1e191]:
+                        - generic [ref=f1e192]: All Licenses
+                  - listitem [ref=f1e193]:
+                    - link "Import" [ref=f1e196] [cursor=pointer]:
+                      - /url: /licenses/import
+                      - paragraph [ref=f1e198]:
+                        - generic [ref=f1e199]: Import
+                  - listitem [ref=f1e200]:
+                    - link "Department Licenses" [ref=f1e203] [cursor=pointer]:
+                      - /url: /licenses/department
+                      - paragraph [ref=f1e205]:
+                        - generic [ref=f1e206]: Department Licenses
+                  - listitem [ref=f1e207]:
+                    - link "Proposals & Approvals" [ref=f1e210] [cursor=pointer]:
+                      - /url: /licenses/approvals
+                      - paragraph [ref=f1e212]:
+                        - generic [ref=f1e213]: Proposals & Approvals
+              - generic [ref=f1e214]:
+                - listitem [ref=f1e215]:
+                  - generic [ref=f1e216]: Constituents
+                - list [ref=f1e220]:
+                  - listitem [ref=f1e221]:
+                    - link "All Constituents" [ref=f1e224] [cursor=pointer]:
+                      - /url: /constituents
+                      - paragraph [ref=f1e226]:
+                        - generic [ref=f1e227]: All Constituents
+                  - listitem [ref=f1e228]:
+                    - link "Import" [ref=f1e231] [cursor=pointer]:
+                      - /url: /constituents/import
+                      - paragraph [ref=f1e233]:
+                        - generic [ref=f1e234]: Import
+                  - listitem [ref=f1e235]:
+                    - link "Stewardship Queue" [ref=f1e238] [cursor=pointer]:
+                      - /url: /constituents/stewardship
+                      - paragraph [ref=f1e240]:
+                        - generic [ref=f1e241]: Stewardship Queue
+                  - listitem [ref=f1e242]:
+                    - link "Development" [ref=f1e245] [cursor=pointer]:
+                      - /url: /dashboard/development
+                      - paragraph [ref=f1e247]:
+                        - generic [ref=f1e248]: Development
+                  - listitem [ref=f1e249]:
+                    - link "Gifts" [ref=f1e252] [cursor=pointer]:
+                      - /url: /gifts
+                      - paragraph [ref=f1e254]:
+                        - generic [ref=f1e255]: Gifts
+                  - listitem [ref=f1e256]:
+                    - link "Import gifts" [ref=f1e259] [cursor=pointer]:
+                      - /url: /gifts/import
+                      - paragraph [ref=f1e261]:
+                        - generic [ref=f1e262]: Import gifts
+                  - listitem [ref=f1e263]:
+                    - link "Campaigns" [ref=f1e266] [cursor=pointer]:
+                      - /url: /campaigns
+                      - paragraph [ref=f1e268]:
+                        - generic [ref=f1e269]: Campaigns
+                  - listitem [ref=f1e270]:
+                    - link "Import campaigns" [ref=f1e273] [cursor=pointer]:
+                      - /url: /campaigns/import
+                      - paragraph [ref=f1e275]:
+                        - generic [ref=f1e276]: Import campaigns
+              - generic [ref=f1e277]:
+                - listitem [ref=f1e278]:
+                  - generic [ref=f1e279]: Audits
+                - list [ref=f1e283]:
+                  - listitem [ref=f1e284]:
+                    - link "Audit Readiness" [ref=f1e287] [cursor=pointer]:
+                      - /url: /audits/readiness
+                      - paragraph [ref=f1e289]:
+                        - generic [ref=f1e290]: Audit Readiness
+                  - listitem [ref=f1e291]:
+                    - link "Compliance Status" [ref=f1e294] [cursor=pointer]:
+                      - /url: /audits/status
+                      - paragraph [ref=f1e296]:
+                        - generic [ref=f1e297]: Compliance Status
+                  - listitem [ref=f1e298]:
+                    - link "Audit Logs" [ref=f1e301] [cursor=pointer]:
+                      - /url: /audits/audit
+                      - paragraph [ref=f1e303]:
+                        - generic [ref=f1e304]: Audit Logs
+              - generic [ref=f1e305]:
+                - listitem [ref=f1e306]:
+                  - generic [ref=f1e307]: Files
+                - list [ref=f1e311]:
+                  - listitem [ref=f1e312]:
+                    - link "Uploads" [ref=f1e315] [cursor=pointer]:
+                      - /url: /uploads
+                      - paragraph [ref=f1e317]:
+                        - generic [ref=f1e318]: Uploads
+                  - listitem [ref=f1e319]:
+                    - link "Documents" [ref=f1e322] [cursor=pointer]:
+                      - /url: /documents
+                      - paragraph [ref=f1e327]:
+                        - generic [ref=f1e328]: Documents
+                  - listitem [ref=f1e329]:
+                    - link "Images" [ref=f1e332] [cursor=pointer]:
+                      - /url: /images
+                      - paragraph [ref=f1e334]:
+                        - generic [ref=f1e335]: Images
+                  - listitem [ref=f1e336]:
+                    - link "Media" [ref=f1e339] [cursor=pointer]:
+                      - /url: /media
+                      - paragraph [ref=f1e341]:
+                        - generic [ref=f1e342]: Media
+                  - listitem [ref=f1e343]:
+                    - link "Others" [ref=f1e346] [cursor=pointer]:
+                      - /url: /others
+                      - paragraph [ref=f1e348]:
+                        - generic [ref=f1e349]: Others
+              - generic [ref=f1e350]:
+                - listitem [ref=f1e351]:
+                  - generic [ref=f1e352]: Team
+                - list [ref=f1e356]:
+                  - listitem [ref=f1e357]:
+                    - link "User Management" [ref=f1e360] [cursor=pointer]:
+                      - /url: /dashboard/user-management
+                      - paragraph [ref=f1e362]:
+                        - generic [ref=f1e363]: User Management
+                  - listitem [ref=f1e364]:
+                    - link "Import users" [ref=f1e367] [cursor=pointer]:
+                      - /url: /dashboard/user-management/import
+                      - paragraph [ref=f1e369]:
+                        - generic [ref=f1e370]: Import users
+                  - listitem [ref=f1e371]:
+                    - link "Role Management" [ref=f1e374] [cursor=pointer]:
+                      - /url: /dashboard/admin/roles
+                      - paragraph [ref=f1e376]:
+                        - generic [ref=f1e377]: Role Management
+                  - listitem [ref=f1e378]:
+                    - link "Assign Tasks" [ref=f1e381] [cursor=pointer]:
+                      - /url: /team/tasks
+                      - paragraph [ref=f1e383]:
+                        - generic [ref=f1e384]: Assign Tasks
+              - generic [ref=f1e385]:
+                - listitem [ref=f1e386]:
+                  - generic [ref=f1e387]: Reports & Analytics
+                - list [ref=f1e391]:
+                  - listitem [ref=f1e392]:
+                    - link "Overview" [ref=f1e395] [cursor=pointer]:
+                      - /url: /analytics
+                      - paragraph [ref=f1e397]:
+                        - generic [ref=f1e398]: Overview
+                  - listitem [ref=f1e399]:
+                    - link "Quick View" [ref=f1e402] [cursor=pointer]:
+                      - /url: /analytics/quick-view
+                      - paragraph [ref=f1e404]:
+                        - generic [ref=f1e405]: Quick View
+                  - listitem [ref=f1e406]:
+                    - link "C Suite" [ref=f1e409] [cursor=pointer]:
+                      - /url: /analytics/c-suite
+                      - paragraph [ref=f1e411]:
+                        - generic [ref=f1e412]: C Suite
+              - generic [ref=f1e413]:
+                - listitem [ref=f1e414]:
+                  - generic [ref=f1e415]: My Roles & Permissions
+                - list [ref=f1e419]:
+                  - listitem [ref=f1e420]:
+                    - link "View My Access" [ref=f1e423] [cursor=pointer]:
+                      - /url: /settings/permissions
+                      - paragraph [ref=f1e425]:
+                        - generic [ref=f1e426]: View My Access
+        - generic [ref=f1e427]:
+          - separator [aria-hidden] [ref=f1e428]
+          - generic [ref=f1e430]:
+            - paragraph [ref=f1e434]: Storage
+            - generic [ref=f1e435]: Loading storage…
+          - separator [aria-hidden] [ref=f1e438]
+          - generic [ref=f1e440]:
+            - paragraph [ref=f1e441]: Victor Ramirez
+            - generic [ref=f1e442]:
+              - paragraph [ref=f1e444]: Loading plan…
+              - button "Account menu" [ref=f1e445] [cursor=pointer]
+      - generic [ref=f1e450]:
+        - generic [ref=f1e452]:
+          - generic [ref=f1e454]:
+            - button "Audit" [ref=f1e455] [cursor=pointer]
+            - button "Schedule" [ref=f1e456] [cursor=pointer]
+            - button "Report" [ref=f1e457] [cursor=pointer]
+          - generic [ref=f1e458]:
+            - button "Ask CAALM" [ref=f1e459] [cursor=pointer]
+            - generic [ref=f1e463]:
+              - button "Profile picture" [ref=f1e466] [cursor=pointer]:
+                - img "Victor Ramirez" [ref=f1e468]
+              - button "Open notifications" [ref=f1e470] [cursor=pointer]
+              - button "Open mail" [ref=f1e471] [cursor=pointer]
+              - button "Log out" [ref=f1e472] [cursor=pointer]
+        - generic [ref=f1e474]:
+          - generic [ref=f1e475]:
+            - heading "Contracts" [level=1] [ref=f1e476]
+            - paragraph [ref=f1e477]: View and manage your organization's contracts — track status, renewals, and ownership in one place.
+          - generic [ref=f1e479]:
+            - link "Create contract" [ref=f1e480] [cursor=pointer]:
+              - /url: /contracts/create
+            - button "Export" [ref=f1e482] [cursor=pointer]
+            - button "Test Expiry Modal" [ref=f1e484] [cursor=pointer]
+          - generic [ref=f1e485]:
+            - generic [ref=f1e489]:
+              - paragraph [ref=f1e490]: Needs attention
+              - paragraph [ref=f1e491]:
+                - generic [ref=f1e492]: 3 expiring within 90 days
+            - button "View expiring" [ref=f1e494] [cursor=pointer]
+          - generic [ref=f1e496]:
+            - generic [ref=f1e499]:
+              - paragraph [ref=f1e504]: Total Value
+              - generic [ref=f1e505]: $14.1M
+              - generic [ref=f1e507]: Sum of contract amounts
+              - generic [ref=f1e509]:
+                - img "Active $1.5M, Pending $12.1M, Expired $535,343.00" [ref=f1e510]:
+                  - 'generic "Active: $1.5M" [ref=f1e511]'
+                  - 'generic "Pending: $12.1M" [ref=f1e512]'
+                  - 'generic "Expired: $535,343.00" [ref=f1e513]'
+                - generic [ref=f1e514]:
+                  - generic [ref=f1e515]: Active — $1.5M
+                  - generic [ref=f1e517]: Pending — $12.1M
+                  - generic [ref=f1e519]: Expired — $535,343.00
+            - button "Total Contracts 15 Across this list · click to show all Active 3, Pending 7, Expired 5 Active — 3 Pending — 7 Expired — 5" [ref=f1e521]:
+              - generic [ref=f1e524] [cursor=pointer]:
+                - paragraph [ref=f1e530]: Total Contracts
+                - generic [ref=f1e531]: "15"
+                - generic [ref=f1e533]: Across this list · click to show all
+                - generic [ref=f1e535]:
+                  - img "Active 3, Pending 7, Expired 5" [ref=f1e536]:
+                    - 'generic "Active: 3" [ref=f1e537]'
+                    - 'generic "Pending: 7" [ref=f1e538]'
+                    - 'generic "Expired: 5" [ref=f1e539]'
+                  - generic [ref=f1e540]:
+                    - generic [ref=f1e541]: Active — 3
+                    - generic [ref=f1e543]: Pending — 7
+                    - generic [ref=f1e545]: Expired — 5
+            - button "Expiring Soon 3 Within 90 days · click to filter 30d 0, 60d 3, 90d 0 30d — 0 60d — 3 90d — 0" [ref=f1e547]:
+              - generic [ref=f1e550] [cursor=pointer]:
+                - paragraph [ref=f1e555]: Expiring Soon
+                - generic [ref=f1e556]: "3"
+                - generic [ref=f1e561]: Within 90 days · click to filter
+                - generic [ref=f1e563]:
+                  - img "30d 0, 60d 3, 90d 0" [ref=f1e564]:
+                    - 'generic "60d: 3" [ref=f1e565]'
+                  - generic [ref=f1e566]:
+                    - generic [ref=f1e567]: 30d — 0
+                    - generic [ref=f1e569]: 60d — 3
+                    - generic [ref=f1e571]: 90d — 0
+            - button "Active 3 20% of total · click to filter 3 of 15 contracts are live" [ref=f1e573]:
+              - generic [ref=f1e576] [cursor=pointer]:
+                - paragraph [ref=f1e582]: Active
+                - generic [ref=f1e583]: "3"
+                - generic [ref=f1e585]: 20% of total · click to filter
+                - paragraph [ref=f1e592]: 3 of 15 contracts are live
+          - generic [ref=f1e595]:
+            - generic [ref=f1e596]:
+              - navigation "Filter by status" [ref=f1e597]:
+                - tablist [ref=f1e598]:
+                  - tab "All 15" [selected] [ref=f1e599] [cursor=pointer]:
+                    - generic [ref=f1e600]: All
+                    - generic [ref=f1e601]: "15"
+                  - tab "Active 3" [ref=f1e602] [cursor=pointer]:
+                    - generic [ref=f1e603]: Active
+                    - generic [ref=f1e604]: "3"
+                  - tab "Pending 7" [ref=f1e605] [cursor=pointer]:
+                    - generic [ref=f1e606]: Pending
+                    - generic [ref=f1e607]: "7"
+                  - tab "Expiring 3" [ref=f1e608] [cursor=pointer]:
+                    - generic [ref=f1e609]: Expiring
+                    - generic [ref=f1e610]: "3"
+                  - tab "Expired 5" [ref=f1e611] [cursor=pointer]:
+                    - generic [ref=f1e612]: Expired
+                    - generic [ref=f1e613]: "5"
+              - generic [ref=f1e614]:
+                - textbox "Search contracts" [ref=f1e617]:
+                  - /placeholder: Search contracts...
+                - generic [ref=f1e618]:
+                  - tablist "Contract views" [ref=f1e619]:
+                    - tab "Card view" [ref=f1e620] [cursor=pointer]
+                    - tab "Table view" [selected] [ref=f1e626] [cursor=pointer]
+                  - button "Views" [ref=f1e629] [cursor=pointer]
+                  - button "Filter" [ref=f1e631] [cursor=pointer]
+                  - button "Sort by" [ref=f1e633] [cursor=pointer]
+            - table [ref=f1e638]:
+              - rowgroup [ref=f1e639]:
+                - row [ref=f1e640]:
+                  - columnheader [ref=f1e641]:
+                    - checkbox "Select all visible contracts" [ref=f1e642] [cursor=pointer]
+                  - columnheader "Contract" [ref=f1e643]
+                  - columnheader "Status" [ref=f1e644]
+                  - columnheader "Value" [ref=f1e645]
+                  - columnheader "Size" [ref=f1e646]
+                  - columnheader "Uploaded On" [ref=f1e647]
+                  - columnheader "Expires On" [ref=f1e648]
+                  - columnheader "Department" [ref=f1e649]
+                  - columnheader "Assigned To" [ref=f1e650]
+                  - columnheader "By" [ref=f1e651]
+                  - columnheader "Actions" [ref=f1e652]
+              - rowgroup [ref=f1e653]:
+                - row [ref=f1e654] [cursor=pointer]:
+                  - cell [ref=f1e655]:
+                    - checkbox "Select NIH SBIR Phase I – test lead" [ref=f1e656]
+                  - cell [ref=f1e657]:
+                    - generic [ref=f1e658]:
+                      - figure [ref=f1e659]:
+                        - img "thumbnail" [ref=f1e660]
+                      - paragraph [ref=f1e661]: NIH SBIR Phase ...
+                  - cell "Open approval workflow for NIH SBIR Phase I – test lead Stuck >3 days 0 of 2 approved" [ref=f1e662]:
+                    - generic [ref=f1e664]:
+                      - generic [ref=f1e665]:
+                        - button "Open approval workflow for NIH SBIR Phase I – test lead" [ref=f1e666]: Pending Review
+                        - generic [ref=f1e667]: Stuck >3 days
+                      - generic [ref=f1e668]: 0 of 2 approved
+                  - cell "$175,000.00" [ref=f1e669]
+                  - cell "0 Bytes" [ref=f1e670]
+                  - cell "14 Sep, 3:55pm" [ref=f1e671]
+                  - cell "13 Dec, 2026 60d" [ref=f1e672]:
+                    - generic [ref=f1e673]:
+                      - text: 13 Dec, 2026
+                      - generic [ref=f1e674]: 60d
+                  - cell "Sales" [ref=f1e675]
+                  - cell "-" [ref=f1e676]
+                  - cell "Loading..." [ref=f1e677]
+                  - cell [ref=f1e681]:
+                    - button [ref=f1e682]:
+                      - img "dots" [ref=f1e683]
+                - row [ref=f1e684] [cursor=pointer]:
+                  - cell [ref=f1e685]:
+                    - checkbox "Select Government Contract - Solvent Technologies, Inc." [ref=f1e686]
+                  - cell [ref=f1e687]:
+                    - generic [ref=f1e688]:
+                      - figure [ref=f1e689]:
+                        - img "thumbnail" [ref=f1e690]
+                      - paragraph [ref=f1e691]: Government Cont...
+                  - cell "Open approval workflow for Government Contract - Solvent Technologies, Inc. Not sent" [ref=f1e692]:
+                    - generic [ref=f1e694]:
+                      - button "Open approval workflow for Government Contract - Solvent Technologies, Inc." [ref=f1e696]: Pending Signature
+                      - generic [ref=f1e697]: Not sent
+                  - cell "$2.5M" [ref=f1e698]
+                  - cell "65.1 KB" [ref=f1e699]
+                  - cell "12 Sep, 12:29pm" [ref=f1e700]
+                  - cell "30 Sep, 2027" [ref=f1e701]
+                  - cell "Executive" [ref=f1e703]
+                  - cell "Loading..." [ref=f1e704]
+                  - cell "Loading..." [ref=f1e708]
+                  - cell [ref=f1e712]:
+                    - button [ref=f1e713]:
+                      - img "dots" [ref=f1e714]
+                - row [ref=f1e715] [cursor=pointer]:
+                  - cell [ref=f1e716]:
+                    - checkbox "Select Government Contract" [ref=f1e717]
+                  - cell [ref=f1e718]:
+                    - generic [ref=f1e719]:
+                      - figure [ref=f1e720]:
+                        - img "thumbnail" [ref=f1e721]
+                      - paragraph [ref=f1e722]: Government Cont...
+                  - cell "Negotiation" [ref=f1e723]
+                  - cell "$2.5M" [ref=f1e728]
+                  - cell "65.1 KB" [ref=f1e729]
+                  - cell "10 Sep, 5:14pm" [ref=f1e730]
+                  - cell "30 Sep, 2027" [ref=f1e731]
+                  - cell "Executive" [ref=f1e733]
+                  - cell "Loading..." [ref=f1e734]
+                  - cell "Loading..." [ref=f1e738]
+                  - cell [ref=f1e742]:
+                    - button [ref=f1e743]:
+                      - img "dots" [ref=f1e744]
+                - row [ref=f1e745] [cursor=pointer]:
+                  - cell [ref=f1e746]:
+                    - checkbox "Select Community-Based Behavioral Health & Child Welfare Support Services" [ref=f1e747]
+                  - cell [ref=f1e748]:
+                    - generic [ref=f1e749]:
+                      - figure [ref=f1e750]:
+                        - img "thumbnail" [ref=f1e751]
+                      - paragraph [ref=f1e752]: Community-Based...
+                  - cell [ref=f1e753]:
+                    - button "Open approval workflow for Community-Based Behavioral Health & Child Welfare Support Services" [ref=f1e757]: Active
+                  - cell "$487,500.00" [ref=f1e758]
+                  - cell "11.0 KB" [ref=f1e759]
+                  - cell "9 Sep, 5:01pm" [ref=f1e760]
+                  - cell "30 Sep, 2027" [ref=f1e761]
+                  - cell "Operations" [ref=f1e763]
+                  - cell "Loading..." [ref=f1e764]
+                  - cell "Loading..." [ref=f1e768]
+                  - cell [ref=f1e772]:
+                    - button [ref=f1e773]:
+                      - img "dots" [ref=f1e774]
+                - row [ref=f1e775] [cursor=pointer]:
+                  - cell [ref=f1e776]:
+                    - checkbox "Select Community-Based Behavioral Health & Child Welfare Support Services" [ref=f1e777]
+                  - cell [ref=f1e778]:
+                    - generic [ref=f1e779]:
+                      - figure [ref=f1e780]:
+                        - img "thumbnail" [ref=f1e781]
+                      - paragraph [ref=f1e782]: Community-Based...
+                  - cell [ref=f1e783]:
+                    - button "Open approval workflow for Community-Based Behavioral Health & Child Welfare Support Services" [ref=f1e787]: Active
+                  - cell "$487,500.00" [ref=f1e788]
+                  - cell "11.0 KB" [ref=f1e789]
+                  - cell "8 Sep, 9:49pm" [ref=f1e790]
+                  - cell "30 Sep, 2027" [ref=f1e791]
+                  - cell "Executive" [ref=f1e793]
+                  - cell "Loading..." [ref=f1e794]
+                  - cell "Loading..." [ref=f1e798]
+                  - cell [ref=f1e802]:
+                    - button [ref=f1e803]:
+                      - img "dots" [ref=f1e804]
+                - row [ref=f1e805] [cursor=pointer]:
+                  - cell [ref=f1e806]:
+                    - checkbox "Select GRANT AGREEMENT" [ref=f1e807]
+                  - cell [ref=f1e808]:
+                    - generic [ref=f1e809]:
+                      - figure [ref=f1e810]:
+                        - img "thumbnail" [ref=f1e811]
+                      - paragraph [ref=f1e812]: GRANT AGREEMENT
+                  - cell "Open approval workflow for GRANT AGREEMENT Stuck >3 days 0 of 2 approved" [ref=f1e813]:
+                    - generic [ref=f1e815]:
+                      - generic [ref=f1e816]:
+                        - button "Open approval workflow for GRANT AGREEMENT" [ref=f1e817]: Pending Review
+                        - generic [ref=f1e818]: Stuck >3 days
+                      - generic [ref=f1e819]: 0 of 2 approved
+                  - cell "$500,000.00" [ref=f1e820]
+                  - cell "90.2 KB" [ref=f1e821]
+                  - cell "7 Sep, 2:54pm" [ref=f1e822]
+                  - cell "1 Dec, 2026 60d" [ref=f1e823]:
+                    - generic [ref=f1e824]:
+                      - text: 1 Dec, 2026
+                      - generic [ref=f1e825]: 60d
+                  - cell "Administration" [ref=f1e826]
+                  - cell "-" [ref=f1e827]
+                  - cell "Loading..." [ref=f1e828]
+                  - cell [ref=f1e832]:
+                    - button [ref=f1e833]:
+                      - img "dots" [ref=f1e834]
+                - row [ref=f1e835] [cursor=pointer]:
+                  - cell [ref=f1e836]:
+                    - checkbox "Select FY2026 Community Grant Agreement" [ref=f1e837]
+                  - cell [ref=f1e838]:
+                    - generic [ref=f1e839]:
+                      - figure [ref=f1e840]:
+                        - img "thumbnail" [ref=f1e841]
+                      - paragraph [ref=f1e842]: FY2026 Communit...
+                  - cell "Open approval workflow for FY2026 Community Grant Agreement Stuck >3 days" [ref=f1e843]:
+                    - generic [ref=f1e846]:
+                      - button "Open approval workflow for FY2026 Community Grant Agreement" [ref=f1e847]: Expired
+                      - generic [ref=f1e848]: Stuck >3 days
+                  - cell "$500,000.00" [ref=f1e849]
+                  - cell "179.3 KB" [ref=f1e850]
+                  - cell "6 Sep, 12:01pm" [ref=f1e851]
+                  - cell "13 Sep, 2026 Expired" [ref=f1e852]:
+                    - generic [ref=f1e853]:
+                      - text: 13 Sep, 2026
+                      - generic [ref=f1e854]: Expired
+                  - cell "Executive" [ref=f1e855]
+                  - cell "-" [ref=f1e856]
+                  - cell "Loading..." [ref=f1e857]
+                  - cell [ref=f1e861]:
+                    - button [ref=f1e862]:
+                      - img "dots" [ref=f1e863]
+                - row [ref=f1e864] [cursor=pointer]:
+                  - cell [ref=f1e865]:
+                    - checkbox "Select Test Grant Agreement" [ref=f1e866]
+                  - cell [ref=f1e867]:
+                    - generic [ref=f1e868]:
+                      - figure [ref=f1e869]:
+                        - img "thumbnail" [ref=f1e870]
+                      - paragraph [ref=f1e871]: Test Grant Agre...
+                  - cell "Negotiation Stuck >3 days" [ref=f1e872]:
+                    - generic [ref=f1e875]:
+                      - generic [ref=f1e876]: Negotiation
+                      - generic [ref=f1e877]: Stuck >3 days
+                  - cell "$5.0M" [ref=f1e878]
+                  - cell "0 Bytes" [ref=f1e879]
+                  - cell "5 Sep, 7:41pm" [ref=f1e880]
+                  - cell "12 May, 2027" [ref=f1e881]
+                  - cell "Executive" [ref=f1e883]
+                  - cell "-" [ref=f1e884]
+                  - cell "Loading..." [ref=f1e885]
+                  - cell [ref=f1e889]:
+                    - button [ref=f1e890]:
+                      - img "dots" [ref=f1e891]
+                - row [ref=f1e892] [cursor=pointer]:
+                  - cell [ref=f1e893]:
+                    - checkbox "Select Test Grant Contract" [ref=f1e894]
+                  - cell [ref=f1e895]:
+                    - generic [ref=f1e896]:
+                      - figure [ref=f1e897]:
+                        - img "thumbnail" [ref=f1e898]
+                      - paragraph [ref=f1e899]: Test Grant Cont...
+                  - cell "Open approval workflow for Test Grant Contract Stuck >3 days 0 of 2 approved" [ref=f1e900]:
+                    - generic [ref=f1e902]:
+                      - generic [ref=f1e903]:
+                        - button "Open approval workflow for Test Grant Contract" [ref=f1e904]: Pending Review
+                        - generic [ref=f1e905]: Stuck >3 days
+                      - generic [ref=f1e906]: 0 of 2 approved
+                  - cell "$500,000.00" [ref=f1e907]
+                  - cell "168.5 KB" [ref=f1e908]
+                  - cell "5 Sep, 3:31pm" [ref=f1e909]
+                  - cell "1 Dec, 2026 60d" [ref=f1e910]:
+                    - generic [ref=f1e911]:
+                      - text: 1 Dec, 2026
+                      - generic [ref=f1e912]: 60d
+                  - cell "Executive" [ref=f1e913]
+                  - cell "-" [ref=f1e914]
+                  - cell "Loading..." [ref=f1e915]
+                  - cell [ref=f1e919]:
+                    - button [ref=f1e920]:
+                      - img "dots" [ref=f1e921]
+                - row [ref=f1e922] [cursor=pointer]:
+                  - cell [ref=f1e923]:
+                    - checkbox "Select CAALM HubSpot Test Deal" [ref=f1e924]
+                  - cell [ref=f1e925]:
+                    - generic [ref=f1e926]:
+                      - figure [ref=f1e927]:
+                        - img "thumbnail" [ref=f1e928]
+                      - paragraph [ref=f1e929]: CAALM HubSpot T...
+                  - cell "Open approval workflow for CAALM HubSpot Test Deal Stuck >3 days" [ref=f1e930]:
+                    - generic [ref=f1e933]:
+                      - button "Open approval workflow for CAALM HubSpot Test Deal" [ref=f1e934]: Expired
+                      - generic [ref=f1e935]: Stuck >3 days
+                  - cell "$1,000.00" [ref=f1e936]
+                  - cell "0 Bytes" [ref=f1e937]
+                  - cell "3 Sep, 5:43pm" [ref=f1e938]
+                  - cell "30 Sep, 2026 Expired" [ref=f1e939]:
+                    - generic [ref=f1e940]:
+                      - text: 30 Sep, 2026
+                      - generic [ref=f1e941]: Expired
+                  - cell "Sales" [ref=f1e942]
+                  - cell "-" [ref=f1e943]
+                  - cell "Loading..." [ref=f1e944]
+                  - cell [ref=f1e948]:
+                    - button [ref=f1e949]:
+                      - img "dots" [ref=f1e950]
+                - row [ref=f1e951] [cursor=pointer]:
+                  - cell [ref=f1e952]:
+                    - checkbox "Select Acme Support vices" [ref=f1e953]
+                  - cell [ref=f1e954]:
+                    - generic [ref=f1e955]:
+                      - figure [ref=f1e956]:
+                        - img "thumbnail" [ref=f1e957]
+                      - paragraph [ref=f1e958]: Acme Support vi...
+                  - cell [ref=f1e959]:
+                    - button "Open approval workflow for Acme Support vices" [ref=f1e963]: Expired
+                  - cell "$34,343.00" [ref=f1e964]
+                  - cell "187.3 KB" [ref=f1e965]
+                  - cell "2 Sep, 5:00pm" [ref=f1e966]
+                  - cell "1 Sep, 2026 Expired" [ref=f1e967]:
+                    - generic [ref=f1e968]:
+                      - text: 1 Sep, 2026
+                      - generic [ref=f1e969]: Expired
+                  - cell "Executive" [ref=f1e970]
+                  - cell "-" [ref=f1e971]
+                  - cell "Loading..." [ref=f1e972]
+                  - cell [ref=f1e976]:
+                    - button [ref=f1e977]:
+                      - img "dots" [ref=f1e978]
+                - row [ref=f1e979] [cursor=pointer]:
+                  - cell [ref=f1e980]:
+                    - checkbox "Select Test" [ref=f1e981]
+                  - cell [ref=f1e982]:
+                    - generic [ref=f1e983]:
+                      - figure [ref=f1e984]:
+                        - img "thumbnail" [ref=f1e985]
+                      - paragraph [ref=f1e986]: Test
+                  - cell "Open approval workflow for Test Stuck >3 days" [ref=f1e987]:
+                    - generic [ref=f1e990]:
+                      - button "Open approval workflow for Test" [ref=f1e991]: Pending Review
+                      - generic [ref=f1e992]: Stuck >3 days
+                  - cell "$1.0M" [ref=f1e993]
+                  - cell "1.2 KB" [ref=f1e994]
+                  - cell "28 Aug, 8:10pm" [ref=f1e995]
+                  - cell "27 Feb, 2028" [ref=f1e996]
+                  - cell "Executive" [ref=f1e998]
+                  - cell "-" [ref=f1e999]
+                  - cell "Loading..." [ref=f1e1000]
+                  - cell [ref=f1e1004]:
+                    - button [ref=f1e1005]:
+                      - img "dots" [ref=f1e1006]
+            - navigation "Contracts pagination" [ref=f1e1007]:
+              - generic [ref=f1e1008]: Showing 1–12 of 15 contracts
+              - button "Previous" [disabled] [ref=f1e1009]
+              - generic [ref=f1e1012]: Page 1 of 2
+              - button "Next" [ref=f1e1013] [cursor=pointer]
+      - button "Report an issue" [ref=f1e1016] [cursor=pointer]:
+        - generic [ref=f1e1017]: Report issue
+  - region "Notifications (F8)":
+    - list

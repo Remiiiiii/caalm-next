@@ -15,7 +15,7 @@ export default function Page() {
 					Manage roles and permissions in the admin roles console.
 				</p>
 				<div className="flex flex-wrap gap-3">
-					<Button asChild className="primary-btn px-3 sm:px-4 cursor-pointer">
+					<Button asChild variant="brand" className="cursor-pointer">
 						<Link href="/dashboard/admin/roles">Open Role Management</Link>
 					</Button>
 					<Button asChild variant="outline" className="cursor-pointer">

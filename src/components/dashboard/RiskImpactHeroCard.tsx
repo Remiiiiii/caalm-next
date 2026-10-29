@@ -14,6 +14,7 @@ import type {
 	RiskImpactTrend,
 } from "@/lib/dashboard/risk-impact.types";
 import { formatRiskUsdExact } from "@/lib/dashboard/risk-impact-events";
+import { useCtaButtonClass } from "@/lib/ui/use-cta-button-class";
 
 const COL_PAD = "flex flex-col justify-start gap-3.5 p-5 sm:p-6";
 const COL_RULE =
@@ -173,6 +174,7 @@ export function RiskImpactHeroCard({
 	error,
 	onRetry,
 }: RiskImpactHeroCardProps) {
+	const cta = useCtaButtonClass();
 	const reduceMotion = useReducedMotion();
 	const breakdownHref = "/analytics/risk-averted";
 
@@ -238,7 +240,7 @@ export function RiskImpactHeroCard({
 						<Button
 							type="button"
 							variant="outline"
-							className="primary-btn px-3 sm:px-4"
+							className={cta}
 							onClick={onRetry}
 						>
 							<RefreshCw className="h-4 w-4" />
@@ -357,10 +359,7 @@ export function RiskImpactHeroCard({
 								value={snapshot.monitoring.clausesFlagged}
 							/>
 							<div className="flex justify-end pt-0.5">
-								<Button
-									asChild
-									className="primary-btn px-3 sm:px-4 gap-1.5 text-[12.5px] font-semibold"
-								>
+								<Button asChild className={cta}>
 									<Link href={breakdownHref}>
 										View breakdown
 										<ChevronRight className="h-3.5 w-3.5" />

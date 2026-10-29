@@ -34,6 +34,7 @@ import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
 import "react-pdf/dist/Page/TextLayer.css";
+import { MODAL_OVERLAY, MODAL_PANEL } from "@/lib/ui/modal-styles";
 
 // pdf.js only (no Adobe Embed / browser PDF chrome)
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -1193,7 +1194,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 
 	return (
 		<div
-			className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+			className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${MODAL_OVERLAY}`}
 			style={{
 				pointerEvents: "auto",
 			}}
@@ -1207,7 +1208,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 			}}
 		>
 			<div
-				className="bg-white rounded-3xl shadow-drop-2 w-full max-w-7xl h-[90vh] flex flex-col border border-light-300"
+				className={`w-full max-w-7xl h-[90vh] flex flex-col ${MODAL_PANEL}`}
 				onClick={(e) => e.stopPropagation()}
 			>
 				{/* Header */}

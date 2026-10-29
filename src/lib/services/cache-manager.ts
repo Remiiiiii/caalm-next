@@ -188,7 +188,12 @@ export class CacheManager {
 	static async getNotificationsCacheGeneration(
 		userId: string,
 	): Promise<number> {
-		return (await cache.get<number>(`notifications:gen:${userId}`)) ?? 0;
+		const genKey = `notifications:gen:${userId}`;
+		const current = await cache.get<number>(genKey);
+		if (typeof current === "number") return current;
+		// Missing key used to miss on every poll. Seed 0 so later reads hit.
+		void cache.set(genKey, 0, 60 * 60 * 24);
+		return 0;
 	}
 
 	/**

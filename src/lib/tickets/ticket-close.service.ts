@@ -1,3 +1,4 @@
+import { getLatestRun, isCursorRunActive } from "./cursor-agent.service";
 import { getTicketById, updateTicket } from "./ticket.repository";
 import { resolveTicketLane, type Ticket } from "./ticket.types";
 import { canCloseTicket } from "./ticket-access.policy";
@@ -6,6 +7,21 @@ import {
 	notifyTicketStaff,
 	notifyTicketSubmitter,
 } from "./ticket-notification.service";
+
+/**
+ * True only while the ticket's Cursor run is actually running. A finished or
+ * stopped agent still has its id on the ticket and must not block closing.
+ * If Cursor can't be reached, trust our own record of the ticket status.
+ */
+async function isFixAgentWorking(ticket: Ticket): Promise<boolean> {
+	try {
+		const run = await getLatestRun(ticket.cursorAgentRunId as string);
+		return run ? isCursorRunActive(run.status) : false;
+	} catch (error) {
+		console.warn("[tickets] could not check fix agent status", error);
+		return ticket.status === "IN_PROGRESS";
+	}
+}
 
 /**
  * Human "Mark resolved" — Help lane close without Cursor agent.
@@ -34,9 +50,11 @@ export async function closeTicket(input: {
 
 	const lane = resolveTicketLane(ticket);
 	if (lane === "engineering" && ticket.cursorAgentRunId) {
-		throw new Error(
-			"This ticket has an active fix agent. Wait for it to finish or use Needs human.",
-		);
+		if (await isFixAgentWorking(ticket)) {
+			throw new Error(
+				"The fix agent is still working. Stop it with “Stop agent” in the Fix Agent Workspace, or wait until the workspace says Finished, then mark the ticket resolved.",
+			);
+		}
 	}
 
 	const updated = await updateTicket(ticket.$id, {

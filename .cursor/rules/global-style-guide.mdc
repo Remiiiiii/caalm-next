@@ -536,7 +536,23 @@ className="shadow-sm hover:shadow-md transition-all duration-200"
 
 ---
 
+## Dialog and sheet headers
+
+**Hard rule (always):** the icon beside any dialog, alert dialog or sheet title has a **white background** (`bg-white`) with a thin border (`border-[#0f5384]/15`; `border-red/20` for destructive). Never a blue, teal, red or translucent tint. `AppDialog` follows this.
+
+**Back button (always):** when a dialog has a Back button it renders at the top of the dialog, on the same row as the close X (Back left, X right), never in the footer.
+
+**Divider (always):** a divider (`border-b border-slate-200`) follows the dialog title and description.
+
+**Mock-ups:** a provided PNG is a general template, not pixel-perfect; follow its layout and these rules, not exact sizes.
+
+Header layout (Select Contract Type is the reference): optional Back row (Back on the left, the dialog close button on the right), then icon tile (34px, `rounded-[9px]`) + title (17px, bold, `#0f5384`), the description under it (12.5px, slate-500, indented to the title), then a `border-b border-slate-200` divider. No gradient strip behind the header.
+
+---
+
 ## Dropdown menus (glass, no card-cap)
+
+> **Exception:** inside the IT routes dropdowns are solid white, not glass. See `.cursor/rules/it-routes-dropdowns-and-header.mdc`.
 
 **Hard rule:** Every dropdown / overflow / filter menu uses the **translucent glass panel** (`bg-white/10` + `backdrop-blur` + `border-white/30`). **Never** add a card-cap bar (`glass-card-cap`, `before:h-4` grey strip, or `AppDropdownMenuContent` cap div) to a dropdown.
 
@@ -663,10 +679,20 @@ When a cell component is shared (status badge, avatar, linked chip), the detail 
 2. If no photo (or load fails), render **initials** on the shared `Avatar` color (`getAvatarColor`).
 3. When a photo is shown, include the **contracts-style outer ring** (teal→navy gradient pad + white inner border) — same as `ManagerAvatars` / `@/components/ui/avatar`.
 4. Use `@/components/ui/avatar` — do not invent a one-off initials circle that ignores photos.
+5. **Never render a bare full-name string as the person.** Wherever a user’s full name would appear on its own (table "Submitted by" / assignee / owner cells, filters, pickers), first look up the uploaded photo, then render the `Avatar` (photo, else initials) **instead of** the name, with a tooltip showing the full name. Keep secondary lines (department, role) beneath the avatar. If the data source has no photo field, fetch it server-side by user id (see `getSubmitterAvatarUrls` in `src/lib/tickets/submitter-avatars.ts`) rather than skipping the lookup. Exception: `showName` on `Avatar` or a name that sits beside the avatar in a profile header, comment or sheet where the name is the primary content.
 
 ```tsx
-<Avatar name={person.name} userId={person.id} size="sm" imageUrl={person.imageUrl} />
+<Tooltip>
+  <TooltipTrigger asChild>
+    <button type="button" aria-label={person.name} className="inline-flex cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40">
+      <Avatar name={person.name} userId={person.id} size="sm" imageUrl={person.imageUrl} />
+    </button>
+  </TooltipTrigger>
+  <TooltipContent>{person.name}</TooltipContent>
+</Tooltip>
 ```
+
+**Reference:** `src/components/tickets/TicketQueue.tsx` (Submitted by column)
 
 ---
 

@@ -139,7 +139,7 @@ export default function SystemOverviewPage() {
 					Jump to live IT tooling already wired in CAALM.
 				</p>
 				<div className="flex flex-wrap gap-3">
-					<Button asChild className="primary-btn px-3 sm:px-4 cursor-pointer">
+					<Button asChild variant="brand" className="cursor-pointer">
 						<Link href="/dashboard/it/rate-limits">Rate limits</Link>
 					</Button>
 					<Button asChild variant="outline" className="cursor-pointer">

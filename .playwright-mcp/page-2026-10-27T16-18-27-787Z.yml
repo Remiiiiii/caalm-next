@@ -1,0 +1,367 @@
+- generic [ref=f5e1]:
+  - button "Open Next.js Dev Tools" [ref=f5e7] [cursor=pointer]:
+    - generic [ref=f5e10]:
+      - text: Rendering
+      - generic [ref=f5e11]:
+        - generic [ref=f5e12]: .
+        - generic [ref=f5e13]: .
+        - generic [ref=f5e14]: .
+  - alert [ref=f5e15]
+  - main [ref=f5e16]:
+    - generic [ref=f5e17]:
+      - complementary [ref=f5e18]:
+        - generic [ref=f5e19]:
+          - link [ref=f5e20] [cursor=pointer]:
+            - /url: /dashboard/it
+            - img "logo" [ref=f5e21]
+          - button "Collapse sidebar" [expanded] [ref=f5e22] [cursor=pointer]
+        - navigation [ref=f5e29]:
+          - list [ref=f5e30]:
+            - generic [ref=f5e31]:
+              - listitem [ref=f5e32]:
+                - generic [ref=f5e33]: Workspaces
+              - list [ref=f5e42]:
+                - listitem [ref=f5e43]:
+                  - link [ref=f5e46] [cursor=pointer]:
+                    - /url: /dashboard/superadmin
+                    - paragraph [ref=f5e49]: Super Admin
+                - listitem [ref=f5e50]:
+                  - link [ref=f5e53] [cursor=pointer]:
+                    - /url: /dashboard/departmentmanager
+                    - paragraph [ref=f5e57]: Department Manager
+            - generic [ref=f5e58]:
+              - listitem [ref=f5e59]:
+                - generic [ref=f5e60]: Overview
+              - list [ref=f5e69]:
+                - listitem [ref=f5e70]:
+                  - link [ref=f5e73] [cursor=pointer]:
+                    - /url: /dashboard/it
+                    - paragraph [ref=f5e79]: Dashboard
+                - listitem [ref=f5e80]:
+                  - link [ref=f5e83] [cursor=pointer]:
+                    - /url: /dashboard/it/system-overview
+                    - paragraph [ref=f5e86]: System overview
+                - listitem [ref=f5e87]:
+                  - link [ref=f5e90] [cursor=pointer]:
+                    - /url: /dashboard/it/storage
+                    - paragraph [ref=f5e93]: Storage
+                - listitem [ref=f5e94]:
+                  - link [ref=f5e97] [cursor=pointer]:
+                    - /url: /dashboard/it/tenants
+                    - paragraph [ref=f5e102]: Tenants
+            - generic [ref=f5e103]:
+              - listitem [ref=f5e104]:
+                - generic [ref=f5e105]: Support
+              - list [ref=f5e111]:
+                - listitem [ref=f5e112]:
+                  - link [ref=f5e115] [cursor=pointer]:
+                    - /url: /tickets/new
+                    - paragraph [ref=f5e118]: Report issue
+                - listitem [ref=f5e119]:
+                  - link [ref=f5e122] [cursor=pointer]:
+                    - /url: /tickets
+                    - paragraph [ref=f5e126]: Tickets
+                - listitem [ref=f5e127]:
+                  - link [ref=f5e130] [cursor=pointer]:
+                    - /url: /dashboard/it/issuehistory
+                    - paragraph [ref=f5e135]: Issue History
+            - generic [ref=f5e136]:
+              - listitem [ref=f5e137]:
+                - generic [ref=f5e138]: Monitoring
+              - list [ref=f5e144]:
+                - listitem [ref=f5e145]:
+                  - link [ref=f5e148] [cursor=pointer]:
+                    - /url: /dashboard/it/monitoring/system-health
+                    - paragraph [ref=f5e152]: System health
+                - listitem [ref=f5e153]:
+                  - link [ref=f5e156] [cursor=pointer]:
+                    - /url: /dashboard/it/monitoring/api-analytics
+                    - paragraph [ref=f5e159]: API analytics
+                - listitem [ref=f5e160]:
+                  - link [ref=f5e163] [cursor=pointer]:
+                    - /url: /dashboard/it/rate-limits
+                    - paragraph [ref=f5e166]: Rate limits
+            - generic [ref=f5e167]:
+              - listitem [ref=f5e168]:
+                - generic [ref=f5e169]: Incidents
+              - list [ref=f5e178]:
+                - listitem [ref=f5e179]:
+                  - link [ref=f5e182] [cursor=pointer]:
+                    - /url: /dashboard/it/incidents/active
+                    - paragraph [ref=f5e185]: Active incidents
+                - listitem [ref=f5e186]:
+                  - link [ref=f5e189] [cursor=pointer]:
+                    - /url: /dashboard/it/incidents/runbooks
+                    - paragraph [ref=f5e193]: Runbooks
+            - generic [ref=f5e194]:
+              - listitem [ref=f5e195]:
+                - generic [ref=f5e196]: Development
+              - list [ref=f5e205]:
+                - listitem [ref=f5e206]:
+                  - link [ref=f5e209] [cursor=pointer]:
+                    - /url: /dashboard/it/development/clm-roadmap
+                    - paragraph [ref=f5e212]: CLM Roadmap
+                - listitem [ref=f5e213]:
+                  - link [ref=f5e216] [cursor=pointer]:
+                    - /url: /dashboard/it/development/nonprofit-roadmap
+                    - paragraph [ref=f5e222]: Nonprofit Roadmap
+                - listitem [ref=f5e223]:
+                  - link [ref=f5e226] [cursor=pointer]:
+                    - /url: /dashboard/it/development/platform-readiness-roadmap
+                    - paragraph [ref=f5e229]: Platform Readiness Roadmap
+                - listitem [ref=f5e230]:
+                  - link [ref=f5e233] [cursor=pointer]:
+                    - /url: /dashboard/it/development/pr-log
+                    - paragraph [ref=f5e238]: PR log - (Cursor Cloud Agent)
+            - generic [ref=f5e239]:
+              - listitem [ref=f5e240]:
+                - generic [ref=f5e241]: Data & logs
+              - list [ref=f5e249]:
+                - listitem [ref=f5e250]:
+                  - link [ref=f5e253] [cursor=pointer]:
+                    - /url: /dashboard/it/database/schema
+                    - paragraph [ref=f5e256]: Schema
+            - generic [ref=f5e257]:
+              - listitem [ref=f5e258]:
+                - generic [ref=f5e259]: Security
+              - list [ref=f5e265]:
+                - listitem [ref=f5e266]:
+                  - link [ref=f5e269] [cursor=pointer]:
+                    - /url: /dashboard/it/security/audit-logs
+                    - paragraph [ref=f5e273]: Audit logs
+                - listitem [ref=f5e274]:
+                  - link [ref=f5e277] [cursor=pointer]:
+                    - /url: /dashboard/it/security/compliance
+                    - paragraph [ref=f5e282]: Compliance
+                - listitem [ref=f5e283]:
+                  - link [ref=f5e286] [cursor=pointer]:
+                    - /url: /dashboard/it/security/access-control
+                    - paragraph [ref=f5e290]: Access control
+                - listitem [ref=f5e291]:
+                  - link [ref=f5e294] [cursor=pointer]:
+                    - /url: /dashboard/it/security/incident-response
+                    - paragraph [ref=f5e300]: Incident response
+            - generic [ref=f5e301]:
+              - listitem [ref=f5e302]:
+                - generic [ref=f5e303]: Team
+              - list [ref=f5e312]:
+                - listitem [ref=f5e313]:
+                  - link [ref=f5e316] [cursor=pointer]:
+                    - /url: /dashboard/it/team/directory
+                    - paragraph [ref=f5e322]: IT directory
+                - listitem [ref=f5e323]:
+                  - link [ref=f5e326] [cursor=pointer]:
+                    - /url: /dashboard/it/team/roles
+                    - paragraph [ref=f5e339]: Roles
+            - listitem [aria-hidden] [ref=f5e340]:
+              - separator [ref=f5e341]
+            - generic [ref=f5e342]:
+              - listitem [ref=f5e343]:
+                - generic [ref=f5e344]: Settings
+              - list [ref=f5e351]:
+                - listitem [ref=f5e352]:
+                  - link [ref=f5e355] [cursor=pointer]:
+                    - /url: /dashboard/it/settings/system
+                    - paragraph [ref=f5e359]: System
+                - listitem [ref=f5e360]:
+                  - link [ref=f5e363] [cursor=pointer]:
+                    - /url: /dashboard/it/settings/integrations
+                    - paragraph [ref=f5e366]: Integrations
+                - listitem [ref=f5e367]:
+                  - link [ref=f5e370] [cursor=pointer]:
+                    - /url: /dashboard/it/settings/notifications
+                    - paragraph [ref=f5e374]: Notifications
+      - generic [ref=f5e375]:
+        - generic [ref=f5e377]:
+          - generic [ref=f5e379]:
+            - button "Audit" [ref=f5e380] [cursor=pointer]
+            - button "Schedule" [ref=f5e381] [cursor=pointer]
+            - button "Report" [ref=f5e382] [cursor=pointer]
+          - generic [ref=f5e383]:
+            - button "Ask CAALM" [ref=f5e384] [cursor=pointer]
+            - generic [ref=f5e388]:
+              - button "Profile picture" [ref=f5e391] [cursor=pointer]:
+                - img "Victor Ramirez" [ref=f5e393]
+              - button "Open notifications" [ref=f5e395] [cursor=pointer]:
+                - generic "54 notifications" [ref=f5e396]: "54"
+              - button "Open mail" [ref=f5e397] [cursor=pointer]
+              - button "Log out" [ref=f5e398] [cursor=pointer]
+        - generic [ref=f5e400]:
+          - heading "Tickets" [level=1] [ref=f5e401]
+          - generic [ref=f5e402]:
+            - paragraph [ref=f5e403]: Report product bugs, access problems, and IT requests. Each ticket gets a number and stays in this queue until it's resolved.
+            - link "New ticket" [ref=f5e404] [cursor=pointer]:
+              - /url: /tickets/new
+          - generic [ref=f5e405]:
+            - generic [ref=f5e406]:
+              - generic [ref=f5e409]:
+                - paragraph [ref=f5e415]: Active tickets
+                - generic [ref=f5e416]: "5"
+                - generic [ref=f5e419]:
+                  - generic [ref=f5e420]: 1 new this week
+                  - generic [ref=f5e423]:
+                    - generic [ref=f5e424]:
+                      - paragraph [ref=f5e425]: Help
+                      - paragraph [ref=f5e426]: "1"
+                    - generic [ref=f5e427]:
+                      - paragraph [ref=f5e428]: Engineering
+                      - paragraph [ref=f5e429]: "4"
+                    - generic [ref=f5e430]:
+                      - paragraph [ref=f5e431]: In progress
+                      - paragraph [ref=f5e432]: "0"
+                    - generic [ref=f5e433]:
+                      - paragraph [ref=f5e434]: Attention
+                      - paragraph [ref=f5e435]: "0"
+                - paragraph [ref=f5e437]:
+                  - strong [ref=f5e438]: 5 unassigned
+                  - text: ·
+                  - strong [ref=f5e439]: 4 open > 24h
+              - generic [ref=f5e442]:
+                - paragraph [ref=f5e447]: Critical — SEV-1
+                - generic [ref=f5e448]: "0"
+                - generic [ref=f5e450]: "SLA: 1h"
+                - paragraph [ref=f5e455]: No critical tickets
+              - generic [ref=f5e458]:
+                - paragraph [ref=f5e463]: High — SEV-2
+                - generic [ref=f5e464]: "1"
+                - generic [ref=f5e467]:
+                  - generic [ref=f5e468]: "SLA: 4h"
+                  - link "TKT-2026-0003" [ref=f5e470] [cursor=pointer]:
+                    - /url: /tickets/6a866195000d6f01c9c1
+                - generic [ref=f5e472]:
+                  - generic [ref=f5e473]:
+                    - generic [ref=f5e474]:
+                      - generic [ref=f5e475]: Oldest — 68d in status
+                      - generic [ref=f5e476]: SLA breached
+                    - progressbar [ref=f5e477]
+                  - paragraph [ref=f5e479]:
+                    - text: 0 in progress ·
+                    - strong [ref=f5e480]: 1 unassigned
+              - generic [ref=f5e483]:
+                - paragraph [ref=f5e489]: Oldest open ticket
+                - generic [ref=f5e490]: 68d
+                - generic [ref=f5e493]:
+                  - generic [ref=f5e494]: stale
+                  - generic [ref=f5e497]:
+                    - link "TKT-2026-0001" [ref=f5e498] [cursor=pointer]:
+                      - /url: /tickets/6a865ce00010b6622bf6
+                    - generic [ref=f5e499]: Engineering
+                - generic [ref=f5e501]:
+                  - generic [ref=f5e502]:
+                    - generic [ref=f5e503]:
+                      - generic [ref=f5e504]: Age vs avg (55d)
+                      - generic [ref=f5e505]: 1.2× longer
+                    - progressbar [ref=f5e506]
+                  - paragraph [ref=f5e507]:
+                    - strong [ref=f5e508]: test to see modal
+                    - text: · Victor Ramirez
+            - generic [ref=f5e511]:
+              - generic [ref=f5e512]:
+                - textbox "Search tickets" [ref=f5e514]:
+                  - /placeholder: Search by ticket number, title, or submitter…
+                - tablist "Filter by lane" [ref=f5e515]:
+                  - tab "All" [selected] [ref=f5e516] [cursor=pointer]
+                  - tab "Help" [ref=f5e518] [cursor=pointer]
+                  - tab "Engineering" [ref=f5e520] [cursor=pointer]
+              - table [ref=f5e525]:
+                - rowgroup [ref=f5e526]:
+                  - row [ref=f5e527]:
+                    - columnheader [ref=f5e528]:
+                      - button "Ticket" [ref=f5e529] [cursor=pointer]
+                    - columnheader "Title" [ref=f5e530]
+                    - columnheader "Submitted by" [ref=f5e531]
+                    - columnheader "Lane" [ref=f5e532]
+                    - columnheader [ref=f5e533]:
+                      - button "Severity" [ref=f5e534] [cursor=pointer]
+                    - columnheader "Status" [ref=f5e535]
+                    - columnheader [ref=f5e536]:
+                      - button "In status" [ref=f5e537] [cursor=pointer]
+                - rowgroup [ref=f5e538]:
+                  - row [ref=f5e539] [cursor=pointer]:
+                    - cell [ref=f5e540]:
+                      - 'link "TKT-2026-0003: sgfsdfgsdsd" [ref=f5e541]':
+                        - /url: /tickets/6a866195000d6f01c9c1
+                        - text: TKT-2026-0003
+                    - cell [ref=f5e542]:
+                      - paragraph [ref=f5e543]: sgfsdfgsdsd
+                    - cell [ref=f5e544]:
+                      - generic [ref=f5e545]:
+                        - button "Victor Ramirez" [ref=f5e546]
+                        - paragraph [ref=f5e549]: IT
+                    - cell "Engineering" [ref=f5e550]
+                    - cell "high · SEV-2" [ref=f5e552]
+                    - cell "OPEN" [ref=f5e554]
+                    - cell "68d (urgent)" [ref=f5e556]:
+                      - text: 68d
+                      - generic [ref=f5e557]: (urgent)
+                  - row [ref=f5e558] [cursor=pointer]:
+                    - cell [ref=f5e559]:
+                      - 'link "TKT-2026-0001: test to see modal" [ref=f5e560]':
+                        - /url: /tickets/6a865ce00010b6622bf6
+                        - text: TKT-2026-0001
+                    - cell [ref=f5e561]:
+                      - paragraph [ref=f5e562]: test to see modal
+                    - cell [ref=f5e563]:
+                      - generic [ref=f5e564]:
+                        - button "Victor Ramirez" [ref=f5e565]
+                        - paragraph [ref=f5e568]: IT
+                    - cell "Engineering" [ref=f5e569]
+                    - cell "low · SEV-4" [ref=f5e571]
+                    - cell "OPEN" [ref=f5e573]
+                    - cell "68d (urgent)" [ref=f5e575]:
+                      - text: 68d
+                      - generic [ref=f5e576]: (urgent)
+                  - row [ref=f5e577] [cursor=pointer]:
+                    - cell [ref=f5e578]:
+                      - 'link "TKT-2026-0002: afafasdfasdfa" [ref=f5e579]':
+                        - /url: /tickets/6a865f6d0020326acfcf
+                        - text: TKT-2026-0002
+                    - cell [ref=f5e580]:
+                      - paragraph [ref=f5e581]: afafasdfasdfa
+                    - cell [ref=f5e582]:
+                      - generic [ref=f5e583]:
+                        - button "Victor Ramirez" [ref=f5e584]
+                        - paragraph [ref=f5e587]: IT
+                    - cell "Engineering" [ref=f5e588]
+                    - cell "low · SEV-4" [ref=f5e590]
+                    - cell "OPEN" [ref=f5e592]
+                    - cell "68d (urgent)" [ref=f5e594]:
+                      - text: 68d
+                      - generic [ref=f5e595]: (urgent)
+                  - row [ref=f5e596] [cursor=pointer]:
+                    - cell [ref=f5e597]:
+                      - 'link "TKT-2026-0004: test to see modal" [ref=f5e598]':
+                        - /url: /tickets/6a86628c002ad46d4531
+                        - text: TKT-2026-0004
+                    - cell [ref=f5e599]:
+                      - paragraph [ref=f5e600]: test to see modal
+                    - cell [ref=f5e601]:
+                      - generic [ref=f5e602]:
+                        - button "Victor Ramirez" [ref=f5e603]
+                        - paragraph [ref=f5e606]: IT
+                    - cell "Engineering" [ref=f5e607]
+                    - cell "low · SEV-4" [ref=f5e609]
+                    - cell "OPEN" [ref=f5e611]
+                    - cell "68d (urgent)" [ref=f5e613]:
+                      - text: 68d
+                      - generic [ref=f5e614]: (urgent)
+                  - row [ref=f5e615] [cursor=pointer]:
+                    - cell [ref=f5e616]:
+                      - 'link "TKT-2026-0005: test" [ref=f5e617]':
+                        - /url: /tickets/6adfe7fc001484846498
+                        - text: TKT-2026-0005
+                    - cell [ref=f5e618]:
+                      - paragraph [ref=f5e619]: test
+                    - cell [ref=f5e620]:
+                      - generic [ref=f5e621]:
+                        - button "Remy Ouji" [ref=f5e622]
+                        - paragraph [ref=f5e625]: Executive
+                    - cell "Help" [ref=f5e626]
+                    - cell "low" [ref=f5e628]
+                    - cell "OPEN" [ref=f5e630]
+                    - cell "16h" [ref=f5e632]
+            - paragraph [ref=f5e633]: Showing 5 of 5 active tickets. Resolved tickets are not shown here.
+      - button "Report an issue" [ref=f5e636] [cursor=pointer]:
+        - generic [ref=f5e637]: Report issue
+  - region "Notifications (F8)":
+    - list

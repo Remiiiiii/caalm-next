@@ -1,0 +1,314 @@
+- generic [active] [ref=f24e1]:
+  - button "Open Next.js Dev Tools" [ref=f24e7] [cursor=pointer]:
+    - generic [ref=f24e10]:
+      - text: Compiling
+      - generic [ref=f24e11]:
+        - generic [ref=f24e12]: .
+        - generic [ref=f24e13]: .
+        - generic [ref=f24e14]: .
+  - alert [ref=f24e15]
+  - main [ref=f24e16]:
+    - generic [ref=f24e17]:
+      - complementary [ref=f24e18]:
+        - generic [ref=f24e19]:
+          - link [ref=f24e20] [cursor=pointer]:
+            - /url: /dashboard/it
+            - img "logo" [ref=f24e21]
+          - button "Collapse sidebar" [expanded] [ref=f24e22] [cursor=pointer]
+        - navigation [ref=f24e29]:
+          - list [ref=f24e30]:
+            - generic [ref=f24e31]:
+              - listitem [ref=f24e32]:
+                - generic [ref=f24e33]: Workspaces
+              - list [ref=f24e42]:
+                - listitem [ref=f24e43]:
+                  - link [ref=f24e46] [cursor=pointer]:
+                    - /url: /dashboard/superadmin
+                    - paragraph [ref=f24e49]: Super Admin
+                - listitem [ref=f24e50]:
+                  - link [ref=f24e53] [cursor=pointer]:
+                    - /url: /dashboard/departmentmanager
+                    - paragraph [ref=f24e57]: Department Manager
+            - generic [ref=f24e58]:
+              - listitem [ref=f24e59]:
+                - generic [ref=f24e60]: Overview
+              - list [ref=f24e69]:
+                - listitem [ref=f24e70]:
+                  - link [ref=f24e73] [cursor=pointer]:
+                    - /url: /dashboard/it
+                    - paragraph [ref=f24e79]: Dashboard
+                - listitem [ref=f24e80]:
+                  - link [ref=f24e83] [cursor=pointer]:
+                    - /url: /dashboard/it/system-overview
+                    - paragraph [ref=f24e86]: System overview
+                - listitem [ref=f24e87]:
+                  - link [ref=f24e90] [cursor=pointer]:
+                    - /url: /dashboard/it/storage
+                    - paragraph [ref=f24e93]: Storage
+                - listitem [ref=f24e94]:
+                  - link [ref=f24e97] [cursor=pointer]:
+                    - /url: /dashboard/it/tenants
+                    - paragraph [ref=f24e102]: Tenants
+            - generic [ref=f24e103]:
+              - listitem [ref=f24e104]:
+                - generic [ref=f24e105]: Support
+              - list [ref=f24e111]:
+                - listitem [ref=f24e112]:
+                  - link [ref=f24e115] [cursor=pointer]:
+                    - /url: /tickets/new
+                    - paragraph [ref=f24e118]: Report issue
+                - listitem [ref=f24e119]:
+                  - link [ref=f24e122] [cursor=pointer]:
+                    - /url: /tickets
+                    - paragraph [ref=f24e126]: Tickets
+                - listitem [ref=f24e127]:
+                  - link [ref=f24e130] [cursor=pointer]:
+                    - /url: /dashboard/it/issuehistory
+                    - paragraph [ref=f24e135]: Issue History
+            - generic [ref=f24e136]:
+              - listitem [ref=f24e137]:
+                - generic [ref=f24e138]: Monitoring
+              - list [ref=f24e144]:
+                - listitem [ref=f24e145]:
+                  - link [ref=f24e148] [cursor=pointer]:
+                    - /url: /dashboard/it/monitoring/system-health
+                    - paragraph [ref=f24e152]: System health
+                - listitem [ref=f24e153]:
+                  - link [ref=f24e156] [cursor=pointer]:
+                    - /url: /dashboard/it/monitoring/api-analytics
+                    - paragraph [ref=f24e159]: API analytics
+                - listitem [ref=f24e160]:
+                  - link [ref=f24e163] [cursor=pointer]:
+                    - /url: /dashboard/it/rate-limits
+                    - paragraph [ref=f24e166]: Rate limits
+            - generic [ref=f24e167]:
+              - listitem [ref=f24e168]:
+                - generic [ref=f24e169]: Incidents
+              - list [ref=f24e178]:
+                - listitem [ref=f24e179]:
+                  - link [ref=f24e182] [cursor=pointer]:
+                    - /url: /dashboard/it/incidents/active
+                    - paragraph [ref=f24e185]: Active incidents
+                - listitem [ref=f24e186]:
+                  - link [ref=f24e189] [cursor=pointer]:
+                    - /url: /dashboard/it/incidents/runbooks
+                    - paragraph [ref=f24e193]: Runbooks
+            - generic [ref=f24e194]:
+              - listitem [ref=f24e195]:
+                - generic [ref=f24e196]: Development
+              - list [ref=f24e205]:
+                - listitem [ref=f24e206]:
+                  - link [ref=f24e209] [cursor=pointer]:
+                    - /url: /dashboard/it/development/clm-roadmap
+                    - paragraph [ref=f24e212]: CLM Roadmap
+                - listitem [ref=f24e213]:
+                  - link [ref=f24e216] [cursor=pointer]:
+                    - /url: /dashboard/it/development/nonprofit-roadmap
+                    - paragraph [ref=f24e222]: Nonprofit Roadmap
+                - listitem [ref=f24e223]:
+                  - link [ref=f24e226] [cursor=pointer]:
+                    - /url: /dashboard/it/development/platform-readiness-roadmap
+                    - paragraph [ref=f24e229]: Platform Readiness Roadmap
+                - listitem [ref=f24e230]:
+                  - link [ref=f24e233] [cursor=pointer]:
+                    - /url: /dashboard/it/development/pr-log
+                    - paragraph [ref=f24e238]: PR log - (Cursor Cloud Agent)
+            - generic [ref=f24e239]:
+              - listitem [ref=f24e240]:
+                - generic [ref=f24e241]: Data & logs
+              - list [ref=f24e249]:
+                - listitem [ref=f24e250]:
+                  - link [ref=f24e253] [cursor=pointer]:
+                    - /url: /dashboard/it/database/schema
+                    - paragraph [ref=f24e256]: Schema
+            - generic [ref=f24e257]:
+              - listitem [ref=f24e258]:
+                - generic [ref=f24e259]: Security
+              - list [ref=f24e265]:
+                - listitem [ref=f24e266]:
+                  - link [ref=f24e269] [cursor=pointer]:
+                    - /url: /dashboard/it/security/audit-logs
+                    - paragraph [ref=f24e273]: Audit logs
+                - listitem [ref=f24e274]:
+                  - link [ref=f24e277] [cursor=pointer]:
+                    - /url: /dashboard/it/security/compliance
+                    - paragraph [ref=f24e282]: Compliance
+                - listitem [ref=f24e283]:
+                  - link [ref=f24e286] [cursor=pointer]:
+                    - /url: /dashboard/it/security/access-control
+                    - paragraph [ref=f24e290]: Access control
+                - listitem [ref=f24e291]:
+                  - link [ref=f24e294] [cursor=pointer]:
+                    - /url: /dashboard/it/security/incident-response
+                    - paragraph [ref=f24e300]: Incident response
+            - generic [ref=f24e301]:
+              - listitem [ref=f24e302]:
+                - generic [ref=f24e303]: Team
+              - list [ref=f24e312]:
+                - listitem [ref=f24e313]:
+                  - link [ref=f24e316] [cursor=pointer]:
+                    - /url: /dashboard/it/team/directory
+                    - paragraph [ref=f24e322]: IT directory
+                - listitem [ref=f24e323]:
+                  - link [ref=f24e326] [cursor=pointer]:
+                    - /url: /dashboard/it/team/roles
+                    - paragraph [ref=f24e339]: Roles
+            - listitem [aria-hidden] [ref=f24e340]:
+              - separator [ref=f24e341]
+            - generic [ref=f24e342]:
+              - listitem [ref=f24e343]:
+                - generic [ref=f24e344]: Settings
+              - list [ref=f24e351]:
+                - listitem [ref=f24e352]:
+                  - link [ref=f24e355] [cursor=pointer]:
+                    - /url: /dashboard/it/settings/system
+                    - paragraph [ref=f24e359]: System
+                - listitem [ref=f24e360]:
+                  - link [ref=f24e363] [cursor=pointer]:
+                    - /url: /dashboard/it/settings/integrations
+                    - paragraph [ref=f24e366]: Integrations
+                - listitem [ref=f24e367]:
+                  - link [ref=f24e370] [cursor=pointer]:
+                    - /url: /dashboard/it/settings/notifications
+                    - paragraph [ref=f24e374]: Notifications
+      - generic [ref=f24e375]:
+        - generic [ref=f24e377]:
+          - generic [ref=f24e379]:
+            - button "Audit" [ref=f24e380] [cursor=pointer]
+            - button "Schedule" [ref=f24e381] [cursor=pointer]
+            - button "Report" [ref=f24e382] [cursor=pointer]
+          - generic [ref=f24e383]:
+            - button "Ask CAALM" [ref=f24e384] [cursor=pointer]
+            - generic [ref=f24e388]:
+              - button "Profile picture" [ref=f24e391] [cursor=pointer]:
+                - img "Victor Ramirez" [ref=f24e393]
+              - button "Open notifications" [ref=f24e395] [cursor=pointer]:
+                - generic "54 notifications" [ref=f24e396]: "54"
+              - button "Open mail" [ref=f24e397] [cursor=pointer]
+              - button "Log out" [ref=f24e398] [cursor=pointer]
+        - generic [ref=f24e400]:
+          - navigation "breadcrumb" [ref=f24e401]:
+            - link "Tickets" [ref=f24e402] [cursor=pointer]:
+              - /url: /tickets
+            - generic [ref=f24e405]: TKT-2026-0003
+          - generic [ref=f24e406]:
+            - generic [ref=f24e407]:
+              - heading "Ticket" [level=1] [ref=f24e408]
+              - generic [ref=f24e409]:
+                - generic [ref=f24e410]: TKT-2026-0003
+                - generic [ref=f24e411]: Engineering
+                - generic [ref=f24e412]: high · SEV-2
+                - generic [ref=f24e413]: IN PROGRESS
+            - generic [ref=f24e414]:
+              - button "Copy link" [ref=f24e415] [cursor=pointer]
+              - link "GitHub issue" [ref=f24e416] [cursor=pointer]:
+                - /url: https://github.com/Remiiiiii/caalm-next/issues/47
+          - generic [ref=f24e417]:
+            - generic [ref=f24e418]:
+              - generic [ref=f24e419]:
+                - generic [ref=f24e422]:
+                  - generic [ref=f24e423]:
+                    - paragraph [ref=f24e424]: Submitted
+                    - paragraph [ref=f24e425]: Wed, Aug 19, 2026
+                  - generic [ref=f24e426]:
+                    - paragraph [ref=f24e427]: Category
+                    - paragraph [ref=f24e428]: Hardware
+                  - generic [ref=f24e429]:
+                    - paragraph [ref=f24e430]: Affected service
+                    - paragraph [ref=f24e431]: Contract Workflows
+                  - generic [ref=f24e432]:
+                    - paragraph [ref=f24e433]: Impact
+                    - paragraph [ref=f24e434]: Whole organization
+                  - generic [ref=f24e435]:
+                    - paragraph [ref=f24e436]: Urgency
+                    - paragraph [ref=f24e437]: This week
+                  - generic [ref=f24e438]:
+                    - paragraph [ref=f24e439]: Environment
+                    - paragraph [ref=f24e440]: —
+                - generic [ref=f24e441]:
+                  - generic [ref=f24e442]:
+                    - generic [ref=f24e445]:
+                      - paragraph [ref=f24e446]: Victor Ramirez
+                      - paragraph [ref=f24e447]: IT · submitted 68d ago
+                    - link "#47 synced" [ref=f24e448] [cursor=pointer]:
+                      - /url: https://github.com/Remiiiiii/caalm-next/issues/47
+                  - generic [ref=f24e453]:
+                    - paragraph [ref=f24e454]: Description
+                    - heading "sgfsdfgsdsd" [level=2] [ref=f24e455]
+                    - paragraph [ref=f24e456]: sdsdfgsdfgsdgf
+              - generic [ref=f24e459]:
+                - paragraph [ref=f24e460]: Fix agent workspace
+                - generic [ref=f24e461]:
+                  - status [ref=f24e462]:
+                    - generic [ref=f24e463]:
+                      - generic [ref=f24e465]: STARTING
+                      - generic [ref=f24e466]: — Connecting…
+                    - generic [ref=f24e467]:
+                      - generic [ref=f24e468]: bc-a8f9ac10-16c0-4270-b774-d5f1485c3fb8
+                      - button "Stop" [ref=f24e469] [cursor=pointer]
+                  - generic [ref=f24e472]:
+                    - region "Agent activity" [ref=f24e473]:
+                      - generic [ref=f24e474]: agent activity
+                      - log "Agent activity" [ref=f24e479]:
+                        - paragraph [ref=f24e480]: Waiting for the agent…
+                    - region "Result" [ref=f24e482]:
+                      - paragraph [ref=f24e483]: Result
+                      - paragraph [ref=f24e484]: Code changes appear in the pull request when the agent finishes.
+                  - generic [ref=f24e485]:
+                    - generic [ref=f24e486]: Direct the agent
+                    - generic [ref=f24e487]:
+                      - textbox "Direct the agent" [ref=f24e488]:
+                        - /placeholder: Tell the agent how to fix this…
+                      - button "Send" [disabled] [ref=f24e489]
+                    - paragraph [ref=f24e493]: Messages go to the running agent as extra guidance.
+            - complementary [ref=f24e496]:
+              - generic [ref=f24e499]:
+                - paragraph [ref=f24e500]: Staff actions
+                - generic [ref=f24e501]:
+                  - generic [ref=f24e502]: Assigned to
+                  - generic [ref=f24e503]: Unassigned
+                - generic [ref=f24e504]:
+                  - button "Claim ticket" [ref=f24e505] [cursor=pointer]
+                  - button "Mark resolved" [ref=f24e506] [cursor=pointer]
+                - paragraph [ref=f24e507]: Claim the ticket before marking it resolved.
+              - generic [ref=f24e510]:
+                - paragraph [ref=f24e511]: SLA status
+                - generic [ref=f24e512]:
+                  - paragraph [ref=f24e513]: Breached
+                  - paragraph [ref=f24e514]: Breached · 68d 16h over
+                  - paragraph [ref=f24e515]: SLA target was 4h (SEV-2)
+                  - progressbar "Share of SLA time used" [ref=f24e516]
+                - generic [ref=f24e518]:
+                  - generic [ref=f24e519]: Opened Wed, Aug 19, 2026
+                  - generic [ref=f24e520]: 68 days in queue
+              - generic [ref=f24e523]:
+                - paragraph [ref=f24e524]: GitHub issue
+                - generic [ref=f24e525]:
+                  - paragraph [ref=f24e527]:
+                    - generic [ref=f24e529]: "#47 · sgfsdfgsdsd"
+                  - button "Refresh" [disabled]
+                - link "View on GitHub" [ref=f24e530] [cursor=pointer]:
+                  - /url: https://github.com/Remiiiiii/caalm-next/issues/47
+              - generic [ref=f24e537]:
+                - paragraph [ref=f24e538]: Audit trail
+                - list [ref=f24e539]:
+                  - listitem [ref=f24e540]:
+                    - generic [ref=f24e545]:
+                      - paragraph [ref=f24e546]: Agent started
+                      - paragraph [ref=f24e547]: ai-agent · Tue, Oct 27, 2026, 6:43:05 PM EDT
+                  - listitem [ref=f24e548]:
+                    - generic [ref=f24e553]:
+                      - paragraph [ref=f24e554]: Resolve clicked
+                      - paragraph [ref=f24e555]: Victor Ramirez · Tue, Oct 27, 2026, 6:42:57 PM EDT
+                  - listitem [ref=f24e556]:
+                    - generic [ref=f24e562]:
+                      - paragraph [ref=f24e563]: Issue created
+                      - paragraph [ref=f24e564]: ai-agent · Wed, Aug 19, 2026, 10:08:42 PM EDT
+                  - listitem [ref=f24e565]:
+                    - generic [ref=f24e569]:
+                      - paragraph [ref=f24e570]: Created
+                      - paragraph [ref=f24e571]: Victor Ramirez · Wed, Aug 19, 2026, 10:08:22 PM EDT
+      - button "Report an issue" [ref=f24e572] [cursor=pointer]:
+        - generic [ref=f24e573]: Report issue
+  - region "Notifications (F8)":
+    - list
