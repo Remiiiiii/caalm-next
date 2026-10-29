@@ -2752,6 +2752,8 @@ iframe[src*="splinecode"] {
 	margin: 0;
 	background-color: #fff;
 	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+	/* Switch uses the `translate` property for the thumb; reset it so only transform moves it. */
+	translate: none;
 	transform: translateX(2px);
 }
 
@@ -2773,4 +2775,21 @@ iframe[src*="splinecode"] {
 
 #contract-upload-form button[role="switch"][data-state="checked"]::after {
 	content: "On";
+}
+
+/* Upload wizard: each step section gets a title and a divider between sections. */
+#contract-upload-form [data-section-title]::before {
+	content: attr(data-section-title);
+	display: block;
+	grid-column: 1 / -1;
+	margin-bottom: 12px;
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: #0f5384;
+}
+#contract-upload-form [data-section-title]:not([data-section-first]) {
+	border-top: 1px solid #e2e8f0;
+	padding-top: 20px;
 }

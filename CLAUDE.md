@@ -16,6 +16,7 @@ Project rules live in `.cursor/rules/` and are the single source of truth. Edit 
 @.cursor/rules/no-workflow-engine-sprawl.mdc
 @.cursor/rules/caalm-demo-database-sync.mdc
 @.cursor/rules/env-example-placeholders.mdc
+@.cursor/rules/playwright-png-cleanup.mdc
 @.cursor/rules/vercel-env-local-permission.mdc
 @.cursor/rules/plain-english-junior-dev.mdc
 @.cursor/rules/plan-prompt-templates.mdc

@@ -1,6 +1,7 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 export type SegmentedToggleTab<T extends string = string> = {
@@ -14,6 +15,8 @@ export type SegmentedToggleTab<T extends string = string> = {
 	/** Optional color for the count (e.g. amber for unassigned, red for overdue) */
 	countClassName?: string;
 	disabled?: boolean;
+	/** Small mark after the label, e.g. a done check or an error count. */
+	suffix?: ReactNode;
 };
 
 export function SegmentedToggle<T extends string>({
@@ -91,6 +94,7 @@ export function SegmentedToggle<T extends string>({
 						{tab.hideLabel ? null : (
 							<span className="truncate">{tab.label}</span>
 						)}
+						{tab.suffix}
 						{typeof tab.count === "number" ? (
 							<span
 								className={cn(

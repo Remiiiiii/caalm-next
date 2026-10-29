@@ -105,6 +105,7 @@ const FormItem = React.forwardRef<
 				ref={ref}
 				className={cn("space-y-2", className)}
 				data-caalm={caalm ?? undefined}
+				data-field={name}
 				{...props}
 			/>
 		</FormItemContext.Provider>
