@@ -44,7 +44,12 @@ import {
 } from "@/components/contract-assistant/ContractAssistantChat";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogTitle,
+} from "@/components/ui/dialog";
 import { PERMISSIONS } from "@/constants/permissions";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useToast } from "@/hooks/use-toast";
@@ -598,6 +603,9 @@ ${contractDetails.attachments
 				{/* Top bar stays full-width — Save / AI Analysis never shift */}
 				<div className="flex shrink-0 items-center justify-end gap-2 border-b border-slate-200 px-6 py-4">
 					<DialogTitle className="sr-only">{contract.title}</DialogTitle>
+					<DialogDescription className="sr-only">
+						Contract document preview.
+					</DialogDescription>
 					<Button size="sm" className="primary-btn">
 						<Star className="h-4 w-4" />
 						Save

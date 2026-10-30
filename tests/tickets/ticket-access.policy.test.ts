@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { PERMISSIONS } from "@/constants/permissions";
 import type { Ticket } from "@/lib/tickets/ticket.types";
 import {
+	canAssignTicket,
 	canClaimTicket,
 	canCloseTicket,
 	canEscalateTicket,
@@ -147,5 +148,26 @@ describe("ticket-access.policy", () => {
 			permissions: [PERMISSIONS.TICKETS.VIEW],
 		});
 		expect(visible.map((item) => item.$id)).toEqual(["t1"]);
+	});
+
+	it("lets assign-permission staff assign or reassign an open ticket", () => {
+		const ctx = { userId: "staff", permissions: [PERMISSIONS.TICKETS.ASSIGN] };
+		expect(canAssignTicket(helpTicket, ctx)).toBe(true);
+		expect(canAssignTicket(ticket, ctx)).toBe(true);
+	});
+
+	it("blocks assigning without the permission or once resolved", () => {
+		expect(
+			canAssignTicket(helpTicket, {
+				userId: "staff",
+				permissions: [PERMISSIONS.TICKETS.RESOLVE],
+			}),
+		).toBe(false);
+		expect(
+			canAssignTicket(
+				{ ...ticket, status: "RESOLVED" },
+				{ userId: "staff", permissions: [PERMISSIONS.TICKETS.ASSIGN] },
+			),
+		).toBe(false);
 	});
 });

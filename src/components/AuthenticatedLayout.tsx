@@ -1,6 +1,7 @@
 "use client";
 
 import type { Models } from "appwrite";
+import { usePathname } from "next/navigation";
 import type React from "react";
 import DashboardHeader from "@/components/DashboardHeader";
 import { DesktopFirstGate } from "@/components/DesktopFirstGate";
@@ -15,6 +16,7 @@ import { normalizeUserRole, type UserRole } from "@/constants/rbac";
 import { OrganizationProvider } from "@/contexts/OrganizationContext";
 import { SidebarProvider } from "@/contexts/SidebarContext";
 import { useInactivityTimer } from "@/hooks/useInactivityTimer";
+import { isItRoute } from "@/lib/ui/it-routes";
 import { resolveAvatarDisplayUrl } from "@/lib/utils";
 
 type ExtendedUser = Models.User<Models.Preferences> & {
@@ -67,6 +69,8 @@ const AuthenticatedLayout = ({
 	const normalizedRole = normalizeUserRole(user.role || "");
 	const avatarUrl = resolveNavAvatar(user);
 
+	const hideQuickActions = isItRoute(usePathname());
+
 	// Initialize inactivity timer
 	const { showDialog, handleContinue, handleLogout, handleClose } =
 		useInactivityTimer();
@@ -95,7 +99,10 @@ const AuthenticatedLayout = ({
 							role={normalizedRole}
 						/>
 						<div className="px-3 sm:px-4 lg:pr-7 pb-2 sm:pb-3 min-w-0 shrink-0">
-							<DashboardHeader user={currentUser} />
+							<DashboardHeader
+								user={currentUser}
+								hideQuickActions={hideQuickActions}
+							/>
 						</div>
 						<div className="main-content">
 							<DesktopFirstGate>{children}</DesktopFirstGate>

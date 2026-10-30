@@ -123,6 +123,11 @@ export function deriveSeverityFromMatrix(
 	};
 }
 
+/** Response SLA in hours for a severity (business days count as 24h). */
+export function getSeveritySlaHours(severity: TicketSeverity): number {
+	return SEVERITY_SLA[severity].hours;
+}
+
 /** Badge text, e.g. "High — SEV-2". */
 export function getSeverityBadgeTitle(severity: TicketSeverity): string {
 	const { title, sev } = SEVERITY_SLA[severity];

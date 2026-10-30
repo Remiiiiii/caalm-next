@@ -55,10 +55,10 @@ import {
 import QuickNotesWidget from "@/components/QuickNotesWidget";
 import RecentActivity from "@/components/RecentActivity";
 import { OrgUnitPicker } from "@/components/settings/OrgUnitPicker";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import Avatar from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { MailClock } from "@/components/ui/mail-clock-icon";
 import {
 	complianceMetricTone,
@@ -87,6 +87,7 @@ import { useCombinedExpiryModal } from "@/hooks/useCombinedExpiryModal";
 import { useDashboardWidgetBundle } from "@/hooks/useDashboardWidgetBundle";
 import { useUnifiedDashboardData } from "@/hooks/useUnifiedDashboardData";
 import { useUpdateExpiredOnce } from "@/hooks/useUpdateExpiredOnce";
+import { useCtaButtonClass } from "@/lib/ui/use-cta-button-class";
 import { cn } from "@/lib/utils";
 import type { UIFileDoc } from "@/types/files";
 import { resolveInviteDepartment } from "../../../../constants";
@@ -197,6 +198,7 @@ const getInvitationStatusBadgeClasses = (status: string): string => {
 };
 
 const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
+	const cta = useCtaButtonClass();
 	const { toast } = useToast();
 	const { ensureStepUp } = useStepUp();
 	const { orgId } = useOrganization();
@@ -1251,19 +1253,13 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 												</div>
 											))}
 											<div className="mt-auto flex items-center justify-end gap-3">
-												<Button
-													asChild
-													className="primary-btn flex-1 cursor-pointer px-3 sm:px-4"
-												>
+												<Button asChild className={`${cta} flex-1`}>
 													<Link href="/analytics?tab=portfolio">
 														<BarChart3 className="h-4 w-4" />
 														Open portfolio analytics
 													</Link>
 												</Button>
-												<Button
-													asChild
-													className="primary-btn flex-1 cursor-pointer px-3 sm:px-4"
-												>
+												<Button asChild className={`${cta} flex-1`}>
 													<Link href="/contracts/approvals">
 														<ClipboardList className="h-4 w-4" />
 														Open approvals
@@ -1453,7 +1449,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 													loading ||
 													(uninvitedUsers as UninvitedUser[]).length === 0
 												}
-												className="primary-btn shrink-0 gap-2 px-5 text-[13px] font-semibold"
+												className={`${cta} shrink-0`}
 											>
 												<Send className="h-3.5 w-3.5" />
 												{loading ? "Sending…" : "Send invite"}

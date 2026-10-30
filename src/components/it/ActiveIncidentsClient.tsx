@@ -67,6 +67,7 @@ import { useUsersByIds } from "@/hooks/useUsersByIds";
 import type { LoadIncident } from "@/lib/incidents/incident.types";
 import { SCALE_LABELS } from "@/lib/incidents/incident.utils";
 import { incidentScreenshotUrl } from "@/lib/incidents/incident-screenshot-url";
+import { IT_DROPDOWN_PANEL } from "@/lib/ui/it-routes";
 import { cn } from "@/lib/utils";
 
 interface IncidentsSummary {
@@ -172,7 +173,7 @@ export function RefreshIncidentsButton() {
 	return (
 		<Button
 			type="button"
-			className="btn-primary"
+			variant="brand"
 			disabled={refreshing}
 			onClick={() => void handleRefresh()}
 		>
@@ -873,7 +874,10 @@ export function ActiveIncidentsClient({
 													)}
 													<ChevronDown className="h-3.5 w-3.5 text-slate-400" />
 												</DropdownMenuTrigger>
-												<DropdownMenuContent align="end" className="w-64 p-0">
+												<DropdownMenuContent
+													align="end"
+													className={`${IT_DROPDOWN_PANEL} w-64 p-0`}
+												>
 													<div className="flex items-center gap-2 border-b border-slate-200/80 px-3 py-2">
 														<Search className="h-4 w-4 shrink-0 text-slate-400" />
 														<input
@@ -982,7 +986,8 @@ export function ActiveIncidentsClient({
 													/>
 													<Button
 														size="sm"
-														className="btn-primary self-end"
+														variant="brand"
+														className="self-end"
 														disabled={!resolutionNote.trim()}
 														onClick={async () => {
 															const ok = await act(selected.$id, {

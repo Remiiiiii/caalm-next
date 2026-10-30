@@ -15,6 +15,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications, useUnreadCount } from "@/hooks/useNotifications";
 
 interface DashboardHeaderProps {
+	/** Hides the quick-action pills, keeping Ask CAALM and the account controls. */
+	hideQuickActions?: boolean;
 	user?:
 		| (Models.User<Models.Preferences> & {
 				fullName?: string;
@@ -26,7 +28,10 @@ interface DashboardHeaderProps {
 		| null;
 }
 
-const DashboardHeader = ({ user: userProp }: DashboardHeaderProps) => {
+const DashboardHeader = ({
+	user: userProp,
+	hideQuickActions = false,
+}: DashboardHeaderProps) => {
 	const { logout, user: userFromContext } = useAuth();
 	const [notifOpen, setNotifOpen] = useState(false);
 
@@ -82,10 +87,12 @@ const DashboardHeader = ({ user: userProp }: DashboardHeaderProps) => {
 
 	return (
 		<div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-			<div className="min-w-0 flex-1 overflow-x-auto">
-				<QuickActions user={user} />
-			</div>
-			<div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+			{hideQuickActions ? null : (
+				<div className="min-w-0 flex-1 overflow-x-auto">
+					<QuickActions user={user} />
+				</div>
+			)}
+			<div className="ml-auto flex items-center gap-2 shrink-0 self-end sm:self-auto">
 				<CaalmAssistantLauncher />
 				<header className="bg-white/30 backdrop-blur border border-white/40 shadow-lg rounded-full w-full sm:w-fit px-2.5 sm:px-3 shrink-0">
 					<div className="flex h-10 items-center">

@@ -57,6 +57,10 @@ const CACHE_USER_TTL_MS = 300000;
 type ProfilePhotoSource = {
 	avatar?: string | null;
 	profileImageId?: string | null;
+	division?: string | null;
+	department?: string | null;
+	departmentLabel?: string | null;
+	divisionLabel?: string | null;
 };
 
 /** Auth account has the name; the users table has the uploaded photo file id. */
@@ -75,6 +79,11 @@ function withProfilePhoto(
 	return {
 		...base,
 		avatar: profile?.avatar ?? base.avatar,
+		// The account has no placement fields; the IT portal link needs department.
+		division: profile?.division ?? base.division,
+		department: profile?.department ?? base.department,
+		departmentLabel: profile?.departmentLabel ?? base.departmentLabel,
+		divisionLabel: profile?.divisionLabel ?? base.divisionLabel,
 		profileImageId: imageId,
 		prefs: {
 			...(base.prefs || {}),

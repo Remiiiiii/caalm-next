@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type React from "react";
 import { Suspense, useEffect, useMemo } from "react";
 import DashboardHeader from "@/components/DashboardHeader";
@@ -12,6 +12,7 @@ import MobileNavigation from "@/components/MobileNavigation";
 import NotificationSoundListener from "@/components/NotificationSoundListener";
 import Sidebar from "@/components/Sidebar";
 import ReportIssueFab from "@/components/tickets/ReportIssueFab";
+import TicketRecordingOverlay from "@/components/tickets/TicketRecordingOverlay";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { Toaster } from "@/components/ui/toaster";
 import type { UserRole } from "@/constants/rbac";
@@ -20,6 +21,8 @@ import { ImpersonationProvider } from "@/contexts/ImpersonationContext";
 import { OrganizationProvider } from "@/contexts/OrganizationContext";
 import { SidebarProvider } from "@/contexts/SidebarContext";
 import { StepUpProvider } from "@/contexts/StepUpContext";
+import { TicketRecordingProvider } from "@/contexts/TicketRecordingContext";
+import { isItRoute } from "@/lib/ui/it-routes";
 import { resolveAvatarDisplayUrl } from "@/lib/utils";
 
 /** Prefer prefs.profileImage (built URL), then file id → storage URL. Empty = initials. */
@@ -54,6 +57,7 @@ function resolveNavAvatar(user: {
 const LayoutContent = ({ children }: { children: React.ReactNode }) => {
 	const { user, loading } = useAuth();
 	const router = useRouter();
+	const hideQuickActions = isItRoute(usePathname());
 
 	useEffect(() => {
 		if (!loading && !user) {
@@ -192,28 +196,34 @@ const LayoutContent = ({ children }: { children: React.ReactNode }) => {
 	}
 
 	return (
-		<SidebarProvider>
-			<NotificationSoundListener />
-			<main className="relative flex h-screen flex-col overflow-hidden">
-				<WaveLoopBackground className="fixed inset-0 -z-10 h-full w-full object-cover" />
-				<ImpersonationBanner />
-				<div className="relative z-0 flex min-h-0 flex-1 overflow-hidden">
-					<Sidebar {...sidebarProps} />
-					<section className="flex h-full min-w-0 flex-1 flex-col pt-4 sm:pt-5 md:pt-6 lg:pt-7">
-						<MobileNavigation {...navigationProps} />
-						<div className="min-w-0 shrink-0 px-3 pb-2 sm:px-4 sm:pb-3 lg:pr-7">
-							<DashboardHeader user={user} />
-						</div>
-						<div className="main-content">
-							<DesktopFirstGate>{pageSlot}</DesktopFirstGate>
-						</div>
-					</section>
-					<Toaster />
-					<DemoTourLayer />
-					<ReportIssueFab />
-				</div>
-			</main>
-		</SidebarProvider>
+		<TicketRecordingProvider>
+			<SidebarProvider>
+				<NotificationSoundListener />
+				<main className="relative flex h-screen flex-col overflow-hidden">
+					<WaveLoopBackground className="fixed inset-0 -z-10 h-full w-full object-cover" />
+					<ImpersonationBanner />
+					<div className="relative z-0 flex min-h-0 flex-1 overflow-hidden">
+						<Sidebar {...sidebarProps} />
+						<section className="flex h-full min-w-0 flex-1 flex-col pt-4 sm:pt-5 md:pt-6 lg:pt-7">
+							<MobileNavigation {...navigationProps} />
+							<div className="min-w-0 shrink-0 px-3 pb-2 sm:px-4 sm:pb-3 lg:pr-7">
+								<DashboardHeader
+									user={user}
+									hideQuickActions={hideQuickActions}
+								/>
+							</div>
+							<div className="main-content">
+								<DesktopFirstGate>{pageSlot}</DesktopFirstGate>
+							</div>
+						</section>
+						<Toaster />
+						<DemoTourLayer />
+						<ReportIssueFab />
+						<TicketRecordingOverlay />
+					</div>
+				</main>
+			</SidebarProvider>
+		</TicketRecordingProvider>
 	);
 };
 

@@ -92,11 +92,15 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
 
 	useEffect(() => {
 		void refreshStatus();
+	}, [refreshStatus]);
+
+	useEffect(() => {
+		if (!status.active) return;
 		const id = window.setInterval(() => {
 			void refreshStatus();
 		}, 15000);
 		return () => window.clearInterval(id);
-	}, [refreshStatus]);
+	}, [status.active, refreshStatus]);
 
 	useEffect(() => {
 		if (status.active) {

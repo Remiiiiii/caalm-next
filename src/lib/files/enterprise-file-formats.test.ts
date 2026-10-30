@@ -3,6 +3,7 @@ import {
 	assertEnterpriseFileAllowed,
 	EnterpriseFileFormatError,
 	getEnterpriseFormatHint,
+	isTicketScreenRecordingFile,
 	validateEnterpriseFile,
 } from "./enterprise-file-formats";
 
@@ -55,6 +56,49 @@ describe("enterprise file formats", () => {
 				"attachment",
 			).ok,
 		).toBe(false);
+	});
+
+	it("keeps video off the ticket drop zone (Record handles clips)", () => {
+		expect(
+			validateEnterpriseFile(
+				{ name: "clip.mp4", type: "video/mp4" },
+				"ticketAttachment",
+			).ok,
+		).toBe(false);
+		expect(
+			validateEnterpriseFile(
+				{ name: "deck.pptx", type: "" },
+				"ticketAttachment",
+			).ok,
+		).toBe(false);
+		expect(
+			validateEnterpriseFile(
+				{ name: "agreement.pdf", type: "application/pdf" },
+				"ticketAttachment",
+			).ok,
+		).toBe(true);
+		expect(
+			validateEnterpriseFile(
+				{ name: "screenshot.png", type: "image/png" },
+				"ticketAttachment",
+			).ok,
+		).toBe(true);
+	});
+
+	it("treats webm/mp4/mov as screen recordings for ticket submit", () => {
+		expect(
+			isTicketScreenRecordingFile({ name: "screen-recording.webm" }),
+		).toBe(true);
+		expect(isTicketScreenRecordingFile({ name: "notes.pdf" })).toBe(false);
+	});
+
+	it("still allows screen recording video on generic attachments", () => {
+		expect(
+			validateEnterpriseFile(
+				{ name: "screen-recording.webm", type: "video/webm" },
+				"attachment",
+			).ok,
+		).toBe(true);
 	});
 
 	it("throws on server assert helper", () => {

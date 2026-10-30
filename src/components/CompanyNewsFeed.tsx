@@ -37,6 +37,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { StatCardIcon } from "@/components/ui/stat-card-icon";
+import { useCtaButtonClass } from "@/lib/ui/use-cta-button-class";
 
 interface NewsItem {
 	id: string;
@@ -82,6 +83,7 @@ const CompanyNewsFeed: React.FC<CompanyNewsFeedProps> = ({
 	viewer: propViewer,
 	parentLoading = false,
 }) => {
+	const cta = useCtaButtonClass();
 	const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
@@ -502,11 +504,7 @@ const CompanyNewsFeed: React.FC<CompanyNewsFeedProps> = ({
 							</div>
 
 							<div className="flex justify-end">
-								<Button
-									type="button"
-									onClick={clearFilters}
-									className="btn-primary h-10 px-3 sm:px-4"
-								>
+								<Button type="button" onClick={clearFilters} className={cta}>
 									<X className="h-4 w-4" />
 									Clear Filters
 								</Button>
@@ -540,10 +538,7 @@ const CompanyNewsFeed: React.FC<CompanyNewsFeedProps> = ({
 							</h3>
 							<p className="text-sm text-slate-600">{error}</p>
 							<div className="mt-4 flex justify-center">
-								<Button
-									onClick={fetchNewsItems}
-									className="btn-primary px-3 sm:px-4"
-								>
+								<Button onClick={fetchNewsItems} className={cta}>
 									<RotateCcw className="h-4 w-4" />
 									Try Again
 								</Button>

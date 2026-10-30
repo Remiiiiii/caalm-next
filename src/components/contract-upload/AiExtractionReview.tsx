@@ -1,7 +1,6 @@
 "use client";
 
-import { AlertTriangle, CheckCircle, Sparkles } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { AlertTriangle, Check, Sparkles } from "lucide-react";
 import {
 	isRealExtractionMethod,
 	LOW_EXTRACTION_CONFIDENCE,
@@ -28,11 +27,21 @@ export function AiExtractionStatusBadge({
 			: null;
 
 	return (
-		<Badge className="sidebar-gradient-text border-sidebar-gradient-text">
-			<CheckCircle className="h-3 w-3 mr-1 text-[#0f5384]" />
-			CAALM filled {filledCount > 0 ? `${filledCount} fields` : "fields"}
-			{pct !== null ? ` · ${pct}%` : ""}
-		</Badge>
+		<span className="inline-flex h-[23px] items-center gap-1.5 rounded-full border border-[#078fab]/20 bg-[#078fab]/[.07] pl-1 pr-2.5">
+			<span className="flex h-4 w-4 items-center justify-center rounded-full bg-[linear-gradient(90deg,#00c1cb,#078fab,#0e638f)]">
+				<Check
+					className="h-[10px] w-[10px] text-white"
+					strokeWidth={3}
+					aria-hidden
+				/>
+			</span>
+			<span className="text-[11.5px] font-semibold text-[#078fab]">
+				CAALM filled {filledCount > 0 ? `${filledCount} fields` : "fields"}
+			</span>
+			{pct !== null ? (
+				<span className="text-xs font-bold text-[#0f5384]">{pct}%</span>
+			) : null}
+		</span>
 	);
 }
 

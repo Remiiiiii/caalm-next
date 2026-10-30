@@ -106,7 +106,9 @@ export async function POST(request: NextRequest) {
 		let environment: unknown = "";
 		let searchedExisting: unknown = "";
 		let isBug: unknown = "";
+		let problemPageUrl: unknown = "";
 		let files: File[] = [];
+		const appOrigin = new URL(request.url).origin;
 
 		if (contentType.includes("multipart/form-data")) {
 			const form = await request.formData();
@@ -124,6 +126,7 @@ export async function POST(request: NextRequest) {
 			environment = form.get("environment") || "";
 			searchedExisting = form.get("searchedExisting") || "";
 			isBug = form.get("isBug") || "";
+			problemPageUrl = form.get("problemPageUrl") || "";
 			files = form
 				.getAll("attachments")
 				.filter((item): item is File => item instanceof File);
@@ -143,6 +146,7 @@ export async function POST(request: NextRequest) {
 			environment = body.environment;
 			searchedExisting = body.searchedExisting;
 			isBug = body.isBug;
+			problemPageUrl = body.problemPageUrl;
 		}
 
 		const isEngineering = String(lane || "").trim() === "engineering";
@@ -241,6 +245,8 @@ export async function POST(request: NextRequest) {
 			lane,
 			category,
 			affectedModule,
+			problemPageUrl,
+			appOrigin,
 			impact,
 			urgency,
 			attachmentIds,

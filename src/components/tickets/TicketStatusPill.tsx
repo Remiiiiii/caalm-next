@@ -4,6 +4,7 @@ import type {
 	TicketStatus,
 } from "@/lib/tickets/ticket.types";
 import { resolveTicketLane } from "@/lib/tickets/ticket.types";
+import { severityLevelNumber } from "@/lib/tickets/ticket-queue";
 import { cn } from "@/lib/utils";
 
 const STATUS_CLASS: Record<TicketStatus, string> = {
@@ -37,7 +38,18 @@ export function TicketStatusPill({ status }: { status: TicketStatus }) {
 	);
 }
 
-export function TicketSeverityPill({ severity }: { severity: TicketSeverity }) {
+export function TicketSeverityPill({
+	severity,
+	lane,
+}: {
+	severity: TicketSeverity;
+	/** Engineering reads "High · SEV-2"; Help shows the level only; omitted keeps the plain level. */
+	lane?: TicketLane | null;
+}) {
+	const label =
+		lane && resolveTicketLane({ lane }) === "engineering"
+			? `${severity} · SEV-${severityLevelNumber(severity)}`
+			: severity;
 	return (
 		<span
 			className={cn(
@@ -45,7 +57,7 @@ export function TicketSeverityPill({ severity }: { severity: TicketSeverity }) {
 				SEVERITY_CLASS[severity],
 			)}
 		>
-			{severity}
+			{label}
 		</span>
 	);
 }

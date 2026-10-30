@@ -1,18 +1,27 @@
 // Test/CI fallback values when secrets are not configured.
 // When a defaultValue is supplied the result is always a string, so callers
 // that pass a fallback get a `string` (not `string | undefined`).
-function getTestFallback(key: string, defaultValue: string): string;
+// Browser bundles only inline literal `process.env.NEXT_PUBLIC_X`, so callers on
+// the client pass that literal as `literalValue`; `process.env[key]` is empty there.
+function getTestFallback(
+	key: string,
+	defaultValue: string,
+	literalValue?: string,
+): string;
 function getTestFallback(
 	key: string,
 	defaultValue?: string,
+	literalValue?: string,
 ): string | undefined;
 function getTestFallback(
 	key: string,
 	defaultValue?: string,
+	literalValue?: string,
 ): string | undefined {
 	if (process.env.CI || process.env.NODE_ENV === "test") {
 		// In CI/test, use test values if env var is not set
 		return (
+			literalValue ||
 			process.env[key] ||
 			defaultValue ||
 			`test-${key
@@ -21,7 +30,7 @@ function getTestFallback(
 				.replace(/_/g, "-")}`
 		);
 	}
-	return process.env[key] || defaultValue;
+	return literalValue || process.env[key] || defaultValue;
 }
 
 export const appwriteConfig = {
@@ -31,11 +40,16 @@ export const appwriteConfig = {
 			? "https://cloud.appwrite.io/v1"
 			: "https://fra.cloud.appwrite.io/v1"),
 
-	projectId: getTestFallback("NEXT_PUBLIC_APPWRITE_PROJECT", "test-project-id"),
+	projectId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_PROJECT",
+		"test-project-id",
+		process.env.NEXT_PUBLIC_APPWRITE_PROJECT,
+	),
 
 	databaseId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_DATABASE",
 		"test-database-id",
+		process.env.NEXT_PUBLIC_APPWRITE_DATABASE,
 	),
 
 	usersCollectionId: getTestFallback(
@@ -51,6 +65,7 @@ export const appwriteConfig = {
 	contractsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_CONTRACTS_COLLECTION",
 		"test-contracts",
+		process.env.NEXT_PUBLIC_APPWRITE_CONTRACTS_COLLECTION,
 	),
 
 	contractsEnterpriseMetadataCollectionId: getTestFallback(
@@ -97,6 +112,7 @@ export const appwriteConfig = {
 	licensesCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_LICENSES_COLLECTION",
 		"test-licenses",
+		process.env.NEXT_PUBLIC_APPWRITE_LICENSES_COLLECTION,
 	),
 
 	licenseDraftsCollectionId: getTestFallback(
@@ -168,6 +184,7 @@ export const appwriteConfig = {
 	notificationSettingsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_NOTIFICATION_SETTINGS_COLLECTION",
 		"test-notification-settings",
+		process.env.NEXT_PUBLIC_APPWRITE_NOTIFICATION_SETTINGS_COLLECTION,
 	),
 
 	pushSubscriptionsCollectionId: getTestFallback(
@@ -446,14 +463,17 @@ export const appwriteConfig = {
 	roadmapSectionsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_ROADMAP_SECTIONS_COLLECTION",
 		"test-roadmap-sections",
+		process.env.NEXT_PUBLIC_APPWRITE_ROADMAP_SECTIONS_COLLECTION,
 	),
 	roadmapTasksCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_ROADMAP_TASKS_COLLECTION",
 		"test-roadmap-tasks",
+		process.env.NEXT_PUBLIC_APPWRITE_ROADMAP_TASKS_COLLECTION,
 	),
 	roadmapTestRunsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_ROADMAP_TEST_RUNS_COLLECTION",
 		"test-roadmap-test-runs",
+		process.env.NEXT_PUBLIC_APPWRITE_ROADMAP_TEST_RUNS_COLLECTION,
 	),
 	roadmapStatusLogCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_ROADMAP_STATUS_LOG_COLLECTION",

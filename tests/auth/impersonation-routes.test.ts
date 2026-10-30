@@ -186,6 +186,27 @@ describe("impersonation APIs", () => {
 		expect(response.status).toBe(403);
 	});
 
+	it("returns inactive without Appwrite when there is no impersonation cookie", async () => {
+		const { GET } = await import("@/app/api/impersonation/status/route");
+		const response = await GET(
+			new NextRequest("http://localhost:3000/api/impersonation/status", {
+				headers: { cookie: "appwrite-session=test-session" },
+			}),
+		);
+		expect(response.status).toBe(200);
+		expect(await response.json()).toEqual({ active: false });
+		expect(mockGetCurrentUser).not.toHaveBeenCalled();
+	});
+
+	it("returns 401 when there is no session cookie", async () => {
+		const { GET } = await import("@/app/api/impersonation/status/route");
+		const response = await GET(
+			new NextRequest("http://localhost:3000/api/impersonation/status"),
+		);
+		expect(response.status).toBe(401);
+		expect(mockGetCurrentUser).not.toHaveBeenCalled();
+	});
+
 	it("ends the session when the actor matches", async () => {
 		const { POST: start } = await import("@/app/api/impersonation/start/route");
 		const started = await start(

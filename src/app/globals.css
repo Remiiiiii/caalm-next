@@ -251,11 +251,33 @@
 		animation: shimmer-slide 900ms ease;
 	}
 
+	/* "Open assistant" pill (Select Contract Type design). EXPERIMENT: used on
+	   /dashboard/superadmin in place of .btn-primary via useCtaButtonClass(). */
+	.btn-secondary {
+		@apply inline-flex shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-full! px-4! text-[12.5px]! font-semibold! text-white transition-[opacity,box-shadow] duration-200;
+		height: 28px !important;
+		min-height: 28px !important;
+		background-image: linear-gradient(90deg, #00c1cb, #078fab, #0e638f);
+	}
+
+	.btn-secondary:hover {
+		@apply text-white!;
+		opacity: 0.92;
+		box-shadow: 0 4px 16px rgba(7, 143, 171, 0.28);
+	}
+
+	.btn-secondary:focus-visible {
+		outline: 2px solid #078fab;
+		outline-offset: 2px;
+	}
+
 	/* Phase 1 View as user: mute write CTAs; End session uses data-impersonation-allow */
 	body[data-impersonation-readonly="true"]
 	.primary-btn:not([data-impersonation-allow]),
 	body[data-impersonation-readonly="true"]
 		.btn-primary:not([data-impersonation-allow]),
+	body[data-impersonation-readonly="true"]
+		.btn-secondary:not([data-impersonation-allow]),
 	body[data-impersonation-readonly="true"]
 		.delete-btn:not([data-impersonation-allow]) {
 		pointer-events: none;
@@ -498,11 +520,11 @@
 
 	/* Matches .glass-dialog-panel — OTP / 2FA alert shells */
 	.shad-alert-dialog {
-		@apply space-y-4 w-full max-w-[min(95vw,28rem)] overflow-hidden rounded-xl md:rounded-[30px] px-4 md:px-8 py-10 outline-hidden;
-		background: rgba(255, 255, 255, 0.9);
+		@apply space-y-4 w-full max-w-[min(95vw,28rem)] overflow-hidden rounded-[26px] px-4 md:px-8 py-10 outline-hidden;
+		background: rgba(255, 255, 255, 0.45);
 		backdrop-filter: blur(24px);
 		-webkit-backdrop-filter: blur(24px);
-		border: 1px solid rgb(226 232 240); /* slate-200 */
+		border: 1px solid rgba(255, 255, 255, 0.5);
 		box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.12);
 	}
 	.shad-submit-btn {
@@ -2631,4 +2653,143 @@ iframe[src*="splinecode"] {
 	--os-handle-bg-active: rgb(148 163 184 / 0.95);
 	--os-handle-border-radius: 9999px;
 	--os-handle-min-size: 24px;
+}
+
+/* ==========================================================================
+   Upload Contract wizard, steps 2+ (form grid spec). Unlayered on purpose: it
+   has to win over the Tailwind classes on each field. Scoped to the wizard form.
+   ========================================================================== */
+#contract-upload-form label {
+	display: block;
+	margin-bottom: 6px;
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: #64748b;
+}
+
+#contract-upload-form label span.text-red {
+	font-size: 11px;
+	color: #ef4444;
+}
+
+#contract-upload-form input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]),
+#contract-upload-form textarea,
+#contract-upload-form button[role="combobox"] {
+	width: 100%;
+	min-height: 38px;
+	padding: 9px 12px;
+	font-size: 13px;
+	font-weight: 500;
+	color: #1e293b;
+	background-color: #fff;
+	border: 1.5px solid #e2e8f0;
+	border-radius: 9px;
+	box-shadow: none;
+}
+
+#contract-upload-form textarea {
+	min-height: 80px;
+	line-height: 1.5;
+	resize: vertical;
+}
+
+#contract-upload-form input:focus,
+#contract-upload-form textarea:focus,
+#contract-upload-form button[role="combobox"]:focus,
+#contract-upload-form button[role="combobox"][data-state="open"] {
+	border-color: #078fab;
+	box-shadow: 0 0 0 3px rgba(7, 143, 171, 0.12);
+	outline: none;
+}
+
+#contract-upload-form [aria-invalid="true"] {
+	border-color: #ef4444 !important;
+}
+
+#contract-upload-form [id$="-form-item-message"] {
+	margin-top: 4px;
+	font-size: 11px;
+	font-weight: 400;
+	color: #ef4444;
+}
+
+/* CAALM-filled fields: left accent and a faint tint on the input itself */
+#contract-upload-form [data-caalm] input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+#contract-upload-form [data-caalm] textarea,
+#contract-upload-form [data-caalm] button[role="combobox"] {
+	border-left: 2.5px solid rgba(7, 143, 171, 0.5);
+	background-color: rgba(7, 143, 171, 0.02);
+}
+
+#contract-upload-form [data-caalm="review"] input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+#contract-upload-form [data-caalm="review"] textarea,
+#contract-upload-form [data-caalm="review"] button[role="combobox"] {
+	border-left-color: rgba(245, 158, 11, 0.6);
+	background-color: rgba(245, 158, 11, 0.03);
+}
+
+/* Boolean toggle: pill track, gradient when on, On/Off text beside it */
+#contract-upload-form button[role="switch"] {
+	position: relative;
+	width: 36px;
+	height: 20px;
+	margin-right: 36px;
+	padding: 0;
+	border-radius: 99px;
+	background-color: #e2e8f0;
+	background-image: none;
+}
+
+#contract-upload-form button[role="switch"][data-state="checked"] {
+	background-image: linear-gradient(90deg, #00c1cb, #078fab, #0e638f);
+}
+
+#contract-upload-form button[role="switch"] > span {
+	width: 16px;
+	height: 16px;
+	margin: 0;
+	background-color: #fff;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+	/* Switch uses the `translate` property for the thumb; reset it so only transform moves it. */
+	translate: none;
+	transform: translateX(2px);
+}
+
+#contract-upload-form button[role="switch"][data-state="checked"] > span {
+	transform: translateX(18px);
+}
+
+#contract-upload-form button[role="switch"]::after {
+	content: "Off";
+	position: absolute;
+	left: 46px;
+	top: 50%;
+	transform: translateY(-50%);
+	font-size: 12.5px;
+	font-weight: 500;
+	color: #475569;
+	white-space: nowrap;
+}
+
+#contract-upload-form button[role="switch"][data-state="checked"]::after {
+	content: "On";
+}
+
+/* Upload wizard: each step section gets a title and a divider between sections. */
+#contract-upload-form [data-section-title]::before {
+	content: attr(data-section-title);
+	display: block;
+	grid-column: 1 / -1;
+	margin-bottom: 12px;
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: #0f5384;
+}
+#contract-upload-form [data-section-title]:not([data-section-first]) {
+	border-top: 1px solid #e2e8f0;
+	padding-top: 20px;
 }

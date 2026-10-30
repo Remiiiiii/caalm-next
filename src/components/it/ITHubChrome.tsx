@@ -15,6 +15,7 @@ import { FILTER_PILL_TRIGGER } from "@/components/ui/filter-pill";
 import { useITOrgScope } from "@/contexts/ITOrgScopeContext";
 import { useITHubOverview } from "@/hooks/useITHubOverview";
 import type { OrgITFleetRow } from "@/lib/it/org-it-snapshot";
+import { IT_DROPDOWN_PANEL } from "@/lib/ui/it-routes";
 import { cn } from "@/lib/utils";
 
 const fleetFetcher = async (
@@ -89,7 +90,10 @@ export function TenantSwitcher() {
 					/>
 				</button>
 			</DropdownMenuTrigger>
-			<DropdownMenuContent align="end" className="w-80 overflow-x-hidden p-0">
+			<DropdownMenuContent
+				align="end"
+				className={`${IT_DROPDOWN_PANEL} w-80 overflow-x-hidden p-0`}
+			>
 				<div className="border-b border-slate-200/80 p-2">
 					<label className="flex h-9 items-center gap-2 rounded-md border-[0.25px] border-slate-300 bg-white px-2.5">
 						<Search className="h-4 w-4 shrink-0 text-slate-500" aria-hidden />
@@ -161,7 +165,8 @@ export function ITHubChrome() {
 					</p>
 					<Button
 						type="button"
-						className="primary-btn shrink-0 px-3 sm:px-4"
+						variant="brand"
+						className="shrink-0"
 						onClick={() => {
 							setHubOrgId(null);
 							router.push("/dashboard/it/tenants");

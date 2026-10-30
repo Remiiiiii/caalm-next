@@ -21,6 +21,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { MODAL_OVERLAY } from "@/lib/ui/modal-styles";
 import { cn } from "@/lib/utils";
 
 export type ExpiryEntityType = "contract" | "license" | "audit";
@@ -202,7 +203,7 @@ export default function ExpiryAlertModal({
 			{/* Bright frosted backdrop — dashboard shows through */}
 			<button
 				type="button"
-				className="absolute inset-0 z-0 border-0 cursor-pointer bg-white/40 backdrop-blur-sm"
+				className={`absolute inset-0 z-0 border-0 cursor-pointer ${MODAL_OVERLAY}`}
 				aria-label="Dismiss expiry alert for this session"
 				onClick={onClose}
 			/>

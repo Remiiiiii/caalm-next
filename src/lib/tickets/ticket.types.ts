@@ -1,3 +1,4 @@
+import type { EngineeringBugFields } from "./bug-report-body";
 export const TICKET_STATUSES = [
 	"OPEN",
 	"ASSIGNED",
@@ -57,6 +58,8 @@ export type Ticket = {
 	description: string;
 	category?: string;
 	affectedModule?: string | null;
+	/** Full URL of the in-app page where the issue was seen. */
+	problemPageUrl?: string | null;
 	impact?: TicketSeverity;
 	urgency?: TicketSeverity;
 	submittedByUserId: string;
@@ -76,6 +79,14 @@ export type Ticket = {
 	attachments?: string[];
 	orgId: string;
 	cursorAgentRunId?: string | null;
+	/** Structured bug-report fields (engineering tickets). */
+	stepsToReproduce?: string | null;
+	expectedBehavior?: string | null;
+	actualBehavior?: string | null;
+	os?: string | null;
+	environment?: string | null;
+	confirmedNoDuplicate?: boolean | null;
+	confirmedProductBug?: boolean | null;
 	$createdAt?: string;
 	$updatedAt?: string;
 };
@@ -96,10 +107,13 @@ export type CreateTicketInput = {
 	lane: TicketLane;
 	category: string;
 	affectedModule?: string | null;
+	problemPageUrl: string;
 	impact: TicketSeverity;
 	urgency: TicketSeverity;
 	severity: TicketSeverity;
 	attachmentIds?: string[];
+	/** Engineering bug-report fields, stored on the ticket as well as in `description`. */
+	bug?: EngineeringBugFields;
 };
 
 export type GitHubIssueSnapshot = {

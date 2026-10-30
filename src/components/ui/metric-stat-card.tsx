@@ -108,6 +108,8 @@ export interface MetricStatCardProps {
 	title: string;
 	value: ReactNode;
 	description?: ReactNode;
+	/** Chip or badge shown to the right of the value, on the same row. */
+	valueAside?: ReactNode;
 	/** Extra content under the description (breakdown bar, sparkline, CTA). */
 	footer?: ReactNode;
 	/** Push the footer to the bottom of the card (equal-height card rows). */
@@ -504,6 +506,7 @@ export function MetricStatCard({
 	description,
 	footer,
 	pinFooter = false,
+	valueAside,
 	titleClassName,
 	icon,
 	iconTone = "default",
@@ -589,6 +592,7 @@ export function MetricStatCard({
 						/>
 					) : null}
 					<span className="min-w-0">{value}</span>
+					{valueAside}
 				</div>
 				{description ? (
 					<div className={cn("mt-1 text-xs", descriptionTone)}>

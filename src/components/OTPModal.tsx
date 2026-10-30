@@ -141,7 +141,9 @@ const OTPModal = ({
 			setError("Incorrect code. Please try again.");
 		} catch (err) {
 			const message =
-				err instanceof Error ? err.message : "Failed to verify. Please try again.";
+				err instanceof Error
+					? err.message
+					: "Failed to verify. Please try again.";
 			if (message.includes("Too many attempts")) {
 				setIsLockedOut(true);
 				setError(LOCKOUT_MESSAGE);
@@ -200,7 +202,7 @@ const OTPModal = ({
 			title="Enter verification code"
 			description={`Enter the 6-digit code we sent to ${maskEmail(email)}.`}
 			footer={
-				<>
+				<div className="flex justify-between w-full">
 					<Button
 						type="button"
 						variant="ghost"
@@ -238,11 +240,11 @@ const OTPModal = ({
 							{isLoading ? "Verifying…" : "Verify"}
 						</Button>
 					)}
-				</>
+				</div>
 			}
 		>
-				{/* Status slot — fixed min-height prevents layout shift */}
-				<div className="flex flex-col gap-3 pb-1">
+			{/* Status slot — fixed min-height prevents layout shift */}
+			<div className="flex flex-col gap-3 pb-1">
 				<div className="min-h-11">
 					{isExpired ? (
 						<div
@@ -347,7 +349,7 @@ const OTPModal = ({
 						)}
 					</p>
 				) : null}
-				</div>
+			</div>
 		</AppDialog>
 	);
 };

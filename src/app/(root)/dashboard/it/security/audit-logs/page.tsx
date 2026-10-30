@@ -16,7 +16,7 @@ export default function ITSecurityAuditLogsPage() {
 					module. Open Audit Logs with your IT system-log permission to review
 					events.
 				</p>
-				<Button asChild className="primary-btn px-3 sm:px-4 cursor-pointer">
+				<Button asChild variant="brand" className="cursor-pointer">
 					<Link href="/audits/audit">Open Audit Logs</Link>
 				</Button>
 			</ITGlassPanel>

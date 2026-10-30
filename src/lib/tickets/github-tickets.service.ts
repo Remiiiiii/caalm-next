@@ -131,6 +131,7 @@ export function buildGitHubIssueBody(input: {
 	severity: string;
 	category: string;
 	affectedModule?: string | null;
+	problemPageUrl?: string | null;
 	impact: string;
 	urgency: string;
 	description: string;
@@ -143,6 +144,9 @@ export function buildGitHubIssueBody(input: {
 	const moduleLine = input.affectedModule
 		? `**Affected service:** ${input.affectedModule}\n`
 		: "";
+	const pageLine = input.problemPageUrl
+		? `**Problem page:** ${input.problemPageUrl}\n`
+		: "";
 	const numberLine = input.ticketNumber
 		? `**Ticket number:** ${input.ticketNumber}\n`
 		: "";
@@ -152,7 +156,7 @@ export function buildGitHubIssueBody(input: {
 **Department/Division:** ${input.department}
 **Submitted at:** ${input.submittedAt} (${human})
 ${numberLine}**Category:** ${input.category}
-${moduleLine}**Impact:** ${impactLabel}
+${moduleLine}${pageLine}**Impact:** ${impactLabel}
 **Urgency:** ${urgencyLabel}
 **Severity:** ${input.severity}
 
