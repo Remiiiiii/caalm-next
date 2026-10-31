@@ -1,169 +1,78 @@
 "use client";
 
-// Inspired by react-hot-toast library
-import { useEffect, useState } from "react";
+/**
+ * Drop-in replacement for the old shadcn use-toast hook.
+ * All calls are now routed through caalmToast.base() (Sonner under the hood),
+ * giving them the CAALM toast UI automatically.
+ *
+ * API surface is preserved:
+ *   const { toast, dismiss } = useToast()
+ *   toast({ title, description, variant, action })
+ */
 
-import type { ToastActionElement, ToastProps } from "@/components/ui/toast";
+import type React from "react";
+import { toast as sonnerDismiss } from "sonner";
+import type { Tone } from "@/components/ui/caalm-toast";
+import { caalmToast } from "@/lib/ui/caalm-toast";
 
-const TOAST_LIMIT = 1;
-const TOAST_REMOVE_DELAY = 1000000;
+// ─── Types (kept for call-site compatibility) ─────────────────────────────────
 
-type ToasterToast = ToastProps & {
-	id: string;
+export interface ToastProps {
+	variant?: "default" | "destructive";
+}
+
+export type ToastActionElement = React.ReactElement;
+
+type ToastInput = {
 	title?: React.ReactNode;
 	description?: React.ReactNode;
+	variant?: "default" | "destructive";
+	/** Legacy React-element action (e.g. <ToastAction altText="Undo">…</ToastAction>). Rendered as-is. */
 	action?: ToastActionElement;
+	/** Structured action list for new call sites. */
+	actions?: Array<{ label: string; onClick: () => void }>;
+	/** Explicit tone override; inferred from variant when absent. */
+	tone?: Tone;
+	/** Override auto-dismiss duration in ms (Infinity = persist). */
+	duration?: number;
+	/** Accepted but ignored — CAALM toast does not support arbitrary className. */
+	className?: string;
 };
 
-type Action =
-	| { type: "ADD_TOAST"; toast: ToasterToast }
-	| { type: "UPDATE_TOAST"; toast: Partial<ToasterToast> }
-	| { type: "DISMISS_TOAST"; toastId?: ToasterToast["id"] }
-	| { type: "REMOVE_TOAST"; toastId?: ToasterToast["id"] };
+// ─── Core function ────────────────────────────────────────────────────────────
 
-interface State {
-	toasts: ToasterToast[];
-}
+function toast(props: ToastInput) {
+	const tone: Tone =
+		props.tone ?? (props.variant === "destructive" ? "error" : "neutral");
 
-const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
+	const message =
+		props.description != null ? String(props.description) : undefined;
 
-const addToRemoveQueue = (toastId: string) => {
-	if (toastTimeouts.has(toastId)) {
-		return;
-	}
-
-	const timeout = setTimeout(() => {
-		toastTimeouts.delete(toastId);
-		dispatch({
-			type: "REMOVE_TOAST",
-			toastId: toastId,
-		});
-	}, TOAST_REMOVE_DELAY);
-
-	toastTimeouts.set(toastId, timeout);
-};
-
-export const reducer = (state: State, action: Action): State => {
-	switch (action.type) {
-		case "ADD_TOAST":
-			return {
-				...state,
-				toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT),
-			};
-
-		case "UPDATE_TOAST":
-			return {
-				...state,
-				toasts: state.toasts.map((t) =>
-					t.id === action.toast.id ? { ...t, ...action.toast } : t,
-				),
-			};
-
-		case "DISMISS_TOAST": {
-			const { toastId } = action;
-
-			// ! Side effects ! - This could be extracted into a dismissToast() action,
-			// but I'll keep it here for simplicity
-			if (toastId) {
-				addToRemoveQueue(toastId);
-			} else {
-				state.toasts.forEach((toast) => {
-					addToRemoveQueue(toast.id);
-				});
-			}
-
-			return {
-				...state,
-				toasts: state.toasts.map((t) =>
-					t.id === toastId || toastId === undefined
-						? {
-								...t,
-								open: false,
-							}
-						: t,
-				),
-			};
-		}
-		case "REMOVE_TOAST":
-			if (action.toastId === undefined) {
-				return {
-					...state,
-					toasts: [],
-				};
-			}
-			return {
-				...state,
-				toasts: state.toasts.filter((t) => t.id !== action.toastId),
-			};
-	}
-};
-
-const listeners: Array<(state: State) => void> = [];
-
-let memoryState: State = { toasts: [] };
-
-function dispatch(action: Action) {
-	memoryState = reducer(memoryState, action);
-	listeners.forEach((listener) => {
-		listener(memoryState);
-	});
-}
-
-type Toast = Omit<ToasterToast, "id">;
-
-let count = 0;
-
-function genId() {
-	count = (count + 1) % Number.MAX_SAFE_INTEGER;
-	return count.toString();
-}
-
-function toast({ ...props }: Toast) {
-	const id = genId();
-
-	const update = (props: ToasterToast) =>
-		dispatch({
-			type: "UPDATE_TOAST",
-			toast: { ...props, id },
-		});
-	const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id });
-
-	dispatch({
-		type: "ADD_TOAST",
-		toast: {
-			...props,
-			id,
-			open: true,
-			onOpenChange: (open) => {
-				if (!open) dismiss();
-			},
-		},
+	const id = caalmToast.base({
+		tone,
+		title: props.title != null ? String(props.title) : "",
+		message,
+		actions: props.actions,
+		renderAction: props.action,
+		duration: props.duration,
 	});
 
 	return {
-		id: id,
-		dismiss,
-		update,
+		id,
+		dismiss: () => sonnerDismiss.dismiss(id),
+		// update is a no-op: use caalmToast directly for live updates
+		update: (_: ToastInput) => {},
 	};
 }
 
+// ─── Hook ─────────────────────────────────────────────────────────────────────
+
 function useToast() {
-	const [state, setState] = useState<State>(memoryState);
-
-	useEffect(() => {
-		listeners.push(setState);
-		return () => {
-			const index = listeners.indexOf(setState);
-			if (index > -1) {
-				listeners.splice(index, 1);
-			}
-		};
-	}, []);
-
 	return {
-		...state,
 		toast,
-		dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
+		dismiss: (toastId?: string | number) => sonnerDismiss.dismiss(toastId),
+		// toasts array kept for type compat; always empty since Sonner owns the state
+		toasts: [] as never[],
 	};
 }
 

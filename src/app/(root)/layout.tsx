@@ -14,7 +14,7 @@ import Sidebar from "@/components/Sidebar";
 import ReportIssueFab from "@/components/tickets/ReportIssueFab";
 import TicketRecordingOverlay from "@/components/tickets/TicketRecordingOverlay";
 import { LoadingSpinner } from "@/components/ui/loading";
-import { Toaster } from "@/components/ui/toaster";
+import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import type { UserRole } from "@/constants/rbac";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ImpersonationProvider } from "@/contexts/ImpersonationContext";
@@ -216,7 +216,7 @@ const LayoutContent = ({ children }: { children: React.ReactNode }) => {
 								<DesktopFirstGate>{pageSlot}</DesktopFirstGate>
 							</div>
 						</section>
-						<Toaster />
+						<SonnerToaster position="bottom-right" visibleToasts={3} />
 						<DemoTourLayer />
 						<ReportIssueFab />
 						<TicketRecordingOverlay />

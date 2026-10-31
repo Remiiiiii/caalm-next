@@ -1,30 +1,12 @@
 "use client";
 
-import {
-	Toast,
-	ToastClose,
-	ToastDescription,
-	ToastProvider,
-	ToastTitle,
-	ToastViewport,
-} from "@/components/ui/toast";
-import { useToast } from "@/hooks/use-toast";
+// Toasts are now rendered by Sonner via caalmToast (see src/lib/ui/caalm-toast.ts).
+// This file is kept as a no-op so existing imports don't break.
+import { ToastProvider, ToastViewport } from "@/components/ui/toast";
 
 export function Toaster() {
-	const { toasts } = useToast();
-
 	return (
 		<ToastProvider>
-			{toasts.map(({ id, title, description, action, ...props }) => (
-				<Toast key={id} {...props}>
-					<div className="grid gap-1">
-						{title && <ToastTitle>{title}</ToastTitle>}
-						{description && <ToastDescription>{description}</ToastDescription>}
-					</div>
-					{action}
-					<ToastClose />
-				</Toast>
-			))}
 			<ToastViewport />
 		</ToastProvider>
 	);

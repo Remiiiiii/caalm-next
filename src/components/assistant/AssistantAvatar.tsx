@@ -37,13 +37,13 @@ export default function AssistantAvatar({
 	const px = SIZE_PX[size];
 	return (
 		<Image
-			src="/assets/images/caalm-assistant.png"
+			src="/assets/images/toast-bot.png"
 			alt={alt}
 			width={px}
 			height={px}
 			priority={priority}
 			className={cn(
-				"shrink-0 rounded-full object-contain outline outline-[#D6E8F5]",
+				"shrink-0 rounded-full object-contain outline border-2 p-0.5 outline-[#D6E8F5]",
 				SIZE_CLASS[size],
 				className,
 			)}

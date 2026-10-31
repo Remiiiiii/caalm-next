@@ -69,6 +69,10 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import {
+	DIALOG_BACK_LINK_CLASS,
+	HEADER_BADGE_CLASS,
+} from "@/lib/ui/modal-styles";
 import { cn, constructFileUrl } from "@/lib/utils";
 import "react-datepicker/dist/react-datepicker.css";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -382,12 +386,6 @@ const AI_QUIZ_GHOST_BTN_CLASS =
 /** Drafts dialog: outlined destructive pill (never ghost, never the gradient). */
 const DRAFT_DELETE_BTN_CLASS =
 	"inline-flex h-7 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border-[1.5px] border-[#dc2626]/[.22] bg-[#dc2626]/[.06] px-3 text-xs font-semibold text-[#dc2626] transition-[background-color,border-color,box-shadow] duration-200 hover:border-[#dc2626]/35 hover:bg-[#dc2626]/[.12] hover:shadow-[0_2px_8px_rgba(220,38,38,0.12)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#dc2626]";
-/** Back button that sits at the top of a dialog, on the same row as the close X. */
-const DIALOG_BACK_LINK_CLASS =
-	"inline-flex cursor-pointer items-center gap-1.5 text-[13px] font-semibold text-slate-400 transition-colors duration-200 hover:text-slate-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#078fab] disabled:cursor-not-allowed disabled:opacity-50";
-/** Wizard header chips: all share the Government Contract chip's height. */
-const HEADER_BADGE_CLASS =
-	"inline-flex h-[23px] shrink-0 items-center whitespace-nowrap rounded-full border px-[9px] text-[11.5px] font-semibold leading-normal";
 /** Header chip per lifecycle status (Draft is the only one a new upload can have). */
 const LIFECYCLE_CHIP: Record<string, { label: string; className: string }> = {
 	draft: {
@@ -6526,7 +6524,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																									>
 																										<input
 																											type="checkbox"
-																											className="rounded border-slate-300"
+																											className="rounded border-slate-300 mr-2"
 																											checked={checked}
 																											onChange={() => {
 																												const next = checked
@@ -6593,7 +6591,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																									>
 																										<input
 																											type="checkbox"
-																											className="rounded border-slate-300"
+																											className="rounded border-slate-300 mr-2"
 																											checked={checked}
 																											onChange={() => {
 																												const next = checked

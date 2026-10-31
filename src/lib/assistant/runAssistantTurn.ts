@@ -16,6 +16,17 @@ import {
 import { buildGeminiChatHistory } from "@/lib/assistant/geminiHistory";
 import { buildGeminiToolFollowUpContents } from "@/lib/assistant/geminiToolFollowUp";
 import { detectDataIntent, isLiveDataIntent } from "@/lib/assistant/intent";
+import {
+	formFromQuizText,
+	hasScheduleDateAndTime,
+	isIncompleteSchedule,
+	looksLikeFieldQuiz,
+	parseFieldsArg,
+	resolveInputForm,
+	scheduleDefaultsFromMessage,
+	scheduleEventForm,
+	scheduleFormFromArgs,
+} from "@/lib/assistant/inputForm";
 import type { RetrievedSource } from "@/lib/assistant/knowledge/retrieve";
 import { retrieveKnowledge } from "@/lib/assistant/knowledge/retrieve";
 import { parseCreateTaskDraft } from "@/lib/assistant/parseCreateTaskDraft";
@@ -49,6 +60,7 @@ export type AssistantTurnResult = {
 	};
 	clientAction?: { type: "navigate"; href: string };
 	activityFeed?: ActivityFeedPayload;
+	inputForm?: AssistantInputForm;
 };
 
 const DATA_TOOLS = new Set([
@@ -334,8 +346,28 @@ export async function runAssistantTurn(params: {
 
 	const allowedTools = getToolsForPermissions(ctx.permissions);
 	const declarations = buildFunctionDeclarations(allowedTools);
+
+	// request_input: AI calls this instead of asking in free text when it needs structured user input.
+	const requestInputDeclaration: FunctionDeclaration = {
+		name: "request_input",
+		description:
+			"Show the user a structured form to fill in instead of asking in free text. Call this whenever you need multiple fields from the user (e.g. scheduling details). Pass fields_json as a JSON array of {name,label,type,placeholder?,required?,options?} objects. Field types: text, date, time, select, textarea.",
+		parameters: {
+			type: SchemaType.OBJECT,
+			properties: {
+				intent: { type: SchemaType.STRING, description: "Short key for what is being collected, e.g. schedule_event" },
+				intro: { type: SchemaType.STRING, description: "Brief message shown above the form" },
+				fields_json: { type: SchemaType.STRING, description: "JSON array of field objects" },
+			},
+			required: ["intent", "intro", "fields_json"],
+		},
+	};
+	declarations.push(requestInputDeclaration);
 	const canListTasks = allowedTools.some((t) => t.name === "list_tasks");
 	const canCreateTask = allowedTools.some((t) => t.name === "create_task");
+	const canCreateEvent = allowedTools.some(
+		(t) => t.name === "create_calendar_event",
+	);
 
 	// Deterministic path: open an editable draft card instead of a numbered quiz.
 	if (dataIntent === "create_task" && canCreateTask) {
@@ -370,6 +402,20 @@ export async function runAssistantTurn(params: {
 		};
 	}
 
+	// Vague “schedule a meeting” → inline form, never a typed quiz.
+	if (
+		dataIntent === "schedule_event" &&
+		canCreateEvent &&
+		!hasScheduleDateAndTime(userMessage)
+	) {
+		return {
+			answer: "Fill this in to schedule it.",
+			sources: [],
+			suggestions: [],
+			inputForm: scheduleEventForm(scheduleDefaultsFromMessage(userMessage)),
+		};
+	}
+
 	// Deterministic path: pending tasks → call list_tasks (don't rely on the model).
 	if (dataIntent === "list_tasks" && canListTasks) {
 		const toolResult = await runToolByName({ ...ctx, pathname }, "list_tasks", {
@@ -397,7 +443,8 @@ Rules:
 - Write in plain, natural language for end users. Never show raw enums, snake_case, JSON, code paths, or API field names (say "Not started", not "not_started"; say "the Tasks page", not "/team/tasks").
 - For live data (tasks, contracts, licenses, approvals, expirations, calendar events), ALWAYS call the matching tool. Never answer those from Knowledge Context alone.
 - Creating tasks: NEVER ask the user to reply with a numbered list of fields (title, due date, priority, description). Call create_task with whatever you can parse from their message. Missing fields may be empty — the in-app draft card collects them with taps and short edits. Do not quiz in chat.
-- Scheduling: when the user asks to schedule, book, or set up a meeting, collect these fields before calling create_calendar_event if the user has not already stated them: title, start time, end time (or duration), date, and type (meeting, review, audit, deadline, or contract). Meeting agenda (description) and participants are optional — ask for them once if missing, but do not block scheduling if the user skips them. Resolve relative dates ("tomorrow", "next Tuesday") against the current date below. If only a start time is given, default end time to 30 minutes later. Never invent participant emails; only include people the user named or emailed. Prefer endTime over durationMinutes when both can be inferred.
+- Scheduling: when the user asks to schedule, book, or set up a meeting and you do not yet have all required fields (title, date, start time, end time, type), call request_input with intent="schedule_event" and the missing fields. Include optional fields for description and participants. Do NOT ask for this info in free text — always call request_input. Once the user fills the form and replies with the data, call create_calendar_event. Resolve relative dates ("tomorrow", "next Tuesday") against the current date below. If only a start time is given, default end time to 30 minutes later. Never invent participant emails; only include people the user named or emailed.
+- Data collection: For ANY situation where you need multiple structured fields from the user before calling a tool, call request_input instead of asking in free text. This renders an inline form the user fills out with taps.
 - Rescheduling: decide what the user wants to change before calling reschedule_calendar_event. If they only change the clock time (e.g. "move the review to 10am", "change it from 14:00 to 10:00", "make it 10 o'clock") and do not name a different day or date, omit newDate so the meeting stays on its existing date — only pass eventTitle and newStartTime. Only include newDate when the user explicitly asks for a different day (e.g. "to Friday", "next week", "the 14th", "August 14"). Never invent a new date for a time-only request. When listing or confirming, keep the original date visible if only the time changed.
 - Knowledge Context is for product how-to only. Do not use Analytics, Reports, or Audit sources as a substitute for listing tasks.
 - Never invent permissions or claim an action succeeded unless a tool returned success.
@@ -450,6 +497,29 @@ User permissions include: ${ctx.permissions.slice(0, 40).join(", ")}${ctx.permis
 	const functionCalls = response.functionCalls();
 	if (functionCalls?.length) {
 		const call = functionCalls[0];
+
+		// request_input is a client-side form tool — handle before looking up in allowedTools.
+		if (call.name === "request_input") {
+			const args = (call.args ?? {}) as Record<string, unknown>;
+			const resolved = resolveInputForm({
+				intent: String(args.intent ?? "input"),
+				intro: String(args.intro ?? "Fill this in:"),
+				rawFields: parseFieldsArg(args),
+			});
+			if (!resolved) {
+				return {
+					answer: "I need a few details, but the form did not load. Try again.",
+					sources,
+				};
+			}
+			return {
+				answer: resolved.intro,
+				sources: [],
+				suggestions: [],
+				inputForm: resolved.form,
+			};
+		}
+
 		const tool = allowedTools.find((t) => t.name === call.name);
 		if (!tool) {
 			return {
@@ -462,6 +532,15 @@ User permissions include: ${ctx.permissions.slice(0, 40).join(", ")}${ctx.permis
 		let args = (call.args ?? {}) as Record<string, unknown>;
 		if (tool.name === "reschedule_calendar_event") {
 			args = sanitizeRescheduleArgs(userMessage, args);
+		}
+
+		if (tool.name === "create_calendar_event" && isIncompleteSchedule(args)) {
+			return {
+				answer: "Fill this in to schedule it.",
+				sources: [],
+				suggestions: [],
+				inputForm: scheduleFormFromArgs(args),
+			};
 		}
 
 		if (tool.mutating) {
@@ -605,8 +684,20 @@ User permissions include: ${ctx.permissions.slice(0, 40).join(", ")}${ctx.permis
 		};
 	}
 
+	const text = response.text() || "I could not generate a response.";
+	if (looksLikeFieldQuiz(text)) {
+		const intent =
+			dataIntent === "schedule_event" ? "schedule_event" : "input";
+		return {
+			answer: "Fill this in instead of typing answers.",
+			sources: [],
+			suggestions: [],
+			inputForm: formFromQuizText(text, intent),
+		};
+	}
+
 	return {
-		answer: response.text() || "I could not generate a response.",
+		answer: text,
 		sources: ragSources,
 		suggestions: suggestionsForTurn({ dataIntent }),
 	};

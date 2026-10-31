@@ -249,6 +249,12 @@ class LicenseDraftService {
 			...(bucketFileId ? { fileId: bucketFileId } : {}),
 		};
 
+		// A save with no extraction data (e.g. before a resumed draft finished loading)
+		// must not wipe the stored extraction, which drives the "CAALM filled" markers.
+		if (draftPayload.extractedData == null) {
+			delete (draftPayload as { extractedData?: string | null }).extractedData;
+		}
+
 		if (draftData.draftId) {
 			try {
 				return await tablesDB.updateRow({
@@ -459,6 +465,7 @@ export async function POST(request: NextRequest) {
 			processedFileData,
 			extractedData,
 			draftId,
+			totalSteps: requestTotalSteps,
 		} = body;
 
 		// Authentication
@@ -497,7 +504,7 @@ export async function POST(request: NextRequest) {
 			processedFileData,
 			extractedData,
 			isCompleted: false,
-			totalSteps: 3, // File → Details → Review
+			totalSteps: requestTotalSteps || 3,
 		});
 
 		return successResponse(

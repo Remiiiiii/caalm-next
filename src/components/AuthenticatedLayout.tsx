@@ -11,7 +11,7 @@ import WaveLoopBackground from "@/components/landing/WaveLoopBackground";
 import MobileNavigation from "@/components/MobileNavigation";
 import NotificationSoundListener from "@/components/NotificationSoundListener";
 import Sidebar from "@/components/Sidebar";
-import { Toaster } from "@/components/ui/toaster";
+import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { normalizeUserRole, type UserRole } from "@/constants/rbac";
 import { OrganizationProvider } from "@/contexts/OrganizationContext";
 import { SidebarProvider } from "@/contexts/SidebarContext";
@@ -108,7 +108,7 @@ const AuthenticatedLayout = ({
 							<DesktopFirstGate>{children}</DesktopFirstGate>
 						</div>
 					</section>
-					<Toaster />
+					<SonnerToaster position="bottom-right" visibleToasts={3} />
 
 					{/* Inactivity Dialog */}
 					<InactivityDialog
