@@ -27,10 +27,10 @@ export function AiExtractionStatusBadge({
 			: null;
 
 	return (
-		<span className="inline-flex items-center gap-1.5 rounded-full border border-[#078fab]/20 bg-[#078fab]/[.07] py-[5px] pl-2 pr-3">
-			<span className="flex h-5 w-5 items-center justify-center rounded-full bg-[linear-gradient(90deg,#00c1cb,#078fab,#0e638f)]">
+		<span className="inline-flex h-[23px] items-center gap-1.5 rounded-full border border-[#078fab]/20 bg-[#078fab]/[.07] pl-1 pr-2.5">
+			<span className="flex h-4 w-4 items-center justify-center rounded-full bg-[linear-gradient(90deg,#00c1cb,#078fab,#0e638f)]">
 				<Check
-					className="h-[11px] w-[11px] text-white"
+					className="h-[10px] w-[10px] text-white"
 					strokeWidth={3}
 					aria-hidden
 				/>

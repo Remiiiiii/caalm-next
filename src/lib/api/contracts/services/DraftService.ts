@@ -304,6 +304,13 @@ export class DraftService {
 				}
 			}
 
+			// A save with no extraction data (e.g. before a resumed draft finished loading)
+			// must not wipe the stored extraction, which drives the "CAALM filled" markers.
+			if (draftPayload.extractedData == null) {
+				delete (draftPayload as { extractedData?: string | null })
+					.extractedData;
+			}
+
 			return await tablesDB.updateRow({
 				databaseId: appwriteConfig.databaseId,
 				tableId: appwriteConfig.contractDraftsCollectionId,

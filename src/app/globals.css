@@ -2772,6 +2772,8 @@ iframe[src*="splinecode"] {
 	margin: 0;
 	background-color: #fff;
 	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+	/* Switch uses the `translate` property for the thumb; reset it so only transform moves it. */
+	translate: none;
 	transform: translateX(2px);
 }
 

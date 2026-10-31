@@ -63,6 +63,7 @@ import {
 	Dialog,
 	DialogContent,
 	DialogHeader,
+	DialogDescription,
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
@@ -1140,6 +1141,9 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 				<DialogContent className="w-[calc(100%-1.5rem)] sm:w-full max-w-5xl max-sm:inset-2 max-sm:translate-x-0 max-sm:translate-y-0 max-sm:left-2 max-sm:top-2 max-sm:h-[calc(100vh-1rem)] h-[90vh] p-0">
 					<DialogHeader className="sr-only">
 						<DialogTitle>Expanded Calendar View</DialogTitle>
+						<DialogDescription>
+							Month calendar with events and filters.
+						</DialogDescription>
 					</DialogHeader>
 					<div className="flex flex-col h-full">
 						{/* Header */}
@@ -1821,6 +1825,9 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 								</Button>
 							</div>
 						</DialogTitle>
+						<DialogDescription className="sr-only">
+							Details, sharing and edit actions for this event.
+						</DialogDescription>
 					</DialogHeader>
 					{selectedEvent && (
 						<div className="space-y-4">
@@ -2035,6 +2042,9 @@ const ExpandedCalendarView: React.FC<ExpandedCalendarViewProps> = ({
 				<DialogContent className="max-w-md">
 					<DialogHeader>
 						<DialogTitle>Share Event</DialogTitle>
+						<DialogDescription className="sr-only">
+							Choose who to share this event with.
+						</DialogDescription>
 					</DialogHeader>
 					<div className="space-y-4">
 						<div>

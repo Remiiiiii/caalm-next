@@ -150,18 +150,92 @@ export async function POST(request: NextRequest) {
 		}
 
 		const isEngineering = String(lane || "").trim() === "engineering";
-		if (
-			title.trim().length < 3 ||
-			(!isEngineering && description.trim().length < 8)
-		) {
+		const titleTrimmed = title.trim();
+		const descriptionTrimmed = description.trim();
+
+		if (titleTrimmed.length < 3) {
 			return NextResponse.json(
-				{
-					error: isEngineering
-						? "Title is required"
-						: "Title and description are required",
-				},
+				{ error: "Title must be at least 3 characters" },
 				{ status: 400 },
 			);
+		}
+
+		// Additional validation for title content quality
+		if (/^[^a-zA-Z0-9\s]{3,}$/.test(titleTrimmed)) {
+			return NextResponse.json(
+				{ error: "Title must contain meaningful text" },
+				{ status: 400 },
+			);
+		}
+
+		if (isEngineering) {
+			// Engineering tickets require structured bug report fields
+			const stepsTrimmed = String(steps || "").trim();
+			const expectedTrimmed = String(expected || "").trim();
+			const actualTrimmed = String(actual || "").trim();
+			const osTrimmed = String(os || "").trim();
+			const environmentTrimmed = String(environment || "").trim();
+
+			if (stepsTrimmed.length < 8) {
+				return NextResponse.json(
+					{ error: "Reproduction steps must be at least 8 characters" },
+					{ status: 400 },
+				);
+			}
+			if (expectedTrimmed.length < 8) {
+				return NextResponse.json(
+					{ error: "Expected behavior must be at least 8 characters" },
+					{ status: 400 },
+				);
+			}
+			if (actualTrimmed.length < 8) {
+				return NextResponse.json(
+					{ error: "Actual behavior must be at least 8 characters" },
+					{ status: 400 },
+				);
+			}
+			if (!osTrimmed) {
+				return NextResponse.json(
+					{ error: "Operating system is required" },
+					{ status: 400 },
+				);
+			}
+			if (!environmentTrimmed) {
+				return NextResponse.json(
+					{ error: "Environment is required" },
+					{ status: 400 },
+				);
+			}
+
+			// Check for meaningless gibberish in key fields
+			const gibberishPattern = /^([a-z])\1{2,}$|^[a-z]{1,2}([a-z]{1,2})\1{2,}$/i;
+			if (
+				gibberishPattern.test(stepsTrimmed) ||
+				gibberishPattern.test(expectedTrimmed) ||
+				gibberishPattern.test(actualTrimmed)
+			) {
+				return NextResponse.json(
+					{ error: "Please provide meaningful descriptions, not random text" },
+					{ status: 400 },
+				);
+			}
+		} else {
+			// Help tickets require description
+			if (descriptionTrimmed.length < 8) {
+				return NextResponse.json(
+					{ error: "Description must be at least 8 characters" },
+					{ status: 400 },
+				);
+			}
+
+			// Check for meaningless gibberish
+			const gibberishPattern = /^([a-z])\1{2,}$|^[a-z]{1,2}([a-z]{1,2})\1{2,}$/i;
+			if (gibberishPattern.test(descriptionTrimmed)) {
+				return NextResponse.json(
+					{ error: "Please provide a meaningful description, not random text" },
+					{ status: 400 },
+				);
+			}
 		}
 
 		const attachmentIds = await uploadTicketAttachments(files);

@@ -290,6 +290,12 @@ export function buildCreateTicketInput(input: {
 	isBug?: unknown;
 	extra?: unknown;
 }): CreateTicketInput {
+	// Validate title first
+	const titleTrimmed = input.title.trim();
+	if (titleTrimmed.length < 3) {
+		throw new Error("Title must be at least 3 characters");
+	}
+
 	const lane = parseLane(input.lane);
 	const category = parseCategory(input.category);
 	if (!isCategoryAllowedForLane(lane, category)) {
@@ -311,7 +317,7 @@ export function buildCreateTicketInput(input: {
 	}
 
 	return {
-		title: input.title.trim(),
+		title: titleTrimmed,
 		description,
 		lane,
 		category,

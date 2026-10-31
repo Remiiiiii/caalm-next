@@ -14,6 +14,7 @@ import {
 	FolderOpen,
 	Info,
 	Loader2,
+	MoveRight,
 	StepForward,
 	Trash2,
 	Upload,
@@ -30,6 +31,7 @@ import React, {
 } from "react";
 import DatePicker from "react-datepicker";
 import { useDropzone } from "react-dropzone";
+import { CancelUploadDialog } from "@/components/contract-upload/CancelUploadDialog";
 import {
 	DEMO_CONTRACT_SAMPLE,
 	DemoSampleDocumentDrop,
@@ -47,12 +49,12 @@ import {
 	toIsoDateLocal,
 } from "@/components/ui/caalm-date-picker";
 import { Card, CardContent } from "@/components/ui/card";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { CurrencyAmountInput } from "@/components/ui/currency-amount-input";
 import { CurrencySelect } from "@/components/ui/currency-select";
 import {
 	Dialog,
 	DialogContent,
+	DialogDescription,
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
@@ -90,10 +92,7 @@ import {
 import { usePathname, useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import {
-	AiExtractionReviewPanel,
-	AiExtractionStatusBadge,
-} from "@/components/contract-upload/AiExtractionReview";
+import { AiExtractionStatusBadge } from "@/components/contract-upload/AiExtractionReview";
 import ContractReviewStep from "@/components/contract-upload/ContractReviewStep";
 import {
 	CaalmFilledProvider,
@@ -801,7 +800,7 @@ const contractSchema = z
 			.string()
 			.min(1, "Business unit / department is required"),
 		businessUnit: z.string().optional(),
-		subDepartment: z.string().min(1, "Division is required"),
+		subDepartment: z.string().min(1, "Required"),
 		departmentOwner: z.string().optional(),
 		contractOwnerId: z.string().min(1, "Owner is required"),
 		startDate: z.date().optional(),
@@ -993,6 +992,8 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 	const [deletingDraftId, setDeletingDraftId] = useState<string | null>(null);
 	const [draftToDelete, setDraftToDelete] = useState<string | null>(null);
 	const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+	// True once the user edits a field after the last save (or resume).
+	const [dirtySinceSave, setDirtySinceSave] = useState(false);
 	const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
 	const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
 	const [previewHtml, setPreviewHtml] = useState<string | null>(null);
@@ -1601,6 +1602,8 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 	// Reset function to clear all form data and file
 	const resetForm = useCallback(() => {
 		form.reset();
+		setDirtySinceSave(false);
+		setLastSavedAt(null);
 		fileBytesRef.current = null;
 		setProcessedFileData(null);
 		setExtractedData(null);
@@ -1667,6 +1670,128 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 			Shield,
 		};
 		return icons[iconName] || FileText;
+	};
+
+	// Section toggle: only the sections the chosen contract type shows on this step.
+	const [stepSections, setStepSections] = useState<UploadStepSection[]>([]);
+	const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
+	const [attachmentsOpen, setAttachmentsOpen] = useState(false);
+	const sectionScrollLockUntil = useRef(0);
+
+	useEffect(() => {
+		const root = stepScrollRef.current;
+		if (!root || currentStep < 2 || isReviewStep) {
+			setStepSections([]);
+			setActiveSectionId(null);
+			return;
+		}
+		const present = new Set(
+			Array.from(root.querySelectorAll("[data-field]"), (el) =>
+				el.getAttribute("data-field"),
+			),
+		);
+		const sections = (UPLOAD_STEP_SECTIONS[currentStep] ?? []).filter(
+			(section) => section.fields.some((field) => present.has(field)),
+		);
+		// Each section's first row carries its title (drawn by CSS from data-section-title).
+		const body = root.querySelector("[data-step-body] > div");
+		if (body) {
+			for (const el of body.querySelectorAll("[data-section-title]")) {
+				el.removeAttribute("data-section-title");
+				el.removeAttribute("data-section-first");
+			}
+			sections.forEach((section, index) => {
+				let el: HTMLElement | null = getSectionAnchor(section);
+				while (el && el.parentElement !== body) el = el.parentElement;
+				if (!el || el.hasAttribute("data-section-title")) return;
+				el.setAttribute("data-section-title", section.label);
+				if (index === 0) el.setAttribute("data-section-first", "");
+			});
+		}
+		setStepSections(sections);
+		setActiveSectionId(sections[0]?.id ?? null);
+	}, [currentStep, isReviewStep, selectedContractType]);
+
+	/** Topmost visible field of a section: where the toggle scrolls to. */
+	const getSectionAnchor = (section: UploadStepSection): HTMLElement | null => {
+		const root = stepScrollRef.current;
+		if (!root) return null;
+		let top: HTMLElement | null = null;
+		for (const field of section.fields) {
+			const el = root.querySelector<HTMLElement>(`[data-field="${field}"]`);
+			if (el && (!top || el.offsetTop < top.offsetTop)) top = el;
+		}
+		return top?.closest<HTMLElement>("[data-section-title]") ?? top;
+	};
+
+	const scrollToSection = (sectionId: string) => {
+		const root = stepScrollRef.current;
+		const section = stepSections.find((s) => s.id === sectionId);
+		const anchor = section ? getSectionAnchor(section) : null;
+		if (!root || !anchor) return;
+		setActiveSectionId(sectionId);
+		// Ignore the scroll spy until the smooth scroll lands, or it would flicker back.
+		sectionScrollLockUntil.current = Date.now() + 900;
+		root.scrollTo({
+			top:
+				anchor.getBoundingClientRect().top -
+				root.getBoundingClientRect().top +
+				root.scrollTop -
+				8,
+			behavior: "smooth",
+		});
+	};
+
+	/** Scrolling the form moves the highlight to the section nearest the top. */
+	const handleStepScroll = () => {
+		const root = stepScrollRef.current;
+		if (!root || stepSections.length < 2) return;
+		if (Date.now() < sectionScrollLockUntil.current) return;
+		const rootTop = root.getBoundingClientRect().top;
+		let current = stepSections[0].id;
+		for (const section of stepSections) {
+			const anchor = getSectionAnchor(section);
+			if (anchor && anchor.getBoundingClientRect().top - rootTop <= 24) {
+				current = section.id;
+			}
+		}
+		// The last section can't reach the top, so at the bottom of the form it wins.
+		if (
+			root.scrollTop > 0 &&
+			root.scrollTop + root.clientHeight >= root.scrollHeight - 4
+		) {
+			current = stepSections[stepSections.length - 1].id;
+		}
+		setActiveSectionId((prev) => (prev === current ? prev : current));
+	};
+
+	/** ✓ when the section's required fields are filled, a red count when some failed validation. */
+	const getSectionMark = (section: UploadStepSection) => {
+		const errors = form.formState.errors as Record<string, unknown>;
+		const failed = section.fields.filter((field) => errors[field]).length;
+		if (failed > 0) {
+			return (
+				<span className="ml-1 inline-flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#ef4444] text-[8.5px] font-bold text-white">
+					{failed}
+				</span>
+			);
+		}
+		const required = selectedContractType
+			? getRequiredFields(selectedContractType).filter((field) =>
+					section.fields.includes(field),
+				)
+			: [];
+		const allFilled =
+			required.length > 0 &&
+			required.every((field) => {
+				const value = (form.getValues as (name: string) => unknown)(field);
+				return Array.isArray(value)
+					? value.length > 0
+					: value !== undefined && value !== null && value !== "";
+			});
+		return allFilled ? (
+			<span className="ml-1 text-[10px] font-bold text-[#078fab]">✓</span>
+		) : null;
 	};
 
 	// Step validation - defines required fields for each step (type-aware)
@@ -2081,22 +2206,21 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 								(extracted.fieldConfidence as Record<string, number>) ||
 								parsed.fieldConfidence;
 
-							setAiFilledFields(
-								isRealExtractionMethod(method) ? filledFromApi : [],
-							);
-							setLowConfidenceFields(
-								isRealExtractionMethod(method) ? lowFromApi : [],
-							);
-							setFieldConfidence(isRealExtractionMethod(method) ? confMap : {});
+							// A "real" run that filled nothing is a failed read, not a 0% success.
+							const usable =
+								isRealExtractionMethod(method) && filledFromApi.length > 0;
+							setAiFilledFields(usable ? filledFromApi : []);
+							setLowConfidenceFields(usable ? lowFromApi : []);
+							setFieldConfidence(usable ? confMap : {});
 							setOverallExtractionConfidence(
-								isRealExtractionMethod(method)
+								usable
 									? typeof extracted.overallConfidence === "number"
 										? (extracted.overallConfidence as number)
 										: parsed.overallConfidence
 									: null,
 							);
 
-							if (isRealExtractionMethod(method)) {
+							if (usable) {
 								if (
 									needsDocumentNumber(
 										typeof patch.contractNumber === "string"
@@ -2119,6 +2243,14 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 								setLowConfidenceFields([]);
 								setFieldConfidence({});
 								setOverallExtractionConfidence(null);
+								if (isRealExtractionMethod(method)) {
+									toast({
+										title: "CAALM couldn't read any fields",
+										description:
+											"Nothing could be filled from this file. You can still fill the form by hand.",
+										variant: "destructive",
+									});
+								}
 							}
 						}
 					} catch (error) {
@@ -2309,6 +2441,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 						});
 					}
 					setLastSavedAt(new Date());
+					setDirtySinceSave(false);
 					if (!silent) {
 						toast({
 							title: "Progress saved",
@@ -2375,7 +2508,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 	);
 
 	// Manual save function
-	const handleManualSave = useCallback(async () => {
+	const handleManualSave = useCallback(async (): Promise<boolean> => {
 		// Don't allow saving on step 1 - user must progress to step 2 first
 		if (currentStep === 1) {
 			toast({
@@ -2383,7 +2516,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 				description: "Please progress to step 2 before saving your progress",
 				variant: "destructive",
 			});
-			return;
+			return false;
 		}
 		if (!processedFileData) {
 			toast({
@@ -2391,7 +2524,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 				description: "Please upload a file first before saving",
 				variant: "destructive",
 			});
-			return;
+			return false;
 		}
 		const success = await autoSaveDraft({ silent: false });
 		// Close form after successful save
@@ -2399,42 +2532,40 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 			setIsOpen(false);
 			resetForm();
 		}
+		return success;
 	}, [autoSaveDraft, currentStep, processedFileData, toast, resetForm]);
 
-	// Handle cancel click - show confirmation dialog
-	const handleCancelClick = useCallback(() => {
-		setCancelDialogOpen(true);
-	}, []);
+	useEffect(() => {
+		const subscription = form.watch((_values, info) => {
+			if (info.type === "change") setDirtySinceSave(true);
+		});
+		return () => subscription.unsubscribe();
+	}, [form]);
 
-	// Handle cancel confirmation - delete current draft and reset
-	const handleCancelConfirm = useCallback(async () => {
-		// If there's a current draft, delete it from database and list
-		if (currentDraftId) {
-			try {
-				const response = await fetch(
-					`/api/contracts/drafts?draftId=${currentDraftId}`,
-					{
-						method: "DELETE",
-					},
-				);
-				if (response.ok) {
-					// Remove from saved drafts list
-					setSavedDrafts((prev) =>
-						prev.filter((d) => d.$id !== currentDraftId),
-					);
-				}
-			} catch (error) {
-				console.error("Error deleting draft on cancel:", error);
-				// Continue with cancel even if delete fails
-			}
-		}
+	// Closing a form step asks first, unless there is nothing to lose.
+	const isFormStepActive =
+		!!selectedContractType &&
+		!showTypeSelection &&
+		!showDraftsList &&
+		!showAiQuiz;
+	const hasUnsavedChanges =
+		dirtySinceSave || (!!processedFileData && !lastSavedAt);
+	const hasWorkToLose = hasUnsavedChanges || !!lastSavedAt;
 
-		// Close dialog, reset form, and clear draft ID
+	// Leave the wizard without saving; a draft that was already saved stays in Drafts.
+	const exitWizard = useCallback(() => {
+		setCancelDialogOpen(false);
+		closePdfPreview();
 		setIsOpen(false);
 		resetForm();
-		setCurrentDraftId(null);
-		setCancelDialogOpen(false);
-	}, [resetForm, currentDraftId]);
+		isResumingDraftRef.current = false;
+	}, [resetForm, closePdfPreview]);
+
+	// Footer Cancel: ask first, unless there is nothing to lose.
+	const handleCancelClick = useCallback(() => {
+		if (hasWorkToLose) setCancelDialogOpen(true);
+		else exitWizard();
+	}, [hasWorkToLose, exitWizard]);
 
 	// Load saved drafts
 	const loadSavedDrafts = useCallback(async () => {
@@ -2633,10 +2764,35 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 								? JSON.parse(draft.extractedData)
 								: draft.extractedData;
 						setExtractedData(extracted);
+
+						// Drafts drop the AI field lists to save space, so rebuild the
+						// "CAALM filled" markers from the saved extraction values.
+						const method = String(extracted?.method || "");
+						if (isRealExtractionMethod(method)) {
+							const parsed = parseContractExtractionJson(
+								JSON.stringify(extracted),
+							);
+							if (parsed.filledFieldNames.length > 0) {
+								setExtractionMethod(method);
+								setAiFilledFields(parsed.filledFieldNames);
+								setLowConfidenceFields(parsed.lowConfidenceFields);
+								setFieldConfidence(parsed.fieldConfidence);
+								setOverallExtractionConfidence(
+									typeof extracted.overallConfidence === "number"
+										? extracted.overallConfidence
+										: parsed.overallConfidence,
+								);
+							}
+						}
 					} catch {
 						setExtractedData(draft.extractedData);
 					}
 				}
+
+				setDirtySinceSave(false);
+				setLastSavedAt(
+					draft.lastSavedAt ? new Date(draft.lastSavedAt) : new Date(),
+				);
 
 				// Keep dialog open (already open when resuming from Drafts)
 				setIsOpen(true);
@@ -3153,6 +3309,10 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 			<Dialog
 				open={isOpen}
 				onOpenChange={(open) => {
+					if (!open && isFormStepActive && hasWorkToLose) {
+						setCancelDialogOpen(true);
+						return;
+					}
 					setIsOpen(open);
 					if (!open) {
 						closePdfPreview();
@@ -3217,6 +3377,9 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 				>
 					<VisuallyHiddenPrimitive.Root>
 						<DialogTitle>Upload Contract</DialogTitle>
+						<DialogDescription>
+							Choose a contract type, then upload and review the contract.
+						</DialogDescription>
 					</VisuallyHiddenPrimitive.Root>
 
 					{/* Contract Type Selection Screen */}
@@ -3355,14 +3518,15 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 							</div>
 
 							{/* Footer */}
-							<div className="flex shrink-0 items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/70 px-[22px] pb-3.5 pt-3">
-								<p className="flex items-center gap-1.5 text-xs text-slate-500">
+							<div className="flex shrink-0 items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/70 px-5.5 pb-3.5 pt-3">
+								<p className="flex items-center justify-center gap-1.5 text-xs text-slate-500">
 									<CircleHelp
-										className="h-[13px] w-[13px] shrink-0 text-[#078fab]"
+										className="h-3.25 w-[3.25 shrink-0 text-[#078fab]"
 										aria-hidden
 									/>
-									Need help? Use CAALM AI Assistant to pick the best contract
-									type.
+									Need help? Use the CAALM Contract Type Assistant to pick the
+									best contract type.
+									<MoveRight className="h-3.5 w-3.5 text-[#078fab]" />
 								</p>
 								<button
 									type="button"
@@ -3379,7 +3543,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 										height={22}
 									/>
 									<span className="text-xs font-semibold text-[#0f5384]">
-										Open Contract Type assistant
+										Contract Type assistant
 									</span>
 								</button>
 							</div>
@@ -4012,15 +4176,46 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 												/>
 											</div>
 											<div className="min-w-0">
-												<div className="flex flex-wrap items-baseline gap-2.5">
+												<div className="flex min-h-[23px] flex-wrap items-center gap-2.5">
 													<h2 className="text-[17px] font-bold leading-tight tracking-tight text-[#0f5384]">
 														Upload Contract
 													</h2>
 													{selectedContractType && currentTypeConfig && (
-														<span className="rounded-full border border-[#078fab]/[.22] bg-[#078fab]/[.09] px-[9px] py-0.5 text-[11.5px] font-semibold text-[#078fab]">
+														<span
+															className={cn(
+																HEADER_BADGE_CLASS,
+																"border-[#078fab]/[.22] bg-[#078fab]/[.09] text-[#078fab]",
+															)}
+														>
 															{currentTypeConfig.label}
 														</span>
 													)}
+													{(() => {
+														const chip =
+															LIFECYCLE_CHIP[
+																String(
+																	form.getValues("lifecycleStatus") || "draft",
+																).toLowerCase()
+															] ?? LIFECYCLE_CHIP.draft;
+														return (
+															<span
+																className={cn(
+																	HEADER_BADGE_CLASS,
+																	"group relative cursor-default",
+																	chip.className,
+																)}
+															>
+																{chip.label}
+																<span
+																	role="tooltip"
+																	className="pointer-events-none absolute left-1/2 top-[calc(100%+7px)] z-50 w-max max-w-[220px] -translate-x-1/2 whitespace-normal rounded-lg bg-[rgba(15,19,26,.88)] px-2.5 py-[7px] text-[11px] font-medium leading-[1.45] text-white opacity-0 backdrop-blur-sm transition-opacity duration-150 group-hover:opacity-100"
+																>
+																	New uploads start as Draft. Review and Execute
+																	move the status later.
+																</span>
+															</span>
+														);
+													})()}
 												</div>
 												<p className="mt-0.5 text-xs text-slate-500">
 													Step {currentStep} of {totalSteps} ·{" "}
@@ -4037,7 +4232,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 											{isSaving && (
 												<Badge
 													variant="outline"
-													className="text-xs sidebar-gradient-text"
+													className="h-[23px] px-[9px] py-0 text-[11.5px] font-semibold leading-normal sidebar-gradient-text"
 												>
 													<Loader2 className="h-3 w-3 mr-1 animate-spin" />
 													Saving...
@@ -4046,7 +4241,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 											{lastSavedAt && !isSaving && (
 												<Badge
 													variant="outline"
-													className="text-xs text-slate-600 border-slate-300"
+													className="h-[23px] px-[9px] py-0 text-[11.5px] font-semibold leading-normal text-slate-600 border-slate-300"
 												>
 													<FileCheck className="h-3 w-3 mr-1 text-green" />
 													Saved {(() => {
@@ -4133,8 +4328,24 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 							</div>
 
 							{/* Scrollable Content */}
+							{stepSections.length > 1 ? (
+								<div className="flex shrink-0 justify-center px-4 pb-1 pt-3">
+									<SegmentedToggle
+										ariaLabel="Step sections"
+										className="max-w-full"
+										value={activeSectionId ?? stepSections[0].id}
+										onChange={scrollToSection}
+										tabs={stepSections.map((section) => ({
+											value: section.id,
+											label: section.label,
+											suffix: getSectionMark(section),
+										}))}
+									/>
+								</div>
+							) : null}
 							<div
 								ref={stepScrollRef}
+								onScroll={handleStepScroll}
 								className="min-h-0 flex-1 overflow-y-auto bg-transparent p-4"
 							>
 								<Form {...form}>
@@ -4314,22 +4525,71 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 											{/* Steps 2–N: Contract Details Sections */}
 											{currentStep >= 2 && currentStep <= contentSteps && (
 												<div className="">
-													<AiExtractionReviewPanel
-														method={extractionMethod}
-														overallConfidence={overallExtractionConfidence}
-														filledCount={aiFilledFields.length}
-														lowConfidenceFields={lowConfidenceFields}
-													/>
 													<div className="mb-4">
 														<h3 className="text-lg font-semibold text-slate-700">
 															{currentStep}. {stepTitles[currentStep - 1]}
 														</h3>
 													</div>
-													<div className="space-y-6">
+													<div className="space-y-6" data-step-body>
 														{/* Step 2: Contract Basics & Timeline */}
 														{!isDigitalSignaturesStep && currentStep === 2 && (
-															<div className="space-y-4">
-																<div className="grid grid-cols-1 gap-y-3.5">
+															<div className="space-y-5">
+																<div className="space-y-3.5">
+																	<div className="grid grid-cols-2 gap-x-4 gap-y-3.5">
+																		<FormField
+																			control={form.control}
+																			name="contractNumber"
+																			render={({ field }) => (
+																				<FormItem>
+																					<FormLabel className="text-sm text-slate-700 mb-1 block">
+																						Contract Number{" "}
+																						<span className="text-red">*</span>
+																					</FormLabel>
+																					<FormControl>
+																						<Input
+																							placeholder="e.g., KHME2-01-47"
+																							{...field}
+																							className="bg-white border-slate-300"
+																						/>
+																					</FormControl>
+																					<FormMessage />
+																				</FormItem>
+																			)}
+																		/>
+																		<FormField
+																			control={form.control}
+																			name="contractType"
+																			render={({ field }) => (
+																				<FormItem>
+																					<FormLabel className="text-sm text-slate-700 mb-1 block">
+																						Contract Type{" "}
+																						<span className="text-red">*</span>
+																					</FormLabel>
+																					<Select
+																						onValueChange={field.onChange}
+																						value={field.value}
+																					>
+																						<FormControl>
+																							<SelectTrigger className="bg-white border-slate-300">
+																								<SelectValue placeholder="Select contract type" />
+																							</SelectTrigger>
+																						</FormControl>
+																						<SelectContent>
+																							{CONTRACT_TYPES.map((type) => (
+																								<SelectItem
+																									key={type}
+																									value={type}
+																								>
+																									{type}
+																								</SelectItem>
+																							))}
+																						</SelectContent>
+																					</Select>
+																					<FormMessage />
+																				</FormItem>
+																			)}
+																		/>
+																	</div>
 																	<FormField
 																		control={form.control}
 																		name="contractName"
@@ -4351,313 +4611,252 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																		)}
 																	/>
 																</div>
-																<div className="grid grid-cols-2 gap-x-4 gap-y-3.5">
-																	<FormField
-																		control={form.control}
-																		name="contractNumber"
-																		render={({ field }) => (
-																			<FormItem>
-																				<FormLabel className="text-sm text-slate-700 mb-1 block">
-																					Contract Number{" "}
-																					<span className="text-red">*</span>
-																				</FormLabel>
-																				<FormControl>
-																					<Input
-																						placeholder="e.g., KHME2-01-47"
-																						{...field}
-																						className="bg-white border-slate-300"
-																					/>
-																				</FormControl>
-																				<FormMessage />
-																			</FormItem>
-																		)}
-																	/>
-																	<FormField
-																		control={form.control}
-																		name="contractType"
-																		render={({ field }) => (
-																			<FormItem>
-																				<FormLabel className="text-sm text-slate-700 mb-1 block">
-																					Contract Type{" "}
-																					<span className="text-red">*</span>
-																				</FormLabel>
-																				<Select
-																					onValueChange={field.onChange}
-																					value={field.value}
-																				>
-																					<FormControl>
-																						<SelectTrigger className="bg-white border-slate-300">
-																							<SelectValue placeholder="Select contract type" />
-																						</SelectTrigger>
-																					</FormControl>
-																					<SelectContent>
-																						{CONTRACT_TYPES.map((type) => (
-																							<SelectItem
-																								key={type}
-																								value={type}
-																							>
-																								{type}
-																							</SelectItem>
-																						))}
-																					</SelectContent>
-																				</Select>
-																				<FormMessage />
-																			</FormItem>
-																		)}
-																	/>
-																</div>
-																<div className="grid grid-cols-2 gap-x-4 gap-y-3.5">
-																	<FormField
-																		control={form.control}
-																		name="lifecycleStatus"
-																		render={() => (
-																			<FormItem>
-																				<FormLabel className="text-sm text-slate-700 mb-1 block">
-																					Lifecycle Status{" "}
-																					<span className="text-red">*</span>
-																				</FormLabel>
-																				<div className="flex items-start gap-2.5">
-																					<span className="inline-flex shrink-0 items-center whitespace-nowrap rounded-md border border-amber-500/25 bg-amber-500/10 px-2.5 py-1 text-xs font-bold text-[#b45309]">
-																						Draft
-																					</span>
-																					<span className="pt-0.5 text-[11px] leading-normal text-slate-400">
-																						New uploads start as Draft. Review
-																						and Execute move the status later.
-																					</span>
-																				</div>
-																				<FormMessage />
-																			</FormItem>
-																		)}
-																	/>
-																	<FormField
-																		control={form.control}
-																		name="attachmentReferences"
-																		render={({ field }) => (
-																			<FormItem>
-																				<FormLabel className="text-sm text-slate-700 mb-1 block">
-																					Attachment References
-																				</FormLabel>
-																				<FormControl>
-																					<Textarea
-																						rows={2}
-																						placeholder="Exhibit A, Attachment B..."
-																						{...field}
-																						className="bg-white border-slate-300 resize-none"
-																					/>
-																				</FormControl>
-																				<FormMessage />
-																			</FormItem>
-																		)}
-																	/>
-																</div>
-																<div className="grid grid-cols-2 gap-x-4 gap-y-3.5">
-																	<FormField
-																		control={form.control}
-																		name="assignToDepartment"
-																		render={({ field }) => (
-																			<FormItem>
-																				<FormLabel className="text-sm text-slate-700 mb-1 block">
-																					Department{" "}
-																					<span className="text-red">*</span>
-																				</FormLabel>
-																				<Select
-																					onValueChange={(value) => {
-																						field.onChange(value);
-																						form.setValue(
-																							"businessUnit",
-																							value,
-																						);
-																					}}
-																					value={field.value}
-																				>
-																					<FormControl>
-																						<SelectTrigger className="bg-white border-slate-300">
-																							<SelectValue placeholder="Select department" />
-																						</SelectTrigger>
-																					</FormControl>
-																					<SelectContent>
-																						{CONTRACT_DEPARTMENTS.map(
-																							(dept) => (
-																								<SelectItem
-																									key={dept}
-																									value={dept}
-																								>
-																									{dept}
-																								</SelectItem>
-																							),
-																						)}
-																					</SelectContent>
-																				</Select>
-																				<FormMessage />
-																			</FormItem>
-																		)}
-																	/>
-																</div>
-																<div className="grid grid-cols-2 gap-x-4 gap-y-3.5">
-																	<FormField
-																		control={form.control}
-																		name="subDepartment"
-																		render={({ field }) => {
-																			const dept =
-																				watchedAssignToDepartment ||
-																				form.watch("businessUnit");
-																			const options = dept
-																				? divisionsForDepartment(dept)
-																				: USER_DIVISIONS;
-																			return (
+																<div className="space-y-3.5">
+																	<p className="text-xs text-slate-500">
+																		Department narrows Division and Owner.
+																	</p>
+																	<div className="grid grid-cols-3 items-start gap-x-4 gap-y-3.5">
+																		<FormField
+																			control={form.control}
+																			name="assignToDepartment"
+																			render={({ field }) => (
 																				<FormItem>
 																					<FormLabel className="text-sm text-slate-700 mb-1 block">
-																						Division{" "}
+																						Department{" "}
 																						<span className="text-red">*</span>
 																					</FormLabel>
 																					<Select
-																						onValueChange={field.onChange}
-																						value={field.value || undefined}
-																						disabled={options.length === 0}
+																						onValueChange={(value) => {
+																							field.onChange(value);
+																							form.setValue(
+																								"businessUnit",
+																								value,
+																							);
+																						}}
+																						value={field.value}
 																					>
 																						<FormControl>
 																							<SelectTrigger className="bg-white border-slate-300">
-																								<SelectValue
-																									placeholder={
-																										options.length === 0
-																											? "Select department first"
-																											: "Select sub-department"
-																									}
-																								/>
+																								<SelectValue placeholder="Select department" />
 																							</SelectTrigger>
 																						</FormControl>
 																						<SelectContent>
-																							{options.map((div) => (
-																								<SelectItem
-																									key={div}
-																									value={div}
-																								>
-																									{formatDivisionName(div)}
-																								</SelectItem>
-																							))}
+																							{CONTRACT_DEPARTMENTS.map(
+																								(dept) => (
+																									<SelectItem
+																										key={dept}
+																										value={dept}
+																									>
+																										{dept}
+																									</SelectItem>
+																								),
+																							)}
 																						</SelectContent>
 																					</Select>
 																					<FormMessage />
 																				</FormItem>
-																			);
-																		}}
-																	/>
-
-																	<FormField
-																		control={form.control}
-																		name="departmentOwner"
-																		render={({ field }) => {
-																			const owners =
-																				filteredManagers.length > 0
-																					? filteredManagers
-																					: availableManagers;
-																			return (
+																			)}
+																		/>
+																		<FormField
+																			control={form.control}
+																			name="subDepartment"
+																			render={({ field }) => {
+																				const dept =
+																					watchedAssignToDepartment ||
+																					form.watch("businessUnit");
+																				const options = dept
+																					? divisionsForDepartment(dept)
+																					: USER_DIVISIONS;
+																				return (
+																					<FormItem>
+																						<FormLabel className="text-sm text-slate-700 mb-1 block">
+																							Division{" "}
+																							<span className="text-red">
+																								*
+																							</span>
+																						</FormLabel>
+																						<Select
+																							onValueChange={field.onChange}
+																							value={field.value || undefined}
+																							disabled={options.length === 0}
+																						>
+																							<FormControl>
+																								<SelectTrigger className="bg-white border-slate-300">
+																									<SelectValue
+																										placeholder={
+																											options.length === 0
+																												? "Select department first"
+																												: "Select sub-department"
+																										}
+																									/>
+																								</SelectTrigger>
+																							</FormControl>
+																							<SelectContent>
+																								{options.map((div) => (
+																									<SelectItem
+																										key={div}
+																										value={div}
+																									>
+																										{formatDivisionName(div)}
+																									</SelectItem>
+																								))}
+																							</SelectContent>
+																						</Select>
+																						<FormMessage />
+																					</FormItem>
+																				);
+																			}}
+																		/>
+																		<FormField
+																			control={form.control}
+																			name="departmentOwner"
+																			render={({ field }) => {
+																				const owners =
+																					filteredManagers.length > 0
+																						? filteredManagers
+																						: availableManagers;
+																				return (
+																					<FormItem>
+																						<FormLabel className="text-sm text-slate-700 mb-1 block">
+																							Department Owner
+																						</FormLabel>
+																						<Select
+																							onValueChange={field.onChange}
+																							value={field.value || undefined}
+																							disabled={owners.length === 0}
+																						>
+																							<FormControl>
+																								<SelectTrigger className="bg-white border-slate-300">
+																									<SelectValue
+																										placeholder={
+																											owners.length === 0
+																												? "No department managers found"
+																												: "Select department manager"
+																										}
+																									/>
+																								</SelectTrigger>
+																							</FormControl>
+																							<SelectContent>
+																								{owners.map((user) => (
+																									<SelectItem
+																										key={user.$id}
+																										value={user.$id}
+																									>
+																										{user.fullName}
+																										{user.email
+																											? ` (${user.email})`
+																											: ""}
+																									</SelectItem>
+																								))}
+																							</SelectContent>
+																						</Select>
+																						<FormMessage />
+																					</FormItem>
+																				);
+																			}}
+																		/>
+																	</div>
+																</div>
+																<div className="space-y-3.5">
+																	<div className="grid grid-cols-3 gap-x-4 gap-y-3.5">
+																		<FormField
+																			control={form.control}
+																			name="startDate"
+																			render={({ field }) => (
 																				<FormItem>
 																					<FormLabel className="text-sm text-slate-700 mb-1 block">
-																						Department Owner
+																						Start Date
 																					</FormLabel>
-																					<Select
-																						onValueChange={field.onChange}
-																						value={field.value || undefined}
-																						disabled={owners.length === 0}
-																					>
-																						<FormControl>
-																							<SelectTrigger className="bg-white border-slate-300">
-																								<SelectValue
-																									placeholder={
-																										owners.length === 0
-																											? "No department managers found"
-																											: "Select department manager"
-																									}
-																								/>
-																							</SelectTrigger>
-																						</FormControl>
-																						<SelectContent>
-																							{owners.map((user) => (
-																								<SelectItem
-																									key={user.$id}
-																									value={user.$id}
-																								>
-																									{user.fullName}
-																									{user.email
-																										? ` (${user.email})`
-																										: ""}
-																								</SelectItem>
-																							))}
-																						</SelectContent>
-																					</Select>
+																					<FormControl>
+																						<WizardDateButton
+																							value={field.value}
+																							onChange={field.onChange}
+																							placeholder="Select start date"
+																						/>
+																					</FormControl>
 																					<FormMessage />
 																				</FormItem>
-																			);
-																		}}
-																	/>
-																</div>
-
-																<div className="grid grid-cols-2 gap-x-4 gap-y-3.5">
-																	<FormField
-																		control={form.control}
-																		name="startDate"
-																		render={({ field }) => (
-																			<FormItem>
-																				<FormLabel className="text-sm text-slate-700 mb-1 block">
-																					Start Date
-																				</FormLabel>
-																				<FormControl>
-																					<WizardDateButton
-																						value={field.value}
-																						onChange={field.onChange}
-																						placeholder="Select start date"
-																					/>
-																				</FormControl>
-																				<FormMessage />
-																			</FormItem>
-																		)}
-																	/>
-
-																	<FormField
-																		control={form.control}
-																		name="executionDate"
-																		render={({ field }) => (
-																			<FormItem>
-																				<FormLabel className="text-sm text-slate-700 mb-1 block">
-																					Execution Date
-																				</FormLabel>
-																				<FormControl>
-																					<WizardDateButton
-																						value={field.value}
-																						onChange={field.onChange}
-																						placeholder="Select execution date"
-																					/>
-																				</FormControl>
-																				<FormMessage />
-																			</FormItem>
-																		)}
-																	/>
-
-																	<FormField
-																		control={form.control}
-																		name="expiryDate"
-																		render={({ field }) => (
-																			<FormItem>
-																				<FormLabel className="text-sm text-slate-700 mb-1 block">
-																					Expiry Date{" "}
-																					<span className="text-red">*</span>
-																				</FormLabel>
-																				<FormControl>
-																					<WizardDateButton
-																						value={field.value}
-																						onChange={field.onChange}
-																						placeholder="Select expiry date"
-																					/>
-																				</FormControl>
-																				<FormMessage />
-																			</FormItem>
-																		)}
-																	/>
-																</div>
-
-																<div className="space-y-4">
-																	<div className="flex flex-wrap items-end justify-between gap-4">
+																			)}
+																		/>
+																		<FormField
+																			control={form.control}
+																			name="executionDate"
+																			render={({ field }) => (
+																				<FormItem>
+																					<FormLabel className="text-sm text-slate-700 mb-1 block">
+																						Execution Date
+																					</FormLabel>
+																					<FormControl>
+																						<WizardDateButton
+																							value={field.value}
+																							onChange={field.onChange}
+																							placeholder="Select execution date"
+																						/>
+																					</FormControl>
+																					<FormMessage />
+																				</FormItem>
+																			)}
+																		/>
+																		<FormField
+																			control={form.control}
+																			name="expiryDate"
+																			render={({ field }) => (
+																				<FormItem>
+																					<FormLabel className="text-sm text-slate-700 mb-1 block">
+																						Expiry Date{" "}
+																						<span className="text-red">*</span>
+																					</FormLabel>
+																					<FormControl>
+																						<WizardDateButton
+																							value={field.value}
+																							onChange={field.onChange}
+																							placeholder="Select expiry date"
+																						/>
+																					</FormControl>
+																					<FormMessage />
+																				</FormItem>
+																			)}
+																		/>
+																	</div>
+																	{(() => {
+																		const start = form.watch("startDate");
+																		const expiry = form.watch("expiryDate");
+																		if (
+																			!(start instanceof Date) ||
+																			!(expiry instanceof Date) ||
+																			Number.isNaN(start.getTime()) ||
+																			Number.isNaN(expiry.getTime()) ||
+																			expiry < start
+																		) {
+																			return null;
+																		}
+																		const days = Math.round(
+																			(expiry.getTime() - start.getTime()) /
+																				86_400_000,
+																		);
+																		const notice = Number.parseInt(
+																			form.watch("renewalNoticeDays") ?? "",
+																			10,
+																		);
+																		const noticeBy = Number.isFinite(notice)
+																			? new Date(
+																					expiry.getTime() -
+																						notice * 86_400_000,
+																				)
+																			: null;
+																		return (
+																			<p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
+																				Term:{" "}
+																				<strong className="text-slate-700">
+																					{days} days
+																				</strong>
+																				{noticeBy
+																					? ` · Notice due by ${noticeBy.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
+																					: null}
+																			</p>
+																		);
+																	})()}
+																	<div className="flex flex-wrap items-end gap-6">
 																		<FormField
 																			control={form.control}
 																			name="autoRenew"
@@ -4676,21 +4875,20 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																				</FormItem>
 																			)}
 																		/>
-
 																		<FormField
 																			control={form.control}
 																			name="renewalNoticeDays"
 																			render={({ field }) => (
 																				<FormItem className="w-[140px] shrink-0">
-																					<FormLabel className="text-sm text-slate-700 mb-1 block">
-																						Renewal Notice (Days)
+																					<FormLabel className="text-sm text-slate-700 mb-1 block w-lg">
+																						Renewal Notice (Days before expiry)
 																					</FormLabel>
 																					<Select
 																						onValueChange={field.onChange}
 																						value={field.value || undefined}
 																					>
 																						<FormControl>
-																							<SelectTrigger className="bg-white border-slate-300 w-[140px]">
+																							<SelectTrigger className="bg-white border-slate-300 w-35">
 																								<SelectValue placeholder="Days" />
 																							</SelectTrigger>
 																						</FormControl>
@@ -4712,15 +4910,14 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																			)}
 																		/>
 																	</div>
-
-																	<div className="border-t border-slate-200" />
-
+																</div>
+																<div className="space-y-3.5">
 																	<FormField
 																		control={form.control}
 																		name="description"
 																		render={({ field }) => (
 																			<FormItem className="w-full">
-																				<FormLabel className="shad-form-label">
+																				<FormLabel className="text-sm text-slate-700 mb-1 block">
 																					Summary / Scope
 																				</FormLabel>
 																				<FormControl>
@@ -4740,6 +4937,49 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																			</FormItem>
 																		)}
 																	/>
+																	<div>
+																		<button
+																			type="button"
+																			onClick={() =>
+																				setAttachmentsOpen((open) => !open)
+																			}
+																			aria-expanded={attachmentsOpen}
+																			className="inline-flex cursor-pointer items-center gap-1.5 text-[12.5px] font-semibold text-[#078fab] hover:text-[#0f5384] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#078fab]"
+																		>
+																			<ChevronRight
+																				className={cn(
+																					"h-3.5 w-3.5 transition-transform",
+																					attachmentsOpen && "rotate-90",
+																				)}
+																				aria-hidden
+																			/>
+																			Attachment references
+																		</button>
+																		{attachmentsOpen ? (
+																			<div className="mt-2.5">
+																				<FormField
+																					control={form.control}
+																					name="attachmentReferences"
+																					render={({ field }) => (
+																						<FormItem>
+																							<FormLabel className="text-sm text-slate-700 mb-1 block">
+																								Attachment References
+																							</FormLabel>
+																							<FormControl>
+																								<Textarea
+																									rows={2}
+																									placeholder="Exhibit A, Attachment B..."
+																									{...field}
+																									className="bg-white border-slate-300 resize-none"
+																								/>
+																							</FormControl>
+																							<FormMessage />
+																						</FormItem>
+																					)}
+																				/>
+																			</div>
+																		) : null}
+																	</div>
 																</div>
 															</div>
 														)}
@@ -5387,7 +5627,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																		control={form.control}
 																		name="insuranceCoverageAggregate"
 																		render={({ field }) => (
-																			<FormItem>
+																			<FormItem className="w-45">
 																				<FormLabel className="text-sm text-slate-700 mb-1 block">
 																					Coverage Aggregate
 																				</FormLabel>
@@ -7052,23 +7292,20 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 				</DialogContent>
 			</Dialog>
 
-			<ConfirmDialog
+			<CancelUploadDialog
 				open={cancelDialogOpen}
-				onOpenChange={setCancelDialogOpen}
-				icon={<Ban className="h-5 w-5" />}
-				title="Cancel Form?"
-				description="Your progress will not be saved"
-				helperText={
-					<p className="text-sm text-slate-700 leading-relaxed">
-						Are you sure you want to cancel? If you cancel, the form will not be
-						saved and all progress will be lost. You can save your progress
-						using the &quot;Save Progress&quot; button before canceling.
-					</p>
-				}
-				cancelLabel="Continue Editing"
-				confirmLabel="Cancel & Discard"
-				confirmIcon={<Ban className="h-4 w-4" />}
-				onConfirm={handleCancelConfirm}
+				hasUnsavedChanges={hasUnsavedChanges}
+				canSave={currentStep > 1}
+				onKeepEditing={() => setCancelDialogOpen(false)}
+				onExit={exitWizard}
+				onSaveAndExit={async () => {
+					const saved = await handleManualSave();
+					if (saved) {
+						setCancelDialogOpen(false);
+						isResumingDraftRef.current = false;
+					}
+					return saved;
+				}}
 			/>
 
 			<LocalPdfPreviewDialog

@@ -63,7 +63,8 @@ describe("ticket intake helpers", () => {
 			searchedExisting: true,
 			isBug: true,
 		});
-		expect(payload.severity).toBe("high");
+		// high impact + high urgency = critical severity (bumped one tier)
+		expect(payload.severity).toBe("critical");
 		expect(payload.lane).toBe("engineering");
 		expect(payload.category).toBe("Software / Application");
 		expect(payload.affectedModule).toBe("User Management");
