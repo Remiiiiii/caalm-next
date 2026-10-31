@@ -98,6 +98,25 @@ export type AssistantActivityFeed = {
 	}>;
 };
 
+export type AssistantFormFieldType = "text" | "date" | "time" | "select" | "textarea";
+
+export type AssistantFormField = {
+	name: string;
+	label: string;
+	type: AssistantFormFieldType;
+	placeholder?: string;
+	required?: boolean;
+	/** Options for select fields */
+	options?: string[];
+	defaultValue?: string;
+};
+
+export type AssistantInputForm = {
+	/** Short key identifying what's being collected, e.g. "schedule_event" */
+	intent: string;
+	fields: AssistantFormField[];
+};
+
 export type AssistantChatMessage = {
 	id: string;
 	role: "user" | "assistant";
@@ -113,6 +132,8 @@ export type AssistantChatMessage = {
 	actionLifecycle?: AssistantActionLifecycle;
 	/** Structured recent-activity list card */
 	activityFeed?: AssistantActivityFeed;
+	/** Inline form for the AI to collect structured input from the user */
+	inputForm?: AssistantInputForm;
 	createdAt?: string;
 };
 

@@ -14,6 +14,7 @@ import { useEffect, useRef, useState } from "react";
 import AssistantActionCompletedCard from "@/components/assistant/AssistantActionCompletedCard";
 import AssistantActionLifecycleCard from "@/components/assistant/AssistantActionLifecycleCard";
 import AssistantActivityFeedCard from "@/components/assistant/AssistantActivityFeedCard";
+import AssistantInputFormCard from "@/components/assistant/AssistantInputFormCard";
 import AssistantAvatar from "@/components/assistant/AssistantAvatar";
 import AssistantHistoryList from "@/components/assistant/AssistantHistoryList";
 import AssistantInPanelOverlay, {
@@ -490,6 +491,7 @@ export default function CaalmAssistantSheet({
 								const hasLifecycleCard =
 									Boolean(m.actionLifecycle) &&
 									m.pendingAction?.toolName !== "create_calendar_event";
+								const hasInputForm = Boolean(m.inputForm);
 								return (
 									<div
 										key={m.id}
@@ -505,23 +507,23 @@ export default function CaalmAssistantSheet({
 											className={cn(
 												"max-w-[85%] text-sm",
 												m.role === "user"
-													? "text-white"
-													: hasLifecycleCard
+													? "chat-question-bubble"
+													: hasLifecycleCard || hasInputForm
 														? "overflow-hidden rounded-2xl border border-slate-200/80 bg-white text-slate-700"
 														: "rounded-2xl border border-slate-200/80 bg-white/60 px-3 py-2 text-slate-700",
 											)}
 											style={m.role === "user" ? {
 												padding: "10px 14px",
 												borderRadius: "16px 4px 16px 16px",
-												background: "linear-gradient(90deg, #078fab, #11487d)",
 												lineHeight: "20px",
 											} : undefined}
 										>
 											{m.content.trim() ? (
 												<div
 													className={cn(
-														"prose prose-sm max-w-none text-slate-700",
-														hasLifecycleCard && "px-3 pt-2",
+														"prose prose-sm max-w-none",
+														m.role === "user" ? "text-white" : "text-slate-700",
+														(hasLifecycleCard || hasInputForm) && "px-3 pt-2",
 													)}
 													dangerouslySetInnerHTML={{
 														__html: formatAssistantMarkdown(m.content),
@@ -570,6 +572,20 @@ export default function CaalmAssistantSheet({
 											{m.activityFeed ? (
 												<AssistantActivityFeedCard feed={m.activityFeed} />
 											) : null}
+											{m.inputForm &&
+											m.id === lastAssistantId &&
+											!assistant.isSending &&
+											assistant.conversationStatus !== "closed" ? (
+												<div className="px-3 pb-3">
+													<AssistantInputFormCard
+														form={m.inputForm}
+														disabled={assistant.isSending}
+														onSubmit={(text) =>
+															void assistant.sendMessage(text)
+														}
+													/>
+												</div>
+											) : null}
 											{m.sources?.length ? (
 												<ul
 													className={cn(
@@ -596,6 +612,7 @@ export default function CaalmAssistantSheet({
 											{m.role === "assistant" &&
 											m.id === lastAssistantId &&
 											m.suggestions?.length &&
+											!hasInputForm &&
 											!assistant.isSending &&
 											assistant.conversationStatus !== "closed" ? (
 												<div className={cn(hasLifecycleCard && "px-3")}>
@@ -607,7 +624,7 @@ export default function CaalmAssistantSheet({
 												</div>
 											) : null}
 											{m.role === "assistant" ? (
-												<div className={cn(hasLifecycleCard && "px-3 pb-2")}>
+												<div className={cn((hasLifecycleCard || hasInputForm) && "px-3 pb-2")}>
 													<AssistantMessageActions
 														messageId={m.id}
 														content={m.content}

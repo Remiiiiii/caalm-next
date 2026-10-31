@@ -6,10 +6,18 @@
 import { useCallback, useRef, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
+import { getDateFieldNames } from "@/lib/licenses/licenseTypeConfigs";
 import type { LicenseUploadFormData } from "../schema";
 import type { Draft, ProcessedFileData } from "../types";
 
-const DATE_KEYS = new Set(["licenseExpiryDate", "issueDate", "renewalDate"]);
+// Fallback date keys before a type is known (e.g. parsing legacy drafts
+// saved before type-specific fields existed). Once a draft's licenseTypeId
+// is known, getDateFieldNames(typeId) is the source of truth.
+const FALLBACK_DATE_KEYS = new Set([
+	"licenseExpiryDate",
+	"issueDate",
+	"renewalDate",
+]);
 
 const STRING_KEYS = new Set([
 	"quantity",
@@ -18,6 +26,7 @@ const STRING_KEYS = new Set([
 	"licenseName",
 	"licenseNumber",
 	"licenseType",
+	"licenseTypeId",
 	"category",
 	"issuingAuthority",
 	"vendor",
@@ -85,6 +94,7 @@ interface UseDraftManagementProps {
 	resetForm: () => void;
 	onRestoreExtraction?: (extracted: Record<string, unknown> | null) => void;
 	onRestoreManagers?: (managerIds: string[]) => void;
+	onRestoreLicenseType?: (licenseTypeId: string | null) => void;
 }
 
 export function useDraftManagement({
@@ -103,6 +113,7 @@ export function useDraftManagement({
 	resetForm,
 	onRestoreExtraction,
 	onRestoreManagers,
+	onRestoreLicenseType,
 }: UseDraftManagementProps) {
 	const { toast } = useToast();
 	const [savedDrafts, setSavedDrafts] = useState<Draft[]>([]);
@@ -155,6 +166,7 @@ export function useDraftManagement({
 					accountId,
 					formData: formValues,
 					currentStep,
+					totalSteps,
 					processedFileData: filePayload,
 					extractedData,
 					draftId: currentDraftId,
@@ -280,6 +292,16 @@ export function useDraftManagement({
 					draft.extractedData,
 				);
 
+				const resumedTypeId =
+					typeof parsedFormData.licenseTypeId === "string"
+						? parsedFormData.licenseTypeId
+						: null;
+				onRestoreLicenseType?.(resumedTypeId);
+				const dateKeys = new Set([
+					...FALLBACK_DATE_KEYS,
+					...getDateFieldNames(resumedTypeId),
+				]);
+
 				const savedStep = Math.max(1, Number(draft.currentStep) || 1);
 				// Step 1 is done once a file exists — jump to details so Resume feels real
 				const targetStep = Math.min(
@@ -299,7 +321,7 @@ export function useDraftManagement({
 					const value = parsedFormData[key];
 					if (value === undefined || value === null) return;
 
-					if (DATE_KEYS.has(key) || key.includes("Date")) {
+					if (dateKeys.has(key) || key.includes("Date")) {
 						if (typeof value === "string" || typeof value === "number") {
 							const dateValue = new Date(value);
 							if (!Number.isNaN(dateValue.getTime())) {
@@ -427,6 +449,7 @@ export function useDraftManagement({
 			setIsOpen,
 			onRestoreExtraction,
 			onRestoreManagers,
+			onRestoreLicenseType,
 		],
 	);
 
@@ -503,20 +526,21 @@ export function useDraftManagement({
 	}, [currentDraftId]);
 
 	// Manual save and close
-	const handleManualSave = useCallback(async () => {
+	const handleManualSave = useCallback(async (): Promise<boolean> => {
 		if (!processedFileData) {
 			toast({
 				title: "No file uploaded",
 				description: "Please upload a file first before saving",
 				variant: "destructive",
 			});
-			return;
+			return false;
 		}
 		const success = await autoSaveDraft();
 		if (success) {
 			setIsOpen(false);
 			resetForm();
 		}
+		return success;
 	}, [autoSaveDraft, processedFileData, toast, setIsOpen, resetForm]);
 
 	return {

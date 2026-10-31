@@ -4,8 +4,13 @@ import {
 	type ContractTypeSuggestionResult,
 	parseContractTypeSuggestionJson,
 } from "./contractTypeSuggestionSchema";
+import {
+	buildLicenseTypeFallbackResult,
+	type LicenseTypeSuggestionResult,
+	parseLicenseTypeSuggestionJson,
+} from "./licenseTypeSuggestionSchema";
 
-export type { ContractTypeSuggestionResult };
+export type { ContractTypeSuggestionResult, LicenseTypeSuggestionResult };
 
 // Initialize Gemini AI - Use server-side environment variable
 const apiKey = process.env.GOOGLE_API_KEY;
@@ -110,6 +115,70 @@ ${answersText}${note}`;
 		console.error("suggestContractType error:", error);
 		return buildContractTypeFallbackResult(
 			"We couldn't reach the AI service. Pick a type below or browse all contract types.",
+		);
+	}
+}
+
+/**
+ * Suggest license type(s) from quiz answers, mirroring suggestContractType.
+ */
+export async function suggestLicenseType(
+	answers: ContractTypeSuggestionInput[],
+	freeText?: string | null,
+): Promise<LicenseTypeSuggestionResult> {
+	const { isDemoLicenseTypeAllowed, LICENSE_TYPE_CONFIGS } = await import(
+		"@/lib/licenses/licenseTypeConfigs"
+	);
+	const enabledConfigs = LICENSE_TYPE_CONFIGS.filter((c) =>
+		isDemoLicenseTypeAllowed(c.id),
+	);
+	const validIds = enabledConfigs.map((c) => c.id);
+
+	if (!apiKey) {
+		return buildLicenseTypeFallbackResult(
+			"AI is not configured. Choose a license type from the list or browse all types.",
+		);
+	}
+
+	const typeList = enabledConfigs
+		.map((c) => `- ${c.id}: ${c.label} — ${c.description}`)
+		.join("\n");
+
+	const answersText = answers
+		.map((a) => `${a.questionId}: ${a.answer}`)
+		.join("\n");
+
+	const note = freeText?.trim().length
+		? `\nOptional user description:\n${freeText.trim()}`
+		: "";
+
+	const idList = validIds.join(", ");
+
+	const prompt = `You are a license/compliance-record classification assistant for a nonprofit organization.
+Based on the user's quiz answers, pick the best matching license type id from the list below.
+
+Return ONE JSON object only (no markdown) with exactly these keys:
+- "primaryTypeId": string, must be exactly one of: ${idList}
+- "confidence": number from 0 through 1 (your confidence in primaryTypeId)
+- "alternates": array with at most 2 objects, each like {"typeId": string, "confidence"?: number}. Each typeId must be from the same allowed list. Do not repeat primaryTypeId.
+- "rationale": string, 1-2 short sentences for a non-lawyer user.
+
+ALLOWED TYPE IDS ONLY: ${idList}
+
+TYPE REFERENCE:
+${typeList}
+
+QUIZ ANSWERS:
+${answersText}${note}`;
+
+	try {
+		const result = await contractTypeSuggestionModel.generateContent(prompt);
+		const text = result.response.text() ?? "{}";
+		return parseLicenseTypeSuggestionJson(text, validIds, enabledConfigs);
+	} catch (error) {
+		console.error("suggestLicenseType error:", error);
+		return buildLicenseTypeFallbackResult(
+			"We couldn't reach the AI service. Pick a type below or browse all license types.",
 		);
 	}
 }

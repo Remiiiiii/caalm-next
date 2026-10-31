@@ -5,13 +5,31 @@
 import * as z from "zod";
 
 export const licenseUploadSchema = z.object({
+	licenseTypeId: z.string().min(1, "License type is required"),
 	licenseName: z
 		.string()
-		.min(1, "License name is required")
+		.min(1, "Record name is required")
 		.max(200, "Keep the name under 200 characters"),
 	licenseNumber: z.string().optional(),
 	licenseType: z.string().min(1, "License type is required"),
 	category: z.string().optional(),
+	entityCovered: z.string().optional(),
+	renewalFrequency: z.string().optional(),
+	fileLocation: z.string().optional(),
+	// Type-specific fields (see src/lib/licenses/licenseTypeConfigs.ts)
+	holderName: z.string().optional(),
+	holderRole: z.string().optional(),
+	licenseBoard: z.string().optional(),
+	carrierName: z.string().optional(),
+	policyNumber: z.string().optional(),
+	coverageAmount: z.string().optional(),
+	certificateHolder: z.string().optional(),
+	backgroundScreeningStatus: z.string().optional(),
+	agencyContractReference: z.string().optional(),
+	hipaaComplianceRecord: z.string().optional(),
+	substanceUseCertification: z.string().optional(),
+	hrsaComplianceStatus: z.string().optional(),
+	phsDeemedStatus: z.string().optional(),
 	status: z
 		.enum([
 			"active",

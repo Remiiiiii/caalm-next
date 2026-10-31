@@ -100,6 +100,25 @@ export interface License {
 	purchaseDate?: string; // Maps to issueDate
 	assignedTo?: string[]; // Maps to assignedManagers
 	certificateFileId?: string; // Maps to fileId
+
+	// Optional - License-type-specific fields (see src/lib/licenses/licenseTypeConfigs.ts)
+	licenseTypeId?: string;
+	entityCovered?: string;
+	renewalFrequency?: string;
+	fileLocation?: string;
+	holderName?: string;
+	holderRole?: string;
+	licenseBoard?: string;
+	carrierName?: string;
+	policyNumber?: string;
+	coverageAmount?: string;
+	certificateHolder?: string;
+	backgroundScreeningStatus?: string;
+	agencyContractReference?: string;
+	hipaaComplianceRecord?: string;
+	substanceUseCertification?: string;
+	hrsaComplianceStatus?: string;
+	phsDeemedStatus?: string;
 }
 
 export interface RenewalRecord {
@@ -171,4 +190,23 @@ export interface LicenseMetadataPayload {
 	purchaseDate?: string; // Maps to issueDate
 	assignedTo?: string[]; // Maps to assignedManagers
 	certificateFileId?: string; // Maps to fileId
+
+	// Optional - License-type-specific fields (see src/lib/licenses/licenseTypeConfigs.ts)
+	licenseTypeId?: string;
+	entityCovered?: string;
+	renewalFrequency?: string;
+	fileLocation?: string;
+	holderName?: string;
+	holderRole?: string;
+	licenseBoard?: string;
+	carrierName?: string;
+	policyNumber?: string;
+	coverageAmount?: string;
+	certificateHolder?: string;
+	backgroundScreeningStatus?: string;
+	agencyContractReference?: string;
+	hipaaComplianceRecord?: string;
+	substanceUseCertification?: string;
+	hrsaComplianceStatus?: string;
+	phsDeemedStatus?: string;
 }

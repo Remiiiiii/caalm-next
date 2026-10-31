@@ -55,6 +55,7 @@ function mapStoredMessages(
 		let actionCompleted: AssistantChatMessage["actionCompleted"];
 		let actionLifecycle: AssistantChatMessage["actionLifecycle"];
 		let activityFeed: AssistantChatMessage["activityFeed"];
+		let inputForm: AssistantChatMessage["inputForm"];
 		if (m.metadataJson) {
 			try {
 				const meta = JSON.parse(m.metadataJson) as {
@@ -63,18 +64,21 @@ function mapStoredMessages(
 					actionCompleted?: AssistantChatMessage["actionCompleted"];
 					actionLifecycle?: AssistantChatMessage["actionLifecycle"];
 					activityFeed?: AssistantChatMessage["activityFeed"];
+					inputForm?: AssistantChatMessage["inputForm"];
 				};
 				suggestions = meta.suggestions;
 				meetingCreated = meta.meetingCreated;
 				actionCompleted = meta.actionCompleted;
 				actionLifecycle = meta.actionLifecycle;
 				activityFeed = meta.activityFeed;
+				inputForm = meta.inputForm;
 			} catch {
 				suggestions = undefined;
 				meetingCreated = undefined;
 				actionCompleted = undefined;
 				actionLifecycle = undefined;
 				activityFeed = undefined;
+				inputForm = undefined;
 			}
 		}
 		return {
@@ -87,6 +91,7 @@ function mapStoredMessages(
 			actionCompleted,
 			actionLifecycle,
 			activityFeed,
+			inputForm,
 			createdAt: m.$createdAt,
 		};
 	});
@@ -288,6 +293,7 @@ export function useCaalmAssistant(): UseCaalmAssistantReturn {
 						pendingAction?: AssistantPendingAction;
 						clientAction?: { type: "navigate"; href: string };
 						activityFeed?: AssistantChatMessage["activityFeed"];
+						inputForm?: AssistantChatMessage["inputForm"];
 					};
 				}>(res);
 				if (!parsed.ok || !parsed.data?.data) {
@@ -311,6 +317,7 @@ export function useCaalmAssistant(): UseCaalmAssistantReturn {
 						? buildPendingActionLifecycle(payload.pendingAction, actionActor())
 						: undefined,
 					activityFeed: payload.activityFeed,
+					inputForm: payload.inputForm,
 					createdAt: new Date().toISOString(),
 				};
 				setMessages((prev) => [...prev, assistantMsg]);

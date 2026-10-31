@@ -67,6 +67,10 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import {
+	DIALOG_BACK_LINK_CLASS,
+	HEADER_BADGE_CLASS,
+} from "@/lib/ui/modal-styles";
 import { cn, constructFileUrl } from "@/lib/utils";
 import "react-datepicker/dist/react-datepicker.css";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -383,9 +387,227 @@ const AI_QUIZ_GHOST_BTN_CLASS =
 /** Drafts dialog: outlined destructive pill (never ghost, never the gradient). */
 const DRAFT_DELETE_BTN_CLASS =
 	"inline-flex h-7 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border-[1.5px] border-[#dc2626]/[.22] bg-[#dc2626]/[.06] px-3 text-xs font-semibold text-[#dc2626] transition-[background-color,border-color,box-shadow] duration-200 hover:border-[#dc2626]/35 hover:bg-[#dc2626]/[.12] hover:shadow-[0_2px_8px_rgba(220,38,38,0.12)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#dc2626]";
-/** Back button that sits at the top of a dialog, on the same row as the close X. */
-const DIALOG_BACK_LINK_CLASS =
-	"inline-flex cursor-pointer items-center gap-1.5 text-[13px] font-semibold text-slate-400 transition-colors duration-200 hover:text-slate-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#078fab] disabled:cursor-not-allowed disabled:opacity-50";
+/** Header chip per lifecycle status (Draft is the only one a new upload can have). */
+const LIFECYCLE_CHIP: Record<string, { label: string; className: string }> = {
+	draft: {
+		label: "Draft",
+		className: "border-[#d97706]/[.28] bg-[#d97706]/10 text-[#d97706]",
+	},
+	active: {
+		label: "Active",
+		className: "border-[#078fab]/25 bg-[#078fab]/10 text-[#078fab]",
+	},
+	expired: {
+		label: "Expired",
+		className: "border-[#dc2626]/20 bg-[#dc2626]/[.08] text-[#dc2626]",
+	},
+	executed: {
+		label: "Executed",
+		className: "border-[#0f5384]/[.22] bg-[#0f5384]/10 text-[#0f5384]",
+	},
+};
+
+type UploadStepSection = { id: string; label: string; fields: string[] };
+
+/**
+ * Sections of each form step, in page order. The toggle above the form jumps to
+ * the first of a section's fields that the chosen contract type actually shows;
+ * sections with no visible field are dropped.
+ */
+const UPLOAD_STEP_SECTIONS: Record<number, UploadStepSection[]> = {
+	2: [
+		{
+			id: "contract",
+			label: "Contract",
+			fields: ["contractName", "contractNumber", "contractType"],
+		},
+		{
+			id: "ownership",
+			label: "Ownership",
+			fields: ["assignToDepartment", "subDepartment", "departmentOwner"],
+		},
+		{
+			id: "dates",
+			label: "Dates & term",
+			fields: [
+				"startDate",
+				"executionDate",
+				"expiryDate",
+				"autoRenew",
+				"renewalNoticeDays",
+			],
+		},
+		{
+			id: "scope",
+			label: "Scope",
+			fields: ["description", "attachmentReferences"],
+		},
+	],
+	3: [
+		{
+			id: "counterparty",
+			label: "Counterparty",
+			fields: [
+				"counterpartyLegalName",
+				"counterpartyContactName",
+				"counterpartyContactTitle",
+				"counterpartyContactEmail",
+				"counterpartyContactPhone",
+				"counterpartyType",
+				"counterpartyTaxId",
+				"counterpartyDunsNumber",
+				"counterpartyAddress",
+			],
+		},
+		{
+			id: "internal",
+			label: "Internal contacts",
+			fields: ["primaryInternalContactId", "secondaryInternalContactId"],
+		},
+	],
+	4: [
+		{
+			id: "financials",
+			label: "Financials",
+			fields: [
+				"amount",
+				"currencyCode",
+				"notToExceedAmount",
+				"paymentTerms",
+				"paymentSchedule",
+				"budgetCode",
+				"costCenter",
+			],
+		},
+		{
+			id: "references",
+			label: "References",
+			fields: ["projectMatterId", "erpReference", "crmReference"],
+		},
+	],
+	5: [
+		{ id: "risk", label: "Risk", fields: ["riskLevel", "riskMitigationPlan"] },
+		{
+			id: "insurance",
+			label: "Insurance",
+			fields: [
+				"insuranceRequired",
+				"insuranceCoveragePerIncident",
+				"insuranceCoverageAggregate",
+				"insuranceVerifiedDate",
+				"insuranceExpiryDate",
+				"indemnificationIncluded",
+			],
+		},
+		{
+			id: "compliance",
+			label: "Compliance",
+			fields: [
+				"hipaaRequired",
+				"backgroundCheckRequired",
+				"auditRightsGranted",
+				"dataPrivacyRequirements",
+				"regulatoryRequirements",
+			],
+		},
+		{
+			id: "performance",
+			label: "Performance",
+			fields: [
+				"keyObligations",
+				"serviceLevelAgreements",
+				"performanceMetrics",
+				"reportingRequirements",
+			],
+		},
+		{
+			id: "termination",
+			label: "Termination",
+			fields: ["terminationNoticeDays", "terminationRights", "curePeriodDays"],
+		},
+		{
+			id: "deliverables",
+			label: "Deliverables",
+			fields: [
+				"milestones",
+				"deliverables",
+				"slaPenalties",
+				"serviceCreditTerms",
+				"escalationProcedures",
+				"obligationOwners",
+			],
+		},
+	],
+	6: [
+		{
+			id: "managers",
+			label: "Managers",
+			fields: ["assignedManagers", "internalApproverIds"],
+		},
+		{
+			id: "approval",
+			label: "Approval",
+			fields: [
+				"approvalWorkflowTemplate",
+				"currentApprovalStage",
+				"approvalDueDate",
+				"reviewerComments",
+			],
+		},
+		{
+			id: "escalation",
+			label: "Escalation",
+			fields: ["approvalEscalationContactIds", "workflowNotes"],
+		},
+	],
+	7: [
+		{
+			id: "recipients",
+			label: "Recipients",
+			fields: ["alertRecipientIds", "alertEscalationContactIds"],
+		},
+		{
+			id: "timing",
+			label: "Timing",
+			fields: ["alertLeadTimes", "alertChannels", "alertStrategy"],
+		},
+		{ id: "notes", label: "Notes", fields: ["alertNotes"] },
+	],
+	8: [
+		{
+			id: "versioning",
+			label: "Versioning",
+			fields: ["versionNumber", "templateUsed", "parentContractId"],
+		},
+		{
+			id: "documents",
+			label: "Documents",
+			fields: ["relatedDocumentIds", "attachmentReferences"],
+		},
+		{
+			id: "details",
+			label: "Details",
+			fields: ["businessPurpose", "tags", "searchKeywords"],
+		},
+	],
+	9: [
+		{
+			id: "legal",
+			label: "Governing law",
+			fields: ["governingLaw", "jurisdiction"],
+		},
+		{
+			id: "records",
+			label: "Disputes & records",
+			fields: [
+				"disputeResolutionMethod",
+				"confidentialityClassification",
+				"recordsRetentionPeriodMonths",
+			],
+		},
+	],
+};
+
 const AI_QUIZ_CTA_CLASS =
 	"inline-flex h-[34px] cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full bg-[linear-gradient(90deg,#00c1cb,#078fab,#0e638f)] px-4 text-[12.5px] font-semibold text-white transition-opacity duration-200 hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#078fab] disabled:pointer-events-none disabled:opacity-50";
 
@@ -6062,7 +6284,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																									>
 																										<input
 																											type="checkbox"
-																											className="rounded border-slate-300"
+																											className="rounded border-slate-300 mr-2"
 																											checked={checked}
 																											onChange={() => {
 																												const next = checked
@@ -6129,7 +6351,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																									>
 																										<input
 																											type="checkbox"
-																											className="rounded border-slate-300"
+																											className="rounded border-slate-300 mr-2"
 																											checked={checked}
 																											onChange={() => {
 																												const next = checked

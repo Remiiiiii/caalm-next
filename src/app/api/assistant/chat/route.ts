@@ -121,6 +121,7 @@ export async function POST(request: NextRequest) {
 					: {}),
 				...(turn.suggestions?.length ? { suggestions: turn.suggestions } : {}),
 				...(turn.activityFeed ? { activityFeed: turn.activityFeed } : {}),
+				...(turn.inputForm ? { inputForm: turn.inputForm } : {}),
 			}),
 		});
 
@@ -144,6 +145,7 @@ export async function POST(request: NextRequest) {
 				pendingAction: turn.pendingAction,
 				clientAction: turn.clientAction,
 				activityFeed: turn.activityFeed,
+				inputForm: turn.inputForm,
 			},
 		});
 	} catch (error) {

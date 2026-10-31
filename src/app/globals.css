@@ -2659,7 +2659,7 @@ iframe[src*="splinecode"] {
    Upload Contract wizard, steps 2+ (form grid spec). Unlayered on purpose: it
    has to win over the Tailwind classes on each field. Scoped to the wizard form.
    ========================================================================== */
-#contract-upload-form label {
+:is(#contract-upload-form, #license-upload-form) label {
 	display: block;
 	margin-bottom: 6px;
 	font-size: 11px;
@@ -2669,14 +2669,17 @@ iframe[src*="splinecode"] {
 	color: #64748b;
 }
 
-#contract-upload-form label span.text-red {
+:is(#contract-upload-form, #license-upload-form) label span.text-red {
 	font-size: 11px;
 	color: #ef4444;
 }
 
-#contract-upload-form input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]),
-#contract-upload-form textarea,
-#contract-upload-form button[role="combobox"] {
+:is(#contract-upload-form, #license-upload-form)
+	input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not(
+		[type="hidden"]
+	),
+:is(#contract-upload-form, #license-upload-form) textarea,
+:is(#contract-upload-form, #license-upload-form) button[role="combobox"] {
 	width: 100%;
 	min-height: 38px;
 	padding: 9px 12px;
@@ -2689,26 +2692,34 @@ iframe[src*="splinecode"] {
 	box-shadow: none;
 }
 
-#contract-upload-form textarea {
+:is(#contract-upload-form, #license-upload-form) textarea {
 	min-height: 80px;
 	line-height: 1.5;
 	resize: vertical;
 }
 
-#contract-upload-form input:focus,
-#contract-upload-form textarea:focus,
-#contract-upload-form button[role="combobox"]:focus,
-#contract-upload-form button[role="combobox"][data-state="open"] {
+/* Currency inputs: room for the leading $ symbol, which the padding rule above (higher
+   specificity via its :not() chain) would otherwise override back down */
+:is(#contract-upload-form, #license-upload-form)
+	input[data-with-leading-icon="true"] {
+	padding-left: 1.5rem !important;
+}
+
+:is(#contract-upload-form, #license-upload-form) input:focus,
+:is(#contract-upload-form, #license-upload-form) textarea:focus,
+:is(#contract-upload-form, #license-upload-form) button[role="combobox"]:focus,
+:is(#contract-upload-form, #license-upload-form)
+	button[role="combobox"][data-state="open"] {
 	border-color: #078fab;
 	box-shadow: 0 0 0 3px rgba(7, 143, 171, 0.12);
 	outline: none;
 }
 
-#contract-upload-form [aria-invalid="true"] {
+:is(#contract-upload-form, #license-upload-form) [aria-invalid="true"] {
 	border-color: #ef4444 !important;
 }
 
-#contract-upload-form [id$="-form-item-message"] {
+:is(#contract-upload-form, #license-upload-form) [id$="-form-item-message"] {
 	margin-top: 4px;
 	font-size: 11px;
 	font-weight: 400;
@@ -2716,22 +2727,30 @@ iframe[src*="splinecode"] {
 }
 
 /* CAALM-filled fields: left accent and a faint tint on the input itself */
-#contract-upload-form [data-caalm] input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
-#contract-upload-form [data-caalm] textarea,
-#contract-upload-form [data-caalm] button[role="combobox"] {
+:is(#contract-upload-form, #license-upload-form)
+	[data-caalm]
+	input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+:is(#contract-upload-form, #license-upload-form) [data-caalm] textarea,
+:is(#contract-upload-form, #license-upload-form)
+	[data-caalm]
+	button[role="combobox"] {
 	border-left: 2.5px solid rgba(7, 143, 171, 0.5);
 	background-color: rgba(7, 143, 171, 0.02);
 }
 
-#contract-upload-form [data-caalm="review"] input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
-#contract-upload-form [data-caalm="review"] textarea,
-#contract-upload-form [data-caalm="review"] button[role="combobox"] {
+:is(#contract-upload-form, #license-upload-form)
+	[data-caalm="review"]
+	input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+:is(#contract-upload-form, #license-upload-form) [data-caalm="review"] textarea,
+:is(#contract-upload-form, #license-upload-form)
+	[data-caalm="review"]
+	button[role="combobox"] {
 	border-left-color: rgba(245, 158, 11, 0.6);
 	background-color: rgba(245, 158, 11, 0.03);
 }
 
 /* Boolean toggle: pill track, gradient when on, On/Off text beside it */
-#contract-upload-form button[role="switch"] {
+:is(#contract-upload-form, #license-upload-form) button[role="switch"] {
 	position: relative;
 	width: 36px;
 	height: 20px;
@@ -2742,11 +2761,12 @@ iframe[src*="splinecode"] {
 	background-image: none;
 }
 
-#contract-upload-form button[role="switch"][data-state="checked"] {
+:is(#contract-upload-form, #license-upload-form)
+	button[role="switch"][data-state="checked"] {
 	background-image: linear-gradient(90deg, #00c1cb, #078fab, #0e638f);
 }
 
-#contract-upload-form button[role="switch"] > span {
+:is(#contract-upload-form, #license-upload-form) button[role="switch"] > span {
 	width: 16px;
 	height: 16px;
 	margin: 0;
@@ -2755,11 +2775,13 @@ iframe[src*="splinecode"] {
 	transform: translateX(2px);
 }
 
-#contract-upload-form button[role="switch"][data-state="checked"] > span {
+:is(#contract-upload-form, #license-upload-form)
+	button[role="switch"][data-state="checked"]
+	> span {
 	transform: translateX(18px);
 }
 
-#contract-upload-form button[role="switch"]::after {
+:is(#contract-upload-form, #license-upload-form) button[role="switch"]::after {
 	content: "Off";
 	position: absolute;
 	left: 46px;
@@ -2771,6 +2793,83 @@ iframe[src*="splinecode"] {
 	white-space: nowrap;
 }
 
-#contract-upload-form button[role="switch"][data-state="checked"]::after {
+:is(#contract-upload-form, #license-upload-form)
+	button[role="switch"][data-state="checked"]::after {
 	content: "On";
+}
+
+/* Upload wizard: each step section gets a title and a divider between sections. */
+:is(#contract-upload-form, #license-upload-form) [data-section-title]::before {
+	content: attr(data-section-title);
+	display: block;
+	grid-column: 1 / -1;
+	margin-bottom: 12px;
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: #0f5384;
+}
+:is(#contract-upload-form, #license-upload-form)
+	[data-section-title]:not([data-section-first]) {
+	border-top: 1px solid #e2e8f0;
+	padding-top: 20px;
+}
+
+/* === Chat question-bubble tokens === */
+:root {
+	--chat-q-from: #0e7490;
+	--chat-q-to: #164e7a;
+	--chat-q-text: #ffffff;
+	--chat-q-link: #bae6fd;
+	--chat-q-border: transparent;
+}
+.dark {
+	--chat-q-from: #0f7f9c;
+	--chat-q-to: #1e5f96;
+	--chat-q-text: #ffffff;
+	--chat-q-link: #bae6fd;
+	--chat-q-border: rgba(255, 255, 255, 0.12);
+}
+.chat-question-bubble {
+	background: linear-gradient(
+		135deg,
+		var(--chat-q-from) 0%,
+		var(--chat-q-to) 100%
+	);
+	color: var(--chat-q-text);
+	border: 1px solid var(--chat-q-border);
+}
+.chat-question-bubble a {
+	color: var(--chat-q-link);
+	text-decoration: underline;
+}
+.chat-question-bubble ::selection {
+	background: rgba(255, 255, 255, 0.3);
+}
+
+/* === CAALM Toast keyframes === */
+@keyframes caalm-timer {
+	from {
+		transform: scaleX(1);
+	}
+	to {
+		transform: scaleX(0);
+	}
+}
+@keyframes caalm-ring-spin {
+	from {
+		transform: rotate(0deg);
+	}
+	to {
+		transform: rotate(360deg);
+	}
+}
+@keyframes caalm-timer-shimmer {
+	0% {
+		transform: translateX(-100%);
+	}
+	100% {
+		transform: translateX(400%);
+	}
 }

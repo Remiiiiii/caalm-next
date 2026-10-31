@@ -5,14 +5,13 @@
 
 "use client";
 
+import * as VisuallyHiddenPrimitive from "@radix-ui/react-visually-hidden";
 import {
-	AlertTriangle,
 	Ban,
 	ChevronLeft,
 	ChevronRight,
 	FileCheck,
 	Loader2,
-	Trash2,
 	Upload,
 } from "lucide-react";
 import dynamic from "next/dynamic";
@@ -23,16 +22,24 @@ import {
 	AiExtractionReviewPanel,
 	AiExtractionStatusBadge,
 } from "@/components/contract-upload/AiExtractionReview";
-import { AppDialog } from "@/components/ui/app-dialog";
+import { CancelUploadDialog } from "@/components/contract-upload/CancelUploadDialog";
+import { SaveProgressCard } from "@/components/SaveProgressCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { Form } from "@/components/ui/form";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogTitle,
+	DialogTrigger,
+} from "@/components/ui/dialog";
+import { CaalmFilledProvider, Form } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { uploadFile } from "@/lib/actions/file.actions";
 import {
 	buildFormPatchFromLicenseExtraction,
 	isRealLicenseExtractionMethod,
+	LOW_LICENSE_EXTRACTION_CONFIDENCE,
 	parseLicenseExtractionJson,
 } from "@/lib/ai/licenseExtractionSchema";
 import {
@@ -43,8 +50,17 @@ import {
 	generateDocumentNumber,
 	needsDocumentNumber,
 } from "@/lib/contracts/documentNumber";
+import {
+	getLicenseRequiredFieldsForStep,
+	getLicenseTypeConfig,
+	isDemoLicenseTypeAllowed,
+} from "@/lib/licenses/licenseTypeConfigs";
 import { refreshStorageUsage } from "@/lib/storage/refreshStorageUsage";
-import { STEP_TITLES, TOTAL_STEPS } from "./constants";
+import {
+	DIALOG_BACK_LINK_CLASS,
+	HEADER_BADGE_CLASS,
+} from "@/lib/ui/modal-styles";
+import { cn } from "@/lib/utils";
 import { useDraftManagement } from "./hooks/useDraftManagement";
 import { useLicenseForm } from "./hooks/useLicenseForm";
 import { useManagers } from "./hooks/useManagers";
@@ -61,8 +77,17 @@ const Step1FileUpload = dynamic(() => import("./steps/Step1FileUpload"), {
 	ssr: false,
 });
 
-const Step2LicenseDetails = dynamic(
-	() => import("./steps/Step2LicenseDetails"),
+const DynamicLicenseStep = dynamic(() => import("./DynamicLicenseStep"), {
+	loading: () => (
+		<div className="flex justify-center p-8">
+			<Loader2 className="animate-spin" />
+		</div>
+	),
+	ssr: false,
+});
+
+const OwnershipStorageStep = dynamic(
+	() => import("./components/OwnershipStorageStep"),
 	{
 		loading: () => (
 			<div className="flex justify-center p-8">
@@ -73,18 +98,19 @@ const Step2LicenseDetails = dynamic(
 	},
 );
 
-const StepIndicator = dynamic(() => import("./components/StepIndicator"), {
+const LicenseTypeSelection = dynamic(() => import("./LicenseTypeSelection"), {
 	ssr: false,
 });
 
-const SaveProgressCard = dynamic(
-	() => import("./components/SaveProgressCard"),
-	{
-		ssr: false,
-	},
-);
+const LicenseDraftsList = dynamic(() => import("./LicenseDraftsList"), {
+	ssr: false,
+});
 
-const CancelDialog = dynamic(() => import("./components/CancelDialog"), {
+const LicenseTypeAssistant = dynamic(() => import("./LicenseTypeAssistant"), {
+	ssr: false,
+});
+
+const StepIndicator = dynamic(() => import("./components/StepIndicator"), {
 	ssr: false,
 });
 
@@ -134,15 +160,34 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 	const [overallExtractionConfidence, setOverallExtractionConfidence] =
 		useState<number | null>(null);
 	const [currentStep, setCurrentStep] = useState(1);
+	const [selectedLicenseType, setSelectedLicenseType] = useState<string | null>(
+		null,
+	);
+	const [showTypeSelection, setShowTypeSelection] = useState(true);
+	const [showDraftsList, setShowDraftsList] = useState(false);
+	const [showLicenseTypeAssistant, setShowLicenseTypeAssistant] =
+		useState(false);
 	const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
-	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-	const [draftToDelete, setDraftToDelete] = useState<string | null>(null);
 	const [isValidating, setIsValidating] = useState(false);
+	// True once the user edits a field after the last save (or resume).
+	const [dirtySinceSave, setDirtySinceSave] = useState(false);
 	const stepScrollRef = useRef<HTMLDivElement | null>(null);
 
 	// Initialize form
 	const { form, processFileSynchronously, extractLicenseData } =
 		useLicenseForm();
+
+	const typeConfig = useMemo(
+		() => getLicenseTypeConfig(selectedLicenseType),
+		[selectedLicenseType],
+	);
+	const totalSteps = typeConfig ? typeConfig.steps.length + 2 : 1;
+	const stepTitles = typeConfig
+		? ["Upload File", ...typeConfig.steps.map((s) => s.title), "Review"]
+		: ["Upload File"];
+	const ownershipStepNumber = typeConfig
+		? typeConfig.steps.findIndex((s) => s.kind === "ownership") + 2
+		: -1;
 
 	// Initialize managers (deferred until dialog opens)
 	const {
@@ -170,6 +215,7 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 	// Reset function
 	const resetForm = useCallback(() => {
 		form.reset();
+		setDirtySinceSave(false);
 		setProcessedFileData(null);
 		setExtractedData(null);
 		setIsExtracting(false);
@@ -188,6 +234,10 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 		setIsUploading(false);
 		setUploadProgress(0);
 		setCurrentStep(1);
+		setSelectedLicenseType(null);
+		setShowTypeSelection(true);
+		setShowDraftsList(false);
+		setShowLicenseTypeAssistant(false);
 	}, [form, setSelectedManagers]);
 
 	// Initialize draft management
@@ -198,17 +248,17 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 		lastSavedAt,
 		currentDraftId,
 		setCurrentDraftId,
+		isResumingDraftRef,
 		autoSaveDraft,
 		loadSavedDrafts,
 		resumeDraft,
 		deleteDraft,
-		deleteDraftOnCancel,
 		handleManualSave,
 	} = useDraftManagement({
 		ownerId,
 		accountId,
 		currentStep,
-		totalSteps: TOTAL_STEPS,
+		totalSteps,
 		form,
 		processedFileData,
 		extractedData,
@@ -219,6 +269,11 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 		setIsOpen,
 		resetForm,
 		onRestoreManagers: setSelectedManagers,
+		onRestoreLicenseType: (licenseTypeId) => {
+			setSelectedLicenseType(licenseTypeId);
+			setShowTypeSelection(false);
+			setShowDraftsList(false);
+		},
 		onRestoreExtraction: (extracted) => {
 			if (!extracted) {
 				setExtractionMethod(null);
@@ -230,27 +285,48 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 			}
 			const method = String(extracted.method || "");
 			setExtractionMethod(method || null);
-			const filled = Array.isArray(extracted.filledFieldNames)
-				? (extracted.filledFieldNames as string[])
-				: [];
-			const low = Array.isArray(extracted.lowConfidenceFields)
-				? (extracted.lowConfidenceFields as string[])
-				: [];
+			// The draft service strips filledFieldNames/fieldConfidence to save
+			// space, so rebuild them from the saved field values on resume.
+			const parsed = parseLicenseExtractionJson(JSON.stringify(extracted));
+			const filled =
+				Array.isArray(extracted.filledFieldNames) &&
+				extracted.filledFieldNames.length > 0
+					? (extracted.filledFieldNames as string[])
+					: parsed.filledFieldNames;
+			const low =
+				Array.isArray(extracted.lowConfidenceFields) &&
+				extracted.lowConfidenceFields.length > 0
+					? (extracted.lowConfidenceFields as string[])
+					: parsed.lowConfidenceFields;
 			const conf =
 				extracted.fieldConfidence &&
-				typeof extracted.fieldConfidence === "object"
+				typeof extracted.fieldConfidence === "object" &&
+				Object.keys(extracted.fieldConfidence as object).length > 0
 					? (extracted.fieldConfidence as Record<string, number>)
-					: {};
+					: parsed.fieldConfidence;
 			setAiFilledFields(filled);
 			setLowConfidenceFields(low);
 			setFieldConfidence(conf);
 			setOverallExtractionConfidence(
 				typeof extracted.overallConfidence === "number"
 					? extracted.overallConfidence
-					: null,
+					: parsed.overallConfidence,
 			);
 		},
 	});
+
+	const handleLicenseTypeSelect = useCallback(
+		(typeId: string) => {
+			const config = getLicenseTypeConfig(typeId);
+			if (!config || !isDemoLicenseTypeAllowed(typeId)) return;
+			setSelectedLicenseType(typeId);
+			setShowTypeSelection(false);
+			setCurrentStep(1);
+			form.setValue("licenseTypeId", typeId);
+			form.setValue("licenseType", config.label);
+		},
+		[form],
+	);
 
 	// Step navigation
 	const nextStep = async () => {
@@ -263,10 +339,7 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 			return; // Don't proceed if validation fails
 		}
 
-		if (currentStep < TOTAL_STEPS) {
-			if (currentStep === 2) {
-				form.setValue("status", "pending-review");
-			}
+		if (currentStep < totalSteps) {
 			setCurrentStep((prev) => prev + 1);
 		}
 	};
@@ -278,7 +351,7 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 	};
 
 	const goToStep = (step: number) => {
-		if (step >= 1 && step <= TOTAL_STEPS) {
+		if (step >= 1 && step <= totalSteps) {
 			setCurrentStep(step);
 		}
 	};
@@ -288,6 +361,42 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 			stepScrollRef.current.scrollTop = 0;
 		}
 	}, [currentStep]);
+
+	// Track edits since the last save so Cancel knows whether work would be lost.
+	useEffect(() => {
+		const subscription = form.watch((_values, info) => {
+			if (info.type === "change") setDirtySinceSave(true);
+		});
+		return () => subscription.unsubscribe();
+	}, [form]);
+
+	// A successful save (auto or manual) clears the "unsaved changes" flag.
+	useEffect(() => {
+		if (lastSavedAt) setDirtySinceSave(false);
+	}, [lastSavedAt]);
+
+	const clearUploadedFile = useCallback(() => {
+		setProcessedFileData(null);
+		setExtractedData(null);
+		setExtractionMethod(null);
+		setAiFilledFields([]);
+		setLowConfidenceFields([]);
+		setFieldConfidence({});
+		setOverallExtractionConfidence(null);
+		setFileIngestUi("hidden");
+		setFileIngestProgress(0);
+		if (fileIngestSuccessTimeoutRef.current) {
+			clearTimeout(fileIngestSuccessTimeoutRef.current);
+			fileIngestSuccessTimeoutRef.current = null;
+		}
+	}, []);
+
+	/** Step 1 back link: return to the license type grid. */
+	const handleChangeType = useCallback(() => {
+		setSelectedLicenseType(null);
+		setShowTypeSelection(true);
+		setCurrentStep(1);
+	}, []);
 
 	// File drop handling
 	const onDrop = useCallback(
@@ -350,7 +459,12 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 								(extracted.fieldConfidence as Record<string, number>) ||
 								parsed.fieldConfidence;
 
-							if (isRealLicenseExtractionMethod(method)) {
+							// A "real" run that filled nothing is a failed read, not a 0% success.
+							const usable =
+								isRealLicenseExtractionMethod(method) &&
+								filledFromApi.length > 0;
+
+							if (usable) {
 								if (
 									needsDocumentNumber(
 										typeof patch.licenseNumber === "string"
@@ -379,6 +493,14 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 								setLowConfidenceFields([]);
 								setFieldConfidence({});
 								setOverallExtractionConfidence(null);
+								if (isRealLicenseExtractionMethod(method)) {
+									toast({
+										title: "CAALM couldn't read any fields",
+										description:
+											"Nothing could be filled from this file. You can still fill the form by hand.",
+										variant: "destructive",
+									});
+								}
 							}
 						}
 					} catch (error) {
@@ -440,31 +562,20 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 		};
 	}, []);
 
+	const currentDynamicStep = typeConfig?.steps[currentStep - 2];
+
 	// Step validation - defines required fields for each step
 	const getRequiredFieldsForStep = (step: number): string[] => {
-		switch (step) {
-			case 1:
-				return [];
-			case 2:
-				return [
-					"licenseName",
-					"licenseType",
-					"licenseExpiryDate",
-					"issuingAuthority",
-					"department",
-					"division",
-					"assignedManagers",
-				];
-			case 3:
-				return [];
-			default:
-				return [];
-		}
+		if (step === 1 || step === totalSteps || !selectedLicenseType) return [];
+		const typeStep = typeConfig?.steps[step - 2];
+		if (!typeStep) return [];
+		if (typeStep.kind === "ownership") return ["division", "department"];
+		return getLicenseRequiredFieldsForStep(selectedLicenseType, step - 2);
 	};
 
 	// Validate current step before proceeding
 	const validateStep = async (): Promise<boolean> => {
-		if (currentStep === 2) {
+		if (currentDynamicStep?.kind === "ownership") {
 			const nextAssignees =
 				selectedManagers.length > 0
 					? selectedManagers
@@ -474,7 +585,7 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 			if (nextAssignees.length === 0) {
 				toast({
 					title: "Required Fields Missing",
-					description: "Assigned To is required before continuing.",
+					description: "Responsible Owner is required before continuing.",
 					variant: "destructive",
 				});
 				return false;
@@ -495,12 +606,6 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 		const result = await form.trigger(requiredFields as any);
 
 		if (!result) {
-			// Show error toast with specific missing fields
-			const errors = form.formState.errors;
-			const _missingFields = requiredFields.filter(
-				(field) => errors[field as keyof typeof errors],
-			);
-
 			toast({
 				title: "Required Fields Missing",
 				description: `Please complete all required fields before proceeding to the next step.`,
@@ -551,13 +656,17 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 				},
 			);
 
-			// Upload file with license metadata
+			// Upload file with license metadata. Type-specific fields are real
+			// LicenseMetadataPayload attributes (src/types/licenses.ts) backed by
+			// matching Appwrite string columns on the Licenses collection,
+			// matching how contracts persist their own type-specific fields.
 			await uploadFile({
 				file: fileForUpload,
 				ownerId,
 				accountId,
 				path: "/licenses",
 				licenseMetadata: {
+					licenseTypeId: values.licenseTypeId,
 					licenseName: values.licenseName,
 					licenseNumber: needsDocumentNumber(values.licenseNumber)
 						? generateDocumentNumber("LIC")
@@ -589,6 +698,28 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 						selectedManagers.length > 0 ? selectedManagers : [ownerId],
 					autoRenew: values.autoRenew || false,
 					renewalNoticeDays: parseIntegerInput(values.renewalNoticeDays),
+					entityCovered: sanitizeString(values.entityCovered),
+					renewalFrequency: sanitizeString(values.renewalFrequency),
+					fileLocation: sanitizeString(values.fileLocation),
+					holderName: sanitizeString(values.holderName),
+					holderRole: sanitizeString(values.holderRole),
+					licenseBoard: sanitizeString(values.licenseBoard),
+					carrierName: sanitizeString(values.carrierName),
+					policyNumber: sanitizeString(values.policyNumber),
+					coverageAmount: sanitizeString(values.coverageAmount),
+					certificateHolder: sanitizeString(values.certificateHolder),
+					backgroundScreeningStatus: sanitizeString(
+						values.backgroundScreeningStatus,
+					),
+					agencyContractReference: sanitizeString(
+						values.agencyContractReference,
+					),
+					hipaaComplianceRecord: sanitizeString(values.hipaaComplianceRecord),
+					substanceUseCertification: sanitizeString(
+						values.substanceUseCertification,
+					),
+					hrsaComplianceStatus: sanitizeString(values.hrsaComplianceStatus),
+					phsDeemedStatus: sanitizeString(values.phsDeemedStatus),
 				},
 				draftId: currentDraftId || undefined,
 			});
@@ -646,19 +777,24 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 		}
 	};
 
-	// Handle cancel confirmation
-	const handleCancelConfirm = useCallback(async () => {
-		await deleteDraftOnCancel();
+	// Leave the wizard without saving; a draft that was already saved stays in Drafts.
+	const exitWizard = useCallback(() => {
+		setCancelDialogOpen(false);
 		setIsOpen(false);
 		resetForm();
-		setCancelDialogOpen(false);
-	}, [deleteDraftOnCancel, resetForm]);
+		isResumingDraftRef.current = false;
+	}, [resetForm, isResumingDraftRef]);
 
-	// Handle delete click
-	const handleDeleteClick = useCallback((draftId: string) => {
-		setDraftToDelete(draftId);
-		setDeleteDialogOpen(true);
-	}, []);
+	// Closing a form step asks first, unless there is nothing to lose.
+	const hasUnsavedChanges =
+		dirtySinceSave || (!!processedFileData && !lastSavedAt);
+	const hasWorkToLose = hasUnsavedChanges || !!lastSavedAt;
+
+	// Footer Cancel: ask first, unless there is nothing to lose.
+	const handleCancelClick = useCallback(() => {
+		if (hasWorkToLose) setCancelDialogOpen(true);
+		else exitWizard();
+	}, [hasWorkToLose, exitWizard]);
 
 	// Auto-save on step change (wait until OCR finishes so form/extracted data persist)
 	useEffect(() => {
@@ -700,259 +836,383 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 		);
 	}, [form, ownerId, selectedManagers]);
 
+	const showPicker =
+		showTypeSelection &&
+		!selectedLicenseType &&
+		!showDraftsList &&
+		!showLicenseTypeAssistant;
+
 	return (
 		<>
-			<Button
-				type="button"
-				className={className}
-				onClick={() => setIsOpen(true)}
-			>
-				<Upload className="h-4 w-4" />
-				{triggerLabel}
-			</Button>
-
-			<AppDialog
+			<Dialog
 				open={isOpen}
-				onOpenChange={setIsOpen}
-				size="form"
-				className="glass-dialog max-h-[90vh] sm:max-w-4xl"
-				icon={<Upload className="h-5 w-5" />}
-				title="Upload New License"
-				description={`Step ${currentStep} of ${TOTAL_STEPS}: ${STEP_TITLES[currentStep - 1]}`}
-				pending={isUploading}
-				footer={
-					<div className="flex w-full items-center justify-between gap-2">
-						<Button
-							type="button"
-							variant="ghost"
-							onClick={() => {
-								if (currentStep > 1 || processedFileData) {
-									setCancelDialogOpen(true);
-								} else {
-									setIsOpen(false);
-									resetForm();
-								}
-							}}
-							className="rounded-full px-3 py-1.5 h-[1.65rem] justify-center text-slate-400 hover:text-slate-600 hover:bg-black/[.04]"
-							disabled={isUploading}
-						>
-							<Ban className="h-4 w-4" />
-							Cancel
-						</Button>
-
-						<div className="flex items-center gap-2">
-							{currentStep > 1 && (
-								<Button
-									type="button"
-									variant="outline"
-									onClick={prevStep}
-									disabled={isUploading}
-									className="flex items-center gap-2"
-								>
-									<ChevronLeft className="h-4 w-4" />
-									Previous
-								</Button>
-							)}
-
-							{currentStep < TOTAL_STEPS ? (
-								<Button
-									type="button"
-									onClick={nextStep}
-									disabled={
-										(currentStep === 1 && !processedFileData) || isValidating
-									}
-									className="primary-btn flex items-center gap-2"
-								>
-									{isValidating ? (
-										<>
-											<Loader2 className="h-4 w-4 animate-spin" />
-											Validating...
-										</>
-									) : (
-										<>
-											Next
-											<ChevronRight className="h-4 w-4" />
-										</>
-									)}
-								</Button>
-							) : (
-								<Button
-									type="button"
-									onClick={() => void form.handleSubmit(handleSubmit)()}
-									disabled={isUploading || !processedFileData}
-									className="primary-btn min-w-[120px]"
-								>
-									{isUploading ? (
-										<>
-											<Loader2 className="h-4 w-4 animate-spin" />
-											Submitting...
-										</>
-									) : (
-										<>
-											<Upload className="h-4 w-4" />
-											Submit for Review
-										</>
-									)}
-								</Button>
-							)}
-						</div>
-					</div>
-				}
-			>
-				<div className="space-y-4 pb-1">
-					<div className="flex flex-wrap items-center justify-end gap-2">
-						<AiExtractionStatusBadge
-							method={extractionMethod}
-							overallConfidence={overallExtractionConfidence}
-							filledCount={aiFilledFields.length}
-						/>
-						{isSaving && (
-							<Badge
-								variant="outline"
-								className="text-xs sidebar-gradient-text"
-							>
-								<Loader2 className="h-3 w-3 mr-1 animate-spin" />
-								Saving...
-							</Badge>
-						)}
-						{lastSavedAt && !isSaving && (
-							<Badge
-								variant="outline"
-								className="text-xs text-slate-600 border-slate-300"
-							>
-								<FileCheck className="h-3 w-3 mr-1 text-green" />
-								Saved {(() => {
-									const seconds = Math.round(
-										(Date.now() - lastSavedAt.getTime()) / 1000,
-									);
-									if (seconds >= 60) {
-										const minutes = Math.round(seconds / 60);
-										return `${minutes} min ago`;
-									}
-									return `${seconds} s ago`;
-								})()}
-							</Badge>
-						)}
-					</div>
-					<StepIndicator
-						currentStep={currentStep}
-						onGoToStep={goToStep}
-						processedFileData={processedFileData}
-					/>
-					<div
-						ref={stepScrollRef}
-						className="-mx-6 min-h-0 flex-1 overflow-y-auto px-4"
-					>
-						<Form {...form}>
-							<form
-								id="license-upload-form"
-								onSubmit={(e) => {
-									// Only the explicit "Submit for Review" button may create a license
-									e.preventDefault();
-								}}
-								onKeyDown={(e) => {
-									// Prevent Enter from auto-submitting while editing fields
-									if (
-										e.key === "Enter" &&
-										(e.target as HTMLElement).tagName !== "TEXTAREA"
-									) {
-										e.preventDefault();
-									}
-								}}
-								className="space-y-6"
-							>
-								{/* Step 1: File Upload */}
-								{currentStep === 1 && (
-									<Step1FileUpload
-										processedFileData={processedFileData}
-										isExtracting={isExtracting}
-										savedDrafts={savedDrafts}
-										fileIngestUi={fileIngestUi}
-										fileIngestProgress={fileIngestProgress}
-										onDrop={onDrop}
-										onResumeDraft={resumeDraft}
-										onDeleteDraft={handleDeleteClick}
-									/>
-								)}
-
-								{/* Step 2: License Details */}
-								{currentStep === 2 && (
-									<>
-										<AiExtractionReviewPanel
-											method={extractionMethod}
-											overallConfidence={overallExtractionConfidence}
-											filledCount={aiFilledFields.length}
-											lowConfidenceFields={lowConfidenceFields}
-										/>
-										<Step2LicenseDetails
-											form={form}
-											departments={departments}
-											filteredManagers={filteredManagers}
-											selectedManagers={selectedManagers}
-											setSelectedManagers={setSelectedManagers}
-											fetchDepartmentManagers={fetchDepartmentManagers}
-											assigneeSource={assigneeSource}
-											aiFilledFields={aiFilledFields}
-											fieldConfidence={fieldConfidence}
-										/>
-									</>
-								)}
-
-								{/* Step 3: Review before submit-for-review */}
-								{currentStep === 3 && (
-									<LicenseReviewStep
-										values={form.watch() as Record<string, unknown>}
-										fileName={processedFileData?.name}
-										lowConfidenceFields={lowConfidenceFields}
-										onEditStep={goToStep}
-									/>
-								)}
-
-								{/* Save Progress Card — details step only (not final review) */}
-								{currentStep === 2 && processedFileData && (
-									<SaveProgressCard
-										onSave={handleManualSave}
-										isSaving={isSaving}
-									/>
-								)}
-							</form>
-						</Form>
-					</div>
-				</div>
-			</AppDialog>
-
-			<CancelDialog
-				open={cancelDialogOpen}
-				onOpenChange={setCancelDialogOpen}
-				onConfirm={handleCancelConfirm}
-			/>
-
-			<ConfirmDialog
-				open={deleteDialogOpen}
 				onOpenChange={(open) => {
-					setDeleteDialogOpen(open);
-					if (!open) setDraftToDelete(null);
+					if (!open && hasWorkToLose) {
+						setCancelDialogOpen(true);
+						return;
+					}
+					setIsOpen(open);
+					if (!open) {
+						resetForm();
+						isResumingDraftRef.current = false;
+					} else if (!isResumingDraftRef.current) {
+						resetForm();
+					}
 				}}
-				variant="destructive"
-				icon={<AlertTriangle className="h-5 w-5" />}
-				title="Delete Draft"
-				description="Are you sure you want to delete this draft? This action cannot be undone."
-				helperText={
-					<>
-						Your decision to delete is irreversible, so please make sure you
-						want to continue.
-						<span className="mt-2 block text-xs font-medium text-slate-500">
-							This action is permanent.
-						</span>
-					</>
-				}
-				confirmLabel="Delete Draft"
-				confirmIcon={<Trash2 className="h-4 w-4" />}
-				onConfirm={async () => {
-					if (!draftToDelete) return;
-					const id = draftToDelete;
-					setDraftToDelete(null);
-					await deleteDraft(id);
+			>
+				<DialogTrigger asChild>
+					<Button type="button" className={className}>
+						<Upload className="h-4 w-4" />
+						{triggerLabel}
+					</Button>
+				</DialogTrigger>
+
+				<DialogContent
+					className={cn(
+						"glass-dialog flex max-h-[90vh] flex-col gap-0 p-0",
+						// Non-wizard screens match ContractUploadForm.tsx's dimensions
+						// exactly: drafts override glass-dialog's default sm:max-w-4xl,
+						// the type picker and assistant use that default as-is. Only
+						// the step wizard itself keeps its own, wider dimension.
+						showDraftsList
+							? savedDrafts.length > 0
+								? "sm:max-w-2xl!"
+								: "sm:max-w-md!"
+							: showPicker || showLicenseTypeAssistant
+								? undefined
+								: "sm:max-w-6xl",
+					)}
+				>
+					<VisuallyHiddenPrimitive.Root>
+						<DialogTitle>Upload License</DialogTitle>
+						<DialogDescription>
+							Choose a license type, then upload and review the record.
+						</DialogDescription>
+					</VisuallyHiddenPrimitive.Root>
+
+					{showPicker ? (
+						<LicenseTypeSelection
+							savedDraftsCount={savedDrafts.length}
+							onOpenDrafts={() => {
+								void loadSavedDrafts();
+								setShowDraftsList(true);
+							}}
+							onSelectType={handleLicenseTypeSelect}
+							onOpenAssistant={() => setShowLicenseTypeAssistant(true)}
+						/>
+					) : showDraftsList ? (
+						<LicenseDraftsList
+							drafts={savedDrafts}
+							onBack={() => setShowDraftsList(false)}
+							onResumeDraft={resumeDraft}
+							onDeleteDraft={deleteDraft}
+						/>
+					) : showLicenseTypeAssistant ? (
+						<LicenseTypeAssistant
+							onBack={() => setShowLicenseTypeAssistant(false)}
+							onSelectType={(typeId) => {
+								setShowLicenseTypeAssistant(false);
+								handleLicenseTypeSelect(typeId);
+							}}
+						/>
+					) : (
+						<>
+							{/* Sticky Header — frosted strip */}
+							<div className="sticky top-0 z-10 shrink-0 border-b border-slate-200 bg-white/50 py-4 backdrop-blur-xl">
+								<div className="px-6">
+									<div className="mb-2 flex h-8 items-center pr-10">
+										{currentStep === 1 && selectedLicenseType ? (
+											<button
+												type="button"
+												onClick={handleChangeType}
+												disabled={isUploading}
+												className={DIALOG_BACK_LINK_CLASS}
+											>
+												<ChevronLeft
+													className="h-[15px] w-[15px]"
+													aria-hidden
+												/>
+												Change type
+											</button>
+										) : (
+											currentStep > 1 && (
+												<button
+													type="button"
+													onClick={prevStep}
+													disabled={isUploading}
+													className={DIALOG_BACK_LINK_CLASS}
+												>
+													<ChevronLeft
+														className="h-[15px] w-[15px]"
+														aria-hidden
+													/>
+													Previous
+												</button>
+											)
+										)}
+									</div>
+									<div className="mb-3 flex items-start justify-between gap-3">
+										<div className="flex min-w-0 items-start gap-[11px]">
+											<div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border border-[#0f5384]/15 bg-white">
+												<Upload
+													className="h-[18px] w-[18px] text-[#0f5384]"
+													aria-hidden
+												/>
+											</div>
+											<div className="min-w-0">
+												<div className="flex min-h-[23px] flex-wrap items-center gap-2.5">
+													<h2 className="text-[17px] font-bold leading-tight tracking-tight text-[#0f5384]">
+														{typeConfig?.label || "Upload License"}
+													</h2>
+												</div>
+												<p className="mt-0.5 text-xs text-slate-500">
+													Step {currentStep} of {totalSteps} ·{" "}
+													{stepTitles[currentStep - 1]}
+												</p>
+											</div>
+										</div>
+										<div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+											<AiExtractionStatusBadge
+												method={extractionMethod}
+												overallConfidence={overallExtractionConfidence}
+												filledCount={aiFilledFields.length}
+											/>
+											{isSaving && (
+												<Badge
+													variant="outline"
+													className={cn(
+														HEADER_BADGE_CLASS,
+														"sidebar-gradient-text",
+													)}
+												>
+													<Loader2 className="h-3 w-3 mr-1 animate-spin" />
+													Saving...
+												</Badge>
+											)}
+											{lastSavedAt && !isSaving && (
+												<Badge
+													variant="outline"
+													className={cn(
+														HEADER_BADGE_CLASS,
+														"text-slate-600 border-slate-300",
+													)}
+												>
+													<FileCheck className="h-3 w-3 mr-1 text-green" />
+													Saved {(() => {
+														const seconds = Math.round(
+															(Date.now() - lastSavedAt.getTime()) / 1000,
+														);
+														if (seconds >= 60) {
+															const minutes = Math.round(seconds / 60);
+															return `${minutes} min ago`;
+														}
+														return `${seconds} s ago`;
+													})()}
+												</Badge>
+											)}
+										</div>
+									</div>
+
+									{/* Progress Bar */}
+									<div className="-mx-6 h-[3px] overflow-hidden bg-slate-100">
+										<div
+											className="h-full rounded-[0_99px_99px_0] bg-[linear-gradient(90deg,#00c1cb,#078fab,#0e638f)] transition-[width] duration-300 ease-out"
+											style={{ width: `${(currentStep / totalSteps) * 100}%` }}
+										/>
+									</div>
+
+									<div className="mt-3">
+										<StepIndicator
+											currentStep={currentStep}
+											stepTitles={stepTitles}
+											onGoToStep={goToStep}
+											processedFileData={processedFileData}
+										/>
+									</div>
+								</div>
+							</div>
+
+							<div
+								ref={stepScrollRef}
+								className="min-h-0 flex-1 overflow-y-auto bg-transparent p-4"
+							>
+								<Form {...form}>
+									<CaalmFilledProvider
+										value={{
+											names: aiFilledFields,
+											confidence: fieldConfidence,
+											lowThreshold: LOW_LICENSE_EXTRACTION_CONFIDENCE,
+										}}
+									>
+										<form
+											id="license-upload-form"
+											onSubmit={(e) => {
+												// Only the explicit "Submit for Review" button may create a license
+												e.preventDefault();
+											}}
+											onKeyDown={(e) => {
+												// Prevent Enter from auto-submitting while editing fields
+												if (
+													e.key === "Enter" &&
+													(e.target as HTMLElement).tagName !== "TEXTAREA"
+												) {
+													e.preventDefault();
+												}
+											}}
+											className="space-y-6"
+										>
+											{/* Step 1: File Upload */}
+											{currentStep === 1 && (
+												<Step1FileUpload
+													processedFileData={processedFileData}
+													isExtracting={isExtracting}
+													isUploading={isUploading}
+													fileIngestUi={fileIngestUi}
+													fileIngestProgress={fileIngestProgress}
+													onDrop={onDrop}
+													onRemoveFile={clearUploadedFile}
+												/>
+											)}
+
+											{/* Dynamic steps: record details, identifiers, compliance, ownership */}
+											{typeConfig &&
+												currentDynamicStep &&
+												currentStep > 1 &&
+												currentStep < totalSteps && (
+													<>
+														{currentStep === 2 && (
+															<AiExtractionReviewPanel
+																method={extractionMethod}
+																overallConfidence={overallExtractionConfidence}
+																filledCount={aiFilledFields.length}
+																lowConfidenceFields={lowConfidenceFields}
+															/>
+														)}
+														{currentDynamicStep.kind === "ownership" ? (
+															<OwnershipStorageStep
+																form={form}
+																departments={departments}
+																filteredManagers={filteredManagers}
+																selectedManagers={selectedManagers}
+																setSelectedManagers={setSelectedManagers}
+																fetchDepartmentManagers={
+																	fetchDepartmentManagers
+																}
+																assigneeSource={assigneeSource}
+															/>
+														) : (
+															<DynamicLicenseStep
+																step={currentDynamicStep}
+																form={form}
+															/>
+														)}
+													</>
+												)}
+
+											{/* Final step: Review before submit-for-review */}
+											{currentStep === totalSteps && typeConfig && (
+												<LicenseReviewStep
+													values={form.watch() as Record<string, unknown>}
+													typeConfig={typeConfig}
+													ownershipStepNumber={ownershipStepNumber}
+													fileName={processedFileData?.name}
+													lowConfidenceFields={lowConfidenceFields}
+													onEditStep={goToStep}
+												/>
+											)}
+
+											{/* Save Progress Card — dynamic steps only (not final review) */}
+											{currentStep > 1 &&
+												currentStep < totalSteps &&
+												processedFileData && (
+													<SaveProgressCard
+														onSave={handleManualSave}
+														isSaving={isSaving}
+													/>
+												)}
+										</form>
+									</CaalmFilledProvider>
+								</Form>
+							</div>
+
+							{/* Sticky Footer with Navigation and Action Buttons */}
+							<div className="sticky bottom-0 z-10 shrink-0 border-t border-slate-100 bg-slate-50/70 px-6 py-4">
+								<div className="flex items-center justify-between">
+									<Button
+										type="button"
+										variant="ghost"
+										onClick={handleCancelClick}
+										disabled={isUploading}
+										className="rounded-full px-3 py-1.5 h-[1.65rem] justify-center text-slate-400 hover:text-slate-600 hover:bg-black/[.04]"
+									>
+										<Ban className="h-4 w-4" />
+										Cancel
+									</Button>
+
+									<div className="flex items-center gap-2">
+										{currentStep < totalSteps ? (
+											<Button
+												type="button"
+												onClick={nextStep}
+												disabled={
+													(currentStep === 1 && !processedFileData) ||
+													isValidating
+												}
+												className="primary-btn flex items-center gap-2"
+											>
+												{isValidating ? (
+													<>
+														<Loader2 className="h-4 w-4 animate-spin" />
+														Validating...
+													</>
+												) : (
+													<>
+														Next
+														<ChevronRight className="h-4 w-4" />
+													</>
+												)}
+											</Button>
+										) : (
+											<Button
+												type="button"
+												onClick={() => void form.handleSubmit(handleSubmit)()}
+												disabled={isUploading || !processedFileData}
+												className="primary-btn min-w-[120px]"
+											>
+												{isUploading ? (
+													<>
+														<Loader2 className="h-4 w-4 animate-spin" />
+														Submitting...
+													</>
+												) : (
+													<>
+														<Upload className="h-4 w-4" />
+														Submit for Review
+													</>
+												)}
+											</Button>
+										)}
+									</div>
+								</div>
+							</div>
+						</>
+					)}
+				</DialogContent>
+			</Dialog>
+
+			<CancelUploadDialog
+				open={cancelDialogOpen}
+				hasUnsavedChanges={hasUnsavedChanges}
+				canSave={currentStep > 1}
+				onKeepEditing={() => setCancelDialogOpen(false)}
+				onExit={exitWizard}
+				onSaveAndExit={async () => {
+					const saved = await handleManualSave();
+					if (saved) {
+						setCancelDialogOpen(false);
+						isResumingDraftRef.current = false;
+					}
+					return saved;
 				}}
 			/>
 		</>

@@ -8,32 +8,25 @@
 import { FileCheck } from "lucide-react";
 import React from "react";
 import { cn } from "@/lib/utils";
-import { STEP_TITLES, TOTAL_STEPS } from "../constants";
 
 interface StepIndicatorProps {
 	currentStep: number;
+	stepTitles: string[];
 	onGoToStep: (step: number) => void;
 	processedFileData?: any; // Optional, for accessibility check
 }
 
 export default function StepIndicator({
 	currentStep,
+	stepTitles,
 	onGoToStep,
 	processedFileData,
 }: StepIndicatorProps) {
 	return (
 		<>
-			{/* Progress Bar */}
-			<div className="h-2 w-full rounded-full bg-white/40 backdrop-blur-sm">
-				<div
-					className="h-2 rounded-full bg-linear-to-r from-blue-500 to-cyan-500 transition-all duration-300"
-					style={{ width: `${(currentStep / TOTAL_STEPS) * 100}%` }}
-				/>
-			</div>
-
-			{/* Step Indicators */}
+			{/* Step Indicators (unchanged; the progress bar now lives in the sticky header) */}
 			<div className="flex items-center justify-between mt-3 gap-1">
-				{STEP_TITLES.map((title, index) => {
+				{stepTitles.map((title, index) => {
 					const stepNum = index + 1;
 					const isActive = stepNum === currentStep;
 					const isCompleted = stepNum < currentStep;
@@ -41,7 +34,7 @@ export default function StepIndicator({
 						stepNum === 1 || processedFileData || stepNum <= currentStep;
 					const nextStepNum = index + 2;
 					const isNextStepCompleted = nextStepNum < currentStep;
-					const hasNextStep = index < STEP_TITLES.length - 1;
+					const hasNextStep = index < stepTitles.length - 1;
 					const showLine = isCompleted && hasNextStep && isNextStepCompleted;
 
 					return (
