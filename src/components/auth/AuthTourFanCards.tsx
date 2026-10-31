@@ -25,12 +25,14 @@ export default function AuthTourFanCards() {
 			{FAN_CARDS.map((tip, index) => {
 				const angleDeg = START_ANGLE_DEG + (360 / count) * index;
 				const angleRad = (angleDeg * Math.PI) / 180;
-				/* Left-anchored ring; stretch the right half farther out */
+				/* Ring anchor; stretch the right half farther out */
 				const cos = Math.cos(angleRad);
 				const sin = Math.sin(angleRad);
 				const radiusX = cos >= 0 ? 40 : 22; // % — tighter ring toward circle center
 				const radiusY = 24;
-				const x = 28 + cos * radiusX;
+				// Anchor shifted right of center so the leftmost card (anchor - 22%)
+				// clears the card's own half-width instead of clipping the left edge.
+				const x = 40 + cos * radiusX;
 				let y = 50 + sin * radiusY;
 				/* Nudge individual cards without breaking the ring */
 				if (tip.id === "demo-welcome") y -= 6;

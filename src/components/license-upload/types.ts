@@ -7,6 +7,10 @@ export interface LicenseUploadFormProps {
 	accountId: string;
 	className?: string;
 	triggerLabel?: string;
+	iconOnly?: boolean;
+	/** `iconOnly` segmented-toggle state: filled badge instead of the plain icon. */
+	active?: boolean;
+	onTriggerClick?: () => void;
 	onSuccess?: () => void;
 }
 
