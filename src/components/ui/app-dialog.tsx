@@ -52,50 +52,45 @@ export function AppDialog({
 	};
 
 	const header = (
-		<div
-			className={cn(
-				"flex shrink-0 items-start gap-3 mb-3 mt-6 px-6 pt-3 pb-3 pr-14",
-				isDestructive ? "bg-red/5" : "bg-[#eefcfe]/60",
-			)}
-		>
-			<div
-				className={cn(
-					"flex h-11 w-11 shrink-0 items-center justify-center rounded-full border bg-white",
-					isDestructive
-						? "border-red/20 text-red"
-						: "border-[#0f5384]/15 text-[#0f5384]",
-				)}
-			>
-				{icon}
-			</div>
-			<div className="min-w-0 pt-0.5">
+		<div className="flex shrink-0 flex-col border-b border-slate-200 px-6 pb-4 pt-[22px] pr-12">
+			<div className="flex items-center gap-2.5">
+				<div
+					className={cn(
+						"flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[9px] border bg-white",
+						isDestructive
+							? "border-red/20 text-red"
+							: "border-[#0f5384]/15 text-[#0f5384]",
+					)}
+				>
+					{icon}
+				</div>
 				{isDestructive ? (
-					<AlertDialogTitle className="text-[18px] font-semibold leading-snug text-red">
+					<AlertDialogTitle className="text-[17px] font-bold leading-tight tracking-tight text-red">
 						{title}
 					</AlertDialogTitle>
 				) : (
-					<DialogTitle className="text-[18px] font-semibold leading-snug text-[#0f5384]">
+					<DialogTitle className="text-[17px] font-bold leading-tight tracking-tight text-[#0f5384]">
 						{title}
 					</DialogTitle>
 				)}
-				{description ? (
-					isDestructive ? (
-						<AlertDialogDescription className="mt-1 text-sm text-slate-500">
-							{description}
-						</AlertDialogDescription>
-					) : (
-						<DialogDescription className="mt-1 text-sm text-slate-500">
-							{description}
-						</DialogDescription>
-					)
-				) : isDestructive ? (
-					<AlertDialogDescription className="sr-only">
-						{title}
+			</div>
+			{description ? (
+				isDestructive ? (
+					<AlertDialogDescription className="mt-1 pl-11 text-[12.5px] leading-normal text-slate-500">
+						{description}
 					</AlertDialogDescription>
 				) : (
-					<DialogDescription className="sr-only">{title}</DialogDescription>
-				)}
-			</div>
+					<DialogDescription className="mt-1 pl-11 text-[12.5px] leading-normal text-slate-500">
+						{description}
+					</DialogDescription>
+				)
+			) : isDestructive ? (
+				<AlertDialogDescription className="sr-only">
+					{title}
+				</AlertDialogDescription>
+			) : (
+				<DialogDescription className="sr-only">{title}</DialogDescription>
+			)}
 		</div>
 	);
 
@@ -103,8 +98,8 @@ export function AppDialog({
 		<button
 			type="button"
 			className={cn(
-				"absolute right-4 top-4 z-20 flex h-6 w-6 cursor-pointer items-center justify-center rounded-sm text-slate-500 transition-colors duration-200",
-				"hover:bg-white/80 hover:text-slate-700",
+				"absolute right-4 top-5 z-20 flex h-7 w-7 cursor-pointer items-center justify-center rounded-md text-slate-500 transition-colors duration-200",
+				"hover:bg-black/[.05] hover:text-slate-700",
 				"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
 				"disabled:pointer-events-none disabled:opacity-50",
 			)}

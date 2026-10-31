@@ -25,24 +25,11 @@ const features = [
 
 const OrbitingBlocks = () => {
 	const [rotation, setRotation] = useState(0);
-	const [isLargeScreen, setIsLargeScreen] = useState(false);
 	const animationRef = useRef<number | undefined>(undefined);
 	const lastTimeRef = useRef<number>(0);
 
 	// Constant animation speed (degrees per millisecond)
 	const ROTATION_SPEED = 0.02; // degrees per frame at 60fps
-
-	// Check screen size for md (768px) and lg (1024px) breakpoints
-	useEffect(() => {
-		const checkScreenSize = () => {
-			setIsLargeScreen(window.innerWidth >= 768); // md breakpoint and above
-		};
-
-		checkScreenSize();
-		window.addEventListener("resize", checkScreenSize);
-
-		return () => window.removeEventListener("resize", checkScreenSize);
-	}, []);
 
 	useEffect(() => {
 		const animate = (currentTime: number) => {
@@ -106,7 +93,9 @@ const OrbitingBlocks = () => {
 						key={i}
 						style={{
 							position: "absolute",
-							left: isLargeScreen ? `calc(43% + ${x}px)` : `calc(50% + ${x}px)`,
+							// Centered anchor — a left-biased anchor let the ±220px swing
+							// clip past the left edge of the (overflow-hidden) container.
+							left: `calc(50% + ${x}px)`,
 							top: `calc(60% + ${y}px)`,
 							transform: `translate(-50%, -50%) scale(${finalScale})`,
 							opacity: finalOpacity,

@@ -5,9 +5,10 @@ import { AlertTriangle } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { memo, useEffect, useState } from "react";
+import { type MouseEvent, memo, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import RequestAccessDialog from "@/components/auth/RequestAccessDialog";
 import CountUp from "@/components/CountUp";
 import { TRUSTED_BRAND_LOGOS } from "@/components/landing/landingContent";
 import OTPModal from "@/components/OTPModal";
@@ -142,6 +143,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
 	const [returningSandboxName, setReturningSandboxName] = useState<
 		string | null
 	>(null);
+	const [showAccessDialog, setShowAccessDialog] = useState(false);
 
 	const formSchema = authFormSchema(type);
 	const searchParams = useSearchParams();
@@ -303,6 +305,25 @@ const AuthForm = ({ type }: { type: FormType }) => {
 		}
 	};
 
+	// Invite links point at /invite/accept?token=..., which consumes the
+	// token and redirects here with ?invitation=accepted. A raw token on
+	// this page (a link pointed here directly) is forwarded to that same
+	// accept route; an already-accepted invite needs no further navigation.
+	const handleRequestAccess = (event: MouseEvent) => {
+		const token = searchParams?.get("token");
+		const alreadyAccepted = searchParams?.get("invitation") === "accepted";
+
+		if (token || alreadyAccepted) {
+			if (token) {
+				router.push(`/invite/accept?token=${token}`);
+			}
+			return;
+		}
+
+		event.preventDefault();
+		setShowAccessDialog(true);
+	};
+
 	const checkTwoFactorStatus = async (userId: string) => {
 		try {
 			// Use cached API endpoint for faster response
@@ -316,31 +337,34 @@ const AuthForm = ({ type }: { type: FormType }) => {
 			const data = await response.json();
 
 			// #region agent log
-			fetch("http://127.0.0.1:7246/ingest/851d37c7-2223-45c1-89c0-a79ca1139a1d", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					"X-Debug-Session-Id": "da7416",
-				},
-				body: JSON.stringify({
-					sessionId: "da7416",
-					runId: "post-fix",
-					hypothesisId: "H3",
-					location: "AuthForm.tsx:checkTwoFactorStatus",
-					message: "2FA status after OTP",
-					data: {
-						status: response.status,
-						success: Boolean(data?.success),
-						has2FA: Boolean(data?.has2FA),
-						error:
-							typeof data?.error === "string"
-								? data.error.slice(0, 80)
-								: null,
-						willOpenSetup: !data?.success || !data?.has2FA,
+			fetch(
+				"http://127.0.0.1:7246/ingest/851d37c7-2223-45c1-89c0-a79ca1139a1d",
+				{
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						"X-Debug-Session-Id": "da7416",
 					},
-					timestamp: Date.now(),
-				}),
-			}).catch(() => {});
+					body: JSON.stringify({
+						sessionId: "da7416",
+						runId: "post-fix",
+						hypothesisId: "H3",
+						location: "AuthForm.tsx:checkTwoFactorStatus",
+						message: "2FA status after OTP",
+						data: {
+							status: response.status,
+							success: Boolean(data?.success),
+							has2FA: Boolean(data?.has2FA),
+							error:
+								typeof data?.error === "string"
+									? data.error.slice(0, 80)
+									: null,
+							willOpenSetup: !data?.success || !data?.has2FA,
+						},
+						timestamp: Date.now(),
+					}),
+				},
+			).catch(() => {});
 			// #endregion
 
 			if (data.success) {
@@ -369,11 +393,16 @@ const AuthForm = ({ type }: { type: FormType }) => {
 			<form onSubmit={form.handleSubmit(onSubmit)} className="auth-form">
 				<h1 className="form-title sidebar-gradient-text">
 					{type === "sign-in"
-						? "Sign In"
+						? "Welcome back"
 						: isClientDemoMode()
 							? "Start free sandbox"
 							: "Sign Up"}
 				</h1>
+				{type === "sign-in" && (
+					<p className="text-sm text-slate-600 mb-4 -mt-2">
+						Sign in to your workspace.
+					</p>
+				)}
 				{isClientDemoMode() && (
 					<p className="text-sm text-slate-600 mb-4 -mt-2">
 						Demo OTP:{" "}
@@ -449,10 +478,16 @@ const AuthForm = ({ type }: { type: FormType }) => {
 						) : (
 							<FormItem>
 								<div className="shad-form-item">
-									<FormLabel className="shad-form-label">Email</FormLabel>
+									<FormLabel className="shad-form-label">
+										{type === "sign-in" ? "Work email" : "Email"}
+									</FormLabel>
 									<FormControl>
 										<Input
-											placeholder=" Enter your email"
+											placeholder={
+												type === "sign-in"
+													? " you@company.com"
+													: " Enter your email"
+											}
 											{...field}
 											value={
 												field.value ? ` ${field.value.replace(/^ /, "")}` : ""
@@ -472,7 +507,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
 				/>
 				<Button
 					type="submit"
-					className="form-submit-button relative overflow-hidden group primary-btn px-3 sm:px-4"
+					className="form-submit-button relative overflow-hidden group primary-btn py-5! px-3 sm:px-4"
 					disabled={isLoading}
 				>
 					{/* Shimmer Effect */}
@@ -480,7 +515,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
 
 					{/* Button Content */}
 					<span className="relative z-10 flex items-center justify-center">
-						{type === "sign-in" ? "Sign In" : "Sign Up"}
+						{type === "sign-in" ? "Continue with email" : "Sign Up"}
 						{isLoading && (
 							<Image
 								src="/assets/icons/loader.svg"
@@ -540,19 +575,40 @@ const AuthForm = ({ type }: { type: FormType }) => {
 					</p>
 				)}
 
-				<div className="body-2 flex justify-center">
-					<p className="text-light-100">
-						{type === "sign-in"
-							? "Don't have an account?"
-							: "Already have an account?"}
-					</p>
-					<Link
-						href={type === "sign-in" ? "/sign-up" : "sign-in"}
-						className="ml-1 font-medium sidebar-gradient-text"
-					>
-						{type === "sign-in" ? "Sign Up" : "Sign In"}
-					</Link>
-				</div>
+				{type === "sign-in" ? (
+					<>
+						<div
+							className="my-6 flex items-center gap-3 text-xs text-slate-500"
+							aria-hidden={false}
+						>
+							<div className="h-px flex-1 bg-slate-200" />
+							<span className="whitespace-nowrap">
+								We&apos;ll send you a sign-in link
+							</span>
+							<div className="h-px flex-1 bg-slate-200" />
+						</div>
+						<div className="body-2 flex justify-center">
+							<p className="text-light-100">New to CAALM?</p>
+							<button
+								type="button"
+								onClick={handleRequestAccess}
+								className="ml-1 cursor-pointer font-medium sidebar-gradient-text"
+							>
+								Request access
+							</button>
+						</div>
+					</>
+				) : (
+					<div className="body-2 flex justify-center">
+						<p className="text-light-100">Already have an account?</p>
+						<Link
+							href="sign-in"
+							className="ml-1 font-medium sidebar-gradient-text"
+						>
+							Sign In
+						</Link>
+					</div>
+				)}
 
 				{/* Brand logos + social proof under account CTA */}
 				<div className="mt-8 w-full">
@@ -606,6 +662,12 @@ const AuthForm = ({ type }: { type: FormType }) => {
 					</div>
 				</div>
 			</form>
+			{type === "sign-in" && (
+				<RequestAccessDialog
+					open={showAccessDialog}
+					onOpenChange={setShowAccessDialog}
+				/>
+			)}
 			{type === "sign-in" && (
 				<OTPModal
 					email={form.getValues("email")}
