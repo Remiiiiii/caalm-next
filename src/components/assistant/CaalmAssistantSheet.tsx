@@ -623,8 +623,8 @@ export default function CaalmAssistantSheet({
 													/>
 												</div>
 											) : null}
-											{m.role === "assistant" ? (
-												<div className={cn((hasLifecycleCard || hasInputForm) && "px-3 pb-2")}>
+											{m.role === "assistant" && !hasInputForm ? (
+												<div className={cn(hasLifecycleCard && "px-3 pb-2")}>
 													<AssistantMessageActions
 														messageId={m.id}
 														content={m.content}

@@ -26,6 +26,49 @@ const MEETING_TYPES = [
 	"contract",
 ];
 
+/** Pull a usable string out of Gemini select options (string or {value,label}). */
+export function normalizeSelectOption(raw: unknown): string | null {
+	if (typeof raw === "string") {
+		const s = raw.trim();
+		if (!s || s === "[object Object]") return null;
+		return s;
+	}
+	if (typeof raw === "number" && Number.isFinite(raw)) return String(raw);
+	if (!raw || typeof raw !== "object") return null;
+	const rec = raw as Record<string, unknown>;
+	const value = rec.value ?? rec.id ?? rec.name ?? rec.label;
+	if (typeof value === "string") {
+		const s = value.trim();
+		if (!s || s === "[object Object]") return null;
+		return s;
+	}
+	if (typeof value === "number" && Number.isFinite(value)) return String(value);
+	return null;
+}
+
+export function normalizeSelectOptions(raw: unknown): string[] {
+	if (!Array.isArray(raw)) return [];
+	const seen = new Set<string>();
+	const out: string[] = [];
+	for (const item of raw) {
+		const value = normalizeSelectOption(item);
+		if (!value || seen.has(value)) continue;
+		seen.add(value);
+		out.push(value);
+	}
+	return out;
+}
+
+/** Options to render on a select field; falls back for type/priority when Gemini sent junk. */
+export function optionsForSelectField(field: AssistantFormField): string[] {
+	const options = normalizeSelectOptions(field.options);
+	if (options.length) return options;
+	const haystack = `${field.name} ${field.label}`;
+	if (/\bpriority\b/i.test(haystack)) return ["low", "medium", "high"];
+	if (/\btype\b/i.test(haystack)) return [...MEETING_TYPES];
+	return [];
+}
+
 function asFieldType(raw: unknown): AssistantFormFieldType {
 	const t = String(raw ?? "text").toLowerCase();
 	return FIELD_TYPES.has(t as AssistantFormFieldType)
@@ -59,9 +102,7 @@ export function sanitizeFormFields(raw: unknown): AssistantFormField[] {
 		if (seen.has(name)) continue;
 		seen.add(name);
 		const type = asFieldType(row.type);
-		const options = Array.isArray(row.options)
-			? row.options.map((o) => String(o)).filter(Boolean)
-			: undefined;
+		const options = normalizeSelectOptions(row.options);
 		fields.push({
 			name,
 			label,
@@ -70,8 +111,7 @@ export function sanitizeFormFields(raw: unknown): AssistantFormField[] {
 				typeof row.placeholder === "string" ? row.placeholder : undefined,
 			required: row.required !== false,
 			...(options?.length ? { options } : {}),
-			defaultValue:
-				typeof row.defaultValue === "string" ? row.defaultValue : undefined,
+			defaultValue: normalizeSelectOption(row.defaultValue) ?? undefined,
 		});
 	}
 	return fields.slice(0, 8);

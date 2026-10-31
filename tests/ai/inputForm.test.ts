@@ -6,6 +6,7 @@ import {
 	looksLikeFieldQuiz,
 	parseFieldsArg,
 	resolveInputForm,
+	optionsForSelectField,
 	sanitizeFormFields,
 	scheduleEventForm,
 } from "@/lib/assistant/inputForm";
@@ -21,6 +22,36 @@ describe("sanitizeFormFields", () => {
 		]);
 		expect(fields.map((f) => f.name)).toEqual(["title", "when"]);
 		expect(fields[1]?.type).toBe("text");
+	});
+
+	it("turns object select options into unique strings", () => {
+		const fields = sanitizeFormFields([
+			{
+				name: "type",
+				label: "Event Type",
+				type: "select",
+				options: [
+					{ value: "meeting", label: "Meeting" },
+					{ value: "review", label: "Review" },
+					{ value: "meeting", label: "Meeting again" },
+					{},
+				],
+			},
+		]);
+		expect(fields[0]?.options).toEqual(["meeting", "review"]);
+	});
+});
+
+describe("optionsForSelectField", () => {
+	it("falls back to meeting types when options are [object Object]", () => {
+		expect(
+			optionsForSelectField({
+				name: "eventType",
+				label: "Event Type",
+				type: "select",
+				options: ["[object Object]", "[object Object]"],
+			}),
+		).toEqual(["meeting", "review", "audit", "deadline", "contract"]);
 	});
 });
 

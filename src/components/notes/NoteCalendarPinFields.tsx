@@ -230,16 +230,24 @@ function TimeColumn({
 	);
 }
 
-function NoteTimePicker({
+export function NoteTimePicker({
 	value,
 	onChange,
 	restrictToFuture,
 	hasPastError,
+	disabled,
+	id,
+	placeholder = "Pick a time",
+	size = "default",
 }: {
 	value: string;
 	onChange: (value: string) => void;
 	restrictToFuture: boolean;
 	hasPastError: boolean;
+	disabled?: boolean;
+	id?: string;
+	placeholder?: string;
+	size?: "default" | "sm";
 }) {
 	const [open, setOpen] = useState(false);
 	const nowMinutes = useLiveNowMinutes(restrictToFuture);
@@ -250,8 +258,8 @@ function NoteTimePicker({
 	// Keep today's selection in the future as the clock moves (e.g. 09:00 AM → 07:01 PM)
 	useEffect(() => {
 		if (!restrictToFuture) return;
-		const current = value || "09:00";
-		const { hour12, minute, period } = parseTime24(current);
+		if (!value.trim()) return;
+		const { hour12, minute, period } = parseTime24(value);
 		if (!isAtOrBeforeNow(hour12, minute, period, nowMinutes)) return;
 		onChangeRef.current(nextFutureTime24());
 	}, [restrictToFuture, nowMinutes, value]);
@@ -281,14 +289,18 @@ function NoteTimePicker({
 			<Popover open={open} onOpenChange={setOpen}>
 				<PopoverTrigger asChild>
 					<Button
+						id={id}
 						type="button"
 						variant="outline"
+						disabled={disabled}
 						className={cn(
-							"h-10 w-full justify-between bg-white px-3 font-normal text-slate-700 border-[0.25px] border-slate-300 hover:border-blue-300",
+							"w-full justify-between bg-white px-3 font-normal text-slate-700 border-[0.25px] border-slate-300 hover:border-blue-300",
+							size === "sm" ? "h-8 text-sm" : "h-10",
+							!value && "text-slate-400",
 							hasPastError && "border-red/40 hover:border-red/50",
 						)}
 					>
-						<span>{formatTimeDisplay(value || "09:00")}</span>
+						<span>{value ? formatTimeDisplay(value) : placeholder}</span>
 						<Clock className="h-4 w-4 shrink-0 text-slate-500" />
 					</Button>
 				</PopoverTrigger>

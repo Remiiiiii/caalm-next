@@ -181,11 +181,10 @@ function StackedParticipantAvatars({ users }: { users: DirectoryUser[] }) {
 			))}
 			{remaining > 0 ? (
 				<span
-					className="-ml-2 inline-flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-slate-200 text-[10px] font-semibold text-slate-700 shadow-sm"
+					className="ml-1.5 shrink-0 whitespace-nowrap text-[11px] font-medium text-slate-500"
 					role="listitem"
-					title={`${remaining} more participants`}
 				>
-					+{remaining}
+					+{remaining} more
 				</span>
 			) : null}
 		</div>
