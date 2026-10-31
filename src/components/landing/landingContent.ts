@@ -266,11 +266,11 @@ export const FOOTER_KEYWORDS = [
 ] as const;
 
 export const TRUSTED_BRAND_LOGOS = [
-	{ src: "/assets/icons/asterisk.svg", alt: "Asterisk" },
+	{ src: "/assets/icons/asterisk.png", alt: "Asterisk" },
 	{ src: "/assets/icons/oasis.svg", alt: "Oasis" },
-	{ src: "/assets/icons/eooks.svg", alt: "Eooks" },
-	{ src: "/assets/icons/opal.svg", alt: "Opal" },
-	{ src: "/assets/icons/dune.svg", alt: "Dune" },
+	{ src: "/assets/icons/eooks.png", alt: "Eooks" },
+	{ src: "/assets/icons/opal.png", alt: "Opal" },
+	{ src: "/assets/icons/dune.png", alt: "Dune" },
 ] as const;
 
 export const CONTRACT_MOCK_ROWS = [

@@ -172,7 +172,7 @@ const TwoFactorVerificationModal = ({
 							<p className="text-sm text-red-700">{error || LOCKOUT_MESSAGE}</p>
 						</div>
 					) : !recoveryMode ? (
-						<div className="flex items-center justify-center gap-1.5 text-sm text-slate-500">
+						<div className="flex items-center justify-center pt-4 gap-1.5 text-sm text-slate-500">
 							<Clock className="h-3.5 w-3.5 shrink-0" />
 							<span>The code in your app changes every 30 seconds</span>
 						</div>

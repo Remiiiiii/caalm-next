@@ -10,6 +10,7 @@ import {
 	ChevronRight,
 	CircleHelp,
 	FileCheck,
+	FilePenLine,
 	FileText,
 	FolderOpen,
 	Info,
@@ -69,6 +70,12 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipProvider,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
 	DIALOG_BACK_LINK_CLASS,
 	HEADER_BADGE_CLASS,
@@ -186,6 +193,10 @@ interface ContractUploadFormProps {
 	accountId: string;
 	className?: string;
 	triggerLabel?: string;
+	iconOnly?: boolean;
+	/** `iconOnly` segmented-toggle state: filled badge instead of the plain icon. */
+	active?: boolean;
+	onTriggerClick?: () => void;
 	onSuccess?: () => void;
 }
 
@@ -940,6 +951,9 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 	accountId,
 	className,
 	triggerLabel = "Upload Contract",
+	iconOnly,
+	active,
+	onTriggerClick,
 	onSuccess,
 }) => {
 	const cta = useCtaButtonClass();
@@ -3327,14 +3341,50 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 					}
 				}}
 			>
-				<DialogTrigger asChild>
-					<Button
-						className={cn(`${cta} px-4 shadow-drop-1 text-sm gap-2`, className)}
-					>
-						<Upload className="h-4 w-4" />
-						{triggerLabel}
-					</Button>
-				</DialogTrigger>
+				{iconOnly ? (
+					<TooltipProvider delayDuration={300}>
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<DialogTrigger asChild>
+									<Button
+										className={cn(
+											// Button's default variant has hover:bg-primary/90 — a
+											// pseudo-class utility that beats .segmented-toggle-item's
+											// plain (non-hover) background on specificity alone, so the
+											// matching hover:bg-* must be named here for tailwind-merge
+											// to actually drop it (a "no hover effect" = hover looks
+											// identical to the current, non-hover state).
+											"segmented-toggle-item px-2.5 hover:shadow-none",
+											active
+												? "segmented-toggle-item-active hover:bg-white"
+												: "hover:bg-transparent",
+											className,
+										)}
+										aria-label="Upload Contract"
+										onClick={onTriggerClick}
+									>
+										<FilePenLine className="h-4 w-4 shrink-0" aria-hidden />
+									</Button>
+								</DialogTrigger>
+							</TooltipTrigger>
+							<TooltipContent className="text-xs">
+								Upload Contract
+							</TooltipContent>
+						</Tooltip>
+					</TooltipProvider>
+				) : (
+					<DialogTrigger asChild>
+						<Button
+							className={cn(
+								`${cta} px-4 shadow-drop-1 text-sm gap-2`,
+								className,
+							)}
+						>
+							<Upload className="h-4 w-4" />
+							{triggerLabel}
+						</Button>
+					</DialogTrigger>
+				)}
 
 				<DialogContent
 					className={cn(

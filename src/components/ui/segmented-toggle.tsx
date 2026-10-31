@@ -42,18 +42,15 @@ export function SegmentedToggle<T extends string>({
 		<div
 			role="tablist"
 			aria-label={ariaLabel}
-			className={cn(
-				"relative inline-grid h-[var(--segmented-toggle-height)] items-center rounded-full border border-slate-200 bg-slate-100",
-				className,
-			)}
+			className={cn("segmented-toggle", className)}
 			style={{
+				display: "grid",
 				gridTemplateColumns: `repeat(${tabCount}, minmax(0, 1fr))`,
-				padding: "var(--segmented-toggle-pad)",
 			}}
 		>
 			<span
 				aria-hidden
-				className="pointer-events-none absolute rounded-full bg-white shadow-sm transition-transform duration-200 ease-out"
+				className="segmented-toggle-thumb"
 				style={{
 					top: "var(--segmented-toggle-pad)",
 					bottom: "var(--segmented-toggle-pad)",
@@ -75,14 +72,8 @@ export function SegmentedToggle<T extends string>({
 						disabled={tab.disabled}
 						onClick={() => onChange(tab.value)}
 						className={cn(
-							"relative z-10 inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-full text-sm font-medium transition-colors duration-200",
-							"h-full py-0",
+							"segmented-toggle-item",
 							tab.hideLabel ? "px-2.5" : "px-3",
-							"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
-							"disabled:cursor-not-allowed disabled:opacity-60",
-							selected
-								? "text-[#0f5384]"
-								: "text-slate-500 hover:text-slate-700",
 						)}
 					>
 						{Icon ? (

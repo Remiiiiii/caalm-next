@@ -1,13 +1,18 @@
 "use client";
 
 import type { Models } from "appwrite";
-import { Calendar, TrendingUp } from "lucide-react";
+import { Calendar, ChartLine, ClipboardCheck } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
 import ReportGenerator from "@/components/ReportGenerator";
-import { Button } from "@/components/ui/button";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipProvider,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useUserRoles } from "@/hooks/useUserRoles";
-import { useCtaButtonClass } from "@/lib/ui/use-cta-button-class";
+import { cn } from "@/lib/utils";
 
 const ContractUploadForm = dynamic(
 	() => import("@/components/ContractUploadForm"),
@@ -27,27 +32,45 @@ interface QuickActionsProps {
 		| null;
 }
 
+function ActionTooltip({
+	label,
+	children,
+}: {
+	label: string;
+	children: React.ReactNode;
+}) {
+	return (
+		<TooltipProvider delayDuration={300}>
+			<Tooltip>
+				<TooltipTrigger asChild>{children}</TooltipTrigger>
+				<TooltipContent className="text-xs">{label}</TooltipContent>
+			</Tooltip>
+		</TooltipProvider>
+	);
+}
+
+type QuickAction = "contract" | "license" | "audit" | "schedule" | "report";
+
 const QuickActions = ({ user }: QuickActionsProps) => {
-	const cta = useCtaButtonClass();
-	const quickActionBtn = `${cta} px-3.5 sm:px-4 shadow-drop-1 text-xs sm:text-sm whitespace-nowrap gap-1.5 [&_svg]:size-3.5`;
 	const [reportOpen, setReportOpen] = useState(false);
+	const [activeAction, setActiveAction] = useState<QuickAction>("contract");
 	const { roles: userRoles } = useUserRoles();
 
-	const isITUser = useMemo(() => {
-		return userRoles.some((r) => r.roleName === "IT");
-	}, [userRoles]);
+	const isITUser = useMemo(
+		() => userRoles.some((r) => r.roleName === "IT"),
+		[userRoles],
+	);
 
 	return (
-		<div className="quick-actions-container flex min-w-0 w-full items-center gap-1 overflow-x-auto pb-1 sm:gap-1.5 sm:pb-0">
+		<div className="segmented-toggle">
 			{!isITUser && user && (
 				<ContractUploadForm
 					ownerId={user.$id}
 					accountId={user.$id}
-					triggerLabel="Upload Contract"
-					className={quickActionBtn}
-					onSuccess={() => {
-						console.log("Contract uploaded successfully");
-					}}
+					iconOnly
+					active={activeAction === "contract"}
+					onTriggerClick={() => setActiveAction("contract")}
+					onSuccess={() => {}}
 				/>
 			)}
 			{!isITUser && (
@@ -55,30 +78,55 @@ const QuickActions = ({ user }: QuickActionsProps) => {
 					<LicenseUploadForm
 						ownerId={user?.$id || ""}
 						accountId={user?.$id || ""}
-						triggerLabel="Upload License"
-						className={quickActionBtn}
-						onSuccess={() => {
-							console.log("License uploaded successfully");
-						}}
+						iconOnly
+						active={activeAction === "license"}
+						onTriggerClick={() => setActiveAction("license")}
+						onSuccess={() => {}}
 					/>
-					<Button className={quickActionBtn} title="Upload Audit">
-						<Calendar className="size-3.5" />
-						Audit
-					</Button>
+					<ActionTooltip label="Upload Audit">
+						<button
+							type="button"
+							className={cn(
+								"segmented-toggle-item px-2.5",
+								activeAction === "audit" && "segmented-toggle-item-active",
+							)}
+							aria-label="Audit"
+							onClick={() => setActiveAction("audit")}
+						>
+							<ClipboardCheck className="h-4 w-4 shrink-0" aria-hidden />
+						</button>
+					</ActionTooltip>
 				</>
 			)}
-			<Button className={quickActionBtn} title="Schedule Review">
-				<Calendar className="size-3.5" />
-				Schedule
-			</Button>
-			<Button
-				className={quickActionBtn}
-				title="Generate Report"
-				onClick={() => setReportOpen(true)}
-			>
-				<TrendingUp className="size-3.5" />
-				Report
-			</Button>
+			<ActionTooltip label="Schedule Review">
+				<button
+					type="button"
+					className={cn(
+						"segmented-toggle-item px-2.5",
+						activeAction === "schedule" && "segmented-toggle-item-active",
+					)}
+					aria-label="Schedule"
+					onClick={() => setActiveAction("schedule")}
+				>
+					<Calendar className="h-4 w-4 shrink-0" aria-hidden />
+				</button>
+			</ActionTooltip>
+			<ActionTooltip label="Generate Report">
+				<button
+					type="button"
+					className={cn(
+						"segmented-toggle-item px-2.5",
+						activeAction === "report" && "segmented-toggle-item-active",
+					)}
+					aria-label="Report"
+					onClick={() => {
+						setActiveAction("report");
+						setReportOpen(true);
+					}}
+				>
+					<ChartLine className="h-4 w-4 shrink-0" aria-hidden />
+				</button>
+			</ActionTooltip>
 			<ReportGenerator
 				open={reportOpen}
 				onClose={() => setReportOpen(false)}

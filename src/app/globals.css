@@ -627,22 +627,41 @@
 		}
 	}
 
-	/* Compact QuickActions in dashboard header */
-	@media (min-width: 1024px) {
-		.quick-actions-container .primary-btn,
-		.quick-actions-container .btn-primary {
-			padding-left: 0.875rem;
-			padding-right: 0.875rem;
-			font-size: 0.8125rem;
-			height: 2rem;
-			min-height: 2rem;
-		}
+	/**
+	 * Segmented toggle — the one pill control for a tab switcher (SegmentedToggle)
+	 * or an icon-trigger group (e.g. QuickActions). Sizing vars at the top of this
+	 * file. `.segmented-toggle-item` carries its own transparent background and
+	 * no shadow so it overrides a <Button>'s default `bg-primary`/`shadow` when
+	 * passed in as that component's className.
+	 */
+	.segmented-toggle {
+		@apply relative inline-flex items-center rounded-full border border-slate-200 bg-slate-100;
+		height: var(--segmented-toggle-height);
+		padding: var(--segmented-toggle-pad);
+	}
 
-		.quick-actions-container .primary-btn svg,
-		.quick-actions-container .btn-primary svg {
-			width: 0.875rem;
-			height: 0.875rem;
-		}
+	.segmented-toggle-thumb {
+		@apply pointer-events-none absolute rounded-full bg-white shadow-sm transition-transform duration-200 ease-out;
+	}
+
+	/* No horizontal padding here — each caller supplies its own px-* so it can
+	   be overridden (tailwind-merge can't dedupe a utility class against a
+	   property baked into this custom class). */
+	.segmented-toggle-item {
+		@apply relative z-10 inline-flex h-full cursor-pointer items-center justify-center gap-1.5 rounded-full bg-transparent py-0 text-sm font-medium text-slate-500 shadow-none transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 disabled:cursor-not-allowed disabled:opacity-60;
+	}
+
+	.segmented-toggle-item[data-state="active"],
+	.segmented-toggle-item[aria-selected="true"] {
+		@apply text-[#0f5384];
+	}
+
+	/* "Active" trigger within an icon-only segmented-toggle group (e.g.
+	   QuickActions) — a solid filled badge. Distinct from the rule above,
+	   which is the tab switcher's selected state (sliding white thumb + navy
+	   text) and would look wrong filled solid. */
+	.segmented-toggle-item-active {
+		@apply bg-white text-[#0f5384] shadow-sm;
 	}
 
 	/* Dashboard */

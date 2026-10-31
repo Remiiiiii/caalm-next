@@ -249,7 +249,7 @@ const OTPModal = ({
 					{isExpired ? (
 						<div
 							role="alert"
-							className="flex gap-2 rounded-lg border border-red-200 bg-red-50 p-3"
+							className="flex gap-2 pt-4 rounded-lg border border-red-200 bg-red-50 p-3"
 						>
 							<AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
 							<div>
@@ -279,7 +279,7 @@ const OTPModal = ({
 					) : hasStarted ? (
 						<div className="space-y-1.5">
 							<div
-								className="flex items-center gap-1.5 text-sm text-slate-500"
+								className="flex items-center gap-1.5 pt-4 text-sm text-slate-500"
 								aria-live="polite"
 								role="timer"
 							>
