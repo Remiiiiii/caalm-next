@@ -188,12 +188,13 @@ const ITSidebar: React.FC<ITSidebarProps> = ({ name, email }) => {
 					<Image
 						src="/assets/images/logo.svg"
 						alt="logo"
-						width={isCollapsed ? 32 : 42}
-						height={isCollapsed ? 32 : 42}
+						width={452}
+						height={431}
 						className={cn(
-							"shrink-0 object-contain",
-							isCollapsed ? "h-8 w-8" : "h-9 w-9",
+							"h-auto shrink-0 object-contain",
+							isCollapsed ? "w-8" : "w-9",
 						)}
+						style={{ height: "auto" }}
 						priority
 						fetchPriority="high"
 					/>

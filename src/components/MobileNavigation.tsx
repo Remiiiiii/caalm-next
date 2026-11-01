@@ -71,9 +71,10 @@ const MobileNavigation = ({ fullName, avatar, email, role }: Props) => {
 			<Image
 				src="/assets/images/logo.svg"
 				alt="CAALM logo"
-				width={50}
-				height={50}
-				className="mt-1 h-[50px] w-[50px] object-contain"
+				width={452}
+				height={431}
+				className="mt-1 h-auto w-[50px] object-contain"
+				style={{ height: "auto" }}
 			/>
 			<Sheet open={open} onOpenChange={setOpen}>
 				<SheetTrigger asChild>

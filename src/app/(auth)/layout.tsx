@@ -87,8 +87,8 @@ function AuthLayout({ children }: { children: React.ReactNode }) {
 													<Image
 														src="/assets/images/logo.svg"
 														alt="CAALM Logo"
-														width={48}
-														height={48}
+														width={452}
+														height={431}
 														className="h-auto w-12"
 														style={{ height: "auto" }}
 													/>
@@ -136,8 +136,8 @@ function AuthLayout({ children }: { children: React.ReactNode }) {
 									<Image
 										src="/assets/images/logo.svg"
 										alt="logo"
-										width={50}
-										height={50}
+										width={452}
+										height={431}
 										className="h-auto w-[50px]"
 										style={{ height: "auto" }}
 									/>

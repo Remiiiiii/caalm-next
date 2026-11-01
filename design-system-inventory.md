@@ -311,6 +311,13 @@ Focus: the components named in the request. Many more shadcn primitives live und
 </span>
 ```
 
+### Sheet chip (selectable / suggestion pills)
+
+- **Path:** `src/components/ui/sheet-chip.ts`
+- **Exports:** `SHEET_CHIP_IDLE`, `SHEET_CHIP_SELECTED` (className strings, same `FILTER_PILL_TRIGGER`-style pattern)
+- **Product rule:** every assistant/panel sheet chip (quick prompts, Ask Next suggestions, multi-select reason chips) shares the same hover state — `hover:border-blue-300 hover:bg-blue-50` on idle, solid `#0f5384` fill when selected. Never hand-roll these classes inline.
+- **Usage:** `src/components/assistant/CaalmAssistantSheet.tsx`, `src/components/audits/ReadinessAiPanel.tsx`
+
 ### Tabs
 
 - **Path:** `src/components/ui/tabs.tsx`

@@ -171,8 +171,8 @@ export const Header = () => {
 						<Image
 							src="/assets/images/logo.svg"
 							alt="Logo"
-							width={40}
-							height={40}
+							width={452}
+							height={431}
 							className="h-auto w-9 shrink-0"
 							style={{ height: "auto" }}
 						/>
@@ -262,8 +262,8 @@ export const Header = () => {
 								<Image
 									src="/assets/images/logo.svg"
 									alt=""
-									width={32}
-									height={32}
+									width={452}
+									height={431}
 									className="h-auto w-8 shrink-0"
 									style={{ height: "auto" }}
 								/>

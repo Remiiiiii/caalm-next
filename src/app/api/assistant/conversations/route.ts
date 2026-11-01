@@ -14,16 +14,19 @@ export async function GET(request: NextRequest) {
 
 	const { searchParams } = request.nextUrl;
 	const limit = Math.min(Number(searchParams.get("limit")) || 30, 50);
-	const offset = Number(searchParams.get("offset")) || 0;
+	const cursor = searchParams.get("cursor") || undefined;
 
-	const { conversations, total } = await listConversations({
+	const { conversations, nextCursor } = await listConversations({
 		userId: auth.user.$id,
 		orgId: auth.orgId,
 		limit,
-		offset,
+		cursor,
 	});
 
-	return NextResponse.json({ success: true, data: { conversations, total } });
+	return NextResponse.json({
+		success: true,
+		data: { conversations, nextCursor },
+	});
 }
 
 export async function POST() {

@@ -13,7 +13,10 @@ export async function POST(request: NextRequest) {
 	const rating =
 		body.rating === "up" || body.rating === "down" ? body.rating : null;
 	const comment =
-		typeof body.comment === "string" ? body.comment.trim().slice(0, 1000) : "";
+		typeof body.comment === "string" ? body.comment.trim().slice(0, 500) : "";
+	const reasons = Array.isArray(body.reasons)
+		? body.reasons.filter((r: unknown): r is string => typeof r === "string")
+		: [];
 	const conversationId =
 		typeof body.conversationId === "string" ? body.conversationId : undefined;
 	const messageId =
@@ -22,9 +25,9 @@ export async function POST(request: NextRequest) {
 	if (!rating) {
 		return NextResponse.json({ error: "rating is required" }, { status: 400 });
 	}
-	if (rating === "down" && comment.length < 1) {
+	if (rating === "down" && reasons.length < 1) {
 		return NextResponse.json(
-			{ error: "Comments must be at least 1 character" },
+			{ error: "At least one reason is required" },
 			{ status: 400 },
 		);
 	}
@@ -52,6 +55,7 @@ export async function POST(request: NextRequest) {
 		metadata: {
 			source: "ai_assistant",
 			rating,
+			reasons: reasons.length ? reasons : undefined,
 			comment: comment || undefined,
 			conversationId,
 			messageId,
