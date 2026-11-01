@@ -23,6 +23,7 @@ import {
 } from "@/components/audits/readiness/readiness-ui";
 import ShimmerBadge from "@/components/landing/ShimmerBadge";
 import { Button } from "@/components/ui/button";
+import { SHEET_CHIP_IDLE } from "@/components/ui/sheet-chip";
 import { Textarea } from "@/components/ui/textarea";
 import {
 	type ReadinessProseBlock,
@@ -780,7 +781,10 @@ export function ReadinessAiPanel({
 								<button
 									key={item}
 									type="button"
-									className="cursor-pointer rounded-full border border-slate-200 bg-white/50 px-3 py-1.5 text-left text-xs text-slate-700 transition-all duration-200 hover:border-blue-300 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 disabled:cursor-not-allowed disabled:opacity-50"
+									className={cn(
+										SHEET_CHIP_IDLE,
+										"text-left disabled:cursor-not-allowed disabled:opacity-50",
+									)}
 									onClick={() => void ask(item)}
 									disabled={loading}
 								>

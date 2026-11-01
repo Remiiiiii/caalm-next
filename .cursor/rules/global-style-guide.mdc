@@ -640,6 +640,24 @@ Header layout (Select Contract Type is the reference): optional Back row (Back o
 
 ---
 
+## Sheet chips (suggestion / selectable pills)
+
+**ALWAYS** use `SHEET_CHIP_IDLE` / `SHEET_CHIP_SELECTED` from `@/components/ui/sheet-chip` for pill-shaped buttons inside assistant and panel sheets — quick prompts, "Ask Next" suggestions, multi-select reason/filter chips. Do not hand-roll the hover classes inline.
+
+```tsx
+<button type="button" className={selected ? SHEET_CHIP_SELECTED : SHEET_CHIP_IDLE}>
+  {label}
+</button>
+```
+
+- Idle: `border-slate-200 bg-white/50 text-slate-700`, hover **always** previews the selected look with `hover:border-blue-300 hover:bg-blue-50`
+- Selected: solid `#0f5384` fill, white text
+- Compose with `cn(SHEET_CHIP_IDLE, "text-left", ...)` for variant needs (alignment, `disabled:` states) — never override the hover colors
+
+**Reference:** `src/components/assistant/CaalmAssistantSheet.tsx` (quick prompts, feedback reason chips), `src/components/audits/ReadinessAiPanel.tsx` (Ask Next)
+
+---
+
 ## Data tables
 
 **Hard rule:** Every list / data table in the app must use the **Assign Tasks** chrome as the base template. Domain columns and cells layer on top — do not invent solid white header rows, `bg-slate-50` header bands, or plain `hover:bg-slate-*` body rows.

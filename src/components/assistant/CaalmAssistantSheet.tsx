@@ -2,24 +2,24 @@
 
 import {
 	Download,
+	FileSymlink,
 	HelpCircle,
 	Loader2,
 	PanelRightClose,
 	Send,
 	SquarePen,
-	X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import AssistantActionCompletedCard from "@/components/assistant/AssistantActionCompletedCard";
 import AssistantActionLifecycleCard from "@/components/assistant/AssistantActionLifecycleCard";
 import AssistantActivityFeedCard from "@/components/assistant/AssistantActivityFeedCard";
-import AssistantInputFormCard from "@/components/assistant/AssistantInputFormCard";
 import AssistantAvatar from "@/components/assistant/AssistantAvatar";
 import AssistantHistoryList from "@/components/assistant/AssistantHistoryList";
 import AssistantInPanelOverlay, {
 	AssistantInPanelActions,
 } from "@/components/assistant/AssistantInPanelOverlay";
+import AssistantInputFormCard from "@/components/assistant/AssistantInputFormCard";
 import AssistantMeetingCreatedCard from "@/components/assistant/AssistantMeetingCreatedCard";
 import AssistantMessageActions from "@/components/assistant/AssistantMessageActions";
 import AssistantPendingActionCard from "@/components/assistant/AssistantPendingActionCard";
@@ -33,6 +33,7 @@ import type {
 import { BusyIcon } from "@/components/ui/busy-icon";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/ui/loading";
+import { SHEET_CHIP_IDLE, SHEET_CHIP_SELECTED } from "@/components/ui/sheet-chip";
 import { Textarea } from "@/components/ui/textarea";
 import {
 	Tooltip,
@@ -68,6 +69,14 @@ const QUICK_PROMPTS = [
 
 type Tab = "chat" | "history";
 
+const FEEDBACK_REASONS = [
+	{ label: "Wrong info", value: "wrong_info" },
+	{ label: "Incomplete", value: "incomplete" },
+	{ label: "Confusing", value: "confusing" },
+	{ label: "Off-topic", value: "off_topic" },
+	{ label: "Other", value: "other" },
+] as const;
+
 type Props = {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
@@ -96,8 +105,8 @@ export default function CaalmAssistantSheet({
 		null,
 	);
 	const [feedbackPromptId, setFeedbackPromptId] = useState<string | null>(null);
+	const [feedbackReasons, setFeedbackReasons] = useState<string[]>([]);
 	const [feedbackComment, setFeedbackComment] = useState("");
-	const [feedbackTouched, setFeedbackTouched] = useState(false);
 	const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
 	const endRef = useRef<HTMLDivElement>(null);
 
@@ -140,8 +149,7 @@ export default function CaalmAssistantSheet({
 	};
 
 	const submitFeedback = async () => {
-		setFeedbackTouched(true);
-		if (feedbackComment.trim().length < 1) return;
+		if (feedbackReasons.length < 1) return;
 		setFeedbackSubmitting(true);
 		try {
 			const res = await fetch("/api/assistant/feedback", {
@@ -149,7 +157,8 @@ export default function CaalmAssistantSheet({
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
 					rating: "down",
-					comment: feedbackComment.trim(),
+					reasons: feedbackReasons,
+					comment: feedbackComment.trim() || undefined,
 					conversationId: assistant.conversationId,
 					messageId: feedbackMessageId,
 				}),
@@ -158,8 +167,8 @@ export default function CaalmAssistantSheet({
 			if (!res.ok) throw new Error(json.error || "Failed to submit feedback");
 			toast({ title: "Thanks for your feedback" });
 			setFeedbackOpen(false);
+			setFeedbackReasons([]);
 			setFeedbackComment("");
-			setFeedbackTouched(false);
 			setFeedbackMessageId(null);
 			setFeedbackPromptId(null);
 		} catch (e) {
@@ -255,7 +264,7 @@ export default function CaalmAssistantSheet({
 		</div>
 	);
 
-	const feedbackValid = feedbackComment.trim().length >= 1;
+	const feedbackValid = feedbackReasons.length >= 1;
 	const feedbackLen = feedbackComment.length;
 
 	const overlay = (
@@ -282,56 +291,79 @@ export default function CaalmAssistantSheet({
 				open={feedbackOpen}
 				onClose={() => {
 					setFeedbackOpen(false);
-					setFeedbackTouched(false);
 				}}
-				title="How can we improve your experience?"
+				title="What went wrong?"
 				titleClassName="sidebar-gradient-text"
 				footer={
-					<Button
-						type="button"
-						className="primary-btn w-full cursor-pointer rounded-full"
-						disabled={!feedbackValid || feedbackSubmitting}
-						onClick={() => void submitFeedback()}
-					>
-						{feedbackSubmitting ? (
-							<Loader2 className="h-4 w-4 animate-spin" />
-						) : (
-							"Leave feedback"
-						)}
-					</Button>
+					<div className="flex justify-end">
+						<Button
+							type="button"
+							className="primary-btn cursor-pointer rounded-full px-5"
+							aria-disabled={!feedbackValid || feedbackSubmitting}
+							disabled={!feedbackValid || feedbackSubmitting}
+							onClick={() => void submitFeedback()}
+						>
+							{feedbackSubmitting ? (
+								<Loader2 className="h-4 w-4 animate-spin" />
+							) : (
+								<>
+									<FileSymlink className="h-4 w-4" />
+									Submit
+								</>
+							)}
+						</Button>
+					</div>
 				}
 			>
 				<div className="text-left">
+					<p className="-mt-1 mb-3 text-sm text-slate-500">
+						Tell us what missed the mark.
+					</p>
+					<div
+						role="group"
+						aria-label="Reason for downvote"
+						className="flex flex-wrap gap-2"
+					>
+						{FEEDBACK_REASONS.map((r) => {
+							const selected = feedbackReasons.includes(r.value);
+							return (
+								<button
+									key={r.value}
+									type="button"
+									aria-pressed={selected}
+									onClick={() =>
+										setFeedbackReasons((prev) =>
+											selected
+												? prev.filter((v) => v !== r.value)
+												: [...prev, r.value],
+										)
+									}
+									className={selected ? SHEET_CHIP_SELECTED : SHEET_CHIP_IDLE}
+								>
+									{r.label}
+								</button>
+							);
+						})}
+					</div>
+
 					<label
 						htmlFor="assistant-feedback-comment"
-						className="mb-1.5 block text-sm font-medium text-slate-700"
+						className="mb-1.5 mt-4 block text-sm font-medium text-slate-700"
 					>
-						Comments
+						Add a comment{" "}
+						<span className="font-normal text-slate-400">(optional)</span>
 					</label>
 					<Textarea
 						id="assistant-feedback-comment"
 						value={feedbackComment}
-						onChange={(e) => setFeedbackComment(e.target.value.slice(0, 1000))}
-						onBlur={() => setFeedbackTouched(true)}
-						placeholder="Write your comments"
-						rows={4}
-						className={cn(
-							"min-h-24 resize-y rounded-xl border-[0.25px] border-slate-300! bg-white text-slate-700",
-							feedbackTouched &&
-								!feedbackValid &&
-								"border-red-500! focus-visible:ring-red-500/30",
-						)}
+						onChange={(e) => setFeedbackComment(e.target.value.slice(0, 500))}
+						placeholder="Anything else we should know?"
+						rows={3}
+						className="resize-y rounded-xl border-[0.25px] border-slate-300! bg-white text-slate-700"
 					/>
-					<div className="mt-1.5 flex items-start justify-between gap-2">
-						{feedbackTouched && !feedbackValid ? (
-							<p className="text-xs text-red-600">
-								This field must be at least 1 characters long
-							</p>
-						) : (
-							<span />
-						)}
+					<div className="mt-1.5 flex justify-end">
 						<span className="shrink-0 text-xs text-slate-500">
-							{feedbackLen}/1000
+							{feedbackLen}/500
 						</span>
 					</div>
 				</div>
@@ -435,6 +467,11 @@ export default function CaalmAssistantSheet({
 					conversations={assistant.conversations}
 					activeId={assistant.conversationId}
 					loading={assistant.historyLoading}
+					loadingMore={assistant.historyLoadingMore}
+					nextCursor={assistant.historyNextCursor}
+					onLoadMore={() => {
+						void assistant.loadMoreHistory();
+					}}
 					onSelect={(id) => {
 						void assistant.selectConversation(id);
 						setTab("chat");
@@ -476,7 +513,7 @@ export default function CaalmAssistantSheet({
 											key={q}
 											type="button"
 											onClick={() => void assistant.sendMessage(q)}
-											className="cursor-pointer rounded-full border border-slate-200 bg-white/50 px-3 py-1.5 text-xs text-slate-700 transition-all duration-200 hover:border-blue-300 hover:bg-blue-50 focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
+											className={SHEET_CHIP_IDLE}
 										>
 											{q}
 										</button>
@@ -512,11 +549,15 @@ export default function CaalmAssistantSheet({
 														? "overflow-hidden rounded-2xl border border-slate-200/80 bg-white text-slate-700"
 														: "rounded-2xl border border-slate-200/80 bg-white/60 px-3 py-2 text-slate-700",
 											)}
-											style={m.role === "user" ? {
-												padding: "10px 14px",
-												borderRadius: "16px 4px 16px 16px",
-												lineHeight: "20px",
-											} : undefined}
+											style={
+												m.role === "user"
+													? {
+															padding: "10px 14px",
+															borderRadius: "16px 4px 16px 16px",
+															lineHeight: "20px",
+														}
+													: undefined
+											}
 										>
 											{m.content.trim() ? (
 												<div
@@ -633,8 +674,8 @@ export default function CaalmAssistantSheet({
 														onLeaveFeedback={(id) => {
 															setFeedbackMessageId(id);
 															setFeedbackOpen(true);
+															setFeedbackReasons([]);
 															setFeedbackComment("");
-															setFeedbackTouched(false);
 														}}
 														onThumbsUp={(id) => {
 															void fetch("/api/assistant/feedback", {

@@ -115,23 +115,32 @@ export async function listConversations(params: {
 	userId: string;
 	orgId: string;
 	limit?: number;
-	offset?: number;
-}): Promise<{ conversations: AssistantConversation[]; total: number }> {
+	cursor?: string;
+}): Promise<{
+	conversations: AssistantConversation[];
+	nextCursor: string | null;
+}> {
 	const { databases } = await createAdminClient();
+	const limit = params.limit ?? 30;
+	const queries = [
+		Query.equal("userId", params.userId),
+		Query.equal("orgId", params.orgId),
+		Query.orderDesc("lastMessageAt"),
+		Query.limit(limit),
+	];
+	if (params.cursor) {
+		queries.push(Query.cursorAfter(params.cursor));
+	}
 	const response = await databases.listDocuments(
 		appwriteConfig.databaseId!,
 		conversationsCollection(),
-		[
-			Query.equal("userId", params.userId),
-			Query.equal("orgId", params.orgId),
-			Query.orderDesc("lastMessageAt"),
-			Query.limit(params.limit ?? 30),
-			Query.offset(params.offset ?? 0),
-		],
+		queries,
 	);
+	const conversations = response.documents as unknown as AssistantConversation[];
+	const last = conversations[conversations.length - 1];
 	return {
-		conversations: response.documents as unknown as AssistantConversation[],
-		total: response.total,
+		conversations,
+		nextCursor: conversations.length === limit && last ? last.$id : null,
 	};
 }
 

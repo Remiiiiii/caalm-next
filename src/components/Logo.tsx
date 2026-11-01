@@ -43,8 +43,8 @@ export default function Logo() {
 					<Image
 						src="/assets/images/logo.svg"
 						alt="CAALM logo"
-						width={52}
-						height={52}
+						width={452}
+						height={431}
 						className="h-auto w-[52px]"
 						style={{ height: "auto" }}
 						priority

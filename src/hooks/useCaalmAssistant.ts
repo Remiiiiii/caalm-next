@@ -19,6 +19,31 @@ import {
 } from "@/lib/ui/refreshCalendarCache";
 
 const CONVERSATION_STORAGE_KEY = "caalm_assistant_conversation_id";
+const HISTORY_PAGE_SIZE = 30;
+
+function parseHistoryPayload(json: {
+	data?: {
+		conversations?: AssistantConversationSummary[];
+		nextCursor?: string | null;
+	};
+}): {
+	conversations: AssistantConversationSummary[];
+	nextCursor: string | null;
+} {
+	return {
+		conversations: json.data?.conversations ?? [],
+		nextCursor: json.data?.nextCursor ?? null,
+	};
+}
+
+function appendUniqueConversations(
+	current: AssistantConversationSummary[],
+	incoming: AssistantConversationSummary[],
+): AssistantConversationSummary[] {
+	const seen = new Set(current.map((c) => c.$id));
+	const extra = incoming.filter((c) => !seen.has(c.$id));
+	return extra.length ? [...current, ...extra] : current;
+}
 
 function readStoredConversationId(): string | null {
 	if (typeof window === "undefined") return null;
@@ -130,6 +155,10 @@ export function useCaalmAssistant(): UseCaalmAssistantReturn {
 		useState<AssistantPendingAction | null>(null);
 	const [isSending, setIsSending] = useState(false);
 	const [historyLoading, setHistoryLoading] = useState(false);
+	const [historyLoadingMore, setHistoryLoadingMore] = useState(false);
+	const [historyNextCursor, setHistoryNextCursor] = useState<string | null>(
+		null,
+	);
 	const [conversationLoading, setConversationLoading] = useState(false);
 
 	const conversationIdRef = useRef<string | null>(null);
@@ -144,10 +173,14 @@ export function useCaalmAssistant(): UseCaalmAssistantReturn {
 	const loadHistory = useCallback(async () => {
 		setHistoryLoading(true);
 		try {
-			const res = await fetch("/api/assistant/conversations?limit=30");
+			const res = await fetch(
+				`/api/assistant/conversations?limit=${HISTORY_PAGE_SIZE}`,
+			);
 			const json = await res.json();
 			if (!res.ok) throw new Error(json.error || "Failed to load history");
-			setConversations(json.data?.conversations ?? []);
+			const page = parseHistoryPayload(json);
+			setConversations(page.conversations);
+			setHistoryNextCursor(page.nextCursor);
 		} catch (e) {
 			toast({
 				title: "Could not load history",
@@ -158,6 +191,31 @@ export function useCaalmAssistant(): UseCaalmAssistantReturn {
 			setHistoryLoading(false);
 		}
 	}, [toast]);
+
+	const loadMoreHistory = useCallback(async () => {
+		if (!historyNextCursor || historyLoadingMore) return;
+		setHistoryLoadingMore(true);
+		try {
+			const res = await fetch(
+				`/api/assistant/conversations?limit=${HISTORY_PAGE_SIZE}&cursor=${encodeURIComponent(historyNextCursor)}`,
+			);
+			const json = await res.json();
+			if (!res.ok) throw new Error(json.error || "Failed to load history");
+			const page = parseHistoryPayload(json);
+			setConversations((prev) =>
+				appendUniqueConversations(prev, page.conversations),
+			);
+			setHistoryNextCursor(page.nextCursor);
+		} catch (e) {
+			toast({
+				title: "Could not load more conversations",
+				description: e instanceof Error ? e.message : "Unknown error",
+				variant: "destructive",
+			});
+		} finally {
+			setHistoryLoadingMore(false);
+		}
+	}, [historyLoadingMore, historyNextCursor, toast]);
 
 	const selectConversation = useCallback(
 		async (id: string) => {
@@ -206,12 +264,15 @@ export function useCaalmAssistant(): UseCaalmAssistantReturn {
 				writeStoredConversationId(null);
 			}
 
-			const listRes = await fetch("/api/assistant/conversations?limit=30");
+			const listRes = await fetch(
+				`/api/assistant/conversations?limit=${HISTORY_PAGE_SIZE}`,
+			);
 			const listJson = await listRes.json();
 			if (!listRes.ok) return;
-			const list = (listJson.data?.conversations ??
-				[]) as AssistantConversationSummary[];
-			setConversations(list);
+			const page = parseHistoryPayload(listJson);
+			setConversations(page.conversations);
+			setHistoryNextCursor(page.nextCursor);
+			const list = page.conversations;
 			const active = list.find((c) => c.status === "active");
 			if (active?.$id) {
 				await selectConversation(active.$id);
@@ -624,8 +685,11 @@ export function useCaalmAssistant(): UseCaalmAssistantReturn {
 		pendingAction,
 		isSending,
 		historyLoading,
+		historyLoadingMore,
+		historyNextCursor,
 		conversationLoading,
 		loadHistory,
+		loadMoreHistory,
 		selectConversation,
 		startNewChat,
 		resumeActiveSession,

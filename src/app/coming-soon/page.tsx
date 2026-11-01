@@ -148,8 +148,10 @@ export default function ComingSoonPage() {
 							<Image
 								src="/assets/images/logo.svg"
 								alt="CAALM Logo"
-								width={40}
-								height={40}
+								width={452}
+								height={431}
+								className="h-auto w-10"
+								style={{ height: "auto" }}
 							/>
 						</div>
 						<div>

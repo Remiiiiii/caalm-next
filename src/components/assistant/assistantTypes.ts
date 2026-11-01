@@ -146,9 +146,14 @@ export type UseCaalmAssistantReturn = {
 	pendingAction: AssistantPendingAction | null;
 	isSending: boolean;
 	historyLoading: boolean;
+	/** True while fetching the next history page */
+	historyLoadingMore: boolean;
+	/** Cursor for the next history page; null when the end is reached */
+	historyNextCursor: string | null;
 	/** True while a selected conversation's messages are loading */
 	conversationLoading: boolean;
 	loadHistory: () => Promise<void>;
+	loadMoreHistory: () => Promise<void>;
 	selectConversation: (id: string) => Promise<void>;
 	startNewChat: () => Promise<void>;
 	/** Restore the current active session after hide/remount (does not create a new chat). */

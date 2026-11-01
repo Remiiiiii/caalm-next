@@ -123,9 +123,10 @@ function GiveShell({ children, orgName, logoUrl }: GiveShellProps) {
 							<Image
 								src="/assets/images/logo.svg"
 								alt=""
-								width={96}
-								height={28}
+								width={452}
+								height={431}
 								className="h-7 w-auto object-contain"
+								style={{ width: "auto" }}
 							/>
 						)}
 						<span className="truncate text-sm font-semibold text-slate-700">
