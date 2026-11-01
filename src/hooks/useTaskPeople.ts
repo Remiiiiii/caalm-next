@@ -48,6 +48,7 @@ export function useTaskPeople(
 								[department, division].filter(Boolean).join(" · ") || null,
 							department,
 							division,
+							email: u.email || null,
 						};
 					});
 					setPeople(list.filter((p) => p.id));

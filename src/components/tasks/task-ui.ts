@@ -51,6 +51,7 @@ export type TaskPerson = {
 	subtitle?: string | null;
 	department?: string | null;
 	division?: string | null;
+	email?: string | null;
 };
 
 export const TASK_LINKED_BADGE = "bg-blue/10 text-blue border-blue/20";

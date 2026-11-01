@@ -351,7 +351,7 @@ export async function runAssistantTurn(params: {
 	const requestInputDeclaration: FunctionDeclaration = {
 		name: "request_input",
 		description:
-			"Show the user a structured form to fill in instead of asking in free text. Call this whenever you need multiple fields from the user (e.g. scheduling details). Pass fields_json as a JSON array of {name,label,type,placeholder?,required?,options?} objects. Field types: text, date, time, select, textarea.",
+			"Show the user a structured form to fill in instead of asking in free text. Call this whenever you need multiple fields from the user (e.g. scheduling details). Pass fields_json as a JSON array of {name,label,type,placeholder?,required?,options?} objects. Field types: text, date, time, select, textarea. For select fields, options must be an array of strings (e.g. [\"meeting\",\"review\"]), never objects.",
 		parameters: {
 			type: SchemaType.OBJECT,
 			properties: {

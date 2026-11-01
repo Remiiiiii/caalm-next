@@ -23,6 +23,16 @@ import {
 } from "./task-filter-pill";
 import type { TaskPerson } from "./task-ui";
 
+const FIELD_TRIGGER =
+	"flex h-8 w-full cursor-pointer items-center justify-between gap-2 rounded-md border-[0.25px] border-slate-300 bg-white px-2.5 text-sm font-medium text-slate-700 hover:border-blue-300 focus-visible:outline-none focus-visible:border-[#078FAB] disabled:cursor-not-allowed disabled:opacity-50";
+
+function parseCsvIds(value: string): string[] {
+	return value
+		.split(",")
+		.map((id) => id.trim())
+		.filter(Boolean);
+}
+
 type DeptNode = {
 	name: string;
 	direct: TaskPerson[];
@@ -126,18 +136,22 @@ export function TaskAssigneeFilter({
 	variant = "filter",
 	open: openProp,
 	onOpenChange,
+	disabled,
+	id,
 }: {
-	/** "" = all, "unassigned", or user id (filter). Assign mode uses user id or "" for unassigned. */
+	/** "" = all, "unassigned", or user id (filter). Assign mode uses user id or "" for unassigned. Multi uses csv ids. */
 	value: string;
 	people: TaskPerson[];
 	onChange: (assigneeId: string) => void;
-	mode?: "filter" | "assign";
+	mode?: "filter" | "assign" | "multi";
 	triggerLabel?: string;
 	ariaLabel?: string;
-	variant?: "filter" | "dock";
+	variant?: "filter" | "dock" | "field";
 	/** Controlled open (e.g. bulk bar — only one menu at a time) */
 	open?: boolean;
 	onOpenChange?: (open: boolean) => void;
+	disabled?: boolean;
+	id?: string;
 }) {
 	const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
 	const controlled = openProp !== undefined;
@@ -148,8 +162,20 @@ export function TaskAssigneeFilter({
 	};
 	const [query, setQuery] = useState("");
 
+	const selectedIds = useMemo(
+		() => (mode === "multi" ? parseCsvIds(value) : []),
+		[mode, value],
+	);
+
 	const selectedLabel = useMemo(() => {
 		if (triggerLabel) return triggerLabel;
+		if (mode === "multi") {
+			if (selectedIds.length === 0) return "Select people";
+			if (selectedIds.length === 1) {
+				return people.find((p) => p.id === selectedIds[0])?.name || "1 person";
+			}
+			return `${selectedIds.length} people`;
+		}
 		if (mode === "assign") {
 			if (!value) return "Assign to";
 			return people.find((p) => p.id === value)?.name || "Assign to";
@@ -157,7 +183,7 @@ export function TaskAssigneeFilter({
 		if (!value || value === "all") return "All assignees";
 		if (value === "unassigned") return "Unassigned";
 		return people.find((p) => p.id === value)?.name || "Assignee";
-	}, [value, people, mode, triggerLabel]);
+	}, [value, people, mode, triggerLabel, selectedIds]);
 
 	const tree = useMemo(() => buildDepartmentTree(people), [people]);
 
@@ -167,12 +193,23 @@ export function TaskAssigneeFilter({
 		return people.filter(
 			(p) =>
 				p.name.toLowerCase().includes(q) ||
+				(p.email || "").toLowerCase().includes(q) ||
 				(p.department || "").toLowerCase().includes(q) ||
 				(p.division || "").toLowerCase().includes(q),
 		);
 	}, [people, query]);
 
+	const isSelected = (personId: string) =>
+		mode === "multi" ? selectedIds.includes(personId) : value === personId;
+
 	const select = (next: string) => {
+		if (mode === "multi") {
+			const nextIds = selectedIds.includes(next)
+				? selectedIds.filter((id) => id !== next)
+				: [...selectedIds, next];
+			onChange(nextIds.join(","));
+			return;
+		}
 		if (mode === "filter") {
 			onChange(next === "all" ? "" : next);
 		} else {
@@ -184,6 +221,11 @@ export function TaskAssigneeFilter({
 
 	const isAll = mode === "filter" && (!value || value === "all");
 	const isDock = variant === "dock";
+	const isField = variant === "field";
+	const fieldPanel =
+		"z-[100] border-slate-200 bg-white shadow-lg backdrop-blur-none";
+	const menuWidth = isField ? "w-[13.5rem]" : "w-72";
+	const subWidth = isField ? "w-[13.5rem]" : "w-56";
 
 	return (
 		<DropdownMenu
@@ -195,12 +237,28 @@ export function TaskAssigneeFilter({
 		>
 			<DropdownMenuTrigger asChild>
 				<button
+					id={id}
 					type="button"
+					disabled={disabled}
 					aria-label={ariaLabel}
-					className={isDock ? TASK_DOCK_TRIGGER : TASK_FILTER_PILL_TRIGGER}
+					className={
+						isField
+							? FIELD_TRIGGER
+							: isDock
+								? TASK_DOCK_TRIGGER
+								: TASK_FILTER_PILL_TRIGGER
+					}
 				>
 					<Users className="h-4 w-4 shrink-0 text-slate-600" aria-hidden />
-					<span className="max-w-[9rem] truncate">{selectedLabel}</span>
+					<span
+						className={cn(
+							"truncate",
+							isField ? "min-w-0 flex-1 text-left" : "max-w-[9rem]",
+							isField && selectedIds.length === 0 && "font-normal text-slate-400",
+						)}
+					>
+						{selectedLabel}
+					</span>
 					<ChevronDown
 						className={cn(
 							"h-3.5 w-3.5 shrink-0 text-slate-500 transition-transform duration-200",
@@ -210,7 +268,14 @@ export function TaskAssigneeFilter({
 					/>
 				</button>
 			</DropdownMenuTrigger>
-			<DropdownMenuContent align="start" className="w-72 overflow-x-hidden p-0">
+			<DropdownMenuContent
+				align="start"
+				className={cn(
+					"overflow-x-hidden p-0",
+					menuWidth,
+					isField && fieldPanel,
+				)}
+			>
 				<div className="border-b border-slate-200/80 p-2">
 					<label className="flex h-9 items-center gap-2 rounded-md border-[0.25px] border-slate-300 bg-white px-2.5">
 						<Search className="h-4 w-4 shrink-0 text-slate-500" aria-hidden />
@@ -235,7 +300,7 @@ export function TaskAssigneeFilter({
 								<PersonRow
 									key={p.id}
 									person={p}
-									selected={value === p.id}
+									selected={isSelected(p.id)}
 									onSelect={() => select(p.id)}
 								/>
 							))
@@ -278,7 +343,7 @@ export function TaskAssigneeFilter({
 									</DropdownMenuItem>
 									<DropdownMenuSeparator />
 								</>
-							) : (
+							) : mode === "assign" ? (
 								<>
 									<DropdownMenuItem
 										className="cursor-pointer gap-2"
@@ -294,7 +359,7 @@ export function TaskAssigneeFilter({
 									</DropdownMenuItem>
 									<DropdownMenuSeparator />
 								</>
-							)}
+							) : null}
 							{tree.map((dept) => {
 								const hasDivisions = dept.divisions.length > 0;
 								const onlyDirect = !hasDivisions && dept.direct.length > 0;
@@ -315,13 +380,19 @@ export function TaskAssigneeFilter({
 													{dept.direct.length}
 												</span>
 											</DropdownMenuSubTrigger>
-											<DropdownMenuSubContent className="w-56 overflow-hidden p-1">
+											<DropdownMenuSubContent
+												className={cn(
+													"overflow-hidden p-1",
+													subWidth,
+													isField && fieldPanel,
+												)}
+											>
 												<DropdownScrollArea maxHeightClassName="max-h-64">
 													{dept.direct.map((p) => (
 														<PersonRow
 															key={p.id}
 															person={p}
-															selected={value === p.id}
+															selected={isSelected(p.id)}
 															onSelect={() => select(p.id)}
 														/>
 													))}
@@ -345,13 +416,19 @@ export function TaskAssigneeFilter({
 													{dept.name}
 												</span>
 											</DropdownMenuSubTrigger>
-											<DropdownMenuSubContent className="w-56 overflow-hidden p-1">
+											<DropdownMenuSubContent
+												className={cn(
+													"overflow-hidden p-1",
+													subWidth,
+													isField && fieldPanel,
+												)}
+											>
 												<DropdownScrollArea maxHeightClassName="max-h-72">
 													{dept.direct.map((p) => (
 														<PersonRow
 															key={p.id}
 															person={p}
-															selected={value === p.id}
+															selected={isSelected(p.id)}
 															onSelect={() => select(p.id)}
 														/>
 													))}
@@ -375,13 +452,19 @@ export function TaskAssigneeFilter({
 																	{div.people.length}
 																</span>
 															</DropdownMenuSubTrigger>
-															<DropdownMenuSubContent className="w-56 overflow-hidden p-1">
+															<DropdownMenuSubContent
+												className={cn(
+													"overflow-hidden p-1",
+													subWidth,
+													isField && fieldPanel,
+												)}
+											>
 																<DropdownScrollArea maxHeightClassName="max-h-64">
 																	{div.people.map((p) => (
 																		<PersonRow
 																			key={p.id}
 																			person={p}
-																			selected={value === p.id}
+																			selected={isSelected(p.id)}
 																			onSelect={() => select(p.id)}
 																		/>
 																	))}
