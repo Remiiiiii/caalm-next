@@ -8,6 +8,26 @@ alwaysApply: false
 
 This is the **single source of truth** for all styling, page structure, and component patterns in the application. All new pages, components, dialogs, and cards must follow these standards.
 
+## Specs vs CAALM palette (hard rule)
+
+**CAALM's design palette comes first** — including CSS — whenever you build or restyle UI from a spec, mockup, PNG, or ticket.
+
+This applies whether the spec **includes** design/CSS notes or **omits** them ("layout only", "CSS left to the agent", "match this screenshot").
+
+1. Read this file's [Color Palette](#color-palette), [Glass Card Design](#glass-card-design), [Buttons](#buttons), and [Badges](#badges) **before** writing class names.
+2. Specs own **layout, copy, and behavior**. They do **not** own tokens. Do not copy mockup whites, `amber-*`, or one-off hex from the spec.
+3. Specs that **do** include CSS still map onto CAALM tokens: `glass-card` + `glass-card-cap`, `btn-primary` / `delete-btn`, `sidebar-gradient-text`, CAALM pills (`bg-green/10 text-green border-green/20`, orange / red / blue / slate), brand `#0f5384` / `#078fab`. Match density and structure, not the spec's stylesheet.
+4. Specs that **omit** CSS are not a license to invent a look. Reuse existing CAALM components (`MetricStatCard`, `Card` + glass cap, CAALM pills).
+
+```tsx
+// ❌ BAD — spec/mockup CSS as-is
+<div className="rounded-[14px] border border-slate-200 bg-white shadow-sm">
+
+// ✅ GOOD — same layout, CAALM palette
+<Card className="glass-card overflow-hidden">
+  <div className="glass-card-cap" />
+```
+
 ## Table of Contents
 
 1. [Page Structure](#page-structure)

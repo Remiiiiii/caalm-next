@@ -11,7 +11,7 @@ Rule map: `docs/internal/cursor-rules-read-order.md`. Full playbook: `docs/inter
 ## Context order (do not skip)
 
 1. `graft ask "<task>" --source` — top hit is the edit target unless the task is exhaustive search (`graft grep`).
-2. Follow **this** rule’s checklist. Then open only the **scoped** rules that match the work (API → `api-route-authz.mdc`; UI → `global-style-guide.mdc`; security → `security-rbac.mdc`; schema → `caalm-demo-database-sync.mdc`; Appwrite IDs → `appwrite-collection-ids.mdc`; product copy → `writing.mdc`).
+2. Follow **this** rule’s checklist. Then open only the **scoped** rules that match the work (API → `api-route-authz.mdc`; UI → `global-style-guide.mdc` — **CAALM palette first**, even when the spec includes or omits CSS; security → `security-rbac.mdc`; schema → `caalm-demo-database-sync.mdc`; Appwrite IDs → `appwrite-collection-ids.mdc`; product copy → `writing.mdc`).
 3. `@`-reference canonical files; do not paste large blobs into chat.
 4. MCP: prefer **Appwrite** for DB schema/data, **GitHub** for PR/CI. For live CAALM page checks in Cursor, use the **in-IDE Browser Tab** (`cursor-ide-browser`): `browser_navigate` with `position: "active"` so the pane is visible. Cookies persist per workspace after one sign-in in that tab. Do **not** attach Cursor Playwright MCP to Claude's Chrome on port 9222. Claude Code keeps that Chrome (`scripts/start-chrome-debug.ps1`). Use `pnpm test:e2e` for automated Playwright tests, not for in-IDE inspection.
 

@@ -25,6 +25,14 @@ const SECTION_TABS = [
 		icon: ScrollText,
 		match: (pathname: string) => pathname.startsWith("/audits/audit"),
 	},
+	{
+		href: "/audits/uploads",
+		label: "Uploaded audits",
+		icon: ClipboardCheck,
+		match: (pathname: string) =>
+			pathname.startsWith("/audits/uploads") ||
+			pathname.startsWith("/audits/upload/"),
+	},
 ] as const;
 
 type SectionHref = (typeof SECTION_TABS)[number]["href"];

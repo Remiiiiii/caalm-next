@@ -7,7 +7,7 @@
 ## Decision
 
 1. **One spine:** `agent-workflow-principal.mdc`  
-2. **One UI book:** `global-style-guide.mdc` (dialogs, buttons, inputs, segmented switches, Tailwind colors, glass cards)  
+2. **One UI book:** `global-style-guide.mdc` (dialogs, buttons, inputs, segmented switches, Tailwind colors, glass cards). CAALM palette first vs specs — whether they include or omit CSS.  
 3. **One chat voice:** `plain-english-junior-dev.mdc`  
 4. **Always-on = safety + habits only** — not style encyclopedias  
 

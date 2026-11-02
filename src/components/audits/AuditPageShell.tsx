@@ -19,30 +19,36 @@ export function AuditPageShell({
 }: AuditPageShellProps) {
 	return (
 		<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
-			<div className="flex flex-col gap-4 mb-4 lg:flex-row lg:items-start lg:justify-between">
-				<div className="min-w-0 flex-1">
-					<div className="flex items-center gap-4 mb-1">
-						<h1 className="h1 capitalize sidebar-gradient-text">{title}</h1>
-					</div>
-					{subtitle ? (
-						<p className="text-sm text-slate-600 max-w-3xl">{subtitle}</p>
-					) : null}
-					{tags && tags.length > 0 ? (
-						<div className="flex flex-wrap gap-2 mt-2.5">
-							{tags.map((tag) => (
-								<span
-									key={tag}
-									className="text-[10px] tracking-wide uppercase text-slate-500 border border-slate-200 bg-white/70 px-2 py-0.5"
-								>
-									{tag}
-								</span>
-							))}
-						</div>
-					) : null}
+			<div className="mb-4">
+				<div className="mb-1 flex items-center gap-4">
+					<h1 className="h1 capitalize sidebar-gradient-text">{title}</h1>
 				</div>
-				{actions ? (
-					<div className="flex flex-wrap items-center justify-start lg:justify-end gap-3 shrink-0">
-						{actions}
+				{subtitle || actions ? (
+					<div className="flex flex-wrap items-center justify-between gap-3">
+						{subtitle ? (
+							<p className="min-w-0 flex-1 text-sm text-slate-600">
+								{subtitle}
+							</p>
+						) : (
+							<span className="min-w-0 flex-1" />
+						)}
+						{actions ? (
+							<div className="flex shrink-0 flex-wrap items-center justify-end gap-3">
+								{actions}
+							</div>
+						) : null}
+					</div>
+				) : null}
+				{tags && tags.length > 0 ? (
+					<div className="mt-2.5 flex flex-wrap gap-2">
+						{tags.map((tag) => (
+							<span
+								key={tag}
+								className="border border-slate-200 bg-white/70 px-2 py-0.5 text-[10px] uppercase tracking-wide text-slate-500"
+							>
+								{tag}
+							</span>
+						))}
 					</div>
 				) : null}
 			</div>

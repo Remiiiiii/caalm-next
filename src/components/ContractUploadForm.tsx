@@ -3346,25 +3346,23 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 						<Tooltip>
 							<TooltipTrigger asChild>
 								<DialogTrigger asChild>
-									<Button
+									{/* A plain button — not shadcn's `Button` — because `Button`'s
+									    base `cva` classes (rounded-md, bg-primary, shadow, h-9 px-4
+									    py-2) live in Tailwind's utilities layer and beat
+									    `.segmented-toggle-item`'s component-layer classes in the
+									    cascade regardless of class order, breaking the pill shape. */}
+									<button
+										type="button"
 										className={cn(
-											// Button's default variant has hover:bg-primary/90 — a
-											// pseudo-class utility that beats .segmented-toggle-item's
-											// plain (non-hover) background on specificity alone, so the
-											// matching hover:bg-* must be named here for tailwind-merge
-											// to actually drop it (a "no hover effect" = hover looks
-											// identical to the current, non-hover state).
-											"segmented-toggle-item px-2.5 hover:shadow-none",
-											active
-												? "segmented-toggle-item-active hover:bg-white"
-												: "hover:bg-transparent",
+											"segmented-toggle-item px-2.5",
+											active && "segmented-toggle-item-active",
 											className,
 										)}
 										aria-label="Upload Contract"
 										onClick={onTriggerClick}
 									>
 										<FilePenLine className="h-4 w-4 shrink-0" aria-hidden />
-									</Button>
+									</button>
 								</DialogTrigger>
 							</TooltipTrigger>
 							<TooltipContent className="text-xs">
