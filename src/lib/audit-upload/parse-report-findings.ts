@@ -250,7 +250,7 @@ export function parseAuditReportFindings(text: string): FindingsExtraction {
 		const managementResponse = sectionAfter(
 			block,
 			"Management Response",
-			/\n(?:F-\d{2}|20\d{2}-\d{3})\s+[—–-]/,
+			/\n(?:F-\d{2}|20\d{2}-\d{3})\s+[—–-]|\nAppendix\s+[A-Z]\b|Confidential\s+Page\b|Schedule of Expenditures|This sample report\b/i,
 		);
 		const recommendation = sectionAfter(
 			block,

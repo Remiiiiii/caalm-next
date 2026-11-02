@@ -17,6 +17,7 @@ import { CaalmDataTableSkeleton } from "@/components/ui/caalm-data-table";
 import { CardContent, Card as GlassCard } from "@/components/ui/card";
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
 import { LoadingSpinner } from "@/components/ui/loading";
+import { SegmentedToggle } from "@/components/ui/segmented-toggle";
 import { ToastAction } from "@/components/ui/toast";
 import { PERMISSIONS } from "@/constants/permissions";
 import { useOrganization } from "@/contexts/OrganizationContext";
@@ -53,6 +54,7 @@ export default function TeamTasksPage() {
 	const { toast } = useToast();
 
 	const [creating, setCreating] = useState(false);
+	const [listScope, setListScope] = useState<"active" | "removed">("active");
 	const [view, setView] = useState<TaskView>("all");
 	const [filters, setFilters] = useState<TaskListFilters>({
 		search: "",
@@ -79,11 +81,12 @@ export default function TeamTasksPage() {
 		if (filters.priority !== "all") params.set("priority", filters.priority);
 		if (filters.assigneeId) params.set("assigneeId", filters.assigneeId);
 		if (filters.search.trim()) params.set("search", filters.search.trim());
-		params.set("view", view);
+		params.set("view", listScope === "removed" ? "all" : view);
 		params.set("dueBucket", filters.dueBucket);
 		params.set("limit", "100");
+		if (listScope === "removed") params.set("scope", "removed");
 		return `/api/tasks?${params.toString()}`;
-	}, [filters, view]);
+	}, [filters, view, listScope]);
 
 	const { data, error, isLoading, mutate } = useSWR<TasksResponse>(
 		canAccess ? query : null,
@@ -227,6 +230,22 @@ export default function TeamTasksPage() {
 		[data, mutate, showUndo, toast],
 	);
 
+	const handleRestore = useCallback(
+		async (taskId: string) => {
+			const res = await fetch(`/api/tasks/${taskId}/restore`, {
+				method: "POST",
+			});
+			if (!res.ok) {
+				toast({ title: "Could not restore task", variant: "destructive" });
+				return;
+			}
+			toast({ title: "Task restored" });
+			setListScope("active");
+			void mutate();
+		},
+		[mutate, toast],
+	);
+
 	const handleCreate = useCallback(
 		async (title: string) => {
 			const res = await fetch("/api/tasks", {
@@ -331,13 +350,38 @@ export default function TeamTasksPage() {
 			<GlassCard ref={cardRef} className="glass-card overflow-hidden mb-6">
 				<div className="glass-card-cap" />
 				<CardContent className="p-0">
-					<TasksViewTabs value={view} counts={counts} onChange={setView} />
-					<TasksFilterBar
-						filters={filters}
-						onChange={setFilters}
-						people={people}
-					/>
 					{canCreate ? (
+						<div className="flex justify-end px-4 pt-3">
+							<SegmentedToggle
+								value={listScope}
+								onChange={(next) => {
+									setListScope(next);
+									setSelectedIds(new Set());
+								}}
+								ariaLabel="Filter tasks by active or removed"
+								className="w-full max-w-xs"
+								tabs={[
+									{ value: "active", label: "Active" },
+									{ value: "removed", label: "Removed" },
+								]}
+							/>
+						</div>
+					) : null}
+					{listScope === "active" ? (
+						<TasksViewTabs value={view} counts={counts} onChange={setView} />
+					) : (
+						<p className="px-4 py-3 text-sm text-slate-600">
+							Soft-deleted tasks. Restore to put them back on Active.
+						</p>
+					)}
+					{listScope === "active" ? (
+						<TasksFilterBar
+							filters={filters}
+							onChange={setFilters}
+							people={people}
+						/>
+					) : null}
+					{listScope === "active" && canCreate ? (
 						<TaskInlineCreateRow
 							open={creating}
 							onOpen={() => setCreating(true)}
@@ -360,6 +404,7 @@ export default function TeamTasksPage() {
 							timeZone={timeZone}
 							canEdit={canCreate}
 							canAssign={canAssign}
+							listScope={listScope}
 							onToggle={(id, checked) => {
 								setSelectedIds((prev) => {
 									const next = new Set(prev);
@@ -386,6 +431,7 @@ export default function TeamTasksPage() {
 							}
 							onDuplicate={(task) => void handleDuplicate(task)}
 							onDelete={(id) => void handleDelete(id)}
+							onRestore={(id) => void handleRestore(id)}
 						/>
 					)}
 					<div className="flex items-center justify-between border-t border-slate-100 px-4 py-2.5 text-xs text-slate-500">

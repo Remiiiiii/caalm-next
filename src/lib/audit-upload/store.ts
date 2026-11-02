@@ -125,10 +125,11 @@ export function mapFinding(row: Record<string, unknown>): AuditFindingRecord {
 		citationCheckPassed: Boolean(row.citationCheckPassed),
 		findingCode: packed.extras.findingCode ?? null,
 		managementResponse: packed.extras.managementResponse ?? null,
-		monetaryImpactUsd:
-			packed.extras.monetaryImpactUsd == null
-				? null
-				: Number(packed.extras.monetaryImpactUsd),
+		monetaryImpactUsd: (() => {
+			if (packed.extras.monetaryImpactUsd == null) return null;
+			const money = Number(packed.extras.monetaryImpactUsd);
+			return Number.isFinite(money) ? money : null;
+		})(),
 		controlDeficiencyType: packed.extras.controlDeficiencyType ?? null,
 		findingKey: String(row.findingKey ?? ""),
 		isRepeat: Boolean(row.isRepeat),
@@ -208,22 +209,35 @@ export async function createAuditDocument(
 export async function getAuditDocument(
 	orgId: string,
 	id: string,
+	options?: { includeDeleted?: boolean },
 ): Promise<AuditDocumentRecord | null> {
 	const { databases } = await createAdminClient();
 	try {
 		const row = await databases.getDocument(db(), documentsId(), id);
 		const mapped = mapDocument(row as unknown as Record<string, unknown>);
-		if (mapped.orgId !== orgId || mapped.deletedAt) return null;
+		if (mapped.orgId !== orgId) return null;
+		if (mapped.deletedAt && !options?.includeDeleted) return null;
 		return mapped;
 	} catch {
 		return null;
 	}
 }
 
+export type AuditDocumentListScope = "active" | "removed";
+
 export async function listAuditDocuments(
 	orgId: string,
-	limit = 50,
+	limitOrOptions: number | { limit?: number; scope?: AuditDocumentListScope } = 50,
 ): Promise<AuditDocumentRecord[]> {
+	const limit =
+		typeof limitOrOptions === "number"
+			? limitOrOptions
+			: (limitOrOptions.limit ?? 50);
+	const scope =
+		typeof limitOrOptions === "number"
+			? "active"
+			: (limitOrOptions.scope ?? "active");
+
 	const { databases } = await createAdminClient();
 	const result = await databases.listDocuments(db(), documentsId(), [
 		Query.equal("orgId", orgId),
@@ -232,7 +246,9 @@ export async function listAuditDocuments(
 	]);
 	return result.documents
 		.map((row) => mapDocument(row as unknown as Record<string, unknown>))
-		.filter((doc) => !doc.deletedAt);
+		.filter((doc) =>
+			scope === "removed" ? Boolean(doc.deletedAt) : !doc.deletedAt,
+		);
 }
 
 export async function updateAuditDocument(

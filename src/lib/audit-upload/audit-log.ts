@@ -3,7 +3,7 @@ import { logAuditEvent } from "@/lib/services/audit-logger";
 export async function logAuditUploadEvent(input: {
 	user: { $id: string; fullName?: string; name?: string; email?: string };
 	orgId: string;
-	action: "create" | "update" | "delete";
+	action: "create" | "update" | "delete" | "restore";
 	summary: string;
 	targetId: string;
 	targetLabel: string;

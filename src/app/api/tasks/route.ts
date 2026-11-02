@@ -51,7 +51,16 @@ export async function GET(request: NextRequest) {
 			dueAfter: q("dueAfter"),
 			view: q("view"),
 			dueBucket: q("dueBucket"),
+			scope: q("scope"),
 		});
+
+		const scope = validated.scope === "removed" ? "removed" : "active";
+		if (scope === "removed") {
+			const deleteDenied = await requirePermission(request, {
+				permission: PERMISSIONS.EVENTS.CREATE,
+			});
+			if (deleteDenied) return deleteDenied;
+		}
 
 		const { getOrganizationTimezone } = await import("@/lib/timezone/org");
 		const timeZone = await getOrganizationTimezone(defaultOrg.orgId);
@@ -82,6 +91,7 @@ export async function GET(request: NextRequest) {
 						dueAfter: validated.dueAfter,
 						view: validated.view,
 						dueBucket: validated.dueBucket,
+						scope,
 						currentUserId: user.$id,
 						timeZone,
 					},

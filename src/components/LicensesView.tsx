@@ -31,6 +31,8 @@ import LicensesTableView from "./LicensesTableView";
 export type ViewType = LicenseViewType;
 export type { LicenseFilters, LicenseStatusTab, SavedLicenseView };
 
+export type LicenseListScope = "active" | "removed";
+
 interface LicensesViewContextType {
 	view: ViewType;
 	handleViewChange: (view: ViewType) => void;
@@ -39,6 +41,8 @@ interface LicensesViewContextType {
 	clearFilters: () => void;
 	statusTab: LicenseStatusTab;
 	setStatusTab: (tab: LicenseStatusTab) => void;
+	listScope: LicenseListScope;
+	setListScope: (scope: LicenseListScope) => void;
 	selectedIds: string[];
 	toggleSelected: (id: string) => void;
 	selectAll: (ids: string[]) => void;
@@ -78,10 +82,17 @@ export function LicensesViewProvider({
 			: emptyFilters(),
 	);
 	const [statusTab, setStatusTabState] = useState<LicenseStatusTab>("all");
+	const [listScope, setListScopeState] = useState<LicenseListScope>("active");
 	const [selectedIds, setSelectedIds] = useState<string[]>([]);
 	const [previewLicense, setPreviewLicense] = useState<License | null>(null);
 	const [savedViews, setSavedViews] = useState<SavedLicenseView[]>([]);
 	const listAnchorRef = useRef<HTMLDivElement | null>(null);
+
+	const setListScope = useCallback((scope: LicenseListScope) => {
+		setListScopeState(scope);
+		setSelectedIds([]);
+		setStatusTabState("all");
+	}, []);
 
 	useEffect(() => {
 		const savedView = localStorage.getItem(
@@ -191,6 +202,8 @@ export function LicensesViewProvider({
 			clearFilters,
 			statusTab,
 			setStatusTab,
+			listScope,
+			setListScope,
 			selectedIds,
 			toggleSelected,
 			selectAll,
@@ -212,6 +225,8 @@ export function LicensesViewProvider({
 			clearFilters,
 			statusTab,
 			setStatusTab,
+			listScope,
+			setListScope,
 			selectedIds,
 			toggleSelected,
 			selectAll,

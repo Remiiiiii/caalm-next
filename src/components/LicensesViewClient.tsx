@@ -27,11 +27,17 @@ interface ListResponse {
 	meta?: { pagination?: { total: number } };
 }
 
-function buildListUrl(page: number, pageSize: number, filters: LicenseFilters) {
+function buildListUrl(
+	page: number,
+	pageSize: number,
+	filters: LicenseFilters,
+	scope: "active" | "removed",
+) {
 	const params = new URLSearchParams({
 		limit: String(pageSize),
 		offset: String((page - 1) * pageSize),
 	});
+	if (scope === "removed") params.set("scope", "removed");
 	const search = (filters.search ?? filters.searchQuery)?.trim();
 	if (search) params.set("search", search);
 	if (filters.vendor?.trim()) params.set("vendor", filters.vendor.trim());
@@ -51,12 +57,12 @@ export default function LicensesViewClient({
 	user,
 }: LicensesViewClientProps) {
 	const router = useRouter();
-	const { filters, statusTab } = useLicensesView();
+	const { filters, statusTab, listScope } = useLicensesView();
 	const [page, setPage] = useState(1);
 
 	useEffect(() => {
 		setPage(1);
-	}, [filters, statusTab]);
+	}, [filters, statusTab, listScope]);
 
 	const hasActiveFilters = Boolean(
 		(filters.search ?? filters.searchQuery)?.trim() ||
@@ -68,9 +74,9 @@ export default function LicensesViewClient({
 	);
 
 	const listUrl =
-		page === 1 && !hasActiveFilters
-			? null
-			: buildListUrl(page, pageSize, filters);
+		listScope === "removed" || page !== 1 || hasActiveFilters
+			? buildListUrl(page, pageSize, filters, listScope)
+			: null;
 
 	const { data: listData, isLoading: listLoading } = useSWR<ListResponse>(
 		listUrl,

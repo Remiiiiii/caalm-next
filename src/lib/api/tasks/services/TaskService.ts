@@ -37,7 +37,9 @@ export class TaskService {
 			Query.offset(pagination.offset),
 		];
 
-		if (!filters.includeDeleted) {
+		if (filters.scope === "removed") {
+			queries.push(Query.isNotNull("deletedAt"));
+		} else if (!filters.includeDeleted) {
 			queries.push(Query.isNull("deletedAt"));
 		}
 		if (filters.status) {

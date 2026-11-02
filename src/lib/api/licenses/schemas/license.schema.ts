@@ -118,6 +118,9 @@ export const licenseListQuerySchema = z.object({
 		.transform((v) =>
 			v == null || v === "" ? undefined : v === "true" || v === true,
 		),
+	scope: z
+		.union([z.string(), z.null(), z.undefined()])
+		.transform((v) => (v === "removed" ? "removed" : "active")),
 });
 
 /**

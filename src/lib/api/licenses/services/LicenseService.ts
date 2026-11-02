@@ -4,7 +4,13 @@ import { appwriteConfig } from "@/lib/appwrite/config";
 import { writeRowWithSchemaDriftRecovery } from "@/lib/appwrite/schemaDriftRecovery";
 import { getUserDefaultOrganization } from "@/lib/rbac/permissions";
 import { logAuditEvent } from "@/lib/services/audit-logger";
-import { excludeSoftDeletedQuery, softDeleteFields } from "@/lib/soft-delete";
+import {
+	clearSoftDeleteFields,
+	excludeSoftDeletedQuery,
+	softDeleteFields,
+	softDeleteScopeQuery,
+	type SoftDeleteListScope,
+} from "@/lib/soft-delete";
 import type { RenewalRecord } from "@/types/licenses";
 
 /**
@@ -609,6 +615,60 @@ export class LicenseService {
 	}
 
 	/**
+	 * Soft-restore a license (clears deletedAt / deletedBy).
+	 */
+	static async restoreLicense(
+		licenseId: string,
+		restoredBy?: {
+			userId?: string;
+			userName?: string | null;
+			userEmail?: string | null;
+		},
+	): Promise<any> {
+		const { tablesDB } = await createAdminClient();
+
+		if (!appwriteConfig.databaseId || !appwriteConfig.licensesCollectionId) {
+			throw new Error("Database configuration missing");
+		}
+
+		const existing = await LicenseService.getLicenseById(licenseId);
+		if (!existing) {
+			throw new Error("License not found");
+		}
+		if (!existing.deletedAt) {
+			return existing;
+		}
+
+		const license = await tablesDB.updateRow({
+			databaseId: appwriteConfig.databaseId,
+			tableId: appwriteConfig.licensesCollectionId,
+			rowId: licenseId,
+			data: clearSoftDeleteFields(),
+		});
+
+		const mapped = LicenseService.mapFieldsFromDatabase(license);
+
+		void logAuditEvent({
+			event_id: `license_restore_${licenseId}`,
+			event_title: `License restored: ${mapped.licenseName || existing.licenseName || licenseId}`,
+			action: "restore",
+			source: "caalm",
+			user_id: restoredBy?.userId || "system",
+			user_name: restoredBy?.userName || "User",
+			user_email: restoredBy?.userEmail || "",
+			orgId: mapped.orgId || existing.orgId || "default_organization",
+			status: "success",
+			module: "licenses",
+			target_type: "license",
+			target_id: licenseId,
+			target_label: mapped.licenseName || existing.licenseName || licenseId,
+			summary: `License ${mapped.licenseName || existing.licenseName || licenseId} restored`,
+		});
+
+		return mapped;
+	}
+
+	/**
 	 * List licenses with filters
 	 */
 	static async listLicenses(
@@ -620,6 +680,7 @@ export class LicenseService {
 			status?: string;
 			department?: string;
 			expiringSoon?: boolean;
+			scope?: SoftDeleteListScope;
 		},
 		pagination?: { limit: number; offset: number },
 	): Promise<{ licenses: any[]; total: number }> {
@@ -629,9 +690,10 @@ export class LicenseService {
 			throw new Error("Database configuration missing");
 		}
 
+		const scope: SoftDeleteListScope = filters?.scope ?? "active";
 		const queries: string[] = [
 			Query.equal("orgId", orgId),
-			excludeSoftDeletedQuery("licenses"),
+			softDeleteScopeQuery(scope, "licenses"),
 		];
 
 		if (filters?.search) {

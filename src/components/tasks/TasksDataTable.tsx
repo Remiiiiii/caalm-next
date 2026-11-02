@@ -50,6 +50,8 @@ export function TasksDataTable({
 	onDueChange,
 	onDuplicate,
 	onDelete,
+	onRestore,
+	listScope = "active",
 }: {
 	tasks: TaskListItem[];
 	people: TaskPerson[];
@@ -66,6 +68,8 @@ export function TasksDataTable({
 	onDueChange: (id: string, dueDate: string) => void;
 	onDuplicate: (task: TaskListItem) => void;
 	onDelete: (id: string) => void;
+	onRestore?: (id: string) => void;
+	listScope?: "active" | "removed";
 }) {
 	const [sortKey, setSortKey] = useState<SortKey>("title");
 	const [sortDir, setSortDir] = useState<SortDir>("asc");
@@ -280,9 +284,13 @@ export function TasksDataTable({
 						>
 							<TaskRowActions
 								canEdit={canEdit}
+								removed={listScope === "removed"}
 								onOpen={() => onOpen(task)}
 								onDuplicate={() => onDuplicate(task)}
 								onDelete={() => onDelete(task.$id)}
+								onRestore={
+									onRestore ? () => onRestore(task.$id) : undefined
+								}
 							/>
 						</TableCell>
 					</TableRow>

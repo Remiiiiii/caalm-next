@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
 	buildActionNeededCallout,
+	deriveAuditScoreboard,
 	deriveDocumentListSummary,
 } from "@/lib/audit-upload/upload-list-summaries";
 import type {
@@ -128,5 +129,105 @@ describe("buildActionNeededCallout", () => {
 		});
 		expect(message).toContain("untracked gap");
 		expect(message).toContain("severity mismatch");
+	});
+});
+
+describe("deriveAuditScoreboard", () => {
+	it("marks awaiting alert when draft findings have gap or mismatch", () => {
+		const board = deriveAuditScoreboard(
+			[doc()],
+			[
+				finding({
+					status: "draft",
+					reconciliation: {
+						verdict: "untracked_gap",
+						rationale: "x",
+						matchedRequirementIds: [],
+						confidence: 0.8,
+					},
+					$createdAt: "2026-10-20T00:00:00.000Z",
+				}),
+				finding({
+					$id: "f2",
+					status: "draft",
+					severityComputed: "medium",
+					reconciliation: {
+						verdict: "supported",
+						rationale: "ok",
+						matchedRequirementIds: [],
+						confidence: 0.9,
+					},
+					$createdAt: "2026-10-25T00:00:00.000Z",
+				}),
+			],
+		);
+		expect(board.awaitingState).toBe("alert");
+		expect(board.untrackedGapCount).toBe(1);
+		expect(board.unreviewedCount).toBe(1);
+		expect(board.oldestUnconfirmedAt).toBe("2026-10-20T00:00:00.000Z");
+		expect(board.fiscalYearLabel).toBe("FY 2025–26");
+		expect(board.uniqueAuditorCount).toBe(1);
+		expect(board.showTrendsNudge).toBe(true);
+	});
+
+	it("marks awaiting complete when nothing is draft", () => {
+		const board = deriveAuditScoreboard(
+			[doc()],
+			[finding({ status: "confirmed" })],
+		);
+		expect(board.awaitingState).toBe("complete");
+		expect(board.awaitingConfirmation).toBe(0);
+		expect(board.oldestUnconfirmedAt).toBeNull();
+		expect(board.confirmedFindingsCount).toBe(1);
+		expect(board.stillOpenFindingsCount).toBe(0);
+	});
+
+	it("sums confirmed, open, repeats, and questioned costs for findings card", () => {
+		const board = deriveAuditScoreboard(
+			[doc()],
+			[
+				finding({
+					status: "confirmed",
+					monetaryImpactUsd: 85000,
+				}),
+				finding({
+					$id: "f2",
+					status: "draft",
+					isRepeat: true,
+					monetaryImpactUsd: 46500,
+				}),
+				finding({
+					$id: "f3",
+					status: "draft",
+					severityComputed: "low",
+					monetaryImpactUsd: null,
+				}),
+			],
+		);
+		expect(board.confirmedFindingsCount).toBe(1);
+		expect(board.stillOpenFindingsCount).toBe(2);
+		expect(board.repeatFindingsCount).toBe(1);
+		expect(board.monetaryImpactUsdTotal).toBe(131500);
+	});
+
+	it("counts unique auditors across completed uploads", () => {
+		const board = deriveAuditScoreboard(
+			[
+				doc({ $id: "doc1" }),
+				doc({
+					$id: "doc2",
+					metadata: {
+						classification: {
+							auditorName: "Other Firm LLP",
+							periodStart: "2024-07-01",
+							periodEnd: "2025-06-30",
+						},
+					},
+				}),
+			],
+			[],
+		);
+		expect(board.uniqueAuditorCount).toBe(2);
+		expect(board.uploadCount).toBe(2);
 	});
 });

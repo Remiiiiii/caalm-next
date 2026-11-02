@@ -14,6 +14,7 @@ import {
 	PenLine,
 	RefreshCw,
 	Share2,
+	RotateCcw,
 	Trash2,
 	UserRoundCheck,
 } from "lucide-react";
@@ -127,6 +128,11 @@ const licenseActionsDropdownItems = [
 		icon: "/assets/icons/delete.svg",
 		value: "delete",
 	},
+	{
+		label: "Restore",
+		icon: "/assets/icons/share.svg",
+		value: "restore",
+	},
 ];
 
 interface LicenseActionDropdownProps {
@@ -229,9 +235,25 @@ const LicenseActionDropdown = ({
 
 				toast({
 					title: "License deleted",
-					description: `"${license.licenseName}" has been removed.`,
+					description: `"${license.licenseName}" left Active. Restore it from Removed if needed.`,
 				});
 				onLicenseRemoved?.(license.$id);
+				closeAllModals();
+				onRefresh?.();
+			} else if (action.value === "restore") {
+				const res = await fetch(`/api/licenses/${license.$id}/restore`, {
+					method: "POST",
+				});
+				if (!res.ok) {
+					const err = await res.json().catch(() => ({}));
+					throw new Error(
+						err?.error || err?.message || "Failed to restore license",
+					);
+				}
+				toast({
+					title: "License restored",
+					description: `"${license.licenseName}" is back in Active licenses.`,
+				});
 				closeAllModals();
 				onRefresh?.();
 			} else if (action.value === "share") {
@@ -278,8 +300,17 @@ const LicenseActionDropdown = ({
 		}
 	};
 
+	const isRemoved = Boolean(license.deletedAt);
+
 	// Permission-based action filtering (keys only; matches API gates)
 	const filteredActions = licenseActionsDropdownItems.filter((action) => {
+		if (isRemoved) {
+			return (
+				action.value === "restore" && canLicenseAction(permissions, "delete")
+			);
+		}
+		if (action.value === "restore") return false;
+
 		switch (action.value) {
 			case "delete":
 				return canLicenseAction(permissions, "delete");
@@ -402,6 +433,7 @@ const LicenseActionDropdown = ({
 							status: GitBranch,
 							sign: PenLine,
 							delete: Trash2,
+							restore: RotateCcw,
 							download: Download,
 							share: Share2,
 						} as const;
@@ -454,6 +486,42 @@ const LicenseActionDropdown = ({
 										} else if (actionItem.value === "delete") {
 											setShowDelete(true);
 											setIsModalOpen(true);
+										} else if (actionItem.value === "restore") {
+											setAction(actionItem);
+											setIsLoading(true);
+											void (async () => {
+												try {
+													const res = await fetch(
+														`/api/licenses/${license.$id}/restore`,
+														{ method: "POST" },
+													);
+													if (!res.ok) {
+														const err = await res.json().catch(() => ({}));
+														throw new Error(
+															err?.error ||
+																err?.message ||
+																"Failed to restore license",
+														);
+													}
+													toast({
+														title: "License restored",
+														description: `"${license.licenseName}" is back in Active licenses.`,
+													});
+													closeAllModals();
+													onRefresh?.();
+												} catch (error) {
+													toast({
+														title: "Could not restore",
+														description:
+															error instanceof Error
+																? error.message
+																: "Try again.",
+														variant: "destructive",
+													});
+												} finally {
+													setIsLoading(false);
+												}
+											})();
 										} else if (actionItem.value === "share") {
 											setShowShare(true);
 											setIsModalOpen(true);

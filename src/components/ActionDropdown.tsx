@@ -108,6 +108,7 @@ import {
 	Pencil,
 	PenLine,
 	ScanEye,
+	RotateCcw,
 	Share2,
 	Trash2,
 	UserRoundCheck,
@@ -228,6 +229,7 @@ const ActionDropdown = ({
 		setIsLoading(true);
 		let success = false;
 
+		try {
 		const actions = {
 			assign: async () => {
 				if (!file.contractId) {
@@ -296,6 +298,19 @@ const ActionDropdown = ({
 					path,
 					contractId: file.contractId, // Pass contractId if this is a contract
 				}),
+			restore: async () => {
+				const contractId = file.contractId || file.$id;
+				const res = await fetch(`/api/contracts/${contractId}/restore`, {
+					method: "POST",
+				});
+				if (!res.ok) {
+					const body = (await res.json().catch(() => null)) as {
+						error?: string;
+					} | null;
+					throw new Error(body?.error || "Failed to restore contract");
+				}
+				return true;
+			},
 		};
 
 		success = await actions[action.value as keyof typeof actions]();
@@ -310,8 +325,11 @@ const ActionDropdown = ({
 				onRefresh();
 			}
 		}
-
-		setIsLoading(false);
+		} catch (error) {
+			console.error("[CLIENT] ActionDropdown handleAction:", error);
+		} finally {
+			setIsLoading(false);
+		}
 	};
 
 	const handleRemoveUser = async (email: string) => {
@@ -841,7 +859,7 @@ const ActionDropdown = ({
 			const itemLabel = file.contractName || file.name || "Untitled";
 			const deleteTitle = isContractDelete ? "Delete contract" : "Delete file";
 			const deleteDescription = isContractDelete
-				? "This will permanently remove the contract below and any linked activity. This action cannot be undone."
+				? "The contract leaves Active. Someone with edit or approve permission can restore it from Removed."
 				: "This will permanently remove the file from the system. This action cannot be undone.";
 			return (
 				<AppDialog
@@ -907,7 +925,7 @@ const ActionDropdown = ({
 						requireConfirmation
 						confirmationLabel={
 							isContractDelete
-								? "I understand this will permanently delete the listed contracts and cannot be undone."
+								? "I understand this removes the contract from Active. It can be restored from Removed."
 								: "I understand this will permanently delete this file and cannot be undone."
 						}
 						confirmed={deleteConfirmed}
@@ -937,18 +955,22 @@ const ActionDropdown = ({
 		file.contractType ||
 		file.contractExpiryDate;
 
-	// Permission-based action filtering
-	let filteredActions = actionsDropdownItems;
+	const isRemoved = Boolean(file.deletedAt);
+	const canManageRemoved =
+		permissions.includes(PERMISSIONS.CONTRACTS.EDIT) ||
+		permissions.includes(PERMISSIONS.CONTRACTS.APPROVE);
 
-	// Filter actions based on permissions
-	filteredActions = actionsDropdownItems.filter((action) => {
+	// Permission-based action filtering
+	let filteredActions = actionsDropdownItems.filter((action) => {
+		if (isRemoved) {
+			return action.value === "restore" && canManageRemoved;
+		}
+		if (action.value === "restore") return false;
+
 		switch (action.value) {
 			case "delete":
 				// Delete requires contracts.edit or contracts.approve
-				return (
-					permissions.includes(PERMISSIONS.CONTRACTS.EDIT) ||
-					permissions.includes(PERMISSIONS.CONTRACTS.APPROVE)
-				);
+				return canManageRemoved;
 			case "rename":
 				// Rename requires contracts.edit
 				return permissions.includes(PERMISSIONS.CONTRACTS.EDIT);
@@ -999,14 +1021,14 @@ const ActionDropdown = ({
 	}
 
 	// If contract is expired, only show: Delete, Details, Download
-	if (isContractExpired) {
+	if (isContractExpired && !isRemoved) {
 		filteredActions = filteredActions.filter((action) =>
 			["delete", "details", "download"].includes(action.value),
 		);
 	}
 
 	const lifecycle = (file.lifecycleStatus || "draft").toLowerCase();
-	if (lifecycle !== "draft" && lifecycle !== "negotiation") {
+	if (!isRemoved && lifecycle !== "draft" && lifecycle !== "negotiation") {
 		filteredActions = filteredActions.filter(
 			(action) => action.value !== "negotiate",
 		);
@@ -1035,6 +1057,7 @@ const ActionDropdown = ({
 							rename: Pencil,
 							share: Share2,
 							delete: Trash2,
+							restore: RotateCcw,
 							details: Info,
 							sign: PenLine,
 							download: Download,
@@ -1149,6 +1172,48 @@ const ActionDropdown = ({
 									onSelect={() => {
 										setAction(actionItem);
 										setIsViewerOpen(true);
+									}}
+								>
+									{actionItem.label}
+								</AppDropdownMenuItem>
+							);
+						}
+
+						if (actionItem.value === "restore") {
+							return (
+								<AppDropdownMenuItem
+									key={actionItem.value}
+									icon={Icon}
+									tone={tone}
+									onSelect={() => {
+										setAction(actionItem);
+										void (async () => {
+											setIsLoading(true);
+											try {
+												const contractId = file.contractId || file.$id;
+												const res = await fetch(
+													`/api/contracts/${contractId}/restore`,
+													{ method: "POST" },
+												);
+												if (!res.ok) {
+													const body = (await res
+														.json()
+														.catch(() => null)) as { error?: string } | null;
+													throw new Error(
+														body?.error || "Failed to restore contract",
+													);
+												}
+												closeAllModals();
+												onRefresh?.();
+											} catch (error) {
+												console.error(
+													"[CLIENT] ActionDropdown restore:",
+													error,
+												);
+											} finally {
+												setIsLoading(false);
+											}
+										})();
 									}}
 								>
 									{actionItem.label}

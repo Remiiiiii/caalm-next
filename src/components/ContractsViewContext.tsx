@@ -24,6 +24,8 @@ import {
 } from "@/lib/contracts/contractsListUtils";
 import type { UIFileDoc } from "@/types/files";
 
+export type ContractListScope = "active" | "removed";
+
 interface ContractsViewContextType {
 	view: ViewType;
 	handleViewChange: (view: ViewType) => void;
@@ -32,6 +34,8 @@ interface ContractsViewContextType {
 	clearFilters: () => void;
 	statusTab: StatusTab;
 	setStatusTab: (tab: StatusTab) => void;
+	listScope: ContractListScope;
+	setListScope: (scope: ContractListScope) => void;
 	selectedIds: string[];
 	toggleSelected: (id: string) => void;
 	selectAll: (ids: string[]) => void;
@@ -58,11 +62,19 @@ export function ContractsViewProvider({ children }: { children: ReactNode }) {
 	const [view, setView] = useState<ViewType>("table");
 	const [filters, setFilters] = useState<ContractFilters>({});
 	const [statusTab, setStatusTabState] = useState<StatusTab>("all");
+	const [listScope, setListScopeState] =
+		useState<ContractListScope>("active");
 	const [selectedIds, setSelectedIds] = useState<string[]>([]);
 	const [density, setDensityState] = useState<DensityMode>("comfortable");
 	const [previewFile, setPreviewFile] = useState<UIFileDoc | null>(null);
 	const [savedViews, setSavedViews] = useState<SavedContractView[]>([]);
 	const listAnchorRef = useRef<HTMLDivElement | null>(null);
+
+	const setListScope = useCallback((scope: ContractListScope) => {
+		setListScopeState(scope);
+		setSelectedIds([]);
+		setStatusTabState("all");
+	}, []);
 
 	useEffect(() => {
 		const savedView = localStorage.getItem(VIEW_STORAGE_KEY) as ViewType | null;
@@ -177,6 +189,8 @@ export function ContractsViewProvider({ children }: { children: ReactNode }) {
 			clearFilters,
 			statusTab,
 			setStatusTab,
+			listScope,
+			setListScope,
 			selectedIds,
 			toggleSelected,
 			selectAll,
@@ -199,6 +213,8 @@ export function ContractsViewProvider({ children }: { children: ReactNode }) {
 			clearFilters,
 			statusTab,
 			setStatusTab,
+			listScope,
+			setListScope,
 			selectedIds,
 			toggleSelected,
 			selectAll,

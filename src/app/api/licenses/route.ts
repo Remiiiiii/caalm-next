@@ -55,10 +55,20 @@ export async function GET(request: NextRequest) {
 			status: q("status") || undefined,
 			department: q("department") || undefined,
 			expiringSoon: q("expiringSoon") || undefined,
+			scope: q("scope") || undefined,
 		};
 
 		const validatedParams = licenseListQuerySchema.parse(queryParams);
 		const { limit, offset } = parsePaginationParams(request);
+		const scope = validatedParams.scope === "removed" ? "removed" : "active";
+
+		if (scope === "removed") {
+			const deleteDenied = await requirePermission(request, {
+				permission: PERMISSIONS.LICENSES.DELETE,
+				requireOrg: true,
+			});
+			if (deleteDenied) return deleteDenied;
+		}
 
 		const filters = {
 			search: validatedParams.search,
@@ -67,18 +77,26 @@ export async function GET(request: NextRequest) {
 			status: validatedParams.status,
 			department: validatedParams.department,
 			expiringSoon: validatedParams.expiringSoon,
+			scope,
 		};
 
-		const result = await CacheManager.withCache(
-			"licenses/all",
-			`${CACHE_KEYS.licenses.all()}:${defaultOrg.orgId}`,
-			async () =>
-				LicenseService.listLicenses(defaultOrg.orgId, filters, {
-					limit,
-					offset,
-				}),
-			CACHE_TTLS.long,
-		);
+		// Removed lists skip the shared all-licenses cache so active lists stay clean.
+		const result =
+			scope === "removed"
+				? await LicenseService.listLicenses(defaultOrg.orgId, filters, {
+						limit,
+						offset,
+					})
+				: await CacheManager.withCache(
+						"licenses/all",
+						`${CACHE_KEYS.licenses.all()}:${defaultOrg.orgId}`,
+						async () =>
+							LicenseService.listLicenses(defaultOrg.orgId, filters, {
+								limit,
+								offset,
+							}),
+						CACHE_TTLS.long,
+					);
 
 		const paginationMeta = buildPaginationMeta(limit, offset, result.total);
 
