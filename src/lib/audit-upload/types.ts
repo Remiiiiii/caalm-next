@@ -161,6 +161,15 @@ export interface AuditFindingRecord {
 	$updatedAt?: string;
 }
 
+/** File attached as close/evidence proof on a corrective action. */
+export interface AuditCapEvidenceAttachment {
+	fileId: string;
+	fileName: string;
+	mimeType: string;
+	fileSize: number;
+	uploadedAt: string;
+}
+
 export interface AuditCapRecord {
 	$id: string;
 	orgId: string;
@@ -173,6 +182,8 @@ export interface AuditCapRecord {
 	dueAt: string;
 	escalationTier: number;
 	verificationEvidence: string | null;
+	/** Screenshots / PDFs uploaded as close evidence. */
+	evidenceAttachments: AuditCapEvidenceAttachment[];
 	closedAt: string | null;
 	$createdAt?: string;
 	$updatedAt?: string;

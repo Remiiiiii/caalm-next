@@ -53,8 +53,6 @@ export default function AssistantPreviewSheetShell({
 					className="glass-card-frosted relative flex h-full w-full flex-col overflow-hidden rounded-2xl"
 					style={{ background: "rgba(255, 255, 255, 0.92)" }}
 				>
-					<div className="glass-card-cap rounded-t-2xl!" />
-
 					<SheetTitle className="sr-only">{title}</SheetTitle>
 
 					<div className="mt-4 shrink-0 px-4 pb-3 pt-1">{header}</div>

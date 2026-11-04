@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import { type Dispatch, type SetStateAction, useState } from "react";
 import useSWR, { mutate } from "swr";
 import { AuditFindingCard } from "@/components/audit-upload/AuditFindingCard";
+import { CloseCorrectiveActionDialog } from "@/components/audit-upload/CloseCorrectiveActionDialog";
 import { AppDialog } from "@/components/ui/app-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,6 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { PERMISSIONS } from "@/constants/permissions";
 import { usePermissions } from "@/hooks/usePermissions";
 import type {
+	AuditCapEvidenceAttachment,
 	AuditCapRecord,
 	AuditDocumentRecord,
 	AuditFindingRecord,
@@ -36,7 +38,7 @@ type Payload = {
 };
 
 type ReasonDialog = {
-	kind: "dispute" | "accept_risk" | "close_cap";
+	kind: "dispute" | "accept_risk";
 	id: string;
 } | null;
 
@@ -87,6 +89,7 @@ export function AuditFindingsReview({ documentId }: { documentId: string }) {
 	const [busyId, setBusyId] = useState<string | null>(null);
 	const [deleteOpen, setDeleteOpen] = useState(false);
 	const [reasonDialog, setReasonDialog] = useState<ReasonDialog>(null);
+	const [closeCapId, setCloseCapId] = useState<string | null>(null);
 	const [reason, setReason] = useState("");
 	const [activeTab, setActiveTab] = useState<"findings" | "report">("findings");
 	const [openFindingIds, setOpenFindingIds] = useState<Set<string>>(new Set());
@@ -150,6 +153,37 @@ export function AuditFindingsReview({ documentId }: { documentId: string }) {
 			setBusyId(null);
 		}
 	};
+
+	const applyCapAttachments = (
+		capId: string,
+		attachments: AuditCapEvidenceAttachment[],
+	) => {
+		void mutate(
+			`/api/audit/documents/${documentId}`,
+			(current: { data?: Payload } | undefined) => {
+				if (!current?.data) return current;
+				return {
+					...current,
+					data: {
+						...current.data,
+						caps: current.data.caps.map((cap) =>
+							cap.$id === capId
+								? { ...cap, evidenceAttachments: attachments }
+								: cap,
+						),
+					},
+				};
+			},
+			{ revalidate: false },
+		);
+	};
+
+	const closingCap = closeCapId
+		? (caps.find((cap) => cap.$id === closeCapId) ?? null)
+		: null;
+	const closingFinding = closingCap
+		? (findings.find((finding) => finding.$id === closingCap.findingId) ?? null)
+		: null;
 
 	if (isLoading) {
 		return (
@@ -283,7 +317,7 @@ export function AuditFindingsReview({ documentId }: { documentId: string }) {
 							classification.period,
 							classification.reportNumber,
 						]
-							.filter(Boolean)
+							.filter((part): part is string => typeof part === "string" && part.length > 0)
 							.join(" · ")}
 					</p>
 				)}
@@ -421,13 +455,7 @@ export function AuditFindingsReview({ documentId }: { documentId: string }) {
 															}
 															onCloseCap={
 																findingCap
-																	? () => {
-																			setReason("");
-																			setReasonDialog({
-																				kind: "close_cap",
-																				id: findingCap.$id,
-																			});
-																		}
+																	? () => setCloseCapId(findingCap.$id)
 																	: undefined
 															}
 															onCreateCap={() =>
@@ -435,6 +463,13 @@ export function AuditFindingsReview({ documentId }: { documentId: string }) {
 																	createCapForFinding(finding.$id),
 																)
 															}
+															onEvidenceUploaded={(attachments) => {
+																if (!findingCap) return;
+																applyCapAttachments(
+																	findingCap.$id,
+																	attachments,
+																);
+															}}
 														/>
 													</div>
 												);
@@ -471,30 +506,19 @@ export function AuditFindingsReview({ documentId }: { documentId: string }) {
 					if (!next) setReasonDialog(null);
 				}}
 				size="form"
-				icon={
-					reasonDialog?.kind === "close_cap" ? (
-						<Check className="h-5 w-5" />
-					) : (
-						<AlertTriangle className="h-5 w-5" />
-					)
-				}
+				icon={<AlertTriangle className="h-5 w-5" />}
 				title={
 					reasonDialog?.kind === "dispute"
 						? "Dispute this finding"
-						: reasonDialog?.kind === "accept_risk"
-							? "Accept this risk"
-							: "Close corrective action"
+						: "Accept this risk"
 				}
-				description={
-					reasonDialog?.kind === "close_cap"
-						? "Add verification notes. High and critical items need this before close."
-						: "Write a short reason so the audit trail stays clear."
-				}
+				description="Write a short reason so the audit trail stays clear."
 				footer={
 					<>
 						<Button
 							type="button"
-							variant="outline"
+							variant="ghost"
+							className="h-[1.65rem] justify-center rounded-full px-3 py-1.5 text-slate-400 hover:bg-black/[.04] hover:text-slate-600"
 							onClick={() => setReasonDialog(null)}
 						>
 							Cancel
@@ -502,21 +526,9 @@ export function AuditFindingsReview({ documentId }: { documentId: string }) {
 						<Button
 							type="button"
 							className="btn-primary px-3 sm:px-4"
-							disabled={
-								busyId === reasonDialog?.id ||
-								(reasonDialog?.kind !== "close_cap" && !reason.trim())
-							}
+							disabled={busyId === reasonDialog?.id || !reason.trim()}
 							onClick={() => {
 								if (!reasonDialog) return;
-								if (reasonDialog.kind === "close_cap") {
-									void run(reasonDialog.id, () =>
-										patchCap(reasonDialog.id, {
-											status: "closed",
-											verificationEvidence: reason,
-										}),
-									).then(() => setReasonDialog(null));
-									return;
-								}
 								void run(reasonDialog.id, () =>
 									patchFinding(
 										reasonDialog.id,
@@ -536,14 +548,54 @@ export function AuditFindingsReview({ documentId }: { documentId: string }) {
 					<Textarea
 						value={reason}
 						onChange={(event) => setReason(event.target.value)}
-						placeholder={
-							reasonDialog?.kind === "close_cap"
-								? "What evidence shows this is fixed?"
-								: "Reason"
-						}
+						placeholder="Reason"
 					/>
 				</div>
 			</AppDialog>
+
+			<CloseCorrectiveActionDialog
+				open={Boolean(closingCap)}
+				onOpenChange={(next) => {
+					if (!next) setCloseCapId(null);
+				}}
+				cap={closingCap}
+				severity={closingFinding?.severityComputed ?? "medium"}
+				busy={busyId === closeCapId}
+				onAttachmentsChange={(attachments) => {
+					if (!closeCapId) return;
+					applyCapAttachments(closeCapId, attachments);
+				}}
+				onViewAllAttachments={() => {
+					const findingId = closingCap?.findingId;
+					if (!findingId) return;
+					const sectionId = `finding-cap-${findingId}`;
+					setOpenFindingIds((prev) => {
+						const next = new Set(prev);
+						next.add(findingId);
+						return next;
+					});
+					// Wait for close-dialog exit + details drawer paint, then scroll to CAP.
+					// Use window.document — `document` here is the audit file record.
+					window.requestAnimationFrame(() => {
+						window.setTimeout(() => {
+							const el = window.document.getElementById(sectionId);
+							if (!el) return;
+							el.scrollIntoView({ behavior: "smooth", block: "start" });
+							el.focus({ preventScroll: true });
+						}, 280);
+					});
+				}}
+				onSubmit={async (notes) => {
+					if (!closeCapId) return;
+					await run(closeCapId, () =>
+						patchCap(closeCapId, {
+							status: "closed",
+							verificationEvidence: notes,
+						}),
+					);
+					setCloseCapId(null);
+				}}
+			/>
 		</div>
 	);
 }

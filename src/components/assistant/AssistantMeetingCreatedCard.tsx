@@ -4,7 +4,6 @@ import { CalendarCheck2, CheckCircle2, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { AssistantMeetingCreated } from "@/components/assistant/assistantTypes";
 import { getAvatarColor } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import {
 	Tooltip,
 	TooltipContent,
@@ -217,15 +216,13 @@ export default function AssistantMeetingCreatedCard({
 
 				{onOpenCalendar ? (
 					<div className="mt-3 flex justify-end">
-						<Button
+						<button
 							type="button"
-							size="sm"
-							variant="outline"
-							className="primary-btn rounded-full px-3 cursor-pointer"
+							className="cursor-pointer text-xs font-semibold text-[#0f5384] hover:underline"
 							onClick={onOpenCalendar}
 						>
 							Open calendar
-						</Button>
+						</button>
 					</div>
 				) : null}
 			</div>

@@ -1,0 +1,49 @@
+---
+description: No btn-primary / primary-btn inside Ask CAALM response bubbles; use plain text Cancel / Confirm actions
+globs: src/components/assistant/AssistantChatThread.tsx,src/components/assistant/AssistantActionLifecycleCard.tsx,src/components/assistant/AssistantImplementationApplyCard.tsx,src/components/assistant/AssistantPendingActionCard.tsx,src/components/assistant/AssistantInputFormCard.tsx,src/components/assistant/AssistantMeetingCreatedCard.tsx,src/components/assistant/AssistantActionCompletedCard.tsx,src/components/assistant/AssistantFocusWindow.tsx
+alwaysApply: false
+---
+
+# Ask CAALM response bubbles: no gradient buttons
+
+Inside an **assistant response bubble** (lifecycle cards, apply cards, pending-action footers, input forms rendered in the thread), do **not** use the teal-to-navy gradient pill.
+
+## Forbidden in bubble content
+
+- `btn-primary`, `primary-btn`, `shad-active`, `shad-submit-btn`
+- Hand-rolled gradient fills that copy those classes
+
+## Use instead — Cancel / Confirm (and similar)
+
+Plain text actions. No icon required on these bubble footers.
+
+```tsx
+<button
+  type="button"
+  className="cursor-pointer text-xs font-medium text-slate-500 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+  onClick={onCancel}
+  disabled={disabled}
+>
+  Cancel
+</button>
+<button
+  type="button"
+  className="cursor-pointer text-xs font-semibold text-[#0f5384] hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+  onClick={onConfirm}
+  disabled={disabled}
+>
+  Confirm
+</button>
+```
+
+- Cancel: muted slate text
+- Confirm / Start / Apply / Retry: brand `#0f5384` text, optional underline on hover
+- Busy: keep the label; show a small spinner **only if needed**, never a gradient pill
+
+## Out of scope (gradient OK)
+
+- Sheet chrome outside the bubble: composer send, “New chat”, Focus chrome, sheet chips (`SHEET_CHIP_*`)
+
+## When touching a bubble file
+
+Search for `btn-primary`, `primary-btn`, `shad-active`, `shad-submit-btn` and remove every hit in bubble footers before finishing.

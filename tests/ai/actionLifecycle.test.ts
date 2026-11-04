@@ -32,9 +32,9 @@ describe("buildPendingActionLifecycle", () => {
 		expect(card.state).toBe("pending");
 		expect(card.actionLabel).toBe("Create task");
 		expect(card.entityTitle).toBe("Test task creation");
-		expect(card.fields.find((f) => f.label === "Assignee")?.assignee?.avatar).toBe(
-			"avatar-file-id",
-		);
+		expect(
+			card.fields.find((f) => f.label === "Assignee")?.assignee?.avatar,
+		).toBe("avatar-file-id");
 		expect(card.fields.find((f) => f.label === "Status")?.value).toBe("Open");
 		expect(card.footerNote).toBe("Nothing has changed yet.");
 	});
@@ -117,5 +117,55 @@ describe("buildFailedActionLifecycle", () => {
 		expect(card.state).toBe("failed");
 		expect(card.retrySafe).toBe(true);
 		expect(card.footerNote).toMatch(/Safe to retry/i);
+	});
+});
+
+describe("apply_audit_remediation lifecycle", () => {
+	const pending = {
+		id: "p-cap",
+		label: "Start corrective action",
+		preview: "Corrective action status: Open → In progress",
+		toolName: "apply_audit_remediation",
+		args: {
+			capId: "cap-1",
+			findingId: "find-1",
+			documentId: "doc-1",
+			nextStatus: "in_progress",
+			capTitle: "Correct SEFA mapping",
+			href: "/audits/upload/doc-1#finding-cap-find-1",
+			changes: [
+				{
+					label: "Corrective action status",
+					current: "Open",
+					required: "In progress",
+				},
+			],
+		},
+	};
+
+	it("shows Open → In progress before apply", () => {
+		const card = buildPendingActionLifecycle(pending);
+		expect(card.actionLabel).toBe("Start corrective action");
+		expect(card.entityTitle).toBe("Correct SEFA mapping");
+		expect(card.fields.find((f) => f.label === "Status")?.value).toBe(
+			"Open → In progress",
+		);
+		expect(card.entityHref).toBe("/audits/upload/doc-1#finding-cap-find-1");
+	});
+
+	it("never labels the completed action as closed", () => {
+		const card = buildCompletedActionLifecycle({
+			pending,
+			result: {
+				title: "Correct SEFA mapping",
+				status: "in_progress",
+				href: "/audits/upload/doc-1#finding-cap-find-1",
+			},
+		});
+		expect(card.state).toBe("completed");
+		expect(card.fields.find((f) => f.label === "Status")?.value).toBe(
+			"In progress",
+		);
+		expect(JSON.stringify(card)).not.toMatch(/closed/i);
 	});
 });

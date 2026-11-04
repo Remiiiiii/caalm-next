@@ -1,15 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import { logAuditUploadEvent } from "@/lib/audit-upload/audit-log";
-import { CAP_GENERATING_VERDICTS } from "@/lib/audit-upload/types";
-import { inferRootCause, slaDueAt } from "@/lib/audit-upload/caps";
+import { confirmAuditFinding } from "@/lib/audit-upload/confirm-finding";
 import { getAuditActor } from "@/lib/audit-upload/context";
-import {
-	createCap,
-	getFinding,
-	listCaps,
-	updateFinding,
-} from "@/lib/audit-upload/store";
+import { getFinding, updateFinding } from "@/lib/audit-upload/store";
 import { requirePermission } from "@/lib/rbac/middleware";
 
 export async function PATCH(
@@ -37,46 +31,21 @@ export async function PATCH(
 	};
 
 	if (body.action === "confirm") {
-		if (!finding.citationCheckPassed) {
+		const result = await confirmAuditFinding({
+			orgId: actor.orgId,
+			user: actor.user,
+			findingId: id,
+		});
+		if (!result.ok) {
 			return NextResponse.json(
-				{ error: "Quarantined findings cannot be confirmed until the quote is fixed." },
-				{ status: 400 },
+				{ error: result.error },
+				{ status: result.status },
 			);
 		}
-		const updated = await updateFinding(id, { status: "confirmed" });
-		const verdict = finding.reconciliation?.verdict;
-		if (verdict && CAP_GENERATING_VERDICTS.includes(verdict)) {
-			const existing = await listCaps({
-				orgId: actor.orgId,
-				documentId: finding.documentId,
-			});
-			const already = existing.some((cap) => cap.findingId === finding.$id);
-			if (!already) {
-				await createCap({
-					orgId: actor.orgId,
-					documentId: finding.documentId,
-					findingId: finding.$id,
-					title: `Correct: ${finding.title}`,
-					rootCause: inferRootCause(`${finding.title} ${finding.description}`),
-					assigneeId: null,
-					status: "open",
-					dueAt: slaDueAt(finding.severityComputed),
-					escalationTier: 0,
-					verificationEvidence: null,
-					closedAt: null,
-				});
-			}
-		}
-		await logAuditUploadEvent({
-			user: actor.user,
-			orgId: actor.orgId,
-			action: "update",
-			summary: `Confirmed finding ${finding.title}`,
-			targetId: id,
-			targetLabel: finding.title,
-			targetType: "audit_finding",
+		return NextResponse.json({
+			success: true,
+			data: { finding: result.finding, cap: result.cap },
 		});
-		return NextResponse.json({ success: true, data: { finding: updated } });
 	}
 
 	if (body.action === "dispute") {

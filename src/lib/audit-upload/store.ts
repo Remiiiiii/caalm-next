@@ -2,6 +2,7 @@ import { ID, Query } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import type {
+	AuditCapEvidenceAttachment,
 	AuditCapRecord,
 	AuditCapStatus,
 	AuditCitation,
@@ -148,6 +149,10 @@ export function mapFinding(row: Record<string, unknown>): AuditFindingRecord {
 }
 
 export function mapCap(row: Record<string, unknown>): AuditCapRecord {
+	const attachments = parseJson<AuditCapEvidenceAttachment[]>(
+		row.evidenceAttachments,
+		[],
+	);
 	return {
 		$id: String(row.$id),
 		orgId: String(row.orgId),
@@ -162,6 +167,7 @@ export function mapCap(row: Record<string, unknown>): AuditCapRecord {
 		verificationEvidence: row.verificationEvidence
 			? String(row.verificationEvidence)
 			: null,
+		evidenceAttachments: Array.isArray(attachments) ? attachments : [],
 		closedAt: row.closedAt ? String(row.closedAt) : null,
 		$createdAt: row.$createdAt ? String(row.$createdAt) : undefined,
 		$updatedAt: row.$updatedAt ? String(row.$updatedAt) : undefined,
@@ -401,6 +407,7 @@ export async function createCap(
 		dueAt: data.dueAt,
 		escalationTier: data.escalationTier,
 		verificationEvidence: data.verificationEvidence,
+		evidenceAttachments: stringify(data.evidenceAttachments ?? []),
 		closedAt: data.closedAt,
 	});
 	return mapCap(created as unknown as Record<string, unknown>);
@@ -450,13 +457,18 @@ export async function updateCap(
 			| "dueAt"
 			| "escalationTier"
 			| "verificationEvidence"
+			| "evidenceAttachments"
 			| "closedAt"
 			| "rootCause"
 		>
 	>,
 ): Promise<AuditCapRecord> {
 	const { databases } = await createAdminClient();
-	const updated = await databases.updateDocument(db(), capsId(), id, patch);
+	const payload: Record<string, unknown> = { ...patch };
+	if (patch.evidenceAttachments !== undefined) {
+		payload.evidenceAttachments = stringify(patch.evidenceAttachments);
+	}
+	const updated = await databases.updateDocument(db(), capsId(), id, payload);
 	return mapCap(updated as unknown as Record<string, unknown>);
 }
 

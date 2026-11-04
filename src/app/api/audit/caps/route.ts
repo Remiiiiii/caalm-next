@@ -56,6 +56,7 @@ export async function POST(request: NextRequest) {
 		dueAt: slaDueAt(finding.severityComputed),
 		escalationTier: 0,
 		verificationEvidence: null,
+		evidenceAttachments: [],
 		closedAt: null,
 	});
 

@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { mutate as swrMutate } from "swr";
 import type {
 	AssistantChatMessage,
 	AssistantConversationSummary,
@@ -11,8 +12,15 @@ import type {
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { buildPendingActionLifecycle } from "@/lib/assistant/actionLifecycle";
+import {
+	auditRemediationUserPrompt,
+	type AuditRemediationLaunchContext,
+} from "@/lib/assistant/audit-remediation-context";
+import type { AssistantResearchStep } from "@/lib/assistant/assistant-research-steps";
+import { buildApplyAuditRemediationSteps } from "@/lib/assistant/apply-audit-remediation-steps";
 import type { AssistantCalendarMutation } from "@/lib/assistant/executeTypes";
 import { readJsonResponse } from "@/lib/assistant/readJsonResponse";
+import { linkRemediationChat } from "@/lib/assistant/remediation-chat-link";
 import {
 	refreshCalendarCache,
 	revalidateCalendarMonth,
@@ -20,6 +28,15 @@ import {
 
 const CONVERSATION_STORAGE_KEY = "caalm_assistant_conversation_id";
 const HISTORY_PAGE_SIZE = 30;
+
+const REMEDIATION_RESEARCH_PENDING: AssistantResearchStep[] = [
+	{
+		id: "research-start",
+		label: "Researching your organization data…",
+		kind: "search",
+		status: "active",
+	},
+];
 
 function parseHistoryPayload(json: {
 	data?: {
@@ -81,6 +98,7 @@ function mapStoredMessages(
 		let actionLifecycle: AssistantChatMessage["actionLifecycle"];
 		let activityFeed: AssistantChatMessage["activityFeed"];
 		let inputForm: AssistantChatMessage["inputForm"];
+		let researchSteps: AssistantChatMessage["researchSteps"];
 		if (m.metadataJson) {
 			try {
 				const meta = JSON.parse(m.metadataJson) as {
@@ -90,6 +108,7 @@ function mapStoredMessages(
 					actionLifecycle?: AssistantChatMessage["actionLifecycle"];
 					activityFeed?: AssistantChatMessage["activityFeed"];
 					inputForm?: AssistantChatMessage["inputForm"];
+					researchSteps?: AssistantChatMessage["researchSteps"];
 				};
 				suggestions = meta.suggestions;
 				meetingCreated = meta.meetingCreated;
@@ -97,6 +116,7 @@ function mapStoredMessages(
 				actionLifecycle = meta.actionLifecycle;
 				activityFeed = meta.activityFeed;
 				inputForm = meta.inputForm;
+				researchSteps = meta.researchSteps;
 			} catch {
 				suggestions = undefined;
 				meetingCreated = undefined;
@@ -104,6 +124,7 @@ function mapStoredMessages(
 				actionLifecycle = undefined;
 				activityFeed = undefined;
 				inputForm = undefined;
+				researchSteps = undefined;
 			}
 		}
 		return {
@@ -117,12 +138,15 @@ function mapStoredMessages(
 			actionLifecycle,
 			activityFeed,
 			inputForm,
+			researchSteps,
 			createdAt: m.$createdAt,
 		};
 	});
 }
 
-export function useCaalmAssistant(): UseCaalmAssistantReturn {
+export function useCaalmAssistant(options?: {
+	enabled?: boolean;
+}): UseCaalmAssistantReturn {
 	const pathname = usePathname();
 	const router = useRouter();
 	const { toast } = useToast();
@@ -154,15 +178,38 @@ export function useCaalmAssistant(): UseCaalmAssistantReturn {
 	const [pendingAction, setPendingAction] =
 		useState<AssistantPendingAction | null>(null);
 	const [isSending, setIsSending] = useState(false);
+	const isSendingRef = useRef(false);
+	const setSending = useCallback((next: boolean) => {
+		isSendingRef.current = next;
+		setIsSending(next);
+	}, []);
 	const [historyLoading, setHistoryLoading] = useState(false);
 	const [historyLoadingMore, setHistoryLoadingMore] = useState(false);
 	const [historyNextCursor, setHistoryNextCursor] = useState<string | null>(
 		null,
 	);
 	const [conversationLoading, setConversationLoading] = useState(false);
+	const [pendingResearchSteps, setPendingResearchSteps] = useState<
+		AssistantResearchStep[] | null
+	>(null);
+	const [researchPlaybackMessageId, setResearchPlaybackMessageId] = useState<
+		string | null
+	>(null);
+	const [applyProgressSteps, setApplyProgressSteps] = useState<
+		AssistantResearchStep[] | null
+	>(null);
+
+	const enabled = options?.enabled ?? true;
+	const enabledRef = useRef(enabled);
+	enabledRef.current = enabled;
 
 	const conversationIdRef = useRef<string | null>(null);
 	const resumeInFlightRef = useRef(false);
+	const sessionEpochRef = useRef(0);
+	const messagesRef = useRef<AssistantChatMessage[]>([]);
+	const conversationStatusRef = useRef<"active" | "closed" | null>(null);
+	messagesRef.current = messages;
+	conversationStatusRef.current = conversationStatus;
 
 	const setConversationId = useCallback((id: string | null) => {
 		conversationIdRef.current = id;
@@ -171,6 +218,7 @@ export function useCaalmAssistant(): UseCaalmAssistantReturn {
 	}, []);
 
 	const loadHistory = useCallback(async () => {
+		if (!enabledRef.current) return;
 		setHistoryLoading(true);
 		try {
 			const res = await fetch(
@@ -219,6 +267,7 @@ export function useCaalmAssistant(): UseCaalmAssistantReturn {
 
 	const selectConversation = useCallback(
 		async (id: string) => {
+			const epoch = sessionEpochRef.current;
 			setConversationLoading(true);
 			setMessages([]);
 			setPendingAction(null);
@@ -226,12 +275,17 @@ export function useCaalmAssistant(): UseCaalmAssistantReturn {
 			try {
 				const res = await fetch(`/api/assistant/conversations/${id}`);
 				const json = await res.json();
+				if (sessionEpochRef.current !== epoch) return;
 				if (!res.ok) throw new Error(json.error || "Not found");
 				const status =
 					json.data?.conversation?.status === "closed" ? "closed" : "active";
 				setConversationStatus(status);
-				setMessages(mapStoredMessages(json.data?.messages ?? []));
+				conversationStatusRef.current = status;
+				const mapped = mapStoredMessages(json.data?.messages ?? []);
+				messagesRef.current = mapped;
+				setMessages(mapped);
 			} catch (e) {
+				if (sessionEpochRef.current !== epoch) return;
 				toast({
 					title: "Could not open conversation",
 					description: e instanceof Error ? e.message : "Unknown error",
@@ -245,20 +299,26 @@ export function useCaalmAssistant(): UseCaalmAssistantReturn {
 	);
 
 	const resumeActiveSession = useCallback(async () => {
+		if (!enabledRef.current) return;
 		// Keep the in-memory session when the sheet is only hidden (not remounted).
 		if (conversationIdRef.current) return;
 		if (resumeInFlightRef.current) return;
 		resumeInFlightRef.current = true;
+		const epoch = sessionEpochRef.current;
 		try {
 			const stored = readStoredConversationId();
 			if (stored) {
 				const res = await fetch(`/api/assistant/conversations/${stored}`);
 				const json = await res.json();
+				if (sessionEpochRef.current !== epoch) return;
 				if (res.ok && json.data?.conversation?.status !== "closed") {
 					setConversationId(stored);
 					setConversationStatus("active");
+					conversationStatusRef.current = "active";
 					setPendingAction(null);
-					setMessages(mapStoredMessages(json.data?.messages ?? []));
+					const mapped = mapStoredMessages(json.data?.messages ?? []);
+					messagesRef.current = mapped;
+					setMessages(mapped);
 					return;
 				}
 				writeStoredConversationId(null);
@@ -268,6 +328,7 @@ export function useCaalmAssistant(): UseCaalmAssistantReturn {
 				`/api/assistant/conversations?limit=${HISTORY_PAGE_SIZE}`,
 			);
 			const listJson = await listRes.json();
+			if (sessionEpochRef.current !== epoch) return;
 			if (!listRes.ok) return;
 			const page = parseHistoryPayload(listJson);
 			setConversations(page.conversations);
@@ -286,10 +347,14 @@ export function useCaalmAssistant(): UseCaalmAssistantReturn {
 
 	// Restore session after remount (navigation / layout refresh).
 	useEffect(() => {
+		if (!enabled) return;
 		void resumeActiveSession();
-	}, [resumeActiveSession]);
+	}, [enabled, resumeActiveSession]);
 
 	const startNewChat = useCallback(async () => {
+		if (!enabledRef.current) return false;
+		sessionEpochRef.current += 1;
+		const epoch = sessionEpochRef.current;
 		try {
 			// Server closes any other active sessions when creating this one
 			const res = await fetch("/api/assistant/conversations", {
@@ -297,39 +362,75 @@ export function useCaalmAssistant(): UseCaalmAssistantReturn {
 			});
 			const json = await res.json();
 			if (!res.ok) throw new Error(json.error || "Failed to create chat");
+			if (sessionEpochRef.current !== epoch) return false;
 			const conv = json.data?.conversation;
 			setConversationLoading(false);
 			setConversationId(conv?.$id ?? null);
 			setConversationStatus("active");
+			conversationStatusRef.current = "active";
+			messagesRef.current = [];
 			setMessages([]);
 			setPendingAction(null);
 			void loadHistory();
+			return true;
 		} catch (e) {
 			toast({
 				title: "Could not start chat",
 				description: e instanceof Error ? e.message : "Unknown error",
 				variant: "destructive",
 			});
+			return false;
 		}
 	}, [loadHistory, setConversationId, toast]);
 
 	const sendMessage = useCallback(
-		async (text: string) => {
+		async (
+			text: string,
+			sendOptions?: {
+				launchContext?: AuditRemediationLaunchContext;
+				contextRoutes?: string[];
+				/** Allow chaining after confirm_finding while the execute call is still marked busy. */
+				bypassBusy?: boolean;
+				/** Continue research without a second user bubble (UI + stored history). */
+				suppressUserBubble?: boolean;
+			},
+		) => {
 			const trimmed = text.trim();
-			if (!trimmed || isSending || conversationStatus === "closed") return;
+			if (
+				!enabledRef.current ||
+				!trimmed ||
+				(isSendingRef.current && !sendOptions?.bypassBusy) ||
+				conversationStatusRef.current === "closed"
+			) {
+				return null;
+			}
 
-			const userMsg: AssistantChatMessage = {
-				id: `local-${Date.now()}`,
-				role: "user",
-				content: trimmed,
-				createdAt: new Date().toISOString(),
-			};
-			setMessages((prev) => [...prev, userMsg]);
-			setIsSending(true);
+			const suppressUser = Boolean(sendOptions?.suppressUserBubble);
+			const userMsg: AssistantChatMessage | null = suppressUser
+				? null
+				: {
+						id: `local-${Date.now()}`,
+						role: "user",
+						content: trimmed,
+						createdAt: new Date().toISOString(),
+					};
+			const historyBase = messagesRef.current;
+			if (userMsg) {
+				messagesRef.current = [...historyBase, userMsg];
+				setMessages(messagesRef.current);
+			}
+			setSending(true);
 			setPendingAction(null);
+			if (sendOptions?.launchContext) {
+				setPendingResearchSteps(REMEDIATION_RESEARCH_PENDING);
+			} else {
+				setPendingResearchSteps(null);
+			}
 
 			try {
-				const history = [...messages, userMsg].map((m) => ({
+				const history = (
+					userMsg ? [...historyBase, userMsg] : historyBase
+				).map((m) => ({
 					role: m.role,
 					content: m.content,
 				}));
@@ -342,6 +443,13 @@ export function useCaalmAssistant(): UseCaalmAssistantReturn {
 						message: trimmed,
 						pathname,
 						history,
+						...(suppressUser ? { suppressUserMessage: true } : {}),
+						...(sendOptions?.launchContext
+							? { launchContext: sendOptions.launchContext }
+							: {}),
+						...(sendOptions?.contextRoutes?.length
+							? { contextRoutes: sendOptions.contextRoutes }
+							: {}),
 					}),
 				});
 				const parsed = await readJsonResponse<{
@@ -355,6 +463,7 @@ export function useCaalmAssistant(): UseCaalmAssistantReturn {
 						clientAction?: { type: "navigate"; href: string };
 						activityFeed?: AssistantChatMessage["activityFeed"];
 						inputForm?: AssistantChatMessage["inputForm"];
+						researchSteps?: AssistantChatMessage["researchSteps"];
 					};
 				}>(res);
 				if (!parsed.ok || !parsed.data?.data) {
@@ -365,12 +474,21 @@ export function useCaalmAssistant(): UseCaalmAssistantReturn {
 				if (payload.conversationId) {
 					setConversationId(payload.conversationId);
 					setConversationStatus("active");
+					conversationStatusRef.current = "active";
+					const launchFindingId = sendOptions?.launchContext?.findingId;
+					if (launchFindingId) {
+						linkRemediationChat(launchFindingId, payload.conversationId);
+					}
 				}
 
+				const hideAnswer =
+					payload.pendingAction?.toolName === "create_task" ||
+					payload.pendingAction?.toolName === "create_task_for_contract" ||
+					payload.pendingAction?.toolName === "create_calendar_event";
 				const assistantMsg: AssistantChatMessage = {
 					id: `local-a-${Date.now()}`,
 					role: "assistant",
-					content: payload.pendingAction ? "" : (payload.answer ?? ""),
+					content: hideAnswer ? "" : (payload.answer ?? ""),
 					sources: payload.sources,
 					suggestions: payload.suggestions,
 					pendingAction: payload.pendingAction,
@@ -379,9 +497,15 @@ export function useCaalmAssistant(): UseCaalmAssistantReturn {
 						: undefined,
 					activityFeed: payload.activityFeed,
 					inputForm: payload.inputForm,
+					researchSteps: payload.researchSteps,
 					createdAt: new Date().toISOString(),
 				};
-				setMessages((prev) => [...prev, assistantMsg]);
+				setPendingResearchSteps(null);
+				if (payload.researchSteps?.length) {
+					setResearchPlaybackMessageId(assistantMsg.id);
+				}
+				messagesRef.current = [...messagesRef.current, assistantMsg];
+				setMessages(messagesRef.current);
 				if (payload.pendingAction) {
 					setPendingAction(payload.pendingAction);
 				}
@@ -389,34 +513,42 @@ export function useCaalmAssistant(): UseCaalmAssistantReturn {
 					router.push(payload.clientAction.href);
 				}
 				void loadHistory();
+				return payload.conversationId ?? conversationIdRef.current;
 			} catch (e) {
-				setMessages((prev) => prev.filter((m) => m.id !== userMsg.id));
+				setPendingResearchSteps(null);
+				if (userMsg) {
+					messagesRef.current = messagesRef.current.filter(
+						(m) => m.id !== userMsg.id,
+					);
+					setMessages(messagesRef.current);
+				}
 				toast({
 					title: "Message failed",
 					description: e instanceof Error ? e.message : "Unknown error",
 					variant: "destructive",
 				});
+				return null;
 			} finally {
-				setIsSending(false);
+				setSending(false);
 			}
 		},
-		[
-			conversationStatus,
-			isSending,
-			loadHistory,
-			messages,
-			pathname,
-			router,
-			setConversationId,
-			toast,
-		],
+		[loadHistory, pathname, router, setConversationId, setSending, toast],
 	);
 
 	const confirmAction = useCallback(
 		async (argsPatch?: Record<string, unknown>) => {
 			if (!pendingAction) return;
 			const pendingSnapshot = pendingAction;
-			setIsSending(true);
+			setSending(true);
+			if (pendingSnapshot.toolName === "apply_audit_remediation") {
+				const capTitle =
+					typeof pendingSnapshot.args?.capTitle === "string"
+						? pendingSnapshot.args.capTitle
+						: undefined;
+				setApplyProgressSteps(buildApplyAuditRemediationSteps(capTitle));
+			} else {
+				setApplyProgressSteps(null);
+			}
 			try {
 				const res = await fetch("/api/assistant/execute", {
 					method: "POST",
@@ -432,6 +564,7 @@ export function useCaalmAssistant(): UseCaalmAssistantReturn {
 					error?: string;
 					data?: {
 						summary?: string;
+						result?: { result?: Record<string, unknown> };
 						meetingCreated?: AssistantChatMessage["meetingCreated"];
 						actionCompleted?: AssistantChatMessage["actionCompleted"];
 						actionLifecycle?: AssistantChatMessage["actionLifecycle"];
@@ -447,6 +580,11 @@ export function useCaalmAssistant(): UseCaalmAssistantReturn {
 				const actionCompleted = jsonData.actionCompleted;
 				const actionLifecycle = jsonData.actionLifecycle;
 				const calendarMutation = jsonData.calendarMutation;
+				const toolPayload =
+					jsonData.result?.result &&
+					typeof jsonData.result.result === "object"
+						? jsonData.result.result
+						: null;
 				const failed = actionLifecycle?.state === "failed";
 
 				// Transition the same message card — do not add a second result bubble.
@@ -485,7 +623,9 @@ export function useCaalmAssistant(): UseCaalmAssistantReturn {
 										? "I couldn't finish that one."
 										: meetingCreated
 											? "Your meeting is on the calendar."
-											: "",
+											: pendingSnapshot.toolName === "apply_audit_remediation"
+												? m.content
+												: "",
 									pendingAction: failed ? pendingSnapshot : undefined,
 									meetingCreated: meetingCreated ?? m.meetingCreated,
 									actionCompleted: actionCompleted ?? m.actionCompleted,
@@ -566,6 +706,54 @@ export function useCaalmAssistant(): UseCaalmAssistantReturn {
 				if (!failed) {
 					void loadHistory();
 				}
+
+				// After confirm-from-assistant, refresh the audit page and continue Show me how.
+				if (
+					!failed &&
+					pendingSnapshot.toolName === "confirm_finding" &&
+					toolPayload?.continueRemediation === true
+				) {
+					const documentId = String(
+						toolPayload.documentId ??
+							pendingSnapshot.args?.documentId ??
+							"",
+					);
+					const findingId = String(
+						toolPayload.findingId ?? pendingSnapshot.args?.findingId ?? "",
+					);
+					const findingCode =
+						typeof toolPayload.findingCode === "string"
+							? toolPayload.findingCode
+							: typeof pendingSnapshot.args?.findingCode === "string"
+								? pendingSnapshot.args.findingCode
+								: null;
+					const findingTitle = String(
+						toolPayload.title ?? pendingSnapshot.args?.title ?? "finding",
+					);
+					if (documentId) {
+						void swrMutate(`/api/audit/documents/${documentId}`);
+					}
+					if (documentId && findingId) {
+						const existingConv = conversationIdRef.current;
+						if (existingConv) {
+							linkRemediationChat(findingId, existingConv);
+						}
+						setApplyProgressSteps(null);
+						await sendMessage(
+							auditRemediationUserPrompt(findingCode, findingTitle),
+							{
+								bypassBusy: true,
+								suppressUserBubble: true,
+								launchContext: {
+									kind: "audit_remediation",
+									findingId,
+									documentId,
+								},
+							},
+						);
+						return;
+					}
+				}
 			} catch (e) {
 				const message = e instanceof Error ? e.message : "Unknown error";
 				setMessages((prev) =>
@@ -597,10 +785,11 @@ export function useCaalmAssistant(): UseCaalmAssistantReturn {
 					variant: "destructive",
 				});
 			} finally {
-				setIsSending(false);
+				setApplyProgressSteps(null);
+				setSending(false);
 			}
 		},
-		[loadHistory, pathname, pendingAction, toast, user],
+		[loadHistory, pathname, pendingAction, sendMessage, setSending, toast, user],
 	);
 
 	const cancelPendingAction = useCallback(() => {
@@ -677,6 +866,10 @@ export function useCaalmAssistant(): UseCaalmAssistantReturn {
 		[user],
 	);
 
+	const completeResearchPlayback = useCallback(() => {
+		setResearchPlaybackMessageId(null);
+	}, []);
+
 	return {
 		conversationId,
 		conversationStatus,
@@ -697,5 +890,9 @@ export function useCaalmAssistant(): UseCaalmAssistantReturn {
 		confirmAction,
 		cancelPendingAction,
 		patchPendingArgs,
+		pendingResearchSteps,
+		researchPlaybackMessageId,
+		completeResearchPlayback,
+		applyProgressSteps,
 	};
 }

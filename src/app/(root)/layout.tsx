@@ -17,6 +17,7 @@ import { LoadingSpinner } from "@/components/ui/loading";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import type { UserRole } from "@/constants/rbac";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { CaalmAssistantProvider } from "@/contexts/CaalmAssistantContext";
 import { ImpersonationProvider } from "@/contexts/ImpersonationContext";
 import { OrganizationProvider } from "@/contexts/OrganizationContext";
 import { SidebarProvider } from "@/contexts/SidebarContext";
@@ -233,7 +234,9 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 			<OrganizationProvider>
 				<StepUpProvider>
 					<ImpersonationProvider>
-						<LayoutContent>{children}</LayoutContent>
+						<CaalmAssistantProvider>
+							<LayoutContent>{children}</LayoutContent>
+						</CaalmAssistantProvider>
 					</ImpersonationProvider>
 				</StepUpProvider>
 			</OrganizationProvider>

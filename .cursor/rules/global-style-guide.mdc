@@ -660,6 +660,12 @@ Header layout (Select Contract Type is the reference): optional Back row (Back o
 
 ---
 
+## Ask CAALM response bubbles (hard rule)
+
+**Never** put `btn-primary` / `primary-btn` (or twin gradient pills) inside an assistant **response bubble**. Cancel / Confirm (and Start / Apply / Retry in the same footers) are **plain text** actions — muted Cancel, brand `#0f5384` Confirm. Full rule: `.cursor/rules/assistant-response-bubble-buttons.mdc`.
+
+Composer send and other sheet chrome outside the bubble may still use `btn-primary`.
+
 ## Sheet chips (suggestion / selectable pills)
 
 **ALWAYS** use `SHEET_CHIP_IDLE` / `SHEET_CHIP_SELECTED` from `@/components/ui/sheet-chip` for pill-shaped buttons inside assistant and panel sheets — quick prompts, "Ask Next" suggestions, multi-select reason/filter chips. Do not hand-roll the hover classes inline.
