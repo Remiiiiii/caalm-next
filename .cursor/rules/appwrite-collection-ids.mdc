@@ -1,35 +1,58 @@
 ---
-description: Appwrite collection/table and bucket IDs must be alphanumeric, not human-readable strings
-globs: "{src/lib/appwrite,src/lib/database,scripts}/**/*,.env.example,.env.demo.example"
+description: HARD RULE — Appwrite table/collection/bucket $id must be alphanumeric; never snake_case names as IDs
+globs:
+  - src/lib/appwrite/**
+  - src/lib/database/**
+  - scripts/**
+  - .env.example
+  - .env.demo.example
+  - .cursor/rules/appwrite-collection-ids.mdc
 alwaysApply: false
 ---
 
-# Appwrite collection IDs
+# Appwrite collection / table / bucket IDs (HARD RULE)
 
-When creating Appwrite database collections (tables) or storage buckets, the resource `$id` must be an **alphanumeric value** (Appwrite-style ID), not a human-readable string name.
+**Enforce before every create.** The resource `$id` must be **alphanumeric only** (`^[a-zA-Z0-9]{1,36}$`). The human label goes in **`name`**, never in `$id`.
+
+Underscores, hyphens, and dots in `$id` are **forbidden** for new CAALM tables/collections/buckets (even if Appwrite accepts them).
 
 ## Required
 
-- Use IDs like `69a3f91200a8c4d1e2f0` or `ID.unique()` output (a-z, A-Z, 0-9 only; max 36 chars).
-- Put the human-readable label in the resource **name** field (e.g. name `tickets`, id `69b8a201001f4e8c2a01`).
-- Store the alphanumeric ID in `.env.local` (and `appwriteConfig` fallback) — never hardcode snake_case names as production IDs.
+- `$id` like `69a3f91200a8c4d1e2f0` or `ID.unique()` (a-z, A-Z, 0-9 only; max 36 chars).
+- `name` holds the readable label (e.g. name `pto_roadmap_sections`, id `69f3c201001f4e8c2e01`).
+- Real alphanumeric ID → `.env.local` / `.env.demo.local` + `appwriteConfig` **fallback** (same ID).
+- `.env.example` / `.env.demo.example` → snake_case **placeholder** only (`pto_roadmap_sections_collection_id`), never a live `$id` and never the table name reused as the env value.
 
-## Forbidden
+## Forbidden (stop and rewrite)
 
 ```text
 ❌ table_id / collection_id = "tickets"
 ❌ table_id = "org_units"
+❌ table_id = "pto_roadmap_sections"
 ❌ bucket_id = "ticket_attachments"
+❌ config fallback = "pto_roadmap_tasks"   // snake_case name as ID
+❌ .env.example value = "pto_roadmap_sections"  // looks like a live id/name
 ```
 
 ```text
-✅ table_id = "69b8a201001f4e8c2a01"  (name: tickets)
+✅ table_id = "69f3c201001f4e8c2e01"  (name: pto_roadmap_sections)
 ✅ bucket_id = "69b8a204004c7b1f5d04"  (name: ticket_attachments)
+✅ config fallback = "69f3c201001f4e8c2e01"
+✅ .env.example = pto_roadmap_sections_collection_id
 ```
 
-## Checklist when adding a collection
+## Agent checklist (do not skip)
 
-1. Create with an alphanumeric custom ID (or `ID.unique()`).
+1. **Before** `tables_db_create_table` / collection / bucket create: confirm `$id` matches `^[a-zA-Z0-9]{1,36}$`. If it has `_`, `-`, or `.`, **abort** and pick a new alphanumeric id.
 2. Set `name` to the readable label.
-3. Put the real alphanumeric ID only in `.env.local` (and demo’s `.env.demo.local` when needed). In `.env.example` / `.env.demo.example`, add a snake_case placeholder only — see `env-example-placeholders.mdc`.
-4. Update `src/lib/appwrite/config.ts` fallback to that same alphanumeric ID (not the snake_case name).
+3. Put the real id only in gitignored env + `appwriteConfig` fallback.
+4. Example env files: placeholders only (`env-example-placeholders.mdc`).
+5. Schema change → prod first, then `node scripts/sync-demo-database-schema.mjs --apply` (demo keeps the **same** alphanumeric `$id`).
+
+## Known exception (do not copy)
+
+- Demo `push_subscriptions` may use a name-based id while prod uses a hex id; sync maps by **table name**. Do **not** use that pattern for new tables.
+
+## In-memory reminder
+
+When planning or creating Appwrite resources in this repo: `$id` = opaque alphanumeric; `name` = label; env example = placeholder. Never ship a snake_case string as `$id` or as the config fallback.

@@ -87,6 +87,7 @@ import { useCombinedExpiryModal } from "@/hooks/useCombinedExpiryModal";
 import { useDashboardWidgetBundle } from "@/hooks/useDashboardWidgetBundle";
 import { useUnifiedDashboardData } from "@/hooks/useUnifiedDashboardData";
 import { useUpdateExpiredOnce } from "@/hooks/useUpdateExpiredOnce";
+import { isDemoMode } from "@/lib/config/demo-mode";
 import { useCtaButtonClass } from "@/lib/ui/use-cta-button-class";
 import { cn } from "@/lib/utils";
 import type { UIFileDoc } from "@/types/files";
@@ -272,17 +273,20 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 	const accountability = slaMetricsRes?.metrics?.accountability;
 	const expiration = slaMetricsRes?.metrics?.expiration;
 
-	// Combined contracts + licenses expiry modal (0–30 days)
+	// Combined expiry modal: trigger 0–30d; queue shows −30d…+90d
 	const {
 		itemsToShow,
 		isModalOpen,
 		closeModal,
-		triggerTestModal,
+		triggerDevTestModal,
+		triggerDemoTestModal,
 		openForEntityId,
 		markItemDismissed,
 		refreshLicenses,
 		shouldPlaySpeech,
 	} = useCombinedExpiryModal(contractsFromApi || []);
+	const showDevExpiryTest = process.env.NODE_ENV === "development";
+	const showDemoExpiryTest = isDemoMode();
 
 	const router = useRouter();
 	const searchParams = useSearchParams();
@@ -803,9 +807,9 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 								</div>
 
 								<div className="flex flex-col items-end gap-2">
-									{process.env.NODE_ENV === "development" && (
+									{showDevExpiryTest && (
 										<Button
-											onClick={triggerTestModal}
+											onClick={triggerDevTestModal}
 											variant="outline"
 											size="sm"
 											className={cn(
@@ -815,6 +819,23 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 										>
 											<span className="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-orange">
 												Dev
+											</span>
+											<Pencil className="h-3.5 w-3.5" />
+											Test expiry modal
+										</Button>
+									)}
+									{showDemoExpiryTest && (
+										<Button
+											onClick={triggerDemoTestModal}
+											variant="outline"
+											size="sm"
+											className={cn(
+												"h-9 gap-2 border border-dashed border-blue/40 bg-blue/10",
+												"px-3 text-xs font-medium text-blue hover:bg-blue/15 hover:border-blue/50",
+											)}
+										>
+											<span className="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-blue">
+												Demo
 											</span>
 											<Pencil className="h-3.5 w-3.5" />
 											Test expiry modal

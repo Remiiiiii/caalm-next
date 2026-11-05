@@ -52,6 +52,7 @@ import {
 } from "./locking";
 import { npoCatalogDisplayTitleForPr } from "./nonprofit/npo-pr-batches";
 import { prdCatalogDisplayTitleForPr } from "./platform-readiness/prd-pr-batches";
+import { ptoCatalogDisplayTitleForPr } from "./production-tools/pto-pr-batches";
 import {
 	appendStatusLog,
 	createTestRun,
@@ -119,6 +120,10 @@ function catalogDisplayTitleForPr(
 		const batchTitle = prdCatalogDisplayTitleForPr(prNumber);
 		if (batchTitle) return batchTitle;
 	}
+	if (key === "pto") {
+		const batchTitle = ptoCatalogDisplayTitleForPr(prNumber);
+		if (batchTitle) return batchTitle;
+	}
 	return catalogDisplayTitleForPrIn(catalogOf(key), prNumber);
 }
 
@@ -129,7 +134,7 @@ function resolvedCatalogPrTitle(
 	catalogKey: RoadmapCatalogKey,
 ): string {
 	const fallback = catalogDisplayTitleForPr(prNumber, catalogKey);
-	if (catalogKey === "npo" || catalogKey === "prd") {
+	if (catalogKey === "npo" || catalogKey === "prd" || catalogKey === "pto") {
 		return fallback || liveTitle?.trim() || "";
 	}
 	return liveTitle?.trim() || fallback;

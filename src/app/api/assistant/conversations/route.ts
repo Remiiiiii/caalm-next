@@ -5,6 +5,7 @@ import {
 } from "@/lib/assistant/auth";
 import {
 	createConversation,
+	getConversationByRemediationFinding,
 	listConversations,
 } from "@/lib/assistant/conversationStore";
 
@@ -13,6 +14,29 @@ export async function GET(request: NextRequest) {
 	if (isAssistantAuthError(auth)) return auth;
 
 	const { searchParams } = request.nextUrl;
+	const findingId = searchParams.get("findingId")?.trim();
+	if (findingId) {
+		const conversation = await getConversationByRemediationFinding({
+			userId: auth.user.$id,
+			orgId: auth.orgId,
+			findingId,
+		});
+		if (!conversation) {
+			return NextResponse.json({
+				success: true,
+				data: { conversationId: null, hasPlan: false, status: null },
+			});
+		}
+		return NextResponse.json({
+			success: true,
+			data: {
+				conversationId: conversation.$id,
+				hasPlan: conversation.remediationHasPlan === true,
+				status: conversation.status,
+			},
+		});
+	}
+
 	const limit = Math.min(Number(searchParams.get("limit")) || 30, 50);
 	const cursor = searchParams.get("cursor") || undefined;
 

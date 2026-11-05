@@ -1,8 +1,8 @@
 "use client";
 
 import { Loader2, MoveUp } from "lucide-react";
-import { useEffect, useRef } from "react";
 import { Textarea } from "@/components/ui/textarea";
+import { useComposerAutoGrow } from "@/hooks/useComposerAutoGrow";
 import { cn } from "@/lib/utils";
 
 export default function AssistantSheetComposer({
@@ -18,15 +18,7 @@ export default function AssistantSheetComposer({
 	disabled?: boolean;
 	sending?: boolean;
 }) {
-	const ref = useRef<HTMLTextAreaElement>(null);
-
-	useEffect(() => {
-		const el = ref.current;
-		if (!el) return;
-		el.style.height = "auto";
-		const next = Math.min(el.scrollHeight, 192);
-		el.style.height = `${Math.max(80, next)}px`;
-	}, [value]);
+	const ref = useComposerAutoGrow(value, 80, 192);
 
 	return (
 		<div className="relative w-full">
@@ -38,7 +30,7 @@ export default function AssistantSheetComposer({
 				rows={1}
 				disabled={disabled}
 				className={cn(
-					"max-h-48 min-h-20 w-full resize-none overflow-y-auto rounded-xl bg-white text-[13px] text-slate-700 shadow-sm",
+					"max-h-48 min-h-20 w-full resize-none overflow-hidden rounded-xl bg-white text-[13px] text-slate-700 shadow-sm",
 					"border-[0.25px] border-slate-300! px-4! py-2.5! pe-14! pb-11!",
 					"placeholder:text-slate-400 focus-visible:border-[#078FAB]! focus-visible:ring-[#078FAB]",
 				)}

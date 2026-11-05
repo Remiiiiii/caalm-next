@@ -120,6 +120,10 @@ How to correct: ${howToCorrect}
 Condition: ${ctx.conditionText}
 Severity: ${ctx.severity.replaceAll("_", " ")}.
 ${capLine}
+IDs for tool calls (use these exact values — never invent or guess an id):
+- findingId: ${ctx.findingId}
+- documentId: ${ctx.documentId}
+- capId: ${ctx.capId ?? "none"}
 Do not give UI navigation plans or numbered “how to use CAALM” steps — Show me how uses live org-data research instead.
-When the user asks to open Mark closed, paste a verification note into the close dialog, or mark closed with text you already provided, call prepare_close_corrective_action with the corrective action ids and verification note — never say you cannot click or interact with the page.`;
+When the user asks to open Mark closed, paste a verification note into the close dialog, or mark closed with text you already provided, call prepare_close_corrective_action with the exact findingId, documentId, and capId above plus the verification note — never say you cannot click or interact with the page.`;
 }

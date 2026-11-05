@@ -26,6 +26,7 @@ Project rules live in `.cursor/rules/` and are the single source of truth. Edit 
 
 | Rule | Read when |
 |------|-----------|
+| `.cursor/rules/llm-model-recommendation.mdc` | Plan mode / make-a-plan only when work is clearly beyond simple bugs, simple design, and Ask mode — never tip on every prompt |
 | `.cursor/rules/global-style-guide.mdc` | Any UI/UX work: styling, page structure, components (`*.tsx`, `*.css`) |
 | `.cursor/rules/api-route-authz.mdc` | Creating or editing `src/app/api/**/route.ts` |
 | `.cursor/rules/appwrite-collection-ids.mdc` | Touching Appwrite collection/table/bucket IDs (`src/lib/appwrite`, `src/lib/database`, `scripts`, `.env*.example`) |

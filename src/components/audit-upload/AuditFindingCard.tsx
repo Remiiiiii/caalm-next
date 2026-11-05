@@ -49,6 +49,7 @@ import {
 	hasRemediationPlan,
 	REMEDIATION_CHAT_LINK_EVENT,
 } from "@/lib/assistant/remediation-chat-link";
+import { resolveRemediationConversation } from "@/lib/assistant/resolveRemediationConversation";
 import { slaDueAt } from "@/lib/audit-upload/caps";
 import { splitFindingDescription } from "@/lib/audit-upload/split-finding-description";
 import type {
@@ -642,13 +643,24 @@ export function AuditFindingCard({
 	);
 
 	useEffect(() => {
-		const sync = () => {
+		let cancelled = false;
+		const syncLocal = () => {
 			setHasRemediationChat(Boolean(getRemediationChatId(finding.$id)));
 			setHasPlan(hasRemediationPlan(finding.$id));
 		};
-		sync();
-		window.addEventListener(REMEDIATION_CHAT_LINK_EVENT, sync);
-		return () => window.removeEventListener(REMEDIATION_CHAT_LINK_EVENT, sync);
+		syncLocal();
+		window.addEventListener(REMEDIATION_CHAT_LINK_EVENT, syncLocal);
+		if (detailsOpen) {
+			void resolveRemediationConversation(finding.$id).then((resolved) => {
+				if (cancelled) return;
+				setHasRemediationChat(Boolean(resolved));
+				setHasPlan(resolved?.hasPlan === true);
+			});
+		}
+		return () => {
+			cancelled = true;
+			window.removeEventListener(REMEDIATION_CHAT_LINK_EVENT, syncLocal);
+		};
 	}, [finding.$id, detailsOpen, cap?.status, cap?.$id]);
 
 	useEffect(() => {

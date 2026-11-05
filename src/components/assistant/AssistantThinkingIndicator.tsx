@@ -40,7 +40,7 @@ export default function AssistantThinkingIndicator() {
 	return (
 		<div
 			className={cn(
-				"flex items-start gap-2 rounded-2xl border border-slate-200/80 bg-white/60 px-3 py-2.5 text-sm text-slate-600",
+				"flex items-start gap-2 rounded-2xl bg-white/60 px-3 py-2.5 text-sm text-slate-600",
 			)}
 			aria-live="polite"
 			aria-busy="true"

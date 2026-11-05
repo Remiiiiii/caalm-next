@@ -13,7 +13,7 @@ export default function ContractsExpiryModalTestButton() {
 		itemsToShow,
 		isModalOpen,
 		closeModal,
-		triggerTestModal,
+		triggerDevTestModal,
 		markItemDismissed,
 		refreshLicenses,
 		shouldPlaySpeech,
@@ -27,7 +27,7 @@ export default function ContractsExpiryModalTestButton() {
 	return (
 		<>
 			<Button
-				onClick={triggerTestModal}
+				onClick={triggerDevTestModal}
 				variant="outline"
 				size="sm"
 				className="bg-orange-100 hover:bg-orange-200 text-orange-800 border-orange-300 text-xs"

@@ -9,6 +9,7 @@ import {
 	Square,
 } from "lucide-react";
 import { type CSSProperties, useEffect, useRef, useState } from "react";
+import { useComposerAutoGrow } from "@/hooks/useComposerAutoGrow";
 import type { ActivityKind } from "@/lib/tickets/agent-events";
 import type { Ticket } from "@/lib/tickets/ticket.types";
 import { cn } from "@/lib/utils";
@@ -103,6 +104,7 @@ export function AgentCanvasWorkspace({
 		restartKey,
 	);
 	const [prompt, setPrompt] = useState("");
+	const promptRef = useComposerAutoGrow(prompt, 60, 192);
 	const [sendError, setSendError] = useState<string | null>(null);
 	const feedRef = useRef<HTMLDivElement>(null);
 	const lineCount = state.activity.length;
@@ -307,6 +309,7 @@ export function AgentCanvasWorkspace({
 				<div className="flex items-end gap-2">
 					<textarea
 						id="agent-prompt"
+						ref={promptRef}
 						value={prompt}
 						onChange={(event) => setPrompt(event.target.value)}
 						onKeyDown={(event) => {
@@ -317,7 +320,8 @@ export function AgentCanvasWorkspace({
 						}}
 						disabled={!canControl || stopped}
 						placeholder="Tell the agent how to fix this…"
-						className="h-[60px] flex-1 resize-y rounded-lg border border-[var(--ide-border)] bg-[var(--ide-bg)] px-3 py-2 text-[12px] text-[var(--ide-text)] placeholder:text-[var(--ide-muted)] focus:border-[#56B8FF] focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+						rows={1}
+						className="min-h-[60px] max-h-48 flex-1 resize-none overflow-hidden rounded-lg border border-[var(--ide-border)] bg-[var(--ide-bg)] px-3 py-2 text-[12px] text-[var(--ide-text)] placeholder:text-[var(--ide-muted)] focus:border-[#56B8FF] focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
 					/>
 					<button
 						type="button"

@@ -202,6 +202,12 @@ export const ITEM_ICONS: Record<
 		height: 20,
 		color: SUBITEM_TEXT_GREY,
 	},
+	"Uploaded Audits": {
+		src: "/assets/icons/uploaded-audits.svg",
+		width: 18,
+		height: 22,
+		color: SUBITEM_TEXT_GREY,
+	},
 	"User Management": {
 		src: "/assets/icons/user-management.svg",
 		width: 20,

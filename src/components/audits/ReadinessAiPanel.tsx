@@ -25,6 +25,7 @@ import ShimmerBadge from "@/components/landing/ShimmerBadge";
 import { Button } from "@/components/ui/button";
 import { SHEET_CHIP_IDLE } from "@/components/ui/sheet-chip";
 import { Textarea } from "@/components/ui/textarea";
+import { useComposerAutoGrow } from "@/hooks/useComposerAutoGrow";
 import {
 	type ReadinessProseBlock,
 	splitReadinessProse,
@@ -433,6 +434,7 @@ export function ReadinessAiPanel({
 	);
 	const [activeSnapshotId, setActiveSnapshotId] = useState(snapshotId);
 	const [question, setQuestion] = useState("");
+	const questionRef = useComposerAutoGrow(question, 90, 192);
 	const [loading, setLoading] = useState(false);
 	const endRef = useRef<HTMLDivElement>(null);
 	const wasOpen = useRef(false);
@@ -594,14 +596,15 @@ export function ReadinessAiPanel({
 		<div className="flex flex-col gap-2">
 			<div className="relative w-full">
 				<Textarea
+					ref={questionRef}
 					value={question}
 					onChange={(event) => setQuestion(event.target.value)}
 					placeholder="Ask about gaps, HRSA prep, or PBC evidence…"
 					aria-label="Ask about gaps, HRSA prep, or PBC evidence"
-					rows={3}
+					rows={1}
 					disabled={loading}
 					className={cn(
-						"min-h-[5.625rem] w-full resize-none rounded-3xl bg-white text-slate-700 shadow-sm",
+						"min-h-[5.625rem] max-h-48 w-full resize-none overflow-hidden rounded-3xl bg-white text-slate-700 shadow-sm",
 						"border-[0.25px] border-slate-300! px-4! pb-14! pt-3.5! pe-14!",
 						"placeholder:text-slate-400 focus-visible:border-[#078FAB]! focus-visible:ring-[#078FAB]",
 					)}

@@ -9,6 +9,7 @@ import type {
 	UseCaalmAssistantReturn,
 } from "@/components/assistant/assistantTypes";
 import { Button } from "@/components/ui/button";
+import { useComposerAutoGrow } from "@/hooks/useComposerAutoGrow";
 import type { ImplementationChange } from "@/lib/assistant/implementation-analysis";
 import type { AssistantMentionRoute } from "@/lib/assistant/mention-routes";
 import { cn } from "@/lib/utils";
@@ -80,9 +81,9 @@ export default function AssistantFocusWindow({
 	const conversationClosed = assistant.conversationStatus === "closed";
 	const inputId = useId();
 	const fileInputRef = useRef<HTMLInputElement>(null);
-	const textareaRef = useRef<HTMLTextAreaElement>(null);
 	const mentionRef = useRef<HTMLDivElement>(null);
 	const [text, setText] = useState("");
+	const textareaRef = useComposerAutoGrow(text, 44, 140);
 	const [files, setFiles] = useState<File[]>([]);
 	const [mentionOpen, setMentionOpen] = useState(false);
 	const [mentionIndex, setMentionIndex] = useState(0);
@@ -122,13 +123,6 @@ export default function AssistantFocusWindow({
 		return () => window.removeEventListener("keydown", onKey);
 	}, [open, mentionOpen, onCloseFocus]);
 
-	useEffect(() => {
-		const el = textareaRef.current;
-		if (!el) return;
-		el.style.height = "auto";
-		const next = Math.min(el.scrollHeight, 140);
-		el.style.height = `${Math.max(44, next)}px`;
-	}, [text]);
 
 	const insertMention = (route: AssistantMentionRoute) => {
 		const at = text.lastIndexOf("@");
@@ -315,7 +309,7 @@ export default function AssistantFocusWindow({
 											}}
 											placeholder="Ask CAALM anything..."
 											rows={1}
-											className="min-h-11 max-h-[8.75rem] w-full resize-none overflow-y-auto bg-transparent text-[13px] leading-5 text-slate-700 outline-none placeholder:text-slate-400"
+											className="min-h-11 max-h-[8.75rem] w-full resize-none overflow-hidden bg-transparent text-[13px] leading-5 text-slate-700 outline-none placeholder:text-slate-400"
 											onKeyDown={(event) => {
 												if (mentionOpen && filteredMentions.length) {
 													if (event.key === "ArrowDown") {

@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Sound waves">
+  <!-- Customized from sound waves.lottie  sidebar-gradient-text stops -->
+  <defs>
+    <linearGradient id="sidebarGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#12477d"/>
+      <stop offset="100%" stop-color="#03afbf"/>
+    </linearGradient>
+  </defs>
+  <g fill="url(#sidebarGradient)">
+    <rect x="8.125" y="196" width="8" height="120" rx="4" opacity="0.76"/>
+    <rect x="22.86" y="196" width="8" height="120" rx="4" opacity="0.35"/>
+    <rect x="37.595" y="196" width="8" height="120" rx="4" opacity="0.55"/>
+    <rect x="52.33" y="196" width="8" height="120" rx="4" opacity="0.37"/>
+    <rect x="67.064" y="196" width="8" height="120" rx="4" opacity="0.35"/>
+    <rect x="81.799" y="196" width="8" height="120" rx="4" opacity="0.35"/>
+    <rect x="96.534" y="196" width="8" height="120" rx="4" opacity="0.35"/>
+    <rect x="111.269" y="196" width="8" height="120" rx="4" opacity="0.47"/>
+    <rect x="126.004" y="196" width="8" height="120" rx="4" opacity="0.76"/>
+    <rect x="140.739" y="196" width="8" height="120" rx="4" opacity="0.35"/>
+    <rect x="155.473" y="196" width="8" height="120" rx="4" opacity="0.57"/>
+    <rect x="170.208" y="196" width="8" height="120" rx="4" opacity="0.57"/>
+    <rect x="184.943" y="196" width="8" height="120" rx="4" opacity="0.35"/>
+    <rect x="199.678" y="196" width="8" height="120" rx="4" opacity="0.46"/>
+    <rect x="214.413" y="196" width="8" height="120" rx="4" opacity="0.35"/>
+    <rect x="229.148" y="196" width="8" height="120" rx="4" opacity="0.45"/>
+    <rect x="243.883" y="196" width="8" height="120" rx="4" opacity="0.75"/>
+    <rect x="258.617" y="196" width="8" height="120" rx="4" opacity="1"/>
+    <rect x="273.352" y="196" width="8" height="120" rx="4" opacity="0.44"/>
+    <rect x="288.087" y="196" width="8" height="120" rx="4" opacity="0.45"/>
+    <rect x="302.822" y="196" width="8" height="120" rx="4" opacity="0.55"/>
+    <rect x="317.557" y="196" width="8" height="120" rx="4" opacity="0.78"/>
+    <rect x="332.292" y="196" width="8" height="120" rx="4" opacity="0.37"/>
+    <rect x="347.027" y="196" width="8" height="120" rx="4" opacity="0.35"/>
+    <rect x="361.761" y="196" width="8" height="120" rx="4" opacity="0.35"/>
+    <rect x="376.496" y="196" width="8" height="120" rx="4" opacity="0.35"/>
+    <rect x="391.231" y="196" width="8" height="120" rx="4" opacity="0.47"/>
+    <rect x="405.966" y="196" width="8" height="120" rx="4" opacity="0.76"/>
+    <rect x="420.701" y="196" width="8" height="120" rx="4" opacity="0.35"/>
+    <rect x="435.436" y="196" width="8" height="120" rx="4" opacity="0.57"/>
+    <rect x="450.17" y="196" width="8" height="120" rx="4" opacity="0.57"/>
+    <rect x="464.905" y="196" width="8" height="120" rx="4" opacity="0.35"/>
+    <rect x="479.64" y="196" width="8" height="120" rx="4" opacity="0.46"/>
+    <rect x="494.375" y="196" width="8" height="120" rx="4" opacity="0.35"/>
+  </g>
+</svg>

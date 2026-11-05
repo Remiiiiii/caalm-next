@@ -1,5 +1,5 @@
 /**
- * Wiring tests: ContractExpiryAlertBridge → ExpiryAlertModal actions.
+ * Wiring tests: ContractExpiryAlertBridge (legacy single-item API) → modal.
  */
 
 import { render, screen } from "@testing-library/react";
@@ -7,6 +7,10 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import ContractExpiryAlertBridge from "@/components/expiry-alert-modal/ContractExpiryAlertBridge";
 import type { UIFileDoc } from "@/types/files";
+
+vi.mock("@/components/SplineCanvas", () => ({
+	default: () => <div data-testid="expiry-spline" />,
+}));
 
 const push = vi.fn();
 const toast = vi.fn();
@@ -27,10 +31,6 @@ vi.mock("@/hooks/useContractSnooze", () => ({
 
 vi.mock("@/hooks/useUpdateContractStatus", () => ({
 	useUpdateContractStatus: () => ({ updateStatus }),
-}));
-
-vi.mock("@/components/contract-expiry-modal/SplineExpiryScene", () => ({
-	default: () => <div data-testid="spline-scene" />,
 }));
 
 function makeContract(
@@ -87,9 +87,7 @@ describe("ContractExpiryAlertBridge wiring", () => {
 	it("Renew Contract navigates to /contracts and marks handled", async () => {
 		const user = userEvent.setup();
 		renderBridge();
-
 		await user.click(screen.getByRole("button", { name: /renew contract/i }));
-
 		expect(push).toHaveBeenCalledWith("/contracts");
 		expect(onContractHandled).toHaveBeenCalledWith("contract-abc");
 	});
@@ -97,23 +95,18 @@ describe("ContractExpiryAlertBridge wiring", () => {
 	it("View Details navigates with highlight and marks handled", async () => {
 		const user = userEvent.setup();
 		renderBridge();
-
 		await user.click(screen.getByRole("button", { name: /view details/i }));
-
 		expect(push).toHaveBeenCalledWith("/contracts?highlight=contract-abc");
 		expect(onContractHandled).toHaveBeenCalledWith("contract-abc");
 	});
 
-	it("Snooze 3 days calls snoozeContract with mapped days", async () => {
+	it("Snooze calls snoozeContract with a fixed 30 days", async () => {
 		const user = userEvent.setup();
 		renderBridge();
-
-		await user.click(screen.getByRole("button", { name: /snooze/i }));
-		await user.click(await screen.findByRole("menuitem", { name: "3 days" }));
-
+		await user.click(screen.getByRole("button", { name: /snooze 30 days/i }));
 		expect(snoozeContract).toHaveBeenCalledWith({
 			contractId: "contract-abc",
-			days: 3,
+			days: 30,
 			expiryDate: "2026-08-12",
 		});
 		expect(onStatusChange).toHaveBeenCalled();
@@ -123,10 +116,11 @@ describe("ContractExpiryAlertBridge wiring", () => {
 	it("Let Expire confirm marks contract inactive", async () => {
 		const user = userEvent.setup();
 		renderBridge();
-
 		await user.click(screen.getByRole("button", { name: /let expire/i }));
-		await user.click(screen.getByRole("button", { name: /^confirm$/i }));
-
+		// Recoil delay (420ms) before the confirm strip appears.
+		await user.click(
+			await screen.findByRole("button", { name: /^confirm$/i }),
+		);
 		expect(updateStatus).toHaveBeenCalledWith({
 			fileId: "contract-abc",
 			status: "inactive",
@@ -138,45 +132,34 @@ describe("ContractExpiryAlertBridge wiring", () => {
 		expect(onContractHandled).toHaveBeenCalledWith("contract-abc");
 	});
 
-	it("Contact Provider opens mailto when email exists", async () => {
+	it("Contact provider opens mailto when email exists", async () => {
 		const user = userEvent.setup();
 		const locationMock = { href: "http://localhost/" };
 		vi.stubGlobal("location", locationMock);
-
 		renderBridge(
-			makeContract({
-				counterpartyContactEmail: "vendor@example.com",
-			}),
+			makeContract({ counterpartyContactEmail: "vendor@example.com" }),
 		);
-
 		await user.click(screen.getByRole("button", { name: /contact provider/i }));
-
 		expect(locationMock.href).toBe("mailto:vendor@example.com");
 		vi.unstubAllGlobals();
 	});
 
-	it("Contact Provider toasts when no email or phone", async () => {
-		const user = userEvent.setup();
+	it("shows muted copy when there is no contact on record", () => {
 		renderBridge();
-
-		await user.click(screen.getByRole("button", { name: /contact provider/i }));
-
-		expect(toast).toHaveBeenCalledWith(
-			expect.objectContaining({
-				title: "Contact information not available",
-				variant: "destructive",
-			}),
-		);
+		expect(
+			screen.getByText("No provider contact on record"),
+		).toBeInTheDocument();
+		expect(
+			screen.queryByRole("button", { name: /contact provider/i }),
+		).not.toBeInTheDocument();
 	});
 
 	it("dismiss X calls onClose only (no status / snooze)", async () => {
 		const user = userEvent.setup();
 		renderBridge();
-
 		await user.click(
 			screen.getByRole("button", { name: "Dismiss for this session" }),
 		);
-
 		expect(onClose).toHaveBeenCalledTimes(1);
 		expect(updateStatus).not.toHaveBeenCalled();
 		expect(snoozeContract).not.toHaveBeenCalled();

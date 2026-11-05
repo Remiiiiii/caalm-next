@@ -15,6 +15,7 @@ import {
 	getActiveConversation,
 	getConversationForUser,
 	setConversationActive,
+	setRemediationLink,
 	truncatePreview,
 	updateConversationMeta,
 } from "@/lib/assistant/conversationStore";
@@ -91,11 +92,14 @@ export async function POST(request: NextRequest) {
 		}
 
 		let convId = conversationId;
+		// Set from the resolved conversation so follow-up turns keep audit remediation context.
+		let linkedFindingId: string | null = null;
 		if (!convId) {
 			// Resume the current active session instead of spawning a new one on remount/hide.
 			const active = await getActiveConversation(auth.user.$id, auth.orgId);
 			if (active) {
 				convId = active.$id;
+				linkedFindingId = active.remediationFindingId?.trim() || null;
 			} else {
 				const { createConversation } = await import(
 					"@/lib/assistant/conversationStore"
@@ -124,11 +128,29 @@ export async function POST(request: NextRequest) {
 					{ status: 409 },
 				);
 			}
+			linkedFindingId = existing.remediationFindingId?.trim() || null;
 			await setConversationActive({
 				conversationId: convId,
 				userId: auth.user.$id,
 				orgId: auth.orgId,
 			});
+		}
+
+		// Rehydrate audit remediation context on follow-up turns (launch is only sent once).
+		if (!remediationContext && linkedFindingId) {
+			if (auth.permissions.includes(PERMISSIONS.AUDIT.DOCUMENTS_VIEW)) {
+				const finding = await getFinding(auth.orgId, linkedFindingId);
+				if (finding) {
+					const caps = await listCaps({
+						orgId: auth.orgId,
+						documentId: finding.documentId,
+						limit: 50,
+					});
+					const cap =
+						caps.find((row) => row.findingId === finding.$id) ?? null;
+					remediationContext = buildAuditRemediationContext({ finding, cap });
+				}
+			}
 		}
 
 		const history =
@@ -196,6 +218,17 @@ export async function POST(request: NextRequest) {
 					)
 				: truncatePreview(message, 80),
 		});
+
+		if (launch) {
+			await setRemediationLink({
+				conversationId: convId,
+				userId: auth.user.$id,
+				orgId: auth.orgId,
+				findingId: launch.findingId,
+				hasPlan:
+					turn.pendingAction?.toolName === "apply_audit_remediation",
+			});
+		}
 
 		return NextResponse.json({
 			success: true,

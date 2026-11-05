@@ -4,8 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
 	buildExpiryQueue,
 	calculateDaysUntilExpiry,
+	EXPIRY_QUEUE_AHEAD_DAYS,
 	type ExpiryQueueItem,
 	type ExpiryShownState,
+	isExpiryModalTriggerItem,
 	loadExpiryShownState,
 	mergeShownWithItems,
 	saveExpiryShownState,
@@ -14,7 +16,9 @@ import type { UIFileDoc } from "@/types/files";
 import type { License } from "@/types/licenses";
 
 /**
- * Combined contracts + licenses expiring in 0–30 days for the full-screen carousel.
+ * Combined contracts + licenses for the full-screen expiry carousel.
+ * Queue shows recently expired (−30d) through +90d; auto-open only when
+ * something is expiring within the next 30 days.
  */
 export function useCombinedExpiryModal(contracts: UIFileDoc[]) {
 	const [shown, setShown] = useState<ExpiryShownState>({
@@ -34,7 +38,9 @@ export function useCombinedExpiryModal(contracts: UIFileDoc[]) {
 
 	const fetchExpiringLicenses = useCallback(async () => {
 		try {
-			const res = await fetch("/api/licenses/expiring?days=30");
+			const res = await fetch(
+				`/api/licenses/expiring?days=${EXPIRY_QUEUE_AHEAD_DAYS}`,
+			);
 			if (!res.ok) return;
 			const json = await res.json();
 			const list: License[] =
@@ -68,10 +74,15 @@ export function useCombinedExpiryModal(contracts: UIFileDoc[]) {
 		return days !== null && days !== undefined;
 	}, [itemsToShow]);
 
+	const hasTriggerItems = useMemo(
+		() => itemsToShow.some((item) => isExpiryModalTriggerItem(item.days)),
+		[itemsToShow],
+	);
+
 	useEffect(() => {
 		if (
 			licensesFetchSettled &&
-			itemsToShow.length > 0 &&
+			hasTriggerItems &&
 			!isModalOpen &&
 			!testMode &&
 			!wasManuallyClosed
@@ -80,55 +91,93 @@ export function useCombinedExpiryModal(contracts: UIFileDoc[]) {
 		}
 	}, [
 		licensesFetchSettled,
-		itemsToShow.length,
+		hasTriggerItems,
 		isModalOpen,
 		testMode,
 		wasManuallyClosed,
 	]);
 
-	const triggerTestModal = async () => {
+	const fetchTestSourceLists = useCallback(async () => {
+		const [contractsRes, licensesRes] = await Promise.all([
+			fetch("/api/contracts/all"),
+			fetch(`/api/licenses/expiring?days=${EXPIRY_QUEUE_AHEAD_DAYS}`),
+		]);
+
+		const fetchedContracts: UIFileDoc[] = contractsRes.ok
+			? ((await contractsRes.json()).data ?? [])
+			: [];
+		const licenseJson = licensesRes.ok ? await licensesRes.json() : null;
+		const fetchedLicenses: License[] =
+			licenseJson?.data?.licenses ?? licenseJson?.licenses ?? [];
+
+		// Prefer freshest of dashboard props + API (by id).
+		const contractById = new Map<string, UIFileDoc>();
+		for (const file of [
+			...(Array.isArray(contracts) ? contracts : []),
+			...fetchedContracts,
+		]) {
+			if (file?.$id) contractById.set(file.$id, file);
+		}
+		const licenseById = new Map<string, License>();
+		for (const license of [
+			...licenses,
+			...(Array.isArray(fetchedLicenses) ? fetchedLicenses : []),
+		]) {
+			if (license?.$id) licenseById.set(license.$id, license);
+		}
+
+		return {
+			contractList: Array.from(contractById.values()),
+			licenseList: Array.from(licenseById.values()),
+		};
+	}, [contracts, licenses]);
+
+	/** Local/dev: real product window (−30d … +90d). Not the curated demo slice. */
+	const triggerDevTestModal = useCallback(async () => {
 		try {
 			setWasManuallyClosed(false);
-
-			const [contractsRes, licensesRes] = await Promise.all([
-				fetch("/api/contracts/all"),
-				fetch("/api/licenses/expiring?days=90"),
-			]);
-
-			const contractList: UIFileDoc[] = contractsRes.ok
-				? ((await contractsRes.json()).data ?? [])
-				: [];
-			const licenseJson = licensesRes.ok ? await licensesRes.json() : null;
-			const licenseList: License[] =
-				licenseJson?.data?.licenses ?? licenseJson?.licenses ?? [];
-
-			let queue = buildExpiryQueue({
+			const { contractList, licenseList } = await fetchTestSourceLists();
+			const queue = buildExpiryQueue({
 				contracts: contractList,
-				licenses: Array.isArray(licenseList) ? licenseList : [],
-				bypassWindow: true,
-			}).filter((item) => item.days >= 30 && item.days <= 60);
-
+				licenses: licenseList,
+			});
 			if (queue.length === 0) {
-				queue = buildExpiryQueue({
-					contracts: contractList,
-					licenses: Array.isArray(licenseList) ? licenseList : [],
-					bypassWindow: true,
-				}).filter((item) => item.days >= 0 && item.days <= 90);
-			}
-
-			queue = queue.slice(0, 4);
-			if (queue.length === 0) {
-				console.warn("No contracts/licenses found for test expiry modal");
+				console.warn("[useCombinedExpiryModal] Dev test: no items in −30…+90d");
 				return;
 			}
-
 			setTestItems(queue);
 			setTestMode(true);
 			setIsModalOpen(true);
 		} catch (error) {
-			console.error("Failed to fetch items for test modal:", error);
+			console.error("[useCombinedExpiryModal] Dev test modal failed:", error);
 		}
-	};
+	}, [fetchTestSourceLists]);
+
+	/** Demo/sales: curated mid-window sample only (does not mirror the Dev button). */
+	const triggerDemoTestModal = useCallback(async () => {
+		try {
+			setWasManuallyClosed(false);
+			const { contractList, licenseList } = await fetchTestSourceLists();
+			const queue = buildExpiryQueue({
+				contracts: contractList,
+				licenses: licenseList,
+				bypassWindow: true,
+			})
+				.filter((item) => item.days >= 30 && item.days <= 60)
+				.slice(0, 4);
+			if (queue.length === 0) {
+				console.warn(
+					"[useCombinedExpiryModal] Demo test: no items in 30–60d sample",
+				);
+				return;
+			}
+			setTestItems(queue);
+			setTestMode(true);
+			setIsModalOpen(true);
+		} catch (error) {
+			console.error("[useCombinedExpiryModal] Demo test modal failed:", error);
+		}
+	}, [fetchTestSourceLists]);
 
 	const closeModal = () => {
 		setIsModalOpen(false);
@@ -257,7 +306,10 @@ export function useCombinedExpiryModal(contracts: UIFileDoc[]) {
 			.map((i) => ({ file: i.file, days: i.days })),
 		isModalOpen,
 		closeModal,
-		triggerTestModal,
+		triggerDevTestModal,
+		triggerDemoTestModal,
+		/** @deprecated Prefer triggerDevTestModal — kept for older callers */
+		triggerTestModal: triggerDevTestModal,
 		openForContractId,
 		openForLicenseId,
 		openForEntityId,

@@ -2,30 +2,34 @@
 
 import { format, parseISO } from "date-fns";
 import { AnimatePresence, motion } from "framer-motion";
+import { CalendarClock, Mail, Phone } from "lucide-react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
+import ActionRail from "@/components/expiry-alert-modal/ActionRail";
+import ExpiryAlertFooterCap from "@/components/expiry-alert-modal/ExpiryAlertFooterCap";
+import ExpiryAlertSpline, {
+	type ExpiryRobotNarration,
+	type ExpiryRobotReaction,
+} from "@/components/expiry-alert-modal/ExpiryAlertSpline";
+import type {
+	ExpiryNarration,
+	ExpiryQueue,
+} from "@/components/expiry-alert-modal/expiry-alert-types";
+import NarrationBar from "@/components/expiry-alert-modal/NarrationBar";
+import QueueStrip from "@/components/expiry-alert-modal/QueueStrip";
+import UrgencyBand from "@/components/expiry-alert-modal/UrgencyBand";
+import { EXPIRY_ALERT_SNOOZE_DAYS } from "@/lib/expiry/action-matrix";
+import { formatExpiryTypeLabel } from "@/lib/expiry/expiry-format";
 import {
-	CalendarClock,
-	ChevronDown,
-	Clock,
-	Eye,
-	FileWarning,
-	Mail,
-	RotateCcw,
-	X,
-} from "lucide-react";
-import { useEffect, useId, useRef, useState } from "react";
-import SplineExpiryScene from "@/components/contract-expiry-modal/SplineExpiryScene";
-import { Button } from "@/components/ui/button";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { MODAL_OVERLAY } from "@/lib/ui/modal-styles";
+	getDaysFact,
+	getUrgencyTier,
+	getUrgencyTone,
+} from "@/lib/expiry/urgency";
+import { MODAL_OVERLAY, MODAL_PANEL } from "@/lib/ui/modal-styles";
 import { cn } from "@/lib/utils";
 
-export type ExpiryEntityType = "contract" | "license" | "audit";
-export type ExpirySnoozeDuration = "24h" | "3d" | "1w";
+export type ExpiryEntityType = "contract" | "license";
+
+export type { ExpiryNarration, ExpiryQueue };
 
 export type ExpiryAlertModalProps = {
 	open: boolean;
@@ -33,35 +37,37 @@ export type ExpiryAlertModalProps = {
 	title: string;
 	expiryDate: string;
 	daysRemaining: number;
-	amount?: number;
-	status: string;
-	/** Pre-formatted human label (e.g. "Government Contract") */
-	typeLabel: string;
-	vendor: string;
+	amount?: number | null;
+	amountLabel?: string;
+	status?: string | null;
+	typeLabel?: string | null;
+	contactEmail?: string;
+	contactPhone?: string;
+	snoozeDays?: number;
+	renewing?: boolean;
+	/** Renewal needs a desktop; show an inline note under Renew instead of hiding it. */
+	renewRequiresDesktop?: boolean;
 	onRenew: () => void;
 	onViewDetails: () => void;
-	onSnooze: (duration: ExpirySnoozeDuration) => void;
-	onLetExpire: () => void;
+	onSnooze?: () => void;
+	onDismiss?: () => void;
+	onLetExpire?: () => void;
 	onContactProvider?: () => void;
-	/**
-	 * Top-right X only. Closes without a decision and suppresses
-	 * re-showing this entity for the rest of the browser session.
-	 * Does not mark the record inactive or write a snooze.
-	 */
+	/** Top-right X — dismiss for this session without a decision. */
 	onClose: () => void;
-	/** Optional: busy state for destructive / snooze */
 	isBusy?: boolean;
-	/** When set, only the details panel cross-fades (shell/Spline stay mounted). */
+	/** Only the body panel cross-fades when this changes (shell stays mounted). */
 	contentKey?: string;
+	/** Carousel chrome. */
+	queuePosition?: { index: number; total: number };
+	onPrev?: () => void;
+	onNext?: () => void;
+	narration?: ExpiryNarration | null;
+	queue?: ExpiryQueue | null;
 };
 
-function urgencyPillClass(days: number): string {
-	if (days <= 3) return "bg-red text-white border-red shadow-lg";
-	if (days <= 14) return "bg-orange text-white border-orange shadow-lg";
-	return "bg-green text-white border-green shadow-lg";
-}
-
 function formatExpiryDisplay(raw: string): string {
+	if (!raw) return "—";
 	try {
 		const date = raw.includes("T")
 			? parseISO(raw)
@@ -72,38 +78,16 @@ function formatExpiryDisplay(raw: string): string {
 	}
 }
 
-function primaryLabel(entityType: ExpiryEntityType): string {
-	if (entityType === "license") return "Renew License";
-	if (entityType === "audit") return "Schedule Audit Prep";
-	return "Renew Contract";
-}
-
-function typeFieldLabel(entityType: ExpiryEntityType): string {
-	if (entityType === "license") return "License Type";
-	if (entityType === "audit") return "Audit Type";
-	return "Contract Type";
-}
-
-function vendorFieldLabel(entityType: ExpiryEntityType): string {
-	if (entityType === "license") return "Issuer";
-	if (entityType === "audit") return "Owner";
-	return "Vendor";
-}
-
-function dueVerb(entityType: ExpiryEntityType): string {
-	if (entityType === "audit") return "Due";
-	return "Expires";
-}
-
-const SNOOZE_OPTIONS: { value: ExpirySnoozeDuration; label: string }[] = [
-	{ value: "24h", label: "24 hours" },
-	{ value: "3d", label: "3 days" },
-	{ value: "1w", label: "Next week" },
-];
+const DAYS_TEXT: Record<"danger" | "warning" | "info", string> = {
+	danger: "text-red",
+	warning: "text-orange",
+	info: "text-blue",
+};
 
 /**
- * Full-viewport expiry alert: bright frosted backdrop + Spline robot (top-left),
- * content offset so it never sits under the robot. Not a single white card shell.
+ * Contained four-zone expiry alert card: urgency band, narration bar, split
+ * body (record detail + action rail) and queue strip, centered over a dimmed,
+ * blurred backdrop.
  */
 export default function ExpiryAlertModal({
 	open,
@@ -112,34 +96,116 @@ export default function ExpiryAlertModal({
 	expiryDate,
 	daysRemaining,
 	amount,
+	amountLabel,
 	status,
-	typeLabel,
-	vendor,
+	contactEmail,
+	contactPhone,
+	snoozeDays = EXPIRY_ALERT_SNOOZE_DAYS,
+	renewing = false,
+	renewRequiresDesktop = false,
 	onRenew,
 	onViewDetails,
 	onSnooze,
+	onDismiss,
 	onLetExpire,
 	onContactProvider,
 	onClose,
 	isBusy = false,
 	contentKey,
+	queuePosition,
+	onPrev,
+	onNext,
+	narration,
+	queue,
 }: ExpiryAlertModalProps) {
 	const titleId = useId();
-	const descId = useId();
 	const modalRef = useRef<HTMLDivElement>(null);
 	const previousActive = useRef<HTMLElement | null>(null);
-	const [confirmLetExpire, setConfirmLetExpire] = useState(false);
 	const panelKey = contentKey ?? `${entityType}-${title}-${expiryDate}`;
+	const pointShownRef = useRef(false);
+	const reactionTimerRef = useRef<number | null>(null);
+	const pointTimerRef = useRef<number | null>(null);
+	const [robotReaction, setRobotReaction] = useState<ExpiryRobotReaction>(null);
+	/** Immediate queue open — robot holds 1s then trails (handled in Spline). */
+	const [queueExpanded, setQueueExpanded] = useState(false);
 
-	useEffect(() => {
-		setConfirmLetExpire(false);
-	}, [panelKey]);
+	const fireRobotReaction = useCallback(
+		(reaction: Exclude<ExpiryRobotReaction, null>, durationMs: number) => {
+			if (reactionTimerRef.current !== null) {
+				window.clearTimeout(reactionTimerRef.current);
+			}
+			setRobotReaction(reaction);
+			reactionTimerRef.current = window.setTimeout(() => {
+				setRobotReaction(null);
+				reactionTimerRef.current = null;
+			}, durationMs);
+		},
+		[],
+	);
 
 	useEffect(() => {
 		if (!open) {
-			setConfirmLetExpire(false);
+			pointShownRef.current = false;
+			setQueueExpanded(false);
+			setRobotReaction(null);
+			if (pointTimerRef.current !== null) {
+				window.clearTimeout(pointTimerRef.current);
+				pointTimerRef.current = null;
+			}
 			return;
 		}
+		return () => {
+			if (reactionTimerRef.current !== null) {
+				window.clearTimeout(reactionTimerRef.current);
+				reactionTimerRef.current = null;
+			}
+			if (pointTimerRef.current !== null) {
+				window.clearTimeout(pointTimerRef.current);
+				pointTimerRef.current = null;
+			}
+		};
+	}, [open]);
+
+	const handleQueueExpandedChange = useCallback(
+		(expanded: boolean) => {
+			setQueueExpanded(expanded);
+			if (pointTimerRef.current !== null) {
+				window.clearTimeout(pointTimerRef.current);
+				pointTimerRef.current = null;
+			}
+			// Point when the robot starts its catch-up move (after the 1s hold).
+			if (expanded && !pointShownRef.current) {
+				pointTimerRef.current = window.setTimeout(() => {
+					pointTimerRef.current = null;
+					pointShownRef.current = true;
+					fireRobotReaction("point", 1350);
+				}, 1000);
+			}
+		},
+		[fireRobotReaction],
+	);
+
+	const handleRenew = useCallback(() => {
+		fireRobotReaction("celebrate", 1400);
+		onRenew();
+	}, [fireRobotReaction, onRenew]);
+
+	const handleSnooze = useCallback(() => {
+		fireRobotReaction("sleepy", 1150);
+		onSnooze?.();
+	}, [fireRobotReaction, onSnooze]);
+
+	const handleDismiss = useCallback(() => {
+		fireRobotReaction("sleepy", 1150);
+		onDismiss?.();
+	}, [fireRobotReaction, onDismiss]);
+
+	const handleDestructiveIntent = useCallback(() => {
+		fireRobotReaction("recoil", 1050);
+	}, [fireRobotReaction]);
+
+	useEffect(() => {
+		if (!open) return;
 		previousActive.current = document.activeElement as HTMLElement | null;
 		document.body.style.overflow = "hidden";
 
@@ -148,13 +214,12 @@ export default function ExpiryAlertModal({
 				'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
 			) ?? [];
 
-		const first = focusables()[0];
-		first?.focus();
+		focusables()[0]?.focus();
 
 		const onKeyDown = (event: KeyboardEvent) => {
+			// Escape does not dismiss — only the X or Dismiss all.
 			if (event.key === "Escape") {
 				event.preventDefault();
-				onClose();
 				return;
 			}
 			if (event.key !== "Tab" || !modalRef.current) return;
@@ -181,16 +246,23 @@ export default function ExpiryAlertModal({
 
 	if (!open) return null;
 
-	const daysLabel =
-		daysRemaining <= 0
-			? daysRemaining === 0
-				? "Due today"
-				: "Past due"
-			: `day${daysRemaining === 1 ? "" : "s"} until ${
-					entityType === "audit" ? "due date" : "expiry"
-				}`;
-
+	const tier = getUrgencyTier(daysRemaining);
+	const tone = getUrgencyTone(tier);
+	const daysFact = getDaysFact(daysRemaining);
 	const showAmount = typeof amount === "number" && Number.isFinite(amount);
+	const resolvedAmountLabel =
+		amountLabel ?? (entityType === "license" ? "Annual cost" : "Amount");
+	const hasContact = !!(contactEmail || contactPhone);
+	const statusChip = status?.replace(/[-_]/g, " ").trim();
+	const kindChip = entityType === "license" ? "License" : "Contract";
+	const dateVerb = renewing ? "Renews" : "Expires";
+	const robotNarration: ExpiryRobotNarration = !narration
+		? "idle"
+		: narration.muted
+			? "muted"
+			: narration.isPlaying
+				? "speaking"
+				: "idle";
 
 	return (
 		<div
@@ -198,266 +270,203 @@ export default function ExpiryAlertModal({
 			role="dialog"
 			aria-modal="true"
 			aria-labelledby={titleId}
-			aria-describedby={descId}
 		>
-			{/* Bright frosted backdrop — dashboard shows through */}
-			<button
-				type="button"
-				className={`absolute inset-0 z-0 border-0 cursor-pointer ${MODAL_OVERLAY}`}
-				aria-label="Dismiss expiry alert for this session"
-				onClick={onClose}
+			{/* Dimmed backdrop only — outside click does not close (X / Dismiss all). */}
+			<div
+				className={`absolute inset-0 z-0 ${MODAL_OVERLAY}`}
+				aria-hidden="true"
 			/>
 
-			{/* Spline robot — full scene, above blur, below content chrome */}
-			<div className="pointer-events-none absolute inset-0 z-10">
-				<SplineExpiryScene className="z-10" />
-			</div>
-
-			{/* Top-right dismiss only */}
-			<div className="pointer-events-none absolute inset-x-0 top-0 z-50 flex justify-end p-6 md:p-8">
-				<Button
-					type="button"
-					variant="outline"
-					size="icon"
-					onClick={onClose}
-					className="pointer-events-auto glass-card text-slate-700 shadow-lg cursor-pointer"
-					aria-label="Dismiss for this session"
+			<div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center p-4">
+				{/* Relative shell so the desktop robot can sit left-full of the card. */}
+				<motion.div
+					className="relative w-full max-w-[840px]"
+					initial={{ opacity: 0, y: -48 }}
+					animate={{ opacity: 1, y: 0 }}
+					transition={{
+						duration: 0.58,
+						ease: [0.22, 1, 0.36, 1],
+					}}
 				>
-					<X className="h-5 w-5" />
-				</Button>
-			</div>
+					<div
+						ref={modalRef}
+						className={cn(
+							MODAL_PANEL,
+							"pointer-events-auto flex max-h-[90vh] w-full flex-col overflow-hidden",
+						)}
+					>
+						{/* Zone 1 — urgency band (also holds prev/next + close). */}
+						<UrgencyBand
+							daysRemaining={daysRemaining}
+							dateLabel={formatExpiryDisplay(expiryDate)}
+							renewing={renewing}
+							position={queuePosition}
+							onPrev={onPrev}
+							onNext={onNext}
+							onClose={onClose}
+							isBusy={isBusy}
+						/>
 
-			{/* Content — shifted right so it clears the Spline robot on the left */}
-			<div
-				ref={modalRef}
-				className="pointer-events-none absolute inset-0 z-40 flex flex-col items-stretch justify-center py-8 pr-6 pl-[min(42vw,22rem)] md:pr-12 md:pl-[min(38vw,26rem)] lg:pl-[28rem]"
-			>
-				<div className="pointer-events-auto relative z-40 isolate w-full max-w-4xl -mt-6">
-					<AnimatePresence mode="wait" initial={false}>
-						<motion.div
-							key={panelKey}
-							initial={{ opacity: 0, y: 8 }}
-							animate={{ opacity: 1, y: 0 }}
-							exit={{ opacity: 0, y: -8 }}
-							transition={{ duration: 0.28, ease: "easeInOut" }}
-							className="flex flex-col items-start space-y-5 w-full"
-						>
-							{/* Title block */}
-							<div className="space-y-3 w-full">
-								<h2
-									id={titleId}
-									className="text-3xl md:text-4xl font-bold text-slate-700 drop-shadow-lg wrap-break-word"
+						{/* Zone 2 — narration bar (only when TTS is in play this session). */}
+						{narration && <NarrationBar narration={narration} />}
+
+						{/* Zone 3 — split body. Only this cross-fades per slide. */}
+						<div className="min-h-0 flex-1 overflow-y-auto">
+							<AnimatePresence mode="wait" initial={false}>
+								<motion.div
+									key={panelKey}
+									initial={{ opacity: 0, y: 6 }}
+									animate={{ opacity: 1, y: 0 }}
+									exit={{ opacity: 0, y: -6 }}
+									transition={{ duration: 0.22, ease: "easeInOut" }}
+									className="grid grid-cols-1 gap-6 p-6 min-[620px]:grid-cols-[1fr_auto]"
 								>
-									{title}
-								</h2>
-								<p
-									id={descId}
-									className="text-lg md:text-xl text-slate-700 drop-shadow-md flex items-center gap-2"
-								>
-									<CalendarClock className="h-5 w-5 shrink-0 text-[#0f5384]" />
-									<span className="font-semibold">{dueVerb(entityType)}:</span>{" "}
-									{formatExpiryDisplay(expiryDate)}
-								</p>
-								<span
-									className={cn(
-										"inline-flex items-center gap-2 rounded-full border-2 px-5 py-2.5",
-										urgencyPillClass(daysRemaining),
-									)}
-								>
-									{daysRemaining <= 0 ? (
-										<span className="text-xl md:text-2xl font-bold">!</span>
-									) : (
-										<span className="text-xl md:text-2xl font-bold">
-											{daysRemaining}
-										</span>
-									)}
-									<span className="text-base md:text-lg opacity-95">
-										{daysLabel}
-									</span>
-								</span>
-							</div>
+									{/* Left — record detail */}
+									<div className="min-w-0 space-y-4">
+										<div className="flex flex-wrap items-center gap-2">
+											<span className="inline-block rounded-full border border-blue/20 bg-blue/10 px-2 py-0.5 text-xs text-blue">
+												{kindChip}
+											</span>
+											{statusChip && (
+												<span className="inline-block rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs capitalize text-slate-600">
+													{statusChip}
+												</span>
+											)}
+										</div>
 
-							{/*
-						  Stat grid — 2×2 with vertical + horizontal cross dividers
-						*/}
-							<div className="relative grid grid-cols-2 w-full overflow-visible">
-								{/* Cross: vertical + horizontal */}
-								<div
-									aria-hidden
-									className="pointer-events-none absolute inset-y-4 left-1/2 w-px -translate-x-1/2 bg-slate-300"
-								/>
-								<div
-									aria-hidden
-									className="pointer-events-none absolute inset-x-4 top-1/2 h-px -translate-y-1/2 bg-slate-300"
-								/>
-
-								<div className="relative p-5 min-h-[108px]">
-									<p className="text-xs font-medium uppercase tracking-[0.08em] text-slate-400 mb-2">
-										Amount
-									</p>
-									<p className="text-[32px] leading-none font-bold text-slate-700 tracking-tight">
-										{showAmount
-											? `$${amount.toLocaleString(undefined, {
-													maximumFractionDigits: 0,
-												})}`
-											: "—"}
-									</p>
-								</div>
-
-								<div className="relative p-5 min-h-[108px]">
-									<p className="text-xs font-medium uppercase tracking-[0.08em] text-slate-400 mb-2">
-										Status
-									</p>
-									<p className="text-lg font-medium text-slate-700 capitalize leading-snug">
-										{status.replace(/[-_]/g, " ") || "—"}
-									</p>
-								</div>
-
-								<div className="relative p-5 min-h-[108px]">
-									<p className="text-xs font-medium uppercase tracking-[0.08em] text-slate-400 mb-2">
-										{typeFieldLabel(entityType)}
-									</p>
-									<p className="text-lg font-medium text-slate-700 leading-snug">
-										{typeLabel || "—"}
-									</p>
-								</div>
-
-								<div className="relative p-5 min-h-[108px]">
-									<p className="text-xs font-medium uppercase tracking-[0.08em] text-slate-400 mb-2">
-										{vendorFieldLabel(entityType)}
-									</p>
-									<p className="text-lg font-medium text-slate-700 leading-snug">
-										{vendor || "—"}
-									</p>
-								</div>
-							</div>
-
-							{/* Action bar — primary row + muted secondary links */}
-							<div className="relative z-50 mt-1 flex flex-col gap-4 w-full">
-								<div className="relative z-50 flex flex-nowrap items-center gap-3">
-									<Button
-										type="button"
-										className="primary-btn px-3 sm:px-4 shrink-0"
-										onClick={onRenew}
-										disabled={isBusy}
-									>
-										{entityType === "audit" ? (
-											<FileWarning className="h-4 w-4" />
-										) : (
-											<RotateCcw className="h-4 w-4" />
-										)}
-										{primaryLabel(entityType)}
-									</Button>
-
-									<Button
-										type="button"
-										variant="outline"
-										className="primary-btn px-3 sm:px-4 shrink-0"
-										onClick={onViewDetails}
-										disabled={isBusy}
-									>
-										<Eye className="h-4 w-4" />
-										View Details
-									</Button>
-
-									<DropdownMenu>
-										<DropdownMenuTrigger asChild>
-											<button
-												type="button"
-												disabled={isBusy}
-												className="relative z-50 inline-flex h-10 items-center gap-1.5 px-1 text-sm font-medium text-slate-500 hover:text-slate-700 cursor-pointer disabled:opacity-50 bg-transparent border-0 shrink-0"
-											>
-												<Clock className="h-4 w-4" />
-												Snooze
-												<ChevronDown className="h-3.5 w-3.5 opacity-70" />
-											</button>
-										</DropdownMenuTrigger>
-										<DropdownMenuContent
-											align="start"
-											className="z-[10050] w-44"
+										<h2
+											id={titleId}
+											className="text-2xl font-bold leading-tight text-slate-700 wrap-break-word"
 										>
-											{SNOOZE_OPTIONS.map((opt) => (
-												<DropdownMenuItem
-													key={opt.value}
-													onClick={() => onSnooze(opt.value)}
-													className="cursor-pointer"
+											{title}
+										</h2>
+
+										<p className="flex items-center gap-2 text-sm text-slate-600">
+											<CalendarClock className="h-4 w-4 shrink-0 text-[#0f5384]" />
+											<span className="font-semibold">{dateVerb}</span>{" "}
+											{formatExpiryDisplay(expiryDate)}
+										</p>
+
+										{/* Fact grid — only cells that carry a value. */}
+										<div
+											className={cn(
+												"grid gap-px overflow-hidden rounded-xl border border-slate-200 bg-slate-200",
+												showAmount ? "grid-cols-2" : "grid-cols-1",
+											)}
+										>
+											{showAmount && (
+												<div className="bg-white p-4">
+													<p className="mb-1 text-xs font-medium uppercase tracking-[0.08em] text-slate-400">
+														{resolvedAmountLabel}
+													</p>
+													<p className="text-2xl font-bold tabular-nums text-slate-700">
+														$
+														{amount.toLocaleString(undefined, {
+															maximumFractionDigits: 0,
+														})}
+													</p>
+												</div>
+											)}
+											<div className="bg-white p-4">
+												<p className="mb-1 text-xs font-medium uppercase tracking-[0.08em] text-slate-400">
+													{daysFact.label}
+												</p>
+												<p
+													className={cn(
+														"text-2xl font-bold tabular-nums",
+														DAYS_TEXT[tone],
+													)}
 												>
-													{opt.label}
-												</DropdownMenuItem>
-											))}
-										</DropdownMenuContent>
-									</DropdownMenu>
-								</div>
+													{daysFact.value}
+												</p>
+											</div>
+										</div>
 
-								<div className="border-t border-slate-200/80 pt-4 flex flex-wrap items-center gap-6 min-h-6">
-									{onContactProvider && (
-										<button
-											type="button"
-											onClick={onContactProvider}
-											disabled={isBusy}
-											className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-600 cursor-pointer disabled:opacity-50 bg-transparent border-0 p-0"
-										>
-											<Mail className="h-3.5 w-3.5" />
-											Contact Provider
-										</button>
-									)}
-
-									{!confirmLetExpire ? (
-										<button
-											type="button"
-											className="text-sm text-red hover:text-red/80 cursor-pointer disabled:opacity-50 bg-transparent border-0 p-0"
-											onClick={() => setConfirmLetExpire(true)}
-											disabled={isBusy || entityType === "audit"}
-										>
-											{entityType === "audit"
-												? "Mark as skipped"
-												: "Let Expire"}
-										</button>
-									) : (
-										<span className="inline-flex flex-wrap items-center gap-2 text-sm text-slate-500">
+										{/* Contact row — button when we have a contact, else muted copy. */}
+										{hasContact ? (
 											<button
 												type="button"
-												className="font-semibold text-red hover:underline cursor-pointer disabled:opacity-50 bg-transparent border-0 p-0"
-												onClick={() => {
-													onLetExpire();
-													setConfirmLetExpire(false);
-												}}
+												onClick={onContactProvider}
 												disabled={isBusy}
+												className="inline-flex items-center gap-2 text-sm text-slate-600 hover:text-slate-700 cursor-pointer disabled:opacity-50"
 											>
-												Confirm
+												{contactEmail ? (
+													<Mail className="h-4 w-4" />
+												) : (
+													<Phone className="h-4 w-4" />
+												)}
+												Contact provider
+												<span className="text-slate-400">
+													{contactEmail || contactPhone}
+												</span>
 											</button>
-											<button
-												type="button"
-												className="text-slate-400 hover:underline cursor-pointer bg-transparent border-0 p-0"
-												onClick={() => setConfirmLetExpire(false)}
-												disabled={isBusy}
-											>
-												Cancel
-											</button>
-										</span>
-									)}
-								</div>
-							</div>
-						</motion.div>
-					</AnimatePresence>
-				</div>
+										) : (
+											<p className="text-sm text-slate-400">
+												No provider contact on record
+											</p>
+										)}
+									</div>
+
+									{/* Right — action rail */}
+									<ActionRail
+										kind={entityType}
+										daysRemaining={daysRemaining}
+										snoozeDays={snoozeDays}
+										resetKey={panelKey}
+										isBusy={isBusy}
+										renewRequiresDesktop={renewRequiresDesktop}
+										onRenew={handleRenew}
+										onViewDetails={onViewDetails}
+										onSnooze={onSnooze ? handleSnooze : undefined}
+										onDismiss={onDismiss ? handleDismiss : undefined}
+										onLetExpire={onLetExpire}
+										onDestructiveIntent={
+											onLetExpire ? handleDestructiveIntent : undefined
+										}
+									/>
+								</motion.div>
+							</AnimatePresence>
+						</div>
+
+						{/* Zone 4 — queue strip (only with more than one item). */}
+						{queue && queue.rows.length > 1 && (
+							<QueueStrip
+								queue={queue}
+								onExpandedChange={handleQueueExpandedChange}
+							/>
+						)}
+
+						{/* Footer cap — audits-style bottom strip (advance / pause / dismiss). */}
+						{queue && (
+							<ExpiryAlertFooterCap
+								nextLabel={
+									queue.nextIndex !== null && queue.rows[queue.nextIndex]
+										? queue.rows[queue.nextIndex].title
+										: null
+								}
+								countdownSeconds={queue.countdownSeconds}
+								paused={queue.paused}
+								onPause={queue.onPause}
+								onDismissAll={queue.onDismissAll}
+							/>
+						)}
+					</div>
+					{/* Desktop robot — enter slides in via motion; gestures via CSS. */}
+					<ExpiryAlertSpline
+						narration={robotNarration}
+						urgencyTier={tier}
+						countdownSeconds={
+							queue?.countdownSeconds ?? narration?.countdownSeconds ?? null
+						}
+						paused={queue?.paused ?? narration?.paused ?? false}
+						queueExpanded={queueExpanded}
+						reaction={robotReaction}
+					/>
+				</motion.div>
 			</div>
 		</div>
 	);
 }
 
-/** Map raw enum-ish values to title case labels. */
-export function formatExpiryTypeLabel(raw?: string | null): string {
-	if (!raw) return "—";
-	return raw
-		.replace(/[_-]+/g, " ")
-		.replace(/\s+/g, " ")
-		.trim()
-		.replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
-export function snoozeDurationToDays(duration: ExpirySnoozeDuration): number {
-	if (duration === "24h") return 1;
-	if (duration === "3d") return 3;
-	return 7;
-}
+/** Re-exported for callers that still import it from the modal module. */
+export { formatExpiryTypeLabel };

@@ -14,7 +14,11 @@ import { PERMISSIONS } from "@/constants/permissions";
 import { useCaalmAssistant } from "@/hooks/useCaalmAssistant";
 import { usePermissions } from "@/hooks/usePermissions";
 import { auditRemediationUserPrompt } from "@/lib/assistant/audit-remediation-context";
-import { getRemediationChatId } from "@/lib/assistant/remediation-chat-link";
+import { unlinkRemediationChat } from "@/lib/assistant/remediation-chat-link";
+import {
+	nextRemediationAction,
+	resolveRemediationConversation,
+} from "@/lib/assistant/resolveRemediationConversation";
 import { caalmToast } from "@/lib/ui/caalm-toast";
 
 type StartAuditRemediationGuideArgs = {
@@ -54,6 +58,17 @@ export function CaalmAssistantProvider({ children }: { children: ReactNode }) {
 		setOpen(true);
 	}, [canChat]);
 
+	const openLinkedConversation = useCallback(
+		async (conversationId: string) => {
+			skipResumeOnOpenRef.current = true;
+			setChatTabNonce((n) => n + 1);
+			setOpen(true);
+			return assistant.selectConversation(conversationId);
+		},
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- selectConversation is stable
+		[assistant.selectConversation],
+	);
+
 	const startAuditRemediationGuide = useCallback(
 		async ({
 			findingId,
@@ -69,14 +84,21 @@ export function CaalmAssistantProvider({ children }: { children: ReactNode }) {
 				});
 				return;
 			}
-			skipResumeOnOpenRef.current = true;
-			setChatTabNonce((n) => n + 1);
-			setOpen(true);
 			setIsGuiding(true);
 			try {
+				const existing = await resolveRemediationConversation(findingId);
+				if (nextRemediationAction(existing) === "open" && existing) {
+					const opened = await openLinkedConversation(
+						existing.conversationId,
+					);
+					if (opened) return;
+					unlinkRemediationChat(findingId);
+				}
+				skipResumeOnOpenRef.current = true;
+				setChatTabNonce((n) => n + 1);
+				setOpen(true);
 				const started = await assistant.startNewChat();
 				if (!started) return;
-				// sendMessage links the finding to this conversation (with plan outcome) internally.
 				await assistant.sendMessage(
 					auditRemediationUserPrompt(findingCode, findingTitle),
 					{
@@ -93,7 +115,12 @@ export function CaalmAssistantProvider({ children }: { children: ReactNode }) {
 		},
 		// startNewChat / sendMessage stay stable; `assistant` is a new object each render.
 		// eslint-disable-next-line react-hooks/exhaustive-deps -- see above
-		[assistant.sendMessage, assistant.startNewChat, canChat],
+		[
+			assistant.sendMessage,
+			assistant.startNewChat,
+			canChat,
+			openLinkedConversation,
+		],
 	);
 
 	const openRemediationChat = useCallback(
@@ -106,8 +133,8 @@ export function CaalmAssistantProvider({ children }: { children: ReactNode }) {
 				});
 				return;
 			}
-			const conversationId = getRemediationChatId(findingId);
-			if (!conversationId) {
+			const existing = await resolveRemediationConversation(findingId);
+			if (!existing) {
 				caalmToast.base({
 					tone: "info",
 					title: "No chat for this finding yet",
@@ -115,13 +142,16 @@ export function CaalmAssistantProvider({ children }: { children: ReactNode }) {
 				});
 				return;
 			}
-			skipResumeOnOpenRef.current = true;
-			setChatTabNonce((n) => n + 1);
-			setOpen(true);
-			await assistant.selectConversation(conversationId);
+			const opened = await openLinkedConversation(existing.conversationId);
+			if (opened) return;
+			unlinkRemediationChat(findingId);
+			caalmToast.base({
+				tone: "info",
+				title: "No chat for this finding yet",
+				message: "Use Show me how on the finding to start one.",
+			});
 		},
-		// eslint-disable-next-line react-hooks/exhaustive-deps -- selectConversation is stable
-		[assistant.selectConversation, canChat],
+		[canChat, openLinkedConversation],
 	);
 
 	const value = useMemo<CaalmAssistantShellValue>(

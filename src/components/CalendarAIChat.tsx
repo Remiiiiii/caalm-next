@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SheetHeaderIcon } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
+import { useComposerAutoGrow } from "@/hooks/useComposerAutoGrow";
 
 interface ChatMessage {
 	id: string;
@@ -158,6 +159,7 @@ const CalendarAIChat: React.FC<CalendarAIChatProps> = ({
 }) => {
 	const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
 	const [aiInput, setAiInput] = useState<string>("");
+	const aiInputRef = useComposerAutoGrow(aiInput, 64, 192);
 	const [isAiLoading, setIsAiLoading] = useState<boolean>(false);
 	const [welcomeMessageLoaded, setWelcomeMessageLoaded] = useState(false);
 	const [preReadsPromptSent, setPreReadsPromptSent] = useState(false);
@@ -1325,6 +1327,7 @@ Contract: ${contractTitle}`;
 			<div className="shrink-0 border-t border-slate-200/80 bg-white/35 px-4 py-3 backdrop-blur-sm">
 				<div className="space-y-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
 					<Textarea
+						ref={aiInputRef}
 						placeholder={
 							mode === "pre-reads"
 								? "Ask about contract details..."
@@ -1338,8 +1341,8 @@ Contract: ${contractTitle}`;
 								handleSendMessage();
 							}
 						}}
-						className="min-h-16 resize-y border-slate-300 text-sm text-slate-700 focus-visible:border-[#078FAB] focus-visible:ring-[#078FAB]"
-						rows={2}
+						className="min-h-16 max-h-48 resize-none overflow-hidden border-slate-300 text-sm text-slate-700 focus-visible:border-[#078FAB] focus-visible:ring-[#078FAB]"
+						rows={1}
 					/>
 					<Button
 						onClick={() => handleSendMessage()}

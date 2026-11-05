@@ -1619,6 +1619,29 @@ iframe[src*="documentcloud.adobe" i] {
 	background-clip: text;
 }
 
+/* Expiry narration equalizer — SVG bars painted with sidebar gradient stops */
+@keyframes sound-wave-bar {
+	from {
+		transform: scaleY(0.22);
+	}
+	to {
+		transform: scaleY(var(--bar-amp, 1));
+	}
+}
+
+.sound-wave-equalizer > rect {
+	transform-box: fill-box;
+	transform-origin: center;
+	animation: sound-wave-bar 0.85s ease-in-out infinite alternate;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.sound-wave-equalizer > rect {
+		animation: none;
+		transform: scaleY(var(--bar-amp, 0.7));
+	}
+}
+
 /* Apply gradient text to active tabs */
 button[data-state="active"] > span {
 	background: linear-gradient(135deg, #12477d 0%, #03afbf 100%);

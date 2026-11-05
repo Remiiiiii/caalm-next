@@ -40,10 +40,9 @@ export function filterConversationsByTitle(
 
 export function groupAssistantConversations(
 	conversations: AssistantConversationSummary[],
-	options: { activeId?: string | null; now?: Date } = {},
+	options: { now?: Date } = {},
 ): AssistantHistoryGroup[] {
 	const now = options.now ?? new Date();
-	const activeId = options.activeId ?? null;
 	const previousWindowStart = startOfDay(subDays(now, 7));
 
 	const buckets: Record<
@@ -57,7 +56,8 @@ export function groupAssistantConversations(
 	};
 
 	for (const conversation of conversations) {
-		if (activeId && conversation.$id === activeId) {
+		// Live session only — not whichever row is selected in the UI.
+		if (conversation.status === "active") {
 			buckets.active.push(conversation);
 			continue;
 		}

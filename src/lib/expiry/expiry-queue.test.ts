@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
 	buildExpiryQueue,
 	calculateDaysUntilExpiry,
+	isExpiryModalTriggerItem,
+	isInExpiryDisplayWindow,
 	parseExpiryShownState,
 } from "@/lib/expiry/expiry-queue";
 import type { UIFileDoc } from "@/types/files";
@@ -49,7 +51,7 @@ function fakeLicense(id: string, days: number, name = "License"): License {
 		licenseExpiryDate: isoOffset(days).slice(0, 10),
 		issuingAuthority: "State Board",
 		issueDate: isoOffset(-365).slice(0, 10),
-		status: "active",
+		status: days < 0 ? "expired" : "active",
 		orgId: "org-1",
 	};
 }
@@ -64,6 +66,22 @@ describe("calculateDaysUntilExpiry", () => {
 	});
 });
 
+describe("display / trigger windows", () => {
+	it("includes recently expired through 90 days ahead in the display window", () => {
+		expect(isInExpiryDisplayWindow(-30)).toBe(true);
+		expect(isInExpiryDisplayWindow(-31)).toBe(false);
+		expect(isInExpiryDisplayWindow(90)).toBe(true);
+		expect(isInExpiryDisplayWindow(91)).toBe(false);
+	});
+
+	it("only triggers the modal for 0–30 day items", () => {
+		expect(isExpiryModalTriggerItem(-3)).toBe(false);
+		expect(isExpiryModalTriggerItem(0)).toBe(true);
+		expect(isExpiryModalTriggerItem(30)).toBe(true);
+		expect(isExpiryModalTriggerItem(48)).toBe(false);
+	});
+});
+
 describe("buildExpiryQueue", () => {
 	it("merges contracts and licenses sorted by days", () => {
 		const queue = buildExpiryQueue({
@@ -75,19 +93,19 @@ describe("buildExpiryQueue", () => {
 		expect(queue[1].kind).toBe("license");
 	});
 
-	it("filters outside 0-30 unless bypassWindow", () => {
+	it("keeps recently expired and up-to-90-day items; drops older / farther", () => {
 		const queue = buildExpiryQueue({
-			contracts: [fakeContract("c40", 40), fakeContract("c-1", -1)],
-			licenses: [],
+			contracts: [
+				fakeContract("past", -12),
+				fakeContract("farPast", -40),
+				fakeContract("soon", 48),
+				fakeContract("far", 100),
+			],
+			licenses: [fakeLicense("lExpired", -5)],
 		});
-		expect(queue).toHaveLength(0);
-
-		const bypassed = buildExpiryQueue({
-			contracts: [fakeContract("c40", 40)],
-			licenses: [],
-			bypassWindow: true,
-		});
-		expect(bypassed).toHaveLength(1);
+		expect(queue.map((i) => i.id).sort()).toEqual(
+			["lExpired", "past", "soon"].sort(),
+		);
 	});
 
 	it("respects shown suppress lists", () => {

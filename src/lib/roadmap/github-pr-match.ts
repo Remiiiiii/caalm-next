@@ -27,6 +27,12 @@ import {
 	prdBatchOwnsTaskCode,
 	prdTaskCodesCompletedByPr,
 } from "./platform-readiness/prd-pr-batches";
+import {
+	ptoBatchForPr,
+	ptoBatchFromHeadRef,
+	ptoBatchOwnsTaskCode,
+	ptoTaskCodesCompletedByPr,
+} from "./production-tools/pto-pr-batches";
 
 export type GitHubPullRequestSummary = {
 	number: number;
@@ -131,6 +137,36 @@ export function matchPullRequestToTask(
 		if (branchMatch || titleMatch) return true;
 	}
 
+	if (catalogKey === "pto") {
+		const completing = ptoTaskCodesCompletedByPr(pr.number);
+		const byNumber = ptoBatchForPr(pr.number);
+		if (
+			completing.length > 0 &&
+			byNumber?.sectionNumber === sectionNumber &&
+			ptoBatchOwnsTaskCode(byNumber, taskCode)
+		) {
+			return true;
+		}
+		const byBranch = ptoBatchFromHeadRef(pr.headRef);
+		if (
+			byBranch &&
+			byBranch.sectionNumber === sectionNumber &&
+			ptoBatchOwnsTaskCode(byBranch, taskCode)
+		) {
+			return true;
+		}
+		const escaped = taskCode.replace(/\./g, "\\.");
+		const branchMatch = catalogBranchPrefixes("pto").some((prefix) =>
+			new RegExp(`${prefix}/${sectionNumber}-${escaped}(?:-|$)`, "i").test(
+				pr.headRef,
+			),
+		);
+		const titleMatch = new RegExp(`\\bPTO\\s+${escaped}\\b`, "i").test(
+			pr.title,
+		);
+		if (branchMatch || titleMatch) return true;
+	}
+
 	if (catalogKey === "npo") {
 		const completing = npoTaskCodesCompletedByPr(pr.number);
 		const byNumber = npoBatchForPr(pr.number);
@@ -167,9 +203,12 @@ export function matchPullRequestToTask(
 			? new RegExp(`\\bNPO\\s+${escapedCode}\\b`, "i").test(pr.title)
 			: catalogKey === "prd"
 				? new RegExp(`\\bPRD\\s+${escapedCode}\\b`, "i").test(pr.title)
-				: !/\bNPO\b/i.test(pr.title) &&
-					!/\bPRD\b/i.test(pr.title) &&
-					new RegExp(`\\b${escapedCode}\\b`).test(pr.title);
+				: catalogKey === "pto"
+					? new RegExp(`\\bPTO\\s+${escapedCode}\\b`, "i").test(pr.title)
+					: !/\bNPO\b/i.test(pr.title) &&
+						!/\bPRD\b/i.test(pr.title) &&
+						!/\bPTO\b/i.test(pr.title) &&
+						new RegExp(`\\b${escapedCode}\\b`).test(pr.title);
 	return branchMatch || titleMatch;
 }
 
@@ -204,7 +243,7 @@ export function findTaskPullRequest(
 export function resolveCatalogFromPrMatch(
 	pr: GitHubPullRequestSummary,
 ): CatalogSectionMatch | undefined {
-	for (const catalogKey of ["clm", "npo", "prd"] as const) {
+	for (const catalogKey of ["clm", "npo", "prd", "pto"] as const) {
 		const fromCatalog = sectionNumberForPrIn(
 			catalogForKey(catalogKey),
 			pr.number,
@@ -214,7 +253,7 @@ export function resolveCatalogFromPrMatch(
 		}
 	}
 
-	for (const catalogKey of ["clm", "npo", "prd"] as const) {
+	for (const catalogKey of ["clm", "npo", "prd", "pto"] as const) {
 		for (const section of catalogForKey(catalogKey)) {
 			if (matchPullRequestToSection(pr, section.sectionNumber, catalogKey)) {
 				return { catalogKey, sectionNumber: section.sectionNumber };
@@ -254,7 +293,7 @@ export function resolveSectionFromPrMatch(
  * matches the catalog task name.
  */
 export function displayPullRequestTitle(title: string): string {
-	return title.replace(/^(?:(?:NPO|PRD)\s+)?\d+\.\d+\s+/i, "").trim();
+	return title.replace(/^(?:(?:NPO|PRD|PTO)\s+)?\d+\.\d+\s+/i, "").trim();
 }
 
 /**

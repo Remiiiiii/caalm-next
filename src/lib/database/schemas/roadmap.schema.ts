@@ -2,8 +2,8 @@
  * Appwrite table attribute guide for CLM Roadmap collections.
  * Create tables with alphanumeric $id values (see appwriteConfig + .env.example).
  * Set ROADMAP_USE_APPWRITE=true after tables exist. Until then the engine uses memory seed.
- * NPO mirrors the same four table shapes: npo_roadmap_sections, npo_roadmap_tasks,
- * npo_roadmap_test_runs, npo_roadmap_status_log (separate IDs from CLM).
+ * NPO / PRD / PTO mirror the same four table shapes under separate table IDs
+ * (sectionNumber and taskCode are unique per table — catalogs must not share).
  */
 
 export const ROADMAP_SECTIONS_SCHEMA = {
@@ -184,4 +184,25 @@ export const NPO_ROADMAP_TEST_RUNS_SCHEMA = {
 export const NPO_ROADMAP_STATUS_LOG_SCHEMA = {
 	...ROADMAP_STATUS_LOG_SCHEMA,
 	name: "npo_roadmap_status_log",
+} as const;
+
+/** Same columns/indexes as CLM; Production Tools Ask CAALM board. */
+export const PTO_ROADMAP_SECTIONS_SCHEMA = {
+	...ROADMAP_SECTIONS_SCHEMA,
+	name: "pto_roadmap_sections",
+} as const;
+
+export const PTO_ROADMAP_TASKS_SCHEMA = {
+	...ROADMAP_TASKS_SCHEMA,
+	name: "pto_roadmap_tasks",
+} as const;
+
+export const PTO_ROADMAP_TEST_RUNS_SCHEMA = {
+	...ROADMAP_TEST_RUNS_SCHEMA,
+	name: "pto_roadmap_test_runs",
+} as const;
+
+export const PTO_ROADMAP_STATUS_LOG_SCHEMA = {
+	...ROADMAP_STATUS_LOG_SCHEMA,
+	name: "pto_roadmap_status_log",
 } as const;

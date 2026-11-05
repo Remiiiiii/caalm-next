@@ -160,7 +160,7 @@ export type UseCaalmAssistantReturn = {
 	conversationLoading: boolean;
 	loadHistory: () => Promise<void>;
 	loadMoreHistory: () => Promise<void>;
-	selectConversation: (id: string) => Promise<void>;
+	selectConversation: (id: string) => Promise<boolean>;
 	startNewChat: () => Promise<boolean>;
 	/** Restore the current active session after hide/remount (does not create a new chat). */
 	resumeActiveSession: () => Promise<void>;

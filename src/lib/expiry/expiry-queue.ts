@@ -2,7 +2,29 @@ import type { UIFileDoc } from "@/types/files";
 import type { License } from "@/types/licenses";
 
 export const EXPIRY_MODAL_SHOWN_KEY = "expiryModalShown";
-export const EXPIRY_WINDOW_DAYS = 30;
+
+/**
+ * Auto-open the modal only when at least one item is expiring in this
+ * forward window (0 … N days). The queue itself can show a wider set.
+ */
+export const EXPIRY_TRIGGER_WINDOW_DAYS = 30;
+/** Include items that expired up to this many days ago. */
+export const EXPIRY_QUEUE_LOOKBACK_DAYS = 30;
+/** Include items expiring up to this many days ahead. */
+export const EXPIRY_QUEUE_AHEAD_DAYS = 90;
+
+/** Alias used by queue-summary "within 30 days" copy. */
+export const EXPIRY_WINDOW_DAYS = EXPIRY_TRIGGER_WINDOW_DAYS;
+
+/** Whether an item belongs in the modal queue card. */
+export function isInExpiryDisplayWindow(days: number): boolean {
+	return days >= -EXPIRY_QUEUE_LOOKBACK_DAYS && days <= EXPIRY_QUEUE_AHEAD_DAYS;
+}
+
+/** Whether an item alone is enough to auto-open the modal. */
+export function isExpiryModalTriggerItem(days: number): boolean {
+	return days >= 0 && days <= EXPIRY_TRIGGER_WINDOW_DAYS;
+}
 
 export type ExpiryQueueItem =
 	| { kind: "contract"; id: string; file: UIFileDoc; days: number }
@@ -68,7 +90,7 @@ export function buildExpiryQueue(options: {
 	contracts: UIFileDoc[];
 	licenses: License[];
 	shown?: ExpiryShownState;
-	/** When true, skip 0–30 filter (test / deep-link). Still sorts. */
+	/** When true, skip the display window (test / deep-link). Still sorts. */
 	bypassWindow?: boolean;
 }): ExpiryQueueItem[] {
 	const {
@@ -89,18 +111,22 @@ export function buildExpiryQueue(options: {
 		if (isContractSnoozed(file, today)) continue;
 		const days = calculateDaysUntilExpiry(file.contractExpiryDate);
 		if (days === null) continue;
-		if (!bypassWindow && (days < 0 || days > EXPIRY_WINDOW_DAYS)) continue;
+		// Show: expired ≤30d ago … expiring within 90d. Trigger is separate.
+		if (!bypassWindow && !isInExpiryDisplayWindow(days)) continue;
 		items.push({ kind: "contract", id: file.$id, file, days });
 	}
 
 	for (const license of Array.isArray(licenses) ? licenses : []) {
 		if (!license?.$id || shownLicenses.has(license.$id)) continue;
-		if (license.status === "expired") continue;
 		const days = calculateDaysUntilExpiry(
 			license.licenseExpiryDate || license.expirationDate,
 		);
 		if (days === null) continue;
-		if (!bypassWindow && (days < 0 || days > EXPIRY_WINDOW_DAYS)) continue;
+		// Keep long-expired licenses out; recent expired stay in the queue.
+		if (license.status === "expired" && days < -EXPIRY_QUEUE_LOOKBACK_DAYS) {
+			continue;
+		}
+		if (!bypassWindow && !isInExpiryDisplayWindow(days)) continue;
 		items.push({ kind: "license", id: license.$id, license, days });
 	}
 
