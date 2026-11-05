@@ -9,6 +9,7 @@ import {
 	getUserDefaultOrganization,
 	getUserPermissions,
 } from "@/lib/rbac/permissions";
+import { excludeSoftDeletedQuery } from "@/lib/soft-delete";
 import type { License } from "@/types/licenses";
 
 const PAGE_SIZE = 12;
@@ -38,6 +39,7 @@ const Page = async () => {
 			tableId: appwriteConfig.licensesCollectionId || "licenses",
 			queries: [
 				Query.equal("orgId", orgId),
+				excludeSoftDeletedQuery("licenses"),
 				Query.orderDesc("$createdAt"),
 				Query.limit(PAGE_SIZE),
 				Query.offset(0),

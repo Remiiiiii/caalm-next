@@ -14,6 +14,7 @@ Comprehensive design guide for web and mobile applications. Contains 67 styles, 
 
 When this skill runs inside **caalm-next** (or any CAALM product UI):
 
+- **Palette first:** CAALM tokens win over spec/mockup CSS. Specs own layout, copy, and behavior — whether they include CSS or leave it out. Map onto `glass-card`, `btn-primary`, `sidebar-gradient-text`, and CAALM pills. Do not paste mockup whites or one-off hex. Source: `.cursor/rules/global-style-guide.mdc` → "Specs vs CAALM palette".
 - **Cards:** every card / page shell / table panel uses `glass-card` + `<div className="glass-card-cap" />`. Never solid white shells (`bg-white` + `border-slate-*` + `shadow-sm`). Clickable: also `interactive-glass-card`.
 - **Dropdowns:** translucent glass (`bg-white/10` + blur) **without** card-cap. Nested submenus match. Divider above Delete. Scrollable lists use `DropdownScrollArea` (no native Windows scrollbar arrows).
 - **Spinners:** branded page-load spinner (`LoadingSpinner` `md` / `lg` / `fullScreen`) only for route / auth / full page loads. Cards and glass panels use `size="sm"` or skeletons.

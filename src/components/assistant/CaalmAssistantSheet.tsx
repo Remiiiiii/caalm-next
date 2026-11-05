@@ -1,52 +1,42 @@
 ﻿"use client";
 
-import {
-	Download,
-	FileSymlink,
-	HelpCircle,
-	Loader2,
-	PanelRightClose,
-	Send,
-	SquarePen,
-} from "lucide-react";
+import { FileSymlink, Loader2, SquarePen } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
-import AssistantActionCompletedCard from "@/components/assistant/AssistantActionCompletedCard";
-import AssistantActionLifecycleCard from "@/components/assistant/AssistantActionLifecycleCard";
-import AssistantActivityFeedCard from "@/components/assistant/AssistantActivityFeedCard";
-import AssistantAvatar from "@/components/assistant/AssistantAvatar";
+import {
+	type MutableRefObject,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
+import AssistantChatThread from "@/components/assistant/AssistantChatThread";
+import AssistantFocusWindow from "@/components/assistant/AssistantFocusWindow";
 import AssistantHistoryList from "@/components/assistant/AssistantHistoryList";
 import AssistantInPanelOverlay, {
 	AssistantInPanelActions,
 } from "@/components/assistant/AssistantInPanelOverlay";
-import AssistantInputFormCard from "@/components/assistant/AssistantInputFormCard";
-import AssistantMeetingCreatedCard from "@/components/assistant/AssistantMeetingCreatedCard";
-import AssistantMessageActions from "@/components/assistant/AssistantMessageActions";
 import AssistantPendingActionCard from "@/components/assistant/AssistantPendingActionCard";
 import AssistantPreviewSheetShell from "@/components/assistant/AssistantPreviewSheetShell";
-import AssistantSuggestions from "@/components/assistant/AssistantSuggestions";
-import AssistantThinkingIndicator from "@/components/assistant/AssistantThinkingIndicator";
+import type { AssistantSheetTab } from "@/components/assistant/AssistantSegmentedTabs";
+import AssistantSheetComposer from "@/components/assistant/AssistantSheetComposer";
+import AssistantSheetHeader from "@/components/assistant/AssistantSheetHeader";
 import type {
 	AssistantSuggestion,
 	UseCaalmAssistantReturn,
 } from "@/components/assistant/assistantTypes";
-import { BusyIcon } from "@/components/ui/busy-icon";
+import { dispatchOpenCloseCap } from "@/lib/assistant/open-close-cap-client";
 import { Button } from "@/components/ui/button";
-import { LoadingSpinner } from "@/components/ui/loading";
-import { SHEET_CHIP_IDLE, SHEET_CHIP_SELECTED } from "@/components/ui/sheet-chip";
-import { Textarea } from "@/components/ui/textarea";
 import {
-	Tooltip,
-	TooltipContent,
-	TooltipProvider,
-	TooltipTrigger,
-} from "@/components/ui/tooltip";
+	SHEET_CHIP_IDLE,
+	SHEET_CHIP_SELECTED,
+} from "@/components/ui/sheet-chip";
+import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useBusyAction } from "@/hooks/useBusyAction";
+import { usePermissions } from "@/hooks/usePermissions";
 import { downloadAssistantChatTxt } from "@/lib/assistant/exportAssistantChatTxt";
-import { formatAssistantMarkdown } from "@/lib/assistant/formatMarkdown";
-import { cn } from "@/lib/utils";
+import { mentionableRoutes } from "@/lib/assistant/mention-routes";
 
 function getFirstName(
 	user: {
@@ -60,15 +50,6 @@ function getFirstName(
 	return first || "there";
 }
 
-const QUICK_PROMPTS = [
-	"What are audits in CAALM?",
-	"How do contract approvals work?",
-	"Show my pending tasks",
-	"What contracts or licenses are expiring soon?",
-];
-
-type Tab = "chat" | "history";
-
 const FEEDBACK_REASONS = [
 	{ label: "Wrong info", value: "wrong_info" },
 	{ label: "Incomplete", value: "incomplete" },
@@ -81,20 +62,28 @@ type Props = {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	assistant: UseCaalmAssistantReturn;
+	/** When true on this open, skip resume so a guided new chat is not overwritten. */
+	skipResumeOnOpenRef?: MutableRefObject<boolean>;
+	/** Increment to force the Chat tab (Show me how). */
+	chatTabNonce?: number;
 };
 
 export default function CaalmAssistantSheet({
 	open,
 	onOpenChange,
 	assistant,
+	skipResumeOnOpenRef,
+	chatTabNonce = 0,
 }: Props) {
 	const { toast } = useToast();
 	const { user } = useAuth();
+	const { permissions } = usePermissions();
 	const router = useRouter();
 	const firstName = getFirstName(
 		user as { name?: string; fullName?: string } | null,
 	);
-	const [tab, setTab] = useState<Tab>("chat");
+	const mentions = useMemo(() => mentionableRoutes(permissions), [permissions]);
+	const [tab, setTab] = useState<AssistantSheetTab>("chat");
 	const [downloadChat, downloadingChat] = useBusyAction(() =>
 		downloadAssistantChatTxt(assistant.messages, assistant.conversationId),
 	);
@@ -111,36 +100,67 @@ export default function CaalmAssistantSheet({
 	const endRef = useRef<HTMLDivElement>(null);
 
 	useEffect(() => {
-		if (open) {
-			void assistant.loadHistory();
-			void assistant.resumeActiveSession();
+		if (!open) {
+			setTab("chat");
+			return;
 		}
+		void assistant.loadHistory();
+		if (skipResumeOnOpenRef?.current) {
+			skipResumeOnOpenRef.current = false;
+			return;
+		}
+		void assistant.resumeActiveSession();
 		// eslint-disable-next-line react-hooks/exhaustive-deps -- resume when sheet opens only
 	}, [open]);
+
+	useEffect(() => {
+		if (chatTabNonce > 0) setTab("chat");
+	}, [chatTabNonce]);
 
 	useEffect(() => {
 		endRef.current?.scrollIntoView({ behavior: "smooth" });
 	}, [assistant.messages, assistant.isSending]);
 
-	const handleSend = () => {
-		const text = input;
+	const handleTabChange = (next: AssistantSheetTab) => {
+		setTab(next);
+		if (next === "history") void assistant.loadHistory();
+	};
+
+	const handleSend = (text = input, contextRoutes?: string[]) => {
+		const trimmed = text.trim();
+		if (!trimmed) return;
 		setInput("");
-		void assistant.sendMessage(text);
+		void assistant.sendMessage(trimmed, { contextRoutes });
+		if (tab === "history") setTab("chat");
+	};
+
+	/** Leave Focus, hide the sheet, then go to the href (scroll hash on same page). */
+	const navigateAssistantHref = (href: string) => {
 		setTab("chat");
+		onOpenChange(false);
+		router.push(href);
+		const hashIdx = href.indexOf("#");
+		const hash = hashIdx >= 0 ? href.slice(hashIdx + 1) : "";
+		if (!hash) return;
+		window.setTimeout(() => {
+			window.document
+				.getElementById(hash)
+				?.scrollIntoView({ behavior: "smooth", block: "start" });
+		}, 120);
 	};
 
 	const handleSuggestion = (suggestion: AssistantSuggestion) => {
 		if (suggestion.action.type === "navigate") {
-			router.push(suggestion.action.href);
+			navigateAssistantHref(suggestion.action.href);
+			return;
+		}
+		if (suggestion.action.type === "open_close_cap") {
+			dispatchOpenCloseCap(suggestion.action);
 			return;
 		}
 		void assistant.sendMessage(suggestion.action.text);
-		setTab("chat");
+		if (tab === "history") setTab("chat");
 	};
-
-	const lastAssistantId = [...assistant.messages]
-		.reverse()
-		.find((m) => m.role === "assistant")?.id;
 
 	const confirmNewChat = async () => {
 		await assistant.startNewChat();
@@ -182,90 +202,10 @@ export default function CaalmAssistantSheet({
 		}
 	};
 
-	const header = (
-		<div className="flex items-center justify-between gap-2">
-			<div
-				className="flex w-fit max-w-35 shrink-0 rounded-full bg-slate-100/90 p-0.5"
-				role="tablist"
-				aria-label="Assistant views"
-			>
-				{(["chat", "history"] as const).map((t) => (
-					<button
-						key={t}
-						type="button"
-						role="tab"
-						aria-selected={tab === t}
-						onClick={() => {
-							setTab(t);
-							if (t === "history") void assistant.loadHistory();
-						}}
-						className={cn(
-							"cursor-pointer rounded-full px-3 py-1 text-xs capitalize transition-all duration-200",
-							tab === t
-								? "bg-white text-slate-700 shadow-sm"
-								: "text-slate-600 hover:text-slate-700",
-							"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
-						)}
-					>
-						{t}
-					</button>
-				))}
-			</div>
-
-			<TooltipProvider delayDuration={200}>
-				<div className="flex items-center gap-0.5">
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<Button
-								type="button"
-								variant="ghost"
-								size="icon"
-								className="h-8 w-8 cursor-pointer text-slate-600 hover:bg-white/50 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
-								aria-label="Download chat"
-								disabled={assistant.messages.length === 0 || downloadingChat}
-								onClick={() => void downloadChat()}
-							>
-								<BusyIcon busy={downloadingChat} icon={Download} />
-							</Button>
-						</TooltipTrigger>
-						<TooltipContent side="bottom">Download chat</TooltipContent>
-					</Tooltip>
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<Button
-								type="button"
-								variant="ghost"
-								size="icon"
-								className="h-8 w-8 cursor-pointer text-slate-600 hover:bg-white/50 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
-								aria-label="Start new chat"
-								onClick={() => setNewChatOpen(true)}
-							>
-								<SquarePen className="h-4 w-4" />
-							</Button>
-						</TooltipTrigger>
-						<TooltipContent side="bottom">Start new chat</TooltipContent>
-					</Tooltip>
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<Button
-								type="button"
-								variant="ghost"
-								size="icon"
-								className="h-8 w-8 cursor-pointer text-slate-600 hover:bg-white/50 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
-								onClick={() => onOpenChange(false)}
-							>
-								<PanelRightClose className="h-4 w-4" />
-							</Button>
-						</TooltipTrigger>
-						<TooltipContent side="bottom">Close</TooltipContent>
-					</Tooltip>
-				</div>
-			</TooltipProvider>
-		</div>
-	);
-
 	const feedbackValid = feedbackReasons.length >= 1;
 	const feedbackLen = feedbackComment.length;
+	const focusOpen = open && tab === "focus";
+	const drawerOpen = open && tab !== "focus";
 
 	const overlay = (
 		<>
@@ -371,338 +311,150 @@ export default function CaalmAssistantSheet({
 		</>
 	);
 
-	return (
-		<AssistantPreviewSheetShell
-			open={open}
-			onOpenChange={onOpenChange}
-			title="CAALM Assistant"
-			header={header}
-			overlay={overlay}
-			footer={
-				tab === "chat" && !assistant.conversationLoading ? (
-					assistant.conversationStatus === "closed" ? (
-						<div className="flex flex-col gap-2">
-							<p className="text-center text-sm text-slate-600">
-								This conversation is closed. Start a new chat to continue.
-							</p>
-							<Button
-								type="button"
-								className="primary-btn w-full cursor-pointer rounded-full gap-2"
-								onClick={() => setNewChatOpen(true)}
-							>
-								<SquarePen className="h-4 w-4" />
-								Start new chat
-							</Button>
-						</div>
-					) : (
-						<div className="flex flex-col gap-2">
-							{/* Meeting create keeps the rich agenda/participants editor in the footer */}
-							{assistant.pendingAction?.toolName === "create_calendar_event" ? (
-								<AssistantPendingActionCard
-									action={assistant.pendingAction}
-									onConfirm={(argsPatch) =>
-										void assistant.confirmAction(argsPatch)
-									}
-									onArgsChange={(argsPatch) =>
-										assistant.patchPendingArgs(argsPatch)
-									}
-									disabled={assistant.isSending}
-								/>
-							) : null}
+	const thread = (
+		<AssistantChatThread
+			assistant={assistant}
+			firstName={firstName}
+			endRef={endRef}
+			feedbackPromptId={feedbackPromptId}
+			onSuggestion={handleSuggestion}
+			onQuickPrompt={(text) => void assistant.sendMessage(text)}
+			onOpenHref={navigateAssistantHref}
+			onThumbsDown={(id) => setFeedbackPromptId(id)}
+			onLeaveFeedback={(id) => {
+				setFeedbackMessageId(id);
+				setFeedbackOpen(true);
+				setFeedbackReasons([]);
+				setFeedbackComment("");
+			}}
+			onThumbsUp={(id) => {
+				void fetch("/api/assistant/feedback", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						rating: "up",
+						conversationId: assistant.conversationId,
+						messageId: id,
+					}),
+				});
+			}}
+		/>
+	);
 
-							<div className="relative w-full">
-								<Textarea
-									value={input}
-									onChange={(e) => setInput(e.target.value)}
-									placeholder="Ask CAALM anything…"
-									rows={4}
-									className={cn(
-										"min-h-[7.5rem] w-full resize-none rounded-3xl bg-white text-slate-700 shadow-sm",
-										"border-[0.25px] border-slate-300! px-4! pb-14! pt-3.5! pe-14!",
-										"placeholder:text-slate-400 focus-visible:border-[#078FAB]! focus-visible:ring-[#078FAB]",
-									)}
-									onKeyDown={(e) => {
-										if (e.key === "Enter" && !e.shiftKey) {
-											e.preventDefault();
-											handleSend();
-										}
-									}}
-								/>
-								<button
-									type="button"
-									onClick={handleSend}
-									disabled={assistant.isSending || !input.trim()}
-									aria-label="Send message"
-									className={cn(
-										"absolute z-10 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-white shadow-md transition-opacity duration-200",
-										"disabled:pointer-events-none disabled:opacity-50",
-										"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
-									)}
-									style={{
-										bottom: 12,
-										right: 12,
-										left: "auto",
-										backgroundImage:
-											"linear-gradient(to right, #00c1cb, #078fab, #0e638f, #11487d, #162768)",
-									}}
-								>
-									{assistant.isSending ? (
-										<Loader2 className="h-4 w-4 animate-spin" />
-									) : (
-										<Send className="h-4 w-4" />
-									)}
-								</button>
-							</div>
-
-							<p className="w-full text-center text-xs text-slate-500">
-								CAALM can make mistakes. Double-check replies.
-							</p>
-						</div>
-					)
-				) : undefined
-			}
-		>
-			{tab === "history" ? (
-				<AssistantHistoryList
-					conversations={assistant.conversations}
-					activeId={assistant.conversationId}
-					loading={assistant.historyLoading}
-					loadingMore={assistant.historyLoadingMore}
-					nextCursor={assistant.historyNextCursor}
-					onLoadMore={() => {
-						void assistant.loadMoreHistory();
-					}}
-					onSelect={(id) => {
-						void assistant.selectConversation(id);
-						setTab("chat");
-					}}
-				/>
+	const composerFooter =
+		tab !== "history" && !assistant.conversationLoading ? (
+			assistant.conversationStatus === "closed" ? (
+				<div className="flex flex-col gap-2">
+					<p className="text-center text-sm text-slate-600">
+						This conversation is closed. Start a new chat to continue.
+					</p>
+					<Button
+						type="button"
+						className="primary-btn w-full cursor-pointer rounded-full gap-2"
+						onClick={() => setNewChatOpen(true)}
+					>
+						<SquarePen className="h-4 w-4" />
+						Start new chat
+					</Button>
+				</div>
 			) : (
-				<div className="space-y-4">
-					{assistant.conversationLoading ? (
-						<LoadingSpinner
-							size="sm"
-							label="Loading conversation…"
-							className="py-16"
+				<div className="flex flex-col gap-2">
+					{assistant.pendingAction?.toolName === "create_calendar_event" ? (
+						<AssistantPendingActionCard
+							action={assistant.pendingAction}
+							onConfirm={(argsPatch) => void assistant.confirmAction(argsPatch)}
+							onArgsChange={(argsPatch) =>
+								assistant.patchPendingArgs(argsPatch)
+							}
+							disabled={assistant.isSending}
 						/>
 					) : null}
-
-					{!assistant.conversationLoading &&
-					assistant.messages.length === 0 &&
-					!assistant.isSending ? (
-						<div className="space-y-6 py-6">
-							<div className="text-center">
-								<div className="mb-4 flex justify-center">
-									<AssistantAvatar size="hero" alt="CAALM" priority />
-								</div>
-								<p className="text-xl font-bold sidebar-gradient-text">
-									Hello {firstName}
-								</p>
-								<p className="mt-1 text-base text-slate-600">
-									How can I assist you today?
-								</p>
-							</div>
-							<div className="space-y-3">
-								<p className="flex items-center justify-center gap-2 text-sm text-slate-600">
-									<HelpCircle className="h-4 w-4 text-[#0f5384]" />
-									Try a quick prompt:
-								</p>
-								<div className="flex flex-wrap justify-center gap-2">
-									{QUICK_PROMPTS.map((q) => (
-										<button
-											key={q}
-											type="button"
-											onClick={() => void assistant.sendMessage(q)}
-											className={SHEET_CHIP_IDLE}
-										>
-											{q}
-										</button>
-									))}
-								</div>
-							</div>
-						</div>
-					) : null}
-
-					{!assistant.conversationLoading
-						? assistant.messages.map((m) => {
-								const hasLifecycleCard =
-									Boolean(m.actionLifecycle) &&
-									m.pendingAction?.toolName !== "create_calendar_event";
-								const hasInputForm = Boolean(m.inputForm);
-								return (
-									<div
-										key={m.id}
-										className={cn(
-											"flex gap-2",
-											m.role === "user" ? "justify-end" : "justify-start",
-										)}
-									>
-										{m.role === "assistant" ? (
-											<AssistantAvatar size="md" />
-										) : null}
-										<div
-											className={cn(
-												"max-w-[85%] text-sm",
-												m.role === "user"
-													? "chat-question-bubble"
-													: hasLifecycleCard || hasInputForm
-														? "overflow-hidden rounded-2xl border border-slate-200/80 bg-white text-slate-700"
-														: "rounded-2xl border border-slate-200/80 bg-white/60 px-3 py-2 text-slate-700",
-											)}
-											style={
-												m.role === "user"
-													? {
-															padding: "10px 14px",
-															borderRadius: "16px 4px 16px 16px",
-															lineHeight: "20px",
-														}
-													: undefined
-											}
-										>
-											{m.content.trim() ? (
-												<div
-													className={cn(
-														"prose prose-sm max-w-none",
-														m.role === "user" ? "text-white" : "text-slate-700",
-														(hasLifecycleCard || hasInputForm) && "px-3 pt-2",
-													)}
-													dangerouslySetInnerHTML={{
-														__html: formatAssistantMarkdown(m.content),
-													}}
-												/>
-											) : null}
-											{hasLifecycleCard && m.actionLifecycle ? (
-												<AssistantActionLifecycleCard
-													embedded
-													action={m.actionLifecycle}
-													pendingArgs={
-														assistant.pendingAction?.id ===
-														m.actionLifecycle.pendingActionId
-															? assistant.pendingAction?.args
-															: m.pendingAction?.args
-													}
-													disabled={assistant.isSending}
-													onConfirm={() => void assistant.confirmAction()}
-													onCancel={() => assistant.cancelPendingAction()}
-													onRetry={() => void assistant.confirmAction()}
-													onArgsChange={(argsPatch) =>
-														assistant.patchPendingArgs(argsPatch)
-													}
-													onOpenEntity={() => {
-														if (m.actionLifecycle?.entityHref) {
-															router.push(m.actionLifecycle.entityHref);
-														}
-													}}
-												/>
-											) : null}
-											{m.meetingCreated ? (
-												<AssistantMeetingCreatedCard
-													meeting={m.meetingCreated}
-													onOpenCalendar={() =>
-														router.push(
-															m.meetingCreated?.calendarHref || "/calendar",
-														)
-													}
-												/>
-											) : null}
-											{!m.actionLifecycle && m.actionCompleted ? (
-												<AssistantActionCompletedCard
-													action={m.actionCompleted}
-												/>
-											) : null}
-											{m.activityFeed ? (
-												<AssistantActivityFeedCard feed={m.activityFeed} />
-											) : null}
-											{m.inputForm &&
-											m.id === lastAssistantId &&
-											!assistant.isSending &&
-											assistant.conversationStatus !== "closed" ? (
-												<div className="px-3 pb-3">
-													<AssistantInputFormCard
-														form={m.inputForm}
-														disabled={assistant.isSending}
-														onSubmit={(text) =>
-															void assistant.sendMessage(text)
-														}
-													/>
-												</div>
-											) : null}
-											{m.sources?.length ? (
-												<ul
-													className={cn(
-														"mt-2 space-y-1 border-t border-slate-200/80 pt-2",
-														hasLifecycleCard && "px-3",
-													)}
-												>
-													{m.sources.map((s) => (
-														<li key={s.id} className="text-xs text-slate-600">
-															Source: {s.title}
-															{s.href ? (
-																<button
-																	type="button"
-																	onClick={() => router.push(s.href!)}
-																	className="ml-1 cursor-pointer text-[#0f5384] underline"
-																>
-																	Open
-																</button>
-															) : null}
-														</li>
-													))}
-												</ul>
-											) : null}
-											{m.role === "assistant" &&
-											m.id === lastAssistantId &&
-											m.suggestions?.length &&
-											!hasInputForm &&
-											!assistant.isSending &&
-											assistant.conversationStatus !== "closed" ? (
-												<div className={cn(hasLifecycleCard && "px-3")}>
-													<AssistantSuggestions
-														suggestions={m.suggestions}
-														disabled={assistant.isSending}
-														onSelect={handleSuggestion}
-													/>
-												</div>
-											) : null}
-											{m.role === "assistant" && !hasInputForm ? (
-												<div className={cn(hasLifecycleCard && "px-3 pb-2")}>
-													<AssistantMessageActions
-														messageId={m.id}
-														content={m.content}
-														showLeaveFeedback={feedbackPromptId === m.id}
-														onThumbsDown={(id) => setFeedbackPromptId(id)}
-														onLeaveFeedback={(id) => {
-															setFeedbackMessageId(id);
-															setFeedbackOpen(true);
-															setFeedbackReasons([]);
-															setFeedbackComment("");
-														}}
-														onThumbsUp={(id) => {
-															void fetch("/api/assistant/feedback", {
-																method: "POST",
-																headers: { "Content-Type": "application/json" },
-																body: JSON.stringify({
-																	rating: "up",
-																	conversationId: assistant.conversationId,
-																	messageId: id,
-																}),
-															});
-														}}
-													/>
-												</div>
-											) : null}
-										</div>
-									</div>
-								);
-							})
-						: null}
-
-					{!assistant.conversationLoading && assistant.isSending ? (
-						<AssistantThinkingIndicator />
-					) : null}
-					<div ref={endRef} />
+					<AssistantSheetComposer
+						value={input}
+						onChange={setInput}
+						onSend={() => handleSend()}
+						sending={assistant.isSending}
+					/>
+					<p className="w-full text-center text-xs text-slate-500">
+						CAALM can make mistakes. Double-check replies.
+					</p>
 				</div>
-			)}
-		</AssistantPreviewSheetShell>
+			)
+		) : undefined;
+
+	return (
+		<>
+			<AssistantPreviewSheetShell
+				open={drawerOpen}
+				onOpenChange={onOpenChange}
+				title="CAALM Assistant"
+				header={
+					<AssistantSheetHeader
+						tab={tab === "focus" ? "chat" : tab}
+						onTabChange={handleTabChange}
+						onDownload={() => void downloadChat()}
+						downloading={downloadingChat}
+						canDownload={assistant.messages.length > 0}
+						onNewChat={() => setNewChatOpen(true)}
+						onClose={() => onOpenChange(false)}
+					/>
+				}
+				overlay={overlay}
+				footer={composerFooter}
+			>
+				{tab === "history" ? (
+					<AssistantHistoryList
+						conversations={assistant.conversations}
+						activeId={assistant.conversationId}
+						loading={assistant.historyLoading}
+						loadingMore={assistant.historyLoadingMore}
+						nextCursor={assistant.historyNextCursor}
+						onLoadMore={() => {
+							void assistant.loadMoreHistory();
+						}}
+						onSelect={(id) => {
+							void assistant.selectConversation(id);
+							setTab("chat");
+						}}
+					/>
+				) : (
+					thread
+				)}
+			</AssistantPreviewSheetShell>
+
+			<AssistantFocusWindow
+				open={focusOpen}
+				assistant={assistant}
+				firstName={firstName}
+				endRef={endRef}
+				feedbackPromptId={feedbackPromptId}
+				onSuggestion={handleSuggestion}
+				onQuickPrompt={(text) => void assistant.sendMessage(text)}
+				onOpenHref={navigateAssistantHref}
+				onThumbsDown={(id) => setFeedbackPromptId(id)}
+				onLeaveFeedback={(id) => {
+					setFeedbackMessageId(id);
+					setFeedbackOpen(true);
+					setFeedbackReasons([]);
+					setFeedbackComment("");
+				}}
+				onThumbsUp={(id) => {
+					void fetch("/api/assistant/feedback", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({
+							rating: "up",
+							conversationId: assistant.conversationId,
+							messageId: id,
+						}),
+					});
+				}}
+				overlay={overlay}
+				mentions={mentions}
+				onSend={(text, contextRoutes) => handleSend(text, contextRoutes)}
+				onCloseFocus={() => setTab("chat")}
+				onRequestNewChat={() => setNewChatOpen(true)}
+			/>
+		</>
 	);
 }

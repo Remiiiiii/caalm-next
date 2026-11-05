@@ -1,5 +1,8 @@
 "use client";
 
+import { SegmentedToggle } from "@/components/ui/segmented-toggle";
+import { PERMISSIONS } from "@/constants/permissions";
+import { usePermissions } from "@/hooks/usePermissions";
 import { DATA_TABLE_TOOLBAR_INSET } from "@/lib/ui/data-table-styles";
 import type { UIFileDoc } from "@/types/files";
 import ContractsFilter from "./ContractsFilter";
@@ -22,26 +25,52 @@ export default function ContractsControlBar({
 	departments = [],
 	assignedManagers = [],
 }: ContractsControlBarProps) {
-	const { listAnchorRef } = useContractsView();
+	const { listAnchorRef, listScope, setListScope } = useContractsView();
+	const { permissions } = usePermissions();
+	const canManageRemoved =
+		permissions.includes(PERMISSIONS.CONTRACTS.EDIT) ||
+		permissions.includes(PERMISSIONS.CONTRACTS.APPROVE);
 
 	return (
 		<div ref={listAnchorRef} className="w-full scroll-mt-4">
-			<ContractsStatusTabs files={files} />
+			{canManageRemoved ? (
+				<div className={`flex justify-end pt-4 ${DATA_TABLE_TOOLBAR_INSET}`}>
+					<SegmentedToggle
+						value={listScope}
+						onChange={setListScope}
+						ariaLabel="Filter contracts by active or removed"
+						className="w-full max-w-xs"
+						tabs={[
+							{ value: "active", label: "Active" },
+							{ value: "removed", label: "Removed" },
+						]}
+					/>
+				</div>
+			) : null}
+			{listScope === "active" ? <ContractsStatusTabs files={files} /> : null}
 			<div
 				className={`flex pt-4 pb-3 ${DATA_TABLE_TOOLBAR_INSET} gap-3 justify-between flex-wrap`}
 			>
-				<ContractsTopControls files={files} />
-				<div className="platform-overview-actions flex items-center gap-2 justify-end flex-wrap">
-					<ContractsViewToggle />
-					<ContractsSavedViews />
-					<ContractsFilter
-						departments={departments}
-						assignedManagers={assignedManagers}
-					/>
-					<Sort />
-				</div>
+				{listScope === "active" ? (
+					<ContractsTopControls files={files} />
+				) : (
+					<p className="text-sm text-slate-600">
+						Soft-deleted contracts. Restore to return them to the active list.
+					</p>
+				)}
+				{listScope === "active" ? (
+					<div className="platform-overview-actions flex items-center gap-2 justify-end flex-wrap">
+						<ContractsViewToggle />
+						<ContractsSavedViews />
+						<ContractsFilter
+							departments={departments}
+							assignedManagers={assignedManagers}
+						/>
+						<Sort />
+					</div>
+				) : null}
 			</div>
-			<ContractsFilterChips />
+			{listScope === "active" ? <ContractsFilterChips /> : null}
 		</div>
 	);
 }

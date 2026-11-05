@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy, ThumbsDown, ThumbsUp } from "lucide-react";
+import { Check, Copy, ThumbsDown, ThumbsUp, Volume2 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -44,6 +44,17 @@ export default function AssistantMessageActions({
 			<div className="flex items-center justify-between gap-3">
 				<p className="text-xs text-slate-400">Was this helpful?</p>
 				<div className="flex shrink-0 items-center gap-0.5">
+					<Button
+						type="button"
+						variant="ghost"
+						size="icon"
+						className={cn(iconBtn, "cursor-not-allowed opacity-50")}
+						aria-label="Read aloud coming soon"
+						title="Read aloud coming soon"
+						disabled
+					>
+						<Volume2 className="h-3.5 w-3.5" />
+					</Button>
 					<Button
 						type="button"
 						variant="ghost"

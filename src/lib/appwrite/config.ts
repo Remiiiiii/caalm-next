@@ -278,6 +278,36 @@ export const appwriteConfig = {
 		"69f8e3a2001d4e8c2b10",
 	),
 
+	/** Uploaded audit result documents (name: audit_documents) */
+	auditDocumentsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_AUDIT_DOCUMENTS_COLLECTION",
+		"69a1c0d10001a8d1e001",
+	),
+
+	/** Extracted findings from uploaded audits (name: audit_findings) */
+	auditFindingsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_AUDIT_FINDINGS_COLLECTION",
+		"69a1c0d10001a8d1e002",
+	),
+
+	/** Corrective action plans (name: audit_corrective_actions) */
+	auditCorrectiveActionsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_AUDIT_CORRECTIVE_ACTIONS_COLLECTION",
+		"69a1c0d10001a8d1e003",
+	),
+
+	/** Per-audit professional feedback (name: audit_feedback) */
+	auditFeedbackCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_AUDIT_FEEDBACK_COLLECTION",
+		"69a1c0d10001a8d1e004",
+	),
+
+	/** Audit report files (name: caalm-audit-documents) */
+	auditDocumentsBucketId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_AUDIT_DOCUMENTS_BUCKET",
+		"69a1c0d10001a8d1e00b",
+	),
+
 	/** Government RFP proposal workspace (name: proposals) */
 	proposalsCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_PROPOSALS_COLLECTION",

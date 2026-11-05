@@ -1,7 +1,7 @@
 "use client";
 
 import type { Models } from "appwrite";
-import { Calendar, ChartLine, ClipboardCheck } from "lucide-react";
+import { Calendar, ChartLine } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
 import ReportGenerator from "@/components/ReportGenerator";
@@ -23,6 +23,11 @@ const LicenseUploadForm = dynamic(() => import("@/components/license-upload"), {
 	ssr: false,
 	loading: () => null,
 });
+
+const AuditUploadForm = dynamic(
+	() => import("@/components/audit-upload/AuditUploadForm"),
+	{ ssr: false, loading: () => null },
+);
 
 interface QuickActionsProps {
 	user?:
@@ -83,19 +88,14 @@ const QuickActions = ({ user }: QuickActionsProps) => {
 						onTriggerClick={() => setActiveAction("license")}
 						onSuccess={() => {}}
 					/>
-					<ActionTooltip label="Upload Audit">
-						<button
-							type="button"
-							className={cn(
-								"segmented-toggle-item px-2.5",
-								activeAction === "audit" && "segmented-toggle-item-active",
-							)}
-							aria-label="Audit"
-							onClick={() => setActiveAction("audit")}
-						>
-							<ClipboardCheck className="h-4 w-4 shrink-0" aria-hidden />
-						</button>
-					</ActionTooltip>
+					<AuditUploadForm
+						ownerId={user?.$id || ""}
+						accountId={user?.$id || ""}
+						iconOnly
+						active={activeAction === "audit"}
+						onTriggerClick={() => setActiveAction("audit")}
+						onSuccess={() => {}}
+					/>
 				</>
 			)}
 			<ActionTooltip label="Schedule Review">

@@ -76,11 +76,11 @@ export function AppDialog({
 			</div>
 			{description ? (
 				isDestructive ? (
-					<AlertDialogDescription className="mt-1 pl-11 text-[12.5px] leading-normal text-slate-500">
+					<AlertDialogDescription className="mt-1 pl-11 text-[13px] leading-normal text-slate-500">
 						{description}
 					</AlertDialogDescription>
 				) : (
-					<DialogDescription className="mt-1 pl-11 text-[12.5px] leading-normal text-slate-500">
+					<DialogDescription className="mt-1 pl-11 text-[13px] leading-normal text-slate-500">
 						{description}
 					</DialogDescription>
 				)

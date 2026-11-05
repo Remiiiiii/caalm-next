@@ -67,6 +67,7 @@ export const taskListQuerySchema = z.object({
 	dueAfter: z.string().optional(),
 	view: taskViewSchema.optional().default("all"),
 	dueBucket: taskDueBucketSchema.optional().default("any"),
+	scope: z.enum(["active", "removed"]).optional().default("active"),
 });
 
 export const taskBulkSchema = z.object({

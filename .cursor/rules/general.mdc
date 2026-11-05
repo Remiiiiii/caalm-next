@@ -9,7 +9,7 @@ alwaysApply: true
 
 **How to talk:** Follow `.cursor/rules/plain-english-junior-dev.mdc`.  
 **How to work:** Follow `.cursor/rules/agent-workflow-principal.mdc`.  
-**UI:** Follow `.cursor/rules/global-style-guide.mdc` when editing UI files.  
+**UI:** Follow `.cursor/rules/global-style-guide.mdc` when editing UI files. CAALM palette first — even when a spec includes or omits CSS.  
 **API auth:** Prefer `pnpm new:api-route` / `api-route-authz.mdc`.  
 **RBAC:** `.cursor/rules/security-rbac.mdc` — no role bypasses.
 

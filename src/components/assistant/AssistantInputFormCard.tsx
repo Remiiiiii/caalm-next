@@ -1,7 +1,7 @@
 "use client";
 
 import { isToday } from "date-fns";
-import { FileSymlink, Unlink2, UserPlus, X } from "lucide-react";
+import { Unlink2, UserPlus, X } from "lucide-react";
 import { useLayoutEffect, useRef, useState } from "react";
 import type {
 	AssistantFormField,
@@ -14,7 +14,6 @@ import {
 import { TaskAssigneeFilter } from "@/components/tasks/TaskAssigneeFilter";
 import type { TaskPerson } from "@/components/tasks/task-ui";
 import Avatar from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import { DropdownScrollArea } from "@/components/ui/DropdownScrollArea";
 import {
 	Popover,
@@ -504,15 +503,13 @@ export default function AssistantInputFormCard({
 			))}
 
 			<div className="flex justify-end pt-1">
-				<Button
+				<button
 					type="submit"
-					size="sm"
 					disabled={disabled || !allRequiredFilled}
-					className="btn-primary h-8 gap-1.5 px-3 text-xs"
+					className="cursor-pointer text-xs font-semibold text-[#0f5384] hover:underline disabled:cursor-not-allowed disabled:opacity-50"
 				>
-					<FileSymlink className="h-3.5 w-3.5" />
 					Submit
-				</Button>
+				</button>
 			</div>
 		</form>
 	);

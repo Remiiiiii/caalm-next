@@ -81,9 +81,9 @@ function DismissButton({ onDismiss }: { onDismiss: () => void }) {
 			type="button"
 			onClick={onDismiss}
 			aria-label="Dismiss"
-			className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#078FAB]"
+			className="absolute right-2 top-2 flex h-6 w-6 cursor-pointer items-center justify-center rounded-full text-slate-400 transition-colors duration-200 hover:bg-black/[.04] hover:text-slate-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#078FAB]"
 		>
-			<X className="h-3.5 w-3.5" />
+			<X className="h-3.5 w-3.5" aria-hidden />
 		</button>
 	);
 }

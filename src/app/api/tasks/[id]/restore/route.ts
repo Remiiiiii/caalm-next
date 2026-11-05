@@ -48,7 +48,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
 		await logAuditEvent({
 			event_id: `task_restore_${id}`,
 			event_title: `Task restored: ${task.title}`,
-			action: "update",
+			action: "restore",
 			source: "caalm",
 			user_id: user.$id,
 			user_name: actorName,

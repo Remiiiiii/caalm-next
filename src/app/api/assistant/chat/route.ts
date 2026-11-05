@@ -1,4 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { PERMISSIONS } from "@/constants/permissions";
+import {
+	type AuditRemediationContext,
+	buildAuditRemediationContext,
+	conversationTitleForRemediation,
+	parseAuditRemediationLaunch,
+} from "@/lib/assistant/audit-remediation-context";
 import {
 	isAssistantAuthError,
 	requireAssistantAccess,
@@ -13,6 +20,7 @@ import {
 } from "@/lib/assistant/conversationStore";
 import { checkAssistantRateLimit } from "@/lib/assistant/rateLimit";
 import { runAssistantTurn } from "@/lib/assistant/runAssistantTurn";
+import { getFinding, listCaps } from "@/lib/audit-upload/store";
 
 export async function POST(request: NextRequest) {
 	try {
@@ -30,14 +38,56 @@ export async function POST(request: NextRequest) {
 		const body = await request.json();
 		const conversationId = body.conversationId as string | undefined;
 		const message = typeof body.message === "string" ? body.message.trim() : "";
+		/** Continue Show me how after confirm — do not store a second user bubble. */
+		const suppressUserMessage = body.suppressUserMessage === true;
 		const pathname =
 			typeof body.pathname === "string" ? body.pathname : undefined;
+		const launch = parseAuditRemediationLaunch(body.launchContext);
+		const contextRoutes = Array.isArray(body.contextRoutes)
+			? (body.contextRoutes as unknown[])
+					.filter(
+						(route): route is string =>
+							typeof route === "string" && route.startsWith("/"),
+					)
+					.slice(0, 8)
+			: [];
+
+		if (launch === "invalid") {
+			return NextResponse.json(
+				{ error: "Invalid launch context." },
+				{ status: 400 },
+			);
+		}
 
 		if (!message) {
 			return NextResponse.json(
 				{ error: "Message is required" },
 				{ status: 400 },
 			);
+		}
+
+		let remediationContext: AuditRemediationContext | undefined;
+		if (launch) {
+			if (!auth.permissions.includes(PERMISSIONS.AUDIT.DOCUMENTS_VIEW)) {
+				return NextResponse.json(
+					{ error: "Permission denied. audit.documents_view is required." },
+					{ status: 403 },
+				);
+			}
+			const finding = await getFinding(auth.orgId, launch.findingId);
+			if (!finding || finding.documentId !== launch.documentId) {
+				return NextResponse.json(
+					{ error: "Finding not found." },
+					{ status: 404 },
+				);
+			}
+			const caps = await listCaps({
+				orgId: auth.orgId,
+				documentId: launch.documentId,
+				limit: 50,
+			});
+			const cap = caps.find((row) => row.findingId === finding.$id) ?? null;
+			remediationContext = buildAuditRemediationContext({ finding, cap });
 		}
 
 		let convId = conversationId;
@@ -93,19 +143,23 @@ export async function POST(request: NextRequest) {
 					}))) ||
 			[];
 
-		await appendMessage({
-			conversationId: convId,
-			userId: auth.user.$id,
-			orgId: auth.orgId,
-			role: "user",
-			content: message,
-		});
+		if (!suppressUserMessage) {
+			await appendMessage({
+				conversationId: convId,
+				userId: auth.user.$id,
+				orgId: auth.orgId,
+				role: "user",
+				content: message,
+			});
+		}
 
 		const turn = await runAssistantTurn({
 			ctx: auth,
 			messages: history,
 			userMessage: message,
 			pathname,
+			remediationContext,
+			contextRoutes,
 		});
 
 		await appendMessage({
@@ -122,6 +176,9 @@ export async function POST(request: NextRequest) {
 				...(turn.suggestions?.length ? { suggestions: turn.suggestions } : {}),
 				...(turn.activityFeed ? { activityFeed: turn.activityFeed } : {}),
 				...(turn.inputForm ? { inputForm: turn.inputForm } : {}),
+				...(turn.researchSteps?.length
+					? { researchSteps: turn.researchSteps }
+					: {}),
 			}),
 		});
 
@@ -132,7 +189,12 @@ export async function POST(request: NextRequest) {
 				turn.answer.replace(/[#*`]/g, ""),
 				120,
 			),
-			title: truncatePreview(message, 80),
+			title: remediationContext
+				? truncatePreview(
+						conversationTitleForRemediation(remediationContext),
+						80,
+					)
+				: truncatePreview(message, 80),
 		});
 
 		return NextResponse.json({
@@ -146,6 +208,7 @@ export async function POST(request: NextRequest) {
 				clientAction: turn.clientAction,
 				activityFeed: turn.activityFeed,
 				inputForm: turn.inputForm,
+				researchSteps: turn.researchSteps,
 			},
 		});
 	} catch (error) {

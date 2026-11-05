@@ -7,7 +7,7 @@
 **Reference pages:** [e.g. contracts, licenses, settings — match width and header pattern]
 
 **Before coding:**
-1. Read `global-style-guide.mdc` and run ui-ux-pro-max skill if layout is non-trivial.
+1. Read `global-style-guide.mdc` and run ui-ux-pro-max skill if layout is non-trivial. **CAALM palette first** — specs own layout/copy/behavior, not CSS tokens, whether the spec includes design notes or leaves CSS out.
 2. `graft ask "page [feature]" --source` for similar pages.
 
 **Required structure:**

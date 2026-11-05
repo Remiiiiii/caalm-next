@@ -645,15 +645,14 @@ export default function AssistantPendingActionCard({
 				/>
 			)}
 			<div className="flex justify-end">
-				<Button
+				<button
 					type="button"
-					size="sm"
-					className="primary-btn rounded-full px-4 cursor-pointer"
+					className="cursor-pointer text-xs font-semibold text-[#0f5384] hover:underline disabled:cursor-not-allowed disabled:opacity-50"
 					onClick={() => onConfirm(isMeeting ? meetingPatch : undefined)}
 					disabled={disabled}
 				>
 					Confirm
-				</Button>
+				</button>
 			</div>
 		</div>
 	);

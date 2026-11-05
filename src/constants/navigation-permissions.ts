@@ -296,6 +296,20 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 				viewerReadOnly: true,
 				viewerFullAccess: true,
 			},
+			{
+				name: "Uploaded Audits",
+				icon: "/assets/icons/open-book-check.svg",
+				url: "/audits/uploads",
+				permissions: [
+					PERMISSIONS.AUDIT.DOCUMENTS_VIEW,
+					PERMISSIONS.AUDIT.UPLOAD,
+					PERMISSIONS.AUDIT.MANAGE_FINDINGS,
+					PERMISSIONS.AUDIT.MANAGE_CAPS,
+					PERMISSIONS.AUDIT.DELETE,
+				],
+				viewerReadOnly: true,
+				viewerFullAccess: true,
+			},
 		],
 	},
 	{

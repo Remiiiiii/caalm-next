@@ -50,6 +50,8 @@ function actionLabelForTool(toolName: string, fallbackLabel: string): string {
 		reschedule_calendar_event: "Move event",
 		cancel_calendar_event: "Cancel event",
 		generate_report: "Generate report",
+		apply_audit_remediation: "Start corrective action",
+		confirm_finding: "Confirm finding",
 	};
 	return (
 		map[toolName] ?? (fallbackLabel.replace(/^Confirm\s+/i, "") || "Action")
@@ -86,6 +88,15 @@ function entityTitleFromArgs(
 	toolName: string,
 	args: Record<string, unknown>,
 ): string {
+	if (toolName === "confirm_finding") {
+		const code =
+			typeof args.findingCode === "string" ? args.findingCode.trim() : "";
+		const title = String(args.title ?? "Audit finding").trim();
+		return code && !title.includes(code) ? `${code} — ${title}` : title || "Finding";
+	}
+	if (toolName === "apply_audit_remediation") {
+		return String(args.capTitle ?? "Corrective action");
+	}
 	if (toolName.includes("calendar") || toolName.includes("event")) {
 		return String(args.title ?? args.eventTitle ?? "Untitled");
 	}
@@ -172,6 +183,33 @@ function buildPendingFields(
 		return fields;
 	}
 
+	if (toolName === "confirm_finding") {
+		fields.push({
+			label: "Status change",
+			value: "Confirmed",
+			previousValue: "Draft",
+		});
+		fields.push({
+			label: "If confirmed",
+			value: "May draft an open corrective action plan automatically",
+		});
+		return fields;
+	}
+
+	if (toolName === "apply_audit_remediation") {
+		fields.push({
+			label: "Corrective action",
+			value: formatActionValue(args.capTitle ?? "Open action"),
+		});
+		fields.push({
+			label: "Status",
+			value: "Open → In progress",
+			kind: "badge",
+			badgeTone: "green",
+		});
+		return fields;
+	}
+
 	if (toolName === "create_calendar_event") {
 		const date = formatDue(args.date);
 		if (date) fields.push({ label: "Date", value: date });
@@ -202,15 +240,30 @@ export function buildPendingActionLifecycle(
 	actor?: ActionActor,
 ): AssistantActionLifecycle {
 	const args = pending.args ?? {};
+	const href =
+		(pending.toolName === "apply_audit_remediation" ||
+			pending.toolName === "confirm_finding") &&
+		typeof args.href === "string"
+			? args.href
+			: undefined;
 	return {
 		state: "pending",
 		actionLabel: actionLabelForTool(pending.toolName, pending.label),
 		entityTitle: entityTitleFromArgs(pending.toolName, args),
-		entitySubtitle: "ID assigned on creation",
+		entitySubtitle:
+			pending.toolName === "apply_audit_remediation" ||
+			pending.toolName === "confirm_finding"
+				? undefined
+				: "ID assigned on creation",
+		entityHref: href,
+		entityHrefLabel: href ? "Open finding" : undefined,
 		toolName: pending.toolName,
 		pendingActionId: pending.id,
 		fields: buildPendingFields(pending.toolName, args, actor),
-		footerNote: "Nothing has changed yet.",
+		footerNote:
+			pending.toolName === "confirm_finding"
+				? "Nothing is applied until you confirm."
+				: "Nothing has changed yet.",
 	};
 }
 
@@ -338,6 +391,80 @@ export function buildCompletedActionLifecycle(params: {
 			entityHrefLabel: "View task",
 			toolName: pending.toolName,
 			fields,
+			footerNote: new Date().toLocaleTimeString("en-US", {
+				hour: "numeric",
+				minute: "2-digit",
+			}),
+		};
+	}
+
+	if (pending.toolName === "confirm_finding") {
+		const href =
+			typeof result?.href === "string"
+				? result.href
+				: typeof args.href === "string"
+					? args.href
+					: undefined;
+		const drafted = Boolean(result?.draftedCap);
+		return {
+			state: "completed",
+			actionLabel: "Confirm finding",
+			entityTitle: entityTitleFromArgs(pending.toolName, {
+				...args,
+				...(result ?? {}),
+			}),
+			entityHref: href,
+			entityHrefLabel: href ? "Open finding" : undefined,
+			toolName: pending.toolName,
+			fields: [
+				{
+					label: "Status",
+					value: "Confirmed",
+					previousValue: "Draft",
+					kind: "badge",
+					badgeTone: "green",
+				},
+				{
+					label: "Corrective action",
+					value: drafted
+						? "Drafted (Open)"
+						: result?.capId
+							? "Already linked"
+							: "Not drafted for this verdict",
+				},
+			],
+			footerNote: new Date().toLocaleTimeString("en-US", {
+				hour: "numeric",
+				minute: "2-digit",
+			}),
+		};
+	}
+
+	if (pending.toolName === "apply_audit_remediation") {
+		const href =
+			typeof result?.href === "string"
+				? result.href
+				: typeof args.href === "string"
+					? args.href
+					: undefined;
+		return {
+			state: "completed",
+			actionLabel: "Start corrective action",
+			entityTitle: String(
+				result?.title ?? args.capTitle ?? "Corrective action",
+			),
+			entityHref: href,
+			entityHrefLabel: href ? "Open finding" : undefined,
+			toolName: pending.toolName,
+			fields: [
+				{
+					label: "Status",
+					value: "In progress",
+					previousValue: "Open",
+					kind: "badge",
+					badgeTone: "green",
+				},
+			],
 			footerNote: new Date().toLocaleTimeString("en-US", {
 				hour: "numeric",
 				minute: "2-digit",

@@ -1,3 +1,6 @@
+import type { AuditRemediationLaunchContext } from "@/lib/assistant/audit-remediation-context";
+import type { AssistantResearchStep } from "@/lib/assistant/assistant-research-steps";
+
 export type RetrievedSource = {
 	id: string;
 	title: string;
@@ -14,11 +17,7 @@ export type AssistantPendingAction = {
 	args?: Record<string, unknown>;
 };
 
-export type AssistantSuggestion = {
-	id: string;
-	label: string;
-	action: { type: "prompt"; text: string } | { type: "navigate"; href: string };
-};
+export type { AssistantSuggestion } from "@/lib/assistant/suggestions";
 
 export type AssistantMeetingCreated = {
 	eventId?: string;
@@ -98,7 +97,12 @@ export type AssistantActivityFeed = {
 	}>;
 };
 
-export type AssistantFormFieldType = "text" | "date" | "time" | "select" | "textarea";
+export type AssistantFormFieldType =
+	| "text"
+	| "date"
+	| "time"
+	| "select"
+	| "textarea";
 
 export type AssistantFormField = {
 	name: string;
@@ -134,6 +138,8 @@ export type AssistantChatMessage = {
 	activityFeed?: AssistantActivityFeed;
 	/** Inline form for the AI to collect structured input from the user */
 	inputForm?: AssistantInputForm;
+	/** Live research trace for corrective-action / implementation flows */
+	researchSteps?: AssistantResearchStep[];
 	createdAt?: string;
 };
 
@@ -155,15 +161,30 @@ export type UseCaalmAssistantReturn = {
 	loadHistory: () => Promise<void>;
 	loadMoreHistory: () => Promise<void>;
 	selectConversation: (id: string) => Promise<void>;
-	startNewChat: () => Promise<void>;
+	startNewChat: () => Promise<boolean>;
 	/** Restore the current active session after hide/remount (does not create a new chat). */
 	resumeActiveSession: () => Promise<void>;
-	sendMessage: (text: string) => Promise<void>;
+	sendMessage: (
+		text: string,
+		options?: {
+			launchContext?: AuditRemediationLaunchContext;
+			contextRoutes?: string[];
+			bypassBusy?: boolean;
+			suppressUserBubble?: boolean;
+		},
+	) => Promise<string | null>;
 	confirmAction: (argsPatch?: Record<string, unknown>) => Promise<void>;
 	/** Dismiss a pending confirmation without running it */
 	cancelPendingAction: () => void;
 	/** Merge confirmation-card edits into the in-memory pending action */
 	patchPendingArgs: (argsPatch: Record<string, unknown>) => void;
+	/** Shown while a remediation research request is in flight */
+	pendingResearchSteps: AssistantResearchStep[] | null;
+	/** Client-only: animate research trace for this assistant message id */
+	researchPlaybackMessageId: string | null;
+	completeResearchPlayback: () => void;
+	/** Live apply trace while apply_audit_remediation runs */
+	applyProgressSteps: AssistantResearchStep[] | null;
 };
 
 export type AssistantConversationSummary = {

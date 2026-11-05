@@ -8,9 +8,9 @@ import {
 	Clock3,
 	Copy,
 	ExternalLink,
+	Info,
 	ListTodo,
 	Loader2,
-	RefreshCw,
 	UserPlus,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -20,7 +20,6 @@ import type {
 	AssistantPendingAction,
 } from "@/components/assistant/assistantTypes";
 import { getAvatarColor } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import { CaalmDatePicker } from "@/components/ui/caalm-date-picker";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -136,7 +135,76 @@ function EntityIcon({ toolName }: { toolName: string }) {
 	if (toolName.includes("invite") || toolName.includes("user")) {
 		return <UserPlus className="h-4 w-4 text-[#0f5384]" />;
 	}
+	if (toolName === "confirm_finding") {
+		return <CheckCircle2 className="h-4 w-4 text-[#078fab]" />;
+	}
 	return <ListTodo className="h-4 w-4 text-[#0f5384]" />;
+}
+
+/** Pending confirm-finding layout — matches Show me how confirm card mock. */
+function ConfirmFindingPendingBody({
+	action,
+}: {
+	action: AssistantActionLifecycle;
+}) {
+	const statusField = action.fields.find((f) => f.label === "Status change");
+	const ifConfirmed = action.fields.find((f) => f.label === "If confirmed");
+
+	return (
+		<div className="px-4 pt-3.5">
+			<div className="flex items-start gap-3">
+				<div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#a0c4db]/70 bg-[#e1f3ff]/50">
+					<CheckCircle2 className="h-4 w-4 text-[#078fab]" aria-hidden />
+				</div>
+				<div className="min-w-0 flex-1">
+					<p className="text-sm font-semibold leading-snug text-slate-700">
+						{action.entityTitle || "Audit finding"}
+					</p>
+					<span
+						className="mt-1.5 inline-flex items-center gap-1.5 rounded-full border border-orange/20 bg-orange/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-orange"
+						role="status"
+					>
+						<span
+							className="h-1.5 w-1.5 shrink-0 rounded-full bg-orange"
+							aria-hidden
+						/>
+						Awaiting confirmation
+					</span>
+				</div>
+			</div>
+
+			<div className="mt-3.5 space-y-0">
+				{statusField ? (
+					<div className="flex items-center justify-between gap-3 border-b border-slate-100 py-2.5">
+						<span className="shrink-0 text-xs text-slate-500">
+							{statusField.label}
+						</span>
+						<span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs">
+							<span className="text-slate-500">
+								{statusField.previousValue ?? "Draft"}
+							</span>
+							<span className="text-slate-400" aria-hidden>
+								→
+							</span>
+							<span className="font-semibold text-[#078fab]">
+								{statusField.value}
+							</span>
+						</span>
+					</div>
+				) : null}
+				{ifConfirmed ? (
+					<div className="flex items-start justify-between gap-3 py-2.5">
+						<span className="shrink-0 text-xs text-slate-500">
+							{ifConfirmed.label}
+						</span>
+						<span className="min-w-0 text-right text-xs leading-snug text-slate-600">
+							{ifConfirmed.value}
+						</span>
+					</div>
+				) : null}
+			</div>
+		</div>
+	);
 }
 
 function isCreateTaskTool(toolName: string): boolean {
@@ -439,6 +507,8 @@ export default function AssistantActionLifecycleCard({
 	const isCompleted = action.state === "completed";
 	const draftMode =
 		isPending && isCreateTaskTool(action.toolName) && Boolean(onArgsChange);
+	const confirmFindingPending =
+		isPending && action.toolName === "confirm_finding";
 
 	const statusBadge = isPending
 		? {
@@ -496,26 +566,28 @@ export default function AssistantActionLifecycleCard({
 					: "mt-2 rounded-xl border border-slate-200 bg-white shadow-sm",
 			)}
 		>
-			{/* Header */}
-			<div className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
-				<div className="flex min-w-0 items-center gap-2">
-					<HeaderIcon
-						className={cn("h-4 w-4 shrink-0", headerIconClass)}
-						aria-hidden
-					/>
-					<p className="truncate text-sm font-semibold text-slate-700">
-						{action.actionLabel}
-					</p>
+			{/* Header — skipped for confirm_finding pending (title + badge live in body). */}
+			{!confirmFindingPending ? (
+				<div className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
+					<div className="flex min-w-0 items-center gap-2">
+						<HeaderIcon
+							className={cn("h-4 w-4 shrink-0", headerIconClass)}
+							aria-hidden
+						/>
+						<p className="truncate text-sm font-semibold text-slate-700">
+							{action.actionLabel}
+						</p>
+					</div>
+					<span
+						className={cn(
+							"inline-block shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+							statusBadge.className,
+						)}
+					>
+						{statusBadge.label}
+					</span>
 				</div>
-				<span
-					className={cn(
-						"inline-block shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-						statusBadge.className,
-					)}
-				>
-					{statusBadge.label}
-				</span>
-			</div>
+			) : null}
 
 			{draftMode ? (
 				<CreateTaskDraftEditor
@@ -524,6 +596,8 @@ export default function AssistantActionLifecycleCard({
 					disabled={disabled}
 					onPatch={handleDraftPatch}
 				/>
+			) : confirmFindingPending ? (
+				<ConfirmFindingPendingBody action={action} />
 			) : (
 				<>
 					{/* Entity */}
@@ -590,80 +664,77 @@ export default function AssistantActionLifecycleCard({
 
 			{/* Footer */}
 			<div className="flex items-center justify-between gap-3 border-t border-slate-100 px-4 py-3">
-				<p className="min-w-0 text-xs text-slate-500">
-					{draftMode ? "Edit the draft, then confirm." : action.footerNote}
-					{!draftMode && action.footerNote && isCompleted ? (
-						<button
-							type="button"
-							onClick={onOpenEntity}
-							className="ml-1 cursor-pointer text-[#0f5384] hover:underline"
-						>
-							details
-						</button>
-					) : null}
-				</p>
+				{confirmFindingPending ? (
+					<p className="flex min-w-0 items-center gap-1.5 text-xs text-slate-500">
+						<Info className="h-3.5 w-3.5 shrink-0" aria-hidden />
+						<span>{action.footerNote}</span>
+					</p>
+				) : (
+					<p className="min-w-0 text-xs text-slate-500">
+						{draftMode ? "Edit the draft, then confirm." : action.footerNote}
+						{!draftMode && action.footerNote && isCompleted ? (
+							<button
+								type="button"
+								onClick={onOpenEntity}
+								className="ml-1 cursor-pointer text-[#0f5384] hover:underline"
+							>
+								details
+							</button>
+						) : null}
+					</p>
+				)}
 
 				{isPending ? (
-					<div className="flex shrink-0 items-center gap-2">
-						<Button
+					<div className="flex shrink-0 items-center gap-3">
+						<button
 							type="button"
-							variant="ghost"
-							size="sm"
-							className="rounded-full px-3 py-1.5 h-[1.65rem] justify-center text-slate-400 hover:text-slate-600 hover:bg-black/[.04]"
+							className="cursor-pointer text-xs font-medium text-slate-500 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
 							onClick={onCancel}
 							disabled={disabled}
 						>
 							Cancel
-						</Button>
-						<Button
+						</button>
+						<button
 							type="button"
-							size="sm"
-							className="primary-btn cursor-pointer gap-1.5 px-3"
+							className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-[#0f5384] hover:underline disabled:cursor-not-allowed disabled:opacity-50"
 							onClick={() => onConfirm?.()}
 							disabled={disabled || !canConfirm}
 						>
 							{disabled ? (
-								<Loader2 className="h-3.5 w-3.5 animate-spin" />
-							) : (
-								<Check className="h-3.5 w-3.5" />
-							)}
+								<Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+							) : null}
 							Confirm
-						</Button>
+						</button>
 					</div>
 				) : null}
 
 				{isFailed ? (
-					<div className="flex shrink-0 items-center gap-2">
+					<div className="flex shrink-0 items-center gap-3">
 						{action.errorCode ? (
-							<Button
+							<button
 								type="button"
-								variant="outline"
-								size="sm"
-								className="cursor-pointer gap-1.5 border-[0.25px] border-slate-300"
+								className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-700"
 								onClick={() => void copyErrorCode()}
 							>
 								{copiedCode ? (
-									<Check className="h-3.5 w-3.5 text-green" />
+									<Check className="h-3.5 w-3.5 text-green" aria-hidden />
 								) : (
-									<Copy className="h-3.5 w-3.5" />
+									<Copy className="h-3.5 w-3.5" aria-hidden />
 								)}
 								Copy ID
-							</Button>
+							</button>
 						) : null}
-						<Button
+						<button
 							type="button"
-							size="sm"
-							className="primary-btn cursor-pointer gap-1.5 px-3"
+							className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-[#0f5384] hover:underline disabled:cursor-not-allowed disabled:opacity-50"
 							onClick={onRetry}
 							disabled={disabled}
 						>
 							{disabled ? (
-								<Loader2 className="h-3.5 w-3.5 animate-spin" />
-							) : (
-								<RefreshCw className="h-3.5 w-3.5" />
-							)}
+								<Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+							) : null}
 							Retry
-						</Button>
+						</button>
 					</div>
 				) : null}
 			</div>

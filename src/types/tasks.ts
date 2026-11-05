@@ -33,6 +33,8 @@ export interface TaskFilters {
 	view?: TaskView;
 	dueBucket?: TaskDueBucket;
 	includeDeleted?: boolean;
+	/** active = hide soft-deleted; removed = only soft-deleted */
+	scope?: "active" | "removed";
 	currentUserId?: string;
 	timeZone?: string;
 }

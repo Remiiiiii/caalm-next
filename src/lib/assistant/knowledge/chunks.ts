@@ -38,6 +38,21 @@ const PRODUCT_MAP: KnowledgeChunk[] = [
 		keywords: ["audit", "compliance", "kri", "log"],
 	},
 	{
+		id: "module-uploaded-audits",
+		title: "Uploaded audits and findings",
+		body: "Uploaded Audits extract findings from audit reports. Open a finding's details to read the Finding (what went wrong) and How to correct (the auditor's fix). Use Show me how to start a new Ask CAALM chat that confirms those steps and walks through the Corrective action section: start the action, upload evidence screenshots or PDFs, then Mark closed after a person checks the proof. CAALM does not close a corrective action for you.",
+		href: "/audits/upload",
+		keywords: [
+			"uploaded",
+			"finding",
+			"corrective",
+			"cap",
+			"evidence",
+			"show me how",
+			"remediation",
+		],
+	},
+	{
 		id: "module-analytics",
 		title: "Analytics & reports",
 		body: "Organization and department analytics, contract and calendar insights, and exportable reports.",

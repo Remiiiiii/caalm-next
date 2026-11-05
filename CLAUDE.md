@@ -36,6 +36,7 @@ Project rules live in `.cursor/rules/` and are the single source of truth. Edit 
 | `.cursor/rules/platform-readiness-roadmap-prs.mdc` | Platform Readiness Roadmap batch PRs (`src/lib/roadmap/platform-readiness*`) |
 | `.cursor/rules/share-give-page.mdc` (+ `share-give-page-design.txt`) | Editing `DonationPageShareCard.tsx` or `DonationPageSettingsClient.tsx` |
 | `.cursor/rules/it-routes-buttons.mdc` | Any UI work in `/dashboard/it/**`, `src/components/it/**`, or the IT ticket queue/detail/sheet: no `btn-primary` / `primary-btn` gradient pills |
+| `.cursor/rules/assistant-response-bubble-buttons.mdc` | Ask CAALM response bubble cards: no `btn-primary`; plain text Cancel / Confirm |
 | `.cursor/rules/it-routes-dropdowns-and-header.mdc` | Any UI work in the IT routes (same scope as above): solid white dropdown panels (not glass), never `DashboardHeader` |
 
 ## Not loaded

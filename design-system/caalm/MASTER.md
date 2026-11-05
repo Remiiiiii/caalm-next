@@ -3,12 +3,16 @@
 > **LOGIC:** When building a specific page, first check `design-system/pages/[page-name].md`.
 > If that file exists, its rules **override** this Master file.
 > If not, strictly follow the rules below.
+>
+> **Product UI source of truth:** `.cursor/rules/global-style-guide.mdc`.
+> This Master file is the short CAALM-facing summary for agents and the ui-ux-pro-max skill.
+> If anything here disagrees with the style guide, follow the style guide.
 
 ---
 
-**Project:** CAALM
-**Generated:** 2026-07-21 16:26:27
-**Category:** Analytics Dashboard
+**Project:** CAALM  
+**Updated:** 2026-11-03  
+**Category:** Enterprise CLM / analytics dashboard (desktop-first)
 
 ---
 
@@ -16,84 +20,46 @@
 
 ### Color Palette
 
-| Role | Hex | CSS Variable |
-|------|-----|--------------|
-| Primary | `#1E40AF` | `--color-primary` |
-| Secondary | `#3B82F6` | `--color-secondary` |
-| CTA/Accent | `#F59E0B` | `--color-cta` |
-| Background | `#F8FAFC` | `--color-background` |
-| Text | `#1E3A8A` | `--color-text` |
+| Role | Hex / token | Usage |
+|------|-------------|--------|
+| Brand blue | `#0f5384` | Icons, accents, selected text (`text-[#0f5384]`) |
+| Teal accent | `#078fab` / `#078FAB` | Meters, secondary accents, dialog icon wells |
+| Success green | `green` → `#3DD9B3` | Active / ok pills (`bg-green/10 text-green border-green/20`) |
+| Warning orange | `orange` → `#F9AB72` | Pending / draft pills |
+| Danger red | `red` → `#FF7474` | Expired / action-required pills |
+| Info blue | `blue` → `#56B8FF` | Category / in-progress pills |
+| Body text | slate-700 / 600 / 500 | Primary / secondary / muted — never inherited black |
+| Borders | `border-slate-200` | Cards, dividers; form fields use `border-slate-300` |
 
-**Color Notes:** Blue data + amber highlights
+**Hard rule:** CAALM palette wins over any spec, mockup, or PNG CSS. Map layout from the spec; map colors onto CAALM tokens.
 
 ### Typography
 
-- **Heading Font:** Fira Code
-- **Body Font:** Fira Sans
-- **Mood:** dashboard, data, analytics, code, technical, precise
-- **Google Fonts:** [Fira Code + Fira Sans](https://fonts.google.com/share?selection.family=Fira+Code:wght@400;500;600;700|Fira+Sans:wght@300;400;500;600;700)
+- **App UI font:** Poppins (`font-poppins` on `<body>`)
+- **Do not use** Fira, Inter, or `font-mono` for product UI
+- **Page / section / card titles:** `sidebar-gradient-text`
+- **Body:** `text-slate-700`; muted helpers `text-slate-500`
+- **Numbers in columns/meters:** `tabular-nums`
 
-**CSS Import:**
-```css
-@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap');
-```
-
-### Spacing Variables
+### Spacing
 
 | Token | Value | Usage |
-|-------|-------|-------|
-| `--space-xs` | `4px` / `0.25rem` | Tight gaps |
-| `--space-sm` | `8px` / `0.5rem` | Icon gaps, inline spacing |
-| `--space-md` | `16px` / `1rem` | Standard padding |
-| `--space-lg` | `24px` / `1.5rem` | Section padding |
-| `--space-xl` | `32px` / `2rem` | Large gaps |
-| `--space-2xl` | `48px` / `3rem` | Section margins |
-| `--space-3xl` | `64px` / `4rem` | Hero padding |
+|-------|-------|--------|
+| Tight | `4px` / `0.25rem` | Icon gaps inside chips |
+| Inline | `8px` / `0.5rem` | Chip icon + label |
+| Standard | `16px` / `1rem` | Card padding baseline (`p-4`) |
+| Section | `24px` / `1.5rem` | Card padding `sm:p-6`, grid `gap-6` |
+| Large | `32px`+ | Page section margins |
+
+Stat / content grids use `gap-6` by default. Dense meta attribute rows may use `gap-x-4` / column padding with dividers.
 
 ### Shadow Depths
 
-| Level | Value | Usage |
-|-------|-------|-------|
-| `--shadow-sm` | `0 1px 2px rgba(0,0,0,0.05)` | Subtle lift |
-| `--shadow-md` | `0 4px 6px rgba(0,0,0,0.1)` | Cards, buttons |
-| `--shadow-lg` | `0 10px 15px rgba(0,0,0,0.1)` | Modals, dropdowns |
-| `--shadow-xl` | `0 20px 25px rgba(0,0,0,0.15)` | Hero images, featured cards |
+Prefer glass-card elevation (blur + soft border) over heavy drop shadows. Keep shadows subtle on product shells.
 
 ---
 
 ## Component Specs
-
-### Buttons
-
-```css
-/* Primary Button */
-.btn-primary {
-  background: #F59E0B;
-  color: white;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-weight: 600;
-  transition: all 200ms ease;
-  cursor: pointer;
-}
-
-.btn-primary:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
-}
-
-/* Secondary Button */
-.btn-secondary {
-  background: transparent;
-  color: #1E40AF;
-  border: 2px solid #1E40AF;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-weight: 600;
-  transition: all 200ms ease;
-  cursor: pointer;
-}
-```
 
 ### Cards
 
@@ -102,22 +68,23 @@
 ```tsx
 <Card className="glass-card">
   <div className="glass-card-cap" />
-  <CardContent>{/* … */}</CardContent>
+  <CardContent className="text-slate-700">{/* … */}</CardContent>
 </Card>
 ```
 
 - Classes: `glass-card` + `glass-card-cap` (required). Clickable: also `interactive-glass-card`.
 - Forbidden for main shells: `bg-white` + `border-slate-*` + `shadow-sm` as a stand-in for a card.
-- Full rules: `.cursor/rules/global-style-guide.mdc` → Glass Card Design.
+- Nested finding / detail panels inside a glass page may use a light bordered surface when they are **content rows**, not page shells — still use CAALM text/pills.
+
+### Buttons
+
+- Primary page actions: `btn-primary px-3 sm:px-4` + Lucide icon (`h-4 w-4`) + label
+- Delete actions: `delete-btn px-3 sm:px-4` + Lucide icon + label
+- Do not ship text-only primary actions or plain `variant="destructive"` as the final look
 
 ### Data tables
 
 Match the **Assign Tasks** table (`/team/tasks`, `TasksDataTable.tsx`): `CaalmDataTable` + `DATA_TABLE_HEADER_ROW` / `DATA_TABLE_HEADER_CELL` / `DATA_TABLE_BODY_ROW_CLICKABLE` from `@/components/ui/caalm-data-table`. Sortable columns use `SortableDataTableHead`.
-
-### Buttons
-
-- Primary page actions: `btn-primary px-3 sm:px-4` + Lucide icon
-- Delete actions: `delete-btn px-3 sm:px-4` + Lucide icon
 
 ### Dropdown menus
 
@@ -125,44 +92,18 @@ Translucent glass (`bg-white/10` + blur) — **never** a card-cap on dropdowns. 
 
 ### Avatars
 
-Uploaded profile photo when available; otherwise initials via `@/components/ui/avatar`.
+Uploaded profile photo when available; otherwise initials via `@/components/ui/avatar`. Name-only person cells: avatar first; tooltip with full name is allowed **only** on avatar person cells (style-guide exception). Elsewhere: no tooltips unless product asks.
 
 ### Inputs
 
-Every standalone text input, select, textarea, and search field must have a **visible** `0.25px solid #CBD5E1` (`border-[0.25px] border-slate-300`) border. Do not use 1px (`border`), white, translucent, or `slate-200` borders on light fills; they disappear or look too heavy. Search fields in a filter row use `h-10` to match adjacent selects.
+Every standalone text input, select, textarea, and search field must have a **visible** `0.25px solid #CBD5E1` (`border-[0.25px] border-slate-300`) border. Do not use 1px (`border`), white, translucent, or `slate-200` borders on light fills. Search fields in a filter row use `h-10` to match adjacent selects.
 
-```css
-.input {
-  padding: 12px 16px;
-  border: 0.25px solid #CBD5E1;
-  border-radius: 8px;
-  font-size: 16px;
-  transition: border-color 200ms ease;
-}
+### Modals / dialogs
 
-.input:focus {
-  border-color: #1E40AF;
-  outline: none;
-  box-shadow: 0 0 0 3px #1E40AF20;
-}
-```
-
-### Modals
-
-```css
-.modal-overlay {
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-}
-
-.modal {
-  background: white;
-  border-radius: 16px;
-  padding: 32px;
-  box-shadow: var(--shadow-xl);
-  max-width: 500px;
-  width: 90%;
-}
+- Overlay: dim + light blur
+- Header: brand title color `#0f5384`, white icon well, description muted
+- Confirm: `btn-primary`; destructive: `delete-btn`
+- Content area: `bg-slate-50` patterns from the style guide
 
 ### Overflow menus (3-dot)
 
@@ -175,57 +116,87 @@ Use the Contracts table trigger. Do not use Lucide `MoreVertical`.
 
 Reference: `src/components/ActionDropdown.tsx`
 
-### Badges
+### Badges / chips
 
 Use the Contracts table badge, not default shadcn Badge variants.
 
-- Shape: `inline-block px-2 py-0.5 text-xs rounded-full border`
-- Active / current: `bg-green/10 text-green border-green/20`
-- Pending / draft: `bg-orange/10 text-orange border-orange/20`
-- Danger / expired: `bg-red/10 text-red border-red/20`
-- Info / category: `bg-blue/10 text-blue border-blue/20`
-- Neutral / version: `bg-slate-100 text-slate-600 border-slate-200`
+**Shape:**
 
-Reference: `src/components/ContractsTableView.tsx` (`statusBadge`)
+```tsx
+<span className="inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold">
+  {/* optional Lucide icon h-3.5 w-3.5 shrink-0 */}
+  Label
+</span>
 ```
+
+| Meaning | Classes |
+|---------|---------|
+| Active / success | `bg-green/10 text-green border-green/20` |
+| Pending / draft | `bg-orange/10 text-orange border-orange/20` |
+| Danger / expired | `bg-red/10 text-red border-red/20` |
+| Info / category | `bg-blue/10 text-blue border-blue/20` |
+| Neutral | `bg-slate-100 text-slate-600 border-slate-200` |
+
+**Rules:**
+
+- No colored dots inside the pill
+- Capitalize labels; do not dump raw enums
+- Short status labels may use `whitespace-nowrap`
+- **Long labels in dense grids** (e.g. “Significant deficiency”): stay inside the column with `max-w-full whitespace-normal break-words leading-snug` and `min-w-0` on the text span; icon `shrink-0`
+- Give long-label columns slightly more grid track space when needed
+- **No `title=` / hover tooltips on badges** unless product explicitly asks
+
+Reference: `src/components/ContractsTableView.tsx` (`statusBadge`), finding meta chips in `src/components/audit-upload/AuditFindingCard.tsx`
+
+### Meta attribute grids (detail cards)
+
+When a card shows a row of labeled attributes (Severity, Risk, Classification, History, Due):
+
+- Uppercase micro labels: `text-[10px] font-semibold uppercase tracking-wide text-slate-500`
+- Desktop column dividers: `border-l border-slate-200/80` with **enough horizontal padding** so chips never touch the divider or the next chip
+- Cells: `min-w-0` so flex/grid children can shrink
+- Put a light `border-t` above the next major block (e.g. verdict) when that block needs visual separation
+
+### Tooltips (hard rule)
+
+- **Do not** add tooltips (`title=`, Radix Tooltip, hover hint chips) unless the user or product ticket explicitly asks for them
+- Exception already in the style guide: avatar person cells may show the full name on hover
+- Truncation is not a reason to invent a tooltip — wrap, reflow, or shorten the visible label instead
 
 ---
 
 ## Style Guidelines
 
-**Style:** Data-Dense Dashboard
+**Style:** Data-dense enterprise dashboard (desktop-first from 1024px)
 
-**Keywords:** Multiple charts/widgets, data tables, KPI cards, minimal padding, grid layout, space-efficient, maximum data visibility
+**Keywords:** Glass cards, KPI / metric cards, data tables, CAALM pills, segment toggles, space-efficient grids
 
-**Best For:** Business intelligence dashboards, financial analytics, enterprise reporting, operational dashboards, data warehousing
+**Best For:** Contract / license lifecycle, audit findings review, org admin, readiness, analytics
 
-**Key Effects:** Hover tooltips, chart zoom on click, row highlighting on hover, smooth filter animations, data loading spinners
+**Key Effects:** Row highlight on hover, smooth filter animations, skeletons inside glass cards, page-entrance motion that honors `prefers-reduced-motion`
 
-**Loading spinners (hard rule):** The branded CAALM page-load spinner (`LoadingSpinner` `md` / `lg` / `fullScreen` — segmented arc + center mark) is **only** for route transitions, auth gates, and initial/full page loads. Glass cards and card-like panels must use `LoadingSpinner size="sm"` or skeletons — never the large page-load spinner. See `.cursor/rules/global-style-guide.mdc` → Loading spinners.
+**Loading spinners (hard rule):** The branded CAALM page-load spinner (`LoadingSpinner` `md` / `lg` / `fullScreen`) is **only** for route transitions, auth gates, and initial/full page loads. Glass cards and card-like panels must use `LoadingSpinner size="sm"` or skeletons — never the large page-load spinner.
 
 ### Page Pattern
 
-**Pattern Name:** AI Personalization Landing
-
-- **Conversion Strategy:** 20%+ conversion with personalization. Requires analytics integration. Fallback for new users.
-- **CTA Placement:** Context-aware placement based on user segment
-- **Section Order:** 1. Dynamic hero (personalized), 2. Relevant features, 3. Tailored testimonials, 4. Smart CTA
+Authenticated product pages: full-width container `w-full px-4 sm:px-6 lg:px-8 xl:px-12`, glass metric strip + glass table / list, desktop-first (companion routes only on phone). Marketing / landing pages stay responsive under their own page override files.
 
 ---
 
 ## Anti-Patterns (Do NOT Use)
 
-- ❌ Ornate design
-- ❌ No filtering
-
-### Additional Forbidden Patterns
-
-- ❌ **Emojis as icons** — Use SVG icons (Heroicons, Lucide, Simple Icons)
-- ❌ **Missing cursor:pointer** — All clickable elements must have cursor:pointer
-- ❌ **Layout-shifting hovers** — Avoid scale transforms that shift layout
-- ❌ **Low contrast text** — Maintain 4.5:1 minimum contrast ratio
-- ❌ **Instant state changes** — Always use transitions (150-300ms)
-- ❌ **Invisible focus states** — Focus states must be visible for a11y
+- ❌ Spec / mockup hex that fights CAALM brand blue / teal / pill tokens
+- ❌ Solid white card shells instead of `glass-card` + `glass-card-cap`
+- ❌ Default shadcn Badge variants as the final look
+- ❌ Tooltips on chips, table cells, or labels unless explicitly requested
+- ❌ Truncating long classification / status chips without wrapping when the column has room to wrap
+- ❌ Emojis as icons — use Lucide SVG
+- ❌ Missing `cursor-pointer` on clickable elements
+- ❌ Layout-shifting hover scales
+- ❌ Low-contrast or inherited black body text
+- ❌ Instant state changes with no 150–300ms transition
+- ❌ Invisible focus rings
+- ❌ Branded page-load spinner inside glass cards
 
 ---
 
@@ -233,13 +204,15 @@ Reference: `src/components/ContractsTableView.tsx` (`statusBadge`)
 
 Before delivering any UI code, verify:
 
-- [ ] No emojis used as icons (use SVG instead)
-- [ ] All icons from consistent icon set (Heroicons/Lucide)
-- [ ] `cursor-pointer` on all clickable elements
-- [ ] Hover states with smooth transitions (150-300ms)
-- [ ] Light mode: text contrast 4.5:1 minimum
-- [ ] Focus states visible for keyboard navigation
+- [ ] CAALM palette (not mockup CSS) on colors and pills
+- [ ] `glass-card` + `glass-card-cap` on page shells / widgets
+- [ ] Primary actions use `btn-primary` + Lucide icon; deletes use `delete-btn`
+- [ ] Badges use CAALM tint pills; long chips wrap inside `min-w-0` cells
+- [ ] No new tooltips unless explicitly requested
+- [ ] No emojis as icons (Lucide)
+- [ ] `cursor-pointer` on clickable elements
+- [ ] Hover / focus transitions 150–300ms; focus rings visible
+- [ ] Body text `text-slate-700` (not inherited black)
 - [ ] `prefers-reduced-motion` respected
-- [ ] Responsive: 375px, 768px, 1024px, 1440px
-- [ ] No content hidden behind fixed navbars
-- [ ] No horizontal scroll on mobile
+- [ ] Desktop-first; phone only for companion routes
+- [ ] Card loading = skeleton / `sm` spinner, not full-page branded spinner

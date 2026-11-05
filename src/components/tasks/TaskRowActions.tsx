@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy, Eye, Trash2 } from "lucide-react";
+import { Copy, Eye, RotateCcw, Trash2 } from "lucide-react";
 import Image from "next/image";
 import {
 	AppDropdownMenuContent,
@@ -13,14 +13,18 @@ import {
 /** Contracts-size hollow dots (`dots.svg` 34×34); only show on this row’s hover / focus / open. */
 export function TaskRowActions({
 	canEdit,
+	removed,
 	onOpen,
 	onDuplicate,
 	onDelete,
+	onRestore,
 }: {
 	canEdit: boolean;
+	removed?: boolean;
 	onOpen: () => void;
 	onDuplicate: () => void;
 	onDelete: () => void;
+	onRestore?: () => void;
 }) {
 	return (
 		<DropdownMenu>
@@ -39,26 +43,36 @@ export function TaskRowActions({
 				/>
 			</DropdownMenuTrigger>
 			<AppDropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-				<AppDropdownMenuItem icon={Eye} onSelect={onOpen}>
-					Open details
-				</AppDropdownMenuItem>
-				{canEdit ? (
-					<AppDropdownMenuItem icon={Copy} onSelect={onDuplicate}>
-						Duplicate
-					</AppDropdownMenuItem>
-				) : null}
-				{canEdit ? (
-					<>
-						<DropdownMenuSeparator />
-						<AppDropdownMenuItem
-							icon={Trash2}
-							tone="danger"
-							onSelect={onDelete}
-						>
-							Delete
+				{removed ? (
+					canEdit && onRestore ? (
+						<AppDropdownMenuItem icon={RotateCcw} onSelect={onRestore}>
+							Restore
 						</AppDropdownMenuItem>
+					) : null
+				) : (
+					<>
+						<AppDropdownMenuItem icon={Eye} onSelect={onOpen}>
+							Open details
+						</AppDropdownMenuItem>
+						{canEdit ? (
+							<AppDropdownMenuItem icon={Copy} onSelect={onDuplicate}>
+								Duplicate
+							</AppDropdownMenuItem>
+						) : null}
+						{canEdit ? (
+							<>
+								<DropdownMenuSeparator />
+								<AppDropdownMenuItem
+									icon={Trash2}
+									tone="danger"
+									onSelect={onDelete}
+								>
+									Delete
+								</AppDropdownMenuItem>
+							</>
+						) : null}
 					</>
-				) : null}
+				)}
 			</AppDropdownMenuContent>
 		</DropdownMenu>
 	);

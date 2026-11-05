@@ -1,8 +1,84 @@
+import {
+	extractVerificationNoteFromText,
+	isCapClosableStatus,
+} from "@/lib/assistant/cap-close-assist";
+
+export type OpenCloseCapSuggestionAction = {
+	type: "open_close_cap";
+	capId: string;
+	findingId: string;
+	documentId: string;
+	verificationNote: string;
+};
+
+export type AssistantSuggestionAction =
+	| { type: "prompt"; text: string }
+	| { type: "navigate"; href: string }
+	| OpenCloseCapSuggestionAction;
+
 export type AssistantSuggestion = {
 	id: string;
 	label: string;
-	action: { type: "prompt"; text: string } | { type: "navigate"; href: string };
+	action: AssistantSuggestionAction;
 };
+
+/** Add open-close chip when research produced verification prose and CAP can close. */
+export function withCloseCapSuggestion(
+	suggestions: AssistantSuggestion[],
+	params: {
+		capId: string | null;
+		capStatus: string | null;
+		canManageCaps: boolean;
+		findingId: string;
+		documentId: string;
+		answerText: string;
+	},
+): AssistantSuggestion[] {
+	if (
+		!params.canManageCaps ||
+		!params.capId ||
+		!isCapClosableStatus(params.capStatus)
+	) {
+		return suggestions;
+	}
+	const note = extractVerificationNoteFromText(params.answerText);
+	if (!note || note.length < 10) {
+		return suggestions;
+	}
+	const chip = buildOpenCloseCapSuggestion({
+		capId: params.capId,
+		findingId: params.findingId,
+		documentId: params.documentId,
+		verificationNote: note,
+	});
+	if (suggestions.some((s) => s.id === chip.id)) {
+		return suggestions;
+	}
+	return [chip, ...suggestions].slice(0, 2);
+}
+
+export function buildOpenCloseCapSuggestion(params: {
+	capId: string;
+	findingId: string;
+	documentId: string;
+	verificationNote: string;
+}): AssistantSuggestion {
+	const note = params.verificationNote.trim();
+	const label = note
+		? "Open Mark closed with this note"
+		: "Open Mark closed dialog";
+	return {
+		id: "open-close-cap",
+		label,
+		action: {
+			type: "open_close_cap",
+			capId: params.capId,
+			findingId: params.findingId,
+			documentId: params.documentId,
+			verificationNote: note,
+		},
+	};
+}
 
 export function suggestionsForTurn(params: {
 	toolName?: string | null;

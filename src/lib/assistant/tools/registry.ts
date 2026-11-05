@@ -5,6 +5,7 @@ import { generateReport } from "@/lib/actions/report.actions";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { retrieveKnowledge } from "@/lib/assistant/knowledge/retrieve";
+import type { AssistantClientAction } from "@/lib/assistant/open-close-cap-client";
 import { AUDIT_TOOLS } from "@/lib/assistant/tools/auditTools";
 import { CALENDAR_TOOLS } from "@/lib/assistant/tools/calendarTools";
 import { TASK_TOOLS } from "@/lib/assistant/tools/taskTools";
@@ -258,7 +259,7 @@ export async function runToolByName(
 	args: Record<string, unknown>,
 ): Promise<{
 	result?: unknown;
-	clientAction?: { type: "navigate"; href: string };
+	clientAction?: AssistantClientAction;
 	error?: string;
 }> {
 	const tool = ASSISTANT_TOOLS.find((t) => t.name === toolName);

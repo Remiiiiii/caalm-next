@@ -5,8 +5,16 @@ import {
 	GoogleGenerativeAI,
 	SchemaType,
 } from "@google/generative-ai";
+import { PERMISSIONS } from "@/constants/permissions";
 import type { ActivityFeedPayload } from "@/lib/assistant/activityFeed";
 import { buildActivityFeed } from "@/lib/assistant/activityFeed";
+import type { AssistantResearchStep } from "@/lib/assistant/assistant-research-steps";
+import { runAuditRemediationResearch } from "@/lib/assistant/audit-remediation-research";
+import {
+	type AuditRemediationContext,
+	buildAuditRemediationPrompt,
+	formatAuditFindingLabel,
+} from "@/lib/assistant/audit-remediation-context";
 import type { AssistantAuthContext } from "@/lib/assistant/auth";
 import {
 	formatDueDate,
@@ -15,7 +23,7 @@ import {
 } from "@/lib/assistant/formatLabels";
 import { buildGeminiChatHistory } from "@/lib/assistant/geminiHistory";
 import { buildGeminiToolFollowUpContents } from "@/lib/assistant/geminiToolFollowUp";
-import { detectDataIntent, isLiveDataIntent } from "@/lib/assistant/intent";
+import { buildImplementationAnalysis } from "@/lib/assistant/implementation-analysis";
 import {
 	formFromQuizText,
 	hasScheduleDateAndTime,
@@ -27,11 +35,19 @@ import {
 	scheduleEventForm,
 	scheduleFormFromArgs,
 } from "@/lib/assistant/inputForm";
+import { detectDataIntent, isLiveDataIntent } from "@/lib/assistant/intent";
 import type { RetrievedSource } from "@/lib/assistant/knowledge/retrieve";
 import { retrieveKnowledge } from "@/lib/assistant/knowledge/retrieve";
 import { parseCreateTaskDraft } from "@/lib/assistant/parseCreateTaskDraft";
 import { sanitizeRescheduleArgs } from "@/lib/assistant/rescheduleArgs";
 import {
+	detectCapCloseAssistIntent,
+	lastAssistantMessageContent,
+	resolveVerificationNoteForClose,
+} from "@/lib/assistant/cap-close-assist";
+import type { AssistantClientAction } from "@/lib/assistant/open-close-cap-client";
+import {
+	buildOpenCloseCapSuggestion,
 	type AssistantSuggestion,
 	suggestionsForTurn,
 } from "@/lib/assistant/suggestions";
@@ -41,6 +57,7 @@ import {
 } from "@/lib/assistant/tools/registry";
 import type { ToolDefinition } from "@/lib/assistant/tools/types";
 import { storePendingAction } from "@/lib/assistant/tools/types";
+import type { AuditCapStatus } from "@/lib/audit-upload/types";
 
 export type ChatTurnMessage = {
 	role: "user" | "assistant";
@@ -58,9 +75,10 @@ export type AssistantTurnResult = {
 		toolName: string;
 		args?: Record<string, unknown>;
 	};
-	clientAction?: { type: "navigate"; href: string };
+	clientAction?: AssistantClientAction;
 	activityFeed?: ActivityFeedPayload;
 	inputForm?: AssistantInputForm;
+	researchSteps?: AssistantResearchStep[];
 };
 
 const DATA_TOOLS = new Set([
@@ -325,8 +343,17 @@ export async function runAssistantTurn(params: {
 	messages: ChatTurnMessage[];
 	userMessage: string;
 	pathname?: string;
+	remediationContext?: AuditRemediationContext;
+	contextRoutes?: string[];
 }): Promise<AssistantTurnResult> {
-	const { ctx, messages, userMessage, pathname } = params;
+	const {
+		ctx,
+		messages,
+		userMessage,
+		pathname,
+		remediationContext,
+		contextRoutes,
+	} = params;
 	const dataIntent = detectDataIntent(userMessage);
 	const { sources: ragSources, contextText } = retrieveKnowledge(
 		userMessage,
@@ -351,13 +378,23 @@ export async function runAssistantTurn(params: {
 	const requestInputDeclaration: FunctionDeclaration = {
 		name: "request_input",
 		description:
-			"Show the user a structured form to fill in instead of asking in free text. Call this whenever you need multiple fields from the user (e.g. scheduling details). Pass fields_json as a JSON array of {name,label,type,placeholder?,required?,options?} objects. Field types: text, date, time, select, textarea. For select fields, options must be an array of strings (e.g. [\"meeting\",\"review\"]), never objects.",
+			'Show the user a structured form to fill in instead of asking in free text. Call this whenever you need multiple fields from the user (e.g. scheduling details). Pass fields_json as a JSON array of {name,label,type,placeholder?,required?,options?} objects. Field types: text, date, time, select, textarea. For select fields, options must be an array of strings (e.g. ["meeting","review"]), never objects.',
 		parameters: {
 			type: SchemaType.OBJECT,
 			properties: {
-				intent: { type: SchemaType.STRING, description: "Short key for what is being collected, e.g. schedule_event" },
-				intro: { type: SchemaType.STRING, description: "Brief message shown above the form" },
-				fields_json: { type: SchemaType.STRING, description: "JSON array of field objects" },
+				intent: {
+					type: SchemaType.STRING,
+					description:
+						"Short key for what is being collected, e.g. schedule_event",
+				},
+				intro: {
+					type: SchemaType.STRING,
+					description: "Brief message shown above the form",
+				},
+				fields_json: {
+					type: SchemaType.STRING,
+					description: "JSON array of field objects",
+				},
 			},
 			required: ["intent", "intro", "fields_json"],
 		},
@@ -370,7 +407,7 @@ export async function runAssistantTurn(params: {
 	);
 
 	// Deterministic path: open an editable draft card instead of a numbered quiz.
-	if (dataIntent === "create_task" && canCreateTask) {
+	if (!remediationContext && dataIntent === "create_task" && canCreateTask) {
 		const draft = parseCreateTaskDraft(userMessage);
 		const args: Record<string, unknown> = {
 			title: draft.title,
@@ -404,6 +441,7 @@ export async function runAssistantTurn(params: {
 
 	// Vague “schedule a meeting” → inline form, never a typed quiz.
 	if (
+		!remediationContext &&
 		dataIntent === "schedule_event" &&
 		canCreateEvent &&
 		!hasScheduleDateAndTime(userMessage)
@@ -417,7 +455,7 @@ export async function runAssistantTurn(params: {
 	}
 
 	// Deterministic path: pending tasks → call list_tasks (don't rely on the model).
-	if (dataIntent === "list_tasks" && canListTasks) {
+	if (!remediationContext && dataIntent === "list_tasks" && canListTasks) {
 		const toolResult = await runToolByName({ ...ctx, pathname }, "list_tasks", {
 			pendingOnly: "true",
 			limit: 15,
@@ -460,7 +498,192 @@ Knowledge Context (product help only):
 ${isLiveDataIntent(dataIntent) ? "Skipped for this live-data question." : contextText || "No specific docs matched."}
 
 Current page path: ${pathname ?? "unknown"}
-User permissions include: ${ctx.permissions.slice(0, 40).join(", ")}${ctx.permissions.length > 40 ? "…" : ""}`;
+${contextRoutes?.length ? `Mentioned pages: ${contextRoutes.join(", ")}` : ""}
+User permissions include: ${ctx.permissions.slice(0, 40).join(", ")}${ctx.permissions.length > 40 ? "…" : ""}
+${remediationContext ? `\n${buildAuditRemediationPrompt(remediationContext)}` : ""}`;
+
+	// Audit “Show me how”: live org-data research, findings report, optional apply card.
+	if (remediationContext) {
+		const capCloseIntent = detectCapCloseAssistIntent(userMessage);
+		if (capCloseIntent?.kind === "open_dialog") {
+			const canManageCaps = ctx.permissions.includes(
+				PERMISSIONS.AUDIT.MANAGE_CAPS,
+			);
+			if (!canManageCaps) {
+				return {
+					answer:
+						"You don't have permission to close corrective actions. Ask an admin for audit manage caps access.",
+					sources: [],
+					suggestions: [],
+				};
+			}
+			if (!remediationContext.capId) {
+				return {
+					answer:
+						"This finding does not have a corrective action yet. Confirm the finding and start the action first, then ask me to open Mark closed.",
+					sources: ragSources,
+					suggestions: [],
+				};
+			}
+			const verificationNote = resolveVerificationNoteForClose({
+				userMessage,
+				priorAssistantContent: lastAssistantMessageContent(messages),
+				stagedDraft: null,
+			});
+			if (!verificationNote.trim()) {
+				return {
+					answer:
+						"I need the verification note text first. Ask me to write a verification note, then say open Mark closed dialog.",
+					sources: ragSources,
+					suggestions: [],
+				};
+			}
+			const toolResult = await runToolByName(
+				{ ...ctx, pathname },
+				"prepare_close_corrective_action",
+				{
+					capId: remediationContext.capId,
+					findingId: remediationContext.findingId,
+					documentId: remediationContext.documentId,
+					verificationNote,
+				},
+			);
+			const err =
+				toolResult.result &&
+				typeof toolResult.result === "object" &&
+				"error" in (toolResult.result as object)
+					? String((toolResult.result as { error: string }).error)
+					: toolResult.error;
+			if (err) {
+				return {
+					answer: err,
+					sources: ragSources,
+					suggestions: [],
+				};
+			}
+			const suggestions: AssistantSuggestion[] =
+				toolResult.clientAction?.type === "open_close_cap"
+					? [
+							buildOpenCloseCapSuggestion({
+								capId: toolResult.clientAction.capId,
+								findingId: toolResult.clientAction.findingId,
+								documentId: toolResult.clientAction.documentId,
+								verificationNote: toolResult.clientAction.verificationNote,
+							}),
+						]
+					: [];
+			return {
+				answer:
+					"Opening Mark closed with your verification note — review and save when ready.",
+				sources: ragSources,
+				suggestions,
+				clientAction: toolResult.clientAction,
+			};
+		}
+
+		const research = await runAuditRemediationResearch({
+			ctx,
+			remediationContext,
+			ragSources,
+		});
+		const canManageCaps = ctx.permissions.includes(
+			PERMISSIONS.AUDIT.MANAGE_CAPS,
+		);
+		const analysis = buildImplementationAnalysis({
+			finding: {
+				$id: remediationContext.findingId,
+				documentId: remediationContext.documentId,
+				title: remediationContext.title,
+				findingCode: remediationContext.findingCode,
+			},
+			cap:
+				remediationContext.capId && remediationContext.capStatus
+					? {
+							$id: remediationContext.capId,
+							title: remediationContext.capTitle ?? "Corrective action",
+							status: remediationContext.capStatus as AuditCapStatus,
+						}
+					: null,
+			canManageCaps,
+		});
+		let pendingAction: AssistantTurnResult["pendingAction"];
+		const canManageFindings = ctx.permissions.includes(
+			PERMISSIONS.AUDIT.MANAGE_FINDINGS,
+		);
+		if (
+			research.hasConfirmAction &&
+			canManageFindings &&
+			!research.hasExecutableApply
+		) {
+			const args: Record<string, unknown> = {
+				findingId: remediationContext.findingId,
+				documentId: remediationContext.documentId,
+				findingCode: remediationContext.findingCode,
+				title: remediationContext.title,
+				href: `/audits/upload/${remediationContext.documentId}#finding-${remediationContext.findingId}`,
+			};
+			const label = "Confirm finding";
+			const preview = formatAuditFindingLabel(
+				remediationContext.findingCode,
+				remediationContext.title,
+			);
+			const pending = await storePendingAction({
+				userId: ctx.user.$id,
+				orgId: ctx.orgId,
+				toolName: "confirm_finding",
+				args,
+				label,
+				preview,
+			});
+			pendingAction = {
+				id: pending.id,
+				label,
+				preview,
+				toolName: "confirm_finding",
+				args,
+			};
+		} else if (
+			research.hasExecutableApply &&
+			analysis.canApply &&
+			analysis.applyArgs
+		) {
+			const args: Record<string, unknown> = {
+				...analysis.applyArgs,
+				capTitle: remediationContext.capTitle,
+				href: analysis.href,
+				changes: analysis.changes,
+			};
+			const label = "Start corrective action";
+			const preview = analysis.changes
+				.map(
+					(change) => `${change.label}: ${change.current} → ${change.required}`,
+				)
+				.join("\n")
+				.slice(0, 500);
+			const pending = await storePendingAction({
+				userId: ctx.user.$id,
+				orgId: ctx.orgId,
+				toolName: "apply_audit_remediation",
+				args,
+				label,
+				preview,
+			});
+			pendingAction = {
+				id: pending.id,
+				label,
+				preview,
+				toolName: "apply_audit_remediation",
+				args,
+			};
+		}
+		return {
+			answer: research.answer,
+			sources: research.sources,
+			suggestions: research.suggestions,
+			pendingAction,
+			researchSteps: research.steps,
+		};
+	}
 
 	const forceTool =
 		dataIntent === "list_pending_approvals" ||
@@ -608,6 +831,36 @@ User permissions include: ${ctx.permissions.slice(0, 40).join(", ")}${ctx.permis
 			call.name,
 			args,
 		);
+
+		if (call.name === "prepare_close_corrective_action") {
+			const result = toolResult.result as { error?: string } | undefined;
+			if (result?.error || toolResult.error) {
+				return {
+					answer: result?.error ?? toolResult.error ?? "Could not open Mark closed.",
+					sources: sourcesForTool(call.name, ragSources),
+					suggestions: [],
+				};
+			}
+			const suggestions: AssistantSuggestion[] =
+				toolResult.clientAction?.type === "open_close_cap"
+					? [
+							buildOpenCloseCapSuggestion({
+								capId: toolResult.clientAction.capId,
+								findingId: toolResult.clientAction.findingId,
+								documentId: toolResult.clientAction.documentId,
+								verificationNote: toolResult.clientAction.verificationNote,
+							}),
+						]
+					: [];
+			return {
+				answer:
+					"Opening Mark closed with your verification note — review and save when ready.",
+				sources: sourcesForTool(call.name, ragSources),
+				suggestions,
+				clientAction: toolResult.clientAction,
+			};
+		}
+
 		// Do not use chat.sendMessage for functionResponse — the SDK
 		// still sends role "function", which Gemini 3.x rejects.
 		const modelContent = response.candidates?.[0]?.content;
@@ -686,8 +939,7 @@ User permissions include: ${ctx.permissions.slice(0, 40).join(", ")}${ctx.permis
 
 	const text = response.text() || "I could not generate a response.";
 	if (looksLikeFieldQuiz(text)) {
-		const intent =
-			dataIntent === "schedule_event" ? "schedule_event" : "input";
+		const intent = dataIntent === "schedule_event" ? "schedule_event" : "input";
 		return {
 			answer: "Fill this in instead of typing answers.",
 			sources: [],

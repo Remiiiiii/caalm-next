@@ -80,6 +80,12 @@ export const PERMISSIONS = {
 	AUDIT: {
 		VIEW: "audit.view",
 		EXPORT: "audit.export",
+		/** View uploaded audit reports, findings, and feedback (not IT log-only access). */
+		DOCUMENTS_VIEW: "audit.documents_view",
+		UPLOAD: "audit.upload",
+		MANAGE_FINDINGS: "audit.manage_findings",
+		MANAGE_CAPS: "audit.manage_caps",
+		DELETE: "audit.delete",
 	},
 
 	// IT/Software Engineering Permissions
@@ -532,6 +538,36 @@ export const PERMISSION_DEFINITIONS = [
 		name: "Export Audit Logs",
 		category: "audit",
 		description: "Export audit logs",
+	},
+	{
+		key: PERMISSIONS.AUDIT.DOCUMENTS_VIEW,
+		name: "View Uploaded Audits",
+		category: "audit",
+		description: "View uploaded audit reports, findings, and feedback",
+	},
+	{
+		key: PERMISSIONS.AUDIT.UPLOAD,
+		name: "Upload Audit Documents",
+		category: "audit",
+		description: "Upload and analyze audit result documents",
+	},
+	{
+		key: PERMISSIONS.AUDIT.MANAGE_FINDINGS,
+		name: "Manage Audit Findings",
+		category: "audit",
+		description: "Confirm, dispute, or rectify extracted audit findings",
+	},
+	{
+		key: PERMISSIONS.AUDIT.MANAGE_CAPS,
+		name: "Manage Corrective Actions",
+		category: "audit",
+		description: "Assign, update, and track corrective action plans",
+	},
+	{
+		key: PERMISSIONS.AUDIT.DELETE,
+		name: "Delete Audit Documents",
+		category: "audit",
+		description: "Soft-delete uploaded audit documents",
 	},
 
 	// IT/Software Engineering
