@@ -1,5 +1,9 @@
-import type { AuditSeverity, ControlDeficiencyType } from "./types";
 import type { ClassificationResult, FindingsExtraction } from "./schemas";
+import type {
+	AuditResponseStance,
+	AuditSeverity,
+	ControlDeficiencyType,
+} from "./types";
 
 const FINDING_HEADER =
 	/(?:^|\n)((?:F-\d{2}|20\d{2}-\d{3}))\s+[—–-]\s+([^\n]+)/g;
@@ -67,7 +71,9 @@ function parseControlType(block: string): ControlDeficiencyType | null {
 
 function parseFrameworkRefs(block: string, fallback: string[]): string[] {
 	const refs = new Set<string>(fallback);
-	const criteria = block.match(/CRITERIA\s+([\s\S]{0,240}?)(?:\n[A-Z][A-Z ]{3,}|\nCondition|\nAFFECTED|\nMAJOR)/i);
+	const criteria = block.match(
+		/CRITERIA\s+([\s\S]{0,240}?)(?:\n[A-Z][A-Z ]{3,}|\nCondition|\nAFFECTED|\nMAJOR)/i,
+	);
 	const haystack = criteria?.[1] || block.slice(0, 400);
 	for (const match of haystack.matchAll(
 		/\b(TSC\s+)?(CC\d+(?:\.\d+)?|A\d+(?:\.\d+)?|C\d+(?:\.\d+)?)\b/gi,
@@ -88,11 +94,38 @@ function parseMoney(block: string): number | null {
 		/question(?:ed)?(?:\s+costs?)?[^$]{0,60}\$([0-9,]+(?:\.\d{2})?)/i,
 	);
 	if (questioned) return dollarsToNumber(questioned[1]);
-	const exposure = block.match(
-		/estimated exposure\s*\$([0-9,]+(?:\.\d{2})?)/i,
-	);
+	const exposure = block.match(/estimated exposure\s*\$([0-9,]+(?:\.\d{2})?)/i);
 	if (exposure) return dollarsToNumber(exposure[1]);
 	return null;
+}
+
+/** Checked in order — "does not concur" and "partially concur" both contain "concur". */
+const STANCE_PATTERNS: Array<{ re: RegExp; stance: AuditResponseStance }> = [
+	{
+		re: /does\s+not\s+concur|management\s+disagrees?/i,
+		stance: "does_not_concur",
+	},
+	{
+		re: /partially\s+concurs?|concurs?\s+in\s+part/i,
+		stance: "partially_concurs",
+	},
+	{ re: /concurs?\b/i, stance: "concurs" },
+];
+
+function parseResponseStance(text: string): AuditResponseStance | null {
+	if (!text) return null;
+	return STANCE_PATTERNS.find(({ re }) => re.test(text))?.stance ?? null;
+}
+
+/** One imperative clause per obligation; falls back to the whole text as a single entry. */
+function splitObligations(recommendation: string, fallback: string): string[] {
+	const source = (recommendation || fallback).replace(/\s+/g, " ").trim();
+	if (!source) return [];
+	const sentences = source
+		.split(/(?<=[.!?])\s+(?=[A-Z])/)
+		.map((s) => s.trim())
+		.filter(Boolean);
+	return sentences.length > 0 ? sentences : [source];
 }
 
 function sectionAfter(block: string, label: string, stop: RegExp): string {
@@ -105,7 +138,10 @@ function sectionAfter(block: string, label: string, stop: RegExp): string {
 function firstSentences(text: string, maxChars = 280): string {
 	const compact = text.replace(/\s+/g, " ").trim();
 	if (!compact) return "";
-	const cut = compact.split(/(?<=\.)\s+/).slice(0, 2).join(" ");
+	const cut = compact
+		.split(/(?<=\.)\s+/)
+		.slice(0, 2)
+		.join(" ");
 	return cut.slice(0, maxChars);
 }
 
@@ -116,7 +152,13 @@ function inferLikelihoodImpact(
 ): { likelihood: number; impact: number } {
 	const lower = block.toLowerCase();
 	let impact =
-		reported === "critical" ? 5 : reported === "high" ? 4 : reported === "low" ? 2 : 3;
+		reported === "critical"
+			? 5
+			: reported === "high"
+				? 4
+				: reported === "low"
+					? 2
+					: 3;
 	let likelihood = 3;
 	if (controlType === "material_weakness") {
 		likelihood = 4;
@@ -144,7 +186,7 @@ function inferLikelihoodImpact(
 function parseSefa(text: string): FindingsExtraction["sefa"] {
 	const programs: NonNullable<FindingsExtraction["sefa"]>["programs"] = [];
 	for (const match of text.matchAll(
-		/([A-Za-z][A-Za-z0-9 &(),.\-]{6,80}?)(\d{2}\.\d{3})\s*\$([0-9,]+)/g,
+		/([A-Za-z][A-Za-z0-9 &(),.-]{6,80}?)(\d{2}\.\d{3})\s*\$([0-9,]+)/g,
 	)) {
 		const name = match[1].replace(/Federal program.*$/i, "").trim();
 		if (!name || /total federal/i.test(name)) continue;
@@ -160,7 +202,9 @@ function parseSefa(text: string): FindingsExtraction["sefa"] {
 	if (programs.length === 0 && !totalMatch) return null;
 	return {
 		programs,
-		totalUsd: totalMatch ? dollarsToNumber(totalMatch[1]) : programs.reduce((sum, row) => sum + row.amountUsd, 0),
+		totalUsd: totalMatch
+			? dollarsToNumber(totalMatch[1])
+			: programs.reduce((sum, row) => sum + row.amountUsd, 0),
 	};
 }
 
@@ -178,9 +222,8 @@ export function classifyAuditReportText(text: string): ClassificationResult {
 		text.match(/\b(SR-\d{4}-\d+|WRA-\d{4}-[A-Z]+-\d+)\b/)?.[1] ||
 		null;
 	const auditorName =
-		text.match(
-			/^([A-Z][A-Za-z&,.\s]{6,80}(?:LLP|CPAs?|LLP —))/m,
-		)?.[1]
+		text
+			.match(/^([A-Z][A-Za-z&,.\s]{6,80}(?:LLP|CPAs?|LLP —))/m)?.[1]
 			?.replace(/\s+—.*$/, "")
 			.trim() ||
 		text.match(/\b([A-Z][A-Za-z&,.\s]{4,50}(?:LLP|CPAs?))\b/)?.[1] ||
@@ -189,20 +232,21 @@ export function classifyAuditReportText(text: string): ClassificationResult {
 		text.match(
 			/AUDIT PERIOD\s+([\s\S]{0,80}?)(?:\nREPORT DATE|\nCRITERIA|\nFEDERAL)/i,
 		)?.[1] || "";
-	const dates = [...text.matchAll(
-		/\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}\b/gi,
-	)].map((match) => parseEnglishDate(match[0]));
+	const dates = [
+		...text.matchAll(
+			/\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}\b/gi,
+		),
+	].map((match) => parseEnglishDate(match[0]));
 	const periodStart = parseEnglishDate(periodLine) || dates[0] || null;
 	const periodEnd =
 		parseEnglishDate(periodLine.split(/[–-]/).slice(1).join("-")) ||
 		dates[1] ||
 		null;
 	const reportDate =
-		parseEnglishDate(
-			text.match(/REPORT DATE\s+([^\n]+)/i)?.[1] || "",
-		) || dates[2] || null;
-	const auditeeName =
-		text.match(/AUDITEE\s+([^\n(]+)/i)?.[1]?.trim() || null;
+		parseEnglishDate(text.match(/REPORT DATE\s+([^\n]+)/i)?.[1] || "") ||
+		dates[2] ||
+		null;
+	const auditeeName = text.match(/AUDITEE\s+([^\n(]+)/i)?.[1]?.trim() || null;
 	const opinion = /except for the matters described/i.test(text)
 		? "qualified"
 		: /in our opinion/i.test(text)
@@ -215,14 +259,13 @@ export function classifyAuditReportText(text: string): ClassificationResult {
 			: isSoc2
 				? "soc2_report"
 				: "audit_report",
-		auditType: isSoc2 && isType2
-			? "soc2_type2"
-			: isSingle
-				? "compliance"
-				: "other",
+		auditType:
+			isSoc2 && isType2 ? "soc2_type2" : isSingle ? "compliance" : "other",
 		frameworks,
 		period:
-			periodStart && periodEnd ? `${periodStart} → ${periodEnd}` : periodLine.trim() || null,
+			periodStart && periodEnd
+				? `${periodStart} → ${periodEnd}`
+				: periodLine.trim() || null,
 		periodStart,
 		periodEnd,
 		auditorName,
@@ -235,6 +278,7 @@ export function classifyAuditReportText(text: string): ClassificationResult {
 
 export function parseAuditReportFindings(text: string): FindingsExtraction {
 	const normalized = normalizeAuditExtractText(text);
+	const classification = classifyAuditReportText(normalized);
 	const headers = [...normalized.matchAll(FINDING_HEADER)];
 	const findings = headers.map((header, index) => {
 		const start = header.index ?? 0;
@@ -265,13 +309,13 @@ export function parseAuditReportFindings(text: string): FindingsExtraction {
 			controlDeficiencyType,
 		);
 		const quote = firstSentences(condition);
-		const description = [condition, recommendation]
-			.filter(Boolean)
-			.join("\n\n")
-			.slice(0, 4000) || title;
+		const description =
+			[condition, recommendation].filter(Boolean).join("\n\n").slice(0, 4000) ||
+			title;
 		const extraFrameworks: string[] = [];
 		if (/TSC|CC\d/i.test(block)) extraFrameworks.push("SOC2");
-		if (/2 CFR|Uniform Guidance/i.test(block)) extraFrameworks.push("UNIFORM_GUIDANCE");
+		if (/2 CFR|Uniform Guidance/i.test(block))
+			extraFrameworks.push("UNIFORM_GUIDANCE");
 		return {
 			findingCode,
 			title: `${findingCode} — ${title}`,
@@ -281,16 +325,18 @@ export function parseAuditReportFindings(text: string): FindingsExtraction {
 			likelihood,
 			impact,
 			confidence: 0.72,
-			citations: quote
-				? [{ quote, page: null, section: "Condition" }]
-				: [],
+			citations: quote ? [{ quote, page: null, section: "Condition" }] : [],
 			managementResponse: managementResponse || null,
 			monetaryImpactUsd: parseMoney(block),
 			controlDeficiencyType,
+			correctionObligations: splitObligations(recommendation, condition),
+			responseStance: parseResponseStance(managementResponse),
+			responseCommittedDate: parseEnglishDate(managementResponse),
+			responseAuditor: classification.auditorName,
+			responseSourceRef: classification.reportNumber,
 		};
 	});
 
-	const classification = classifyAuditReportText(normalized);
 	const summaryParts = [
 		classification.opinion === "qualified"
 			? "Qualified opinion (except for the listed findings)."

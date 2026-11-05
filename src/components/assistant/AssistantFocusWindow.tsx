@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { AtSign, Loader2, Mic, MoveUp, Plus, X } from "lucide-react";
+import { AtSign, Loader2, Mic, MoveUp, Plus, SquarePen, X } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import AssistantChatThread from "@/components/assistant/AssistantChatThread";
 import type {
@@ -55,6 +55,7 @@ export default function AssistantFocusWindow({
 	mentions,
 	onSend,
 	onCloseFocus,
+	onRequestNewChat,
 }: {
 	open: boolean;
 	assistant: UseCaalmAssistantReturn;
@@ -73,7 +74,10 @@ export default function AssistantFocusWindow({
 	mentions: AssistantMentionRoute[];
 	onSend: (text: string, contextRoutes: string[]) => void;
 	onCloseFocus: () => void;
+	/** Same new-chat confirm path as the sheet when this thread is closed. */
+	onRequestNewChat: () => void;
 }) {
+	const conversationClosed = assistant.conversationStatus === "closed";
 	const inputId = useId();
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -139,7 +143,7 @@ export default function AssistantFocusWindow({
 
 	const submit = () => {
 		const trimmed = text.trim();
-		if (!trimmed || assistant.isSending) return;
+		if (!trimmed || assistant.isSending || conversationClosed) return;
 		onSend(
 			trimmed,
 			selectedRoutes.map((item) => item.href),
@@ -175,13 +179,13 @@ export default function AssistantFocusWindow({
 						exit={{ opacity: 0, scale: 0.98 }}
 						transition={SPRING}
 					>
-						<div className="flex items-center justify-between gap-3 px-4 py-3">
+						<div className="flex items-center justify-between gap-3 border-b border-slate-200/80 bg-[#e7edf0] px-4 py-3">
 							{findingHeader ? (
 								<div
 									className="flex min-w-0 flex-1 items-center gap-2"
 									title={sessionTitle}
 								>
-									<span className="inline-flex shrink-0 items-center whitespace-nowrap rounded-md border border-green/20 bg-green/10 px-2 py-0.5 font-mono text-xs font-semibold text-[#0f5384]">
+									<span className="inline-flex shrink-0 items-center whitespace-nowrap rounded-md border border-[#a0c4db]/60 bg-[#e1f3ff] px-2 py-0.5 font-mono text-xs font-semibold text-[#0f5384]">
 										{findingHeader.findingId}
 									</span>
 									<p className="min-w-0 truncate text-sm font-semibold text-slate-700">
@@ -190,7 +194,7 @@ export default function AssistantFocusWindow({
 								</div>
 							) : (
 								<p
-									className="min-w-0 flex-1 truncate text-sm font-semibold sidebar-gradient-text"
+									className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-700"
 									title={sessionTitle}
 								>
 									{sessionTitle}
@@ -207,7 +211,6 @@ export default function AssistantFocusWindow({
 								<X className="h-4 w-4" />
 							</Button>
 						</div>
-						<div className="border-b border-slate-200/80" aria-hidden />
 						<div className="glass-dialog-scroll-area min-h-0 flex-1 overflow-y-auto px-5 py-3">
 							<AssistantChatThread
 								assistant={assistant}
@@ -250,149 +253,167 @@ export default function AssistantFocusWindow({
 							</div>
 						) : null}
 						<div className="relative border-t border-slate-200/80 px-3 py-3">
-							{mentionOpen ? (
-								<div
-									ref={mentionRef}
-									role="listbox"
-									aria-label="Pages you can mention"
-									className="absolute bottom-full left-3 z-10 mb-1 max-h-48 w-64 overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg"
-								>
-									{filteredMentions.map((route, index) => (
-										<button
-											key={route.href}
-											type="button"
-											role="option"
-											aria-selected={index === mentionIndex}
-											className={cn(
-												"flex w-full cursor-pointer px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-50",
-												index === mentionIndex && "bg-slate-50",
-											)}
-											onClick={() => insertMention(route)}
-										>
-											{route.label}
-										</button>
-									))}
+							{conversationClosed ? (
+								<div className="flex flex-col gap-2 px-1">
+									<p className="text-center text-sm text-slate-600">
+										This conversation is closed. Start a new chat to continue.
+									</p>
+									<Button
+										type="button"
+										className="primary-btn w-full cursor-pointer rounded-full gap-2"
+										onClick={onRequestNewChat}
+									>
+										<SquarePen className="h-4 w-4" />
+										Start new chat
+									</Button>
 								</div>
-							) : null}
-							<div className="rounded-2xl border-[0.5px] border-[#0f5384]/20 bg-white px-3 py-2.5 shadow-sm">
-								<input
-									ref={fileInputRef}
-									id={inputId}
-									type="file"
-									accept="image/*,application/pdf,.pdf"
-									className="sr-only"
-									multiple
-									onChange={(event) => {
-										setFiles(Array.from(event.target.files ?? []));
-									}}
-								/>
-								<textarea
-									ref={textareaRef}
-									value={text}
-									onChange={(event) => {
-										const next = event.target.value;
-										setText(next);
-										setMentionOpen(next.includes("@"));
-									}}
-									placeholder="Ask CAALM anything..."
-									rows={1}
-									className="min-h-11 max-h-[8.75rem] w-full resize-none overflow-y-auto bg-transparent text-[13px] leading-5 text-slate-700 outline-none placeholder:text-slate-400"
-									onKeyDown={(event) => {
-										if (mentionOpen && filteredMentions.length) {
-											if (event.key === "ArrowDown") {
-												event.preventDefault();
-												setMentionIndex(
-													(index) => (index + 1) % filteredMentions.length,
-												);
-												return;
-											}
-											if (event.key === "ArrowUp") {
-												event.preventDefault();
-												setMentionIndex(
-													(index) =>
-														(index - 1 + filteredMentions.length) %
-														filteredMentions.length,
-												);
-												return;
-											}
-											if (event.key === "Enter") {
-												event.preventDefault();
-												const chosen = filteredMentions[mentionIndex];
-												if (chosen) insertMention(chosen);
-												return;
-											}
-										}
-										if (event.key === "Enter" && !event.shiftKey) {
-											event.preventDefault();
-											submit();
-										}
-									}}
-								/>
-								<div className="mt-2 flex items-center justify-between gap-2">
-									<div className="flex items-center gap-1.5">
-										<button
-											type="button"
-											className={toolBtn}
-											aria-label="Attach file"
-											onClick={() => fileInputRef.current?.click()}
+							) : (
+								<>
+									{mentionOpen ? (
+										<div
+											ref={mentionRef}
+											role="listbox"
+											aria-label="Pages you can mention"
+											className="absolute bottom-full left-3 z-10 mb-1 max-h-48 w-64 overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg"
 										>
-											<Plus className="h-4 w-4" aria-hidden />
-										</button>
-										<button
-											type="button"
-											className={toolBtn}
-											aria-label="Mention a page"
-											onClick={() => {
-												setMentionOpen(true);
-												setText((prev) =>
-													prev.endsWith("@") ? prev : `${prev}@`,
-												);
+											{filteredMentions.map((route, index) => (
+												<button
+													key={route.href}
+													type="button"
+													role="option"
+													aria-selected={index === mentionIndex}
+													className={cn(
+														"flex w-full cursor-pointer px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-50",
+														index === mentionIndex && "bg-slate-50",
+													)}
+													onClick={() => insertMention(route)}
+												>
+													{route.label}
+												</button>
+											))}
+										</div>
+									) : null}
+									<div className="rounded-2xl border-[0.5px] border-[#0f5384]/20 bg-white px-3 py-2.5 shadow-sm">
+										<input
+											ref={fileInputRef}
+											id={inputId}
+											type="file"
+											accept="image/*,application/pdf,.pdf"
+											className="sr-only"
+											multiple
+											onChange={(event) => {
+												setFiles(Array.from(event.target.files ?? []));
 											}}
-										>
-											<AtSign className="h-4 w-4" aria-hidden />
-										</button>
-									</div>
-									<div className="flex items-center gap-1.5">
-										<button
-											type="button"
-											className="flex h-8 w-8 shrink-0 cursor-not-allowed items-center justify-center rounded-md text-slate-400 opacity-50"
-											aria-label="Voice input coming soon"
-											title="Voice input coming soon"
-											disabled
-										>
-											<Mic className="h-4 w-4" aria-hidden />
-										</button>
-										<button
-											type="button"
-											aria-label="Send message"
-											disabled={assistant.isSending || !text.trim()}
-											onClick={submit}
-											className={cn(
-												"flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white shadow-sm",
-												"disabled:pointer-events-none disabled:opacity-40",
-												"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
-											)}
-											style={{
-												backgroundImage:
-													"linear-gradient(135deg, var(--chat-q-from) 0%, var(--chat-q-to) 100%)",
+										/>
+										<textarea
+											ref={textareaRef}
+											value={text}
+											onChange={(event) => {
+												const next = event.target.value;
+												setText(next);
+												setMentionOpen(next.includes("@"));
 											}}
-										>
-											{assistant.isSending ? (
-												<Loader2
-													className="h-4 w-4 animate-spin text-white"
-													aria-hidden
-												/>
-											) : (
-												<MoveUp
-													className="h-4 w-4 text-white"
-													strokeWidth={2.25}
-													aria-hidden
-												/>
-											)}
-										</button>
+											placeholder="Ask CAALM anything..."
+											rows={1}
+											className="min-h-11 max-h-[8.75rem] w-full resize-none overflow-y-auto bg-transparent text-[13px] leading-5 text-slate-700 outline-none placeholder:text-slate-400"
+											onKeyDown={(event) => {
+												if (mentionOpen && filteredMentions.length) {
+													if (event.key === "ArrowDown") {
+														event.preventDefault();
+														setMentionIndex(
+															(index) => (index + 1) % filteredMentions.length,
+														);
+														return;
+													}
+													if (event.key === "ArrowUp") {
+														event.preventDefault();
+														setMentionIndex(
+															(index) =>
+																(index - 1 + filteredMentions.length) %
+																filteredMentions.length,
+														);
+														return;
+													}
+													if (event.key === "Enter") {
+														event.preventDefault();
+														const chosen = filteredMentions[mentionIndex];
+														if (chosen) insertMention(chosen);
+														return;
+													}
+												}
+												if (event.key === "Enter" && !event.shiftKey) {
+													event.preventDefault();
+													submit();
+												}
+											}}
+										/>
+										<div className="mt-2 flex items-center justify-between gap-2">
+											<div className="flex items-center gap-1.5">
+												<button
+													type="button"
+													className={toolBtn}
+													aria-label="Attach file"
+													onClick={() => fileInputRef.current?.click()}
+												>
+													<Plus className="h-4 w-4" aria-hidden />
+												</button>
+												<button
+													type="button"
+													className={toolBtn}
+													aria-label="Mention a page"
+													onClick={() => {
+														setMentionOpen(true);
+														setText((prev) =>
+															prev.endsWith("@") ? prev : `${prev}@`,
+														);
+													}}
+												>
+													<AtSign className="h-4 w-4" aria-hidden />
+												</button>
+											</div>
+											<div className="flex items-center gap-1.5">
+												<button
+													type="button"
+													className="flex h-8 w-8 shrink-0 cursor-not-allowed items-center justify-center rounded-md text-slate-400 opacity-50"
+													aria-label="Voice input coming soon"
+													title="Voice input coming soon"
+													disabled
+												>
+													<Mic className="h-4 w-4" aria-hidden />
+												</button>
+												<button
+													type="button"
+													aria-label="Send message"
+													disabled={assistant.isSending || !text.trim()}
+													onClick={submit}
+													className={cn(
+														"flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white shadow-sm",
+														"disabled:pointer-events-none disabled:opacity-40",
+														"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
+													)}
+													style={{
+														backgroundImage:
+															"linear-gradient(135deg, var(--chat-q-from) 0%, var(--chat-q-to) 100%)",
+													}}
+												>
+													{assistant.isSending ? (
+														<Loader2
+															className="h-4 w-4 animate-spin text-white"
+															aria-hidden
+														/>
+													) : (
+														<MoveUp
+															className="h-4 w-4 text-white"
+															strokeWidth={2.25}
+															aria-hidden
+														/>
+													)}
+												</button>
+											</div>
+										</div>
 									</div>
-								</div>
-							</div>
+								</>
+							)}
 						</div>
 						{overlay}
 					</motion.div>

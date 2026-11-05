@@ -12,14 +12,16 @@ import type {
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { buildPendingActionLifecycle } from "@/lib/assistant/actionLifecycle";
-import {
-	auditRemediationUserPrompt,
-	type AuditRemediationLaunchContext,
-} from "@/lib/assistant/audit-remediation-context";
-import type { AssistantResearchStep } from "@/lib/assistant/assistant-research-steps";
 import { buildApplyAuditRemediationSteps } from "@/lib/assistant/apply-audit-remediation-steps";
+import type { AssistantResearchStep } from "@/lib/assistant/assistant-research-steps";
+import {
+	type AuditRemediationLaunchContext,
+	auditRemediationUserPrompt,
+} from "@/lib/assistant/audit-remediation-context";
 import type { AssistantCalendarMutation } from "@/lib/assistant/executeTypes";
 import { readJsonResponse } from "@/lib/assistant/readJsonResponse";
+import type { AssistantClientAction } from "@/lib/assistant/open-close-cap-client";
+import { dispatchOpenCloseCap } from "@/lib/assistant/open-close-cap-client";
 import { linkRemediationChat } from "@/lib/assistant/remediation-chat-link";
 import {
 	refreshCalendarCache,
@@ -428,12 +430,12 @@ export function useCaalmAssistant(options?: {
 			}
 
 			try {
-				const history = (
-					userMsg ? [...historyBase, userMsg] : historyBase
-				).map((m) => ({
-					role: m.role,
-					content: m.content,
-				}));
+				const history = (userMsg ? [...historyBase, userMsg] : historyBase).map(
+					(m) => ({
+						role: m.role,
+						content: m.content,
+					}),
+				);
 
 				const res = await fetch("/api/assistant/chat", {
 					method: "POST",
@@ -460,7 +462,7 @@ export function useCaalmAssistant(options?: {
 						sources?: AssistantChatMessage["sources"];
 						suggestions?: AssistantChatMessage["suggestions"];
 						pendingAction?: AssistantPendingAction;
-						clientAction?: { type: "navigate"; href: string };
+						clientAction?: AssistantClientAction;
 						activityFeed?: AssistantChatMessage["activityFeed"];
 						inputForm?: AssistantChatMessage["inputForm"];
 						researchSteps?: AssistantChatMessage["researchSteps"];
@@ -477,7 +479,11 @@ export function useCaalmAssistant(options?: {
 					conversationStatusRef.current = "active";
 					const launchFindingId = sendOptions?.launchContext?.findingId;
 					if (launchFindingId) {
-						linkRemediationChat(launchFindingId, payload.conversationId);
+						linkRemediationChat(
+							launchFindingId,
+							payload.conversationId,
+							payload.pendingAction?.toolName === "apply_audit_remediation",
+						);
 					}
 				}
 
@@ -511,6 +517,8 @@ export function useCaalmAssistant(options?: {
 				}
 				if (payload.clientAction?.type === "navigate") {
 					router.push(payload.clientAction.href);
+				} else if (payload.clientAction?.type === "open_close_cap") {
+					dispatchOpenCloseCap(payload.clientAction);
 				}
 				void loadHistory();
 				return payload.conversationId ?? conversationIdRef.current;
@@ -581,8 +589,7 @@ export function useCaalmAssistant(options?: {
 				const actionLifecycle = jsonData.actionLifecycle;
 				const calendarMutation = jsonData.calendarMutation;
 				const toolPayload =
-					jsonData.result?.result &&
-					typeof jsonData.result.result === "object"
+					jsonData.result?.result && typeof jsonData.result.result === "object"
 						? jsonData.result.result
 						: null;
 				const failed = actionLifecycle?.state === "failed";
@@ -714,9 +721,7 @@ export function useCaalmAssistant(options?: {
 					toolPayload?.continueRemediation === true
 				) {
 					const documentId = String(
-						toolPayload.documentId ??
-							pendingSnapshot.args?.documentId ??
-							"",
+						toolPayload.documentId ?? pendingSnapshot.args?.documentId ?? "",
 					);
 					const findingId = String(
 						toolPayload.findingId ?? pendingSnapshot.args?.findingId ?? "",
@@ -736,7 +741,8 @@ export function useCaalmAssistant(options?: {
 					if (documentId && findingId) {
 						const existingConv = conversationIdRef.current;
 						if (existingConv) {
-							linkRemediationChat(findingId, existingConv);
+							// No plan yet — the continued research below will re-link with the real outcome.
+							linkRemediationChat(findingId, existingConv, false);
 						}
 						setApplyProgressSteps(null);
 						await sendMessage(
@@ -789,7 +795,15 @@ export function useCaalmAssistant(options?: {
 				setSending(false);
 			}
 		},
-		[loadHistory, pathname, pendingAction, sendMessage, setSending, toast, user],
+		[
+			loadHistory,
+			pathname,
+			pendingAction,
+			sendMessage,
+			setSending,
+			toast,
+			user,
+		],
 	);
 
 	const cancelPendingAction = useCallback(() => {

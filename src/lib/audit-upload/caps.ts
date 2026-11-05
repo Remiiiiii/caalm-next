@@ -1,4 +1,4 @@
-import type { AuditSeverity } from "./types";
+import type { AuditCapTask, AuditFindingRecord, AuditSeverity } from "./types";
 
 const SLA_DAYS: Record<AuditSeverity, number> = {
 	critical: 30,
@@ -61,6 +61,47 @@ export function inferRootCause(text: string): CapRootCause {
 
 export function requiresCloseEvidence(severity: AuditSeverity): boolean {
 	return severity === "critical" || severity === "high";
+}
+
+/** One task per obligation. Evidence requirement mirrors the CAP's own close-evidence rule for this severity. */
+export function draftTasksFromFinding(
+	finding: Pick<
+		AuditFindingRecord,
+		"correctionObligations" | "severityComputed"
+	>,
+): AuditCapTask[] {
+	const requiresEvidence = requiresCloseEvidence(finding.severityComputed);
+	return finding.correctionObligations.map((text, index) => ({
+		id: `t-${index + 1}`,
+		text,
+		done: false,
+		requiresEvidence,
+		evidenceIds: [],
+	}));
+}
+
+/** `canClose` is true only when every task is done, and every evidence-requiring task has evidence. */
+export function computeCapCloseState(tasks: AuditCapTask[]): {
+	canClose: boolean;
+	closeBlocker: string | null;
+} {
+	const remaining = tasks.filter((task) => !task.done).length;
+	if (remaining > 0) {
+		return {
+			canClose: false,
+			closeBlocker: `${remaining} task${remaining === 1 ? "" : "s"} remaining before this can be closed.`,
+		};
+	}
+	const needsEvidence = tasks.filter(
+		(task) => task.requiresEvidence && task.evidenceIds.length === 0,
+	).length;
+	if (needsEvidence > 0) {
+		return {
+			canClose: false,
+			closeBlocker: `Evidence is required on ${needsEvidence} task${needsEvidence === 1 ? "" : "s"} before this can be closed.`,
+		};
+	}
+	return { canClose: true, closeBlocker: null };
 }
 
 export { ROOT_CAUSES, SLA_DAYS };

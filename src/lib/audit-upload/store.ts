@@ -1,16 +1,19 @@
 import { ID, Query } from "node-appwrite";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { computeCapCloseState } from "./caps";
 import type {
 	AuditCapEvidenceAttachment,
 	AuditCapRecord,
 	AuditCapStatus,
+	AuditCapTask,
 	AuditCitation,
 	AuditDocumentRecord,
 	AuditDocumentStatus,
 	AuditFeedbackRecord,
 	AuditFindingRecord,
 	AuditFindingStatus,
+	AuditResponseStance,
 	ControlDeficiencyType,
 	ProcessingLogEntry,
 	ReconciliationResult,
@@ -21,6 +24,11 @@ type FindingExtras = {
 	managementResponse?: string | null;
 	monetaryImpactUsd?: number | null;
 	controlDeficiencyType?: ControlDeficiencyType | null;
+	correctionObligations?: string[];
+	responseStance?: AuditResponseStance | null;
+	responseCommittedDate?: string | null;
+	responseAuditor?: string | null;
+	responseSourceRef?: string | null;
 };
 
 function packCitations(
@@ -39,7 +47,10 @@ function unpackCitations(value: unknown): {
 		return { citations: parsed as AuditCitation[], extras: {} };
 	}
 	if (parsed && typeof parsed === "object") {
-		const record = parsed as { quotes?: AuditCitation[]; extras?: FindingExtras };
+		const record = parsed as {
+			quotes?: AuditCitation[];
+			extras?: FindingExtras;
+		};
 		return {
 			citations: Array.isArray(record.quotes) ? record.quotes : [],
 			extras: record.extras ?? {},
@@ -116,8 +127,11 @@ export function mapFinding(row: Record<string, unknown>): AuditFindingRecord {
 		title: String(row.title),
 		description: String(row.description ?? ""),
 		frameworkRefs: parseJson(row.frameworkRefs, []),
-		severityReported: (row.severityReported as AuditFindingRecord["severityReported"]) ?? null,
-		severityComputed: (row.severityComputed as AuditFindingRecord["severityComputed"]) ?? "medium",
+		severityReported:
+			(row.severityReported as AuditFindingRecord["severityReported"]) ?? null,
+		severityComputed:
+			(row.severityComputed as AuditFindingRecord["severityComputed"]) ??
+			"medium",
 		likelihood: Number(row.likelihood ?? 3),
 		impact: Number(row.impact ?? 3),
 		riskScore: Number(row.riskScore ?? 9),
@@ -132,9 +146,16 @@ export function mapFinding(row: Record<string, unknown>): AuditFindingRecord {
 			return Number.isFinite(money) ? money : null;
 		})(),
 		controlDeficiencyType: packed.extras.controlDeficiencyType ?? null,
+		correctionObligations: packed.extras.correctionObligations ?? [],
+		responseStance: packed.extras.responseStance ?? null,
+		responseCommittedDate: packed.extras.responseCommittedDate ?? null,
+		responseAuditor: packed.extras.responseAuditor ?? null,
+		responseSourceRef: packed.extras.responseSourceRef ?? null,
 		findingKey: String(row.findingKey ?? ""),
 		isRepeat: Boolean(row.isRepeat),
-		repeatOfFindingId: row.repeatOfFindingId ? String(row.repeatOfFindingId) : null,
+		repeatOfFindingId: row.repeatOfFindingId
+			? String(row.repeatOfFindingId)
+			: null,
 		status: String(row.status) as AuditFindingStatus,
 		reconciliation: parseJson(row.reconciliation, null),
 		disputeReason: row.disputeReason ? String(row.disputeReason) : null,
@@ -153,6 +174,9 @@ export function mapCap(row: Record<string, unknown>): AuditCapRecord {
 		row.evidenceAttachments,
 		[],
 	);
+	const tasks = parseJson<AuditCapTask[]>(row.tasks, []);
+	const safeTasks = Array.isArray(tasks) ? tasks : [];
+	const { canClose, closeBlocker } = computeCapCloseState(safeTasks);
 	return {
 		$id: String(row.$id),
 		orgId: String(row.orgId),
@@ -168,7 +192,10 @@ export function mapCap(row: Record<string, unknown>): AuditCapRecord {
 			? String(row.verificationEvidence)
 			: null,
 		evidenceAttachments: Array.isArray(attachments) ? attachments : [],
+		tasks: safeTasks,
 		closedAt: row.closedAt ? String(row.closedAt) : null,
+		canClose,
+		closeBlocker,
 		$createdAt: row.$createdAt ? String(row.$createdAt) : undefined,
 		$updatedAt: row.$updatedAt ? String(row.$updatedAt) : undefined,
 	};
@@ -194,21 +221,26 @@ export async function createAuditDocument(
 	data: Omit<AuditDocumentRecord, "$id" | "$createdAt" | "$updatedAt">,
 ): Promise<AuditDocumentRecord> {
 	const { databases } = await createAdminClient();
-	const created = await databases.createDocument(db(), documentsId(), ID.unique(), {
-		orgId: data.orgId,
-		uploadedBy: data.uploadedBy,
-		fileName: data.fileName,
-		mimeType: data.mimeType,
-		fileSize: data.fileSize,
-		storageFileId: data.storageFileId,
-		contentHash: data.contentHash,
-		status: data.status,
-		processingLog: stringify(data.processingLog),
-		summary: data.summary,
-		metadata: stringify(data.metadata),
-		errorMessage: data.errorMessage,
-		deletedAt: data.deletedAt,
-	});
+	const created = await databases.createDocument(
+		db(),
+		documentsId(),
+		ID.unique(),
+		{
+			orgId: data.orgId,
+			uploadedBy: data.uploadedBy,
+			fileName: data.fileName,
+			mimeType: data.mimeType,
+			fileSize: data.fileSize,
+			storageFileId: data.storageFileId,
+			contentHash: data.contentHash,
+			status: data.status,
+			processingLog: stringify(data.processingLog),
+			summary: data.summary,
+			metadata: stringify(data.metadata),
+			errorMessage: data.errorMessage,
+			deletedAt: data.deletedAt,
+		},
+	);
 	return mapDocument(created as unknown as Record<string, unknown>);
 }
 
@@ -233,7 +265,9 @@ export type AuditDocumentListScope = "active" | "removed";
 
 export async function listAuditDocuments(
 	orgId: string,
-	limitOrOptions: number | { limit?: number; scope?: AuditDocumentListScope } = 50,
+	limitOrOptions:
+		| number
+		| { limit?: number; scope?: AuditDocumentListScope } = 50,
 ): Promise<AuditDocumentRecord[]> {
 	const limit =
 		typeof limitOrOptions === "number"
@@ -262,7 +296,12 @@ export async function updateAuditDocument(
 	patch: Partial<
 		Pick<
 			AuditDocumentRecord,
-			"status" | "processingLog" | "summary" | "metadata" | "errorMessage" | "deletedAt"
+			| "status"
+			| "processingLog"
+			| "summary"
+			| "metadata"
+			| "errorMessage"
+			| "deletedAt"
 		>
 	>,
 ): Promise<AuditDocumentRecord> {
@@ -296,35 +335,45 @@ export async function createFinding(
 	data: Omit<AuditFindingRecord, "$id" | "$createdAt" | "$updatedAt">,
 ): Promise<AuditFindingRecord> {
 	const { databases } = await createAdminClient();
-	const created = await databases.createDocument(db(), findingsId(), ID.unique(), {
-		orgId: data.orgId,
-		documentId: data.documentId,
-		title: data.title,
-		description: data.description,
-		frameworkRefs: stringify(data.frameworkRefs),
-		severityReported: data.severityReported,
-		severityComputed: data.severityComputed,
-		likelihood: data.likelihood,
-		impact: data.impact,
-		riskScore: data.riskScore,
-		confidence: data.confidence,
-		citations: packCitations(data.citations, {
-			findingCode: data.findingCode,
-			managementResponse: data.managementResponse,
-			monetaryImpactUsd: data.monetaryImpactUsd,
-			controlDeficiencyType: data.controlDeficiencyType,
-		}),
-		citationCheckPassed: data.citationCheckPassed,
-		findingKey: data.findingKey,
-		isRepeat: data.isRepeat,
-		repeatOfFindingId: data.repeatOfFindingId,
-		status: data.status,
-		reconciliation: stringify(data.reconciliation),
-		disputeReason: data.disputeReason,
-		riskAcceptanceReason: data.riskAcceptanceReason,
-		riskAcceptedBy: data.riskAcceptedBy,
-		riskAcceptedAt: data.riskAcceptedAt,
-	});
+	const created = await databases.createDocument(
+		db(),
+		findingsId(),
+		ID.unique(),
+		{
+			orgId: data.orgId,
+			documentId: data.documentId,
+			title: data.title,
+			description: data.description,
+			frameworkRefs: stringify(data.frameworkRefs),
+			severityReported: data.severityReported,
+			severityComputed: data.severityComputed,
+			likelihood: data.likelihood,
+			impact: data.impact,
+			riskScore: data.riskScore,
+			confidence: data.confidence,
+			citations: packCitations(data.citations, {
+				findingCode: data.findingCode,
+				managementResponse: data.managementResponse,
+				monetaryImpactUsd: data.monetaryImpactUsd,
+				controlDeficiencyType: data.controlDeficiencyType,
+				correctionObligations: data.correctionObligations,
+				responseStance: data.responseStance,
+				responseCommittedDate: data.responseCommittedDate,
+				responseAuditor: data.responseAuditor,
+				responseSourceRef: data.responseSourceRef,
+			}),
+			citationCheckPassed: data.citationCheckPassed,
+			findingKey: data.findingKey,
+			isRepeat: data.isRepeat,
+			repeatOfFindingId: data.repeatOfFindingId,
+			status: data.status,
+			reconciliation: stringify(data.reconciliation),
+			disputeReason: data.disputeReason,
+			riskAcceptanceReason: data.riskAcceptanceReason,
+			riskAcceptedBy: data.riskAcceptedBy,
+			riskAcceptedAt: data.riskAcceptedAt,
+		},
+	);
 	return mapFinding(created as unknown as Record<string, unknown>);
 }
 
@@ -354,7 +403,8 @@ export async function listFindings(filters: {
 		Query.orderDesc("$createdAt"),
 		Query.limit(filters.limit ?? 100),
 	];
-	if (filters.documentId) queries.push(Query.equal("documentId", filters.documentId));
+	if (filters.documentId)
+		queries.push(Query.equal("documentId", filters.documentId));
 	if (filters.status) queries.push(Query.equal("status", filters.status));
 	const result = await databases.listDocuments(db(), findingsId(), queries);
 	return result.documents.map((row) =>
@@ -382,18 +432,24 @@ export async function updateFinding(
 	if (patch.reconciliation !== undefined) {
 		data.reconciliation = stringify(patch.reconciliation);
 	}
-	if (patch.disputeReason !== undefined) data.disputeReason = patch.disputeReason;
+	if (patch.disputeReason !== undefined)
+		data.disputeReason = patch.disputeReason;
 	if (patch.riskAcceptanceReason !== undefined) {
 		data.riskAcceptanceReason = patch.riskAcceptanceReason;
 	}
-	if (patch.riskAcceptedBy !== undefined) data.riskAcceptedBy = patch.riskAcceptedBy;
-	if (patch.riskAcceptedAt !== undefined) data.riskAcceptedAt = patch.riskAcceptedAt;
+	if (patch.riskAcceptedBy !== undefined)
+		data.riskAcceptedBy = patch.riskAcceptedBy;
+	if (patch.riskAcceptedAt !== undefined)
+		data.riskAcceptedAt = patch.riskAcceptedAt;
 	const updated = await databases.updateDocument(db(), findingsId(), id, data);
 	return mapFinding(updated as unknown as Record<string, unknown>);
 }
 
 export async function createCap(
-	data: Omit<AuditCapRecord, "$id" | "$createdAt" | "$updatedAt">,
+	data: Omit<
+		AuditCapRecord,
+		"$id" | "$createdAt" | "$updatedAt" | "canClose" | "closeBlocker"
+	>,
 ): Promise<AuditCapRecord> {
 	const { databases } = await createAdminClient();
 	const created = await databases.createDocument(db(), capsId(), ID.unique(), {
@@ -408,6 +464,7 @@ export async function createCap(
 		escalationTier: data.escalationTier,
 		verificationEvidence: data.verificationEvidence,
 		evidenceAttachments: stringify(data.evidenceAttachments ?? []),
+		tasks: stringify(data.tasks ?? []),
 		closedAt: data.closedAt,
 	});
 	return mapCap(created as unknown as Record<string, unknown>);
@@ -439,7 +496,8 @@ export async function listCaps(filters: {
 		Query.orderDesc("$createdAt"),
 		Query.limit(filters.limit ?? 200),
 	];
-	if (filters.documentId) queries.push(Query.equal("documentId", filters.documentId));
+	if (filters.documentId)
+		queries.push(Query.equal("documentId", filters.documentId));
 	if (filters.status) queries.push(Query.equal("status", filters.status));
 	const result = await databases.listDocuments(db(), capsId(), queries);
 	return result.documents.map((row) =>
@@ -458,6 +516,7 @@ export async function updateCap(
 			| "escalationTier"
 			| "verificationEvidence"
 			| "evidenceAttachments"
+			| "tasks"
 			| "closedAt"
 			| "rootCause"
 		>
@@ -468,11 +527,16 @@ export async function updateCap(
 	if (patch.evidenceAttachments !== undefined) {
 		payload.evidenceAttachments = stringify(patch.evidenceAttachments);
 	}
+	if (patch.tasks !== undefined) {
+		payload.tasks = stringify(patch.tasks);
+	}
 	const updated = await databases.updateDocument(db(), capsId(), id, payload);
 	return mapCap(updated as unknown as Record<string, unknown>);
 }
 
-export async function listOpenCapsAllOrgs(limit = 200): Promise<AuditCapRecord[]> {
+export async function listOpenCapsAllOrgs(
+	limit = 200,
+): Promise<AuditCapRecord[]> {
 	const { databases } = await createAdminClient();
 	const result = await databases.listDocuments(db(), capsId(), [
 		Query.equal("status", ["open", "in_progress", "escalated", "overdue"]),
@@ -487,11 +551,16 @@ export async function createFeedback(
 	data: Omit<AuditFeedbackRecord, "$id" | "$createdAt">,
 ): Promise<AuditFeedbackRecord> {
 	const { databases } = await createAdminClient();
-	const created = await databases.createDocument(db(), feedbackId(), ID.unique(), {
-		orgId: data.orgId,
-		documentId: data.documentId,
-		report: stringify(data.report),
-	});
+	const created = await databases.createDocument(
+		db(),
+		feedbackId(),
+		ID.unique(),
+		{
+			orgId: data.orgId,
+			documentId: data.documentId,
+			report: stringify(data.report),
+		},
+	);
 	return {
 		$id: created.$id,
 		orgId: data.orgId,
@@ -509,6 +578,7 @@ export async function getFeedbackForDocument(
 	const result = await databases.listDocuments(db(), feedbackId(), [
 		Query.equal("orgId", orgId),
 		Query.equal("documentId", documentId),
+		Query.orderDesc("$createdAt"),
 		Query.limit(1),
 	]);
 	const row = result.documents[0];

@@ -41,6 +41,13 @@ import { retrieveKnowledge } from "@/lib/assistant/knowledge/retrieve";
 import { parseCreateTaskDraft } from "@/lib/assistant/parseCreateTaskDraft";
 import { sanitizeRescheduleArgs } from "@/lib/assistant/rescheduleArgs";
 import {
+	detectCapCloseAssistIntent,
+	lastAssistantMessageContent,
+	resolveVerificationNoteForClose,
+} from "@/lib/assistant/cap-close-assist";
+import type { AssistantClientAction } from "@/lib/assistant/open-close-cap-client";
+import {
+	buildOpenCloseCapSuggestion,
 	type AssistantSuggestion,
 	suggestionsForTurn,
 } from "@/lib/assistant/suggestions";
@@ -68,7 +75,7 @@ export type AssistantTurnResult = {
 		toolName: string;
 		args?: Record<string, unknown>;
 	};
-	clientAction?: { type: "navigate"; href: string };
+	clientAction?: AssistantClientAction;
 	activityFeed?: ActivityFeedPayload;
 	inputForm?: AssistantInputForm;
 	researchSteps?: AssistantResearchStep[];
@@ -497,6 +504,83 @@ ${remediationContext ? `\n${buildAuditRemediationPrompt(remediationContext)}` : 
 
 	// Audit “Show me how”: live org-data research, findings report, optional apply card.
 	if (remediationContext) {
+		const capCloseIntent = detectCapCloseAssistIntent(userMessage);
+		if (capCloseIntent?.kind === "open_dialog") {
+			const canManageCaps = ctx.permissions.includes(
+				PERMISSIONS.AUDIT.MANAGE_CAPS,
+			);
+			if (!canManageCaps) {
+				return {
+					answer:
+						"You don't have permission to close corrective actions. Ask an admin for audit manage caps access.",
+					sources: [],
+					suggestions: [],
+				};
+			}
+			if (!remediationContext.capId) {
+				return {
+					answer:
+						"This finding does not have a corrective action yet. Confirm the finding and start the action first, then ask me to open Mark closed.",
+					sources: ragSources,
+					suggestions: [],
+				};
+			}
+			const verificationNote = resolveVerificationNoteForClose({
+				userMessage,
+				priorAssistantContent: lastAssistantMessageContent(messages),
+				stagedDraft: null,
+			});
+			if (!verificationNote.trim()) {
+				return {
+					answer:
+						"I need the verification note text first. Ask me to write a verification note, then say open Mark closed dialog.",
+					sources: ragSources,
+					suggestions: [],
+				};
+			}
+			const toolResult = await runToolByName(
+				{ ...ctx, pathname },
+				"prepare_close_corrective_action",
+				{
+					capId: remediationContext.capId,
+					findingId: remediationContext.findingId,
+					documentId: remediationContext.documentId,
+					verificationNote,
+				},
+			);
+			const err =
+				toolResult.result &&
+				typeof toolResult.result === "object" &&
+				"error" in (toolResult.result as object)
+					? String((toolResult.result as { error: string }).error)
+					: toolResult.error;
+			if (err) {
+				return {
+					answer: err,
+					sources: ragSources,
+					suggestions: [],
+				};
+			}
+			const suggestions: AssistantSuggestion[] =
+				toolResult.clientAction?.type === "open_close_cap"
+					? [
+							buildOpenCloseCapSuggestion({
+								capId: toolResult.clientAction.capId,
+								findingId: toolResult.clientAction.findingId,
+								documentId: toolResult.clientAction.documentId,
+								verificationNote: toolResult.clientAction.verificationNote,
+							}),
+						]
+					: [];
+			return {
+				answer:
+					"Opening Mark closed with your verification note — review and save when ready.",
+				sources: ragSources,
+				suggestions,
+				clientAction: toolResult.clientAction,
+			};
+		}
+
 		const research = await runAuditRemediationResearch({
 			ctx,
 			remediationContext,
@@ -747,6 +831,36 @@ ${remediationContext ? `\n${buildAuditRemediationPrompt(remediationContext)}` : 
 			call.name,
 			args,
 		);
+
+		if (call.name === "prepare_close_corrective_action") {
+			const result = toolResult.result as { error?: string } | undefined;
+			if (result?.error || toolResult.error) {
+				return {
+					answer: result?.error ?? toolResult.error ?? "Could not open Mark closed.",
+					sources: sourcesForTool(call.name, ragSources),
+					suggestions: [],
+				};
+			}
+			const suggestions: AssistantSuggestion[] =
+				toolResult.clientAction?.type === "open_close_cap"
+					? [
+							buildOpenCloseCapSuggestion({
+								capId: toolResult.clientAction.capId,
+								findingId: toolResult.clientAction.findingId,
+								documentId: toolResult.clientAction.documentId,
+								verificationNote: toolResult.clientAction.verificationNote,
+							}),
+						]
+					: [];
+			return {
+				answer:
+					"Opening Mark closed with your verification note — review and save when ready.",
+				sources: sourcesForTool(call.name, ragSources),
+				suggestions,
+				clientAction: toolResult.clientAction,
+			};
+		}
+
 		// Do not use chat.sendMessage for functionResponse — the SDK
 		// still sends role "function", which Gemini 3.x rejects.
 		const modelContent = response.candidates?.[0]?.content;

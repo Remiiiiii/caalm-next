@@ -2,8 +2,8 @@ import type { AuditCapEvidenceAttachment } from "./types";
 
 export const CAP_EVIDENCE_MAX_BYTES = 10 * 1024 * 1024;
 export const CAP_EVIDENCE_MAX_FILES = 10;
-/** Compact grids: file tiles in slots 1–3; slot 4 is overflow when total ≥ 5. */
-export const CAP_EVIDENCE_COMPACT_FILE_SLOTS = 3;
+/** Compact grids: up to 10 file tiles in view; overflow tile when total > 10. */
+export const CAP_EVIDENCE_COMPACT_FILE_SLOTS = 9;
 
 const ALLOWED_MIME = new Set([
 	"image/png",

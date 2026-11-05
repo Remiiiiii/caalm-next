@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
+import type {
+	AuditDocumentRecord,
+	AuditFindingRecord,
+} from "@/lib/audit-upload/types";
 import {
 	buildActionNeededCallout,
 	deriveAuditScoreboard,
 	deriveDocumentListSummary,
 } from "@/lib/audit-upload/upload-list-summaries";
-import type {
-	AuditDocumentRecord,
-	AuditFindingRecord,
-} from "@/lib/audit-upload/types";
 
 function doc(
 	overrides: Partial<AuditDocumentRecord> = {},
@@ -60,6 +60,11 @@ function finding(
 		managementResponse: null,
 		monetaryImpactUsd: null,
 		controlDeficiencyType: null,
+		correctionObligations: [],
+		responseStance: null,
+		responseCommittedDate: null,
+		responseAuditor: null,
+		responseSourceRef: null,
 		findingKey: "k",
 		isRepeat: false,
 		repeatOfFindingId: null,

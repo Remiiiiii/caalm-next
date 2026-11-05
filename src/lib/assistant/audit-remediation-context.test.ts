@@ -28,6 +28,11 @@ const finding = {
 	managementResponse: null,
 	monetaryImpactUsd: null,
 	controlDeficiencyType: null,
+	correctionObligations: [],
+	responseStance: null,
+	responseCommittedDate: null,
+	responseAuditor: null,
+	responseSourceRef: null,
 	findingKey: "k",
 	isRepeat: false,
 	repeatOfFindingId: null,
@@ -73,7 +78,10 @@ describe("parseAuditRemediationLaunch", () => {
 describe("auditRemediationUserPrompt", () => {
 	it("names the finding in the chat bubble", () => {
 		expect(
-			auditRemediationUserPrompt("2026-004", "2026-004 — SEFA misclassification"),
+			auditRemediationUserPrompt(
+				"2026-004",
+				"2026-004 — SEFA misclassification",
+			),
 		).toBe(
 			"Show me how to implement the corrective steps for 2026-004 — SEFA misclassification.",
 		);

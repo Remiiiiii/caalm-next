@@ -1,5 +1,6 @@
 import type { PermissionKey } from "@/constants/permissions";
 import type { AssistantAuthContext } from "@/lib/assistant/auth";
+import type { AssistantClientAction } from "@/lib/assistant/open-close-cap-client";
 import * as cache from "@/lib/services/redis-cache";
 
 export type PendingAssistantAction = {
@@ -113,6 +114,6 @@ export type ToolDefinition = {
 		args: Record<string, unknown>,
 	) => Promise<{
 		result?: unknown;
-		clientAction?: { type: "navigate"; href: string };
+		clientAction?: AssistantClientAction;
 	}>;
 };

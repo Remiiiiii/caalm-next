@@ -139,6 +139,15 @@ export default function AssistantChatThread({
 				const showResearchPlayback =
 					Boolean(researchSteps?.length) &&
 					message.id === assistant.researchPlaybackMessageId;
+				const showSources =
+					!researchSteps?.length && Boolean(message.sources?.length);
+				const showSuggestions =
+					message.role === "assistant" &&
+					isLastAssistant &&
+					Boolean(message.suggestions?.length) &&
+					!hasInputForm &&
+					!assistant.isSending &&
+					assistant.conversationStatus !== "closed";
 
 				return (
 					<div
@@ -255,36 +264,33 @@ export default function AssistantChatThread({
 									/>
 								</div>
 							) : null}
-							{!researchSteps?.length && message.sources?.length ? (
+							{showSources || showSuggestions ? (
 								<div
 									className={cn(
-										"px-3 pb-1",
-										!hasLifecycleCard && !showApply && "px-0",
+										"mt-2 space-y-2 border-t border-slate-200/80 pt-2",
+										(hasLifecycleCard || showApply) && "px-3 pb-2",
 									)}
 								>
-									<AssistantSourceChips
-										sources={message.sources}
-										onOpen={onOpenHref}
-									/>
-								</div>
-							) : null}
-							{message.role === "assistant" &&
-							isLastAssistant &&
-							message.suggestions?.length &&
-							!hasInputForm &&
-							!assistant.isSending &&
-							assistant.conversationStatus !== "closed" ? (
-								<div
-									className={cn(
-										hasLifecycleCard || showApply ? "px-3 pb-2" : "",
-									)}
-								>
-									<AssistantSuggestions
-										suggestions={message.suggestions}
-										disabled={assistant.isSending}
-										onSelect={onSuggestion}
-										variant={suggestionsVariant}
-									/>
+									{showSources ? (
+										<AssistantSourceChips
+											sources={message.sources ?? []}
+											onOpen={onOpenHref}
+										/>
+									) : null}
+									{showSources && showSuggestions ? (
+										<div
+											className="border-t border-slate-200/80"
+											aria-hidden
+										/>
+									) : null}
+									{showSuggestions ? (
+										<AssistantSuggestions
+											suggestions={message.suggestions ?? []}
+											disabled={assistant.isSending}
+											onSelect={onSuggestion}
+											variant={suggestionsVariant}
+										/>
+									) : null}
 								</div>
 							) : null}
 							{message.role === "assistant" && !hasInputForm ? (

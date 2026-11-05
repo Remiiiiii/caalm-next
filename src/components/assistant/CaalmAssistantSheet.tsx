@@ -24,6 +24,7 @@ import type {
 	AssistantSuggestion,
 	UseCaalmAssistantReturn,
 } from "@/components/assistant/assistantTypes";
+import { dispatchOpenCloseCap } from "@/lib/assistant/open-close-cap-client";
 import { Button } from "@/components/ui/button";
 import {
 	SHEET_CHIP_IDLE,
@@ -151,6 +152,10 @@ export default function CaalmAssistantSheet({
 	const handleSuggestion = (suggestion: AssistantSuggestion) => {
 		if (suggestion.action.type === "navigate") {
 			navigateAssistantHref(suggestion.action.href);
+			return;
+		}
+		if (suggestion.action.type === "open_close_cap") {
+			dispatchOpenCloseCap(suggestion.action);
 			return;
 		}
 		void assistant.sendMessage(suggestion.action.text);
@@ -448,6 +453,7 @@ export default function CaalmAssistantSheet({
 				mentions={mentions}
 				onSend={(text, contextRoutes) => handleSend(text, contextRoutes)}
 				onCloseFocus={() => setTab("chat")}
+				onRequestNewChat={() => setNewChatOpen(true)}
 			/>
 		</>
 	);

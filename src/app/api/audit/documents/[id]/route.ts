@@ -7,6 +7,7 @@ import {
 } from "@/lib/audit-upload/context";
 import {
 	getAuditDocument,
+	getFeedbackForDocument,
 	listCaps,
 	listFindings,
 	softDeleteDocumentChildren,
@@ -33,14 +34,15 @@ export async function GET(
 		return NextResponse.json({ error: "Not found" }, { status: 404 });
 	}
 
-	const [findings, caps] = await Promise.all([
+	const [findings, caps, feedback] = await Promise.all([
 		listFindings({ orgId: actor.orgId, documentId: id, limit: 200 }),
 		listCaps({ orgId: actor.orgId, documentId: id, limit: 200 }),
+		getFeedbackForDocument(actor.orgId, id),
 	]);
 
 	return NextResponse.json({
 		success: true,
-		data: { document, findings, caps },
+		data: { document, findings, caps, feedback },
 	});
 }
 

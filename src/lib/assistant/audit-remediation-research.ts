@@ -12,7 +12,10 @@ import {
 } from "@/lib/assistant/correction-autonomy";
 import { buildImplementationAnalysis } from "@/lib/assistant/implementation-analysis";
 import type { RetrievedSource } from "@/lib/assistant/knowledge/retrieve";
-import type { AssistantSuggestion } from "@/lib/assistant/suggestions";
+import {
+	type AssistantSuggestion,
+	withCloseCapSuggestion,
+} from "@/lib/assistant/suggestions";
 import {
 	getAuditDocument,
 	getFinding,
@@ -413,11 +416,22 @@ export async function runAuditRemediationResearch(params: {
 		summaryMax: 700,
 	});
 
+	const baseSuggestions: AssistantSuggestion[] = analysis.canApply
+		? []
+		: [buildOtherFindingSuggestion()];
+
 	return {
 		steps,
 		answer,
 		sources,
-		suggestions: analysis.canApply ? [] : [buildOtherFindingSuggestion()],
+		suggestions: withCloseCapSuggestion(baseSuggestions, {
+			capId: cap?.$id ?? remediationContext.capId,
+			capStatus: cap?.status ?? remediationContext.capStatus,
+			canManageCaps,
+			findingId: remediationContext.findingId,
+			documentId: remediationContext.documentId,
+			answerText: answer,
+		}),
 		hasExecutableApply: analysis.canApply,
 		hasConfirmAction: false,
 	};

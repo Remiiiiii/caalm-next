@@ -1,13 +1,16 @@
-import { citationsPassed, verifyCitations } from "./citation-verify";
 import { chunkDocument } from "./chunk-document";
+import { citationsPassed, verifyCitations } from "./citation-verify";
 import { findRepeatFinding } from "./dedupe-findings";
 import { extractAuditDocumentText } from "./extract-document-text";
-import { buildFindingKey } from "./finding-key";
 import { generateFeedbackReport } from "./feedback";
-import { classifyAuditDocument, extractAuditFindings } from "./llm-client";
+import { buildFindingKey } from "./finding-key";
+import {
+	classifyAuditDocument,
+	extractAuditFindings,
+	reconcileFindingWithReadiness,
+} from "./llm-client";
 import { notifyAuditAnalysisComplete } from "./notify";
 import { loadReadinessItems } from "./readiness-adapter";
-import { reconcileFindingWithReadiness } from "./llm-client";
 import { reconcileByRules } from "./reconcile-rules";
 import { scoreAuditRisk } from "./risk-score";
 import {
@@ -20,7 +23,7 @@ import {
 } from "./store";
 import type { ProcessingLogEntry } from "./types";
 
-async function loadStoredFile(storageFileId: string): Promise<{
+export async function loadStoredFile(storageFileId: string): Promise<{
 	buffer: Buffer;
 	name: string;
 	type: string;
@@ -87,7 +90,12 @@ export async function runAuditUploadPipeline(
 			classification.auditType || classification.documentType,
 		);
 
-		await logStage("extract_findings", "started", undefined, "extracting_findings");
+		await logStage(
+			"extract_findings",
+			"started",
+			undefined,
+			"extracting_findings",
+		);
 		const extracted = await extractAuditFindings(text);
 		await logStage(
 			"extract_findings",
@@ -124,8 +132,15 @@ export async function runAuditUploadPipeline(
 				managementResponse: finding.managementResponse ?? null,
 				monetaryImpactUsd: finding.monetaryImpactUsd ?? null,
 				controlDeficiencyType: finding.controlDeficiencyType ?? null,
+				correctionObligations: finding.correctionObligations ?? [],
+				responseStance: finding.responseStance ?? null,
+				responseCommittedDate: finding.responseCommittedDate ?? null,
+				responseAuditor: finding.responseAuditor ?? null,
+				responseSourceRef: finding.responseSourceRef ?? null,
 				findingKey: buildFindingKey(finding.title, finding.frameworkRefs),
-				isRepeat: Boolean(repeat) || /repeat of/i.test(finding.title + finding.description),
+				isRepeat:
+					Boolean(repeat) ||
+					/repeat of/i.test(finding.title + finding.description),
 				repeatOfFindingId: repeat?.$id ?? null,
 				status: "draft",
 				reconciliation: null,

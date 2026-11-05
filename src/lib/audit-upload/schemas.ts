@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+	AUDIT_RESPONSE_STANCES,
 	AUDIT_SEVERITIES,
 	AUDIT_TYPES,
 	CONTROL_DEFICIENCY_TYPES,
@@ -41,6 +42,11 @@ export const extractedFindingSchema = z.object({
 	managementResponse: z.string().nullable().optional(),
 	monetaryImpactUsd: z.number().nullable().optional(),
 	controlDeficiencyType: z.enum(CONTROL_DEFICIENCY_TYPES).nullable().optional(),
+	correctionObligations: z.array(z.string()).default([]),
+	responseStance: z.enum(AUDIT_RESPONSE_STANCES).nullable().optional(),
+	responseCommittedDate: z.string().nullable().optional(),
+	responseAuditor: z.string().nullable().optional(),
+	responseSourceRef: z.string().nullable().optional(),
 });
 
 export const sefaSchema = z

@@ -7,6 +7,7 @@ import {
 	formatInlineMarkdown,
 	parseAssistantMarkdown,
 	parseSoleMarkdownLink,
+	plainTextForPaste,
 } from "@/lib/assistant/formatMarkdown";
 import { cn } from "@/lib/utils";
 
@@ -38,6 +39,71 @@ function CodeBlock({ code, language }: { code: string; language: string }) {
 			<pre className="overflow-x-auto p-3 font-mono text-xs leading-relaxed">
 				{code}
 			</pre>
+		</div>
+	);
+}
+
+function precedingInstructsPaste(
+	blocks: ReturnType<typeof parseAssistantMarkdown>,
+	index: number,
+): boolean {
+	for (let i = index - 1; i >= 0; i -= 1) {
+		const prev = blocks[i];
+		if (!prev) continue;
+		if (prev.type === "heading") continue;
+		if (prev.type === "paragraph" || prev.type === "blockquote") {
+			return /\b(paste|copy|verification\s+note|closing\s+note|use this|suggested\s+(?:response|note)|mark\s+closed)\b/i.test(
+				prev.text,
+			);
+		}
+		break;
+	}
+	return false;
+}
+
+function isPasteableQuoteBlock(
+	text: string,
+	blocks: ReturnType<typeof parseAssistantMarkdown>,
+	index: number,
+): boolean {
+	const plain = plainTextForPaste(text);
+	if (plain.length < 40) return false;
+	if (precedingInstructsPaste(blocks, index)) return true;
+	const trimmed = text.trim();
+	return /^["“'*]/.test(trimmed) || /["”']$/.test(trimmed);
+}
+
+function PasteableQuoteBlock({ text }: { text: string }) {
+	const [copied, setCopied] = useState(false);
+	const copyValue = plainTextForPaste(text);
+
+	return (
+		<div className="space-y-1.5">
+			<blockquote
+				className="border-l-[3px] border-slate-300 pl-3 text-sm italic leading-relaxed text-slate-600"
+				dangerouslySetInnerHTML={{
+					__html: formatInlineMarkdown(text),
+				}}
+			/>
+			<div className="flex justify-end">
+				<button
+					type="button"
+					className="inline-flex cursor-pointer items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-[#0f5384] hover:bg-[#0f5384]/5"
+					aria-label="Copy response"
+					onClick={() => {
+						void navigator.clipboard.writeText(copyValue);
+						setCopied(true);
+						window.setTimeout(() => setCopied(false), 1200);
+					}}
+				>
+					{copied ? (
+						<Check className="h-3.5 w-3.5" aria-hidden />
+					) : (
+						<Copy className="h-3.5 w-3.5" aria-hidden />
+					)}
+					{copied ? "Copied" : "Copy"}
+				</button>
+			</div>
 		</div>
 	);
 }
@@ -75,6 +141,23 @@ export default function AssistantRichMarkdown({
 									!isUser &&
 									"mt-3 border-t border-slate-200/80 pt-3",
 							)}
+							dangerouslySetInnerHTML={{
+								__html: formatInlineMarkdown(block.text),
+							}}
+						/>
+					);
+				}
+				if (block.type === "blockquote") {
+					if (
+						!isUser &&
+						isPasteableQuoteBlock(block.text, blocks, index)
+					) {
+						return <PasteableQuoteBlock key={key} text={block.text} />;
+					}
+					return (
+						<blockquote
+							key={key}
+							className="border-l-[3px] border-slate-300 pl-3 text-sm italic leading-relaxed text-slate-600"
 							dangerouslySetInnerHTML={{
 								__html: formatInlineMarkdown(block.text),
 							}}

@@ -120,5 +120,6 @@ How to correct: ${howToCorrect}
 Condition: ${ctx.conditionText}
 Severity: ${ctx.severity.replaceAll("_", " ")}.
 ${capLine}
-Do not give UI navigation plans or numbered “how to use CAALM” steps — Show me how uses live org-data research instead.`;
+Do not give UI navigation plans or numbered “how to use CAALM” steps — Show me how uses live org-data research instead.
+When the user asks to open Mark closed, paste a verification note into the close dialog, or mark closed with text you already provided, call prepare_close_corrective_action with the corrective action ids and verification note — never say you cannot click or interact with the page.`;
 }

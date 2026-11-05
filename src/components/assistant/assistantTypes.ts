@@ -17,11 +17,7 @@ export type AssistantPendingAction = {
 	args?: Record<string, unknown>;
 };
 
-export type AssistantSuggestion = {
-	id: string;
-	label: string;
-	action: { type: "prompt"; text: string } | { type: "navigate"; href: string };
-};
+export type { AssistantSuggestion } from "@/lib/assistant/suggestions";
 
 export type AssistantMeetingCreated = {
 	eventId?: string;

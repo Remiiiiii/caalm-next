@@ -1,10 +1,13 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
 import { logAuditUploadEvent } from "@/lib/audit-upload/audit-log";
-import { requiresCloseEvidence } from "@/lib/audit-upload/caps";
+import {
+	computeCapCloseState,
+	requiresCloseEvidence,
+} from "@/lib/audit-upload/caps";
 import { getAuditActor } from "@/lib/audit-upload/context";
 import { getCap, getFinding, updateCap } from "@/lib/audit-upload/store";
-import type { AuditCapStatus } from "@/lib/audit-upload/types";
+import type { AuditCapStatus, AuditCapTask } from "@/lib/audit-upload/types";
 import { requirePermission } from "@/lib/rbac/middleware";
 
 export async function PATCH(
@@ -31,9 +34,21 @@ export async function PATCH(
 		status?: AuditCapStatus;
 		verificationEvidence?: string;
 		rootCause?: string;
+		tasks?: AuditCapTask[];
 	};
 
 	if (body.status === "closed" || body.status === "verified") {
+		const effectiveTasks = body.tasks ?? cap.tasks;
+		const { canClose } = computeCapCloseState(effectiveTasks);
+		if (!canClose) {
+			return NextResponse.json(
+				{
+					error:
+						"This corrective action still has open tasks or missing evidence.",
+				},
+				{ status: 400 },
+			);
+		}
 		const finding = await getFinding(actor.orgId, cap.findingId);
 		const evidence = body.verificationEvidence ?? cap.verificationEvidence;
 		if (
@@ -52,10 +67,12 @@ export async function PATCH(
 	}
 
 	const updated = await updateCap(id, {
-		assigneeId: body.assigneeId === undefined ? cap.assigneeId : body.assigneeId,
+		assigneeId:
+			body.assigneeId === undefined ? cap.assigneeId : body.assigneeId,
 		status: body.status,
 		verificationEvidence: body.verificationEvidence,
 		rootCause: body.rootCause,
+		tasks: body.tasks,
 		closedAt:
 			body.status === "closed" || body.status === "verified"
 				? new Date().toISOString()

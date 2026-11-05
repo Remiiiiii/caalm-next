@@ -44,6 +44,14 @@ export const AUDIT_SEVERITIES = [
 
 export type AuditSeverity = (typeof AUDIT_SEVERITIES)[number];
 
+export const AUDIT_RESPONSE_STANCES = [
+	"concurs",
+	"partially_concurs",
+	"does_not_concur",
+] as const;
+
+export type AuditResponseStance = (typeof AUDIT_RESPONSE_STANCES)[number];
+
 export const RECONCILIATION_VERDICTS = [
 	"false_finding",
 	"supported",
@@ -148,6 +156,13 @@ export interface AuditFindingRecord {
 	managementResponse: string | null;
 	monetaryImpactUsd: number | null;
 	controlDeficiencyType: ControlDeficiencyType | null;
+	/** Required correction broken into discrete, separately-trackable obligations. Empty = no directive panel. */
+	correctionObligations: string[];
+	responseStance: AuditResponseStance | null;
+	/** Date management committed to completion by, extracted from the response text. */
+	responseCommittedDate: string | null;
+	responseAuditor: string | null;
+	responseSourceRef: string | null;
 	findingKey: string;
 	isRepeat: boolean;
 	repeatOfFindingId: string | null;
@@ -170,6 +185,16 @@ export interface AuditCapEvidenceAttachment {
 	uploadedAt: string;
 }
 
+/** One imperative step of a corrective action plan. Sourced from the finding's correction obligations when drafted. */
+export interface AuditCapTask {
+	id: string;
+	text: string;
+	done: boolean;
+	requiresEvidence: boolean;
+	/** File ids from the CAP's evidenceAttachments pool, attached to this task. */
+	evidenceIds: string[];
+}
+
 export interface AuditCapRecord {
 	$id: string;
 	orgId: string;
@@ -184,7 +209,13 @@ export interface AuditCapRecord {
 	verificationEvidence: string | null;
 	/** Screenshots / PDFs uploaded as close evidence. */
 	evidenceAttachments: AuditCapEvidenceAttachment[];
+	/** The plan. */
+	tasks: AuditCapTask[];
 	closedAt: string | null;
+	/** Server-computed — true only when every task is done and every evidence-requiring task has evidence. */
+	canClose: boolean;
+	/** Why `canClose` is false, or null when it's true. */
+	closeBlocker: string | null;
 	$createdAt?: string;
 	$updatedAt?: string;
 }

@@ -4,6 +4,7 @@ import {
 	formatInlineMarkdown,
 	parseAssistantMarkdown,
 	parseSoleMarkdownLink,
+	plainTextForPaste,
 } from "./formatMarkdown";
 
 describe("parseAssistantMarkdown", () => {
@@ -50,5 +51,33 @@ describe("formatInlineMarkdown", () => {
 		const html = formatInlineMarkdown("[Open](/audits/upload/1)");
 		expect(html).toContain('href="/audits/upload/1"');
 		expect(html).toContain(">Open</a>");
+	});
+
+	it("renders italic emphasis", () => {
+		const html = formatInlineMarkdown('*"Corrective action complete"*');
+		expect(html).toContain("<em");
+		expect(html).not.toContain("*Corrective");
+	});
+});
+
+describe("blockquote parsing", () => {
+	it("parses blockquote lines without raw greater-than", () => {
+		const blocks = parseAssistantMarkdown('> *"note"*\n\nNext para.');
+		expect(blocks[0]).toMatchObject({ type: "blockquote" });
+		const html = formatAssistantMarkdown('> *"note"*');
+		expect(html).toContain("blockquote");
+		expect(html).not.toContain("&gt;");
+	});
+});
+
+describe("plainTextForPaste", () => {
+	it("strips emphasis and quote wrappers", () => {
+		expect(
+			plainTextForPaste(
+				'*"Corrective action for finding 2026-006 has been fully implemented."*',
+			),
+		).toBe(
+			"Corrective action for finding 2026-006 has been fully implemented.",
+		);
 	});
 });

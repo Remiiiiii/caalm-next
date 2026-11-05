@@ -2,22 +2,19 @@
 
 import {
 	createContext,
+	type ReactNode,
 	useCallback,
 	useContext,
 	useMemo,
 	useRef,
 	useState,
-	type ReactNode,
 } from "react";
 import CaalmAssistantSheet from "@/components/assistant/CaalmAssistantSheet";
 import { PERMISSIONS } from "@/constants/permissions";
 import { useCaalmAssistant } from "@/hooks/useCaalmAssistant";
 import { usePermissions } from "@/hooks/usePermissions";
 import { auditRemediationUserPrompt } from "@/lib/assistant/audit-remediation-context";
-import {
-	getRemediationChatId,
-	linkRemediationChat,
-} from "@/lib/assistant/remediation-chat-link";
+import { getRemediationChatId } from "@/lib/assistant/remediation-chat-link";
 import { caalmToast } from "@/lib/ui/caalm-toast";
 
 type StartAuditRemediationGuideArgs = {
@@ -79,7 +76,8 @@ export function CaalmAssistantProvider({ children }: { children: ReactNode }) {
 			try {
 				const started = await assistant.startNewChat();
 				if (!started) return;
-				const conversationId = await assistant.sendMessage(
+				// sendMessage links the finding to this conversation (with plan outcome) internally.
+				await assistant.sendMessage(
 					auditRemediationUserPrompt(findingCode, findingTitle),
 					{
 						launchContext: {
@@ -89,9 +87,6 @@ export function CaalmAssistantProvider({ children }: { children: ReactNode }) {
 						},
 					},
 				);
-				if (conversationId) {
-					linkRemediationChat(findingId, conversationId);
-				}
 			} finally {
 				setIsGuiding(false);
 			}

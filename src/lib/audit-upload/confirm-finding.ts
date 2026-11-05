@@ -1,5 +1,9 @@
 import { logAuditUploadEvent } from "@/lib/audit-upload/audit-log";
-import { inferRootCause, slaDueAt } from "@/lib/audit-upload/caps";
+import {
+	draftTasksFromFinding,
+	inferRootCause,
+	slaDueAt,
+} from "@/lib/audit-upload/caps";
 import {
 	createCap,
 	getFinding,
@@ -7,9 +11,9 @@ import {
 	updateFinding,
 } from "@/lib/audit-upload/store";
 import {
-	CAP_GENERATING_VERDICTS,
 	type AuditCapRecord,
 	type AuditFindingRecord,
+	CAP_GENERATING_VERDICTS,
 } from "@/lib/audit-upload/types";
 
 export type ConfirmFindingActor = {
@@ -84,6 +88,7 @@ export async function confirmAuditFinding(params: {
 				escalationTier: 0,
 				verificationEvidence: null,
 				evidenceAttachments: [],
+				tasks: draftTasksFromFinding(finding),
 				closedAt: null,
 			});
 			draftedCap = true;

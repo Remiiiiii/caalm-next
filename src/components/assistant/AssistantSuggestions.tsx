@@ -20,8 +20,8 @@ export default function AssistantSuggestions({
 
 	if (variant === "list") {
 		return (
-			<div className="mt-3">
-				<p className="mb-1.5 text-xs font-medium text-slate-500">Suggestions</p>
+		<div>
+			<p className="mb-1.5 text-xs font-medium text-slate-500">Suggestions</p>
 				<ul className="space-y-1">
 					{suggestions.map((suggestion) => (
 						<li key={suggestion.id}>
@@ -49,18 +49,21 @@ export default function AssistantSuggestions({
 	}
 
 	return (
-		<div className="mt-2 flex flex-wrap gap-1.5">
-			{suggestions.map((suggestion) => (
-				<button
-					key={suggestion.id}
-					type="button"
-					disabled={disabled}
-					onClick={() => onSelect(suggestion)}
-					className="cursor-pointer rounded-full border border-slate-300 bg-white/70 px-3 py-1 text-xs text-slate-600 transition-colors duration-200 hover:border-[#078fab]/40 hover:text-[#0f5384] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 disabled:cursor-not-allowed disabled:opacity-50"
-				>
-					{suggestion.label}
-				</button>
-			))}
+		<div>
+			<p className="mb-1.5 text-xs font-medium text-slate-500">Suggestions</p>
+			<div className="flex flex-wrap gap-1.5">
+				{suggestions.map((suggestion) => (
+					<button
+						key={suggestion.id}
+						type="button"
+						disabled={disabled}
+						onClick={() => onSelect(suggestion)}
+						className="cursor-pointer rounded-full border border-slate-300 bg-white/70 px-3 py-1 text-xs text-slate-600 transition-colors duration-200 hover:border-[#078fab]/40 hover:text-[#0f5384] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 disabled:cursor-not-allowed disabled:opacity-50"
+					>
+						{suggestion.label}
+					</button>
+				))}
+			</div>
 		</div>
 	);
 }

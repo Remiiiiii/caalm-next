@@ -1,16 +1,16 @@
-import { z } from "zod";
+import type { z } from "zod";
 import { model } from "@/lib/ai/gemini";
 import {
 	classifyAuditReportText,
 	parseAuditReportFindings,
 } from "./parse-report-findings";
 import {
-	classificationSchema,
-	findingsExtractionSchema,
-	reconciliationSchema,
 	type ClassificationResult,
+	classificationSchema,
 	type FindingsExtraction,
+	findingsExtractionSchema,
 	type ReconciliationLlmResult,
+	reconciliationSchema,
 } from "./schemas";
 import type { ReadinessItem } from "./types";
 
@@ -36,26 +36,30 @@ async function callOverrideLlm(prompt: string): Promise<string> {
 	const controller = new AbortController();
 	const timer = setTimeout(() => controller.abort(), timeoutMs());
 	try {
-		const response = await fetch(`${baseUrl.replace(/\/$/, "")}/chat/completions`, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				Authorization: `Bearer ${apiKey}`,
+		const response = await fetch(
+			`${baseUrl.replace(/\/$/, "")}/chat/completions`,
+			{
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${apiKey}`,
+				},
+				signal: controller.signal,
+				body: JSON.stringify({
+					model: llmModel,
+					temperature: 0.1,
+					response_format: { type: "json_object" },
+					messages: [
+						{
+							role: "system",
+							content:
+								"Return only valid JSON that matches the requested schema.",
+						},
+						{ role: "user", content: prompt },
+					],
+				}),
 			},
-			signal: controller.signal,
-			body: JSON.stringify({
-				model: llmModel,
-				temperature: 0.1,
-				response_format: { type: "json_object" },
-				messages: [
-					{
-						role: "system",
-						content: "Return only valid JSON that matches the requested schema.",
-					},
-					{ role: "user", content: prompt },
-				],
-			}),
-		});
+		);
 		if (!response.ok) {
 			throw new Error(`AUDIT_LLM request failed (${response.status})`);
 		}
@@ -118,6 +122,11 @@ function heuristicFindings(text: string): FindingsExtraction {
 		managementResponse: null,
 		monetaryImpactUsd: null,
 		controlDeficiencyType: null,
+		correctionObligations: [],
+		responseStance: null,
+		responseCommittedDate: null,
+		responseAuditor: null,
+		responseSourceRef: null,
 	}));
 	return {
 		summary:
@@ -140,6 +149,11 @@ function heuristicFindings(text: string): FindingsExtraction {
 							managementResponse: null,
 							monetaryImpactUsd: null,
 							controlDeficiencyType: null,
+							correctionObligations: [],
+							responseStance: null,
+							responseCommittedDate: null,
+							responseAuditor: null,
+							responseSourceRef: null,
 						},
 					],
 		sefa: parsed.sefa,
@@ -167,7 +181,7 @@ const EXTRACT_PROMPT = `Extract every finding from this audit report.
 Return JSON with:
 - summary
 - sefa: {programs:[{name,assistanceListing,amountUsd}], totalUsd} or null
-- findings:[{findingCode,title,description,frameworkRefs,severityReported,likelihood,impact,confidence,managementResponse,monetaryImpactUsd,controlDeficiencyType,citations:[{quote,page,section}]}]
+- findings:[{findingCode,title,description,frameworkRefs,severityReported,likelihood,impact,confidence,managementResponse,monetaryImpactUsd,controlDeficiencyType,correctionObligations,responseStance,responseCommittedDate,responseAuditor,responseSourceRef,citations:[{quote,page,section}]}]
 
 Rules:
 - Keep findingCode like F-01 or 2026-001.
@@ -176,6 +190,11 @@ Rules:
 - controlDeficiencyType is material_weakness, significant_deficiency, control_deficiency, or null.
 - frameworks include SOC2, TSC refs (CC6.1), or UNIFORM_GUIDANCE / 2 CFR 200.
 - monetaryImpactUsd is questioned costs or estimated exposure when stated.
+- correctionObligations: split the auditor's recommendation into one imperative clause per array entry (e.g. "Reconcile the property ledger quarterly."). If it cannot be split, return one entry with the full recommendation text. Empty array if there is no recommendation.
+- responseStance is one of concurs, partially_concurs, does_not_concur, or null if management's response doesn't state a stance.
+- responseCommittedDate is the date management committed to completing the correction by, or null.
+- responseAuditor is the audit firm's name, or null.
+- responseSourceRef is the report number or other source document reference, or null.
 
 Report:
 `;
@@ -236,7 +255,8 @@ ${catalog}`,
 		reconciliationSchema,
 		{
 			verdict: "needs_human_review",
-			rationale: "AI reconciliation was unavailable; a person should review this finding.",
+			rationale:
+				"AI reconciliation was unavailable; a person should review this finding.",
 			matchedRequirementIds: [],
 			confidence: 0.2,
 		},

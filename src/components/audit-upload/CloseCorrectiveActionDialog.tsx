@@ -33,12 +33,15 @@ export function CloseCorrectiveActionDialog({
 	onSubmit,
 	onAttachmentsChange,
 	onViewAllAttachments,
+	initialNotes,
 }: {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	cap: AuditCapRecord | null;
 	severity: AuditSeverity;
 	busy?: boolean;
+	/** Prefill from Ask CAALM or a staged draft when the dialog opens. */
+	initialNotes?: string;
 	onSubmit: (notes: string) => Promise<void> | void;
 	onAttachmentsChange?: (attachments: AuditCapEvidenceAttachment[]) => void;
 	/** Overflow tile: leave dialog and open the finding’s corrective action section. */
@@ -68,9 +71,11 @@ export function CloseCorrectiveActionDialog({
 			setSubmitting(false);
 			return;
 		}
+		setNotes(initialNotes?.trim() ?? "");
+		setTouchedInvalid(false);
 		const timer = window.setTimeout(() => textareaRef.current?.focus(), 50);
 		return () => window.clearTimeout(timer);
-	}, [open]);
+	}, [open, initialNotes]);
 
 	const charCountLabel = useMemo(() => {
 		if (!needsStrict) return null;
@@ -238,6 +243,7 @@ export function CloseCorrectiveActionDialog({
 							size="md"
 							layout="compact"
 							maxFiles={10}
+							compactFileSlots={3}
 							onUploaded={onAttachmentsChange}
 							onDeleted={onAttachmentsChange}
 							onViewAll={() => {

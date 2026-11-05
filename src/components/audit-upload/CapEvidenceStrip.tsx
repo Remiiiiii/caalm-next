@@ -2,11 +2,13 @@
 
 import { Loader2, Paperclip, Trash2, Upload, X } from "lucide-react";
 import {
+	forwardRef,
+	type ReactNode,
 	useCallback,
 	useId,
+	useImperativeHandle,
 	useRef,
 	useState,
-	type ReactNode,
 } from "react";
 import {
 	Dialog,
@@ -30,13 +32,38 @@ type UploadJob = {
 	percent: number;
 };
 
-type StripSize = "sm" | "md";
+type StripSize = "sm" | "md" | "xl";
 /** compact = Actions/dialog (4 + +n, centered); full = drawer (all names, paperclip). */
 type StripLayout = "compact" | "full";
 
 const TILE_SIZE: Record<StripSize, string> = {
 	sm: "h-16 w-16",
 	md: "h-24 w-24",
+	xl: "h-32 w-32",
+};
+
+const TILE_COLUMN_WIDTH: Record<StripSize, string> = {
+	sm: "w-16",
+	md: "w-24",
+	xl: "w-32",
+};
+
+const FILE_ICON_SIZE: Record<StripSize, string> = {
+	sm: "h-8 w-8",
+	md: "h-10 w-10",
+	xl: "h-14 w-14",
+};
+
+const PROGRESS_ICON_SIZE: Record<StripSize, string> = {
+	sm: "h-4 w-4",
+	md: "h-5 w-5",
+	xl: "h-6 w-6",
+};
+
+const ADD_ICON_SIZE: Record<StripSize, string> = {
+	sm: "h-5 w-5",
+	md: "h-6 w-6",
+	xl: "h-8 w-8",
 };
 
 const TILE_BASE =
@@ -77,7 +104,8 @@ function displayName(fileName: string): string {
 function evidenceIconSrc(fileName: string, mimeType: string): string {
 	const ext = fileName.split(".").pop()?.toLowerCase() ?? "";
 	const mime = mimeType.toLowerCase();
-	if (ext === "pdf" || mime.includes("pdf")) return "/assets/icons/file-pdf.svg";
+	if (ext === "pdf" || mime.includes("pdf"))
+		return "/assets/icons/file-pdf.svg";
 	if (ext === "txt" || mime.includes("text/plain")) {
 		return "/assets/icons/file-txt.svg";
 	}
@@ -121,12 +149,13 @@ function FileTypeThumb({
 	const name = displayName(attachment.fileName);
 	const format = formatLabel(attachment);
 	const iconSrc = evidenceIconSrc(attachment.fileName, attachment.mimeType);
-	const iconClass = size === "md" ? "h-10 w-10" : "h-8 w-8";
-	const tileWidth =
-		layout === "full" ? "w-28" : size === "md" ? "w-24" : "w-16";
+	const iconClass = FILE_ICON_SIZE[size];
+	const tileWidth = layout === "full" ? "w-28" : TILE_COLUMN_WIDTH[size];
 
 	return (
-		<div className={cn("group relative flex min-w-0 flex-col gap-1", tileWidth)}>
+		<div
+			className={cn("group relative flex min-w-0 flex-col gap-1", tileWidth)}
+		>
 			{canDelete ? (
 				<button
 					type="button"
@@ -223,7 +252,7 @@ function UploadProgressTile({
 			<Loader2
 				className={cn(
 					"animate-spin text-[#078fab]",
-					size === "md" ? "h-5 w-5" : "h-4 w-4",
+					PROGRESS_ICON_SIZE[size],
 				)}
 				aria-hidden
 			/>
@@ -254,9 +283,8 @@ function OverflowTile({
 	size: StripSize;
 	onViewAll?: () => void;
 }) {
-	const tileWidth = size === "md" ? "w-24" : "w-16";
 	return (
-		<div className={cn("flex min-w-0 flex-col gap-1", tileWidth)}>
+		<div className={cn("flex min-w-0 flex-col gap-1", TILE_COLUMN_WIDTH[size])}>
 			<button
 				type="button"
 				className={cn(
@@ -287,59 +315,88 @@ function OverflowTile({
 	);
 }
 
-export function CapEvidenceStrip({
-	capId,
-	attachments,
-	canUpload,
-	canDelete = false,
-	onUploaded,
-	onDeleted,
-	onViewAll,
-	children,
-	className,
-	size = "sm",
-	layout = "compact",
-	maxFiles = CAP_EVIDENCE_MAX_FILES,
-}: {
-	capId: string;
-	attachments: AuditCapEvidenceAttachment[];
-	canUpload: boolean;
-	canDelete?: boolean;
-	onUploaded?: (attachments: AuditCapEvidenceAttachment[]) => void;
-	onDeleted?: (attachments: AuditCapEvidenceAttachment[]) => void;
-	/** Compact overflow: expand drawer + scroll to corrective action (no modal). */
-	onViewAll?: () => void;
-	children?: ReactNode;
-	className?: string;
-	size?: StripSize;
-	layout?: StripLayout;
-	maxFiles?: number;
-}) {
+export type CapEvidenceStripHandle = {
+	/** Opens the native file picker — for an external "Add" trigger when `hideAddTile` is set. */
+	openFilePicker: () => void;
+};
+
+export const CapEvidenceStrip = forwardRef<
+	CapEvidenceStripHandle,
+	{
+		capId: string;
+		attachments: AuditCapEvidenceAttachment[];
+		canUpload: boolean;
+		canDelete?: boolean;
+		onUploaded?: (attachments: AuditCapEvidenceAttachment[]) => void;
+		onDeleted?: (attachments: AuditCapEvidenceAttachment[]) => void;
+		/** Compact overflow: expand drawer + scroll to corrective action (no modal). */
+		onViewAll?: () => void;
+		children?: ReactNode;
+		className?: string;
+		size?: StripSize;
+		layout?: StripLayout;
+		maxFiles?: number;
+		/** Suppress the inline dashed add tile — use with an external button calling openFilePicker via ref. */
+		hideAddTile?: boolean;
+		/**
+		 * Compact layout only: how many file thumbs show before the overflow
+		 * “+n more” tile. Defaults to CAP_EVIDENCE_COMPACT_FILE_SLOTS.
+		 */
+		compactFileSlots?: number;
+	}
+>(function CapEvidenceStrip(
+	{
+		capId,
+		attachments,
+		canUpload,
+		canDelete = false,
+		onUploaded,
+		onDeleted,
+		onViewAll,
+		children,
+		className,
+		size = "sm",
+		layout = "compact",
+		maxFiles = CAP_EVIDENCE_MAX_FILES,
+		hideAddTile = false,
+		compactFileSlots = CAP_EVIDENCE_COMPACT_FILE_SLOTS,
+	},
+	ref,
+) {
 	const inputId = useId();
 	const inputRef = useRef<HTMLInputElement>(null);
+	useImperativeHandle(ref, () => ({
+		openFilePicker: () => inputRef.current?.click(),
+	}));
 	const [jobs, setJobs] = useState<UploadJob[]>([]);
 	const [preview, setPreview] = useState<AuditCapEvidenceAttachment | null>(
 		null,
 	);
 	const [deletingId, setDeletingId] = useState<string | null>(null);
 
+	const fileSlots = Math.max(1, compactFileSlots);
 	const limit = Math.min(maxFiles, CAP_EVIDENCE_MAX_FILES);
 	const atLimit = attachments.length + jobs.length >= limit;
-	const showUploadTile = canUpload && !atLimit;
+	const filledSlots = attachments.length + jobs.length;
+	/** Compact: Add thumb only while fewer than the in-view slot count. */
+	const showUploadTile =
+		canUpload &&
+		!atLimit &&
+		!hideAddTile &&
+		(layout !== "compact" || filledSlots < fileSlots);
 
 	const showOverflow =
-		layout === "compact" && attachments.length > CAP_EVIDENCE_COMPACT_FILE_SLOTS;
+		layout === "compact" && attachments.length > fileSlots;
 	const visibleAttachments =
 		layout === "full"
 			? attachments
 			: showOverflow
-				? attachments.slice(0, CAP_EVIDENCE_COMPACT_FILE_SLOTS)
+				? attachments.slice(0, fileSlots)
 				: attachments;
-	const overflowCount = showOverflow
-		? attachments.length - CAP_EVIDENCE_COMPACT_FILE_SLOTS
-		: 0;
+	const overflowCount = showOverflow ? attachments.length - fileSlots : 0;
 	/** Spec: compact grid with 0 files is not rendered (Add tile may still show). */
-	const showFileGrid = layout === "full" || attachments.length > 0 || jobs.length > 0;
+	const showFileGrid =
+		layout === "full" || attachments.length > 0 || jobs.length > 0;
 
 	const uploadFile = useCallback(
 		(file: File) => {
@@ -460,19 +517,16 @@ export function CapEvidenceStrip({
 		}
 	};
 
-	const previewUrl = preview
-		? evidenceFileUrl(capId, preview.fileId)
-		: null;
+	const previewUrl = preview ? evidenceFileUrl(capId, preview.fileId) : null;
 
-	const addIconClass = size === "md" ? "h-6 w-6" : "h-5 w-5";
+	const addIconClass = ADD_ICON_SIZE[size];
 
 	return (
 		<>
 			{showFileGrid || showUploadTile ? (
 				<div
 					className={cn(
-						"flex flex-wrap items-start gap-3",
-						layout === "compact" ? "justify-center" : "justify-start",
+						"flex w-full flex-wrap items-start gap-3 justify-start",
 						className,
 					)}
 				>
@@ -503,37 +557,37 @@ export function CapEvidenceStrip({
 						<UploadProgressTile key={job.localId} job={job} size={size} />
 					))}
 					{showUploadTile ? (
-						<>
-							<label
-								htmlFor={inputId}
-								className={cn(
-									TILE_BASE,
-									TILE_SIZE[size],
-									TILE_HOVER,
-									"cursor-pointer border-dashed border-slate-300 bg-slate-50/80 text-[#078fab]",
+						<label
+							htmlFor={inputId}
+							className={cn(
+								TILE_BASE,
+								TILE_SIZE[size],
+								TILE_HOVER,
+								"cursor-pointer border-dashed border-slate-300 bg-slate-50/80 text-[#078fab]",
+							)}
+						>
+							<span className="flex flex-col items-center gap-1">
+								{layout === "full" ? (
+									<Paperclip className={addIconClass} aria-hidden />
+								) : (
+									<Upload className={addIconClass} aria-hidden />
 								)}
-							>
-								<span className="flex flex-col items-center gap-1">
-									{layout === "full" ? (
-										<Paperclip className={addIconClass} aria-hidden />
-									) : (
-										<Upload className={addIconClass} aria-hidden />
-									)}
-									<span className="text-[10px] font-semibold uppercase tracking-wide">
-										Add
-									</span>
+								<span className="text-[10px] font-semibold uppercase tracking-wide">
+									Add
 								</span>
-							</label>
-							<input
-								ref={inputRef}
-								id={inputId}
-								type="file"
-								accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,.png,.jpg,.jpeg,.webp,.gif,.pdf"
-								className="sr-only"
-								multiple
-								onChange={(event) => onPick(event.target.files)}
-							/>
-						</>
+							</span>
+						</label>
+					) : null}
+					{canUpload ? (
+						<input
+							ref={inputRef}
+							id={inputId}
+							type="file"
+							accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,.png,.jpg,.jpeg,.webp,.gif,.pdf"
+							className="sr-only"
+							multiple
+							onChange={(event) => onPick(event.target.files)}
+						/>
 					) : null}
 				</div>
 			) : null}
@@ -589,4 +643,4 @@ export function CapEvidenceStrip({
 			</Dialog>
 		</>
 	);
-}
+});

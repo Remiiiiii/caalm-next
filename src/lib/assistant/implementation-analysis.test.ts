@@ -27,6 +27,11 @@ const finding = {
 	managementResponse: null,
 	monetaryImpactUsd: null,
 	controlDeficiencyType: null,
+	correctionObligations: [],
+	responseStance: null,
+	responseCommittedDate: null,
+	responseAuditor: null,
+	responseSourceRef: null,
 	findingKey: "k",
 	isRepeat: false,
 	repeatOfFindingId: null,
@@ -51,7 +56,10 @@ const openCap = {
 	escalationTier: 0,
 	verificationEvidence: null,
 	evidenceAttachments: [],
+	tasks: [],
 	closedAt: null,
+	canClose: false,
+	closeBlocker: null,
 } as AuditCapRecord;
 
 describe("buildImplementationAnalysis", () => {

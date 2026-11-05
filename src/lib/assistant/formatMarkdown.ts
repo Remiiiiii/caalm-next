@@ -13,6 +13,10 @@ function inlineFormat(raw: string): string {
 		'<strong class="font-semibold">$1</strong>',
 	);
 	formatted = formatted.replace(
+		/\*([^*]+)\*/g,
+		'<em class="italic">$1</em>',
+	);
+	formatted = formatted.replace(
 		/`([^`]+)`/g,
 		'<code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-[12px] text-slate-700">$1</code>',
 	);
@@ -48,6 +52,7 @@ export function parseSoleMarkdownLink(
 export type MarkdownBlock =
 	| { type: "heading"; level: 2 | 3; text: string }
 	| { type: "paragraph"; text: string }
+	| { type: "blockquote"; text: string }
 	| { type: "list"; ordered: boolean; items: string[] }
 	| { type: "code"; language: string; code: string }
 	| { type: "table"; headers: string[]; rows: string[][] };
@@ -107,6 +112,19 @@ export function parseAssistantMarkdown(text: string): MarkdownBlock[] {
 			continue;
 		}
 
+		if (/^>\s?/.test(line)) {
+			const quoteLines: string[] = [];
+			while (i < lines.length && /^>\s?/.test(lines[i] ?? "")) {
+				quoteLines.push((lines[i] ?? "").replace(/^>\s?/, "").trim());
+				i += 1;
+			}
+			blocks.push({
+				type: "blockquote",
+				text: quoteLines.join(" "),
+			});
+			continue;
+		}
+
 		if (/^\d+\.\s+/.test(line) || /^[-*]\s+/.test(line)) {
 			const ordered = /^\d+\.\s+/.test(line);
 			const items: string[] = [];
@@ -133,6 +151,7 @@ export function parseAssistantMarkdown(text: string): MarkdownBlock[] {
 			lines[i]?.trim() &&
 			!lines[i]?.startsWith("##") &&
 			!lines[i]?.trim().startsWith("```") &&
+			!/^>\s?/.test(lines[i] ?? "") &&
 			!/^\d+\.\s+/.test(lines[i] ?? "") &&
 			!/^[-*]\s+/.test(lines[i] ?? "")
 		) {
@@ -156,6 +175,8 @@ export function formatAssistantMarkdown(text: string): string {
 					return `<p class="font-semibold sidebar-gradient-text">${inlineFormat(block.text)}</p>`;
 				case "paragraph":
 					return `<p>${inlineFormat(block.text)}</p>`;
+				case "blockquote":
+					return `<blockquote class="border-l-[3px] border-slate-300 pl-3 italic text-slate-600">${inlineFormat(block.text)}</blockquote>`;
 				case "list": {
 					const tag = block.ordered ? "ol" : "ul";
 					const cls = block.ordered
@@ -177,6 +198,17 @@ export function formatAssistantMarkdown(text: string): string {
 			}
 		})
 		.join("");
+}
+
+/** Strip quote/emphasis wrappers so clipboard gets paste-ready note text. */
+export function plainTextForPaste(raw: string): string {
+	return raw
+		.trim()
+		.replace(/^\*+/, "")
+		.replace(/\*+$/, "")
+		.replace(/^["“]+/, "")
+		.replace(/["”]+$/, "")
+		.trim();
 }
 
 export { inlineFormat as formatInlineMarkdown, escapeHtml as escapeMarkdownHtml };
