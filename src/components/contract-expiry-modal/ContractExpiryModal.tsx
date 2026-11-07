@@ -16,7 +16,10 @@ interface ContractExpiryModalProps {
 	onClose: () => void;
 	onStatusChange?: () => void;
 	onItemDismissed?: (item: ExpiryQueueItem) => void;
+	/** Park without dismissing — Open in Contracts/Licenses. */
+	onParkSession?: (index: number) => void;
 	shouldPlaySpeech?: boolean;
+	initialIndex?: number;
 }
 
 function contractsToItems(contracts: UIFileDoc[]): ExpiryQueueItem[] {
@@ -52,7 +55,9 @@ export default function ContractExpiryModal({
 	onClose,
 	onStatusChange,
 	onItemDismissed,
+	onParkSession,
 	shouldPlaySpeech = true,
+	initialIndex = 0,
 }: ContractExpiryModalProps) {
 	const [dismissedKeys, setDismissedKeys] = useState<Set<string>>(
 		() => new Set(),
@@ -110,8 +115,10 @@ export default function ContractExpiryModal({
 						items={activeItems}
 						onDismiss={onClose}
 						onItemDismissed={handleItemDismissed}
+						onParkSession={onParkSession}
 						onStatusChange={onStatusChange}
 						shouldPlaySpeech={shouldPlaySpeech}
+						initialIndex={initialIndex}
 					/>
 				</motion.div>
 			)}

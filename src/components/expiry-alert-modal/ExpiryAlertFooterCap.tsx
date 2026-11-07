@@ -1,6 +1,6 @@
 "use client";
 
-import { Pause, X } from "lucide-react";
+import { ExternalLink, Pause, X } from "lucide-react";
 import { Button } from "../ui/button";
 
 type ExpiryAlertFooterCapProps = {
@@ -9,6 +9,10 @@ type ExpiryAlertFooterCapProps = {
 	paused: boolean;
 	onPause: () => void;
 	onDismissAll: () => void;
+	/** File view open — swap "Dismiss all" for the workspace CTA. */
+	fileViewOpen?: boolean;
+	workspaceLabel?: string;
+	onOpenInWorkspace?: () => void;
 };
 
 /**
@@ -21,6 +25,9 @@ export default function ExpiryAlertFooterCap({
 	paused,
 	onPause,
 	onDismissAll,
+	fileViewOpen = false,
+	workspaceLabel = "Open in workspace",
+	onOpenInWorkspace,
 }: ExpiryAlertFooterCapProps) {
 	const statusLine =
 		countdownSeconds !== null && !paused && nextLabel
@@ -28,6 +35,27 @@ export default function ExpiryAlertFooterCap({
 			: paused
 				? "Auto-advance paused"
 				: "";
+
+	if (fileViewOpen && onOpenInWorkspace) {
+		return (
+			<div className="shrink-0 rounded-b-[26px] border-t border-slate-200/70 bg-slate-50/80 px-5 py-3">
+				<div className="flex items-center gap-3">
+					<p className="min-w-0 flex-1 text-xs leading-relaxed text-slate-500">
+						Need the full workspace? We&apos;ll pause this alert queue so you
+						can come back to the same item.
+					</p>
+					<Button
+						type="button"
+						onClick={onOpenInWorkspace}
+						className="btn-primary shrink-0"
+					>
+						<ExternalLink className="h-3.5 w-3.5" />
+						{workspaceLabel}
+					</Button>
+				</div>
+			</div>
+		);
+	}
 
 	return (
 		<div className="shrink-0 rounded-b-[26px] border-t border-slate-200/70 bg-slate-50/80 px-5 py-3">

@@ -32,6 +32,13 @@ import {
 	getEnterpriseDropzoneAccept,
 	getEnterpriseFormatHint,
 } from "@/lib/files/enterprise-file-formats";
+import {
+	CONTENT_CROSSFADE_PRESENCE_MODE,
+	contentCrossfadeAnimate,
+	contentCrossfadeExitInline,
+	contentCrossfadeInitial,
+	contentCrossfadeTransition,
+} from "@/lib/ui/content-crossfade";
 import { cn } from "@/lib/utils";
 import type { ProcessedFileData } from "../types";
 
@@ -94,14 +101,17 @@ export default function Step1FileUpload({
 				<h3 className="text-[13.5px] font-bold text-[#0f5384]">
 					1. Upload License File
 				</h3>
-				<AnimatePresence mode="wait">
+				<AnimatePresence
+					mode={CONTENT_CROSSFADE_PRESENCE_MODE}
+					initial={false}
+				>
 					{fileIngestUi === "progress" ? (
 						<motion.div
 							key="file-ingest-progress"
-							initial={{ opacity: 0, x: -6 }}
-							animate={{ opacity: 1, x: 0 }}
-							exit={{ opacity: 0, scale: 0.9 }}
-							transition={{ duration: 0.2 }}
+							initial={contentCrossfadeInitial}
+							animate={contentCrossfadeAnimate}
+							exit={contentCrossfadeExitInline}
+							transition={contentCrossfadeTransition}
 							className="flex min-w-0 items-center gap-2"
 							aria-live="polite"
 							aria-label={`Upload ${fileIngestProgress}% complete`}
@@ -120,10 +130,10 @@ export default function Step1FileUpload({
 					{fileIngestUi === "success" ? (
 						<motion.div
 							key="file-ingest-success"
-							initial={{ opacity: 0, scale: 0.5 }}
-							animate={{ opacity: 1, scale: 1 }}
-							exit={{ opacity: 0, scale: 0.8 }}
-							transition={{ type: "spring", stiffness: 420, damping: 18 }}
+							initial={contentCrossfadeInitial}
+							animate={contentCrossfadeAnimate}
+							exit={contentCrossfadeExitInline}
+							transition={contentCrossfadeTransition}
 							className="flex items-center"
 							aria-label="Upload complete"
 						>

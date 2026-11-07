@@ -17,13 +17,14 @@ function renderModal(overrides: Partial<ExpiryAlertModalProps> = {}) {
 	const props: ExpiryAlertModalProps = {
 		open: true,
 		entityType: "contract",
+		entityId: "contract-1",
 		title: "Community-Based Behavioral Health & Wellness Services",
 		expiryDate: "2026-08-12",
 		daysRemaining: 5,
 		amount: 487_500,
 		status: "active",
 		onRenew: vi.fn(),
-		onViewDetails: vi.fn(),
+		onOpenInWorkspace: vi.fn(),
 		onSnooze: vi.fn(),
 		onDismiss: vi.fn(),
 		onLetExpire: vi.fn(),
@@ -79,19 +80,46 @@ describe("ExpiryAlertModal card wiring", () => {
 		expect(props.onClose).not.toHaveBeenCalled();
 	});
 
-	it("calls onRenew and onViewDetails", async () => {
+	it("calls onRenew from the primary action", async () => {
 		const user = userEvent.setup();
 		const { props } = renderModal();
 		await user.click(screen.getByRole("button", { name: /renew contract/i }));
-		await user.click(screen.getByRole("button", { name: /view details/i }));
 		expect(props.onRenew).toHaveBeenCalledTimes(1);
-		expect(props.onViewDetails).toHaveBeenCalledTimes(1);
 	});
 
-	it("calls onSnooze once from the single 30-day snooze button", async () => {
+	it("More details opens an in-modal peek without leaving the session", async () => {
 		const user = userEvent.setup();
 		const { props } = renderModal();
-		await user.click(screen.getByRole("button", { name: /snooze 30 days/i }));
+		await user.click(screen.getByRole("button", { name: /more details/i }));
+		expect(props.onOpenInWorkspace).not.toHaveBeenCalled();
+		expect(props.onClose).not.toHaveBeenCalled();
+		expect(
+			screen.getByRole("button", { name: /back to alert/i }),
+		).toBeInTheDocument();
+		expect(
+			screen.getByRole("button", { name: /open in contracts/i }),
+		).toBeInTheDocument();
+		await user.click(screen.getByRole("button", { name: /back to alert/i }));
+		expect(
+			screen.getByRole("button", { name: /more details/i }),
+		).toBeInTheDocument();
+	});
+
+	it("Open in Contracts parks via onOpenInWorkspace from the peek", async () => {
+		const user = userEvent.setup();
+		const { props } = renderModal();
+		await user.click(screen.getByRole("button", { name: /more details/i }));
+		await user.click(
+			screen.getByRole("button", { name: /open in contracts/i }),
+		);
+		expect(props.onOpenInWorkspace).toHaveBeenCalledTimes(1);
+	});
+
+	it("calls onSnooze once from the resolved snooze button", async () => {
+		const user = userEvent.setup();
+		const { props } = renderModal();
+		// 5 days left → snooze 4 days (day before expiry).
+		await user.click(screen.getByRole("button", { name: /snooze 4 days/i }));
 		expect(props.onSnooze).toHaveBeenCalledTimes(1);
 	});
 
@@ -159,10 +187,10 @@ describe("ExpiryAlertModal card wiring", () => {
 			screen.getByRole("button", { name: /renew contract/i }),
 		).toBeDisabled();
 		expect(
-			screen.getByRole("button", { name: /view details/i }),
+			screen.getByRole("button", { name: /more details/i }),
 		).toBeDisabled();
 		expect(
-			screen.getByRole("button", { name: /snooze 30 days/i }),
+			screen.getByRole("button", { name: /snooze 4 days/i }),
 		).toBeDisabled();
 	});
 

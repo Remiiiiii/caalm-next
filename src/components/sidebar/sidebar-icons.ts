@@ -12,7 +12,7 @@ export const SECTION_ICONS: Record<
 	Contracts: { src: "/assets/icons/contracts.svg", width: 22, height: 22 },
 	Licenses: { src: "/assets/icons/license.svg", width: 22, height: 22 },
 	Constituents: {
-		src: "/assets/icons/constituents.svg",
+		src: "/assets/icons/constituents-section.svg",
 		width: 22,
 		height: 22,
 	},

@@ -8,7 +8,8 @@ import { getExpiryActions } from "@/lib/expiry/action-matrix";
 type ActionRailProps = {
 	kind: "contract" | "license";
 	daysRemaining: number;
-	snoozeDays: number;
+	/** Optional override; ActionRail resolves from daysRemaining when omitted. */
+	snoozeDays?: number;
 	/** Reset the confirm step when the slide changes. */
 	resetKey: string;
 	isBusy?: boolean;

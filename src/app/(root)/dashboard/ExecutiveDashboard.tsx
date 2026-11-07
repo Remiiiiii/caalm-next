@@ -278,6 +278,10 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 		itemsToShow,
 		isModalOpen,
 		closeModal,
+		parkModal,
+		parkedSession,
+		resumeIndex,
+		resumeParkedSession,
 		triggerDevTestModal,
 		triggerDemoTestModal,
 		openForEntityId,
@@ -788,8 +792,22 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 				onClose={closeModal}
 				onStatusChange={handleContractStatusChange}
 				onItemDismissed={markItemDismissed}
+				onParkSession={parkModal}
+				initialIndex={resumeIndex}
 				shouldPlaySpeech={shouldPlaySpeech}
 			/>
+			{parkedSession && !isModalOpen && (
+				<button
+					type="button"
+					onClick={resumeParkedSession}
+					className="fixed bottom-6 right-6 z-50 inline-flex cursor-pointer items-center gap-2 rounded-full border border-[#0f5384]/20 bg-white px-4 py-2.5 text-sm font-semibold text-[#0f5384] shadow-lg transition-colors hover:bg-[#F1F9FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
+				>
+					Resume expiry alerts
+					<span className="rounded-full bg-[#0f5384]/10 px-2 py-0.5 text-xs tabular-nums">
+						{parkedSession.count}
+					</span>
+				</button>
+			)}
 			{/* Main Content Container */}
 			<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
 				<motion.div {...revealSolo(softRise)}>

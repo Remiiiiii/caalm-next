@@ -18,6 +18,13 @@ import {
 	getLicenseTypeConfig,
 	isDemoLicenseTypeAllowed,
 } from "@/lib/licenses/licenseTypeConfigs";
+import {
+	CONTENT_CROSSFADE_PRESENCE_MODE,
+	contentCrossfadeAnimate,
+	contentCrossfadeExit,
+	contentCrossfadeInitial,
+	contentCrossfadeTransition,
+} from "@/lib/ui/content-crossfade";
 import { cn } from "@/lib/utils";
 
 const TYPE_SELECT_ICON_TILE =
@@ -96,7 +103,6 @@ export default function LicenseTypeAssistant({
 	onSelectType,
 }: LicenseTypeAssistantProps) {
 	const [step, setStep] = useState(0);
-	const [direction, setDirection] = useState<"forward" | "back">("forward");
 	const [phase, setPhase] = useState<Phase>("questions");
 	const [answers, setAnswers] = useState<Answer[]>([]);
 	const [result, setResult] = useState<SuggestionResult | null>(null);
@@ -135,7 +141,6 @@ export default function LicenseTypeAssistant({
 
 		const nextStep = step + 1;
 		if (nextStep < QUESTIONS.length) {
-			setDirection("forward");
 			setStep(nextStep);
 		} else {
 			void submit(nextAnswers);
@@ -144,7 +149,6 @@ export default function LicenseTypeAssistant({
 
 	const resetQuiz = () => {
 		setStep(0);
-		setDirection("forward");
 		setPhase("questions");
 		setAnswers([]);
 		setResult(null);
@@ -154,13 +158,11 @@ export default function LicenseTypeAssistant({
 	/** One step back; from the first question, back to the type grid. */
 	const handleBack = () => {
 		if (phase === "result") {
-			setDirection("back");
 			setStep(Math.max(0, QUESTIONS.length - 1));
 			setPhase("questions");
 			return;
 		}
 		if (step > 0) {
-			setDirection("back");
 			setStep((s) => s - 1);
 			return;
 		}
@@ -171,7 +173,6 @@ export default function LicenseTypeAssistant({
 		if (value === "results") return;
 		const index = Number(value.slice(1));
 		if (!Number.isInteger(index) || index >= QUESTIONS.length) return;
-		setDirection(index < step ? "back" : "forward");
 		setStep(index);
 		setPhase("questions");
 	};
@@ -246,17 +247,18 @@ export default function LicenseTypeAssistant({
 							]}
 						/>
 					</div>
-					<AnimatePresence mode="wait">
+					<div className="relative w-full">
+					<AnimatePresence
+						mode={CONTENT_CROSSFADE_PRESENCE_MODE}
+						initial={false}
+					>
 						{phase === "questions" && (
 							<motion.div
 								key={`question-${QUESTIONS[step]?.id ?? step}`}
-								initial={{
-									opacity: 0,
-									x: direction === "forward" ? 100 : -100,
-								}}
-								animate={{ opacity: 1, x: 0 }}
-								exit={{ opacity: 0, x: direction === "forward" ? -100 : 100 }}
-								transition={{ duration: 0.3 }}
+								initial={contentCrossfadeInitial}
+								animate={contentCrossfadeAnimate}
+								exit={contentCrossfadeExit}
+								transition={contentCrossfadeTransition}
 								className="w-full"
 							>
 								<h3
@@ -292,9 +294,10 @@ export default function LicenseTypeAssistant({
 						{phase === "loading" && (
 							<motion.div
 								key="loading"
-								initial={{ opacity: 0 }}
-								animate={{ opacity: 1 }}
-								exit={{ opacity: 0 }}
+								initial={contentCrossfadeInitial}
+								animate={contentCrossfadeAnimate}
+								exit={contentCrossfadeExit}
+								transition={contentCrossfadeTransition}
 								className="flex flex-col items-center justify-center gap-3.5 py-12"
 							>
 								<div
@@ -311,8 +314,10 @@ export default function LicenseTypeAssistant({
 							(error ? (
 								<motion.div
 									key="error"
-									initial={{ opacity: 0 }}
-									animate={{ opacity: 1 }}
+									initial={contentCrossfadeInitial}
+									animate={contentCrossfadeAnimate}
+									exit={contentCrossfadeExit}
+									transition={contentCrossfadeTransition}
 									className="py-5 text-center text-[13px] leading-normal text-slate-500"
 								>
 									{error}
@@ -320,8 +325,10 @@ export default function LicenseTypeAssistant({
 							) : result ? (
 								<motion.div
 									key="result"
-									initial={{ opacity: 0, x: 100 }}
-									animate={{ opacity: 1, x: 0 }}
+									initial={contentCrossfadeInitial}
+									animate={contentCrossfadeAnimate}
+									exit={contentCrossfadeExit}
+									transition={contentCrossfadeTransition}
 									className="w-full"
 								>
 									<div className="mb-3.5 flex items-center justify-between">
@@ -426,6 +433,7 @@ export default function LicenseTypeAssistant({
 								</motion.div>
 							) : null)}
 					</AnimatePresence>
+					</div>
 				</div>
 			</div>
 

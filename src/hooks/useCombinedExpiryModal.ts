@@ -31,6 +31,12 @@ export function useCombinedExpiryModal(contracts: UIFileDoc[]) {
 	const [testMode, setTestMode] = useState(false);
 	const [testItems, setTestItems] = useState<ExpiryQueueItem[]>([]);
 	const [wasManuallyClosed, setWasManuallyClosed] = useState(false);
+	/** Parked after "Open in Contracts/Licenses" — queue kept, resume chip shown. */
+	const [parkedSession, setParkedSession] = useState<{
+		count: number;
+	} | null>(null);
+	/** Index to reopen on after parking (kept while chip is visible / modal reopens). */
+	const [resumeIndex, setResumeIndex] = useState(0);
 
 	useEffect(() => {
 		setShown(loadExpiryShownState());
@@ -85,7 +91,8 @@ export function useCombinedExpiryModal(contracts: UIFileDoc[]) {
 			hasTriggerItems &&
 			!isModalOpen &&
 			!testMode &&
-			!wasManuallyClosed
+			!wasManuallyClosed &&
+			!parkedSession
 		) {
 			setIsModalOpen(true);
 		}
@@ -95,6 +102,7 @@ export function useCombinedExpiryModal(contracts: UIFileDoc[]) {
 		isModalOpen,
 		testMode,
 		wasManuallyClosed,
+		parkedSession,
 	]);
 
 	const fetchTestSourceLists = useCallback(async () => {
@@ -182,6 +190,8 @@ export function useCombinedExpiryModal(contracts: UIFileDoc[]) {
 	const closeModal = () => {
 		setIsModalOpen(false);
 		setWasManuallyClosed(true);
+		setParkedSession(null);
+		setResumeIndex(0);
 
 		if (typeof window !== "undefined" && !testMode && itemsToShow.length > 0) {
 			const next = mergeShownWithItems(shown, itemsToShow);
@@ -194,6 +204,26 @@ export function useCombinedExpiryModal(contracts: UIFileDoc[]) {
 			setTestItems([]);
 		}
 	};
+
+	/** Hide the modal but keep the queue — user is peeking in Contracts/Licenses. */
+	const parkModal = useCallback(
+		(index: number) => {
+			setResumeIndex(Math.max(0, index));
+			setParkedSession({
+				count: itemsToShow.length,
+			});
+			setIsModalOpen(false);
+			// Do not mark items shown and do not set wasManuallyClosed —
+			// resume must reopen the same session.
+		},
+		[itemsToShow.length],
+	);
+
+	const resumeParkedSession = useCallback(() => {
+		setParkedSession(null);
+		setWasManuallyClosed(false);
+		setIsModalOpen(true);
+	}, []);
 
 	const markItemDismissed = useCallback(
 		(item: ExpiryQueueItem) => {
@@ -306,6 +336,10 @@ export function useCombinedExpiryModal(contracts: UIFileDoc[]) {
 			.map((i) => ({ file: i.file, days: i.days })),
 		isModalOpen,
 		closeModal,
+		parkModal,
+		parkedSession,
+		resumeIndex,
+		resumeParkedSession,
 		triggerDevTestModal,
 		triggerDemoTestModal,
 		/** @deprecated Prefer triggerDevTestModal — kept for older callers */

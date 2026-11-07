@@ -88,21 +88,50 @@ describe("ExpiryQueueAlertBridge — contract", () => {
 		);
 	}
 
-	it("View Details navigates with highlight (works without desktop gate)", async () => {
+	it("More details peeks without navigating; Open in Contracts parks session", async () => {
 		const user = userEvent.setup();
-		renderBridge();
-		await user.click(screen.getByRole("button", { name: /view details/i }));
-		expect(push).toHaveBeenCalledWith("/contracts?highlight=contract-abc");
-		expect(onItemHandled).toHaveBeenCalled();
+		const onParkSession = vi.fn();
+		render(
+			<ExpiryQueueAlertBridge
+				item={contractItem()}
+				onClose={onClose}
+				onItemHandled={onItemHandled}
+				onParkSession={onParkSession}
+				onStatusChange={onStatusChange}
+			/>,
+		);
+		await user.click(screen.getByRole("button", { name: /more details/i }));
+		expect(push).not.toHaveBeenCalled();
+		expect(onItemHandled).not.toHaveBeenCalled();
+		await user.click(
+			screen.getByRole("button", { name: /open in contracts/i }),
+		);
+		expect(onParkSession).toHaveBeenCalledTimes(1);
+		expect(onItemHandled).not.toHaveBeenCalled();
+		expect(push).toHaveBeenCalledWith(
+			"/contracts/contract-abc/details?fromAlert=1",
+		);
 	});
 
-	it("Snooze 30 days snoozes the contract", async () => {
+	it("Snooze uses resolved days from days remaining", async () => {
 		const user = userEvent.setup();
 		renderBridge();
-		await user.click(screen.getByRole("button", { name: /snooze 30 days/i }));
+		// contractItem() defaults to 5 days left → snooze 4
+		await user.click(screen.getByRole("button", { name: /snooze 4 days/i }));
 		expect(snoozeContract).toHaveBeenCalledWith({
 			contractId: "contract-abc",
-			days: 30,
+			days: 4,
+			expiryDate: "2026-08-12",
+		});
+	});
+
+	it("25 days left offers a 5-day mid-window snooze, not 30", async () => {
+		const user = userEvent.setup();
+		renderBridge(contractItem(25));
+		await user.click(screen.getByRole("button", { name: /snooze 5 days/i }));
+		expect(snoozeContract).toHaveBeenCalledWith({
+			contractId: "contract-abc",
+			days: 5,
 			expiryDate: "2026-08-12",
 		});
 	});
@@ -138,12 +167,26 @@ describe("ExpiryQueueAlertBridge — license", () => {
 		);
 	}
 
-	it("View Details navigates to the license without a laptop gate", async () => {
+	it("More details peeks; Open in Licenses parks without marking handled", async () => {
 		const user = userEvent.setup();
-		renderBridge();
-		await user.click(screen.getByRole("button", { name: /view details/i }));
-		expect(push).toHaveBeenCalledWith("/licenses?highlight=license-xyz");
-		expect(onItemHandled).toHaveBeenCalled();
+		const onParkSession = vi.fn();
+		render(
+			<ExpiryQueueAlertBridge
+				item={licenseItem()}
+				onClose={onClose}
+				onItemHandled={onItemHandled}
+				onParkSession={onParkSession}
+				onStatusChange={onStatusChange}
+			/>,
+		);
+		await user.click(screen.getByRole("button", { name: /more details/i }));
+		expect(onItemHandled).not.toHaveBeenCalled();
+		await user.click(screen.getByRole("button", { name: /open in licenses/i }));
+		expect(onParkSession).toHaveBeenCalledTimes(1);
+		expect(push).toHaveBeenCalledWith(
+			"/licenses/license-xyz/details?fromAlert=1",
+		);
+		expect(onItemHandled).not.toHaveBeenCalled();
 	});
 
 	it("offers Dismiss for now and no snooze / let expire", async () => {

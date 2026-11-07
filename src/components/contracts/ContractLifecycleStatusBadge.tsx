@@ -8,12 +8,15 @@ interface ContractLifecycleStatusBadgeProps {
 	file: UIFileDoc;
 	clickable?: boolean;
 	onClick?: () => void;
+	/** Hide the under-pill subtext (e.g. card grids put it on the meta line). */
+	hideSubtext?: boolean;
 }
 
 export function ContractLifecycleStatusBadge({
 	file,
 	clickable = false,
 	onClick,
+	hideSubtext = false,
 }: ContractLifecycleStatusBadgeProps) {
 	const display = getContractLifecycleDisplay(file);
 	const pillClass = cn(
@@ -39,8 +42,15 @@ export function ContractLifecycleStatusBadge({
 		<span className={pillClass}>{display.label}</span>
 	);
 
+	const showSubtext = !hideSubtext && !!display.subtext;
+
 	return (
-		<div className="flex flex-col items-start gap-0.5 min-w-0">
+		<div
+			className={cn(
+				"min-w-0",
+				showSubtext ? "flex flex-col items-start gap-0.5" : "inline-flex",
+			)}
+		>
 			<div className="flex items-center gap-1.5 flex-wrap">
 				{pill}
 				{display.stuck ? (
@@ -49,7 +59,7 @@ export function ContractLifecycleStatusBadge({
 					</span>
 				) : null}
 			</div>
-			{display.subtext ? (
+			{showSubtext ? (
 				<span className="text-[10px] text-slate-500 leading-tight">
 					{display.subtext}
 				</span>

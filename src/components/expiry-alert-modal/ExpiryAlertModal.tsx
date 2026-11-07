@@ -10,6 +10,7 @@ import ExpiryAlertSpline, {
 	type ExpiryRobotNarration,
 	type ExpiryRobotReaction,
 } from "@/components/expiry-alert-modal/ExpiryAlertSpline";
+import ExpiryFileView from "@/components/expiry-alert-modal/ExpiryFileView";
 import type {
 	ExpiryNarration,
 	ExpiryQueue,
@@ -17,13 +18,19 @@ import type {
 import NarrationBar from "@/components/expiry-alert-modal/NarrationBar";
 import QueueStrip from "@/components/expiry-alert-modal/QueueStrip";
 import UrgencyBand from "@/components/expiry-alert-modal/UrgencyBand";
-import { EXPIRY_ALERT_SNOOZE_DAYS } from "@/lib/expiry/action-matrix";
 import { formatExpiryTypeLabel } from "@/lib/expiry/expiry-format";
 import {
 	getDaysFact,
 	getUrgencyTier,
 	getUrgencyTone,
 } from "@/lib/expiry/urgency";
+import {
+	CONTENT_CROSSFADE_PRESENCE_MODE,
+	contentCrossfadeAnimate,
+	contentCrossfadeExit,
+	contentCrossfadeInitial,
+	contentCrossfadeTransition,
+} from "@/lib/ui/content-crossfade";
 import { MODAL_OVERLAY, MODAL_PANEL } from "@/lib/ui/modal-styles";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +41,8 @@ export type { ExpiryNarration, ExpiryQueue };
 export type ExpiryAlertModalProps = {
 	open: boolean;
 	entityType: ExpiryEntityType;
+	/** Underlying contract/license document id — required to persist the AI synopsis. */
+	entityId: string;
 	title: string;
 	expiryDate: string;
 	daysRemaining: number;
@@ -43,12 +52,29 @@ export type ExpiryAlertModalProps = {
 	typeLabel?: string | null;
 	contactEmail?: string;
 	contactPhone?: string;
+	/** Extra fields (vendor, dept, reference, authority). */
+	vendor?: string | null;
+	department?: string | null;
+	referenceNumber?: string | null;
+	issuingAuthority?: string | null;
+	/** Fields for the in-modal "More details" file view. */
+	fileUrl?: string | null;
+	division?: string | null;
+	uploadedById?: string | null;
+	assignedManagerIds?: string[];
+	aiSynopsis?: string | null;
+	aiSynopsisGeneratedAt?: string | null;
+	onSynopsisGenerated?: (synopsis: string, generatedAt: string) => void;
 	snoozeDays?: number;
 	renewing?: boolean;
 	/** Renewal needs a desktop; show an inline note under Renew instead of hiding it. */
 	renewRequiresDesktop?: boolean;
 	onRenew: () => void;
-	onViewDetails: () => void;
+	/**
+	 * Parks the alert session and opens Contracts/Licenses.
+	 * "More details" is handled inside the modal and does not call this.
+	 */
+	onOpenInWorkspace?: () => void;
 	onSnooze?: () => void;
 	onDismiss?: () => void;
 	onLetExpire?: () => void;
@@ -92,19 +118,31 @@ const DAYS_TEXT: Record<"danger" | "warning" | "info", string> = {
 export default function ExpiryAlertModal({
 	open,
 	entityType,
+	entityId,
 	title,
 	expiryDate,
 	daysRemaining,
 	amount,
 	amountLabel,
 	status,
+	typeLabel,
 	contactEmail,
 	contactPhone,
-	snoozeDays = EXPIRY_ALERT_SNOOZE_DAYS,
+	vendor,
+	department,
+	referenceNumber,
+	issuingAuthority,
+	fileUrl,
+	division,
+	uploadedById,
+	assignedManagerIds = [],
+	aiSynopsis,
+	onSynopsisGenerated,
+	snoozeDays,
 	renewing = false,
 	renewRequiresDesktop = false,
 	onRenew,
-	onViewDetails,
+	onOpenInWorkspace,
 	onSnooze,
 	onDismiss,
 	onLetExpire,
@@ -128,6 +166,8 @@ export default function ExpiryAlertModal({
 	const [robotReaction, setRobotReaction] = useState<ExpiryRobotReaction>(null);
 	/** Immediate queue open — robot holds 1s then trails (handled in Spline). */
 	const [queueExpanded, setQueueExpanded] = useState(false);
+	/** In-modal peek — does not end the expiry session. */
+	const [fileViewOpen, setFileViewOpen] = useState(false);
 
 	const fireRobotReaction = useCallback(
 		(reaction: Exclude<ExpiryRobotReaction, null>, durationMs: number) => {
@@ -143,10 +183,16 @@ export default function ExpiryAlertModal({
 		[],
 	);
 
+	// New queue item → leave the peek so actions show for the new record.
+	useEffect(() => {
+		setFileViewOpen(false);
+	}, [panelKey]);
+
 	useEffect(() => {
 		if (!open) {
 			pointShownRef.current = false;
 			setQueueExpanded(false);
+			setFileViewOpen(false);
 			setRobotReaction(null);
 			if (pointTimerRef.current !== null) {
 				window.clearTimeout(pointTimerRef.current);
@@ -264,6 +310,9 @@ export default function ExpiryAlertModal({
 				? "speaking"
 				: "idle";
 
+	const workspaceLabel =
+		entityType === "license" ? "Open in Licenses" : "Open in Contracts";
+
 	return (
 		<div
 			className="fixed inset-0 z-9999"
@@ -300,154 +349,184 @@ export default function ExpiryAlertModal({
 							daysRemaining={daysRemaining}
 							dateLabel={formatExpiryDisplay(expiryDate)}
 							renewing={renewing}
+							contentKey={panelKey}
 							position={queuePosition}
 							onPrev={onPrev}
 							onNext={onNext}
 							onClose={onClose}
 							isBusy={isBusy}
+							onBack={fileViewOpen ? () => setFileViewOpen(false) : undefined}
 						/>
 
 						{/* Zone 2 — narration bar (only when TTS is in play this session). */}
 						{narration && <NarrationBar narration={narration} />}
 
-						{/* Zone 3 — split body. Only this cross-fades per slide. */}
-						<div className="min-h-0 flex-1 overflow-y-auto">
-							<AnimatePresence mode="wait" initial={false}>
+						{/* Zone 3 — body cross-fades (opacity only; no Y jump). */}
+						<div className="relative min-h-0 flex-1 overflow-y-auto">
+							<AnimatePresence
+								mode={CONTENT_CROSSFADE_PRESENCE_MODE}
+								initial={false}
+							>
 								<motion.div
-									key={panelKey}
-									initial={{ opacity: 0, y: 6 }}
-									animate={{ opacity: 1, y: 0 }}
-									exit={{ opacity: 0, y: -6 }}
-									transition={{ duration: 0.22, ease: "easeInOut" }}
-									className="grid grid-cols-1 gap-6 p-6 min-[620px]:grid-cols-[1fr_auto]"
+									key={`${panelKey}-${fileViewOpen ? "file" : "actions"}`}
+									initial={contentCrossfadeInitial}
+									animate={contentCrossfadeAnimate}
+									exit={contentCrossfadeExit}
+									transition={contentCrossfadeTransition}
+									className={
+										fileViewOpen
+											? "p-6"
+											: "grid grid-cols-1 gap-6 p-6 min-[620px]:grid-cols-[1fr_auto]"
+									}
 								>
-									{/* Left — record detail */}
-									<div className="min-w-0 space-y-4">
-										<div className="flex flex-wrap items-center gap-2">
-											<span className="inline-block rounded-full border border-blue/20 bg-blue/10 px-2 py-0.5 text-xs text-blue">
-												{kindChip}
-											</span>
-											{statusChip && (
-												<span className="inline-block rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs capitalize text-slate-600">
-													{statusChip}
-												</span>
-											)}
-										</div>
-
-										<h2
-											id={titleId}
-											className="text-2xl font-bold leading-tight text-slate-700 wrap-break-word"
-										>
-											{title}
-										</h2>
-
-										<p className="flex items-center gap-2 text-sm text-slate-600">
-											<CalendarClock className="h-4 w-4 shrink-0 text-[#0f5384]" />
-											<span className="font-semibold">{dateVerb}</span>{" "}
-											{formatExpiryDisplay(expiryDate)}
-										</p>
-
-										{/* Fact grid — only cells that carry a value. */}
-										<div
-											className={cn(
-												"grid gap-px overflow-hidden rounded-xl border border-slate-200 bg-slate-200",
-												showAmount ? "grid-cols-2" : "grid-cols-1",
-											)}
-										>
-											{showAmount && (
-												<div className="bg-white p-4">
-													<p className="mb-1 text-xs font-medium uppercase tracking-[0.08em] text-slate-400">
-														{resolvedAmountLabel}
-													</p>
-													<p className="text-2xl font-bold tabular-nums text-slate-700">
-														$
-														{amount.toLocaleString(undefined, {
-															maximumFractionDigits: 0,
-														})}
-													</p>
+									{fileViewOpen ? (
+										<ExpiryFileView
+											entityType={entityType}
+											entityId={entityId}
+											fileUrl={fileUrl ?? null}
+											department={department ?? null}
+											division={division ?? null}
+											uploadedById={uploadedById ?? null}
+											assignedManagerIds={assignedManagerIds}
+											aiSynopsis={aiSynopsis ?? null}
+											onSynopsisGenerated={onSynopsisGenerated}
+										/>
+									) : (
+										<>
+											{/* Left — record summary */}
+											<div className="min-w-0 space-y-4">
+												<div className="flex flex-wrap items-center gap-2">
+													<span className="inline-block rounded-full border border-blue/20 bg-blue/10 px-2 py-0.5 text-xs text-blue">
+														{kindChip}
+													</span>
+													{statusChip && (
+														<span className="inline-block rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs capitalize text-slate-600">
+															{statusChip}
+														</span>
+													)}
 												</div>
-											)}
-											<div className="bg-white p-4">
-												<p className="mb-1 text-xs font-medium uppercase tracking-[0.08em] text-slate-400">
-													{daysFact.label}
+
+												<h2
+													id={titleId}
+													className="text-2xl font-bold leading-tight text-slate-700 wrap-break-word"
+												>
+													{title}
+												</h2>
+
+												<p className="flex items-center gap-2 text-sm text-slate-600">
+													<CalendarClock className="h-4 w-4 shrink-0 text-[#0f5384]" />
+													<span className="font-semibold">{dateVerb}</span>{" "}
+													{formatExpiryDisplay(expiryDate)}
 												</p>
-												<p
+
+												{/* Fact grid — only cells that carry a value. */}
+												<div
 													className={cn(
-														"text-2xl font-bold tabular-nums",
-														DAYS_TEXT[tone],
+														"grid gap-px overflow-hidden rounded-xl border border-slate-200 bg-slate-200",
+														showAmount ? "grid-cols-2" : "grid-cols-1",
 													)}
 												>
-													{daysFact.value}
-												</p>
-											</div>
-										</div>
+													{showAmount && (
+														<div className="bg-white p-4">
+															<p className="mb-1 text-xs font-medium uppercase tracking-[0.08em] text-slate-400">
+																{resolvedAmountLabel}
+															</p>
+															<p className="text-2xl font-bold tabular-nums text-slate-700">
+																$
+																{amount.toLocaleString(undefined, {
+																	maximumFractionDigits: 0,
+																})}
+															</p>
+														</div>
+													)}
+													<div className="bg-white p-4">
+														<p className="mb-1 text-xs font-medium uppercase tracking-[0.08em] text-slate-400">
+															{daysFact.label}
+														</p>
+														<p
+															className={cn(
+																"text-2xl font-bold tabular-nums",
+																DAYS_TEXT[tone],
+															)}
+														>
+															{daysFact.value}
+														</p>
+													</div>
+												</div>
 
-										{/* Contact row — button when we have a contact, else muted copy. */}
-										{hasContact ? (
-											<button
-												type="button"
-												onClick={onContactProvider}
-												disabled={isBusy}
-												className="inline-flex items-center gap-2 text-sm text-slate-600 hover:text-slate-700 cursor-pointer disabled:opacity-50"
-											>
-												{contactEmail ? (
-													<Mail className="h-4 w-4" />
+												{/* Contact row — button when we have a contact, else muted copy. */}
+												{hasContact ? (
+													<button
+														type="button"
+														onClick={onContactProvider}
+														disabled={isBusy}
+														className="inline-flex items-center gap-2 text-sm text-slate-600 hover:text-slate-700 cursor-pointer disabled:opacity-50"
+													>
+														{contactEmail ? (
+															<Mail className="h-4 w-4" />
+														) : (
+															<Phone className="h-4 w-4" />
+														)}
+														Contact provider
+														<span className="text-slate-400">
+															{contactEmail || contactPhone}
+														</span>
+													</button>
 												) : (
-													<Phone className="h-4 w-4" />
+													<p className="text-sm text-slate-400">
+														No provider contact on record
+													</p>
 												)}
-												Contact provider
-												<span className="text-slate-400">
-													{contactEmail || contactPhone}
-												</span>
-											</button>
-										) : (
-											<p className="text-sm text-slate-400">
-												No provider contact on record
-											</p>
-										)}
-									</div>
+											</div>
 
-									{/* Right — action rail */}
-									<ActionRail
-										kind={entityType}
-										daysRemaining={daysRemaining}
-										snoozeDays={snoozeDays}
-										resetKey={panelKey}
-										isBusy={isBusy}
-										renewRequiresDesktop={renewRequiresDesktop}
-										onRenew={handleRenew}
-										onViewDetails={onViewDetails}
-										onSnooze={onSnooze ? handleSnooze : undefined}
-										onDismiss={onDismiss ? handleDismiss : undefined}
-										onLetExpire={onLetExpire}
-										onDestructiveIntent={
-											onLetExpire ? handleDestructiveIntent : undefined
-										}
-									/>
+											{/* Right — action rail */}
+											<ActionRail
+												kind={entityType}
+												daysRemaining={daysRemaining}
+												snoozeDays={snoozeDays}
+												resetKey={panelKey}
+												isBusy={isBusy}
+												renewRequiresDesktop={renewRequiresDesktop}
+												onRenew={handleRenew}
+												onViewDetails={() => setFileViewOpen(true)}
+												onSnooze={onSnooze ? handleSnooze : undefined}
+												onDismiss={onDismiss ? handleDismiss : undefined}
+												onLetExpire={onLetExpire}
+												onDestructiveIntent={
+													onLetExpire ? handleDestructiveIntent : undefined
+												}
+											/>
+										</>
+									)}
 								</motion.div>
 							</AnimatePresence>
 						</div>
 
-						{/* Zone 4 — queue strip (only with more than one item). */}
-						{queue && queue.rows.length > 1 && (
+						{/* Zone 4 — queue strip (only with more than one item, hidden while reading a file). */}
+						{queue && queue.rows.length > 1 && !fileViewOpen && (
 							<QueueStrip
 								queue={queue}
 								onExpandedChange={handleQueueExpandedChange}
 							/>
 						)}
 
-						{/* Footer cap — audits-style bottom strip (advance / pause / dismiss). */}
-						{queue && (
+						{/* Footer cap — audits-style bottom strip (advance / pause / dismiss / workspace). */}
+						{(queue || (fileViewOpen && onOpenInWorkspace)) && (
 							<ExpiryAlertFooterCap
 								nextLabel={
-									queue.nextIndex !== null && queue.rows[queue.nextIndex]
+									queue &&
+									queue.nextIndex !== null &&
+									queue.rows[queue.nextIndex]
 										? queue.rows[queue.nextIndex].title
 										: null
 								}
-								countdownSeconds={queue.countdownSeconds}
-								paused={queue.paused}
-								onPause={queue.onPause}
-								onDismissAll={queue.onDismissAll}
+								countdownSeconds={queue?.countdownSeconds ?? null}
+								paused={queue?.paused ?? false}
+								onPause={queue?.onPause ?? (() => {})}
+								onDismissAll={queue?.onDismissAll ?? (() => {})}
+								fileViewOpen={fileViewOpen}
+								workspaceLabel={workspaceLabel}
+								onOpenInWorkspace={onOpenInWorkspace}
 							/>
 						)}
 					</div>

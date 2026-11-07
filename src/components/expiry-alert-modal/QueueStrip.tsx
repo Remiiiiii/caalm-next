@@ -12,13 +12,29 @@ import { cn } from "@/lib/utils";
 export const QUEUE_EXPAND_MS = 420;
 export const QUEUE_COLLAPSE_MS = 320;
 
-const MAX_ROWS = 4;
+/** Rows kept on screen; window slides as the carousel advances. */
+const VISIBLE_ROWS = 3;
+/** Fixed row height so the window can translate smoothly. */
+const ROW_HEIGHT_PX = 56;
+const WINDOW_EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
 const DAYS_TEXT: Record<"danger" | "warning" | "info", string> = {
 	danger: "text-red",
 	warning: "text-orange",
 	info: "text-blue",
 };
+
+/** Keep the current item in the bottom slot when possible (scrolls both ways). */
+export function queueWindowStart(
+	currentIndex: number,
+	total: number,
+	visible = VISIBLE_ROWS,
+): number {
+	if (total <= visible) return 0;
+	const maxStart = total - visible;
+	// Prefer current as the last visible row → at item 5/N, show 3–4–5.
+	return Math.min(Math.max(0, currentIndex - (visible - 1)), maxStart);
+}
 
 function ProgressRing({ fraction }: { fraction: number }) {
 	const r = 8;
@@ -85,8 +101,10 @@ export default function QueueStrip({
 		within30,
 		amountSum,
 	});
-	const visibleRows = rows.slice(0, MAX_ROWS);
-	const hiddenCount = rows.length - visibleRows.length;
+
+	const windowStart = queueWindowStart(currentIndex, rows.length);
+	const visibleCount = Math.min(VISIBLE_ROWS, rows.length);
+	const hiddenBelow = Math.max(0, rows.length - (windowStart + visibleCount));
 	const ringFraction =
 		countdownSeconds !== null && countdownTotal > 0
 			? countdownSeconds / countdownTotal
@@ -128,7 +146,7 @@ export default function QueueStrip({
 							transition: {
 								height: {
 									duration: QUEUE_EXPAND_MS / 1000,
-									ease: [0.22, 1, 0.36, 1],
+									ease: WINDOW_EASE,
 								},
 								opacity: { duration: 0.22, ease: "easeOut" },
 							},
@@ -139,7 +157,7 @@ export default function QueueStrip({
 							transition: {
 								height: {
 									duration: QUEUE_COLLAPSE_MS / 1000,
-									ease: [0.22, 1, 0.36, 1],
+									ease: WINDOW_EASE,
 								},
 								opacity: { duration: 0.18, ease: "easeIn" },
 							},
@@ -147,80 +165,98 @@ export default function QueueStrip({
 						className="overflow-hidden"
 					>
 						<div className="px-2 pb-2">
-							{visibleRows.map((row, index) => {
-								const tier = getUrgencyTier(row.days);
-								const tone = getUrgencyTone(tier);
-								const isCurrent = index === currentIndex;
-								const isNext = index === nextIndex;
-								const dayValue = row.days < 0 ? Math.abs(row.days) : row.days;
-								return (
-									<button
-										key={row.id}
-										type="button"
-										onClick={() => onJump(index)}
-										aria-label={`${row.title}, ${row.kind}, ${
-											row.days < 0
-												? `${dayValue} days overdue`
-												: `${dayValue} days`
-										}${row.amount !== null ? `, $${row.amount.toLocaleString()}` : ""}`}
-										className={cn(
-											"flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
-											isCurrent && "bg-blue/10",
-											row.done && "opacity-50",
-										)}
-									>
-										<span
-											aria-hidden="true"
-											className={cn(
-												"h-2.5 w-2.5 shrink-0 rounded-full",
-												row.done
-													? "bg-green"
-													: isCurrent
-														? "bg-[#0f5384] ring-2 ring-[#0f5384]/30"
-														: "bg-slate-300",
-											)}
-										/>
-										<span
-											className={cn(
-												"w-10 shrink-0 text-right text-sm font-semibold tabular-nums",
-												DAYS_TEXT[tone],
-											)}
-										>
-											{dayValue}
-											<span className="block text-[10px] font-normal text-slate-400">
-												{row.days < 0 ? "Over" : "Days"}
-											</span>
-										</span>
-										<span className="min-w-0 flex-1">
-											<span className="block truncate text-sm font-medium text-slate-700">
-												{row.title}
-											</span>
-											<span className="block truncate text-xs text-slate-400 capitalize">
-												{row.kind} · {row.dateLabel}
-											</span>
-										</span>
-										{row.amount !== null && (
-											<span className="shrink-0 text-sm tabular-nums text-slate-600">
-												$
-												{row.amount.toLocaleString(undefined, {
-													maximumFractionDigits: 0,
-												})}
-											</span>
-										)}
-										<span className="flex h-5 w-5 shrink-0 items-center justify-center">
-											{isNext && countdownSeconds !== null ? (
-												<ProgressRing fraction={ringFraction} />
-											) : (
-												<ChevronDown className="h-4 w-4 -rotate-90 text-slate-300" />
-											)}
-										</span>
-									</button>
-								);
-							})}
+							{/* Fixed viewport: 3 rows; list translates as currentIndex moves. */}
+							<div
+								className="relative overflow-hidden"
+								style={{ height: visibleCount * ROW_HEIGHT_PX }}
+							>
+								<motion.div
+									className="absolute inset-x-0 top-0"
+									animate={{ y: -windowStart * ROW_HEIGHT_PX }}
+									transition={{
+										duration: 0.4,
+										ease: WINDOW_EASE,
+									}}
+								>
+									{rows.map((row, index) => {
+										const tier = getUrgencyTier(row.days);
+										const tone = getUrgencyTone(tier);
+										const isCurrent = index === currentIndex;
+										const isNext = index === nextIndex;
+										const dayValue =
+											row.days < 0 ? Math.abs(row.days) : row.days;
+										return (
+											<button
+												key={row.id}
+												type="button"
+												onClick={() => onJump(index)}
+												aria-label={`${row.title}, ${row.kind}, ${
+													row.days < 0
+														? `${dayValue} days overdue`
+														: `${dayValue} days`
+												}${row.amount !== null ? `, $${row.amount.toLocaleString()}` : ""}`}
+												style={{ height: ROW_HEIGHT_PX }}
+												className={cn(
+													"flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 text-left transition-colors duration-300 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
+													isCurrent && "bg-blue/10",
+													row.done && "opacity-50",
+												)}
+											>
+												<span
+													aria-hidden="true"
+													className={cn(
+														"h-2.5 w-2.5 shrink-0 rounded-full",
+														row.done
+															? "bg-green"
+															: isCurrent
+																? "bg-[#0f5384] ring-2 ring-[#0f5384]/30"
+																: "bg-slate-300",
+													)}
+												/>
+												<span
+													className={cn(
+														"w-10 shrink-0 text-right text-sm font-semibold tabular-nums",
+														DAYS_TEXT[tone],
+													)}
+												>
+													{dayValue}
+													<span className="block text-[10px] font-normal text-slate-400">
+														{row.days < 0 ? "Over" : "Days"}
+													</span>
+												</span>
+												<span className="min-w-0 flex-1">
+													<span className="block truncate text-sm font-medium text-slate-700">
+														{row.title}
+													</span>
+													<span className="block truncate text-xs text-slate-400 capitalize">
+														{row.kind} · {row.dateLabel}
+													</span>
+												</span>
+												{row.amount !== null && (
+													<span className="shrink-0 text-sm tabular-nums text-slate-600">
+														$
+														{row.amount.toLocaleString(undefined, {
+															maximumFractionDigits: 0,
+														})}
+													</span>
+												)}
+												<span className="flex h-5 w-5 shrink-0 items-center justify-center">
+													{isNext && countdownSeconds !== null ? (
+														<ProgressRing fraction={ringFraction} />
+													) : (
+														<ChevronDown className="h-4 w-4 -rotate-90 text-slate-300" />
+													)}
+												</span>
+											</button>
+										);
+									})}
+								</motion.div>
+							</div>
 
-							{hiddenCount > 0 && (
+							{hiddenBelow > 0 && (
 								<p className="px-3 py-2 text-xs text-slate-400">
-									{hiddenCount} more {hiddenCount === 1 ? "item" : "items"}
+									{hiddenBelow} more{" "}
+									{hiddenBelow === 1 ? "item" : "items"}
 								</p>
 							)}
 						</div>

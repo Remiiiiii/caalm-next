@@ -92,21 +92,29 @@ describe("ContractExpiryAlertBridge wiring", () => {
 		expect(onContractHandled).toHaveBeenCalledWith("contract-abc");
 	});
 
-	it("View Details navigates with highlight and marks handled", async () => {
+	it("More details peeks in-modal; Open in Contracts leaves without marking handled", async () => {
 		const user = userEvent.setup();
 		renderBridge();
-		await user.click(screen.getByRole("button", { name: /view details/i }));
-		expect(push).toHaveBeenCalledWith("/contracts?highlight=contract-abc");
-		expect(onContractHandled).toHaveBeenCalledWith("contract-abc");
+		await user.click(screen.getByRole("button", { name: /more details/i }));
+		expect(onContractHandled).not.toHaveBeenCalled();
+		await user.click(
+			screen.getByRole("button", { name: /open in contracts/i }),
+		);
+		expect(push).toHaveBeenCalledWith(
+			"/contracts/contract-abc/details?fromAlert=1",
+		);
+		expect(onContractHandled).not.toHaveBeenCalled();
+		expect(onClose).toHaveBeenCalled();
 	});
 
-	it("Snooze calls snoozeContract with a fixed 30 days", async () => {
+	it("Snooze calls snoozeContract with days clamped to day-before-expiry", async () => {
 		const user = userEvent.setup();
 		renderBridge();
-		await user.click(screen.getByRole("button", { name: /snooze 30 days/i }));
+		// daysRemaining=5 → resolveContractSnoozeDays → 4
+		await user.click(screen.getByRole("button", { name: /snooze 4 days/i }));
 		expect(snoozeContract).toHaveBeenCalledWith({
 			contractId: "contract-abc",
-			days: 30,
+			days: 4,
 			expiryDate: "2026-08-12",
 		});
 		expect(onStatusChange).toHaveBeenCalled();
@@ -118,9 +126,7 @@ describe("ContractExpiryAlertBridge wiring", () => {
 		renderBridge();
 		await user.click(screen.getByRole("button", { name: /let expire/i }));
 		// Recoil delay (420ms) before the confirm strip appears.
-		await user.click(
-			await screen.findByRole("button", { name: /^confirm$/i }),
-		);
+		await user.click(await screen.findByRole("button", { name: /^confirm$/i }));
 		expect(updateStatus).toHaveBeenCalledWith({
 			fileId: "contract-abc",
 			status: "inactive",

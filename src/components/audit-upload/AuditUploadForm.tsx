@@ -41,8 +41,15 @@ import type {
 	ProcessingLogEntry,
 } from "@/lib/audit-upload/types";
 import { fetcher } from "@/lib/swr-config";
-import { DIALOG_BACK_LINK_CLASS, HEADER_BADGE_CLASS } from "@/lib/ui/modal-styles";
 import { caalmToast } from "@/lib/ui/caalm-toast";
+import {
+	CONTENT_CROSSFADE_PRESENCE_MODE,
+	contentCrossfadeAnimate,
+	contentCrossfadeExitInline,
+	contentCrossfadeInitial,
+	contentCrossfadeTransition,
+} from "@/lib/ui/content-crossfade";
+import { DIALOG_BACK_LINK_CLASS, HEADER_BADGE_CLASS } from "@/lib/ui/modal-styles";
 import { cn } from "@/lib/utils";
 
 export interface AuditUploadFormProps {
@@ -364,14 +371,17 @@ export default function AuditUploadForm({
 								<h3 className="text-[13.5px] font-bold text-[#0f5384]">
 									1. Upload Audit File
 								</h3>
-								<AnimatePresence mode="wait">
+								<AnimatePresence
+									mode={CONTENT_CROSSFADE_PRESENCE_MODE}
+									initial={false}
+								>
 									{fileIngestUi === "progress" ? (
 										<motion.div
 											key="file-ingest-progress"
-											initial={{ opacity: 0, x: -6 }}
-											animate={{ opacity: 1, x: 0 }}
-											exit={{ opacity: 0, scale: 0.9 }}
-											transition={{ duration: 0.2 }}
+											initial={contentCrossfadeInitial}
+											animate={contentCrossfadeAnimate}
+											exit={contentCrossfadeExitInline}
+											transition={contentCrossfadeTransition}
 											className="flex min-w-0 items-center gap-2"
 											aria-live="polite"
 										>
@@ -389,9 +399,10 @@ export default function AuditUploadForm({
 									{fileIngestUi === "success" ? (
 										<motion.div
 											key="file-ingest-success"
-											initial={{ opacity: 0, scale: 0.5 }}
-											animate={{ opacity: 1, scale: 1 }}
-											exit={{ opacity: 0, scale: 0.8 }}
+											initial={contentCrossfadeInitial}
+											animate={contentCrossfadeAnimate}
+											exit={contentCrossfadeExitInline}
+											transition={contentCrossfadeTransition}
 											className="flex items-center"
 										>
 											<CheckCircle2

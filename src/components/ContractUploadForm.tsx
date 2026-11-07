@@ -77,6 +77,14 @@ import {
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
+	CONTENT_CROSSFADE_PRESENCE_MODE,
+	contentCrossfadeAnimate,
+	contentCrossfadeExit,
+	contentCrossfadeExitInline,
+	contentCrossfadeInitial,
+	contentCrossfadeTransition,
+} from "@/lib/ui/content-crossfade";
+import {
 	DIALOG_BACK_LINK_CLASS,
 	HEADER_BADGE_CLASS,
 } from "@/lib/ui/modal-styles";
@@ -1035,9 +1043,6 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 	const [aiQuizPhase, setAiQuizPhase] = useState<
 		"questions" | "loading" | "result"
 	>("questions");
-	const [aiQuizDirection, setAiQuizDirection] = useState<"forward" | "back">(
-		"forward",
-	);
 
 	const visibleAiQuizQuestions = useMemo(
 		() => getVisibleAiQuizQuestions(aiQuizAnswers),
@@ -1159,7 +1164,6 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
 			const nextStep = aiQuizStep + 1;
 			if (nextStep < visible.length) {
-				setAiQuizDirection("forward");
 				setAiQuizStep(nextStep);
 			} else {
 				void submitAiQuizSuggestion(pruned);
@@ -1225,7 +1229,6 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 		setAiSuggestion(null);
 		setAiQuizFreeTextDraft("");
 		setAiQuizPhase("questions");
-		setAiQuizDirection("forward");
 	};
 
 	/** Leave the assistant and return to the contract type grid. */
@@ -1237,13 +1240,11 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 	/** One step back; from the first question, back to the type grid. */
 	const handleAiQuizBack = () => {
 		if (aiQuizPhase === "result") {
-			setAiQuizDirection("back");
 			setAiQuizStep(Math.max(0, visibleAiQuizQuestions.length - 1));
 			setAiQuizPhase("questions");
 			return;
 		}
 		if (aiQuizStep > 0) {
-			setAiQuizDirection("back");
 			setAiQuizStep((step) => step - 1);
 			return;
 		}
@@ -1255,7 +1256,6 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 		const index = Number(value.slice(1));
 		if (value === "results" || !Number.isInteger(index)) return;
 		if (index >= visibleAiQuizQuestions.length) return;
-		setAiQuizDirection(index < aiQuizStep ? "back" : "forward");
 		setAiQuizStep(index);
 		setAiQuizPhase("questions");
 	};
@@ -1648,7 +1648,6 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 		setAiSuggestion(null);
 		setAiQuizFreeTextDraft("");
 		setAiQuizPhase("questions");
-		setAiQuizDirection("forward");
 	}, [form]);
 
 	// Handle contract type selection
@@ -3881,21 +3880,19 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 											]}
 										/>
 									</div>
-									<AnimatePresence mode="wait">
+									<div className="relative w-full">
+									<AnimatePresence
+										mode={CONTENT_CROSSFADE_PRESENCE_MODE}
+										initial={false}
+									>
 										{aiQuizPhase === "questions" &&
 											visibleAiQuizQuestions.length > 0 && (
 												<motion.div
 													key={`question-${visibleAiQuizQuestions[aiQuizStep]?.id ?? aiQuizStep}`}
-													initial={{
-														opacity: 0,
-														x: aiQuizDirection === "forward" ? 100 : -100,
-													}}
-													animate={{ opacity: 1, x: 0 }}
-													exit={{
-														opacity: 0,
-														x: aiQuizDirection === "forward" ? -100 : 100,
-													}}
-													transition={{ duration: 0.3 }}
+													initial={contentCrossfadeInitial}
+													animate={contentCrossfadeAnimate}
+													exit={contentCrossfadeExit}
+													transition={contentCrossfadeTransition}
 													className="w-full"
 												>
 													{aiQuizStep < visibleAiQuizQuestions.length ? (
@@ -3955,9 +3952,10 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 										{aiQuizPhase === "loading" && (
 											<motion.div
 												key="loading"
-												initial={{ opacity: 0 }}
-												animate={{ opacity: 1 }}
-												exit={{ opacity: 0 }}
+												initial={contentCrossfadeInitial}
+												animate={contentCrossfadeAnimate}
+												exit={contentCrossfadeExit}
+												transition={contentCrossfadeTransition}
 												className="flex flex-col items-center justify-center gap-3.5 py-12"
 											>
 												<div
@@ -3991,8 +3989,10 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 												return (
 													<motion.div
 														key="result"
-														initial={{ opacity: 0, x: 100 }}
-														animate={{ opacity: 1, x: 0 }}
+														initial={contentCrossfadeInitial}
+														animate={contentCrossfadeAnimate}
+														exit={contentCrossfadeExit}
+														transition={contentCrossfadeTransition}
 														className="w-full"
 													>
 														<div className="mb-3.5 flex items-center justify-between">
@@ -4121,6 +4121,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 												);
 											})()}
 									</AnimatePresence>
+									</div>
 								</div>
 							</div>
 
@@ -4416,14 +4417,17 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 														<h3 className="text-[13.5px] font-bold text-[#0f5384]">
 															1. Upload Contract File
 														</h3>
-														<AnimatePresence mode="wait">
+														<AnimatePresence
+															mode={CONTENT_CROSSFADE_PRESENCE_MODE}
+															initial={false}
+														>
 															{fileIngestUi === "progress" ? (
 																<motion.div
 																	key="file-ingest-progress"
-																	initial={{ opacity: 0, x: -6 }}
-																	animate={{ opacity: 1, x: 0 }}
-																	exit={{ opacity: 0, scale: 0.9 }}
-																	transition={{ duration: 0.2 }}
+																	initial={contentCrossfadeInitial}
+																	animate={contentCrossfadeAnimate}
+																	exit={contentCrossfadeExitInline}
+																	transition={contentCrossfadeTransition}
 																	className="flex min-w-0 items-center gap-2"
 																	aria-live="polite"
 																	aria-label={`Upload ${fileIngestProgress}% complete`}
@@ -4444,14 +4448,10 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 															{fileIngestUi === "success" ? (
 																<motion.div
 																	key="file-ingest-success"
-																	initial={{ opacity: 0, scale: 0.5 }}
-																	animate={{ opacity: 1, scale: 1 }}
-																	exit={{ opacity: 0, scale: 0.8 }}
-																	transition={{
-																		type: "spring",
-																		stiffness: 420,
-																		damping: 18,
-																	}}
+																	initial={contentCrossfadeInitial}
+																	animate={contentCrossfadeAnimate}
+																	exit={contentCrossfadeExitInline}
+																	transition={contentCrossfadeTransition}
 																	className="flex items-center"
 																	aria-label="Upload complete"
 																>

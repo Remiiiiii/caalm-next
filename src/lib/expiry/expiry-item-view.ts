@@ -29,6 +29,18 @@ export type ExpiryItemView = {
 	contact: ExpiryItemContact | null;
 	/** Licenses that renew rather than lapse flip the verb to "Renews". */
 	renewing: boolean;
+	/** Extra fields for the in-modal "More details" peek. */
+	vendor: string | null;
+	department: string | null;
+	referenceNumber: string | null;
+	issuingAuthority: string | null;
+	/** Fields for the in-modal "More details" file view. */
+	fileUrl: string | null;
+	division: string | null;
+	uploadedById: string | null;
+	assignedManagerIds: string[];
+	aiSynopsis: string | null;
+	aiSynopsisGeneratedAt: string | null;
 };
 
 function toFiniteNumber(value: unknown): number | null {
@@ -68,6 +80,9 @@ function getContractContact(file: UIFileDoc): ExpiryItemContact | null {
 export function toExpiryItemView(item: ExpiryQueueItem): ExpiryItemView {
 	if (item.kind === "contract") {
 		const file = item.file;
+		const counterparty = file as UIFileDoc & {
+			counterpartyLegalName?: string;
+		};
 		return {
 			kind: "contract",
 			id: item.id,
@@ -82,6 +97,19 @@ export function toExpiryItemView(item: ExpiryQueueItem): ExpiryItemView {
 				: null,
 			contact: getContractContact(file),
 			renewing: false,
+			vendor:
+				file.vendor?.trim() ||
+				counterparty.counterpartyLegalName?.trim() ||
+				null,
+			department: file.department?.trim() || null,
+			referenceNumber: file.contractNumber?.trim() || null,
+			issuingAuthority: null,
+			fileUrl: file.url?.trim() || null,
+			division: null,
+			uploadedById: typeof file.owner === "string" ? file.owner : null,
+			assignedManagerIds: file.assignedManagers || [],
+			aiSynopsis: file.aiSynopsis?.trim() || null,
+			aiSynopsisGeneratedAt: file.aiSynopsisGeneratedAt || null,
 		};
 	}
 
@@ -102,5 +130,15 @@ export function toExpiryItemView(item: ExpiryQueueItem): ExpiryItemView {
 		contact: null,
 		// Spec: licences that renew rather than lapse use "Renews" in the band.
 		renewing: license.autoRenew === true,
+		vendor: license.vendor?.trim() || null,
+		department: license.department?.trim() || license.division || null,
+		referenceNumber: license.licenseNumber?.trim() || null,
+		issuingAuthority: license.issuingAuthority?.trim() || null,
+		fileUrl: license.licenseUrl?.trim() || null,
+		division: license.division?.trim() || null,
+		uploadedById: license.createdBy?.trim() || null,
+		assignedManagerIds: license.assignedManagers || [],
+		aiSynopsis: license.aiSynopsis?.trim() || null,
+		aiSynopsisGeneratedAt: license.aiSynopsisGeneratedAt || null,
 	};
 }

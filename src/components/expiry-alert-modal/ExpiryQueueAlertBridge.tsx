@@ -9,7 +9,7 @@ import ExpiryAlertModal, {
 import { useToast } from "@/hooks/use-toast";
 import { useContractSnooze } from "@/hooks/useContractSnooze";
 import { useUpdateContractStatus } from "@/hooks/useUpdateContractStatus";
-import { EXPIRY_ALERT_SNOOZE_DAYS } from "@/lib/expiry/action-matrix";
+import { resolveContractSnoozeDays } from "@/lib/expiry/action-matrix";
 import { toExpiryItemView } from "@/lib/expiry/expiry-item-view";
 import type { ExpiryQueueItem } from "@/lib/expiry/expiry-queue";
 import { DESKTOP_MIN_WIDTH } from "@/lib/ui/desktop-first";
@@ -18,6 +18,8 @@ type ExpiryQueueAlertBridgeProps = {
 	item: ExpiryQueueItem;
 	onClose: () => void;
 	onItemHandled: (item: ExpiryQueueItem) => void;
+	/** Park the queue (keep items) and leave for Contracts/Licenses. */
+	onParkSession?: () => void;
 	onStatusChange?: () => void;
 	queuePosition?: { index: number; total: number };
 	onPrev?: () => void;
@@ -38,6 +40,12 @@ function useIsPhoneViewport() {
 	return isPhone;
 }
 
+function workspaceHref(item: ExpiryQueueItem): string {
+	return item.kind === "contract"
+		? `/contracts/${item.id}/details?fromAlert=1`
+		: `/licenses/${item.id}/details?fromAlert=1`;
+}
+
 /**
  * Adapter: turns one queue item into ExpiryAlertModal content + handlers. The
  * shell (band / narration / queue) stays mounted; only the body changes per
@@ -47,6 +55,7 @@ export default function ExpiryQueueAlertBridge({
 	item,
 	onClose,
 	onItemHandled,
+	onParkSession,
 	onStatusChange,
 	queuePosition,
 	onPrev,
@@ -64,13 +73,9 @@ export default function ExpiryQueueAlertBridge({
 	const view = toExpiryItemView(item);
 	const contentKey = `${item.kind}:${item.id}`;
 
-	const handleViewDetails = () => {
-		const href =
-			item.kind === "contract"
-				? `/contracts?highlight=${encodeURIComponent(item.id)}`
-				: `/licenses?highlight=${encodeURIComponent(item.id)}`;
-		router.push(href);
-		onItemHandled(item);
+	const handleOpenInWorkspace = () => {
+		onParkSession?.();
+		router.push(workspaceHref(item));
 	};
 
 	const handleContactProvider = () => {
@@ -89,6 +94,42 @@ export default function ExpiryQueueAlertBridge({
 		});
 	};
 
+	const sharedModalProps = {
+		open: true as const,
+		contentKey,
+		entityId: item.id,
+		title: view.title,
+		expiryDate: view.expiresAt,
+		daysRemaining: view.days,
+		amount: view.amount,
+		amountLabel: view.amountLabel,
+		status: view.status,
+		typeLabel: view.typeLabel,
+		contactEmail: view.contact?.email,
+		contactPhone: view.contact?.phone,
+		vendor: view.vendor,
+		department: view.department,
+		referenceNumber: view.referenceNumber,
+		issuingAuthority: view.issuingAuthority,
+		fileUrl: view.fileUrl,
+		division: view.division,
+		uploadedById: view.uploadedById,
+		assignedManagerIds: view.assignedManagerIds,
+		aiSynopsis: view.aiSynopsis,
+		aiSynopsisGeneratedAt: view.aiSynopsisGeneratedAt,
+		renewing: view.renewing,
+		renewRequiresDesktop: isPhone,
+		onOpenInWorkspace: handleOpenInWorkspace,
+		onContactProvider: handleContactProvider,
+		onClose,
+		isBusy,
+		queuePosition,
+		onPrev,
+		onNext,
+		narration,
+		queue,
+	};
+
 	if (item.kind === "contract") {
 		const handleRenew = () => {
 			router.push("/contracts");
@@ -97,11 +138,13 @@ export default function ExpiryQueueAlertBridge({
 
 		const handleSnooze = async () => {
 			if (!view.expiresAt) return;
+			const days = resolveContractSnoozeDays(view.days);
+			if (days == null) return;
 			setIsBusy(true);
 			try {
 				const success = await snoozeContract({
 					contractId: item.id,
-					days: EXPIRY_ALERT_SNOOZE_DAYS,
+					days,
 					expiryDate: view.expiresAt,
 				});
 				if (success) {
@@ -135,38 +178,18 @@ export default function ExpiryQueueAlertBridge({
 
 		return (
 			<ExpiryAlertModal
-				open
-				contentKey={contentKey}
+				{...sharedModalProps}
 				entityType="contract"
-				title={view.title}
-				expiryDate={view.expiresAt}
-				daysRemaining={view.days}
-				amount={view.amount}
-				amountLabel={view.amountLabel}
-				status={view.status}
-				contactEmail={view.contact?.email}
-				contactPhone={view.contact?.phone}
-				renewing={view.renewing}
-				renewRequiresDesktop={isPhone}
 				onRenew={handleRenew}
-				onViewDetails={handleViewDetails}
 				onSnooze={handleSnooze}
 				onLetExpire={handleLetExpire}
-				onContactProvider={handleContactProvider}
-				onClose={onClose}
-				isBusy={isBusy}
-				queuePosition={queuePosition}
-				onPrev={onPrev}
-				onNext={onNext}
-				narration={narration}
-				queue={queue}
 			/>
 		);
 	}
 
-	// License — renew / view / dismiss only (no date snooze, no inactive).
+	// License — renew / dismiss only (no date snooze, no inactive).
 	const handleRenew = () => {
-		router.push(`/licenses?highlight=${encodeURIComponent(item.id)}`);
+		router.push("/licenses");
 		onItemHandled(item);
 	};
 
@@ -182,28 +205,10 @@ export default function ExpiryQueueAlertBridge({
 
 	return (
 		<ExpiryAlertModal
-			open
-			contentKey={contentKey}
+			{...sharedModalProps}
 			entityType="license"
-			title={view.title}
-			expiryDate={view.expiresAt}
-			daysRemaining={view.days}
-			amount={view.amount}
-			amountLabel={view.amountLabel}
-			status={view.status}
-			renewing={view.renewing}
-			renewRequiresDesktop={isPhone}
 			onRenew={handleRenew}
-			onViewDetails={handleViewDetails}
 			onDismiss={handleDismiss}
-			onContactProvider={handleContactProvider}
-			onClose={onClose}
-			isBusy={isBusy}
-			queuePosition={queuePosition}
-			onPrev={onPrev}
-			onNext={onNext}
-			narration={narration}
-			queue={queue}
 		/>
 	);
 }

@@ -27,8 +27,12 @@ interface ExpiryCarouselProps {
 	items: ExpiryQueueItem[];
 	onDismiss: () => void;
 	onItemDismissed?: (item: ExpiryQueueItem) => void;
+	/** Park the queue without marking items handled (Open in workspace). */
+	onParkSession?: (index: number) => void;
 	onStatusChange?: () => void;
 	shouldPlaySpeech?: boolean;
+	/** Resume index after parking the session. */
+	initialIndex?: number;
 }
 
 function formatShortDate(raw: string): string {
@@ -47,10 +51,14 @@ export default function ExpiryCarousel({
 	items,
 	onDismiss,
 	onItemDismissed,
+	onParkSession,
 	onStatusChange,
 	shouldPlaySpeech = true,
+	initialIndex = 0,
 }: ExpiryCarouselProps) {
-	const [currentIndex, setCurrentIndex] = useState(0);
+	const [currentIndex, setCurrentIndex] = useState(() =>
+		Math.min(Math.max(initialIndex, 0), Math.max(items.length - 1, 0)),
+	);
 	const [speechMuted, setSpeechMuted] = useState(false);
 	const [countdown, setCountdown] = useState<number | null>(null);
 	const [paused, setPaused] = useState(false);
@@ -346,11 +354,22 @@ export default function ExpiryCarousel({
 		onDismiss();
 	};
 
+	const handleParkSession = () => {
+		skipAutoAdvanceRef.current = true;
+		clearCountdown();
+		pausedRef.current = false;
+		setPaused(false);
+		stop();
+		suppressContractAlarm();
+		onParkSession?.(currentIndex);
+	};
+
 	return (
 		<ExpiryQueueAlertBridge
 			item={currentItem}
 			onClose={handleClose}
 			onItemHandled={handleItemHandled}
+			onParkSession={onParkSession ? handleParkSession : undefined}
 			onStatusChange={onStatusChange}
 			queuePosition={{ index: currentIndex, total: items.length }}
 			onPrev={items.length > 1 ? handlePrevious : undefined}

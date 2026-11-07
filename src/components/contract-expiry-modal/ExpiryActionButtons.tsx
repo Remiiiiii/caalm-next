@@ -17,6 +17,10 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useContractSnooze } from "@/hooks/useContractSnooze";
 import { useUpdateContractStatus } from "@/hooks/useUpdateContractStatus";
+import {
+	CONTENT_CROSSFADE_DURATION,
+	CONTENT_CROSSFADE_EASE,
+} from "@/lib/ui/content-crossfade";
 import { DESKTOP_MIN_WIDTH } from "@/lib/ui/desktop-first";
 import type { UIFileDoc } from "@/types/files";
 import ContractDismissalAcknowledgmentModal from "./ContractDismissalAcknowledgmentModal";
@@ -233,9 +237,13 @@ export default function ExpiryActionButtons({
 	return (
 		<>
 			<motion.div
-				initial={{ opacity: 0, y: 50 }}
-				animate={{ opacity: 1, y: 0 }}
-				transition={{ delay: 1.5, duration: 0.5 }}
+				initial={{ opacity: 0 }}
+				animate={{ opacity: 1 }}
+				transition={{
+					delay: 1.5,
+					duration: CONTENT_CROSSFADE_DURATION,
+					ease: CONTENT_CROSSFADE_EASE,
+				}}
 				className="relative z-20 mt-8 flex flex-wrap gap-3 w-full max-w-full justify-start"
 			>
 				<motion.div variants={buttonVariants} whileHover="hover" whileTap="tap">

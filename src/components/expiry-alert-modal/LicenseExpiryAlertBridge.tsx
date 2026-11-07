@@ -41,13 +41,13 @@ export default function LicenseExpiryAlertBridge({
 	});
 
 	const handleRenew = () => {
-		router.push(`/licenses?highlight=${encodeURIComponent(license.$id)}`);
+		router.push("/licenses");
 		onLicenseHandled(license.$id);
 	};
 
-	const handleViewDetails = () => {
-		router.push(`/licenses?highlight=${encodeURIComponent(license.$id)}`);
-		onLicenseHandled(license.$id);
+	const handleOpenInWorkspace = () => {
+		router.push(`/licenses/${license.$id}/details?fromAlert=1`);
+		onClose();
 	};
 
 	const handleDismiss = () => {
@@ -69,15 +69,27 @@ export default function LicenseExpiryAlertBridge({
 		<ExpiryAlertModal
 			open={open}
 			entityType="license"
+			entityId={license.$id}
 			title={view.title}
 			expiryDate={view.expiresAt}
 			daysRemaining={view.days}
 			amount={view.amount}
 			amountLabel={view.amountLabel}
 			status={view.status}
+			typeLabel={view.typeLabel}
+			vendor={view.vendor}
+			department={view.department}
+			referenceNumber={view.referenceNumber}
+			issuingAuthority={view.issuingAuthority}
+			fileUrl={view.fileUrl}
+			division={view.division}
+			uploadedById={view.uploadedById}
+			assignedManagerIds={view.assignedManagerIds}
+			aiSynopsis={view.aiSynopsis}
+			aiSynopsisGeneratedAt={view.aiSynopsisGeneratedAt}
 			renewing={view.renewing}
 			onRenew={handleRenew}
-			onViewDetails={handleViewDetails}
+			onOpenInWorkspace={handleOpenInWorkspace}
 			onDismiss={handleDismiss}
 			onClose={onClose}
 			isBusy={isBusy}

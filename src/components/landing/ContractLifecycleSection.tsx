@@ -8,6 +8,13 @@ import {
 } from "framer-motion";
 import { ArrowRight, Check, Clock, FileSignature } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import {
+	CONTENT_CROSSFADE_PRESENCE_MODE,
+	contentCrossfadeAnimate,
+	contentCrossfadeExit,
+	contentCrossfadeInitial,
+	contentCrossfadeTransition,
+} from "@/lib/ui/content-crossfade";
 import { cn } from "@/lib/utils";
 import LandingFrostedCard from "./LandingFrostedCard";
 import LandingSection from "./LandingSection";
@@ -400,15 +407,22 @@ export default function ContractLifecycleSection() {
 								id="lifecycle-panel"
 								role="tabpanel"
 								aria-labelledby={`lifecycle-tab-${activeId}`}
-								className="min-h-[15rem] rounded-xl border border-slate-200 bg-white/60 p-4 sm:p-5"
+								className="relative min-h-[15rem] rounded-xl border border-slate-200 bg-white/60 p-4 sm:p-5"
 							>
-								<AnimatePresence mode="wait">
+								<AnimatePresence
+									mode={CONTENT_CROSSFADE_PRESENCE_MODE}
+									initial={false}
+								>
 									<motion.div
 										key={activeId}
-										initial={{ opacity: 0, y: 12 }}
-										animate={{ opacity: 1, y: 0 }}
-										exit={{ opacity: 0, y: -12 }}
-										transition={{ duration: 0.3 }}
+										initial={
+											reduceMotion ? false : contentCrossfadeInitial
+										}
+										animate={contentCrossfadeAnimate}
+										exit={
+											reduceMotion ? { opacity: 0 } : contentCrossfadeExit
+										}
+										transition={contentCrossfadeTransition}
 									>
 										{activeId === "draft" ? <DraftVisual /> : null}
 										{activeId === "negotiate" ? <NegotiateVisual /> : null}

@@ -2,6 +2,10 @@
 
 import { format } from "date-fns";
 import { motion } from "framer-motion";
+import {
+	CONTENT_CROSSFADE_DURATION,
+	CONTENT_CROSSFADE_EASE,
+} from "@/lib/ui/content-crossfade";
 import type { UIFileDoc } from "@/types/files";
 
 interface AnimatedContractInfoProps {
@@ -20,13 +24,12 @@ const containerVariants = {
 };
 
 const itemVariants = {
-	hidden: { opacity: 0, y: 20 },
+	hidden: { opacity: 0 },
 	visible: {
 		opacity: 1,
-		y: 0,
 		transition: {
-			duration: 0.5,
-			ease: [0.4, 0, 0.2, 1] as const, // easeOut cubic bezier
+			duration: CONTENT_CROSSFADE_DURATION,
+			ease: CONTENT_CROSSFADE_EASE,
 		},
 	},
 };

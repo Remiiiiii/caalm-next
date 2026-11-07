@@ -86,6 +86,10 @@ export interface License {
 	allowsCommercialUse?: boolean;
 	requiresAttribution?: boolean;
 
+	// AI-generated document synopsis, persisted once generated (see /api/expiry/synopsis)
+	aiSynopsis?: string;
+	aiSynopsisGeneratedAt?: string;
+
 	// Optional - Audit
 	orgId: string;
 	createdBy?: string;

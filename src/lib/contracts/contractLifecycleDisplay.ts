@@ -118,7 +118,7 @@ export function signatureHintFromEnvelope(
 	return { stage: "not_sent", signedCount, totalSigners };
 }
 
-function progressSubtext(
+export function progressSubtext(
 	state: ApprovalWorkflowState | null,
 ): string | undefined {
 	if (!state) return undefined;

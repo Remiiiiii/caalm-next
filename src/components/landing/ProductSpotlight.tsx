@@ -11,6 +11,13 @@ import {
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import CountUp from "react-countup";
+import {
+	CONTENT_CROSSFADE_PRESENCE_MODE,
+	contentCrossfadeAnimate,
+	contentCrossfadeExit,
+	contentCrossfadeInitial,
+	contentCrossfadeTransition,
+} from "@/lib/ui/content-crossfade";
 import { cn } from "@/lib/utils";
 import FeatureSpotlightGrid from "./FeatureSpotlightGrid";
 import LandingFrostedCard from "./LandingFrostedCard";
@@ -161,10 +168,10 @@ export default function ProductSpotlight() {
 	const contentMotion = reduceMotion
 		? {}
 		: {
-				initial: { opacity: 0, y: 14 },
-				animate: { opacity: 1, y: 0 },
-				exit: { opacity: 0, y: -10 },
-				transition: { duration: 0.28, ease: [0.22, 1, 0.36, 1] as const },
+				initial: contentCrossfadeInitial,
+				animate: contentCrossfadeAnimate,
+				exit: contentCrossfadeExit,
+				transition: contentCrossfadeTransition,
 			};
 
 	return (
@@ -264,7 +271,11 @@ export default function ProductSpotlight() {
 				<motion.div variants={softRise}>
 					<div ref={paperRef} className="paper-3d">
 						<LandingFrostedCard contentClassName="p-4 sm:p-6 md:p-8 overflow-hidden">
-							<AnimatePresence mode="wait" initial={false}>
+							<div className="relative">
+							<AnimatePresence
+								mode={CONTENT_CROSSFADE_PRESENCE_MODE}
+								initial={false}
+							>
 								<motion.div key={activeId} {...contentMotion}>
 									{showFullMock ? (
 										<SpotlightMockPanel activeId={activeId} />
@@ -322,6 +333,7 @@ export default function ProductSpotlight() {
 									)}
 								</motion.div>
 							</AnimatePresence>
+							</div>
 						</LandingFrostedCard>
 					</div>
 				</motion.div>

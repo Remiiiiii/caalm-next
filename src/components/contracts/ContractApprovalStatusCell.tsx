@@ -11,11 +11,14 @@ import type { UIFileDoc } from "@/types/files";
 interface ContractApprovalStatusCellProps {
 	file: UIFileDoc;
 	onRefresh?: () => void;
+	/** Compact badge with no under-pill subtext (card grids). */
+	hideSubtext?: boolean;
 }
 
 export function ContractApprovalStatusCell({
 	file,
 	onRefresh,
+	hideSubtext = false,
 }: ContractApprovalStatusCellProps) {
 	const { permissions, settled } = usePermissions();
 	const [open, setOpen] = useState(false);
@@ -44,6 +47,7 @@ export function ContractApprovalStatusCell({
 				file={file}
 				clickable={canOpen}
 				onClick={() => setOpen(true)}
+				hideSubtext={hideSubtext}
 			/>
 			{canOpen ? (
 				<ContractApprovalFlowDialog

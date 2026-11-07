@@ -6,7 +6,7 @@ import ExpiryAlertModal from "@/components/expiry-alert-modal/ExpiryAlertModal";
 import { useToast } from "@/hooks/use-toast";
 import { useContractSnooze } from "@/hooks/useContractSnooze";
 import { useUpdateContractStatus } from "@/hooks/useUpdateContractStatus";
-import { EXPIRY_ALERT_SNOOZE_DAYS } from "@/lib/expiry/action-matrix";
+import { resolveContractSnoozeDays } from "@/lib/expiry/action-matrix";
 import { toExpiryItemView } from "@/lib/expiry/expiry-item-view";
 import type { UIFileDoc } from "@/types/files";
 
@@ -49,18 +49,21 @@ export default function ContractExpiryAlertBridge({
 		onContractHandled(contract.$id);
 	};
 
-	const handleViewDetails = () => {
-		router.push(`/contracts?highlight=${encodeURIComponent(contract.$id)}`);
-		onContractHandled(contract.$id);
+	const handleOpenInWorkspace = () => {
+		// Single-item legacy bridge: leave without marking handled so X can reopen.
+		router.push(`/contracts/${contract.$id}/details?fromAlert=1`);
+		onClose();
 	};
 
 	const handleSnooze = async () => {
 		if (!view.expiresAt) return;
+		const days = resolveContractSnoozeDays(view.days);
+		if (days == null) return;
 		setIsBusy(true);
 		try {
 			const success = await snoozeContract({
 				contractId: contract.$id,
-				days: EXPIRY_ALERT_SNOOZE_DAYS,
+				days,
 				expiryDate: view.expiresAt,
 			});
 			if (success) {
@@ -112,16 +115,28 @@ export default function ContractExpiryAlertBridge({
 		<ExpiryAlertModal
 			open={open}
 			entityType="contract"
+			entityId={contract.$id}
 			title={view.title}
 			expiryDate={view.expiresAt}
 			daysRemaining={view.days}
 			amount={view.amount}
 			amountLabel={view.amountLabel}
 			status={view.status}
+			typeLabel={view.typeLabel}
 			contactEmail={view.contact?.email}
 			contactPhone={view.contact?.phone}
+			vendor={view.vendor}
+			department={view.department}
+			referenceNumber={view.referenceNumber}
+			issuingAuthority={view.issuingAuthority}
+			fileUrl={view.fileUrl}
+			division={view.division}
+			uploadedById={view.uploadedById}
+			assignedManagerIds={view.assignedManagerIds}
+			aiSynopsis={view.aiSynopsis}
+			aiSynopsisGeneratedAt={view.aiSynopsisGeneratedAt}
 			onRenew={handleRenew}
-			onViewDetails={handleViewDetails}
+			onOpenInWorkspace={handleOpenInWorkspace}
 			onSnooze={handleSnooze}
 			onLetExpire={handleLetExpire}
 			onContactProvider={handleContactProvider}

@@ -13,6 +13,10 @@ export default function ContractsExpiryModalTestButton() {
 		itemsToShow,
 		isModalOpen,
 		closeModal,
+		parkModal,
+		parkedSession,
+		resumeIndex,
+		resumeParkedSession,
 		triggerDevTestModal,
 		markItemDismissed,
 		refreshLicenses,
@@ -40,8 +44,19 @@ export default function ContractsExpiryModalTestButton() {
 				onClose={closeModal}
 				onStatusChange={handleStatusChange}
 				onItemDismissed={markItemDismissed}
+				onParkSession={parkModal}
+				initialIndex={resumeIndex}
 				shouldPlaySpeech={shouldPlaySpeech}
 			/>
+			{parkedSession && !isModalOpen && (
+				<button
+					type="button"
+					onClick={resumeParkedSession}
+					className="fixed bottom-6 right-6 z-50 inline-flex cursor-pointer items-center gap-2 rounded-full border border-[#0f5384]/20 bg-white px-4 py-2.5 text-sm font-semibold text-[#0f5384] shadow-lg"
+				>
+					Resume expiry alerts ({parkedSession.count})
+				</button>
+			)}
 		</>
 	);
 }
