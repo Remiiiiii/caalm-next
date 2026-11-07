@@ -53,7 +53,7 @@ Project rules live in `.cursor/rules/` and are the single source of truth. Edit 
 |--------|-------------|
 | `.cursor/rules/*.mdc` | `@` imports / on-demand table above |
 | `.cursor/prompt-templates/` | Used in place, via `plan-prompt-templates.mdc` |
-| `.cursor/skills/*`, `.agents/skills/*` | Directory junctions in `.claude/skills/` (gitignored; recreate with `New-Item -ItemType Junction`) |
+| `.cursor/skills/*`, `.agents/skills/*` | Directory junctions in `.claude/skills/` (gitignored; recreate with `node scripts/sync-claude-skill-junctions.mjs`) |
 | `.cursor/commands/code-review.md` | `/caalm-review` (renamed: `/code-review` is a Claude Code built-in) |
 | `.cursor/commands/ui-ux-check.md` | `/ui-ux-check` |
 | `.cursor/hooks.json` (Graft) | `.claude/settings.json` hooks + statusline, from `graft init --no-agents` |
