@@ -17,8 +17,6 @@ import {
 	Users,
 } from "lucide-react";
 import dynamic from "next/dynamic";
-import { Document, Page, pdfjs } from "react-pdf";
-import "react-pdf/dist/Page/TextLayer.css";
 import {
 	type CSSProperties,
 	type ReactNode,
@@ -56,8 +54,18 @@ const DocumentViewer = dynamic(() => import("@/components/DocumentViewer"), {
 	loading: () => null,
 });
 
-// pdf.js only (no Adobe Embed / browser PDF chrome) — same worker as DocumentViewerInner.
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+// react-pdf touches DOMMatrix at import time — ssr:false keeps it off the server prerender.
+const ContractDocumentPreview = dynamic(
+	() => import("./ContractDocumentPreviewInner"),
+	{
+		ssr: false,
+		loading: () => (
+			<div className="flex h-32 items-center justify-center text-xs text-slate-400">
+				Loading document…
+			</div>
+		),
+	},
+);
 
 type ContractPreviewSheetProps = {
 	file: UIFileDoc;
@@ -1208,42 +1216,18 @@ function DocumentPane({ fileUrl, onCollapse, onOpenFull }: DocumentPaneProps) {
 						Loading document…
 					</div>
 				) : (
-					<Document
+					<ContractDocumentPreview
 						file={pdfViewerFile}
+						pageWidth={pageWidth}
+						numPages={numPages}
+						error={error}
 						onLoadSuccess={({ numPages: total }) => setNumPages(total)}
 						onLoadError={() => setError(true)}
-						loading={
-							<div className="flex h-32 items-center justify-center text-xs text-slate-400">
-								Loading document…
-							</div>
-						}
-					>
-						{error ? (
-							<p className="pt-8 text-center text-xs text-red">
-								Failed to load this document.
-							</p>
-						) : (
-							Array.from({ length: numPages ?? 0 }, (_, index) => (
-								<div
-									key={`page-${index + 1}`}
-									ref={(el) => {
-										if (el) pageRefs.current.set(index + 1, el);
-										else pageRefs.current.delete(index + 1);
-									}}
-									aria-hidden="true"
-									className="mb-3 flex justify-center last:mb-0"
-								>
-									<Page
-										pageNumber={index + 1}
-										width={pageWidth}
-										renderTextLayer={false}
-										renderAnnotationLayer={false}
-										className="rounded border border-slate-200 bg-white shadow-sm"
-									/>
-								</div>
-							))
-						)}
-					</Document>
+						registerPageRef={(page, el) => {
+							if (el) pageRefs.current.set(page, el);
+							else pageRefs.current.delete(page);
+						}}
+					/>
 				)}
 			</div>
 		</div>
