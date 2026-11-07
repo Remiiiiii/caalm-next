@@ -40,6 +40,7 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 			"assign_user_roles",
 			"deactivate_user",
 		],
+		linkedPrNumber: 219,
 	},
 	{
 		sectionNumber: 1,
