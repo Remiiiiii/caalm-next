@@ -40,6 +40,7 @@ When **Plan mode** is selected, the **first** reply in that planning thread **mu
 
 - If the user **already** named one or more templates in the **same** message (e.g. “A and D”, “use ui-page”), acknowledge those letters, still show the menu once for the record, then continue planning with the chosen template(s).
 - Do **not** call `CreatePlan` or write a substantive implementation plan until the user has picked A–K (or confirmed a combination they named in that message).
+- **Model tip (gated):** After A–K is chosen (or with a pre-named letter), read `.cursor/rules/llm-model-recommendation.mdc` **only** if the work is clearly beyond a simple bug / simple design / Ask-mode Q&A (see that rule’s hard skips and tip table). Skip the tip for **F** or tiny **G**/**H**. Never tip in Ask mode.
 
 ### Agent mode — “make a plan”
 
@@ -104,5 +105,6 @@ If a bracket cannot be inferred, ask a short clarifying question for that field 
 ## After the template is chosen (or auto-picked)
 
 1. Fill brackets in memory (above).
-2. Continue Plan / Agent planning using the filled brief + `agent-workflow-principal.mdc` (graft, rules, delivery checklist).
-3. Do not paste the entire blank template back to the user; optionally show a short “using template X” line and any still-empty fields you need answered.
+2. If gated Model tip applies (**B**/**C**/multi-system **A**+…, not simple **F**/**G**), emit one tip from `llm-model-recommendation.mdc`; otherwise stay silent on models.
+3. Continue Plan / Agent planning using the filled brief + `agent-workflow-principal.mdc` (graft, rules, delivery checklist).
+4. Do not paste the entire blank template back to the user; optionally show a short “using template X” line and any still-empty fields you need answered.

@@ -8,7 +8,10 @@ export type RoadmapAppwriteTableIds = {
 	statusLogTableId: string | undefined;
 };
 
-/** CLM vs NPO roadmap table IDs — same schema, separate tables (taskCode unique per catalog). */
+/**
+ * Per-catalog Appwrite table IDs — same schema, separate tables.
+ * taskCode and sectionNumber are unique per table, so catalogs must not share.
+ */
 export function roadmapAppwriteTableIds(
 	catalogKey: RoadmapCatalogKey,
 ): RoadmapAppwriteTableIds {
@@ -26,6 +29,14 @@ export function roadmapAppwriteTableIds(
 			tasksTableId: appwriteConfig.prdRoadmapTasksCollectionId,
 			testRunsTableId: appwriteConfig.prdRoadmapTestRunsCollectionId,
 			statusLogTableId: appwriteConfig.prdRoadmapStatusLogCollectionId,
+		};
+	}
+	if (catalogKey === "pto") {
+		return {
+			sectionsTableId: appwriteConfig.ptoRoadmapSectionsCollectionId,
+			tasksTableId: appwriteConfig.ptoRoadmapTasksCollectionId,
+			testRunsTableId: appwriteConfig.ptoRoadmapTestRunsCollectionId,
+			statusLogTableId: appwriteConfig.ptoRoadmapStatusLogCollectionId,
 		};
 	}
 	return {

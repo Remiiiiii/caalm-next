@@ -1,0 +1,194 @@
+/**
+ * Phase A — wrapper-only robot motion for the expiry alert.
+ * Scoped to `.expiry-alert-robot` so auth/docs Spline mounts stay untouched.
+ * Enter + queue pose use Framer Motion on the outer wrapper; gestures stay here.
+ */
+
+.expiry-alert-robot {
+	transform-origin: 50% 60%;
+	will-change: transform, opacity;
+}
+
+.expiry-alert-robot__stage {
+	width: 100%;
+	height: 100%;
+	transform-origin: 50% 60%;
+}
+
+/* --- Continuous: idle float (default) --- */
+@keyframes expiry-robot-idle-float {
+	0%,
+	100% {
+		transform: translateY(0) rotate(0deg);
+	}
+	50% {
+		transform: translateY(-5px) rotate(-0.6deg);
+	}
+}
+
+.expiry-alert-robot[data-narration="idle"] .expiry-alert-robot__stage,
+.expiry-alert-robot:not([data-narration]) .expiry-alert-robot__stage {
+	animation: expiry-robot-idle-float 5s ease-in-out infinite;
+}
+
+/* Speaking — soft lean toward card + gentle bob */
+@keyframes expiry-robot-speak-bob {
+	0%,
+	100% {
+		transform: translateX(-7px) translateY(0) rotate(-1.6deg) scale(1);
+	}
+	25% {
+		transform: translateX(-7px) translateY(-2px) rotate(-2.2deg) scale(1.006);
+	}
+	50% {
+		transform: translateX(-7px) translateY(-1px) rotate(-1.4deg) scale(1.003);
+	}
+	75% {
+		transform: translateX(-7px) translateY(-2.5px) rotate(-1deg) scale(1.006);
+	}
+}
+
+.expiry-alert-robot[data-narration="speaking"] .expiry-alert-robot__stage {
+	animation: expiry-robot-speak-bob 1.8s ease-in-out infinite;
+}
+
+/* Muted — soft sag, dimmed */
+@keyframes expiry-robot-muted-sag {
+	0%,
+	100% {
+		transform: translateY(2px) rotate(0deg);
+	}
+	50% {
+		transform: translateY(4px) rotate(0.35deg);
+	}
+}
+
+.expiry-alert-robot[data-narration="muted"] .expiry-alert-robot__stage {
+	animation: expiry-robot-muted-sag 6s ease-in-out infinite;
+}
+
+/* Urgency critical/overdue — slower, smaller pulse */
+@keyframes expiry-robot-urgent-pulse {
+	0%,
+	100% {
+		transform: translateX(-8px) translateY(-3px) scale(1);
+	}
+	50% {
+		transform: translateX(-8px) translateY(-6px) scale(1.015);
+	}
+}
+
+.expiry-alert-robot[data-urgency="2"][data-narration="idle"]
+	.expiry-alert-robot__stage {
+	animation: expiry-robot-urgent-pulse 1.35s ease-in-out infinite;
+}
+
+.expiry-alert-robot[data-urgency="1"][data-narration="idle"]
+	.expiry-alert-robot__stage {
+	transform: translateX(-4px);
+	animation: expiry-robot-idle-float 5s ease-in-out infinite;
+}
+
+/* Lean — last 2s of auto-advance */
+@keyframes expiry-robot-lean-tick {
+	0%,
+	100% {
+		transform: translateX(-10px) translateY(2px) rotate(-3deg);
+	}
+	50% {
+		transform: translateX(-10px) translateY(3.5px) rotate(-3.6deg);
+	}
+}
+
+.expiry-alert-robot[data-lean="true"]:not([data-reaction])
+	.expiry-alert-robot__stage {
+	animation: expiry-robot-lean-tick 1.6s ease-in-out infinite;
+}
+
+/* --- One-shots (smoother, less overshoot) --- */
+@keyframes expiry-robot-point {
+	0%,
+	100% {
+		transform: translateX(0) rotate(0deg);
+	}
+	35%,
+	65% {
+		transform: translateX(-14px) rotate(-4.5deg);
+	}
+}
+
+.expiry-alert-robot[data-reaction="point"] .expiry-alert-robot__stage {
+	animation: expiry-robot-point 1.35s ease-in-out both;
+}
+
+@keyframes expiry-robot-celebrate {
+	0% {
+		transform: translateY(0) scale(1) rotate(0deg);
+	}
+	20% {
+		transform: translateY(3px) scale(0.98, 1.02) rotate(0deg);
+	}
+	48% {
+		transform: translateY(-16px) scale(1.03, 0.98) rotate(-4deg);
+	}
+	72% {
+		transform: translateY(-8px) scale(1.01) rotate(3deg);
+	}
+	100% {
+		transform: translateY(0) scale(1) rotate(0deg);
+	}
+}
+
+.expiry-alert-robot[data-reaction="celebrate"] .expiry-alert-robot__stage {
+	animation: expiry-robot-celebrate 1.4s ease-in-out both;
+}
+
+@keyframes expiry-robot-sleepy {
+	0% {
+		transform: translateY(0) rotate(0deg);
+	}
+	40%,
+	100% {
+		transform: translateY(6px) rotate(2.5deg);
+	}
+}
+
+.expiry-alert-robot[data-reaction="sleepy"] {
+	opacity: 0.82;
+	transition: opacity 500ms ease;
+}
+
+.expiry-alert-robot[data-reaction="sleepy"] .expiry-alert-robot__stage {
+	animation: expiry-robot-sleepy 1.15s ease-in-out both;
+}
+
+@keyframes expiry-robot-recoil {
+	0% {
+		transform: translate(0, 0) rotate(0deg);
+	}
+	28% {
+		transform: translate(12px, -3px) rotate(4.5deg);
+	}
+	58% {
+		transform: translate(5px, -1px) rotate(1.5deg);
+	}
+	100% {
+		transform: translate(0, 0) rotate(0deg);
+	}
+}
+
+.expiry-alert-robot[data-reaction="recoil"] .expiry-alert-robot__stage {
+	animation: expiry-robot-recoil 1.05s ease-in-out both;
+}
+
+/* Reduced motion — static pose only */
+@media (prefers-reduced-motion: reduce) {
+	.expiry-alert-robot,
+	.expiry-alert-robot__stage {
+		animation: none !important;
+		transition: opacity 200ms ease !important;
+		transform: none !important;
+		opacity: 1 !important;
+	}
+
+}

@@ -23,6 +23,7 @@ import { Document, Page, pdfjs } from "react-pdf";
 import AssistantAvatar from "@/components/assistant/AssistantAvatar";
 import type { ContractChatMessage } from "@/components/contract-assistant/ContractAssistantChat";
 import { ContractAssistantChat } from "@/components/contract-assistant/ContractAssistantChat";
+import { useComposerAutoGrow } from "@/hooks/useComposerAutoGrow";
 import { useDocumentViewer } from "@/hooks/useDocumentViewer";
 import type {
 	ContractStarterPrompt,
@@ -114,6 +115,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 }) => {
 	const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
 	const [newMessage, setNewMessage] = useState("");
+	const composerRef = useComposerAutoGrow(newMessage, 72, 192);
 	const [isLoading, setIsLoading] = useState(false);
 	const [isClosing, setIsClosing] = useState(false);
 	const [previewError, setPreviewError] = useState<string | null>(null);
@@ -1476,13 +1478,14 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
 										</div>
 										<div className="flex items-end gap-2">
 											<Textarea
+												ref={composerRef}
 												placeholder="Ask a question about this document..."
 												value={newMessage}
 												onChange={(e) => setNewMessage(e.target.value)}
 												onKeyPress={handleKeyPress}
 												onClick={(e) => e.stopPropagation()}
-												className="min-h-[72px] flex-1 resize-none border! border-slate-300! bg-white text-left text-sm shadow-sm focus-visible:border-[#078FAB]! focus-visible:ring-1 focus-visible:ring-[#078FAB]"
-												rows={2}
+												className="min-h-[72px] max-h-48 flex-1 resize-none overflow-hidden border! border-slate-300! bg-white text-left text-sm shadow-sm focus-visible:border-[#078FAB]! focus-visible:ring-1 focus-visible:ring-[#078FAB]"
+												rows={1}
 												aria-label="Ask CAALM"
 											/>
 											<Button

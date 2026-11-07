@@ -72,7 +72,7 @@ export const useUnifiedDashboardData = (
 	const effectiveUserId = serverUserId || user?.$id;
 	const url =
 		enabled && effectiveUserId
-			? `/api/dashboard/unified?orgId=${orgId}&userId=${effectiveUserId}&v=19`
+			? `/api/dashboard/unified?orgId=${orgId}&userId=${effectiveUserId}&v=20`
 			: null;
 
 	// After mount only — reading localStorage during the first client paint

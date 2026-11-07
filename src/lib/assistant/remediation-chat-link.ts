@@ -72,15 +72,34 @@ export function linkRemediationChat(
 	}
 }
 
-export function getRemediationChatId(findingId: string): string | null {
+export function getRemediationLink(findingId: string): RemediationChatLink | null {
 	const id = findingId.trim();
 	if (!id) return null;
-	return readMap()[id]?.conversationId ?? null;
+	return readMap()[id] ?? null;
+}
+
+export function getRemediationChatId(findingId: string): string | null {
+	return getRemediationLink(findingId)?.conversationId ?? null;
 }
 
 /** True once a Show me how session for this finding produced an applyable corrective-action plan. */
 export function hasRemediationPlan(findingId: string): boolean {
+	return getRemediationLink(findingId)?.hasPlan === true;
+}
+
+/** Drop a stale local link (deleted conversation or replaced session). */
+export function unlinkRemediationChat(findingId: string): void {
 	const id = findingId.trim();
-	if (!id) return false;
-	return readMap()[id]?.hasPlan === true;
+	if (!id) return;
+	const map = readMap();
+	if (!(id in map)) return;
+	delete map[id];
+	writeMap(map);
+	if (typeof window !== "undefined") {
+		window.dispatchEvent(
+			new CustomEvent(REMEDIATION_CHAT_LINK_EVENT, {
+				detail: { findingId: id, conversationId: "", hasPlan: false },
+			}),
+		);
+	}
 }

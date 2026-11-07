@@ -57,18 +57,10 @@ export function useContractSnooze() {
 				}
 
 				const formattedDate = format(finalSnoozeDate, "MMMM d, yyyy");
-
-				// Determine toast message based on days
-				let description = `Contract expiry notification snoozed until ${formattedDate}`;
-				if (days === 30) {
-					// For 30-day mark, show that it's snoozed until 10 days before expiry
-					const expiry = new Date(expiryDate);
-					expiry.setHours(0, 0, 0, 0);
-					const tenDaysBefore = new Date(expiry);
-					tenDaysBefore.setDate(expiry.getDate() - 10);
-					const tenDaysFormatted = format(tenDaysBefore, "MMMM d, yyyy");
-					description = `Contract expiry notification snoozed until ${tenDaysFormatted} (10 days before expiry)`;
-				}
+				const cappedToDayBefore = snoozedUntil > maxSnoozeDate;
+				const description = cappedToDayBefore
+					? `Contract expiry notification snoozed until ${formattedDate} (day before expiry)`
+					: `Contract expiry notification snoozed until ${formattedDate}`;
 
 				toast({
 					title: "Contract snoozed",

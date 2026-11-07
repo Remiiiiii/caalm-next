@@ -107,8 +107,8 @@ import {
 	MessageSquareText,
 	Pencil,
 	PenLine,
-	ScanEye,
 	RotateCcw,
+	ScanEye,
 	Share2,
 	Trash2,
 	UserRoundCheck,
@@ -116,6 +116,7 @@ import {
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { ShareInput } from "@/components/ActionsModalContent";
+import ContractPreviewSheet from "@/components/contracts/ContractPreviewSheet";
 import { SendForSignatureDialog } from "@/components/esign/SendForSignatureDialog";
 import { TransferOwnershipDialog } from "@/components/ownership/TransferOwnershipDialog";
 import { PERMISSIONS } from "@/constants/permissions";
@@ -131,7 +132,6 @@ import {
 import { assignContractToDepartment } from "@/lib/actions/notification.actions";
 import type { AppUser } from "@/lib/actions/user.actions";
 import { refreshStorageUsage } from "@/lib/storage/refreshStorageUsage";
-import { FileDetails } from "./ActionsModalContent";
 import DocumentViewer from "./DocumentViewer";
 import { Button } from "./ui/button";
 import { DeleteConfirmBody } from "./ui/delete-confirmation-dialog";
@@ -230,101 +230,101 @@ const ActionDropdown = ({
 		let success = false;
 
 		try {
-		const actions = {
-			assign: async () => {
-				if (!file.contractId) {
-					throw new Error(
-						"This file does not have an associated contract. Only contract files can be assigned.",
-					);
-				}
+			const actions = {
+				assign: async () => {
+					if (!file.contractId) {
+						throw new Error(
+							"This file does not have an associated contract. Only contract files can be assigned.",
+						);
+					}
 
-				// Validate contractId format before using it
-				const contractId = file.contractId;
-				const isValidContractId =
-					typeof contractId === "string" &&
-					contractId.length > 0 &&
-					contractId.length <= 36 &&
-					/^[a-zA-Z0-9_][a-zA-Z0-9_]*$/.test(contractId);
+					// Validate contractId format before using it
+					const contractId = file.contractId;
+					const isValidContractId =
+						typeof contractId === "string" &&
+						contractId.length > 0 &&
+						contractId.length <= 36 &&
+						/^[a-zA-Z0-9_][a-zA-Z0-9_]*$/.test(contractId);
 
-				if (!isValidContractId) {
-					console.error("Invalid contractId format:", contractId);
-					throw new Error(
-						`Invalid contract ID format: "${contractId}". Contract ID must be 1-36 characters, alphanumeric with underscores only, and cannot start with an underscore.`,
-					);
-				}
+					if (!isValidContractId) {
+						console.error("Invalid contractId format:", contractId);
+						throw new Error(
+							`Invalid contract ID format: "${contractId}". Contract ID must be 1-36 characters, alphanumeric with underscores only, and cannot start with an underscore.`,
+						);
+					}
 
-				const assignResult = await assignContract({
-					fileId: contractId,
-					managerAccountIds: selectedManagers,
-					path,
-					fileDocumentId: file.$id, // Pass the file document ID
-				});
-
-				// Also assign department if selected - use the validated contractId
-				if (selectedDepartment) {
-					await assignContractToDepartment({
-						contractId: contractId, // Use the validated contractId we already have
-						department: selectedDepartment as ContractDepartment,
+					const assignResult = await assignContract({
+						fileId: contractId,
+						managerAccountIds: selectedManagers,
+						path,
+						fileDocumentId: file.$id, // Pass the file document ID
 					});
-				}
 
-				return assignResult;
-			},
-			rename: () => {
-				// Remove extension if user included it
-				let baseName = name;
-				if (
-					baseName.toLowerCase().endsWith(`.${file.extension.toLowerCase()}`)
-				) {
-					baseName = baseName.slice(0, -file.extension.length - 1);
-				}
-				return renameFile({
-					fileId: file.$id,
-					name: baseName,
-					extension: file.extension,
-					path,
-				});
-			},
-			share: () =>
-				updateFileUsers({
-					fileId: file.$id,
-					emails,
-					path,
-				}),
-			delete: () =>
-				deleteFile({
-					fileId: file.$id,
-					bucketFileId: file.bucketFileId || "",
-					path,
-					contractId: file.contractId, // Pass contractId if this is a contract
-				}),
-			restore: async () => {
-				const contractId = file.contractId || file.$id;
-				const res = await fetch(`/api/contracts/${contractId}/restore`, {
-					method: "POST",
-				});
-				if (!res.ok) {
-					const body = (await res.json().catch(() => null)) as {
-						error?: string;
-					} | null;
-					throw new Error(body?.error || "Failed to restore contract");
-				}
-				return true;
-			},
-		};
+					// Also assign department if selected - use the validated contractId
+					if (selectedDepartment) {
+						await assignContractToDepartment({
+							contractId: contractId, // Use the validated contractId we already have
+							department: selectedDepartment as ContractDepartment,
+						});
+					}
 
-		success = await actions[action.value as keyof typeof actions]();
+					return assignResult;
+				},
+				rename: () => {
+					// Remove extension if user included it
+					let baseName = name;
+					if (
+						baseName.toLowerCase().endsWith(`.${file.extension.toLowerCase()}`)
+					) {
+						baseName = baseName.slice(0, -file.extension.length - 1);
+					}
+					return renameFile({
+						fileId: file.$id,
+						name: baseName,
+						extension: file.extension,
+						path,
+					});
+				},
+				share: () =>
+					updateFileUsers({
+						fileId: file.$id,
+						emails,
+						path,
+					}),
+				delete: () =>
+					deleteFile({
+						fileId: file.$id,
+						bucketFileId: file.bucketFileId || "",
+						path,
+						contractId: file.contractId, // Pass contractId if this is a contract
+					}),
+				restore: async () => {
+					const contractId = file.contractId || file.$id;
+					const res = await fetch(`/api/contracts/${contractId}/restore`, {
+						method: "POST",
+					});
+					if (!res.ok) {
+						const body = (await res.json().catch(() => null)) as {
+							error?: string;
+						} | null;
+						throw new Error(body?.error || "Failed to restore contract");
+					}
+					return true;
+				},
+			};
 
-		if (success) {
-			closeAllModals();
-			if (action.value === "delete") {
-				await refreshStorageUsage();
+			success = await actions[action.value as keyof typeof actions]();
+
+			if (success) {
+				closeAllModals();
+				if (action.value === "delete") {
+					await refreshStorageUsage();
+				}
+				// Refresh the contracts list after successful actions
+				if (onRefresh) {
+					onRefresh();
+				}
 			}
-			// Refresh the contracts list after successful actions
-			if (onRefresh) {
-				onRefresh();
-			}
-		}
 		} catch (error) {
 			console.error("[CLIENT] ActionDropdown handleAction:", error);
 		} finally {
@@ -716,83 +716,17 @@ const ActionDropdown = ({
 		}
 		// Details dialog
 		if (value === "details") {
-			const handleDetailsDownload = async () => {
-				if (downloading) return;
-				setDownloading(true);
-				try {
-					const params = new URLSearchParams();
-					if (isValidBucketFileId(file.bucketFileId)) {
-						params.append("bucketFileId", file.bucketFileId!);
-					} else if (file.contractId) {
-						params.append("contractId", file.contractId);
-					} else if (file.$id) {
-						params.append("fileId", file.$id);
-					} else {
-						throw new Error("No file identifier available");
-					}
-
-					const response = await fetch(
-						`/api/files/download?${params.toString()}`,
-					);
-					if (!response.ok) throw new Error("Download failed");
-
-					const blob = await response.blob();
-					const contentDisposition = response.headers.get(
-						"Content-Disposition",
-					);
-					let filename = file.name || file.contractName || "download";
-					if (contentDisposition) {
-						const match = contentDisposition.match(
-							/filename\*?=['"]?([^'";\n]+)/,
-						);
-						if (match?.[1]) {
-							filename = decodeURIComponent(match[1].replace(/^UTF-8''/, ""));
-						}
-					}
-					if (
-						file.extension &&
-						!filename.toLowerCase().endsWith(`.${file.extension.toLowerCase()}`)
-					) {
-						filename = `${filename}.${file.extension}`;
-					}
-
-					const url = URL.createObjectURL(blob);
-					const link = document.createElement("a");
-					link.href = url;
-					link.download = filename;
-					link.style.display = "none";
-					link.setAttribute("download", filename);
-					document.body.appendChild(link);
-					link.click();
-					setTimeout(() => {
-						document.body.removeChild(link);
-						URL.revokeObjectURL(url);
-					}, 100);
-				} catch (error) {
-					console.error("[CLIENT] ActionDropdown: Download failed:", error);
-					alert("Failed to download file");
-				} finally {
-					setDownloading(false);
-				}
-			};
-
 			return (
 				<AppDialog
 					open={isModalOpen}
 					onOpenChange={handleModalOpenChange}
 					size="form"
-					className="max-h-[90vh] w-[calc(100%-1.5rem)] sm:w-full max-w-5xl shadow-xl"
+					className="max-h-[90vh] w-[calc(100%-1.5rem)] sm:w-full max-w-[1180px] shadow-xl"
 					icon={<Info className="h-5 w-5" />}
 					title={file.contractName || file.name || "Details"}
 					description="Contract and file details"
 				>
-					<FileDetails
-						file={file}
-						onRefresh={onRefresh}
-						onExpiryDateChange={onExpiryDateChange}
-						onDownload={handleDetailsDownload}
-						downloading={downloading}
-					/>
+					<ContractPreviewSheet file={file} />
 				</AppDialog>
 			);
 		}
@@ -1196,9 +1130,9 @@ const ActionDropdown = ({
 													{ method: "POST" },
 												);
 												if (!res.ok) {
-													const body = (await res
-														.json()
-														.catch(() => null)) as { error?: string } | null;
+													const body = (await res.json().catch(() => null)) as {
+														error?: string;
+													} | null;
 													throw new Error(
 														body?.error || "Failed to restore contract",
 													);

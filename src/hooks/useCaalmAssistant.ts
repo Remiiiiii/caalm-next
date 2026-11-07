@@ -270,6 +270,7 @@ export function useCaalmAssistant(options?: {
 	const selectConversation = useCallback(
 		async (id: string) => {
 			const epoch = sessionEpochRef.current;
+			const previousId = conversationIdRef.current;
 			setConversationLoading(true);
 			setMessages([]);
 			setPendingAction(null);
@@ -277,7 +278,7 @@ export function useCaalmAssistant(options?: {
 			try {
 				const res = await fetch(`/api/assistant/conversations/${id}`);
 				const json = await res.json();
-				if (sessionEpochRef.current !== epoch) return;
+				if (sessionEpochRef.current !== epoch) return false;
 				if (!res.ok) throw new Error(json.error || "Not found");
 				const status =
 					json.data?.conversation?.status === "closed" ? "closed" : "active";
@@ -286,13 +287,16 @@ export function useCaalmAssistant(options?: {
 				const mapped = mapStoredMessages(json.data?.messages ?? []);
 				messagesRef.current = mapped;
 				setMessages(mapped);
+				return true;
 			} catch (e) {
-				if (sessionEpochRef.current !== epoch) return;
+				if (sessionEpochRef.current !== epoch) return false;
+				setConversationId(previousId);
 				toast({
 					title: "Could not open conversation",
 					description: e instanceof Error ? e.message : "Unknown error",
 					variant: "destructive",
 				});
+				return false;
 			} finally {
 				setConversationLoading(false);
 			}

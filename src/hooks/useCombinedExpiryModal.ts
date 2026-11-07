@@ -4,8 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
 	buildExpiryQueue,
 	calculateDaysUntilExpiry,
+	EXPIRY_QUEUE_AHEAD_DAYS,
 	type ExpiryQueueItem,
 	type ExpiryShownState,
+	isExpiryModalTriggerItem,
 	loadExpiryShownState,
 	mergeShownWithItems,
 	saveExpiryShownState,
@@ -13,10 +15,23 @@ import {
 import type { UIFileDoc } from "@/types/files";
 import type { License } from "@/types/licenses";
 
+function emptyShown(): ExpiryShownState {
+	return { contracts: [], licenses: [] };
+}
+
 /**
- * Combined contracts + licenses expiring in 0–30 days for the full-screen carousel.
+ * Combined contracts + licenses for the full-screen expiry carousel.
+ * Queue shows recently expired (−30d) through +90d; auto-open only when
+ * something is expiring within the next 30 days.
  */
-export function useCombinedExpiryModal(contracts: UIFileDoc[]) {
+export function useCombinedExpiryModal(
+	contracts: UIFileDoc[],
+	options?: {
+		/** Hold off auto-opening at index 0 while a deep-link resume (push "View" / "Back to alert") is pending. */
+		suppressAutoOpen?: boolean;
+	},
+) {
+	const suppressAutoOpen = options?.suppressAutoOpen ?? false;
 	const [shown, setShown] = useState<ExpiryShownState>({
 		contracts: [],
 		licenses: [],
@@ -27,14 +42,32 @@ export function useCombinedExpiryModal(contracts: UIFileDoc[]) {
 	const [testMode, setTestMode] = useState(false);
 	const [testItems, setTestItems] = useState<ExpiryQueueItem[]>([]);
 	const [wasManuallyClosed, setWasManuallyClosed] = useState(false);
+	/** Parked after "Open in Contracts/Licenses" — queue kept, resume chip shown. */
+	const [parkedSession, setParkedSession] = useState<{
+		count: number;
+	} | null>(null);
+	/** Index to reopen on after parking (kept while chip is visible / modal reopens). */
+	const [resumeIndex, setResumeIndex] = useState(0);
 
 	useEffect(() => {
 		setShown(loadExpiryShownState());
 	}, []);
 
+	/** Snapshot a multi-item queue into testMode so a later "shown" load cannot collapse it. */
+	const openQueueAt = useCallback((queue: ExpiryQueueItem[], index: number) => {
+		setWasManuallyClosed(false);
+		setParkedSession(null);
+		setTestItems(queue);
+		setTestMode(true);
+		setResumeIndex(Math.max(0, index));
+		setIsModalOpen(true);
+	}, []);
+
 	const fetchExpiringLicenses = useCallback(async () => {
 		try {
-			const res = await fetch("/api/licenses/expiring?days=30");
+			const res = await fetch(
+				`/api/licenses/expiring?days=${EXPIRY_QUEUE_AHEAD_DAYS}`,
+			);
 			if (!res.ok) return;
 			const json = await res.json();
 			const list: License[] =
@@ -68,71 +101,120 @@ export function useCombinedExpiryModal(contracts: UIFileDoc[]) {
 		return days !== null && days !== undefined;
 	}, [itemsToShow]);
 
+	const hasTriggerItems = useMemo(
+		() => itemsToShow.some((item) => isExpiryModalTriggerItem(item.days)),
+		[itemsToShow],
+	);
+
 	useEffect(() => {
 		if (
 			licensesFetchSettled &&
-			itemsToShow.length > 0 &&
+			hasTriggerItems &&
 			!isModalOpen &&
 			!testMode &&
-			!wasManuallyClosed
+			!wasManuallyClosed &&
+			!parkedSession &&
+			!suppressAutoOpen
 		) {
 			setIsModalOpen(true);
 		}
 	}, [
 		licensesFetchSettled,
-		itemsToShow.length,
+		hasTriggerItems,
 		isModalOpen,
+		suppressAutoOpen,
 		testMode,
 		wasManuallyClosed,
+		parkedSession,
 	]);
 
-	const triggerTestModal = async () => {
+	const fetchTestSourceLists = useCallback(async () => {
+		const [contractsRes, licensesRes] = await Promise.all([
+			fetch("/api/contracts/all"),
+			fetch(`/api/licenses/expiring?days=${EXPIRY_QUEUE_AHEAD_DAYS}`),
+		]);
+
+		const fetchedContracts: UIFileDoc[] = contractsRes.ok
+			? ((await contractsRes.json()).data ?? [])
+			: [];
+		const licenseJson = licensesRes.ok ? await licensesRes.json() : null;
+		const fetchedLicenses: License[] =
+			licenseJson?.data?.licenses ?? licenseJson?.licenses ?? [];
+
+		// Prefer freshest of dashboard props + API (by id).
+		const contractById = new Map<string, UIFileDoc>();
+		for (const file of [
+			...(Array.isArray(contracts) ? contracts : []),
+			...fetchedContracts,
+		]) {
+			if (file?.$id) contractById.set(file.$id, file);
+		}
+		const licenseById = new Map<string, License>();
+		for (const license of [
+			...licenses,
+			...(Array.isArray(fetchedLicenses) ? fetchedLicenses : []),
+		]) {
+			if (license?.$id) licenseById.set(license.$id, license);
+		}
+
+		return {
+			contractList: Array.from(contractById.values()),
+			licenseList: Array.from(licenseById.values()),
+		};
+	}, [contracts, licenses]);
+
+	/** Local/dev: real product window (−30d … +90d). Not the curated demo slice. */
+	const triggerDevTestModal = useCallback(async () => {
 		try {
 			setWasManuallyClosed(false);
-
-			const [contractsRes, licensesRes] = await Promise.all([
-				fetch("/api/contracts/all"),
-				fetch("/api/licenses/expiring?days=90"),
-			]);
-
-			const contractList: UIFileDoc[] = contractsRes.ok
-				? ((await contractsRes.json()).data ?? [])
-				: [];
-			const licenseJson = licensesRes.ok ? await licensesRes.json() : null;
-			const licenseList: License[] =
-				licenseJson?.data?.licenses ?? licenseJson?.licenses ?? [];
-
-			let queue = buildExpiryQueue({
+			const { contractList, licenseList } = await fetchTestSourceLists();
+			const queue = buildExpiryQueue({
 				contracts: contractList,
-				licenses: Array.isArray(licenseList) ? licenseList : [],
-				bypassWindow: true,
-			}).filter((item) => item.days >= 30 && item.days <= 60);
-
+				licenses: licenseList,
+			});
 			if (queue.length === 0) {
-				queue = buildExpiryQueue({
-					contracts: contractList,
-					licenses: Array.isArray(licenseList) ? licenseList : [],
-					bypassWindow: true,
-				}).filter((item) => item.days >= 0 && item.days <= 90);
-			}
-
-			queue = queue.slice(0, 4);
-			if (queue.length === 0) {
-				console.warn("No contracts/licenses found for test expiry modal");
+				console.warn("[useCombinedExpiryModal] Dev test: no items in −30…+90d");
 				return;
 			}
-
 			setTestItems(queue);
 			setTestMode(true);
 			setIsModalOpen(true);
 		} catch (error) {
-			console.error("Failed to fetch items for test modal:", error);
+			console.error("[useCombinedExpiryModal] Dev test modal failed:", error);
 		}
-	};
+	}, [fetchTestSourceLists]);
+
+	/** Demo/sales: curated mid-window sample only (does not mirror the Dev button). */
+	const triggerDemoTestModal = useCallback(async () => {
+		try {
+			setWasManuallyClosed(false);
+			const { contractList, licenseList } = await fetchTestSourceLists();
+			const queue = buildExpiryQueue({
+				contracts: contractList,
+				licenses: licenseList,
+				bypassWindow: true,
+			})
+				.filter((item) => item.days >= 30 && item.days <= 60)
+				.slice(0, 4);
+			if (queue.length === 0) {
+				console.warn(
+					"[useCombinedExpiryModal] Demo test: no items in 30–60d sample",
+				);
+				return;
+			}
+			setTestItems(queue);
+			setTestMode(true);
+			setIsModalOpen(true);
+		} catch (error) {
+			console.error("[useCombinedExpiryModal] Demo test modal failed:", error);
+		}
+	}, [fetchTestSourceLists]);
 
 	const closeModal = () => {
 		setIsModalOpen(false);
 		setWasManuallyClosed(true);
+		setParkedSession(null);
+		setResumeIndex(0);
 
 		if (typeof window !== "undefined" && !testMode && itemsToShow.length > 0) {
 			const next = mergeShownWithItems(shown, itemsToShow);
@@ -145,6 +227,26 @@ export function useCombinedExpiryModal(contracts: UIFileDoc[]) {
 			setTestItems([]);
 		}
 	};
+
+	/** Hide the modal but keep the queue — user is peeking in Contracts/Licenses. */
+	const parkModal = useCallback(
+		(index: number) => {
+			setResumeIndex(Math.max(0, index));
+			setParkedSession({
+				count: itemsToShow.length,
+			});
+			setIsModalOpen(false);
+			// Do not mark items shown and do not set wasManuallyClosed —
+			// resume must reopen the same session.
+		},
+		[itemsToShow.length],
+	);
+
+	const resumeParkedSession = useCallback(() => {
+		setParkedSession(null);
+		setWasManuallyClosed(false);
+		setIsModalOpen(true);
+	}, []);
 
 	const markItemDismissed = useCallback(
 		(item: ExpiryQueueItem) => {
@@ -163,6 +265,30 @@ export function useCombinedExpiryModal(contracts: UIFileDoc[]) {
 
 	const openForContractId = useCallback(
 		(contractId: string) => {
+			// Prefer the live queue; else rebuild ignoring session "shown" so a
+			// remount + shown-load race cannot collapse "Back to alert" to 1 item.
+			const liveAt = itemsToShow.findIndex(
+				(i) => i.kind === "contract" && i.id === contractId,
+			);
+			const fullQueue =
+				liveAt === -1
+					? buildExpiryQueue({
+							contracts: Array.isArray(contracts) ? contracts : [],
+							licenses,
+							shown: emptyShown(),
+						})
+					: itemsToShow;
+			const resumeAt =
+				liveAt !== -1
+					? liveAt
+					: fullQueue.findIndex(
+							(i) => i.kind === "contract" && i.id === contractId,
+						);
+			if (resumeAt !== -1) {
+				openQueueAt(fullQueue, resumeAt);
+				return true;
+			}
+
 			const filesArray = Array.isArray(contracts) ? contracts : [];
 			const match = filesArray.find((f) => f.$id === contractId);
 			if (!match) {
@@ -172,17 +298,39 @@ export function useCombinedExpiryModal(contracts: UIFileDoc[]) {
 				return false;
 			}
 			const days = calculateDaysUntilExpiry(match.contractExpiryDate) ?? 0;
-			setWasManuallyClosed(false);
-			setTestItems([{ kind: "contract", id: match.$id, file: match, days }]);
-			setTestMode(true);
-			setIsModalOpen(true);
+			openQueueAt(
+				[{ kind: "contract", id: match.$id, file: match, days }],
+				0,
+			);
 			return true;
 		},
-		[contracts],
+		[contracts, itemsToShow, licenses, openQueueAt],
 	);
 
 	const openForLicenseId = useCallback(
 		(licenseId: string) => {
+			const liveAt = itemsToShow.findIndex(
+				(i) => i.kind === "license" && i.id === licenseId,
+			);
+			const fullQueue =
+				liveAt === -1
+					? buildExpiryQueue({
+							contracts: Array.isArray(contracts) ? contracts : [],
+							licenses,
+							shown: emptyShown(),
+						})
+					: itemsToShow;
+			const resumeAt =
+				liveAt !== -1
+					? liveAt
+					: fullQueue.findIndex(
+							(i) => i.kind === "license" && i.id === licenseId,
+						);
+			if (resumeAt !== -1) {
+				openQueueAt(fullQueue, resumeAt);
+				return true;
+			}
+
 			const match = licenses.find((l) => l.$id === licenseId);
 			if (!match) {
 				// Try fetch once more for deep-link race
@@ -200,17 +348,27 @@ export function useCombinedExpiryModal(contracts: UIFileDoc[]) {
 							);
 							return;
 						}
+						const rebuilt = buildExpiryQueue({
+							contracts: Array.isArray(contracts) ? contracts : [],
+							licenses: list,
+							shown: emptyShown(),
+						});
+						const at = rebuilt.findIndex(
+							(i) => i.kind === "license" && i.id === licenseId,
+						);
+						setLicenses(list);
+						if (at !== -1) {
+							openQueueAt(rebuilt, at);
+							return;
+						}
 						const days =
 							calculateDaysUntilExpiry(
 								found.licenseExpiryDate || found.expirationDate,
 							) ?? 0;
-						setWasManuallyClosed(false);
-						setLicenses(list);
-						setTestItems([
-							{ kind: "license", id: found.$id, license: found, days },
-						]);
-						setTestMode(true);
-						setIsModalOpen(true);
+						openQueueAt(
+							[{ kind: "license", id: found.$id, license: found, days }],
+							0,
+						);
 					} catch {
 						// ignore
 					}
@@ -221,13 +379,13 @@ export function useCombinedExpiryModal(contracts: UIFileDoc[]) {
 				calculateDaysUntilExpiry(
 					match.licenseExpiryDate || match.expirationDate,
 				) ?? 0;
-			setWasManuallyClosed(false);
-			setTestItems([{ kind: "license", id: match.$id, license: match, days }]);
-			setTestMode(true);
-			setIsModalOpen(true);
+			openQueueAt(
+				[{ kind: "license", id: match.$id, license: match, days }],
+				0,
+			);
 			return true;
 		},
-		[licenses],
+		[licenses, itemsToShow, contracts, openQueueAt],
 	);
 
 	const openForEntityId = useCallback(
@@ -257,7 +415,14 @@ export function useCombinedExpiryModal(contracts: UIFileDoc[]) {
 			.map((i) => ({ file: i.file, days: i.days })),
 		isModalOpen,
 		closeModal,
-		triggerTestModal,
+		parkModal,
+		parkedSession,
+		resumeIndex,
+		resumeParkedSession,
+		triggerDevTestModal,
+		triggerDemoTestModal,
+		/** @deprecated Prefer triggerDevTestModal — kept for older callers */
+		triggerTestModal: triggerDevTestModal,
 		openForContractId,
 		openForLicenseId,
 		openForEntityId,

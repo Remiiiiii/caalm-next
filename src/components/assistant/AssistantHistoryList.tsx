@@ -68,8 +68,8 @@ function HistoryRow({
 				onClick={() => onSelect(conversation.$id)}
 				aria-current={isActive ? "true" : undefined}
 				className={cn(
-					"group flex w-full cursor-pointer items-start gap-3 rounded-lg px-2 py-2.5 text-left transition-[background-color,box-shadow] duration-150",
-					"hover:bg-[#078fab]/[.04] hover:shadow-[0_2px_10px_rgba(7,143,171,0.10)]",
+					"group flex w-full cursor-pointer items-start gap-3 rounded-lg border border-transparent px-2 py-2.5 text-left transition-[background-color,box-shadow,border-color] duration-150",
+					"hover:border-blue-300 hover:bg-[#078fab]/[.04] hover:shadow-[0_2px_10px_rgba(7,143,171,0.10)]",
 					"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
 					isActive && "bg-[#078fab]/[.06]",
 				)}
@@ -138,8 +138,8 @@ export default function AssistantHistoryList({
 		[conversations, query],
 	);
 	const groups = useMemo(
-		() => groupAssistantConversations(filtered, { activeId }),
-		[activeId, filtered],
+		() => groupAssistantConversations(filtered),
+		[filtered],
 	);
 	const showInitialLoader = Boolean(loading && !conversations.length);
 	const showEmptyAll = !showInitialLoader && !conversations.length;

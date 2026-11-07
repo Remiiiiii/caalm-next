@@ -218,104 +218,100 @@ export default function ContractDismissalAcknowledgmentModal({
 				</Button>
 			}
 		>
-						<div className="space-y-6 pb-1">
-							{/* Contract Info */}
-							<div className="bg-white rounded-lg p-4 border border-slate-200">
-								<h3 className="font-semibold text-slate-700 mb-2">
-									{contract.contractName ||
-										contract.name ||
-										"Untitled Contract"}
-								</h3>
-								{contract.contractExpiryDate && (
-									<p className="text-sm text-slate-600">
-										Expires:{" "}
-										{new Date(contract.contractExpiryDate).toLocaleDateString()}
-									</p>
-								)}
-							</div>
+			<div className="space-y-6 pb-1">
+				{/* Contract Info */}
+				<div className="bg-white rounded-lg p-4 border border-slate-200">
+					<h3 className="font-semibold text-slate-700 mb-2">
+						{contract.contractName || contract.name || "Untitled Contract"}
+					</h3>
+					{contract.contractExpiryDate && (
+						<p className="text-sm text-slate-600">
+							Expires:{" "}
+							{new Date(contract.contractExpiryDate).toLocaleDateString()}
+						</p>
+					)}
+				</div>
 
-							{/* Signature Canvas */}
-							<div className="space-y-2">
-								<Label
-									htmlFor="signature"
-									className="text-sm font-medium text-slate-700"
-								>
-									Acknowledgment mark
-								</Label>
-								<div className="bg-white rounded-lg border-2 border-slate-200 p-4">
-									<div
-										ref={canvasContainerRef}
-										className="w-full border border-slate-300 rounded"
-										style={{
-											height: "100px",
-											width: "100%",
-											position: "relative",
-										}}
-									>
-										<SignatureCanvas
-											ref={signatureRef}
-											canvasProps={{
-												width: canvasSize.width,
-												height: canvasSize.height,
-												style: {
-													pointerEvents: "auto",
-													touchAction: "none",
-													cursor: "crosshair",
-												},
-											}}
-											backgroundColor="white"
-											penColor="black"
-										/>
-									</div>
-									<Button
-										type="button"
-										variant="outline"
-										size="sm"
-										onClick={handleClear}
-										className="mt-2"
-									>
-										Clear mark
-									</Button>
-								</div>
-							</div>
-
-							{/* Date Input */}
-							<div className="space-y-2">
-								<Label
-									htmlFor="signatureDate"
-									className="text-sm font-medium text-slate-700"
-								>
-									Date
-								</Label>
-								<Input
-									id="signatureDate"
-									type="date"
-									value={signatureDate}
-									onChange={(e) => setSignatureDate(e.target.value)}
-									className="bg-white"
-									required
-								/>
-							</div>
-
-							{/* Confirmation Checkbox */}
-							<div className="flex items-start space-x-3 bg-white rounded-lg p-4 border border-slate-200">
-								<Checkbox
-									id="confirmation"
-									checked={isConfirmed}
-									onCheckedChange={(checked) =>
-										setIsConfirmed(checked === true)
-									}
-									className="mt-1"
-								/>
-								<Label
-									htmlFor="confirmation"
-									className="text-sm text-slate-700 leading-relaxed cursor-pointer"
-								>
-									I acknowledge I reviewed this expiry alert. This mark is not a
-									legal e-signature and does not execute the contract.
-								</Label>
-							</div>
+				{/* Signature Canvas */}
+				<div className="space-y-2">
+					<Label
+						htmlFor="signature"
+						className="text-sm font-medium text-slate-700"
+					>
+						Acknowledgment mark
+					</Label>
+					<div className="bg-white rounded-lg border-2 border-slate-200 p-4">
+						<div
+							ref={canvasContainerRef}
+							className="w-full border border-slate-300 rounded"
+							style={{
+								height: "100px",
+								width: "100%",
+								position: "relative",
+							}}
+						>
+							<SignatureCanvas
+								ref={signatureRef}
+								canvasProps={{
+									width: canvasSize.width,
+									height: canvasSize.height,
+									style: {
+										pointerEvents: "auto",
+										touchAction: "none",
+										cursor: "crosshair",
+									},
+								}}
+								backgroundColor="white"
+								penColor="black"
+							/>
 						</div>
+						<Button
+							type="button"
+							variant="outline"
+							size="sm"
+							onClick={handleClear}
+							className="mt-2"
+						>
+							Clear mark
+						</Button>
+					</div>
+				</div>
+
+				{/* Date Input */}
+				<div className="space-y-2">
+					<Label
+						htmlFor="signatureDate"
+						className="text-sm font-medium text-slate-700"
+					>
+						Date
+					</Label>
+					<Input
+						id="signatureDate"
+						type="date"
+						value={signatureDate}
+						onChange={(e) => setSignatureDate(e.target.value)}
+						className="bg-white"
+						required
+					/>
+				</div>
+
+				{/* Confirmation Checkbox */}
+				<div className="flex items-start space-x-3 bg-white rounded-lg p-4 border border-slate-200">
+					<Checkbox
+						id="confirmation"
+						checked={isConfirmed}
+						onCheckedChange={(checked) => setIsConfirmed(checked === true)}
+						className="mt-1"
+					/>
+					<Label
+						htmlFor="confirmation"
+						className="text-sm text-slate-700 leading-relaxed cursor-pointer"
+					>
+						I acknowledge I reviewed this expiry alert. This mark is not a legal
+						e-signature and does not execute the contract.
+					</Label>
+				</div>
+			</div>
 		</AppDialog>
 	);
 }

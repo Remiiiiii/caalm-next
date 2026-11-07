@@ -16,7 +16,10 @@ interface ContractExpiryModalProps {
 	onClose: () => void;
 	onStatusChange?: () => void;
 	onItemDismissed?: (item: ExpiryQueueItem) => void;
+	/** Park without dismissing — Open in Contracts/Licenses. */
+	onParkSession?: (index: number) => void;
 	shouldPlaySpeech?: boolean;
+	initialIndex?: number;
 }
 
 function contractsToItems(contracts: UIFileDoc[]): ExpiryQueueItem[] {
@@ -52,9 +55,10 @@ export default function ContractExpiryModal({
 	onClose,
 	onStatusChange,
 	onItemDismissed,
+	onParkSession,
 	shouldPlaySpeech = true,
+	initialIndex = 0,
 }: ContractExpiryModalProps) {
-	const [isDesktop, setIsDesktop] = useState(false);
 	const [dismissedKeys, setDismissedKeys] = useState<Set<string>>(
 		() => new Set(),
 	);
@@ -84,13 +88,6 @@ export default function ContractExpiryModal({
 	};
 
 	useEffect(() => {
-		const checkDesktop = () => setIsDesktop(window.innerWidth >= 1024);
-		checkDesktop();
-		window.addEventListener("resize", checkDesktop);
-		return () => window.removeEventListener("resize", checkDesktop);
-	}, []);
-
-	useEffect(() => {
 		if (!isOpen) {
 			setDismissedKeys(new Set());
 			return;
@@ -101,7 +98,8 @@ export default function ContractExpiryModal({
 		};
 	}, [isOpen]);
 
-	if (!isDesktop) return null;
+	// Desktop-first, but the alert is a companion interrupt (approve / renew /
+	// snooze / glance), so it may open on phones too.
 	if (!isOpen || activeItems.length === 0) return null;
 
 	return (
@@ -117,8 +115,10 @@ export default function ContractExpiryModal({
 						items={activeItems}
 						onDismiss={onClose}
 						onItemDismissed={handleItemDismissed}
+						onParkSession={onParkSession}
 						onStatusChange={onStatusChange}
 						shouldPlaySpeech={shouldPlaySpeech}
+						initialIndex={initialIndex}
 					/>
 				</motion.div>
 			)}

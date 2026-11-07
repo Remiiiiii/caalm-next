@@ -546,6 +546,24 @@ export const appwriteConfig = {
 		"69e2b104001f4e8c2d04",
 	),
 
+	/** Production Tools roadmap — same schema; own tables (sectionNumber/taskCode unique) */
+	ptoRoadmapSectionsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_PTO_ROADMAP_SECTIONS_COLLECTION",
+		"69f3c201001f4e8c2e01",
+	),
+	ptoRoadmapTasksCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_PTO_ROADMAP_TASKS_COLLECTION",
+		"69f3c202001f4e8c2e02",
+	),
+	ptoRoadmapTestRunsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_PTO_ROADMAP_TEST_RUNS_COLLECTION",
+		"69f3c203001f4e8c2e03",
+	),
+	ptoRoadmapStatusLogCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_PTO_ROADMAP_STATUS_LOG_COLLECTION",
+		"69f3c204001f4e8c2e04",
+	),
+
 	/** Legacy manual completions — merged into npo_roadmap_tasks on seed when present */
 	npoRoadmapTaskOverridesCollectionId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_NPO_ROADMAP_TASK_OVERRIDES_COLLECTION",

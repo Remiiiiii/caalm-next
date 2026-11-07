@@ -2,15 +2,32 @@
 
 import { Loader2 } from "lucide-react";
 import type { Models } from "node-appwrite";
-import type React from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+	type ReactNode,
+	useCallback,
+	useEffect,
+	useMemo,
+	useState,
+} from "react";
 import { ContractApprovalStatusCell } from "@/components/contracts/ContractApprovalStatusCell";
+import { getAvatarColor } from "@/components/ui/avatar";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipProvider,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { type AppUser, fetchUserNamesByIds } from "@/lib/actions/user.actions";
-import { convertFileSize } from "@/lib/utils";
+import {
+	contractSubStatus,
+	daysToExpiry,
+	formatValueAbbrev,
+	getExpiryTier,
+} from "@/lib/contracts/contract-card-format";
+import { cn, convertFileSize, getProfilePictureUrl } from "@/lib/utils";
 import type { UIFileDoc } from "@/types/files";
 import ActionDropdown from "./ActionDropdown";
-import FormattedDateTime, { FormattedDate } from "./FormattedDateTime";
-import ManagerAvatars from "./ManagerAvatars";
+import { FormattedDate } from "./FormattedDateTime";
 import Thumbnail from "./Thumbnail";
 
 // Map risk level to badge color and label
@@ -32,42 +49,125 @@ const riskLevelBadge = (risk: string) => {
 		default:
 			color = "border border-slate-200 bg-slate-100 text-slate-700";
 	}
-	const label = risk.charAt(0).toUpperCase() + risk.slice(1).toLowerCase();
+	const label = `${risk.charAt(0).toUpperCase()}${risk.slice(1).toLowerCase()} risk`;
 	return (
 		<span
-			className={`inline-block px-1.5 py-0.5 text-xs rounded-full ${color}`}
+			className={`inline-flex whitespace-nowrap px-1.5 py-0.5 text-xs rounded-full ${color}`}
 		>
-			{label} Risk
+			{label}
 		</span>
 	);
 };
 
-function MetaRow({
-	label,
-	children,
-	emphasize,
+type FooterPerson = {
+	id: string;
+	name: string;
+	imageUrl: string | null;
+};
+
+/** Overlapping avatars within one role (Assigned by OR Assigned to — never mixed). */
+function RoleAvatarStack({
+	people,
+	ariaLabel,
 }: {
-	label: string;
-	children: React.ReactNode;
-	emphasize?: "danger" | "warning";
+	people: FooterPerson[];
+	ariaLabel: string;
 }) {
-	const valueClass =
-		emphasize === "danger"
-			? "text-[#E5252A] font-semibold"
-			: emphasize === "warning"
-				? "text-orange font-semibold"
-				: "text-slate-700 font-medium";
+	if (people.length === 0) return null;
+	const shown = people.slice(0, 3);
+	const more = people.length - shown.length;
+	const allNames = people.map((p) => p.name).join(", ");
 
 	return (
-		<div className="flex items-start justify-between gap-3 min-w-0 py-1.5 border-b border-slate-200/60 last:border-b-0">
-			<span className="text-xs sm:text-sm text-slate-500 shrink-0 pt-0.5">
+		<TooltipProvider delayDuration={200}>
+			<div
+				className="flex shrink-0 items-center"
+				role="list"
+				aria-label={`${ariaLabel} ${allNames}`}
+			>
+				{shown.map((person, index) => {
+					const initials = person.name
+						.split(" ")
+						.map((n) => n.charAt(0))
+						.join("")
+						.toUpperCase()
+						.slice(0, 2);
+					const color = getAvatarColor(person.id);
+					return (
+						<Tooltip key={person.id}>
+							<TooltipTrigger asChild>
+								<button
+									type="button"
+									role="listitem"
+									aria-label={person.name}
+									className={cn(
+										"relative inline-flex h-7 w-7 cursor-default items-center justify-center overflow-hidden rounded-full border-2 border-white text-[10px] font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
+										index > 0 && "-ml-[7px]",
+									)}
+									style={
+										person.imageUrl ? undefined : { backgroundColor: color }
+									}
+									onClick={(e) => e.stopPropagation()}
+								>
+									{person.imageUrl ? (
+										// eslint-disable-next-line @next/next/no-img-element -- remote Appwrite profile URLs
+										<img
+											src={person.imageUrl}
+											alt=""
+											className="h-full w-full object-cover"
+										/>
+									) : (
+										initials || "?"
+									)}
+								</button>
+							</TooltipTrigger>
+							<TooltipContent side="top">{person.name}</TooltipContent>
+						</Tooltip>
+					);
+				})}
+				{more > 0 && (
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<button
+								type="button"
+								aria-label={`${more} more: ${people
+									.slice(3)
+									.map((p) => p.name)
+									.join(", ")}`}
+								className="-ml-[7px] inline-flex h-7 w-7 cursor-default items-center justify-center rounded-full border-2 border-white bg-slate-100 text-[10px] font-semibold text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
+								onClick={(e) => e.stopPropagation()}
+							>
+								+{more}
+							</button>
+						</TooltipTrigger>
+						<TooltipContent side="top">
+							{people
+								.slice(3)
+								.map((p) => p.name)
+								.join(", ")}
+						</TooltipContent>
+					</Tooltip>
+				)}
+			</div>
+		</TooltipProvider>
+	);
+}
+
+function AssignmentFooterGroup({
+	label,
+	people,
+}: {
+	label: string;
+	people: FooterPerson[];
+}) {
+	if (people.length === 0) return null;
+
+	return (
+		<div className="flex min-w-0 items-center gap-1.5">
+			<span className="shrink-0 text-[11px] font-medium text-slate-500">
 				{label}
 			</span>
-			<div
-				className={`min-w-0 text-right text-xs sm:text-sm wrap-anywhere ${valueClass}`}
-			>
-				{children}
-			</div>
+			<RoleAvatarStack people={people} ariaLabel={label} />
 		</div>
 	);
 }
@@ -102,16 +202,11 @@ const Card = ({
 		status || file.status,
 	);
 	const [contractAmount, setContractAmount] = useState<number | undefined>(
-		amount || file.amount,
+		amount ?? file.amount,
 	);
 	const [contractVendor, setContractVendor] = useState<string | undefined>(
 		vendor || file.vendor,
 	);
-	const formattedContractAmount = new Intl.NumberFormat("en-US", {
-		minimumFractionDigits: 2, // Ensure at least two decimal places (e.g., .00)
-		maximumFractionDigits: 2, // Limit to two decimal places
-		useGrouping: true, // Automatically adds commas for thousands
-	}).format(contractAmount || 0);
 
 	const [contractExpiryDate, setContractExpiryDate] = useState<
 		string | undefined
@@ -132,22 +227,18 @@ const Card = ({
 	);
 	const [isLoadingOwnerName, setIsLoadingOwnerName] = useState(false);
 	const [contractOwnerId, setContractOwnerId] = useState<string | null>(null);
+	const [ownerImageUrl, setOwnerImageUrl] = useState<string | null>(null);
 	const [contractLoaded, setContractLoaded] = useState(false);
 	const [assignedManagerUsers, setAssignedManagerUsers] = useState<AppUser[]>(
 		[],
 	);
-	const [loadingManagers, setLoadingManagers] = useState(false);
 	const [managerProfileImages, setManagerProfileImages] = useState<
 		Record<string, string>
 	>({});
-	const [failedProfileImages, setFailedProfileImages] = useState<Set<string>>(
-		new Set(),
-	);
 	const [riskLevel, setRiskLevel] = useState<string | undefined>(
-		(file as any).riskLevel || undefined,
+		file.riskLevel || undefined,
 	);
 
-	// Sync local state with file prop changes (for real-time updates)
 	useEffect(() => {
 		setContractStatus(status || file.status);
 	}, [status, file.status]);
@@ -156,18 +247,22 @@ const Card = ({
 		setContractExpiryDate(expirationDate || file.contractExpiryDate);
 	}, [expirationDate, file.contractExpiryDate]);
 
-	// Fetch owner name - prioritize contractOwnerId if contract exists
+	useEffect(() => {
+		setContractAmount(amount ?? file.amount);
+	}, [amount, file.amount]);
+
+	useEffect(() => {
+		setContractVendor(vendor || file.vendor);
+	}, [vendor, file.vendor]);
+
 	useEffect(() => {
 		const fetchOwnerName = async () => {
-			// Wait for contract to load if we're trying to fetch it (check for contract indicators)
 			const mightHaveContract =
 				file.contractId || file.contractName || file.status;
 			if (mightHaveContract && !contractLoaded) {
 				return;
 			}
 
-			// If we already have a valid name (not "Unknown"), don't re-fetch
-			// But allow re-fetch if contractOwnerId becomes available
 			if (ownerName && ownerName !== "Unknown" && !contractOwnerId) {
 				return;
 			}
@@ -176,15 +271,11 @@ const Card = ({
 			try {
 				let userIdToFetch: string | null = null;
 
-				// For contracts, prioritize contractOwnerId from the contract document
 				if (contractOwnerId) {
 					userIdToFetch = contractOwnerId;
-				}
-				// Fall back to file.owner if no contract owner found
-				else if (typeof file.owner === "string" && file.owner) {
+				} else if (typeof file.owner === "string" && file.owner) {
 					userIdToFetch = file.owner;
 				} else if (typeof file.owner === "object" && file.owner?.fullName) {
-					// Already have the name, no need to fetch
 					setOwnerName(file.owner.fullName);
 					setIsLoadingOwnerName(false);
 					return;
@@ -202,25 +293,17 @@ const Card = ({
 								) || users[0];
 							if (user?.fullName) {
 								setOwnerName(user.fullName);
-							} else {
-								console.warn(
-									`[Card] User found but no fullName for ID: ${userIdToFetch}. User object:`,
-									user,
+								const fromProfile = getProfilePictureUrl(
+									user.profileImageId ?? null,
 								);
+								if (fromProfile) setOwnerImageUrl(fromProfile);
+							} else {
 								setOwnerName("Unknown");
 							}
 						} else {
-							console.warn(
-								`[Card] User not found for ID: ${userIdToFetch}. API returned:`,
-								users,
-							);
 							setOwnerName("Unknown");
 						}
-					} catch (fetchError) {
-						console.error(
-							`[Card] Error fetching user name for ID ${userIdToFetch}:`,
-							fetchError,
-						);
+					} catch {
 						setOwnerName("Unknown");
 					}
 				} else {
@@ -234,7 +317,7 @@ const Card = ({
 			}
 		};
 
-		fetchOwnerName();
+		void fetchOwnerName();
 	}, [
 		file.owner,
 		file.contractId,
@@ -246,75 +329,63 @@ const Card = ({
 	]);
 
 	useEffect(() => {
-		// Fetch contract data - try both contractId and fileId lookup
 		if (!contractLoaded) {
 			(async () => {
 				try {
-					// Dynamically import to avoid SSR issues
 					const { getContracts } = await import("@/lib/actions/file.actions");
 					const contractsRes = await getContracts();
 					const contracts = Array.isArray(contractsRes.documents)
 						? contractsRes.documents
 						: [];
 
-					// Try to find contract by contractId first
 					let contract = file.contractId
 						? contracts.find((c: Models.Document) => c.$id === file.contractId)
 						: null;
 
-					// If not found and file has an ID, try finding by fileId
 					if (!contract && file.$id) {
 						contract = contracts.find(
-							(c: any) =>
+							(c: Models.Document & { fileId?: string; fileRef?: string }) =>
 								(c.fileId && c.fileId === file.$id) ||
 								(c.fileRef && c.fileRef === file.$id),
 						);
 					}
 
 					if (contract) {
-						// Update contract status if not already set
-						if (!status && !file.status && contract.status) {
-							setContractStatus(contract.status);
+						const c = contract as Models.Document & {
+							status?: string;
+							amount?: number;
+							contractExpiryDate?: string;
+							assignedTo?: string;
+							assignedToDepartment?: string;
+							vendor?: string;
+							riskLevel?: string;
+							contractOwnerId?: string;
+						};
+						if (!status && !file.status && c.status) {
+							setContractStatus(c.status);
 						}
-
-						if (contract.amount) {
-							setContractAmount(contract.amount);
+						if (c.amount) setContractAmount(c.amount);
+						if (c.contractExpiryDate) {
+							setContractExpiryDate(c.contractExpiryDate);
 						}
-
-						if (contract.contractExpiryDate) {
-							setContractExpiryDate(contract.contractExpiryDate);
+						if (c.assignedTo) setAssignedTo(c.assignedTo);
+						if (c.assignedToDepartment) {
+							setAssignedToDepartment(c.assignedToDepartment);
 						}
-
-						if (contract.assignedTo) {
-							setAssignedTo(contract.assignedTo);
+						if (c.vendor) setContractVendor(c.vendor);
+						if (c.riskLevel) {
+							setRiskLevel(c.riskLevel);
+						} else if (file.riskLevel && !riskLevel) {
+							setRiskLevel(file.riskLevel);
 						}
-
-						if (contract.assignedToDepartment) {
-							setAssignedToDepartment(contract.assignedToDepartment);
-						}
-
-						if (contract.vendor) {
-							setContractVendor(contract.vendor);
-						}
-
-						// Store riskLevel from contract (prefer contract data over file prop)
-						if (contract.riskLevel) {
-							setRiskLevel(contract.riskLevel);
-						} else if ((file as any).riskLevel && !riskLevel) {
-							// Fallback to file prop if contract doesn't have it
-							setRiskLevel((file as any).riskLevel);
-						}
-
-						// Store contractOwnerId for owner name lookup
-						if (contract.contractOwnerId) {
-							console.log("Found contractOwnerId:", contract.contractOwnerId);
-							setContractOwnerId(contract.contractOwnerId);
+						if (c.contractOwnerId) {
+							setContractOwnerId(c.contractOwnerId);
 						}
 					}
 					setContractLoaded(true);
 				} catch (error) {
 					console.error("Failed to fetch contract:", error);
-					setContractLoaded(true); // Mark as loaded even on error to prevent infinite retries
+					setContractLoaded(true);
 				}
 			})();
 		}
@@ -325,10 +396,9 @@ const Card = ({
 		file.status,
 		contractLoaded,
 		riskLevel,
-		(file as any).riskLevel,
+		file.riskLevel,
 	]);
 
-	// Fetch assigned manager user data - render immediately, fetch async
 	const managersKey = useMemo(() => {
 		if (
 			Array.isArray(file.assignedManagers) &&
@@ -346,7 +416,6 @@ const Card = ({
 		const fetchAssignedManagers = async () => {
 			let managers: string[] = [];
 
-			// Get manager IDs - could be IDs or names
 			if (
 				Array.isArray(file.assignedManagers) &&
 				file.assignedManagers.length > 0
@@ -355,28 +424,20 @@ const Card = ({
 			} else if (typeof file.assignedManagers === "string") {
 				managers = [file.assignedManagers];
 			} else if (assignedTo && typeof assignedTo === "string") {
-				// Fallback to assignedTo if assignedManagers is not available
 				managers = assignedTo.split(",").map((m) => m.trim());
 			}
 
 			if (managers.length === 0) {
 				setAssignedManagerUsers([]);
-				setLoadingManagers(false);
 				return;
 			}
 
 			const managerIdsArray = managers.map((m) => m.trim()).filter(Boolean);
-
 			if (managerIdsArray.length === 0) {
 				setAssignedManagerUsers([]);
-				setLoadingManagers(false);
 				return;
 			}
 
-			// Set loading state and show fallback immediately
-			setLoadingManagers(true);
-
-			// Create fallback users immediately so UI renders
 			const fallbackUsers: AppUser[] = managerIdsArray.map((manager) => ({
 				$id: manager,
 				fullName: manager,
@@ -391,8 +452,6 @@ const Card = ({
 			try {
 				const users = await fetchUserNamesByIds(managerIdsArray);
 				const fileManagers: AppUser[] = [];
-
-				// Map users by their IDs, accountIds, and fullNames
 				const userMap = new Map<string, AppUser>();
 				users.forEach((user) => {
 					if (user.$id) userMap.set(user.$id, user);
@@ -405,7 +464,6 @@ const Card = ({
 					if (user) {
 						fileManagers.push(user);
 					} else {
-						// If not found, create a mock user from the name
 						fileManagers.push({
 							$id: manager,
 							fullName: manager,
@@ -418,12 +476,10 @@ const Card = ({
 					}
 				});
 
-				// Generate profile image URLs for users with profileImageId
 				const bucketId =
 					process.env.NEXT_PUBLIC_APPWRITE_PROFILE_PICTURES_BUCKET;
 				const endpoint = process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT;
 				const projectId = process.env.NEXT_PUBLIC_APPWRITE_PROJECT;
-
 				const newProfileImages: Record<string, string> = {};
 
 				if (bucketId && endpoint && projectId) {
@@ -431,9 +487,7 @@ const Card = ({
 					users.forEach((user) => {
 						if (user.profileImageId) {
 							const imageUrl = `${baseUrl}/${user.profileImageId}/view?project=${projectId}`;
-							if (user.$id) {
-								newProfileImages[user.$id] = imageUrl;
-							}
+							if (user.$id) newProfileImages[user.$id] = imageUrl;
 							if (user.accountId) {
 								newProfileImages[user.accountId] = imageUrl;
 							}
@@ -446,99 +500,127 @@ const Card = ({
 			} catch (error) {
 				console.error("Failed to fetch assigned manager users:", error);
 				setAssignedManagerUsers([]);
-			} finally {
-				setLoadingManagers(false);
 			}
 		};
 
-		fetchAssignedManagers();
+		void fetchAssignedManagers();
 		// eslint-disable-next-line react-hooks/exhaustive-deps -- managersKey is content-stable
 	}, [managersKey]);
 
-	// Memoized handler for image load errors
-	const handleImageError = useCallback((userId: string, accountId?: string) => {
-		setFailedProfileImages((prev) => {
-			const newSet = new Set(prev);
-			if (userId) newSet.add(userId);
-			if (accountId) newSet.add(accountId);
-			return newSet;
-		});
-	}, []);
-
-	const renderAssignedManagers = () => {
-		// Show content immediately - either loaded users or fallback
-		if (assignedManagerUsers.length === 0) {
-			// Only show loading if we have no data at all
-			if (loadingManagers) {
-				return (
-					<span className="body-2 text-slate-400 inline-flex items-center gap-1.5">
-						<Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
-						Loading...
-					</span>
-				);
-			}
-			// Fallback to original display if no user data
-			if (
-				Array.isArray(file.assignedManagers) &&
-				file.assignedManagers.length > 0
-			) {
-				return (
-					<span
-						className="body-2 truncate block"
-						title={file.assignedManagers.join(", ")}
-					>
-						{file.assignedManagers.join(", ")}
-					</span>
-				);
-			}
-			if (typeof file.assignedManagers === "string") {
-				return <span className="body-2">{file.assignedManagers}</span>;
-			}
-			if (assignedTo) {
-				return <span className="body-2">{assignedTo}</span>;
-			}
-			return null;
-		}
-
-		return (
-			<ManagerAvatars
-				managers={assignedManagerUsers}
-				profileImages={managerProfileImages}
-				failedImages={failedProfileImages}
-				onImageError={handleImageError}
-			/>
-		);
-	};
-
-	const handleCardClick = (e: React.MouseEvent) => {
-		e.preventDefault();
-		e.stopPropagation();
-		onPreview?.();
-	};
+	const handleCardClick = useCallback(
+		(e: React.MouseEvent) => {
+			e.preventDefault();
+			e.stopPropagation();
+			onPreview?.();
+		},
+		[onPreview],
+	);
 
 	const displayName = file.contractName || file.name || "Untitled";
-	const isExpired =
-		contractStatus?.toLowerCase() === "expired" ||
-		file.isExpired ||
-		(contractExpiryDate ? new Date(contractExpiryDate) < new Date() : false);
-	const daysUntilExpiry = contractExpiryDate
-		? Math.ceil(
-				(new Date(contractExpiryDate).getTime() - Date.now()) /
-					(1000 * 60 * 60 * 24),
-			)
-		: null;
-	const isExpiringSoon =
-		!isExpired &&
-		daysUntilExpiry != null &&
-		daysUntilExpiry >= 0 &&
-		daysUntilExpiry <= 90;
+	const days = daysToExpiry(contractExpiryDate);
+	const tier = getExpiryTier(days);
+	const valueFmt = formatValueAbbrev(contractAmount ?? null);
+	const subStatus = contractSubStatus(file);
 	const departmentLabel = assignedToDepartment
 		? String(assignedToDepartment).replace(/-/g, " ")
 		: null;
 
+	const expiryFigureClass =
+		tier === "expired"
+			? "text-red"
+			: tier === "warn"
+				? "text-orange"
+				: "text-slate-700";
+
+	const expiryLabel =
+		tier === "expired" ? "EXPIRED" : days == null ? "EXPIRES IN" : "EXPIRES IN";
+	const expiryFigure =
+		days == null
+			? "—"
+			: days < 0
+				? `-${Math.abs(days)} days ago`
+				: `${days} days`;
+
+	const assignedByPeople = useMemo((): FooterPerson[] => {
+		if (!ownerName || ownerName === "Unknown") return [];
+		return [
+			{
+				id: contractOwnerId || "owner",
+				name: ownerName,
+				imageUrl: ownerImageUrl,
+			},
+		];
+	}, [ownerName, contractOwnerId, ownerImageUrl]);
+
+	const assignedToPeople = useMemo((): FooterPerson[] => {
+		const people: FooterPerson[] = [];
+		const seen = new Set<string>();
+		if (contractOwnerId) seen.add(contractOwnerId);
+		if (ownerName) seen.add(ownerName);
+
+		for (const manager of assignedManagerUsers) {
+			const id = manager.$id || manager.accountId || manager.fullName;
+			if (!id || seen.has(id) || seen.has(manager.fullName)) continue;
+			seen.add(id);
+			seen.add(manager.fullName);
+			const imageUrl =
+				managerProfileImages[manager.$id] ||
+				(manager.accountId
+					? managerProfileImages[manager.accountId]
+					: undefined) ||
+				getProfilePictureUrl(manager.profileImageId ?? null);
+			people.push({
+				id,
+				name: manager.fullName || "Assignee",
+				imageUrl,
+			});
+		}
+		return people;
+	}, [assignedManagerUsers, managerProfileImages, contractOwnerId, ownerName]);
+
+	const metaSegments: Array<{ key: string; node: ReactNode; warn?: boolean }> =
+		[];
+	if (file.$createdAt) {
+		metaSegments.push({
+			key: "uploaded",
+			node: (
+				<>
+					Uploaded{" "}
+					<FormattedDate date={file.$createdAt} className="text-inherit" />
+				</>
+			),
+		});
+	}
+	if (file.size != null && file.size > 0) {
+		metaSegments.push({
+			key: "size",
+			node: convertFileSize({ sizeInBytes: file.size }),
+		});
+	}
+	if (subStatus) {
+		metaSegments.push({
+			key: "sub",
+			node: subStatus,
+			warn: true,
+		});
+	}
+
+	const ariaName = [
+		displayName,
+		contractVendor || undefined,
+		valueFmt.accessible !== "No value on record" ? valueFmt.display : undefined,
+		days == null
+			? undefined
+			: days < 0
+				? `expired ${Math.abs(days)} days (-${Math.abs(days)}d)`
+				: `expires in ${days} days`,
+	]
+		.filter(Boolean)
+		.join(", ");
+
 	return (
 		<div
-			className="glass-card interactive-glass-card relative flex h-full w-full min-w-0 cursor-pointer flex-col gap-3 p-4 sm:p-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 transition-all duration-200"
+			className="glass-card interactive-glass-card relative grid h-full w-full min-w-0 cursor-pointer grid-rows-[auto_auto_1fr_auto] gap-0 p-4 transition-all duration-200 hover:border-[#0f5384]/35 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 sm:p-5"
 			data-equal-height-card
 			onClick={handleCardClick}
 			onKeyDown={(e) => {
@@ -549,10 +631,12 @@ const Card = ({
 			}}
 			role="button"
 			tabIndex={0}
+			aria-label={ariaName}
 		>
 			<div className="glass-card-cap" />
 
-			<div className="flex items-start justify-between gap-3 mt-2 min-w-0">
+			{/* Zone 1 — header (min-height keeps the strip aligned across the row) */}
+			<div className="relative mt-2 flex min-h-[76px] items-start gap-2.5">
 				<Thumbnail
 					type={file.type}
 					extension={file.extension}
@@ -560,112 +644,144 @@ const Card = ({
 					className="size-12 sm:size-14 shrink-0"
 					imageClassName="!size-8 sm:!size-9"
 				/>
+				<div className="min-w-0 flex-1 pr-8">
+					<p className="line-clamp-2 text-[13.5px] font-bold leading-snug text-slate-700 wrap-break-word">
+						{displayName}
+					</p>
+					<p className="mt-0.5 truncate text-[11px] text-slate-500">
+						{contractVendor?.trim() || (
+							<span className="text-slate-400">No vendor on record</span>
+						)}
+					</p>
+				</div>
 				<div
-					className="flex flex-col items-end gap-1.5 shrink-0"
+					className="absolute right-0 top-0 shrink-0"
 					onClick={(e) => e.stopPropagation()}
 					onKeyDown={(e) => e.stopPropagation()}
 				>
 					<ActionDropdown
 						file={file}
-						onStatusChange={() => {
-							if (onRefresh) {
-								onRefresh();
-							}
-						}}
+						onStatusChange={() => onRefresh?.()}
 						onRefresh={onRefresh}
 						onExpiryDateChange={(newExpiryDate: string) => {
 							setContractExpiryDate(newExpiryDate);
-							if (onRefresh) {
-								onRefresh();
-							}
+							onRefresh?.();
 						}}
 						userRole={userRole}
 					/>
-					{file.size != null && file.size > 0 && (
-						<span className="text-[10px] text-slate-500 tabular-nums">
-							{convertFileSize({ sizeInBytes: file.size })}
-						</span>
+				</div>
+			</div>
+
+			{/* Zone 2 — comparison strip (value + time, fixed vertical position) */}
+			<div className="mt-3 grid grid-cols-2 overflow-hidden rounded-lg border border-slate-200/80 bg-white/50">
+				<div className="border-r border-slate-200/80 px-3 py-2.5">
+					<p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+						Value
+					</p>
+					<p
+						className={cn(
+							"mt-0.5 text-[15px] font-bold tabular-nums",
+							contractAmount == null ? "text-slate-400" : "text-slate-700",
+						)}
+						aria-label={valueFmt.accessible}
+					>
+						{valueFmt.display}
+					</p>
+				</div>
+				<div className="px-3 py-2.5">
+					<p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+						{expiryLabel}
+					</p>
+					<p
+						className={cn(
+							"mt-0.5 text-[15px] font-bold tabular-nums",
+							days == null ? "text-slate-400" : expiryFigureClass,
+						)}
+					>
+						{expiryFigure}
+					</p>
+					{contractExpiryDate && (
+						<p className="mt-0.5 text-[10px] text-slate-500">
+							<FormattedDate
+								date={contractExpiryDate}
+								className="text-inherit"
+							/>
+						</p>
 					)}
 				</div>
 			</div>
 
-			<div className="min-w-0 space-y-2">
-				<p className="subtitle-2 line-clamp-2 wrap-break-word text-slate-700">
-					{displayName}
-				</p>
-				<div className="flex items-center gap-2 flex-wrap">
-					{(contractStatus || isExpired) && (
+			{/* Zone 3 — mid (flexes so strip + footer stay put) */}
+			<div className="mt-3 min-h-0 min-w-0 space-y-2">
+				<div className="flex flex-wrap items-center gap-1.5">
+					{(contractStatus || tier === "expired") && (
 						<ContractApprovalStatusCell
 							file={{
 								...file,
-								status: (isExpired
+								status: (tier === "expired"
 									? "expired"
 									: contractStatus || file.status) as UIFileDoc["status"],
 								contractExpiryDate,
-								isExpired,
+								isExpired: tier === "expired",
 							}}
 							onRefresh={onRefresh}
+							hideSubtext
 						/>
 					)}
 					{riskLevel && riskLevelBadge(riskLevel)}
 					{departmentLabel && (
-						<span className="inline-block px-1.5 py-0.5 border border-slate-200 bg-white/50 text-slate-600 text-xs rounded-full capitalize">
+						<span className="inline-flex items-center whitespace-nowrap rounded-full border border-slate-200 bg-white/60 px-1.5 py-0.5 text-xs capitalize text-slate-600">
 							{departmentLabel}
 						</span>
 					)}
 				</div>
-			</div>
 
-			<div className="min-w-0 rounded-lg bg-white/40 border border-white/50 px-3 py-1">
-				{contractAmount != null && (
-					<MetaRow label="Value">${formattedContractAmount} USD</MetaRow>
-				)}
-				{contractVendor && <MetaRow label="Vendor">{contractVendor}</MetaRow>}
-				{file.$createdAt && (
-					<MetaRow label="Uploaded">
-						<FormattedDateTime
-							date={file.$createdAt}
-							className="text-inherit"
-						/>
-					</MetaRow>
-				)}
-				{contractExpiryDate && (
-					<MetaRow
-						label={isExpired ? "Expired" : "Expires"}
-						emphasize={
-							isExpired ? "danger" : isExpiringSoon ? "warning" : undefined
-						}
-					>
-						<FormattedDate date={contractExpiryDate} className="text-inherit" />
-					</MetaRow>
-				)}
-				{(assignedTo ||
-					assignedManagerUsers.length > 0 ||
-					loadingManagers ||
-					(Array.isArray(file.assignedManagers) &&
-						file.assignedManagers.length > 0)) && (
-					<MetaRow label="Assigned">
-						<div className="flex items-center justify-end flex-wrap gap-1">
-							{renderAssignedManagers()}
-						</div>
-					</MetaRow>
+				{metaSegments.length > 0 && (
+					<p className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] text-slate-500">
+						{metaSegments.map((seg, i) => (
+							<span key={seg.key} className="inline-flex items-center gap-1.5">
+								{i > 0 && (
+									<span className="text-slate-300" aria-hidden>
+										·
+									</span>
+								)}
+								<span
+									className={seg.warn ? "font-semibold text-orange" : undefined}
+								>
+									{seg.node}
+								</span>
+							</span>
+						))}
+					</p>
 				)}
 			</div>
 
-			<p className="caption mt-auto line-clamp-1 wrap-break-word text-slate-500">
-				By:{" "}
-				{isLoadingOwnerName ? (
-					<span className="inline-flex items-center gap-1 align-middle">
+			{/* Zone 4 — footer: by | to on one row */}
+			<div className="mt-3 min-w-0 border-t border-slate-200/70 pt-3">
+				{isLoadingOwnerName &&
+				assignedByPeople.length === 0 &&
+				assignedToPeople.length === 0 ? (
+					<span className="inline-flex items-center gap-1.5 text-[11px] text-slate-400">
 						<Loader2 className="h-3 w-3 animate-spin shrink-0" />
-						Loading...
+						Loading…
 					</span>
 				) : (
-					ownerName ||
-					(typeof file.owner === "object" && file.owner?.fullName
-						? file.owner.fullName
-						: "Unknown")
+					<div className="flex min-w-0 items-center justify-between gap-3">
+						<div className="min-w-0">
+							<AssignmentFooterGroup
+								label="Assigned by:"
+								people={assignedByPeople}
+							/>
+						</div>
+						<div className="min-w-0 shrink-0">
+							<AssignmentFooterGroup
+								label="Assigned to:"
+								people={assignedToPeople}
+							/>
+						</div>
+					</div>
 				)}
-			</p>
+			</div>
 		</div>
 	);
 };

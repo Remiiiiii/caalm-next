@@ -35,6 +35,15 @@ export function extractVerificationNoteFromText(text: string): string | null {
 		if (note.length >= 10) return note;
 	}
 
+	// "Open mark closed and paste the following: <note>" — take the text after the colon.
+	const pasteMatch = trimmed.match(
+		/\b(?:paste|paste\s+the\s+following|with\s+this\s+note|close\s+note)\b[:\s]+["“]?([\s\S]+?)["”]?$/i,
+	);
+	if (pasteMatch?.[1]) {
+		const note = pasteMatch[1].trim();
+		if (note.length >= 10) return note.slice(0, 4000);
+	}
+
 	const labeled = trimmed.match(
 		/(?:verification\s+note|closing\s+note|suggested\s+note)[:\s]+["“]?([\s\S]+?)["”]?(?:\n\n|$)/i,
 	);

@@ -12,7 +12,7 @@ export const SECTION_ICONS: Record<
 	Contracts: { src: "/assets/icons/contracts.svg", width: 22, height: 22 },
 	Licenses: { src: "/assets/icons/license.svg", width: 22, height: 22 },
 	Constituents: {
-		src: "/assets/icons/constituents.svg",
+		src: "/assets/icons/constituents-section.svg",
 		width: 22,
 		height: 22,
 	},
@@ -200,6 +200,12 @@ export const ITEM_ICONS: Record<
 		src: "/assets/icons/audit-logs.svg",
 		width: 20,
 		height: 20,
+		color: SUBITEM_TEXT_GREY,
+	},
+	"Uploaded Audits": {
+		src: "/assets/icons/uploaded-audits.svg",
+		width: 18,
+		height: 22,
 		color: SUBITEM_TEXT_GREY,
 	},
 	"User Management": {

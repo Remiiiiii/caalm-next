@@ -5,11 +5,13 @@ import { getActiveUsersCount } from "@/lib/actions/user.actions";
 import { LicenseService } from "@/lib/api/licenses/services/LicenseService";
 import { createApiAdminClient } from "@/lib/appwrite/api-client";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { flattenTableRow } from "@/lib/contracts/contract-row-to-file";
 import { computeContractKpis } from "@/lib/dashboard/contract-kpis";
 import { computeRiskImpact } from "@/lib/dashboard/risk-impact.service";
 import { getDashboardUserComposition } from "@/lib/dashboard/user-composition";
 import { CACHE_KEYS, CACHE_TTLS } from "@/lib/services/cache-keys";
 import CacheManager from "@/lib/services/cache-manager";
+import { constructFileUrl } from "@/lib/utils";
 
 export async function GET(request: NextRequest) {
 	try {
@@ -44,8 +46,8 @@ export async function GET(request: NextRequest) {
 		}
 
 		// Check cache first (include pagination in cache key)
-		// v19: metric card breakdowns (status / roles / month trend)
-		const cacheKey = `${CACHE_KEYS.dashboard.unified(orgId, userId)}:v19:page:${page}:limit:${limit}`;
+		// v20: contract file urls for expiry alert "More details"
+		const cacheKey = `${CACHE_KEYS.dashboard.unified(orgId, userId)}:v20:page:${page}:limit:${limit}`;
 
 		// Try to get cached data first to check ETag
 		const existingCache = (await import("@/lib/services/redis-cache").then(
@@ -235,17 +237,63 @@ export async function GET(request: NextRequest) {
 					kpiContractsResult.total ?? kpiRows.length,
 				);
 
+				// Join Files rows so expiry alert "More details" can show the PDF
+				// (same link the contract details page uses).
+				const fileIds = Array.from(
+					new Set(
+						kpiRows
+							.map((row: Record<string, unknown>) => {
+								const flat = flattenTableRow(row);
+								return typeof flat.fileId === "string" ? flat.fileId : null;
+							})
+							.filter((id): id is string => !!id),
+					),
+				);
+				const filesById = new Map<string, Record<string, unknown>>();
+				const FILE_ID_BATCH = 80;
+				if (fileIds.length > 0 && appwriteConfig.filesCollectionId) {
+					const batches: string[][] = [];
+					for (let i = 0; i < fileIds.length; i += FILE_ID_BATCH) {
+						batches.push(fileIds.slice(i, i + FILE_ID_BATCH));
+					}
+					const batchResults = await Promise.all(
+						batches.map((batch) => {
+							const fileQueries =
+								batch.length === 1
+									? [Query.equal("$id", batch[0]), Query.limit(batch.length)]
+									: [
+											Query.or(batch.map((id) => Query.equal("$id", id))),
+											Query.limit(batch.length),
+										];
+							return tablesDB.listRows({
+								databaseId: appwriteConfig.databaseId || "default-db",
+								tableId: appwriteConfig.filesCollectionId!,
+								queries: fileQueries,
+							});
+						}),
+					);
+					for (const result of batchResults) {
+						for (const file of result.rows || []) {
+							const flat = flattenTableRow(
+								file as Record<string, unknown>,
+							);
+							filesById.set(String(flat.$id), flat);
+						}
+					}
+				}
+
 				// Same 500-row scan as /contracts metrics — widget counts stay in sync
 				const now = new Date();
 				now.setHours(0, 0, 0, 0);
 				const mappedDashboardContracts = kpiRows.map(
 					(contract: Record<string, unknown>) => {
+						const flat = flattenTableRow(contract);
 						// Always recompute from expiry date — stored daysUntilExpiry goes stale.
 						let daysUntilExpiry: number | undefined;
 						let contractStatus =
-							typeof contract.status === "string" ? contract.status : undefined;
+							typeof flat.status === "string" ? flat.status : undefined;
 						let expiredByDate = false;
-						const expiryRaw = contract.contractExpiryDate;
+						const expiryRaw = flat.contractExpiryDate;
 						if (typeof expiryRaw === "string" && expiryRaw) {
 							const expiryStr = expiryRaw.split("T")[0];
 							const [year, month, day] = expiryStr.split("-").map(Number);
@@ -259,7 +307,7 @@ export async function GET(request: NextRequest) {
 								contractStatus = "expired";
 							}
 						}
-						const amountRaw = contract.amount;
+						const amountRaw = flat.amount;
 						const amount =
 							typeof amountRaw === "number"
 								? amountRaw
@@ -267,42 +315,66 @@ export async function GET(request: NextRequest) {
 									? Number.parseFloat(amountRaw)
 									: undefined;
 
+						const fileId =
+							typeof flat.fileId === "string" ? flat.fileId : undefined;
+						const fileRow = fileId ? filesById.get(fileId) : undefined;
+						const bucketFileId =
+							(typeof fileRow?.bucketFileId === "string" &&
+								fileRow.bucketFileId) ||
+							(typeof flat.bucketFileId === "string" && flat.bucketFileId) ||
+							undefined;
+						const urlFromFile =
+							(typeof fileRow?.url === "string" && fileRow.url.trim()) ||
+							(bucketFileId ? constructFileUrl(bucketFileId) : "") ||
+							"";
+
 						return {
-							$id: contract.$id,
-							$createdAt: contract.$createdAt,
-							$updatedAt: contract.$updatedAt,
+							$id: flat.$id,
+							$createdAt: flat.$createdAt,
+							$updatedAt: flat.$updatedAt,
 							type: "contract",
-							name: contract.contractName || "Unnamed Contract",
-							contractName: contract.contractName || "Unnamed Contract",
-							contractExpiryDate: contract.contractExpiryDate,
-							startDate: contract.startDate,
-							isExpired: Boolean(contract.isExpired) || expiredByDate,
+							name: flat.contractName || "Unnamed Contract",
+							contractName: flat.contractName || "Unnamed Contract",
+							contractExpiryDate: flat.contractExpiryDate,
+							startDate: flat.startDate,
+							isExpired: Boolean(flat.isExpired) || expiredByDate,
 							daysUntilExpiry,
 							status: contractStatus,
-							department: contract.department,
-							snoozedUntil: contract.snoozedUntil || null,
+							department: flat.department,
+							snoozedUntil: flat.snoozedUntil || null,
 							amount: Number.isFinite(amount) ? amount : undefined,
 							contractType:
-								typeof contract.contractType === "string"
-									? contract.contractType
+								typeof flat.contractType === "string"
+									? flat.contractType
 									: undefined,
 							vendor:
-								(typeof contract.vendor === "string" && contract.vendor) ||
-								(typeof contract.counterpartyLegalName === "string" &&
-									contract.counterpartyLegalName) ||
+								(typeof flat.vendor === "string" && flat.vendor) ||
+								(typeof flat.counterpartyLegalName === "string" &&
+									flat.counterpartyLegalName) ||
 								undefined,
 							counterpartyLegalName:
-								typeof contract.counterpartyLegalName === "string"
-									? contract.counterpartyLegalName
+								typeof flat.counterpartyLegalName === "string"
+									? flat.counterpartyLegalName
 									: undefined,
 							counterpartyContactEmail:
-								typeof contract.counterpartyContactEmail === "string"
-									? contract.counterpartyContactEmail
+								typeof flat.counterpartyContactEmail === "string"
+									? flat.counterpartyContactEmail
 									: undefined,
 							counterpartyContactPhone:
-								typeof contract.counterpartyContactPhone === "string"
-									? contract.counterpartyContactPhone
+								typeof flat.counterpartyContactPhone === "string"
+									? flat.counterpartyContactPhone
 									: undefined,
+							fileId,
+							bucketFileId,
+							url: urlFromFile,
+							owner:
+								(typeof flat.contractOwnerId === "string" &&
+									flat.contractOwnerId) ||
+								(typeof flat.owner === "string" && flat.owner) ||
+								undefined,
+							assignedManagers: Array.isArray(flat.assignedManagers)
+								? flat.assignedManagers
+								: undefined,
 						};
 					},
 				);

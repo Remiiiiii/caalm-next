@@ -12,6 +12,8 @@ export type AssistantConversation = {
 	lastMessagePreview: string;
 	status: ConversationStatus;
 	lastMessageAt: string;
+	remediationFindingId?: string | null;
+	remediationHasPlan?: boolean;
 	$createdAt: string;
 	$updatedAt: string;
 };
@@ -165,6 +167,84 @@ export async function getActiveConversation(
 	return doc ? (doc as unknown as AssistantConversation) : null;
 }
 
+/** Prefer the live session, else the most recent row (caller should orderDesc lastMessageAt). */
+export function pickConversationForFinding(
+	rows: AssistantConversation[],
+): AssistantConversation | null {
+	if (!rows.length) return null;
+	return rows.find((row) => row.status === "active") ?? rows[0] ?? null;
+}
+
+export async function getConversationByRemediationFinding(params: {
+	userId: string;
+	orgId: string;
+	findingId: string;
+}): Promise<AssistantConversation | null> {
+	const findingId = params.findingId.trim();
+	if (!findingId) return null;
+	const { databases } = await createAdminClient();
+	const response = await databases.listDocuments(
+		appwriteConfig.databaseId!,
+		conversationsCollection(),
+		[
+			Query.equal("userId", params.userId),
+			Query.equal("orgId", params.orgId),
+			Query.equal("remediationFindingId", findingId),
+			Query.orderDesc("lastMessageAt"),
+			Query.limit(5),
+		],
+	);
+	return pickConversationForFinding(
+		response.documents as unknown as AssistantConversation[],
+	);
+}
+
+export async function setRemediationLink(params: {
+	conversationId: string;
+	userId: string;
+	orgId: string;
+	findingId: string;
+	hasPlan: boolean;
+}): Promise<void> {
+	const findingId = params.findingId.trim();
+	if (!findingId) return;
+	const owned = await getConversationForUser(
+		params.conversationId,
+		params.userId,
+		params.orgId,
+	);
+	if (!owned) return;
+
+	const { databases } = await createAdminClient();
+	const others = await databases.listDocuments(
+		appwriteConfig.databaseId!,
+		conversationsCollection(),
+		[
+			Query.equal("userId", params.userId),
+			Query.equal("orgId", params.orgId),
+			Query.equal("remediationFindingId", findingId),
+			Query.limit(25),
+		],
+	);
+	await Promise.all(
+		others.documents
+			.filter((doc) => doc.$id !== params.conversationId)
+			.map((doc) =>
+				databases.updateDocument(
+					appwriteConfig.databaseId!,
+					conversationsCollection(),
+					doc.$id,
+					// Empty string unlinks; lookup Query.equal(findingId) will not match it.
+					{ remediationFindingId: "", remediationHasPlan: false },
+				),
+			),
+	);
+	await updateConversationMeta(params.conversationId, {
+		remediationFindingId: findingId,
+		remediationHasPlan: params.hasPlan,
+	});
+}
+
 export async function getConversationForUser(
 	conversationId: string,
 	userId: string,
@@ -192,6 +272,8 @@ export async function updateConversationMeta(
 		lastMessagePreview: string;
 		status: ConversationStatus;
 		lastMessageAt: string;
+		remediationFindingId: string;
+		remediationHasPlan: boolean;
 	}>,
 ): Promise<void> {
 	const { databases } = await createAdminClient();

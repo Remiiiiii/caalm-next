@@ -301,6 +301,12 @@ export const IT_NAVIGATION: ITSidebarSection[] = [
 				permission: PERMISSIONS.IT.VIEW_ROADMAP,
 			},
 			{
+				name: "Production Tools Roadmap",
+				icon: "hammer",
+				url: "/dashboard/it/development/production-tools-roadmap",
+				permission: PERMISSIONS.IT.VIEW_ROADMAP,
+			},
+			{
 				name: "PR log - (Cursor Cloud Agent)",
 				icon: "gitPullRequest",
 				url: "/dashboard/it/development/pr-log",

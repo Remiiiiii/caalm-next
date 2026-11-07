@@ -15,6 +15,8 @@ import { ContractAssistantMarkdown } from "@/components/contract-assistant/Contr
 import { ContractAssistantStarters } from "@/components/contract-assistant/ContractAssistantStarters";
 import { ContractFollowUpSuggestions } from "@/components/contract-assistant/ContractFollowUpSuggestions";
 import { Textarea } from "@/components/ui/textarea";
+import { useComposerAutoGrow } from "@/hooks/useComposerAutoGrow";
+import { cn } from "@/lib/utils";
 import type {
 	ContractCitation,
 	ContractStarterPrompt,
@@ -35,6 +37,7 @@ export function AskCaalmComposer({
 	onSend: (text: string) => void;
 }) {
 	const [draft, setDraft] = useState("");
+	const draftRef = useComposerAutoGrow(draft, 64, 160);
 
 	const send = (text: string) => {
 		const next = text.trim();
@@ -51,6 +54,7 @@ export function AskCaalmComposer({
 			</div>
 			<div className="relative w-full">
 				<Textarea
+					ref={draftRef}
 					value={draft}
 					onChange={(event) => setDraft(event.target.value)}
 					onKeyDown={(event) => {
@@ -61,7 +65,9 @@ export function AskCaalmComposer({
 					}}
 					placeholder="Ask a question about this contract..."
 					rows={1}
-					className="min-h-16 max-h-24 w-full resize-none border-[0.25px] border-slate-300! bg-white px-3! py-2.5! pe-14! text-sm text-slate-700 focus-visible:border-[#078FAB]!"
+					className={cn(
+						"min-h-16 max-h-40 w-full resize-none overflow-hidden border-[0.25px] border-slate-300! bg-white px-3! py-2.5! pe-14! text-sm text-slate-700 focus-visible:border-[#078FAB]!",
+					)}
 					aria-label="Ask CAALM Contract Assistant"
 				/>
 				{/* Plain button: primary-btn's w-full breaks absolute bottom-right placement */}
@@ -70,7 +76,7 @@ export function AskCaalmComposer({
 					onClick={() => send(draft)}
 					disabled={!draft.trim() || loading}
 					aria-label="Send message"
-					className="absolute top-1/2 right-5 z-10 flex h-8 w-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-white shadow-md transition-opacity duration-200 disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
+					className="absolute bottom-2 right-2 z-10 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-white shadow-md transition-opacity duration-200 disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
 					style={{
 						backgroundImage:
 							"linear-gradient(to right, #00c1cb, #078fab, #0e638f, #11487d, #162768)",

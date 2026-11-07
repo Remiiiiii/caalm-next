@@ -2,6 +2,10 @@
 
 import { motion } from "framer-motion";
 import { Building2, Mail, MapPin, Phone } from "lucide-react";
+import {
+	CONTENT_CROSSFADE_DURATION,
+	CONTENT_CROSSFADE_EASE,
+} from "@/lib/ui/content-crossfade";
 import type { UIFileDoc } from "@/types/files";
 
 interface ContactDetailsProps {
@@ -30,9 +34,13 @@ export default function ContactDetails({ contract }: ContactDetailsProps) {
 
 	return (
 		<motion.div
-			initial={{ opacity: 0, y: 20 }}
-			animate={{ opacity: 1, y: 0 }}
-			transition={{ delay: 1.8, duration: 0.5 }}
+			initial={{ opacity: 0 }}
+			animate={{ opacity: 1 }}
+			transition={{
+				delay: 1.8,
+				duration: CONTENT_CROSSFADE_DURATION,
+				ease: CONTENT_CROSSFADE_EASE,
+			}}
 			className="relative z-20 mt-8 glass-card p-4 sm:p-6 w-full max-w-4xl mx-auto sm:ml-24"
 		>
 			<div className="flex items-center gap-2 mb-4">

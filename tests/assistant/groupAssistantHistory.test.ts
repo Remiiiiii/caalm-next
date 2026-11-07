@@ -49,12 +49,13 @@ describe("filterConversationsByTitle", () => {
 });
 
 describe("groupAssistantConversations", () => {
-	it("puts the open conversation in Active and does not repeat it", () => {
+	it("puts the live (status=active) conversation in Active and does not repeat it", () => {
 		const groups = groupAssistantConversations(
 			[
 				conv({
 					$id: "open",
 					title: "Current",
+					status: "active",
 					lastMessageAt: new Date(2026, 10, 1, 10).toISOString(),
 				}),
 				conv({
@@ -63,14 +64,35 @@ describe("groupAssistantConversations", () => {
 					lastMessageAt: new Date(2026, 10, 1, 9).toISOString(),
 				}),
 			],
-			{ activeId: "open", now },
+			{ now },
 		);
 
 		expect(ids("active", groups)).toEqual(["open"]);
 		expect(ids("today", groups)).toEqual(["other"]);
 	});
 
-	it("omits Active when no conversation is open", () => {
+	it("keeps a selected closed conversation in its date group, not Active", () => {
+		const groups = groupAssistantConversations(
+			[
+				conv({
+					$id: "live",
+					status: "active",
+					lastMessageAt: new Date(2026, 9, 31, 14).toISOString(),
+				}),
+				conv({
+					$id: "closed-selected",
+					status: "closed",
+					lastMessageAt: new Date(2026, 9, 30, 21).toISOString(),
+				}),
+			],
+			{ now },
+		);
+
+		expect(ids("active", groups)).toEqual(["live"]);
+		expect(ids("previous7", groups)).toEqual(["closed-selected"]);
+	});
+
+	it("omits Active when no conversation is live", () => {
 		const groups = groupAssistantConversations(
 			[
 				conv({

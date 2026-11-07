@@ -1,0 +1,37 @@
+---
+description: Production Tools Roadmap batch PRs — one PR per up to five Ask CAALM tool tasks
+globs:
+  - src/lib/roadmap/production-tools/**
+  - src/lib/roadmap/production-tools-catalog.ts
+  - cursor/production-tools/**
+alwaysApply: false
+---
+
+# Production Tools Roadmap batch pull requests
+
+This board (`?catalog=pto`) turns the Ask CAALM assistant tool gap list (A–O) into small batch PRs instead of one mega-PR. Each **batch PR** (up to five top-level task codes) is the **implementation ticket**. Do not open one PR per task unless the user explicitly asks.
+
+## Do
+
+- Branch: `cursor/production-tools/s{nn}-b{n}-5329` (see `pto-pr-batches.ts`).
+- Title: `PTO S{n} B{n} {section title} ({task range})`.
+- Body: Who / What / Where / Why / When / How and **Done when** from `production-tools-catalog.ts` for **every task in the batch** (`pnpm`-free: use `buildPtoBatchPrBody`).
+- Merge with green CI to mark those task codes complete on the board.
+
+## Every tool (non-negotiable)
+
+- One `ToolDefinition` with `requiredPermissions` from the database — **no role-name bypass** (see `security-rbac.mdc`).
+- Mutating tools **confirm** before writing and **audit** who/what/when/tenant on success (`audit-narrative.mdc`); never a fake success audit on a denied/failed attempt.
+- Reads are **org-scoped**.
+- AI document extraction stays **human-in-the-loop** (no auto-save) — `ai-document-extraction.mdc`.
+- **2a rule:** wrap the existing product API. If a backend does not exist yet, ship a permission-gated honest "not available yet" response and leave the task **incomplete** until a real wrap lands.
+
+## Never expose to the chat agent
+
+Platform force-delete, manage-schema, and API-key management stay out of Ask CAALM (section 11 note). Do not add a second agent/workflow engine (`no-workflow-engine-sprawl.mdc`) — compose existing tools.
+
+## Reference
+
+- Batch table: `src/lib/roadmap/production-tools/pto-pr-batches.ts`
+- PR body builder: `src/lib/roadmap/production-tools/pto-batch-pr-body.ts`
+- Catalog: `src/lib/roadmap/production-tools-catalog.ts`

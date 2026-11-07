@@ -2,20 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import ExpiryAlertModal, {
-	type ExpirySnoozeDuration,
-	formatExpiryTypeLabel,
-	snoozeDurationToDays,
-} from "@/components/expiry-alert-modal/ExpiryAlertModal";
+import ExpiryAlertModal from "@/components/expiry-alert-modal/ExpiryAlertModal";
 import { useToast } from "@/hooks/use-toast";
 import { useContractSnooze } from "@/hooks/useContractSnooze";
 import { useUpdateContractStatus } from "@/hooks/useUpdateContractStatus";
-import { DESKTOP_MIN_WIDTH } from "@/lib/ui/desktop-first";
+import { resolveContractSnoozeDays } from "@/lib/expiry/action-matrix";
+import { toExpiryItemView } from "@/lib/expiry/expiry-item-view";
 import type { UIFileDoc } from "@/types/files";
-
-function isPhoneViewport() {
-	return typeof window !== "undefined" && window.innerWidth < DESKTOP_MIN_WIDTH;
-}
 
 type ContractExpiryAlertBridgeProps = {
 	open: boolean;
@@ -27,7 +20,8 @@ type ContractExpiryAlertBridgeProps = {
 };
 
 /**
- * Maps a contract UIFileDoc into ExpiryAlertModal and wires renew / snooze / let-expire.
+ * Legacy single-contract bridge (old API, still used by tests). Maps one
+ * UIFileDoc into ExpiryAlertModal and wires renew / snooze / let-expire.
  */
 export default function ContractExpiryAlertBridge({
 	open,
@@ -43,48 +37,34 @@ export default function ContractExpiryAlertBridge({
 	const { updateStatus } = useUpdateContractStatus({ onStatusChange });
 	const [isBusy, setIsBusy] = useState(false);
 
-	const title = contract.contractName || contract.name || "Untitled Contract";
-	const expiryDate = contract.contractExpiryDate || "";
-	const vendor =
-		contract.vendor ||
-		(contract as UIFileDoc & { counterpartyLegalName?: string })
-			.counterpartyLegalName ||
-		"";
+	const view = toExpiryItemView({
+		kind: "contract",
+		id: contract.$id,
+		file: contract,
+		days: daysRemaining,
+	});
 
 	const handleRenew = () => {
-		if (isPhoneViewport()) {
-			toast({
-				title: "Open on a laptop",
-				description: "Renew from the contract library on a desktop or laptop.",
-			});
-			onContractHandled(contract.$id);
-			return;
-		}
 		router.push("/contracts");
 		onContractHandled(contract.$id);
 	};
 
-	const handleViewDetails = () => {
-		if (isPhoneViewport()) {
-			toast({
-				title: "Open on a laptop",
-				description: "Full contract details need a wider screen.",
-			});
-			onContractHandled(contract.$id);
-			return;
-		}
-		router.push(`/contracts?highlight=${encodeURIComponent(contract.$id)}`);
-		onContractHandled(contract.$id);
+	const handleOpenInWorkspace = () => {
+		// Single-item legacy bridge: leave without marking handled so X can reopen.
+		router.push(`/contracts/${contract.$id}/details?fromAlert=1`);
+		onClose();
 	};
 
-	const handleSnooze = async (duration: ExpirySnoozeDuration) => {
-		if (!expiryDate) return;
+	const handleSnooze = async () => {
+		if (!view.expiresAt) return;
+		const days = resolveContractSnoozeDays(view.days);
+		if (days == null) return;
 		setIsBusy(true);
 		try {
 			const success = await snoozeContract({
 				contractId: contract.$id,
-				days: snoozeDurationToDays(duration),
-				expiryDate,
+				days,
+				expiryDate: view.expiresAt,
 			});
 			if (success) {
 				onStatusChange?.();
@@ -116,17 +96,12 @@ export default function ContractExpiryAlertBridge({
 	};
 
 	const handleContactProvider = () => {
-		const counterparty = contract as UIFileDoc & {
-			counterpartyContactEmail?: string;
-			counterpartyContactPhone?: string;
-		};
-
-		if (counterparty.counterpartyContactEmail) {
-			window.location.href = `mailto:${counterparty.counterpartyContactEmail}`;
+		if (view.contact?.email) {
+			window.location.href = `mailto:${view.contact.email}`;
 			return;
 		}
-		if (counterparty.counterpartyContactPhone) {
-			window.location.href = `tel:${counterparty.counterpartyContactPhone}`;
+		if (view.contact?.phone) {
+			window.location.href = `tel:${view.contact.phone}`;
 			return;
 		}
 		toast({
@@ -140,15 +115,28 @@ export default function ContractExpiryAlertBridge({
 		<ExpiryAlertModal
 			open={open}
 			entityType="contract"
-			title={title}
-			expiryDate={expiryDate}
-			daysRemaining={daysRemaining}
-			amount={typeof contract.amount === "number" ? contract.amount : undefined}
-			status={contract.status || "active"}
-			typeLabel={formatExpiryTypeLabel(contract.contractType)}
-			vendor={vendor || "—"}
+			entityId={contract.$id}
+			title={view.title}
+			expiryDate={view.expiresAt}
+			daysRemaining={view.days}
+			amount={view.amount}
+			amountLabel={view.amountLabel}
+			status={view.status}
+			typeLabel={view.typeLabel}
+			contactEmail={view.contact?.email}
+			contactPhone={view.contact?.phone}
+			vendor={view.vendor}
+			department={view.department}
+			referenceNumber={view.referenceNumber}
+			issuingAuthority={view.issuingAuthority}
+			fileUrl={view.fileUrl}
+			division={view.division}
+			uploadedById={view.uploadedById}
+			assignedManagerIds={view.assignedManagerIds}
+			aiSynopsis={view.aiSynopsis}
+			aiSynopsisGeneratedAt={view.aiSynopsisGeneratedAt}
 			onRenew={handleRenew}
-			onViewDetails={handleViewDetails}
+			onOpenInWorkspace={handleOpenInWorkspace}
 			onSnooze={handleSnooze}
 			onLetExpire={handleLetExpire}
 			onContactProvider={handleContactProvider}

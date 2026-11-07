@@ -4,7 +4,7 @@ import type { ToolDefinition } from "@/lib/assistant/tools/types";
 import { logAuditUploadEvent } from "@/lib/audit-upload/audit-log";
 import { confirmAuditFinding } from "@/lib/audit-upload/confirm-finding";
 import { isCapClosableStatus } from "@/lib/assistant/cap-close-assist";
-import { getCap, updateCap } from "@/lib/audit-upload/store";
+import { getCap, listCaps, updateCap } from "@/lib/audit-upload/store";
 import { getAuditLogs } from "@/lib/services/audit-logger";
 
 export const AUDIT_TOOLS: ToolDefinition[] = [
@@ -193,7 +193,7 @@ export const AUDIT_TOOLS: ToolDefinition[] = [
 			const findingId = String(args.findingId ?? "").trim();
 			const documentId = String(args.documentId ?? "").trim();
 			const verificationNote = String(args.verificationNote ?? "").trim();
-			if (!capId || !findingId || !documentId) {
+			if (!findingId || !documentId) {
 				return { result: { error: "Missing corrective action or finding id." } };
 			}
 			if (!verificationNote) {
@@ -204,12 +204,20 @@ export const AUDIT_TOOLS: ToolDefinition[] = [
 					},
 				};
 			}
-			const cap = await getCap(ctx.orgId, capId);
-			if (!cap) {
-				return { result: { error: "Corrective action not found." } };
+			// Prefer the given capId; fall back to resolving by finding so a stale/missing
+			// id (model guessed, or follow-up turn) does not dead-end at "not found".
+			let cap = capId ? await getCap(ctx.orgId, capId) : null;
+			if (!cap || cap.findingId !== findingId) {
+				const caps = await listCaps({ orgId: ctx.orgId, documentId, limit: 50 });
+				cap = caps.find((row) => row.findingId === findingId) ?? null;
 			}
-			if (cap.findingId !== findingId) {
-				return { result: { error: "Finding does not match this action." } };
+			if (!cap) {
+				return {
+					result: {
+						error:
+							"This finding does not have a corrective action yet. Confirm the finding and start the action first.",
+					},
+				};
 			}
 			if (!isCapClosableStatus(cap.status)) {
 				return {
@@ -228,19 +236,20 @@ export const AUDIT_TOOLS: ToolDefinition[] = [
 					},
 				};
 			}
+			// Use the resolved cap's ids so a missing/stale input capId still opens the right dialog.
 			return {
 				result: {
 					ok: true,
-					capId,
+					capId: cap.$id,
 					findingId,
-					documentId,
+					documentId: cap.documentId,
 					verificationNote,
 				},
 				clientAction: {
 					type: "open_close_cap",
-					capId,
+					capId: cap.$id,
 					findingId,
-					documentId,
+					documentId: cap.documentId,
 					verificationNote,
 				},
 			};

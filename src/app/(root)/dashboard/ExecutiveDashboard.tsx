@@ -21,11 +21,11 @@ import {
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { Models } from "node-appwrite";
 // In your dashboard page (e.g., src/app/(root)/dashboard/page.tsx)
 // import { NotificationDemoButton } from '@/components/NotificationDemoButton';
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import CountUp from "react-countup";
 import useSWR from "swr";
 import ClientTimestamp from "@/components/ClientTimestamp";
@@ -87,6 +87,7 @@ import { useCombinedExpiryModal } from "@/hooks/useCombinedExpiryModal";
 import { useDashboardWidgetBundle } from "@/hooks/useDashboardWidgetBundle";
 import { useUnifiedDashboardData } from "@/hooks/useUnifiedDashboardData";
 import { useUpdateExpiredOnce } from "@/hooks/useUpdateExpiredOnce";
+import { isDemoMode } from "@/lib/config/demo-mode";
 import { useCtaButtonClass } from "@/lib/ui/use-cta-button-class";
 import { cn } from "@/lib/utils";
 import type { UIFileDoc } from "@/types/files";
@@ -272,37 +273,67 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 	const accountability = slaMetricsRes?.metrics?.accountability;
 	const expiration = slaMetricsRes?.metrics?.expiration;
 
-	// Combined contracts + licenses expiry modal (0–30 days)
+	const router = useRouter();
+	const pathname = usePathname();
+	const searchParams = useSearchParams();
+	// A pending deep-link resume (push notification "View" or "Back to
+	// alert" from the details page) must win the race against the default
+	// auto-open-at-index-0 effect below — otherwise the modal opens on the
+	// first queue item before the resume effect gets a chance to redirect it.
+	const hasPendingExpiryResume = Boolean(
+		searchParams?.get("expiryEntity") && searchParams?.get("expiryId"),
+	);
+
+	// Combined expiry modal: trigger 0–30d; queue shows −30d…+90d
 	const {
 		itemsToShow,
 		isModalOpen,
 		closeModal,
-		triggerTestModal,
+		parkModal,
+		parkedSession,
+		resumeIndex,
+		resumeParkedSession,
+		triggerDevTestModal,
+		triggerDemoTestModal,
 		openForEntityId,
 		markItemDismissed,
 		refreshLicenses,
 		shouldPlaySpeech,
-	} = useCombinedExpiryModal(contractsFromApi || []);
-
-	const router = useRouter();
-	const searchParams = useSearchParams();
+	} = useCombinedExpiryModal(contractsFromApi || [], {
+		suppressAutoOpen: hasPendingExpiryResume,
+	});
+	const showDevExpiryTest = process.env.NODE_ENV === "development";
+	const showDemoExpiryTest = isDemoMode();
 
 	// Desktop push View → /dashboard?expiryEntity=contract|license&expiryId=…
+	// Handle each deep-link once — re-running after open collapses a good
+	// multi-item resume into the 1-item fallback (shown-load / dep churn).
+	const handledExpiryDeepLinkRef = useRef<string | null>(null);
 	useEffect(() => {
 		const entity = searchParams?.get("expiryEntity");
 		const id = searchParams?.get("expiryId");
-		if ((entity !== "contract" && entity !== "license") || !id) return;
+		if ((entity !== "contract" && entity !== "license") || !id) {
+			handledExpiryDeepLinkRef.current = null;
+			return;
+		}
 		if (entity === "contract" && !contractsFromApi?.length) return;
+
+		const key = `${entity}:${id}`;
+		if (handledExpiryDeepLinkRef.current === key) return;
 
 		const opened = openForEntityId(entity, id);
 		if (opened || entity === "license") {
+			handledExpiryDeepLinkRef.current = key;
 			const next = new URLSearchParams(searchParams?.toString() ?? "");
 			next.delete("expiryEntity");
 			next.delete("expiryId");
 			const qs = next.toString();
-			router.replace(qs ? `/dashboard?${qs}` : "/dashboard", { scroll: false });
+			// Stay on the role home path — replace to `/dashboard` would redirect
+			// again and remount this tree, wiping resumeIndex / open state.
+			const home = pathname || "/dashboard";
+			router.replace(qs ? `${home}?${qs}` : home, { scroll: false });
 		}
-	}, [searchParams, contractsFromApi, openForEntityId, router]);
+	}, [searchParams, contractsFromApi, openForEntityId, router, pathname]);
 
 	// Handle contract/license status change - refresh unified data + licenses
 	const handleContractStatusChange = () => {
@@ -784,8 +815,22 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 				onClose={closeModal}
 				onStatusChange={handleContractStatusChange}
 				onItemDismissed={markItemDismissed}
+				onParkSession={parkModal}
+				initialIndex={resumeIndex}
 				shouldPlaySpeech={shouldPlaySpeech}
 			/>
+			{parkedSession && !isModalOpen && (
+				<button
+					type="button"
+					onClick={resumeParkedSession}
+					className="fixed bottom-6 right-6 z-50 inline-flex cursor-pointer items-center gap-2 rounded-full border border-[#0f5384]/20 bg-white px-4 py-2.5 text-sm font-semibold text-[#0f5384] shadow-lg transition-colors hover:bg-[#F1F9FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
+				>
+					Resume expiry alerts
+					<span className="rounded-full bg-[#0f5384]/10 px-2 py-0.5 text-xs tabular-nums">
+						{parkedSession.count}
+					</span>
+				</button>
+			)}
 			{/* Main Content Container */}
 			<div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
 				<motion.div {...revealSolo(softRise)}>
@@ -803,9 +848,9 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 								</div>
 
 								<div className="flex flex-col items-end gap-2">
-									{process.env.NODE_ENV === "development" && (
+									{showDevExpiryTest && (
 										<Button
-											onClick={triggerTestModal}
+											onClick={triggerDevTestModal}
 											variant="outline"
 											size="sm"
 											className={cn(
@@ -815,6 +860,23 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 										>
 											<span className="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-orange">
 												Dev
+											</span>
+											<Pencil className="h-3.5 w-3.5" />
+											Test expiry modal
+										</Button>
+									)}
+									{showDemoExpiryTest && (
+										<Button
+											onClick={triggerDemoTestModal}
+											variant="outline"
+											size="sm"
+											className={cn(
+												"h-9 gap-2 border border-dashed border-blue/40 bg-blue/10",
+												"px-3 text-xs font-medium text-blue hover:bg-blue/15 hover:border-blue/50",
+											)}
+										>
+											<span className="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-blue">
+												Demo
 											</span>
 											<Pencil className="h-3.5 w-3.5" />
 											Test expiry modal

@@ -1,0 +1,57 @@
+---
+description: Recommend a chat LLM only in Plan mode or clearly complex work — not Ask, simple bugs, or simple design
+alwaysApply: false
+---
+
+# LLM model recommendation (gated)
+
+You cannot switch the user’s chat model. When this rule applies, recommend one primary + one fallback once, then continue.
+
+## Hard skip (never load or tip)
+
+Do **not** read this file or emit a **Model tip** when:
+
+- Cursor **Ask** mode (questions only)
+- Simple bug fixes (clear repro, one path, no architecture)
+- Simple design / UI polish (copy, spacing, icon, color, one component)
+- Tiny Agent edits, renames, “what does this do?”, or follow-ups mid-task
+
+Default: **stay silent** on models. Silence saves tokens.
+
+## When to apply
+
+Only if **both** are true:
+
+1. Work is clearly **above** simple bug / simple design / Ask, **and**
+2. Either:
+   - **Plan mode** is active (or user asked to **make a plan** for non-trivial work), or
+   - The prompt is obviously multi-system, security/RBAC-heavy, roadmap-batch, schema+API+UI, or sticky/ambiguous
+
+Then: read this file once; one tip; do not repeat every turn.
+
+## Sophistication ladder
+
+| Level | Signals | Prefer |
+|-------|---------|--------|
+| **Standard** | Non-trivial feature API+UI, schema migration, permission seed, audit path, CI with real diagnosis | **Claude Sonnet 5.5** (Medium). Fallbacks: **Opus 5.5**, **GPT-5.5** / **GPT-5.6 Sol**, **Codex 5.3** (CI/code) |
+| **High** | Roadmap batch, RBAC/security review, multi-system, architecture trade-offs | **Claude Opus 4.8** (High). Fallbacks: **Fable 5.1**, **Muse Wonder** |
+| **Extra high** | Ambiguous hard design, deep tenant/security blast radius | **Claude Opus 4.7** (Extra High). Fallback: **Opus 4.8** |
+
+Skip recommending **Lite** models in this rule — those tasks should not trigger the tip at all (user can keep Auto / current model).
+
+Also OK at Standard: **Gemini 4 Argon** / **Gemini 3.1 Pro**; **Grok 4.7** only if the user asks for speed on an already-complex plan.
+
+## Plan template → tip?
+
+| Template | Tip? |
+|----------|------|
+| **F**, tiny **G**/**H** only | **No** — too simple |
+| **A**, **D**, **E**, **I**, **J**, non-trivial **G**/**H** | Yes → Standard |
+| **B**, **C**, **A+E**, multi-letter | Yes → High (Extra high if deep **C**) |
+| **K** | Tip only if signals are clearly Standard+ |
+
+## Reply shape
+
+> **Model tip:** use **Claude Sonnet 5.5** for this (standard feature). Fallback: Opus 5.5. Switch in the model picker if you want.
+
+Never claim you switched models. Never invent names outside the picker list above.

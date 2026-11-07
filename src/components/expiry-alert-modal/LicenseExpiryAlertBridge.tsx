@@ -2,11 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import ExpiryAlertModal, {
-	type ExpirySnoozeDuration,
-	formatExpiryTypeLabel,
-} from "@/components/expiry-alert-modal/ExpiryAlertModal";
+import ExpiryAlertModal from "@/components/expiry-alert-modal/ExpiryAlertModal";
 import { useToast } from "@/hooks/use-toast";
+import { toExpiryItemView } from "@/lib/expiry/expiry-item-view";
 import type { License } from "@/types/licenses";
 
 type LicenseExpiryAlertBridgeProps = {
@@ -19,8 +17,9 @@ type LicenseExpiryAlertBridgeProps = {
 };
 
 /**
- * Maps a License into ExpiryAlertModal.
- * Snooze / dismiss are session-scoped until a license snooze API exists.
+ * Legacy single-license bridge (old API, still used by tests). Licenses can't
+ * be snoozed by date or marked inactive — the only deferral is a session
+ * dismiss until a license snooze API exists.
  */
 export default function LicenseExpiryAlertBridge({
 	open,
@@ -34,43 +33,24 @@ export default function LicenseExpiryAlertBridge({
 	const { toast } = useToast();
 	const [isBusy, setIsBusy] = useState(false);
 
-	const title = license.licenseName || "Untitled License";
-	const expiryDate = license.licenseExpiryDate || license.expirationDate || "";
-	const vendor = license.vendor || license.issuingAuthority || "";
-
-	const amountRaw =
-		(license as License & { amount?: number }).amount ?? license.cost;
-	const amount =
-		typeof amountRaw === "number" && Number.isFinite(amountRaw)
-			? amountRaw
-			: undefined;
+	const view = toExpiryItemView({
+		kind: "license",
+		id: license.$id,
+		license,
+		days: daysRemaining,
+	});
 
 	const handleRenew = () => {
-		router.push(`/licenses?highlight=${encodeURIComponent(license.$id)}`);
+		router.push("/licenses");
 		onLicenseHandled(license.$id);
 	};
 
-	const handleViewDetails = () => {
-		router.push(`/licenses?highlight=${encodeURIComponent(license.$id)}`);
-		onLicenseHandled(license.$id);
+	const handleOpenInWorkspace = () => {
+		router.push(`/licenses/${license.$id}/details?fromAlert=1`);
+		onClose();
 	};
 
-	const handleSnooze = async (_duration: ExpirySnoozeDuration) => {
-		setIsBusy(true);
-		try {
-			toast({
-				title: "Reminder snoozed",
-				description:
-					"This license won't show again until you start a new session.",
-			});
-			onStatusChange?.();
-			onLicenseHandled(license.$id);
-		} finally {
-			setIsBusy(false);
-		}
-	};
-
-	const handleLetExpire = async () => {
+	const handleDismiss = () => {
 		setIsBusy(true);
 		try {
 			toast({
@@ -89,17 +69,28 @@ export default function LicenseExpiryAlertBridge({
 		<ExpiryAlertModal
 			open={open}
 			entityType="license"
-			title={title}
-			expiryDate={expiryDate}
-			daysRemaining={daysRemaining}
-			amount={amount}
-			status={license.status || "active"}
-			typeLabel={formatExpiryTypeLabel(license.licenseType)}
-			vendor={vendor || "—"}
+			entityId={license.$id}
+			title={view.title}
+			expiryDate={view.expiresAt}
+			daysRemaining={view.days}
+			amount={view.amount}
+			amountLabel={view.amountLabel}
+			status={view.status}
+			typeLabel={view.typeLabel}
+			vendor={view.vendor}
+			department={view.department}
+			referenceNumber={view.referenceNumber}
+			issuingAuthority={view.issuingAuthority}
+			fileUrl={view.fileUrl}
+			division={view.division}
+			uploadedById={view.uploadedById}
+			assignedManagerIds={view.assignedManagerIds}
+			aiSynopsis={view.aiSynopsis}
+			aiSynopsisGeneratedAt={view.aiSynopsisGeneratedAt}
+			renewing={view.renewing}
 			onRenew={handleRenew}
-			onViewDetails={handleViewDetails}
-			onSnooze={handleSnooze}
-			onLetExpire={handleLetExpire}
+			onOpenInWorkspace={handleOpenInWorkspace}
+			onDismiss={handleDismiss}
 			onClose={onClose}
 			isBusy={isBusy}
 		/>

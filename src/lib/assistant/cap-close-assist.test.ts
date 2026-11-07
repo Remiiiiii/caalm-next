@@ -18,6 +18,14 @@ describe("detectCapCloseAssistIntent", () => {
 			detectCapCloseAssistIntent("Write a verification note for this cap"),
 		).toEqual({ kind: "stage_note" });
 	});
+
+	it("detects open + paste the following phrasing", () => {
+		expect(
+			detectCapCloseAssistIntent(
+				"Open mark closed and paste the following: Uploaded files and corrected the misclassification.",
+			),
+		).toEqual({ kind: "open_dialog" });
+	});
 });
 
 describe("extractVerificationNoteFromText", () => {
@@ -26,6 +34,13 @@ describe("extractVerificationNoteFromText", () => {
 			'> "Corrective action mapping is complete and verified in CAALM."',
 		);
 		expect(note).toContain("Corrective action mapping");
+	});
+
+	it("pulls text after 'paste the following:'", () => {
+		const note = extractVerificationNoteFromText(
+			"Open mark closed and paste the following: Uploaded files and corrected the misclassification of CDC award expenditures.",
+		);
+		expect(note).toContain("Uploaded files and corrected");
 	});
 });
 

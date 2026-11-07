@@ -61,5 +61,69 @@ export function contractRowToFileDoc(
 			| string
 			| undefined,
 		deletedAt: (row.deletedAt as string | null | undefined) ?? null,
+		aiSynopsis: row.aiSynopsis as string | undefined,
+		aiSynopsisGeneratedAt: row.aiSynopsisGeneratedAt as string | undefined,
+		contractCategory: row.contractCategory as string | undefined,
+		departmentOwner: row.departmentOwner as string | undefined,
+		businessUnit: row.businessUnit as string | undefined,
+		subDepartment: row.subDepartment as string | undefined,
+		startDate: row.startDate as string | undefined,
+		executionDate: row.executionDate as string | undefined,
+		autoRenew: row.autoRenew as boolean | undefined,
+		renewalNoticeDays: row.renewalNoticeDays as number | undefined,
+		counterpartyLegalName: row.counterpartyLegalName as string | undefined,
+		counterpartyContactTitle: row.counterpartyContactTitle as
+			| string
+			| undefined,
+		counterpartyContactEmail: row.counterpartyContactEmail as
+			| string
+			| undefined,
+		counterpartyContactPhone: row.counterpartyContactPhone as
+			| string
+			| undefined,
+		counterpartyAddress: row.counterpartyAddress as string | undefined,
+		counterpartyType: row.counterpartyType as string | undefined,
+		counterpartyTaxId: row.counterpartyTaxId as string | undefined,
+		counterpartyDunsNumber: row.counterpartyDunsNumber as string | undefined,
+		currencyCode: row.currencyCode as string | undefined,
+		notToExceedAmount: row.notToExceedAmount as number | undefined,
+		paymentTerms: row.paymentTerms as string | undefined,
+		paymentSchedule: row.paymentSchedule as string | undefined,
+		budgetCode: row.budgetCode as string | undefined,
+		costCenter: row.costCenter as string | undefined,
+		hipaaRequired: row.hipaaRequired as boolean | undefined,
+		dataPrivacyRequirements: row.dataPrivacyRequirements as string | undefined,
+		backgroundCheckRequired: row.backgroundCheckRequired as boolean | undefined,
+		regulatoryRequirements: row.regulatoryRequirements as string | undefined,
+		auditRightsGranted: row.auditRightsGranted as boolean | undefined,
+		insuranceRequired: row.insuranceRequired as boolean | undefined,
+		insuranceVerifiedDate: row.insuranceVerifiedDate as string | undefined,
+		insuranceExpiryDate: row.insuranceExpiryDate as string | undefined,
+		insuranceCoveragePerIncident: row.insuranceCoveragePerIncident as
+			| number
+			| undefined,
+		insuranceCoverageAggregate: row.insuranceCoverageAggregate as
+			| number
+			| undefined,
+		indemnificationIncluded: row.indemnificationIncluded as boolean | undefined,
+		keyObligations: row.keyObligations as string[] | undefined,
+		serviceLevelAgreements: row.serviceLevelAgreements as string | undefined,
+		performanceMetrics: row.performanceMetrics as string | undefined,
+		reportingRequirements: row.reportingRequirements as string | undefined,
+		postTerminationObligations: row.postTerminationObligations as
+			| string
+			| undefined,
+		terminationNoticeDays: row.terminationNoticeDays as number | undefined,
+		terminationRights: row.terminationRights as string | undefined,
+		curePeriodDays: row.curePeriodDays as number | undefined,
+		internalApproverIds: row.internalApproverIds as string[] | undefined,
+		currentApprovalStage: row.currentApprovalStage as string | undefined,
+		approvalHistoryLog: row.approvalHistoryLog as string | undefined,
+		reviewerComments: row.reviewerComments as string | undefined,
+		attachmentReferences: row.attachmentReferences as string[] | undefined,
+		relatedDocumentIds: row.relatedDocumentIds as string[] | undefined,
+		versionNumber: row.versionNumber as string | undefined,
+		parentContractId: row.parentContractId as string | undefined,
+		templateUsed: row.templateUsed as string | undefined,
 	};
 }

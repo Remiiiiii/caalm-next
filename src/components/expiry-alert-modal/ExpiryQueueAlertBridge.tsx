@@ -1,103 +1,151 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ExpiryAlertModal, {
-	type ExpirySnoozeDuration,
-	formatExpiryTypeLabel,
-	snoozeDurationToDays,
+	type ExpiryNarration,
+	type ExpiryQueue,
 } from "@/components/expiry-alert-modal/ExpiryAlertModal";
 import { useToast } from "@/hooks/use-toast";
 import { useContractSnooze } from "@/hooks/useContractSnooze";
 import { useUpdateContractStatus } from "@/hooks/useUpdateContractStatus";
+import { resolveContractSnoozeDays } from "@/lib/expiry/action-matrix";
+import { toExpiryItemView } from "@/lib/expiry/expiry-item-view";
 import type { ExpiryQueueItem } from "@/lib/expiry/expiry-queue";
 import { DESKTOP_MIN_WIDTH } from "@/lib/ui/desktop-first";
-import type { UIFileDoc } from "@/types/files";
-import type { License } from "@/types/licenses";
-
-function isPhoneViewport() {
-	return typeof window !== "undefined" && window.innerWidth < DESKTOP_MIN_WIDTH;
-}
 
 type ExpiryQueueAlertBridgeProps = {
 	item: ExpiryQueueItem;
 	onClose: () => void;
 	onItemHandled: (item: ExpiryQueueItem) => void;
+	/** Park the queue (keep items) and leave for Contracts/Licenses. */
+	onParkSession?: () => void;
 	onStatusChange?: () => void;
+	queuePosition?: { index: number; total: number };
+	onPrev?: () => void;
+	onNext?: () => void;
+	narration?: ExpiryNarration | null;
+	queue?: ExpiryQueue | null;
 };
 
-function parseAmount(value: unknown): number | undefined {
-	if (typeof value === "number" && Number.isFinite(value)) return value;
-	if (typeof value === "string" && value.trim() !== "") {
-		const n = Number.parseFloat(value);
-		return Number.isFinite(n) ? n : undefined;
-	}
-	return undefined;
+/** Reactive "is this a phone" check so the Renew note updates on resize. */
+function useIsPhoneViewport() {
+	const [isPhone, setIsPhone] = useState(false);
+	useEffect(() => {
+		const check = () => setIsPhone(window.innerWidth < DESKTOP_MIN_WIDTH);
+		check();
+		window.addEventListener("resize", check);
+		return () => window.removeEventListener("resize", check);
+	}, []);
+	return isPhone;
+}
+
+function workspaceHref(item: ExpiryQueueItem): string {
+	return item.kind === "contract"
+		? `/contracts/${item.id}/details?fromAlert=1`
+		: `/licenses/${item.id}/details?fromAlert=1`;
 }
 
 /**
- * Single ExpiryAlertModal for carousel slides.
- * Shell (backdrop / Spline / close) stays mounted; only contentKey changes.
+ * Adapter: turns one queue item into ExpiryAlertModal content + handlers. The
+ * shell (band / narration / queue) stays mounted; only the body changes per
+ * slide via contentKey.
  */
 export default function ExpiryQueueAlertBridge({
 	item,
 	onClose,
 	onItemHandled,
+	onParkSession,
 	onStatusChange,
+	queuePosition,
+	onPrev,
+	onNext,
+	narration,
+	queue,
 }: ExpiryQueueAlertBridgeProps) {
 	const router = useRouter();
 	const { toast } = useToast();
 	const { snoozeContract } = useContractSnooze();
 	const { updateStatus } = useUpdateContractStatus({ onStatusChange });
 	const [isBusy, setIsBusy] = useState(false);
+	const isPhone = useIsPhoneViewport();
 
+	const view = toExpiryItemView(item);
 	const contentKey = `${item.kind}:${item.id}`;
 
-	if (item.kind === "contract") {
-		const contract = item.file;
-		const title = contract.contractName || contract.name || "Untitled Contract";
-		const expiryDate = contract.contractExpiryDate || "";
-		const vendor =
-			contract.vendor ||
-			(contract as UIFileDoc & { counterpartyLegalName?: string })
-				.counterpartyLegalName ||
-			"";
+	const handleOpenInWorkspace = () => {
+		onParkSession?.();
+		router.push(workspaceHref(item));
+	};
 
+	const handleContactProvider = () => {
+		if (view.contact?.email) {
+			window.location.href = `mailto:${view.contact.email}`;
+			return;
+		}
+		if (view.contact?.phone) {
+			window.location.href = `tel:${view.contact.phone}`;
+			return;
+		}
+		toast({
+			title: "Contact information not available",
+			description: "No contact email or phone number found for this record.",
+			variant: "destructive",
+		});
+	};
+
+	const sharedModalProps = {
+		open: true as const,
+		contentKey,
+		entityId: item.id,
+		title: view.title,
+		expiryDate: view.expiresAt,
+		daysRemaining: view.days,
+		amount: view.amount,
+		amountLabel: view.amountLabel,
+		status: view.status,
+		typeLabel: view.typeLabel,
+		contactEmail: view.contact?.email,
+		contactPhone: view.contact?.phone,
+		vendor: view.vendor,
+		department: view.department,
+		referenceNumber: view.referenceNumber,
+		issuingAuthority: view.issuingAuthority,
+		fileUrl: view.fileUrl,
+		division: view.division,
+		uploadedById: view.uploadedById,
+		assignedManagerIds: view.assignedManagerIds,
+		aiSynopsis: view.aiSynopsis,
+		aiSynopsisGeneratedAt: view.aiSynopsisGeneratedAt,
+		renewing: view.renewing,
+		renewRequiresDesktop: isPhone,
+		onOpenInWorkspace: handleOpenInWorkspace,
+		onContactProvider: handleContactProvider,
+		onClose,
+		isBusy,
+		queuePosition,
+		onPrev,
+		onNext,
+		narration,
+		queue,
+	};
+
+	if (item.kind === "contract") {
 		const handleRenew = () => {
-			if (isPhoneViewport()) {
-				toast({
-					title: "Open on a laptop",
-					description:
-						"Renew from the contract library on a desktop or laptop.",
-				});
-				onItemHandled(item);
-				return;
-			}
 			router.push("/contracts");
 			onItemHandled(item);
 		};
 
-		const handleViewDetails = () => {
-			if (isPhoneViewport()) {
-				toast({
-					title: "Open on a laptop",
-					description: "Full contract details need a wider screen.",
-				});
-				onItemHandled(item);
-				return;
-			}
-			router.push(`/contracts?highlight=${encodeURIComponent(contract.$id)}`);
-			onItemHandled(item);
-		};
-
-		const handleSnooze = async (duration: ExpirySnoozeDuration) => {
-			if (!expiryDate) return;
+		const handleSnooze = async () => {
+			if (!view.expiresAt) return;
+			const days = resolveContractSnoozeDays(view.days);
+			if (days == null) return;
 			setIsBusy(true);
 			try {
 				const success = await snoozeContract({
-					contractId: contract.$id,
-					days: snoozeDurationToDays(duration),
-					expiryDate,
+					contractId: item.id,
+					days,
+					expiryDate: view.expiresAt,
 				});
 				if (success) {
 					onStatusChange?.();
@@ -112,7 +160,7 @@ export default function ExpiryQueueAlertBridge({
 			setIsBusy(true);
 			try {
 				const success = await updateStatus({
-					fileId: contract.$id,
+					fileId: item.id,
 					status: "inactive",
 					path: "/dashboard",
 				});
@@ -128,132 +176,39 @@ export default function ExpiryQueueAlertBridge({
 			}
 		};
 
-		const handleContactProvider = () => {
-			const counterparty = contract as UIFileDoc & {
-				counterpartyContactEmail?: string;
-				counterpartyContactPhone?: string;
-			};
-
-			if (counterparty.counterpartyContactEmail) {
-				window.location.href = `mailto:${counterparty.counterpartyContactEmail}`;
-				return;
-			}
-			if (counterparty.counterpartyContactPhone) {
-				window.location.href = `tel:${counterparty.counterpartyContactPhone}`;
-				return;
-			}
-			toast({
-				title: "Contact information not available",
-				description: "No contact email or phone number found for this vendor.",
-				variant: "destructive",
-			});
-		};
-
 		return (
 			<ExpiryAlertModal
-				open
-				contentKey={contentKey}
+				{...sharedModalProps}
 				entityType="contract"
-				title={title}
-				expiryDate={expiryDate}
-				daysRemaining={item.days}
-				amount={parseAmount(contract.amount)}
-				status={contract.status || "active"}
-				typeLabel={formatExpiryTypeLabel(contract.contractType)}
-				vendor={vendor || "—"}
 				onRenew={handleRenew}
-				onViewDetails={handleViewDetails}
 				onSnooze={handleSnooze}
 				onLetExpire={handleLetExpire}
-				onContactProvider={handleContactProvider}
-				onClose={onClose}
-				isBusy={isBusy}
 			/>
 		);
 	}
 
-	const license = item.license;
-	const title = license.licenseName || "Untitled License";
-	const expiryDate = license.licenseExpiryDate || license.expirationDate || "";
-	const vendor = license.vendor || license.issuingAuthority || "";
-	const amount = parseAmount(
-		(license as License & { amount?: number }).amount ?? license.cost,
-	);
-
+	// License — renew / dismiss only (no date snooze, no inactive).
 	const handleRenew = () => {
-		if (isPhoneViewport()) {
-			toast({
-				title: "Open on a laptop",
-				description: "Renew from the license library on a desktop or laptop.",
-			});
-			onItemHandled(item);
-			return;
-		}
-		router.push(`/licenses?highlight=${encodeURIComponent(license.$id)}`);
+		router.push("/licenses");
 		onItemHandled(item);
 	};
 
-	const handleViewDetails = () => {
-		if (isPhoneViewport()) {
-			toast({
-				title: "Open on a laptop",
-				description: "Full license details need a wider screen.",
-			});
-			onItemHandled(item);
-			return;
-		}
-		router.push(`/licenses?highlight=${encodeURIComponent(license.$id)}`);
+	const handleDismiss = () => {
+		toast({
+			title: "Reminder dismissed",
+			description:
+				"This license won't show again until you start a new session.",
+		});
+		onStatusChange?.();
 		onItemHandled(item);
-	};
-
-	const handleSnooze = async (_duration: ExpirySnoozeDuration) => {
-		setIsBusy(true);
-		try {
-			toast({
-				title: "Reminder snoozed",
-				description:
-					"This license won't show again until you start a new session.",
-			});
-			onStatusChange?.();
-			onItemHandled(item);
-		} finally {
-			setIsBusy(false);
-		}
-	};
-
-	const handleLetExpire = async () => {
-		setIsBusy(true);
-		try {
-			toast({
-				title: "Reminder dismissed",
-				description:
-					"This license won't show again until you start a new session.",
-			});
-			onStatusChange?.();
-			onItemHandled(item);
-		} finally {
-			setIsBusy(false);
-		}
 	};
 
 	return (
 		<ExpiryAlertModal
-			open
-			contentKey={contentKey}
+			{...sharedModalProps}
 			entityType="license"
-			title={title}
-			expiryDate={expiryDate}
-			daysRemaining={item.days}
-			amount={amount}
-			status={license.status || "active"}
-			typeLabel={formatExpiryTypeLabel(license.licenseType)}
-			vendor={vendor || "—"}
 			onRenew={handleRenew}
-			onViewDetails={handleViewDetails}
-			onSnooze={handleSnooze}
-			onLetExpire={handleLetExpire}
-			onClose={onClose}
-			isBusy={isBusy}
+			onDismiss={handleDismiss}
 		/>
 	);
 }
