@@ -1,7 +1,6 @@
 "use client";
 
 import {
-	ArrowLeft,
 	Building2,
 	ChevronLeft,
 	ChevronRight,
@@ -31,6 +30,7 @@ import {
 } from "react";
 import ManagerAvatars from "@/components/ManagerAvatars";
 import Thumbnail from "@/components/Thumbnail";
+import { Button } from "@/components/ui/button";
 import type { AppUser } from "@/lib/actions/user.actions";
 import { fetchUserNamesByIds } from "@/lib/actions/user.actions";
 import {
@@ -790,9 +790,9 @@ export default function ContractPreviewSheet({
 					<button
 						type="button"
 						onClick={onBack}
-						className="inline-flex cursor-pointer items-center gap-1.5 text-[11.5px] font-semibold text-[#0f5384] transition-colors hover:text-[#078fab] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
+						className="flex items-center gap-2 text-sm font-semibold text-slate-400 hover:text-slate-600"
 					>
-						<ArrowLeft className="h-3.5 w-3.5" aria-hidden />
+						<ChevronLeft className="h-4 w-4" aria-hidden />
 						{backLabel}
 					</button>
 				</div>

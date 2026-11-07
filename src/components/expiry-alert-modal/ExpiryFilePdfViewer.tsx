@@ -11,7 +11,7 @@ const ExpiryFilePdfViewer = dynamic(
 	{
 		ssr: false,
 		loading: () => (
-			<div className="flex h-64 items-center justify-center text-sm text-slate-500">
+			<div className="flex min-h-[42vh] items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-500">
 				Loading document…
 			</div>
 		),

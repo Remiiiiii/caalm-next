@@ -16,6 +16,8 @@ type ActionRailProps = {
 	renewRequiresDesktop?: boolean;
 	onRenew: () => void;
 	onViewDetails: () => void;
+	/** Prefetch the PDF chunk before click so More details isn’t a cold start. */
+	onViewDetailsHover?: () => void;
 	onSnooze?: () => void;
 	onDismiss?: () => void;
 	onLetExpire?: () => void;
@@ -32,6 +34,7 @@ export default function ActionRail({
 	renewRequiresDesktop,
 	onRenew,
 	onViewDetails,
+	onViewDetailsHover,
 	onSnooze,
 	onDismiss,
 	onLetExpire,
@@ -73,6 +76,8 @@ export default function ActionRail({
 				type="button"
 				className="btn-primary w-full justify-center"
 				onClick={onViewDetails}
+				onMouseEnter={onViewDetailsHover}
+				onFocus={onViewDetailsHover}
 				disabled={isBusy}
 			>
 				<Eye className="h-4 w-4" />

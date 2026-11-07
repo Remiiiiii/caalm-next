@@ -361,145 +361,158 @@ export default function ExpiryAlertModal({
 						{/* Zone 2 — narration bar (only when TTS is in play this session). */}
 						{narration && <NarrationBar narration={narration} />}
 
-						{/* Zone 3 — body cross-fades (opacity only; no Y jump). */}
-						<div className="relative min-h-0 flex-1 overflow-y-auto">
-							<AnimatePresence
-								mode={CONTENT_CROSSFADE_PRESENCE_MODE}
-								initial={false}
-							>
-								<motion.div
-									key={`${panelKey}-${fileViewOpen ? "file" : "actions"}`}
-									initial={contentCrossfadeInitial}
-									animate={contentCrossfadeAnimate}
-									exit={contentCrossfadeExit}
-									transition={contentCrossfadeTransition}
-									className={
-										fileViewOpen
-											? "p-6"
-											: "grid grid-cols-1 gap-6 p-6 min-[620px]:grid-cols-[1fr_auto]"
-									}
+						{/* Zone 3 — opacity cross-fade only. No `layout` height tween:
+						    growing the shell while the PDF still mounts was the spike
+						    (blank white body, then another jump when pages paint). */}
+						<div className="relative min-h-0 flex-1 overflow-hidden">
+							<div className="h-full overflow-y-auto">
+								{/* sync + absolute exit keeps the old panel visible while the
+								    file view fades in, so the body never flashes empty. */}
+								<div className="relative">
+								<AnimatePresence
+									mode={CONTENT_CROSSFADE_PRESENCE_MODE}
+									initial={false}
 								>
-									{fileViewOpen ? (
-										<ExpiryFileView
-											entityType={entityType}
-											entityId={entityId}
-											fileUrl={fileUrl ?? null}
-											department={department ?? null}
-											division={division ?? null}
-											uploadedById={uploadedById ?? null}
-											assignedManagerIds={assignedManagerIds}
-											aiSynopsis={aiSynopsis ?? null}
-											onSynopsisGenerated={onSynopsisGenerated}
-										/>
-									) : (
-										<>
-											{/* Left — record summary */}
-											<div className="min-w-0 space-y-4">
-												<div className="flex flex-wrap items-center gap-2">
-													<span className="inline-block rounded-full border border-blue/20 bg-blue/10 px-2 py-0.5 text-xs text-blue">
-														{kindChip}
-													</span>
-													{statusChip && (
-														<span className="inline-block rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs capitalize text-slate-600">
-															{statusChip}
+									<motion.div
+										key={`${panelKey}-${fileViewOpen ? "file" : "actions"}`}
+										initial={contentCrossfadeInitial}
+										animate={contentCrossfadeAnimate}
+										exit={contentCrossfadeExit}
+										transition={contentCrossfadeTransition}
+										className={
+											fileViewOpen
+												? "p-6"
+												: "grid grid-cols-1 gap-6 p-6 min-[620px]:grid-cols-[1fr_auto]"
+										}
+									>
+										{fileViewOpen ? (
+											<ExpiryFileView
+												entityType={entityType}
+												entityId={entityId}
+												fileUrl={fileUrl ?? null}
+												department={department ?? null}
+												division={division ?? null}
+												uploadedById={uploadedById ?? null}
+												assignedManagerIds={assignedManagerIds}
+												aiSynopsis={aiSynopsis ?? null}
+												onSynopsisGenerated={onSynopsisGenerated}
+											/>
+										) : (
+											<>
+												{/* Left — record summary */}
+												<div className="min-w-0 space-y-4">
+													<div className="flex flex-wrap items-center gap-2">
+														<span className="inline-block rounded-full border border-blue/20 bg-blue/10 px-2 py-0.5 text-xs text-blue">
+															{kindChip}
 														</span>
-													)}
-												</div>
+														{statusChip && (
+															<span className="inline-block rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs capitalize text-slate-600">
+																{statusChip}
+															</span>
+														)}
+													</div>
 
-												<h2
-													id={titleId}
-													className="text-2xl font-bold leading-tight text-slate-700 wrap-break-word"
-												>
-													{title}
-												</h2>
+													<h2
+														id={titleId}
+														className="text-2xl font-bold leading-tight text-slate-700 wrap-break-word"
+													>
+														{title}
+													</h2>
 
-												<p className="flex items-center gap-2 text-sm text-slate-600">
-													<CalendarClock className="h-4 w-4 shrink-0 text-[#0f5384]" />
-													<span className="font-semibold">{dateVerb}</span>{" "}
-													{formatExpiryDisplay(expiryDate)}
-												</p>
+													<p className="flex items-center gap-2 text-sm text-slate-600">
+														<CalendarClock className="h-4 w-4 shrink-0 text-[#0f5384]" />
+														<span className="font-semibold">{dateVerb}</span>{" "}
+														{formatExpiryDisplay(expiryDate)}
+													</p>
 
-												{/* Fact grid — only cells that carry a value. */}
-												<div
-													className={cn(
-														"grid gap-px overflow-hidden rounded-xl border border-slate-200 bg-slate-200",
-														showAmount ? "grid-cols-2" : "grid-cols-1",
-													)}
-												>
-													{showAmount && (
+													{/* Fact grid — only cells that carry a value. */}
+													<div
+														className={cn(
+															"grid gap-px overflow-hidden rounded-xl border border-slate-200 bg-slate-200",
+															showAmount ? "grid-cols-2" : "grid-cols-1",
+														)}
+													>
+														{showAmount && (
+															<div className="bg-white p-4">
+																<p className="mb-1 text-xs font-medium uppercase tracking-[0.08em] text-slate-400">
+																	{resolvedAmountLabel}
+																</p>
+																<p className="text-2xl font-bold tabular-nums text-slate-700">
+																	$
+																	{amount.toLocaleString(undefined, {
+																		maximumFractionDigits: 0,
+																	})}
+																</p>
+															</div>
+														)}
 														<div className="bg-white p-4">
 															<p className="mb-1 text-xs font-medium uppercase tracking-[0.08em] text-slate-400">
-																{resolvedAmountLabel}
+																{daysFact.label}
 															</p>
-															<p className="text-2xl font-bold tabular-nums text-slate-700">
-																$
-																{amount.toLocaleString(undefined, {
-																	maximumFractionDigits: 0,
-																})}
+															<p
+																className={cn(
+																	"text-2xl font-bold tabular-nums",
+																	DAYS_TEXT[tone],
+																)}
+															>
+																{daysFact.value}
 															</p>
 														</div>
-													)}
-													<div className="bg-white p-4">
-														<p className="mb-1 text-xs font-medium uppercase tracking-[0.08em] text-slate-400">
-															{daysFact.label}
-														</p>
-														<p
-															className={cn(
-																"text-2xl font-bold tabular-nums",
-																DAYS_TEXT[tone],
-															)}
-														>
-															{daysFact.value}
-														</p>
 													</div>
+
+													{/* Contact row — button when we have a contact, else muted copy. */}
+													{hasContact ? (
+														<button
+															type="button"
+															onClick={onContactProvider}
+															disabled={isBusy}
+															className="inline-flex items-center gap-2 text-sm text-slate-600 hover:text-slate-700 cursor-pointer disabled:opacity-50"
+														>
+															{contactEmail ? (
+																<Mail className="h-4 w-4" />
+															) : (
+																<Phone className="h-4 w-4" />
+															)}
+															Contact provider
+															<span className="text-slate-400">
+																{contactEmail || contactPhone}
+															</span>
+														</button>
+													) : (
+														<p className="text-sm text-slate-400">
+															No provider contact on record
+														</p>
+													)}
 												</div>
 
-												{/* Contact row — button when we have a contact, else muted copy. */}
-												{hasContact ? (
-													<button
-														type="button"
-														onClick={onContactProvider}
-														disabled={isBusy}
-														className="inline-flex items-center gap-2 text-sm text-slate-600 hover:text-slate-700 cursor-pointer disabled:opacity-50"
-													>
-														{contactEmail ? (
-															<Mail className="h-4 w-4" />
-														) : (
-															<Phone className="h-4 w-4" />
-														)}
-														Contact provider
-														<span className="text-slate-400">
-															{contactEmail || contactPhone}
-														</span>
-													</button>
-												) : (
-													<p className="text-sm text-slate-400">
-														No provider contact on record
-													</p>
-												)}
-											</div>
-
-											{/* Right — action rail */}
-											<ActionRail
-												kind={entityType}
-												daysRemaining={daysRemaining}
-												snoozeDays={snoozeDays}
-												resetKey={panelKey}
-												isBusy={isBusy}
-												renewRequiresDesktop={renewRequiresDesktop}
-												onRenew={handleRenew}
-												onViewDetails={() => setFileViewOpen(true)}
-												onSnooze={onSnooze ? handleSnooze : undefined}
-												onDismiss={onDismiss ? handleDismiss : undefined}
-												onLetExpire={onLetExpire}
-												onDestructiveIntent={
-													onLetExpire ? handleDestructiveIntent : undefined
-												}
-											/>
-										</>
-									)}
-								</motion.div>
-							</AnimatePresence>
+												{/* Right — action rail */}
+												<ActionRail
+													kind={entityType}
+													daysRemaining={daysRemaining}
+													snoozeDays={snoozeDays}
+													resetKey={panelKey}
+													isBusy={isBusy}
+													renewRequiresDesktop={renewRequiresDesktop}
+													onRenew={handleRenew}
+													onViewDetails={() => setFileViewOpen(true)}
+													onViewDetailsHover={() => {
+														void import(
+															"@/components/expiry-alert-modal/ExpiryFilePdfViewerInner"
+														);
+													}}
+													onSnooze={onSnooze ? handleSnooze : undefined}
+													onDismiss={onDismiss ? handleDismiss : undefined}
+													onLetExpire={onLetExpire}
+													onDestructiveIntent={
+														onLetExpire ? handleDestructiveIntent : undefined
+													}
+												/>
+											</>
+										)}
+									</motion.div>
+								</AnimatePresence>
+								</div>
+							</div>
 						</div>
 
 						{/* Zone 4 — queue strip (only with more than one item, hidden while reading a file). */}

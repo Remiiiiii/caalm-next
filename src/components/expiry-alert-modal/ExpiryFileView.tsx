@@ -1,5 +1,6 @@
 "use client";
 
+import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import ExpiryFilePdfViewer from "@/components/expiry-alert-modal/ExpiryFilePdfViewer";
 import Avatar from "@/components/ui/avatar";
@@ -156,21 +157,28 @@ export default function ExpiryFileView({
 
 	return (
 		<div className="flex min-h-0 flex-col gap-4">
-			{(department ||
-				division ||
-				uploadedBy ||
-				assignedManagers.length > 0) && (
-				<div className="flex flex-wrap items-center gap-3">
-					{department && <Chip label="Dept" value={department} />}
-					{division && division !== department && (
-						<Chip label="Division" value={division} />
-					)}
-					{uploadedBy && (
-						<AvatarStack label="Uploaded by" users={[uploadedBy]} />
-					)}
-					<AvatarStack label="Assigned to" users={assignedManagers} />
-				</div>
-			)}
+			<AnimatePresence>
+				{(department ||
+					division ||
+					uploadedBy ||
+					assignedManagers.length > 0) && (
+					<motion.div
+						initial={{ opacity: 0 }}
+						animate={{ opacity: 1 }}
+						transition={{ duration: 0.4 }}
+						className="flex flex-wrap items-center gap-3"
+					>
+						{department && <Chip label="Dept" value={department} />}
+						{division && division !== department && (
+							<Chip label="Division" value={division} />
+						)}
+						{uploadedBy && (
+							<AvatarStack label="Uploaded by" users={[uploadedBy]} />
+						)}
+						<AvatarStack label="Assigned to" users={assignedManagers} />
+					</motion.div>
+				)}
+			</AnimatePresence>
 
 			{fileUrl ? (
 				<ExpiryFilePdfViewer fileUrl={fileUrl} />
@@ -184,19 +192,53 @@ export default function ExpiryFileView({
 				<p className="mb-1 text-xs font-medium uppercase tracking-[0.08em] text-slate-400">
 					Smart Summary
 				</p>
-				{synopsisLoading ? (
-					<p className="text-sm text-slate-400">Reading the document…</p>
-				) : synopsisError ? (
-					<p className="text-sm text-slate-400">
-						Couldn&apos;t generate a synopsis for this document.
-					</p>
-				) : synopsis ? (
-					<p className="whitespace-pre-line text-sm leading-relaxed text-slate-600">
-						{synopsis}
-					</p>
-				) : (
-					<p className="text-sm text-slate-400">No synopsis available.</p>
-				)}
+				<AnimatePresence mode="wait">
+					{synopsisLoading ? (
+						<motion.p
+							key="loading"
+							initial={{ opacity: 0 }}
+							animate={{ opacity: 1 }}
+							exit={{ opacity: 0 }}
+							transition={{ duration: 0.3 }}
+							className="text-sm text-slate-400"
+						>
+							Reading the document…
+						</motion.p>
+					) : synopsisError ? (
+						<motion.p
+							key="error"
+							initial={{ opacity: 0 }}
+							animate={{ opacity: 1 }}
+							exit={{ opacity: 0 }}
+							transition={{ duration: 0.3 }}
+							className="text-sm text-slate-400"
+						>
+							Couldn&apos;t generate a synopsis for this document.
+						</motion.p>
+					) : synopsis ? (
+						<motion.p
+							key="synopsis"
+							initial={{ opacity: 0 }}
+							animate={{ opacity: 1 }}
+							exit={{ opacity: 0 }}
+							transition={{ duration: 0.4 }}
+							className="whitespace-pre-line text-sm leading-relaxed text-slate-600"
+						>
+							{synopsis}
+						</motion.p>
+					) : (
+						<motion.p
+							key="none"
+							initial={{ opacity: 0 }}
+							animate={{ opacity: 1 }}
+							exit={{ opacity: 0 }}
+							transition={{ duration: 0.3 }}
+							className="text-sm text-slate-400"
+						>
+							No synopsis available.
+						</motion.p>
+					)}
+				</AnimatePresence>
 			</div>
 		</div>
 	);

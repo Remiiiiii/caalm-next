@@ -21,11 +21,11 @@ import {
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { Models } from "node-appwrite";
 // In your dashboard page (e.g., src/app/(root)/dashboard/page.tsx)
 // import { NotificationDemoButton } from '@/components/NotificationDemoButton';
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import CountUp from "react-countup";
 import useSWR from "swr";
 import ClientTimestamp from "@/components/ClientTimestamp";
@@ -273,6 +273,17 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 	const accountability = slaMetricsRes?.metrics?.accountability;
 	const expiration = slaMetricsRes?.metrics?.expiration;
 
+	const router = useRouter();
+	const pathname = usePathname();
+	const searchParams = useSearchParams();
+	// A pending deep-link resume (push notification "View" or "Back to
+	// alert" from the details page) must win the race against the default
+	// auto-open-at-index-0 effect below — otherwise the modal opens on the
+	// first queue item before the resume effect gets a chance to redirect it.
+	const hasPendingExpiryResume = Boolean(
+		searchParams?.get("expiryEntity") && searchParams?.get("expiryId"),
+	);
+
 	// Combined expiry modal: trigger 0–30d; queue shows −30d…+90d
 	const {
 		itemsToShow,
@@ -288,29 +299,41 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 		markItemDismissed,
 		refreshLicenses,
 		shouldPlaySpeech,
-	} = useCombinedExpiryModal(contractsFromApi || []);
+	} = useCombinedExpiryModal(contractsFromApi || [], {
+		suppressAutoOpen: hasPendingExpiryResume,
+	});
 	const showDevExpiryTest = process.env.NODE_ENV === "development";
 	const showDemoExpiryTest = isDemoMode();
 
-	const router = useRouter();
-	const searchParams = useSearchParams();
-
 	// Desktop push View → /dashboard?expiryEntity=contract|license&expiryId=…
+	// Handle each deep-link once — re-running after open collapses a good
+	// multi-item resume into the 1-item fallback (shown-load / dep churn).
+	const handledExpiryDeepLinkRef = useRef<string | null>(null);
 	useEffect(() => {
 		const entity = searchParams?.get("expiryEntity");
 		const id = searchParams?.get("expiryId");
-		if ((entity !== "contract" && entity !== "license") || !id) return;
+		if ((entity !== "contract" && entity !== "license") || !id) {
+			handledExpiryDeepLinkRef.current = null;
+			return;
+		}
 		if (entity === "contract" && !contractsFromApi?.length) return;
+
+		const key = `${entity}:${id}`;
+		if (handledExpiryDeepLinkRef.current === key) return;
 
 		const opened = openForEntityId(entity, id);
 		if (opened || entity === "license") {
+			handledExpiryDeepLinkRef.current = key;
 			const next = new URLSearchParams(searchParams?.toString() ?? "");
 			next.delete("expiryEntity");
 			next.delete("expiryId");
 			const qs = next.toString();
-			router.replace(qs ? `/dashboard?${qs}` : "/dashboard", { scroll: false });
+			// Stay on the role home path — replace to `/dashboard` would redirect
+			// again and remount this tree, wiping resumeIndex / open state.
+			const home = pathname || "/dashboard";
+			router.replace(qs ? `${home}?${qs}` : home, { scroll: false });
 		}
-	}, [searchParams, contractsFromApi, openForEntityId, router]);
+	}, [searchParams, contractsFromApi, openForEntityId, router, pathname]);
 
 	// Handle contract/license status change - refresh unified data + licenses
 	const handleContractStatusChange = () => {

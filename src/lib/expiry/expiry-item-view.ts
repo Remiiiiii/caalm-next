@@ -6,6 +6,7 @@
 
 import type { UIFileDoc } from "@/types/files";
 import type { License } from "@/types/licenses";
+import { constructFileUrl } from "@/lib/utils";
 import { formatExpiryTypeLabel } from "./expiry-format";
 import type { ExpiryQueueItem } from "./expiry-queue";
 
@@ -104,7 +105,9 @@ export function toExpiryItemView(item: ExpiryQueueItem): ExpiryItemView {
 			department: file.department?.trim() || null,
 			referenceNumber: file.contractNumber?.trim() || null,
 			issuingAuthority: null,
-			fileUrl: file.url?.trim() || null,
+			fileUrl:
+				file.url?.trim() ||
+				(file.bucketFileId ? constructFileUrl(file.bucketFileId) : null),
 			division: null,
 			uploadedById: typeof file.owner === "string" ? file.owner : null,
 			assignedManagerIds: file.assignedManagers || [],
