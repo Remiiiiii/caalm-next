@@ -89,7 +89,45 @@ const DATA_TOOLS = new Set([
 	"list_calendar_events",
 	"list_expirations",
 	"list_audit_logs",
+	"list_users",
 ]);
+
+function pendingActionLabel(
+	toolName: string,
+	args: Record<string, unknown>,
+): string {
+	switch (toolName) {
+		case "create_task":
+			return `Create task “${args.title ?? "Untitled"}”`;
+		case "complete_task":
+			return `Mark task “${args.title ?? "?"}” done`;
+		case "create_calendar_event":
+			return `Schedule meeting “${args.title ?? "Untitled"}” on ${args.date ?? "?"} at ${args.startTime ?? "?"}`;
+		case "reschedule_calendar_event":
+			return args.newDate
+				? `Move “${args.eventTitle ?? "?"}” to ${args.newDate} at ${args.newStartTime ?? "?"}`
+				: `Change “${args.eventTitle ?? "?"}” to ${args.newStartTime ?? "?"} (keep same date)`;
+		case "cancel_calendar_event":
+			return `Cancel meeting “${args.eventTitle ?? "?"}”`;
+		case "create_task_for_contract":
+			return `Create task “${args.title ?? "Untitled"}” for ${args.contractName ?? "contract"}`;
+		case "generate_report":
+			return `Generate report for ${args.department ?? "your department"}`;
+		case "invite_user":
+			return `Invite ${args.email ?? "user"} as ${args.role ?? "Viewer"}`;
+		case "resend_invite":
+			return `Resend invite to ${args.email ?? "pending user"}`;
+		case "assign_user_roles":
+			return `Change roles for ${args.userEmail ?? args.userId ?? "user"}`;
+		case "deactivate_user":
+			return args.reactivate === true ||
+				String(args.reactivate ?? "").toLowerCase() === "true"
+				? `Reactivate ${args.userEmail ?? args.userId ?? "user"}`
+				: `Deactivate ${args.userEmail ?? args.userId ?? "user"}`;
+		default:
+			return `Confirm ${toolName}`;
+	}
+}
 
 const apiKey = process.env.GOOGLE_API_KEY;
 
@@ -302,6 +340,18 @@ function formatGenericDataAnswer(toolName: string, output: unknown): string {
 		return "Here's the recent activity.";
 	}
 
+	if (toolName === "list_users") {
+		const items = (data.users ?? []) as Array<Record<string, unknown>>;
+		if (!items.length) {
+			return String(data.message ?? "No people found in this organization.");
+		}
+		return `Here are the people I found:\n\n${formatListItems(items, "name", [
+			{ key: "email", label: (v) => (v ? String(v) : null) },
+			{ key: "role", label: (v) => (v ? String(v) : null) },
+			{ key: "status", label: (v) => (v ? String(v) : null) },
+		])}\n\nOpen Users for the full directory.`;
+	}
+
 	return "I finished that request. Use a suggestion below if you want to dig in further.";
 }
 
@@ -330,6 +380,16 @@ function sourcesForTool(
 					title: "Calendar",
 					href: "/calendar",
 					excerpt: "Your CAALM calendar",
+				},
+			];
+		}
+		if (toolName === "list_users") {
+			return [
+				{
+					id: "module-users",
+					title: "Users",
+					href: "/dashboard/users",
+					excerpt: "People in your organization",
 				},
 			];
 		}
@@ -767,24 +827,7 @@ ${remediationContext ? `\n${buildAuditRemediationPrompt(remediationContext)}` : 
 		}
 
 		if (tool.mutating) {
-			const label =
-				tool.name === "create_task"
-					? `Create task “${args.title ?? "Untitled"}”`
-					: tool.name === "complete_task"
-						? `Mark task “${args.title ?? "?"}” done`
-						: tool.name === "create_calendar_event"
-							? `Schedule meeting “${args.title ?? "Untitled"}” on ${args.date ?? "?"} at ${args.startTime ?? "?"}`
-							: tool.name === "reschedule_calendar_event"
-								? args.newDate
-									? `Move “${args.eventTitle ?? "?"}” to ${args.newDate} at ${args.newStartTime ?? "?"}`
-									: `Change “${args.eventTitle ?? "?"}” to ${args.newStartTime ?? "?"} (keep same date)`
-								: tool.name === "cancel_calendar_event"
-									? `Cancel meeting “${args.eventTitle ?? "?"}”`
-									: tool.name === "create_task_for_contract"
-										? `Create task “${args.title ?? "Untitled"}” for ${args.contractName ?? "contract"}`
-										: tool.name === "generate_report"
-											? `Generate report for ${args.department ?? "your department"}`
-											: `Confirm ${tool.name}`;
+			const label = pendingActionLabel(tool.name, args);
 			const preview = JSON.stringify(args, null, 2).slice(0, 500);
 			const pending = await storePendingAction({
 				userId: ctx.user.$id,
