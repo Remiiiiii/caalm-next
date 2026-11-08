@@ -2,7 +2,7 @@
 
 # Cursor rules
 
-Project rules live in `.cursor/rules/` and are the single source of truth. Edit them there, not here.
+Project rules live in `.cursor/rules/` and are the single source of truth. Edit them there, not here
 
 ## Always-on (`alwaysApply: true` in Cursor)
 
