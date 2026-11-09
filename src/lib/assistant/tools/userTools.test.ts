@@ -7,11 +7,15 @@ const listPendingInvitations = vi.fn();
 const listUsersForManagement = vi.fn();
 const updateUserProfile = vi.fn();
 const listRoles = vi.fn();
+const getRolePermissions = vi.fn();
+const getOrganization = vi.fn();
+const updateOrganization = vi.fn();
 const validateRoleIdsUnionForSod = vi.fn();
 const logAuditEvent = vi.fn();
 const listRows = vi.fn();
 const deleteRow = vi.fn();
 const createRow = vi.fn();
+const invalidateOrganization = vi.fn();
 
 vi.mock("@/lib/actions/user.actions", () => ({
 	createInvitation: (...args: unknown[]) => createInvitation(...args),
@@ -24,6 +28,11 @@ vi.mock("@/lib/actions/user.actions", () => ({
 }));
 vi.mock("@/lib/rbac/roles", () => ({
 	listRoles: (...args: unknown[]) => listRoles(...args),
+	getRolePermissions: (...args: unknown[]) => getRolePermissions(...args),
+}));
+vi.mock("@/lib/rbac/organizations", () => ({
+	getOrganization: (...args: unknown[]) => getOrganization(...args),
+	updateOrganization: (...args: unknown[]) => updateOrganization(...args),
 }));
 vi.mock("@/lib/rbac/separation-of-duties", () => ({
 	validateRoleIdsUnionForSod: (...args: unknown[]) =>
@@ -36,6 +45,8 @@ vi.mock("@/lib/services/cache-manager", () => ({
 	default: {
 		invalidateRBAC: vi.fn(),
 		invalidateUsers: vi.fn(),
+		invalidateOrganization: (...args: unknown[]) =>
+			invalidateOrganization(...args),
 	},
 }));
 vi.mock("@/lib/appwrite", () => ({
@@ -78,11 +89,15 @@ describe("USER_TOOLS", () => {
 		listUsersForManagement.mockReset();
 		updateUserProfile.mockReset();
 		listRoles.mockReset();
+		getRolePermissions.mockReset();
+		getOrganization.mockReset();
+		updateOrganization.mockReset();
 		validateRoleIdsUnionForSod.mockReset();
 		logAuditEvent.mockReset().mockResolvedValue(undefined);
 		listRows.mockReset();
 		deleteRow.mockReset();
 		createRow.mockReset();
+		invalidateOrganization.mockReset().mockResolvedValue(undefined);
 	});
 
 	it("invite_user blocks without users.invite", async () => {
@@ -205,6 +220,100 @@ describe("USER_TOOLS", () => {
 		expect((res.result as { user?: { status: string } }).user?.status).toBe(
 			"inactive",
 		);
+		expect(logAuditEvent).toHaveBeenCalled();
+	});
+
+	it("update_user_profile blocks without users.edit", async () => {
+		const res = await tool("update_user_profile").handler(ctx([]), {
+			userEmail: "alice@org.test",
+			fullName: "Alice New",
+		});
+		expect((res.result as { error?: string }).error).toMatch(/permission|cannot/i);
+		expect(updateUserProfile).not.toHaveBeenCalled();
+	});
+
+	it("update_user_profile wraps safe fields and audits", async () => {
+		listUsersForManagement.mockResolvedValue([alice]);
+		updateUserProfile.mockResolvedValue({
+			user: { ...alice, fullName: "Alice New" },
+		});
+		const res = await tool("update_user_profile").handler(
+			ctx([PERMISSIONS.USERS.EDIT]),
+			{ userEmail: "alice@org.test", fullName: "Alice New", jobTitle: "Analyst" },
+		);
+		expect(updateUserProfile).toHaveBeenCalledWith({
+			accountId: "acc-alice",
+			fullName: "Alice New",
+			jobTitle: "Analyst",
+		});
+		expect(
+			(res.result as { updatedFields?: string[] }).updatedFields,
+		).toEqual(expect.arrayContaining(["fullName", "jobTitle"]));
+		expect(logAuditEvent).toHaveBeenCalled();
+	});
+
+	it("list_roles is gated by users.view and summarizes permissions", async () => {
+		const denied = await tool("list_roles").handler(ctx([]), {});
+		expect((denied.result as { error?: string }).error).toMatch(
+			/permission|cannot/i,
+		);
+
+		listRoles.mockResolvedValue([
+			{
+				$id: "role-viewer",
+				name: "Viewer",
+				description: "Read-only",
+				isSystemRole: true,
+			},
+		]);
+		getRolePermissions.mockResolvedValue([PERMISSIONS.USERS.VIEW]);
+		const ok = await tool("list_roles").handler(ctx([PERMISSIONS.USERS.VIEW]), {});
+		expect(listRoles).toHaveBeenCalledWith("org-1");
+		const roles = (ok.result as { roles: Array<{ canDo: string[] }> }).roles;
+		expect(roles).toHaveLength(1);
+		expect(roles[0]?.canDo[0]).toMatch(/view/i);
+	});
+
+	it("update_org_settings blocks without settings.edit and only patches safe fields", async () => {
+		const denied = await tool("update_org_settings").handler(ctx([]), {
+			timezone: "America/Chicago",
+		});
+		expect((denied.result as { error?: string }).error).toMatch(
+			/permission|cannot/i,
+		);
+
+		getOrganization.mockResolvedValue({
+			$id: "org-1",
+			name: "Acme",
+			settings: { maxUsers: 10, maxDepartments: 3, features: [] },
+		});
+		updateOrganization.mockResolvedValue({
+			$id: "org-1",
+			name: "Acme",
+			settings: {
+				maxUsers: 10,
+				maxDepartments: 3,
+				features: [],
+				timezone: "America/Chicago",
+			},
+		});
+		const ok = await tool("update_org_settings").handler(
+			ctx([PERMISSIONS.SETTINGS.EDIT]),
+			{ timezone: "America/Chicago" },
+		);
+		expect(updateOrganization).toHaveBeenCalledWith(
+			"org-1",
+			expect.objectContaining({
+				settings: expect.objectContaining({
+					timezone: "America/Chicago",
+					maxUsers: 10,
+					maxDepartments: 3,
+				}),
+			}),
+		);
+		expect(
+			(ok.result as { updatedFields?: string[] }).updatedFields,
+		).toEqual(["timezone"]);
 		expect(logAuditEvent).toHaveBeenCalled();
 	});
 });

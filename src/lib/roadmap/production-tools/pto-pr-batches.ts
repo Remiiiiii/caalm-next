@@ -48,6 +48,7 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 		batch: 2,
 		taskCodes: ["1.6", "1.7", "1.8"],
 		taskTitles: ["update_user_profile", "list_roles", "update_org_settings"],
+		linkedPrNumber: 223,
 	},
 	{
 		sectionNumber: 2,

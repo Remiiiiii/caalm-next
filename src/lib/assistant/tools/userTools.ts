@@ -1,5 +1,9 @@
 import { ID, Query } from "node-appwrite";
-import { PERMISSIONS } from "@/constants/permissions";
+import {
+	PERMISSION_DEFINITIONS,
+	PERMISSIONS,
+	type PermissionKey,
+} from "@/constants/permissions";
 import {
 	createInvitation,
 	listPendingInvitations,
@@ -12,10 +16,22 @@ import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { hasAll } from "@/lib/assistant/tools/toolUtils";
 import type { ToolContext, ToolDefinition } from "@/lib/assistant/tools/types";
-import { listRoles } from "@/lib/rbac/roles";
+import {
+	getOrganization,
+	updateOrganization,
+} from "@/lib/rbac/organizations";
+import { getRolePermissions, listRoles } from "@/lib/rbac/roles";
 import { validateRoleIdsUnionForSod } from "@/lib/rbac/separation-of-duties";
 import { logAuditEvent } from "@/lib/services/audit-logger";
 import CacheManager from "@/lib/services/cache-manager";
+
+const PERMISSION_LABEL_BY_KEY = new Map(
+	PERMISSION_DEFINITIONS.map((def) => [def.key, def.name] as const),
+);
+
+function plainPermissionLabel(key: PermissionKey | string): string {
+	return PERMISSION_LABEL_BY_KEY.get(key as PermissionKey) ?? String(key);
+}
 
 function actorName(ctx: ToolContext): string {
 	return (
@@ -529,6 +545,291 @@ export const USER_TOOLS: ToolDefinition[] = [
 					error instanceof Error
 						? error.message
 						: "Failed to update account status.",
+				);
+			}
+		},
+	},
+	{
+		name: "update_user_profile",
+		description:
+			"Update safe profile fields (name, job title, department, division) for a user. Requires users.edit. Confirm before writing. Never changes roles, status, email, or billing.",
+		requiredPermissions: [PERMISSIONS.USERS.EDIT],
+		mutating: true,
+		parameters: {
+			type: "object",
+			properties: {
+				userEmail: {
+					type: "string",
+					description: "Target user email (preferred) or name",
+				},
+				userId: { type: "string", description: "Optional user document id" },
+				fullName: { type: "string", description: "New full name" },
+				jobTitle: { type: "string", description: "New job title" },
+				department: { type: "string", description: "New department" },
+				division: { type: "string", description: "New division" },
+			},
+			required: ["userEmail"],
+		},
+		handler: async (ctx, args) => {
+			if (!hasAll(ctx, [PERMISSIONS.USERS.EDIT])) {
+				return asError(
+					"You cannot edit user profiles. Ask an admin for the users.edit permission.",
+				);
+			}
+			const lookup = String(args.userId ?? args.userEmail ?? "").trim();
+			const found = await resolveOneUser(ctx.orgId, lookup);
+			if (found.error || !found.user) {
+				return asError(found.error ?? "User not found.");
+			}
+
+			const patch: {
+				fullName?: string;
+				jobTitle?: string | null;
+				department?: string;
+				division?: string;
+			} = {};
+			if (args.fullName !== undefined) {
+				const name = String(args.fullName).trim();
+				if (!name) return asError("Full name cannot be empty.");
+				patch.fullName = name;
+			}
+			if (args.jobTitle !== undefined) {
+				patch.jobTitle = String(args.jobTitle).trim() || null;
+			}
+			if (args.department !== undefined) {
+				patch.department = String(args.department).trim();
+			}
+			if (args.division !== undefined) {
+				patch.division = String(args.division).trim();
+			}
+			if (Object.keys(patch).length === 0) {
+				return asError(
+					"Say which field to change: name, job title, department, or division.",
+				);
+			}
+
+			try {
+				const result = await updateUserProfile({
+					accountId: found.user.accountId,
+					...patch,
+				});
+				if (!result?.user) {
+					return asError("Failed to update that profile.");
+				}
+				await logAuditEvent({
+					event_id: `assistant_user_profile_${found.user.$id}`,
+					event_title: `Assistant updated profile for ${found.user.fullName || found.user.email}`,
+					action: "update",
+					source: "caalm",
+					user_id: ctx.user.$id,
+					user_name: actorName(ctx),
+					user_email: ctx.user.email || "",
+					status: "success",
+					orgId: ctx.orgId,
+					module: "governance",
+					target_type: "user",
+					target_id: found.user.$id,
+					target_label: found.user.fullName || found.user.email,
+					summary: `${actorName(ctx)} updated profile fields for ${found.user.fullName || found.user.email}`,
+					metadata: { source: "ai_assistant", fields: Object.keys(patch) },
+				}).catch(() => undefined);
+				return {
+					result: {
+						user: {
+							...summarizeUser(found.user),
+							fullName:
+								patch.fullName ?? found.user.fullName,
+							department:
+								patch.department ?? found.user.department ?? null,
+							jobTitle: patch.jobTitle ?? null,
+							division: patch.division ?? null,
+						},
+						updatedFields: Object.keys(patch),
+					},
+				};
+			} catch (error) {
+				return asError(
+					error instanceof Error
+						? error.message
+						: "Failed to update the profile.",
+				);
+			}
+		},
+	},
+	{
+		name: "list_roles",
+		description:
+			"List roles in this organization and summarize what each can do in plain English. Requires users.view.",
+		requiredPermissions: [PERMISSIONS.USERS.VIEW],
+		mutating: false,
+		parameters: {
+			type: "object",
+			properties: {
+				query: {
+					type: "string",
+					description: "Optional role name filter",
+				},
+				limit: { type: "number", description: "Max roles. Default 12." },
+			},
+		},
+		handler: async (ctx, args) => {
+			if (!hasAll(ctx, [PERMISSIONS.USERS.VIEW])) {
+				return asError(
+					"You cannot list roles. Ask an admin for the users.view permission.",
+				);
+			}
+			const query = String(args.query ?? "").trim().toLowerCase();
+			const limit = Math.min(Number(args.limit) || 12, 20);
+			const roles = await listRoles(ctx.orgId);
+			const filtered = query
+				? roles.filter((role) => role.name.toLowerCase().includes(query))
+				: roles;
+			if (filtered.length === 0) {
+				return {
+					result: {
+						roles: [],
+						message: query
+							? `No roles matched "${args.query}".`
+							: "No roles found for this organization.",
+					},
+				};
+			}
+
+			const sliced = filtered.slice(0, limit);
+			const summarized = await Promise.all(
+				sliced.map(async (role) => {
+					const keys = await getRolePermissions(role.$id);
+					const labels = keys.map(plainPermissionLabel);
+					const shown = labels.slice(0, 8);
+					return {
+						id: role.$id,
+						name: role.name,
+						description: role.description || null,
+						isSystemRole: role.isSystemRole,
+						canDo: shown,
+						permissionCount: labels.length,
+						morePermissions: Math.max(0, labels.length - shown.length),
+					};
+				}),
+			);
+
+			return {
+				result: {
+					roles: summarized,
+					total: filtered.length,
+					rolesHref: "/dashboard/users",
+				},
+			};
+		},
+	},
+	{
+		name: "update_org_settings",
+		description:
+			"Update a safe subset of organization settings (timezone, website URL). Requires settings.edit. Confirm before writing. Never changes billing, seats, secrets, or logos.",
+		requiredPermissions: [PERMISSIONS.SETTINGS.EDIT],
+		mutating: true,
+		parameters: {
+			type: "object",
+			properties: {
+				timezone: {
+					type: "string",
+					description: "IANA timezone, e.g. America/New_York",
+				},
+				websiteUrl: {
+					type: "string",
+					description: "Organization website URL",
+				},
+			},
+		},
+		handler: async (ctx, args) => {
+			if (!hasAll(ctx, [PERMISSIONS.SETTINGS.EDIT])) {
+				return asError(
+					"You cannot edit organization settings. Ask an admin for the settings.edit permission.",
+				);
+			}
+
+			const patch: { timezone?: string; websiteUrl?: string } = {};
+			if (args.timezone !== undefined) {
+				const timezone = String(args.timezone).trim();
+				if (!timezone) return asError("Timezone cannot be empty.");
+				patch.timezone = timezone;
+			}
+			if (args.websiteUrl !== undefined) {
+				patch.websiteUrl = String(args.websiteUrl).trim();
+			}
+			if (Object.keys(patch).length === 0) {
+				return asError(
+					"Say which setting to change: timezone or website URL.",
+				);
+			}
+
+			try {
+				const existing = await getOrganization(ctx.orgId);
+				if (!existing) {
+					return asError("Organization not found.");
+				}
+				const prior = (existing.settings ?? {}) as Record<string, unknown>;
+				const settings = {
+					...prior,
+					maxUsers:
+						typeof prior.maxUsers === "number" ? prior.maxUsers : 10,
+					maxDepartments:
+						typeof prior.maxDepartments === "number"
+							? prior.maxDepartments
+							: 3,
+					features: Array.isArray(prior.features)
+						? (prior.features as string[])
+						: [],
+					...patch,
+				};
+
+				const updated = await updateOrganization(ctx.orgId, { settings });
+				if (!updated) {
+					return asError("Failed to update organization settings.");
+				}
+				await CacheManager.invalidateOrganization(ctx.orgId).catch(
+					() => undefined,
+				);
+				await logAuditEvent({
+					event_id: `assistant_org_settings_${ctx.orgId}`,
+					event_title: `Assistant updated org settings for ${updated.name || ctx.orgId}`,
+					action: "update",
+					source: "caalm",
+					user_id: ctx.user.$id,
+					user_name: actorName(ctx),
+					user_email: ctx.user.email || "",
+					status: "success",
+					orgId: ctx.orgId,
+					module: "system",
+					target_type: "organization",
+					target_id: ctx.orgId,
+					target_label: updated.name,
+					summary: `${actorName(ctx)} updated organization settings (${Object.keys(patch).join(", ")})`,
+					metadata: { source: "ai_assistant", fields: Object.keys(patch) },
+				}).catch(() => undefined);
+
+				return {
+					result: {
+						organization: {
+							id: ctx.orgId,
+							name: updated.name,
+							timezone:
+								typeof updated.settings?.timezone === "string"
+									? updated.settings.timezone
+									: patch.timezone ?? null,
+							websiteUrl:
+								typeof updated.settings?.websiteUrl === "string"
+									? updated.settings.websiteUrl
+									: patch.websiteUrl ?? null,
+						},
+						updatedFields: Object.keys(patch),
+					},
+				};
+			} catch (error) {
+				return asError(
+					error instanceof Error
+						? error.message
+						: "Failed to update organization settings.",
 				);
 			}
 		},
