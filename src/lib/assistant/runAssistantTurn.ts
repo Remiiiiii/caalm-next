@@ -90,6 +90,7 @@ const DATA_TOOLS = new Set([
 	"list_expirations",
 	"list_audit_logs",
 	"list_users",
+	"list_roles",
 ]);
 
 function pendingActionLabel(
@@ -124,6 +125,14 @@ function pendingActionLabel(
 				String(args.reactivate ?? "").toLowerCase() === "true"
 				? `Reactivate ${args.userEmail ?? args.userId ?? "user"}`
 				: `Deactivate ${args.userEmail ?? args.userId ?? "user"}`;
+		case "update_user_profile":
+			return `Update profile for ${args.userEmail ?? args.userId ?? "user"}`;
+		case "update_org_settings":
+			return args.timezone
+				? `Set organization timezone to ${args.timezone}`
+				: args.websiteUrl
+					? `Update organization website URL`
+					: `Update organization settings`;
 		default:
 			return `Confirm ${toolName}`;
 	}
@@ -352,6 +361,25 @@ function formatGenericDataAnswer(toolName: string, output: unknown): string {
 		])}\n\nOpen Users for the full directory.`;
 	}
 
+	if (toolName === "list_roles") {
+		const items = (data.roles ?? []) as Array<Record<string, unknown>>;
+		if (!items.length) {
+			return String(data.message ?? "No roles found for this organization.");
+		}
+		const lines = items.map((role, index) => {
+			const canDo = Array.isArray(role.canDo)
+				? (role.canDo as string[]).slice(0, 5).join("; ")
+				: "";
+			const more =
+				typeof role.morePermissions === "number" && role.morePermissions > 0
+					? ` (+${role.morePermissions} more)`
+					: "";
+			const detail = canDo ? ` — can: ${canDo}${more}` : "";
+			return `${index + 1}. **${role.name ?? "Role"}**${detail}`;
+		});
+		return `Here are the roles I found:\n\n${lines.join("\n")}\n\nOpen Users to manage role assignments.`;
+	}
+
 	return "I finished that request. Use a suggestion below if you want to dig in further.";
 }
 
@@ -383,13 +411,13 @@ function sourcesForTool(
 				},
 			];
 		}
-		if (toolName === "list_users") {
+		if (toolName === "list_users" || toolName === "list_roles") {
 			return [
 				{
 					id: "module-users",
 					title: "Users",
 					href: "/dashboard/users",
-					excerpt: "People in your organization",
+					excerpt: "People and roles in your organization",
 				},
 			];
 		}
