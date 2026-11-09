@@ -21,6 +21,7 @@ Project rules live in `.cursor/rules/` and are the single source of truth. Edit 
 @.cursor/rules/plain-english-junior-dev.mdc
 @.cursor/rules/plan-prompt-templates.mdc
 @.cursor/rules/roadmap-pr-journey.mdc
+@.cursor/rules/no-auto-merge-prs.mdc
 
 ## On-demand: read the file before working in its area
 
