@@ -1,0 +1,29 @@
+---
+description: Open PRs for inspection — never merge or ask to merge unless the user explicitly says to
+alwaysApply: true
+---
+
+# No auto-merge (user inspects PRs)
+
+## Hard rule
+
+When finishing implementation work that opens a pull request (roadmap batches, features, fixes):
+
+1. **Implement** the scoped work, tests, and batch markers as needed.
+2. **Commit, push, and open the PR** (set `linkedPrNumber` when the roadmap board needs it).
+3. **Do not merge** the PR.
+4. **Do not ask** for permission to merge, offer to merge, or start a merge after CI turns green.
+
+The user inspects each PR for task completion and merges themselves.
+
+## Allowed
+
+- Report the PR URL and that CI is pending or green.
+- Fix CI failures on the same branch/PR when asked or when the batch plan says to keep CI green.
+- Merge **only** when the user explicitly says to merge that PR (e.g. “merge #223”).
+
+## Not allowed without an explicit merge ask
+
+- `gh pr merge`, merge buttons, or merge via API/MCP
+- “CI is green — should I merge?”
+- Merging because a plan template says “merge with green CI”

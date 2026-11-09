@@ -16,7 +16,8 @@ This board (`?catalog=pto`) turns the Ask CAALM assistant tool gap list (A–O) 
 - Branch: `cursor/production-tools/s{nn}-b{n}-5329` (see `pto-pr-batches.ts`).
 - Title: `PTO S{n} B{n} {section title} ({task range})`.
 - Body: Who / What / Where / Why / When / How and **Done when** from `production-tools-catalog.ts` for **every task in the batch** (`pnpm`-free: use `buildPtoBatchPrBody`).
-- Merge with green CI to mark those task codes complete on the board.
+- Open the PR, set `linkedPrNumber`, and push for CI. **Do not merge** and **do not ask to merge** — the user inspects the PR and merges when ready (`no-auto-merge-prs.mdc`). Board tasks complete after the user merges with green checks.
+
 
 ## Every tool (non-negotiable)
 

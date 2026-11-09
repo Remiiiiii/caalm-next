@@ -5,7 +5,8 @@ alwaysApply: true
 
 # Roadmap PR completion — user/developer journey
 
-When you **finish implementing** a roadmap batch PR (CLM, Nonprofit / NPO, or Platform Readiness / PRD) — tasks done, tests added or updated, ready to commit/push/merge — **always** end your reply with a brief **user/developer journey** for that PR.
+When you **finish implementing** a roadmap batch PR (CLM, Nonprofit / NPO, Platform Readiness / PRD, or Production Tools / PTO) — tasks done, tests added or updated, PR opened (not merged unless the user asked) — **always** end your reply with a brief **user/developer journey** for that PR.
+
 
 This **overrides** the usual “no post-edit reply” silence for that completion turn only. Keep the journey short; do not add a separate Summary/recap closer.
 
@@ -23,7 +24,7 @@ This **overrides** the usual “no post-edit reply” silence for that completio
 
 1. **One-line what shipped** (plain English; PR number + board if known).
 2. **Everyday user journey** — 3–6 short steps: what a CAALM user / buyer sees or no longer risks. One simple analogy OK.
-3. **Developer journey** — 3–6 short steps: branch/batch, what changed, how CI/roadmap marks complete.
+3. **Developer journey** — 3–6 short steps: branch/batch, what changed, PR URL; note that the user merges after inspect (roadmap marks complete on their merge + green CI).
 4. **Verify** — one command, page, or check.
 
 ## Tone
