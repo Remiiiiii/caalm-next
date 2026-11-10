@@ -11,6 +11,7 @@ export type AssistantDataIntent =
 	| "list_tasks"
 	| "create_task"
 	| "search_contracts"
+	| "create_contract"
 	| "search_licenses"
 	| "list_pending_approvals"
 	| "expiring"
@@ -141,6 +142,12 @@ export function detectDataIntent(message: string): AssistantDataIntent {
 		)
 	) {
 		return "view_audit";
+	}
+	if (
+		/\b(create|add|make|start|draft|new)\b/.test(q) &&
+		/\b(contract|agreement)\b/.test(q)
+	) {
+		return "create_contract";
 	}
 	if (/\b(contract|contracts)/.test(q) && /\b(search|find|show|list)/.test(q)) {
 		return "search_contracts";

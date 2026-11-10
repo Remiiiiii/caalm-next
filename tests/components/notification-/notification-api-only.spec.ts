@@ -210,6 +210,8 @@ test.describe("Notification System API Tests (Working Endpoints Only)", () => {
 			expect(Array.isArray(data.data)).toBe(true);
 
 			if (data.data.length > 0) {
+				// Raw Appwrite rows: $id/$createdAt, not id/createdAt (matches
+				// useDashboardData.ts and the dashboard Invitation type).
 				const firstInvitation = data.data[0];
 				// Appwrite invitation rows use $id / $createdAt (not id / createdAt).
 				expect(firstInvitation).toHaveProperty("$id");
