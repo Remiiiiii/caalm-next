@@ -11,7 +11,10 @@ export type PtoPrBatch = {
 	batch: number;
 	taskCodes: string[];
 	taskTitles: string[];
+	/** Batch PR on the board. Completes tasks unless productPrNumber is set. */
 	linkedPrNumber?: number;
+	/** Optional implementation PR when linkedPrNumber was closed without merging (board placeholder only). */
+	productPrNumber?: number;
 };
 
 export const PTO_PR_BATCHES: PtoPrBatch[] = [
@@ -63,6 +66,7 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 			"bulk_update_contracts",
 		],
 		linkedPrNumber: 226,
+		productPrNumber: 227,
 	},
 	{
 		sectionNumber: 2,
@@ -298,12 +302,16 @@ export function linkedPrNumbersForPtoSection(sectionNumber: number): number[] {
 	for (const batch of PTO_PR_BATCHES) {
 		if (batch.sectionNumber !== sectionNumber) continue;
 		if (batch.linkedPrNumber != null) numbers.push(batch.linkedPrNumber);
+		if (batch.productPrNumber != null) numbers.push(batch.productPrNumber);
 	}
 	return numbers;
 }
 
 export function ptoBatchForPr(prNumber: number): PtoPrBatch | undefined {
-	return PTO_PR_BATCHES.find((item) => item.linkedPrNumber === prNumber);
+	return PTO_PR_BATCHES.find(
+		(item) =>
+			item.linkedPrNumber === prNumber || item.productPrNumber === prNumber,
+	);
 }
 
 export function ptoBatchOwnsTaskCode(
@@ -315,9 +323,17 @@ export function ptoBatchOwnsTaskCode(
 	);
 }
 
+/**
+ * Task codes this PR completes on merge.
+ * When productPrNumber is set, only that PR completes the batch — the
+ * linkedPrNumber board placeholder (closed without merging) completes nothing.
+ */
 export function ptoTaskCodesCompletedByPr(prNumber: number): string[] {
 	const batch = ptoBatchForPr(prNumber);
 	if (!batch) return [];
+	if (batch.productPrNumber != null && prNumber !== batch.productPrNumber) {
+		return [];
+	}
 	return batch.taskCodes;
 }
 
@@ -340,7 +356,7 @@ function taskRange(batch: PtoPrBatch): string {
 }
 
 export function ptoCatalogDisplayTitleForPr(prNumber: number): string {
-	const batch = PTO_PR_BATCHES.find((item) => item.linkedPrNumber === prNumber);
+	const batch = ptoBatchForPr(prNumber);
 	if (!batch) return "";
 	return `PTO S${batch.sectionNumber} B${batch.batch} ${batch.sectionTitle} (${taskRange(batch)})`;
 }
