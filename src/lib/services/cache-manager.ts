@@ -54,18 +54,20 @@ export class CacheManager {
 	): Promise<void> {
 		const escapedOrgId = escapeRegex(orgId);
 
-		if (userId) {
+		// Unified keys look like dashboard:unified:{org}:{user}:v21:page:1:limit:50.
+		// Clear every viewer for this org when patterns work — invitation revoke/delete
+		// often only knows orgId, not who has a warm unified cache.
+		if (supportsPatternClear()) {
+			await cache.clear(`^dashboard:unified:${escapedOrgId}:`);
+		} else if (userId) {
 			const baseKey = CACHE_KEYS.dashboard.unified(orgId, userId);
-			if (supportsPatternClear()) {
-				await cache.clear(
-					`^dashboard:unified:${escapedOrgId}:${escapeRegex(userId)}`,
-				);
-			} else {
-				// Vercel KV: delete known unified dashboard cache keys (paginated variants)
+			const versions = ["v21", "v20", "v4", "v3"];
+			for (const version of versions) {
 				for (const page of [1, 2]) {
 					for (const limit of [20, 50]) {
-						await cache.del(`${baseKey}:v4:page:${page}:limit:${limit}`);
-						await cache.del(`${baseKey}:v3:page:${page}:limit:${limit}`);
+						await cache.del(
+							`${baseKey}:${version}:page:${page}:limit:${limit}`,
+						);
 					}
 				}
 			}

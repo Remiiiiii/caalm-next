@@ -5,6 +5,7 @@ import {
 	GoogleGenerativeAI,
 	SchemaType,
 } from "@google/generative-ai";
+import type { AssistantInputForm } from "@/components/assistant/assistantTypes";
 import { PERMISSIONS } from "@/constants/permissions";
 import type { ActivityFeedPayload } from "@/lib/assistant/activityFeed";
 import { buildActivityFeed } from "@/lib/assistant/activityFeed";
@@ -17,6 +18,11 @@ import {
 } from "@/lib/assistant/audit-remediation-context";
 import type { AssistantAuthContext } from "@/lib/assistant/auth";
 import {
+	buildClaudeTools,
+	callClaudeAssistantTurn,
+	callClaudeToolFollowUp,
+} from "@/lib/assistant/claudeChat";
+import {
 	formatDueDate,
 	formatPriority,
 	formatTaskStatus,
@@ -25,8 +31,13 @@ import { buildGeminiChatHistory } from "@/lib/assistant/geminiHistory";
 import { buildGeminiToolFollowUpContents } from "@/lib/assistant/geminiToolFollowUp";
 import { buildImplementationAnalysis } from "@/lib/assistant/implementation-analysis";
 import {
+	type DirectoryInvitee,
+	resolveDirectoryInvitees,
+} from "@/lib/assistant/directoryInvite";
+import {
 	formFromQuizText,
 	hasScheduleDateAndTime,
+	inviteUsersForm,
 	isIncompleteSchedule,
 	looksLikeFieldQuiz,
 	parseFieldsArg,
@@ -35,11 +46,34 @@ import {
 	scheduleEventForm,
 	scheduleFormFromArgs,
 } from "@/lib/assistant/inputForm";
-import { detectDataIntent, isLiveDataIntent } from "@/lib/assistant/intent";
+import {
+	detectDataIntent,
+	isLiveDataIntent,
+	parseDepartmentFilter,
+} from "@/lib/assistant/intent";
+import {
+	clearInviteQueue,
+	getInviteQueue,
+	setInviteQueue,
+} from "@/lib/assistant/inviteQueue";
 import type { RetrievedSource } from "@/lib/assistant/knowledge/retrieve";
 import { retrieveKnowledge } from "@/lib/assistant/knowledge/retrieve";
+import {
+	type AssistantLlmProvider,
+	resolveAssistantProvider,
+	resolveAssistantTurnKind,
+} from "@/lib/assistant/modelRouter";
 import { parseCreateTaskDraft } from "@/lib/assistant/parseCreateTaskDraft";
+import {
+	formatInviteNamesForAnswer,
+} from "@/lib/assistant/invitePeopleField";
+import {
+	formatInvitePeopleLine,
+	parseInviteDraft,
+} from "@/lib/assistant/parseInviteDraft";
+import { parseUserProfileRename } from "@/lib/assistant/parseUserProfileUpdate";
 import { sanitizeRescheduleArgs } from "@/lib/assistant/rescheduleArgs";
+import { ASSISTANT_TOOLS } from "@/lib/assistant/tools/registry";
 import {
 	detectCapCloseAssistIntent,
 	lastAssistantMessageContent,
@@ -55,9 +89,12 @@ import {
 	getToolsForPermissions,
 	runToolByName,
 } from "@/lib/assistant/tools/registry";
+import { normalizeUserToolPendingArgs } from "@/lib/assistant/tools/userTools";
 import type { ToolDefinition } from "@/lib/assistant/tools/types";
 import { storePendingAction } from "@/lib/assistant/tools/types";
 import type { AuditCapStatus } from "@/lib/audit-upload/types";
+import { normalizePricingTier } from "@/lib/billing/entitlements";
+import { getOrganization } from "@/lib/rbac/organizations";
 
 export type ChatTurnMessage = {
 	role: "user" | "assistant";
@@ -90,13 +127,20 @@ const DATA_TOOLS = new Set([
 	"list_expirations",
 	"list_audit_logs",
 	"list_users",
+	"list_departments",
 	"list_roles",
 ]);
 
 function pendingActionLabel(
 	toolName: string,
 	args: Record<string, unknown>,
+	subjectLabel?: string,
 ): string {
+	const userSubject =
+		subjectLabel ||
+		(typeof args.userEmail === "string" ? args.userEmail : undefined) ||
+		(typeof args.userId === "string" ? args.userId : undefined) ||
+		"user";
 	switch (toolName) {
 		case "create_task":
 			return `Create task “${args.title ?? "Untitled"}”`;
@@ -115,18 +159,29 @@ function pendingActionLabel(
 		case "generate_report":
 			return `Generate report for ${args.department ?? "your department"}`;
 		case "invite_user":
-			return `Invite ${args.email ?? "user"} as ${args.role ?? "Viewer"}`;
+			return `Invite ${args.name || args.email || "user"} as ${args.role ?? "Viewer"} in ${args.department ?? "department"}`;
+		case "invite_users": {
+			const invitees = Array.isArray(args.invitees)
+				? (args.invitees as Array<{ name?: string; email?: string }>)
+				: [];
+			const names =
+				invitees
+					.map((row) => row.name || row.email)
+					.filter(Boolean)
+					.join(", ") || "directory users";
+			return `Invite ${names} as ${args.role ?? "Viewer"} in ${args.department ?? "department"}`;
+		}
 		case "resend_invite":
 			return `Resend invite to ${args.email ?? "pending user"}`;
 		case "assign_user_roles":
-			return `Change roles for ${args.userEmail ?? args.userId ?? "user"}`;
+			return `Change roles for ${userSubject}`;
 		case "deactivate_user":
 			return args.reactivate === true ||
 				String(args.reactivate ?? "").toLowerCase() === "true"
-				? `Reactivate ${args.userEmail ?? args.userId ?? "user"}`
-				: `Deactivate ${args.userEmail ?? args.userId ?? "user"}`;
+				? `Reactivate ${userSubject}`
+				: `Deactivate ${userSubject}`;
 		case "update_user_profile":
-			return `Update profile for ${args.userEmail ?? args.userId ?? "user"}`;
+			return `Update profile for ${userSubject}`;
 		case "update_org_settings":
 			return args.timezone
 				? `Set organization timezone to ${args.timezone}`
@@ -137,8 +192,6 @@ function pendingActionLabel(
 			return `Confirm ${toolName}`;
 	}
 }
-
-const apiKey = process.env.GOOGLE_API_KEY;
 
 function buildFunctionDeclarations(
 	tools: ToolDefinition[],
@@ -351,14 +404,39 @@ function formatGenericDataAnswer(toolName: string, output: unknown): string {
 
 	if (toolName === "list_users") {
 		const items = (data.users ?? []) as Array<Record<string, unknown>>;
+		const department =
+			typeof data.department === "string" && data.department.trim()
+				? data.department.trim()
+				: null;
 		if (!items.length) {
-			return String(data.message ?? "No people found in this organization.");
+			return String(
+				data.message ??
+					(department
+						? `No people found in the ${department} department.`
+						: "No people found in this organization."),
+			);
 		}
-		return `Here are the people I found:\n\n${formatListItems(items, "name", [
+		const header = department
+			? `Here are the people in ${department}:`
+			: "Here are the people I found:";
+		return `${header}\n\n${formatListItems(items, "name", [
 			{ key: "email", label: (v) => (v ? String(v) : null) },
 			{ key: "role", label: (v) => (v ? String(v) : null) },
+			{ key: "department", label: (v) => (v ? String(v) : null) },
 			{ key: "status", label: (v) => (v ? String(v) : null) },
 		])}\n\nOpen Users for the full directory.`;
+	}
+
+	if (toolName === "list_departments") {
+		const items = (data.departments ?? []) as Array<Record<string, unknown>>;
+		if (!items.length) {
+			return "No departments are configured for this organization.";
+		}
+		return `Here are the departments in your organization:\n\n${formatListItems(
+			items,
+			"name",
+			[],
+		)}`;
 	}
 
 	if (toolName === "list_roles") {
@@ -411,7 +489,11 @@ function sourcesForTool(
 				},
 			];
 		}
-		if (toolName === "list_users" || toolName === "list_roles") {
+		if (
+			toolName === "list_users" ||
+			toolName === "list_roles" ||
+			toolName === "list_departments"
+		) {
 			return [
 				{
 					id: "module-users",
@@ -450,7 +532,9 @@ export async function runAssistantTurn(params: {
 	// For live-data questions, do not let weak RAG matches steer the answer.
 	const sources = isLiveDataIntent(dataIntent) ? [] : ragSources;
 
-	if (!apiKey) {
+	const googleApiKey = process.env.GOOGLE_API_KEY;
+	const claudeApiKey = process.env.CLAUDE_API_KEY;
+	if (!googleApiKey && !claudeApiKey) {
 		return {
 			answer:
 				"AI is not configured on this server. You can still browse CAALM using the sidebar. For product help, open the demo tour tips on each module page.",
@@ -489,10 +573,320 @@ export async function runAssistantTurn(params: {
 	};
 	declarations.push(requestInputDeclaration);
 	const canListTasks = allowedTools.some((t) => t.name === "list_tasks");
+	const canListUsers = allowedTools.some((t) => t.name === "list_users");
+	const canListRoles = allowedTools.some((t) => t.name === "list_roles");
 	const canCreateTask = allowedTools.some((t) => t.name === "create_task");
 	const canCreateEvent = allowedTools.some(
 		(t) => t.name === "create_calendar_event",
 	);
+	const canUpdateUserProfile = allowedTools.some(
+		(t) => t.name === "update_user_profile",
+	);
+	const canInviteUser = allowedTools.some(
+		(t) => t.name === "invite_user" || t.name === "invite_users",
+	);
+
+	// Deterministic path: CAALM invite — one person per form, then Confirm.
+	if (!remediationContext && dataIntent === "invite_user") {
+		if (!canInviteUser) {
+			return {
+				answer:
+					"You don't have permission to invite people into CAALM (`users.invite`). Ask an admin for invite access, or open **Send Invite Link** on the dashboard with a role that includes inviting.",
+				sources: [],
+				suggestions: [
+					{
+						id: "open-dashboard",
+						label: "Open dashboard",
+						action: { type: "navigate", href: "/dashboard" },
+					},
+				],
+			};
+		}
+
+		const draft = parseInviteDraft(userMessage);
+		const existingQueue = await getInviteQueue(ctx.user.$id, ctx.orgId);
+		let matched: DirectoryInvitee[] = [];
+		let unmatched: string[] = [];
+
+		if (draft.nameHints.length > 0 || draft.emails.length > 0) {
+			const resolved = await resolveDirectoryInvitees({
+				nameHints: draft.nameHints,
+				emails: draft.emails,
+			});
+			matched = resolved.matched;
+			unmatched = resolved.unmatched;
+		} else if (existingQueue?.remaining.length) {
+			matched = [...existingQueue.remaining];
+		}
+
+		if (matched.length === 0) {
+			const who =
+				unmatched.length > 0 ? unmatched.join(", ") : "those people";
+			return {
+				answer: `${who} ${unmatched.length === 1 ? "is" : "are"} not in the connected directory waiting for a CAALM invite. Invites grant CAALM access to people who already have a company email in that directory. Use **Send Invite Link** on the dashboard after they appear there.`,
+				sources: [],
+				suggestions: [
+					{
+						id: "open-dashboard-invite",
+						label: "Open Send Invite Link",
+						action: { type: "navigate", href: "/dashboard" },
+					},
+				],
+			};
+		}
+
+		const unmatchedNote =
+			unmatched.length > 0
+				? ` I could not match: ${unmatched.join(", ")}.`
+				: "";
+
+		// Clickable multi form: check who shares this role/dept; unchecked wait for the next form.
+		if (matched.length > 1 && (!draft.role || !draft.department)) {
+			await setInviteQueue({
+				userId: ctx.user.$id,
+				orgId: ctx.orgId,
+				remaining: matched,
+				total: Math.max(existingQueue?.total ?? 0, matched.length),
+			});
+			return {
+				answer: `I found ${formatInviteNamesForAnswer(matched)} in the connected directory. Check everyone who should share the same role and department on this invite. Leave others unchecked. After you Confirm, I will open another form for anyone still left.${unmatchedNote}`,
+				sources: [],
+				suggestions: [],
+				inputForm: inviteUsersForm(
+					{
+						people: formatInvitePeopleLine(matched),
+						role: draft.role,
+						department: draft.department,
+						division: draft.division,
+					},
+					matched,
+				),
+			};
+		}
+
+		// Ready to confirm: selected people from this form (or NL).
+		// Unchecked people stay in the queue until Confirm succeeds, then get the next form.
+		if (draft.role && draft.department) {
+			const selected = matched;
+			const selectedEmails = new Set(
+				selected.map((row) => row.email.trim().toLowerCase()),
+			);
+			const pool = existingQueue?.remaining?.length
+				? existingQueue.remaining
+				: selected;
+			const deferred: DirectoryInvitee[] = pool.filter(
+				(row) => !selectedEmails.has(row.email.trim().toLowerCase()),
+			);
+
+			if (deferred.length > 0) {
+				// Keep unchecked people in the queue until Confirm succeeds.
+				await setInviteQueue({
+					userId: ctx.user.$id,
+					orgId: ctx.orgId,
+					remaining: pool,
+					total: Math.max(
+						existingQueue?.total ?? 0,
+						pool.length,
+						selected.length + deferred.length,
+					),
+				});
+			} else if (!existingQueue) {
+				// Natural-language invite with role already filled: nothing deferred.
+				await clearInviteQueue(ctx.user.$id, ctx.orgId);
+			} else {
+				// Everyone in the queue was selected for this Confirm.
+				await setInviteQueue({
+					userId: ctx.user.$id,
+					orgId: ctx.orgId,
+					remaining: pool,
+					total: existingQueue.total,
+				});
+			}
+
+			const deferredNote =
+				deferred.length > 0
+					? ` After Confirm, I will ask about ${formatInviteNamesForAnswer(deferred)} next.`
+					: "";
+
+			if (selected.length === 1) {
+				const current = selected[0]!;
+				const singleArgs: Record<string, unknown> = {
+					email: current.email,
+					name: current.fullName,
+					role: draft.role,
+					department: draft.department,
+					...(draft.division ? { division: draft.division } : {}),
+				};
+				const label = pendingActionLabel("invite_user", singleArgs);
+				const preview = JSON.stringify(singleArgs, null, 2).slice(0, 500);
+				const pending = await storePendingAction({
+					userId: ctx.user.$id,
+					orgId: ctx.orgId,
+					toolName: "invite_user",
+					args: singleArgs,
+					label,
+					preview,
+				});
+				return {
+					answer: `I prepared **${label}**. Review and tap **Confirm** to send their invite link. Nothing is sent until you confirm.${deferredNote}${unmatchedNote}`,
+					sources: [],
+					suggestions: [
+						{
+							id: "confirm-hint",
+							label: "What happens when I confirm?",
+							action: {
+								type: "prompt",
+								text: "What will happen when I confirm this action?",
+							},
+						},
+						{
+							id: "open-pending-invites",
+							label: "Open Pending Invitations",
+							action: { type: "navigate", href: "/dashboard" },
+						},
+					],
+					pendingAction: {
+						id: pending.id,
+						label,
+						preview,
+						toolName: "invite_user",
+						args: singleArgs,
+					},
+				};
+			}
+
+			const invitees = selected.map((row) => ({
+				email: row.email,
+				name: row.fullName,
+			}));
+			const bulkArgs: Record<string, unknown> = {
+				invitees,
+				invitees_json: JSON.stringify(invitees),
+				role: draft.role,
+				department: draft.department,
+				...(draft.division ? { division: draft.division } : {}),
+			};
+			const label = pendingActionLabel("invite_users", bulkArgs);
+			const preview = JSON.stringify(bulkArgs, null, 2).slice(0, 500);
+			const pending = await storePendingAction({
+				userId: ctx.user.$id,
+				orgId: ctx.orgId,
+				toolName: "invite_users",
+				args: bulkArgs,
+				label,
+				preview,
+			});
+			return {
+				answer: `I prepared **${label}** for ${formatInviteNamesForAnswer(selected)}. Review and tap **Confirm** to send these invite links. Nothing is sent until you confirm.${deferredNote}${unmatchedNote}`,
+				sources: [],
+				suggestions: [
+					{
+						id: "confirm-hint",
+						label: "What happens when I confirm?",
+						action: {
+							type: "prompt",
+							text: "What will happen when I confirm this action?",
+						},
+					},
+					{
+						id: "open-pending-invites",
+						label: "Open Pending Invitations",
+						action: { type: "navigate", href: "/dashboard" },
+					},
+				],
+				pendingAction: {
+					id: pending.id,
+					label,
+					preview,
+					toolName: "invite_users",
+					args: bulkArgs,
+				},
+			};
+		}
+
+		// Single person, still need role/department.
+		const current = matched[0]!;
+		await setInviteQueue({
+			userId: ctx.user.$id,
+			orgId: ctx.orgId,
+			remaining: matched,
+			total: Math.max(existingQueue?.total ?? 0, matched.length),
+		});
+		return {
+			answer: `I found **${current.fullName}** in the connected directory. Choose their CAALM role and department. Nothing is sent until you Confirm.${unmatchedNote}`,
+			sources: [],
+			suggestions: [],
+			inputForm: inviteUsersForm({
+				people: formatInvitePeopleLine([current]),
+				role: draft.role,
+				department: draft.department,
+				division: draft.division,
+			}),
+		};
+	}
+
+	// Deterministic path: rename / change display name → confirm card (skip list_users).
+	if (
+		!remediationContext &&
+		dataIntent === "update_user_profile" &&
+		canUpdateUserProfile
+	) {
+		const draft = parseUserProfileRename(userMessage);
+		if (draft) {
+			let args: Record<string, unknown> = {
+				userEmail: draft.lookup,
+				fullName: draft.fullName,
+			};
+			const normalized = await normalizeUserToolPendingArgs(
+				ctx.orgId,
+				"update_user_profile",
+				args,
+			);
+			if (normalized.error) {
+				return {
+					answer: normalized.error,
+					sources: [],
+					suggestions: suggestionsForTurn({ dataIntent }),
+				};
+			}
+			args = normalized.args;
+			const label = pendingActionLabel(
+				"update_user_profile",
+				args,
+				normalized.subjectLabel,
+			);
+			const preview = JSON.stringify(args, null, 2).slice(0, 500);
+			const pending = await storePendingAction({
+				userId: ctx.user.$id,
+				orgId: ctx.orgId,
+				toolName: "update_user_profile",
+				args,
+				label,
+				preview,
+			});
+			return {
+				answer: `I prepared **${label}**. Review the details and tap **Confirm** to run it, or ask me to change something first.`,
+				sources: [],
+				suggestions: [
+					{
+						id: "confirm-hint",
+						label: "What happens when I confirm?",
+						action: {
+							type: "prompt",
+							text: "What will happen when I confirm this action?",
+						},
+					},
+				],
+				pendingAction: {
+					id: pending.id,
+					label,
+					preview,
+					toolName: "update_user_profile",
+					args,
+				},
+			};
+		}
+	}
 
 	// Deterministic path: open an editable draft card instead of a numbered quiz.
 	if (!remediationContext && dataIntent === "create_task" && canCreateTask) {
@@ -563,6 +957,64 @@ export async function runAssistantTurn(params: {
 		};
 	}
 
+	// Deterministic path: list people (optional department filter from the message).
+	if (!remediationContext && dataIntent === "list_users" && canListUsers) {
+		const department = parseDepartmentFilter(userMessage);
+		const toolResult = await runToolByName(
+			{ ...ctx, pathname },
+			"list_users",
+			{
+				...(department ? { department } : {}),
+				limit: 25,
+			},
+		);
+		return {
+			answer: formatGenericDataAnswer("list_users", toolResult.result),
+			sources: sourcesForTool("list_users", ragSources),
+			suggestions: suggestionsForTurn({
+				toolName: "list_users",
+				dataIntent,
+			}),
+			clientAction: toolResult.clientAction,
+		};
+	}
+
+	// Deterministic path: list departments (do not let the model call list_users).
+	if (!remediationContext && dataIntent === "list_departments") {
+		const toolResult = await runToolByName(
+			{ ...ctx, pathname },
+			"list_departments",
+			{},
+		);
+		return {
+			answer: formatGenericDataAnswer("list_departments", toolResult.result),
+			sources: sourcesForTool("list_departments", ragSources),
+			suggestions: suggestionsForTurn({
+				toolName: "list_departments",
+				dataIntent,
+			}),
+			clientAction: toolResult.clientAction,
+		};
+	}
+
+	// Deterministic path: list roles.
+	if (!remediationContext && dataIntent === "list_roles" && canListRoles) {
+		const toolResult = await runToolByName(
+			{ ...ctx, pathname },
+			"list_roles",
+			{ limit: 20 },
+		);
+		return {
+			answer: formatGenericDataAnswer("list_roles", toolResult.result),
+			sources: sourcesForTool("list_roles", ragSources),
+			suggestions: suggestionsForTurn({
+				toolName: "list_roles",
+				dataIntent,
+			}),
+			clientAction: toolResult.clientAction,
+		};
+	}
+
 	const systemInstruction = `You are CAALM Assistant, an in-app helper for contracts, licenses, audits, analytics, calendar, and tasks.
 
 Rules:
@@ -575,9 +1027,16 @@ Rules:
 - Knowledge Context is for product how-to only. Do not use Analytics, Reports, or Audit sources as a substitute for listing tasks.
 - Never invent permissions or claim an action succeeded unless a tool returned success.
 - After a tool returns data, summarize the rows clearly (titles, status, due dates). Never reply with only "Done."
+- User profile changes: when the user asks to rename someone or change their name, job title, department, or division, call update_user_profile directly with that person's name or exact email. Do NOT call list_users first when they already named who to change — the confirm card resolves the directory email.
+- Departments catalog: when the user asks which departments exist (not who is in one), call list_departments. Never answer with a people list for that question.
+- People in a department: when the user asks for users/people in a department (e.g. "list users in IT"), call list_users with department set. Never call list_departments for that.
+- Invites: CAALM invites are for product access only, and only for people already in the connected directory with a company email. Never invent invite success. Prefer invite_users / invite_user with directory emails, role, and department. The app shows a Confirm card before anything is sent.
 - Only call navigate when the user asks to open or go to a page.
 - Refuse legal, billing dispute, and security incident advice; suggest contacting an admin.
 - Keep answers concise and actionable.
+- Never use em dashes (—) or en dashes (–) as punctuation. Use a period, comma, or new sentence instead. Hyphens are fine only inside hyphenated words or labels (for example co-founder, well-known).
+- One job per turn: do not claim unrelated profile edits when the user only asked to invite.
+- Invites with several people: the app shows a clickable name list so the admin can include or remove people before choosing one shared role and department.
 
 Current date and time (server timezone): ${new Date().toString()}
 Today is ${new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })} (${new Date().toISOString().slice(0, 10)}). When the user says a weekday like "Friday", use the soonest upcoming that weekday (including today if it matches) — do not skip ahead a week unless they said "next Friday".
@@ -783,35 +1242,169 @@ ${remediationContext ? `\n${buildAuditRemediationPrompt(remediationContext)}` : 
 		dataIntent === "view_audit" ||
 		dataIntent === "complete_task" ||
 		dataIntent === "reschedule_event" ||
-		dataIntent === "cancel_event";
+		dataIntent === "cancel_event" ||
+		dataIntent === "list_users" ||
+		dataIntent === "list_departments" ||
+		dataIntent === "list_roles" ||
+		dataIntent === "update_user_profile" ||
+		dataIntent === "invite_user";
 
-	const genAI = new GoogleGenerativeAI(apiKey);
-	const model = genAI.getGenerativeModel({
-		model: "gemini-3.5-flash-lite",
-		systemInstruction,
-		tools: declarations.length
-			? [{ functionDeclarations: declarations }]
-			: undefined,
-		toolConfig: {
-			functionCallingConfig: {
-				mode: forceTool ? FunctionCallingMode.ANY : FunctionCallingMode.AUTO,
-			},
-		},
+	const org = await getOrganization(ctx.orgId);
+	const tier = normalizePricingTier(org?.subscriptionTier);
+	const turnKind = resolveAssistantTurnKind({ dataIntent });
+	let provider: AssistantLlmProvider = resolveAssistantProvider({
+		tier,
+		kind: turnKind,
 	});
 
-	const history = buildGeminiChatHistory(messages, userMessage);
+	if (provider === "claude" && !claudeApiKey) {
+		if (tier === "enterprise") {
+			return {
+				answer:
+					"Claude is not configured on this server. Ask your admin to set CLAUDE_API_KEY for Enterprise Ask CAALM.",
+				sources: ragSources,
+				suggestions: suggestionsForTurn({ dataIntent }),
+			};
+		}
+		if (!googleApiKey) {
+			return {
+				answer:
+					"AI is not configured on this server. You can still browse CAALM using the sidebar. For product help, open the demo tour tips on each module page.",
+				sources: ragSources,
+				suggestions: suggestionsForTurn({ dataIntent }),
+			};
+		}
+		console.warn(
+			"[SERVER] runAssistantTurn: CLAUDE_API_KEY missing; falling back to Gemini for growth action",
+		);
+		provider = "gemini";
+	} else if (provider === "gemini" && !googleApiKey) {
+		if (claudeApiKey && tier !== "starter") {
+			console.warn(
+				"[SERVER] runAssistantTurn: GOOGLE_API_KEY missing; falling back to Claude",
+			);
+			provider = "claude";
+		} else {
+			return {
+				answer:
+					"AI is not configured on this server. You can still browse CAALM using the sidebar. For product help, open the demo tour tips on each module page.",
+				sources: ragSources,
+				suggestions: suggestionsForTurn({ dataIntent }),
+			};
+		}
+	}
 
-	const chat = model.startChat({ history });
-	const result = await chat.sendMessage(userMessage);
-	const response = result.response;
+	console.log(
+		`[SERVER] runAssistantTurn: provider=${provider} tier=${tier} kind=${turnKind}`,
+	);
 
-	const functionCalls = response.functionCalls();
-	if (functionCalls?.length) {
-		const call = functionCalls[0];
+	type NormalizedToolCall = {
+		name: string;
+		args: Record<string, unknown>;
+		id?: string;
+	};
+
+	let toolCall: NormalizedToolCall | null = null;
+	let textAnswer = "";
+	let geminiFollowUp:
+		| {
+				history: ReturnType<typeof buildGeminiChatHistory>;
+				modelContent: {
+					role: string;
+					parts: Array<Record<string, unknown>>;
+				};
+				model: ReturnType<GoogleGenerativeAI["getGenerativeModel"]>;
+		  }
+		| null = null;
+	let claudeFollowUp:
+		| {
+				assistantContent: Awaited<
+					ReturnType<typeof callClaudeAssistantTurn>
+				>["assistantContent"];
+				tools: ReturnType<typeof buildClaudeTools>;
+		  }
+		| null = null;
+
+	if (provider === "claude") {
+		const claudeTools = buildClaudeTools(allowedTools, true);
+		const claudeTurn = await callClaudeAssistantTurn({
+			systemInstruction,
+			messages,
+			userMessage,
+			tools: claudeTools,
+			forceTool,
+		});
+		if (claudeTurn.toolCall) {
+			toolCall = {
+				name: claudeTurn.toolCall.name,
+				args: claudeTurn.toolCall.args,
+				id: claudeTurn.toolCall.id,
+			};
+			claudeFollowUp = {
+				assistantContent: claudeTurn.assistantContent,
+				tools: claudeTools,
+			};
+		} else {
+			textAnswer = claudeTurn.text || "I could not generate a response.";
+		}
+	} else {
+		// Growth help: Gemini without tools (cheap RAG). Starter keeps tools.
+		const geminiToolsEnabled = !(tier === "growth" && turnKind === "help");
+		const genAI = new GoogleGenerativeAI(googleApiKey!);
+		const model = genAI.getGenerativeModel({
+			model: "gemini-3.5-flash-lite",
+			systemInstruction,
+			tools:
+				geminiToolsEnabled && declarations.length
+					? [{ functionDeclarations: declarations }]
+					: undefined,
+			toolConfig: geminiToolsEnabled
+				? {
+						functionCallingConfig: {
+							mode: forceTool
+								? FunctionCallingMode.ANY
+								: FunctionCallingMode.AUTO,
+						},
+					}
+				: undefined,
+		});
+
+		const history = buildGeminiChatHistory(messages, userMessage);
+		const chat = model.startChat({ history });
+		const result = await chat.sendMessage(userMessage);
+		const response = result.response;
+		const functionCalls = response.functionCalls();
+
+		if (functionCalls?.length) {
+			const call = functionCalls[0]!;
+			const callWithId = call as typeof call & { id?: string };
+			toolCall = {
+				name: call.name,
+				args: (call.args ?? {}) as Record<string, unknown>,
+				id: callWithId.id,
+			};
+			const modelContent = response.candidates?.[0]?.content;
+			geminiFollowUp = {
+				history,
+				modelContent: {
+					role: modelContent?.role ?? "model",
+					parts: (modelContent?.parts ?? []) as unknown as Array<
+						Record<string, unknown>
+					>,
+				},
+				model,
+			};
+		} else {
+			textAnswer = response.text() || "I could not generate a response.";
+		}
+	}
+
+	if (toolCall) {
+		const call = toolCall;
 
 		// request_input is a client-side form tool — handle before looking up in allowedTools.
 		if (call.name === "request_input") {
-			const args = (call.args ?? {}) as Record<string, unknown>;
+			const args = call.args;
 			const resolved = resolveInputForm({
 				intent: String(args.intent ?? "input"),
 				intro: String(args.intro ?? "Fill this in:"),
@@ -833,14 +1426,24 @@ ${remediationContext ? `\n${buildAuditRemediationPrompt(remediationContext)}` : 
 
 		const tool = allowedTools.find((t) => t.name === call.name);
 		if (!tool) {
+			const knownTool = ASSISTANT_TOOLS.some((t) => t.name === call.name);
+			if (!knownTool) {
+				return {
+					answer:
+						"I don't have a tool for that exact step. For CAALM access invites, name people from the connected directory and include role and department — or use **Send Invite Link** on the dashboard.",
+					sources: [],
+					suggestions: suggestionsForTurn({ dataIntent }),
+				};
+			}
 			return {
-				answer: "I cannot run that action with your current permissions.",
-				sources,
+				answer:
+					"I cannot run that action with your current permissions. Ask an admin if you need access.",
+				sources: [],
 				suggestions: suggestionsForTurn({ dataIntent }),
 			};
 		}
 
-		let args = (call.args ?? {}) as Record<string, unknown>;
+		let args = call.args;
 		if (tool.name === "reschedule_calendar_event") {
 			args = sanitizeRescheduleArgs(userMessage, args);
 		}
@@ -855,7 +1458,24 @@ ${remediationContext ? `\n${buildAuditRemediationPrompt(remediationContext)}` : 
 		}
 
 		if (tool.mutating) {
-			const label = pendingActionLabel(tool.name, args);
+			const normalized = await normalizeUserToolPendingArgs(
+				ctx.orgId,
+				tool.name,
+				args,
+			);
+			if (normalized.error) {
+				return {
+					answer: normalized.error,
+					sources,
+					suggestions: suggestionsForTurn({ dataIntent }),
+				};
+			}
+			args = normalized.args;
+			const label = pendingActionLabel(
+				tool.name,
+				args,
+				normalized.subjectLabel,
+			);
 			const preview = JSON.stringify(args, null, 2).slice(0, 500);
 			const pending = await storePendingAction({
 				userId: ctx.user.$id,
@@ -907,7 +1527,8 @@ ${remediationContext ? `\n${buildAuditRemediationPrompt(remediationContext)}` : 
 			const result = toolResult.result as { error?: string } | undefined;
 			if (result?.error || toolResult.error) {
 				return {
-					answer: result?.error ?? toolResult.error ?? "Could not open Mark closed.",
+					answer:
+						result?.error ?? toolResult.error ?? "Could not open Mark closed.",
 					sources: sourcesForTool(call.name, ragSources),
 					suggestions: [],
 				};
@@ -932,31 +1553,40 @@ ${remediationContext ? `\n${buildAuditRemediationPrompt(remediationContext)}` : 
 			};
 		}
 
-		// Do not use chat.sendMessage for functionResponse — the SDK
-		// still sends role "function", which Gemini 3.x rejects.
-		const modelContent = response.candidates?.[0]?.content;
-		const callWithId = call as typeof call & { id?: string };
-		const followUpContents = buildGeminiToolFollowUpContents({
-			history,
-			userMessage,
-			modelContent: {
-				role: modelContent?.role ?? "model",
-				parts: (modelContent?.parts ?? []) as unknown as Array<
-					Record<string, unknown>
-				>,
-			},
-			functionCall: {
-				name: call.name,
-				args: (call.args ?? {}) as object,
-				id: callWithId.id,
-			},
-			toolResult: toolResult.result ?? toolResult,
-		});
-		const followUp = await model.generateContent({
-			// GeminiContent is intentionally looser than SDK Content (id / thoughts).
-			contents: followUpContents as unknown as Content[],
-		});
-		let text = followUp.response.text()?.trim() ?? "";
+		let text = "";
+		if (provider === "claude" && claudeFollowUp && call.id) {
+			text = (
+				await callClaudeToolFollowUp({
+					systemInstruction,
+					messages,
+					userMessage,
+					assistantContent: claudeFollowUp.assistantContent,
+					toolCallId: call.id,
+					toolResult: toolResult.result ?? toolResult,
+					tools: claudeFollowUp.tools,
+				})
+			).trim();
+		} else if (provider === "gemini" && geminiFollowUp) {
+			// Do not use chat.sendMessage for functionResponse — the SDK
+			// still sends role "function", which Gemini 3.x rejects.
+			const followUpContents = buildGeminiToolFollowUpContents({
+				history: geminiFollowUp.history,
+				userMessage,
+				modelContent: geminiFollowUp.modelContent,
+				functionCall: {
+					name: call.name,
+					args: call.args as object,
+					id: call.id,
+				},
+				toolResult: toolResult.result ?? toolResult,
+			});
+			const followUp = await geminiFollowUp.model.generateContent({
+				// GeminiContent is intentionally looser than SDK Content (id / thoughts).
+				contents: followUpContents as unknown as Content[],
+			});
+			text = followUp.response.text()?.trim() ?? "";
+		}
+
 		const weakReply = !text || /^done\.?$/i.test(text);
 		if (weakReply || DATA_TOOLS.has(call.name)) {
 			text = formatGenericDataAnswer(
@@ -1008,19 +1638,18 @@ ${remediationContext ? `\n${buildAuditRemediationPrompt(remediationContext)}` : 
 		};
 	}
 
-	const text = response.text() || "I could not generate a response.";
-	if (looksLikeFieldQuiz(text)) {
+	if (looksLikeFieldQuiz(textAnswer)) {
 		const intent = dataIntent === "schedule_event" ? "schedule_event" : "input";
 		return {
 			answer: "Fill this in instead of typing answers.",
 			sources: [],
 			suggestions: [],
-			inputForm: formFromQuizText(text, intent),
+			inputForm: formFromQuizText(textAnswer, intent),
 		};
 	}
 
 	return {
-		answer: text,
+		answer: textAnswer,
 		sources: ragSources,
 		suggestions: suggestionsForTurn({ dataIntent }),
 	};

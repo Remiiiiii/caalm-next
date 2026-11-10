@@ -24,6 +24,7 @@ import { CaalmDatePicker } from "@/components/ui/caalm-date-picker";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { dueDateIsoOffset } from "@/lib/assistant/parseCreateTaskDraft";
+import { toUserFacingErrorMessage } from "@/lib/errors/user-facing";
 import { cn, getProfilePictureUrl } from "@/lib/utils";
 
 const BADGE_TONES = {
@@ -125,7 +126,17 @@ function FieldValue({ field }: { field: AssistantActionField }) {
 		);
 	}
 
-	return <span className="font-semibold text-slate-700">{field.value}</span>;
+	return (
+		<span
+			className={cn(
+				field.muted
+					? "font-medium text-slate-400"
+					: "font-semibold text-slate-700",
+			)}
+		>
+			{field.value}
+		</span>
+	);
 }
 
 function EntityIcon({ toolName }: { toolName: string }) {
@@ -648,17 +659,19 @@ export default function AssistantActionLifecycleCard({
 				</>
 			)}
 
-			{/* Failure alert */}
+			{/* Failure alert — plain language only (no HTTP status / internal codes). */}
 			{isFailed && action.errorMessage ? (
 				<div className="mx-4 mb-3 rounded-lg border border-red/20 bg-red/10 px-3 py-2.5">
 					<p className="text-sm font-medium text-slate-700">
-						{action.errorMessage}
+						{toUserFacingErrorMessage(
+							action.errorMessage,
+							"Something went wrong. Please try again.",
+						)}
 					</p>
-					{action.errorCode ? (
-						<p className="mt-1 text-xs tabular-nums text-red">
-							{action.errorCode}
-						</p>
-					) : null}
+					<p className="mt-1 text-xs text-slate-600">
+						Use Retry below. If it keeps failing, copy the ID and share it with
+						support.
+					</p>
 				</div>
 			) : null}
 

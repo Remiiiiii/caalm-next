@@ -1,5 +1,5 @@
-import type { AuditRemediationLaunchContext } from "@/lib/assistant/audit-remediation-context";
 import type { AssistantResearchStep } from "@/lib/assistant/assistant-research-steps";
+import type { AuditRemediationLaunchContext } from "@/lib/assistant/audit-remediation-context";
 
 export type RetrievedSource = {
 	id: string;
@@ -51,6 +51,8 @@ export type AssistantActionField = {
 	value: string;
 	/** When set, UI shows previous → value */
 	previousValue?: string;
+	/** Soften the value (e.g. department when invite role is Viewer). */
+	muted?: boolean;
 	kind?: "text" | "badge" | "priority" | "status" | "assignee";
 	badgeTone?: AssistantActionFieldBadgeTone;
 	assignee?: {
@@ -102,7 +104,9 @@ export type AssistantFormFieldType =
 	| "date"
 	| "time"
 	| "select"
-	| "textarea";
+	| "textarea"
+	/** Clickable directory people for bulk invite (same role/department). */
+	| "directory_multi";
 
 export type AssistantFormField = {
 	name: string;
@@ -110,7 +114,7 @@ export type AssistantFormField = {
 	type: AssistantFormFieldType;
 	placeholder?: string;
 	required?: boolean;
-	/** Options for select fields */
+	/** Options for select / directory_multi fields */
 	options?: string[];
 	defaultValue?: string;
 };
@@ -140,6 +144,10 @@ export type AssistantChatMessage = {
 	inputForm?: AssistantInputForm;
 	/** Live research trace for corrective-action / implementation flows */
 	researchSteps?: AssistantResearchStep[];
+	/** User bubble whose send failed — show Retry under the request */
+	failed?: boolean;
+	/** Friendly error shown under a failed user request */
+	failedMessage?: string;
 	createdAt?: string;
 };
 
@@ -173,6 +181,8 @@ export type UseCaalmAssistantReturn = {
 			suppressUserBubble?: boolean;
 		},
 	) => Promise<string | null>;
+	/** Resend a user message that failed (keeps the request bubble until retry). */
+	retryFailedMessage: (messageId: string) => Promise<string | null>;
 	confirmAction: (argsPatch?: Record<string, unknown>) => Promise<void>;
 	/** Dismiss a pending confirmation without running it */
 	cancelPendingAction: () => void;

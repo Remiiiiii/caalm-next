@@ -1665,7 +1665,19 @@ export const revokeInvitation = async ({ token }: RevokeInvitationParams) => {
 		rowId: invite.$id,
 		data: { revoked: true, status: INVITATION_STATUS.REVOKED },
 	});
-	await CacheManager.invalidateInvitationCaches(String(invite.orgId));
+	let actorUserId: string | undefined;
+	try {
+		const current = await getCurrentUser();
+		actorUserId =
+			(current as { $id?: string; accountId?: string } | null)?.$id ??
+			(current as { accountId?: string } | null)?.accountId;
+	} catch {
+		actorUserId = undefined;
+	}
+	await CacheManager.invalidateInvitationCaches(
+		String(invite.orgId),
+		actorUserId,
+	);
 	return { success: true };
 };
 
@@ -1683,7 +1695,19 @@ export const deleteInvitation = async ({ token }: RevokeInvitationParams) => {
 		tableId: INVITATIONS_COLLECTION,
 		rowId: invite.$id,
 	});
-	await CacheManager.invalidateInvitationCaches(String(invite.orgId));
+	let actorUserId: string | undefined;
+	try {
+		const current = await getCurrentUser();
+		actorUserId =
+			(current as { $id?: string; accountId?: string } | null)?.$id ??
+			(current as { accountId?: string } | null)?.accountId;
+	} catch {
+		actorUserId = undefined;
+	}
+	await CacheManager.invalidateInvitationCaches(
+		String(invite.orgId),
+		actorUserId,
+	);
 	return { success: true };
 };
 

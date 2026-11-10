@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { Query } from "node-appwrite";
-import { isPendingInvitationStatus } from "@/constants/status";
+import { isVisiblePendingInvitation } from "@/constants/status";
 import { getActiveUsersCount } from "@/lib/actions/user.actions";
 import { LicenseService } from "@/lib/api/licenses/services/LicenseService";
 import { createApiAdminClient } from "@/lib/appwrite/api-client";
@@ -274,9 +274,7 @@ export async function GET(request: NextRequest) {
 					);
 					for (const result of batchResults) {
 						for (const file of result.rows || []) {
-							const flat = flattenTableRow(
-								file as Record<string, unknown>,
-							);
+							const flat = flattenTableRow(file as Record<string, unknown>);
 							filesById.set(String(flat.$id), flat);
 						}
 					}
@@ -418,8 +416,10 @@ export async function GET(request: NextRequest) {
 					files: files.documents,
 					invitations: invitations.documents.filter(
 						(invitation: Record<string, unknown>) =>
-							isPendingInvitationStatus(String(invitation.status)) &&
-							invitation.revoked !== true,
+							isVisiblePendingInvitation({
+								status: String(invitation.status ?? ""),
+								revoked: invitation.revoked,
+							}),
 					),
 					authUsers: users.documents,
 					uninvitedUsers: uninvitedUsers,

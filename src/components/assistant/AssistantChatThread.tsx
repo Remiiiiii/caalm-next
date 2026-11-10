@@ -163,7 +163,9 @@ export default function AssistantChatThread({
 						<div
 							className={cn(
 								"min-w-0 text-sm",
-								message.role === "user" ? "max-w-[85%]" : "max-w-[85%] flex-1",
+								message.role === "user"
+									? "max-w-[85%]"
+									: "w-full max-w-[85%]",
 							)}
 						>
 							<div
@@ -173,6 +175,9 @@ export default function AssistantChatThread({
 										: hasLifecycleCard || hasInputForm || showApply
 											? "overflow-hidden rounded-2xl border border-slate-200/80 bg-white/70 text-slate-700"
 											: "rounded-2xl border border-slate-200/80 bg-white/60 px-3 py-2 text-slate-700",
+									message.role === "user" &&
+										message.failed &&
+										"opacity-90 ring-1 ring-red-300/80",
 								)}
 								style={
 									message.role === "user"
@@ -309,6 +314,24 @@ export default function AssistantChatThread({
 								</div>
 							) : null}
 							</div>
+							{message.role === "user" && message.failed ? (
+								<div className="mt-1.5 flex flex-col items-end gap-1">
+									<p className="max-w-full text-right text-xs text-red-600">
+										{message.failedMessage ||
+											"I couldn't complete that request. Please try again."}
+									</p>
+									<button
+										type="button"
+										disabled={assistant.isSending}
+										onClick={() =>
+											void assistant.retryFailedMessage(message.id)
+										}
+										className="cursor-pointer text-xs font-semibold text-[#0f5384] hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+									>
+										Retry
+									</button>
+								</div>
+							) : null}
 							{message.role === "assistant" && researchSteps?.length ? (
 								<div className="mt-1.5">
 									<AssistantResearchTracePlayback

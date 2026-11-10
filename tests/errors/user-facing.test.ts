@@ -28,4 +28,27 @@ describe("toUserFacingErrorMessage", () => {
 			),
 		).toBe("Something went wrong.");
 	});
+
+	it("hides HTTP 500 / Request failed noise", () => {
+		expect(
+			toUserFacingErrorMessage(
+				"Request failed (500 Internal Server Error)",
+				"We couldn't send that invite. Try again. Nothing was saved twice.",
+			),
+		).toBe(
+			"We couldn't send that invite. Try again. Nothing was saved twice.",
+		);
+	});
+
+	it("hides raw Anthropic / JSON vendor payloads", () => {
+		const raw =
+			'404 {"type":"error","error":{"type":"not_found_error","message":"model: claude-sonnet-4-5"},"request_id":"req_011CgtHWE6Fhi5bjJ7brQMHY"}';
+		expect(isTechnicalErrorMessage(raw)).toBe(true);
+		expect(
+			toUserFacingErrorMessage(
+				raw,
+				"I couldn't complete that request. Please try again.",
+			),
+		).toBe("I couldn't complete that request. Please try again.");
+	});
 });

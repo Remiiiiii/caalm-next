@@ -38,6 +38,37 @@ describe("buildPendingActionLifecycle", () => {
 		expect(card.fields.find((f) => f.label === "Status")?.value).toBe("Open");
 		expect(card.footerNote).toBe("Nothing has changed yet.");
 	});
+
+	it("shows invitees as names and hides invitees_json", () => {
+		const card = buildPendingActionLifecycle({
+			id: "p-invite",
+			label: "Invite Nora Castillo, Indira Sen as Viewer in Administration",
+			preview: "{}",
+			toolName: "invite_users",
+			args: {
+				invitees: [
+					{ email: "cao.chart@example.com", name: "Nora Castillo" },
+					{ email: "csuite4.chart@example.com", name: "Indira Sen" },
+				],
+				invitees_json: JSON.stringify([
+					{ email: "cao.chart@example.com", name: "Nora Castillo" },
+					{ email: "csuite4.chart@example.com", name: "Indira Sen" },
+				]),
+				role: "Viewer",
+				department: "Administration",
+			},
+		});
+		expect(card.fields.find((f) => f.label === "Invitees")?.value).toBe(
+			"Nora Castillo, Indira Sen",
+		);
+		expect(
+			card.fields.some(
+				(f) =>
+					f.label.toLowerCase().includes("json") ||
+					f.value.includes("cao.chart@example.com"),
+			),
+		).toBe(false);
+	});
 });
 
 describe("buildCompletedActionLifecycle", () => {

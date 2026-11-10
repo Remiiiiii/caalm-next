@@ -1,7 +1,7 @@
 "use client";
 
 import { isToday } from "date-fns";
-import { Unlink2, UserPlus, X } from "lucide-react";
+import { Check, Unlink2, UserPlus, X } from "lucide-react";
 import { useLayoutEffect, useRef, useState } from "react";
 import type {
 	AssistantFormField,
@@ -35,6 +35,12 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useTaskPeople } from "@/hooks/useTaskPeople";
 import { optionsForSelectField } from "@/lib/assistant/inputForm";
+import {
+	formatInvitePeopleValue,
+	parseInvitePeopleValue,
+	parseInvitePersonOption,
+	type InvitePeopleOption,
+} from "@/lib/assistant/invitePeopleField";
 import { cn } from "@/lib/utils";
 
 function isParticipantsField(field: AssistantFormField): boolean {
@@ -82,6 +88,97 @@ function participantValueFromIds(
 
 const FIELD_CLASS =
 	"border-[0.25px] border-slate-300 bg-white text-sm text-slate-700";
+
+function DirectoryInvitePeoplePicker({
+	field,
+	value,
+	disabled,
+	onChange,
+}: {
+	field: AssistantFormField;
+	value: string;
+	disabled?: boolean;
+	onChange: (next: string) => void;
+}) {
+	const candidates: InvitePeopleOption[] = (field.options ?? [])
+		.map(parseInvitePersonOption)
+		.filter((row): row is InvitePeopleOption => Boolean(row));
+	const selected = parseInvitePeopleValue(value);
+	const selectedEmails = new Set(selected.map((row) => row.email.toLowerCase()));
+
+	const toggle = (person: InvitePeopleOption) => {
+		if (disabled) return;
+		const email = person.email.toLowerCase();
+		const next = selectedEmails.has(email)
+			? selected.filter((row) => row.email.toLowerCase() !== email)
+			: [...selected, person];
+		onChange(formatInvitePeopleValue(next));
+	};
+
+	if (candidates.length === 0) {
+		return (
+			<p className="text-xs text-slate-500">
+				No directory people are available for this invite.
+			</p>
+		);
+	}
+
+	return (
+		<div className="space-y-1.5">
+			<ul
+				role="listbox"
+				aria-multiselectable="true"
+				aria-label={field.label}
+				className="max-h-44 space-y-1 overflow-y-auto rounded-lg border border-slate-200 bg-white p-1.5"
+			>
+				{candidates.map((person) => {
+					const isOn = selectedEmails.has(person.email.toLowerCase());
+					return (
+						<li key={person.email}>
+							<button
+								type="button"
+								role="option"
+								aria-selected={isOn}
+								disabled={disabled}
+								onClick={() => toggle(person)}
+								className={cn(
+									"flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-left transition-colors duration-200",
+									"hover:bg-blue/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
+									isOn && "bg-[#0f5384]/8",
+									disabled && "cursor-not-allowed opacity-60",
+								)}
+							>
+								<span
+									className={cn(
+										"flex h-4 w-4 shrink-0 items-center justify-center rounded border",
+										isOn
+											? "border-[#0f5384] bg-[#0f5384] text-white"
+											: "border-slate-300 bg-white text-transparent",
+									)}
+									aria-hidden
+								>
+									<Check className="h-2.5 w-2.5" strokeWidth={3} />
+								</span>
+								<span className="min-w-0 flex-1">
+									<span className="block truncate text-sm font-medium text-slate-800">
+										{person.fullName}
+									</span>
+									<span className="block truncate text-[11px] text-slate-500">
+										{person.email}
+									</span>
+								</span>
+							</button>
+						</li>
+					);
+				})}
+			</ul>
+			<p className="text-[11px] text-slate-500">
+				{field.placeholder ||
+					"Check who shares this role and department. Leave others unchecked for the next form."}
+			</p>
+		</div>
+	);
+}
 
 function growTextarea(el: HTMLTextAreaElement | null) {
 	if (!el) return;
@@ -409,41 +506,69 @@ export default function AssistantInputFormCard({
 	const restrictToFuture = Boolean(selectedDay && isToday(selectedDay));
 	const hasPeopleField = form.fields.some(isParticipantsField);
 	const people = useTaskPeople(hasPeopleField);
+	const roleIsViewer =
+		form.intent === "invite_user" &&
+		(values.role ?? "").trim().toLowerCase() === "viewer";
 
 	return (
 		<form onSubmit={handleSubmit} className="mt-2 space-y-3">
-			{form.fields.map((field) => (
+			{form.fields.map((field) => {
+				const fieldName = field.name.toLowerCase();
+				const muteOrgFields =
+					roleIsViewer &&
+					(fieldName === "department" || fieldName === "division");
+				const fieldDisabled = Boolean(disabled || muteOrgFields);
+
+				return (
 				<div key={field.name} className="space-y-1">
 					<label
-						htmlFor={`aif-${field.name}`}
+						htmlFor={
+							field.type === "directory_multi"
+								? undefined
+								: `aif-${field.name}`
+						}
 						className={cn(
-							"block text-xs font-medium text-slate-600",
+							"block text-xs font-medium",
+							muteOrgFields ? "text-slate-400" : "text-slate-600",
 							field.required &&
+								!muteOrgFields &&
 								"after:ml-0.5 after:text-red after:content-['*']",
+							field.required &&
+								muteOrgFields &&
+								"after:ml-0.5 after:text-slate-300 after:content-['*']",
 						)}
 					>
 						{field.label}
 					</label>
 
-					{field.type === "textarea" ? (
+					{field.type === "directory_multi" ? (
+						<DirectoryInvitePeoplePicker
+							field={field}
+							value={values[field.name] ?? ""}
+							disabled={fieldDisabled}
+							onChange={(next) => set(field.name, next)}
+						/>
+					) : field.type === "textarea" ? (
 						<AutoGrowTextarea
 							id={`aif-${field.name}`}
 							value={values[field.name]}
 							onChange={(next) => set(field.name, next)}
 							placeholder={field.placeholder}
-							disabled={disabled}
+							disabled={fieldDisabled}
 						/>
 					) : field.type === "select" ? (
 						<Select
 							value={values[field.name] || undefined}
 							onValueChange={(value) => set(field.name, value)}
-							disabled={disabled}
+							disabled={fieldDisabled}
 						>
 							<SelectTrigger
 								id={`aif-${field.name}`}
 								className={cn(
 									"h-8 px-2.5! py-0! shadow-none hover:border-blue-300",
 									FIELD_CLASS,
+									muteOrgFields &&
+										"border-slate-200 bg-slate-50 text-slate-400 opacity-100 hover:border-slate-200",
 								)}
 							>
 								<SelectValue placeholder="Choose…" />
@@ -462,7 +587,7 @@ export default function AssistantInputFormCard({
 							value={values[field.name] ?? ""}
 							onChange={(value) => set(field.name, value)}
 							placeholder={field.placeholder ?? "Pick a date"}
-							disabled={disabled}
+							disabled={fieldDisabled}
 							disablePast
 							size="sm"
 						/>
@@ -476,7 +601,7 @@ export default function AssistantInputFormCard({
 								restrictToFuture &&
 								isNotePinDateTimeInPast(dateValue, values[field.name] ?? "")
 							}
-							disabled={disabled}
+							disabled={fieldDisabled}
 							placeholder="Pick a time"
 							size="sm"
 						/>
@@ -485,7 +610,7 @@ export default function AssistantInputFormCard({
 							field={field}
 							value={values[field.name] ?? ""}
 							people={people}
-							disabled={disabled}
+							disabled={fieldDisabled}
 							onChange={(next) => set(field.name, next)}
 						/>
 					) : (
@@ -495,12 +620,13 @@ export default function AssistantInputFormCard({
 							value={values[field.name]}
 							onChange={(e) => set(field.name, e.target.value)}
 							placeholder={field.placeholder}
-							disabled={disabled}
+							disabled={fieldDisabled}
 							className={cn("h-8", FIELD_CLASS)}
 						/>
 					)}
 				</div>
-			))}
+				);
+			})}
 
 			<div className="flex justify-end pt-1">
 				<button
