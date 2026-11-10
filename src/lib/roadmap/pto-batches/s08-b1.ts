@@ -1,4 +1,5 @@
 /**
+// Reopened implementation draft (merged setup stub # does not complete tasks).
  * Production Tools batch ticket — implement all tasks on this PR branch.
  * Section 8 batch 1: Constituents, gifts, donations, volunteers
  */
