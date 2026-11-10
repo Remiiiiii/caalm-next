@@ -80,8 +80,9 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 			"check_playbook_deviations",
 			"suggest_redlines",
 		],
-
-		linkedPrNumber: 229,	},
+		// #229 was the draft stub; implementation continues on #250 (same branch).
+		linkedPrNumber: 250,
+	},
 	{
 		sectionNumber: 2,
 		sectionTitle: "Contracts CLM depth",
