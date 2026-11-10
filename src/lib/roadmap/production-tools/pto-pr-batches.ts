@@ -62,6 +62,7 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 			"update_contract_fields",
 			"bulk_update_contracts",
 		],
+		linkedPrNumber: 226,
 	},
 	{
 		sectionNumber: 2,
