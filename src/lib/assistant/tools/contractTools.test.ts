@@ -7,11 +7,21 @@ const listRows = vi.fn();
 const logAuditEvent = vi.fn();
 const invalidateContracts = vi.fn();
 const answerContractQuestion = vi.fn();
+const analyzeContractDocument = vi.fn();
 const parsePdfBuffer = vi.fn();
 const createWizardSession = vi.fn();
 const saveWizardSession = vi.fn();
 const submitWizard = vi.fn();
 const fetchMock = vi.fn();
+const extractContractFromDocument = vi.fn();
+const listVersions = vi.fn();
+const listClauses = vi.fn();
+const isClauseCategory = vi.fn(() => true);
+const compareClauseWithGemini = vi.fn();
+const extractClausesWithGemini = vi.fn();
+const pickStandardForClause = vi.fn();
+const scoreOrgContractDeviations = vi.fn();
+const suggestRedlineForClause = vi.fn();
 
 vi.mock("@/lib/appwrite", () => ({
 	createAdminClient: async () => ({
@@ -29,6 +39,36 @@ vi.mock("@/lib/services/cache-manager", () => ({
 vi.mock("@/lib/ai/contract-assistant", () => ({
 	answerContractQuestion: (...args: unknown[]) =>
 		answerContractQuestion(...args),
+	analyzeContractDocument: (...args: unknown[]) =>
+		analyzeContractDocument(...args),
+}));
+vi.mock("@/lib/ai/extractContractFromDocument", () => ({
+	extractContractFromDocument: (...args: unknown[]) =>
+		extractContractFromDocument(...args),
+}));
+vi.mock("@/lib/contracts/negotiation/versions.service", () => ({
+	listVersions: (...args: unknown[]) => listVersions(...args),
+}));
+vi.mock("@/lib/clauses/clause-library.service", () => ({
+	listClauses: (...args: unknown[]) => listClauses(...args),
+	isClauseCategory: () => isClauseCategory(),
+}));
+vi.mock("@/lib/playbook/compare-with-gemini", () => ({
+	compareClauseWithGemini: (...args: unknown[]) =>
+		compareClauseWithGemini(...args),
+	extractClausesWithGemini: (...args: unknown[]) =>
+		extractClausesWithGemini(...args),
+}));
+vi.mock("@/lib/playbook/deviation-scoring", () => ({
+	pickStandardForClause: (...args: unknown[]) => pickStandardForClause(...args),
+}));
+vi.mock("@/lib/playbook/score-org-contract", () => ({
+	scoreOrgContractDeviations: (...args: unknown[]) =>
+		scoreOrgContractDeviations(...args),
+}));
+vi.mock("@/lib/playbook/suggest-redline", () => ({
+	suggestRedlineForClause: (...args: unknown[]) =>
+		suggestRedlineForClause(...args),
 }));
 vi.mock("@/lib/files/pdf-text", () => ({
 	parsePdfBuffer: (...args: unknown[]) => parsePdfBuffer(...args),
@@ -79,11 +119,21 @@ describe("CONTRACT_TOOLS", () => {
 		logAuditEvent.mockReset().mockResolvedValue(undefined);
 		invalidateContracts.mockReset().mockResolvedValue(undefined);
 		answerContractQuestion.mockReset();
+		analyzeContractDocument.mockReset();
 		parsePdfBuffer.mockReset();
 		createWizardSession.mockReset();
 		saveWizardSession.mockReset();
 		submitWizard.mockReset();
 		fetchMock.mockReset();
+		extractContractFromDocument.mockReset();
+		listVersions.mockReset();
+		listClauses.mockReset();
+		isClauseCategory.mockReset().mockReturnValue(true);
+		compareClauseWithGemini.mockReset();
+		extractClausesWithGemini.mockReset();
+		pickStandardForClause.mockReset();
+		scoreOrgContractDeviations.mockReset();
+		suggestRedlineForClause.mockReset();
 	});
 
 	describe("get_contract", () => {
@@ -260,6 +310,232 @@ describe("CONTRACT_TOOLS", () => {
 			expect(result.message).toMatch(/available yet/i);
 			expect(result.succeeded).toBe(0);
 			expect(result.failed).toBe(0);
+			expect(updateRow).not.toHaveBeenCalled();
+		});
+	});
+
+	describe("extract_contract_terms", () => {
+		it("blocks without contracts.edit", async () => {
+			const res = await tool("extract_contract_terms").handler(ctx([]), {
+				contractId: "c-1",
+			});
+			expect((res.result as { error?: string }).error).toMatch(
+				/permission|cannot/i,
+			);
+			expect(extractContractFromDocument).not.toHaveBeenCalled();
+		});
+
+		it("returns extracted fields for review without saving", async () => {
+			getRow.mockResolvedValueOnce(contractRow).mockResolvedValueOnce({
+				url: "https://files.example.test/file-1",
+				extension: "pdf",
+			});
+			fetchMock.mockResolvedValueOnce({
+				ok: true,
+				arrayBuffer: async () => new ArrayBuffer(4),
+			});
+			extractContractFromDocument.mockResolvedValueOnce({
+				fields: { amount: "1000" },
+				extractedData: { amount: "1000" },
+				overallConfidence: 0.9,
+				lowConfidenceFields: [],
+			});
+			const res = await tool("extract_contract_terms").handler(
+				ctx([PERMISSIONS.CONTRACTS.EDIT]),
+				{ contractId: "c-1" },
+			);
+			const result = res.result as {
+				extractedData?: Record<string, unknown>;
+				message?: string;
+			};
+			expect(result.extractedData).toEqual({ amount: "1000" });
+			expect(result.message).toMatch(/nothing was saved/i);
+			expect(updateRow).not.toHaveBeenCalled();
+		});
+	});
+
+	describe("summarize_contract", () => {
+		it("blocks without contracts.view", async () => {
+			const res = await tool("summarize_contract").handler(ctx([]), {
+				contractId: "c-1",
+			});
+			expect((res.result as { error?: string }).error).toMatch(
+				/permission|cannot/i,
+			);
+			expect(analyzeContractDocument).not.toHaveBeenCalled();
+		});
+
+		it("returns a summary with citations for an org match", async () => {
+			getRow.mockResolvedValueOnce(contractRow).mockResolvedValueOnce({
+				url: "https://files.example.test/file-1",
+				extension: "pdf",
+			});
+			fetchMock.mockResolvedValueOnce({
+				ok: true,
+				arrayBuffer: async () => new ArrayBuffer(4),
+			});
+			parsePdfBuffer.mockResolvedValueOnce({
+				pageTexts: [{ page: 1, text: "Key terms" }],
+			});
+			analyzeContractDocument.mockResolvedValueOnce({
+				summaryMarkdown: "**Summary**",
+				citations: [{ id: 1, pages: [1], quote: "Key terms" }],
+			});
+			const res = await tool("summarize_contract").handler(
+				ctx([PERMISSIONS.CONTRACTS.VIEW]),
+				{ contractId: "c-1" },
+			);
+			const result = res.result as { summaryMarkdown?: string };
+			expect(result.summaryMarkdown).toBe("**Summary**");
+		});
+	});
+
+	describe("compare_contract_versions", () => {
+		it("blocks without contracts.view", async () => {
+			const res = await tool("compare_contract_versions").handler(ctx([]), {
+				contractId: "c-1",
+			});
+			expect((res.result as { error?: string }).error).toMatch(
+				/permission|cannot/i,
+			);
+			expect(listVersions).not.toHaveBeenCalled();
+		});
+
+		it("errors when fewer than two versions exist", async () => {
+			getRow.mockResolvedValueOnce(contractRow);
+			listVersions.mockResolvedValueOnce([
+				{ orgId: "org-1", versionNumber: 1, extractedText: "v1" },
+			]);
+			const res = await tool("compare_contract_versions").handler(
+				ctx([PERMISSIONS.CONTRACTS.VIEW]),
+				{ contractId: "c-1" },
+			);
+			expect((res.result as { error?: string }).error).toMatch(
+				/nothing to compare/i,
+			);
+		});
+
+		it("diffs the two most recent versions for an org match", async () => {
+			getRow.mockResolvedValueOnce(contractRow);
+			listVersions.mockResolvedValueOnce([
+				{
+					orgId: "org-1",
+					versionNumber: 1,
+					extractedText: "line one\nline two",
+					changeSummary: "first",
+				},
+				{
+					orgId: "org-1",
+					versionNumber: 2,
+					extractedText: "line one\nline three",
+					changeSummary: "second",
+				},
+			]);
+			const res = await tool("compare_contract_versions").handler(
+				ctx([PERMISSIONS.CONTRACTS.VIEW]),
+				{ contractId: "c-1" },
+			);
+			const result = res.result as {
+				fromVersion?: number;
+				toVersion?: number;
+				added?: string[];
+				removed?: string[];
+			};
+			expect(result.fromVersion).toBe(1);
+			expect(result.toVersion).toBe(2);
+			expect(result.added).toContain("line three");
+			expect(result.removed).toContain("line two");
+		});
+	});
+
+	describe("check_playbook_deviations", () => {
+		it("blocks without contracts.review", async () => {
+			const res = await tool("check_playbook_deviations").handler(ctx([]), {
+				contractId: "c-1",
+			});
+			expect((res.result as { error?: string }).error).toMatch(
+				/permission|cannot/i,
+			);
+			expect(scoreOrgContractDeviations).not.toHaveBeenCalled();
+		});
+
+		it("returns the deviation report for an org match", async () => {
+			getRow.mockResolvedValueOnce(contractRow).mockResolvedValueOnce({
+				url: "https://files.example.test/file-1",
+				extension: "pdf",
+			});
+			fetchMock.mockResolvedValueOnce({
+				ok: true,
+				arrayBuffer: async () => new ArrayBuffer(4),
+			});
+			parsePdfBuffer.mockResolvedValueOnce({ text: "contract text" });
+			scoreOrgContractDeviations.mockResolvedValueOnce({
+				deviations: [{ verdict: "deviate" }],
+				summary: { passCount: 0, deviateCount: 1, noStandardCount: 0 },
+			});
+			const res = await tool("check_playbook_deviations").handler(
+				ctx([PERMISSIONS.CONTRACTS.REVIEW]),
+				{ contractId: "c-1" },
+			);
+			expect(scoreOrgContractDeviations).toHaveBeenCalledWith(
+				expect.objectContaining({ orgId: "org-1", content: "contract text" }),
+			);
+			const result = res.result as { summary?: { deviateCount?: number } };
+			expect(result.summary?.deviateCount).toBe(1);
+		});
+	});
+
+	describe("suggest_redlines", () => {
+		it("blocks without contracts.review", async () => {
+			const res = await tool("suggest_redlines").handler(ctx([]), {
+				contractId: "c-1",
+			});
+			expect((res.result as { error?: string }).error).toMatch(
+				/permission|cannot/i,
+			);
+			expect(extractClausesWithGemini).not.toHaveBeenCalled();
+		});
+
+		it("proposes redlines only for deviating clauses and never writes", async () => {
+			getRow.mockResolvedValueOnce(contractRow).mockResolvedValueOnce({
+				url: "https://files.example.test/file-1",
+				extension: "pdf",
+			});
+			fetchMock.mockResolvedValueOnce({
+				ok: true,
+				arrayBuffer: async () => new ArrayBuffer(4),
+			});
+			parsePdfBuffer.mockResolvedValueOnce({ text: "contract text" });
+			extractClausesWithGemini.mockResolvedValueOnce([
+				{ title: "Confidentiality", category: "confidentiality", body: "x" },
+			]);
+			listClauses.mockResolvedValueOnce([
+				{ title: "Confidentiality", category: "confidentiality", body: "y" },
+			]);
+			pickStandardForClause.mockReturnValueOnce({
+				title: "Confidentiality",
+				category: "confidentiality",
+				body: "y",
+			});
+			compareClauseWithGemini.mockResolvedValueOnce({
+				verdict: "deviate",
+				severity: "medium",
+				rationale: "Missing carve-out",
+				differingPoints: ["no carve-out"],
+			});
+			suggestRedlineForClause.mockResolvedValueOnce({
+				suggestedText: "New clause text",
+				explanation: "Adds the carve-out",
+			});
+			const res = await tool("suggest_redlines").handler(
+				ctx([PERMISSIONS.CONTRACTS.REVIEW]),
+				{ contractId: "c-1" },
+			);
+			const result = res.result as {
+				proposals?: Array<{ suggestedText?: string }>;
+			};
+			expect(result.proposals).toHaveLength(1);
+			expect(result.proposals?.[0].suggestedText).toBe("New clause text");
 			expect(updateRow).not.toHaveBeenCalled();
 		});
 	});
