@@ -8,8 +8,8 @@ import { retrieveKnowledge } from "@/lib/assistant/knowledge/retrieve";
 import type { AssistantClientAction } from "@/lib/assistant/open-close-cap-client";
 import { AUDIT_TOOLS } from "@/lib/assistant/tools/auditTools";
 import { CALENDAR_TOOLS } from "@/lib/assistant/tools/calendarTools";
+import { CONTRACT_TOOLS } from "@/lib/assistant/tools/contractTools";
 import { TASK_TOOLS } from "@/lib/assistant/tools/taskTools";
-import { USER_TOOLS } from "@/lib/assistant/tools/userTools";
 import {
 	formatLocalDate,
 	hasAll,
@@ -17,6 +17,7 @@ import {
 	searchLicensesTable,
 } from "@/lib/assistant/tools/toolUtils";
 import type { ToolContext, ToolDefinition } from "@/lib/assistant/tools/types";
+import { USER_TOOLS } from "@/lib/assistant/tools/userTools";
 import { logAuditEvent } from "@/lib/services/audit-logger";
 
 const CORE_TOOLS: ToolDefinition[] = [
@@ -245,6 +246,7 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
 	...CALENDAR_TOOLS,
 	...AUDIT_TOOLS,
 	...USER_TOOLS,
+	...CONTRACT_TOOLS,
 ];
 
 export function getToolsForPermissions(
