@@ -22,6 +22,7 @@ import {
 	lastAssistantMessageContent,
 	resolveVerificationNoteForClose,
 } from "@/lib/assistant/cap-close-assist";
+import {
 	buildClaudeTools,
 	callClaudeAssistantTurn,
 	callClaudeToolFollowUp,
