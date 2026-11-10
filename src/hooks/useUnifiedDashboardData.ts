@@ -1,8 +1,10 @@
-import { useCallback } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import useSWR from "swr";
+import { isVisiblePendingInvitation } from "@/constants/status";
 import { useAuth } from "@/contexts/AuthContext";
 import { useClientCachedFallback } from "@/hooks/useClientCachedFallback";
 import type { RiskImpactSnapshot } from "@/lib/dashboard/risk-impact.types";
+import type { InvitationsUpdatedDetail } from "@/lib/ui/refreshDashboardInvitations";
 import { clearCachedData, setCachedData } from "@/lib/utils/client-cache";
 import type { License } from "@/types/licenses";
 
@@ -48,7 +50,9 @@ interface UnifiedDashboardDataResponse {
 }
 
 const fetcher = async (url: string): Promise<UnifiedDashboardDataResponse> => {
-	const response = await fetch(url);
+	// Always hit the server after mutations; do not reuse a browser HTTP cache
+	// of the previous pending-invitations payload.
+	const response = await fetch(url, { cache: "no-store" });
 	if (!response.ok) {
 		throw new Error("Failed to fetch unified dashboard data");
 	}
@@ -72,7 +76,7 @@ export const useUnifiedDashboardData = (
 	const effectiveUserId = serverUserId || user?.$id;
 	const url =
 		enabled && effectiveUserId
-			? `/api/dashboard/unified?orgId=${orgId}&userId=${effectiveUserId}&v=20`
+			? `/api/dashboard/unified?orgId=${orgId}&userId=${effectiveUserId}&v=21`
 			: null;
 
 	// After mount only — reading localStorage during the first client paint
@@ -133,11 +137,107 @@ export const useUnifiedDashboardData = (
 					) {
 						return current;
 					}
+					const next: UnifiedDashboardDataResponse = {
+						...current,
+						timestamp: Date.now(),
+						data: {
+							...current.data,
+							invitations: [invitation, ...existing],
+						},
+					};
+					if (url) setCachedData(url, next, 300000);
+					return next;
+				},
+				{ revalidate: false },
+			);
+		},
+		[mutate, url],
+	);
+
+	// Ask CAALM (and other non-dashboard paths) broadcast new invite rows here
+	// so the table updates without waiting on a stale unified revalidate.
+	useEffect(() => {
+		if (!url) return;
+
+		const onInvitationsUpdated = (event: Event) => {
+			const detail = (event as CustomEvent<InvitationsUpdatedDetail>).detail;
+			const rows = detail?.prepend ?? [];
+			if (rows.length === 0) {
+				clearCachedData(url);
+				void mutate();
+				return;
+			}
+			void (async () => {
+				for (const row of rows) {
+					await prependInvitation(row);
+				}
+				// Later merge with server — keep optimistic rows if the refetch is still stale.
+				window.setTimeout(() => {
+					void mutate(
+						async (current) => {
+							try {
+								const fresh = await fetcher(url);
+								if (!current?.data) return fresh;
+								const freshInv = fresh.data.invitations || [];
+								const freshTokens = new Set(
+									freshInv
+										.map((inv) => (inv as { token?: string }).token)
+										.filter(Boolean),
+								);
+								const keepOptimistic = (current.data.invitations || []).filter(
+									(inv) => {
+										const token = (inv as { token?: string }).token;
+										if (!token || freshTokens.has(token)) return false;
+										return rows.some((row) => row.token === token);
+									},
+								);
+								const merged: UnifiedDashboardDataResponse = {
+									...fresh,
+									data: {
+										...fresh.data,
+										invitations: [...keepOptimistic, ...freshInv],
+									},
+								};
+								setCachedData(url, merged, 300000);
+								return merged;
+							} catch {
+								return current;
+							}
+						},
+						{ revalidate: false },
+					);
+				}, 800);
+			})();
+		};
+
+		window.addEventListener("caalm:invitations-updated", onInvitationsUpdated);
+		return () => {
+			window.removeEventListener(
+				"caalm:invitations-updated",
+				onInvitationsUpdated,
+			);
+		};
+	}, [url, mutate, prependInvitation]);
+
+	const removeInvitation = useCallback(
+		async (token: string) => {
+			await mutate(
+				(current) => {
+					if (!current?.data) return current;
+					const existing = current.data.invitations || [];
 					return {
 						...current,
 						data: {
 							...current.data,
-							invitations: [invitation, ...existing],
+							invitations: existing.filter((inv) => {
+								const row = inv as {
+									token?: string;
+									status?: string;
+									revoked?: unknown;
+								};
+								if (row.token === token) return false;
+								return isVisiblePendingInvitation(row);
+							}),
 						},
 					};
 				},
@@ -146,6 +246,13 @@ export const useUnifiedDashboardData = (
 		},
 		[mutate],
 	);
+
+	const invitations = useMemo(() => {
+		const rows = data?.data?.invitations || [];
+		return rows.filter((inv) =>
+			isVisiblePendingInvitation(inv as { status?: string; revoked?: unknown }),
+		);
+	}, [data?.data?.invitations]);
 
 	return {
 		// Data
@@ -165,7 +272,7 @@ export const useUnifiedDashboardData = (
 			},
 		},
 		files: data?.data?.files || [],
-		invitations: data?.data?.invitations || [],
+		invitations,
 		authUsers: data?.data?.authUsers || [],
 		uninvitedUsers: data?.data?.uninvitedUsers || [],
 		contracts: data?.data?.contracts || [],
@@ -189,5 +296,6 @@ export const useUnifiedDashboardData = (
 		// Actions
 		refresh,
 		prependInvitation,
+		removeInvitation,
 	};
 };

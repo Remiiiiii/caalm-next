@@ -1,6 +1,6 @@
 /**
  * Turn thrown/API errors into short messages safe to show in the UI.
- * Keeps intentional product copy; replaces stacks, bundler noise, and internals.
+ * Keeps intentional product copy; replaces stacks, bundler noise, JSON, and internals.
  */
 
 const DEFAULT_FALLBACK = "Something went wrong. Please try again.";
@@ -33,10 +33,42 @@ const TECHNICAL_PATTERNS: RegExp[] = [
 	/\bMongoError\b/i,
 	/\bAppwriteException\b/i,
 	/\bInternal Server Error\b/i,
+	/\bRequest failed\b/i,
+	/\bHTTP\s*[45]\d{2}\b/i,
+	/\b[45]\d{2}\s+Internal\b/i,
 	/\bprisma\b/i,
 	/stack trace/i,
 	/^\s*Error:\s*$/i,
+	/\bnot_found_error\b/i,
+	/\binvalid_request_error\b/i,
+	/\bauthentication_error\b/i,
+	/\bpermission_error\b/i,
+	/\brate_limit_error\b/i,
+	/\bapi_error\b/i,
+	/\brequest_id\b/i,
+	/"type"\s*:\s*"error"/i,
+	/\bmodel:\s*claude-/i,
+	/\bclaude-[a-z0-9-]+/i,
 ];
+
+function looksLikeJsonBlob(text: string): boolean {
+	const trimmed = text.trim();
+	if (
+		(trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+		(trimmed.startsWith("[") && trimmed.endsWith("]"))
+	) {
+		try {
+			JSON.parse(trimmed);
+			return true;
+		} catch {
+			return trimmed.includes('"error"') || trimmed.includes('"type"');
+		}
+	}
+	// Anthropic / vendor payloads often arrive as `404 {"type":"error",...}`
+	if (/^\d{3}\s*\{/.test(trimmed)) return true;
+	if (trimmed.includes('{"type"') || trimmed.includes('"error":{')) return true;
+	return false;
+}
 
 function extractRawMessage(error: unknown): string {
 	if (error == null) return "";
@@ -45,6 +77,8 @@ function extractRawMessage(error: unknown): string {
 	if (typeof error === "object" && "message" in error) {
 		const message = (error as { message?: unknown }).message;
 		if (typeof message === "string") return message.trim();
+		// Nested vendor error objects — never stringify for the UI
+		if (message && typeof message === "object") return "";
 	}
 	return "";
 }
@@ -53,6 +87,7 @@ export function isTechnicalErrorMessage(message: string): boolean {
 	const text = message.trim();
 	if (!text) return true;
 	if (text.length > 220) return true;
+	if (looksLikeJsonBlob(text)) return true;
 	if (TECHNICAL_PATTERNS.some((pattern) => pattern.test(text))) return true;
 	// Bundler/module path noise: long encoded segments without spaces
 	if (/__[a-z0-9$]{12,}/i.test(text)) return true;

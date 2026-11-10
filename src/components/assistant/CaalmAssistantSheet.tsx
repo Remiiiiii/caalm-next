@@ -118,7 +118,14 @@ export default function CaalmAssistantSheet({
 	}, [chatTabNonce]);
 
 	useEffect(() => {
-		endRef.current?.scrollIntoView({ behavior: "smooth" });
+		// Scroll only the thread pane — scrollIntoView can move outer sheet ancestors
+		// and leave the header/composer looking blank or flipped.
+		const scrollArea = endRef.current?.closest(
+			".glass-dialog-scroll-area",
+		) as HTMLElement | null;
+		if (scrollArea) {
+			scrollArea.scrollTop = scrollArea.scrollHeight;
+		}
 	}, [assistant.messages, assistant.isSending]);
 
 	const handleTabChange = (next: AssistantSheetTab) => {
@@ -374,6 +381,7 @@ export default function CaalmAssistantSheet({
 						onChange={setInput}
 						onSend={() => handleSend()}
 						sending={assistant.isSending}
+						layoutKey={`${assistant.messages.length}:${assistant.isSending ? 1 : 0}`}
 					/>
 					<p className="w-full text-center text-xs text-slate-500">
 						CAALM can make mistakes. Double-check replies.

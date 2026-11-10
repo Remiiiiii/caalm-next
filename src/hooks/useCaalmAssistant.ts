@@ -11,7 +11,10 @@ import type {
 } from "@/components/assistant/assistantTypes";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { buildPendingActionLifecycle } from "@/lib/assistant/actionLifecycle";
+import {
+	buildFailedActionLifecycle,
+	buildPendingActionLifecycle,
+} from "@/lib/assistant/actionLifecycle";
 import { buildApplyAuditRemediationSteps } from "@/lib/assistant/apply-audit-remediation-steps";
 import type { AssistantResearchStep } from "@/lib/assistant/assistant-research-steps";
 import {
@@ -19,14 +22,58 @@ import {
 	auditRemediationUserPrompt,
 } from "@/lib/assistant/audit-remediation-context";
 import type { AssistantCalendarMutation } from "@/lib/assistant/executeTypes";
-import { readJsonResponse } from "@/lib/assistant/readJsonResponse";
 import type { AssistantClientAction } from "@/lib/assistant/open-close-cap-client";
 import { dispatchOpenCloseCap } from "@/lib/assistant/open-close-cap-client";
+import { readJsonResponse } from "@/lib/assistant/readJsonResponse";
 import { linkRemediationChat } from "@/lib/assistant/remediation-chat-link";
+import { toUserFacingErrorMessage } from "@/lib/errors/user-facing";
 import {
 	refreshCalendarCache,
 	revalidateCalendarMonth,
 } from "@/lib/ui/refreshCalendarCache";
+import {
+	type DashboardInvitationPrepend,
+	refreshDashboardInvitations,
+} from "@/lib/ui/refreshDashboardInvitations";
+
+function dashboardInvitationsFromToolPayload(
+	payload: Record<string, unknown> | null,
+): DashboardInvitationPrepend[] {
+	if (!payload) return [];
+	const raw = payload.dashboardInvitations;
+	if (!Array.isArray(raw)) return [];
+	const out: DashboardInvitationPrepend[] = [];
+	for (const item of raw) {
+		if (!item || typeof item !== "object") continue;
+		const row = item as Record<string, unknown>;
+		const token = String(row.token ?? "").trim();
+		const email = String(row.email ?? "").trim();
+		if (!token || !email) continue;
+		out.push({
+			$id: String(row.$id ?? "").trim() || `temp-${token}`,
+			name: String(row.name ?? email).trim() || email,
+			email,
+			role: String(row.role ?? "").trim() || "Viewer",
+			token,
+			expiresAt:
+				typeof row.expiresAt === "string" ? row.expiresAt : undefined,
+			status:
+				typeof row.status === "string" ? row.status : "pending-review",
+			revoked: Boolean(row.revoked),
+			$createdAt:
+				typeof row.$createdAt === "string"
+					? row.$createdAt
+					: new Date().toISOString(),
+			department:
+				typeof row.department === "string" ? row.department : undefined,
+			division:
+				typeof row.division === "string" ? row.division : undefined,
+			invitedBy:
+				typeof row.invitedBy === "string" ? row.invitedBy : undefined,
+		});
+	}
+	return out;
+}
 
 const CONVERSATION_STORAGE_KEY = "caalm_assistant_conversation_id";
 const HISTORY_PAGE_SIZE = 30;
@@ -234,7 +281,10 @@ export function useCaalmAssistant(options?: {
 		} catch (e) {
 			toast({
 				title: "Could not load history",
-				description: e instanceof Error ? e.message : "Unknown error",
+				description: toUserFacingErrorMessage(
+					e,
+					"Could not load chat history. Please try again.",
+				),
 				variant: "destructive",
 			});
 		} finally {
@@ -259,7 +309,10 @@ export function useCaalmAssistant(options?: {
 		} catch (e) {
 			toast({
 				title: "Could not load more conversations",
-				description: e instanceof Error ? e.message : "Unknown error",
+				description: toUserFacingErrorMessage(
+					e,
+					"Could not load more conversations. Please try again.",
+				),
 				variant: "destructive",
 			});
 		} finally {
@@ -293,7 +346,10 @@ export function useCaalmAssistant(options?: {
 				setConversationId(previousId);
 				toast({
 					title: "Could not open conversation",
-					description: e instanceof Error ? e.message : "Unknown error",
+					description: toUserFacingErrorMessage(
+						e,
+						"Could not open that conversation. Please try again.",
+					),
 					variant: "destructive",
 				});
 				return false;
@@ -382,7 +438,10 @@ export function useCaalmAssistant(options?: {
 		} catch (e) {
 			toast({
 				title: "Could not start chat",
-				description: e instanceof Error ? e.message : "Unknown error",
+				description: toUserFacingErrorMessage(
+					e,
+					"Could not start a new chat. Please try again.",
+				),
 				variant: "destructive",
 			});
 			return false;
@@ -473,7 +532,12 @@ export function useCaalmAssistant(options?: {
 					};
 				}>(res);
 				if (!parsed.ok || !parsed.data?.data) {
-					throw new Error(parsed.error || "Chat failed");
+					throw new Error(
+						toUserFacingErrorMessage(
+							parsed.error,
+							"I couldn't complete that request. Please try again.",
+						),
+					);
 				}
 				const payload = parsed.data.data;
 
@@ -528,23 +592,45 @@ export function useCaalmAssistant(options?: {
 				return payload.conversationId ?? conversationIdRef.current;
 			} catch (e) {
 				setPendingResearchSteps(null);
+				const friendly = toUserFacingErrorMessage(
+					e,
+					"I couldn't complete that request. Please try again.",
+				);
 				if (userMsg) {
-					messagesRef.current = messagesRef.current.filter(
-						(m) => m.id !== userMsg.id,
+					messagesRef.current = messagesRef.current.map((m) =>
+						m.id === userMsg.id
+							? { ...m, failed: true, failedMessage: friendly }
+							: m,
 					);
 					setMessages(messagesRef.current);
+				} else {
+					toast({
+						title: "Message failed",
+						description: friendly,
+						variant: "destructive",
+					});
 				}
-				toast({
-					title: "Message failed",
-					description: e instanceof Error ? e.message : "Unknown error",
-					variant: "destructive",
-				});
 				return null;
 			} finally {
 				setSending(false);
 			}
 		},
 		[loadHistory, pathname, router, setConversationId, setSending, toast],
+	);
+
+	const retryFailedMessage = useCallback(
+		async (messageId: string) => {
+			const failed = messagesRef.current.find(
+				(m) => m.id === messageId && m.role === "user" && m.failed,
+			);
+			if (!failed?.content.trim()) return null;
+			messagesRef.current = messagesRef.current.filter(
+				(m) => m.id !== messageId,
+			);
+			setMessages(messagesRef.current);
+			return sendMessage(failed.content);
+		},
+		[sendMessage],
 	);
 
 	const confirmAction = useCallback(
@@ -581,10 +667,19 @@ export function useCaalmAssistant(options?: {
 						actionCompleted?: AssistantChatMessage["actionCompleted"];
 						actionLifecycle?: AssistantChatMessage["actionLifecycle"];
 						calendarMutation?: AssistantCalendarMutation;
+						nextInvite?: {
+							answer: string;
+							inputForm: AssistantChatMessage["inputForm"];
+						};
 					};
 				}>(res);
 				if (!parsed.ok || !parsed.data?.data) {
-					throw new Error(parsed.error || "Action failed");
+					throw new Error(
+						toUserFacingErrorMessage(
+							parsed.error,
+							"I couldn't finish that action. Please try again.",
+						),
+					);
 				}
 				const jsonData = parsed.data.data;
 				const summary = jsonData.summary ?? "Action completed.";
@@ -592,6 +687,7 @@ export function useCaalmAssistant(options?: {
 				const actionCompleted = jsonData.actionCompleted;
 				const actionLifecycle = jsonData.actionLifecycle;
 				const calendarMutation = jsonData.calendarMutation;
+				const nextInvite = jsonData.nextInvite;
 				const toolPayload =
 					jsonData.result?.result && typeof jsonData.result.result === "object"
 						? jsonData.result.result
@@ -649,6 +745,32 @@ export function useCaalmAssistant(options?: {
 
 				if (!failed) {
 					setPendingAction(null);
+				}
+
+				// Sequential invites: after Confirm, open the next person's form only.
+				if (!failed && nextInvite?.inputForm) {
+					setMessages((prev) => [
+						...prev,
+						{
+							id: `local-invite-next-${Date.now()}`,
+							role: "assistant" as const,
+							content: nextInvite.answer,
+							inputForm: nextInvite.inputForm,
+							createdAt: new Date().toISOString(),
+						},
+					]);
+				}
+
+				if (
+					!failed &&
+					(pendingSnapshot.toolName === "invite_user" ||
+						pendingSnapshot.toolName === "invite_users" ||
+						pendingSnapshot.toolName === "resend_invite")
+				) {
+					const prepend = dashboardInvitationsFromToolPayload(toolPayload);
+					void refreshDashboardInvitations(
+						prepend.length > 0 ? { prepend } : undefined,
+					);
 				}
 
 				if (calendarMutation?.kind === "create" && calendarMutation.date) {
@@ -765,7 +887,15 @@ export function useCaalmAssistant(options?: {
 					}
 				}
 			} catch (e) {
-				const message = e instanceof Error ? e.message : "Unknown error";
+				const failedLifecycle = buildFailedActionLifecycle({
+					pending: pendingSnapshot,
+					errorMessage: toUserFacingErrorMessage(
+						e,
+						"Something went wrong. Please try again.",
+					),
+					errorCode: "ERR_ACTION",
+					actor: actionActor(),
+				});
 				setMessages((prev) =>
 					prev.map((m) =>
 						m.pendingAction?.id === pendingSnapshot.id ||
@@ -773,25 +903,17 @@ export function useCaalmAssistant(options?: {
 							? {
 									...m,
 									content: "I couldn't finish that one.",
-									actionLifecycle: {
-										...(m.actionLifecycle ??
-											buildPendingActionLifecycle(
-												pendingSnapshot,
-												actionActor(),
-											)),
-										state: "failed",
-										errorMessage: message,
-										errorCode: "ERR_ACTION",
-										retrySafe: true,
-										footerNote: "Safe to retry — no duplicate will be created.",
-									},
+									actionLifecycle: failedLifecycle,
 								}
 							: m,
 					),
 				);
 				toast({
 					title: "Action failed",
-					description: message,
+					description: toUserFacingErrorMessage(
+						failedLifecycle.errorMessage,
+						"Something went wrong. Please try again.",
+					),
 					variant: "destructive",
 				});
 			} finally {
@@ -905,6 +1027,7 @@ export function useCaalmAssistant(options?: {
 		startNewChat,
 		resumeActiveSession,
 		sendMessage,
+		retryFailedMessage,
 		confirmAction,
 		cancelPendingAction,
 		patchPendingArgs,

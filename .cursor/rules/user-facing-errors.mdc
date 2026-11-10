@@ -1,0 +1,51 @@
+---
+description: Never show raw JSON, stacks, or vendor API payloads in user-visible errors (toasts, cards, API error fields)
+alwaysApply: true
+---
+
+# User-facing errors (no raw code / JSON)
+
+End users must never see developer or vendor internals in the UI.
+
+## Hard rule
+
+Any message shown in a **toast**, **dialog**, **assistant card**, **inline banner**, or API `error` field meant for the client must be **plain, human language**.
+
+Never surface:
+
+- Raw JSON (`{"type":"error",...}`, Anthropic / Stripe / Appwrite payloads)
+- HTTP dumps (`404 {"type":"error"...}`, `request_id`, model ids)
+- Stack traces, Turbopack / webpack / `node_modules` paths
+- `TypeError` / `ReferenceError` / `is not a function` text
+- Internal codes as the only message (`ERR_ACTION`, `not_found_error`) unless paired with a clear sentence
+
+## How
+
+1. Prefer `toUserFacingErrorMessage(error, "Something went wrong. Please try again.")` from `src/lib/errors/user-facing.ts`.
+2. On API catch blocks, return a short product sentence — do **not** forward `error.message` when it may be vendor JSON.
+3. Log the real error with `console.error` / server logs for debugging; show the friendly copy in the response.
+4. No em dashes in user-facing failure copy (product writing habit).
+
+## Examples
+
+```typescript
+// ✅ GOOD
+toast({
+  title: "Message failed",
+  description: toUserFacingErrorMessage(
+    error,
+    "I couldn't complete that request. Please try again.",
+  ),
+  variant: "destructive",
+});
+
+// ✅ GOOD — API route
+return NextResponse.json(
+  { error: toUserFacingErrorMessage(error, "Assistant chat failed. Please try again.") },
+  { status: 500 },
+);
+
+// ❌ BAD
+toast({ description: e instanceof Error ? e.message : "Unknown error" });
+return NextResponse.json({ error: error.message }, { status: 500 });
+```

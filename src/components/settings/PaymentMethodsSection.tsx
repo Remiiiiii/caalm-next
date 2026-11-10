@@ -13,6 +13,7 @@ import {
 import { useState } from "react";
 import CardBrandIcon from "@/components/billing/CardBrandIcon";
 import EditPaymentMethodDialog from "@/components/settings/EditPaymentMethodDialog";
+import { AppDialog } from "@/components/ui/app-dialog";
 import { Button } from "@/components/ui/button";
 import {
 	CaalmDataTable,
@@ -21,7 +22,6 @@ import {
 	DATA_TABLE_HEADER_ROW,
 } from "@/components/ui/caalm-data-table";
 import { Card, CardContent } from "@/components/ui/card";
-import { AppDialog } from "@/components/ui/app-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
 	DropdownMenu,
@@ -459,9 +459,6 @@ export default function PaymentMethodsSection({
 				pendingLabel="Removing…"
 				onConfirm={async () => {
 					if (!selectedMethod) return;
-					if (!(await ensureStepUp())) {
-						throw new Error("Verification required to remove a payment method.");
-					}
 					setLocalError(null);
 					const res = await fetch(
 						`/api/billing/payment-methods/${selectedMethod.id}?orgId=${encodeURIComponent(orgId)}`,
@@ -472,9 +469,7 @@ export default function PaymentMethodsSection({
 					);
 					const data = await res.json();
 					if (!res.ok) {
-						throw new Error(
-							data.error || "Could not remove payment method",
-						);
+						throw new Error(data.error || "Could not remove payment method");
 					}
 					const removedId = selectedMethod.id;
 					onPaymentMethodRemoved?.(removedId);

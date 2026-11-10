@@ -3,9 +3,31 @@
  * Never returns "[object Object]".
  */
 
+function formatInviteesJsonString(raw: string): string | null {
+	const trimmed = raw.trim();
+	if (!trimmed.startsWith("[")) return null;
+	try {
+		const parsed = JSON.parse(trimmed) as unknown;
+		if (!Array.isArray(parsed) || parsed.length === 0) return null;
+		const names = parsed
+			.map((item) => {
+				if (!item || typeof item !== "object") return "";
+				const row = item as Record<string, unknown>;
+				return String(row.name ?? row.fullName ?? row.email ?? "").trim();
+			})
+			.filter(Boolean);
+		return names.length > 0 ? names.join(", ") : null;
+	} catch {
+		return null;
+	}
+}
+
 export function formatActionValue(value: unknown): string {
 	if (value === null || value === undefined) return "";
-	if (typeof value === "string") return value.trim();
+	if (typeof value === "string") {
+		const trimmed = value.trim();
+		return formatInviteesJsonString(trimmed) ?? trimmed;
+	}
 	if (typeof value === "number" || typeof value === "boolean") {
 		return String(value);
 	}
@@ -41,7 +63,13 @@ export function formatActionValue(value: unknown): string {
 			.filter(([k, v]) => {
 				if (v === null || v === undefined) return false;
 				if (k.startsWith("$")) return false;
-				if (/^(id|eventId|orgId|userId|href)$/i.test(k)) return false;
+				if (
+					/^(id|eventId|orgId|userId|href|invitationId|expiresInDays|pendingInvitationsHref|dashboardInvitations|token|message)$/i.test(
+						k,
+					)
+				) {
+					return false;
+				}
 				return true;
 			})
 			.slice(0, 6)

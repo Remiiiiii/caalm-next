@@ -5,6 +5,8 @@
  * inflections ("contracts", "expiring", "meetings") still match.
  */
 
+import { CONTRACT_DEPARTMENTS } from "../../../constants";
+
 export type AssistantDataIntent =
 	| "list_tasks"
 	| "create_task"
@@ -18,10 +20,57 @@ export type AssistantDataIntent =
 	| "complete_task"
 	| "reschedule_event"
 	| "cancel_event"
+	| "update_user_profile"
+	| "list_users"
+	| "list_departments"
+	| "list_roles"
+	| "invite_user"
 	| null;
+
+/**
+ * Pull a known department name from a people-list ask
+ * (e.g. "users in the IT department" → "IT").
+ */
+export function parseDepartmentFilter(message: string): string | undefined {
+	const q = message.toLowerCase();
+	for (const dept of CONTRACT_DEPARTMENTS) {
+		const d = dept.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+		if (
+			new RegExp(`\\bin(?:\\s+the)?\\s+${d}(?:\\s+department)?\\b`).test(q) ||
+			new RegExp(`\\b${d}\\s+department\\b`).test(q)
+		) {
+			return dept;
+		}
+	}
+	return undefined;
+}
 
 export function detectDataIntent(message: string): AssistantDataIntent {
 	const q = message.toLowerCase();
+
+	// Invite to CAALM (directory access) before generic user list checks.
+	// Form submit uses label "People" (multi) or "Person" (last invitee alone).
+	if (
+		/\binvite\b/.test(q) ||
+		/\bsend\s+(?:an?\s+|and\s+)?invite(?:\s+link)?\b/.test(q) ||
+		(/^(?:people|person)\s*:/im.test(message) &&
+			/^role\s*:/im.test(message) &&
+			/^department\s*:/im.test(message))
+	) {
+		return "invite_user";
+	}
+
+	// Rename / change display name before generic "set … task" checks.
+	if (
+		(/\b(change|update|set)\s+(?:the\s+)?(?:user\s*)?(?:full\s*)?name\b/.test(
+			q,
+		) &&
+			/\bto\b/.test(q)) ||
+		(/\b(change|update|set)\s+username\b/.test(q) && /\bto\b/.test(q)) ||
+		(/\brename\b/.test(q) && /\bto\b/.test(q))
+	) {
+		return "update_user_profile";
+	}
 
 	if (
 		/\b(mark|set|complete|finish|close|check off|tick)/.test(q) &&
@@ -101,6 +150,30 @@ export function detectDataIntent(message: string): AssistantDataIntent {
 		/\b(search|find|show|list)/.test(q)
 	) {
 		return "search_licenses";
+	}
+	// People before departments so "users in the IT department" stays list_users.
+	if (
+		(/\b(users?|people|team members?|directory)\b/.test(q) &&
+			/\b(list|show|find|search|who is|who's|look up|lookup|who)\b/.test(q)) ||
+		(/\bwho\s+(?:is|are)\s+in\b/.test(q) && Boolean(parseDepartmentFilter(message)))
+	) {
+		return "list_users";
+	}
+	if (
+		/\broles?\b/.test(q) &&
+		/\b(list|show|what|which|available|have)\b/.test(q) &&
+		!/\b(assign|change|update|set|remove)\b/.test(q)
+	) {
+		return "list_roles";
+	}
+	// Catalog of department names only — not people inside a department.
+	if (
+		/\bdepartments?\b/.test(q) &&
+		/\b(list|show|what|which|available|have|name)\b/.test(q) &&
+		!/\b(change|update|set|assign|move)\b/.test(q) &&
+		!/\b(users?|people|team members?)\b/.test(q)
+	) {
+		return "list_departments";
 	}
 	return null;
 }

@@ -8,7 +8,18 @@ import type {
 	AssistantFormFieldType,
 	AssistantInputForm,
 } from "@/components/assistant/assistantTypes";
+import {
+	CONTRACT_DEPARTMENTS,
+	USER_DIVISIONS,
+	formatDivisionName,
+} from "../../../constants";
 import { parseDueDateFromText } from "@/lib/assistant/parseCreateTaskDraft";
+import {
+	encodeInvitePersonOption,
+	formatInvitePeopleValue,
+	type InvitePeopleOption,
+} from "@/lib/assistant/invitePeopleField";
+import { INVITE_ROLES } from "@/lib/assistant/parseInviteDraft";
 
 const FIELD_TYPES = new Set<AssistantFormFieldType>([
 	"text",
@@ -16,6 +27,7 @@ const FIELD_TYPES = new Set<AssistantFormFieldType>([
 	"time",
 	"select",
 	"textarea",
+	"directory_multi",
 ]);
 
 const MEETING_TYPES = [
@@ -218,6 +230,64 @@ export function isIncompleteSchedule(args: Record<string, unknown>): boolean {
 	);
 }
 
+/** Access fields for a CAALM invite (role + department). Multi uses clickable names. */
+export function inviteUsersForm(
+	defaults?: Partial<Record<string, string>>,
+	candidates?: InvitePeopleOption[],
+): AssistantInputForm {
+	const divisionOptions = USER_DIVISIONS.map((code) => formatDivisionName(code));
+	const multi = (candidates?.length ?? 0) > 1;
+	const peopleField: AssistantFormField = multi
+		? {
+				name: "people",
+				label: "People",
+				type: "directory_multi",
+				required: true,
+				placeholder:
+					"Check who shares this role and department. Leave others unchecked for the next form.",
+				options: candidates!.map(encodeInvitePersonOption),
+				defaultValue:
+					defaults?.people?.trim() ||
+					formatInvitePeopleValue(candidates!),
+			}
+		: {
+				name: "people",
+				label: "Person",
+				type: "textarea",
+				required: true,
+				placeholder: "Directory person to invite",
+				defaultValue: defaults?.people,
+			};
+	const fields: AssistantFormField[] = [
+		peopleField,
+		{
+			name: "role",
+			label: "Role",
+			type: "select",
+			required: true,
+			options: [...INVITE_ROLES],
+			defaultValue: defaults?.role || "Viewer",
+		},
+		{
+			name: "department",
+			label: "Department",
+			type: "select",
+			required: true,
+			options: [...CONTRACT_DEPARTMENTS],
+			defaultValue: defaults?.department || "Administration",
+		},
+		{
+			name: "division",
+			label: "Division",
+			type: "select",
+			required: false,
+			options: divisionOptions,
+			defaultValue: defaults?.division || undefined,
+		},
+	];
+	return { intent: "invite_user", fields };
+}
+
 const TIME_RE =
 	/\b(?:[01]?\d|2[0-3]):[0-5]\d\b|\b\d{1,2}(?::[0-5]\d)?\s*(?:am|pm)\b/i;
 
@@ -300,6 +370,9 @@ export function resolveInputForm(params: {
 	let fields = sanitizeFormFields(params.rawFields);
 	if (!fields.length && intent === "schedule_event") {
 		fields = scheduleEventForm().fields;
+	}
+	if (!fields.length && intent === "invite_user") {
+		fields = inviteUsersForm().fields;
 	}
 	if (!fields.length) return null;
 	return {

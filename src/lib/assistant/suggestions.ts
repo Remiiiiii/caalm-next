@@ -87,6 +87,28 @@ export function suggestionsForTurn(params: {
 }): AssistantSuggestion[] {
 	const { toolName, dataIntent, taskCount } = params;
 
+	if (
+		toolName === "invite_user" ||
+		toolName === "invite_users" ||
+		dataIntent === "invite_user"
+	) {
+		return [
+			{
+				id: "open-pending-invites",
+				label: "Open Pending Invitations",
+				action: { type: "navigate", href: "/dashboard" },
+			},
+			{
+				id: "invite-another",
+				label: "Invite someone else",
+				action: {
+					type: "prompt",
+					text: "Invite another person from the connected directory",
+				},
+			},
+		];
+	}
+
 	if (toolName === "list_tasks" || dataIntent === "list_tasks") {
 		if (taskCount === 0) {
 			return [

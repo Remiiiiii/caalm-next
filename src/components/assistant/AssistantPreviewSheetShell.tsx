@@ -62,7 +62,7 @@ export default function AssistantPreviewSheetShell({
 					</div>
 
 					{footer ? (
-						<div className="shrink-0 border-t border-slate-200/80 bg-white/35 px-5 py-3 backdrop-blur-sm">
+						<div className="shrink-0 border-t border-slate-200/80 bg-white/35 px-5 py-3 backdrop-blur-sm [&>*]:min-h-0">
 							{footer}
 						</div>
 					) : null}

@@ -83,7 +83,8 @@ export default function AssistantFocusWindow({
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const mentionRef = useRef<HTMLDivElement>(null);
 	const [text, setText] = useState("");
-	const textareaRef = useComposerAutoGrow(text, 44, 140);
+	const focusLayoutKey = `${assistant.messages.length}:${assistant.isSending ? 1 : 0}:${open ? 1 : 0}`;
+	const textareaRef = useComposerAutoGrow(text, 44, 140, focusLayoutKey);
 	const [files, setFiles] = useState<File[]>([]);
 	const [mentionOpen, setMentionOpen] = useState(false);
 	const [mentionIndex, setMentionIndex] = useState(0);

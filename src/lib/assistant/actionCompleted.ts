@@ -65,6 +65,15 @@ const HIDDEN_RESULT_KEYS = new Set([
 	"note",
 	"conflicts",
 	"invitedCount",
+	"invitationId",
+	"invitationid",
+	"expiresInDays",
+	"expiresindays",
+	"pendingInvitationsHref",
+	"pendinginvitationshref",
+	"dashboardInvitations",
+	"dashboardinvitations",
+	"message",
 ]);
 
 export function buildCalendarActionCompleted(params: {

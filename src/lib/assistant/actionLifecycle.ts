@@ -16,6 +16,7 @@ import {
 	flattenResultFields,
 	formatActionValue,
 } from "@/lib/assistant/formatActionValue";
+import { toUserFacingErrorMessage } from "@/lib/errors/user-facing";
 
 const HIDDEN_RESULT_KEYS = new Set([
 	"eventId",
@@ -31,7 +32,39 @@ const HIDDEN_RESULT_KEYS = new Set([
 	"previousStartTime",
 	"previousEndTime",
 	"tasksHref",
+	"invitationId",
+	"invitationid",
+	"expiresInDays",
+	"expiresindays",
+	"pendingInvitationsHref",
+	"pendinginvitationshref",
+	"dashboardInvitations",
+	"dashboardinvitations",
+	"message",
+	"invitees_json",
+	"inviteesjson",
 ]);
+
+/** Internal tool payload keys that must not appear on confirm/result cards. */
+function isHiddenPendingArgKey(
+	key: string,
+	args: Record<string, unknown>,
+): boolean {
+	const lower = key.toLowerCase();
+	if (HIDDEN_RESULT_KEYS.has(key) || HIDDEN_RESULT_KEYS.has(lower)) {
+		return true;
+	}
+	// Raw JSON twins of structured args (e.g. invitees_json next to invitees).
+	if (lower.endsWith("_json")) {
+		const twin = key.slice(0, -5);
+		if (twin in args) return true;
+		return true;
+	}
+	if (key === "userId" || key === "accountId" || key === "userDisplayName") {
+		return true;
+	}
+	return false;
+}
 
 export type ActionActor = {
 	userId?: string;
@@ -92,13 +125,44 @@ function entityTitleFromArgs(
 		const code =
 			typeof args.findingCode === "string" ? args.findingCode.trim() : "";
 		const title = String(args.title ?? "Audit finding").trim();
-		return code && !title.includes(code) ? `${code} — ${title}` : title || "Finding";
+		return code && !title.includes(code)
+			? `${code}: ${title}`
+			: title || "Finding";
 	}
 	if (toolName === "apply_audit_remediation") {
 		return String(args.capTitle ?? "Corrective action");
 	}
+	if (
+		toolName === "update_user_profile" ||
+		toolName === "assign_user_roles" ||
+		toolName === "deactivate_user"
+	) {
+		const display =
+			(typeof args.userDisplayName === "string" &&
+				args.userDisplayName.trim()) ||
+			(typeof args.userEmail === "string" && args.userEmail.trim()) ||
+			"";
+		return display || "User";
+	}
 	if (toolName.includes("calendar") || toolName.includes("event")) {
 		return String(args.title ?? args.eventTitle ?? "Untitled");
+	}
+	if (toolName === "invite_user" || toolName === "invite_users") {
+		if (toolName === "invite_user") {
+			const name =
+				(typeof args.name === "string" && args.name.trim()) ||
+				(typeof args.email === "string" && args.email.trim()) ||
+				"";
+			return name || "Directory invite";
+		}
+		const invitees = Array.isArray(args.invitees)
+			? (args.invitees as Array<{ name?: string; email?: string }>)
+			: [];
+		const names = invitees
+			.map((row) => row.name || row.email)
+			.filter(Boolean)
+			.join(", ");
+		return names || "Directory invites";
 	}
 	const title = String(args.title ?? args.eventTitle ?? "").trim();
 	if (toolName === "create_task" || toolName === "create_task_for_contract") {
@@ -223,14 +287,30 @@ function buildPendingFields(
 		return fields;
 	}
 
+	const roleIsViewer =
+		String(args.role ?? "")
+			.trim()
+			.toLowerCase() === "viewer";
+
 	for (const [key, value] of Object.entries(args)) {
 		if (value === undefined || value === null) continue;
 		if (String(value).trim() === "") continue;
+		if (isHiddenPendingArgKey(key, args)) continue;
 		const label = key
+			.replace(/_+/g, " ")
 			.replace(/([A-Z])/g, " $1")
 			.replace(/^./, (c) => c.toUpperCase())
 			.trim();
-		fields.push({ label, value: formatActionValue(value) });
+		const mutedKey = key.toLowerCase();
+		const mutedLabel = label.toLowerCase();
+		const muted =
+			roleIsViewer &&
+			(mutedKey === "department" ||
+				mutedKey === "departmentlabel" ||
+				mutedKey === "division" ||
+				mutedLabel === "department" ||
+				mutedLabel === "division");
+		fields.push({ label, value: formatActionValue(value), muted });
 	}
 	return fields.slice(0, 8);
 }
@@ -473,11 +553,19 @@ export function buildCompletedActionLifecycle(params: {
 	}
 
 	const flat = result ? flattenResultFields(result, HIDDEN_RESULT_KEYS) : [];
+	const roleIsViewer =
+		String(args.role ?? result?.role ?? "")
+			.trim()
+			.toLowerCase() === "viewer";
 	const fields: AssistantActionField[] =
 		flat.length > 0
 			? flat.map((row) => ({
 					label: row.label,
 					value: row.value,
+					muted:
+						roleIsViewer &&
+						(row.label.trim().toLowerCase() === "department" ||
+							row.label.trim().toLowerCase() === "division"),
 				}))
 			: base.fields;
 
@@ -498,6 +586,13 @@ export function buildCompletedActionLifecycle(params: {
 	};
 }
 
+function failedActionFallback(toolName: string): string {
+	if (toolName === "invite_user" || toolName === "invite_users") {
+		return "We couldn't send that invite. Try again. Nothing was saved twice.";
+	}
+	return "Something went wrong. Please try again.";
+}
+
 export function buildFailedActionLifecycle(params: {
 	pending: AssistantPendingAction;
 	errorMessage: string;
@@ -509,10 +604,13 @@ export function buildFailedActionLifecycle(params: {
 		...base,
 		state: "failed",
 		entitySubtitle: base.entitySubtitle ?? "ID assigned on creation",
-		errorMessage: params.errorMessage,
+		errorMessage: toUserFacingErrorMessage(
+			params.errorMessage,
+			failedActionFallback(params.pending.toolName),
+		),
 		errorCode: params.errorCode,
 		retrySafe: true,
-		footerNote: "Safe to retry — no duplicate will be created.",
+		footerNote: "Safe to retry. No duplicate will be created.",
 		pendingActionId: params.pending.id,
 	};
 }

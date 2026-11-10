@@ -58,7 +58,7 @@ export default function AssistantSuggestions({
 						type="button"
 						disabled={disabled}
 						onClick={() => onSelect(suggestion)}
-						className="cursor-pointer rounded-full border border-slate-300 bg-white/70 px-3 py-1 text-xs text-slate-600 transition-colors duration-200 hover:border-[#078fab]/40 hover:text-[#0f5384] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 disabled:cursor-not-allowed disabled:opacity-50"
+						className="caalm-chip-hover cursor-pointer rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-700 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 disabled:cursor-not-allowed disabled:opacity-50"
 					>
 						{suggestion.label}
 					</button>
