@@ -80,7 +80,8 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 			"check_playbook_deviations",
 			"suggest_redlines",
 		],
-	},
+
+		linkedPrNumber: 229,	},
 	{
 		sectionNumber: 2,
 		sectionTitle: "Contracts CLM depth",
@@ -93,14 +94,16 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 			"approve_contract",
 			"renew_contract",
 		],
-	},
+
+		linkedPrNumber: 230,	},
 	{
 		sectionNumber: 2,
 		sectionTitle: "Contracts CLM depth",
 		batch: 4,
 		taskCodes: ["2.16", "2.17"],
 		taskTitles: ["upload_contract_file", "export_contract"],
-	},
+
+		linkedPrNumber: 231,	},
 	{
 		sectionNumber: 3,
 		sectionTitle: "Licenses",
@@ -113,6 +116,7 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 			"approve_license",
 			"extract_license_from_document",
 		],
+		linkedPrNumber: 232,
 	},
 	{
 		sectionNumber: 3,
@@ -120,7 +124,8 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 		batch: 2,
 		taskCodes: ["3.6", "3.7"],
 		taskTitles: ["list_license_expirations", "assign_license_owner"],
-	},
+
+		linkedPrNumber: 233,	},
 	{
 		sectionNumber: 4,
 		sectionTitle: "Approvals write",
@@ -132,6 +137,7 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 			"reassign_approval",
 			"override_approval",
 		],
+		linkedPrNumber: 234,
 	},
 	{
 		sectionNumber: 5,
@@ -145,6 +151,7 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 			"list_contract_templates",
 			"seed_clause_from_document",
 		],
+		linkedPrNumber: 235,
 	},
 	{
 		sectionNumber: 6,
@@ -158,6 +165,7 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 			"create_corrective_action",
 			"assign_cap_owner",
 		],
+		linkedPrNumber: 236,
 	},
 	{
 		sectionNumber: 6,
@@ -171,7 +179,8 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 			"export_audit_report",
 			"run_readiness_check",
 		],
-	},
+
+		linkedPrNumber: 237,	},
 	{
 		sectionNumber: 7,
 		sectionTitle: "Funding and proposals",
@@ -183,6 +192,7 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 			"create_proposal",
 			"link_contract_to_funding",
 		],
+		linkedPrNumber: 238,
 	},
 	{
 		sectionNumber: 8,
@@ -196,6 +206,7 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 			"share_donation_page",
 			"assign_volunteer",
 		],
+		linkedPrNumber: 239,
 	},
 	{
 		sectionNumber: 8,
@@ -203,7 +214,8 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 		batch: 2,
 		taskCodes: ["8.6"],
 		taskTitles: ["compute_suggested_ask"],
-	},
+
+		linkedPrNumber: 240,	},
 	{
 		sectionNumber: 9,
 		sectionTitle: "Calendar and events gaps",
@@ -215,6 +227,7 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 			"share_calendar",
 			"create_public_event",
 		],
+		linkedPrNumber: 241,
 	},
 	{
 		sectionNumber: 10,
@@ -227,6 +240,7 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 			"create_task_for_finding",
 			"cancel_task",
 		],
+		linkedPrNumber: 242,
 	},
 	{
 		sectionNumber: 11,
@@ -239,6 +253,7 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 			"search_runbooks",
 			"get_system_health",
 		],
+		linkedPrNumber: 244,
 	},
 	{
 		sectionNumber: 12,
@@ -252,6 +267,7 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 			"sync_outlook_calendar",
 			"create_crm_draft_from_deal",
 		],
+		linkedPrNumber: 243,
 	},
 	{
 		sectionNumber: 13,
@@ -263,6 +279,7 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 			"list_notifications",
 			"send_sms_test",
 		],
+		linkedPrNumber: 245,
 	},
 	{
 		sectionNumber: 14,
@@ -270,6 +287,7 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 		batch: 1,
 		taskCodes: ["14.1", "14.2", "14.3"],
 		taskTitles: ["query_risk_averted", "export_table_csv", "schedule_report"],
+		linkedPrNumber: 246,
 	},
 	{
 		sectionNumber: 15,
@@ -283,6 +301,7 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 			"list_my_capabilities",
 			"compose_skill_multi_step",
 		],
+		linkedPrNumber: 247,
 	},
 ];
 

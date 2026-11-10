@@ -57,4 +57,4 @@
 
 ## Progress note for continuation
 
-Section **0** is seed-complete. Section **1** has linked PRs **#219** (1.1–1.5) and **#223** (1.6–1.8). Next product work after those merge green is typically **section 2 Contracts** (`PTO S2 B1` …) unless board state says otherwise — re-check overview / PR merge status before starting.
+Section **0** is seed-complete. Section **1** has linked PRs **#219** (1.1–1.5) and **#223** (1.6–1.8). Section **2 batch 1** shipped on **#227** (placeholder **#226**). Sections **2–15** remaining batches have **draft stub PRs #229–#247** (see `pr-catalog-bodies/pto/linked-pr-numbers.json` and `pto-pr-batches.ts` `linkedPrNumber` fields). Implement on the matching `cursor/production-tools/sNN-bN-5329` branch; full PR bodies in `pr-catalog-bodies/pto/*.md` or `pnpm pto:batch-pr-body --pr <n>`.
