@@ -27,7 +27,10 @@ const dryRun = process.argv.includes("--dry-run");
 
 function batchesNeedingStub(): PtoPrBatch[] {
 	return PTO_PR_BATCHES.filter(
-		(b) => b.sectionNumber >= 2 && b.linkedPrNumber == null,
+		(b) =>
+			b.sectionNumber >= 2 &&
+			b.linkedPrNumber == null &&
+			b.mergedSetupPrNumber != null,
 	);
 }
 
@@ -50,7 +53,7 @@ function createDraftPr(batch: PtoPrBatch): number {
 	);
 	fs.writeFileSync(bodyFile, body);
 
-	sh(`git push -u origin HEAD:${branch}`);
+	sh(`git push -u origin main:${branch}`);
 	const out = sh(
 		`gh pr create --draft --base main --head ${branch} --title ${JSON.stringify(title)} --body-file ${JSON.stringify(bodyFile)}`,
 	);

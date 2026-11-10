@@ -30,6 +30,8 @@
 		"pto:write-batch-bodies": "tsx scripts/write-pto-catalog-pr-bodies.ts",
 		"pto:sync-linked-prs": "tsx scripts/sync-pto-linked-pr-numbers.ts",
 		"pto:apply-linked-prs": "tsx scripts/apply-pto-linked-pr-numbers.ts",
+		"pto:sync-merged-setup-prs": "tsx scripts/sync-pto-merged-setup-pr-numbers.ts",
+		"pto:clear-reopen-linked-prs": "tsx scripts/clear-pto-reopen-linked-pr-numbers.ts",
 		"prd:batch-pr-body": "tsx scripts/prd-batch-pr-body-cli.ts",
 		"test:e2e": "playwright test",
 		"test:e2e:ui": "playwright test --ui",

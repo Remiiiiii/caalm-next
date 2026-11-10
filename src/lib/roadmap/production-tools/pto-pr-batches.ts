@@ -11,8 +11,10 @@ export type PtoPrBatch = {
 	batch: number;
 	taskCodes: string[];
 	taskTitles: string[];
-	/** Batch PR on the board. Completes tasks unless productPrNumber is set. */
+	/** Active batch PR on the board; merge completes tasks unless productPrNumber applies. */
 	linkedPrNumber?: number;
+	/** Merged starter/stub PR (marker-only); never completes catalog tasks. */
+	mergedSetupPrNumber?: number;
 	/** Optional implementation PR when linkedPrNumber was closed without merging (board placeholder only). */
 	productPrNumber?: number;
 };
@@ -80,9 +82,8 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 			"check_playbook_deviations",
 			"suggest_redlines",
 		],
-		// #229 was the draft stub; implementation continues on #250 (same branch).
 		linkedPrNumber: 250,
-	},
+		mergedSetupPrNumber: 229,	},
 	{
 		sectionNumber: 2,
 		sectionTitle: "Contracts CLM depth",
@@ -96,7 +97,7 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 			"renew_contract",
 		],
 
-		linkedPrNumber: 230,	},
+		mergedSetupPrNumber: 230,	},
 	{
 		sectionNumber: 2,
 		sectionTitle: "Contracts CLM depth",
@@ -104,7 +105,7 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 		taskCodes: ["2.16", "2.17"],
 		taskTitles: ["upload_contract_file", "export_contract"],
 
-		linkedPrNumber: 231,	},
+		mergedSetupPrNumber: 231,	},
 	{
 		sectionNumber: 3,
 		sectionTitle: "Licenses",
@@ -117,8 +118,7 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 			"approve_license",
 			"extract_license_from_document",
 		],
-		linkedPrNumber: 232,
-	},
+		mergedSetupPrNumber: 232,	},
 	{
 		sectionNumber: 3,
 		sectionTitle: "Licenses",
@@ -126,7 +126,7 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 		taskCodes: ["3.6", "3.7"],
 		taskTitles: ["list_license_expirations", "assign_license_owner"],
 
-		linkedPrNumber: 233,	},
+		mergedSetupPrNumber: 233,	},
 	{
 		sectionNumber: 4,
 		sectionTitle: "Approvals write",
@@ -138,8 +138,7 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 			"reassign_approval",
 			"override_approval",
 		],
-		linkedPrNumber: 234,
-	},
+		mergedSetupPrNumber: 234,	},
 	{
 		sectionNumber: 5,
 		sectionTitle: "Clauses and templates",
@@ -152,8 +151,7 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 			"list_contract_templates",
 			"seed_clause_from_document",
 		],
-		linkedPrNumber: 235,
-	},
+		mergedSetupPrNumber: 235,	},
 	{
 		sectionNumber: 6,
 		sectionTitle: "Audits CAPA depth",
@@ -166,8 +164,7 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 			"create_corrective_action",
 			"assign_cap_owner",
 		],
-		linkedPrNumber: 236,
-	},
+		mergedSetupPrNumber: 236,	},
 	{
 		sectionNumber: 6,
 		sectionTitle: "Audits CAPA depth",
@@ -181,7 +178,7 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 			"run_readiness_check",
 		],
 
-		linkedPrNumber: 237,	},
+		mergedSetupPrNumber: 237,	},
 	{
 		sectionNumber: 7,
 		sectionTitle: "Funding and proposals",
@@ -193,8 +190,7 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 			"create_proposal",
 			"link_contract_to_funding",
 		],
-		linkedPrNumber: 238,
-	},
+		mergedSetupPrNumber: 238,	},
 	{
 		sectionNumber: 8,
 		sectionTitle: "Constituents, gifts, donations, volunteers",
@@ -207,8 +203,7 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 			"share_donation_page",
 			"assign_volunteer",
 		],
-		linkedPrNumber: 239,
-	},
+		mergedSetupPrNumber: 239,	},
 	{
 		sectionNumber: 8,
 		sectionTitle: "Constituents, gifts, donations, volunteers",
@@ -216,7 +211,7 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 		taskCodes: ["8.6"],
 		taskTitles: ["compute_suggested_ask"],
 
-		linkedPrNumber: 240,	},
+		mergedSetupPrNumber: 240,	},
 	{
 		sectionNumber: 9,
 		sectionTitle: "Calendar and events gaps",
@@ -228,8 +223,7 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 			"share_calendar",
 			"create_public_event",
 		],
-		linkedPrNumber: 241,
-	},
+		mergedSetupPrNumber: 241,	},
 	{
 		sectionNumber: 10,
 		sectionTitle: "Tasks gaps",
@@ -241,8 +235,7 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 			"create_task_for_finding",
 			"cancel_task",
 		],
-		linkedPrNumber: 242,
-	},
+		mergedSetupPrNumber: 242,	},
 	{
 		sectionNumber: 11,
 		sectionTitle: "Tickets and IT (safe subset)",
@@ -254,8 +247,7 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 			"search_runbooks",
 			"get_system_health",
 		],
-		linkedPrNumber: 244,
-	},
+		mergedSetupPrNumber: 244,	},
 	{
 		sectionNumber: 12,
 		sectionTitle: "Integrations and mail",
@@ -268,8 +260,7 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 			"sync_outlook_calendar",
 			"create_crm_draft_from_deal",
 		],
-		linkedPrNumber: 243,
-	},
+		mergedSetupPrNumber: 243,	},
 	{
 		sectionNumber: 13,
 		sectionTitle: "News, briefing, notifications",
@@ -280,16 +271,14 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 			"list_notifications",
 			"send_sms_test",
 		],
-		linkedPrNumber: 245,
-	},
+		mergedSetupPrNumber: 245,	},
 	{
 		sectionNumber: 14,
 		sectionTitle: "Analytics and exports",
 		batch: 1,
 		taskCodes: ["14.1", "14.2", "14.3"],
 		taskTitles: ["query_risk_averted", "export_table_csv", "schedule_report"],
-		linkedPrNumber: 246,
-	},
+		mergedSetupPrNumber: 246,	},
 	{
 		sectionNumber: 15,
 		sectionTitle: "Agent OS cross-cutting",
@@ -302,8 +291,7 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 			"list_my_capabilities",
 			"compose_skill_multi_step",
 		],
-		linkedPrNumber: 247,
-	},
+		mergedSetupPrNumber: 247,	},
 ];
 
 export function ptoBatchBranchName(batch: PtoPrBatch): string {
@@ -321,6 +309,9 @@ export function linkedPrNumbersForPtoSection(sectionNumber: number): number[] {
 	const numbers: number[] = [];
 	for (const batch of PTO_PR_BATCHES) {
 		if (batch.sectionNumber !== sectionNumber) continue;
+		if (batch.mergedSetupPrNumber != null) {
+			numbers.push(batch.mergedSetupPrNumber);
+		}
 		if (batch.linkedPrNumber != null) numbers.push(batch.linkedPrNumber);
 		if (batch.productPrNumber != null) numbers.push(batch.productPrNumber);
 	}
@@ -330,7 +321,9 @@ export function linkedPrNumbersForPtoSection(sectionNumber: number): number[] {
 export function ptoBatchForPr(prNumber: number): PtoPrBatch | undefined {
 	return PTO_PR_BATCHES.find(
 		(item) =>
-			item.linkedPrNumber === prNumber || item.productPrNumber === prNumber,
+			item.linkedPrNumber === prNumber ||
+			item.productPrNumber === prNumber ||
+			item.mergedSetupPrNumber === prNumber,
 	);
 }
 
@@ -347,10 +340,17 @@ export function ptoBatchOwnsTaskCode(
  * Task codes this PR completes on merge.
  * When productPrNumber is set, only that PR completes the batch — the
  * linkedPrNumber board placeholder (closed without merging) completes nothing.
+ * mergedSetupPrNumber is a historical marker merge and completes nothing.
  */
 export function ptoTaskCodesCompletedByPr(prNumber: number): string[] {
 	const batch = ptoBatchForPr(prNumber);
 	if (!batch) return [];
+	if (
+		batch.mergedSetupPrNumber != null &&
+		prNumber === batch.mergedSetupPrNumber
+	) {
+		return [];
+	}
 	if (batch.productPrNumber != null && prNumber !== batch.productPrNumber) {
 		return [];
 	}

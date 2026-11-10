@@ -23,7 +23,8 @@
 - Branch: `cursor/production-tools/s{nn}-b{n}-5329`
 - Title: `PTO S{n} B{n} {section} ({range})`
 - Body: `buildPtoBatchPrBody` from catalog Who/What/Where/Why/When/How + Done when.
-- Set `linkedPrNumber`; **do not merge** — user inspects/merges.
+- Set `linkedPrNumber` on the open draft PR; **do not merge** stub-only — user implements on the branch, pushes, then merges.
+- Historic marker merges **`#229–#247`** are `mergedSetupPrNumber` only — they never complete tasks.
 - Tests: `tests/roadmap/pto/{code-with-dashes}.test.ts` + `pnpm run test:api-authz` when routes/permissions change.
 
 ## Sections (0 seed-complete; product starts at 1)
@@ -57,4 +58,4 @@
 
 ## Progress note for continuation
 
-Section **0** is seed-complete. Section **1** has linked PRs **#219** (1.1–1.5) and **#223** (1.6–1.8). Section **2 batch 1** shipped on **#227** (placeholder **#226**). Section **2 batch 2** (2.6–2.10) is linked to **#250** on `cursor/production-tools/s02-b2-5329` (replaces draft stub **#229**). Remaining section **2–15** batches still use draft stubs **#230–#247** (see `pr-catalog-bodies/pto/linked-pr-numbers.json` and `pto-pr-batches.ts`). Implement on the matching `cursor/production-tools/sNN-bN-5329` branch; full PR bodies in `pr-catalog-bodies/pto/*.md` or `pnpm pto:batch-pr-body --pr <n>`.
+Section **0** is seed-complete. Section **1** has linked PRs **#219** (1.1–1.5) and **#223** (1.6–1.8). Section **2 batch 1** shipped on **#227** (placeholder **#226**). Section **2 batch 2** (2.6–2.10) shipped on **#250** (setup stub **#229** is `mergedSetupPrNumber` only). **Sections 2 batch 3 through 15 batch 1**: merged setup stubs **#230–#247** are listed but do not complete work — open replacement **draft** PRs (same `cursor/production-tools/sNN-bN-5329` branches) carry new `linkedPrNumber` values in `pr-catalog-bodies/pto/linked-pr-numbers.json`. Workflow: checkout the batch branch locally → implement tools → push → merge when CI is green (do not merge marker-only drafts). Full PR bodies: `pr-catalog-bodies/pto/*.md` or `pnpm pto:batch-pr-body --pr <n>`.

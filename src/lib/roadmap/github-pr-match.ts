@@ -148,8 +148,14 @@ export function matchPullRequestToTask(
 			return true;
 		}
 		const byBranch = ptoBatchFromHeadRef(pr.headRef);
+		const branchIsStubOnly =
+			(byBranch?.mergedSetupPrNumber != null &&
+				pr.number === byBranch.mergedSetupPrNumber) ||
+			(byBranch?.productPrNumber != null &&
+				pr.number === byBranch.linkedPrNumber);
 		if (
 			byBranch &&
+			!branchIsStubOnly &&
 			byBranch.sectionNumber === sectionNumber &&
 			ptoBatchOwnsTaskCode(byBranch, taskCode)
 		) {
