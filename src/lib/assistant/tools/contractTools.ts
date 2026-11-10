@@ -1,11 +1,27 @@
 import { PERMISSIONS } from "@/constants/permissions";
-import { answerContractQuestion } from "@/lib/ai/contract-assistant";
+import {
+	analyzeContractDocument,
+	answerContractQuestion,
+} from "@/lib/ai/contract-assistant";
+import { extractContractFromDocument } from "@/lib/ai/extractContractFromDocument";
 import { ContractFieldUpdateService } from "@/lib/api/contracts/services/ContractFieldUpdateService";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { hasAll, searchContractsTable } from "@/lib/assistant/tools/toolUtils";
 import type { ToolContext, ToolDefinition } from "@/lib/assistant/tools/types";
+import {
+	isClauseCategory,
+	listClauses,
+} from "@/lib/clauses/clause-library.service";
+import { listVersions } from "@/lib/contracts/negotiation/versions.service";
 import { parsePdfBuffer } from "@/lib/files/pdf-text";
+import {
+	compareClauseWithGemini,
+	extractClausesWithGemini,
+} from "@/lib/playbook/compare-with-gemini";
+import { pickStandardForClause } from "@/lib/playbook/deviation-scoring";
+import { scoreOrgContractDeviations } from "@/lib/playbook/score-org-contract";
+import { suggestRedlineForClause } from "@/lib/playbook/suggest-redline";
 import { logAuditEvent } from "@/lib/services/audit-logger";
 import { getBlueprint, isBlueprintId } from "@/lib/templates/blueprint-catalog";
 import {
@@ -481,4 +497,385 @@ export const CONTRACT_TOOLS: ToolDefinition[] = [
 			};
 		},
 	},
+	{
+		name: "extract_contract_terms",
+		description:
+			"AI-extract dates, parties, and value from a contract's file into fields for human review. Requires contracts.edit. Never auto-saves — review then use update_contract_fields.",
+		requiredPermissions: [PERMISSIONS.CONTRACTS.EDIT],
+		mutating: false,
+		parameters: {
+			type: "object",
+			properties: {
+				contractId: { type: "string", description: "Contract document id" },
+				query: { type: "string", description: "Contract name search" },
+			},
+		},
+		handler: async (ctx, args) => {
+			if (!hasAll(ctx, [PERMISSIONS.CONTRACTS.EDIT])) {
+				return asError(
+					"You cannot edit contracts. Ask an admin for the contracts.edit permission.",
+				);
+			}
+			const found = await resolveOneContract(ctx, args);
+			if (found.error || !found.contract) {
+				return asError(found.error ?? "Contract not found.");
+			}
+			const contract = found.contract;
+			if (!contract.fileUrl) {
+				return asError(
+					`"${contract.contractName}" has no readable file attached yet.`,
+				);
+			}
+			try {
+				const response = await fetch(contract.fileUrl);
+				if (!response.ok) {
+					return asError("Could not load the contract file.");
+				}
+				const buffer = Buffer.from(await response.arrayBuffer());
+				const extraction = await extractContractFromDocument({
+					buffer,
+					fileName: `${contract.contractName}.${contract.fileExtension || "pdf"}`,
+				});
+				return {
+					result: {
+						contractId: contract.contractId,
+						fields: extraction.fields,
+						extractedData: extraction.extractedData,
+						overallConfidence: extraction.overallConfidence,
+						lowConfidenceFields: extraction.lowConfidenceFields,
+						message:
+							"Review these fields — nothing was saved. Use update_contract_fields to apply any you confirm.",
+					},
+				};
+			} catch (error) {
+				return asError(
+					error instanceof Error
+						? error.message
+						: "Failed to extract terms from the contract.",
+				);
+			}
+		},
+	},
+	{
+		name: "summarize_contract",
+		description:
+			"Plain-language summary of one contract's key terms, with citations. Requires contracts.view. Read-only.",
+		requiredPermissions: [PERMISSIONS.CONTRACTS.VIEW],
+		mutating: false,
+		parameters: {
+			type: "object",
+			properties: {
+				contractId: { type: "string", description: "Contract document id" },
+				query: { type: "string", description: "Contract name search" },
+			},
+		},
+		handler: async (ctx, args) => {
+			if (!hasAll(ctx, [PERMISSIONS.CONTRACTS.VIEW])) {
+				return asError(
+					"You cannot view contracts. Ask an admin for the contracts.view permission.",
+				);
+			}
+			const found = await resolveOneContract(ctx, args);
+			if (found.error || !found.contract) {
+				return asError(found.error ?? "Contract not found.");
+			}
+			const contract = found.contract;
+			if (!contract.fileUrl) {
+				return asError(
+					`"${contract.contractName}" has no readable file attached yet.`,
+				);
+			}
+			try {
+				const response = await fetch(contract.fileUrl);
+				if (!response.ok) {
+					return asError("Could not load the contract file.");
+				}
+				const buffer = Buffer.from(await response.arrayBuffer());
+				const parsed = await parsePdfBuffer(buffer, contract.contractName);
+				const analysis = await analyzeContractDocument({
+					fileName: contract.contractName,
+					pageTexts: parsed.pageTexts,
+				});
+				return {
+					result: {
+						contractId: contract.contractId,
+						summaryMarkdown: analysis.summaryMarkdown,
+						citations: analysis.citations,
+					},
+				};
+			} catch (error) {
+				return asError(
+					error instanceof Error
+						? error.message
+						: "Failed to summarize the contract.",
+				);
+			}
+		},
+	},
+	{
+		name: "compare_contract_versions",
+		description:
+			"Show what changed between two saved versions of a contract. Requires contracts.view. Read-only; org-scoped.",
+		requiredPermissions: [PERMISSIONS.CONTRACTS.VIEW],
+		mutating: false,
+		parameters: {
+			type: "object",
+			properties: {
+				contractId: { type: "string", description: "Contract document id" },
+				query: { type: "string", description: "Contract name search" },
+				fromVersion: {
+					type: "number",
+					description:
+						"Older version number (defaults to the second-most-recent)",
+				},
+				toVersion: {
+					type: "number",
+					description: "Newer version number (defaults to the most recent)",
+				},
+			},
+		},
+		handler: async (ctx, args) => {
+			if (!hasAll(ctx, [PERMISSIONS.CONTRACTS.VIEW])) {
+				return asError(
+					"You cannot view contracts. Ask an admin for the contracts.view permission.",
+				);
+			}
+			const found = await resolveOneContract(ctx, args);
+			if (found.error || !found.contract) {
+				return asError(found.error ?? "Contract not found.");
+			}
+			const contract = found.contract;
+			const versions = (await listVersions(contract.contractId)).filter(
+				(v) => v.orgId === ctx.orgId,
+			);
+			if (versions.length < 2) {
+				return asError(
+					`"${contract.contractName}" only has ${versions.length} saved version${versions.length === 1 ? "" : "s"} — nothing to compare yet.`,
+				);
+			}
+			const sorted = [...versions].sort(
+				(a, b) => a.versionNumber - b.versionNumber,
+			);
+			const toVersion =
+				args.toVersion != null
+					? sorted.find((v) => v.versionNumber === Number(args.toVersion))
+					: sorted[sorted.length - 1];
+			const fromVersion =
+				args.fromVersion != null
+					? sorted.find((v) => v.versionNumber === Number(args.fromVersion))
+					: sorted[sorted.length - 2];
+			if (!fromVersion || !toVersion) {
+				return asError("Could not find both versions to compare.");
+			}
+			const diff = diffLines(
+				fromVersion.extractedText,
+				toVersion.extractedText,
+			);
+			return {
+				result: {
+					contractId: contract.contractId,
+					fromVersion: fromVersion.versionNumber,
+					toVersion: toVersion.versionNumber,
+					fromChangeSummary: fromVersion.changeSummary,
+					toChangeSummary: toVersion.changeSummary,
+					added: diff.added,
+					removed: diff.removed,
+					unchangedLineCount: diff.unchangedCount,
+				},
+			};
+		},
+	},
+	{
+		name: "check_playbook_deviations",
+		description:
+			"Flag clauses in a contract that deviate from the org's playbook standards, with an explanation for each. Requires contracts.review. Read-only analysis; no auto-edit.",
+		requiredPermissions: [PERMISSIONS.CONTRACTS.REVIEW],
+		mutating: false,
+		parameters: {
+			type: "object",
+			properties: {
+				contractId: { type: "string", description: "Contract document id" },
+				query: { type: "string", description: "Contract name search" },
+			},
+		},
+		handler: async (ctx, args) => {
+			if (!hasAll(ctx, [PERMISSIONS.CONTRACTS.REVIEW])) {
+				return asError(
+					"You cannot review contracts. Ask an admin for the contracts.review permission.",
+				);
+			}
+			const found = await resolveOneContract(ctx, args);
+			if (found.error || !found.contract) {
+				return asError(found.error ?? "Contract not found.");
+			}
+			const contract = found.contract;
+			if (!contract.fileUrl) {
+				return asError(
+					`"${contract.contractName}" has no readable file attached yet.`,
+				);
+			}
+			try {
+				const response = await fetch(contract.fileUrl);
+				if (!response.ok) {
+					return asError("Could not load the contract file.");
+				}
+				const buffer = Buffer.from(await response.arrayBuffer());
+				const parsed = await parsePdfBuffer(buffer, contract.contractName);
+				const report = await scoreOrgContractDeviations({
+					orgId: ctx.orgId,
+					content: parsed.text,
+				});
+				return {
+					result: {
+						contractId: contract.contractId,
+						deviations: report.deviations,
+						summary: report.summary,
+					},
+				};
+			} catch (error) {
+				return asError(
+					error instanceof Error
+						? error.message
+						: "Failed to check this contract against the playbook.",
+				);
+			}
+		},
+	},
+	{
+		name: "suggest_redlines",
+		description:
+			"Propose redline edits against the org's clause library playbook, for human review. Requires contracts.review. Proposals only — never saves without confirm.",
+		requiredPermissions: [PERMISSIONS.CONTRACTS.REVIEW],
+		mutating: false,
+		parameters: {
+			type: "object",
+			properties: {
+				contractId: { type: "string", description: "Contract document id" },
+				query: { type: "string", description: "Contract name search" },
+			},
+		},
+		handler: async (ctx, args) => {
+			if (!hasAll(ctx, [PERMISSIONS.CONTRACTS.REVIEW])) {
+				return asError(
+					"You cannot review contracts. Ask an admin for the contracts.review permission.",
+				);
+			}
+			const found = await resolveOneContract(ctx, args);
+			if (found.error || !found.contract) {
+				return asError(found.error ?? "Contract not found.");
+			}
+			const contract = found.contract;
+			if (!contract.fileUrl) {
+				return asError(
+					`"${contract.contractName}" has no readable file attached yet.`,
+				);
+			}
+			try {
+				const response = await fetch(contract.fileUrl);
+				if (!response.ok) {
+					return asError("Could not load the contract file.");
+				}
+				const buffer = Buffer.from(await response.arrayBuffer());
+				const parsed = await parsePdfBuffer(buffer, contract.contractName);
+				const extracted = await extractClausesWithGemini(parsed.text);
+				const standards = await listClauses({
+					orgId: ctx.orgId,
+					status: "active",
+					currentOnly: true,
+				});
+				// shortcut: caps at 10 clauses per call to bound Gemini round-trips; upgrade to pagination if contracts regularly exceed this.
+				const proposals: Array<{
+					clauseTitle: string;
+					category: string;
+					rationale: string;
+					differingPoints: string[];
+					suggestedText: string;
+					explanation: string;
+				}> = [];
+				for (const clause of extracted.slice(0, 10)) {
+					const standard = pickStandardForClause(clause, standards);
+					if (!standard || !isClauseCategory(clause.category ?? "")) continue;
+					const compare = await compareClauseWithGemini(clause, standard);
+					if (compare.verdict !== "deviate") continue;
+					const redline = await suggestRedlineForClause(clause, standard);
+					proposals.push({
+						clauseTitle: clause.title ?? "",
+						category: clause.category ?? "",
+						rationale: compare.rationale,
+						differingPoints: compare.differingPoints,
+						suggestedText: redline.suggestedText,
+						explanation: redline.explanation,
+					});
+				}
+				return {
+					result: {
+						contractId: contract.contractId,
+						proposals,
+						message:
+							proposals.length === 0
+								? "No clauses deviate from the playbook, or none matched a standard to redline against."
+								: "These are proposals only — nothing was saved. Apply any you confirm manually.",
+					},
+				};
+			} catch (error) {
+				return asError(
+					error instanceof Error
+						? error.message
+						: "Failed to suggest redlines for this contract.",
+				);
+			}
+		},
+	},
 ];
+
+/** Simple line-level diff between two versions' extracted text. */
+function diffLines(
+	a: string,
+	b: string,
+): { added: string[]; removed: string[]; unchangedCount: number } {
+	// shortcut: caps each side at 2000 lines for an O(n*m) LCS; upgrade to a
+	// streaming/word-diff library if contracts regularly exceed this.
+	const MAX_LINES = 2000;
+	const linesA = a.split("\n").slice(0, MAX_LINES);
+	const linesB = b.split("\n").slice(0, MAX_LINES);
+	const n = linesA.length;
+	const m = linesB.length;
+	const lcs: number[][] = Array.from({ length: n + 1 }, () =>
+		new Array(m + 1).fill(0),
+	);
+	for (let i = n - 1; i >= 0; i--) {
+		for (let j = m - 1; j >= 0; j--) {
+			lcs[i][j] =
+				linesA[i] === linesB[j]
+					? lcs[i + 1][j + 1] + 1
+					: Math.max(lcs[i + 1][j], lcs[i][j + 1]);
+		}
+	}
+	const added: string[] = [];
+	const removed: string[] = [];
+	let unchangedCount = 0;
+	let i = 0;
+	let j = 0;
+	while (i < n && j < m) {
+		if (linesA[i] === linesB[j]) {
+			unchangedCount++;
+			i++;
+			j++;
+		} else if (lcs[i + 1][j] >= lcs[i][j + 1]) {
+			if (linesA[i].trim()) removed.push(linesA[i]);
+			i++;
+		} else {
+			if (linesB[j].trim()) added.push(linesB[j]);
+			j++;
+		}
+	}
+	while (i < n) {
+		if (linesA[i].trim()) removed.push(linesA[i]);
+		i++;
+	}
+	while (j < m) {
+		if (linesB[j].trim()) added.push(linesB[j]);
+		j++;
+	}
+	return { added, removed, unchangedCount };
+}
