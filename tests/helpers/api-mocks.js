@@ -284,16 +284,16 @@ export async function mockNotificationAPIs(page) {
 			body: JSON.stringify({
 				data: [
 					{
-						id: "1",
+						$id: "1",
 						email: "user1@example.com",
 						status: "pending",
-						createdAt: new Date().toISOString(),
+						$createdAt: new Date().toISOString(),
 					},
 					{
-						id: "2",
+						$id: "2",
 						email: "user2@example.com",
 						status: "accepted",
-						createdAt: new Date(Date.now() - 86400000).toISOString(),
+						$createdAt: new Date(Date.now() - 86400000).toISOString(),
 					},
 				],
 			}),

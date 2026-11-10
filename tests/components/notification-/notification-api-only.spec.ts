@@ -211,10 +211,11 @@ test.describe("Notification System API Tests (Working Endpoints Only)", () => {
 
 			if (data.data.length > 0) {
 				const firstInvitation = data.data[0];
-				expect(firstInvitation).toHaveProperty("id");
+				// Appwrite invitation rows use $id / $createdAt (not id / createdAt).
+				expect(firstInvitation).toHaveProperty("$id");
 				expect(firstInvitation).toHaveProperty("email");
 				expect(firstInvitation).toHaveProperty("status");
-				expect(firstInvitation).toHaveProperty("createdAt");
+				expect(firstInvitation).toHaveProperty("$createdAt");
 			}
 
 			console.log(
