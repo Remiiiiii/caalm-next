@@ -22,6 +22,7 @@ import {
 import { checkAssistantRateLimit } from "@/lib/assistant/rateLimit";
 import { runAssistantTurn } from "@/lib/assistant/runAssistantTurn";
 import { getFinding, listCaps } from "@/lib/audit-upload/store";
+import { toUserFacingErrorMessage } from "@/lib/errors/user-facing";
 
 export async function POST(request: NextRequest) {
 	try {
@@ -248,7 +249,10 @@ export async function POST(request: NextRequest) {
 		console.error("[assistant/chat]", error);
 		return NextResponse.json(
 			{
-				error: error instanceof Error ? error.message : "Assistant chat failed",
+				error: toUserFacingErrorMessage(
+					error,
+					"I couldn't complete that request. Please try again.",
+				),
 			},
 			{ status: 500 },
 		);

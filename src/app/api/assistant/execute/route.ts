@@ -17,12 +17,18 @@ import {
 	updateConversationMeta,
 } from "@/lib/assistant/conversationStore";
 import type { AssistantCalendarMutation } from "@/lib/assistant/executeTypes";
+import {
+	completeInviteQueueBatch,
+	completedEmailsFromInviteArgs,
+} from "@/lib/assistant/inviteQueue";
+import { buildNextInviteForm } from "@/lib/assistant/nextInviteForm";
 import { runToolByName } from "@/lib/assistant/tools/registry";
 import {
 	deletePendingAction,
 	getPendingAction,
 	patchPendingActionArgs,
 } from "@/lib/assistant/tools/types";
+import { toUserFacingErrorMessage } from "@/lib/errors/user-facing";
 
 function buildCalendarMutation(
 	toolName: string,
@@ -231,6 +237,26 @@ export async function POST(request: NextRequest) {
 							? formatGenericSuccessSummary(pending.label, resultObj)
 							: `Action completed: ${pending.label}`;
 
+		// After a successful invite batch, open the form for anyone still unchecked.
+		let nextInvite: ReturnType<typeof buildNextInviteForm> | undefined;
+		if (
+			!resultError &&
+			(pending.toolName === "invite_user" ||
+				pending.toolName === "invite_users")
+		) {
+			const batch = await completeInviteQueueBatch({
+				userId: auth.user.$id,
+				orgId: auth.orgId,
+				completedEmails: completedEmailsFromInviteArgs(pending.args),
+			});
+			if (batch.remaining.length > 0) {
+				nextInvite = buildNextInviteForm({
+					remaining: batch.remaining,
+					total: batch.total,
+				});
+			}
+		}
+
 		const metadataJson =
 			meetingCreated || actionCompleted || actionLifecycle || calendarMutation
 				? JSON.stringify({
@@ -250,9 +276,22 @@ export async function POST(request: NextRequest) {
 				content: summary,
 				metadataJson,
 			});
+			if (nextInvite) {
+				await appendMessage({
+					conversationId,
+					userId: auth.user.$id,
+					orgId: auth.orgId,
+					role: "assistant",
+					content: nextInvite.answer,
+					metadataJson: JSON.stringify({ inputForm: nextInvite.inputForm }),
+				});
+			}
 			await updateConversationMeta(conversationId, {
 				lastMessageAt: new Date().toISOString(),
-				lastMessagePreview: truncatePreview(summary, 120),
+				lastMessagePreview: truncatePreview(
+					nextInvite?.answer ?? summary,
+					120,
+				),
 			});
 		}
 
@@ -265,14 +304,17 @@ export async function POST(request: NextRequest) {
 				actionCompleted,
 				actionLifecycle,
 				calendarMutation,
+				...(nextInvite ? { nextInvite } : {}),
 			},
 		});
 	} catch (error) {
 		console.error("[assistant/execute]", error);
 		return NextResponse.json(
 			{
-				error:
-					error instanceof Error ? error.message : "Action execution failed",
+				error: toUserFacingErrorMessage(
+					error,
+					"I couldn't finish that action. Please try again.",
+				),
 			},
 			{ status: 500 },
 		);

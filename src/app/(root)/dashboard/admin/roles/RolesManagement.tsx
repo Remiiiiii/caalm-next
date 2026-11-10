@@ -39,7 +39,6 @@ import {
 } from "@/components/ui/table";
 import { PERMISSIONS } from "@/constants/permissions";
 import { useOrganization } from "@/contexts/OrganizationContext";
-import { useStepUp } from "@/contexts/StepUpContext";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { cn } from "@/lib/utils";
@@ -170,7 +169,6 @@ const RolesManagement = () => {
 	const [roleToDelete, setRoleToDelete] = useState<RoleRow | null>(null);
 	const [pageNowMs] = useState(() => Date.now());
 	const { toast } = useToast();
-	const { ensureStepUp } = useStepUp();
 	const router = useRouter();
 	const { orgId } = useOrganization();
 	const { permissions } = usePermissions();
@@ -456,13 +454,9 @@ const RolesManagement = () => {
 				pendingLabel="Deleting…"
 				onConfirm={async () => {
 					if (!roleToDelete) return;
-					if (!(await ensureStepUp())) {
-						throw new Error("Verification required to delete a role.");
-					}
-					const response = await fetch(
-						`/api/admin/roles/${roleToDelete.$id}`,
-						{ method: "DELETE" },
-					);
+					const response = await fetch(`/api/admin/roles/${roleToDelete.$id}`, {
+						method: "DELETE",
+					});
 					const data = await response.json();
 					if (!data.success) {
 						throw new Error(data.error || "Failed to delete role");

@@ -6,6 +6,11 @@ import { useEffect, useState } from "react";
 import { AppDialog } from "@/components/ui/app-dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useOptionalStepUp } from "@/contexts/StepUpContext";
+import {
+	confirmingLabelFromPending,
+	mapConfirmFactsToSummaryRows,
+} from "@/lib/auth/step-up-prompt";
 import { cn } from "@/lib/utils";
 
 export type DeleteListItem = {
@@ -32,6 +37,7 @@ interface DeleteConfirmationDialogProps {
 	isLoading?: boolean;
 	confirmLabel?: string;
 	closeOnConfirm?: boolean;
+	requireStepUp?: boolean;
 }
 
 function normalizeItems(
@@ -182,30 +188,60 @@ export const DeleteConfirmationDialog: React.FC<
 	isLoading = false,
 	confirmLabel,
 	closeOnConfirm = true,
+	requireStepUp = true,
 }) => {
 	const [confirmed, setConfirmed] = useState(false);
+	const [verifying, setVerifying] = useState(false);
+	const stepUp = useOptionalStepUp();
 
 	useEffect(() => {
 		if (!open) {
 			setConfirmed(false);
+			setVerifying(false);
 		}
 	}, [open]);
 
-	const handleConfirm = () => {
+	const list = normalizeItems(items, itemName);
+	const count = list.length;
+	const noun = itemNoun || "item";
+	const itemsLabel = `${count} ${noun}${count === 1 ? "" : "s"}`;
+	const defaultConfirmLabel =
+		count > 0
+			? `Delete ${count} ${noun}${count === 1 ? "" : "s"}`
+			: `Delete ${noun}s`;
+
+	const handleConfirm = async () => {
+		if (isLoading || verifying) return;
+		if (requireStepUp) {
+			if (!stepUp) return;
+			setVerifying(true);
+			try {
+				const label = confirmLabel || defaultConfirmLabel;
+				const verified = await stepUp.ensureStepUp({
+					tone: "danger",
+					icon: <AlertTriangle className="h-5 w-5" aria-hidden />,
+					title,
+					description,
+					confirmLabel: label,
+					confirmingLabel: confirmingLabelFromPending("Deleting…"),
+					summaryRows: mapConfirmFactsToSummaryRows({
+						confirmLabel: label,
+						facts: [{ label: "Items", value: itemsLabel }],
+					}),
+				});
+				if (!verified) return;
+			} finally {
+				setVerifying(false);
+			}
+		}
 		onConfirm();
 		if (closeOnConfirm) {
 			onOpenChange(false);
 		}
 	};
 
-	const confirmDisabled = isLoading || (requireConfirmation && !confirmed);
-	const list = normalizeItems(items, itemName);
-	const count = list.length;
-	const noun = itemNoun || "item";
-	const defaultConfirmLabel =
-		count > 0
-			? `Delete ${count} ${noun}${count === 1 ? "" : "s"}`
-			: `Delete ${noun}s`;
+	const busy = isLoading || verifying;
+	const confirmDisabled = busy || (requireConfirmation && !confirmed);
 
 	return (
 		<AppDialog
@@ -215,7 +251,7 @@ export const DeleteConfirmationDialog: React.FC<
 				onOpenChange(next);
 			}}
 			variant="destructive"
-			pending={isLoading}
+			pending={busy}
 			icon={<AlertTriangle className="h-5 w-5" aria-hidden />}
 			title={title}
 			description={description}
@@ -225,7 +261,7 @@ export const DeleteConfirmationDialog: React.FC<
 						type="button"
 						variant="ghost"
 						className="rounded-full px-3 py-1.5 h-[1.65rem] justify-center text-slate-400 hover:text-slate-600 hover:bg-black/[.04]"
-						disabled={isLoading}
+						disabled={busy}
 						autoFocus
 						onClick={() => {
 							onCancel?.();
@@ -236,16 +272,16 @@ export const DeleteConfirmationDialog: React.FC<
 					</Button>
 					<Button
 						type="button"
-						onClick={handleConfirm}
+						onClick={() => void handleConfirm()}
 						disabled={confirmDisabled}
 						className="delete-btn cursor-pointer gap-2"
 					>
-						{isLoading ? (
+						{busy ? (
 							<Loader2 className="h-4 w-4 shrink-0 animate-spin" />
 						) : (
 							<Trash2 className="h-4 w-4 shrink-0" />
 						)}
-						{isLoading ? "Deleting…" : confirmLabel || defaultConfirmLabel}
+						{busy ? "Deleting…" : confirmLabel || defaultConfirmLabel}
 					</Button>
 				</>
 			}

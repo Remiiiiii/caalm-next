@@ -16,7 +16,6 @@ import {
 	RefreshCw,
 	Send,
 	SquareArrowOutUpRight,
-	Trash2,
 	Users,
 } from "lucide-react";
 import dynamic from "next/dynamic";
@@ -35,6 +34,8 @@ import ContractStatusPieChart from "@/components/ContractStatusPieChart";
 import ContractExpiryModal from "@/components/contract-expiry-modal/ContractExpiryModal";
 import DepartmentPerformanceWidget from "@/components/DepartmentPerformanceWidget";
 import { DashboardGreeting } from "@/components/dashboard/DashboardGreeting";
+import { PendingInvitationsCard } from "@/components/dashboard/PendingInvitationsCard";
+import type { PendingInvitationRow } from "@/components/dashboard/pending-invitations-types";
 import {
 	type RecentFileItem,
 	RecentFilesUploadedCard,
@@ -58,8 +59,6 @@ import { OrgUnitPicker } from "@/components/settings/OrgUnitPicker";
 import Avatar from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { MailClock } from "@/components/ui/mail-clock-icon";
 import {
 	complianceMetricTone,
 	complianceNeedReviewCount,
@@ -76,18 +75,17 @@ import {
 	SelectItem,
 	SelectScrollable,
 } from "@/components/ui/select-scrollable";
-import { StatCardSkeleton, TableRowSkeleton } from "@/components/ui/skeletons";
+import { StatCardSkeleton } from "@/components/ui/skeletons";
 import { StatCardIcon } from "@/components/ui/stat-card-icon";
 import { WidgetCarousel } from "@/components/ui/widget-carousel";
-import type { ContractStatus } from "@/constants/status";
 import { useOrganization } from "@/contexts/OrganizationContext";
-import { useStepUp } from "@/contexts/StepUpContext";
 import { useToast } from "@/hooks/use-toast";
 import { useCombinedExpiryModal } from "@/hooks/useCombinedExpiryModal";
 import { useDashboardWidgetBundle } from "@/hooks/useDashboardWidgetBundle";
 import { useUnifiedDashboardData } from "@/hooks/useUnifiedDashboardData";
 import { useUpdateExpiredOnce } from "@/hooks/useUpdateExpiredOnce";
 import { isDemoMode } from "@/lib/config/demo-mode";
+import { refreshDashboardInvitations } from "@/lib/ui/refreshDashboardInvitations";
 import { useCtaButtonClass } from "@/lib/ui/use-cta-button-class";
 import { cn } from "@/lib/utils";
 import type { UIFileDoc } from "@/types/files";
@@ -99,10 +97,6 @@ interface UninvitedUser {
 	fullName: string;
 	$createdAt: string;
 }
-
-const ClientDate = dynamic(() => import("@/components/ClientDate"), {
-	ssr: false,
-});
 
 const CalendarView = dynamic(() => import("@/components/CalendarView"), {
 	ssr: false,
@@ -150,19 +144,6 @@ const fetchUninvitedUsers = (refresh = false) =>
 		refresh ? "/api/users/uninvited?refresh=1" : "/api/users/uninvited",
 	);
 
-// Add Invitation type
-interface Invitation {
-	$id: string;
-	name: string;
-	email: string;
-	role: string;
-	token: string;
-	expiresAt: string;
-	status: ContractStatus;
-	revoked: boolean;
-	$createdAt: string;
-}
-
 interface ExecutiveDashboardProps {
 	user?:
 		| (Models.User<Models.Preferences> & {
@@ -177,31 +158,9 @@ interface ExecutiveDashboardProps {
 		| null;
 }
 
-// Map invitation status to badge colors
-// Now uses the same enum as contracts: ['active', 'inactive', 'pending-review', 'action-required']
-const getInvitationStatusBadgeClasses = (status: string): string => {
-	const normalizedStatus = status?.toLowerCase?.() ?? "";
-	switch (normalizedStatus) {
-		case "pending-review":
-		case "pending": // Legacy support
-			return "bg-[#fef6f0] text-[#ebc620]";
-		case "action-required":
-			return "bg-[#fff1f1] text-[#fe8787]";
-		case "active":
-		case "accepted": // Legacy support
-			return "bg-[#ccf3e9] text-[#3dd9b3]";
-		case "inactive":
-		case "revoked": // Legacy support
-			return "bg-gray-100 text-gray-600";
-		default:
-			return "bg-gray-100 text-gray-600";
-	}
-};
-
 const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 	const cta = useCtaButtonClass();
 	const { toast } = useToast();
-	const { ensureStepUp } = useStepUp();
 	const { orgId } = useOrganization();
 	const reduceMotion = useReducedMotion();
 	const effectiveOrgId = orgId || "default_organization";
@@ -235,6 +194,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 		lastUpdatedAt,
 		refresh: refreshUnified,
 		prependInvitation,
+		removeInvitation,
 	} = useUnifiedDashboardData(
 		orgId || "default_organization",
 		user?.$id ?? user?.accountId ?? null,
@@ -374,6 +334,24 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 					status: created.status ?? "pending-review",
 					revoked: false,
 					$createdAt: created.$createdAt ?? new Date().toISOString(),
+					department:
+						typeof invitationData.department === "string"
+							? invitationData.department
+							: typeof created.department === "string"
+								? created.department
+								: undefined,
+					division:
+						typeof invitationData.division === "string"
+							? invitationData.division
+							: typeof created.division === "string"
+								? created.division
+								: undefined,
+					invitedBy:
+						typeof invitationData.invitedBy === "string"
+							? invitationData.invitedBy
+							: typeof created.invitedBy === "string"
+								? created.invitedBy
+								: undefined,
 				});
 			}
 
@@ -388,6 +366,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 	};
 
 	const revokeInvitation = async (token: string) => {
+		await removeInvitation(token);
 		try {
 			const response = await fetch(`/api/invitations/${token}/revoke`, {
 				method: "PUT",
@@ -397,10 +376,13 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 				throw new Error("Failed to revoke invitation");
 			}
 
-			// Refresh unified data
-			refreshUnified();
+			await refreshDashboardInvitations();
+			await refreshUninvited(fetchUninvitedUsers(true), { revalidate: false });
+			// Keep the row gone even if a stale server cache briefly returns it.
+			await removeInvitation(token);
 		} catch (error) {
 			console.error("Failed to revoke invitation:", error);
+			await refreshUnified(undefined, { revalidate: true });
 			throw error;
 		}
 	};
@@ -496,22 +478,6 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 	});
 	const [loading, setLoading] = useState(false);
 	const [refreshLoading, setRefreshLoading] = useState(false);
-	const [resendingToken, setResendingToken] = useState<string | null>(null);
-
-	// Revoke confirmation dialog state
-	const [showRevokeDialog, setShowRevokeDialog] = useState(false);
-	const [revokeToken, setRevokeToken] = useState<string | null>(null);
-	const [revokeEmail, setRevokeEmail] = useState<string | null>(null);
-	const [revokingToken, setRevokingToken] = useState<string | null>(null);
-
-	// Delete confirmation dialog state
-	const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-	const [deleteToken, setDeleteToken] = useState<string | null>(null);
-	const [deleteEmail, setDeleteEmail] = useState<string | null>(null);
-	const [deletingToken, setDeletingToken] = useState<string | null>(null);
-	const [removingInvitations, setRemovingInvitations] = useState<Set<string>>(
-		new Set(),
-	);
 	const [addingInvitations, setAddingInvitations] = useState<Set<string>>(
 		new Set(),
 	);
@@ -648,161 +614,28 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 		}
 	};
 
-	const handleRevoke = async (token: string, email: string) => {
-		setRevokeToken(token);
-		setRevokeEmail(email);
-		setShowRevokeDialog(true);
-	};
-
-	const handleDelete = async (token: string, email: string) => {
-		setDeleteToken(token);
-		setDeleteEmail(email);
-		setShowDeleteDialog(true);
-	};
-
-	const confirmRevoke = async () => {
-		if (!revokeToken) return;
-		if (!(await ensureStepUp())) return;
-
-		try {
-			// Add visual feedback - mark as revoking
-			setRevokingToken(revokeToken);
-			setRemovingInvitations((prev) => new Set(prev).add(revokeToken));
-
-			await revokeInvitation(revokeToken);
-			// SWR will automatically refresh the data
-
-			toast({
-				title: "Invitation Revoked",
-				description: "The invitation has been successfully revoked.",
-			});
-		} catch {
-			toast({
-				title: "Error",
-				description: "Failed to revoke invitation. Please try again.",
-				variant: "destructive",
-			});
-		} finally {
-			setShowRevokeDialog(false);
-			setRevokeToken(null);
-			setRevokeEmail(null);
-			setRevokingToken(null);
-			// Clear the removing state after a short delay to allow animation
-			setTimeout(() => {
-				setRemovingInvitations((prev) => {
-					const newSet = new Set(prev);
-					newSet.delete(revokeToken!);
-					return newSet;
-				});
-			}, 300);
+	const executeResendInvitation = async (token: string) => {
+		const response = await fetch(`/api/invitations/${token}/resend`, {
+			method: "POST",
+		});
+		if (!response.ok) {
+			const errorData = await response.json().catch(() => ({}));
+			throw new Error(
+				(typeof errorData.error === "string" && errorData.error) ||
+					"Failed to resend invitation",
+			);
 		}
 	};
 
-	const cancelRevoke = () => {
-		setShowRevokeDialog(false);
-		setRevokeToken(null);
-		setRevokeEmail(null);
-	};
-
-	const confirmDelete = async () => {
-		if (!deleteToken) return;
-		if (!(await ensureStepUp())) return;
-
+	const executeDeleteInvitation = async (token: string) => {
+		await removeInvitation(token);
 		try {
-			// Add visual feedback - mark as deleting
-			setDeletingToken(deleteToken);
-			setRemovingInvitations((prev) => new Set(prev).add(deleteToken));
-
-			// Optimistically update the UI by immediately removing the invitation from the cache
-			const currentData = await refreshUnified();
-			if (currentData?.data?.invitations) {
-				const updatedInvitations = (
-					currentData.data.invitations as Invitation[]
-				).filter((inv: Invitation) => inv.token !== deleteToken);
-
-				// Update the cache immediately
-				await refreshUnified(
-					{
-						...currentData,
-						data: {
-							...currentData.data,
-							invitations: updatedInvitations,
-						},
-					},
-					{ revalidate: false },
-				);
-			}
-
-			// Show success toast immediately after optimistic update
-			toast({
-				title: "Invitation Deleted",
-				description: "The invitation has been permanently deleted.",
-			});
-
-			// Then perform the actual delete operation
-			await deleteInvitation(deleteToken);
-
-			// Finally, revalidate to ensure data consistency
-			await refreshUnified();
-		} catch {
-			// If delete fails, refresh to restore the original state
-			await refreshUnified();
-			toast({
-				title: "Error",
-				description: "Failed to delete invitation. Please try again.",
-				variant: "destructive",
-			});
-		} finally {
-			setShowDeleteDialog(false);
-			setDeleteToken(null);
-			setDeleteEmail(null);
-			setDeletingToken(null);
-			// Clear the removing state after a short delay to allow animation
-			setTimeout(() => {
-				setRemovingInvitations((prev) => {
-					const newSet = new Set(prev);
-					newSet.delete(deleteToken!);
-					return newSet;
-				});
-			}, 300);
-		}
-	};
-
-	const cancelDelete = () => {
-		setShowDeleteDialog(false);
-		setDeleteToken(null);
-		setDeleteEmail(null);
-	};
-
-	const handleResend = async (token: string) => {
-		setResendingToken(token);
-		try {
-			const response = await fetch(`/api/invitations/${token}/resend`, {
-				method: "POST",
-			});
-
-			if (!response.ok) {
-				const errorData = await response.json();
-				throw new Error(errorData.error || "Failed to resend invitation");
-			}
-
-			const result = await response.json();
-			toast({
-				title: "Success",
-				description: result.message,
-			});
+			await deleteInvitation(token);
+			await refreshUnified(undefined, { revalidate: true });
+			await removeInvitation(token);
 		} catch (error) {
-			console.error("Failed to resend invitation:", error);
-			toast({
-				title: "Error",
-				description:
-					error instanceof Error
-						? error.message
-						: "Failed to resend invitation",
-				variant: "destructive",
-			});
-		} finally {
-			setResendingToken(null);
+			await refreshUnified(undefined, { revalidate: true });
+			throw error;
 		}
 	};
 
@@ -1342,7 +1175,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 									<MetricStatDotsBackdrop />
 									{/* Header */}
 									<div className="relative z-10 border-b border-slate-200/80 px-5 py-5 sm:px-6">
-										<h2 className="flex items-center gap-2.5 text-xl font-bold tracking-tight sidebar-gradient-text">
+										<h2 className="flex items-center gap-2.5 mt-1 text-xl font-bold tracking-tight sidebar-gradient-text">
 											<StatCardIcon icon={LinkIcon} />
 											Send Invite Link
 										</h2>
@@ -1353,149 +1186,151 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 									</div>
 
 									<form onSubmit={handleInviteSubmit} className="relative z-10">
-										{/* Recipient */}
 										<div className="border-b border-slate-200/80 px-5 py-5 sm:px-6">
-											<p className="mb-4 text-[10.5px] font-bold uppercase tracking-[0.08em] text-slate-500">
-												Recipient
-											</p>
-											<div>
-												<label className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-700">
-													Select a user
-													<span className="font-bold text-red" aria-hidden>
-														*
-													</span>
-												</label>
-												<div className="flex items-end gap-2.5">
-													<div className="min-w-0 flex-1">
-														<SelectScrollable
-															value={inviteForm.selectedUserId}
-															onValueChange={(value) =>
-																setInviteForm((prev) => ({
-																	...prev,
-																	selectedUserId: value,
-																}))
-															}
-															placeholder="Choose from directory…"
-															className="w-full border-[0.25px] border-slate-200 bg-white text-slate-700 shadow-sm"
-														>
-															{(uninvitedUsers as UninvitedUser[]).map(
-																(inviteUser: UninvitedUser) => (
-																	<SelectItem
-																		key={inviteUser.$id}
-																		value={inviteUser.$id}
-																	>
-																		<div className="flex items-center gap-3">
-																			<Avatar
-																				name={inviteUser.fullName}
-																				userId={inviteUser.$id}
-																				size="sm"
-																			/>
-																			<span>
-																				{inviteUser.fullName} (
-																				{inviteUser.email})
-																			</span>
-																		</div>
-																	</SelectItem>
-																),
-															)}
-														</SelectScrollable>
-													</div>
-													<Button
-														type="button"
-														variant="outline"
-														onClick={handleRefreshUsers}
-														disabled={refreshLoading}
-														aria-label="Refresh user list"
-														title="Refresh user list"
-														className="h-10 w-10 shrink-0 border-slate-200 bg-white p-0 text-slate-600 hover:border-[#0f5384]/30 hover:bg-blue/10 hover:text-[#0f5384]"
-													>
-														<RefreshCw
-															className={cn(
-																"h-4 w-4",
-																refreshLoading && "animate-spin",
-															)}
-														/>
-													</Button>
-												</div>
-												<p className="mt-1.5 text-[11px] text-slate-500">
-													Pulled from your connected directory. Refresh if this
-													person was just added.
-												</p>
-												{(uninvitedUsers as UninvitedUser[]).length === 0 && (
-													<p className="mt-2 text-xs text-slate-500">
-														No Auth users are waiting for an invite. Everyone
-														either has a role or already has a pending
-														invitation.
+											<div className="flex items-start gap-4">
+												<div className="min-w-0 flex-[1.2]">
+													<p className="mb-4 text-[10.5px] font-bold uppercase tracking-[0.08em] text-slate-500">
+														Recipient
 													</p>
-												)}
-											</div>
-										</div>
-
-										{/* Access & permissions */}
-										<div className="border-b border-slate-200/80 px-5 py-5 sm:px-6">
-											<p className="mb-4 text-[10.5px] font-bold uppercase tracking-[0.08em] text-slate-500">
-												Access &amp; permissions
-											</p>
-											<div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)_minmax(0,1.5fr)]">
-												<div className="min-w-0 space-y-2 md:col-span-2 lg:col-span-1">
-													<label className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-700">
-														Role
+													<label className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold leading-none text-slate-700">
+														Select a user
 														<span className="font-bold text-red" aria-hidden>
 															*
 														</span>
 													</label>
-													<SelectScrollable
-														value={inviteForm.role}
-														onValueChange={(value) =>
-															setInviteForm((prev) => ({
-																...prev,
-																role: value,
-															}))
-														}
-														placeholder="Select role…"
-														className="w-full border-[0.25px] border-slate-200 bg-white text-slate-700 shadow-sm"
-													>
-														<SelectItem value="Super Admin">
-															Super Admin
-														</SelectItem>
-														<SelectItem value="Organization Admin">
-															Organization Admin
-														</SelectItem>
-														<SelectItem value="Executive">Executive</SelectItem>
-														<SelectItem value="Department Manager">
-															Department Manager
-														</SelectItem>
-														<SelectItem value="Viewer">Viewer</SelectItem>
-													</SelectScrollable>
+													<div className="flex items-end gap-2">
+														<div className="min-w-0 flex-1">
+															<SelectScrollable
+																value={inviteForm.selectedUserId}
+																onValueChange={(value) =>
+																	setInviteForm((prev) => ({
+																		...prev,
+																		selectedUserId: value,
+																	}))
+																}
+																placeholder="Choose from directory…"
+																className="w-full border-[0.25px] border-slate-200 bg-white text-slate-700 shadow-sm"
+															>
+																{(uninvitedUsers as UninvitedUser[]).map(
+																	(inviteUser: UninvitedUser) => (
+																		<SelectItem
+																			key={inviteUser.$id}
+																			value={inviteUser.$id}
+																		>
+																			<div className="flex items-center gap-3">
+																				<Avatar
+																					name={inviteUser.fullName}
+																					userId={inviteUser.$id}
+																					size="sm"
+																				/>
+																				<span>
+																					{inviteUser.fullName} (
+																					{inviteUser.email})
+																				</span>
+																			</div>
+																		</SelectItem>
+																	),
+																)}
+															</SelectScrollable>
+														</div>
+														<Button
+															type="button"
+															variant="outline"
+															onClick={handleRefreshUsers}
+															disabled={refreshLoading}
+															aria-label="Refresh user list"
+															title="Refresh user list"
+															className="h-10 w-10 shrink-0 border-slate-200 bg-white p-0 text-slate-600 hover:border-[#0f5384]/30 hover:bg-blue/10 hover:text-[#0f5384]"
+														>
+															<RefreshCw
+																className={cn(
+																	"h-4 w-4",
+																	refreshLoading && "animate-spin",
+																)}
+															/>
+														</Button>
+													</div>
 												</div>
 
-												<OrgUnitPicker
-													layout="inline"
-													departmentRequired
-													orgId={effectiveOrgId}
-													divisionOptional
-													departmentCode={inviteForm.department}
-													divisionCode={inviteForm.division}
-													onDepartmentChange={(value) =>
-														setInviteForm((prev) => ({
-															...prev,
-															department: value,
-															division: "",
-														}))
-													}
-													onDivisionChange={(value) =>
-														setInviteForm((prev) => ({
-															...prev,
-															division: value,
-														}))
-													}
+												<div
+													className="mt-1 w-px shrink-0 self-stretch bg-slate-200"
+													aria-hidden
 												/>
+
+												<div className="min-w-0 flex-[2.4]">
+													<p className="mb-4 text-[10.5px] font-bold uppercase tracking-[0.08em] text-slate-500">
+														Access &amp; permissions
+													</p>
+													<div className="grid grid-cols-[minmax(0,0.85fr)_minmax(0,1fr)_minmax(0,1fr)] items-start gap-3">
+														<div className="min-w-0">
+															<label className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold leading-none text-slate-700">
+																Role
+																<span
+																	className="font-bold text-red"
+																	aria-hidden
+																>
+																	*
+																</span>
+															</label>
+															<SelectScrollable
+																value={inviteForm.role}
+																onValueChange={(value) =>
+																	setInviteForm((prev) => ({
+																		...prev,
+																		role: value,
+																	}))
+																}
+																placeholder="Select role…"
+																className="w-full border-[0.25px] border-slate-200 bg-white text-slate-700 shadow-sm"
+															>
+																<SelectItem value="Super Admin">
+																	Super Admin
+																</SelectItem>
+																<SelectItem value="Organization Admin">
+																	Organization Admin
+																</SelectItem>
+																<SelectItem value="Executive">
+																	Executive
+																</SelectItem>
+																<SelectItem value="Department Manager">
+																	Department Manager
+																</SelectItem>
+																<SelectItem value="Viewer">Viewer</SelectItem>
+															</SelectScrollable>
+														</div>
+
+														<OrgUnitPicker
+															layout="inline"
+															departmentRequired
+															orgId={effectiveOrgId}
+															divisionOptional
+															departmentCode={inviteForm.department}
+															divisionCode={inviteForm.division}
+															onDepartmentChange={(value) =>
+																setInviteForm((prev) => ({
+																	...prev,
+																	department: value,
+																	division: "",
+																}))
+															}
+															onDivisionChange={(value) =>
+																setInviteForm((prev) => ({
+																	...prev,
+																	division: value,
+																}))
+															}
+														/>
+													</div>
+												</div>
 											</div>
-											{inviteForm.department && (
-												<p className="mt-3 text-[11px] text-slate-500">
-													Division is optional. Selecting{" "}
-													{inviteForm.department.replace(/-/g, " ")} as
-													department is enough to send the invite.
+											<p className="mt-2 text-[11px] text-slate-500">
+												User list comes from your connected directory. Division
+												is optional.
+											</p>
+											{(uninvitedUsers as UninvitedUser[]).length === 0 && (
+												<p className="mt-2 text-xs text-slate-500">
+													No Auth users are waiting for an invite. Everyone
+													either has a role or already has a pending invitation.
 												</p>
 											)}
 										</div>
@@ -1522,202 +1357,18 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 							</motion.div>
 
 							<motion.div {...revealItem(softRise)}>
-								<Card className="glass-card relative overflow-hidden">
-									<div className="glass-card-cap" />
-									<MetricStatDotsBackdrop />
-									<CardHeader className="relative z-10 mb-4 border-b border-slate-200/80 pb-4">
-										<CardTitle className="flex items-center gap-2.5 text-lg font-bold sidebar-gradient-text">
-											<StatCardIcon icon={MailClock} />
-											Pending Invitations
-										</CardTitle>
-									</CardHeader>
-									<CardContent className="relative z-10">
-										<div className="glass-card-inner overflow-x-auto">
-											<table className="min-w-full text-xs">
-												<thead className="bg-white/40 backdrop-blur-md border-b border-white/30 text-center">
-													<tr>
-														<th className="text-slate-700 text-center px-4 py-2">
-															Name
-														</th>
-														<th className="text-slate-700 text-center px-4 py-2">
-															Email
-														</th>
-														<th className="text-slate-700 text-center px-4 py-2">
-															Role
-														</th>
-														<th className="text-slate-700 text-center px-4 py-2">
-															Invited
-														</th>
-														<th className="text-slate-700 text-center px-4 py-2">
-															Expires
-														</th>
-														<th className="text-slate-700 text-center px-4 py-2">
-															Status
-														</th>
-														<th className="text-slate-700 text-center px-4 py-2">
-															Actions
-														</th>
-													</tr>
-												</thead>
-												<tbody>
-													{unifiedLoading ? (
-														[1, 2, 3].map((i) => (
-															<TableRowSkeleton key={i} columns={7} />
-														))
-													) : invitations.length === 0 ? (
-														<tr>
-															<td
-																colSpan={7}
-																className="text-center py-8 text-gray-400"
-															>
-																No pending invitations
-															</td>
-														</tr>
-													) : (
-														(invitations as Invitation[]).map(
-															(inv: Invitation) => (
-																<tr
-																	key={inv.$id}
-																	className={`border-b text-center hover:bg-gray-50 transition-all duration-300 ${
-																		removingInvitations.has(inv.token)
-																			? "invitation-removing"
-																			: addingInvitations.has(inv.token)
-																				? "invitation-adding"
-																				: ""
-																	}`}
-																>
-																	<td className="pl-2">{inv.name}</td>
-																	<td>{inv.email}</td>
-																	<td>
-																		{inv.role
-																			? (inv.role as string)
-																					.charAt(0)
-																					.toUpperCase() +
-																				(inv.role as string)
-																					.slice(1)
-																					.toLowerCase()
-																			: ""}
-																	</td>
-																	<td>
-																		<ClientDate dateString={inv.$createdAt} />
-																	</td>
-																	<td>
-																		<ClientDate dateString={inv.expiresAt} />
-																	</td>
-																	<td>
-																		<span
-																			className={`inline-block px-2 py-1 rounded text-xs ${getInvitationStatusBadgeClasses(
-																				inv.status,
-																			)}`}
-																		>
-																			{inv.status}
-																		</span>
-																	</td>
-																	<td className="space-x-2">
-																		<Button
-																			size="sm"
-																			variant="outline"
-																			onClick={() =>
-																				handleRevoke(inv.token, inv.email)
-																			}
-																			disabled={revokingToken === inv.token}
-																			className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
-																		>
-																			{revokingToken === inv.token
-																				? "Revoking..."
-																				: "Revoke"}
-																		</Button>
-																		<Button
-																			size="sm"
-																			variant="secondary"
-																			onClick={() => handleResend(inv.token)}
-																			disabled={resendingToken === inv.token}
-																			className="bg-white/30 backdrop-blur border border-white/40 shadow-md text-slate-700"
-																		>
-																			{resendingToken === inv.token
-																				? "Resending..."
-																				: "Resend"}
-																		</Button>
-																		<Button
-																			size="sm"
-																			onClick={() =>
-																				handleDelete(inv.token, inv.email)
-																			}
-																			disabled={deletingToken === inv.token}
-																			style={{
-																				backgroundColor: "#ffffff",
-																				color: "#f87774",
-																			}}
-																		>
-																			{deletingToken === inv.token ? (
-																				"Deleting..."
-																			) : (
-																				<Trash2 className="h-4 w-4" />
-																			)}
-																		</Button>
-																	</td>
-																</tr>
-															),
-														)
-													)}
-												</tbody>
-											</table>
-										</div>
-									</CardContent>
-								</Card>
+								<PendingInvitationsCard
+									invitations={
+										(invitations as PendingInvitationRow[]) ?? []
+									}
+									isLoading={unifiedLoading}
+									addingTokens={addingInvitations}
+									onResend={executeResendInvitation}
+									onRevoke={revokeInvitation}
+									onDelete={executeDeleteInvitation}
+									variant="executive"
+								/>
 							</motion.div>
-
-							<ConfirmDialog
-								open={showRevokeDialog}
-								onOpenChange={(next) => {
-									if (!next) cancelRevoke();
-									else setShowRevokeDialog(true);
-								}}
-								variant="destructive"
-								icon={<AlertTriangle className="h-5 w-5" aria-hidden />}
-								title="Revoke this invitation?"
-								description="User won't be able to accept it afterward."
-								facts={[
-									...(revokeEmail
-										? [{ label: "Email", value: revokeEmail }]
-										: []),
-									{
-										label: "Date",
-										value: new Date().toLocaleDateString(),
-									},
-								]}
-								note="This action can't be undone"
-								confirmLabel="Revoke invitation"
-								onConfirm={confirmRevoke}
-							/>
-
-							<ConfirmDialog
-								open={showDeleteDialog}
-								onOpenChange={(next) => {
-									if (!next) cancelDelete();
-									else setShowDeleteDialog(true);
-								}}
-								variant="destructive"
-								icon={<Trash2 className="h-5 w-5" aria-hidden />}
-								title="Delete invitation?"
-								description="This action cannot be undone."
-								facts={[
-									...(deleteEmail
-										? [{ label: "Email", value: deleteEmail }]
-										: []),
-									{
-										label: "Request date",
-										value: new Date().toLocaleDateString("en-US", {
-											year: "numeric",
-											month: "short",
-											day: "numeric",
-										}),
-									},
-								]}
-								note="This will permanently remove the invitation from the system. The recipient will no longer be able to access their invitation link."
-								confirmLabel="Delete invitation"
-								onConfirm={confirmDelete}
-							/>
 						</motion.div>
 					</div>
 				</div>

@@ -6,7 +6,6 @@ import { useMemo, useState } from "react";
 import { BulkActionDock } from "@/components/ui/bulk-action-dock";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { useStepUp } from "@/contexts/StepUpContext";
 import { useToast } from "@/hooks/use-toast";
 import { deleteFile } from "@/lib/actions/file.actions";
 import { refreshStorageUsage } from "@/lib/storage/refreshStorageUsage";
@@ -26,7 +25,6 @@ export default function FilesBulkBar({
 	const path = usePathname() || "";
 	const router = useRouter();
 	const { toast } = useToast();
-	const { ensureStepUp } = useStepUp();
 	const [confirmOpen, setConfirmOpen] = useState(false);
 	const [isDeleting, setIsDeleting] = useState(false);
 
@@ -38,14 +36,6 @@ export default function FilesBulkBar({
 	if (selectedIds.length === 0) return null;
 
 	const handleBulkDelete = async () => {
-		// Deleting linked contracts requires OTP step-up (same as contracts list).
-		if (
-			selectedFiles.some((file) => Boolean(file.contractId)) &&
-			!(await ensureStepUp())
-		) {
-			return;
-		}
-
 		setIsDeleting(true);
 		let successCount = 0;
 		let failCount = 0;

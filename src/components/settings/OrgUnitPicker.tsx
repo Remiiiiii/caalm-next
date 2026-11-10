@@ -103,18 +103,21 @@ export function OrgUnitPicker({
 			.sort((a, b) => a.name.localeCompare(b.name));
 	}, [units, selectedDept]);
 
+	const inlineLabelClass =
+		"mb-1.5 flex items-center gap-1.5 text-xs font-semibold leading-none text-slate-700";
+
 	return (
 		<div
 			className={cn(
 				layout === "inline" ? "contents" : "grid grid-cols-2 gap-4",
 			)}
 		>
-			<div className="min-w-0 space-y-2">
+			<div className={cn("min-w-0", layout !== "inline" && "space-y-2")}>
 				<Label
 					htmlFor="org-unit-department"
 					className={cn(
 						"flex items-center gap-1.5",
-						layout === "inline" && "text-xs font-semibold text-slate-700",
+						layout === "inline" && inlineLabelClass,
 					)}
 				>
 					Department
@@ -134,7 +137,11 @@ export function OrgUnitPicker({
 				>
 					<SelectTrigger
 						id="org-unit-department"
-						className="bg-white cursor-pointer min-w-0"
+						className={cn(
+							"min-w-0 cursor-pointer bg-white",
+							layout === "inline" &&
+								"border-[0.25px] border-slate-200 shadow-sm",
+						)}
 					>
 						<SelectValue
 							placeholder={isLoading ? "Loading…" : "Select department"}
@@ -149,17 +156,18 @@ export function OrgUnitPicker({
 					</SelectContent>
 				</Select>
 				{error && apiUnits.length === 0 && !isLoading && (
-					<p className="text-[11px] text-slate-500">
+					<p className="mt-1.5 text-[11px] text-slate-500">
 						Using default department list. Org structure sync is temporarily
 						unavailable.
 					</p>
 				)}
 			</div>
-			<div className="min-w-0 space-y-2">
+			<div className={cn("min-w-0", layout !== "inline" && "space-y-2")}>
 				<Label
 					htmlFor="org-unit-division"
 					className={cn(
-						layout === "inline" && "text-xs font-semibold text-slate-700",
+						"flex items-center gap-1.5",
+						layout === "inline" && inlineLabelClass,
 					)}
 				>
 					Division
@@ -178,7 +186,11 @@ export function OrgUnitPicker({
 				>
 					<SelectTrigger
 						id="org-unit-division"
-						className="bg-white cursor-pointer min-w-0"
+						className={cn(
+							"min-w-0 cursor-pointer bg-white",
+							layout === "inline" &&
+								"border-[0.25px] border-slate-200 shadow-sm",
+						)}
 					>
 						<SelectValue
 							placeholder={

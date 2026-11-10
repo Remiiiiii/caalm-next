@@ -23,6 +23,17 @@ describe("formatActionValue", () => {
 		expect(formatActionValue(["finance", "review"])).toBe("finance, review");
 		expect(formatActionValue([{ title: "A" }, { title: "B" }])).toBe("A, B");
 	});
+
+	it("turns invitee JSON strings into names", () => {
+		expect(
+			formatActionValue(
+				JSON.stringify([
+					{ email: "a@example.com", name: "Nora Castillo" },
+					{ email: "b@example.com", name: "Indira Sen" },
+				]),
+			),
+		).toBe("Nora Castillo, Indira Sen");
+	});
 });
 
 describe("flattenResultFields + formatGenericSuccessSummary", () => {

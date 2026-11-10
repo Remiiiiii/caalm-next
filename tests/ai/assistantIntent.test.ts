@@ -35,6 +35,30 @@ describe("detectDataIntent - scheduling", () => {
 		expect(detectDataIntent("Hello")).toBeNull();
 	});
 
+	it("detects invite form submits for People and Person labels", () => {
+		expect(
+			detectDataIntent(
+				[
+					"People: Nora Castillo <cao.chart@example.com>",
+					"Role: Viewer",
+					"Department: Administration",
+				].join("\n"),
+			),
+		).toBe("invite_user");
+		expect(
+			detectDataIntent(
+				[
+					"Person: Chris Vale <csuite5.chart@example.com>",
+					"Role: Department Manager",
+					"Department: Engineering",
+				].join("\n"),
+			),
+		).toBe("invite_user");
+		expect(detectDataIntent("Invite Chris Vale from the directory")).toBe(
+			"invite_user",
+		);
+	});
+
 	it("detects create-task requests without stealing list intents", () => {
 		expect(detectDataIntent("Help me create a new task")).toBe("create_task");
 		expect(detectDataIntent("Create a task called Renew license")).toBe(

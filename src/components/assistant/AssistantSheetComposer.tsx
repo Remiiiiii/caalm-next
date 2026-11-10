@@ -1,9 +1,12 @@
 "use client";
 
 import { Loader2, MoveUp } from "lucide-react";
-import { Textarea } from "@/components/ui/textarea";
 import { useComposerAutoGrow } from "@/hooks/useComposerAutoGrow";
 import { cn } from "@/lib/utils";
+
+/** Single-line height; grow only with typed text (not after invite replies). */
+const COMPOSER_MIN_PX = 44;
+const COMPOSER_MAX_PX = 192;
 
 export default function AssistantSheetComposer({
 	value,
@@ -11,18 +14,27 @@ export default function AssistantSheetComposer({
 	onSend,
 	disabled,
 	sending,
+	/** Re-clamp height when the chat thread reflows (message count, etc.). */
+	layoutKey,
 }: {
 	value: string;
 	onChange: (value: string) => void;
 	onSend: () => void;
 	disabled?: boolean;
 	sending?: boolean;
+	layoutKey?: string | number;
 }) {
-	const ref = useComposerAutoGrow(value, 80, 192);
+	const ref = useComposerAutoGrow(
+		value,
+		COMPOSER_MIN_PX,
+		COMPOSER_MAX_PX,
+		layoutKey,
+	);
 
 	return (
-		<div className="relative w-full">
-			<Textarea
+		<div className="relative w-full shrink-0" data-composer="sheet">
+			{/* Native textarea: ui/Textarea adds `flex`, which flex-stretch can inflate. */}
+			<textarea
 				ref={ref}
 				value={value}
 				onChange={(event) => onChange(event.target.value)}
@@ -30,10 +42,14 @@ export default function AssistantSheetComposer({
 				rows={1}
 				disabled={disabled}
 				className={cn(
-					"max-h-48 min-h-20 w-full resize-none overflow-hidden rounded-xl bg-white text-[13px] text-slate-700 shadow-sm",
-					"border-[0.25px] border-slate-300! px-4! py-2.5! pe-14! pb-11!",
-					"placeholder:text-slate-400 focus-visible:border-[#078FAB]! focus-visible:ring-[#078FAB]",
+					"block max-h-48 min-h-11 w-full resize-none overflow-hidden rounded-xl bg-white text-[13px] leading-5 text-slate-700 shadow-sm",
+					/* pe-14 keeps typed lines clear of the bottom-right send control */
+					"border-[0.25px] border-slate-300 px-4 py-2.5 pe-14",
+					"placeholder:text-slate-400",
+					"focus-visible:border-[#078FAB] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#078FAB]",
+					"disabled:cursor-not-allowed disabled:opacity-50",
 				)}
+				style={{ maxHeight: COMPOSER_MAX_PX }}
 				onKeyDown={(event) => {
 					if (event.key === "Enter" && !event.shiftKey) {
 						event.preventDefault();

@@ -8,7 +8,6 @@ import { BusyIcon } from "@/components/ui/busy-icon";
 import { Button } from "@/components/ui/button";
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
 import { PERMISSIONS } from "@/constants/permissions";
-import { useStepUp } from "@/contexts/StepUpContext";
 import { useToast } from "@/hooks/use-toast";
 import { useBusyAction } from "@/hooks/useBusyAction";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -24,7 +23,6 @@ export default function LicensesBulkBar({ licenses }: LicensesBulkBarProps) {
 	const { toast } = useToast();
 	const { selectedIds, clearSelection } = useLicensesView();
 	const { permissions } = usePermissions();
-	const { ensureStepUp } = useStepUp();
 	const [confirmOpen, setConfirmOpen] = useState(false);
 	const [isDeleting, setIsDeleting] = useState(false);
 
@@ -87,8 +85,6 @@ export default function LicensesBulkBar({ licenses }: LicensesBulkBarProps) {
 	};
 
 	const handleBulkDelete = async () => {
-		if (!(await ensureStepUp())) return;
-
 		setIsDeleting(true);
 		let successCount = 0;
 		let failCount = 0;

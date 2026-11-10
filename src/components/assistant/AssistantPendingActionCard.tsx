@@ -559,9 +559,21 @@ function GenericPreview({
 	preview: string;
 }) {
 	const entries = args
-		? Object.entries(args).filter(
-				([, v]) => v !== undefined && v !== null && String(v).trim() !== "",
-			)
+		? Object.entries(args).filter(([key, v]) => {
+				if (v === undefined || v === null || String(v).trim() === "") {
+					return false;
+				}
+				const lower = key.toLowerCase();
+				if (lower.endsWith("_json")) return false;
+				if (
+					key === "userId" ||
+					key === "accountId" ||
+					key === "userDisplayName"
+				) {
+					return false;
+				}
+				return true;
+			})
 		: [];
 
 	return (
@@ -574,7 +586,10 @@ function GenericPreview({
 						{entries.map(([key, value]) => (
 							<div key={key} className="flex gap-2 text-sm">
 								<dt className="w-28 shrink-0 capitalize text-slate-500">
-									{key.replace(/([A-Z])/g, " $1").trim()}
+									{key
+										.replace(/_+/g, " ")
+										.replace(/([A-Z])/g, " $1")
+										.trim()}
 								</dt>
 								<dd className="min-w-0 flex-1 wrap-break-word text-slate-700">
 									{formatActionValue(value)}

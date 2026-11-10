@@ -24,23 +24,30 @@ export function AppDialog({
 	icon,
 	title,
 	description,
+	descriptionId,
 	variant = "default",
 	size = "confirm",
 	pending = false,
+	headerBorder = true,
 	children,
 	footer,
+	footerClassName,
 	className,
 }: {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	icon: ReactNode;
 	title: string;
-	description?: string;
+	description?: ReactNode;
+	descriptionId?: string;
 	variant?: "default" | "destructive";
 	size?: AppDialogSize;
 	pending?: boolean;
+	/** When false, skips the rule under the header (summary blocks supply their own edge). */
+	headerBorder?: boolean;
 	children?: ReactNode;
 	footer?: ReactNode;
+	footerClassName?: string;
 	className?: string;
 }) {
 	const isDestructive = variant === "destructive";
@@ -51,8 +58,16 @@ export function AppDialog({
 		onOpenChange(next);
 	};
 
+	const descriptionClassName =
+		"mt-1 pl-11 text-[13px] leading-[1.55] text-slate-500";
+
 	const header = (
-		<div className="flex shrink-0 flex-col border-b border-slate-200 px-6 pb-4 pt-[22px] pr-12">
+		<div
+			className={cn(
+				"flex shrink-0 flex-col px-6 pb-4 pt-[22px] pr-12",
+				headerBorder && "border-b border-slate-200",
+			)}
+		>
 			<div className="flex items-center gap-2.5">
 				<div
 					className={cn(
@@ -61,27 +76,44 @@ export function AppDialog({
 							? "border-red/20 text-red"
 							: "border-[#0f5384]/15 text-[#0f5384]",
 					)}
+					aria-hidden="true"
 				>
 					{icon}
 				</div>
 				{isDestructive ? (
-					<AlertDialogTitle className="text-[17px] font-bold leading-tight tracking-tight text-red">
+					<AlertDialogTitle className="text-[15.5px] font-bold leading-tight tracking-tight text-red">
 						{title}
 					</AlertDialogTitle>
 				) : (
-					<DialogTitle className="text-[17px] font-bold leading-tight tracking-tight text-[#0f5384]">
+					<DialogTitle className="text-[15.5px] font-bold leading-tight tracking-tight text-[#0f5384]">
 						{title}
 					</DialogTitle>
 				)}
 			</div>
 			{description ? (
 				isDestructive ? (
-					<AlertDialogDescription className="mt-1 pl-11 text-[13px] leading-normal text-slate-500">
-						{description}
+					<AlertDialogDescription
+						id={descriptionId}
+						className={descriptionClassName}
+						asChild={typeof description !== "string"}
+					>
+						{typeof description === "string" ? (
+							description
+						) : (
+							<div>{description}</div>
+						)}
 					</AlertDialogDescription>
 				) : (
-					<DialogDescription className="mt-1 pl-11 text-[13px] leading-normal text-slate-500">
-						{description}
+					<DialogDescription
+						id={descriptionId}
+						className={descriptionClassName}
+						asChild={typeof description !== "string"}
+					>
+						{typeof description === "string" ? (
+							description
+						) : (
+							<div>{description}</div>
+						)}
 					</DialogDescription>
 				)
 			) : isDestructive ? (
@@ -119,7 +151,14 @@ export function AppDialog({
 				<div className="min-h-0 flex-1 overflow-y-auto px-6">{children}</div>
 			) : null}
 			{footer ? (
-				<div className="flex shrink-0 justify-end gap-2.5 p-6">{footer}</div>
+				<div
+					className={cn(
+						"flex shrink-0 items-center justify-end gap-2.5 p-6",
+						footerClassName,
+					)}
+				>
+					{footer}
+				</div>
 			) : null}
 		</>
 	);
