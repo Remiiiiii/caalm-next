@@ -5,17 +5,23 @@ import {
 	GoogleGenerativeAI,
 	SchemaType,
 } from "@google/generative-ai";
+import type { AssistantInputForm } from "@/components/assistant/assistantTypes";
 import { PERMISSIONS } from "@/constants/permissions";
 import type { ActivityFeedPayload } from "@/lib/assistant/activityFeed";
 import { buildActivityFeed } from "@/lib/assistant/activityFeed";
 import type { AssistantResearchStep } from "@/lib/assistant/assistant-research-steps";
-import { runAuditRemediationResearch } from "@/lib/assistant/audit-remediation-research";
 import {
 	type AuditRemediationContext,
 	buildAuditRemediationPrompt,
 	formatAuditFindingLabel,
 } from "@/lib/assistant/audit-remediation-context";
+import { runAuditRemediationResearch } from "@/lib/assistant/audit-remediation-research";
 import type { AssistantAuthContext } from "@/lib/assistant/auth";
+import {
+	detectCapCloseAssistIntent,
+	lastAssistantMessageContent,
+	resolveVerificationNoteForClose,
+} from "@/lib/assistant/cap-close-assist";
 import {
 	formatDueDate,
 	formatPriority,
@@ -38,17 +44,12 @@ import {
 import { detectDataIntent, isLiveDataIntent } from "@/lib/assistant/intent";
 import type { RetrievedSource } from "@/lib/assistant/knowledge/retrieve";
 import { retrieveKnowledge } from "@/lib/assistant/knowledge/retrieve";
+import type { AssistantClientAction } from "@/lib/assistant/open-close-cap-client";
 import { parseCreateTaskDraft } from "@/lib/assistant/parseCreateTaskDraft";
 import { sanitizeRescheduleArgs } from "@/lib/assistant/rescheduleArgs";
 import {
-	detectCapCloseAssistIntent,
-	lastAssistantMessageContent,
-	resolveVerificationNoteForClose,
-} from "@/lib/assistant/cap-close-assist";
-import type { AssistantClientAction } from "@/lib/assistant/open-close-cap-client";
-import {
-	buildOpenCloseCapSuggestion,
 	type AssistantSuggestion,
+	buildOpenCloseCapSuggestion,
 	suggestionsForTurn,
 } from "@/lib/assistant/suggestions";
 import {
@@ -907,7 +908,8 @@ ${remediationContext ? `\n${buildAuditRemediationPrompt(remediationContext)}` : 
 			const result = toolResult.result as { error?: string } | undefined;
 			if (result?.error || toolResult.error) {
 				return {
-					answer: result?.error ?? toolResult.error ?? "Could not open Mark closed.",
+					answer:
+						result?.error ?? toolResult.error ?? "Could not open Mark closed.",
 					sources: sourcesForTool(call.name, ragSources),
 					suggestions: [],
 				};
