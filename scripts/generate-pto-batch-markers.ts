@@ -16,6 +16,7 @@ const outDir = path.join(process.cwd(), "src/lib/roadmap/pto-batches");
 fs.mkdirSync(outDir, { recursive: true });
 
 for (const batch of PTO_PR_BATCHES) {
+	if (batch.sectionNumber === 0) continue;
 	const fileId = ptoBatchFileId(batch);
 	const dest = path.join(outDir, `${fileId}.ts`);
 	if (fs.existsSync(dest) && !force) {

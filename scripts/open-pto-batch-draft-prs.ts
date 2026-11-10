@@ -27,7 +27,7 @@ const dryRun = process.argv.includes("--dry-run");
 
 function batchesNeedingStub(): PtoPrBatch[] {
 	return PTO_PR_BATCHES.filter(
-		(b) => b.sectionNumber > 0 && b.linkedPrNumber == null,
+		(b) => b.sectionNumber >= 2 && b.linkedPrNumber == null,
 	);
 }
 
