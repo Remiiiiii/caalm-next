@@ -50,6 +50,7 @@ function RoadmapPullRequestItem({
 	const settled = shouldStrikeRoadmapPullRequestTitle({
 		checksPassed: pr.checksPassed,
 		sectionComplete,
+		state: pr.state,
 	});
 
 	return (
@@ -243,6 +244,7 @@ function RoadmapSectionCard({
 													shouldStrikeRoadmapPullRequestTitle({
 														checksPassed: pr.checksPassed,
 														sectionComplete: section.status === "complete",
+														state: pr.state,
 													}) && "line-through text-slate-500",
 												)}
 											>
