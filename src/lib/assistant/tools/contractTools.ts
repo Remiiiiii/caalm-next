@@ -5,6 +5,10 @@ import {
 } from "@/lib/ai/contract-assistant";
 import { extractContractFromDocument } from "@/lib/ai/extractContractFromDocument";
 import { ContractFieldUpdateService } from "@/lib/api/contracts/services/ContractFieldUpdateService";
+import {
+	decide,
+	getWorkflowForViewer,
+} from "@/lib/approvals/ContractApprovalWorkflowService";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { hasAll, searchContractsTable } from "@/lib/assistant/tools/toolUtils";
@@ -13,8 +17,12 @@ import {
 	isClauseCategory,
 	listClauses,
 } from "@/lib/clauses/clause-library.service";
+import { createAccess } from "@/lib/contracts/negotiation/access.service";
 import { listVersions } from "@/lib/contracts/negotiation/versions.service";
+import { createEnvelope, sendEnvelope } from "@/lib/esign/envelope-service";
 import { parsePdfBuffer } from "@/lib/files/pdf-text";
+import { listObligations } from "@/lib/funding/obligation.repository";
+import type { ObligationStatus } from "@/lib/funding/types";
 import {
 	compareClauseWithGemini,
 	extractClausesWithGemini,
@@ -22,7 +30,9 @@ import {
 import { pickStandardForClause } from "@/lib/playbook/deviation-scoring";
 import { scoreOrgContractDeviations } from "@/lib/playbook/score-org-contract";
 import { suggestRedlineForClause } from "@/lib/playbook/suggest-redline";
+import { renewContractAfterExpiry } from "@/lib/renewals/renewDocument";
 import { logAuditEvent } from "@/lib/services/audit-logger";
+import { mailgunService } from "@/lib/services/mailgun";
 import { getBlueprint, isBlueprintId } from "@/lib/templates/blueprint-catalog";
 import {
 	createWizardSession,
@@ -43,6 +53,17 @@ function actorName(ctx: ToolContext): string {
 function asError(message: string) {
 	return { result: { error: message } };
 }
+
+function escapeHtml(value: string): string {
+	return value
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;")
+		.replace(/"/g, "&quot;")
+		.replace(/'/g, "&#39;");
+}
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type ContractDetail = {
 	contractId: string;
@@ -822,6 +843,429 @@ export const CONTRACT_TOOLS: ToolDefinition[] = [
 					error instanceof Error
 						? error.message
 						: "Failed to suggest redlines for this contract.",
+				);
+			}
+		},
+	},
+	{
+		name: "list_contract_obligations",
+		description:
+			"List post-signature obligations (renewal, reporting, deliverable, compliance, payment) for a contract. Requires contracts.view. Read-only, org-scoped. To create a follow-up task, use create_task_for_contract.",
+		requiredPermissions: [PERMISSIONS.CONTRACTS.VIEW],
+		mutating: false,
+		parameters: {
+			type: "object",
+			properties: {
+				contractId: { type: "string", description: "Contract document id" },
+				query: { type: "string", description: "Contract name search" },
+				status: {
+					type: "string",
+					description:
+						"Optional filter: open, in_progress, done, waived, overdue",
+				},
+			},
+		},
+		handler: async (ctx, args) => {
+			if (!hasAll(ctx, [PERMISSIONS.CONTRACTS.VIEW])) {
+				return asError(
+					"You cannot view contracts. Ask an admin for the contracts.view permission.",
+				);
+			}
+			const found = await resolveOneContract(ctx, args);
+			if (found.error || !found.contract) {
+				return asError(found.error ?? "Contract not found.");
+			}
+			const obligations = await listObligations({
+				orgId: ctx.orgId,
+				contractId: found.contract.contractId,
+				status: args.status
+					? (String(args.status) as ObligationStatus)
+					: undefined,
+			});
+			return {
+				result: { contractId: found.contract.contractId, obligations },
+			};
+		},
+	},
+	{
+		name: "send_counterparty_invite",
+		description:
+			"Start negotiation by emailing a secure counterparty invite link to review and comment on a contract draft. Requires contracts.edit. Confirm before sending; audits; link is scoped to the contract and org.",
+		requiredPermissions: [PERMISSIONS.CONTRACTS.EDIT],
+		mutating: true,
+		parameters: {
+			type: "object",
+			properties: {
+				contractId: { type: "string", description: "Contract document id" },
+				query: { type: "string", description: "Contract name search" },
+				email: { type: "string", description: "Counterparty email" },
+				name: { type: "string", description: "Counterparty full name" },
+				message: { type: "string", description: "Optional note to include" },
+			},
+			required: ["email", "name"],
+		},
+		handler: async (ctx, args) => {
+			if (!hasAll(ctx, [PERMISSIONS.CONTRACTS.EDIT])) {
+				return asError(
+					"You cannot edit contracts. Ask an admin for the contracts.edit permission.",
+				);
+			}
+			const email = String(args.email ?? "")
+				.trim()
+				.toLowerCase();
+			const name = String(args.name ?? "").trim();
+			if (!EMAIL_RE.test(email)) {
+				return asError("Give a valid counterparty email address.");
+			}
+			if (!name) return asError("Give the counterparty's full name.");
+
+			const found = await resolveOneContract(ctx, args);
+			if (found.error || !found.contract) {
+				return asError(found.error ?? "Contract not found.");
+			}
+			const contract = found.contract;
+			const message = String(args.message ?? "")
+				.trim()
+				.slice(0, 2000);
+
+			try {
+				const { access, urlPath } = await createAccess({
+					contractId: contract.contractId,
+					orgId: ctx.orgId,
+					invitees: [{ email, name }],
+					createdBy: ctx.user.$id,
+				});
+				const baseUrl =
+					process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || "";
+				const link = `${baseUrl}${urlPath}`;
+				const text = [
+					`You have been invited to review "${contract.contractName}" in CAALM.`,
+					message ? `\n${message}` : "",
+					`\nOpen the draft: ${link}`,
+					"\nThis secure link expires in 14 days. You can view the draft and leave comments without a CAALM login.",
+				].join("");
+				const html = [
+					`<p>You have been invited to review <strong>${escapeHtml(contract.contractName)}</strong> in CAALM.</p>`,
+					message
+						? `<p>${escapeHtml(message).replace(/\n/g, "<br />")}</p>`
+						: "",
+					`<p><a href="${escapeHtml(link)}">Open the draft</a></p>`,
+					"<p>This secure link expires in 14 days. You can view the draft and leave comments without a CAALM login.</p>",
+				].join("");
+				await mailgunService.sendEmail({
+					to: email,
+					subject: `[CAALM] Review requested: ${contract.contractName}`,
+					text,
+					html,
+				});
+
+				await logAuditEvent({
+					event_id: `assistant_contract_invite_${contract.contractId}_${Date.now()}`,
+					event_title: `Assistant invited counterparty to review: ${contract.contractName}`,
+					action: "create",
+					source: "caalm",
+					user_id: ctx.user.$id,
+					user_name: actorName(ctx),
+					user_email: ctx.user.email || "",
+					status: "success",
+					orgId: ctx.orgId,
+					module: "contracts",
+					target_type: "contract",
+					target_id: contract.contractId,
+					target_label: contract.contractName,
+					summary: `${actorName(ctx)} invited ${email} to review "${contract.contractName}"`,
+					metadata: { source: "ai_assistant", email },
+				}).catch(() => undefined);
+
+				return {
+					result: {
+						contractId: contract.contractId,
+						email,
+						expiresAt: access.expiresAt,
+						sent: true,
+					},
+				};
+			} catch (error) {
+				return asError(
+					error instanceof Error
+						? error.message
+						: "Failed to send the counterparty invite.",
+				);
+			}
+		},
+	},
+	{
+		name: "send_for_signature",
+		description:
+			"Prepare and send a contract for e-signature to one or more signers, and report envelope status. Requires contracts.sign. Confirm signers before sending; audits send.",
+		requiredPermissions: [PERMISSIONS.CONTRACTS.SIGN],
+		mutating: true,
+		parameters: {
+			type: "object",
+			properties: {
+				contractId: { type: "string", description: "Contract document id" },
+				query: { type: "string", description: "Contract name search" },
+				signers: {
+					type: "array",
+					items: {
+						type: "object",
+						properties: {
+							email: { type: "string" },
+							name: { type: "string" },
+						},
+					},
+					description: "At least one signer: [{email, name}]",
+				},
+			},
+			required: ["signers"],
+		},
+		handler: async (ctx, args) => {
+			if (!hasAll(ctx, [PERMISSIONS.CONTRACTS.SIGN])) {
+				return asError(
+					"You cannot send contracts for signature. Ask an admin for the contracts.sign permission.",
+				);
+			}
+			const rawSigners = Array.isArray(args.signers) ? args.signers : [];
+			const signers = rawSigners
+				.map((s) => ({
+					email: String((s as { email?: string }).email ?? "")
+						.trim()
+						.toLowerCase(),
+					name: String((s as { name?: string }).name ?? "").trim(),
+				}))
+				.filter((s) => s.email && s.name);
+			if (signers.length === 0) {
+				return asError("Give at least one signer with an email and full name.");
+			}
+			const invalid = signers.find((s) => !EMAIL_RE.test(s.email));
+			if (invalid) return asError(`"${invalid.email}" is not a valid email.`);
+
+			const found = await resolveOneContract(ctx, args);
+			if (found.error || !found.contract) {
+				return asError(found.error ?? "Contract not found.");
+			}
+			const contract = found.contract;
+			if (!contract.fileId) {
+				return asError(
+					`"${contract.contractName}" has no attached file to sign yet.`,
+				);
+			}
+
+			try {
+				const envelope = await createEnvelope({
+					orgId: ctx.orgId,
+					resourceType: "contract",
+					resourceId: contract.contractId,
+					documentFileId: contract.fileId,
+					createdBy: ctx.user.$id,
+					title: contract.contractName,
+					recipients: signers.map((s, index) => ({
+						email: s.email,
+						name: s.name,
+						role: "signer",
+						order: index + 1,
+					})),
+				});
+				const sent = await sendEnvelope(envelope.$id);
+
+				await logAuditEvent({
+					event_id: `assistant_contract_esign_${contract.contractId}_${sent.$id}`,
+					event_title: `Assistant sent contract for signature: ${contract.contractName}`,
+					action: "update",
+					source: "caalm",
+					user_id: ctx.user.$id,
+					user_name: actorName(ctx),
+					user_email: ctx.user.email || "",
+					status: "success",
+					orgId: ctx.orgId,
+					module: "contracts",
+					target_type: "contract",
+					target_id: contract.contractId,
+					target_label: contract.contractName,
+					summary: `${actorName(ctx)} sent "${contract.contractName}" for signature to ${signers.map((s) => s.email).join(", ")}`,
+					metadata: { source: "ai_assistant", envelopeId: sent.$id },
+				}).catch(() => undefined);
+
+				return {
+					result: {
+						contractId: contract.contractId,
+						envelopeId: sent.$id,
+						status: sent.status,
+					},
+				};
+			} catch (error) {
+				const message =
+					error instanceof Error
+						? error.message
+						: "Failed to send this contract for signature.";
+				return asError(
+					message.includes("missing signature fields")
+						? `${message}. Add signature fields to the document in the e-sign editor before sending.`
+						: message,
+				);
+			}
+		},
+	},
+	{
+		name: "approve_contract",
+		description:
+			"Approve, reject, or request changes on a contract at its current approval step, with a comment. Requires contracts.approve. Confirms decision; audits; no role bypass.",
+		requiredPermissions: [PERMISSIONS.CONTRACTS.APPROVE],
+		mutating: true,
+		parameters: {
+			type: "object",
+			properties: {
+				contractId: { type: "string", description: "Contract document id" },
+				query: { type: "string", description: "Contract name search" },
+				decision: {
+					type: "string",
+					enum: ["approved", "changes_requested", "rejected"],
+				},
+				notes: {
+					type: "string",
+					description: "Required for rejected or changes_requested",
+				},
+			},
+			required: ["decision"],
+		},
+		handler: async (ctx, args) => {
+			if (!hasAll(ctx, [PERMISSIONS.CONTRACTS.APPROVE])) {
+				return asError(
+					"You cannot approve contracts. Ask an admin for the contracts.approve permission.",
+				);
+			}
+			const decision = String(args.decision ?? "") as
+				| "approved"
+				| "changes_requested"
+				| "rejected";
+			if (!["approved", "changes_requested", "rejected"].includes(decision)) {
+				return asError(
+					"decision must be one of: approved, changes_requested, rejected.",
+				);
+			}
+			const found = await resolveOneContract(ctx, args);
+			if (found.error || !found.contract) {
+				return asError(found.error ?? "Contract not found.");
+			}
+			const contract = found.contract;
+			const notes = args.notes ? String(args.notes).trim() : undefined;
+			const viewerUserId =
+				(ctx.user as { accountId?: string }).accountId || ctx.user.$id;
+
+			try {
+				const before = await getWorkflowForViewer(
+					contract.contractId,
+					viewerUserId,
+					{ isAdminOverride: false },
+				);
+				if (
+					!before.canDecideAsAssignee &&
+					!before.canAdminOverrideActiveStep &&
+					!before.canAdminOverrideCompleted
+				) {
+					return asError(
+						"You are not the assignee for the current approval step on this contract.",
+					);
+				}
+				if (decision === "rejected" && !before.canReject) {
+					return asError("Rejecting is not allowed at this approval step.");
+				}
+
+				const outcome = await decide({
+					contractId: contract.contractId,
+					viewerUserId,
+					decision,
+					notes,
+				});
+
+				await logAuditEvent({
+					event_id: `assistant_contract_approval_${contract.contractId}_${Date.now()}`,
+					event_title: `Assistant recorded approval decision: ${contract.contractName}`,
+					action: "update",
+					source: "caalm",
+					user_id: ctx.user.$id,
+					user_name: actorName(ctx),
+					user_email: ctx.user.email || "",
+					status: "success",
+					orgId: ctx.orgId,
+					module: "contracts",
+					target_type: "contract",
+					target_id: contract.contractId,
+					target_label: contract.contractName,
+					summary: `${actorName(ctx)} recorded "${decision}" on "${contract.contractName}"`,
+					metadata: { source: "ai_assistant", decision, notes },
+				}).catch(() => undefined);
+
+				return {
+					result: {
+						contractId: contract.contractId,
+						decision,
+						contractStatus: outcome.contractStatus,
+					},
+				};
+			} catch (error) {
+				return asError(
+					error instanceof Error
+						? error.message
+						: "Failed to record the approval decision.",
+				);
+			}
+		},
+	},
+	{
+		name: "renew_contract",
+		description:
+			"Renew a contract with a new expiry date, restarting approval. Requires contracts.edit. Confirm before writing; audits; never auto-renews without a human.",
+		requiredPermissions: [PERMISSIONS.CONTRACTS.EDIT],
+		mutating: true,
+		parameters: {
+			type: "object",
+			properties: {
+				contractId: { type: "string", description: "Contract document id" },
+				query: { type: "string", description: "Contract name search" },
+				newExpiryDate: { type: "string", description: "YYYY-MM-DD" },
+				notes: { type: "string" },
+			},
+			required: ["newExpiryDate"],
+		},
+		handler: async (ctx, args) => {
+			if (!hasAll(ctx, [PERMISSIONS.CONTRACTS.EDIT])) {
+				return asError(
+					"You cannot edit contracts. Ask an admin for the contracts.edit permission.",
+				);
+			}
+			const newExpiryDate = String(args.newExpiryDate ?? "").trim();
+			if (!newExpiryDate || Number.isNaN(new Date(newExpiryDate).getTime())) {
+				return asError("Give a valid new expiry date (YYYY-MM-DD).");
+			}
+			const found = await resolveOneContract(ctx, args);
+			if (found.error || !found.contract) {
+				return asError(found.error ?? "Contract not found.");
+			}
+			const contract = found.contract;
+
+			try {
+				await renewContractAfterExpiry({
+					contractId: contract.contractId,
+					orgId: ctx.orgId,
+					newExpiryDate,
+					notes: args.notes ? String(args.notes).trim() : undefined,
+					renewedBy: ctx.user.$id,
+					userName: actorName(ctx),
+					userEmail: ctx.user.email || "",
+				});
+				return {
+					result: {
+						contractId: contract.contractId,
+						newExpiryDate,
+						renewed: true,
+					},
+				};
+			} catch (error) {
+				return asError(
+					error instanceof Error
+						? error.message
+						: "Failed to renew this contract.",
 				);
 			}
 		},

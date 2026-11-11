@@ -22,6 +22,14 @@ const extractClausesWithGemini = vi.fn();
 const pickStandardForClause = vi.fn();
 const scoreOrgContractDeviations = vi.fn();
 const suggestRedlineForClause = vi.fn();
+const listObligations = vi.fn();
+const createAccess = vi.fn();
+const sendEmail = vi.fn();
+const createEnvelope = vi.fn();
+const sendEnvelope = vi.fn();
+const decide = vi.fn();
+const getWorkflowForViewer = vi.fn();
+const renewContractAfterExpiry = vi.fn();
 
 vi.mock("@/lib/appwrite", () => ({
 	createAdminClient: async () => ({
@@ -81,6 +89,27 @@ vi.mock("@/lib/templates/wizard.service", () => ({
 vi.mock("@/lib/utils", () => ({
 	constructFileUrl: (id: string) => `https://files.example.test/${id}`,
 }));
+vi.mock("@/lib/funding/obligation.repository", () => ({
+	listObligations: (...args: unknown[]) => listObligations(...args),
+}));
+vi.mock("@/lib/contracts/negotiation/access.service", () => ({
+	createAccess: (...args: unknown[]) => createAccess(...args),
+}));
+vi.mock("@/lib/services/mailgun", () => ({
+	mailgunService: { sendEmail: (...args: unknown[]) => sendEmail(...args) },
+}));
+vi.mock("@/lib/esign/envelope-service", () => ({
+	createEnvelope: (...args: unknown[]) => createEnvelope(...args),
+	sendEnvelope: (...args: unknown[]) => sendEnvelope(...args),
+}));
+vi.mock("@/lib/approvals/ContractApprovalWorkflowService", () => ({
+	decide: (...args: unknown[]) => decide(...args),
+	getWorkflowForViewer: (...args: unknown[]) => getWorkflowForViewer(...args),
+}));
+vi.mock("@/lib/renewals/renewDocument", () => ({
+	renewContractAfterExpiry: (...args: unknown[]) =>
+		renewContractAfterExpiry(...args),
+}));
 
 global.fetch = fetchMock as unknown as typeof fetch;
 
@@ -134,6 +163,14 @@ describe("CONTRACT_TOOLS", () => {
 		pickStandardForClause.mockReset();
 		scoreOrgContractDeviations.mockReset();
 		suggestRedlineForClause.mockReset();
+		listObligations.mockReset();
+		createAccess.mockReset();
+		sendEmail.mockReset().mockResolvedValue(undefined);
+		createEnvelope.mockReset();
+		sendEnvelope.mockReset();
+		decide.mockReset();
+		getWorkflowForViewer.mockReset();
+		renewContractAfterExpiry.mockReset();
 	});
 
 	describe("get_contract", () => {
@@ -537,6 +574,214 @@ describe("CONTRACT_TOOLS", () => {
 			expect(result.proposals).toHaveLength(1);
 			expect(result.proposals?.[0].suggestedText).toBe("New clause text");
 			expect(updateRow).not.toHaveBeenCalled();
+		});
+	});
+
+	describe("list_contract_obligations", () => {
+		it("blocks without contracts.view", async () => {
+			const res = await tool("list_contract_obligations").handler(ctx([]), {
+				contractId: "c-1",
+			});
+			expect((res.result as { error?: string }).error).toMatch(
+				/permission|cannot/i,
+			);
+			expect(listObligations).not.toHaveBeenCalled();
+		});
+
+		it("returns org-scoped obligations for a contract", async () => {
+			getRow.mockResolvedValueOnce(contractRow);
+			listObligations.mockResolvedValueOnce([
+				{ $id: "ob-1", title: "Annual report", status: "open" },
+			]);
+			const res = await tool("list_contract_obligations").handler(
+				ctx([PERMISSIONS.CONTRACTS.VIEW]),
+				{ contractId: "c-1" },
+			);
+			expect(listObligations).toHaveBeenCalledWith(
+				expect.objectContaining({ orgId: "org-1", contractId: "c-1" }),
+			);
+			const result = res.result as { obligations?: unknown[] };
+			expect(result.obligations).toHaveLength(1);
+		});
+	});
+
+	describe("send_counterparty_invite", () => {
+		it("blocks without contracts.edit", async () => {
+			const res = await tool("send_counterparty_invite").handler(ctx([]), {
+				contractId: "c-1",
+				email: "a@b.test",
+				name: "A B",
+			});
+			expect((res.result as { error?: string }).error).toMatch(
+				/permission|cannot/i,
+			);
+			expect(createAccess).not.toHaveBeenCalled();
+		});
+
+		it("rejects an invalid email", async () => {
+			const res = await tool("send_counterparty_invite").handler(
+				ctx([PERMISSIONS.CONTRACTS.EDIT]),
+				{ contractId: "c-1", email: "not-an-email", name: "A B" },
+			);
+			expect((res.result as { error?: string }).error).toMatch(/email/i);
+			expect(createAccess).not.toHaveBeenCalled();
+		});
+
+		it("creates access, emails the invite, and audits", async () => {
+			getRow.mockResolvedValueOnce(contractRow);
+			createAccess.mockResolvedValueOnce({
+				access: { expiresAt: "2026-12-01" },
+				token: "tok",
+				urlPath: "/negotiate/tok",
+			});
+			const res = await tool("send_counterparty_invite").handler(
+				ctx([PERMISSIONS.CONTRACTS.EDIT]),
+				{ contractId: "c-1", email: "counterparty@vendor.test", name: "Pat" },
+			);
+			expect(sendEmail).toHaveBeenCalled();
+			expect(logAuditEvent).toHaveBeenCalled();
+			const result = res.result as { sent?: boolean };
+			expect(result.sent).toBe(true);
+		});
+	});
+
+	describe("send_for_signature", () => {
+		it("blocks without contracts.sign", async () => {
+			const res = await tool("send_for_signature").handler(ctx([]), {
+				contractId: "c-1",
+				signers: [{ email: "a@b.test", name: "A B" }],
+			});
+			expect((res.result as { error?: string }).error).toMatch(
+				/permission|cannot/i,
+			);
+			expect(createEnvelope).not.toHaveBeenCalled();
+		});
+
+		it("requires at least one valid signer", async () => {
+			const res = await tool("send_for_signature").handler(
+				ctx([PERMISSIONS.CONTRACTS.SIGN]),
+				{ contractId: "c-1", signers: [] },
+			);
+			expect((res.result as { error?: string }).error).toMatch(/signer/i);
+			expect(createEnvelope).not.toHaveBeenCalled();
+		});
+
+		it("creates and sends the envelope, then audits", async () => {
+			getRow.mockResolvedValueOnce(contractRow);
+			createEnvelope.mockResolvedValueOnce({ $id: "env-1" });
+			sendEnvelope.mockResolvedValueOnce({ $id: "env-1", status: "sent" });
+			const res = await tool("send_for_signature").handler(
+				ctx([PERMISSIONS.CONTRACTS.SIGN]),
+				{
+					contractId: "c-1",
+					signers: [{ email: "signer@vendor.test", name: "Pat" }],
+				},
+			);
+			expect(sendEnvelope).toHaveBeenCalledWith("env-1");
+			expect(logAuditEvent).toHaveBeenCalled();
+			const result = res.result as { status?: string };
+			expect(result.status).toBe("sent");
+		});
+	});
+
+	describe("approve_contract", () => {
+		it("blocks without contracts.approve", async () => {
+			const res = await tool("approve_contract").handler(ctx([]), {
+				contractId: "c-1",
+				decision: "approved",
+			});
+			expect((res.result as { error?: string }).error).toMatch(
+				/permission|cannot/i,
+			);
+			expect(decide).not.toHaveBeenCalled();
+		});
+
+		it("rejects an invalid decision value", async () => {
+			const res = await tool("approve_contract").handler(
+				ctx([PERMISSIONS.CONTRACTS.APPROVE]),
+				{ contractId: "c-1", decision: "maybe" },
+			);
+			expect((res.result as { error?: string }).error).toMatch(/decision/i);
+		});
+
+		it("denies the decision when the viewer cannot decide this step", async () => {
+			getRow.mockResolvedValueOnce(contractRow);
+			getWorkflowForViewer.mockResolvedValueOnce({
+				canDecideAsAssignee: false,
+				canAdminOverrideActiveStep: false,
+				canAdminOverrideCompleted: false,
+				canReject: false,
+			});
+			const res = await tool("approve_contract").handler(
+				ctx([PERMISSIONS.CONTRACTS.APPROVE]),
+				{ contractId: "c-1", decision: "approved" },
+			);
+			expect((res.result as { error?: string }).error).toMatch(
+				/not the assignee/i,
+			);
+			expect(decide).not.toHaveBeenCalled();
+		});
+
+		it("records the decision and audits", async () => {
+			getRow.mockResolvedValueOnce(contractRow);
+			getWorkflowForViewer.mockResolvedValueOnce({
+				canDecideAsAssignee: true,
+				canAdminOverrideActiveStep: false,
+				canAdminOverrideCompleted: false,
+				canReject: true,
+			});
+			decide.mockResolvedValueOnce({
+				state: {},
+				contractStatus: "approved",
+			});
+			const res = await tool("approve_contract").handler(
+				ctx([PERMISSIONS.CONTRACTS.APPROVE]),
+				{ contractId: "c-1", decision: "approved" },
+			);
+			expect(decide).toHaveBeenCalled();
+			expect(logAuditEvent).toHaveBeenCalled();
+			const result = res.result as { contractStatus?: string };
+			expect(result.contractStatus).toBe("approved");
+		});
+	});
+
+	describe("renew_contract", () => {
+		it("blocks without contracts.edit", async () => {
+			const res = await tool("renew_contract").handler(ctx([]), {
+				contractId: "c-1",
+				newExpiryDate: "2027-01-01",
+			});
+			expect((res.result as { error?: string }).error).toMatch(
+				/permission|cannot/i,
+			);
+			expect(renewContractAfterExpiry).not.toHaveBeenCalled();
+		});
+
+		it("rejects an invalid expiry date", async () => {
+			const res = await tool("renew_contract").handler(
+				ctx([PERMISSIONS.CONTRACTS.EDIT]),
+				{ contractId: "c-1", newExpiryDate: "not-a-date" },
+			);
+			expect((res.result as { error?: string }).error).toMatch(/expiry/i);
+			expect(renewContractAfterExpiry).not.toHaveBeenCalled();
+		});
+
+		it("renews the contract for an org match", async () => {
+			getRow.mockResolvedValueOnce(contractRow);
+			renewContractAfterExpiry.mockResolvedValueOnce(undefined);
+			const res = await tool("renew_contract").handler(
+				ctx([PERMISSIONS.CONTRACTS.EDIT]),
+				{ contractId: "c-1", newExpiryDate: "2027-01-01" },
+			);
+			expect(renewContractAfterExpiry).toHaveBeenCalledWith(
+				expect.objectContaining({
+					contractId: "c-1",
+					orgId: "org-1",
+					newExpiryDate: "2027-01-01",
+				}),
+			);
+			const result = res.result as { renewed?: boolean };
+			expect(result.renewed).toBe(true);
 		});
 	});
 });

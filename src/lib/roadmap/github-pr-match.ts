@@ -63,18 +63,88 @@ export function isSettledRoadmapPullRequestState(
 }
 
 /**
- * Strike the PR title when required checks passed, the section is done, or
- * the PR was closed without merge (stub / abandoned). Merge alone must not
- * look "complete" while tasks stay available/locked — wait for CI.
+ * Catalog task codes this board PR is tied to (batch or per-task link).
+ * Includes setup stubs so their titles can strike when the batch is done.
+ */
+export function catalogTaskCodesForBoardPr(
+	prNumber: number,
+	catalogKey: RoadmapCatalogKey = DEFAULT_ROADMAP_CATALOG_KEY,
+): string[] {
+	if (catalogKey === "pto") {
+		return ptoBatchForPr(prNumber)?.taskCodes ?? [];
+	}
+	if (catalogKey === "prd") {
+		return prdBatchForPr(prNumber)?.taskCodes ?? [];
+	}
+	if (catalogKey === "npo") {
+		return npoBatchForPr(prNumber)?.taskCodes ?? [];
+	}
+
+	const codes: string[] = [];
+	const walk = (
+		tasks: ReturnType<typeof catalogForKey>[number]["tasks"],
+	) => {
+		for (const task of tasks) {
+			if (task.linkedPrNumber === prNumber) codes.push(task.taskCode);
+			if (task.children?.length) walk(task.children);
+		}
+	};
+	for (const section of catalogForKey(catalogKey)) {
+		walk(section.tasks);
+	}
+	return codes;
+}
+
+/**
+ * True when every catalog task tied to this PR is `complete` on the board.
+ */
+export function areBoardPrTasksComplete(input: {
+	prNumber: number;
+	catalogKey: RoadmapCatalogKey;
+	sectionTasks: Array<{
+		taskCode: string;
+		status: string;
+		prNumber?: number | null;
+	}>;
+}): boolean {
+	const codes = catalogTaskCodesForBoardPr(input.prNumber, input.catalogKey);
+	if (codes.length > 0) {
+		return codes.every((code) => {
+			const matches = input.sectionTasks.filter(
+				(task) =>
+					task.taskCode === code || task.taskCode.startsWith(`${code}.`),
+			);
+			if (matches.length === 0) return false;
+			return matches.every((task) => task.status === "complete");
+		});
+	}
+
+	const owned = input.sectionTasks.filter(
+		(task) => task.prNumber === input.prNumber,
+	);
+	if (owned.length === 0) return false;
+	return owned.every((task) => task.status === "complete");
+}
+
+/**
+ * Strike the PR title when its linked tasks are done, required checks passed,
+ * the section is done, or the PR was closed without merge. Merge alone must
+ * not look "complete" while those tasks are still open — wait for CI or tasks.
  */
 export function shouldStrikeRoadmapPullRequestTitle(input: {
 	checksPassed?: boolean;
 	sectionComplete?: boolean;
+	/** True when every board task tied to this PR is complete. */
+	tasksComplete?: boolean;
 	/** GitHub PR state from the board payload. */
 	state?: "open" | "closed" | "merged" | "unknown";
 }): boolean {
 	if (input.state === "closed") return true;
-	return input.checksPassed === true || input.sectionComplete === true;
+	return (
+		input.tasksComplete === true ||
+		input.checksPassed === true ||
+		input.sectionComplete === true
+	);
 }
 
 /** Catalog PRs stay listed after close/merge on every board. */

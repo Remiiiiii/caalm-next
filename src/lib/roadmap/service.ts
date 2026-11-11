@@ -34,6 +34,7 @@ import {
 	evaluateNpoPackagingGate,
 } from "./nonprofit/npo-packaging-gate";
 import {
+	areBoardPrTasksComplete,
 	findSectionPullRequest,
 	type GitHubPullRequestSummary,
 	matchPullRequestToTask,
@@ -714,6 +715,11 @@ export async function getOverview(options?: {
 					title: resolvedCatalogPrTitle(number, meta?.title, catalogKey),
 					state: meta?.state,
 					checksPassed: checksPassedByPr.get(number) === true,
+					tasksComplete: areBoardPrTasksComplete({
+						prNumber: number,
+						catalogKey,
+						sectionTasks,
+					}),
 				};
 			})
 			.filter((pr) =>
@@ -834,12 +840,14 @@ export async function getSectionPullRequests(sectionId: string): Promise<
 		headRef: string;
 		body: string;
 		checksPassed: boolean;
+		tasksComplete: boolean;
 	}>
 > {
 	const section = await getSectionById(sectionId);
 	if (!section) throw new RoadmapError("Section not found", 404);
 	const catalogKey = catalogKeyFromEntityId(sectionId);
 	const numbers = getCatalogLinkedPrNumbers(section.sectionNumber, catalogKey);
+	const sectionTasks = await listTasks(sectionId, catalogKey);
 	const pullRequests = await Promise.all(
 		numbers.map(async (number) => {
 			const live = await fetchPullRequestStatus({ prNumber: number });
@@ -860,6 +868,11 @@ export async function getSectionPullRequests(sectionId: string): Promise<
 				headRef: live.headRef?.trim() || "",
 				body: live.body || "",
 				checksPassed,
+				tasksComplete: areBoardPrTasksComplete({
+					prNumber: number,
+					catalogKey,
+					sectionTasks,
+				}),
 			};
 		}),
 	);
