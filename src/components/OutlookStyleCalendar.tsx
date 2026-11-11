@@ -76,6 +76,7 @@ import { EventReminderConfig as EventReminderConfigComponent } from "@/component
 import { ResourceManager } from "@/components/ResourceManager";
 import { SharedCalendarManager } from "@/components/SharedCalendarManager";
 import { SharePrimaryCalendarDialog } from "@/components/SharePrimaryCalendarDialog";
+import { AppDialog } from "@/components/ui/app-dialog";
 import Avatar from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -85,7 +86,6 @@ import {
 	toIsoDateLocal,
 } from "@/components/ui/caalm-date-picker";
 import { Card, CardContent } from "@/components/ui/card";
-import { AppDialog } from "@/components/ui/app-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SearchField } from "@/components/ui/search-field";
@@ -3037,7 +3037,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 					<div className="glass-card-cap" />
 					<CardContent className="p-0">
 						{/* Clean toolbar — pt clears absolute glass-card-cap (h-4) */}
-						<div className="flex flex-row items-center justify-between gap-3 pt-7 px-4 pb-4 border-b border-slate-200 bg-white/60">
+						<div className="flex flex-row items-center justify-between gap-3 pt-7 px-4 py-2 pb-4 border-b border-slate-200 bg-white/60">
 							<div className="flex items-center gap-3 flex-wrap min-w-0">
 								<Button
 									size="sm"
@@ -3151,8 +3151,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 											endDate: new Date(),
 											type: "meeting",
 											description: "",
-											startTime: getSmartPlaceholderTimes(new Date())
-												.startTime,
+											startTime: getSmartPlaceholderTimes(new Date()).startTime,
 											endTime: getSmartPlaceholderTimes(new Date()).endTime,
 											contractName: "",
 											participants: "",
@@ -3188,9 +3187,7 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 											<CalendarIcon className="h-5 w-5" />
 										)
 									}
-									title={
-										selectedEvent ? "Update Event" : "Create New Event"
-									}
+									title={selectedEvent ? "Update Event" : "Create New Event"}
 									description={
 										selectedEvent
 											? "Update the details for your event"
@@ -3240,716 +3237,705 @@ const OutlookStyleCalendar: React.FC<OutlookStyleCalendarProps> = ({
 										</>
 									}
 								>
-									<div className="space-y-6 pb-1">
-										<p className="text-sm text-slate-500">
+									<div className="space-y-6 pt-4 pb-1">
+										<p className="text-sm  text-slate-500">
 											{newEvent.description
 												? `${newEvent.description.length} characters`
 												: "Enter event details"}
 										</p>
-											{/* Event Title Section */}
+										{/* Event Title Section */}
+										<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+											<Label
+												className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3"
+												htmlFor="title"
+											>
+												<FileText className="w-4 h-4 text-blue-600" />
+												Event Title
+											</Label>
+											<Input
+												id="title"
+												value={newEvent.title}
+												onChange={(e) =>
+													setNewEvent({ ...newEvent, title: e.target.value })
+												}
+												placeholder="Enter a descriptive title for your event"
+												className="bg-white border-slate-300 focus:border-blue-500 focus:ring-blue-500 h-11 text-base"
+											/>
+										</div>
+										{/* Participants Section */}
+										<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+											<Label
+												className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3"
+												htmlFor="participants"
+											>
+												<Users className="w-4 h-4 text-blue-600" />
+												Participants
+											</Label>
+
+											{/* Selected Participants Display */}
+											{selectedParticipants.length > 0 && (
+												<div className="flex flex-wrap gap-2 mb-3">
+													{selectedParticipants.map((participant) => (
+														<Badge
+															key={participant.$id}
+															variant="secondary"
+															className="flex items-center gap-2 bg-blue-100 text-blue-800 border-blue-200 px-3 py-1"
+														>
+															<Avatar
+																name={participant.fullName || participant.name}
+																userId={participant.$id}
+																size="sm"
+															/>
+															<span className="text-sm font-medium">
+																{participant.fullName || participant.name}
+															</span>
+															<Button
+																variant="ghost"
+																size="sm"
+																className="h-4 w-4 p-0 hover:bg-blue-200 rounded-full"
+																onClick={() =>
+																	removeParticipant(participant.$id)
+																}
+															>
+																<X className="h-3 w-3" />
+															</Button>
+														</Badge>
+													))}
+												</div>
+											)}
+
+											{/* Participant Search */}
+											<div className="space-y-2">
+												<Input
+													placeholder="Search for team members..."
+													value={participantSearch}
+													onChange={(e) => {
+														const value = e.target.value;
+														setParticipantSearch(value);
+														searchUsers(value);
+													}}
+													className="bg-white border-slate-300 focus:border-blue-500 focus:ring-blue-500 h-11"
+												/>
+
+												{/* Search Results */}
+												{participantSearch.length >= 2 && (
+													<div className="max-h-40 overflow-y-auto border border-slate-200 rounded-lg bg-white shadow-sm">
+														{isSearching && (
+															<div className="p-3 text-sm text-slate-500 flex items-center gap-2">
+																<div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+																Searching team members...
+															</div>
+														)}
+														{!isSearching && searchResults.length === 0 && (
+															<div className="p-3 text-sm text-slate-500">
+																No team members found.
+															</div>
+														)}
+														{searchResults.length > 0 && (
+															<div className="divide-y divide-slate-100">
+																{searchResults.map((user) => (
+																	<div
+																		key={user.$id}
+																		className="p-3 hover:bg-slate-50 cursor-pointer flex items-center justify-between transition-colors"
+																		onClick={() => addParticipant(user)}
+																	>
+																		<div className="flex items-center gap-3">
+																			<div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center text-slate-600 text-sm font-medium">
+																				{(user.fullName || user.name || "?")
+																					.charAt(0)
+																					.toUpperCase()}
+																			</div>
+																			<div className="flex flex-col">
+																				<span className="font-medium text-sm text-slate-700">
+																					{user.fullName || user.name}
+																				</span>
+																				<span className="text-xs text-slate-500">
+																					{user.email}
+																				</span>
+																			</div>
+																		</div>
+																		<Button
+																			variant="ghost"
+																			size="sm"
+																			className="h-8 w-8 p-0 hover:bg-blue-100 rounded-full"
+																		>
+																			<UserPlus className="h-4 w-4 text-blue-600" />
+																		</Button>
+																	</div>
+																))}
+															</div>
+														)}
+													</div>
+												)}
+											</div>
+										</div>
+										{/* Date and Time Section */}
+										<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+											<div className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-4">
+												<Clock className="w-4 h-4 text-blue-600" />
+												Schedule
+											</div>
+
+											<div className="grid grid-cols-2 gap-4">
+												{/* Column 1: Dates */}
+												<div className="space-y-4">
+													<div>
+														<Label
+															htmlFor="date"
+															className="text-sm font-medium text-slate-700 mb-2 block"
+														>
+															Start Date
+														</Label>
+														<CaalmDatePicker
+															id="date"
+															value={
+																newEvent.date
+																	? toIsoDateLocal(newEvent.date)
+																	: ""
+															}
+															placeholder="Select start date"
+															disablePast
+															className="h-11 border-slate-300 hover:border-blue-500"
+															onChange={(iso) => {
+																const selectedDate =
+																	parseIsoDateLocal(iso) || new Date();
+																const smartTimes =
+																	getSmartPlaceholderTimes(selectedDate);
+																setNewEvent({
+																	...newEvent,
+																	date: selectedDate,
+																	startTime:
+																		newEvent.startTime || smartTimes.startTime,
+																	endTime:
+																		newEvent.endTime || smartTimes.endTime,
+																});
+															}}
+														/>
+													</div>
+
+													<div>
+														<Label
+															htmlFor="endDate"
+															className="text-sm font-medium text-slate-700 mb-2 block"
+														>
+															End Date
+														</Label>
+														<CaalmDatePicker
+															id="endDate"
+															value={
+																newEvent.endDate
+																	? toIsoDateLocal(newEvent.endDate)
+																	: ""
+															}
+															placeholder="Select end date"
+															disablePast
+															className="h-11 border-slate-300 hover:border-blue-500"
+															onChange={(iso) => {
+																setNewEvent({
+																	...newEvent,
+																	endDate: parseIsoDateLocal(iso) || new Date(),
+																});
+															}}
+														/>
+													</div>
+												</div>
+
+												{/* Column 2: Times */}
+												<div className="space-y-4">
+													<div>
+														<Label
+															htmlFor="startTime"
+															className="text-sm font-medium text-slate-700 mb-2 block"
+														>
+															Start Time
+														</Label>
+														<Select
+															value={
+																newEvent.startTime ||
+																getSmartPlaceholderTimes(newEvent.date)
+																	.startTime
+															}
+															onValueChange={(value) =>
+																setNewEvent({ ...newEvent, startTime: value })
+															}
+														>
+															<SelectTrigger className="h-11 bg-white border-slate-300 hover:border-blue-500">
+																<SelectValue placeholder="Select start time" />
+															</SelectTrigger>
+															<SelectContent className="shadow-lg border-slate-200">
+																{generateTimeOptions(newEvent.date).map(
+																	(time) => (
+																		<SelectItem
+																			key={time.value}
+																			value={time.value}
+																			disabled={time.disabled}
+																			className={
+																				time.disabled
+																					? "opacity-50 cursor-not-allowed"
+																					: ""
+																			}
+																		>
+																			{time.label}
+																		</SelectItem>
+																	),
+																)}
+															</SelectContent>
+														</Select>
+													</div>
+													<div>
+														<Label
+															htmlFor="endTime"
+															className="text-sm font-medium text-slate-700 mb-2 block"
+														>
+															End Time
+														</Label>
+														<Select
+															value={
+																newEvent.endTime ||
+																getSmartPlaceholderTimes(newEvent.date).endTime
+															}
+															onValueChange={(value) =>
+																setNewEvent({ ...newEvent, endTime: value })
+															}
+														>
+															<SelectTrigger className="h-11 bg-white border-slate-300 hover:border-blue-500">
+																<SelectValue placeholder="Select end time" />
+															</SelectTrigger>
+															<SelectContent className="shadow-lg border-slate-200">
+																{generateTimeOptions(newEvent.date).map(
+																	(time) => (
+																		<SelectItem
+																			key={time.value}
+																			value={time.value}
+																			disabled={time.disabled}
+																			className={
+																				time.disabled
+																					? "opacity-50 cursor-not-allowed"
+																					: ""
+																			}
+																		>
+																			{time.label}
+																		</SelectItem>
+																	),
+																)}
+															</SelectContent>
+														</Select>
+													</div>
+												</div>
+											</div>
+										</div>
+
+										{/* Event Type Section */}
+										<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+											<Label
+												htmlFor="type"
+												className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3"
+											>
+												<Tag className="w-4 h-4 text-blue-600" />
+												Event Type
+											</Label>
+											<Select
+												value={newEvent.type}
+												onValueChange={(value) =>
+													setNewEvent({
+														...newEvent,
+														type: value as NewEventForm["type"],
+													})
+												}
+											>
+												<SelectTrigger className="h-11 bg-white border-slate-300 hover:border-blue-500">
+													<SelectValue placeholder="Select event type" />
+												</SelectTrigger>
+												<SelectContent className="shadow-lg border-slate-200">
+													<SelectItem value="audit">
+														<div className="flex items-center gap-2">
+															<div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+															Audit
+														</div>
+													</SelectItem>
+													<SelectItem value="contract">
+														<div className="flex items-center gap-2">
+															<div className="w-2 h-2 bg-blue rounded-full"></div>
+															Contract Review
+														</div>
+													</SelectItem>
+													<SelectItem value="meeting">
+														<div className="flex items-center gap-2">
+															<div className="w-2 h-2 bg-green rounded-full"></div>
+															Meeting
+														</div>
+													</SelectItem>
+													<SelectItem value="deadline">
+														<div className="flex items-center gap-2">
+															<div className="w-2 h-2 bg-red rounded-full"></div>
+															Deadline Discussion
+														</div>
+													</SelectItem>
+													<SelectItem value="review">
+														<div className="flex items-center gap-2">
+															<div className="w-2 h-2 bg-orange rounded-full"></div>
+															Internal Review
+														</div>
+													</SelectItem>
+												</SelectContent>
+											</Select>
+										</div>
+
+										{/* Sensitivity Section */}
+										<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+											<Label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3">
+												<AlertTriangle className="w-4 h-4 text-blue-600" />
+												Sensitivity Level
+											</Label>
+											<Select
+												value={newEvent.sensitivityLevel}
+												onValueChange={(value: CalendarSensitivity) =>
+													setNewEvent({
+														...newEvent,
+														sensitivityLevel: value,
+													})
+												}
+											>
+												<SelectTrigger className="h-11 bg-white border-slate-300 hover:border-blue-500">
+													<SelectValue placeholder="Select sensitivity level" />
+												</SelectTrigger>
+												<SelectContent className="shadow-lg border-slate-200">
+													{(
+														["standard", "restricted", "confidential"] as const
+													).map((level) => (
+														<SelectItem key={level} value={level}>
+															<div className="flex flex-col text-left">
+																<span className="text-sm font-medium">
+																	{SENSITIVITY_LABELS[level]}
+																</span>
+																<span className="text-xs text-slate-500">
+																	{level === "standard"
+																		? "Visible to users with calendar access."
+																		: level === "restricted"
+																			? "Requires approver review before publishing."
+																			: "Visible only to approvers until approved."}
+																</span>
+															</div>
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+											{newEvent.sensitivityLevel !== "standard" && (
+												<p className="mt-2 text-xs text-slate-500">
+													This event will remain hidden until an approver
+													approves it.
+												</p>
+											)}
+										</div>
+
+										{canManageEventRegistrations ? (
 											<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
 												<Label
-													className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3"
-													htmlFor="title"
+													htmlFor="event-campaign-id"
+													className="text-sm font-semibold text-slate-700 mb-3 block"
 												>
-													<FileText className="w-4 h-4 text-blue-600" />
-													Event Title
+													Fundraising campaign (optional)
 												</Label>
 												<Input
-													id="title"
-													value={newEvent.title}
+													id="event-campaign-id"
+													className="border-[0.25px] border-slate-300 bg-white"
+													value={newEvent.campaignId || ""}
 													onChange={(e) =>
-														setNewEvent({ ...newEvent, title: e.target.value })
+														setNewEvent({
+															...newEvent,
+															campaignId: e.target.value,
+														})
 													}
-													placeholder="Enter a descriptive title for your event"
-													className="bg-white border-slate-300 focus:border-blue-500 focus:ring-blue-500 h-11 text-base"
+													placeholder="Campaign ID for event gifts"
 												/>
 											</div>
-											{/* Participants Section */}
+										) : null}
+
+										{/* Contract Selection (conditional) */}
+										{["contract", "contract review"].includes(
+											(newEvent.type as unknown as string).toLowerCase(),
+										) && (
 											<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
 												<Label
-													className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3"
-													htmlFor="participants"
-												>
-													<Users className="w-4 h-4 text-blue-600" />
-													Participants
-												</Label>
-
-												{/* Selected Participants Display */}
-												{selectedParticipants.length > 0 && (
-													<div className="flex flex-wrap gap-2 mb-3">
-														{selectedParticipants.map((participant) => (
-															<Badge
-																key={participant.$id}
-																variant="secondary"
-																className="flex items-center gap-2 bg-blue-100 text-blue-800 border-blue-200 px-3 py-1"
-															>
-																<Avatar
-																	name={
-																		participant.fullName || participant.name
-																	}
-																	userId={participant.$id}
-																	size="sm"
-																/>
-																<span className="text-sm font-medium">
-																	{participant.fullName || participant.name}
-																</span>
-																<Button
-																	variant="ghost"
-																	size="sm"
-																	className="h-4 w-4 p-0 hover:bg-blue-200 rounded-full"
-																	onClick={() =>
-																		removeParticipant(participant.$id)
-																	}
-																>
-																	<X className="h-3 w-3" />
-																</Button>
-															</Badge>
-														))}
-													</div>
-												)}
-
-												{/* Participant Search */}
-												<div className="space-y-2">
-													<Input
-														placeholder="Search for team members..."
-														value={participantSearch}
-														onChange={(e) => {
-															const value = e.target.value;
-															setParticipantSearch(value);
-															searchUsers(value);
-														}}
-														className="bg-white border-slate-300 focus:border-blue-500 focus:ring-blue-500 h-11"
-													/>
-
-													{/* Search Results */}
-													{participantSearch.length >= 2 && (
-														<div className="max-h-40 overflow-y-auto border border-slate-200 rounded-lg bg-white shadow-sm">
-															{isSearching && (
-																<div className="p-3 text-sm text-slate-500 flex items-center gap-2">
-																	<div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-																	Searching team members...
-																</div>
-															)}
-															{!isSearching && searchResults.length === 0 && (
-																<div className="p-3 text-sm text-slate-500">
-																	No team members found.
-																</div>
-															)}
-															{searchResults.length > 0 && (
-																<div className="divide-y divide-slate-100">
-																	{searchResults.map((user) => (
-																		<div
-																			key={user.$id}
-																			className="p-3 hover:bg-slate-50 cursor-pointer flex items-center justify-between transition-colors"
-																			onClick={() => addParticipant(user)}
-																		>
-																			<div className="flex items-center gap-3">
-																				<div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center text-slate-600 text-sm font-medium">
-																					{(user.fullName || user.name || "?")
-																						.charAt(0)
-																						.toUpperCase()}
-																				</div>
-																				<div className="flex flex-col">
-																					<span className="font-medium text-sm text-slate-700">
-																						{user.fullName || user.name}
-																					</span>
-																					<span className="text-xs text-slate-500">
-																						{user.email}
-																					</span>
-																				</div>
-																			</div>
-																			<Button
-																				variant="ghost"
-																				size="sm"
-																				className="h-8 w-8 p-0 hover:bg-blue-100 rounded-full"
-																			>
-																				<UserPlus className="h-4 w-4 text-blue-600" />
-																			</Button>
-																		</div>
-																	))}
-																</div>
-															)}
-														</div>
-													)}
-												</div>
-											</div>
-											{/* Date and Time Section */}
-											<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-												<div className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-4">
-													<Clock className="w-4 h-4 text-blue-600" />
-													Schedule
-												</div>
-
-												<div className="grid grid-cols-2 gap-4">
-													{/* Column 1: Dates */}
-													<div className="space-y-4">
-														<div>
-															<Label
-																htmlFor="date"
-																className="text-sm font-medium text-slate-700 mb-2 block"
-															>
-																Start Date
-															</Label>
-															<CaalmDatePicker
-																id="date"
-																value={
-																	newEvent.date
-																		? toIsoDateLocal(newEvent.date)
-																		: ""
-																}
-																placeholder="Select start date"
-																disablePast
-																className="h-11 border-slate-300 hover:border-blue-500"
-																onChange={(iso) => {
-																	const selectedDate =
-																		parseIsoDateLocal(iso) || new Date();
-																	const smartTimes =
-																		getSmartPlaceholderTimes(selectedDate);
-																	setNewEvent({
-																		...newEvent,
-																		date: selectedDate,
-																		startTime:
-																			newEvent.startTime ||
-																			smartTimes.startTime,
-																		endTime:
-																			newEvent.endTime || smartTimes.endTime,
-																	});
-																}}
-															/>
-														</div>
-
-														<div>
-															<Label
-																htmlFor="endDate"
-																className="text-sm font-medium text-slate-700 mb-2 block"
-															>
-																End Date
-															</Label>
-															<CaalmDatePicker
-																id="endDate"
-																value={
-																	newEvent.endDate
-																		? toIsoDateLocal(newEvent.endDate)
-																		: ""
-																}
-																placeholder="Select end date"
-																disablePast
-																className="h-11 border-slate-300 hover:border-blue-500"
-																onChange={(iso) => {
-																	setNewEvent({
-																		...newEvent,
-																		endDate:
-																			parseIsoDateLocal(iso) || new Date(),
-																	});
-																}}
-															/>
-														</div>
-													</div>
-
-													{/* Column 2: Times */}
-													<div className="space-y-4">
-														<div>
-															<Label
-																htmlFor="startTime"
-																className="text-sm font-medium text-slate-700 mb-2 block"
-															>
-																Start Time
-															</Label>
-															<Select
-																value={
-																	newEvent.startTime ||
-																	getSmartPlaceholderTimes(newEvent.date)
-																		.startTime
-																}
-																onValueChange={(value) =>
-																	setNewEvent({ ...newEvent, startTime: value })
-																}
-															>
-																<SelectTrigger className="h-11 bg-white border-slate-300 hover:border-blue-500">
-																	<SelectValue placeholder="Select start time" />
-																</SelectTrigger>
-																<SelectContent className="shadow-lg border-slate-200">
-																	{generateTimeOptions(newEvent.date).map(
-																		(time) => (
-																			<SelectItem
-																				key={time.value}
-																				value={time.value}
-																				disabled={time.disabled}
-																				className={
-																					time.disabled
-																						? "opacity-50 cursor-not-allowed"
-																						: ""
-																				}
-																			>
-																				{time.label}
-																			</SelectItem>
-																		),
-																	)}
-																</SelectContent>
-															</Select>
-														</div>
-														<div>
-															<Label
-																htmlFor="endTime"
-																className="text-sm font-medium text-slate-700 mb-2 block"
-															>
-																End Time
-															</Label>
-															<Select
-																value={
-																	newEvent.endTime ||
-																	getSmartPlaceholderTimes(newEvent.date)
-																		.endTime
-																}
-																onValueChange={(value) =>
-																	setNewEvent({ ...newEvent, endTime: value })
-																}
-															>
-																<SelectTrigger className="h-11 bg-white border-slate-300 hover:border-blue-500">
-																	<SelectValue placeholder="Select end time" />
-																</SelectTrigger>
-																<SelectContent className="shadow-lg border-slate-200">
-																	{generateTimeOptions(newEvent.date).map(
-																		(time) => (
-																			<SelectItem
-																				key={time.value}
-																				value={time.value}
-																				disabled={time.disabled}
-																				className={
-																					time.disabled
-																						? "opacity-50 cursor-not-allowed"
-																						: ""
-																				}
-																			>
-																				{time.label}
-																			</SelectItem>
-																		),
-																	)}
-																</SelectContent>
-															</Select>
-														</div>
-													</div>
-												</div>
-											</div>
-
-											{/* Event Type Section */}
-											<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-												<Label
-													htmlFor="type"
+													htmlFor="contractName"
 													className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3"
 												>
-													<Tag className="w-4 h-4 text-blue-600" />
-													Event Type
+													<FileText className="w-4 h-4 text-blue-600" />
+													Related Contract
 												</Label>
 												<Select
-													value={newEvent.type}
+													value={newEvent.contractName}
 													onValueChange={(value) =>
-														setNewEvent({
-															...newEvent,
-															type: value as NewEventForm["type"],
-														})
+														setNewEvent({ ...newEvent, contractName: value })
 													}
 												>
 													<SelectTrigger className="h-11 bg-white border-slate-300 hover:border-blue-500">
-														<SelectValue placeholder="Select event type" />
+														<SelectValue placeholder="Select a contract to review" />
 													</SelectTrigger>
 													<SelectContent className="shadow-lg border-slate-200">
-														<SelectItem value="audit">
-															<div className="flex items-center gap-2">
-																<div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-																Audit
-															</div>
-														</SelectItem>
-														<SelectItem value="contract">
-															<div className="flex items-center gap-2">
-																<div className="w-2 h-2 bg-blue rounded-full"></div>
-																Contract Review
-															</div>
-														</SelectItem>
-														<SelectItem value="meeting">
-															<div className="flex items-center gap-2">
-																<div className="w-2 h-2 bg-green rounded-full"></div>
-																Meeting
-															</div>
-														</SelectItem>
-														<SelectItem value="deadline">
-															<div className="flex items-center gap-2">
-																<div className="w-2 h-2 bg-red rounded-full"></div>
-																Deadline Discussion
-															</div>
-														</SelectItem>
-														<SelectItem value="review">
-															<div className="flex items-center gap-2">
-																<div className="w-2 h-2 bg-orange rounded-full"></div>
-																Internal Review
-															</div>
-														</SelectItem>
-													</SelectContent>
-												</Select>
-											</div>
-
-											{/* Sensitivity Section */}
-											<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-												<Label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3">
-													<AlertTriangle className="w-4 h-4 text-blue-600" />
-													Sensitivity Level
-												</Label>
-												<Select
-													value={newEvent.sensitivityLevel}
-													onValueChange={(value: CalendarSensitivity) =>
-														setNewEvent({
-															...newEvent,
-															sensitivityLevel: value,
-														})
-													}
-												>
-													<SelectTrigger className="h-11 bg-white border-slate-300 hover:border-blue-500">
-														<SelectValue placeholder="Select sensitivity level" />
-													</SelectTrigger>
-													<SelectContent className="shadow-lg border-slate-200">
-														{(
-															[
-																"standard",
-																"restricted",
-																"confidential",
-															] as const
-														).map((level) => (
-															<SelectItem key={level} value={level}>
-																<div className="flex flex-col text-left">
-																	<span className="text-sm font-medium">
-																		{SENSITIVITY_LABELS[level]}
-																	</span>
-																	<span className="text-xs text-slate-500">
-																		{level === "standard"
-																			? "Visible to users with calendar access."
-																			: level === "restricted"
-																				? "Requires approver review before publishing."
-																				: "Visible only to approvers until approved."}
-																	</span>
+														{loadingContracts ? (
+															<SelectItem value="loading" disabled>
+																<div className="flex items-center gap-2">
+																	<div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+																	Loading contracts...
 																</div>
 															</SelectItem>
-														))}
+														) : contracts.length > 0 ? (
+															contracts.map((contract) => (
+																<SelectItem
+																	key={contract.id}
+																	value={contract.name}
+																>
+																	<div className="flex items-center gap-2">
+																		<FileText className="w-4 h-4 text-slate-500" />
+																		{contract.name}
+																	</div>
+																</SelectItem>
+															))
+														) : (
+															<SelectItem value="no-contracts" disabled>
+																No contracts available
+															</SelectItem>
+														)}
 													</SelectContent>
 												</Select>
-												{newEvent.sensitivityLevel !== "standard" && (
-													<p className="mt-2 text-xs text-slate-500">
-														This event will remain hidden until an approver
-														approves it.
-													</p>
-												)}
 											</div>
+										)}
 
-											{canManageEventRegistrations ? (
-												<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-													<Label
-														htmlFor="event-campaign-id"
-														className="text-sm font-semibold text-slate-700 mb-3 block"
-													>
-														Fundraising campaign (optional)
-													</Label>
-													<Input
-														id="event-campaign-id"
-														className="border-[0.25px] border-slate-300 bg-white"
-														value={newEvent.campaignId || ""}
-														onChange={(e) =>
-															setNewEvent({
-																...newEvent,
-																campaignId: e.target.value,
-															})
+										{/* Location Section */}
+										<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+											<Label
+												htmlFor="location"
+												className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3"
+											>
+												<MapPin className="w-4 h-4 text-blue-600" />
+												Location
+											</Label>
+											{/* Location Search */}
+											<div className="space-y-2">
+												<SearchField
+													id="location"
+													placeholder="Search for a meeting room or location..."
+													value={locationSearch}
+													onChange={(e) => {
+														const value = e.target.value;
+														setLocationSearch(value);
+														setNewEvent({ ...newEvent, location: value });
+														searchLocations(value);
+													}}
+													onFocus={() => {
+														if (locationSearch.length >= 2) {
+															searchLocations(locationSearch);
 														}
-														placeholder="Campaign ID for event gifts"
-													/>
-												</div>
-											) : null}
-
-											{/* Contract Selection (conditional) */}
-											{["contract", "contract review"].includes(
-												(newEvent.type as unknown as string).toLowerCase(),
-											) && (
-												<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-													<Label
-														htmlFor="contractName"
-														className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3"
-													>
-														<FileText className="w-4 h-4 text-blue-600" />
-														Related Contract
-													</Label>
-													<Select
-														value={newEvent.contractName}
-														onValueChange={(value) =>
-															setNewEvent({ ...newEvent, contractName: value })
-														}
-													>
-														<SelectTrigger className="h-11 bg-white border-slate-300 hover:border-blue-500">
-															<SelectValue placeholder="Select a contract to review" />
-														</SelectTrigger>
-														<SelectContent className="shadow-lg border-slate-200">
-															{loadingContracts ? (
-																<SelectItem value="loading" disabled>
-																	<div className="flex items-center gap-2">
-																		<div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-																		Loading contracts...
-																	</div>
-																</SelectItem>
-															) : contracts.length > 0 ? (
-																contracts.map((contract) => (
-																	<SelectItem
-																		key={contract.id}
-																		value={contract.name}
-																	>
-																		<div className="flex items-center gap-2">
-																			<FileText className="w-4 h-4 text-slate-500" />
-																			{contract.name}
-																		</div>
-																	</SelectItem>
-																))
-															) : (
-																<SelectItem value="no-contracts" disabled>
-																	No contracts available
-																</SelectItem>
-															)}
-														</SelectContent>
-													</Select>
-												</div>
-											)}
-
-											{/* Location Section */}
-											<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-												<Label
-													htmlFor="location"
-													className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3"
-												>
-													<MapPin className="w-4 h-4 text-blue-600" />
-													Location
-												</Label>
-												{/* Location Search */}
-												<div className="space-y-2">
-													<SearchField
-														id="location"
-														placeholder="Search for a meeting room or location..."
-														value={locationSearch}
-														onChange={(e) => {
-															const value = e.target.value;
-															setLocationSearch(value);
-															setNewEvent({ ...newEvent, location: value });
-															searchLocations(value);
-														}}
-														onFocus={() => {
-															if (locationSearch.length >= 2) {
-																searchLocations(locationSearch);
-															}
-														}}
-														className="h-11 bg-white"
-													/>
-
-													{/* Location Search Results */}
-													{locationSearch.length >= 2 &&
-														locationResults.length > 0 && (
-															<div className="max-h-40 overflow-y-auto border border-slate-200 rounded-lg bg-white shadow-sm">
-																{isSearchingLocation && (
-																	<div className="p-3 text-sm text-slate-500 flex items-center gap-2">
-																		<div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-																		Searching locations...
-																	</div>
-																)}
-																{!isSearchingLocation &&
-																	locationResults.length > 0 && (
-																		<div className="divide-y divide-slate-100">
-																			{locationResults.map((location) => (
-																				<div
-																					key={location.id}
-																					className="p-3 hover:bg-slate-50 cursor-pointer flex items-center justify-between transition-colors"
-																					onClick={() => {
-																						setNewEvent({
-																							...newEvent,
-																							location: location.address,
-																						});
-																						setLocationSearch(location.address);
-																						setLocationResults([]);
-																						// If this is a resource, set the resourceId
-																						if (
-																							location.type === "resource" &&
-																							location.resourceId
-																						) {
-																							setSelectedResourceId(
-																								location.resourceId,
-																							);
-																						} else {
-																							setSelectedResourceId(null);
-																						}
-																					}}
-																				>
-																					<div className="flex items-center gap-3">
-																						<div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center">
-																							<MapPin className="h-4 w-4 text-slate-500" />
-																						</div>
-																						<div className="flex flex-col">
-																							<span className="font-medium text-sm text-slate-700">
-																								{location.name}
-																							</span>
-																							<span className="text-xs text-slate-500">
-																								{location.address}
-																							</span>
-																						</div>
-																					</div>
-																					<Button
-																						variant="ghost"
-																						size="sm"
-																						className="h-8 w-8 p-0 hover:bg-blue-100 rounded-full"
-																					>
-																						<Plus className="h-4 w-4 text-blue-600" />
-																					</Button>
-																				</div>
-																			))}
-																		</div>
-																	)}
-															</div>
-														)}
-
-													{/* No results message - only show when actively searching and no results */}
-													{locationSearch.length >= 2 &&
-														!isSearchingLocation &&
-														locationResults.length === 0 &&
-														!newEvent.location && (
-															<div className="max-h-40 overflow-y-auto border border-slate-200 rounded-lg bg-white shadow-sm">
-																<div className="p-3 text-sm text-slate-500">
-																	No locations found. You can enter a custom
-																	location.
-																</div>
-															</div>
-														)}
-												</div>
-											</div>
-
-											{/* Priority 2: Reminders Section */}
-											<EventReminderConfigComponent
-												reminders={newEvent.reminders || []}
-												onChange={(reminders) =>
-													setNewEvent({ ...newEvent, reminders })
-												}
-											/>
-
-											{/* Description Section */}
-											<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-												<Label
-													htmlFor="description"
-													className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3"
-												>
-													<MessageSquare className="w-4 h-4 text-blue-600" />
-													Description
-												</Label>
-												<Textarea
-													id="description"
-													value={newEvent.description}
-													onChange={(e) =>
-														setNewEvent({
-															...newEvent,
-															description: e.target.value,
-														})
-													}
-													placeholder="Add meeting agenda, objectives, or any additional details..."
-													rows={4}
-													className="bg-white border-slate-300 focus:border-[#078FAB] focus:ring-1 focus:ring-[#078FAB] focus-visible:ring-1 focus-visible:ring-[#078FAB] focus-visible:ring-offset-0 resize-none"
+													}}
+													className="h-11 bg-white"
 												/>
-											</div>
 
-											{/* Attachments Section - Only for specific event types */}
-											{supportsAttachments(newEvent.type) && (
-												<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-													<Label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3">
-														<Paperclip className="w-4 h-4 text-blue-600" />
-														Attachments
-													</Label>
-													<div className="space-y-3">
-														<div className="flex items-center gap-2">
-															<Input
-																type="file"
-																id="file-upload"
-																multiple
-																accept={getEnterpriseInputAccept("attachment")}
-																onChange={(e) =>
-																	handleFileUpload(e.target.files)
-																}
-																className="hidden"
-																disabled={uploadingFiles}
-															/>
-															<Label
-																htmlFor="file-upload"
-																className={cn(
-																	"flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors",
-																	uploadingFiles &&
-																		"opacity-50 cursor-not-allowed",
-																)}
-															>
-																{uploadingFiles ? (
-																	<>
-																		<Loader2 className="w-4 h-4 animate-spin text-blue-600" />
-																		<span className="text-sm text-slate-600">
-																			Uploading...
-																		</span>
-																	</>
-																) : (
-																	<>
-																		<Paperclip className="w-4 h-4 text-blue-600" />
-																		<span className="text-sm text-slate-700">
-																			Upload Documents
-																		</span>
-																	</>
-																)}
-															</Label>
-															<span className="text-xs text-slate-500">
-																JPG, JPEG, PNG, PDF, DOC, DOCX (Max 50MB each)
-															</span>
-														</div>
-
-														{/* Display uploaded attachments */}
-														{newEvent.attachments &&
-															newEvent.attachments.length > 0 && (
-																<div className="space-y-2">
-																	{newEvent.attachments.map((attachment) => (
-																		<div
-																			key={attachment.$id}
-																			className="flex items-center justify-between p-2 bg-white border border-slate-200 rounded-lg"
-																		>
-																			<div className="flex items-center gap-2 flex-1 min-w-0">
-																				<FileText className="w-4 h-4 text-blue-600 flex-shrink-0" />
-																				<div className="flex-1 min-w-0">
-																					<p className="text-sm font-medium text-slate-700 truncate">
-																						{attachment.name || "Unknown file"}
-																					</p>
-																					<p className="text-xs text-slate-500">
-																						{convertFileSize({
-																							sizeInBytes: attachment.size,
-																						})}
-																						{attachment.extension && (
-																							<>
-																								{" "}
-																								•{" "}
-																								{attachment.extension.toUpperCase()}
-																							</>
-																						)}
-																					</p>
-																				</div>
-																			</div>
-																			<Button
-																				type="button"
-																				variant="ghost"
-																				size="sm"
-																				className="h-8 w-8 p-0 hover:bg-red-50"
-																				onClick={() =>
-																					handleRemoveAttachment(attachment.$id)
-																				}
-																			>
-																				<Trash2 className="w-4 h-4 text-red-600" />
-																			</Button>
-																		</div>
-																	))}
+												{/* Location Search Results */}
+												{locationSearch.length >= 2 &&
+													locationResults.length > 0 && (
+														<div className="max-h-40 overflow-y-auto border border-slate-200 rounded-lg bg-white shadow-sm">
+															{isSearchingLocation && (
+																<div className="p-3 text-sm text-slate-500 flex items-center gap-2">
+																	<div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+																	Searching locations...
 																</div>
 															)}
+															{!isSearchingLocation &&
+																locationResults.length > 0 && (
+																	<div className="divide-y divide-slate-100">
+																		{locationResults.map((location) => (
+																			<div
+																				key={location.id}
+																				className="p-3 hover:bg-slate-50 cursor-pointer flex items-center justify-between transition-colors"
+																				onClick={() => {
+																					setNewEvent({
+																						...newEvent,
+																						location: location.address,
+																					});
+																					setLocationSearch(location.address);
+																					setLocationResults([]);
+																					// If this is a resource, set the resourceId
+																					if (
+																						location.type === "resource" &&
+																						location.resourceId
+																					) {
+																						setSelectedResourceId(
+																							location.resourceId,
+																						);
+																					} else {
+																						setSelectedResourceId(null);
+																					}
+																				}}
+																			>
+																				<div className="flex items-center gap-3">
+																					<div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center">
+																						<MapPin className="h-4 w-4 text-slate-500" />
+																					</div>
+																					<div className="flex flex-col">
+																						<span className="font-medium text-sm text-slate-700">
+																							{location.name}
+																						</span>
+																						<span className="text-xs text-slate-500">
+																							{location.address}
+																						</span>
+																					</div>
+																				</div>
+																				<Button
+																					variant="ghost"
+																					size="sm"
+																					className="h-8 w-8 p-0 hover:bg-blue-100 rounded-full"
+																				>
+																					<Plus className="h-4 w-4 text-blue-600" />
+																				</Button>
+																			</div>
+																		))}
+																	</div>
+																)}
+														</div>
+													)}
+
+												{/* No results message - only show when actively searching and no results */}
+												{locationSearch.length >= 2 &&
+													!isSearchingLocation &&
+													locationResults.length === 0 &&
+													!newEvent.location && (
+														<div className="max-h-40 overflow-y-auto border border-slate-200 rounded-lg bg-white shadow-sm">
+															<div className="p-3 text-sm text-slate-500">
+																No locations found. You can enter a custom
+																location.
+															</div>
+														</div>
+													)}
+											</div>
+										</div>
+
+										{/* Priority 2: Reminders Section */}
+										<EventReminderConfigComponent
+											reminders={newEvent.reminders || []}
+											onChange={(reminders) =>
+												setNewEvent({ ...newEvent, reminders })
+											}
+										/>
+
+										{/* Description Section */}
+										<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+											<Label
+												htmlFor="description"
+												className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3"
+											>
+												<MessageSquare className="w-4 h-4 text-blue-600" />
+												Description
+											</Label>
+											<Textarea
+												id="description"
+												value={newEvent.description}
+												onChange={(e) =>
+													setNewEvent({
+														...newEvent,
+														description: e.target.value,
+													})
+												}
+												placeholder="Add meeting agenda, objectives, or any additional details..."
+												rows={4}
+												className="bg-white border-slate-300 focus:border-[#078FAB] focus:ring-1 focus:ring-[#078FAB] focus-visible:ring-1 focus-visible:ring-[#078FAB] focus-visible:ring-offset-0 resize-none"
+											/>
+										</div>
+
+										{/* Attachments Section - Only for specific event types */}
+										{supportsAttachments(newEvent.type) && (
+											<div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+												<Label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3">
+													<Paperclip className="w-4 h-4 text-blue-600" />
+													Attachments
+												</Label>
+												<div className="space-y-3">
+													<div className="flex items-center gap-2">
+														<Input
+															type="file"
+															id="file-upload"
+															multiple
+															accept={getEnterpriseInputAccept("attachment")}
+															onChange={(e) => handleFileUpload(e.target.files)}
+															className="hidden"
+															disabled={uploadingFiles}
+														/>
+														<Label
+															htmlFor="file-upload"
+															className={cn(
+																"flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors",
+																uploadingFiles &&
+																	"opacity-50 cursor-not-allowed",
+															)}
+														>
+															{uploadingFiles ? (
+																<>
+																	<Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+																	<span className="text-sm text-slate-600">
+																		Uploading...
+																	</span>
+																</>
+															) : (
+																<>
+																	<Paperclip className="w-4 h-4 text-blue-600" />
+																	<span className="text-sm text-slate-700">
+																		Upload Documents
+																	</span>
+																</>
+															)}
+														</Label>
+														<span className="text-xs text-slate-500">
+															JPG, JPEG, PNG, PDF, DOC, DOCX (Max 50MB each)
+														</span>
 													</div>
+
+													{/* Display uploaded attachments */}
+													{newEvent.attachments &&
+														newEvent.attachments.length > 0 && (
+															<div className="space-y-2">
+																{newEvent.attachments.map((attachment) => (
+																	<div
+																		key={attachment.$id}
+																		className="flex items-center justify-between p-2 bg-white border border-slate-200 rounded-lg"
+																	>
+																		<div className="flex items-center gap-2 flex-1 min-w-0">
+																			<FileText className="w-4 h-4 text-blue-600 flex-shrink-0" />
+																			<div className="flex-1 min-w-0">
+																				<p className="text-sm font-medium text-slate-700 truncate">
+																					{attachment.name || "Unknown file"}
+																				</p>
+																				<p className="text-xs text-slate-500">
+																					{convertFileSize({
+																						sizeInBytes: attachment.size,
+																					})}
+																					{attachment.extension && (
+																						<>
+																							{" "}
+																							•{" "}
+																							{attachment.extension.toUpperCase()}
+																						</>
+																					)}
+																				</p>
+																			</div>
+																		</div>
+																		<Button
+																			type="button"
+																			variant="ghost"
+																			size="sm"
+																			className="h-8 w-8 p-0 hover:bg-red-50"
+																			onClick={() =>
+																				handleRemoveAttachment(attachment.$id)
+																			}
+																		>
+																			<Trash2 className="w-4 h-4 text-red-600" />
+																		</Button>
+																	</div>
+																))}
+															</div>
+														)}
 												</div>
-											)}
+											</div>
+										)}
 									</div>
 								</AppDialog>
 

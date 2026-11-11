@@ -117,6 +117,8 @@ export type RoadmapSectionOverview = {
 		 * (Playwright E2E push + Deploy to Vercel production) passed.
 		 */
 		checksPassed?: boolean;
+		/** True when every catalog task tied to this PR is complete on the board. */
+		tasksComplete?: boolean;
 	}>;
 	/** Why tasks in this section stay locked (missing merge or green tests). */
 	mergeBlockReason?: string | null;
