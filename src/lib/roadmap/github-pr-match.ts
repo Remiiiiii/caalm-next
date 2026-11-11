@@ -63,13 +63,17 @@ export function isSettledRoadmapPullRequestState(
 }
 
 /**
- * Strike the PR title only when required checks passed or the section is done.
- * Merge alone must not look "complete" while tasks stay available/locked.
+ * Strike the PR title when required checks passed, the section is done, or
+ * the PR was closed without merge (stub / abandoned). Merge alone must not
+ * look "complete" while tasks stay available/locked — wait for CI.
  */
 export function shouldStrikeRoadmapPullRequestTitle(input: {
 	checksPassed?: boolean;
 	sectionComplete?: boolean;
+	/** GitHub PR state from the board payload. */
+	state?: "open" | "closed" | "merged" | "unknown";
 }): boolean {
+	if (input.state === "closed") return true;
 	return input.checksPassed === true || input.sectionComplete === true;
 }
 

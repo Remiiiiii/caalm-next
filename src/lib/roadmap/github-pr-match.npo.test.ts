@@ -115,7 +115,7 @@ describe("nonprofit PR matching", () => {
 		expect(matchPullRequestToTask(product131, 1, "1.6", "npo")).toBe(false);
 	});
 
-	it("strikes PR titles only when checks passed or the section is complete", () => {
+	it("strikes PR titles when checks passed, section complete, or closed", () => {
 		expect(
 			shouldStrikeRoadmapPullRequestTitle({
 				checksPassed: false,
@@ -134,6 +134,27 @@ describe("nonprofit PR matching", () => {
 				sectionComplete: true,
 			}),
 		).toBe(true);
+		expect(
+			shouldStrikeRoadmapPullRequestTitle({
+				checksPassed: false,
+				sectionComplete: false,
+				state: "closed",
+			}),
+		).toBe(true);
+		expect(
+			shouldStrikeRoadmapPullRequestTitle({
+				checksPassed: false,
+				sectionComplete: false,
+				state: "merged",
+			}),
+		).toBe(false);
+		expect(
+			shouldStrikeRoadmapPullRequestTitle({
+				checksPassed: false,
+				sectionComplete: false,
+				state: "open",
+			}),
+		).toBe(false);
 	});
 
 	it("treats closed and merged as settled for listing", () => {
