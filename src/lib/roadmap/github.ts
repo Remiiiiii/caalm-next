@@ -411,8 +411,11 @@ async function loadRoadmapCompletionGate(
 	}
 
 	const [owner, name] = repo.split("/");
+	// branch=main scopes to the real main-branch run; without it, frequent pushes from
+	// other in-progress cursor/* branches (same workflow, different head_branch) can push
+	// the one run that matters off the first page of head_sha results.
 	const runsRes = await githubFetch(
-		`https://api.github.com/repos/${owner}/${name}/actions/runs?head_sha=${encodeURIComponent(sha)}&per_page=30`,
+		`https://api.github.com/repos/${owner}/${name}/actions/runs?head_sha=${encodeURIComponent(sha)}&branch=main&per_page=30`,
 	);
 	if (!runsRes) {
 		const value: RoadmapCompletionGate = {
