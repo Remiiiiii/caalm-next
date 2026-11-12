@@ -15,6 +15,9 @@ import {
 	CONSTITUENT_TYPES,
 	RELATIONSHIP_TYPES,
 } from "@/lib/constituents/types";
+import { computeSuggestedAsk } from "@/lib/fundraising/ask";
+import { getSegmentForConstituent } from "@/lib/fundraising/segments-repository";
+import { getLatestWealthScreen } from "@/lib/fundraising/wealth-repository";
 import {
 	createDraftGift,
 	GiftDomainError,
@@ -537,6 +540,103 @@ export const CONSTITUENT_TOOLS: ToolDefinition[] = [
 			}
 			const shifts = await listVolunteerShiftsForOrg(ctx.orgId);
 			return { result: { shifts, count: shifts.length } };
+		},
+	},
+	{
+		name: "compute_suggested_ask",
+		description:
+			"Return the suggested ask amount for a constituent from the existing fundraising logic, with the basis for the number. Requires constituents.view. Read-only; org-scoped.",
+		requiredPermissions: [PERMISSIONS.CONSTITUENTS.VIEW],
+		mutating: false,
+		parameters: {
+			type: "object",
+			properties: {
+				constituentId: { type: "string" },
+				query: { type: "string", description: "Name/email search" },
+			},
+		},
+		handler: async (ctx, args) => {
+			if (!hasAll(ctx, [PERMISSIONS.CONSTITUENTS.VIEW])) {
+				return asError(
+					"You cannot view constituents. Ask an admin for the constituents.view permission.",
+				);
+			}
+			let constituentId = String(args.constituentId ?? "").trim();
+			if (!constituentId) {
+				const query = String(args.query ?? "").trim();
+				if (!query) {
+					return asError("Give a constituent id or a name/email to search.");
+				}
+				const { items } = await listConstituents({
+					orgId: ctx.orgId,
+					search: query,
+					limit: 5,
+				});
+				if (items.length === 0) {
+					return asError(`No constituent found matching "${query}".`);
+				}
+				if (items.length > 1) {
+					return {
+						result: {
+							error:
+								"Multiple constituents match; be more specific or give an id.",
+							candidates: items.map((c) => ({
+								$id: c.$id,
+								firstName: c.firstName,
+								lastName: c.lastName,
+								email: c.email,
+							})),
+						},
+					};
+				}
+				constituentId = items[0].$id;
+			}
+			const constituent = await getConstituentById(constituentId);
+			if (!constituent || constituent.orgId !== ctx.orgId) {
+				return asError(`No constituent found with id "${constituentId}".`);
+			}
+			if (constituent.doNotContact) {
+				return asError(
+					"Scores aren't computed for do-not-contact constituents.",
+				);
+			}
+			const row = await getSegmentForConstituent(ctx.orgId, constituentId);
+			if (!row) {
+				return asError(
+					"Scores haven't been computed yet for this constituent.",
+				);
+			}
+			const { items: gifts } = await listGifts({
+				orgId: ctx.orgId,
+				limit: 200,
+			});
+			const giftRows = gifts
+				.filter((g) => g.constituentId === constituentId)
+				.map((g) => ({
+					giftDate: g.giftDate,
+					amount: g.amount,
+					status: g.status,
+					voidOfId: g.voidOfId,
+				}));
+			const wealth = await getLatestWealthScreen(ctx.orgId, constituentId);
+			const ask = computeSuggestedAsk({
+				gifts: giftRows,
+				upgradeReadinessScore: row.upgradeReadinessScore ?? 0,
+				capacityBand: wealth?.capacityBand ?? null,
+			});
+			return {
+				result: {
+					constituentId,
+					suggestedAsk: ask.suggestedAsk,
+					basis: {
+						baseAmount: ask.baseAmount,
+						upgradeReadinessScore: row.upgradeReadinessScore ?? null,
+						upgradeFactor: ask.upgradeFactor,
+						capacityBand: wealth?.capacityBand ?? null,
+						cappedByCapacity: ask.cappedByCapacity,
+					},
+				},
+			};
 		},
 	},
 ];

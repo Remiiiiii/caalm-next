@@ -18,6 +18,8 @@ const listVolunteerShiftsForOrg = vi.fn();
 const getVolunteerShiftById = vi.fn();
 const bookVolunteerOnShift = vi.fn();
 const logAuditEvent = vi.fn();
+const getSegmentForConstituent = vi.fn();
+const getLatestWealthScreen = vi.fn();
 
 vi.mock("@/lib/constituents/repository", () => ({
 	getConstituentById: (...args: unknown[]) => getConstituentById(...args),
@@ -63,6 +65,13 @@ vi.mock("@/lib/volunteers/shift-bookings.repository", () => ({
 }));
 vi.mock("@/lib/services/audit-logger", () => ({
 	logAuditEvent: (...args: unknown[]) => logAuditEvent(...args),
+}));
+vi.mock("@/lib/fundraising/segments-repository", () => ({
+	getSegmentForConstituent: (...args: unknown[]) =>
+		getSegmentForConstituent(...args),
+}));
+vi.mock("@/lib/fundraising/wealth-repository", () => ({
+	getLatestWealthScreen: (...args: unknown[]) => getLatestWealthScreen(...args),
 }));
 
 const { CONSTITUENT_TOOLS } = await import("./constituentTools");
@@ -111,6 +120,8 @@ describe("CONSTITUENT_TOOLS (8.1-8.5)", () => {
 		getVolunteerShiftById.mockReset();
 		bookVolunteerOnShift.mockReset();
 		logAuditEvent.mockReset().mockResolvedValue(undefined);
+		getSegmentForConstituent.mockReset();
+		getLatestWealthScreen.mockReset();
 	});
 
 	describe("search_constituents", () => {
@@ -384,6 +395,87 @@ describe("CONSTITUENT_TOOLS (8.1-8.5)", () => {
 			);
 			expect(logAuditEvent).toHaveBeenCalled();
 			expect((res.result as { assigned: boolean }).assigned).toBe(true);
+		});
+	});
+
+	describe("compute_suggested_ask", () => {
+		it("blocks without constituents.view", async () => {
+			const res = await tool("compute_suggested_ask").handler(ctx([]), {
+				constituentId: "c-1",
+			});
+			expect(errorOf(res)).toMatch(/permission|cannot/i);
+			expect(getSegmentForConstituent).not.toHaveBeenCalled();
+		});
+
+		it("denies a constituent from another org", async () => {
+			getConstituentById.mockResolvedValueOnce({
+				...constituentRow,
+				orgId: "org-2",
+			});
+			const res = await tool("compute_suggested_ask").handler(
+				ctx([PERMISSIONS.CONSTITUENTS.VIEW]),
+				{ constituentId: "c-1" },
+			);
+			expect(errorOf(res)).toMatch(/no constituent found/i);
+		});
+
+		it("refuses do-not-contact constituents", async () => {
+			getConstituentById.mockResolvedValueOnce({
+				...constituentRow,
+				doNotContact: true,
+			});
+			const res = await tool("compute_suggested_ask").handler(
+				ctx([PERMISSIONS.CONSTITUENTS.VIEW]),
+				{ constituentId: "c-1" },
+			);
+			expect(errorOf(res)).toMatch(/do-not-contact/i);
+			expect(getSegmentForConstituent).not.toHaveBeenCalled();
+		});
+
+		it("errors when scores haven't been computed yet", async () => {
+			getConstituentById.mockResolvedValueOnce(constituentRow);
+			getSegmentForConstituent.mockResolvedValueOnce(null);
+			const res = await tool("compute_suggested_ask").handler(
+				ctx([PERMISSIONS.CONSTITUENTS.VIEW]),
+				{ constituentId: "c-1" },
+			);
+			expect(errorOf(res)).toMatch(/haven't been computed/i);
+		});
+
+		it("computes the ask from this constituent's gifts and explains the basis", async () => {
+			getConstituentById.mockResolvedValueOnce(constituentRow);
+			getSegmentForConstituent.mockResolvedValueOnce({
+				upgradeReadinessScore: 50,
+			});
+			listGifts.mockResolvedValueOnce({
+				items: [
+					{
+						constituentId: "c-1",
+						giftDate: "2026-01-01",
+						amount: 100,
+						status: "posted",
+					},
+					{
+						constituentId: "c-2",
+						giftDate: "2026-01-01",
+						amount: 999,
+						status: "posted",
+					},
+				],
+				total: 2,
+			});
+			getLatestWealthScreen.mockResolvedValueOnce({ capacityBand: 500 });
+			const res = await tool("compute_suggested_ask").handler(
+				ctx([PERMISSIONS.CONSTITUENTS.VIEW]),
+				{ constituentId: "c-1" },
+			);
+			const result = res.result as {
+				suggestedAsk: number;
+				basis: { baseAmount: number; capacityBand: number };
+			};
+			expect(result.suggestedAsk).toBe(112.5);
+			expect(result.basis.baseAmount).toBe(100);
+			expect(result.basis.capacityBand).toBe(500);
 		});
 	});
 });
