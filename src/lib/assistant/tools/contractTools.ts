@@ -15,6 +15,8 @@ import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { hasAll, searchContractsTable } from "@/lib/assistant/tools/toolUtils";
 import type { ToolContext, ToolDefinition } from "@/lib/assistant/tools/types";
+import { consumeAiExtractionForOrg } from "@/lib/billing/consumeAiExtractionForRequest";
+import { isPlanLimitError } from "@/lib/billing/planLimits";
 import {
 	isClauseCategory,
 	listClauses,
@@ -555,6 +557,8 @@ export const CONTRACT_TOOLS: ToolDefinition[] = [
 				if (!response.ok) {
 					return asError("Could not load the contract file.");
 				}
+				// Count against the monthly AI quota, same as the extract-data route.
+				await consumeAiExtractionForOrg(ctx.orgId);
 				const buffer = Buffer.from(await response.arrayBuffer());
 				const extraction = await extractContractFromDocument({
 					buffer,
@@ -572,6 +576,7 @@ export const CONTRACT_TOOLS: ToolDefinition[] = [
 					},
 				};
 			} catch (error) {
+				if (isPlanLimitError(error)) return asError(error.message);
 				return asError(
 					error instanceof Error
 						? error.message

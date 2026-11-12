@@ -36,8 +36,8 @@ export async function resolveOrgIdForBilling(
 	return "default_organization";
 }
 
-export async function consumeAiExtractionForRequest(request: NextRequest) {
-	const orgId = await resolveOrgIdForBilling(request);
+/** Consume one AI extraction for a known org (used by assistant tools). */
+export async function consumeAiExtractionForOrg(orgId: string) {
 	const org = await getOrganization(orgId);
 	const tier = resolveTier(org?.subscriptionTier);
 	const billingStatus = org?.billingStatus || "none";
@@ -47,6 +47,11 @@ export async function consumeAiExtractionForRequest(request: NextRequest) {
 		tier,
 		billingStatus,
 	});
+}
+
+export async function consumeAiExtractionForRequest(request: NextRequest) {
+	const orgId = await resolveOrgIdForBilling(request);
+	return consumeAiExtractionForOrg(orgId);
 }
 
 export async function getAiExtractionMeter(
