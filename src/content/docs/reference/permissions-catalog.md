@@ -158,11 +158,13 @@ This catalog explains permission keys in everyday language. Exact availability c
 
 | Key | Meaning |
 |---|---|
-| `ai.chat` | Use assistant chat |
+| `ai.chat` | Use Ask CAALM chat |
 | `ai.document_analysis` | Analyze documents with AI |
 | `ai.meeting_prep` | Meeting prep assistance |
 | `ai.image_generate` | Generate images |
 | `ai.fundraising` | View donor scores and next-best-action on constituent Intelligence |
+
+Ask CAALM also needs the matching domain permission for each action (for example `contracts.view` to search contracts, `licenses.edit` to renew). `ai.chat` alone does not unlock every write.
 
 ## Audit
 

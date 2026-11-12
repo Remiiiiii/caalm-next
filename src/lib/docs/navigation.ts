@@ -275,7 +275,8 @@ export const DOCS_NAV: DocsNavGroup[] = [
 				title: "CAALM Assistant",
 				slug: "reference/assistant",
 				path: "reference/assistant",
-				summary: "Chat, document analysis, and meeting prep.",
+				summary:
+					"Ask CAALM — search, explain, and propose actions under your permissions.",
 			},
 			{
 				title: "Team and user management",

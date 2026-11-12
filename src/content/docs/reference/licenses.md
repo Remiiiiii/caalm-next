@@ -29,6 +29,16 @@ Permissions commonly involved: `licenses.view`, `create`, `edit`, `delete`, `all
 
 When a license sits in **Pending Signature**, people with `licenses.sign` use **Send for signature** (same CAALM Execute flow as contracts).
 
+## Ask CAALM on licenses
+
+With `ai.chat` plus the matching licenses permission, [Ask CAALM](/docs/reference/assistant) can:
+
+- Look up a license, list upcoming expirations, and answer from the record you can see
+- Suggest fields from an attached certificate or file (**review only** — apply changes only after you confirm)
+- Propose create, renew, approve, or owner assignment — writes require a **Confirm** step
+
+Intake upload can suggest fields the same way: human review before save, with a full manual fallback if AI is unavailable.
+
 ## Manager tip
 
 If your department page is empty but you know licenses exist, check:

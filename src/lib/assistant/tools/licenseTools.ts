@@ -1,4 +1,5 @@
 import { PERMISSIONS } from "@/constants/permissions";
+import { getUserByEmail } from "@/lib/actions/user.actions";
 import { extractLicenseFromDocument } from "@/lib/ai/extractLicenseFromDocument";
 import {
 	licenseCreateSchema,
@@ -13,6 +14,7 @@ import { hasAll, searchLicensesTable } from "@/lib/assistant/tools/toolUtils";
 import type { ToolContext, ToolDefinition } from "@/lib/assistant/tools/types";
 import { consumeAiExtractionForOrg } from "@/lib/billing/consumeAiExtractionForRequest";
 import { isPlanLimitError } from "@/lib/billing/planLimits";
+import { transferLicenseOwnership } from "@/lib/ownership/transfer.service";
 import { logAuditEvent } from "@/lib/services/audit-logger";
 import CacheManager from "@/lib/services/cache-manager";
 import { constructFileUrl } from "@/lib/utils";
@@ -511,6 +513,131 @@ export const LICENSE_TOOLS: ToolDefinition[] = [
 					error instanceof Error
 						? error.message
 						: "Failed to extract fields from the license document.",
+				);
+			}
+		},
+	},
+	{
+		name: "list_license_expirations",
+		description:
+			"List upcoming license expirations, org-scoped. Requires licenses.view. Read-only.",
+		requiredPermissions: [PERMISSIONS.LICENSES.VIEW],
+		mutating: false,
+		parameters: {
+			type: "object",
+			properties: {
+				days: {
+					type: "number",
+					description: "Look-ahead window in days (default 30)",
+				},
+			},
+		},
+		handler: async (ctx, args) => {
+			if (!hasAll(ctx, [PERMISSIONS.LICENSES.VIEW])) {
+				return asError(
+					"You cannot view licenses. Ask an admin for the licenses.view permission.",
+				);
+			}
+			const days =
+				args.days !== undefined && args.days !== null ? Number(args.days) : 30;
+			if (!Number.isFinite(days) || days <= 0) {
+				return asError("days must be a positive number.");
+			}
+			try {
+				const licenses = await LicenseService.getExpiringLicenses(
+					ctx.orgId,
+					days,
+				);
+				return { result: { days, count: licenses.length, licenses } };
+			} catch (error) {
+				return asError(
+					error instanceof Error
+						? error.message
+						: "Failed to load upcoming license expirations.",
+				);
+			}
+		},
+	},
+	{
+		name: "assign_license_owner",
+		description:
+			"Change the owner of a license to another user in this org. Requires licenses.edit. Confirm before writing; audits.",
+		requiredPermissions: [PERMISSIONS.LICENSES.EDIT],
+		mutating: true,
+		parameters: {
+			type: "object",
+			properties: {
+				licenseId: { type: "string", description: "License document id" },
+				query: { type: "string", description: "License name search" },
+				toUserId: { type: "string", description: "New owner's user id" },
+				toUserEmail: {
+					type: "string",
+					description: "New owner's email, if you don't have their user id",
+				},
+			},
+		},
+		handler: async (ctx, args) => {
+			if (!hasAll(ctx, [PERMISSIONS.LICENSES.EDIT])) {
+				return asError(
+					"You cannot edit licenses. Ask an admin for the licenses.edit permission.",
+				);
+			}
+			let toUserId = String(args.toUserId ?? "").trim();
+			const toUserEmail = String(args.toUserEmail ?? "").trim();
+			if (!toUserId && !toUserEmail) {
+				return asError("Give the new owner's user id or email.");
+			}
+
+			try {
+				if (!toUserId && toUserEmail) {
+					const target = await getUserByEmail(toUserEmail);
+					if (!target) {
+						return asError(`No user found with email "${toUserEmail}".`);
+					}
+					toUserId = String((target as { $id?: string }).$id || "");
+				}
+
+				const found = await resolveOneLicense(ctx, args);
+				if (found.error || !found.license) {
+					return asError(found.error ?? "License not found.");
+				}
+				const license = found.license;
+				const id = licenseIdOf(license, String(args.licenseId ?? ""));
+				const label = licenseLabel(license, id);
+
+				const { fromUserId, toUserId: assignedTo } =
+					await transferLicenseOwnership({
+						licenseId: id,
+						orgId: ctx.orgId,
+						toUserId,
+						actorUserId: ctx.user.$id,
+					});
+				await CacheManager.invalidateLicenses(ctx.orgId, id).catch(
+					() => undefined,
+				);
+
+				await auditLicense(ctx, {
+					action: "update",
+					eventKey: "assign_owner",
+					title: `Assistant reassigned license owner: ${label}`,
+					summary: `${actorName(ctx)} reassigned "${label}" from ${fromUserId || "no owner"} to ${assignedTo}`,
+					targetId: id,
+					targetLabel: label,
+					metadata: { fromUserId, toUserId: assignedTo },
+				});
+				return {
+					result: {
+						licenseId: id,
+						fromUserId,
+						toUserId: assignedTo,
+						reassigned: true,
+					},
+				};
+			} catch (error) {
+				return asError(
+					error instanceof Error
+						? error.message
+						: "Failed to reassign this license's owner.",
 				);
 			}
 		},

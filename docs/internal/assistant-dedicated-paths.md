@@ -90,7 +90,7 @@ Model must still call the right tool. If it returns blank text instead, user see
 
 ## Registered tools vs path coverage
 
-### Core / contracts / licenses / reports
+### Core / search / reports
 
 | Tool | Permission (approx.) | Intent | Dedicated? | Status |
 | --- | --- | --- | --- | --- |
@@ -101,6 +101,44 @@ Model must still call the right tool. If it returns blank text instead, user see
 | `list_pending_approvals` | events.approve | `list_pending_approvals` | force only | Missing dedicated |
 | `list_expirations` | contracts/licenses view | `expiring` | force only | Missing dedicated |
 | `generate_report` | settings.view | none | no | Tool only / Missing intent + path |
+
+### Contracts (`contractTools.ts`)
+
+Registered in `ASSISTANT_TOOLS`. No dedicated `detectDataIntent` branches for these today — LLM + Confirm for mutating tools.
+
+| Tool | Permission (approx.) | Mutating? | Dedicated? | Status |
+| --- | --- | --- | --- | --- |
+| `get_contract` | contracts.view | no | no | Tool only |
+| `ask_contract` | contracts.view | no | no | Tool only |
+| `summarize_contract` | contracts.view | no | no | Tool only |
+| `compare_contract_versions` | contracts.view | no | no | Tool only |
+| `list_contract_obligations` | contracts.view | no | no | Tool only |
+| `export_contract` | contracts.view | no | no | Tool only (audited export) |
+| `extract_contract_terms` | contracts.edit | no | no | Tool only — suggests fields, does **not** auto-save |
+| `check_playbook_deviations` | contracts.review | no | no | Tool only |
+| `suggest_redlines` | contracts.review | no | no | Tool only |
+| `create_contract` | contracts.create | yes | no | Tool only / Confirm |
+| `update_contract_fields` | contracts.edit | yes | no | Tool only / Confirm |
+| `bulk_update_contracts` | contracts.edit | yes | no | Tool only / Confirm |
+| `send_counterparty_invite` | contracts.edit | yes | no | Tool only / Confirm |
+| `renew_contract` | contracts.edit | yes | no | Tool only / Confirm |
+| `upload_contract_file` | contracts.edit | yes | no | Tool only / Confirm |
+| `send_for_signature` | contracts.sign | yes | no | Tool only / Confirm |
+| `approve_contract` | contracts.approve | yes | no | Tool only / Confirm |
+
+### Licenses (`licenseTools.ts`)
+
+Same pattern: registered, no dedicated intents yet; mutating tools use Confirm.
+
+| Tool | Permission (approx.) | Mutating? | Dedicated? | Status |
+| --- | --- | --- | --- | --- |
+| `get_license` | licenses.view | no | no | Tool only |
+| `list_license_expirations` | licenses.view | no | no | Tool only |
+| `extract_license_from_document` | licenses.edit | no | no | Tool only — suggests fields, does **not** auto-save |
+| `create_license` | licenses.create | yes | no | Tool only / Confirm |
+| `renew_license` | licenses.edit | yes | no | Tool only / Confirm |
+| `assign_license_owner` | licenses.edit | yes | no | Tool only / Confirm |
+| `approve_license` | licenses.approve | yes | no | Tool only / Confirm |
 
 ### Tasks
 
@@ -192,6 +230,7 @@ Ordered by how often users hit blank / wrong answers.
 | `update_org_settings` | “Set org timezone to …” |
 | `navigate` | “Open Licenses” (optional; low risk to leave LLM) |
 | `get_page_help` | usually fine as help/`null` intent |
+| Contract/license tools (see tables above) | “Summarize the Acme MSA”, “Renew license X”, “Extract terms from …” — still tool-only; add intents only when blank-reply rate justifies it |
 
 ---
 

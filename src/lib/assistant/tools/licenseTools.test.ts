@@ -13,6 +13,9 @@ const logAuditEvent = vi.fn();
 const invalidateLicenses = vi.fn();
 const fetchMock = vi.fn();
 const consumeAiExtractionForOrg = vi.fn();
+const getExpiringLicenses = vi.fn();
+const getUserByEmail = vi.fn();
+const transferLicenseOwnership = vi.fn();
 
 vi.mock("@/lib/api/licenses/services/LicenseService", () => ({
 	LicenseService: {
@@ -20,7 +23,15 @@ vi.mock("@/lib/api/licenses/services/LicenseService", () => ({
 		createLicense: (...args: unknown[]) => createLicense(...args),
 		updateLicense: (...args: unknown[]) => updateLicense(...args),
 		renewLicense: (...args: unknown[]) => renewLicense(...args),
+		getExpiringLicenses: (...args: unknown[]) => getExpiringLicenses(...args),
 	},
+}));
+vi.mock("@/lib/actions/user.actions", () => ({
+	getUserByEmail: (...args: unknown[]) => getUserByEmail(...args),
+}));
+vi.mock("@/lib/ownership/transfer.service", () => ({
+	transferLicenseOwnership: (...args: unknown[]) =>
+		transferLicenseOwnership(...args),
 }));
 vi.mock("@/lib/approvals/LicenseApprovalWorkflowService", () => ({
 	getLicenseWorkflowForViewer: (...args: unknown[]) =>
@@ -100,6 +111,9 @@ describe("LICENSE_TOOLS", () => {
 		consumeAiExtractionForOrg
 			.mockReset()
 			.mockResolvedValue({ used: 1, limit: 10 });
+		getExpiringLicenses.mockReset();
+		getUserByEmail.mockReset();
+		transferLicenseOwnership.mockReset();
 	});
 
 	describe("get_license", () => {
@@ -428,6 +442,105 @@ describe("LICENSE_TOOLS", () => {
 			);
 			expect(errorOf(res)).toMatch(/limit/i);
 			expect(extractLicenseFromDocument).not.toHaveBeenCalled();
+		});
+	});
+
+	describe("list_license_expirations", () => {
+		it("blocks without licenses.view", async () => {
+			const res = await tool("list_license_expirations").handler(ctx([]), {});
+			expect(errorOf(res)).toMatch(/permission|cannot/i);
+			expect(getExpiringLicenses).not.toHaveBeenCalled();
+		});
+
+		it("rejects a non-positive days value", async () => {
+			const res = await tool("list_license_expirations").handler(
+				ctx([PERMISSIONS.LICENSES.VIEW]),
+				{ days: 0 },
+			);
+			expect(errorOf(res)).toMatch(/days/i);
+			expect(getExpiringLicenses).not.toHaveBeenCalled();
+		});
+
+		it("defaults to 30 days and returns the org-scoped list", async () => {
+			getExpiringLicenses.mockResolvedValueOnce([licenseRow]);
+			const res = await tool("list_license_expirations").handler(
+				ctx([PERMISSIONS.LICENSES.VIEW]),
+				{},
+			);
+			expect(getExpiringLicenses).toHaveBeenCalledWith("org-1", 30);
+			const result = res.result as { count: number; days: number };
+			expect(result.count).toBe(1);
+			expect(result.days).toBe(30);
+		});
+	});
+
+	describe("assign_license_owner", () => {
+		it("blocks without licenses.edit", async () => {
+			const res = await tool("assign_license_owner").handler(ctx([]), {
+				licenseId: "l-1",
+				toUserId: "u-2",
+			});
+			expect(errorOf(res)).toMatch(/permission|cannot/i);
+			expect(transferLicenseOwnership).not.toHaveBeenCalled();
+		});
+
+		it("requires a target user id or email", async () => {
+			const res = await tool("assign_license_owner").handler(
+				ctx([PERMISSIONS.LICENSES.EDIT]),
+				{ licenseId: "l-1" },
+			);
+			expect(errorOf(res)).toMatch(/user id or email/i);
+			expect(transferLicenseOwnership).not.toHaveBeenCalled();
+		});
+
+		it("resolves the target by email when no user id is given", async () => {
+			getUserByEmail.mockResolvedValueOnce({ $id: "u-2" });
+			getLicenseByIdForOrg.mockResolvedValueOnce(licenseRow);
+			transferLicenseOwnership.mockResolvedValueOnce({
+				fromUserId: "u-1",
+				toUserId: "u-2",
+			});
+			const res = await tool("assign_license_owner").handler(
+				ctx([PERMISSIONS.LICENSES.EDIT]),
+				{ licenseId: "l-1", toUserEmail: "new.owner@org.test" },
+			);
+			expect(getUserByEmail).toHaveBeenCalledWith("new.owner@org.test");
+			expect(transferLicenseOwnership).toHaveBeenCalledWith(
+				expect.objectContaining({
+					licenseId: "l-1",
+					orgId: "org-1",
+					toUserId: "u-2",
+					actorUserId: "admin-1",
+				}),
+			);
+			expect(logAuditEvent).toHaveBeenCalledWith(
+				expect.objectContaining({ module: "licenses" }),
+			);
+			const result = res.result as { reassigned: boolean };
+			expect(result.reassigned).toBe(true);
+		});
+
+		it("errors when no user matches the given email", async () => {
+			getUserByEmail.mockResolvedValueOnce(null);
+			const res = await tool("assign_license_owner").handler(
+				ctx([PERMISSIONS.LICENSES.EDIT]),
+				{ licenseId: "l-1", toUserEmail: "nope@org.test" },
+			);
+			expect(errorOf(res)).toMatch(/no user found/i);
+			expect(transferLicenseOwnership).not.toHaveBeenCalled();
+		});
+
+		it("denies a license from another org", async () => {
+			getLicenseByIdForOrg.mockResolvedValueOnce({
+				...licenseRow,
+				orgId: "org-2",
+			});
+			const res = await tool("assign_license_owner").handler(
+				ctx([PERMISSIONS.LICENSES.EDIT]),
+				{ licenseId: "l-1", toUserId: "u-2" },
+			);
+			expect(errorOf(res)).toMatch(/no license found/i);
+			expect(transferLicenseOwnership).not.toHaveBeenCalled();
 		});
 	});
 });

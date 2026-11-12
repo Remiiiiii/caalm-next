@@ -49,6 +49,16 @@ Contracts pages often surface counts and “needs attention” cues. Use them as
 - `contracts.approve`
 - `contracts.sign`
 
+## Ask CAALM on contracts
+
+With `ai.chat` plus the matching contracts permission, [Ask CAALM](/docs/reference/assistant) can help without leaving the header panel:
+
+- Search and open a contract; ask a question about one agreement; summarize; compare versions; list obligations
+- Suggest fields from the attached file (**review only** — nothing saves until you confirm an update)
+- Propose create/update, renew, counterparty invite, send for signature, approve, or export — each write shows a **Confirm** step first
+
+Upload intake can also suggest fields with AI. A person must review those suggestions before save. Manual entry always remains available if AI is off or over quota.
+
 ## Quality checklist before you walk away
 
 - [ ] File present and readable
@@ -58,7 +68,7 @@ Contracts pages often surface counts and “needs attention” cues. Use them as
 - [ ] Approval state matches reality
 - [ ] Related tasks/dates on calendar if your team uses that discipline
 
-Related: [Negotiate contracts](/docs/reference/negotiate), [Clause Library](/docs/reference/clause-library), [Contract templates](/docs/reference/contract-templates), [Funding and retention](/docs/reference/funding-retention), [Approvals](/docs/reference/approvals), [SAM.gov](/docs/reference/sam-gov), [RFP proposals](/docs/reference/rfp-proposals).
+Related: [Ask CAALM](/docs/reference/assistant), [Negotiate contracts](/docs/reference/negotiate), [Clause Library](/docs/reference/clause-library), [Contract templates](/docs/reference/contract-templates), [Funding and retention](/docs/reference/funding-retention), [Approvals](/docs/reference/approvals), [SAM.gov](/docs/reference/sam-gov), [RFP proposals](/docs/reference/rfp-proposals).
 
 
 ## Intake standards (recommended)
