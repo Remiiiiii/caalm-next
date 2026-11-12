@@ -11,6 +11,7 @@ import { AUDIT_TOOLS } from "@/lib/assistant/tools/auditTools";
 import { CALENDAR_TOOLS } from "@/lib/assistant/tools/calendarTools";
 import { CLAUSE_TOOLS } from "@/lib/assistant/tools/clauseTools";
 import { CONTRACT_TOOLS } from "@/lib/assistant/tools/contractTools";
+import { FUNDING_TOOLS } from "@/lib/assistant/tools/fundingTools";
 import { LICENSE_TOOLS } from "@/lib/assistant/tools/licenseTools";
 import { TASK_TOOLS } from "@/lib/assistant/tools/taskTools";
 import {
@@ -253,6 +254,7 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
 	...LICENSE_TOOLS,
 	...APPROVAL_TOOLS,
 	...CLAUSE_TOOLS,
+	...FUNDING_TOOLS,
 ];
 
 export function getToolsForPermissions(
