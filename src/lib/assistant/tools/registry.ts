@@ -9,6 +9,7 @@ import type { AssistantClientAction } from "@/lib/assistant/open-close-cap-clien
 import { APPROVAL_TOOLS } from "@/lib/assistant/tools/approvalTools";
 import { AUDIT_TOOLS } from "@/lib/assistant/tools/auditTools";
 import { CALENDAR_TOOLS } from "@/lib/assistant/tools/calendarTools";
+import { CLAUSE_TOOLS } from "@/lib/assistant/tools/clauseTools";
 import { CONTRACT_TOOLS } from "@/lib/assistant/tools/contractTools";
 import { LICENSE_TOOLS } from "@/lib/assistant/tools/licenseTools";
 import { TASK_TOOLS } from "@/lib/assistant/tools/taskTools";
@@ -251,6 +252,7 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
 	...CONTRACT_TOOLS,
 	...LICENSE_TOOLS,
 	...APPROVAL_TOOLS,
+	...CLAUSE_TOOLS,
 ];
 
 export function getToolsForPermissions(
