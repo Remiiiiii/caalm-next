@@ -1,3 +1,5 @@
+import { ID } from "node-appwrite";
+import { InputFile } from "node-appwrite/file";
 import { PERMISSIONS } from "@/constants/permissions";
 import {
 	analyzeContractDocument,
@@ -32,6 +34,7 @@ import { scoreOrgContractDeviations } from "@/lib/playbook/score-org-contract";
 import { suggestRedlineForClause } from "@/lib/playbook/suggest-redline";
 import { renewContractAfterExpiry } from "@/lib/renewals/renewDocument";
 import { logAuditEvent } from "@/lib/services/audit-logger";
+import CacheManager from "@/lib/services/cache-manager";
 import { mailgunService } from "@/lib/services/mailgun";
 import { getBlueprint, isBlueprintId } from "@/lib/templates/blueprint-catalog";
 import {
@@ -39,7 +42,7 @@ import {
 	saveWizardSession,
 	submitWizard,
 } from "@/lib/templates/wizard.service";
-import { constructFileUrl } from "@/lib/utils";
+import { constructFileUrl, getFileType } from "@/lib/utils";
 
 function actorName(ctx: ToolContext): string {
 	return (
@@ -1268,6 +1271,197 @@ export const CONTRACT_TOOLS: ToolDefinition[] = [
 						: "Failed to renew this contract.",
 				);
 			}
+		},
+	},
+	{
+		name: "upload_contract_file",
+		description:
+			"Attach a file to a contract record by fetching it from a URL and linking it. Requires contracts.edit. Confirm before writing; audits; org-scoped.",
+		requiredPermissions: [PERMISSIONS.CONTRACTS.EDIT],
+		mutating: true,
+		parameters: {
+			type: "object",
+			properties: {
+				contractId: { type: "string", description: "Contract document id" },
+				query: { type: "string", description: "Contract name search" },
+				fileUrl: {
+					type: "string",
+					description: "HTTPS URL of the file to attach",
+				},
+				fileName: {
+					type: "string",
+					description: "Optional display name; derived from the URL otherwise",
+				},
+			},
+			required: ["fileUrl"],
+		},
+		handler: async (ctx, args) => {
+			if (!hasAll(ctx, [PERMISSIONS.CONTRACTS.EDIT])) {
+				return asError(
+					"You cannot edit contracts. Ask an admin for the contracts.edit permission.",
+				);
+			}
+			const fileUrl = String(args.fileUrl ?? "").trim();
+			if (!fileUrl.startsWith("https://")) {
+				return asError("Give an HTTPS URL for the file to attach.");
+			}
+			const found = await resolveOneContract(ctx, args);
+			if (found.error || !found.contract) {
+				return asError(found.error ?? "Contract not found.");
+			}
+			const contract = found.contract;
+
+			try {
+				const response = await fetch(fileUrl);
+				if (!response.ok) {
+					return asError(`Could not download the file (${response.status}).`);
+				}
+				// shortcut: caps at 25MB to avoid loading huge files into memory; raise or stream if larger files are needed
+				const MAX_BYTES = 25 * 1024 * 1024;
+				const contentLength = Number(
+					response.headers.get("content-length") ?? "0",
+				);
+				if (contentLength > MAX_BYTES) {
+					return asError("That file is too large to attach (25MB limit).");
+				}
+				const arrayBuffer = await response.arrayBuffer();
+				if (arrayBuffer.byteLength > MAX_BYTES) {
+					return asError("That file is too large to attach (25MB limit).");
+				}
+				const fileName =
+					(args.fileName ? String(args.fileName).trim() : "") ||
+					fileUrl.split("/").pop() ||
+					"attachment";
+
+				const { storage, tablesDB } = await createAdminClient();
+				const inputFile = InputFile.fromBuffer(
+					Buffer.from(arrayBuffer),
+					fileName,
+				);
+				const bucketFile = await storage.createFile(
+					appwriteConfig.bucketId,
+					ID.unique(),
+					inputFile,
+				);
+				const fileType = getFileType(bucketFile.name);
+				const newFile = await tablesDB.createRow({
+					databaseId: appwriteConfig.databaseId!,
+					tableId: appwriteConfig.filesCollectionId || "files",
+					rowId: ID.unique(),
+					data: {
+						type: fileType.type,
+						name: bucketFile.name,
+						url: constructFileUrl(bucketFile.$id),
+						extension: fileType.extension,
+						size: bucketFile.sizeOriginal,
+						owner: ctx.user.$id,
+						accountId: ctx.user.$id,
+						users: [],
+						bucketFileId: bucketFile.$id,
+					},
+				});
+
+				await tablesDB.updateRow({
+					databaseId: appwriteConfig.databaseId!,
+					tableId: appwriteConfig.contractsCollectionId || "contracts",
+					rowId: contract.contractId,
+					data: { fileId: newFile.$id },
+				});
+
+				await CacheManager.invalidateContracts(
+					undefined,
+					contract.contractId,
+				).catch(() => undefined);
+
+				await logAuditEvent({
+					event_id: `assistant_contract_file_attach_${contract.contractId}`,
+					event_title: `Assistant attached a file to contract: ${contract.contractName}`,
+					action: "update",
+					source: "caalm",
+					user_id: ctx.user.$id,
+					user_name: actorName(ctx),
+					user_email: ctx.user.email || "",
+					status: "success",
+					orgId: ctx.orgId,
+					module: "contracts",
+					target_type: "contract",
+					target_id: contract.contractId,
+					target_label: contract.contractName,
+					summary: `${actorName(ctx)} attached "${fileName}" to contract "${contract.contractName}"`,
+					metadata: { source: "ai_assistant", fileName },
+				}).catch(() => undefined);
+
+				return {
+					result: {
+						contractId: contract.contractId,
+						fileId: newFile.$id,
+						fileName,
+						attached: true,
+					},
+				};
+			} catch (error) {
+				return asError(
+					error instanceof Error
+						? error.message
+						: "Failed to attach that file to the contract.",
+				);
+			}
+		},
+	},
+	{
+		name: "export_contract",
+		description:
+			"Get a download link to export a contract's existing file (PDF/DOCX). Requires contracts.view. Read-only; audits as a sensitive export.",
+		requiredPermissions: [PERMISSIONS.CONTRACTS.VIEW],
+		mutating: false,
+		parameters: {
+			type: "object",
+			properties: {
+				contractId: { type: "string", description: "Contract document id" },
+				query: { type: "string", description: "Contract name search" },
+			},
+		},
+		handler: async (ctx, args) => {
+			if (!hasAll(ctx, [PERMISSIONS.CONTRACTS.VIEW])) {
+				return asError(
+					"You cannot view contracts. Ask an admin for the contracts.view permission.",
+				);
+			}
+			const found = await resolveOneContract(ctx, args);
+			if (found.error || !found.contract) {
+				return asError(found.error ?? "Contract not found.");
+			}
+			const contract = found.contract;
+			if (!contract.fileUrl) {
+				return asError("This contract has no file to export yet.");
+			}
+
+			await logAuditEvent({
+				event_id: `assistant_contract_export_${contract.contractId}_${Date.now()}`,
+				event_title: `Assistant exported contract: ${contract.contractName}`,
+				action: "export",
+				source: "caalm",
+				user_id: ctx.user.$id,
+				user_name: actorName(ctx),
+				user_email: ctx.user.email || "",
+				status: "success",
+				orgId: ctx.orgId,
+				module: "contracts",
+				target_type: "contract",
+				target_id: contract.contractId,
+				target_label: contract.contractName,
+				summary: `${actorName(ctx)} exported contract "${contract.contractName}"`,
+				metadata: { source: "ai_assistant" },
+			}).catch(() => undefined);
+
+			return {
+				result: {
+					contractId: contract.contractId,
+					fileUrl: contract.fileUrl,
+					fileExtension: contract.fileExtension,
+					message: "Use this link to download/export the contract file.",
+				},
+			};
 		},
 	},
 ];

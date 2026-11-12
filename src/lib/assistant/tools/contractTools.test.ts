@@ -4,6 +4,8 @@ import { PERMISSIONS } from "@/constants/permissions";
 const getRow = vi.fn();
 const updateRow = vi.fn();
 const listRows = vi.fn();
+const createRow = vi.fn();
+const createFile = vi.fn();
 const logAuditEvent = vi.fn();
 const invalidateContracts = vi.fn();
 const answerContractQuestion = vi.fn();
@@ -33,7 +35,8 @@ const renewContractAfterExpiry = vi.fn();
 
 vi.mock("@/lib/appwrite", () => ({
 	createAdminClient: async () => ({
-		tablesDB: { getRow, updateRow, listRows },
+		tablesDB: { getRow, updateRow, listRows, createRow },
+		storage: { createFile },
 	}),
 }));
 vi.mock("@/lib/services/audit-logger", () => ({
@@ -88,6 +91,10 @@ vi.mock("@/lib/templates/wizard.service", () => ({
 }));
 vi.mock("@/lib/utils", () => ({
 	constructFileUrl: (id: string) => `https://files.example.test/${id}`,
+	getFileType: (name: string) => ({
+		type: "document",
+		extension: name.split(".").pop() ?? "pdf",
+	}),
 }));
 vi.mock("@/lib/funding/obligation.repository", () => ({
 	listObligations: (...args: unknown[]) => listObligations(...args),
@@ -145,6 +152,8 @@ describe("CONTRACT_TOOLS", () => {
 		getRow.mockReset();
 		updateRow.mockReset();
 		listRows.mockReset();
+		createRow.mockReset();
+		createFile.mockReset();
 		logAuditEvent.mockReset().mockResolvedValue(undefined);
 		invalidateContracts.mockReset().mockResolvedValue(undefined);
 		answerContractQuestion.mockReset();
@@ -782,6 +791,99 @@ describe("CONTRACT_TOOLS", () => {
 			);
 			const result = res.result as { renewed?: boolean };
 			expect(result.renewed).toBe(true);
+		});
+	});
+
+	describe("upload_contract_file", () => {
+		it("blocks without contracts.edit", async () => {
+			const res = await tool("upload_contract_file").handler(ctx([]), {
+				contractId: "c-1",
+				fileUrl: "https://files.example.test/doc.pdf",
+			});
+			expect((res.result as { error?: string }).error).toMatch(
+				/permission|cannot/i,
+			);
+			expect(createFile).not.toHaveBeenCalled();
+		});
+
+		it("rejects a non-HTTPS url", async () => {
+			const res = await tool("upload_contract_file").handler(
+				ctx([PERMISSIONS.CONTRACTS.EDIT]),
+				{ contractId: "c-1", fileUrl: "http://insecure.test/doc.pdf" },
+			);
+			expect((res.result as { error?: string }).error).toMatch(/https/i);
+			expect(createFile).not.toHaveBeenCalled();
+		});
+
+		it("downloads, stores, links the file, and audits", async () => {
+			getRow.mockResolvedValueOnce(contractRow).mockResolvedValueOnce({
+				url: "https://files.example.test/file-1",
+				extension: "pdf",
+			});
+			fetchMock.mockResolvedValueOnce({
+				ok: true,
+				headers: new Map([["content-length", "4"]]),
+				arrayBuffer: async () => new ArrayBuffer(4),
+			});
+			createFile.mockResolvedValueOnce({
+				$id: "bucket-file-1",
+				name: "doc.pdf",
+				sizeOriginal: 4,
+			});
+			createRow.mockResolvedValueOnce({ $id: "file-2" });
+			const res = await tool("upload_contract_file").handler(
+				ctx([PERMISSIONS.CONTRACTS.EDIT]),
+				{
+					contractId: "c-1",
+					fileUrl: "https://files.example.test/doc.pdf",
+				},
+			);
+			expect(createFile).toHaveBeenCalled();
+			expect(updateRow).toHaveBeenCalledWith(
+				expect.objectContaining({
+					rowId: "c-1",
+					data: { fileId: "file-2" },
+				}),
+			);
+			expect(logAuditEvent).toHaveBeenCalled();
+			const result = res.result as { attached?: boolean };
+			expect(result.attached).toBe(true);
+		});
+	});
+
+	describe("export_contract", () => {
+		it("blocks without contracts.view", async () => {
+			const res = await tool("export_contract").handler(ctx([]), {
+				contractId: "c-1",
+			});
+			expect((res.result as { error?: string }).error).toMatch(
+				/permission|cannot|not found/i,
+			);
+		});
+
+		it("returns the file link and audits an export for an org match", async () => {
+			getRow.mockResolvedValueOnce(contractRow).mockResolvedValueOnce({
+				url: "https://files.example.test/file-1",
+				extension: "pdf",
+			});
+			const res = await tool("export_contract").handler(
+				ctx([PERMISSIONS.CONTRACTS.VIEW]),
+				{ contractId: "c-1" },
+			);
+			const result = res.result as { fileUrl?: string };
+			expect(result.fileUrl).toBe("https://files.example.test/file-1");
+			expect(logAuditEvent).toHaveBeenCalledWith(
+				expect.objectContaining({ action: "export" }),
+			);
+		});
+
+		it("errors when the contract has no file yet", async () => {
+			getRow.mockResolvedValueOnce({ ...contractRow, fileId: "" });
+			const res = await tool("export_contract").handler(
+				ctx([PERMISSIONS.CONTRACTS.VIEW]),
+				{ contractId: "c-1" },
+			);
+			expect((res.result as { error?: string }).error).toMatch(/no file/i);
 		});
 	});
 });
