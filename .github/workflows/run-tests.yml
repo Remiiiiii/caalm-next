@@ -82,8 +82,22 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-playwright-
 
+      - name: Fix Ubuntu apt mirror
+        # shortcut: azure.archive.ubuntu.com (the runner's default mirror) intermittently fails DNS; swap to the main archive before apt-get runs
+        run: |
+          sudo sed -i 's#azure\.archive\.ubuntu\.com#archive.ubuntu.com#g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
+          sudo sed -i 's#azure\.archive\.ubuntu\.com#archive.ubuntu.com#g' /etc/apt/sources.list 2>/dev/null || true
+          sudo apt-get update
+
       - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps chromium
+        # shortcut: retries 3x to ride out any remaining transient mirror flakes; if it keeps failing, check runner network status, not this repo
+        run: |
+          for i in 1 2 3; do
+            pnpm exec playwright install --with-deps chromium && break
+            if [ "$i" = "3" ]; then exit 1; fi
+            echo "Playwright install failed (attempt $i), retrying in 10s..."
+            sleep 10
+          done
 
       - name: Run Playwright tests
         id: playwright

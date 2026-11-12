@@ -32,6 +32,7 @@ type SectionPullRequest = {
 	headRef: string;
 	body: string;
 	checksPassed?: boolean;
+	tasksComplete?: boolean;
 };
 
 type SectionPullRequestsResponse = {
@@ -50,6 +51,8 @@ function RoadmapPullRequestItem({
 	const settled = shouldStrikeRoadmapPullRequestTitle({
 		checksPassed: pr.checksPassed,
 		sectionComplete,
+		tasksComplete: pr.tasksComplete,
+		state: pr.state as "open" | "closed" | "merged" | "unknown" | undefined,
 	});
 
 	return (
@@ -243,6 +246,8 @@ function RoadmapSectionCard({
 													shouldStrikeRoadmapPullRequestTitle({
 														checksPassed: pr.checksPassed,
 														sectionComplete: section.status === "complete",
+														tasksComplete: pr.tasksComplete,
+														state: pr.state,
 													}) && "line-through text-slate-500",
 												)}
 											>
