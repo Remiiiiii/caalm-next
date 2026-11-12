@@ -7,6 +7,7 @@ import {
 	ptoBatchBranchName,
 	ptoBatchFromHeadRef,
 	ptoBatchOwnsTaskCode,
+	ptoTaskCodesCompletedByPr,
 } from "./pto-pr-batches";
 
 describe("PTO PR batches", () => {
@@ -34,6 +35,14 @@ describe("PTO PR batches", () => {
 		const batch = ptoBatchFromHeadRef("cursor/production-tools/s02-b1-5329");
 		expect(batch?.sectionNumber).toBe(2);
 		expect(ptoBatchOwnsTaskCode(batch!, "2.3")).toBe(true);
+	});
+
+	it("merged setup stubs complete no task codes", () => {
+		expect(ptoTaskCodesCompletedByPr(230)).toEqual([]);
+		expect(ptoTaskCodesCompletedByPr(229)).toEqual([]);
+		expect(ptoTaskCodesCompletedByPr(226)).toEqual([]);
+		expect(ptoTaskCodesCompletedByPr(227).length).toBeGreaterThan(0);
+		expect(ptoTaskCodesCompletedByPr(250).length).toBeGreaterThan(0);
 	});
 
 	it("every batch task code exists in the catalog", () => {

@@ -179,8 +179,8 @@ export default function GmailMessageList({
 						<li key={item.id}>
 							<div
 								className={cn(
-									"group relative z-0 w-full min-w-0 transition-all duration-200",
-									"hover:z-10 hover:bg-blue-50 hover:shadow-[0_6px_14px_-4px_rgba(15,83,132,0.18),0_2px_4px_-1px_rgba(15,23,42,0.06)]",
+									"group relative z-0 my-1 w-full min-w-0 rounded-lg transition-all duration-200",
+									"hover:z-10 hover:bg-blue-50/80",
 									(selected || isChecked) && "bg-blue/10",
 								)}
 							>
@@ -241,6 +241,16 @@ export default function GmailMessageList({
 											)}
 										</div>
 
+										{/* Hover/selected accent — sits between avatar and sender */}
+										<span
+											className={cn(
+												"mt-0.5 py-3 h-9 w-1 shrink-0 rounded-full bg-transparent transition-colors duration-200",
+												"group-hover:bg-[#0f5384] group-focus-within:bg-[#0f5384]",
+												(selected || isChecked) && "bg-[#0f5384]",
+											)}
+											aria-hidden
+										/>
+
 										<div className="min-w-0 flex-1 overflow-hidden">
 											<div className="flex items-baseline justify-between gap-2">
 												<p
@@ -253,6 +263,7 @@ export default function GmailMessageList({
 														? item.subject || "(No subject)"
 														: sender.name}
 												</p>
+
 												<span
 													className={cn(
 														"shrink-0 text-[11px] tabular-nums text-slate-500 transition-opacity duration-150",
@@ -263,6 +274,7 @@ export default function GmailMessageList({
 													{formatListDate(item.date)}
 												</span>
 											</div>
+
 											{variant === "inbox" ? (
 												<p
 													className={cn(

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+	areBoardPrTasksComplete,
 	isSettledRoadmapPullRequestState,
 	matchPullRequestToSection,
 	matchPullRequestToTask,
@@ -115,13 +116,20 @@ describe("nonprofit PR matching", () => {
 		expect(matchPullRequestToTask(product131, 1, "1.6", "npo")).toBe(false);
 	});
 
-	it("strikes PR titles only when checks passed or the section is complete", () => {
+	it("strikes PR titles when tasks complete, checks passed, section complete, or closed", () => {
 		expect(
 			shouldStrikeRoadmapPullRequestTitle({
 				checksPassed: false,
 				sectionComplete: false,
 			}),
 		).toBe(false);
+		expect(
+			shouldStrikeRoadmapPullRequestTitle({
+				checksPassed: false,
+				sectionComplete: false,
+				tasksComplete: true,
+			}),
+		).toBe(true);
 		expect(
 			shouldStrikeRoadmapPullRequestTitle({
 				checksPassed: true,
@@ -134,6 +142,27 @@ describe("nonprofit PR matching", () => {
 				sectionComplete: true,
 			}),
 		).toBe(true);
+		expect(
+			shouldStrikeRoadmapPullRequestTitle({
+				checksPassed: false,
+				sectionComplete: false,
+				state: "closed",
+			}),
+		).toBe(true);
+		expect(
+			shouldStrikeRoadmapPullRequestTitle({
+				checksPassed: false,
+				sectionComplete: false,
+				state: "merged",
+			}),
+		).toBe(false);
+		expect(
+			shouldStrikeRoadmapPullRequestTitle({
+				checksPassed: false,
+				sectionComplete: false,
+				state: "open",
+			}),
+		).toBe(false);
 	});
 
 	it("treats closed and merged as settled for listing", () => {
@@ -141,5 +170,41 @@ describe("nonprofit PR matching", () => {
 		expect(isSettledRoadmapPullRequestState("merged")).toBe(true);
 		expect(isSettledRoadmapPullRequestState("open")).toBe(false);
 		expect(isSettledRoadmapPullRequestState("unknown")).toBe(false);
+	});
+
+	it("marks PTO board PRs complete when batch task codes are complete", () => {
+		const sectionTasks = [
+			{ taskCode: "2.6", status: "complete" },
+			{ taskCode: "2.7", status: "complete" },
+			{ taskCode: "2.8", status: "complete" },
+			{ taskCode: "2.9", status: "complete" },
+			{ taskCode: "2.10", status: "complete" },
+			{ taskCode: "2.11", status: "available" },
+		];
+		expect(
+			areBoardPrTasksComplete({
+				prNumber: 250,
+				catalogKey: "pto",
+				sectionTasks,
+			}),
+		).toBe(true);
+		expect(
+			areBoardPrTasksComplete({
+				prNumber: 229,
+				catalogKey: "pto",
+				sectionTasks,
+			}),
+		).toBe(true);
+		expect(
+			areBoardPrTasksComplete({
+				prNumber: 250,
+				catalogKey: "pto",
+				sectionTasks: sectionTasks.map((task) =>
+					task.taskCode === "2.10"
+						? { ...task, status: "available" }
+						: task,
+				),
+			}),
+		).toBe(false);
 	});
 });
