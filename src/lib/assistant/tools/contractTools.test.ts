@@ -32,7 +32,12 @@ const sendEnvelope = vi.fn();
 const decide = vi.fn();
 const getWorkflowForViewer = vi.fn();
 const renewContractAfterExpiry = vi.fn();
+const consumeAiExtractionForOrg = vi.fn();
 
+vi.mock("@/lib/billing/consumeAiExtractionForRequest", () => ({
+	consumeAiExtractionForOrg: (...args: unknown[]) =>
+		consumeAiExtractionForOrg(...args),
+}));
 vi.mock("@/lib/appwrite", () => ({
 	createAdminClient: async () => ({
 		tablesDB: { getRow, updateRow, listRows, createRow },
@@ -180,6 +185,9 @@ describe("CONTRACT_TOOLS", () => {
 		decide.mockReset();
 		getWorkflowForViewer.mockReset();
 		renewContractAfterExpiry.mockReset();
+		consumeAiExtractionForOrg
+			.mockReset()
+			.mockResolvedValue({ used: 1, limit: 10 });
 	});
 
 	describe("get_contract", () => {
@@ -397,6 +405,29 @@ describe("CONTRACT_TOOLS", () => {
 			expect(result.extractedData).toEqual({ amount: "1000" });
 			expect(result.message).toMatch(/nothing was saved/i);
 			expect(updateRow).not.toHaveBeenCalled();
+			expect(consumeAiExtractionForOrg).toHaveBeenCalledWith("org-1");
+		});
+
+		it("stops with a plain message when the AI quota is used up", async () => {
+			getRow.mockResolvedValueOnce(contractRow).mockResolvedValueOnce({
+				url: "https://files.example.test/file-1",
+				extension: "pdf",
+			});
+			fetchMock.mockResolvedValueOnce({
+				ok: true,
+				arrayBuffer: async () => new ArrayBuffer(4),
+			});
+			consumeAiExtractionForOrg.mockRejectedValueOnce(
+				Object.assign(new Error("Monthly AI extraction limit reached."), {
+					code: "PLAN_LIMIT_EXCEEDED",
+				}),
+			);
+			const res = await tool("extract_contract_terms").handler(
+				ctx([PERMISSIONS.CONTRACTS.EDIT]),
+				{ contractId: "c-1" },
+			);
+			expect((res.result as { error?: string }).error).toMatch(/limit/i);
+			expect(extractContractFromDocument).not.toHaveBeenCalled();
 		});
 	});
 
