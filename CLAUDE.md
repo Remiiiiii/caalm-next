@@ -37,6 +37,7 @@ Project rules live in `.cursor/rules/` and are the single source of truth. Edit 
 | `.cursor/rules/context-dev.mdc` | Adding or changing a Context.dev web-scraping call (`src/lib/audits/readiness/screenshot.ts` and friends) |
 | `.cursor/rules/nonprofit-roadmap-prs.mdc` | Nonprofit Roadmap batch PRs (`src/lib/roadmap/nonprofit*`, `src/lib/roadmap/npo-batches`) |
 | `.cursor/rules/platform-readiness-roadmap-prs.mdc` | Platform Readiness Roadmap batch PRs (`src/lib/roadmap/platform-readiness*`) |
+| `.cursor/rules/production-tools-roadmap-prs.mdc` | Production Tools (PTO) Roadmap batch PRs (`src/lib/roadmap/production-tools*`) — read before starting ANY new section; check prior section is fully merged first |
 | `.cursor/rules/share-give-page.mdc` (+ `share-give-page-design.txt`) | Editing `DonationPageShareCard.tsx` or `DonationPageSettingsClient.tsx` |
 | `.cursor/rules/it-routes-buttons.mdc` | Any UI work in `/dashboard/it/**`, `src/components/it/**`, or the IT ticket queue/detail/sheet: no `btn-primary` / `primary-btn` gradient pills |
 | `.cursor/rules/assistant-response-bubble-buttons.mdc` | Ask CAALM response bubble cards: no `btn-primary`; plain text Cancel / Confirm |
