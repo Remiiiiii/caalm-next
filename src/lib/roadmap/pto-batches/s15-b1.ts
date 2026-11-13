@@ -1,4 +1,5 @@
 /**
+// Reopened implementation draft (merged setup stub # does not complete tasks).
  * Production Tools batch ticket — implement all tasks on this PR branch.
  * Section 15 batch 1: Agent OS cross-cutting
  */
