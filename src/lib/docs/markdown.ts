@@ -296,6 +296,10 @@ export function stripMarkdown(markdown: string): string {
 		.replace(/^>\s?/gm, "")
 		.replace(/!\[[^\]]*\]\([^)]+\)/g, "")
 		.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+		// Drop markdown table separator rows (|---|---|)
+		.replace(/^\s*\|?(?:\s*:?-{3,}:?\s*\|)+\s*:?-{3,}:?\s*\|?\s*$/gm, " ")
+		// Turn remaining table pipes into spaces so search snippets stay readable
+		.replace(/\|/g, " ")
 		.replace(/[`*_#]/g, "")
 		.replace(/\s+/g, " ")
 		.trim();

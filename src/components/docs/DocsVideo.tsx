@@ -17,12 +17,13 @@ export function DocsVideo({ video }: { video: DocsVideoSpec }) {
 
 	return (
 		<figure className="my-6">
-			<div className="relative aspect-video overflow-hidden rounded-xl border border-slate-200 bg-slate-50 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+			{/* White shell + overflow clip: Clueso paints a black player bg that can show as thin L/R bars */}
+			<div className="relative aspect-video overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-950">
 				{playing ? (
 					<iframe
 						src={video.embed}
 						title={video.title}
-						className="absolute inset-0 h-full w-full"
+						className="absolute top-1/2 left-1/2 h-[102%] w-[102%] max-w-none -translate-x-1/2 -translate-y-1/2 border-0"
 						allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
 						allowFullScreen
 						referrerPolicy="strict-origin-when-cross-origin"
