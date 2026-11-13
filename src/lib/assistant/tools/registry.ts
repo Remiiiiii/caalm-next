@@ -13,8 +13,10 @@ import { CLAUSE_TOOLS } from "@/lib/assistant/tools/clauseTools";
 import { CONSTITUENT_TOOLS } from "@/lib/assistant/tools/constituentTools";
 import { CONTRACT_TOOLS } from "@/lib/assistant/tools/contractTools";
 import { FUNDING_TOOLS } from "@/lib/assistant/tools/fundingTools";
+import { IT_TOOLS } from "@/lib/assistant/tools/itTools";
 import { LICENSE_TOOLS } from "@/lib/assistant/tools/licenseTools";
 import { TASK_TOOLS } from "@/lib/assistant/tools/taskTools";
+import { TICKET_TOOLS } from "@/lib/assistant/tools/ticketTools";
 import {
 	formatLocalDate,
 	hasAll,
@@ -257,6 +259,8 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
 	...CLAUSE_TOOLS,
 	...FUNDING_TOOLS,
 	...CONSTITUENT_TOOLS,
+	...TICKET_TOOLS,
+	...IT_TOOLS,
 ];
 
 export function getToolsForPermissions(
