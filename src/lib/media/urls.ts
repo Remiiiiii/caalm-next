@@ -21,6 +21,11 @@ function mediaPath(path: string): string {
 	return MEDIA_BASE ? `${MEDIA_BASE}${path}` : path;
 }
 
+/** Resolve a site-relative `/assets/…` path against `NEXT_PUBLIC_MEDIA_BASE_URL`. */
+export function mediaUrl(path: string): string {
+	return mediaPath(path);
+}
+
 export const MEDIA_URLS = {
 	waveVideo: mediaPath("/assets/video/wave.mp4"),
 	demoLandingVideo: mediaPath("/assets/video/demo-landing.mp4"),
