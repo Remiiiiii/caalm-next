@@ -11,6 +11,15 @@ alwaysApply: false
 
 This board (`?catalog=pto`) turns the Ask CAALM assistant tool gap list (A–O) into small batch PRs instead of one mega-PR. Each **batch PR** (up to five top-level task codes) is the **implementation ticket**. Do not open one PR per task unless the user explicitly asks.
 
+## Before you start (non-negotiable — check every time)
+
+Sections complete in strict numeric order. **Never implement, open, or merge work for section N until every batch in section N-1 is fully merged.**
+
+- Read `src/lib/roadmap/production-tools/pto-pr-batches.ts` for the prior section's batches. For each batch, the PR that actually completes its tasks is `productPrNumber ?? linkedPrNumber` — `mergedSetupPrNumber` is a historical marker stub and never completes anything (see `ptoTaskCodesCompletedByPr`).
+- If any batch in the prior section has no such PR number set, or `gh pr view <number> --json state,mergedAt` shows it isn't merged, the prior section is **not complete**. Stop and tell the user instead of starting the next section.
+- Only once every prior-section batch's completing PR is merged may you branch and implement the next section.
+- Incident: PR #268 (section 15's batch-ticket marker, no real tool code) was merged as `linkedPrNumber` while section 14's real completing PR (#267) was still open — this falsely marked section 15 complete and jumped the queue. It was reverted; `pto-pr-batches.ts` now leaves section 15 without a `linkedPrNumber` until a real implementation PR lands, in order, after section 14 merges.
+
 ## Do
 
 - Branch: `cursor/production-tools/s{nn}-b{n}-5329` (see `pto-pr-batches.ts`).
