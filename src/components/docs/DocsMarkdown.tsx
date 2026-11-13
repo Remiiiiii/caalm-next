@@ -4,7 +4,9 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import type { InlineNode, MdBlock } from "@/lib/docs/markdown";
 import { parseMarkdown } from "@/lib/docs/markdown";
+import { parseDocsVideo } from "@/lib/docs/video";
 import { cn } from "@/lib/utils";
+import { DocsVideo } from "./DocsVideo";
 
 function Inline({ nodes }: { nodes: InlineNode[] }): ReactNode {
 	return nodes.map((node, i) => {
@@ -147,12 +149,17 @@ function Block({ block }: { block: MdBlock }) {
 					</p>
 				</div>
 			);
-		case "code":
+		case "code": {
+			if (block.lang === "video") {
+				const video = parseDocsVideo(block.code);
+				if (video) return <DocsVideo video={video} />;
+			}
 			return (
 				<pre className="my-5 overflow-x-auto rounded-xl border border-slate-200 bg-slate-950 p-4 text-sm leading-6 text-slate-100 dark:border-slate-700">
 					<code>{block.code}</code>
 				</pre>
 			);
+		}
 		case "table":
 			return (
 				<div className="my-6 overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
