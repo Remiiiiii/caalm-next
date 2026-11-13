@@ -1,4 +1,5 @@
 /**
+// Reopened implementation draft (merged setup stub #230 does not complete tasks).
  * Production Tools batch ticket — implement all tasks on this PR branch.
  * Section 2 batch 3: Contracts CLM depth
  */

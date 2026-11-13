@@ -1,11 +1,53 @@
+import { ID } from "node-appwrite";
+import { InputFile } from "node-appwrite/file";
 import { PERMISSIONS } from "@/constants/permissions";
+import { createAdminClient } from "@/lib/appwrite";
+import { appwriteConfig } from "@/lib/appwrite/config";
+import { isCapClosableStatus } from "@/lib/assistant/cap-close-assist";
 import { hasAll } from "@/lib/assistant/tools/toolUtils";
 import type { ToolDefinition } from "@/lib/assistant/tools/types";
 import { logAuditUploadEvent } from "@/lib/audit-upload/audit-log";
+import {
+	assertCapEvidenceFile,
+	CAP_EVIDENCE_MAX_BYTES,
+	CAP_EVIDENCE_MAX_FILES,
+	CapEvidenceValidationError,
+	normalizeEvidenceList,
+} from "@/lib/audit-upload/cap-evidence";
+import {
+	draftTasksFromFinding,
+	inferRootCause,
+	slaDueAt,
+} from "@/lib/audit-upload/caps";
 import { confirmAuditFinding } from "@/lib/audit-upload/confirm-finding";
-import { isCapClosableStatus } from "@/lib/assistant/cap-close-assist";
-import { getCap, listCaps, updateCap } from "@/lib/audit-upload/store";
+import {
+	createCap,
+	getAuditDocument,
+	getCap,
+	getFinding,
+	listAuditDocuments,
+	listCaps,
+	listFindings,
+	updateCap,
+	updateFinding,
+} from "@/lib/audit-upload/store";
+import type {
+	AuditCapEvidenceAttachment,
+	AuditFindingStatus,
+} from "@/lib/audit-upload/types";
+import { runReadinessAuditForOrg } from "@/lib/audits/readiness/run-audit";
+import type { AuditCadence } from "@/lib/audits/readiness/types";
 import { getAuditLogs } from "@/lib/services/audit-logger";
+
+const FINDING_STANCES = ["disputed", "rectified", "accepted_risk"] as const;
+const OPEN_CAP_STATUSES = new Set([
+	"open",
+	"in_progress",
+	"pending_verification",
+	"escalated",
+	"overdue",
+]);
+const READINESS_CADENCES = ["weekly", "monthly", "quarterly"] as const;
 
 export const AUDIT_TOOLS: ToolDefinition[] = [
 	{
@@ -175,7 +217,8 @@ export const AUDIT_TOOLS: ToolDefinition[] = [
 				documentId: { type: "string" },
 				verificationNote: {
 					type: "string",
-					description: "Verification / closing note text to prefill in the dialog.",
+					description:
+						"Verification / closing note text to prefill in the dialog.",
 				},
 			},
 			required: ["capId", "findingId", "documentId", "verificationNote"],
@@ -194,7 +237,9 @@ export const AUDIT_TOOLS: ToolDefinition[] = [
 			const documentId = String(args.documentId ?? "").trim();
 			const verificationNote = String(args.verificationNote ?? "").trim();
 			if (!findingId || !documentId) {
-				return { result: { error: "Missing corrective action or finding id." } };
+				return {
+					result: { error: "Missing corrective action or finding id." },
+				};
 			}
 			if (!verificationNote) {
 				return {
@@ -208,7 +253,11 @@ export const AUDIT_TOOLS: ToolDefinition[] = [
 			// id (model guessed, or follow-up turn) does not dead-end at "not found".
 			let cap = capId ? await getCap(ctx.orgId, capId) : null;
 			if (!cap || cap.findingId !== findingId) {
-				const caps = await listCaps({ orgId: ctx.orgId, documentId, limit: 50 });
+				const caps = await listCaps({
+					orgId: ctx.orgId,
+					documentId,
+					limit: 50,
+				});
 				cap = caps.find((row) => row.findingId === findingId) ?? null;
 			}
 			if (!cap) {
@@ -251,6 +300,658 @@ export const AUDIT_TOOLS: ToolDefinition[] = [
 					findingId,
 					documentId: cap.documentId,
 					verificationNote,
+				},
+			};
+		},
+	},
+	{
+		name: "list_audit_documents",
+		description:
+			"List uploaded audit documents, or return one document's detail. Requires audit.documents_view. Read-only; org-scoped.",
+		requiredPermissions: [PERMISSIONS.AUDIT.DOCUMENTS_VIEW],
+		mutating: false,
+		parameters: {
+			type: "object",
+			properties: {
+				documentId: { type: "string", description: "Audit document id" },
+				scope: { type: "string", enum: ["active", "removed"] },
+				limit: { type: "number", description: "Max rows. Default 50." },
+			},
+		},
+		handler: async (ctx, args) => {
+			if (!hasAll(ctx, [PERMISSIONS.AUDIT.DOCUMENTS_VIEW])) {
+				return {
+					result: {
+						error:
+							"You cannot view audit documents. Ask an admin for the audit.documents_view permission.",
+					},
+				};
+			}
+			const documentId = String(args.documentId ?? "").trim();
+			if (documentId) {
+				const document = await getAuditDocument(ctx.orgId, documentId);
+				if (!document) {
+					return {
+						result: {
+							error: `No audit document found with id "${documentId}".`,
+						},
+					};
+				}
+				return { result: { document } };
+			}
+			const documents = await listAuditDocuments(ctx.orgId, {
+				limit: Math.min(Number(args.limit) || 50, 100),
+				scope: args.scope === "removed" ? "removed" : "active",
+			});
+			return { result: { documents, count: documents.length } };
+		},
+	},
+	{
+		name: "list_findings",
+		description:
+			"List audit findings, or return one finding's detail. Requires audit.documents_view. Read-only; org-scoped.",
+		requiredPermissions: [PERMISSIONS.AUDIT.DOCUMENTS_VIEW],
+		mutating: false,
+		parameters: {
+			type: "object",
+			properties: {
+				findingId: { type: "string", description: "Audit finding id" },
+				documentId: { type: "string" },
+				status: {
+					type: "string",
+					enum: [
+						"draft",
+						"confirmed",
+						"disputed",
+						"rectified",
+						"closed",
+						"accepted_risk",
+					],
+				},
+				limit: { type: "number", description: "Max rows. Default 100." },
+			},
+		},
+		handler: async (ctx, args) => {
+			if (!hasAll(ctx, [PERMISSIONS.AUDIT.DOCUMENTS_VIEW])) {
+				return {
+					result: {
+						error:
+							"You cannot view findings. Ask an admin for the audit.documents_view permission.",
+					},
+				};
+			}
+			const findingId = String(args.findingId ?? "").trim();
+			if (findingId) {
+				const finding = await getFinding(ctx.orgId, findingId);
+				if (!finding) {
+					return {
+						result: { error: `No finding found with id "${findingId}".` },
+					};
+				}
+				return { result: { finding } };
+			}
+			const findings = await listFindings({
+				orgId: ctx.orgId,
+				documentId: args.documentId ? String(args.documentId) : undefined,
+				status: args.status as AuditFindingStatus | undefined,
+				limit: Math.min(Number(args.limit) || 100, 100),
+			});
+			return { result: { findings, count: findings.length } };
+		},
+	},
+	{
+		name: "dispute_finding",
+		description:
+			"Set a finding's stance: disputed, rectified, or accepted_risk, with a reason where required. Requires audit.manage_findings. Confirm before writing; audits.",
+		requiredPermissions: [PERMISSIONS.AUDIT.MANAGE_FINDINGS],
+		mutating: true,
+		parameters: {
+			type: "object",
+			properties: {
+				findingId: { type: "string" },
+				stance: {
+					type: "string",
+					enum: FINDING_STANCES as unknown as string[],
+				},
+				reason: {
+					type: "string",
+					description: "Required to accept risk",
+				},
+			},
+			required: ["findingId", "stance"],
+		},
+		handler: async (ctx, args) => {
+			if (!hasAll(ctx, [PERMISSIONS.AUDIT.MANAGE_FINDINGS])) {
+				return {
+					result: {
+						error:
+							"You cannot set a finding's stance. Ask an admin for the audit.manage_findings permission.",
+					},
+				};
+			}
+			const findingId = String(args.findingId ?? "").trim();
+			if (!findingId) {
+				return { result: { error: "Give the finding id." } };
+			}
+			const stance = String(args.stance ?? "");
+			if (
+				!FINDING_STANCES.includes(stance as (typeof FINDING_STANCES)[number])
+			) {
+				return {
+					result: {
+						error: "stance must be disputed, rectified, or accepted_risk.",
+					},
+				};
+			}
+			const finding = await getFinding(ctx.orgId, findingId);
+			if (!finding) {
+				return {
+					result: { error: `No finding found with id "${findingId}".` },
+				};
+			}
+			const reason = args.reason ? String(args.reason).trim() : "";
+			if (stance === "accepted_risk" && !reason) {
+				return {
+					result: { error: "A reason is required to accept this risk." },
+				};
+			}
+
+			let updated;
+			if (stance === "disputed") {
+				updated = await updateFinding(findingId, {
+					status: "disputed",
+					disputeReason: reason || "Disputed",
+				});
+			} else if (stance === "rectified") {
+				updated = await updateFinding(findingId, { status: "rectified" });
+			} else {
+				updated = await updateFinding(findingId, {
+					status: "accepted_risk",
+					riskAcceptanceReason: reason,
+					riskAcceptedBy: ctx.user.$id,
+					riskAcceptedAt: new Date().toISOString(),
+				});
+			}
+			await logAuditUploadEvent({
+				user: ctx.user,
+				orgId: ctx.orgId,
+				action: "update",
+				summary: `Set finding stance (${stance}): ${finding.title}`,
+				targetId: findingId,
+				targetLabel: finding.title,
+				targetType: "audit_finding",
+			});
+			return { result: { findingId, status: updated.status, stance } };
+		},
+	},
+	{
+		name: "create_corrective_action",
+		description:
+			"Create a corrective action for a finding that doesn't have one yet. Requires audit.manage_caps. Confirm before writing; audits; org-scoped.",
+		requiredPermissions: [PERMISSIONS.AUDIT.MANAGE_CAPS],
+		mutating: true,
+		parameters: {
+			type: "object",
+			properties: {
+				findingId: { type: "string" },
+				assigneeId: { type: "string", description: "Optional initial owner" },
+			},
+			required: ["findingId"],
+		},
+		handler: async (ctx, args) => {
+			if (!hasAll(ctx, [PERMISSIONS.AUDIT.MANAGE_CAPS])) {
+				return {
+					result: {
+						error:
+							"You cannot create corrective actions. Ask an admin for the audit.manage_caps permission.",
+					},
+				};
+			}
+			const findingId = String(args.findingId ?? "").trim();
+			if (!findingId) {
+				return { result: { error: "Give the finding id." } };
+			}
+			const finding = await getFinding(ctx.orgId, findingId);
+			if (!finding) {
+				return {
+					result: { error: `No finding found with id "${findingId}".` },
+				};
+			}
+			const existing = await listCaps({
+				orgId: ctx.orgId,
+				documentId: finding.documentId,
+				limit: 200,
+			});
+			if (existing.some((cap) => cap.findingId === findingId)) {
+				return {
+					result: { error: "This finding already has a corrective action." },
+				};
+			}
+
+			const cap = await createCap({
+				orgId: ctx.orgId,
+				documentId: finding.documentId,
+				findingId: finding.$id,
+				title: `Correct: ${finding.title}`,
+				rootCause: inferRootCause(`${finding.title} ${finding.description}`),
+				assigneeId: args.assigneeId ? String(args.assigneeId) : null,
+				status: "open",
+				dueAt: slaDueAt(finding.severityComputed),
+				escalationTier: 0,
+				verificationEvidence: null,
+				evidenceAttachments: [],
+				tasks: draftTasksFromFinding(finding),
+				closedAt: null,
+			});
+			await logAuditUploadEvent({
+				user: ctx.user,
+				orgId: ctx.orgId,
+				action: "create",
+				summary: `Created corrective action for ${finding.title}`,
+				targetId: cap.$id,
+				targetLabel: cap.title,
+				targetType: "audit_cap",
+			});
+			return {
+				result: {
+					capId: cap.$id,
+					title: cap.title,
+					dueAt: cap.dueAt,
+					status: cap.status,
+					created: true,
+				},
+			};
+		},
+	},
+	{
+		name: "assign_cap_owner",
+		description:
+			"Assign a corrective action's owner and/or due date. Requires audit.manage_caps. Confirm before writing; audits.",
+		requiredPermissions: [PERMISSIONS.AUDIT.MANAGE_CAPS],
+		mutating: true,
+		parameters: {
+			type: "object",
+			properties: {
+				capId: { type: "string" },
+				assigneeId: { type: "string" },
+				dueAt: { type: "string", description: "YYYY-MM-DD" },
+			},
+			required: ["capId", "assigneeId"],
+		},
+		handler: async (ctx, args) => {
+			if (!hasAll(ctx, [PERMISSIONS.AUDIT.MANAGE_CAPS])) {
+				return {
+					result: {
+						error:
+							"You cannot change corrective actions. Ask an admin for the audit.manage_caps permission.",
+					},
+				};
+			}
+			const capId = String(args.capId ?? "").trim();
+			if (!capId) {
+				return { result: { error: "Give the corrective action id." } };
+			}
+			const cap = await getCap(ctx.orgId, capId);
+			if (!cap) {
+				return {
+					result: { error: `No corrective action found with id "${capId}".` },
+				};
+			}
+			const assigneeId = String(args.assigneeId ?? "").trim();
+			if (!assigneeId) {
+				return { result: { error: "Give the new owner's user id." } };
+			}
+			const dueAt = args.dueAt ? String(args.dueAt).trim() : undefined;
+			if (dueAt && Number.isNaN(new Date(dueAt).getTime())) {
+				return { result: { error: "Give a valid due date (YYYY-MM-DD)." } };
+			}
+
+			const updated = await updateCap(capId, {
+				assigneeId,
+				...(dueAt ? { dueAt } : {}),
+			});
+			await logAuditUploadEvent({
+				user: ctx.user,
+				orgId: ctx.orgId,
+				action: "update",
+				summary: `Assigned owner for corrective action ${cap.title}`,
+				targetId: capId,
+				targetLabel: cap.title,
+				targetType: "audit_cap",
+			});
+			return {
+				result: {
+					capId: updated.$id,
+					assigneeId: updated.assigneeId,
+					dueAt: updated.dueAt,
+					assigned: true,
+				},
+			};
+		},
+	},
+	{
+		name: "upload_cap_evidence",
+		description:
+			"Attach evidence to a corrective action by fetching it from a URL. Requires audit.manage_caps. Confirm before writing; audits.",
+		requiredPermissions: [PERMISSIONS.AUDIT.MANAGE_CAPS],
+		mutating: true,
+		parameters: {
+			type: "object",
+			properties: {
+				capId: { type: "string" },
+				fileUrl: {
+					type: "string",
+					description: "HTTPS URL of the evidence file to attach",
+				},
+				fileName: {
+					type: "string",
+					description: "Optional display name; derived from the URL otherwise",
+				},
+			},
+			required: ["capId", "fileUrl"],
+		},
+		handler: async (ctx, args) => {
+			if (!hasAll(ctx, [PERMISSIONS.AUDIT.MANAGE_CAPS])) {
+				return {
+					result: {
+						error:
+							"You cannot attach evidence. Ask an admin for the audit.manage_caps permission.",
+					},
+				};
+			}
+			const capId = String(args.capId ?? "").trim();
+			if (!capId) {
+				return { result: { error: "Give the corrective action id." } };
+			}
+			const fileUrl = String(args.fileUrl ?? "").trim();
+			if (!fileUrl.startsWith("https://")) {
+				return {
+					result: { error: "Give an HTTPS URL for the evidence file." },
+				};
+			}
+			const cap = await getCap(ctx.orgId, capId);
+			if (!cap) {
+				return {
+					result: { error: `No corrective action found with id "${capId}".` },
+				};
+			}
+			const existing = normalizeEvidenceList(cap.evidenceAttachments);
+			if (existing.length >= CAP_EVIDENCE_MAX_FILES) {
+				return {
+					result: {
+						error: `You can attach up to ${CAP_EVIDENCE_MAX_FILES} files.`,
+					},
+				};
+			}
+
+			try {
+				const response = await fetch(fileUrl);
+				if (!response.ok) {
+					return {
+						result: {
+							error: `Could not download the file (${response.status}).`,
+						},
+					};
+				}
+				const contentLength = Number(
+					response.headers.get("content-length") ?? "0",
+				);
+				if (contentLength > CAP_EVIDENCE_MAX_BYTES) {
+					return {
+						result: { error: "Each file must be 10 MB or smaller." },
+					};
+				}
+				const arrayBuffer = await response.arrayBuffer();
+				if (arrayBuffer.byteLength > CAP_EVIDENCE_MAX_BYTES) {
+					return {
+						result: { error: "Each file must be 10 MB or smaller." },
+					};
+				}
+				const fileName =
+					(args.fileName ? String(args.fileName).trim() : "") ||
+					fileUrl.split("/").pop() ||
+					"evidence";
+				const mimeType =
+					response.headers.get("content-type")?.split(";")[0]?.trim() || "";
+				const bytes = Buffer.from(arrayBuffer);
+				const file = new File([bytes], fileName, { type: mimeType });
+				assertCapEvidenceFile(file);
+
+				const { storage } = await createAdminClient();
+				const uploaded = await storage.createFile({
+					bucketId: appwriteConfig.auditDocumentsBucketId,
+					fileId: ID.unique(),
+					file: InputFile.fromBuffer(bytes, fileName),
+				});
+				const attachment: AuditCapEvidenceAttachment = {
+					fileId: uploaded.$id,
+					fileName,
+					mimeType: mimeType || "application/octet-stream",
+					fileSize: bytes.length,
+					uploadedAt: new Date().toISOString(),
+				};
+				const updated = await updateCap(capId, {
+					evidenceAttachments: [...existing, attachment],
+				});
+				await logAuditUploadEvent({
+					user: ctx.user,
+					orgId: ctx.orgId,
+					action: "update",
+					summary: `Attached evidence ${fileName} to corrective action ${cap.title}`,
+					targetId: capId,
+					targetLabel: cap.title,
+					targetType: "audit_cap",
+				});
+				return {
+					result: {
+						capId: updated.$id,
+						attachment,
+						evidenceCount: normalizeEvidenceList(updated.evidenceAttachments)
+							.length,
+					},
+				};
+			} catch (error) {
+				if (error instanceof CapEvidenceValidationError) {
+					return { result: { error: error.message } };
+				}
+				return {
+					result: {
+						error:
+							error instanceof Error
+								? error.message
+								: "Could not attach that file.",
+					},
+				};
+			}
+		},
+	},
+	{
+		name: "list_open_caps",
+		description:
+			"List open and overdue corrective actions across the organization. Requires audit.documents_view. Read-only; org-scoped.",
+		requiredPermissions: [PERMISSIONS.AUDIT.DOCUMENTS_VIEW],
+		mutating: false,
+		parameters: {
+			type: "object",
+			properties: {
+				limit: { type: "number", description: "Max rows. Default 50." },
+			},
+		},
+		handler: async (ctx, args) => {
+			if (!hasAll(ctx, [PERMISSIONS.AUDIT.DOCUMENTS_VIEW])) {
+				return {
+					result: {
+						error:
+							"You cannot view corrective actions. Ask an admin for the audit.documents_view permission.",
+					},
+				};
+			}
+			const limit = Math.min(Number(args.limit) || 50, 100);
+			const pool = await listCaps({ orgId: ctx.orgId, limit: 200 });
+			const now = Date.now();
+			const openCaps = pool
+				.filter((cap) => OPEN_CAP_STATUSES.has(cap.status))
+				.map((cap) => ({
+					...cap,
+					overdue: Boolean(cap.dueAt) && new Date(cap.dueAt).getTime() < now,
+				}))
+				.slice(0, limit);
+			return { result: { caps: openCaps, count: openCaps.length } };
+		},
+	},
+	{
+		name: "draft_verification_note",
+		description:
+			"Draft (stage) a verification/closing note for a corrective action for the user to review. Stages text only; never closes a CAP — closing still requires the human Mark closed step. Requires audit.manage_caps.",
+		requiredPermissions: [PERMISSIONS.AUDIT.MANAGE_CAPS],
+		mutating: false,
+		parameters: {
+			type: "object",
+			properties: {
+				capId: { type: "string" },
+				findingId: { type: "string" },
+				verificationNote: {
+					type: "string",
+					description: "Draft verification/closing note text to stage.",
+				},
+			},
+			required: ["capId", "verificationNote"],
+		},
+		handler: async (ctx, args) => {
+			if (!hasAll(ctx, [PERMISSIONS.AUDIT.MANAGE_CAPS])) {
+				return {
+					result: {
+						error:
+							"You cannot draft verification notes. Ask an admin for the audit.manage_caps permission.",
+					},
+				};
+			}
+			const capId = String(args.capId ?? "").trim();
+			if (!capId) {
+				return { result: { error: "Give the corrective action id." } };
+			}
+			const verificationNote = String(args.verificationNote ?? "").trim();
+			if (!verificationNote) {
+				return {
+					result: { error: "Give the verification note text to stage." },
+				};
+			}
+			const cap = await getCap(ctx.orgId, capId);
+			if (!cap) {
+				return {
+					result: { error: `No corrective action found with id "${capId}".` },
+				};
+			}
+			const findingId = args.findingId
+				? String(args.findingId).trim()
+				: cap.findingId;
+			return {
+				result: {
+					ok: true,
+					capId: cap.$id,
+					findingId,
+					documentId: cap.documentId,
+					verificationNote,
+					staged: true,
+					note: "This note is staged only. Review it in the Mark closed dialog and save there to close the corrective action.",
+				},
+			};
+		},
+	},
+	{
+		name: "export_audit_report",
+		description:
+			"Export the audit report or findings as CSV. Not available yet in Ask CAALM. Requires audit.documents_view.",
+		requiredPermissions: [PERMISSIONS.AUDIT.DOCUMENTS_VIEW],
+		mutating: false,
+		parameters: {
+			type: "object",
+			properties: {
+				documentId: { type: "string" },
+			},
+		},
+		handler: async (ctx) => {
+			if (!hasAll(ctx, [PERMISSIONS.AUDIT.DOCUMENTS_VIEW])) {
+				return {
+					result: {
+						error:
+							"You cannot export audit reports. Ask an admin for the audit.documents_view permission.",
+					},
+				};
+			}
+			return {
+				result: {
+					available: false,
+					message:
+						"Exporting audit reports or findings as CSV isn't available from Ask CAALM yet.",
+				},
+			};
+		},
+	},
+	{
+		name: "run_readiness_check",
+		description:
+			"Run the audit readiness check used by the Readiness AI panel and return the score and summary. Requires audit.documents_view. Read/analysis; org-scoped.",
+		requiredPermissions: [PERMISSIONS.AUDIT.DOCUMENTS_VIEW],
+		mutating: false,
+		parameters: {
+			type: "object",
+			properties: {
+				cadence: {
+					type: "string",
+					enum: READINESS_CADENCES as unknown as string[],
+					description: "Default monthly",
+				},
+				force: {
+					type: "boolean",
+					description: "Re-run even if a snapshot already exists today",
+				},
+			},
+		},
+		handler: async (ctx, args) => {
+			if (!hasAll(ctx, [PERMISSIONS.AUDIT.DOCUMENTS_VIEW])) {
+				return {
+					result: {
+						error:
+							"You cannot run the readiness check. Ask an admin for the audit.documents_view permission.",
+					},
+				};
+			}
+			const cadence = READINESS_CADENCES.includes(
+				args.cadence as (typeof READINESS_CADENCES)[number],
+			)
+				? (args.cadence as AuditCadence)
+				: "monthly";
+			const outcome = await runReadinessAuditForOrg({
+				orgId: ctx.orgId,
+				cadence,
+				force: Boolean(args.force),
+				sendAlerts: false,
+				source: "manual",
+			});
+			if (!outcome.snapshot) {
+				return {
+					result: { ran: false, skipped: outcome.skipped ?? "unknown" },
+				};
+			}
+			await logAuditUploadEvent({
+				user: ctx.user,
+				orgId: ctx.orgId,
+				action: "create",
+				summary: `Ran a ${cadence} readiness check from Ask CAALM`,
+				targetId: outcome.snapshot.$id,
+				targetLabel: "Readiness snapshot",
+				targetType: "audit_readiness_snapshot",
+			});
+			return {
+				result: {
+					ran: true,
+					snapshotId: outcome.snapshot.$id,
+					score: outcome.snapshot.score,
+					ragStatus: outcome.snapshot.ragStatus,
+					cadence: outcome.snapshot.cadence,
+					createdAt: outcome.snapshot.createdAt,
+					aiSummary: outcome.snapshot.aiSummary || "",
 				},
 			};
 		},

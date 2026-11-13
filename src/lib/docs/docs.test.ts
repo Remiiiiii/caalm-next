@@ -1,13 +1,14 @@
 import { describe, expect, it } from "vitest";
+import { getDocsPage } from "@/lib/docs/load";
 import {
 	extractHeadings,
 	parseMarkdown,
 	stripMarkdown,
 } from "@/lib/docs/markdown";
-import { findMissingNpoShippedDocFiles } from "@/lib/docs/npo-shipped-docs";
 import { flattenDocsNav } from "@/lib/docs/navigation";
-import { getDocsPage } from "@/lib/docs/load";
+import { findMissingNpoShippedDocFiles } from "@/lib/docs/npo-shipped-docs";
 import { searchDocs } from "@/lib/docs/search";
+import { parseDocsVideo } from "@/lib/docs/video";
 
 describe("docs markdown", () => {
 	it("parses headings, lists, callouts, and tables", () => {
@@ -41,6 +42,67 @@ Intro paragraph.
 		expect(text.toLowerCase()).toContain("hello");
 		expect(text.toLowerCase()).toContain("world");
 		expect(text).not.toContain("```");
+	});
+});
+
+describe("docs video embeds", () => {
+	const ok = {
+		embed: "https://watchclueso.com/embed/twj9jyiks6cc0whn",
+		poster: "/assets/video/docs/upload-contract-poster.webp",
+		title: "How to upload a contract in CAALM",
+		duration: "1:13",
+	};
+
+	it("parses a video fence as a code block tagged video", () => {
+		const md = `\`\`\`video\n${JSON.stringify(ok)}\n\`\`\``;
+		const [block] = parseMarkdown(md);
+		expect(block).toMatchObject({ type: "code", lang: "video" });
+		if (block.type !== "code") throw new Error("expected code block");
+		expect(parseDocsVideo(block.code)).toEqual(ok);
+	});
+
+	it("rejects non-https, unknown hosts, bad posters and bad JSON", () => {
+		expect(
+			parseDocsVideo(
+				JSON.stringify({ ...ok, embed: "http://watchclueso.com/embed/x" }),
+			),
+		).toBeNull();
+		expect(
+			parseDocsVideo(
+				JSON.stringify({ ...ok, embed: "https://evil.example/embed/x" }),
+			),
+		).toBeNull();
+		expect(
+			parseDocsVideo(
+				JSON.stringify({
+					...ok,
+					embed: "https://watchclueso.com.evil.example/x",
+				}),
+			),
+		).toBeNull();
+		expect(
+			parseDocsVideo(
+				JSON.stringify({ ...ok, poster: "https://evil.example/p.webp" }),
+			),
+		).toBeNull();
+		expect(parseDocsVideo(JSON.stringify({ ...ok, title: " " }))).toBeNull();
+		expect(parseDocsVideo("{not json")).toBeNull();
+	});
+
+	it("keeps the embed JSON out of search text", () => {
+		const text = stripMarkdown(
+			`Intro\n\n\`\`\`video\n${JSON.stringify(ok)}\n\`\`\``,
+		);
+		expect(text).toContain("Intro");
+		expect(text).not.toContain("watchclueso");
+	});
+
+	it("ships the contracts page with a valid embed", () => {
+		const page = getDocsPage("reference/contracts");
+		expect(page).toBeTruthy();
+		const fence = /```video\n([\s\S]*?)\n```/.exec(page?.markdown ?? "");
+		expect(fence).toBeTruthy();
+		expect(parseDocsVideo(fence?.[1] ?? "")).not.toBeNull();
 	});
 });
 

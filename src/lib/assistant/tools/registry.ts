@@ -6,10 +6,18 @@ import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { retrieveKnowledge } from "@/lib/assistant/knowledge/retrieve";
 import type { AssistantClientAction } from "@/lib/assistant/open-close-cap-client";
+import { APPROVAL_TOOLS } from "@/lib/assistant/tools/approvalTools";
 import { AUDIT_TOOLS } from "@/lib/assistant/tools/auditTools";
 import { CALENDAR_TOOLS } from "@/lib/assistant/tools/calendarTools";
+import { CLAUSE_TOOLS } from "@/lib/assistant/tools/clauseTools";
+import { CONSTITUENT_TOOLS } from "@/lib/assistant/tools/constituentTools";
 import { CONTRACT_TOOLS } from "@/lib/assistant/tools/contractTools";
+import { FUNDING_TOOLS } from "@/lib/assistant/tools/fundingTools";
+import { INTEGRATION_TOOLS } from "@/lib/assistant/tools/integrationTools";
+import { IT_TOOLS } from "@/lib/assistant/tools/itTools";
+import { LICENSE_TOOLS } from "@/lib/assistant/tools/licenseTools";
 import { TASK_TOOLS } from "@/lib/assistant/tools/taskTools";
+import { TICKET_TOOLS } from "@/lib/assistant/tools/ticketTools";
 import {
 	formatLocalDate,
 	hasAll,
@@ -247,6 +255,14 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
 	...AUDIT_TOOLS,
 	...USER_TOOLS,
 	...CONTRACT_TOOLS,
+	...LICENSE_TOOLS,
+	...APPROVAL_TOOLS,
+	...CLAUSE_TOOLS,
+	...FUNDING_TOOLS,
+	...CONSTITUENT_TOOLS,
+	...TICKET_TOOLS,
+	...IT_TOOLS,
+	...INTEGRATION_TOOLS,
 ];
 
 export function getToolsForPermissions(

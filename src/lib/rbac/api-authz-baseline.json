@@ -22,8 +22,6 @@
     "it/metrics/sse",
     "it/storage-metrics",
     "locations/search",
-    "microsoft/calendar/auto-sync",
-    "microsoft/calendar/sync",
     "microsoft/global-sync-lock",
     "notification-settings",
     "notification-types",

@@ -34,7 +34,7 @@ That process feels normal until one miss costs a license, a grant, or a week of 
 - **Audits** — compliance posture and activity history
 - **Analytics** — leadership visibility, including **Risk averted** (caught flags, closed gaps, on-time renewals)
 - **News** — internal communication that reaches the right audience
-- **Assistant** — AI help for chat, document analysis, and meeting prep (permission-gated)
+- **Ask CAALM** — permission-gated AI help that can search and explain live records and propose actions on contracts, licenses, tasks, and more (Confirm before any write)
 - **Constituents** — donor, volunteer, and member CRM with channel consent
 - **Gifts & campaigns** — posted giving, void discipline, and development dashboards
 - **Public donation page** — configurable `/give` ask with Stripe checkout and share attribution

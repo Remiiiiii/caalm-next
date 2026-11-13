@@ -1,71 +1,62 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { PERMISSIONS } from "@/constants/permissions";
+import { getCurrentUserId } from "@/lib/microsoft/auth-utils";
+import { syncOutlookCalendarForUser } from "@/lib/microsoft/calendar-sync.service";
+import { requirePermission } from "@/lib/rbac/middleware";
 
 /**
  * Auto-sync endpoint that polls Outlook for changes
- * This endpoint should be called periodically (every 30 seconds) by a client-side interval for near-instant updates
+ * Called periodically (every 30 seconds) by a client-side interval for near-instant updates.
  */
 export async function POST(request: NextRequest) {
+	const denied = await requirePermission(request, {
+		permission: PERMISSIONS.INTEGRATIONS.OUTLOOK_SYNC,
+	});
+	if (denied) return denied;
+
+	let userId: string;
 	try {
-		const body = await request.json();
-		const { userId } = body;
-
-		if (!userId) {
-			return NextResponse.json(
-				{ success: false, message: "User ID is required" },
-				{ status: 400 },
-			);
-		}
-
-		console.log("🔄 Auto-sync triggered for user:", userId);
-
-		// Call the main sync endpoint
-		const syncResponse = await fetch(
-			`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/microsoft/calendar/sync`,
-			{
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({
-					userId,
-					// CRITICAL FIX: Use same date range as main sync (±30 days) to prevent old events from being synced
-					// This prevents August/September events from being processed when creating new events
-					startDate: new Date(
-						Date.now() - 30 * 24 * 60 * 60 * 1000,
-					).toISOString(),
-					endDate: new Date(
-						Date.now() + 30 * 24 * 60 * 60 * 1000,
-					).toISOString(),
-					strategy: "newest",
-				}),
-			},
+		userId = await getCurrentUserId();
+	} catch {
+		return NextResponse.json(
+			{ success: false, message: "Authentication required" },
+			{ status: 401 },
 		);
+	}
 
-		const syncResult = await syncResponse.json();
+	console.log("🔄 Auto-sync triggered for user:", userId);
 
-		if (syncResult.success) {
+	try {
+		const outcome = await syncOutlookCalendarForUser(userId, {
+			// Same date range as the main sync (±30 days) to prevent old events from being synced
+			startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+			endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+			strategy: "newest",
+		});
+
+		if (outcome.success) {
 			console.log("✅ Auto-sync completed successfully:", {
-				syncedEvents: syncResult.result?.syncedEvents || 0,
-				conflicts: syncResult.result?.conflicts?.length || 0,
-				errors: syncResult.result?.errors?.length || 0,
+				syncedEvents: outcome.result?.syncedEvents || 0,
+				conflicts: outcome.result?.conflicts?.length || 0,
+				errors: outcome.result?.errors?.length || 0,
 			});
 
 			return NextResponse.json({
 				success: true,
 				message: "Auto-sync completed",
-				result: syncResult.result,
+				result: outcome.result,
 			});
-		} else {
-			console.error("❌ Auto-sync failed:", syncResult);
-			return NextResponse.json(
-				{
-					success: false,
-					message: "Auto-sync failed",
-					error: syncResult.error || syncResult.message,
-				},
-				{ status: 500 },
-			);
 		}
+
+		console.error("❌ Auto-sync failed:", outcome);
+		return NextResponse.json(
+			{
+				success: false,
+				message: "Auto-sync failed",
+				error: outcome.error || outcome.message,
+			},
+			{ status: outcome.httpStatus >= 400 ? outcome.httpStatus : 500 },
+		);
 	} catch (error) {
 		console.error("Error in auto-sync:", error);
 		return NextResponse.json(

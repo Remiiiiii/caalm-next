@@ -1,7 +1,7 @@
 # Policy: AI on customer documents
 
 **Status:** Accepted  
-**Date:** 2026-10-16  
+**Date:** 2026-11-12  
 **Audience:** Engineering, product, sales, Cursor agents  
 
 ## Purpose
@@ -14,13 +14,15 @@ Inspired by [NIST AI RMF](https://www.nist.gov/itl/ai-risk-management-framework)
 
 | Step | What happens |
 |------|----------------|
-| 1 | User uploads a file during **contract or license intake** |
+| 1 | User uploads a file during **contract or license intake**, **or** Ask CAALM runs `extract_contract_terms` / `extract_license_from_document` on an attached file |
 | 2 | CAALM reads text from the file on our side when possible |
 | 3 | Text (and related prompts) may go to **Google Gemini** via `GOOGLE_API_KEY` (`src/lib/ai/extractContractFromDocument.ts`, `extractLicenseFromDocument.ts`) |
-| 4 | Suggested fields show in the UI for **human review** before submit (`AiExtractionReviewPanel`) |
+| 4 | Suggested fields show for **human review** before save (`AiExtractionReviewPanel` on intake; assistant returns fields and requires a separate update/Confirm — it does **not** auto-save) |
 | 5 | Orgs have a monthly **extraction quota** (billing); system settings include an **AI document extraction** toggle key |
 
-Other Gemini uses (assistant, news assist, audits) are **not** the same as document intake. New document-file AI paths must follow this policy too.
+**Document-file extraction** (intake + those Ask CAALM extract tools) is the Gemini path above. **Ask CAALM chat** may use Claude (Anthropic) or Gemini by plan tier for conversation and tool routing; that chat provider is **not** a new document-file vendor. Do not send contract/license file bodies to Anthropic (or any new vendor) for extraction without updating this policy and a product/security review.
+
+Other Gemini uses (news assist, audits, non-file assistant help) are related but not the same as document intake. New document-file AI paths must follow this policy too.
 
 ## Hard rules
 
@@ -58,4 +60,7 @@ Update **Status/Date** in this file before coding those changes.
 
 - Playbook overlooking item: AI document extraction  
 - Billing quota: `src/lib/billing/aiExtractionQuota.ts`  
+- Ask CAALM extract tools: `extract_contract_terms`, `extract_license_from_document` in `src/lib/assistant/tools/`  
+- Path inventory: `docs/internal/assistant-dedicated-paths.md`  
 - NIST AI RMF (external reference in the playbook Tier list)  
+
