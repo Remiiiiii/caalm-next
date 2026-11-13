@@ -1147,22 +1147,26 @@ export const syncMicrosoftCalendar = async (
 			};
 		}
 
-		// Call the sync API endpoint with absolute URL and user ID
+		// Call the sync API endpoint. This file has no "use server" directive
+		// and is imported directly by several client components, so it must
+		// stay a real network call rather than an in-process import — pulling
+		// in the sync service's module graph here (cache-manager -> redis
+		// client, which carries "server-only") breaks the client bundle. The
+		// route itself derives the signed-in user from the session cookie
+		// this same-origin fetch carries; it no longer trusts the userId
+		// below for authorization, only to decide whether to call it at all.
 		const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 		const response = await fetch(`${baseUrl}/api/microsoft/calendar/sync`, {
 			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				"X-User-ID": userId, // Pass user ID in header
-			},
+			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({
-				userId, // Also pass in body for redundancy
 				startDate: new Date(
 					Date.now() - 90 * 24 * 60 * 60 * 1000,
 				).toISOString(), // 90 days ago
 				endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year from now
 				strategy: "newest",
 			}),
+			credentials: "same-origin",
 		});
 
 		const result = await response.json();
