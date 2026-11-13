@@ -43,6 +43,17 @@ Intro paragraph.
 		expect(text.toLowerCase()).toContain("world");
 		expect(text).not.toContain("```");
 	});
+
+	it("strips markdown table pipes from search text", () => {
+		const text = stripMarkdown(
+			"Where to work\n\n| Screen | Path | Purpose |\n|---|---|---|\n| All Contracts | `/contracts` | Library |\n",
+		);
+		expect(text).toContain("Where to work");
+		expect(text).toContain("All Contracts");
+		expect(text).toContain("contracts");
+		expect(text).not.toContain("|");
+		expect(text).not.toContain("---");
+	});
 });
 
 describe("docs video embeds", () => {
