@@ -16,6 +16,7 @@ import { FUNDING_TOOLS } from "@/lib/assistant/tools/fundingTools";
 import { INTEGRATION_TOOLS } from "@/lib/assistant/tools/integrationTools";
 import { IT_TOOLS } from "@/lib/assistant/tools/itTools";
 import { LICENSE_TOOLS } from "@/lib/assistant/tools/licenseTools";
+import { NEWS_TOOLS } from "@/lib/assistant/tools/newsTools";
 import { TASK_TOOLS } from "@/lib/assistant/tools/taskTools";
 import { TICKET_TOOLS } from "@/lib/assistant/tools/ticketTools";
 import {
@@ -263,6 +264,7 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
 	...TICKET_TOOLS,
 	...IT_TOOLS,
 	...INTEGRATION_TOOLS,
+	...NEWS_TOOLS,
 ];
 
 export function getToolsForPermissions(
