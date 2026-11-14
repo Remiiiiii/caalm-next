@@ -9,7 +9,7 @@ alwaysApply: false
 
 # Production Tools Roadmap batch pull requests
 
-This board (`?catalog=pto`) turns the Ask CAALM assistant tool gap list (A–O) into small batch PRs instead of one mega-PR. Each **batch PR** (up to five top-level task codes) is the **implementation ticket**. Do not open one PR per task unless the user explicitly asks.
+This board (`?catalog=pto`) turns the Ask CAALM assistant tool gap list (A–S) into small batch PRs instead of one mega-PR. Each **batch PR** (up to five top-level task codes) is the **implementation ticket**. Do not open one PR per task unless the user explicitly asks.
 
 ## Before you start (non-negotiable — check every time)
 

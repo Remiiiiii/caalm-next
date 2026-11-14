@@ -1,5 +1,5 @@
 /**
- * Markdown bodies for Production Tools batch PRs (Ask CAALM A–O tool gap list).
+ * Markdown bodies for Production Tools batch PRs (Ask CAALM A–S tool gap list).
  * Mirrors the PRD body builder; one PR per batch (up to five task codes).
  */
 
@@ -35,6 +35,10 @@ export const PTO_SECTION_PLAIN_INTRO: Record<number, string> = {
 	13: "Add morning briefing and news reads, a notification inbox, and the SMS test.",
 	14: "Explain dashboard metrics in plain English, export tables, and schedule reports—honest about sample vs live data.",
 	15: "Add the agent safety layer: preview before confirm, undo where safe, explain denials, list capabilities, and compose multi-step skills.",
+	16: "Let the assistant schedule, list, reschedule, and cancel Audit Lab review sessions and invite participants, always under audit_lab.manage_sessions, with confirm and audit.",
+	17: "Let the assistant assign session roles, build a question bank (including from real findings), and assemble a timed interview script.",
+	18: "Let the assistant generate and run the PBC-style evidence matrix: owners, statuses, coverage, and who owns each item.",
+	19: "Let the assistant start practice rounds, score answers, find rehearsal gaps, and return session and department readiness reports.",
 };
 
 function catalogTaskForCode(

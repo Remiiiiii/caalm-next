@@ -1,5 +1,5 @@
 /**
- * Production Tools Roadmap catalog PR batches (Ask CAALM A–O tool gap list).
+ * Production Tools Roadmap catalog PR batches (Ask CAALM A–S tool gap list).
  * Up to five top-level task codes per batch PR — same rule as PRD / Nonprofit.
  * Linked PR numbers fill in as batch PRs open; completion also matches by
  * branch `cursor/production-tools/s{nn}-b{n}-…` and title `PTO S{n} B{n}`.
@@ -332,6 +332,69 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 		// production-tools-roadmap-prs.mdc).
 		mergedSetupPrNumber: 247,
 		linkedPrNumber: 274,
+	},
+	{
+		sectionNumber: 16,
+		sectionTitle: "Audit Lab review sessions",
+		batch: 1,
+		taskCodes: ["16.1", "16.2", "16.3", "16.4", "16.5"],
+		taskTitles: [
+			"schedule_review_session",
+			"list_review_sessions",
+			"reschedule_review_session",
+			"cancel_review_session",
+			"invite_participants",
+		],
+		linkedPrNumber: 284,
+	},
+	{
+		sectionNumber: 17,
+		sectionTitle: "Audit Lab roles and interview prep",
+		batch: 1,
+		taskCodes: ["17.1", "17.2", "17.3", "17.4", "17.5"],
+		taskTitles: [
+			"assign_session_role",
+			"generate_question_bank",
+			"add_question",
+			"import_questions_from_findings",
+			"generate_interview_script",
+		],
+		linkedPrNumber: 285,
+	},
+	{
+		sectionNumber: 18,
+		sectionTitle: "Audit Lab evidence matrix",
+		batch: 1,
+		taskCodes: ["18.1", "18.2", "18.3", "18.4", "18.5"],
+		taskTitles: [
+			"generate_evidence_request_list",
+			"assign_evidence_owner",
+			"update_evidence_status",
+			"evidence_coverage_report",
+			"who_owns_evidence",
+		],
+		linkedPrNumber: 286,
+	},
+	{
+		sectionNumber: 19,
+		sectionTitle: "Audit Lab practice and reporting",
+		batch: 1,
+		taskCodes: ["19.1", "19.2", "19.3", "19.4"],
+		taskTitles: [
+			"start_practice_round",
+			"score_answer",
+			"request_feedback",
+			"find_rehearsal_gaps",
+		],
+		linkedPrNumber: 287,
+	},
+	{
+		sectionNumber: 19,
+		sectionTitle: "Audit Lab practice and reporting",
+		batch: 2,
+		taskCodes: ["19.5", "19.6"],
+		taskTitles: ["session_readiness_report", "department_readiness_summary"],
+		linkedPrNumber: 288,
 	},
 ];
 

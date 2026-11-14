@@ -1,8 +1,8 @@
-# Production Tools Roadmap — handoff for Claude
+# Production Tools Roadmap: handoff for Claude
 
 ## What it is
 
-**PTO (Production Tools)** is the fourth IT Development board (`?catalog=pto`). It turns the **Ask CAALM assistant tool gap list (A–O)** into tracked work: each task = **one permission-gated chat tool** (or a tight group), shipped as **small batch PRs** instead of one mega-PR.
+**PTO (Production Tools)** is the fourth IT Development board (`?catalog=pto`). It turns the **Ask CAALM assistant tool gap list (A–S)** into tracked work: each task = **one permission-gated chat tool** (or a tight group), shipped as **small batch PRs** instead of one mega-PR.
 
 - UI: `/dashboard/it/development/production-tools-roadmap`
 - API: `/api/roadmap/overview?catalog=pto`
@@ -10,7 +10,7 @@
 
 ## Core product rules (every tool)
 
-1. Register in Ask CAALM tool registry with `requiredPermissions` from the DB — **no role-name bypass**.
+1. Register in Ask CAALM tool registry with `requiredPermissions` from the DB: **no role-name bypass**.
 2. **Mutating** tools: confirm before write + audit who/what/when/tenant on success.
 3. **Reads**: org-scoped; clear deny / empty messages.
 4. **2a rule**: wrap existing product APIs. If no backend yet → honest permission-gated “not available yet”; leave task incomplete.
@@ -23,8 +23,8 @@
 - Branch: `cursor/production-tools/s{nn}-b{n}-5329`
 - Title: `PTO S{n} B{n} {section} ({range})`
 - Body: `buildPtoBatchPrBody` from catalog Who/What/Where/Why/When/How + Done when.
-- Set `linkedPrNumber` on the open draft PR; **do not merge** stub-only — user implements on the branch, pushes, then merges.
-- Historic marker merges **`#229–#247`** are `mergedSetupPrNumber` only — they never complete tasks.
+- Set `linkedPrNumber` on the open draft PR; **do not merge** stub-only; user implements on the branch, pushes, then merges.
+- Historic marker merges **`#229–#247`** are `mergedSetupPrNumber` only; they never complete tasks.
 - Tests: `tests/roadmap/pto/{code-with-dashes}.test.ts` + `pnpm run test:api-authz` when routes/permissions change.
 
 ## Sections (0 seed-complete; product starts at 1)
@@ -32,7 +32,7 @@
 | # | Theme | Example tools |
 |---|--------|----------------|
 | 0 | Roadmap engine (seeded done) | catalog, locking, board page, PR matching, conventions |
-| 1 | Users / org admin | invite_user, list_users, assign roles, deactivate, org settings — **PRs #219, #223 linked** |
+| 1 | Users / org admin | invite_user, list_users, assign roles, deactivate, org settings; **PRs #219, #223 linked** |
 | 2 | Contracts CLM depth | get/ask/create/update/bulk, extract/summarize/compare, obligations, signature, renew, export |
 | 3 | Licenses | get/create/renew/approve/extract, expirations, assign owner |
 | 4 | Approvals write | get / approve / reassign / override |
@@ -47,6 +47,10 @@
 | 13 | News / briefing / notifications | morning briefing, list notifications, SMS test |
 | 14 | Analytics & exports | risk averted query, CSV export, schedule report |
 | 15 | Agent OS cross-cutting | preview mutation, undo, explain deny, list capabilities, multi-step compose |
+| 16 | Audit Lab review sessions (gap P) | schedule/list/reschedule/cancel session, invite participants — **locked until 15 merges**; wraps Lab APIs |
+| 17 | Audit Lab roles and interview prep (gap Q) | assign role, question bank, add/import questions, interview script |
+| 18 | Audit Lab evidence matrix (gap R) | generate list, assign owner, update status, coverage report, who owns |
+| 19 | Audit Lab practice and reporting (gap S) | practice round, score, feedback, gaps, session/department reports |
 
 ## Key files
 
@@ -58,4 +62,4 @@
 
 ## Progress note for continuation
 
-Section **0** is seed-complete. Section **1** has linked PRs **#219** (1.1–1.5) and **#223** (1.6–1.8). Section **2 batch 1** shipped on **#227** (placeholder **#226**). Section **2 batch 2** (2.6–2.10) shipped on **#250** (setup stub **#229** is `mergedSetupPrNumber` only). **Sections 2 batch 3 through 15 batch 1**: merged setup stubs **#230–#247** are `mergedSetupPrNumber` only; open implementation drafts **#251–#268** (same `cursor/production-tools/sNN-bN-5329` branches) are in `pr-catalog-bodies/pto/linked-pr-numbers.json`. Workflow: checkout the batch branch locally → implement tools → push → merge when CI is green (do not merge marker-only drafts). Full PR bodies: `pr-catalog-bodies/pto/*.md` or `pnpm pto:batch-pr-body --pr <n>`.
+Section **0** is seed-complete. Section **1** has linked PRs **#219** (1.1–1.5) and **#223** (1.6–1.8). Section **2 batch 1** shipped on **#227** (placeholder **#226**). Section **2 batch 2** (2.6–2.10) shipped on **#250** (setup stub **#229** is `mergedSetupPrNumber` only). **Sections 2 batch 3 through 15 batch 1**: merged setup stubs **#230–#247** are `mergedSetupPrNumber` only; open implementation drafts **#251–#268** (same `cursor/production-tools/sNN-bN-5329` branches) are in `pr-catalog-bodies/pto/linked-pr-numbers.json`. **Sections 16–19** (Audit Lab assistant tools, spec §11) are catalogued and stay **locked until section 15 fully merges**; they wrap Audit Lab product APIs (`docs/internal/audit-lab-decision.md`). Workflow: checkout the batch branch locally → implement tools → push → merge when CI is green (do not merge marker-only drafts). Full PR bodies: `pr-catalog-bodies/pto/*.md` or `pnpm pto:batch-pr-body --pr <n>`.
