@@ -88,6 +88,12 @@ export const PERMISSIONS = {
 		DELETE: "audit.delete",
 	},
 
+	// Audit Lab (mock-audit rehearsal)
+	AUDIT_LAB: {
+		VIEW: "audit_lab.view",
+		MANAGE_SESSIONS: "audit_lab.manage_sessions",
+	},
+
 	// IT/Software Engineering Permissions
 	IT: {
 		VIEW_RATE_LIMITS: "it.view_rate_limits",
@@ -569,6 +575,18 @@ export const PERMISSION_DEFINITIONS = [
 		category: "audit",
 		description: "Soft-delete uploaded audit documents",
 	},
+	{
+		key: PERMISSIONS.AUDIT_LAB.VIEW,
+		name: "View Audit Lab",
+		category: "audit_lab",
+		description: "View mock-audit review sessions",
+	},
+	{
+		key: PERMISSIONS.AUDIT_LAB.MANAGE_SESSIONS,
+		name: "Manage Audit Lab Sessions",
+		category: "audit_lab",
+		description: "Create, reschedule, cancel sessions, and invite participants",
+	},
 
 	// IT/Software Engineering
 	{
@@ -886,7 +904,8 @@ export const PERMISSION_DEFINITIONS = [
 		key: PERMISSIONS.PROPOSALS.LIBRARY_MANAGE,
 		name: "Manage Proposal Library",
 		category: "proposals",
-		description: "Add and edit reusable past-performance and capability content",
+		description:
+			"Add and edit reusable past-performance and capability content",
 	},
 
 	// Constituent CRM

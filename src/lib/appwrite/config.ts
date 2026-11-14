@@ -302,6 +302,12 @@ export const appwriteConfig = {
 		"69a1c0d10001a8d1e004",
 	),
 
+	/** Audit Lab mock-audit sessions (name: review_sessions) */
+	reviewSessionsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_REVIEW_SESSIONS_COLLECTION",
+		"69c4b201001f4e8c2101",
+	),
+
 	/** Audit report files (name: caalm-audit-documents) */
 	auditDocumentsBucketId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_AUDIT_DOCUMENTS_BUCKET",
