@@ -40,6 +40,8 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
+import type { ReviewReadiness } from "@/components/upload-review/types";
+import { useInlineUploadPreview } from "@/components/upload-review/useInlineUploadPreview";
 import { useToast } from "@/hooks/use-toast";
 import { uploadFile } from "@/lib/actions/file.actions";
 import {
@@ -178,6 +180,25 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 		useState(false);
 	const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 	const [isValidating, setIsValidating] = useState(false);
+	const [reviewReadiness, setReviewReadiness] = useState<ReviewReadiness>({
+		missingRequiredLabels: [],
+		canSubmit: false,
+	});
+	const handleReviewReadinessChange = useCallback((next: ReviewReadiness) => {
+		setReviewReadiness((prev) => {
+			if (
+				prev.canSubmit === next.canSubmit &&
+				prev.missingRequiredLabels.length ===
+					next.missingRequiredLabels.length &&
+				prev.missingRequiredLabels.every(
+					(label, i) => label === next.missingRequiredLabels[i],
+				)
+			) {
+				return prev;
+			}
+			return next;
+		});
+	}, []);
 	// True once the user edits a field after the last save (or resume).
 	const [dirtySinceSave, setDirtySinceSave] = useState(false);
 	const stepScrollRef = useRef<HTMLDivElement | null>(null);
@@ -197,6 +218,20 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 	const ownershipStepNumber = typeConfig
 		? typeConfig.steps.findIndex((s) => s.kind === "ownership") + 2
 		: -1;
+	const isReviewStep = Boolean(
+		typeConfig && currentStep === totalSteps && totalSteps > 1,
+	);
+	const inlinePreview = useInlineUploadPreview(processedFileData, isReviewStep);
+	const extractedFieldNames = useMemo(() => {
+		if (
+			extractedData &&
+			Array.isArray(extractedData.filledFieldNames) &&
+			extractedData.filledFieldNames.length > 0
+		) {
+			return extractedData.filledFieldNames as string[];
+		}
+		return aiFilledFields;
+	}, [extractedData, aiFilledFields]);
 
 	// Initialize managers (deferred until dialog opens)
 	const {
@@ -208,16 +243,17 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 		assigneeSource,
 	} = useManagers(isOpen, { $id: ownerId, fullName: "You" });
 
-	// Review step shows owners by name, not by users-table id.
-	const managerNames = useMemo(
-		() =>
-			Object.fromEntries(
-				[...availableManagers, ...filteredManagers].map((m) => [
-					m.$id,
-					m.fullName,
-				]),
-			),
+	const reviewManagers = useMemo(
+		() => [...availableManagers, ...filteredManagers],
 		[availableManagers, filteredManagers],
+	);
+
+	// Fallback name lookup for the review step — covers assigned managers no
+	// longer present in availableManagers/filteredManagers (e.g. removed from
+	// the department since assignment), so owners never show as raw ids.
+	const managerNames = useMemo(
+		() => Object.fromEntries(reviewManagers.map((m) => [m.$id, m.fullName])),
+		[reviewManagers],
 	);
 
 	// Department options derived from the divisions of available managers.
@@ -976,7 +1012,9 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 								: "sm:max-w-md!"
 							: showPicker || showLicenseTypeAssistant
 								? undefined
-								: "sm:max-w-6xl",
+								: isReviewStep
+									? "sm:max-w-[90rem]!"
+									: "sm:max-w-6xl",
 					)}
 				>
 					<VisuallyHiddenPrimitive.Root>
@@ -1130,7 +1168,12 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 
 							<div
 								ref={stepScrollRef}
-								className="min-h-0 flex-1 overflow-y-auto bg-transparent p-4"
+								className={cn(
+									"min-h-0 flex-1 bg-transparent",
+									isReviewStep
+										? "flex flex-col overflow-hidden px-4 pb-3 pt-4"
+										: "overflow-y-auto p-4",
+								)}
 							>
 								<Form {...form}>
 									<CaalmFilledProvider
@@ -1155,7 +1198,11 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 													e.preventDefault();
 												}
 											}}
-											className="space-y-6"
+											className={cn(
+												"space-y-6",
+												isReviewStep &&
+													"flex min-h-0 flex-1 flex-col space-y-0",
+											)}
 										>
 											{/* Step 1: File Upload */}
 											{currentStep === 1 && (
@@ -1206,16 +1253,25 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 												)}
 
 											{/* Final step: Review before submit-for-review */}
-											{currentStep === totalSteps && typeConfig && (
-												<LicenseReviewStep
-													values={form.watch() as Record<string, unknown>}
-													typeConfig={typeConfig}
-													ownershipStepNumber={ownershipStepNumber}
-													fileName={processedFileData?.name}
-													lowConfidenceFields={lowConfidenceFields}
-													managerNames={managerNames}
-													onEditStep={goToStep}
-												/>
+											{isReviewStep && typeConfig && (
+												<div className="flex min-h-0 flex-1 flex-col">
+													<LicenseReviewStep
+														values={form.watch() as Record<string, unknown>}
+														typeConfig={typeConfig}
+														ownershipStepNumber={ownershipStepNumber}
+														fileName={processedFileData?.name}
+														pdfUrl={inlinePreview.pdfUrl}
+														htmlContent={inlinePreview.htmlContent}
+														textContent={inlinePreview.textContent}
+														downloadOnly={inlinePreview.downloadOnly}
+														managers={reviewManagers}
+														managerNames={managerNames}
+														extractedFieldNames={extractedFieldNames}
+														lowConfidenceFields={lowConfidenceFields}
+														onEditStep={goToStep}
+														onReadinessChange={handleReviewReadinessChange}
+													/>
+												</div>
 											)}
 
 											{/* Save Progress Card — dynamic steps only (not final review) */}
@@ -1234,19 +1290,30 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 
 							{/* Sticky Footer with Navigation and Action Buttons */}
 							<div className="sticky bottom-0 z-10 shrink-0 border-t border-slate-100 bg-slate-50/70 px-6 py-4">
-								<div className="flex items-center justify-between">
+								<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 									<Button
 										type="button"
 										variant="ghost"
 										onClick={handleCancelClick}
 										disabled={isUploading}
-										className="rounded-full px-3 py-1.5 h-[1.65rem] justify-center text-slate-400 hover:text-slate-600 hover:bg-black/[.04]"
+										className="h-[1.65rem] justify-center self-start rounded-full px-3 py-1.5 text-slate-400 hover:bg-black/[.04] hover:text-slate-600"
 									>
 										<Ban className="h-4 w-4" />
 										Cancel
 									</Button>
 
-									<div className="flex items-center gap-2">
+									{isReviewStep ? (
+										<p
+											className="text-xs text-slate-600 sm:flex-1 sm:text-center"
+											role="status"
+										>
+											{reviewReadiness.missingRequiredLabels.length > 0
+												? `${reviewReadiness.missingRequiredLabels.length} required field${reviewReadiness.missingRequiredLabels.length === 1 ? "" : "s"} left: ${reviewReadiness.missingRequiredLabels.join(", ")}`
+												: "Ready to submit"}
+										</p>
+									) : null}
+
+									<div className="flex items-center justify-end gap-2">
 										{currentStep < totalSteps ? (
 											<Button
 												type="button"
@@ -1273,7 +1340,11 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 											<Button
 												type="button"
 												onClick={() => void form.handleSubmit(handleSubmit)()}
-												disabled={isUploading || !processedFileData}
+												disabled={
+													isUploading ||
+													!processedFileData ||
+													!reviewReadiness.canSubmit
+												}
 												className="primary-btn min-w-[120px]"
 											>
 												{isUploading ? (

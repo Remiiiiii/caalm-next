@@ -359,7 +359,7 @@ export function RiskImpactHeroCard({
 								value={snapshot.monitoring.clausesFlagged}
 							/>
 							<div className="flex justify-end pt-0.5">
-								<Button asChild className={cta}>
+								<Button asChild className="btn-primary">
 									<Link href={breakdownHref}>
 										View breakdown
 										<ChevronRight className="h-3.5 w-3.5" />

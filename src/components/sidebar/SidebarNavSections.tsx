@@ -125,7 +125,7 @@ function NavItemIcons({
 						<Crown
 							className={cn(
 								"h-5 w-5",
-								mobile && active ? "text-white" : "text-yellow-500",
+								mobile && active ? "text-white" : "text-[#0f5384]",
 							)}
 						/>
 					)}
@@ -141,7 +141,7 @@ function NavItemIcons({
 						<Building
 							className={cn(
 								"h-5 w-5",
-								mobile && active ? "text-white" : "text-green-500",
+								mobile && active ? "text-white" : "text-[#0f5384]",
 							)}
 						/>
 					)}

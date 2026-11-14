@@ -69,11 +69,11 @@ function ItemIcon({
 
 	if (sectionHeader === "Dashboard" || sectionHeader === "Workspaces") {
 		if (item.name === "Super Admin")
-			return <Crown className="h-4 w-4 text-yellow-500 shrink-0" />;
+			return <Crown className="h-4 w-4 text-[#0f5384] shrink-0" />;
 		if (item.name === "Organization Admin")
 			return <Building2 className="h-4 w-4 text-blue-500 shrink-0" />;
 		if (item.name === "Department Manager")
-			return <Building className="h-4 w-4 text-green-500 shrink-0" />;
+			return <Building className="h-4 w-4 text-[#0f5384] shrink-0" />;
 		if (item.name === "Viewer")
 			return <Eye className="h-4 w-4 text-gray-500 shrink-0" />;
 		if (item.name === "IT")

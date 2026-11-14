@@ -41,6 +41,7 @@ import {
 	handleDemoSampleDragOverCapture,
 	handleDemoSampleDropCapture,
 } from "@/components/demo/demoSampleDrag";
+import ShimmerBadge from "@/components/landing/ShimmerBadge";
 import { SaveProgressCard } from "@/components/SaveProgressCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -109,6 +110,8 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { AiExtractionStatusBadge } from "@/components/contract-upload/AiExtractionReview";
 import ContractReviewStep from "@/components/contract-upload/ContractReviewStep";
+import type { ReviewReadiness } from "@/components/upload-review/types";
+import { useInlineUploadPreview } from "@/components/upload-review/useInlineUploadPreview";
 import {
 	CaalmFilledProvider,
 	Form,
@@ -1021,6 +1024,28 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 	const [previewHtml, setPreviewHtml] = useState<string | null>(null);
 	const [previewText, setPreviewText] = useState<string | null>(null);
 	const [previewDownloadOnly, setPreviewDownloadOnly] = useState(false);
+	const [reviewReadiness, setReviewReadiness] = useState<ReviewReadiness>({
+		missingRequiredLabels: [],
+		canSubmit: false,
+	});
+	const handleReviewReadinessChange = React.useCallback(
+		(next: ReviewReadiness) => {
+			setReviewReadiness((prev) => {
+				if (
+					prev.canSubmit === next.canSubmit &&
+					prev.missingRequiredLabels.length ===
+						next.missingRequiredLabels.length &&
+					prev.missingRequiredLabels.every(
+						(label, i) => label === next.missingRequiredLabels[i],
+					)
+				) {
+					return prev;
+				}
+				return next;
+			});
+		},
+		[],
+	);
 	const stepScrollRef = useRef<HTMLDivElement | null>(null);
 	const isResumingDraftRef = React.useRef(false);
 
@@ -1282,6 +1307,34 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 	const totalSteps = contentSteps + 1;
 	const stepTitles = [...contentStepTitles, "Review"];
 	const isReviewStep = currentStep === totalSteps;
+	const reviewPreviewFile = React.useMemo(() => {
+		if (!processedFileData) return null;
+		const fromState = toArrayBuffer(processedFileData.arrayBuffer);
+		return {
+			name: processedFileData.name,
+			type: processedFileData.type,
+			arrayBuffer: fromState ?? fileBytesRef.current ?? undefined,
+			base64Content: processedFileData.base64Content,
+		};
+	}, [processedFileData]);
+	const inlinePreview = useInlineUploadPreview(
+		reviewPreviewFile,
+		isReviewStep,
+	);
+	const extractedFieldNames = React.useMemo(() => {
+		if (
+			extractedData &&
+			Array.isArray(extractedData.filledFieldNames) &&
+			(extractedData.filledFieldNames as string[]).length > 0
+		) {
+			return extractedData.filledFieldNames as string[];
+		}
+		return aiFilledFields;
+	}, [extractedData, aiFilledFields]);
+	const reviewManagers = React.useMemo(
+		() => [...availableManagers, ...filteredManagers],
+		[availableManagers, filteredManagers],
+	);
 	// Typed wizards (government, grant, …) have fewer than 10 steps — match by title.
 	const isDigitalSignaturesStep =
 		!isReviewStep &&
@@ -3389,6 +3442,10 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 						// Override .glass-dialog sm:max-w-4xl when viewing drafts
 						showDraftsList &&
 							(savedDrafts.length > 0 ? "sm:max-w-2xl!" : "sm:max-w-md!"),
+						!showDraftsList &&
+							!showTypeSelection &&
+							isReviewStep &&
+							"sm:max-w-[90rem]!",
 					)}
 					onPointerDownOutside={(e) => {
 						// PDF preview is portaled outside this dialog — don't dismiss on those clicks
@@ -3568,31 +3625,33 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 							<div className="flex shrink-0 items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/70 px-5.5 pb-3.5 pt-3">
 								<p className="flex items-center justify-center gap-1.5 text-xs text-slate-500">
 									<CircleHelp
-										className="h-3.25 w-[3.25 shrink-0 text-[#078fab]"
+										className="h-3.25 w-[3.25 shrink-0 text-slate-500"
 										aria-hidden
 									/>
 									Need help? Use the CAALM Contract Type Assistant to pick the
 									best contract type.
 									<MoveRight className="h-3.5 w-3.5 text-[#078fab]" />
 								</p>
-								<button
+								<ShimmerBadge
+									as="button"
 									type="button"
+									animateOn="hover"
 									onClick={() => setShowAiQuiz(true)}
-									className={cn(
-										AI_ASSISTANT_OPEN_CHIP_CLASS,
-										"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/30",
-									)}
+									aria-label="Contract Type assistant"
+									className="h-10 shrink-0"
+									innerClassName="h-full bg-white px-3 text-sm font-medium text-[#0f5384]"
 								>
 									<Image
-										src="/assets/icons/ai-icon.svg"
-										alt=""
-										width={22}
-										height={22}
+										src="/assets/images/caalm-bot-bust.svg"
+										alt="Contract Type assistant"
+										width={24}
+										height={24}
+										className="shrink-0 rounded-full! h-6 w-6! object-contain outline border-2 p-0.5 outline-[#D6E8F5]"
 									/>
 									<span className="text-xs font-semibold text-[#0f5384]">
 										Contract Type assistant
 									</span>
-								</button>
+								</ShimmerBadge>
 							</div>
 						</div>
 					) : showDraftsList ? (
@@ -3881,58 +3940,233 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 										/>
 									</div>
 									<div className="relative w-full">
-									<AnimatePresence
-										mode={CONTENT_CROSSFADE_PRESENCE_MODE}
-										initial={false}
-									>
-										{aiQuizPhase === "questions" &&
-											visibleAiQuizQuestions.length > 0 && (
+										<AnimatePresence
+											mode={CONTENT_CROSSFADE_PRESENCE_MODE}
+											initial={false}
+										>
+											{aiQuizPhase === "questions" &&
+												visibleAiQuizQuestions.length > 0 && (
+													<motion.div
+														key={`question-${visibleAiQuizQuestions[aiQuizStep]?.id ?? aiQuizStep}`}
+														initial={contentCrossfadeInitial}
+														animate={contentCrossfadeAnimate}
+														exit={contentCrossfadeExit}
+														transition={contentCrossfadeTransition}
+														className="w-full"
+													>
+														{aiQuizStep < visibleAiQuizQuestions.length ? (
+															<>
+																<h3
+																	id={`quiz-q-${visibleAiQuizQuestions[aiQuizStep].id}`}
+																	className="mb-4 text-[15px] font-bold leading-snug text-slate-700"
+																>
+																	{visibleAiQuizQuestions[aiQuizStep].text}
+																</h3>
+																{visibleAiQuizQuestions[aiQuizStep].kind ===
+																"freeText" ? (
+																	<Textarea
+																		value={aiQuizFreeTextDraft}
+																		onChange={(e) =>
+																			setAiQuizFreeTextDraft(e.target.value)
+																		}
+																		aria-labelledby={`quiz-q-${visibleAiQuizQuestions[aiQuizStep].id}`}
+																		placeholder="e.g. Annual lease for our program office…"
+																		className="min-h-[120px] resize-y rounded-[10px] border-[1.5px] border-slate-200 bg-white/85 px-3.5 py-3 text-[13.5px] leading-normal text-slate-700 shadow-none placeholder:text-slate-400 focus-visible:border-[#078fab] focus-visible:ring-[3px] focus-visible:ring-[#078fab]/10"
+																	/>
+																) : (
+																	<div
+																		role="group"
+																		aria-labelledby={`quiz-q-${visibleAiQuizQuestions[aiQuizStep].id}`}
+																		className="space-y-2"
+																	>
+																		{visibleAiQuizQuestions[
+																			aiQuizStep
+																		].options.map((opt) => (
+																			<button
+																				key={opt.value}
+																				type="button"
+																				onClick={() =>
+																					handleAiQuizChoice(opt.value)
+																				}
+																				className={AI_QUIZ_OPTION_CLASS}
+																			>
+																				<span className="flex-1 text-[13.5px] font-semibold text-slate-700">
+																					{opt.label}
+																				</span>
+																				<span
+																					className={AI_QUIZ_ARROW_CHIP_CLASS}
+																					aria-hidden
+																				>
+																					<ArrowRight className="h-2.5 w-2.5" />
+																				</span>
+																			</button>
+																		))}
+																	</div>
+																)}
+															</>
+														) : null}
+													</motion.div>
+												)}
+
+											{aiQuizPhase === "loading" && (
 												<motion.div
-													key={`question-${visibleAiQuizQuestions[aiQuizStep]?.id ?? aiQuizStep}`}
+													key="loading"
 													initial={contentCrossfadeInitial}
 													animate={contentCrossfadeAnimate}
 													exit={contentCrossfadeExit}
 													transition={contentCrossfadeTransition}
-													className="w-full"
+													className="flex flex-col items-center justify-center gap-3.5 py-12"
 												>
-													{aiQuizStep < visibleAiQuizQuestions.length ? (
-														<>
-															<h3
-																id={`quiz-q-${visibleAiQuizQuestions[aiQuizStep].id}`}
-																className="mb-4 text-[15px] font-bold leading-snug text-slate-700"
-															>
-																{visibleAiQuizQuestions[aiQuizStep].text}
-															</h3>
-															{visibleAiQuizQuestions[aiQuizStep].kind ===
-															"freeText" ? (
-																<Textarea
-																	value={aiQuizFreeTextDraft}
-																	onChange={(e) =>
-																		setAiQuizFreeTextDraft(e.target.value)
-																	}
-																	aria-labelledby={`quiz-q-${visibleAiQuizQuestions[aiQuizStep].id}`}
-																	placeholder="e.g. Annual lease for our program office…"
-																	className="min-h-[120px] resize-y rounded-[10px] border-[1.5px] border-slate-200 bg-white/85 px-3.5 py-3 text-[13.5px] leading-normal text-slate-700 shadow-none placeholder:text-slate-400 focus-visible:border-[#078fab] focus-visible:ring-[3px] focus-visible:ring-[#078fab]/10"
-																/>
-															) : (
-																<div
-																	role="group"
-																	aria-labelledby={`quiz-q-${visibleAiQuizQuestions[aiQuizStep].id}`}
-																	className="space-y-2"
+													<div
+														className="h-8 w-8 animate-spin rounded-full border-[3px] border-slate-100 border-t-[#078fab]"
+														aria-hidden
+													/>
+													<p
+														className="text-[13px] text-slate-500"
+														aria-live="polite"
+													>
+														Finding the best match for your needs…
+													</p>
+												</motion.div>
+											)}
+
+											{aiQuizPhase === "result" &&
+												aiSuggestion &&
+												(() => {
+													const orderedIds: string[] = [
+														aiSuggestion.primaryTypeId,
+													];
+													for (const a of aiSuggestion.alternates) {
+														if (!orderedIds.includes(a.typeId))
+															orderedIds.push(a.typeId);
+													}
+													const visibleIds = isDemoMode()
+														? orderedIds.filter((id) =>
+																isDemoContractTypeAllowed(id),
+															)
+														: orderedIds;
+													return (
+														<motion.div
+															key="result"
+															initial={contentCrossfadeInitial}
+															animate={contentCrossfadeAnimate}
+															exit={contentCrossfadeExit}
+															transition={contentCrossfadeTransition}
+															className="w-full"
+														>
+															<div className="mb-3.5 flex items-center justify-between">
+																<p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
+																	Recommended for you
+																</p>
+																<span
+																	className="text-[11px] text-slate-400"
+																	aria-live="polite"
 																>
-																	{visibleAiQuizQuestions[
-																		aiQuizStep
-																	].options.map((opt) => (
-																		<button
-																			key={opt.value}
-																			type="button"
-																			onClick={() =>
-																				handleAiQuizChoice(opt.value)
+																	{visibleIds.length}{" "}
+																	{visibleIds.length === 1
+																		? "result"
+																		: "results"}
+																</span>
+															</div>
+															{aiSuggestion.rationale ? (
+																<p className="mb-3.5 text-[12.5px] leading-normal text-slate-500">
+																	{aiSuggestion.rationale}
+																</p>
+															) : null}
+															{aiSuggestion.confidence < 0.4 ? (
+																<p className="mb-3.5 rounded-[10px] border border-[#F9AB72]/30 bg-[#F9AB72]/10 px-4 py-3 text-center text-[13px] leading-normal text-[#b45309]">
+																	We couldn&apos;t confidently match your needs.
+																	Review the options below, browse all contract
+																	types, or retake the quiz with more detail.
+																</p>
+															) : null}
+															{visibleIds.length === 0 ? (
+																<p className="py-5 text-center text-[13px] leading-normal text-slate-500">
+																	None of these suggestions are available.
+																	Browse all contract types instead.
+																</p>
+															) : null}
+															{visibleIds.map((typeId, idx) => {
+																const config = getContractTypeConfig(typeId);
+																if (!config) return null;
+																const IconComponent = getIconComponent(
+																	config.icon,
+																);
+																const best = idx === 0;
+																const choose = () => {
+																	handleContractTypeSelect(config.id);
+																	closeAiQuiz();
+																};
+																return (
+																	<div
+																		key={typeId}
+																		role="button"
+																		tabIndex={0}
+																		aria-label={`${config.label} — ${config.steps} steps`}
+																		onClick={choose}
+																		onKeyDown={(e) => {
+																			if (e.key === "Enter" || e.key === " ") {
+																				e.preventDefault();
+																				choose();
 																			}
-																			className={AI_QUIZ_OPTION_CLASS}
-																		>
-																			<span className="flex-1 text-[13.5px] font-semibold text-slate-700">
-																				{opt.label}
+																		}}
+																		className={cn(
+																			"group mb-2.5 flex cursor-pointer flex-col rounded-xl border-[1.5px] bg-white/85 p-3.5 transition-[border-color,background-color,box-shadow] duration-150",
+																			"hover:border-[#078fab] hover:bg-[#078fab]/[.04] hover:shadow-[0_2px_12px_rgba(7,143,171,0.10)]",
+																			"focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#078fab]",
+																			best
+																				? "border-[#078fab]/35"
+																				: "border-slate-200",
+																		)}
+																	>
+																		<div className="mb-2.5 flex items-center gap-2">
+																			<span
+																				className={cn(
+																					"rounded-md border px-2 py-[3px] text-[11px] font-semibold",
+																					best
+																						? "border-[#078fab]/25 bg-[#078fab]/10 text-[#078fab]"
+																						: "border-[#F9AB72]/30 bg-[#F9AB72]/10 text-[#b45309]",
+																				)}
+																			>
+																				{best
+																					? aiSuggestion.confidence === 0
+																						? "Default"
+																						: "✦ Best match"
+																					: "Also consider"}
+																			</span>
+																			{best && aiSuggestion.confidence > 0 ? (
+																				<span className="text-[11.5px] font-bold text-[#078fab]">
+																					{Math.round(
+																						aiSuggestion.confidence * 100,
+																					)}
+																					% match
+																				</span>
+																			) : null}
+																		</div>
+																		<div className="mb-2.5 flex items-start gap-3">
+																			<div
+																				className={cn(
+																					TYPE_SELECT_ICON_TILE,
+																					"h-8 w-8 rounded-lg",
+																				)}
+																			>
+																				<IconComponent
+																					className="h-4 w-4 text-[#0f5384]"
+																					aria-hidden
+																				/>
+																			</div>
+																			<div className="min-w-0 flex-1">
+																				<p className="text-sm font-bold text-[#0f5384]">
+																					{config.label}
+																				</p>
+																				<p className="text-xs leading-snug text-slate-500">
+																					{config.description}
+																				</p>
+																			</div>
+																		</div>
+																		<div className="flex items-center justify-between border-t border-slate-100 pt-2.5">
+																			<span className="text-[11px] font-semibold text-slate-400">
+																				{config.steps} steps
 																			</span>
 																			<span
 																				className={AI_QUIZ_ARROW_CHIP_CLASS}
@@ -3940,187 +4174,14 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 																			>
 																				<ArrowRight className="h-2.5 w-2.5" />
 																			</span>
-																		</button>
-																	))}
-																</div>
-															)}
-														</>
-													) : null}
-												</motion.div>
-											)}
-
-										{aiQuizPhase === "loading" && (
-											<motion.div
-												key="loading"
-												initial={contentCrossfadeInitial}
-												animate={contentCrossfadeAnimate}
-												exit={contentCrossfadeExit}
-												transition={contentCrossfadeTransition}
-												className="flex flex-col items-center justify-center gap-3.5 py-12"
-											>
-												<div
-													className="h-8 w-8 animate-spin rounded-full border-[3px] border-slate-100 border-t-[#078fab]"
-													aria-hidden
-												/>
-												<p
-													className="text-[13px] text-slate-500"
-													aria-live="polite"
-												>
-													Finding the best match for your needs…
-												</p>
-											</motion.div>
-										)}
-
-										{aiQuizPhase === "result" &&
-											aiSuggestion &&
-											(() => {
-												const orderedIds: string[] = [
-													aiSuggestion.primaryTypeId,
-												];
-												for (const a of aiSuggestion.alternates) {
-													if (!orderedIds.includes(a.typeId))
-														orderedIds.push(a.typeId);
-												}
-												const visibleIds = isDemoMode()
-													? orderedIds.filter((id) =>
-															isDemoContractTypeAllowed(id),
-														)
-													: orderedIds;
-												return (
-													<motion.div
-														key="result"
-														initial={contentCrossfadeInitial}
-														animate={contentCrossfadeAnimate}
-														exit={contentCrossfadeExit}
-														transition={contentCrossfadeTransition}
-														className="w-full"
-													>
-														<div className="mb-3.5 flex items-center justify-between">
-															<p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
-																Recommended for you
-															</p>
-															<span
-																className="text-[11px] text-slate-400"
-																aria-live="polite"
-															>
-																{visibleIds.length}{" "}
-																{visibleIds.length === 1 ? "result" : "results"}
-															</span>
-														</div>
-														{aiSuggestion.rationale ? (
-															<p className="mb-3.5 text-[12.5px] leading-normal text-slate-500">
-																{aiSuggestion.rationale}
-															</p>
-														) : null}
-														{aiSuggestion.confidence < 0.4 ? (
-															<p className="mb-3.5 rounded-[10px] border border-[#F9AB72]/30 bg-[#F9AB72]/10 px-4 py-3 text-center text-[13px] leading-normal text-[#b45309]">
-																We couldn&apos;t confidently match your needs.
-																Review the options below, browse all contract
-																types, or retake the quiz with more detail.
-															</p>
-														) : null}
-														{visibleIds.length === 0 ? (
-															<p className="py-5 text-center text-[13px] leading-normal text-slate-500">
-																None of these suggestions are available. Browse
-																all contract types instead.
-															</p>
-														) : null}
-														{visibleIds.map((typeId, idx) => {
-															const config = getContractTypeConfig(typeId);
-															if (!config) return null;
-															const IconComponent = getIconComponent(
-																config.icon,
-															);
-															const best = idx === 0;
-															const choose = () => {
-																handleContractTypeSelect(config.id);
-																closeAiQuiz();
-															};
-															return (
-																<div
-																	key={typeId}
-																	role="button"
-																	tabIndex={0}
-																	aria-label={`${config.label} — ${config.steps} steps`}
-																	onClick={choose}
-																	onKeyDown={(e) => {
-																		if (e.key === "Enter" || e.key === " ") {
-																			e.preventDefault();
-																			choose();
-																		}
-																	}}
-																	className={cn(
-																		"group mb-2.5 flex cursor-pointer flex-col rounded-xl border-[1.5px] bg-white/85 p-3.5 transition-[border-color,background-color,box-shadow] duration-150",
-																		"hover:border-[#078fab] hover:bg-[#078fab]/[.04] hover:shadow-[0_2px_12px_rgba(7,143,171,0.10)]",
-																		"focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#078fab]",
-																		best
-																			? "border-[#078fab]/35"
-																			: "border-slate-200",
-																	)}
-																>
-																	<div className="mb-2.5 flex items-center gap-2">
-																		<span
-																			className={cn(
-																				"rounded-md border px-2 py-[3px] text-[11px] font-semibold",
-																				best
-																					? "border-[#078fab]/25 bg-[#078fab]/10 text-[#078fab]"
-																					: "border-[#F9AB72]/30 bg-[#F9AB72]/10 text-[#b45309]",
-																			)}
-																		>
-																			{best
-																				? aiSuggestion.confidence === 0
-																					? "Default"
-																					: "✦ Best match"
-																				: "Also consider"}
-																		</span>
-																		{best && aiSuggestion.confidence > 0 ? (
-																			<span className="text-[11.5px] font-bold text-[#078fab]">
-																				{Math.round(
-																					aiSuggestion.confidence * 100,
-																				)}
-																				% match
-																			</span>
-																		) : null}
-																	</div>
-																	<div className="mb-2.5 flex items-start gap-3">
-																		<div
-																			className={cn(
-																				TYPE_SELECT_ICON_TILE,
-																				"h-8 w-8 rounded-lg",
-																			)}
-																		>
-																			<IconComponent
-																				className="h-4 w-4 text-[#0f5384]"
-																				aria-hidden
-																			/>
-																		</div>
-																		<div className="min-w-0 flex-1">
-																			<p className="text-sm font-bold text-[#0f5384]">
-																				{config.label}
-																			</p>
-																			<p className="text-xs leading-snug text-slate-500">
-																				{config.description}
-																			</p>
 																		</div>
 																	</div>
-																	<div className="flex items-center justify-between border-t border-slate-100 pt-2.5">
-																		<span className="text-[11px] font-semibold text-slate-400">
-																			{config.steps} steps
-																		</span>
-																		<span
-																			className={AI_QUIZ_ARROW_CHIP_CLASS}
-																			aria-hidden
-																		>
-																			<ArrowRight className="h-2.5 w-2.5" />
-																		</span>
-																	</div>
-																</div>
-															);
-														})}
-													</motion.div>
-												);
-											})()}
-									</AnimatePresence>
+																);
+															})}
+														</motion.div>
+													);
+												})()}
+										</AnimatePresence>
 									</div>
 								</div>
 							</div>
@@ -4395,7 +4456,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 							<div
 								ref={stepScrollRef}
 								onScroll={handleStepScroll}
-								className="min-h-0 flex-1 overflow-y-auto bg-transparent p-4"
+								className={`min-h-0 flex-1 bg-transparent ${isReviewStep ? "flex flex-col overflow-hidden px-4 pb-3 pt-4" : "overflow-y-auto p-4"}`}
 							>
 								<Form {...form}>
 									<CaalmFilledProvider
@@ -4408,7 +4469,7 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 										<form
 											id="contract-upload-form"
 											onSubmit={form.handleSubmit(handleSubmit)}
-											className="space-y-6"
+											className={`space-y-6${isReviewStep ? " flex min-h-0 flex-1 flex-col space-y-0" : ""}`}
 										>
 											{/* Step 1: File Upload Section */}
 											{currentStep === 1 && (
@@ -7193,32 +7254,26 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
 											{/* Final step: Review before upload */}
 											{isReviewStep && (
-												<div className="">
-													<div className="mb-4">
-														<h3 className="text-lg font-semibold text-slate-700">
-															{currentStep}. Review
-														</h3>
-													</div>
+												<div className="flex min-h-0 flex-1 flex-col">
 													<ContractReviewStep
 														values={form.watch() as Record<string, unknown>}
 														fileName={processedFileData?.name}
+														pdfUrl={inlinePreview.pdfUrl ?? pdfPreviewUrl}
+														htmlContent={
+															inlinePreview.htmlContent ?? previewHtml
+														}
+														textContent={
+															inlinePreview.textContent ?? previewText
+														}
+														downloadOnly={
+															inlinePreview.downloadOnly || previewDownloadOnly
+														}
 														contentStepTitles={contentStepTitles}
+														managers={reviewManagers}
+														extractedFieldNames={extractedFieldNames}
 														lowConfidenceFields={lowConfidenceFields}
 														onEditStep={goToStep}
-														canPreviewFile={Boolean(
-															processedFileData &&
-																(Boolean(fileBytesRef.current?.byteLength) ||
-																	Boolean(
-																		toArrayBuffer(
-																			processedFileData.arrayBuffer,
-																		),
-																	) ||
-																	Boolean(processedFileData.base64Content) ||
-																	Boolean(processedFileData.bucketFileId)),
-														)}
-														onPreviewFile={() => {
-															void openPdfPreview();
-														}}
+														onReadinessChange={handleReviewReadinessChange}
 													/>
 												</div>
 											)}
@@ -7262,23 +7317,30 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 
 							{/* Sticky Footer with Navigation and Action Buttons */}
 							<div className="sticky bottom-0 z-10 border-t border-slate-100 bg-slate-50/70 px-6 py-4">
-								<div className="flex items-center justify-between">
-									{/* Previous/Back Button */}
-									<div className="flex items-center space-x-3">
-										<Button
-											type="button"
-											variant="ghost"
-											onClick={handleCancelClick}
-											disabled={isUploading}
-											className="rounded-full px-3 py-1.5 h-[1.65rem] justify-center text-slate-400 hover:text-slate-600 hover:bg-black/[.04]"
-										>
-											<Ban className="w-4 h-4" />
-											Cancel
-										</Button>
-									</div>
+								<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+									<Button
+										type="button"
+										variant="ghost"
+										onClick={handleCancelClick}
+										disabled={isUploading}
+										className="h-[1.65rem] justify-center self-start rounded-full px-3 py-1.5 text-slate-400 hover:bg-black/[.04] hover:text-slate-600"
+									>
+										<Ban className="w-4 h-4" />
+										Cancel
+									</Button>
 
-									{/* Next/Submit Button */}
-									<div className="flex items-center space-x-3">
+									{isReviewStep ? (
+										<p
+											className="text-xs text-slate-600 sm:flex-1 sm:text-center"
+											role="status"
+										>
+											{reviewReadiness.missingRequiredLabels.length > 0
+												? `${reviewReadiness.missingRequiredLabels.length} required field${reviewReadiness.missingRequiredLabels.length === 1 ? "" : "s"} left: ${reviewReadiness.missingRequiredLabels.join(", ")}`
+												: "Ready to submit"}
+										</p>
+									) : null}
+
+									<div className="flex items-center justify-end gap-2">
 										{currentStep < totalSteps ? (
 											<Button
 												type="button"
@@ -7316,18 +7378,22 @@ const ContractUploadForm: React.FC<ContractUploadFormProps> = ({
 														});
 													}
 												}}
-												disabled={isUploading || !processedFileData}
+												disabled={
+													isUploading ||
+													!processedFileData ||
+													!reviewReadiness.canSubmit
+												}
 												className="btn-primary min-w-[120px]"
 											>
 												{isUploading ? (
 													<>
 														<Loader2 className="h-4 w-4 animate-spin" />
-														Uploading...
+														Submitting...
 													</>
 												) : (
 													<>
-														<Upload className="h-4 w-4 mr-2" />
-														Upload Contract
+														<Upload className="h-4 w-4" />
+														Submit for Review
 													</>
 												)}
 											</Button>

@@ -671,17 +671,17 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 						user={user}
 						actions={
 							<div className="flex items-start gap-3">
-								<div className="text-right">
+								{/* <div className="text-right">
 									<p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
 										Last updated
 									</p>
 									<p className="text-xs text-slate-600">
 										<ClientTimestamp updatedAt={lastUpdatedAt} />
 									</p>
-								</div>
+								</div> */}
 
 								<div className="flex flex-col items-end gap-2">
-									{showDevExpiryTest && (
+									{/* {showDevExpiryTest && (
 										<Button
 											onClick={triggerDevTestModal}
 											variant="outline"
@@ -697,7 +697,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 											<Pencil className="h-3.5 w-3.5" />
 											Test expiry modal
 										</Button>
-									)}
+									)} */}
 									{showDemoExpiryTest && (
 										<Button
 											onClick={triggerDemoTestModal}
@@ -1358,9 +1358,7 @@ const ExecutiveDashboard = ({ user }: ExecutiveDashboardProps) => {
 
 							<motion.div {...revealItem(softRise)}>
 								<PendingInvitationsCard
-									invitations={
-										(invitations as PendingInvitationRow[]) ?? []
-									}
+									invitations={(invitations as PendingInvitationRow[]) ?? []}
 									isLoading={unifiedLoading}
 									addingTokens={addingInvitations}
 									onResend={executeResendInvitation}
