@@ -145,12 +145,30 @@ export function AuditLabClient({
 											event.preventDefault();
 											setBusy(true);
 											try {
-												await postJson("/api/audit-lab/sessions", {
+												const json = await postJson("/api/audit-lab/sessions", {
 													department,
 													scheduledAt: scheduledAt || undefined,
 												});
 												setDepartment("");
-												await mutate();
+												const created = json.data as ReviewSession | undefined;
+												await mutate(
+													(current) => {
+														if (!created) return current;
+														const sessions = current?.data?.sessions ?? [];
+														return {
+															data: {
+																sessions: [
+																	created,
+																	...sessions.filter((s) => s.$id !== created.$id),
+																],
+																evidence: current?.data?.evidence ?? [],
+																gaps: current?.data?.gaps ?? [],
+																reports: current?.data?.reports ?? [],
+															},
+														};
+													},
+													{ revalidate: true },
+												);
 											} catch (err) {
 												onError(err, "I couldn't schedule that session.");
 											} finally {
