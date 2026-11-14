@@ -208,6 +208,18 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 		assigneeSource,
 	} = useManagers(isOpen, { $id: ownerId, fullName: "You" });
 
+	// Review step shows owners by name, not by users-table id.
+	const managerNames = useMemo(
+		() =>
+			Object.fromEntries(
+				[...availableManagers, ...filteredManagers].map((m) => [
+					m.$id,
+					m.fullName,
+				]),
+			),
+		[availableManagers, filteredManagers],
+	);
+
 	// Department options derived from the divisions of available managers.
 	const departments = useMemo(
 		() =>
@@ -1201,6 +1213,7 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 													ownershipStepNumber={ownershipStepNumber}
 													fileName={processedFileData?.name}
 													lowConfidenceFields={lowConfidenceFields}
+													managerNames={managerNames}
 													onEditStep={goToStep}
 												/>
 											)}

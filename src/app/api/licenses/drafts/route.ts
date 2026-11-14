@@ -12,6 +12,7 @@ import {
 } from "@/lib/api/licenses/utils/response.util";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { isSelfUserId } from "@/lib/auth/is-self-user-id";
 import { requirePermission } from "@/lib/rbac/middleware";
 
 /**
@@ -482,13 +483,6 @@ export async function POST(request: NextRequest) {
 			return errorResponse("User not found", 401, { requestId });
 		}
 
-		// Verify owner matches authenticated user
-		if (ownerId !== user.$id) {
-			return errorResponse("Unauthorized: Owner ID does not match user", 403, {
-				requestId,
-			});
-		}
-
 		if (!ownerId || !accountId) {
 			return validationErrorResponse(
 				"Owner ID and Account ID are required",
@@ -496,16 +490,27 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		// Use LicenseDraftService to save draft
-		const draft = await LicenseDraftService.saveDraft(ownerId, accountId, {
-			draftId,
-			formData,
-			currentStep,
-			processedFileData,
-			extractedData,
-			isCompleted: false,
-			totalSteps: requestTotalSteps || 3,
-		});
+		// Verify owner matches authenticated user (client sends the Auth account id)
+		if (!isSelfUserId(ownerId, user)) {
+			return errorResponse("Unauthorized: Owner ID does not match user", 403, {
+				requestId,
+			});
+		}
+
+		// Store drafts under the users-table id so every caller finds them
+		const draft = await LicenseDraftService.saveDraft(
+			user.$id,
+			user.accountId || accountId,
+			{
+				draftId,
+				formData,
+				currentStep,
+				processedFileData,
+				extractedData,
+				isCompleted: false,
+				totalSteps: requestTotalSteps || 3,
+			},
+		);
 
 		return successResponse(
 			{
@@ -569,8 +574,8 @@ export async function GET(request: NextRequest) {
 			return errorResponse("User not found", 401, { requestId });
 		}
 
-		// Verify owner matches authenticated user
-		if (ownerId !== user.$id) {
+		// Verify owner matches authenticated user (client sends the Auth account id)
+		if (!isSelfUserId(ownerId, user)) {
 			return errorResponse("Unauthorized: Owner ID does not match user", 403, {
 				requestId,
 			});
@@ -586,7 +591,7 @@ export async function GET(request: NextRequest) {
 		}
 
 		// Get drafts
-		const drafts = await LicenseDraftService.getDrafts(ownerId);
+		const drafts = await LicenseDraftService.getDrafts(user.$id);
 
 		return successResponse({ drafts }, { requestId });
 	} catch (error: any) {
@@ -645,7 +650,7 @@ export async function DELETE(request: NextRequest) {
 			draftOwnerId = draft.ownerId as string;
 
 			// Verify owner matches authenticated user
-			if (draftOwnerId !== user.$id) {
+			if (!isSelfUserId(draftOwnerId, user)) {
 				return errorResponse(
 					"Unauthorized: Draft does not belong to user",
 					403,

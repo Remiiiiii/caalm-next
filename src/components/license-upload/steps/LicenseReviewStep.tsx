@@ -18,6 +18,8 @@ export type LicenseReviewStepProps = {
 	ownershipStepNumber: number;
 	fileName?: string;
 	lowConfidenceFields?: string[];
+	/** Manager id → display name, so owners show as people rather than ids. */
+	managerNames?: Record<string, string>;
 	onEditStep: (step: number) => void;
 };
 
@@ -85,6 +87,7 @@ export default function LicenseReviewStep({
 	ownershipStepNumber,
 	fileName,
 	lowConfidenceFields = [],
+	managerNames,
 	onEditStep,
 }: LicenseReviewStepProps) {
 	const low = new Set(lowConfidenceFields);
@@ -101,7 +104,13 @@ export default function LicenseReviewStep({
 						{ label: "Department", value: displayValue(values.department) },
 						{
 							label: "Responsible owner(s)",
-							value: displayValue(values.assignedManagers),
+							value: displayValue(
+								Array.isArray(values.assignedManagers)
+									? values.assignedManagers.map(
+											(id) => managerNames?.[String(id)] ?? String(id),
+										)
+									: values.assignedManagers,
+							),
 						},
 						{
 							label: "File location",
