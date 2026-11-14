@@ -95,14 +95,13 @@ const nextConfig: NextConfig = {
 	},
 	// pdf-parse ships pdf.js 1.10 and loads it with a dynamic require; bundling it
 	// corrupts parsing on Vercel ("bad XRef entry"), so load it from node_modules.
+	// Next traces its files itself; don't add an outputFileTracingIncludes glob through
+	// the pnpm symlink (Vercel rejects functions containing symlinked directories).
 	serverExternalPackages: [
 		"ioredis",
 		"@adobe/pdfservices-node-sdk",
 		"pdf-parse-debugging-disabled",
 	],
-	outputFileTracingIncludes: {
-		"*": ["./node_modules/pdf-parse-debugging-disabled/lib/pdf.js/v1.10.100/**"],
-	},
 	// Keep Remotion/AE side projects, local dumps, and Blob-hosted media out of
 	// serverless function file tracing (variable fs walks can otherwise pull dirs in).
 	outputFileTracingExcludes: {
