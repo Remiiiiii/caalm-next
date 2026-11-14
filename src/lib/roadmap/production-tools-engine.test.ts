@@ -35,9 +35,9 @@ describe("production tools roadmap engine", () => {
 		);
 	});
 
-	it("returns 16 PTO sections (engine + A–O) on overview", async () => {
+	it("returns 20 PTO sections (engine + A–S) on overview", async () => {
 		const overview = await getOverview({ catalogKey: "pto" });
-		expect(overview.sections).toHaveLength(16);
+		expect(overview.sections).toHaveLength(20);
 		expect(overview.sections[0]?.title).toBe(
 			"Production Tools Roadmap Engine",
 		);

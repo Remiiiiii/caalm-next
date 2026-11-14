@@ -86,7 +86,7 @@ export function isPlatformReadinessRoadmapBranch(
 }
 
 /**
- * Branches for the Production Tools Roadmap (Ask CAALM A–O tool gap list) —
+ * Branches for the Production Tools Roadmap (Ask CAALM A–S tool gap list) —
  * excluded from the agent PR log.
  */
 export function isProductionToolsRoadmapBranch(
