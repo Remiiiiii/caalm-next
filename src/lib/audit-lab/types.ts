@@ -20,6 +20,18 @@ export const SESSION_ROLES = [
 
 export type SessionRole = (typeof SESSION_ROLES)[number];
 
+export const EVIDENCE_STATUSES = [
+	"not_started",
+	"in_progress",
+	"internal_review",
+	"submitted",
+	"follow_up",
+	"accepted",
+	"rejected",
+] as const;
+
+export type EvidenceStatus = (typeof EVIDENCE_STATUSES)[number];
+
 export type SessionParticipant = {
 	userId: string;
 	name?: string;
@@ -42,9 +54,75 @@ export type ReviewSession = {
 	$updatedAt?: string;
 };
 
-export function parseParticipants(
-	json: string | undefined,
-): SessionParticipant[] {
+export type ReviewQuestion = {
+	$id: string;
+	orgId: string;
+	sessionId: string;
+	prompt: string;
+	source: string;
+	sourceFindingId?: string;
+	difficulty: string;
+	rubric?: string;
+	createdByUserId: string;
+};
+
+export type ReviewScript = {
+	$id: string;
+	orgId: string;
+	sessionId: string;
+	version: number;
+	itemsJson: string;
+	createdByUserId: string;
+};
+
+export type ReviewAttempt = {
+	$id: string;
+	orgId: string;
+	sessionId: string;
+	intervieweeUserId: string;
+	persona: string;
+	difficulty: string;
+	transcriptJson: string;
+	scoresJson: string;
+	status: string;
+	createdByUserId: string;
+};
+
+export type ReviewGap = {
+	$id: string;
+	orgId: string;
+	sessionId: string;
+	attemptId?: string;
+	description: string;
+	capId?: string;
+	status: string;
+};
+
+export type EvidenceRequest = {
+	$id: string;
+	orgId: string;
+	sessionId: string;
+	title: string;
+	controlRef?: string;
+	department?: string;
+	ownerUserId?: string;
+	managerUserId?: string;
+	assigneeUserId?: string;
+	status: EvidenceStatus;
+	dueAt?: string;
+	sensitive?: boolean;
+};
+
+export type ReviewReport = {
+	$id: string;
+	orgId: string;
+	sessionId?: string;
+	kind: string;
+	bodyJson: string;
+	createdByUserId: string;
+};
+
+export function parseParticipants(json: string | undefined): SessionParticipant[] {
 	if (!json) return [];
 	try {
 		const parsed = JSON.parse(json) as unknown;

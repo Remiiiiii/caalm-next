@@ -208,6 +208,12 @@ export const ITEM_ICONS: Record<
 		height: 22,
 		color: SUBITEM_TEXT_GREY,
 	},
+	"Audit Lab": {
+		src: "/assets/icons/calendar2.svg",
+		width: 20,
+		height: 20,
+		color: SUBITEM_TEXT_GREY,
+	},
 	"User Management": {
 		src: "/assets/icons/user-management.svg",
 		width: 20,

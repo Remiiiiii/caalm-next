@@ -308,6 +308,48 @@ export const appwriteConfig = {
 		"69c4b201001f4e8c2101",
 	),
 
+	/** Audit Lab question bank (name: review_questions) */
+	reviewQuestionsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_REVIEW_QUESTIONS_COLLECTION",
+		"69c4b201001f4e8c2102",
+	),
+
+	/** Audit Lab interview scripts (name: review_scripts) */
+	reviewScriptsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_REVIEW_SCRIPTS_COLLECTION",
+		"69c4b201001f4e8c2103",
+	),
+
+	/** Audit Lab practice/live attempts (name: review_attempts) */
+	reviewAttemptsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_REVIEW_ATTEMPTS_COLLECTION",
+		"69c4b201001f4e8c2104",
+	),
+
+	/** Audit Lab captured rehearsal gaps (name: review_gaps) */
+	reviewGapsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_REVIEW_GAPS_COLLECTION",
+		"69c4b201001f4e8c2105",
+	),
+
+	/** Audit Lab PBC evidence requests (name: evidence_requests) */
+	evidenceRequestsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_EVIDENCE_REQUESTS_COLLECTION",
+		"69c4b201001f4e8c2106",
+	),
+
+	/** Audit Lab evidence status trail (name: evidence_status_log) */
+	evidenceStatusLogCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_EVIDENCE_STATUS_LOG_COLLECTION",
+		"69c4b201001f4e8c2107",
+	),
+
+	/** Audit Lab session/department reports (name: review_reports) */
+	reviewReportsCollectionId: getTestFallback(
+		"NEXT_PUBLIC_APPWRITE_REVIEW_REPORTS_COLLECTION",
+		"69c4b201001f4e8c2108",
+	),
+
 	/** Audit report files (name: caalm-audit-documents) */
 	auditDocumentsBucketId: getTestFallback(
 		"NEXT_PUBLIC_APPWRITE_AUDIT_DOCUMENTS_BUCKET",
