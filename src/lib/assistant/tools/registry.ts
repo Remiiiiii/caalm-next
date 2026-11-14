@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { retrieveKnowledge } from "@/lib/assistant/knowledge/retrieve";
 import type { AssistantClientAction } from "@/lib/assistant/open-close-cap-client";
+import { ANALYTICS_TOOLS } from "@/lib/assistant/tools/analyticsTools";
 import { APPROVAL_TOOLS } from "@/lib/assistant/tools/approvalTools";
 import { AUDIT_TOOLS } from "@/lib/assistant/tools/auditTools";
 import { CALENDAR_TOOLS } from "@/lib/assistant/tools/calendarTools";
@@ -16,6 +17,7 @@ import { FUNDING_TOOLS } from "@/lib/assistant/tools/fundingTools";
 import { INTEGRATION_TOOLS } from "@/lib/assistant/tools/integrationTools";
 import { IT_TOOLS } from "@/lib/assistant/tools/itTools";
 import { LICENSE_TOOLS } from "@/lib/assistant/tools/licenseTools";
+import { NEWS_TOOLS } from "@/lib/assistant/tools/newsTools";
 import { TASK_TOOLS } from "@/lib/assistant/tools/taskTools";
 import { TICKET_TOOLS } from "@/lib/assistant/tools/ticketTools";
 import {
@@ -263,6 +265,8 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
 	...TICKET_TOOLS,
 	...IT_TOOLS,
 	...INTEGRATION_TOOLS,
+	...NEWS_TOOLS,
+	...ANALYTICS_TOOLS,
 ];
 
 export function getToolsForPermissions(

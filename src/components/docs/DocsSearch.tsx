@@ -113,7 +113,7 @@ export function DocsSearch() {
 								role="dialog"
 								aria-modal="true"
 								aria-label="Search documentation"
-								className={`pointer-events-auto w-full max-w-xl overflow-hidden dark:border-slate-700 dark:bg-slate-950 ${MODAL_PANEL}`}
+								className={`pointer-events-auto w-full max-w-xl overflow-hidden bg-white/80! dark:border-slate-700 dark:bg-slate-950/90! ${MODAL_PANEL}`}
 							>
 								<div className="flex items-center gap-2 border-b border-slate-200 px-3 dark:border-slate-800">
 									<Search className="h-4 w-4 text-slate-400" />
