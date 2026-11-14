@@ -345,6 +345,7 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 			"cancel_review_session",
 			"invite_participants",
 		],
+		linkedPrNumber: 284,
 	},
 	{
 		sectionNumber: 17,
@@ -358,6 +359,7 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 			"import_questions_from_findings",
 			"generate_interview_script",
 		],
+		linkedPrNumber: 285,
 	},
 	{
 		sectionNumber: 18,
@@ -371,6 +373,7 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 			"evidence_coverage_report",
 			"who_owns_evidence",
 		],
+		linkedPrNumber: 286,
 	},
 	{
 		sectionNumber: 19,
@@ -383,6 +386,7 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 			"request_feedback",
 			"find_rehearsal_gaps",
 		],
+		linkedPrNumber: 287,
 	},
 	{
 		sectionNumber: 19,
@@ -390,6 +394,7 @@ export const PTO_PR_BATCHES: PtoPrBatch[] = [
 		batch: 2,
 		taskCodes: ["19.5", "19.6"],
 		taskTitles: ["session_readiness_report", "department_readiness_summary"],
+		linkedPrNumber: 288,
 	},
 ];
 
