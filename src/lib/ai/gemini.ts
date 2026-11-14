@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { parsePdfText } from "@/lib/files/parse-pdf";
 import {
 	buildContractTypeFallbackResult,
 	type ContractTypeSuggestionResult,
@@ -414,8 +415,7 @@ export const extractDocumentContent = async (
 			const buffer = Buffer.from(arrayBuffer);
 
 			// Use dynamic import to avoid module loading issues
-			const pdfParse = (await import("pdf-parse-debugging-disabled")).default;
-			const data = await pdfParse(buffer);
+			const data = await parsePdfText(buffer);
 			const text = data.text || "No text content found in PDF";
 			console.log("PDF content extracted, length:", text.length);
 			return text;

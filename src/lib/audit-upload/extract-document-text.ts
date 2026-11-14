@@ -1,3 +1,5 @@
+import { parsePdfText } from "@/lib/files/parse-pdf";
+
 const MAX_BYTES = 25 * 1024 * 1024;
 const ALLOWED_MIME = new Set([
 	"application/pdf",
@@ -23,7 +25,9 @@ export function assertAuditUploadFile(file: {
 		throw new AuditUploadValidationError("The file is empty.");
 	}
 	if (file.size > MAX_BYTES) {
-		throw new AuditUploadValidationError("Audit files must be 25 MB or smaller.");
+		throw new AuditUploadValidationError(
+			"Audit files must be 25 MB or smaller.",
+		);
 	}
 	const ext = (file.name?.split(".").pop() || "").toLowerCase();
 	const mime = (file.type || "").toLowerCase();
@@ -50,8 +54,7 @@ export async function extractAuditDocumentText(
 	const ext = (file.name?.split(".").pop() || "").toLowerCase();
 
 	if (type.includes("pdf") || ext === "pdf") {
-		const pdfParse = (await import("pdf-parse-debugging-disabled")).default;
-		const data = await pdfParse(buffer);
+		const data = await parsePdfText(buffer);
 		return normalizeExtractedPdfText(data.text || "");
 	}
 
@@ -71,8 +74,7 @@ export async function extractAuditDocumentText(
 	}
 
 	try {
-		const pdfParse = (await import("pdf-parse-debugging-disabled")).default;
-		const data = await pdfParse(buffer);
+		const data = await parsePdfText(buffer);
 		if (data.text?.trim()) return normalizeExtractedPdfText(data.text);
 	} catch {
 		/* last resort below */

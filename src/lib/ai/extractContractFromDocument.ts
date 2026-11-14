@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { parsePdfText } from "@/lib/files/parse-pdf";
 import {
 	CONTRACT_EXTRACTION_METHOD,
 	type ContractExtractionMethod,
@@ -35,8 +36,7 @@ async function extractTextFromBuffer(
 	const ext = fileName.split(".").pop()?.toLowerCase() || "";
 
 	if (type.includes("pdf") || ext === "pdf") {
-		const pdfParse = (await import("pdf-parse-debugging-disabled")).default;
-		const data = await pdfParse(buffer);
+		const data = await parsePdfText(buffer);
 		return data.text || "";
 	}
 
@@ -57,8 +57,7 @@ async function extractTextFromBuffer(
 
 	// Last resort: try pdf-parse (many uploads mislabel MIME)
 	try {
-		const pdfParse = (await import("pdf-parse-debugging-disabled")).default;
-		const data = await pdfParse(buffer);
+		const data = await parsePdfText(buffer);
 		if (data.text?.trim()) return data.text;
 	} catch {
 		/* ignore */

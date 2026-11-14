@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { parsePdfText } from "@/lib/files/parse-pdf";
 import {
 	EXTRACTABLE_LICENSE_FIELDS,
 	LICENSE_EXTRACTION_METHOD,
@@ -77,8 +78,7 @@ async function extractTextFromBuffer(
 	const ext = fileName.split(".").pop()?.toLowerCase() || "";
 
 	if (type.includes("pdf") || ext === "pdf") {
-		const pdfParse = (await import("pdf-parse-debugging-disabled")).default;
-		const data = await pdfParse(buffer);
+		const data = await parsePdfText(buffer);
 		return data.text || "";
 	}
 
@@ -98,8 +98,7 @@ async function extractTextFromBuffer(
 	}
 
 	try {
-		const pdfParse = (await import("pdf-parse-debugging-disabled")).default;
-		const data = await pdfParse(buffer);
+		const data = await parsePdfText(buffer);
 		if (data.text?.trim()) return data.text;
 	} catch {
 		/* ignore */
