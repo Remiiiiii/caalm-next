@@ -1,3 +1,4 @@
+import { INVITATION_STATUS } from "@/constants/status";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { demoRowId } from "./constants";
 import { createRowIfMissing, tableHasColumns } from "./helpers";
@@ -95,10 +96,15 @@ export async function seedDemoSecondary({
 			demoRowId(orgId, "invite1"),
 			{
 				email: "demo+pending-invite@caalm.demo",
+				name: "Jordan Pending",
 				orgId,
+				role: "Department Manager",
 				department: "Operations",
 				division: "clinic",
-				status: "pending",
+				token: crypto.randomUUID().replace(/-/g, ""),
+				expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+				status: INVITATION_STATUS.PENDING,
+				revoked: false,
 				invitedBy: ownerUserId,
 			},
 			"invitation",
@@ -106,15 +112,20 @@ export async function seedDemoSecondary({
 	}
 
 	if (resourcesTable && (await tableHasColumns(resourcesTable))) {
+		const now = new Date().toISOString();
 		await createRowIfMissing(
 			resourcesTable,
 			demoRowId(orgId, "room01"),
 			{
 				name: "Board Room A",
-				orgId,
+				organizationId: orgId,
 				type: "room",
 				capacity: 12,
-				status: "available",
+				location: "Main office",
+				requiresApproval: false,
+				isActive: true,
+				createdAt: now,
+				updatedAt: now,
 			},
 			"calendar-resource",
 		);
