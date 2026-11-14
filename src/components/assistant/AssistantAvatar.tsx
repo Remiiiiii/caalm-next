@@ -50,3 +50,25 @@ export default function AssistantAvatar({
 		/>
 	);
 }
+export function AssistantAvatar2({
+	size = "md",
+	className,
+	priority,
+	alt = "",
+}: Props) {
+	const px = SIZE_PX[size];
+	return (
+		<Image
+			src="/assets/images/caalm-bot-bust.svg"
+			alt={alt}
+			width={px}
+			height={px}
+			priority={priority}
+			className={cn(
+				"shrink-0 rounded-full object-contain outline border-2 p-0.5 outline-[#D6E8F5]",
+				SIZE_CLASS[size],
+				className,
+			)}
+		/>
+	);
+}

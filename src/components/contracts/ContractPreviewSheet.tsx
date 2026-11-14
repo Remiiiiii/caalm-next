@@ -330,7 +330,7 @@ function Section({
 			id={def.id}
 			ref={(el) => registerRef(def.id, el)}
 			data-preview-section={def.id}
-			className="scroll-mt-4 space-y-4"
+			className="scroll-mt-4 space-y-4 overflow-hidden rounded-lg border border-slate-200/80 bg-white/55 p-4"
 		>
 			<div className="flex items-baseline justify-between gap-2 border-b border-slate-200/70 pb-2">
 				<h2 className="text-[13px] font-bold text-slate-700">{def.title}</h2>
@@ -540,8 +540,13 @@ export default function ContractPreviewSheet({
 				? "text-orange"
 				: "text-slate-700";
 	const expiryLabel = tier === "expired" ? "EXPIRED" : "EXPIRES IN";
+	const expiryDayWord = Math.abs(days ?? 0) === 1 ? "day" : "days";
 	const expiryFigure =
-		days === null ? "—" : days < 0 ? `${Math.abs(days)}d ago` : `${days}d`;
+		days === null
+			? "—"
+			: days < 0
+				? `−${Math.abs(days)} ${expiryDayWord} ago`
+				: `${days} ${expiryDayWord} left`;
 
 	const amountFmt = formatValueAbbrev(file.amount ?? null);
 	const displayTitle = file.contractName || file.name || "Untitled";
@@ -897,7 +902,7 @@ export default function ContractPreviewSheet({
 				{/* 3a — nav */}
 				<nav
 					aria-label="Details sections"
-					className="remove-scrollbar hidden flex-col gap-3 overflow-y-auto border-r border-slate-200/70 bg-white/20 p-3 lg:flex"
+					className="review-hover-scroll hidden flex-col gap-3 border-r border-slate-200/70 bg-white/20 p-3 lg:flex"
 				>
 					{CLUSTERS.map((cluster) => (
 						<div key={cluster.label}>
@@ -974,7 +979,7 @@ export default function ContractPreviewSheet({
 					aria-label="Contract details"
 					// biome-ignore lint/a11y/noNoninteractiveTabindex: scrollable region must be keyboard-scrollable without a pointer, per spec
 					tabIndex={0}
-					className="relative min-h-0 flex-1 space-y-7 overflow-y-auto bg-white/10 px-5 py-5"
+					className="review-hover-scroll relative min-h-0 flex-1 space-y-4 bg-transparent px-5 py-5"
 				>
 					{ALL_SECTIONS.map((def) => (
 						<Section
@@ -1205,7 +1210,7 @@ function DocumentPane({ fileUrl, onCollapse, onOpenFull }: DocumentPaneProps) {
 				ref={scrollRef}
 				role="region"
 				aria-label="Document preview"
-				className="remove-scrollbar min-h-0 flex-1 overflow-y-auto bg-slate-50/60 p-3"
+				className="review-hover-scroll min-h-0 flex-1 bg-slate-50/60 p-3"
 			>
 				{!fileUrl ? (
 					<p className="pt-8 text-center text-xs text-slate-400">

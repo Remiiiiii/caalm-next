@@ -323,7 +323,7 @@ export const DASHBOARD_ITEM_COLORS: Record<string, string> = {
 	"Organization Admin": "#3b82f6",
 	"Department Manager": SUBITEM_TEXT_GREY,
 	Viewer: SUBITEM_TEXT_GREY,
-	IT: "#0f5384",
+	IT: SUBITEM_TEXT_GREY,
 	"Content Creator": SUBITEM_TEXT_GREY,
 };
 

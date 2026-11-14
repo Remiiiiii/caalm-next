@@ -1,277 +1,229 @@
 "use client";
 
-import { format } from "date-fns";
-import { CheckCircle, Eye, FileText, Pencil } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-
+import { FileSearchCorner } from "lucide-react";
+import { useEffect, useMemo } from "react";
+import {
+	collectMissingRequiredLabels,
+	type PersonOption,
+} from "@/components/upload-review/reviewFieldUtils";
+import type {
+	ReviewField,
+	ReviewReadiness,
+	ReviewSection,
+} from "@/components/upload-review/types";
+import { UploadReviewPairedLayout } from "@/components/upload-review/UploadReviewPairedLayout";
 export type ContractReviewStepProps = {
 	values: Record<string, unknown>;
 	fileName?: string;
-	/** Content step titles (without Review). Index 0 = step 1. */
+	pdfUrl?: string | null;
+	htmlContent?: string | null;
+	textContent?: string | null;
+	downloadOnly?: boolean;
 	contentStepTitles: string[];
+	managers?: { $id: string; fullName: string }[];
+	extractedFieldNames?: string[];
 	lowConfidenceFields?: string[];
 	onEditStep: (step: number) => void;
-	/** Opens the uploaded document in a viewer */
-	onPreviewFile?: () => void;
-	canPreviewFile?: boolean;
+	onReadinessChange?: (readiness: ReviewReadiness) => void;
 };
 
-function displayValue(value: unknown): string {
-	if (value === undefined || value === null || value === "") return "—";
-	if (typeof value === "boolean") return value ? "Yes" : "No";
-	if (Array.isArray(value)) {
-		return value.length > 0 ? value.map(String).join(", ") : "—";
-	}
-	if (value instanceof Date && !Number.isNaN(value.getTime())) {
-		return format(value, "PPP");
-	}
-	return String(value);
+function fieldSource(
+	name: string,
+	extracted: Set<string>,
+): "extracted" | "manual" {
+	return extracted.has(name) ? "extracted" : "manual";
 }
-
-function formatMoney(amount: unknown, currency?: unknown): string {
-	if (amount === undefined || amount === null || amount === "") return "—";
-	const n = Number(String(amount).replace(/,/g, ""));
-	if (!Number.isFinite(n)) return String(amount);
-	const code = typeof currency === "string" && currency ? currency : "USD";
-	try {
-		return new Intl.NumberFormat("en-US", {
-			style: "currency",
-			currency: code,
-		}).format(n);
-	} catch {
-		return `${code} ${n.toLocaleString()}`;
-	}
-}
-
-type ReviewRow = {
-	label: string;
-	value: string;
-	field?: string;
-	editStep?: number;
-	isFile?: boolean;
-};
-
-type ReviewSection = {
-	title: string;
-	editStep: number;
-	rows: ReviewRow[];
-};
 
 export default function ContractReviewStep({
 	values,
 	fileName,
+	pdfUrl = null,
+	htmlContent = null,
+	textContent = null,
+	downloadOnly = false,
 	contentStepTitles,
+	managers = [],
+	extractedFieldNames = [],
 	lowConfidenceFields = [],
 	onEditStep,
-	onPreviewFile,
-	canPreviewFile = false,
+	onReadinessChange,
 }: ContractReviewStepProps) {
-	const low = new Set(lowConfidenceFields);
+	const extracted = useMemo(
+		() => new Set(extractedFieldNames),
+		[extractedFieldNames],
+	);
 
-	const sections: ReviewSection[] = [
-		{
-			title: "File",
-			editStep: 1,
-			rows: [
-				{
-					label: "Uploaded file",
-					value: fileName || "—",
-					editStep: 1,
-					isFile: true,
-				},
-			],
-		},
-		{
-			title: contentStepTitles[1] || "Contract Basics",
-			editStep: 2,
-			rows: [
-				{
-					label: "Contract title",
-					value: displayValue(values.contractName),
-					field: "contractName",
-					editStep: 2,
-				},
-				{
-					label: "Contract number",
-					value: displayValue(values.contractNumber),
-					field: "contractNumber",
-					editStep: 2,
-				},
-				{
-					label: "Type",
-					value: displayValue(values.contractType),
-					field: "contractType",
-					editStep: 2,
-				},
-				{
-					label: "Department",
-					value: displayValue(values.assignToDepartment),
-					field: "assignToDepartment",
-					editStep: 2,
-				},
-				{
-					label: "Start date",
-					value: displayValue(values.startDate),
-					field: "startDate",
-					editStep: 2,
-				},
-				{
-					label: "Expiry date",
-					value: displayValue(values.expiryDate),
-					field: "expiryDate",
-					editStep: 2,
-				},
-				{
-					label: "Auto-renew",
-					value: displayValue(values.autoRenew),
-					field: "autoRenew",
-					editStep: 2,
-				},
-				{
-					label: "Renewal notice (days)",
-					value: displayValue(values.renewalNoticeDays),
-					field: "renewalNoticeDays",
-					editStep: 2,
-				},
-			],
-		},
-		{
-			title: "Parties & financials",
-			editStep: Math.min(3, contentStepTitles.length),
-			rows: [
-				{
-					label: "Counterparty",
-					value: displayValue(values.counterpartyLegalName),
-					field: "counterpartyLegalName",
-					editStep: 3,
-				},
-				{
-					label: "Amount",
-					value: formatMoney(values.amount, values.currencyCode),
-					field: "amount",
-					editStep: Math.min(4, contentStepTitles.length) || 4,
-				},
-				{
-					label: "Risk level",
-					value: displayValue(values.riskLevel),
-					field: "riskLevel",
-					editStep: Math.min(5, contentStepTitles.length) || 5,
-				},
-			],
-		},
-	];
+	const peopleById = useMemo(() => {
+		const map = new Map<string, PersonOption>();
+		for (const m of managers) {
+			map.set(m.$id, { id: m.$id, name: m.fullName || "Unknown user" });
+		}
+		const ownerId = values.contractOwnerId;
+		if (typeof ownerId === "string" && ownerId && !map.has(ownerId)) {
+			map.set(ownerId, { id: ownerId, name: "Unknown user" });
+		}
+		return map;
+	}, [managers, values.contractOwnerId]);
 
-	const fileChip = fileName ? (
-		<button
-			type="button"
-			onClick={(e) => {
-				e.preventDefault();
-				e.stopPropagation();
-				onPreviewFile?.();
-			}}
-			className={cn(
-				"flex w-full items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-left text-xs text-slate-600 transition-all duration-200",
-				canPreviewFile
-					? "cursor-pointer hover:border-blue-300 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#078FAB]"
-					: "cursor-pointer hover:border-slate-300",
-			)}
-			aria-label={`Preview ${fileName}`}
-		>
-			<FileText className="h-4 w-4 shrink-0 text-[#0f5384]" />
-			<span className="min-w-0 flex-1 truncate font-medium text-slate-700">
-				{fileName}
-			</span>
-			<span className="inline-flex shrink-0 items-center gap-1 text-[11px] text-[#0f5384]">
-				<Eye className="h-3.5 w-3.5" />
-				View document
-			</span>
-		</button>
-	) : null;
+	const partiesStep = Math.min(3, contentStepTitles.length) || 3;
+
+	const sections: ReviewSection[] = useMemo(
+		() => [
+			{
+				title: contentStepTitles[1] || "Contract Basics",
+				editStep: 2,
+				fields: [
+					{
+						label: "Contract title",
+						value: values.contractName,
+						required: true,
+						source: fieldSource("contractName", extracted),
+						fieldKey: "contractName",
+					},
+					{
+						label: "Contract number",
+						value: values.contractNumber,
+						required: true,
+						source: fieldSource("contractNumber", extracted),
+						format: "mono",
+						fieldKey: "contractNumber",
+					},
+					{
+						label: "Type",
+						value: values.contractType,
+						required: true,
+						source: fieldSource("contractType", extracted),
+						format: "enum",
+						fieldKey: "contractType",
+					},
+					{
+						label: "Department",
+						value: values.assignToDepartment,
+						required: true,
+						source: fieldSource("assignToDepartment", extracted),
+						format: "enum",
+						fieldKey: "assignToDepartment",
+					},
+					{
+						label: "Start date",
+						value: values.startDate,
+						required: false,
+						source: fieldSource("startDate", extracted),
+						format: "date",
+						fieldKey: "startDate",
+					},
+					{
+						label: "Expiry date",
+						value: values.expiryDate,
+						required: true,
+						source: fieldSource("expiryDate", extracted),
+						format: "date",
+						fieldKey: "expiryDate",
+					},
+					{
+						label: "Auto-renew",
+						value: values.autoRenew,
+						required: false,
+						source: fieldSource("autoRenew", extracted),
+						fieldKey: "autoRenew",
+					},
+					{
+						label: "Renewal notice (days)",
+						value: values.renewalNoticeDays,
+						required: false,
+						source: fieldSource("renewalNoticeDays", extracted),
+						fieldKey: "renewalNoticeDays",
+					},
+				] satisfies ReviewField[],
+			},
+			{
+				title: "Parties & financials",
+				editStep: partiesStep,
+				fields: [
+					{
+						label: "Counterparty",
+						value: values.counterpartyLegalName,
+						required: true,
+						source: fieldSource("counterpartyLegalName", extracted),
+						fieldKey: "counterpartyLegalName",
+					},
+					{
+						label: "Amount",
+						value: values.amount,
+						required: true,
+						source: fieldSource("amount", extracted),
+						fieldKey: "amount",
+						formatOptions: {
+							currencyCode:
+								typeof values.currencyCode === "string"
+									? values.currencyCode
+									: "USD",
+						},
+					},
+					{
+						label: "Risk level",
+						value: values.riskLevel,
+						required: true,
+						source: fieldSource("riskLevel", extracted),
+						format: "enum",
+						fieldKey: "riskLevel",
+					},
+				] satisfies ReviewField[],
+			},
+		],
+		[contentStepTitles, values, extracted, partiesStep],
+	);
+
+	const missingRequiredLabels = useMemo(
+		() => collectMissingRequiredLabels(sections),
+		[sections],
+	);
+	const missingKey = missingRequiredLabels.join("\0");
+
+	useEffect(() => {
+		onReadinessChange?.({
+			missingRequiredLabels,
+			canSubmit: missingRequiredLabels.length === 0,
+		});
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- missingKey is the stable signal
+	}, [missingKey, onReadinessChange]);
+
+	const banner = (
+		<div className="rounded-lg border border-blue-200 bg-blue-50/80 px-4 py-3">
+			<div className="flex items-center justify-between gap-3">
+				<div className="flex min-w-0 items-center gap-2">
+					<FileSearchCorner
+						className="h-4 w-4 shrink-0 text-[#0f5384]"
+						aria-hidden
+					/>
+					<p className="text-sm font-medium text-slate-700">
+						Review before submitting
+					</p>
+				</div>
+				<span className="inline-flex shrink-0 items-center rounded-full border border-blue-200 bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-[#0f5384]">
+					Pending Review
+				</span>
+			</div>
+			<p className="mt-1 text-xs text-slate-600">
+				Submitting sends this contract to{" "}
+				<span className="font-semibold">Pending Review</span>. It will not
+				become Active until approved on the Contracts Approvals page.
+			</p>
+		</div>
+	);
 
 	return (
-		<div className="space-y-4">
-			<div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-				<div className="flex items-start gap-2">
-					<CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-[#0f5384]" />
-					<div>
-						<p className="text-sm font-medium text-slate-700">
-							Review before upload
-						</p>
-						<p className="mt-0.5 text-xs text-slate-600">
-							Confirm the details below. Use Edit to jump back to any step.
-							{canPreviewFile
-								? " Click the file to open it in the document viewer."
-								: ""}
-						</p>
-					</div>
-				</div>
-			</div>
-
-			{sections.map((section) => (
-				<section
-					key={section.title}
-					className="rounded-lg border border-slate-200 bg-white overflow-hidden"
-				>
-					<div className="flex items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3">
-						<h4 className="text-sm font-semibold sidebar-gradient-text">
-							{section.title}
-						</h4>
-						<Button
-							type="button"
-							variant="outline"
-							className="primary-btn h-8 px-3 text-xs"
-							onClick={() => onEditStep(section.editStep)}
-						>
-							<Pencil className="h-3.5 w-3.5" />
-							Edit
-						</Button>
-					</div>
-					<dl className="divide-y divide-slate-100">
-						{section.rows.map((row) => {
-							const needsReview = row.field ? low.has(row.field) : false;
-							return (
-								<div
-									key={`${section.title}-${row.label}`}
-									className={cn(
-										"flex flex-col gap-0.5 px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4",
-										needsReview && "bg-amber-50/80",
-									)}
-								>
-									<dt className="text-xs font-medium text-slate-500">
-										{row.label}
-										{needsReview ? (
-											<span className="ml-2 text-[10px] font-medium text-amber-700">
-												AI · review
-											</span>
-										) : null}
-									</dt>
-									<dd className="text-sm text-slate-700 wrap-break-word text-left sm:text-right sm:max-w-[60%]">
-										{row.isFile ? (
-											<button
-												type="button"
-												onClick={(e) => {
-													e.preventDefault();
-													e.stopPropagation();
-													onPreviewFile?.();
-												}}
-												className="inline-flex max-w-full cursor-pointer items-center gap-1.5 rounded text-[#0f5384] underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#078FAB]"
-											>
-												<span className="truncate">{row.value}</span>
-												<Eye className="h-3.5 w-3.5 shrink-0" />
-											</button>
-										) : (
-											row.value
-										)}
-									</dd>
-								</div>
-							);
-						})}
-					</dl>
-				</section>
-			))}
-
-			{fileChip}
-		</div>
+		<UploadReviewPairedLayout
+			banner={banner}
+			sections={sections}
+			fileName={fileName}
+			pdfUrl={pdfUrl}
+			htmlContent={htmlContent}
+			textContent={textContent}
+			downloadOnly={downloadOnly}
+			lowConfidenceFields={lowConfidenceFields}
+			peopleById={peopleById}
+			onEditStep={onEditStep}
+		/>
 	);
 }
