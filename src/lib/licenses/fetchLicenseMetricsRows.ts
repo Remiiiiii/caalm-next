@@ -4,6 +4,33 @@ import { appwriteConfig } from "@/lib/appwrite/config";
 import { excludeSoftDeletedQuery } from "@/lib/soft-delete";
 import type { License } from "@/types/licenses";
 
+/**
+ * Columns for the metrics bar, attention strip, filters and header export.
+ * Every key must exist on the licenses table (expiry is `licenseExpiryDate`,
+ * compliance is `compliance`, department is `division`).
+ */
+export const LICENSE_METRICS_COLUMNS = [
+	"$id",
+	"licenseName",
+	"licenseNumber",
+	"licenseType",
+	"category",
+	"product",
+	"vendor",
+	"status",
+	"compliance",
+	"cost",
+	"issueDate",
+	"licenseExpiryDate",
+	"renewalDate",
+	"autoRenew",
+	"quantity",
+	"availableQuantity",
+	"division",
+	"assignedManagers",
+	"deletedAt",
+] as const;
+
 /** Slim license rows for metrics, filters, and attention strips (no heavy fields). */
 export async function fetchLicenseMetricsRows(
 	orgId: string,
@@ -15,22 +42,8 @@ export async function fetchLicenseMetricsRows(
 		queries: [
 			Query.equal("orgId", orgId),
 			excludeSoftDeletedQuery("licenses"),
-			Query.select([
-				"$id",
-				"status",
-				"cost",
-				"licenseExpiryDate",
-				"expirationDate",
-				"renewalDate",
-				"autoRenew",
-				"quantity",
-				"availableQuantity",
-				"complianceStatus",
-				"division",
-				"department",
-				"assignedManagers",
-				"deletedAt",
-			]),
+			// Only real columns: Appwrite rejects the whole query if one is unknown.
+			Query.select([...LICENSE_METRICS_COLUMNS]),
 			Query.limit(2000),
 		],
 	});

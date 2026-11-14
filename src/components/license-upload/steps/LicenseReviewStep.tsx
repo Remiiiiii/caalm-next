@@ -32,6 +32,8 @@ export type LicenseReviewStepProps = {
 	managers?: Manager[];
 	extractedFieldNames?: string[];
 	lowConfidenceFields?: string[];
+	/** Manager id → display name, so owners show as people rather than ids. */
+	managerNames?: Record<string, string>;
 	onEditStep: (step: number) => void;
 	onReadinessChange?: (readiness: ReviewReadiness) => void;
 };
@@ -55,6 +57,7 @@ export default function LicenseReviewStep({
 	managers = [],
 	extractedFieldNames = [],
 	lowConfidenceFields = [],
+	managerNames,
 	onEditStep,
 	onReadinessChange,
 }: LicenseReviewStepProps) {
@@ -65,11 +68,16 @@ export default function LicenseReviewStep({
 
 	const peopleById = useMemo(() => {
 		const map = new Map<string, PersonOption>();
+		// Fallback first: covers an assigned manager no longer in `managers`
+		// (e.g. removed from the department since assignment).
+		for (const [id, name] of Object.entries(managerNames ?? {})) {
+			map.set(id, { id, name: name || "Unknown user" });
+		}
 		for (const m of managers) {
 			map.set(m.$id, { id: m.$id, name: m.fullName || "Unknown user" });
 		}
 		return map;
-	}, [managers]);
+	}, [managers, managerNames]);
 
 	const sections: ReviewSection[] = useMemo(() => {
 		const dynamicSections: ReviewSection[] = (typeConfig?.steps ?? [])

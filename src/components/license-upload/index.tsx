@@ -40,6 +40,8 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
+import type { ReviewReadiness } from "@/components/upload-review/types";
+import { useInlineUploadPreview } from "@/components/upload-review/useInlineUploadPreview";
 import { useToast } from "@/hooks/use-toast";
 import { uploadFile } from "@/lib/actions/file.actions";
 import {
@@ -66,8 +68,6 @@ import {
 	DIALOG_BACK_LINK_CLASS,
 	HEADER_BADGE_CLASS,
 } from "@/lib/ui/modal-styles";
-import type { ReviewReadiness } from "@/components/upload-review/types";
-import { useInlineUploadPreview } from "@/components/upload-review/useInlineUploadPreview";
 import { cn } from "@/lib/utils";
 import { useDraftManagement } from "./hooks/useDraftManagement";
 import { useLicenseForm } from "./hooks/useLicenseForm";
@@ -221,10 +221,7 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 	const isReviewStep = Boolean(
 		typeConfig && currentStep === totalSteps && totalSteps > 1,
 	);
-	const inlinePreview = useInlineUploadPreview(
-		processedFileData,
-		isReviewStep,
-	);
+	const inlinePreview = useInlineUploadPreview(processedFileData, isReviewStep);
 	const extractedFieldNames = useMemo(() => {
 		if (
 			extractedData &&
@@ -249,6 +246,14 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 	const reviewManagers = useMemo(
 		() => [...availableManagers, ...filteredManagers],
 		[availableManagers, filteredManagers],
+	);
+
+	// Fallback name lookup for the review step — covers assigned managers no
+	// longer present in availableManagers/filteredManagers (e.g. removed from
+	// the department since assignment), so owners never show as raw ids.
+	const managerNames = useMemo(
+		() => Object.fromEntries(reviewManagers.map((m) => [m.$id, m.fullName])),
+		[reviewManagers],
 	);
 
 	// Department options derived from the divisions of available managers.
@@ -1260,6 +1265,7 @@ const LicenseUploadForm: React.FC<LicenseUploadFormProps> = ({
 														textContent={inlinePreview.textContent}
 														downloadOnly={inlinePreview.downloadOnly}
 														managers={reviewManagers}
+														managerNames={managerNames}
 														extractedFieldNames={extractedFieldNames}
 														lowConfidenceFields={lowConfidenceFields}
 														onEditStep={goToStep}

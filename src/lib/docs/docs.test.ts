@@ -108,8 +108,11 @@ describe("docs video embeds", () => {
 		expect(text).not.toContain("watchclueso");
 	});
 
-	it("ships the contracts page with a valid embed", () => {
-		const page = getDocsPage("reference/contracts");
+	it.each([
+		"reference/contracts",
+		"reference/licenses",
+	])("ships %s with a valid embed", (slug) => {
+		const page = getDocsPage(slug);
 		expect(page).toBeTruthy();
 		const fence = /```video\n([\s\S]*?)\n```/.exec(page?.markdown ?? "");
 		expect(fence).toBeTruthy();
