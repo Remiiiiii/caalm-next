@@ -310,6 +310,12 @@ export const PERMISSION_BASED_NAV: NavigationSection[] = [
 				viewerReadOnly: true,
 				viewerFullAccess: true,
 			},
+			{
+				name: "Audit Lab",
+				icon: "/assets/icons/calendar2.svg",
+				url: "/audit-lab",
+				permissions: [PERMISSIONS.AUDIT_LAB.VIEW],
+			},
 		],
 	},
 	{
