@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import formidable, { type Fields, type Files } from "formidable";
 import type { NextApiRequest, NextApiResponse } from "next";
+import { parsePdfText } from "@/lib/files/parse-pdf";
 /// <reference path="../../types/pdf-parse-debugging-disabled.d.ts" />
 
 export const config = {
@@ -37,8 +38,7 @@ export default async function handler(
 		try {
 			if (file.mimetype === "application/pdf") {
 				const dataBuffer = fs.readFileSync(filePath);
-				const pdfParse = (await import("pdf-parse-debugging-disabled")).default;
-				const pdfData = await pdfParse(dataBuffer);
+				const pdfData = await parsePdfText(dataBuffer);
 				text = pdfData.text;
 				expiryDate = extractExpiryDateFromText(text);
 			} else {

@@ -7,6 +7,7 @@ import {
 	EnterpriseFileFormatError,
 	getEnterpriseFileExtension,
 } from "@/lib/files/enterprise-file-formats";
+import { parsePdfText } from "@/lib/files/parse-pdf";
 
 export async function POST(request: NextRequest) {
 	try {
@@ -51,8 +52,7 @@ export async function POST(request: NextRequest) {
 
 		// Extract text from the PDF
 		try {
-			const pdfParse = (await import("pdf-parse-debugging-disabled")).default;
-			const data = await pdfParse(buffer);
+			const data = await parsePdfText(buffer);
 
 			return NextResponse.json({
 				success: true,

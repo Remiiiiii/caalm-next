@@ -1,3 +1,4 @@
+import { parsePdfText } from "@/lib/files/parse-pdf";
 export type PdfPageText = { page: number; text: string };
 
 export function combinePageTexts(pageTexts: PdfPageText[]): string {
@@ -40,8 +41,7 @@ export async function parsePdfBuffer(buffer: Buffer, fileName?: string) {
 	}
 
 	try {
-		const pdfParse = (await import("pdf-parse-debugging-disabled")).default;
-		const data = await pdfParse(buffer);
+		const data = await parsePdfText(buffer);
 		if (data.text?.trim()) {
 			const pages = data.numpages || 1;
 			const chunks = data.text.split(/\f/);
