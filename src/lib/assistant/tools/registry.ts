@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { retrieveKnowledge } from "@/lib/assistant/knowledge/retrieve";
 import type { AssistantClientAction } from "@/lib/assistant/open-close-cap-client";
+import { AGENT_OS_TOOLS } from "@/lib/assistant/tools/agentOsTools";
 import { ANALYTICS_TOOLS } from "@/lib/assistant/tools/analyticsTools";
 import { APPROVAL_TOOLS } from "@/lib/assistant/tools/approvalTools";
 import { AUDIT_TOOLS } from "@/lib/assistant/tools/auditTools";
@@ -267,6 +268,7 @@ export const ASSISTANT_TOOLS: ToolDefinition[] = [
 	...INTEGRATION_TOOLS,
 	...NEWS_TOOLS,
 	...ANALYTICS_TOOLS,
+	...AGENT_OS_TOOLS,
 ];
 
 export function getToolsForPermissions(

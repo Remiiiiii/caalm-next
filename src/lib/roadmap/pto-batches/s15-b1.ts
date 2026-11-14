@@ -1,6 +1,9 @@
 /**
  * Production Tools batch ticket — implement all tasks on this PR branch.
  * Section 15 batch 1: Agent OS cross-cutting
+ *
+ * Placeholder draft: section 14 (#267) must merge first — see
+ * production-tools-roadmap-prs.mdc. No tool implementation here yet.
  */
 export const PTO_BATCH_S15_B1 = {
 	sectionNumber: 15,
