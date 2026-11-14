@@ -919,7 +919,8 @@ export const PERMISSION_DEFINITIONS = [
 		key: PERMISSIONS.PROPOSALS.LIBRARY_MANAGE,
 		name: "Manage Proposal Library",
 		category: "proposals",
-		description: "Add and edit reusable past-performance and capability content",
+		description:
+			"Add and edit reusable past-performance and capability content",
 	},
 
 	// Constituent CRM
