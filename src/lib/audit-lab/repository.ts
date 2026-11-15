@@ -76,7 +76,15 @@ export async function updateSessionRow(
 	data: Partial<
 		Pick<
 			ReviewSession,
-			"scheduledAt" | "status" | "participantsJson" | "title" | "department"
+			| "scheduledAt"
+			| "prepDeadlineAt"
+			| "status"
+			| "participantsJson"
+			| "title"
+			| "department"
+			| "framework"
+			| "recurrence"
+			| "timezone"
 		>
 	>,
 ): Promise<ReviewSession> {
@@ -294,6 +302,30 @@ export async function updateEvidenceRow(
 		data,
 	});
 	return row as unknown as EvidenceRequest;
+}
+
+export async function listEvidenceStatusLog(
+	orgId: string,
+	limit = 50,
+) {
+	const tablesDB = await tables();
+	const result = await tablesDB.listRows({
+		databaseId: dbId(),
+		tableId: appwriteConfig.evidenceStatusLogCollectionId,
+		queries: [
+			Query.equal("orgId", orgId),
+			Query.orderDesc("$createdAt"),
+			Query.limit(limit),
+		],
+	});
+	return result.rows as Array<{
+		$id: string;
+		requestId: string;
+		toStatus: string;
+		actorUserId: string;
+		note?: string;
+		$createdAt?: string;
+	}>;
 }
 
 export async function appendEvidenceStatusLog(data: {

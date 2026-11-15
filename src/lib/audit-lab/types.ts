@@ -25,12 +25,26 @@ export const EVIDENCE_STATUSES = [
 	"in_progress",
 	"internal_review",
 	"submitted",
-	"follow_up",
+	"follow_up_requested",
+	"resubmitted",
 	"accepted",
-	"rejected",
+	"rejected_resubmit",
+	"not_applicable",
 ] as const;
 
 export type EvidenceStatus = (typeof EVIDENCE_STATUSES)[number];
+
+const LEGACY_EVIDENCE: Record<string, EvidenceStatus> = {
+	follow_up: "follow_up_requested",
+	rejected: "rejected_resubmit",
+};
+
+export function normalizeEvidenceStatus(raw: string): EvidenceStatus {
+	if ((EVIDENCE_STATUSES as readonly string[]).includes(raw)) {
+		return raw as EvidenceStatus;
+	}
+	return LEGACY_EVIDENCE[raw] ?? "not_started";
+}
 
 export type SessionParticipant = {
 	userId: string;
@@ -46,6 +60,13 @@ export type ReviewSession = {
 	department: string;
 	framework?: string;
 	scheduledAt?: string;
+	prepDeadlineAt?: string;
+	recurrence?: string;
+	departmentsJson?: string;
+	timezone?: string;
+	readinessSnapshotId?: string;
+	linkedAuditDocIds?: string;
+	auditTrailJson?: string;
 	durationMinutes: number;
 	status: SessionStatus;
 	participantsJson: string;

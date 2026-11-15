@@ -21,6 +21,9 @@ import {
 	updateEvidenceRow,
 	updateSessionRow,
 } from "./repository";
+import { canAcceptEvidence } from "./evidence-merge";
+import { enqueueSessionReminders, notifySessionCancelled } from "./notifications";
+import { buildSessionReport } from "./reports";
 import { applyPracticeScore } from "./score";
 import {
 	EVIDENCE_STATUSES,
@@ -92,6 +95,7 @@ export async function scheduleReviewSession(
 		id: session.$id,
 		label: session.title,
 	});
+	await enqueueSessionReminders(session).catch(() => undefined);
 	return { session };
 }
 
@@ -127,6 +131,7 @@ export async function cancelReviewSession(actor: Actor, sessionId: string) {
 	const session = await updateSessionRow(sessionId, {
 		status: "cancelled" satisfies SessionStatus,
 	});
+	await notifySessionCancelled(session).catch(() => undefined);
 	await audit(actor, "update", `Cancelled ${session.title}`, {
 		type: "review_session",
 		id: session.$id,
@@ -407,6 +412,12 @@ export async function updateEvidenceStatus(
 				"Sensitive evidence needs internal review before it can be submitted.",
 		};
 	}
+	if (status === "accepted") {
+		const gate = canAcceptEvidence(item);
+		if (!gate.ok) {
+			return { error: gate.reason ?? "This item cannot be accepted yet." };
+		}
+	}
 	const updated = await updateEvidenceRow(requestId, { status });
 	await appendEvidenceStatusLog({
 		orgId: actor.orgId,
@@ -489,12 +500,12 @@ export async function scoreAnswer(
 	if (!attempt) return { error: "I couldn't find that practice attempt." };
 	const scores = JSON.parse(attempt.scoresJson || "[]") as unknown[];
 	const transcript = JSON.parse(attempt.transcriptJson || "[]") as unknown[];
-	const { score: nextScore, honestUnknown } = applyPracticeScore(
+	const { score: nextScore, honestUnknown, dimensions } = applyPracticeScore(
 		answer,
 		score,
 	);
 	transcript.push({ answer, at: new Date().toISOString() });
-	scores.push({ score: nextScore, honestUnknown });
+	scores.push({ score: nextScore, honestUnknown, dimensions });
 	if (nextScore < 3) {
 		await createGapRow({
 			orgId: actor.orgId,
@@ -513,7 +524,26 @@ export async function scoreAnswer(
 		id: attempt.$id,
 		label: attemptId,
 	});
-	return { attempt: updated, score: nextScore, honestUnknown };
+	return { attempt: updated, score: nextScore, honestUnknown, dimensions };
+}
+
+export async function transitionSessionStatus(
+	actor: Actor,
+	sessionId: string,
+	status: SessionStatus,
+) {
+	const existing = await getSession(actor.orgId, sessionId);
+	if (!existing) return { error: "I couldn't find that review session." };
+	const session = await updateSessionRow(sessionId, { status });
+	if (status === "completed" || status === "report_ready") {
+		await buildSessionReport(actor, sessionId).catch(() => undefined);
+	}
+	await audit(actor, "update", `${session.title} is now ${status}`, {
+		type: "review_session",
+		id: session.$id,
+		label: session.title,
+	});
+	return { session };
 }
 
 export async function requestFeedback(actor: Actor, attemptId: string) {

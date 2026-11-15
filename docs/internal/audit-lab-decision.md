@@ -20,3 +20,26 @@ PTO **16+ stays locked** until section **15** is fully merged. Product PRs may m
 | 4 | Practice + reports | s19-b1, s19-b2 |
 
 Tools wrap `src/lib/audit-lab/service.ts`. Do not add a second workflow engine for roleplay.
+
+## Product UI (functionality spec)
+
+Six surfaces under `/audit-lab/*`: overview, sessions, interview, practice, evidence, reports. Left nav mirrors Contract Preview section nav (desktop-first).
+
+### §1 capability map (permissions only)
+
+| Spec intent | Permission keys |
+|-------------|-----------------|
+| View dashboards / deep links | `audit_lab.view` |
+| Create sessions, scripts, invites | `audit_lab.manage_sessions` |
+| Evidence assign + status (dept) | `audit_lab.manage_evidence` |
+| Compliance coordinator / accept | `audit_lab.coordinate_evidence` |
+| Practice drills | `audit_lab.run_practice` |
+| Score attempts (auditor) | `audit_lab.score_practice` |
+| Publish / export reports | `audit_lab.publish_reports` |
+
+Resolved in `src/lib/audit-lab/access.ts` (`resolveLabCapabilities`). IT staff keep view-only via role_permissions seed; department scoping hooks in `sessionInScope` when dept names are supplied.
+
+### Crons
+
+- `/api/cron/audit-lab-reminders` — session invitation + reminder pass (`CRON_SECRET`, `orgId` query).
+- `/api/cron/audit-lab-chasers` — overdue evidence nudges.
