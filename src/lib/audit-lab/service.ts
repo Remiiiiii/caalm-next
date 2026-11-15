@@ -1,5 +1,11 @@
 import { listFindings } from "@/lib/audit-upload/store";
 import { logAuditEvent } from "@/lib/services/audit-logger";
+import { canAcceptEvidence } from "./evidence-merge";
+import {
+	enqueueSessionReminders,
+	notifySessionCancelled,
+} from "./notifications";
+import { buildSessionReport } from "./reports";
 import {
 	appendEvidenceStatusLog,
 	createAttemptRow,
@@ -21,9 +27,6 @@ import {
 	updateEvidenceRow,
 	updateSessionRow,
 } from "./repository";
-import { canAcceptEvidence } from "./evidence-merge";
-import { enqueueSessionReminders, notifySessionCancelled } from "./notifications";
-import { buildSessionReport } from "./reports";
 import { applyPracticeScore } from "./score";
 import {
 	EVIDENCE_STATUSES,
@@ -42,11 +45,16 @@ type Actor = {
 	orgId: string;
 };
 
-function audit(actor: Actor, action: "create" | "update", summary: string, target: {
-	type: string;
-	id: string;
-	label: string;
-}) {
+function audit(
+	actor: Actor,
+	action: "create" | "update",
+	summary: string,
+	target: {
+		type: string;
+		id: string;
+		label: string;
+	},
+) {
 	return logAuditEvent({
 		event_id: `audit_lab_${action}_${target.id}`,
 		event_title: summary,
@@ -218,11 +226,16 @@ export async function generateQuestionBank(actor: Actor, sessionId: string) {
 			}),
 		);
 	}
-	await audit(actor, "create", `Generated question bank for ${existing.title}`, {
-		type: "review_session",
-		id: existing.$id,
-		label: existing.title,
-	});
+	await audit(
+		actor,
+		"create",
+		`Generated question bank for ${existing.title}`,
+		{
+			type: "review_session",
+			id: existing.$id,
+			label: existing.title,
+		},
+	);
 	return { questions: created };
 }
 
@@ -264,7 +277,7 @@ export async function importQuestionsFromFindings(
 	}
 	const created = [];
 	for (const finding of findings) {
-		const title = finding.title || finding.summary || "prior finding";
+		const title = finding.title || finding.description || "prior finding";
 		created.push(
 			await createQuestionRow({
 				orgId: actor.orgId,
@@ -313,11 +326,16 @@ export async function generateInterviewScript(actor: Actor, sessionId: string) {
 		itemsJson: JSON.stringify(items),
 		createdByUserId: actor.userId,
 	});
-	await audit(actor, "create", `Interview script v${version} for ${existing.title}`, {
-		type: "review_script",
-		id: script.$id,
-		label: `${existing.title} v${version}`,
-	});
+	await audit(
+		actor,
+		"create",
+		`Interview script v${version} for ${existing.title}`,
+		{
+			type: "review_script",
+			id: script.$id,
+			label: `${existing.title} v${version}`,
+		},
+	);
 	return { script, items };
 }
 
@@ -435,7 +453,10 @@ export async function updateEvidenceStatus(
 	return { evidence: updated };
 }
 
-export async function evidenceCoverageReport(orgId: string, sessionId?: string) {
+export async function evidenceCoverageReport(
+	orgId: string,
+	sessionId?: string,
+) {
 	const items = await listEvidence(orgId, sessionId);
 	const byStatus: Record<string, number> = {};
 	for (const item of items) {
@@ -500,10 +521,11 @@ export async function scoreAnswer(
 	if (!attempt) return { error: "I couldn't find that practice attempt." };
 	const scores = JSON.parse(attempt.scoresJson || "[]") as unknown[];
 	const transcript = JSON.parse(attempt.transcriptJson || "[]") as unknown[];
-	const { score: nextScore, honestUnknown, dimensions } = applyPracticeScore(
-		answer,
-		score,
-	);
+	const {
+		score: nextScore,
+		honestUnknown,
+		dimensions,
+	} = applyPracticeScore(answer, score);
 	transcript.push({ answer, at: new Date().toISOString() });
 	scores.push({ score: nextScore, honestUnknown, dimensions });
 	if (nextScore < 3) {

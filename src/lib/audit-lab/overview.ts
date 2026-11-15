@@ -1,4 +1,3 @@
-import { listFindings } from "@/lib/audit-upload/store";
 import type { LabScope } from "@/lib/audit-lab/access";
 import { sessionInScope } from "@/lib/audit-lab/access";
 import {
@@ -8,6 +7,7 @@ import {
 	listSessions,
 } from "@/lib/audit-lab/repository";
 import type { ReviewSession } from "@/lib/audit-lab/types";
+import { listFindings } from "@/lib/audit-upload/store";
 
 function inQuarter(iso?: string): boolean {
 	if (!iso) return false;
@@ -52,7 +52,7 @@ export async function buildLabOverview(orgId: string, scope: LabScope) {
 
 	const suggestions = findings.slice(0, 3).map((f) => ({
 		id: f.$id,
-		title: f.title || f.summary || "Prior finding",
+		title: f.title || f.description || "Prior finding",
 		reason: "Prior finding due for rehearsal",
 		department: scopedSessions[0]?.department ?? "General",
 	}));

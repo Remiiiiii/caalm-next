@@ -193,7 +193,9 @@ export async function getAttempt(
 
 export async function updateAttemptRow(
 	attemptId: string,
-	data: Partial<Pick<ReviewAttempt, "transcriptJson" | "scoresJson" | "status">>,
+	data: Partial<
+		Pick<ReviewAttempt, "transcriptJson" | "scoresJson" | "status">
+	>,
 ): Promise<ReviewAttempt> {
 	const tablesDB = await tables();
 	const row = await tablesDB.updateRow({
@@ -304,10 +306,7 @@ export async function updateEvidenceRow(
 	return row as unknown as EvidenceRequest;
 }
 
-export async function listEvidenceStatusLog(
-	orgId: string,
-	limit = 50,
-) {
+export async function listEvidenceStatusLog(orgId: string, limit = 50) {
 	const tablesDB = await tables();
 	const result = await tablesDB.listRows({
 		databaseId: dbId(),
@@ -318,7 +317,7 @@ export async function listEvidenceStatusLog(
 			Query.limit(limit),
 		],
 	});
-	return result.rows as Array<{
+	return result.rows as unknown as Array<{
 		$id: string;
 		requestId: string;
 		toStatus: string;

@@ -18,14 +18,20 @@ import {
 import { NewSessionDialog } from "@/components/audit-lab/NewSessionDialog";
 import { LoadError } from "@/components/LoadError";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
 	CaalmDataTable,
 	CaalmDataTableEmpty,
 } from "@/components/ui/caalm-data-table";
+import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { MetricStatCard } from "@/components/ui/metric-stat-card";
-import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import type { LabCapabilities } from "@/lib/audit-lab/access";
 import type { EvidenceRequest, ReviewSession } from "@/lib/audit-lab/types";
@@ -146,15 +152,18 @@ export function AuditLabClient({
 		>
 			{error ? (
 				<LoadError
+					scale="section"
 					title="Audit Lab didn't load"
-					description="I couldn't load Audit Lab. Please try again."
-					error={error}
+					elementKey="audit-lab-client"
+					error={{ requestPath: overviewUrl }}
 					onRetry={() => void mutate()}
 				/>
 			) : isLoading ? (
 				<Card className="glass-card">
 					<div className="glass-card-cap" />
-					<CardContent className="p-4 sm:p-6 text-slate-600">Loading…</CardContent>
+					<CardContent className="p-4 sm:p-6 text-slate-600">
+						Loading…
+					</CardContent>
 				</Card>
 			) : (
 				<>
@@ -164,18 +173,22 @@ export function AuditLabClient({
 								<MetricStatCard
 									title="Readiness score"
 									value={`${stats.readinessScore ?? 0}%`}
+									icon={ListChecks}
 								/>
 								<MetricStatCard
 									title="Open rehearsal gaps"
 									value={stats.openGaps ?? 0}
+									icon={ClipboardList}
 								/>
 								<MetricStatCard
 									title="Evidence coverage"
 									value={`${stats.evidenceCoverage ?? 0}%`}
+									icon={GraduationCap}
 								/>
 								<MetricStatCard
 									title="Sessions this quarter"
 									value={stats.sessionsThisQuarter ?? 0}
+									icon={Calendar}
 								/>
 							</div>
 							{(payload?.suggestions?.length ?? 0) > 0 ? (
@@ -192,7 +205,8 @@ export function AuditLabClient({
 								</ul>
 							) : (
 								<p className="text-sm text-slate-500">
-									No suggestions yet. Import audit findings to seed drill material.
+									No suggestions yet. Import audit findings to seed drill
+									material.
 								</p>
 							)}
 						</div>
@@ -235,9 +249,12 @@ export function AuditLabClient({
 												<TableCell className="text-sm text-slate-600">
 													{session.scheduledAt ?? "—"}
 												</TableCell>
-												<TableCell className="text-sm">{session.status}</TableCell>
+												<TableCell className="text-sm">
+													{session.status}
+												</TableCell>
 												<TableCell>
-													{canManageSessions && session.status !== "cancelled" ? (
+													{canManageSessions &&
+													session.status !== "cancelled" ? (
 														<Button
 															type="button"
 															variant="outline"
@@ -269,9 +286,21 @@ export function AuditLabClient({
 							onError={onError}
 							postJson={postJson}
 							actions={[
-								{ key: "generate_bank", label: "Generate questions", icon: ClipboardList },
-								{ key: "import_findings", label: "Import findings", variant: "outline" as const },
-								{ key: "script", label: "Build script", variant: "outline" as const },
+								{
+									key: "generate_bank",
+									label: "Generate questions",
+									icon: ClipboardList,
+								},
+								{
+									key: "import_findings",
+									label: "Import findings",
+									variant: "outline" as const,
+								},
+								{
+									key: "script",
+									label: "Build script",
+									variant: "outline" as const,
+								},
 							]}
 						/>
 					) : null}
@@ -333,8 +362,8 @@ export function AuditLabClient({
 					{surface === "practice" ? (
 						<div className="space-y-3">
 							<p className="text-sm text-slate-600">
-								Practice against an auditor persona. Honest “I don’t know, I’ll find
-								out” answers score as acceptable.
+								Practice against an auditor persona. Honest “I don’t know, I’ll
+								find out” answers score as acceptable.
 							</p>
 							{canPractice && selected ? (
 								<Button
@@ -348,8 +377,9 @@ export function AuditLabClient({
 												action: "start",
 												sessionId: selected.$id,
 											});
-											const attempt = (json.data as { attempt?: { $id?: string } })
-												?.attempt;
+											const attempt = (
+												json.data as { attempt?: { $id?: string } }
+											)?.attempt;
 											if (attempt?.$id) {
 												toast({
 													title: "Practice started",
@@ -383,7 +413,8 @@ export function AuditLabClient({
 							<ul className="space-y-1">
 								{(payload?.reports ?? []).map((r) => (
 									<li key={r.$id}>
-										{r.kind} report <span className="text-slate-400">{r.$id}</span>
+										{r.kind} report{" "}
+										<span className="text-slate-400">{r.$id}</span>
 									</li>
 								))}
 							</ul>
@@ -469,7 +500,9 @@ function SurfaceSessionTools({
 	return (
 		<div className="space-y-3">
 			<p className="text-sm text-slate-600">
-				{selected ? `Working on ${selected.title}.` : `Pick a session on ${label}.`}
+				{selected
+					? `Working on ${selected.title}.`
+					: `Pick a session on ${label}.`}
 			</p>
 			{canManage && selected ? (
 				<div className="flex flex-wrap gap-3">
