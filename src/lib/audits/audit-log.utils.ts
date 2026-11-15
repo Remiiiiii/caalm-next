@@ -6,7 +6,8 @@ export type AuditModule =
 	| "system"
 	| "billing"
 	| "news"
-	| "it";
+	| "it"
+	| "audit_lab";
 
 export type AuditAction =
 	| "create"
