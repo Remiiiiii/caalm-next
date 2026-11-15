@@ -1,9 +1,11 @@
 "use client";
 
-import { ClipboardCheck, Gauge, ScrollText } from "lucide-react";
+import { Calendar, ClipboardCheck, Gauge, ScrollText } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { SegmentedToggle } from "@/components/ui/segmented-toggle";
+import { PERMISSIONS } from "@/constants/permissions";
+import { usePermissions } from "@/hooks/usePermissions";
 
 const SECTION_TABS = [
 	{
@@ -33,6 +35,12 @@ const SECTION_TABS = [
 			pathname.startsWith("/audits/uploads") ||
 			pathname.startsWith("/audits/upload/"),
 	},
+	{
+		href: "/audit-lab",
+		label: "Audit Lab",
+		icon: Calendar,
+		match: (pathname: string) => pathname.startsWith("/audit-lab"),
+	},
 ] as const;
 
 type SectionHref = (typeof SECTION_TABS)[number]["href"];
@@ -48,15 +56,24 @@ export function AuditsSectionNav({
 }) {
 	const pathname = usePathname() || "";
 	const router = useRouter();
+	const { permissions } = usePermissions();
+	const tabs = useMemo(
+		() =>
+			SECTION_TABS.filter(
+				(tab) =>
+					tab.href !== "/audit-lab" ||
+					permissions.includes(PERMISSIONS.AUDIT_LAB.VIEW),
+			),
+		[permissions],
+	);
 	const active =
-		SECTION_TABS.find((tab) => tab.match(pathname))?.href ??
-		SECTION_TABS[0].href;
+		tabs.find((tab) => tab.match(pathname))?.href ?? SECTION_TABS[0].href;
 
 	const hidden = hideOnReadiness && active === "/audits/readiness";
 
 	useEffect(() => {
-		for (const tab of SECTION_TABS) router.prefetch(tab.href);
-	}, [router]);
+		for (const tab of tabs) router.prefetch(tab.href);
+	}, [router, tabs]);
 
 	if (hidden) return null;
 
@@ -66,7 +83,7 @@ export function AuditsSectionNav({
 			onChange={(href) => router.push(href)}
 			ariaLabel="Audit sections"
 			className={className}
-			tabs={SECTION_TABS.map((tab) => ({
+			tabs={tabs.map((tab) => ({
 				value: tab.href,
 				label: tab.label,
 				icon: tab.icon,

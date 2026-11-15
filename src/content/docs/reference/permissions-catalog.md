@@ -1,6 +1,6 @@
 ---
 title: "Permissions catalog"
-description: "Every major permission key in plain language — the dictionary behind CAALM access."
+description: "Every major permission key in plain language; the dictionary behind CAALM access."
 section: reference
 audience: "Admins, Security, Everyone"
 ---
@@ -172,6 +172,15 @@ Ask CAALM also needs the matching domain permission for each action (for example
 |---|---|
 | `audit.view` | View audit information |
 | `audit.export` | Export audit information |
+
+## Audit Lab
+
+| Key | Meaning |
+|---|---|
+| `audit_lab.view` | View mock-audit sessions, evidence, and reports |
+| `audit_lab.manage_sessions` | Create, reschedule, cancel sessions and build scripts |
+| `audit_lab.manage_evidence` | Generate and update the evidence request matrix |
+| `audit_lab.run_practice` | Start practice rounds and score answers |
 
 ## IT
 
