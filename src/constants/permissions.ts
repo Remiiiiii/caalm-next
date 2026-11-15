@@ -88,6 +88,14 @@ export const PERMISSIONS = {
 		DELETE: "audit.delete",
 	},
 
+	// Audit Lab (mock-audit rehearsal)
+	AUDIT_LAB: {
+		VIEW: "audit_lab.view",
+		MANAGE_SESSIONS: "audit_lab.manage_sessions",
+		MANAGE_EVIDENCE: "audit_lab.manage_evidence",
+		RUN_PRACTICE: "audit_lab.run_practice",
+	},
+
 	// IT/Software Engineering Permissions
 	IT: {
 		VIEW_RATE_LIMITS: "it.view_rate_limits",
@@ -569,6 +577,31 @@ export const PERMISSION_DEFINITIONS = [
 		category: "audit",
 		description: "Soft-delete uploaded audit documents",
 	},
+	{
+		key: PERMISSIONS.AUDIT_LAB.VIEW,
+		name: "View Audit Lab",
+		category: "audit_lab",
+		description: "View mock-audit sessions, evidence matrix, and reports",
+	},
+	{
+		key: PERMISSIONS.AUDIT_LAB.MANAGE_SESSIONS,
+		name: "Manage Audit Lab Sessions",
+		category: "audit_lab",
+		description:
+			"Create, reschedule, cancel sessions, invite participants, and build scripts",
+	},
+	{
+		key: PERMISSIONS.AUDIT_LAB.MANAGE_EVIDENCE,
+		name: "Manage Audit Lab Evidence",
+		category: "audit_lab",
+		description: "Generate and update the PBC-style evidence request matrix",
+	},
+	{
+		key: PERMISSIONS.AUDIT_LAB.RUN_PRACTICE,
+		name: "Run Audit Lab Practice",
+		category: "audit_lab",
+		description: "Start practice rounds, score answers, and request coaching",
+	},
 
 	// IT/Software Engineering
 	{
@@ -886,7 +919,8 @@ export const PERMISSION_DEFINITIONS = [
 		key: PERMISSIONS.PROPOSALS.LIBRARY_MANAGE,
 		name: "Manage Proposal Library",
 		category: "proposals",
-		description: "Add and edit reusable past-performance and capability content",
+		description:
+			"Add and edit reusable past-performance and capability content",
 	},
 
 	// Constituent CRM

@@ -3,6 +3,7 @@
 import type { Models } from "appwrite";
 import { Calendar, ChartLine } from "lucide-react";
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import ReportGenerator from "@/components/ReportGenerator";
 import {
@@ -11,6 +12,8 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { PERMISSIONS } from "@/constants/permissions";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { cn } from "@/lib/utils";
 
@@ -60,11 +63,14 @@ const QuickActions = ({ user }: QuickActionsProps) => {
 	const [reportOpen, setReportOpen] = useState(false);
 	const [activeAction, setActiveAction] = useState<QuickAction>("contract");
 	const { roles: userRoles } = useUserRoles();
+	const { permissions } = usePermissions();
+	const router = useRouter();
 
 	const isITUser = useMemo(
 		() => userRoles.some((r) => r.roleName === "IT"),
 		[userRoles],
 	);
+	const canScheduleReview = permissions.includes(PERMISSIONS.AUDIT_LAB.VIEW);
 
 	return (
 		<div className="segmented-toggle">
@@ -98,19 +104,24 @@ const QuickActions = ({ user }: QuickActionsProps) => {
 					/>
 				</>
 			)}
-			<ActionTooltip label="Schedule Review">
-				<button
-					type="button"
-					className={cn(
-						"segmented-toggle-item px-2.5",
-						activeAction === "schedule" && "segmented-toggle-item-active",
-					)}
-					aria-label="Schedule"
-					onClick={() => setActiveAction("schedule")}
-				>
-					<Calendar className="h-4 w-4 shrink-0" aria-hidden />
-				</button>
-			</ActionTooltip>
+			{canScheduleReview ? (
+				<ActionTooltip label="Schedule Review">
+					<button
+						type="button"
+						className={cn(
+							"segmented-toggle-item px-2.5",
+							activeAction === "schedule" && "segmented-toggle-item-active",
+						)}
+						aria-label="Schedule"
+						onClick={() => {
+							setActiveAction("schedule");
+							router.push("/audit-lab");
+						}}
+					>
+						<Calendar className="h-4 w-4 shrink-0" aria-hidden />
+					</button>
+				</ActionTooltip>
+			) : null}
 			<ActionTooltip label="Generate Report">
 				<button
 					type="button"
