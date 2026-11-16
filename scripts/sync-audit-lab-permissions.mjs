@@ -67,6 +67,27 @@ const AUDIT_LAB_PERMISSIONS = [
 		category: "audit_lab",
 		description: "Start practice rounds, score answers, and request coaching",
 	},
+	{
+		$id: "perm_auditlab_coordinate",
+		key: "audit_lab.coordinate_evidence",
+		name: "Coordinate Audit Lab Evidence",
+		category: "audit_lab",
+		description: "Org-wide evidence triage and accept/reject workflows",
+	},
+	{
+		$id: "perm_auditlab_score",
+		key: "audit_lab.score_practice",
+		name: "Score Audit Lab Practice",
+		category: "audit_lab",
+		description: "Score live practice answers and observer notes",
+	},
+	{
+		$id: "perm_auditlab_reports",
+		key: "audit_lab.publish_reports",
+		name: "Publish Audit Lab Reports",
+		category: "audit_lab",
+		description: "Publish and export readiness reports",
+	},
 ];
 
 const ADMIN_ROLES = ["role_super_admin", "role_org_admin"];

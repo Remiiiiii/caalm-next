@@ -317,7 +317,7 @@ For content cards (like article lists, tables, etc.):
 
 ### Custom Colors
 
-Use custom colors defined in `tailwind.config.ts` without intermediate suffixes (100, 200, etc.).
+Use custom colors defined in `tailwind.config.mjs` without intermediate suffixes (100, 200, etc.).
 
 **Available custom colors:** `red`, `green`, `blue`, `pink`, `orange`, `brand`, `light`, `dark`, `navy`, `coral`
 
