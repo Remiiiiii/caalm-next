@@ -43,3 +43,13 @@ Resolved in `src/lib/audit-lab/access.ts` (`resolveLabCapabilities`). IT staff k
 
 - `/api/cron/audit-lab-reminders` — session invitation + reminder pass (`CRON_SECRET`, `orgId` query).
 - `/api/cron/audit-lab-chasers` — overdue evidence nudges.
+
+### Spec polish (UI)
+
+- Interview: drag questions into Opening / Process / Evidence / Closing; version conflict on save; presence heartbeat.
+- Evidence: coverage bar chart, group-by + status filters, single-person flag in table.
+- Practice: persona picker, show-me 2-minute timer, four score dimensions, observer cannot score.
+- Reports: readiness vs practice trend chart + CSV export at `/api/audit-lab/reports/export`.
+- Capabilities poll every 30s so mid-session permission loss drops actions without a hard error.
+- Evidence status §10 enums in app code (`normalizeEvidenceStatus`); migrate legacy rows with `node scripts/migrate-audit-lab-evidence-status.mjs --apply`.
+- LLM auditor persona (spec 4b) still deferred — template/follow-up path only until product enables Anthropic for drills.

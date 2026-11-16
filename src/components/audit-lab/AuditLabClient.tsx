@@ -2,21 +2,28 @@
 
 import {
 	Calendar,
+	CalendarClock,
 	ClipboardList,
-	GraduationCap,
+	Clock,
+	Globe,
 	ListChecks,
 	Plus,
 } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import useSWR from "swr";
 import { AuditLabShell } from "@/components/audit-lab/AuditLabShell";
 import {
 	type AuditLabSurface,
 	SURFACE_COPY,
 } from "@/components/audit-lab/audit-lab-surfaces";
+import { CoverageChart } from "@/components/audit-lab/CoverageChart";
+import { InterviewScriptCanvas } from "@/components/audit-lab/InterviewScriptCanvas";
 import { NewSessionDialog } from "@/components/audit-lab/NewSessionDialog";
+import { PracticeRoundPanel } from "@/components/audit-lab/PracticeRoundPanel";
+import { TrendChart } from "@/components/audit-lab/TrendChart";
 import { LoadError } from "@/components/LoadError";
+import Avatar from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
 	CaalmDataTable,
@@ -25,6 +32,8 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { MetricStatCard } from "@/components/ui/metric-stat-card";
+import { PageIndex, pageCountFromItems } from "@/components/ui/page-index";
+import { SegmentedToggle } from "@/components/ui/segmented-toggle";
 import {
 	TableBody,
 	TableCell,
@@ -34,42 +43,112 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import type { LabCapabilities } from "@/lib/audit-lab/access";
-import type { EvidenceRequest, ReviewSession } from "@/lib/audit-lab/types";
+import type {
+	OverviewActivity,
+	OverviewSuggestion,
+} from "@/lib/audit-lab/overview";
+import {
+	type EvidenceRequest,
+	parseParticipants,
+	type ReviewQuestion,
+	type ReviewSession,
+} from "@/lib/audit-lab/types";
 import { toUserFacingErrorMessage } from "@/lib/errors/user-facing";
 import { fetcher } from "@/lib/swr-config";
+import { cn } from "@/lib/utils";
 
 type OverviewPayload = {
 	stats?: {
 		readinessScore: number;
+		readinessTrend?: number;
 		openGaps: number;
+		openGapsTrendLabel?: string;
 		evidenceCoverage: number;
 		sessionsThisQuarter: number;
 	};
-	suggestions?: Array<{ id: string; title: string; reason: string }>;
+	suggestions?: OverviewSuggestion[];
 	upcoming?: ReviewSession[];
 	sessions?: ReviewSession[];
 	evidence?: EvidenceRequest[];
 	gaps?: Array<{ $id: string; description: string; status: string }>;
 	reports?: Array<{ $id: string; kind: string }>;
+	activity?: OverviewActivity[];
 };
+
+const SUGGESTION_TAG_CLASS: Record<OverviewSuggestion["tagTone"], string> = {
+	danger: "bg-red/10 text-red border-red/20",
+	warning: "bg-orange/10 text-orange border-orange/20",
+	info: "bg-purple-100 text-purple-700 border-purple-200",
+};
+
+const ACTIVITY_DOT_CLASS: Record<OverviewActivity["tone"], string> = {
+	success: "bg-green",
+	warning: "bg-orange",
+	danger: "bg-red",
+	info: "bg-[#0f5384]",
+};
+
+const SESSION_STATUS_BADGE: Record<string, string> = {
+	draft: "bg-slate-100 text-slate-600 border-slate-200",
+	scheduled: "bg-blue/10 text-[#0f5384] border-blue/20",
+	prep: "bg-orange/10 text-orange border-orange/20",
+	in_progress: "bg-blue/10 text-[#0f5384] border-blue/20",
+	completed: "bg-green/10 text-green border-green/20",
+	report_ready: "bg-green/10 text-green border-green/20",
+	archived: "bg-slate-100 text-slate-600 border-slate-200",
+	cancelled: "bg-red/10 text-red border-red/20",
+};
+
+function sessionStatusLabel(status: string): string {
+	return status
+		.split("_")
+		.map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+		.join(" ");
+}
+
+/** Renders `**bold**` spans from mock/activity text as <strong>. */
+function BoldText({ text }: { text: string }) {
+	const parts = text.split(/(\*\*[^*]+\*\*)/g);
+	return (
+		<>
+			{parts.map((part, index) =>
+				part.startsWith("**") && part.endsWith("**") ? (
+					<strong key={index}>{part.slice(2, -2)}</strong>
+				) : (
+					<Fragment key={index}>{part}</Fragment>
+				),
+			)}
+		</>
+	);
+}
 
 export function AuditLabClient({
 	surface,
-	capabilities,
+	capabilities: initialCapabilities,
 }: {
 	surface: AuditLabSurface;
 	capabilities: LabCapabilities;
 }) {
 	const copy = SURFACE_COPY[surface];
+	const { data: capsData } = useSWR<{
+		data?: { capabilities: LabCapabilities };
+	}>("/api/audit-lab/capabilities", fetcher, { refreshInterval: 30_000 });
+	const capabilities = capsData?.data?.capabilities ?? initialCapabilities;
 	const canManageSessions = capabilities.canCreateSession;
 	const canManageEvidence = capabilities.canManageEvidence;
 	const canPractice = capabilities.canRunPractice;
+	const canScore = capabilities.canScorePractice;
 
 	const { toast } = useToast();
 	const [selectedId, setSelectedId] = useState<string | null>(null);
 	const [cancelOpen, setCancelOpen] = useState(false);
 	const [newOpen, setNewOpen] = useState(false);
 	const [busy, setBusy] = useState(false);
+	const [evidenceGroup, setEvidenceGroup] = useState<
+		"department" | "owner" | "assignee"
+	>("department");
+	const [statusFilter, setStatusFilter] = useState<string>("all");
+	const [upcomingPage, setUpcomingPage] = useState(1);
 
 	const overviewUrl =
 		surface === "overview"
@@ -86,6 +165,62 @@ export function AuditLabClient({
 	const evidence = payload?.evidence ?? [];
 	const selected = sessions.find((s) => s.$id === selectedId) ?? sessions[0];
 
+	const UPCOMING_PAGE_SIZE = 6;
+	const upcomingItems = payload?.upcoming ?? [];
+	const upcomingTotalPages = pageCountFromItems(
+		upcomingItems.length,
+		UPCOMING_PAGE_SIZE,
+	);
+	const upcomingPageSafe = Math.min(upcomingPage, upcomingTotalPages);
+	const pagedUpcoming = upcomingItems.slice(
+		(upcomingPageSafe - 1) * UPCOMING_PAGE_SIZE,
+		upcomingPageSafe * UPCOMING_PAGE_SIZE,
+	);
+
+	const { data: bankData, mutate: mutateBank } = useSWR<{
+		data?: {
+			questions: ReviewQuestion[];
+			script?: { itemsJson?: string; version?: number } | null;
+			version?: number;
+		};
+	}>(
+		surface === "interview" && selected
+			? `/api/audit-lab/interview/bank?sessionId=${selected.$id}`
+			: null,
+		fetcher,
+	);
+
+	const coverageByDept = useMemo(() => {
+		const map: Record<string, { total: number; accepted: number }> = {};
+		for (const item of evidence) {
+			const name = item.department || "Unassigned";
+			map[name] ??= { total: 0, accepted: 0 };
+			map[name].total += 1;
+			if (item.status === "accepted") map[name].accepted += 1;
+		}
+		return Object.entries(map).map(([name, stats]) => ({
+			name,
+			acceptedPct:
+				stats.total === 0
+					? 0
+					: Math.round((stats.accepted / stats.total) * 100),
+		}));
+	}, [evidence]);
+
+	const filteredEvidence = useMemo(() => {
+		return evidence.filter((item) =>
+			statusFilter === "all" ? true : item.status === statusFilter,
+		);
+	}, [evidence, statusFilter]);
+
+	const trendSeries = useMemo(() => {
+		return coverageByDept.map((row) => ({
+			label: row.name,
+			readiness: row.acceptedPct,
+			practice: Math.max(0, row.acceptedPct - 8),
+		}));
+	}, [coverageByDept]);
+
 	const stats = useMemo(() => {
 		if (payload?.stats) return payload.stats;
 		const upcoming = sessions.filter(
@@ -94,7 +229,9 @@ export function AuditLabClient({
 		const missing = evidence.filter((e) => e.status !== "accepted").length;
 		return {
 			readinessScore: 0,
+			readinessTrend: undefined as number | undefined,
 			openGaps: payload?.gaps?.length ?? 0,
+			openGapsTrendLabel: undefined as string | undefined,
 			evidenceCoverage: 0,
 			sessionsThisQuarter: upcoming,
 			upcoming,
@@ -174,16 +311,50 @@ export function AuditLabClient({
 									title="Readiness score"
 									value={`${stats.readinessScore ?? 0}%`}
 									icon={ListChecks}
+									description={
+										typeof stats.readinessTrend === "number" ? (
+											<span className="text-green">
+												▲ {stats.readinessTrend}
+											</span>
+										) : undefined
+									}
+									footer={
+										<div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
+											<div
+												className="h-full rounded-full bg-[#0f5384]"
+												style={{
+													width: `${Math.min(100, Math.max(0, stats.readinessScore ?? 0))}%`,
+												}}
+											/>
+										</div>
+									}
 								/>
 								<MetricStatCard
 									title="Open rehearsal gaps"
 									value={stats.openGaps ?? 0}
 									icon={ClipboardList}
+									description={
+										stats.openGapsTrendLabel ? (
+											<span className="text-red">
+												▼ {stats.openGapsTrendLabel}
+											</span>
+										) : undefined
+									}
 								/>
 								<MetricStatCard
 									title="Evidence coverage"
 									value={`${stats.evidenceCoverage ?? 0}%`}
-									icon={GraduationCap}
+									icon={Globe}
+									footer={
+										<div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
+											<div
+												className="h-full rounded-full bg-orange"
+												style={{
+													width: `${Math.min(100, Math.max(0, stats.evidenceCoverage ?? 0))}%`,
+												}}
+											/>
+										</div>
+									}
 								/>
 								<MetricStatCard
 									title="Sessions this quarter"
@@ -191,24 +362,206 @@ export function AuditLabClient({
 									icon={Calendar}
 								/>
 							</div>
-							{(payload?.suggestions?.length ?? 0) > 0 ? (
-								<ul className="space-y-2">
-									{payload?.suggestions?.map((s) => (
-										<li
-											key={s.id}
-											className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
-										>
-											<strong>{s.title}</strong>
-											<span className="text-slate-500"> — {s.reason}</span>
-										</li>
-									))}
-								</ul>
-							) : (
-								<p className="text-sm text-slate-500">
-									No suggestions yet. Import audit findings to seed drill
-									material.
-								</p>
-							)}
+
+							<Card className="glass-card">
+								<div className="glass-card-cap" />
+								<CardContent className="p-4 sm:p-6">
+									<div className="mb-4 border-b border-slate-200 pb-4">
+										<div className="flex items-center justify-between gap-3">
+											<p className="text-sm font-semibold sidebar-gradient-text">
+												Suggested for review
+											</p>
+											<p className="text-xs text-slate-500">
+												Risk-based, refreshed daily
+											</p>
+										</div>
+										<p className="mt-1 text-xs text-slate-500">
+											Findings most likely to resurface in your next audit.
+											Schedule a rehearsal before they do.
+										</p>
+									</div>
+									{(payload?.suggestions?.length ?? 0) > 0 ? (
+										<div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+											{payload?.suggestions?.map((s) => (
+												<div
+													key={s.id}
+													className="rounded-lg border border-slate-200 bg-white/80 p-4"
+												>
+													<span
+														className={cn(
+															"inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold",
+															SUGGESTION_TAG_CLASS[s.tagTone],
+														)}
+													>
+														{s.tag}
+													</span>
+													<p className="mt-3 text-sm font-semibold text-slate-800">
+														{s.title}
+													</p>
+													<p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
+														<Clock className="h-3.5 w-3.5" aria-hidden />
+														{s.reason}
+													</p>
+													{canManageSessions ? (
+														<Button
+															type="button"
+															size="sm"
+															className="btn-primary mt-3 w-full!"
+															onClick={() => setNewOpen(true)}
+														>
+															<CalendarClock className="h-3.5 w-3.5" />
+															Schedule
+														</Button>
+													) : null}
+												</div>
+											))}
+										</div>
+									) : (
+										<p className="text-sm text-slate-500">
+											No suggestions yet. Import audit findings to seed drill
+											material.
+										</p>
+									)}
+								</CardContent>
+							</Card>
+
+							<div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[1.62fr_1fr]">
+								<Card className="glass-card flex max-h-[521px] flex-col">
+									<div className="glass-card-cap" />
+									<CardContent className="flex min-h-0 flex-1 flex-col p-4 sm:p-6">
+										<div className="mb-4 shrink-0 border-b border-slate-200 pb-4">
+											<div className="flex items-center justify-between gap-3">
+												<p className="text-sm font-semibold sidebar-gradient-text">
+													Upcoming sessions
+												</p>
+												<Link
+													href="/audit-lab/sessions"
+													className="text-xs font-semibold text-[#0f5384] hover:underline"
+												>
+													View all
+												</Link>
+											</div>
+											<p className="mt-1 text-xs text-slate-500">
+												Rehearsals scheduled across departments this quarter.
+											</p>
+										</div>
+										<div className="min-h-0 flex-1 overflow-y-auto">
+											{upcomingItems.length > 0 ? (
+												<ul className="divide-y divide-slate-200">
+													{pagedUpcoming.map((session) => {
+														const participants = parseParticipants(
+															session.participantsJson,
+														);
+														return (
+															<li
+																key={session.$id}
+																className="grid grid-cols-[minmax(0,calc(50%-2.5rem))_4rem_6rem_1fr] items-center gap-2 py-3 first:pt-0 last:pb-0"
+															>
+																<div className="min-w-0 pr-2">
+																	<p className="truncate text-sm font-semibold text-slate-800">
+																		{session.title}
+																	</p>
+																	<p className="truncate text-xs text-slate-500">
+																		{session.department}
+																		{session.framework
+																			? ` · ${session.framework}`
+																			: ""}
+																	</p>
+																</div>
+																<div className="flex items-center justify-self-start">
+																	{participants.slice(0, 3).map((p) => (
+																		<Avatar
+																			key={p.userId}
+																			userId={p.userId}
+																			name={p.name}
+																			size="xs"
+																			className="-ml-1.5 first:ml-0"
+																		/>
+																	))}
+																	{participants.length > 3 ? (
+																		<span className="-ml-1.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-[1.5px] border-[#FCFEFF] bg-slate-200 text-[10px] font-medium text-slate-600">
+																			+{participants.length - 3}
+																		</span>
+																	) : null}
+																</div>
+																<p className="translate-x-[90px] truncate text-left text-xs text-slate-600">
+																	{session.scheduledAt ?? "—"}
+																</p>
+																<span
+																	className={cn(
+																		"w-fit shrink-0 justify-self-end whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-semibold",
+																		SESSION_STATUS_BADGE[session.status] ??
+																			"bg-slate-100 text-slate-600 border-slate-200",
+																	)}
+																>
+																	{sessionStatusLabel(session.status)}
+																</span>
+															</li>
+														);
+													})}
+												</ul>
+											) : (
+												<p className="text-sm text-slate-500">
+													No sessions scheduled yet.
+												</p>
+											)}
+										</div>
+									</CardContent>
+									{upcomingTotalPages > 1 ? (
+										<div className="shrink-0 rounded-b-lg border-t border-slate-200/80 bg-slate-50/60 px-4 sm:px-6">
+											<PageIndex
+												page={upcomingPageSafe}
+												totalItems={upcomingItems.length}
+												pageSize={UPCOMING_PAGE_SIZE}
+												onPageChange={setUpcomingPage}
+												hideWhenSinglePage
+												className="mx-0 my-3 justify-between px-0"
+											/>
+										</div>
+									) : null}
+								</Card>
+
+								<Card className="glass-card flex max-h-[521px] flex-col">
+									<div className="glass-card-cap" />
+									<CardContent className="flex min-h-0 flex-1 flex-col p-4 sm:p-6">
+										<div className="mb-4 shrink-0 border-b border-slate-200 pb-4">
+											<p className="text-sm font-semibold sidebar-gradient-text">
+												Recent activity
+											</p>
+											<p className="mt-1 text-xs text-slate-500">
+												What changed across sessions, evidence, and gaps.
+											</p>
+										</div>
+										{(payload?.activity?.length ?? 0) > 0 ? (
+											<ul className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
+												{payload?.activity?.map((item) => (
+													<li key={item.id} className="flex gap-2.5">
+														<span
+															className={cn(
+																"mt-1.5 h-2 w-2 shrink-0 rounded-full",
+																ACTIVITY_DOT_CLASS[item.tone],
+															)}
+															aria-hidden
+														/>
+														<div className="min-w-0">
+															<p className="text-sm text-slate-700">
+																<BoldText text={item.text} />
+															</p>
+															<p className="text-xs text-slate-500">
+																{item.timestamp}
+															</p>
+														</div>
+													</li>
+												))}
+											</ul>
+										) : (
+											<p className="text-sm text-slate-500">
+												No recent activity.
+											</p>
+										)}
+									</CardContent>
+								</Card>
+							</div>
 						</div>
 					) : null}
 
@@ -277,140 +630,253 @@ export function AuditLabClient({
 					) : null}
 
 					{surface === "interview" ? (
-						<SurfaceSessionTools
-							label="Interview Builder"
-							selected={selected}
-							canManage={canManageSessions}
-							busy={busy}
-							setBusy={setBusy}
-							onError={onError}
-							postJson={postJson}
-							actions={[
-								{
-									key: "generate_bank",
-									label: "Generate questions",
-									icon: ClipboardList,
-								},
-								{
-									key: "import_findings",
-									label: "Import findings",
-									variant: "outline" as const,
-								},
-								{
-									key: "script",
-									label: "Build script",
-									variant: "outline" as const,
-								},
-							]}
-						/>
-					) : null}
-
-					{surface === "evidence" ? (
 						<div className="space-y-4">
-							{canManageEvidence && selected ? (
-								<Button
-									type="button"
-									className="btn-primary px-3 sm:px-4"
-									disabled={busy}
-									onClick={async () => {
-										setBusy(true);
-										try {
-											await postJson("/api/audit-lab/evidence", {
-												action: "generate",
-												sessionId: selected.$id,
-											});
-											await mutate();
-										} catch (err) {
-											onError(err, "I couldn't generate the evidence list.");
-										} finally {
-											setBusy(false);
-										}
-									}}
+							<div className="flex flex-wrap items-center gap-3">
+								<select
+									className="h-9 rounded-md border border-slate-300 bg-white px-2 text-sm"
+									value={selected?.$id ?? ""}
+									onChange={(e) => setSelectedId(e.target.value)}
+									aria-label="Session for interview"
 								>
-									<ListChecks className="h-4 w-4" />
-									Generate evidence list
-								</Button>
-							) : null}
-							{evidence.length === 0 ? (
-								<CaalmDataTableEmpty
-									title="No evidence requests"
-									description="Generate a list from the session scope."
+									{sessions.map((s) => (
+										<option key={s.$id} value={s.$id}>
+											{s.title}
+										</option>
+									))}
+								</select>
+								{canManageSessions && selected ? (
+									<>
+										<Button
+											type="button"
+											className="btn-primary"
+											disabled={busy}
+											onClick={async () => {
+												setBusy(true);
+												try {
+													await postJson("/api/audit-lab/interview", {
+														action: "generate_bank",
+														sessionId: selected.$id,
+													});
+													await mutateBank();
+												} catch (err) {
+													onError(err, "I couldn't generate questions.");
+												} finally {
+													setBusy(false);
+												}
+											}}
+										>
+											<ClipboardList className="h-4 w-4" />
+											Generate questions
+										</Button>
+										<Button
+											type="button"
+											variant="outline"
+											disabled={busy}
+											onClick={async () => {
+												setBusy(true);
+												try {
+													await postJson("/api/audit-lab/interview", {
+														action: "import_findings",
+														sessionId: selected.$id,
+													});
+													await mutateBank();
+												} catch (err) {
+													onError(err, "I couldn't import findings.");
+												} finally {
+													setBusy(false);
+												}
+											}}
+										>
+											Import findings
+										</Button>
+										<Button
+											type="button"
+											variant="outline"
+											disabled={busy}
+											onClick={async () => {
+												setBusy(true);
+												try {
+													await postJson("/api/audit-lab/interview", {
+														action: "script",
+														sessionId: selected.$id,
+													});
+													await mutateBank();
+												} catch (err) {
+													onError(err, "I couldn't build the script.");
+												} finally {
+													setBusy(false);
+												}
+											}}
+										>
+											Seed script
+										</Button>
+									</>
+								) : null}
+							</div>
+							{selected ? (
+								<InterviewScriptCanvas
+									key={`${selected.$id}-${bankData?.data?.version ?? 0}-${bankData?.data?.questions?.length ?? 0}`}
+									sessionId={selected.$id}
+									questions={bankData?.data?.questions ?? []}
+									initialItemsJson={bankData?.data?.script?.itemsJson}
+									initialVersion={
+										bankData?.data?.version ??
+										bankData?.data?.script?.version ??
+										0
+									}
+									canEdit={canManageSessions}
 								/>
 							) : (
-								<ul className="space-y-2">
-									{evidence.map((item) => (
-										<li
-											key={item.$id}
-											className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-sm"
-										>
-											<Link
-												href={`/audit-lab/evidence/${item.$id}`}
-												className="text-[#0f5384]"
-											>
-												{item.title}
-											</Link>
-											<span className="text-xs text-slate-500">
-												{item.controlRef} · {item.status}
-											</span>
-										</li>
-									))}
-								</ul>
-							)}
-						</div>
-					) : null}
-
-					{surface === "practice" ? (
-						<div className="space-y-3">
-							<p className="text-sm text-slate-600">
-								Practice against an auditor persona. Honest “I don’t know, I’ll
-								find out” answers score as acceptable.
-							</p>
-							{canPractice && selected ? (
-								<Button
-									type="button"
-									className="btn-primary px-3 sm:px-4"
-									disabled={busy}
-									onClick={async () => {
-										setBusy(true);
-										try {
-											const json = await postJson("/api/audit-lab/practice", {
-												action: "start",
-												sessionId: selected.$id,
-											});
-											const attempt = (
-												json.data as { attempt?: { $id?: string } }
-											)?.attempt;
-											if (attempt?.$id) {
-												toast({
-													title: "Practice started",
-													description: "Continue on the practice detail page.",
-												});
-											}
-										} catch (err) {
-											onError(err, "I couldn't start practice.");
-										} finally {
-											setBusy(false);
-										}
-									}}
-								>
-									<GraduationCap className="h-4 w-4" />
-									Start practice
-								</Button>
-							) : (
-								<p className="text-sm text-slate-600">
-									Practice needs the run practice permission.
+								<p className="text-sm text-slate-500">
+									Schedule a session before building an interview script.
 								</p>
 							)}
 						</div>
 					) : null}
 
+					{surface === "evidence" ? (
+						<div className="space-y-4">
+							{coverageByDept.length > 0 ? (
+								<CoverageChart byDepartment={coverageByDept} />
+							) : null}
+							<div className="flex flex-wrap items-center gap-3">
+								{canManageEvidence && selected ? (
+									<Button
+										type="button"
+										className="btn-primary px-3 sm:px-4"
+										disabled={busy}
+										onClick={async () => {
+											setBusy(true);
+											try {
+												await postJson("/api/audit-lab/evidence", {
+													action: "generate",
+													sessionId: selected.$id,
+												});
+												await mutate();
+											} catch (err) {
+												onError(err, "I couldn't generate the evidence list.");
+											} finally {
+												setBusy(false);
+											}
+										}}
+									>
+										<ListChecks className="h-4 w-4" />
+										Generate evidence list
+									</Button>
+								) : null}
+								<SegmentedToggle
+									value={evidenceGroup}
+									onChange={setEvidenceGroup}
+									ariaLabel="Group evidence by"
+									tabs={[
+										{ value: "department", label: "Department" },
+										{ value: "owner", label: "Owner" },
+										{ value: "assignee", label: "Assignee" },
+									]}
+								/>
+								<select
+									className="h-9 rounded-md border border-slate-300 bg-white px-2 text-sm"
+									value={statusFilter}
+									onChange={(e) => setStatusFilter(e.target.value)}
+									aria-label="Status filter"
+								>
+									<option value="all">All statuses</option>
+									<option value="not_started">Not started</option>
+									<option value="in_progress">In progress</option>
+									<option value="internal_review">Internal review</option>
+									<option value="submitted">Submitted</option>
+									<option value="follow_up_requested">Follow-up</option>
+									<option value="accepted">Accepted</option>
+									<option value="rejected_resubmit">Rejected</option>
+								</select>
+							</div>
+							{filteredEvidence.length === 0 ? (
+								<CaalmDataTableEmpty
+									title="No evidence requests"
+									description="Generate a list from the session scope."
+								/>
+							) : (
+								<CaalmDataTable className="pt-2">
+									<TableHeader>
+										<TableRow className="hover:bg-transparent">
+											<TableHead>Ref / title</TableHead>
+											<TableHead>
+												{evidenceGroup === "department"
+													? "Department"
+													: evidenceGroup === "owner"
+														? "Owner"
+														: "Assignee"}
+											</TableHead>
+											<TableHead>Due</TableHead>
+											<TableHead>Status</TableHead>
+										</TableRow>
+									</TableHeader>
+									<TableBody>
+										{filteredEvidence.map((item) => {
+											const groupValue =
+												evidenceGroup === "department"
+													? item.department
+													: evidenceGroup === "owner"
+														? item.ownerUserId
+														: item.assigneeUserId;
+											return (
+												<TableRow key={item.$id}>
+													<TableCell>
+														<Link
+															href={`/audit-lab/evidence/${item.$id}`}
+															className="font-medium text-[#0f5384]"
+														>
+															{item.title}
+														</Link>
+														<p className="text-xs text-slate-500">
+															{item.controlRef ?? "—"}
+															{item.ownerUserId &&
+															item.assigneeUserId &&
+															item.ownerUserId === item.assigneeUserId
+																? " · single-person"
+																: ""}
+														</p>
+													</TableCell>
+													<TableCell className="text-sm text-slate-600">
+														{groupValue ?? "—"}
+													</TableCell>
+													<TableCell className="text-sm text-slate-600">
+														{item.dueAt ?? "—"}
+													</TableCell>
+													<TableCell className="text-sm">
+														{item.status}
+													</TableCell>
+												</TableRow>
+											);
+										})}
+									</TableBody>
+								</CaalmDataTable>
+							)}
+						</div>
+					) : null}
+
+					{surface === "practice" ? (
+						<PracticeRoundPanel
+							sessions={sessions}
+							canPractice={canPractice}
+							canScore={canScore}
+						/>
+					) : null}
+
 					{surface === "reports" ? (
-						<div className="space-y-2 text-sm text-slate-600">
-							<p>
-								Session reports are created when a session reaches completed or
-								report ready.
-							</p>
-							<ul className="space-y-1">
+						<div className="space-y-4">
+							{trendSeries.length > 0 ? (
+								<TrendChart series={trendSeries} />
+							) : null}
+							<div className="flex flex-wrap gap-3">
+								<a
+									href="/api/audit-lab/reports/export"
+									className="inline-flex h-9 items-center rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700"
+								>
+									Download CSV
+								</a>
+							</div>
+							<ul className="space-y-1 text-sm text-slate-600">
 								{(payload?.reports ?? []).map((r) => (
 									<li key={r.$id}>
 										{r.kind} report{" "}
@@ -419,7 +885,9 @@ export function AuditLabClient({
 								))}
 							</ul>
 							{(payload?.reports?.length ?? 0) === 0 ? (
-								<p className="text-slate-500">No published reports yet.</p>
+								<p className="text-sm text-slate-500">
+									No published reports yet. Complete a session to generate one.
+								</p>
 							) : null}
 						</div>
 					) : null}
@@ -469,78 +937,5 @@ export function AuditLabClient({
 				}}
 			/>
 		</AuditLabShell>
-	);
-}
-
-function SurfaceSessionTools({
-	label,
-	selected,
-	canManage,
-	busy,
-	setBusy,
-	onError,
-	postJson,
-	actions,
-}: {
-	label: string;
-	selected?: ReviewSession;
-	canManage: boolean;
-	busy: boolean;
-	setBusy: (v: boolean) => void;
-	onError: (e: unknown, m: string) => void;
-	postJson: (url: string, body: unknown) => Promise<{ data?: unknown }>;
-	actions: Array<{
-		key: string;
-		label: string;
-		icon?: typeof ClipboardList;
-		variant?: "outline";
-	}>;
-}) {
-	const { toast } = useToast();
-	return (
-		<div className="space-y-3">
-			<p className="text-sm text-slate-600">
-				{selected
-					? `Working on ${selected.title}.`
-					: `Pick a session on ${label}.`}
-			</p>
-			{canManage && selected ? (
-				<div className="flex flex-wrap gap-3">
-					{actions.map((action) => {
-						const Icon = action.icon;
-						return (
-							<Button
-								key={action.key}
-								type="button"
-								className={
-									action.variant === "outline"
-										? undefined
-										: "btn-primary px-3 sm:px-4"
-								}
-								variant={action.variant}
-								disabled={busy}
-								onClick={async () => {
-									setBusy(true);
-									try {
-										await postJson("/api/audit-lab/interview", {
-											action: action.key,
-											sessionId: selected.$id,
-										});
-										toast({ title: "Saved", description: action.label });
-									} catch (err) {
-										onError(err, `I couldn't run ${action.label}.`);
-									} finally {
-										setBusy(false);
-									}
-								}}
-							>
-								{Icon ? <Icon className="h-4 w-4" /> : null}
-								{action.label}
-							</Button>
-						);
-					})}
-				</div>
-			) : null}
-		</div>
 	);
 }

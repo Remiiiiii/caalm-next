@@ -12,7 +12,8 @@ export const SURFACE_COPY: Record<
 > = {
 	overview: {
 		title: "Overview",
-		description: "Readiness, gaps, and what to schedule next.",
+		description:
+			"Mock audit rehearsal, interview building, and evidence readiness in one place.",
 	},
 	sessions: {
 		title: "Sessions",

@@ -179,8 +179,6 @@ const TABLES = [
 					"accepted",
 					"rejected_resubmit",
 					"not_applicable",
-					"follow_up",
-					"rejected",
 				],
 				required: true,
 			},

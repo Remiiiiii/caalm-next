@@ -27,7 +27,9 @@ import {
 	updateEvidenceRow,
 	updateSessionRow,
 } from "./repository";
+import { followUpForVagueAnswer } from "./roleplay";
 import { applyPracticeScore } from "./score";
+import { emptyCanvas, serializeScriptItems } from "./script-sections";
 import {
 	EVIDENCE_STATUSES,
 	type EvidenceStatus,
@@ -313,17 +315,29 @@ export async function generateInterviewScript(actor: Actor, sessionId: string) {
 	}
 	const prior = await listScripts(actor.orgId, sessionId);
 	const version = (prior[0]?.version ?? 0) + 1;
-	const items = questions.map((q, index) => ({
-		order: index + 1,
-		questionId: q.$id,
-		prompt: q.prompt,
-		minutes: 5,
-	}));
+	const canvas = emptyCanvas();
+	for (const [index, q] of questions.entries()) {
+		const section =
+			index === 0
+				? "opening"
+				: index === questions.length - 1
+					? "closing"
+					: index % 2 === 0
+						? "evidence"
+						: "process";
+		canvas[section].push({
+			id: `${section}-${q.$id}`,
+			questionId: q.$id,
+			prompt: q.prompt,
+			minutes: 5,
+			section,
+		});
+	}
 	const script = await createScriptRow({
 		orgId: actor.orgId,
 		sessionId,
 		version,
-		itemsJson: JSON.stringify(items),
+		itemsJson: serializeScriptItems(canvas),
 		createdByUserId: actor.userId,
 	});
 	await audit(
@@ -336,7 +350,7 @@ export async function generateInterviewScript(actor: Actor, sessionId: string) {
 			label: `${existing.title} v${version}`,
 		},
 	);
-	return { script, items };
+	return { script, items: canvas };
 }
 
 export async function generateEvidenceRequestList(
@@ -483,7 +497,7 @@ export async function whoOwnsEvidence(orgId: string, requestId: string) {
 export async function startPracticeRound(
 	actor: Actor,
 	sessionId: string,
-	persona = "skeptical",
+	persona = "by_the_book",
 	difficulty = "medium",
 ) {
 	const existing = await getSession(actor.orgId, sessionId);
@@ -516,9 +530,17 @@ export async function scoreAnswer(
 	attemptId: string,
 	answer: string,
 	score: number,
+	options?: { retrievalMs?: number; showMe?: boolean },
 ) {
 	const attempt = await getAttempt(actor.orgId, attemptId);
 	if (!attempt) return { error: "I couldn't find that practice attempt." };
+	const session = await getSession(actor.orgId, attempt.sessionId);
+	const self = parseParticipants(session?.participantsJson).find(
+		(p) => p.userId === actor.userId,
+	);
+	if (self?.role === "observer") {
+		return { error: "Observers can annotate, but they cannot score." };
+	}
 	const scores = JSON.parse(attempt.scoresJson || "[]") as unknown[];
 	const transcript = JSON.parse(attempt.transcriptJson || "[]") as unknown[];
 	const {
@@ -526,9 +548,28 @@ export async function scoreAnswer(
 		honestUnknown,
 		dimensions,
 	} = applyPracticeScore(answer, score);
-	transcript.push({ answer, at: new Date().toISOString() });
-	scores.push({ score: nextScore, honestUnknown, dimensions });
-	if (nextScore < 3) {
+	const retrievalMs = options?.retrievalMs;
+	const slowRetrieval =
+		typeof retrievalMs === "number" && retrievalMs > 120_000;
+	const followUp = followUpForVagueAnswer(answer);
+	transcript.push({
+		answer,
+		at: new Date().toISOString(),
+		retrievalMs,
+		showMe: Boolean(options?.showMe),
+		slowRetrieval,
+		followUp,
+	});
+	scores.push({ score: nextScore, honestUnknown, dimensions, retrievalMs });
+	if (/policy says|we actually do/i.test(answer)) {
+		await createGapRow({
+			orgId: actor.orgId,
+			sessionId: attempt.sessionId,
+			attemptId,
+			description: `Policy-practice mismatch noted: ${answer.slice(0, 120)}`,
+			status: "open",
+		});
+	} else if (nextScore < 3 && !honestUnknown) {
 		await createGapRow({
 			orgId: actor.orgId,
 			sessionId: attempt.sessionId,
@@ -546,7 +587,14 @@ export async function scoreAnswer(
 		id: attempt.$id,
 		label: attemptId,
 	});
-	return { attempt: updated, score: nextScore, honestUnknown, dimensions };
+	return {
+		attempt: updated,
+		score: nextScore,
+		honestUnknown,
+		dimensions,
+		followUp,
+		slowRetrieval,
+	};
 }
 
 export async function transitionSessionStatus(
