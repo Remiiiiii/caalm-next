@@ -2,10 +2,10 @@
 
 import {
 	BarChart3,
+	ChartQuadrant,
 	ClipboardList,
-	Globe,
+	Drama,
 	LayoutDashboard,
-	ListChecks,
 	MessagesSquare,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
@@ -21,8 +21,12 @@ const NAV = [
 		label: "Interview Builder",
 		icon: MessagesSquare,
 	},
-	{ href: "/audit-lab/practice", label: "Practice & Roleplay", icon: Globe },
-	{ href: "/audit-lab/evidence", label: "Evidence Matrix", icon: ListChecks },
+	{ href: "/audit-lab/practice", label: "Practice & Roleplay", icon: Drama },
+	{
+		href: "/audit-lab/evidence",
+		label: "Evidence Matrix",
+		icon: ChartQuadrant,
+	},
 	{ href: "/audit-lab/reports", label: "Reports", icon: BarChart3 },
 ] as const;
 

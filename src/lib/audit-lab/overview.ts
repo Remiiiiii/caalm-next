@@ -1,3 +1,4 @@
+import { Query } from "node-appwrite";
 import type { LabScope } from "@/lib/audit-lab/access";
 import { sessionInScope } from "@/lib/audit-lab/access";
 import {
@@ -8,6 +9,10 @@ import {
 } from "@/lib/audit-lab/repository";
 import type { ReviewSession, SessionParticipant } from "@/lib/audit-lab/types";
 import { listFindings } from "@/lib/audit-upload/store";
+import { createAdminClient } from "@/lib/appwrite";
+import { appwriteConfig } from "@/lib/appwrite/config";
+import { flattenTableRow } from "@/lib/appwrite/flatten-row";
+import { resolveAvatarDisplayUrl } from "@/lib/utils";
 
 export type OverviewSuggestion = {
 	id: string;
@@ -26,17 +31,110 @@ export type OverviewActivity = {
 	tone: "success" | "warning" | "danger" | "info";
 };
 
-function mockParticipants(names: string[]): string {
-	const participants: SessionParticipant[] = names.map((name, index) => ({
-		userId: `mock-${index}`,
-		name,
-		role: index === 0 ? "facilitator" : "observer",
-	}));
+type OrgAvatarUser = {
+	userId: string;
+	name: string;
+	hasPhoto: boolean;
+};
+
+/** Org members for demo avatar stacks. Photos-first so the UI shows real pictures. */
+async function listOrgUsersForSessionAvatars(
+	orgId: string,
+): Promise<OrgAvatarUser[]> {
+	const { tablesDB } = await createAdminClient();
+	const databaseId = appwriteConfig.databaseId || "default-db";
+	const usersTableId = appwriteConfig.usersCollectionId || "users";
+
+	const [userOrgsResult, usersResult] = await Promise.all([
+		tablesDB.listRows({
+			databaseId,
+			tableId: "user_organizations",
+			queries: [Query.equal("orgId", orgId), Query.limit(100)],
+		}),
+		tablesDB.listRows({
+			databaseId,
+			tableId: usersTableId,
+			queries: [Query.limit(500)],
+		}),
+	]);
+
+	const usersById = new Map<string, OrgAvatarUser>();
+	const accountIdToProfileId = new Map<string, string>();
+
+	for (const row of usersResult.rows || []) {
+		const flat = flattenTableRow(row as Record<string, unknown>);
+		const userId = String(flat.$id || "").trim();
+		if (!userId) continue;
+		const name = String(flat.fullName || "").trim() || "Team member";
+		const hasPhoto = Boolean(
+			resolveAvatarDisplayUrl({
+				avatar: flat.avatar as string | null | undefined,
+				profileImageId: flat.profileImageId as string | null | undefined,
+			}),
+		);
+		usersById.set(userId, { userId, name, hasPhoto });
+		const accountId = String(flat.accountId || "").trim();
+		if (accountId) accountIdToProfileId.set(accountId, userId);
+	}
+
+	const members: OrgAvatarUser[] = [];
+	const seen = new Set<string>();
+	for (const membership of userOrgsResult.rows || []) {
+		const flat = flattenTableRow(membership as Record<string, unknown>);
+		const rawUserId = String(flat.userId || "").trim();
+		const profileId =
+			(usersById.has(rawUserId) ? rawUserId : null) ||
+			accountIdToProfileId.get(rawUserId) ||
+			null;
+		if (!profileId || seen.has(profileId)) continue;
+		const user = usersById.get(profileId);
+		if (!user) continue;
+		seen.add(profileId);
+		members.push(user);
+	}
+
+	// Prefer uploaded photos, then stable name order so stacks look consistent.
+	members.sort((a, b) => {
+		if (a.hasPhoto !== b.hasPhoto) return a.hasPhoto ? -1 : 1;
+		return a.name.localeCompare(b.name);
+	});
+	return members;
+}
+
+function mockParticipants(
+	names: string[],
+	orgUsers: OrgAvatarUser[],
+	startIndex: number,
+): string {
+	const picked = new Set<string>();
+	const participants: SessionParticipant[] = names.map((fallbackName, index) => {
+		let user: OrgAvatarUser | null = null;
+		if (orgUsers.length > 0) {
+			for (let offset = 0; offset < orgUsers.length; offset += 1) {
+				const candidate =
+					orgUsers[(startIndex + index + offset) % orgUsers.length];
+				if (!picked.has(candidate.userId)) {
+					user = candidate;
+					picked.add(candidate.userId);
+					break;
+				}
+			}
+			// Small orgs: reuse people rather than inventing fake ids.
+			if (!user) {
+				user = orgUsers[(startIndex + index) % orgUsers.length];
+			}
+		}
+		return {
+			userId: user?.userId ?? `mock-${startIndex + index}`,
+			name: user?.name ?? fallbackName,
+			role: index === 0 ? "facilitator" : "observer",
+		};
+	});
 	return JSON.stringify(participants);
 }
 
 /** Demo content shown only when an org has no real review activity yet. */
-function mockOverview(orgId: string) {
+function mockOverview(orgId: string, orgUsers: OrgAvatarUser[] = []) {
 	const suggestions: OverviewSuggestion[] = [
 		{
 			id: "mock-suggestion-1",
@@ -64,6 +162,13 @@ function mockOverview(orgId: string) {
 		},
 	];
 
+	let cursor = 0;
+	const take = (names: string[]) => {
+		const json = mockParticipants(names, orgUsers, cursor);
+		cursor += names.length;
+		return json;
+	};
+
 	const upcoming: ReviewSession[] = [
 		{
 			$id: "mock-session-1",
@@ -74,7 +179,7 @@ function mockOverview(orgId: string) {
 			scheduledAt: "Nov 18, 10:00 AM",
 			durationMinutes: 60,
 			status: "prep",
-			participantsJson: mockParticipants([
+			participantsJson: take([
 				"Priya R.",
 				"Micah I.",
 				"Jordan K.",
@@ -92,7 +197,7 @@ function mockOverview(orgId: string) {
 			scheduledAt: "Nov 21, 2:00 PM",
 			durationMinutes: 60,
 			status: "scheduled",
-			participantsJson: mockParticipants(["Vera R.", "Jo O."]),
+			participantsJson: take(["Vera R.", "Jo O."]),
 			createdByUserId: "mock",
 		},
 		{
@@ -104,7 +209,7 @@ function mockOverview(orgId: string) {
 			scheduledAt: "Dec 2, 9:00 AM",
 			durationMinutes: 60,
 			status: "draft",
-			participantsJson: mockParticipants(["Taylor L."]),
+			participantsJson: take(["Taylor L."]),
 			createdByUserId: "mock",
 		},
 		{
@@ -116,7 +221,7 @@ function mockOverview(orgId: string) {
 			scheduledAt: "Dec 5, 1:00 PM",
 			durationMinutes: 60,
 			status: "scheduled",
-			participantsJson: mockParticipants(["Dana K.", "Sam P."]),
+			participantsJson: take(["Dana K.", "Sam P."]),
 			createdByUserId: "mock",
 		},
 		{
@@ -128,7 +233,7 @@ function mockOverview(orgId: string) {
 			scheduledAt: "Dec 9, 11:00 AM",
 			durationMinutes: 60,
 			status: "draft",
-			participantsJson: mockParticipants(["Noah B."]),
+			participantsJson: take(["Noah B."]),
 			createdByUserId: "mock",
 		},
 		{
@@ -140,7 +245,7 @@ function mockOverview(orgId: string) {
 			scheduledAt: "Dec 12, 3:30 PM",
 			durationMinutes: 60,
 			status: "prep",
-			participantsJson: mockParticipants([
+			participantsJson: take([
 				"Elena M.",
 				"Chris D.",
 				"Pat R.",
@@ -157,7 +262,7 @@ function mockOverview(orgId: string) {
 			scheduledAt: "Dec 16, 9:30 AM",
 			durationMinutes: 60,
 			status: "scheduled",
-			participantsJson: mockParticipants(["Grace H."]),
+			participantsJson: take(["Grace H."]),
 			createdByUserId: "mock",
 		},
 	];
@@ -293,7 +398,11 @@ export async function buildLabOverview(orgId: string, scope: LabScope) {
 
 	// shortcut: no activity-log table is wired into audit-lab yet, so the demo
 	// feed below is static. Swap for a real feed once one exists.
-	const mock = mockOverview(orgId);
+	const orgUsers = await listOrgUsersForSessionAvatars(orgId).catch((error) => {
+		console.error("[SERVER] buildLabOverview: org avatar users failed", error);
+		return [] as OrgAvatarUser[];
+	});
+	const mock = mockOverview(orgId, orgUsers);
 	// Stats fall back to the demo numbers only while the real numbers are all
 	// still zero. Once any one of them is genuinely non-zero, real data wins.
 	const statsAreEmpty =

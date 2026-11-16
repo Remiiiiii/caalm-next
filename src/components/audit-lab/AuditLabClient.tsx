@@ -1,16 +1,27 @@
 "use client";
 
+import { motion } from "framer-motion";
 import {
 	Calendar,
 	CalendarClock,
+	CalendarRange,
 	ClipboardList,
 	Clock,
 	Globe,
 	ListChecks,
 	Plus,
+	Star,
 } from "lucide-react";
 import Link from "next/link";
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useLayoutEffect, useMemo, useRef, useState } from "react";
+import CountUp from "react-countup";
+import {
+	Area,
+	AreaChart,
+	Tooltip as ChartTooltip,
+	ResponsiveContainer,
+	XAxis,
+} from "recharts";
 import useSWR from "swr";
 import { AuditLabShell } from "@/components/audit-lab/AuditLabShell";
 import {
@@ -23,6 +34,14 @@ import { NewSessionDialog } from "@/components/audit-lab/NewSessionDialog";
 import { PracticeRoundPanel } from "@/components/audit-lab/PracticeRoundPanel";
 import { TrendChart } from "@/components/audit-lab/TrendChart";
 import { LoadError } from "@/components/LoadError";
+import {
+	fadeLeft,
+	fadeRight,
+	fadeUp,
+	scaleIn,
+	staggerFast,
+	viewportOnce,
+} from "@/components/landing/motion";
 import Avatar from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,9 +50,15 @@ import {
 } from "@/components/ui/caalm-data-table";
 import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { MetricStatCard } from "@/components/ui/metric-stat-card";
+import {
+	MetricProgressRing,
+	MetricSegmentBar,
+	MetricStatCard,
+} from "@/components/ui/metric-stat-card";
 import { PageIndex, pageCountFromItems } from "@/components/ui/page-index";
 import { SegmentedToggle } from "@/components/ui/segmented-toggle";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ActivityItemSkeleton } from "@/components/ui/skeletons";
 import {
 	TableBody,
 	TableCell,
@@ -41,6 +66,12 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipProvider,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import type { LabCapabilities } from "@/lib/audit-lab/access";
 import type {
@@ -55,7 +86,7 @@ import {
 } from "@/lib/audit-lab/types";
 import { toUserFacingErrorMessage } from "@/lib/errors/user-facing";
 import { fetcher } from "@/lib/swr-config";
-import { cn } from "@/lib/utils";
+import { cn, resolveAvatarDisplayUrl } from "@/lib/utils";
 
 type OverviewPayload = {
 	stats?: {
@@ -74,6 +105,14 @@ type OverviewPayload = {
 	reports?: Array<{ $id: string; kind: string }>;
 	activity?: OverviewActivity[];
 };
+
+/** Same stops as `.sidebar-gradient-text`, used as a bar fill (text-clip won't paint bars). */
+const SIDEBAR_BAR_FILL = "linear-gradient(135deg, #12477d 0%, #03afbf 100%)";
+
+/** Slow enough to read after the overview skeleton clears. */
+const STAT_CHART_DURATION_SEC = 2.4;
+const STAT_CHART_DURATION_MS = 2400;
+const STAT_STAGGER_SEC = 0.12;
 
 const SUGGESTION_TAG_CLASS: Record<OverviewSuggestion["tagTone"], string> = {
 	danger: "bg-red/10 text-red border-red/20",
@@ -119,6 +158,87 @@ function BoldText({ text }: { text: string }) {
 				),
 			)}
 		</>
+	);
+}
+
+/** Loading placeholder for the Overview surface, shaped like the real layout. */
+function AuditLabOverviewSkeleton() {
+	return (
+		<div className="space-y-6">
+			<div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+				{Array.from({ length: 4 }, (_, i) => (
+					<Card key={i} className="glass-card">
+						<div className="glass-card-cap" />
+						<CardContent className="space-y-3 p-4 pt-6 sm:p-6 sm:pt-6">
+							<div className="flex items-center gap-2.5 border-b border-slate-200 pb-3">
+								<Skeleton className="h-8 w-8 rounded-lg" />
+								<Skeleton className="h-4 w-24" />
+							</div>
+							<Skeleton className="h-8 w-16" />
+							<Skeleton className="h-1.5 w-full rounded-full" />
+						</CardContent>
+					</Card>
+				))}
+			</div>
+
+			<Card className="glass-card">
+				<div className="glass-card-cap" />
+				<CardContent className="p-4 sm:p-6">
+					<div className="mb-4 flex items-center justify-between border-b border-slate-200 pb-4">
+						<Skeleton className="h-4 w-36" />
+						<Skeleton className="h-3 w-28" />
+					</div>
+					<div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+						{Array.from({ length: 3 }, (_, i) => (
+							<div
+								key={i}
+								className="space-y-3 rounded-lg border border-slate-200 bg-white/80 p-4"
+							>
+								<Skeleton className="h-5 w-28 rounded-full" />
+								<Skeleton className="h-4 w-full" />
+								<Skeleton className="h-3 w-3/4" />
+								<Skeleton className="h-8 w-full rounded-full" />
+							</div>
+						))}
+					</div>
+				</CardContent>
+			</Card>
+
+			<div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.62fr_1fr]">
+				<Card className="glass-card">
+					<div className="glass-card-cap" />
+					<CardContent className="p-4 sm:p-6">
+						<div className="mb-4 flex items-center justify-between border-b border-slate-200 pb-4">
+							<Skeleton className="h-4 w-32" />
+							<Skeleton className="h-3 w-14" />
+						</div>
+						<div className="divide-y divide-slate-200">
+							{Array.from({ length: 4 }, (_, i) => (
+								<div key={i} className="flex items-center gap-4 py-3">
+									<div className="min-w-0 flex-1 space-y-1.5">
+										<Skeleton className="h-4 w-40" />
+										<Skeleton className="h-3 w-24" />
+									</div>
+									<Skeleton className="h-6 w-20 rounded-full" />
+								</div>
+							))}
+						</div>
+					</CardContent>
+				</Card>
+
+				<Card className="glass-card">
+					<div className="glass-card-cap" />
+					<CardContent className="space-y-3 p-4 sm:p-6">
+						<div className="mb-1 border-b border-slate-200 pb-4">
+							<Skeleton className="h-4 w-28" />
+						</div>
+						{Array.from({ length: 4 }, (_, i) => (
+							<ActivityItemSkeleton key={i} />
+						))}
+					</CardContent>
+				</Card>
+			</div>
+		</div>
 	);
 }
 
@@ -177,6 +297,54 @@ export function AuditLabClient({
 		upcomingPageSafe * UPCOMING_PAGE_SIZE,
 	);
 
+	const upcomingParticipantIds = useMemo(() => {
+		const ids = new Set<string>();
+		for (const session of upcomingItems) {
+			for (const person of parseParticipants(session.participantsJson)) {
+				if (person.userId && !person.userId.startsWith("mock-")) {
+					ids.add(person.userId);
+				}
+			}
+		}
+		return [...ids].sort();
+	}, [upcomingItems]);
+
+	const { data: participantProfiles } = useSWR(
+		surface === "overview" && upcomingParticipantIds.length > 0
+			? ["audit-lab-upcoming-avatars", upcomingParticipantIds.join(",")]
+			: null,
+		async () => {
+			const res = await fetch("/api/users/get-by-ids", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ userIds: upcomingParticipantIds }),
+			});
+			if (!res.ok) return [];
+			const users = (await res.json()) as Array<{
+				$id?: string;
+				accountId?: string;
+				fullName?: string;
+				avatar?: string | null;
+				profileImageId?: string | null;
+			}>;
+			return Array.isArray(users) ? users : [];
+		},
+	);
+
+	const upcomingAvatarByUserId = useMemo(() => {
+		const map = new Map<string, { name: string; imageUrl: string | null }>();
+		for (const user of participantProfiles ?? []) {
+			if (!user?.$id) continue;
+			const entry = {
+				name: user.fullName?.trim() || "",
+				imageUrl: resolveAvatarDisplayUrl(user),
+			};
+			map.set(user.$id, entry);
+			if (user.accountId) map.set(user.accountId, entry);
+		}
+		return map;
+	}, [participantProfiles]);
+
 	const { data: bankData, mutate: mutateBank } = useSWR<{
 		data?: {
 			questions: ReviewQuestion[];
@@ -206,6 +374,24 @@ export function AuditLabClient({
 					: Math.round((stats.accepted / stats.total) * 100),
 		}));
 	}, [evidence]);
+
+	// shortcut: demo department split for orgs with no real evidence yet.
+	// List is intentionally long so the capped hover-scroll + bottom blur show.
+	const readinessDeptBreakdown =
+		coverageByDept.length > 0
+			? coverageByDept
+			: [
+					{ name: "HR", acceptedPct: 91 },
+					{ name: "Finance", acceptedPct: 82 },
+					{ name: "Legal", acceptedPct: 76 },
+					{ name: "IT", acceptedPct: 58 },
+					{ name: "Operations", acceptedPct: 71 },
+					{ name: "Marketing", acceptedPct: 64 },
+					{ name: "Sales", acceptedPct: 69 },
+					{ name: "Customer Success", acceptedPct: 73 },
+					{ name: "Facilities", acceptedPct: 55 },
+					{ name: "R&D", acceptedPct: 67 },
+				];
 
 	const filteredEvidence = useMemo(() => {
 		return evidence.filter((item) =>
@@ -238,6 +424,329 @@ export function AuditLabClient({
 			missing,
 		};
 	}, [sessions, evidence, payload]);
+
+	// shortcut: no historical snapshot of last quarter's score is stored yet,
+	// so "last quarter" is simply backed out from today's score and trend.
+	const lastQuarterReadiness =
+		typeof stats.readinessTrend === "number"
+			? (stats.readinessScore ?? 0) - stats.readinessTrend
+			: null;
+
+	// shortcut: ReviewGap has no category field in the schema, so the
+	// Evidence/Owner/Policy split is always a proportional estimate off the
+	// headline total, never a real per-gap category lookup.
+	const gapSegments = useMemo(() => {
+		const total = stats.openGaps ?? 0;
+		if (total === 0) return [];
+		const evidenceCount = Math.round(total * (5 / 12));
+		const ownerCount = Math.round(total * (3 / 12));
+		const policyCount = Math.max(0, total - evidenceCount - ownerCount);
+		return [
+			{
+				key: "evidence",
+				label: "Evidence",
+				count: evidenceCount,
+				colorClass: "bg-red",
+				textClass: "text-red",
+			},
+			{
+				key: "owner",
+				label: "Owner",
+				count: ownerCount,
+				colorClass: "bg-[#7c5cff]",
+				textClass: "text-[#7c5cff]",
+			},
+			{
+				key: "policy",
+				label: "Policy",
+				count: policyCount,
+				colorClass: "bg-orange",
+				textClass: "text-orange",
+			},
+		];
+	}, [stats.openGaps]);
+
+	// shortcut: no weekly gap-count history is tracked yet, so the 7-week
+	// trend is a static illustrative shape, not real week-over-week data.
+	const gapWeeklyTrend = useMemo(
+		() =>
+			[40, 55, 35, 60, 45, 70, 100].map((value, index) => ({
+				week: `wk ${String(index + 1).padStart(2, "0")}`,
+				value,
+			})),
+		[],
+	);
+	const oldestGapDays = 14;
+
+	const evidenceSegments = useMemo(() => {
+		if (evidence.length === 0) {
+			const pct = stats.evidenceCoverage ?? 0;
+			if (pct === 0) return { segments: [], accepted: 0, total: 0 };
+			// shortcut: demo numbers chosen so accepted/total matches the pct.
+			const total = 500;
+			const accepted = Math.round((pct / 100) * total);
+			const overdue = 18;
+			const notStarted = 71;
+			const other = Math.max(0, total - accepted - overdue - notStarted);
+			return {
+				segments: [
+					{
+						key: "accepted",
+						label: "Accepted",
+						count: accepted,
+						colorClass: "bg-green",
+						textClass: "text-green",
+					},
+					{
+						key: "overdue",
+						label: "Overdue",
+						count: overdue,
+						colorClass: "bg-red",
+						textClass: "text-red",
+					},
+					{
+						key: "not_started",
+						label: "Not started",
+						count: notStarted,
+						colorClass: "bg-slate-300",
+						textClass: "text-slate-500",
+					},
+					{
+						key: "other",
+						label: "Other",
+						count: other,
+						colorClass: "bg-slate-200",
+						textClass: "text-slate-400",
+					},
+				],
+				accepted,
+				total,
+			};
+		}
+		const now = Date.now();
+		let accepted = 0;
+		let notStarted = 0;
+		let overdue = 0;
+		let other = 0;
+		for (const e of evidence) {
+			if (e.status === "accepted") accepted++;
+			else if (e.status === "not_applicable" || e.status === "not_started")
+				notStarted++;
+			else if (e.dueAt && new Date(e.dueAt).getTime() < now) overdue++;
+			else other++;
+		}
+		return {
+			segments: [
+				{
+					key: "accepted",
+					label: "Accepted",
+					count: accepted,
+					colorClass: "bg-green",
+					textClass: "text-green",
+				},
+				{
+					key: "overdue",
+					label: "Overdue",
+					count: overdue,
+					colorClass: "bg-red",
+					textClass: "text-red",
+				},
+				{
+					key: "not_started",
+					label: "Not started",
+					count: notStarted,
+					colorClass: "bg-slate-300",
+					textClass: "text-slate-500",
+				},
+				{
+					key: "other",
+					label: "In progress",
+					count: other,
+					colorClass: "bg-orange",
+					textClass: "text-orange",
+				},
+			],
+			accepted,
+			total: evidence.length,
+		};
+	}, [evidence, stats.evidenceCoverage]);
+
+	const SESSION_STATUS_SEGMENT: Record<
+		string,
+		{ label: string; colorClass: string; textClass: string }
+	> = {
+		scheduled: {
+			label: "Scheduled",
+			colorClass: "bg-[#0f5384]",
+			textClass: "text-[#0f5384]",
+		},
+		draft: {
+			label: "Scheduled",
+			colorClass: "bg-[#0f5384]",
+			textClass: "text-[#0f5384]",
+		},
+		prep: { label: "Prep", colorClass: "bg-orange", textClass: "text-orange" },
+		in_progress: {
+			label: "In progress",
+			colorClass: "bg-[#078fab]",
+			textClass: "text-[#078fab]",
+		},
+		completed: {
+			label: "Done",
+			colorClass: "bg-green",
+			textClass: "text-green",
+		},
+		report_ready: {
+			label: "Done",
+			colorClass: "bg-green",
+			textClass: "text-green",
+		},
+		archived: {
+			label: "Done",
+			colorClass: "bg-green",
+			textClass: "text-green",
+		},
+	};
+
+	const sessionSegments = useMemo(() => {
+		const total = stats.sessionsThisQuarter ?? 0;
+		if (total === 0) return [];
+		const realSessions = sessions.filter((s) => s.status !== "cancelled");
+		if (realSessions.length === 0) {
+			// shortcut: demo breakdown sized to match the mock headline count (5).
+			return [
+				{
+					key: "scheduled",
+					label: "Scheduled",
+					count: 2,
+					colorClass: "bg-[#0f5384]",
+					textClass: "text-[#0f5384]",
+				},
+				{
+					key: "prep",
+					label: "Prep",
+					count: 1,
+					colorClass: "bg-orange",
+					textClass: "text-orange",
+				},
+				{
+					key: "in_progress",
+					label: "In progress",
+					count: 1,
+					colorClass: "bg-[#078fab]",
+					textClass: "text-[#078fab]",
+				},
+				{
+					key: "done",
+					label: "Done",
+					count: 1,
+					colorClass: "bg-green",
+					textClass: "text-green",
+				},
+			];
+		}
+		const counts: Record<string, number> = {};
+		for (const s of realSessions) {
+			const visual = SESSION_STATUS_SEGMENT[s.status];
+			const label = visual?.label ?? "Scheduled";
+			counts[label] = (counts[label] ?? 0) + 1;
+		}
+		const order = ["Scheduled", "Prep", "In progress", "Done"];
+		const byLabel = Object.fromEntries(
+			Object.values(SESSION_STATUS_SEGMENT).map((v) => [v.label, v]),
+		);
+		const realBreakdown = order
+			.filter((label) => counts[label] > 0)
+			.map((label) => ({
+				key: label,
+				label,
+				count: counts[label],
+				colorClass: byLabel[label]?.colorClass ?? "bg-slate-300",
+				textClass: byLabel[label]?.textClass ?? "text-slate-500",
+			}));
+		const realTotal = realBreakdown.reduce((sum, seg) => sum + seg.count, 0);
+		// The headline count can come from the mock stats fallback even when a
+		// handful of real (incomplete) sessions exist — if the real breakdown
+		// doesn't actually account for the full headline number, it's not a
+		// trustworthy breakdown of it, so fall back to the demo split instead.
+		if (realTotal !== total) {
+			return [
+				{
+					key: "scheduled",
+					label: "Scheduled",
+					count: 2,
+					colorClass: "bg-[#0f5384]",
+					textClass: "text-[#0f5384]",
+				},
+				{
+					key: "prep",
+					label: "Prep",
+					count: 1,
+					colorClass: "bg-orange",
+					textClass: "text-orange",
+				},
+				{
+					key: "in_progress",
+					label: "In progress",
+					count: 1,
+					colorClass: "bg-[#078fab]",
+					textClass: "text-[#078fab]",
+				},
+				{
+					key: "done",
+					label: "Done",
+					count: 1,
+					colorClass: "bg-green",
+					textClass: "text-green",
+				},
+			];
+		}
+		return realBreakdown;
+	}, [sessions, stats.sessionsThisQuarter]);
+
+	// Prefer a session that actually has a scheduled time to show as "next
+	// up" — a real but still-draft session with no date isn't useful there.
+	const nextUpSession =
+		upcomingItems.find((s) => s.scheduledAt) ?? upcomingItems[0];
+	const prepDeadlineLabel = useMemo(() => {
+		if (!nextUpSession) return null;
+		if (!nextUpSession.prepDeadlineAt) {
+			// shortcut: mock sessions carry a display string, not a real ISO
+			// date, so the demo countdown is a fixed label rather than a diff.
+			return nextUpSession.$id.startsWith("mock-")
+				? "prep deadline in 2 days"
+				: null;
+		}
+		const days = Math.ceil(
+			(new Date(nextUpSession.prepDeadlineAt).getTime() - Date.now()) /
+				86_400_000,
+		);
+		if (days < 0) return "prep deadline passed";
+		if (days === 0) return "prep deadline today";
+		return `prep deadline in ${days} day${days === 1 ? "" : "s"}`;
+	}, [nextUpSession]);
+
+	const statGridRef = useRef<HTMLDivElement>(null);
+	const readinessCardRef = useRef<HTMLDivElement>(null);
+
+	// Spec: Readiness score is the only stat card allowed to set height; the
+	// other three follow it via this CSS var instead of default grid stretch.
+	// Re-run after loading so refs exist once the overview grid mounts.
+	useLayoutEffect(() => {
+		const reference = readinessCardRef.current;
+		const grid = statGridRef.current;
+		if (!reference || !grid) return;
+		const syncHeight = () => {
+			grid.style.setProperty(
+				"--stat-card-height",
+				`${reference.getBoundingClientRect().height}px`,
+			);
+		};
+		syncHeight();
+		const observer = new ResizeObserver(syncHeight);
+		observer.observe(reference);
+		return () => observer.disconnect();
+	}, [isLoading, surface]);
 
 	async function postJson(url: string, body: unknown) {
 		const res = await fetch(url, {
@@ -296,271 +805,662 @@ export function AuditLabClient({
 					onRetry={() => void mutate()}
 				/>
 			) : isLoading ? (
-				<Card className="glass-card">
-					<div className="glass-card-cap" />
-					<CardContent className="p-4 sm:p-6 text-slate-600">
-						Loading…
-					</CardContent>
-				</Card>
+				surface === "overview" ? (
+					<AuditLabOverviewSkeleton />
+				) : (
+					<Card className="glass-card">
+						<div className="glass-card-cap" />
+						<CardContent className="p-4 sm:p-6 text-slate-600">
+							Loading…
+						</CardContent>
+					</Card>
+				)
 			) : (
 				<>
 					{surface === "overview" ? (
 						<div className="space-y-6">
-							<div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-								<MetricStatCard
-									title="Readiness score"
-									value={`${stats.readinessScore ?? 0}%`}
-									icon={ListChecks}
-									description={
-										typeof stats.readinessTrend === "number" ? (
-											<span className="text-green">
-												▲ {stats.readinessTrend}
-											</span>
-										) : undefined
-									}
-									footer={
-										<div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
-											<div
-												className="h-full rounded-full bg-[#0f5384]"
-												style={{
-													width: `${Math.min(100, Math.max(0, stats.readinessScore ?? 0))}%`,
-												}}
-											/>
-										</div>
-									}
-								/>
-								<MetricStatCard
-									title="Open rehearsal gaps"
-									value={stats.openGaps ?? 0}
-									icon={ClipboardList}
-									description={
-										stats.openGapsTrendLabel ? (
-											<span className="text-red">
-												▼ {stats.openGapsTrendLabel}
-											</span>
-										) : undefined
-									}
-								/>
-								<MetricStatCard
-									title="Evidence coverage"
-									value={`${stats.evidenceCoverage ?? 0}%`}
-									icon={Globe}
-									footer={
-										<div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
-											<div
-												className="h-full rounded-full bg-orange"
-												style={{
-													width: `${Math.min(100, Math.max(0, stats.evidenceCoverage ?? 0))}%`,
-												}}
-											/>
-										</div>
-									}
-								/>
-								<MetricStatCard
-									title="Sessions this quarter"
-									value={stats.sessionsThisQuarter ?? 0}
-									icon={Calendar}
-								/>
-							</div>
-
-							<Card className="glass-card">
-								<div className="glass-card-cap" />
-								<CardContent className="p-4 sm:p-6">
-									<div className="mb-4 border-b border-slate-200 pb-4">
-										<div className="flex items-center justify-between gap-3">
-											<p className="text-sm font-semibold sidebar-gradient-text">
-												Suggested for review
-											</p>
-											<p className="text-xs text-slate-500">
-												Risk-based, refreshed daily
-											</p>
-										</div>
-										<p className="mt-1 text-xs text-slate-500">
-											Findings most likely to resurface in your next audit.
-											Schedule a rehearsal before they do.
-										</p>
-									</div>
-									{(payload?.suggestions?.length ?? 0) > 0 ? (
-										<div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-											{payload?.suggestions?.map((s) => (
-												<div
-													key={s.id}
-													className="rounded-lg border border-slate-200 bg-white/80 p-4"
-												>
-													<span
-														className={cn(
-															"inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold",
-															SUGGESTION_TAG_CLASS[s.tagTone],
-														)}
-													>
-														{s.tag}
-													</span>
-													<p className="mt-3 text-sm font-semibold text-slate-800">
-														{s.title}
-													</p>
-													<p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
-														<Clock className="h-3.5 w-3.5" aria-hidden />
-														{s.reason}
-													</p>
-													{canManageSessions ? (
-														<Button
-															type="button"
-															size="sm"
-															className="btn-primary mt-3 w-full!"
-															onClick={() => setNewOpen(true)}
-														>
-															<CalendarClock className="h-3.5 w-3.5" />
-															Schedule
-														</Button>
-													) : null}
+							<motion.div
+								ref={statGridRef}
+								className="grid grid-cols-1 items-start gap-4 md:grid-cols-4"
+								variants={staggerFast}
+								initial="hidden"
+								whileInView="visible"
+								viewport={viewportOnce}
+							>
+								<motion.div
+									ref={readinessCardRef}
+									data-stat-card="readiness-score"
+									variants={fadeUp}
+								>
+									<MetricStatCard
+										title="Readiness score"
+										value={`${stats.readinessScore ?? 0}%`}
+										icon={Star}
+										valueAside={
+											typeof stats.readinessTrend === "number" ? (
+												<span className="text-sm font-semibold text-green">
+													▲ {stats.readinessTrend}
+												</span>
+											) : undefined
+										}
+										footer={
+											<div>
+												<div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
+													<motion.div
+														className="h-full origin-left rounded-full"
+														initial={{ scaleX: 0 }}
+														whileInView={{ scaleX: 1 }}
+														viewport={viewportOnce}
+														transition={{
+															duration: STAT_CHART_DURATION_SEC,
+															ease: "easeOut",
+														}}
+														style={{
+															width: `${Math.min(100, Math.max(0, stats.readinessScore ?? 0))}%`,
+															background: SIDEBAR_BAR_FILL,
+														}}
+													/>
 												</div>
-											))}
-										</div>
-									) : (
-										<p className="text-sm text-slate-500">
-											No suggestions yet. Import audit findings to seed drill
-											material.
-										</p>
-									)}
-								</CardContent>
-							</Card>
-
-							<div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[1.62fr_1fr]">
-								<Card className="glass-card flex max-h-[521px] flex-col">
-									<div className="glass-card-cap" />
-									<CardContent className="flex min-h-0 flex-1 flex-col p-4 sm:p-6">
-										<div className="mb-4 shrink-0 border-b border-slate-200 pb-4">
-											<div className="flex items-center justify-between gap-3">
-												<p className="text-sm font-semibold sidebar-gradient-text">
-													Upcoming sessions
-												</p>
-												<Link
-													href="/audit-lab/sessions"
-													className="text-xs font-semibold text-[#0f5384] hover:underline"
+												<div className="mt-3 flex items-center justify-between">
+													<p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+														By department
+													</p>
+													<p className="text-[10px] font-semibold text-[#0f5384]">
+														hover to scroll ↓
+													</p>
+												</div>
+												<ul
+													className="review-hover-scroll mt-1.5 max-h-24 space-y-1.5 pr-1"
+													style={{
+														// Keep the last full row solid; fade only a short strip at the bottom edge.
+														maskImage:
+															"linear-gradient(to bottom, #000 0%, #000 86%, transparent 100%)",
+														WebkitMaskImage:
+															"linear-gradient(to bottom, #000 0%, #000 86%, transparent 100%)",
+													}}
 												>
-													View all
-												</Link>
+													{readinessDeptBreakdown.map((dept, index) => (
+														<li
+															key={dept.name}
+															className={cn(
+																"flex items-center gap-2 text-xs text-slate-600",
+																index === readinessDeptBreakdown.length - 1 &&
+																	"pb-1",
+															)}
+														>
+															<span className="w-[4.5rem] shrink-0 truncate">
+																{dept.name}
+															</span>
+															<span className="h-1 flex-1 overflow-hidden rounded-full bg-slate-200">
+																<motion.span
+																	className="block h-full origin-left rounded-full"
+																	initial={{ scaleX: 0 }}
+																	whileInView={{ scaleX: 1 }}
+																	viewport={viewportOnce}
+																	transition={{
+																		duration: STAT_CHART_DURATION_SEC,
+																		ease: "easeOut",
+																		delay: STAT_STAGGER_SEC * index,
+																	}}
+																	style={{
+																		width: `${dept.acceptedPct}%`,
+																		background: SIDEBAR_BAR_FILL,
+																	}}
+																/>
+															</span>
+															<span className="w-8 shrink-0 text-right tabular-nums text-slate-500">
+																{dept.acceptedPct}%
+															</span>
+														</li>
+													))}
+												</ul>
+												<p className="mt-2 border-t border-slate-200 pt-2 text-[11px] text-slate-500">
+													vs. {lastQuarterReadiness ?? 74}% last quarter ·{" "}
+													{readinessDeptBreakdown.length} departments in scope
+												</p>
 											</div>
-											<p className="mt-1 text-xs text-slate-500">
-												Rehearsals scheduled across departments this quarter.
-											</p>
-										</div>
-										<div className="min-h-0 flex-1 overflow-y-auto">
-											{upcomingItems.length > 0 ? (
-												<ul className="divide-y divide-slate-200">
-													{pagedUpcoming.map((session) => {
-														const participants = parseParticipants(
-															session.participantsJson,
-														);
-														return (
-															<li
-																key={session.$id}
-																className="grid grid-cols-[minmax(0,calc(50%-2.5rem))_4rem_6rem_1fr] items-center gap-2 py-3 first:pt-0 last:pb-0"
-															>
-																<div className="min-w-0 pr-2">
-																	<p className="truncate text-sm font-semibold text-slate-800">
-																		{session.title}
-																	</p>
-																	<p className="truncate text-xs text-slate-500">
-																		{session.department}
-																		{session.framework
-																			? ` · ${session.framework}`
-																			: ""}
-																	</p>
-																</div>
-																<div className="flex items-center justify-self-start">
-																	{participants.slice(0, 3).map((p) => (
-																		<Avatar
-																			key={p.userId}
-																			userId={p.userId}
-																			name={p.name}
-																			size="xs"
-																			className="-ml-1.5 first:ml-0"
-																		/>
-																	))}
-																	{participants.length > 3 ? (
-																		<span className="-ml-1.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-[1.5px] border-[#FCFEFF] bg-slate-200 text-[10px] font-medium text-slate-600">
-																			+{participants.length - 3}
-																		</span>
-																	) : null}
-																</div>
-																<p className="translate-x-[90px] truncate text-left text-xs text-slate-600">
-																	{session.scheduledAt ?? "—"}
-																</p>
-																<span
+										}
+									/>
+								</motion.div>
+								<motion.div
+									data-stat-card="open-gaps"
+									className="overflow-hidden"
+									style={{ height: "var(--stat-card-height, auto)" }}
+									variants={fadeUp}
+								>
+									<MetricStatCard
+										title="Open rehearsal gaps"
+										value={stats.openGaps ?? 0}
+										icon={ClipboardList}
+										valueAside={
+											stats.openGapsTrendLabel ? (
+												<span className="text-sm font-semibold text-red">
+													▼ {stats.openGapsTrendLabel.replace(/^-/, "")}
+												</span>
+											) : undefined
+										}
+										pinFooter
+										footer={
+											gapSegments.length > 0 ? (
+												<>
+													<div className="flex flex-1 items-center py-1">
+														<MetricSegmentBar
+															className="w-full"
+															segments={gapSegments}
+															legendMuted
+															immediate
+															durationMs={STAT_CHART_DURATION_MS}
+														/>
+													</div>
+													<div className="mt-auto w-full shrink-0 space-y-2">
+														{/* Fixed px height: % height inside equal-height overflow cards collapses to 0. */}
+														<div className="relative h-[7rem] w-full min-w-0 outline-none **:outline-none">
+															<ResponsiveContainer width="100%" height={112}>
+																<AreaChart
+																	data={gapWeeklyTrend}
+																	margin={{
+																		top: 6,
+																		right: 4,
+																		left: 4,
+																		bottom: 2,
+																	}}
+																>
+																	<defs>
+																		<linearGradient
+																			id="auditLabGapsWaveFill"
+																			x1="0"
+																			y1="0"
+																			x2="0"
+																			y2="1"
+																		>
+																			<stop
+																				offset="0%"
+																				stopColor="#03AFBF"
+																				stopOpacity={0.28}
+																			/>
+																			<stop
+																				offset="100%"
+																				stopColor="#0f5384"
+																				stopOpacity={0.02}
+																			/>
+																		</linearGradient>
+																	</defs>
+																	<XAxis
+																		dataKey="week"
+																		interval={0}
+																		tick={{ fill: "#64748b", fontSize: 9 }}
+																		tickLine={false}
+																		axisLine={{ stroke: "#cbd5e1" }}
+																		height={18}
+																	/>
+																	<ChartTooltip
+																		cursor={{
+																			stroke: "#0f5384",
+																			strokeDasharray: "3 3",
+																		}}
+																		content={({ active, payload }) => {
+																			if (!active || !payload?.[0]) return null;
+																			const point = payload[0].payload as {
+																				week: string;
+																				value: number;
+																			};
+																			return (
+																				<div className="rounded-md border border-slate-200 bg-white px-3 py-2 shadow-md">
+																					<p className="text-xs font-medium text-slate-700">
+																						{point.week}
+																					</p>
+																					<p className="mt-1 text-xs tabular-nums text-slate-600">
+																						<span className="font-semibold text-slate-700">
+																							{point.value}
+																						</span>{" "}
+																						gap index
+																					</p>
+																				</div>
+																			);
+																		}}
+																	/>
+																	<Area
+																		type="monotone"
+																		dataKey="value"
+																		stroke="#0f5384"
+																		strokeWidth={2}
+																		fill="url(#auditLabGapsWaveFill)"
+																		dot={false}
+																		activeDot={{
+																			r: 5,
+																			fill: "rgba(255, 255, 255, 0.55)",
+																			stroke: "#0f5384",
+																			strokeWidth: 2,
+																		}}
+																		isAnimationActive
+																		animationDuration={STAT_CHART_DURATION_MS}
+																		animationEasing="ease-out"
+																	/>
+																</AreaChart>
+															</ResponsiveContainer>
+														</div>
+														<p className="text-[11px] text-slate-500">
+															7-week trend · oldest gap:{" "}
+															<span className="font-semibold text-slate-700">
+																{oldestGapDays}d
+															</span>
+														</p>
+													</div>
+												</>
+											) : undefined
+										}
+									/>
+								</motion.div>
+								<motion.div
+									data-stat-card="evidence-coverage"
+									className="overflow-hidden"
+									style={{ height: "var(--stat-card-height, auto)" }}
+									variants={fadeUp}
+								>
+									<MetricStatCard
+										title="Evidence coverage"
+										value={`${stats.evidenceCoverage ?? 0}%`}
+										icon={Globe}
+										pinFooter
+										footer={
+											evidenceSegments.segments.length > 0 ? (
+												<>
+													{/* Sit under the headline %; leftover height stays between caption and KPI bar. */}
+													<div className="flex w-full flex-col items-center gap-2">
+														<div className="relative inline-flex items-center justify-center">
+															<MetricProgressRing
+																percent={stats.evidenceCoverage ?? 0}
+																size={88}
+																stroke={7}
+																tone="default"
+																sidebarGradient
+																immediate
+																durationSec={STAT_CHART_DURATION_SEC}
+															/>
+															{/* Gradient class must live on CountUp's own span — a parent
+															    with sidebar-gradient-text makes nested text invisible. */}
+															<CountUp
+																key={`evidence-donut-${stats.evidenceCoverage ?? 0}`}
+																className="pointer-events-none absolute text-sm font-bold tabular-nums sidebar-gradient-text"
+																start={0}
+																end={stats.evidenceCoverage ?? 0}
+																duration={STAT_CHART_DURATION_SEC}
+																suffix="%"
+																preserveValue
+															/>
+														</div>
+														<p className="text-center text-[11px] leading-snug text-slate-500">
+															<span className="font-semibold text-slate-700">
+																{evidenceSegments.accepted}
+															</span>{" "}
+															of {evidenceSegments.total} items accepted
+														</p>
+													</div>
+													<div className="mt-auto w-full pt-6">
+														<MetricSegmentBar
+															segments={evidenceSegments.segments}
+															legendMuted
+															immediate
+															durationMs={STAT_CHART_DURATION_MS}
+														/>
+													</div>
+												</>
+											) : undefined
+										}
+									/>
+								</motion.div>
+								<motion.div
+									data-stat-card="sessions-this-quarter"
+									className="overflow-hidden"
+									style={{ height: "var(--stat-card-height, auto)" }}
+									variants={fadeUp}
+								>
+									<MetricStatCard
+										title="Sessions this quarter"
+										value={stats.sessionsThisQuarter ?? 0}
+										icon={CalendarRange}
+										pinFooter
+										footer={
+											<>
+												<div className="flex flex-1 flex-col justify-center gap-2 py-1">
+													{/* Sized to leave room for legend + Next up inside equal-height cards */}
+													<div className="flex flex-wrap items-center gap-1.5">
+														{sessionSegments.flatMap((seg) =>
+															Array.from({ length: seg.count }, (_, i) => (
+																<motion.span
+																	key={`${seg.key}-${i}`}
 																	className={cn(
-																		"w-fit shrink-0 justify-self-end whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-semibold",
-																		SESSION_STATUS_BADGE[session.status] ??
-																			"bg-slate-100 text-slate-600 border-slate-200",
+																		"size-7 rounded-sm",
+																		seg.colorClass,
+																	)}
+																	initial={{ scale: 0, opacity: 0 }}
+																	whileInView={{ scale: 1, opacity: 1 }}
+																	viewport={viewportOnce}
+																	transition={{
+																		type: "spring",
+																		stiffness: 160,
+																		damping: 18,
+																		delay: STAT_STAGGER_SEC * i,
+																	}}
+																/>
+															)),
+														)}
+													</div>
+													{sessionSegments.length > 0 ? (
+														<div className="flex flex-wrap gap-x-3 gap-y-1">
+															{sessionSegments.map((seg) => (
+																<span
+																	key={seg.key}
+																	className={cn(
+																		"inline-flex items-center gap-1.5 text-[11px] tabular-nums",
+																		seg.textClass,
 																	)}
 																>
-																	{sessionStatusLabel(session.status)}
+																	<span
+																		className={cn(
+																			"h-1.5 w-1.5 shrink-0 rounded-full",
+																			seg.colorClass,
+																		)}
+																		aria-hidden
+																	/>
+																	{seg.label} — {seg.count}
 																</span>
-															</li>
-														);
-													})}
-												</ul>
-											) : (
-												<p className="text-sm text-slate-500">
-													No sessions scheduled yet.
-												</p>
-											)}
-										</div>
-									</CardContent>
-									{upcomingTotalPages > 1 ? (
-										<div className="shrink-0 rounded-b-lg border-t border-slate-200/80 bg-slate-50/60 px-4 sm:px-6">
-											<PageIndex
-												page={upcomingPageSafe}
-												totalItems={upcomingItems.length}
-												pageSize={UPCOMING_PAGE_SIZE}
-												onPageChange={setUpcomingPage}
-												hideWhenSinglePage
-												className="mx-0 my-3 justify-between px-0"
-											/>
-										</div>
-									) : null}
-								</Card>
+															))}
+														</div>
+													) : null}
+												</div>
+												{nextUpSession ? (
+													<p className="mt-auto border-t border-slate-200 pt-2 text-[11px] text-slate-500">
+														Next up:{" "}
+														<span className="font-semibold text-slate-700">
+															{nextUpSession.title}
+														</span>
+														<br />
+														{nextUpSession.scheduledAt ?? "—"}
+														{prepDeadlineLabel ? ` · ${prepDeadlineLabel}` : ""}
+													</p>
+												) : null}
+											</>
+										}
+									/>
+								</motion.div>
+							</motion.div>
 
-								<Card className="glass-card flex max-h-[521px] flex-col">
+							<motion.div
+								variants={scaleIn}
+								initial="hidden"
+								whileInView="visible"
+								viewport={viewportOnce}
+							>
+								<Card className="glass-card">
 									<div className="glass-card-cap" />
-									<CardContent className="flex min-h-0 flex-1 flex-col p-4 sm:p-6">
-										<div className="mb-4 shrink-0 border-b border-slate-200 pb-4">
-											<p className="text-sm font-semibold sidebar-gradient-text">
-												Recent activity
-											</p>
+									<CardContent className="p-4 sm:p-6">
+										<div className="mb-4 border-b border-slate-200 pb-4">
+											<div className="flex items-center justify-between gap-3">
+												<p className="text-sm font-semibold sidebar-gradient-text">
+													Suggested for review
+												</p>
+												<p className="text-xs text-slate-500">
+													Risk-based, refreshed daily
+												</p>
+											</div>
 											<p className="mt-1 text-xs text-slate-500">
-												What changed across sessions, evidence, and gaps.
+												Findings most likely to resurface in your next audit.
+												Schedule a rehearsal before they do.
 											</p>
 										</div>
-										{(payload?.activity?.length ?? 0) > 0 ? (
-											<ul className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
-												{payload?.activity?.map((item) => (
-													<li key={item.id} className="flex gap-2.5">
+										{(payload?.suggestions?.length ?? 0) > 0 ? (
+											<div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+												{payload?.suggestions?.map((s) => (
+													<div
+														key={s.id}
+														className="flex h-full flex-col rounded-lg border border-slate-200 bg-white/80 p-4"
+													>
 														<span
 															className={cn(
-																"mt-1.5 h-2 w-2 shrink-0 rounded-full",
-																ACTIVITY_DOT_CLASS[item.tone],
+																"inline-flex w-fit items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold",
+																SUGGESTION_TAG_CLASS[s.tagTone],
 															)}
-															aria-hidden
-														/>
-														<div className="min-w-0">
-															<p className="text-sm text-slate-700">
-																<BoldText text={item.text} />
-															</p>
-															<p className="text-xs text-slate-500">
-																{item.timestamp}
-															</p>
-														</div>
-													</li>
+														>
+															{s.tag}
+														</span>
+														<p className="mt-3 text-sm font-semibold text-slate-800">
+															{s.title}
+														</p>
+														<p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
+															<Clock className="h-3.5 w-3.5" aria-hidden />
+															{s.reason}
+														</p>
+														{canManageSessions ? (
+															<div className="mt-auto pt-3">
+																<Button
+																	type="button"
+																	size="sm"
+																	className="btn-primary w-full!"
+																	onClick={() => setNewOpen(true)}
+																>
+																	<CalendarClock className="h-3.5 w-3.5" />
+																	Schedule
+																</Button>
+															</div>
+														) : null}
+													</div>
 												))}
-											</ul>
+											</div>
 										) : (
 											<p className="text-sm text-slate-500">
-												No recent activity.
+												No suggestions yet. Import audit findings to seed drill
+												material.
 											</p>
 										)}
 									</CardContent>
 								</Card>
+							</motion.div>
+
+							<div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[1.62fr_1fr]">
+								<motion.div
+									variants={fadeLeft}
+									initial="hidden"
+									whileInView="visible"
+									viewport={viewportOnce}
+								>
+									<Card className="glass-card flex max-h-[521px] flex-col">
+										<div className="glass-card-cap" />
+										<CardContent className="flex min-h-0 flex-1 flex-col p-4 sm:p-6">
+											<div className="mb-4 shrink-0 border-b border-slate-200 pb-4">
+												<div className="flex items-center justify-between gap-3">
+													<p className="text-sm font-semibold sidebar-gradient-text">
+														Upcoming sessions
+													</p>
+													<Link
+														href="/audit-lab/sessions"
+														className="text-xs font-semibold text-[#0f5384] hover:underline"
+													>
+														View all
+													</Link>
+												</div>
+												<p className="mt-1 text-xs text-slate-500">
+													Rehearsals scheduled across departments this quarter.
+												</p>
+											</div>
+											<div className="min-h-0 flex-1 overflow-y-auto">
+												{upcomingItems.length > 0 ? (
+													<ul className="divide-y divide-slate-200">
+														{pagedUpcoming.map((session) => {
+															const participants = parseParticipants(
+																session.participantsJson,
+															);
+															return (
+																<li
+																	key={session.$id}
+																	className="grid grid-cols-[minmax(0,calc(50%-2.5rem))_4rem_6rem_1fr] items-center gap-2 py-3 first:pt-0 last:pb-0"
+																>
+																	<div className="min-w-0 pr-2">
+																		<p className="truncate text-sm font-semibold text-slate-800">
+																			{session.title}
+																		</p>
+																		<p className="truncate text-xs text-slate-500">
+																			{session.department}
+																			{session.framework
+																				? ` · ${session.framework}`
+																				: ""}
+																		</p>
+																	</div>
+																	<div className="flex items-center justify-self-start">
+																		<TooltipProvider delayDuration={200}>
+																			{participants
+																				.slice(0, 3)
+																				.map((p, index) => {
+																					const profile =
+																						upcomingAvatarByUserId.get(
+																							p.userId,
+																						);
+																					const fullName =
+																						profile?.name ||
+																						p.name?.trim() ||
+																						"Participant";
+																					return (
+																						<Tooltip
+																							key={`${p.userId}-${index}`}
+																						>
+																							<TooltipTrigger asChild>
+																								<span className="-ml-2 inline-flex rounded-full border-2 border-white first:ml-0">
+																									<Avatar
+																										userId={p.userId}
+																										name={fullName}
+																										size="xs"
+																										imageUrl={profile?.imageUrl}
+																									/>
+																								</span>
+																							</TooltipTrigger>
+																							<TooltipContent>
+																								<p>{fullName}</p>
+																							</TooltipContent>
+																						</Tooltip>
+																					);
+																				})}
+																			{participants.length > 3 ? (
+																				<Tooltip>
+																					<TooltipTrigger asChild>
+																						<span className="-ml-2 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-white bg-slate-200 text-[11px] font-medium text-slate-600">
+																							+{participants.length - 3}
+																						</span>
+																					</TooltipTrigger>
+																					<TooltipContent>
+																						<div className="space-y-1">
+																							{participants
+																								.slice(3)
+																								.map((p, index) => {
+																									const profile =
+																										upcomingAvatarByUserId.get(
+																											p.userId,
+																										);
+																									return (
+																										<p
+																											key={`${p.userId}-${index}`}
+																										>
+																											{profile?.name ||
+																												p.name?.trim() ||
+																												"Participant"}
+																										</p>
+																									);
+																								})}
+																						</div>
+																					</TooltipContent>
+																				</Tooltip>
+																			) : null}
+																		</TooltipProvider>
+																	</div>
+																	<p className="translate-x-[90px] truncate text-left text-xs text-slate-600">
+																		{session.scheduledAt ?? "—"}
+																	</p>
+																	<span
+																		className={cn(
+																			"w-fit shrink-0 justify-self-end whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-semibold",
+																			SESSION_STATUS_BADGE[session.status] ??
+																				"bg-slate-100 text-slate-600 border-slate-200",
+																		)}
+																	>
+																		{sessionStatusLabel(session.status)}
+																	</span>
+																</li>
+															);
+														})}
+													</ul>
+												) : (
+													<p className="text-sm text-slate-500">
+														No sessions scheduled yet.
+													</p>
+												)}
+											</div>
+										</CardContent>
+										{upcomingTotalPages > 1 ? (
+											<div className="shrink-0 rounded-b-lg border-t border-slate-200/80 bg-slate-50/60 px-4 sm:px-6">
+												<PageIndex
+													page={upcomingPageSafe}
+													totalItems={upcomingItems.length}
+													pageSize={UPCOMING_PAGE_SIZE}
+													onPageChange={setUpcomingPage}
+													hideWhenSinglePage
+													className="mx-0 my-3 justify-between px-0"
+												/>
+											</div>
+										) : null}
+									</Card>
+								</motion.div>
+
+								<motion.div
+									variants={fadeRight}
+									initial="hidden"
+									whileInView="visible"
+									viewport={viewportOnce}
+								>
+									<Card className="glass-card flex max-h-[521px] flex-col">
+										<div className="glass-card-cap" />
+										<CardContent className="flex min-h-0 flex-1 flex-col p-4 sm:p-6">
+											<div className="mb-4 shrink-0 border-b border-slate-200 pb-4">
+												<p className="text-sm font-semibold sidebar-gradient-text">
+													Recent activity
+												</p>
+												<p className="mt-1 text-xs text-slate-500">
+													What changed across sessions, evidence, and gaps.
+												</p>
+											</div>
+											{(payload?.activity?.length ?? 0) > 0 ? (
+												<ul className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-2">
+													{payload?.activity?.map((item) => (
+														<li
+															key={item.id}
+															className="rounded-lg border border-white/30 bg-white/20 p-3 shadow-sm backdrop-blur-md"
+														>
+															<div className="flex items-start gap-3">
+																<span
+																	className={cn(
+																		"mt-1.5 h-2 w-2 shrink-0 rounded-full",
+																		ACTIVITY_DOT_CLASS[item.tone],
+																	)}
+																	aria-hidden
+																/>
+																<div className="min-w-0 flex-1">
+																	<p className="text-sm font-medium text-slate-700">
+																		<BoldText text={item.text} />
+																	</p>
+																</div>
+																<span className="shrink-0 pt-0.5 text-xs tabular-nums text-slate-500">
+																	{item.timestamp}
+																</span>
+															</div>
+														</li>
+													))}
+												</ul>
+											) : (
+												<p className="text-sm text-slate-500">
+													No recent activity.
+												</p>
+											)}
+										</CardContent>
+									</Card>
+								</motion.div>
 							</div>
 						</div>
 					) : null}

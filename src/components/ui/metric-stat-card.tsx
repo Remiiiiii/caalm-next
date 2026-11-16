@@ -7,6 +7,7 @@ import {
 	type KeyboardEvent,
 	type ReactNode,
 	useEffect,
+	useId,
 	useRef,
 	useState,
 } from "react";
@@ -281,19 +282,26 @@ export function MetricSegmentBar({
 	formatValue,
 	/** Legend labels use slate-500 (same family as the title divider). */
 	legendMuted = false,
+	/** Skip scroll-spy and grow segments as soon as the bar mounts. */
+	immediate = false,
+	/** Width grow length in ms (default 1200). */
+	durationMs = 1200,
 }: {
 	segments: MetricSegment[];
 	className?: string;
 	/** Optional legend formatter (e.g. dollars). Defaults to the raw count. */
 	formatValue?: (count: number) => string;
 	legendMuted?: boolean;
+	immediate?: boolean;
+	durationMs?: number;
 }) {
 	const total = segments.reduce((sum, s) => sum + Math.max(0, s.count), 0);
 	const visible = segments.filter((s) => s.count > 0);
 	const labelFor = (count: number) =>
 		formatValue ? formatValue(count) : String(count);
 	const resetKey = segments.map((s) => `${s.key}:${s.count}`).join("|");
-	const { ref, ready } = useInViewReady(resetKey);
+	const { ref, ready: inViewReady } = useInViewReady(resetKey);
+	const ready = immediate || inViewReady;
 
 	return (
 		<div ref={ref} className={cn("w-full space-y-2", className)}>
@@ -311,11 +319,12 @@ export function MetricSegmentBar({
 						<div
 							key={segment.key}
 							className={cn(
-								"h-full min-w-0 transition-[width] duration-[1200ms] ease-out",
+								"h-full min-w-0 transition-[width] ease-out",
 								segment.colorClass,
 							)}
 							style={{
 								width: ready ? `${(segment.count / total) * 100}%` : "0%",
+								transitionDuration: `${durationMs}ms`,
 							}}
 							title={`${segment.label}: ${labelFor(segment.count)}`}
 						/>
@@ -423,20 +432,43 @@ export function MetricProgressRing({
 	size = 44,
 	stroke = 4,
 	className,
+	/** Paint the arc with the sidebar blue→teal gradient. */
+	sidebarGradient = false,
+	immediate = false,
+	/** Arc draw length in seconds (default 1.2). */
+	durationSec = 1.2,
 }: {
 	percent: number;
 	tone?: MetricTone;
 	size?: number;
 	stroke?: number;
 	className?: string;
+	sidebarGradient?: boolean;
+	immediate?: boolean;
+	durationSec?: number;
 }) {
 	const r = (size - stroke) / 2;
 	const c = 2 * Math.PI * r;
 	const pct = Math.max(0, Math.min(100, percent));
-	const { ref, ready } = useInViewReady(pct);
+	const { ref, ready: inViewReady } = useInViewReady(pct);
+	// With `immediate`, still paint empty first so the CSS transition can run.
+	const [kick, setKick] = useState(false);
+	useEffect(() => {
+		if (!immediate) {
+			setKick(false);
+			return;
+		}
+		setKick(false);
+		const frame = requestAnimationFrame(() => setKick(true));
+		return () => cancelAnimationFrame(frame);
+	}, [immediate, pct]);
+	const ready = immediate ? kick : inViewReady;
 	const offset = ready ? c * (1 - pct / 100) : c;
-	const strokeColor =
-		tone === "danger"
+	const reactId = useId().replace(/:/g, "");
+	const gradientId = `metric-ring-sidebar-${reactId}`;
+	const strokeColor = sidebarGradient
+		? `url(#${gradientId})`
+		: tone === "danger"
 			? "#fe8787"
 			: tone === "warning"
 				? "#ebc620"
@@ -449,6 +481,20 @@ export function MetricProgressRing({
 	return (
 		<div ref={ref} className={cn("inline-flex shrink-0", className)}>
 			<svg width={size} height={size} className="-rotate-90" aria-hidden>
+				{sidebarGradient ? (
+					<defs>
+						<linearGradient
+							id={gradientId}
+							x1="0%"
+							y1="0%"
+							x2="100%"
+							y2="100%"
+						>
+							<stop offset="0%" stopColor="#12477d" />
+							<stop offset="100%" stopColor="#03afbf" />
+						</linearGradient>
+					</defs>
+				) : null}
 				<circle
 					cx={size / 2}
 					cy={size / 2}
@@ -468,7 +514,7 @@ export function MetricProgressRing({
 					strokeDasharray={c}
 					strokeDashoffset={offset}
 					style={{
-						transition: "stroke-dashoffset 1.2s ease-out",
+						transition: `stroke-dashoffset ${durationSec}s ease-out`,
 					}}
 				/>
 			</svg>
@@ -601,7 +647,14 @@ export function MetricStatCard({
 				) : null}
 				{/* Keep footer under the value — do not mt-auto (that pinned it to the card bottom). */}
 				{footer ? (
-					<div className={cn("w-full pt-3", pinFooter && "mt-auto")}>
+					<div
+						className={cn(
+							"w-full pt-3",
+							// flex-1 lets a card put mid content in the spare height
+							// while still pinning a bottom block with mt-auto inside.
+							pinFooter && "mt-auto flex min-h-0 flex-1 flex-col",
+						)}
+					>
 						{footer}
 					</div>
 				) : null}

@@ -173,7 +173,7 @@ mcpjson.txt
 *.bak
 
 # Graft
-graft/
+/graft/
 
 # Env secrets (local / demo local). Keep example templates tracked.
 .env*
