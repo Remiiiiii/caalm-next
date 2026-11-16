@@ -93,7 +93,10 @@ export const PERMISSIONS = {
 		VIEW: "audit_lab.view",
 		MANAGE_SESSIONS: "audit_lab.manage_sessions",
 		MANAGE_EVIDENCE: "audit_lab.manage_evidence",
+		COORDINATE_EVIDENCE: "audit_lab.coordinate_evidence",
 		RUN_PRACTICE: "audit_lab.run_practice",
+		SCORE_PRACTICE: "audit_lab.score_practice",
+		PUBLISH_REPORTS: "audit_lab.publish_reports",
 	},
 
 	// IT/Software Engineering Permissions
@@ -601,6 +604,25 @@ export const PERMISSION_DEFINITIONS = [
 		name: "Run Audit Lab Practice",
 		category: "audit_lab",
 		description: "Start practice rounds, score answers, and request coaching",
+	},
+	{
+		key: PERMISSIONS.AUDIT_LAB.COORDINATE_EVIDENCE,
+		name: "Coordinate Audit Lab Evidence",
+		category: "audit_lab",
+		description:
+			"Org-wide evidence triage, accept/reject items, and run coordinator workflows",
+	},
+	{
+		key: PERMISSIONS.AUDIT_LAB.SCORE_PRACTICE,
+		name: "Score Audit Lab Practice",
+		category: "audit_lab",
+		description: "Score live practice answers and observer annotations",
+	},
+	{
+		key: PERMISSIONS.AUDIT_LAB.PUBLISH_REPORTS,
+		name: "Publish Audit Lab Reports",
+		category: "audit_lab",
+		description: "Publish and export session and department readiness reports",
 	},
 
 	// IT/Software Engineering
