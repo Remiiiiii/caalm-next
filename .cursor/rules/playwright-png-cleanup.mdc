@@ -1,23 +1,26 @@
 ---
-description: Delete every .png Playwright creates as soon as you have looked at it, so it never shows under Git changes
+description: Delete every file Playwright creates in .playwright-mcp/ (screenshots, snapshots, console logs) as soon as you've used it, so it never shows under Git changes
 alwaysApply: true
 ---
 
-# Playwright screenshots — discard after viewing
+# Playwright artifacts — discard after use
 
-Any `.png` created through Playwright (`browser_take_screenshot`, `page.screenshot`, `browser_run_code` that writes an image, in `.playwright-mcp/` or anywhere else in the repo) is scratch output. It must **never** be left in the working tree or the Git "Changes" / "Staged Changes" list.
+Every file the Playwright MCP tool writes — not just `.png` screenshots, but also the `.yml` page snapshot saved by `browser_navigate`/`browser_snapshot`, and any `.log` saved by `browser_console_messages` — lands in `.playwright-mcp/` (or wherever else in the repo a manual `page.screenshot`/`browser_run_code` call targets). All of it is scratch output. It must **never** be left in the working tree or the Git "Changes" / "Staged Changes" list. A single `browser_navigate` call alone writes a `.yml` — cleanup isn't just for explicit screenshots.
+
+`.playwright-mcp/` is gitignored as a backstop, but **do not rely on that alone** — keep cleaning up as you go; the directory still clutters the disk and a future repo/gitignore change could expose it again.
 
 ## Do this every time
 
-1. Take the screenshot and look at it (Read the file).
+1. Take the screenshot / snapshot / log and read what you need from it.
 2. As soon as you have what you need, delete it in the same turn:
    - untracked file: `rm -f -- <path>`
    - already staged: `git rm -q -f --cached -- <path>` then `rm -f -- <path>`
-3. Before you finish the turn, run `git status --porcelain -- .playwright-mcp` and confirm no `.png` you created is listed.
+   - whole session's worth at once: `rm -rf .playwright-mcp/*` is fine when nothing in there needs keeping
+3. Before you finish the turn, run `git status --porcelain -- .playwright-mcp` and confirm nothing you created is listed (it should show nothing at all now that the directory is gitignored — if it shows something, the gitignore entry is missing or broken, fix that too).
 
 ## Rules
 
-- Never `git add` a Playwright screenshot, and never commit one.
-- Only delete files you created this session. A `.png` that was already tracked in Git (`git ls-files --error-unmatch <path>` succeeds) is not scratch; leave it alone.
-- Keep a screenshot only if the user explicitly asks to keep it, and say where it is.
-- Prefer assertions on DOM text/measurements over screenshots when a screenshot is not needed.
+- Never `git add` a Playwright artifact, and never commit one.
+- Only delete files you created this session. A file that was already tracked in Git (`git ls-files --error-unmatch <path>` succeeds) is not scratch; leave it alone.
+- Keep an artifact only if the user explicitly asks to keep it, and say where it is.
+- Prefer assertions on DOM text/measurements over screenshots when a screenshot is not needed — this also avoids piling up `.yml` snapshots from navigation calls you didn't need a screenshot for.
