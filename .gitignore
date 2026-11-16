@@ -145,6 +145,9 @@ dist
 test-results/
 playwright-report/
 
+# Playwright MCP tool artifacts (auto-saved snapshots/console logs/screenshots)
+.playwright-mcp/
+
 # Internal engineering notes at repo root (product docs live under src/content/docs + src/app/docs)
 # Ignore docs/* (not docs/) so !exceptions under docs/internal/ are visible to git
 /docs/*
@@ -170,7 +173,7 @@ mcpjson.txt
 *.bak
 
 # Graft
-graft/
+/graft/
 
 # Env secrets (local / demo local). Keep example templates tracked.
 .env*

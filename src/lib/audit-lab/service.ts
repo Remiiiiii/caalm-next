@@ -1,5 +1,11 @@
 import { listFindings } from "@/lib/audit-upload/store";
 import { logAuditEvent } from "@/lib/services/audit-logger";
+import { canAcceptEvidence } from "./evidence-merge";
+import {
+	enqueueSessionReminders,
+	notifySessionCancelled,
+} from "./notifications";
+import { buildSessionReport } from "./reports";
 import {
 	appendEvidenceStatusLog,
 	createAttemptRow,
@@ -21,7 +27,9 @@ import {
 	updateEvidenceRow,
 	updateSessionRow,
 } from "./repository";
+import { followUpForVagueAnswer } from "./roleplay";
 import { applyPracticeScore } from "./score";
+import { emptyCanvas, serializeScriptItems } from "./script-sections";
 import {
 	EVIDENCE_STATUSES,
 	type EvidenceStatus,
@@ -39,11 +47,16 @@ type Actor = {
 	orgId: string;
 };
 
-function audit(actor: Actor, action: "create" | "update", summary: string, target: {
-	type: string;
-	id: string;
-	label: string;
-}) {
+function audit(
+	actor: Actor,
+	action: "create" | "update",
+	summary: string,
+	target: {
+		type: string;
+		id: string;
+		label: string;
+	},
+) {
 	return logAuditEvent({
 		event_id: `audit_lab_${action}_${target.id}`,
 		event_title: summary,
@@ -92,6 +105,7 @@ export async function scheduleReviewSession(
 		id: session.$id,
 		label: session.title,
 	});
+	await enqueueSessionReminders(session).catch(() => undefined);
 	return { session };
 }
 
@@ -127,6 +141,7 @@ export async function cancelReviewSession(actor: Actor, sessionId: string) {
 	const session = await updateSessionRow(sessionId, {
 		status: "cancelled" satisfies SessionStatus,
 	});
+	await notifySessionCancelled(session).catch(() => undefined);
 	await audit(actor, "update", `Cancelled ${session.title}`, {
 		type: "review_session",
 		id: session.$id,
@@ -213,11 +228,16 @@ export async function generateQuestionBank(actor: Actor, sessionId: string) {
 			}),
 		);
 	}
-	await audit(actor, "create", `Generated question bank for ${existing.title}`, {
-		type: "review_session",
-		id: existing.$id,
-		label: existing.title,
-	});
+	await audit(
+		actor,
+		"create",
+		`Generated question bank for ${existing.title}`,
+		{
+			type: "review_session",
+			id: existing.$id,
+			label: existing.title,
+		},
+	);
 	return { questions: created };
 }
 
@@ -259,7 +279,7 @@ export async function importQuestionsFromFindings(
 	}
 	const created = [];
 	for (const finding of findings) {
-		const title = finding.title || finding.summary || "prior finding";
+		const title = finding.title || finding.description || "prior finding";
 		created.push(
 			await createQuestionRow({
 				orgId: actor.orgId,
@@ -295,25 +315,42 @@ export async function generateInterviewScript(actor: Actor, sessionId: string) {
 	}
 	const prior = await listScripts(actor.orgId, sessionId);
 	const version = (prior[0]?.version ?? 0) + 1;
-	const items = questions.map((q, index) => ({
-		order: index + 1,
-		questionId: q.$id,
-		prompt: q.prompt,
-		minutes: 5,
-	}));
+	const canvas = emptyCanvas();
+	for (const [index, q] of questions.entries()) {
+		const section =
+			index === 0
+				? "opening"
+				: index === questions.length - 1
+					? "closing"
+					: index % 2 === 0
+						? "evidence"
+						: "process";
+		canvas[section].push({
+			id: `${section}-${q.$id}`,
+			questionId: q.$id,
+			prompt: q.prompt,
+			minutes: 5,
+			section,
+		});
+	}
 	const script = await createScriptRow({
 		orgId: actor.orgId,
 		sessionId,
 		version,
-		itemsJson: JSON.stringify(items),
+		itemsJson: serializeScriptItems(canvas),
 		createdByUserId: actor.userId,
 	});
-	await audit(actor, "create", `Interview script v${version} for ${existing.title}`, {
-		type: "review_script",
-		id: script.$id,
-		label: `${existing.title} v${version}`,
-	});
-	return { script, items };
+	await audit(
+		actor,
+		"create",
+		`Interview script v${version} for ${existing.title}`,
+		{
+			type: "review_script",
+			id: script.$id,
+			label: `${existing.title} v${version}`,
+		},
+	);
+	return { script, items: canvas };
 }
 
 export async function generateEvidenceRequestList(
@@ -407,6 +444,12 @@ export async function updateEvidenceStatus(
 				"Sensitive evidence needs internal review before it can be submitted.",
 		};
 	}
+	if (status === "accepted") {
+		const gate = canAcceptEvidence(item);
+		if (!gate.ok) {
+			return { error: gate.reason ?? "This item cannot be accepted yet." };
+		}
+	}
 	const updated = await updateEvidenceRow(requestId, { status });
 	await appendEvidenceStatusLog({
 		orgId: actor.orgId,
@@ -424,7 +467,10 @@ export async function updateEvidenceStatus(
 	return { evidence: updated };
 }
 
-export async function evidenceCoverageReport(orgId: string, sessionId?: string) {
+export async function evidenceCoverageReport(
+	orgId: string,
+	sessionId?: string,
+) {
 	const items = await listEvidence(orgId, sessionId);
 	const byStatus: Record<string, number> = {};
 	for (const item of items) {
@@ -451,7 +497,7 @@ export async function whoOwnsEvidence(orgId: string, requestId: string) {
 export async function startPracticeRound(
 	actor: Actor,
 	sessionId: string,
-	persona = "skeptical",
+	persona = "by_the_book",
 	difficulty = "medium",
 ) {
 	const existing = await getSession(actor.orgId, sessionId);
@@ -484,18 +530,46 @@ export async function scoreAnswer(
 	attemptId: string,
 	answer: string,
 	score: number,
+	options?: { retrievalMs?: number; showMe?: boolean },
 ) {
 	const attempt = await getAttempt(actor.orgId, attemptId);
 	if (!attempt) return { error: "I couldn't find that practice attempt." };
+	const session = await getSession(actor.orgId, attempt.sessionId);
+	const self = parseParticipants(session?.participantsJson).find(
+		(p) => p.userId === actor.userId,
+	);
+	if (self?.role === "observer") {
+		return { error: "Observers can annotate, but they cannot score." };
+	}
 	const scores = JSON.parse(attempt.scoresJson || "[]") as unknown[];
 	const transcript = JSON.parse(attempt.transcriptJson || "[]") as unknown[];
-	const { score: nextScore, honestUnknown } = applyPracticeScore(
+	const {
+		score: nextScore,
+		honestUnknown,
+		dimensions,
+	} = applyPracticeScore(answer, score);
+	const retrievalMs = options?.retrievalMs;
+	const slowRetrieval =
+		typeof retrievalMs === "number" && retrievalMs > 120_000;
+	const followUp = followUpForVagueAnswer(answer);
+	transcript.push({
 		answer,
-		score,
-	);
-	transcript.push({ answer, at: new Date().toISOString() });
-	scores.push({ score: nextScore, honestUnknown });
-	if (nextScore < 3) {
+		at: new Date().toISOString(),
+		retrievalMs,
+		showMe: Boolean(options?.showMe),
+		slowRetrieval,
+		followUp,
+	});
+	scores.push({ score: nextScore, honestUnknown, dimensions, retrievalMs });
+	if (/policy says|we actually do/i.test(answer)) {
+		await createGapRow({
+			orgId: actor.orgId,
+			sessionId: attempt.sessionId,
+			attemptId,
+			description: `Policy-practice mismatch noted: ${answer.slice(0, 120)}`,
+			status: "open",
+		});
+	} else if (nextScore < 3 && !honestUnknown) {
 		await createGapRow({
 			orgId: actor.orgId,
 			sessionId: attempt.sessionId,
@@ -513,7 +587,33 @@ export async function scoreAnswer(
 		id: attempt.$id,
 		label: attemptId,
 	});
-	return { attempt: updated, score: nextScore, honestUnknown };
+	return {
+		attempt: updated,
+		score: nextScore,
+		honestUnknown,
+		dimensions,
+		followUp,
+		slowRetrieval,
+	};
+}
+
+export async function transitionSessionStatus(
+	actor: Actor,
+	sessionId: string,
+	status: SessionStatus,
+) {
+	const existing = await getSession(actor.orgId, sessionId);
+	if (!existing) return { error: "I couldn't find that review session." };
+	const session = await updateSessionRow(sessionId, { status });
+	if (status === "completed" || status === "report_ready") {
+		await buildSessionReport(actor, sessionId).catch(() => undefined);
+	}
+	await audit(actor, "update", `${session.title} is now ${status}`, {
+		type: "review_session",
+		id: session.$id,
+		label: session.title,
+	});
+	return { session };
 }
 
 export async function requestFeedback(actor: Actor, attemptId: string) {

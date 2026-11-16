@@ -36,3 +36,7 @@ When you changed code and the user asked for a reply: say whether a **page refre
 
 - Use Appwrite **MCP tools** for schema/data work — do not write one-off DB scripts unless the user asks.
 - Schema changes: prod first, then demo sync (`caalm-demo-database-sync.mdc`).
+
+## Copy (hard rule)
+
+Never use an em dash (—) in UI copy, code comments, commit messages, or docs unless there's no other way to express it. Use a period, comma, colon, or "and" instead. A standalone "—" used as an empty-value placeholder in a table/list cell (e.g. `value ?? "—"`) is not prose and is fine. See `writing.mdc` for the full style guide.
