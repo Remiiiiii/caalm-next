@@ -32,6 +32,8 @@ export async function POST(request: NextRequest) {
 			score?: number;
 			persona?: string;
 			difficulty?: string;
+			retrievalMs?: number;
+			showMe?: boolean;
 		};
 		const action = String(body.action ?? "start");
 		if (action === "score") {
@@ -40,6 +42,11 @@ export async function POST(request: NextRequest) {
 				String(body.attemptId ?? ""),
 				String(body.answer ?? ""),
 				Number(body.score ?? 3),
+				{
+					retrievalMs:
+						typeof body.retrievalMs === "number" ? body.retrievalMs : undefined,
+					showMe: Boolean(body.showMe),
+				},
 			);
 			if (result.error) {
 				return NextResponse.json({ error: result.error }, { status: 400 });

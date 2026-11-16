@@ -10,7 +10,7 @@ Inventory of what exists in this repo as of the inspection date. Paths are repo-
 | Desktop-first product policy | `.cursor/rules/desktop-first.mdc` |
 | Agent workflow (UI rule map) | `.cursor/rules/agent-workflow-principal.mdc`, `CLAUDE.md`, `AGENTS.md` |
 | Implemented CSS utilities + CSS variables | `src/app/globals.css` |
-| Tailwind theme extensions | `tailwind.config.ts`, `tailwind.config.mjs` (identical theme; `globals.css` `@config` points at `.mjs`) |
+| Tailwind theme extensions | `tailwind.config.mjs` (loaded by `globals.css` via `@config`) |
 | Shared UI primitives | `src/components/ui/*` |
 | Data-table chrome tokens | `src/lib/ui/data-table-styles.ts`, `src/components/ui/caalm-data-table.tsx` |
 | Generated / secondary design notes | `design-system/caalm/MASTER.md` (and page overrides under `design-system/caalm/pages/`) |
@@ -84,7 +84,7 @@ From `.cursor/skills/ui-ux-pro-max/SKILL.md` (CAALM hard rules section):
 
 ### 2.1 Colors — Tailwind custom palette
 
-**File:** `tailwind.config.ts` / `tailwind.config.mjs`
+**File:** `tailwind.config.mjs`
 
 | Token | Value | Role group |
 |-------|-------|------------|

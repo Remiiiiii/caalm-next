@@ -10,8 +10,6 @@ const nextConfig: NextConfig = {
 		ignoreBuildErrors: true,
 	},
 
-	// ESLint configuration - MIGRATED to .eslintrc.json (Next.js 16 requirement)
-
 	// Compiler options
 	compiler: {
 		removeConsole:
@@ -22,77 +20,6 @@ const nextConfig: NextConfig = {
 				: false,
 	},
 
-	// Webpack configuration for bundle optimization
-	webpack: (config, { isServer }) => {
-		// Exclude Node.js modules from client bundle
-		if (!isServer) {
-			config.externals = [
-				...(Array.isArray(config.externals) ? config.externals : []),
-				{ ioredis: "commonjs ioredis" },
-			];
-			config.resolve.fallback = {
-				...config.resolve.fallback,
-				dns: false,
-				net: false,
-				tls: false,
-				fs: false,
-				child_process: false,
-			};
-
-			// Optimize chunk splitting
-			config.optimization = {
-				...config.optimization,
-				moduleIds: "deterministic",
-				runtimeChunk: "single",
-				splitChunks: {
-					chunks: "all",
-					cacheGroups: {
-						default: false,
-						vendors: false,
-						// Separate vendor chunk for large libraries
-						framework: {
-							name: "framework",
-							chunks: "all",
-							test: /[\\/]node_modules[\\/](react|react-dom|scheduler|prop-types|use-subscription)[\\/]/,
-							priority: 40,
-							enforce: true,
-						},
-						// UI components chunk
-						ui: {
-							name: "ui",
-							test: /[\\/]node_modules[\\/]@radix-ui[\\/]/,
-							priority: 30,
-							enforce: true,
-						},
-						// Utilities chunk
-						utilities: {
-							name: "utilities",
-							test: /[\\/]node_modules[\\/](date-fns|lodash)[\\/]/,
-							priority: 20,
-							enforce: true,
-						},
-						// Contract upload components chunk
-						contractUpload: {
-							name: "contract-upload",
-							test: /[\\/]src[\\/]components[\\/](ContractUploadForm|contract-upload)[\\/]/,
-							priority: 25,
-							enforce: true,
-						},
-						// Shared chunks
-						common: {
-							name: "common",
-							minChunks: 2,
-							priority: 10,
-							reuseExistingChunk: true,
-							enforce: true,
-						},
-					},
-				},
-			};
-		}
-
-		return config;
-	},
 	// pdf-parse ships pdf.js 1.10 and loads it with a dynamic require; bundling it
 	// corrupts parsing on Vercel ("bad XRef entry"), so load it from node_modules.
 	// Next traces its files itself; don't add an outputFileTracingIncludes glob through
@@ -189,14 +116,6 @@ const nextConfig: NextConfig = {
 	images: {
 		formats: ["image/avif", "image/webp"],
 		remotePatterns: [
-			{
-				protocol: "https",
-				hostname: "cdn.pixabay.com",
-			},
-			{
-				protocol: "https",
-				hostname: "img.freepik.com",
-			},
 			{
 				protocol: "https",
 				hostname: "cloud.appwrite.io",
