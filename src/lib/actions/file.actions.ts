@@ -8,6 +8,7 @@ import { LicenseService } from "@/lib/api/licenses/services/LicenseService";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { writeRowWithSchemaDriftRecovery } from "@/lib/appwrite/schemaDriftRecovery";
+import { extractExpiryDateFromFile } from "@/lib/files/extract-expiry";
 import {
 	getFileShareNotificationTitle,
 	getFileShareViewActionText,
@@ -319,20 +320,11 @@ export const uploadFile = async ({
 			} else {
 				// Fallback to extraction for files with "contract" in name
 				try {
-					const formData = new FormData();
-					const fileForFormData = new File([arrayBuffer], bucketFile.name, {
-						type: file.type,
-					});
-					formData.append("file", fileForFormData);
-					const response = await fetch(
-						"http://localhost:3000/api/extract-expiry",
-						{
-							method: "POST",
-							body: formData,
-						},
-					);
-					const data = await response.json();
-					contractExpiryDate = data.expiryDate;
+					contractExpiryDate =
+						(await extractExpiryDateFromFile(
+							new Uint8Array(arrayBuffer),
+							file.type,
+						)) ?? undefined;
 					if (!contractExpiryDate) {
 						contractExpiryDate = new Date().toISOString().split("T")[0];
 						// Keep as 'pending-review' - missing expiry date doesn't change review requirement
