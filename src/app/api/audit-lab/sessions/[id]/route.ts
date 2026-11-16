@@ -54,7 +54,10 @@ export async function PATCH(
 			const result = await inviteParticipants(
 				resolved.actor,
 				id,
-				body.participants ?? [],
+				(body.participants ?? []).map((p) => ({
+					...p,
+					role: p.role ?? "interviewee",
+				})),
 			);
 			if (result.error) {
 				return NextResponse.json({ error: result.error }, { status: 400 });

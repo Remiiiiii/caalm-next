@@ -115,7 +115,7 @@ const QuickActions = ({ user }: QuickActionsProps) => {
 						aria-label="Schedule"
 						onClick={() => {
 							setActiveAction("schedule");
-							router.push("/audit-lab");
+							router.push("/audit-lab/overview");
 						}}
 					>
 						<Calendar className="h-4 w-4 shrink-0" aria-hidden />
