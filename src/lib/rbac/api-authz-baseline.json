@@ -35,7 +35,6 @@
     "notifications/read-all",
     "notifications/recent",
     "notifications/stats",
-    "notifications/test-appwrite-sms",
     "notifications/test-sms",
     "notifications/unread-count",
     "notifications/user/[userId]",

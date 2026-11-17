@@ -169,6 +169,8 @@ mcpjson.txt
 *.backup
 *.tmp
 .tmp-blueprint-thumbs/
+# Local scratch folders (extracted docx, nav frames, etc.)
+/.tmp-*/
 *.old
 *.bak
 
