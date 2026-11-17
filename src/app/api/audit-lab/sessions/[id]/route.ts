@@ -4,6 +4,7 @@ import { resolveAuditLabActor } from "@/lib/audit-lab/actor";
 import {
 	assignSessionRole,
 	cancelReviewSession,
+	completeReviewSession,
 	inviteParticipants,
 	rescheduleReviewSession,
 } from "@/lib/audit-lab/service";
@@ -56,6 +57,13 @@ export async function PATCH(
 		}
 		if (action === "cancel") {
 			const result = await cancelReviewSession(resolved.actor, id);
+			if (result.error) {
+				return NextResponse.json({ error: result.error }, { status: 400 });
+			}
+			return NextResponse.json({ data: result.session });
+		}
+		if (action === "complete") {
+			const result = await completeReviewSession(resolved.actor, id);
 			if (result.error) {
 				return NextResponse.json({ error: result.error }, { status: 400 });
 			}

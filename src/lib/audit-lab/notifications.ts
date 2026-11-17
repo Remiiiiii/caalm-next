@@ -86,6 +86,29 @@ export async function notifySessionRescheduled(session: ReviewSession) {
 	return { sent };
 }
 
+export async function notifySessionCompleted(session: ReviewSession) {
+	const participants = parseParticipants(session.participantsJson);
+	let sent = 0;
+	for (const participant of participants) {
+		if (!participant.userId) continue;
+		try {
+			await createNotification({
+				userId: participant.userId,
+				title: "Audit Lab session complete",
+				message: `${session.title} is complete. The session report is ready.`,
+				type: "success",
+				actionUrl: `/audit-lab/sessions/${session.$id}`,
+				actionText: "View report",
+				triggerType: "automatic",
+			});
+			sent += 1;
+		} catch {
+			/* best effort */
+		}
+	}
+	return { sent };
+}
+
 export async function notifySessionCancelled(session: ReviewSession) {
 	const participants = parseParticipants(session.participantsJson);
 	let sent = 0;

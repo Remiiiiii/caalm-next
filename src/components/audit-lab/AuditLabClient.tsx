@@ -6,6 +6,7 @@ import {
 	Calendar,
 	CalendarClock,
 	CalendarRange,
+	CheckCircle,
 	ChevronDown,
 	ClipboardList,
 	Clock,
@@ -130,7 +131,12 @@ type OverviewPayload = {
 	upcoming?: ReviewSession[];
 	sessions?: ReviewSession[];
 	evidence?: EvidenceRequest[];
-	gaps?: Array<{ $id: string; description: string; status: string }>;
+	gaps?: Array<{
+		$id: string;
+		sessionId?: string;
+		description: string;
+		status: string;
+	}>;
 	reports?: Array<{ $id: string; kind: string }>;
 	activity?: OverviewActivity[];
 };
@@ -166,6 +172,14 @@ const SESSION_STATUS_BADGE: Record<string, string> = {
 	archived: "bg-slate-100 text-slate-600 border-slate-200",
 	cancelled: "bg-red/10 text-red border-red/20",
 };
+
+/** Sessions in these states are done; Reschedule/Cancel/Mark complete no longer apply. */
+const SESSION_TERMINAL_STATUSES = [
+	"completed",
+	"report_ready",
+	"archived",
+	"cancelled",
+];
 
 function sessionStatusLabel(status: string): string {
 	return status
@@ -222,6 +236,28 @@ function compareSessions(
 			return _exhaustive;
 		}
 	}
+}
+
+/** Nudge, not a gate: tells "Mark complete" whether to warn, never blocks it. */
+function sessionReadinessGate(
+	session: ReviewSession,
+	evidence: EvidenceRequest[],
+	gaps: Array<{ sessionId?: string; status: string }>,
+) {
+	const openEvidence = evidence.filter(
+		(e) =>
+			e.sessionId === session.$id &&
+			e.status !== "accepted" &&
+			e.status !== "not_applicable",
+	).length;
+	const openGaps = gaps.filter(
+		(g) => g.sessionId === session.$id && g.status === "open",
+	).length;
+	return {
+		openEvidence,
+		openGaps,
+		isReady: openEvidence === 0 && openGaps === 0,
+	};
 }
 
 const SESSION_STATUS_FILTER_OPTIONS = [
@@ -457,6 +493,7 @@ export function AuditLabClient({
 		new Set(),
 	);
 	const [rescheduleOpen, setRescheduleOpen] = useState(false);
+	const [completeOpen, setCompleteOpen] = useState(false);
 	const [newOpen, setNewOpen] = useState(false);
 	const [busy, setBusy] = useState(false);
 	const [evidenceGroup, setEvidenceGroup] = useState<
@@ -493,6 +530,7 @@ export function AuditLabClient({
 	const payload = data?.data;
 	const sessions = payload?.sessions ?? payload?.upcoming ?? [];
 	const evidence = payload?.evidence ?? [];
+	const gaps = payload?.gaps ?? [];
 	const selected = sessions.find((s) => s.$id === selectedId) ?? sessions[0];
 
 	const UPCOMING_PAGE_SIZE = 6;
@@ -2017,16 +2055,35 @@ export function AuditLabClient({
 																			align="end"
 																			onClick={(e) => e.stopPropagation()}
 																		>
-																			<AppDropdownMenuItem
-																				icon={CalendarClock}
-																				onSelect={() => {
-																					setSelectedId(session.$id);
-																					setRescheduleOpen(true);
-																				}}
-																			>
-																				Reschedule
-																			</AppDropdownMenuItem>
-																			{session.status !== "cancelled" ? (
+																			{!SESSION_TERMINAL_STATUSES.includes(
+																				session.status,
+																			) ? (
+																				<AppDropdownMenuItem
+																					icon={CalendarClock}
+																					onSelect={() => {
+																						setSelectedId(session.$id);
+																						setRescheduleOpen(true);
+																					}}
+																				>
+																					Reschedule
+																				</AppDropdownMenuItem>
+																			) : null}
+																			{!SESSION_TERMINAL_STATUSES.includes(
+																				session.status,
+																			) ? (
+																				<AppDropdownMenuItem
+																					icon={CheckCircle}
+																					onSelect={() => {
+																						setSelectedId(session.$id);
+																						setCompleteOpen(true);
+																					}}
+																				>
+																					Mark complete
+																				</AppDropdownMenuItem>
+																			) : null}
+																			{!SESSION_TERMINAL_STATUSES.includes(
+																				session.status,
+																			) ? (
 																				<AppDropdownMenuItem
 																					icon={Ban}
 																					tone="danger"
@@ -2339,7 +2396,8 @@ export function AuditLabClient({
 							</ul>
 							{(payload?.reports?.length ?? 0) === 0 ? (
 								<p className="text-sm text-slate-500">
-									No published reports yet. Complete a simulation to generate one.
+									No published reports yet. Complete a simulation to generate
+									one.
 								</p>
 							) : null}
 						</div>
@@ -2425,6 +2483,30 @@ export function AuditLabClient({
 						await mutate();
 					} catch (err) {
 						onError(err, "I couldn't reschedule that simulation.");
+					}
+				}}
+			/>
+
+			<ConfirmDialog
+				open={completeOpen}
+				onOpenChange={setCompleteOpen}
+				icon={<CheckCircle className="h-5 w-5" />}
+				title="Mark this simulation complete?"
+				description={(() => {
+					if (!selected) return "";
+					const gate = sessionReadinessGate(selected, evidence, gaps);
+					return gate.isReady
+						? "This builds the session report and notifies participants."
+						: `${gate.openEvidence} evidence item${gate.openEvidence === 1 ? "" : "s"} still open and ${gate.openGaps} gap${gate.openGaps === 1 ? "" : "s"} unresolved. You can still complete — this builds the report and notifies participants.`;
+				})()}
+				confirmLabel="Mark complete"
+				onConfirm={async () => {
+					if (!selectedId) return;
+					try {
+						await patchSession(selectedId, { action: "complete" });
+						await mutate();
+					} catch (err) {
+						onError(err, "I couldn't mark that simulation complete.");
 					}
 				}}
 			/>
