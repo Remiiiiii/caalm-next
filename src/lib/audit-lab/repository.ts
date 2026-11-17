@@ -86,6 +86,7 @@ export async function updateSessionRow(
 			| "recurrence"
 			| "timezone"
 			| "calendarEventId"
+			| "aiBannerDismissedSignature"
 		>
 	>,
 ): Promise<ReviewSession> {

@@ -69,6 +69,12 @@ const TABLES = [
 			{ key: "linkedAuditDocIds", type: "string", size: 4000, required: false },
 			{ key: "auditTrailJson", type: "string", size: 8000, required: false },
 			{ key: "calendarEventId", type: "string", size: 64, required: false },
+			{
+				key: "aiBannerDismissedSignature",
+				type: "string",
+				size: 64,
+				required: false,
+			},
 			{ key: "createdByUserId", type: "string", size: 64, required: true },
 		],
 		indexes: [
@@ -86,6 +92,7 @@ const TABLES = [
 			{ key: "sourceFindingId", type: "string", size: 64, required: false },
 			{ key: "difficulty", type: "string", size: 32, required: true },
 			{ key: "rubric", type: "string", size: 2000, required: false },
+			{ key: "controlRef", type: "string", size: 32, required: false },
 			{ key: "createdByUserId", type: "string", size: 64, required: true },
 		],
 		indexes: [
@@ -224,7 +231,9 @@ const TABLES = [
 			{ key: "bodyJson", type: "string", size: 16384, required: true },
 			{ key: "createdByUserId", type: "string", size: 64, required: true },
 		],
-		indexes: [{ key: "orgId_kind", type: "key", attributes: ["orgId", "kind"] }],
+		indexes: [
+			{ key: "orgId_kind", type: "key", attributes: ["orgId", "kind"] },
+		],
 	},
 ];
 

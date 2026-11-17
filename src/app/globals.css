@@ -664,6 +664,17 @@
 		@apply bg-white text-[#0f5384] shadow-sm;
 	}
 
+	/* Compact variant for tight spaces (e.g. Interview Builder's bank filter) —
+	   scoped override via custom-property shadowing; does not touch the global
+	   default above, so every other segmented-toggle in the app is unaffected. */
+	.segmented-toggle-sm {
+		--segmented-toggle-height: 1.75rem;
+		--segmented-toggle-pad: 0.15rem;
+	}
+	.segmented-toggle-sm .segmented-toggle-item {
+		@apply text-[10.5px];
+	}
+
 	/* Dashboard */
 	.dashboard-logo {
 		@apply relative inline-block size-8 shrink-0;

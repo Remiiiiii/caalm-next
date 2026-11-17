@@ -5,6 +5,7 @@ import {
 	assignSessionRole,
 	cancelReviewSession,
 	completeReviewSession,
+	dismissAiBanner,
 	inviteParticipants,
 	rescheduleReviewSession,
 } from "@/lib/audit-lab/service";
@@ -42,8 +43,20 @@ export async function PATCH(
 			}>;
 			userId?: string;
 			role?: SessionRole;
+			signature?: string;
 		};
 		const action = String(body.action ?? "reschedule");
+		if (action === "dismiss_ai_banner") {
+			const result = await dismissAiBanner(
+				resolved.actor,
+				id,
+				String(body.signature ?? ""),
+			);
+			if (result.error) {
+				return NextResponse.json({ error: result.error }, { status: 400 });
+			}
+			return NextResponse.json({ data: result.session });
+		}
 		if (action === "reschedule") {
 			const result = await rescheduleReviewSession(
 				resolved.actor,
