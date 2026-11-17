@@ -49,6 +49,43 @@ export async function enqueueSessionReminders(session: ReviewSession) {
 	return { sent };
 }
 
+/** Unambiguous reschedule notice: `Nov 18, 2026, 10:00 AM` (never raw ISO). */
+function formatRescheduledTime(iso?: string): string {
+	if (!iso) return "a new time";
+	const ms = Date.parse(iso);
+	if (Number.isNaN(ms)) return iso;
+	return new Date(ms).toLocaleString("en-US", {
+		month: "short",
+		day: "numeric",
+		year: "numeric",
+		hour: "numeric",
+		minute: "2-digit",
+	});
+}
+
+export async function notifySessionRescheduled(session: ReviewSession) {
+	const participants = parseParticipants(session.participantsJson);
+	let sent = 0;
+	for (const participant of participants) {
+		if (!participant.userId) continue;
+		try {
+			await createNotification({
+				userId: participant.userId,
+				title: "Audit Lab session rescheduled",
+				message: `${session.title} moved to ${formatRescheduledTime(session.scheduledAt)}.`,
+				type: "info",
+				actionUrl: `/audit-lab/sessions/${session.$id}`,
+				actionText: "Open session",
+				triggerType: "automatic",
+			});
+			sent += 1;
+		} catch {
+			/* best effort */
+		}
+	}
+	return { sent };
+}
+
 export async function notifySessionCancelled(session: ReviewSession) {
 	const participants = parseParticipants(session.participantsJson);
 	let sent = 0;

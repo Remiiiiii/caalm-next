@@ -57,12 +57,12 @@ export function NewSessionDialog({
 		>
 			<DialogContent className="glass-card max-w-lg">
 				<DialogHeader>
-					<DialogTitle>New review session</DialogTitle>
+					<DialogTitle>New review simulation</DialogTitle>
 				</DialogHeader>
 				{step === 1 ? (
 					<div className="space-y-3">
 						<Input
-							placeholder="Session title"
+							placeholder="Simulation title"
 							value={title}
 							onChange={(e) => setTitle(e.target.value)}
 						/>
@@ -102,13 +102,13 @@ export function NewSessionDialog({
 								checked={ackConflict}
 								onChange={(e) => setAckConflict(e.target.checked)}
 							/>
-							I reviewed participant load and overlapping sessions.
+							I reviewed participant load and overlapping simulations.
 						</label>
 					</div>
 				) : null}
 				{step === 3 ? (
 					<p className="text-sm text-slate-600">
-						Add participants after the session is created from the session detail
+						Add participants after the simulation is created from the simulation detail
 						view or Ask CAALM.
 					</p>
 				) : null}
@@ -168,7 +168,7 @@ export function NewSessionDialog({
 								}
 							}}
 						>
-							Schedule session
+							Schedule simulation
 						</Button>
 					)}
 				</DialogFooter>

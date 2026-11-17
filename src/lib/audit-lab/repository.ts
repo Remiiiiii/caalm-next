@@ -85,6 +85,7 @@ export async function updateSessionRow(
 			| "framework"
 			| "recurrence"
 			| "timezone"
+			| "calendarEventId"
 		>
 	>,
 ): Promise<ReviewSession> {

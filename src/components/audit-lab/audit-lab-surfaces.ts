@@ -16,8 +16,8 @@ export const SURFACE_COPY: Record<
 			"Mock audit rehearsal, interview building, and evidence readiness in one place.",
 	},
 	sessions: {
-		title: "Sessions",
-		description: "Schedule and manage mock-audit sessions.",
+		title: "Simulations",
+		description: "Schedule and manage mock-audit simulations.",
 	},
 	interview: {
 		title: "Interview Builder",
@@ -33,6 +33,6 @@ export const SURFACE_COPY: Record<
 	},
 	reports: {
 		title: "Reports",
-		description: "Session outcomes and department readiness summaries.",
+		description: "Simulation outcomes and department readiness summaries.",
 	},
 };

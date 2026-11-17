@@ -1,9 +1,14 @@
 import { listFindings } from "@/lib/audit-upload/store";
 import { logAuditEvent } from "@/lib/services/audit-logger";
+import {
+	markSessionCalendarEventCancelled,
+	syncSessionCalendarEvent,
+} from "./calendar-sync";
 import { canAcceptEvidence } from "./evidence-merge";
 import {
 	enqueueSessionReminders,
 	notifySessionCancelled,
+	notifySessionRescheduled,
 } from "./notifications";
 import { buildSessionReport } from "./reports";
 import {
@@ -20,7 +25,6 @@ import {
 	listEvidence,
 	listGaps,
 	listQuestions,
-	listReports,
 	listScripts,
 	listSessions,
 	updateAttemptRow,
@@ -89,7 +93,7 @@ export async function scheduleReviewSession(
 	if (!department) {
 		return { error: "Give a department for the review session." };
 	}
-	const session = await createSessionRow({
+	let session = await createSessionRow({
 		orgId: actor.orgId,
 		title: (input.title || `${department} mock audit`).trim(),
 		department,
@@ -105,6 +109,10 @@ export async function scheduleReviewSession(
 		id: session.$id,
 		label: session.title,
 	});
+	const { calendarEventId } = await syncSessionCalendarEvent(actor, session);
+	if (calendarEventId) {
+		session = await updateSessionRow(session.$id, { calendarEventId });
+	}
 	await enqueueSessionReminders(session).catch(() => undefined);
 	return { session };
 }
@@ -123,15 +131,25 @@ export async function rescheduleReviewSession(
 	if (existing.status === "cancelled") {
 		return { error: "That session is cancelled. Schedule a new one instead." };
 	}
-	const session = await updateSessionRow(sessionId, {
+	let session = await updateSessionRow(sessionId, {
 		scheduledAt,
 		status: "scheduled",
 	});
-	await audit(actor, "update", `Rescheduled ${session.title}`, {
-		type: "review_session",
-		id: session.$id,
-		label: session.title,
-	});
+	await audit(
+		actor,
+		"update",
+		`Rescheduled ${session.title} from ${existing.scheduledAt || "an unscheduled time"} to ${scheduledAt}`,
+		{
+			type: "review_session",
+			id: session.$id,
+			label: session.title,
+		},
+	);
+	const { calendarEventId } = await syncSessionCalendarEvent(actor, session);
+	if (calendarEventId) {
+		session = await updateSessionRow(session.$id, { calendarEventId });
+	}
+	await notifySessionRescheduled(session).catch(() => undefined);
 	return { session };
 }
 
@@ -142,6 +160,7 @@ export async function cancelReviewSession(actor: Actor, sessionId: string) {
 		status: "cancelled" satisfies SessionStatus,
 	});
 	await notifySessionCancelled(session).catch(() => undefined);
+	await markSessionCalendarEventCancelled(session);
 	await audit(actor, "update", `Cancelled ${session.title}`, {
 		type: "review_session",
 		id: session.$id,
@@ -679,14 +698,4 @@ export async function departmentReadinessSummary(orgId: string) {
 		if (item.status === "accepted") byDept[dept].accepted += 1;
 	}
 	return { byDepartment: byDept, sample: false };
-}
-
-export async function getLabOverview(orgId: string) {
-	const [sessions, evidence, gaps, reports] = await Promise.all([
-		listSessions(orgId),
-		listEvidence(orgId),
-		listGaps(orgId),
-		listReports(orgId),
-	]);
-	return { sessions, evidence, gaps, reports };
 }

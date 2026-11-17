@@ -2,18 +2,30 @@
 
 import { motion } from "framer-motion";
 import {
+	Ban,
 	Calendar,
 	CalendarClock,
 	CalendarRange,
+	ChevronDown,
 	ClipboardList,
 	Clock,
+	Filter,
+	FunnelX,
 	Globe,
 	ListChecks,
 	Plus,
 	Star,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
-import { Fragment, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+	Fragment,
+	useEffect,
+	useLayoutEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import CountUp from "react-countup";
 import {
 	Area,
@@ -32,6 +44,7 @@ import { CoverageChart } from "@/components/audit-lab/CoverageChart";
 import { InterviewScriptCanvas } from "@/components/audit-lab/InterviewScriptCanvas";
 import { NewSessionDialog } from "@/components/audit-lab/NewSessionDialog";
 import { PracticeRoundPanel } from "@/components/audit-lab/PracticeRoundPanel";
+import { RescheduleSessionDialog } from "@/components/audit-lab/RescheduleSessionDialog";
 import { TrendChart } from "@/components/audit-lab/TrendChart";
 import { LoadError } from "@/components/LoadError";
 import {
@@ -43,19 +56,35 @@ import {
 	viewportOnce,
 } from "@/components/landing/motion";
 import Avatar from "@/components/ui/avatar";
+import { BulkActionDock } from "@/components/ui/bulk-action-dock";
 import { Button } from "@/components/ui/button";
 import {
 	CaalmDataTable,
 	CaalmDataTableEmpty,
+	DATA_TABLE_BODY_ROW_CLICKABLE,
+	DATA_TABLE_HEADER_CELL,
+	DATA_TABLE_HEADER_ROW,
+	SortableDataTableHead,
 } from "@/components/ui/caalm-data-table";
 import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import {
+	AppDropdownMenuContent,
+	AppDropdownMenuItem,
+	DropdownMenu,
+	DropdownMenuLabel,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { FILTER_PILL_TRIGGER } from "@/components/ui/filter-pill";
 import {
 	MetricProgressRing,
 	MetricSegmentBar,
 	MetricStatCard,
 } from "@/components/ui/metric-stat-card";
 import { PageIndex, pageCountFromItems } from "@/components/ui/page-index";
+import { SearchField } from "@/components/ui/search-field";
 import { SegmentedToggle } from "@/components/ui/segmented-toggle";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ActivityItemSkeleton } from "@/components/ui/skeletons";
@@ -143,6 +172,167 @@ function sessionStatusLabel(status: string): string {
 		.split("_")
 		.map((part) => part.charAt(0).toUpperCase() + part.slice(1))
 		.join(" ");
+}
+
+// shortcut: ReviewSession has no readiness score field yet, so the bar length
+// is a static per-status placeholder, not a computed score. Upgrade once
+// readinessSnapshotId resolves to a real percentage.
+const SESSION_READINESS_BY_STATUS: Record<
+	string,
+	{ pct: number; colorClass: string; faded?: boolean }
+> = {
+	draft: { pct: 20, colorClass: "bg-[#0f5384]" },
+	scheduled: { pct: 38, colorClass: "bg-[#0f5384]" },
+	prep: { pct: 48, colorClass: "bg-orange" },
+	in_progress: { pct: 66, colorClass: "bg-[#078fab]" },
+	completed: { pct: 92, colorClass: "bg-green" },
+	report_ready: { pct: 96, colorClass: "bg-green" },
+	archived: { pct: 78, colorClass: "bg-green", faded: true },
+	cancelled: { pct: 0, colorClass: "bg-slate-300" },
+};
+
+type SessionSortKey = "scheduled" | "title" | "readiness";
+type SessionSort = { key: SessionSortKey; direction: "asc" | "desc" };
+
+function compareSessions(
+	a: ReviewSession,
+	b: ReviewSession,
+	sort: SessionSort,
+): number {
+	const dir = sort.direction === "asc" ? 1 : -1;
+	switch (sort.key) {
+		case "title":
+			return a.title.localeCompare(b.title) * dir;
+		case "readiness": {
+			const ra = SESSION_READINESS_BY_STATUS[a.status]?.pct ?? 0;
+			const rb = SESSION_READINESS_BY_STATUS[b.status]?.pct ?? 0;
+			return (ra - rb) * dir;
+		}
+		case "scheduled": {
+			const da = a.scheduledAt
+				? Date.parse(a.scheduledAt)
+				: Number.POSITIVE_INFINITY;
+			const db = b.scheduledAt
+				? Date.parse(b.scheduledAt)
+				: Number.POSITIVE_INFINITY;
+			return (da - db) * dir;
+		}
+		default: {
+			const _exhaustive: never = sort.key;
+			return _exhaustive;
+		}
+	}
+}
+
+const SESSION_STATUS_FILTER_OPTIONS = [
+	"draft",
+	"scheduled",
+	"prep",
+	"in_progress",
+	"completed",
+	"report_ready",
+	"archived",
+	"cancelled",
+] as const;
+
+/** Status filter pill (FILTER_PILL_TRIGGER) with a checkbox list, matching Contracts/Licenses. */
+function SessionFilterMenu({
+	value,
+	onChange,
+}: {
+	value: string[];
+	onChange: (next: string[]) => void;
+}) {
+	const toggle = (status: string, checked: boolean) => {
+		onChange(checked ? [...value, status] : value.filter((s) => s !== status));
+	};
+
+	return (
+		<DropdownMenu>
+			<DropdownMenuTrigger asChild>
+				<button
+					type="button"
+					aria-label="Filter simulations by status"
+					className={FILTER_PILL_TRIGGER}
+				>
+					<Filter className="h-4 w-4 shrink-0 text-slate-600" aria-hidden />
+					<span className="truncate">
+						{value.length > 0 ? `Filter (${value.length})` : "All statuses"}
+					</span>
+					<ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+				</button>
+			</DropdownMenuTrigger>
+			<AppDropdownMenuContent align="end" className="w-64 p-1">
+				<DropdownMenuLabel className="sidebar-gradient-text">
+					Filter by status
+				</DropdownMenuLabel>
+				<SessionFilterRow
+					checked={value.length === 0}
+					label="All statuses"
+					onCheckedChange={() => onChange([])}
+				/>
+				{SESSION_STATUS_FILTER_OPTIONS.map((status) => (
+					<SessionFilterRow
+						key={status}
+						checked={value.includes(status)}
+						label={sessionStatusLabel(status)}
+						onCheckedChange={(checked) => toggle(status, checked)}
+					/>
+				))}
+				{value.length > 0 ? (
+					<>
+						<DropdownMenuSeparator />
+						<AppDropdownMenuItem
+							icon={FunnelX}
+							onSelect={(event) => {
+								event.preventDefault();
+								onChange([]);
+							}}
+						>
+							Clear filters
+						</AppDropdownMenuItem>
+					</>
+				) : null}
+			</AppDropdownMenuContent>
+		</DropdownMenu>
+	);
+}
+
+function SessionFilterRow({
+	checked,
+	label,
+	onCheckedChange,
+}: {
+	checked: boolean;
+	label: string;
+	onCheckedChange: (checked: boolean) => void;
+}) {
+	return (
+		<div
+			role="menuitemcheckbox"
+			aria-checked={checked}
+			tabIndex={0}
+			className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm text-slate-700 transition-colors duration-200 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40"
+			onPointerDown={(event) => {
+				event.preventDefault();
+				event.stopPropagation();
+			}}
+			onClick={() => onCheckedChange(!checked)}
+			onKeyDown={(event) => {
+				if (event.key === "Enter" || event.key === " ") {
+					event.preventDefault();
+					onCheckedChange(!checked);
+				}
+			}}
+		>
+			<Checkbox
+				checked={checked}
+				tabIndex={-1}
+				className="pointer-events-none"
+			/>
+			<span>{label}</span>
+		</div>
+	);
 }
 
 /** Renders `**bold**` spans from mock/activity text as <strong>. */
@@ -262,6 +452,11 @@ export function AuditLabClient({
 	const { toast } = useToast();
 	const [selectedId, setSelectedId] = useState<string | null>(null);
 	const [cancelOpen, setCancelOpen] = useState(false);
+	const [cancelIsBulk, setCancelIsBulk] = useState(false);
+	const [selectedSessionIds, setSelectedSessionIds] = useState<Set<string>>(
+		new Set(),
+	);
+	const [rescheduleOpen, setRescheduleOpen] = useState(false);
 	const [newOpen, setNewOpen] = useState(false);
 	const [busy, setBusy] = useState(false);
 	const [evidenceGroup, setEvidenceGroup] = useState<
@@ -269,6 +464,21 @@ export function AuditLabClient({
 	>("department");
 	const [statusFilter, setStatusFilter] = useState<string>("all");
 	const [upcomingPage, setUpcomingPage] = useState(1);
+	const [sessionSort, setSessionSort] = useState<SessionSort>({
+		key: "scheduled",
+		direction: "asc",
+	});
+	const [sessionStatusFilter, setSessionStatusFilter] = useState<string[]>([]);
+	const [sessionQuery, setSessionQuery] = useState("");
+	const [sessionsPage, setSessionsPage] = useState(1);
+
+	const toggleSessionSort = (key: SessionSortKey) => {
+		setSessionSort((prev) =>
+			prev.key === key
+				? { key, direction: prev.direction === "asc" ? "desc" : "asc" }
+				: { key, direction: "asc" },
+		);
+	};
 
 	const overviewUrl =
 		surface === "overview"
@@ -297,9 +507,14 @@ export function AuditLabClient({
 		upcomingPageSafe * UPCOMING_PAGE_SIZE,
 	);
 
+	// Sessions surface has no separate "upcoming" list — its avatars come
+	// straight from the full session list instead.
+	const avatarSourceSessions =
+		surface === "sessions" ? sessions : upcomingItems;
+
 	const upcomingParticipantIds = useMemo(() => {
 		const ids = new Set<string>();
-		for (const session of upcomingItems) {
+		for (const session of avatarSourceSessions) {
 			for (const person of parseParticipants(session.participantsJson)) {
 				if (person.userId && !person.userId.startsWith("mock-")) {
 					ids.add(person.userId);
@@ -307,10 +522,11 @@ export function AuditLabClient({
 			}
 		}
 		return [...ids].sort();
-	}, [upcomingItems]);
+	}, [avatarSourceSessions]);
 
 	const { data: participantProfiles } = useSWR(
-		surface === "overview" && upcomingParticipantIds.length > 0
+		(surface === "overview" || surface === "sessions") &&
+			upcomingParticipantIds.length > 0
 			? ["audit-lab-upcoming-avatars", upcomingParticipantIds.join(",")]
 			: null,
 		async () => {
@@ -392,6 +608,73 @@ export function AuditLabClient({
 					{ name: "Facilities", acceptedPct: 55 },
 					{ name: "R&D", acceptedPct: 67 },
 				];
+
+	const filteredSessions = useMemo(() => {
+		const q = sessionQuery.trim().toLowerCase();
+		const matching = sessions.filter((session) => {
+			if (
+				sessionStatusFilter.length > 0 &&
+				!sessionStatusFilter.includes(session.status)
+			) {
+				return false;
+			}
+			if (!q) return true;
+			return (
+				session.title.toLowerCase().includes(q) ||
+				session.department.toLowerCase().includes(q)
+			);
+		});
+		return matching.sort((a, b) => compareSessions(a, b, sessionSort));
+	}, [sessions, sessionStatusFilter, sessionSort, sessionQuery]);
+
+	const SESSIONS_PAGE_SIZE = 12;
+	const sessionsTotalPages = pageCountFromItems(
+		filteredSessions.length,
+		SESSIONS_PAGE_SIZE,
+	);
+	const sessionsPageSafe = Math.min(sessionsPage, sessionsTotalPages);
+	const pagedSessions = filteredSessions.slice(
+		(sessionsPageSafe - 1) * SESSIONS_PAGE_SIZE,
+		sessionsPageSafe * SESSIONS_PAGE_SIZE,
+	);
+
+	// A new search, status filter or sort starts back on the first page and
+	// drops any selection, since the rows behind it just changed.
+	useEffect(() => {
+		setSessionsPage(1);
+		setSelectedSessionIds(new Set());
+	}, [sessionStatusFilter, sessionSort, sessionQuery]);
+
+	const pagedSessionIds = useMemo(
+		() => pagedSessions.map((s) => s.$id),
+		[pagedSessions],
+	);
+	const allPagedSelected =
+		pagedSessionIds.length > 0 &&
+		pagedSessionIds.every((id) => selectedSessionIds.has(id));
+	const somePagedSelected =
+		!allPagedSelected &&
+		pagedSessionIds.some((id) => selectedSessionIds.has(id));
+
+	const toggleSessionSelect = (id: string, checked: boolean) => {
+		setSelectedSessionIds((prev) => {
+			const next = new Set(prev);
+			if (checked) next.add(id);
+			else next.delete(id);
+			return next;
+		});
+	};
+
+	const toggleAllPagedSessions = (checked: boolean) => {
+		setSelectedSessionIds((prev) => {
+			const next = new Set(prev);
+			for (const id of pagedSessionIds) {
+				if (checked) next.add(id);
+				else next.delete(id);
+			}
+			return next;
+		});
+	};
 
 	const filteredEvidence = useMemo(() => {
 		return evidence.filter((item) =>
@@ -785,7 +1068,7 @@ export function AuditLabClient({
 				onClick={() => setNewOpen(true)}
 			>
 				<Plus className="h-4 w-4" />
-				New session
+				New simulation
 			</Button>
 		) : null;
 
@@ -1116,7 +1399,7 @@ export function AuditLabClient({
 									variants={fadeUp}
 								>
 									<MetricStatCard
-										title="Sessions this quarter"
+										title="Simulations this quarter"
 										value={stats.sessionsThisQuarter ?? 0}
 										icon={CalendarRange}
 										pinFooter
@@ -1270,7 +1553,7 @@ export function AuditLabClient({
 											<div className="mb-4 shrink-0 border-b border-slate-200 pb-4">
 												<div className="flex items-center justify-between gap-3">
 													<p className="text-sm font-semibold sidebar-gradient-text">
-														Upcoming sessions
+														Upcoming simulations
 													</p>
 													<Link
 														href="/audit-lab/sessions"
@@ -1389,7 +1672,7 @@ export function AuditLabClient({
 													</ul>
 												) : (
 													<p className="text-sm text-slate-500">
-														No sessions scheduled yet.
+														No simulations scheduled yet.
 													</p>
 												)}
 											</div>
@@ -1423,7 +1706,7 @@ export function AuditLabClient({
 													Recent activity
 												</p>
 												<p className="mt-1 text-xs text-slate-500">
-													What changed across sessions, evidence, and gaps.
+													What changed across simulations, evidence, and gaps.
 												</p>
 											</div>
 											{(payload?.activity?.length ?? 0) > 0 ? (
@@ -1466,67 +1749,337 @@ export function AuditLabClient({
 					) : null}
 
 					{surface === "sessions" ? (
-						<div className="space-y-4">
-							{sessions.length === 0 ? (
-								<p className="text-sm text-slate-500">
-									No sessions yet. Schedule your first review.
-								</p>
-							) : (
-								<CaalmDataTable className="pt-2">
-									<TableHeader>
-										<TableRow className="border-slate-200/80 hover:bg-transparent">
-											<TableHead>Session</TableHead>
-											<TableHead>Framework</TableHead>
-											<TableHead>Scheduled</TableHead>
-											<TableHead>Status</TableHead>
-											<TableHead />
-										</TableRow>
-									</TableHeader>
-									<TableBody>
-										{sessions.map((session) => (
-											<TableRow key={session.$id}>
-												<TableCell>
-													<Link
-														href={`/audit-lab/sessions/${session.$id}`}
-														className="font-medium text-[#0f5384]"
+						<>
+							<Card className="glass-card">
+								<div className="glass-card-cap" />
+								<CardContent className="p-4 sm:p-6">
+									<div className="flex flex-wrap items-center justify-between gap-3 pb-3">
+										<SearchField
+											value={sessionQuery}
+											onChange={(e) => setSessionQuery(e.target.value)}
+											placeholder="Search simulations…"
+											aria-label="Search simulations"
+											containerClassName="w-full min-w-0 max-w-xl"
+										/>
+										<SessionFilterMenu
+											value={sessionStatusFilter}
+											onChange={setSessionStatusFilter}
+										/>
+									</div>
+									{filteredSessions.length === 0 ? (
+										<CaalmDataTableEmpty
+											title="No simulations found"
+											description={
+												sessions.length === 0
+													? "Schedule your first review."
+													: "Try a different status or search term."
+											}
+										/>
+									) : (
+										<CaalmDataTable className="pt-2">
+											<TableHeader className="[&_tr]:border-b-0">
+												<TableRow className={DATA_TABLE_HEADER_ROW}>
+													<TableHead
+														className={cn(
+															DATA_TABLE_HEADER_CELL,
+															"w-10 pl-4 pr-2",
+														)}
 													>
-														{session.title}
-													</Link>
-													<p className="text-xs text-slate-500">
-														{session.department}
-													</p>
-												</TableCell>
-												<TableCell className="text-sm text-slate-600">
-													{session.framework ?? "—"}
-												</TableCell>
-												<TableCell className="text-sm text-slate-600">
-													{session.scheduledAt ?? "—"}
-												</TableCell>
-												<TableCell className="text-sm">
-													{session.status}
-												</TableCell>
-												<TableCell>
-													{canManageSessions &&
-													session.status !== "cancelled" ? (
-														<Button
-															type="button"
-															variant="outline"
-															size="sm"
-															onClick={() => {
-																setSelectedId(session.$id);
-																setCancelOpen(true);
-															}}
+														<Checkbox
+															checked={
+																allPagedSelected
+																	? true
+																	: somePagedSelected
+																		? "indeterminate"
+																		: false
+															}
+															onCheckedChange={(checked) =>
+																toggleAllPagedSessions(checked === true)
+															}
+															aria-label="Select all simulations on this page"
+															className="cursor-pointer"
+														/>
+													</TableHead>
+													<SortableDataTableHead
+														label="Simulation"
+														active={sessionSort.key === "title"}
+														onClick={() => toggleSessionSort("title")}
+													/>
+													<TableHead
+														className={cn(DATA_TABLE_HEADER_CELL, "px-5")}
+													>
+														Framework
+													</TableHead>
+													<TableHead
+														className={cn(DATA_TABLE_HEADER_CELL, "px-5")}
+													>
+														Participants
+													</TableHead>
+													<SortableDataTableHead
+														label="Scheduled"
+														active={sessionSort.key === "scheduled"}
+														onClick={() => toggleSessionSort("scheduled")}
+													/>
+													<SortableDataTableHead
+														label="Readiness"
+														active={sessionSort.key === "readiness"}
+														onClick={() => toggleSessionSort("readiness")}
+													/>
+													<TableHead
+														className={cn(DATA_TABLE_HEADER_CELL, "px-5")}
+													>
+														Status
+													</TableHead>
+													<TableHead
+														className={cn(DATA_TABLE_HEADER_CELL, "w-16 pr-4")}
+													/>
+												</TableRow>
+											</TableHeader>
+											<TableBody className="[&_tr:last-child>td]:border-b-0">
+												{pagedSessions.map((session) => {
+													const participants = parseParticipants(
+														session.participantsJson,
+													);
+													const readiness = SESSION_READINESS_BY_STATUS[
+														session.status
+													] ?? { pct: 0, colorClass: "bg-slate-300" };
+													const isSelected = selectedSessionIds.has(
+														session.$id,
+													);
+													return (
+														<TableRow
+															key={session.$id}
+															className={cn(
+																DATA_TABLE_BODY_ROW_CLICKABLE,
+																"group bg-transparent",
+																isSelected && "bg-blue/10 hover:bg-blue/10",
+															)}
 														>
-															Cancel
-														</Button>
-													) : null}
-												</TableCell>
-											</TableRow>
-										))}
-									</TableBody>
-								</CaalmDataTable>
-							)}
-						</div>
+															<TableCell
+																className="px-4 py-3 pl-4 pr-2 align-middle"
+																onClick={(e) => e.stopPropagation()}
+															>
+																<Checkbox
+																	checked={isSelected}
+																	onCheckedChange={(checked) =>
+																		toggleSessionSelect(
+																			session.$id,
+																			checked === true,
+																		)
+																	}
+																	aria-label={`Select ${session.title}`}
+																	className="cursor-pointer"
+																/>
+															</TableCell>
+															<TableCell className="px-5 py-3 align-middle">
+																<Link
+																	href={`/audit-lab/sessions/${session.$id}`}
+																	className="font-medium text-sm text-slate-800 hover:text-[#0f5384]"
+																>
+																	{session.title}
+																</Link>
+																<p className="text-xs text-slate-500">
+																	{session.department}
+																</p>
+															</TableCell>
+															<TableCell className="px-5 py-3 align-middle">
+																{session.framework ? (
+																	<span className="inline-flex items-center rounded-full border border-blue/20 bg-blue/10 px-2.5 py-0.5 text-xs font-medium text-[#0f5384]">
+																		{session.framework}
+																	</span>
+																) : (
+																	<span className="text-sm text-slate-400">
+																		—
+																	</span>
+																)}
+															</TableCell>
+															<TableCell className="px-5 py-3 align-middle">
+																{participants.length > 0 ? (
+																	<TooltipProvider delayDuration={200}>
+																		<div className="flex items-center">
+																			{participants
+																				.slice(0, 3)
+																				.map((p, index) => {
+																					const profile =
+																						upcomingAvatarByUserId.get(
+																							p.userId,
+																						);
+																					const fullName =
+																						profile?.name ||
+																						p.name?.trim() ||
+																						"Participant";
+																					return (
+																						<Tooltip
+																							key={`${p.userId}-${index}`}
+																						>
+																							<TooltipTrigger asChild>
+																								<span className="-ml-2 inline-flex rounded-full border-2 border-white first:ml-0">
+																									<Avatar
+																										userId={p.userId}
+																										name={fullName}
+																										size="xs"
+																										imageUrl={profile?.imageUrl}
+																									/>
+																								</span>
+																							</TooltipTrigger>
+																							<TooltipContent>
+																								<p>{fullName}</p>
+																							</TooltipContent>
+																						</Tooltip>
+																					);
+																				})}
+																			{participants.length > 3 ? (
+																				<Tooltip>
+																					<TooltipTrigger asChild>
+																						<span className="-ml-2 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-white bg-slate-200 text-[11px] font-medium text-slate-600">
+																							+{participants.length - 3}
+																						</span>
+																					</TooltipTrigger>
+																					<TooltipContent>
+																						<div className="space-y-1">
+																							{participants
+																								.slice(3)
+																								.map((p, index) => {
+																									const profile =
+																										upcomingAvatarByUserId.get(
+																											p.userId,
+																										);
+																									return (
+																										<p
+																											key={`${p.userId}-${index}`}
+																										>
+																											{profile?.name ||
+																												p.name?.trim() ||
+																												"Participant"}
+																										</p>
+																									);
+																								})}
+																						</div>
+																					</TooltipContent>
+																				</Tooltip>
+																			) : null}
+																		</div>
+																	</TooltipProvider>
+																) : (
+																	<span className="text-sm text-slate-400">
+																		—
+																	</span>
+																)}
+															</TableCell>
+															<TableCell className="px-5 py-3 align-middle text-sm text-slate-600">
+																{session.scheduledAt ?? "—"}
+															</TableCell>
+															<TableCell className="px-5 py-3 align-middle">
+																<div
+																	className={cn(
+																		"h-1.5 w-24 overflow-hidden rounded-full bg-slate-200",
+																		readiness.faded && "opacity-50",
+																	)}
+																>
+																	<div
+																		className={cn(
+																			"h-full rounded-full",
+																			readiness.colorClass,
+																		)}
+																		style={{ width: `${readiness.pct}%` }}
+																	/>
+																</div>
+															</TableCell>
+															<TableCell className="px-5 py-3 align-middle">
+																<span
+																	className={cn(
+																		"w-fit shrink-0 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-semibold",
+																		SESSION_STATUS_BADGE[session.status] ??
+																			"bg-slate-100 text-slate-600 border-slate-200",
+																	)}
+																>
+																	{sessionStatusLabel(session.status)}
+																</span>
+															</TableCell>
+															<TableCell className="px-5 py-3 pr-4 align-middle text-right">
+																{canManageSessions ? (
+																	<DropdownMenu>
+																		<DropdownMenuTrigger
+																			className="shad-no-focus inline-flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full opacity-0 transition-all duration-200 hover:bg-white/30 group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
+																			aria-label={`Actions for ${session.title}`}
+																			onClick={(e) => e.stopPropagation()}
+																		>
+																			<Image
+																				src="/assets/icons/dots.svg"
+																				alt="dots"
+																				width={34}
+																				height={34}
+																				className="h-[34px] w-[34px] max-h-[34px] max-w-[34px] shrink-0"
+																				unoptimized
+																			/>
+																		</DropdownMenuTrigger>
+																		<AppDropdownMenuContent
+																			align="end"
+																			onClick={(e) => e.stopPropagation()}
+																		>
+																			<AppDropdownMenuItem
+																				icon={CalendarClock}
+																				onSelect={() => {
+																					setSelectedId(session.$id);
+																					setRescheduleOpen(true);
+																				}}
+																			>
+																				Reschedule
+																			</AppDropdownMenuItem>
+																			{session.status !== "cancelled" ? (
+																				<AppDropdownMenuItem
+																					icon={Ban}
+																					tone="danger"
+																					onSelect={() => {
+																						setSelectedId(session.$id);
+																						setCancelOpen(true);
+																					}}
+																				>
+																					Cancel
+																				</AppDropdownMenuItem>
+																			) : null}
+																		</AppDropdownMenuContent>
+																	</DropdownMenu>
+																) : null}
+															</TableCell>
+														</TableRow>
+													);
+												})}
+											</TableBody>
+										</CaalmDataTable>
+									)}
+								</CardContent>
+								{sessionsTotalPages > 1 ? (
+									<div className="shrink-0 rounded-b-lg border-t border-slate-200/80 bg-slate-50/60 px-4 sm:px-6">
+										<PageIndex
+											page={sessionsPageSafe}
+											totalItems={filteredSessions.length}
+											pageSize={SESSIONS_PAGE_SIZE}
+											onPageChange={setSessionsPage}
+											hideWhenSinglePage
+											className="mx-0 my-3 justify-between px-0"
+										/>
+									</div>
+								) : null}
+							</Card>
+							<BulkActionDock
+								count={selectedSessionIds.size}
+								noun="simulation"
+								onClear={() => setSelectedSessionIds(new Set())}
+							>
+								<button
+									type="button"
+									onClick={() => {
+										setCancelIsBulk(true);
+										setCancelOpen(true);
+									}}
+									className="delete-btn cursor-pointer text-sm"
+								>
+									<Ban className="h-4 w-4" aria-hidden />
+									Cancel
+								</button>
+							</BulkActionDock>
+						</>
 					) : null}
 
 					{surface === "interview" ? (
@@ -1536,7 +2089,7 @@ export function AuditLabClient({
 									className="h-9 rounded-md border border-slate-300 bg-white px-2 text-sm"
 									value={selected?.$id ?? ""}
 									onChange={(e) => setSelectedId(e.target.value)}
-									aria-label="Session for interview"
+									aria-label="Simulation for interview"
 								>
 									{sessions.map((s) => (
 										<option key={s.$id} value={s.$id}>
@@ -1628,7 +2181,7 @@ export function AuditLabClient({
 								/>
 							) : (
 								<p className="text-sm text-slate-500">
-									Schedule a session before building an interview script.
+									Schedule a simulation before building an interview script.
 								</p>
 							)}
 						</div>
@@ -1693,7 +2246,7 @@ export function AuditLabClient({
 							{filteredEvidence.length === 0 ? (
 								<CaalmDataTableEmpty
 									title="No evidence requests"
-									description="Generate a list from the session scope."
+									description="Generate a list from the simulation scope."
 								/>
 							) : (
 								<CaalmDataTable className="pt-2">
@@ -1786,7 +2339,7 @@ export function AuditLabClient({
 							</ul>
 							{(payload?.reports?.length ?? 0) === 0 ? (
 								<p className="text-sm text-slate-500">
-									No published reports yet. Complete a session to generate one.
+									No published reports yet. Complete a simulation to generate one.
 								</p>
 							) : null}
 						</div>
@@ -1821,18 +2374,57 @@ export function AuditLabClient({
 
 			<ConfirmDialog
 				open={cancelOpen}
-				onOpenChange={setCancelOpen}
+				onOpenChange={(next) => {
+					setCancelOpen(next);
+					if (!next) setCancelIsBulk(false);
+				}}
 				icon={<Calendar className="h-5 w-5" />}
-				title="Cancel this session?"
-				description="Invitees will keep the record, but the session will no longer run."
-				confirmLabel="Cancel session"
+				title={
+					cancelIsBulk
+						? `Cancel ${selectedSessionIds.size} simulation${selectedSessionIds.size === 1 ? "" : "s"}?`
+						: "Cancel this simulation?"
+				}
+				description="Invitees will keep the record, but the simulation will no longer run."
+				confirmLabel={cancelIsBulk ? "Cancel simulations" : "Cancel simulation"}
 				onConfirm={async () => {
-					if (!selectedId) return;
 					try {
-						await patchSession(selectedId, { action: "cancel" });
+						if (cancelIsBulk) {
+							const ids = [...selectedSessionIds];
+							await Promise.all(
+								ids.map((id) => patchSession(id, { action: "cancel" })),
+							);
+							setSelectedSessionIds(new Set());
+						} else {
+							if (!selectedId) return;
+							await patchSession(selectedId, { action: "cancel" });
+						}
 						await mutate();
 					} catch (err) {
-						onError(err, "I couldn't cancel that session.");
+						onError(
+							err,
+							cancelIsBulk
+								? "I couldn't cancel those simulations."
+								: "I couldn't cancel that simulation.",
+						);
+					}
+				}}
+			/>
+
+			<RescheduleSessionDialog
+				open={rescheduleOpen}
+				onOpenChange={setRescheduleOpen}
+				sessionTitle={selected?.title ?? ""}
+				currentScheduledAt={selected?.scheduledAt}
+				onSubmit={async (scheduledAt) => {
+					if (!selectedId) return;
+					try {
+						await patchSession(selectedId, {
+							action: "reschedule",
+							scheduledAt,
+						});
+						await mutate();
+					} catch (err) {
+						onError(err, "I couldn't reschedule that simulation.");
 					}
 				}}
 			/>

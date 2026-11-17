@@ -67,6 +67,7 @@ export type ReviewSession = {
 	readinessSnapshotId?: string;
 	linkedAuditDocIds?: string;
 	auditTrailJson?: string;
+	calendarEventId?: string;
 	durationMinutes: number;
 	status: SessionStatus;
 	participantsJson: string;
@@ -143,7 +144,9 @@ export type ReviewReport = {
 	createdByUserId: string;
 };
 
-export function parseParticipants(json: string | undefined): SessionParticipant[] {
+export function parseParticipants(
+	json: string | undefined,
+): SessionParticipant[] {
 	if (!json) return [];
 	try {
 		const parsed = JSON.parse(json) as unknown;
