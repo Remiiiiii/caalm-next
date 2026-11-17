@@ -43,6 +43,17 @@ export async function PATCH(
 			role?: SessionRole;
 		};
 		const action = String(body.action ?? "reschedule");
+		if (action === "reschedule") {
+			const result = await rescheduleReviewSession(
+				resolved.actor,
+				id,
+				String(body.scheduledAt ?? ""),
+			);
+			if (result.error) {
+				return NextResponse.json({ error: result.error }, { status: 400 });
+			}
+			return NextResponse.json({ data: result.session });
+		}
 		if (action === "cancel") {
 			const result = await cancelReviewSession(resolved.actor, id);
 			if (result.error) {
@@ -76,15 +87,12 @@ export async function PATCH(
 			}
 			return NextResponse.json({ data: result });
 		}
-		const result = await rescheduleReviewSession(
-			resolved.actor,
-			id,
-			String(body.scheduledAt ?? ""),
+		return NextResponse.json(
+			{ error: `Unknown action "${action}".` },
+			{
+				status: 400,
+			},
 		);
-		if (result.error) {
-			return NextResponse.json({ error: result.error }, { status: 400 });
-		}
-		return NextResponse.json({ data: result.session });
 	} catch (error) {
 		console.error("[SERVER] PATCH /api/audit-lab/sessions/[id]:", error);
 		return NextResponse.json(

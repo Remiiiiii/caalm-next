@@ -101,7 +101,7 @@ export function BulkActionDock({
 					<div
 						role="toolbar"
 						aria-label={`Bulk actions for ${count} selected ${noun}${count === 1 ? "" : "s"}`}
-						className="glass-card pointer-events-auto flex max-w-full flex-wrap items-center gap-1 rounded-full! px-3 py-2 text-slate-700 shadow-lg shadow-slate-900/15"
+						className="glass-card bg-white/90! pointer-events-auto flex max-w-full flex-wrap items-center gap-1 rounded-full! px-3 py-2 text-slate-700 shadow-lg shadow-slate-900/15"
 					>
 						<span className="sr-only" aria-live="polite">
 							{count} selected

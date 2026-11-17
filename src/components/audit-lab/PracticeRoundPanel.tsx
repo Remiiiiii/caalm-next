@@ -150,7 +150,7 @@ export function PracticeRoundPanel({
 					className="h-9 rounded-md border border-slate-300 bg-white px-2 text-sm"
 					value={sessionId}
 					onChange={(e) => setSessionId(e.target.value)}
-					aria-label="Session"
+					aria-label="Simulation"
 				>
 					{sessions.map((s) => (
 						<option key={s.$id} value={s.$id}>

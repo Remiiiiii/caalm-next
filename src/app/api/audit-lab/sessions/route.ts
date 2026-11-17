@@ -1,12 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { PERMISSIONS } from "@/constants/permissions";
+import { resolveLabCapabilities } from "@/lib/audit-lab/access";
 import { resolveAuditLabActor } from "@/lib/audit-lab/actor";
-import {
-	getLabOverview,
-	scheduleReviewSession,
-} from "@/lib/audit-lab/service";
+import { buildLabOverview } from "@/lib/audit-lab/overview";
+import { scheduleReviewSession } from "@/lib/audit-lab/service";
 import { toUserFacingErrorMessage } from "@/lib/errors/user-facing";
 import { requirePermission } from "@/lib/rbac/middleware";
+import { getUserPermissions } from "@/lib/rbac/permissions";
 
 export async function GET(request: NextRequest) {
 	const denied = await requirePermission(request, {
@@ -23,7 +23,12 @@ export async function GET(request: NextRequest) {
 	}
 
 	try {
-		const overview = await getLabOverview(resolved.actor.orgId);
+		// Same builder the overview surface uses, so the Sessions table shows
+		// the identical (real + demo) rows instead of a real-only subset.
+		const { actor } = resolved;
+		const permissions = await getUserPermissions(actor.userId, actor.orgId);
+		const caps = resolveLabCapabilities({ permissions });
+		const overview = await buildLabOverview(actor.orgId, caps.scope);
 		return NextResponse.json({ data: overview });
 	} catch (error) {
 		console.error("[SERVER] GET /api/audit-lab/sessions:", error);

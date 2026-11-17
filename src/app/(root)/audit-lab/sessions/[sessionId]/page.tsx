@@ -15,13 +15,13 @@ export default async function AuditLabSessionDetailPage({
 	if (!session || !sessionInScope(session.department, ctx.capabilities.scope)) {
 		return (
 			<AuditLabShell
-				title="Session"
-				description="This session is not available for your access level."
+				title="Simulation"
+				description="This simulation is not available for your access level."
 				capabilities={ctx.capabilities}
 			>
 				<p className="text-sm text-slate-600">
 					<Link href="/audit-lab/sessions" className="text-[#0f5384]">
-						Back to sessions
+						Back to simulations
 					</Link>
 				</p>
 			</AuditLabShell>

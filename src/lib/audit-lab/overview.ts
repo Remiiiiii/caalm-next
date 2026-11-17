@@ -1,4 +1,7 @@
 import { Query } from "node-appwrite";
+import { createAdminClient } from "@/lib/appwrite";
+import { appwriteConfig } from "@/lib/appwrite/config";
+import { flattenTableRow } from "@/lib/appwrite/flatten-row";
 import type { LabScope } from "@/lib/audit-lab/access";
 import { sessionInScope } from "@/lib/audit-lab/access";
 import {
@@ -9,9 +12,6 @@ import {
 } from "@/lib/audit-lab/repository";
 import type { ReviewSession, SessionParticipant } from "@/lib/audit-lab/types";
 import { listFindings } from "@/lib/audit-upload/store";
-import { createAdminClient } from "@/lib/appwrite";
-import { appwriteConfig } from "@/lib/appwrite/config";
-import { flattenTableRow } from "@/lib/appwrite/flatten-row";
 import { resolveAvatarDisplayUrl } from "@/lib/utils";
 
 export type OverviewSuggestion = {
@@ -107,29 +107,31 @@ function mockParticipants(
 	startIndex: number,
 ): string {
 	const picked = new Set<string>();
-	const participants: SessionParticipant[] = names.map((fallbackName, index) => {
-		let user: OrgAvatarUser | null = null;
-		if (orgUsers.length > 0) {
-			for (let offset = 0; offset < orgUsers.length; offset += 1) {
-				const candidate =
-					orgUsers[(startIndex + index + offset) % orgUsers.length];
-				if (!picked.has(candidate.userId)) {
-					user = candidate;
-					picked.add(candidate.userId);
-					break;
+	const participants: SessionParticipant[] = names.map(
+		(fallbackName, index) => {
+			let user: OrgAvatarUser | null = null;
+			if (orgUsers.length > 0) {
+				for (let offset = 0; offset < orgUsers.length; offset += 1) {
+					const candidate =
+						orgUsers[(startIndex + index + offset) % orgUsers.length];
+					if (!picked.has(candidate.userId)) {
+						user = candidate;
+						picked.add(candidate.userId);
+						break;
+					}
+				}
+				// Small orgs: reuse people rather than inventing fake ids.
+				if (!user) {
+					user = orgUsers[(startIndex + index) % orgUsers.length];
 				}
 			}
-			// Small orgs: reuse people rather than inventing fake ids.
-			if (!user) {
-				user = orgUsers[(startIndex + index) % orgUsers.length];
-			}
-		}
-		return {
-			userId: user?.userId ?? `mock-${startIndex + index}`,
-			name: user?.name ?? fallbackName,
-			role: index === 0 ? "facilitator" : "observer",
-		};
-	});
+			return {
+				userId: user?.userId ?? `mock-${startIndex + index}`,
+				name: user?.name ?? fallbackName,
+				role: index === 0 ? "facilitator" : "observer",
+			};
+		},
+	);
 	return JSON.stringify(participants);
 }
 
@@ -245,12 +247,7 @@ function mockOverview(orgId: string, orgUsers: OrgAvatarUser[] = []) {
 			scheduledAt: "Dec 12, 3:30 PM",
 			durationMinutes: 60,
 			status: "prep",
-			participantsJson: take([
-				"Elena M.",
-				"Chris D.",
-				"Pat R.",
-				"Lee S.",
-			]),
+			participantsJson: take(["Elena M.", "Chris D.", "Pat R.", "Lee S."]),
 			createdByUserId: "mock",
 		},
 		{
@@ -422,7 +419,10 @@ export async function buildLabOverview(orgId: string, scope: LabScope) {
 		// still reads as a full calendar instead of stopping at one real entry.
 		upcoming: [...upcoming, ...mock.upcoming].slice(0, 7),
 		activity: mock.activity,
-		sessions: scopedSessions,
+		// Same demo sessions the overview's "upcoming" list pads itself with,
+		// so the full Sessions table shows the identical mock rows instead of
+		// just the real ones.
+		sessions: [...scopedSessions, ...mock.upcoming],
 		evidence: scopedEvidence,
 		gaps: scopedGaps,
 		reports,

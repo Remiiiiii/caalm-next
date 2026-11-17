@@ -43,15 +43,15 @@ const AUDIT_LAB_PERMISSIONS = [
 		key: "audit_lab.view",
 		name: "View Audit Lab",
 		category: "audit_lab",
-		description: "View mock-audit sessions, evidence matrix, and reports",
+		description: "View mock-audit simulations, evidence matrix, and reports",
 	},
 	{
 		$id: "perm_auditlab_sessions",
 		key: "audit_lab.manage_sessions",
-		name: "Manage Audit Lab Sessions",
+		name: "Manage Audit Lab Simulations",
 		category: "audit_lab",
 		description:
-			"Create, reschedule, cancel sessions, invite participants, and build scripts",
+			"Create, reschedule, cancel simulations, invite participants, and build scripts",
 	},
 	{
 		$id: "perm_auditlab_evidence",

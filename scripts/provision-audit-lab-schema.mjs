@@ -37,7 +37,7 @@ const DEMO_DB = "caalm-demo";
 const TABLES = [
 	{
 		tableId: "69c4b201001f4e8c2101",
-		name: "review_sessions",
+		name: "review_simulations",
 		columns: [
 			{ key: "orgId", type: "string", size: 64, required: true },
 			{ key: "title", type: "string", size: 256, required: true },
@@ -68,6 +68,7 @@ const TABLES = [
 			{ key: "readinessSnapshotId", type: "string", size: 64, required: false },
 			{ key: "linkedAuditDocIds", type: "string", size: 4000, required: false },
 			{ key: "auditTrailJson", type: "string", size: 8000, required: false },
+			{ key: "calendarEventId", type: "string", size: 64, required: false },
 			{ key: "createdByUserId", type: "string", size: 64, required: true },
 		],
 		indexes: [
