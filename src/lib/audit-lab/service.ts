@@ -8,6 +8,7 @@ import { canAcceptEvidence } from "./evidence-merge";
 import {
 	enqueueSessionReminders,
 	notifySessionCancelled,
+	notifySessionCompleted,
 	notifySessionRescheduled,
 } from "./notifications";
 import { buildSessionReport } from "./reports";
@@ -166,6 +167,24 @@ export async function cancelReviewSession(actor: Actor, sessionId: string) {
 		id: session.$id,
 		label: session.title,
 	});
+	return { session };
+}
+
+export async function completeReviewSession(actor: Actor, sessionId: string) {
+	const existing = await getSession(actor.orgId, sessionId);
+	if (!existing) return { error: "I couldn't find that review session." };
+	if (existing.status === "cancelled") {
+		return { error: "A cancelled session can't be marked complete." };
+	}
+	if (existing.status === "completed" || existing.status === "report_ready") {
+		return { error: "That session is already complete." };
+	}
+	const { session } = await transitionSessionStatus(
+		actor,
+		sessionId,
+		"completed",
+	);
+	if (session) await notifySessionCompleted(session).catch(() => undefined);
 	return { session };
 }
 

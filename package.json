@@ -2,7 +2,7 @@
 	"name": "caalm-next",
 	"version": "0.1.0",
 	"private": true,
-	"packageManager": "pnpm@11.23.0",
+	"packageManager": "pnpm@12.21.0",
 	"engines": {
 		"node": "^18.18.0 || ^19.8.0 || >=20.0.0 <25.0.0"
 	},
