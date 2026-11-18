@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
 	Fragment,
 	useEffect,
@@ -46,6 +47,11 @@ import { InterviewScriptCanvas } from "@/components/audit-lab/InterviewScriptCan
 import { NewSessionDialog } from "@/components/audit-lab/NewSessionDialog";
 import { PracticeRoundPanel } from "@/components/audit-lab/PracticeRoundPanel";
 import { RescheduleSessionDialog } from "@/components/audit-lab/RescheduleSessionDialog";
+import {
+	profilesFromUsers,
+	SimulationDetailSheet,
+} from "@/components/audit-lab/SimulationDetailSheet";
+import { SimulationPhaseStepper } from "@/components/audit-lab/SimulationPhaseStepper";
 import { TrendChart } from "@/components/audit-lab/TrendChart";
 import { LoadError } from "@/components/LoadError";
 import {
@@ -108,6 +114,12 @@ import type {
 	OverviewActivity,
 	OverviewSuggestion,
 } from "@/lib/audit-lab/overview";
+import type { ScriptSection } from "@/lib/audit-lab/script-sections";
+import {
+	phaseIndex,
+	resolveSimulationPhase,
+	SIMULATION_PHASES,
+} from "@/lib/audit-lab/simulation-phase";
 import {
 	type EvidenceRequest,
 	parseParticipants,
@@ -117,6 +129,20 @@ import {
 import { toUserFacingErrorMessage } from "@/lib/errors/user-facing";
 import { fetcher } from "@/lib/swr-config";
 import { cn, resolveAvatarDisplayUrl } from "@/lib/utils";
+
+/** Table cells: `Nov 24, 02:00 PM`. */
+function formatSessionDateTime(iso: string | null | undefined): string {
+	if (!iso) return "—";
+	const date = new Date(iso);
+	if (Number.isNaN(date.getTime())) return "—";
+	return date.toLocaleString("en-US", {
+		month: "short",
+		day: "numeric",
+		hour: "2-digit",
+		minute: "2-digit",
+		hour12: true,
+	});
+}
 
 type OverviewPayload = {
 	stats?: {
@@ -486,6 +512,7 @@ export function AuditLabClient({
 	const canScore = capabilities.canScorePractice;
 
 	const { toast } = useToast();
+	const searchParams = useSearchParams();
 	const [selectedId, setSelectedId] = useState<string | null>(null);
 	const [cancelOpen, setCancelOpen] = useState(false);
 	const [cancelIsBulk, setCancelIsBulk] = useState(false);
@@ -495,6 +522,8 @@ export function AuditLabClient({
 	const [rescheduleOpen, setRescheduleOpen] = useState(false);
 	const [completeOpen, setCompleteOpen] = useState(false);
 	const [newOpen, setNewOpen] = useState(false);
+	const [detailOpen, setDetailOpen] = useState(false);
+	const [detailSessionId, setDetailSessionId] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
 	const [evidenceGroup, setEvidenceGroup] = useState<
 		"department" | "owner" | "assignee"
@@ -525,6 +554,7 @@ export function AuditLabClient({
 	const { data, error, isLoading, mutate } = useSWR<{ data?: OverviewPayload }>(
 		overviewUrl,
 		fetcher,
+		{ refreshInterval: detailOpen ? 8_000 : 0 },
 	);
 
 	const payload = data?.data;
@@ -580,6 +610,8 @@ export function AuditLabClient({
 				fullName?: string;
 				avatar?: string | null;
 				profileImageId?: string | null;
+				department?: string | null;
+				division?: string | null;
 			}>;
 			return Array.isArray(users) ? users : [];
 		},
@@ -598,6 +630,28 @@ export function AuditLabClient({
 		}
 		return map;
 	}, [participantProfiles]);
+
+	const sheetProfilesByUserId = useMemo(
+		() => profilesFromUsers(participantProfiles ?? []),
+		[participantProfiles],
+	);
+
+	const detailSession =
+		sessions.find((s) => s.$id === detailSessionId) ??
+		upcomingItems.find((s) => s.$id === detailSessionId) ??
+		null;
+
+	function openSimulationDetail(sessionId: string) {
+		setDetailSessionId(sessionId);
+		setDetailOpen(true);
+	}
+
+	// Open builder deep-link: /audit-lab/interview?sessionId=…
+	useEffect(() => {
+		if (surface !== "interview") return;
+		const fromQuery = searchParams.get("sessionId");
+		if (fromQuery) setSelectedId(fromQuery);
+	}, [surface, searchParams]);
 
 	const { data: bankData, mutate: mutateBank } = useSWR<{
 		data?: {
@@ -1617,9 +1671,15 @@ export function AuditLabClient({
 																	className="grid grid-cols-[minmax(0,calc(50%-2.5rem))_4rem_6rem_1fr] items-center gap-2 py-3 first:pt-0 last:pb-0"
 																>
 																	<div className="min-w-0 pr-2">
-																		<p className="truncate text-sm font-semibold text-slate-800">
+																		<button
+																			type="button"
+																			className="block w-full cursor-pointer truncate text-left text-sm font-semibold text-slate-800 hover:text-[#0f5384]"
+																			onClick={() =>
+																				openSimulationDetail(session.$id)
+																			}
+																		>
 																			{session.title}
-																		</p>
+																		</button>
 																		<p className="truncate text-xs text-slate-500">
 																			{session.department}
 																			{session.framework
@@ -1858,6 +1918,11 @@ export function AuditLabClient({
 														active={sessionSort.key === "scheduled"}
 														onClick={() => toggleSessionSort("scheduled")}
 													/>
+													<TableHead
+														className={cn(DATA_TABLE_HEADER_CELL, "px-5")}
+													>
+														Prep deadline
+													</TableHead>
 													<SortableDataTableHead
 														label="Readiness"
 														active={sessionSort.key === "readiness"}
@@ -1892,6 +1957,7 @@ export function AuditLabClient({
 																"group bg-transparent",
 																isSelected && "bg-blue/10 hover:bg-blue/10",
 															)}
+															onClick={() => openSimulationDetail(session.$id)}
 														>
 															<TableCell
 																className="px-4 py-3 pl-4 pr-2 align-middle"
@@ -1910,12 +1976,9 @@ export function AuditLabClient({
 																/>
 															</TableCell>
 															<TableCell className="px-5 py-3 align-middle">
-																<Link
-																	href={`/audit-lab/sessions/${session.$id}`}
-																	className="font-medium text-sm text-slate-800 hover:text-[#0f5384]"
-																>
+																<span className="font-medium text-sm text-slate-800">
 																	{session.title}
-																</Link>
+																</span>
 																<p className="text-xs text-slate-500">
 																	{session.department}
 																</p>
@@ -2005,7 +2068,10 @@ export function AuditLabClient({
 																)}
 															</TableCell>
 															<TableCell className="px-5 py-3 align-middle text-sm text-slate-600">
-																{session.scheduledAt ?? "—"}
+																{formatSessionDateTime(session.scheduledAt)}
+															</TableCell>
+															<TableCell className="px-5 py-3 align-middle text-sm text-slate-600">
+																{formatSessionDateTime(session.prepDeadlineAt)}
 															</TableCell>
 															<TableCell className="px-5 py-3 align-middle">
 																<div
@@ -2224,18 +2290,64 @@ export function AuditLabClient({
 								) : null}
 							</div>
 							{selected ? (
-								<InterviewScriptCanvas
-									key={`${selected.$id}-${bankData?.data?.version ?? 0}-${bankData?.data?.questions?.length ?? 0}`}
-									sessionId={selected.$id}
-									questions={bankData?.data?.questions ?? []}
-									initialItemsJson={bankData?.data?.script?.itemsJson}
-									initialVersion={
-										bankData?.data?.version ??
-										bankData?.data?.script?.version ??
-										0
-									}
-									canEdit={canManageSessions}
-								/>
+								<div className="grid gap-4 lg:grid-cols-[12rem_minmax(0,1fr)]">
+									<div className="rounded-lg border border-slate-200/80 bg-white/70 p-4">
+										<p className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+											Phases
+										</p>
+										<SimulationPhaseStepper
+											currentPhase={resolveSimulationPhase(selected)}
+										/>
+										{canManageSessions ? (
+											<Button
+												type="button"
+												className="btn-primary mt-3 w-full!"
+												disabled={
+													busy ||
+													phaseIndex(resolveSimulationPhase(selected)) >=
+														SIMULATION_PHASES.length - 1
+												}
+												onClick={async () => {
+													const current = resolveSimulationPhase(selected);
+													const next =
+														SIMULATION_PHASES[
+															phaseIndex(current) + 1
+														] as ScriptSection | undefined;
+													if (!next) return;
+													setBusy(true);
+													try {
+														await patchSession(selected.$id, {
+															action: "set_phase",
+															phase: next,
+														});
+														await mutate();
+													} catch (err) {
+														onError(
+															err,
+															"I couldn't advance that simulation phase.",
+														);
+													} finally {
+														setBusy(false);
+													}
+												}}
+											>
+												Advance phase
+											</Button>
+										) : null}
+									</div>
+									<InterviewScriptCanvas
+										key={`${selected.$id}-${bankData?.data?.version ?? 0}-${bankData?.data?.questions?.length ?? 0}`}
+										sessionId={selected.$id}
+										questions={bankData?.data?.questions ?? []}
+										initialItemsJson={bankData?.data?.script?.itemsJson}
+										initialVersion={
+											bankData?.data?.version ??
+											bankData?.data?.script?.version ??
+											0
+										}
+										canEdit={canManageSessions}
+									/>
+								</div>
 							) : (
 								<p className="text-sm text-slate-500">
 									Schedule a simulation before building an interview script.
@@ -2408,6 +2520,7 @@ export function AuditLabClient({
 			<NewSessionDialog
 				open={newOpen}
 				onOpenChange={setNewOpen}
+				existingSessions={sessions}
 				onSubmit={async (body) => {
 					const json = await postJson("/api/audit-lab/sessions", body);
 					const created = json.data as ReviewSession | undefined;
@@ -2508,6 +2621,20 @@ export function AuditLabClient({
 					} catch (err) {
 						onError(err, "I couldn't mark that simulation complete.");
 					}
+				}}
+			/>
+
+			<SimulationDetailSheet
+				session={detailSession}
+				open={detailOpen}
+				onOpenChange={setDetailOpen}
+				profilesByUserId={sheetProfilesByUserId}
+				canManage={canManageSessions}
+				onReschedule={() => {
+					if (!detailSession) return;
+					setSelectedId(detailSession.$id);
+					setDetailOpen(false);
+					setRescheduleOpen(true);
 				}}
 			/>
 		</AuditLabShell>

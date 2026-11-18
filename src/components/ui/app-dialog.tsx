@@ -1,6 +1,6 @@
 "use client";
 
-import { X } from "lucide-react";
+import { ChevronLeft, X } from "lucide-react";
 import type { ReactNode } from "react";
 import {
 	AlertDialog,
@@ -14,6 +14,7 @@ import {
 	DialogDescription,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import { DIALOG_BACK_BTN_CLASS } from "@/components/ui/dialog-back";
 import { cn } from "@/lib/utils";
 
 export type AppDialogSize = "confirm" | "form";
@@ -29,6 +30,8 @@ export function AppDialog({
 	size = "confirm",
 	pending = false,
 	headerBorder = true,
+	onBack,
+	backLabel = "Back",
 	children,
 	footer,
 	footerClassName,
@@ -45,6 +48,9 @@ export function AppDialog({
 	pending?: boolean;
 	/** When false, skips the rule under the header (summary blocks supply their own edge). */
 	headerBorder?: boolean;
+	/** When set, shows ChevronLeft + Back above the icon/title row (never in the footer). */
+	onBack?: () => void;
+	backLabel?: string;
 	children?: ReactNode;
 	footer?: ReactNode;
 	footerClassName?: string;
@@ -61,13 +67,45 @@ export function AppDialog({
 	const descriptionClassName =
 		"mt-1 pl-11 text-[13px] leading-[1.55] text-slate-500";
 
+	const closeButton = (
+		<button
+			type="button"
+			className={cn(
+				"flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-slate-500 transition-colors duration-200",
+				"hover:bg-black/[.05] hover:text-slate-700",
+				"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
+				"disabled:pointer-events-none disabled:opacity-50",
+			)}
+			aria-label="Close"
+			disabled={pending}
+			onClick={() => handleOpenChange(false)}
+		>
+			<X className="h-4 w-4" />
+		</button>
+	);
+
 	const header = (
 		<div
 			className={cn(
-				"flex shrink-0 flex-col px-6 pb-4 pt-[22px] pr-12",
+				"flex shrink-0 flex-col px-6 pb-4",
+				onBack ? "pt-1" : "pt-[22px] pr-12",
 				headerBorder && "border-b border-slate-200",
 			)}
 		>
+			{onBack ? (
+				<div className="mb-2 flex h-8 items-center justify-between gap-3">
+					<button
+						type="button"
+						onClick={onBack}
+						disabled={pending}
+						className={DIALOG_BACK_BTN_CLASS}
+					>
+						<ChevronLeft className="h-[15px] w-[15px]" aria-hidden />
+						{backLabel}
+					</button>
+					{closeButton}
+				</div>
+			) : null}
 			<div className="flex items-center gap-2.5">
 				<div
 					className={cn(
@@ -126,29 +164,22 @@ export function AppDialog({
 		</div>
 	);
 
-	const closeButton = (
-		<button
-			type="button"
-			className={cn(
-				"absolute right-4 top-5 z-20 flex h-7 w-7 cursor-pointer items-center justify-center rounded-md text-slate-500 transition-colors duration-200",
-				"hover:bg-black/[.05] hover:text-slate-700",
-				"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40",
-				"disabled:pointer-events-none disabled:opacity-50",
-			)}
-			aria-label="Close"
-			disabled={pending}
-			onClick={() => handleOpenChange(false)}
-		>
-			<X className="h-4 w-4" />
-		</button>
-	);
-
 	const panel = (
 		<>
-			{closeButton}
+			{onBack ? null : (
+				<div className="absolute right-4 top-5 z-20">{closeButton}</div>
+			)}
 			{header}
 			{children ? (
-				<div className="min-h-0 flex-1 overflow-y-auto px-6">{children}</div>
+				<div
+					className={cn(
+						"min-h-0 flex-1 overflow-y-auto px-6",
+						// Match header `pb-4` so space above/below the divider stays even.
+						headerBorder && "pt-4",
+					)}
+				>
+					{children}
+				</div>
 			) : null}
 			{footer ? (
 				<div

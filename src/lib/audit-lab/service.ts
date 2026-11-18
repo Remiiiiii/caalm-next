@@ -2,10 +2,12 @@ import { listFindings } from "@/lib/audit-upload/store";
 import { logAuditEvent } from "@/lib/services/audit-logger";
 import {
 	markSessionCalendarEventCancelled,
+	syncPrepDeadlineCalendarEvent,
 	syncSessionCalendarEvent,
 } from "./calendar-sync";
 import { canAcceptEvidence } from "./evidence-merge";
 import {
+	enqueuePrepDeadlineReminders,
 	enqueueSessionReminders,
 	notifySessionCancelled,
 	notifySessionCompleted,
@@ -34,7 +36,16 @@ import {
 } from "./repository";
 import { followUpForVagueAnswer } from "./roleplay";
 import { applyPracticeScore } from "./score";
-import { emptyCanvas, serializeScriptItems } from "./script-sections";
+import {
+	emptyCanvas,
+	type ScriptSection,
+	serializeScriptItems,
+} from "./script-sections";
+import {
+	isSimulationPhase,
+	SIMULATION_PHASE_LABELS,
+	writeSimulationPhaseToTrail,
+} from "./simulation-phase";
 import {
 	EVIDENCE_STATUSES,
 	type EvidenceStatus,
@@ -86,23 +97,59 @@ export async function scheduleReviewSession(
 		title?: string;
 		department: string;
 		scheduledAt?: string;
+		prepDeadlineAt?: string;
 		durationMinutes?: number;
 		framework?: string;
+		participants?: Array<{
+			userId: string;
+			name?: string;
+			email?: string;
+			role?: string;
+		}>;
 	},
 ) {
 	const department = input.department.trim();
 	if (!department) {
 		return { error: "Give a department for the review session." };
 	}
+	if (input.prepDeadlineAt && input.scheduledAt) {
+		const prepMs = Date.parse(input.prepDeadlineAt);
+		const startMs = Date.parse(input.scheduledAt);
+		if (
+			!Number.isNaN(prepMs) &&
+			!Number.isNaN(startMs) &&
+			prepMs > startMs
+		) {
+			return {
+				error: "Prep deadline must be on or before the scheduled start.",
+			};
+		}
+	}
+	const participantsJson = JSON.stringify(
+		(input.participants ?? [])
+			.filter((p) => p.userId?.trim())
+			.map((p) => ({
+				userId: p.userId.trim(),
+				name: p.name?.trim() || undefined,
+				email: p.email?.trim() || undefined,
+				role: p.role === "facilitator" ||
+					p.role === "mock_auditor" ||
+					p.role === "observer" ||
+					p.role === "interviewee"
+					? p.role
+					: "interviewee",
+			})),
+	);
 	let session = await createSessionRow({
 		orgId: actor.orgId,
 		title: (input.title || `${department} mock audit`).trim(),
 		department,
 		framework: input.framework?.trim() || "SOC 2",
 		scheduledAt: input.scheduledAt,
+		prepDeadlineAt: input.prepDeadlineAt,
 		durationMinutes: input.durationMinutes ?? 60,
 		status: input.scheduledAt ? "scheduled" : "draft",
-		participantsJson: "[]",
+		participantsJson,
 		createdByUserId: actor.userId,
 	});
 	await audit(actor, "create", `Scheduled review session ${session.title}`, {
@@ -114,7 +161,13 @@ export async function scheduleReviewSession(
 	if (calendarEventId) {
 		session = await updateSessionRow(session.$id, { calendarEventId });
 	}
+	const { session: withPrepCal } = await syncPrepDeadlineCalendarEvent(
+		actor,
+		session,
+	);
+	session = withPrepCal;
 	await enqueueSessionReminders(session).catch(() => undefined);
+	await enqueuePrepDeadlineReminders(session).catch(() => undefined);
 	return { session };
 }
 
@@ -185,6 +238,40 @@ export async function completeReviewSession(actor: Actor, sessionId: string) {
 		"completed",
 	);
 	if (session) await notifySessionCompleted(session).catch(() => undefined);
+	return { session };
+}
+
+/** Persist the active interview phase shared by Detail sheet + Interview Builder. */
+export async function setSimulationPhase(
+	actor: Actor,
+	sessionId: string,
+	phase: string,
+) {
+	if (!isSimulationPhase(phase)) {
+		return { error: "Pick a valid simulation phase." };
+	}
+	const existing = await getSession(actor.orgId, sessionId);
+	if (!existing) return { error: "I couldn't find that simulation." };
+	if (existing.status === "cancelled") {
+		return { error: "That simulation is cancelled." };
+	}
+	const nextPhase = phase as ScriptSection;
+	const session = await updateSessionRow(sessionId, {
+		auditTrailJson: writeSimulationPhaseToTrail(
+			existing.auditTrailJson,
+			nextPhase,
+		),
+	});
+	await audit(
+		actor,
+		"update",
+		`Set ${session.title} phase to ${SIMULATION_PHASE_LABELS[nextPhase]}`,
+		{
+			type: "review_session",
+			id: session.$id,
+			label: session.title,
+		},
+	);
 	return { session };
 }
 

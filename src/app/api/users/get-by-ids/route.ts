@@ -20,6 +20,27 @@ function getProfileImageId(user: {
 	return user.profileImageId || null;
 }
 
+function toPublicUser(user: {
+	$id: string;
+	accountId?: string | null;
+	fullName?: string | null;
+	email?: string | null;
+	avatar?: string | null;
+	profileImageId?: string | null;
+	department?: string | null;
+	division?: string | null;
+}) {
+	return {
+		$id: user.$id,
+		accountId: user.accountId,
+		fullName: user.fullName,
+		email: user.email,
+		profileImageId: getProfileImageId(user),
+		department: user.department ?? null,
+		division: user.division ?? null,
+	};
+}
+
 /**
  * Fetch a single user by ID, accountId, or fullName with caching
  */
@@ -48,13 +69,7 @@ async function fetchUserByIdentifier(
 			});
 
 			if (user) {
-				const userData = {
-					$id: user.$id,
-					accountId: user.accountId,
-					fullName: user.fullName,
-					email: user.email,
-					profileImageId: getProfileImageId(user),
-				};
+				const userData = toPublicUser(user);
 
 				// Cache by all identifiers for future lookups
 				const ttl = getTTLForRoute("users/get-by-ids");
@@ -90,13 +105,7 @@ async function fetchUserByIdentifier(
 
 			if (accountIdResponse.rows && accountIdResponse.rows.length > 0) {
 				const user = accountIdResponse.rows[0];
-				const userData = {
-					$id: user.$id,
-					accountId: user.accountId,
-					fullName: user.fullName,
-					email: user.email,
-					profileImageId: getProfileImageId(user),
-				};
+				const userData = toPublicUser(user);
 
 				// Cache by all identifiers
 				const ttl = getTTLForRoute("users/get-by-ids");
@@ -132,13 +141,7 @@ async function fetchUserByIdentifier(
 
 			if (nameResponse.rows && nameResponse.rows.length > 0) {
 				const user = nameResponse.rows[0];
-				const userData = {
-					$id: user.$id,
-					accountId: user.accountId,
-					fullName: user.fullName,
-					email: user.email,
-					profileImageId: getProfileImageId(user),
-				};
+				const userData = toPublicUser(user);
 
 				// Cache by all identifiers
 				const ttl = getTTLForRoute("users/get-by-ids");

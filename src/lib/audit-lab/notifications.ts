@@ -49,6 +49,63 @@ export async function enqueueSessionReminders(session: ReviewSession) {
 	return { sent };
 }
 
+function formatDeadlineDay(iso: string): string {
+	const ms = Date.parse(iso);
+	if (Number.isNaN(ms)) return iso;
+	return new Date(ms).toLocaleDateString("en-US", {
+		month: "short",
+		day: "numeric",
+		year: "numeric",
+	});
+}
+
+/**
+ * Puts the prep deadline on the notification feed for the creator and any
+ * participants. When the deadline is within 7 days, uses deadline-approaching.
+ */
+export async function enqueuePrepDeadlineReminders(session: ReviewSession) {
+	if (!session.prepDeadlineAt) return { sent: 0 };
+	const deadlineMs = Date.parse(session.prepDeadlineAt);
+	if (Number.isNaN(deadlineMs)) return { sent: 0 };
+
+	const daysUntil = Math.ceil((deadlineMs - Date.now()) / 86_400_000);
+	if (daysUntil < 0) return { sent: 0 };
+
+	const userIds = new Set<string>();
+	if (session.createdByUserId) userIds.add(session.createdByUserId);
+	for (const participant of parseParticipants(session.participantsJson)) {
+		if (participant.userId) userIds.add(participant.userId);
+	}
+	if (userIds.size === 0) return { sent: 0 };
+
+	const approaching = daysUntil <= 7;
+	const when = formatDeadlineDay(session.prepDeadlineAt);
+	let sent = 0;
+
+	for (const userId of userIds) {
+		try {
+			await createNotification({
+				userId,
+				title: approaching
+					? `Prep deadline approaching: ${session.title}`
+					: `Prep deadline set: ${session.title}`,
+				message: approaching
+					? `Prep for "${session.title}" is due on ${when} (${daysUntil} day${daysUntil === 1 ? "" : "s"} left).`
+					: `Prep for "${session.title}" is due on ${when}. A calendar deadline event was added.`,
+				type: approaching ? "deadline-approaching" : "info",
+				actionUrl: `/audit-lab/sessions/${session.$id}`,
+				actionText: "Open simulation",
+				triggerType: "scheduled",
+			});
+			sent += 1;
+		} catch {
+			/* best effort */
+		}
+	}
+
+	return { sent };
+}
+
 /** Unambiguous reschedule notice: `Nov 18, 2026, 10:00 AM` (never raw ISO). */
 function formatRescheduledTime(iso?: string): string {
 	if (!iso) return "a new time";

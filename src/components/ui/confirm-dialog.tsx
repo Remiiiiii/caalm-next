@@ -15,6 +15,7 @@ import {
 } from "@/lib/auth/step-up-prompt";
 import { cn } from "@/lib/utils";
 import { Button } from "./button";
+import { DIALOG_CANCEL_BTN_CLASS } from "./dialog-cancel";
 
 export type ConfirmDialogSummaryRow = StepUpSummaryRow;
 
@@ -224,7 +225,7 @@ export function ConfirmDialog({
 							<Button
 								type="button"
 								variant="ghost"
-								className="h-[1.65rem] justify-center rounded-full px-3 py-1.5 text-slate-400 hover:bg-black/[.04] hover:text-slate-600"
+								className={DIALOG_CANCEL_BTN_CLASS}
 								disabled={busy}
 								autoFocus={isDanger}
 								onClick={() => handleOpenChange(false)}

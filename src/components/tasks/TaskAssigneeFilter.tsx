@@ -23,8 +23,9 @@ import {
 } from "./task-filter-pill";
 import type { TaskPerson } from "./task-ui";
 
+/** Matches department `SelectTrigger` / `glass-form-control` field shape. */
 const FIELD_TRIGGER =
-	"flex h-8 w-full cursor-pointer items-center justify-between gap-2 rounded-md border-[0.25px] border-slate-300 bg-white px-2.5 text-sm font-medium text-slate-700 hover:border-blue-300 focus-visible:outline-none focus-visible:border-[#078FAB] disabled:cursor-not-allowed disabled:opacity-50";
+	"glass-form-control flex h-10 w-full cursor-pointer items-center justify-between gap-2 rounded-md border-[0.25px] border-slate-300 bg-white px-3 py-2 text-left text-sm font-normal text-slate-700 shadow-md hover:border-blue-300 focus-visible:outline-none focus-visible:border-[#078FAB] focus-visible:ring-1 focus-visible:ring-[#078FAB] disabled:cursor-not-allowed disabled:opacity-50";
 
 function parseCsvIds(value: string): string[] {
 	return value
@@ -222,10 +223,8 @@ export function TaskAssigneeFilter({
 	const isAll = mode === "filter" && (!value || value === "all");
 	const isDock = variant === "dock";
 	const isField = variant === "field";
-	const fieldPanel =
-		"z-[100] border-slate-200 bg-white shadow-lg backdrop-blur-none";
-	const menuWidth = isField ? "w-[13.5rem]" : "w-72";
-	const subWidth = isField ? "w-[13.5rem]" : "w-56";
+	const menuWidth = isField ? "w-[var(--radix-dropdown-menu-trigger-width)] min-w-[16rem]" : "w-72";
+	const subWidth = isField ? "w-56" : "w-56";
 
 	return (
 		<DropdownMenu
@@ -270,11 +269,7 @@ export function TaskAssigneeFilter({
 			</DropdownMenuTrigger>
 			<DropdownMenuContent
 				align="start"
-				className={cn(
-					"overflow-x-hidden p-0",
-					menuWidth,
-					isField && fieldPanel,
-				)}
+				className={cn("overflow-x-hidden p-0", menuWidth)}
 			>
 				<div className="border-b border-slate-200/80 p-2">
 					<label className="flex h-9 items-center gap-2 rounded-md border-[0.25px] border-slate-300 bg-white px-2.5">
@@ -381,11 +376,7 @@ export function TaskAssigneeFilter({
 												</span>
 											</DropdownMenuSubTrigger>
 											<DropdownMenuSubContent
-												className={cn(
-													"overflow-hidden p-1",
-													subWidth,
-													isField && fieldPanel,
-												)}
+												className={cn("overflow-hidden p-1", subWidth)}
 											>
 												<DropdownScrollArea maxHeightClassName="max-h-64">
 													{dept.direct.map((p) => (
@@ -417,11 +408,7 @@ export function TaskAssigneeFilter({
 												</span>
 											</DropdownMenuSubTrigger>
 											<DropdownMenuSubContent
-												className={cn(
-													"overflow-hidden p-1",
-													subWidth,
-													isField && fieldPanel,
-												)}
+												className={cn("overflow-hidden p-1", subWidth)}
 											>
 												<DropdownScrollArea maxHeightClassName="max-h-72">
 													{dept.direct.map((p) => (
@@ -453,12 +440,11 @@ export function TaskAssigneeFilter({
 																</span>
 															</DropdownMenuSubTrigger>
 															<DropdownMenuSubContent
-												className={cn(
-													"overflow-hidden p-1",
-													subWidth,
-													isField && fieldPanel,
-												)}
-											>
+																className={cn(
+																	"overflow-hidden p-1",
+																	subWidth,
+																)}
+															>
 																<DropdownScrollArea maxHeightClassName="max-h-64">
 																	{div.people.map((p) => (
 																		<PersonRow

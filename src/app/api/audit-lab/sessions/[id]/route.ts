@@ -7,6 +7,7 @@ import {
 	completeReviewSession,
 	inviteParticipants,
 	rescheduleReviewSession,
+	setSimulationPhase,
 } from "@/lib/audit-lab/service";
 import type { SessionRole } from "@/lib/audit-lab/types";
 import { toUserFacingErrorMessage } from "@/lib/errors/user-facing";
@@ -42,8 +43,20 @@ export async function PATCH(
 			}>;
 			userId?: string;
 			role?: SessionRole;
+			phase?: string;
 		};
 		const action = String(body.action ?? "reschedule");
+		if (action === "set_phase") {
+			const result = await setSimulationPhase(
+				resolved.actor,
+				id,
+				String(body.phase ?? ""),
+			);
+			if (result.error) {
+				return NextResponse.json({ error: result.error }, { status: 400 });
+			}
+			return NextResponse.json({ data: result.session });
+		}
 		if (action === "reschedule") {
 			const result = await rescheduleReviewSession(
 				resolved.actor,
