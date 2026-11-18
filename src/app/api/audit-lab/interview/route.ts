@@ -5,7 +5,9 @@ import {
 	addQuestion,
 	generateInterviewScript,
 	generateQuestionBank,
+	generateQuestionsFromGaps,
 	importQuestionsFromFindings,
+	saveScriptAsTemplate,
 } from "@/lib/audit-lab/service";
 import { toUserFacingErrorMessage } from "@/lib/errors/user-facing";
 import { requirePermission } from "@/lib/rbac/middleware";
@@ -30,6 +32,8 @@ export async function POST(request: NextRequest) {
 			sessionId?: string;
 			prompt?: string;
 			difficulty?: string;
+			prompts?: string[];
+			source?: string;
 		};
 		const sessionId = String(body.sessionId ?? "");
 		const action = String(body.action ?? "generate_bank");
@@ -39,6 +43,7 @@ export async function POST(request: NextRequest) {
 				sessionId,
 				String(body.prompt ?? ""),
 				body.difficulty,
+				body.source,
 			);
 			if (result.error) {
 				return NextResponse.json({ error: result.error }, { status: 400 });
@@ -49,6 +54,24 @@ export async function POST(request: NextRequest) {
 			const result = await importQuestionsFromFindings(
 				resolved.actor,
 				sessionId,
+			);
+			if (result.error) {
+				return NextResponse.json({ error: result.error }, { status: 400 });
+			}
+			return NextResponse.json({ data: result });
+		}
+		if (action === "generate_from_gaps") {
+			const result = await generateQuestionsFromGaps(resolved.actor, sessionId);
+			if (result.error) {
+				return NextResponse.json({ error: result.error }, { status: 400 });
+			}
+			return NextResponse.json({ data: result });
+		}
+		if (action === "save_as_template") {
+			const result = await saveScriptAsTemplate(
+				resolved.actor,
+				sessionId,
+				Array.isArray(body.prompts) ? body.prompts.map(String) : [],
 			);
 			if (result.error) {
 				return NextResponse.json({ error: result.error }, { status: 400 });
