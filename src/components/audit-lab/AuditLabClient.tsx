@@ -10,11 +10,14 @@ import {
 	ChevronDown,
 	ClipboardList,
 	Clock,
+	Download,
 	Filter,
 	FunnelX,
 	Globe,
 	ListChecks,
+	Loader2,
 	Plus,
+	Sprout,
 	Star,
 } from "lucide-react";
 import Image from "next/image";
@@ -80,6 +83,7 @@ import {
 	AppDropdownMenuContent,
 	AppDropdownMenuItem,
 	DropdownMenu,
+	DropdownMenuItem,
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
@@ -494,6 +498,34 @@ function AuditLabOverviewSkeleton() {
 	);
 }
 
+/** Generic loading placeholder for every non-overview surface (sessions, interview, evidence, reports). */
+function AuditLabSurfaceSkeleton() {
+	return (
+		<div className="space-y-4">
+			<div className="flex flex-wrap items-center gap-3">
+				<Skeleton className="h-[1.55rem] w-56 rounded-full" />
+				<Skeleton className="h-[1.55rem] w-32 rounded-full" />
+				<Skeleton className="ml-auto h-8 w-32 rounded-full" />
+			</div>
+			<Card className="glass-card">
+				<div className="glass-card-cap" />
+				<CardContent className="space-y-3 p-4 sm:p-6">
+					{Array.from({ length: 5 }, (_, i) => (
+						<div key={i} className="flex items-center gap-3">
+							<Skeleton className="h-9 w-9 shrink-0 rounded-full" />
+							<div className="flex-1 space-y-1.5">
+								<Skeleton className="h-3.5 w-1/3" />
+								<Skeleton className="h-3 w-1/2" />
+							</div>
+							<Skeleton className="h-5 w-20 rounded-full" />
+						</div>
+					))}
+				</CardContent>
+			</Card>
+		</div>
+	);
+}
+
 export function AuditLabClient({
 	surface,
 	capabilities: initialCapabilities,
@@ -522,9 +554,7 @@ export function AuditLabClient({
 	const [rescheduleOpen, setRescheduleOpen] = useState(false);
 	const [completeOpen, setCompleteOpen] = useState(false);
 	const [newOpen, setNewOpen] = useState(false);
-	const [detailOpen, setDetailOpen] = useState(false);
-	const [detailSessionId, setDetailSessionId] = useState<string | null>(null);
-	const [busy, setBusy] = useState(false);
+	const [busyAction, setBusyAction] = useState<string | null>(null);
 	const [evidenceGroup, setEvidenceGroup] = useState<
 		"department" | "owner" | "assignee"
 	>("department");
@@ -1183,12 +1213,7 @@ export function AuditLabClient({
 				surface === "overview" ? (
 					<AuditLabOverviewSkeleton />
 				) : (
-					<Card className="glass-card">
-						<div className="glass-card-cap" />
-						<CardContent className="p-4 sm:p-6 text-slate-600">
-							Loading…
-						</CardContent>
-					</Card>
+					<AuditLabSurfaceSkeleton />
 				)
 			) : (
 				<>
@@ -2207,86 +2232,157 @@ export function AuditLabClient({
 
 					{surface === "interview" ? (
 						<div className="space-y-4">
-							<div className="flex flex-wrap items-center gap-3">
-								<select
-									className="h-9 rounded-md border border-slate-300 bg-white px-2 text-sm"
-									value={selected?.$id ?? ""}
-									onChange={(e) => setSelectedId(e.target.value)}
-									aria-label="Simulation for interview"
-								>
-									{sessions.map((s) => (
-										<option key={s.$id} value={s.$id}>
-											{s.title}
-										</option>
-									))}
-								</select>
+							<div className="flex flex-wrap items-center justify-between gap-3">
+								<DropdownMenu>
+									<DropdownMenuTrigger asChild>
+										<button
+											type="button"
+											aria-label="Simulation for interview"
+											className={FILTER_PILL_TRIGGER}
+										>
+											<span className="max-w-[200px] truncate">
+												{selected?.title ?? "Choose a simulation"}
+											</span>
+											<ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+										</button>
+									</DropdownMenuTrigger>
+									<AppDropdownMenuContent align="start" className="w-64 p-1">
+										<DropdownMenuLabel className="sidebar-gradient-text">
+											Simulations
+										</DropdownMenuLabel>
+										{sessions.map((s) => (
+											<DropdownMenuItem
+												key={s.$id}
+												onSelect={() => setSelectedId(s.$id)}
+											>
+												{s.title}
+											</DropdownMenuItem>
+										))}
+									</AppDropdownMenuContent>
+								</DropdownMenu>
 								{canManageSessions && selected ? (
-									<>
+									<div className="flex flex-wrap items-center gap-2">
 										<Button
 											type="button"
 											className="btn-primary"
-											disabled={busy}
+											disabled={busyAction !== null}
 											onClick={async () => {
-												setBusy(true);
+												setBusyAction("generate_bank");
 												try {
-													await postJson("/api/audit-lab/interview", {
-														action: "generate_bank",
-														sessionId: selected.$id,
-													});
+													const json = await postJson(
+														"/api/audit-lab/interview",
+														{
+															action: "generate_bank",
+															sessionId: selected.$id,
+														},
+													);
 													await mutateBank();
+													const count = ((
+														json.data as { questions?: unknown[] } | undefined
+													)?.questions?.length ?? 0) as number;
+													toast({
+														title: "Question bank",
+														description:
+															count > 0
+																? `Added ${count} new question${count === 1 ? "" : "s"}.`
+																: "No new template questions to add.",
+													});
 												} catch (err) {
 													onError(err, "I couldn't generate questions.");
 												} finally {
-													setBusy(false);
+													setBusyAction(null);
 												}
 											}}
 										>
-											<ClipboardList className="h-4 w-4" />
-											Generate questions
+											{busyAction === "generate_bank" ? (
+												<Loader2 className="h-4 w-4 animate-spin" />
+											) : (
+												<ClipboardList className="h-4 w-4" />
+											)}
+											{busyAction === "generate_bank"
+												? "Generating questions…"
+												: "Generate questions"}
 										</Button>
 										<Button
 											type="button"
-											variant="outline"
-											disabled={busy}
+											className="btn-primary"
+											disabled={busyAction !== null}
 											onClick={async () => {
-												setBusy(true);
+												setBusyAction("import_findings");
 												try {
-													await postJson("/api/audit-lab/interview", {
-														action: "import_findings",
-														sessionId: selected.$id,
-													});
+													const json = await postJson(
+														"/api/audit-lab/interview",
+														{
+															action: "import_findings",
+															sessionId: selected.$id,
+														},
+													);
 													await mutateBank();
+													const count = ((
+														json.data as { questions?: unknown[] } | undefined
+													)?.questions?.length ?? 0) as number;
+													toast({
+														title: "Findings",
+														description:
+															count > 0
+																? `Imported ${count} question${count === 1 ? "" : "s"} from findings.`
+																: "No new findings to import.",
+													});
 												} catch (err) {
 													onError(err, "I couldn't import findings.");
 												} finally {
-													setBusy(false);
+													setBusyAction(null);
 												}
 											}}
 										>
-											Import findings
+											{busyAction === "import_findings" ? (
+												<Loader2
+													className="h-3.5 w-3.5 animate-spin"
+													aria-hidden
+												/>
+											) : (
+												<Download className="h-3.5 w-3.5" aria-hidden />
+											)}
+											{busyAction === "import_findings"
+												? "Importing findings…"
+												: "Import findings"}
 										</Button>
 										<Button
 											type="button"
-											variant="outline"
-											disabled={busy}
+											className="btn-primary"
+											disabled={busyAction !== null}
 											onClick={async () => {
-												setBusy(true);
+												setBusyAction("script");
 												try {
 													await postJson("/api/audit-lab/interview", {
 														action: "script",
 														sessionId: selected.$id,
 													});
 													await mutateBank();
+													toast({
+														title: "Script",
+														description: "Seeded a new script version.",
+													});
 												} catch (err) {
 													onError(err, "I couldn't build the script.");
 												} finally {
-													setBusy(false);
+													setBusyAction(null);
 												}
 											}}
 										>
-											Seed script
+											{busyAction === "script" ? (
+												<Loader2
+													className="h-3.5 w-3.5 animate-spin"
+													aria-hidden
+												/>
+											) : (
+												<Sprout className="h-3.5 w-3.5" aria-hidden />
+											)}
+											{busyAction === "script"
+												? "Seeding script…"
+												: "Seed script"}
 										</Button>
-									</>
+									</div>
 								) : null}
 							</div>
 							{selected ? (
@@ -2346,8 +2442,14 @@ export function AuditLabClient({
 											0
 										}
 										canEdit={canManageSessions}
-									/>
-								</div>
+										isLoadingBank={!bankData}
+									  initialAiBannerDismissedSignature={
+										selected.aiBannerDismissedSignature
+									}
+									onDismissAiBanner={() => void mutate()}
+									onQuestionsChanged={() => void mutateBank()}
+								/>
+                  </div>
 							) : (
 								<p className="text-sm text-slate-500">
 									Schedule a simulation before building an interview script.
@@ -2366,24 +2468,40 @@ export function AuditLabClient({
 									<Button
 										type="button"
 										className="btn-primary px-3 sm:px-4"
-										disabled={busy}
+										disabled={busyAction !== null}
 										onClick={async () => {
-											setBusy(true);
+											setBusyAction("generate_evidence");
 											try {
-												await postJson("/api/audit-lab/evidence", {
+												const json = await postJson("/api/audit-lab/evidence", {
 													action: "generate",
 													sessionId: selected.$id,
 												});
 												await mutate();
+												const count = ((
+													json.data as { created?: unknown[] } | undefined
+												)?.created?.length ?? 0) as number;
+												toast({
+													title: "Evidence list",
+													description:
+														count > 0
+															? `Added ${count} evidence request${count === 1 ? "" : "s"}.`
+															: "Evidence list is already up to date.",
+												});
 											} catch (err) {
 												onError(err, "I couldn't generate the evidence list.");
 											} finally {
-												setBusy(false);
+												setBusyAction(null);
 											}
 										}}
 									>
-										<ListChecks className="h-4 w-4" />
-										Generate evidence list
+										{busyAction === "generate_evidence" ? (
+											<Loader2 className="h-4 w-4 animate-spin" />
+										) : (
+											<ListChecks className="h-4 w-4" />
+										)}
+										{busyAction === "generate_evidence"
+											? "Generating evidence list…"
+											: "Generate evidence list"}
 									</Button>
 								) : null}
 								<SegmentedToggle

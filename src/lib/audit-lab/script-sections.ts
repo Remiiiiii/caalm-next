@@ -68,6 +68,65 @@ export function sectionMinutes(items: ScriptItem[]): number {
 	return items.reduce((sum, item) => sum + (item.minutes || 0), 0);
 }
 
+export const DEFAULT_SECTION_BUDGET_MINUTES: Record<ScriptSection, number> = {
+	opening: 5,
+	process: 25,
+	evidence: 10,
+	closing: 5,
+};
+
+export type ScriptDocument = {
+	sections: ScriptCanvas;
+	budgets: Record<ScriptSection, number>;
+};
+
+export function emptyScriptDocument(): ScriptDocument {
+	return {
+		sections: emptyCanvas(),
+		budgets: { ...DEFAULT_SECTION_BUDGET_MINUTES },
+	};
+}
+
+/** Reads the `{sections,budgets}` shape; falls back to the legacy bare-canvas/flat-array shape with default budgets. */
+export function parseScriptDocument(
+	itemsJson: string | undefined,
+): ScriptDocument {
+	if (!itemsJson) return emptyScriptDocument();
+	try {
+		const parsed = JSON.parse(itemsJson) as unknown;
+		if (
+			parsed &&
+			typeof parsed === "object" &&
+			!Array.isArray(parsed) &&
+			"sections" in parsed &&
+			"budgets" in parsed
+		) {
+			const obj = parsed as { sections: unknown; budgets: unknown };
+			const sections = parseScriptItems(JSON.stringify(obj.sections));
+			const budgetsRaw = (obj.budgets ?? {}) as Partial<
+				Record<ScriptSection, number>
+			>;
+			const budgets = { ...DEFAULT_SECTION_BUDGET_MINUTES };
+			for (const section of SCRIPT_SECTIONS) {
+				if (typeof budgetsRaw[section] === "number") {
+					budgets[section] = budgetsRaw[section] as number;
+				}
+			}
+			return { sections, budgets };
+		}
+	} catch {
+		return emptyScriptDocument();
+	}
+	return {
+		sections: parseScriptItems(itemsJson),
+		budgets: { ...DEFAULT_SECTION_BUDGET_MINUTES },
+	};
+}
+
+export function serializeScriptDocument(doc: ScriptDocument): string {
+	return JSON.stringify(doc);
+}
+
 export function placeQuestionInSection(
 	canvas: ScriptCanvas,
 	section: ScriptSection,

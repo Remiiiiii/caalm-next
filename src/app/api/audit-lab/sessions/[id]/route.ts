@@ -5,6 +5,7 @@ import {
 	assignSessionRole,
 	cancelReviewSession,
 	completeReviewSession,
+	dismissAiBanner,
 	inviteParticipants,
 	rescheduleReviewSession,
 	setSimulationPhase,
@@ -43,14 +44,14 @@ export async function PATCH(
 			}>;
 			userId?: string;
 			role?: SessionRole;
-			phase?: string;
+			signature?: string;
 		};
 		const action = String(body.action ?? "reschedule");
-		if (action === "set_phase") {
-			const result = await setSimulationPhase(
+		if (action === "dismiss_ai_banner") {
+			const result = await dismissAiBanner(
 				resolved.actor,
 				id,
-				String(body.phase ?? ""),
+				String(body.signature ?? ""),
 			);
 			if (result.error) {
 				return NextResponse.json({ error: result.error }, { status: 400 });

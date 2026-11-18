@@ -68,6 +68,7 @@ export type ReviewSession = {
 	linkedAuditDocIds?: string;
 	auditTrailJson?: string;
 	calendarEventId?: string;
+	aiBannerDismissedSignature?: string;
 	durationMinutes: number;
 	status: SessionStatus;
 	participantsJson: string;
@@ -85,11 +86,13 @@ export type ReviewQuestion = {
 	sourceFindingId?: string;
 	difficulty: string;
 	rubric?: string;
+	controlRef?: string;
 	createdByUserId: string;
 };
 
 export type ReviewScript = {
 	$id: string;
+	$createdAt?: string;
 	orgId: string;
 	sessionId: string;
 	version: number;

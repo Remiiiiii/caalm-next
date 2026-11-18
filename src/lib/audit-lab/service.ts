@@ -339,8 +339,12 @@ const TEMPLATE_QUESTIONS = [
 export async function generateQuestionBank(actor: Actor, sessionId: string) {
 	const existing = await getSession(actor.orgId, sessionId);
 	if (!existing) return { error: "I couldn't find that review session." };
+	const existingPrompts = new Set(
+		(await listQuestions(actor.orgId, sessionId)).map((q) => q.prompt.trim()),
+	);
 	const created = [];
 	for (const prompt of TEMPLATE_QUESTIONS) {
+		if (existingPrompts.has(prompt.trim())) continue;
 		created.push(
 			await createQuestionRow({
 				orgId: actor.orgId,
@@ -366,21 +370,32 @@ export async function generateQuestionBank(actor: Actor, sessionId: string) {
 	return { questions: created };
 }
 
+const MANUAL_QUESTION_SOURCES = [
+	"finding",
+	"readiness_gap",
+	"template",
+	"manual",
+];
+
 export async function addQuestion(
 	actor: Actor,
 	sessionId: string,
 	prompt: string,
 	difficulty = "medium",
+	source = "manual",
 ) {
 	const existing = await getSession(actor.orgId, sessionId);
 	if (!existing) return { error: "I couldn't find that review session." };
 	const trimmed = prompt.trim();
 	if (!trimmed) return { error: "Give a question prompt." };
+	const resolvedSource = MANUAL_QUESTION_SOURCES.includes(source)
+		? source
+		: "manual";
 	const question = await createQuestionRow({
 		orgId: actor.orgId,
 		sessionId,
 		prompt: trimmed,
-		source: "manual",
+		source: resolvedSource,
 		difficulty,
 		createdByUserId: actor.userId,
 	});
@@ -402,8 +417,14 @@ export async function importQuestionsFromFindings(
 	if (findings.length === 0) {
 		return { error: "No uploaded audit findings to import yet." };
 	}
+	const alreadyImported = new Set(
+		(await listQuestions(actor.orgId, sessionId))
+			.filter((q) => q.source === "finding" && q.sourceFindingId)
+			.map((q) => q.sourceFindingId),
+	);
 	const created = [];
 	for (const finding of findings) {
+		if (alreadyImported.has(finding.$id)) continue;
 		const title = finding.title || finding.description || "prior finding";
 		created.push(
 			await createQuestionRow({
@@ -476,6 +497,185 @@ export async function generateInterviewScript(actor: Actor, sessionId: string) {
 		},
 	);
 	return { script, items: canvas };
+}
+
+export async function generateQuestionsFromGaps(
+	actor: Actor,
+	sessionId: string,
+) {
+	const existing = await getSession(actor.orgId, sessionId);
+	if (!existing) return { error: "I couldn't find that review session." };
+	const gaps = (await listGaps(actor.orgId, sessionId)).filter(
+		(gap) => gap.status === "open",
+	);
+	if (gaps.length === 0) {
+		return { error: "No open readiness gaps to turn into questions yet." };
+	}
+	const existingPrompts = new Set(
+		(await listQuestions(actor.orgId, sessionId))
+			.filter((q) => q.source === "readiness_gap")
+			.map((q) => q.prompt.trim()),
+	);
+	const created = [];
+	for (const gap of gaps) {
+		const prompt = `A readiness gap flagged: ${gap.description}. Walk me through how that's handled now, and show me the record.`;
+		if (existingPrompts.has(prompt.trim())) continue;
+		created.push(
+			await createQuestionRow({
+				orgId: actor.orgId,
+				sessionId,
+				prompt,
+				source: "readiness_gap",
+				difficulty: "high",
+				rubric: "Honest unknown is acceptable; must name the next step.",
+				createdByUserId: actor.userId,
+			}),
+		);
+	}
+	await audit(
+		actor,
+		"create",
+		`Generated ${created.length} questions from readiness gaps`,
+		{
+			type: "review_session",
+			id: existing.$id,
+			label: existing.title,
+		},
+	);
+	return { questions: created };
+}
+
+/** Turns the prompts currently placed in a script into reusable template questions for this session. */
+export async function saveScriptAsTemplate(
+	actor: Actor,
+	sessionId: string,
+	prompts: string[],
+) {
+	const existing = await getSession(actor.orgId, sessionId);
+	if (!existing) return { error: "I couldn't find that review session." };
+	const unique = [...new Set(prompts.map((p) => p.trim()).filter(Boolean))];
+	if (unique.length === 0) {
+		return {
+			error: "The script is empty — add questions before saving a template.",
+		};
+	}
+	const existingQuestions = await listQuestions(actor.orgId, sessionId);
+	const existingTemplatePrompts = new Set(
+		existingQuestions
+			.filter((q) => q.source === "template")
+			.map((q) => q.prompt.trim()),
+	);
+	const toCreate = unique.filter((p) => !existingTemplatePrompts.has(p));
+	if (toCreate.length === 0) {
+		return { questions: [] };
+	}
+	const created = [];
+	for (const prompt of toCreate) {
+		created.push(
+			await createQuestionRow({
+				orgId: actor.orgId,
+				sessionId,
+				prompt,
+				source: "template",
+				difficulty: "medium",
+				createdByUserId: actor.userId,
+			}),
+		);
+	}
+	await audit(
+		actor,
+		"create",
+		`Saved ${created.length} question${created.length === 1 ? "" : "s"} as template`,
+		{
+			type: "review_session",
+			id: existing.$id,
+			label: existing.title,
+		},
+	);
+	return { questions: created };
+}
+
+export async function saveScriptDraft(
+	actor: Actor,
+	sessionId: string,
+	itemsJson: string,
+	expectedVersion?: number,
+) {
+	const existing = await getSession(actor.orgId, sessionId);
+	if (!existing) return { error: "I couldn't find that review session." };
+	const prior = await listScripts(actor.orgId, sessionId);
+	const latest = prior[0];
+	if (expectedVersion != null && latest && latest.version !== expectedVersion) {
+		return {
+			error:
+				"Someone else saved this script first. Refresh and merge your changes.",
+			conflict: true,
+			currentVersion: latest.version,
+		};
+	}
+	const version = (latest?.version ?? 0) + 1;
+	const script = await createScriptRow({
+		orgId: actor.orgId,
+		sessionId,
+		version,
+		itemsJson,
+		createdByUserId: actor.userId,
+	});
+	await audit(
+		actor,
+		"update",
+		`Saved script v${version} for ${existing.title}`,
+		{
+			type: "review_script",
+			id: script.$id,
+			label: `${existing.title} v${version}`,
+		},
+	);
+	return { script };
+}
+
+export async function restoreScriptVersion(
+	actor: Actor,
+	sessionId: string,
+	version: number,
+) {
+	const existing = await getSession(actor.orgId, sessionId);
+	if (!existing) return { error: "I couldn't find that review session." };
+	const prior = await listScripts(actor.orgId, sessionId);
+	const target = prior.find((row) => row.version === version);
+	if (!target) return { error: "I couldn't find that script version." };
+	const newVersion = (prior[0]?.version ?? 0) + 1;
+	const script = await createScriptRow({
+		orgId: actor.orgId,
+		sessionId,
+		version: newVersion,
+		itemsJson: target.itemsJson,
+		createdByUserId: actor.userId,
+	});
+	await audit(
+		actor,
+		"update",
+		`Restored script v${version} as v${newVersion} for ${existing.title}`,
+		{
+			type: "review_script",
+			id: script.$id,
+			label: `${existing.title} v${newVersion}`,
+		},
+	);
+	return { script };
+}
+
+export async function dismissAiBanner(
+	actor: Actor,
+	sessionId: string,
+	signature: string,
+) {
+	const existing = await getSession(actor.orgId, sessionId);
+	if (!existing) return { error: "I couldn't find that review session." };
+	const session = await updateSessionRow(sessionId, {
+		aiBannerDismissedSignature: signature,
+	});
+	return { session };
 }
 
 export async function generateEvidenceRequestList(
