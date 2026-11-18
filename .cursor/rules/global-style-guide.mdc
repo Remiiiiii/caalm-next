@@ -269,6 +269,8 @@ For content cards (like article lists, tables, etc.):
 ### Form / multi-step
 
 ```tsx
+import { DIALOG_CANCEL_BTN_CLASS } from "@/components/ui/dialog-cancel";
+
 <AppDialog
   open={open}
   onOpenChange={setOpen}
@@ -278,7 +280,12 @@ For content cards (like article lists, tables, etc.):
   description="Enter the code we emailed you."
   footer={
     <>
-      <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+      <Button
+        type="button"
+        variant="ghost"
+        className={DIALOG_CANCEL_BTN_CLASS}
+        onClick={() => setOpen(false)}
+      >
         Cancel
       </Button>
       <Button type="button" className="btn-primary" onClick={submit}>
@@ -296,7 +303,7 @@ For content cards (like article lists, tables, etc.):
 **ALWAYS:**
 - Header: full-width wash `bg-[#eefcfe]/60` (default) or `bg-red/5` (destructive); 44px round tinted icon well (teal `bg-[#078FAB]/10` default, `bg-red/10` destructive), title 18px semibold (`text-[#0f5384]` default, `text-red` destructive), one-line description on the same left edge, 40×40 close X
 - Body `px-6`; optional facts box (`border-slate-200 bg-slate-50`, label left / value right `text-slate-700`); muted helper; optional orange warning note
-- Footer right-aligned `p-6`: outline Cancel, then one committing action
+- Footer right-aligned `p-6`: ghost Cancel (`DIALOG_CANCEL_BTN_CLASS`), then one committing action
 - Confirm uses `btn-primary` (only gradient in the dialog). Destructive uses `.delete-btn` (solid error)
 - Pending: spinner + “Saving…” / “Deleting…”, disable buttons and X, block Escape and overlay click
 - Error: keep open, inline `role="alert"` above the footer
@@ -435,6 +442,7 @@ Use custom colors defined in `tailwind.config.mjs` without intermediate suffixes
 
 - Primary / create / save / confirm / duplicate → `className="btn-primary px-3 sm:px-4"` (`.primary-btn` is the same).
 - Delete / remove / destroy → `className="delete-btn px-3 sm:px-4"` (`.btn-delete` is the same). Never a plain red outline or `variant="destructive"` fill as the final look.
+- **Cancel (hard rule):** every Cancel in a dialog, sheet, or form footer must use the shared ghost pill: `variant="ghost"` + `className={DIALOG_CANCEL_BTN_CLASS}` from `@/components/ui/dialog-cancel`. Never `variant="outline"`, `outline-btn`, or `btn-primary` for Cancel. (Ask CAALM response-bubble Cancel stays plain muted text per `assistant-response-bubble-buttons.mdc`.)
 - Do **not** default to `variant="outline"`, plain `Button`, or text-only links for primary page actions.
 
 ```tsx
@@ -560,13 +568,20 @@ className="shadow-sm hover:shadow-md transition-all duration-200"
 
 **Hard rule (always):** the icon beside any dialog, alert dialog or sheet title has a **white background** (`bg-white`) with a thin border (`border-[#0f5384]/15`; `border-red/20` for destructive). Never a blue, teal, red or translucent tint. `AppDialog` follows this.
 
-**Back button (always):** when a dialog has a Back button it renders at the top of the dialog, on the same row as the close X (Back left, X right), never in the footer.
+**Back button (hard rule):** when a dialog has a Back control it must use `DIALOG_BACK_BTN_CLASS` from `@/components/ui/dialog-back` with Lucide `ChevronLeft` (`h-[15px] w-[15px]`) + the label “Back”. Put Back and the close X on the **same row** above the icon + title (Back left, X right). Prefer `AppDialog`’s `onBack` prop. **Never** put Back in the footer next to Cancel / Next / Save.
 
-**Divider (always):** a divider (`border-b border-slate-200`) follows the dialog title and description.
+```tsx
+<button type="button" onClick={onBack} className={DIALOG_BACK_BTN_CLASS}>
+  <ChevronLeft className="h-[15px] w-[15px]" aria-hidden />
+  Back
+</button>
+```
+
+**Divider (always):** a divider (`border-b border-slate-200`) follows the dialog title and description. Space below the divider (body `pt`) must match space above it (header `pb-4`); use the header padding as the source of truth (`AppDialog` already pairs `pb-4` with body `pt-4`).
 
 **Mock-ups:** a provided PNG is a general template, not pixel-perfect; follow its layout and these rules, not exact sizes.
 
-Header layout (Select Contract Type is the reference): optional Back row (Back on the left, the dialog close button on the right), then icon tile (34px, `rounded-[9px]`) + title (17px, bold, `#0f5384`), the description under it (12.5px, slate-500, indented to the title), then a `border-b border-slate-200` divider. No gradient strip behind the header.
+Header layout (Select Contract Type / License Drafts / `AppDialog` `onBack` is the reference): optional top row with Back left and close X right on the **same row**, then icon tile (34px, `rounded-[9px]`) + title (17px, bold, `#0f5384`), the description under it (12.5px, slate-500, indented to the title), then a `border-b border-slate-200` divider. No gradient strip behind the header.
 
 ---
 

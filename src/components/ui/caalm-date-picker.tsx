@@ -81,6 +81,10 @@ export type CaalmCalendarPanelProps = {
 	selected?: Date;
 	onSelect: (date: Date | undefined) => void;
 	disablePast?: boolean;
+	/** Inclusive last selectable day (local midnight). */
+	maxDate?: Date;
+	/** Inclusive first selectable day (local midnight). */
+	minDate?: Date;
 	yearStart?: number;
 	yearEnd?: number;
 	className?: string;
@@ -91,6 +95,8 @@ export function CaalmCalendarPanel({
 	selected,
 	onSelect,
 	disablePast = false,
+	maxDate,
+	minDate,
 	yearStart = DEFAULT_YEAR_START,
 	yearEnd = DEFAULT_YEAR_END,
 	className,
@@ -216,6 +222,16 @@ export function CaalmCalendarPanel({
 					) {
 						return true;
 					}
+					if (maxDate) {
+						const max = new Date(maxDate);
+						max.setHours(0, 0, 0, 0);
+						if (check > max) return true;
+					}
+					if (minDate) {
+						const min = new Date(minDate);
+						min.setHours(0, 0, 0, 0);
+						if (check < min) return true;
+					}
 					if (!disablePast) return false;
 					const today = new Date();
 					today.setHours(0, 0, 0, 0);
@@ -242,6 +258,10 @@ export type CaalmDatePickerProps = {
 	placeholder?: string;
 	disabled?: boolean;
 	disablePast?: boolean;
+	/** Inclusive last selectable day as `yyyy-MM-dd`. */
+	maxDate?: string;
+	/** Inclusive first selectable day as `yyyy-MM-dd`. */
+	minDate?: string;
 	yearStart?: number;
 	yearEnd?: number;
 	className?: string;
@@ -257,6 +277,8 @@ export function CaalmDatePicker({
 	placeholder = "Pick a date",
 	disabled,
 	disablePast = false,
+	maxDate,
+	minDate,
 	yearStart,
 	yearEnd,
 	className,
@@ -264,6 +286,14 @@ export function CaalmDatePicker({
 	size = "default",
 }: CaalmDatePickerProps) {
 	const selected = useMemo(() => parseIsoDateLocal(value), [value]);
+	const maxDateValue = useMemo(
+		() => (maxDate ? parseIsoDateLocal(maxDate) : undefined),
+		[maxDate],
+	);
+	const minDateValue = useMemo(
+		() => (minDate ? parseIsoDateLocal(minDate) : undefined),
+		[minDate],
+	);
 
 	return (
 		<Popover>
@@ -299,6 +329,8 @@ export function CaalmDatePicker({
 				<CaalmCalendarPanel
 					selected={selected}
 					disablePast={disablePast}
+					maxDate={maxDateValue}
+					minDate={minDateValue}
 					yearStart={yearStart}
 					yearEnd={yearEnd}
 					onSelect={(date) => {

@@ -63,15 +63,24 @@ export async function POST(request: NextRequest) {
 			title?: string;
 			department?: string;
 			scheduledAt?: string;
+			prepDeadlineAt?: string;
 			durationMinutes?: number;
 			framework?: string;
+			participants?: Array<{
+				userId: string;
+				name?: string;
+				email?: string;
+				role?: string;
+			}>;
 		};
 		const result = await scheduleReviewSession(resolved.actor, {
 			title: body.title,
 			department: String(body.department ?? ""),
 			scheduledAt: body.scheduledAt,
+			prepDeadlineAt: body.prepDeadlineAt,
 			durationMinutes: body.durationMinutes,
 			framework: body.framework,
+			participants: body.participants,
 		});
 		if ("error" in result && result.error) {
 			return NextResponse.json({ error: result.error }, { status: 400 });

@@ -22,6 +22,8 @@ interface EntityPreviewSheetShellProps {
 	children: ReactNode;
 	footer?: ReactNode;
 	maxWidth?: "md" | "lg";
+	/** Extra classes for the scrollable body (e.g. hover-only scrollbar). */
+	bodyClassName?: string;
 }
 
 export default function EntityPreviewSheetShell({
@@ -34,6 +36,7 @@ export default function EntityPreviewSheetShell({
 	children,
 	footer,
 	maxWidth = "md",
+	bodyClassName,
 }: EntityPreviewSheetShellProps) {
 	return (
 		<Sheet open={open} onOpenChange={onOpenChange}>
@@ -69,7 +72,12 @@ export default function EntityPreviewSheetShell({
 
 					{statusBanner}
 
-					<div className="glass-dialog-scroll-area space-y-4 px-5 py-4">
+					<div
+						className={cn(
+							"glass-dialog-scroll-area space-y-4 px-5 py-4",
+							bodyClassName,
+						)}
+					>
 						{children}
 					</div>
 

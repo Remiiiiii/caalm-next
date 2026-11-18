@@ -8,6 +8,7 @@ import {
 	dismissAiBanner,
 	inviteParticipants,
 	rescheduleReviewSession,
+	setSimulationPhase,
 } from "@/lib/audit-lab/service";
 import type { SessionRole } from "@/lib/audit-lab/types";
 import { toUserFacingErrorMessage } from "@/lib/errors/user-facing";
