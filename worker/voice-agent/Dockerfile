@@ -29,11 +29,13 @@ FROM base AS build
 WORKDIR /app
 
 # Copy just the dependency files first, for more efficient layer caching
-COPY package.json pnpm-lock.yaml ./
+COPY package.json ./
+COPY ../../pnpm-lock.yaml ./pnpm-lock.yaml
+COPY ../../pnpm-workspace.yaml ./pnpm-workspace.yaml
 
 # Install dependencies using pnpm
 # --frozen-lockfile ensures we use exact versions from pnpm-lock.yaml for reproducible builds
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --no-frozen-lockfile
 
 # Pre-download any ML models or files the agent needs
 # This runs before COPY . . so the download layer is cached across code-only changes.
