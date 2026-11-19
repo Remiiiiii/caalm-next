@@ -8,12 +8,10 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useMemo } from "react";
-import { SimulationPhaseStepper } from "@/components/audit-lab/SimulationPhaseStepper";
 import EntityPreviewSheetShell from "@/components/preview/EntityPreviewSheetShell";
 import Avatar from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { CAALM_BADGE_BASE } from "@/components/tasks/task-ui";
-import { resolveSimulationPhase } from "@/lib/audit-lab/simulation-phase";
 import {
 	parseParticipants,
 	type ReviewSession,
@@ -159,8 +157,6 @@ export function SimulationDetailSheet({
 		() => (session ? parseLinkedDocIds(session.linkedAuditDocIds) : []),
 		[session],
 	);
-	const phase = session ? resolveSimulationPhase(session) : "opening";
-
 	if (!session) return null;
 
 	const subtitleParts = [
@@ -221,13 +217,6 @@ export function SimulationDetailSheet({
 				</div>
 			}
 		>
-			<section>
-				<p className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-					Phases
-				</p>
-				<SimulationPhaseStepper currentPhase={phase} />
-			</section>
-
 			{ROLE_SECTION.map(({ role, label }) => {
 				const rows = participants.filter((p) => p.role === role);
 				if (rows.length === 0) return null;

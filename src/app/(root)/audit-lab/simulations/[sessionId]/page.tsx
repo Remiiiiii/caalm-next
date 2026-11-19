@@ -4,7 +4,7 @@ import { getLabServerContext } from "@/lib/audit-lab/get-lab-server-context";
 import { getSession } from "@/lib/audit-lab/repository";
 import { sessionInScope } from "@/lib/audit-lab/access";
 
-export default async function AuditLabSessionDetailPage({
+export default async function AuditLabSimulationDetailPage({
 	params,
 }: {
 	params: Promise<{ sessionId: string }>;
@@ -20,7 +20,7 @@ export default async function AuditLabSessionDetailPage({
 				capabilities={ctx.capabilities}
 			>
 				<p className="text-sm text-slate-600">
-					<Link href="/audit-lab/sessions" className="text-[#0f5384]">
+					<Link href="/audit-lab/simulations" className="text-[#0f5384]">
 						Back to simulations
 					</Link>
 				</p>

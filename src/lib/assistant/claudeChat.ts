@@ -28,7 +28,7 @@ const RETIRED_SONNET_MODELS = new Set([
 	"claude-sonnet-4-20250514",
 ]);
 
-function claudeModel(): string {
+export function claudeModel(): string {
 	const configured = process.env.CLAUDE_SONNET_MODEL?.trim();
 	if (!configured || RETIRED_SONNET_MODELS.has(configured)) {
 		return DEFAULT_MODEL;

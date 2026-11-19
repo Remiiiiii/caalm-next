@@ -1,5 +1,6 @@
 packages:
   - "."
+  - "worker/voice-agent"
 
 allowBuilds:
   esbuild: true
@@ -7,6 +8,8 @@ allowBuilds:
   sharp: true
   tesseract.js: true
   unrs-resolver: true
+  "@livekit/local-inference": true
+  onnxruntime-node: true
 
 minimumReleaseAgeExclude:
   - '@next/env@16.3.3'

@@ -1,4 +1,9 @@
 import { listFindings } from "@/lib/audit-upload/store";
+import {
+	createParticipantToken,
+	createVoiceInterviewRoom,
+	livekitBrowserUrl,
+} from "@/lib/livekit/client";
 import { logAuditEvent } from "@/lib/services/audit-logger";
 import {
 	markSessionCalendarEventCancelled,
@@ -20,9 +25,11 @@ import {
 	createEvidenceRow,
 	createGapRow,
 	createQuestionRow,
+	createReportRow,
 	createScriptRow,
 	createSessionRow,
 	getAttempt,
+	getAttemptUnscoped,
 	getEvidence,
 	getSession,
 	listEvidence,
@@ -55,6 +62,8 @@ import {
 	type SessionRole,
 	type SessionStatus,
 } from "./types";
+import { gradeVoiceTranscript } from "./voice/grade";
+import { buildVoiceRubric, type VoiceAgentJobMetadata } from "./voice/rubric";
 
 type Actor = {
 	userId: string;
@@ -115,11 +124,7 @@ export async function scheduleReviewSession(
 	if (input.prepDeadlineAt && input.scheduledAt) {
 		const prepMs = Date.parse(input.prepDeadlineAt);
 		const startMs = Date.parse(input.scheduledAt);
-		if (
-			!Number.isNaN(prepMs) &&
-			!Number.isNaN(startMs) &&
-			prepMs > startMs
-		) {
+		if (!Number.isNaN(prepMs) && !Number.isNaN(startMs) && prepMs > startMs) {
 			return {
 				error: "Prep deadline must be on or before the scheduled start.",
 			};
@@ -132,12 +137,13 @@ export async function scheduleReviewSession(
 				userId: p.userId.trim(),
 				name: p.name?.trim() || undefined,
 				email: p.email?.trim() || undefined,
-				role: p.role === "facilitator" ||
+				role:
+					p.role === "facilitator" ||
 					p.role === "mock_auditor" ||
 					p.role === "observer" ||
 					p.role === "interviewee"
-					? p.role
-					: "interviewee",
+						? p.role
+						: "interviewee",
 			})),
 	);
 	let session = await createSessionRow({
@@ -920,6 +926,146 @@ export async function scoreAnswer(
 		followUp,
 		slowRetrieval,
 	};
+}
+
+/** Phase 1 of the voice interviewer: creates the attempt + LiveKit room, dispatches the agent worker. */
+export async function startVoicePracticeRound(
+	actor: Actor,
+	sessionId: string,
+	persona = "by_the_book",
+) {
+	const existing = await getSession(actor.orgId, sessionId);
+	if (!existing) return { error: "I couldn't find that review session." };
+	const questions = await listQuestions(actor.orgId, sessionId);
+	if (questions.length === 0) {
+		return {
+			error: "Generate a question bank before starting a voice interview.",
+		};
+	}
+	const attempt = await createAttemptRow({
+		orgId: actor.orgId,
+		sessionId,
+		intervieweeUserId: actor.userId,
+		persona,
+		difficulty: "voice",
+		transcriptJson: JSON.stringify([]),
+		scoresJson: JSON.stringify([]),
+		status: "in_progress",
+		createdByUserId: actor.userId,
+	});
+	const roomName = `review-attempt-${attempt.$id}`;
+	const metadata: VoiceAgentJobMetadata = {
+		attemptId: attempt.$id,
+		orgId: actor.orgId,
+		sessionTitle: existing.title,
+		persona,
+		rubric: buildVoiceRubric(questions),
+	};
+	await createVoiceInterviewRoom({
+		roomName,
+		metadata: JSON.stringify(metadata),
+	});
+	const token = await createParticipantToken({
+		roomName,
+		identity: actor.userId,
+		name: actor.name,
+	});
+	const updated = await updateAttemptRow(attempt.$id, { callId: roomName });
+	await audit(
+		actor,
+		"create",
+		`Started a voice interview on ${existing.title}`,
+		{ type: "review_attempt", id: attempt.$id, label: existing.title },
+	);
+	return {
+		attempt: updated,
+		roomName,
+		token,
+		livekitUrl: livekitBrowserUrl(),
+	};
+}
+
+/** Marks consent captured, before the browser is allowed to connect to the room. */
+export async function recordVoiceConsent(attemptId: string) {
+	const attempt = await getAttemptUnscoped(attemptId);
+	if (!attempt) return { error: "I couldn't find that practice attempt." };
+	const updated = await updateAttemptRow(attemptId, {
+		consentAt: new Date().toISOString(),
+	});
+	return { attempt: updated };
+}
+
+/**
+ * Called by the voice-agent worker (shared-secret auth, no user session) after
+ * every answered question, so a dropped call never loses transcript so far.
+ */
+export async function recordVoiceTurn(
+	attemptId: string,
+	turn: {
+		questionId: string;
+		question: string;
+		answer: string;
+		citedEvidence?: string;
+	},
+) {
+	const attempt = await getAttemptUnscoped(attemptId);
+	if (!attempt) return { error: "I couldn't find that practice attempt." };
+	const transcript = JSON.parse(attempt.transcriptJson || "[]") as unknown[];
+	transcript.push({ ...turn, at: new Date().toISOString() });
+	const updated = await updateAttemptRow(attemptId, {
+		transcriptJson: JSON.stringify(transcript),
+	});
+	return { attempt: updated };
+}
+
+/**
+ * Called from the LiveKit `room_finished` webhook, not the worker — grading
+ * survives a worker crash/restart since it's driven by the room's own lifecycle.
+ */
+export async function finalizeVoiceInterview(roomName: string) {
+	const attemptId = roomName.replace(/^review-attempt-/, "");
+	const attempt = await getAttemptUnscoped(attemptId);
+	if (!attempt) return { error: "I couldn't find that practice attempt." };
+	if (attempt.status === "completed") return { attempt };
+
+	const questions = await listQuestions(attempt.orgId, attempt.sessionId);
+	const rubric = buildVoiceRubric(questions);
+	const transcript = JSON.parse(attempt.transcriptJson || "[]") as Array<{
+		questionId: string;
+		question: string;
+		answer: string;
+	}>;
+
+	const scorecard = await gradeVoiceTranscript({ rubric, transcript }).catch(
+		() => null,
+	);
+	if (scorecard) {
+		await createReportRow({
+			orgId: attempt.orgId,
+			sessionId: attempt.sessionId,
+			kind: "practice_scorecard",
+			bodyJson: JSON.stringify({ attemptId: attempt.$id, ...scorecard }),
+			createdByUserId: attempt.createdByUserId,
+		});
+	}
+	const updated = await updateAttemptRow(attemptId, { status: "completed" });
+	await logAuditEvent({
+		event_id: `audit_lab_voice_interview_complete_${attempt.$id}`,
+		event_title: `Voice interview completed for ${attempt.sessionId}`,
+		action: "update",
+		source: "caalm",
+		user_id: attempt.createdByUserId,
+		user_name: "",
+		user_email: "",
+		orgId: attempt.orgId,
+		status: "success",
+		module: "audit_lab",
+		target_type: "review_attempt",
+		target_id: attempt.$id,
+		target_label: attempt.sessionId,
+		summary: `Voice interview completed for ${attempt.sessionId}`,
+	}).catch(() => undefined);
+	return { attempt: updated };
 }
 
 export async function transitionSessionStatus(

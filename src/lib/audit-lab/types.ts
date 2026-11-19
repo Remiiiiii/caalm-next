@@ -110,7 +110,20 @@ export type ReviewAttempt = {
 	transcriptJson: string;
 	scoresJson: string;
 	status: string;
+	/** LiveKit room/call id — set once a voice interview starts. */
+	callId?: string;
+	recordingUrl?: string;
+	consentAt?: string;
 	createdByUserId: string;
+};
+
+/** One turn of a voice interview, stored inside `ReviewAttempt.transcriptJson`. */
+export type VoiceTranscriptTurn = {
+	questionId: string;
+	question: string;
+	answer: string;
+	at: string;
+	citedEvidence?: string;
 };
 
 export type ReviewGap = {

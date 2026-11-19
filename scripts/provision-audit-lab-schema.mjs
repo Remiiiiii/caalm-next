@@ -133,6 +133,9 @@ const TABLES = [
 			{ key: "transcriptJson", type: "string", size: 16384, required: true },
 			{ key: "scoresJson", type: "string", size: 16384, required: true },
 			{ key: "status", type: "string", size: 32, required: true },
+			{ key: "callId", type: "string", size: 64, required: false },
+			{ key: "recordingUrl", type: "string", size: 512, required: false },
+			{ key: "consentAt", type: "string", size: 64, required: false },
 			{ key: "createdByUserId", type: "string", size: 64, required: true },
 		],
 		indexes: [

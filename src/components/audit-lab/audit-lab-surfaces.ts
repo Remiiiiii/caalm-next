@@ -1,6 +1,6 @@
 export type AuditLabSurface =
 	| "overview"
-	| "sessions"
+	| "simulations"
 	| "interview"
 	| "practice"
 	| "evidence"
@@ -15,7 +15,7 @@ export const SURFACE_COPY: Record<
 		description:
 			"Mock audit rehearsal, interview building, and evidence readiness in one place.",
 	},
-	sessions: {
+	simulations: {
 		title: "Simulations",
 		description: "Schedule and manage mock-audit simulations.",
 	},

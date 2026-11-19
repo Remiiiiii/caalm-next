@@ -15,7 +15,7 @@ import type { LabCapabilities } from "@/lib/audit-lab/access";
 
 const NAV = [
 	{ href: "/audit-lab/overview", label: "Overview", icon: LayoutDashboard },
-	{ href: "/audit-lab/sessions", label: "Simulations", icon: ClipboardList },
+	{ href: "/audit-lab/simulations", label: "Simulations", icon: ClipboardList },
 	{
 		href: "/audit-lab/interview",
 		label: "Interview Builder",

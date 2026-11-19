@@ -201,6 +201,9 @@ scripts/.blob-media-urls.json
 .tmp-*.env
 .tmp-vercel*.env
 
+# LiveKit Cloud agent secrets file (worker/voice-agent) — real API keys, never commit
+worker/voice-agent/secrets.env
+
 founder/facts.md
 
 # Claude Code: skill junctions into .cursor/skills and .agents/skills (source of truth lives there)

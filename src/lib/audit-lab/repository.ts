@@ -193,10 +193,39 @@ export async function getAttempt(
 	}
 }
 
+/**
+ * No orgId check — only for trusted server-to-server callers (the voice-agent
+ * worker and the LiveKit webhook), which authenticate by shared secret / signed
+ * payload instead of a user session and so have no orgId to check against yet.
+ */
+export async function getAttemptUnscoped(
+	attemptId: string,
+): Promise<ReviewAttempt | null> {
+	try {
+		const tablesDB = await tables();
+		const row = await tablesDB.getRow({
+			databaseId: dbId(),
+			tableId: appwriteConfig.reviewAttemptsCollectionId,
+			rowId: attemptId,
+		});
+		return row as unknown as ReviewAttempt;
+	} catch {
+		return null;
+	}
+}
+
 export async function updateAttemptRow(
 	attemptId: string,
 	data: Partial<
-		Pick<ReviewAttempt, "transcriptJson" | "scoresJson" | "status">
+		Pick<
+			ReviewAttempt,
+			| "transcriptJson"
+			| "scoresJson"
+			| "status"
+			| "callId"
+			| "recordingUrl"
+			| "consentAt"
+		>
 	>,
 ): Promise<ReviewAttempt> {
 	const tablesDB = await tables();
