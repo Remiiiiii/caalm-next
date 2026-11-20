@@ -31,8 +31,11 @@ export const getAvatarColor = (userId: string): string => {
 	return AVATAR_COLORS[colorIndex];
 };
 
-/** Contracts-table photo ring (ManagerAvatars) */
-const PHOTO_RING_GRADIENT = "linear-gradient(135deg, #12477d 0%, #03afbf 100%)";
+/** Photo ring — same tokens as ProfilePicture (DashboardHeader). */
+export const AVATAR_PHOTO_RING_GRADIENT =
+	"linear-gradient(135deg, #12477d 0%, #03afbf 100%)";
+export const AVATAR_PHOTO_RING_PAD = "3px";
+export const AVATAR_PHOTO_INNER_BORDER = "border-2 border-[#FCFEFF]";
 
 interface AvatarProps {
 	name?: string;
@@ -81,23 +84,17 @@ const Avatar: React.FC<AvatarProps> = ({
 		lg: "w-12 h-12 text-lg",
 	};
 
-	const ringPx = size === "sm" ? "2px" : "2px";
-	const borderClass =
-		size === "sm"
-			? "border-[2px] border-[#FCFEFF]"
-			: "border-[1.5px] border-[#FCFEFF]";
-
 	return (
 		<div className={cn("flex items-center gap-2", className)}>
 			{showImage ? (
 				<div
 					className={cn(
-						"rounded-full overflow-hidden shrink-0",
+						"rounded-full overflow-hidden relative shrink-0",
 						sizeClasses[size],
 					)}
 					style={{
-						background: PHOTO_RING_GRADIENT,
-						padding: ringPx,
+						background: AVATAR_PHOTO_RING_GRADIENT,
+						padding: AVATAR_PHOTO_RING_PAD,
 					}}
 				>
 					{/* eslint-disable-next-line @next/next/no-img-element -- remote Appwrite / CDN URLs */}
@@ -106,8 +103,9 @@ const Avatar: React.FC<AvatarProps> = ({
 						alt=""
 						className={cn(
 							"h-full w-full rounded-full object-cover",
-							borderClass,
+							AVATAR_PHOTO_INNER_BORDER,
 						)}
+						referrerPolicy="no-referrer"
 						onError={() => setImageFailed(true)}
 					/>
 				</div>

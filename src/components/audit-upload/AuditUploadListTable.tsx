@@ -9,11 +9,13 @@ import { Button } from "@/components/ui/button";
 import {
 	CaalmDataTable,
 	CaalmDataTableSkeleton,
+	DATA_TABLE_ACTIONS_HEAD,
 	DATA_TABLE_BODY_ROW_BASE,
 	DATA_TABLE_BODY_ROW_CLICKABLE,
 	DATA_TABLE_CELL,
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
+	DATA_TABLE_PRIMARY_TITLE,
 	SortableDataTableHead,
 } from "@/components/ui/caalm-data-table";
 import { Card, CardContent } from "@/components/ui/card";
@@ -217,7 +219,7 @@ function AuditUploadDataRow({
 			>
 				{/* 1 Document */}
 				<TableCell className={cn(DATA_TABLE_CELL, "min-w-0 pl-4")}>
-					<p className="text-sm font-medium text-slate-700">{item.fileName}</p>
+					<p className={DATA_TABLE_PRIMARY_TITLE}>{item.fileName}</p>
 				</TableCell>
 
 				{/* 2 Status */}
@@ -554,7 +556,7 @@ export function AuditUploadListTable({
 									active={sortKey === "uploadedOn"}
 									onClick={() => toggleSort("uploadedOn")}
 								/>
-								<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3 pr-4")}>
+								<TableHead className={DATA_TABLE_ACTIONS_HEAD}>
 									<span className="sr-only">
 										{scope === "removed" ? "Restore" : "Open"}
 									</span>

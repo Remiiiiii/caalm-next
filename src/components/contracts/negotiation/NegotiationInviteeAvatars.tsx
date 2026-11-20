@@ -1,7 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { getAvatarColor } from "@/components/ui/avatar";
+import {
+	AVATAR_PHOTO_INNER_BORDER,
+	AVATAR_PHOTO_RING_GRADIENT,
+	AVATAR_PHOTO_RING_PAD,
+	getAvatarColor,
+} from "@/components/ui/avatar";
 import {
 	Tooltip,
 	TooltipContent,
@@ -75,21 +80,27 @@ function ParticipantBadge({
 					<span
 						role="listitem"
 						className={cn(
-							"relative inline-flex h-7 w-7 items-center justify-center overflow-hidden rounded-full border-2 border-white text-[10px] font-semibold text-white shadow-sm",
+							"relative inline-flex h-7 w-7 items-center justify-center overflow-hidden rounded-full text-[10px] font-semibold text-white shadow-sm",
+							!showImage && "border-2 border-white",
 							index > 0 && "-ml-2",
 						)}
 						style={{
-							backgroundColor: showImage ? undefined : color,
+							background: showImage ? AVATAR_PHOTO_RING_GRADIENT : color,
+							padding: showImage ? AVATAR_PHOTO_RING_PAD : undefined,
 							zIndex: stackSize - index,
 						}}
 						aria-label={`${person.name} (${person.role})`}
 					>
 						{showImage ? (
-							// eslint-disable-next-line @next/next/no-img-element -- Appwrite storage URL; matches ManagerAvatars
+							// eslint-disable-next-line @next/next/no-img-element -- Appwrite storage URL; matches ProfilePicture ring
 							<img
 								src={person.imageUrl || ""}
 								alt=""
-								className="h-full w-full object-cover"
+								className={cn(
+									"h-full w-full rounded-full object-cover",
+									AVATAR_PHOTO_INNER_BORDER,
+								)}
+								referrerPolicy="no-referrer"
 								onError={() => setImageFailed(true)}
 							/>
 						) : (

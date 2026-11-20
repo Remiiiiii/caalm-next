@@ -33,9 +33,34 @@ export const DATA_TABLE_CELL_FIRST = "pl-4 pr-2 py-3 align-middle";
 /** Last column edge padding */
 export const DATA_TABLE_CELL_LAST = "pl-3 pr-4 py-3 align-middle";
 
+/**
+ * Primary title in the first content column (Fix next Item).
+ * Use on the title/link, not the checkbox column.
+ */
+export const DATA_TABLE_PRIMARY_TITLE = "font-semibold text-[#0f5384]";
+
+/** Subtext under the primary title (Fix next caption line). */
+export const DATA_TABLE_PRIMARY_SUBTEXT = "caption text-slate-500";
+
+/** Default body text for non-primary columns (dates, meta, etc.). */
+export const DATA_TABLE_BODY_TEXT = "text-sm text-slate-600";
+
+/**
+ * Actions column header: no visible "Actions" label.
+ * Wide enough for the 34×34 dots trigger (w-10 crushed the icon).
+ */
+export const DATA_TABLE_ACTIONS_HEAD = cn(
+	DATA_TABLE_HEADER_CELL,
+	"w-14 min-w-14 px-1 pr-3 text-right",
+);
+
+/** Wrap the overflow trigger so it only shows on row hover / focus. */
+export const DATA_TABLE_ACTIONS_TRIGGER =
+	"opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100 focus-within:opacity-100";
+
 /** Base body row; add e.g. `cursor-pointer` via cn() where needed */
 export const DATA_TABLE_BODY_ROW_BASE =
-	"border-b-0 transition-all duration-200 hover:bg-white/20 hover:shadow-md [&>td]:border-b [&>td]:border-slate-300/50";
+	"group border-b-0 transition-all duration-200 hover:bg-white/20 hover:shadow-md [&>td]:border-b [&>td]:border-slate-300/50";
 
 /** Clickable data table rows */
 export const DATA_TABLE_BODY_ROW_CLICKABLE = cn(

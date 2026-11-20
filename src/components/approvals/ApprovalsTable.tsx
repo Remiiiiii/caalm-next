@@ -11,9 +11,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
 	CaalmDataTable,
+	DATA_TABLE_ACTIONS_HEAD,
+	DATA_TABLE_ACTIONS_TRIGGER,
 	DATA_TABLE_BODY_ROW_CLICKABLE,
+	DATA_TABLE_BODY_TEXT,
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
+	DATA_TABLE_PRIMARY_SUBTEXT,
+	DATA_TABLE_PRIMARY_TITLE,
 } from "@/components/ui/caalm-data-table";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -210,10 +215,8 @@ export default function ApprovalsTable({
 						<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>
 							Status
 						</TableHead>
-						<TableHead
-							className={`${DATA_TABLE_HEADER_CELL} pl-3 pr-4 text-right`}
-						>
-							Actions
+						<TableHead className={DATA_TABLE_ACTIONS_HEAD}>
+							<span className="sr-only">Actions</span>
 						</TableHead>
 					</TableRow>
 				</TableHeader>
@@ -243,28 +246,48 @@ export default function ApprovalsTable({
 							<TableCell className="py-3 sticky left-10 z-10 backdrop-blur-md bg-white/10 group-hover:bg-white/25 border-r border-white/30">
 								<div className="min-w-0 max-w-[220px]">
 									<p
-										className="subtitle-2 text-slate-700 truncate"
+										className={cn(DATA_TABLE_PRIMARY_TITLE, "truncate")}
 										title={item.title}
 									>
 										{item.title}
 									</p>
 									{item.subtitle && (
-										<p className="text-xs text-slate-500 truncate">
+										<p className={cn(DATA_TABLE_PRIMARY_SUBTEXT, "truncate")}>
 											{item.subtitle}
 										</p>
 									)}
 								</div>
 							</TableCell>
-							<TableCell className="py-3 text-slate-700 whitespace-nowrap text-sm">
+							<TableCell
+								className={cn(
+									DATA_TABLE_BODY_TEXT,
+									"whitespace-nowrap py-3",
+								)}
+							>
 								{item.itemType || "—"}
 							</TableCell>
-							<TableCell className="py-3 text-slate-700 whitespace-nowrap text-sm">
+							<TableCell
+								className={cn(
+									DATA_TABLE_BODY_TEXT,
+									"whitespace-nowrap py-3",
+								)}
+							>
 								{item.department || "—"}
 							</TableCell>
-							<TableCell className="py-3 text-slate-700 whitespace-nowrap text-sm max-w-[140px] truncate">
+							<TableCell
+								className={cn(
+									DATA_TABLE_BODY_TEXT,
+									"max-w-[140px] truncate whitespace-nowrap py-3",
+								)}
+							>
 								{item.assignees.length > 0 ? item.assignees.join(", ") : "—"}
 							</TableCell>
-							<TableCell className="py-3 text-slate-700 whitespace-nowrap">
+							<TableCell
+								className={cn(
+									DATA_TABLE_BODY_TEXT,
+									"whitespace-nowrap py-3",
+								)}
+							>
 								<FormattedDateTime date={item.submittedAt} className="body-2" />
 							</TableCell>
 							<TableCell className="py-3 whitespace-nowrap">
@@ -305,7 +328,12 @@ export default function ApprovalsTable({
 								className="py-3 text-right"
 								onClick={(e) => e.stopPropagation()}
 							>
-								<div className="flex items-center justify-end gap-2">
+								<div
+									className={cn(
+										"flex items-center justify-end gap-2",
+										DATA_TABLE_ACTIONS_TRIGGER,
+									)}
+								>
 									{canReview && (
 										<Button
 											type="button"

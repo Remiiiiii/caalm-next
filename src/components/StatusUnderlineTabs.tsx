@@ -1,11 +1,16 @@
 "use client";
 
-import RoundedUnderlineTabs, {
-	type RoundedUnderlineTab,
-	type RoundedUnderlineTabsProps,
-} from "@/components/RoundedUnderlineTabs";
+import {
+	SegmentedToggle,
+	type SegmentedToggleTab,
+} from "@/components/ui/segmented-toggle";
+import { cn } from "@/lib/utils";
 
-type UnderlineTab = RoundedUnderlineTab & { count: number };
+export type UnderlineTab = {
+	value: string;
+	label: string;
+	count: number;
+};
 
 interface StatusUnderlineTabsProps {
 	tabs: UnderlineTab[];
@@ -17,7 +22,8 @@ interface StatusUnderlineTabsProps {
 }
 
 /**
- * Status filter tabs. Visual source of truth is RoundedUnderlineTabs.
+ * Status filter tabs for contracts / licenses / approvals.
+ * Thin adapter over SegmentedToggle (counts supported).
  */
 export default function StatusUnderlineTabs({
 	tabs,
@@ -25,21 +31,23 @@ export default function StatusUnderlineTabs({
 	onValueChange,
 	listClassName,
 }: StatusUnderlineTabsProps) {
+	const segmentedTabs: Array<SegmentedToggleTab<string>> = tabs.map((tab) => ({
+		value: tab.value,
+		label: tab.label,
+		count: tab.count,
+	}));
+
 	return (
-		<RoundedUnderlineTabs
-			tabs={tabs}
-			value={value}
-			onValueChange={onValueChange}
-			variant="bar"
-			aria-label="Filter by status"
-			className="mt-4 px-4 sm:px-6"
-			listClassName={listClassName}
-		/>
+		<div className={cn("mt-4 px-4 sm:px-6", listClassName)}>
+			<SegmentedToggle
+				value={value}
+				onChange={onValueChange}
+				tabs={segmentedTabs}
+				ariaLabel="Filter by status"
+				className="w-full max-w-full sm:w-auto"
+			/>
+		</div>
 	);
 }
 
-export type {
-	RoundedUnderlineTabsProps,
-	StatusUnderlineTabsProps,
-	UnderlineTab,
-};
+export type { StatusUnderlineTabsProps };

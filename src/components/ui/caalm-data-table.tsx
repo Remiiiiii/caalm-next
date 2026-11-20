@@ -37,31 +37,41 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import {
+	DATA_TABLE_ACTIONS_HEAD,
+	DATA_TABLE_ACTIONS_TRIGGER,
 	DATA_TABLE_BODY_ROW_BASE,
 	DATA_TABLE_BODY_ROW_CLICKABLE,
+	DATA_TABLE_BODY_TEXT,
 	DATA_TABLE_CELL,
 	DATA_TABLE_CELL_FIRST,
 	DATA_TABLE_CELL_LAST,
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
 	DATA_TABLE_INSET,
+	DATA_TABLE_PRIMARY_SUBTEXT,
+	DATA_TABLE_PRIMARY_TITLE,
 	DATA_TABLE_TOOLBAR_INSET,
 } from "@/lib/ui/data-table-styles";
 import { cn } from "@/lib/utils";
 
 export {
+	DATA_TABLE_ACTIONS_HEAD,
+	DATA_TABLE_ACTIONS_TRIGGER,
 	DATA_TABLE_BODY_ROW_BASE,
 	DATA_TABLE_BODY_ROW_CLICKABLE,
+	DATA_TABLE_BODY_TEXT,
 	DATA_TABLE_CELL,
 	DATA_TABLE_CELL_FIRST,
 	DATA_TABLE_CELL_LAST,
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
 	DATA_TABLE_INSET,
+	DATA_TABLE_PRIMARY_SUBTEXT,
+	DATA_TABLE_PRIMARY_TITLE,
 	DATA_TABLE_TOOLBAR_INSET,
 };
 
-/** Scrollable shell matching Assign Tasks */
+/** Table shell matching Assign Tasks (no horizontal scrollbar). */
 export function CaalmDataTable({
 	children,
 	className,
@@ -70,9 +80,11 @@ export function CaalmDataTable({
 	className?: string;
 }) {
 	return (
-		<div className={cn("w-full overflow-x-auto pb-4", className)}>
-			<div className={DATA_TABLE_INSET}>
-				<Table className="border-separate border-spacing-0">{children}</Table>
+		<div className={cn("w-full min-w-0 overflow-x-hidden pb-4", className)}>
+			<div className={cn(DATA_TABLE_INSET, "min-w-0")}>
+				<Table className="w-full min-w-0 border-separate border-spacing-0">
+					{children}
+				</Table>
 			</div>
 		</div>
 	);

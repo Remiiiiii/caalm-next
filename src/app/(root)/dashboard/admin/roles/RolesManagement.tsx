@@ -15,9 +15,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
 	CaalmDataTable,
+	DATA_TABLE_ACTIONS_HEAD,
+	DATA_TABLE_ACTIONS_TRIGGER,
 	DATA_TABLE_BODY_ROW_BASE,
+	DATA_TABLE_BODY_TEXT,
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
+	DATA_TABLE_PRIMARY_TITLE,
 } from "@/components/ui/caalm-data-table";
 import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -107,6 +111,7 @@ function RoleActionsMenu({
 	};
 
 	return (
+		<div className={cn("inline-flex justify-end", DATA_TABLE_ACTIONS_TRIGGER)}>
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
 				<Button
@@ -158,6 +163,7 @@ function RoleActionsMenu({
 				)}
 			</AppDropdownMenuContent>
 		</DropdownMenu>
+		</div>
 	);
 }
 
@@ -275,10 +281,8 @@ const RolesManagement = () => {
 								Created
 							</TableHead>
 						) : null}
-						<TableHead
-							className={`${DATA_TABLE_HEADER_CELL} pl-3 pr-4 text-right`}
-						>
-							Action
+						<TableHead className={DATA_TABLE_ACTIONS_HEAD}>
+							<span className="sr-only">Actions</span>
 						</TableHead>
 					</TableRow>
 				</TableHeader>
@@ -287,15 +291,22 @@ const RolesManagement = () => {
 						return (
 							<TableRow key={role.$id} className={DATA_TABLE_BODY_ROW_BASE}>
 								<TableCell className="py-4">
-									<p className="subtitle-2 text-slate-700">{role.name}</p>
+									<p className={DATA_TABLE_PRIMARY_TITLE}>{role.name}</p>
 								</TableCell>
 								<TableCell className="max-w-md py-4">
-									<span className="body-2 line-clamp-2 text-slate-600">
+									<span
+										className={cn(DATA_TABLE_BODY_TEXT, "line-clamp-2")}
+									>
 										{role.description?.trim() ? role.description : "—"}
 									</span>
 								</TableCell>
-								<TableCell className="whitespace-nowrap py-4 text-slate-700">
-									<span className="body-2 font-medium tabular-nums">
+								<TableCell
+									className={cn(
+										DATA_TABLE_BODY_TEXT,
+										"whitespace-nowrap py-4",
+									)}
+								>
+									<span className="font-medium tabular-nums">
 										{role.memberCount ?? 0}
 									</span>
 								</TableCell>

@@ -6,9 +6,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLicensesView } from "@/components/LicensesView";
 import {
 	CaalmDataTable,
+	DATA_TABLE_ACTIONS_HEAD,
+	DATA_TABLE_ACTIONS_TRIGGER,
 	DATA_TABLE_BODY_ROW_CLICKABLE,
+	DATA_TABLE_BODY_TEXT,
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
+	DATA_TABLE_PRIMARY_SUBTEXT,
+	DATA_TABLE_PRIMARY_TITLE,
 } from "@/components/ui/caalm-data-table";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -457,10 +462,8 @@ export default function LicensesTableView({
 						Assigned To
 					</TableHead>
 					<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>By</TableHead>
-					<TableHead
-						className={`${DATA_TABLE_HEADER_CELL} pl-3 pr-4 text-right`}
-					>
-						Actions
+					<TableHead className={DATA_TABLE_ACTIONS_HEAD}>
+						<span className="sr-only">Actions</span>
 					</TableHead>
 				</TableRow>
 			</TableHeader>
@@ -498,13 +501,16 @@ export default function LicensesTableView({
 								/>
 								<div className="min-w-0">
 									<p
-										className="subtitle-2 text-slate-700 whitespace-nowrap truncate max-w-[180px]"
+										className={cn(
+											DATA_TABLE_PRIMARY_TITLE,
+											"max-w-[180px] truncate whitespace-nowrap",
+										)}
 										title={license.licenseName}
 									>
 										{truncateLicenseName(license.licenseName)}
 									</p>
 									{license.licenseNumber && (
-										<p className="text-xs text-slate-500 mt-0.5">
+										<p className={cn(DATA_TABLE_PRIMARY_SUBTEXT, "mt-0.5")}>
 											#{license.licenseNumber}
 										</p>
 									)}
@@ -514,26 +520,38 @@ export default function LicensesTableView({
 						<TableCell className="py-4 whitespace-nowrap">
 							{statusBadge(license)}
 						</TableCell>
-						<TableCell className="py-4 text-slate-700 whitespace-nowrap">
+						<TableCell
+							className={cn(DATA_TABLE_BODY_TEXT, "whitespace-nowrap py-4")}
+						>
 							{convertFileSize({
 								sizeInBytes: license.fileSize ?? 0,
 							})}
 						</TableCell>
-						<TableCell className="py-4 text-slate-700 whitespace-nowrap">
+						<TableCell
+							className={cn(DATA_TABLE_BODY_TEXT, "whitespace-nowrap py-4")}
+						>
 							<FormattedDateTime date={license.$createdAt} className="body-2" />
 						</TableCell>
-						<TableCell className="py-4 text-slate-700 whitespace-nowrap">
+						<TableCell
+							className={cn(DATA_TABLE_BODY_TEXT, "whitespace-nowrap py-4")}
+						>
 							{expiryCell(license)}
 						</TableCell>
-						<TableCell className="py-4 text-slate-700 whitespace-nowrap">
+						<TableCell
+							className={cn(DATA_TABLE_BODY_TEXT, "whitespace-nowrap py-4")}
+						>
 							{license.division || license.department || (
 								<span className="body-2 text-slate-400">-</span>
 							)}
 						</TableCell>
-						<TableCell className="py-4 text-slate-700 whitespace-nowrap">
+						<TableCell
+							className={cn(DATA_TABLE_BODY_TEXT, "whitespace-nowrap py-4")}
+						>
 							{renderAssignedManagers(license)}
 						</TableCell>
-						<TableCell className="py-4 text-slate-700 whitespace-nowrap">
+						<TableCell
+							className={cn(DATA_TABLE_BODY_TEXT, "whitespace-nowrap py-4")}
+						>
 							{loadingOwners[license.$id] ? (
 								<span className="body-2 text-slate-400 inline-flex items-center gap-1.5">
 									<Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
@@ -552,12 +570,14 @@ export default function LicensesTableView({
 							className="py-4 text-right"
 							onClick={(e) => e.stopPropagation()}
 						>
-							<LicenseActionDropdown
-								license={license}
-								onRefresh={onRefresh}
-								onLicenseRemoved={onLicenseRemoved}
-								userRole={user?.role as "executive" | "admin" | "manager"}
-							/>
+							<div className={cn("inline-flex justify-end", DATA_TABLE_ACTIONS_TRIGGER)}>
+								<LicenseActionDropdown
+									license={license}
+									onRefresh={onRefresh}
+									onLicenseRemoved={onLicenseRemoved}
+									userRole={user?.role as "executive" | "admin" | "manager"}
+								/>
+							</div>
 						</TableCell>
 					</TableRow>
 				))}

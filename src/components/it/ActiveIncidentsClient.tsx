@@ -27,9 +27,12 @@ import {
 	CaalmDataTable,
 	CaalmDataTableEmpty,
 	DATA_TABLE_BODY_ROW_CLICKABLE,
+	DATA_TABLE_BODY_TEXT,
 	DATA_TABLE_CELL,
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
+	DATA_TABLE_PRIMARY_SUBTEXT,
+	DATA_TABLE_PRIMARY_TITLE,
 } from "@/components/ui/caalm-data-table";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -558,19 +561,24 @@ export function ActiveIncidentsClient({
 										<TableCell
 											className={cn(
 												DATA_TABLE_CELL,
-												"whitespace-nowrap font-mono text-[#0f5384]",
+												DATA_TABLE_PRIMARY_TITLE,
+												"whitespace-nowrap font-mono",
 											)}
 										>
 											{row.reference}
 										</TableCell>
 										<TableCell
-											className={cn(DATA_TABLE_CELL, "whitespace-nowrap")}
+											className={cn(
+												DATA_TABLE_CELL,
+												DATA_TABLE_BODY_TEXT,
+												"whitespace-nowrap",
+											)}
 										>
 											{formatTime(row.lastSeenAt)}
 										</TableCell>
 										<TableCell className={DATA_TABLE_CELL}>
-											<p className="font-semibold">{row.route}</p>
-											<p className="text-xs text-slate-500">
+											<p className={DATA_TABLE_PRIMARY_TITLE}>{row.route}</p>
+											<p className={DATA_TABLE_PRIMARY_SUBTEXT}>
 												{SCALE_LABELS[row.scale]} · {row.elementKey}
 											</p>
 										</TableCell>

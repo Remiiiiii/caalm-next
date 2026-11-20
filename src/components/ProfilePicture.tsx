@@ -4,7 +4,11 @@ import type { Models } from "appwrite";
 import { Camera, Trash2, Upload } from "lucide-react";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
-import Avatar from "@/components/ui/avatar";
+import Avatar, {
+	AVATAR_PHOTO_INNER_BORDER,
+	AVATAR_PHOTO_RING_GRADIENT,
+	AVATAR_PHOTO_RING_PAD,
+} from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
 	AppDropdownMenuContent,
@@ -278,8 +282,8 @@ const ProfilePicture: React.FC<ProfilePictureProps> = ({
 				className,
 			)}
 			style={{
-				background: "linear-gradient(135deg, #12477d 0%, #03afbf 100%)",
-				padding: "3px",
+				background: AVATAR_PHOTO_RING_GRADIENT,
+				padding: AVATAR_PHOTO_RING_PAD,
 				width: sizePx[size],
 				height: sizePx[size],
 			}}
@@ -287,7 +291,10 @@ const ProfilePicture: React.FC<ProfilePictureProps> = ({
 			<img
 				src={profileImageUrl}
 				alt={(user as ProfileImageUser).fullName || user.name || "Profile"}
-				className="h-full w-full rounded-full border-2 border-[#FCFEFF] object-cover"
+				className={cn(
+					"h-full w-full rounded-full object-cover",
+					AVATAR_PHOTO_INNER_BORDER,
+				)}
 				referrerPolicy="no-referrer"
 				onError={(e: any) => {
 					console.error("ProfilePicture: Image failed to load:", {

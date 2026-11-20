@@ -4,12 +4,12 @@ import {
 	ArrowLeftRight,
 	CreditCard,
 	Info,
-	MoreHorizontal,
 	Pencil,
 	Plus,
 	Star,
 	Trash2,
 } from "lucide-react";
+import Image from "next/image";
 import { useState } from "react";
 import CardBrandIcon from "@/components/billing/CardBrandIcon";
 import EditPaymentMethodDialog from "@/components/settings/EditPaymentMethodDialog";
@@ -17,16 +17,20 @@ import { AppDialog } from "@/components/ui/app-dialog";
 import { Button } from "@/components/ui/button";
 import {
 	CaalmDataTable,
+	DATA_TABLE_ACTIONS_HEAD,
+	DATA_TABLE_ACTIONS_TRIGGER,
 	DATA_TABLE_BODY_ROW_BASE,
+	DATA_TABLE_BODY_TEXT,
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
+	DATA_TABLE_PRIMARY_TITLE,
 } from "@/components/ui/caalm-data-table";
 import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
+	AppDropdownMenuContent,
+	AppDropdownMenuItem,
 	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -280,9 +284,7 @@ export default function PaymentMethodsSection({
 											<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
 												Expiration
 											</TableHead>
-											<TableHead
-												className={cn(DATA_TABLE_HEADER_CELL, "w-12 px-3")}
-											>
+											<TableHead className={DATA_TABLE_ACTIONS_HEAD}>
 												<span className="sr-only">Actions</span>
 											</TableHead>
 										</TableRow>
@@ -293,10 +295,10 @@ export default function PaymentMethodsSection({
 												key={method.id}
 												className={cn(DATA_TABLE_BODY_ROW_BASE)}
 											>
-												<TableCell className="text-sm text-slate-700">
+												<TableCell>
 													<div className="flex items-center gap-2">
 														<CardBrandIcon brand={method.brand} />
-														<span>
+														<span className={DATA_TABLE_PRIMARY_TITLE}>
 															{formatBrand(method.brand)} ending in{" "}
 															{method.last4}
 														</span>
@@ -309,63 +311,74 @@ export default function PaymentMethodsSection({
 														) : null}
 													</div>
 												</TableCell>
-												<TableCell className="text-sm text-slate-700">
+												<TableCell className={DATA_TABLE_BODY_TEXT}>
 													{method.name || "—"}
 												</TableCell>
-												<TableCell className="text-sm text-slate-700">
+												<TableCell className={DATA_TABLE_BODY_TEXT}>
 													{formatExpiration(method.expMonth, method.expYear)}
 												</TableCell>
 												<TableCell className="text-right">
-													<DropdownMenu modal={false}>
-														<DropdownMenuTrigger asChild>
-															<button
-																type="button"
-																aria-label={`Actions for card ending in ${method.last4}`}
+													<div
+														className={cn(
+															"inline-flex justify-end",
+															DATA_TABLE_ACTIONS_TRIGGER,
+														)}
+													>
+														<DropdownMenu modal={false}>
+															<DropdownMenuTrigger
 																disabled={loading}
-																className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-slate-600 transition-colors duration-200 hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f5384]/40 disabled:cursor-not-allowed disabled:opacity-50"
+																aria-label={`Actions for card ending in ${method.last4}`}
+																className="shad-no-focus rounded-full transition-colors hover:bg-white/30 disabled:cursor-not-allowed disabled:opacity-50"
 															>
-																<MoreHorizontal className="h-4 w-4" />
-															</button>
-														</DropdownMenuTrigger>
-														<DropdownMenuContent align="end" className="w-44">
-															<DropdownMenuItem
-																className="cursor-pointer gap-2"
-																onSelect={() => openEdit(method)}
+																<Image
+																	src="/assets/icons/dots.svg"
+																	alt=""
+																	width={34}
+																	height={34}
+																/>
+															</DropdownMenuTrigger>
+															<AppDropdownMenuContent
+																align="end"
+																className="w-44"
 															>
-																<Pencil className="h-4 w-4 text-slate-600" />
-																Edit
-															</DropdownMenuItem>
-															{paymentMethods.length > 1 &&
-															!method.isDefault ? (
-																<DropdownMenuItem
-																	className="cursor-pointer gap-2"
-																	onSelect={() => void handleSetDefault(method)}
-																	disabled={settingDefaultId === method.id}
+																<AppDropdownMenuItem
+																	icon={Pencil}
+																	onSelect={() => openEdit(method)}
 																>
-																	<Star className="h-4 w-4 text-slate-600" />
-																	Set as default
-																</DropdownMenuItem>
-															) : null}
-															<DropdownMenuItem
-																className="cursor-pointer gap-2"
-																onSelect={() =>
-																	onReplacePaymentMethod(method.id)
-																}
-																disabled={replacingId === method.id}
-															>
-																<ArrowLeftRight className="h-4 w-4 text-slate-600" />
-																Replace
-															</DropdownMenuItem>
-															<DropdownMenuSeparator />
-															<DropdownMenuItem
-																className="cursor-pointer gap-2 text-red focus:text-red"
-																onSelect={() => openRemove(method)}
-															>
-																<Trash2 className="h-4 w-4" />
-																Remove
-															</DropdownMenuItem>
-														</DropdownMenuContent>
-													</DropdownMenu>
+																	Edit
+																</AppDropdownMenuItem>
+																{paymentMethods.length > 1 &&
+																!method.isDefault ? (
+																	<AppDropdownMenuItem
+																		icon={Star}
+																		onSelect={() =>
+																			void handleSetDefault(method)
+																		}
+																		disabled={settingDefaultId === method.id}
+																	>
+																		Set as default
+																	</AppDropdownMenuItem>
+																) : null}
+																<AppDropdownMenuItem
+																	icon={ArrowLeftRight}
+																	onSelect={() =>
+																		onReplacePaymentMethod(method.id)
+																	}
+																	disabled={replacingId === method.id}
+																>
+																	Replace
+																</AppDropdownMenuItem>
+																<DropdownMenuSeparator />
+																<AppDropdownMenuItem
+																	icon={Trash2}
+																	tone="danger"
+																	onSelect={() => openRemove(method)}
+																>
+																	Remove
+																</AppDropdownMenuItem>
+															</AppDropdownMenuContent>
+														</DropdownMenu>
+													</div>
 												</TableCell>
 											</TableRow>
 										))}

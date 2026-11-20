@@ -29,13 +29,13 @@ export function TaskRowActions({
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger
-				className="shad-no-focus inline-flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full opacity-0 transition-all duration-200 hover:bg-white/30 group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
+				className="shad-no-focus inline-flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full bg-transparent text-slate-500 opacity-0 transition-opacity duration-200 group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
 				aria-label="Task actions"
 				onClick={(e) => e.stopPropagation()}
 			>
 				<Image
 					src="/assets/icons/dots.svg"
-					alt="dots"
+					alt=""
 					width={34}
 					height={34}
 					className="h-[34px] w-[34px] max-h-[34px] max-w-[34px] shrink-0"

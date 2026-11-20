@@ -12,10 +12,14 @@ import {
 	CaalmDataTable,
 	CaalmDataTableEmpty,
 	CaalmDataTableSkeleton,
+	DATA_TABLE_ACTIONS_HEAD,
+	DATA_TABLE_ACTIONS_TRIGGER,
 	DATA_TABLE_BODY_ROW_BASE,
+	DATA_TABLE_BODY_TEXT,
 	DATA_TABLE_CELL,
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
+	DATA_TABLE_PRIMARY_TITLE,
 } from "@/components/ui/caalm-data-table";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -32,8 +36,7 @@ const ClientDate = dynamic(() => import("@/components/ClientDate"), {
 });
 
 const rowPad = "px-3 py-3";
-/** Body copy matches Email; Name / Status / Actions keep their own look. */
-const cellText = "text-sm text-slate-600";
+const cellText = DATA_TABLE_BODY_TEXT;
 
 export function PendingInvitationsDataTable({
 	invitations,
@@ -118,10 +121,8 @@ export function PendingInvitationsDataTable({
 					<TableHead className={cn(DATA_TABLE_HEADER_CELL, "px-3")}>
 						Status
 					</TableHead>
-					<TableHead
-						className={cn(DATA_TABLE_HEADER_CELL, "pl-3 pr-4 text-right")}
-					>
-						Actions
+					<TableHead className={DATA_TABLE_ACTIONS_HEAD}>
+						<span className="sr-only">Actions</span>
 					</TableHead>
 				</TableRow>
 			</TableHeader>
@@ -152,7 +153,7 @@ export function PendingInvitationsDataTable({
 								/>
 							</TableCell>
 							<TableCell className={cn(DATA_TABLE_CELL, rowPad)}>
-								<span className="text-sm font-medium text-slate-700">
+								<span className={DATA_TABLE_PRIMARY_TITLE}>
 									{inv.name || "—"}
 								</span>
 							</TableCell>
@@ -207,13 +208,20 @@ export function PendingInvitationsDataTable({
 							<TableCell
 								className={cn(DATA_TABLE_CELL, rowPad, "pl-3 pr-4 text-right")}
 							>
-								<PendingInvitationRowActions
-									label={inv.name || inv.email}
-									busy={busy}
-									onResend={() => onResend(inv)}
-									onRevoke={() => onRevoke(inv)}
-									onDelete={() => onDelete(inv)}
-								/>
+								<div
+									className={cn(
+										"inline-flex justify-end",
+										DATA_TABLE_ACTIONS_TRIGGER,
+									)}
+								>
+									<PendingInvitationRowActions
+										label={inv.name || inv.email}
+										busy={busy}
+										onResend={() => onResend(inv)}
+										onRevoke={() => onRevoke(inv)}
+										onDelete={() => onDelete(inv)}
+									/>
+								</div>
 							</TableCell>
 						</TableRow>
 					);

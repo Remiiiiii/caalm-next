@@ -7,9 +7,13 @@ import { useContractsView } from "@/components/ContractsViewContext";
 import { ContractApprovalStatusCell } from "@/components/contracts/ContractApprovalStatusCell";
 import {
 	CaalmDataTable,
+	DATA_TABLE_ACTIONS_HEAD,
+	DATA_TABLE_ACTIONS_TRIGGER,
 	DATA_TABLE_BODY_ROW_CLICKABLE,
+	DATA_TABLE_BODY_TEXT,
 	DATA_TABLE_HEADER_CELL,
 	DATA_TABLE_HEADER_ROW,
+	DATA_TABLE_PRIMARY_TITLE,
 } from "@/components/ui/caalm-data-table";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -598,10 +602,8 @@ export default function ContractsTableView({
 						Assigned To
 					</TableHead>
 					<TableHead className={`${DATA_TABLE_HEADER_CELL} px-3`}>By</TableHead>
-					<TableHead
-						className={`${DATA_TABLE_HEADER_CELL} pl-3 pr-4 text-right`}
-					>
-						Actions
+					<TableHead className={DATA_TABLE_ACTIONS_HEAD}>
+						<span className="sr-only">Actions</span>
 					</TableHead>
 				</TableRow>
 			</TableHeader>
@@ -638,7 +640,10 @@ export default function ContractsTableView({
 									imageClassName="!size-8"
 								/>
 								<p
-									className="subtitle-2 text-slate-700 whitespace-nowrap truncate max-w-[180px]"
+									className={cn(
+										DATA_TABLE_PRIMARY_TITLE,
+										"max-w-[180px] truncate whitespace-nowrap",
+									)}
 									title={file.name || file.contractName || "Untitled Contract"}
 								>
 									{truncateContractName(
@@ -657,7 +662,8 @@ export default function ContractsTableView({
 						<TableCell
 							className={cn(
 								rowPad,
-								"text-slate-700 whitespace-nowrap tabular-nums",
+								DATA_TABLE_BODY_TEXT,
+								"whitespace-nowrap tabular-nums",
 							)}
 						>
 							{file.amount != null && Number(file.amount) > 0 ? (
@@ -667,34 +673,34 @@ export default function ContractsTableView({
 							)}
 						</TableCell>
 						<TableCell
-							className={cn(rowPad, "text-slate-700 whitespace-nowrap")}
+							className={cn(rowPad, DATA_TABLE_BODY_TEXT, "whitespace-nowrap")}
 						>
 							{convertFileSize({ sizeInBytes: file.size || 0 })}
 						</TableCell>
 						<TableCell
-							className={cn(rowPad, "text-slate-700 whitespace-nowrap")}
+							className={cn(rowPad, DATA_TABLE_BODY_TEXT, "whitespace-nowrap")}
 						>
 							<FormattedDateTime date={file.$createdAt} className="body-2" />
 						</TableCell>
 						<TableCell
-							className={cn(rowPad, "text-slate-700 whitespace-nowrap")}
+							className={cn(rowPad, DATA_TABLE_BODY_TEXT, "whitespace-nowrap")}
 						>
 							{expiryCell(file)}
 						</TableCell>
 						<TableCell
-							className={cn(rowPad, "text-slate-700 whitespace-nowrap")}
+							className={cn(rowPad, DATA_TABLE_BODY_TEXT, "whitespace-nowrap")}
 						>
 							{file.department || (
 								<span className="body-2 text-slate-400">-</span>
 							)}
 						</TableCell>
 						<TableCell
-							className={cn(rowPad, "text-slate-700 whitespace-nowrap")}
+							className={cn(rowPad, DATA_TABLE_BODY_TEXT, "whitespace-nowrap")}
 						>
 							{renderAssignedManagers(file)}
 						</TableCell>
 						<TableCell
-							className={cn(rowPad, "text-slate-700 whitespace-nowrap")}
+							className={cn(rowPad, DATA_TABLE_BODY_TEXT, "whitespace-nowrap")}
 						>
 							{renderOwner(file)}
 						</TableCell>
@@ -702,12 +708,14 @@ export default function ContractsTableView({
 							className={cn(rowPad, "text-right")}
 							onClick={(e) => e.stopPropagation()}
 						>
-							<ActionDropdown
-								file={file}
-								onStatusChange={onRefresh}
-								onRefresh={onRefresh}
-								userRole={user?.role as "executive" | "admin" | "manager"}
-							/>
+							<div className={cn("inline-flex justify-end", DATA_TABLE_ACTIONS_TRIGGER)}>
+								<ActionDropdown
+									file={file}
+									onStatusChange={onRefresh}
+									onRefresh={onRefresh}
+									userRole={user?.role as "executive" | "admin" | "manager"}
+								/>
+							</div>
 						</TableCell>
 					</TableRow>
 				))}
